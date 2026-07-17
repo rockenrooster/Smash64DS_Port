@@ -171,6 +171,34 @@ foreach ($sourceOffset in @(
     }
 }
 
+$marioMotionText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
+    'src/relocData/202_MarioMainMotion.c') -Raw
+foreach ($fixture in @(
+        @{ Call = 'ftMotionPlayFGM(nSYAudioFGMMarioLanding)'; Count = 7 },
+        @{ Call = 'ftMotionPlayVoice(nSYAudioVoiceMarioSmash1)'; Count = 4 },
+        @{ Call = 'ftMotionPlayVoice(nSYAudioVoiceMarioJump)'; Count = 3 }
+    )) {
+    $count = [regex]::Matches(
+        $marioMotionText, [regex]::Escape($fixture.Call)).Count
+    if ($count -ne $fixture.Count) {
+        throw ("BattleShip Mario motion trigger count changed: {0} ({1})" -f
+            $fixture.Call, $count)
+    }
+}
+
+$marioMainText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
+    'src/relocData/203_MarioMain.c') -Raw
+if (-not $marioMainText.Contains(
+        '{ nSYAudioVoiceMarioSmash1, nSYAudioVoiceMarioSmash2, nSYAudioVoiceMarioSmash3 }, /* smash_sfx */')) {
+    throw 'BattleShip Mario random smash-voice table changed.'
+}
+$ftMainText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
+    'src/ft/ftmain.c') -Raw
+if (-not $ftMainText.Contains(
+        'ftParamPlayVoice(fp, fp->attr->smash_sfx[syUtilsRandIntRange(ARRAY_COUNT(fp->attr->smash_sfx))]);')) {
+    throw 'BattleShip random smash-voice dispatch changed.'
+}
+
 $deadSourcePath = Join-Path $BattleShipRoot 'src/ft/ftcommon/ftcommondead.c'
 $deadSourceText = Get-Content -LiteralPath $deadSourcePath -Raw
 $deadInit = Get-SourceFunctionBlock -Source $deadSourceText `
@@ -205,6 +233,45 @@ foreach ($unexpected in @(
     }
 }
 
+$attackMotionFixtures = @(
+    @{
+        Path = 'src/relocData/202_MarioMainMotion.c'
+        Tokens = @(
+            'ftMotionPlayFGM(nSYAudioFGMCatch)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingL)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingM)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingS)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMMarioUnkSwing2)',
+            'ftMotionPlayFGM(nSYAudioFGMMarioSpecialN)',
+            'ftMotionPlayFGM(nSYAudioFGMMarioSpecialHiJump)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMMarioUnkSwing1)'
+        )
+    },
+    @{
+        Path = 'src/relocData/208_FoxMainMotion.c'
+        Tokens = @(
+            'ftMotionPlayFGM(nSYAudioFGMCatch)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingL)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingM)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMLightSwingS)',
+            'ftMotionCommandPlayFGMStoreInfo(nSYAudioFGMFoxAttackAirLw)',
+            'ftMotionPlayFGM(nSYAudioFGMFoxSpecialN)',
+            'ftMotionPlayFGM(nSYAudioFGMFoxSpecialHiStart)',
+            'ftMotionPlayFGM(nSYAudioFGMFoxSpecialHiFly)',
+            'ftMotionPlayFGM(nSYAudioFGMFoxSpecialLwStart)'
+        )
+    }
+)
+foreach ($fixture in $attackMotionFixtures) {
+    $source = Get-Content -LiteralPath (
+        Join-Path $BattleShipRoot $fixture.Path) -Raw
+    foreach ($token in $fixture.Tokens) {
+        if (-not $source.Contains($token)) {
+            throw "BattleShip attack motion fixture is missing: $token"
+        }
+    }
+}
+
 $metadataPath = Join-Path $root 'assets/audio/fgm_phase_pack_ima.json'
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
 $koIDs = @($metadata.entries | Where-Object {
@@ -220,6 +287,30 @@ Assert-EqualList -Label 'Fox regular-KO source sequence' `
     -Actual $foxRegularKo -Expected ([int[]]@(370, 289, 154))
 Assert-EqualList -Label 'Resident regular-KO ID set' -Actual $koIDs `
     -Expected ([int[]]@(439, 292, 370, 289, 154))
+$attackIDs = @($metadata.entries | Where-Object {
+        $_.entry_kind -eq 'attack'
+    } | ForEach-Object { [int]$_.id })
+Assert-EqualList -Label 'Resident attack/activation ID set' `
+    -Actual $attackIDs -Expected ([int[]]@(215))
+$qualification = $metadata.attack_activation_qualification
+Assert-EqualList -Label 'Source-qualified attack/activation ID set' `
+    -Actual ([int[]]@($qualification.qualified_ids)) `
+    -Expected ([int[]]@(215))
+Assert-EqualList -Label 'Fail-closed attack/activation exclusion set' `
+    -Actual ([int[]]@($qualification.excluded_ids)) `
+    -Expected ([int[]]@(19, 41, 42, 43, 185, 186, 187, 189, 190,
+            217, 218, 219))
+if (($qualification.source_action_audit.sha256 -ne
+        'ae7690adc1d646e8c0a755510064a324c6ff59f4f578a2f6fdd719351744c601') -or
+    ($qualification.sha256 -ne
+        '8e520123996038b06edbd9cd2c3194734b9d7d08bde89159271ff3872a15e69e') -or
+    ($qualification.source_action_audit.region -ne 'REGION_US') -or
+    ([int]$qualification.source_action_audit.callsite_count -ne 60) -or
+    ([int]$qualification.source_action_audit.action_count -ne 66) -or
+    (@($qualification.source_action_audit.callsites).Count -ne 60) -or
+    (@($qualification.source_action_audit.actions).Count -ne 66)) {
+    throw 'Attack/activation action or source-program qualification changed.'
+}
 foreach ($entry in $metadata.entries | Where-Object {
         $_.entry_kind -eq 'ko'
     }) {
@@ -350,7 +441,11 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output (
     'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
-    'mixed-u16 words each, exact Mario/Fox regular-KO call order, no ' +
-    'rebirth-audio claim, target layouts, source IDs, persisted DS loop ' +
-    'point/length, and recyclable BattleShip FGM tokens.'
+    'mixed-u16 words each, 14 Mario motion callsites across 1 included and 2 ' +
+    'source-audited excluded cues plus the random smash table/dispatch, ' +
+    'exact Mario/Fox ' +
+    'regular-KO call order, no rebirth-audio claim, source attack-motion ' +
+    'callsites, target layouts, ' +
+    'source IDs, persisted DS loop point/length, and recyclable BattleShip ' +
+    'FGM tokens.'
 )

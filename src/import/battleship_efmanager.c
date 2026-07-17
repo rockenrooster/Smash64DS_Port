@@ -7,7 +7,9 @@
 #include <wp/weapon.h>
 #include <reloc_data.h>
 #include <reloc_data_ftdata_symbols.h>
+#include <nds/nds_effects.h>
 #include <sys/audio.h>
+#include <string.h>
 
 #include "battleship_efmanager_symbols.h"
 
@@ -127,6 +129,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 
 #undef efParticleGetLoadBankID
 
+#define efManagerInitEffects ndsBaseEFManagerInitEffects
 #define efManagerDamageNormalLightMakeEffect ndsBaseEFManagerDamageNormalLightMakeEffect
 #define efManagerDamageNormalHeavyMakeEffect ndsBaseEFManagerDamageNormalHeavyMakeEffect
 #define efManagerDamageFireMakeEffect ndsBaseEFManagerDamageFireMakeEffect
@@ -161,6 +164,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 
 #include "../../decomp/BattleShip-main/decomp/src/ef/efmanager.c"
 
+#undef efManagerInitEffects
 #undef efManagerDamageNormalLightMakeEffect
 #undef efManagerDamageNormalHeavyMakeEffect
 #undef efManagerDamageFireMakeEffect
@@ -193,11 +197,544 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerEggBreakMakeEffect
 #undef efManagerFoxReflectorMakeEffect
 
+#define NDS_VISUAL_TEMPLATE_COUNT 8
+#define NDS_VISUAL_TEMPLATE_VERTICES 16
+#define NDS_VISUAL_TEMPLATE_COMMANDS 12
+
+typedef enum NDSVisualTemplateKind
+{
+    nNDSVisualTemplateDust,
+    nNDSVisualTemplateNormal,
+    nNDSVisualTemplateFire,
+    nNDSVisualTemplateElectric,
+    nNDSVisualTemplateSparkle,
+    nNDSVisualTemplateWave,
+    nNDSVisualTemplateShield,
+    nNDSVisualTemplateDeath
+} NDSVisualTemplateKind;
+
+typedef struct NDSVisualTemplate
+{
+    u32 vertices[NDS_VISUAL_TEMPLATE_VERTICES][4];
+    Gfx display_list[NDS_VISUAL_TEMPLATE_COMMANDS];
+} NDSVisualTemplate;
+
+static NDSVisualTemplate *sNdsVisualTemplates;
+
+static void ndsEFManagerSetCommand(Gfx *command, u32 w0, u32 w1)
+{
+    command->words.w0 = w0;
+    command->words.w1 = w1;
+}
+
+static void ndsEFManagerSetVertex(NDSVisualTemplate *template, u32 index,
+                                  s16 x, s16 y, s16 z, u32 rgba)
+{
+    template->vertices[index][0] = ((u32)(u16)x << 16) | (u16)y;
+    template->vertices[index][1] = (u32)(u16)z << 16;
+    template->vertices[index][2] = 0u;
+    template->vertices[index][3] = rgba;
+}
+
+static u32 ndsEFManagerPackTriangle(u32 v0, u32 v1, u32 v2)
+{
+    return ((v0 * 2u) << 16) | ((v1 * 2u) << 8) | (v2 * 2u);
+}
+
+static u32 ndsEFManagerBeginTemplate(NDSVisualTemplate *template,
+                                     u32 vertex_count)
+{
+    ndsEFManagerSetCommand(&template->display_list[0], 0xd9000000u,
+                           G_SHADE);
+    ndsEFManagerSetCommand(&template->display_list[1], 0xd7000000u, 0u);
+    ndsEFManagerSetCommand(
+        &template->display_list[2],
+        0x01000000u | (vertex_count << 12) | (vertex_count << 1),
+        (u32)(uintptr_t)template->vertices);
+    return 3u;
+}
+
+static void ndsEFManagerBuildStar(NDSVisualTemplate *template,
+                                  u32 center_rgba, u32 outer_rgba)
+{
+    static const s16 outer[8][2] = {
+        { 0, 180 }, { 42, 42 }, { 180, 0 }, { 42, -42 },
+        { 0, -180 }, { -42, -42 }, { -180, 0 }, { -42, 42 }
+    };
+    u32 command;
+    u32 i;
+
+    ndsEFManagerSetVertex(template, 0u, 0, 0, 0, center_rgba);
+    for (i = 0u; i < 8u; i++)
+    {
+        ndsEFManagerSetVertex(template, i + 1u, outer[i][0], outer[i][1],
+                              0, outer_rgba);
+    }
+    command = ndsEFManagerBeginTemplate(template, 9u);
+    for (i = 0u; i < 8u; i += 2u)
+    {
+        u32 next0 = ((i + 1u) & 7u) + 1u;
+        u32 next1 = ((i + 2u) & 7u) + 1u;
+
+        ndsEFManagerSetCommand(
+            &template->display_list[command++],
+            0x06000000u |
+                ndsEFManagerPackTriangle(0u, i + 1u, next0),
+            ndsEFManagerPackTriangle(0u, i + 2u, next1));
+    }
+    ndsEFManagerSetCommand(&template->display_list[command],
+                           0xdf000000u, 0u);
+}
+
+static void ndsEFManagerBuildDust(NDSVisualTemplate *template,
+                                  u32 center_rgba, u32 outer_rgba)
+{
+    static const s16 outer[6][2] = {
+        { -170, -25 }, { -90, 55 }, { 0, 80 },
+        { 90, 55 }, { 170, -25 }, { 0, -65 }
+    };
+    u32 command;
+    u32 i;
+
+    ndsEFManagerSetVertex(template, 0u, 0, 0, 0, center_rgba);
+    for (i = 0u; i < 6u; i++)
+    {
+        ndsEFManagerSetVertex(template, i + 1u, outer[i][0], outer[i][1],
+                              0, outer_rgba);
+    }
+    command = ndsEFManagerBeginTemplate(template, 7u);
+    for (i = 0u; i < 6u; i += 2u)
+    {
+        u32 next0 = ((i + 1u) % 6u) + 1u;
+        u32 next1 = ((i + 2u) % 6u) + 1u;
+
+        ndsEFManagerSetCommand(
+            &template->display_list[command++],
+            0x06000000u |
+                ndsEFManagerPackTriangle(0u, i + 1u, next0),
+            ndsEFManagerPackTriangle(0u, i + 2u, next1));
+    }
+    ndsEFManagerSetCommand(&template->display_list[command],
+                           0xdf000000u, 0u);
+}
+
+static void ndsEFManagerBuildRing(NDSVisualTemplate *template,
+                                  u32 outer_rgba, u32 inner_rgba)
+{
+    static const s16 outer[8][2] = {
+        { 0, 180 }, { 127, 127 }, { 180, 0 }, { 127, -127 },
+        { 0, -180 }, { -127, -127 }, { -180, 0 }, { -127, 127 }
+    };
+    static const s16 inner[8][2] = {
+        { 0, 105 }, { 74, 74 }, { 105, 0 }, { 74, -74 },
+        { 0, -105 }, { -74, -74 }, { -105, 0 }, { -74, 74 }
+    };
+    u32 command;
+    u32 i;
+
+    for (i = 0u; i < 8u; i++)
+    {
+        ndsEFManagerSetVertex(template, i * 2u, outer[i][0], outer[i][1],
+                              0, outer_rgba);
+        ndsEFManagerSetVertex(template, (i * 2u) + 1u, inner[i][0],
+                              inner[i][1], 0, inner_rgba);
+    }
+    command = ndsEFManagerBeginTemplate(template, 16u);
+    for (i = 0u; i < 8u; i++)
+    {
+        u32 next = (i + 1u) & 7u;
+        u32 outer0 = i * 2u;
+        u32 inner0 = outer0 + 1u;
+        u32 outer1 = next * 2u;
+        u32 inner1 = outer1 + 1u;
+
+        ndsEFManagerSetCommand(
+            &template->display_list[command++],
+            0x06000000u |
+                ndsEFManagerPackTriangle(outer0, outer1, inner0),
+            ndsEFManagerPackTriangle(inner0, outer1, inner1));
+    }
+    ndsEFManagerSetCommand(&template->display_list[command],
+                           0xdf000000u, 0u);
+}
+
+static void ndsEFManagerInitVisualTemplates(void)
+{
+    sNdsVisualTemplates = syTaskmanMalloc(sizeof(*sNdsVisualTemplates) *
+                                              NDS_VISUAL_TEMPLATE_COUNT,
+                                          0x10);
+    if (sNdsVisualTemplates == NULL)
+    {
+        gNdsVisualEffectTemplateBytes = 0u;
+        return;
+    }
+    memset(sNdsVisualTemplates, 0,
+           sizeof(*sNdsVisualTemplates) * NDS_VISUAL_TEMPLATE_COUNT);
+    ndsEFManagerBuildDust(&sNdsVisualTemplates[nNDSVisualTemplateDust],
+                          0xddd0b0ffu, 0x806c54ffu);
+    ndsEFManagerBuildStar(&sNdsVisualTemplates[nNDSVisualTemplateNormal],
+                          0xffffffffu, 0xffd040ffu);
+    ndsEFManagerBuildStar(&sNdsVisualTemplates[nNDSVisualTemplateFire],
+                          0xffff90ffu, 0xff4a10ffu);
+    ndsEFManagerBuildStar(&sNdsVisualTemplates[nNDSVisualTemplateElectric],
+                          0xffffffffu, 0x3090ffffu);
+    ndsEFManagerBuildStar(&sNdsVisualTemplates[nNDSVisualTemplateSparkle],
+                          0xffffffffu, 0x90e8ffffu);
+    ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateWave],
+                          0x60ff80ffu, 0xffff80ffu);
+    ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateShield],
+                          0x40b8ffffu, 0xe0ffffffu);
+    ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateDeath],
+                          0xff4060ffu, 0xffffffffu);
+    gNdsVisualEffectTemplateBytes =
+        sizeof(*sNdsVisualTemplates) * NDS_VISUAL_TEMPLATE_COUNT;
+}
+
+static NDSVisualTemplate *ndsEFManagerGetVisualTemplate(
+    NDSVisualEffectKind kind)
+{
+    NDSVisualTemplateKind template_kind;
+
+    if (sNdsVisualTemplates == NULL)
+    {
+        return NULL;
+    }
+    switch (kind)
+    {
+    case nNDSVisualEffectDust:
+        template_kind = nNDSVisualTemplateDust;
+        break;
+    case nNDSVisualEffectHitFire:
+        template_kind = nNDSVisualTemplateFire;
+        break;
+    case nNDSVisualEffectHitElectric:
+        template_kind = nNDSVisualTemplateElectric;
+        break;
+    case nNDSVisualEffectCoin:
+    case nNDSVisualEffectSparkle:
+        template_kind = nNDSVisualTemplateSparkle;
+        break;
+    case nNDSVisualEffectImpactWave:
+    case nNDSVisualEffectCatch:
+        template_kind = nNDSVisualTemplateWave;
+        break;
+    case nNDSVisualEffectShield:
+    case nNDSVisualEffectReflector:
+        template_kind = nNDSVisualTemplateShield;
+        break;
+    case nNDSVisualEffectDeath:
+    case nNDSVisualEffectRebirth:
+        template_kind = nNDSVisualTemplateDeath;
+        break;
+    case nNDSVisualEffectSlash:
+    case nNDSVisualEffectHitNormal:
+    default:
+        template_kind = nNDSVisualTemplateNormal;
+        break;
+    }
+    return &sNdsVisualTemplates[template_kind];
+}
+
+static s32 ndsEFManagerVisualLifetime(NDSVisualEffectKind kind)
+{
+    switch (kind)
+    {
+    case nNDSVisualEffectDust:
+        return 9;
+    case nNDSVisualEffectCoin:
+    case nNDSVisualEffectImpactWave:
+        return 12;
+    case nNDSVisualEffectCatch:
+        return 14;
+    case nNDSVisualEffectDeath:
+        return 18;
+    case nNDSVisualEffectHitFire:
+    case nNDSVisualEffectSparkle:
+        return 10;
+    default:
+        return 8;
+    }
+}
+
+static f32 ndsEFManagerVisualGrowth(NDSVisualEffectKind kind)
+{
+    switch (kind)
+    {
+    case nNDSVisualEffectDust:
+        return 0.06F;
+    case nNDSVisualEffectImpactWave:
+    case nNDSVisualEffectCatch:
+        return 0.09F;
+    case nNDSVisualEffectDeath:
+        return 0.12F;
+    case nNDSVisualEffectSlash:
+        return 0.10F;
+    default:
+        return 0.04F;
+    }
+}
+
+static f32 ndsEFManagerVisualSpin(NDSVisualEffectKind kind, s32 lr)
+{
+    f32 spin;
+
+    switch (kind)
+    {
+    case nNDSVisualEffectCoin:
+        spin = 0.26F;
+        break;
+    case nNDSVisualEffectHitElectric:
+    case nNDSVisualEffectSparkle:
+        spin = 0.20F;
+        break;
+    case nNDSVisualEffectHitNormal:
+    case nNDSVisualEffectHitFire:
+        spin = 0.14F;
+        break;
+    default:
+        spin = 0.0F;
+        break;
+    }
+    return (lr < 0) ? -spin : spin;
+}
+
+static void ndsEFManagerDestroyVisualEffect(GObj *effect_gobj)
+{
+    EFStruct *ep;
+
+    if (ndsEFManagerIsVisualEffectGObj(effect_gobj) == FALSE)
+    {
+        return;
+    }
+    ep = efGetStruct(effect_gobj);
+    if (ep != NULL)
+    {
+        efManagerSetPrevStructAlloc(ep);
+    }
+    if (gNdsVisualEffectActiveCount != 0u)
+    {
+        gNdsVisualEffectActiveCount--;
+    }
+    gNdsVisualEffectDestroyCount++;
+    gcEjectGObj(effect_gobj);
+}
+
+static void ndsEFManagerVisualProcUpdate(GObj *effect_gobj)
+{
+    EFStruct *ep = efGetStruct(effect_gobj);
+    DObj *dobj = DObjGetStruct(effect_gobj);
+
+    if ((ep == NULL) || (dobj == NULL) || (ep->is_pause_effect != FALSE))
+    {
+        return;
+    }
+    if (ep->fighter_gobj != NULL)
+    {
+        DObj *joint = dobj->user_data.p;
+
+        if (joint != NULL)
+        {
+            Vec3f pos = { 0.0F, 0.0F, 0.0F };
+
+            gmCollisionGetFighterPartsWorldPosition(joint, &pos);
+            dobj->translate.vec.f = pos;
+        }
+        return;
+    }
+    dobj->translate.vec.f.x += ep->effect_vars.common.vel.x;
+    dobj->translate.vec.f.y += ep->effect_vars.common.vel.y;
+    dobj->translate.vec.f.z += ep->effect_vars.common.vel.z;
+    dobj->rotate.vec.f.z += dobj->anim_frame;
+    dobj->scale.vec.f.x += dobj->anim_speed;
+    dobj->scale.vec.f.y += dobj->anim_speed;
+    effect_gobj->anim_frame -= 1.0F;
+    if (effect_gobj->anim_frame <= 0.0F)
+    {
+        ndsEFManagerDestroyVisualEffect(effect_gobj);
+    }
+}
+
+s32 ndsEFManagerIsVisualEffectGObj(GObj *effect_gobj)
+{
+    DObj *dobj;
+    u32 i;
+
+    if ((effect_gobj == NULL) || (effect_gobj->id != nGCCommonKindEffect) ||
+        (sNdsVisualTemplates == NULL))
+    {
+        return FALSE;
+    }
+    dobj = DObjGetStruct(effect_gobj);
+    if (dobj == NULL)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < NDS_VISUAL_TEMPLATE_COUNT; i++)
+    {
+        if (dobj->dl == sNdsVisualTemplates[i].display_list)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
+                                    const Vec3f *pos, f32 scale, s32 lr,
+                                    GObj *fighter_gobj)
+{
+    NDSVisualTemplate *template = ndsEFManagerGetVisualTemplate(kind);
+    EFStruct *ep;
+    GObj *effect_gobj;
+    DObj *dobj;
+
+    if ((template == NULL) ||
+        ((u32)kind >= (u32)nNDSVisualEffectKindCount))
+    {
+        gNdsVisualEffectDropCount++;
+        return NULL;
+    }
+    ep = (fighter_gobj != NULL) ? efManagerGetEffectForce() :
+                                  efManagerGetEffectNoForce();
+    if (ep == NULL)
+    {
+        gNdsVisualEffectDropCount++;
+        return NULL;
+    }
+    effect_gobj = gcMakeGObjSPAfter(nGCCommonKindEffect, NULL,
+                                    nGCCommonLinkIDEffect,
+                                    GOBJ_PRIORITY_DEFAULT);
+    if (effect_gobj == NULL)
+    {
+        efManagerSetPrevStructAlloc(ep);
+        gNdsVisualEffectDropCount++;
+        return NULL;
+    }
+    effect_gobj->user_data.p = ep;
+    dobj = gcAddDObjForGObj(effect_gobj, template->display_list);
+    if ((dobj == NULL) ||
+        (gcAddXObjForDObjFixed(dobj, nGCMatrixKindTraRotRpyRSca, 0) ==
+         NULL))
+    {
+        efManagerSetPrevStructAlloc(ep);
+        gcEjectGObj(effect_gobj);
+        gNdsVisualEffectDropCount++;
+        return NULL;
+    }
+    if (scale < 0.2F)
+    {
+        scale = 0.2F;
+    }
+    else if (scale > 5.0F)
+    {
+        scale = 5.0F;
+    }
+    dobj->scale.vec.f.x = scale;
+    dobj->scale.vec.f.y = scale;
+    dobj->scale.vec.f.z = scale;
+    if (kind == nNDSVisualEffectDust)
+    {
+        dobj->scale.vec.f.y *= 0.65F;
+    }
+    else if (kind == nNDSVisualEffectSlash)
+    {
+        dobj->scale.vec.f.x *= 1.5F;
+        dobj->scale.vec.f.y *= 0.35F;
+    }
+    if (pos != NULL)
+    {
+        dobj->translate.vec.f = *pos;
+    }
+    dobj->anim_speed = ndsEFManagerVisualGrowth(kind);
+    dobj->anim_frame = ndsEFManagerVisualSpin(kind, lr);
+    effect_gobj->anim_frame = (f32)ndsEFManagerVisualLifetime(kind);
+    ep->proc_update = ndsEFManagerVisualProcUpdate;
+    ep->effect_vars.common.vel.x = 0.0F;
+    ep->effect_vars.common.vel.y = 0.0F;
+    ep->effect_vars.common.vel.z = 0.0F;
+    ep->effect_vars.common.size = kind;
+    if (kind == nNDSVisualEffectDust)
+    {
+        ep->effect_vars.common.vel.x = (f32)-lr * 1.5F;
+        ep->effect_vars.common.vel.y = 2.0F;
+    }
+    else if ((kind == nNDSVisualEffectCoin) ||
+             (kind == nNDSVisualEffectSparkle))
+    {
+        ep->effect_vars.common.vel.y = 2.5F;
+    }
+    ep->fighter_gobj = fighter_gobj;
+    if (fighter_gobj != NULL)
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        DObj *joint = NULL;
+
+        if (fp != NULL)
+        {
+            joint = fp->joints[(kind == nNDSVisualEffectShield) ?
+                                   nFTPartsJointYRotN :
+                                   nFTPartsJointTopN];
+            fp->is_effect_attach = TRUE;
+        }
+        dobj->user_data.p = joint;
+        if (joint != NULL)
+        {
+            Vec3f joint_pos = { 0.0F, 0.0F, 0.0F };
+
+            gmCollisionGetFighterPartsWorldPosition(joint, &joint_pos);
+            dobj->translate.vec.f = joint_pos;
+        }
+    }
+    gcAddGObjProcess(effect_gobj, ndsEFManagerVisualProcUpdate,
+                     nGCProcessKindFunc, 3);
+    gcAddGObjDisplay(effect_gobj, gcDrawDObjTreeForGObj, 18, 2, -1);
+    gNdsVisualEffectCreateCount++;
+    gNdsVisualEffectActiveCount++;
+    if (gNdsVisualEffectActiveCount > gNdsVisualEffectMaxActiveCount)
+    {
+        gNdsVisualEffectMaxActiveCount = gNdsVisualEffectActiveCount;
+    }
+    gNdsVisualEffectKindMask |= 1u << (u32)kind;
+    return effect_gobj;
+}
+
+void ndsEFManagerStopAttachedVisualEffects(GObj *fighter_gobj)
+{
+    GObj *effect_gobj = gGCCommonLinks[nGCCommonLinkIDEffect];
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+    while (effect_gobj != NULL)
+    {
+        GObj *next = effect_gobj->link_next;
+        EFStruct *ep = efGetStruct(effect_gobj);
+
+        if ((ep != NULL) && (ep->fighter_gobj == fighter_gobj) &&
+            (ndsEFManagerIsVisualEffectGObj(effect_gobj) != FALSE))
+        {
+            ndsEFManagerDestroyVisualEffect(effect_gobj);
+        }
+        effect_gobj = next;
+    }
+}
+
+void efManagerInitEffects(void)
+{
+    gNdsVisualEffectCreateCount = 0u;
+    gNdsVisualEffectDestroyCount = 0u;
+    gNdsVisualEffectDropCount = 0u;
+    gNdsVisualEffectActiveCount = 0u;
+    gNdsVisualEffectMaxActiveCount = 0u;
+    gNdsVisualEffectKindMask = 0u;
+    gNdsVisualEffectTemplateBytes = 0u;
+    ndsBaseEFManagerInitEffects();
+    ndsEFManagerInitVisualTemplates();
+}
+
 GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
 {
-    dEFManagerFoxReflectorEffectDesc.o_dobjsetup =
-        (intptr_t)llFoxSpecial2ReflectorDObjDesc;
-    dEFManagerFoxReflectorEffectDesc.o_anim_joint =
-        (intptr_t)llFoxSpecial2ReflectorStartAnimJoint;
-    return ndsBaseEFManagerFoxReflectorMakeEffect(fighter_gobj);
+    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectReflector, NULL,
+                                        1.6F, 1, fighter_gobj);
 }

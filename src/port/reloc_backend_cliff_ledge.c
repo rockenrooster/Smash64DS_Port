@@ -1,4 +1,5 @@
 /* Imported ftmain no longer executes the local duplicate damage callbacks. */
+#include <nds/nds_effects.h>
 #define NDS_FIGHTER_DASH_RUN_IMPORT_PROCPARAMS_MASK 0xfffdf3ffu
 #define NDS_FIGHTER_DASH_RUN_IMPORT_DAMAGE_SETUP_MASK 0xbffffdfdu
 
@@ -15510,6 +15511,13 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsWeaponRendererFireballTriangleCount = 0u;
     gNdsWeaponRendererFireballVisibleDrawCount = 0u;
     gNdsWeaponRendererRejectedDrawCount = 0u;
+    gNdsEffectRendererCaptureCount = 0u;
+    gNdsEffectRendererDObjDrawCount = 0u;
+    gNdsEffectRendererSubmitCount = 0u;
+    gNdsEffectRendererTriangleCount = 0u;
+    gNdsEffectRendererTextureReadyCount = 0u;
+    gNdsEffectRendererTextureRejectCount = 0u;
+    gNdsEffectRendererRejectedDrawCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarrySeedCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarryCaptureCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount = 0u;

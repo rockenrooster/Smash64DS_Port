@@ -14,6 +14,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import re
 import struct
 import sys
 from pathlib import Path
@@ -26,7 +27,7 @@ PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
-MAX_RESIDENT_BYTES = 104 * 1024
+MAX_RESIDENT_BYTES = 106 * 1024
 PUBLIC_EXCITED_ID = 626
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
 PUBLIC_EXCITED_RAMP_SAMPLES = 184
@@ -36,6 +37,160 @@ PUBLIC_EXCITED_IMA_INDEX = 65
 PUBLIC_EXCITED_GUARD_NIBBLES = (8, 9)
 PUBLIC_EXCITED_LOOP_POINT_WORDS = 1
 REPEAT_ORACLE_CYCLES = 3
+SOURCE_SINE_TABLE_SHA256 = (
+    "bc184c0dbd76adecf7ff264d39cc58456546173beba727f189d2716dd8eabf16")
+
+ATTACK_ACTION_AUDIT_SHA256 = (
+    "ae7690adc1d646e8c0a755510064a324c6ff59f4f578a2f6fdd719351744c601")
+ATTACK_CUE_AUDIT_SHA256 = (
+    "8e520123996038b06edbd9cd2c3194734b9d7d08bde89159271ff3872a15e69e")
+ATTACK_DIRECT_CALL_COUNTS = {
+    19: 4,
+    41: 17,
+    42: 21,
+    43: 11,
+    185: 2,
+    186: 1,
+    187: 2,
+    189: 1,
+    190: 7,
+    215: 1,
+    217: 1,
+    218: 2,
+    219: 2,
+}
+ATTACK_CUE_AUDIT = (
+    {
+        "id": 19,
+        "name": "nSYAudioFGMCatch",
+        "root_program_sha256":
+            "9fad1e2cea571fa7c2a0407a5ab8e401e9b1460c56229eb9674b934b9c8961a0",
+        "blockers": (
+            "ucd_pitch_schedule",
+            "articulation_pitch_and_volume_schedule",
+            "resident_pack_cap",
+        ),
+    },
+    {
+        "id": 41,
+        "name": "nSYAudioFGMLightSwingL",
+        "root_program_sha256":
+            "2c127d35837004afaafe6904dd1b02e24bd6cdc29bfe4af7133aeff49b260955",
+        "blockers": ("source_custom_fx_bus", "resident_pack_cap"),
+    },
+    {
+        "id": 42,
+        "name": "nSYAudioFGMLightSwingM",
+        "root_program_sha256":
+            "85fe213b07b57a985e1083326f460eb79543547f3481362555daa4341c8995a1",
+        "blockers": ("source_custom_fx_bus",),
+    },
+    {
+        "id": 43,
+        "name": "nSYAudioFGMLightSwingS",
+        "root_program_sha256":
+            "56f323a51d99829631b90e5f4cec63a30068e017f22ec39ea135b3e07dae333e",
+        "blockers": ("source_custom_fx_bus",),
+    },
+    {
+        "id": 185,
+        "name": "nSYAudioFGMFoxSpecialN",
+        "root_program_sha256":
+            "17238042b674146a514375fb79b5c4af03bd8b0734757fbe2f3c5143163e066a",
+        "blockers": (
+            "source_sample_loop",
+            "articulation_infinite_pitch_and_volume_loop",
+            "resident_pack_cap",
+        ),
+    },
+    {
+        "id": 186,
+        "name": "nSYAudioFGMFoxSpecialHiStart",
+        "root_program_sha256":
+            "d43bbdf6fbb80605811fda12db256d4eddd04915c6344fa277fe9e2a5daf0823",
+        "blockers": (
+            "ucd_pitch_schedule",
+            "articulation_volume_schedule",
+            "resident_pack_cap",
+        ),
+    },
+    {
+        "id": 187,
+        "name": "nSYAudioFGMFoxSpecialHiFly",
+        "root_program_sha256":
+            "720103f7048fee9ea9cd24c5383c865de2d063ff7d7eafba659c337027a36b6f",
+        "blockers": (
+            "simultaneous_fork_voice_0",
+            "ucd_pitch_schedule",
+            "fork_volume_schedule",
+            "fork_source_custom_fx_bus",
+            "resident_pack_cap",
+        ),
+    },
+    {
+        "id": 189,
+        "name": "nSYAudioFGMFoxSpecialLwStart",
+        "root_program_sha256":
+            "2f6e924d16e5107e8557234d5c9806ba5ff99d86d9d0dd5b671ad7d5dfe7156d",
+        "blockers": (
+            "ucd_t5_pitch_schedule",
+            "source_rate_above_u16",
+            "ucd_volume_schedule",
+            "source_custom_fx_bus",
+        ),
+    },
+    {
+        "id": 190,
+        "name": "nSYAudioFGMFoxAttackAirLw",
+        "root_program_sha256":
+            "84a6c9a138201870077c8f6d2461040e94494e28082790285687d58a9b27df40",
+        "blockers": (
+            "ucd_pitch_schedule",
+            "source_rate_above_u16",
+            "source_custom_fx_bus",
+        ),
+    },
+    {
+        "id": 215,
+        "name": "nSYAudioFGMMarioSpecialN",
+        "root_program_sha256":
+            "c9f584ac64297bfca52605e5bd01c3d42a31126f7d6e3e73cc4e65b9743cc6ac",
+        "blockers": (),
+    },
+    {
+        "id": 217,
+        "name": "nSYAudioFGMMarioSpecialHiJump",
+        "root_program_sha256":
+            "58e4d5252df98dda45a46cabaddfeae9a93b9917dcaa9020e63e9f3e2f45c09a",
+        "blockers": (
+            "ucd_pitch_schedule",
+            "articulation_spawn_mod_47",
+            "resident_pack_cap",
+        ),
+    },
+    {
+        "id": 218,
+        "name": "nSYAudioFGMMarioUnkSwing1",
+        "root_program_sha256":
+            "e599e2bf74db3900b0e653a72c5d29a7330cabd17e5e05a5b5f9f91392446f23",
+        "blockers": (
+            "ucd_pitch_schedule",
+            "aot_custom_fx_tail_exceeds_resident_pack_cap",
+            "source_overlap_exceeds_handle_capacity",
+        ),
+    },
+    {
+        "id": 219,
+        "name": "nSYAudioFGMMarioUnkSwing2",
+        "root_program_sha256":
+            "84a6c9a138201870077c8f6d2461040e94494e28082790285687d58a9b27df40",
+        "blockers": (
+            "ucd_pitch_schedule",
+            "source_rate_above_u16",
+            "source_custom_fx_bus",
+        ),
+    },
+)
 
 # These selectors are intentionally explicit.  Any upstream layout or program
 # change fails generation instead of silently selecting a different sound.
@@ -119,6 +274,116 @@ SELECTED = (
         "loop_start": 0,
         "loop_end": 0,
         "expected_retained_samples": 13801,
+    },
+    {
+        "id": 74,
+        "name": "nSYAudioFGMFoxLanding",
+        "kind": "movement",
+        "render_program": 72,
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((8, 7, 3),),
+        "duration_ticks": 3,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 621,
+        "root_fork_programs": (72,),
+        "root_program_sha256":
+            "c5fb3a31fc2383118516512dda33fdd0f670a91a490bfc333c27b21e66d6f4a0",
+        "render_program_sha256":
+            "9b37506dc57cc43b255fa175bfb1e9256fc4c955ae00e4bd600bf4ab123781cf",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+        "aot_source_schedule": True,
+        "source_actions": (
+            {"action": "dFoxMainMotion_LandingAirX_0x010C",
+             "trigger_game_tick": 0, "call": "ftMotionPlayFGM"},
+            {"action": "dFoxMainMotion_LandingAirX_0x0124",
+             "trigger_game_tick": 0, "call": "ftMotionPlayFGM"},
+            {"action": "dFoxMainMotion_LandingAirX_0x018C",
+             "trigger_game_tick": 0, "call": "ftMotionPlayFGM"},
+            {"action": "dFoxMainMotion_LandingAirF",
+             "trigger_game_tick": 0, "call": "ftMotionPlayFGM"},
+            {"action": "dFoxMainMotion_LandingAirB",
+             "trigger_game_tick": 0, "call": "ftMotionPlayFGM"},
+            {"action": "dFoxMainMotion_LandingAirX_0x177C",
+             "trigger_game_tick": 0, "call": "ftMotionPlayFGM"},
+        ),
+        "source_action_file":
+            "decomp/src/relocData/208_FoxMainMotion.c",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 363,
+        "name": "nSYAudioVoiceFoxJumpAerial",
+        "kind": "voice",
+        "articulation": 227,
+        "sound": 108,
+        "notes": ((13, 7, 45),),
+        "duration_ticks": 45,
+        "ucd_volume": 222,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 922072,
+        "wave_length": 2116,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 3760,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "126427d6140813a00aadc14a7c4f51ec2cdeb013a1b030b7f2b9e29c08898b08",
+        "render_program_sha256":
+            "126427d6140813a00aadc14a7c4f51ec2cdeb013a1b030b7f2b9e29c08898b08",
+        "articulation_program_sha256":
+            "eff2f55d748352dca4be41a0377216dba9f6ab9a65b68438f09913a514f3a8e3",
+        "aot_source_schedule": True,
+        "source_actions": (
+            {"action": "dFoxMainMotion_JumpAerialB",
+             "trigger_game_tick": 0, "call": "ftMotionPlayVoice"},
+        ),
+        "source_action_file":
+            "decomp/src/relocData/208_FoxMainMotion.c",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 364,
+        "name": "nSYAudioVoiceFoxEscape",
+        "kind": "voice",
+        "articulation": 221,
+        "sound": 102,
+        "notes": ((13, 7, 20), (13, 7, 20), (13, 7, 20),
+                  (13, 7, 5)),
+        "duration_ticks": 65,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 903200,
+        "wave_length": 1638,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2912,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "9baa16746dc4d654749dce8e6dd786d13faa021e275593f654ec5ad92a14f89e",
+        "render_program_sha256":
+            "9baa16746dc4d654749dce8e6dd786d13faa021e275593f654ec5ad92a14f89e",
+        "articulation_program_sha256":
+            "fac513d6d196e7a9ea445e98c30dc7d837063108c99902c4a2a88a5e08b3d8d9",
+        "aot_source_schedule": True,
+        "source_actions": (
+            {"action": "dFoxMainMotion_TechB_0x418",
+             "trigger_game_tick": 4, "call": "ftMotionPlayVoice"},
+            {"action": "dFoxMainMotion_RollB",
+             "trigger_game_tick": 4, "call": "ftMotionPlayVoice"},
+        ),
+        "source_action_file":
+            "decomp/src/relocData/208_FoxMainMotion.c",
+        "fidelity_debt": (),
     },
     {
         "id": 372,
@@ -213,7 +478,7 @@ SELECTED = (
         "wave_length": 3762,
         "loop_start": 0,
         "loop_end": 0,
-        "expected_retained_samples": 6688,
+        "expected_retained_samples": 5168,
         "root_fork_programs": (287,),
         "root_program_sha256":
             "64523939186fd3d63f5440b5ec78784dac4e10c76456ebaa75671e4bfd9a85c2",
@@ -221,7 +486,8 @@ SELECTED = (
             "634c9b1217b933f51dde97353d62e908fa1082943114d6dbe72bb188a3f33776",
         "articulation_program_sha256":
             "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
-        "fidelity_debt": ("articulation_pitch_modulation",),
+        "fidelity_debt": ("articulation_volume_modulation",
+                          "articulation_pitch_automation"),
     },
     {
         "id": 370,
@@ -264,7 +530,7 @@ SELECTED = (
         "wave_length": 3762,
         "loop_start": 0,
         "loop_end": 0,
-        "expected_retained_samples": 6688,
+        "expected_retained_samples": 5168,
         "root_fork_programs": (287,),
         "root_program_sha256":
             "64523939186fd3d63f5440b5ec78784dac4e10c76456ebaa75671e4bfd9a85c2",
@@ -272,7 +538,53 @@ SELECTED = (
             "634c9b1217b933f51dde97353d62e908fa1082943114d6dbe72bb188a3f33776",
         "articulation_program_sha256":
             "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
-        "fidelity_debt": ("articulation_pitch_modulation",),
+        "fidelity_debt": ("articulation_volume_modulation",
+                          "articulation_pitch_automation"),
+    },
+    {
+        "id": 300,
+        "name": "nSYAudioFGMFoxDownBounce",
+        "kind": "movement",
+        "render_program": 298,
+        "articulation": 187,
+        "sound": 28,
+        "notes": ((12, 7, 10), (12, 7, 15)),
+        "duration_ticks": 25,
+        "ucd_volume": 130,
+        "articulation_pitch_cents": -1100,
+        "loop": False,
+        "wave_base": 251360,
+        "wave_length": 3762,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2301,
+        "root_fork_programs": (298,),
+        "root_program_sha256":
+            "0a7645ae1249ff5140ddbf80859b52c127b73d2b80e0b97d90cc3b61b0c4b262",
+        "render_program_sha256":
+            "9ed69d587dab562768d6321d349477c4f522c0b65115fb7cb2c1f27d5b27c4c2",
+        "articulation_program_sha256":
+            "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
+        "aot_modulator_index": 22,
+        "aot_modulator": {
+            "shape": 0,
+            "target": 11,
+            "postproc": 0,
+            "init_phase": 49,
+            "period": 100.0,
+            "amplitude": 50.0,
+            "offset": 50.0,
+        },
+        "aot_source_schedule": True,
+        "source_actions": (
+            {"action": "nFTCommonStatusDownBounceU",
+             "trigger_game_tick": 0, "call": "func_800269C0_275C0"},
+            {"action": "nFTCommonStatusDownBounceD",
+             "trigger_game_tick": 0, "call": "func_800269C0_275C0"},
+        ),
+        "source_action_file":
+            "decomp/src/ft/ftcommon/ftcommondownwaitbounce.c",
+        "fidelity_debt": (),
     },
     {
         "id": 154,
@@ -303,6 +615,579 @@ SELECTED = (
         "articulation_program_sha256":
             "a6ebcc72a0293708770674b0e871961bf6a5223c52ae4d0b6d31ea993e8fb6b8",
         "fidelity_debt": ("ucd_pitch_automation", "omitted_fork_voice_685"),
+    },
+    {
+        "id": 77,
+        "name": "nSYAudioFGMMarioLanding",
+        "kind": "mario",
+        "render_program": 72,
+        "articulation": 3,
+        "sound": 1,
+        "notes": ((8, 7, 3),),
+        "duration_ticks": 3,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": 700,
+        "loop": False,
+        "wave_base": 14224,
+        "wave_length": 2944,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 621,
+        "root_fork_programs": (72,),
+        "root_program_sha256":
+            "c5fb3a31fc2383118516512dda33fdd0f670a91a490bfc333c27b21e66d6f4a0",
+        "render_program_sha256":
+            "9b37506dc57cc43b255fa175bfb1e9256fc4c955ae00e4bd600bf4ab123781cf",
+        "articulation_program_sha256":
+            "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
+        "aot_source_schedule": True,
+        "fidelity_debt": (),
+    },
+)
+
+# These source cues are deliberately audited but not packed.  Both retune an
+# already-running voice after playback starts; the current DS entry format has
+# no frequency schedule, so first-note playback would be behaviorally wrong.
+EXCLUDED_SOURCE_CUES = (
+    {
+        "id": 429,
+        "name": "nSYAudioVoiceMarioSmash1",
+        "kind": "voice",
+        "articulation": 296,
+        "sound": 173,
+        "notes": ((12, 7, 6), (12, 7, 20), (11, 7, 30),
+                  (10, 7, 40)),
+        "duration_ticks": 96,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1430184,
+        "wave_length": 2052,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 3648,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "305f617ac74e0c0d714d7a107d18d481bdfbd8d0c26d29f1dd1d00593f104269",
+        "render_program_sha256":
+            "305f617ac74e0c0d714d7a107d18d481bdfbd8d0c26d29f1dd1d00593f104269",
+        "articulation_program_sha256":
+            "213f87188a79bd2c5ac6c58d1162a54912cc95f33afaa742be3c35f71311c2a3",
+        "fidelity_debt": ("ucd_pitch_automation",),
+        "exclusion_reason":
+            "continuous_voice_pitch_schedule_not_representable",
+    },
+    {
+        "id": 435,
+        "name": "nSYAudioVoiceMarioJump",
+        "kind": "voice",
+        "articulation": 302,
+        "sound": 179,
+        "notes": ((12, 7, 6), (12, 7, 20), (12, 7, 30),
+                  (9, 7, 40)),
+        "duration_ticks": 96,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1160,
+        "loop": False,
+        "wave_base": 1482688,
+        "wave_length": 1882,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 3344,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "820e3ad7c1f3c07e61e0a3047e722314a89aac24ca934fd3c3dae8af1ef3e866",
+        "render_program_sha256":
+            "820e3ad7c1f3c07e61e0a3047e722314a89aac24ca934fd3c3dae8af1ef3e866",
+        "articulation_program_sha256":
+            "4fc9031eda94767f7e8f989a5cf9bf02f5ac1091519ac817bd22da87e6fc34d2",
+        "fidelity_debt": ("ucd_pitch_automation",),
+        "exclusion_reason":
+            "combined_ucd_and_articulation_pitch_schedule_not_representable",
+    },
+)
+
+SELECTED += (
+    {
+        "id": 215,
+        "name": "nSYAudioFGMMarioSpecialN",
+        "kind": "attack",
+        "articulation": 42,
+        "sound": 19,
+        "notes": ((13, 7, 5), (13, 7, 10)),
+        "duration_ticks": 15,
+        "ucd_volume": 250,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "wave_base": 191464,
+        "wave_length": 1224,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2176,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "c9f584ac64297bfca52605e5bd01c3d42a31126f7d6e3e73cc4e65b9743cc6ac",
+        "render_program_sha256":
+            "c9f584ac64297bfca52605e5bd01c3d42a31126f7d6e3e73cc4e65b9743cc6ac",
+        "articulation_program_sha256":
+            "78e320e6ee2a2832cb2f3635016b5b46d13fa820dccf4651d7effcd36ee5c7dd",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 40,
+        "name": "nSYAudioFGMPunchS",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "fighter punch-kind small collision",
+        "source_callsites": (
+            "ftmain.c:dFTMainHitCollisionFGMs[punch][small]",
+            "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
+        ),
+        "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
+        "runtime_excluded_reasons": (
+            "source_composite_fork_not_rendered",
+            "source_note_retrigger_and_volume_automation_not_rendered",
+            "source_custom_fx_route_not_rendered",
+        ),
+        "articulation": 31,
+        "sound": 11,
+        "notes": ((12, 7, 48), (12, 7, 20)),
+        "duration_ticks": 68,
+        "ucd_volume": 170,
+        "articulation_pitch_cents": -300,
+        "loop": False,
+        "wave_base": 120848,
+        "wave_length": 9234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 16416,
+        "root_fork_programs": (655,),
+        "omitted_fork_programs": (655,),
+        "root_program_sha256":
+            "28f536fe3e90955bbedb7cddaf62f405433d5e8eab4ea3c501988d4b56c5b4a3",
+        "render_program_sha256":
+            "28f536fe3e90955bbedb7cddaf62f405433d5e8eab4ea3c501988d4b56c5b4a3",
+        "omitted_fork_program_sha256": (
+            "75fe85b876585bbdd7b5688160d81e53d77fe6068fee46531d49641cd2540f40",
+        ),
+        "articulation_program_sha256":
+            "783c596ffcb39d9338e3e3ab7fb99db0cb7751cac24ecdf841b8e2b043417298",
+        "fidelity_debt": ("ucd_volume_automation",
+                          "omitted_fork_voice_655"),
+    },
+    {
+        "id": 38,
+        "name": "nSYAudioFGMPunchM",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "fighter punch-kind medium collision",
+        "source_callsites": (
+            "ftmain.c:dFTMainHitCollisionFGMs[punch][medium]",
+            "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
+        ),
+        "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
+        "runtime_excluded_reasons": (
+            "source_composite_fork_not_rendered",
+            "source_note_retrigger_pitch_and_volume_automation_not_rendered",
+            "source_custom_fx_route_not_rendered",
+        ),
+        "articulation": 29,
+        "sound": 11,
+        "notes": ((14, 7, 48), (13, 7, 48), (13, 7, 15)),
+        "duration_ticks": 111,
+        "ucd_volume": 250,
+        "articulation_pitch_cents": 50,
+        "loop": False,
+        "wave_base": 120848,
+        "wave_length": 9234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 16416,
+        "root_fork_programs": (654,),
+        "omitted_fork_programs": (654,),
+        "root_program_sha256":
+            "d04ce6abe4111930deb668c4cfc78e8a1e82462f2935e6978eef88661e3d1639",
+        "render_program_sha256":
+            "d04ce6abe4111930deb668c4cfc78e8a1e82462f2935e6978eef88661e3d1639",
+        "omitted_fork_program_sha256": (
+            "a287c6195f269a6729a74db38a6aa2f3b707a19d44ffba4ef4f21750530daee5",
+        ),
+        "articulation_program_sha256":
+            "580678b358c9a14cd9879a965edbeb70009f96155be3e041b7d819cc882bcc63",
+        "fidelity_debt": ("ucd_pitch_automation", "ucd_volume_automation",
+                          "articulation_pitch_modulation",
+                          "omitted_fork_voice_654"),
+    },
+    {
+        "id": 37,
+        "name": "nSYAudioFGMPunchL",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "fighter punch-kind large collision",
+        "source_callsites": (
+            "ftmain.c:dFTMainHitCollisionFGMs[punch][large]",
+            "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
+        ),
+        "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
+        "runtime_excluded_reasons": (
+            "source_composite_fork_not_rendered",
+            "source_note_retrigger_pitch_volume_and_modulation_not_rendered",
+            "source_custom_fx_route_not_rendered",
+        ),
+        "articulation": 30,
+        "sound": 11,
+        "notes": ((16, 7, 45), (16, 7, 45), (15, 7, 45),
+                  (15, 7, 20)),
+        "duration_ticks": 155,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": 300,
+        "loop": False,
+        "wave_base": 120848,
+        "wave_length": 9234,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 16416,
+        "root_fork_programs": (653,),
+        "omitted_fork_programs": (653,),
+        "root_program_sha256":
+            "80d72e74f0d4de80cb03e4a78f45907892bf5ebf1e464394917a7157337fd249",
+        "render_program_sha256":
+            "80d72e74f0d4de80cb03e4a78f45907892bf5ebf1e464394917a7157337fd249",
+        "omitted_fork_program_sha256": (
+            "450624587294d4be7b473cfba7223e1a5cbdfe3bfe45b630fe96bac4ce7a17ed",
+        ),
+        "articulation_program_sha256":
+            "4d3bbb2b0f80ef41f06f9c4812a795e6a12989855c7f5320fd1e5d7f957cfd27",
+        "fidelity_debt": ("ucd_pitch_automation", "ucd_volume_automation",
+                          "articulation_pitch_modulation",
+                          "omitted_fork_voice_653"),
+    },
+    {
+        "id": 34,
+        "name": "nSYAudioFGMKickS",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "fighter kick-kind small collision",
+        "source_callsites": (
+            "ftmain.c:dFTMainHitCollisionFGMs[kick][small]",
+            "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
+        ),
+        "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
+        "runtime_excluded_reasons": (
+            "source_composite_fork_not_rendered",
+            "source_note_retrigger_and_volume_automation_not_rendered",
+            "source_custom_fx_route_not_rendered",
+        ),
+        "articulation": 34,
+        "sound": 16,
+        "notes": ((6, 7, 50), (6, 7, 20)),
+        "duration_ticks": 70,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": -888,
+        "loop": False,
+        "wave_base": 165960,
+        "wave_length": 6310,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 11216,
+        "root_fork_programs": (658,),
+        "omitted_fork_programs": (658,),
+        "root_program_sha256":
+            "9b0c4611ee9ce3034b129dd41cd3e88fa5bacf7fb7e797e6872aac0bc94fade5",
+        "render_program_sha256":
+            "9b0c4611ee9ce3034b129dd41cd3e88fa5bacf7fb7e797e6872aac0bc94fade5",
+        "omitted_fork_program_sha256": (
+            "75fe85b876585bbdd7b5688160d81e53d77fe6068fee46531d49641cd2540f40",
+        ),
+        "articulation_program_sha256":
+            "a83fb7f2cb1c8190e22fe4cd76afc24697de9041d7b0729b5ffc226d67a5bfcd",
+        "fidelity_debt": ("ucd_volume_automation",
+                          "omitted_fork_voice_658"),
+    },
+    {
+        "id": 32,
+        "name": "nSYAudioFGMKickM",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "fighter kick-kind medium collision",
+        "source_callsites": (
+            "ftmain.c:dFTMainHitCollisionFGMs[kick][medium]",
+            "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
+        ),
+        "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
+        "runtime_excluded_reasons": (
+            "source_composite_fork_not_rendered",
+            "source_note_retrigger_and_volume_automation_not_rendered",
+            "source_custom_fx_route_not_rendered",
+        ),
+        "articulation": 35,
+        "sound": 16,
+        "notes": ((8, 7, 48), (8, 7, 48), (8, 7, 15)),
+        "duration_ticks": 111,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -900,
+        "loop": False,
+        "wave_base": 165960,
+        "wave_length": 6310,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 11216,
+        "root_fork_programs": (657,),
+        "omitted_fork_programs": (657,),
+        "root_program_sha256":
+            "420b243a1616819719fac1e41e538c938049be781dffaa397560811b07d2cf24",
+        "render_program_sha256":
+            "420b243a1616819719fac1e41e538c938049be781dffaa397560811b07d2cf24",
+        "omitted_fork_program_sha256": (
+            "91c40dab5937cf9d5e3e9c50bf838d662061e9ffe2e9f9a5a7fcb63a2978afaa",
+        ),
+        "articulation_program_sha256":
+            "1ee86a59e8fa37a8d78be0a286f908f67f2a44018dc39863444f52222cb47b9c",
+        "fidelity_debt": ("ucd_volume_automation",
+                          "omitted_fork_voice_657"),
+    },
+    {
+        "id": 31,
+        "name": "nSYAudioFGMKickL",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "fighter kick-kind large collision",
+        "source_callsites": (
+            "ftmain.c:dFTMainHitCollisionFGMs[kick][large]",
+            "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
+        ),
+        "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
+        "runtime_excluded_reasons": (
+            "source_composite_fork_not_rendered",
+            "source_note_retrigger_pitch_volume_and_modulation_not_rendered",
+            "source_custom_fx_route_not_rendered",
+        ),
+        "articulation": 33,
+        "sound": 16,
+        "notes": ((10, 7, 44), (10, 7, 45), (10, 7, 45),
+                  (10, 7, 17)),
+        "duration_ticks": 151,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -900,
+        "loop": False,
+        "wave_base": 165960,
+        "wave_length": 6310,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 11216,
+        "root_fork_programs": (656,),
+        "omitted_fork_programs": (656,),
+        "root_program_sha256":
+            "11c5a67bd6baa8730dace7c881508222177acb1d710670d4efeee4671a602c0c",
+        "render_program_sha256":
+            "11c5a67bd6baa8730dace7c881508222177acb1d710670d4efeee4671a602c0c",
+        "omitted_fork_program_sha256": (
+            "eee8f09b8d3cdc1b0a04eb7c2563b74039d51fe6fba2fd0d302a41da9f6cc272",
+        ),
+        "articulation_program_sha256":
+            "566a178f2e69b1e045900a590c78e4064780a57cca2864e5d83ceb0472f9c725",
+        "fidelity_debt": ("ucd_volume_automation",
+                          "omitted_fork_voice_656"),
+    },
+    {
+        "id": 216,
+        "name": "nSYAudioFGMMarioSpecialHiCoin",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "Mario special-hi coin-kind fighter collision",
+        "source_callsites": (
+            "ftmain.c:dFTMainHitCollisionFGMs[coin][all-levels]",
+            "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
+        ),
+        "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
+        "runtime_excluded_reasons": (
+            "source_composite_fork_not_rendered",
+            "source_note_stop_live_pitch_and_loop_behavior_not_rendered",
+            "fork_668_initial_65875_hz_exceeds_ds_u16_frequency",
+        ),
+        "articulation": 51,
+        "sound": 22,
+        "notes": ((12, 7, 10), (0, 7, 2), (17, 7, 40),
+                  (17, 7, 40)),
+        "duration_ticks": 92,
+        "ucd_volume": 170,
+        "articulation_pitch_cents": 0,
+        "loop": True,
+        "wave_base": 199064,
+        "wave_length": 918,
+        "loop_start": 10,
+        "loop_end": 1625,
+        "render_source_loop": True,
+        "expected_retained_samples": 20458,
+        "root_fork_programs": (668,),
+        "omitted_fork_programs": (668,),
+        "root_program_sha256":
+            "27f9f2691fd4c5b25cfac411a75270e418990e5719788f71f7dd020ea8a7816f",
+        "render_program_sha256":
+            "27f9f2691fd4c5b25cfac411a75270e418990e5719788f71f7dd020ea8a7816f",
+        "omitted_fork_program_sha256": (
+            "ff46bd44f488c9b61ae7df69ab8a6706c8638e86a4d19739425de35f533efc82",
+        ),
+        "articulation_program_sha256":
+            "aaad5c2c434005ef3ce87adead9c89da0bbfdd883488b0e59594a8b145295e9f",
+        "fidelity_debt": ("ucd_pitch_automation",
+                          "omitted_fork_voice_668"),
+    },
+    {
+        "id": 28,
+        "name": "nSYAudioFGMBurnS",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "Mario Fireball weapon collision BurnS component",
+        "source_callsites": (
+            "204_MarioSpecial1.c:fireball weapon attribute sfx=28",
+            "ftmain.c:ftMainUpdateDamageStatWeapon->func_800269C0_275C0",
+            "wpmariofireball.c:wpMarioFireballProcHit also starts ID 0",
+        ),
+        "source_pan_behavior": "centered func_800269C0_275C0 weapon hit",
+        "runtime_excluded_reasons": (
+            "source_loop_and_envelope_not_aot_rendered",
+            "paired_fireball_proc_hit_id_0_is_not_behavior_exact",
+        ),
+        "articulation": 65,
+        "sound": 27,
+        "notes": ((13, 7, 50), (13, 7, 40), (13, 7, 70)),
+        "duration_ticks": 160,
+        "ucd_volume": 150,
+        "articulation_pitch_cents": 0,
+        "loop": True,
+        "wave_base": 235736,
+        "wave_length": 15624,
+        "loop_start": 13840,
+        "loop_end": 27456,
+        "render_source_loop": True,
+        "expected_retained_samples": 29441,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "e2709974888dccc4920fcf1bd21bdb6171ffd8f38846b38f516f21aa4adfa298",
+        "render_program_sha256":
+            "e2709974888dccc4920fcf1bd21bdb6171ffd8f38846b38f516f21aa4adfa298",
+        "articulation_program_sha256":
+            "39cd6d6668a90146cdef1f14fcfd817aa715ee258af68599973edfe8b4d3e425",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 2,
+        "name": "nSYAudioFGMFireShoot1",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "Fox Blaster weapon collision",
+        "source_callsites": (
+            "210_FoxSpecial1.c:blaster weapon attribute sfx=2",
+            "ftmain.c:ftMainUpdateDamageStatWeapon->func_800269C0_275C0",
+        ),
+        "source_pan_behavior": "centered func_800269C0_275C0 weapon hit",
+        "runtime_excluded_reasons": (
+            "source_envelope_not_aot_rendered",
+            "source_custom_fx_route_not_rendered",
+        ),
+        "articulation": 7,
+        "sound": 4,
+        "notes": ((18, 7, 50), (18, 7, 140)),
+        "duration_ticks": 190,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": 300,
+        "loop": False,
+        "wave_base": 28560,
+        "wave_length": 17046,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 30304,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "a79a589363657a4069e95f2b5d8d1f1cb589f17aa4d87ba8021c2a16e0063746",
+        "render_program_sha256":
+            "a79a589363657a4069e95f2b5d8d1f1cb589f17aa4d87ba8021c2a16e0063746",
+        "articulation_program_sha256":
+            "25baf51195b0172ac10261cc3368f6fac20147a94e42f2ca777aab29ab13a6b3",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 0,
+        "name": "nSYAudioFGMExplodeS",
+        "kind": "hit",
+        "runtime_excluded": True,
+        "action_contract": "Mario Fireball proc-hit/shield/setoff/absorb explosion",
+        "source_callsites": (
+            "wpmariofireball.c:wpMarioFireballProcHit->func_800269C0_275C0(0)",
+        ),
+        "source_pan_behavior": "centered func_800269C0_275C0 proc hit",
+        "runtime_excluded_reasons": (
+            "source_envelope_not_aot_rendered",
+            "source_custom_fx_route_not_rendered",
+        ),
+        "articulation": 7,
+        "sound": 4,
+        "notes": ((3, 7, 20), (3, 7, 30), (3, 7, 85)),
+        "duration_ticks": 135,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": 300,
+        "loop": False,
+        "wave_base": 28560,
+        "wave_length": 17046,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 30304,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "7874ec9371696e630f3e27f81fa10ff9661013ada5c1b880b5f3fdfe054d5a36",
+        "render_program_sha256":
+            "7874ec9371696e630f3e27f81fa10ff9661013ada5c1b880b5f3fdfe054d5a36",
+        "articulation_program_sha256":
+            "25baf51195b0172ac10261cc3368f6fac20147a94e42f2ca777aab29ab13a6b3",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 188,
+        "name": "nSYAudioFGMFoxSpecialLwHit",
+        "kind": "hit_inventory",
+        "runtime_excluded": True,
+        "action_contract": "Fox reflector successful-reflect motion cue",
+        "source_callsites": (
+            "208_FoxMainMotion.c:dFoxMainMotion_Reflecting->ftMotionPlayFGM(188)",
+        ),
+        "source_pan_behavior": "centered fighter motion FGM",
+        "runtime_excluded_reasons": (
+            "no_natural_mode_163_call_observed",
+            "source_live_pitch_and_envelope_not_aot_rendered",
+            "source_custom_fx_route_not_rendered",
+        ),
+        "articulation": 45,
+        "sound": 12,
+        "notes": ((18, 7, 1), (20, 7, 1), (12, 7, 2),
+                  (15, 7, 2), (18, 7, 1), (15, 7, 2),
+                  (8, 7, 1), (8, 7, 2), (11, 7, 2),
+                  (13, 7, 2), (15, 7, 6)),
+        "duration_ticks": 22,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": True,
+        "wave_base": 130088,
+        "wave_length": 4320,
+        "loop_start": 100,
+        "loop_end": 7664,
+        "expected_retained_samples": 7680,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "a974ed1ff5e44afae9c6dc701e489ed7836dcb70a11b36c244b171782a5f26e5",
+        "render_program_sha256":
+            "a974ed1ff5e44afae9c6dc701e489ed7836dcb70a11b36c244b171782a5f26e5",
+        "articulation_program_sha256":
+            "a58c3cff3972a3140b9a507942634ac9d2df4eb6b310e9e01c0db0797ef852ae",
+        "fidelity_debt": (),
     },
 )
 
@@ -392,7 +1277,8 @@ def validate_ucd(root_program: list[list], program: list[list],
                 f"{sorted(present & forbidden)}")
     if first_program_arg(program, "set_articulation") != selector["articulation"]:
         raise ValueError(f"FGM {selector['id']} articulation changed")
-    if first_program_arg(program, "set_volume") != selector["ucd_volume"]:
+    volumes = [int(row[1]) for row in program if row[0] == "set_volume"]
+    if not volumes or volumes[0] != selector["ucd_volume"]:
         raise ValueError(f"FGM {selector['id']} volume changed")
     notes = [row for row in program if row[0] == "note"]
     if "notes" in selector:
@@ -430,6 +1316,262 @@ def validate_articulation(program: list[list], selector: dict) -> None:
                 f"{sorted(unsupported)}")
     if not program or program[-1][0] != "end":
         raise ValueError(f"FGM {selector['id']} articulation has no end")
+
+
+def fgm_voice_source_audit(program_id: int, ucd: dict,
+                           articulations: dict, instrument: dict,
+                           ctl_by_offset: dict, source_tbl: bytes,
+                           audio_codec) -> dict:
+    program = ucd["entries"][program_id]["program"]
+    articulation_id = first_program_arg(program, "set_articulation")
+    articulation = articulations["entries"][articulation_id]["program"]
+    sound_id = first_program_arg(articulation, "trigger")
+    sound_offset = instrument["soundArray_offs"][sound_id]
+    sound = ctl_by_offset[sound_offset]
+    wave = ctl_by_offset[sound["wavetable_off"]]
+    book = ctl_by_offset[wave["book_off"]]
+    loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+    vadpcm = source_tbl[wave["base"]:wave["base"] + wave["length"]]
+    frame_bytes = len(vadpcm) - (len(vadpcm) % 9)
+    pcm = audio_codec.adpcm_decode(
+        vadpcm[:frame_bytes], book["entries"], book["order"],
+        book["npredictors"])
+
+    root_volume = 255
+    root_fx_scale = 64
+    root_pan = 64
+    cut_before_note_end = False
+    note_tick = 0
+    previous_duration = None
+    previous_cut_before_note_end = False
+    articulation_pitches = [int(row[1]) for row in articulation
+                            if row[0] == "pitch"]
+    if not articulation_pitches:
+        raise ValueError(f"FGM voice {program_id} has no articulation pitch")
+    initial_articulation_pitch = articulation_pitches[0]
+    note_schedule = []
+    root_volume_schedule = []
+    root_pan_schedule = []
+    for row in program:
+        if row[0] == "set_unk1E":
+            cut_before_note_end = (int(row[1]) & 0x80) != 0
+        elif row[0] == "set_volume":
+            root_volume = int(row[1])
+            root_volume_schedule.append({"tick": note_tick,
+                                         "value": root_volume})
+        elif row[0] == "vol_delta":
+            root_volume = max(0, min(255, root_volume + int(row[1])))
+            root_volume_schedule.append({"tick": note_tick,
+                                         "value": root_volume})
+        elif row[0] == "set_unk2C":
+            root_fx_scale = int(row[1])
+        elif row[0] == "unk2C_delta":
+            root_fx_scale = max(
+                0, min(127, root_fx_scale + int(row[1])))
+        elif row[0] == "set_pan":
+            root_pan = int(row[1])
+            root_pan_schedule.append({"tick": note_tick,
+                                      "value": root_pan})
+        elif row[0] == "pan_delta":
+            root_pan = max(0, min(127, root_pan + int(row[1])))
+            root_pan_schedule.append({"tick": note_tick,
+                                      "value": root_pan})
+        elif row[0] == "note":
+            duration = int(row[3])
+            pitch_code = int(row[1])
+            starts_new_voice = (
+                previous_duration is None or
+                (previous_cut_before_note_end and previous_duration > 1))
+            note_schedule.append({
+                "start_tick": note_tick,
+                "duration_ticks": duration,
+                "pitch_code": pitch_code,
+                "root_volume": root_volume,
+                "starts_new_voice": starts_new_voice,
+                "cut_before_note_end": cut_before_note_end,
+                "initial_frequency_hz": note_frequency_hz(
+                    initial_articulation_pitch, pitch_code),
+                "release_ramp_start_tick": (
+                    note_tick + duration - 1
+                    if cut_before_note_end and duration > 1 else None),
+            })
+            note_tick += duration
+            previous_duration = duration
+            previous_cut_before_note_end = cut_before_note_end
+
+    articulation_tick = 0
+    pitch_schedule = []
+    volume_schedule = []
+    fx_mix_schedule = []
+    modulation_schedule = []
+    articulation_fx = 0
+    for row in articulation:
+        op = row[0]
+        if op == "pitch":
+            pitch_schedule.append({"tick": articulation_tick,
+                                   "cents": int(row[1])})
+        elif op == "vol":
+            volume_schedule.append({"tick": articulation_tick,
+                                    "value": int(row[1])})
+        elif op == "unk36":
+            value = int(row[1])
+            articulation_fx = (value if value <= 127 else
+                               max(0, min(127,
+                                          articulation_fx + value - 192)))
+            fx_mix_schedule.append({
+                "tick": articulation_tick,
+                "articulation_unk36": articulation_fx,
+                "root_unk2c": root_fx_scale,
+                "effective_fx_mix": (
+                    articulation_fx * (root_fx_scale >> 1) >> 7),
+            })
+        elif op in ("spawn_mod", "stop_mod"):
+            modulation_schedule.append({"tick": articulation_tick,
+                                        "command": row[:-1]})
+        articulation_tick += int(row[-1])
+
+    loop_audit = None
+    if loop is not None:
+        loop_audit = {
+            "start": loop["start"],
+            "end": loop["end"],
+            "count": loop["count"],
+            "count_signed": -1 if loop["count"] == 0xffffffff else
+                loop["count"],
+            "state": loop.get("state", []),
+            "state_sha256": json_sha256(loop.get("state", [])),
+        }
+    return {
+        "program_id": program_id,
+        "ucd_program": program,
+        "ucd_program_sha256": json_sha256(program),
+        "fork_program_ids": [int(row[1]) for row in program
+                             if row[0] == "fork_voice"],
+        "root_volume_schedule": root_volume_schedule,
+        "root_pan_schedule": root_pan_schedule,
+        "root_fx_scale_unk2c": root_fx_scale,
+        "cut_before_note_end": cut_before_note_end,
+        "note_schedule": note_schedule,
+        "articulation_id": articulation_id,
+        "articulation_program": articulation,
+        "articulation_program_sha256": json_sha256(articulation),
+        "articulation_pitch_schedule": pitch_schedule,
+        "articulation_volume_schedule": volume_schedule,
+        "articulation_fx_mix_schedule": fx_mix_schedule,
+        "articulation_modulation_schedule": modulation_schedule,
+        "requires_custom_fx": any(
+            point["effective_fx_mix"] != 0 for point in fx_mix_schedule),
+        "sound_id": sound_id,
+        "sound_offset": sound_offset,
+        "sound_sample_pan_ignored_by_fgm": sound["samplePan"],
+        "sound_sample_volume_ignored_by_fgm": sound["sampleVolume"],
+        "wave_base": wave["base"],
+        "wave_length": wave["length"],
+        "source_vadpcm_frame_bytes": frame_bytes,
+        "source_vadpcm_trailing_bytes": len(vadpcm) - frame_bytes,
+        "source_vadpcm_sha256": sha256(vadpcm),
+        "source_pcm_samples": len(pcm),
+        "source_pcm_sha256": ima_pcm_sha256(pcm),
+        "adpcm_book_order": book["order"],
+        "adpcm_book_predictors": book["npredictors"],
+        "adpcm_book_sha256": json_sha256(book["entries"]),
+        "source_loop": loop_audit,
+        "source_stop_retrigger_policy": (
+            "each note records the then-current set_unk1E high-bit; a set "
+            "high-bit and duration_gt_1 fades out for one 184-sample block "
+            "at duration_minus_1, otherwise the next note updates the live "
+            "voice until stop_voice"),
+    }
+
+
+def excluded_hit_source_audit(selector: dict, ucd: dict,
+                              articulations: dict, instrument: dict,
+                              ctl_by_offset: dict, source_tbl: bytes,
+                              audio_codec) -> dict:
+    root_program = ucd["entries"][selector["id"]]["program"]
+    validate_ucd(root_program, root_program, selector)
+    root_voice = fgm_voice_source_audit(
+        selector["id"], ucd, articulations, instrument, ctl_by_offset,
+        source_tbl, audio_codec)
+    validate_articulation(root_voice["articulation_program"], selector)
+    voices = [root_voice]
+    for fork_id, expected_hash in zip(
+            selector.get("omitted_fork_programs", ()),
+            selector.get("omitted_fork_program_sha256", ())):
+        fork_voice = fgm_voice_source_audit(
+            fork_id, ucd, articulations, instrument, ctl_by_offset,
+            source_tbl, audio_codec)
+        if fork_voice["ucd_program_sha256"] != expected_hash:
+            raise ValueError(
+                f"FGM {selector['id']} omitted fork {fork_id} changed")
+        voices.append(fork_voice)
+    return {
+        "id": selector["id"],
+        "name": selector["name"],
+        "entry_kind": selector["kind"],
+        "runtime_included": False,
+        "action_contract": selector["action_contract"],
+        "source_callsites": list(selector["source_callsites"]),
+        "source_pan_behavior": selector["source_pan_behavior"],
+        "runtime_excluded_reasons": list(
+            selector["runtime_excluded_reasons"]),
+        "voices": voices,
+    }
+
+
+def source_custom_fx_audit(repo_root: Path) -> dict:
+    source_path = repo_root / "decomp/BattleShip-main/decomp/src/sys/audio.c"
+    source = source_path.read_text(encoding="utf-8")
+    mixer_path = (repo_root /
+                  "decomp/BattleShip-main/decomp/src/libultra/n_audio/n_env.c")
+    mixer_source = mixer_path.read_text(encoding="utf-8")
+    scene_path = (repo_root /
+                  "decomp/BattleShip-main/decomp/src/sc/scmanager.c")
+    scene_source = scene_path.read_text(encoding="utf-8")
+    match = re.search(
+        r"s32 dSYAudioCustomFXParams\[.*?\]\s*=\s*\{(.*?)\};",
+        source, re.DOTALL)
+    if match is None:
+        raise ValueError("BattleShip custom FX parameter table not found")
+    params = [int(value) for value in re.findall(r"-?\d+", match.group(1))]
+    if len(params) != 114 or params[:2] != [14, 19200]:
+        raise ValueError("BattleShip custom FX parameter table changed")
+    mixer_fragments = (
+        "case AL_FX_CUSTOM:\tparam = c->params;",
+        "tmp = ((s32)param->volume * (s32)param->volume) >> 15;",
+        "e->em_dryamt = n_eqpower[param->fxMix];",
+        "e->em_wetamt = n_eqpower[N_EQPOWER_LENGTH - param->fxMix - 1];",
+        "param = (arg0->unk36 * (arg0->unk3C >> 1)) >> 7;",
+        "n_alSynSetVol(&arg0->voice, 0, D_8009EDD0_406D0.unk_alsound_0x44);",
+        "D_8009EDD0_406D0.unk_alsound_0x44 = (184000000 / n_syn->outputRate);",
+        "param, param3, 0);",
+    )
+    missing = [fragment for fragment in mixer_fragments
+               if fragment not in mixer_source]
+    if missing:
+        raise ValueError(
+            f"BattleShip n_env mixer contract changed: {missing}")
+    if "syAudioSetFXType(AL_FX_CUSTOM);" not in scene_source:
+        raise ValueError("BattleShip scene custom FX selection changed")
+    return {
+        "scene_selection": "scmanager.c:syAudioSetFXType(AL_FX_CUSTOM)",
+        "parameter_source": "sys/audio.c:dSYAudioCustomFXParams",
+        "parameter_count": len(params),
+        "parameters": params,
+        "parameters_sha256": json_sha256(params),
+        "mixer_source": "libultra/n_audio/n_env.c",
+        "mixer_source_sha256": sha256(mixer_source.encode("utf-8")),
+        "output_rate_hz": FGM_OUTPUT_RATE,
+        "parameter_ramp_microseconds": 184000000 // FGM_OUTPUT_RATE,
+        "parameter_ramp_samples": 184,
+        "start_voice_attack_microseconds": 0,
+        "volume_curve": "(signed_volume * signed_volume) >> 15",
+        "pan_curve": "n_eqpower[pan] / n_eqpower[127-pan]",
+        "fx_mix_formula": "articulation_unk36 * (root_unk2c >> 1) >> 7",
+        "routing": (
+            "n_env.c maps effective fxMix through n_eqpower to dry/wet "
+            "amounts and AL_FX_CUSTOM's 14-section delay network"),
+    }
 
 
 def initial_ima_index(samples: list[int]) -> int:
@@ -802,6 +1944,260 @@ def articulation_envelope(program: list[list], selector: dict) -> list[dict]:
     return points
 
 
+def f32(value: float) -> float:
+    """Round one operation to the source engine's IEEE-754 f32 value."""
+    return struct.unpack(">f", struct.pack(">f", value))[0]
+
+
+def source_sine_table(path: Path) -> tuple[list[int], bytes]:
+    wrapped = path.read_bytes()
+    if sha256(wrapped) != SOURCE_SINE_TABLE_SHA256:
+        raise ValueError("BattleShip source sine table changed")
+    values = [int(value, 16) for value in re.findall(
+        rb"0x([0-9A-Fa-f]{4})", wrapped)]
+    if len(values) != 2048 or values[0] != 0 or values[1024] != 32768:
+        raise ValueError("unexpected BattleShip source sine table")
+    return values, wrapped
+
+
+def validate_source_actions(repo_root: Path, selector: dict) -> list[dict]:
+    actions = [dict(action) for action in selector.get("source_actions", ())]
+    if not actions:
+        return []
+    source_path = (repo_root / "decomp/BattleShip-main" /
+                   selector["source_action_file"])
+    source = source_path.read_text(encoding="utf-8")
+
+    if selector["id"] == 300:
+        call = "func_800269C0_275C0(dFTCommonDataDownBounceSFX[fp->fkind])"
+        if source.count(call) != 1:
+            raise ValueError("Fox DownBounce source callsite changed")
+        status = re.search(
+            r"void\s+ftCommonDownBounceSetStatus\([^)]*\)\s*\{(.*?)\n\}",
+            source, re.DOTALL)
+        if (status is None or
+                status.group(1).find("ftMainSetStatus") < 0 or
+                status.group(1).find("ftCommonDownBounceUpdateEffects") <
+                status.group(1).find("ftMainSetStatus")):
+            raise ValueError("Fox DownBounce status-entry trigger changed")
+        common_data = (repo_root / "decomp/BattleShip-main/decomp/src/ft/"
+                       "ftcommondata.c").read_text(encoding="utf-8")
+        # Fox and Polygon Fox share the same source table entry.
+        if common_data.count("nSYAudioFGMFoxDownBounce") != 2:
+            raise ValueError("Fox DownBounce fighter-to-FGM mapping changed")
+        return actions
+
+    cue = f"{actions[0]['call']}({selector['name']})"
+    if source.count(cue) != len(actions):
+        raise ValueError(
+            f"FGM {selector['id']} source callsite count changed")
+    for action in actions:
+        if action["call"] != actions[0]["call"]:
+            raise ValueError(f"FGM {selector['id']} mixes source call types")
+        match = re.search(
+            rf"ftMotionCommand\s+{re.escape(action['action'])}\[\]\s*=\s*"
+            rf"\{{(.*?)\n\}};", source, re.DOTALL)
+        if match is None or match.group(1).count(cue) != 1:
+            raise ValueError(
+                f"FGM {selector['id']} action {action['action']} changed")
+        prefix = match.group(1).split(cue, 1)[0]
+        trigger_tick = sum(int(value) for value in re.findall(
+            r"ftMotionCommandWait(?:Async)?\((\d+)\)", prefix))
+        if trigger_tick != action["trigger_game_tick"]:
+            raise ValueError(
+                f"FGM {selector['id']} action trigger timing changed")
+    return actions
+
+
+def articulation_tick_schedule(program: list[list], selector: dict,
+                               modulator: dict | None,
+                               sine_table: list[int]) -> list[dict]:
+    events: dict[int, list[list]] = {}
+    event_tick = 0
+    for row in program:
+        events.setdefault(event_tick, []).append(row)
+        event_tick += int(row[-1])
+
+    volume = 127
+    pitch_cents = 0
+    phase = 0.0
+    modulator_active = False
+    note_tick = 0
+    notes = []
+    for pitch_code, _duration_code, duration_ticks in selector["notes"]:
+        notes.append((note_tick, note_tick + duration_ticks, pitch_code))
+        note_tick += duration_ticks
+    if note_tick != selector["duration_ticks"]:
+        raise ValueError(f"FGM {selector['id']} note duration changed")
+
+    schedule = []
+    for tick in range(selector["duration_ticks"]):
+        ended = False
+        for row in events.get(tick, []):
+            if row[0] == "vol":
+                value = int(row[1])
+                volume = (value if value <= 127 else
+                          min(127, max(0, volume + value - 192)))
+            elif row[0] == "pitch":
+                value = int(row[1])
+                pitch_cents = (min(1200, max(-1200, value))
+                               if -1200 <= value <= 1200 else
+                               min(1200, max(-1200,
+                                             pitch_cents + value - 2400)))
+            elif row[0] == "spawn_mod":
+                if (modulator is None or int(row[1]) != 0 or
+                        int(row[2]) != selector["aot_modulator_index"]):
+                    raise ValueError(
+                        f"FGM {selector['id']} AOT modulator binding changed")
+                phase = f32(f32(f32(modulator["period"]) *
+                                f32(modulator["init_phase"])) *
+                            f32(1.0 / 256.0))
+                modulator_active = True
+            elif row[0] == "stop_mod":
+                if int(row[1]) != 0:
+                    raise ValueError(
+                        f"FGM {selector['id']} AOT modulator slot changed")
+                modulator_active = False
+            elif row[0] == "end":
+                ended = True
+            elif row[0] not in ("trigger", "unk36", "pan",
+                                "mark_loop", "jump_loop"):
+                raise ValueError(
+                    f"FGM {selector['id']} AOT gained unsupported op {row[0]}")
+
+        sine_index = None
+        if modulator_active:
+            assert modulator is not None
+            if (modulator["shape"] != 0 or modulator["target"] != 11 or
+                    modulator["postproc"] != 0):
+                raise ValueError(
+                    f"FGM {selector['id']} AOT modulator semantics changed")
+            phase = f32(phase + f32(1.0))
+            if f32(modulator["period"]) < phase:
+                phase = f32(phase - f32(modulator["period"]))
+            phase_ratio = f32(phase / f32(modulator["period"]))
+            sine_index = int(f32(phase_ratio * f32(4096.0))) & 0xFFF
+            angle = f32(sine_table[sine_index & 0x7FF] / f32(65536.0))
+            if sine_index & 0x800:
+                angle = f32(-angle)
+            mod_value = f32(f32(angle * f32(modulator["amplitude"])) +
+                            f32(modulator["offset"]))
+            volume = int(min(127.0, max(0.0,
+                                       f32(mod_value + float(volume)))))
+        if ended:
+            volume = 0
+
+        pitch_code = next((pitch for start, end, pitch in notes
+                           if start <= tick < end), 0)
+        if pitch_code == 0:
+            frequency = 0
+        else:
+            frequency = note_frequency_hz(pitch_cents, pitch_code)
+        pre_mixer_target = source_volume_target(
+            selector["ucd_volume"], volume)
+        quadratic_target = source_quadratic_target(
+            selector["ucd_volume"], volume)
+        schedule.append({
+            "tick": tick,
+            "articulation_volume": volume,
+            "articulation_pitch_cents": pitch_cents,
+            "note_pitch_code": pitch_code,
+            "frequency_hz": frequency,
+            "ds_volume": ds_volume(selector["ucd_volume"], volume),
+            "source_pre_mixer_target": pre_mixer_target,
+            "source_quadratic_target": quadratic_target,
+            "modulator_sine_index": sine_index,
+        })
+    return schedule
+
+
+def render_modulated_voice_aot(pcm: list[int], selector: dict,
+                               program: list[list], modulator: dict | None,
+                               sine_table: list[int],
+                               output_frequency: int) -> tuple[list[int], dict]:
+    schedule = articulation_tick_schedule(
+        program, selector, modulator, sine_table)
+    sample_count = min(
+        len(pcm),
+        ((selector["duration_ticks"] * FGM_TIMER_MICROSECONDS *
+          output_frequency + 999999) // 1000000) + 1)
+    if sample_count != selector["expected_retained_samples"]:
+        raise ValueError(
+            f"FGM {selector['id']} AOT sample extent changed: {sample_count}")
+    maximum_target = max(point["source_quadratic_target"]
+                         for point in schedule)
+    channel_volume = min(
+        127, (maximum_target * 127 + 16383) // 32767)
+    if channel_volume <= 0:
+        raise ValueError(f"FGM {selector['id']} AOT is silent")
+
+    rendered = []
+    step_volume_negative = []
+    source_phase = 0.0
+    for sample_index in range(sample_count):
+        tick = min(
+            selector["duration_ticks"] - 1,
+            (sample_index * 1000000) //
+            (output_frequency * FGM_TIMER_MICROSECONDS))
+        source_index = int(source_phase)
+        if source_index >= len(pcm):
+            raise ValueError(f"FGM {selector['id']} AOT exceeded source PCM")
+        fraction = source_phase - source_index
+        if source_index + 1 == len(pcm):
+            if fraction != 0.0:
+                raise ValueError(
+                    f"FGM {selector['id']} AOT exceeded source PCM")
+            source_sample = pcm[source_index]
+        else:
+            source_sample = int(round(
+                pcm[source_index] * (1.0 - fraction) +
+                pcm[source_index + 1] * fraction))
+        gain_numerator, gain_denominator = public_excited_gain_fraction(
+            sample_index, output_frequency, schedule)
+        scaled = round_div_signed(
+            source_sample * gain_numerator * 127,
+            gain_denominator * 32767 * channel_volume)
+        rendered.append(min(32767, max(-32768, scaled)))
+        step_scaled = round_div_signed(
+            source_sample * schedule[tick]["source_quadratic_target"] * 127,
+            32767 * channel_volume)
+        step_volume_negative.append(min(32767, max(-32768, step_scaled)))
+        source_phase += schedule[tick]["frequency_hz"] / output_frequency
+
+    schedule_changes = [
+        point for index, point in enumerate(schedule)
+        if (index == 0 or modulator is not None or
+            (point["articulation_volume"],
+             point["articulation_pitch_cents"],
+             point["note_pitch_code"]) !=
+            (schedule[index - 1]["articulation_volume"],
+             schedule[index - 1]["articulation_pitch_cents"],
+             schedule[index - 1]["note_pitch_code"]))
+    ]
+    return rendered, {
+        "aot_strategy": "source_articulation_pitch_volume_schedule",
+        "aot_runtime_automation": False,
+        "aot_output_frequency_hz": output_frequency,
+        "aot_output_samples": len(rendered),
+        "aot_source_phase_end": round(source_phase, 6),
+        "aot_constant_hardware_volume": channel_volume,
+        "aot_volume_model": "source_quadratic_n_micro_184_sample_ramps",
+        "aot_ramp_output_rate_hz": FGM_OUTPUT_RATE,
+        "aot_ramp_samples": PUBLIC_EXCITED_RAMP_SAMPLES,
+        "aot_modulator_index": selector.get("aot_modulator_index"),
+        "aot_modulator": dict(modulator) if modulator is not None else None,
+        "aot_full_tick_count": len(schedule),
+        "aot_schedule_sha256": json_sha256(schedule),
+        "aot_rendered_pcm_sha256": sha256(struct.pack(
+            f"<{len(rendered)}h", *rendered)),
+        "aot_step_volume_negative_pcm_sha256": sha256(struct.pack(
+            f"<{len(step_volume_negative)}h", *step_volume_negative)),
+        "aot_step_volume_negative_rejected":
+            step_volume_negative != rendered,
+        "source_effective_tick_schedule": schedule_changes,
+    }
+
+
 def round_div_signed(numerator: int, denominator: int) -> int:
     if denominator <= 0:
         raise ValueError("rounding denominator must be positive")
@@ -815,6 +2211,17 @@ def note_frequency_hz(articulation_pitch_cents: int,
     note_pitch_cents = pitch_code * 100 - 1300
     return round(FGM_OUTPUT_RATE * (2.0 ** (
         (articulation_pitch_cents + note_pitch_cents) / 1200.0)))
+
+
+def render_source_loop(pcm: list[int], loop_start: int, loop_end: int,
+                       sample_count: int) -> list[int]:
+    if not (0 <= loop_start < loop_end <= len(pcm)):
+        raise ValueError("invalid finite source-loop extent")
+    rendered = list(pcm[:min(sample_count, loop_end)])
+    loop = pcm[loop_start:loop_end]
+    while len(rendered) < sample_count:
+        rendered.extend(loop[:sample_count - len(rendered)])
+    return rendered
 
 
 def trim_proof(selector: dict, program: list[list], pcm: list[int],
@@ -841,9 +2248,15 @@ def trim_proof(selector: dict, program: list[list], pcm: list[int],
     current_consumption = ((current_numerator + 999999) // 1000000) + 1
     pitch_modulated = "articulation_pitch_modulation" in selector.get(
         "fidelity_debt", ())
-    if pitch_modulated:
+    if selector.get("render_source_loop", False):
+        retained_samples = max(schedule_reach, current_consumption)
+        strategy = "finite_source_loop_duration_render"
+    elif pitch_modulated:
         retained_samples = len(pcm)
         strategy = "untrimmed_articulation_pitch_modulation"
+    elif selector.get("retain_full_source", False):
+        retained_samples = len(pcm)
+        strategy = "untrimmed_shared_source_reuse"
     else:
         retained_samples = min(
             len(pcm), max(schedule_reach, current_consumption))
@@ -854,7 +2267,14 @@ def trim_proof(selector: dict, program: list[list], pcm: list[int],
         raise ValueError(
             f"FGM {selector['id']} retained-sample proof changed: "
             f"{retained_samples}")
-    retained = pcm[:retained_samples]
+    if selector.get("render_source_loop", False):
+        retained = render_source_loop(
+            pcm, selector["loop_start"], selector["loop_end"],
+            retained_samples)
+        prefix_samples = min(retained_samples, selector["loop_end"])
+    else:
+        retained = pcm[:retained_samples]
+        prefix_samples = retained_samples
     return retained, {
         "trim_strategy": strategy,
         "trim_source_note_segments": segments,
@@ -865,10 +2285,15 @@ def trim_proof(selector: dict, program: list[list], pcm: list[int],
         "trim_current_ds_consumption_reach_samples": current_consumption,
         "trim_one_sample_ceiling": 1,
         "trim_proven_reachable_samples": retained_samples,
-        "trim_source_samples_removed": len(pcm) - retained_samples,
+        "trim_source_samples_removed": max(
+            0, len(pcm) - retained_samples),
         "trim_applied": retained_samples < len(pcm),
         "trim_retained_source_prefix_pcm_sha256": ima_pcm_sha256(retained),
-        "trim_retained_prefix_exact": retained == pcm[:retained_samples],
+        "trim_retained_prefix_exact": (
+            retained[:prefix_samples] == pcm[:prefix_samples]),
+        "finite_source_loop_replay_samples": (
+            max(0, retained_samples - selector["loop_end"])
+            if selector.get("render_source_loop", False) else 0),
     }
 
 
@@ -1016,6 +2441,688 @@ def render_public_excited(pcm: list[int], selector: dict,
     }
 
 
+def region_us_motion_arrays(path: Path) -> list[dict]:
+    """Read the active REGION_US motion-command arrays in source order."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    active = True
+    regions: list[tuple[bool, bool]] = []
+    filtered = []
+    for line in lines:
+        stripped = line.strip()
+        match = re.fullmatch(r"#if defined\(REGION_(JP|US)\)", stripped)
+        if match:
+            condition = match.group(1) == "US"
+            regions.append((active, condition))
+            active = active and condition
+            continue
+        if stripped == "#else" and regions:
+            parent_active, condition = regions[-1]
+            active = parent_active and not condition
+            regions[-1] = (parent_active, not condition)
+            continue
+        if stripped == "#endif" and regions:
+            parent_active, _condition = regions.pop()
+            active = parent_active
+            continue
+        if stripped.startswith("#if") or stripped.startswith("#elif"):
+            raise ValueError(f"unsupported motion preprocessor branch: {line}")
+        if active:
+            filtered.append(line)
+    if regions:
+        raise ValueError(f"unterminated motion preprocessor branch: {path}")
+
+    array_start = re.compile(
+        r"^ftMotionCommand\s+(\w+)\[\]\s*=\s*\{$")
+    call = re.compile(r"^\s*(ftMotion\w+)\((.*)\),\s*$")
+    audited_calls = {
+        "ftMotionCommandWaitAsync", "ftMotionCommandWait",
+        "ftMotionCommandLoopBegin", "ftMotionCommandLoopEnd",
+        "ftMotionCommandGoto", "ftMotionCommandSetParallelScript",
+        "ftMotionPlayFGM", "ftMotionCommandPlayFGMStoreInfo",
+        "ftMotionCommandEnd", "ftMotionCommandPauseScript",
+    }
+    arrays = []
+    current = None
+    for line in filtered:
+        start = array_start.fullmatch(line.strip())
+        if start:
+            if current is not None:
+                raise ValueError(f"nested motion array in {path}")
+            current = {"name": start.group(1), "program": []}
+            continue
+        if current is None:
+            continue
+        if line.strip() == "};":
+            arrays.append(current)
+            current = None
+            continue
+        normalized = re.sub(r"/\*.*?\*/", "", line).split("//", 1)[0]
+        command = call.fullmatch(normalized.rstrip())
+        if command and command.group(1) in audited_calls:
+            current["program"].append({
+                "op": command.group(1),
+                "args": " ".join(command.group(2).split()),
+            })
+    if current is not None:
+        raise ValueError(f"unterminated motion array in {path}")
+    return arrays
+
+
+def build_attack_action_audit(repo_root: Path) -> dict:
+    fixtures = {entry["name"]: entry["id"] for entry in ATTACK_CUE_AUDIT}
+    source_specs = (
+        ("Mario", "decomp/BattleShip-main/decomp/src/relocData/"
+         "202_MarioMainMotion.c"),
+        ("Fox", "decomp/BattleShip-main/decomp/src/relocData/"
+         "208_FoxMainMotion.c"),
+    )
+    arrays = []
+    for fighter, relative_path in source_specs:
+        for array in region_us_motion_arrays(repo_root / relative_path):
+            arrays.append({
+                "fighter": fighter,
+                "source": relative_path,
+                **array,
+            })
+    by_name = {array["name"]: array for array in arrays}
+    if len(by_name) != len(arrays):
+        raise ValueError("duplicate REGION_US motion-array name")
+    next_array = {
+        array["name"]: (arrays[index + 1]["name"]
+                        if index + 1 < len(arrays) and
+                        arrays[index + 1]["source"] == array["source"]
+                        else None)
+        for index, array in enumerate(arrays)
+    }
+
+    def target_name(args: str) -> str | None:
+        return args if re.fullmatch(r"d(?:Mario|Fox)MainMotion_\w+", args) \
+            else None
+
+    def execute(array_name: str, tick: int = 0, base_tick: int = 0,
+                stack: tuple[str, ...] = ()) -> list[dict]:
+        if array_name in stack or len(stack) > 12:
+            raise ValueError(f"motion control recursion at {array_name}")
+        array = by_name[array_name]
+        program = array["program"]
+        events = []
+        pc = 0
+        loops: list[list[int]] = []
+        terminated = False
+        steps = 0
+        while pc < len(program):
+            steps += 1
+            if steps > 4096:
+                raise ValueError(f"motion control expansion overflow: {array_name}")
+            row = program[pc]
+            op = row["op"]
+            args = row["args"]
+            if op == "ftMotionCommandWaitAsync":
+                tick = base_tick + int(args, 0)
+            elif op == "ftMotionCommandWait":
+                tick += int(args, 0)
+            elif op == "ftMotionCommandLoopBegin":
+                loops.append([pc + 1, int(args, 0)])
+            elif op == "ftMotionCommandLoopEnd":
+                if not loops:
+                    raise ValueError(f"motion LoopEnd without LoopBegin: {array_name}")
+                loops[-1][1] -= 1
+                if loops[-1][1] > 0:
+                    pc = loops[-1][0]
+                    continue
+                loops.pop()
+            elif op in ("ftMotionPlayFGM",
+                        "ftMotionCommandPlayFGMStoreInfo"):
+                if args in fixtures:
+                    events.append({
+                        "fgm_id": fixtures[args],
+                        "fgm_name": args,
+                        "trigger_tick": tick,
+                        "callsite": array_name,
+                        "call": op,
+                    })
+            elif op == "ftMotionCommandSetParallelScript":
+                target = target_name(args)
+                if target in by_name:
+                    events.extend(execute(
+                        target, tick, tick, stack + (array_name,)))
+            elif op == "ftMotionCommandGoto":
+                target = target_name(args)
+                if target in by_name:
+                    events.extend(execute(
+                        target, tick, base_tick, stack + (array_name,)))
+                terminated = True
+                break
+            elif op in ("ftMotionCommandEnd", "ftMotionCommandPauseScript"):
+                terminated = True
+                break
+            pc += 1
+        if loops:
+            raise ValueError(f"unterminated motion loop: {array_name}")
+        fallthrough = next_array[array_name]
+        if not terminated and fallthrough is not None:
+            events.extend(execute(
+                fallthrough, tick, base_tick, stack + (array_name,)))
+        return events
+
+    direct_counts = {fgm_id: 0 for fgm_id in ATTACK_DIRECT_CALL_COUNTS}
+    callsites = []
+    for array in arrays:
+        direct = []
+        for row in array["program"]:
+            if row["op"] not in (
+                    "ftMotionPlayFGM",
+                    "ftMotionCommandPlayFGMStoreInfo"):
+                continue
+            fgm_id = fixtures.get(row["args"])
+            if fgm_id is not None:
+                direct_counts[fgm_id] += 1
+                direct.append(fgm_id)
+        if direct:
+            callsites.append({
+                "fighter": array["fighter"],
+                "source": array["source"],
+                "callsite": array["name"],
+                "direct_fgm_ids": direct,
+                "control_program": array["program"],
+                "direct_events": execute(array["name"]),
+            })
+    if direct_counts != ATTACK_DIRECT_CALL_COUNTS:
+        raise ValueError(
+            f"attack direct-call counts changed: {direct_counts}")
+
+    relevant = {callsite["callsite"] for callsite in callsites}
+    changed = True
+    while changed:
+        changed = False
+        for array in arrays:
+            if array["name"] in relevant:
+                continue
+            links = [target_name(row["args"])
+                     for row in array["program"]
+                     if row["op"] in (
+                         "ftMotionCommandGoto",
+                         "ftMotionCommandSetParallelScript")]
+            terminal = any(row["op"] in (
+                "ftMotionCommandGoto", "ftMotionCommandEnd",
+                "ftMotionCommandPauseScript") for row in array["program"])
+            if (any(link in relevant for link in links) or
+                    (not terminal and next_array[array["name"]] in relevant)):
+                relevant.add(array["name"])
+                changed = True
+
+    actions = []
+    for array in arrays:
+        if array["name"] not in relevant:
+            continue
+        events = execute(array["name"])
+        if events:
+            actions.append({
+                "fighter": array["fighter"],
+                "source": array["source"],
+                "action": array["name"],
+                "events": events,
+            })
+    audit = {
+        "region": "REGION_US",
+        "wait_async_semantics": "absolute action tick",
+        "wait_semantics": "relative ticks",
+        "direct_call_counts": direct_counts,
+        "callsites": callsites,
+        "actions": actions,
+    }
+    digest = json_sha256(audit)
+    if digest != ATTACK_ACTION_AUDIT_SHA256:
+        raise ValueError(
+            f"attack action audit changed: {digest}")
+    return {
+        "sha256": digest,
+        "region": audit["region"],
+        "wait_async_semantics": audit["wait_async_semantics"],
+        "wait_semantics": audit["wait_semantics"],
+        "direct_call_counts": direct_counts,
+        "callsite_count": len(callsites),
+        "action_count": len(actions),
+        "callsites": [{
+            "fighter": callsite["fighter"],
+            "source": callsite["source"],
+            "callsite": callsite["callsite"],
+            "direct_fgm_ids": callsite["direct_fgm_ids"],
+        } for callsite in callsites],
+        "actions": [{
+            "fighter": action["fighter"],
+            "source": action["source"],
+            "action": action["action"],
+            "events": action["events"],
+        } for action in actions],
+    }
+
+
+def attack_custom_fx_contract(repo_root: Path) -> dict:
+    manager_path = Path(
+        "decomp/BattleShip-main/decomp/src/sc/scmanager.c")
+    engine_path = Path(
+        "decomp/BattleShip-main/decomp/src/libultra/n_audio/n_env.c")
+    audio_path = Path(
+        "decomp/BattleShip-main/decomp/src/sys/audio.c")
+    manager = (repo_root / manager_path).read_text(encoding="utf-8")
+    engine = (repo_root / engine_path).read_text(encoding="utf-8")
+    audio = (repo_root / audio_path).read_text(encoding="utf-8")
+    required_manager = "syAudioSetFXType(AL_FX_CUSTOM);"
+    required_engine = (
+        "param = (arg0->unk36 * (arg0->unk3C >> 1)) >> 7;",
+        "n_alSynSetFXMix(&arg0->voice, param);",
+        "param3 = (arg0->unk36 * (arg0->unk3C >> 1)) >> 7;",
+        "n_alSynStartVoiceParams(&arg0->voice, arg0->unk40,",
+        "temp_s0->unkALWhatever8009EDD0_siz34_0x2C = 0x40;",
+        "else arg0->unkALWhatever8009EDD0_siz34_0x28->unk3C = "
+        "arg0->unkALWhatever8009EDD0_siz34_0x2C;",
+        "ptr = _n_saveBuffer(r, r->input, input, ptr);",
+        "if (d->fbcoef)",
+    )
+    if required_manager not in manager or any(
+            token not in engine for token in required_engine):
+        raise ValueError("BattleShip custom FGM FX-bus contract changed")
+
+    table_match = re.search(
+        r"s32 dSYAudioCustomFXParams\[.*?\]\s*=\s*\{(.*?)\};",
+        audio, re.DOTALL)
+    if table_match is None:
+        raise ValueError("BattleShip custom FX parameter table moved")
+    table = [int(value) for value in re.findall(
+        r"-?\d+", table_match.group(1))]
+    if len(table) < 2:
+        raise ValueError("BattleShip custom FX parameter table is short")
+    section_count, delay_samples = table[:2]
+    if len(table) != 2 + (section_count * 8):
+        raise ValueError("BattleShip custom FX parameter table shape changed")
+    sections = [table[2 + (index * 8):10 + (index * 8)]
+                for index in range(section_count)]
+    nonzero_gain_outputs = [section[1] for section in sections
+                            if section[4] != 0]
+    if not nonzero_gain_outputs:
+        raise ValueError("BattleShip custom FX lost all output taps")
+    return {
+        "source_fx_type": "AL_FX_CUSTOM",
+        "source_manager": manager_path.as_posix(),
+        "source_manager_call": required_manager,
+        "source_engine": engine_path.as_posix(),
+        "source_effect_table": audio_path.as_posix(),
+        "source_effect_table_sha256": json_sha256(table),
+        "source_effect_section_count": section_count,
+        "source_effect_delay_samples": delay_samples,
+        "source_effect_latest_nonzero_gain_output_tap_samples": max(
+            nonzero_gain_outputs),
+        "source_effect_nonzero_feedback_sections": sum(
+            section[2] != 0 for section in sections),
+        "source_effect_feedback_tail": "exact finite silence horizon not proven",
+        "source_effect_state_scope": "shared aux-bus circular delay",
+        "source_articulation_opcode": "unk36",
+        "source_default_voice_fx": 64,
+        "source_mix_law": "(articulation_fx * (voice_fx >> 1)) >> 7",
+        "source_voice_calls": ["n_alSynSetFXMix", "n_alSynStartVoiceParams"],
+        "ds_resident_pack_fx_fields": 0,
+        "ds_runtime_behavior": "dry hardware channel",
+        "qualification": "blocked until custom FX-bus behavior is reproduced",
+    }
+
+
+def build_fgm218_feasibility(repo_root: Path, action_audit: dict,
+                             cue_audit: dict, fx_contract: dict,
+                             resident_bytes: int) -> dict:
+    cue = next((item for item in cue_audit["cues"]
+                if item["id"] == 218), None)
+    if cue is None:
+        raise ValueError("FGM 218 source audit disappeared")
+
+    actions = []
+    for action in action_audit["actions"]:
+        ticks = [event["trigger_tick"] for event in action["events"]
+                 if event["fgm_id"] == 218]
+        if ticks:
+            actions.append({"action": action["action"], "trigger_ticks": ticks})
+    expected_ticks = list(range(4, 41, 3))
+    if len(actions) != 2 or any(
+            action["trigger_ticks"] != expected_ticks for action in actions):
+        raise ValueError("FGM 218 tornado call schedule changed")
+
+    duration_ticks = cue["voice"]["duration_ticks"]
+    max_live_voices = max(
+        sum(start <= tick < start + duration_ticks for start in expected_ticks)
+        for tick in range(expected_ticks[0],
+                          expected_ticks[-1] + duration_ticks + 1))
+
+    header_path = Path("include/nds/nds_audio_fgm.h")
+    header = (repo_root / header_path).read_text(encoding="utf-8")
+    handle_match = re.search(
+        r"^#define NDS_AUDIO_FGM_HANDLE_CAPACITY (\d+)u$",
+        header, re.MULTILINE)
+    if handle_match is None:
+        raise ValueError("DS FGM handle capacity definition moved")
+    handle_capacity = int(handle_match.group(1))
+
+    custom_fx_commands = cue["voice"]["articulation"][
+        "custom_fx_mix_commands"]
+    if custom_fx_commands != [["unk36", 100, 0]]:
+        raise ValueError("FGM 218 custom FX articulation changed")
+    articulation_fx = custom_fx_commands[0][1]
+    voice_fx = fx_contract["source_default_voice_fx"]
+    effective_fx_mix = (articulation_fx * (voice_fx >> 1)) >> 7
+
+    def ima_storage_bytes(sample_count: int) -> int:
+        unaligned = 4 + (sample_count // 2)
+        return (unaligned + 3) & ~3
+
+    dry_samples = (
+        duration_ticks * FGM_TIMER_MICROSECONDS * FGM_OUTPUT_RATE + 999999
+    ) // 1000000
+    dry_ima_bytes = ima_storage_bytes(dry_samples)
+    minimum_wet_samples = (
+        fx_contract[
+            "source_effect_latest_nonzero_gain_output_tap_samples"] + 1)
+    minimum_wet_ima_bytes = ima_storage_bytes(minimum_wet_samples)
+    dry_projected_bytes = resident_bytes + PACK_ENTRY.size + dry_ima_bytes
+    minimum_wet_projected_bytes = (
+        resident_bytes + PACK_ENTRY.size + minimum_wet_ima_bytes)
+
+    if not (
+            duration_ticks == 27 and
+            max_live_voices == 9 and
+            handle_capacity == 8 and
+            effective_fx_mix == 25 and
+            dry_samples == 4968 and
+            dry_ima_bytes == 2488 and
+            minimum_wet_samples == 17601 and
+            minimum_wet_ima_bytes == 8804 and
+            dry_projected_bytes == 110056 and
+            minimum_wet_projected_bytes == 116372):
+        raise ValueError("FGM 218 feasibility boundary changed")
+
+    return {
+        "id": 218,
+        "decision": "fail_closed",
+        "qualified": False,
+        "experiment_boundary": (
+            "one AOT-baked Nintendo DS IMA entry per natural source call"),
+        "source_actions": actions,
+        "source_calls_per_action": len(expected_ticks),
+        "source_retrigger_period_ticks": 3,
+        "source_voice_duration_ticks": duration_ticks,
+        "source_stop_semantics": (
+            "each voice stops at call tick + 27; live interval is half-open"),
+        "source_max_live_voices": max_live_voices,
+        "ds_handle_capacity_source": header_path.as_posix(),
+        "ds_handle_capacity": handle_capacity,
+        "overlap_handle_shortfall": max_live_voices - handle_capacity,
+        "source_articulation_fx": articulation_fx,
+        "source_inherited_voice_fx": voice_fx,
+        "source_effective_fx_mix": effective_fx_mix,
+        "source_effect_feedback_tail": fx_contract[
+            "source_effect_feedback_tail"],
+        "resident_bytes_before_candidate": resident_bytes,
+        "resident_limit_bytes": MAX_RESIDENT_BYTES,
+        "resident_free_bytes_before_candidate": (
+            MAX_RESIDENT_BYTES - resident_bytes),
+        "aot_pack_entry_bytes": PACK_ENTRY.size,
+        "dry_aot_samples": dry_samples,
+        "dry_aot_ima_bytes": dry_ima_bytes,
+        "dry_projected_pack_bytes": dry_projected_bytes,
+        "dry_projected_headroom_bytes": (
+            MAX_RESIDENT_BYTES - dry_projected_bytes),
+        "minimum_wet_timeline_basis": (
+            "latest configured nonzero-gain custom-FX output tap + 1"),
+        "minimum_wet_timeline_samples": minimum_wet_samples,
+        "minimum_wet_ima_bytes": minimum_wet_ima_bytes,
+        "minimum_wet_projected_pack_bytes": minimum_wet_projected_bytes,
+        "minimum_wet_pack_overflow_bytes": (
+            minimum_wet_projected_bytes - MAX_RESIDENT_BYTES),
+        "runtime_conversion_allowed": False,
+        "runtime_allocation_allowed": False,
+        "blockers": list(cue["blockers"]),
+    }
+
+
+def build_attack_cue_audit(ucd: dict, articulations: dict,
+                           modulators: dict, ctl_by_offset: dict,
+                           instrument: dict, source_tbl: bytes,
+                           audio_codec) -> dict:
+    def duration_for(row: list, duration_table: list[int]) -> int:
+        code = int(row[2])
+        if code == 0:
+            return 0
+        if 1 <= code <= 6:
+            return duration_table[code - 1]
+        if code == 7 and row[3] is not None:
+            return int(row[3])
+        raise ValueError(f"invalid UCD duration row: {row}")
+
+    sound_cache: dict[int, dict] = {}
+
+    def audit_sound(sound_index: int) -> dict:
+        if sound_index in sound_cache:
+            return sound_cache[sound_index]
+        sound_offset = instrument["soundArray_offs"][sound_index]
+        sound = ctl_by_offset[sound_offset]
+        wave = ctl_by_offset[sound["wavetable_off"]]
+        if wave["type"] != 0:
+            raise ValueError(f"attack sound {sound_index} is not VADPCM")
+        book = ctl_by_offset[wave["book_off"]]
+        loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+        vadpcm = source_tbl[wave["base"]:wave["base"] + wave["length"]]
+        if len(vadpcm) != wave["length"]:
+            raise ValueError(f"short attack VADPCM sound {sound_index}")
+        pcm = audio_codec.adpcm_decode(
+            vadpcm, book["entries"], book["order"], book["npredictors"])
+        ima = ima_encode(pcm)
+        result = {
+            "sound_index": sound_index,
+            "sound_offset": sound_offset,
+            "sample_pan": sound["samplePan"],
+            "sample_volume": sound["sampleVolume"],
+            "source_sound_gain_fields_used_by_fgm": False,
+            "wave_base": wave["base"],
+            "source_vadpcm_bytes": wave["length"],
+            "source_vadpcm_sha256": sha256(vadpcm),
+            "source_pcm_samples": len(pcm),
+            "source_pcm_sha256": ima_pcm_sha256(pcm),
+            "ds_ima_bytes_if_resident": len(ima),
+            "ds_ima_sha256_if_resident": sha256(ima),
+            "source_loop": ({
+                "start": loop["start"],
+                "end": loop["end"],
+                "count": loop["count"],
+            } if loop else None),
+        }
+        sound_cache[sound_index] = result
+        return result
+
+    def audit_articulation(articulation_index: int) -> dict:
+        program = articulations["entries"][articulation_index]["program"]
+        tick = 0
+        timed_program = []
+        for row in program:
+            wait = int(row[-1]) if len(row) > 1 else 0
+            timed_program.append({"tick": tick, "command": row})
+            tick += wait
+        triggers = [int(row[1]) for row in program if row[0] == "trigger"]
+        mods = []
+        for row in program:
+            if row[0] == "spawn_mod":
+                mods.append({
+                    "id": int(row[1]),
+                    "index": int(row[2]),
+                    "wait_ticks": int(row[3]),
+                    "program": modulators["entries"][int(row[2])],
+                })
+        return {
+            "articulation_index": articulation_index,
+            "program": program,
+            "program_sha256": json_sha256(program),
+            "timed_program": timed_program,
+            "program_linear_duration_ticks": tick,
+            "pitch_commands": [row for row in program if row[0] == "pitch"],
+            "volume_commands": [row for row in program if row[0] == "vol"],
+            "pan_commands": [row for row in program if row[0] == "pan"],
+            "custom_fx_mix_commands": [
+                row for row in program if row[0] == "unk36"],
+            "spawn_modulators": mods,
+            "loop_commands": [row for row in program
+                              if row[0] in ("mark_loop", "jump_loop")],
+            "triggered_sounds": [audit_sound(index) for index in triggers],
+        }
+
+    def audit_voice(program_id: int, inherited_pan: int = 64,
+                    stack: tuple[int, ...] = ()) -> dict:
+        if program_id in stack:
+            raise ValueError(f"recursive attack UCD fork: {program_id}")
+        program = ucd["entries"][program_id]["program"]
+        articulation_ids = [int(row[1]) for row in program
+                            if row[0] == "set_articulation"]
+        if len(articulation_ids) != 1:
+            raise ValueError(
+                f"attack UCD {program_id} articulation count changed")
+        articulation = audit_articulation(articulation_ids[0])
+        initial_pitches = articulation["pitch_commands"]
+        if not initial_pitches:
+            raise ValueError(f"attack articulation {articulation_ids[0]} has no pitch")
+        articulation_pitch = int(initial_pitches[0][1])
+        tick = 0
+        duration_table = [0] * 6
+        volume = None
+        pan = inherited_pan
+        t5 = 0
+        notes = []
+        volumes = []
+        pans = [{"tick": 0, "value": inherited_pan, "source": "FGM default"}]
+        forks = []
+        for row in program:
+            op = row[0]
+            if op == "set_dur_table":
+                duration_table = [int(value) for value in row[1:7]]
+            elif op == "set_volume":
+                volume = int(row[1])
+                volumes.append({"tick": tick, "value": volume,
+                                "command": row})
+            elif op == "vol_delta":
+                volume = max(0, min(255, int(volume or 0) + int(row[1])))
+                volumes.append({"tick": tick, "value": volume,
+                                "command": row})
+            elif op == "set_pan":
+                pan = int(row[1])
+                pans.append({"tick": tick, "value": pan, "command": row})
+            elif op == "pan_delta":
+                pan = max(0, min(127, pan + int(row[1])))
+                pans.append({"tick": tick, "value": pan, "command": row})
+            elif op == "set_t5_neg2400":
+                t5 = -2400
+            elif op == "set_t5_neg4800":
+                t5 = -4800
+            elif op == "fork_voice":
+                fork_id = int(row[1])
+                forks.append({
+                    "spawn_tick": tick,
+                    "source_scheduler_countdown_ticks": 1,
+                    "voice": audit_voice(
+                        fork_id, pan, stack + (program_id,)),
+                })
+            elif op == "note":
+                duration = duration_for(row, duration_table)
+                pitch_code = int(row[1])
+                note_cents = pitch_code * 100 - 1300 + t5
+                net_cents = articulation_pitch + note_cents
+                frequency = round(FGM_OUTPUT_RATE * (2.0 ** (
+                    net_cents / 1200.0)))
+                notes.append({
+                    "start_tick": tick,
+                    "duration_ticks": duration,
+                    "pitch_code": pitch_code,
+                    "duration_code": int(row[2]),
+                    "t5_cents": t5,
+                    "note_pitch_cents": note_cents,
+                    "initial_articulation_pitch_cents": articulation_pitch,
+                    "initial_source_frequency_hz": frequency,
+                    "frequency_exceeds_u16": frequency > 0xFFFF,
+                    "volume": volume,
+                    "pan": pan,
+                })
+                t5 = 0
+                tick += duration
+        return {
+            "program_id": program_id,
+            "program": program,
+            "program_sha256": json_sha256(program),
+            "duration_ticks": tick,
+            "notes": notes,
+            "volume_schedule": volumes,
+            "pan_schedule": pans,
+            "forks": forks,
+            "articulation": articulation,
+        }
+
+    cues = []
+    for fixture in ATTACK_CUE_AUDIT:
+        voice = audit_voice(fixture["id"])
+        if voice["program_sha256"] != fixture["root_program_sha256"]:
+            raise ValueError(f"attack FGM {fixture['id']} root UCD changed")
+        pending_voices = [voice]
+        rates_above_u16 = False
+        while pending_voices:
+            pending_voice = pending_voices.pop()
+            rates_above_u16 = rates_above_u16 or any(
+                note["frequency_exceeds_u16"]
+                for note in pending_voice["notes"])
+            pending_voices.extend(
+                fork["voice"] for fork in pending_voice["forks"])
+        if rates_above_u16 != (
+                "source_rate_above_u16" in fixture["blockers"]):
+            raise ValueError(
+                f"attack FGM {fixture['id']} u16-rate blocker changed")
+        cues.append({
+            "id": fixture["id"],
+            "name": fixture["name"],
+            "qualified": not fixture["blockers"],
+            "blockers": list(fixture["blockers"]),
+            "effective_fgm_pan": 64,
+            "voice": voice,
+        })
+
+    fireball = next(cue for cue in cues if cue["id"] == 215)
+    fireball_voice = fireball["voice"]
+    fireball_art = fireball_voice["articulation"]
+    fireball_sound = fireball_art["triggered_sounds"]
+    if not (
+            fireball_voice["duration_ticks"] == 15 and
+            [note["initial_source_frequency_hz"]
+             for note in fireball_voice["notes"]] == [32000, 32000] and
+            fireball_voice["forks"] == [] and
+            len(fireball_voice["pan_schedule"]) == 1 and
+            fireball_art["program_sha256"] ==
+            "78e320e6ee2a2832cb2f3635016b5b46d13fa820dccf4651d7effcd36ee5c7dd" and
+            fireball_art["custom_fx_mix_commands"] == [] and
+            fireball_art["spawn_modulators"] == [] and
+            fireball_art["loop_commands"] == [] and
+            len(fireball_sound) == 1 and
+            fireball_sound[0]["sound_index"] == 19 and
+            fireball_sound[0]["wave_base"] == 191464 and
+            fireball_sound[0]["source_vadpcm_bytes"] == 1224 and
+            fireball_sound[0]["source_pcm_samples"] == 2176 and
+            fireball_sound[0]["source_loop"] is None and
+            fireball_sound[0]["ds_ima_bytes_if_resident"] == 1092 and
+            fireball_sound[0]["ds_ima_sha256_if_resident"] ==
+            "7ed82ac09a350207bb4107b598447567516fd03ad40324953d041507a234ef78"):
+        raise ValueError("FGM 215 exact source qualification changed")
+
+    digest = json_sha256(cues)
+    if digest != ATTACK_CUE_AUDIT_SHA256:
+        raise ValueError(f"attack cue audit changed: {digest}")
+    return {
+        "sha256": digest,
+        "qualified_ids": [cue["id"] for cue in cues if cue["qualified"]],
+        "excluded_ids": [cue["id"] for cue in cues if not cue["qualified"]],
+        "cues": cues,
+    }
+
+
 def build_pack(repo_root: Path) -> tuple[bytes, dict]:
     tools_dir = repo_root / "decomp/BattleShip-main/decomp/tools"
     extract_fgm = load_module(tools_dir / "extract_fgm.py", "extract_fgm")
@@ -1025,13 +3132,16 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
 
     source_wrapped: dict[str, bytes] = {}
     source_raw: dict[str, bytes] = {}
-    for name in ("fgm_tbl", "fgm_ucd", "B1_sounds2_ctl",
+    for name in ("fgm_tbl", "fgm_ucd", "fgm_unk", "B1_sounds2_ctl",
                  "B1_sounds2_tbl"):
         source_wrapped[name], source_raw[name] = read_o2r_payload(
             audio_dir / name)
 
     ucd = extract_fgm.decode_fgm_ucd(source_raw["fgm_ucd"])
     articulations = extract_fgm.decode_fgm_tbl(source_raw["fgm_tbl"])
+    modulators = extract_fgm.decode_fgm_unk(source_raw["fgm_unk"])
+    sine_table, sine_source = source_sine_table(
+        repo_root / "decomp/BattleShip-main/decomp/src/sys/sintable.c")
     ctl_structs = decode_ctl.walk(source_raw["B1_sounds2_ctl"])
     ctl_by_offset = {entry["offset"]: entry for entry in ctl_structs}
     banks = [entry for entry in ctl_structs if entry["kind"] == "ALBank"]
@@ -1042,9 +3152,112 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         raise ValueError("unexpected B1_sounds2 instrument layout")
     instrument = ctl_by_offset[bank["instArray_offs"][0]]
 
+    excluded_entries = []
+    for selector in EXCLUDED_SOURCE_CUES:
+        root_program = ucd["entries"][selector["id"]]["program"]
+        render_program_id = selector.get("render_program", selector["id"])
+        ucd_program = ucd["entries"][render_program_id]["program"]
+        validate_ucd(root_program, ucd_program, selector)
+        art_program = articulations["entries"][
+            selector["articulation"]]["program"]
+        validate_articulation(art_program, selector)
+
+        sound_offset = instrument["soundArray_offs"][selector["sound"]]
+        sound = ctl_by_offset[sound_offset]
+        wave = ctl_by_offset[sound["wavetable_off"]]
+        book = ctl_by_offset[wave["book_off"]]
+        loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+        if (wave["type"] != 0 or wave["base"] != selector["wave_base"] or
+                wave["length"] != selector["wave_length"]):
+            raise ValueError(f"excluded FGM {selector['id']} wavetable changed")
+        actual_loop = (loop["start"], loop["end"]) if loop else (0, 0)
+        if actual_loop != (selector["loop_start"], selector["loop_end"]):
+            raise ValueError(
+                f"excluded FGM {selector['id']} loop changed: {actual_loop}")
+        vadpcm = source_raw["B1_sounds2_tbl"][
+            wave["base"]:wave["base"] + wave["length"]]
+        pcm = audio_codec.adpcm_decode(vadpcm, book["entries"],
+                                       book["order"], book["npredictors"])
+        if len(pcm) != selector["expected_retained_samples"]:
+            raise ValueError(
+                f"excluded FGM {selector['id']} sample count changed")
+
+        note_rows = [row for row in ucd_program if row[0] == "note"]
+        note_tick = 0
+        note_schedule = []
+        for row in note_rows:
+            note_schedule.append({
+                "tick": note_tick,
+                "pitch_code": int(row[1]),
+                "velocity": int(row[2]),
+                "duration_ticks": int(row[3]),
+            })
+            note_tick += int(row[3])
+        articulation_tick = 0
+        articulation_pitch = []
+        articulation_volume = []
+        for row in art_program:
+            if row[0] == "pitch":
+                articulation_pitch.append({
+                    "tick": articulation_tick,
+                    "cents": int(row[1]),
+                    "duration_ticks": int(row[2]),
+                })
+            elif row[0] == "vol":
+                articulation_volume.append({
+                    "tick": articulation_tick,
+                    "value": int(row[1]),
+                    "duration_ticks": int(row[2]),
+                })
+            articulation_tick += int(row[-1])
+        if len(note_schedule) <= 1 and len(articulation_pitch) <= 1:
+            raise ValueError(
+                f"excluded FGM {selector['id']} no longer needs scheduling")
+        excluded_entries.append({
+            "id": selector["id"],
+            "name": selector["name"],
+            "reason": selector["exclusion_reason"],
+            "root_ucd_program_id": selector["id"],
+            "render_ucd_program_id": render_program_id,
+            "root_ucd_program_sha256": json_sha256(root_program),
+            "render_ucd_program_sha256": json_sha256(ucd_program),
+            "articulation_index": selector["articulation"],
+            "articulation_program_sha256": json_sha256(art_program),
+            "source_sound_index": selector["sound"],
+            "source_sample_count": len(pcm),
+            "source_duration_ticks": note_tick,
+            "source_note_schedule": note_schedule,
+            "source_articulation_pitch_schedule": articulation_pitch,
+            "source_articulation_volume_schedule": articulation_volume,
+            "source_ucd_pan_ops": [row for row in ucd_program
+                                   if row[0] in ("set_pan", "pan_delta")],
+            "source_articulation_pan_ops": [row for row in art_program
+                                            if row[0] == "pan"],
+            "source_fork_programs": [int(row[1]) for row in root_program
+                                     if row[0] == "fork_voice"],
+            "source_spawn_mod_ops": [row for row in art_program
+                                     if row[0] == "spawn_mod"],
+            "source_loop_start": actual_loop[0],
+            "source_loop_end": actual_loop[1],
+        })
+
+    runtime_selected = [selector for selector in SELECTED
+                        if not selector.get("runtime_excluded", False)]
+    excluded_hit_cues = [
+        excluded_hit_source_audit(
+            selector, ucd, articulations, instrument, ctl_by_offset,
+            source_raw["B1_sounds2_tbl"], audio_codec)
+        for selector in SELECTED
+        if selector.get("runtime_excluded", False)
+    ]
+    attack_actions = build_attack_action_audit(repo_root)
+    attack_fx = attack_custom_fx_contract(repo_root)
+    attack_cues = build_attack_cue_audit(
+        ucd, articulations, modulators, ctl_by_offset, instrument,
+        source_raw["B1_sounds2_tbl"], audio_codec)
     mapping_source = [
         {key: value for key, value in selector.items()}
-        for selector in SELECTED
+        for selector in runtime_selected
     ]
     mapping_json = json.dumps(mapping_source, sort_keys=True,
                               separators=(",", ":")).encode("utf-8")
@@ -1053,7 +3266,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
 
     records = []
     metadata_entries = []
-    for entry_index, selector in enumerate(SELECTED):
+    for entry_index, selector in enumerate(runtime_selected):
+        source_actions = validate_source_actions(repo_root, selector)
         root_program = ucd["entries"][selector["id"]]["program"]
         render_program_id = selector.get("render_program", selector["id"])
         ucd_program = ucd["entries"][render_program_id]["program"]
@@ -1130,11 +3344,39 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "old_hardware_loop_decoded_clipped_sample_count": sum(
                     abs(value) >= 32767 for value in old_loop_decoded),
             })
+        elif selector.get("aot_source_schedule"):
+            modulator = None
+            if "aot_modulator_index" in selector:
+                modulator = modulators["entries"][
+                    selector["aot_modulator_index"]]
+                if modulator != selector["aot_modulator"]:
+                    raise ValueError(
+                        f"FGM {selector['id']} source modulator changed")
+            runtime_pcm, acoustic_oracle = render_modulated_voice_aot(
+                pcm, selector, art_program, modulator, sine_table, frequency)
+            loop_strategy = "none"
+            flags = 0
+            loop_point_words = 0
+            packed_envelope = []
+            volume = acoustic_oracle["aot_constant_hardware_volume"]
+            trim = {
+                "trim_strategy":
+                    "source_articulation_pitch_volume_schedule_aot",
+                "trim_source_samples_removed": 0,
+                "trim_applied": True,
+                "trim_retained_source_prefix_pcm_sha256": None,
+                "trim_retained_prefix_exact": False,
+                "trim_proven_reachable_samples": len(runtime_pcm),
+                "trim_one_sample_ceiling": 1,
+            }
+            old_loop_ima = b""
         else:
             runtime_pcm, trim = trim_proof(
                 selector, ucd_program, pcm, frequency)
             acoustic_oracle = {}
-            loop_strategy = "none"
+            loop_strategy = (
+                "finite_source_loop_aot"
+                if selector.get("render_source_loop", False) else "none")
             flags = 0
             loop_point_words = 0
             packed_envelope = envelope[1:]
@@ -1206,6 +3448,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                             else None),
             "id": selector["id"],
             "name": selector["name"],
+            "source_action_file": selector.get("source_action_file"),
+            "source_actions": source_actions,
             "root_ucd_program_id": selector["id"],
             "root_ucd_program": root_program,
             "render_ucd_program_id": render_program_id,
@@ -1260,6 +3504,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "127)>>7); mixer=(pre_mixer*pre_mixer)>>15; N_MICRO "
                 "linearly ramps each target over 184 samples"
                 if selector["id"] == PUBLIC_EXCITED_ID else
+                "source articulation volume/LFO targets mapped to DS gain "
+                "and baked with the pitch schedule into the AOT sample"
+                if selector.get("aot_source_schedule") else
                 "pre_mixer target mapped from 0..32767 to DS 0..127"),
             "runtime_fidelity_debt": list(selector.get(
                 "fidelity_debt", ())),
@@ -1316,9 +3563,56 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         raise ValueError(
             f"FGM pack exceeds {MAX_RESIDENT_BYTES // 1024} KiB: "
             f"{len(pack)} bytes")
+    fgm218_feasibility = build_fgm218_feasibility(
+        repo_root, attack_actions, attack_cues, attack_fx, len(pack))
+
+    # One bounded feasibility cut for the naturally observed small-kick cue.
+    # Fork 658 runs for 200 FGM ticks, so any exact 32 kHz fused capture must
+    # span at least this many samples even before AL_FX_CUSTOM delay output.
+    id34_fork_ticks = 200
+    id34_root_ticks = 70
+    id34_fused_samples = round(
+        id34_fork_ticks * FGM_TIMER_MICROSECONDS * FGM_OUTPUT_RATE /
+        1_000_000)
+    id34_root_samples = round(
+        id34_root_ticks * FGM_TIMER_MICROSECONDS * FGM_OUTPUT_RATE /
+        1_000_000)
+    id34_fused_add_bytes = (
+        len(ima_encode([0] * id34_fused_samples)) + PACK_ENTRY.size)
+    id34_paired_add_bytes = (
+        len(ima_encode([0] * id34_root_samples)) +
+        len(ima_encode([0] * id34_fused_samples)) +
+        2 * PACK_ENTRY.size)
+    id34_feasibility = {
+        "id": 34,
+        "decision": "fail_closed",
+        "measurement": "32_khz_ds_ima_storage_lower_bound",
+        "source_root_program": 34,
+        "source_fork_program": 658,
+        "source_root_duration_ticks": id34_root_ticks,
+        "source_fork_duration_ticks": id34_fork_ticks,
+        "fused_minimum_samples": id34_fused_samples,
+        "current_pack_bytes": len(pack),
+        "pack_limit_bytes": MAX_RESIDENT_BYTES,
+        "pack_headroom_bytes": MAX_RESIDENT_BYTES - len(pack),
+        "fused_minimum_add_bytes": id34_fused_add_bytes,
+        "fused_minimum_total_bytes": len(pack) + id34_fused_add_bytes,
+        "fused_minimum_over_limit_bytes": (
+            len(pack) + id34_fused_add_bytes - MAX_RESIDENT_BYTES),
+        "paired_minimum_add_bytes": id34_paired_add_bytes,
+        "paired_minimum_total_bytes": len(pack) + id34_paired_add_bytes,
+        "paired_minimum_over_limit_bytes": (
+            len(pack) + id34_paired_add_bytes - MAX_RESIDENT_BYTES),
+        "excluded_from_lower_bound": (
+            "AL_FX_CUSTOM delay output and acoustic-tail samples"),
+        "conclusion": (
+            "dry fused lower bound already exceeds the resident cap; exact "
+            "custom-FX output cannot be smaller"),
+    }
 
     metadata = {
         "format": "BattleShip P1 FGM pack / Nintendo DS IMA ADPCM",
+        "source_region": "REGION_US",
         "format_version": PACK_VERSION,
         "entry_count": len(records),
         "entry_bytes": PACK_ENTRY.size,
@@ -1342,13 +3636,25 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             PACK_ENVELOPE_POINT.pack(point["tick"], point["ds_volume"], 0)
             for record in records if record["flags"] == 0
             for point in record["envelope"])),
+        "strict_hit_contact_status": "fail_closed",
+        "runtime_excluded_hit_ids": [entry["id"]
+                                     for entry in excluded_hit_cues],
+        "excluded_hit_cues": excluded_hit_cues,
+        "hit_contact_feasibility_experiment": id34_feasibility,
+        "source_custom_fx": source_custom_fx_audit(repo_root),
         "known_runtime_fidelity_debt": [
-            "The regular KO entries retain their exact source wavetable, "
-            "duration-proven prefix, initial pitch, and volume envelope; "
-            "source pitch automation is not yet scheduled on DS channels.",
+            "Entries carrying articulation or UCD automation debt retain "
+            "their source wavetable and bounded initial DS state, but their "
+            "listed pitch or volume automation is not yet reproduced.",
             "DeadExplodeL currently renders its primary UCD voice; forked "
             "source voice 685 remains explicit metadata fidelity debt.",
         ],
+        "attack_activation_qualification": {
+            "source_action_audit": attack_actions,
+            "source_custom_fx_bus_contract": attack_fx,
+            "fgm_218_feasibility": fgm218_feasibility,
+            **attack_cues,
+        },
         "sources": {
             name: {
                 "wrapped_sha256": sha256(source_wrapped[name]),
@@ -1357,7 +3663,13 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             }
             for name in source_raw
         },
+        "excluded_entries": excluded_entries,
         "entries": metadata_entries,
+    }
+    metadata["sources"]["source_sine_table"] = {
+        "sha256": sha256(sine_source),
+        "bytes": len(sine_source),
+        "entries": len(sine_table),
     }
     return pack, metadata
 

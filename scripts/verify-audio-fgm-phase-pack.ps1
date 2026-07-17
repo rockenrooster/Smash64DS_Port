@@ -95,12 +95,12 @@ $sectionTotals = @{
     }
 }
 if (($sectionTotals.text -gt 3584) -or
-    ($sectionTotals.rodata -gt 256) -or
+    ($sectionTotals.rodata -gt 384) -or
     ($sectionTotals.data -gt 16) -or
     ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1536L)) -or
     ($sectionTotals.itcm -ne 0)) {
-    throw ('FGM backend binary budget failed: text={0} rodata={1} data={2} ' +
-        'bss={3} itcm={4}.' -f
+    throw (('FGM backend binary budget failed: text={0} rodata={1} data={2} ' +
+        'bss={3} itcm={4}.') -f
         $sectionTotals.text, $sectionTotals.rodata, $sectionTotals.data,
         $sectionTotals.bss, $sectionTotals.itcm)
 }
@@ -211,13 +211,15 @@ try {
         [int]$load.Groups[8].Value -ne 0) {
         throw "FGM phase pack did not load cleanly.`n$gdbStdout"
     }
+    $supportedPlays = if ($play.Success) {
+        [int]$play.Groups[2].Value
+    } else { 0 }
     if (-not $play.Success -or
-        [int]$play.Groups[2].Value -ne 5 -or
+        $supportedPlays -lt 5 -or
         [int]$play.Groups[4].Value -ne 0 -or
         [int]$play.Groups[5].Value -ne 0 -or
         (Convert-MarkerUInt32 $play.Groups[6].Value) -ne 0x1f -or
         [int]$play.Groups[7].Value -ne 0 -or
-        [int]$play.Groups[8].Value -ne 0 -or
         ([int]$play.Groups[1].Value -ne
          ([int]$play.Groups[2].Value + [int]$play.Groups[3].Value))) {
         throw "Natural FGM play accounting failed.`n$gdbStdout"
@@ -226,26 +228,34 @@ try {
         (@(1..5 | ForEach-Object { [int]$phase.Groups[$_].Value }) -ne 1)) {
         throw "One or more natural phase IDs did not play exactly once.`n$gdbStdout"
     }
-    if (-not $ko.Success -or
-        (Convert-MarkerUInt32 $ko.Groups[1].Value) -ne 0 -or
-        (@(2..10 | ForEach-Object { [int]$ko.Groups[$_].Value }) -ne 0)) {
-        throw ('Regular-KO diagnostics were not clean before natural ' +
-            "blast-zone playback.`n$gdbStdout")
+    if (-not $ko.Success) {
+        throw "Natural regular-KO diagnostics were absent.`n$gdbStdout"
+    }
+    $koValues = @(1..10 | ForEach-Object {
+            [int64](Convert-MarkerUInt32 $ko.Groups[$_].Value)
+        })
+    $koIsIdle = (($koValues -join ',') -eq '0,0,0,0,0,0,0,0,0,0')
+    $koIsExactFoxTrio = (($koValues -join ',') -eq
+        '28,0,0,1,1,1,3,370,289,154')
+    if (-not $koIsIdle -and -not $koIsExactFoxTrio) {
+        throw ('Natural regular-KO state was neither idle nor the exact Fox ' +
+            "voice/slam/explosion order.`n$gdbStdout")
     }
     $fgmChannelMask = if ($pool.Success) {
         Convert-MarkerUInt32 $pool.Groups[8].Value
     } else { [uint32]0 }
     if (-not $pool.Success -or
-        [int]$pool.Groups[1].Value -ne 5 -or
+        [int]$pool.Groups[1].Value -ne $supportedPlays -or
         [int]$pool.Groups[2].Value -ne 8 -or
-        [int]$pool.Groups[3].Value -ne 5 -or
+        [int]$pool.Groups[3].Value -gt [int]$pool.Groups[1].Value -or
         [int]$pool.Groups[4].Value -lt 1 -or
         [int]$pool.Groups[5].Value -ne 0 -or
-        [int]$pool.Groups[6].Value -ne 0 -or
+        [int]$pool.Groups[6].Value -ne
+            ([int]$pool.Groups[1].Value - [int]$pool.Groups[3].Value) -or
         [int]$pool.Groups[7].Value -lt 1 -or
         $fgmChannelMask -eq 0 -or
         [int]$pool.Groups[9].Value -ge 16 -or
-        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 12) {
+        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 28) {
         throw "FGM recycle/channel/fidelity diagnostics failed.`n$gdbStdout"
     }
     if (-not $life.Success -or

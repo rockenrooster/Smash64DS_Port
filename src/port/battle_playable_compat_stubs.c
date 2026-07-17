@@ -3,6 +3,7 @@
 #include <gm/generic.h>
 #include <if/interface.h>
 #include <it/item.h>
+#include <nds/nds_effects.h>
 #include <sc/scene.h>
 #include <sys/objtypes.h>
 
@@ -116,25 +117,26 @@ NDS_WEAK void itMainDestroyItem(GObj *item_gobj)
 NDS_WEAK GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player,
                                               u32 kind)
 {
-    (void)pos;
     (void)player;
-    (void)kind;
-    return NULL;
+    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectDeath, pos,
+                                        2.0F + ((f32)(kind & 3u) * 0.2F),
+                                        1, NULL);
 }
 
 NDS_WEAK LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos,
                                                          f32 scale)
 {
-    (void)pos;
-    (void)scale;
+    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectSparkle, pos,
+                                       scale, 1, NULL);
     return NULL;
 }
 
 NDS_WEAK GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
 {
-    (void)fighter_gobj;
-    (void)size;
-    return NULL;
+    f32 scale = (size > 5.0F) ? size * 0.05F : size;
+
+    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectRebirth, NULL,
+                                        scale, 1, fighter_gobj);
 }
 
 NDS_WEAK void sc1PTrainingModeLoadWallpaper(void)

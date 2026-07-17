@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 12u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 18u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -23,14 +23,16 @@
 #define NDS_AUDIO_FGM_RELEASE_REASON_STOP_ALL 4u
 #define NDS_AUDIO_FGM_RELEASE_REASON_EXPLICIT 5u
 #endif
-#define NDS_AUDIO_FGM_PACK_BYTES 102196u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x9a9c3d4eu
+#define NDS_AUDIO_FGM_PACK_BYTES 107536u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x41eb6d66u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_FORK_VOICE (1u << 3)
+#define NDS_AUDIO_FGM_FIDELITY_DEBT_VOLUME_AUTOMATION (1u << 4)
 #define NDS_AUDIO_FGM_EXPECTED_FIDELITY_DEBT_MASK \
     (NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION | \
-     NDS_AUDIO_FGM_FIDELITY_DEBT_FORK_VOICE)
+     NDS_AUDIO_FGM_FIDELITY_DEBT_FORK_VOICE | \
+     NDS_AUDIO_FGM_FIDELITY_DEBT_VOLUME_AUTOMATION)
 
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 typedef struct NDSAudioFgmArm7AckEvent {
@@ -68,6 +70,7 @@ void ndsAudioFgmUpdate(void);
 void ndsAudioFgmStopAll(void);
 void ndsAudioFgmStop(alSoundEffect *effect);
 alSoundEffect *ndsAudioFgmPlay(u16 fgm_id);
+alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan);
 
 extern volatile u32 gNdsAudioFgmResult;
 extern volatile u32 gNdsAudioFgmMask;

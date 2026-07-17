@@ -1,6 +1,7 @@
 /* NDS_NATURAL_COMBAT_ROUTED_EXTERNS */
 #include "nds_scene_harness_config.h"
 #include <nds/nds_freeze_diagnostics.h>
+#include <nds/nds_effects.h>
 #include <sys/vector.h>
 
 static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
@@ -572,14 +573,15 @@ void func_80026738_27338(alSoundEffect *sfx)
 #endif
 }
 
-void *func_800269C0_275C0(u16 fgm_id)
+static void *ndsPlayFGMAtPan(u16 fgm_id, u8 pan)
 {
 #if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
     alSoundEffect *sound_effect;
 
-    sound_effect = ndsAudioFgmPlay(fgm_id);
+    sound_effect = ndsAudioFgmPlayAtPan(fgm_id, pan);
 #else
     sNdsStubSoundEffect.sfx_id = fgm_id;
+    sNdsStubSoundEffect.balance = pan;
 #endif
     gNdsSCVSBattleLastFGM = fgm_id;
     if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
@@ -613,6 +615,11 @@ void *func_800269C0_275C0(u16 fgm_id)
 #else
     return &sNdsStubSoundEffect;
 #endif
+}
+
+void *func_800269C0_275C0(u16 fgm_id)
+{
+    return ndsPlayFGMAtPan(fgm_id, 64u);
 }
 
 s32 syAudioCheckBGMPlaying(s32 sngplayer)
@@ -1389,7 +1396,13 @@ void ftParamHideModelPartAll(GObj *fighter_gobj)
 
 void ftParamProcStopEffect(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    ndsEFManagerStopAttachedVisualEffects(fighter_gobj);
+    if (fp != NULL)
+    {
+        fp->is_effect_attach = FALSE;
+    }
 }
 
 static void ndsFTParamsInvalidateFighterParts(DObj *joint, sb32 reset_mode)
@@ -1647,13 +1660,17 @@ void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
 
 __attribute__((weak)) GObj *efManagerShieldMakeEffect(GObj *fighter_gobj)
 {
-    (void)fighter_gobj;
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    f32 scale = ((fp != NULL) && (fp->attr != NULL)) ?
+                    fp->attr->shield_size * 0.05F : 1.5F;
+
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunGuardOnActive != FALSE))
     {
         gNdsFighterDashRunGuardEffectCount++;
     }
-    return NULL;
+    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectShield, NULL,
+                                        scale, 1, fighter_gobj);
 }
 
 __attribute__((weak)) GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
@@ -5999,13 +6016,13 @@ void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
 
 __attribute__((weak)) GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos)
 {
-    (void)pos;
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopCatchPullActive != FALSE))
     {
         gNdsStageMPPassiveLoopCatchPullEffectCount++;
     }
-    return NULL;
+    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectCatch, pos,
+                                        0.9F, 1, NULL);
 }
 
 void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
@@ -7406,16 +7423,74 @@ void ftParamVelDamageTransferGround(FTStruct *fp)
     }
 }
 
+static void ndsFTParamGetVisualPosition(GObj *fighter_gobj, s32 joint_id,
+                                        Vec3f *effect_pos,
+                                        Vec3f *effect_scatter,
+                                        sb32 is_scale_pos, Vec3f *pos)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    DObj *root = (fighter_gobj != NULL) ? DObjGetStruct(fighter_gobj) : NULL;
+
+    pos->x = (root != NULL) ? root->translate.vec.f.x : 0.0F;
+    pos->y = (root != NULL) ? root->translate.vec.f.y : 0.0F;
+    pos->z = (root != NULL) ? root->translate.vec.f.z : 0.0F;
+    if ((fp == NULL) || (joint_id < 0) ||
+        (joint_id >= (s32)ARRAY_COUNT(fp->joints)) ||
+        (fp->joints[joint_id] == NULL))
+    {
+        if (effect_pos != NULL)
+        {
+            pos->x += effect_pos->x;
+            pos->y += effect_pos->y;
+            pos->z += effect_pos->z;
+        }
+        return;
+    }
+    if (effect_pos != NULL)
+    {
+        *pos = *effect_pos;
+    }
+    else
+    {
+        pos->x = pos->y = pos->z = 0.0F;
+    }
+    if (effect_scatter != NULL)
+    {
+        if (effect_scatter->x != 0.0F)
+        {
+            pos->x += (syUtilsRandFloat() - 0.5F) *
+                      (effect_scatter->x * 2.0F);
+        }
+        if (effect_scatter->y != 0.0F)
+        {
+            pos->y += (syUtilsRandFloat() - 0.5F) *
+                      (effect_scatter->y * 2.0F);
+        }
+        if (effect_scatter->z != 0.0F)
+        {
+            pos->z += (syUtilsRandFloat() - 0.5F) *
+                      (effect_scatter->z * 2.0F);
+        }
+    }
+    if ((is_scale_pos != FALSE) && (fp->attr != NULL) &&
+        (fp->attr->size != 0.0F))
+    {
+        f32 inverse_size = 1.0F / fp->attr->size;
+
+        pos->x *= inverse_size;
+        pos->y *= inverse_size;
+        pos->z *= inverse_size;
+    }
+    gmCollisionGetFighterPartsWorldPosition(fp->joints[joint_id], pos);
+}
+
 void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
                         Vec3f *effect_pos, Vec3f *effect_scatter, s32 lr,
                         sb32 is_scale_pos, u32 arg7)
 {
-    (void)fighter_gobj;
-    (void)joint_id;
-    (void)effect_pos;
-    (void)effect_scatter;
-    (void)lr;
-    (void)is_scale_pos;
+    Vec3f pos;
+    GObj *effect_gobj = NULL;
+
     (void)arg7;
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         ((sNdsFighterDashRunDamageStatusSetupActive != FALSE) ||
@@ -7438,12 +7513,130 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         gNdsFighterSpecialsMarioLwDustEffectCount++;
     }
 #endif
-    return NULL;
+    ndsFTParamGetVisualPosition(fighter_gobj, joint_id, effect_pos,
+                                effect_scatter, is_scale_pos, &pos);
+    switch (effect_id)
+    {
+    case nEFKindDamageNormal:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectHitNormal, &pos, 0.8F, lr, NULL);
+        break;
+    case nEFKindFlameLR:
+    case nEFKindFlameRandom:
+    case nEFKindFlameStatic:
+    case nEFKindFireSpark:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectHitFire, &pos, 0.7F, lr, NULL);
+        break;
+    case nEFKindShockSmall:
+    case nEFKindPsionic:
+    case nEFKindThunderAmp:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectHitElectric, &pos, 0.7F, lr, NULL);
+        break;
+    case nEFKindDustLight:
+    case nEFKindDustLightRapid:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectDust, &pos, 0.65F, lr, NULL);
+        break;
+    case nEFKindDustHeavyDouble:
+    case nEFKindDustHeavyDoubleRapid:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectDust, &pos, 1.0F, lr, NULL);
+        pos.x += (f32)lr * 110.0F;
+        (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectDust, &pos,
+                                           0.8F, -lr, NULL);
+        break;
+    case nEFKindDustHeavy:
+    case nEFKindDustHeavyReverse:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectDust, &pos, 1.0F,
+            (effect_id == nEFKindDustHeavyReverse) ? -lr : lr, NULL);
+        break;
+    case nEFKindDustExpandLarge:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectDust, &pos, 1.35F, lr, NULL);
+        break;
+    case nEFKindDustExpandSmall:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectDust, &pos, 0.7F, lr, NULL);
+        break;
+    case nEFKindDustDashSmall:
+    case nEFKindDustDashLarge:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectDust, &pos,
+            (effect_id == nEFKindDustDashLarge) ? 1.25F : 0.9F,
+            lr, NULL);
+        break;
+    case nEFKindDamageFlyOrbs:
+    case nEFKindStarRodSpark:
+    case nEFKindDamageFlySparks:
+    case nEFKindDamageFlySparksReverse:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectSparkle, &pos, 0.65F, lr, NULL);
+        break;
+    case nEFKindDamageFlyMDust:
+    case nEFKindDamageFlyMDustReverse:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectDust, &pos, 0.55F, lr, NULL);
+        break;
+    case nEFKindImpactWave:
+    case nEFKindRipple:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectImpactWave, &pos, 0.9F, lr, NULL);
+        break;
+    case nEFKindSparkleWhite:
+    case nEFKindSparkleWhiteMultiExplode:
+    case nEFKindSparkleWhiteMulti:
+    case nEFKindSparkleWhiteScale:
+    case nEFKindFuraSparkle:
+    case nEFKindChargeSparkle:
+    case nEFKindHealSparkles:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectSparkle, &pos, 0.75F, lr, NULL);
+        break;
+    case nEFKindFlashSmall:
+    case nEFKindFlashMiddle:
+    case nEFKindFlashLarge:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectImpactWave, &pos,
+            (effect_id == nEFKindFlashLarge) ? 1.3F : 0.8F, lr, NULL);
+        break;
+    case nEFKindMusicNote:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectCoin, &pos, 0.65F, lr, NULL);
+        break;
+    case nEFKindEggBreak:
+        effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectDust, &pos, 0.8F, lr, NULL);
+        break;
+    case nEFKindQuakeMag0:
+        return efManagerQuakeMakeEffect(0);
+    case nEFKindQuakeMag1:
+        return efManagerQuakeMakeEffect(1);
+    case nEFKindQuakeMag2:
+        return efManagerQuakeMakeEffect(2);
+    default:
+        break;
+    }
+    return effect_gobj;
+}
+
+static f32 ndsVisualDamageScale(s32 size, f32 base, f32 step)
+{
+    if (size < 0)
+    {
+        size = 0;
+    }
+    else if (size > 40)
+    {
+        size = 40;
+    }
+    return base + ((f32)size * step);
 }
 
 __attribute__((weak)) LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos)
 {
-    (void)pos;
     if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffCatchFloorLoopSetStatusActive != FALSE))
@@ -7456,40 +7649,44 @@ __attribute__((weak)) LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos)
     {
         gNdsStageMPCliffWaitDamageLoopCliffCatchFlashCount++;
     }
+    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectImpactWave, pos,
+                                       0.8F, 1, NULL);
     return NULL;
 }
 
 __attribute__((weak)) LBParticle *
 efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
 {
-    (void)pos;
-    (void)scale;
     if ((ndsFighterMarioFoxStageInishieScaleLoopProofEnabled() != FALSE) &&
         (sNdsStageInishieScaleLoopActive != FALSE))
     {
         gNdsStageInishieScaleLoopFallSparkleCount++;
         gNdsFighterMarioFoxStageInishieScaleLoopDeferredMask |= 1u << 0;
     }
+    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectSparkle, pos,
+                                       scale, 1, NULL);
     return NULL;
 }
 
 __attribute__((weak)) LBParticle *
 efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index)
 {
-    (void)pos;
-    (void)f_index;
+    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectDust, pos,
+                                       0.65F * f_index, 1, NULL);
     return NULL;
 }
 
 __attribute__((weak)) LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
 {
-    (void)pos;
+    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectHitFire, pos,
+                                       0.55F, 1, NULL);
     return NULL;
 }
 
 __attribute__((weak)) LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos)
 {
-    (void)pos;
+    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectSparkle, pos,
+                                       0.75F, 1, NULL);
     return NULL;
 }
 
@@ -7498,10 +7695,11 @@ efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size,
                                      sb32 is_static)
 {
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
-    (void)pos;
     (void)player;
-    (void)size;
     (void)is_static;
+    (void)ndsEFManagerMakeVisualEffect(
+        nNDSVisualEffectHitNormal, pos,
+        ndsVisualDamageScale(size, 0.45F, 0.025F), 1, NULL);
     return NULL;
 }
 
@@ -7509,71 +7707,79 @@ __attribute__((weak)) LBParticle *
 efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player, s32 size)
 {
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
-    (void)pos;
     (void)player;
-    (void)size;
+    (void)ndsEFManagerMakeVisualEffect(
+        nNDSVisualEffectHitNormal, pos,
+        ndsVisualDamageScale(size, 0.70F, 0.035F), 1, NULL);
     return NULL;
 }
 
 __attribute__((weak)) LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos,
                                                                s32 size)
 {
-    (void)pos;
-    (void)size;
+    (void)ndsEFManagerMakeVisualEffect(
+        nNDSVisualEffectHitFire, pos,
+        ndsVisualDamageScale(size, 0.60F, 0.03F), 1, NULL);
     return NULL;
 }
 
 __attribute__((weak)) LBParticle *
 efManagerDamageElectricMakeEffect(Vec3f *pos, s32 size)
 {
-    (void)pos;
-    (void)size;
+    (void)ndsEFManagerMakeVisualEffect(
+        nNDSVisualEffectHitElectric, pos,
+        ndsVisualDamageScale(size, 0.55F, 0.03F), 1, NULL);
     return NULL;
 }
 
 __attribute__((weak)) LBParticle *efManagerDamageCoinMakeEffect(Vec3f *pos)
 {
-    (void)pos;
+    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectCoin, pos,
+                                       0.75F, 1, NULL);
     return NULL;
 }
 
 __attribute__((weak)) GObj *
 efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
 {
-    (void)pos;
-    (void)size;
-    (void)rotate;
-    return NULL;
+    GObj *effect_gobj = ndsEFManagerMakeVisualEffect(
+        nNDSVisualEffectSlash, pos,
+        ndsVisualDamageScale(size, 0.55F, 0.025F), 1, NULL);
+
+    if ((effect_gobj != NULL) && (DObjGetStruct(effect_gobj) != NULL))
+    {
+        DObjGetStruct(effect_gobj)->rotate.vec.f.z = rotate;
+    }
+    return effect_gobj;
 }
 
 __attribute__((weak)) GObj *
 efManagerDamageSpawnOrbsRandomMakeEffect(Vec3f *pos)
 {
-    (void)pos;
-    return NULL;
+    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectSparkle, pos,
+                                        0.55F, 1, NULL);
 }
 
 __attribute__((weak)) GObj *
 efManagerDamageSpawnSparksRandomMakeEffect(Vec3f *pos, s32 lr)
 {
-    (void)pos;
-    (void)lr;
-    return NULL;
+    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectHitElectric, pos,
+                                        0.50F, lr, NULL);
 }
 
 __attribute__((weak)) GObj *
 efManagerDamageSpawnMDustRandomMakeEffect(Vec3f *pos, s32 lr)
 {
-    (void)pos;
-    (void)lr;
-    return NULL;
+    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectDust, pos,
+                                        0.50F, lr, NULL);
 }
 
 __attribute__((weak)) LBParticle *efManagerSetOffMakeEffect(Vec3f *pos,
                                                            s32 size)
 {
-    (void)pos;
-    (void)size;
+    (void)ndsEFManagerMakeVisualEffect(
+        nNDSVisualEffectImpactWave, pos,
+        ndsVisualDamageScale(size, 0.55F, 0.03F), 1, NULL);
     return NULL;
 }
 
@@ -8067,8 +8273,17 @@ void ftCommonGuardSetOffSetStatus(GObj *fighter_gobj)
 
 alSoundEffect *lbCommonMakePositionFGM(u16 fgm, f32 pos)
 {
-    (void)pos;
-    return func_800269C0_275C0(fgm);
+    s32 balance = (s32)((pos / 8000.0F) * 60.0F);
+
+    if (balance > 60)
+    {
+        balance = 60;
+    }
+    if (balance < -60)
+    {
+        balance = -60;
+    }
+    return ndsPlayFGMAtPan(fgm, (u8)(64 - balance));
 }
 
 sb32 ftCommonCliffAttackCheckInterruptCommon(GObj *fighter_gobj)
@@ -12672,15 +12887,22 @@ __attribute__((weak)) GObj *
 efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
 {
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
-    (void)pos;
     (void)index;
-    (void)rotate;
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopWallDamageActive != FALSE))
     {
         gNdsStageMPPassiveLoopWallDamageImpactWaveCount++;
     }
-    return NULL;
+    {
+        GObj *effect_gobj = ndsEFManagerMakeVisualEffect(
+            nNDSVisualEffectImpactWave, pos, 0.9F, 1, NULL);
+
+        if ((effect_gobj != NULL) && (DObjGetStruct(effect_gobj) != NULL))
+        {
+            DObjGetStruct(effect_gobj)->rotate.vec.f.z = rotate;
+        }
+        return effect_gobj;
+    }
 }
 
 LBGenerator *lbParticleMakeGenerator(s32 bank_id, s32 generator_id)
