@@ -8,6 +8,7 @@
 #include <nds/timers.h>
 #include <PR/sp.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <sys/obj.h>
 
@@ -16,16 +17,22 @@
 #endif
 
 #define NDS_IFCOMMON_GAME_STATUS_SIZE 0x252d4u
-#if NDS_IFCOMMON_HYBRID_OAM
 #define NDS_IFCOMMON_OBJ_VRAM_BYTES (64u * 1024u)
+#if NDS_IFCOMMON_HYBRID_OAM
 #define NDS_IFCOMMON_OBJ_GFX_ALIGNMENT 128u
 #define NDS_IFCOMMON_OBJ_PALETTE_ENTRIES 256u
-#else
-#define NDS_IFCOMMON_OBJ_VRAM_BYTES (96u * 1024u)
 #endif
 #define NDS_IFCOMMON_ASSET_COUNT 16u
 #define NDS_IFCOMMON_MAX_TILES 9u
 #define NDS_IFCOMMON_SCREEN_SCALE_Q16 52429u
+#define NDS_IFCOMMON_CLOUD_FIRST nNDSIFCommonAssetRedContour
+#define NDS_IFCOMMON_CLOUD_ATLAS_COUNT 2u
+#define NDS_IFCOMMON_CLOUD_ATLAS_WIDTH 256u
+#define NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT 128u
+#define NDS_IFCOMMON_CLOUD_ATLAS_BYTES \
+    (NDS_IFCOMMON_CLOUD_ATLAS_WIDTH * NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT)
+#define NDS_IFCOMMON_CLOUD_SPEC_COUNT 6u
+#define NDS_IFCOMMON_CLOUD_ALPHA_THRESHOLD 8u
 #define NDS_IFCOMMON_HASH_SEED 0x49464f41u
 
 enum NDSIFCommonNativeAssetKind
@@ -72,6 +79,26 @@ typedef struct NDSIFCommonTileSpec
     u8 pad_y;
 } NDSIFCommonTileSpec;
 
+typedef struct NDSIFCommonCloudSpec
+{
+    u8 asset_index;
+    u8 kind;
+    u8 atlas_index;
+    u8 atlas_x;
+    u8 atlas_y;
+    u8 width;
+    u8 height;
+    u8 source_x;
+    u8 source_y;
+    u8 palette_index;
+} NDSIFCommonCloudSpec;
+
+enum NDSIFCommonCloudKind
+{
+    nNDSIFCommonCloudLight,
+    nNDSIFCommonCloudContour
+};
+
 typedef struct NDSIFCommonAssetSpec
 {
     u32 offset;
@@ -95,6 +122,7 @@ typedef struct NDSIFCommonNativeTile
 
 typedef struct NDSIFCommonNativeAsset
 {
+    const Sprite *sprite;
     const Bitmap *bitmap;
     u32 width;
     u32 height;
@@ -113,28 +141,21 @@ typedef struct NDSIFCommonNativeAsset
 #define NO_TILE TILE(0, 0, 0, 0, 0, 0, 0, 0)
 
 /* These offsets and dimensions are the exact mixed-width Sprite manifest
- * used by reloc_backend_assets.c.  Traffic colors are ifcommon.c's original
- * dIFCommonTrafficSpriteColors tables; the second shadow is the GO-time
- * primary/environment pair from the same translation unit. */
+ * used by reloc_backend_assets.c.  GO is bilinear-prefiltered once to the DS
+ * grid.  The colored SP_CLOUD contours are prepared separately as A5I3
+ * hardware textures; their white Light cores, housing, and Dim tiles remain
+ * opaque OAM. */
 static const NDSIFCommonAssetSpec sNdsIFCommonAssetSpecs[
     NDS_IFCOMMON_ASSET_COUNT] = {
-    { 0x4d78u, 255, 255, 255, 0, 0, 0, 3,
-      { TILE(0, 0, 62, 64, 64, 64, 0, 0),
-        TILE(0, 64, 32, 9, 32, 16, 0, 0),
-        TILE(32, 64, 30, 9, 32, 16, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0xa730u, 255, 255, 255, 0, 0, 0, 6,
-      { TILE(0, 0, 64, 64, 64, 64, 0, 0),
-        TILE(64, 0, 6, 32, 8, 32, 0, 0),
-        TILE(64, 32, 6, 32, 8, 32, 0, 0),
-        TILE(0, 64, 32, 10, 32, 16, 0, 0),
-        TILE(32, 64, 32, 10, 32, 16, 0, 0),
-        TILE(64, 64, 6, 10, 8, 16, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE } },
-    { 0xc370u, 255, 255, 255, 0, 0, 0, 2,
-      { TILE(0, 0, 24, 64, 32, 64, 0, 0),
-        TILE(0, 64, 24, 9, 32, 16, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x4d78u, 255, 255, 255, 0, 0, 0, 1,
+      { TILE(0, 0, 50, 58, 64, 64, 0, 0), NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0xa730u, 255, 255, 255, 0, 0, 0, 1,
+      { TILE(0, 0, 56, 59, 64, 64, 0, 0), NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0xc370u, 255, 255, 255, 0, 0, 0, 1,
+      { TILE(0, 0, 19, 58, 32, 64, 0, 0), NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
     { 0x20990u, 255, 255, 255, 0, 0, 0, 2,
       { TILE(0, 0, 8, 32, 8, 32, 0, 0),
         TILE(0, 32, 8, 21, 8, 32, 0, 0), NO_TILE, NO_TILE,
@@ -164,62 +185,65 @@ static const NDSIFCommonAssetSpec sNdsIFCommonAssetSpecs[
       { TILE(0, 0, 19, 19, 32, 32, 0, 0), NO_TILE, NO_TILE,
         NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
     { 0x22128u, 0xff, 0xff, 0xff, 0, 0, 0, 2,
-      { TILE(0, 0, 32, 32, 32, 32, 0, 0),
-        TILE(0, 32, 32, 9, 32, 16, 0, 0), NO_TILE, NO_TILE,
+      { TILE(0, 0, 26, 32, 32, 32, 0, 0),
+        TILE(0, 32, 26, 1, 32, 8, 0, 0), NO_TILE, NO_TILE,
         NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
     { 0x22588u, 0xff, 0xff, 0xff, 0, 0, 0, 1,
-      { TILE(0, 0, 30, 32, 32, 32, 0, 0), NO_TILE, NO_TILE,
+      { TILE(0, 0, 24, 26, 32, 32, 0, 0), NO_TILE, NO_TILE,
         NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x22f18u, 0xff, 0xff, 0xff, 0, 0, 0, 6,
+    { 0x22f18u, 0xff, 0xff, 0xff, 0, 0, 0, 4,
       { TILE(0, 0, 32, 32, 32, 32, 0, 0),
-        TILE(32, 0, 14, 32, 16, 32, 0, 0),
-        TILE(0, 32, 32, 16, 32, 16, 0, 0),
-        TILE(32, 32, 14, 16, 16, 16, 0, 0),
-        TILE(0, 48, 32, 1, 32, 8, 0, 0),
-        TILE(32, 48, 14, 1, 16, 8, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE } },
-    { 0x23a28u, 0xff, 0x38, 0x38, 0, 0, 0, 6,
-      { TILE(0, 0, 32, 32, 32, 32, 0, 0),
-        TILE(32, 0, 16, 32, 16, 32, 0, 0),
-        TILE(0, 32, 32, 16, 32, 16, 0, 0),
-        TILE(32, 32, 16, 16, 16, 16, 0, 0),
-        TILE(0, 48, 32, 9, 32, 16, 0, 0),
-        TILE(32, 48, 16, 9, 16, 16, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE } },
-    { 0x24620u, 0xff, 0xa2, 0x00, 0, 0, 0, 9,
-      { TILE(0, 0, 18, 18, 32, 32, 7, 7),
-        TILE(18, 0, 18, 18, 32, 32, 7, 7),
-        TILE(36, 0, 17, 18, 32, 32, 7, 7),
-        TILE(0, 18, 18, 18, 32, 32, 7, 7),
-        TILE(18, 18, 18, 18, 32, 32, 7, 7),
-        TILE(36, 18, 17, 18, 32, 32, 7, 7),
-        TILE(0, 36, 18, 17, 32, 32, 7, 7),
-        TILE(18, 36, 18, 17, 32, 32, 7, 7),
-        TILE(36, 36, 17, 17, 32, 32, 7, 7) } },
-    { 0x25290u, 0x22, 0x66, 0xfe, 0, 0, 0, 9,
-      { TILE(0, 0, 19, 19, 32, 32, 6, 6),
-        TILE(19, 0, 18, 19, 32, 32, 7, 6),
-        TILE(37, 0, 18, 19, 32, 32, 7, 6),
-        TILE(0, 19, 19, 18, 32, 32, 6, 7),
-        TILE(19, 19, 18, 18, 32, 32, 7, 7),
-        TILE(37, 19, 18, 18, 32, 32, 7, 7),
-        TILE(0, 37, 19, 18, 32, 32, 6, 7),
-        TILE(19, 37, 18, 18, 32, 32, 7, 7),
-        TILE(37, 37, 18, 18, 32, 32, 7, 7) } }
+        TILE(32, 0, 5, 32, 8, 32, 0, 0),
+        TILE(0, 32, 32, 7, 32, 8, 0, 0),
+        TILE(32, 32, 5, 7, 8, 8, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x23a28u, 0xff, 0x38, 0x38, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE } },
+    { 0x24620u, 0xff, 0xa2, 0x00, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE } },
+    { 0x25290u, 0x22, 0x66, 0xfe, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE } }
 };
 
 #undef TILE
 #undef NO_TILE
 
+/* Two 256x128 A5I3 atlases retain the three Contours as 2x
+ * bilinear-prefiltered source masks and the three Light alpha ramps at their
+ * final DS resolution. The opaque Light centers remain OAM above the housing;
+ * these A5I3 copies restore the soft rays outside it without extra VRAM.
+ * The largest countdown scale is only 1.12x above that lattice, so the DS
+ * nearest sampler never exposes the old 3x OAM texel blocks. */
+static const NDSIFCommonCloudSpec sNdsIFCommonCloudSpecs[
+    NDS_IFCOMMON_CLOUD_SPEC_COUNT] = {
+    { nNDSIFCommonAssetRedLight, nNDSIFCommonCloudLight,
+      0, 197, 39, 26, 33, 0, 0, 4 },
+    { nNDSIFCommonAssetYellowLight, nNDSIFCommonCloudLight,
+      1, 99, 0, 24, 26, 0, 0, 4 },
+    { nNDSIFCommonAssetBlueLight, nNDSIFCommonCloudLight,
+      0, 197, 0, 37, 39, 0, 0, 4 },
+    { nNDSIFCommonAssetRedContour, nNDSIFCommonCloudContour,
+      0, 103, 0, 94, 114, 2, 0, 1 },
+    { nNDSIFCommonAssetYellowContour, nNDSIFCommonCloudContour,
+      1, 0, 0, 99, 106, 6, 0, 2 },
+    { nNDSIFCommonAssetBlueContour, nNDSIFCommonCloudContour,
+      0, 0, 0, 103, 108, 4, 2, 3 }
+};
+
 static NDSIFCommonNativeAsset sNdsIFCommonAssets[
     NDS_IFCOMMON_ASSET_COUNT];
 static const void *sNdsIFCommonPreparedFile;
+static size_t sNdsIFCommonPreparedFileSize;
 static u32 sNdsIFCommonPrepared;
 static s32 sNdsIFCommonNextOamID = 127;
 static s32 sNdsIFCommonPreviousLowestOamID = 128;
 static u32 sNdsIFCommonMatrixCount;
 static u16 sNdsIFCommonMatrixInverse[32];
 static u32 sNdsIFCommonFrameNeedsCommit;
+static u32 sNdsIFCommonCloudTextureNames[NDS_IFCOMMON_CLOUD_ATLAS_COUNT];
 
 volatile u32 gNdsIFCommonNativeOamEnabled = 1u;
 volatile u32 gNdsIFCommonNativeOamPrepareCount;
@@ -231,6 +255,11 @@ volatile u32 gNdsIFCommonNativeOamPrepareAssets;
 volatile u32 gNdsIFCommonNativeOamPrepareTiles;
 volatile u32 gNdsIFCommonNativeOamPrepareProfileFrame;
 volatile u32 gNdsIFCommonNativeOamPreparePaletteBytes;
+volatile u32 gNdsIFCommonNativeOamPrepareCloudTextureBytes;
+volatile u32 gNdsIFCommonNativeOamPrepareCloudTextureCount;
+volatile u32 gNdsIFCommonNativeOamPrepareCloudFailureStage;
+volatile u32 gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[
+    NDS_IFCOMMON_CLOUD_SPEC_COUNT];
 volatile u32 gNdsIFCommonNativeOamHotConvertCount;
 volatile u32 gNdsIFCommonNativeOamRuntimeUploadBytes;
 volatile u32 gNdsIFCommonNativeOamFrameBeginTicks;
@@ -245,6 +274,7 @@ volatile u32 gNdsIFCommonNativeOamFrameDrawCalls;
 volatile u32 gNdsIFCommonNativeOamFrameFallbackCalls;
 volatile u32 gNdsIFCommonNativeOamFrameSObjCount;
 volatile u32 gNdsIFCommonNativeOamFrameObjectCount;
+volatile u32 gNdsIFCommonNativeOamFrameCloudDrawCount;
 volatile u32 gNdsIFCommonNativeOamFrameSemanticHash;
 volatile u32 gNdsIFCommonNativeOamLastFallbackReason;
 volatile u32 gNdsIFCommonNativeOamCommitCount;
@@ -302,6 +332,304 @@ static s32 ndsIFCommonRangeValid(const void *base, size_t size,
 
     return ((address >= first) && ((address - first) <= size) &&
             (bytes <= (size - (address - first)))) ? TRUE : FALSE;
+}
+
+static s32 ndsIFCommonReadRgba32(const Sprite *sprite,
+                                  const void *file_data, size_t file_size,
+                                  u32 source_x, u32 source_y, u32 *rgba)
+{
+    const Bitmap *bitmap = sprite->bitmap;
+    u32 out_y = 0u;
+    u32 bitmap_index;
+
+    for (bitmap_index = 0u;
+         (bitmap_index < (u32)(u16)sprite->nbitmaps) &&
+         (out_y < (u32)(u16)sprite->height);
+         bitmap_index++)
+    {
+        const Bitmap *current = &bitmap[bitmap_index];
+        u32 width = (u32)(u16)current->width;
+        u32 width_img = (u32)(u16)current->width_img;
+        u32 height = (u32)(u16)current->actualHeight;
+        u32 advance = (u32)(u16)sprite->bmheight;
+        u32 local_y;
+        u32 shuffled_x;
+        const u32 *pixels;
+
+        if (width == 0u)
+        {
+            break;
+        }
+        if (width_img == 0u)
+        {
+            width_img = width;
+        }
+        if (height == 0u)
+        {
+            height = advance;
+        }
+        if (advance == 0u)
+        {
+            advance = height;
+        }
+        if ((source_y < out_y) || (source_y >= (out_y + height)) ||
+            (source_x >= width))
+        {
+            out_y += advance;
+            continue;
+        }
+
+        local_y = source_y - out_y;
+        shuffled_x = source_x ^ ((local_y & 1u) != 0u ? 1u : 0u);
+        pixels = (const u32 *)current->buf;
+        if (ndsIFCommonRangeValid(
+                file_data, file_size, pixels,
+                (size_t)width_img * height * sizeof(*pixels)) == FALSE)
+        {
+            return FALSE;
+        }
+        memcpy(rgba, &pixels[(local_y * width_img) + shuffled_x],
+               sizeof(*rgba));
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static u8 ndsIFCommonBilerpChannel(u32 c00, u32 c10,
+                                   u32 c01, u32 c11,
+                                   u32 fraction_x, u32 fraction_y)
+{
+    u32 inverse_x = 256u - fraction_x;
+    u32 inverse_y = 256u - fraction_y;
+    u32 top = (c00 * inverse_x) + (c10 * fraction_x);
+    u32 bottom = (c01 * inverse_x) + (c11 * fraction_x);
+
+    return (u8)(((top * inverse_y) + (bottom * fraction_y) +
+                 0x8000u) >> 16);
+}
+
+static u16 ndsIFCommonDecodePrefilteredGoPixel(
+    const Sprite *sprite, const void *file_data, size_t file_size,
+    u32 destination_x, u32 destination_y)
+{
+    u32 source_x_q8 = (destination_x * 320u) + 32u;
+    u32 source_y_q8 = (destination_y * 320u) + 32u;
+    u32 source_x = source_x_q8 >> 8;
+    u32 source_y = source_y_q8 >> 8;
+    u32 next_x = source_x + 1u;
+    u32 next_y = source_y + 1u;
+    u32 rgba00;
+    u32 rgba10;
+    u32 rgba01;
+    u32 rgba11;
+    u32 red;
+    u32 green;
+    u32 blue;
+    u32 alpha;
+
+    if (next_x >= (u32)(u16)sprite->width)
+    {
+        next_x = source_x;
+    }
+    if (next_y >= (u32)(u16)sprite->height)
+    {
+        next_y = source_y;
+    }
+    if ((ndsIFCommonReadRgba32(sprite, file_data, file_size,
+                               source_x, source_y, &rgba00) == FALSE) ||
+        (ndsIFCommonReadRgba32(sprite, file_data, file_size,
+                               next_x, source_y, &rgba10) == FALSE) ||
+        (ndsIFCommonReadRgba32(sprite, file_data, file_size,
+                               source_x, next_y, &rgba01) == FALSE) ||
+        (ndsIFCommonReadRgba32(sprite, file_data, file_size,
+                               next_x, next_y, &rgba11) == FALSE))
+    {
+        return 0u;
+    }
+
+#define BILERP_CHANNEL(shift) ndsIFCommonBilerpChannel(                 \
+    (rgba00 >> (shift)) & 0xffu, (rgba10 >> (shift)) & 0xffu,          \
+    (rgba01 >> (shift)) & 0xffu, (rgba11 >> (shift)) & 0xffu,          \
+    source_x_q8 & 0xffu, source_y_q8 & 0xffu)
+    red = BILERP_CHANNEL(24);
+    green = BILERP_CHANNEL(16);
+    blue = BILERP_CHANNEL(8);
+    alpha = BILERP_CHANNEL(0);
+#undef BILERP_CHANNEL
+
+    return (alpha >= 0x80u) ?
+        ndsIFCommonPackRgb15((u8)red, (u8)green, (u8)blue) : 0u;
+}
+
+static s32 ndsIFCommonReadI8(const Sprite *sprite,
+                             const void *file_data, size_t file_size,
+                             u32 source_x, u32 source_y, u8 *intensity)
+{
+    const Bitmap *bitmap = sprite->bitmap;
+    u32 out_y = 0u;
+    u32 bitmap_index;
+
+    for (bitmap_index = 0u;
+         (bitmap_index < (u32)(u16)sprite->nbitmaps) &&
+         (out_y < (u32)(u16)sprite->height);
+         bitmap_index++)
+    {
+        const Bitmap *current = &bitmap[bitmap_index];
+        u32 width = (u32)(u16)current->width;
+        u32 width_img = (u32)(u16)current->width_img;
+        u32 height = (u32)(u16)current->actualHeight;
+        u32 advance = (u32)(u16)sprite->bmheight;
+        u32 local_y;
+        u32 shuffled_x;
+        const u8 *pixels;
+
+        if (width == 0u)
+        {
+            break;
+        }
+        if (width_img == 0u)
+        {
+            width_img = width;
+        }
+        if (height == 0u)
+        {
+            height = advance;
+        }
+        if (advance == 0u)
+        {
+            advance = height;
+        }
+        if ((source_y < out_y) || (source_y >= (out_y + height)) ||
+            (source_x >= width))
+        {
+            out_y += advance;
+            continue;
+        }
+
+        local_y = source_y - out_y;
+        shuffled_x = source_x ^ ((local_y & 1u) != 0u ? 4u : 0u);
+        pixels = (const u8 *)current->buf;
+        if (ndsIFCommonRangeValid(file_data, file_size, pixels,
+                                  (size_t)width_img * height) == FALSE)
+        {
+            return FALSE;
+        }
+        *intensity = pixels[((size_t)local_y * width_img + shuffled_x) ^
+                            3u];
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static s32 ndsIFCommonSampleI8Q8(
+    const Sprite *sprite, const void *file_data, size_t file_size,
+    s32 source_x_q8, s32 source_y_q8, u8 *out_intensity)
+{
+    u32 source_x;
+    u32 source_y;
+    u32 next_x;
+    u32 next_y;
+    u32 fraction_x;
+    u32 fraction_y;
+    u8 intensity00;
+    u8 intensity10;
+    u8 intensity01;
+    u8 intensity11;
+
+    if ((sprite == NULL) || (out_intensity == NULL) ||
+        (sprite->width <= 0) || (sprite->height <= 0))
+    {
+        return FALSE;
+    }
+    if (source_x_q8 <= 0)
+    {
+        source_x = next_x = fraction_x = 0u;
+    }
+    else
+    {
+        source_x = (u32)source_x_q8 >> 8;
+        fraction_x = (u32)source_x_q8 & 0xffu;
+        if (source_x + 1u >= (u32)(u16)sprite->width)
+        {
+            source_x = (u32)(u16)sprite->width - 1u;
+            next_x = source_x;
+            fraction_x = 0u;
+        }
+        else
+        {
+            next_x = source_x + 1u;
+        }
+    }
+    if (source_y_q8 <= 0)
+    {
+        source_y = next_y = fraction_y = 0u;
+    }
+    else
+    {
+        source_y = (u32)source_y_q8 >> 8;
+        fraction_y = (u32)source_y_q8 & 0xffu;
+        if (source_y + 1u >= (u32)(u16)sprite->height)
+        {
+            source_y = (u32)(u16)sprite->height - 1u;
+            next_y = source_y;
+            fraction_y = 0u;
+        }
+        else
+        {
+            next_y = source_y + 1u;
+        }
+    }
+    if ((ndsIFCommonReadI8(sprite, file_data, file_size,
+                           source_x, source_y, &intensity00) == FALSE) ||
+        (ndsIFCommonReadI8(sprite, file_data, file_size,
+                           next_x, source_y, &intensity10) == FALSE) ||
+        (ndsIFCommonReadI8(sprite, file_data, file_size,
+                           source_x, next_y, &intensity01) == FALSE) ||
+        (ndsIFCommonReadI8(sprite, file_data, file_size,
+                           next_x, next_y, &intensity11) == FALSE))
+    {
+        return FALSE;
+    }
+    *out_intensity = ndsIFCommonBilerpChannel(
+        intensity00, intensity10, intensity01, intensity11,
+        fraction_x, fraction_y);
+    return TRUE;
+}
+
+static s32 ndsIFCommonPrefilterCloudIntensity(
+    const Sprite *sprite, const void *file_data, size_t file_size,
+    u32 destination_x, u32 destination_y, u8 *out_intensity)
+{
+    return ndsIFCommonSampleI8Q8(
+        sprite, file_data, file_size,
+        (s32)(destination_x * 128u) - 64,
+        (s32)(destination_y * 128u) - 64, out_intensity);
+}
+
+static s32 ndsIFCommonPrefilterLightIntensity(
+    const Sprite *sprite, const void *file_data, size_t file_size,
+    u32 destination_x, u32 destination_y, u8 *out_intensity)
+{
+    return ndsIFCommonSampleI8Q8(
+        sprite, file_data, file_size,
+        (s32)(destination_x * 320u) + 32,
+        (s32)(destination_y * 320u) + 32, out_intensity);
+}
+
+static u16 ndsIFCommonDecodePrefilteredLightPixel(
+    const Sprite *sprite, const void *file_data, size_t file_size,
+    u32 destination_x, u32 destination_y)
+{
+    u8 intensity;
+
+    if (ndsIFCommonPrefilterLightIntensity(
+            sprite, file_data, file_size,
+            destination_x, destination_y, &intensity) == FALSE)
+    {
+        return 0u;
+    }
+    return (intensity >= 128u) ?
+        ndsIFCommonPackRgb15(255u, 255u, 255u) : 0u;
 }
 
 static u16 ndsIFCommonDecodePixel(const Sprite *sprite,
@@ -452,6 +780,169 @@ static u16 ndsIFCommonDecodePixel(const Sprite *sprite,
     return color;
 }
 
+static u16 ndsIFCommonDecodeAssetPixel(
+    u32 asset_index, const Sprite *sprite,
+    const NDSIFCommonAssetSpec *asset_spec,
+    const void *file_data, size_t file_size,
+    u32 destination_x, u32 destination_y)
+{
+    if (asset_index <= nNDSIFCommonAssetGoExclaim)
+    {
+        return ndsIFCommonDecodePrefilteredGoPixel(
+            sprite, file_data, file_size, destination_x, destination_y);
+    }
+    if ((asset_index >= nNDSIFCommonAssetRedLight) &&
+        (asset_index <= nNDSIFCommonAssetBlueLight))
+    {
+        return ndsIFCommonDecodePrefilteredLightPixel(
+            sprite, file_data, file_size, destination_x, destination_y);
+    }
+    return ndsIFCommonDecodePixel(sprite, asset_spec, file_data, file_size,
+                                  destination_x, destination_y);
+}
+
+static void ndsIFCommonReleaseCloudAtlases(void)
+{
+    u32 atlas_index;
+
+    for (atlas_index = 0u;
+         atlas_index < NDS_IFCOMMON_CLOUD_ATLAS_COUNT; atlas_index++)
+    {
+        if (sNdsIFCommonCloudTextureNames[atlas_index] != 0u)
+        {
+            ndsRendererHardwareReleaseIFCommonCloudAtlas(
+                &sNdsIFCommonCloudTextureNames[atlas_index]);
+        }
+    }
+}
+
+typedef struct NDSIFCommonCloudFillContext
+{
+    const void *file_data;
+    size_t file_size;
+    u32 atlas_index;
+} NDSIFCommonCloudFillContext;
+
+static s32 ndsIFCommonFillCloudAtlas(u8 *pixels, u32 bytes,
+                                      void *user_data)
+{
+    const NDSIFCommonCloudFillContext *context =
+        (const NDSIFCommonCloudFillContext *)user_data;
+    u32 cloud_index;
+
+    if ((pixels == NULL) || (context == NULL) ||
+        (bytes != NDS_IFCOMMON_CLOUD_ATLAS_BYTES))
+    {
+        return FALSE;
+    }
+    memset(pixels, 0, bytes);
+    for (cloud_index = 0u;
+         cloud_index < NDS_IFCOMMON_CLOUD_SPEC_COUNT; cloud_index++)
+    {
+        const NDSIFCommonCloudSpec *cloud =
+            &sNdsIFCommonCloudSpecs[cloud_index];
+        const NDSIFCommonNativeAsset *asset;
+        u32 y;
+
+        if (cloud->atlas_index != context->atlas_index)
+        {
+            continue;
+        }
+        if ((cloud->asset_index >= NDS_IFCOMMON_ASSET_COUNT) ||
+            (cloud->kind > nNDSIFCommonCloudContour) ||
+            ((u32)cloud->atlas_x + cloud->width >
+             NDS_IFCOMMON_CLOUD_ATLAS_WIDTH) ||
+            ((u32)cloud->atlas_y + cloud->height >
+             NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT))
+        {
+            gNdsIFCommonNativeOamPrepareCloudFailureStage = 1u;
+            return FALSE;
+        }
+        asset = &sNdsIFCommonAssets[cloud->asset_index];
+        for (y = 0u; y < cloud->height; y++)
+        {
+            u32 x;
+
+            for (x = 0u; x < cloud->width; x++)
+            {
+                u8 intensity;
+                u8 alpha;
+
+                s32 sampled = (cloud->kind == nNDSIFCommonCloudLight) ?
+                    ndsIFCommonPrefilterLightIntensity(
+                        asset->sprite, context->file_data,
+                        context->file_size,
+                        (u32)cloud->source_x + x,
+                        (u32)cloud->source_y + y, &intensity) :
+                    ndsIFCommonPrefilterCloudIntensity(
+                        asset->sprite, context->file_data,
+                        context->file_size,
+                        (u32)cloud->source_x + x,
+                        (u32)cloud->source_y + y, &intensity);
+
+                if (sampled == FALSE)
+                {
+                    gNdsIFCommonNativeOamPrepareCloudFailureStage = 2u;
+                    return FALSE;
+                }
+                if (intensity < NDS_IFCOMMON_CLOUD_ALPHA_THRESHOLD)
+                {
+                    continue;
+                }
+                alpha = (u8)(((u32)intensity * 31u + 127u) / 255u);
+                gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[cloud_index]++;
+                pixels[((u32)cloud->atlas_y + y) *
+                           NDS_IFCOMMON_CLOUD_ATLAS_WIDTH +
+                       (u32)cloud->atlas_x + x] =
+                    (u8)((alpha << 3) | cloud->palette_index);
+            }
+        }
+    }
+    return TRUE;
+}
+
+static s32 ndsIFCommonPrepareCloudAtlases(const void *file_data,
+                                           size_t file_size)
+{
+    static const u16 palette[8] = {
+        0,
+        RGB15(31, 7, 7),
+        RGB15(31, 20, 0),
+        RGB15(4, 12, 31),
+        RGB15(31, 31, 31),
+        0, 0, 0
+    };
+    u32 atlas_index;
+
+    for (atlas_index = 0u;
+         atlas_index < NDS_IFCOMMON_CLOUD_ATLAS_COUNT; atlas_index++)
+    {
+        NDSIFCommonCloudFillContext context = {
+            file_data, file_size, atlas_index
+        };
+
+        if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
+                NDS_IFCOMMON_CLOUD_ATLAS_WIDTH,
+                NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT, palette,
+                ndsIFCommonFillCloudAtlas, &context,
+                &sNdsIFCommonCloudTextureNames[atlas_index]) == FALSE)
+        {
+            if (gNdsIFCommonNativeOamPrepareCloudFailureStage == 0u)
+            {
+                gNdsIFCommonNativeOamPrepareCloudFailureStage = 3u;
+            }
+            ndsIFCommonReleaseCloudAtlases();
+            return FALSE;
+        }
+        gNdsIFCommonNativeOamPrepareCloudTextureBytes +=
+            NDS_IFCOMMON_CLOUD_ATLAS_BYTES;
+        gNdsIFCommonNativeOamPrepareCloudTextureCount++;
+    }
+    gNdsIFCommonNativeOamPreparePaletteBytes +=
+        sizeof(palette) * NDS_IFCOMMON_CLOUD_ATLAS_COUNT;
+    return TRUE;
+}
+
 static SpriteSize ndsIFCommonSpriteSize(u32 width, u32 height)
 {
     if ((width == 8u) && (height == 8u)) return SpriteSize_8x8;
@@ -526,8 +1017,9 @@ static s32 ndsIFCommonBuildHybridPalette(const void *file_data,
 
                 for (x = 0u; x < tile->content_width; x++)
                 {
-                    u16 color = ndsIFCommonDecodePixel(
-                        sprite, spec, file_data, file_size,
+                    u16 color = ndsIFCommonDecodeAssetPixel(
+                        asset_index, sprite, spec,
+                        file_data, file_size,
                         (u32)tile->source_x + x,
                         (u32)tile->source_y + y);
 
@@ -576,6 +1068,7 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
     }
 
     memset(asset, 0, sizeof(*asset));
+    asset->sprite = sprite;
     asset->bitmap = sprite->bitmap;
     asset->width = (u32)(u16)sprite->width;
     asset->height = (u32)(u16)sprite->height;
@@ -641,8 +1134,9 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
 
             for (x = 0u; x < tile_spec->content_width; x++)
             {
-                u16 color = ndsIFCommonDecodePixel(
-                    sprite, spec, file_data, file_size,
+                u16 color = ndsIFCommonDecodeAssetPixel(
+                    asset_index, sprite, spec,
+                    file_data, file_size,
                     (u32)tile_spec->source_x + x,
                     (u32)tile_spec->source_y + y);
 
@@ -685,11 +1179,20 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
 
 void ndsIFCommonNativeOamInit(void)
 {
-    /* All conversion and the optional standard OBJ palette upload happen
-     * during relocation.  Neither owner has a gameplay-time upload path. */
+    /* Opaque conversion and the optional OBJ palette upload happen during
+     * relocation. The A5I3 Contours upload at scene start after M4 reserves
+     * bank A; neither owner has a gameplay-time upload path. */
     gNdsIFCommonNativeOamPreparePaletteBytes = 0u;
+    gNdsIFCommonNativeOamPrepareCloudTextureBytes = 0u;
+    gNdsIFCommonNativeOamPrepareCloudTextureCount = 0u;
+    gNdsIFCommonNativeOamPrepareCloudFailureStage = 0u;
+    memset((void *)gNdsIFCommonNativeOamPrepareCloudNonzeroTexels, 0,
+           sizeof(gNdsIFCommonNativeOamPrepareCloudNonzeroTexels));
     gNdsIFCommonNativeOamHotConvertCount = 0u;
     gNdsIFCommonNativeOamRuntimeUploadBytes = 0u;
+    memset(sNdsIFCommonCloudTextureNames, 0,
+           sizeof(sNdsIFCommonCloudTextureNames));
+    sNdsIFCommonPreparedFileSize = 0u;
 #if NDS_RENDERER_HW_TRIANGLES
     oamInit(&oamMain, SpriteMapping_Bmp_1D_128, false);
     oamClear(&oamMain, 0, 128);
@@ -728,11 +1231,18 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     gNdsIFCommonNativeOamPrepareTiles = 0u;
     gNdsIFCommonNativeOamPrepareBytes = 0u;
     gNdsIFCommonNativeOamPreparePaletteBytes = 0u;
+    gNdsIFCommonNativeOamPrepareCloudTextureBytes = 0u;
+    gNdsIFCommonNativeOamPrepareCloudTextureCount = 0u;
+    gNdsIFCommonNativeOamPrepareCloudFailureStage = 0u;
+    memset((void *)gNdsIFCommonNativeOamPrepareCloudNonzeroTexels, 0,
+           sizeof(gNdsIFCommonNativeOamPrepareCloudNonzeroTexels));
     gNdsIFCommonNativeOamPrepareProfileFrame =
         gNdsRendererProfileFrameCount;
+    ndsIFCommonReleaseCloudAtlases();
     memset(sNdsIFCommonAssets, 0, sizeof(sNdsIFCommonAssets));
     sNdsIFCommonPrepared = FALSE;
     sNdsIFCommonPreparedFile = NULL;
+    sNdsIFCommonPreparedFileSize = 0u;
 
 #if NDS_IFCOMMON_HYBRID_OAM
     palette = palette_storage;
@@ -765,10 +1275,11 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
 
 #if NDS_IFCOMMON_HYBRID_OAM
     memcpy(SPRITE_PALETTE, palette_storage, sizeof(palette_storage));
-    gNdsIFCommonNativeOamPreparePaletteBytes = sizeof(palette_storage);
+    gNdsIFCommonNativeOamPreparePaletteBytes += sizeof(palette_storage);
 #endif
     sNdsIFCommonPrepared = TRUE;
     sNdsIFCommonPreparedFile = file_data;
+    sNdsIFCommonPreparedFileSize = file_size;
     gNdsIFCommonNativeOamPrepareBytes = vram_cursor;
     gNdsIFCommonNativeOamPrepareTicks = cpuGetTiming() - start;
     gNdsIFCommonNativeOamPrepareSuccessCount++;
@@ -776,6 +1287,49 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
 #else
     (void)file_data;
     (void)file_size;
+    return FALSE;
+#endif
+}
+
+s32 ndsIFCommonNativeOamPrepareClouds(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 start;
+
+    if ((sNdsIFCommonPrepared == FALSE) ||
+        (sNdsIFCommonPreparedFile == NULL) ||
+        (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE))
+    {
+        gNdsIFCommonNativeOamPrepareCloudFailureStage = 1u;
+        gNdsIFCommonNativeOamPrepareFailCount++;
+        return FALSE;
+    }
+    if ((sNdsIFCommonCloudTextureNames[0] != 0u) &&
+        (sNdsIFCommonCloudTextureNames[1] != 0u))
+    {
+        return TRUE;
+    }
+
+    start = cpuGetTiming();
+    ndsIFCommonReleaseCloudAtlases();
+    gNdsIFCommonNativeOamPrepareCloudTextureBytes = 0u;
+    gNdsIFCommonNativeOamPrepareCloudTextureCount = 0u;
+    gNdsIFCommonNativeOamPrepareCloudFailureStage = 0u;
+    memset((void *)gNdsIFCommonNativeOamPrepareCloudNonzeroTexels, 0,
+           sizeof(gNdsIFCommonNativeOamPrepareCloudNonzeroTexels));
+    if (ndsIFCommonPrepareCloudAtlases(
+            sNdsIFCommonPreparedFile,
+            sNdsIFCommonPreparedFileSize) == FALSE)
+    {
+        gNdsIFCommonNativeOamPrepareFailCount++;
+        gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
+        gNdsIFCommonNativeOamLastFallbackReason =
+            nNDSIFCommonFallbackBadAsset;
+        return FALSE;
+    }
+    gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
+    return TRUE;
+#else
     return FALSE;
 #endif
 }
@@ -809,6 +1363,7 @@ void ndsIFCommonNativeOamBeginFrame(void)
     gNdsIFCommonNativeOamFrameFallbackCalls = 0u;
     gNdsIFCommonNativeOamFrameSObjCount = 0u;
     gNdsIFCommonNativeOamFrameObjectCount = 0u;
+    gNdsIFCommonNativeOamFrameCloudDrawCount = 0u;
     gNdsIFCommonNativeOamFrameSemanticHash = NDS_IFCOMMON_HASH_SEED;
     gNdsIFCommonNativeOamLastFallbackReason =
         nNDSIFCommonFallbackNone;
@@ -937,7 +1492,7 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
     s32 origin_y;
     u32 tile_index;
     s32 size_double;
-    u32 bitmap_alpha;
+    u32 prefiltered;
 
     for (tile_index = 0u; tile_index < asset->tile_count; tile_index++)
     {
@@ -947,12 +1502,17 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
             return FALSE;
         }
     }
-    bitmap_alpha = ndsIFCommonBitmapAlpha(sobj->sprite.alpha);
+    prefiltered = ((asset_index <= nNDSIFCommonAssetGoExclaim) ||
+                   ((asset_index >= nNDSIFCommonAssetRedLight) &&
+                    (asset_index <= nNDSIFCommonAssetBlueLight))) ?
+                      TRUE : FALSE;
 
     scale_x_q16 = (u32)((sobj->sprite.scalex *
-                         (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
+        (f32)(prefiltered ? (1u << 16) :
+                            NDS_IFCOMMON_SCREEN_SCALE_Q16)) + 0.5F);
     scale_y_q16 = (u32)((sobj->sprite.scaley *
-                         (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
+        (f32)(prefiltered ? (1u << 16) :
+                            NDS_IFCOMMON_SCREEN_SCALE_Q16)) + 0.5F);
     if ((scale_x_q16 == 0u) || (scale_y_q16 == 0u) ||
         (scale_x_q16 != scale_y_q16))
     {
@@ -995,6 +1555,7 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
                                               (spec->cell_height / 2);
         s32 x = center_x - half_bounds_x;
         s32 y = center_y - half_bounds_y;
+        u32 bitmap_alpha = ndsIFCommonBitmapAlpha(sobj->sprite.alpha);
 
         oamSet(&oamMain, sNdsIFCommonNextOamID, x, y, 0,
                (tile->color_format == SpriteColorFormat_Bmp) ?
@@ -1004,6 +1565,82 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
         sNdsIFCommonNextOamID--;
         gNdsIFCommonNativeOamFrameObjectCount++;
     }
+    return TRUE;
+}
+
+static const NDSIFCommonCloudSpec *ndsIFCommonCloudSpecForAsset(
+    u32 asset_index)
+{
+    u32 cloud_index;
+
+    for (cloud_index = 0u;
+         cloud_index < NDS_IFCOMMON_CLOUD_SPEC_COUNT; cloud_index++)
+    {
+        if ((u32)sNdsIFCommonCloudSpecs[cloud_index].asset_index ==
+            asset_index)
+        {
+            return &sNdsIFCommonCloudSpecs[cloud_index];
+        }
+    }
+    return NULL;
+}
+
+static s32 ndsIFCommonCloudSObjValid(
+    const SObj *sobj, const NDSIFCommonCloudSpec *cloud)
+{
+    u32 scale_x_q16;
+    u32 scale_y_q16;
+
+    if ((sobj == NULL) || (cloud == NULL))
+    {
+        return FALSE;
+    }
+    if ((cloud->atlas_index >= NDS_IFCOMMON_CLOUD_ATLAS_COUNT) ||
+        (sNdsIFCommonCloudTextureNames[cloud->atlas_index] == 0u) ||
+        (sobj->sprite.alpha != 255u))
+    {
+        return FALSE;
+    }
+    scale_x_q16 = (u32)((sobj->sprite.scalex *
+        (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
+    scale_y_q16 = (u32)((sobj->sprite.scaley *
+        (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
+    if ((scale_x_q16 == 0u) || (scale_x_q16 != scale_y_q16))
+    {
+        return FALSE;
+    }
+    return ((cloud->kind != nNDSIFCommonCloudLight) ||
+            (scale_x_q16 == NDS_IFCOMMON_SCREEN_SCALE_Q16)) ? TRUE : FALSE;
+}
+
+static s32 ndsIFCommonEmitCloudSObj(
+    const SObj *sobj, const NDSIFCommonCloudSpec *cloud)
+{
+    s32 origin_x_q16 = ndsIFCommonRoundFloatHalfUp(
+        sobj->pos.x * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16);
+    s32 origin_y_q16 = ndsIFCommonRoundFloatHalfUp(
+        sobj->pos.y * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16);
+    u32 source_scale_q16 = (u32)((sobj->sprite.scalex *
+        (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16) + 0.5F);
+    u32 atlas_scale_q16 = (cloud->kind == nNDSIFCommonCloudLight) ?
+        (1u << 16) : (source_scale_q16 + 1u) / 2u;
+    s32 x_q16 = origin_x_q16 +
+        (s32)((u32)cloud->source_x * atlas_scale_q16);
+    s32 y_q16 = origin_y_q16 +
+        (s32)((u32)cloud->source_y * atlas_scale_q16);
+    s32 width_q16 = (s32)((u32)cloud->width * atlas_scale_q16);
+    s32 height_q16 = (s32)((u32)cloud->height * atlas_scale_q16);
+    u32 poly_id = (cloud->kind == nNDSIFCommonCloudLight) ? 63u : 62u;
+
+    if (ndsRendererHardwareDrawIFCommonCloudAtlas(
+            sNdsIFCommonCloudTextureNames[cloud->atlas_index],
+            x_q16, y_q16, width_q16, height_q16,
+            cloud->atlas_x, cloud->atlas_y,
+            cloud->width, cloud->height, poly_id) == FALSE)
+    {
+        return FALSE;
+    }
+    gNdsIFCommonNativeOamFrameCloudDrawCount++;
     return TRUE;
 }
 
@@ -1032,6 +1669,7 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     for (scan = sobj; scan != NULL; scan = scan->next)
     {
         s32 asset_index;
+        const NDSIFCommonCloudSpec *cloud;
 
         if ((scan->sprite.attr & SP_HIDDEN) != 0u)
         {
@@ -1059,6 +1697,16 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
             return FALSE;
         }
         recognized = TRUE;
+        cloud = ndsIFCommonCloudSpecForAsset((u32)asset_index);
+        if ((cloud != NULL) &&
+            (ndsIFCommonCloudSObjValid(scan, cloud) == FALSE))
+        {
+            gNdsIFCommonNativeOamFrameFallbackCalls++;
+            gNdsIFCommonNativeOamLastFallbackReason =
+                nNDSIFCommonFallbackBadAsset;
+            gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+            return FALSE;
+        }
         required_objects += sNdsIFCommonAssets[asset_index].tile_count;
         ndsIFCommonRecordSemantic(scan, (u32)asset_index);
     }
@@ -1104,6 +1752,10 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
             continue;
         }
         asset_index = ndsIFCommonAssetForSObj(scan);
+        if ((asset_index >= (s32)NDS_IFCOMMON_CLOUD_FIRST))
+        {
+            continue;
+        }
         if ((asset_index < 0) ||
             (ndsIFCommonEmitSObj(scan, (u32)asset_index) == FALSE))
         {
@@ -1118,6 +1770,28 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
             gNdsIFCommonNativeOamFrameFallbackCalls++;
             gNdsIFCommonNativeOamLastFallbackReason =
                 nNDSIFCommonFallbackMatrixLimit;
+            gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+            return FALSE;
+        }
+    }
+    for (scan = sobj; scan != NULL; scan = scan->next)
+    {
+        s32 asset_index;
+        const NDSIFCommonCloudSpec *cloud;
+
+        if ((scan->sprite.attr & SP_HIDDEN) != 0u)
+        {
+            continue;
+        }
+        asset_index = ndsIFCommonAssetForSObj(scan);
+        cloud = (asset_index >= 0) ?
+            ndsIFCommonCloudSpecForAsset((u32)asset_index) : NULL;
+        if ((cloud != NULL) &&
+            (ndsIFCommonEmitCloudSObj(scan, cloud) == FALSE))
+        {
+            gNdsIFCommonNativeOamFrameFallbackCalls++;
+            gNdsIFCommonNativeOamLastFallbackReason =
+                nNDSIFCommonFallbackBadAsset;
             gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
             return FALSE;
         }

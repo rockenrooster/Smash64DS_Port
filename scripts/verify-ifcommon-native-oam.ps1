@@ -394,8 +394,11 @@ $nativeCapture = Join-Path $visibilityDir `
     "${date}_ifcommon-native-oam${captureVariant}-frame187.png"
 
 try {
-    $expectedPrepareBytes = if ($HybridOamMode -eq 1) { 60416 } else { 93824 }
-    $expectedPaletteBytes = if ($HybridOamMode -eq 1) { 512 } else { 0 }
+    # Opaque OBJ cells are 41,728 bytes in bitmap mode or 31,168 bytes in
+    # hybrid mode. Both add two 256x128 A5I3 Contour atlases whose two
+    # eight-entry palettes cost 2 * 8 * 2 = 32 bytes.
+    $expectedPrepareBytes = if ($HybridOamMode -eq 1) { 31168 } else { 41728 }
+    $expectedPaletteBytes = if ($HybridOamMode -eq 1) { 544 } else { 32 }
     Assert-RunnerReleased
     Set-Content -LiteralPath $configState.Config -Value $configText -NoNewline
     $fallback = Invoke-IFCommonRun -NativeEnabled 0 `
@@ -428,15 +431,16 @@ try {
         Assert-Condition ($prep[0] -eq $run.Mode -and $prep[1] -eq 1 -and
             $prep[2] -eq 1 -and $prep[3] -eq 0 -and $prep[4] -gt 0 -and
             $prep[5] -eq $expectedPrepareBytes -and $prep[6] -eq 16 -and
-            $prep[7] -eq 59 -and $prep[8] -eq 0 -and
+            $prep[7] -eq 25 -and $prep[8] -eq 0 -and
             $prep[9] -eq $expectedPaletteBytes -and
             $prep[10] -eq 0 -and $prep[11] -eq 0) `
-            'Native countdown assets were not prepared exactly once, wholly outside gameplay, with no palette/hot/runtime upload.' `
+            'Native countdown assets were not prepared exactly once outside gameplay with the derived palette cost and no hot/runtime upload.' `
             $run.Text
         foreach ($row in $run.Active) {
             Assert-Condition ($row[0] -eq $run.Mode -and $row[9] -eq 1 -and
                 $row[12] -eq 10 -and $row[32] -eq 0 -and
-                $row[33] -eq 0 -and $row[34] -eq 0 -and
+                $row[33] -eq 0 -and
+                $row[34] -eq $expectedPaletteBytes -and
                 $row[35] -eq 1 -and $row[36] -eq 1) `
                 "Mode $($run.Mode) lost source recognition or performed hot conversion/upload." `
                 $run.Text
@@ -483,7 +487,7 @@ try {
         $nativeInclusive += [int64]$row[3] + [int64]$row[4] + [int64]$row[5]
         Assert-Condition ($row[6] -eq 1 -and $row[7] -eq $previousObjects -and
             $row[8] -eq 0 -and $row[10] -eq 1 -and $row[11] -eq 0 -and
-            $row[13] -ge 24 -and $row[13] -le 26 -and $row[15] -eq 0 -and
+            $row[13] -eq 17 -and $row[15] -eq 0 -and
             $row[16] -eq ($previousCommit + 1) -and $row[17] -ge $row[5]) `
             'Native OAM frame did not conserve prior clears, draws, commits, and post-VBlank work.' `
             $native.Text
@@ -569,7 +573,7 @@ try {
 
     Write-Output (
         "IFCommon native OAM gate passed: ROM=$romHash ELF=$elfHash " +
-        "frames=187..194 sourceSObjs=10 objects=24..26 " +
+        "frames=187..194 sourceSObjs=10 objects=17 " +
         "hybridOam=$HybridOamMode prepareBytes=$expectedPrepareBytes paletteBytes=$expectedPaletteBytes " +
         "inclusiveMedian/P95=$nativeMedian/$nativeP95 " +
         "foregroundMedian=$(Get-Median $fallbackForeground)->$(Get-Median $nativeForeground) " +

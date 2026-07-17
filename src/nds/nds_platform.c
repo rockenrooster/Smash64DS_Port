@@ -221,16 +221,11 @@ void ndsPlatformInit(void)
     videoSetMode(MODE_5_3D | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE);
     vramSetBankA(VRAM_A_TEXTURE);
     vramSetBankB(VRAM_B_TEXTURE);
-    /* The hybrid IFCommon owner fits its exact preconverted graphics in E;
-     * F/G then remain available to the renderer as texture-palette banks. */
+    /* IFCommon's opaque OAM assets fit in E. Its source-alpha flare uses
+     * A5I3 hardware textures, so F/G remain texture-palette banks. */
     vramSetBankE(VRAM_E_MAIN_SPRITE);
-#if NDS_IFCOMMON_HYBRID_OAM
     vramSetBankF(VRAM_F_TEX_PALETTE_SLOT0);
     vramSetBankG(VRAM_G_TEX_PALETTE_SLOT1);
-#else
-    vramSetBankF(VRAM_F_MAIN_SPRITE_0x06410000);
-    vramSetBankG(VRAM_G_MAIN_SPRITE_0x06414000);
-#endif
     ndsIFCommonNativeOamInit();
     glInit();
     glClearColor(2, 3, 6, 31);

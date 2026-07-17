@@ -1277,6 +1277,23 @@ _Static_assert(
     "direct raw topology cache must remain within 8 KiB");
 
 static u32 sNdsRendererHardwareSubmitted;
+#define NDS_RENDERER_IFCOMMON_CLOUD_QUEUE_COUNT 4u
+typedef struct NDSRendererIFCommonCloudDraw
+{
+    u32 texture_name;
+    s32 x_q16;
+    s32 y_q16;
+    s32 width_q16;
+    s32 height_q16;
+    u32 texture_x;
+    u32 texture_y;
+    u32 texture_width;
+    u32 texture_height;
+    u32 poly_id;
+} NDSRendererIFCommonCloudDraw;
+static NDSRendererIFCommonCloudDraw sNdsRendererIFCommonCloudQueue[
+    NDS_RENDERER_IFCOMMON_CLOUD_QUEUE_COUNT];
+static u32 sNdsRendererIFCommonCloudQueueCount;
 static u32 sNdsRendererHardwareNoOracle;
 static u32 sNdsRendererHardwareTriangleBatchOpen;
 static u32 sNdsRendererHardwareTriangleBatchTextured;
@@ -6818,11 +6835,259 @@ static s32 ndsRendererHardwareTextureSizeEnum(u32 size, int *out)
     case 32u: value = TEXTURE_SIZE_32; break;
     case 64u: value = TEXTURE_SIZE_64; break;
     case 128u: value = TEXTURE_SIZE_128; break;
+    case 256u: value = TEXTURE_SIZE_256; break;
     default:
         return FALSE;
     }
     *out = value;
     return TRUE;
+}
+
+s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
+    u32 width, u32 height, const u16 palette[8],
+    NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
+{
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    int size_x;
+    int size_y;
+    int name = 0;
+    u32 bytes;
+    u32 upload_attempts = 0u;
+    u8 *pixels = (u8 *)sNdsRendererHardwareTextureScratch;
+
+    if ((fill == NULL) || (palette == NULL) || (texture_name == NULL) ||
+        (height == 0u) || (width > (UINT32_MAX / height)) ||
+        (ndsRendererHardwareTextureSizeEnum(width, &size_x) == FALSE) ||
+        (ndsRendererHardwareTextureSizeEnum(height, &size_y) == FALSE))
+    {
+        return FALSE;
+    }
+    bytes = width * height;
+    if ((bytes > sizeof(sNdsRendererHardwareTextureScratch)) ||
+        (fill(pixels, bytes, user_data) == FALSE))
+    {
+        return FALSE;
+    }
+    if (*texture_name != 0u)
+    {
+        ndsRendererHardwareReleaseIFCommonCloudAtlas(texture_name);
+    }
+    ndsRendererHardwareEndBatch();
+    if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0)
+    {
+        return FALSE;
+    }
+    glBindTexture(GL_TEXTURE_2D, name);
+    while (ndsRendererHardwareFencedGlTexImage2D(
+               GL_TEXTURE_2D, 0, GL_RGB8_A5, size_x, size_y, 0,
+               TEXGEN_TEXCOORD, pixels) == 0)
+    {
+        ndsRendererHardwareFencedGlDeleteTextures(1, &name);
+        name = 0;
+        upload_attempts++;
+        if ((upload_attempts >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT) ||
+            (ndsRendererHardwareEvictTexture(NULL) == FALSE) ||
+            (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0))
+        {
+            return FALSE;
+        }
+        glBindTexture(GL_TEXTURE_2D, name);
+    }
+    glColorTableEXT(GL_TEXTURE_2D, 0, 8, 0, 0, palette);
+    *texture_name = (u32)name;
+    sNdsRendererHardwareBoundTextureName = (u32)name;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    return TRUE;
+#else
+    (void)width;
+    (void)height;
+    (void)palette;
+    (void)fill;
+    (void)user_data;
+    (void)texture_name;
+    return FALSE;
+#endif
+}
+
+void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
+{
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    int name;
+
+    if ((texture_name == NULL) || (*texture_name == 0u))
+    {
+        return;
+    }
+    name = (int)*texture_name;
+    ndsRendererHardwareEndBatch();
+    ndsRendererHardwareFencedGlDeleteTextures(1, &name);
+    if (sNdsRendererHardwareBoundTextureName == *texture_name)
+    {
+        sNdsRendererHardwareBoundTextureName = 0u;
+    }
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    *texture_name = 0u;
+#else
+    if (texture_name != NULL)
+    {
+        *texture_name = 0u;
+    }
+#endif
+}
+
+static v16 ndsRendererHardwareIFCommonScreenX(s32 pixel_q16)
+{
+    s64 scaled = (s64)pixel_q16 * 32;
+    s64 rounded = (scaled >= 0) ? (scaled + 0x8000) >> 16 :
+                                     -(((-scaled) + 0x8000) >> 16);
+
+    rounded -= 4096;
+    if (rounded < -32768)
+    {
+        rounded = -32768;
+    }
+    else if (rounded > 32767)
+    {
+        rounded = 32767;
+    }
+    return (v16)rounded;
+}
+
+static v16 ndsRendererHardwareIFCommonScreenY(s32 pixel_q16)
+{
+    s64 scaled = (s64)pixel_q16 * 128;
+    const s64 denominator = 3 * 65536;
+    s64 rounded = (scaled >= 0) ?
+        (scaled + (denominator / 2)) / denominator :
+        -(((-scaled) + (denominator / 2)) / denominator);
+
+    rounded = 4096 - rounded;
+    if (rounded < -32768)
+    {
+        rounded = -32768;
+    }
+    else if (rounded > 32767)
+    {
+        rounded = 32767;
+    }
+    return (v16)rounded;
+}
+
+s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
+    u32 texture_name, s32 x_q16, s32 y_q16,
+    s32 width_q16, s32 height_q16,
+    u32 texture_x, u32 texture_y, u32 texture_width,
+    u32 texture_height, u32 poly_id)
+{
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    NDSRendererIFCommonCloudDraw *draw;
+
+    if ((texture_name == 0u) || (width_q16 <= 0) || (height_q16 <= 0) ||
+        (texture_width == 0u) || (texture_height == 0u) ||
+        (texture_x + texture_width > 256u) ||
+        (texture_y + texture_height > 128u) || (poly_id > 63u) ||
+        (sNdsRendererIFCommonCloudQueueCount >=
+         NDS_RENDERER_IFCOMMON_CLOUD_QUEUE_COUNT))
+    {
+        return FALSE;
+    }
+    draw = &sNdsRendererIFCommonCloudQueue[
+        sNdsRendererIFCommonCloudQueueCount++];
+    draw->texture_name = texture_name;
+    draw->x_q16 = x_q16;
+    draw->y_q16 = y_q16;
+    draw->width_q16 = width_q16;
+    draw->height_q16 = height_q16;
+    draw->texture_x = texture_x;
+    draw->texture_y = texture_y;
+    draw->texture_width = texture_width;
+    draw->texture_height = texture_height;
+    draw->poly_id = poly_id;
+    return TRUE;
+#else
+    (void)texture_name;
+    (void)x_q16;
+    (void)y_q16;
+    (void)width_q16;
+    (void)height_q16;
+    (void)texture_x;
+    (void)texture_y;
+    (void)texture_width;
+    (void)texture_height;
+    (void)poly_id;
+    return FALSE;
+#endif
+}
+
+static void ndsRendererHardwareEmitIFCommonClouds(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    u32 draw_index;
+
+    if (sNdsRendererIFCommonCloudQueueCount == 0u)
+    {
+        return;
+    }
+
+    /* BG0 is below main OAM on DS. Emit the source-alpha Contour and soft
+     * Light rays at the final renderer boundary; opaque OAM supplies the
+     * housing and high-alpha Light center above them. */
+    ndsRendererHardwareEndBatch();
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glDisable(GL_ALPHA_TEST);
+    glColor(RGB15(31, 31, 31));
+    for (draw_index = 0u;
+         draw_index < sNdsRendererIFCommonCloudQueueCount; draw_index++)
+    {
+        const NDSRendererIFCommonCloudDraw *draw =
+            &sNdsRendererIFCommonCloudQueue[draw_index];
+        v16 left = ndsRendererHardwareIFCommonScreenX(draw->x_q16);
+        v16 right = ndsRendererHardwareIFCommonScreenX(
+            draw->x_q16 + draw->width_q16);
+        v16 top = ndsRendererHardwareIFCommonScreenY(draw->y_q16);
+        v16 bottom = ndsRendererHardwareIFCommonScreenY(
+            draw->y_q16 + draw->height_q16);
+        t16 tex_left = (t16)(draw->texture_x << 4);
+        t16 tex_right = (t16)((draw->texture_x + draw->texture_width) << 4);
+        t16 tex_top = (t16)(draw->texture_y << 4);
+        t16 tex_bottom = (t16)((draw->texture_y + draw->texture_height) << 4);
+        v16 depth = (v16)-4090;
+
+        glBindTexture(GL_TEXTURE_2D, (int)draw->texture_name);
+        glPolyFmt(POLY_CULL_NONE | POLY_ALPHA(31) |
+                  POLY_ID(draw->poly_id));
+        glBegin(GL_TRIANGLE);
+#define NDS_IFCOMMON_CLOUD_VERTEX(s, t, x, y) do { \
+    glTexCoord2t16((s), (t)); \
+    glVertex3v16((x), (y), depth); \
+} while (0)
+        NDS_IFCOMMON_CLOUD_VERTEX(tex_left, tex_top, left, top);
+        NDS_IFCOMMON_CLOUD_VERTEX(tex_left, tex_bottom, left, bottom);
+        NDS_IFCOMMON_CLOUD_VERTEX(tex_right, tex_top, right, top);
+        NDS_IFCOMMON_CLOUD_VERTEX(tex_right, tex_top, right, top);
+        NDS_IFCOMMON_CLOUD_VERTEX(tex_left, tex_bottom, left, bottom);
+        NDS_IFCOMMON_CLOUD_VERTEX(tex_right, tex_bottom, right, bottom);
+#undef NDS_IFCOMMON_CLOUD_VERTEX
+    }
+    sNdsRendererHardwareBoundTextureName =
+        sNdsRendererIFCommonCloudQueue[
+            sNdsRendererIFCommonCloudQueueCount - 1u].texture_name;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+    sNdsRendererHardwareMatrixGeneration = 0u;
+    sNdsRendererHardwareSubmitted = TRUE;
+    sNdsRendererIFCommonCloudQueueCount = 0u;
+#endif
 }
 
 static u32 ndsRendererHardwareTextureNextPow2(u32 value)
@@ -19281,8 +19546,10 @@ void ndsRendererProfileFramePublish(void)
 u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
-    u32 submitted = sNdsRendererHardwareSubmitted;
+    u32 submitted;
 
+    ndsRendererHardwareEmitIFCommonClouds();
+    submitted = sNdsRendererHardwareSubmitted;
     ndsRendererHardwareEndBatch();
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererHardwareRunRawMatrixPosTests();

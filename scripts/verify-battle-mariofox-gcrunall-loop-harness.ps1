@@ -1344,14 +1344,14 @@ try {
             $publishedBanks[2] -eq 0x81 -and
             $publishedBanks[3] -eq 0x89 -and
             $publishedBanks[4] -eq 0x82 -and
-            $publishedBanks[5] -eq 0x92 -and
-            $publishedBanks[6] -eq 0x9a -and
+            $publishedBanks[5] -eq 0x83 -and
+            $publishedBanks[6] -eq 0x8b -and
             $publishedBanks[7] -eq 0x81 -and
             $publishedBanks[8] -eq 0x06800000 -and
             $publishedBanks[9] -eq 0x06820000 -and
             $publishedBanks[10] -eq 131072 -and
             $publishedBanks[11] -eq 1
-        ) "Published ROM did not naturally preserve bitmap IFCommon banks and the exact bank-A static span (actual=$($publishedBanks -join ','))." $gdbStdout
+        ) "Published ROM did not naturally preserve the IFCommon OBJ/source-alpha palette banks and the exact bank-A static span (actual=$($publishedBanks -join ','))." $gdbStdout
         $publishedRendererDefaultsSummary =
             " intrinsicM3=9/$($publishedFast[1])/$($publishedFast[2]) intrinsicM4=22/$($publishedM4[5])/hits$($publishedM4[11])/fence0 water=2/0/1"
     }
@@ -1745,8 +1745,9 @@ try {
                 $wo = Get-Ints $wallpaperOracle
                 if ($usesRetainedWallpaper) {
                     $ioam = Get-Ints $ifCommonOam
-                    $expectedIfCommonPrepareBytes = if ($effectiveIFCommonHybridOamMode -eq 1) { 60416 } else { 93824 }
-                    $expectedIfCommonPaletteBytes = if ($effectiveIFCommonHybridOamMode -eq 1) { 512 } else { 0 }
+                    # Native OBJ bytes exclude the two source-alpha contour atlases, which live in texture VRAM.
+                    $expectedIfCommonPrepareBytes = if ($effectiveIFCommonHybridOamMode -eq 1) { 31168 } else { 41728 }
+                    $expectedIfCommonPaletteBytes = if ($effectiveIFCommonHybridOamMode -eq 1) { 544 } else { 32 }
                     $smc = Get-Ints $sceneMipCache
                     $swa = Get-Ints $sceneWallAffine
                 }
@@ -2644,8 +2645,8 @@ try {
                     Assert-Condition (($benchmarkMakeIdentity.RendererBenchmarkMode -gt 0) -or ($RendererFastRunMode -eq 9)) 'Benchmark-only verifier was not built with a renderer benchmark mode and did not select the complete-stage owner.' ($benchmarkMakeIdentity | Format-List | Out-String)
                     if ($m4CandidateEvidence) {
                         $banks = Get-Ints $vramBanks
-                        $expectedBankF = if ($effectiveIFCommonHybridOamMode -eq 1) { 0x83 } else { 0x92 }
-                        $expectedBankG = if ($effectiveIFCommonHybridOamMode -eq 1) { 0x8b } else { 0x9a }
+                        $expectedBankF = 0x83
+                        $expectedBankG = 0x8b
                         Assert-Condition ($vramBanks.Success -and $banks[0] -eq 0x83 -and $banks[1] -eq 0x8b -and $banks[2] -eq 0x81 -and $banks[3] -eq 0x89 -and $banks[4] -eq 0x82 -and $banks[5] -eq $expectedBankF -and $banks[6] -eq $expectedBankG -and $banks[7] -eq 0x81 -and $banks[8] -eq 0x06800000 -and $banks[9] -eq 0x06820000 -and $banks[10] -eq 131072 -and $banks[11] -eq 1) "M4 VRAM bank ownership or exact contiguous bank-A static span does not match the battle contract (actual=$($banks -join ','))." $gdbStdout
                     }
                     if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
@@ -2912,7 +2913,7 @@ try {
                         $ioam[1] -eq 1 -and $ioam[2] -eq 1 -and
                         $ioam[3] -eq 0 -and $ioam[4] -gt 0 -and
                         $ioam[5] -eq $expectedIfCommonPrepareBytes -and
-                        $ioam[6] -eq 16 -and $ioam[7] -eq 59 -and
+                        $ioam[6] -eq 16 -and $ioam[7] -eq 25 -and
                         $ioam[9] -eq $expectedIfCommonPaletteBytes -and
                         $ioam[10] -eq 0 -and $ioam[11] -eq 0 -and
                         $ioam[12] -eq 0 -and $ioam[13] -eq 0 -and

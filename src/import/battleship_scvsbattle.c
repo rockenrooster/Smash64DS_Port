@@ -11,6 +11,7 @@
 #include <if/interface.h>
 #include <mn/menu.h>
 #include <nds/nds_audio_assets.h>
+#include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
@@ -136,6 +137,7 @@ void scVSBattleStartBattle(void)
 
     ndsBaseSCVSBattleStartBattle();
     (void)ndsRendererHardwarePrepareBattleStaticTextures();
+    (void)ndsIFCommonNativeOamPrepareClouds();
 
     gNdsSCVSBattleOriginalGObjCount = (u32)gcGetGObjsActiveNum();
     gNdsSCVSBattleOriginalCameraCount = sGCCamerasActiveNum;

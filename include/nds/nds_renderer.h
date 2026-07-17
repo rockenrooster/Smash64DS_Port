@@ -798,10 +798,21 @@ s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,
                                              const u16 *mip1,
                                              const u16 *mip2);
 s32 ndsRendererHardwareDrawSceneMipCache(u32 mip_index,
-                                          const s32 *tex_s_q4,
-                                          const s32 *tex_t_q4,
-                                          u32 columns,
-                                          u32 rows);
+                                           const s32 *tex_s_q4,
+                                           const s32 *tex_t_q4,
+                                           u32 columns,
+                                           u32 rows);
+typedef s32 (*NDSRendererTextureFillCallback)(u8 *pixels, u32 bytes,
+                                               void *user_data);
+s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
+    u32 width, u32 height, const u16 palette[8],
+    NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name);
+void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name);
+s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
+    u32 texture_name, s32 x_q16, s32 y_q16,
+    s32 width_q16, s32 height_q16,
+    u32 texture_x, u32 texture_y, u32 texture_width,
+    u32 texture_height, u32 poly_id);
 void ndsRendererHardwareSetNoOracle(u32 enabled);
 u32 ndsRendererHardwareNoOracleEnabled(void);
 u32 ndsRendererHardwareConsumeSubmittedFrame(void);

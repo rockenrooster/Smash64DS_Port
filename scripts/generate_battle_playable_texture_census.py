@@ -250,7 +250,9 @@ EXPECTED_ACTOR_ROOTS = {
 
 
 EXPECTED_CENSUS_SHA256 = (
-    "4b2a16c348bdff54d397728e7bcf01f3ea3fe54e67beb931521f053df1d8a92f"
+    # Same 25/41728 OBJ and 65536/32 A5I3 residency; the owner label now
+    # records that unused atlas space also carries the three Light rays.
+    "73ede7b370c7d72712b4760111d626d5d77a359e118a32707ef22a3190e2ac62"
 )
 
 
@@ -789,10 +791,18 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
         if offset >= len(countdown.payload):
             raise falsify(f"countdown {name}: Sprite offset 0x{offset:x} is out of range")
         tiles: list[list[int]] = []
-        for tile_match in re.finditer(r"TILE\(([^)]*)\)", entry):
-            tile = [c_integer(value) for value in tile_match.group(1).split(",")]
-            if len(tile) != 8:
-                raise falsify(f"countdown {name}: malformed TILE")
+        for tile_match in re.finditer(
+            r"\b(CLOUD_TILE|TILE)\(([^)]*)\)", entry
+        ):
+            kind = tile_match.group(1)
+            tile = [
+                c_integer(value) for value in tile_match.group(2).split(",")
+            ]
+            expected_fields = 9 if kind == "CLOUD_TILE" else 8
+            if len(tile) != expected_fields:
+                raise falsify(f"countdown {name}: malformed {kind}")
+            if kind == "CLOUD_TILE":
+                tile = tile[:6] + [0, 0] + tile[6:]
             if any(tile):
                 tiles.append(tile)
         if len(tiles) != tile_count:
@@ -821,17 +831,47 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
                 ],
             }
         )
-    if total_tiles != 59 or total_bytes != 93824:
+    macro_values: dict[str, int] = {}
+    for macro in (
+        "NDS_IFCOMMON_CLOUD_ATLAS_COUNT",
+        "NDS_IFCOMMON_CLOUD_ATLAS_WIDTH",
+        "NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT",
+    ):
+        match = re.search(
+            rf"^#define\s+{macro}\s+([^\s]+)", source, re.MULTILINE
+        )
+        if match is None:
+            raise falsify(f"native countdown {macro} is absent")
+        macro_values[macro] = c_integer(match.group(1))
+    cloud_texture_bytes = (
+        macro_values["NDS_IFCOMMON_CLOUD_ATLAS_COUNT"]
+        * macro_values["NDS_IFCOMMON_CLOUD_ATLAS_WIDTH"]
+        * macro_values["NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT"]
+    )
+    cloud_palette_bytes = (
+        macro_values["NDS_IFCOMMON_CLOUD_ATLAS_COUNT"] * 8 * 2
+    )
+    if total_tiles != 25 or total_bytes != 41728:
         raise falsify(
             f"native countdown totals {total_tiles} tiles/{total_bytes} bytes "
-            "!= 59/93824"
+            "!= 25/41728"
+        )
+    if cloud_texture_bytes != 65536 or cloud_palette_bytes != 32:
+        raise falsify(
+            "native countdown A5I3 residency changed: "
+            f"{cloud_texture_bytes} texture/{cloud_palette_bytes} palette bytes"
         )
     return {
-        "path": "native OAM, outside the GL texture cache",
+        "path": "opaque OAM plus pinned A5I3 Contour/Light-ray atlases",
         "asset_id": countdown.file_id,
         "logical_assets": len(records),
         "native_tiles": total_tiles,
         "native_obj_vram_bytes": total_bytes,
+        "native_cloud_texture_bytes": cloud_texture_bytes,
+        "native_cloud_palette_bytes": cloud_palette_bytes,
+        "native_gpu_resident_bytes": (
+            total_bytes + cloud_texture_bytes + cloud_palette_bytes
+        ),
         "assets": records,
         "runtime_zero_hot_conversion_proven_by_host_census": False,
     }

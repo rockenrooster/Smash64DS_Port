@@ -176,9 +176,9 @@ $goFirstGdb = $goFirst.Replace('\', '/')
 $readySecondGdb = $readySecond.Replace('\', '/')
 $goSecondGdb = $goSecond.Replace('\', '/')
 $markerFormat =
-    'CUTG_EXACT=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u'
+    'CUTG_EXACT=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u'
 $markerValues =
-    'gNdsRendererProfileFrameCount, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsIFCommonNativeOamEnabled, gNdsIFCommonNativeOamFrameRecognizedCalls, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamFrameSemanticHash, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamFrameCommitCalls, gNdsIFCommonNativeOamFrameIdle, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsIFCommonNativeOamPreparePaletteBytes'
+    'gNdsRendererProfileFrameCount, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsIFCommonNativeOamEnabled, gNdsIFCommonNativeOamFrameRecognizedCalls, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamFrameSemanticHash, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamFrameCommitCalls, gNdsIFCommonNativeOamFrameIdle, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsIFCommonNativeOamPreparePaletteBytes, gNdsIFCommonNativeOamPrepareSuccessCount, gNdsIFCommonNativeOamPrepareFailCount, gNdsIFCommonNativeOamPrepareCloudTextureBytes, gNdsIFCommonNativeOamPrepareCloudTextureCount, gNdsIFCommonNativeOamPrepareBytes, gNdsIFCommonNativeOamPrepareCloudFailureStage, gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[0], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[1], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[2], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[3], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[4], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[5], gNdsIFCommonNativeOamFrameCloudDrawCount'
 $selectorCommands = @()
 if ($FoxCpuMode -ge 0) {
     $selectorCommands = @(
@@ -243,7 +243,7 @@ try {
     $expectedFrames = @($FirstFrame, $SecondFrame)
     for ($i = 0; $i -lt 2; $i++) {
         $row = $rows[$i]
-        Assert-Condition ($row.Count -eq 20) `
+        Assert-Condition ($row.Count -eq 33) `
             "Exact Cut G frame $($expectedFrames[$i]) marker had $($row.Count) fields." `
             $gdbText
         Assert-Condition (
@@ -257,9 +257,16 @@ try {
         Assert-Condition (
             $row[7] -eq 1 -and $row[8] -eq 2 -and $row[9] -eq 2 -and
             $row[10] -eq 0 -and $row[11] -eq 13 -and
-            $row[12] -ne 0x49464f41 -and $row[13] -eq 42 -and
+            $row[12] -ne 0x49464f41 -and $row[13] -eq 23 -and
             $row[14] -eq 0 -and $row[15] -eq 1 -and $row[16] -eq 0 -and
-            $row[17] -eq 0 -and $row[18] -eq 0 -and $row[19] -eq 0) `
+            $row[17] -eq 0 -and $row[18] -eq 0 -and $row[19] -eq 32 -and
+            $row[20] -eq 1 -and $row[21] -eq 0 -and
+            $row[22] -eq 65536 -and $row[23] -eq 2 -and
+            $row[24] -eq 41728 -and $row[25] -eq 0 -and
+            $row[26] -gt 0 -and $row[27] -gt 0 -and
+            $row[28] -gt 0 -and $row[29] -gt 0 -and
+            $row[30] -gt 0 -and $row[31] -gt 0 -and
+            $row[32] -eq 2) `
             "Exact frame $($expectedFrames[$i]) lost native-OAM GO recognition, drawing, or no-conversion state." `
             $gdbText
     }
