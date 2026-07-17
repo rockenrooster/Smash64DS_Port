@@ -1,0 +1,4 @@
+interface:
+  display_name: "Smash64DS N64 Sprite Extraction"
+  short_description: "Extract TEXSHUF sprites into DS-ready assets"
+  default_prompt: "Use $smash64ds-extract-n64-sprites to extract a source-faithful N64 sprite and bake a clean DS RGB555 asset."

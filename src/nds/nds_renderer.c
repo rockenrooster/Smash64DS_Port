@@ -1277,7 +1277,9 @@ _Static_assert(
     "direct raw topology cache must remain within 8 KiB");
 
 static u32 sNdsRendererHardwareSubmitted;
-#define NDS_RENDERER_IFCOMMON_CLOUD_QUEUE_COUNT 4u
+/* GO peaks at ten traffic/flare SObjs plus three announce glyphs. Three spare
+ * entries keep the exact source painter order fail-closed. */
+#define NDS_RENDERER_IFCOMMON_CLOUD_QUEUE_COUNT 16u
 typedef struct NDSRendererIFCommonCloudDraw
 {
     u32 texture_name;
@@ -1294,6 +1296,8 @@ typedef struct NDSRendererIFCommonCloudDraw
 static NDSRendererIFCommonCloudDraw sNdsRendererIFCommonCloudQueue[
     NDS_RENDERER_IFCOMMON_CLOUD_QUEUE_COUNT];
 static u32 sNdsRendererIFCommonCloudQueueCount;
+volatile u32 gNdsRendererIFCommonCloudQueuedCount;
+volatile u32 gNdsRendererIFCommonCloudEmittedCount;
 static u32 sNdsRendererHardwareNoOracle;
 static u32 sNdsRendererHardwareTriangleBatchOpen;
 static u32 sNdsRendererHardwareTriangleBatchTextured;
@@ -6843,8 +6847,9 @@ static s32 ndsRendererHardwareTextureSizeEnum(u32 size, int *out)
     return TRUE;
 }
 
-s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
-    u32 width, u32 height, const u16 palette[8],
+static s32 ndsRendererHardwarePrepareIFCommonAtlas(
+    u32 width, u32 height, u32 texture_format,
+    const u16 *palette, u32 palette_entries,
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
 {
 #if NDS_RENDERER_HW_TRIANGLES && \
@@ -6857,6 +6862,10 @@ s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
     u8 *pixels = (u8 *)sNdsRendererHardwareTextureScratch;
 
     if ((fill == NULL) || (palette == NULL) || (texture_name == NULL) ||
+        (((texture_format == GL_RGB8_A5) && (palette_entries > 8u)) ||
+         ((texture_format == GL_RGB32_A3) && (palette_entries > 32u)) ||
+         ((texture_format != GL_RGB8_A5) &&
+          (texture_format != GL_RGB32_A3)) || (palette_entries == 0u)) ||
         (height == 0u) || (width > (UINT32_MAX / height)) ||
         (ndsRendererHardwareTextureSizeEnum(width, &size_x) == FALSE) ||
         (ndsRendererHardwareTextureSizeEnum(height, &size_y) == FALSE))
@@ -6880,7 +6889,7 @@ s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
     }
     glBindTexture(GL_TEXTURE_2D, name);
     while (ndsRendererHardwareFencedGlTexImage2D(
-               GL_TEXTURE_2D, 0, GL_RGB8_A5, size_x, size_y, 0,
+               GL_TEXTURE_2D, 0, (int)texture_format, size_x, size_y, 0,
                TEXGEN_TEXCOORD, pixels) == 0)
     {
         ndsRendererHardwareFencedGlDeleteTextures(1, &name);
@@ -6894,7 +6903,7 @@ s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
         }
         glBindTexture(GL_TEXTURE_2D, name);
     }
-    glColorTableEXT(GL_TEXTURE_2D, 0, 8, 0, 0, palette);
+    glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0, palette);
     *texture_name = (u32)name;
     sNdsRendererHardwareBoundTextureName = (u32)name;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -6902,12 +6911,32 @@ s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
 #else
     (void)width;
     (void)height;
+    (void)texture_format;
     (void)palette;
+    (void)palette_entries;
     (void)fill;
     (void)user_data;
     (void)texture_name;
     return FALSE;
 #endif
+}
+
+s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
+    u32 width, u32 height, const u16 palette[8],
+    NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
+{
+    return ndsRendererHardwarePrepareIFCommonAtlas(
+        width, height, GL_RGB8_A5, palette, 8u,
+        fill, user_data, texture_name);
+}
+
+s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
+    u32 width, u32 height, const u16 palette[32],
+    NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
+{
+    return ndsRendererHardwarePrepareIFCommonAtlas(
+        width, height, GL_RGB32_A3, palette, 32u,
+        fill, user_data, texture_name);
 }
 
 void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
@@ -7006,6 +7035,7 @@ s32 ndsRendererHardwareDrawIFCommonCloudAtlas(
     draw->texture_width = texture_width;
     draw->texture_height = texture_height;
     draw->poly_id = poly_id;
+    gNdsRendererIFCommonCloudQueuedCount++;
     return TRUE;
 #else
     (void)texture_name;
@@ -7033,9 +7063,8 @@ static void ndsRendererHardwareEmitIFCommonClouds(void)
         return;
     }
 
-    /* BG0 is below main OAM on DS. Emit the source-alpha Contour and soft
-     * Light rays at the final renderer boundary; opaque OAM supplies the
-     * housing and high-alpha Light center above them. */
+    /* Emit IFCommon traffic, Contour, and Light quads at the final renderer
+     * boundary in the order queued by the source pass. */
     ndsRendererHardwareEndBatch();
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -7060,7 +7089,10 @@ static void ndsRendererHardwareEmitIFCommonClouds(void)
         t16 tex_right = (t16)((draw->texture_x + draw->texture_width) << 4);
         t16 tex_top = (t16)(draw->texture_y << 4);
         t16 tex_bottom = (t16)((draw->texture_y + draw->texture_height) << 4);
-        v16 depth = (v16)-4090;
+        /* Opaque A3 texels update depth on DS. Give each later source SObj a
+         * one-step-nearer depth so frame, lamps, contour, and Light compose in
+         * painter order instead of the first quad masking every successor. */
+        v16 depth = (v16)(-4080 - (s32)draw_index);
 
         glBindTexture(GL_TEXTURE_2D, (int)draw->texture_name);
         glPolyFmt(POLY_CULL_NONE | POLY_ALPHA(31) |
@@ -7077,6 +7109,7 @@ static void ndsRendererHardwareEmitIFCommonClouds(void)
         NDS_IFCOMMON_CLOUD_VERTEX(tex_left, tex_bottom, left, bottom);
         NDS_IFCOMMON_CLOUD_VERTEX(tex_right, tex_bottom, right, bottom);
 #undef NDS_IFCOMMON_CLOUD_VERTEX
+        gNdsRendererIFCommonCloudEmittedCount++;
     }
     sNdsRendererHardwareBoundTextureName =
         sNdsRendererIFCommonCloudQueue[
@@ -19229,6 +19262,8 @@ u32 ndsRendererProfileGlobalStateHash(void)
 
 void ndsRendererProfileFrameBegin(void)
 {
+    gNdsRendererIFCommonCloudQueuedCount = 0u;
+    gNdsRendererIFCommonCloudEmittedCount = 0u;
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     if (gNdsRendererBenchmarkSinkCalibrationWords == 0u)
     {

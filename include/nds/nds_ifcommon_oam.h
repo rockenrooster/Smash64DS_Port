@@ -15,6 +15,7 @@ void ndsIFCommonNativeOamInit(void);
 s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
                                            size_t file_size);
 s32 ndsIFCommonNativeOamPrepareClouds(void);
+void ndsIFCommonNativeOamReleasePreGoTextures(void);
 void ndsIFCommonNativeOamBeginFrame(void);
 s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj);
 void ndsIFCommonNativeOamCommit(void);
@@ -32,7 +33,9 @@ extern volatile u32 gNdsIFCommonNativeOamPreparePaletteBytes;
 extern volatile u32 gNdsIFCommonNativeOamPrepareCloudTextureBytes;
 extern volatile u32 gNdsIFCommonNativeOamPrepareCloudTextureCount;
 extern volatile u32 gNdsIFCommonNativeOamPrepareCloudFailureStage;
-extern volatile u32 gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[6];
+extern volatile u32 gNdsIFCommonNativeOamPreGoReleaseCount;
+extern volatile u32 gNdsIFCommonNativeOamPreGoReleaseBytes;
+extern volatile u32 gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[16];
 extern volatile u32 gNdsIFCommonNativeOamHotConvertCount;
 extern volatile u32 gNdsIFCommonNativeOamRuntimeUploadBytes;
 extern volatile u32 gNdsIFCommonNativeOamFrameBeginTicks;

@@ -99,7 +99,14 @@ DS BG, OAM, and GX hardware.
 
 - Cut G M1 keeps one complete source Dream Land wallpaper seed in 256x192 BG2.
 - Live `grWallpaperCalcPersp` state updates native affine registers.
-- Countdown/traffic-light/GO SObjs use setup-converted bitmap OAM.
+- Countdown source assets are decoded once from O2R with format-specific
+  `SP_TEXSHUF` inversion: odd rows use `x^8` for 4-bit, `x^4` for 8-bit, and
+  `x^2` for both RGBA16 and RGBA32. A comb pattern is a decode failure, not a
+  filtering problem.
+- Big GO uses prepare-time premultiplied resampling into direct RGB555+A1 OAM;
+  no runtime palette quantization, subpixel placement, or antialiasing remains.
+- The traffic housing/dim lamps use one opaque shaded A3I5 hardware atlas. Only
+  the source flare/core/contour uses graded A5I3 alpha, queued after the housing.
 - FPS, timer, fighter identity, stock, and damage are change-driven lower-screen
   text. Gameplay presentation remains on the top screen.
 

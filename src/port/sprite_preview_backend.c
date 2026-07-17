@@ -1695,7 +1695,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
 
                     if ((is_texshuf != 0) && ((row & 1u) != 0))
                     {
-                        source_x ^= 1u;
+                        source_x ^= 2u;
                     }
                     memcpy(&rgba,
                            &src_rgba32[(row * src_width) + source_x],

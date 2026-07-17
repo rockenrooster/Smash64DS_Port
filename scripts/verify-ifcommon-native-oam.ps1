@@ -196,8 +196,117 @@ function Save-WindowCapture {
     }
 }
 
+function Get-BitmapRegionMetrics {
+    param(
+        [string]$Path,
+        [string]$ClearPath,
+        [System.Drawing.Rectangle]$Region
+    )
+    $bitmap = [System.Drawing.Bitmap]::FromFile($Path)
+    $clear = [System.Drawing.Bitmap]::FromFile($ClearPath)
+    try {
+        Assert-Condition ($bitmap.Width -eq 416 -and $bitmap.Height -eq 664) `
+            "Capture '$Path' is not the canonical 416x664 window."
+        Assert-Condition ($clear.Width -eq $bitmap.Width -and
+            $clear.Height -eq $bitmap.Height) `
+            "Clear capture '$ClearPath' does not match '$Path'."
+        Assert-Condition ($Region.X -ge 0 -and $Region.Y -ge 0 -and
+            $Region.Right -le $bitmap.Width -and
+            $Region.Bottom -le $bitmap.Height) `
+            "Region $Region is outside capture '$Path'."
+
+        $bytes = [byte[]]::new($Region.Width * $Region.Height * 3)
+        $byteIndex = 0
+        $blue = 0
+        $red = 0
+        $amber = 0
+        $cream = 0
+        $dark = 0
+        $different = 0
+        for ($y = $Region.Y; $y -lt $Region.Bottom; $y++) {
+            for ($x = $Region.X; $x -lt $Region.Right; $x++) {
+                $pixel = $bitmap.GetPixel($x, $y)
+                $clearPixel = $clear.GetPixel($x, $y)
+                $bytes[$byteIndex++] = $pixel.R
+                $bytes[$byteIndex++] = $pixel.G
+                $bytes[$byteIndex++] = $pixel.B
+                if ($pixel.ToArgb() -ne $clearPixel.ToArgb()) { $different++ }
+                if ($pixel.B -ge $pixel.R + 16 -and
+                    $pixel.B -ge $pixel.G + 8) { $blue++ }
+                if ($pixel.R -ge $pixel.G + 24 -and
+                    $pixel.R -ge $pixel.B + 24) { $red++ }
+                if ($pixel.R -ge 160 -and $pixel.G -ge 70 -and
+                    $pixel.R -ge $pixel.G + 24 -and
+                    $pixel.G -ge $pixel.B + 16) { $amber++ }
+                if ($pixel.R -ge 190 -and $pixel.G -ge 150 -and
+                    $pixel.B -ge 90) { $cream++ }
+                if ($pixel.R -lt 64 -and $pixel.G -lt 64 -and
+                    $pixel.B -lt 64) { $dark++ }
+            }
+        }
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hash = -join @($sha256.ComputeHash($bytes) |
+                ForEach-Object { $_.ToString('x2') })
+        } finally {
+            $sha256.Dispose()
+        }
+        return [pscustomobject]@{
+            Hash = $hash
+            Blue = $blue
+            Red = $red
+            Amber = $amber
+            Cream = $cream
+            Dark = $dark
+            Different = $different
+        }
+    } finally {
+        $clear.Dispose()
+        $bitmap.Dispose()
+    }
+}
+
+function Save-NearestNeighborCrop {
+    param(
+        [string]$SourcePath,
+        [string]$DestinationPath,
+        [System.Drawing.Rectangle]$Region,
+        [ValidateRange(1,8)][int]$Scale = 3
+    )
+    $source = [System.Drawing.Bitmap]::FromFile($SourcePath)
+    $crop = $source.Clone($Region, $source.PixelFormat)
+    $zoom = New-Object System.Drawing.Bitmap `
+        ($Region.Width * $Scale), ($Region.Height * $Scale)
+    $graphics = [System.Drawing.Graphics]::FromImage($zoom)
+    try {
+        $graphics.CompositingMode =
+            [System.Drawing.Drawing2D.CompositingMode]::SourceCopy
+        $graphics.InterpolationMode =
+            [System.Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
+        $graphics.PixelOffsetMode =
+            [System.Drawing.Drawing2D.PixelOffsetMode]::Half
+        $graphics.SmoothingMode =
+            [System.Drawing.Drawing2D.SmoothingMode]::None
+        $destination = New-Object System.Drawing.Rectangle `
+            0, 0, $zoom.Width, $zoom.Height
+        $graphics.DrawImage(
+            $crop, $destination, 0, 0, $crop.Width, $crop.Height,
+            [System.Drawing.GraphicsUnit]::Pixel)
+        $zoom.Save($DestinationPath, [System.Drawing.Imaging.ImageFormat]::Png)
+    } finally {
+        $graphics.Dispose()
+        $zoom.Dispose()
+        $crop.Dispose()
+        $source.Dispose()
+    }
+}
+
 function Invoke-IFCommonRun {
-    param([ValidateSet(0,1)][int]$NativeEnabled, [string]$CapturePath)
+    param(
+        [ValidateSet(0,1)][int]$NativeEnabled,
+        [string]$CapturePath,
+        [string]$ClearCapturePath
+    )
 
     $name = if ($NativeEnabled -ne 0) { 'native' } else { 'fallback' }
     $stdout = Join-Path $logDir "ifcommon-oam-$name.gdb.stdout.log"
@@ -207,13 +316,17 @@ function Invoke-IFCommonRun {
     $gdbScript = Join-Path $tempDir "ifcommon-oam-$name.gdb"
     $ready = Join-Path $tempDir "ifcommon-oam-$name.capture-ready"
     $go = Join-Path $tempDir "ifcommon-oam-$name.capture-go"
+    $clearReady = Join-Path $tempDir "ifcommon-oam-$name.clear-ready"
+    $clearGo = Join-Path $tempDir "ifcommon-oam-$name.clear-go"
     Remove-Item $stdout, $stderr, $melonStdout, $melonStderr, $gdbScript,
-        $ready, $go -Force -ErrorAction SilentlyContinue
+        $ready, $go, $clearReady, $clearGo -Force -ErrorAction SilentlyContinue
     $runConfigHash =
         (Get-FileHash -LiteralPath $configState.Config -Algorithm SHA256).Hash
 
     $gdbReady = $ready.Replace('\', '/')
     $gdbGo = $go.Replace('\', '/')
+    $gdbClearReady = $clearReady.Replace('\', '/')
+    $gdbClearGo = $clearGo.Replace('\', '/')
     $activeFormat =
         'IFCOMMON_ACTIVE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u'
     $activeValues =
@@ -222,6 +335,10 @@ function Invoke-IFCommonRun {
         'IFCOMMON_TAIL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%u'
     $tailValues =
         'gNdsIFCommonNativeOamEnabled, gNdsRendererProfileFrameCount, gNdsIFCommonNativeOamFrameBeginTicks, gNdsIFCommonNativeOamFrameTicks, gNdsIFCommonNativeOamFrameCommitTicks, gNdsIFCommonNativeOamFrameCommitCalls, gNdsIFCommonNativeOamFrameClearedObjects, gNdsIFCommonNativeOamFrameIdle, gNdsIFCommonNativeOamFrameRecognizedCalls, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamFrameSemanticHash, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamCommitCount, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsRendererProfilePostVBlankTicks'
+    $goFormat = 'IFCOMMON_GO=' +
+        ((1..50 | ForEach-Object { '%u' }) -join ',')
+    $goValues =
+        'gNdsRendererProfileFrameCount, gSCManagerBattleState->game_status, gNdsIFCommonNativeOamFrameCloudDrawCount, gNdsRendererIFCommonCloudQueuedCount, gNdsRendererIFCommonCloudEmittedCount, gNdsIFCommonNativeOamPrepareCloudFailureStage, sNdsIFCommonCloudTextureNames[0], sNdsIFCommonCloudTextureNames[1], sNdsIFCommonTrafficTextureName, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamPrepareCloudTextureBytes, gNdsIFCommonNativeOamPrepareCloudTextureCount, gNdsIFCommonNativeOamPreparePaletteBytes, gNdsIFCommonNativeOamPrepareBytes, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9], gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[0], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[1], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[2], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[3], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[4], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[5], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[6], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[7], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[8], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[9], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[10], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[11], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[12], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[13], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[14], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[15], gNdsIFCommonNativeOamPreGoReleaseCount, gNdsIFCommonNativeOamPreGoReleaseBytes'
     $commands = @(
         'set pagination off',
         'set confirm off',
@@ -231,7 +348,7 @@ function Invoke-IFCommonRun {
         'continue',
         "set variable gNdsIFCommonNativeOamEnabled = $NativeEnabled",
         'set variable gNdsIFCommonHUDLowerTextMode = 1',
-        'break ndsBattlePlayableFrameCompleteMarker if ((gNdsRendererProfileFrameCount >= 186 && gNdsRendererProfileFrameCount <= 194) || (gNdsRendererProfileFrameCount >= 250 && gNdsRendererProfileFrameCount <= 300) || gNdsRendererProfileFrameCount == 600)',
+        'break ndsBattlePlayableFrameCompleteMarker if ((gNdsRendererProfileFrameCount >= 186 && gNdsRendererProfileFrameCount <= 194) || (gNdsRendererProfileFrameCount >= 198 && gNdsRendererProfileFrameCount <= 202) || (gNdsRendererProfileFrameCount >= 250 && gNdsRendererProfileFrameCount <= 300) || gNdsRendererProfileFrameCount == 600)',
         'commands',
         'silent',
         'if gNdsRendererProfileFrameCount == 186',
@@ -239,12 +356,18 @@ function Invoke-IFCommonRun {
         'end',
         'if gNdsRendererProfileFrameCount >= 187 && gNdsRendererProfileFrameCount <= 194',
         ("printf `"$activeFormat\n`", $activeValues"),
-        'if gNdsRendererProfileFrameCount == 187',
+        'end',
+        'if gNdsRendererProfileFrameCount >= 198 && gNdsRendererProfileFrameCount <= 202',
+        ("printf `"$goFormat\n`", $goValues"),
+        'if gNdsRendererProfileFrameCount == 198',
         ("shell powershell.exe -NoProfile -Command `"Set-Content -LiteralPath '$gdbReady' -Value ready; while (-not (Test-Path -LiteralPath '$gdbGo')) { Start-Sleep -Milliseconds 25 }`""),
         'end',
         'end',
         'if gNdsRendererProfileFrameCount >= 250 && gNdsRendererProfileFrameCount <= 300',
         ("printf `"$tailFormat\n`", $tailValues"),
+        'if gNdsRendererProfileFrameCount == 256',
+        ("shell powershell.exe -NoProfile -Command `"Set-Content -LiteralPath '$gdbClearReady' -Value ready; while (-not (Test-Path -LiteralPath '$gdbClearGo')) { Start-Sleep -Milliseconds 25 }`""),
+        'end',
         'end',
         'if gNdsRendererProfileFrameCount == 600',
         ("printf `"IFCOMMON_IDLE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u\n`", $tailValues"),
@@ -295,16 +418,33 @@ function Invoke-IFCommonRun {
             if ($gdbProcess.HasExited) {
                 $contextText = (Get-Content $stdout, $stderr -Raw `
                     -ErrorAction SilentlyContinue) -join "`n"
-                throw "GDB exited before exact frame 187 capture.`n$contextText"
+                throw "GDB exited before exact frame 198 capture.`n$contextText"
             }
             if ((Get-Date) -ge $captureDeadline) {
-                throw 'Timed out waiting for exact frame 187 capture pause.'
+                throw 'Timed out waiting for exact frame 198 capture pause.'
             }
             Start-Sleep -Milliseconds 50
         }
         Save-WindowCapture -WindowHandle $emulator.MainWindowHandle `
             -Path $CapturePath
         Set-Content -LiteralPath $go -Value go
+
+        $clearDeadline = (Get-Date).AddSeconds(120)
+        while (-not (Test-Path -LiteralPath $clearReady)) {
+            $gdbProcess.Refresh()
+            if ($gdbProcess.HasExited) {
+                $contextText = (Get-Content $stdout, $stderr -Raw `
+                    -ErrorAction SilentlyContinue) -join "`n"
+                throw "GDB exited before exact frame 256 capture.`n$contextText"
+            }
+            if ((Get-Date) -ge $clearDeadline) {
+                throw 'Timed out waiting for exact frame 256 capture pause.'
+            }
+            Start-Sleep -Milliseconds 50
+        }
+        Save-WindowCapture -WindowHandle $emulator.MainWindowHandle `
+            -Path $ClearCapturePath
+        Set-Content -LiteralPath $clearGo -Value go
 
         Assert-Condition ($gdbProcess.WaitForExit(180000)) `
             'Timed out waiting for the exact native-OAM GDB run.'
@@ -319,6 +459,7 @@ function Invoke-IFCommonRun {
         $tailRows = @(Get-MarkerRows $gdbText 'IFCOMMON_TAIL')
         $idleRows = @(Get-MarkerRows $gdbText 'IFCOMMON_IDLE')
         $prepRows = @(Get-MarkerRows $gdbText 'IFCOMMON_PREP')
+        $goRows = @(Get-MarkerRows $gdbText 'IFCOMMON_GO')
         return [PSCustomObject]@{
             Mode = $NativeEnabled
             Text = $gdbText
@@ -327,7 +468,9 @@ function Invoke-IFCommonRun {
             Tail = $tailRows
             Idle = if ($idleRows.Count -ne 0) { $idleRows[0] } else { $null }
             Prep = if ($prepRows.Count -ne 0) { $prepRows[0] } else { $null }
+            Go = $goRows
             Capture = $CapturePath
+            ClearCapture = $ClearCapturePath
             ConfigHash = $runConfigHash
         }
     } finally {
@@ -345,9 +488,15 @@ function Invoke-IFCommonRun {
                 $emulator.WaitForExit()
             }
         }
-        Remove-Item $ready, $go -Force -ErrorAction SilentlyContinue
+        Remove-Item $ready, $go, $clearReady, $clearGo -Force `
+            -ErrorAction SilentlyContinue
     }
 }
+
+$hostFixture = & python (Join-Path $root 'scripts\check_ifcommon_hybrid_oam.py') 2>&1
+Assert-Condition ($LASTEXITCODE -eq 0) `
+    'Offline IFCommon atlas/filter fixture failed before emulator execution.' `
+    ($hostFixture -join "`n")
 
 if (-not $NoBuild) {
     if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
@@ -389,26 +538,69 @@ $elfHash = (Get-FileHash -LiteralPath $elf -Algorithm SHA256).Hash
 $date = Get-Date -Format 'yyyy-MM-dd'
 $captureVariant = if ($HybridOamMode -eq 1) { '-hybrid' } else { '' }
 $fallbackCapture = Join-Path $visibilityDir `
-    "${date}_ifcommon-bg3-fallback${captureVariant}-frame187.png"
+    "task11-${date}_ifcommon-bg3-fallback${captureVariant}-frame198.png"
 $nativeCapture = Join-Path $visibilityDir `
-    "${date}_ifcommon-native-oam${captureVariant}-frame187.png"
+    "task11-${date}_ifcommon-native-oam${captureVariant}-frame198.png"
+$fallbackClearCapture = Join-Path $visibilityDir `
+    "task11-${date}_ifcommon-bg3-fallback${captureVariant}-frame256.png"
+$nativeClearCapture = Join-Path $visibilityDir `
+    "task11-${date}_ifcommon-native-oam${captureVariant}-frame256.png"
 
 try {
-    # Opaque OBJ cells are 41,728 bytes in bitmap mode or 31,168 bytes in
-    # hybrid mode. Both add two 256x128 A5I3 Contour atlases whose two
-    # eight-entry palettes cost 2 * 8 * 2 = 32 bytes.
-    $expectedPrepareBytes = if ($HybridOamMode -eq 1) { 31168 } else { 41728 }
-    $expectedPaletteBytes = if ($HybridOamMode -eq 1) { 544 } else { 32 }
+    # GO occupies three direct RGB555+A1 OBJ cells. Traffic stays one opaque
+    # A3I5 hardware atlas and the flare stays two source-alpha A5I3 atlases.
+    # Palette accounting is 512 OBJ + 2*16 A5I3 + 64 A3I5 = 608 bytes.
+    $expectedPrepareBytes = 31168
+    $expectedPaletteBytes = 608
+    $expectedCloudTextureBytes = 73728
+    $expectedCloudTextureCount = 3
+    $expectedCloudNonzero = @(
+        486, 421, 739, 6001, 7067, 8990, 0, 0, 0,
+        176, 2026, 97, 97, 132, 75, 201)
     Assert-RunnerReleased
     Set-Content -LiteralPath $configState.Config -Value $configText -NoNewline
     $fallback = Invoke-IFCommonRun -NativeEnabled 0 `
-        -CapturePath $fallbackCapture
+        -CapturePath $fallbackCapture -ClearCapturePath $fallbackClearCapture
     Assert-RunnerReleased
     Set-Content -LiteralPath $configState.Config -Value $configText -NoNewline
     $native = Invoke-IFCommonRun -NativeEnabled 1 `
-        -CapturePath $nativeCapture
+        -CapturePath $nativeCapture -ClearCapturePath $nativeClearCapture
     Assert-RunnerReleased
     Set-Content -LiteralPath $configState.Config -Value $configText -NoNewline
+
+    # Canonical window coordinates derived from the accepted frame-198 capture.
+    # The exact GO crop locks Tyler's approved nearest-pixel presentation; the
+    # traffic crop excludes the unrelated lower-stage geometry and separately
+    # proves a blue flare, shaded housing/lamps, and countdown disappearance.
+    $trafficRegion = New-Object System.Drawing.Rectangle 115, 56, 235, 120
+    $goRegion = New-Object System.Drawing.Rectangle 100, 155, 220, 120
+    $trafficMetrics = Get-BitmapRegionMetrics -Path $nativeCapture `
+        -ClearPath $nativeClearCapture -Region $trafficRegion
+    $goMetrics = Get-BitmapRegionMetrics -Path $nativeCapture `
+        -ClearPath $nativeClearCapture -Region $goRegion
+    Assert-Condition ($trafficMetrics.Hash -eq
+        '121ca43c5ba39a5b5ab2b8985b8ded94be953f73719048581c611080efba6eba') `
+        'Accepted traffic-light/flare crop changed byte-for-byte.'
+    Assert-Condition ($goMetrics.Hash -eq
+        '8dbde0ad01eaa9b0a33de10ac290380dc509b98e7dda96a5e1c537818c1d12cd') `
+        'Accepted GO text crop changed byte-for-byte.'
+    Assert-Condition ($trafficMetrics.Blue -gt 10000 -and
+        $trafficMetrics.Red -gt 800 -and $trafficMetrics.Amber -gt 800 -and
+        $trafficMetrics.Dark -gt 500 -and
+        $trafficMetrics.Different -gt 25000) `
+        'Traffic-light crop lost the blue flare, shaded lamps/housing, or disappearance.'
+    Assert-Condition ($goMetrics.Red -gt 6500 -and
+        $goMetrics.Amber -gt 4000 -and $goMetrics.Cream -gt 3500 -and
+        $goMetrics.Different -gt 20000) `
+        'GO crop lost its red/amber/cream body or countdown disappearance.'
+    $fallbackGoCrop = Join-Path $visibilityDir `
+        "task11-${date}_ifcommon-go-fallback${captureVariant}-frame198-3x.png"
+    $acceptedGoCrop = Join-Path $visibilityDir `
+        "task11-${date}_ifcommon-go-accepted${captureVariant}-frame198-3x.png"
+    Save-NearestNeighborCrop -SourcePath $fallbackCapture `
+        -DestinationPath $fallbackGoCrop -Region $goRegion
+    Save-NearestNeighborCrop -SourcePath $nativeCapture `
+        -DestinationPath $acceptedGoCrop -Region $goRegion
 
     foreach ($run in @($fallback, $native)) {
         Assert-Condition ($null -ne $run.Base -and $null -ne $run.Prep -and
@@ -418,6 +610,9 @@ try {
         Assert-Condition ($run.Active.Count -eq 8) `
             "Mode $($run.Mode) captured $($run.Active.Count) of 8 active frames." `
             $run.Text
+        Assert-Condition ($run.Go.Count -eq 5) `
+            "Mode $($run.Mode) captured $($run.Go.Count) of 5 GO frames." `
+            $run.Text
         Assert-Condition ($run.Tail.Count -eq 51) `
             "Mode $($run.Mode) captured $($run.Tail.Count) of 51 tail frames." `
             $run.Text
@@ -426,6 +621,12 @@ try {
         Assert-Condition (($actualFrames -join ',') -eq
             ($expectedFrames -join ',')) `
             "Mode $($run.Mode) did not capture exact frames 187..194." `
+            $run.Text
+        $expectedGoFrames = @(198..202)
+        $actualGoFrames = @($run.Go | ForEach-Object { [int64]$_[0] })
+        Assert-Condition (($actualGoFrames -join ',') -eq
+            ($expectedGoFrames -join ',')) `
+            "Mode $($run.Mode) did not capture exact GO frames 198..202." `
             $run.Text
         $prep = $run.Prep
         Assert-Condition ($prep[0] -eq $run.Mode -and $prep[1] -eq 1 -and
@@ -450,6 +651,39 @@ try {
                 "Mode $($run.Mode) disagreed with BattleShip's locked Wait/timer state." `
                 $run.Text
         }
+        foreach ($row in $run.Go) {
+            Assert-Condition ($row.Count -eq 50 -and
+                $row[1] -eq 1 -and $row[5] -eq 0 -and
+                $row[6] -ne 0 -and $row[7] -eq 0 -and
+                $row[8] -ne 0 -and
+                $row[14] -eq $expectedCloudTextureBytes -and
+                $row[15] -eq $expectedCloudTextureCount -and
+                $row[16] -eq $expectedPaletteBytes -and
+                $row[17] -eq $expectedPrepareBytes -and
+                $row[18] -eq 0 -and $row[19] -eq 0 -and
+                (($row[20..29] | Measure-Object -Sum).Sum -eq 0) -and
+                $row[30] -eq 0 -and $row[31] -eq 0 -and
+                (($row[32..47] -join ',') -eq
+                    ($expectedCloudNonzero -join ',')) -and
+                $row[48] -eq 1 -and $row[49] -eq 32768) `
+                "Mode $($run.Mode) lost prepared overlay residency, direct GO cells, or the post-GO texture fence." `
+                $run.Text
+        }
+    }
+
+    foreach ($row in $fallback.Go) {
+        Assert-Condition ($row[2] -eq 0 -and $row[3] -eq 0 -and
+            $row[4] -eq 0 -and $row[10] -eq 0 -and $row[11] -eq 2) `
+            'Disabled native mode unexpectedly queued an IFCommon overlay.' `
+            $fallback.Text
+    }
+    foreach ($row in $native.Go) {
+        Assert-Condition ($row[2] -eq 10 -and $row[3] -eq 10 -and
+            $row[4] -eq 10 -and $row[9] -eq 0 -and
+            $row[10] -eq 2 -and $row[11] -eq 0 -and
+            $row[12] -eq 3 -and $row[13] -eq 13) `
+            'Native GO did not emit three direct letters plus traffic and flare exactly once.' `
+            $native.Text
     }
 
     for ($i = 0; $i -lt 8; $i++) {
@@ -481,17 +715,15 @@ try {
         $fallback.Text
 
     $nativeInclusive = @()
-    $previousObjects = [int64]$native.Base[7]
     $previousCommit = [int64]$native.Base[2]
     foreach ($row in $native.Active) {
         $nativeInclusive += [int64]$row[3] + [int64]$row[4] + [int64]$row[5]
-        Assert-Condition ($row[6] -eq 1 -and $row[7] -eq $previousObjects -and
-            $row[8] -eq 0 -and $row[10] -eq 1 -and $row[11] -eq 0 -and
-            $row[13] -eq 17 -and $row[15] -eq 0 -and
-            $row[16] -eq ($previousCommit + 1) -and $row[17] -ge $row[5]) `
-            'Native OAM frame did not conserve prior clears, draws, commits, and post-VBlank work.' `
+        Assert-Condition ($row[6] -eq 0 -and $row[7] -eq 0 -and
+            $row[8] -eq 1 -and $row[10] -eq 1 -and $row[11] -eq 0 -and
+            $row[13] -eq 0 -and $row[15] -eq 0 -and
+            $row[16] -eq $previousCommit -and $row[17] -ge $row[5]) `
+            'Native quad frame retained an OAM clear/object/commit or lost its source draw.' `
             $native.Text
-        $previousObjects = [int64]$row[13]
         $previousCommit = [int64]$row[16]
     }
     $nativeMedian = Get-Median $nativeInclusive
@@ -516,7 +748,7 @@ try {
     $nativeTail = $native.Tail
     $firstZero = -1
     for ($i = 1; $i -lt $nativeTail.Count; $i++) {
-        if ($nativeTail[$i - 1][12] -gt 0 -and $nativeTail[$i][12] -eq 0) {
+        if ($nativeTail[$i - 1][11] -gt 0 -and $nativeTail[$i][11] -eq 0) {
             $firstZero = $i
             break
         }
@@ -528,14 +760,14 @@ try {
     $finalClear = $nativeTail[$firstZero]
     Assert-Condition ($lastActive[1] -eq 255 -and
         $finalClear[1] -eq 256 -and
-        $finalClear[2] -gt 0 -and $finalClear[3] -eq 0 -and
-        $finalClear[4] -gt 0 -and $finalClear[5] -eq 1 -and
-        $finalClear[6] -eq $lastActive[12] -and $finalClear[7] -eq 0 -and
+        $finalClear[2] -eq 0 -and $finalClear[3] -eq 0 -and
+        $finalClear[4] -eq 0 -and $finalClear[5] -eq 0 -and
+        $finalClear[6] -eq 0 -and $finalClear[7] -eq 1 -and
         $finalClear[8] -eq 0 -and $finalClear[9] -eq 0 -and
-        $finalClear[12] -eq 0 -and
-        $finalClear[15] -eq ($lastActive[15] + 1) -and
+        $finalClear[11] -eq 0 -and $finalClear[12] -eq 0 -and
+        $finalClear[15] -eq $lastActive[15] -and
         $finalClear[22] -ge $finalClear[4]) `
-        'Countdown disappearance did not perform exactly one bounded final clear/commit.' `
+        'Countdown disappearance retained native OAM work after the quad queue emptied.' `
         $native.Text
     for ($i = $firstZero + 1; $i -lt $nativeTail.Count; $i++) {
         $row = $nativeTail[$i]
@@ -573,7 +805,7 @@ try {
 
     Write-Output (
         "IFCommon native OAM gate passed: ROM=$romHash ELF=$elfHash " +
-        "frames=187..194 sourceSObjs=10 objects=17 " +
+        "frames=187..194 sourceSObjs=10 objects=0 GO=3obj+10quads " +
         "hybridOam=$HybridOamMode prepareBytes=$expectedPrepareBytes paletteBytes=$expectedPaletteBytes " +
         "inclusiveMedian/P95=$nativeMedian/$nativeP95 " +
         "foregroundMedian=$(Get-Median $fallbackForeground)->$(Get-Median $nativeForeground) " +
