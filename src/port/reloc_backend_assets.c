@@ -128,14 +128,7 @@
 #define NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE 0x280u
 #define NDS_RELOC_ASSET_MARIO_ANIM_FIRE_FLOWER_AIR 0x281u
 #define NDS_RELOC_ASSET_FOX_ANIM_EGGLAY 0x282u
-#define NDS_RELOC_ASSET_FOX_ANIM_WALK1 0x283u
-#define NDS_RELOC_ASSET_FOX_ANIM_WALK2 0x284u
-#define NDS_RELOC_ASSET_FOX_ANIM_WALK3 0x285u
-#define NDS_RELOC_ASSET_FOX_ANIM_WALK_END 0x286u
-#define NDS_RELOC_ASSET_FOX_ANIM_DASH 0x287u
-#define NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN 0x28bu
-#define NDS_RELOC_ASSET_FOX_ANIM_JUMP_F 0x292u
-#define NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B 0x295u
+#define NDS_RELOC_ASSET_FOX_ANIM_LANDING_AIR_X 0x295u
 #define NDS_RELOC_ASSET_FOX_ANIM_CATCH 0x2dcu
 #define NDS_RELOC_ASSET_FOX_ANIM_THROW_B 0x2dfu
 #define NDS_RELOC_ASSET_FOX_ANIM_JAB1 0x2efu
@@ -1413,9 +1406,7 @@ static s32 ndsRelocIsMarioFoxNaturalCombatAnimID(u32 asset_id)
     return (((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_WAIT) &&
              (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_FIRE_FLOWER_AIR)) ||
             ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
-             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN)) ||
-            ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JUMP_F) &&
-             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B)) ||
+             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_LANDING_AIR_X)) ||
             ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_CATCH) &&
              (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_THROW_B)) ||
             ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JAB1) &&
@@ -1596,6 +1587,48 @@ static u32 ndsRelocMarioBattleAnimAssetIDForToken(u32 token)
     return NDS_RELOC_ASSET_INVALID;
 }
 
+/* BattleShip files 642..661 are Fox's contiguous common-motion bank. */
+static const uintptr_t *const sNdsRelocFoxCommonAnimFileIDs[] =
+{
+    &llFTFoxAnimEggLayFileID, /* 642 */
+    &llFTFoxAnimWalk1FileID, /* 643 */
+    &llFTFoxAnimWalk2FileID, /* 644 */
+    &llFTFoxAnimWalk3FileID, /* 645 */
+    &llFTFoxAnimWalkEndFileID, /* 646 */
+    &llFTFoxAnimDashFileID, /* 647 */
+    &llFTFoxAnimRunFileID, /* 648 */
+    &llFTFoxAnimRunBrakeFileID, /* 649 */
+    &llFTFoxAnimTurnFileID, /* 650 */
+    &llFTFoxAnimTurnRunFileID, /* 651 */
+    &llFTFoxAnimJumpFFileID, /* 652 */
+    &llFTFoxAnimJumpBFileID, /* 653 */
+    &llFTFoxAnimJumpAerialFFileID, /* 654 */
+    &llFTFoxAnimJumpAerialBFileID, /* 655 */
+    &llFTFoxAnimFallFileID, /* 656 */
+    &llFTFoxAnimFallAerialFileID, /* 657 */
+    &llFTFoxAnimCrouchFileID, /* 658 */
+    &llFTFoxAnimCrouchIdleFileID, /* 659 */
+    &llFTFoxAnimCrouchEndFileID, /* 660 */
+    &llFTFoxAnimLandingAirXFileID, /* 661 */
+};
+
+static u32 ndsRelocFoxCommonAnimAssetIDForToken(u32 token)
+{
+    u32 i;
+
+    for (i = 0u;
+         i < (sizeof(sNdsRelocFoxCommonAnimFileIDs) /
+              sizeof(sNdsRelocFoxCommonAnimFileIDs[0]));
+         i++)
+    {
+        if (token == ndsRelocFileID(sNdsRelocFoxCommonAnimFileIDs[i]))
+        {
+            return NDS_RELOC_ASSET_FOX_ANIM_EGGLAY + i;
+        }
+    }
+    return NDS_RELOC_ASSET_INVALID;
+}
+
 /* BattleShip files 751..771 are one contiguous Fox combat bank.  Keep the
  * imported symbol order beside its exact O2R base so a motion cannot silently
  * drift onto an adjacent Jab, tilt, smash, or aerial payload. */
@@ -1758,20 +1791,15 @@ static u32 ndsRelocAssetIDForToken(u32 token)
             return mario_anim_asset_id;
         }
     }
-    if (token == ndsRelocFileID(&llFTFoxAnimEggLayFileID)) return NDS_RELOC_ASSET_FOX_ANIM_EGGLAY;
-    if (token == ndsRelocFileID(&llFTFoxAnimWalk1FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK1;
-    if (token == ndsRelocFileID(&llFTFoxAnimWalk2FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK2;
-    if (token == ndsRelocFileID(&llFTFoxAnimWalk3FileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK3;
-    if (token == ndsRelocFileID(&llFTFoxAnimWalkEndFileID)) return NDS_RELOC_ASSET_FOX_ANIM_WALK_END;
-    if (token == ndsRelocFileID(&llFTFoxAnimDashFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH;
-    if (token == ndsRelocFileID(&llFTFoxAnimRunFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH + 1u;
-    if (token == ndsRelocFileID(&llFTFoxAnimRunBrakeFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH + 2u;
-    if (token == ndsRelocFileID(&llFTFoxAnimTurnFileID)) return NDS_RELOC_ASSET_FOX_ANIM_DASH + 3u;
-    if (token == ndsRelocFileID(&llFTFoxAnimTurnRunFileID)) return NDS_RELOC_ASSET_FOX_ANIM_TURN_RUN;
-    if (token == ndsRelocFileID(&llFTFoxAnimJumpFFileID)) return NDS_RELOC_ASSET_FOX_ANIM_JUMP_F;
-    if (token == ndsRelocFileID(&llFTFoxAnimJumpBFileID)) return NDS_RELOC_ASSET_FOX_ANIM_JUMP_F + 1u;
-    if (token == ndsRelocFileID(&llFTFoxAnimJumpAerialFFileID)) return NDS_RELOC_ASSET_FOX_ANIM_JUMP_F + 2u;
-    if (token == ndsRelocFileID(&llFTFoxAnimJumpAerialBFileID)) return NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B;
+    {
+        u32 fox_common_anim_asset_id =
+            ndsRelocFoxCommonAnimAssetIDForToken(token);
+
+        if (fox_common_anim_asset_id != NDS_RELOC_ASSET_INVALID)
+        {
+            return fox_common_anim_asset_id;
+        }
+    }
     if (token == ndsRelocFileID(&llFTFoxAnimCatchFileID)) return NDS_RELOC_ASSET_FOX_ANIM_CATCH;
     if (token == ndsRelocFileID(&llFTFoxAnimCatchPullFileID)) return NDS_RELOC_ASSET_FOX_ANIM_CATCH + 1u;
     if (token == ndsRelocFileID(&llFTFoxAnimThrowFFileID)) return NDS_RELOC_ASSET_FOX_ANIM_CATCH + 2u;
@@ -1801,11 +1829,6 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK2) return NDS_RELOC_ASSET_MARIO_ANIM_WALK2;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK3) return NDS_RELOC_ASSET_MARIO_ANIM_WALK3;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK_END) return NDS_RELOC_ASSET_MARIO_ANIM_WALK_END;
-    if (token == NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) return NDS_RELOC_ASSET_FOX_ANIM_EGGLAY;
-    if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK1) return NDS_RELOC_ASSET_FOX_ANIM_WALK1;
-    if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK2) return NDS_RELOC_ASSET_FOX_ANIM_WALK2;
-    if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK3) return NDS_RELOC_ASSET_FOX_ANIM_WALK3;
-    if (token == NDS_RELOC_ASSET_FOX_ANIM_WALK_END) return NDS_RELOC_ASSET_FOX_ANIM_WALK_END;
     if (ndsRelocIsMarioFoxNaturalCombatAnimID(token) != FALSE) return token;
     return NDS_RELOC_ASSET_INVALID;
 }
@@ -1952,8 +1975,6 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
          (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_FIRE_FLOWER_AIR)) ||
         ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY) &&
          (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JAB1)) ||
-        ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JUMP_F) &&
-         (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B)) ||
         ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_JAB1) &&
          (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_D)) ||
         (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_FIREBALL_GROUND) ||

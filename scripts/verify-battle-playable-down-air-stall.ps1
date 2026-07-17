@@ -141,14 +141,6 @@ try {
         '-EmulatorProcessId {1} -Output "{2}"') -f
         $capture.Replace('\', '/'), $emulator.Id,
         $screenshotPath.Replace('\', '/')
-    $tempDir = if (-not [string]::IsNullOrWhiteSpace(
-            $env:SMASH64DS_VERIFY_TEMP_DIR)) {
-        $env:SMASH64DS_VERIFY_TEMP_DIR
-    } else {
-        Join-Path $root 'artifacts\verifier-temp\default'
-    }
-    $readyFile = Join-Path $tempDir "_battle_playable_down_air_${slug}.ready"
-    $readyCommand = 'shell type nul > "{0}"' -f $readyFile.Replace('\', '/')
     $actorKind = if ($Actor -eq 'Mario') { 0 } else { 1 }
     $actorPads = $pads + (6 * $actorKind)
     $connectedMask = if ($Actor -eq 'Mario') { 1 } else { 3 }
@@ -207,6 +199,7 @@ try {
         'set $knee_speed_bits = 0',
         'set $knee_length_bits = 0',
         'set $seen = 0',
+        'set $sampled = 0',
         'set $air_n = 0',
         'set $air_f = 0',
         'set $air_b = 0',
@@ -314,6 +307,18 @@ try {
         'set $previous_format_fails = gNdsRelocAssetFormatFailCount',
         'set $previous_short_reads = gNdsRelocAssetShortReadCount',
         'end',
+        'if ($seen != 0) && ($sampled != 0) && ($r1 != 213)',
+        'set $terminal_exit_status = $r1',
+        'set $terminal_open_fails = gNdsRelocAssetOpenFailCount',
+        'set $terminal_format_fails = gNdsRelocAssetFormatFailCount',
+        'set $terminal_short_reads = gNdsRelocAssetShortReadCount',
+        'set $outcome = 1',
+        'disable $input_breakpoint',
+        'disable $status_breakpoint',
+        'disable $kneebend_breakpoint',
+        'disable $downair_breakpoint',
+        'disable $timeup_breakpoint',
+        'end',
         'end',
         'if $outcome == 0',
         'continue',
@@ -347,16 +352,14 @@ try {
         'silent',
         'if ($armed != 0) && ((GObj *)$r0 == $actor_gobj)',
         'set $downair_entries = $downair_entries + 1',
+        'printf "DOWN_AIR_HEARTBEAT=%u,%u,%#x\n", $downair_entries, $actor_fp->status_total_tics, *(unsigned int *)&$actor_gobj->anim_frame',
         'if $seen == 0',
         'set $seen = 1',
         'set $phase = 3',
-        # Retire every breakpoint after natural entry.  The measured interval
-        # runs uninterrupted and is sampled later on this same GDB connection.
+        # Record the exact first-use asset, then count nine natural callback
+        # entries: the later eight each follow one completed Down-Air update.
         'disable $input_breakpoint',
-        'disable $status_breakpoint',
         'disable $kneebend_breakpoint',
-        'disable $downair_breakpoint',
-        'disable $timeup_breakpoint',
         'set $entry_status = $actor_fp->status_id',
         'set $entry_motion = $actor_fp->motion_id',
         'set $entry_ga = $actor_fp->ga',
@@ -401,10 +404,26 @@ try {
         'set $short_reads_start = gNdsRelocAssetShortReadCount',
         'printf "DOWN_AIR_EVENT=entry,%d,%d,%u,%u\n", $entry_status, $entry_motion, $payload_delta, $header_delta',
         ('set {{unsigned int}}0x{0:x8} = 0' -f $actorPads),
-        $readyCommand,
         'end',
         'end',
-        'if $seen == 0',
+        'if ($seen != 0) && ($downair_entries == 9)',
+        'set $sampled = 1',
+        'set $terminal_logic = gNdsBattlePlayablePacingLogicFrames',
+        'set $terminal_cpu = gNdsFTComputerProcessCount',
+        'set $terminal_present = gNdsBattlePlayablePacingPresentedFrames',
+        'set $terminal_reads = gNdsControllerPlaybackReadCount',
+        'set $terminal_status_tics = $actor_fp->status_total_tics',
+        'set $terminal_anim_bits = *(unsigned int *)&$actor_gobj->anim_frame',
+        'set $terminal_motion_bits = *(unsigned int *)&$actor_fp->motion_frame',
+        'set $terminal_status = $actor_fp->status_id',
+        'set $terminal_motion = $actor_fp->motion_id',
+        'set $terminal_update = gNdsRendererProfileUpdateTicks',
+        $captureCommand,
+        'disable $input_breakpoint',
+        'disable $kneebend_breakpoint',
+        'disable $downair_breakpoint',
+        'end',
+        'if $outcome == 0',
         'continue',
         'end',
         'end',
@@ -446,64 +465,13 @@ try {
         ('set {{unsigned int}}0x{0:x8} = {1}' -f $connected, $connectedMask),
         ('set {{unsigned int}}0x{0:x8} = 1' -f $enabled),
         'set $armed = 1',
-        'continue',
-        'if $seen == 0'
-    ) + $summaryCommands + @(
-        'end'
-    )
-
-    $terminalSummaryCommands = @(
-        'set $terminal_exit_status = $actor_fp->status_id',
-        'set $terminal_open_fails = gNdsRelocAssetOpenFailCount',
-        'set $terminal_format_fails = gNdsRelocAssetFormatFailCount',
-        'set $terminal_short_reads = gNdsRelocAssetShortReadCount',
-        'if $terminal_exit_status != 213',
-        'set $outcome = 1',
-        'else',
-        'set $outcome = 4',
-        'end'
+        'continue'
     ) + $summaryCommands
-    $interactiveSteps = @(
-        [PSCustomObject]@{
-            DelayMilliseconds = 0
-            Commands = @('continue&')
-        },
-        [PSCustomObject]@{
-            DelayMilliseconds = 500
-            Commands = @('interrupt')
-        },
-        [PSCustomObject]@{
-            DelayMilliseconds = 150
-            Commands = @(
-                'set $terminal_logic = gNdsBattlePlayablePacingLogicFrames',
-                'set $terminal_cpu = gNdsFTComputerProcessCount',
-                'set $terminal_present = gNdsBattlePlayablePacingPresentedFrames',
-                'set $terminal_reads = gNdsControllerPlaybackReadCount',
-                'set $terminal_status_tics = $actor_fp->status_total_tics',
-                'set $terminal_anim_bits = *(unsigned int *)&$actor_gobj->anim_frame',
-                'set $terminal_motion_bits = *(unsigned int *)&$actor_fp->motion_frame',
-                'set $terminal_status = $actor_fp->status_id',
-                'set $terminal_motion = $actor_fp->motion_id',
-                'set $terminal_update = gNdsRendererProfileUpdateTicks',
-                $captureCommand,
-                'continue&'
-            )
-        },
-        [PSCustomObject]@{
-            DelayMilliseconds = 4000
-            Commands = @('interrupt')
-        },
-        [PSCustomObject]@{
-            DelayMilliseconds = 150
-            Commands = $terminalSummaryCommands
-        }
-    )
 
     $gdbStdout = (Invoke-GdbMarkerScript `
         -Gdb $Gdb -Elf $elf -Root $root -Commands $gdbCommands `
         -ScriptName "_battle_playable_down_air_${slug}.gdb" `
-        -TimeoutSeconds $TimeoutSeconds -ReadyFile $readyFile `
-        -InteractiveSteps $interactiveSteps).Stdout
+        -TimeoutSeconds $TimeoutSeconds).Stdout
 
     $result = [regex]::Match($gdbStdout,
         'DOWN_AIR_RESULT=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -544,10 +512,7 @@ try {
     if ($rv[1] -eq 2) {
         throw "$Actor did not enter Down-Air before match time-up.`n$gdbStdout"
     }
-    if ($rv[1] -eq 4) {
-        throw "$Actor entered Down-Air but did not reach a source-owned successor status during the breakpoint-free observation window.`n$gdbStdout"
-    }
-    Assert-Condition ($rv[1] -eq 1 -and $rv[2] -eq 1 -and $rv[3] -eq 1) `
+    Assert-Condition ($rv[1] -eq 1 -and $rv[2] -eq 9 -and $rv[3] -eq 1) `
         "$Actor did not naturally complete Down-Air." $gdbStdout
     Assert-Condition ($knee.Success -and $kv[0] -gt 0 -and
         $kv[2] -ne 0 -and $kv[3] -ne 0) `

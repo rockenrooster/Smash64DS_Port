@@ -651,6 +651,12 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTFoxAnim007 \
 	reloc_animations/FTFoxAnim008 \
 	reloc_animations/FTFoxAnim009 \
+	reloc_animations/FTFoxAnim010 \
+	reloc_animations/FTFoxAnim011 \
+	reloc_animations/FTFoxAnim012 \
+	reloc_animations/FTFoxAnim013 \
+	reloc_animations/FTFoxAnim014 \
+	reloc_animations/FTFoxAnim015 \
 	reloc_animations/FTFoxAnim016 \
 	reloc_animations/FTFoxAnim017 \
 	reloc_animations/FTFoxAnim018 \
