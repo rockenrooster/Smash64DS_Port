@@ -44,8 +44,8 @@ profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | July 17 Boundary + focused gates pass | live tree | integrated battle ROM, countdown, effects, audio, two-ROM contract; current one-minute refresh pending | no runner active |
-| Renderer implementation | Task 8 E/F banked; G2 stashed | shared live tree / focused lab builds | Retained exact topology/matrix cuts; resume state-shadow packet after integration snapshot | no runner active |
+| Integration/release | July 17 Boundary + one-minute pass | live tree | integrated battle ROM, countdown, effects, audio, two-ROM contract, and current terminal lifecycle | no runner active |
+| Renderer implementation | Task 8 complete; Task 9 next | shared live tree / focused lab builds | E/F/G2 are banked; H was not measured, and the update-pair draw audit found no duplicate display work | no runner active |
 | Gameplay + QA | Integrated / manual review pending | shared live tree / disjoint files | source effects and audio mappings verified; exact-ROM visual/acoustic eyeball remains | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
 
@@ -82,9 +82,9 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Dream Land BGM | Pass | Audio | Tyler reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |
 | Required FGM, attack/hit sounds, and Mario/Fox voices | Focused source-behavior pass | Audio | The 107,536-byte AOT pack maps 18 exact source IDs / 16 unique samples plus 11 collision cues. Natural qualification observed 14 plays, 21 envelope steps, max 3 live handles, and 174,864-byte headroom; ID626 remains user-confirmed. Continuous-pitch IDs 429/435 and fork voice 685 remain explicit debt | Keep exact event mapping/behavior fixtures and natural gates; finish acoustic ear checks |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
-| Stable reserve / no corruption | Pass on current candidate | QA | Canonical Task 6 CPU-on expiry→Results retains 206,352 bytes before the 65,536-byte resident BGM ring, leaving 140,816 bytes after BGM and 9,744 bytes above the 128 KiB floor | Keep exact harness lifetime bound and one-minute reserve gate |
-| Focused/checkpoint verification | Integrated Boundary + focused gates PASS | QA | Published candidate `83E41C1B...` passes Boundary at frame 212 plus source countdown, visual-effects, and full FGM phase-pack qualification; ITCM is 26,104/32,768. The earlier Task 6 one-minute lifecycle remains the last terminal proof | Current one-minute lifecycle and Tyler's exact-ROM eyeball remain release gates |
-| Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Task 6 Cut C and Cut D each pass deterministic native 256x192 comparison at 0/49,152 changed pixels; current Boundary capture is dated | Tyler still owes the requested 30-second eyeball of exact ROM `83E41C1B...` |
+| Stable reserve / no corruption | Pass on current candidate | QA | Current CPU-on expiry→Results retains 203,536 bytes before the 65,536-byte BGM ring, leaving 138,000 bytes after BGM and 6,928 bytes above the 128 KiB floor | Keep the serial display-scratch lifetime bound and one-minute reserve gate |
+| Focused/checkpoint verification | Integrated Boundary + focused + lifecycle PASS | QA | Published candidate `162212F4...` passes Boundary at frame 212, source countdown, visual-effects, full FGM phase-pack, and current CPU-on expiry→Results; ITCM is 26,176/32,768 | Tyler's exact-ROM visual/acoustic eyeball remains the release gate |
+| Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Task 6 C/D, Task 8 G2, and the reserve repair preserve deterministic native output at 0/49,152 changed pixels; current Boundary capture is dated | Tyler still owes the requested 30-second eyeball of exact ROM `162212F4...` |
 
 ## Dated Gates
 

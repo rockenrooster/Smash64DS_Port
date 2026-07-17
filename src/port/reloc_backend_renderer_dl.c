@@ -11050,7 +11050,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             collection.selected_index_mask;
     }
 
-    states = sNdsFighterDLAllDrawStates[slot];
+    states = sNdsFighterDLAllDrawStates;
 #if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
     stats = sNdsFighterDLAllDrawStats[slot];
 #endif
@@ -11062,7 +11062,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                                        FALSE;
     if (detailed_output != FALSE)
     {
-        bzero(states, sizeof(sNdsFighterDLAllDrawStates[slot]));
+        bzero(states, sizeof(sNdsFighterDLAllDrawStates));
         bzero(&persistent_state, sizeof(persistent_state));
         bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
     }
@@ -11075,7 +11075,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         persistent_state.segment_e_end = NULL;
     }
 #else
-    bzero(states, sizeof(sNdsFighterDLAllDrawStates[slot]));
+    bzero(states, sizeof(sNdsFighterDLAllDrawStates));
     bzero(&persistent_state, sizeof(persistent_state));
     bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
 #endif

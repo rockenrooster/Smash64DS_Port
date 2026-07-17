@@ -19,7 +19,7 @@ configuration. Dream Land water is exact frame 0/fraction 114 on the original
 12 triangles; the animated replacement and its dead implementation are removed.
 
 The integrated fixed-two candidate is 14,612,480 bytes, SHA-256
-`83E41C1BB8E04155D71F7AB9BF849AB3DC58618F16CE52BEC5F39813EC680EEA`.
+`162212F4093BFFF9B8C9AA47678019DD627766A5BD66CFBB1BB44FE9B4284DC5`.
 Stage painter depth and pause-orbit containment are fixed and user-confirmed.
 M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, the
 zero-shift matrix builder, exact bounded `s16` rounding, Task 6 first-use
@@ -49,13 +49,12 @@ source-timer gate passes:
 .\scripts\verify-battle-playable-one-minute-match.ps1 -NoBuild
 ```
 
-The previous Task 6 ROM passes the natural fixed-two qualification: 4,084
-committed updates / 2,042
-presents, phase rates 39.9/38.1/39.6/n.a./58.2 updates/s, and phase slips
-196/1036/925/0/3. It
-exercised imported level-3 Fox AI, expired at 3,600 source ticks, reached
-Results, retained 140,816 bytes after BGM, and reported exactly one normal M4
-teardown with every post-GO fence counter zero. The DS taskman seam matches
+The current ROM passes the natural fixed-two qualification: 4,084 committed
+updates / 2,042 presents, phase rates 39.9/38.0/39.6/n.a./58.2 updates/s, and
+phase slips 196/1039/925/0/3. It exercised imported level-3 Fox AI, expired at
+3,600 source ticks, reached Results, retained 138,000 bytes after BGM, and
+reported exactly one normal M4 teardown with every post-GO fence counter zero.
+The DS taskman seam matches
 BattleShip by breaking on `LoadScene` before drawing; the verifier samples the
 battle ledger before Results reuses the globals.
 
@@ -70,16 +69,18 @@ battle ledger before Results reuses the globals.
   steps, max 3 live handles, and 174,864-byte headroom. IDs 429/435 continuous
   pitch and fork voice 685 remain explicit fidelity debt.
 - Current canonical startup reaches frame 212 with M4 `22/131072`, 646 hits,
-  zero hot conversion/upload, and zero post-GO fence work. Full current
-  one-minute lifecycle refresh remains required.
+  zero hot conversion/upload, and zero post-GO fence work. The full current
+  one-minute lifecycle passes through Results and teardown.
 
-Task 8 Cuts E (`bc35a84c57`) and F (`11e69a9de4`) are banked. G2 state-shadow
-work is preserved in `stash@{0}`; resume it only after this integration
-checkpoint from `docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md`.
-Do not merge this branch into main without Tyler's instruction.
+Task 8 Cuts E (`bc35a84c57`), F (`11e69a9de4`), and lean G2 (`25ef1397e2`)
+are banked. Cut H was not measured; the update-pair audit found no duplicate
+display derivation. The one-minute reserve repair shares the non-overlapping
+fighter display-list scratch and preserves exact output. Next is Task 9 Phase 0
+from `docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md`. Do not
+merge this branch into main without Tyler's instruction.
 
 ## Checkpoint
-Countdown source/host/runtime, focused visual-effects, full FGM phase-pack, and
-Boundary checks pass. Take a Lean snapshot as the final project command.
-Release qualification still needs the current one-minute lifecycle plus Tyler's
-exact-ROM eyeball.
+Countdown source/host/runtime, focused visual-effects, full FGM phase-pack,
+Task 8 Boundary, and the current natural one-minute lifecycle pass. Take a Lean
+snapshot as the final project command. Release qualification still needs
+Tyler's exact-ROM eyeball.

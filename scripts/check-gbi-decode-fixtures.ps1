@@ -1089,6 +1089,10 @@ $relocAssets = Get-Content (Join-Path $root 'src/port/reloc_backend_assets.c') -
 $relocRendererDL = Get-Content (Join-Path $root 'src/port/reloc_backend_renderer_dl.c') -Raw
 $relocMPCollision = Get-Content (Join-Path $root 'src/port/reloc_backend_mp_collision.c') -Raw
 $objAnimImport = Get-Content (Join-Path $root 'src/import/battleship_sys_objanim.c') -Raw
+Assert-True ($relocAssets -match '(?s)static NDSFighterDLDrawState\s+sNdsFighterDLAllDrawStates\[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED\];') `
+    'Fighter display-list scratch is no longer one serially shared state array.'
+Assert-True ($relocRendererDL -notmatch 'sNdsFighterDLAllDrawStates\[slot\]') `
+    'Fighter display-list callbacks still retain duplicate per-slot state scratch.'
 $o2rCi8 = [byte[]](3, 2, 1, 0)
 Assert-Equal (Get-TextureByte $o2rCi8 0 'O2R') 0 'O2R CI8 logical byte 0 lane decode failed.'
 Assert-Equal (Get-TextureByte $o2rCi8 1 'O2R') 1 'O2R CI8 logical byte 1 lane decode failed.'

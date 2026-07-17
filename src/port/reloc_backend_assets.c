@@ -535,7 +535,7 @@ typedef struct NDSFighterDLDrawState {
 } NDSFighterDLDrawState;
 
 static NDSFighterDLDrawState
-    sNdsFighterDLAllDrawStates[2][NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    sNdsFighterDLAllDrawStates[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 #if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
 static NDSRendererStats
     sNdsFighterDLAllDrawStats[2][NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];

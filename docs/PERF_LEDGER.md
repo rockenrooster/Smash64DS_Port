@@ -3517,3 +3517,51 @@ UPDATE-PAIR AUDIT:
   cut row to add.
 DECISION: NO CUT / AUDIT PASS
 ```
+
+## 2026-07-17 - Task 8 end-gate reserve recovery
+
+The integrated one-minute gate exposed a post-BGM reserve of only
+`178,960 - 65,536 = 113,424` bytes, 17,648 below the 128 KiB floor. The
+following table owns the bounded lifetime change used to recover it.
+
+| Item | Producer | Consumer | Bytes | Storage/bank | Lifetime | Invalidation key | Changed bytes | Transfer/clear bytes | Active ticks P50/P95 | Wait P50/P95 | Fallback/stale | Reserve impact |
+|---|---|---|---:|---|---|---|---:|---:|---:|---:|---|---:|
+| Fighter DL state scratch | `ndsFighterMarioFoxDLAllDrawForSlot` | list executor; forensic rasterizer | 54,272 -> 27,136 | ARM9 main BSS | one serial fighter display callback | overwritten, or cleared before detailed output | unchanged | profile-0 hot clear remains 0 | no tick claim | 0/0 | exact fallback and profile-2 oracle retained | +27,136 BSS |
+| IFCommon overlays | source prepare | OBJ/GX | 31,168 OBJ + 57,344 texture + 608 palette | OBJ VRAM / texture VRAM | battle scene | scene generation; no post-GO mutation | unchanged | zero post-GO | 0/0 hot | 0/0 | fence 0; teardown 1 | unchanged |
+| BGM ring | ARM9 stream refill | audio channel | 65,536 | ARM9 main BSS | battle/results transition | audio teardown | unchanged | unchanged | unchanged | unchanged | normal teardown | unchanged |
+
+```text
+MEASURED WALL:
+  The first current-ROM lifecycle completed gameplay and Results but failed the
+  reserve assertion at 113,424 bytes after BGM.
+REPRESENTATION / LIFETIME CHANGE:
+  The two 27,136-byte fighter display-list state arrays never overlap: each is
+  produced, consumed, optionally rasterized, and discarded inside one serial
+  display callback. Reuse one array for both slots; retain per-slot stats and
+  clean ledgers.
+BEFORE / AFTER STATIC STORAGE:
+  sNdsFighterDLAllDrawStates 54,272 -> 27,136 bytes; .main.bss
+  1,785,200 -> 1,758,064; __heap_start_ntr 0x022921F0 -> 0x0228B7F0.
+VRAM / CACHE / DMA / AUDIO CONTRACT:
+  No VRAM bank, texture, palette, DMA, cache-maintenance, ARM7, BGM, FGM, or
+  reloc ownership changed. Canonical ITCM remains 26,176/32,768.
+OUTPUT / RUNTIME PROOF:
+  The synchronized frame-607 comparison is exactly 0/49,152 changed pixels,
+  mean channel delta 0. Owner 121/828, stage 8/255/57/42/54/202/49/4,
+  M4 22/131072, and zero fallback/fence/conservation remain intact.
+RESERVE HIGH-WATER / LIFECYCLE:
+  The rerun passes at 203,536 bytes before and 138,000 after the 65,536-byte
+  BGM ring, 6,928 above the floor. It reaches Time Up -> Results with 4,084
+  updates / 2,042 presents, phase rates 39.9/38.0/39.6/n.a./58.2 updates/s,
+  slips 196/1039/925/0/3, one normal M4 teardown, and zero stale, safety,
+  eviction, or post-GO fence counts.
+IDENTITY / EVIDENCE:
+  Canonical ROM SHA-256 is
+  162212F4093BFFF9B8C9AA47678019DD627766A5BD66CFBB1BB44FE9B4284DC5.
+  artifacts/performance/2026-07-17_task8-shared-dl-scratch-fighter600.json
+  artifacts/visibility/2026-07-17_task8-shared-dl-scratch-frame607.png
+  artifacts/visibility/2026-07-17_task8-g2-candidate2-frame607.png
+KEEP / REWORK / REVERT: KEEP
+  This restores the required reserve by matching storage to its actual serial
+  lifetime; it is not a renderer tick claim.
+```
