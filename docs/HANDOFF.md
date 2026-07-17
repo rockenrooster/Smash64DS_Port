@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-17 17:24 Central
+Updated: 2026-07-17 18:34 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -17,7 +17,7 @@ Preserve the published intrinsic mode-9 / mip-0 / static-residency /
 source-countdown configuration. Dream Land water is exact frame 0/fraction 114
 on the original 12 triangles; the animated replacement is removed.
 
-The integrated fixed-two candidate is 14,613,504 bytes, SHA-256 `FE0C8893C37F43934DB4BEEB8169F52BB0AADEB97C5C4BA07B69416A37B743A9`.
+The integrated fixed-two candidate is 14,655,488 bytes, SHA-256 `70DCD33BFC19D39460B2199FFD94606368DF03EEDD5984C067CA5CAFCC9ABFF2`.
 Stage painter depth and pause-orbit containment are fixed and user-confirmed.
 M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, the
 zero-shift matrix builder, exact bounded `s16` rounding, Task 6 first-use
@@ -28,9 +28,9 @@ The M4 Whispy lifecycle repair is kept. Countdown assets now reverse the source
 odd-row texture interleave: big GO is direct RGB555+A1 OAM, the opaque shaded
 traffic box is A3I5, and only the foreground flare is A5I3. Compact source
 atlases use 57,344 texture bytes total and restore pre-GO source-frame residency;
-do not add transition-time texture deletion. The large GO is clean, but the
-separate 12x9 traffic-box `ShadowGo` is still unreadable at the current 0.8x DS
-footprint and remains an open playtest finding.
+do not add transition-time texture deletion. The large RGB555+A1 GO and the
+source-backed point-sampled 12x9 traffic-box `ShadowGo` now pass the full
+runtime gate; the countdown playtest finding is fixed.
 
 ## One-Minute Gate
 
@@ -89,7 +89,7 @@ state. Raw corners now carry only their 10-bit dense ID, removing 1,746
 dynamic masks per frame and shrinking the raw emitter 0xD0 -> 0xBC. Current
 post-light-repair ledger-off is 385,088/388,224; the older
 372.1K sample is retired. Generic/fast profile 2 remains exact on frames
-180..187 with 686 triangles. Boundary passes on `FE0C8893...`; current
+180..187 with 686 triangles. Boundary passes on `70DCD33B...`; current
 profile-0 smoke is 22.3 FPS, so full-speed remains red.
 
 Natural KO/rebirth uses real source events and measures 1,261,344/1,524,864 and 1,110,528/1,112,256 active ticks with exact stage/M4/fence contracts.
@@ -97,22 +97,26 @@ Natural KO/rebirth uses real source events and measures 1,261,344/1,524,864 and 
 ## Checkpoint
 Effects, FGM, Task 9 identity, one-minute lifecycle, natural KO/rebirth timing,
 the M2 split, source-exact light parity, capture reset, raw-corner cut, and
-Boundary pass are retained. Countdown is no longer broadly marked fixed: only
-the large GO is accepted. The source-backed point-sampled tiny `ShadowGo`
-candidate is an isolated visual KEEP: its 49-pixel atlas delta is wholly inside
-the 12x9 source rectangle, the runtime still submits 10/10/10 draws, and hot
-conversion/upload remains zero. The exact tiny-GO count/crop locks are now
-refreshed and pass across all five isolated GO frames. The full verifier next
-stops at a separate large-GO crop mismatch (`8dbde0ad...` expected,
-`d968b0cc...` actual); inspect that independent delta before changing its lock.
+Boundary pass are retained. The countdown finding is fixed. The source-backed
+point-sampled tiny `ShadowGo` changes 49 atlas pixels only inside its exact 12x9
+rectangle and passes its 70-pixel crop lock across all five GO frames with
+10/10/10 draws and zero hot conversion/upload. The apparent large-GO mismatch
+was a stale crop lock after the later source-light repair: 125/26,400 pixels
+changed, all inside Mario's 22x14 area, while the GO RGB555 payload remained
+byte-identical. The rebuilt full verifier passes with crop `d968b0cc...`, GO
+`3 OBJ + 10 quads`, 31,168 OBJ bytes, 57,344 texture bytes, and 608 palette
+bytes. No GO source change was needed.
 
-The Down+A report is reproduced, but the audio-load hypothesis is disproven.
+The Down+A report remains open, but the audio-load hypothesis is disproven and
+a stopped target update loop is not yet proven.
 The verifier-only pre-spawn override makes Fox human P2 without changing shipped
 mode 163. Fox enters status 213 / motion 188 with exact asset `FTFoxAnim129` /
-`0x303`, then advances exactly six callback updates in both a 30-second and a
-120-second run before stopping. Exact tracing sees both ID-190 calls and both
-tick-7 attack refreshes return, followed by entry into the next effect-script
-`SyncWait`. ID 190 is absent from the resident 18-entry FGM pack, so
+`0x303`. Source trace maps the six observed callbacks to normal animation
+frames 2..7; callback 6 completes the second ID-190 event, after which the
+same-frame map step may transition Fox, including to status 219
+`LandingAirNull`. Exact tracing sees both ID-190 calls and both tick-7 attack
+refreshes return, followed by entry into the next effect-script `SyncWait`.
+ID 190 is absent from the resident 18-entry FGM pack, so
 `ndsAudioFgmPlayAtPan` increments the unsupported counter and returns before
 `soundPlaySample`; NitroFS reads occur only during the fenced pack load. The
 reported `nitroromReadIter` / `_lseek_r` PCs were initial GDB attach locations,
@@ -120,18 +124,22 @@ not terminal samples. Do not add ID 190 to the pack as a stall fix; its source
 pitch schedule and custom-FX fidelity remain a separate unqualified audio item.
 The common-bank repair also restores Fox's omitted files 642..661
 (`0x282..0x295`) and passes its static source-identity checker; runtime
-qualification is pending.
+qualification is pending. Repeated-breakpoint runs did not observe callback 7
+or a successor, but GDB convenience-variable encoding warnings and failed
+asynchronous CLI interrupts make the apparent stop ambiguous; temporary
+freeze-diagnostic edits were removed before this checkpoint.
 
-Resume immediately after the second ID-190/effect-forward event. Use the
-existing target freeze watchdog or one target-owned breadcrumb with the detailed
-observer breakpoints disabled, identify the first owner that stops advancing,
-and fix that shared seam. Then rerun the existing Fox arm:
+Resume with one observer-free target snapshot. Stop only at the first Down-Air
+entry, disable every observer breakpoint, continue for a short bounded window,
+then use GDB/MI `-exec-interrupt` and sample global logic/present counters, Fox
+status/motion/animation state, and target PC/LR. If the target advanced, repair
+the verifier; if it did not, map the first stopped owner before changing source.
+Then rerun the restored existing Fox arm:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor Fox -NoBuild -RunnerSlot 3 -TimeoutSeconds 300
 ```
 
 Do not mark the playtest finding fixed until Fox P2, Mario, and one canonical
-CPU-on Current gate pass. Separately resolve the large-GO hash mismatch and
-capture against the canonical ROM. The five-minute goal heartbeat is
-intentionally paused for the requested model-change checkpoint.
+CPU-on Current gate pass. The five-minute goal heartbeat is intentionally
+paused for the requested model-change checkpoint.

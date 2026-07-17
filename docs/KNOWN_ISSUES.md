@@ -20,15 +20,14 @@ durable unresolved gaps.
 - The exact two-ROM build and Boundary checkpoint pass with a dated
   fast-iteration capture. Release still needs the final CPU-on complete-match
   capture under `artifacts/visibility` and manual user retest.
-- The tiny `GO` inside the countdown traffic-light housing remains unreadable
-  in the current 0.8x A3I5 runtime capture. This is separate from the accepted
-  large RGB555+A1 `GO!` announcement.
 - Playtesting reports a CPU stall during Down+A aerials. A stopped update loop
-  is not yet proven. The shifted Fox combat-asset seam is corrected through the
-  exact Down-Air `FTFoxAnim129` / `0x303`, and Mario status 213 / motion 188 now
-  passes eight live updates. The verifier-only human-P2 Fox arm reaches natural
-  KneeBend with controller input but still needs Down-Air heartbeat proof plus a
-  canonical CPU-on Current regression gate before closure.
+  remains unproven. The shifted Fox combat-asset seam is corrected through the
+  exact Down-Air `FTFoxAnim129` / `0x303`; source trace maps the six observed
+  callbacks to normal animation frames 2..7 through the second ID-190 event.
+  Repeated-breakpoint GDB runs did not observe the successor, but convenience-
+  variable and asynchronous-stop failures make that result ambiguous. Closure
+  needs one observer-free target snapshot, then Fox, Mario, and canonical CPU-on
+  Current gates.
 
 ## Gameplay And Source Boundaries
 

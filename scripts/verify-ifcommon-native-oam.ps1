@@ -582,7 +582,7 @@ try {
         '8971bfb5863c6e3ec55e4bda8049545974f881d11af29f69e74b982a865589ac') `
         'Accepted traffic-light/flare crop changed byte-for-byte.'
     Assert-Condition ($goMetrics.Hash -eq
-        '8dbde0ad01eaa9b0a33de10ac290380dc509b98e7dda96a5e1c537818c1d12cd') `
+        'd968b0cc6513a5736200247d46dedee9eb2bb88919420931cfd9c81cde0a4619') `
         'Accepted GO text crop changed byte-for-byte.'
     Assert-Condition ($trafficMetrics.Blue -gt 10000 -and
         $trafficMetrics.Red -gt 800 -and $trafficMetrics.Amber -gt 800 -and
