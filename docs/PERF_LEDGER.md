@@ -3453,3 +3453,67 @@ EVIDENCE:
 KEEP / REWORK / REVERT: KEEP
   Bank the exact 928-tick P50 owner-local gain under the no-discard rule.
 ```
+
+## 2026-07-17 - Task 8 Cut G2 idempotent GX state
+
+```text
+IDEA ID: TASK8-CUT-G2-IDEMPOTENT-GX-STATE-20260717
+BOUND / FIRST CANDIDATE:
+  The refreshed begin/bind bucket was 39,808 ticks. Instrumentation found, per
+  frame, texture-param 44 writes / 13 repeats, matrix-mode 164 / 0, and
+  polygon-format 69 / 34. Shadowing all three in production therefore compared
+  matrix mode 164 times without one skip. That first candidate regressed draw
+  by 3,616/3,520 and active by 3,520/3,456 ticks P50/P95 and was rejected.
+ONE KEPT CHANGE:
+  Retain one renderer-owned shadow only for texture parameters and polygon
+  format. Bind, upload, delete, and frame handoff invalidate the affected
+  state; all renderer writes route through that owner. Matrix-mode accounting
+  remains lab-only and production still emits the direct write.
+IDENTITY / A-B RESULT, FRAMES 600..607:
+  Two independent controls are byte-identical at ROM SHA-256
+  9BD486DF9C7B833636289182A5D7E0E77FFC58648C9C260F79DE8B57EB74C1DC.
+  The lean candidate is
+  E80F1828FD9243F1FE9D6606167D1581C524F5AFEBFE74F371D6720AAA47C1D5.
+  Draw 1,154,496/1,190,400 -> 1,154,144/1,190,016, saving 352/384;
+  active 1,159,360/1,195,264 -> 1,158,912/1,194,816, saving 448/448.
+  This is a small global draw gain, not a locked-30 claim.
+FINAL-STATE / EXACTNESS PROOF:
+  The final instrumented ROM is
+  19EDF8AC689EFF001E3B2053D02168BF003A3858D56835ACEE7BED8FF70D8651.
+  It reproduces texture 44/13, matrix 164/0, and polygon 69/34 on all eight
+  frames. Owner 121/828, stage 8/255/57/42/54/202/49/4, cross 5/10/15,
+  M4 22/131072, and every fallback, fence, and conservation gate pass. The
+  production top-screen A/B is exactly 0/49,152 changed pixels, mean delta 0.
+EVIDENCE:
+  artifacts/performance/2026-07-17_task8-g2-control-fighter600.json
+  artifacts/performance/2026-07-17_task8-g2-control2-fighter600.json
+  artifacts/performance/2026-07-17_task8-g2-candidate-fighter600.json
+  artifacts/performance/2026-07-17_task8-g2-candidate2-fighter600.json
+  artifacts/performance/2026-07-17_task8-g2-final-lab-fighter600.json
+  artifacts/visibility/2026-07-17_task8-g2-control2-frame607.png
+  artifacts/visibility/2026-07-17_task8-g2-candidate2-frame607.png
+KEEP / REWORK / REVERT: KEEP LEAN / REVERT FULL SHADOW
+  Bank the 47 productive repeat-write skips; do not ship the zero-hit matrix
+  comparison.
+```
+
+## 2026-07-17 - Task 8 Cut H and update-pair audit
+
+```text
+CUT H PROFILE / DECISION:
+  Final Phase-0.5 records the lower HUD at only 1,184/1,216 ticks P50/P95.
+  ndsPlatformRenderBattleTextHud already fingerprints the displayed state and
+  returns unchanged; FPS text is likewise change-driven, and consoleClear is
+  limited to initialization/teardown. The proposed full-line dirty rewrite is
+  not a measured cut. No code change.
+UPDATE-PAIR AUDIT:
+  Mode 163 runs exactly two ndsRunMarioFoxProofUpdate calls before one
+  ndsBattlePlayablePresentRealtimeFrame. The update reaches gcRunAll, whose
+  source implementation executes only func_run and process callbacks; it never
+  calls proc_display. Display callbacks and renderer submission are reached
+  once through gcDrawAll inside ndsBattlePlayablePresentFrame, after the pair.
+  Post-update recorders read gameplay/proof state only. No draw-side derivation
+  or per-present work was found inside the update pair, so there is no bounded
+  cut row to add.
+DECISION: NO CUT / AUDIT PASS
+```

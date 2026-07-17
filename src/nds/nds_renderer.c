@@ -1127,6 +1127,12 @@ volatile u32 gNdsRendererM3Phase0CalibrationIntervals;
 volatile u32 gNdsRendererM3Phase0PreparedDenseCount;
 volatile u32 gNdsRendererM3Phase0NearTransformCount;
 volatile u32 gNdsRendererM3Phase0NoZMatrixCount;
+volatile u32 gNdsRendererM3G2TextureParamWriteCount;
+volatile u32 gNdsRendererM3G2TextureParamSkipCount;
+volatile u32 gNdsRendererM3G2MatrixModeWriteCount;
+volatile u32 gNdsRendererM3G2MatrixModeSkipCount;
+volatile u32 gNdsRendererM3G2PolyFmtWriteCount;
+volatile u32 gNdsRendererM3G2PolyFmtSkipCount;
 
 static inline u32 ndsRendererM3Phase0Tick(void)
 {
@@ -1164,6 +1170,12 @@ static void ndsRendererM3Phase0Reset(void)
     gNdsRendererM3Phase0PreparedDenseCount = 0u;
     gNdsRendererM3Phase0NearTransformCount = 0u;
     gNdsRendererM3Phase0NoZMatrixCount = 0u;
+    gNdsRendererM3G2TextureParamWriteCount = 0u;
+    gNdsRendererM3G2TextureParamSkipCount = 0u;
+    gNdsRendererM3G2MatrixModeWriteCount = 0u;
+    gNdsRendererM3G2MatrixModeSkipCount = 0u;
+    gNdsRendererM3G2PolyFmtWriteCount = 0u;
+    gNdsRendererM3G2PolyFmtSkipCount = 0u;
 
     calibration_tick = ndsRendererM3Phase0Tick();
     for (calibration_index = 0u;
@@ -1319,6 +1331,75 @@ static u32 sNdsRendererHardwareMatrixLoaded;
 static u32 sNdsRendererHardwareMatrixMode;
 static u32 sNdsRendererHardwareMatrixGeneration;
 static u32 sNdsRendererMatrixGenerationSerial;
+
+#define NDS_RENDERER_GX_STATE_TEXTURE_PARAMS (1u << 0)
+#define NDS_RENDERER_GX_STATE_MATRIX_MODE    (1u << 1)
+#define NDS_RENDERER_GX_STATE_POLY_FMT       (1u << 2)
+#define NDS_RENDERER_GX_STATE_ALL            \
+    (NDS_RENDERER_GX_STATE_TEXTURE_PARAMS |  \
+     NDS_RENDERER_GX_STATE_MATRIX_MODE |     \
+     NDS_RENDERER_GX_STATE_POLY_FMT)
+
+typedef struct NDSRendererGXStateShadow
+{
+    u32 texture_params;
+    u32 matrix_mode;
+    u32 poly_fmt;
+    u32 valid_mask;
+} NDSRendererGXStateShadow;
+
+static NDSRendererGXStateShadow sNdsRendererGXStateShadow;
+
+static inline void ndsRendererHardwareInvalidateGXState(u32 mask)
+{
+    sNdsRendererGXStateShadow.valid_mask &= ~mask;
+}
+
+static inline void ndsRendererHardwareBindTextureState(int name)
+{
+    glBindTexture(GL_TEXTURE_2D, name);
+    ndsRendererHardwareInvalidateGXState(
+        NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
+}
+
+static inline void ndsRendererHardwareSetMatrixMode(int mode)
+{
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    if (((sNdsRendererGXStateShadow.valid_mask &
+          NDS_RENDERER_GX_STATE_MATRIX_MODE) != 0u) &&
+        (sNdsRendererGXStateShadow.matrix_mode == (u32)mode))
+    {
+        gNdsRendererM3G2MatrixModeSkipCount++;
+        return;
+    }
+#endif
+    glMatrixMode(mode);
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    sNdsRendererGXStateShadow.matrix_mode = (u32)mode;
+    sNdsRendererGXStateShadow.valid_mask |=
+        NDS_RENDERER_GX_STATE_MATRIX_MODE;
+    gNdsRendererM3G2MatrixModeWriteCount++;
+#endif
+}
+
+static inline void ndsRendererHardwareSetPolyFmt(u32 poly_fmt)
+{
+    if (((sNdsRendererGXStateShadow.valid_mask &
+          NDS_RENDERER_GX_STATE_POLY_FMT) != 0u) &&
+        (sNdsRendererGXStateShadow.poly_fmt == poly_fmt))
+    {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        gNdsRendererM3G2PolyFmtSkipCount++;
+#endif
+        return;
+    }
+    glPolyFmt(poly_fmt);
+    sNdsRendererGXStateShadow.poly_fmt = poly_fmt;
+    sNdsRendererGXStateShadow.valid_mask |= NDS_RENDERER_GX_STATE_POLY_FMT;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    gNdsRendererM3G2PolyFmtWriteCount++;
+#endif
+}
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
 static u32 sNdsRendererHardwareMatrixSignature;
 
@@ -1499,6 +1580,8 @@ static inline int ndsRendererHardwareFencedGlTexImage2D(
 {
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_GL_UPLOAD);
+    ndsRendererHardwareInvalidateGXState(
+        NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
     return glTexImage2D(target, empty1, type, size_x, size_y, empty2,
                         params, texture);
 }
@@ -1508,6 +1591,8 @@ static inline int ndsRendererHardwareFencedGlDeleteTextures(int count,
 {
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_GL_DELETE);
+    ndsRendererHardwareInvalidateGXState(
+        NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
     return glDeleteTextures(count, names);
 }
 
@@ -6694,8 +6779,8 @@ s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,
         {
             break;
         }
-        glBindTexture(GL_TEXTURE_2D,
-                      sNdsRendererSceneMipTextureNames[i]);
+        ndsRendererHardwareBindTextureState(
+            sNdsRendererSceneMipTextureNames[i]);
         if (ndsRendererHardwareFencedGlTexImage2D(
                 GL_TEXTURE_2D, 0, GL_RGBA,
                 TEXTURE_SIZE_128, TEXTURE_SIZE_128, 0,
@@ -6774,13 +6859,14 @@ s32 ndsRendererHardwareDrawSceneMipCache(u32 mip_index,
     }
 
     ndsRendererHardwareEndBatch();
-    glMatrixMode(GL_PROJECTION);
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glMatrixMode(GL_MODELVIEW);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glBindTexture(GL_TEXTURE_2D,
-                  sNdsRendererSceneMipTextureNames[mip_index]);
-    glPolyFmt(POLY_CULL_NONE | POLY_ALPHA(31) | POLY_ID(63));
+    ndsRendererHardwareBindTextureState(
+        sNdsRendererSceneMipTextureNames[mip_index]);
+    ndsRendererHardwareSetPolyFmt(
+        POLY_CULL_NONE | POLY_ALPHA(31) | POLY_ID(63));
     glColor(RGB15(31, 31, 31));
     glBegin(GL_TRIANGLE);
     for (row = 0u; row + 1u < rows; row++)
@@ -6890,7 +6976,7 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     {
         return FALSE;
     }
-    glBindTexture(GL_TEXTURE_2D, name);
+    ndsRendererHardwareBindTextureState(name);
     while (ndsRendererHardwareFencedGlTexImage2D(
                GL_TEXTURE_2D, 0, (int)texture_format, size_x, size_y, 0,
                TEXGEN_TEXCOORD, pixels) == 0)
@@ -6904,7 +6990,7 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
         {
             return FALSE;
         }
-        glBindTexture(GL_TEXTURE_2D, name);
+        ndsRendererHardwareBindTextureState(name);
     }
     glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0, palette);
     *texture_name = (u32)name;
@@ -7069,9 +7155,9 @@ static void ndsRendererHardwareEmitIFCommonClouds(void)
     /* Emit IFCommon traffic, Contour, and Light quads at the final renderer
      * boundary in the order queued by the source pass. */
     ndsRendererHardwareEndBatch();
-    glMatrixMode(GL_PROJECTION);
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glMatrixMode(GL_MODELVIEW);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
@@ -7097,9 +7183,9 @@ static void ndsRendererHardwareEmitIFCommonClouds(void)
          * painter order instead of the first quad masking every successor. */
         v16 depth = (v16)(-4080 - (s32)draw_index);
 
-        glBindTexture(GL_TEXTURE_2D, (int)draw->texture_name);
-        glPolyFmt(POLY_CULL_NONE | POLY_ALPHA(31) |
-                  POLY_ID(draw->poly_id));
+        ndsRendererHardwareBindTextureState((int)draw->texture_name);
+        ndsRendererHardwareSetPolyFmt(
+            POLY_CULL_NONE | POLY_ALPHA(31) | POLY_ID(draw->poly_id));
         glBegin(GL_TRIANGLE);
 #define NDS_IFCOMMON_CLOUD_VERTEX(s, t, x, y) do { \
     glTexCoord2t16((s), (t)); \
@@ -7252,7 +7338,22 @@ static u32 ndsRendererHardwareMergeTextureParams(u32 params)
 
 static void ndsRendererHardwareApplyTextureParams(u32 params)
 {
+    if (((sNdsRendererGXStateShadow.valid_mask &
+          NDS_RENDERER_GX_STATE_TEXTURE_PARAMS) != 0u) &&
+        (sNdsRendererGXStateShadow.texture_params == params))
+    {
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+        gNdsRendererM3G2TextureParamSkipCount++;
+#endif
+        return;
+    }
     glTexParameter(GL_TEXTURE_2D, (int)params);
+    sNdsRendererGXStateShadow.texture_params = params;
+    sNdsRendererGXStateShadow.valid_mask |=
+        NDS_RENDERER_GX_STATE_TEXTURE_PARAMS;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    gNdsRendererM3G2TextureParamWriteCount++;
+#endif
 }
 
 #define NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT 128u
@@ -7540,7 +7641,7 @@ static void ndsRendererHardwareBindTextureName(
     if (sNdsRendererHardwareBoundTextureName != texture_name)
     {
         ndsRendererHardwareEndBatch();
-        glBindTexture(GL_TEXTURE_2D, texture_name);
+        ndsRendererHardwareBindTextureState((int)texture_name);
         sNdsRendererHardwareBoundTextureName = texture_name;
         ndsRendererProfileRecordTextureBind();
         if (stats != NULL)
@@ -7915,7 +8016,8 @@ static void ndsRendererHardwareBindNoTexture(NDSRendererStats *stats)
         {
             return;
         }
-        glBindTexture(GL_TEXTURE_2D, sNdsRendererHardwareNoTextureName);
+        ndsRendererHardwareBindTextureState(
+            sNdsRendererHardwareNoTextureName);
         sNdsRendererHardwareBoundTextureName =
             (u32)sNdsRendererHardwareNoTextureName;
         ndsRendererHardwareFencedGlTexImage2D(
@@ -10689,9 +10791,9 @@ static void ndsRendererLoadHardwareMatrixPair(
     ndsRendererCopyMtx20p12ToM4x4(projection, &projection_hw);
     ndsRendererCopyMtx20p12ToM4x4(modelview, &modelview_hw);
 
-    glMatrixMode(GL_PROJECTION);
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
     glLoadMatrix4x4(&projection_hw);
-    glMatrixMode(GL_MODELVIEW);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     glLoadMatrix4x4(&modelview_hw);
 
     ndsRendererProfileRecordMatrixLoad();
@@ -11210,7 +11312,7 @@ static void ndsRendererHardwareBeginTriangleBatch(
     }
     ndsRendererHardwareApplyAlphaTest(stats);
     ndsRendererHardwareApplyFog(stats);
-    glPolyFmt(poly_fmt);
+    ndsRendererHardwareSetPolyFmt(poly_fmt);
     glBegin(GL_TRIANGLE);
     ndsRendererProfileRecordBatchBegin();
 
@@ -13955,7 +14057,7 @@ static inline void ndsRendererNativeBeginDirectBatch(
     }
     glDisable(GL_ALPHA_TEST);
     glDisable(GL_FOG);
-    glPolyFmt(poly_fmt);
+    ndsRendererHardwareSetPolyFmt(poly_fmt);
     glBegin(GL_TRIANGLE);
     ndsRendererProfileRecordBatchBegin();
 
@@ -15861,7 +15963,7 @@ static inline void ndsRendererNativeBeginHierarchyBatch(
     }
     glDisable(GL_ALPHA_TEST);
     glDisable(GL_FOG);
-    glPolyFmt(prepared_run->poly_fmt);
+    ndsRendererHardwareSetPolyFmt(prepared_run->poly_fmt);
     glBegin(GL_TRIANGLE);
     ndsRendererProfileRecordBatchBegin();
 
@@ -16104,14 +16206,14 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
             hierarchy->camera_modelview, &camera_hardware);
         *out_hardware_started = TRUE;
         ndsRendererHardwareEndBatch();
-        glMatrixMode(GL_PROJECTION);
+        ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
         {
             m4x4 projection_hardware;
             ndsRendererCopyMtx20p12ToM4x4(
                 hierarchy->projection, &projection_hardware);
             glLoadMatrix4x4(&projection_hardware);
         }
-        glMatrixMode(GL_MODELVIEW);
+        ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
         glLoadMatrix4x4(&camera_hardware);
         ndsRendererProfileRecordMatrixLoad();
         sNdsRendererHardwareMatrixMode =
@@ -16134,7 +16236,7 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
 #endif
 
         ndsRendererHardwareEndBatch();
-        glMatrixMode(GL_MODELVIEW);
+        ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
         if ((packed & 0x8000u) != 0u)
         {
             glPushMatrix();
@@ -16206,7 +16308,7 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
                     u32 m2_gx_start = cpuGetTiming();
 #endif
                     ndsRendererHardwareEndBatch();
-                    glMatrixMode(GL_MODELVIEW);
+                    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
                     glPopMatrix(1);
                     stats->matrix_pop_count++;
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -16994,7 +17096,7 @@ static void ndsRendererNativeStageBeginRun(
         glDisable(GL_ALPHA_TEST);
     }
     glDisable(GL_FOG);
-    glPolyFmt(poly_fmt);
+    ndsRendererHardwareSetPolyFmt(poly_fmt);
     glBegin(GL_TRIANGLE);
     ndsRendererProfileRecordBatchBegin();
     sNdsRendererHardwareTriangleBatchOpen = TRUE;
@@ -19637,6 +19739,7 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 #endif
     sNdsRendererHardwareBoundTextureName = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
+    ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
     sNdsRendererHardwareFrameSerial++;
     return submitted;
 #else

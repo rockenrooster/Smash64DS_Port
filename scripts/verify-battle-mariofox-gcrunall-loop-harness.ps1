@@ -707,6 +707,7 @@ try {
                     $coarseBenchmarkCommands += ('printf "M3_STAGE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3PreflightAttemptCount, gNdsRendererM3PreflightSuccessCount, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3SegmentCount, gNdsRendererM3SegmentMask, gNdsRendererM3PostArmFailureCount, gNdsRendererM3DObjCount, gNdsRendererM3BindingCount, gNdsRendererM3RunCount, gNdsRendererM3TriangleCount, gNdsRendererM3ResidentEpochCount, gNdsRendererM3MaterialShadowCount, gNdsRendererM3MaterialCommitCount, gNdsRendererM3CrossRunCount, gNdsRendererM3CrossTriangleCount, gNdsRendererM3CrossForeignCornerCount, gNdsRendererM3TopologyFullValidationCount, gNdsRendererM3TopologyCacheHitCount, gNdsRendererM3TopologyStampMismatchCount, {0}, {1}' -f $topologyFaultInjectionExpression, $topologyFaultRevalidationExpression)
                     if ($RendererM3Phase0Profile) {
                         $coarseBenchmarkCommands += 'printf "M3_PHASE0=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3Phase0PreflightTicks, gNdsRendererM3Phase0PrepareRunTicks, gNdsRendererM3Phase0VertexPrepareTicks, gNdsRendererM3Phase0NearTransformTicks, gNdsRendererM3Phase0RunTransitionTicks, gNdsRendererM3Phase0RawEmitTicks, gNdsRendererM3Phase0RangeEmitTicks, gNdsRendererM3Phase0NoZEmitTicks, gNdsRendererM3Phase0NoZMatrixTicks, gNdsRendererM3Phase0AccountingTicks, gNdsRendererM3Phase0CommitTicks, gNdsRendererM3Phase0TimerReadCount, gNdsRendererM3Phase0TimerSpanCount, gNdsRendererM3Phase0CalibrationTicks, gNdsRendererM3Phase0CalibrationIntervals, gNdsRendererM3Phase0PreparedDenseCount, gNdsRendererM3Phase0NearTransformCount, gNdsRendererM3Phase0NoZMatrixCount'
+                        $coarseBenchmarkCommands += 'printf "G2_STATE=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3G2TextureParamWriteCount, gNdsRendererM3G2TextureParamSkipCount, gNdsRendererM3G2MatrixModeWriteCount, gNdsRendererM3G2MatrixModeSkipCount, gNdsRendererM3G2PolyFmtWriteCount, gNdsRendererM3G2PolyFmtSkipCount'
                         $coarseBenchmarkCommands += 'printf "PHASE05=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererPhase05WallpaperSetupTicks, gNdsRendererPhase05WallpaperXMapTicks, gNdsRendererPhase05WallpaperYMapTicks, gNdsRendererPhase05WallpaperWriteTicks, gNdsRendererPhase05WallpaperCommitTicks, gNdsRendererPhase05PresentHardwareTicks, gNdsRendererPhase05GCDrawAllTicks, gNdsRendererPhase05StageTransitionTicks, gNdsRendererPhase05FighterWrapperTicks, gNdsRendererPhase05FrameResetTicks, gNdsRendererPhase05PresentTailTicks, gNdsRendererPhase05ProfileBookkeepingTicks, gNdsRendererPhase05ProfilePublishTicks, gNdsRendererPhase05FlushPrepTicks, gNdsRendererPhase05TimerReadCount, gNdsRendererPhase05TimerSpanCount, gNdsRendererPhase05CalibrationTicks, gNdsRendererPhase05CalibrationIntervals, gNdsRendererPhase05WallpaperRowCount, gNdsRendererPhase05WallpaperPixelWriteCount'
                     }
                 }
@@ -1157,6 +1158,7 @@ try {
     $fastRunBenchmark = @()
     $m3StageBenchmark = @()
     $m3Phase0Benchmark = @()
+    $g2StateBenchmark = @()
     $phase05Benchmark = @()
     $m4WaterStillBenchmark = @()
     $m4StaticBenchmark = @()
@@ -1180,6 +1182,7 @@ try {
             $m3StageBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_STAGE' -FieldCount 22)
             if ($RendererM3Phase0Profile) {
                 $m3Phase0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_PHASE0' -FieldCount 19)
+                $g2StateBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'G2_STATE' -FieldCount 7)
                 $phase05Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'PHASE05' -FieldCount 21)
             }
         }
@@ -1786,6 +1789,7 @@ try {
                 $fastRunMetricSummary = ''
                 $m3StageMetricSummary = ''
                 $m3Phase0MetricSummary = ''
+                $g2StateMetricSummary = ''
                 $m4WaterStillMetricSummary = ''
                 $m4StaticMetricSummary = ''
                 $m4FenceMetricSummary = ''
@@ -1895,6 +1899,7 @@ try {
                         $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                         $m3StageSamples = [System.Collections.Generic.List[object]]::new()
                         $m3Phase0Samples = [System.Collections.Generic.List[object]]::new()
+                        $g2StateSamples = [System.Collections.Generic.List[object]]::new()
                         $m4WaterStillSamples = [System.Collections.Generic.List[object]]::new()
                         $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
                         $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
@@ -1925,6 +1930,7 @@ try {
                             Assert-Condition ($m3StageBenchmark.Count -eq $RendererBenchmarkSamples) "M3 stage benchmark captured $($m3StageBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         if ($RendererM3Phase0Profile) {
                             Assert-Condition ($m3Phase0Benchmark.Count -eq $RendererBenchmarkSamples) "M3 Phase-0 benchmark captured $($m3Phase0Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                            Assert-Condition ($g2StateBenchmark.Count -eq $RendererBenchmarkSamples) "G2 state benchmark captured $($g2StateBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($phase05Benchmark.Count -eq $RendererBenchmarkSamples) "Phase-0.5 benchmark captured $($phase05Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
                         }
@@ -2063,6 +2069,9 @@ try {
                                     Assert-Condition ($phase0[0] -eq $frame -and $phase0[12] -eq 1319 -and $phase0[13] -eq 651 -and $phase0[15] -eq 16 -and $phase0[16] -eq 312 -and $phase0[17] -eq 226 -and $phase0[18] -eq 146) "M3 Phase-0 timer/count census drifted at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
                                     Assert-Condition ($phase0[2] -ge $phase0[3] -and $phase0[3] -ge $phase0[4] -and $phase0[8] -ge $phase0[9] -and $phase0[1] -ge $phase0[2] -and $phase0[11] -ge ($phase0[5] + $phase0[6] + $phase0[7] + $phase0[8] + $phase0[10])) "M3 Phase-0 nested bucket conservation failed at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
                                     $m3Phase0Samples.Add($phase0)
+                                    $g2State = Get-Ints $g2StateBenchmark[$sampleIndex]
+                                    Assert-Condition ($g2State[0] -eq $frame -and $g2State[1] -eq 44 -and $g2State[2] -eq 13 -and $g2State[3] -eq 164 -and $g2State[4] -eq 0 -and $g2State[5] -eq 69 -and $g2State[6] -eq 34) "G2 state write/skip census drifted at frame $frame (actual=$($g2State -join ','))." $gdbStdout
+                                    $g2StateSamples.Add($g2State)
                                     $phase05 = Get-Ints $phase05Benchmark[$sampleIndex]
                                     $phase05WallpaperSubtotal =
                                         [int64]$phase05[1] + [int64]$phase05[2] +
@@ -2433,6 +2442,7 @@ try {
                                 $phase0CalibrationPerRead = @($m3Phase0Samples | ForEach-Object { [int64]$_.Item(14) / [int64]$_.Item(15) })
                                 $phase0Last = $m3Phase0Samples[-1]
                                 $m3Phase0MetricSummary = "Renderer M3 Phase 0: samples=$RendererBenchmarkSamples preflight=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 1)) prepareRuns=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 2)) attributeExclusive=$(Get-MedianP95 $phase0AttributeExclusive) nearTransform=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 4)) prepareResidual=$(Get-MedianP95 $phase0PrepareResidual) preflightResidual=$(Get-MedianP95 $phase0PreflightResidual) beginBind=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 5)) raw=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 6)) range=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 7)) noZInclusive=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 8)) noZMatrix=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 9)) noZExclusive=$(Get-MedianP95 $phase0NoZExclusive) accounting=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 10)) commit=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 11)) commitResidual=$(Get-MedianP95 $phase0CommitResidual) timerReads/spans=$($phase0Last[12])/$($phase0Last[13]) calibrationTotal/perRead=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 14))/$(Get-MedianP95 $phase0CalibrationPerRead) counts=dense$($phase0Last[16])/near$($phase0Last[17])/matrix$($phase0Last[18])"
+                                $g2StateMetricSummary = "Renderer G2 state writes/skips: samples=$RendererBenchmarkSamples texture=$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 1))/$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 2)) matrixMode=$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 3))/$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 4)) polyFmt=$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 5))/$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 6))"
                                 $phase05WallpaperSubtotal = @($phase05Samples | ForEach-Object { [int64]$_[1] + [int64]$_[2] + [int64]$_[3] + [int64]$_[4] + [int64]$_[5] })
                                 $phase05WallpaperResidual = @(for ($i = 0; $i -lt $phase05Samples.Count; $i++) { [int64]$coarseSamples[$i][10] - [int64]$phase05WallpaperSubtotal[$i] })
                                 $phase05StageExecute = @(for ($i = 0; $i -lt $phase05Samples.Count; $i++) { [int64]$coarseSamples[$i][11] - [int64]$phase05Samples[$i][8] })
@@ -2620,6 +2630,7 @@ try {
                                 fastRaw = @($fastRunSamples)
                                 m3Stage = @($m3StageSamples)
                                 m3Phase0 = @($m3Phase0Samples)
+                                g2State = @($g2StateSamples)
                                 phase05 = @($phase05Samples)
                                 m4WaterStill = @($m4WaterStillSamples)
                                 m4Static = @($m4StaticSamples)
@@ -2689,6 +2700,7 @@ try {
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
+                    if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
                             if ($phase05MetricSummary) { Write-Output $phase05MetricSummary }
                     if ($m4WaterStillMetricSummary) { Write-Output $m4WaterStillMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
@@ -3144,6 +3156,7 @@ try {
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
+                    if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
                     if ($phase05MetricSummary) { Write-Output $phase05MetricSummary }
                     if ($m4WaterStillMetricSummary) { Write-Output $m4WaterStillMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
