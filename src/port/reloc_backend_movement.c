@@ -4473,7 +4473,10 @@ static void ndsFighterProcessLoopRunFrame(u32 slot, FTStruct *fp)
     }
 
     fp->status_total_tics++;
-    fp->fighter_gobj->anim_frame += 1.0F;
+    if (fp->hitlag_tics == 0)
+    {
+        ftMainPlayAnimEventsAll(fp->fighter_gobj);
+    }
     ndsFighterProcessLoopRunUpdate(slot, fp);
     ndsFighterProcessLoopRunInterrupt(slot, fp);
     fp->physics.vel_jostle_x = 0.0F;
