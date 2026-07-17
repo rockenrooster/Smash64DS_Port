@@ -34,10 +34,9 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
     (NDS_IFCOMMON_TRAFFIC_ATLAS_WIDTH * NDS_IFCOMMON_TRAFFIC_ATLAS_HEIGHT)
 #define NDS_IFCOMMON_CLOUD_FIRST nNDSIFCommonAssetRedContour
 #define NDS_IFCOMMON_CLOUD_ATLAS_COUNT 2u
-#define NDS_IFCOMMON_CLOUD_ATLAS_WIDTH 256u
+#define NDS_IFCOMMON_CLOUD_ATLAS0_WIDTH 256u
+#define NDS_IFCOMMON_CLOUD_ATLAS1_WIDTH 128u
 #define NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT 128u
-#define NDS_IFCOMMON_CLOUD_ATLAS_BYTES \
-    (NDS_IFCOMMON_CLOUD_ATLAS_WIDTH * NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT)
 #define NDS_IFCOMMON_CLOUD_SPEC_COUNT 6u
 #define NDS_IFCOMMON_CLOUD_ALPHA_THRESHOLD 8u
 #define NDS_IFCOMMON_GO_ALPHA_THRESHOLD 112u
@@ -244,8 +243,9 @@ static const NDSIFCommonTrafficSpec sNdsIFCommonTrafficSpecs[
 };
 
 /* Two A5I3 atlases retain the source I8 alpha ramps: Light at the final DS
- * grid and Contour at 2x. The opaque traffic base adds one 128x64 A3I5
- * atlas. Total texture residency is 2*32768 + 8192 = 73728 bytes. */
+ * grid and Contour at 2x. Atlas 1 is only 123x106 occupied, so its 128x128
+ * allocation preserves every texel while avoiding 16 KiB of empty VRAM. The
+ * opaque traffic base adds one 128x64 A3I5 atlas: 57344 bytes total. */
 static const NDSIFCommonCloudSpec sNdsIFCommonCloudSpecs[
     NDS_IFCOMMON_CLOUD_SPEC_COUNT] = {
     { nNDSIFCommonAssetRedLight, nNDSIFCommonCloudLight,
@@ -260,6 +260,11 @@ static const NDSIFCommonCloudSpec sNdsIFCommonCloudSpecs[
       1, 0, 0, 99, 106, 6, 0, 2 },
     { nNDSIFCommonAssetBlueContour, nNDSIFCommonCloudContour,
       0, 0, 0, 103, 108, 4, 2, 3 }
+};
+static const u16 sNdsIFCommonCloudAtlasWidths[
+    NDS_IFCOMMON_CLOUD_ATLAS_COUNT] = {
+    NDS_IFCOMMON_CLOUD_ATLAS0_WIDTH,
+    NDS_IFCOMMON_CLOUD_ATLAS1_WIDTH
 };
 
 static NDSIFCommonNativeAsset sNdsIFCommonAssets[
@@ -288,8 +293,6 @@ volatile u32 gNdsIFCommonNativeOamPreparePaletteBytes;
 volatile u32 gNdsIFCommonNativeOamPrepareCloudTextureBytes;
 volatile u32 gNdsIFCommonNativeOamPrepareCloudTextureCount;
 volatile u32 gNdsIFCommonNativeOamPrepareCloudFailureStage;
-volatile u32 gNdsIFCommonNativeOamPreGoReleaseCount;
-volatile u32 gNdsIFCommonNativeOamPreGoReleaseBytes;
 volatile u32 gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[
     NDS_IFCOMMON_OVERLAY_SPEC_COUNT];
 volatile u32 gNdsIFCommonNativeOamHotConvertCount;
@@ -1089,10 +1092,16 @@ static s32 ndsIFCommonFillCloudAtlas(u8 *pixels, u32 bytes,
 {
     const NDSIFCommonCloudFillContext *context =
         (const NDSIFCommonCloudFillContext *)user_data;
+    u32 atlas_width;
     u32 cloud_index;
 
     if ((pixels == NULL) || (context == NULL) ||
-        (bytes != NDS_IFCOMMON_CLOUD_ATLAS_BYTES))
+        (context->atlas_index >= NDS_IFCOMMON_CLOUD_ATLAS_COUNT))
+    {
+        return FALSE;
+    }
+    atlas_width = sNdsIFCommonCloudAtlasWidths[context->atlas_index];
+    if (bytes != atlas_width * NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT)
     {
         return FALSE;
     }
@@ -1112,7 +1121,7 @@ static s32 ndsIFCommonFillCloudAtlas(u8 *pixels, u32 bytes,
         if ((cloud->asset_index >= NDS_IFCOMMON_ASSET_COUNT) ||
             (cloud->kind > nNDSIFCommonCloudContour) ||
             ((u32)cloud->atlas_x + cloud->width >
-             NDS_IFCOMMON_CLOUD_ATLAS_WIDTH) ||
+             atlas_width) ||
             ((u32)cloud->atlas_y + cloud->height >
              NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT))
         {
@@ -1154,7 +1163,7 @@ static s32 ndsIFCommonFillCloudAtlas(u8 *pixels, u32 bytes,
                 gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[
                     cloud_index]++;
                 pixels[((u32)cloud->atlas_y + y) *
-                           NDS_IFCOMMON_CLOUD_ATLAS_WIDTH +
+                           atlas_width +
                        (u32)cloud->atlas_x + x] =
                     (u8)((alpha << 3) | cloud->palette_index);
             }
@@ -1184,7 +1193,7 @@ static s32 ndsIFCommonPrepareCloudAtlases(
         };
 
         if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
-                NDS_IFCOMMON_CLOUD_ATLAS_WIDTH,
+                sNdsIFCommonCloudAtlasWidths[atlas_index],
                 NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT, palette,
                 ndsIFCommonFillCloudAtlas, &context,
                 &sNdsIFCommonCloudTextureNames[atlas_index]) == FALSE)
@@ -1197,7 +1206,8 @@ static s32 ndsIFCommonPrepareCloudAtlases(
             return FALSE;
         }
         gNdsIFCommonNativeOamPrepareCloudTextureBytes +=
-            NDS_IFCOMMON_CLOUD_ATLAS_BYTES;
+            (u32)sNdsIFCommonCloudAtlasWidths[atlas_index] *
+                NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT;
         gNdsIFCommonNativeOamPrepareCloudTextureCount++;
     }
     gNdsIFCommonNativeOamPreparePaletteBytes +=
@@ -1598,8 +1608,6 @@ void ndsIFCommonNativeOamInit(void)
     gNdsIFCommonNativeOamPrepareCloudTextureBytes = 0u;
     gNdsIFCommonNativeOamPrepareCloudTextureCount = 0u;
     gNdsIFCommonNativeOamPrepareCloudFailureStage = 0u;
-    gNdsIFCommonNativeOamPreGoReleaseCount = 0u;
-    gNdsIFCommonNativeOamPreGoReleaseBytes = 0u;
     memset((void *)gNdsIFCommonNativeOamPrepareCloudNonzeroTexels, 0,
            sizeof(gNdsIFCommonNativeOamPrepareCloudNonzeroTexels));
     gNdsIFCommonNativeOamHotConvertCount = 0u;
@@ -1647,8 +1655,6 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     gNdsIFCommonNativeOamPrepareCloudTextureBytes = 0u;
     gNdsIFCommonNativeOamPrepareCloudTextureCount = 0u;
     gNdsIFCommonNativeOamPrepareCloudFailureStage = 0u;
-    gNdsIFCommonNativeOamPreGoReleaseCount = 0u;
-    gNdsIFCommonNativeOamPreGoReleaseBytes = 0u;
     memset((void *)gNdsIFCommonNativeOamPrepareCloudNonzeroTexels, 0,
            sizeof(gNdsIFCommonNativeOamPrepareCloudNonzeroTexels));
     gNdsIFCommonNativeOamPrepareProfileFrame =
@@ -1728,8 +1734,6 @@ s32 ndsIFCommonNativeOamPrepareClouds(void)
     gNdsIFCommonNativeOamPrepareCloudTextureBytes = 0u;
     gNdsIFCommonNativeOamPrepareCloudTextureCount = 0u;
     gNdsIFCommonNativeOamPrepareCloudFailureStage = 0u;
-    gNdsIFCommonNativeOamPreGoReleaseCount = 0u;
-    gNdsIFCommonNativeOamPreGoReleaseBytes = 0u;
     memset((void *)gNdsIFCommonNativeOamPrepareCloudNonzeroTexels, 0,
            sizeof(gNdsIFCommonNativeOamPrepareCloudNonzeroTexels));
     if ((ndsIFCommonPrepareCloudAtlases(
@@ -1751,23 +1755,6 @@ s32 ndsIFCommonNativeOamPrepareClouds(void)
     return TRUE;
 #else
     return FALSE;
-#endif
-}
-
-void ndsIFCommonNativeOamReleasePreGoTextures(void)
-{
-#if NDS_RENDERER_HW_TRIANGLES
-    /* Atlas 1 contains only Yellow Contour/Light. BattleShip has hidden both
-     * when Wait transitions to GO, so release its 32 KiB before M4 arms. The
-     * accepted blue GO flare lives in atlas 0 and remains byte-identical. */
-    if (sNdsIFCommonCloudTextureNames[1] != 0u)
-    {
-        ndsRendererHardwareReleaseIFCommonCloudAtlas(
-            &sNdsIFCommonCloudTextureNames[1]);
-        gNdsIFCommonNativeOamPreGoReleaseCount++;
-        gNdsIFCommonNativeOamPreGoReleaseBytes +=
-            NDS_IFCOMMON_CLOUD_ATLAS_BYTES;
-    }
 #endif
 }
 

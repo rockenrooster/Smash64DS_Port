@@ -1768,6 +1768,7 @@ Assert-True ($platform.Contains('vramSetBankF(VRAM_F_TEX_PALETTE_SLOT0)')) 'Plat
 Assert-True ($platform.Contains('vramSetBankG(VRAM_G_TEX_PALETTE_SLOT1)')) 'Platform countdown source-alpha palette bank G init is missing.'
 $scVSBattle = Get-Content (Join-Path $root 'src/import/battleship_scvsbattle.c') -Raw
 Assert-True ($scVSBattle -match '(?s)ndsRendererHardwarePrepareBattleStaticTextures\(\);.*?ndsIFCommonNativeOamPrepareClouds\(\);') 'Countdown source-alpha atlases no longer upload after the exact M4 bank-A reservation.'
+Assert-True ($renderer -match '(?s)#if !NDS_RENDERER_HW_TRIANGLES.*?gNdsRendererBattleStaticTextureEnabled\s*=\s*0u;.*?ndsRendererHardwarePrepareBattleStaticTextures\(void\).*?return FALSE;.*?ndsRendererHardwareArmBattleStaticTextures\(void\).*?ndsRendererHardwareDiscardBattleStaticTextures\(void\).*?ndsRendererHardwareAbortBattleStaticTextures\(void\).*?#endif') 'Software renderer build no longer provides the shared scene texture-lifecycle stubs.'
 Assert-True ($platform.Contains('glFlush(GL_TRANS_MANUALSORT)')) 'Platform hardware renderer manual-sort/Z-buffer frame flush is missing.'
 Assert-True (-not $platform.Contains('GL_WBUFFERING')) 'Projected source depth must not be replaced by identity-matrix W buffering.'
 Assert-True ($platform.Contains('ndsRendererHardwareConsumeSubmittedFrame')) 'Platform does not guard hardware flushes with the renderer submit latch.'

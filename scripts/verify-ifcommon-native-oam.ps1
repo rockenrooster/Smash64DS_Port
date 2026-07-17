@@ -336,9 +336,9 @@ function Invoke-IFCommonRun {
     $tailValues =
         'gNdsIFCommonNativeOamEnabled, gNdsRendererProfileFrameCount, gNdsIFCommonNativeOamFrameBeginTicks, gNdsIFCommonNativeOamFrameTicks, gNdsIFCommonNativeOamFrameCommitTicks, gNdsIFCommonNativeOamFrameCommitCalls, gNdsIFCommonNativeOamFrameClearedObjects, gNdsIFCommonNativeOamFrameIdle, gNdsIFCommonNativeOamFrameRecognizedCalls, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamFrameSemanticHash, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamCommitCount, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsRendererProfilePostVBlankTicks'
     $goFormat = 'IFCOMMON_GO=' +
-        ((1..50 | ForEach-Object { '%u' }) -join ',')
+        ((1..48 | ForEach-Object { '%u' }) -join ',')
     $goValues =
-        'gNdsRendererProfileFrameCount, gSCManagerBattleState->game_status, gNdsIFCommonNativeOamFrameCloudDrawCount, gNdsRendererIFCommonCloudQueuedCount, gNdsRendererIFCommonCloudEmittedCount, gNdsIFCommonNativeOamPrepareCloudFailureStage, sNdsIFCommonCloudTextureNames[0], sNdsIFCommonCloudTextureNames[1], sNdsIFCommonTrafficTextureName, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamPrepareCloudTextureBytes, gNdsIFCommonNativeOamPrepareCloudTextureCount, gNdsIFCommonNativeOamPreparePaletteBytes, gNdsIFCommonNativeOamPrepareBytes, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9], gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[0], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[1], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[2], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[3], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[4], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[5], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[6], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[7], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[8], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[9], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[10], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[11], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[12], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[13], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[14], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[15], gNdsIFCommonNativeOamPreGoReleaseCount, gNdsIFCommonNativeOamPreGoReleaseBytes'
+        'gNdsRendererProfileFrameCount, gSCManagerBattleState->game_status, gNdsIFCommonNativeOamFrameCloudDrawCount, gNdsRendererIFCommonCloudQueuedCount, gNdsRendererIFCommonCloudEmittedCount, gNdsIFCommonNativeOamPrepareCloudFailureStage, sNdsIFCommonCloudTextureNames[0], sNdsIFCommonCloudTextureNames[1], sNdsIFCommonTrafficTextureName, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamPrepareCloudTextureBytes, gNdsIFCommonNativeOamPrepareCloudTextureCount, gNdsIFCommonNativeOamPreparePaletteBytes, gNdsIFCommonNativeOamPrepareBytes, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9], gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[0], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[1], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[2], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[3], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[4], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[5], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[6], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[7], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[8], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[9], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[10], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[11], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[12], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[13], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[14], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[15]'
     $commands = @(
         'set pagination off',
         'set confirm off',
@@ -552,7 +552,7 @@ try {
     # Palette accounting is 512 OBJ + 2*16 A5I3 + 64 A3I5 = 608 bytes.
     $expectedPrepareBytes = 31168
     $expectedPaletteBytes = 608
-    $expectedCloudTextureBytes = 73728
+    $expectedCloudTextureBytes = 57344
     $expectedCloudTextureCount = 3
     $expectedCloudNonzero = @(
         486, 421, 739, 6001, 7067, 8990, 0, 0, 0,
@@ -652,9 +652,9 @@ try {
                 $run.Text
         }
         foreach ($row in $run.Go) {
-            Assert-Condition ($row.Count -eq 50 -and
+            Assert-Condition ($row.Count -eq 48 -and
                 $row[1] -eq 1 -and $row[5] -eq 0 -and
-                $row[6] -ne 0 -and $row[7] -eq 0 -and
+                $row[6] -ne 0 -and $row[7] -ne 0 -and
                 $row[8] -ne 0 -and
                 $row[14] -eq $expectedCloudTextureBytes -and
                 $row[15] -eq $expectedCloudTextureCount -and
@@ -664,8 +664,7 @@ try {
                 (($row[20..29] | Measure-Object -Sum).Sum -eq 0) -and
                 $row[30] -eq 0 -and $row[31] -eq 0 -and
                 (($row[32..47] -join ',') -eq
-                    ($expectedCloudNonzero -join ',')) -and
-                $row[48] -eq 1 -and $row[49] -eq 32768) `
+                    ($expectedCloudNonzero -join ','))) `
                 "Mode $($run.Mode) lost prepared overlay residency, direct GO cells, or the post-GO texture fence." `
                 $run.Text
         }

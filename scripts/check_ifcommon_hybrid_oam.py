@@ -59,6 +59,7 @@ EXPECTED_CLOUD_ATLAS_SPECS = (
     (14, "contour", 1, 0, 0, 99, 106, 6, 0, 2),
     (15, "contour", 0, 0, 0, 103, 108, 4, 2, 3),
 )
+EXPECTED_CLOUD_ATLAS_SIZES = ((256, 128), (128, 128))
 EXPECTED_TRAFFIC_PALETTE = (
     0, 4228, 0, 2114, 6342, 5285, 14500, 3171,
     7399, 1057, 8456, 14, 15855, 9513, 6243, 302,
@@ -1214,7 +1215,9 @@ def export_source_assets(
         visibility / "task11-original-n64-flare-source.png"
     )
 
-    flare_atlases = [Image.new("RGBA", (256, 128)) for _ in range(2)]
+    flare_atlases = [
+        Image.new("RGBA", size) for size in EXPECTED_CLOUD_ATLAS_SIZES
+    ]
     for spec in EXPECTED_CLOUD_ATLAS_SPECS:
         asset_index, _, atlas_index, atlas_x, atlas_y, *_ = spec
         flare_atlases[atlas_index].alpha_composite(
@@ -1266,11 +1269,10 @@ def check_runtime_contract(root: Path, source: str) -> None:
         "ndsRendererHardwareDrawIFCommonCloudAtlas(",
         "NDS_IFCOMMON_TRAFFIC_ATLAS_BYTES",
         "NDS_IFCOMMON_CLOUD_SPEC_COUNT 6u",
+        "NDS_IFCOMMON_CLOUD_ATLAS1_WIDTH 128u",
         "(sobj->sprite.alpha != 255u)",
         "ndsIFCommonRoundFloatHalfUp(",
         "ndsIFCommonRoundQ16HalfUp(",
-        "ndsIFCommonNativeOamReleasePreGoTextures(void)",
-        "gNdsIFCommonNativeOamPreGoReleaseBytes +=",
         "(rgba & 0xffu) < 0x80u",
         "((ia & 0x0fu) >= 8u)",
     ):
@@ -1295,17 +1297,13 @@ def check_runtime_contract(root: Path, source: str) -> None:
     ):
         if fragment not in renderer:
             fail(f"renderer is missing IFCommon queue proof: {fragment}")
-    for fragment in (
-        "gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[16]",
-        "gNdsIFCommonNativeOamPreGoReleaseCount",
-        "gNdsIFCommonNativeOamPreGoReleaseBytes",
-    ):
+    for fragment in ("gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[16]",):
         if fragment not in header:
             fail(f"IFCommon header is missing atlas proof: {fragment}")
-    release = taskman.find("ndsIFCommonNativeOamReleasePreGoTextures();")
-    arm = taskman.find("ndsRendererHardwareArmBattleStaticTextures();", release)
-    if release < 0 or arm < release:
-        fail("yellow-atlas release and M4 arm are not source ordered")
+    if "ndsIFCommonNativeOamReleasePreGoTextures" in header + source + taskman:
+        fail("transition-time countdown atlas deletion returned")
+    if taskman.find("ndsRendererHardwareArmBattleStaticTextures();") < 0:
+        fail("post-GO M4 arm is missing")
     for obsolete in (
         "sNdsIFCommonGoTextureName",
         "ndsIFCommonBuildGoPalette(",
@@ -1320,6 +1318,7 @@ def check_runtime_contract(root: Path, source: str) -> None:
         "SPRITE_PALETTE",
         "dmaFill",
         "dmaCopy",
+        "ndsRendererHardwareReleaseIFCommonCloudAtlas",
     ):
         if forbidden in gameplay:
             fail(f"post-prepare IFCommon path contains forbidden work: {forbidden}")
@@ -1605,7 +1604,7 @@ def verify(
     print("  flare: two prepare-once A5I3 source-alpha atlases")
     print("  traffic: prepare-once opaque A3I5 cutout with RGB shading")
     print("  GO: prepare-once direct RGB555+A1 bitmap OAM")
-    print("  overlay texture residency: 73728 bytes, three palettes")
+    print("  overlay texture residency: 57344 bytes, three palettes")
     print("  post-prepare conversion/upload: 0/0")
 
 

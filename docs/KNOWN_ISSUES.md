@@ -47,12 +47,6 @@ durable unresolved gaps.
 - M3 remains above its tick target. Dense preparation reuse, AOT coordinate
   shifts, and the zero-shift matrix specialization are retained; do not retry
   the slower incremental-matrix transport cut.
-- Bitmap OAM has one-bit alpha, so nonzero partial-alpha GO pixels are opaque.
-  This is accepted presentation debt under the 90% visual rule.
-- Do not publish the hybrid IFCommon OAM lab path: its counters and source
-  commits pass, but the countdown traffic-light objects are invisible at
-  runtime. The proven all-bitmap path prepares before gameplay with no hot
-  conversion/upload and is the published contract.
 - The animated tiled-water implementation is deleted. Do not restore it; frozen
   source frame 0 is the P1 contract.
 - Whispy material state and geometry remain live, but an unprepared post-GO
@@ -63,10 +57,10 @@ durable unresolved gaps.
 ## Audio
 
 - The DS backend does not yet prove every reachable source pitch/voice event.
-- Forked DeadExplode voice program 685 remains explicit fidelity debt. The
-  natural recovery trace resolved 17 unique post-GO IDs; source FoxSmash1 372
-  and MarioSmash2 430 are now packed and runtime-proved, leaving 15 unique
-  effects/voice variants unsupported on that route.
+  The current pack covers 18 exact source IDs / 16 unique samples and 11
+  collision cues. IDs 429 and 435 require continuous pitch schedules that the
+  packed DS format cannot yet represent; forked DeadExplode voice 685 remains
+  explicit fidelity debt.
 - Existing ACK counters cannot prove the final acoustic mix. The ID626 AOT cue
   passed Tyler's exact-ROM ear check; retain user retests for remaining voices.
 - Dream Land BGM now has an exact nonzero initial-ring acoustic fixture and a
@@ -77,8 +71,8 @@ durable unresolved gaps.
 
 - The topology cache is validated for the current battle scene; repeated scene
   rebuild/rematch lifetime and reclamation still need proof.
-- Mode 163 currently retains 202,256 bytes after resident audio/renderer
-  allocations; final CPU-on lifecycle qualification must preserve the floor.
+- Focused current countdown/effects/audio qualifications retain at least
+  174,864 bytes; final CPU-on lifecycle qualification must preserve the floor.
 - N64 fixed framebuffer addresses and overlay assumptions are unsafe on DS.
 - Save/backup behavior remains stubbed; no persistent SRAM/flash behavior exists.
 - Overlay loading remains a compatibility no-op pending a measured DS memory plan.

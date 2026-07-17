@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-16 14:30 Central
+Updated: 2026-07-17 01:16 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -12,12 +12,12 @@ This is the only dynamic P1 queue. `HANDOFF.md` owns the restart surface,
 
 ## Artifact Identity
 
-Task-6-qualified user-facing candidate:
+Integrated user-facing candidate:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,586,880 bytes
-SHA-256 7AB28684930899D5A4F5165E1CE85DDA7A93FC7F3CB06D44062283536507BFAD
+14,612,480 bytes
+SHA-256 83E41C1BB8E04155D71F7AB9BF849AB3DC58618F16CE52BEC5F39813EC680EEA
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -44,9 +44,9 @@ profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Task 6 runtime gates pass | live tree | canonical battle ROM, locked-30 smoke, natural one-minute match, two-ROM contract | no runner active |
-| Renderer implementation | Task 6 KEEP / STOP | shared live tree / focused lab builds | Phase 0, Cut C first-use preparation, and Cut D valid-color seam retained; forbidden transport/semantic surfaces remain untouched | no runner active |
-| Gameplay + QA | Paused | shared live tree / disjoint files | sparse DamageFall runtime gate | no runner active |
+| Integration/release | July 17 Boundary + focused gates pass | live tree | integrated battle ROM, countdown, effects, audio, two-ROM contract; current one-minute refresh pending | no runner active |
+| Renderer implementation | Task 8 E/F banked; G2 stashed | shared live tree / focused lab builds | Retained exact topology/matrix cuts; resume state-shadow packet after integration snapshot | no runner active |
+| Gameplay + QA | Integrated / manual review pending | shared live tree / disjoint files | source effects and audio mappings verified; exact-ROM visual/acoustic eyeball remains | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
 
 Runner/window/port policy lives in `VERIFYING.md`; scripted launches normalize
@@ -64,6 +64,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Locked-30 scheduler | Pass / slowdown published | Integration | Canonical Task 6 match: 4,084 updates / 2,042 presents, exact fixed-two pacing; phase rates 39.9/38.1/39.6/n.a./58.2 updates/s and slips 196/1036/925/0/3. The smoke reports 19.5 presents/s and 38.9 updates/s | Keep exact 2:1 and conditional 59.0–61.0 gates; full-speed locked 30 remains unmet |
 | Mario can damage Fox | Pass / continuous gate | Gameplay | User confirmed the repair manually. The focused current-ROM route now damages Fox 0→59, lets imported level-3 Recover return naturally to line 3, then damages Fox again 59→72 within 78 frames while all 11 damage colliders and global/special/star hit statuses remain normal | Keep the post-Recover assertion in `verify-battle-playable-fox-recovery.ps1` |
 | Fireball spawn/render/damage/destruction | Pass | Gameplay | Source spawn/damage/lifetime and 40 moving visible textured hardware draws pass with zero rejects | Keep dedicated natural-input gate |
+| Common visual effects | Focused pass | Renderer + Gameplay | Natural Fireball rebound created 3 bounded source effects; 13 hardware submissions emitted 96 triangles with kind mask `0x45`, zero texture/reject faults, and 176,464-byte reserve | Keep the imported effect manager and focused `-VisualEffectsOnly` gate |
 | Fireball trajectory, floor rebound, and terminal | Pass | Gameplay | Current custom `0x47` submits 40/40 and first rebound is 55→46.75 at lifetime 122. The exact ELF destroy callsite then records the same weapon crossing Pupupu bottom −3500 at x/y/z −4650.5/−3504.8/−66.9 with lifetime 10; it is absent next frame. The deterministic source-MVP ROI changes 50→0 orange pixels | Keep the focused countdown/Fox-off gate and both `20260716_fireball-source-mvp-long-travel*.png` captures; the earlier far-left theory was false |
 | Damage/throw map collision | P1 Dream Land boundary pass | Gameplay | Five source up-smashes proved DamageFall recovery. A separate external-input route then used nine short source Walk/Dash/Run steps for one Mario catch/forward throw: Fox took 0→12%, released status 169→186, swept/clamped to line 3, DownBounced once, cleared every catch link, and retained 202,256 bytes. Source Dream Land contains one static collision group: 4 floors, 1 ceiling, 1 right wall, and 1 left wall | Keep both sparse gates; throw evidence is `2026-07-16_063512-7696185_throw-release-recovery-p21764.png`. Moving-stage/project providers are P2 and must not delay this static-stage P1 |
 | One-way platform semantics | Pass / hardened natural gate | Gameplay | Current-ROM mode 163 completed 715 natural frames: six ordered continued-ascent/strict-descent/downward-crossing flights (`0x3f`), all three platform masks `0x7`, two side cycles, three exact ignore-line Pass crossings, nine landings, and 214,544-byte reserve | Keep the focused gate; screenshot `2026-07-16_052652-7356809_platform-semantics-p984.png` |
@@ -75,15 +76,15 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Incremental compute KEEP at 384.0K | Renderer | Current Mode-8 A/B moves combined fighter P50/P95 386,880/386,944 → 384,000/384,000 by co-locating the prepared color/UV and immutable AOT GX words in one 16-byte output record. Exact 70/686 and 60/320/306/29/0/0 remain, conservation is zero, and the native top-screen image is byte-identical | Keep ITCM, exact quantization, raw-loop specialization, batched accounting, AOT GX coordinates, and the output-local record; lighting is already a bare exact LUT path. Continue the measured production emit path. The 170–250K milestone is directional, not an intermediate discard gate |
 | M3 complete stage AOT, 150–250K ticks | Task 6 accumulated KEEP at 489K / STOP | Renderer | R0→Cut D moves combat stage 539,616/539,904 → 489,184/489,536 and draw+flush P50 1,297,056 → 1,245,664. Cut C and Cut D each preserve exact 121/828, 8/255/57/42/54/202/49/4, cross 5/10/15, zero fallback/fence/conservation, and 0/49,152 native pixels | Bank both gains. The remaining 455,664-tick gap to ~790K is required work or lies behind forbidden packet/order/poly/translucency boundaries; do not manufacture another cut from nested profiler noise |
-| M4 zero gameplay conversion/preparation | Lifecycle pass / teardown refreshed | Renderer | Exact CPU-on phase sampling exposed and repaired the Whispy mouth-image fallback. The canonical Task 6 one-minute match retains 22 textures / 131,072 bytes, reports exactly one normal teardown, and keeps all ten post-GO fence counts zero | Keep the documented cosmetic source-frame approximation and terminal lifecycle gate |
+| M4 zero gameplay conversion/preparation | Current startup pass / lifecycle refresh pending | Renderer | Compacting the two source countdown atlases from 65,536 to 49,152 bytes restores pre-GO source-frame residency without transition deletion. Current canonical frame 212 retains 22 textures / 131,072 bytes, records 646 cache hits, zero hot conversion/upload, and all fence counts zero | Keep the 57,344-byte total overlay texture layout; rerun terminal lifecycle with the release gate |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
-| Countdown/3-2-1/GO top presentation | FIXED / bitmap OAM | Renderer + QA | Hybrid runtime submission was invisible despite valid counters; restored proven all-bitmap OBJ ownership shows the traffic light with 93,824 bytes prepared pregame and zero gameplay conversion/upload | Keep published bitmap path; hybrid remains lab-only |
+| Countdown/3-2-1/GO top presentation | FIXED / source-derived hybrid | Renderer + QA | O2R decode reverses the original odd-row texture interleave. Big GO is prepare-time RGB555+A1 OAM; the opaque shaded traffic box is A3I5; only its foreground flare is A5I3. Runtime proof prepares 31,168 OBJ + 57,344 texture + 608 palette bytes, emits GO as 3 OBJ + 10 quads, and performs zero hot conversion/upload | Keep the prepare-once path and source pixels; no runtime antialiasing |
 | Dream Land BGM | Pass | Audio | Tyler reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |
-| Required FGM and Mario/Fox voices | Crowd FIXED / one natural voice per fighter PASS | Audio | The 102,196-byte AOT pack adds source FoxSmash1 ID372 and MarioSmash2 ID430. The natural 820-frame recovery route triggered both, acquired/released two clean DS handles, reported zero play/load/stale/generation faults, and retained 202,256 bytes; ID626 remains user-confirmed | Keep the two representative cues; Tyler ear-checks them, while remaining variants and exact pitch automation stay open |
+| Required FGM, attack/hit sounds, and Mario/Fox voices | Focused source-behavior pass | Audio | The 107,536-byte AOT pack maps 18 exact source IDs / 16 unique samples plus 11 collision cues. Natural qualification observed 14 plays, 21 envelope steps, max 3 live handles, and 174,864-byte headroom; ID626 remains user-confirmed. Continuous-pitch IDs 429/435 and fork voice 685 remain explicit debt | Keep exact event mapping/behavior fixtures and natural gates; finish acoustic ear checks |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | Pass on current candidate | QA | Canonical Task 6 CPU-on expiry→Results retains 206,352 bytes before the 65,536-byte resident BGM ring, leaving 140,816 bytes after BGM and 9,744 bytes above the 128 KiB floor | Keep exact harness lifetime bound and one-minute reserve gate |
-| Focused/checkpoint verification | Task 6 gates PASS / Boundary refresh pending | QA | Published ROM `7AB28684...` passes ITCM 26,104/32,768, locked-30 smoke, natural one-minute lifecycle, and the two-ROM contract. The generic ROM remains exact SHA `009211A8...` | A later release-wide Boundary/Current run remains outside Task 6; do not claim it from narrower gates |
-| Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Task 6 Cut C and Cut D each pass deterministic native 256x192 comparison at 0/49,152 changed pixels; canonical lifecycle is complete | Tyler still owes the requested 30-second eyeball of exact ROM `7AB28684...` |
+| Focused/checkpoint verification | Integrated Boundary + focused gates PASS | QA | Published candidate `83E41C1B...` passes Boundary at frame 212 plus source countdown, visual-effects, and full FGM phase-pack qualification; ITCM is 26,104/32,768. The earlier Task 6 one-minute lifecycle remains the last terminal proof | Current one-minute lifecycle and Tyler's exact-ROM eyeball remain release gates |
+| Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Task 6 Cut C and Cut D each pass deterministic native 256x192 comparison at 0/49,152 changed pixels; current Boundary capture is dated | Tyler still owes the requested 30-second eyeball of exact ROM `83E41C1B...` |
 
 ## Dated Gates
 

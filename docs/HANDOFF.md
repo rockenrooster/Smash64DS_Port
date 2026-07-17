@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-16 14:30 Central
+Updated: 2026-07-17 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This file is only the restart
 surface.
 
@@ -14,22 +14,23 @@ Boundary: `battle_playable_realtime`, mode `163`.
 git status --short
 ```
 
-Preserve the published intrinsic mode-9 / mip-0 / static-residency / bitmap-OAM
+Preserve the published intrinsic mode-9 / mip-0 / static-residency / source-countdown
 configuration. Dream Land water is exact frame 0/fraction 114 on the original
 12 triangles; the animated replacement and its dead implementation are removed.
 
-The Task-6-qualified fixed-two candidate is 14,586,880 bytes, SHA-256
-`7AB28684930899D5A4F5165E1CE85DDA7A93FC7F3CB06D44062283536507BFAD`.
+The integrated fixed-two candidate is 14,612,480 bytes, SHA-256
+`83E41C1BB8E04155D71F7AB9BF849AB3DC58618F16CE52BEC5F39813EC680EEA`.
 Stage painter depth and pause-orbit containment are fixed and user-confirmed.
 M3 retains no-Z codegen, dense prepare-once, AOT coordinate shifts, the
 zero-shift matrix builder, exact bounded `s16` rounding, Task 6 first-use
 attribute preparation, and the valid-color stage seam. Combat stage is now
 489,184/489,536 ticks P50/P95.
 
-The M4 Whispy lifecycle repair is kept: later cosmetic mouth/eye images reuse
-an otherwise exact resident source-frame key, preventing the late fallback and
-40 gameplay conversions. See the board and `PERF_LEDGER.md` for the exact-ROM
-windows; do not repeat them before final release qualification.
+The M4 Whispy lifecycle repair is kept. Countdown assets now reverse the source
+odd-row texture interleave: big GO is direct RGB555+A1 OAM, the opaque shaded
+traffic box is A3I5, and only the foreground flare is A5I3. Compact source
+atlases use 57,344 texture bytes total and restore pre-GO source-frame residency;
+do not add transition-time texture deletion.
 
 ## One-Minute Gate
 
@@ -48,9 +49,8 @@ source-timer gate passes:
 .\scripts\verify-battle-playable-one-minute-match.ps1 -NoBuild
 ```
 
-Canonical ROM SHA-256
-`7AB28684930899D5A4F5165E1CE85DDA7A93FC7F3CB06D44062283536507BFAD`
-passes the natural fixed-two qualification: 4,084 committed updates / 2,042
+The previous Task 6 ROM passes the natural fixed-two qualification: 4,084
+committed updates / 2,042
 presents, phase rates 39.9/38.1/39.6/n.a./58.2 updates/s, and phase slips
 196/1036/925/0/3. It
 exercised imported level-3 Fox AI, expired at 3,600 source ticks, reached
@@ -59,61 +59,27 @@ teardown with every post-GO fence counter zero. The DS taskman seam matches
 BattleShip by breaking on `LoadScene` before drawing; the verifier samples the
 battle ledger before Results reuses the globals.
 
-## Task 6 Result
+## Integrated July 17 Candidate
 
-The frozen R0 combat draw+flush P50 was 1,297,056 ticks, not the earlier
-936K-1,014K cross-build estimate. Phase 0 calibrated the largest removable
-attribute surface. Cut C avoids repeated full input construction after the
-312-dense first-use mask; Cut D routes immutable valid stage RGBA around only
-the unreachable invalid-vertex lighting fallback and constructs input records
-only for the 226 no-Z transforms. Both are exact and banked separately.
+- Source countdown verifier passes with GO `3 OBJ + 10 quads`, 31,168 OBJ,
+  57,344 texture, 608 palette bytes, and zero gameplay conversion/upload.
+- Natural visual-effects proof passes: 3 created, 13 rendered, 96 triangles,
+  kind mask `0x45`, zero rejects, 176,464-byte reserve.
+- The 107,536-byte FGM pack covers 18 exact IDs / 16 unique samples and 11
+  collision cues. Natural phase qualification passes 14 plays, 21 envelope
+  steps, max 3 live handles, and 174,864-byte headroom. IDs 429/435 continuous
+  pitch and fork voice 685 remain explicit fidelity debt.
+- Current canonical startup reaches frame 212 with M4 `22/131072`, 646 hits,
+  zero hot conversion/upload, and zero post-GO fence work. Full current
+  one-minute lifecycle refresh remains required.
 
-Together they save 51,392 draw+flush ticks P50, ending at 1,245,664. The locked-
-30 smoke is 19.5 presents/s and 38.9 updates/s; natural combat improves from the
-old 37.9 to 38.1 updates/s. The result is real but still 455,664 ticks above the
-approximate 790K full-speed draw+flush target. The refreshed profile is a STOP:
-remaining work is required validation, texture/color preparation, transforms,
-matrix transport, and ordered emission, or lies behind explicitly forbidden
-packet/order/poly/translucency semantics. See the three Task 6 rows in
-`PERF_LEDGER.md`.
-
-## Prior Retained Packet
-
-Tyler withdrew the Jump A/C all-or-nothing keep gates. Correct measured gains
-now accumulate even when they do not finish a milestone. Jump A dense reuse is
-kept. Jump C native-fighter ITCM placement is also kept: combined fighter
-P50/P95 is 419,328/419,392 → 402,560/402,624, draw P50/P95 is
-1,245,024/1,247,616 → 1,230,336/1,232,832, and the top-screen A/B is exact.
-ITCM is 25,384/32,768. Evidence is under
-`artifacts/performance/2026-07-16_m2-itcm-restore-{a,b}.json` and
-`artifacts/visibility/2026-07-16_m2-itcm-restore-{a,b}.png`.
-
-Jump A now retains no-Z codegen, dense prepare-once, AOT-packed coordinate
-shifts, the exact zero-shift raw-matrix builder, bounded `s16` vertex rounding,
-and both Task 6 cuts. The latest combat stage result is 489,184/489,536 ticks;
-Cut C and Cut D each have a 0/49,152 native-pixel delta. The constant-depth GX
-painter already made the old CPU divider cut obsolete; do not reopen it or the
-rejected matrix-position reuse.
-Jump C Phase 0 is refreshed: local matrix construction is 53,024/53,120 ticks
-and lighting is 67,808/68,032. The source integer sine-table path was already
-live, but its power-of-two float-to-fixed boundaries still called ARM soft-float
-helpers. The retained exact conversion cut moves combined fighter time from
-402,560/402,624 to 398,048/398,144. Lighting is already the exact prepared-dot
-plus LUT path. The old 480-triangle KRAW extension is superseded: Mode 8 now
-owns all 582 raw fighter triangles. Hoisting its raw/textured decisions outside
-the corner loop moves combined fighter time again to 397,248/397,312. Batching
-the unchanged raw/cross accounting once per owner traversal moves it to
-395,264/395,328. AOT-packing the immutable DS `VERTEX16` words in the same
-16-byte dense record moves it to 386,880/386,944. Co-locating those words with
-prepared color/UV in one 16-byte output record then moves it to
-384,000/384,000 with a byte-identical top screen and unchanged total fighter-
-table RAM. Continue against production emit work, not lighting.
-Locked 30 is the explicit presentation decision; 60 FPS and full-speed locked
-30 are not claimed. Task 6 is closed at its semantic/transport boundary rather
-than extended from profiler noise.
+Task 8 Cuts E (`bc35a84c57`) and F (`11e69a9de4`) are banked. G2 state-shadow
+work is preserved in `stash@{0}`; resume it only after this integration
+checkpoint from `docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md`.
+Do not merge this branch into main without Tyler's instruction.
 
 ## Checkpoint
-Task 6 static checks, battle-only canonical build, locked-30 smoke, natural
-one-minute match, and two-ROM contract pass. The release-wide Boundary/Current
-suite and Tyler's requested 30-second exact-ROM eyeball remain separate gates.
-Snapshot is the final project command after the manual eyeball.
+Countdown source/host/runtime, focused visual-effects, full FGM phase-pack, and
+Boundary checks pass. Take a Lean snapshot as the final project command.
+Release qualification still needs the current one-minute lifecycle plus Tyler's
+exact-ROM eyeball.

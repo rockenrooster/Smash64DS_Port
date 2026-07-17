@@ -1046,6 +1046,11 @@ static void ndsRendererSemanticCommitEvent(
 }
 #endif
 
+/* Frame begin is shared by software and GX builds.  Keep these diagnostics
+ * defined in both; only the hardware queue increments them. */
+volatile u32 gNdsRendererIFCommonCloudQueuedCount;
+volatile u32 gNdsRendererIFCommonCloudEmittedCount;
+
 #if NDS_RENDERER_HW_TRIANGLES
 typedef enum NDSRendererHWSubmitClass
 {
@@ -1296,8 +1301,6 @@ typedef struct NDSRendererIFCommonCloudDraw
 static NDSRendererIFCommonCloudDraw sNdsRendererIFCommonCloudQueue[
     NDS_RENDERER_IFCOMMON_CLOUD_QUEUE_COUNT];
 static u32 sNdsRendererIFCommonCloudQueueCount;
-volatile u32 gNdsRendererIFCommonCloudQueuedCount;
-volatile u32 gNdsRendererIFCommonCloudEmittedCount;
 static u32 sNdsRendererHardwareNoOracle;
 static u32 sNdsRendererHardwareTriangleBatchOpen;
 static u32 sNdsRendererHardwareTriangleBatchTextured;
@@ -12269,6 +12272,29 @@ ndsRendererSubmitHardwareTriangle(
     }
 }
 #endif
+#endif
+
+#if !NDS_RENDERER_HW_TRIANGLES
+/* Shared scene code owns teardown calls even in the software build.  Keep the
+ * hardware-only texture API link-complete without allocating GX state. */
+volatile u32 gNdsRendererBattleStaticTextureEnabled = 0u;
+
+s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
+{
+    return FALSE;
+}
+
+void ndsRendererHardwareArmBattleStaticTextures(void)
+{
+}
+
+void ndsRendererHardwareDiscardBattleStaticTextures(void)
+{
+}
+
+void ndsRendererHardwareAbortBattleStaticTextures(void)
+{
+}
 #endif
 
 static inline void ndsRendererExecuteTriangleCommand(

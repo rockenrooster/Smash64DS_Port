@@ -7416,10 +7416,10 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                         (gSCManagerBattleState->game_status ==
                          nSCBattleGameStatusGo))
                     {
-                        /* The imported countdown GObj performed the source
-                         * Wait->Go assignment. Its yellow-only atlas is dead;
-                         * release it before arming the post-GO M4 fence. */
-                        ndsIFCommonNativeOamReleasePreGoTextures();
+                        /* Keep all prepare-once countdown atlases resident.
+                         * Their compact allocation preserves pre-GO source-
+                         * frame headroom; transition deletion only mutates a
+                         * live binding after preparation has finished. */
                         ndsRendererHardwareArmBattleStaticTextures();
                     }
                     /* BattleShip syTaskmanRunTask checks LoadScene immediately

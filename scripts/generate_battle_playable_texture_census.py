@@ -250,9 +250,9 @@ EXPECTED_ACTOR_ROOTS = {
 
 
 EXPECTED_CENSUS_SHA256 = (
-    # Same 25/41728 OBJ and 65536/32 A5I3 residency; the owner label now
-    # records that unused atlas space also carries the three Light rays.
-    "73ede7b370c7d72712b4760111d626d5d77a359e118a32707ef22a3190e2ac62"
+    # Same 25/41728 OBJ census. The two source-derived cloud atlases now use
+    # 49152/32 A5I3 residency while still carrying all three Light rays.
+    "829c895df846b837cff31d86e4682e8fa69ce2bbbca08ae8b27558f0f60a265d"
 )
 
 
@@ -834,7 +834,8 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
     macro_values: dict[str, int] = {}
     for macro in (
         "NDS_IFCOMMON_CLOUD_ATLAS_COUNT",
-        "NDS_IFCOMMON_CLOUD_ATLAS_WIDTH",
+        "NDS_IFCOMMON_CLOUD_ATLAS0_WIDTH",
+        "NDS_IFCOMMON_CLOUD_ATLAS1_WIDTH",
         "NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT",
     ):
         match = re.search(
@@ -844,8 +845,8 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
             raise falsify(f"native countdown {macro} is absent")
         macro_values[macro] = c_integer(match.group(1))
     cloud_texture_bytes = (
-        macro_values["NDS_IFCOMMON_CLOUD_ATLAS_COUNT"]
-        * macro_values["NDS_IFCOMMON_CLOUD_ATLAS_WIDTH"]
+        (macro_values["NDS_IFCOMMON_CLOUD_ATLAS0_WIDTH"]
+         + macro_values["NDS_IFCOMMON_CLOUD_ATLAS1_WIDTH"])
         * macro_values["NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT"]
     )
     cloud_palette_bytes = (
@@ -856,7 +857,7 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
             f"native countdown totals {total_tiles} tiles/{total_bytes} bytes "
             "!= 25/41728"
         )
-    if cloud_texture_bytes != 65536 or cloud_palette_bytes != 32:
+    if cloud_texture_bytes != 49152 or cloud_palette_bytes != 32:
         raise falsify(
             "native countdown A5I3 residency changed: "
             f"{cloud_texture_bytes} texture/{cloud_palette_bytes} palette bytes"

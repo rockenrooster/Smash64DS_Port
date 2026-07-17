@@ -142,9 +142,10 @@ if (($makefileText -notmatch 'ifeq \(\$\(TARGET\),smash64ds-battle-playable-hwtr
     Fail-Check 'published battle target is not intrinsically realtime, interactive, and hardware-rendered'
 }
 if (($makefileText -notmatch 'NDS_PUBLISHED_TARGETS := smash64ds smash64ds-battle-playable-hwtri') -or
+    ($makefileText -notmatch 'NDS_OUTPUT_BASENAME \?= \$\(TARGET\)') -or
     ($makefileText -notmatch 'override NDS_PUBLISH_USER_ROM :=') -or
     ($makefileText -notmatch 'Non-published target .* may not write into the project root') -or
-    ($makefileText -notmatch 'export OUTPUT := \$\(NDS_OUTPUT_ROOT\)/\$\(TARGET\)')) {
+    ($makefileText -notmatch 'export OUTPUT := \$\(NDS_OUTPUT_ROOT\)/\$\(NDS_OUTPUT_BASENAME\)')) {
     Fail-Check 'Makefile no longer confines non-published ROMs to their build directories'
 }
 foreach ($record in $harnessRecords) {
