@@ -36,6 +36,8 @@ Required match:
 
 P1 is complete only when the user-facing ROM naturally supports an entire match from start through the timer expiring and the original match-end/result transition, including:
 
+- Correct assets are used for hit sounds, hit visuals, and all other audio and visual effects
+- CPU stalls and game freezes are fixed.
 - Live Mario movement, attacks, aerials, specials, shield, grab, throws, damage, knockback, KO, and rebirth.
 - Fox level-3 CPU movement, targeting, attacks, defense, recovery, and specials through imported original AI/runtime code.
 - Source-backed fighter state, animation, collision, camera, match rules, scoring, timer, and HUD.
@@ -44,9 +46,10 @@ P1 is complete only when the user-facing ROM naturally supports an entire match 
 - Battle BGM plus gameplay-critical effects and voices.
 - Stable memory use with the project’s required reserve.
 - Native DS rendering for 3D and 2D (or most efficient path considering DS contraints, least amount of CPU ticks)
-- Real-time playable performance, targeting 60 FPS. Do not mark P1 complete below real-time speed without explicit user approval.
+- Real-time playable performance, targeting stable 30 FPS. Do not mark P1 complete below real-time speed without explicit user approval.
 - No synthetic proof-only state, harness-controlled combat, crashes, hangs, or known save/data corruption.
 - A verifier-covered user-facing ROM and dated capture demonstrating the result.
+
 
 Use the existing battle_playable scene-level capability as the P1 integration anchor. Do not create new one-bit harness modes, proof masks, seed/restore reruns, or synthetic branch proofs.
 
