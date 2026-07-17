@@ -3565,3 +3565,139 @@ KEEP / REWORK / REVERT: KEEP
   This restores the required reserve by matching storage to its actual serial
   lifetime; it is not a renderer tick claim.
 ```
+
+## 2026-07-17 - Task 9 bit-exact soft-float ITCM promotion
+
+```text
+IDEA ID: TASK9-LIBGCC-FLOAT-ITCM-20260717
+R0 / MEASUREMENT IDENTITY:
+  Mode 163 battle_playable_realtime, renderer profile 1, Mode 9, static AOT 1,
+  bitmap OAM 0, live Fox CPU, frames 600..607 / logic updates 808..822. Common
+  code is GCC 15.2.0 -O2 -march=armv5te -mtune=arm946e-s -mthumb; only the
+  established renderer translation unit adds -marm. R0 and its retake are
+  byte-identical: ROM/ELF 803747713DA1FBA66EF68CD66F704FCDDE244E25A8791DF3EEC0DE89568D78C6 /
+  00912357A3C670D206634FC6C5E5A2185A89366D780A7157ABA60B3874A14888.
+  Artifact SHA-256 values are ABC86221A5E85767D1E127993464BA448F30E9726831178705F4FCB8F609F0A9
+  and B3BD6860FED0302AA793F29ABAA110B3A1428C1972175C2408A89823532EF43C.
+
+PHASE 0 CENSUS:
+  Lab-only --wrap shims count the exact scVSBattleFuncUpdate scope; audio is
+  excluded. The selected Thumb multilib archive is GCC's stock
+  C755ADC33ECA252260360327904591B8462CCE5C25E48B0E881AC0B295953F48.
+  Objdump proves the linked nonzero helpers are ARM-state routines in waitstated
+  .main despite the caller's Thumb mode. The artifact below owns all 35 rows;
+  the compact table lists every routine observed in the natural window.
+
+  Routine     mean calls/update   median ticks/call   observed max tick bound
+  fadd              821.063              24                   231116
+  fsub              576.375              39                   148656
+  fmul             1172.375              21                   395504
+  fdiv               51.250              80                    29120
+  fcmpeq            556.250              40                   127148
+  fcmplt             80.000              48                    22420
+  fcmple            111.813              40                    30172
+  fcmpge             46.250              39                     6156
+  fcmpgt             94.125              47                    12844
+  fcmpun              8.000              22                     2964
+  f2iz                2.000              17                     5092
+  f2uiz               4.000              15                      532
+  i2f               174.438              34                    50160
+  f2d                 4.000              16                      456
+  d2f                 4.000              19                      380
+  dmul                4.000              48                      380
+  ddiv                4.000             355                     1980
+
+  Observed zero: frsub, ui2f, l2f, ul2f, dadd, dsub, drsub, dcmpeq,
+  dcmplt, dcmple, dcmpge, dcmpgt, dcmpun, d2iz, i2d, ui2d, l2d, ul2d.
+  Mean count x measured median cost totals 115,648 ticks/update; the top ten
+  rows account for 113,626. Census artifact SHA-256 is
+  E302383C8635E8AECF8D28278A18C0E34147A35BA807A1B9E390B1D97381FA27.
+
+PHASE 1 / EXACT CODE IDENTITY:
+  One change only: extract six stock objects, rename .text to .itcm, and link
+  them ahead of libgcc. No instruction, helper ABI, float rule, renderer ITCM,
+  packet, gameplay, or source file changes. The verifier byte-compares each
+  relocated code section with a fresh private extraction.
+
+  Object                 bytes   machine-code SHA-256
+  _arm_addsubsf3.o          684   E1F79C55786F2323E18924D71A1268945789DD33C3C8C8861042F41A5CCB4A91
+  _arm_muldivsf3.o          760   C313BBE04B3484CDBE9E6B14BCB14B0828F308B076616D080AA89204FDFD940A
+  _arm_cmpsf2.o             276   2B656E12FDE0F34CEB17395A5FF8FCC1EF0CEBBF94F8EDA3725BD26C0B3C2884
+  _arm_unordsf2.o            56   7B4D5CFBE032C0D80470495D888A2598C8D77BD434831B0F28488C0070A60407
+  _arm_fixsfsi.o             92   73908D204E4625C30FC21DFF9A2F817E26C53D161164A032BD229A9DCDD6EDEE
+  _arm_fixunssfsi.o          84   1BFBAB489E0E7B2166376F736F04F891A50F7BF04191CFB8731E5294B752D66F
+  Total                    1,952
+
+  Current canonical symbols are .itcm ARM functions: fsub/fadd
+  01FF8028/01FF802C (0x1C0/0x1BC), ui2f/i2f 01FF81E8/01FF81F0
+  (0x28/0x20), fmul 01FF82CC (0x198), fdiv 01FF8464 (0x160), compare
+  aliases 01FF8660..01FF86D8 (0x18 each; unordered 0x38), and
+  f2iz/f2uiz 01FF8710/01FF876C (0x5C/0x54).
+
+TIMING / KEEP:
+  R0 coarse update P50/P95 313,888/581,376 -> 263,040/527,808. The stable
+  source-update owner moves 311,744/312,960 -> 260,192/261,312, saving
+  51,552/51,648 ticks, or 16.54%/16.50%. Phase-1 ROM/ELF are
+  32C957ADBB0D61F031DC9FF743BE4983175CCBBAE84924788C48FA67C8ECB154 /
+  638778926805CBFD38140C8CB4C897C17C3BADAAD4B68E472A26AB823F53C511.
+  Timing artifact SHA-256 is
+  D6284625227D423C31DB89B84122AB2C273A376855706D179D08E65442D791A1.
+
+SUPREME STATE GATE:
+  The lab hash records match-local RNG/heap-relative state, battle, scene,
+  camera, ground, controllers, collision, active GObjs/processes and their
+  DObj/SObj/CObj/XObj/AObj/MObj trees, plus fighter/item/weapon/effect state.
+  Pointer normalization is relative/canonical and bounded; overflow is fatal.
+  R0 and Phase 1 each produced 3,892 post-update rows through Results, overflow
+  0, with exact row equality. Baseline ROM/ELF are
+  8E0629C2924B6FFAEE9F0A6423128CAC0E3CE53C957DA7B50193797EACF178CE /
+  27E04474190AE33ACEAB669B51C7BA92B3259AF40BF860348750F155EC706FB3;
+  candidate ROM/ELF are
+  4744FA5F2D19086782390B3EA6DC9204C35A32BC556F76024C9298AB9FB98D60 /
+  AA10D8ACC4D00FA84574E29C32E006C0A025D35A76A15869804D9A43E9DAE39B.
+  Row-artifact SHA-256 values are
+  3DC139481FF70EABAE75981EF7CA05D022714BD999CB4C79B09C295C8A431F1A /
+  D8E6C4966B22F811BEA4A8ED9265DD47C56AA2C60E02F8BD40EB795E926EB363.
+
+PHASE 2:
+  SKIP. Unchanged libgcc already gives a decisive 16.54% owner gain and exact
+  3,892-update identity. A custom IEEE-754 implementation and its exhaustive
+  proof cost are not justified.
+
+STACK REPORT ONLY:
+  The linker boot/user stack is DTCM at __sp_usr=02FF3E80, but gameplay runs on
+  the port coroutine's 16 KiB malloc-backed main-RAM stack. Runtime owner base /
+  top are 0228F200/02293200; update-600 SP is 02292FE8. The fmul ITCM path was
+  observed at PC 01FF82CC with SP 02292EF8; ddiv remains main-RAM at 020867D8
+  with SP 02292F08. The deepest sentinel touch was 0229125C: 8,100 bytes used,
+  8,284 headroom. Therefore the requested no-main-RAM-spill premise is false;
+  no stack change was made.
+
+FINAL GATES / MEMORY:
+  DevFast and Current pass. Canonical ITCM is 28,128/32,768, leaving 4,640;
+  renderer ownership remains 23,640 bytes. Normal ITCM is 8,612, leaving
+  24,156. The isolated one-minute proof uses 27,980, leaving 4,788. It completes
+  4,084 updates / 2,042 presents, timer 3,600 -> 0, CPU decisions 3,601,
+  phase rates 39.9/37.4/39.3/n.a./58.2 updates/s, slips 196/1088/946/0/3,
+  Results, one teardown, reserve 232,208 - 65,536 = 166,672, and zero stale,
+  safety, eviction, or post-GO fence counts. Its ROM is 9C35F4B3...; the public
+  A89F143B... ROM remains byte-identical across the isolated proof.
+
+TOOLING / CHECKER HARDENING:
+  Never redirect `ar p` binary output through PowerShell text streams and never
+  extract from the installed archive. More importantly, never declare an
+  installed .a as a Make prerequisite: Current's `make -B` invokes an implicit
+  archive rebuild and reduced libgcc.a to the 8-byte empty archive
+  F0A17A43C74D2FE5474FA2FD29C8F14799E777D7D75A2CC4D11C20A6E7B161C5.
+  The build now keeps libgcc out of Make's target graph, hard-checks its package
+  hash, makes one private copy, and performs one grouped extraction. State-range
+  normalization likewise checks value <= last before unsigned subtraction so
+  high-bit gameplay values cannot masquerade as pointers.
+
+EVIDENCE:
+  artifacts/performance/2026-07-17_task9-phase0-float-census.json
+  artifacts/performance/2026-07-17_task9-{r0,r0-retake}-fighter600.json
+  artifacts/performance/2026-07-17_task9-phase1-float-itcm.json
+  artifacts/performance/2026-07-17_task9-state-{r0,phase1-itcm}.json
+KEEP / REWORK / REVERT: KEEP PHASE 1 / SKIP PHASE 2
+```

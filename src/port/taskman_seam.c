@@ -4326,7 +4326,16 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
     u32 phase_start = start;
 #endif
 
+#if NDS_TASK9_FLOAT_CENSUS
+    ndsTask9FloatCensusBeginUpdate();
+#endif
     scVSBattleFuncUpdate();
+#if NDS_TASK9_FLOAT_CENSUS
+    ndsTask9FloatCensusEndUpdate();
+#endif
+#if NDS_TASK9_STATE_HASH
+    ndsTask9StateHashRecordUpdate();
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileSourceUpdateTicks = cpuGetTiming() - phase_start;
     phase_start = cpuGetTiming();

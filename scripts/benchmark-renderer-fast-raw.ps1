@@ -9,6 +9,8 @@ param(
     [ValidateRange(1,2)][int]$RendererProfileLevel = 1,
     [switch]$RendererM2DetailedLedger,
     [switch]$RendererM3Phase0Profile,
+    [ValidateRange(0,1)][int]$Task9FloatCensusMode = 0,
+    [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$GdbPort = 4333,
@@ -43,7 +45,11 @@ $target = if ($FastRunMode -eq 9) {
 } else {
     'smash64ds-battle-playable-coarse-hwtri'
 }
-$build = if ($RendererM3Phase0Profile) {
+$build = if ($Task9FloatCensusMode -eq 1) {
+    'builds/build-task9-float-census-lab'
+} elseif ($Task9FloatItcmMode -eq 1) {
+    'builds/build-task9-float-itcm-lab'
+} elseif ($RendererM3Phase0Profile) {
     'builds/build-m3-phase0-lab'
 } elseif ($FastRunMode -eq 9) {
     'builds/build-m3-stage-owner-lab'
@@ -68,6 +74,8 @@ $build = if ($RendererM3Phase0Profile) {
     -RendererProfileLevel $RendererProfileLevel `
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -RendererM3Phase0Profile:$RendererM3Phase0Profile `
+    -Task9FloatCensusMode $Task9FloatCensusMode `
+    -Task9FloatItcmMode $Task9FloatItcmMode `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
     -RendererBenchmarkTimeoutSeconds $RendererBenchmarkTimeoutSeconds `
@@ -87,7 +95,7 @@ $build = if ($RendererM3Phase0Profile) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode" `
+    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode task9 float census/ITCM $Task9FloatCensusMode/$Task9FloatItcmMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

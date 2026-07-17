@@ -32,6 +32,10 @@ param(
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [switch]$RendererM2DetailedLedger,
     [switch]$RendererM3Phase0Profile,
+    [ValidateRange(0,1)][int]$Task9FloatCensusMode = 0,
+    [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
+    [ValidateRange(0,1)][int]$Task9StateHashMode = 0,
+    [string]$Task9StateHashExportPath = '',
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
     [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
@@ -87,6 +91,12 @@ if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
 if ($OneMinuteMatchProof -and -not $RealtimePresentation) {
     throw 'OneMinuteMatchProof requires realtime presentation so wall-clock pacing is hardware-vblank anchored.'
 }
+if (($Task9StateHashMode -eq 1) -and -not $MatchLifecycleProof) {
+    throw 'Task9StateHashMode requires the deterministic match-lifecycle proof.'
+}
+if ($Task9StateHashExportPath -and ($Task9StateHashMode -ne 1)) {
+    throw 'Task9StateHashExportPath requires Task9StateHashMode 1.'
+}
 if ($RendererBenchmarkOnly -and ($RendererBenchmarkSamples -eq 0)) {
     throw 'RendererBenchmarkOnly requires RendererBenchmarkSamples greater than zero.'
 }
@@ -123,6 +133,14 @@ if ($RequireZeroPostGoTextureFence -and $foxCpuModeSelected -and
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ImportBattleShipFTManager = $true
+$task9FloatRoutineNames = @(
+    'fadd', 'fsub', 'frsub', 'fmul', 'fdiv',
+    'fcmpeq', 'fcmplt', 'fcmple', 'fcmpge', 'fcmpgt', 'fcmpun',
+    'f2iz', 'f2uiz', 'i2f', 'ui2f', 'l2f', 'ul2f', 'f2d', 'd2f',
+    'dadd', 'dsub', 'drsub', 'dmul', 'ddiv',
+    'dcmpeq', 'dcmplt', 'dcmple', 'dcmpge', 'dcmpgt', 'dcmpun',
+    'd2iz', 'i2d', 'ui2d', 'l2d', 'ul2d'
+)
 if ($BattlePlayable) {
     $ImportBattleShipBattlePlayable = $true
 }
@@ -361,7 +379,8 @@ function Get-BenchmarkMakeIdentity {
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
         'M3_PHASE0_PROFILE', 'RENDERER_BENCHMARK_MODE', 'FAST_RUN_DEFAULT',
         'SCENE_MIP_CACHE_LAB', 'BATTLE_STATIC_TEXTURE_DEFAULT',
-        'IFCOMMON_HYBRID_OAM',
+        'IFCOMMON_HYBRID_OAM', 'TASK9_FLOAT_CENSUS', 'TASK9_FLOAT_ITCM',
+        'TASK9_STATE_HASH',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
     foreach ($key in $required) {
@@ -382,6 +401,9 @@ function Get-BenchmarkMakeIdentity {
         BattleStaticTextureDefault =
             [int]$values.BATTLE_STATIC_TEXTURE_DEFAULT
         IFCommonHybridOamMode = [int]$values.IFCOMMON_HYBRID_OAM
+        Task9FloatCensusMode = [int]$values.TASK9_FLOAT_CENSUS
+        Task9FloatItcmMode = [int]$values.TASK9_FLOAT_ITCM
+        Task9StateHashMode = [int]$values.TASK9_STATE_HASH
         CommonCFlags = $values.CFLAGS_COMMON
         RendererCFlags = $values.CFLAGS_RENDERER
         SceneCFlags = $values.CFLAGS_SCENE
@@ -397,6 +419,72 @@ function Get-BenchmarkFileIdentity {
         LastWriteUtc = $item.LastWriteTimeUtc.ToString('o')
     }
 }
+function Complete-Task9StateHashCapture {
+    param(
+        [System.Collections.IEnumerable]$Summary,
+        [System.Collections.IEnumerable]$Records,
+        [string]$GdbOutput
+    )
+
+    Assert-Condition (@($Summary).Count -eq 1) `
+        "Task 9 state hash emitted $(@($Summary).Count) summaries instead of one." `
+        $GdbOutput
+    $summaryValues = Get-Ints @($Summary)[0]
+    Assert-Condition (
+        $summaryValues[0] -ge 3600 -and
+        $summaryValues[0] -le $summaryValues[2] -and
+        $summaryValues[1] -eq 0 -and
+        @($Records).Count -eq $summaryValues[0]
+    ) "Task 9 state hash did not cover every deterministic match update without overflow (summary=$($summaryValues -join ',') rows=$(@($Records).Count))." `
+        $GdbOutput
+    $rows = @($Records | ForEach-Object { , @(Get-Ints $_) })
+    for ($index = 0; $index -lt $rows.Count; $index++) {
+        $row = $rows[$index]
+        Assert-Condition (
+            $row[0] -eq $index -and $row[3] -gt 0 -and
+            $row[4] -gt 0 -and $row[5] -eq 0
+        ) "Task 9 state hash row $index has incomplete coverage or overflowed (row=$($row -join ','))." `
+            $GdbOutput
+    }
+    if ($Task9StateHashExportPath) {
+        $resolvedPath = if ([System.IO.Path]::IsPathRooted(
+                $Task9StateHashExportPath)) {
+            $Task9StateHashExportPath
+        } else {
+            Join-Path $root $Task9StateHashExportPath
+        }
+        $parent = Split-Path -Parent $resolvedPath
+        if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+            New-Item -ItemType Directory -Path $parent -Force | Out-Null
+        }
+        $export = [ordered]@{
+            schema = 1
+            kind = 'smash64ds-task9-full-active-game-state-hash'
+            target = $Target
+            build = $Build
+            task9FloatItcmMode = $Task9FloatItcmMode
+            task9StateHashMode = $Task9StateHashMode
+            coverage = [ordered]@{
+                source = 'post-scVSBattleFuncUpdate'
+                pointerPolicy = 'general/graphics relative; static code/data region canonical'
+                records = 'battle scene camera ground controllers collision active GObj/process/DObj/SObj/CObj/AObj/MObj fighter/item/weapon/effect state'
+                updates = [int64]$summaryValues[0]
+                overflow = [int64]$summaryValues[1]
+            }
+            artifacts = [ordered]@{
+                rom = Get-BenchmarkFileIdentity -Path $rom
+                elf = Get-BenchmarkFileIdentity -Path $elf
+            }
+            rows = @($rows)
+        }
+        Set-Content -LiteralPath $resolvedPath -Encoding utf8 `
+            -Value ($export | ConvertTo-Json -Depth 7)
+    }
+    return [PSCustomObject]@{
+        Summary = $summaryValues
+        Rows = $rows
+    }
+}
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness", '-j16')
@@ -404,6 +492,9 @@ $makeArgs += "NDS_RENDERER_PROFILE_LEVEL=$RendererProfileLevel"
 $makeArgs += "NDS_RENDERER_M2_DETAILED_LEDGER=$([int]$RendererM2DetailedLedger.IsPresent)"
 $makeArgs += "NDS_RENDERER_M3_PHASE0_PROFILE=$([int]$RendererM3Phase0Profile.IsPresent)"
 $makeArgs += "NDS_IFCOMMON_HYBRID_OAM=$IFCommonHybridOamMode"
+$makeArgs += "NDS_TASK9_FLOAT_CENSUS=$Task9FloatCensusMode"
+$makeArgs += "NDS_TASK9_FLOAT_ITCM=$Task9FloatItcmMode"
+$makeArgs += "NDS_TASK9_STATE_HASH=$Task9StateHashMode"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
 }
@@ -467,7 +558,16 @@ if (-not $NoBuild) {
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw "$Label harness build did not produce the expected ROM and ELF."
 }
-if ($Target -match '^smash64ds-battle-playable-(?:hwtri|coarse(?:-[a-z-]+)?-hwtri|forensic-hwtri)$') {
+if ($Task9FloatItcmMode -eq 1) {
+    $task9BuildDirectory = Resolve-Smash64DSBuildPath `
+        -Root $root -Build $Build
+    & (Join-Path $PSScriptRoot 'check-task9-float-itcm.ps1') `
+        -Elf $elf `
+        -BuildDirectory $task9BuildDirectory
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+if (($Task9FloatItcmMode -eq 1) -or
+    ($Target -match '^smash64ds-battle-playable-(?:hwtri|coarse(?:-[a-z-]+)?-hwtri|forensic-hwtri)$')) {
     & (Join-Path $PSScriptRoot 'check-renderer-itcm-placement.ps1') `
         -Elf $elf `
         -BenchmarkAblation:($Target -like '*triangle-noop*')
@@ -485,9 +585,13 @@ if ($RendererBenchmarkSamples -gt 0) {
             [int]$RendererM2DetailedLedger.IsPresent -and
         $benchmarkMakeIdentity.M3Phase0Profile -eq
             [int]$RendererM3Phase0Profile.IsPresent -and
+        $benchmarkMakeIdentity.Task9FloatCensusMode -eq
+            $Task9FloatCensusMode -and
+        $benchmarkMakeIdentity.Task9FloatItcmMode -eq
+            $Task9FloatItcmMode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
-        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/IFCommon configuration.' `
+        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/IFCommon/Task9 configuration.' `
         ($benchmarkMakeIdentity | Format-List | Out-String)
     if ($usesPublishedIntrinsicRendererDefaults) {
         Assert-Condition (
@@ -668,10 +772,30 @@ try {
         # BattleShip ifcommon.c:2533-2542 creates the 1:00 timer before the
         # first VSBattle update. Stop there once, then run naturally until the
         # imported Results recorder has observed its complete source setup.
+        $task9StateStartCommands = if ($Task9StateHashMode -eq 1) {
+            @(
+                'set variable gNdsTask9StateHashArmed = 0',
+                'set variable gNdsTask9StateHashCount = 0',
+                'set variable gNdsTask9StateHashOverflow = 0',
+                'set variable gNdsTask9StateHashArmed = 1'
+            )
+        } else { @() }
+        $task9StateFinishCommands = if ($Task9StateHashMode -eq 1) {
+            @(
+                'set variable gNdsTask9StateHashArmed = 0',
+                'printf "TASK9_STATE_SUMMARY=%u,%u,%u\n", gNdsTask9StateHashCount, gNdsTask9StateHashOverflow, 4096',
+                'set $task9_state_index = 0',
+                'while $task9_state_index < gNdsTask9StateHashCount',
+                'printf "TASK9_STATE=%u,%u,%u,%u,%u,%u\n", $task9_state_index, gNdsTask9StateHashes[$task9_state_index].hash1, gNdsTask9StateHashes[$task9_state_index].hash2, gNdsTask9StateHashes[$task9_state_index].bytes, gNdsTask9StateHashes[$task9_state_index].records, gNdsTask9StateHashes[$task9_state_index].overflow',
+                'set $task9_state_index = $task9_state_index + 1',
+                'end'
+            )
+        } else { @() }
         $matchWaitCommands = @(
             'tbreak scVSBattleFuncUpdate if gSCManagerBattleState->time_limit == 1 && gSCManagerBattleState->time_remain == 3600 && gSCManagerBattleState->time_passed == 0',
             'continue',
-            'printf "MATCH_START=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->game_status, gSCManagerBattleState->time_limit, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, sIFCommonTimerIsStarted, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsMemoryLedgerArenaHeadroom',
+            'printf "MATCH_START=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->game_status, gSCManagerBattleState->time_limit, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, sIFCommonTimerIsStarted, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsMemoryLedgerArenaHeadroom'
+        ) + $task9StateStartCommands + @(
             'set variable gNdsBattlePlayablePacingRestartRequested = 1',
             'tbreak ndsRendererHardwareDiscardBattleStaticTextures',
             'continue',
@@ -680,7 +804,7 @@ try {
             'printf "VSB_MEMEVICT=%u,%u\n", gNdsMemoryLedgerEvictedFiles, gNdsMemoryLedgerEvictedBytes',
             'tbreak ndsMNVSResultsRecordFrame if gNdsVSResultsResult == 0x56535231',
             'continue'
-        )
+        ) + $task9StateFinishCommands
         $gdbCommands = @(
             $gdbCommands[0..3]
             $matchWaitCommands
@@ -716,6 +840,25 @@ try {
                 }
                 $coarseBenchmarkCommands += 'printf "M4_STATIC=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount'
                 $coarseBenchmarkCommands += 'printf "M4_FENCE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]'
+                if ($Task9FloatCensusMode -eq 1) {
+                    $coarseBenchmarkCommands += @(
+                        'printf "TASK9_FLOAT_PAIR=%u,%u", gNdsRendererProfileFrameCount, gNdsTask9FloatCensusUpdateCount',
+                        'set $task9_float_index = 0',
+                        'while $task9_float_index < 35',
+                        'printf ",%u", gNdsTask9FloatCensusPair[$task9_float_index]',
+                        'set $task9_float_index = $task9_float_index + 1',
+                        'end',
+                        'printf "\n"',
+                        'if $renderer_benchmark_samples == 0',
+                        'printf "TASK9_FLOAT_TIMER=%u,%u\n", gNdsTask9FloatTimerReadPairTicks, gNdsTask9FloatTimerReadPairCount',
+                        'set $task9_float_index = 0',
+                        'while $task9_float_index < 35',
+                        'printf "TASK9_FLOAT_COST=%u,%u,%u,%u,%u,%u,%u\n", $task9_float_index, gNdsTask9FloatCostTicks[$task9_float_index], gNdsTask9FloatCostCalls[$task9_float_index], gNdsTask9FloatCostMin[$task9_float_index], gNdsTask9FloatCostMax[$task9_float_index], gNdsTask9FloatCensusMin[$task9_float_index], gNdsTask9FloatCensusMax[$task9_float_index]',
+                        'set $task9_float_index = $task9_float_index + 1',
+                        'end',
+                        'end'
+                    )
+                }
                 if ($RendererM2DetailedLedger) {
                     foreach ($ownerIndex in 1..2) {
                         $coarseBenchmarkCommands += Get-RendererM2BenchmarkCommand -OwnerIndex $ownerIndex
@@ -885,10 +1028,29 @@ try {
                  $FoxCpuMode)
         }
         if ($MatchLifecycleProof -and -not $OneMinuteMatchProof) {
+            if ($Task9StateHashMode -eq 1) {
+                $preBattleSetupCommands += @(
+                    'set variable gNdsTask9StateHashArmed = 0',
+                    'set variable gNdsTask9StateHashCount = 0',
+                    'set variable gNdsTask9StateHashOverflow = 0',
+                    'set variable gNdsTask9StateHashArmed = 1'
+                )
+            }
             $preBattleSetupCommands += @(
                 'tbreak ndsMNVSResultsRecordFrame if gNdsVSResultsResult == 0x56535231',
                 'continue'
             )
+            if ($Task9StateHashMode -eq 1) {
+                $preBattleSetupCommands += @(
+                    'set variable gNdsTask9StateHashArmed = 0',
+                    'printf "TASK9_STATE_SUMMARY=%u,%u,%u\n", gNdsTask9StateHashCount, gNdsTask9StateHashOverflow, 4096',
+                    'set $task9_state_index = 0',
+                    'while $task9_state_index < gNdsTask9StateHashCount',
+                    'printf "TASK9_STATE=%u,%u,%u,%u,%u,%u\n", $task9_state_index, gNdsTask9StateHashes[$task9_state_index].hash1, gNdsTask9StateHashes[$task9_state_index].hash2, gNdsTask9StateHashes[$task9_state_index].bytes, gNdsTask9StateHashes[$task9_state_index].records, gNdsTask9StateHashes[$task9_state_index].overflow',
+                    'set $task9_state_index = $task9_state_index + 1',
+                    'end'
+                )
+            }
         }
         $gdbCommands = @(
             $gdbCommands[0..3]
@@ -1115,6 +1277,10 @@ try {
     $vsResultsFighters = [regex]::Match($gdbStdout, 'VS_RESULTS_FIGHTERS=([0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+)')
     $vsResultsDisplay = [regex]::Match($gdbStdout, 'VS_RESULTS_DISPLAY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $matchStart = [regex]::Match($gdbStdout, 'MATCH_START=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $task9StateSummary = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+        -Name 'TASK9_STATE_SUMMARY' -FieldCount 3)
+    $task9StateRecords = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+        -Name 'TASK9_STATE' -FieldCount 6)
     $matchSafety = [regex]::Match($gdbStdout, 'MATCH_SAFETY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $damageFloor = [regex]::Match($gdbStdout, 'DAMAGE_FLOOR=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $run = [regex]::Match($gdbStdout, 'GCRUNALL_RUN=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -1165,6 +1331,9 @@ try {
     $m4FenceBenchmark = @()
     $m2Benchmark = @()
     $rendererSemanticBenchmark = @()
+    $task9FloatPairBenchmark = @()
+    $task9FloatCostBenchmark = @()
+    $task9FloatTimerBenchmark = @()
     $m4FenceFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'M4_FENCE_FINAL' -FieldCount 24)
     $fastFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
@@ -1177,6 +1346,11 @@ try {
         $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
         $texturePhaseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TEXTURE_PHASE_BENCH' -FieldCount 15)
         $fastRunBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'FAST_BENCH' -FieldCount 10)
+        if ($Task9FloatCensusMode -eq 1) {
+            $task9FloatPairBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK9_FLOAT_PAIR' -FieldCount 37)
+            $task9FloatCostBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK9_FLOAT_COST' -FieldCount 7)
+            $task9FloatTimerBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK9_FLOAT_TIMER' -FieldCount 2)
+        }
         if (($RendererProfileLevel -eq 1) -and
             ($RendererFastRunMode -eq 9)) {
             $m3StageBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_STAGE' -FieldCount 22)
@@ -1379,6 +1553,15 @@ try {
         $expectedTimeLimit = 1
         Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq 3 -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq $expectedTimeLimit -and $cc[6] -eq 0 -and $cc[7] -eq 0 -and $cc[8] -eq $FoxCpuMode) 'Mode 163 did not preserve the items-off Mario human versus Fox level-3 CPU match and selected Fox CPU decision mode.' $gdbStdout
     }
+    $task9StateCapture = $null
+    if ($Task9StateHashMode -eq 1) {
+        $task9StateCapture = Complete-Task9StateHashCapture `
+            -Summary $task9StateSummary `
+            -Records $task9StateRecords `
+            -GdbOutput $gdbStdout
+        $task9StateSummaryValues = $task9StateCapture.Summary
+        $task9StateRows = $task9StateCapture.Rows
+    }
     if ($OneMinuteMatchProof) {
         $start = Get-Ints $matchStart
         $safety = Get-Ints $matchSafety
@@ -1557,7 +1740,10 @@ try {
             $gdbStdout
 
         if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
-        Write-Output ("$Label one-minute match lifecycle passed: logic/present=$($bp[2])/$($bp[3]) timer=$($start[3])->$($life[5])/$($life[6]) phaseRate=$($phaseRatesX10 -join '/')x0.1 phaseSlip=$($bp[17..21] -join '/') boundsOutside=$($fdc[8])/$($fdc[7]+$fdc[8]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])")
+        $task9StateSummaryText = if ($Task9StateHashMode -eq 1) {
+            " stateHash=$($task9StateSummaryValues[0])/overflow$($task9StateSummaryValues[1])"
+        } else { '' }
+        Write-Output ("$Label one-minute match lifecycle passed: logic/present=$($bp[2])/$($bp[3]) timer=$($start[3])->$($life[5])/$($life[6]) phaseRate=$($phaseRatesX10 -join '/')x0.1 phaseSlip=$($bp[17..21] -join '/') boundsOutside=$($fdc[8])/$($fdc[7]+$fdc[8]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])$task9StateSummaryText")
         return
     }
     if ($ExpectedMode -eq 54) {
@@ -1799,6 +1985,10 @@ try {
                 $semanticProvenanceSummaries = @()
                 $ownerCensusSummaries = @()
                 $ownerChurnSummaries = @()
+                $task9FloatSummaries = @()
+                $task9FloatRows = @()
+                $task9Pairs = @()
+                $task9Timer = @()
                 if ($RendererBenchmarkSamples -gt 0) {
                     Assert-Condition ($rendererBenchmark.Count -eq $RendererBenchmarkSamples) "Renderer benchmark captured $($rendererBenchmark.Count) of $RendererBenchmarkSamples requested warm frames." $gdbStdout
                     $benchFrames = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[2].Value })
@@ -2419,6 +2609,64 @@ try {
                         $coarseConservation = Get-SampleFieldValues $coarseSamples 22
                         $coarseLogic = Get-SampleFieldValues $coarseSamples 23
                         $coarseMetricSummary = "Renderer coarse benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) logic=$($coarseLogic[0])..$($coarseLogic[-1]) median/p95 ticks loop=$(Get-MedianP95 $coarseLoop) input=$(Get-MedianP95 $coarseInput) update=$(Get-MedianP95 $coarseUpdate) sourceUpdate=$(Get-MedianP95 $coarseSourceUpdate) audioUpdate=$(Get-MedianP95 $coarseAudioUpdate) active=$(Get-MedianP95 $coarseActive) wait=$(Get-MedianP95 $coarseWait) begin=$(Get-MedianP95 $coarseBegin) draw=$(Get-MedianP95 $coarseDraw) wallpaper=$(Get-MedianP95 $coarseWallpaper) stage=$(Get-MedianP95 $coarseStage) Mario=$(Get-MedianP95 $coarseMario) Fox=$(Get-MedianP95 $coarseFox) foreground=$(Get-MedianP95 $coarseForeground) hud=$(Get-MedianP95 $coarseHud) flush=$(Get-MedianP95 $coarseFlush) postVBlank=$(Get-MedianP95 $coarsePostVBlank) threads=$(Get-MedianP95 $coarseThreads) drawResidual=$(Get-MedianP95 $coarseDrawResidual) presentResidual=$(Get-MedianP95 $coarsePresentResidual) loopResidual=$(Get-MedianP95 $coarseLoopResidual) conservationError=$(Get-MedianP95 $coarseConservation)"
+                        if ($Task9FloatCensusMode -eq 1) {
+                            Assert-Condition ($task9FloatPairBenchmark.Count -eq $RendererBenchmarkSamples) "Task 9 float census captured $($task9FloatPairBenchmark.Count) of $RendererBenchmarkSamples pair records." $gdbStdout
+                            Assert-Condition ($task9FloatCostBenchmark.Count -eq $task9FloatRoutineNames.Count) "Task 9 float census captured $($task9FloatCostBenchmark.Count) of $($task9FloatRoutineNames.Count) cost records." $gdbStdout
+                            Assert-Condition ($task9FloatTimerBenchmark.Count -eq 1) 'Task 9 float census did not capture its timer-read calibration.' $gdbStdout
+                            $task9Timer = Get-Ints $task9FloatTimerBenchmark[0]
+                            Assert-Condition ($task9Timer[1] -eq 256) 'Task 9 float census timer-read calibration count changed.' $gdbStdout
+                            $task9TimerMean = [int64][Math]::Round(
+                                [double]$task9Timer[0] / [double]$task9Timer[1])
+                            $task9Pairs = @($task9FloatPairBenchmark | ForEach-Object {
+                                , @(Get-Ints $_)
+                            })
+                            for ($sampleIndex = 0; $sampleIndex -lt $task9Pairs.Count; $sampleIndex++) {
+                                Assert-Condition ($task9Pairs[$sampleIndex][0] -eq $benchFrames[$sampleIndex]) 'Task 9 float pair census is not synchronized with the renderer frame.' $gdbStdout
+                                if ($sampleIndex -gt 0) {
+                                    Assert-Condition (($task9Pairs[$sampleIndex][1] - $task9Pairs[$sampleIndex - 1][1]) -eq 2) 'Task 9 float census did not observe exactly two updates per sampled frame.' $gdbStdout
+                                }
+                            }
+                            for ($routineIndex = 0; $routineIndex -lt $task9FloatRoutineNames.Count; $routineIndex++) {
+                                $cost = Get-Ints $task9FloatCostBenchmark[$routineIndex]
+                                Assert-Condition ($cost[0] -eq $routineIndex) 'Task 9 float cost records changed order.' $gdbStdout
+                                $pairCounts = @($task9Pairs | ForEach-Object {
+                                    [int64]$_[2 + $routineIndex]
+                                })
+                                $rawMean = if ($cost[2] -gt 0) {
+                                    [int64][Math]::Round([double]$cost[1] / [double]$cost[2])
+                                } else { 0 }
+                                $measuredCost = [Math]::Max(0, $rawMean - $task9TimerMean)
+                                $measuredMin = if ($cost[2] -gt 0) {
+                                    [Math]::Max(0, $cost[3] - $task9TimerMean)
+                                } else { 0 }
+                                $measuredMax = if ($cost[2] -gt 0) {
+                                    [Math]::Max(0, $cost[4] - $task9TimerMean)
+                                } else { 0 }
+                                $perUpdateMean = [double](($pairCounts | Measure-Object -Sum).Sum) /
+                                    [double](2 * $pairCounts.Count)
+                                $tickBound = [int64]$cost[6] * [int64]$measuredMax
+                                $row = [ordered]@{
+                                    index = $routineIndex
+                                    routine = $task9FloatRoutineNames[$routineIndex]
+                                    pairP50 = Get-Median $pairCounts
+                                    pairP95 = Get-Percentile95 $pairCounts
+                                    perUpdateMean = $perUpdateMean
+                                    singleUpdateMin = [int64]$cost[5]
+                                    singleUpdateMax = [int64]$cost[6]
+                                    costSamples = [int64]$cost[2]
+                                    measuredCostTicks = [int64]$measuredCost
+                                    measuredMinTicks = [int64]$measuredMin
+                                    measuredMaxTicks = [int64]$measuredMax
+                                    tickBound = $tickBound
+                                }
+                                $task9FloatRows += [PSCustomObject]$row
+                                if (($row.pairP95 -gt 0) -or ($row.costSamples -gt 0)) {
+                                    $meanText = $row.perUpdateMean.ToString('0.###', [System.Globalization.CultureInfo]::InvariantCulture)
+                                    $task9FloatSummaries += "Task9 float $($row.routine): pairP50/P95=$($row.pairP50)/$($row.pairP95) perUpdateMean=$meanText singleUpdateMin/Max=$($row.singleUpdateMin)/$($row.singleUpdateMax) costTicks=$($row.measuredCostTicks)[$($row.measuredMinTicks)..$($row.measuredMaxTicks)] samples=$($row.costSamples) bound=$($row.tickBound)"
+                                }
+                            }
+                            $task9FloatSummaries = @("Task9 float census: frames=$($benchFrames[0])..$($benchFrames[-1]) updates=$($task9Pairs[0][1])..$($task9Pairs[-1][1]) timerReadPair=$task9TimerMean ticks") + $task9FloatSummaries
+                        }
                         $coarseResidualRatioSummary = "Renderer coarse residual ratios (median/p95 basis points): draw=$(Get-MedianP95 $drawResidualRatios) present=$(Get-MedianP95 $presentResidualRatios) loop=$(Get-MedianP95 $loopResidualRatios)"
                         $gxBoundarySummary = "Renderer GX boundary: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) adjacent changes/distinct values statusBefore=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 1)) controlBefore=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 2)) statusAfterFlush=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 3)) statusPostVBlank=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 4)) controlPostVBlank=$(Get-AdjacentChurn (Get-SampleFieldValues $gxBoundarySamples 5)) median/p95 ticks flush=$(Get-MedianP95 (Get-SampleFieldValues $gxBoundarySamples 6))"
                         $stage0Summary = "Renderer stage layer-0 benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) median/p95 ticks=$(Get-MedianP95 (Get-SampleFieldValues $stage0Samples 1)) adjacent changes/distinct values=$(Get-AdjacentChurn (Get-SampleFieldValues $stage0Samples 1))"
@@ -2543,6 +2791,10 @@ try {
                             $effectiveStaticTextureAotMode
                         ifCommonHybridOamMode =
                             $benchmarkMakeIdentity.IFCommonHybridOamMode
+                        task9FloatCensusMode =
+                            $benchmarkMakeIdentity.Task9FloatCensusMode
+                        task9FloatItcmMode =
+                            $benchmarkMakeIdentity.Task9FloatItcmMode
                         requestedIfCommonHybridOamMode =
                             $IFCommonHybridOamMode
                         foxCpuMode = $FoxCpuMode
@@ -2646,6 +2898,9 @@ try {
                                 )
                                 m2Combined = @($m2CombinedSamples)
                                 semantic = @($semanticSamples)
+                                task9FloatPairs = @($task9Pairs)
+                                task9FloatRows = @($task9FloatRows)
+                                task9FloatTimer = @($task9Timer)
                             }
                         }
                         Set-Content -LiteralPath $resolvedExportPath -Encoding utf8 `
@@ -2691,6 +2946,7 @@ try {
                     Write-Output $benchmarkMetricSummary
                     Write-Output $benchmarkChurnSummary
                     Write-Output $coarseMetricSummary
+                    $task9FloatSummaries | ForEach-Object { Write-Output $_ }
                     Write-Output $coarseResidualRatioSummary
                     Write-Output $gxBoundarySummary
                     Write-Output $stage0Summary
@@ -3149,6 +3405,7 @@ try {
                 Write-Output $benchmarkChurnSummary
                 if ($RendererProfileLevel -ge 1) {
                     Write-Output $coarseMetricSummary
+                    $task9FloatSummaries | ForEach-Object { Write-Output $_ }
                     Write-Output $coarseResidualRatioSummary
                     Write-Output $gxBoundarySummary
                     Write-Output $stage0Summary

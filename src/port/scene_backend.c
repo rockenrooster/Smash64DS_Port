@@ -30,6 +30,8 @@
 #include <nds/nds_scene_harness.h>
 #include "nds_scene_harness_config.h"
 #include <nds/nds_startup.h>
+#include <nds/nds_task9_float_census.h>
+#include <nds/nds_task9_state_hash.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/audio.h>

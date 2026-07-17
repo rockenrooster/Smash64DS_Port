@@ -65,7 +65,13 @@ $ImportBattleShipAudioBGM = $true
 $target = 'smash64ds-battle-playable-fast-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 $harness = 'battle_playable'
-if ($RealtimePresentation) {
+if ($OneMinuteMatchProof) {
+    # Keep the full-expiry hardware gate artifact-isolated from the canonical
+    # user ROM while exercising its renderer residency and one-minute rule.
+    $target = 'smash64ds-battle-playable-one-minute-match-hwtri'
+    $build = 'build-battle-playable-one-minute-match-hwtri-harness'
+    $LiveInputPreview = $true
+} elseif ($RealtimePresentation) {
     if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 0 }
     if ($RendererProfileLevel -eq 0) {
         $target = 'smash64ds-battle-playable-hwtri'
@@ -77,12 +83,6 @@ if ($RealtimePresentation) {
         $target = 'smash64ds-battle-playable-forensic-hwtri'
         $build = 'build-battle-playable-forensic-hwtri-harness'
     }
-    $LiveInputPreview = $true
-} elseif ($OneMinuteMatchProof) {
-    # Keep the full-expiry hardware gate artifact-isolated from the canonical
-    # user ROM while exercising its renderer residency and one-minute rule.
-    $target = 'smash64ds-battle-playable-one-minute-match-hwtri'
-    $build = 'build-battle-playable-one-minute-match-hwtri-harness'
     $LiveInputPreview = $true
 } elseif ($CPUOpponentProof) {
     $target = 'smash64ds-battle-playable-cpu-proof'

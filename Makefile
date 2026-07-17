@@ -49,6 +49,9 @@ NDS_IFCOMMON_HYBRID_OAM ?= 0
 NDS_DEBUG_HUD ?= 1
 NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
 NDS_FREEZE_DIAGNOSTICS ?= 0
+NDS_TASK9_FLOAT_CENSUS ?= 0
+NDS_TASK9_FLOAT_ITCM ?= 1
+NDS_TASK9_STATE_HASH ?= 0
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
 ifeq ($(TARGET),smash64ds-battle-playable-hwtri)
 # This is the only published P1 battle ROM. Keep the complete realtime
@@ -221,6 +224,31 @@ CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections
 
+NDS_TASK9_FLOAT_WRAP_SYMBOLS := \
+	__aeabi_fadd __aeabi_fsub __aeabi_frsub __aeabi_fmul __aeabi_fdiv \
+	__aeabi_fcmpeq __aeabi_fcmplt __aeabi_fcmple __aeabi_fcmpge \
+	__aeabi_fcmpgt __aeabi_fcmpun __aeabi_f2iz __aeabi_f2uiz \
+	__aeabi_i2f __aeabi_ui2f __aeabi_l2f __aeabi_ul2f __aeabi_f2d \
+	__aeabi_d2f __aeabi_dadd __aeabi_dsub __aeabi_drsub __aeabi_dmul \
+	__aeabi_ddiv __aeabi_dcmpeq __aeabi_dcmplt __aeabi_dcmple \
+	__aeabi_dcmpge __aeabi_dcmpgt __aeabi_dcmpun __aeabi_d2iz \
+	__aeabi_i2d __aeabi_ui2d __aeabi_l2d __aeabi_ul2d
+ifeq ($(NDS_TASK9_FLOAT_CENSUS),1)
+LDFLAGS += $(foreach symbol,$(NDS_TASK9_FLOAT_WRAP_SYMBOLS),-Wl,--wrap=$(symbol))
+endif
+
+# Task 9 Phase 1 uses the exact objects from the selected Thumb multilib.  The
+# objects contain ARM-state implementations; only their section placement is
+# changed.  Keep the list narrow so the renderer's existing ITCM ownership is
+# never displaced by low-frequency double-precision helpers.
+NDS_TASK9_FLOAT_LIBGCC_SHA256 := \
+	c755adc33eca252260360327904591b8462cce5c25e48b0e881ac0b295953f48
+NDS_TASK9_FLOAT_ITCM_MEMBERS := \
+	_arm_addsubsf3.o _arm_muldivsf3.o _arm_cmpsf2.o \
+	_arm_unordsf2.o _arm_fixsfsi.o _arm_fixunssfsi.o
+NDS_TASK9_FLOAT_ITCM_OFILES := \
+	$(addsuffix .itcm.o,$(basename $(NDS_TASK9_FLOAT_ITCM_MEMBERS)))
+
 LIBS := -lfat -lfilesystem -lnds9 -lm
 LIBDIRS := $(LIBNDS)
 
@@ -358,6 +386,12 @@ ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI),1)
 CFILES += battleship_fox_special_hi.c
 endif
 CFILES += battleship_ftmain.c
+ifeq ($(NDS_TASK9_FLOAT_CENSUS),1)
+CFILES += nds_task9_float_census.c
+endif
+ifeq ($(NDS_TASK9_STATE_HASH),1)
+CFILES += nds_task9_state_hash.c
+endif
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
 CFILES += battleship_grmodelsetup.c
 endif
@@ -369,7 +403,9 @@ SFILES += nds_freeze_diagnostics_irq.s
 endif
 
 export LD := $(CC)
-export OFILES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
+export OFILES := \
+	$(if $(filter 1,$(NDS_TASK9_FLOAT_ITCM)),$(NDS_TASK9_FLOAT_ITCM_OFILES)) \
+	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 export NDS_PRIVATE_CHECK_OFILES := $(NDS_PRIVATE_CHECK_CFILES:.c=.o)
 export NDS_MPPROCESS_STRICT_OFILES := $(NDS_PRIVATE_CHECK_OFILES) \
 	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)),$(NDS_MPPROCESS_SOURCE_CFILES:.c=.o) battleship_mpprocess_live_bridge.o)
@@ -812,6 +848,9 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_DEBUG_HUD $(NDS_DEBUG_HUD)'; \
 		echo '#define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS $(NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS)'; \
 		echo '#define NDS_FREEZE_DIAGNOSTICS $(NDS_FREEZE_DIAGNOSTICS)'; \
+		echo '#define NDS_TASK9_FLOAT_CENSUS $(NDS_TASK9_FLOAT_CENSUS)'; \
+		echo '#define NDS_TASK9_FLOAT_ITCM $(NDS_TASK9_FLOAT_ITCM)'; \
+		echo '#define NDS_TASK9_STATE_HASH $(NDS_TASK9_STATE_HASH)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE $(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)'; \
@@ -850,6 +889,25 @@ $(NDS_SCENE_HARNESS_CONFIG): FORCE
 $(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES)
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
+ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
+NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
+NDS_TASK9_FLOAT_AR := $(shell $(CC) -print-prog-name=ar)
+# Keep the installed archive out of Make's prerequisite graph: `make -B` would
+# otherwise try to rebuild that external .a through an implicit archive rule.
+# One grouped recipe makes one verified private copy and extracts only from it.
+$(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile
+	@echo "$(NDS_TASK9_FLOAT_LIBGCC_SHA256) *$(NDS_TASK9_FLOAT_LIBGCC)" | sha256sum -c -
+	@rm -rf ".task9-float-itcm" $(NDS_TASK9_FLOAT_ITCM_OFILES)
+	@mkdir -p ".task9-float-itcm"
+	@cp "$(NDS_TASK9_FLOAT_LIBGCC)" ".task9-float-itcm/libgcc.a"
+	@cd ".task9-float-itcm" && $(NDS_TASK9_FLOAT_AR) x "libgcc.a" $(NDS_TASK9_FLOAT_ITCM_MEMBERS)
+	@for member in $(NDS_TASK9_FLOAT_ITCM_MEMBERS); do \
+		stem="$${member%.o}"; \
+		$(OBJCOPY) --rename-section .text=.itcm,alloc,load,readonly,code,contents \
+			".task9-float-itcm/$$member" "$$stem.itcm.o" || exit $$?; \
+	done
+	@rm -rf ".task9-float-itcm"
+endif
 ifneq ($(strip $(NDS_MPPROCESS_STRICT_OFILES)),)
 $(NDS_MPPROCESS_STRICT_OFILES): CFLAGS += -Werror=implicit-function-declaration -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=return-type
 endif
@@ -926,6 +984,9 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_SCENE_MIP_CACHE_LAB=$(NDS_SCENE_MIP_CACHE_LAB)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_STATIC_TEXTURE_DEFAULT=$(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'
 	@printf '%s\n' 'BENCH_MAKE_IFCOMMON_HYBRID_OAM=$(NDS_IFCOMMON_HYBRID_OAM)'
+	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_CENSUS=$(NDS_TASK9_FLOAT_CENSUS)'
+	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_ITCM=$(NDS_TASK9_FLOAT_ITCM)'
+	@printf '%s\n' 'BENCH_MAKE_TASK9_STATE_HASH=$(NDS_TASK9_STATE_HASH)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'
