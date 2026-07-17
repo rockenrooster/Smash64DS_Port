@@ -144,6 +144,9 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     u32 binding_count;
     u32 next_segment;
     u32 active;
+    u32 topology_generation;
+    u32 topology_stamp;
+    u32 topology_valid;
 } NDSRendererAdapterNativeStageWorkspace;
 
 /* The stage owner remains armed across fighter links 9, so it cannot share
@@ -1256,6 +1259,7 @@ static void ndsRendererAdapterApplyMvpRecalcRpy0x47(
 static void ndsRendererAdapterResetSceneCaches(void)
 {
     ndsRendererHardwareResetSourceCaches();
+    ndsRendererResetNativeStageValidationCache();
     sNdsRendererAdapterCameraCacheFrame = 0u;
     sNdsRendererAdapterCameraCacheCount = 0u;
     sNdsRendererAdapterDObjWorldCache = NULL;
@@ -1272,6 +1276,10 @@ static void ndsRendererAdapterResetSceneCaches(void)
     sNdsRendererAdapterStageWorldNextGeneration = 1u;
     memset(sNdsRendererAdapterStageWorldIndex, 0,
            sizeof(sNdsRendererAdapterStageWorldIndex));
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    memset(&sNdsRendererAdapterNativeStageWorkspace, 0,
+           sizeof(sNdsRendererAdapterNativeStageWorkspace));
+#endif
 }
 
 static u32 ndsRendererAdapterDObjWorldIndexHash(const DObj *dobj)
@@ -6222,6 +6230,192 @@ static sb32 ndsRendererAdapterCollectNativeStageDObjs(
     return TRUE;
 }
 
+static u32 ndsRendererAdapterNativeStageStampValue(u32 stamp, uintptr_t value)
+{
+    stamp ^= (u32)value;
+    stamp *= 16777619u;
+    stamp ^= stamp >> 16;
+    return stamp;
+}
+
+static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
+    NDSRendererAdapterNativeStageWorkspace *workspace,
+    u32 generation,
+    u32 *out_stamp)
+{
+    u32 stamp = 2166136261u;
+    u32 i;
+
+    if ((workspace == NULL) || (out_stamp == NULL) || (generation == 0u) ||
+        (workspace->dobj_count != NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) ||
+        (workspace->binding_count !=
+         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT))
+    {
+        return FALSE;
+    }
+    stamp = ndsRendererAdapterNativeStageStampValue(stamp, generation);
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+    {
+        NDSRelocLoadedFile *loaded = workspace->loaded[i];
+
+        if ((loaded == NULL) || (loaded->data == NULL) ||
+            (loaded->owner_generation != generation))
+        {
+            return FALSE;
+        }
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)loaded);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)loaded->data);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, loaded->asset_id);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, loaded->data_size);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, loaded->owner_generation);
+    }
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    {
+        GObj *gobj = ndsRendererAdapterNativeStageSegmentGObj(i);
+
+        if ((gobj == NULL) || (gobj != workspace->segments[i]) ||
+            (DObjGetStruct(gobj) == NULL) ||
+            ((gobj->flags & GOBJ_FLAG_HIDDEN) != 0u) ||
+            (gobj->dl_link_id != ndsRendererAdapterNativeStageSegmentLink(i)) ||
+            (ndsRendererAdapterNativeStageProcMatches(i, gobj) == FALSE) ||
+            (ndsRendererAdapterNativeStageGObjLinked(
+                 gobj, gobj->dl_link_id) == FALSE))
+        {
+            return FALSE;
+        }
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)gobj);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)DObjGetStruct(gobj));
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, gobj->flags);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, gobj->dl_link_id);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)gobj->proc_display);
+    }
+    if (ndsRendererAdapterNativeStageLayer0OrderMatches(
+            workspace->segments) == FALSE)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT; i++)
+    {
+        DObj *dobj = workspace->dobjs[i];
+        NDSRendererNativeStageDObj *live = &workspace->live_dobjs[i];
+        u16 transform_flags;
+        u32 xobj_index;
+
+        if ((dobj == NULL) || (live->identity != dobj) ||
+            (ndsRendererAdapterNativeStageTransformFlags(
+                 dobj, &transform_flags) == FALSE) ||
+            (transform_flags != live->transform_flags))
+        {
+            return FALSE;
+        }
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)dobj);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)dobj->parent_gobj);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)dobj->parent);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)dobj->child);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)dobj->sib_next);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)dobj->sib_prev);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)dobj->dv);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)dobj->mobj);
+        stamp = ndsRendererAdapterNativeStageStampValue(stamp, dobj->flags);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, dobj->xobjs_num);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, live->parent_index);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, live->binding_index);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, live->owner);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, live->depth);
+        for (xobj_index = 0u; xobj_index < dobj->xobjs_num; xobj_index++)
+        {
+            XObj *xobj = dobj->xobjs[xobj_index];
+
+            if (xobj == NULL)
+            {
+                return FALSE;
+            }
+            stamp = ndsRendererAdapterNativeStageStampValue(
+                stamp, (uintptr_t)xobj);
+            stamp = ndsRendererAdapterNativeStageStampValue(
+                stamp, xobj->kind);
+        }
+    }
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT; i++)
+    {
+        if ((workspace->binding_dobjs[i] == NULL) ||
+            (workspace->binding_display_lists[i] == NULL) ||
+            (workspace->binding_dobjs[i]->dv !=
+             workspace->binding_display_lists[i]))
+        {
+            return FALSE;
+        }
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)workspace->binding_dobjs[i]);
+        stamp = ndsRendererAdapterNativeStageStampValue(
+            stamp, (uintptr_t)workspace->binding_display_lists[i]);
+    }
+    *out_stamp = (stamp != 0u) ? stamp : 1u;
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterCollectNativeStageTopology(
+    NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    static const u8 dobj_counts[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT] = {
+        21u, 3u, 6u, 7u, 2u, 4u, 10u, 4u
+    };
+    u32 i;
+
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    {
+        u32 first_dobj = workspace->dobj_count;
+        GObj *gobj = ndsRendererAdapterNativeStageSegmentGObj(i);
+
+        workspace->segments[i] = gobj;
+        if ((gobj == NULL) || ((gobj->flags & GOBJ_FLAG_HIDDEN) != 0u) ||
+            (gobj->dl_link_id != ndsRendererAdapterNativeStageSegmentLink(i)) ||
+            (ndsRendererAdapterNativeStageProcMatches(i, gobj) == FALSE) ||
+            (ndsRendererAdapterNativeStageGObjLinked(
+                 gobj, gobj->dl_link_id) == FALSE) ||
+            (ndsRendererAdapterCollectNativeStageDObjs(
+                 DObjGetStruct(gobj),
+                 (i == 0u) ? 0u : (i == 1u) ? 4u :
+                 (i == 2u) ? 5u : (i == 3u) ? 6u :
+                 (i == 4u) ? 1u : (i == 5u) ? 2u :
+                 (i == 6u) ? 7u : 3u,
+                 0xffffu, 0u, workspace) == FALSE) ||
+            ((workspace->dobj_count - first_dobj) != dobj_counts[i]))
+        {
+            return FALSE;
+        }
+    }
+    return ((workspace->dobj_count ==
+             NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) &&
+            (workspace->binding_count ==
+             NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) &&
+            (ndsRendererAdapterNativeStageLayer0OrderMatches(
+                 workspace->segments) != FALSE)) ? TRUE : FALSE;
+}
+
 static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace)
 {
@@ -6316,13 +6510,14 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     static const u32 asset_sizes[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT] = {
         0x2fc0u, 0x43f0u, 0x3700u, 0x00c0u
     };
-    static const u8 dobj_counts[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT] = {
-        21u, 3u, 6u, 7u, 2u, 4u, 10u, 4u
-    };
     NDSRendererAdapterNativeStageWorkspace *workspace =
         &sNdsRendererAdapterNativeStageWorkspace;
+    NDSRelocLoadedFile *loaded[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT];
     GObj *camera_gobj = camera_gobj_ptr;
     CObj *cobj = (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) : NULL;
+    u32 topology_generation = 0u;
+    u32 topology_stamp = 0u;
+    sb32 topology_cached = FALSE;
     u32 i;
 
     workspace->active = FALSE;
@@ -6335,47 +6530,65 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     {
         goto reject;
     }
-    bzero(workspace, sizeof(*workspace));
     for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
     {
-        workspace->loaded[i] = ndsRelocFindLoadedFileByAsset(asset_ids[i]);
-        if ((workspace->loaded[i] == NULL) ||
-            (workspace->loaded[i]->data == NULL) ||
-            (workspace->loaded[i]->data_size != asset_sizes[i]))
+        loaded[i] = ndsRelocFindLoadedFileByAsset(asset_ids[i]);
+        if ((loaded[i] == NULL) || (loaded[i]->data == NULL) ||
+            (loaded[i]->data_size != asset_sizes[i]) ||
+            (loaded[i]->owner_generation == 0u) ||
+            ((i != 0u) &&
+             (loaded[i]->owner_generation != topology_generation)))
         {
             goto reject;
         }
-        workspace->frame.asset_bases[i] = workspace->loaded[i]->data;
+        topology_generation = loaded[i]->owner_generation;
     }
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    if ((workspace->topology_valid != FALSE) &&
+        (workspace->topology_generation == topology_generation))
     {
-        u32 first_dobj = workspace->dobj_count;
-        GObj *gobj = ndsRendererAdapterNativeStageSegmentGObj(i);
-
-        workspace->segments[i] = gobj;
-        if ((gobj == NULL) || ((gobj->flags & GOBJ_FLAG_HIDDEN) != 0u) ||
-            (gobj->dl_link_id != ndsRendererAdapterNativeStageSegmentLink(i)) ||
-            (ndsRendererAdapterNativeStageProcMatches(i, gobj) == FALSE) ||
-            (ndsRendererAdapterNativeStageGObjLinked(
-                 gobj, gobj->dl_link_id) == FALSE) ||
-            (ndsRendererAdapterCollectNativeStageDObjs(
-                 DObjGetStruct(gobj),
-                 (i == 0u) ? 0u : (i == 1u) ? 4u :
-                 (i == 2u) ? 5u : (i == 3u) ? 6u :
-                 (i == 4u) ? 1u : (i == 5u) ? 2u :
-                 (i == 6u) ? 7u : 3u,
-                 0xffffu, 0u, workspace) == FALSE) ||
-            ((workspace->dobj_count - first_dobj) != dobj_counts[i]))
+        topology_cached = TRUE;
+        for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+        {
+            if (workspace->loaded[i] != loaded[i])
+            {
+                topology_cached = FALSE;
+                break;
+            }
+        }
+        if ((topology_cached != FALSE) &&
+            ((ndsRendererAdapterBuildNativeStageTopologyStamp(
+                  workspace, topology_generation, &topology_stamp) == FALSE) ||
+             (topology_stamp != workspace->topology_stamp)))
+        {
+            topology_cached = FALSE;
+        }
+    }
+    if (topology_cached == FALSE)
+    {
+        bzero(workspace, sizeof(*workspace));
+        for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+        {
+            workspace->loaded[i] = loaded[i];
+            workspace->frame.asset_bases[i] = loaded[i]->data;
+        }
+        if ((ndsRendererAdapterCollectNativeStageTopology(workspace) == FALSE) ||
+            (ndsRendererAdapterBuildNativeStageTopologyStamp(
+                 workspace, topology_generation, &topology_stamp) == FALSE))
         {
             goto reject;
         }
+        workspace->topology_generation = topology_generation;
+        workspace->topology_stamp = topology_stamp;
+        workspace->topology_valid = TRUE;
     }
-    if ((workspace->dobj_count != NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) ||
-        (workspace->binding_count !=
-         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) ||
-        (ndsRendererAdapterNativeStageLayer0OrderMatches(
-             workspace->segments) == FALSE) ||
-        (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE) ||
+    else
+    {
+        for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+        {
+            workspace->frame.asset_bases[i] = loaded[i]->data;
+        }
+    }
+    if ((ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE) ||
         (ndsRendererAdapterPrepareNativeStageMaterials(workspace) == FALSE))
     {
         goto reject;
@@ -6402,9 +6615,12 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     workspace->frame.binding_composed = workspace->binding_composed;
     workspace->frame.materials = workspace->materials;
     workspace->frame.config = &workspace->config;
+    workspace->frame.topology_generation = workspace->topology_generation;
+    workspace->frame.topology_stamp = workspace->topology_stamp;
     if (ndsRendererPrepareNativeStageOwner(
             &workspace->frame, &workspace->stats) == FALSE)
     {
+        workspace->topology_valid = FALSE;
         goto reject;
     }
     workspace->next_segment = 0u;

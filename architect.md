@@ -87,3 +87,23 @@ texture resolution, alpha policy, near-plane classification, and prepared run
 state. A missing or mismatched stamp re-enters the complete validator before
 any GX mutation. The Phase-0 lab must include a one-shot stamped-byte fault that
 proves this slow path remains reachable and rejects or revalidates safely.
+
+### Cut E accepted implementation
+
+The adapter cache stores only authoritative reloc generation, GObj/DObj/XObj,
+and display-list topology identities. The renderer cache stores only the summary
+produced by one complete generated-table validation. Scene reset invalidates both
+caches. Production telemetry is limited to full-validation, hit, and mismatch
+counters; the one-shot fault and revalidation counters are linked only in the
+Phase-0 lab.
+
+The accepted profile-1 production ROM is SHA-256
+`6496D8907BFD67A46647A246A77EEEC1326D195B7ED8DEF13D2A65A9538518CB`.
+Against frozen ROM `07FBFCB21586AA3964432ADD9055A98DB29E0D317895B02E1B1FE6DFEBD67765`,
+frames 600..607 save 18,816/18,752 stage ticks and 19,712/19,840
+draw ticks at P50/P95. The native frame-607 comparison is exactly 0/49,152
+changed pixels. The final-source lab ROM
+`9246A45B17FFBAF0D79BE8067AAC2697F408B2EDA420979606EB1229D58C9DC7`
+reports two full validations, 605 hits, and exactly one mismatch, injection, and
+successful revalidation. The explicit pacing smoke preserves fixed-two cadence
+but reaches only 19.0 presents/s; Cut E is a banked gain, not a locked-30 claim.

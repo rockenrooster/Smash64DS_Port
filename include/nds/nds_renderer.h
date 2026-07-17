@@ -535,6 +535,8 @@ typedef struct NDSRendererNativeStageFrame
     const NDSRendererMatrix20p12 *binding_composed;
     const NDSRendererNativeMaterial *materials;
     const NDSRendererConfig *config;
+    u32 topology_generation;
+    u32 topology_stamp;
 } NDSRendererNativeStageFrame;
 
 typedef struct NDSRendererStats
@@ -759,6 +761,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     NDSRendererStats *stats);
 s32 ndsRendererCommitNativeStageSegment(u32 segment_index);
 void ndsRendererFinishNativeStageOwner(void);
+void ndsRendererResetNativeStageValidationCache(void);
 s32 ndsRendererBeginNativeFighterOwner(
     u32 slot,
     NDSRendererStats *stats,
@@ -835,6 +838,13 @@ extern volatile u32 gNdsRendererM3MaterialCommitCount;
 extern volatile u32 gNdsRendererM3CrossRunCount;
 extern volatile u32 gNdsRendererM3CrossTriangleCount;
 extern volatile u32 gNdsRendererM3CrossForeignCornerCount;
+extern volatile u32 gNdsRendererM3TopologyFullValidationCount;
+extern volatile u32 gNdsRendererM3TopologyCacheHitCount;
+extern volatile u32 gNdsRendererM3TopologyStampMismatchCount;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+extern volatile u32 gNdsRendererM3TopologyFaultInjectionCount;
+extern volatile u32 gNdsRendererM3TopologyFaultRevalidationCount;
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
 extern volatile u32 gNdsRendererM3Phase0PreflightTicks;
 extern volatile u32 gNdsRendererM3Phase0PrepareRunTicks;

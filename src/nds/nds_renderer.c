@@ -1096,6 +1096,13 @@ volatile u32 gNdsRendererM3MaterialCommitCount;
 volatile u32 gNdsRendererM3CrossRunCount;
 volatile u32 gNdsRendererM3CrossTriangleCount;
 volatile u32 gNdsRendererM3CrossForeignCornerCount;
+volatile u32 gNdsRendererM3TopologyFullValidationCount;
+volatile u32 gNdsRendererM3TopologyCacheHitCount;
+volatile u32 gNdsRendererM3TopologyStampMismatchCount;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+volatile u32 gNdsRendererM3TopologyFaultInjectionCount;
+volatile u32 gNdsRendererM3TopologyFaultRevalidationCount;
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
 volatile u32 gNdsRendererM3Phase0PreflightTicks;
 volatile u32 gNdsRendererM3Phase0PrepareRunTicks;
@@ -2566,12 +2573,34 @@ typedef struct NDSNativeStageOwnerExecution
     u32 active;
 } NDSNativeStageOwnerExecution;
 
+typedef struct NDSNativeStageTopologySummary
+{
+    u32 raw_triangles;
+    u32 projected_no_z_triangles;
+    u32 projected_range_triangles;
+    u32 cross_runs;
+    u32 cross_triangles;
+    u32 cross_foreign_corners;
+} NDSNativeStageTopologySummary;
+
+typedef struct NDSNativeStageValidationCache
+{
+    NDSNativeStageTopologySummary summary;
+    u32 generation;
+    u32 stamp;
+    u32 valid;
+} NDSNativeStageValidationCache;
+
 /* Stage segments straddle the fighter display links, so their accepted
  * preflight must survive the two complete fighter-owner submissions. */
 static NDSNativeFighterOwnerExecution sNdsNativeFighterOwnerExecution;
 static NDSNativeStageOwnerExecution sNdsNativeStageOwnerExecution;
 static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
     NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
+static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+static u32 sNdsNativeStageTopologyFaultInjected;
+#endif
 #endif
 #endif
 
@@ -15906,22 +15935,17 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
 #endif
 }
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-static s32 ndsRendererNativeStageApplyStateSpan(
-    const NDSNativeStageStateSpan *span,
-    const NDSRendererNativeStageFrame *frame,
-    NDSRendererStats *stats,
-    NDSRendererTraversalState *state)
+static s32 ndsRendererNativeStageValidateStateSpanTopology(
+    const NDSNativeStageStateSpan *span)
 {
     u32 i;
 
-    if ((span == NULL) || (frame == NULL) || (stats == NULL) ||
-        (state == NULL) ||
+    if ((span == NULL) ||
         ((u32)span->first_state + span->state_count >
          NDS_NATIVE_STAGE_STATE_SEQUENCE_COUNT))
     {
         return FALSE;
     }
-    stats->sync_command_count += span->sync_count;
     for (i = 0u; i < span->state_count; i++)
     {
         u32 delta_index = sNdsNativeStageStateSequence[
@@ -15943,6 +15967,367 @@ static s32 ndsRendererNativeStageApplyStateSpan(
             {
                 return FALSE;
             }
+            continue;
+        }
+        if (delta->effect == NDS_NATIVE_STATE_BLEND)
+        {
+            continue;
+        }
+        if ((delta->effect < NDS_NATIVE_STATE_OTHERMODE) ||
+            (delta->effect > NDS_NATIVE_STATE_PRIM))
+        {
+            return FALSE;
+        }
+        if ((delta->effect == NDS_NATIVE_STATE_IMAGE) &&
+            ((delta->asset_index >= NDS_NATIVE_STAGE_ASSET_COUNT) ||
+             (delta->w1 >= sNdsNativeStageAssets[
+                 delta->asset_index].payload_size)))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static s32 ndsRendererNativeStageValidateTopologyFull(
+    const NDSRendererNativeStageFrame *frame,
+    NDSNativeStageTopologySummary *summary)
+{
+    u32 i;
+
+    if ((frame == NULL) || (summary == NULL) ||
+        (frame->topology_generation == 0u) ||
+        (frame->topology_stamp == 0u))
+    {
+        return FALSE;
+    }
+    memset(summary, 0, sizeof(*summary));
+    for (i = 0u; i < NDS_NATIVE_STAGE_DOBJ_COUNT; i++)
+    {
+        const NDSNativeStageDObj *expected = &sNdsNativeStageDObjs[i];
+        const NDSRendererNativeStageDObj *live = &frame->dobjs[i];
+
+        if ((live->identity == NULL) ||
+            (live->parent_index != expected->parent_index) ||
+            (live->binding_index != expected->binding_index) ||
+            (live->transform_flags != expected->transform_flags) ||
+            (live->owner != expected->owner) ||
+            (live->depth != expected->depth))
+        {
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_STAGE_ASSET_COUNT; i++)
+    {
+        if ((frame->asset_bases[i] == NULL) ||
+            (sNdsNativeStageAssets[i].payload_size == 0u))
+        {
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_STAGE_SEGMENT_COUNT; i++)
+    {
+        const NDSNativeStageSegment *segment = &sNdsNativeStageSegments[i];
+        u32 binding_offset;
+
+        if (((u32)segment->first_dobj + segment->dobj_count >
+             NDS_NATIVE_STAGE_DOBJ_COUNT) ||
+            ((u32)segment->first_binding + segment->binding_count >
+             NDS_NATIVE_STAGE_BINDING_COUNT) ||
+            ((u32)segment->first_run + segment->run_count >
+             NDS_NATIVE_STAGE_RUN_COUNT) ||
+            (segment->reserved != 0u))
+        {
+            return FALSE;
+        }
+        for (binding_offset = 0u;
+             binding_offset < segment->binding_count;
+             binding_offset++)
+        {
+            u32 binding_index =
+                (u32)segment->first_binding + binding_offset;
+            const NDSNativeStageBinding *binding =
+                &sNdsNativeStageBindings[binding_index];
+
+            if ((binding->first_run < segment->first_run) ||
+                ((u32)binding->first_run + binding->run_count >
+                 (u32)segment->first_run + segment->run_count))
+            {
+                return FALSE;
+            }
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_STAGE_BINDING_COUNT; i++)
+    {
+        const NDSNativeStageBinding *binding = &sNdsNativeStageBindings[i];
+
+        if ((binding->asset_index >= NDS_NATIVE_STAGE_ASSET_COUNT) ||
+            (binding->root_offset >= sNdsNativeStageAssets[
+                 binding->asset_index].payload_size) ||
+            ((u32)binding->first_vertex + binding->source_vertex_count >
+             NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) ||
+            ((u32)binding->first_run + binding->run_count >
+             NDS_NATIVE_STAGE_RUN_COUNT) ||
+            ((u32)binding->first_epoch + binding->texture_epoch_count >
+             NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) ||
+            ((binding->material_event != 0xffu) &&
+             (binding->material_event >=
+              NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT)) ||
+            (frame->binding_display_lists[i] !=
+             (const void *)((const u8 *)frame->asset_bases[
+                 binding->asset_index] + binding->root_offset)))
+        {
+            return FALSE;
+        }
+        {
+            u32 run_offset;
+
+            for (run_offset = 0u; run_offset < binding->run_count;
+                 run_offset++)
+            {
+                if (sNdsNativeStageRuns[
+                        (u32)binding->first_run + run_offset].binding_index != i)
+                {
+                    return FALSE;
+                }
+            }
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT; i++)
+    {
+        const NDSNativeStageTextureEpoch *epoch =
+            &sNdsNativeStageTextureEpochs[i];
+
+        if ((epoch->asset_index >= NDS_NATIVE_STAGE_ASSET_COUNT) ||
+            (epoch->source_command_offset >= sNdsNativeStageAssets[
+                 epoch->asset_index].payload_size) ||
+            (epoch->policy_index >= NDS_NATIVE_STAGE_STATE_POLICY_COUNT) ||
+            ((epoch->material_event != 0xffu) &&
+             (epoch->material_event >=
+              NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT)))
+        {
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT; i++)
+    {
+        const NDSNativeStageMaterialEvent *event =
+            &sNdsNativeStageMaterialEvents[i];
+
+        if ((event->asset_index >= NDS_NATIVE_STAGE_ASSET_COUNT) ||
+            (event->mobj_offset >= sNdsNativeStageAssets[
+                 event->asset_index].payload_size) ||
+            (event->binding_index >= NDS_NATIVE_STAGE_BINDING_COUNT) ||
+            (event->segment_index >= NDS_NATIVE_STAGE_SEGMENT_COUNT) ||
+            (event->material_slot >=
+             NDS_RENDERER_NATIVE_STAGE_MATERIAL_COUNT) ||
+            (event->source_command_count == 0u))
+        {
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_STAGE_STATE_SPAN_COUNT; i++)
+    {
+        if (ndsRendererNativeStageValidateStateSpanTopology(
+                &sNdsNativeStageStateSpans[i]) == FALSE)
+        {
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT; i++)
+    {
+        if (sNdsNativeStageVertices[i].matrix_binding >=
+            NDS_NATIVE_STAGE_BINDING_COUNT)
+        {
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_STAGE_RUN_COUNT; i++)
+    {
+        const NDSNativeStageRun *run = &sNdsNativeStageRuns[i];
+        const NDSNativeStageTextureEpoch *epoch;
+        u32 corner_count = (u32)run->triangle_count * 3u;
+        u32 corner_offset;
+
+        if ((run->triangle_count == 0u) ||
+            (run->binding_index >= NDS_NATIVE_STAGE_BINDING_COUNT) ||
+            (run->texture_epoch >= NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) ||
+            (run->state_policy >= NDS_NATIVE_STAGE_STATE_POLICY_COUNT) ||
+            ((run->flags &
+              ~NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u) ||
+            ((u32)run->first_corner + corner_count >
+             NDS_NATIVE_STAGE_CORNER_COUNT))
+        {
+            return FALSE;
+        }
+        epoch = &sNdsNativeStageTextureEpochs[run->texture_epoch];
+        if (epoch->policy_index != run->state_policy)
+        {
+            return FALSE;
+        }
+        if (run->submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
+        {
+            if (run->binding_index != 29u)
+            {
+                return FALSE;
+            }
+            summary->raw_triangles += run->triangle_count;
+        }
+        else if (run->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+        {
+            summary->projected_no_z_triangles += run->triangle_count;
+        }
+        else if (run->submit_class ==
+                 NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
+        {
+            summary->projected_range_triangles += run->triangle_count;
+        }
+        else
+        {
+            return FALSE;
+        }
+        for (corner_offset = 0u; corner_offset < corner_count; corner_offset++)
+        {
+            u32 dense_index = sNdsNativeStageCorners[
+                (u32)run->first_corner + corner_offset];
+            const NDSNativeStageDenseVertex *dense;
+
+            if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
+            {
+                return FALSE;
+            }
+            dense = &sNdsNativeStageVertices[dense_index];
+            if (run->submit_class ==
+                NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
+            {
+                s32 x = ndsRendererNativeStageVertexShift(dense->x, 1u);
+                s32 y = ndsRendererNativeStageVertexShift(dense->y, 1u);
+                s32 z = ndsRendererNativeStageVertexShift(dense->z, 1u);
+
+                if ((run->binding_index != 29u) ||
+                    (dense->matrix_binding != run->binding_index) ||
+                    (x < -2048) || (x > 2047) ||
+                    (y < -2048) || (y > 2047) ||
+                    (z < -2048) || (z > 2047))
+                {
+                    return FALSE;
+                }
+            }
+        }
+        if ((run->flags &
+             NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u)
+        {
+            if ((run->submit_class !=
+                 NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ||
+                (run->triangle_count != 2u))
+            {
+                return FALSE;
+            }
+            summary->cross_runs++;
+            summary->cross_triangles += run->triangle_count;
+            for (corner_offset = 0u;
+                 corner_offset < corner_count;
+                 corner_offset++)
+            {
+                u32 dense_index = sNdsNativeStageCorners[
+                    (u32)run->first_corner + corner_offset];
+
+                if (sNdsNativeStageVertices[dense_index].matrix_binding !=
+                    run->binding_index)
+                {
+                    summary->cross_foreign_corners++;
+                }
+            }
+        }
+    }
+    return ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT ==
+             NDS_NATIVE_STAGE_RUN_COUNT + NDS_NATIVE_STAGE_BINDING_COUNT) &&
+            (summary->raw_triangles == 66u) &&
+            (summary->projected_no_z_triangles == 126u) &&
+            (summary->projected_range_triangles == 10u) &&
+            (summary->cross_runs == 5u) &&
+            (summary->cross_triangles == 10u) &&
+            (summary->cross_foreign_corners == 15u)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererNativeStageValidateTopology(
+    const NDSRendererNativeStageFrame *frame,
+    NDSNativeStageTopologySummary *summary)
+{
+    s32 injected_fault = FALSE;
+
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    if ((sNdsNativeStageValidationCache.valid != FALSE) &&
+        (sNdsNativeStageTopologyFaultInjected == FALSE))
+    {
+        sNdsNativeStageValidationCache.stamp ^= 1u;
+        sNdsNativeStageTopologyFaultInjected = TRUE;
+        gNdsRendererM3TopologyFaultInjectionCount++;
+        injected_fault = TRUE;
+    }
+#endif
+    if ((sNdsNativeStageValidationCache.valid != FALSE) &&
+        (sNdsNativeStageValidationCache.generation ==
+         frame->topology_generation) &&
+        (sNdsNativeStageValidationCache.stamp == frame->topology_stamp))
+    {
+        *summary = sNdsNativeStageValidationCache.summary;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererM3TopologyCacheHitCount++;
+#endif
+        return TRUE;
+    }
+    if (sNdsNativeStageValidationCache.valid != FALSE)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererM3TopologyStampMismatchCount++;
+#endif
+    }
+    sNdsNativeStageValidationCache.valid = FALSE;
+    if (ndsRendererNativeStageValidateTopologyFull(frame, summary) == FALSE)
+    {
+        return FALSE;
+    }
+    sNdsNativeStageValidationCache.summary = *summary;
+    sNdsNativeStageValidationCache.generation = frame->topology_generation;
+    sNdsNativeStageValidationCache.stamp = frame->topology_stamp;
+    sNdsNativeStageValidationCache.valid = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererM3TopologyFullValidationCount++;
+#endif
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    if (injected_fault != FALSE)
+    {
+        gNdsRendererM3TopologyFaultRevalidationCount++;
+    }
+#else
+    (void)injected_fault;
+#endif
+    return TRUE;
+}
+
+static s32 ndsRendererNativeStageApplyStateSpan(
+    const NDSNativeStageStateSpan *span,
+    const NDSRendererNativeStageFrame *frame,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state)
+{
+    u32 i;
+
+    if ((span == NULL) || (frame == NULL) || (stats == NULL) ||
+        (state == NULL))
+    {
+        return FALSE;
+    }
+    stats->sync_command_count += span->sync_count;
+    for (i = 0u; i < span->state_count; i++)
+    {
+        u32 delta_index = sNdsNativeStageStateSequence[
+            (u32)span->first_state + i];
+        const NDSNativeStageStateDelta *delta =
+            &sNdsNativeStageStateDeltas[delta_index];
+        if (delta->effect == NDS_NATIVE_STATE_MATERIAL)
+        {
             if (delta->material_command == 0u)
             {
                 ndsRendererNativeApplyMaterialPreflight(
@@ -15957,11 +16342,6 @@ static s32 ndsRendererNativeStageApplyStateSpan(
             stats->color_command_count++;
             continue;
         }
-        if ((delta->effect < NDS_NATIVE_STATE_OTHERMODE) ||
-            (delta->effect > NDS_NATIVE_STATE_PRIM))
-        {
-            return FALSE;
-        }
         {
             NDSNativeStateDelta native_delta;
             const u8 *asset_base = frame->asset_bases[0];
@@ -15974,10 +16354,6 @@ static s32 ndsRendererNativeStageApplyStateSpan(
             native_delta.reserved[2] = 0u;
             if (delta->effect == NDS_NATIVE_STATE_IMAGE)
             {
-                if (delta->asset_index >= NDS_NATIVE_STAGE_ASSET_COUNT)
-                {
-                    return FALSE;
-                }
                 asset_base = frame->asset_bases[delta->asset_index];
             }
             ndsRendererNativeApplyStateDelta(
@@ -16045,18 +16421,9 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 vertex_prepare_start;
 #endif
 
-    if ((run->binding_index >= NDS_NATIVE_STAGE_BINDING_COUNT) ||
-        (run->texture_epoch >= NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) ||
-        (run->state_policy >= NDS_NATIVE_STAGE_STATE_POLICY_COUNT) ||
-        ((u32)run->first_corner + corner_count >
-         NDS_NATIVE_STAGE_CORNER_COUNT))
-    {
-        return FALSE;
-    }
     epoch = &sNdsNativeStageTextureEpochs[run->texture_epoch];
     policy = &sNdsNativeStageStatePolicies[run->state_policy];
-    if ((epoch->policy_index != run->state_policy) ||
-        (ndsRendererNativeStagePolicyMatches(policy, stats) == FALSE))
+    if (ndsRendererNativeStagePolicyMatches(policy, stats) == FALSE)
     {
         return FALSE;
     }
@@ -16119,10 +16486,6 @@ static s32 ndsRendererNativeStagePrepareRun(
         const NDSNativeStageDenseVertex *dense;
         NDSNativeStagePreparedDense *prepared_dense;
 
-        if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
-        {
-            return FALSE;
-        }
         dense = &sNdsNativeStageVertices[dense_index];
         prepared_dense = &sNdsNativeStagePreparedDense[dense_index];
         if (alpha_uses_vertex != FALSE)
@@ -16162,26 +16525,6 @@ static s32 ndsRendererNativeStagePrepareRun(
                 texture_offset);
         }
         if (run->submit_class ==
-            NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
-        {
-            s32 x = ndsRendererNativeStageVertexShift(dense->x, 1u);
-            s32 y = ndsRendererNativeStageVertexShift(dense->y, 1u);
-            s32 z = ndsRendererNativeStageVertexShift(dense->z, 1u);
-
-            /* These source-Z vertices only exceed GX VTX_16 range slightly.
-             * Submit half coordinates with a compensating matrix so GX clips
-             * them at the near plane instead of CPU-projecting an unclipped
-             * screen-covering triangle. */
-            if ((run->binding_index != 29u) ||
-                (dense->matrix_binding != run->binding_index) ||
-                (x < -2048) || (x > 2047) ||
-                (y < -2048) || (y > 2047) ||
-                (z < -2048) || (z > 2047))
-            {
-                return FALSE;
-            }
-        }
-        else if (run->submit_class ==
                  NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
         {
             NDSRendererInputVertex input;
@@ -16192,11 +16535,6 @@ static s32 ndsRendererNativeStagePrepareRun(
             u32 near_transform_start = ndsRendererM3Phase0Tick();
 #endif
 
-            if (dense->matrix_binding >=
-                NDS_NATIVE_STAGE_BINDING_COUNT)
-            {
-                return FALSE;
-            }
             ndsRendererTransformVertex20p12(
                 &frame->binding_composed[dense->matrix_binding],
                 &input, &clip);
@@ -16632,13 +16970,8 @@ s32 ndsRendererPrepareNativeStageOwner(
 {
     NDSRendererTraversalState *state =
         &sNdsNativeStageOwnerExecution.traversal;
+    NDSNativeStageTopologySummary topology;
     u64 epoch_mask = 0u;
-    u32 raw_triangles = 0u;
-    u32 projected_no_z_triangles = 0u;
-    u32 projected_range_triangles = 0u;
-    u32 cross_runs = 0u;
-    u32 cross_triangles = 0u;
-    u32 cross_foreign_corners = 0u;
     u32 prepared_dense_mask[
         (NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT + 31u) / 32u];
     u32 segment_index;
@@ -16677,51 +17010,10 @@ s32 ndsRendererPrepareNativeStageOwner(
         (frame->projection == NULL) ||
         (frame->binding_composed == NULL) ||
         (frame->materials == NULL) || (frame->config == NULL) ||
-        (NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI != 0x4d335031u))
+        (NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI != 0x4d335031u) ||
+        (ndsRendererNativeStageValidateTopology(frame, &topology) == FALSE))
     {
         goto done;
-    }
-    for (segment_index = 0u;
-         segment_index < NDS_NATIVE_STAGE_DOBJ_COUNT;
-         segment_index++)
-    {
-        const NDSNativeStageDObj *expected =
-            &sNdsNativeStageDObjs[segment_index];
-        const NDSRendererNativeStageDObj *live = &frame->dobjs[segment_index];
-
-        if ((live->identity == NULL) ||
-            (live->parent_index != expected->parent_index) ||
-            (live->binding_index != expected->binding_index) ||
-            (live->transform_flags != expected->transform_flags) ||
-            (live->owner != expected->owner) ||
-            (live->depth != expected->depth))
-        {
-            goto done;
-        }
-    }
-    for (segment_index = 0u;
-         segment_index < NDS_NATIVE_STAGE_ASSET_COUNT;
-         segment_index++)
-    {
-        if (frame->asset_bases[segment_index] == NULL)
-        {
-            goto done;
-        }
-    }
-    for (segment_index = 0u;
-         segment_index < NDS_NATIVE_STAGE_BINDING_COUNT;
-         segment_index++)
-    {
-        const NDSNativeStageBinding *binding =
-            &sNdsNativeStageBindings[segment_index];
-
-        if ((binding->asset_index >= NDS_NATIVE_STAGE_ASSET_COUNT) ||
-            (frame->binding_display_lists[segment_index] !=
-             (const void *)((const u8 *)frame->asset_bases[
-                 binding->asset_index] + binding->root_offset)))
-        {
-            goto done;
-        }
     }
 
     for (segment_index = 0u;
@@ -16753,18 +17045,11 @@ s32 ndsRendererPrepareNativeStageOwner(
                  run_offset++)
             {
                 u32 run_index = (u32)binding->first_run + run_offset;
-                const NDSNativeStageRun *run;
-                u32 corner_count;
-                u32 corner_offset;
 
-                if ((run_index >= NDS_NATIVE_STAGE_RUN_COUNT) ||
-                    (run_index < segment->first_run) ||
-                    (run_index >= (u32)segment->first_run +
-                                      segment->run_count) ||
-                    (ndsRendererNativeStageApplyStateSpan(
+                if (ndsRendererNativeStageApplyStateSpan(
                          &sNdsNativeStageStateSpans[run_index], frame,
                          &sNdsNativeStageOwnerExecution.preflight_stats,
-                         state) == FALSE))
+                         state) == FALSE)
                 {
                     goto done;
                 }
@@ -16793,55 +17078,6 @@ s32 ndsRendererPrepareNativeStageOwner(
                     goto done;
                 }
 #endif
-                run = &sNdsNativeStageRuns[run_index];
-                if (run->submit_class ==
-                    NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
-                {
-                    if (run->binding_index != 29u)
-                    {
-                        goto done;
-                    }
-                    raw_triangles += run->triangle_count;
-                }
-                else if (run->submit_class ==
-                         NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
-                {
-                    projected_no_z_triangles += run->triangle_count;
-                }
-                else if (run->submit_class ==
-                         NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
-                {
-                    projected_range_triangles += run->triangle_count;
-                }
-                else
-                {
-                    goto done;
-                }
-                if ((run->flags &
-                     NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u)
-                {
-                    if ((run->submit_class !=
-                         NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ||
-                        (run->triangle_count != 2u))
-                    {
-                        goto done;
-                    }
-                    cross_runs++;
-                    cross_triangles += run->triangle_count;
-                    corner_count = (u32)run->triangle_count * 3u;
-                    for (corner_offset = 0u;
-                         corner_offset < corner_count;
-                         corner_offset++)
-                    {
-                        u32 dense_index = sNdsNativeStageCorners[
-                            (u32)run->first_corner + corner_offset];
-                        if (sNdsNativeStageVertices[dense_index].matrix_binding !=
-                            run->binding_index)
-                        {
-                            cross_foreign_corners++;
-                        }
-                    }
-                }
             }
             if (ndsRendererNativeStageApplyStateSpan(
                     &sNdsNativeStageStateSpans[
@@ -16855,11 +17091,12 @@ s32 ndsRendererPrepareNativeStageOwner(
     }
     if ((epoch_mask != (((u64)1u <<
                          NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) - 1u)) ||
-        (raw_triangles != 66u) ||
-        (projected_no_z_triangles != 126u) ||
-        (projected_range_triangles != 10u) ||
-        (cross_runs != 5u) || (cross_triangles != 10u) ||
-        (cross_foreign_corners != 15u))
+        (topology.raw_triangles != 66u) ||
+        (topology.projected_no_z_triangles != 126u) ||
+        (topology.projected_range_triangles != 10u) ||
+        (topology.cross_runs != 5u) ||
+        (topology.cross_triangles != 10u) ||
+        (topology.cross_foreign_corners != 15u))
     {
         goto done;
     }
@@ -16888,9 +17125,10 @@ s32 ndsRendererPrepareNativeStageOwner(
     gNdsRendererM3PreflightSuccessCount++;
     gNdsRendererM3ResidentEpochCount =
         NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT;
-    gNdsRendererM3CrossRunCount = cross_runs;
-    gNdsRendererM3CrossTriangleCount = cross_triangles;
-    gNdsRendererM3CrossForeignCornerCount = cross_foreign_corners;
+    gNdsRendererM3CrossRunCount = topology.cross_runs;
+    gNdsRendererM3CrossTriangleCount = topology.cross_triangles;
+    gNdsRendererM3CrossForeignCornerCount =
+        topology.cross_foreign_corners;
 #endif
     accepted = TRUE;
 
@@ -16910,6 +17148,12 @@ done:
 #endif
     }
     return accepted;
+}
+
+void ndsRendererResetNativeStageValidationCache(void)
+{
+    memset(&sNdsNativeStageValidationCache, 0,
+           sizeof(sNdsNativeStageValidationCache));
 }
 
 s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
@@ -17087,6 +17331,10 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 }
 
 void ndsRendererFinishNativeStageOwner(void)
+{
+}
+
+void ndsRendererResetNativeStageValidationCache(void)
 {
 }
 #endif

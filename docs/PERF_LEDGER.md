@@ -96,6 +96,67 @@ KEEP / REWORK / REVERT: KEEP (DIAGNOSTIC)
   forbidden packet, order, polygon-ID, translucency, or gameplay-float work.
 ```
 
+## 2026-07-17 - Task 8 Cut E generation-gated preflight
+
+```text
+IDEA ID: TASK8-CUT-E-GENERATION-GATED-PREFLIGHT-20260717
+PURPOSE:
+  Stop rewalking immutable native-stage topology every presented frame. Cache
+  only topology identities and a fully validated generated-table summary; keep
+  matrices, materials, colors, texture selection, alpha, near-plane work, and
+  run preparation live. Any generation/stamp mismatch fails closed through the
+  original full validators before GX mutation.
+PRODUCTION A/B IDENTITY / WINDOW:
+  Mode 163, profile 1, fast mode 9, static AOT 1, live Fox, retained wallpaper,
+  frames 600..607, no JIT, common/scene -O2 -mthumb, renderer -O2 -marm.
+  Frozen control ROM/ELF SHA-256:
+    07FBFCB21586AA3964432ADD9055A98DB29E0D317895B02E1B1FE6DFEBD67765
+    B13F18DF0F034EE9AFF3BBB96061ADAE54ED175022AC842A0FB1494C30AEF60A
+  Candidate ROM/ELF SHA-256:
+    6496D8907BFD67A46647A246A77EEEC1326D195B7ED8DEF13D2A65A9538518CB
+    801F872115F37BEEFA4199C7D77F6C059172A01D3E533EF10EE75D1C5FA0AF5B
+P50/P95 TICKS (CONTROL -> CANDIDATE; DELTA):
+  Stage:  489,600/489,664 -> 470,784/470,912; -18,816/-18,752.
+  Draw: 1,168,960/1,204,992 -> 1,149,248/1,185,152; -19,712/-19,840.
+  Active: 1,173,824/1,209,856 -> 1,154,016/1,189,888; -19,808/-19,968.
+  Update: 312,736/314,112 -> 309,920/311,296; -2,816/-2,816 noise-side
+  movement, not attributed to this draw cut.
+FAIL-CLOSED LAB:
+  Final-source profile-1 Phase-0 lab ROM/ELF SHA-256:
+    9246A45B17FFBAF0D79BE8067AAC2697F408B2EDA420979606EB1229D58C9DC7
+    2F02287E2176EF4FAF038379571DC5DB40ABDEB9FED249E20E780D2BEA117AC2
+  The one-shot lab mutation flips the cached stamp. The terminal census is
+  full=2, hit=605, mismatch=1, inject=1, revalidate=1; frames 600..607 add one
+  hit each and no additional validation. Production is full=1, hit=606 and
+  mismatch/inject/revalidate=0/0/0. Lab-only fault symbols are absent from the
+  production ELF.
+CORRECTNESS / RESOURCE GATES:
+  Native frame 607 is exact: raw and meaningful delta 0/49,152, mean 0.00.
+  Owner 121/828 with 202/320/306 partition; stage
+  8/255/57/42/54/202/49/4; cross 5/10/15; M4 22/131072; zero owner fallback,
+  post-GO fence work, and conservation error. A separate current-source M2
+  detailed-ledger build (ROM SHA-256
+  5E7E56D401665F0EA259F04C812EF057A5BFDABE5AD7AC698E7C223C702027B9)
+  proves Mario 14/18/30 and Fox 18/31/37 roots/epochs/runs, totaling the
+  required 32/49/67 over 626 fighter triangles. The battle arena >=128 KiB
+  gate passes. ITCM is 26,104/32,768 bytes, leaving 6,664 bytes.
+PACING:
+  The explicit -RequireLocked30Pacing smoke preserves fixed-two cadence and all
+  gates but warns at 19.0 presents/s. This cut is a measured gain; it does not
+  by itself meet locked 30.
+EVIDENCE:
+  artifacts/performance/2026-07-17_task8-cut-e-control-fighter600.json
+  artifacts/performance/2026-07-17_task8-cut-e-candidate-fighter600.json
+  artifacts/performance/2026-07-17_task8-cut-e-lab-fighter600.json
+  artifacts/performance/2026-07-17_task8-cut-e-m2-fighter600.json
+  artifacts/visibility/2026-07-17_task8-cut-e-control-frame607.png
+  artifacts/visibility/2026-07-17_task8-cut-e-candidate-frame607.png
+KEEP / REWORK / REVERT: KEEP
+  Bank the generation-gated topology preflight. It changes neither FIFO packet
+  ownership, interpreter count, run order, polygon/translucency semantics,
+  gameplay floats, nor decomp sources.
+```
+
 ## 2026-07-16 - Locked-30 fixed-two scheduler decision
 
 ```text
