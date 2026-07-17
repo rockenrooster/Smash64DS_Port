@@ -556,7 +556,7 @@ try {
     $expectedCloudTextureCount = 3
     $expectedCloudNonzero = @(
         486, 421, 739, 6001, 7067, 8990, 0, 0, 0,
-        176, 2026, 97, 97, 132, 75, 201)
+        176, 2026, 97, 70, 132, 75, 201)
     Assert-RunnerReleased
     Set-Content -LiteralPath $configState.Config -Value $configText -NoNewline
     $fallback = Invoke-IFCommonRun -NativeEnabled 0 `
@@ -579,7 +579,7 @@ try {
     $goMetrics = Get-BitmapRegionMetrics -Path $nativeCapture `
         -ClearPath $nativeClearCapture -Region $goRegion
     Assert-Condition ($trafficMetrics.Hash -eq
-        '121ca43c5ba39a5b5ab2b8985b8ded94be953f73719048581c611080efba6eba') `
+        '8971bfb5863c6e3ec55e4bda8049545974f881d11af29f69e74b982a865589ac') `
         'Accepted traffic-light/flare crop changed byte-for-byte.'
     Assert-Condition ($goMetrics.Hash -eq
         '8dbde0ad01eaa9b0a33de10ac290380dc509b98e7dda96a5e1c537818c1d12cd') `

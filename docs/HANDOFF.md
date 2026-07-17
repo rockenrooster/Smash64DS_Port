@@ -101,29 +101,37 @@ Boundary pass are retained. Countdown is no longer broadly marked fixed: only
 the large GO is accepted. The source-backed point-sampled tiny `ShadowGo`
 candidate is an isolated visual KEEP: its 49-pixel atlas delta is wholly inside
 the 12x9 source rectangle, the runtime still submits 10/10/10 draws, and hot
-conversion/upload remains zero. Canonical capture/checker locks are still stale
-and must be refreshed before the playtest item can close.
+conversion/upload remains zero. The exact tiny-GO count/crop locks are now
+refreshed and pass across all five isolated GO frames. The full verifier next
+stops at a separate large-GO crop mismatch (`8dbde0ad...` expected,
+`d968b0cc...` actual); inspect that independent delta before changing its lock.
 
-The Down+A report is now reproduced, not merely suspected. The verifier-only
-pre-spawn override makes Fox human P2 without changing shipped mode 163. Fox
-enters status 213 / motion 188 with exact asset `FTFoxAnim129` / `0x303`, then
-advances exactly six callback updates in both a 30-second and a 120-second run
-before stopping. The last PCs are in `nitroromReadIter` / `_lseek_r`; source
-motion tick 7 reaches the first `PlayFGMStoreInfo` for Fox Down-Air FGM ID 190.
-Treat the ID-190 audio load path as the leading hypothesis until an exact event
-trace proves it. The separate WIP patch also restores Fox's omitted common files
-642..661 (`0x282..0x295`); its static source-identity checker passes, but runtime
+The Down+A report is reproduced, but the audio-load hypothesis is disproven.
+The verifier-only pre-spawn override makes Fox human P2 without changing shipped
+mode 163. Fox enters status 213 / motion 188 with exact asset `FTFoxAnim129` /
+`0x303`, then advances exactly six callback updates in both a 30-second and a
+120-second run before stopping. Exact tracing sees both ID-190 calls and both
+tick-7 attack refreshes return, followed by entry into the next effect-script
+`SyncWait`. ID 190 is absent from the resident 18-entry FGM pack, so
+`ndsAudioFgmPlayAtPan` increments the unsupported counter and returns before
+`soundPlaySample`; NitroFS reads occur only during the fenced pack load. The
+reported `nitroromReadIter` / `_lseek_r` PCs were initial GDB attach locations,
+not terminal samples. Do not add ID 190 to the pack as a stall fix; its source
+pitch schedule and custom-FX fidelity remain a separate unqualified audio item.
+The common-bank repair also restores Fox's omitted files 642..661
+(`0x282..0x295`) and passes its static source-identity checker; runtime
 qualification is pending.
 
-Resume with the audio qualification skill, trace ID 190 through
-`func_800269C0_275C0` into the DS pack/load seam, and fix the shared root cause.
-Then rerun the existing Fox arm:
+Resume immediately after the second ID-190/effect-forward event. Use the
+existing target freeze watchdog or one target-owned breadcrumb with the detailed
+observer breakpoints disabled, identify the first owner that stops advancing,
+and fix that shared seam. Then rerun the existing Fox arm:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor Fox -NoBuild -RunnerSlot 3 -TimeoutSeconds 300
 ```
 
 Do not mark the playtest finding fixed until Fox P2, Mario, and one canonical
-CPU-on Current gate pass. Afterward refresh the exact tiny-GO locks and capture
-against the canonical ROM. The five-minute goal heartbeat is intentionally
-paused for the requested model-change checkpoint.
+CPU-on Current gate pass. Separately resolve the large-GO hash mismatch and
+capture against the canonical ROM. The five-minute goal heartbeat is
+intentionally paused for the requested model-change checkpoint.
