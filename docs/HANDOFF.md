@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-18 06:35 Central
+Updated: 2026-07-18 07:12 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -19,6 +19,8 @@ hardware-pending statuses. Preserve canonical mode 163, intrinsic renderer mode
 and published Task 16 compare/i2f/addsub `1/1/1`. Global Task 16 lab defaults
 remain zero. Tasks 12 and 17 remain retail-hardware-primary; do not infer their
 verdicts from melonDS or cherry-pick Task 17 without an on-device win.
+The device-photo packets are root-local at `builds/task12-hardware-hud-pair/`
+and `builds/task17-hardware-hud-pair/`; both expose the six phase-HUD rows.
 
 ## Next Packet
 

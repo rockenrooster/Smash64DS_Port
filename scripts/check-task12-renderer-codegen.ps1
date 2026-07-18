@@ -7,6 +7,8 @@ param(
     [ValidateRange(1, 12288)][int]$MaxHotTextBytes = 8192,
     [switch]$AllowArmHotText,
     [string[]]$ExpectedHotFunction = @(),
+    [string]$BuildConfig = '',
+    [switch]$RequireHardwareHud,
     [string]$Readelf =
         'C:\devkitPro\devkitARM\bin\arm-none-eabi-readelf.exe'
 )
@@ -215,8 +217,39 @@ if ($RequireHotText) {
     throw 'Unexpected final .text.hot section before Task 12 Phase B.'
 }
 
+if ($RequireHardwareHud) {
+    if ([string]::IsNullOrWhiteSpace($BuildConfig)) {
+        throw 'RequireHardwareHud requires BuildConfig.'
+    }
+    $resolvedBuildConfig = (Resolve-Path -LiteralPath $BuildConfig).Path
+    $configText = Get-Content -LiteralPath $resolvedBuildConfig -Raw
+    foreach ($needle in @(
+        '#define NDS_DEV_LIVE_INPUT_PREVIEW 1',
+        '#define NDS_HARNESS_FAST_LOGIC 0',
+        '#define NDS_RENDERER_HW_TRIANGLES 1',
+        '#define NDS_RENDERER_PROFILE_LEVEL 1',
+        '#define NDS_RENDERER_FAST_RUN_DEFAULT 9',
+        '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT 1',
+        '#define NDS_DEBUG_HUD 0')) {
+        if (-not $configText.Contains($needle)) {
+            throw "Task 12 hardware HUD config is missing '$needle'."
+        }
+    }
+
+    $elfText = [System.Text.Encoding]::ASCII.GetString(
+        [System.IO.File]::ReadAllBytes($resolvedElf))
+    foreach ($label in @(
+        'UPD %10lu', 'DRW %10lu', 'ACT %10lu',
+        'LOOP%10lu', 'SLIP%10lu', 'GIT %s')) {
+        if (-not $elfText.Contains($label)) {
+            throw "Task 12 hardware HUD ELF is missing '$label'."
+        }
+    }
+}
+
 Write-Output (
     "Task 12 renderer codegen passed: main=$ExpectedMainMode " +
     "objectText=$objectTextBytes objectItcm=$objectItcmBytes " +
     "finalItcm=$($elfItcmSection.Bytes)/32768 hot=$hotBytes " +
-    "hotFunctions=[$($hotNames -join ', ')]")
+    "hotFunctions=[$($hotNames -join ', ')] " +
+    "hardwareHud=$([int]$RequireHardwareHud.IsPresent)")
