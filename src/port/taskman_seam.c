@@ -4500,7 +4500,14 @@ static void ndsBattlePlayablePresentFrame(void)
     phase05_start = NDS_RENDERER_PHASE05_TICK();
 #endif
     gNdsRendererProfileFrameCount++;
+#if NDS_RENDER_ECONOMY
+    ndsRendererProfileFrameBegin(
+        ((gSCManagerBattleState != NULL) &&
+         (gSCManagerBattleState->game_status == nSCBattleGameStatusGo)) ?
+            1u : 0u);
+#else
     ndsRendererProfileFrameBegin();
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileBeginFrameTicks = 0u;
     gNdsRendererProfileWallpaperTicks = 0u;

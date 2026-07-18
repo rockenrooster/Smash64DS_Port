@@ -9,6 +9,9 @@ param(
     [ValidateRange(1,2)][int]$RendererProfileLevel = 1,
     [switch]$RendererM2DetailedLedger,
     [switch]$RendererM3Phase0Profile,
+    [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
+    [ValidateRange(0,1)][int]$RenderEconomyMode = 0,
+    [ValidateRange(0,255)][int]$RenderEconomyOwnerMask = 0,
     [ValidateRange(0,1)][int]$Task9FloatCensusMode = 0,
     [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
     [ValidateRange(0,1)][int]$Task9FloatPhase2Mode = 1,
@@ -18,11 +21,11 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
-    [ValidateRange(8,256)][int]$RendererBenchmarkSamples = 8,
+    [ValidateRange(8,1024)][int]$RendererBenchmarkSamples = 8,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
     [ValidateSet('None','KO','Rebirth')]
     [string]$RendererBenchmarkStartEvent = 'None',
-    [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
+    [ValidateRange(5,3600)][int]$RendererBenchmarkTimeoutSeconds = 30,
     [string]$RendererBenchmarkExportPath = '',
     [string]$RendererBenchmarkScreenshot = ''
 )
@@ -43,6 +46,17 @@ if ($RendererM3Phase0Profile -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
     throw 'RendererM3Phase0Profile requires fast-run mode 9 and renderer profile 1.'
 }
+if (($RendererScreenSpaceCensusMode -eq 1) -and
+    (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
+    throw 'RendererScreenSpaceCensusMode requires fast-run mode 9 and renderer profile 1.'
+}
+if (($RenderEconomyMode -eq 1) -and
+    (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
+    throw 'RenderEconomyMode requires fast-run mode 9 and renderer profile 1.'
+}
+if (($RenderEconomyMode -eq 0) -and ($RenderEconomyOwnerMask -ne 0)) {
+    throw 'RenderEconomyOwnerMask requires RenderEconomyMode 1.'
+}
 if (($FastRunMode -eq 9) -and
     ($RendererBenchmarkStartEvent -eq 'None') -and
     -not $PSBoundParameters.ContainsKey('RendererBenchmarkStartFrame')) {
@@ -57,7 +71,11 @@ $target = if ($FastRunMode -eq 9) {
 } else {
     'smash64ds-battle-playable-coarse-hwtri'
 }
-$build = if ($Task9FloatCensusMode -eq 1) {
+$build = if ($RendererScreenSpaceCensusMode -eq 1) {
+    'builds/build-task11-screen-space-census-lab'
+} elseif ($RenderEconomyMode -eq 1) {
+    'builds/build-task11-economy-lab'
+} elseif ($Task9FloatCensusMode -eq 1) {
     'builds/build-task9-float-census-lab'
 } elseif ($Task9FloatItcmMode -eq 1) {
     if ($Task9FloatPhase2Mode -eq 1) {
@@ -90,6 +108,9 @@ $build = if ($Task9FloatCensusMode -eq 1) {
     -RendererProfileLevel $RendererProfileLevel `
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -RendererM3Phase0Profile:$RendererM3Phase0Profile `
+    -RendererScreenSpaceCensusMode $RendererScreenSpaceCensusMode `
+    -RenderEconomyMode $RenderEconomyMode `
+    -RenderEconomyOwnerMask $RenderEconomyOwnerMask `
     -Task9FloatCensusMode $Task9FloatCensusMode `
     -Task9FloatItcmMode $Task9FloatItcmMode `
     -Task9FloatPhase2Mode $Task9FloatPhase2Mode `
@@ -113,7 +134,7 @@ $build = if ($Task9FloatCensusMode -eq 1) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode" `
+    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

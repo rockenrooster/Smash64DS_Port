@@ -40,6 +40,37 @@
 #error "NDS_RENDERER_M3_PHASE0_PROFILE requires profile level 1"
 #endif
 
+#ifndef NDS_RENDERER_SCREEN_SPACE_CENSUS
+#define NDS_RENDERER_SCREEN_SPACE_CENSUS 0
+#endif
+
+#if (NDS_RENDERER_SCREEN_SPACE_CENSUS != 0) && \
+    (NDS_RENDERER_SCREEN_SPACE_CENSUS != 1)
+#error "NDS_RENDERER_SCREEN_SPACE_CENSUS must be 0 or 1"
+#endif
+
+#if NDS_RENDERER_SCREEN_SPACE_CENSUS && \
+    (NDS_RENDERER_PROFILE_LEVEL != 1)
+#error "NDS_RENDERER_SCREEN_SPACE_CENSUS requires profile level 1"
+#endif
+
+#ifndef NDS_RENDER_ECONOMY
+#define NDS_RENDER_ECONOMY 0
+#endif
+
+#ifndef NDS_RENDER_ECONOMY_OWNER_MASK
+#define NDS_RENDER_ECONOMY_OWNER_MASK 32
+#endif
+
+#if (NDS_RENDER_ECONOMY != 0) && (NDS_RENDER_ECONOMY != 1)
+#error "NDS_RENDER_ECONOMY must be 0 or 1"
+#endif
+
+#if (NDS_RENDER_ECONOMY_OWNER_MASK < 0) || \
+    (NDS_RENDER_ECONOMY_OWNER_MASK > 255)
+#error "NDS_RENDER_ECONOMY_OWNER_MASK must fit the eight Dream Land owners"
+#endif
+
 #define NDS_RENDERER_BENCHMARK_NONE 0
 #define NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP 1
 #define NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX 2
@@ -186,6 +217,21 @@ typedef enum NDSRendererProfileOwner
     NDS_RENDERER_PROFILE_OWNER_COUNT,
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
 } NDSRendererProfileOwner;
+
+#if NDS_RENDERER_SCREEN_SPACE_CENSUS
+#define NDS_RENDERER_SCREEN_SPACE_CENSUS_PART_COUNT 42u
+#define NDS_RENDERER_SCREEN_SPACE_CENSUS_STAGE_OWNER_COUNT 8u
+
+typedef struct NDSRendererScreenSpaceCensusRow
+{
+    u32 identity;
+    u32 triangle_count;
+    u32 area_lt_1px_count;
+    u32 area_lt_4px_count;
+    u32 invalid_count;
+    u64 area2_q8_sum;
+} NDSRendererScreenSpaceCensusRow;
+#endif
 
 /* Diagnostic-only owner census.  Profile 0 never allocates or touches this
  * ledger; profiles 1/2 publish it once per synchronized frame. */
@@ -824,7 +870,11 @@ void ndsRendererProfileSetSourceProvenance(u32 owner_occurrence,
 void ndsRendererProfileRecordFrameBoundaryGXState(u32 status, u32 control);
 void ndsRendererProfileRecordMaterialOperations(u32 count);
 u32 ndsRendererProfileGlobalStateHash(void);
+#if NDS_RENDER_ECONOMY
+void ndsRendererProfileFrameBegin(u32 render_economy_allowed);
+#else
 void ndsRendererProfileFrameBegin(void);
+#endif
 void ndsRendererProfileFramePublish(void);
 extern volatile u32 gNdsRendererFastRunMode;
 extern volatile u32 gNdsRendererFastRunCount;
@@ -832,6 +882,24 @@ extern volatile u32 gNdsRendererFastTriangleCount;
 extern volatile u32 gNdsRendererFastOwnerTriangleCount[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 extern volatile u32 gNdsRendererFastFallbackCount[3];
+#if NDS_RENDERER_SCREEN_SPACE_CENSUS
+extern volatile NDSRendererScreenSpaceCensusRow
+    gNdsRendererScreenSpaceCensus[NDS_RENDERER_PROFILE_OWNER_COUNT]
+                                   [NDS_RENDERER_SCREEN_SPACE_CENSUS_PART_COUNT];
+extern volatile u64 gNdsRendererScreenSpaceStageOwnerTicks[
+    NDS_RENDERER_SCREEN_SPACE_CENSUS_STAGE_OWNER_COUNT];
+extern volatile u32 gNdsRendererScreenSpaceCensusArmed;
+extern volatile u32 gNdsRendererScreenSpaceCensusResetRequested;
+extern volatile u32 gNdsRendererScreenSpaceCensusFrameCount;
+extern volatile u32 gNdsRendererScreenSpaceCensusOverflowCount;
+#endif
+#if NDS_RENDER_ECONOMY
+extern volatile u32 gNdsRendererEconomyConfiguredOwnerMask;
+extern volatile u32 gNdsRendererEconomyActiveOwnerMask;
+extern volatile u32 gNdsRendererEconomyAppliedOwnerMask;
+extern volatile u32 gNdsRendererEconomySkippedRunCount;
+extern volatile u32 gNdsRendererEconomySkippedTriangleCount;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
 extern volatile u32 gNdsRendererM3PreflightAttemptCount;
 extern volatile u32 gNdsRendererM3PreflightSuccessCount;

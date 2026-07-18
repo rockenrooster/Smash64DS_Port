@@ -32,16 +32,19 @@ param(
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [switch]$RendererM2DetailedLedger,
     [switch]$RendererM3Phase0Profile,
+    [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
+    [ValidateRange(0,1)][int]$RenderEconomyMode = 0,
+    [ValidateRange(0,255)][int]$RenderEconomyOwnerMask = 0,
     [ValidateRange(0,1)][int]$Task9FloatCensusMode = 0,
     [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
     [ValidateRange(0,1)][int]$Task9FloatPhase2Mode = 1,
     [ValidateRange(0,1)][int]$Task9StateHashMode = 0,
     [string]$Task9StateHashExportPath = '',
-    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
+    [ValidateRange(0,1024)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
     [ValidateSet('None','KO','Rebirth')]
     [string]$RendererBenchmarkStartEvent = 'None',
-    [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
+    [ValidateRange(5,3600)][int]$RendererBenchmarkTimeoutSeconds = 30,
     [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
@@ -88,6 +91,11 @@ $m3StageOnlyBenchmarkWindow =
     ($RendererFastRunMode -eq 9) -and
     ($RendererBenchmarkStartFrame -eq 438) -and
     ($RendererBenchmarkSamples -eq 8)
+$naturalScreenSpaceCensusWindow =
+    ($RendererScreenSpaceCensusMode -eq 1) -and
+    ($RendererBenchmarkSamples -ge 512) -and
+    ($FoxCpuMode -eq 1) -and
+    ($RendererBenchmarkStartEvent -eq 'None')
 if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
     throw 'OneMinuteMatchProof requires MatchLifecycleProof.'
 }
@@ -117,6 +125,18 @@ if ($RendererM2DetailedLedger -and ($RendererProfileLevel -ne 1)) {
 if ($RendererM3Phase0Profile -and
     (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9))) {
     throw 'RendererM3Phase0Profile requires RendererProfileLevel 1 and RendererFastRunMode 9.'
+}
+if (($RendererScreenSpaceCensusMode -eq 1) -and
+    (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9) -or
+     ($RendererBenchmarkStartFrame -le 0))) {
+    throw 'RendererScreenSpaceCensusMode requires RendererProfileLevel 1, RendererFastRunMode 9, and an exact positive start frame.'
+}
+if (($RenderEconomyMode -eq 1) -and
+    (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9))) {
+    throw 'RenderEconomyMode requires RendererProfileLevel 1 and RendererFastRunMode 9.'
+}
+if (($RenderEconomyMode -eq 0) -and ($RenderEconomyOwnerMask -ne 0)) {
+    throw 'RenderEconomyOwnerMask requires RenderEconomyMode 1.'
 }
 if ($RequireZeroPostGoTextureFence -and -not $HardwareTriangles) {
     throw 'RequireZeroPostGoTextureFence requires HardwareTriangles.'
@@ -388,7 +408,9 @@ function Get-BenchmarkMakeIdentity {
     }
     $required = @(
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
-        'M3_PHASE0_PROFILE', 'RENDERER_BENCHMARK_MODE', 'FAST_RUN_DEFAULT',
+        'M3_PHASE0_PROFILE', 'SCREEN_SPACE_CENSUS', 'RENDER_ECONOMY',
+        'RENDER_ECONOMY_OWNER_MASK', 'RENDERER_BENCHMARK_MODE',
+        'FAST_RUN_DEFAULT',
         'SCENE_MIP_CACHE_LAB', 'BATTLE_STATIC_TEXTURE_DEFAULT',
         'IFCOMMON_HYBRID_OAM', 'TASK9_FLOAT_CENSUS', 'TASK9_FLOAT_ITCM',
         'TASK9_FLOAT_PHASE2', 'TASK9_STATE_HASH',
@@ -406,6 +428,9 @@ function Get-BenchmarkMakeIdentity {
         Profile = [int]$values.PROFILE
         M2DetailedLedger = [int]$values.M2_DETAILED_LEDGER
         M3Phase0Profile = [int]$values.M3_PHASE0_PROFILE
+        ScreenSpaceCensusMode = [int]$values.SCREEN_SPACE_CENSUS
+        RenderEconomyMode = [int]$values.RENDER_ECONOMY
+        RenderEconomyOwnerMask = [int]$values.RENDER_ECONOMY_OWNER_MASK
         RendererBenchmarkMode = [int]$values.RENDERER_BENCHMARK_MODE
         FastRunDefault = [int]$values.FAST_RUN_DEFAULT
         SceneMipCacheLab = [int]$values.SCENE_MIP_CACHE_LAB
@@ -500,10 +525,14 @@ function Complete-Task9StateHashCapture {
 }
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
+$renderEconomyCompileOwnerMask = if ($RenderEconomyMode -eq 1) { 255 } else { 0 }
 $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARNESS=$Harness", '-j16')
 $makeArgs += "NDS_RENDERER_PROFILE_LEVEL=$RendererProfileLevel"
 $makeArgs += "NDS_RENDERER_M2_DETAILED_LEDGER=$([int]$RendererM2DetailedLedger.IsPresent)"
 $makeArgs += "NDS_RENDERER_M3_PHASE0_PROFILE=$([int]$RendererM3Phase0Profile.IsPresent)"
+$makeArgs += "NDS_RENDERER_SCREEN_SPACE_CENSUS=$RendererScreenSpaceCensusMode"
+$makeArgs += "NDS_RENDER_ECONOMY=$RenderEconomyMode"
+$makeArgs += "NDS_RENDER_ECONOMY_OWNER_MASK=$renderEconomyCompileOwnerMask"
 $makeArgs += "NDS_IFCOMMON_HYBRID_OAM=$IFCommonHybridOamMode"
 $makeArgs += "NDS_TASK9_FLOAT_CENSUS=$Task9FloatCensusMode"
 $makeArgs += "NDS_TASK9_FLOAT_ITCM=$Task9FloatItcmMode"
@@ -600,6 +629,12 @@ if ($RendererBenchmarkSamples -gt 0) {
             [int]$RendererM2DetailedLedger.IsPresent -and
         $benchmarkMakeIdentity.M3Phase0Profile -eq
             [int]$RendererM3Phase0Profile.IsPresent -and
+        $benchmarkMakeIdentity.ScreenSpaceCensusMode -eq
+            $RendererScreenSpaceCensusMode -and
+        $benchmarkMakeIdentity.RenderEconomyMode -eq
+            $RenderEconomyMode -and
+        $benchmarkMakeIdentity.RenderEconomyOwnerMask -eq
+            $renderEconomyCompileOwnerMask -and
         $benchmarkMakeIdentity.Task9FloatCensusMode -eq
             $Task9FloatCensusMode -and
         $benchmarkMakeIdentity.Task9FloatItcmMode -eq
@@ -608,7 +643,7 @@ if ($RendererBenchmarkSamples -gt 0) {
             $Task9FloatPhase2Mode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
-        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/IFCommon/Task9 configuration.' `
+        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/Task11/IFCommon/Task9 configuration.' `
         ($benchmarkMakeIdentity | Format-List | Out-String)
     if ($usesPublishedIntrinsicRendererDefaults) {
         Assert-Condition (
@@ -839,6 +874,9 @@ try {
                 $coarseBenchmarkCommands += 'printf "GX_BOUNDARY=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileGXStatusBeforeFlush, gNdsRendererProfileGXControlBeforeFlush, gNdsRendererProfileGXStatusAfterFlush, gNdsRendererProfileGXStatusPostVBlank, gNdsRendererProfileGXControlPostVBlank, gNdsRendererProfileFlushTicks'
                 $coarseBenchmarkCommands += 'printf "TEXTURE_PHASE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileTextureConvertTicks, gNdsRendererProfileTextureUploadTicks, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes, gNdsRendererProfileTexturePairOracleChecks, gNdsRendererProfileTexturePairOracleMismatches, gNdsRendererProfileTextureVBlankQueuedUploads, gNdsRendererProfileTextureVBlankQueuedBytes, gNdsRendererProfileTextureVBlankCommittedUploads, gNdsRendererProfileTextureVBlankCommitTicks, gNdsRendererProfileTextureVBlankOutsideCount, gNdsRendererProfileTextureVBlankFallbackCount, gNdsRendererProfileTextureVBlankStartLine, gNdsRendererProfileTextureVBlankEndLine'
                 $coarseBenchmarkCommands += 'printf "FAST_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererFastRunMode, gNdsRendererFastRunCount, gNdsRendererFastTriangleCount, gNdsRendererFastOwnerTriangleCount[0], gNdsRendererFastOwnerTriangleCount[1], gNdsRendererFastOwnerTriangleCount[2], gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2]'
+                if ($RenderEconomyMode -eq 1) {
+                    $coarseBenchmarkCommands += 'printf "ECONOMY_BENCH=%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererEconomyActiveOwnerMask, gNdsRendererEconomyAppliedOwnerMask, gNdsRendererEconomySkippedRunCount, gNdsRendererEconomySkippedTriangleCount'
+                }
                 if (($RendererProfileLevel -eq 1) -and
                     ($RendererFastRunMode -eq 9)) {
                     $topologyFaultInjectionExpression = if ($RendererM3Phase0Profile) {
@@ -908,11 +946,17 @@ try {
             $benchmarkEventBreakpointCommands = @()
             $benchmarkRuntimeControlCommands = @()
             $benchmarkInitialControlCommands = @()
+            $benchmarkCensusFinishCommands = @()
             $benchmarkWarmInitial = 0
             if (-not $usesPublishedIntrinsicRendererDefaults) {
                 $benchmarkInitialControlCommands +=
                     ('set variable gNdsRendererFastRunMode = {0}' -f
                      $RendererFastRunMode)
+            }
+            if ($RenderEconomyMode -eq 1) {
+                $benchmarkInitialControlCommands +=
+                    ('set variable gNdsRendererEconomyConfiguredOwnerMask = {0}' -f
+                     $RenderEconomyOwnerMask)
             }
             $benchmarkInitialControlCommands +=
                 ('set variable gNdsSObjWallpaperIncrementalMode = {0}' -f
@@ -929,12 +973,27 @@ try {
                         ('set variable gNdsRendererFastRunMode = {0}' -f
                          $RendererFastRunMode)
                 }
+                if ($RenderEconomyMode -eq 1) {
+                    $benchmarkRuntimeControlCommands +=
+                        ('set variable gNdsRendererEconomyConfiguredOwnerMask = {0}' -f
+                         $RenderEconomyOwnerMask)
+                }
                 $benchmarkRuntimeControlCommands +=
                     ('set variable gNdsSObjWallpaperIncrementalMode = {0}' -f
                      $WallpaperIncrementalMode)
                 $benchmarkRuntimeControlCommands +=
                     ('set variable gNdsIFCommonHUDLowerTextMode = {0}' -f
                      $LowerTextHudMode)
+                if ($RendererScreenSpaceCensusMode -eq 1) {
+                    $benchmarkStartGateCommands += @(
+                        ('if gNdsRendererProfileFrameCount == {0}' -f
+                            ($RendererBenchmarkStartFrame - 1)),
+                        'set variable gNdsRendererScreenSpaceCensusResetRequested = 1',
+                        'set variable gNdsRendererScreenSpaceCensusArmed = 1',
+                        'continue',
+                        'end'
+                    )
+                }
                 $benchmarkStartGateCommands +=
                     ('if gNdsRendererProfileFrameCount < {0}' -f
                      $RendererBenchmarkStartFrame)
@@ -970,6 +1029,31 @@ try {
                 $benchmarkStartGateCommands += 'continue'
                 $benchmarkStartGateCommands += 'end'
             }
+            if ($RendererScreenSpaceCensusMode -eq 1) {
+                $benchmarkCensusFinishCommands = @(
+                    ('if $renderer_benchmark_samples == {0}' -f
+                        ($RendererBenchmarkSamples - 1)),
+                    'set variable gNdsRendererScreenSpaceCensusArmed = 0',
+                    'printf "SCREEN_CENSUS_SUMMARY=%u,%u\n", gNdsRendererScreenSpaceCensusFrameCount, gNdsRendererScreenSpaceCensusOverflowCount',
+                    'set $screen_census_owner = 0',
+                    'while $screen_census_owner < 3',
+                    'set $screen_census_part = 0',
+                    'while $screen_census_part < 42',
+                    'if gNdsRendererScreenSpaceCensus[$screen_census_owner][$screen_census_part].triangle_count != 0',
+                    'printf "SCREEN_CENSUS_ROW=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $screen_census_owner, $screen_census_part, gNdsRendererScreenSpaceCensus[$screen_census_owner][$screen_census_part].identity, gNdsRendererScreenSpaceCensus[$screen_census_owner][$screen_census_part].triangle_count, gNdsRendererScreenSpaceCensus[$screen_census_owner][$screen_census_part].area_lt_1px_count, gNdsRendererScreenSpaceCensus[$screen_census_owner][$screen_census_part].area_lt_4px_count, gNdsRendererScreenSpaceCensus[$screen_census_owner][$screen_census_part].invalid_count, (unsigned int)gNdsRendererScreenSpaceCensus[$screen_census_owner][$screen_census_part].area2_q8_sum, (unsigned int)(gNdsRendererScreenSpaceCensus[$screen_census_owner][$screen_census_part].area2_q8_sum >> 32)',
+                    'end',
+                    'set $screen_census_part = $screen_census_part + 1',
+                    'end',
+                    'set $screen_census_owner = $screen_census_owner + 1',
+                    'end',
+                    'set $screen_census_owner = 0',
+                    'while $screen_census_owner < 8',
+                    'printf "SCREEN_CENSUS_STAGE_OWNER=%u,%u,%u\n", $screen_census_owner, (unsigned int)gNdsRendererScreenSpaceStageOwnerTicks[$screen_census_owner], (unsigned int)(gNdsRendererScreenSpaceStageOwnerTicks[$screen_census_owner] >> 32)',
+                    'set $screen_census_owner = $screen_census_owner + 1',
+                    'end',
+                    'end'
+                )
+            }
             $benchmarkEventSampleCommands = if (
                 $RendererBenchmarkStartEvent -ne 'None') {
                 @('printf "RENDER_EVENT=%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsAudioFgmKoTraceCount, $renderer_benchmark_event')
@@ -995,6 +1079,7 @@ try {
                 $rendererBenchmarkCommand
                 $coarseBenchmarkCommands
                 $benchmarkEventSampleCommands
+                $benchmarkCensusFinishCommands
                 $benchmarkScreenshotCommands
                 'set $renderer_benchmark_samples = $renderer_benchmark_samples + 1'
                 'end'
@@ -1395,6 +1480,10 @@ try {
     $task9FloatPairBenchmark = @()
     $task9FloatCostBenchmark = @()
     $task9FloatTimerBenchmark = @()
+    $economyBenchmark = @()
+    $screenSpaceCensusSummary = @()
+    $screenSpaceCensusRows = @()
+    $screenSpaceCensusStageOwners = @()
     $m4FenceFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'M4_FENCE_FINAL' -FieldCount 24)
     $fastFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
@@ -1407,6 +1496,14 @@ try {
         $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
         $texturePhaseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TEXTURE_PHASE_BENCH' -FieldCount 15)
         $fastRunBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'FAST_BENCH' -FieldCount 10)
+        if ($RenderEconomyMode -eq 1) {
+            $economyBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'ECONOMY_BENCH' -FieldCount 5)
+        }
+        if ($RendererScreenSpaceCensusMode -eq 1) {
+            $screenSpaceCensusSummary = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'SCREEN_CENSUS_SUMMARY' -FieldCount 2)
+            $screenSpaceCensusRows = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'SCREEN_CENSUS_ROW' -FieldCount 9)
+            $screenSpaceCensusStageOwners = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'SCREEN_CENSUS_STAGE_OWNER' -FieldCount 3)
+        }
         if ($Task9FloatCensusMode -eq 1) {
             $task9FloatPairBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK9_FLOAT_PAIR' -FieldCount 37)
             $task9FloatCostBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK9_FLOAT_COST' -FieldCount 7)
@@ -2050,6 +2147,9 @@ try {
                 $task9FloatRows = @()
                 $task9Pairs = @()
                 $task9Timer = @()
+                $economySamples = @()
+                $screenSpaceCensusRowValues = @()
+                $screenSpaceCensusStageOwnerValues = @()
                 if ($RendererBenchmarkSamples -gt 0) {
                     Assert-Condition ($rendererBenchmark.Count -eq $RendererBenchmarkSamples) "Renderer benchmark captured $($rendererBenchmark.Count) of $RendererBenchmarkSamples requested warm frames." $gdbStdout
                     $benchFrames = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[2].Value })
@@ -2087,6 +2187,11 @@ try {
                     $benchUploadBytes = @($rendererBenchmark | ForEach-Object { [int64]$_.Groups[15].Value })
                     $benchSetup = @()
                     $benchScan = @()
+                    if ($RenderEconomyMode -eq 1) {
+                        Assert-Condition (
+                            $economyBenchmark.Count -eq $RendererBenchmarkSamples
+                        ) "Renderer economy captured $($economyBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                    }
                     for ($sampleIndex = 0; $sampleIndex -lt $rendererBenchmark.Count; $sampleIndex++) {
                         $sample = $rendererBenchmark[$sampleIndex]
                         $sampleProfile = [int64]$sample.Groups[1].Value
@@ -2098,13 +2203,34 @@ try {
                         $sampleOracle = [int64]$sample.Groups[13].Value
                         $sampleUploadCount = [int64]$sample.Groups[14].Value
                         $sampleUploadBytes = [int64]$sample.Groups[15].Value
-                        $sampleTriangleContract =
-                            if ($m3StageOnlyBenchmarkWindow -or
-                                ($RendererBenchmarkStartEvent -ne 'None')) {
-                                $sampleTriangles -ge 202
+                        $sampleTriangleContract = if (
+                            $RenderEconomyMode -eq 1) {
+                            $economy = Get-Ints $economyBenchmark[$sampleIndex]
+                            $expectedMask = $RenderEconomyOwnerMask
+                            $economySamples += , $economy
+                            if ($expectedMask -eq 0) {
+                                ($economy[0] -eq $sampleFrame) -and
+                                ($economy[1] -eq 0) -and
+                                ($economy[2] -eq 0) -and
+                                ($economy[3] -eq 0) -and
+                                ($economy[4] -eq 0) -and
+                                ($sampleTriangles -eq 828)
                             } else {
-                                $sampleTriangles -eq 828
+                                ($economy[0] -eq $sampleFrame) -and
+                                ($economy[1] -eq $expectedMask) -and
+                                ($economy[2] -eq $expectedMask) -and
+                                ($economy[3] -gt 0) -and
+                                ($economy[4] -gt 0) -and
+                                ($sampleTriangles -eq (828 - $economy[4]))
                             }
+                        } elseif ($naturalScreenSpaceCensusWindow) {
+                            $sampleTriangles -ge 202
+                        } elseif ($m3StageOnlyBenchmarkWindow -or
+                            ($RendererBenchmarkStartEvent -ne 'None')) {
+                            $sampleTriangles -ge 202
+                        } else {
+                            $sampleTriangles -eq 828
+                        }
                         Assert-Condition ($sampleProfile -eq $RendererProfileLevel -and $sampleTriangleContract -and (($RendererProfileLevel -ge 2 -and $sampleOracle -eq 2484) -or ($RendererProfileLevel -lt 2 -and $sampleOracle -eq 0))) 'Renderer benchmark sampled the wrong profile or violated the selected stage-only/transient or exact 828-triangle/2,484-oracle contract.' $gdbStdout
                         Assert-Condition (Test-RendererUploadPair $sampleUploadCount $sampleUploadBytes) "Renderer benchmark sampled an invalid texture upload pair $sampleUploadCount/$sampleUploadBytes at frame $sampleFrame." $gdbStdout
                         if ($sampleIndex -gt 0) {
@@ -2116,6 +2242,61 @@ try {
                         $benchScan += $sampleDL - $sampleSubmit
                     }
                     $uploadSequenceHash = Get-RendererUploadSequenceHash $benchUploadCount $benchUploadBytes
+                    if ($RendererScreenSpaceCensusMode -eq 1) {
+                        Assert-Condition (
+                            $screenSpaceCensusSummary.Count -eq 1 -and
+                            $screenSpaceCensusStageOwners.Count -eq 8
+                        ) 'Screen-space census omitted its summary or eight stage-owner tick rows.' $gdbStdout
+                        $censusSummaryValues = Get-Ints $screenSpaceCensusSummary[0]
+                        Assert-Condition (
+                            $censusSummaryValues[0] -eq $RendererBenchmarkSamples -and
+                            $censusSummaryValues[1] -eq 0 -and
+                            $screenSpaceCensusRows.Count -gt 0
+                        ) 'Screen-space census did not cover the exact sampled window without overflow.' $gdbStdout
+                        $screenSpaceCensusRowValues = @(
+                            $screenSpaceCensusRows | ForEach-Object {
+                                , @(Get-Ints $_)
+                            })
+                        $screenSpaceCensusStageOwnerValues = @(
+                            $screenSpaceCensusStageOwners | ForEach-Object {
+                                , @(Get-Ints $_)
+                            })
+                        $censusStageTriangles = [int64](
+                            ($screenSpaceCensusRowValues |
+                                Where-Object { $_[0] -eq 0 } |
+                                ForEach-Object { [int64]$_[3] } |
+                                Measure-Object -Sum).Sum)
+                        $censusMarioTriangles = [int64](
+                            ($screenSpaceCensusRowValues |
+                                Where-Object { $_[0] -eq 1 } |
+                                ForEach-Object { [int64]$_[3] } |
+                                Measure-Object -Sum).Sum)
+                        $censusFoxTriangles = [int64](
+                            ($screenSpaceCensusRowValues |
+                                Where-Object { $_[0] -eq 2 } |
+                                ForEach-Object { [int64]$_[3] } |
+                                Measure-Object -Sum).Sum)
+                        $censusInvalidTriangles = [int64](
+                            ($screenSpaceCensusRowValues |
+                                ForEach-Object { [int64]$_[6] } |
+                                Measure-Object -Sum).Sum)
+                        $censusStageOwnerCoverage = @(
+                            $screenSpaceCensusStageOwnerValues |
+                                Where-Object {
+                                    ($_[0] -ge 0) -and ($_[0] -lt 8) -and
+                                    (($_[1] -ne 0) -or ($_[2] -ne 0))
+                                }).Count
+                        Assert-Condition (
+                            $censusStageTriangles -eq
+                                (202 * $RendererBenchmarkSamples) -and
+                            $censusMarioTriangles -gt 0 -and
+                            ($censusMarioTriangles % 320) -eq 0 -and
+                            $censusFoxTriangles -gt 0 -and
+                            ($censusFoxTriangles % 306) -eq 0 -and
+                            $censusInvalidTriangles -eq 0 -and
+                            $censusStageOwnerCoverage -eq 8
+                        ) "Screen-space census lost exact stage coverage, whole fighter packets, valid projections, or stage-owner timing (stage=$censusStageTriangles Mario=$censusMarioTriangles Fox=$censusFoxTriangles invalid=$censusInvalidTriangles owners=$censusStageOwnerCoverage)." $gdbStdout
+                    }
                     $benchmarkMetricSummary = "Renderer benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) median/p95 ticks present=$((Get-Median $benchPresent))/$((Get-Percentile95 $benchPresent)) draw=$((Get-Median $benchDraw))/$((Get-Percentile95 $benchDraw)) stage=$((Get-Median $benchStage))/$((Get-Percentile95 $benchStage)) material=$((Get-Median $benchMaterial))/$((Get-Percentile95 $benchMaterial)) matrix=$((Get-Median $benchMatrix))/$((Get-Percentile95 $benchMatrix)) dl=$((Get-Median $benchDL))/$((Get-Percentile95 $benchDL)) texture=$((Get-Median $benchTexture))/$((Get-Percentile95 $benchTexture)) submit=$((Get-Median $benchSubmit))/$((Get-Percentile95 $benchSubmit)) vertex=$((Get-Median $benchVertex))/$((Get-Percentile95 $benchVertex)) setup=$((Get-Median $benchSetup))/$((Get-Percentile95 $benchSetup)) scan=$((Get-Median $benchScan))/$((Get-Percentile95 $benchScan)) uploads=$(Get-MedianP95 $benchUploadCount)/$(Get-MedianP95 $benchUploadBytes) uploadSequenceSha256=$uploadSequenceHash"
                     $benchmarkChurnSummary = "Renderer benchmark churn (adjacent changes/distinct values): present=$((Get-AdjacentChurn $benchPresent)) draw=$((Get-AdjacentChurn $benchDraw)) stage=$((Get-AdjacentChurn $benchStage)) material=$((Get-AdjacentChurn $benchMaterial)) matrix=$((Get-AdjacentChurn $benchMatrix)) dl=$((Get-AdjacentChurn $benchDL)) texture=$((Get-AdjacentChurn $benchTexture)) submit=$((Get-AdjacentChurn $benchSubmit)) vertex=$((Get-AdjacentChurn $benchVertex)) setup=$((Get-AdjacentChurn $benchSetup)) scan=$((Get-AdjacentChurn $benchScan))"
                     # Profile 0 intentionally emits only the non-nested
@@ -2312,7 +2493,25 @@ try {
                                 Assert-Condition ($fastRun[2] -eq 70 -and $fastRun[3] -eq 686 -and $fastRun[4] -eq 60 -and $fastRun[5] -eq 320 -and $fastRun[6] -eq 306 -and $fastRun[7] -eq 29 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "Production native fighter owner did not preserve exact 70-run/686-triangle accounting, 60/320/306 owner partition, and 29/0/0 fallback partition at frame $frame (actual=$($fastRun -join ','))." $gdbStdout
                             } elseif (($RendererProfileLevel -eq 1) -and
                                       ($RendererFastRunMode -eq 9)) {
-                                if ($RendererBenchmarkStartEvent -ne 'None') {
+                                if ($naturalScreenSpaceCensusWindow) {
+                                    $naturalFighterTrianglesValid =
+                                        ($fastRun[5] -in @(0, 320)) -and
+                                        ($fastRun[6] -in @(0, 306))
+                                    $naturalNonFastTriangles =
+                                        [int64]$render[11] - [int64]$fastRun[3]
+                                    Assert-Condition (
+                                        $fastRun[2] -ge 54 -and
+                                        $fastRun[3] -eq
+                                            (202 + $fastRun[5] + $fastRun[6]) -and
+                                        $fastRun[4] -eq 202 -and
+                                        $naturalFighterTrianglesValid -and
+                                        $naturalNonFastTriangles -ge 0 -and
+                                        $naturalNonFastTriangles -le 384 -and
+                                        $fastRun[7] -eq 0 -and
+                                        $fastRun[8] -eq 0 -and
+                                        $fastRun[9] -eq 0
+                                    ) "M3 natural census window lost the exact stage/whole-fighter owner packets, bounded non-fast fighter/effect geometry, or zero-fallback accounting at frame $frame (actual=$($fastRun -join ',') rendered=$($render[11]))." $gdbStdout
+                                } elseif ($RendererBenchmarkStartEvent -ne 'None') {
                                     $eventFighterTrianglesValid =
                                         ($fastRun[5] -in @(0, 320)) -and
                                         ($fastRun[6] -in @(0, 306)) -and
@@ -2866,6 +3065,12 @@ try {
                             $benchmarkMakeIdentity.M2DetailedLedger
                         rendererM3Phase0Profile =
                             $benchmarkMakeIdentity.M3Phase0Profile
+                        rendererScreenSpaceCensusMode =
+                            $benchmarkMakeIdentity.ScreenSpaceCensusMode
+                        renderEconomyMode =
+                            $benchmarkMakeIdentity.RenderEconomyMode
+                        renderEconomyOwnerMask =
+                            $benchmarkMakeIdentity.RenderEconomyOwnerMask
                         runtimeM2DetailedLedger =
                             [int]$rendererM2DetailedLedgerMarker.Groups[1].Value
                         rendererBenchmarkMode =
@@ -2966,6 +3171,10 @@ try {
                             foxCpuMode = $FoxCpuMode
                             wallpaperIncrementalMode = $WallpaperIncrementalMode
                             lowerTextHudMode = $LowerTextHudMode
+                            rendererScreenSpaceCensusMode =
+                                $RendererScreenSpaceCensusMode
+                            renderEconomyMode = $RenderEconomyMode
+                            renderEconomyOwnerMask = $RenderEconomyOwnerMask
                             samples = [ordered]@{
                                 renderer = @($rendererBenchmark | ForEach-Object {
                                     , @(Get-Ints $_)
@@ -2973,6 +3182,11 @@ try {
                                 coarse = @($coarseSamples)
                                 texturePhases = @($texturePhaseSamples)
                                 fastRaw = @($fastRunSamples)
+                                economy = @($economySamples)
+                                screenSpaceCensusRows =
+                                    @($screenSpaceCensusRowValues)
+                                screenSpaceCensusStageOwners =
+                                    @($screenSpaceCensusStageOwnerValues)
                                 m3Stage = @($m3StageSamples)
                                 m3Phase0 = @($m3Phase0Samples)
                                 g2State = @($g2StateSamples)

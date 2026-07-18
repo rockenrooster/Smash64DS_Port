@@ -43,6 +43,78 @@ Input/state:              canonical idle realtime BattleShip scene
 Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png
 ```
 
+## 2026-07-17 - Task 11 screen-space census and stage economy
+
+```text
+IDEA ID: TASK11-SCREEN-CENSUS-STAGE-ECONOMY-20260717
+SOURCE / SCOPE:
+  BattleShip grdisplay.c:52-141 supplies strict stage callback order;
+  grpupupu.c:637-690 maps owners 4/5/6/7 to Whispy eyes, Whispy mouth,
+  back flowers, and front flowers. Gameplay and decomp sources are unchanged.
+  The profile-1-only census uses integer Q4 screen coordinates and Q8 doubled
+  area; profile 0 and default NDS_RENDER_ECONOMY=0 compile the work out.
+IDENTITY / WINDOWS:
+  Census ROM/ELF SHA-256:
+    E23D8ACAB0692A0BD87174BEC1F1CE7FFEE231B57E6B6E09F1F381A28235E0E7
+    7FF5C449F804D115A64E81BC7EEF86F1D5C290F991E6AE38BA0B01C977AFE791
+  Exact idle frames 600..607 use Fox frozen for the canonical 828-triangle
+  partition. Exact natural frames 438..1037 use the imported level-3 Fox and
+  span 600 live presentations. Stage coverage is 121,200 = 202*600; Mario is
+  165,120 = 516 whole 320-triangle packets; Fox is 183,600 = 600 whole
+  306-triangle packets; invalid projections and census overflow are zero.
+  Extending the window through frame 1111 encounters the already-owned Whispy
+  post-GO texture debt in KNOWN_ISSUES, so that unrelated gate was not weakened.
+RANKED NATURAL CENSUS (ticks/frame * subpixel fraction):
+  owner/source                 tri/f   <1 px2   <4 px2  ticks/f  score1/score4
+  5 Whispy mouth                   8    43.62%    43.62%    7,342   3,203/3,203
+  6 back flowers                   6     5.97%    27.25%    8,565     511/2,334
+  1 stage layer 1                 76     2.52%     9.28%   14,808     373/1,374
+  3 stage layer 3                 28     0.60%     1.41%   19,315     116/271
+  2 stage layer 2                 17     0.23%     1.21%   11,623      27/140
+  0 stage layer 0                 54     0.01%     0.11%   54,474       8/62
+  4 Whispy eyes                    4     0.00%     0.00%    2,955       0/0
+  7 front flowers                  9     0.00%     0.00%   12,746       0/0
+  Idle 600..607 independently ranks owner 6/5/1 by the <4-pixel score
+  (2,867/1,828/578). Fighter planning only: idle Mario/Fox <4 fractions are
+  54.57%/53.55%; natural fractions are 76.99%/77.63%. No fighter cut is made.
+SAME-ROM A/B/A (frames 600..607; ROM/ELF SHA-256):
+    44A9F913525802A6A5157131B066572C589951B72A6245CF89CFBD4123EFF972
+    58942D83340FCEFFC30078CC272BE7376A40399124A136B297A9D56F84E91294
+  Runtime mask 0 A and repeated A are identical: stage/draw/active P50
+  478,368/882,176/887,040 ticks and a pixel-exact native top-screen crop.
+PER-OWNER RATCHETS (stage/draw/active P50; channel delta >=25):
+  owner 5: 471,296/875,008/879,936; -7,072/-7,168/-7,104 ticks;
+           8 triangles and 4 runs skipped; 117/49,152 meaningful pixels;
+           protected top-left 0/7,200 changed; all visibility, named-region,
+           horizontal-detail, and required-region gates green. KEEP.
+  owner 6: 470,048/873,760/878,688; -8,320/-8,416/-8,352 ticks;
+           6 triangles skipped; 1,019/49,152 pixels. REVERT (>500).
+  owner 1: 463,680/867,456/872,384; -14,688/-14,720/-14,656 ticks;
+           76 triangles skipped; 6,323/49,152 pixels and 540 protected-region
+           changes. REVERT (>500 and protected region changed).
+DEFAULT / PAUSE / ORDER CONTRACT:
+  Retained mask is owner 5 (0x20), but NDS_RENDER_ECONOMY defaults OFF. A full
+  default-off rebuild is byte-identical to the frozen control ROM SHA-256
+  1D55C7F38B1E987488882CFC51FA36B5DE7E9F457F24627D231BC6DBD8F11018
+  and keeps 828 triangles on every canonical frame. The task manager samples
+  the real BattleShip game_status once per presented frame; only GO activates
+  the mask, so Pause/Unpause/Wait/End render the full owner set. Skipped runs
+  advance the same no-Z/foreground painter cursor and source counters; all
+  remaining owner order is unchanged.
+EVIDENCE:
+  artifacts/performance/2026-07-17_task11-census-idle600.json
+  artifacts/performance/2026-07-17_task11-census-natural438-1037.json
+  artifacts/performance/2026-07-17_task11-economy-lab-control-repeat-idle600.json
+  artifacts/performance/2026-07-17_task11-economy-owner5-idle600.json
+  artifacts/performance/2026-07-17_task11-economy-owner6-idle600.json
+  artifacts/performance/2026-07-17_task11-economy-owner1-idle600.json
+  artifacts/performance/2026-07-17_task11-default-off-rebuild-idle600.json
+  artifacts/visibility/2026-07-17_task11-economy-lab-control-repeat-idle607.png
+  artifacts/visibility/2026-07-17_task11-economy-owner5-idle607.png
+  artifacts/visibility/2026-07-17_task11-census-natural1037.png
+KEEP / REWORK / REVERT: KEEP owner 5 only; owner 6 and owner 1 reverted alone.
+```
+
 ## 2026-07-17 - natural KO and rebirth phase baseline
 
 ```text
