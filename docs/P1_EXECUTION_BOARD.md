@@ -31,16 +31,48 @@ GX work so each owner can be projected from its matching on-device bench.
 
 | Resource / bench | Fixed work | melonDS 1.1 ticks | Retail DS ticks | HW / melonDS multiplier |
 |---|---|---:|---:|---:|
-| CPU-ITCM / ALU-ITCM | 1,000,000 dependent chains, 32 adds each | 17,501,568 | TBD | TBD |
-| CPU-mainRAM / MEM-THMB | 8,388,608 loads over 256 KiB | 33,557,632 | TBD | TBD |
-| CPU-mainRAM / MEM-ARM | identical loads and buffer, ARM state | 37,752,448 | TBD | TBD |
-| CPU-cache control / CACHE4K | same load count over 4 KiB | 33,565,696 | TBD | TBD |
-| GX / GX-BRST | 10,000 immediate triangles, flush every 2,048 | 2,729,728 | TBD | TBD |
-| CARD (optional) | no safe media-independent run admitted | not run | TBD | TBD |
+| CPU-ITCM / ALU-ITCM | 1,000,000 dependent chains, 32 adds each | 17,501,568 | 18,002,048 | 1.03 |
+| CPU-mainRAM / MEM-THMB | 8,388,608 loads over 256 KiB | 33,557,632 | 50,170,432 | 1.50 |
+| CPU-mainRAM / MEM-ARM | identical loads and buffer, ARM state | 37,752,448 | 45,362,752 | 1.20 |
+| CPU-cache control / CACHE4K | same load count over 4 KiB | 33,565,696 | 29,676,224 | 0.88 |
+| GX / GX-BRST | 10,000 immediate triangles, flush every 2,048 | 2,729,728 | 2,378,432 | 0.87 |
+| CARD (optional) | no safe media-independent run admitted | not run | not run | — |
 
-Until the paired hardware run exists, use `840,000` melonDS ticks as the
-provisional locked-30 hardware budget only for planning. It is not a promotion
-or rejection gate and does not authorize changing gameplay semantics.
+Retail column source: Tyler's device photo
+`artifacts/visibility/2026-07-17_233353-8578811_task10-hardware-calibration_real_nds.jpg`
+(claude-read 2026-07-18). Two photo digits were disambiguated by physics, not
+guessed: ALU-ITCM must exceed the 16,777,216-bus-tick single-issue floor for
+33,554,432 dependent adds, fixing the second digit to 8 (18,002,048); MEM-THMB
+matches the CACHE4K hardware floor plus ~20 bus ticks per 32-byte line fill
+(1,048,576 fills), fixing 50,170,432 over 58,170,432. MEM-ARM mid digits carry
+about +-2% photo uncertainty; its ratio is 1.15-1.22 under any plausible read.
+
+Calibrated findings (2026-07-18):
+
+1. melonDS 1.1 does not model the ARM9 dcache: it charges the 4 KiB and
+   256 KiB load loops identically (0.02% apart) while hardware runs the
+   cache-resident loop 41% faster. Cache-locality wins are invisible in
+   melonDS and must be measured on hardware (TASK 12 hardware-primary rule).
+2. The hardware tax is streaming/miss-heavy main-RAM traffic: x1.50. This is
+   the bucket most of our draw-prep and update CPU work lives in.
+3. The ARM/Thumb ranking inverts between emulator and hardware: melonDS
+   penalizes ARM code in main RAM continuously (no icache model); hardware
+   runs the icache-resident ARM loop faster than the Thumb one. Hot,
+   cache-resident functions prefer ARM; only the cold bulk favors Thumb.
+   Neither bench measures large-footprint code streaming, so TASK 12's
+   on-workload hardware A/B remains the decisive test.
+4. GX transport is cheaper on hardware (x0.87): moving work onto the GX
+   (TASK 8 CUT A style) is worth more on-device than melonDS credits, and
+   GX FIFO DMA feeding is deprioritized (no hidden stall tax observed).
+
+Projection rule for ledger planning: hardware ticks ~= ITCM-bucket x1.03
++ main-RAM CPU bucket x1.2-1.5 (1.5 when data-streaming/miss-heavy)
++ GX-transport x0.87. The blended whole-frame observation remains ~0.75x
+fps; the residual beyond these buckets is attributed to large-footprint
+icache misses that no small-loop bench captures. Keep `840,000` melonDS
+ticks as the locked-30 hardware planning budget, weighting main-RAM CPU
+cuts x1.5 toward it. It is not a promotion or rejection gate and does not
+authorize changing gameplay semantics.
 
 Hardware operator packet:
 
@@ -77,7 +109,7 @@ profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
 | Integration/release | July 17 Latest + one-minute pass | live tree | integrated battle ROM, countdown, effects, audio, two-ROM contract, and current terminal lifecycle | no runner active |
-| Renderer implementation | Tasks 8-10 banked; Task 11 owns the renderer TU | isolated renderer worktree plus shared integration tree | Task 8 CUT A is the retained constant-depth painter path, Task 9 keeps stock-libgcc ITCM plus exact `fcmpeq`, and Task 10 supplies the hardware lab/HUD. Task 11 is the sole current renderer writer; Task 12 waits for that lane to clear | renderer-economy runner only |
+| Renderer implementation | Task 14 KEEP; renderer lane clear | shared integration tree | Task 12 Phase A is landed and its Phase B hardware verdict remains pending. Task 13 closed REVERT. Task 14 now banks an exact generation-gated dense first-visit plan; no renderer-TU task remains active | no runner active |
 | Gameplay + QA | Playtest review fixed / manual candidate retest pending | shared live tree / disjoint files | Down+A is source-fixed at the shared ClearAll seam. Human-P2 Fox completes all nine Down-Air callbacks and exits naturally; Mario completes the same focused route with eight live imported CPU updates. Latest then passes canonical mode 163, two-ROM publication, runtime, registry, renderer/ITCM, and visual gates. Countdown also remains fixed | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
 
@@ -112,6 +144,12 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | M3 complete stage AOT, 150–250K ticks | Task 6 accumulated KEEP at 489K / STOP | Renderer | R0→Cut D moves combat stage 539,616/539,904 → 489,184/489,536 and draw+flush P50 1,297,056 → 1,245,664. Cut C and Cut D each preserve exact 121/828, 8/255/57/42/54/202/49/4, cross 5/10/15, zero fallback/fence/conservation, and 0/49,152 native pixels | Bank both gains. The remaining 455,664-tick gap to ~790K is required work or lies behind forbidden packet/order/poly/translucency boundaries; do not manufacture another cut from nested profiler noise |
 | Task 8 CUT A constant-depth GX painter | PASS / already canonical | Renderer | The requested mechanism had already landed at the pause/depth root-cause fix: each no-Z band loads a matrix whose Z row is the exact band constant times W, so the GX divider produces constant post-divide depth without the retired CPU `div64` projector. The subsequent exact AOT-shift and zero-shift specializations saved another 22,016/22,208 and 14,304/14,080 stage ticks | Reconcile as completed; do not add a second constant-depth path. Retain the depth trace, 121/828 census, zero fallback/fence/conservation, and pixel gates |
 | Task 9 bit-exact soft-float | PASS / Phase 1 16.54%, Phase 2 8.86% owner gains | Renderer + Gameplay | Phase 1 keeps six byte-identical GCC 15.2.0 objects (1,952 ITCM bytes). Phase 2 replaces only the 556.25-calls/update `__aeabi_fcmpeq` with a 36-byte, nine-instruction ARM leaf: source-update 236,640/238,016 → 215,680/217,024 P50/P95. Host proof covers 16,777,216 directed plus 100,000,000 deterministic random pairs; the standalone ARM9 ROM covers 2,916 directed pairs; 3,892 full-state rows match exactly | Keep both phases. ITCM is 28,088/32,768 with 4,680 bytes free. The renamed stock helper remains the linked golden only in Phase 2; Phase 1 proves it absent. Main-RAM coroutine stack finding remains report-only |
+| Task 12 renderer code placement | EXACT / hardware verdict pending | Renderer | Phase A shrinks main renderer text 79,068 → 60,694 bytes while keeping renderer object/final ITCM exactly 24,364/28,088 bytes; ARM/Thumb frame delta is 0/49,152. melonDS regresses loop 1,680,448 → 2,240,640 and draw 1,150,944 → 1,765,152, which is calibration evidence only. Phase B places the measured 1,772-byte raw-run and 5,268-byte fighter-root kernels in a sorted 7,040-byte region, stays 0/49,152, and saves 2,112 draw/active ticks in melonDS. Hardware ROM pairs and operator instructions are in the Task 12 ledger row | Hardware is the only keep referee. Phase A uses ARM control vs Thumb; Phase B uses Thumb vs hot-text. If blanket Thumb loses on device, pin the hottest non-ITCM functions ARM before abandoning Phase A. Hardware cells remain `PENDING-HW`; never infer them from melonDS |
+| Task 13 fighter decimation pack | CLOSED / REVERT | Renderer + Assets | The deterministic 17/32-part pack reduced natural Mario/Fox fighter triangles 626→402. Even mask 0 paid +5,120 draw ticks; the best mask `0x89` removed 64 triangles but regressed draw +3,168 and active +3,328, and the final cold-placement/Fox-skip salvage regressed every paired frame by 3,136–3,264 ticks. Runtime, tools, and derived assets were removed | Do not revive this hash lookup/ITCM design. The performance gate was decisive before visual sign-off or any default-on discussion |
+| Task 14 dense-preparation reuse | KEEP / exact | Renderer | A 312-entry generation-gated first-visit plan removes the per-frame 606-corner mask walk while leaving matrices, materials, texture selection, alpha, color, UV, and near-plane work live. Stage is 904,928/905,088 → 895,872/896,000 (-9,056/-9,088); draw is -9,280/-8,704 and active is -9,248/-8,704. All eight paired stage frames improve, native pixels are 0/49,152, production is full1/hit437→444 with zero mismatch/inject/revalidate, and the fault lab is full2/hit436→443/mismatch1/inject1/revalidate1 | Bank the 736-byte BSS / zero-ITCM cut. Keep the exact 55-offset/312-permutation/uniform-alpha host contract and fail-closed publication checker; all live prepared attributes remain per-frame |
+| Task 16 extended bit-exact soft-float | THREE CANDIDATES QUALIFIED / integrated; `fmul` pending | Gameplay + Toolchain | Compare (236 bytes), `i2f` (92), and `fadd`/`fsub` (404) have zero-mismatch software proofs. `i2f` covers all 2^32 host inputs plus 393,256 ARM9 cases and saves 2,304/2,368 update ticks; add/sub covers 200,005,832 ARM9 plus 233,554,432 host results and saves 1,280/1,280. All retain 3,892/3,892 state rows. The combined current link is measured at 28,088→28,820 ITCM: 732 raw and 732 final bytes, with zero ITCM fill in both maps | Keep every candidate default OFF and the append-only shared-object symbol filters. Run one combined SUPREME state hash after qualifying or decisively rejecting the still-unresolved `fmul` scope |
+| Task 17 update hot-text round 2 | PENDING-HW / isolated pair ready | Gameplay + Toolchain | The census, selected hot sections, profile-1 control/candidate ROM pair, and device packet are complete in isolated commit `910662d28c`; the pair is under `D:\Stuff\DevFolder\Smash64DS_Port_task17_census\builds\task17-hardware-hud-pair` | The real-device UPD row is the only referee. Do not cherry-pick the candidate without a hardware win; melonDS remains report-only |
+| Task 18 KO wallpaper spike | CLOSED / bad baseline | Renderer + Platform | Production incremental mode measures KO wallpaper at 302,880/357,824 versus steady 292,224/360,000: +10,656/-2,176, not the cited 547,584/547,648 full-raster control. No runtime change is justified | Keep incremental mode and the affine lab retired. The Task 18 ledger row is the durable correction |
 | M4 zero gameplay conversion/preparation | Latest startup + lifecycle pass | Renderer | Latest canonical frame 212 retains 22 textures / 131,072 bytes, records 646 cache hits, zero hot conversion/upload, and all fence counts zero. The Task 9 one-minute proof reaches Results with one normal teardown and zero post-GO fence work | Keep the 57,344-byte total overlay texture layout |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / full runtime gate pass | Renderer + QA | The source-backed point sample changes 49 atlas pixels only inside the 12x9 `ShadowGo`; all five GO frames retain its 70-pixel count plus 10/10/10 draws/queued/emitted, 57,344 texture bytes, 608 palette bytes, and zero hot conversion/upload. The large-GO mismatch was a stale crop lock after the source-light repair: only 125/26,400 pixels changed, all inside Mario's 22x14 area, while the GO RGB555 payload remained `05330f47...`. The rebuilt full verifier passes with crop `d968b0cc...`, GO `3 OBJ + 10 quads`, and 31,168 OBJ bytes | Keep both accepted crop locks and the source-derived DS assets; no GO source change was warranted |

@@ -4436,3 +4436,167 @@ EVIDENCE:
   artifacts/performance/2026-07-17_task9-state-phase2-fcmpeq.json
 KEEP / REWORK / REVERT: KEEP PHASE 2 FCMPEQ / INTEGRATED BOUNDARY PENDING
 ```
+
+## 2026-07-18 - Task 18 production KO falsifier
+
+```text
+IDEA ID: TASK18-PRODUCTION-KO-FALSIFIER-20260718
+BOUND / IDENTITY:
+  Falsify the cited KO wallpaper spike on the retained production path; make no
+  runtime change. The isolated checkout is pinned to
+  19fdafa48d5e4dca23d2d0af212737a756001af8. Mode 163 uses profile 1, fast
+  mode 9, static AOT 1, live Fox, WallpaperIncrementalMode=1, and Phase 0.5.
+  ROM/ELF/map SHA-256 values are
+  3E4A909AE0D6C87FE3728206BF611BDA6DDE08B9B3628C20D539369612363A1B /
+  1DBA648A3F7E4581A24F71AFEB52998CC393327F2EC450B528ADA206F8ADBCC8 /
+  ECDA8D11D560EBA77ADCF5CA1D82D96920A859D04BF85536BA99154CB76C109A.
+  melonDS 1.1 is interpreter/software-renderer/unthrottled; executable/config
+  SHA-256 values are
+  04738277BA1D7EA0B7408608755D746193A68A9BFA628E2759140A9F2D5AB109 /
+  B4AA5C791B4D8CC94E7EBC4AC77514CCE3B83D5976A726E46FD5FF29B714B2F3.
+
+SAME-ROM PRODUCTION FALSIFIER:
+  Natural KO frames 708..715 (logic 1024..1038) measure wallpaper
+  302,880/357,824 P50/P95 ticks. Steady frames 438..445 measure
+  292,224/360,000, so KO is +10,656/-2,176 ticks (+3.65%/-0.60%). Every KO
+  frame retains 828 source triangles plus 16 transient death-effect triangles,
+  zero tile/texture uploads, and the resident source cache. Decode/build is 1,
+  decode hits are 714, fast draws/fallbacks are 715/0, and all eight KO frames
+  change the camera-derived final key while incremental remapping writes only
+  the changed pixel subset after the first frame.
+
+CLOSURE:
+  The cited 547,584/547,648 wallpaper row is
+  WallpaperIncrementalMode=0, a forced full-raster oracle, not production. Its
+  source JSON SHA-256 is
+  C6926AAD99218EF3E8282D3D85839CAE175B4273AAB05B937987E18EB89C125A.
+  Task 18 closes as a bad full-raster-oracle baseline/documentation defect; no
+  runtime fix is justified. The affine lab is disabled and unreachable in the
+  measured ROM, and affine remains retired.
+
+EVIDENCE:
+  artifacts/performance/2026-07-18_task18-production-ko-incremental-phase05.json
+    AC45C244FC4067C29615F715D7E710C65D19AC75E4D1AA79F41FDCFAC0E63FC8
+  artifacts/performance/2026-07-18_task18-production-steady438-445-phase05.json
+    29A3104F61DEEA6C883B891F1BDBA6FE7014F6348E4B0DD15DB3A03F3C62AAA1
+  artifacts/visibility/2026-07-18_task18-production-ko-incremental-frame715.png
+    7EB1B82516BCB96BC70DBCA9CDCA9CE75549C05CA09D7B890CD1E858FA64ECCF
+KEEP / REWORK / REVERT: CLOSE BAD BASELINE / AFFINE REMAINS RETIRED
+```
+
+## 2026-07-18 - Task 13 fighter decimation pack
+
+```text
+IDEA ID: TASK13-FIGHTER-DECIMATION-PACK-20260718
+BOUND / IDENTITY:
+  Test the requested deterministic derived-asset LOD substitution on the
+  natural mode-163 Mario/Fox window. The generator admitted 17 of 32 parts and
+  reduced the pair's fighter payload from 626 to 402 triangles. Pack/manifest
+  SHA-256 values are
+  5DAC5E5C518284D4EA464AAF3E5B81E05A9740CA30D3B04E9675ECECC264A67B /
+  EB80B3D4ACABF49C60E74D8D59A40A2D3B3C698BFFB824A92FA6E4EABF2239B0.
+  The aligned control ROM SHA-256 is
+  D9072000D678DA2780A52B17CB5F720D06972822D57FF3980B83831901FC4446.
+
+SYNCHRONIZED EIGHT-FRAME A/B, FRAMES 438..445:
+  The aligned source control measures draw 1,743,200/1,833,984 P50/P95,
+  active 1,748,032, stage 791,872, Mario 299,200, Fox 371,072, and 828
+  total triangles. Enabling the runtime with part mask 0 changes no geometry
+  but measures draw 1,748,320, active 1,753,312, stage 794,432, Mario
+  300,480, and Fox 372,480: a fixed +5,120 draw-tick loss.
+
+  The best three one-run Mario parts, mask 0x89, remove 64 triangles
+  (626→562) but measure draw 1,746,368/1,837,184, active 1,751,360,
+  stage 794,464, Mario 298,368, and Fox 372,480. Against control that is
+  +3,168 draw P50 and +3,328 active despite the local Mario reduction.
+  Adding a fourth part (mask 0x99, 98 triangles removed) regresses draw by
+  4,192; the full pack regresses it by 7,360. Moving cold support code out of
+  ITCM and skipping the unused Fox lookup still leaves every best-three paired
+  frame 3,136–3,264 ticks slower. The design costs about 3,216 ITCM bytes.
+
+DECISION:
+  REVERT. More removed geometry monotonically increases the loss and the
+  smallest useful subset cannot repay the fixed hash-lookup/substitution cost.
+  The decisive performance gate failed before Tyler visual sign-off; no
+  default-on or user-facing flag-ON ROM is warranted. All Task 13 runtime,
+  tooling, generated pack/manifest, and generated include changes were removed.
+
+EVIDENCE:
+  artifacts/performance/2026-07-18_task13-control-aligned-438-445.json
+    D99D77A0E6463B25BA021AEEE2585F1514B2C30221A336D5346ED3054A138681
+  artifacts/performance/2026-07-18_task13-lod-mask0-438-445.json
+    27E7546BE2EEB55DC023CDA46DAC281427FAF124BDF21857AE74809205613AE2
+  artifacts/performance/2026-07-18_task13-lod-best-three-438-445.json
+    D4989476403A61858E3D3BDAFFD0341366BAEB8B280F54510F49DDE1D8A83B20
+  artifacts/performance/2026-07-18_task13-lod-best-three-placed-438-445.json
+    1274FC75717F076960278D9FCD2A5EC3F63C2F96C34A542470834361D9E21590
+KEEP / REWORK / REVERT: REVERT / RUNTIME, TOOLS, AND DERIVED ASSETS REMOVED
+```
+
+## 2026-07-18 - Task 14 generation-gated dense first-visit plan
+
+```text
+IDEA ID: TASK14-DENSE-FIRST-VISIT-PLAN-20260718
+BOUND / LIVE-STATE SPLIT:
+  Extend the existing CUT E topology cache with only immutable run offsets and
+  the exact first-visit permutation of the 312 generated dense vertices. The
+  full validator constructs the plan behind generation/stamp validation and
+  publishes valid last. Every frame still recomputes matrices, materials,
+  texture selection, alpha, color, UV, and near-plane transforms. The cut
+  removes only the 606-corner scan and 312-bit per-frame first-use mask.
+
+SYNCHRONIZED EIGHT-FRAME A/B, FRAMES 438..445:
+  Control/candidate are mode 163, profile 1 + identical Phase-0 observation,
+  fast mode 9, static AOT 1, live Fox, incremental wallpaper, interpreter,
+  software renderer, and the same melonDS config hash CE818A04.... ROM hashes
+  are 3E4A909A... / 09586578....
+
+  Metric                 control P50/P95       candidate P50/P95     delta
+  stage                  904,928 / 905,088     895,872 / 896,000   -9,056 / -9,088
+  draw                 1,886,688 / 1,976,960 1,877,408 / 1,968,256 -9,280 / -8,704
+  active               1,892,992 / 1,983,296 1,883,744 / 1,974,592 -9,248 / -8,704
+  preflight              424,064 / 424,064     414,720 / 414,784   -9,344 / -9,280
+  prepare-runs           350,592 / 350,848     342,080 / 342,272   -8,512 / -8,576
+  attribute-exclusive     87,968 /  88,384      78,592 /  78,912   -9,376 / -9,472
+
+  Per-frame stage deltas are -8,768, -9,216, -8,960, -9,024, -8,832,
+  -9,024, -9,152, -9,152. Draw and active also improve on every paired frame.
+  This is a repeatable correctness-preserving main-RAM CPU gain; no withdrawn
+  minimum threshold is applied.
+
+CORRECTNESS / FAIL-CLOSED RESULT:
+  Exact packet/census remains 8/255/57/42/54/202/49/4, cross 5/10/15,
+  owner 121/828 with 202/320/306 partition, dense/near/matrix 312/226/146,
+  and zero fallback/fence/conservation faults. The native frame-445 crop is
+  raw and meaningful 0/49,152 changed pixels, mean delta 0.00.
+
+  The lab mutation records full2, hits436..443, mismatch1, inject1,
+  revalidate1. A separate clean production build records full1, hits437..444,
+  mismatch/inject/revalidate 0/0/0; nm finds zero lab-fault symbols. Host proof
+  pins the exact 55 offsets from 0 through 312, one 312-ID permutation, uniform
+  source alpha for all 54 runs, 606 corners, and 12 fail-closed perturbations.
+  The static fixture requires the unique-bit guard, terminal offset/count, and
+  valid=FALSE -> checked full validation -> generation/stamp -> valid=TRUE
+  publication order. GBI fixtures and the renderer parity corpus pass.
+
+SIZE / PLACEMENT:
+  BSS grows 736 bytes (734-byte arrays plus 2-byte alignment), text grows 568
+  bytes, and the observed lab ROM grows 1,024 bytes. ITCM remains exactly
+  28,132 bytes in the instrumented pair and 28,088 in production; renderer
+  ITCM remains 15,396. The 40-byte mask moves from every hit-path owner stack
+  to miss-only full validation, so validation peak is unchanged and the normal
+  hit path uses 40 fewer stack bytes. No arena or DTCM change.
+
+EVIDENCE:
+  artifacts/performance/2026-07-18_task14-control-phase0-438-445.json
+    D1376B8F3671301EC64381A3A652348BA18B5E45B55A5B6FBDEBA15899258868
+  artifacts/performance/2026-07-18_task14-candidate-phase0-438-445.json
+    5235AEC60CBCF36F4503784F736A61F3D9DE22A6CBE25CCBBC7F3C00B2EAB0EF
+  artifacts/performance/2026-07-18_task14-candidate-production-438-445.json
+    DA4169BA8D28C110652E9AE5B3FCC73AB1BF6A4FD959AA294A4E7F3F075208AE
+  artifacts/visibility/2026-07-18_task14-control-frame445.png
+    48758530DF00AA8B038DF626708465E84D608EA784BC6BA54644BFC4665354FA
+  artifacts/visibility/2026-07-18_task14-candidate-frame445.png
+    B79765A7A1040FC27253FACCC93D22477D6ABFD7D2FB71BA9F0F6B5DB4825D0E
+KEEP / REWORK / REVERT: KEEP
+```

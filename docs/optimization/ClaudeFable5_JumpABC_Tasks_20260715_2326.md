@@ -1000,3 +1000,317 @@ numbers. End: canonical rebuild, snapshot -Mode Lean last.
 - The decimation-pack task (fighter + stage-solid LOD, the biggest
   visual-economy payoff) is deliberately NOT written yet: its targets
   come straight from TASK 11's census table.
+
+---
+
+# 2026-07-18 — post-calibration additions
+
+TASK 10 hardware numbers are in (board table now filled): ITCM ×1.03,
+streaming main-RAM ×1.50, cache-resident ×0.88 (hardware faster; melonDS has
+no dcache model), MEM-ARM ×1.20 with the ARM/Thumb ranking inverted vs
+emulator, GX ×0.87 (hardware faster). TASK 11's census aims decimation at
+fighters: natural-window <4 px² fractions are 76.99% (Mario) / 77.63% (Fox)
+against a combined fighter draw P50 of 385,312/pair; stage layers are not
+sub-pixel and stage economy is closed at owner 5 (−7.1K).
+
+## TASK 13 — fighter decimation pack (derived-asset LOD)
+
+```
+/task TASK 13 — Fighter decimation pack: tool-derived LOD meshes for Mario
+and Fox part meshes, substituted at draw time under NDS_RENDER_ECONOMY.
+Census facts this task is built on (TASK11-SCREEN-CENSUS ledger row):
+natural frames 438..1037 put 76.99% of Mario's and 77.63% of Fox's
+triangles under 4 px² on the 256×192 screen; combined fighter draw P50 is
+385,312 ticks/pair. Fighter meshes are N64-era segmented RIGID parts (one
+DL per joint segment, no skinning), and hitboxes are bone-anchored spheres
+in gameplay code — visual decimation cannot affect collision or feel.
+Calibration note: fighter prep is main-RAM CPU work, so every melonDS tick
+saved here is worth ~×1.2-1.5 on retail hardware (board, Hardware reality).
+
+PHASE 0 — extraction + tool. Host-side deterministic tool (Python, same
+derived-asset pattern as assets/audio/fgm_phase_pack_ima.bin + .json):
+read each fighter part's source Vtx/tri payload via the existing decode
+machinery, run quadric-error edge collapse PER PART with hard constraints:
+  - joint-boundary ring vertices preserved bit-exact (no seam cracks);
+  - collapses only within a single texture/material run — never across
+    a texture switch; winding preserved; degenerate output forbidden;
+  - vertex colors/UVs recomputed only for interior vertices;
+  - deterministic: pinned ordering, no RNG; same input → same output.
+Emit pack + manifest: per part, source payload SHA-256, original and
+decimated tri/vtx counts, achieved ratio. Target ratio per part from the
+census: aggressive where <4 px² fraction is high; parts may individually
+ship at 1.0 (no cut) if gates fail. Tool + pack + regeneration script
+checked in; manifest SHA pinned in the ledger row.
+
+PHASE 1 — runtime substitution. Under NDS_RENDER_ECONOMY (default OFF),
+the prepared/AOT fighter path substitutes decimated part payloads keyed
+by source payload hash; any key miss FAILS OPEN to the source mesh.
+Close-up guard: LOD applies only while the fighter's projected scale is
+below a threshold — KO/rebirth camera zoom, magnify, and Pause render
+source meshes (reuse the per-present game_status sampling TASK 11 added,
+plus a projected-scale check from data the pipeline already computes; the
+KO window frames 708..715 baseline must show source meshes). Default-OFF
+rebuild must remain byte-identical to the frozen control ROM, same
+discipline as TASK 11.
+
+PHASE 2 — gates, per part (each its own ratchet row; failed part ships
+full-res, rest keep):
+  - Pixel gate at 256×192: idle frames 600..607 AND ≥8 natural-window
+    captures spanning 438..1037 (attack/jump/hit poses). Per capture:
+    meaningful changed pixels ≤500/49,152 per fighter, zero changes in
+    required regions, all existing visibility/named-region/detail gates
+    green with the flag ON. Flag-OFF gates untouched.
+  - Counter contract: flag-ON smoke uses expected triangle/owner counts
+    DERIVED FROM THE MANIFEST (e.g. 828-triangle partition adjusted by
+    the pack totals); flag-OFF expectations are not weakened.
+  - Ticks: combined fighter / draw / active P50 A/B via the fast-iteration
+    protocol, flag ON vs OFF; report melonDS values and the ×1.2-1.5
+    hardware-weighted projection. Optional: profile-1 HUD ROM pair for a
+    retail-DS spot check.
+  - Tyler feel/eyeball gate: flag-ON ROM plays a natural match; visual
+    sign-off before default-ON is even discussed (not in this task).
+
+Hard rules: no decomp edits; no gameplay reads/writes; stage meshes are
+OUT OF SCOPE (census shows stage layers are not sub-pixel; stage economy
+is closed); one-writer — renderer TU edits limited to the loader hookup,
+and this task must NOT run concurrently with TASK 12's renderer changes.
+Ledger row per part plus a pack-summary row. End: canonical rebuild,
+snapshot New-Smash64DSSnapshot.ps1 -Mode Lean last.
+```
+
+## Sequencing amendment (2026-07-18)
+
+- TASK 13 relays only after TASK 12 lands (shared renderer TU, one-writer).
+- TASK 12 steer per calibration: melonDS will overvalue blanket Thumb (it
+  charges ARM main-RAM fetches continuously) and cannot see icache/dcache
+  wins at all — the hardware-primary keep rule is not optional there. Hot
+  icache-resident functions prefer ARM: if blanket Thumb regresses on
+  hardware, retry with hot functions pinned ARM via the existing
+  target("arm") attribute before abandoning Phase A.
+- GX FIFO DMA feeding is DEPRIORITIZED (GX measured ×0.87 — hardware is
+  faster than emulator at transport; no stall tax to recover).
+
+---
+
+# 2026-07-18 — overnight queue (TASKS 14–18)
+
+## TASK 14 — revive prepare-once under the accumulation policy
+
+```
+/task TASK 14 — Dense-preparation reuse, revived. AUTHORIZATION: the ledger
+row M3-DENSE-PREPARE-ONCE (2026-07-15) says "Do not retry or widen
+dense-only preparation reuse." That instruction is SUPERSEDED by Tyler's
+2026-07-16 policy override recorded at the head of this document: the
+threshold gates (>=164,544 required saving, <=500K stage) are withdrawn
+and every repeatable correctness-preserving gain is kept and accumulated.
+The 7/15 experiment was exactness-clean — counters 8/57/42/54/202 exact,
+owner 121/828, M4 22/131072, zero fallback/fence faults, screenshot
+correct — and saved 108,960/108,864 P50/P95. It failed ONLY the withdrawn
+threshold. Re-land that class of win under current policy and the CUT E
+fail-closed pattern. This is main-RAM CPU work: melonDS savings count
+x1.2-1.5 on retail hardware (board, Hardware reality).
+
+PHASE 0 — re-baseline. The 7/15 numbers predate CUT E and the other
+banked cuts (stage was 664K then; stage P50 is 470,784 now, prepare-runs
+213,408/213,504 per the TASK8-CUT-E row). Re-measure the prepare bucket
+composition on current source before changing anything; expect the
+recoverable pool at −60K..−110K. Bank whatever is clean — no minimum.
+
+PHASE 1 — generation-gated prepared-run reuse, on the TASK8-CUT-E
+template: cache the dense/prepared run state that is immutable for static
+stage topology; keep matrices, materials, colors, texture selection,
+alpha, and near-plane work live every frame (same live/immutable split
+CUT E proved for preflight). Any generation/stamp mismatch fails closed
+through the original full preparation before any GX mutation.
+
+PHASE 2 — fail-closed lab: one-shot lab mutation flips the cached stamp;
+publish the full/hit/mismatch/inject/revalidate census exactly like the
+CUT E row; lab-only symbols absent from the production ELF.
+
+Gates: canonical frames raw delta 0/49,152; owner/partition counters
+exact at current values; GBI fixtures + parity corpus; DevFast + Boundary
+green; fast-iteration protocol for A/B (stage/draw/active P50); ledger
+row either way. Hard rules: no decomp edits; no gameplay reads; renderer
+TU lane — must NOT run concurrently with other renderer-TU tasks.
+End: canonical rebuild, snapshot New-Smash64DSSnapshot.ps1 -Mode Lean.
+```
+
+Result (2026-07-18): **KEEP**. The current-source rebaseline is
+904,928/905,088 stage ticks. A generation-gated 55-offset/312-index immutable
+first-visit plan removes the 606-corner per-frame mask walk while every live
+matrix/material/texture/alpha/color/UV/near-plane operation stays per-frame.
+Stage becomes 895,872/896,000 (-9,056/-9,088); draw and active improve
+-9,280/-8,704 and -9,248/-8,704. All eight paired frames win, the native
+top-screen delta is 0/49,152, the one-shot fault lab is exactly
+full2/hit436..443/mismatch1/inject1/revalidate1, and production is
+full1/hit437..444 with no fault symbols. Cost is 736 B BSS, 568 B text, zero
+ITCM, and 40 B less hit-path stack. The new host/static proofs pin all 55
+offsets, the exact 312-ID permutation, uniform source alpha per run, unique-bit
+construction, terminal count, and fail-closed cache publication order.
+
+## TASK 15 — CUT A: no-Z painter class onto the GX
+
+```
+/task TASK 15 — Offload the no-Z painter class to hardware transform
+(TASK 8's carried CUT A, now standalone). Pool per TASK6-R0 Phase 0:
+no-Z inclusive 98,816 ticks (matrix share 50,432); re-measure first on
+current source. Calibration bonus: GX transport measured x0.87 on retail
+hardware — CPU→GX shifts are worth MORE on-device than melonDS shows.
+
+IDEA: the 126-owner no-Z painter class computes vertex transforms on the
+CPU so it can pack the synthetic monotonic painter-band depth into the
+v16 Z channel. Move it to the GX matrix path with the Z row replaced by
+band_constant × W row: hardware then emits z/w = band_constant per
+polygon — the exact same band value the CPU path packs — while the
+hardware does the XY transform work. Painter semantics are unchanged
+because the band constant per run is unchanged.
+
+REQUIREMENTS:
+1. Reproduce the depth-band contract exactly: bg 4095..4024 / fg
+   −3969..−4022 bands with real-Z 3605..3728 between (strict-order note;
+   BattleShip grdisplay.c:52-141 callback order, grpupupu.c:637-690 owner
+   map). Verify band values A/B with the existing
+   ndsRendererStageDepthTraceEvent instrumentation before/after.
+2. Do NOT regress the banked TASK 1/1B depth and translucency work:
+   translucent poly-ID cycling and the grass/bush behavior must be
+   pixel-identical on the canonical frames and the depth-probe scenes.
+3. Respect GX resource ceilings: report poly/vertex RAM headroom before
+   and after (2048 poly / 6144 vtx hardware limits; current partition is
+   828 stage+fighter triangles — ample, but publish the numbers).
+4. Fail closed: if any no-Z owner cannot express its band through the
+   matrix Z-row form (unexpected vertex-level depth variation), leave
+   that owner on the CPU path and report it — partial offload is a valid
+   KEEP; per-owner accounting in the ledger row.
+
+Gates: canonical frames raw delta 0/49,152; stage depth trace bands
+identical; owner/partition counters exact; fixtures + parity corpus;
+DevFast + Boundary; A/B stage/draw/active P50 via fast-iteration
+protocol; ledger row per outcome including per-owner offload census.
+Hard rules: no decomp edits; renderer TU lane — not concurrent with
+other renderer-TU tasks. End: canonical rebuild, snapshot -Mode Lean.
+```
+
+## TASK 16 — GO for TASK 9 Phase 2 (census-scoped)
+
+```
+/task TASK 16 — Execute TASK 9 PHASE 2 as specified in this document
+(optimized ARM-mode IEEE-754-single routines in ITCM, bit-exact, full
+proof ladder), with the census-informed scope from the
+TASK9-LIBGCC-FLOAT-ITCM ledger row:
+  IMPLEMENT: fmul (1,172.4 calls/update), fadd (821.1), fsub (576.4),
+  the fcmp family (~896 combined; medians 40-48 ticks/call — the largest
+  relative win: an ARM-state compare is ~10-15 instructions), i2f (174.4).
+  KEEP LIBGCC (already in ITCM from Phase 1): fdiv, f2iz, f2uiz, f2d,
+  d2f, dmul, ddiv — together <2% of float ticks; not worth proof surface.
+The proof ladder and SUPREME GATE are unchanged from the TASK 9 block:
+host exhaustive 2^32 for unary, directed + >=10^8 random vectors for
+binary against the libgcc golden, then the deterministic scripted match
+with per-update full game-state hash A/B vs the baseline ROM — any
+single-bit divergence at any update = revert, no exceptions. The
+nds_task9_state_hash machinery from Phase 1 is already in the tree.
+ITCM budget: replacing the six Phase-1 libgcc objects (1,952 bytes)
+frees their space; optimized routines must fit within that plus current
+free bytes (baseline 28,052/32,768). Report exact before/after bytes; do
+not evict renderer ITCM. Expected yield: −20..−35K per update
+(−40..−70K per pair) on top of Phase 1's −51.5K. Not a renderer-TU task;
+surfaces are the new routine objects, link order, and lab shims only.
+Gates and end sequence exactly as the TASK 9 block specifies.
+```
+
+## TASK 17 — hot-text grouping round 2: the update path
+
+```
+/task TASK 17 — Extend TASK 12's hot-text mechanism to the update path.
+PREREQUISITE: TASK 12 Phase B (NDS_HOT_TEXT macro + .text.hot linker
+placement) must be landed; this task reuses its mechanism and its
+hardware-primary keep rule. melonDS cannot see cache-locality wins at
+all (board: no icache/dcache model), so device photos are the referee.
+
+MECHANISM FOR DECOMP-COMPILED CODE (no source edits — decomp/ is
+read-only): -ffunction-sections is already global (Makefile:213), so
+every function has its own .text.<name> section. Place gameplay/library
+hot functions BY SECTION NAME in the supplementary linker script's hot
+region — zero source changes. Port-side functions may use NDS_HOT_TEXT
+directly.
+
+SELECTION: from the TASK 9 Phase 0 census callers (scVSBattleFuncUpdate
+scope) and per-owner update attribution, list the hottest main-RAM
+update-path functions with map-file sizes. Combined .text.hot (renderer
+set from TASK 12 + this update set) target <=12 KiB with the hottest
+<=8 KiB placed first — the ARM946E-S icache is 8 KiB, 4-way; publish the
+final region size and ordering from the map.
+
+MEASURE: melonDS A/B (expect a wash — report it anyway) + hardware A/B:
+control/candidate profile-1 HUD ROM pair for Tyler's device, one
+paragraph of instructions, UPD row is the number that decides. PENDING-HW
+ledger cells until the photos exist — never guessed. KEEP on hardware
+win; REVERT on hardware wash (dead weight in the linker script helps
+nobody).
+
+Hard rules: no decomp edits; no behavior change; linker-script surface
+shared with TASK 12 — run only after TASK 12 is fully landed; not
+concurrent with any renderer-TU task if it also annotates renderer
+functions. Ledger row with both columns. End: canonical rebuild,
+snapshot -Mode Lean.
+```
+
+## TASK 18 — KO-window wallpaper re-render spike
+
+```
+/task TASK 18 — Diagnose and bound the KO-window wallpaper spike.
+FACT (NATURAL-KO-REBIRTH-PHASE-20260717 ledger row): during KO frames
+708..715, wallpaper costs 547,584/547,648 P50/P95 — nearly half of the
+1,256,544 KO-window draw — while steady-state wallpaper is retained and
+cheap. Hypothesis: the KO camera zoom invalidates the retained wallpaper
+every frame, forcing a full re-render exactly when the camera moment is
+most visible. An affine wallpaper path already exists
+(gNdsSceneWallpaperAffineLastTicks, src/nds/nds_platform.c:193 and
+:942-968).
+
+PHASE 0 — diagnose (profile-1 counters, no behavior change): during the
+KO window record per frame: invalidation cause (scale change? scroll?
+palette?), full vs partial re-render, pixels/tiles re-rendered, and
+whether the affine path is engaged. Publish an 8-frame trace in the
+ledger row. Do not guess the cause — name it from the counters.
+
+PHASE 1 — bounded fix, chosen from the Phase 0 evidence, preference
+order:
+  a. EXACT: render the wallpaper source once per zoom sequence and let
+     the 2D affine hardware scale it per frame (the affine path exists;
+     if zoom currently re-renders the source instead of reusing the
+     affine matrix, this is a pure win with pixel-identical output —
+     gate: KO-window captures raw delta 0/49,152).
+  b. If (a) is structurally unavailable: reduced re-render cadence
+     during zoom with affine interpolation between renders. This changes
+     intermediate-frame pixels: gate becomes named KO-window captures
+     with meaningful delta <=500/49,152 per frame plus Tyler's explicit
+     eyeball sign-off on the KO moment — flag-gated, default OFF until
+     his sign-off.
+  Steady-state behavior byte-identical either way; only the zoom-window
+  path may change. No gameplay reads; camera values are consumed, never
+  written.
+
+Gates: steady-state canonical frames raw delta 0/49,152 (unchanged
+path); KO-window gate per the chosen branch above; DevFast + Boundary;
+A/B of the KO window (draw/wallpaper P50) + one full natural KO
+sequence; ledger row. Surface: wallpaper/platform path — NOT the
+renderer stage TU; may interleave with the renderer lane. End: canonical
+rebuild, snapshot -Mode Lean.
+```
+
+## Overnight relay order (2026-07-18)
+
+Single codex lane, after in-flight TASK 12 completes:
+  13 → 14 → 16 → 15 → 17 → 18
+Rationale: 13 and 14 are the two biggest pools; 16 is bit-exact and
+independent of the renderer TU (safe mid-queue breather with its own
+supreme gate); 15 after 14 because both are renderer-TU and 15 carries
+more semantic risk (depth bands); 17 strictly after 12 (shared linker
+mechanism, hardware-primary); 18 anytime — it is surface-disjoint and
+can also slot earlier if a renderer task blocks.
+Two lanes, if run: lane A (renderer TU) 13 → 14 → 15; lane B
+(non-renderer) 16 → 18, then 17 after 12 lands. One-writer holds per
+lane; nothing in lane B touches the renderer TU.
+Morning deliverables to Tyler: TASK 12/17 HUD ROM pairs for device
+photos; TASK 13 flag-ON ROM for the feel/eyeball gate; TASK 18 KO
+captures if branch (b) was taken.
