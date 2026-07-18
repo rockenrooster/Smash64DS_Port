@@ -122,6 +122,49 @@ IDENTITY / EVIDENCE:
 DECISION: PHASE A PENDING-HW; PHASE B PENDING-HW. No device values guessed.
 ```
 
+## 2026-07-18 - Task 15 constant-depth GX painter reconciliation
+
+```text
+IDEA ID: TASK15-CONSTANT-DEPTH-GX-RECONCILE-20260718
+SOURCE / MECHANISM:
+  BattleShip grdisplay.c preserves the no-Z / source-Z / no-Z / no-Z draw
+  order, and grpupupu.c creates the four Dream Land owners in that order. The
+  canonical renderer already implements TASK 15: each no-Z run replaces the
+  GX matrix Z row with painter_band * W, so the divider produces the exact
+  constant post-divide depth while GX performs the XY transform. Whole-owner
+  preflight fails closed before GX mutation if a run cannot express that form.
+
+CURRENT POST-TASK-12 PROOF:
+  No second implementation or candidate was created. The focused native-stage
+  checker passes 8 callbacks, 57 DObjs, 42 bindings, 54 runs, 49 epochs, 202
+  stage triangles, the exact 5/10/15 cross-matrix census, 12 fail-closed
+  perturbations, and slab SHA-256
+  053444F8474B4E7A80E0AD7F8F68272AF9D7CB7089036E665574ABF3DEE95EC7.
+  The current Task-12 Phase-B run retains 121/828 total runs/triangles,
+  stage/Mario/Fox 202/320/306, zero fallback/fence/conservation failures, and
+  a raw 0/49,152 gameplay-crop delta. Its widest Boundary run passed.
+  Existing depth-trace gates retain background 4095..4024, real source-Z
+  3605..3728, and foreground -3969..-4022 with no synthetic/source collision.
+
+GX RESOURCE CONTRACT (before == after; reconciliation made no code change):
+  Conservative submitted maximum is 828 polygons and 2,484 vertices against
+  2,048/6,144 hardware limits: 1,220 polygon and 3,660 vertex headroom. The
+  source class census remains 648 raw / 44 cross-matrix / 126 constant-depth /
+  10 source-Z triangles; all 126 constant-depth triangles use the GX form.
+
+PERFORMANCE:
+  The original retained mechanism and its later exact specializations are
+  already measured below: AOT shift saved 22,016/22,208 stage ticks and the
+  zero-shift builder saved another 14,304/14,080. Blanket renderer Thumb makes
+  melonDS timing non-authoritative for the current hardware decision, so no
+  emulator-only number is relabeled as a new TASK 15 win.
+
+DECISION: COMPLETE / ALREADY CANONICAL.
+  A duplicate constant-depth path would add risk without a new treatment.
+  Retain the existing source-order, depth, resource, pixel, and fail-closed
+  gates.
+```
+
 ## 2026-07-17 - Task 11 screen-space census and stage economy
 
 ```text
