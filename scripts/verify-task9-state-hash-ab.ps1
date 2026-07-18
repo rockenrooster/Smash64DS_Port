@@ -11,15 +11,16 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $owner = Join-Path $PSScriptRoot `
     'verify-battle-mariofox-gcrunall-loop-harness.ps1'
 $baselinePath = Join-Path $root `
-    'artifacts\performance\2026-07-17_task9-state-r0.json'
-$candidatePath = Join-Path $root `
     'artifacts\performance\2026-07-17_task9-state-phase1-itcm.json'
+$candidatePath = Join-Path $root `
+    'artifacts\performance\2026-07-17_task9-state-phase2-fcmpeq.json'
 
 function Invoke-Task9StateRun {
     param(
         [Parameter(Mandatory=$true)][string]$Target,
         [Parameter(Mandatory=$true)][string]$Build,
         [Parameter(Mandatory=$true)][ValidateRange(0,1)][int]$ItcmMode,
+        [Parameter(Mandatory=$true)][ValidateRange(0,1)][int]$Phase2Mode,
         [Parameter(Mandatory=$true)][string]$ExportPath
     )
 
@@ -40,6 +41,7 @@ function Invoke-Task9StateRun {
         -FoxCpuMode 1 `
         -RendererBenchmarkTimeoutSeconds 600 `
         -Task9FloatItcmMode $ItcmMode `
+        -Task9FloatPhase2Mode $Phase2Mode `
         -Task9StateHashMode 1 `
         -Task9StateHashExportPath $ExportPath `
         -Harness 'battle_playable_match_lifecycle' `
@@ -48,10 +50,10 @@ function Invoke-Task9StateRun {
         -ExpectedMode 163 `
         -ExpectedHarnessSceneCurr 22 `
         -ExpectedHarnessScenePrev 21 `
-        -Label "Task 9 state hash ITCM=$ItcmMode" `
+        -Label "Task 9 state hash ITCM=$ItcmMode Phase2=$Phase2Mode" `
         -HarnessSelectMessage 'Task 9 state hash run did not select Pupupu VSBattle from Maps.'
     if ($LASTEXITCODE -ne 0) {
-        throw "Task 9 state hash run ITCM=$ItcmMode failed."
+        throw "Task 9 state hash run ITCM=$ItcmMode Phase2=$Phase2Mode failed."
     }
 }
 
@@ -70,14 +72,16 @@ foreach ($name in $environment.Keys) {
 }
 try {
     Invoke-Task9StateRun `
-        -Target 'smash64ds-task9-state-hash-r0-lab' `
-        -Build 'builds/build-task9-state-hash-r0-lab' `
-        -ItcmMode 0 `
-        -ExportPath $baselinePath
-    Invoke-Task9StateRun `
         -Target 'smash64ds-task9-state-hash-phase1-lab' `
         -Build 'builds/build-task9-state-hash-phase1-lab' `
         -ItcmMode 1 `
+        -Phase2Mode 0 `
+        -ExportPath $baselinePath
+    Invoke-Task9StateRun `
+        -Target 'smash64ds-task9-state-hash-phase2-fcmpeq-lab' `
+        -Build 'builds/build-task9-state-hash-phase2-fcmpeq-lab' `
+        -ItcmMode 1 `
+        -Phase2Mode 1 `
         -ExportPath $candidatePath
 } finally {
     foreach ($name in $environment.Keys) {

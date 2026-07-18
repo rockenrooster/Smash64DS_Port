@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Elf,
     [Parameter(Mandatory = $true)][string]$BuildDirectory,
+    [ValidateRange(0,1)][int]$Phase2Mode = 1,
     [string]$BaselineElf = '',
     [string]$Gcc = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gcc.exe',
     [string]$Ar = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-ar.exe',
@@ -74,7 +75,7 @@ try {
     }
 
     $codeRows = @()
-    $expectedBytes = 0
+    $stockBytes = 0
     foreach ($entry in $members.GetEnumerator()) {
         $member = $entry.Key
         $expected = [int]$entry.Value
@@ -103,7 +104,80 @@ try {
             throw "$member machine-code bytes changed during section relocation."
         }
         $codeRows += "$member=$expected/$codeHash"
-        $expectedBytes += $expected
+        $stockBytes += $expected
+    }
+
+    $phase2Bytes = 0
+    if ($Phase2Mode -eq 1) {
+        $relocatedCompare = Join-Path $resolvedBuild '_arm_cmpsf2.itcm.o'
+        $compareSymbols = @(& $Objdump -t $relocatedCompare)
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Could not inspect the relocated comparison golden object.'
+        }
+        if (@($compareSymbols | Where-Object {
+                $_ -match '\s__aeabi_fcmpeq$'
+            }).Count -ne 0 -or
+            @($compareSymbols | Where-Object {
+                $_ -match '\s__nds_task9_libgcc_fcmpeq_golden$'
+            }).Count -ne 1) {
+            throw 'Phase 2 did not rename exactly the stock fcmpeq wrapper as its golden.'
+        }
+
+        $phase2Object = Join-Path $resolvedBuild 'nds_task9_float_phase2.o'
+        if (-not (Test-Path -LiteralPath $phase2Object -PathType Leaf)) {
+            throw "Missing Task 9 Phase 2 object '$phase2Object'."
+        }
+        $phase2Bytes = Get-SectionBytes -Path $phase2Object `
+            -Section '.itcm.task9_float_phase2'
+        if ($phase2Bytes -ne 0x24) {
+            throw "Task 9 Phase 2 fcmpeq leaf is $phase2Bytes bytes instead of 36."
+        }
+        $phase2Symbols = @(& $Objdump -t $phase2Object)
+        if ($LASTEXITCODE -ne 0 -or
+            @($phase2Symbols | Where-Object {
+                $_ -match '\sF\s+\.itcm\.task9_float_phase2\s+[0-9a-fA-F]+\s+__aeabi_fcmpeq$'
+            }).Count -ne 1 -or
+            @($phase2Symbols | Where-Object { $_ -match '\*UND\*' }).Count -ne 0) {
+            throw 'Task 9 Phase 2 object is not one self-contained fcmpeq ITCM definition.'
+        }
+        $phase2Disassembly = @(& $Objdump -dr $phase2Object)
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Could not disassemble the Task 9 Phase 2 object.'
+        }
+        $phase2Instructions = @($phase2Disassembly | Where-Object {
+            $_ -match '^\s*[0-9a-fA-F]+:\s+[0-9a-fA-F]{8}\s+'
+        })
+        if ($phase2Instructions.Count -eq 0 -or
+            @($phase2Instructions | Where-Object {
+                $_ -match '\bblx?\b|\bpush\b|\bpop\b|\bsp\b'
+            }).Count -ne 0) {
+            throw 'Task 9 Phase 2 fcmpeq is not a stackless ARM leaf.'
+        }
+        $phase2Code = Join-Path $temp 'task9-phase2.bin'
+        & $Objcopy --dump-section ".itcm.task9_float_phase2=$phase2Code" `
+            $phase2Object
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Could not dump Task 9 Phase 2 machine code.'
+        }
+        $phase2CodeHash =
+            (Get-FileHash -LiteralPath $phase2Code -Algorithm SHA256).Hash
+        if ($phase2CodeHash -ne
+            '07B3147B9CF599BDD408AF922A4B9F6891734B4C3AB7DE7C3A700DDE92B6FBE2') {
+            throw "Task 9 Phase 2 machine code drifted: $phase2CodeHash."
+        }
+        $codeRows += "phase2-fcmpeq=$phase2Bytes/$phase2CodeHash"
+    } else {
+        $relocatedCompare = Join-Path $resolvedBuild '_arm_cmpsf2.itcm.o'
+        $compareSymbols = @(& $Objdump -t $relocatedCompare)
+        if ($LASTEXITCODE -ne 0 -or
+            @($compareSymbols | Where-Object {
+                $_ -match '\s__aeabi_fcmpeq$'
+            }).Count -ne 1 -or
+            @($compareSymbols | Where-Object {
+                $_ -match '\s__nds_task9_libgcc_fcmpeq_golden$'
+            }).Count -ne 0) {
+            throw 'Phase 1 comparison object did not retain the stock fcmpeq symbol.'
+        }
     }
 
     $symbols = @(& $Objdump -t $resolvedElf)
@@ -117,6 +191,12 @@ try {
             throw "Expected exactly one $helper definition in ELF .itcm."
         }
     }
+    if ($Phase2Mode -eq 1 -and
+        @($symbols | Where-Object {
+            $_ -match '\sF\s+\.itcm\s+[0-9a-fA-F]+.*\s__nds_task9_libgcc_fcmpeq_golden$'
+        }).Count -ne 1) {
+        throw 'Task 9 Phase 2 ELF omitted its selected-libgcc fcmpeq golden.'
+    }
 
     $itcmBytes = Get-SectionBytes -Path $resolvedElf -Section '.itcm'
     if ($itcmBytes -gt 32768) {
@@ -125,8 +205,9 @@ try {
     if ($BaselineElf) {
         $baseBytes = Get-SectionBytes -Path `
             (Resolve-Path -LiteralPath $BaselineElf).Path -Section '.itcm'
-        if (($itcmBytes - $baseBytes) -ne $expectedBytes) {
-            throw "Candidate ITCM delta $($itcmBytes - $baseBytes) is not the exact $expectedBytes-byte payload."
+        $payloadBytes = $stockBytes + $phase2Bytes
+        if (($itcmBytes - $baseBytes) -ne $payloadBytes) {
+            throw "Candidate ITCM delta $($itcmBytes - $baseBytes) is not the exact $payloadBytes-byte payload."
         }
     }
 
@@ -145,8 +226,9 @@ try {
         $expectedArchiveHash) {
         throw 'Installed Thumb libgcc archive changed during verification.'
     }
-    Write-Output ("Task 9 float ITCM passed: bytes={0} itcm={1}/32768 free={2} libgcc={3} sha256={4} code=[{5}]" -f
-        $expectedBytes, $itcmBytes, (32768 - $itcmBytes), $libgcc,
+    Write-Output ("Task 9 float ITCM passed: phase2={0} stockBytes={1} phase2Bytes={2} itcm={3}/32768 free={4} libgcc={5} sha256={6} code=[{7}]" -f
+        $Phase2Mode, $stockBytes, $phase2Bytes, $itcmBytes,
+        (32768 - $itcmBytes), $libgcc,
         $archiveHash, ($codeRows -join ', '))
 } finally {
     Remove-Item -LiteralPath $temp -Recurse -Force

@@ -34,6 +34,7 @@ param(
     [switch]$RendererM3Phase0Profile,
     [ValidateRange(0,1)][int]$Task9FloatCensusMode = 0,
     [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
+    [ValidateRange(0,1)][int]$Task9FloatPhase2Mode = 1,
     [ValidateRange(0,1)][int]$Task9StateHashMode = 0,
     [string]$Task9StateHashExportPath = '',
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
@@ -390,7 +391,7 @@ function Get-BenchmarkMakeIdentity {
         'M3_PHASE0_PROFILE', 'RENDERER_BENCHMARK_MODE', 'FAST_RUN_DEFAULT',
         'SCENE_MIP_CACHE_LAB', 'BATTLE_STATIC_TEXTURE_DEFAULT',
         'IFCOMMON_HYBRID_OAM', 'TASK9_FLOAT_CENSUS', 'TASK9_FLOAT_ITCM',
-        'TASK9_STATE_HASH',
+        'TASK9_FLOAT_PHASE2', 'TASK9_STATE_HASH',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
     foreach ($key in $required) {
@@ -413,6 +414,7 @@ function Get-BenchmarkMakeIdentity {
         IFCommonHybridOamMode = [int]$values.IFCOMMON_HYBRID_OAM
         Task9FloatCensusMode = [int]$values.TASK9_FLOAT_CENSUS
         Task9FloatItcmMode = [int]$values.TASK9_FLOAT_ITCM
+        Task9FloatPhase2Mode = [int]$values.TASK9_FLOAT_PHASE2
         Task9StateHashMode = [int]$values.TASK9_STATE_HASH
         CommonCFlags = $values.CFLAGS_COMMON
         RendererCFlags = $values.CFLAGS_RENDERER
@@ -473,6 +475,7 @@ function Complete-Task9StateHashCapture {
             target = $Target
             build = $Build
             task9FloatItcmMode = $Task9FloatItcmMode
+            task9FloatPhase2Mode = $Task9FloatPhase2Mode
             task9StateHashMode = $Task9StateHashMode
             coverage = [ordered]@{
                 source = 'post-scVSBattleFuncUpdate'
@@ -504,6 +507,7 @@ $makeArgs += "NDS_RENDERER_M3_PHASE0_PROFILE=$([int]$RendererM3Phase0Profile.IsP
 $makeArgs += "NDS_IFCOMMON_HYBRID_OAM=$IFCommonHybridOamMode"
 $makeArgs += "NDS_TASK9_FLOAT_CENSUS=$Task9FloatCensusMode"
 $makeArgs += "NDS_TASK9_FLOAT_ITCM=$Task9FloatItcmMode"
+$makeArgs += "NDS_TASK9_FLOAT_PHASE2=$Task9FloatPhase2Mode"
 $makeArgs += "NDS_TASK9_STATE_HASH=$Task9StateHashMode"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
@@ -573,7 +577,8 @@ if ($Task9FloatItcmMode -eq 1) {
         -Root $root -Build $Build
     & (Join-Path $PSScriptRoot 'check-task9-float-itcm.ps1') `
         -Elf $elf `
-        -BuildDirectory $task9BuildDirectory
+        -BuildDirectory $task9BuildDirectory `
+        -Phase2Mode $Task9FloatPhase2Mode
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if (($Task9FloatItcmMode -eq 1) -or
@@ -599,6 +604,8 @@ if ($RendererBenchmarkSamples -gt 0) {
             $Task9FloatCensusMode -and
         $benchmarkMakeIdentity.Task9FloatItcmMode -eq
             $Task9FloatItcmMode -and
+        $benchmarkMakeIdentity.Task9FloatPhase2Mode -eq
+            $Task9FloatPhase2Mode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
         'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/IFCommon/Task9 configuration.' `
@@ -2878,6 +2885,8 @@ try {
                             $benchmarkMakeIdentity.Task9FloatCensusMode
                         task9FloatItcmMode =
                             $benchmarkMakeIdentity.Task9FloatItcmMode
+                        task9FloatPhase2Mode =
+                            $benchmarkMakeIdentity.Task9FloatPhase2Mode
                         requestedIfCommonHybridOamMode =
                             $IFCommonHybridOamMode
                         foxCpuMode = $FoxCpuMode

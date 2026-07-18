@@ -792,3 +792,211 @@ New-Smash64DSSnapshot.ps1 -Mode Lean last.
 - Against locked 30: present must reach <=~1,120K. TASK 2 fully landed is
   roughly -145K to -195K from draw; the remainder must come from TASK 3.
   Neither alone is sufficient.
+
+---
+
+# 2026-07-17 — Hardware-reality addendum (TASKS 10–12)
+
+Context: Tyler observed real-DS hardware running ≈0.75× melonDS on this build.
+The multiplier is almost certainly per-resource, not uniform (ITCM ALU ~1.0×,
+waitstated main RAM worse, GX FIFO stalls likely unmodeled in melonDS), so it
+must be calibrated before re-ranking anything. Agreed strategy pivot: the big
+remaining wins are (a) visual economy at DS resolution — 256×192 is exactly
+0.8× N64 linear per axis; CPU draw cost scales with triangles, not pixels —and
+(b) memory-system placement tuned for real hardware. Gameplay stays bit-exact;
+the budget being spent is the 90% visual target, via measured per-owner pixel
+ratchets. Budget lines: melonDS locked-30 needs the frame pair ≤ 1,120,380
+ticks; provisional hardware-30 ≈ ≤840K melonDS-equivalent until TASK 10
+replaces 0.75× with per-bucket multipliers. Current heavy-combat truth:
+draw P50 ~1,149K, update owner ~260K (post TASK9-P1), loop 1,680K (3 vblanks).
+
+## TASK 10 — hardware calibration + on-device phase-tick HUD
+
+```
+/task TASK 10 — Hardware calibration lab ROM + profile-1 phase-tick HUD.
+Real DS hardware measures ≈0.75× melonDS on this build (Tyler, 2026-07-17).
+Before re-ranking any optimization we need per-resource multipliers and an
+on-device measurement loop. Zero behavior change anywhere in this task.
+
+PHASE A — phase-tick HUD (profile-1 only).
+The sub-screen console and battle FPS HUD already exist: consoleInit on the
+sub engine src/nds/nds_platform.c:274-276, row-positioned print helper
+:1351-1355, half-second HUD sample window :1361-1390 with
+NDS_BATTLE_FPS_HUD_SAMPLE_TICKS = BUS_CLOCK/2 (:47), tick source
+cpuStartTiming(0)/cpuGetTiming() (:208) — the same tick currency as the
+ledger. Add HUD rows, sampled off the hot path and formatted only inside
+the existing HUD window, reusing the profile-1 phase accumulators that
+already feed the perf artifacts:
+  UPD (source-update owner), DRW (draw), ACT (active), LOOP,
+  PRE/PRP/CMT (stage preflight/prepare/commit, if rows allow),
+  FPS (presents/s), SLIP (delta of the locked-30 cadence counter
+  gNdsBattlePlayablePacingCadenceViolationCount).
+Raw decimal ticks, fixed rows, labels ≤4 chars — readable from a photo of
+the device. Print the short git hash once at boot for provenance.
+Constraints: compiled out of profile-0 entirely (production ROM
+byte-identical); HUD cost inside the known profile-1 observer allowance;
+no allocation or formatting on the frame hot path.
+
+PHASE B — calibration lab ROM (standalone; no new harness-registry mode;
+lab-only symbols absent from the production ELF per established lab
+discipline). Boot straight into a fixed bench sequence, print label +
+ticks per bench on the sub console; the identical ROM runs in melonDS and
+on hardware. Benches, fixed work sizes, each ~0.5-1.0 s on hardware:
+  ALU-ITCM  1,000,000-iteration dependent-add chain, ARM code in .itcm
+            (reuse the attribute pattern at src/nds/nds_renderer.c:33).
+  MEM-THMB  streaming u32 sum over a 256 KiB main-RAM buffer, Thumb.
+  MEM-ARM   the identical C loop compiled target("arm"), main RAM.
+  CACHE4K   the same loop over a 4 KiB buffer, pass count scaled to the
+            same total load count (dcache-resident control).
+  GX-BRST   fixed synthetic stream: 10,000 flat triangles as immediate
+            GXFIFO writes with normal poly attrs, swap every 2,048;
+            sustained ticks including FIFO-full stalls (GXSTAT).
+  CARD      optional, informational: timed 512 KiB sequential card read
+            if trivially available on the flashcart path.
+End with a fixed-order summary table so one photo captures everything.
+
+PHASE C — documentation with data. Record melonDS-side numbers for every
+bench under the canonical harness config; record the melonDS version and
+any timing/cache-accuracy options (if such an option exists, run the
+bench under it too and record the delta). Add to docs/P1_EXECUTION_BOARD.md
+a "Hardware reality (2026-07-17)" section: the bench table with melonDS
+values filled and hardware cells left TBD for Tyler's photo numbers, plus
+the provisional rule "hardware-30 budget ≈ 840K melonDS-equivalent until
+calibrated". Add a PERF_LEDGER.md methodology note defining per-bucket
+hardware projection (CPU-ITCM / CPU-mainRAM / GX buckets × multipliers).
+
+Gates: profile-0 ROM byte-identical; DevFast + Boundary green; fixtures
+untouched; no decomp/gameplay/renderer-behavior edits; lab ROM not
+registered as a harness mode. Deliver: lab ROM path + SHA-256, HUD ROM
+path + SHA-256, and one-paragraph instructions for Tyler (what to run,
+what to photograph). Ledger row for the task. End: canonical rebuild,
+snapshot New-Smash64DSSnapshot.ps1 -Mode Lean last.
+```
+
+## TASK 11 — screen-space census + background economy (stage only)
+
+```
+/task TASK 11 — Screen-space over-tessellation census + background economy.
+Stage only; fighter LOD is a later task fed by this census. The DS top
+screen is 256×192 = 49,152 px, exactly 0.8× N64 linear per axis: 1 DS px
+= 1.25 N64 px, so near-sub-pixel N64 geometry is fully sub-pixel here.
+CPU draw cost scales with triangles, not pixels. The capture harness's
+pixel diff at 256×192 is the perceptual referee. Gameplay is untouched;
+hitboxes are bone-anchored spheres in gameplay code and cannot be
+affected by draw-side cuts.
+
+PHASE A — census (measurement only; profile-1/lab; compiled out of
+profile-0). At triangle submit time the pipeline already holds projected
+coordinates. Accumulate per stage owner/DL (across the 66 raw, 126 no-Z
+painter, and 10 range classes) and per fighter part: triangle count,
+triangles with projected screen area <1 px² and <4 px², and area sum.
+Integer/fixed-point math only — no new soft-float on the frame path.
+Windows: canonical frames 600..607 plus one ~600-frame natural-match
+window (realistic camera range). Export through the existing perf
+artifact JSON path. Deliverable: a ranked over-tessellation table
+(owner ticks × sub-pixel fraction) in the ledger row. Fighters appear in
+the census for later LOD planning but are NOT cut in this task.
+
+PHASE B — background economy behind NDS_RENDER_ECONOMY (new build flag,
+default OFF; default builds byte-identical). From the census ranking, cut
+the top background/far stage owners (expected: sky, clouds, trees, far
+scenery on Dream Land) by whole-owner skip or a statically reduced
+variant. Rules, per owner cut, each its own ledger ratchet row:
+  - A/B ticks via the fast-iteration protocol: stage/draw/active P50,
+    flag ON vs OFF.
+  - Pixel tolerance gate at 256×192 on canonical frames: meaningful
+    changed pixels ≤ 500/49,152 per owner cut, zero changes inside
+    required regions, and every existing visibility / named-region /
+    horizontal-detail / required-region gate stays green with the flag
+    ON. Existing gates are one-way ratchets — none may be weakened.
+  - Painter strict-order semantics for all remaining owners unchanged
+    (contract per the grdisplay.c:52-141 / grpupupu.c:637-690 citations
+    already in the ledger).
+  - A failed owner reverts alone; keep the rest.
+Pause rule: economy applies only during live gameplay. While the battle
+is paused, render the full owner set — pause is frame-frozen with no perf
+budget, and it is the only time the player can inspect closely. Bind to
+the real pause/process-pause state; select per frame, never per triangle.
+
+Gates: DevFast + Boundary green with the flag OFF (default) AND an
+economy smoke run with the flag ON; fixtures green; no decomp edits; no
+gameplay reads/writes changed; per-owner ledger rows with tick deltas,
+pixel numbers, and capture evidence paths. Pool context: stage P50 is
+470,784 post CUT-E. End: canonical rebuild, snapshot -Mode Lean last.
+```
+
+## TASK 12 — renderer Thumb conversion + hot/cold text grouping
+
+```
+/task TASK 12 — Renderer main-RAM Thumb conversion + hot/cold grouping.
+Pure codegen/placement task: zero behavior change; canonical frames stay
+pixel-exact 0/49,152.
+
+Facts: global ARCH is -mthumb (Makefile:185) but nds_renderer.o adds
+-marm (Makefile:933; bench echo mirror at :1006). So all non-ITCM
+renderer code executes ARM opcodes from waitstated 16-bit main RAM — two
+fetches per instruction on every icache miss — while the ITCM macros
+already force ARM + placement via __attribute__((hot, optimize("O3"),
+target("arm"), section(".itcm"))) (src/nds/nds_renderer.c:33, :38).
+melonDS may under-model the 8 KiB icache; TASK 9 Phase 1 proved main-RAM
+placement is heavily charged. Real hardware is the primary referee here,
+via the TASK 10 HUD.
+
+PHASE A — Thumb conversion.
+1. Audit first: objdump every symbol in .itcm* — each must be ARM-state
+   and reached via the annotated macros. Any bare section(".itcm")
+   function missing target("arm") gets the full macro BEFORE the flag
+   change (silently becoming Thumb-in-ITCM would waste the 32-bit bus).
+2. Remove -marm from nds_renderer.o CFLAGS (Makefile:933) and mirror the
+   bench echo at :1006 so benchmarks build identically. armv5te has blx;
+   interworking veneers are automatic — fix any fallout, expect none.
+3. Verify: objdump state audit (main-RAM renderer symbols Thumb, .itcm
+   ARM); ITCM bytes unchanged (28,052/32,768 baseline); report the
+   main-RAM renderer text size delta (expect roughly −25-30%).
+4. Exactness: GBI fixtures, parity corpus, canonical frames raw delta
+   0/49,152, DevFast + Boundary green.
+5. Measure: melonDS A/B (report even if a wash) AND hardware A/B — build
+   a control/candidate profile-1 ROM pair carrying the TASK 10 HUD and
+   hand Tyler one-paragraph instructions (which ROM, which HUD rows to
+   photograph). KEEP rule for this task (new precedent, memory-system
+   changes only): hardware numbers are primary; a melonDS wash does not
+   veto a hardware win ≥1% of loop; a melonDS regression >1% alongside a
+   hardware win → REWORK, understand it before banking. Record both
+   columns in the ledger; mark hardware cells PENDING-HW if Tyler's
+   device run lands later — never guess them.
+
+PHASE B — hot/cold grouping (after Phase A lands).
+1. Add an NDS_HOT_TEXT(nn) macro → section(".text.hot.nn"). Annotate the
+   hottest main-RAM-resident per-frame functions chosen from ledger owner
+   attribution + map-file sizes; total hot region ≤ 8 KiB (icache size);
+   never move ITCM functions.
+2. Placement: supplementary INSERT-only linker script —
+     SECTIONS { .text.hot : { *(SORT_BY_NAME(.text.hot.*)) } }
+     INSERT BEFORE .text;
+   passed via -T alongside the default script if the toolchain accepts
+   augmentation; otherwise fork the default ds_arm9 script into the repo
+   with the one added line and a provenance comment. Verify hot-region
+   contiguity and ordering in the -Wl,-Map output.
+3. Same exactness gates and the same hardware-primary A/B protocol as
+   Phase A.
+
+Hard rules: no decomp edits, no gameplay edits, no DTCM changes, no GX
+packet/semantic changes; one-writer — this task owns only the Makefile
+lines, the linker-script addition, and attribute/macro annotations in
+the renderer TU. Ledger row per phase with both melonDS and hardware
+numbers. End: canonical rebuild, snapshot -Mode Lean last.
+```
+
+## Sequencing (TASKS 10–12)
+
+- Relay order: TASK 10 first (small; establishes the device measurement
+  loop), then TASK 11 (independent, melonDS-measurable), then TASK 12
+  (its keep decision consumes TASK 10's HUD on hardware).
+- TASK 8 CUT A and TASK 9 Phase 2 remain staged and are not preempted.
+  TASK 11/12 touch the renderer TU — one-writer: do not run them in the
+  same codex lane as TASK 8's renderer cuts.
+- Demo window: TASK 10 and 11 are bankable before 7/19; TASK 12's
+  hardware referee depends on Tyler's device availability.
+- The decimation-pack task (fighter + stage-solid LOD, the biggest
+  visual-economy payoff) is deliberately NOT written yet: its targets
+  come straight from TASK 11's census table.

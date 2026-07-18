@@ -51,7 +51,13 @@ NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS ?= 0
 NDS_FREEZE_DIAGNOSTICS ?= 0
 NDS_TASK9_FLOAT_CENSUS ?= 0
 NDS_TASK9_FLOAT_ITCM ?= 1
+NDS_TASK9_FLOAT_PHASE2 ?= 1
 NDS_TASK9_STATE_HASH ?= 0
+ifeq ($(NDS_TASK9_FLOAT_PHASE2),1)
+ifneq ($(NDS_TASK9_FLOAT_ITCM),1)
+$(error NDS_TASK9_FLOAT_PHASE2=1 requires NDS_TASK9_FLOAT_ITCM=1)
+endif
+endif
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
 ifeq ($(TARGET),smash64ds-battle-playable-hwtri)
 # This is the only published P1 battle ROM. Keep the complete realtime
@@ -237,10 +243,12 @@ ifeq ($(NDS_TASK9_FLOAT_CENSUS),1)
 LDFLAGS += $(foreach symbol,$(NDS_TASK9_FLOAT_WRAP_SYMBOLS),-Wl,--wrap=$(symbol))
 endif
 
-# Task 9 Phase 1 uses the exact objects from the selected Thumb multilib.  The
+# Task 9 Phase 1 uses the exact objects from the selected Thumb multilib. The
 # objects contain ARM-state implementations; only their section placement is
-# changed.  Keep the list narrow so the renderer's existing ITCM ownership is
-# never displaced by low-frequency double-precision helpers.
+# changed. Phase 2 renames the stock fcmpeq wrapper as an in-ROM golden and
+# links one integer-only leaf replacement ahead of libgcc. Keep the list narrow
+# so the renderer's existing ITCM ownership is never displaced by low-frequency
+# double-precision helpers.
 NDS_TASK9_FLOAT_LIBGCC_SHA256 := \
 	c755adc33eca252260360327904591b8462cce5c25e48b0e881ac0b295953f48
 NDS_TASK9_FLOAT_ITCM_MEMBERS := \
@@ -397,6 +405,9 @@ CFILES += battleship_grmodelsetup.c
 endif
 CPPFILES :=
 SFILES := coroutine_arm.s
+ifeq ($(NDS_TASK9_FLOAT_PHASE2),1)
+SFILES += nds_task9_float_phase2.s
+endif
 ifeq ($(NDS_FREEZE_DIAGNOSTICS),1)
 CFILES += nds_freeze_diagnostics.c
 SFILES += nds_freeze_diagnostics_irq.s
@@ -865,6 +876,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FREEZE_DIAGNOSTICS $(NDS_FREEZE_DIAGNOSTICS)'; \
 		echo '#define NDS_TASK9_FLOAT_CENSUS $(NDS_TASK9_FLOAT_CENSUS)'; \
 		echo '#define NDS_TASK9_FLOAT_ITCM $(NDS_TASK9_FLOAT_ITCM)'; \
+		echo '#define NDS_TASK9_FLOAT_PHASE2 $(NDS_TASK9_FLOAT_PHASE2)'; \
 		echo '#define NDS_TASK9_STATE_HASH $(NDS_TASK9_STATE_HASH)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
@@ -918,7 +930,12 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile
 	@cd ".task9-float-itcm" && $(NDS_TASK9_FLOAT_AR) x "libgcc.a" $(NDS_TASK9_FLOAT_ITCM_MEMBERS)
 	@for member in $(NDS_TASK9_FLOAT_ITCM_MEMBERS); do \
 		stem="$${member%.o}"; \
-		$(OBJCOPY) --rename-section .text=.itcm,alloc,load,readonly,code,contents \
+		phase2_filter=""; \
+		if test "$(NDS_TASK9_FLOAT_PHASE2)" = "1" && test "$$member" = "_arm_cmpsf2.o"; then \
+			phase2_filter="--redefine-sym __aeabi_fcmpeq=__nds_task9_libgcc_fcmpeq_golden"; \
+		fi; \
+		$(OBJCOPY) $$phase2_filter \
+			--rename-section .text=.itcm,alloc,load,readonly,code,contents \
 			".task9-float-itcm/$$member" "$$stem.itcm.o" || exit $$?; \
 	done
 	@rm -rf ".task9-float-itcm"
@@ -1001,6 +1018,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_IFCOMMON_HYBRID_OAM=$(NDS_IFCOMMON_HYBRID_OAM)'
 	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_CENSUS=$(NDS_TASK9_FLOAT_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_ITCM=$(NDS_TASK9_FLOAT_ITCM)'
+	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_PHASE2=$(NDS_TASK9_FLOAT_PHASE2)'
 	@printf '%s\n' 'BENCH_MAKE_TASK9_STATE_HASH=$(NDS_TASK9_STATE_HASH)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
