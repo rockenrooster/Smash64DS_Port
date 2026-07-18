@@ -968,12 +968,6 @@ endif
 ifneq ($(strip $(NDS_MPPROCESS_STRICT_OFILES)),)
 $(NDS_MPPROCESS_STRICT_OFILES): CFLAGS += -Werror=implicit-function-declaration -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=return-type
 endif
-# The source DS renderer is ARM-state code, with its hottest handlers copied
-# to ITCM. Keep that interworking shape for mode 163 without spending the code
-# size in normal startup or the archived narrow harness fleet.
-ifeq ($(NDS_DEV_SCENE_HARNESS_ID),163)
-nds_renderer.o: CFLAGS += -marm
-endif
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
 
@@ -1027,7 +1021,7 @@ endif
 
 # Read-only benchmark metadata.  Keep this target independent from the build
 # graph so verifier `-NoBuild` runs can still report the exact flags selected
-# by this Makefile, including the mode-163 ARM-state renderer override.
+# by this Makefile.
 .PHONY: print-benchmark-flags
 print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TARGET=$(TARGET)'
@@ -1050,7 +1044,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK9_STATE_HASH=$(NDS_TASK9_STATE_HASH)'
 	@printf '%s\n' 'BENCH_MAKE_TASK10_HARDWARE_CALIBRATION=$(NDS_TASK10_HARDWARE_CALIBRATION)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
-	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
+	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'
 
 # Nonbuilding semantic probe for the toolchain-path identity checker.  Its

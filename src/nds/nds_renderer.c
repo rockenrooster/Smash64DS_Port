@@ -24,15 +24,14 @@
 #define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY 0
 #endif
 
-/* libnds builds default to compact Thumb code, but the DS reference renderer
- * keeps its display-list interpreter and GX submission loops in ARM state.
- * These six measured paths favor ARM's full register file and conditional
- * execution; retain the ordinary hot/O3 annotation for host-side fixtures. */
+/* Keep the main-RAM renderer in compact Thumb code for the DS 16-bit bus.
+ * The measured zero-wait ITCM paths retain explicit ARM state and O3; host
+ * fixtures retain only the portable optimization annotations. */
 #if defined(__arm__)
 #define NDS_RENDERER_HOT_CODE \
     __attribute__((hot, optimize("O3"), target("arm"), section(".itcm")))
 #define NDS_RENDERER_FAST_RUN_CODE \
-    __attribute__((noinline, optimize("O3"), target("arm")))
+    __attribute__((noinline, optimize("O3")))
 #define NDS_RENDERER_NATIVE_FIGHTER_CODE \
     __attribute__((noinline, hot, optimize("O3"), target("arm"), \
                    section(".itcm.native_fighter")))
@@ -11530,7 +11529,11 @@ static void ndsRendererHardwareBeginTriangleBatch(
     sNdsRendererHardwareTriangleBatchMatrixGeneration = matrix_generation;
 }
 
+/* Thumb interworking changes GCC's surrounding register allocation.  Keep
+ * direct BLX calls (no tail veneer) and the two compact ARM forms so the
+ * measured ITCM footprint stays unchanged. */
 static void NDS_RENDERER_HOT_CODE
+__attribute__((optimize("no-optimize-sibling-calls,no-gcse")))
 ndsRendererHardwareSubmitVertex(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
@@ -12068,6 +12071,7 @@ ndsRendererSubmitHardwareTriangle(
 }
 #else
 static void NDS_RENDERER_HOT_CODE
+__attribute__((optimize("no-cse-follow-jumps")))
 ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
