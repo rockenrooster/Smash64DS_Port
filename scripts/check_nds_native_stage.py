@@ -100,6 +100,13 @@ EXPECTED_RUN_CLASSES = (
     *(generator.SUBMIT_PROJECTED_NO_Z for _ in range(13)),
 )
 
+EXPECTED_DENSE_FIRST_VISIT_OFFSETS = (
+    0, 4, 8, 13, 18, 23, 30, 33, 36, 40, 44, 49, 54, 58, 62, 67, 72,
+    76, 79, 82, 85, 88, 91, 94, 102, 105, 108, 114, 118, 122, 126, 130,
+    133, 137, 140, 144, 168, 200, 210, 218, 226, 230, 237, 245, 253, 256,
+    260, 263, 267, 270, 274, 278, 282, 298, 312,
+)
+
 EXPECTED_STAGE_DEPTH_TRACE_HASH = 0x3BB26905
 
 EXPECTED_PROJECTED_CROSS_MATRIX_RUNS = (32, 34, 45, 47, 49)
@@ -270,10 +277,12 @@ def verify_packet(packet: generator.Packet) -> None:
     )
 
     dense_contexts: dict[int, tuple[int, int, int, int, int]] = {}
+    dense_first_visits: list[int] = []
+    dense_first_visit_offsets = [0]
     dense_references = 0
     projected_references = 0
     projected_dense: set[int] = set()
-    for run in packet.runs:
+    for run_index, run in enumerate(packet.runs):
         context = (
             run.binding_index,
             run.texture_epoch,
@@ -281,18 +290,27 @@ def verify_packet(packet: generator.Packet) -> None:
             run.state_policy,
             run.flags,
         )
+        run_alphas: set[int] = set()
         for dense_index in packet.corners[
             run.first_corner : run.first_corner + run.triangle_count * 3
         ]:
             dense_references += 1
+            if dense_index not in dense_contexts:
+                dense_first_visits.append(dense_index)
             previous = dense_contexts.setdefault(dense_index, context)
             require(
                 previous == context,
                 f"dense vertex {dense_index}: preparation context conflicts",
             )
+            run_alphas.add(packet.vertices[dense_index].rgba & 0xFF)
             if run.submit_class != generator.SUBMIT_RAW_CURRENT:
                 projected_references += 1
                 projected_dense.add(dense_index)
+        require(
+            len(run_alphas) == 1,
+            f"run {run_index}: source vertex alpha is not uniform",
+        )
+        dense_first_visit_offsets.append(len(dense_first_visits))
     require(
         (
             dense_references,
@@ -302,6 +320,14 @@ def verify_packet(packet: generator.Packet) -> None:
         )
         == (606, 312, 408, 246),
         "dense prepare-once reference census drifted",
+    )
+    require(
+        tuple(dense_first_visit_offsets) == EXPECTED_DENSE_FIRST_VISIT_OFFSETS,
+        "dense first-visit run offsets drifted",
+    )
+    require(
+        tuple(sorted(dense_first_visits)) == tuple(range(len(packet.vertices))),
+        "dense first-visit plan is not an exact vertex permutation",
     )
     require(
         Counter(

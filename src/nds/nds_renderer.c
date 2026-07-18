@@ -2701,6 +2701,8 @@ typedef struct NDSNativeStageTopologySummary
 typedef struct NDSNativeStageValidationCache
 {
     NDSNativeStageTopologySummary summary;
+    u16 prepared_dense_offsets[NDS_NATIVE_STAGE_RUN_COUNT + 1u];
+    u16 prepared_dense_indices[NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
     u32 generation;
     u32 stamp;
     u32 valid;
@@ -16667,6 +16669,9 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
     const NDSRendererNativeStageFrame *frame,
     NDSNativeStageTopologySummary *summary)
 {
+    u32 prepared_dense_mask[
+        (NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT + 31u) / 32u];
+    u32 prepared_dense_count = 0u;
     u32 i;
 
     if ((frame == NULL) || (summary == NULL) ||
@@ -16676,6 +16681,7 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         return FALSE;
     }
     memset(summary, 0, sizeof(*summary));
+    memset(prepared_dense_mask, 0, sizeof(prepared_dense_mask));
     for (i = 0u; i < NDS_NATIVE_STAGE_DOBJ_COUNT; i++)
     {
         const NDSNativeStageDObj *expected = &sNdsNativeStageDObjs[i];
@@ -16822,6 +16828,7 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         const NDSNativeStageTextureEpoch *epoch;
         u32 corner_count = (u32)run->triangle_count * 3u;
         u32 corner_offset;
+        u32 run_alpha = UINT_MAX;
 
         if ((run->triangle_count == 0u) ||
             (run->binding_index >= NDS_NATIVE_STAGE_BINDING_COUNT) ||
@@ -16860,6 +16867,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         {
             return FALSE;
         }
+        sNdsNativeStageValidationCache.prepared_dense_offsets[i] =
+            (u16)prepared_dense_count;
         for (corner_offset = 0u; corner_offset < corner_count; corner_offset++)
         {
             u32 dense_index = sNdsNativeStageCorners[
@@ -16871,6 +16880,27 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                 return FALSE;
             }
             dense = &sNdsNativeStageVertices[dense_index];
+            if (run_alpha == UINT_MAX)
+            {
+                run_alpha = dense->rgba & 0xffu;
+            }
+            else if (run_alpha != (dense->rgba & 0xffu))
+            {
+                return FALSE;
+            }
+            if ((prepared_dense_mask[dense_index / 32u] &
+                 ((u32)1u << (dense_index & 31u))) == 0u)
+            {
+                if (prepared_dense_count >=
+                    NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
+                {
+                    return FALSE;
+                }
+                prepared_dense_mask[dense_index / 32u] |=
+                    (u32)1u << (dense_index & 31u);
+                sNdsNativeStageValidationCache.prepared_dense_indices[
+                    prepared_dense_count++] = (u16)dense_index;
+            }
             if (run->submit_class ==
                 NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
             {
@@ -16887,6 +16917,10 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                     return FALSE;
                 }
             }
+        }
+        if (run_alpha == UINT_MAX)
+        {
+            return FALSE;
         }
         if ((run->flags &
              NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u)
@@ -16914,8 +16948,11 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             }
         }
     }
+    sNdsNativeStageValidationCache.prepared_dense_offsets[
+        NDS_NATIVE_STAGE_RUN_COUNT] = (u16)prepared_dense_count;
     return ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT ==
              NDS_NATIVE_STAGE_RUN_COUNT + NDS_NATIVE_STAGE_BINDING_COUNT) &&
+            (prepared_dense_count == NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) &&
             (summary->raw_triangles == 66u) &&
             (summary->projected_no_z_triangles == 126u) &&
             (summary->projected_range_triangles == 10u) &&
@@ -17069,8 +17106,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
-    u64 *epoch_mask,
-    u32 *prepared_dense_mask)
+    u64 *epoch_mask)
 {
     const NDSNativeStageRun *run = &sNdsNativeStageRuns[run_index];
     const NDSNativeStageTextureEpoch *epoch;
@@ -17087,8 +17123,9 @@ static s32 ndsRendererNativeStagePrepareRun(
     s32 use_material_color;
     s32 use_vertex_color;
     s32 texture_offset;
-    u32 corner_count = (u32)run->triangle_count * 3u;
-    u32 corner_offset;
+    u32 first_visit_offset;
+    u32 first_visit_end;
+    u32 dense_offset;
     u32 alpha = UINT_MAX;
     u32 use_texture;
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -17150,38 +17187,42 @@ static s32 ndsRendererNativeStagePrepareRun(
     {
         alpha = ndsRendererHardwareAlpha(stats, NULL);
     }
+    if (alpha_uses_vertex != FALSE)
+    {
+        u32 dense_index = sNdsNativeStageCorners[run->first_corner];
+        const NDSNativeStageDenseVertex *dense =
+            &sNdsNativeStageVertices[dense_index];
+
+        alpha = (dense->rgba & 0xffu) >> 3;
+    }
+    first_visit_offset =
+        sNdsNativeStageValidationCache.prepared_dense_offsets[run_index];
+    first_visit_end =
+        sNdsNativeStageValidationCache.prepared_dense_offsets[run_index + 1u];
+    if ((first_visit_offset > first_visit_end) ||
+        (first_visit_end > NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT))
+    {
+        return FALSE;
+    }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     vertex_prepare_start = ndsRendererM3Phase0Tick();
 #endif
-    for (corner_offset = 0u; corner_offset < corner_count; corner_offset++)
+    for (dense_offset = first_visit_offset;
+         dense_offset < first_visit_end;
+         dense_offset++)
     {
-        u32 dense_index = sNdsNativeStageCorners[
-            (u32)run->first_corner + corner_offset];
+        u32 dense_index =
+            sNdsNativeStageValidationCache.prepared_dense_indices[
+                dense_offset];
         const NDSNativeStageDenseVertex *dense;
         NDSNativeStagePreparedDense *prepared_dense;
 
+        if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
+        {
+            return FALSE;
+        }
         dense = &sNdsNativeStageVertices[dense_index];
         prepared_dense = &sNdsNativeStagePreparedDense[dense_index];
-        if (alpha_uses_vertex != FALSE)
-        {
-            u32 vertex_alpha = (dense->rgba & 0xffu) >> 3;
-
-            if (alpha == UINT_MAX)
-            {
-                alpha = vertex_alpha;
-            }
-            else if (alpha != vertex_alpha)
-            {
-                return FALSE;
-            }
-        }
-        if ((prepared_dense_mask[dense_index / 32u] &
-             ((u32)1u << (dense_index & 31u))) != 0u)
-        {
-            continue;
-        }
-        prepared_dense_mask[dense_index / 32u] |=
-            (u32)1u << (dense_index & 31u);
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         gNdsRendererM3Phase0PreparedDenseCount++;
 #endif
@@ -17646,8 +17687,6 @@ s32 ndsRendererPrepareNativeStageOwner(
         &sNdsNativeStageOwnerExecution.traversal;
     NDSNativeStageTopologySummary topology;
     u64 epoch_mask = 0u;
-    u32 prepared_dense_mask[
-        (NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT + 31u) / 32u];
     u32 segment_index;
     s32 accepted = FALSE;
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -17675,7 +17714,6 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
-    memset(prepared_dense_mask, 0, sizeof(prepared_dense_mask));
     if ((gNdsRendererFastRunMode !=
          NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ||
         (frame == NULL) || (stats == NULL) ||
@@ -17733,7 +17771,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     s32 prepare_run_result = ndsRendererNativeStagePrepareRun(
                         run_index, frame,
                         &sNdsNativeStageOwnerExecution.preflight_stats,
-                        state, &epoch_mask, prepared_dense_mask);
+                        state, &epoch_mask);
 
                     ndsRendererM3Phase0FinishSpan(
                         &gNdsRendererM3Phase0PrepareRunTicks,
@@ -17747,7 +17785,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                 if (ndsRendererNativeStagePrepareRun(
                         run_index, frame,
                         &sNdsNativeStageOwnerExecution.preflight_stats,
-                        state, &epoch_mask, prepared_dense_mask) == FALSE)
+                        state, &epoch_mask) == FALSE)
                 {
                     goto done;
                 }
