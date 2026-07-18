@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-18 10:18 Central
+Updated: 2026-07-18 10:59 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -19,19 +19,14 @@ source countdown, exact Dream Land water frame 0, and Task 16 compare/i2f/addsub
 `1/1/1`; global Task 16 lab defaults remain zero. Retail hardware closes Task
 12 as blanket-Thumb REVERT and renderer-hot REVERT WITH BASE. The renderer is
 ARM again. Task 17 is retained only as the exact 11-function / 5,016-byte
-update working set; melonDS remains correctness evidence, never its speed
-referee.
+update working set. Its ARM-base device pair passes by crossing LOOP from five
+to four VBlanks and FPS 13.9→14.3; the actual UPD delta is only -2,560, so do
+not carry the earlier -44K Thumb-base result into ARM claims. melonDS remains
+correctness evidence, never its speed referee.
 
 ## Next Packet
 
-First run the morning retail-DS confirmation pair under
-`builds/task19-hardware-hud-pair/`: cold-boot the ARM control, then ARM +
-update-hot, on the same DS/flashcart/settings and photograph the same post-GO
-heavy-combat `UPD/DRW/ACT/LOOP/SLIP/GIT` sample. The expected carry is about
-44K fewer UPD ticks; equal or worse requires reverting update-hot before
-release-candidate work. Report the DS, loader/settings, and both photos.
-
-At that checkpoint, start the requested attack/hit audio-visual asset audit.
+Start the requested attack/hit audio-visual asset audit.
 Its first gate is the CPU-on one-minute lifecycle/reserve proof against the
 current 121,720-byte pack; the old 166,672-byte result belongs to the smaller
 pack. Bind natural exact-ROM BattleShip triggers to the correct source sample,

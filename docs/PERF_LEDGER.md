@@ -371,11 +371,25 @@ ARM-BASE SAME-HUD CONFIRMATION PAIR:
   ARM + update-hot ROM / ELF:
     381914BD34E34114E06A59E3642CC0896A88736EE9A66947AA7C80B5D4AE30E7
     EBF8EEC6F37946A9943C86B7E9CE887CF375269C578192ED6B5D4E3448AD4408
-  Both ROMs are 14,673,920 bytes and embed the same T19PAIR phase HUD. Cold-boot
-  control then candidate on the same DS/flashcart/settings and photograph the
-  same post-GO heavy-combat UPD/DRW/ACT/LOOP/SLIP/GIT sample. The expected
-  carry is approximately -44K UPD ticks. Equal or worse UPD falsifies the
-  transposition and requires reverting update-hot before release-candidate work.
+  Both ROMs are 14,673,920 bytes and embed the same T19PAIR phase HUD.
+
+RETAIL-DS ARM-BASE CONFIRMATION (2026-07-18, TIMER 00:58):
+  control:   FPS 13.9; UPD 366,016; DRW 1,699,328; ACT 1,699,072;
+             LOOP 2,800,832; SLIP 0
+  update-hot: FPS 14.3; UPD 363,456; DRW 1,696,640; ACT 1,714,944;
+              LOOP 2,240,448; SLIP 0
+  Delta is UPD -2,560 (-0.70%), DRW -2,688 (-0.16%), ACT +15,872
+  (+0.93%), LOOP -560,384 (-20.01%, five to four VBlanks), and FPS +0.4.
+  The earlier -44,160 UPD result on the Thumb base does not carry to this ARM
+  sample. The retained 5,016-byte set is still a device KEEP because its small
+  compute win crosses the presentation threshold in the matched phase; that is
+  the admitted claim, not a broad 11.4% ARM-base update reduction. Tyler also
+  reports that the update-hot ROM runs better.
+  Photos and SHA-256:
+    artifacts/visibility/2026-07-18_task19-arm-control-retail-ds.jpg
+    95E2897047E38BD2C2289DCC8980783C8E47D291323C0A05AF6E8E33F62616DF
+    artifacts/visibility/2026-07-18_task19-arm-update-hot-retail-ds.jpg
+    9AE9777BB31F5B003A5BD67E04F164546D031015F7E6B10F20D6ED5FF5045ECD
 
 MELONDS ARM-BASE REPORT-ONLY CHECK (FRAMES 438..445):
   source update 196,352/197,312 -> 196,160/197,056 (-192/-256)
@@ -389,8 +403,8 @@ MELONDS ARM-BASE REPORT-ONLY CHECK (FRAMES 438..445):
     artifacts/performance/2026-07-18_task19-arm-update-hot.json
     artifacts/visibility/2026-07-18_task19-arm-control-frame445.png
     artifacts/visibility/2026-07-18_task19-arm-update-hot-frame445.png
-DECISION: KEEP, REWORKED UPDATE-ONLY ON ARM. MORNING ARM-BASE DEVICE PAIR IS
-THE FINAL FALSIFIER; MELONDS NEVER OVERRULES THE RETAIL-DS UPDATE VERDICT.
+DECISION: KEEP CONFIRMED, REWORKED UPDATE-ONLY ON ARM. THE MEASURED ARM-BASE
+GAIN IS THE FIVE-TO-FOUR-VBLANK CROSSING; DO NOT CLAIM THE EARLIER -44K UPD.
 ```
 
 ## 2026-07-17 - Task 11 screen-space census and stage economy
