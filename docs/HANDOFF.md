@@ -140,28 +140,29 @@ fails its advancement assertion while preserving the decisive snapshot:
 pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor Fox -ObserverFreeSnapshot -NoBuild -RunnerSlot 3 -TimeoutSeconds 120
 ```
 
-The new `-FreezeDiagnostics` arm selects the intrinsic isolated diagnostic ROM,
-reuses the same human-P2 Fox route, disables the five observer breakpoints at
-first Down-Air, and prefers the target watchdog marker. Because this freeze
-prevents the watchdog task from arming, it falls back to one 12-second MI stop
-and prints only target-owned diagnostic globals:
+The `-FreezeDiagnostics` arm selects the intrinsic isolated diagnostic ROM,
+reuses the same human-P2 Fox route, and now stops at the retained exception
+handler after first Down-Air:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor Fox -FreezeDiagnostics -NoBuild -RunnerSlot 3 -TimeoutSeconds 120
 ```
 
-The retained run captures status 213 / motion 188 / tic 6, heartbeat 6, latest
-breadcrumb `UPDT`, raw ring `DRAW,FLUS,VBLK,PRES,UPDT,UPDT,HITS,HITS`, and
-`IME/IE/IF=1/0x000F0061/0x61`. Its last target-owned IRQ PC is `0x01ffebe4`, the
-`bx lr` immediately after Calico's WFI in `armWaitForIrq`. The watchdog is
-initialized but remains unarmed, so a target stuck in IRQ/scheduler wait with a
-pending IRQ is now the leading boundary. The stored LR is the user/system bank
-and is not a proved caller when the interrupted mode is privileged.
+The retained run captures exception flags `2`, status 213 / motion 188 / tic 6,
+context PC `0x020631f6`, and saved caller return `0x02088873`. The faulting PC is
+`gmCollisionGetFighterPartsWorldPosition` at `gmcollision.c:494`, dereferencing
+its `main_dobj` argument. The caller is `ftMainProcPhysicsMap` at
+`ftmain.c:1884`; immediately before the call it loads `attack_coll->joint`.
+Repeated captures pass invalid small values including `0x1a0`, `0x1ac`, and
+`0x206` instead of a DObj pointer. The scheduler snapshot has Calico main as the
+current thread and shows `0x01ffebe4` as the seeded idle-thread WFI context, so
+the earlier IRQ-wait conclusion is disproven.
 
-Resume by capturing the interrupted SPSR/CPSR and correct banked SP/LR in the
-diagnostic IRQ vector, or enable a breakpoint on the first post-entry
-`armWaitForIrq` call and recover its caller. Map that owner before changing
-gameplay source. Do not add ID 190 as a stall fix.
+Resume by tracing every live write to `FTAttackColl.joint`, the motion-event
+joint decode, and the imported structure layout/stride against BattleShip
+source. Identify where the frame-7 attack refresh installs the small value and
+fix that shared seam. Do not add a collision-transform guard, a Down-Air special
+case, or ID 190 as a stall fix.
 
 Do not mark the playtest finding fixed until Fox P2, Mario, and one canonical
 CPU-on Current gate pass. The five-minute goal heartbeat is intentionally

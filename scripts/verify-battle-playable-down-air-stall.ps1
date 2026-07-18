@@ -117,6 +117,11 @@ $freezeStall = if ($FreezeDiagnostics) {
 } else {
     0
 }
+$freezeException = if ($FreezeDiagnostics) {
+    Get-ElfSymbolAddress 'ndsFreezeDiagnosticsExceptionHandler'
+} else {
+    0
+}
 $downAirAssetSymbol = if ($Actor -eq 'Mario') {
     'llFTMarioAnimAttackAirDFileID'
 } else {
@@ -199,17 +204,44 @@ try {
     $freezeDefinitions = if ($FreezeDiagnostics) {
         @(
             'set $freeze_fallback_armed = 0',
+            'set $freeze_exception_armed = 0',
             'define hook-stop',
             'if $freeze_fallback_armed != 0',
+            ('if $pc != 0x{0:x8}' -f $freezeException),
             'if gNdsFreezeDiagnosticsWatchdogTripCount == 0',
             'set $freeze_fallback_armed = 0',
             'printf "DOWN_AIR_FREEZE_LIVE=%#x,%#x,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%d,%d,%u,%#x,%#x,%#x,%#x,%u,%u,%#x,%#x,%#x\n", gNdsFreezeDiagnosticsInterruptedPC, gNdsFreezeDiagnosticsInterruptedLR, gNdsFreezeDiagnosticsHeartbeat, gNdsFreezeDiagnosticsLastBreadcrumb, gNdsFreezeDiagnosticsBreadcrumbWriteCount, sNdsFreezeDiagnosticsInitialized, sNdsFreezeDiagnosticsWatchdogArmed, sNdsFreezeDiagnosticsStaleSamples, sNdsFreezeDiagnosticsLastHeartbeat, gNdsFreezeDiagnosticsWatchdogTripCount, gNdsFreezeDiagnosticsForceTrip, $actor_fp->status_id, $actor_fp->motion_id, $actor_fp->status_total_tics, *(unsigned int *)&$actor_gobj->anim_frame, *(unsigned int *)&$actor_fp->motion_frame, (unsigned int)$actor_fp->proc_update, (unsigned int)$actor_fp->proc_map, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, *(unsigned int *)0x04000208, *(unsigned int *)0x04000210, *(unsigned int *)0x04000214',
             'printf "DOWN_AIR_FREEZE_RING=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsFreezeDiagnosticsBreadcrumbs[0], gNdsFreezeDiagnosticsBreadcrumbs[1], gNdsFreezeDiagnosticsBreadcrumbs[2], gNdsFreezeDiagnosticsBreadcrumbs[3], gNdsFreezeDiagnosticsBreadcrumbs[4], gNdsFreezeDiagnosticsBreadcrumbs[5], gNdsFreezeDiagnosticsBreadcrumbs[6], gNdsFreezeDiagnosticsBreadcrumbs[7]',
+            'printf "DOWN_AIR_CPU=%#x,%#x,%#x,%#x,%#x\n", gNdsFreezeDiagnosticsReportKind, $cpsr, $pc, $lr, $sp',
+            'printf "DOWN_AIR_SCHED=%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", *(unsigned int *)0x02ff0080, *(unsigned int *)0x02ff0084, *(unsigned int *)0x02ff0088, *(unsigned int *)0x02ff008c, *(unsigned int *)0x02ff0090, *(unsigned int *)0x02ff0094, *(unsigned int *)0x02ff3ff8',
+            'set $sched_thread = *(unsigned int *)0x02ff0088',
+            'set $sched_index = 0',
+            'while ($sched_thread != 0) && ($sched_index < 12)',
+            'printf "DOWN_AIR_THREAD=%u,%#x,%#x,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", $sched_index, $sched_thread, *(unsigned int *)($sched_thread + 80), *(unsigned char *)($sched_thread + 84), *(unsigned char *)($sched_thread + 85), *(unsigned char *)($sched_thread + 86), *(unsigned char *)($sched_thread + 87), *(unsigned int *)($sched_thread + 52), *(unsigned int *)($sched_thread + 56), *(unsigned int *)($sched_thread + 60), *(unsigned int *)($sched_thread + 64), *(unsigned int *)($sched_thread + 104), *(unsigned int *)($sched_thread + 108), *(unsigned int *)($sched_thread + 96)',
+            'set $sched_thread = *(unsigned int *)($sched_thread + 80)',
+            'set $sched_index = $sched_index + 1',
+            'end',
             ('set {{unsigned int}}0x{0:x8} = 0' -f $enabled),
             'detach',
             'quit',
             'end',
             'end',
+            'end',
+            'end',
+            ('break *0x{0:x8}' -f $freezeException),
+            'set $freeze_exception_breakpoint = $bpnum',
+            'commands $freeze_exception_breakpoint',
+            'silent',
+            'if $freeze_exception_armed != 0',
+            'printf "DOWN_AIR_EXCEPTION=%u,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%d,%d,%u,%u,%u\n", $r1, $r0, *(unsigned int *)($r0 + 52), *(unsigned int *)($r0 + 56), *(unsigned int *)($r0 + 60), *(unsigned int *)($r0 + 64), *(unsigned int *)($r0 + 68), *(unsigned int *)($r0 + 72), *(unsigned int *)($r0 + 76), $actor_fp->status_id, $actor_fp->motion_id, $actor_fp->status_total_tics, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed',
+            'printf "DOWN_AIR_EXCEPTION_REGS=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", *(unsigned int *)($r0 + 0), *(unsigned int *)($r0 + 4), *(unsigned int *)($r0 + 8), *(unsigned int *)($r0 + 12), *(unsigned int *)($r0 + 16), *(unsigned int *)($r0 + 20), *(unsigned int *)($r0 + 24), *(unsigned int *)($r0 + 28), *(unsigned int *)($r0 + 32), *(unsigned int *)($r0 + 36), *(unsigned int *)($r0 + 40), *(unsigned int *)($r0 + 44), *(unsigned int *)($r0 + 48)',
+            'set $exception_sp = *(unsigned int *)($r0 + 52)',
+            'printf "DOWN_AIR_EXCEPTION_STACK=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", *(unsigned int *)($exception_sp + 0), *(unsigned int *)($exception_sp + 4), *(unsigned int *)($exception_sp + 8), *(unsigned int *)($exception_sp + 12), *(unsigned int *)($exception_sp + 16), *(unsigned int *)($exception_sp + 20), *(unsigned int *)($exception_sp + 24), *(unsigned int *)($exception_sp + 28), *(unsigned int *)($exception_sp + 32), *(unsigned int *)($exception_sp + 36), *(unsigned int *)($exception_sp + 40), *(unsigned int *)($exception_sp + 44)',
+            ('set {{unsigned int}}0x{0:x8} = 0' -f $enabled),
+            'detach',
+            'quit',
+            'end',
+            'continue',
             'end',
             ('break *0x{0:x8}' -f $freezeStall),
             'set $freeze_breakpoint = $bpnum',
@@ -246,6 +278,7 @@ try {
             'disable $timeup_breakpoint',
             'set $outcome = 4',
             'set $freeze_fallback_armed = 1',
+            'set $freeze_exception_armed = 1',
             ("shell powershell.exe -NoProfile -Command `"Set-Content -LiteralPath '$observerReadyGdb' -Value ready`"")
         )
     } else {
@@ -619,17 +652,59 @@ try {
     }
 
     if ($FreezeDiagnostics) {
+        $exception = [regex]::Match($gdbStdout,
+            'DOWN_AIR_EXCEPTION=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+        $exceptionRegs = [regex]::Match($gdbStdout,
+            'DOWN_AIR_EXCEPTION_REGS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+        $exceptionStack = [regex]::Match($gdbStdout,
+            'DOWN_AIR_EXCEPTION_STACK=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
         $live = [regex]::Match($gdbStdout,
             'DOWN_AIR_FREEZE_LIVE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
         $freeze = [regex]::Match($gdbStdout,
             'DOWN_AIR_FREEZE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
         $ring = [regex]::Match($gdbStdout,
             'DOWN_AIR_FREEZE_RING=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+        $sched = [regex]::Match($gdbStdout,
+            'DOWN_AIR_SCHED=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+        $cpu = [regex]::Match($gdbStdout,
+            'DOWN_AIR_CPU=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+        $threads = [regex]::Matches($gdbStdout,
+            'DOWN_AIR_THREAD=([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
         $io = [regex]::Match($gdbStdout,
             'DOWN_AIR_FREEZE_IO=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
+        if ($exception.Success) {
+            $exceptionv = Get-Ints $exception
+            Assert-Condition ($exceptionRegs.Success -and
+                $exceptionStack.Success -and
+                $exceptionv[1] -ne 0 -and $exceptionv[4] -ne 0 -and
+                $exceptionv[9] -eq 213 -and $exceptionv[10] -eq 188 -and
+                ($exceptionv[12] + $exceptionv[13]) -eq 3600) `
+                "$Actor exception context was incomplete or left Down-Air." `
+                $gdbStdout
+            Write-Output ((
+                'Down-Air exception captured: actor={0} flags={1} ctx={2} ' +
+                'pc={3} lr={4} sp={5} cpsr={6} spsr={7} ' +
+                'cp15/excpt={8}/{9} status={10} motion={11} tic={12} ' +
+                'regs=[{13}] stack=[{14}].') -f
+                $Actor, $exceptionv[0], $exception.Groups[2].Value,
+                $exception.Groups[5].Value, $exception.Groups[4].Value,
+                $exception.Groups[3].Value, $exception.Groups[6].Value,
+                $exception.Groups[7].Value, $exception.Groups[8].Value,
+                $exception.Groups[9].Value, $exceptionv[9],
+                $exceptionv[10], $exceptionv[11],
+                ((1..13 | ForEach-Object {
+                    $exceptionRegs.Groups[$_].Value
+                }) -join ','),
+                ((1..12 | ForEach-Object {
+                    $exceptionStack.Groups[$_].Value
+                }) -join ','))
+            return
+        }
         if ($live.Success) {
-            Assert-Condition $ring.Success `
-                "$Actor live freeze snapshot omitted its breadcrumb ring." `
+            Assert-Condition ($ring.Success -and $cpu.Success -and
+                $sched.Success -and
+                $threads.Count -ge 2) `
+                "$Actor live freeze snapshot omitted target scheduler state." `
                 $gdbStdout
             $livev = Get-Ints $live
             $ringv = Get-Ints $ring
@@ -645,14 +720,27 @@ try {
                 'Down-Air live freeze captured: actor={0} pc={1} lr={2} ' +
                 'heartbeat={3} last={4} write={5} watchdog={6}/{7}/{8} ' +
                 'trip/force={9}/{10} status={11} motion={12} tic={13} ' +
-                'irq={14}/{15}/{16} ring=[{17}].') -f
+                'irq={14}/{15}/{16} ring=[{17}] sched={18}/{19}/{20}/{21} ' +
+                'cpu={22}/{23}/{24}/{25}/{26} threads=[{27}].') -f
                 $Actor, $live.Groups[1].Value, $live.Groups[2].Value,
                 $livev[2], $live.Groups[4].Value, $livev[4],
                 $livev[6], $livev[7], $livev[8], $livev[9], $livev[10],
                 $livev[11], $livev[12], $livev[13],
                 $live.Groups[21].Value, $live.Groups[22].Value,
                 $live.Groups[23].Value,
-                ((1..8 | ForEach-Object { $ring.Groups[$_].Value }) -join ','))
+                ((1..8 | ForEach-Object { $ring.Groups[$_].Value }) -join ','),
+                $sched.Groups[1].Value, $sched.Groups[2].Value,
+                $sched.Groups[3].Value, $sched.Groups[4].Value,
+                $cpu.Groups[1].Value, $cpu.Groups[2].Value,
+                $cpu.Groups[3].Value, $cpu.Groups[4].Value,
+                $cpu.Groups[5].Value,
+                (($threads | ForEach-Object {
+                    '{0}:{1}/{2}/{3}/{4}/{5}/{6}' -f
+                        $_.Groups[2].Value, $_.Groups[4].Value,
+                        $_.Groups[5].Value, $_.Groups[10].Value,
+                        $_.Groups[11].Value, $_.Groups[12].Value,
+                        $_.Groups[13].Value
+                }) -join ','))
             return
         }
         Assert-Condition ($freeze.Success -and $ring.Success -and $io.Success) `

@@ -20,12 +20,12 @@ durable unresolved gaps.
 - The exact two-ROM build and Boundary checkpoint pass with a dated
   fast-iteration capture. Release still needs the final CPU-on complete-match
   capture under `artifacts/visibility` and manual user retest.
-- Playtesting reports a CPU stall during Down+A aerials. Human-P2 Fox now has
-  observer-free and target-owned freeze snapshots at status 213 / motion 188 /
-  tic 6. The last target IRQ PC resolves to Calico `armWaitForIrq` with a pending
-  IRQ, while the watchdog task never arms. The interrupted mode and caller are
-  still unknown; capture SPSR/CPSR plus the correct banked SP/LR before changing
-  gameplay. Closure then needs Fox P2, Mario, and canonical CPU-on Current gates.
+- Playtesting reports a CPU stall during Down+A aerials. Human-P2 Fox reaches a
+  data abort at status 213 / motion 188 / tic 6: `ftMainProcPhysicsMap` passes an
+  invalid small `attack_coll->joint` value to
+  `gmCollisionGetFighterPartsWorldPosition`. The earlier WFI sample was Calico's
+  idle-thread context. Trace and repair the shared attack-joint assignment/decode
+  seam; closure then needs Fox P2, Mario, and canonical CPU-on Current gates.
 
 ## Gameplay And Source Boundaries
 
