@@ -135,6 +135,7 @@ $profile1Rom = [string]$first.identity.artifacts.rom.sha256
 $profile1Elf = [string]$first.identity.artifacts.elf.sha256
 $sourceHead = [string]$first.identity.gitHead
 $phaseResults = @()
+$profile1ExactnessFailures = @()
 $timerDefinitions = @(
     @{ key = 'input'; index = 2; class = 'child'; parent = 'wholeLoop' },
     @{ key = 'sourceUpdate1'; index = 24; class = 'child'; parent = 'sourceUpdateAggregate' },
@@ -195,6 +196,8 @@ foreach ($phaseName in $phaseOrder) {
         $m3Rows.Count -eq 8 -and $m2ShadeRows.Count -in @(0, 8) -and
         $textureRows.Count -eq 8 -and $m4StaticRows.Count -eq 8 -and
         $m4FenceRows.Count -eq 8) "$phaseName does not contain eight synchronized exactness rows."
+    $phaseExactnessFailures = @()
+    $observedFastGeometry = @()
     for ($index = 0; $index -lt 8; $index++) {
         $coarse = $coarseRows[$index]
         $fast = $fastRows[$index]
@@ -208,32 +211,49 @@ foreach ($phaseName in $phaseOrder) {
             ($coarse[4] + $coarse[5]) -le $coarse[3] -and
             ($coarse[22] * 100) -le ($coarse[1] * 2)) `
             "$phaseName sample $index failed fixed-two or timing conservation."
-        Assert-Task25R (($fast -join ',') -match '^[0-9]+,9,121,828,202,320,306,0,0,0$') `
-            "$phaseName sample $index drifted from 121/828 and 202/320/306 ownership."
-        Assert-Task25R ($m3[4] -eq 8 -and $m3[5] -eq 255 -and
+        $fastGeometry = $fast[2..6] -join '/'
+        $observedFastGeometry += $fastGeometry
+        $fastExact = (($fast -join ',') -match
+            '^[0-9]+,9,121,828,202,320,306,0,0,0$')
+        if (-not $fastExact) {
+            $phaseExactnessFailures +=
+                "sample $index geometry=$fastGeometry fallback=$($fast[7..9] -join '/')"
+        }
+        $m3Exact = ($m3[4] -eq 8 -and $m3[5] -eq 255 -and
             $m3[6] -eq 0 -and $m3[7] -eq 57 -and $m3[8] -eq 42 -and
             $m3[9] -eq 54 -and $m3[10] -eq 202 -and $m3[11] -eq 49 -and
             $m3[12] -eq 4 -and $m3[13] -eq 4 -and
             $m3[14] -eq 5 -and $m3[15] -eq 10 -and $m3[16] -eq 15 -and
             $m3[17] -eq 1 -and $m3[18] -eq $m3[2] -and
             $m3[19] -eq 0 -and $m3[20] -eq 0 -and $m3[21] -eq 0 -and
-            $m3[1] -eq ($m3[2] + $m3[3])) `
-            "$phaseName sample $index drifted from the exact M3 topology/state contract."
-        if ($m2ShadeRows.Count -eq 8) {
-            Assert-Task25R ($m2ShadeRows[$index][4] -eq 0) `
-                "$phaseName sample $index observed an M2 shade collision."
+            $m3[1] -eq ($m3[2] + $m3[3]))
+        if (-not $m3Exact) {
+            $phaseExactnessFailures += "sample $index M3 topology/state"
         }
-        Assert-Task25R ($texture[3] -eq 0 -and $texture[4] -eq 0 -and
+        $m2Exact = ($m2ShadeRows.Count -eq 0 -or
+            $m2ShadeRows[$index][4] -eq 0)
+        if (-not $m2Exact) {
+            $phaseExactnessFailures += "sample $index M2 shade collision"
+        }
+        $textureExact = ($texture[3] -eq 0 -and $texture[4] -eq 0 -and
             $texture[6] -eq 0 -and $texture[7] -eq 0 -and $texture[8] -eq 0 -and
-            $texture[9] -eq 0 -and $texture[11] -eq 0 -and $texture[12] -eq 0) `
-            "$phaseName sample $index observed unexpected conversion/upload/fallback work."
-        Assert-Task25R ($m4Static[1] -eq 1 -and $m4Static[2] -eq 1 -and
+            $texture[9] -eq 0 -and $texture[11] -eq 0 -and $texture[12] -eq 0)
+        if (-not $textureExact) {
+            $phaseExactnessFailures += "sample $index conversion/upload/fallback"
+        }
+        $m4Exact = ($m4Static[1] -eq 1 -and $m4Static[2] -eq 1 -and
             $m4Static[3] -eq 0 -and $m4Static[4] -eq 22 -and
             $m4Static[5] -eq 131072 -and $m4Static[6] -eq 1 -and
             $m4Static[7] -eq 0x3fffff -and $m4Static[8] -eq 0x7 -and
             $m4Static[9] -eq 0 -and $m4Static[10] -gt 0 -and
-            @($m4Fence[1..12] | Where-Object { $_ -ne 0 }).Count -eq 0) `
-            "$phaseName sample $index failed static residency or post-GO fence exactness."
+            @($m4Fence[1..12] | Where-Object { $_ -ne 0 }).Count -eq 0)
+        if (-not $m4Exact) {
+            $phaseExactnessFailures += "sample $index static residency/fence"
+        }
+    }
+    if ($phaseExactnessFailures.Count -gt 0) {
+        $profile1ExactnessFailures +=
+            "$phaseName`: $($phaseExactnessFailures -join '; ')"
     }
 
     $timers = [ordered]@{}
@@ -275,6 +295,9 @@ foreach ($phaseName in $phaseOrder) {
         fighterPair = $fighterPair
         rankedLeafOwners = $ranking
         exactness = [ordered]@{
+            pass = ($phaseExactnessFailures.Count -eq 0)
+            failures = $phaseExactnessFailures
+            observedFastGeometry = @($observedFastGeometry | Sort-Object -Unique)
             synchronizedSamples = 8
             geometryRuns = 121
             triangles = 828
@@ -529,7 +552,8 @@ $profile0SlowIntervals = [int64]$profile0.pacing.histogram.vblank3 +
     [int64]$profile0.pacing.histogram.vblank5Plus
 $pacingStable30 = ($profile0SlowIntervals -eq 0 -and
     [int64]$profile0.pacing.slips -eq 0)
-$stable30 = ($pacingStable30 -and
+$profile1ExactnessPass = ($profile1ExactnessFailures.Count -eq 0)
+$stable30 = ($pacingStable30 -and $profile1ExactnessPass -and
     [bool]$profile0.gates.reservePass -and
     [bool]$profile0.gates.exactKoFgmTriplet -and
     [bool]$profile0.gates.zeroPostGoTextureFence)
@@ -565,6 +589,8 @@ $matrix = [ordered]@{
     readiness = [ordered]@{
         stable30 = $stable30
         pacingStable30 = $pacingStable30
+        profile1ExactnessPass = $profile1ExactnessPass
+        profile1ExactnessFailures = $profile1ExactnessFailures
         slowPresentationIntervals = $profile0SlowIntervals
         slips = [int64]$profile0.pacing.slips
         reserveBytes = [int64]$profile0.gates.reserveBytes
@@ -619,13 +645,13 @@ $markdown = @(
     "Profile-1 ROM: ``$profile1Rom``  ",
     "Recommendation: **$recommendation**  ",
     '',
-    '| Phase | Loop P50/P95/max | Deficit P50/P95/max | Update P95 | Wallpaper P95 | Stage P95 | Mario/Fox P95 | 2/3/4/5+ | Present/s | Update/s |',
-    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|'
+    '| Phase | Exact | Loop P50/P95/max | Deficit P50/P95/max | Update P95 | Wallpaper P95 | Stage P95 | Mario/Fox P95 | 2/3/4/5+ | Present/s | Update/s |',
+    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'
 )
 foreach ($phase in $phaseResults) {
     $h = $phase.intervals.histogram
-    $markdown += ('| {0} | {1}/{2}/{3} | {4}/{5}/{6} | {7} | {8} | {9} | {10}/{11} | {12}/{13}/{14}/{15} | {16:N3} | {17:N3} |' -f
-        $phase.phase,
+    $markdown += ('| {0} | {1} | {2}/{3}/{4} | {5}/{6}/{7} | {8} | {9} | {10} | {11}/{12} | {13}/{14}/{15}/{16} | {17:N3} | {18:N3} |' -f
+        $phase.phase, $phase.exactness.pass,
         $phase.timers.wholeLoop.p50, $phase.timers.wholeLoop.p95,
         $phase.timers.wholeLoop.maximum,
         $phase.deadline.p50Deficit, $phase.deadline.p95Deficit,
@@ -636,6 +662,12 @@ foreach ($phase in $phaseResults) {
         $h.vblank4, $h.vblank5Plus,
         $phase.intervals.presentationsPerSecond,
         $phase.intervals.sourceUpdatesPerSecond)
+}
+$markdown += @('', '## Profile-1 exactness', '')
+if ($profile1ExactnessPass) {
+    $markdown += '- All seven synchronized phase gates passed.'
+} else {
+    $markdown += @($profile1ExactnessFailures | ForEach-Object { "- $_" })
 }
 $ph = $profile0.pacing.histogram
 $markdown += @(
@@ -654,11 +686,11 @@ $markdown += @(
 )
 Set-Content -LiteralPath $outputMarkdownPath -Encoding utf8 -Value $markdown
 
-Write-Output ("Task 25R matrix passed: phases=7 profile1=$profile1Rom " +
+Write-Output ("Task 25R matrix report produced: phases=7 profile1=$profile1Rom " +
     "profile0=$($profile0.identity.artifacts.rom.sha256) " +
-    "pixels=0/49152 stable30=$stable30 intervals3plus=$profile0SlowIntervals " +
+    "pixels=0/49152 exact=$profile1ExactnessPass stable30=$stable30 intervals3plus=$profile0SlowIntervals " +
     "slips=$($profile0.pacing.slips) reserve=$($profile0.gates.reserveBytes) " +
     "recommendation=$recommendation")
 if ($RequireStable30 -and -not $stable30) {
-    throw "Task 25R stable-30 gate failed: 3+ intervals=$profile0SlowIntervals slips=$($profile0.pacing.slips) reserve=$($profile0.gates.reservePass) KO-FGM=$($profile0.gates.exactKoFgmTriplet) fence=$($profile0.gates.zeroPostGoTextureFence)."
+    throw "Task 25R stable-30 gate failed: 3+ intervals=$profile0SlowIntervals slips=$($profile0.pacing.slips) profile1-exact=$profile1ExactnessPass reserve=$($profile0.gates.reservePass) KO-FGM=$($profile0.gates.exactKoFgmTriplet) fence=$($profile0.gates.zeroPostGoTextureFence)."
 }

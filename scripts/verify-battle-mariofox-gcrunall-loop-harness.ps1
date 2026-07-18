@@ -1920,7 +1920,7 @@ try {
             $m4FenceFinalValues[12] -eq 0 -and
             $m4FenceFinalValues[13] -eq 0 -and
             $m4FenceFinalCountSum -eq 0
-        if (-not $Task25RPacingTrace) {
+        if (-not $Task25RPacingTrace -and -not $PhaseMatrixMode) {
             Assert-Condition $m4FenceFinalPass `
                 "M4 terminal post-GO texture fence failed (actual=$($m4FenceFinalValues -join ','))." `
                 $gdbStdout
@@ -3121,7 +3121,8 @@ try {
                                     ) "M4 first fence diagnostic changed at frame $frame." $gdbStdout
                                 }
                             }
-                            if ($RequireZeroPostGoTextureFence) {
+                            if ($RequireZeroPostGoTextureFence -and
+                                -not $PhaseMatrixMode) {
                                 Assert-Condition (
                                     @($m4Fence[1..12] |
                                         Where-Object { $_ -ne 0 }).Count -eq 0
