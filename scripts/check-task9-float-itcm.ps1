@@ -526,10 +526,13 @@ try {
     if ($itcmBytes -gt 32768) {
         throw "Candidate ITCM use $itcmBytes exceeds 32,768 bytes."
     }
-    $hotLoadDelta = Get-SectionLoadDelta -Path $resolvedElf -Section '.text.hot'
-    $mainLoadDelta = Get-SectionLoadDelta -Path $resolvedElf -Section '.main'
-    if ($mainLoadDelta -ne $hotLoadDelta) {
-        throw ".main VMA/LMA delta $mainLoadDelta differs from .text.hot delta $hotLoadDelta."
+    $hotBytes = Get-SectionBytes -Path $resolvedElf -Section '.text.hot'
+    if ($hotBytes -ne 0) {
+        $hotLoadDelta = Get-SectionLoadDelta -Path $resolvedElf -Section '.text.hot'
+        $mainLoadDelta = Get-SectionLoadDelta -Path $resolvedElf -Section '.main'
+        if ($mainLoadDelta -ne $hotLoadDelta) {
+            throw ".main VMA/LMA delta $mainLoadDelta differs from .text.hot delta $hotLoadDelta."
+        }
     }
 
     $map = Join-Path $resolvedBuild '.map'

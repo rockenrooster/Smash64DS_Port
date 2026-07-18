@@ -52,7 +52,7 @@ SCOPE / CALIBRATION:
   decomp source, or visual semantics changed. melonDS 1.1 has no useful
   icache/dcache model for this decision: it overcharges blanket main-RAM ARM
   fetches and cannot value cache locality. Retail hardware is the sole keep
-  referee; all hardware cells below remain PENDING-HW.
+  referee; the photographed device rows below close both original phases.
 
 PHASE A - MAIN-RAM THUMB, ITCM ARM:
   Commit 51fc1fe3e0 removes the mode-163 renderer -marm override. Every
@@ -94,13 +94,33 @@ PHASE B - 7,040-BYTE SORTED WORKING SET:
   .text.hot (0x020013c0), and the focused checker permanently rejects that
   omission.
 
-HARDWARE OPERATOR PACKET:
-  Phase A: cold-boot the ARM control ROM, then the Thumb ROM, in the same
-  post-GO combat phase and photograph the half-second UPD/DRW/ACT/LOOP/SLIP/GIT
-  HUD rows for each. Phase B: repeat with the Thumb ROM as control and hot-text
-  ROM as candidate. Keep DS model, flashcart, loader/settings, and phase fixed;
-  LOOP is the Phase-A decision, while DRW/ACT plus LOOP decide Phase B. Do not
-  compare emulator values to device values as if they shared a cache model.
+RETAIL-DS VERDICT (2026-07-18):
+  Phase A ARM control:
+    FPS 13.5; UPD 374,464; DRW 1,743,296; ACT 1,745,984;
+    LOOP 2,240,384; SLIP 0.
+  Phase A Thumb candidate:
+    FPS 10.6; UPD 387,008; DRW 2,338,112; ACT 2,367,040;
+    LOOP 2,800,640.
+  Blanket Thumb adds 594,816 DRW ticks (+34.1%), moves the loop from four to
+  five VBlanks, and drops the observed rate from 13.5 to 10.6 FPS. Phase A is
+  REVERT: restore the mode-163 renderer to ARM.
+
+  Phase B hot-text candidate on the Thumb base:
+    FPS 10.6; UPD 385,664; DRW 2,332,672; ACT 2,367,808;
+    LOOP 2,800,960.
+  Against its Thumb control, DRW moves only -5,440 (-0.23%), ACT moves +768,
+  and LOOP moves +320. That is device noise, not a workload win. Phase B is
+  REVERT WITH BASE. The linker placement mechanism remains safe and available;
+  Task 17 reuses it only for the independently measured update working set on
+  the restored ARM renderer.
+
+  Authoritative photos and SHA-256:
+    artifacts/visibility/smash64ds-task12-phase-a-arm-control.jpg
+    AE7449E06C71EBAB4202472368134D5EFBBA6C9AC4A9274CA3634B04E9B134EA
+    artifacts/visibility/smash64ds-task12-phase-a-thumb-final.jpg
+    DF5227E5AE12C104E38126FEB59C769703165882CC7AF61A7C2082F3E7D1BEA4
+    artifacts/visibility/smash64ds-task12-phase-b-hot-text.jpg
+    7511F848FACBEE465CB0DBE80F1F46D269B3905EFCEA0F3D2011AE391E2856B0
 
 HISTORICAL MELONDS A/B EVIDENCE (NOT THE DEVICE PACKET):
   Phase-A ARM control ROM:
@@ -144,7 +164,8 @@ CORRECTED HARDWARE HUD PACKET:
   artifacts/visibility/2026-07-18_task12-hardware-arm-control-frame445.png
   artifacts/visibility/2026-07-18_task12-hardware-thumb-control-frame445.png
   artifacts/visibility/2026-07-18_task12-hardware-hot-text-frame445.png
-DECISION: PHASE A PENDING-HW; PHASE B PENDING-HW. No device values guessed.
+DECISION: PHASE A REVERT; PHASE B REVERT WITH BASE. RETAIN ONLY THE PROVED
+PLACEMENT MECHANISM FOR A NEW MEASURED WORKING SET.
 ```
 
 ## 2026-07-18 - Task 15 constant-depth GX painter reconciliation
@@ -307,70 +328,69 @@ DECISION: KEEP AND SHIP COMPARE/I2F/ADDSUB; KEEP GLOBAL LAB DEFAULTS OFF;
 REVERT FMUL.
 ```
 
-## 2026-07-18 - Task 17 update hot-text hardware packet
+## 2026-07-18 - Task 17 update hot-text hardware verdict and rework
 
 ```text
 IDEA ID: TASK17-UPDATE-HOT-TEXT-20260718
-SCOPE / SELECTION:
-  Isolated commit 910662d28c changes only linker/nds_hot_text.ld; decomp,
-  gameplay, renderer, DTCM, and code bytes are untouched. The selected
-  scVSBattleFuncUpdate chain extends Task 12's 7,040-byte renderer region with
-  the repeated object/process, CPU, hit/catch, interrupt, and map functions.
-  The first tier is exactly 8,192 bytes: renderer 7,040 plus
-  gcPlayDObjAnimJoint 500, gcRunGObjProcess 160, gcRunAll 120,
-  ndsBaseFTComputerProcessAll 80, battleship_ftMainProcSearchHitAll 76,
-  battleship_ftMainProcSearchCatch 72, ftMainProcPhysicsMapDefault 72, and
-  ftMainProcPhysicsMapCapture 72. The second tier is
-  ftMainProcUpdateInterrupt 2,176, ftComputerProcessAll 604, and
-  ftMainProcPhysicsMap 1,084. Final .text.hot is 12,056/12,288 bytes in that
-  order; linker ASSERTs pin both the 8 KiB tier and 12 KiB ceiling. ITCM stays
-  28,088/32,768 and DTCM stays zero.
+ORIGINAL DEVICE EXPERIMENT:
+  Isolated commit 910662d28c placed a 12,056-byte renderer-plus-update working
+  set on the Task 12 Thumb base. The retail-DS photographs close its actual
+  update-locality question:
+    control:   FPS 10.6; UPD 386,240; DRW 2,335,552; ACT 2,367,232;
+               LOOP 2,800,704
+    candidate: FPS 10.9; UPD 342,080; DRW 2,312,192; ACT 2,331,264;
+               LOOP 2,800,640
+  The candidate saves 44,160 UPD ticks (-11.4%), 23,360 DRW ticks (-1.0%),
+  and 35,968 ACT ticks (-1.5%). This is a decisive hardware locality win even
+  though melonDS reported a +192-tick source-update wash. Photos:
+    artifacts/visibility/smash64ds-task17-control.jpg
+    6FE51745D7787A1741A7980977899CC6D39A53B98121DF4A2415108DAE819DF0
+    artifacts/visibility/smash64ds-task17-candidate.jpg
+    969646FF5020B079B9C2AB46E4B29A7B92B675FD908B73EE506EAF2449D20824
 
-MELONDS A/B (REPORT-ONLY, FRAMES 438..445):
-  owner             Task-12 control P50/P95  Task-17 candidate P50/P95
-  loop                 2,240,640/2,800,832      2,240,640/2,240,704
-  source update          215,104/216,512          215,296/216,704
-  active               1,767,904/1,859,328      1,759,776/1,847,296
-  draw                 1,763,040/1,854,464      1,754,912/1,842,368
-  stage                  806,016/806,080          801,632/801,984
-  Mario                  302,112/313,728          301,792/313,472
-  Fox                    374,240/374,528          373,600/373,952
-  Source-update changes only +192/+192 while draw/active move -8,128/-12,096
-  and -8,128/-12,032; this mixed cache result is an emulator wash, not a keep
-  verdict. Both sides retain eight exact 121/828, 202/320/306 fast-raw rows,
-  zero fallbacks, and identical M3 topology/state counts.
+REWORKED RETAINED IMPLEMENTATION:
+  Task 12's blanket Thumb renderer and 7,040-byte renderer grouping are gone.
+  Mode 163 is ARM again. The sole .text.hot output contains exactly these 11
+  measured update functions, in this order:
+    gcPlayDObjAnimJoint 500; gcRunGObjProcess 160; gcRunAll 120;
+    ndsBaseFTComputerProcessAll 80; battleship_ftMainProcSearchHitAll 76;
+    battleship_ftMainProcSearchCatch 72; ftMainProcPhysicsMapDefault 72;
+    ftMainProcPhysicsMapCapture 72; ftMainProcUpdateInterrupt 2,176;
+    ftComputerProcessAll 604; ftMainProcPhysicsMap 1,084.
+  Total is exactly 5,016/8,192 bytes. The linker ASSERT and focused checker
+  enforce exact membership, order, size ceiling, and main-load range. Decomp
+  sources and generated assets are untouched. Renderer object/final ITCM is
+  24,364/28,820 bytes; Task 14 remains live; Task 16 compare/i2f/addsub remains
+  1/1/1; stock 408-byte __aeabi_fmul remains linked.
 
-HARDWARE HUD PAIR / DRY-RUN:
-  Root-local packet: builds/task17-hardware-hud-pair/
-  control ROM  C42C22B11533132E6EC98CE342CEDF0255B93083E19834D318E994954E16864D
-  candidate    75C47A2613D0F22904B0468BC646E0F63E70AF3B8E1420E1DB7753BC420042AD
-  Both are 14,654,464 bytes. Their melonDS dry-run is deliberately only a
-  launch check: UPD 216,000/217,472 -> 215,008/216,320, LOOP
-  2,240,640/2,240,640 -> 2,240,640/2,240,704, DRW
-  1,762,112/1,852,992 -> 1,760,096/1,847,168, and ACT
-  1,766,208/1,919,232 -> 1,776,992/1,851,200.
+ARM-BASE SAME-HUD CONFIRMATION PAIR:
+  builds/task19-hardware-hud-pair/
+  control ROM / ELF:
+    609E1B57022ECCA6A821124DED4A464C26BCB660D9F84102E705C1F52FD5CCC0
+    C7F407E90D5A45C2FE7D049005E8CFCEA4364402ECA1850D55915F7B1870485B
+  ARM + update-hot ROM / ELF:
+    381914BD34E34114E06A59E3642CC0896A88736EE9A66947AA7C80B5D4AE30E7
+    EBF8EEC6F37946A9943C86B7E9CE887CF375269C578192ED6B5D4E3448AD4408
+  Both ROMs are 14,673,920 bytes and embed the same T19PAIR phase HUD. Cold-boot
+  control then candidate on the same DS/flashcart/settings and photograph the
+  same post-GO heavy-combat UPD/DRW/ACT/LOOP/SLIP/GIT sample. The expected
+  carry is approximately -44K UPD ticks. Equal or worse UPD falsifies the
+  transposition and requires reverting update-hot before release-candidate work.
 
-HARDWARE OPERATOR PACKET:
-  Cold-boot smash64ds-task17-control.nds and then
-  smash64ds-task17-candidate.nds on the same DS/flashcart/settings. In the same
-  post-GO combat phase, photograph the half-second UPD/DRW/ACT/LOOP/SLIP/GIT
-  HUD for each and report the device/loader. The UPD row is the referee: keep
-  only a repeatable hardware win; equal or worse means revert. Other rows are
-  context and melonDS never substitutes for this measurement.
-
-EVIDENCE:
-  artifacts/performance/2026-07-18_task17-control.json
-    BB4129E1C239B61D7DFDF67E6A2F408C66FFCA658E2C0129D64864B17F767917
-  artifacts/performance/2026-07-18_task17-candidate.json
-    565A9369460CDB9B55190FBFE552EFDCEA939FDCF976DDBDD406570C1D347E09
-  artifacts/performance/2026-07-18_task17-hardware-control.json
-    CF6F03652F45EFDB99B2A2BD8EC410C4059DDBFEC93BD48F6EF3E6D020C68631
-  artifacts/performance/2026-07-18_task17-hardware-candidate.json
-    916CDEC00598330A6286AF05E2842008972300539307A6F33E0BA5C222A63BDC
-  artifacts/performance/task17-update-census-438.json
-    0E1269580CFEE5A81BA5776F8EDB7CF126F8DE7BC741315172C1A77FE411A22F
-DECISION: PENDING-HW / PACKET COMPLETE. Do not cherry-pick 910662d28c until
-the retail-DS UPD row wins; never infer the verdict from melonDS.
+MELONDS ARM-BASE REPORT-ONLY CHECK (FRAMES 438..445):
+  source update 196,352/197,312 -> 196,160/197,056 (-192/-256)
+  draw          857,856/860,928 -> 861,664/864,704 (+3,808/+3,776)
+  Raw top-screen delta is 0/49,152 with 100% meaningful overlap. Both sides
+  retain exact 121/828, 202/320/306 fast-raw rows and zero fallbacks. The
+  exhaustive Task 16 A/B also passes all 3,892 six-field gameplay-state rows.
+  These emulator results prove exactness and packet function, not device speed.
+  Evidence:
+    artifacts/performance/2026-07-18_task19-arm-control.json
+    artifacts/performance/2026-07-18_task19-arm-update-hot.json
+    artifacts/visibility/2026-07-18_task19-arm-control-frame445.png
+    artifacts/visibility/2026-07-18_task19-arm-update-hot-frame445.png
+DECISION: KEEP, REWORKED UPDATE-ONLY ON ARM. MORNING ARM-BASE DEVICE PAIR IS
+THE FINAL FALSIFIER; MELONDS NEVER OVERRULES THE RETAIL-DS UPDATE VERDICT.
 ```
 
 ## 2026-07-17 - Task 11 screen-space census and stage economy

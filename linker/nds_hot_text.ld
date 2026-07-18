@@ -1,6 +1,6 @@
 /* Repo copy of Calico 1.2.0-1 ds9.ld (source SHA-256
  * 3DC451DCA9FE7E2B005CD8CBADAD9FAD2A39DC2B83E901D7DBBC3CD92EE36F87).
- * Policy changes are the separate sorted .text.hot output and making the
+ * Policy changes are the separate measured .text.hot output and making the
  * Calico main-RAM load range begin at that new leading section. */
 /*--------------------------------------------------------------------------------
 	** Linker script for DS/DSi homebrew, ARM9 side **
@@ -157,11 +157,23 @@ SECTIONS {
 	/*   Main RAM area   */
 	/* ================= */
 
-	/* Measured renderer working set, sorted by numeric section suffix. */
+	/* Device-qualified update working set; decomp sources stay untouched. */
 	.text.hot : {
-		*nds_renderer.o(SORT_BY_NAME(.text.hot.*))
+		*battleship_sys_objanim.o(.text.gcPlayDObjAnimJoint)
+		*battleship_sys_objman.o(.text.gcRunGObjProcess)
+		*battleship_sys_objman.o(.text.gcRunAll)
+		*battleship_ftcomputer.o(.text.ndsBaseFTComputerProcessAll)
+		*battleship_ftmain.o(.text.battleship_ftMainProcSearchHitAll)
+		*battleship_ftmain.o(.text.battleship_ftMainProcSearchCatch)
+		*battleship_ftmain.o(.text.ftMainProcPhysicsMapDefault)
+		*battleship_ftmain.o(.text.ftMainProcPhysicsMapCapture)
+		*battleship_ftmain.o(.text.ftMainProcUpdateInterrupt)
+		*battleship_ftcomputer.o(.text.ftComputerProcessAll)
+		*battleship_ftmain.o(.text.ftMainProcPhysicsMap)
 		. = ALIGN(4);
 	} >main AT>lma9 :main = 0xff
+	ASSERT(SIZEOF(.text.hot) <= 8192,
+		"Task 17 update hot text exceeds 8 KiB")
 
 	/* Main user code/read-only data section */
 	.main : ALIGN_WITH_INPUT {

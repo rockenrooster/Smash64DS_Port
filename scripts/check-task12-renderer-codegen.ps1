@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Elf,
     [Parameter(Mandatory = $true)][string]$RendererObject,
-    [ValidateSet('Arm', 'Thumb')][string]$ExpectedMainMode = 'Thumb',
+    [ValidateSet('Arm', 'Thumb')][string]$ExpectedMainMode = 'Arm',
     [ValidateRange(0, 32768)][int]$ExpectedItcmBytes = 0,
     [switch]$RequireHotText,
     [ValidateRange(1, 12288)][int]$MaxHotTextBytes = 8192,
@@ -195,6 +195,10 @@ if ($RequireHotText) {
     }
     $hotNames = @($hotFunctions | ForEach-Object Name)
     if ($ExpectedHotFunction.Count -ne 0) {
+        if ($hotFunctions.Count -ne $ExpectedHotFunction.Count) {
+            throw ("Final .text.hot has {0} functions; expected exactly {1}." -f
+                $hotFunctions.Count, $ExpectedHotFunction.Count)
+        }
         $actualExpectedOrder = @($hotFunctions | Where-Object {
             $name = $_.Name
             @($ExpectedHotFunction | Where-Object {
@@ -213,7 +217,9 @@ if ($RequireHotText) {
                 ($ExpectedHotFunction -join ', '))
         }
     }
-} elseif (@($elfSections.Values | Where-Object Name -eq '.text.hot').Count) {
+} elseif (@($elfSections.Values | Where-Object {
+    $_.Name -eq '.text.hot' -and $_.Bytes -ne 0u
+}).Count) {
     throw 'Unexpected final .text.hot section before Task 12 Phase B.'
 }
 

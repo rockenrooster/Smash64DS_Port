@@ -1031,6 +1031,11 @@ endif
 ifneq ($(strip $(NDS_MPPROCESS_STRICT_OFILES)),)
 $(NDS_MPPROCESS_STRICT_OFILES): CFLAGS += -Werror=implicit-function-declaration -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=return-type
 endif
+# The measured mode-163 renderer is cache-resident on retail hardware and
+# wins in ARM state despite melonDS's main-RAM fetch model.
+ifeq ($(NDS_DEV_SCENE_HARNESS_ID),163)
+nds_renderer.o: CFLAGS += -marm
+endif
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
 
@@ -1110,7 +1115,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK9_STATE_HASH=$(NDS_TASK9_STATE_HASH)'
 	@printf '%s\n' 'BENCH_MAKE_TASK10_HARDWARE_CALIBRATION=$(NDS_TASK10_HARDWARE_CALIBRATION)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
-	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS))'
+	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'
 
 # Nonbuilding semantic probe for the toolchain-path identity checker.  Its

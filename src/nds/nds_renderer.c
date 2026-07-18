@@ -24,21 +24,18 @@
 #define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY 0
 #endif
 
-/* Keep the main-RAM renderer in compact Thumb code for the DS 16-bit bus.
- * The measured zero-wait ITCM paths retain explicit ARM state and O3; host
- * fixtures retain only the portable optimization annotations. */
+/* The measured mode-163 renderer wins in ARM state on retail hardware.  Its
+ * six zero-wait ITCM paths retain explicit ARM state and O3; host fixtures
+ * retain only the portable optimization annotations. */
 #if defined(__arm__)
-#define NDS_HOT_TEXT(nn) \
-    __attribute__((section(".text.hot." #nn)))
 #define NDS_RENDERER_HOT_CODE \
     __attribute__((hot, optimize("O3"), target("arm"), section(".itcm")))
 #define NDS_RENDERER_FAST_RUN_CODE \
-    __attribute__((noinline, optimize("O3")))
+    __attribute__((noinline, optimize("O3"), target("arm")))
 #define NDS_RENDERER_NATIVE_FIGHTER_CODE \
     __attribute__((noinline, hot, optimize("O3"), target("arm"), \
                    section(".itcm.native_fighter")))
 #else
-#define NDS_HOT_TEXT(nn)
 #define NDS_RENDERER_HOT_CODE __attribute__((hot, optimize("O3")))
 #define NDS_RENDERER_FAST_RUN_CODE \
     __attribute__((noinline, optimize("O3")))
@@ -11534,11 +11531,7 @@ static void ndsRendererHardwareBeginTriangleBatch(
     sNdsRendererHardwareTriangleBatchMatrixGeneration = matrix_generation;
 }
 
-/* Thumb interworking changes GCC's surrounding register allocation.  Keep
- * direct BLX calls (no tail veneer) and the two compact ARM forms so the
- * measured ITCM footprint stays unchanged. */
 static void NDS_RENDERER_HOT_CODE
-__attribute__((optimize("no-optimize-sibling-calls,no-gcse")))
 ndsRendererHardwareSubmitVertex(
     NDSRendererStats *stats,
     NDSRendererTraversalState *state,
@@ -12076,7 +12069,6 @@ ndsRendererSubmitHardwareTriangle(
 }
 #else
 static void NDS_RENDERER_HOT_CODE
-__attribute__((optimize("no-cse-follow-jumps")))
 ndsRendererSubmitHardwareTriangle(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
@@ -13317,8 +13309,7 @@ static s32 NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteDirectRawRemainder(
     return TRUE;
 }
 
-static void NDS_RENDERER_FAST_RUN_CODE NDS_HOT_TEXT(00)
-ndsRendererExecuteFastRawCurrentRun(
+static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
     const Gfx **dl_io,
     u32 *list_index_io,
     u32 immutable_command_count,
@@ -15507,7 +15498,7 @@ static void ndsRendererNativeBindOwnerRootState(
 }
 #endif
 
-static s32 NDS_HOT_TEXT(10) ndsRendererExecuteNativeFighterRootHardware(
+static s32 ndsRendererExecuteNativeFighterRootHardware(
     u32 slot,
     u32 root_ordinal,
     const void *asset_base_ptr,

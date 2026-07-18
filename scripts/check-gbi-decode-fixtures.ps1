@@ -1415,8 +1415,8 @@ Assert-True ($renderer.Contains('prepared_projected_x[NDS_RENDERER_MAX_VTX]')) '
 Assert-True ($renderer.Contains('state->prepared_projected_source_z_valid_mask = 0u;')) 'Renderer does not invalidate derived projected-depth values at source-command boundaries.'
 Assert-True ([regex]::Matches($renderer, 'static (?:void|s32|u32) NDS_RENDERER_HOT_CODE').Count -eq 6) 'Renderer hot-code set drifted from the six measured texture/VTX/shade/vertex/triangle/scan paths.'
 Assert-True ($renderer -match '(?s)#define NDS_RENDERER_HOT_CODE.*?optimize\("O3"\).*?target\("arm"\).*?section\("\.itcm"\)') 'Renderer hot-code policy no longer combines targeted O3, ARM state, and ITCM placement.'
-Assert-True ($renderer.Contains('#define NDS_HOT_TEXT(nn) \') -and $renderer.Contains('section(".text.hot." #nn)') -and $renderer.Contains('NDS_HOT_TEXT(00)') -and $renderer.Contains('NDS_HOT_TEXT(10)')) 'Renderer measured main-RAM hot-text annotations drifted.'
-Assert-True ($renderer -match '#define NDS_RENDERER_FAST_RUN_CODE \\\r?\n\s*__attribute__\(\(noinline, optimize\("O3"\)\)\)' -and $renderer -match '(?s)static void NDS_RENDERER_FAST_RUN_CODE NDS_HOT_TEXT\(00\)\s+ndsRendererExecuteFastRawCurrentRun') 'Renderer shared raw-current run kernel is not isolated as one noinline Thumb/O3 hot-text call.'
+Assert-True (-not $renderer.Contains('NDS_HOT_TEXT')) 'Rejected renderer main-RAM hot-text annotations returned.'
+Assert-True ($renderer -match '(?s)#define NDS_RENDERER_FAST_RUN_CODE.*?noinline.*?optimize\("O3"\).*?target\("arm"\)' -and $renderer.Contains('static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun')) 'Renderer shared raw-current run kernel is not isolated as one noinline ARM/O3 call.'
 Assert-True ((Get-Content -LiteralPath (Join-Path $root 'scripts\check-renderer-itcm-placement.ps1') -Raw) -match "Hot renderer symbol.*escaped") 'Renderer ITCM post-link placement assertion is missing.'
 Assert-True ($harnessScript.Contains("check-renderer-itcm-placement.ps1")) 'Canonical/coarse/forensic verifier no longer enforces renderer ITCM placement.'
 Assert-True ($relocRendererDL.Contains('ndsRendererAdapterImmutableCommandSpan')) 'Battle renderer does not classify reloc-backed display-list topology as immutable.'
@@ -1810,6 +1810,18 @@ Assert-True ($platform.Contains('gNdsHardwareRendererVertexRamCount')) 'Platform
 $makefile = Get-Content (Join-Path $root 'Makefile') -Raw
 $hotTextSpecs = Get-Content (Join-Path $root 'linker/ds9_hot_text.specs') -Raw
 $hotTextLinker = Get-Content (Join-Path $root 'linker/nds_hot_text.ld') -Raw
+$task17HotSelectors = @(
+    '*battleship_sys_objanim.o(.text.gcPlayDObjAnimJoint)',
+    '*battleship_sys_objman.o(.text.gcRunGObjProcess)',
+    '*battleship_sys_objman.o(.text.gcRunAll)',
+    '*battleship_ftcomputer.o(.text.ndsBaseFTComputerProcessAll)',
+    '*battleship_ftmain.o(.text.battleship_ftMainProcSearchHitAll)',
+    '*battleship_ftmain.o(.text.battleship_ftMainProcSearchCatch)',
+    '*battleship_ftmain.o(.text.ftMainProcPhysicsMapDefault)',
+    '*battleship_ftmain.o(.text.ftMainProcPhysicsMapCapture)',
+    '*battleship_ftmain.o(.text.ftMainProcUpdateInterrupt)',
+    '*battleship_ftcomputer.o(.text.ftComputerProcessAll)',
+    '*battleship_ftmain.o(.text.ftMainProcPhysicsMap)')
 $battlePlayableVerifier = Get-Content (Join-Path $root 'scripts/verify-battle-playable-harness.ps1') -Raw
 Assert-True ($makefile.Contains('NDS_RENDERER_HW_TRIANGLES ?= 0')) 'Makefile hardware renderer flag default is missing.'
 Assert-True ($makefile.Contains('NDS_RENDERER_PROFILE_LEVEL ?= 2')) 'Makefile renderer profile default is not forensic-safe.'
@@ -1826,10 +1838,10 @@ Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable
 Assert-True ($makefile -match '(?s)ifeq \(\$\(TARGET\),smash64ds-battle-playable-forensic-hwtri\).*?override NDS_RENDERER_PROFILE_LEVEL := 2') 'Internal forensic renderer target is not forced to profile 2.'
 Assert-True ([regex]::Matches($makefile, 'NDS_DEV_SCENE_HARNESS_ID := 163\r?\n(?:#[^\r\n]*\r?\n)*CFLAGS \+= -O2').Count -eq 1) 'Canonical mode 163 no longer retains the measured O2 latency policy.'
 Assert-True ([regex]::Matches($makefile, 'NDS_DEV_SCENE_HARNESS_ID := 163\r?\n(?:#[^\r\n]*\r?\n)*CFLAGS \+= -Os').Count -eq 2) 'Mode 163 diagnostic variants no longer preserve their scene-reserve size policy.'
-Assert-True (-not $makefile.Contains('nds_renderer.o: CFLAGS += -marm') -and $makefile.Contains('BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS))')) 'Renderer TU or benchmark metadata no longer follows the common Thumb codegen policy.'
+Assert-True ($makefile -match '(?s)ifeq \(\$\(NDS_DEV_SCENE_HARNESS_ID\),163\).*?nds_renderer\.o: CFLAGS \+= -marm.*?endif' -and $makefile.Contains('BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))')) 'Mode 163 no longer compiles the renderer TU in measured ARM state.'
 Assert-True ($makefile.Contains('-specs=$(NDS_HOT_TEXT_SPECS)') -and $makefile.Contains('-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)') -and $makefile.Contains('$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT)')) 'Task 12 hot-text linker inputs are not build and dependency inputs.'
 Assert-True ($hotTextSpecs.Contains('-L%:getenv(DEVKITPRO /calico/lib)') -and -not $hotTextSpecs.Contains('-dT')) 'Task 12 specs shim no longer preserves Calico while replacing its deferred default-script order.'
-Assert-True ($hotTextLinker.Contains('3DC451DCA9FE7E2B005CD8CBADAD9FAD2A39DC2B83E901D7DBBC3CD92EE36F87') -and $hotTextLinker.Contains('*nds_renderer.o(SORT_BY_NAME(.text.hot.*))') -and $hotTextLinker.Contains('EXCLUDE_FILE(*.twl.*) *(.text.hot .text.hot.*)') -and $hotTextLinker.Contains('__main_start = ADDR(.text.hot)')) 'Task 12 linker fork lost provenance, sorted renderer hot text, the stock residual rule, or the Calico load-range start.'
+Assert-True ($hotTextLinker.Contains('3DC451DCA9FE7E2B005CD8CBADAD9FAD2A39DC2B83E901D7DBBC3CD92EE36F87') -and -not $hotTextLinker.Contains('*nds_renderer.o(SORT_BY_NAME(.text.hot.*))') -and @($task17HotSelectors | Where-Object { -not $hotTextLinker.Contains($_) }).Count -eq 0 -and $hotTextLinker.Contains('ASSERT(SIZEOF(.text.hot) <= 8192') -and $hotTextLinker.Contains('EXCLUDE_FILE(*.twl.*) *(.text.hot .text.hot.*)') -and $hotTextLinker.Contains('__main_start = ADDR(.text.hot)') -and $hotTextLinker.Contains('.main : ALIGN_WITH_INPUT')) 'Task 17 linker fork lost provenance, update-only placement, the 8 KiB cap, residual routing, aligned main section, or load-range start.'
 Assert-True ($makefile.Contains("echo '#define NDS_RENDERER_PROFILE_LEVEL `$(NDS_RENDERER_PROFILE_LEVEL)';")) 'Generated build config omits the renderer profile level.'
 Assert-True ($makefile.Contains('echo ''#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'';')) 'Generated build config cannot invalidate objects when equal-ID harness variants change compiler policy.'
 Assert-True ($battlePlayableVerifier -match '(?s)elseif \(\$RealtimePresentation -and \(\$RendererProfileLevel -lt 2\)\).*?\$harness = ''battle_playable_realtime''.*?-Harness \$harness') 'Direct canonical verifier no longer routes profiles 0/1 through the O2 battle_playable_realtime build variant.'
