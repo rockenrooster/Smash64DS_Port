@@ -77,6 +77,10 @@ $realtimeText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle
 $verifyAllText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-all.ps1') -Raw
 $battleLoopText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
 $captureText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'capture-melonds.ps1') -Raw
+$runningCaptureText = Get-Content -LiteralPath (
+    Join-Path $PSScriptRoot 'capture-running-melonds-window.ps1') -Raw
+$foxRecoveryText = Get-Content -LiteralPath (
+    Join-Path $PSScriptRoot 'verify-battle-playable-fox-recovery.ps1') -Raw
 $ftComputerText = Get-Content -LiteralPath (Join-Path $root 'src\import\battleship_ftcomputer.c') -Raw
 $debugMelonText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'debug-melonds.ps1') -Raw
 $melonLibText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'lib\melonds.ps1') -Raw
@@ -126,8 +130,15 @@ if (($melonLibText -notmatch 'function\s+Set-MelonDSDualScreenLayout') -or
     Fail-Check 'visible melonDS launch/capture no longer guarantees both DS screens'
 }
 if (($captureText -notmatch 'CopyFromScreen') -or
-    ($captureText -notmatch 'PrintWindow')) {
+    ($captureText -notmatch 'PrintWindow') -or
+    ($runningCaptureText -notmatch 'CopyFromScreen') -or
+    ($runningCaptureText -notmatch 'PrintWindow')) {
     Fail-Check 'melonDS capture no longer supports disconnected-session fallback'
+}
+if (($foxRecoveryText -notmatch 'assert-melonds-top-visible\.ps1') -or
+    ($foxRecoveryText -notmatch 'MinDominantGreenFraction') -or
+    ($foxRecoveryText -notmatch 'MaxSingleColorFraction')) {
+    Fail-Check 'natural attack/hit evidence can accept a blank window capture'
 }
 if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|MinRequiredRegionFighterFraction') -or
     ($battleLoopText -notmatch 'FTR_DISPLAY_CONTRACT=') -or

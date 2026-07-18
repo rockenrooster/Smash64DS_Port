@@ -55,6 +55,9 @@ public static class Smash64DSRunningMelonDSCapture
     public static extern bool GetWindowRect(IntPtr window, out Rect rect);
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr window);
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool PrintWindow(
+        IntPtr window, IntPtr destination, uint flags);
     [DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr window, int command);
     [DllImport("user32.dll")]
@@ -146,9 +149,24 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $outputPath) |
     Out-Null
 $bitmap = New-Object System.Drawing.Bitmap $width, $height
 $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+$usedPrintWindow = $false
 try {
-    $graphics.CopyFromScreen(
-        $rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+    try {
+        $graphics.CopyFromScreen(
+            $rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+    } catch {
+        $screenError = $_.Exception.Message
+        $destination = $graphics.GetHdc()
+        try {
+            if (-not [Smash64DSRunningMelonDSCapture]::PrintWindow(
+                    $handle, $destination, 2)) {
+                throw "CopyFromScreen failed ($screenError) and PrintWindow failed."
+            }
+            $usedPrintWindow = $true
+        } finally {
+            $graphics.ReleaseHdc($destination)
+        }
+    }
     $bitmap.Save($outputPath, [System.Drawing.Imaging.ImageFormat]::Png)
 } finally {
     $graphics.Dispose()
@@ -157,4 +175,7 @@ try {
         $handle, [IntPtr](-2), 0, 0, 0, 0, 0x43)
 }
 
+if ($usedPrintWindow) {
+    Write-Warning 'CopyFromScreen unavailable; used PrintWindow capture.'
+}
 Write-Output "Captured repo-local melonDS window: $outputPath"

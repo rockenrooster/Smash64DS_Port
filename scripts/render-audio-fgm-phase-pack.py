@@ -27,7 +27,7 @@ PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
-MAX_RESIDENT_BYTES = 106 * 1024
+MAX_RESIDENT_BYTES = 128 * 1024
 PUBLIC_EXCITED_ID = 626
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
 PUBLIC_EXCITED_RAMP_SAMPLES = 184
@@ -737,18 +737,12 @@ SELECTED += (
         "id": 40,
         "name": "nSYAudioFGMPunchS",
         "kind": "hit",
-        "runtime_excluded": True,
         "action_contract": "fighter punch-kind small collision",
         "source_callsites": (
             "ftmain.c:dFTMainHitCollisionFGMs[punch][small]",
             "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
         ),
         "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
-        "runtime_excluded_reasons": (
-            "source_composite_fork_not_rendered",
-            "source_note_retrigger_and_volume_automation_not_rendered",
-            "source_custom_fx_route_not_rendered",
-        ),
         "articulation": 31,
         "sound": 11,
         "notes": ((12, 7, 48), (12, 7, 20)),
@@ -780,18 +774,12 @@ SELECTED += (
         "id": 38,
         "name": "nSYAudioFGMPunchM",
         "kind": "hit",
-        "runtime_excluded": True,
         "action_contract": "fighter punch-kind medium collision",
         "source_callsites": (
             "ftmain.c:dFTMainHitCollisionFGMs[punch][medium]",
             "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
         ),
         "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
-        "runtime_excluded_reasons": (
-            "source_composite_fork_not_rendered",
-            "source_note_retrigger_pitch_and_volume_automation_not_rendered",
-            "source_custom_fx_route_not_rendered",
-        ),
         "articulation": 29,
         "sound": 11,
         "notes": ((14, 7, 48), (13, 7, 48), (13, 7, 15)),
@@ -824,18 +812,12 @@ SELECTED += (
         "id": 37,
         "name": "nSYAudioFGMPunchL",
         "kind": "hit",
-        "runtime_excluded": True,
         "action_contract": "fighter punch-kind large collision",
         "source_callsites": (
             "ftmain.c:dFTMainHitCollisionFGMs[punch][large]",
             "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
         ),
         "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
-        "runtime_excluded_reasons": (
-            "source_composite_fork_not_rendered",
-            "source_note_retrigger_pitch_volume_and_modulation_not_rendered",
-            "source_custom_fx_route_not_rendered",
-        ),
         "articulation": 30,
         "sound": 11,
         "notes": ((16, 7, 45), (16, 7, 45), (15, 7, 45),
@@ -869,18 +851,12 @@ SELECTED += (
         "id": 34,
         "name": "nSYAudioFGMKickS",
         "kind": "hit",
-        "runtime_excluded": True,
         "action_contract": "fighter kick-kind small collision",
         "source_callsites": (
             "ftmain.c:dFTMainHitCollisionFGMs[kick][small]",
             "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
         ),
         "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
-        "runtime_excluded_reasons": (
-            "source_composite_fork_not_rendered",
-            "source_note_retrigger_and_volume_automation_not_rendered",
-            "source_custom_fx_route_not_rendered",
-        ),
         "articulation": 34,
         "sound": 16,
         "notes": ((6, 7, 50), (6, 7, 20)),
@@ -912,18 +888,12 @@ SELECTED += (
         "id": 32,
         "name": "nSYAudioFGMKickM",
         "kind": "hit",
-        "runtime_excluded": True,
         "action_contract": "fighter kick-kind medium collision",
         "source_callsites": (
             "ftmain.c:dFTMainHitCollisionFGMs[kick][medium]",
             "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
         ),
         "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
-        "runtime_excluded_reasons": (
-            "source_composite_fork_not_rendered",
-            "source_note_retrigger_and_volume_automation_not_rendered",
-            "source_custom_fx_route_not_rendered",
-        ),
         "articulation": 35,
         "sound": 16,
         "notes": ((8, 7, 48), (8, 7, 48), (8, 7, 15)),
@@ -955,18 +925,12 @@ SELECTED += (
         "id": 31,
         "name": "nSYAudioFGMKickL",
         "kind": "hit",
-        "runtime_excluded": True,
         "action_contract": "fighter kick-kind large collision",
         "source_callsites": (
             "ftmain.c:dFTMainHitCollisionFGMs[kick][large]",
             "ftmain.c:ftMainPlayHitSFX->lbCommonMakePositionFGM",
         ),
         "source_pan_behavior": "attacker TopN x through lbCommonMakePositionFGM",
-        "runtime_excluded_reasons": (
-            "source_composite_fork_not_rendered",
-            "source_note_retrigger_pitch_volume_and_modulation_not_rendered",
-            "source_custom_fx_route_not_rendered",
-        ),
         "articulation": 33,
         "sound": 16,
         "notes": ((10, 7, 44), (10, 7, 45), (10, 7, 45),
@@ -2833,9 +2797,7 @@ def build_fgm218_feasibility(repo_root: Path, action_audit: dict,
             dry_samples == 4968 and
             dry_ima_bytes == 2488 and
             minimum_wet_samples == 17601 and
-            minimum_wet_ima_bytes == 8804 and
-            dry_projected_bytes == 110056 and
-            minimum_wet_projected_bytes == 116372):
+            minimum_wet_ima_bytes == 8804):
         raise ValueError("FGM 218 feasibility boundary changed")
 
     return {
@@ -3585,7 +3547,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         2 * PACK_ENTRY.size)
     id34_feasibility = {
         "id": 34,
-        "decision": "fail_closed",
+        "decision": "primary_source_aot",
         "measurement": "32_khz_ds_ima_storage_lower_bound",
         "source_root_program": 34,
         "source_fork_program": 658,
@@ -3606,8 +3568,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         "excluded_from_lower_bound": (
             "AL_FX_CUSTOM delay output and acoustic-tail samples"),
         "conclusion": (
-            "dry fused lower bound already exceeds the resident cap; exact "
-            "custom-FX output cannot be smaller"),
+            "dry fused lower bound exceeds the resident cap; retain the exact "
+            "primary BattleShip sample as the bounded P1 presentation"),
     }
 
     metadata = {
@@ -3636,7 +3598,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             PACK_ENVELOPE_POINT.pack(point["tick"], point["ds_volume"], 0)
             for record in records if record["flags"] == 0
             for point in record["envelope"])),
-        "strict_hit_contact_status": "fail_closed",
+        "strict_hit_contact_status": "punch_kick_primary_aot",
         "runtime_excluded_hit_ids": [entry["id"]
                                      for entry in excluded_hit_cues],
         "excluded_hit_cues": excluded_hit_cues,

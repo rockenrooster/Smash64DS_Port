@@ -57,10 +57,12 @@ durable unresolved gaps.
 ## Audio
 
 - The DS backend does not yet prove every reachable source pitch/voice event.
-  The current pack covers 18 exact source IDs / 16 unique samples and 11
-  collision cues. IDs 429 and 435 require continuous pitch schedules that the
-  packed DS format cannot yet represent; forked DeadExplode voice 685 remains
-  explicit fidelity debt.
+  The current 121,720-byte pack covers 18 exact source IDs plus six common
+  punch/kick contacts (40/38/37/34/32/31) from their exact primary BattleShip
+  samples; their composite forks/custom FX remain bounded fidelity debt. Five
+  special/projectile contacts remain fail-closed. IDs 429 and 435 require
+  continuous pitch schedules that the packed DS format cannot yet represent;
+  forked DeadExplode voice 685 remains explicit fidelity debt.
 - Existing ACK counters cannot prove the final acoustic mix. The ID626 AOT cue
   passed Tyler's exact-ROM ear check; retain user retests for remaining voices.
 - Dream Land BGM now has an exact nonzero initial-ring acoustic fixture and a

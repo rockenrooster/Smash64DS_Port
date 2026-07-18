@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-17 21:25 Central
+Updated: 2026-07-17 22:06 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -13,8 +13,8 @@ Boundary: `battle_playable_realtime`, mode `163`.
 git status --short
 ```
 
-The integrated fixed-two battle ROM is 14,655,488 bytes, SHA-256
-`DA8282BBBD9872DC29F7442CC6ED3E0029967A7AB1AA0E94F9EDBED172981F04`.
+The integrated fixed-two battle ROM is 14,668,800 bytes, SHA-256
+`1409F7CB67875E69A3C86DC3BA6DCB46629DEC84CC87B1BD31C928D6BBC58016`.
 Preserve intrinsic mode 9, mip 0, static residency, source countdown, and exact
 Dream Land water frame 0/fraction 114 on the original 12 triangles.
 
@@ -22,32 +22,40 @@ Dream Land water frame 0/fraction 114 on the original 12 triangles.
 
 - Mode 163 uses exact fixed-two pacing with no debt or catch-up. Public/manual
   runs keep the level-3 Fox CPU and source Wait/countdown/timer path enabled.
-- The natural one-minute proof completes 4,084 updates / 2,042 presents, reaches
-  Results, retains 166,672 bytes after BGM, and performs one clean M4 teardown.
+- The last fully qualified one-minute proof used the smaller 107,536-byte pack:
+  4,084 updates / 2,042 presents, Results, 166,672 bytes after BGM, and one clean
+  M4 teardown. Do not transfer that reserve result to the current audio pack.
 - Countdown, focused effects, BGM/FGM, KO/rebirth, M4 `22/131072`, Task 9 state
-  identity, 28,052-byte ITCM placement, and the two-ROM contract pass.
+  identity, 28,052-byte ITCM placement, and the two-ROM contract pass. The new
+  focused common-contact route retains 187,152 bytes; its full one-minute
+  post-pack reserve recheck remains open.
 - M3 remains 489,184/489,536 ticks. M2's source-light-exact checkpoint remains
   385,312/388,480 with exact 686-triangle generic/fast parity. Latest profile-0
-  smoke is 22.3 FPS, so full-speed locked 30 remains red.
+  smoke is 19.7 FPS, so full-speed locked 30 remains red.
 
 ## Checkpoint
 
-The production raw emitter now has separate textured and untextured callees.
-The existing corpus proves 43/11 raw calls per frame; the common untextured path
-removes 172 main-RAM stack word transfers. Synchronized frames 600..607 improve
-combined fighter 386,624/389,824 -> 385,312/388,480 and draw
-1,011,648/1,014,976 -> 1,009,824/1,013,120 with 0/49,152 changed pixels. Profile
-2 remains exact on frames 180..187. Down+A remains source-fixed and gated.
-The exact `DA8282BB...` ROM passes full `Latest -NoBuild` in 201.2 seconds.
-Disconnected desktop capture now falls back to native `PrintWindow`; the same
-visibility, region, motion, and detail gates pass instead of accepting blindly.
+Natural mode-163 contact reproduced the reported silence at BattleShip kick ID
+32: the old pack recorded unsupported delta 1 and acquired no channel. The AOT
+pack is now 121,720 bytes / 24 entries / 18 unique samples. Punch/kick IDs
+40/38/37/34/32/31 use their two exact primary BattleShip samples plus source
+frequency and volume envelopes; source composite forks/custom FX remain named
+fidelity debt. The repeated ID-32 route records positional pan 80 and channel
+supported/unsupported/acquire `1/0/1`. Its following source hitlog creates
+`HitNormal` kind 1 plus the bounded orb/spark companions: 3 effects, 24 hardware
+triangles, zero drops/rejects, and 187,152-byte reserve. Screenshot
+`2026-07-17_220144-9409465_fox-recovery.png` passes Dream Land green/detail and
+single-color gates; blank `PrintWindow` output now fails closed. This proves a
+runtime channel start, not the final acoustic mix; Tyler's exact-ROM ear retest
+remains open. Exact ROM `1409F7CB...` passes `Latest` in 194 seconds.
 
 ## Next Packet
 
-Qualify Tyler's current-ROM report that some attack/hit sounds and visuals do
-not play. Start from the exact BattleShip attack/collision/effect event and ID,
-then trace the DS mapping, AOT asset, mixer/channel or renderer/effect manager,
-and natural runtime output. Pack membership is not playback proof. Reuse the
-existing natural attack/hit gates; do not add a one-bit harness or substitute a
-generic sound/effect. Update the two reopened acceptance rows from audible and
-visible exact-ROM evidence only.
+First run the CPU-on one-minute lifecycle/reserve gate against the 121,720-byte
+pack; the old 166,672-byte full-match reserve belongs to the smaller pack. Then
+continue the exact-event audit from the naturally observed unsupported IDs:
+Escape 11, Grind4 85, MarioFoot 110, MarioDash 121, LightSwing 41/42, GuardOn
+13, Fox special starts 186/189, MarioSmash3 431, and FoxDamage 375. Five
+special/projectile contacts (216/28/2/0/188), continuous-pitch 429/435, and fork
+voice 685 remain explicit debt. Reuse natural gates and qualify audible/visible
+output; do not substitute a generic cue or accept pack membership as playback.

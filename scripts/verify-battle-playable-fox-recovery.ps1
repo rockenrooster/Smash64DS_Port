@@ -147,6 +147,17 @@ try {
         'set $hit_supported_before = 0',
         'set $hit_unsupported_before = 0',
         'set $hit_acquire_before = 0',
+        'set $hit_visual_seen = 0',
+        'set $hit_visual_kind = -1',
+        'set $hit_visual_create_before = 0',
+        'set $hit_visual_drop_before = 0',
+        'set $hit_effect_capture_before = 0',
+        'set $hit_effect_draw_before = 0',
+        'set $hit_effect_submit_before = 0',
+        'set $hit_effect_triangle_before = 0',
+        'set $hit_effect_texture_ready_before = 0',
+        'set $hit_effect_texture_reject_before = 0',
+        'set $hit_effect_rejected_draw_before = 0',
         'set $recover_seen = 0',
         'set $recover_frames = 0',
         'set $recover_start_x = 0',
@@ -198,13 +209,39 @@ try {
         'if ($r0 == 74) || ($r0 == 300) || ($r0 == 363) || ($r0 == 364)',
         'printf "FOX_RECOVERY_FOX_AUDIO=%u,%u,%u\n", (unsigned int)$r0, $frame, $ffp->status_id',
         'end',
-        'if ($hit_audio_only != 0) && ($outcome == 0) && (($r0 == 40) || ($r0 == 38) || ($r0 == 37) || ($r0 == 34) || ($r0 == 32) || ($r0 == 31) || ($r0 == 216) || ($r0 == 28) || ($r0 == 2) || ($r0 == 0)) && ($r1 != 64)',
+        'if ($hit_audio_only != 0) && ($outcome == 0) && (($r0 == 40) || ($r0 == 38) || ($r0 == 37) || ($r0 == 34) || ($r0 == 32) || ($r0 == 31)) && ($r1 != 64)',
         'set $hit_id = (unsigned int)$r0',
         'set $hit_pan = (unsigned int)$r1',
         'set $hit_supported_before = gNdsAudioFgmSupportedPlayCount',
         'set $hit_unsupported_before = gNdsAudioFgmUnsupportedCallCount',
         'set $hit_acquire_before = gNdsAudioFgmHandleAcquireCount',
+        'set $hit_visual_create_before = gNdsVisualEffectCreateCount',
+        'set $hit_visual_drop_before = gNdsVisualEffectDropCount',
+        'set $hit_effect_capture_before = gNdsEffectRendererCaptureCount',
+        'set $hit_effect_draw_before = gNdsEffectRendererDObjDrawCount',
+        'set $hit_effect_submit_before = gNdsEffectRendererSubmitCount',
+        'set $hit_effect_triangle_before = gNdsEffectRendererTriangleCount',
+        'set $hit_effect_texture_ready_before = gNdsEffectRendererTextureReadyCount',
+        'set $hit_effect_texture_reject_before = gNdsEffectRendererTextureRejectCount',
+        'set $hit_effect_rejected_draw_before = gNdsEffectRendererRejectedDrawCount',
         'set $outcome = 5',
+        'end',
+        'continue',
+        'end',
+
+        # BattleShip records attack stats/audio before it resolves the victim's
+        # source hitlog effect. Bind the first following DS effect kind to this
+        # exact natural contact instead of accepting a cumulative scene mask.
+        'break ndsEFManagerMakeVisualEffect',
+        'set $hit_visual_breakpoint = $bpnum',
+        'if $hit_audio_only == 0',
+        'disable $hit_visual_breakpoint',
+        'end',
+        'commands $hit_visual_breakpoint',
+        'silent',
+        'if ($hit_audio_only != 0) && ($outcome == 5) && ($hit_visual_seen == 0)',
+        'set $hit_visual_seen = 1',
+        'set $hit_visual_kind = (unsigned int)$r0',
         'end',
         'continue',
         'end',
@@ -320,6 +357,7 @@ try {
         'printf "FOX_RECOVERY_MEMORY=%#x,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerArenaHeadroom',
         'printf "FOX_RECOVERY_AUDIO=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmPlayCalls - $fgm_calls_base, gNdsAudioFgmSupportedPlayCount - $fgm_supported_base, gNdsAudioFgmUnsupportedCallCount - $fgm_unsupported_base, gNdsAudioFgmIncludedLookupFailCount - $fgm_lookup_fail_base, gNdsAudioFgmPlayFailCount - $fgm_play_fail_base, gNdsAudioFgmPoolExhaustCount - $fgm_pool_base, gNdsAudioFgmGenerationMismatchCount - $fgm_generation_base, gNdsAudioFgmStaleStopCount - $fgm_stale_base, gNdsAudioFgmHandleAcquireCount - $fgm_acquire_base, gNdsAudioFgmHandleReleaseCount - $fgm_release_base, $fgm_active_base, gNdsAudioFgmActiveHandles, gNdsAudioFgmMaxActiveHandles',
         'printf "FOX_RECOVERY_HIT_AUDIO=%u,%u,%u,%u,%u,%u\n", $hit_id, $hit_pan, gNdsAudioFgmSupportedPlayCount - $hit_supported_before, gNdsAudioFgmUnsupportedCallCount - $hit_unsupported_before, gNdsAudioFgmHandleAcquireCount - $hit_acquire_before, gNdsAudioFgmLastID',
+        'printf "FOX_RECOVERY_HIT_VISUAL=%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u\n", $hit_visual_seen, $hit_visual_kind, gNdsVisualEffectCreateCount - $hit_visual_create_before, gNdsVisualEffectDropCount - $hit_visual_drop_before, gNdsEffectRendererCaptureCount - $hit_effect_capture_before, gNdsEffectRendererDObjDrawCount - $hit_effect_draw_before, gNdsEffectRendererSubmitCount - $hit_effect_submit_before, gNdsEffectRendererTriangleCount - $hit_effect_triangle_before, gNdsEffectRendererTextureReadyCount - $hit_effect_texture_ready_before, gNdsEffectRendererTextureRejectCount - $hit_effect_texture_reject_before, gNdsEffectRendererRejectedDrawCount - $hit_effect_rejected_draw_before, gNdsVisualEffectKindMask, gNdsVisualEffectTemplateBytes',
         'printf "FOX_RECOVERY_AUDIO_STATE=%#x,%u,%u,%u,%u,%u,%#x\n", gNdsAudioFgmResult, gNdsAudioFgmLoaded, gNdsAudioFgmResidentBytes, gNdsAudioFgmOpenFailCount, gNdsAudioFgmReadFailCount, gNdsAudioFgmFormatFailCount, gNdsAudioFgmChannelMask',
         'printf "FOX_RECOVERY_BGM=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%u,%#x,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmPupupuPlayCount, gNdsAudioBgmSoundActive, gNdsAudioBgmPlayFailCount, gNdsAudioBgmOpenFailCount, gNdsAudioBgmReadFailCount, gNdsAudioBgmUnsafeWriteCount, gNdsAudioBgmOverrunCount, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmExpectedBytesPerSecond, sNdsAudioBgmSoundID, s_soundAutoUpdate, *(unsigned short *)0x02ffff8c, gNdsAudioBgmResidentBytes, gNdsAudioBgmPlaybackBytes, gNdsAudioBgmRefillCount',
         $captureCommand,
@@ -344,6 +382,7 @@ try {
     $memory = [regex]::Match($gdbStdout, 'FOX_RECOVERY_MEMORY=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $audio = [regex]::Match($gdbStdout, 'FOX_RECOVERY_AUDIO=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $hitAudio = [regex]::Match($gdbStdout, 'FOX_RECOVERY_HIT_AUDIO=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $hitVisual = [regex]::Match($gdbStdout, 'FOX_RECOVERY_HIT_VISUAL=([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $audioState = [regex]::Match($gdbStdout, 'FOX_RECOVERY_AUDIO_STATE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $bgm = [regex]::Match($gdbStdout, 'FOX_RECOVERY_BGM=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $fgmMatches = @([regex]::Matches(
@@ -363,8 +402,9 @@ try {
             }
         })
     $includedIDs = @(626, 470, 469, 467, 490, 74, 363, 364, 372, 430,
-        439, 292, 370, 289, 300, 154, 77, 215)
+        439, 292, 370, 289, 300, 154, 77, 215, 40, 38, 37, 34, 32, 31)
     $voiceIDs = @(372, 430)
+    $runtimeHitIDs = @(40, 38, 37, 34, 32, 31)
     $hitIDs = @(40, 38, 37, 34, 32, 31, 216, 28, 2, 0)
     $supportedEvents = @($fgmEvents | Where-Object { $_ -in $includedIDs })
     $unsupportedEvents = @($fgmEvents | Where-Object { $_ -notin $includedIDs })
@@ -379,12 +419,18 @@ try {
     $pv = Get-Ints $postDamage
     $cv = Get-Ints $cpu; $dv = Get-Ints $damage; $iv = Get-Ints $input
     $qv = Get-Ints $scene; $mv = Get-Ints $memory; $av = Get-Ints $audio
-    $hav = Get-Ints $hitAudio; $asv = Get-Ints $audioState; $bv = Get-Ints $bgm
+    $hav = Get-Ints $hitAudio; $hvv = Get-Ints $hitVisual
+    $asv = Get-Ints $audioState; $bv = Get-Ints $bgm
 
     Assert-Condition (Test-Path -LiteralPath $screenshotPath -PathType Leaf) `
         'Fox recovery run did not produce a screenshot.' $gdbStdout
     Assert-Condition ((Get-Item $screenshotPath).Length -gt 1024) `
         'Fox recovery screenshot is unexpectedly small.' $gdbStdout
+    & (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
+        -Image $screenshotPath -WindowScaledCapture `
+        -MinDominantGreenFraction 0.05 `
+        -MinNonWhiteNonGreenFraction 0.05 `
+        -MaxSingleColorFraction 0.9 | Out-Null
     if ($HitAudioOnly) {
         Assert-Condition ($result.Success -and $rv[0] -eq 5 -and
             $rv[1] -gt 0 -and $rv[1] -lt 1800 -and $rv[5] -eq 1) `
@@ -407,10 +453,19 @@ try {
             'Natural collision did not reach a bounded positional DS pan.' `
             $gdbStdout
         Assert-Condition ($hitAudio.Success -and
-            $hav[0] -in $hitIDs -and $hav[1] -in $hitPans -and
-            $hav[2] -eq 0 -and $hav[3] -eq 1 -and $hav[4] -eq 0 -and
+            $hav[0] -in $runtimeHitIDs -and $hav[1] -in $hitPans -and
+            $hav[2] -eq 1 -and $hav[3] -eq 0 -and $hav[4] -eq 1 -and
             $hav[5] -eq $hav[0]) `
-            'Natural excluded hit did not fail closed before handle acquisition.' `
+            'Natural common hit did not acquire a positional DS channel.' `
+            $gdbStdout
+        Assert-Condition ($hitVisual.Success -and
+            $hvv[0] -eq 1 -and $hvv[1] -eq 1 -and
+            $hvv[2] -ge 1 -and $hvv[3] -eq 0 -and
+            $hvv[4] -ge 1 -and $hvv[5] -ge 1 -and
+            $hvv[6] -ge 1 -and $hvv[7] -ge 1 -and
+            $hvv[9] -eq 0 -and $hvv[10] -eq 0 -and
+            ($hvv[11] -band 0x2) -ne 0 -and $hvv[12] -gt 0) `
+            'Natural common hit did not create and submit its normal source effect.' `
             $gdbStdout
         Assert-Condition ($audio.Success -and
             $av[0] -gt 0 -and $av[1] -ge 0 -and $av[2] -ge 1 -and
@@ -420,18 +475,20 @@ try {
             $av[9] -le ($av[10] + $av[8]) -and
             $av[11] -eq ($av[10] + $av[8] - $av[9]) -and
             $av[12] -gt 0) `
-            'Natural excluded hit contaminated FGM handle/channel state.' `
+            'Natural common-hit playback contaminated FGM handle/channel state.' `
             $gdbStdout
         Assert-Condition ($audioState.Success -and
             $asv[0] -eq 0x46474d31 -and $asv[1] -eq 1 -and
-            $asv[2] -eq 107536 -and $asv[3] -eq 0 -and
+            $asv[2] -eq 121720 -and $asv[3] -eq 0 -and
             $asv[4] -eq 0 -and $asv[5] -eq 0 -and $asv[6] -ne 0) `
             'Hit-audio pack load/channel state is invalid.' $gdbStdout
-        Write-Output (('Natural hit audio fail-closed passed: excluded ID={0} ' +
-            'pan={1} frames={2} reserve={3} deltas(s/u/a)={4}/{5}/{6} ' +
-            'screenshot={7}') -f
+        Write-Output (('Natural attack/hit runtime route passed: ' +
+            'source ID={0} pan={1} frames={2} reserve={3} ' +
+            'audio(s/u/a)={4}/{5}/{6} visual(kind/create/submit/tri)=' +
+            '{7}/{8}/{9}/{10} screenshot={11}') -f
             $hav[0], $hav[1], $rv[1], $mv[2], $hav[2], $hav[3],
-            $hav[4], $screenshotPath)
+            $hav[4], $hvv[1], $hvv[2], $hvv[6], $hvv[7],
+            $screenshotPath)
         return
     }
     Assert-Condition ($result.Success -and $rv[0] -eq 1 -and
@@ -490,7 +547,7 @@ try {
         $gdbStdout
     Assert-Condition ($audioState.Success -and
         $asv[0] -eq 0x46474d31 -and $asv[1] -eq 1 -and
-        $asv[2] -eq 107536 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
+        $asv[2] -eq 121720 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
         $asv[5] -eq 0 -and $asv[6] -ne 0) `
         'Fighter-voice pack load/channel state is invalid.' $gdbStdout
     Assert-Condition ($bgm.Success -and
