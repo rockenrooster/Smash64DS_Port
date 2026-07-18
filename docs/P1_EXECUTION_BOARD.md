@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-18 15:25 Central
+Updated: 2026-07-18 16:38 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -186,12 +186,44 @@ audio, and fence while reserve passes.
 
 The same-ROM leaf-owner P95 result selects **M3-first**: the largest stage P95
 is 468,480 ticks (natural KO), versus 380,544 for the largest combined fighter
-pair (Countdown). Resume with Task 23R Phase 0, then Task 26, then only the
-residual Task 23R work Task 26 leaves. The complete P50/P95/max/N table, ranked
+pair (Countdown). Task 23R Phase 0 is complete; resume with Task 26, then only
+the residual Task 23R work Task 26 leaves. The complete P50/P95/max/N table, ranked
 owners, task bounds, interval rows, identity packet, disassembly, map, and
 screenshots live under
 `artifacts/performance/2026-07-18_task25r-*` and
 `artifacts/visibility/2026-07-18_task25r-*`.
+
+## Task 23R Phase 0 certificate (2026-07-18)
+
+The generated manifest binds 588 pointer-field accesses across 36 M3 production
+closures: 140 immutable-generation, 43 live-camera-dependent, 260 live-camera-
+independent, and 145 callback-visible mutation/output. Every pointer base is
+observed, so a newly named live cache or output base cannot evade the
+unclassified-read gate. Generation/stamp admission, per-frame
+matrices and near-plane work, four live material snapshots, callback order and
+restoration, texture/config state, and pre-GX fail-closed behavior are explicit.
+The checker regenerates the manifest byte-for-byte and rejects every new or
+removed tracked access until classified. No runtime reuse, cache, code, data,
+stack, reserve, or DS working-set change was made.
+
+Eight same-ROM eight-frame windows cover Countdown, early, the exact natural
+Whispy Wait→Open/material-animation edge at frames 675→676, Whispy steady,
+natural KO, rebirth, late, and Time Up/Results. Every one of the eight prepared
+segment lanes and four material lanes records `7/0` adjacent hits/changes in
+every window. The transition capture independently exports the source-state
+edge and exact G2 tuple change; first-sample and cross-window boundaries remain
+explicitly uncounted. The ROM/ELF remains `88EF4931...` / `FEC9EB30...`.
+Early frame 607 is exactly `0/49,152` changed pixels against Task 25R. Boundary
+passes in 77.8 seconds with the new checker in the normal GBI fixture path.
+Evidence is `artifacts/performance/2026-07-18_task23r-phase0.md`, the eight
+adjacent JSON captures, and
+`docs/optimization/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json`.
+
+Task 26 owns the next renderer cut. Begin with segment 0 / `layer0` generated
+preflight/control only (bindings 0–19, runs 0–25, 54 triangles, 22 epochs, no
+material event), reusing current prepared storage, commit loop, and GX emitters.
+Retail hardware remains the performance referee. Task 23R Phase 1 is deferred
+until Task 26 stabilizes and only residual work is remeasured.
 
 ## Historical pre-Task-25R phase evidence
 
@@ -240,7 +272,7 @@ authoritative pair and selects the implementation order:
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Task 25R report complete / M3-first selected | live tree | authoritative phase matrix, integrated battle ROM, countdown, effects, audio, two-ROM contract, and current terminal lifecycle | no runner active; Task 23R Phase 0 next |
+| Integration/release | Task 23R Phase 0 complete / Task 26 next | live tree | 588-access consumed-field certificate, eight same-ROM 8x12 prepared-output windows, exact frame-607 pixels, integrated battle ROM, and current terminal lifecycle | no runner active; renderer TU remains one-writer for Task 26 |
 | Renderer implementation | ARM restored; Task 12 closed REVERT; Task 14 KEEP | shared integration tree | Retail hardware rejects blanket Thumb by +594,816 DRW ticks (+34.1%); its renderer hot group is device noise and reverts with that base. The renderer TU is ARM again with Task 14 intact | no runner active |
 | Gameplay + QA | Playtest review fixed / manual candidate retest pending | shared live tree / disjoint files | Down+A is source-fixed at the shared ClearAll seam. Human-P2 Fox completes all nine Down-Air callbacks and exits naturally; Mario completes the same focused route with eight live imported CPU updates. Latest then passes canonical mode 163, two-ROM publication, runtime, registry, renderer/ITCM, and visual gates. Countdown also remains fixed | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
@@ -290,7 +322,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Required FGM, attack/hit sounds, and Mario/Fox voices | Six common channel starts restored / current full-lifecycle audio gate RED | Audio + Gameplay | The source table `dFTMainHitCollisionFGMs` exposed an intentional DS exclusion: natural kick ID 32 produced unsupported delta 1 and no channel. The 121,720-byte pack now maps 18 exact IDs plus punch/kick IDs 40/38/37/34/32/31 from their two exact primary BattleShip samples and source frequency/volume envelopes; omitted composite forks/custom FX remain explicit fidelity debt. The repeated natural ID-32 route records pan 80, supported/unsupported/acquire `1/0/1`, a live channel mask, zero playback faults, and 187,152-byte reserve. Task 25R observes the exact natural Mario-KO source sequence `439/292/154` and mask `0x13`, but playback/generation failures are `1/1`; the current complete-lifecycle audio gate is therefore false. Automated channel ACK is not an ear check; five special/projectile contacts remain fail-closed | Keep the six common mappings and natural channel/effect gate. Before Task 30, fix the Task 25R KO playback/generation failure and rerun the complete lifecycle. Tyler's exact-ROM ear retest remains required. Next resolve the naturally observed unsupported Escape 11, Grind4 85, MarioFoot 110, MarioDash 121, swing 41/42, GuardOn 13, Fox special 186/189, MarioSmash3 431, and FoxDamage 375 cues; requalify the one-minute reserve before adding more resident audio |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | PASS / current Task 25R artifact | QA | The current CPU-on profile-0 sibling reaches Results once with 232,208 arena headroom and 65,536 resident audio bytes: 166,672 net versus the 131,072-byte floor. Exact 4,084/2,042 pacing and teardown pass; stale/safety/eviction counters stay zero | Preserve the floor and recheck after every representation or resident-asset change |
-| Focused/checkpoint verification | Current Boundary PASS / Task 25R evidence complete | QA | Published battle candidate `F3252C5C...` and public ROM `D0632348...` pass the 15:22 Boundary checkpoint in 147.8 seconds with normal runtime, mode-163 CPU setup/proc/target 1/33/33, GBI fixtures, registry and two-ROM publication, Task16 1/1/1 at 28,820-byte ITCM, zero renderer rejects, and dated visual analysis. Capture `2026-07-18_canonical_fast_152228-5907544-p27172.png` has 747/49,152 meaningful changes and 100% overlap against its expected paired frame. The same-HUD retail pair remains the referee for Task 17's five-to-four-VBlank threshold win | Keep this checkpoint. Start Task 23R Phase 0 next; the exact-ROM ear check and remaining attack/hit audio-visual cue audit remain required before Task 30 |
+| Focused/checkpoint verification | Current Boundary PASS / Task 23R Phase 0 complete | QA | Published battle candidate `F3252C5C...` and public ROM `D0632348...` pass the 17:32 Boundary checkpoint in 77.8 seconds with the 588-field manifest checker, GBI fixtures, canonical mode-163 runtime, registry and two-ROM publication. Capture `2026-07-18_canonical_fast_173223-9494262-p47600.png` has 675/49,152 meaningful changes and 100% overlap against its expected paired frame. Task 23R's synchronized frame 607 remains exactly 0/49,152 against Task 25R | Keep this checkpoint. Start Task 26; the exact-ROM ear check and remaining attack/hit audio-visual cue audit remain required before Task 30 |
 | Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Latest capture is `2026-07-18_canonical_fast_101715-1383371-p57268.png`; its paired frame has 747/49,152 meaningful changes, 100% overlap, and all named-region/detail gates pass. Task 6 C/D, Task 8 G2, reserve repair, Task 9/16 state identity, source-light parity, both emitter splits, raw-corner cut, Down+A, and the common-contact checkpoint remain retained | Manually retest exact ROM `DADB7C96...`; automated common-contact A/V closure is focused, not global |
 
 ## Dated Gates

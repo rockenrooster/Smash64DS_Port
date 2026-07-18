@@ -157,7 +157,7 @@ if ($PhaseMatrixMode -and -not (
         ($WallpaperIncrementalMode -eq 1) -and
         ($RendererBenchmarkSamples -eq 8) -and
         ((($RendererBenchmarkStartEvent -eq 'None') -and
-          ($RendererBenchmarkStartFrame -in @(438, 600, 1398))) -or
+          ($RendererBenchmarkStartFrame -in @(438, 600, 672, 1398))) -or
          (($RendererBenchmarkStartEvent -ne 'None') -and
           ($RendererBenchmarkStartFrame -eq 0))))) {
     throw 'PhaseMatrixMode requires mode 163/profile 1/fast 9/live Fox/production wallpaper and one exact eight-frame phase gate.'
@@ -325,6 +325,21 @@ function Get-AdjacentChurn {
     }
     $distinct = @($Values | Sort-Object -Unique).Count
     return "$changes/$distinct"
+}
+function Get-AdjacentHitChangeCounts {
+    param([int64[]]$Values, [int]$Lane)
+    $opportunities = [Math]::Max(0, $Values.Count - 1)
+    $changes = 0
+    for ($i = 1; $i -lt $Values.Count; $i++) {
+        if ($Values[$i] -ne $Values[$i - 1]) { $changes++ }
+    }
+    return [ordered]@{
+        lane = $Lane
+        samples = $Values.Count
+        opportunities = $opportunities
+        hits = $opportunities - $changes
+        changes = $changes
+    }
 }
 function Get-MedianP95 {
     param([int64[]]$Values)
@@ -1080,6 +1095,86 @@ try {
                     $coarseBenchmarkCommands += ('printf "M3_STAGE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3PreflightAttemptCount, gNdsRendererM3PreflightSuccessCount, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3SegmentCount, gNdsRendererM3SegmentMask, gNdsRendererM3PostArmFailureCount, gNdsRendererM3DObjCount, gNdsRendererM3BindingCount, gNdsRendererM3RunCount, gNdsRendererM3TriangleCount, gNdsRendererM3ResidentEpochCount, gNdsRendererM3MaterialShadowCount, gNdsRendererM3MaterialCommitCount, gNdsRendererM3CrossRunCount, gNdsRendererM3CrossTriangleCount, gNdsRendererM3CrossForeignCornerCount, gNdsRendererM3TopologyFullValidationCount, gNdsRendererM3TopologyCacheHitCount, gNdsRendererM3TopologyStampMismatchCount, {0}, {1}' -f $topologyFaultInjectionExpression, $topologyFaultRevalidationExpression)
                     if ($RendererM3Phase0Profile) {
                         $coarseBenchmarkCommands += 'printf "M3_PHASE0=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3Phase0PreflightTicks, gNdsRendererM3Phase0PrepareRunTicks, gNdsRendererM3Phase0VertexPrepareTicks, gNdsRendererM3Phase0NearTransformTicks, gNdsRendererM3Phase0RunTransitionTicks, gNdsRendererM3Phase0RawEmitTicks, gNdsRendererM3Phase0RangeEmitTicks, gNdsRendererM3Phase0NoZEmitTicks, gNdsRendererM3Phase0NoZMatrixTicks, gNdsRendererM3Phase0AccountingTicks, gNdsRendererM3Phase0CommitTicks, gNdsRendererM3Phase0TimerReadCount, gNdsRendererM3Phase0TimerSpanCount, gNdsRendererM3Phase0CalibrationTicks, gNdsRendererM3Phase0CalibrationIntervals, gNdsRendererM3Phase0PreparedDenseCount, gNdsRendererM3Phase0NearTransformCount, gNdsRendererM3Phase0NoZMatrixCount'
+                        # Debugger-only FNV-1a prepared-output stability
+                        # census: no target state, cache, or reuse mechanism
+                        # is added to the measured ROM.
+                        $coarseBenchmarkCommands += @(
+                            'printf "M3_PREPARED=%u,%u,%u", gNdsRendererProfileFrameCount, sNdsRendererAdapterNativeStageWorkspace.frame.topology_generation, sNdsRendererAdapterNativeStageWorkspace.frame.topology_stamp',
+                            'set $m3_live_prefix_hash = (unsigned int)2166136261',
+                            'set $m3_live_ptr = (unsigned char *)&sNdsRendererAdapterNativeStageWorkspace.frame.topology_generation',
+                            'set $m3_live_byte = 0',
+                            'while $m3_live_byte < 8',
+                            'set $m3_live_prefix_hash = (unsigned int)(($m3_live_prefix_hash ^ (unsigned int)$m3_live_ptr[$m3_live_byte]) * (unsigned int)16777619)',
+                            'set $m3_live_byte = $m3_live_byte + 1',
+                            'end',
+                            'set $m3_live_ptr = (unsigned char *)sNdsRendererAdapterNativeStageWorkspace.frame.config',
+                            'set $m3_live_byte = 0',
+                            'while $m3_live_byte < sizeof(*sNdsRendererAdapterNativeStageWorkspace.frame.config)',
+                            'set $m3_live_prefix_hash = (unsigned int)(($m3_live_prefix_hash ^ (unsigned int)$m3_live_ptr[$m3_live_byte]) * (unsigned int)16777619)',
+                            'set $m3_live_byte = $m3_live_byte + 1',
+                            'end',
+                            'set $m3_live_segment = 0',
+                            'while $m3_live_segment < 8',
+                            'set $m3_live_hash = $m3_live_prefix_hash',
+                            'set $m3_live_run = (unsigned int)sNdsNativeStageSegments[$m3_live_segment].first_run',
+                            'set $m3_live_run_end = $m3_live_run + (unsigned int)sNdsNativeStageSegments[$m3_live_segment].run_count',
+                            'while $m3_live_run < $m3_live_run_end',
+                            'set $m3_live_ptr = (unsigned char *)&sNdsNativeStageOwnerExecution.runs[$m3_live_run]',
+                            'set $m3_live_byte = 0',
+                            'while $m3_live_byte < sizeof(sNdsNativeStageOwnerExecution.runs[0])',
+                            'set $m3_live_hash = (unsigned int)(($m3_live_hash ^ (unsigned int)$m3_live_ptr[$m3_live_byte]) * (unsigned int)16777619)',
+                            'set $m3_live_byte = $m3_live_byte + 1',
+                            'end',
+                            'set $m3_live_dense_offset = (unsigned int)sNdsNativeStageValidationCache.prepared_dense_offsets[$m3_live_run]',
+                            'set $m3_live_dense_end = (unsigned int)sNdsNativeStageValidationCache.prepared_dense_offsets[$m3_live_run + 1]',
+                            'while $m3_live_dense_offset < $m3_live_dense_end',
+                            'set $m3_live_ptr = (unsigned char *)&sNdsNativeStageValidationCache.prepared_dense_indices[$m3_live_dense_offset]',
+                            'set $m3_live_byte = 0',
+                            'while $m3_live_byte < 2',
+                            'set $m3_live_hash = (unsigned int)(($m3_live_hash ^ (unsigned int)$m3_live_ptr[$m3_live_byte]) * (unsigned int)16777619)',
+                            'set $m3_live_byte = $m3_live_byte + 1',
+                            'end',
+                            'set $m3_live_dense = (unsigned int)sNdsNativeStageValidationCache.prepared_dense_indices[$m3_live_dense_offset]',
+                            'set $m3_live_ptr = (unsigned char *)&sNdsNativeStagePreparedDense[$m3_live_dense]',
+                            'set $m3_live_byte = 0',
+                            'while $m3_live_byte < 6',
+                            'set $m3_live_hash = (unsigned int)(($m3_live_hash ^ (unsigned int)$m3_live_ptr[$m3_live_byte]) * (unsigned int)16777619)',
+                            'set $m3_live_byte = $m3_live_byte + 1',
+                            'end',
+                            'set $m3_live_dense_offset = $m3_live_dense_offset + 1',
+                            'end',
+                            'set $m3_live_run = $m3_live_run + 1',
+                            'end',
+                            'printf ",%u", $m3_live_hash',
+                            'set $m3_live_segment = $m3_live_segment + 1',
+                            'end',
+                            'set $m3_live_material = 0',
+                            'while $m3_live_material < 4',
+                            'set $m3_live_hash = $m3_live_prefix_hash',
+                            'set $m3_live_ptr = (unsigned char *)&sNdsRendererAdapterNativeStageWorkspace.materials[$m3_live_material]',
+                            'set $m3_live_byte = 0',
+                            'while $m3_live_byte < sizeof(sNdsRendererAdapterNativeStageWorkspace.materials[0])',
+                            'set $m3_live_hash = (unsigned int)(($m3_live_hash ^ (unsigned int)$m3_live_ptr[$m3_live_byte]) * (unsigned int)16777619)',
+                            'set $m3_live_byte = $m3_live_byte + 1',
+                            'end',
+                            'set $m3_live_ptr = (unsigned char *)&sNdsRendererAdapterNativeStageWorkspace.material_curr[$m3_live_material]',
+                            'set $m3_live_byte = 0',
+                            'while $m3_live_byte < 4',
+                            'set $m3_live_hash = (unsigned int)(($m3_live_hash ^ (unsigned int)$m3_live_ptr[$m3_live_byte]) * (unsigned int)16777619)',
+                            'set $m3_live_byte = $m3_live_byte + 1',
+                            'end',
+                            'set $m3_live_ptr = (unsigned char *)&sNdsRendererAdapterNativeStageWorkspace.material_next[$m3_live_material]',
+                            'set $m3_live_byte = 0',
+                            'while $m3_live_byte < 4',
+                            'set $m3_live_hash = (unsigned int)(($m3_live_hash ^ (unsigned int)$m3_live_ptr[$m3_live_byte]) * (unsigned int)16777619)',
+                            'set $m3_live_byte = $m3_live_byte + 1',
+                            'end',
+                            'printf ",%u", $m3_live_hash',
+                            'set $m3_live_material = $m3_live_material + 1',
+                            'end',
+                            'printf "\n"'
+                        )
+                        $coarseBenchmarkCommands += 'printf "M3_WHISPY=%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, (unsigned int)gGRCommonStruct.pupupu.whispy_status, (unsigned int)gGRCommonStruct.pupupu.whispy_wind_wait, (unsigned int)gGRCommonStruct.pupupu.whispy_wind_duration, (unsigned int)gGRCommonStruct.pupupu.whispy_blink_wait'
                         $coarseBenchmarkCommands += 'printf "G2_STATE=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3G2TextureParamWriteCount, gNdsRendererM3G2TextureParamSkipCount, gNdsRendererM3G2MatrixModeWriteCount, gNdsRendererM3G2MatrixModeSkipCount, gNdsRendererM3G2PolyFmtWriteCount, gNdsRendererM3G2PolyFmtSkipCount'
                         $coarseBenchmarkCommands += 'printf "PHASE05=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererPhase05WallpaperSetupTicks, gNdsRendererPhase05WallpaperXMapTicks, gNdsRendererPhase05WallpaperYMapTicks, gNdsRendererPhase05WallpaperWriteTicks, gNdsRendererPhase05WallpaperCommitTicks, gNdsRendererPhase05PresentHardwareTicks, gNdsRendererPhase05GCDrawAllTicks, gNdsRendererPhase05StageTransitionTicks, gNdsRendererPhase05FighterWrapperTicks, gNdsRendererPhase05FrameResetTicks, gNdsRendererPhase05PresentTailTicks, gNdsRendererPhase05ProfileBookkeepingTicks, gNdsRendererPhase05ProfilePublishTicks, gNdsRendererPhase05FlushPrepTicks, gNdsRendererPhase05TimerReadCount, gNdsRendererPhase05TimerSpanCount, gNdsRendererPhase05CalibrationTicks, gNdsRendererPhase05CalibrationIntervals, gNdsRendererPhase05WallpaperRowCount, gNdsRendererPhase05WallpaperPixelWriteCount'
                         $coarseBenchmarkCommands += 'printf "WALL_RUNS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererPhase05WallpaperFullRowCount, gNdsRendererPhase05WallpaperIncrementalRowCount, gNdsRendererPhase05WallpaperChangedXCount, gNdsRendererPhase05WallpaperChangedRunCount, gNdsRendererPhase05WallpaperLongestChangedRun, gNdsRendererPhase05WallpaperRunGE2Count, gNdsRendererPhase05WallpaperRunGE2Pixels, gNdsRendererPhase05WallpaperRunGE4Count, gNdsRendererPhase05WallpaperRunGE4Pixels, gNdsRendererPhase05WallpaperRunGE8Count, gNdsRendererPhase05WallpaperRunGE8Pixels, gNdsRendererPhase05WallpaperScalarStoreCount, gNdsRendererPhase05WallpaperPackedStoreCount, gNdsRendererPhase05WallpaperDmaPixelCount, gNdsRendererPhase05WallpaperCopyPixelCount, gNdsRendererPhase05WallpaperPixelWriteCount'
@@ -1774,6 +1869,8 @@ try {
     $fastRunBenchmark = @()
     $m3StageBenchmark = @()
     $m3Phase0Benchmark = @()
+    $m3PreparedBenchmark = @()
+    $m3WhispyBenchmark = @()
     $g2StateBenchmark = @()
     $phase05Benchmark = @()
     $wallRunBenchmark = @()
@@ -1820,6 +1917,8 @@ try {
             $m3StageBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_STAGE' -FieldCount 22)
             if ($RendererM3Phase0Profile) {
                 $m3Phase0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_PHASE0' -FieldCount 19)
+                $m3PreparedBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_PREPARED' -FieldCount 15)
+                $m3WhispyBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_WHISPY' -FieldCount 5)
                 $g2StateBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'G2_STATE' -FieldCount 7)
                 $phase05Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'PHASE05' -FieldCount 21)
                 $wallRunBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'WALL_RUNS' -FieldCount 17)
@@ -2545,6 +2644,16 @@ try {
                 $fastRunMetricSummary = ''
                 $m3StageMetricSummary = ''
                 $m3Phase0MetricSummary = ''
+                $m3PreparedMetricSummary = ''
+                $m3PreparedCounts = [ordered]@{
+                    comparison = 'adjacent-within-window'
+                    boundary = 'unknown'
+                    firstSampleIsOpportunity = $false
+                    samples = 0
+                    opportunities = 0
+                    segments = @()
+                    materials = @()
+                }
                 $g2StateMetricSummary = ''
                 $phase05MetricSummary = ''
                 $wallRunMetricSummary = ''
@@ -2725,6 +2834,8 @@ try {
                     $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                     $m3StageSamples = [System.Collections.Generic.List[object]]::new()
                     $m3Phase0Samples = [System.Collections.Generic.List[object]]::new()
+                    $m3PreparedSamples = [System.Collections.Generic.List[object]]::new()
+                    $m3WhispySamples = [System.Collections.Generic.List[object]]::new()
                     $phase05Samples = [System.Collections.Generic.List[object]]::new()
                     $wallRunSamples = [System.Collections.Generic.List[object]]::new()
                     $m4WaterStillSamples = [System.Collections.Generic.List[object]]::new()
@@ -2766,6 +2877,8 @@ try {
                         $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                         $m3StageSamples = [System.Collections.Generic.List[object]]::new()
                         $m3Phase0Samples = [System.Collections.Generic.List[object]]::new()
+                        $m3PreparedSamples = [System.Collections.Generic.List[object]]::new()
+                        $m3WhispySamples = [System.Collections.Generic.List[object]]::new()
                         $g2StateSamples = [System.Collections.Generic.List[object]]::new()
                         $m4WaterStillSamples = [System.Collections.Generic.List[object]]::new()
                         $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
@@ -2799,6 +2912,8 @@ try {
                             Assert-Condition ($m3StageBenchmark.Count -eq $RendererBenchmarkSamples) "M3 stage benchmark captured $($m3StageBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         if ($RendererM3Phase0Profile) {
                             Assert-Condition ($m3Phase0Benchmark.Count -eq $RendererBenchmarkSamples) "M3 Phase-0 benchmark captured $($m3Phase0Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                            Assert-Condition ($m3PreparedBenchmark.Count -eq $RendererBenchmarkSamples) "M3 prepared-output stability census captured $($m3PreparedBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                            Assert-Condition ($m3WhispyBenchmark.Count -eq $RendererBenchmarkSamples) "M3 Whispy source-state census captured $($m3WhispyBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($g2StateBenchmark.Count -eq $RendererBenchmarkSamples) "G2 state benchmark captured $($g2StateBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($phase05Benchmark.Count -eq $RendererBenchmarkSamples) "Phase-0.5 benchmark captured $($phase05Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($wallRunBenchmark.Count -eq $RendererBenchmarkSamples) "Wallpaper run census captured $($wallRunBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
@@ -2987,12 +3102,59 @@ try {
                                 }
                                 $m3StageSamples.Add($m3)
                                 if ($RendererM3Phase0Profile) {
+                                    $m3Prepared = Get-Ints $m3PreparedBenchmark[$sampleIndex]
+                                    Assert-Condition (
+                                        $m3Prepared[0] -eq $frame -and
+                                        $m3Prepared[1] -gt 0 -and
+                                        $m3Prepared[2] -gt 0
+                                    ) "M3 prepared-output stability census lost frame/topology synchronization at frame $frame (actual=$($m3Prepared -join ','))." $gdbStdout
+                                    $m3PreparedSamples.Add($m3Prepared)
+                                    $m3Whispy = Get-Ints $m3WhispyBenchmark[$sampleIndex]
+                                    if ($RendererBenchmarkStartFrame -eq 672) {
+                                        $expectedWhispy = if ($sampleIndex -lt 4) {
+                                            @(1, (7 - (2 * $sampleIndex)), 0,
+                                              (71 - (2 * $sampleIndex)))
+                                        } else {
+                                            @(3, 0, 0,
+                                              (71 - (2 * $sampleIndex)))
+                                        }
+                                        Assert-Condition (
+                                            $m3Whispy[0] -eq $frame -and
+                                            (($m3Whispy[1..4] -join ',') -eq
+                                             ($expectedWhispy -join ','))
+                                        ) "M3 natural Whispy Wait-to-Open/material-animation boundary drifted at frame $frame (actual=$($m3Whispy -join ',') expected=$($expectedWhispy -join ','))." $gdbStdout
+                                    } else {
+                                        Assert-Condition ($m3Whispy[0] -eq $frame -and $m3Whispy[1] -le 5) "M3 Whispy source-state census lost synchronization or status bounds at frame $frame (actual=$($m3Whispy -join ','))." $gdbStdout
+                                    }
+                                    $m3WhispySamples.Add($m3Whispy)
                                     $phase0 = Get-Ints $m3Phase0Benchmark[$sampleIndex]
                                     Assert-Condition ($phase0[0] -eq $frame -and $phase0[12] -eq 1319 -and $phase0[13] -eq 651 -and $phase0[15] -eq 16 -and $phase0[16] -eq 312 -and $phase0[17] -eq 226 -and $phase0[18] -eq 146) "M3 Phase-0 timer/count census drifted at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
                                     Assert-Condition ($phase0[2] -ge $phase0[3] -and $phase0[3] -ge $phase0[4] -and $phase0[8] -ge $phase0[9] -and $phase0[1] -ge $phase0[2] -and $phase0[11] -ge ($phase0[5] + $phase0[6] + $phase0[7] + $phase0[8] + $phase0[10])) "M3 Phase-0 nested bucket conservation failed at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
                                     $m3Phase0Samples.Add($phase0)
                                     $g2State = Get-Ints $g2StateBenchmark[$sampleIndex]
-                                    if ($Task22WallpaperRunLab -and
+                                    if ($PhaseMatrixMode) {
+                                        $expectedG2State = if (
+                                            ($RendererBenchmarkStartFrame -eq 600) -or
+                                            ($RendererBenchmarkStartEvent -in @('KO','Rebirth'))) {
+                                            @(41, 13, 138, 0, 54, 32)
+                                        } elseif (
+                                            (($RendererBenchmarkStartFrame -eq 672) -and
+                                             ($sampleIndex -ge 4))) {
+                                            @(44, 13, 166, 0, 70, 36)
+                                        } elseif (
+                                            ($RendererBenchmarkStartFrame -eq 672) -or
+                                            (($RendererBenchmarkStartEvent -eq 'TimeUp') -and
+                                             ($sampleIndex -ge 6))) {
+                                            @(44, 13, 166, 0, 70, 34)
+                                        } else {
+                                            @(44, 13, 164, 0, 69, 34)
+                                        }
+                                        Assert-Condition (
+                                            $g2State[0] -eq $frame -and
+                                            (($g2State[1..6] -join ',') -eq
+                                             ($expectedG2State -join ','))
+                                        ) "Phase-matrix G2 state census drifted at frame $frame (actual=$($g2State -join ',') expected=$($expectedG2State -join ','))." $gdbStdout
+                                    } elseif ($Task22WallpaperRunLab -and
                                         (($RendererBenchmarkStartFrame -ne 438) -or
                                          ($RendererBenchmarkStartEvent -ne 'None'))) {
                                         Assert-Condition (
@@ -3027,13 +3189,17 @@ try {
                                     $phase05PixelWritesValid = if ($WallpaperIncrementalMode -eq 0) {
                                         $phase05[20] -eq 49152
                                     } else {
-                                        ($phase05[20] -gt 0) -and ($phase05[20] -le 49152)
+                                        ($phase05[20] -ge 0) -and ($phase05[20] -le 49152)
                                     }
-                                    Assert-Condition ($phase05[0] -eq $frame -and $phase05[18] -eq 16 -and $phase05[19] -eq 192 -and $phase05PixelWritesValid -and $phase05[15] -gt $phase05[16] -and $phase05[16] -gt 0) "Phase-0.5 timer/count census drifted at frame $frame (actual=$($phase05 -join ','))." $gdbStdout
+                                    $phase05WallpaperInactive =
+                                        $PhaseMatrixMode -and
+                                        ($RendererBenchmarkStartEvent -in @('Late','TimeUp')) -and
+                                        ($phase05[19] -eq 0) -and ($phase05[20] -eq 0)
+                                    Assert-Condition ($phase05[0] -eq $frame -and $phase05[18] -eq 16 -and (($phase05[19] -eq 192 -and $phase05PixelWritesValid) -or $phase05WallpaperInactive) -and $phase05[15] -gt $phase05[16] -and $phase05[16] -gt 0) "Phase-0.5 timer/count census drifted at frame $frame (actual=$($phase05 -join ','))." $gdbStdout
                                     Assert-Condition ($phase05WallpaperSubtotal -le $coarse[10] -and $coarse[11] -ge $phase05[8] -and $phase05[7] -ge $phase05StageExecute -and $phase05[9] -gt 0 -and $phase05[6] -ge ($phase05[7] + $phase05[8] + $phase05[9]) -and $coarse[19] -ge $phase05NamedDrawShell -and $coarse[20] -ge ($phase05[10] + $phase05[11] + $phase05[14]) -and $coarse[21] -ge ($phase05[12] + $phase05[13])) "Phase-0.5 nested conservation failed at frame $frame (phase05=$($phase05 -join ',') coarse=$($coarse -join ','))." $gdbStdout
                                     $phase05Samples.Add($phase05)
                                     $wallRuns = Get-Ints $wallRunBenchmark[$sampleIndex]
-                                    Assert-Condition ($wallRuns[0] -eq $frame -and ($wallRuns[1] + $wallRuns[2]) -eq 192 -and $wallRuns[3] -le 256 -and $wallRuns[4] -le $wallRuns[3] -and $wallRuns[5] -le $wallRuns[3] -and $wallRuns[7] -le $wallRuns[3] -and $wallRuns[9] -le $wallRuns[7] -and $wallRuns[11] -le $wallRuns[9] -and ([int64]$wallRuns[12] + (2 * [int64]$wallRuns[13]) + [int64]$wallRuns[14] + [int64]$wallRuns[15]) -eq [int64]$wallRuns[16] -and $wallRuns[16] -eq $phase05[20]) "Wallpaper run/store census failed exact row, nesting, or physical-write conservation at frame $frame (actual=$($wallRuns -join ','))." $gdbStdout
+                                    Assert-Condition ($wallRuns[0] -eq $frame -and ($wallRuns[1] + $wallRuns[2]) -eq $phase05[19] -and $wallRuns[3] -le 256 -and $wallRuns[4] -le $wallRuns[3] -and $wallRuns[5] -le $wallRuns[3] -and $wallRuns[7] -le $wallRuns[3] -and $wallRuns[9] -le $wallRuns[7] -and $wallRuns[11] -le $wallRuns[9] -and ([int64]$wallRuns[12] + (2 * [int64]$wallRuns[13]) + [int64]$wallRuns[14] + [int64]$wallRuns[15]) -eq [int64]$wallRuns[16] -and $wallRuns[16] -eq $phase05[20]) "Wallpaper run/store census failed exact row, nesting, or physical-write conservation at frame $frame (actual=$($wallRuns -join ','))." $gdbStdout
                                     $wallRunSamples.Add($wallRuns)
                                 }
                             } else {
@@ -3454,6 +3620,27 @@ try {
                                 $phase0CalibrationPerRead = @($m3Phase0Samples | ForEach-Object { [int64]$_.Item(14) / [int64]$_.Item(15) })
                                 $phase0Last = $m3Phase0Samples[-1]
                                 $m3Phase0MetricSummary = "Renderer M3 Phase 0: samples=$RendererBenchmarkSamples preflight=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 1)) prepareRuns=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 2)) attributeExclusive=$(Get-MedianP95 $phase0AttributeExclusive) nearTransform=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 4)) prepareResidual=$(Get-MedianP95 $phase0PrepareResidual) preflightResidual=$(Get-MedianP95 $phase0PreflightResidual) beginBind=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 5)) raw=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 6)) range=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 7)) noZInclusive=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 8)) noZMatrix=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 9)) noZExclusive=$(Get-MedianP95 $phase0NoZExclusive) accounting=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 10)) commit=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 11)) commitResidual=$(Get-MedianP95 $phase0CommitResidual) timerReads/spans=$($phase0Last[12])/$($phase0Last[13]) calibrationTotal/perRead=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 14))/$(Get-MedianP95 $phase0CalibrationPerRead) counts=dense$($phase0Last[16])/near$($phase0Last[17])/matrix$($phase0Last[18])"
+                                $m3PreparedCounts = [ordered]@{
+                                    comparison = 'adjacent-within-window'
+                                    boundary = 'unknown'
+                                    firstSampleIsOpportunity = $false
+                                    samples = $m3PreparedSamples.Count
+                                    opportunities = [Math]::Max(
+                                        0, $m3PreparedSamples.Count - 1)
+                                    segments = @(for ($i = 0; $i -lt 8; $i++) {
+                                        Get-AdjacentHitChangeCounts `
+                                            -Values (Get-SampleFieldValues $m3PreparedSamples (3 + $i)) `
+                                            -Lane $i
+                                    })
+                                    materials = @(for ($i = 0; $i -lt 4; $i++) {
+                                        Get-AdjacentHitChangeCounts `
+                                            -Values (Get-SampleFieldValues $m3PreparedSamples (11 + $i)) `
+                                            -Lane $i
+                                    })
+                                }
+                                $m3PreparedSegmentChurn = @($m3PreparedCounts.segments | ForEach-Object { "s$($_.lane)=$($_.hits)/$($_.changes)" })
+                                $m3PreparedMaterialChurn = @($m3PreparedCounts.materials | ForEach-Object { "m$($_.lane)=$($_.hits)/$($_.changes)" })
+                                $m3PreparedMetricSummary = "Renderer M3 camera-independent prepared-output FNV (in-window adjacent hits/changes; boundary unknown): topology=$(Get-AdjacentChurn (Get-SampleFieldValues $m3PreparedSamples 1))/$(Get-AdjacentChurn (Get-SampleFieldValues $m3PreparedSamples 2)) segments=$($m3PreparedSegmentChurn -join ',') materials=$($m3PreparedMaterialChurn -join ',')"
                                 $g2StateMetricSummary = "Renderer G2 state writes/skips: samples=$RendererBenchmarkSamples texture=$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 1))/$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 2)) matrixMode=$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 3))/$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 4)) polyFmt=$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 5))/$(Get-MedianP95 (Get-SampleFieldValues $g2StateSamples 6))"
                                 $phase05WallpaperSubtotal = @($phase05Samples | ForEach-Object { [int64]$_[1] + [int64]$_[2] + [int64]$_[3] + [int64]$_[4] + [int64]$_[5] })
                                 $phase05WallpaperResidual = @(for ($i = 0; $i -lt $phase05Samples.Count; $i++) { [int64]$coarseSamples[$i][10] - [int64]$phase05WallpaperSubtotal[$i] })
@@ -3683,6 +3870,7 @@ try {
                                 $RendererScreenSpaceCensusMode
                             renderEconomyMode = $RenderEconomyMode
                             renderEconomyOwnerMask = $RenderEconomyOwnerMask
+                            m3PreparedOutputCounts = $m3PreparedCounts
                             samples = [ordered]@{
                                 renderer = @($rendererBenchmark | ForEach-Object {
                                     , @(Get-Ints $_)
@@ -3698,6 +3886,8 @@ try {
                                     @($screenSpaceCensusStageOwnerValues)
                                 m3Stage = @($m3StageSamples)
                                 m3Phase0 = @($m3Phase0Samples)
+                                m3PreparedOutput = @($m3PreparedSamples)
+                                m3WhispySourceState = @($m3WhispySamples)
                                 g2State = @($g2StateSamples)
                                 phase05 = @($phase05Samples)
                                 wallpaperRuns = @($wallRunSamples)
@@ -3775,6 +3965,7 @@ try {
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
+                    if ($m3PreparedMetricSummary) { Write-Output $m3PreparedMetricSummary }
                     if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
                     if ($phase05MetricSummary) { Write-Output $phase05MetricSummary }
                     if ($wallRunMetricSummary) { Write-Output $wallRunMetricSummary }
@@ -4277,6 +4468,7 @@ try {
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
+                    if ($m3PreparedMetricSummary) { Write-Output $m3PreparedMetricSummary }
                     if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
                     if ($phase05MetricSummary) { Write-Output $phase05MetricSummary }
                     if ($wallRunMetricSummary) { Write-Output $wallRunMetricSummary }

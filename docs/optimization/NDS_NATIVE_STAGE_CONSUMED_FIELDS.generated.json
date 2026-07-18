@@ -1,0 +1,2931 @@
+{
+  "admission_only": [
+    "dobjs[57]",
+    "binding_display_lists[42]",
+    "projection",
+    "topology_generation",
+    "topology_stamp"
+  ],
+  "allowed_classifications": [
+    "immutable_generation",
+    "live_camera_dependent",
+    "live_camera_independent",
+    "callback_visible_mutation_output"
+  ],
+  "callback_commit_order": [
+    {
+      "outputs": [
+        "MObj.texture_id_curr",
+        "MObj.texture_id_next"
+      ],
+      "segment": 1,
+      "slots": [
+        0
+      ]
+    },
+    {
+      "outputs": [
+        "MObj.texture_id_curr",
+        "MObj.texture_id_next"
+      ],
+      "segment": 2,
+      "slots": [
+        1
+      ]
+    },
+    {
+      "outputs": [
+        "MObj.texture_id_curr",
+        "MObj.texture_id_next"
+      ],
+      "segment": 5,
+      "slots": [
+        2,
+        3
+      ]
+    }
+  ],
+  "census_dimensions": {
+    "material_snapshots": 4,
+    "segments": 8,
+    "windows": [
+      "Countdown",
+      "early",
+      "Whispy Wait-to-Open/material-animation boundary",
+      "Whispy steady/post-change",
+      "late",
+      "KO",
+      "rebirth",
+      "Time Up/Results"
+    ]
+  },
+  "frame_lifetime": "The adapter workspace owns generation-stable topology and asset pointers, rebuilds matrices and material snapshots before each synchronous preflight, remains resident through all eight interleaved commits, and restores captured texture IDs only at segments 1, 2, and 5.",
+  "generated_by": "scripts/generate_nds_native_stage.py",
+  "generated_runtime_fields": [
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "payload_size"
+      ],
+      "record": "NDSNativeStageAsset"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "first_dobj",
+        "dobj_count",
+        "owner",
+        "first_binding",
+        "binding_count",
+        "initial_geometry",
+        "first_run",
+        "run_count",
+        "reserved"
+      ],
+      "record": "NDSNativeStageSegment"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "parent_index",
+        "binding_index",
+        "transform_flags",
+        "owner",
+        "depth"
+      ],
+      "record": "NDSNativeStageDObj"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "root_offset",
+        "first_vertex",
+        "first_run",
+        "first_epoch",
+        "source_vertex_count",
+        "run_count",
+        "texture_epoch_count",
+        "asset_index",
+        "material_event"
+      ],
+      "record": "NDSNativeStageBinding"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "first_corner",
+        "triangle_count",
+        "binding_index",
+        "texture_epoch",
+        "submit_class",
+        "state_policy",
+        "flags"
+      ],
+      "record": "NDSNativeStageRun"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "x",
+        "y",
+        "z",
+        "s",
+        "t",
+        "matrix_binding",
+        "packed_cache_shift",
+        "rgba"
+      ],
+      "record": "NDSNativeStageDenseVertex"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "source_command_offset",
+        "asset_index",
+        "policy_index",
+        "material_event"
+      ],
+      "record": "NDSNativeStageTextureEpoch"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "mobj_offset",
+        "binding_index",
+        "asset_index",
+        "material_slot",
+        "segment_index",
+        "source_command_count"
+      ],
+      "record": "NDSNativeStageMaterialEvent"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "combine_w0",
+        "combine_w1",
+        "othermode_h",
+        "othermode_l",
+        "geometry_mode"
+      ],
+      "record": "NDSNativeStageStatePolicy"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "w0",
+        "w1",
+        "effect",
+        "asset_index",
+        "material_event",
+        "material_command"
+      ],
+      "record": "NDSNativeStageStateDelta"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "first_state",
+        "state_count",
+        "sync_count"
+      ],
+      "record": "NDSNativeStageStateSpan"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "all_indices"
+      ],
+      "record": "sNdsNativeStageCorners"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "all_indices"
+      ],
+      "record": "sNdsNativeStageStateSequence"
+    }
+  ],
+  "invalidation_manifest": [
+    "asset owner generation, loaded-file identity, data pointer, asset ID, size, or owner generation changes",
+    "segment identity, link, callback, display-link order, or visibility flags change",
+    "DObj parent/child/sibling, display list, MObj, flags, XObj count/kind, owner, depth, or binding changes",
+    "binding display-list identity changes",
+    "camera projection or any of 42 composed matrices changes: recompute every frame; never cache near-plane results",
+    "any live MObj material, texture selector, color, alpha, scale, scroll, palette, or image input changes: rebuild all four snapshots",
+    "callback segment/order mismatch: fail closed; never restore texture IDs at a different seam"
+  ],
+  "material_snapshots": [
+    {
+      "binding": 20,
+      "required_flags": 1,
+      "slot": 0
+    },
+    {
+      "binding": 22,
+      "required_flags": 1,
+      "slot": 1
+    },
+    {
+      "binding": 31,
+      "required_flags": 107,
+      "slot": 2
+    },
+    {
+      "binding": 32,
+      "required_flags": 107,
+      "slot": 3
+    }
+  ],
+  "root_frame_fields": [
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "asset_bases",
+        "dobjs",
+        "binding_display_lists",
+        "topology_generation",
+        "topology_stamp"
+      ]
+    },
+    {
+      "classification": "live_camera_dependent",
+      "fields": [
+        "projection",
+        "binding_composed"
+      ]
+    },
+    {
+      "classification": "live_camera_independent",
+      "fields": [
+        "materials",
+        "config"
+      ]
+    }
+  ],
+  "schema": "smash64ds.m3-consumed-fields.v1",
+  "segment_order": [
+    "layer0",
+    "whispy_eyes",
+    "whispy_mouth",
+    "flowers_back",
+    "layer1",
+    "layer2",
+    "flowers_front",
+    "layer3"
+  ],
+  "source_closures": [
+    {
+      "closure": "ndsRendererNativeStageValidateTopologyFull",
+      "fields": [
+        {
+          "access": "binding.asset_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding.first_epoch",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding.first_vertex",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding.material_event",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding.root_offset",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding.source_vertex_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding.texture_epoch_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dense.matrix_binding",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dense.rgba",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dense.x",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dense.y",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dense.z",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.asset_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.material_event",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.policy_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.source_command_offset",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "event.asset_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "event.binding_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "event.material_slot",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "event.mobj_offset",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "event.segment_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "event.source_command_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "expected.binding_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "expected.depth",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "expected.owner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "expected.parent_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "expected.transform_flags",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.asset_bases",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.binding_display_lists",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.topology_generation",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.topology_stamp",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.binding_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.depth",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.identity",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.owner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.parent_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.transform_flags",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.binding_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.first_corner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.flags",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.state_policy",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.submit_class",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.texture_epoch",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.triangle_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.binding_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.dobj_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_binding",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_dobj",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.reserved",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "summary.cross_foreign_corners",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "summary.cross_runs",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "summary.cross_triangles",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "summary.projected_no_z_triangles",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "summary.projected_range_triangles",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "summary.raw_triangles",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeStageApplyStateSpan",
+      "fields": [
+        {
+          "access": "delta.asset_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "delta.effect",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "delta.material_command",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "delta.material_event",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "delta.w0",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "delta.w1",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.asset_bases",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.materials",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "span.first_state",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "span.state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "span.sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "stats.blend_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.color_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.sync_command_count",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeApplyMaterial",
+      "fields": [
+        {
+          "access": "material.blend_color",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.block_image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.block_image_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.command_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.current_image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.current_image_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.effects",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.env_color",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.light1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.light2",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.load_block_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.load_block_w1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.palette_image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.palette_image_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.palette_tile_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.palette_tile_w1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.palette_tlut_w1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.prim_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.prim_w1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.render_tile_size_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.render_tile_size_w1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.scroll_tile_size_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.scroll_tile_size_w1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.sync_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.texture_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "material.texture_w1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.blend_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.branch_call_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.branch_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.branch_jump_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.color_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.end_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.env_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.prim_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.prim_lod_fraction",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.prim_min_level",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.segment_resolve_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.sync_command_count",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeStagePolicyMatches",
+      "fields": [
+        {
+          "access": "policy.combine_w0",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "policy.combine_w1",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "policy.geometry_mode",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "policy.othermode_h",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "policy.othermode_l",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "stats.geometry_mode",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.othermode_h",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.othermode_l",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w1",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeStagePrepareRun",
+      "fields": [
+        {
+          "access": "dense.matrix_binding",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dense.rgba",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dense.s",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dense.t",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.binding_composed",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "frame.config",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared.alpha_ref",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.alpha_test",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.poly_fmt",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_entry",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_format",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_height",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_name",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_params",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_width",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.textured",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared_dense.near_inside",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared_dense.packed_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared_dense.s",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared_dense.t",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "render_tile.uls",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.ult",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "run.first_corner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.state_policy",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.submit_class",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.texture_epoch",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "stats.blend_color",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.othermode_l",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_scale_s",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_scale_t",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_state_flags",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_tiles",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererPrepareNativeStageOwner",
+      "fields": [
+        {
+          "access": "binding.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.binding_composed",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "frame.binding_display_lists",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.config",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "frame.dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.materials",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "frame.projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "segment.binding_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_binding",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.initial_geometry",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "stats.command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.sync_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.triangle_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.vertex_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.vertex_count",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererCommitNativeStageSegment",
+      "fields": [
+        {
+          "access": "run.first_corner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.submit_class",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.triangle_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.owner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "stats.triangle_count",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareResolveOrBindTexture",
+      "fields": [
+        {
+          "access": "config.texture_data_layout",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.green_texels",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.key",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.key_generation",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.key_hash",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.last_used_frame",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.name",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.nonwhite_texels",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.params",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.pinned",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.profile_height",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.profile_width",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.ready",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.source_texels",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.image_format",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.image_size",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.image_width",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.load_dxt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.load_kind",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.load_lrs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.load_texels",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.load_tile",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.load_uls",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "load.load_ult",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.image_format",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.image_size",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.image_width",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.load_dxt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.load_kind",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.load_lrs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.load_texels",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.load_tile",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.load_uls",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "primary_load.load_ult",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.cms",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.cmt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.flags",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.format",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.height",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.line",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.lrs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.lrt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.masks",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.maskt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.palette",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.set_seen",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.shifts",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.shiftt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.size",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.tmem",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.uls",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.ult",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.width",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "resolved.entry",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "resolved.format",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "resolved.height",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "resolved.name",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "resolved.params",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "resolved.width",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.hardware_texture_format",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.hardware_texture_height",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.hardware_texture_ready_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.hardware_texture_upload_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.hardware_texture_width",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.prim_lod_fraction",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_format",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_image_width",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_block_dxt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_block_lrs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_block_uls",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_block_ult",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_kind",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_texels",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_tile",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_size",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_state_flags",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_tiles",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_tlut_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_tlut_image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.cms",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.cmt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.line",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.lrs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.lrt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.masks",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.maskt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.palette",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.shifts",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.shiftt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.tmem",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.uls",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tile.ult",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareColorSource",
+      "fields": [
+        {
+          "access": "stats.env_color",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.prim_color",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareAlphaUsesVertex",
+      "fields": [
+        {
+          "access": "stats.othermode_l",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareUseMaterialColor",
+      "fields": [
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareUseVertexColor",
+      "fields": [
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w1",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareAlpha",
+      "fields": [
+        {
+          "access": "stats.env_color",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.othermode_l",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.prim_color",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "vtx.a",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwarePolyFmt",
+      "fields": [
+        {
+          "access": "stats.geometry_mode",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareUseTexture",
+      "fields": [
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_state_flags",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareTextureImplicitStateOn",
+      "fields": [
+        {
+          "access": "render_tile.height",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.line",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.set_seen",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.size_seen",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "render_tile.width",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_texels",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_state_flags",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_tiles",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererActiveTextureTile",
+      "fields": [
+        {
+          "access": "stats.texture_state_flags",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_tile",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareTextureFilterOffset",
+      "fields": [
+        {
+          "access": "stats.othermode_h",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererStageTextureSiteRemember",
+      "fields": [
+        {
+          "access": "candidate.site",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "entry.key.prim_lod_fraction",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.key.texel1_image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.key_generation",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.ready",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "plan.entry",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.entry_generation",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.format",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.height",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.prim_lod_fraction",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.semantic_key_hash",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.semantic_params",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.site",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.size",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.state_hash1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.state_hash2",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.texel1_image0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.texel1_image1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.texel1_primary_state",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.texel1_tile_state",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.uses_texel1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "plan.width",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.source_command_site",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_source_hash1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_source_hash2",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererInitTraversalState",
+      "fields": [
+        {
+          "access": "config.initial_geometry_mode",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "config.initial_modelview",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "config.initial_projection",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.current_matrix_snapshot",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.current_transform_vertex_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.input_vertex_valid_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.input_vertices",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.matrix_generation",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.matrix_snapshot_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.matrix_snapshots",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.matrix_valid",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.matrix_word_valid",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.modelview",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.modelview_stack_depth",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.modelview_valid",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.prepared_light_direction_valid",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.prepared_projected_source_z_valid_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.prepared_projected_xy_valid_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.prepared_texcoord_valid_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.prepared_vertex_color_valid_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.projection",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.projection_valid",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.raw_vertex_fit_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.semantic_branch_path",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.semantic_command_index",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.semantic_tri2_half",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.source_command_site",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_key_hash",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_params",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_valid",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.vertex_clip_snapshot",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.vertex_color_valid_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.vertex_colors",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.vertex_matrix_snapshot",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.vertex_valid_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.vertices",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_mode",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.hardware_matrix_seed_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "vertex_storage.input_vertices",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "vertex_storage.vertex_clip_snapshot",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "vertex_storage.vertex_colors",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "vertex_storage.vertex_matrix_snapshot",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "vertex_storage.vertices",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererResolveDataPointer",
+      "fields": [
+        {
+          "access": "config.resolve_data",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "config.user",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "config.validate_range",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererAdapterBuildCameraMatrices",
+      "fields": [
+        {
+          "access": "cobj.projection.ortho.b",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.ortho.f",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.ortho.l",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.ortho.n",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.ortho.r",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.ortho.scale",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.ortho.t",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.aspect",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.far",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.fovy",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.near",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.norm",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.scale",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.at.x",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.at.y",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.at.z",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.eye.x",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.eye.y",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.eye.z",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.up.x",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.up.y",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.up.z",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.xobjs",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.xobjs_num",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "xobj.kind",
+          "classification": "live_camera_dependent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterBuildDObjXObjMatrix",
+      "fields": [
+        {
+          "access": "dobj.rotate.a",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.rotate.vec.f.x",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.rotate.vec.f.y",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.rotate.vec.f.z",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.scale.vec.f.x",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.scale.vec.f.y",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.scale.vec.f.z",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.translate.vec.f.x",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.translate.vec.f.y",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.translate.vec.f.z",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "rotate.a",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "rotate.vec.f.x",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "rotate.vec.f.y",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "rotate.vec.f.z",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "scale.vec.f.x",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "scale.vec.f.y",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "scale.vec.f.z",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "translate.vec.f.x",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "translate.vec.f.y",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "translate.vec.f.z",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "xobj.kind",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "xobj.mtx",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterBuildDObjLocalMatrix",
+      "fields": [
+        {
+          "access": "dobj.xobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.xobjs_num",
+          "classification": "immutable_generation"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterApplyMvpRecalcRpy0x47",
+      "fields": [
+        {
+          "access": "cobj.projection.persp.aspect",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.far",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.fovy",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.near",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.norm",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.scale",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.xobjs",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.xobjs_num",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "dobj.rotate.vec.f.x",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.rotate.vec.f.y",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.xobjs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.xobjs_num",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "modelview.m",
+          "classification": "live_camera_dependent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterMaterialFlags",
+      "fields": [
+        {
+          "access": "mobj.sub.flags",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterMaterialLoadBlock",
+      "fields": [
+        {
+          "access": "mobj.sub.block_dxt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.block_siz",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk36",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterMaterialTextureState",
+      "fields": [
+        {
+          "access": "mobj.sub.scau",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.scav",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.scrollu",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.scrollv",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.trau",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.trav",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk10",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk24",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk28",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk44",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "fields": [
+        {
+          "access": "mobj.lfrac",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.palette_id",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.blendcolor",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.block_fmt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.block_siz",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.envcolor",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.fmt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.light1color",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.light2color",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.palettes",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.prim_m",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.primcolor",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.siz",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.sprites",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk08",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk0A",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk0C",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk0E",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk10",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk38",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.sub.unk3A",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "mobj.texture_id_curr",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "mobj.texture_id_next",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.blend_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.block_image",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.block_image_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.current_image",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.current_image_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.effects",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.env_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.light1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.light2",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.load_block_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.load_block_w1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.palette_image",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.palette_image_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.palette_tile_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.palette_tile_w1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.palette_tlut_w1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.prim_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.prim_w1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.render_tile_size_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.render_tile_size_w1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.scroll_tile_size_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.scroll_tile_size_w1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.sync_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.texture_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "out.texture_w1",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterBuildNativeStageTopologyStamp",
+      "fields": [
+        {
+          "access": "dobj.child",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.dv",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.flags",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.mobj",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.parent",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.parent_gobj",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.sib_next",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.sib_prev",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.xobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dobj.xobjs_num",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "gobj.dl_link_id",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "gobj.flags",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "gobj.proc_display",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.binding_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.depth",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.identity",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.owner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.parent_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "live.transform_flags",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "loaded.asset_id",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "loaded.data",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "loaded.data_size",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "loaded.owner_generation",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.binding_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.binding_display_lists",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.binding_dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.dobj_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.live_dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.loaded",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.segments",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "xobj.kind",
+          "classification": "immutable_generation"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterPrepareNativeStageMatrices",
+      "fields": [
+        {
+          "access": "workspace.binding_composed",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.binding_dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.projection",
+          "classification": "live_camera_dependent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterPrepareNativeStageMaterials",
+      "fields": [
+        {
+          "access": "workspace.binding_dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.material_curr",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.material_mobjs",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.material_next",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.materials",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterCommitNativeStageMaterials",
+      "fields": [
+        {
+          "access": "workspace.material_curr",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.material_mobjs",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.material_next",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterPrepareNativeStageOwner",
+      "fields": [
+        {
+          "access": "workspace.active",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.binding_composed",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.binding_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.binding_display_lists",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.config",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.config.immutable_command_span",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.config.max_commands",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.config.max_depth",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.config.max_list_commands",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.config.resolve_branch",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.config.resolve_data",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.config.texture_data_layout",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.config.user",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.config.validate_range",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.dobj_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.frame",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.frame.asset_bases",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.frame.binding_composed",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.frame.binding_display_lists",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.frame.config",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.frame.dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.frame.materials",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.frame.projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.frame.topology_generation",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.frame.topology_stamp",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.live_dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.loaded",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.materials",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.next_segment",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.resolver",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.resolver.primary_file",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.stats",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.topology_generation",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.topology_stamp",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.topology_valid",
+          "classification": "immutable_generation"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterCommitNativeStageDisplay",
+      "fields": [
+        {
+          "access": "workspace.active",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.next_segment",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.segments",
+          "classification": "immutable_generation"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterFinishNativeStageOwner",
+      "fields": [
+        {
+          "access": "workspace.active",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.next_segment",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    }
+  ],
+  "task26_live_operand_order": [
+    {
+      "classification": "immutable_generation",
+      "disposition": "generation_validated_address_binding",
+      "index": 0,
+      "operand": "asset_bases[4]"
+    },
+    {
+      "classification": "live_camera_dependent",
+      "disposition": "recompute_and_bind_each_frame",
+      "index": 1,
+      "operand": "binding_composed[42]"
+    },
+    {
+      "classification": "live_camera_independent",
+      "disposition": "rebuild_and_bind_each_frame",
+      "index": 2,
+      "operand": "materials[4]"
+    },
+    {
+      "classification": "live_camera_independent",
+      "disposition": "bind_current_exact_callbacks_and_limits",
+      "index": 3,
+      "operand": "config"
+    }
+  ],
+  "task26_overlap": {
+    "consume": "immutable generated control fields plus the ordered live operand block above",
+    "forbid": "a second topology cache, cached camera/near results, a generic runtime scanner, or post-GX fallback",
+    "retain_current": "generation/stamp admission, all per-frame matrices and near-plane computation, exact material rebuild, callback restoration, and pre-GX fail-closed validation"
+  },
+  "transitive_inputs": [
+    {
+      "closures": [
+        "ndsRendererAdapterBuildCameraMatrices",
+        "ndsRendererAdapterBuildDObjXObjMatrix",
+        "ndsRendererAdapterBuildDObjLocalMatrix",
+        "ndsRendererAdapterApplyMvpRecalcRpy0x47",
+        "ndsRendererAdapterPrepareNativeStageMatrices"
+      ],
+      "disposition": "recompute from live CObj and DObj operands every frame; never cache composed or near-plane results",
+      "name": "camera_and_dobj_matrix_operands"
+    },
+    {
+      "closures": [
+        "ndsRendererAdapterMaterialFlags",
+        "ndsRendererAdapterMaterialLoadBlock",
+        "ndsRendererAdapterMaterialTextureState",
+        "ndsRendererAdapterBuildNativeMaterialSnapshot",
+        "ndsRendererNativeApplyMaterial",
+        "ndsRendererNativeStageApplyStateSpan",
+        "ndsRendererNativeStagePolicyMatches",
+        "ndsRendererNativeStagePrepareRun",
+        "ndsRendererHardwareResolveOrBindTexture",
+        "ndsRendererHardwareColorSource",
+        "ndsRendererHardwareAlphaUsesVertex",
+        "ndsRendererHardwareUseMaterialColor",
+        "ndsRendererHardwareUseVertexColor",
+        "ndsRendererHardwareAlpha",
+        "ndsRendererHardwarePolyFmt",
+        "ndsRendererHardwareUseTexture",
+        "ndsRendererHardwareTextureImplicitStateOn",
+        "ndsRendererActiveTextureTile",
+        "ndsRendererHardwareTextureFilterOffset",
+        "ndsRendererStageTextureSiteRemember",
+        "ndsRendererInitTraversalState",
+        "ndsRendererResolveDataPointer"
+      ],
+      "disposition": "retain the current exact state, texture resolver, color, alpha, and configuration helpers in Task 26",
+      "name": "material_color_alpha_texture_and_resolver_state"
+    },
+    {
+      "closures": [
+        "ndsRendererAdapterBuildNativeStageTopologyStamp",
+        "ndsRendererPrepareNativeStageOwner",
+        "ndsRendererCommitNativeStageSegment",
+        "ndsRendererAdapterCommitNativeStageMaterials",
+        "ndsRendererAdapterCommitNativeStageDisplay",
+        "ndsRendererAdapterFinishNativeStageOwner"
+      ],
+      "disposition": "validate before GX and preserve exact segment and texture-ID restoration order",
+      "name": "visibility_phase_and_callback_restoration"
+    }
+  ]
+}

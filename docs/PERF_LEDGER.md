@@ -5183,3 +5183,83 @@ EVIDENCE:
   and compressed disassembly share the same task25r evidence prefix.
 KEEP / REWORK / REVERT: KEEP TOOLING + EVIDENCE / STABLE-30 FAIL / M3 FIRST
 ```
+
+## 2026-07-18 - Task 23R Phase 0 consumed-field certificate
+
+```text
+IDEA ID: TASK23R-PHASE0-CONSUMED-FIELD-CERTIFICATE-20260718
+BOUND / IDENTITY:
+  Host generation/checking and debugger-only census; no runtime reuse, cache,
+  code, data, stack, reserve, or DS working-set change. All eight windows use
+  mode 163, M3 owner 9, static AOT 1, incremental wallpaper, live Fox, Task 9
+  1/1, and Task 16 compare/i2f/add-sub 1/1/1.
+
+  Measured source HEAD:
+    1d381c447f06deed04b7749bffe6d5bb1259b303
+  Profile-1 ROM / ELF:
+    88EF4931A24151A70FA05CF0AE2E6B69501B708DE405584D4716657A6DA56249
+    FEC9EB30BBD628F0E9DDB502C0A7DF0752BC1B0E1E4C227C39B99EA25AAB1FDA
+
+CONSUMED-FIELD CLOSURE:
+  The deterministic generated manifest binds 588 pointer-field accesses across
+  36 production closures: immutable generation 140, live camera-dependent 43,
+  live camera-independent 260, callback-visible mutation/output 145. Exact
+  closure-policy equality makes any new or removed pointer-base access fail
+  until classified; the falsifier introduces a wholly new pointer base. Twelve
+  fail-closed packet perturbations and that unclassified-read falsifier pass.
+  Exact stage counts remain 8/255/57/42/54/202/49/4, cross
+  5/10/15, and dense/near/matrix 312/226/146.
+
+  Task 26 live operands are ordered asset_bases[4], binding_composed[42],
+  materials[4], config. Generation/stamp admission, all matrices and near-plane
+  work, material rebuild, callback restoration, and fallback-before-GX remain
+  live. A second topology cache, cached camera results, generic runtime scan,
+  or post-GX fallback is forbidden.
+
+EIGHT SYNCHRONIZED EIGHT-FRAME WINDOWS:
+  Phase             profile frames  segment s0-s7  material m0-m3  boundary
+  Countdown / GO    438-445         each 7/0       each 7/0       unknown
+  Early combat      600-607         each 7/0       each 7/0       unknown
+  Whispy transition 672-679         each 7/0       each 7/0       exact 675->676
+  Whispy steady     1398-1405       each 7/0       each 7/0       unknown
+  Natural KO        566-573         each 7/0       each 7/0       unknown
+  Natural rebirth   589-596         each 7/0       each 7/0       unknown
+  Late combat       1846-1853       each 7/0       each 7/0       unknown
+  Time Up / Results 1988-1995       each 7/0       each 7/0       unknown
+
+  Counts are adjacent prepared-output hits/changes only. Eight samples create
+  seven opportunities; the first sample and cross-window boundary are not
+  counted. The synchronized transition rows change Whispy source
+  status/wait/duration/blink from 1/1/0/65 at frame 675 to 3/0/0/63 at frame
+  676 while the exact G2 tuple changes 44/13/166/0/70/34 ->
+  44/13/166/0/70/36. BattleShip starts the Whispy material animation at this
+  Wait-to-Open edge (`grpupupu.c:250-275`, `:565-597`). Prepared segment and
+  material snapshot lanes remain 7/0; that observed stability is not promoted
+  as a residual-cache hit. Task 23R Phase 1 must remeasure the exact residual
+  key after Task 26.
+
+CORRECTNESS / CHECKPOINT:
+  Early frame 607 is exactly 0/49,152 changed native pixels versus Task 25R,
+  mean delta 0.00 and overlap 100%. The phase-matrix harness now pins exact
+  phase-specific G2 tuples and accepts only exact gameplay-active wallpaper
+  rows or exact Late/TimeUp inactive 0-row/0-write state while preserving
+  row/store conservation. Boundary passes in
+  77.8 seconds with the manifest checker in the normal GBI fixture path.
+  The unchanged Task 25R reserve baseline remains 166,672 bytes.
+
+NEXT:
+  Task 26. First candidate is segment 0 / layer0 generated preflight/control
+  only: bindings 0-19, runs 0-25, 54 triangles, 22 epochs, all projected-no-Z,
+  no material event. Reuse existing prepared storage, commit loop, and GX
+  emitters. Do not begin Task 23R Phase 1.
+
+EVIDENCE:
+  docs/optimization/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json
+    0A9BB01791F05BB1DF78FA8F358205DF5BEA371EE7268A10D291042722CDA205
+  artifacts/performance/2026-07-18_task23r-phase0.md
+    854D4CCA580670728B4368B1D5D3A8632B45F1D7C757F0447EABE7D9CE5D48AE
+  artifacts/visibility/2026-07-18_task23r-phase0-profile1-frame607.png
+    BDEC00014752795F8923CAC5046F830231AF23B5AFD2696C41D9A5132C516ACE
+  Eight per-window JSON captures share the task23r-phase0 evidence prefix.
+KEEP / REWORK / REVERT: KEEP PHASE-0 CERTIFICATE / NO RUNTIME REUSE / TASK 26 NEXT
+```

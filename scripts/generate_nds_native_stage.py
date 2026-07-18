@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
+import re
 import struct
 import sys
 from dataclasses import dataclass
@@ -24,7 +26,21 @@ from typing import Iterable, Sequence
 
 
 DEFAULT_OUTPUT = Path("src/nds/nds_native_stage_owner.generated.inc")
+DEFAULT_CONSUMED_FIELDS_OUTPUT = Path(
+    "docs/optimization/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json"
+)
 MAX_SLAB_BYTES = 16 * 1024
+
+FIELD_CLASS_IMMUTABLE = "immutable_generation"
+FIELD_CLASS_CAMERA = "live_camera_dependent"
+FIELD_CLASS_LIVE = "live_camera_independent"
+FIELD_CLASS_CALLBACK = "callback_visible_mutation_output"
+FIELD_CLASSES = (
+    FIELD_CLASS_IMMUTABLE,
+    FIELD_CLASS_CAMERA,
+    FIELD_CLASS_LIVE,
+    FIELD_CLASS_CALLBACK,
+)
 
 EXPECTED_CALLBACKS = 8
 EXPECTED_DOBJS = 57
@@ -279,6 +295,756 @@ TEXT_INPUTS = {
         "decomp/BattleShip-main/include/reloc_data.us.h",
         "8c2d5938590e9a38ca2dad6ac0fa45b4742d125ed5d89f305c38774e40551385",
     ),
+}
+
+
+def _classified(classification: str, fields: str) -> dict[str, str]:
+    return {field: classification for field in fields.split()}
+
+
+# The field certificate deliberately follows named production closures instead
+# of line numbers. Every pointer-field access in a closure must be classified;
+# tracked_bases additionally pins the expected primary inputs so a rename or
+# removal fails with a direct diagnostic.
+SOURCE_CLOSURE_POLICIES = (
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeStageValidateTopologyFull",
+        "tracked_bases": (
+            "binding", "dense", "epoch", "event", "expected", "frame",
+            "live", "run", "segment",
+        ),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                binding.asset_index binding.first_epoch binding.first_run
+                binding.first_vertex binding.material_event binding.root_offset
+                binding.run_count binding.source_vertex_count
+                binding.texture_epoch_count dense.matrix_binding dense.rgba
+                dense.x dense.y dense.z epoch.asset_index epoch.material_event
+                epoch.policy_index epoch.source_command_offset event.asset_index
+                event.binding_index event.material_slot event.mobj_offset
+                event.segment_index event.source_command_count
+                expected.binding_index expected.depth expected.owner
+                expected.parent_index expected.transform_flags frame.asset_bases
+                frame.binding_display_lists frame.dobjs
+                frame.topology_generation frame.topology_stamp live.binding_index
+                live.depth live.identity live.owner live.parent_index
+                live.transform_flags run.binding_index run.first_corner run.flags
+                run.state_policy run.submit_class run.texture_epoch
+                run.triangle_count segment.binding_count segment.dobj_count
+                segment.first_binding segment.first_dobj segment.first_run
+                segment.reserved segment.run_count
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                summary.cross_foreign_corners summary.cross_runs
+                summary.cross_triangles summary.projected_no_z_triangles
+                summary.projected_range_triangles summary.raw_triangles
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeStageApplyStateSpan",
+        "tracked_bases": ("delta", "frame", "span"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                delta.asset_index delta.effect delta.material_command
+                delta.material_event delta.w0 delta.w1 frame.asset_bases
+                span.first_state span.state_count span.sync_count
+                """,
+            ),
+            **_classified(FIELD_CLASS_LIVE, "frame.materials"),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                stats.blend_color stats.color_command_count
+                stats.sync_command_count
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeApplyMaterial",
+        "tracked_bases": ("material",),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                material.blend_color material.block_image
+                material.block_image_w0 material.command_count
+                material.current_image material.current_image_w0
+                material.effects material.env_color material.light1
+                material.light2 material.load_block_w0 material.load_block_w1
+                material.palette_image material.palette_image_w0
+                material.palette_tile_w0 material.palette_tile_w1
+                material.palette_tlut_w1 material.prim_w0 material.prim_w1
+                material.render_tile_size_w0 material.render_tile_size_w1
+                material.scroll_tile_size_w0 material.scroll_tile_size_w1
+                material.sync_count material.texture_w0 material.texture_w1
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                stats.blend_color stats.branch_call_count
+                stats.branch_command_count stats.branch_jump_count
+                stats.color_command_count stats.command_count
+                stats.end_command_count stats.env_color stats.prim_color
+                stats.prim_lod_fraction stats.prim_min_level
+                stats.segment_resolve_count stats.sync_command_count
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeStagePolicyMatches",
+        "tracked_bases": ("policy", "stats"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                policy.combine_w0 policy.combine_w1 policy.geometry_mode
+                policy.othermode_h policy.othermode_l
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                stats.geometry_mode stats.othermode_h stats.othermode_l
+                stats.texture_combine_w0 stats.texture_combine_w1
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeStagePrepareRun",
+        "tracked_bases": ("dense", "frame", "render_tile", "run", "stats"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                dense.matrix_binding dense.rgba dense.s dense.t
+                run.first_corner run.state_policy run.submit_class
+                run.texture_epoch
+                """,
+            ),
+            **_classified(FIELD_CLASS_CAMERA, "frame.binding_composed"),
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                frame.config render_tile.uls render_tile.ult
+                stats.blend_color stats.othermode_l stats.texture_scale_s
+                stats.texture_scale_t stats.texture_state_flags
+                stats.texture_tiles
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                prepared.alpha_ref prepared.alpha_test prepared.poly_fmt
+                prepared.texture_entry prepared.texture_format
+                prepared.texture_height prepared.texture_name
+                prepared.texture_params prepared.texture_width
+                prepared.textured prepared_dense.near_inside
+                prepared_dense.packed_color prepared_dense.s prepared_dense.t
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererPrepareNativeStageOwner",
+        "tracked_bases": ("binding", "frame", "segment"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                binding.first_run binding.run_count
+                frame.binding_display_lists frame.dobjs
+                segment.binding_count segment.first_binding
+                segment.initial_geometry
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CAMERA,
+                "frame.binding_composed frame.projection",
+            ),
+            **_classified(
+                FIELD_CLASS_LIVE,
+                "frame.config frame.materials",
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                stats.command_count stats.sync_command_count
+                stats.triangle_command_count stats.vertex_command_count
+                stats.vertex_count
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererCommitNativeStageSegment",
+        "tracked_bases": ("run", "segment"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                run.first_corner run.submit_class run.triangle_count
+                segment.first_run segment.owner segment.run_count
+                """,
+            ),
+            **_classified(FIELD_CLASS_CALLBACK, "stats.triangle_count"),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareResolveOrBindTexture",
+        "tracked_bases": (
+            "config", "entry", "load", "primary_load", "render_tile",
+            "stats", "tile",
+        ),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                config.texture_data_layout entry.green_texels entry.key
+                entry.key_generation entry.key_hash entry.last_used_frame
+                entry.name entry.nonwhite_texels entry.params entry.pinned
+                entry.profile_height entry.profile_width entry.ready
+                entry.source_texels load.image load.image_format
+                load.image_size load.image_width load.load_dxt load.load_kind
+                load.load_lrs load.load_texels load.load_tile load.load_uls
+                load.load_ult primary_load.image primary_load.image_format
+                primary_load.image_size primary_load.image_width
+                primary_load.load_dxt primary_load.load_kind
+                primary_load.load_lrs primary_load.load_texels
+                primary_load.load_tile primary_load.load_uls
+                primary_load.load_ult render_tile.cms render_tile.cmt
+                render_tile.flags render_tile.format render_tile.height
+                render_tile.line render_tile.lrs render_tile.lrt
+                render_tile.masks render_tile.maskt render_tile.palette
+                render_tile.set_seen render_tile.shifts render_tile.shiftt
+                render_tile.size render_tile.tmem render_tile.uls
+                render_tile.ult render_tile.width stats.hardware_texture_format
+                stats.hardware_texture_height stats.hardware_texture_ready_count
+                stats.hardware_texture_upload_count stats.hardware_texture_width
+                stats.prim_lod_fraction stats.texture_combine_w0
+                stats.texture_combine_w1 stats.texture_format
+                stats.texture_image stats.texture_image_width
+                stats.texture_load_block_dxt stats.texture_load_block_lrs
+                stats.texture_load_block_uls stats.texture_load_block_ult
+                stats.texture_load_kind stats.texture_load_texels
+                stats.texture_load_tile stats.texture_size
+                stats.texture_state_flags stats.texture_tiles
+                stats.texture_tlut_count stats.texture_tlut_image tile.cms
+                tile.cmt tile.line tile.lrs tile.lrt tile.masks tile.maskt
+                tile.palette tile.shifts tile.shiftt tile.tmem tile.uls tile.ult
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                resolved.entry resolved.format resolved.height resolved.name
+                resolved.params resolved.width
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareColorSource",
+        "tracked_bases": ("stats",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            "stats.env_color stats.prim_color stats.texture_combine_count",
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareAlphaUsesVertex",
+        "tracked_bases": ("stats",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            "stats.othermode_l stats.texture_combine_count",
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareUseMaterialColor",
+        "tracked_bases": ("stats",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE, "stats.texture_combine_count"
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareUseVertexColor",
+        "tracked_bases": ("stats",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            """
+            stats.texture_combine_count stats.texture_combine_w0
+            stats.texture_combine_w1
+            """,
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareAlpha",
+        "tracked_bases": ("stats", "vtx"),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            """
+            stats.env_color stats.othermode_l stats.prim_color
+            stats.texture_combine_count vtx.a
+            """,
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwarePolyFmt",
+        "tracked_bases": ("stats",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            "stats.geometry_mode stats.texture_combine_count",
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareUseTexture",
+        "tracked_bases": ("stats",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            """
+            stats.texture_combine_count stats.texture_combine_w0
+            stats.texture_combine_w1 stats.texture_state_flags
+            """,
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareTextureImplicitStateOn",
+        "tracked_bases": ("render_tile", "stats"),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            """
+            render_tile.height render_tile.line render_tile.set_seen
+            render_tile.size_seen render_tile.width stats.texture_image
+            stats.texture_load_texels stats.texture_mask
+            stats.texture_state_flags stats.texture_tiles
+            """,
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererActiveTextureTile",
+        "tracked_bases": ("stats",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            "stats.texture_state_flags stats.texture_tile",
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareTextureFilterOffset",
+        "tracked_bases": ("stats",),
+        "fields": _classified(FIELD_CLASS_LIVE, "stats.othermode_h"),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererStageTextureSiteRemember",
+        "tracked_bases": ("entry", "state", "stats"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                entry.key.prim_lod_fraction entry.key.texel1_image
+                entry.key_generation entry.ready state.source_command_site
+                stats.texture_source_hash1 stats.texture_source_hash2
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                candidate.site plan.entry plan.entry_generation plan.format
+                plan.height plan.prim_lod_fraction plan.semantic_key_hash
+                plan.semantic_params plan.site plan.size plan.state_hash1
+                plan.state_hash2 plan.texel1_image0 plan.texel1_image1
+                plan.texel1_primary_state plan.texel1_tile_state
+                plan.uses_texel1 plan.width
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererInitTraversalState",
+        "tracked_bases": ("config", "state"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                config.initial_geometry_mode config.initial_modelview
+                config.initial_projection stats.geometry_mode
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                state.current_matrix_snapshot state.current_transform_vertex_mask
+                state.input_vertex_valid_mask state.input_vertices
+                state.matrix_generation state.matrix_snapshot_count
+                state.matrix_snapshots state.matrix_valid
+                state.matrix_word_valid state.modelview
+                state.modelview_stack_depth state.modelview_valid
+                state.prepared_light_direction_valid
+                state.prepared_projected_source_z_valid_mask
+                state.prepared_projected_xy_valid_mask
+                state.prepared_texcoord_valid_mask
+                state.prepared_vertex_color_valid_mask state.projection
+                state.projection_valid state.raw_vertex_fit_mask
+                state.semantic_branch_path state.semantic_command_index
+                state.semantic_tri2_half state.source_command_site
+                state.texture_prepare_key_hash state.texture_prepare_params
+                state.texture_prepare_valid state.vertex_clip_snapshot
+                state.vertex_color_valid_mask state.vertex_colors
+                state.vertex_matrix_snapshot state.vertex_valid_mask
+                state.vertices stats.hardware_matrix_seed_count
+                vertex_storage.input_vertices vertex_storage.vertex_clip_snapshot
+                vertex_storage.vertex_colors vertex_storage.vertex_matrix_snapshot
+                vertex_storage.vertices
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererResolveDataPointer",
+        "tracked_bases": ("config",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            "config.resolve_data config.user config.validate_range",
+        ),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterBuildCameraMatrices",
+        "tracked_bases": ("cobj", "xobj"),
+        "fields": _classified(
+            FIELD_CLASS_CAMERA,
+            """
+            cobj.projection.ortho.b cobj.projection.ortho.f
+            cobj.projection.ortho.l cobj.projection.ortho.n
+            cobj.projection.ortho.r cobj.projection.ortho.scale
+            cobj.projection.ortho.t cobj.projection.persp.aspect
+            cobj.projection.persp.far cobj.projection.persp.fovy
+            cobj.projection.persp.near cobj.projection.persp.norm
+            cobj.projection.persp.scale cobj.vec.at.x cobj.vec.at.y
+            cobj.vec.at.z cobj.vec.eye.x cobj.vec.eye.y cobj.vec.eye.z
+            cobj.vec.up.x cobj.vec.up.y cobj.vec.up.z cobj.xobjs
+            cobj.xobjs_num xobj.kind
+            """,
+        ),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterBuildDObjXObjMatrix",
+        "tracked_bases": ("dobj", "rotate", "scale", "translate", "xobj"),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            """
+            dobj.rotate.a dobj.rotate.vec.f.x dobj.rotate.vec.f.y
+            dobj.rotate.vec.f.z dobj.scale.vec.f.x dobj.scale.vec.f.y
+            dobj.scale.vec.f.z dobj.translate.vec.f.x
+            dobj.translate.vec.f.y dobj.translate.vec.f.z rotate.a
+            rotate.vec.f.x rotate.vec.f.y rotate.vec.f.z scale.vec.f.x
+            scale.vec.f.y scale.vec.f.z translate.vec.f.x translate.vec.f.y
+            translate.vec.f.z xobj.kind xobj.mtx
+            """,
+        ),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterBuildDObjLocalMatrix",
+        "tracked_bases": ("dobj",),
+        "fields": _classified(
+            FIELD_CLASS_IMMUTABLE, "dobj.xobjs dobj.xobjs_num"
+        ),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterApplyMvpRecalcRpy0x47",
+        "tracked_bases": ("cobj", "dobj"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_CAMERA,
+                """
+                cobj.projection.persp.aspect cobj.projection.persp.far
+                cobj.projection.persp.fovy cobj.projection.persp.near
+                cobj.projection.persp.norm cobj.projection.persp.scale
+                cobj.xobjs cobj.xobjs_num modelview.m
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                dobj.rotate.vec.f.x dobj.rotate.vec.f.y dobj.xobjs
+                dobj.xobjs_num
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterMaterialFlags",
+        "tracked_bases": ("mobj",),
+        "fields": _classified(FIELD_CLASS_LIVE, "mobj.sub.flags"),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterMaterialLoadBlock",
+        "tracked_bases": ("mobj",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            "mobj.sub.block_dxt mobj.sub.block_siz mobj.sub.unk36",
+        ),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterMaterialTextureState",
+        "tracked_bases": ("mobj",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            """
+            mobj.sub.scau mobj.sub.scav mobj.sub.scrollu mobj.sub.scrollv
+            mobj.sub.trau mobj.sub.trav mobj.sub.unk10 mobj.sub.unk24
+            mobj.sub.unk28 mobj.sub.unk44
+            """,
+        ),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+        "tracked_bases": ("mobj",),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                mobj.lfrac mobj.palette_id mobj.sub.blendcolor
+                mobj.sub.block_fmt mobj.sub.block_siz mobj.sub.envcolor
+                mobj.sub.fmt mobj.sub.light1color mobj.sub.light2color
+                mobj.sub.palettes mobj.sub.prim_m mobj.sub.primcolor
+                mobj.sub.siz mobj.sub.sprites mobj.sub.unk08
+                mobj.sub.unk0A mobj.sub.unk0C mobj.sub.unk0E
+                mobj.sub.unk10 mobj.sub.unk38 mobj.sub.unk3A
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                mobj.texture_id_curr mobj.texture_id_next out.blend_color
+                out.block_image out.block_image_w0 out.command_count
+                out.current_image out.current_image_w0 out.effects
+                out.env_color out.light1 out.light2 out.load_block_w0
+                out.load_block_w1 out.palette_image out.palette_image_w0
+                out.palette_tile_w0 out.palette_tile_w1 out.palette_tlut_w1
+                out.prim_w0 out.prim_w1 out.render_tile_size_w0
+                out.render_tile_size_w1 out.scroll_tile_size_w0
+                out.scroll_tile_size_w1 out.sync_count out.texture_w0
+                out.texture_w1
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterBuildNativeStageTopologyStamp",
+        "tracked_bases": (
+            "dobj", "gobj", "live", "loaded", "workspace", "xobj",
+        ),
+        "fields": _classified(
+            FIELD_CLASS_IMMUTABLE,
+            """
+            dobj.child dobj.dv dobj.flags dobj.mobj dobj.parent
+            dobj.parent_gobj dobj.sib_next dobj.sib_prev dobj.xobjs
+            dobj.xobjs_num gobj.dl_link_id gobj.flags gobj.proc_display
+            live.binding_index live.depth live.identity live.owner
+            live.parent_index live.transform_flags loaded.asset_id
+            loaded.data loaded.data_size loaded.owner_generation
+            workspace.binding_count workspace.binding_display_lists
+            workspace.binding_dobjs workspace.dobj_count workspace.dobjs
+            workspace.live_dobjs workspace.loaded workspace.segments xobj.kind
+            """,
+        ),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterPrepareNativeStageMatrices",
+        "tracked_bases": ("workspace",),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE, "workspace.binding_dobjs"
+            ),
+            **_classified(
+                FIELD_CLASS_CAMERA,
+                "workspace.binding_composed workspace.projection",
+            ),
+        },
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterPrepareNativeStageMaterials",
+        "tracked_bases": ("workspace",),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE, "workspace.binding_dobjs"
+            ),
+            **_classified(FIELD_CLASS_LIVE, "workspace.materials"),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                workspace.material_curr workspace.material_mobjs
+                workspace.material_next
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterCommitNativeStageMaterials",
+        "tracked_bases": ("workspace",),
+        "fields": _classified(
+            FIELD_CLASS_CALLBACK,
+            """
+            workspace.material_curr workspace.material_mobjs
+            workspace.material_next
+            """,
+        ),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterPrepareNativeStageOwner",
+        "tracked_bases": ("workspace",),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                workspace.binding_count workspace.binding_display_lists
+                workspace.dobj_count workspace.frame.asset_bases
+                workspace.frame.binding_display_lists workspace.frame.dobjs
+                workspace.frame.topology_generation
+                workspace.frame.topology_stamp
+                workspace.live_dobjs workspace.loaded
+                workspace.topology_generation workspace.topology_stamp
+                workspace.topology_valid
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CAMERA,
+                """
+                workspace.binding_composed workspace.frame.binding_composed
+                workspace.frame.projection workspace.projection
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                workspace.config workspace.config.immutable_command_span
+                workspace.config.max_commands workspace.config.max_depth
+                workspace.config.max_list_commands
+                workspace.config.resolve_branch workspace.config.resolve_data
+                workspace.config.texture_data_layout workspace.config.user
+                workspace.config.validate_range workspace.frame
+                workspace.frame.config workspace.frame.materials
+                workspace.materials workspace.resolver
+                workspace.resolver.primary_file workspace.stats
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                "workspace.active workspace.next_segment",
+            ),
+        },
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterCommitNativeStageDisplay",
+        "tracked_bases": ("workspace",),
+        "fields": {
+            **_classified(FIELD_CLASS_IMMUTABLE, "workspace.segments"),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                "workspace.active workspace.next_segment",
+            ),
+        },
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterFinishNativeStageOwner",
+        "tracked_bases": ("workspace",),
+        "fields": _classified(
+            FIELD_CLASS_CALLBACK,
+            "workspace.active workspace.next_segment",
+        ),
+    },
+)
+
+
+GENERATED_RUNTIME_FIELDS = {
+    "NDSNativeStageAsset": ("payload_size",),
+    "NDSNativeStageSegment": (
+        "first_dobj", "dobj_count", "owner", "first_binding",
+        "binding_count", "initial_geometry", "first_run", "run_count",
+        "reserved",
+    ),
+    "NDSNativeStageDObj": (
+        "parent_index", "binding_index", "transform_flags", "owner", "depth",
+    ),
+    "NDSNativeStageBinding": (
+        "root_offset", "first_vertex", "first_run", "first_epoch",
+        "source_vertex_count", "run_count", "texture_epoch_count",
+        "asset_index", "material_event",
+    ),
+    "NDSNativeStageRun": (
+        "first_corner", "triangle_count", "binding_index", "texture_epoch",
+        "submit_class", "state_policy", "flags",
+    ),
+    "NDSNativeStageDenseVertex": (
+        "x", "y", "z", "s", "t", "matrix_binding", "packed_cache_shift",
+        "rgba",
+    ),
+    "NDSNativeStageTextureEpoch": (
+        "source_command_offset", "asset_index", "policy_index",
+        "material_event",
+    ),
+    "NDSNativeStageMaterialEvent": (
+        "mobj_offset", "binding_index", "asset_index", "material_slot",
+        "segment_index", "source_command_count",
+    ),
+    "NDSNativeStageStatePolicy": (
+        "combine_w0", "combine_w1", "othermode_h", "othermode_l",
+        "geometry_mode",
+    ),
+    "NDSNativeStageStateDelta": (
+        "w0", "w1", "effect", "asset_index", "material_event",
+        "material_command",
+    ),
+    "NDSNativeStageStateSpan": ("first_state", "state_count", "sync_count"),
+    "sNdsNativeStageCorners": ("all_indices",),
+    "sNdsNativeStageStateSequence": ("all_indices",),
 }
 
 
@@ -2253,6 +3019,351 @@ def render_include(packet: Packet) -> bytes:
     return ("\n".join(lines) + "\n").encode("ascii")
 
 
+def strip_c_non_code(source: str) -> str:
+    """Blank comments and literals while preserving source offsets."""
+
+    result = list(source)
+    index = 0
+    state = "code"
+    while index < len(source):
+        char = source[index]
+        following = source[index + 1] if index + 1 < len(source) else ""
+        if state == "code":
+            if char == "/" and following == "/":
+                result[index] = result[index + 1] = " "
+                index += 2
+                state = "line"
+                continue
+            if char == "/" and following == "*":
+                result[index] = result[index + 1] = " "
+                index += 2
+                state = "block"
+                continue
+            if char in ('"', "'"):
+                result[index] = " "
+                index += 1
+                state = "string" if char == '"' else "character"
+                continue
+        elif state == "line":
+            if char == "\n":
+                state = "code"
+            else:
+                result[index] = " "
+            index += 1
+            continue
+        elif state == "block":
+            result[index] = " "
+            if char == "*" and following == "/":
+                result[index + 1] = " "
+                index += 2
+                state = "code"
+                continue
+            index += 1
+            continue
+        else:
+            result[index] = " "
+            if char == "\\" and index + 1 < len(source):
+                result[index + 1] = " "
+                index += 2
+                continue
+            if ((state == "string" and char == '"') or
+                    (state == "character" and char == "'")):
+                state = "code"
+            index += 1
+            continue
+        index += 1
+    if state in ("block", "string", "character"):
+        raise falsify(f"unterminated C {state}")
+    return "".join(result)
+
+
+def named_c_closure(source: str, name: str) -> str:
+    """Return one top-level named C function with brace-balanced bounds."""
+
+    code = strip_c_non_code(source)
+    pattern = re.compile(
+        rf"(?m)^[A-Za-z_][^\n;{{}}]*\b{re.escape(name)}\s*\("
+    )
+    for match in pattern.finditer(code):
+        open_brace = code.find("{", match.end())
+        semicolon = code.find(";", match.end())
+        if open_brace < 0 or (semicolon >= 0 and semicolon < open_brace):
+            continue
+        depth = 0
+        for index in range(open_brace, len(code)):
+            if code[index] == "{":
+                depth += 1
+            elif code[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    return code[open_brace:index + 1]
+        raise falsify(f"{name}: unbalanced function braces")
+    raise falsify(f"named source closure is absent: {name}")
+
+
+def observed_arrow_fields(closure: str, tracked_bases: Sequence[str]) -> set[str]:
+    tracked = set(tracked_bases)
+    observed_bases = set()
+    fields = set()
+    for match in re.finditer(
+        r"\b([A-Za-z_]\w*)\s*->\s*"
+        r"([A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)*)",
+        closure,
+    ):
+        observed_bases.add(match.group(1))
+        fields.add(
+            f"{match.group(1)}."
+            + re.sub(r"\s+", "", match.group(2))
+        )
+    missing_bases = sorted(tracked - observed_bases)
+    if missing_bases:
+        raise falsify(f"tracked pointer bases are no longer read {missing_bases}")
+    return fields
+
+
+def validate_observed_field_policy(
+    policy: dict[str, str], observed: set[str], context: str
+) -> None:
+    invalid = sorted(set(policy.values()) - set(FIELD_CLASSES))
+    if invalid:
+        raise falsify(f"{context}: invalid field classifications {invalid}")
+    unclassified = sorted(observed - set(policy))
+    if unclassified:
+        raise falsify(f"{context}: unclassified reads {unclassified}")
+    missing = sorted(set(policy) - observed)
+    if missing:
+        raise falsify(f"{context}: classified fields are no longer read {missing}")
+
+
+def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
+    source_cache: dict[str, str] = {}
+    closures = []
+    for spec in SOURCE_CLOSURE_POLICIES:
+        path = str(spec["path"])
+        if path not in source_cache:
+            source_cache[path] = (repo_root / path).read_text(encoding="utf-8")
+        name = str(spec["closure"])
+        policy = dict(spec["fields"])
+        observed = observed_arrow_fields(
+            named_c_closure(source_cache[path], name),
+            tuple(spec["tracked_bases"]),
+        )
+        validate_observed_field_policy(policy, observed, f"{path}:{name}")
+        closures.append(
+            {
+                "path": path,
+                "closure": name,
+                "fields": [
+                    {"access": field, "classification": policy[field]}
+                    for field in sorted(observed)
+                ],
+            }
+        )
+
+    return {
+        "schema": "smash64ds.m3-consumed-fields.v1",
+        "generated_by": "scripts/generate_nds_native_stage.py",
+        "allowed_classifications": list(FIELD_CLASSES),
+        "source_closures": closures,
+        "generated_runtime_fields": [
+            {
+                "record": record,
+                "classification": FIELD_CLASS_IMMUTABLE,
+                "fields": list(fields),
+            }
+            for record, fields in GENERATED_RUNTIME_FIELDS.items()
+        ],
+        "root_frame_fields": [
+            {
+                "fields": [
+                    "asset_bases", "dobjs", "binding_display_lists",
+                    "topology_generation", "topology_stamp",
+                ],
+                "classification": FIELD_CLASS_IMMUTABLE,
+            },
+            {
+                "fields": ["projection", "binding_composed"],
+                "classification": FIELD_CLASS_CAMERA,
+            },
+            {
+                "fields": ["materials", "config"],
+                "classification": FIELD_CLASS_LIVE,
+            },
+        ],
+        "transitive_inputs": [
+            {
+                "name": "camera_and_dobj_matrix_operands",
+                "closures": [
+                    "ndsRendererAdapterBuildCameraMatrices",
+                    "ndsRendererAdapterBuildDObjXObjMatrix",
+                    "ndsRendererAdapterBuildDObjLocalMatrix",
+                    "ndsRendererAdapterApplyMvpRecalcRpy0x47",
+                    "ndsRendererAdapterPrepareNativeStageMatrices",
+                ],
+                "disposition": (
+                    "recompute from live CObj and DObj operands every frame; "
+                    "never cache composed or near-plane results"
+                ),
+            },
+            {
+                "name": "material_color_alpha_texture_and_resolver_state",
+                "closures": [
+                    "ndsRendererAdapterMaterialFlags",
+                    "ndsRendererAdapterMaterialLoadBlock",
+                    "ndsRendererAdapterMaterialTextureState",
+                    "ndsRendererAdapterBuildNativeMaterialSnapshot",
+                    "ndsRendererNativeApplyMaterial",
+                    "ndsRendererNativeStageApplyStateSpan",
+                    "ndsRendererNativeStagePolicyMatches",
+                    "ndsRendererNativeStagePrepareRun",
+                    "ndsRendererHardwareResolveOrBindTexture",
+                    "ndsRendererHardwareColorSource",
+                    "ndsRendererHardwareAlphaUsesVertex",
+                    "ndsRendererHardwareUseMaterialColor",
+                    "ndsRendererHardwareUseVertexColor",
+                    "ndsRendererHardwareAlpha",
+                    "ndsRendererHardwarePolyFmt",
+                    "ndsRendererHardwareUseTexture",
+                    "ndsRendererHardwareTextureImplicitStateOn",
+                    "ndsRendererActiveTextureTile",
+                    "ndsRendererHardwareTextureFilterOffset",
+                    "ndsRendererStageTextureSiteRemember",
+                    "ndsRendererInitTraversalState",
+                    "ndsRendererResolveDataPointer",
+                ],
+                "disposition": (
+                    "retain the current exact state, texture resolver, color, "
+                    "alpha, and configuration helpers in Task 26"
+                ),
+            },
+            {
+                "name": "visibility_phase_and_callback_restoration",
+                "closures": [
+                    "ndsRendererAdapterBuildNativeStageTopologyStamp",
+                    "ndsRendererPrepareNativeStageOwner",
+                    "ndsRendererCommitNativeStageSegment",
+                    "ndsRendererAdapterCommitNativeStageMaterials",
+                    "ndsRendererAdapterCommitNativeStageDisplay",
+                    "ndsRendererAdapterFinishNativeStageOwner",
+                ],
+                "disposition": (
+                    "validate before GX and preserve exact segment and "
+                    "texture-ID restoration order"
+                ),
+            },
+        ],
+        "segment_order": [
+            "layer0", "whispy_eyes", "whispy_mouth", "flowers_back",
+            "layer1", "layer2", "flowers_front", "layer3",
+        ],
+        "material_snapshots": [
+            {"slot": 0, "binding": 20, "required_flags": 1},
+            {"slot": 1, "binding": 22, "required_flags": 1},
+            {"slot": 2, "binding": 31, "required_flags": 107},
+            {"slot": 3, "binding": 32, "required_flags": 107},
+        ],
+        "task26_live_operand_order": [
+            {
+                "index": 0,
+                "operand": "asset_bases[4]",
+                "classification": FIELD_CLASS_IMMUTABLE,
+                "disposition": "generation_validated_address_binding",
+            },
+            {
+                "index": 1,
+                "operand": "binding_composed[42]",
+                "classification": FIELD_CLASS_CAMERA,
+                "disposition": "recompute_and_bind_each_frame",
+            },
+            {
+                "index": 2,
+                "operand": "materials[4]",
+                "classification": FIELD_CLASS_LIVE,
+                "disposition": "rebuild_and_bind_each_frame",
+            },
+            {
+                "index": 3,
+                "operand": "config",
+                "classification": FIELD_CLASS_LIVE,
+                "disposition": "bind_current_exact_callbacks_and_limits",
+            },
+        ],
+        "admission_only": [
+            "dobjs[57]", "binding_display_lists[42]", "projection",
+            "topology_generation", "topology_stamp",
+        ],
+        "callback_commit_order": [
+            {
+                "segment": 1,
+                "slots": [0],
+                "outputs": ["MObj.texture_id_curr", "MObj.texture_id_next"],
+            },
+            {
+                "segment": 2,
+                "slots": [1],
+                "outputs": ["MObj.texture_id_curr", "MObj.texture_id_next"],
+            },
+            {
+                "segment": 5,
+                "slots": [2, 3],
+                "outputs": ["MObj.texture_id_curr", "MObj.texture_id_next"],
+            },
+        ],
+        "invalidation_manifest": [
+            "asset owner generation, loaded-file identity, data pointer, asset ID, size, or owner generation changes",
+            "segment identity, link, callback, display-link order, or visibility flags change",
+            "DObj parent/child/sibling, display list, MObj, flags, XObj count/kind, owner, depth, or binding changes",
+            "binding display-list identity changes",
+            "camera projection or any of 42 composed matrices changes: recompute every frame; never cache near-plane results",
+            "any live MObj material, texture selector, color, alpha, scale, scroll, palette, or image input changes: rebuild all four snapshots",
+            "callback segment/order mismatch: fail closed; never restore texture IDs at a different seam",
+        ],
+        "census_dimensions": {
+            "segments": 8,
+            "material_snapshots": 4,
+            "windows": [
+                "Countdown", "early",
+                "Whispy Wait-to-Open/material-animation boundary",
+                "Whispy steady/post-change", "late", "KO", "rebirth",
+                "Time Up/Results",
+            ],
+        },
+        "frame_lifetime": (
+            "The adapter workspace owns generation-stable topology and asset "
+            "pointers, rebuilds matrices and material snapshots before each "
+            "synchronous preflight, remains resident through all eight "
+            "interleaved commits, and restores captured texture IDs only at "
+            "segments 1, 2, and 5."
+        ),
+        "task26_overlap": {
+            "consume": (
+                "immutable generated control fields plus the ordered live "
+                "operand block above"
+            ),
+            "retain_current": (
+                "generation/stamp admission, all per-frame matrices and "
+                "near-plane computation, exact material rebuild, callback "
+                "restoration, and pre-GX fail-closed validation"
+            ),
+            "forbid": (
+                "a second topology cache, cached camera/near results, a "
+                "generic runtime scanner, or post-GX fallback"
+            ),
+        },
+    }
+
+
+def render_consumed_fields_manifest(repo_root: Path) -> bytes:
+    return (
+        json.dumps(
+            build_consumed_fields_manifest(repo_root),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode("utf-8")
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -2268,6 +3379,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help=f"generated include; default {DEFAULT_OUTPUT.as_posix()}",
     )
     parser.add_argument(
+        "--manifest-output",
+        type=Path,
+        default=None,
+        help=(
+            "generated Task 23R consumed-field certificate; default "
+            f"{DEFAULT_CONSUMED_FIELDS_OUTPUT.as_posix()}"
+        ),
+    )
+    parser.add_argument(
         "--check",
         action="store_true",
         help="compare the existing include without writing it",
@@ -2279,11 +3399,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     repo_root = args.repo_root.resolve()
     output = args.output or (repo_root / DEFAULT_OUTPUT)
+    manifest_output = args.manifest_output or (
+        repo_root / DEFAULT_CONSUMED_FIELDS_OUTPUT
+    )
     if not output.is_absolute():
         output = repo_root / output
+    if not manifest_output.is_absolute():
+        manifest_output = repo_root / manifest_output
     try:
         packet = generate(repo_root)
         rendered = render_include(packet)
+        rendered_manifest = render_consumed_fields_manifest(repo_root)
         rendered_hash = sha256(rendered)
         if (
             EXPECTED_INCLUDE_SHA256 != "TO_BE_FILLED"
@@ -2298,9 +3424,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 raise falsify(f"generated include is absent: {output}")
             if output.read_bytes() != rendered:
                 raise falsify(f"generated include is stale: {output}")
+            if not manifest_output.is_file():
+                raise falsify(
+                    f"consumed-field manifest is absent: {manifest_output}"
+                )
+            if manifest_output.read_bytes() != rendered_manifest:
+                raise falsify(
+                    f"consumed-field manifest is stale: {manifest_output}"
+                )
         else:
             output.parent.mkdir(parents=True, exist_ok=True)
             output.write_bytes(rendered)
+            manifest_output.parent.mkdir(parents=True, exist_ok=True)
+            manifest_output.write_bytes(rendered_manifest)
     except (Falsifier, OSError, struct.error, UnicodeError, ValueError) as exc:
         print(f"M3_NATIVE_STAGE_GENERATION_FAIL: {exc}", file=sys.stderr)
         return 1
@@ -2314,6 +3450,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"policies={len(packet.policies)} state_deltas={len(packet.state_deltas)} "
         f"state_events={len(packet.state_sequence)} "
         f"state_spans={len(packet.state_spans)} slab_bytes={packet.slab_bytes()} "
+        f"manifest_fields={sum(len(row['fields']) for row in build_consumed_fields_manifest(repo_root)['source_closures'])} "
         f"sha256={rendered_hash}"
     )
     return 0

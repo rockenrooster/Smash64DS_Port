@@ -10,6 +10,7 @@ vertex-cache contracts needed by a later DS-native consumer.
 
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 import tempfile
@@ -164,6 +165,79 @@ def verify_input_falsifier(repo_root: Path) -> None:
             require("SHA256" in str(exc), "mutated input failed for the wrong reason")
         else:
             raise generator.falsify("one-byte O2R mutation was accepted")
+
+
+def verify_consumed_fields_manifest(repo_root: Path) -> int:
+    first = generator.render_consumed_fields_manifest(repo_root)
+    second = generator.render_consumed_fields_manifest(repo_root)
+    require(first == second, "consumed-field manifest is nondeterministic")
+    output = repo_root / generator.DEFAULT_CONSUMED_FIELDS_OUTPUT
+    require(output.is_file(), f"consumed-field manifest is absent: {output}")
+    require(output.read_bytes() == first, "consumed-field manifest is stale")
+    manifest = json.loads(first)
+    require(
+        tuple(manifest["allowed_classifications"]) == generator.FIELD_CLASSES,
+        "consumed-field classification vocabulary drifted",
+    )
+    require(
+        [row["index"] for row in manifest["task26_live_operand_order"]]
+        == list(range(4)),
+        "Task 26 live-operand order is not dense",
+    )
+    require(
+        [row["segment"] for row in manifest["callback_commit_order"]]
+        == [1, 2, 5],
+        "callback material commit order drifted",
+    )
+    require(
+        [row["slots"] for row in manifest["callback_commit_order"]]
+        == [[0], [1], [2, 3]],
+        "callback material slot order drifted",
+    )
+    require(
+        manifest["census_dimensions"]
+        == {
+            "segments": 8,
+            "material_snapshots": 4,
+            "windows": [
+                "Countdown",
+                "early",
+                "Whispy Wait-to-Open/material-animation boundary",
+                "Whispy steady/post-change",
+                "late",
+                "KO",
+                "rebirth",
+                "Time Up/Results",
+            ],
+        },
+        "Task 23R census dimensions drifted",
+    )
+    bound_closures = {
+        row["closure"] for row in manifest["source_closures"]
+    }
+    for group in manifest["transitive_inputs"]:
+        require(
+            set(group["closures"]) <= bound_closures,
+            f"transitive group {group['name']} has an unbound closure",
+        )
+    try:
+        observed = generator.observed_arrow_fields(
+            "{ tracked->known; synthetic->unclassified; }",
+            ("tracked",),
+        )
+        generator.validate_observed_field_policy(
+            {"tracked.known": generator.FIELD_CLASS_LIVE},
+            observed,
+            "in-memory falsifier",
+        )
+    except generator.Falsifier as exc:
+        require(
+            "unclassified reads" in str(exc),
+            "unclassified-read falsifier failed for the wrong reason",
+        )
+    else:
+        raise generator.falsify("unclassified source read was accepted")
+    return sum(len(row["fields"]) for row in manifest["source_closures"])
 
 
 def verify_packet(packet: generator.Packet) -> None:
@@ -819,6 +893,7 @@ def main() -> int:
         verify_packet(first)
         replay_commands = verify_command_replay(first, repo_root)
         perturbations = verify_fail_closed(first)
+        manifest_fields = verify_consumed_fields_manifest(repo_root)
 
         rendered_first = generator.render_include(first)
         rendered_second = generator.render_include(second)
@@ -847,6 +922,7 @@ def main() -> int:
         f"state_events={len(first.state_sequence)} "
         f"replay_commands={replay_commands} "
         f"fail_closed_perturbations={perturbations} "
+        f"manifest_fields={manifest_fields} "
         f"slab_bytes={first.slab_bytes()} sha256={include_hash}"
     )
     return 0

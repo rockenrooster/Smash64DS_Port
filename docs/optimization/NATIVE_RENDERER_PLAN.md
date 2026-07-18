@@ -128,8 +128,27 @@ draw to 962,816/962,880. Exact bounded `s16` vertex rounding removes the generic
 64-bit shift sequences and moves the current same-ROM stage window from
 545,440/545,536 to 536,032/536,256 with a 0/49,152 native-pixel delta. The 500K
 point remains the next milestone target, not a discard gate; correct measured
-gains accumulate. Incremental no-Z matrix transport remains reverted because
-it regressed. M3 remains REWORK.
+gains accumulate.
+
+Task 23R Phase 0 now closes the consumed-field surface before Task 26. Its
+generated checker binds 588 pointer-field accesses in 36 production closures,
+including live texture-cache records and every callback-visible output base,
+and fixes the
+Task 26 live operand order to generation-validated asset bases, 42 per-frame
+composed matrices, four per-frame material snapshots, and current renderer
+config. Eight eight-frame windows cover all lifecycle phases; one synchronizes
+the natural Whispy Wait→Open/material-animation edge at frames 675→676, while
+the other cross-window boundaries remain explicitly unknown. All eight prepared
+segment lanes and four material lanes are stable within every window; the
+transition capture separately exports its source state and exact G2 tuple
+change. This is a control certificate, not permission to cache matrices,
+near-plane results, or work Task 26 will remove. The first Task 26 cut is
+segment 0 / `layer0` generated
+preflight/control only, retaining current prepared storage, commit loop, GX
+emitters, and pre-GX fallback.
+
+Incremental no-Z matrix transport remains reverted because it regressed. M3
+remains REWORK.
 
 ## M4 — Pre-GO Texture Residency
 

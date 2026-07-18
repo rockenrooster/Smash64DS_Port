@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-18 15:25 Central
+Updated: 2026-07-18 16:38 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -43,11 +43,27 @@ post-GO texture fence first trips at class+1/frame 10/1111. The strict
 stable-30 gate correctly fails; normal verifier paths remain strict.
 
 The same-ROM owner ranking selects **M3-first**: stage P95 reaches 468,480
-ticks, versus 380,544 for the largest combined fighter pair. Start Task 23R
-Phase 0 next: produce only the consumed-field/invalidation manifest that feeds
-Task 26; do not add a residual cache yet. Then run Task 26 and attempt only the
-Task 23R Phase-1 work Task 26 leaves. `src/nds/nds_renderer.c` remains a
-mandatory one-writer surface. The complete matrix, identity pack, map,
-disassembly, screenshots, and exact artifact identities are under
-`artifacts/performance/2026-07-18_task25r-*` and
-`artifacts/visibility/2026-07-18_task25r-*`.
+ticks, versus 380,544 for the largest combined fighter pair. Task 23R Phase 0
+is complete at measured HEAD `1d381c447f06deed04b7749bffe6d5bb1259b303`.
+Its generated certificate binds 588 pointer-field accesses in 36 production
+closures to 140 immutable-generation, 43 live-camera, 260 live-camera-
+independent, and 145 callback-visible classifications. Every pointer base is
+observed, so a newly named base cannot evade the unclassified-read gate. Eight
+same-ROM eight-frame windows report
+all eight prepared segment lanes and four material lanes at `7/0` adjacent
+hits/changes. Frames 672–679 include the exact natural Whispy Wait→Open /
+material-animation edge at 675→676, with source state and exact G2 tuples
+exported; other cross-window boundaries remain explicitly unknown. Early frame
+607 is exactly `0/49,152` pixels against Task 25R, and Boundary passes in 77.8
+seconds. Evidence is under `artifacts/performance/2026-07-18_task23r-phase0-*`,
+with the authoritative manifest at
+`docs/optimization/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json`.
+
+Start Task 26. The smallest first candidate is generated preflight/control for
+segment 0 / `layer0` only: bindings 0–19, runs 0–25, 54 triangles, 22 epochs,
+all projected-no-Z, no material event. Reuse the existing prepared storage,
+commit loop, and GX emitters; keep matrices, near-plane work, texture/color/
+alpha/UV selection, validation, and pre-GX fallback live. Do not add a second
+topology cache or a residual Task 23R cache. `src/nds/nds_renderer.c` remains
+a mandatory one-writer surface. Attempt Task 23R Phase 1 only after Task 26
+stabilizes and remeasurement proves residual work remains.
