@@ -57,12 +57,30 @@ NDS_FREEZE_DIAGNOSTICS ?= 0
 NDS_TASK9_FLOAT_CENSUS ?= 0
 NDS_TASK9_FLOAT_ITCM ?= 1
 NDS_TASK9_FLOAT_PHASE2 ?= 1
+NDS_TASK16_FLOAT_COMPARE ?= 0
+NDS_TASK16_FLOAT_I2F ?= 0
+NDS_TASK16_FLOAT_ADDSUB ?= 0
 NDS_TASK9_STATE_HASH ?= 0
 NDS_TASK10_HARDWARE_CALIBRATION ?= 0
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_TASK9_FLOAT_PHASE2),1)
 ifneq ($(NDS_TASK9_FLOAT_ITCM),1)
 $(error NDS_TASK9_FLOAT_PHASE2=1 requires NDS_TASK9_FLOAT_ITCM=1)
+endif
+endif
+ifeq ($(NDS_TASK16_FLOAT_COMPARE),1)
+ifneq ($(NDS_TASK9_FLOAT_PHASE2),1)
+$(error NDS_TASK16_FLOAT_COMPARE=1 requires NDS_TASK9_FLOAT_PHASE2=1)
+endif
+endif
+ifeq ($(NDS_TASK16_FLOAT_I2F),1)
+ifneq ($(NDS_TASK9_FLOAT_ITCM),1)
+$(error NDS_TASK16_FLOAT_I2F=1 requires NDS_TASK9_FLOAT_ITCM=1)
+endif
+endif
+ifeq ($(NDS_TASK16_FLOAT_ADDSUB),1)
+ifneq ($(NDS_TASK9_FLOAT_PHASE2),1)
+$(error NDS_TASK16_FLOAT_ADDSUB=1 requires NDS_TASK9_FLOAT_PHASE2=1)
 endif
 endif
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
@@ -250,6 +268,16 @@ NDS_HOT_TEXT_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_hot_text.ld
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
+ifeq ($(NDS_TASK16_FLOAT_COMPARE),1)
+LDFLAGS += -Wl,--undefined=__nds_task9_libgcc_fcmpeq_golden \
+	-Wl,--undefined=__nds_task16_libgcc_fcmpun_golden
+endif
+ifeq ($(NDS_TASK16_FLOAT_I2F),1)
+LDFLAGS += -Wl,--undefined=__nds_task16_libgcc_i2f_golden
+endif
+ifeq ($(NDS_TASK16_FLOAT_ADDSUB),1)
+LDFLAGS += -Wl,--undefined=__nds_task16_libgcc_fadd_golden
+endif
 
 NDS_TASK9_FLOAT_WRAP_SYMBOLS := \
 	__aeabi_fadd __aeabi_fsub __aeabi_frsub __aeabi_fmul __aeabi_fdiv \
@@ -431,6 +459,15 @@ CPPFILES :=
 SFILES := coroutine_arm.s
 ifeq ($(NDS_TASK9_FLOAT_PHASE2),1)
 SFILES += nds_task9_float_phase2.s
+endif
+ifeq ($(NDS_TASK16_FLOAT_COMPARE),1)
+SFILES += nds_task16_float_compare.s
+endif
+ifeq ($(NDS_TASK16_FLOAT_I2F),1)
+SFILES += nds_task16_float_i2f.s
+endif
+ifeq ($(NDS_TASK16_FLOAT_ADDSUB),1)
+SFILES += nds_task16_float_addsub.s
 endif
 ifeq ($(NDS_FREEZE_DIAGNOSTICS),1)
 CFILES += nds_freeze_diagnostics.c
@@ -904,6 +941,9 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK9_FLOAT_CENSUS $(NDS_TASK9_FLOAT_CENSUS)'; \
 		echo '#define NDS_TASK9_FLOAT_ITCM $(NDS_TASK9_FLOAT_ITCM)'; \
 		echo '#define NDS_TASK9_FLOAT_PHASE2 $(NDS_TASK9_FLOAT_PHASE2)'; \
+		echo '#define NDS_TASK16_FLOAT_COMPARE $(NDS_TASK16_FLOAT_COMPARE)'; \
+		echo '#define NDS_TASK16_FLOAT_I2F $(NDS_TASK16_FLOAT_I2F)'; \
+		echo '#define NDS_TASK16_FLOAT_ADDSUB $(NDS_TASK16_FLOAT_ADDSUB)'; \
 		echo '#define NDS_TASK9_STATE_HASH $(NDS_TASK9_STATE_HASH)'; \
 		echo '#define NDS_TASK10_HARDWARE_CALIBRATION $(NDS_TASK10_HARDWARE_CALIBRATION)'; \
 		echo '#define NDS_TASK10_GIT_SHORT "$(NDS_TASK10_GIT_SHORT)"'; \
@@ -952,7 +992,7 @@ NDS_TASK9_FLOAT_AR := $(shell $(CC) -print-prog-name=ar)
 # Keep the installed archive out of Make's prerequisite graph: `make -B` would
 # otherwise try to rebuild that external .a through an implicit archive rule.
 # One grouped recipe makes one verified private copy and extracts only from it.
-$(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile
+$(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 	@echo "$(NDS_TASK9_FLOAT_LIBGCC_SHA256) *$(NDS_TASK9_FLOAT_LIBGCC)" | sha256sum -c -
 	@rm -rf ".task9-float-itcm" $(NDS_TASK9_FLOAT_ITCM_OFILES)
 	@mkdir -p ".task9-float-itcm"
@@ -963,6 +1003,18 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile
 		phase2_filter=""; \
 		if test "$(NDS_TASK9_FLOAT_PHASE2)" = "1" && test "$$member" = "_arm_cmpsf2.o"; then \
 			phase2_filter="--redefine-sym __aeabi_fcmpeq=__nds_task9_libgcc_fcmpeq_golden"; \
+		fi; \
+		if test "$(NDS_TASK16_FLOAT_COMPARE)" = "1" && test "$$member" = "_arm_cmpsf2.o"; then \
+			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmplt=__nds_task16_libgcc_fcmplt_golden --redefine-sym __aeabi_fcmple=__nds_task16_libgcc_fcmple_golden --redefine-sym __aeabi_fcmpge=__nds_task16_libgcc_fcmpge_golden --redefine-sym __aeabi_fcmpgt=__nds_task16_libgcc_fcmpgt_golden"; \
+		fi; \
+		if test "$(NDS_TASK16_FLOAT_COMPARE)" = "1" && test "$$member" = "_arm_unordsf2.o"; then \
+			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fcmpun=__nds_task16_libgcc_fcmpun_golden"; \
+		fi; \
+		if test "$(NDS_TASK16_FLOAT_ADDSUB)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
+			phase2_filter="$$phase2_filter --redefine-sym __aeabi_fadd=__nds_task16_libgcc_fadd_golden --redefine-sym __aeabi_fsub=__nds_task16_libgcc_fsub_golden"; \
+		fi; \
+		if test "$(NDS_TASK16_FLOAT_I2F)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
+			phase2_filter="$$phase2_filter --redefine-sym __aeabi_i2f=__nds_task16_libgcc_i2f_golden"; \
 		fi; \
 		$(OBJCOPY) $$phase2_filter \
 			--rename-section .text=.itcm,alloc,load,readonly,code,contents \
@@ -1046,6 +1098,9 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_CENSUS=$(NDS_TASK9_FLOAT_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_ITCM=$(NDS_TASK9_FLOAT_ITCM)'
 	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_PHASE2=$(NDS_TASK9_FLOAT_PHASE2)'
+	@printf '%s\n' 'BENCH_MAKE_TASK16_FLOAT_COMPARE=$(NDS_TASK16_FLOAT_COMPARE)'
+	@printf '%s\n' 'BENCH_MAKE_TASK16_FLOAT_I2F=$(NDS_TASK16_FLOAT_I2F)'
+	@printf '%s\n' 'BENCH_MAKE_TASK16_FLOAT_ADDSUB=$(NDS_TASK16_FLOAT_ADDSUB)'
 	@printf '%s\n' 'BENCH_MAKE_TASK9_STATE_HASH=$(NDS_TASK9_STATE_HASH)'
 	@printf '%s\n' 'BENCH_MAKE_TASK10_HARDWARE_CALIBRATION=$(NDS_TASK10_HARDWARE_CALIBRATION)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'

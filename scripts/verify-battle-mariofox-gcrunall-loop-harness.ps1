@@ -38,6 +38,9 @@ param(
     [ValidateRange(0,1)][int]$Task9FloatCensusMode = 0,
     [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
     [ValidateRange(0,1)][int]$Task9FloatPhase2Mode = 1,
+    [ValidateRange(0,1)][int]$Task16FloatCompareMode = 0,
+    [ValidateRange(0,1)][int]$Task16FloatI2fMode = 0,
+    [ValidateRange(0,1)][int]$Task16FloatAddSubMode = 0,
     [ValidateRange(0,1)][int]$Task9StateHashMode = 0,
     [string]$Task9StateHashExportPath = '',
     [ValidateRange(0,1024)][int]$RendererBenchmarkSamples = 0,
@@ -413,7 +416,8 @@ function Get-BenchmarkMakeIdentity {
         'FAST_RUN_DEFAULT',
         'SCENE_MIP_CACHE_LAB', 'BATTLE_STATIC_TEXTURE_DEFAULT',
         'IFCOMMON_HYBRID_OAM', 'TASK9_FLOAT_CENSUS', 'TASK9_FLOAT_ITCM',
-        'TASK9_FLOAT_PHASE2', 'TASK9_STATE_HASH',
+        'TASK9_FLOAT_PHASE2', 'TASK16_FLOAT_COMPARE', 'TASK16_FLOAT_I2F',
+        'TASK16_FLOAT_ADDSUB', 'TASK9_STATE_HASH',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
     foreach ($key in $required) {
@@ -440,6 +444,9 @@ function Get-BenchmarkMakeIdentity {
         Task9FloatCensusMode = [int]$values.TASK9_FLOAT_CENSUS
         Task9FloatItcmMode = [int]$values.TASK9_FLOAT_ITCM
         Task9FloatPhase2Mode = [int]$values.TASK9_FLOAT_PHASE2
+        Task16FloatCompareMode = [int]$values.TASK16_FLOAT_COMPARE
+        Task16FloatI2fMode = [int]$values.TASK16_FLOAT_I2F
+        Task16FloatAddSubMode = [int]$values.TASK16_FLOAT_ADDSUB
         Task9StateHashMode = [int]$values.TASK9_STATE_HASH
         CommonCFlags = $values.CFLAGS_COMMON
         RendererCFlags = $values.CFLAGS_RENDERER
@@ -501,6 +508,9 @@ function Complete-Task9StateHashCapture {
             build = $Build
             task9FloatItcmMode = $Task9FloatItcmMode
             task9FloatPhase2Mode = $Task9FloatPhase2Mode
+            task16FloatCompareMode = $Task16FloatCompareMode
+            task16FloatI2fMode = $Task16FloatI2fMode
+            task16FloatAddSubMode = $Task16FloatAddSubMode
             task9StateHashMode = $Task9StateHashMode
             coverage = [ordered]@{
                 source = 'post-scVSBattleFuncUpdate'
@@ -537,6 +547,9 @@ $makeArgs += "NDS_IFCOMMON_HYBRID_OAM=$IFCommonHybridOamMode"
 $makeArgs += "NDS_TASK9_FLOAT_CENSUS=$Task9FloatCensusMode"
 $makeArgs += "NDS_TASK9_FLOAT_ITCM=$Task9FloatItcmMode"
 $makeArgs += "NDS_TASK9_FLOAT_PHASE2=$Task9FloatPhase2Mode"
+$makeArgs += "NDS_TASK16_FLOAT_COMPARE=$Task16FloatCompareMode"
+$makeArgs += "NDS_TASK16_FLOAT_I2F=$Task16FloatI2fMode"
+$makeArgs += "NDS_TASK16_FLOAT_ADDSUB=$Task16FloatAddSubMode"
 $makeArgs += "NDS_TASK9_STATE_HASH=$Task9StateHashMode"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
@@ -607,7 +620,10 @@ if ($Task9FloatItcmMode -eq 1) {
     & (Join-Path $PSScriptRoot 'check-task9-float-itcm.ps1') `
         -Elf $elf `
         -BuildDirectory $task9BuildDirectory `
-        -Phase2Mode $Task9FloatPhase2Mode
+        -Phase2Mode $Task9FloatPhase2Mode `
+        -Task16CompareMode $Task16FloatCompareMode `
+        -Task16I2fMode $Task16FloatI2fMode `
+        -Task16AddSubMode $Task16FloatAddSubMode
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if (($Task9FloatItcmMode -eq 1) -or
@@ -641,9 +657,15 @@ if ($RendererBenchmarkSamples -gt 0) {
             $Task9FloatItcmMode -and
         $benchmarkMakeIdentity.Task9FloatPhase2Mode -eq
             $Task9FloatPhase2Mode -and
+        $benchmarkMakeIdentity.Task16FloatCompareMode -eq
+            $Task16FloatCompareMode -and
+        $benchmarkMakeIdentity.Task16FloatI2fMode -eq
+            $Task16FloatI2fMode -and
+        $benchmarkMakeIdentity.Task16FloatAddSubMode -eq
+            $Task16FloatAddSubMode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
-        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/Task11/IFCommon/Task9 configuration.' `
+        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/Task11/IFCommon/Task9/Task16 configuration.' `
         ($benchmarkMakeIdentity | Format-List | Out-String)
     if ($usesPublishedIntrinsicRendererDefaults) {
         Assert-Condition (
@@ -3092,6 +3114,12 @@ try {
                             $benchmarkMakeIdentity.Task9FloatItcmMode
                         task9FloatPhase2Mode =
                             $benchmarkMakeIdentity.Task9FloatPhase2Mode
+                        task16FloatCompareMode =
+                            $benchmarkMakeIdentity.Task16FloatCompareMode
+                        task16FloatI2fMode =
+                            $benchmarkMakeIdentity.Task16FloatI2fMode
+                        task16FloatAddSubMode =
+                            $benchmarkMakeIdentity.Task16FloatAddSubMode
                         requestedIfCommonHybridOamMode =
                             $IFCommonHybridOamMode
                         foxCpuMode = $FoxCpuMode

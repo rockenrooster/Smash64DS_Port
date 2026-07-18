@@ -15,6 +15,9 @@ param(
     [ValidateRange(0,1)][int]$Task9FloatCensusMode = 0,
     [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
     [ValidateRange(0,1)][int]$Task9FloatPhase2Mode = 1,
+    [ValidateRange(0,1)][int]$Task16FloatCompareMode = 0,
+    [ValidateRange(0,1)][int]$Task16FloatI2fMode = 0,
+    [ValidateRange(0,1)][int]$Task16FloatAddSubMode = 0,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$GdbPort = 4333,
@@ -41,6 +44,18 @@ if (($Task9FloatItcmMode -eq 0) -and
 if (($Task9FloatPhase2Mode -eq 1) -and
     ($Task9FloatItcmMode -ne 1)) {
     throw 'Task9FloatPhase2Mode=1 requires Task9FloatItcmMode=1.'
+}
+if (($Task16FloatCompareMode -eq 1) -and
+    ($Task9FloatPhase2Mode -ne 1)) {
+    throw 'Task16FloatCompareMode=1 requires Task9FloatPhase2Mode=1.'
+}
+if (($Task16FloatI2fMode -eq 1) -and
+    ($Task9FloatItcmMode -ne 1)) {
+    throw 'Task16FloatI2fMode=1 requires Task9FloatItcmMode=1.'
+}
+if (($Task16FloatAddSubMode -eq 1) -and
+    ($Task9FloatPhase2Mode -ne 1)) {
+    throw 'Task16FloatAddSubMode=1 requires Task9FloatPhase2Mode=1.'
 }
 if ($RendererM3Phase0Profile -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
@@ -77,6 +92,10 @@ $build = if ($RendererScreenSpaceCensusMode -eq 1) {
     'builds/build-task11-economy-lab'
 } elseif ($Task9FloatCensusMode -eq 1) {
     'builds/build-task9-float-census-lab'
+} elseif (($Task16FloatCompareMode -eq 1) -or
+          ($Task16FloatI2fMode -eq 1) -or
+          ($Task16FloatAddSubMode -eq 1)) {
+    "builds/build-task16-float-c${Task16FloatCompareMode}-i${Task16FloatI2fMode}-a${Task16FloatAddSubMode}-lab"
 } elseif ($Task9FloatItcmMode -eq 1) {
     if ($Task9FloatPhase2Mode -eq 1) {
         'builds/build-task9-float-phase2-fcmpeq-lab'
@@ -114,6 +133,9 @@ $build = if ($RendererScreenSpaceCensusMode -eq 1) {
     -Task9FloatCensusMode $Task9FloatCensusMode `
     -Task9FloatItcmMode $Task9FloatItcmMode `
     -Task9FloatPhase2Mode $Task9FloatPhase2Mode `
+    -Task16FloatCompareMode $Task16FloatCompareMode `
+    -Task16FloatI2fMode $Task16FloatI2fMode `
+    -Task16FloatAddSubMode $Task16FloatAddSubMode `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
     -RendererBenchmarkStartEvent $RendererBenchmarkStartEvent `
@@ -134,7 +156,7 @@ $build = if ($RendererScreenSpaceCensusMode -eq 1) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode" `
+    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

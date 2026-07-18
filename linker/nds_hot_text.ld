@@ -164,7 +164,7 @@ SECTIONS {
 	} >main AT>lma9 :main = 0xff
 
 	/* Main user code/read-only data section */
-	.main : {
+	.main : ALIGN_WITH_INPUT {
 		KEEP( *(SORT_NONE(.init)) )
 		EXCLUDE_FILE(*.twl.*) *(.text.unlikely .text.*_unlikely .text.unlikely.*)
 		EXCLUDE_FILE(*.twl.*) *(.text.exit .text.exit.*)
