@@ -63,6 +63,20 @@ samples. It deliberately leaves the stall in place so the report remains
 photographable. `NDS_FREEZE_DIAGNOSTICS=0` preprocesses all hot-path call sites
 to no-ops and does not link the diagnostic implementation.
 
+For the Down-Air reproduction, the existing verifier can select the intrinsic
+diagnostic build while retaining its verifier-only human-P2 Fox route:
+
+```powershell
+pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor Fox -FreezeDiagnostics -NoBuild -RunnerSlot 3 -TimeoutSeconds 120
+```
+
+It disables the five input/status observer breakpoints at first Down-Air and
+waits for the target marker. If the watchdog task itself cannot run, one timed
+MI stop prints the last target-owned IRQ snapshot and breadcrumb state. In that
+fallback, `PC` is the last IRQ-captured target PC; it is not the emulator stub's
+asynchronous `$pc`. The saved LR uses the user/system bank, so capture SPSR and
+the preempted mode's correct banked SP/LR before treating it as a caller.
+
 ## Emulator Layout
 
 Local emulator binaries and configs live under `emulators/`:

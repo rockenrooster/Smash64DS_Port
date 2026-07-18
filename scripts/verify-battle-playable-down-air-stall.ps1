@@ -8,6 +8,7 @@ param(
     [ValidateRange(30, 600)][int]$TimeoutSeconds = 300,
     [switch]$NoBuild,
     [switch]$ObserverFreeSnapshot,
+    [switch]$FreezeDiagnostics,
     [string]$Screenshot = ''
 )
 
@@ -21,10 +22,26 @@ $context = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$target = 'smash64ds-battle-playable-hwtri'
-$build = 'build-battle-playable-canonical-hwtri-harness'
-$rom = Join-Path $root "$target.nds"
-$elf = Join-Path $root "$target.elf"
+if ($ObserverFreeSnapshot -and $FreezeDiagnostics) {
+    throw 'Observer-free and freeze-diagnostic captures are mutually exclusive.'
+}
+$target = if ($FreezeDiagnostics) {
+    'smash64ds-battle-playable-freeze-diagnostics-on-hwtri'
+} else {
+    'smash64ds-battle-playable-hwtri'
+}
+$build = if ($FreezeDiagnostics) {
+    'build-freeze-diagnostics-on-hwtri'
+} else {
+    'build-battle-playable-canonical-hwtri-harness'
+}
+$artifactDir = if ($FreezeDiagnostics) {
+    Join-Path $root (Join-Path 'builds' $build)
+} else {
+    $root
+}
+$rom = Join-Path $artifactDir "$target.nds"
+$elf = Join-Path $artifactDir "$target.elf"
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 $melonDsPath = $context.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
@@ -95,6 +112,11 @@ $kneeBendUpdate = Get-ElfSymbolAddress 'ndsBaseFTCommonKneeBendProcUpdate'
 $downAirUpdate = Get-ElfSymbolAddress 'ndsBaseFTCommonAttackAirLwProcUpdate'
 $controllerRead = Get-ElfSymbolAddress 'osContGetReadData'
 $timeUp = Get-ElfSymbolAddress 'ifCommonAnnounceTimeUpInitInterface'
+$freezeStall = if ($FreezeDiagnostics) {
+    Get-ElfSymbolAddress 'ndsFreezeDiagnosticsStallMarker'
+} else {
+    0
+}
 $downAirAssetSymbol = if ($Actor -eq 'Mario') {
     'llFTMarioAnimAttackAirDFileID'
 } else {
@@ -174,6 +196,36 @@ try {
     } else {
         @()
     }
+    $freezeDefinitions = if ($FreezeDiagnostics) {
+        @(
+            'set $freeze_fallback_armed = 0',
+            'define hook-stop',
+            'if $freeze_fallback_armed != 0',
+            'if gNdsFreezeDiagnosticsWatchdogTripCount == 0',
+            'set $freeze_fallback_armed = 0',
+            'printf "DOWN_AIR_FREEZE_LIVE=%#x,%#x,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%d,%d,%u,%#x,%#x,%#x,%#x,%u,%u,%#x,%#x,%#x\n", gNdsFreezeDiagnosticsInterruptedPC, gNdsFreezeDiagnosticsInterruptedLR, gNdsFreezeDiagnosticsHeartbeat, gNdsFreezeDiagnosticsLastBreadcrumb, gNdsFreezeDiagnosticsBreadcrumbWriteCount, sNdsFreezeDiagnosticsInitialized, sNdsFreezeDiagnosticsWatchdogArmed, sNdsFreezeDiagnosticsStaleSamples, sNdsFreezeDiagnosticsLastHeartbeat, gNdsFreezeDiagnosticsWatchdogTripCount, gNdsFreezeDiagnosticsForceTrip, $actor_fp->status_id, $actor_fp->motion_id, $actor_fp->status_total_tics, *(unsigned int *)&$actor_gobj->anim_frame, *(unsigned int *)&$actor_fp->motion_frame, (unsigned int)$actor_fp->proc_update, (unsigned int)$actor_fp->proc_map, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, *(unsigned int *)0x04000208, *(unsigned int *)0x04000210, *(unsigned int *)0x04000214',
+            'printf "DOWN_AIR_FREEZE_RING=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsFreezeDiagnosticsBreadcrumbs[0], gNdsFreezeDiagnosticsBreadcrumbs[1], gNdsFreezeDiagnosticsBreadcrumbs[2], gNdsFreezeDiagnosticsBreadcrumbs[3], gNdsFreezeDiagnosticsBreadcrumbs[4], gNdsFreezeDiagnosticsBreadcrumbs[5], gNdsFreezeDiagnosticsBreadcrumbs[6], gNdsFreezeDiagnosticsBreadcrumbs[7]',
+            ('set {{unsigned int}}0x{0:x8} = 0' -f $enabled),
+            'detach',
+            'quit',
+            'end',
+            'end',
+            'end',
+            ('break *0x{0:x8}' -f $freezeStall),
+            'set $freeze_breakpoint = $bpnum',
+            'commands $freeze_breakpoint',
+            'silent',
+            'printf "DOWN_AIR_FREEZE=%#x,%#x,%u,%#x,%u,%u,%u,%#x,%u,%d,%d,%u,%#x,%#x,%#x,%#x,%u,%u\n", gNdsFreezeDiagnosticsInterruptedPC, gNdsFreezeDiagnosticsInterruptedLR, gNdsFreezeDiagnosticsWatchdogTripCount, gNdsFreezeDiagnosticsReportKind, gNdsFreezeDiagnosticsReportLogicFrames, gNdsFreezeDiagnosticsReportPresentedFrames, gNdsFreezeDiagnosticsHeartbeat, gNdsFreezeDiagnosticsLastBreadcrumb, gNdsFreezeDiagnosticsBreadcrumbWriteCount, $actor_fp->status_id, $actor_fp->motion_id, $actor_fp->status_total_tics, *(unsigned int *)&$actor_gobj->anim_frame, *(unsigned int *)&$actor_fp->motion_frame, (unsigned int)$actor_fp->proc_update, (unsigned int)$actor_fp->proc_map, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed',
+            'printf "DOWN_AIR_FREEZE_RING=%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsFreezeDiagnosticsBreadcrumbs[0], gNdsFreezeDiagnosticsBreadcrumbs[1], gNdsFreezeDiagnosticsBreadcrumbs[2], gNdsFreezeDiagnosticsBreadcrumbs[3], gNdsFreezeDiagnosticsBreadcrumbs[4], gNdsFreezeDiagnosticsBreadcrumbs[5], gNdsFreezeDiagnosticsBreadcrumbs[6], gNdsFreezeDiagnosticsBreadcrumbs[7]',
+            'printf "DOWN_AIR_FREEZE_IO=%#x,%u,%u,%#x,%#x,%u,%u,%u,%u,%d\n", gNdsFreezeDiagnosticsReportGXStatus, gNdsFreezeDiagnosticsReportPolygonCount, gNdsFreezeDiagnosticsReportVertexCount, gNdsFreezeDiagnosticsReportIpcFifo, gNdsFreezeDiagnosticsReportIpcSync, gNdsFreezeDiagnosticsSwapPending, gNdsFreezeDiagnosticsFgmEnterCount, gNdsFreezeDiagnosticsFgmReturnCount, gNdsFreezeDiagnosticsLastFgmID, gNdsFreezeDiagnosticsLastFgmChannel',
+            ('set {{unsigned int}}0x{0:x8} = 0' -f $enabled),
+            'detach',
+            'quit',
+            'end'
+        )
+    } else {
+        @()
+    }
     $observerEntryCommands = if ($ObserverFreeSnapshot) {
         @(
             'disable $input_breakpoint',
@@ -185,10 +237,21 @@ try {
             'set $observer_armed = 1',
             ("shell powershell.exe -NoProfile -Command `"Set-Content -LiteralPath '$observerReadyGdb' -Value ready`"")
         )
+    } elseif ($FreezeDiagnostics) {
+        @(
+            'disable $input_breakpoint',
+            'disable $status_breakpoint',
+            'disable $kneebend_breakpoint',
+            'disable $downair_breakpoint',
+            'disable $timeup_breakpoint',
+            'set $outcome = 4',
+            'set $freeze_fallback_armed = 1',
+            ("shell powershell.exe -NoProfile -Command `"Set-Content -LiteralPath '$observerReadyGdb' -Value ready`"")
+        )
     } else {
         @()
     }
-    $summaryCommands = if ($ObserverFreeSnapshot) {
+    $summaryCommands = if ($ObserverFreeSnapshot -or $FreezeDiagnostics) {
         @()
     } else {
         @(
@@ -293,7 +356,7 @@ try {
         'set $terminal_open_fails = 0',
         'set $terminal_format_fails = 0',
         'set $terminal_short_reads = 0'
-    ) + $observerDefinitions + @(
+    ) + $observerDefinitions + $freezeDefinitions + @(
         ('break *0x{0:x8}' -f $controllerRead),
         'set $input_breakpoint = $bpnum',
         'commands $input_breakpoint',
@@ -515,7 +578,7 @@ try {
         ScriptName = "_battle_playable_down_air_${slug}.gdb"
         TimeoutSeconds = $TimeoutSeconds
     }
-    if ($ObserverFreeSnapshot) {
+    if ($ObserverFreeSnapshot -or $FreezeDiagnostics) {
         $gdbArguments.ReadyFile = $observerReady
         $gdbArguments.InteractiveSteps = @(
             [pscustomobject]@{
@@ -552,6 +615,71 @@ try {
             'pc={6} lr={7}.') -f
             $Actor, $logicDelta, $presentDelta, $readsDelta, $ov[6], $ov[7],
             $observer.Groups[15].Value, $observer.Groups[16].Value)
+        return
+    }
+
+    if ($FreezeDiagnostics) {
+        $live = [regex]::Match($gdbStdout,
+            'DOWN_AIR_FREEZE_LIVE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+        $freeze = [regex]::Match($gdbStdout,
+            'DOWN_AIR_FREEZE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
+        $ring = [regex]::Match($gdbStdout,
+            'DOWN_AIR_FREEZE_RING=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
+        $io = [regex]::Match($gdbStdout,
+            'DOWN_AIR_FREEZE_IO=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
+        if ($live.Success) {
+            Assert-Condition $ring.Success `
+                "$Actor live freeze snapshot omitted its breadcrumb ring." `
+                $gdbStdout
+            $livev = Get-Ints $live
+            $ringv = Get-Ints $ring
+            Assert-Condition ($livev[0] -ne 0 -and $livev[1] -ne 0 -and
+                $livev[2] -gt 0 -and $livev[3] -ne 0 -and
+                $livev[4] -ge 8 -and $livev[5] -eq 1 -and
+                $livev[11] -eq 213 -and $livev[12] -eq 188 -and
+                ($livev[18] + $livev[19]) -eq 3600 -and
+                ($ringv | Where-Object { $_ -ne 0 }).Count -gt 0) `
+                "$Actor live freeze snapshot was incomplete or left Down-Air." `
+                $live.Value
+            Write-Output ((
+                'Down-Air live freeze captured: actor={0} pc={1} lr={2} ' +
+                'heartbeat={3} last={4} write={5} watchdog={6}/{7}/{8} ' +
+                'trip/force={9}/{10} status={11} motion={12} tic={13} ' +
+                'irq={14}/{15}/{16} ring=[{17}].') -f
+                $Actor, $live.Groups[1].Value, $live.Groups[2].Value,
+                $livev[2], $live.Groups[4].Value, $livev[4],
+                $livev[6], $livev[7], $livev[8], $livev[9], $livev[10],
+                $livev[11], $livev[12], $livev[13],
+                $live.Groups[21].Value, $live.Groups[22].Value,
+                $live.Groups[23].Value,
+                ((1..8 | ForEach-Object { $ring.Groups[$_].Value }) -join ','))
+            return
+        }
+        Assert-Condition ($freeze.Success -and $ring.Success -and $io.Success) `
+            "$Actor freeze watchdog did not emit a complete target report." `
+            $gdbStdout
+        $fv = Get-Ints $freeze
+        $ringv = Get-Ints $ring
+        $iov = Get-Ints $io
+        Assert-Condition ($fv[0] -ne 0 -and $fv[1] -ne 0 -and
+            $fv[2] -ge 1 -and $fv[3] -eq 0x5354414c -and
+            $fv[4] -gt 0 -and $fv[5] -gt 0 -and
+            $fv[6] -gt 0 -and $fv[7] -ne 0 -and $fv[8] -ge 8 -and
+            $fv[9] -eq 213 -and $fv[10] -eq 188 -and
+            ($fv[16] + $fv[17]) -eq 3600 -and
+            ($ringv | Where-Object { $_ -ne 0 }).Count -gt 0) `
+            "$Actor freeze watchdog report was incomplete or left Down-Air." `
+            $freeze.Value
+        Write-Output ((
+            'Down-Air freeze watchdog captured: actor={0} pc={1} lr={2} ' +
+            'logic={3} present={4} heartbeat={5} last={6} write={7} ' +
+            'status={8} motion={9} tic={10} gx={11} poly/vertex={12}/{13} ' +
+            'fgm={14}/{15} ring=[{16}].') -f
+            $Actor, $freeze.Groups[1].Value, $freeze.Groups[2].Value,
+            $fv[4], $fv[5], $fv[6], $freeze.Groups[8].Value, $fv[8],
+            $fv[9], $fv[10], $fv[11], $io.Groups[1].Value, $iov[1],
+            $iov[2], $iov[6], $iov[7],
+            ((1..8 | ForEach-Object { $ring.Groups[$_].Value }) -join ','))
         return
     }
 

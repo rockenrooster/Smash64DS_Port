@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-17 19:02 Central
+Updated: 2026-07-17 19:26 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -90,7 +90,7 @@ dynamic masks per frame and shrinking the raw emitter 0xD0 -> 0xBC. Current
 post-light-repair ledger-off is 385,088/388,224; the older
 372.1K sample is retired. Generic/fast profile 2 remains exact on frames
 180..187 with 686 triangles. Boundary passes on `70DCD33B...`; current
-profile-0 smoke is 22.3 FPS, so full-speed remains red.
+profile-0 smoke is 22.1 FPS, so full-speed remains red.
 
 Natural KO/rebirth uses real source events and measures 1,261,344/1,524,864 and 1,110,528/1,112,256 active ticks with exact stage/M4/fence contracts.
 
@@ -126,28 +126,42 @@ The common-bank repair also restores Fox's omitted files 642..661
 (`0x282..0x295`) and passes its static source-identity checker; runtime
 qualification is pending.
 
-`Invoke-GdbMarkerScript -MiInteractive` and the verifier's
-`-ObserverFreeSnapshot` arm are retained for the restart. The arm stops only at
-the first Down-Air entry, disables all five observer breakpoints, resumes, and
+`Invoke-GdbMarkerScript -MiInteractive` and the verifier's observer-free and
+freeze-diagnostic arms are retained. The observer-free arm stops only at the
+first Down-Air entry, disables all five observer breakpoints, resumes, and
 interrupts through GDB/MI after 12 seconds. Its target snapshot is unchanged
 from the earlier 4-second sample: logic 6->12, presents 3->6, reads 11->19,
 status 213, motion 188, tic 6, animation frame `0x40e00000` (7), motion frame 0,
 update `0x02070ded`, map `0x0203a385`, and timer 3600/0. Therefore the target
-itself freezes at the frame-7 boundary. The melonDS stub returns malformed
-interrupt registers (`$pc=0x01ffeca8`, `$lr=0x4000003f`), so they do not identify
-the owner. This command intentionally fails its advancement assertion while
-preserving the decisive snapshot in its output:
+itself freezes at the frame-7 boundary. The observer-free command intentionally
+fails its advancement assertion while preserving the decisive snapshot:
 
 ```powershell
 pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor Fox -ObserverFreeSnapshot -NoBuild -RunnerSlot 3 -TimeoutSeconds 120
 ```
 
-Resume by inspecting the existing freeze-diagnostic target and
-`ndsFreezeDiagnosticsIrqVector`, then run that target with the same human-P2 Fox
-arm. Let its target-owned watchdog trip at `ndsFreezeDiagnosticsStallMarker` and
-read the captured interrupted PC/LR, report counters, last breadcrumb, and ring.
-Map the first stuck owner before changing gameplay source. Do not add ID 190 as
-a stall fix.
+The new `-FreezeDiagnostics` arm selects the intrinsic isolated diagnostic ROM,
+reuses the same human-P2 Fox route, disables the five observer breakpoints at
+first Down-Air, and prefers the target watchdog marker. Because this freeze
+prevents the watchdog task from arming, it falls back to one 12-second MI stop
+and prints only target-owned diagnostic globals:
+
+```powershell
+pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor Fox -FreezeDiagnostics -NoBuild -RunnerSlot 3 -TimeoutSeconds 120
+```
+
+The retained run captures status 213 / motion 188 / tic 6, heartbeat 6, latest
+breadcrumb `UPDT`, raw ring `DRAW,FLUS,VBLK,PRES,UPDT,UPDT,HITS,HITS`, and
+`IME/IE/IF=1/0x000F0061/0x61`. Its last target-owned IRQ PC is `0x01ffebe4`, the
+`bx lr` immediately after Calico's WFI in `armWaitForIrq`. The watchdog is
+initialized but remains unarmed, so a target stuck in IRQ/scheduler wait with a
+pending IRQ is now the leading boundary. The stored LR is the user/system bank
+and is not a proved caller when the interrupted mode is privileged.
+
+Resume by capturing the interrupted SPSR/CPSR and correct banked SP/LR in the
+diagnostic IRQ vector, or enable a breakpoint on the first post-entry
+`armWaitForIrq` call and recover its caller. Map that owner before changing
+gameplay source. Do not add ID 190 as a stall fix.
 
 Do not mark the playtest finding fixed until Fox P2, Mario, and one canonical
 CPU-on Current gate pass. The five-minute goal heartbeat is intentionally
