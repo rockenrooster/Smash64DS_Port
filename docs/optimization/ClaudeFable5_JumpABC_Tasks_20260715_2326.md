@@ -799,9 +799,13 @@ overflow, and the synchronized natural A/B keeps the three accepted
 candidates. `PERF_LEDGER.md` owns the measurements and artifact identities;
 `verify-task16-combined-state-hash-ab.ps1` owns the repeatable combined gate.
 The global selectors remain zero so the exact A/B controls stay available;
-the qualified terminal integration is to set all three intrinsically for the
-published battle target and run the inherited canonical Boundary/publication
-gate. Until that integration gate lands, TASK 16 is qualified but not shipped.
+the published and release-equivalent freeze targets now override all three to
+one. Canonical Boundary passed in mode 163 with 1/1/1, stock 408-byte fmul,
+and ITCM 28,820/32,768 with 3,948 bytes free and zero fill. TASK 16 is
+shipped; `P1_EXECUTION_BOARD.md` owns the current ROM identity, while the
+ledger owns the publication measurement. Its authoritative combined gate
+always rebuilds both sides and binds exact build, ROM, ELF, and full six-field
+row identity.
 
 ## Sequencing and interactions
 

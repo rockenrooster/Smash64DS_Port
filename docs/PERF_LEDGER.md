@@ -173,7 +173,8 @@ BOUND / RETAINED SET:
   TASK 16 extends the Task-9 Phase-2 exact-ARM method without touching the
   renderer TU, decomp source, gameplay semantics, or the stock low-frequency
   helpers. Three independently proved candidates remain integrated behind
-  default-OFF selectors: compare 236 bytes / SHA-256
+  default-OFF lab selectors and intrinsic published-target overrides: compare
+  236 bytes / SHA-256
   F822244564E6EFF11F3812B241A2E71ED7E013D34905687C4D9E2E8242C1185D,
   i2f 92 bytes / EE6FE8233D98D26A602988362BF014D08515AA477EF493DE55F31B26ED8D0573,
   and add/sub 404 bytes /
@@ -266,8 +267,19 @@ EVIDENCE:
   artifacts/performance/2026-07-18_task16-fmul-state-{control,candidate}.json
   artifacts/performance/2026-07-18_task16-fmul-bench-{control,candidate}.json
   builds/build-task16-fmul-arm9-lab/
-DECISION: KEEP COMPARE/I2F/ADDSUB; ENABLE THEM IN THE PUBLISHED TARGET AFTER
-THE INTEGRATION BOUNDARY; KEEP GLOBAL LAB DEFAULTS OFF; REVERT FMUL.
+PUBLICATION GATE:
+  Commit 8a4c7185dda intrinsically enables compare/i2f/addsub for the published
+  and release-equivalent freeze targets while retaining global zero defaults
+  for exact lab controls. Canonical Boundary passed in mode 163 with
+  task16Compare/I2f/AddSub=1/1/1, stock fmul=408 bytes, ITCM 28,820/32,768,
+  zero fill, and 3,948 bytes free. The published 14,651,392-byte ROM is
+  SHA-256 41E457A68CBAC94EF389BE6B9677BE60CFB61E81B97E5C3F49F2DBB4296469BF.
+  The owner verifier derives effective published modes at its make, placement,
+  identity, and state-export seams. The combined SUPREME gate has no stale
+  NoBuild/CompareOnly pass: it rebuilds both sides and binds exact build, ROM,
+  ELF, and all six per-update row fields.
+DECISION: KEEP AND SHIP COMPARE/I2F/ADDSUB; KEEP GLOBAL LAB DEFAULTS OFF;
+REVERT FMUL.
 ```
 
 ## 2026-07-17 - Task 11 screen-space census and stage economy
