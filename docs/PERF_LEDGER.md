@@ -4115,3 +4115,57 @@ EVIDENCE:
   builds/m2-raw-texture-split-{control,candidate}/
 KEEP / REWORK / REVERT: KEEP RAW TEXTURE-CLASS SPLIT / CONTINUE P1
 ```
+
+## 2026-07-17 - Task 10 hardware-calibration loop
+
+```text
+IDEA ID: TASK10-HARDWARE-CALIBRATION-20260717
+BOUND:
+  Add a compile-time profile-1 phase HUD and a standalone calibration ROM.
+  Profile 0 retains the same source graph and binary. The lab is a Make target,
+  not a harness-registry mode, and none of its symbols link into production.
+
+MELONDS IDENTITY:
+  melonDS 1.1, ARM interpreter, software renderer, unthrottled LimitFPS=false,
+  muted host audio, canonical 416x664 window. Config SHA-256 is
+  695273E6AC92305B1BDCA71FC72D44A8BE23F05B12517FD7C04532F0576C5B25.
+
+STANDALONE LAB TICKS:
+  ALU-ITCM   17,501,568  (1M dependent chains, 32 adds each, ARM .itcm)
+  MEM-THMB   33,557,632  (8M loads, 256 KiB stream, Thumb state)
+  MEM-ARM    37,752,448  (identical load loop and buffer, ARM state)
+  CACHE4K    33,565,696  (same total loads, 4 KiB control)
+  GX-BRST     2,729,728  (10K immediate triangles, swap every 2,048)
+  CARD              TBD  (optional; no media-independent result admitted)
+
+PROFILE-1 HUD PROOF:
+  Focused frozen-Fox frames 600..607 retain exact 828 triangles and
+  60/320/306 stage/Mario/Fox ownership. P50/P95 ticks are source update
+  239,520/258,688; draw 1,011,840/1,015,232; active
+  1,016,032/1,065,856; loop 1,680,448/1,680,512. The half-second formatter
+  costs 384/50,880 HUD ticks and reports nonzero ACT plus zero slip in the
+  accepted capture.
+
+HARDWARE PROJECTION METHOD:
+  Measure the exact same lab ROM on melonDS and retail hardware, then compute
+  M_ITCM = hardware ALU-ITCM / melonDS ALU-ITCM,
+  M_MAIN = hardware MEM bench / melonDS matching MEM bench, and
+  M_GX = hardware GX-BRST / melonDS GX-BRST.
+
+  For a measurement whose exclusive owners are known:
+    projected hardware ticks = ITCM ticks * M_ITCM
+                             + main-RAM ticks * M_MAIN
+                             + GX ticks * M_GX
+
+  Keep mixed or unattributed time unprojected and state that uncertainty. The
+  CACHE4K control diagnoses locality; it is not a replacement for M_MAIN.
+  Never apply the observed 0.75x throughput as one universal tick multiplier.
+  Retail-hardware values and all three admitted multipliers remain TBD.
+
+EVIDENCE:
+  artifacts/visibility/2026-07-17_230709-6847521_task10-hardware-calibration.png
+  artifacts/visibility/2026-07-17_task10-phase-hud-profile1-pass.png
+  builds/build-task10-hardware-calibration/
+  builds/build-task9-float-itcm-lab/
+KEEP / REWORK / REVERT: KEEP TOOLING / HARDWARE RUN PENDING
+```

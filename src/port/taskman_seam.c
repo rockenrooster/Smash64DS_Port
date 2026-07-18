@@ -4510,7 +4510,6 @@ static void ndsBattlePlayablePresentFrame(void)
     gNdsRendererProfileVBlankWaitTicks = 0u;
     gNdsRendererProfilePostVBlankTicks = 0u;
     gNdsRendererProfileThreadTicks = 0u;
-    gNdsRendererProfilePresentActiveTicks = 0u;
     gNdsRendererProfileDrawResidualTicks = 0u;
     gNdsRendererProfilePresentResidualTicks = 0u;
     gNdsRendererProfileLoopResidualTicks = 0u;

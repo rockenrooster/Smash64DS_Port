@@ -53,6 +53,8 @@ NDS_TASK9_FLOAT_CENSUS ?= 0
 NDS_TASK9_FLOAT_ITCM ?= 1
 NDS_TASK9_FLOAT_PHASE2 ?= 1
 NDS_TASK9_STATE_HASH ?= 0
+NDS_TASK10_HARDWARE_CALIBRATION ?= 0
+NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_TASK9_FLOAT_PHASE2),1)
 ifneq ($(NDS_TASK9_FLOAT_ITCM),1)
 $(error NDS_TASK9_FLOAT_PHASE2=1 requires NDS_TASK9_FLOAT_ITCM=1)
@@ -110,6 +112,16 @@ override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 8
+endif
+ifeq ($(TARGET),smash64ds-task10-hardware-calibration)
+# Standalone lab payload: it boots from main before any game or harness setup.
+override NDS_DEV_SCENE_HARNESS := normal
+override NDS_DEV_LIVE_INPUT_PREVIEW := 0
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_TASK10_HARDWARE_CALIBRATION := 1
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-forensic-hwtri)
 override NDS_DEBUG_HUD := 0
@@ -399,6 +411,9 @@ CFILES += nds_task9_float_census.c
 endif
 ifeq ($(NDS_TASK9_STATE_HASH),1)
 CFILES += nds_task9_state_hash.c
+endif
+ifeq ($(NDS_TASK10_HARDWARE_CALIBRATION),1)
+CFILES += nds_task10_hardware_calibration.c
 endif
 ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
 CFILES += battleship_grmodelsetup.c
@@ -878,6 +893,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK9_FLOAT_ITCM $(NDS_TASK9_FLOAT_ITCM)'; \
 		echo '#define NDS_TASK9_FLOAT_PHASE2 $(NDS_TASK9_FLOAT_PHASE2)'; \
 		echo '#define NDS_TASK9_STATE_HASH $(NDS_TASK9_STATE_HASH)'; \
+		echo '#define NDS_TASK10_HARDWARE_CALIBRATION $(NDS_TASK10_HARDWARE_CALIBRATION)'; \
+		echo '#define NDS_TASK10_GIT_SHORT "$(NDS_TASK10_GIT_SHORT)"'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE $(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)'; \
@@ -1020,6 +1037,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_ITCM=$(NDS_TASK9_FLOAT_ITCM)'
 	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_PHASE2=$(NDS_TASK9_FLOAT_PHASE2)'
 	@printf '%s\n' 'BENCH_MAKE_TASK9_STATE_HASH=$(NDS_TASK9_STATE_HASH)'
+	@printf '%s\n' 'BENCH_MAKE_TASK10_HARDWARE_CALIBRATION=$(NDS_TASK10_HARDWARE_CALIBRATION)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'

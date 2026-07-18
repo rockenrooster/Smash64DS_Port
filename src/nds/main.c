@@ -6,6 +6,7 @@
 #include <nds/nds_boot.h>
 #include <nds/nds_controller.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_task10_hardware_calibration.h>
 #include <nds/nds_video.h>
 #include <port/port_probe.h>
 #include <port/coroutine.h>
@@ -22,6 +23,9 @@ int main(void)
     int os_test;
 
     ndsPlatformInit();
+#if NDS_TASK10_HARDWARE_CALIBRATION
+    ndsTask10HardwareCalibrationRun();
+#endif
     ndsRelocAssetsInit();
     portCoroutineInitMain();
     os_test = ndsOsSelfTest();

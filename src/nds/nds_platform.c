@@ -51,6 +51,8 @@ extern volatile u32 gNdsFrameCounter;
      (NDS_RENDERER_HW_TRIANGLES != 0) && \
      (NDS_DEV_LIVE_INPUT_PREVIEW != 0) && \
      (NDS_DEBUG_HUD == 0))
+#define NDS_BATTLE_PHASE_HUD_ENABLED \
+    (NDS_BATTLE_FPS_HUD_ENABLED && (NDS_RENDERER_PROFILE_LEVEL >= 1))
 #if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
 static u16 *sFramebuffers[2];
@@ -76,6 +78,9 @@ static u32 sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
 static u32 sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
 static u32 sBattleTextHudReady;
 static u32 sBattleTextHudFingerprint = 0xffffffffu;
+#if NDS_BATTLE_PHASE_HUD_ENABLED
+static u32 sBattlePhaseHudLastSlipCount;
+#endif
 #endif
 static u16 sOriginalSpritePreview[
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
@@ -1384,6 +1389,21 @@ static void ndsPlatformRenderBattleFpsHud(void)
         gNdsBattlePlayableHudFpsTickWindow = 0u;
         consoleClear();
         ndsPlatformPrintDebugLine(0u, "FPS --.-  UP --.-");
+#if NDS_BATTLE_PHASE_HUD_ENABLED
+        sBattlePhaseHudLastSlipCount =
+            gNdsBattlePlayablePacingCadenceViolationCount;
+        ndsPlatformPrintDebugLine(12u, "UPD        --");
+        ndsPlatformPrintDebugLine(13u, "DRW        --");
+        ndsPlatformPrintDebugLine(14u, "ACT        --");
+        ndsPlatformPrintDebugLine(15u, "LOOP       --");
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M3_PHASE0_PROFILE
+        ndsPlatformPrintDebugLine(16u, "PRE        --");
+        ndsPlatformPrintDebugLine(17u, "PRP        --");
+        ndsPlatformPrintDebugLine(18u, "CMT        --");
+#endif
+        ndsPlatformPrintDebugLine(19u, "SLIP        0");
+        ndsPlatformPrintDebugLine(23u, "GIT %s", NDS_TASK10_GIT_SHORT);
+#endif
         return;
     }
 
@@ -1409,6 +1429,37 @@ static void ndsPlatformRenderBattleFpsHud(void)
     sBattleFpsHudLastTick = now_tick;
     sBattleFpsHudLastPresentedFrames = presented_frames;
     sBattleFpsHudLastLogicFrames = logic_frames;
+
+#if NDS_BATTLE_PHASE_HUD_ENABLED
+    ndsPlatformPrintDebugLine(
+        12u, "UPD %10lu",
+        (unsigned long)gNdsRendererProfileSourceUpdateTicks);
+    ndsPlatformPrintDebugLine(
+        13u, "DRW %10lu", (unsigned long)gNdsRendererProfileDrawTicks);
+    ndsPlatformPrintDebugLine(
+        14u, "ACT %10lu",
+        (unsigned long)gNdsRendererProfilePresentActiveTicks);
+    ndsPlatformPrintDebugLine(
+        15u, "LOOP%10lu",
+        (unsigned long)gNdsRendererProfileLoopWallTicks);
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M3_PHASE0_PROFILE
+    ndsPlatformPrintDebugLine(
+        16u, "PRE %10lu",
+        (unsigned long)gNdsRendererM3Phase0PreflightTicks);
+    ndsPlatformPrintDebugLine(
+        17u, "PRP %10lu",
+        (unsigned long)gNdsRendererM3Phase0PrepareRunTicks);
+    ndsPlatformPrintDebugLine(
+        18u, "CMT %10lu",
+        (unsigned long)gNdsRendererM3Phase0CommitTicks);
+#endif
+    ndsPlatformPrintDebugLine(
+        19u, "SLIP%10lu",
+        (unsigned long)(gNdsBattlePlayablePacingCadenceViolationCount -
+                        sBattlePhaseHudLastSlipCount));
+    sBattlePhaseHudLastSlipCount =
+        gNdsBattlePlayablePacingCadenceViolationCount;
+#endif
 
     /* sm64-nds also dedicates the lower console to FPS. Keep this port's
      * update change-driven so the counter does not clear or pulse the screen. */

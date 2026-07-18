@@ -22,6 +22,38 @@ SHA-256 DA8282BBBD9872DC29F7442CC6ED3E0029967A7AB1AA0E94F9EDBED172981F04
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
 
+## Hardware reality (2026-07-17)
+
+A manual retail-DS observation currently puts real-hardware throughput near
+`0.75x` the local melonDS run, but that is a starting observation rather than
+an admitted uniform multiplier. Task 10 separates CPU/ITCM, CPU/main-RAM, and
+GX work so each owner can be projected from its matching on-device bench.
+
+| Resource / bench | Fixed work | melonDS 1.1 ticks | Retail DS ticks | HW / melonDS multiplier |
+|---|---|---:|---:|---:|
+| CPU-ITCM / ALU-ITCM | 1,000,000 dependent chains, 32 adds each | 17,501,568 | TBD | TBD |
+| CPU-mainRAM / MEM-THMB | 8,388,608 loads over 256 KiB | 33,557,632 | TBD | TBD |
+| CPU-mainRAM / MEM-ARM | identical loads and buffer, ARM state | 37,752,448 | TBD | TBD |
+| CPU-cache control / CACHE4K | same load count over 4 KiB | 33,565,696 | TBD | TBD |
+| GX / GX-BRST | 10,000 immediate triangles, flush every 2,048 | 2,729,728 | TBD | TBD |
+| CARD (optional) | no safe media-independent run admitted | not run | TBD | TBD |
+
+Until the paired hardware run exists, use `840,000` melonDS ticks as the
+provisional locked-30 hardware budget only for planning. It is not a promotion
+or rejection gate and does not authorize changing gameplay semantics.
+
+Hardware operator packet:
+
+1. Copy `builds/build-task10-hardware-calibration/smash64ds-task10-hardware-calibration.nds`
+   to the flashcart, boot it on retail hardware, wait for `COMPLETE`, and take
+   one legible photo containing the five tick rows and the displayed Git hash.
+2. Report the DS model, flashcart, loader/settings, and photographed values.
+3. Run the profile-1 battle ROM in the same combat phase and photograph the
+   half-second HUD sample (`UPD`, `DRW`, `ACT`, `LOOP`, `SLIP`, `GIT`).
+
+`PRE`/`PRP`/`CMT` rows are populated only by the existing detailed renderer
+phase profiler; the low-observer profile-1 ROM intentionally leaves them off.
+
 ## Phase Evidence
 
 Do not fill this table with figures from a different ROM or phase. Pending is
