@@ -127,6 +127,11 @@ Use automated emulator/GDB/capture scripts only. For subjective play behavior,
 build the verifier-covered ROM and ask the user to test it. Use no$gba only for
 a specific VRAM/OAM/palette/DMA/register question melonDS cannot answer.
 
+`capture-melonds.ps1` uses screen capture in an interactive desktop and native
+`PrintWindow` only when that fails in a disconnected session. The fallback is
+evidence only when the unchanged visibility, region, motion, and detail gates
+pass; a successful API call alone never qualifies an image.
+
 The P1 timer is one minute (`3600` source ticks). Never launch the obsolete
 five-minute configuration.
 

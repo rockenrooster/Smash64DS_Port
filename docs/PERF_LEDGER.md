@@ -4039,3 +4039,79 @@ EVIDENCE:
   artifacts/visibility/2026-07-17_canonical_fast_125115-2819034-p54940.png
 KEEP / REWORK / REVERT: KEEP RAW DENSE IDs / REVERT SHARED CAMERA HOIST
 ```
+
+## 2026-07-17 - Split raw emitter by immutable texture class
+
+```text
+IDEA ID: M2-PRODUCTION-RAW-TEXTURE-SPLIT-20260717
+MEASUREMENT IDENTITY:
+  Mode 163 battle_playable_realtime, profile 1, ledger off, Mode 8, static AOT
+  1, hybrid OAM 1, Fox decisions paused, exact frames 600..607. Control ROM/ELF
+  are 6DAA92BF2F731B5423A81DFF7497B355301CA62444D31594079497C508CD3F55 /
+  A0C684BB70D6D7B566FC4564C73EE1FF8A5F67D6898FA31C7E46F99217A00262;
+  candidate ROM/ELF are
+  F7CE466C1E993AF8E62EBE45A39CEC61FB2B6658C1E3628E4C377EFF12C7F7FF /
+  8A142D37FF18926E242BA72BB082144BC91E4F5BBB4108278797855C9130B30F.
+
+BOUND / ONE CHANGE:
+  The existing generated parity corpus proves 15 textured runs: 11 of the 54
+  raw runs and 4 of the 13 cross runs. Split the already-specialized production
+  raw loops into textured and untextured callees and dispatch from the two
+  existing call sites. No table, generator, state, GX word, or harness changes.
+
+ARMV5TE CODEGEN:
+  The control 0xBC raw symbol pushes/pops {r4,r5,r6,lr} on both paths. Candidate
+  textured is 0x74 and retains {r4,r5,r6,lr}; untextured is 0x64 and uses only
+  {r4,lr}. The 43 common untextured calls remove four stack word transfers each,
+  172 per frame. The production owner grows 0xB98 -> 0xB9C; cross stays 0x164.
+  ITCM grows 28,020 -> 28,052 / 32,768 and renderer ownership 23,536 -> 23,540.
+  Control/candidate object SHA-256 values are
+  6A224B07EF3163706A532DB887BEA440D9B1DE027F192FADB8F2238DED1B425D /
+  467794AF644CFCABC4E4496396BEE979F4F6A71E7FE030ED250977F3611A9CEB.
+
+SYNCHRONIZED A/B P50/P95:
+  Mario             173,792/175,360   -> 173,248/174,848   (-544/-512)
+  Fox               214,048/214,464   -> 213,280/213,632   (-768/-832)
+  Combined fighter  386,624/389,824   -> 385,312/388,480 (-1,312/-1,344)
+  Draw            1,011,648/1,014,976 -> 1,009,824/1,013,120 (-1,824/-1,856)
+  Active          1,015,680/1,018,880 -> 1,014,048/1,017,088 (-1,632/-1,792)
+  Loop            1,680,448/1,680,512 -> 1,680,448/1,680,512 (unchanged)
+  Fixed-two VBlank wait absorbs the saved active work: present moves
+  1,434,624/1,438,784 -> 1,436,192/1,440,256 and smoke remains 19.7 FPS. This is
+  a CPU-cost KEEP, not a full-speed promotion.
+
+EXACTNESS / DECISION:
+  Every paired frame saves 1,280..1,344 combined fighter ticks. All eight retain
+  70/686 and 60/320/306/29/0/0, zero conservation and texture-fence faults, and
+  0/49,152 changed top-screen pixels. A2 is unnecessary because timing and all
+  guards agree. Owner hierarchy/packet, parity corpus, and GBI fixtures pass.
+  Profile-2 ROM 75A731E10BCB1357FFD39129AA41D08C58352CDB17F00DCC10DB5BEC22166A4B
+  is exact on generic/Mode-8 frames 180..187 with 686 triangles in both arms and
+  zero semantic, owner, or geometry mismatch.
+
+TOOLING NOTE:
+  The first control wrapper allowed only 240 seconds and ended during the full
+  rebuild before exporting a sample; it was excluded. Full-rebuild wall time
+  and the runtime capture timeout are separate allowances in future cycles.
+
+INTEGRATION / DISCONNECTED CAPTURE:
+  The full Latest build passed normal runtime, mode-163 smoke, CPU
+  setup/proc/target 1/33/33, ITCM, and two-ROM publication, then Windows session
+  1 entered `WinDisc` and `CopyFromScreen` failed with an invalid handle on two
+  runner slots. `capture-melonds.ps1` now falls back to native `PrintWindow`
+  only after that exception; `check-harness-registry.ps1` preserves both paths.
+  A clean full Latest no-build profile passes in 201.2 seconds on battle ROM
+  DA8282BBBD9872DC29F7442CC6ED3E0029967A7AB1AA0E94F9EDBED172981F04
+  and unchanged normal ROM
+  D06323485C866D74BA5D82F87B58182C82A3D7FBE5E9AAC08B83807583171A9E.
+  Capture `2026-07-17_canonical_fast_212428-0396036-p48468.png` and its paired
+  frame retain 100% overlap, 1,844/49,152 meaningful changes, and every
+  visibility, named-region, horizontal-detail, and required-region gate.
+
+EVIDENCE:
+  artifacts/performance/2026-07-17_m2-raw-texture-split-{a,b}.json
+  artifacts/performance/2026-07-17_m2-raw-texture-split-{generic,fast}-profile2.json
+  artifacts/visibility/2026-07-17_m2-raw-texture-split-{a,b}-frame607.png
+  builds/m2-raw-texture-split-{control,candidate}/
+KEEP / REWORK / REVERT: KEEP RAW TEXTURE-CLASS SPLIT / CONTINUE P1
+```

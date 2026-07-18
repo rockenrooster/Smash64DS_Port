@@ -14611,44 +14611,49 @@ ndsRendererNativePrepareProductionRun(
 
 
 static void NDS_RENDERER_NATIVE_FIGHTER_CODE
-ndsRendererNativeEmitProductionRawRun(
+ndsRendererNativeEmitProductionRawTexturedRun(
     u32 run_index,
-    u32 corner_count,
-    u32 textured)
+    u32 corner_count)
 {
     const u16 *corner =
         &sNdsNativeFighterPackedCorners[
             sNdsNativeFighterRunFirstCorner[run_index]];
     u32 remaining = corner_count;
 
-    if (textured != 0u)
+    while (remaining-- != 0u)
     {
-        while (remaining-- != 0u)
-        {
-            u32 dense_id = *corner++;
-            const NDSNativePreparedDenseVertex *prepared =
-                &sNdsNativeFighterPreparedDense[dense_id];
+        u32 dense_id = *corner++;
+        const NDSNativePreparedDenseVertex *prepared =
+            &sNdsNativeFighterPreparedDense[dense_id];
 
-            GFX_COLOR = prepared->packed_color;
-            GFX_TEX_COORD =
-                (u32)(u16)prepared->s |
-                ((u32)(u16)prepared->t << 16);
-            GFX_VERTEX16 = prepared->gx_xy;
-            GFX_VERTEX16 = prepared->gx_z;
-        }
+        GFX_COLOR = prepared->packed_color;
+        GFX_TEX_COORD =
+            (u32)(u16)prepared->s |
+            ((u32)(u16)prepared->t << 16);
+        GFX_VERTEX16 = prepared->gx_xy;
+        GFX_VERTEX16 = prepared->gx_z;
     }
-    else
-    {
-        while (remaining-- != 0u)
-        {
-            u32 dense_id = *corner++;
-            const NDSNativePreparedDenseVertex *prepared =
-                &sNdsNativeFighterPreparedDense[dense_id];
+}
 
-            GFX_COLOR = prepared->packed_color;
-            GFX_VERTEX16 = prepared->gx_xy;
-            GFX_VERTEX16 = prepared->gx_z;
-        }
+static void NDS_RENDERER_NATIVE_FIGHTER_CODE
+ndsRendererNativeEmitProductionRawUntexturedRun(
+    u32 run_index,
+    u32 corner_count)
+{
+    const u16 *corner =
+        &sNdsNativeFighterPackedCorners[
+            sNdsNativeFighterRunFirstCorner[run_index]];
+    u32 remaining = corner_count;
+
+    while (remaining-- != 0u)
+    {
+        u32 dense_id = *corner++;
+        const NDSNativePreparedDenseVertex *prepared =
+            &sNdsNativeFighterPreparedDense[dense_id];
+
+        GFX_COLOR = prepared->packed_color;
+        GFX_VERTEX16 = prepared->gx_xy;
+        GFX_VERTEX16 = prepared->gx_z;
     }
 }
 
@@ -14823,9 +14828,16 @@ static s32 ndsRendererNativeSubmitProductionRun(
     }
     else
     {
-        ndsRendererNativeEmitProductionRawRun(
-            run_index, (u32)run->triangle_count * 3u,
-            state->texture_prepare_enabled);
+        if (state->texture_prepare_enabled != 0u)
+        {
+            ndsRendererNativeEmitProductionRawTexturedRun(
+                run_index, (u32)run->triangle_count * 3u);
+        }
+        else
+        {
+            ndsRendererNativeEmitProductionRawUntexturedRun(
+                run_index, (u32)run->triangle_count * 3u);
+        }
     }
 #else
     (void)epoch_policy;
@@ -16121,9 +16133,16 @@ static void ndsRendererNativeCommitHierarchyRoot(
             }
             else
             {
-                ndsRendererNativeEmitProductionRawRun(
-                    run_index, (u32)run->triangle_count * 3u,
-                    prepared_run->textured);
+                if (prepared_run->textured != 0u)
+                {
+                    ndsRendererNativeEmitProductionRawTexturedRun(
+                        run_index, (u32)run->triangle_count * 3u);
+                }
+                else
+                {
+                    ndsRendererNativeEmitProductionRawUntexturedRun(
+                        run_index, (u32)run->triangle_count * 3u);
+                }
             }
 #endif
             stats->triangle_count += run->triangle_count;

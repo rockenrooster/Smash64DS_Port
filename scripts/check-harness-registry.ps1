@@ -125,6 +125,10 @@ if (($melonLibText -notmatch 'function\s+Set-MelonDSDualScreenLayout') -or
     ($debugMelonText -notmatch 'Set-MelonDSDualScreenLayout')) {
     Fail-Check 'visible melonDS launch/capture no longer guarantees both DS screens'
 }
+if (($captureText -notmatch 'CopyFromScreen') -or
+    ($captureText -notmatch 'PrintWindow')) {
+    Fail-Check 'melonDS capture no longer supports disconnected-session fallback'
+}
 if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|MinRequiredRegionFighterFraction') -or
     ($battleLoopText -notmatch 'FTR_DISPLAY_CONTRACT=') -or
     ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$stageHardwareFighter\.Success.*?\$shwf\[0\]\s*-eq\s*\(2\s*\*\s*\$hw\[0\]\).*?\$shwf\[1\]\s*-eq\s*\(626\s*\*\s*\$hw\[0\]\)') -or

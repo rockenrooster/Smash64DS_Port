@@ -54,13 +54,13 @@ emitter by its already-proved raw/cross run class reduces the synchronized
 detailed combined-fighter window 433,472/433,536 -> 432,384/432,448 and draw
 1,061,888/1,061,952 -> 1,060,928/1,060,992. Raw runs now save two registers
 per entry/exit; the rarer cross runs add one, eliminating 190 main-RAM stack
-word transfers per frame. Canonical ITCM is 28,020/32,768 after Task 9, the
-source-light repair, and the raw-corner cut; the exact 70/686 fast owner and
+word transfers per frame. Canonical ITCM is 28,052/32,768 after Task 9, the
+source-light repair, the raw-corner cut, and the raw texture-class split; the exact 70/686 fast owner and
 60/320/306/29/0/0
 partition stay unchanged. Full inlining and a shared tail dispatcher are
 measured regressions.
 
-The current source-light-exact ledger-off checkpoint is 385,088/388,224.
+The current source-light-exact ledger-off checkpoint is 385,312/388,480.
 Capture now resets only live scalar state because every consumed event field
 and scratch command is overwritten before use; it no longer clears the
 6,240-byte arena twice per frame. Detailed capture moves 47,296/47,360 ->
@@ -76,13 +76,23 @@ exits. The raw emitter shrinks 0xD0 -> 0xBC bytes, cross remains 0x164, and the
 synchronized ledger-off window improves 386,016/389,184 -> 385,088/388,224
 without changing pixels, geometry, owner state, or texture traffic.
 
+The two already-specialized raw loops now have separate textured and
+untextured callees. The immutable corpus proves 43 untextured and 11 textured
+raw calls per frame. The common untextured path saves `r5` and `r6` at entry
+and exit, removing 172 main-RAM stack word transfers per frame. The old 0xBC
+combined symbol becomes 0x74 textured plus 0x64 untextured symbols; the owner
+grows 0xB98 -> 0xB9C and ITCM grows 32 bytes. On the synchronized current-build
+window, combined fighter improves 386,624/389,824 -> 385,312/388,480 and draw
+1,011,648/1,014,976 -> 1,009,824/1,013,120. All eight paired frames preserve
+pixels, geometry, owner state, texture traffic, and conservation.
+
 The generic/fast profile-2 oracle is exact again. F3DEX2 `G_MOVEWORD` uses
 index bits 16..23 and offset bits 0..15. The generated owner retains all 148
 static fighter `G_MW_LIGHTCOL` commands as 120 compact root preambles plus 28
 intra-root epoch-state changes, and validation admits that state effect only
 for an exact light-color opcode/index/offset tuple. Fresh frames 180..187 have
 zero semantic, owner, or geometry mismatches and 686 triangles in both arms.
-The next M2 change must be another measured production cut from this contract.
+Any future M2 change must be another measured production cut from this contract.
 
 ## M3 — Complete Dream Land Owner
 
