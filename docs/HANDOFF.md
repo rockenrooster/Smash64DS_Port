@@ -150,19 +150,31 @@ pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor
 
 The retained run captures exception flags `2`, status 213 / motion 188 / tic 6,
 context PC `0x020631f6`, and saved caller return `0x02088873`. The faulting PC is
-`gmCollisionGetFighterPartsWorldPosition` at `gmcollision.c:494`, dereferencing
-its `main_dobj` argument. The caller is `ftMainProcPhysicsMap` at
-`ftmain.c:1884`; immediately before the call it loads `attack_coll->joint`.
-Repeated captures pass invalid small values including `0x1a0`, `0x1ac`, and
-`0x206` instead of a DObj pointer. The scheduler snapshot has Calico main as the
-current thread and shows `0x01ffebe4` as the seeded idle-thread WFI context, so
-the earlier IRQ-wait conclusion is disproven.
+`gmCollisionGetFighterPartsWorldPosition` at `gmcollision.c:494`; its caller is
+`ftMainProcPhysicsMap` at `ftmain.c:1884`, immediately after loading
+`attack_coll->joint`. The linked caller and stack establish collider 0 at
+`fp + 0x294`, with 0xC4 stride and `joint` at +20. Earlier reported small
+register values are retired because the exception labels do not preserve the
+caller's registers reliably. The scheduler snapshot still proves that
+`0x01ffebe4` is Calico's seeded idle-thread WFI context, not this gameplay fault.
 
-Resume by tracing every live write to `FTAttackColl.joint`, the motion-event
-joint decode, and the imported structure layout/stride against BattleShip
-source. Identify where the frame-7 attack refresh installs the small value and
-fix that shared seam. Do not add a collision-transform guard, a Down-Air special
-case, or ID 190 as a stall fix.
+The source mismatch is now exact. `208_FoxMainMotion.c:1374-1420` makes attack
+IDs 0/1 on joint 20, clears them after two ticks, waits one tick, then refreshes
+both IDs repeatedly. BattleShip `ftparam.c:480-492` implements ClearAll by
+setting only each `attack_state` to Off and clearing `is_attack_active`; Refresh
+at lines 514-523 intentionally reuses the collider payload. The live ABI,
+bitfield decode, joint-20 parser assignment, and linked offsets match the source.
+The port shim at `src/port/reloc_backend_compat_shims.c:896-950` is the defect:
+it also zeroes `joint` and every other payload field before Refresh reactivates
+the collider.
+
+Resume with the smallest source-exact deletion: leave the shim's null guard,
+state-off loop, `is_attack_active = FALSE`, and proof counter, but remove all
+other collider clearing and the unused inner-loop variable. Then update the
+existing probe at `src/port/reloc_backend_diagnostic_recorders.c:6554-6561` to
+require seeded damage 7 to remain after the state clear; its current `damage ==
+0` expectation encodes the same non-source behavior. Do not add a transform
+guard, Down-Air special case, payload rebuild, or new harness.
 
 Do not mark the playtest finding fixed until Fox P2, Mario, and one canonical
 CPU-on Current gate pass. The five-minute goal heartbeat is intentionally

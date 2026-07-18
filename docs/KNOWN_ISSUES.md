@@ -21,11 +21,14 @@ durable unresolved gaps.
   fast-iteration capture. Release still needs the final CPU-on complete-match
   capture under `artifacts/visibility` and manual user retest.
 - Playtesting reports a CPU stall during Down+A aerials. Human-P2 Fox reaches a
-  data abort at status 213 / motion 188 / tic 6: `ftMainProcPhysicsMap` passes an
-  invalid small `attack_coll->joint` value to
-  `gmCollisionGetFighterPartsWorldPosition`. The earlier WFI sample was Calico's
-  idle-thread context. Trace and repair the shared attack-joint assignment/decode
-  seam; closure then needs Fox P2, Mario, and canonical CPU-on Current gates.
+  data abort at status 213 / motion 188 / tic 6 after its first collider refresh.
+  The root source mismatch is mapped but unpatched: BattleShip's
+  `ftParamClearAttackCollAll` preserves each collider payload and clears only its
+  state, while the port shim also erases `joint` and every other reusable field.
+  Fox's script clears, waits one tick, then refreshes IDs 0/1 without rebuilding
+  them. The ABI and motion-event decode match BattleShip. Repair the shared clear
+  shim and its stale diagnostic expectation; closure then needs Fox P2, Mario,
+  and canonical CPU-on Current gates.
 
 ## Gameplay And Source Boundaries
 
