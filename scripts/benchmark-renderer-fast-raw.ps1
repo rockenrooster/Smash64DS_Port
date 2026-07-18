@@ -11,6 +11,7 @@ param(
     [switch]$RendererM3Phase0Profile,
     [ValidateRange(0,1)][int]$Task9FloatCensusMode = 0,
     [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
+    [ValidateRange(0,1)][int]$Task9FloatPhase2Mode = 1,
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [int]$GdbPort = 4333,
@@ -29,6 +30,14 @@ param(
 $ErrorActionPreference = 'Stop'
 if (($FastRunMode -eq 9) -and ($RendererProfileLevel -ne 1)) {
     throw 'Fast-run mode 9 requires renderer profile 1.'
+}
+if (($Task9FloatItcmMode -eq 0) -and
+    -not $PSBoundParameters.ContainsKey('Task9FloatPhase2Mode')) {
+    $Task9FloatPhase2Mode = 0
+}
+if (($Task9FloatPhase2Mode -eq 1) -and
+    ($Task9FloatItcmMode -ne 1)) {
+    throw 'Task9FloatPhase2Mode=1 requires Task9FloatItcmMode=1.'
 }
 if ($RendererM3Phase0Profile -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
@@ -51,7 +60,11 @@ $target = if ($FastRunMode -eq 9) {
 $build = if ($Task9FloatCensusMode -eq 1) {
     'builds/build-task9-float-census-lab'
 } elseif ($Task9FloatItcmMode -eq 1) {
-    'builds/build-task9-float-itcm-lab'
+    if ($Task9FloatPhase2Mode -eq 1) {
+        'builds/build-task9-float-phase2-fcmpeq-lab'
+    } else {
+        'builds/build-task9-float-itcm-lab'
+    }
 } elseif ($RendererM3Phase0Profile) {
     'builds/build-m3-phase0-lab'
 } elseif ($FastRunMode -eq 9) {
@@ -79,6 +92,7 @@ $build = if ($Task9FloatCensusMode -eq 1) {
     -RendererM3Phase0Profile:$RendererM3Phase0Profile `
     -Task9FloatCensusMode $Task9FloatCensusMode `
     -Task9FloatItcmMode $Task9FloatItcmMode `
+    -Task9FloatPhase2Mode $Task9FloatPhase2Mode `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
     -RendererBenchmarkStartEvent $RendererBenchmarkStartEvent `
@@ -99,7 +113,7 @@ $build = if ($Task9FloatCensusMode -eq 1) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode task9 float census/ITCM $Task9FloatCensusMode/$Task9FloatItcmMode" `
+    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

@@ -96,6 +96,24 @@ try {
 
 $baseline = Get-Content -LiteralPath $baselinePath -Raw | ConvertFrom-Json
 $candidate = Get-Content -LiteralPath $candidatePath -Raw | ConvertFrom-Json
+$expectedBaselineTarget = 'smash64ds-task9-state-hash-phase1-lab'
+$expectedCandidateTarget = 'smash64ds-task9-state-hash-phase2-fcmpeq-lab'
+if (($baseline.target -cne $expectedBaselineTarget) -or
+    ($baseline.task9FloatItcmMode -ne 1) -or
+    ($baseline.task9FloatPhase2Mode -ne 0) -or
+    ($baseline.task9StateHashMode -ne 1)) {
+    throw "Task 9 state baseline identity is not $expectedBaselineTarget ITCM/Phase2/Hash=1/0/1."
+}
+if (($candidate.target -cne $expectedCandidateTarget) -or
+    ($candidate.task9FloatItcmMode -ne 1) -or
+    ($candidate.task9FloatPhase2Mode -ne 1) -or
+    ($candidate.task9StateHashMode -ne 1)) {
+    throw "Task 9 state candidate identity is not $expectedCandidateTarget ITCM/Phase2/Hash=1/1/1."
+}
+if (($baseline.artifacts.elf.sha256 -ceq $candidate.artifacts.elf.sha256) -or
+    ($baseline.artifacts.rom.sha256 -ceq $candidate.artifacts.rom.sha256)) {
+    throw 'Task 9 state A/B accidentally used an identical ELF or ROM identity.'
+}
 if ($baseline.rows.Count -ne $candidate.rows.Count) {
     throw "Task 9 state hash count mismatch: baseline=$($baseline.rows.Count) candidate=$($candidate.rows.Count)."
 }

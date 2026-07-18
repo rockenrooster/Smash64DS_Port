@@ -4169,3 +4169,76 @@ EVIDENCE:
   builds/build-task9-float-itcm-lab/
 KEEP / REWORK / REVERT: KEEP TOOLING / HARDWARE RUN PENDING
 ```
+
+## 2026-07-17 - Task 9 Phase 2 exact ARM `fcmpeq`
+
+```text
+IDEA ID: TASK9-PHASE2-FCMPEQ-ARM-20260717
+RECONCILIATION / BOUND:
+  The earlier Phase-1 row stopped before custom code because its 16.54% owner
+  win was already decisive. Tyler explicitly resumed the staged Phase 2. The
+  census names fcmpeq as the safest next exact cut: 556.25 calls/update,
+  40 median ticks/call, and a 127,148-tick observed bound. This ratchet changes
+  only that helper; fadd/fmul and conversion helpers retain stock libgcc.
+
+CODE / LINK IDENTITY:
+  The candidate is a 36-byte, nine-instruction, stackless and call-free ARM
+  leaf in .itcm. Machine-code SHA-256 is
+  07B3147B9CF599BDD408AF922A4B9F6891734B4C3AB7DE7C3A700DDE92B6FBE2.
+  The selected GCC 15.2.0 Thumb-multilib libgcc archive remains
+  C755ADC33ECA252260360327904591B8462CCE5C25E48B0E881AC0B295953F48.
+  Phase 2 retains the stock _arm_cmpsf2.o text byte-for-byte (276 bytes,
+  2B656E12FDE0F34CEB17395A5FF8FCC1EF0CEBBF94F8EDA3725BD26C0B3C2884)
+  and renames only its public fcmpeq symbol to the linked golden
+  __nds_task9_libgcc_fcmpeq_golden. Phase 1 proves that golden is absent.
+  ITCM moves 28,052 -> 28,088 / 32,768 bytes, leaving 4,680 bytes free.
+
+HOST AND ARM9 SEMANTIC PROOF:
+  Host differential proof passes 16,777,216 directed pairs covering zeros,
+  subnormals, normals, infinities and NaN payload/sign classes, then
+  100,000,000 deterministic randomized pairs. Final PRNG seed is
+  64F086E1A4420059 and mismatches are zero.
+  A standalone ARM9 melonDS ROM compares candidate and the linked stock golden
+  over 54 directed values / 2,916 pairs with zero mismatches. ROM/ELF SHA-256:
+  8B64932AF9D8DA35D2E7114AE96B4353B72A472BDFF457E2352740B99C6AFBDF /
+  596C8916949883AD7C7FCFC1CFF26987B64A226E2CC7ADC7603C31936C2EFF2A.
+
+SUPREME STATE GATE:
+  Phase 1 (ITCM/Phase2/Hash 1/0/1) and Phase 2 (1/1/1) each complete the
+  one-minute CPU-on mode-163 lifecycle. All 3,892 post-update full active-game
+  state rows match exactly and both overflow counts are zero. The verifier
+  now rejects wrong mode identities or reused ELF/ROM identities before it
+  compares rows. JSON SHA-256 values are
+  D322B55DA1923EC43F66203F93DB91DFBDFDED4873693328959A500AEA69C75F /
+  7EC98FCD359E97F2C21DB0B8E38CC3AC88D9A9BFD827F0C6B6521EC794577C78.
+
+SYNCHRONIZED EIGHT-FRAME A/B:
+  Mode 163, profile 1, fast mode 9, static AOT 1, incremental wallpaper 1,
+  live Fox, identical frames 438..445 and controls. A is Phase 1 ROM/ELF
+  1D55C7F38B1E987488882CFC51FA36B5DE7E9F457F24627D231BC6DBD8F11018 /
+  3432C2B3A44D76C03A966BA3D90713D1941A4381C1EEF22C203AADF1D1FCAD99.
+  B is Phase 2 ROM/ELF
+  A517F627A1BA836DE85688A9F71274F32D1551BCD06ED3C30238622F5299E062 /
+  3E46FA161228CCFA60F6DAC7E68F1AA5EE23347A62DECC89256E3316D86EE0E5.
+
+  Owner / frame       Phase 1 P50/P95      Phase 2 P50/P95      Delta
+  source update       236,640 / 238,016    215,680 / 217,024    -20,960 / -20,992
+  stage               476,032 / 476,352    476,000 / 476,160        -32 /    -192
+  draw              1,154,144 / 1,225,920 1,151,808 / 1,223,616  -2,336 /  -2,304
+  active            1,159,008 / 1,230,784 1,156,704 / 1,228,416  -2,304 /  -2,368
+
+  The stable source owner gains 8.86% / 8.82%. All eight frames retain exactly
+  828 triangles, stage/Mario/Fox 202/320/306, and zero fallback, texture-fence,
+  conservation, or benchmark-identity faults. The stable owner and decisive
+  expected result make a third A unnecessary.
+
+EVIDENCE:
+  scripts/check-task9-phase2-fcmpeq.ps1
+  scripts/verify-task9-phase2-fcmpeq-arm9.ps1
+  scripts/verify-task9-state-hash-ab.ps1
+  artifacts/performance/2026-07-17_task9-phase2-fcmpeq-phase1-a.json
+  artifacts/performance/2026-07-17_task9-phase2-fcmpeq-candidate-b.json
+  artifacts/performance/2026-07-17_task9-state-phase1-itcm.json
+  artifacts/performance/2026-07-17_task9-state-phase2-fcmpeq.json
+KEEP / REWORK / REVERT: KEEP PHASE 2 FCMPEQ / INTEGRATED BOUNDARY PENDING
+```

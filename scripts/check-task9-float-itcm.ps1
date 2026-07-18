@@ -197,6 +197,12 @@ try {
         }).Count -ne 1) {
         throw 'Task 9 Phase 2 ELF omitted its selected-libgcc fcmpeq golden.'
     }
+    if ($Phase2Mode -eq 0 -and
+        @($symbols | Where-Object {
+            $_ -match '\s__nds_task9_libgcc_fcmpeq_golden$'
+        }).Count -ne 0) {
+        throw 'Task 9 Phase 1 ELF unexpectedly contains the Phase 2 golden symbol.'
+    }
 
     $itcmBytes = Get-SectionBytes -Path $resolvedElf -Section '.itcm'
     if ($itcmBytes -gt 32768) {
