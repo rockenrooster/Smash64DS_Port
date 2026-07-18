@@ -1,0 +1,7 @@
+%include <sync-none.specs>
+
+*link:
++ -L%:getenv(DEVKITPRO /calico/lib) --gc-sections --nmagic --no-warn-rwx-segments --use-blx
+
+*startfile:
+crti%O%s crtbegin%O%s --require-defined=main

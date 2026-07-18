@@ -4,6 +4,8 @@ param(
     [ValidateSet('Arm', 'Thumb')][string]$ExpectedMainMode = 'Thumb',
     [ValidateRange(0, 32768)][int]$ExpectedItcmBytes = 0,
     [switch]$RequireHotText,
+    [ValidateRange(1, 12288)][int]$MaxHotTextBytes = 8192,
+    [switch]$AllowArmHotText,
     [string[]]$ExpectedHotFunction = @(),
     [string]$Readelf =
         'C:\devkitPro\devkitARM\bin\arm-none-eabi-readelf.exe'
@@ -159,20 +161,26 @@ if ($RequireHotText) {
     }
     $hotSection = $hotSections[0]
     $hotBytes = $hotSection.Bytes
-    if ($hotBytes -eq 0u -or $hotBytes -gt 8192u) {
-        throw "Final .text.hot is $hotBytes bytes; expected 1..8192."
+    if ($hotBytes -eq 0u -or $hotBytes -gt [uint64]$MaxHotTextBytes) {
+        throw "Final .text.hot is $hotBytes bytes; expected 1..$MaxHotTextBytes."
     }
-    $mainText = @($elfSections.Values | Where-Object Name -eq '.text')
+    $mainText = @($elfSections.Values | Where-Object Name -eq '.main')
     if ($mainText.Count -ne 1 -or
         ($hotSection.Address + $hotSection.Bytes) -gt $mainText[0].Address) {
-        throw 'Final .text.hot is not contiguous immediately before .text.'
+        throw 'Final .text.hot is not contiguous immediately before .main.'
+    }
+    $mainStart = @($elfSymbols | Where-Object Name -eq '__main_start')
+    if ($mainStart.Count -ne 1 -or
+        ($mainStart[0].Value -band (-bnot 1u)) -ne $hotSection.Address) {
+        throw 'Calico __main_start does not include the leading .text.hot section.'
     }
 
     $hotFunctions = @($elfSymbols | Where-Object {
         $_.Type -eq 'FUNC' -and $_.Bytes -gt 0u -and
         $_.Section.Index -eq $hotSection.Index
     } | Sort-Object { $_.Value -band (-bnot 1u) })
-    if (@($hotFunctions | Where-Object { -not (Test-ThumbSymbol $_) }).Count) {
+    if (-not $AllowArmHotText -and
+        @($hotFunctions | Where-Object { -not (Test-ThumbSymbol $_) }).Count) {
         throw 'Final .text.hot contains a non-Thumb function.'
     }
     foreach ($expected in $ExpectedHotFunction) {

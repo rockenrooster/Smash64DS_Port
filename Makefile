@@ -245,7 +245,11 @@ endif
 
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
-LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),--gc-sections
+NDS_HOT_TEXT_SPECS := $(PROJECT_ROOT)/linker/ds9_hot_text.specs
+NDS_HOT_TEXT_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_hot_text.ld
+LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
+	-Wl,-Map,$(notdir $*.map),--gc-sections \
+	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
 
 NDS_TASK9_FLOAT_WRAP_SYMBOLS := \
 	__aeabi_fadd __aeabi_fsub __aeabi_frsub __aeabi_fmul __aeabi_fdiv \
@@ -939,7 +943,8 @@ $(NDS_SCENE_HARNESS_CONFIG): FORCE
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
 
 $(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES)
-$(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES)
+$(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
+	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT)
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
 NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)

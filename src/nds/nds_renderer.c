@@ -28,6 +28,8 @@
  * The measured zero-wait ITCM paths retain explicit ARM state and O3; host
  * fixtures retain only the portable optimization annotations. */
 #if defined(__arm__)
+#define NDS_HOT_TEXT(nn) \
+    __attribute__((section(".text.hot." #nn)))
 #define NDS_RENDERER_HOT_CODE \
     __attribute__((hot, optimize("O3"), target("arm"), section(".itcm")))
 #define NDS_RENDERER_FAST_RUN_CODE \
@@ -36,6 +38,7 @@
     __attribute__((noinline, hot, optimize("O3"), target("arm"), \
                    section(".itcm.native_fighter")))
 #else
+#define NDS_HOT_TEXT(nn)
 #define NDS_RENDERER_HOT_CODE __attribute__((hot, optimize("O3")))
 #define NDS_RENDERER_FAST_RUN_CODE \
     __attribute__((noinline, optimize("O3")))
@@ -13312,7 +13315,8 @@ static s32 NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteDirectRawRemainder(
     return TRUE;
 }
 
-static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun(
+static void NDS_RENDERER_FAST_RUN_CODE NDS_HOT_TEXT(00)
+ndsRendererExecuteFastRawCurrentRun(
     const Gfx **dl_io,
     u32 *list_index_io,
     u32 immutable_command_count,
@@ -15501,7 +15505,7 @@ static void ndsRendererNativeBindOwnerRootState(
 }
 #endif
 
-static s32 ndsRendererExecuteNativeFighterRootHardware(
+static s32 NDS_HOT_TEXT(10) ndsRendererExecuteNativeFighterRootHardware(
     u32 slot,
     u32 root_ordinal,
     const void *asset_base_ptr,

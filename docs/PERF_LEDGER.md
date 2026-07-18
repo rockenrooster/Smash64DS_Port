@@ -43,6 +43,85 @@ Input/state:              canonical idle realtime BattleShip scene
 Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png
 ```
 
+## 2026-07-18 - Task 12 renderer Thumb conversion and hot-text grouping
+
+```text
+IDEA ID: TASK12-RENDERER-THUMB-HOT-TEXT-20260718
+SCOPE / CALIBRATION:
+  Pure ARM9 codegen and placement; no renderer packets, gameplay state, DTCM,
+  decomp source, or visual semantics changed. melonDS 1.1 has no useful
+  icache/dcache model for this decision: it overcharges blanket main-RAM ARM
+  fetches and cannot value cache locality. Retail hardware is the sole keep
+  referee; all hardware cells below remain PENDING-HW.
+
+PHASE A - MAIN-RAM THUMB, ITCM ARM:
+  Commit 51fc1fe3e0 removes the mode-163 renderer -marm override. Every
+  .itcm* function remains ARM. Two measured local optimizer constraints remove
+  an interworking tail veneer and retain the exact compact ARM forms, keeping
+  renderer object ITCM at 24,364 bytes and final ITCM at 28,088/32,768.
+  Main renderer text is 79,068 -> 60,694 bytes: -18,374 (-23.24%).
+  Synchronized frames 438..445, P50/P95 ticks (ARM -> Thumb):
+    loop    1,680,448/1,680,512 -> 2,240,640/2,800,832
+    update    218,976/220,288   ->   217,152/499,776
+    active  1,155,776/1,227,520 -> 1,770,016/1,861,504
+    draw    1,150,944/1,222,720 -> 1,765,152/1,856,640
+    stage     474,688/474,752   ->   807,040/807,232
+    Mario     172,736/174,656   ->   302,560/314,240
+    Fox       213,120/213,440   ->   374,752/375,040
+  This severe emulator regression is reported, not treated as a hardware
+  verdict. Raw native top-screen delta is 0/49,152; fast raw remains exactly
+  121 runs / 828 triangles partitioned 202/320/306 with zero fallbacks.
+
+PHASE B - 7,040-BYTE SORTED WORKING SET:
+  NDS_HOT_TEXT(00/10) selects the 1,772-byte raw-run kernel (121 runs and 828
+  triangles per frame) and 5,268-byte fighter-root kernel (32 roots per frame).
+  The Calico 1.2.0-1 linker script is provenance-pinned and differs only by a
+  sorted renderer .text.hot output plus the matching main-load start. Final
+  order is raw-run then fighter-root, 7,040/8,192 bytes, immediately before
+  .main; unrelated wallpaper hot text remains in .main.
+  Phase-A Thumb -> Phase-B hot-text P50/P95:
+    loop    2,240,640/2,800,832 -> 2,240,640/2,800,832
+    update    217,152/499,776   ->   217,152/499,776
+    active  1,770,016/1,861,504 -> 1,767,904/1,859,328 (-2,112/-2,176)
+    draw    1,765,152/1,856,640 -> 1,763,040/1,854,464 (-2,112/-2,176)
+    stage     807,040/807,232   ->   806,016/806,080 (-1,024/-1,152)
+    Mario     302,560/314,240   ->   302,112/313,728 (-448/-512)
+    Fox       374,752/375,040   ->   374,240/374,528 (-512/-512)
+  Raw frame delta remains 0/49,152; GBI fixtures, parity corpus, exact codegen,
+  ITCM, ordering, load-range, and runtime marker gates pass. The first linker
+  attempt correctly failed at runtime because Calico's load table still began
+  at .main and omitted the leading .text.hot bytes. __main_start now begins at
+  .text.hot (0x020013c0), and the focused checker permanently rejects that
+  omission.
+
+HARDWARE OPERATOR PACKET:
+  Phase A: cold-boot the ARM control ROM, then the Thumb ROM, in the same
+  post-GO combat phase and photograph the half-second UPD/DRW/ACT/LOOP/SLIP/GIT
+  HUD rows for each. Phase B: repeat with the Thumb ROM as control and hot-text
+  ROM as candidate. Keep DS model, flashcart, loader/settings, and phase fixed;
+  LOOP is the Phase-A decision, while DRW/ACT plus LOOP decide Phase B. Do not
+  compare emulator values to device values as if they shared a cache model.
+
+IDENTITY / EVIDENCE:
+  Phase-A ARM control ROM:
+    builds/task12-phase-a-arm-control/smash64ds-task12-phase-a-arm-control.nds
+    B11B5D29978C442627758D8B44D9D09D876242EBE9EF889846FE21EDE0933F70
+  Phase-A Thumb ROM:
+    builds/task12-phase-a-thumb-final/smash64ds-task12-phase-a-thumb-final.nds
+    4793D93ECB06BE22A505533275E5E6342D3B93B960A2134183DE53147298BD0C
+  Phase-B hot-text ROM / ELF:
+    builds/task12-phase-b-hot-text/smash64ds-task12-phase-b-hot-text.nds
+    66BDD5FF9E58C55B9C9B157F111D84DA14D9EF03452387E9E388918F9B95F171
+    75339DD7B188D15309CD9D3D8821FF52FB425B5C195B3AEB71EBAA73C5621F4A
+  artifacts/performance/2026-07-18_task12-phase-a-arm-control.json
+  artifacts/performance/2026-07-18_task12-phase-a-thumb-final.json
+  artifacts/performance/2026-07-18_task12-phase-b-hot-text.json
+  artifacts/visibility/2026-07-18_task12-phase-a-arm-control-frame445.png
+  artifacts/visibility/2026-07-18_task12-phase-a-thumb-final-frame445.png
+  artifacts/visibility/2026-07-18_task12-phase-b-hot-text-frame445.png
+DECISION: PHASE A PENDING-HW; PHASE B PENDING-HW. No device values guessed.
+```
+
 ## 2026-07-17 - Task 11 screen-space census and stage economy
 
 ```text
