@@ -897,54 +897,12 @@ void ftParamClearAttackCollAll(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     s32 i;
-    s32 j;
 
     if (fp != NULL)
     {
         for (i = 0; i < FTATTACKCOLL_NUM_MAX; i++)
         {
             fp->attack_colls[i].attack_state = nGMAttackStateOff;
-            fp->attack_colls[i].group_id = 0;
-            fp->attack_colls[i].joint_id = 0;
-            fp->attack_colls[i].joint = NULL;
-            fp->attack_colls[i].damage = 0;
-            fp->attack_colls[i].element = 0;
-            fp->attack_colls[i].offset.x = 0.0F;
-            fp->attack_colls[i].offset.y = 0.0F;
-            fp->attack_colls[i].offset.z = 0.0F;
-            fp->attack_colls[i].size = 0.0F;
-            fp->attack_colls[i].angle = 0;
-            fp->attack_colls[i].knockback_scale = 0;
-            fp->attack_colls[i].knockback_weight = 0;
-            fp->attack_colls[i].knockback_base = 0;
-            fp->attack_colls[i].shield_damage = 0;
-            fp->attack_colls[i].fgm_level = 0;
-            fp->attack_colls[i].fgm_kind = 0;
-            fp->attack_colls[i].is_hit_air = FALSE;
-            fp->attack_colls[i].is_hit_ground = FALSE;
-            fp->attack_colls[i].can_rebound = FALSE;
-            fp->attack_colls[i].is_scale_pos = FALSE;
-            fp->attack_colls[i].motion_attack_id = 0;
-            fp->attack_colls[i].motion_count = 0;
-            fp->attack_colls[i].stat_count = 0;
-            fp->attack_colls[i].pos_curr.x = 0.0F;
-            fp->attack_colls[i].pos_curr.y = 0.0F;
-            fp->attack_colls[i].pos_curr.z = 0.0F;
-            fp->attack_colls[i].pos_prev.x = 0.0F;
-            fp->attack_colls[i].pos_prev.y = 0.0F;
-            fp->attack_colls[i].pos_prev.z = 0.0F;
-            for (j = 0; j < GMATTACKREC_NUM_MAX; j++)
-            {
-                fp->attack_colls[i].attack_records[j].victim_gobj = NULL;
-                fp->attack_colls[i].attack_records[j]
-                    .victim_flags.is_interact_hurt = FALSE;
-                fp->attack_colls[i].attack_records[j]
-                    .victim_flags.is_interact_shield = FALSE;
-                fp->attack_colls[i].attack_records[j]
-                    .victim_flags.timer_rehit = 0;
-                fp->attack_colls[i].attack_records[j]
-                    .victim_flags.group_id = 7;
-            }
         }
         fp->is_attack_active = FALSE;
     }

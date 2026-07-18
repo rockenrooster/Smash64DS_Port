@@ -17,19 +17,9 @@ durable unresolved gaps.
 - Fox remains the imported level-3 CPU in the public ROM. Automated visual
   captures alone select the documented Fox/countdown-off fast-iteration switch;
   final P1 still needs Tyler's CPU-on manual qualification.
-- The exact two-ROM build and Boundary checkpoint pass with a dated
+- The exact two-ROM build and Current checkpoint pass with a dated
   fast-iteration capture. Release still needs the final CPU-on complete-match
   capture under `artifacts/visibility` and manual user retest.
-- Playtesting reports a CPU stall during Down+A aerials. Human-P2 Fox reaches a
-  data abort at status 213 / motion 188 / tic 6 after its first collider refresh.
-  The root source mismatch is mapped but unpatched: BattleShip's
-  `ftParamClearAttackCollAll` preserves each collider payload and clears only its
-  state, while the port shim also erases `joint` and every other reusable field.
-  Fox's script clears, waits one tick, then refreshes IDs 0/1 without rebuilding
-  them. The ABI and motion-event decode match BattleShip. Repair the shared clear
-  shim and its stale diagnostic expectation; closure then needs Fox P2, Mario,
-  and canonical CPU-on Current gates.
-
 ## Gameplay And Source Boundaries
 
 - Imported `mpprocess` has static symbol/ABI closure. Moving-wall sweep,

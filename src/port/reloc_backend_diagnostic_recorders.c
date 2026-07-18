@@ -6556,7 +6556,7 @@ static sb32 ndsFighterDashRunProbeDamageCommonPhysics(GObj *fighter_gobj,
     ftCommonDamageCommonProcPhysics(fighter_gobj);
     clear_state_after = fp->attack_colls[0].attack_state;
     if ((clear_state_after == nGMAttackStateOff) &&
-        (fp->attack_colls[0].damage == 0))
+        (fp->attack_colls[0].damage == 7))
     {
         mask |= NDS_DAMAGE_COMMON_PHYSICS_CLEAR_ATTACK;
     }

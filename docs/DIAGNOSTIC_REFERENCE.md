@@ -1688,8 +1688,8 @@ Opening movie / Opening Portraits:
 - `DASH_RUN_DAMAGE_COMMON_PHYSICS`: companion marker for the bounded
   imported-original `ftCommonDamageCommonProcPhysics` proof. Current proof
   expects mask low bits `0x3f`, nonzero reduced ground/air-friction X velocities,
-  negative air-drift Y velocity, cleared attack state `0`, and proof-local
-  restore plus imported-original routing.
+  negative air-drift Y velocity, cleared attack state `0` with seeded damage `7`
+  preserved, and proof-local restore plus imported-original routing.
 - `DASH_RUN_DAMAGE_COMMON_CALLBACKS`: companion marker for bounded common
   damage callback routing: imported-original ground and air update
   stay/expiry, imported-original common interrupt ground/fall/hammer branches,
