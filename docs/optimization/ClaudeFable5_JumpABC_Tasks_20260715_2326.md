@@ -778,6 +778,31 @@ New-Smash64DSSnapshot.ps1 -Mode Lean last.
 
 ---
 
+## TASK 16 — Extended Task 9 Phase 2 (census-scoped)
+
+```text
+/task Extend TASK 9 Phase 2 only across the census leaders: fmul, fadd,
+fsub, the fcmp family, and i2f. Every replacement must match the selected
+GCC libgcc result bit-for-bit, live in ARM ITCM, retain a renamed literal
+stock golden for proof, and pass the host/ARM9/SUPREME ladder. Keep fdiv,
+f2iz, f2uiz, f2d, d2f, dmul, and ddiv in relocated stock libgcc. Do not
+touch the renderer TU or decomp source, and keep each shipping selector
+default OFF until integration chooses otherwise.
+```
+
+Closure (2026-07-18): compare, i2f, and add/sub are qualified and coexist in
+one exact link. The fmul exact-zero specialization was decisively reverted
+after correctness passed but both its representative ARM9 microbenchmark and
+natural source-update timing regressed. The combined 0/0/0 versus 1/1/1
+SUPREME gate has exactly 3,892 matching six-field rows per side with zero
+overflow, and the synchronized natural A/B keeps the three accepted
+candidates. `PERF_LEDGER.md` owns the measurements and artifact identities;
+`verify-task16-combined-state-hash-ab.ps1` owns the repeatable combined gate.
+The global selectors remain zero so the exact A/B controls stay available;
+the qualified terminal integration is to set all three intrinsically for the
+published battle target and run the inherited canonical Boundary/publication
+gate. Until that integration gate lands, TASK 16 is qualified but not shipped.
+
 ## Sequencing and interactions
 
 - TASK 1 before TASK 2, hard: the depth fix changes class-3 semantics and the

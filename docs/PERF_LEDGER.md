@@ -165,6 +165,111 @@ DECISION: COMPLETE / ALREADY CANONICAL.
   gates.
 ```
 
+## 2026-07-18 - Task 16 extended bit-exact soft-float closure
+
+```text
+IDEA ID: TASK16-EXTENDED-BIT-EXACT-SOFT-FLOAT-20260718
+BOUND / RETAINED SET:
+  TASK 16 extends the Task-9 Phase-2 exact-ARM method without touching the
+  renderer TU, decomp source, gameplay semantics, or the stock low-frequency
+  helpers. Three independently proved candidates remain integrated behind
+  default-OFF selectors: compare 236 bytes / SHA-256
+  F822244564E6EFF11F3812B241A2E71ED7E013D34905687C4D9E2E8242C1185D,
+  i2f 92 bytes / EE6FE8233D98D26A602988362BF014D08515AA477EF493DE55F31B26ED8D0573,
+  and add/sub 404 bytes /
+  9A74410744210A544CC57EA1323C3C9A896D430E2295718870DA4B827E4139FE.
+  i2f covers all 2^32 host inputs plus 393,256 literal ARM9 vectors; add/sub
+  covers 233,554,432 host and 200,005,832 literal ARM9 operations. Compare,
+  i2f, and add/sub all report zero mismatches against their selected GCC
+  15.2.0 golden objects.
+
+FMUL AUDIT / DECISIVE REVERT:
+  The selected Thumb-multilib archive is
+  C755ADC33ECA252260360327904591B8462CCE5C25E48B0E881AC0B295953F48.
+  Its _arm_muldivsf3.o text is 760 bytes / SHA-256
+  C313BBE04B3484CDBE9E6B14BCB14B0828F308B076616D080AA89204FDFD940A:
+  stock ARM-ITCM fmul is 408 bytes, fdiv is 352 bytes, and fdiv branches into
+  four fmul tails, so fmul cannot independently reclaim its stock body.
+  The natural census recorded 1,467,051 calls: 79.07% both-normal, 21.50%
+  either power-of-two, 20.93% either zero, and 6.64% either +1. Stock already
+  specializes zero and power-of-two inputs.
+
+  The only justified candidate was a 48-byte, 12-instruction, stackless,
+  call-free finite-zero wrapper (machine SHA-256
+  AC1351F61DC2F02B91F738A2E3D26B7598A9EBA88D9E0D9E55B8105D499F0B8B)
+  that tail-branches every nonzero or exponent-255 input to a renamed literal
+  stock golden. It passed 2,304 directed plus 100,000,000 deterministic host
+  model pairs, then 1,050,880 candidate-versus-literal-stock ARM9 pairs with
+  zero mismatches. ARM9 lab ROM/ELF SHA-256 values are
+  9565D561B8AEF7A7B1E5B6DF91B0990445E64FFA43FA5DC498DBE7890B9C7E22 /
+  0B19EDFF4671DFDFAAD9F151A64FC9E9D1DD3AE98BCA6EA083E2078893796F89.
+
+  Correctness did not rescue the cost. A 65,536-call representative ARM9
+  distribution measured candidate/stock 1,459,328/1,385,344 ticks (+5.34%).
+  Synchronized frames 438..445 then measured:
+    source update  215,104/216,512 -> 218,624/219,968 (+3,520/+3,456; +1.64%)
+    total update   217,152/499,776 -> 220,704/503,232 (+3,552/+3,456; +1.64%)
+  Fast-raw and M3 semantic rows remained exact. Fmul state JSON SHA-256 values
+  DE2387B5E261746E0FBBE0F1E0E90E88C3887CBFB6E80C5031866A3392354764 /
+  F07CA0C224E6596ABE3C6AD7A65ADB64B37EADD0BD63F42B488FF3799FF4F040
+  cover 3,892/3,892 identical rows with zero overflow. Natural benchmark JSON
+  hashes are 80B8BD1F2667736C67A785F96541AF3627213AD8DE409C960ECCDE291832E0A5 /
+  33D053E0098936571015E03C5B3531FF36C96DE98788343221C6935D16E7DC85.
+  The candidate, Makefile filter, proof-only scripts, and branch-local linker
+  edit were removed. After that clean revert, the lane fast-forwarded to
+  ebd0f8a238; that accepted integration already contains the same known
+  `.main : ALIGN_WITH_INPUT` linker correction, so this fmul closure neither
+  adds nor attributes that correction to fmul.
+
+COMBINED SUPREME / PLACEMENT:
+  A new fail-closed verifier builds mode 163 at Task16 compare/i2f/addsub
+  0/0/0 and 1/1/1, re-runs the exact libgcc/object/codegen/ITCM checker, and
+  requires stock 408-byte fmul in both ELFs. Both one-minute CPU-on lifecycles
+  produced exactly 3,892 six-field rows, zero overflow, and no divergence.
+  Control/candidate state ROM SHA-256 values are
+  86FB8764E500D79C9FE6DA48E07735CC9D474A38EDA5DA98BB5FC1E09A67EB33 /
+  EA37B0B9BD24C3890FEACA333B457252232D512CFDD7C95689652660EBF00D4D;
+  ELF hashes are
+  0384BF9FB60D13076D8165152692EC6964BC33CB3F069FF6C1B52739A91189B5 /
+  C635451B6EE894AD5E10DC89261A4BDE78484B7A5CA9E35BC9CC6DDCA24AD1D7;
+  JSON hashes are
+  63BA3649F81C24726E6A72ACFA6E535933C94368BADD5B8F1A454AEA60D52CBF /
+  2116151492EE972920D4AFE114A445A31AEB1A30F8B5E98C9177CD4A921C3BE1.
+  Profile-1 ITCM moves 28,088 -> 28,820 / 32,768 bytes: exactly 732 raw and
+  final candidate bytes, zero fill, 3,948 bytes free, and no renderer eviction.
+
+COMBINED SYNCHRONIZED A/B (frames 438..445, live Fox):
+  owner             control P50/P95       all-three P50/P95      delta
+  source update      215,104/216,512        200,000/201,088   -15,104/-15,424
+  total update       217,152/499,776        202,080/484,608   -15,072/-15,168
+  stage              806,016/806,080        805,344/805,440      -672/   -640
+  Mario              302,112/313,728        299,776/311,552    -2,336/ -2,176
+  Fox                374,240/374,528        371,648/371,968    -2,592/ -2,560
+  active           1,767,904/1,859,328    1,762,016/1,853,440 -5,888/ -5,888
+  present          1,763,040/1,854,464    1,757,152/1,848,512 -5,888/ -5,952
+  Source-update median falls 7.02%. Fast-raw remains 121/828 and the exact
+  202/320/306 stage/Mario/Fox partition; all M3 semantic rows match. Control /
+  candidate ROM hashes are
+  66BDD5FF9E58C55B9C9B157F111D84DA14D9EF03452387E9E388918F9B95F171 /
+  E91B59CD010C95824299EAFB899D9DD5F09F461332388F6199ABBF8C16694CE9;
+  ELF hashes are
+  D653BD4D7863A3E3A2894C2902C0BAC7D797A79A6CC9D7A8CF16D9F98738585F /
+  FE6FCD789B1220FEF609C34AC7A0C14D157BDAC9D97ADC58D49256F95ECC8146;
+  benchmark JSON hashes are
+  34B2DDFCC3954AFEB3CAB6941782282B0DD15552275B38DED7BBCABA99803B59 /
+  763805DFDF8955A3E1A199305D83BA32711F3B0AE63FA050358EF0BA442C3636.
+
+EVIDENCE:
+  scripts/verify-task16-combined-state-hash-ab.ps1
+  artifacts/performance/2026-07-18_task16-combined-state-{control,candidate}.json
+  artifacts/performance/2026-07-18_task16-combined-perf-{control,candidate}.json
+  artifacts/performance/2026-07-18_task16-fmul-state-{control,candidate}.json
+  artifacts/performance/2026-07-18_task16-fmul-bench-{control,candidate}.json
+  builds/build-task16-fmul-arm9-lab/
+DECISION: KEEP COMPARE/I2F/ADDSUB; ENABLE THEM IN THE PUBLISHED TARGET AFTER
+THE INTEGRATION BOUNDARY; KEEP GLOBAL LAB DEFAULTS OFF; REVERT FMUL.
+```
+
 ## 2026-07-17 - Task 11 screen-space census and stage economy
 
 ```text
