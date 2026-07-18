@@ -45,8 +45,9 @@ param(
     [string]$Task9StateHashExportPath = '',
     [ValidateRange(0,1024)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
-    [ValidateSet('None','KO','Rebirth')]
+    [ValidateSet('None','KO','Rebirth','Late','TimeUp')]
     [string]$RendererBenchmarkStartEvent = 'None',
+    [switch]$PhaseMatrixMode,
     [ValidateRange(5,3600)][int]$RendererBenchmarkTimeoutSeconds = 30,
     [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
@@ -116,6 +117,10 @@ if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
 if ($OneMinuteMatchProof -and -not $RealtimePresentation) {
     throw 'OneMinuteMatchProof requires realtime presentation so wall-clock pacing is hardware-vblank anchored.'
 }
+if ($OneMinuteMatchProof -and
+    (-not $ImportBattleShipAudioAssets -or -not $ImportBattleShipAudioBGM)) {
+    throw 'OneMinuteMatchProof requires audio asset and BGM marker capture.'
+}
 if (($Task9StateHashMode -eq 1) -and -not $MatchLifecycleProof) {
     throw 'Task9StateHashMode requires the deterministic match-lifecycle proof.'
 }
@@ -132,6 +137,18 @@ if (($RendererBenchmarkStartEvent -ne 'None') -and
 if (($RendererBenchmarkStartEvent -ne 'None') -and
     -not $RendererBenchmarkOnly) {
     throw 'RendererBenchmarkStartEvent requires RendererBenchmarkOnly.'
+}
+if ($PhaseMatrixMode -and -not (
+        $BattlePlayable -and $RealtimePresentation -and
+        ($ExpectedMode -eq 163) -and ($RendererProfileLevel -eq 1) -and
+        ($RendererFastRunMode -eq 9) -and ($FoxCpuMode -eq 1) -and
+        ($WallpaperIncrementalMode -eq 1) -and
+        ($RendererBenchmarkSamples -eq 8) -and
+        ((($RendererBenchmarkStartEvent -eq 'None') -and
+          ($RendererBenchmarkStartFrame -in @(438, 600, 1398))) -or
+         (($RendererBenchmarkStartEvent -ne 'None') -and
+          ($RendererBenchmarkStartFrame -eq 0))))) {
+    throw 'PhaseMatrixMode requires mode 163/profile 1/fast 9/live Fox/production wallpaper and one exact eight-frame phase gate.'
 }
 if ($RendererM2DetailedLedger -and ($RendererProfileLevel -ne 1)) {
     throw 'RendererM2DetailedLedger requires RendererProfileLevel 1.'
@@ -1061,6 +1078,28 @@ try {
                     'if $renderer_benchmark_event == 0'
                 $benchmarkStartGateCommands += 'continue'
                 $benchmarkStartGateCommands += 'end'
+            }
+            elseif ($RendererBenchmarkStartEvent -eq 'Late') {
+                # Current one-minute Boundary cannot reach presentation frame
+                # 3300. Gate the intended late phase on the source timer.
+                $benchmarkWarmInitial = 1
+                $benchmarkStartGateCommands +=
+                    'if gSCManagerBattleState->time_limit != 1 || gSCManagerBattleState->time_passed < 3300'
+                $benchmarkStartGateCommands += 'continue'
+                $benchmarkStartGateCommands += 'end'
+                $benchmarkStartGateCommands +=
+                    'set $renderer_benchmark_event = 1'
+            }
+            elseif ($RendererBenchmarkStartEvent -eq 'TimeUp') {
+                # Eight final battle presents at the 1:00 boundary. Results is
+                # proven separately because it does not publish battle owners.
+                $benchmarkWarmInitial = 1
+                $benchmarkStartGateCommands +=
+                    'if gSCManagerBattleState->time_limit != 1 || gSCManagerBattleState->time_remain > 16'
+                $benchmarkStartGateCommands += 'continue'
+                $benchmarkStartGateCommands += 'end'
+                $benchmarkStartGateCommands +=
+                    'set $renderer_benchmark_event = 1'
             }
             if ($RendererScreenSpaceCensusMode -eq 1) {
                 $benchmarkCensusFinishCommands = @(
@@ -2258,13 +2297,14 @@ try {
                             }
                         } elseif ($naturalScreenSpaceCensusWindow) {
                             $sampleTriangles -ge 202
-                        } elseif ($m3StageOnlyBenchmarkWindow -or
+                        } elseif ($PhaseMatrixMode -or
+                            $m3StageOnlyBenchmarkWindow -or
                             ($RendererBenchmarkStartEvent -ne 'None')) {
                             $sampleTriangles -ge 202
                         } else {
                             $sampleTriangles -eq 828
                         }
-                        Assert-Condition ($sampleProfile -eq $RendererProfileLevel -and $sampleTriangleContract -and (($RendererProfileLevel -ge 2 -and $sampleOracle -eq 2484) -or ($RendererProfileLevel -lt 2 -and $sampleOracle -eq 0))) 'Renderer benchmark sampled the wrong profile or violated the selected stage-only/transient or exact 828-triangle/2,484-oracle contract.' $gdbStdout
+                        Assert-Condition ($sampleProfile -eq $RendererProfileLevel -and $sampleTriangleContract -and (($RendererProfileLevel -ge 2 -and $sampleOracle -eq 2484) -or ($RendererProfileLevel -lt 2 -and $sampleOracle -eq 0))) 'Renderer benchmark sampled the wrong profile or violated the selected live-CPU/transient or exact 828-triangle/2,484-oracle contract.' $gdbStdout
                         Assert-Condition (Test-RendererUploadPair $sampleUploadCount $sampleUploadBytes) "Renderer benchmark sampled an invalid texture upload pair $sampleUploadCount/$sampleUploadBytes at frame $sampleFrame." $gdbStdout
                         if ($sampleIndex -gt 0) {
                             $previousFrame = [int64]$rendererBenchmark[$sampleIndex - 1].Groups[2].Value
@@ -2544,7 +2584,8 @@ try {
                                         $fastRun[8] -eq 0 -and
                                         $fastRun[9] -eq 0
                                     ) "M3 natural census window lost the exact stage/whole-fighter owner packets, bounded non-fast fighter/effect geometry, or zero-fallback accounting at frame $frame (actual=$($fastRun -join ',') rendered=$($render[11]))." $gdbStdout
-                                } elseif ($RendererBenchmarkStartEvent -ne 'None') {
+                                } elseif ($RendererBenchmarkStartEvent -in
+                                    @('KO', 'Rebirth')) {
                                     $eventFighterTrianglesValid =
                                         ($fastRun[5] -in @(0, 320)) -and
                                         ($fastRun[6] -in @(0, 306)) -and
@@ -2561,6 +2602,22 @@ try {
                                     ) "M3 natural-event window lost the exact stage/fighter owners, 16-triangle death/rebirth effect, or zero-fallback accounting at frame $frame (actual=$($fastRun -join ',') rendered=$($render[11]))." $gdbStdout
                                 } elseif ($m3StageOnlyBenchmarkWindow) {
                                     Assert-Condition ($fastRun[2] -ge 54 -and $fastRun[3] -ge 202 -and $fastRun[4] -eq 202 -and $fastRun[7] -eq 0 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "M3 countdown-stage window did not preserve the exact 202-triangle stage owner, positive transient fast-owner census, and zero fallbacks at frame $frame (actual=$($fastRun -join ',') rendered=$($render[11]))." $gdbStdout
+                                } elseif ($PhaseMatrixMode) {
+                                    Assert-Condition (
+                                        $fastRun[2] -gt 0 -and
+                                        $fastRun[3] -eq
+                                            ($fastRun[4] + $fastRun[5] +
+                                             $fastRun[6]) -and
+                                        $fastRun[4] -eq 202 -and
+                                        ($fastRun[5] -eq 0 -or
+                                         $fastRun[5] -eq 320) -and
+                                        ($fastRun[6] -eq 0 -or
+                                         $fastRun[6] -eq 306) -and
+                                        $render[11] -ge $fastRun[3] -and
+                                        $fastRun[7] -eq 0 -and
+                                        $fastRun[8] -eq 0 -and
+                                        $fastRun[9] -eq 0
+                                    ) "M3 live-CPU window lost exact stage/fighter owner accounting or zero-fallback behavior at frame $frame (actual=$($fastRun -join ',') rendered=$($render[11]))." $gdbStdout
                                 } else {
                                     Assert-Condition ($fastRun[2] -eq 121 -and $fastRun[3] -eq 828 -and $fastRun[4] -eq 202 -and $fastRun[5] -eq 320 -and $fastRun[6] -eq 306 -and $fastRun[7] -eq 0 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "M3 complete-stage owner did not preserve exact 121-run/828-triangle accounting, 202/320/306 owner partition, and zero fallbacks at frame $frame (actual=$($fastRun -join ','))." $gdbStdout
                                 }
@@ -3135,6 +3192,7 @@ try {
                             $IFCommonHybridOamMode
                         foxCpuMode = $FoxCpuMode
                         wallpaperIncrementalMode = $WallpaperIncrementalMode
+                        phaseMatrixMode = [bool]$PhaseMatrixMode
                         lowerTextHudMode = $LowerTextHudMode
                         effectiveCFlags = [ordered]@{
                             common = $benchmarkMakeIdentity.CommonCFlags
@@ -3209,6 +3267,7 @@ try {
                                 [bool]$RequireZeroPostGoTextureFence
                             foxCpuMode = $FoxCpuMode
                             wallpaperIncrementalMode = $WallpaperIncrementalMode
+                            phaseMatrixMode = [bool]$PhaseMatrixMode
                             lowerTextHudMode = $LowerTextHudMode
                             rendererScreenSpaceCensusMode =
                                 $RendererScreenSpaceCensusMode

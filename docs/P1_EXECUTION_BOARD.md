@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-18 10:59 Central
+Updated: 2026-07-18 11:48 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -110,21 +110,52 @@ phase profiler; the low-observer profile-1 ROM intentionally leaves them off.
 
 ## Phase Evidence
 
-Do not fill this table with figures from a different ROM or phase. Pending is
-more accurate than recycling cross-build samples.
+Every timed row below comes from one current profile-1 ROM with live Fox,
+production incremental wallpaper, and eight samples. Values are P50/P95 ARM9
+ticks; `UPD` is the source-update owner, and residuals are draw/present/loop.
+Natural event gates replace the old cross-build `708/730/3300` presentation
+coordinates. The prior mixed-ROM table is archived in `PERF_LEDGER.md`.
 
-| Match phase | Artifact class | ROM SHA-256 | Synchronized window | N | Active median / P95 | State |
-|---|---|---|---|---:|---:|---|
-| Countdown / GO | focused profile-1 | `2868DEC6...` | exact completed frames 438–445 | 8 | 1,559,616 / 1,560,448 | Task 6 Cut D sample; stage 488,992/489,344 |
-| Early combat | focused profile-1 | `2868DEC6...` | exact completed frames 600–607 | 8 | 1,250,432 / 1,251,264 | Task 6 Cut D sample; draw+flush P50 1,245,664 |
-| Mid combat / Whispy change | focused profile-1 | `426B821A...` | exact completed frames 1398–1405 | 8 | 1,616,000 / 1,617,920 | Same-ROM M4 lifecycle sample; worst measured material phase |
-| Late combat | focused profile-1 | `426B821A...` | exact completed frames 3300–3307 | 8 | 1,240,832 / 1,414,912 | Same-ROM late sample; no M4 fallback |
-| KO / rebirth | focused profile-1 | `32C957AD...` | natural KO frames 708–715; rebirth cross-check 730–737 | 8 + 8 | 1,261,344 / 1,524,864; rebirth 1,110,528 / 1,112,256 | Exact source-event gates; additive 16-triangle effect, stage/M4, and zero-fence contracts pass |
-| Time Up / Results | isolated published-equivalent profile-0 | `9C35F4B3...` | natural one-minute expiry→Results | 1 lifecycle | n/a / n/a | Pass: 4,084/2,042 exact 2:1, Results 58.2 updates/s, one teardown, zero M4 fence work |
+Same artifact: profile-1 ROM
+`FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144`,
+ELF `A1811E43CFF97DC57EC1DB19DCE89CE4E0E36C50900E83857A371B0340F2CF68`.
+
+| Match phase | ROM SHA-256 | Profile frames / source ticks | N | UPD | Draw | Stage | Mario | Fox | Wallpaper | Active | Loop | Residual D/P/L | State |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| Countdown / GO | `FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144` | 438–445 / 484–498 | 8 | 199,776/200,896 | 1,148,416/1,216,576 | 465,984/466,112 | 169,440/171,200 | 208,960/209,344 | 286,112/351,296 | 1,153,248/1,221,376 | 1,680,448/2,240,640 | 19,616/19,968; 1,408/1,536; 1,600/1,728 | Exact natural countdown window |
+| Early combat | `FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144` | 600–607 / 808–822 | 8 | 144,480/145,920 | 1,063,232/1,085,824 | 466,112/466,240 | 9,920/9,984 | 196,800/196,928 | 340,544/362,880 | 1,068,032/1,090,624 | 1,680,448/1,680,512 | 50,048/50,304; 1,376/1,536; 1,600/1,728 | Mario naturally off-screen; fast owners remain exact |
+| Mid combat / Whispy | `FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144` | 1398–1405 / 2404–2418 | 8 | 214,944/814,080 | 1,183,328/1,221,312 | 466,016/466,048 | 169,504/171,264 | 209,184/209,728 | 320,416/358,592 | 1,188,160/1,226,112 | 1,680,448/2,240,640 | 19,520/19,776; 1,376/1,536; 1,536/1,664 | One live texture conversion/decode/alloc/create/upload/fallback reopens the lifecycle fence |
+| Natural KO | `FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144` | 566–573 / 740–754 | 8 | 194,336/222,912 | 799,872/1,053,248 | 470,016/470,144 | 7,584/7,616 | 197,568/197,632 | 73,888/327,360 | 804,672/1,058,048 | 1,120,256/1,680,512 | 50,720/50,880; 1,408/1,408; 1,568/1,664 | Exact source-event gate |
+| Natural rebirth | `FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144` | 589–596 / 786–800 | 8 | 149,120/824,640 | 1,042,880/1,046,592 | 465,504/466,112 | 9,920/9,984 | 197,504/197,632 | 319,904/323,968 | 1,048,864/1,303,360 | 1,680,448/2,240,640 | 49,920/50,048; 1,408/1,472; 1,600/1,728 | Exact source-event gate; update P95 spike retained |
+| Late combat | `FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144` | 1846–1853 / 3300–3314 | 8 | 197,696/209,728 | 864,864/867,328 | 466,048/466,176 | 169,568/171,328 | 208,384/208,768 | 2,400/2,432 | 869,696/872,192 | 1,120,256/1,680,448 | 19,520/20,736; 1,408/1,536; 1,600/1,600 | Source-tick gate; no stale presentation-frame assumption |
+| Time-Up boundary | `FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144` | 1988–1995 / 3584–3598 | 8 | 197,568/617,920 | 865,728/896,064 | 465,984/466,112 | 169,504/171,200 | 208,096/210,112 | 2,400/2,432 | 870,528/900,864 | 1,120,256/1,680,448 | 19,584/49,600; 1,408/1,472; 1,600/1,600 | Final battle owner window; Results exposes no equivalent owner timers |
+| Expiry → Results | `FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144` | full one-minute lifecycle | 1 | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | Transition/teardown and 4,084/2,042 pacing pass; reserve gate fails at 117,520 net bytes versus 131,072 |
 
 Profile-1 hard-checkpoint windows are O2-equivalent feasibility evidence, not
 profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 `PERF_LEDGER.md`.
+
+## Remaining Queue After Task 25
+
+1. **Task 20 Phase A, then conditional Phase C.** The same-ROM lifecycle is
+   13,552 bytes below the net arena-reserve gate, while source-update P95 spikes
+   to 814,080 at Whispy, 824,640 at rebirth, and 617,920 at Time Up. Audit both
+   DTCM stack directions and every pointer escape first. Phase B records
+   `NO CANDIDATE / REWORK`; a safe external gameplay stack could release the
+   current 16 KiB heap allocation and repair the reserve, but device UPD alone
+   referees its performance.
+2. **Task 21, serialized before Task 23.** Run the shade census and kill 21A
+   below 20%; attempt the 21B hot/cold event split only against the current
+   approximately 378K visible-fighter pool. 21C is already satisfied by the
+   generated 67-run/49-epoch compact direct tables and is killed before coding.
+3. **Task 23.** Stage is the largest stable draw owner at approximately 466K in
+   every phase. Census only camera-independent per-segment state and keep lanes
+   at or above 20%; matrices and near-plane work remain live.
+4. **Task 22.** Wallpaper reaches 320–363K in moving-camera windows but falls to
+   2.4K late. Exact full-key map retention already exists, so begin with one
+   changed-run coalescing census/threshold experiment; row hashes remain killed.
+5. **Task 24** remains lane-free evidence-preserving cleanup after permanent
+   worktree evidence is migrated and hash-verified.
 
 ## Lane Ownership
 
@@ -172,13 +203,14 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Task 16 extended bit-exact soft-float | PASS / compare, i2f, add/sub shipped; fmul REVERT | Gameplay + Toolchain | The three exact candidates coexist in one link and move source-update 215,104/216,512 → 200,000/201,088 P50/P95 (-15,104/-15,424; -7.02% median). Combined ITCM is 28,820/32,768 with 3,948 bytes free and zero fill; all 3,892/3,892 six-field state rows match with zero overflow. The exact-zero fmul wrapper passed 100M host and 1,050,880 literal ARM9 pairs but regressed its representative microbench 5.34% and natural source-update 1.64%, so all fmul code/tools/link changes were removed. Canonical Boundary passed with published Task16 1/1/1 and ROM `DADB7C96...` | Keep global selectors default OFF for exact lab controls and the published/freeze-equivalent overrides at 1/1/1. Keep stock 408-byte `__aeabi_fmul`; the authoritative combined verifier always rebuilds both sides and binds build, ROM, ELF, and all six row fields |
 | Task 17 update hot-text round 2 | KEEP CONFIRMED / update-only on ARM | Gameplay + Toolchain | The original Thumb-base device pair moves UPD 386,240→342,080 (-44,160/-11.4%). The decisive ARM-base pair narrows that claim: UPD 366,016→363,456 (-2,560/-0.70%) and DRW -2,688 cross LOOP 2,800,832→2,240,448 (five→four VBlanks) and FPS 13.9→14.3, while ACT rises 15,872. Exact retained surface remains 11 functions / 5,016 bytes under an 8 KiB ASSERT; Task 14 and Task 16 1/1/1 remain intact | Keep the threshold win and both device photos. Do not claim -44K on ARM or infer cache placement from melonDS; continue phase-wide performance qualification normally |
 | Task 18 KO wallpaper spike | CLOSED / bad baseline | Renderer + Platform | Production incremental mode measures KO wallpaper at 302,880/357,824 versus steady 292,224/360,000: +10,656/-2,176, not the cited 547,584/547,648 full-raster control. No runtime change is justified | Keep incremental mode and the affine lab retired. The Task 18 ledger row is the durable correction |
-| M4 zero gameplay conversion/preparation | Latest startup + lifecycle pass | Renderer | Latest canonical frame 212 retains 22 textures / 131,072 bytes, records 646 cache hits, zero hot conversion/upload, and all fence counts zero. The Task 9 one-minute proof reaches Results with one normal teardown and zero post-GO fence work | Keep the 57,344-byte total overlay texture layout |
+| Task 25 same-artifact phase matrix | COMPLETE / two blockers exposed | Integration | One profile-1 ROM `FB0704BA...` supplies all seven eight-frame natural windows plus the one-minute Results transition. The old `708/730/3300` presentation coordinates were cross-build artifacts. The exact ROM exposes a 117,520-byte net lifecycle reserve and one Whispy live-texture fallback | Use this matrix for all remaining estimates. Do not call the lifecycle green until reserve and the M4 fence are repaired |
+| M4 zero gameplay conversion/preparation | Startup pass / Whispy lifecycle REOPENED | Renderer | Latest canonical startup frame 212 retains 22 textures / 131,072 bytes, records 646 cache hits, and zero hot conversion/upload. The Task 25 same-ROM Whispy window instead records one conversion, decode, allocation, GL create, upload, and fallback from a live weapon texture | Keep the 57,344-byte overlay layout, but trace and pre-reside the exact live weapon asset before restoring the zero-fence lifecycle claim |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / full runtime gate pass | Renderer + QA | The source-backed point sample changes 49 atlas pixels only inside the 12x9 `ShadowGo`; all five GO frames retain its 70-pixel count plus 10/10/10 draws/queued/emitted, 57,344 texture bytes, 608 palette bytes, and zero hot conversion/upload. The large-GO mismatch was a stale crop lock after the source-light repair: only 125/26,400 pixels changed, all inside Mario's 22x14 area, while the GO RGB555 payload remained `05330f47...`. The rebuilt full verifier passes with crop `d968b0cc...`, GO `3 OBJ + 10 quads`, and 31,168 OBJ bytes | Keep both accepted crop locks and the source-derived DS assets; no GO source change was warranted |
 | Dream Land BGM | Pass | Audio | Tyler reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |
 | Required FGM, attack/hit sounds, and Mario/Fox voices | Six common channel starts restored / acoustic and broader audit open | Audio + Gameplay | The source table `dFTMainHitCollisionFGMs` exposed an intentional DS exclusion: natural kick ID 32 produced unsupported delta 1 and no channel. The 121,720-byte pack now maps 18 exact IDs plus punch/kick IDs 40/38/37/34/32/31 from their two exact primary BattleShip samples and source frequency/volume envelopes; omitted composite forks/custom FX remain explicit fidelity debt. The repeated natural ID-32 route records pan 80, supported/unsupported/acquire `1/0/1`, a live channel mask, zero playback faults, and 187,152-byte reserve. Automated channel ACK is not an ear check; five special/projectile contacts remain fail-closed | Keep the six common mappings and natural channel/effect gate. Tyler's exact-ROM ear retest remains required. Next resolve the naturally observed unsupported Escape 11, Grind4 85, MarioFoot 110, MarioDash 121, swing 41/42, GuardOn 13, Fox special 186/189, MarioSmash3 431, and FoxDamage 375 cues; requalify the one-minute reserve before adding more resident audio |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
-| Stable reserve / no corruption | Focused pass / one-minute post-pack recheck pending | QA | The natural attack/hit route retains 187,152 bytes after loading the expanded 121,720-byte FGM pack, 56,080 above the 128 KiB floor. The prior full expiry→Results reserve belongs to the smaller 107,536-byte pack and cannot close the new candidate | Run the CPU-on one-minute lifecycle/reserve gate before further pack growth or release; do not infer the full-match floor from the focused route |
+| Stable reserve / no corruption | RED / current one-minute proof is 13,552 bytes short | QA | The Task 25 same-ROM CPU-on lifecycle reaches Results and reports 183,056 arena headroom with 65,536 resident audio bytes: 117,520 net versus the 131,072-byte floor. Transition, teardown, audio markers, and exact 4,084/2,042 pacing pass; reserve alone fails | Task 20 Phase A is now first. Do not add resident assets or relax the floor; require a measured ownership fix and rerun the same lifecycle |
 | Focused/checkpoint verification | DevFast + Boundary PASS / ARM-base device confirmation PASS | QA | Published battle candidate `DADB7C96...` passes the 10:17 Boundary checkpoint in 58.8 seconds with normal runtime, mode-163 CPU setup/proc/target 1/33/33, GBI fixtures, two-ROM publication, Task16 1/1/1 at 28,820-byte ITCM, zero renderer rejects, and dated visual analysis. DevFast also passes in 206.4 seconds. The same-HUD retail pair then confirms Task 17's five→four-VBlank threshold win | Keep this development checkpoint. Resume the full one-minute post-pack reserve, exact-ROM ear check, and remaining attack/hit audio-visual cue audit |
 | Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Latest capture is `2026-07-18_canonical_fast_101715-1383371-p57268.png`; its paired frame has 747/49,152 meaningful changes, 100% overlap, and all named-region/detail gates pass. Task 6 C/D, Task 8 G2, reserve repair, Task 9/16 state identity, source-light parity, both emitter splits, raw-corner cut, Down+A, and the common-contact checkpoint remain retained | Manually retest exact ROM `DADB7C96...`; automated common-contact A/V closure is focused, not global |
 

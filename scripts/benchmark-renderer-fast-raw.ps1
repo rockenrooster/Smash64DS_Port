@@ -26,8 +26,9 @@ param(
     [int]$DelaySeconds = 5,
     [ValidateRange(8,1024)][int]$RendererBenchmarkSamples = 8,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
-    [ValidateSet('None','KO','Rebirth')]
+    [ValidateSet('None','KO','Rebirth','Late','TimeUp')]
     [string]$RendererBenchmarkStartEvent = 'None',
+    [switch]$PhaseMatrixMode,
     [ValidateRange(5,3600)][int]$RendererBenchmarkTimeoutSeconds = 30,
     [string]$RendererBenchmarkExportPath = '',
     [string]$RendererBenchmarkScreenshot = ''
@@ -139,6 +140,7 @@ $build = if ($RendererScreenSpaceCensusMode -eq 1) {
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
     -RendererBenchmarkStartEvent $RendererBenchmarkStartEvent `
+    -PhaseMatrixMode:$PhaseMatrixMode `
     -RendererBenchmarkTimeoutSeconds $RendererBenchmarkTimeoutSeconds `
     -RendererBenchmarkOnly:($FastRunMode -eq 9) `
     -RendererBenchmarkScreenshot $RendererBenchmarkScreenshot `
@@ -156,7 +158,7 @@ $build = if ($RendererScreenSpaceCensusMode -eq 1) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
+    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode phase matrix $([int]$PhaseMatrixMode.IsPresent) lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

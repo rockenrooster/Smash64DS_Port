@@ -43,6 +43,102 @@ Input/state:              canonical idle realtime BattleShip scene
 Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png
 ```
 
+## 2026-07-18 - Task 25 same-artifact all-phase matrix
+
+```text
+IDEA ID: TASK25-SAME-ARTIFACT-PHASE-MATRIX-20260718
+SCOPE / IDENTITY:
+  Measurement and verifier/tooling only; no runtime behavior changed. One
+  profile-1 mode-163 ROM supplies every timed phase: fast mode 9, static AOT 1,
+  Task 16 compare/i2f/addsub 1/1/1, update-hot retained, renderer ARM, live Fox,
+  production incremental wallpaper, eight samples, melonDS 1.1 interpreter.
+  ROM / ELF SHA-256:
+    FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144
+    A1811E43CFF97DC57EC1DB19DCE89CE4E0E36C50900E83857A371B0340F2CF68
+  ROM bytes 14,676,992; ITCM 28,820/32,768, 3,948 free.
+
+ARCHIVED PRE-TASK-25 MIXED-ROM BOARD:
+  Countdown 2868DEC6..., frames 438..445, active 1,559,616/1,560,448.
+  Early     2868DEC6..., frames 600..607, active 1,250,432/1,251,264.
+  Whispy    426B821A..., frames 1398..1405, active 1,616,000/1,617,920.
+  Late      426B821A..., frames 3300..3307, active 1,240,832/1,414,912.
+  KO        32C957AD..., frames 708..715, active 1,261,344/1,524,864.
+  Rebirth   32C957AD..., frames 730..737, active 1,110,528/1,112,256.
+  Results   9C35F4B3..., one profile-0 lifecycle, owner timers unavailable.
+  These rows remain historical evidence only. Cross-build presentation-frame
+  coordinates 708/730/3300 are not valid gates for the new ROM.
+
+SAME-ROM MATRIX, P50/P95 ARM9 TICKS:
+  Phase       frame/source       source UPD        draw              stage
+  Countdown   438..445/484..498  199,776/200,896   1,148,416/1,216,576 465,984/466,112
+  Early       600..607/808..822  144,480/145,920   1,063,232/1,085,824 466,112/466,240
+  Whispy    1398..1405/2404..2418 214,944/814,080  1,183,328/1,221,312 466,016/466,048
+  KO          566..573/740..754  194,336/222,912     799,872/1,053,248 470,016/470,144
+  Rebirth     589..596/786..800  149,120/824,640   1,042,880/1,046,592 465,504/466,112
+  Late      1846..1853/3300..3314 197,696/209,728    864,864/867,328   466,048/466,176
+  Time Up   1988..1995/3584..3598 197,568/617,920    865,728/896,064   465,984/466,112
+
+  Phase       Mario              Fox                wallpaper         active             loop
+  Countdown   169,440/171,200    208,960/209,344    286,112/351,296  1,153,248/1,221,376 1,680,448/2,240,640
+  Early         9,920/9,984      196,800/196,928    340,544/362,880  1,068,032/1,090,624 1,680,448/1,680,512
+  Whispy      169,504/171,264    209,184/209,728    320,416/358,592  1,188,160/1,226,112 1,680,448/2,240,640
+  KO            7,584/7,616      197,568/197,632     73,888/327,360    804,672/1,058,048 1,120,256/1,680,512
+  Rebirth       9,920/9,984      197,504/197,632    319,904/323,968  1,048,864/1,303,360 1,680,448/2,240,640
+  Late        169,568/171,328    208,384/208,768      2,400/2,432      869,696/872,192   1,120,256/1,680,448
+  Time Up     169,504/171,200    208,096/210,112      2,400/2,432      870,528/900,864   1,120,256/1,680,448
+
+  Phase       draw residual      present residual    loop residual
+  Countdown    19,616/19,968       1,408/1,536        1,600/1,728
+  Early        50,048/50,304       1,376/1,536        1,600/1,728
+  Whispy       19,520/19,776       1,376/1,536        1,536/1,664
+  KO           50,720/50,880       1,408/1,408        1,568/1,664
+  Rebirth      49,920/50,048       1,408/1,472        1,600/1,728
+  Late         19,520/20,736       1,408/1,536        1,600/1,600
+  Time Up      19,584/49,600       1,408/1,472        1,600/1,600
+
+LIFECYCLE RESULT:
+  The same ROM, reused with -NoBuild, reaches natural expiry and Results with
+  SCENE 24->22->6, VSB_END one teardown, VS_RESULTS initialized/displayed,
+  4,084 logic updates / 2,042 presents, fixed-two pacing, CPU process 3,601,
+  and clean KO trace 439/292/154. Results does not publish battle-owner timers,
+  so the final timed row is the Time-Up battle boundary; no Results P50/P95 is
+  invented. The verifier is RED only at the current reserve contract:
+  arena headroom 183,056 minus 65,536 resident audio = 117,520 bytes, 13,552
+  below the 131,072-byte floor. This is a real Task 20 input, not a relaxed gate.
+
+ADDITIONAL FINDING:
+  The Whispy window records one post-GO conversion, decode, allocation, GL
+  create, upload, and fallback from a live weapon texture. Strict zero-fence
+  mode correctly rejects it. The profile matrix remains valid with that fence
+  disabled for observation, but the M4 lifecycle claim is reopened.
+
+TOOLING / METHOD:
+  PhaseMatrixMode is an explicit verifier contract, not a relaxation of the
+  generic exact-828 path. It admits only mode 163/profile 1/fast 9/live Fox/
+  incremental wallpaper/eight samples and the exact fixed or natural phase
+  gates. Natural Late keys on source time_passed >=3300; Time Up keys on the
+  final battle rows with time_remain <=16. A concurrent Task 9 placement check
+  exposed shared-object objcopy races; the checker now copies objects into a
+  per-process temp directory before inspection, and two concurrent checks pass.
+
+EVIDENCE (JSON SHA-256):
+  artifacts/performance/2026-07-18_task25-same-rom-countdown438-445.json
+    D782016D71C13461430EB13F586EA802E7C500D384320D75D7E50767A81E836A
+  artifacts/performance/2026-07-18_task25-same-rom-early600-607.json
+    E8951D48B06F648946D04FAF4C19DDCC61EBB66E2CA7ED1C59B587D021AD1C9C
+  artifacts/performance/2026-07-18_task25-same-rom-whispy1398-1405.json
+    BC672E8FCAFF5D44A646B74A0EF28F9CBC1EB477F95E04FA837BB055859A7AB0
+  artifacts/performance/2026-07-18_task25-same-rom-natural-ko.json
+    44A6B49B663A27CF00A0F64029B7E11D9B09EA08F4004D96F98CF7FA94D52FD0
+  artifacts/performance/2026-07-18_task25-same-rom-natural-rebirth.json
+    F51C29B41E24BAD0501B7BFD71D8830A432C8D7A9BC3D970930DE396AA0FCF20
+  artifacts/performance/2026-07-18_task25-same-rom-late-source3300.json
+    8B48C757E8E36F024D21B8161CF20FE024B626602159C896FB1EC04EB63A2F73
+  artifacts/performance/2026-07-18_task25-same-rom-timeup-boundary.json
+    B62FDBAB318F36E3B76BF7BB83D02C16CAD5C90B9788CEF3D5F26F1686F88A14
+KEEP / REWORK / REVERT: TASK 25 COMPLETE / RESERVE AND M4 LIFECYCLE REOPENED
+```
+
 ## 2026-07-18 - Task 12 renderer Thumb conversion and hot-text grouping
 
 ```text

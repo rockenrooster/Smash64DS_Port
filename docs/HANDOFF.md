@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-18 10:59 Central
+Updated: 2026-07-18 11:48 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -26,12 +26,18 @@ correctness evidence, never its speed referee.
 
 ## Next Packet
 
-Start the requested attack/hit audio-visual asset audit.
-Its first gate is the CPU-on one-minute lifecycle/reserve proof against the
-current 121,720-byte pack; the old 166,672-byte result belongs to the smaller
-pack. Bind natural exact-ROM BattleShip triggers to the correct source sample,
-frequency/volume/pan envelope, audible DS channel, source effect kind, and
-visible geometry/palette. Begin with unsupported Escape 11, Grind4 85,
-MarioFoot 110, MarioDash 121, LightSwing 41/42, GuardOn 13, Fox special starts
-186/189, MarioSmash3 431, and FoxDamage 375. Do not substitute generic cues or
-accept pack membership/spawn counters as audible or visible proof.
+Task 25 is complete. Its one-ROM phase matrix uses profile-1 ROM
+`FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144`.
+Begin Task 20 Phase A: measure full-lifecycle gameplay and Calico DTCM stack
+high-water, prove the exact capacity equation, and census every stack-pointer
+escape across DMA/GX/audio/IPC/queues. The current one-minute proof reaches
+Results but has only 117,520 net arena bytes, 13,552 below the 128 KiB floor;
+do not relax the gate. Record Phase B as `NO CANDIDATE / REWORK` unless a real
+private 1–2 KiB hot update scratch block appears. Attempt the external DTCM
+gameplay stack only if the full lifecycle fits with the required guard and
+fail-open heap fallback. Device typed-UPD is its only speed referee.
+
+After Task 20, keep the renderer one-writer sequence Task 21 then Task 23;
+Task 22 remains disjoint. The matrix also reopens the M4 lifecycle fence: the
+Whispy window performs one live weapon conversion/decode/alloc/create/upload/
+fallback. Preserve that as a blocker while completing Tasks 20–25.

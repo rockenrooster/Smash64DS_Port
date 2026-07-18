@@ -119,12 +119,17 @@ try {
         $expected = [int]$entry.Value
         $stem = [System.IO.Path]::GetFileNameWithoutExtension($member)
         $fresh = Join-Path $temp $member
-        $relocated = Join-Path $resolvedBuild "$stem.itcm.o"
-        foreach ($path in @($fresh, $relocated)) {
+        $relocatedSource = Join-Path $resolvedBuild "$stem.itcm.o"
+        foreach ($path in @($fresh, $relocatedSource)) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
                 throw "Missing Task 9 generated object '$path'."
             }
         }
+        # Work on a private copy. Multiple same-ROM verifier runs may inspect
+        # one build concurrently, and Windows objcopy is not reliable when all
+        # processes dump sections from the same input object at once.
+        $relocated = Join-Path $temp "$stem.itcm.o"
+        Copy-Item -LiteralPath $relocatedSource -Destination $relocated
         if ((Get-SectionBytes -Path $fresh -Section '.text') -ne $expected -or
             (Get-SectionBytes -Path $relocated -Section '.itcm') -ne $expected) {
             throw "$member did not preserve its expected $expected code bytes."
@@ -145,7 +150,7 @@ try {
         $stockBytes += $expected
     }
 
-    $relocatedAddSub = Join-Path $resolvedBuild '_arm_addsubsf3.itcm.o'
+    $relocatedAddSub = Join-Path $temp '_arm_addsubsf3.itcm.o'
     $addSubSymbols = @(& $Objdump -t $relocatedAddSub)
     if ($LASTEXITCODE -ne 0) {
         throw 'Could not inspect the relocated add/sub object.'
@@ -163,10 +168,12 @@ try {
                 throw "Task 16 did not rename exactly the stock $routine wrapper as its golden."
             }
         }
-        $task16Object = Join-Path $resolvedBuild 'nds_task16_float_addsub.o'
-        if (-not (Test-Path -LiteralPath $task16Object -PathType Leaf)) {
-            throw "Missing Task 16 add/sub object '$task16Object'."
+        $task16ObjectSource = Join-Path $resolvedBuild 'nds_task16_float_addsub.o'
+        if (-not (Test-Path -LiteralPath $task16ObjectSource -PathType Leaf)) {
+            throw "Missing Task 16 add/sub object '$task16ObjectSource'."
         }
+        $task16Object = Join-Path $temp 'nds_task16_float_addsub.o'
+        Copy-Item -LiteralPath $task16ObjectSource -Destination $task16Object
         $task16AddSubBytes = Get-SectionBytes -Path $task16Object `
             -Section '.itcm.task16_float_addsub'
         if ($task16AddSubBytes -ne 0x194) {
@@ -230,10 +237,12 @@ try {
             }).Count -ne 1) {
             throw 'Task 16 did not rename exactly the stock i2f wrapper as its golden.'
         }
-        $task16I2fObject = Join-Path $resolvedBuild 'nds_task16_float_i2f.o'
-        if (-not (Test-Path -LiteralPath $task16I2fObject -PathType Leaf)) {
-            throw "Missing Task 16 i2f object '$task16I2fObject'."
+        $task16I2fObjectSource = Join-Path $resolvedBuild 'nds_task16_float_i2f.o'
+        if (-not (Test-Path -LiteralPath $task16I2fObjectSource -PathType Leaf)) {
+            throw "Missing Task 16 i2f object '$task16I2fObjectSource'."
         }
+        $task16I2fObject = Join-Path $temp 'nds_task16_float_i2f.o'
+        Copy-Item -LiteralPath $task16I2fObjectSource -Destination $task16I2fObject
         $task16I2fBytes = Get-SectionBytes -Path $task16I2fObject `
             -Section '.itcm.task16_i2f'
         if ($task16I2fBytes -ne 0x5c) {
@@ -281,7 +290,7 @@ try {
 
     $phase2Bytes = 0
     if ($Phase2Mode -eq 1) {
-        $relocatedCompare = Join-Path $resolvedBuild '_arm_cmpsf2.itcm.o'
+        $relocatedCompare = Join-Path $temp '_arm_cmpsf2.itcm.o'
         $compareSymbols = @(& $Objdump -t $relocatedCompare)
         if ($LASTEXITCODE -ne 0) {
             throw 'Could not inspect the relocated comparison golden object.'
@@ -295,10 +304,12 @@ try {
             throw 'Phase 2 did not rename exactly the stock fcmpeq wrapper as its golden.'
         }
 
-        $phase2Object = Join-Path $resolvedBuild 'nds_task9_float_phase2.o'
-        if (-not (Test-Path -LiteralPath $phase2Object -PathType Leaf)) {
-            throw "Missing Task 9 Phase 2 object '$phase2Object'."
+        $phase2ObjectSource = Join-Path $resolvedBuild 'nds_task9_float_phase2.o'
+        if (-not (Test-Path -LiteralPath $phase2ObjectSource -PathType Leaf)) {
+            throw "Missing Task 9 Phase 2 object '$phase2ObjectSource'."
         }
+        $phase2Object = Join-Path $temp 'nds_task9_float_phase2.o'
+        Copy-Item -LiteralPath $phase2ObjectSource -Destination $phase2Object
         $phase2Bytes = Get-SectionBytes -Path $phase2Object `
             -Section '.itcm.task9_float_phase2'
         if ($phase2Bytes -ne 0x24) {
@@ -339,7 +350,7 @@ try {
         }
         $codeRows += "phase2-fcmpeq=$phase2Bytes/$phase2CodeHash"
     } else {
-        $relocatedCompare = Join-Path $resolvedBuild '_arm_cmpsf2.itcm.o'
+        $relocatedCompare = Join-Path $temp '_arm_cmpsf2.itcm.o'
         $compareSymbols = @(& $Objdump -t $relocatedCompare)
         if ($LASTEXITCODE -ne 0 -or
             @($compareSymbols | Where-Object {
@@ -353,7 +364,7 @@ try {
     }
 
     $compareRoutines = @('fcmplt', 'fcmple', 'fcmpge', 'fcmpgt')
-    $unordObject = Join-Path $resolvedBuild '_arm_unordsf2.itcm.o'
+    $unordObject = Join-Path $temp '_arm_unordsf2.itcm.o'
     $unordSymbols = @(& $Objdump -t $unordObject)
     if ($LASTEXITCODE -ne 0) {
         throw 'Could not inspect the relocated unordered-comparison object.'
@@ -378,11 +389,14 @@ try {
             }).Count -ne 1) {
             throw 'Task 16 did not rename exactly the stock fcmpun wrapper.'
         }
-        $task16CompareObject = Join-Path $resolvedBuild `
+        $task16CompareObjectSource = Join-Path $resolvedBuild `
             'nds_task16_float_compare.o'
-        if (-not (Test-Path -LiteralPath $task16CompareObject -PathType Leaf)) {
-            throw "Missing Task 16 compare object '$task16CompareObject'."
+        if (-not (Test-Path -LiteralPath $task16CompareObjectSource -PathType Leaf)) {
+            throw "Missing Task 16 compare object '$task16CompareObjectSource'."
         }
+        $task16CompareObject = Join-Path $temp 'nds_task16_float_compare.o'
+        Copy-Item -LiteralPath $task16CompareObjectSource `
+            -Destination $task16CompareObject
         $task16CompareBytes = Get-SectionBytes -Path $task16CompareObject `
             -Section '.itcm.task16_float_compare'
         if ($task16CompareBytes -ne 0xec) {
