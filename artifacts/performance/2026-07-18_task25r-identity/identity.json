@@ -1,0 +1,731 @@
+{
+  "schema": 1,
+  "sourceHead": "f088db98de272e9788405c2181029ad4a4c353ba",
+  "gitStatus": [
+    " M AGENTS.md",
+    " M docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md"
+  ],
+  "focusedDiff": [],
+  "submodules": [],
+  "profile1": {
+    "rom": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
+      "sha256": "6E90D4140E6332E8F37BB05CB8B35ED192AAB448B26E110916992F2C15701921",
+      "bytes": 14676992,
+      "lastWriteUtc": "2026-07-18T19:59:03.3716222Z"
+    },
+    "elf": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
+      "sha256": "55CC8EF067E68310441F7025978FCF7569E95E51A3B6B937E7811A7D25B44C06",
+      "bytes": 9046264,
+      "lastWriteUtc": "2026-07-18T19:59:02.3384797Z"
+    },
+    "buildCommand": [
+      "make",
+      "-C",
+      "D:\\Stuff\\DevFolder\\Smash64DS_Port",
+      "TARGET=smash64ds-battle-playable-m3-stage-owner-lab",
+      "BUILD=builds/build-task16-float-c1-i1-a1-lab",
+      "NDS_DEV_SCENE_HARNESS=battle_playable_realtime",
+      "-j16",
+      "NDS_RENDERER_PROFILE_LEVEL=1",
+      "NDS_RENDERER_M2_DETAILED_LEDGER=0",
+      "NDS_RENDERER_M3_PHASE0_PROFILE=0",
+      "NDS_TASK22_WALLPAPER_RUN_LAB=0",
+      "NDS_RENDERER_SCREEN_SPACE_CENSUS=0",
+      "NDS_RENDER_ECONOMY=0",
+      "NDS_RENDER_ECONOMY_OWNER_MASK=0",
+      "NDS_IFCOMMON_HYBRID_OAM=0",
+      "NDS_TASK9_FLOAT_CENSUS=0",
+      "NDS_TASK9_FLOAT_ITCM=1",
+      "NDS_TASK9_FLOAT_PHASE2=1",
+      "NDS_TASK16_FLOAT_COMPARE=1",
+      "NDS_TASK16_FLOAT_I2F=1",
+      "NDS_TASK16_FLOAT_ADDSUB=1",
+      "NDS_TASK9_STATE_HASH=0",
+      "NDS_TASK20_STACK_PROFILE=0",
+      "NDS_IMPORT_BATTLESHIP_FTMANAGER=1",
+      "NDS_IMPORT_BATTLESHIP_FTCOMPUTER=1",
+      "NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1",
+      "NDS_IMPORT_BATTLESHIP_IFCOMMON=1",
+      "NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1",
+      "NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1",
+      "NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER=1",
+      "NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR=1",
+      "NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI=1",
+      "NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW=1",
+      "NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI=1",
+      "NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS=1",
+      "NDS_IMPORT_BATTLESHIP_AUDIO_BGM=1",
+      "NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET=1",
+      "NDS_RENDERER_HW_TRIANGLES=1",
+      "NDS_DEV_LIVE_INPUT_PREVIEW=1",
+      "NDS_HARNESS_FAST_LOGIC=0"
+    ]
+  },
+  "profile0": {
+    "rom": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.nds",
+      "sha256": "E685C034D301D3C6881D398B14820D0D60A112FA259657A6B05408C90683C5CE",
+      "bytes": 14576640
+    },
+    "elf": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.elf",
+      "sha256": "E9428051194F9E6917427DCD54BE44838C049E856ECBAFD6A702D605A34A1A96",
+      "bytes": 8408264
+    },
+    "buildCommand": [
+      "make",
+      "-C",
+      "D:\\Stuff\\DevFolder\\Smash64DS_Port",
+      "TARGET=smash64ds-battle-playable-one-minute-match-hwtri",
+      "BUILD=build-battle-playable-one-minute-match-hwtri-harness",
+      "NDS_DEV_SCENE_HARNESS=battle_playable_match_lifecycle",
+      "-j16",
+      "NDS_RENDERER_PROFILE_LEVEL=0",
+      "NDS_RENDERER_M2_DETAILED_LEDGER=0",
+      "NDS_RENDERER_M3_PHASE0_PROFILE=0",
+      "NDS_TASK22_WALLPAPER_RUN_LAB=0",
+      "NDS_RENDERER_SCREEN_SPACE_CENSUS=0",
+      "NDS_RENDER_ECONOMY=0",
+      "NDS_RENDER_ECONOMY_OWNER_MASK=0",
+      "NDS_IFCOMMON_HYBRID_OAM=0",
+      "NDS_TASK9_FLOAT_CENSUS=0",
+      "NDS_TASK9_FLOAT_ITCM=1",
+      "NDS_TASK9_FLOAT_PHASE2=1",
+      "NDS_TASK16_FLOAT_COMPARE=1",
+      "NDS_TASK16_FLOAT_I2F=1",
+      "NDS_TASK16_FLOAT_ADDSUB=1",
+      "NDS_TASK9_STATE_HASH=0",
+      "NDS_TASK20_STACK_PROFILE=0",
+      "NDS_IMPORT_BATTLESHIP_FTMANAGER=1",
+      "NDS_IMPORT_BATTLESHIP_FTCOMPUTER=1",
+      "NDS_IMPORT_BATTLESHIP_VS_RESULTS=1",
+      "NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE=1",
+      "NDS_IMPORT_BATTLESHIP_IFCOMMON=1",
+      "NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL=1",
+      "NDS_IMPORT_BATTLESHIP_FOX_BLASTER=1",
+      "NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER=1",
+      "NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR=1",
+      "NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI=1",
+      "NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW=1",
+      "NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI=1",
+      "NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS=1",
+      "NDS_IMPORT_BATTLESHIP_AUDIO_BGM=1",
+      "NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET=1",
+      "NDS_RENDERER_HW_TRIANGLES=1",
+      "NDS_DEV_LIVE_INPUT_PREVIEW=1",
+      "NDS_HARNESS_FAST_LOGIC=0"
+    ]
+  },
+  "relevantObjects": [
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_renderer.o",
+      "sha256": "3A8DA6A64A689F9C74C9FAEE7F59D2F3FCCAFF8CF28488DF97E6FCE44D751A94",
+      "bytes": 861676
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_platform.o",
+      "sha256": "5CDA1435F1E44898BBF1919CD3024E3E6F4055B9136EF23FA3587A842F64D0CB",
+      "bytes": 126260
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\scene_backend.o",
+      "sha256": "0BE10C24867F05579B93827C51619D2D22BC177474D7DA2C2573979F4921229B",
+      "bytes": 4120032
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\battle_playable_static_textures.o",
+      "sha256": "3D5A30589336B8A7D570613C61B11B4625002A8F55540B9B0FB4EE8EE21B6B69",
+      "bytes": 18784
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task16_float_compare.o",
+      "sha256": "9AE60943C9ECB744A0954018DD04C2FA31346EB7E732728C1D5B02BB368A8EE4",
+      "bytes": 2468
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task16_float_i2f.o",
+      "sha256": "22E840B0023FA74628945A06E2E253373E5AF2D718DBFA175CC0A3503C36074D",
+      "bytes": 2016
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task16_float_addsub.o",
+      "sha256": "7FB05F9A67617EEC181A4F028E6C350CA50CF571CA7627CADC340262F0735FC0",
+      "bytes": 2492
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task9_float_phase2.o",
+      "sha256": "AD1E64F21D55BD9C66D41B81F3CE53803D6ACB23611C55EC2F320E8DA461657C",
+      "bytes": 1964
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_cmpsf2.itcm.o",
+      "sha256": "7E5EE9D99986A7A5A183E22FAE8109D8F07A2FCB7D2144F9B548114D455ED1F9",
+      "bytes": 3872
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_unordsf2.itcm.o",
+      "sha256": "005881BE10DC6934777FFED5A7AFFEC111AEFAF2F19D2503E04C068498C8C9AC",
+      "bytes": 2284
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_fixsfsi.itcm.o",
+      "sha256": "2AD8B203759EC56E0A5DD725AE53E67F79845BC749CE310177A77F74B8D093A8",
+      "bytes": 2316
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_fixunssfsi.itcm.o",
+      "sha256": "97483C15A1620E754388A08EDB6DC0DF0E6A3701AEC46F0EC2FA903A0E4C5BB0",
+      "bytes": 2312
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_addsubsf3.itcm.o",
+      "sha256": "608FBCF55AA3457319B10DC56FBB1042F0D7738E378FE85806921CFAB435D405",
+      "bytes": 4048
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_muldivsf3.itcm.o",
+      "sha256": "805BF06648027884D563AD23A01136F82C425B8370F437EF43E732708774C669",
+      "bytes": 3360
+    }
+  ],
+  "generatedTables": [
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_native_stage_owner.generated.inc",
+      "sha256": "053444F8474B4E7A80E0AD7F8F68272AF9D7CB7089036E665574ABF3DEE95EC7",
+      "bytes": 59361
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_native_fighter_owner.generated.inc",
+      "sha256": "2DCDAB1EC7D55420D9BEFE0E8534D7EF1036FFB6616A6F6208E56AF62AB8F8CB",
+      "bytes": 339866
+    },
+    {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\generated\\battle_playable_static_textures.generated.inc",
+      "sha256": "22BA02C9B7E9BD41CEE2ED112741D8CB61CE2737A6787F0D79D582925206321B",
+      "bytes": 26364
+    }
+  ],
+  "sections": [
+    {
+      "index": 0,
+      "name": "NULL",
+      "address": "0x000000",
+      "bytes": 0
+    },
+    {
+      "index": 1,
+      "name": ".secure",
+      "address": "0x0E000000",
+      "bytes": 2048
+    },
+    {
+      "index": 2,
+      "name": ".bootstub",
+      "address": "0x0E000800",
+      "bytes": 408
+    },
+    {
+      "index": 3,
+      "name": ".crt0",
+      "address": "0x02001000",
+      "bytes": 960
+    },
+    {
+      "index": 4,
+      "name": ".dldi",
+      "address": "0x0380B000",
+      "bytes": 16384
+    },
+    {
+      "index": 5,
+      "name": ".vectors",
+      "address": "0x00000000",
+      "bytes": 32
+    },
+    {
+      "index": 6,
+      "name": ".itcm",
+      "address": "0x01FF8020",
+      "bytes": 28820
+    },
+    {
+      "index": 7,
+      "name": ".dtcm",
+      "address": "0x02FF0000",
+      "bytes": 0
+    },
+    {
+      "index": 8,
+      "name": ".dtcm.bss",
+      "address": "0x02FF0000",
+      "bytes": 152
+    },
+    {
+      "index": 9,
+      "name": ".text.hot",
+      "address": "0x020013C0",
+      "bytes": 5016
+    },
+    {
+      "index": 10,
+      "name": ".main",
+      "address": "0x02002758",
+      "bytes": 774712
+    },
+    {
+      "index": 11,
+      "name": ".main.rw",
+      "address": "0x020BF990",
+      "bytes": 132692
+    },
+    {
+      "index": 12,
+      "name": ".eh_frame",
+      "address": "0x020DFFE4",
+      "bytes": 4
+    },
+    {
+      "index": 13,
+      "name": ".tinfo",
+      "address": "0x020DFFE8",
+      "bytes": 12
+    },
+    {
+      "index": 14,
+      "name": ".init_array",
+      "address": "0x020DFFF4",
+      "bytes": 8
+    },
+    {
+      "index": 15,
+      "name": ".fini_array",
+      "address": "0x020DFFFC",
+      "bytes": 4
+    },
+    {
+      "index": 16,
+      "name": ".tdata",
+      "address": "0x00000000",
+      "bytes": 0
+    },
+    {
+      "index": 17,
+      "name": ".tbss",
+      "address": "0x00000000",
+      "bytes": 0
+    },
+    {
+      "index": 18,
+      "name": ".main.tls",
+      "address": "0x020E0000",
+      "bytes": 0
+    },
+    {
+      "index": 19,
+      "name": ".main.bss",
+      "address": "0x020E0000",
+      "bytes": 1773840
+    },
+    {
+      "index": 20,
+      "name": ".twl",
+      "address": "0x02291120",
+      "bytes": 0
+    },
+    {
+      "index": 21,
+      "name": ".twl.rw",
+      "address": "0x02291120",
+      "bytes": 0
+    },
+    {
+      "index": 22,
+      "name": ".twl.bss",
+      "address": "0x02291120",
+      "bytes": 0
+    },
+    {
+      "index": 23,
+      "name": ".loadlist",
+      "address": "0x0E000998",
+      "bytes": 48
+    },
+    {
+      "index": 24,
+      "name": ".twl.loadlist",
+      "address": "0x0E0009C8",
+      "bytes": 12
+    },
+    {
+      "index": 25,
+      "name": ".comment",
+      "address": "0x00000000",
+      "bytes": 24
+    },
+    {
+      "index": 26,
+      "name": ".debug_aranges",
+      "address": "0x00000000",
+      "bytes": 39824
+    },
+    {
+      "index": 27,
+      "name": ".debug_info",
+      "address": "0x00000000",
+      "bytes": 4045391
+    },
+    {
+      "index": 28,
+      "name": ".debug_abbrev",
+      "address": "0x00000000",
+      "bytes": 193075
+    },
+    {
+      "index": 29,
+      "name": ".debug_line",
+      "address": "0x00000000",
+      "bytes": 1108271
+    },
+    {
+      "index": 30,
+      "name": ".debug_frame",
+      "address": "0x00000000",
+      "bytes": 122744
+    },
+    {
+      "index": 31,
+      "name": ".debug_str",
+      "address": "0x00000000",
+      "bytes": 776026
+    },
+    {
+      "index": 32,
+      "name": ".ARM.attributes",
+      "address": "0x00000000",
+      "bytes": 39
+    },
+    {
+      "index": 33,
+      "name": ".debug_line_str",
+      "address": "0x00000000",
+      "bytes": 1171
+    },
+    {
+      "index": 34,
+      "name": ".debug_loclists",
+      "address": "0x00000000",
+      "bytes": 852989
+    },
+    {
+      "index": 35,
+      "name": ".debug_rnglists",
+      "address": "0x00000000",
+      "bytes": 107626
+    },
+    {
+      "index": 36,
+      "name": ".symtab",
+      "address": "0x00000000",
+      "bytes": 450752
+    },
+    {
+      "index": 37,
+      "name": ".strtab",
+      "address": "0x00000000",
+      "bytes": 384793
+    },
+    {
+      "index": 38,
+      "name": ".shstrtab",
+      "address": "0x00000000",
+      "bytes": 373
+    }
+  ],
+  "instructionState": {
+    "armFunctions": 461,
+    "thumbFunctions": 2858,
+    "hotTextOrder": [
+      {
+        "address": 33559488,
+        "name": "gcPlayDObjAnimJoint"
+      },
+      {
+        "address": 33559988,
+        "name": "gcRunGObjProcess"
+      },
+      {
+        "address": 33560148,
+        "name": "gcRunAll"
+      },
+      {
+        "address": 33560268,
+        "name": "ndsBaseFTComputerProcessAll"
+      },
+      {
+        "address": 33560348,
+        "name": "battleship_ftMainProcSearchHitAll"
+      },
+      {
+        "address": 33560424,
+        "name": "battleship_ftMainProcSearchCatch"
+      },
+      {
+        "address": 33560496,
+        "name": "ftMainProcPhysicsMapDefault"
+      },
+      {
+        "address": 33560568,
+        "name": "ftMainProcPhysicsMapCapture"
+      },
+      {
+        "address": 33560640,
+        "name": "ftMainProcUpdateInterrupt"
+      },
+      {
+        "address": 33562816,
+        "name": "ftComputerProcessAll"
+      },
+      {
+        "address": 33563420,
+        "name": "ftMainProcPhysicsMap"
+      }
+    ],
+    "veneersAndStubs": [
+      "____aeabi_idiv0_from_arm",
+      "____aeabi_ldiv0_from_arm",
+      "____libc_lock_release_from_arm",
+      "__close_from_arm",
+      "__ds9_bootstub",
+      "__ds9_bootstub_trampoline",
+      "__free_from_arm",
+      "__glGenTextures_from_arm",
+      "__memcpy_from_arm",
+      "__memset_from_arm",
+      "ndsSCSubsysOpeningFighterProcUpdateStub"
+    ]
+  },
+  "largestStackFrames": [
+    {
+      "function": "ndsRendererExecuteDisplayListWithVertexCache",
+      "stackBytes": 8800,
+      "spillStores": 22
+    },
+    {
+      "function": "ndsRendererScanDisplayList",
+      "stackBytes": 8788,
+      "spillStores": 24
+    },
+    {
+      "function": "ndsRendererExecuteNativeFighterRootHardware",
+      "stackBytes": 3124,
+      "spillStores": 108
+    },
+    {
+      "function": "_dvmSetAppWorkingDir",
+      "stackBytes": 1032,
+      "spillStores": 3
+    },
+    {
+      "function": "ndsRendererHardwareResolveOrBindTexture",
+      "stackBytes": 816,
+      "spillStores": 385
+    },
+    {
+      "function": "f_rename",
+      "stackBytes": 672,
+      "spillStores": 10
+    },
+    {
+      "function": "f_mkdir",
+      "stackBytes": 632,
+      "spillStores": 17
+    },
+    {
+      "function": "f_unlink",
+      "stackBytes": 632,
+      "spillStores": 9
+    },
+    {
+      "function": "f_open",
+      "stackBytes": 592,
+      "spillStores": 12
+    },
+    {
+      "function": "f_stat",
+      "stackBytes": 584,
+      "spillStores": 6
+    },
+    {
+      "function": "f_chdir",
+      "stackBytes": 584,
+      "spillStores": 6
+    },
+    {
+      "function": "f_readdir",
+      "stackBytes": 544,
+      "spillStores": 8
+    },
+    {
+      "function": "f_opendir",
+      "stackBytes": 536,
+      "spillStores": 6
+    },
+    {
+      "function": "ndsRendererAdapterBuildCameraMatrices.constprop.0.isra.0",
+      "stackBytes": 408,
+      "spillStores": 49
+    },
+    {
+      "function": "__kernel_rem_pio2f",
+      "stackBytes": 400,
+      "spillStores": 44
+    },
+    {
+      "function": "ndsRendererExecuteNativeFighterOwnerHierarchy",
+      "stackBytes": 344,
+      "spillStores": 94
+    },
+    {
+      "function": "ndsRendererHardwarePrepareBattleStaticTextures",
+      "stackBytes": 320,
+      "spillStores": 20
+    },
+    {
+      "function": "ndsRendererAdapterBuildDObjLocalMatrix",
+      "stackBytes": 312,
+      "spillStores": 142
+    },
+    {
+      "function": "_FAT_stat_r",
+      "stackBytes": 312,
+      "spillStores": 6
+    },
+    {
+      "function": "mnVSResultsSetPlayerTagPosition",
+      "stackBytes": 312,
+      "spillStores": 5
+    },
+    {
+      "function": "mvOpeningRoomSetSpotlightPosition",
+      "stackBytes": 308,
+      "spillStores": 6
+    },
+    {
+      "function": "ndsRelocExternTreeAllocSize",
+      "stackBytes": 304,
+      "spillStores": 8
+    },
+    {
+      "function": "syTaskmanRunTask",
+      "stackBytes": 296,
+      "spillStores": 109
+    },
+    {
+      "function": "ftComputerCheckDetectTarget",
+      "stackBytes": 296,
+      "spillStores": 59
+    },
+    {
+      "function": "mnVSResultsMakeString",
+      "stackBytes": 296,
+      "spillStores": 12
+    }
+  ],
+  "largestHotStackFrames": [
+    {
+      "function": "ftMainProcUpdateInterrupt",
+      "stackBytes": 40,
+      "spillStores": 14
+    },
+    {
+      "function": "gcPlayDObjAnimJoint",
+      "stackBytes": 40,
+      "spillStores": 12
+    },
+    {
+      "function": "ftMainProcPhysicsMap",
+      "stackBytes": 28,
+      "spillStores": 11
+    },
+    {
+      "function": "gcRunGObjProcess",
+      "stackBytes": 20,
+      "spillStores": 6
+    },
+    {
+      "function": "ftComputerProcessAll",
+      "stackBytes": 20,
+      "spillStores": 6
+    },
+    {
+      "function": "gcRunAll",
+      "stackBytes": 16,
+      "spillStores": 4
+    },
+    {
+      "function": "ndsBaseFTComputerProcessAll",
+      "stackBytes": 16,
+      "spillStores": 4
+    },
+    {
+      "function": "battleship_ftMainProcSearchHitAll",
+      "stackBytes": 16,
+      "spillStores": 4
+    },
+    {
+      "function": "battleship_ftMainProcSearchCatch",
+      "stackBytes": 16,
+      "spillStores": 4
+    },
+    {
+      "function": "ftMainProcPhysicsMapDefault",
+      "stackBytes": 8,
+      "spillStores": 2
+    },
+    {
+      "function": "ftMainProcPhysicsMapCapture",
+      "stackBytes": 8,
+      "spillStores": 2
+    }
+  ],
+  "reserveBytes": 166672,
+  "raw": {
+    "nm": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-nm-size-sort.txt",
+      "sha256": "815969B7329D9372751964DABE9F4CDDE6A919F0D33848E50999A5E92671513F",
+      "bytes": 643484
+    },
+    "readelf": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-readelf-sections-symbols-relocs-attributes.txt",
+      "sha256": "D9F9F17347DC766A20A04852CDF923C91220F8C0CB86DEE1FD5770177180EF23",
+      "bytes": 1900434
+    },
+    "objdumpGzip": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-objdump-d-S-r-w.txt.gz",
+      "sha256": "C1FD286E315067F2BB19B9F871AFF37035FA3B3E339C21A708E92E1DC1A39F4E",
+      "bytes": 3461095
+    },
+    "size": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-size-sections.txt",
+      "sha256": "BA82C29794F61C3D790372EBE0CACD97340E602D95B6C9148E04640B68963A06",
+      "bytes": 1561
+    },
+    "profile0Nm": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile0-nm-size-sort.txt",
+      "sha256": "BAD2D0CA82EB9D403CED0C09BC458805A9F3B59C8FB730A211A3B52AEA76CEFD",
+      "bytes": 666465
+    },
+    "linkerMapGzip": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-linker.map.gz",
+      "sha256": "5B669794758B509E9F5D8C42E5995C646269019001EF579C10E15BCE6674F9DE",
+      "bytes": 280753
+    },
+    "toolchain": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\toolchain-versions.txt",
+      "sha256": "0816695415DE24FDE232649D4BC24A654DE4D9A0181137708E5E9A87FF0D904B",
+      "bytes": 3278
+    }
+  }
+}

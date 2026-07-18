@@ -5106,3 +5106,80 @@ EVIDENCE:
     B79765A7A1040FC27253FACCC93D22477D6ABFD7D2FB71BA9F0F6B5DB4825D0E
 KEEP / REWORK / REVERT: KEEP
 ```
+
+## 2026-07-18 - Task 25R authoritative stable-30 baseline
+
+```text
+IDEA ID: TASK25R-AUTHORITATIVE-STABLE30-BASELINE-20260718
+BOUND / IDENTITY:
+  Measurement, verifier, and report tooling only. The production profile-0
+  executor has no Task-25R timing symbols, stores, or layout change. One
+  profile-1 ROM supplies all seven detailed eight-frame windows and one
+  profile-0 sibling supplies the complete canonical lifecycle. Both use mode
+  163, renderer mode 9, static AOT 1, incremental wallpaper, live Fox, Task 9
+  1/1, and Task 16 compare/i2f/add-sub 1/1/1.
+
+  Measured source HEAD:
+    f088db98de272e9788405c2181029ad4a4c353ba
+  Profile-1 ROM / ELF:
+    6E90D4140E6332E8F37BB05CB8B35ED192AAB448B26E110916992F2C15701921
+    55CC8EF067E68310441F7025978FCF7569E95E51A3B6B937E7811A7D25B44C06
+  Profile-0 ROM / ELF:
+    E685C034D301D3C6881D398B14820D0D60A112FA259657A6B05408C90683C5CE
+    E9428051194F9E6917427DCD54BE44838C049E856ECBAFD6A702D605A34A1A96
+
+SAME-ROM PROFILE-1 WINDOWS (P50/P95/MAX ARM9 TICKS):
+  Phase             frame/source       whole loop                    stage P95  Mario+Fox P95  2/3/4/5+
+  Countdown / GO    438-445/484-498    1680448/1680512/1680512       464320     380928          0/8/0/0
+  Early combat      600-607/808-822    1680448/1680448/1680448       464448     207040          0/8/0/0
+  Whispy            1398-1405/2404-18  1680448/2240640/2240640       464576     381312          0/6/2/0
+  Late combat       1846-53/3300-14    1120256/1120320/1120320       464384     380416          8/0/0/0
+  Natural KO        566-573/740-754    1120256/1680512/1680512       468480     205440          6/2/0/0
+  Natural rebirth   589-596/786-800    1680448/2240640/2240640       464192     207616          0/7/1/0
+  Time Up / Results 1988-95/3584-98    1120256/1680448/1680448       464320     381632          7/1/0/0
+
+  Countdown is the only phase that satisfies the strict fixed-both-fighter
+  geometry and zero post-GO fence contract. Early, KO, and rebirth have Mario
+  source-owned nonrendering with zero fallback; their observed 91/508 geometry
+  is 202+0+306 rather than the fixed 202+320+306 expectation. Whispy, late,
+  and Time Up fail the post-GO residency fence. These are reported exactly,
+  not normalized away.
+
+PROFILE-0 LIFECYCLE / STABLE-30 DEFICIT:
+  Source updates / presentations / teardown: 4,084 / 2,042 / 1
+  Presentations/s / updates/s:             18.6 / 37.3
+  Interval histogram 2/3/4/5+:            61 / 1,547 / 396 / 38
+  Intervals >=3 VBlanks / slip events:     1,981 / 2,457
+  Net reserve / floor:                     166,672 / 131,072 PASS
+  Synchronized native pixels:              0 / 49,152 changed
+
+CORRECTNESS DEBTS:
+  The post-GO texture fence first trips at class+1/frame 10/1111 with counts
+  1,1,1,0,1,1,0,0,0,1. The natural Mario-KO source sequence is exactly
+  439/292/154 with mask 0x13, but playback/generation failure counts are 1/1,
+  so the exact KO FGM gate is false. Normal verifier paths remain strict.
+  -RequireStable30 correctly fails on pacing, fixed-window exactness, audio,
+  and the fence while reserve and synchronized pixels pass.
+
+PRIORITY:
+  The same-ROM leaf-owner comparison selects M3-first. Maximum stage P95 is
+  468,480 ticks at natural KO, versus 380,544 for the largest combined fighter
+  pair at Countdown. Next queue is Task 23R Phase 0 -> Task 26 -> only the
+  residual Task 23R Phase-1 work Task 26 leaves. No runtime optimization is
+  promoted by this row.
+
+EVIDENCE:
+  artifacts/performance/2026-07-18_task25r-phase-matrix.json
+    DDC65C1507FBBC81EEBDE15E3681AE65A97926F945BCBCA1ED491A6D53D9F343
+  artifacts/performance/2026-07-18_task25r-phase-matrix.md
+    54B60555DE32E002C413A3A438738F074D7024DF00CDFC986D0B9942BDF37601
+  artifacts/performance/2026-07-18_task25r-identity/identity.json
+    3EABC8119CF8D1AADC911BEEEAB3F90EC6E33FA02CD259DFAF056CB7F9755314
+  artifacts/visibility/2026-07-18_task25r-profile1-frame607.png
+    ECEE8B8720C382A1123F2F278F35D5CA5AE64D080F2E171AFF7ED040F142BCA0
+  artifacts/visibility/2026-07-18_task25r-profile0-frame607.png
+    8FE8473D3854B25B28EC6FD7B68F60D8E9927DAEE597CCF31ED812C2E7F155A6
+  Per-phase JSON, lifecycle JSON, nm/readelf/size/toolchain, compressed map,
+  and compressed disassembly share the same task25r evidence prefix.
+KEEP / REWORK / REVERT: KEEP TOOLING + EVIDENCE / STABLE-30 FAIL / M3 FIRST
+```

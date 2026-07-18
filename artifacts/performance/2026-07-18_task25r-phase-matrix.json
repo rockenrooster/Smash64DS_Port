@@ -1,0 +1,2712 @@
+{
+  "schema": 1,
+  "kind": "smash64ds-task25r-authoritative-phase-matrix",
+  "sourceHead": "f088db98de272e9788405c2181029ad4a4c353ba",
+  "accounting": {
+    "rule": "parents and nested timers are never summed into leaf-owner totals",
+    "deadlineTicks": 1120380,
+    "profile1DetailedRowsOnly": true,
+    "profile0ProductionPacingOnly": true
+  },
+  "artifacts": {
+    "profile1RomSha256": "6E90D4140E6332E8F37BB05CB8B35ED192AAB448B26E110916992F2C15701921",
+    "profile1ElfSha256": "55CC8EF067E68310441F7025978FCF7569E95E51A3B6B937E7811A7D25B44C06",
+    "profile0": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-profile0-lifecycle.json",
+      "sha256": "EEA807FB39AD374E1A7FE8458C454AC64E4DE586F6C2C58181177753B1B584F3",
+      "bytes": 424840
+    },
+    "identityPacket": {
+      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\identity.json",
+      "sha256": "3EABC8119CF8D1AADC911BEEEAB3F90EC6E33FA02CD259DFAF056CB7F9755314",
+      "bytes": 21197
+    },
+    "pixels": {
+      "changedPixels": 0,
+      "comparedPixels": 49152,
+      "meanMaxChannelDelta": 0.0,
+      "profile1": {
+        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\visibility\\2026-07-18_task25r-profile1-frame607.png",
+        "sha256": "ECEE8B8720C382A1123F2F278F35D5CA5AE64D080F2E171AFF7ED040F142BCA0",
+        "bytes": 65372
+      },
+      "profile0": {
+        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\visibility\\2026-07-18_task25r-profile0-frame607.png",
+        "sha256": "8FE8473D3854B25B28EC6FD7B68F60D8E9927DAEE597CCF31ED812C2E7F155A6",
+        "bytes": 56824
+      }
+    }
+  },
+  "phases": [
+    {
+      "phase": "countdown438-445",
+      "sampling": {
+        "requestedStartFrame": 438,
+        "requestedStartEvent": "None",
+        "frameStart": 438,
+        "frameEnd": 445,
+        "logicTickStart": 484,
+        "logicTickEnd": 498
+      },
+      "source": {
+        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-countdown438-445-profile1.json",
+        "sha256": "3AB5B9936DB7700E6A0D83D1888A49BF0C7262CCFB3BC0C183B9C154A69D69DC",
+        "bytes": 20994
+      },
+      "timers": {
+        "input": {
+          "p50": 1600,
+          "p95": 1600,
+          "maximum": 1600,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "sourceUpdate1": {
+          "p50": 100192,
+          "p95": 100928,
+          "maximum": 100928,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdate2": {
+          "p50": 100352,
+          "p95": 100800,
+          "maximum": 100800,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdateAggregate": {
+          "p50": 200416,
+          "p95": 201536,
+          "maximum": 201536,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch"
+        },
+        "audioUpdateShell": {
+          "p50": 2144,
+          "p95": 300864,
+          "maximum": 300864,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch",
+          "derivation": "updateBatch-sourceUpdateAggregate"
+        },
+        "updateBatch": {
+          "p50": 202656,
+          "p95": 501056,
+          "maximum": 501056,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "frameBegin": {
+          "p50": 192,
+          "p95": 192,
+          "maximum": 192,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "wallpaper": {
+          "p50": 286176,
+          "p95": 351296,
+          "maximum": 351296,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "stage": {
+          "p50": 464128,
+          "p95": 464320,
+          "maximum": 464320,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "mario": {
+          "p50": 169696,
+          "p95": 171392,
+          "maximum": 171392,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "fox": {
+          "p50": 209120,
+          "p95": 209536,
+          "maximum": 209536,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "foregroundEffects": {
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "drawResidual": {
+          "p50": 19744,
+          "p95": 19968,
+          "maximum": 19968,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "draw": {
+          "p50": 1147136,
+          "p95": 1215360,
+          "maximum": 1215360,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "gxFlush": {
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "postVBlank": {
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "runnableThreads": {
+          "p50": 1632,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentActive": {
+          "p50": 1152000,
+          "p95": 1220288,
+          "maximum": 1220288,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "vblankWait": {
+          "p50": 318368,
+          "p95": 408704,
+          "maximum": 408704,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "loopResidual": {
+          "p50": 1600,
+          "p95": 1728,
+          "maximum": 1728,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "wholeLoop": {
+          "p50": 1680448,
+          "p95": 1680512,
+          "maximum": 1680512,
+          "samples": 8,
+          "timerClass": "root",
+          "parent": null
+        },
+        "hud": {
+          "p50": 1184,
+          "p95": 1216,
+          "maximum": 1216,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentResidual": {
+          "p50": 1408,
+          "p95": 1600,
+          "maximum": 1600,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "audioBackend": {
+          "p50": 1920,
+          "p95": 300672,
+          "maximum": 300672,
+          "samples": 8,
+          "timerClass": "nested",
+          "parent": "audioUpdateShell"
+        }
+      },
+      "deadline": {
+        "ticks": 1120380,
+        "p50Deficit": 560068,
+        "p95Deficit": 560132,
+        "maximumDeficit": 560132
+      },
+      "intervals": {
+        "histogram": {
+          "vblank2": 0,
+          "vblank3": 8,
+          "vblank4": 0,
+          "vblank5Plus": 0
+        },
+        "slips": 8,
+        "presentationsPerSecond": 20.0,
+        "sourceUpdatesPerSecond": 40.0
+      },
+      "fighterPair": {
+        "p50": 377632,
+        "p95": 380544,
+        "maximum": 380544,
+        "samples": 8
+      },
+      "rankedLeafOwners": [
+        {
+          "owner": "stage",
+          "p50": 464128,
+          "p95": 464320,
+          "maximum": 464320
+        },
+        {
+          "owner": "vblankWait",
+          "p50": 318368,
+          "p95": 408704,
+          "maximum": 408704
+        },
+        {
+          "owner": "wallpaper",
+          "p50": 286176,
+          "p95": 351296,
+          "maximum": 351296
+        },
+        {
+          "owner": "audioUpdateShell",
+          "p50": 2144,
+          "p95": 300864,
+          "maximum": 300864
+        },
+        {
+          "owner": "fox",
+          "p50": 209120,
+          "p95": 209536,
+          "maximum": 209536
+        },
+        {
+          "owner": "mario",
+          "p50": 169696,
+          "p95": 171392,
+          "maximum": 171392
+        },
+        {
+          "owner": "sourceUpdate1",
+          "p50": 100192,
+          "p95": 100928,
+          "maximum": 100928
+        },
+        {
+          "owner": "sourceUpdate2",
+          "p50": 100352,
+          "p95": 100800,
+          "maximum": 100800
+        },
+        {
+          "owner": "drawResidual",
+          "p50": 19744,
+          "p95": 19968,
+          "maximum": 19968
+        },
+        {
+          "owner": "loopResidual",
+          "p50": 1600,
+          "p95": 1728,
+          "maximum": 1728
+        },
+        {
+          "owner": "runnableThreads",
+          "p50": 1632,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "presentResidual",
+          "p50": 1408,
+          "p95": 1600,
+          "maximum": 1600
+        },
+        {
+          "owner": "input",
+          "p50": 1600,
+          "p95": 1600,
+          "maximum": 1600
+        },
+        {
+          "owner": "hud",
+          "p50": 1184,
+          "p95": 1216,
+          "maximum": 1216
+        },
+        {
+          "owner": "postVBlank",
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384
+        },
+        {
+          "owner": "frameBegin",
+          "p50": 192,
+          "p95": 192,
+          "maximum": 192
+        },
+        {
+          "owner": "gxFlush",
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64
+        },
+        {
+          "owner": "foregroundEffects",
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0
+        }
+      ],
+      "exactness": {
+        "pass": true,
+        "failures": [],
+        "observedFastGeometry": [
+          "121/828/202/320/306"
+        ],
+        "observedFastFallback": [
+          "0/0/0"
+        ],
+        "synchronizedSamples": 8,
+        "geometryRuns": 121,
+        "triangles": 828,
+        "ownerTriangles": [
+          202,
+          320,
+          306
+        ],
+        "fastFallbacks": 0,
+        "textureOrResidencyFaults": 0,
+        "conservationFailure": false
+      }
+    },
+    {
+      "phase": "early600-607",
+      "sampling": {
+        "requestedStartFrame": 600,
+        "requestedStartEvent": "None",
+        "frameStart": 600,
+        "frameEnd": 607,
+        "logicTickStart": 808,
+        "logicTickEnd": 822
+      },
+      "source": {
+        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-early600-607-profile1.json",
+        "sha256": "D0054A83B81B01077DA4BA2BF6C3EBA362F7389F7DF070ECE25580F1E5280563",
+        "bytes": 20946
+      },
+      "timers": {
+        "input": {
+          "p50": 1536,
+          "p95": 1600,
+          "maximum": 1600,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "sourceUpdate1": {
+          "p50": 72576,
+          "p95": 74240,
+          "maximum": 74240,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdate2": {
+          "p50": 72384,
+          "p95": 73536,
+          "maximum": 73536,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdateAggregate": {
+          "p50": 145120,
+          "p95": 146496,
+          "maximum": 146496,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch"
+        },
+        "audioUpdateShell": {
+          "p50": 2688,
+          "p95": 300928,
+          "maximum": 300928,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch",
+          "derivation": "updateBatch-sourceUpdateAggregate"
+        },
+        "updateBatch": {
+          "p50": 147968,
+          "p95": 445824,
+          "maximum": 445824,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "frameBegin": {
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "wallpaper": {
+          "p50": 340544,
+          "p95": 362880,
+          "maximum": 362880,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "stage": {
+          "p50": 464352,
+          "p95": 464448,
+          "maximum": 464448,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "mario": {
+          "p50": 9920,
+          "p95": 9984,
+          "maximum": 9984,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "fox": {
+          "p50": 196992,
+          "p95": 197056,
+          "maximum": 197056,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "foregroundEffects": {
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "drawResidual": {
+          "p50": 50240,
+          "p95": 50368,
+          "maximum": 50368,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "draw": {
+          "p50": 1061856,
+          "p95": 1084480,
+          "maximum": 1084480,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "gxFlush": {
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "postVBlank": {
+          "p50": 384,
+          "p95": 448,
+          "maximum": 448,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "runnableThreads": {
+          "p50": 1664,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentActive": {
+          "p50": 1066784,
+          "p95": 1089280,
+          "maximum": 1089280,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "vblankWait": {
+          "p50": 458848,
+          "p95": 482048,
+          "maximum": 482048,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "loopResidual": {
+          "p50": 1600,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "wholeLoop": {
+          "p50": 1680448,
+          "p95": 1680448,
+          "maximum": 1680448,
+          "samples": 8,
+          "timerClass": "root",
+          "parent": null
+        },
+        "hud": {
+          "p50": 1184,
+          "p95": 1216,
+          "maximum": 1216,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentResidual": {
+          "p50": 1472,
+          "p95": 1600,
+          "maximum": 1600,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "audioBackend": {
+          "p50": 2432,
+          "p95": 300736,
+          "maximum": 300736,
+          "samples": 8,
+          "timerClass": "nested",
+          "parent": "audioUpdateShell"
+        }
+      },
+      "deadline": {
+        "ticks": 1120380,
+        "p50Deficit": 560068,
+        "p95Deficit": 560068,
+        "maximumDeficit": 560068
+      },
+      "intervals": {
+        "histogram": {
+          "vblank2": 0,
+          "vblank3": 8,
+          "vblank4": 0,
+          "vblank5Plus": 0
+        },
+        "slips": 8,
+        "presentationsPerSecond": 20.0,
+        "sourceUpdatesPerSecond": 40.0
+      },
+      "fighterPair": {
+        "p50": 206848,
+        "p95": 207040,
+        "maximum": 207040,
+        "samples": 8
+      },
+      "rankedLeafOwners": [
+        {
+          "owner": "vblankWait",
+          "p50": 458848,
+          "p95": 482048,
+          "maximum": 482048
+        },
+        {
+          "owner": "stage",
+          "p50": 464352,
+          "p95": 464448,
+          "maximum": 464448
+        },
+        {
+          "owner": "wallpaper",
+          "p50": 340544,
+          "p95": 362880,
+          "maximum": 362880
+        },
+        {
+          "owner": "audioUpdateShell",
+          "p50": 2688,
+          "p95": 300928,
+          "maximum": 300928
+        },
+        {
+          "owner": "fox",
+          "p50": 196992,
+          "p95": 197056,
+          "maximum": 197056
+        },
+        {
+          "owner": "sourceUpdate1",
+          "p50": 72576,
+          "p95": 74240,
+          "maximum": 74240
+        },
+        {
+          "owner": "sourceUpdate2",
+          "p50": 72384,
+          "p95": 73536,
+          "maximum": 73536
+        },
+        {
+          "owner": "drawResidual",
+          "p50": 50240,
+          "p95": 50368,
+          "maximum": 50368
+        },
+        {
+          "owner": "mario",
+          "p50": 9920,
+          "p95": 9984,
+          "maximum": 9984
+        },
+        {
+          "owner": "runnableThreads",
+          "p50": 1664,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "loopResidual",
+          "p50": 1600,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "presentResidual",
+          "p50": 1472,
+          "p95": 1600,
+          "maximum": 1600
+        },
+        {
+          "owner": "input",
+          "p50": 1536,
+          "p95": 1600,
+          "maximum": 1600
+        },
+        {
+          "owner": "hud",
+          "p50": 1184,
+          "p95": 1216,
+          "maximum": 1216
+        },
+        {
+          "owner": "postVBlank",
+          "p50": 384,
+          "p95": 448,
+          "maximum": 448
+        },
+        {
+          "owner": "frameBegin",
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192
+        },
+        {
+          "owner": "gxFlush",
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64
+        },
+        {
+          "owner": "foregroundEffects",
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0
+        }
+      ],
+      "exactness": {
+        "pass": false,
+        "failures": [
+          "geometry samples=0,1,2,3,4,5,6,7 observed=91/508/202/0/306 fallback=0/0/0 expected=121/828/202/320/306 and 0/0/0"
+        ],
+        "observedFastGeometry": [
+          "91/508/202/0/306"
+        ],
+        "observedFastFallback": [
+          "0/0/0"
+        ],
+        "synchronizedSamples": 8,
+        "geometryRuns": 121,
+        "triangles": 828,
+        "ownerTriangles": [
+          202,
+          320,
+          306
+        ],
+        "fastFallbacks": 0,
+        "textureOrResidencyFaults": 0,
+        "conservationFailure": false
+      }
+    },
+    {
+      "phase": "whispy1398-1405",
+      "sampling": {
+        "requestedStartFrame": 1398,
+        "requestedStartEvent": "None",
+        "frameStart": 1398,
+        "frameEnd": 1405,
+        "logicTickStart": 2404,
+        "logicTickEnd": 2418
+      },
+      "source": {
+        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-whispy1398-1405-profile1.json",
+        "sha256": "BE595635394A0D14C931092F444D33DA0304BD55DA5A61A16A8B15D77119C340",
+        "bytes": 21141
+      },
+      "timers": {
+        "input": {
+          "p50": 1536,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "sourceUpdate1": {
+          "p50": 108096,
+          "p95": 731584,
+          "maximum": 731584,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdate2": {
+          "p50": 107232,
+          "p95": 396224,
+          "maximum": 396224,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdateAggregate": {
+          "p50": 215584,
+          "p95": 837248,
+          "maximum": 837248,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch"
+        },
+        "audioUpdateShell": {
+          "p50": 2304,
+          "p95": 2304,
+          "maximum": 2304,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch",
+          "derivation": "updateBatch-sourceUpdateAggregate"
+        },
+        "updateBatch": {
+          "p50": 217856,
+          "p95": 839552,
+          "maximum": 839552,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "frameBegin": {
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "wallpaper": {
+          "p50": 320448,
+          "p95": 358592,
+          "maximum": 358592,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "stage": {
+          "p50": 464288,
+          "p95": 464576,
+          "maximum": 464576,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "mario": {
+          "p50": 169728,
+          "p95": 171456,
+          "maximum": 171456,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "fox": {
+          "p50": 209312,
+          "p95": 209856,
+          "maximum": 209856,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "foregroundEffects": {
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "drawResidual": {
+          "p50": 19552,
+          "p95": 19840,
+          "maximum": 19840,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "draw": {
+          "p50": 1182016,
+          "p95": 1220032,
+          "maximum": 1220032,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "gxFlush": {
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "postVBlank": {
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "runnableThreads": {
+          "p50": 1632,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentActive": {
+          "p50": 1186912,
+          "p95": 1224896,
+          "maximum": 1224896,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "vblankWait": {
+          "p50": 257120,
+          "p95": 389824,
+          "maximum": 389824,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "loopResidual": {
+          "p50": 1632,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "wholeLoop": {
+          "p50": 1680448,
+          "p95": 2240640,
+          "maximum": 2240640,
+          "samples": 8,
+          "timerClass": "root",
+          "parent": null
+        },
+        "hud": {
+          "p50": 1216,
+          "p95": 1216,
+          "maximum": 1216,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentResidual": {
+          "p50": 1472,
+          "p95": 1536,
+          "maximum": 1536,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "audioBackend": {
+          "p50": 2048,
+          "p95": 2176,
+          "maximum": 2176,
+          "samples": 8,
+          "timerClass": "nested",
+          "parent": "audioUpdateShell"
+        }
+      },
+      "deadline": {
+        "ticks": 1120380,
+        "p50Deficit": 560068,
+        "p95Deficit": 1120260,
+        "maximumDeficit": 1120260
+      },
+      "intervals": {
+        "histogram": {
+          "vblank2": 0,
+          "vblank3": 6,
+          "vblank4": 2,
+          "vblank5Plus": 0
+        },
+        "slips": 10,
+        "presentationsPerSecond": 18.462,
+        "sourceUpdatesPerSecond": 36.923
+      },
+      "fighterPair": {
+        "p50": 378112,
+        "p95": 380352,
+        "maximum": 380352,
+        "samples": 8
+      },
+      "rankedLeafOwners": [
+        {
+          "owner": "sourceUpdate1",
+          "p50": 108096,
+          "p95": 731584,
+          "maximum": 731584
+        },
+        {
+          "owner": "stage",
+          "p50": 464288,
+          "p95": 464576,
+          "maximum": 464576
+        },
+        {
+          "owner": "sourceUpdate2",
+          "p50": 107232,
+          "p95": 396224,
+          "maximum": 396224
+        },
+        {
+          "owner": "vblankWait",
+          "p50": 257120,
+          "p95": 389824,
+          "maximum": 389824
+        },
+        {
+          "owner": "wallpaper",
+          "p50": 320448,
+          "p95": 358592,
+          "maximum": 358592
+        },
+        {
+          "owner": "fox",
+          "p50": 209312,
+          "p95": 209856,
+          "maximum": 209856
+        },
+        {
+          "owner": "mario",
+          "p50": 169728,
+          "p95": 171456,
+          "maximum": 171456
+        },
+        {
+          "owner": "drawResidual",
+          "p50": 19552,
+          "p95": 19840,
+          "maximum": 19840
+        },
+        {
+          "owner": "audioUpdateShell",
+          "p50": 2304,
+          "p95": 2304,
+          "maximum": 2304
+        },
+        {
+          "owner": "runnableThreads",
+          "p50": 1632,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "input",
+          "p50": 1536,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "loopResidual",
+          "p50": 1632,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "presentResidual",
+          "p50": 1472,
+          "p95": 1536,
+          "maximum": 1536
+        },
+        {
+          "owner": "hud",
+          "p50": 1216,
+          "p95": 1216,
+          "maximum": 1216
+        },
+        {
+          "owner": "postVBlank",
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384
+        },
+        {
+          "owner": "frameBegin",
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192
+        },
+        {
+          "owner": "gxFlush",
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64
+        },
+        {
+          "owner": "foregroundEffects",
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0
+        }
+      ],
+      "exactness": {
+        "pass": false,
+        "failures": [
+          "static residency/fence samples=0,1,2,3,4,5,6,7"
+        ],
+        "observedFastGeometry": [
+          "121/828/202/320/306"
+        ],
+        "observedFastFallback": [
+          "0/0/0"
+        ],
+        "synchronizedSamples": 8,
+        "geometryRuns": 121,
+        "triangles": 828,
+        "ownerTriangles": [
+          202,
+          320,
+          306
+        ],
+        "fastFallbacks": 0,
+        "textureOrResidencyFaults": 0,
+        "conservationFailure": false
+      }
+    },
+    {
+      "phase": "late3300-3307",
+      "sampling": {
+        "requestedStartFrame": 0,
+        "requestedStartEvent": "Late",
+        "frameStart": 1846,
+        "frameEnd": 1853,
+        "logicTickStart": 3300,
+        "logicTickEnd": 3314
+      },
+      "source": {
+        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-late3300-3307-profile1.json",
+        "sha256": "13BDEAA6A25DA277A6ED5939E46A3D70D36EAB45340CF8CB1908E0F7925AC412",
+        "bytes": 21069
+      },
+      "timers": {
+        "input": {
+          "p50": 1568,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "sourceUpdate1": {
+          "p50": 99392,
+          "p95": 113280,
+          "maximum": 113280,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdate2": {
+          "p50": 99040,
+          "p95": 100352,
+          "maximum": 100352,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdateAggregate": {
+          "p50": 198304,
+          "p95": 210176,
+          "maximum": 210176,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch"
+        },
+        "audioUpdateShell": {
+          "p50": 2304,
+          "p95": 2496,
+          "maximum": 2496,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch",
+          "derivation": "updateBatch-sourceUpdateAggregate"
+        },
+        "updateBatch": {
+          "p50": 200576,
+          "p95": 212480,
+          "maximum": 212480,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "frameBegin": {
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "wallpaper": {
+          "p50": 2368,
+          "p95": 2432,
+          "maximum": 2432,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "stage": {
+          "p50": 464256,
+          "p95": 464384,
+          "maximum": 464384,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "mario": {
+          "p50": 169824,
+          "p95": 171520,
+          "maximum": 171520,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "fox": {
+          "p50": 208448,
+          "p95": 208896,
+          "maximum": 208896,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "foregroundEffects": {
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "drawResidual": {
+          "p50": 19648,
+          "p95": 20480,
+          "maximum": 20480,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "draw": {
+          "p50": 863584,
+          "p95": 866048,
+          "maximum": 866048,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "gxFlush": {
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "postVBlank": {
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "runnableThreads": {
+          "p50": 1600,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentActive": {
+          "p50": 868384,
+          "p95": 870912,
+          "maximum": 870912,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "vblankWait": {
+          "p50": 46944,
+          "p95": 50624,
+          "maximum": 50624,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "loopResidual": {
+          "p50": 1632,
+          "p95": 1728,
+          "maximum": 1728,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "wholeLoop": {
+          "p50": 1120256,
+          "p95": 1120320,
+          "maximum": 1120320,
+          "samples": 8,
+          "timerClass": "root",
+          "parent": null
+        },
+        "hud": {
+          "p50": 1216,
+          "p95": 1216,
+          "maximum": 1216,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentResidual": {
+          "p50": 1472,
+          "p95": 1600,
+          "maximum": 1600,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "audioBackend": {
+          "p50": 2048,
+          "p95": 2240,
+          "maximum": 2240,
+          "samples": 8,
+          "timerClass": "nested",
+          "parent": "audioUpdateShell"
+        }
+      },
+      "deadline": {
+        "ticks": 1120380,
+        "p50Deficit": -124,
+        "p95Deficit": -60,
+        "maximumDeficit": -60
+      },
+      "intervals": {
+        "histogram": {
+          "vblank2": 8,
+          "vblank3": 0,
+          "vblank4": 0,
+          "vblank5Plus": 0
+        },
+        "slips": 0,
+        "presentationsPerSecond": 30.0,
+        "sourceUpdatesPerSecond": 60.0
+      },
+      "fighterPair": {
+        "p50": 377216,
+        "p95": 379712,
+        "maximum": 379712,
+        "samples": 8
+      },
+      "rankedLeafOwners": [
+        {
+          "owner": "stage",
+          "p50": 464256,
+          "p95": 464384,
+          "maximum": 464384
+        },
+        {
+          "owner": "fox",
+          "p50": 208448,
+          "p95": 208896,
+          "maximum": 208896
+        },
+        {
+          "owner": "mario",
+          "p50": 169824,
+          "p95": 171520,
+          "maximum": 171520
+        },
+        {
+          "owner": "sourceUpdate1",
+          "p50": 99392,
+          "p95": 113280,
+          "maximum": 113280
+        },
+        {
+          "owner": "sourceUpdate2",
+          "p50": 99040,
+          "p95": 100352,
+          "maximum": 100352
+        },
+        {
+          "owner": "vblankWait",
+          "p50": 46944,
+          "p95": 50624,
+          "maximum": 50624
+        },
+        {
+          "owner": "drawResidual",
+          "p50": 19648,
+          "p95": 20480,
+          "maximum": 20480
+        },
+        {
+          "owner": "audioUpdateShell",
+          "p50": 2304,
+          "p95": 2496,
+          "maximum": 2496
+        },
+        {
+          "owner": "wallpaper",
+          "p50": 2368,
+          "p95": 2432,
+          "maximum": 2432
+        },
+        {
+          "owner": "loopResidual",
+          "p50": 1632,
+          "p95": 1728,
+          "maximum": 1728
+        },
+        {
+          "owner": "runnableThreads",
+          "p50": 1600,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "input",
+          "p50": 1568,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "presentResidual",
+          "p50": 1472,
+          "p95": 1600,
+          "maximum": 1600
+        },
+        {
+          "owner": "hud",
+          "p50": 1216,
+          "p95": 1216,
+          "maximum": 1216
+        },
+        {
+          "owner": "postVBlank",
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384
+        },
+        {
+          "owner": "frameBegin",
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192
+        },
+        {
+          "owner": "gxFlush",
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64
+        },
+        {
+          "owner": "foregroundEffects",
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0
+        }
+      ],
+      "exactness": {
+        "pass": false,
+        "failures": [
+          "static residency/fence samples=0,1,2,3,4,5,6,7"
+        ],
+        "observedFastGeometry": [
+          "121/828/202/320/306"
+        ],
+        "observedFastFallback": [
+          "0/0/0"
+        ],
+        "synchronizedSamples": 8,
+        "geometryRuns": 121,
+        "triangles": 828,
+        "ownerTriangles": [
+          202,
+          320,
+          306
+        ],
+        "fastFallbacks": 0,
+        "textureOrResidencyFaults": 0,
+        "conservationFailure": false
+      }
+    },
+    {
+      "phase": "natural-ko",
+      "sampling": {
+        "requestedStartFrame": 0,
+        "requestedStartEvent": "KO",
+        "frameStart": 566,
+        "frameEnd": 573,
+        "logicTickStart": 740,
+        "logicTickEnd": 754
+      },
+      "source": {
+        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-natural-ko-profile1.json",
+        "sha256": "CE651FE1AF5B70A77568107F5E8F59CE8C3AA48AF0BEE3309274385EA825BB81",
+        "bytes": 20910
+      },
+      "timers": {
+        "input": {
+          "p50": 1536,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "sourceUpdate1": {
+          "p50": 97600,
+          "p95": 107648,
+          "maximum": 107648,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdate2": {
+          "p50": 97056,
+          "p95": 116032,
+          "maximum": 116032,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdateAggregate": {
+          "p50": 194912,
+          "p95": 223680,
+          "maximum": 223680,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch"
+        },
+        "audioUpdateShell": {
+          "p50": 3200,
+          "p95": 301888,
+          "maximum": 301888,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch",
+          "derivation": "updateBatch-sourceUpdateAggregate"
+        },
+        "updateBatch": {
+          "p50": 198784,
+          "p95": 487296,
+          "maximum": 487296,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "frameBegin": {
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "wallpaper": {
+          "p50": 73888,
+          "p95": 327360,
+          "maximum": 327360,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "stage": {
+          "p50": 468256,
+          "p95": 468480,
+          "maximum": 468480,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "mario": {
+          "p50": 7584,
+          "p95": 7616,
+          "maximum": 7616,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "fox": {
+          "p50": 197696,
+          "p95": 197824,
+          "maximum": 197824,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "foregroundEffects": {
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "drawResidual": {
+          "p50": 51008,
+          "p95": 51200,
+          "maximum": 51200,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "draw": {
+          "p50": 798528,
+          "p95": 1051904,
+          "maximum": 1051904,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "gxFlush": {
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "postVBlank": {
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "runnableThreads": {
+          "p50": 1600,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentActive": {
+          "p50": 803424,
+          "p95": 1056768,
+          "maximum": 1056768,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "vblankWait": {
+          "p50": 121664,
+          "p95": 421056,
+          "maximum": 421056,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "loopResidual": {
+          "p50": 1600,
+          "p95": 1728,
+          "maximum": 1728,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "wholeLoop": {
+          "p50": 1120256,
+          "p95": 1680512,
+          "maximum": 1680512,
+          "samples": 8,
+          "timerClass": "root",
+          "parent": null
+        },
+        "hud": {
+          "p50": 1216,
+          "p95": 1216,
+          "maximum": 1216,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentResidual": {
+          "p50": 1472,
+          "p95": 1536,
+          "maximum": 1536,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "audioBackend": {
+          "p50": 2944,
+          "p95": 301632,
+          "maximum": 301632,
+          "samples": 8,
+          "timerClass": "nested",
+          "parent": "audioUpdateShell"
+        }
+      },
+      "deadline": {
+        "ticks": 1120380,
+        "p50Deficit": -124,
+        "p95Deficit": 560132,
+        "maximumDeficit": 560132
+      },
+      "intervals": {
+        "histogram": {
+          "vblank2": 6,
+          "vblank3": 2,
+          "vblank4": 0,
+          "vblank5Plus": 0
+        },
+        "slips": 2,
+        "presentationsPerSecond": 26.667,
+        "sourceUpdatesPerSecond": 53.333
+      },
+      "fighterPair": {
+        "p50": 205280,
+        "p95": 205440,
+        "maximum": 205440,
+        "samples": 8
+      },
+      "rankedLeafOwners": [
+        {
+          "owner": "stage",
+          "p50": 468256,
+          "p95": 468480,
+          "maximum": 468480
+        },
+        {
+          "owner": "vblankWait",
+          "p50": 121664,
+          "p95": 421056,
+          "maximum": 421056
+        },
+        {
+          "owner": "wallpaper",
+          "p50": 73888,
+          "p95": 327360,
+          "maximum": 327360
+        },
+        {
+          "owner": "audioUpdateShell",
+          "p50": 3200,
+          "p95": 301888,
+          "maximum": 301888
+        },
+        {
+          "owner": "fox",
+          "p50": 197696,
+          "p95": 197824,
+          "maximum": 197824
+        },
+        {
+          "owner": "sourceUpdate2",
+          "p50": 97056,
+          "p95": 116032,
+          "maximum": 116032
+        },
+        {
+          "owner": "sourceUpdate1",
+          "p50": 97600,
+          "p95": 107648,
+          "maximum": 107648
+        },
+        {
+          "owner": "drawResidual",
+          "p50": 51008,
+          "p95": 51200,
+          "maximum": 51200
+        },
+        {
+          "owner": "mario",
+          "p50": 7584,
+          "p95": 7616,
+          "maximum": 7616
+        },
+        {
+          "owner": "loopResidual",
+          "p50": 1600,
+          "p95": 1728,
+          "maximum": 1728
+        },
+        {
+          "owner": "runnableThreads",
+          "p50": 1600,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "input",
+          "p50": 1536,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "presentResidual",
+          "p50": 1472,
+          "p95": 1536,
+          "maximum": 1536
+        },
+        {
+          "owner": "hud",
+          "p50": 1216,
+          "p95": 1216,
+          "maximum": 1216
+        },
+        {
+          "owner": "postVBlank",
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384
+        },
+        {
+          "owner": "frameBegin",
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192
+        },
+        {
+          "owner": "gxFlush",
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64
+        },
+        {
+          "owner": "foregroundEffects",
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0
+        }
+      ],
+      "exactness": {
+        "pass": false,
+        "failures": [
+          "geometry samples=0,1,2,3,4,5,6,7 observed=91/508/202/0/306 fallback=0/0/0 expected=121/828/202/320/306 and 0/0/0"
+        ],
+        "observedFastGeometry": [
+          "91/508/202/0/306"
+        ],
+        "observedFastFallback": [
+          "0/0/0"
+        ],
+        "synchronizedSamples": 8,
+        "geometryRuns": 121,
+        "triangles": 828,
+        "ownerTriangles": [
+          202,
+          320,
+          306
+        ],
+        "fastFallbacks": 0,
+        "textureOrResidencyFaults": 0,
+        "conservationFailure": false
+      }
+    },
+    {
+      "phase": "natural-rebirth",
+      "sampling": {
+        "requestedStartFrame": 0,
+        "requestedStartEvent": "Rebirth",
+        "frameStart": 589,
+        "frameEnd": 596,
+        "logicTickStart": 786,
+        "logicTickEnd": 800
+      },
+      "source": {
+        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-natural-rebirth-profile1.json",
+        "sha256": "5C616F22471BDD3FF2E85F0E822032B58092521897A5D41637B2FAF71B37E535",
+        "bytes": 20949
+      },
+      "timers": {
+        "input": {
+          "p50": 1568,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "sourceUpdate1": {
+          "p50": 75040,
+          "p95": 775360,
+          "maximum": 775360,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdate2": {
+          "p50": 74784,
+          "p95": 75328,
+          "maximum": 75328,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdateAggregate": {
+          "p50": 149792,
+          "p95": 850304,
+          "maximum": 850304,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch"
+        },
+        "audioUpdateShell": {
+          "p50": 2752,
+          "p95": 301632,
+          "maximum": 301632,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch",
+          "derivation": "updateBatch-sourceUpdateAggregate"
+        },
+        "updateBatch": {
+          "p50": 152416,
+          "p95": 853184,
+          "maximum": 853184,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "frameBegin": {
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "wallpaper": {
+          "p50": 319968,
+          "p95": 324032,
+          "maximum": 324032,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "stage": {
+          "p50": 463904,
+          "p95": 464192,
+          "maximum": 464192,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "mario": {
+          "p50": 9920,
+          "p95": 9920,
+          "maximum": 9920,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "fox": {
+          "p50": 197632,
+          "p95": 197696,
+          "maximum": 197696,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "foregroundEffects": {
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "drawResidual": {
+          "p50": 50080,
+          "p95": 50240,
+          "maximum": 50240,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "draw": {
+          "p50": 1041536,
+          "p95": 1045248,
+          "maximum": 1045248,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "gxFlush": {
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "postVBlank": {
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "runnableThreads": {
+          "p50": 1664,
+          "p95": 1856,
+          "maximum": 1856,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentActive": {
+          "p50": 1047552,
+          "p95": 1303808,
+          "maximum": 1303808,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "vblankWait": {
+          "p50": 476544,
+          "p95": 486144,
+          "maximum": 486144,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "loopResidual": {
+          "p50": 1600,
+          "p95": 1728,
+          "maximum": 1728,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "wholeLoop": {
+          "p50": 1680448,
+          "p95": 2240640,
+          "maximum": 2240640,
+          "samples": 8,
+          "timerClass": "root",
+          "parent": null
+        },
+        "hud": {
+          "p50": 1184,
+          "p95": 267264,
+          "maximum": 267264,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentResidual": {
+          "p50": 1472,
+          "p95": 1600,
+          "maximum": 1600,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "audioBackend": {
+          "p50": 2496,
+          "p95": 301376,
+          "maximum": 301376,
+          "samples": 8,
+          "timerClass": "nested",
+          "parent": "audioUpdateShell"
+        }
+      },
+      "deadline": {
+        "ticks": 1120380,
+        "p50Deficit": 560068,
+        "p95Deficit": 1120260,
+        "maximumDeficit": 1120260
+      },
+      "intervals": {
+        "histogram": {
+          "vblank2": 0,
+          "vblank3": 7,
+          "vblank4": 1,
+          "vblank5Plus": 0
+        },
+        "slips": 9,
+        "presentationsPerSecond": 19.2,
+        "sourceUpdatesPerSecond": 38.4
+      },
+      "fighterPair": {
+        "p50": 207520,
+        "p95": 207616,
+        "maximum": 207616,
+        "samples": 8
+      },
+      "rankedLeafOwners": [
+        {
+          "owner": "sourceUpdate1",
+          "p50": 75040,
+          "p95": 775360,
+          "maximum": 775360
+        },
+        {
+          "owner": "vblankWait",
+          "p50": 476544,
+          "p95": 486144,
+          "maximum": 486144
+        },
+        {
+          "owner": "stage",
+          "p50": 463904,
+          "p95": 464192,
+          "maximum": 464192
+        },
+        {
+          "owner": "wallpaper",
+          "p50": 319968,
+          "p95": 324032,
+          "maximum": 324032
+        },
+        {
+          "owner": "audioUpdateShell",
+          "p50": 2752,
+          "p95": 301632,
+          "maximum": 301632
+        },
+        {
+          "owner": "hud",
+          "p50": 1184,
+          "p95": 267264,
+          "maximum": 267264
+        },
+        {
+          "owner": "fox",
+          "p50": 197632,
+          "p95": 197696,
+          "maximum": 197696
+        },
+        {
+          "owner": "sourceUpdate2",
+          "p50": 74784,
+          "p95": 75328,
+          "maximum": 75328
+        },
+        {
+          "owner": "drawResidual",
+          "p50": 50080,
+          "p95": 50240,
+          "maximum": 50240
+        },
+        {
+          "owner": "mario",
+          "p50": 9920,
+          "p95": 9920,
+          "maximum": 9920
+        },
+        {
+          "owner": "runnableThreads",
+          "p50": 1664,
+          "p95": 1856,
+          "maximum": 1856
+        },
+        {
+          "owner": "loopResidual",
+          "p50": 1600,
+          "p95": 1728,
+          "maximum": 1728
+        },
+        {
+          "owner": "input",
+          "p50": 1568,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "presentResidual",
+          "p50": 1472,
+          "p95": 1600,
+          "maximum": 1600
+        },
+        {
+          "owner": "postVBlank",
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384
+        },
+        {
+          "owner": "frameBegin",
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192
+        },
+        {
+          "owner": "gxFlush",
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64
+        },
+        {
+          "owner": "foregroundEffects",
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0
+        }
+      ],
+      "exactness": {
+        "pass": false,
+        "failures": [
+          "geometry samples=0,1,2,3,4,5,6,7 observed=91/508/202/0/306 fallback=0/0/0 expected=121/828/202/320/306 and 0/0/0"
+        ],
+        "observedFastGeometry": [
+          "91/508/202/0/306"
+        ],
+        "observedFastFallback": [
+          "0/0/0"
+        ],
+        "synchronizedSamples": 8,
+        "geometryRuns": 121,
+        "triangles": 828,
+        "ownerTriangles": [
+          202,
+          320,
+          306
+        ],
+        "fastFallbacks": 0,
+        "textureOrResidencyFaults": 0,
+        "conservationFailure": false
+      }
+    },
+    {
+      "phase": "timeup-results",
+      "sampling": {
+        "requestedStartFrame": 0,
+        "requestedStartEvent": "TimeUp",
+        "frameStart": 1988,
+        "frameEnd": 1995,
+        "logicTickStart": 3584,
+        "logicTickEnd": 3598
+      },
+      "source": {
+        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-timeup-results-profile1.json",
+        "sha256": "39FC7D00CF79DBDFF0EF7D433ED4C005B64756E7B04D429F34C11AD76147A6F8",
+        "bytes": 21074
+      },
+      "timers": {
+        "input": {
+          "p50": 1600,
+          "p95": 1600,
+          "maximum": 1600,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "sourceUpdate1": {
+          "p50": 99296,
+          "p95": 522240,
+          "maximum": 522240,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdate2": {
+          "p50": 99104,
+          "p95": 107392,
+          "maximum": 107392,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "sourceUpdateAggregate"
+        },
+        "sourceUpdateAggregate": {
+          "p50": 198176,
+          "p95": 628736,
+          "maximum": 628736,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch"
+        },
+        "audioUpdateShell": {
+          "p50": 2240,
+          "p95": 2240,
+          "maximum": 2240,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "updateBatch",
+          "derivation": "updateBatch-sourceUpdateAggregate"
+        },
+        "updateBatch": {
+          "p50": 200416,
+          "p95": 630976,
+          "maximum": 630976,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "frameBegin": {
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "wallpaper": {
+          "p50": 2400,
+          "p95": 2432,
+          "maximum": 2432,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "stage": {
+          "p50": 464128,
+          "p95": 464320,
+          "maximum": 464320,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "mario": {
+          "p50": 169728,
+          "p95": 171392,
+          "maximum": 171392,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "fox": {
+          "p50": 208224,
+          "p95": 210240,
+          "maximum": 210240,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "foregroundEffects": {
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "drawResidual": {
+          "p50": 19744,
+          "p95": 49664,
+          "maximum": 49664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "draw"
+        },
+        "draw": {
+          "p50": 864416,
+          "p95": 894784,
+          "maximum": 894784,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "gxFlush": {
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "postVBlank": {
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "runnableThreads": {
+          "p50": 1600,
+          "p95": 1664,
+          "maximum": 1664,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentActive": {
+          "p50": 869312,
+          "p95": 899712,
+          "maximum": 899712,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "vblankWait": {
+          "p50": 48096,
+          "p95": 146624,
+          "maximum": 146624,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "loopResidual": {
+          "p50": 1568,
+          "p95": 1728,
+          "maximum": 1728,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "wholeLoop"
+        },
+        "wholeLoop": {
+          "p50": 1120256,
+          "p95": 1680448,
+          "maximum": 1680448,
+          "samples": 8,
+          "timerClass": "root",
+          "parent": null
+        },
+        "hud": {
+          "p50": 1216,
+          "p95": 1216,
+          "maximum": 1216,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "presentResidual": {
+          "p50": 1504,
+          "p95": 1536,
+          "maximum": 1536,
+          "samples": 8,
+          "timerClass": "child",
+          "parent": "presentActive"
+        },
+        "audioBackend": {
+          "p50": 1984,
+          "p95": 2048,
+          "maximum": 2048,
+          "samples": 8,
+          "timerClass": "nested",
+          "parent": "audioUpdateShell"
+        }
+      },
+      "deadline": {
+        "ticks": 1120380,
+        "p50Deficit": -124,
+        "p95Deficit": 560068,
+        "maximumDeficit": 560068
+      },
+      "intervals": {
+        "histogram": {
+          "vblank2": 7,
+          "vblank3": 1,
+          "vblank4": 0,
+          "vblank5Plus": 0
+        },
+        "slips": 1,
+        "presentationsPerSecond": 28.235,
+        "sourceUpdatesPerSecond": 56.471
+      },
+      "fighterPair": {
+        "p50": 377600,
+        "p95": 380160,
+        "maximum": 380160,
+        "samples": 8
+      },
+      "rankedLeafOwners": [
+        {
+          "owner": "sourceUpdate1",
+          "p50": 99296,
+          "p95": 522240,
+          "maximum": 522240
+        },
+        {
+          "owner": "stage",
+          "p50": 464128,
+          "p95": 464320,
+          "maximum": 464320
+        },
+        {
+          "owner": "fox",
+          "p50": 208224,
+          "p95": 210240,
+          "maximum": 210240
+        },
+        {
+          "owner": "mario",
+          "p50": 169728,
+          "p95": 171392,
+          "maximum": 171392
+        },
+        {
+          "owner": "vblankWait",
+          "p50": 48096,
+          "p95": 146624,
+          "maximum": 146624
+        },
+        {
+          "owner": "sourceUpdate2",
+          "p50": 99104,
+          "p95": 107392,
+          "maximum": 107392
+        },
+        {
+          "owner": "drawResidual",
+          "p50": 19744,
+          "p95": 49664,
+          "maximum": 49664
+        },
+        {
+          "owner": "wallpaper",
+          "p50": 2400,
+          "p95": 2432,
+          "maximum": 2432
+        },
+        {
+          "owner": "audioUpdateShell",
+          "p50": 2240,
+          "p95": 2240,
+          "maximum": 2240
+        },
+        {
+          "owner": "loopResidual",
+          "p50": 1568,
+          "p95": 1728,
+          "maximum": 1728
+        },
+        {
+          "owner": "runnableThreads",
+          "p50": 1600,
+          "p95": 1664,
+          "maximum": 1664
+        },
+        {
+          "owner": "input",
+          "p50": 1600,
+          "p95": 1600,
+          "maximum": 1600
+        },
+        {
+          "owner": "presentResidual",
+          "p50": 1504,
+          "p95": 1536,
+          "maximum": 1536
+        },
+        {
+          "owner": "hud",
+          "p50": 1216,
+          "p95": 1216,
+          "maximum": 1216
+        },
+        {
+          "owner": "postVBlank",
+          "p50": 384,
+          "p95": 384,
+          "maximum": 384
+        },
+        {
+          "owner": "frameBegin",
+          "p50": 128,
+          "p95": 192,
+          "maximum": 192
+        },
+        {
+          "owner": "gxFlush",
+          "p50": 64,
+          "p95": 64,
+          "maximum": 64
+        },
+        {
+          "owner": "foregroundEffects",
+          "p50": 0,
+          "p95": 0,
+          "maximum": 0
+        }
+      ],
+      "exactness": {
+        "pass": false,
+        "failures": [
+          "static residency/fence samples=0,1,2,3,4,5,6,7"
+        ],
+        "observedFastGeometry": [
+          "121/828/202/320/306"
+        ],
+        "observedFastFallback": [
+          "0/0/0"
+        ],
+        "synchronizedSamples": 8,
+        "geometryRuns": 121,
+        "triangles": 828,
+        "ownerTriangles": [
+          202,
+          320,
+          306
+        ],
+        "fastFallbacks": 0,
+        "textureOrResidencyFaults": 0,
+        "conservationFailure": false
+      }
+    }
+  ],
+  "productionPacing": {
+    "presentations": 2042,
+    "sourceUpdates": 4084,
+    "presentationsPerSecond": 18.6,
+    "sourceUpdatesPerSecond": 37.3,
+    "histogram": {
+      "vblank2": 61,
+      "vblank3": 1547,
+      "vblank4": 396,
+      "vblank5Plus": 38
+    },
+    "phases": [
+      {
+        "phase": "countdown",
+        "vblank2": 0,
+        "vblank3": 190,
+        "vblank4": 4,
+        "vblank5Plus": 0,
+        "slips": 198
+      },
+      {
+        "phase": "earlyCombat",
+        "vblank2": 17,
+        "vblank3": 606,
+        "vblank4": 253,
+        "vblank5Plus": 24,
+        "slips": 1188
+      },
+      {
+        "phase": "lateCombat",
+        "vblank2": 0,
+        "vblank3": 747,
+        "vblank4": 139,
+        "vblank5Plus": 14,
+        "slips": 1067
+      },
+      {
+        "phase": "koRebirth",
+        "vblank2": 0,
+        "vblank3": 0,
+        "vblank4": 0,
+        "vblank5Plus": 0,
+        "slips": 0
+      },
+      {
+        "phase": "results",
+        "vblank2": 44,
+        "vblank3": 4,
+        "vblank4": 0,
+        "vblank5Plus": 0,
+        "slips": 4
+      }
+    ],
+    "slips": 2457
+  },
+  "readiness": {
+    "stable30": false,
+    "pacingStable30": false,
+    "profile1ExactnessPass": false,
+    "profile1ExactnessFailures": [
+      "early600-607: geometry samples=0,1,2,3,4,5,6,7 observed=91/508/202/0/306 fallback=0/0/0 expected=121/828/202/320/306 and 0/0/0",
+      "whispy1398-1405: static residency/fence samples=0,1,2,3,4,5,6,7",
+      "late3300-3307: static residency/fence samples=0,1,2,3,4,5,6,7",
+      "natural-ko: geometry samples=0,1,2,3,4,5,6,7 observed=91/508/202/0/306 fallback=0/0/0 expected=121/828/202/320/306 and 0/0/0",
+      "natural-rebirth: geometry samples=0,1,2,3,4,5,6,7 observed=91/508/202/0/306 fallback=0/0/0 expected=121/828/202/320/306 and 0/0/0",
+      "timeup-results: static residency/fence samples=0,1,2,3,4,5,6,7"
+    ],
+    "slowPresentationIntervals": 1981,
+    "slips": 2457,
+    "reserveBytes": 166672,
+    "reserveFloorBytes": 131072,
+    "reservePass": true,
+    "exactTwoUpdatesPerPresentation": true,
+    "exactlyOneTeardown": true,
+    "exactKoFgmTriplet": false,
+    "zeroPostGoTextureFence": false,
+    "changedPixels": 0
+  },
+  "recommendation": {
+    "lane": "M3-first",
+    "largestM3Phase": "natural-ko",
+    "largestM3StageP95": 468480,
+    "largestM2Phase": "countdown438-445",
+    "largestM2FighterPairP95": 380544,
+    "basis": "same profile-1 ROM leaf-owner P95 only"
+  },
+  "taskBounds": {
+    "task20R": "stack/DTCM only; no timing candidate before lifecycle reserve and stack evidence",
+    "task21R_task27": {
+      "owner": "Mario+Fox M2",
+      "maximumP95": 380544,
+      "phase": "countdown438-445"
+    },
+    "task22R": {
+      "owner": "wallpaper",
+      "maximumP95": 362880
+    },
+    "task23R_task26": {
+      "owner": "stage M3",
+      "maximumP95": 468480,
+      "phase": "natural-ko"
+    }
+  }
+}

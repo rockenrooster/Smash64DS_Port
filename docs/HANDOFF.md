@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-18 13:55 Central
+Updated: 2026-07-18 15:25 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -26,34 +26,28 @@ correctness evidence, never its speed referee.
 
 ## Next Packet
 
-`docs/optimization/tasks.md` is authoritative. The reconciliation began at
-HEAD `458191bef147f1c6963b2f533c601f9f68fc7730` on `master` in the root
-worktree. Preserve the user's uncommitted 344-line
-`ClaudeFable5_JumpABC_Tasks_20260715_2326.md` change; it was not edited or
-staged by this checkpoint.
+`docs/optimization/tasks.md` remains authoritative. Preserve the user's
+uncommitted `AGENTS.md` and 344-line
+`docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md` changes; neither
+belongs to this checkpoint.
 
-The old Task 25 profile-1 matrix (`FB0704BA...`) remains historical evidence
-only and is not Task 25R. The preserved atomic units are closed:
+Task 25R is complete as a report-only baseline at measured source HEAD
+`f088db98de272e9788405c2181029ad4a4c353ba`. Its detailed/profile-0 ROM pair is
+`6E90D414...` / `E685C034...`; synchronized frame 607 is exactly 0/49,152
+changed pixels. Profile 0 completes 4,084 updates / 2,042 presentations and one
+teardown with 166,672-byte reserve, but reaches only 18.6 presentations/s and
+37.3 updates/s. Its `61/1547/396/38` interval histogram contains 1,981
+intervals of three or more VBlanks and 2,457 excess VBlanks. The exact Mario-KO
+source sequence is present but playback/generation failures are 1/1, and the
+post-GO texture fence first trips at class+1/frame 10/1111. The strict
+stable-30 gate correctly fails; normal verifier paths remain strict.
 
-- Task 20R measurement-only: preserve the default-off sampler; no move exists.
-  The corrected startup-only export carries all eight raw rows and fit fields
-  and is absent from profile 0. Its shallow 252/2,832-byte watermark proves the
-  tooling only. Earlier 13,044/3,700-byte `NO_FIT` console output is provisional
-  because its legacy JSON omitted Task-20 rows; rerun the full lifecycle after
-  Task 25R before any DTCM candidate.
-- Task 21R measurement-only: 16/392 exact resident shade hits (4.08%); no cache.
-- Task 22R threshold-4 writer: REVERT on natural-KO wallpaper P95 +4,160;
-  candidate removed, neutral census retained.
-- Task 24: only the 17-worktree evidence-cleared batch was removed; 15 held
-  worktrees and all branches/builds/logs remain. Focused checks and the final
-  Boundary profile pass; further cleanup is deferred. `DevFast` is retired.
-
-Start Task 25R next. Build one current detailed profile-1 ROM and its matching
-profile-0 sibling; publish the complete identity pack, P50/P95/max/N owner rows,
-interval histogram, rates, reserve, exactness, and stable-30 deficit. Then use
-only its result to choose M3 (`23R Phase 0 -> 26 -> residual 23R`) or M2
-(`21R -> 27`); the disjoint lane is `20R -> 22R`, followed by `28 -> 29`, with
-Task 24 in a quiet slot and Task 30 last. `src/nds/nds_renderer.c` is always a
-one-writer surface. Emulator proves deterministic correctness/pixels; retail
-hardware decides DTCM, layout/cache, direct VRAM/DMA/GX, generated-program, and
-final pacing performance.
+The same-ROM owner ranking selects **M3-first**: stage P95 reaches 468,480
+ticks, versus 380,544 for the largest combined fighter pair. Start Task 23R
+Phase 0 next: produce only the consumed-field/invalidation manifest that feeds
+Task 26; do not add a residual cache yet. Then run Task 26 and attempt only the
+Task 23R Phase-1 work Task 26 leaves. `src/nds/nds_renderer.c` remains a
+mandatory one-writer surface. The complete matrix, identity pack, map,
+disassembly, screenshots, and exact artifact identities are under
+`artifacts/performance/2026-07-18_task25r-*` and
+`artifacts/visibility/2026-07-18_task25r-*`.

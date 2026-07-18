@@ -1,0 +1,40 @@
+D:\Stuff\DevFolder\Smash64DS_Port\builds\build-task16-float-c1-i1-a1-lab\smash64ds-battle-playable-m3-stage-owner-lab.elf  :
+section              size        addr
+.secure              2048   234881024
+.bootstub             408   234883072
+.crt0                 960    33558528
+.dldi               16384    58765312
+.vectors               32           0
+.itcm               28820    33521696
+.dtcm                   0    50266112
+.dtcm.bss             152    50266112
+.text.hot            5016    33559488
+.main              774712    33564504
+.main.rw           132692    34339216
+.eh_frame               4    34471908
+.tinfo                 12    34471912
+.init_array             8    34471924
+.fini_array             4    34471932
+.tdata                  0           0
+.tbss                   0           0
+.main.tls               0    34471936
+.main.bss         1773840    34471936
+.twl                    0    36245792
+.twl.rw                 0    36245792
+.twl.bss                0    36245792
+.loadlist              48   234883480
+.twl.loadlist          12   234883528
+.comment               24           0
+.debug_aranges      39824           0
+.debug_info       4045391           0
+.debug_abbrev      193075           0
+.debug_line       1108271           0
+.debug_frame       122744           0
+.debug_str         776026           0
+.ARM.attributes        39           0
+.debug_line_str      1171           0
+.debug_loclists    852989           0
+.debug_rnglists    107626           0
+Total             9982332
+
+

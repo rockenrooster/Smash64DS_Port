@@ -141,7 +141,7 @@ $timerDefinitions = @(
     @{ key = 'sourceUpdate1'; index = 24; class = 'child'; parent = 'sourceUpdateAggregate' },
     @{ key = 'sourceUpdate2'; index = 25; class = 'child'; parent = 'sourceUpdateAggregate' },
     @{ key = 'sourceUpdateAggregate'; index = 4; class = 'child'; parent = 'updateBatch' },
-    @{ key = 'audioUpdateShell'; index = -1; class = 'derived remainder'; parent = 'updateBatch' },
+    @{ key = 'audioUpdateShell'; index = -1; class = 'child'; parent = 'updateBatch'; derivation = 'updateBatch-sourceUpdateAggregate' },
     @{ key = 'updateBatch'; index = 3; class = 'child'; parent = 'wholeLoop' },
     @{ key = 'frameBegin'; index = 8; class = 'child'; parent = 'presentActive' },
     @{ key = 'wallpaper'; index = 10; class = 'child'; parent = 'draw' },
@@ -198,6 +198,12 @@ foreach ($phaseName in $phaseOrder) {
         $m4FenceRows.Count -eq 8) "$phaseName does not contain eight synchronized exactness rows."
     $phaseExactnessFailures = @()
     $observedFastGeometry = @()
+    $observedFastFallback = @()
+    $geometryFailureSamples = @()
+    $m3FailureSamples = @()
+    $m2FailureSamples = @()
+    $textureFailureSamples = @()
+    $m4FailureSamples = @()
     for ($index = 0; $index -lt 8; $index++) {
         $coarse = $coarseRows[$index]
         $fast = $fastRows[$index]
@@ -213,11 +219,11 @@ foreach ($phaseName in $phaseOrder) {
             "$phaseName sample $index failed fixed-two or timing conservation."
         $fastGeometry = $fast[2..6] -join '/'
         $observedFastGeometry += $fastGeometry
+        $observedFastFallback += ($fast[7..9] -join '/')
         $fastExact = (($fast -join ',') -match
             '^[0-9]+,9,121,828,202,320,306,0,0,0$')
         if (-not $fastExact) {
-            $phaseExactnessFailures +=
-                "sample $index geometry=$fastGeometry fallback=$($fast[7..9] -join '/')"
+            $geometryFailureSamples += $index
         }
         $m3Exact = ($m3[4] -eq 8 -and $m3[5] -eq 255 -and
             $m3[6] -eq 0 -and $m3[7] -eq 57 -and $m3[8] -eq 42 -and
@@ -228,18 +234,18 @@ foreach ($phaseName in $phaseOrder) {
             $m3[19] -eq 0 -and $m3[20] -eq 0 -and $m3[21] -eq 0 -and
             $m3[1] -eq ($m3[2] + $m3[3]))
         if (-not $m3Exact) {
-            $phaseExactnessFailures += "sample $index M3 topology/state"
+            $m3FailureSamples += $index
         }
         $m2Exact = ($m2ShadeRows.Count -eq 0 -or
             $m2ShadeRows[$index][4] -eq 0)
         if (-not $m2Exact) {
-            $phaseExactnessFailures += "sample $index M2 shade collision"
+            $m2FailureSamples += $index
         }
         $textureExact = ($texture[3] -eq 0 -and $texture[4] -eq 0 -and
             $texture[6] -eq 0 -and $texture[7] -eq 0 -and $texture[8] -eq 0 -and
             $texture[9] -eq 0 -and $texture[11] -eq 0 -and $texture[12] -eq 0)
         if (-not $textureExact) {
-            $phaseExactnessFailures += "sample $index conversion/upload/fallback"
+            $textureFailureSamples += $index
         }
         $m4Exact = ($m4Static[1] -eq 1 -and $m4Static[2] -eq 1 -and
             $m4Static[3] -eq 0 -and $m4Static[4] -eq 22 -and
@@ -248,8 +254,26 @@ foreach ($phaseName in $phaseOrder) {
             $m4Static[9] -eq 0 -and $m4Static[10] -gt 0 -and
             @($m4Fence[1..12] | Where-Object { $_ -ne 0 }).Count -eq 0)
         if (-not $m4Exact) {
-            $phaseExactnessFailures += "sample $index static residency/fence"
+            $m4FailureSamples += $index
         }
+    }
+    if ($geometryFailureSamples.Count -gt 0) {
+        $phaseExactnessFailures +=
+            "geometry samples=$($geometryFailureSamples -join ',') observed=$(@($observedFastGeometry | Sort-Object -Unique) -join ',') fallback=$(@($observedFastFallback | Sort-Object -Unique) -join ',') expected=121/828/202/320/306 and 0/0/0"
+    }
+    if ($m3FailureSamples.Count -gt 0) {
+        $phaseExactnessFailures += "M3 topology/state samples=$($m3FailureSamples -join ',')"
+    }
+    if ($m2FailureSamples.Count -gt 0) {
+        $phaseExactnessFailures += "M2 shade collision samples=$($m2FailureSamples -join ',')"
+    }
+    if ($textureFailureSamples.Count -gt 0) {
+        $phaseExactnessFailures +=
+            "conversion/upload/fallback samples=$($textureFailureSamples -join ',')"
+    }
+    if ($m4FailureSamples.Count -gt 0) {
+        $phaseExactnessFailures +=
+            "static residency/fence samples=$($m4FailureSamples -join ',')"
     }
     if ($phaseExactnessFailures.Count -gt 0) {
         $profile1ExactnessFailures +=
@@ -266,6 +290,9 @@ foreach ($phaseName in $phaseOrder) {
         $entry = Get-Task25RStats $values
         $entry.timerClass = $definition.class
         $entry.parent = $definition.parent
+        if ($definition.derivation) {
+            $entry.derivation = $definition.derivation
+        }
         $timers[$definition.key] = $entry
     }
     $intervals = @($coarseRows | ForEach-Object { [int64]$_[26] })
@@ -283,6 +310,14 @@ foreach ($phaseName in $phaseOrder) {
     })
     $phaseResults += [pscustomobject]@{
         phase = $phaseName
+        sampling = [ordered]@{
+            requestedStartFrame = [int64]$json.identity.sampling.requestedStartFrame
+            requestedStartEvent = [string]$json.identity.sampling.requestedStartEvent
+            frameStart = [int64]$json.identity.sampling.frameStart
+            frameEnd = [int64]$json.identity.sampling.frameEnd
+            logicTickStart = [int64]$json.identity.sampling.logicTickStart
+            logicTickEnd = [int64]$json.identity.sampling.logicTickEnd
+        }
         source = Get-Task25RFileIdentity $packet.Path
         timers = $timers
         deadline = [ordered]@{
@@ -298,6 +333,7 @@ foreach ($phaseName in $phaseOrder) {
             pass = ($phaseExactnessFailures.Count -eq 0)
             failures = $phaseExactnessFailures
             observedFastGeometry = @($observedFastGeometry | Sort-Object -Unique)
+            observedFastFallback = @($observedFastFallback | Sort-Object -Unique)
             synchronizedSamples = 8
             geometryRuns = 121
             triangles = 828
@@ -332,7 +368,7 @@ $pixelOutput = @(& (Join-Path $PSScriptRoot 'assert-melonds-top-visible.ps1') `
     -CompareChannelThreshold 1 `
     -MaxCompareChangedFraction 0 `
     -MaxCompareMeanChannelDelta 0 2>&1 | ForEach-Object { "$_" })
-if ($LASTEXITCODE -ne 0) { throw ($pixelOutput -join "`n") }
+if (-not $?) { throw ($pixelOutput -join "`n") }
 $pixelMatch = [regex]::Match(($pixelOutput -join "`n"),
     'Top screen delta: raw=([0-9]+)/([0-9]+).*?mean=([0-9.]+)')
 Assert-Task25R ($pixelMatch.Success -and
@@ -489,7 +525,10 @@ if (-not [string]::IsNullOrWhiteSpace($IdentityDirectory)) {
     [System.IO.File]::WriteAllLines($toolVersionsPath, $toolVersions)
 
     $objectNames = @(
-        'nds_renderer.o', 'battle_playable_static_textures.o',
+        'nds_renderer.o', 'nds_platform.o', 'scene_backend.o',
+        'battle_playable_static_textures.o', 'nds_task16_float_compare.o',
+        'nds_task16_float_i2f.o', 'nds_task16_float_addsub.o',
+        'nds_task9_float_phase2.o',
         '_arm_cmpsf2.itcm.o', '_arm_unordsf2.itcm.o', '_arm_fixsfsi.itcm.o',
         '_arm_fixunssfsi.itcm.o', '_arm_addsubsf3.itcm.o', '_arm_muldivsf3.itcm.o')
     $objectIdentities = @($objectNames | ForEach-Object {
@@ -503,6 +542,7 @@ if (-not [string]::IsNullOrWhiteSpace($IdentityDirectory)) {
         'src/nds/nds_native_fighter_owner.generated.inc',
         'src/nds/generated/battle_playable_static_textures.generated.inc'
     ) | ForEach-Object { Get-Task25RFileIdentity $_ }
+    $hotFunctionNames = @($hotFunctions | ForEach-Object name)
     $identity = [ordered]@{
         schema = 1
         sourceHead = $sourceHead
@@ -530,6 +570,9 @@ if (-not [string]::IsNullOrWhiteSpace($IdentityDirectory)) {
         }
         largestStackFrames = @($stackRows | Sort-Object stackBytes, spillStores -Descending |
             Select-Object -First 25)
+        largestHotStackFrames = @($stackRows |
+            Where-Object { $hotFunctionNames -contains $_.function } |
+            Sort-Object stackBytes, spillStores -Descending)
         reserveBytes = [int64]$profile0.gates.reserveBytes
         raw = [ordered]@{
             nm = Get-Task25RFileIdentity $nmPath
@@ -645,29 +688,43 @@ $markdown = @(
     "Profile-1 ROM: ``$profile1Rom``  ",
     "Recommendation: **$recommendation**  ",
     '',
-    '| Phase | Exact | Loop P50/P95/max | Deficit P50/P95/max | Update P95 | Wallpaper P95 | Stage P95 | Mario/Fox P95 | 2/3/4/5+ | Present/s | Update/s |',
-    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'
+    '| Phase | Frame / logic window | Exact | Loop P50/P95/max | Deficit P50/P95/max | Update P95 | Wallpaper P95 | Stage P95 | Mario/Fox P95 | 2/3/4/5+ | Present/s | Update/s |',
+    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'
 )
 foreach ($phase in $phaseResults) {
     $h = $phase.intervals.histogram
-    $markdown += ('| {0} | {1} | {2}/{3}/{4} | {5}/{6}/{7} | {8} | {9} | {10} | {11}/{12} | {13}/{14}/{15}/{16} | {17:N3} | {18:N3} |' -f
-        $phase.phase, $phase.exactness.pass,
-        $phase.timers.wholeLoop.p50, $phase.timers.wholeLoop.p95,
-        $phase.timers.wholeLoop.maximum,
-        $phase.deadline.p50Deficit, $phase.deadline.p95Deficit,
-        $phase.deadline.maximumDeficit,
-        $phase.timers.updateBatch.p95, $phase.timers.wallpaper.p95,
-        $phase.timers.stage.p95, $phase.timers.mario.p95,
-        $phase.timers.fox.p95, $h.vblank2, $h.vblank3,
-        $h.vblank4, $h.vblank5Plus,
-        $phase.intervals.presentationsPerSecond,
-        $phase.intervals.sourceUpdatesPerSecond)
+    $markdown += "| $($phase.phase) | $($phase.sampling.frameStart)-$($phase.sampling.frameEnd) / $($phase.sampling.logicTickStart)-$($phase.sampling.logicTickEnd) | $($phase.exactness.pass) | $($phase.timers.wholeLoop.p50)/$($phase.timers.wholeLoop.p95)/$($phase.timers.wholeLoop.maximum) | $($phase.deadline.p50Deficit)/$($phase.deadline.p95Deficit)/$($phase.deadline.maximumDeficit) | $($phase.timers.updateBatch.p95) | $($phase.timers.wallpaper.p95) | $($phase.timers.stage.p95) | $($phase.timers.mario.p95)/$($phase.timers.fox.p95) | $($h.vblank2)/$($h.vblank3)/$($h.vblank4)/$($h.vblank5Plus) | $($phase.intervals.presentationsPerSecond) | $($phase.intervals.sourceUpdatesPerSecond) |"
 }
 $markdown += @('', '## Profile-1 exactness', '')
 if ($profile1ExactnessPass) {
     $markdown += '- All seven synchronized phase gates passed.'
 } else {
     $markdown += @($profile1ExactnessFailures | ForEach-Object { "- $_" })
+}
+$markdown += @('', '## Detailed profile-1 rows', '')
+$markdown += '| Timer | Class / parent | ' + (($phaseResults | ForEach-Object {
+    $_.phase
+}) -join ' | ') + ' |'
+$markdown += '|---|---|' + (($phaseResults | ForEach-Object { '---:|' }) -join '')
+foreach ($definition in $timerDefinitions) {
+    $classParent = if ($definition.parent) {
+        "$($definition.class) / $($definition.parent)"
+    } else { [string]$definition.class }
+    if ($definition.derivation) {
+        $classParent += " / $($definition.derivation)"
+    }
+    $cells = @($phaseResults | ForEach-Object {
+        $row = $_.timers.($definition.key)
+        "$($row.p50)/$($row.p95)/$($row.maximum)/$($row.samples)"
+    })
+    $markdown += "| $($definition.key) | $classParent | $($cells -join ' | ') |"
+}
+$markdown += @('', '## Ranked leaf owners by P95', '')
+foreach ($phase in $phaseResults) {
+    $rankingText = @($phase.rankedLeafOwners | ForEach-Object {
+        "$($_.owner)=$($_.p95)"
+    }) -join ', '
+    $markdown += "- $($phase.phase): $rankingText"
 }
 $ph = $profile0.pacing.histogram
 $markdown += @(
@@ -683,6 +740,20 @@ $markdown += @(
     "- Zero post-GO texture fence: $($profile0.gates.zeroPostGoTextureFence)",
     '- Synchronized pixels: 0/49,152 changed',
     "- Stable-30 ready: $stable30"
+)
+$markdown += @('', '| Lifecycle phase | 2 | 3 | 4 | 5+ | Slips |',
+    '|---|---:|---:|---:|---:|---:|')
+foreach ($phase in $profile0.pacing.phases) {
+    $markdown += "| $($phase.phase) | $($phase.vblank2) | $($phase.vblank3) | $($phase.vblank4) | $($phase.vblank5Plus) | $($phase.slips) |"
+}
+$markdown += @(
+    '',
+    '## Task bounds',
+    '',
+    "- Task 20R: $($matrix.taskBounds.task20R)",
+    "- Tasks 21R/27: Mario+Fox P95 <= $($matrix.taskBounds.task21R_task27.maximumP95) ticks in $($matrix.taskBounds.task21R_task27.phase).",
+    "- Task 22R: wallpaper P95 <= $($matrix.taskBounds.task22R.maximumP95) ticks.",
+    "- Tasks 23R/26: stage P95 <= $($matrix.taskBounds.task23R_task26.maximumP95) ticks in $($matrix.taskBounds.task23R_task26.phase)."
 )
 Set-Content -LiteralPath $outputMarkdownPath -Encoding utf8 -Value $markdown
 
