@@ -69,6 +69,17 @@ param(
 $ErrorActionPreference = 'Stop'
 $usesPublishedIntrinsicRendererDefaults =
     ($Target -eq 'smash64ds-battle-playable-hwtri')
+$usesIntrinsicTask16FloatHelpers = $Target -in @(
+    'smash64ds-battle-playable-hwtri',
+    'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
+    'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
+)
+$effectiveTask16FloatCompareMode = if (
+    $usesIntrinsicTask16FloatHelpers) { 1 } else { $Task16FloatCompareMode }
+$effectiveTask16FloatI2fMode = if (
+    $usesIntrinsicTask16FloatHelpers) { 1 } else { $Task16FloatI2fMode }
+$effectiveTask16FloatAddSubMode = if (
+    $usesIntrinsicTask16FloatHelpers) { 1 } else { $Task16FloatAddSubMode }
 $staticTextureAotSelected =
     $PSBoundParameters.ContainsKey('StaticTextureAotMode')
 $staticTextureAotSelected =
@@ -508,9 +519,9 @@ function Complete-Task9StateHashCapture {
             build = $Build
             task9FloatItcmMode = $Task9FloatItcmMode
             task9FloatPhase2Mode = $Task9FloatPhase2Mode
-            task16FloatCompareMode = $Task16FloatCompareMode
-            task16FloatI2fMode = $Task16FloatI2fMode
-            task16FloatAddSubMode = $Task16FloatAddSubMode
+            task16FloatCompareMode = $effectiveTask16FloatCompareMode
+            task16FloatI2fMode = $effectiveTask16FloatI2fMode
+            task16FloatAddSubMode = $effectiveTask16FloatAddSubMode
             task9StateHashMode = $Task9StateHashMode
             coverage = [ordered]@{
                 source = 'post-scVSBattleFuncUpdate'
@@ -547,9 +558,9 @@ $makeArgs += "NDS_IFCOMMON_HYBRID_OAM=$IFCommonHybridOamMode"
 $makeArgs += "NDS_TASK9_FLOAT_CENSUS=$Task9FloatCensusMode"
 $makeArgs += "NDS_TASK9_FLOAT_ITCM=$Task9FloatItcmMode"
 $makeArgs += "NDS_TASK9_FLOAT_PHASE2=$Task9FloatPhase2Mode"
-$makeArgs += "NDS_TASK16_FLOAT_COMPARE=$Task16FloatCompareMode"
-$makeArgs += "NDS_TASK16_FLOAT_I2F=$Task16FloatI2fMode"
-$makeArgs += "NDS_TASK16_FLOAT_ADDSUB=$Task16FloatAddSubMode"
+$makeArgs += "NDS_TASK16_FLOAT_COMPARE=$effectiveTask16FloatCompareMode"
+$makeArgs += "NDS_TASK16_FLOAT_I2F=$effectiveTask16FloatI2fMode"
+$makeArgs += "NDS_TASK16_FLOAT_ADDSUB=$effectiveTask16FloatAddSubMode"
 $makeArgs += "NDS_TASK9_STATE_HASH=$Task9StateHashMode"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
@@ -621,9 +632,9 @@ if ($Task9FloatItcmMode -eq 1) {
         -Elf $elf `
         -BuildDirectory $task9BuildDirectory `
         -Phase2Mode $Task9FloatPhase2Mode `
-        -Task16CompareMode $Task16FloatCompareMode `
-        -Task16I2fMode $Task16FloatI2fMode `
-        -Task16AddSubMode $Task16FloatAddSubMode
+        -Task16CompareMode $effectiveTask16FloatCompareMode `
+        -Task16I2fMode $effectiveTask16FloatI2fMode `
+        -Task16AddSubMode $effectiveTask16FloatAddSubMode
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if (($Task9FloatItcmMode -eq 1) -or
@@ -658,11 +669,11 @@ if ($RendererBenchmarkSamples -gt 0) {
         $benchmarkMakeIdentity.Task9FloatPhase2Mode -eq
             $Task9FloatPhase2Mode -and
         $benchmarkMakeIdentity.Task16FloatCompareMode -eq
-            $Task16FloatCompareMode -and
+            $effectiveTask16FloatCompareMode -and
         $benchmarkMakeIdentity.Task16FloatI2fMode -eq
-            $Task16FloatI2fMode -and
+            $effectiveTask16FloatI2fMode -and
         $benchmarkMakeIdentity.Task16FloatAddSubMode -eq
-            $Task16FloatAddSubMode -and
+            $effectiveTask16FloatAddSubMode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
         'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/Task11/IFCommon/Task9/Task16 configuration.' `

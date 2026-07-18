@@ -2,9 +2,7 @@ param(
     [string]$MelonDS = '',
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
     [string]$Objdump = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-objdump.exe',
-    [ValidateRange(0,127)][int]$RunnerSlot = 31,
-    [switch]$NoBuild,
-    [switch]$CompareOnly
+    [ValidateRange(0,127)][int]$RunnerSlot = 31
 )
 
 $ErrorActionPreference = 'Stop'
@@ -34,7 +32,6 @@ function Invoke-Task16CombinedStateRun {
         -MelonDS $MelonDS `
         -Gdb $Gdb `
         -RunnerSlot $RunnerSlot `
-        -NoBuild:$NoBuild `
         -DelaySeconds 0 `
         -BattlePlayable `
         -LiveInputPreview `
@@ -73,32 +70,30 @@ $environment = @{
     NDS_DEBUG_HUD = '0'
 }
 $savedEnvironment = @{}
-if (-not $CompareOnly) {
+foreach ($name in $environment.Keys) {
+    $savedEnvironment[$name] =
+        [Environment]::GetEnvironmentVariable($name, 'Process')
+    [Environment]::SetEnvironmentVariable(
+        $name, $environment[$name], 'Process')
+}
+try {
+    Invoke-Task16CombinedStateRun `
+        -Mode 0 `
+        -Target 'smash64ds-task16-combined-state-control' `
+        -Build 'builds/build-task16-combined-state-control' `
+        -ExportPath $controlPath
+    Invoke-Task16CombinedStateRun `
+        -Mode 1 `
+        -Target 'smash64ds-task16-combined-state-candidate' `
+        -Build 'builds/build-task16-combined-state-candidate' `
+        -ExportPath $candidatePath
+} finally {
     foreach ($name in $environment.Keys) {
-        $savedEnvironment[$name] =
-            [Environment]::GetEnvironmentVariable($name, 'Process')
-        [Environment]::SetEnvironmentVariable(
-            $name, $environment[$name], 'Process')
-    }
-    try {
-        Invoke-Task16CombinedStateRun `
-            -Mode 0 `
-            -Target 'smash64ds-task16-combined-state-control' `
-            -Build 'builds/build-task16-combined-state-control' `
-            -ExportPath $controlPath
-        Invoke-Task16CombinedStateRun `
-            -Mode 1 `
-            -Target 'smash64ds-task16-combined-state-candidate' `
-            -Build 'builds/build-task16-combined-state-candidate' `
-            -ExportPath $candidatePath
-    } finally {
-        foreach ($name in $environment.Keys) {
-            if ($null -eq $savedEnvironment[$name]) {
-                Remove-Item "Env:$name" -ErrorAction SilentlyContinue
-            } else {
-                [Environment]::SetEnvironmentVariable(
-                    $name, $savedEnvironment[$name], 'Process')
-            }
+        if ($null -eq $savedEnvironment[$name]) {
+            Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+        } else {
+            [Environment]::SetEnvironmentVariable(
+                $name, $savedEnvironment[$name], 'Process')
         }
     }
 }
@@ -108,16 +103,18 @@ $candidate = Get-Content -LiteralPath $candidatePath -Raw | ConvertFrom-Json
 foreach ($case in @(
     @{ Name='control'; Data=$control; Mode=0;
        Target='smash64ds-task16-combined-state-control';
-       Build='builds\build-task16-combined-state-control' },
+       Build='builds/build-task16-combined-state-control' },
     @{ Name='candidate'; Data=$candidate; Mode=1;
        Target='smash64ds-task16-combined-state-candidate';
-       Build='builds\build-task16-combined-state-candidate' }
+       Build='builds/build-task16-combined-state-candidate' }
 )) {
     $build = Join-Path $root $case.Build
     $config = Join-Path $build 'nds_build_config.h'
     $elf = Join-Path $build "$($case.Data.target).elf"
+    $rom = Join-Path $build "$($case.Data.target).nds"
     $configText = Get-Content -LiteralPath $config -Raw
     if (($case.Data.target -cne $case.Target) -or
+        ($case.Data.build -cne $case.Build) -or
         ($case.Data.task9FloatItcmMode -ne 1) -or
         ($case.Data.task9FloatPhase2Mode -ne 1) -or
         ($case.Data.task9StateHashMode -ne 1)) {
@@ -145,6 +142,10 @@ foreach ($case in @(
     if ((Get-FileHash $elf -Algorithm SHA256).Hash -cne
         $case.Data.artifacts.elf.Sha256) {
         throw "$($case.Name) state artifact ELF identity drifted."
+    }
+    if ((Get-FileHash $rom -Algorithm SHA256).Hash -cne
+        $case.Data.artifacts.rom.Sha256) {
+        throw "$($case.Name) state artifact ROM identity drifted."
     }
 
     & $itcmChecker `
@@ -189,6 +190,10 @@ for ($index = 0; $index -lt 3892; ++$index) {
     $a = @($control.rows[$index])
     $b = @($candidate.rows[$index])
     if (($a.Count -ne 6) -or ($b.Count -ne 6) -or
+        ($a[0] -ne $index) -or ($b[0] -ne $index) -or
+        ($a[3] -le 0) -or ($b[3] -le 0) -or
+        ($a[4] -le 0) -or ($b[4] -le 0) -or
+        ($a[5] -ne 0) -or ($b[5] -ne 0) -or
         (($a -join ',') -cne ($b -join ','))) {
         throw ("Task 16 combined state divergence at update $index`n" +
             "control=$($a -join ',')`ncandidate=$($b -join ',')")

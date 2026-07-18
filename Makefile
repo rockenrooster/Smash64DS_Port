@@ -99,6 +99,9 @@ override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
 endif
 NDS_FREEZE_DIAGNOSTIC_TARGETS := \
 	smash64ds-battle-playable-freeze-diagnostics-on-hwtri \
@@ -118,6 +121,9 @@ override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
 override NDS_FREEZE_DIAGNOSTICS := $(if $(filter %-on-hwtri,$(TARGET)),1,0)
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-freeze-diagnostics-off-hwtri)
