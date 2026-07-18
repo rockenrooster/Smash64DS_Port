@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-17 18:34 Central
+Updated: 2026-07-17 19:02 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -107,8 +107,8 @@ byte-identical. The rebuilt full verifier passes with crop `d968b0cc...`, GO
 `3 OBJ + 10 quads`, 31,168 OBJ bytes, 57,344 texture bytes, and 608 palette
 bytes. No GO source change was needed.
 
-The Down+A report remains open, but the audio-load hypothesis is disproven and
-a stopped target update loop is not yet proven.
+The Down+A report remains open. The audio-load hypothesis is disproven and an
+observer-free target stall is now proven.
 The verifier-only pre-spawn override makes Fox human P2 without changing shipped
 mode 163. Fox enters status 213 / motion 188 with exact asset `FTFoxAnim129` /
 `0x303`. Source trace maps the six observed callbacks to normal animation
@@ -124,21 +124,30 @@ not terminal samples. Do not add ID 190 to the pack as a stall fix; its source
 pitch schedule and custom-FX fidelity remain a separate unqualified audio item.
 The common-bank repair also restores Fox's omitted files 642..661
 (`0x282..0x295`) and passes its static source-identity checker; runtime
-qualification is pending. Repeated-breakpoint runs did not observe callback 7
-or a successor, but GDB convenience-variable encoding warnings and failed
-asynchronous CLI interrupts make the apparent stop ambiguous; temporary
-freeze-diagnostic edits were removed before this checkpoint.
+qualification is pending.
 
-Resume with one observer-free target snapshot. Stop only at the first Down-Air
-entry, disable every observer breakpoint, continue for a short bounded window,
-then use GDB/MI `-exec-interrupt` and sample global logic/present counters, Fox
-status/motion/animation state, and target PC/LR. If the target advanced, repair
-the verifier; if it did not, map the first stopped owner before changing source.
-Then rerun the restored existing Fox arm:
+`Invoke-GdbMarkerScript -MiInteractive` and the verifier's
+`-ObserverFreeSnapshot` arm are retained for the restart. The arm stops only at
+the first Down-Air entry, disables all five observer breakpoints, resumes, and
+interrupts through GDB/MI after 12 seconds. Its target snapshot is unchanged
+from the earlier 4-second sample: logic 6->12, presents 3->6, reads 11->19,
+status 213, motion 188, tic 6, animation frame `0x40e00000` (7), motion frame 0,
+update `0x02070ded`, map `0x0203a385`, and timer 3600/0. Therefore the target
+itself freezes at the frame-7 boundary. The melonDS stub returns malformed
+interrupt registers (`$pc=0x01ffeca8`, `$lr=0x4000003f`), so they do not identify
+the owner. This command intentionally fails its advancement assertion while
+preserving the decisive snapshot in its output:
 
 ```powershell
-pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor Fox -NoBuild -RunnerSlot 3 -TimeoutSeconds 300
+pwsh -NoProfile -File .\scripts\verify-battle-playable-down-air-stall.ps1 -Actor Fox -ObserverFreeSnapshot -NoBuild -RunnerSlot 3 -TimeoutSeconds 120
 ```
+
+Resume by inspecting the existing freeze-diagnostic target and
+`ndsFreezeDiagnosticsIrqVector`, then run that target with the same human-P2 Fox
+arm. Let its target-owned watchdog trip at `ndsFreezeDiagnosticsStallMarker` and
+read the captured interrupted PC/LR, report counters, last breadcrumb, and ring.
+Map the first stuck owner before changing gameplay source. Do not add ID 190 as
+a stall fix.
 
 Do not mark the playtest finding fixed until Fox P2, Mario, and one canonical
 CPU-on Current gate pass. The five-minute goal heartbeat is intentionally

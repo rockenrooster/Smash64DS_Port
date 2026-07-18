@@ -18,12 +18,16 @@ function Invoke-GdbMarkerScript {
         [string]$ScriptName = '_verify_markers.gdb',
         [ValidateRange(1,3600)][int]$TimeoutSeconds = 30,
         [string]$ReadyFile = '',
-        [object[]]$InteractiveSteps = @()
+        [object[]]$InteractiveSteps = @(),
+        [switch]$MiInteractive
     )
 
     $interactive = -not [string]::IsNullOrWhiteSpace($ReadyFile)
     if (($InteractiveSteps.Count -ne 0) -and (-not $interactive)) {
         throw 'Interactive GDB steps require a ready-file path.'
+    }
+    if ($MiInteractive -and (-not $interactive)) {
+        throw 'MI GDB mode requires interactive steps and a ready-file path.'
     }
 
     $tempDir = if (-not [string]::IsNullOrWhiteSpace($env:SMASH64DS_VERIFY_TEMP_DIR)) {
@@ -54,10 +58,15 @@ function Invoke-GdbMarkerScript {
 
     $gdbInfo = New-Object System.Diagnostics.ProcessStartInfo
     $gdbInfo.FileName = $Gdb
-    $gdbInfo.Arguments = if ($interactive) {
+    $gdbArguments = if ($interactive) {
         '-ex "set confirm off" "{0}" -x "{1}"' -f $Elf, $gdbScriptPath
     } else {
         '-batch -ex "set confirm off" "{0}" -x "{1}"' -f $Elf, $gdbScriptPath
+    }
+    $gdbInfo.Arguments = if ($MiInteractive) {
+        '--interpreter=mi2 ' + $gdbArguments
+    } else {
+        $gdbArguments
     }
     $gdbInfo.RedirectStandardInput = $interactive
     $gdbInfo.RedirectStandardOutput = $true

@@ -7,6 +7,7 @@ param(
     [int]$RunnerSlot = -1,
     [ValidateRange(30, 600)][int]$TimeoutSeconds = 300,
     [switch]$NoBuild,
+    [switch]$ObserverFreeSnapshot,
     [string]$Screenshot = ''
 )
 
@@ -141,6 +142,8 @@ try {
         '-EmulatorProcessId {1} -Output "{2}"') -f
         $capture.Replace('\', '/'), $emulator.Id,
         $screenshotPath.Replace('\', '/')
+    $observerReady = Join-Path $logDir "down-air-$slug-observer.ready"
+    $observerReadyGdb = $observerReady.Replace('\', '/')
     $actorKind = if ($Actor -eq 'Mario') { 0 } else { 1 }
     $actorPads = $pads + (6 * $actorKind)
     $connectedMask = if ($Actor -eq 'Mario') { 1 } else { 3 }
@@ -155,22 +158,56 @@ try {
     } else {
         @()
     }
-    $summaryCommands = @(
-        ('set {{unsigned int}}0x{0:x8} = 0' -f $actorPads),
-        'printf "DOWN_AIR_RESULT=%u,%u,%u,%u\n", $actor_kind, $outcome, $downair_entries, $seen',
-        'printf "DOWN_AIR_KNEE=%u,%#x,%#x,%#x\n", $knee_updates, $knee_frame_bits, $knee_speed_bits, $knee_length_bits',
-        'printf "DOWN_AIR_ENTRY=%d,%d,%d,%u,%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%u\n", $entry_status, $entry_motion, $entry_ga, $payload_delta, $header_delta, $open_fail_delta, $format_fail_delta, $short_read_delta, $entry_update, $entry_anim_bits, $entry_motion_bits, $entry_fp_anim_bits, $entry_heap0, $entry_heap1, $status_transition',
-        'printf "DOWN_AIR_ASSET=%#x,%#x,%#x,%#x,%#x,%u,%u,%u,%u\n", $entry_asset_token, $entry_asset_id, $entry_asset_data, $entry_heap_ptr, $entry_figatree_ptr, $entry_asset_size, $entry_asset_owner, $entry_asset_fixup_fails, $entry_motion_count',
-        'printf "DOWN_AIR_BASELINE=%u,%u,%u,%u,%u,%u,%u,%u\n", $logic_start, $cpu_start, $present_start, $reads_start, $status_tics_start, $open_fails_start, $format_fails_start, $short_reads_start',
-        'printf "DOWN_AIR_TERMINAL=%u,%u,%u,%u,%u,%#x,%#x,%d,%d,%d,%u,%u,%u,%u\n", $terminal_logic, $terminal_cpu, $terminal_present, $terminal_reads, $terminal_status_tics, $terminal_anim_bits, $terminal_motion_bits, $terminal_status, $terminal_motion, $terminal_exit_status, $terminal_update, $terminal_open_fails, $terminal_format_fails, $terminal_short_reads',
-        'printf "DOWN_AIR_AERIALS=%u,%u,%u,%u,%u\n", $air_n, $air_f, $air_b, $air_u, $air_d',
-        'printf "DOWN_AIR_SCENE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSceneHarnessMode, gSCManagerSceneData.scene_curr, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, $mario->fkind, $fox->fkind',
-        'printf "DOWN_AIR_ACTORS=%u,%u,%u,%u,%u,%u,%u,%u\n", $mario->pkind, $mario->player, $fox->pkind, $fox->player, $fox->level, gNdsBattlePlayableFoxCpuEnabled, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count',
-        'printf "DOWN_AIR_MEMORY=%#x,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerArenaHeadroom',
-        ('set {{unsigned int}}0x{0:x8} = 0' -f $enabled),
-        'detach',
-        'quit'
-    )
+    $observerDefinitions = if ($ObserverFreeSnapshot) {
+        @(
+            'set $observer_armed = 0',
+            'define hook-stop',
+            'if $observer_armed != 0',
+            'set $observer_armed = 0',
+            'printf "DOWN_AIR_OBSERVER=%u,%u,%u,%u,%u,%u,%d,%d,%u,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%u,%u\n", $logic_start, gNdsBattlePlayablePacingLogicFrames, $present_start, gNdsBattlePlayablePacingPresentedFrames, $reads_start, gNdsControllerPlaybackReadCount, $actor_fp->status_id, $actor_fp->motion_id, $actor_fp->status_total_tics, *(unsigned int *)&$actor_gobj->anim_frame, *(unsigned int *)&$actor_fp->motion_frame, (unsigned int)$actor_fp->proc_update, (unsigned int)$actor_fp->proc_interrupt, (unsigned int)$actor_fp->proc_map, $pc, $lr, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed',
+            ('set {{unsigned int}}0x{0:x8} = 0' -f $enabled),
+            'detach',
+            'quit',
+            'end',
+            'end'
+        )
+    } else {
+        @()
+    }
+    $observerEntryCommands = if ($ObserverFreeSnapshot) {
+        @(
+            'disable $input_breakpoint',
+            'disable $status_breakpoint',
+            'disable $kneebend_breakpoint',
+            'disable $downair_breakpoint',
+            'disable $timeup_breakpoint',
+            'set $outcome = 4',
+            'set $observer_armed = 1',
+            ("shell powershell.exe -NoProfile -Command `"Set-Content -LiteralPath '$observerReadyGdb' -Value ready`"")
+        )
+    } else {
+        @()
+    }
+    $summaryCommands = if ($ObserverFreeSnapshot) {
+        @()
+    } else {
+        @(
+            ('set {{unsigned int}}0x{0:x8} = 0' -f $actorPads),
+            'printf "DOWN_AIR_RESULT=%u,%u,%u,%u\n", $actor_kind, $outcome, $downair_entries, $seen',
+            'printf "DOWN_AIR_KNEE=%u,%#x,%#x,%#x\n", $knee_updates, $knee_frame_bits, $knee_speed_bits, $knee_length_bits',
+            'printf "DOWN_AIR_ENTRY=%d,%d,%d,%u,%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%u\n", $entry_status, $entry_motion, $entry_ga, $payload_delta, $header_delta, $open_fail_delta, $format_fail_delta, $short_read_delta, $entry_update, $entry_anim_bits, $entry_motion_bits, $entry_fp_anim_bits, $entry_heap0, $entry_heap1, $status_transition',
+            'printf "DOWN_AIR_ASSET=%#x,%#x,%#x,%#x,%#x,%u,%u,%u,%u\n", $entry_asset_token, $entry_asset_id, $entry_asset_data, $entry_heap_ptr, $entry_figatree_ptr, $entry_asset_size, $entry_asset_owner, $entry_asset_fixup_fails, $entry_motion_count',
+            'printf "DOWN_AIR_BASELINE=%u,%u,%u,%u,%u,%u,%u,%u\n", $logic_start, $cpu_start, $present_start, $reads_start, $status_tics_start, $open_fails_start, $format_fails_start, $short_reads_start',
+            'printf "DOWN_AIR_TERMINAL=%u,%u,%u,%u,%u,%#x,%#x,%d,%d,%d,%u,%u,%u,%u\n", $terminal_logic, $terminal_cpu, $terminal_present, $terminal_reads, $terminal_status_tics, $terminal_anim_bits, $terminal_motion_bits, $terminal_status, $terminal_motion, $terminal_exit_status, $terminal_update, $terminal_open_fails, $terminal_format_fails, $terminal_short_reads',
+            'printf "DOWN_AIR_AERIALS=%u,%u,%u,%u,%u\n", $air_n, $air_f, $air_b, $air_u, $air_d',
+            'printf "DOWN_AIR_SCENE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSceneHarnessMode, gSCManagerSceneData.scene_curr, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, $mario->fkind, $fox->fkind',
+            'printf "DOWN_AIR_ACTORS=%u,%u,%u,%u,%u,%u,%u,%u\n", $mario->pkind, $mario->player, $fox->pkind, $fox->player, $fox->level, gNdsBattlePlayableFoxCpuEnabled, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count',
+            'printf "DOWN_AIR_MEMORY=%#x,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerArenaHeadroom',
+            ('set {{unsigned int}}0x{0:x8} = 0' -f $enabled),
+            'detach',
+            'quit'
+        )
+    }
 
     $gdbCommands = @(
         'set pagination off',
@@ -255,7 +292,8 @@ try {
         'set $terminal_update = 0',
         'set $terminal_open_fails = 0',
         'set $terminal_format_fails = 0',
-        'set $terminal_short_reads = 0',
+        'set $terminal_short_reads = 0'
+    ) + $observerDefinitions + @(
         ('break *0x{0:x8}' -f $controllerRead),
         'set $input_breakpoint = $bpnum',
         'commands $input_breakpoint',
@@ -403,7 +441,8 @@ try {
         'set $format_fails_start = gNdsRelocAssetFormatFailCount',
         'set $short_reads_start = gNdsRelocAssetShortReadCount',
         'printf "DOWN_AIR_EVENT=entry,%d,%d,%u,%u\n", $entry_status, $entry_motion, $payload_delta, $header_delta',
-        ('set {{unsigned int}}0x{0:x8} = 0' -f $actorPads),
+        ('set {{unsigned int}}0x{0:x8} = 0' -f $actorPads)
+    ) + $observerEntryCommands + @(
         'end',
         'end',
         'if ($seen != 0) && ($downair_entries == 9)',
@@ -468,10 +507,53 @@ try {
         'continue'
     ) + $summaryCommands
 
-    $gdbStdout = (Invoke-GdbMarkerScript `
-        -Gdb $Gdb -Elf $elf -Root $root -Commands $gdbCommands `
-        -ScriptName "_battle_playable_down_air_${slug}.gdb" `
-        -TimeoutSeconds $TimeoutSeconds).Stdout
+    $gdbArguments = @{
+        Gdb = $Gdb
+        Elf = $elf
+        Root = $root
+        Commands = $gdbCommands
+        ScriptName = "_battle_playable_down_air_${slug}.gdb"
+        TimeoutSeconds = $TimeoutSeconds
+    }
+    if ($ObserverFreeSnapshot) {
+        $gdbArguments.ReadyFile = $observerReady
+        $gdbArguments.InteractiveSteps = @(
+            [pscustomobject]@{
+                DelayMilliseconds = 0
+                Commands = @('1-exec-continue')
+            },
+            [pscustomobject]@{
+                DelayMilliseconds = 12000
+                Commands = @('2-exec-interrupt')
+            }
+        )
+        $gdbArguments.MiInteractive = $true
+    }
+    $gdbStdout = (Invoke-GdbMarkerScript @gdbArguments).Stdout
+
+    if ($ObserverFreeSnapshot) {
+        $observer = [regex]::Match($gdbStdout,
+            'DOWN_AIR_OBSERVER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
+        Assert-Condition $observer.Success `
+            "$Actor observer-free interrupt did not emit a target snapshot." `
+            $gdbStdout
+        $ov = Get-Ints $observer
+        $logicDelta = $ov[1] - $ov[0]
+        $presentDelta = $ov[3] - $ov[2]
+        $readsDelta = $ov[5] - $ov[4]
+        Assert-Condition ($logicDelta -ge 8 -and $presentDelta -ge 4 -and
+            $readsDelta -gt 0 -and $ov[14] -ne 0 -and $ov[15] -ne 0 -and
+            ($ov[16] + $ov[17]) -eq 3600) `
+            "$Actor did not clear the observer-free Down-Air window." `
+            $observer.Value
+        Write-Output ((
+            'Down-Air observer-free target snapshot passed: actor={0} ' +
+            'logic={1} present={2} reads={3} status={4} motion={5} ' +
+            'pc={6} lr={7}.') -f
+            $Actor, $logicDelta, $presentDelta, $readsDelta, $ov[6], $ov[7],
+            $observer.Groups[15].Value, $observer.Groups[16].Value)
+        return
+    }
 
     $result = [regex]::Match($gdbStdout,
         'DOWN_AIR_RESULT=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
