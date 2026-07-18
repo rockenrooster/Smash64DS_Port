@@ -10131,6 +10131,9 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
         root->modelview_matrix = modelviews[i];
         root->materials = sNdsRendererAdapterNativeOwnerMaterials[i];
         root->config = config;
+#if NDS_RENDERER_M2_DETAILED_LEDGER
+        root->owner_generation = owner_file->owner_generation;
+#endif
 
         if (event != NULL)
         {

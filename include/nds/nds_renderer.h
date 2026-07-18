@@ -535,6 +535,9 @@ typedef struct NDSRendererNativeFighterRoot
     const NDSRendererMatrix20p12 *modelview_matrix;
     const NDSRendererNativeMaterial *materials;
     const NDSRendererConfig *config;
+#if NDS_RENDERER_M2_DETAILED_LEDGER
+    u32 owner_generation;
+#endif
     NDSRendererNativeFighterPreamble preamble;
 } NDSRendererNativeFighterRoot;
 
@@ -969,6 +972,21 @@ extern volatile u32 gNdsRendererPhase05CalibrationTicks;
 extern volatile u32 gNdsRendererPhase05CalibrationIntervals;
 extern volatile u32 gNdsRendererPhase05WallpaperRowCount;
 extern volatile u32 gNdsRendererPhase05WallpaperPixelWriteCount;
+extern volatile u32 gNdsRendererPhase05WallpaperFullRowCount;
+extern volatile u32 gNdsRendererPhase05WallpaperIncrementalRowCount;
+extern volatile u32 gNdsRendererPhase05WallpaperChangedXCount;
+extern volatile u32 gNdsRendererPhase05WallpaperChangedRunCount;
+extern volatile u32 gNdsRendererPhase05WallpaperLongestChangedRun;
+extern volatile u32 gNdsRendererPhase05WallpaperRunGE2Count;
+extern volatile u32 gNdsRendererPhase05WallpaperRunGE2Pixels;
+extern volatile u32 gNdsRendererPhase05WallpaperRunGE4Count;
+extern volatile u32 gNdsRendererPhase05WallpaperRunGE4Pixels;
+extern volatile u32 gNdsRendererPhase05WallpaperRunGE8Count;
+extern volatile u32 gNdsRendererPhase05WallpaperRunGE8Pixels;
+extern volatile u32 gNdsRendererPhase05WallpaperScalarStoreCount;
+extern volatile u32 gNdsRendererPhase05WallpaperPackedStoreCount;
+extern volatile u32 gNdsRendererPhase05WallpaperDmaPixelCount;
+extern volatile u32 gNdsRendererPhase05WallpaperCopyPixelCount;
 #endif
 #endif
 extern volatile u32 gNdsRendererBattleStaticTextureEnabled;

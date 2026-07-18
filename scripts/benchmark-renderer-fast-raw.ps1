@@ -9,6 +9,8 @@ param(
     [ValidateRange(1,2)][int]$RendererProfileLevel = 1,
     [switch]$RendererM2DetailedLedger,
     [switch]$RendererM3Phase0Profile,
+    [switch]$Task20StackProfile,
+    [switch]$Task22WallpaperRunLab,
     [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
     [ValidateRange(0,1)][int]$RenderEconomyMode = 0,
     [ValidateRange(0,255)][int]$RenderEconomyOwnerMask = 0,
@@ -73,6 +75,12 @@ if (($RenderEconomyMode -eq 1) -and
 if (($RenderEconomyMode -eq 0) -and ($RenderEconomyOwnerMask -ne 0)) {
     throw 'RenderEconomyOwnerMask requires RenderEconomyMode 1.'
 }
+if ($Task20StackProfile -and ($RendererProfileLevel -ne 1)) {
+    throw 'Task20StackProfile requires renderer profile 1.'
+}
+if ($Task20StackProfile -and $PhaseMatrixMode) {
+    throw 'Task20StackProfile is a separate startup stack census and cannot contaminate the phase matrix.'
+}
 if (($FastRunMode -eq 9) -and
     ($RendererBenchmarkStartEvent -eq 'None') -and
     -not $PSBoundParameters.ContainsKey('RendererBenchmarkStartFrame')) {
@@ -87,7 +95,11 @@ $target = if ($FastRunMode -eq 9) {
 } else {
     'smash64ds-battle-playable-coarse-hwtri'
 }
-$build = if ($RendererScreenSpaceCensusMode -eq 1) {
+$build = if ($Task20StackProfile) {
+    'builds/build-task20-reconcile'
+} elseif ($Task22WallpaperRunLab) {
+    "builds/build-task22-wallpaper-profile${RendererProfileLevel}-lab"
+} elseif ($RendererScreenSpaceCensusMode -eq 1) {
     'builds/build-task11-screen-space-census-lab'
 } elseif ($RenderEconomyMode -eq 1) {
     'builds/build-task11-economy-lab'
@@ -128,6 +140,8 @@ $build = if ($RendererScreenSpaceCensusMode -eq 1) {
     -RendererProfileLevel $RendererProfileLevel `
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -RendererM3Phase0Profile:$RendererM3Phase0Profile `
+    -Task20StackProfileMode ([int]$Task20StackProfile.IsPresent) `
+    -Task22WallpaperRunLab:$Task22WallpaperRunLab `
     -RendererScreenSpaceCensusMode $RendererScreenSpaceCensusMode `
     -RenderEconomyMode $RenderEconomyMode `
     -RenderEconomyOwnerMask $RenderEconomyOwnerMask `
@@ -158,7 +172,7 @@ $build = if ($RendererScreenSpaceCensusMode -eq 1) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode phase matrix $([int]$PhaseMatrixMode.IsPresent) lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
+    -Label "battle_playable fast raw mode $FastRunMode static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode task20 startup stack census $([int]$Task20StackProfile.IsPresent) task22 run census $([int]$Task22WallpaperRunLab.IsPresent) phase matrix $([int]$PhaseMatrixMode.IsPresent) lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

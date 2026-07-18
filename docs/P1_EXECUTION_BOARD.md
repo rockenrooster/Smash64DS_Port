@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-18 11:48 Central
+Updated: 2026-07-18 13:55 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -17,7 +17,7 @@ Integrated user-facing candidate:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,669,824 bytes
-SHA-256 DADB7C9626D4E7A1C8DDCF57A3233A0DEF653325E7FEEEFDA5B1F29B5624DEBB
+SHA-256 F3252C5C1A08D89FA040313D5DFEA5F3862A6A80020E8CE3D641E215B3AA1B0B
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -82,14 +82,15 @@ Calibrated findings (2026-07-18):
    (TASK 8 CUT A style) is worth more on-device than melonDS credits, and
    GX FIFO DMA feeding is deprioritized (no hidden stall tax observed).
 
-Projection rule for ledger planning: hardware ticks ~= ITCM-bucket x1.03
-+ main-RAM CPU bucket x1.2-1.5 (1.5 when data-streaming/miss-heavy)
-+ GX-transport x0.87. The blended whole-frame observation remains ~0.75x
-fps; the residual beyond these buckets is attributed to large-footprint
-icache misses that no small-loop bench captures. Keep `840,000` melonDS
-ticks as the locked-30 hardware planning budget, weighting main-RAM CPU
-cuts x1.5 toward it. It is not a promotion or rejection gate and does not
-authorize changing gameplay semantics.
+No emulator-to-device formula or universal multiplier is admissible. The rows
+above describe only their exact microbench workloads; they may rank a matching
+diagnostic, but they cannot synthesize a whole-frame device result or promote a
+candidate. Emulator evidence remains authoritative for deterministic state,
+semantic/GX traces, arithmetic, and pixels. Retail A/B is authoritative for
+DTCM, ARM/Thumb, code/data/cache layout, generated-program footprint, direct
+VRAM stores, DMA, GX FIFO behavior, and final pacing. The former `840,000`
+melonDS planning figure is retired; stable 30 is decided by the device's actual
+two-VBlank interval distribution and zero-slip lifecycle.
 
 Hardware operator packet:
 
@@ -108,13 +109,50 @@ Profile-1 HUD ROM: `builds/task10-hardware-packet/smash64ds-task10-phase-hud-pro
 `PRE`/`PRP`/`CMT` rows are populated only by the existing detailed renderer
 phase profiler; the low-observer profile-1 ROM intentionally leaves them off.
 
-## Phase Evidence
+## Tasks 20R-25R atomic reconciliation checkpoint
 
-Every timed row below comes from one current profile-1 ROM with live Fox,
-production incremental wallpaper, and eight samples. Values are P50/P95 ARM9
+Live-unit capture began on branch `master`, worktree
+`D:\Stuff\DevFolder\Smash64DS_Port`, HEAD
+`458191bef147f1c6963b2f533c601f9f68fc7730`. The tree was intentionally dirty:
+the user's 344-line
+`docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md` change is
+preserved, unedited, and outside this checkpoint; the user-supplied
+`docs/optimization/tasks.md` is the new authoritative queue.
+
+| Unit | Class / atomic sub-cut | Owned files or hunks | Checkpoint disposition |
+|---|---|---|---|
+| Task 20R | **B** — stack high-water and DTCM capacity census only | `Makefile`; `include/nds/nds_os.h`; `include/port/coroutine.h`; `src/port/coroutine.c`; `src/port/coroutine_arm.s`; `src/port/libultra_os.c`; Task-20 verifier/checker hunks | Preserve default-off measurement support. Earlier console output suggested gameplay/main HWM 13,044/3,700 and `NO_FIT`, but the legacy exports omitted every Task-20 row, so that deeper result is provisional rather than promoted evidence. The corrected startup-only recheck (`CA743BF9...` ROM, `9DE93ADA...` ELF, JSON `6173F456...`) exports the enabled flag, eight raw records, sampleCount 1, exact capacity/alignment/guards, and its shallow 252/2,832 HWM. It proves instrumentation/export safety, not gameplay-phase fit. Profile 0 exposes zero Task-20 symbols. No scratch or stack move exists; complete lifecycle/IRQ/escape proof remains for Task 20R after Task 25R. |
+| Task 21R | **B** — 21A shade/color key census only | `include/nds/nds_renderer.h`; `src/nds/nds_renderer.c`; `src/port/reloc_backend_renderer_dl.c`; M2 verifier hunk | Preserve compile-gated production-loop census. Frames 438–445 found 16 exact resident hits / 392 epochs (4.08%; Mario 11, Fox 5), zero collisions, below the 20% cache gate. No cache, 21B, 21C, or 23R work began. 21C remains only Task 27's foundation. |
+| Task 22R | **A** — one threshold-4 packed dirty-span writer | Task-22 hunks in `Makefile`, renderer/startup headers, benchmark/verifier/checker, diagnostics, `src/port/sprite_preview_backend.c`, and `src/port/taskman_seam.c` | **REVERT.** Early/Countdown/Whispy writer P50 improved, but natural-KO wallpaper P95 regressed 366,784 -> 370,944 (+4,160), over the +2,000 gate. Profile 2 recorded 136,192 map and 14,942,208 pixel checks with zero mismatches. Candidate and selector are removed; only neutral default-off span/store census remains. |
+| Task 24 | **C** — the already evidence-cleared worktree batch | committed manifest/evidence, worktree administration, `AGENTS.md`, ledger/board | Manifest SHA-256 `62585F0AE38C8B2ED4E0DC855DE56102B046585C69A208A6624EC0C16A8AF1BB`; 225 unique files / 20,501,076 bytes copied and 292 destinations rehashed with zero failures. Exactly 17 cleared worktrees were removed; all 15 held/dirty worktrees, every branch, builds, logs, and telemetry remain. No more cleanup until a quiet slot. |
+| Old Task 25 | Not live — completed immediately before reconciliation | historical phase-matrix evidence/tooling | Preserve as historical input only. It is not Task 25R and cannot set current priority. |
+
+During the only renderer edit, `/root/task21_23_renderer` was the sole writer of
+`src/nds/nds_renderer.c`; that lane is stopped. Focused PowerShell parsing, GBI
+fixtures, the Task 20 startup-sample recheck, Task 21 census, Task 22 oracle,
+post-revert census, and the final profile-0 Boundary gate are green. `DevFast`
+is retired and is not a registry profile; no obsolete gate was revived. This
+closes the Task 24 safety gate for the evidence-cleared batch.
+
+## Stable-30 retail contract
+
+The final profile-0 device gate requires exactly two unchanged source updates
+per presentation, with no debt, catch-up, skipped logic, interpolation, or
+speculative state. Across the complete canonical lifecycle it permits zero
+presentation intervals of three or more VBlanks and zero pacing-slip events.
+State, audio, lifecycle, geometry, material, texture, depth, and ownership must
+remain exact; synchronized native top-screen delta must be `0/49,152`; net
+reserve must be at least 128 KiB. Each phase publishes P50, P95, maximum, N,
+the interval histogram, presentations/s, and source updates/s.
+
+## Historical pre-Task-25R phase evidence
+
+Every timed row below came from one profile-1 ROM with live Fox, production
+incremental wallpaper, and eight samples. It repaired the older mixed-ROM
+comparison, but it is not Task 25R: it lacks the matching profile-0 sibling,
+maximums, complete owner rows, interval histogram, stable-30 deficit, and
+artifact/code-layout pack. Values are retained as historical P50/P95 ARM9
 ticks; `UPD` is the source-update owner, and residuals are draw/present/loop.
-Natural event gates replace the old cross-build `708/730/3300` presentation
-coordinates. The prior mixed-ROM table is archived in `PERF_LEDGER.md`.
 
 Same artifact: profile-1 ROM
 `FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144`,
@@ -135,33 +173,30 @@ Profile-1 hard-checkpoint windows are O2-equivalent feasibility evidence, not
 profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 `PERF_LEDGER.md`.
 
-## Remaining Queue After Task 25
+## Reconciled stable-30 queue
 
-1. **Task 20 Phase A, then conditional Phase C.** The same-ROM lifecycle is
-   13,552 bytes below the net arena-reserve gate, while source-update P95 spikes
-   to 814,080 at Whispy, 824,640 at rebirth, and 617,920 at Time Up. Audit both
-   DTCM stack directions and every pointer escape first. Phase B records
-   `NO CANDIDATE / REWORK`; a safe external gameplay stack could release the
-   current 16 KiB heap allocation and repair the reserve, but device UPD alone
-   referees its performance.
-2. **Task 21, serialized before Task 23.** Run the shade census and kill 21A
-   below 20%; attempt the 21B hot/cold event split only against the current
-   approximately 378K visible-fighter pool. 21C is already satisfied by the
-   generated 67-run/49-epoch compact direct tables and is killed before coding.
-3. **Task 23.** Stage is the largest stable draw owner at approximately 466K in
-   every phase. Census only camera-independent per-segment state and keep lanes
-   at or above 20%; matrices and near-plane work remain live.
-4. **Task 22.** Wallpaper reaches 320–363K in moving-camera windows but falls to
-   2.4K late. Exact full-key map retention already exists, so begin with one
-   changed-run coalescing census/threshold experiment; row hashes remain killed.
-5. **Task 24** remains lane-free evidence-preserving cleanup after permanent
-   worktree evidence is migrated and hash-verified.
+The old Task 25 matrix above is historical. After the preserved atomic units
+close, Task 25R is the only next task. It establishes the current profile-1 and
+profile-0 artifact pair, complete phase rows, maximums, interval histogram,
+stable-30 deficit, and M3-versus-M2 priority.
+
+Task 25R then selects the implementation order:
+
+1. Default M3 lane: Task 23R Phase 0 -> Task 26 -> Task 23R residual Phase 1.
+2. M2 lane: Task 21R -> Task 27. Task 21C is only the compact-table
+   foundation for Task 27, not the completed generated fighter architecture.
+3. Disjoint lane: Task 20R -> Task 22R, with retail hardware deciding DTCM and
+   direct-VRAM/DMA performance.
+4. After representations stabilize: Task 28 -> Task 29.
+5. Task 24 only in a quiet slot; Task 30 is the final stable-30 gate.
+
+`src/nds/nds_renderer.c` is a mandatory one-writer surface throughout.
 
 ## Lane Ownership
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | July 18 DevFast + Boundary pass | live tree | integrated battle ROM, countdown, effects, audio, two-ROM contract, and current terminal lifecycle | no runner active |
+| Integration/release | July 18 Boundary pass (`DevFast` retired) | live tree | integrated battle ROM, countdown, effects, audio, two-ROM contract, and current terminal lifecycle | no runner active |
 | Renderer implementation | ARM restored; Task 12 closed REVERT; Task 14 KEEP | shared integration tree | Retail hardware rejects blanket Thumb by +594,816 DRW ticks (+34.1%); its renderer hot group is device noise and reverts with that base. The renderer TU is ARM again with Task 14 intact | no runner active |
 | Gameplay + QA | Playtest review fixed / manual candidate retest pending | shared live tree / disjoint files | Down+A is source-fixed at the shared ClearAll seam. Human-P2 Fox completes all nine Down-Air callbacks and exits naturally; Mario completes the same focused route with eight live imported CPU updates. Latest then passes canonical mode 163, two-ROM publication, runtime, registry, renderer/ITCM, and visual gates. Countdown also remains fixed | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
@@ -203,14 +238,14 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Task 16 extended bit-exact soft-float | PASS / compare, i2f, add/sub shipped; fmul REVERT | Gameplay + Toolchain | The three exact candidates coexist in one link and move source-update 215,104/216,512 → 200,000/201,088 P50/P95 (-15,104/-15,424; -7.02% median). Combined ITCM is 28,820/32,768 with 3,948 bytes free and zero fill; all 3,892/3,892 six-field state rows match with zero overflow. The exact-zero fmul wrapper passed 100M host and 1,050,880 literal ARM9 pairs but regressed its representative microbench 5.34% and natural source-update 1.64%, so all fmul code/tools/link changes were removed. Canonical Boundary passed with published Task16 1/1/1 and ROM `DADB7C96...` | Keep global selectors default OFF for exact lab controls and the published/freeze-equivalent overrides at 1/1/1. Keep stock 408-byte `__aeabi_fmul`; the authoritative combined verifier always rebuilds both sides and binds build, ROM, ELF, and all six row fields |
 | Task 17 update hot-text round 2 | KEEP CONFIRMED / update-only on ARM | Gameplay + Toolchain | The original Thumb-base device pair moves UPD 386,240→342,080 (-44,160/-11.4%). The decisive ARM-base pair narrows that claim: UPD 366,016→363,456 (-2,560/-0.70%) and DRW -2,688 cross LOOP 2,800,832→2,240,448 (five→four VBlanks) and FPS 13.9→14.3, while ACT rises 15,872. Exact retained surface remains 11 functions / 5,016 bytes under an 8 KiB ASSERT; Task 14 and Task 16 1/1/1 remain intact | Keep the threshold win and both device photos. Do not claim -44K on ARM or infer cache placement from melonDS; continue phase-wide performance qualification normally |
 | Task 18 KO wallpaper spike | CLOSED / bad baseline | Renderer + Platform | Production incremental mode measures KO wallpaper at 302,880/357,824 versus steady 292,224/360,000: +10,656/-2,176, not the cited 547,584/547,648 full-raster control. No runtime change is justified | Keep incremental mode and the affine lab retired. The Task 18 ledger row is the durable correction |
-| Task 25 same-artifact phase matrix | COMPLETE / two blockers exposed | Integration | One profile-1 ROM `FB0704BA...` supplies all seven eight-frame natural windows plus the one-minute Results transition. The old `708/730/3300` presentation coordinates were cross-build artifacts. The exact ROM exposes a 117,520-byte net lifecycle reserve and one Whispy live-texture fallback | Use this matrix for all remaining estimates. Do not call the lifecycle green until reserve and the M4 fence are repaired |
-| M4 zero gameplay conversion/preparation | Startup pass / Whispy lifecycle REOPENED | Renderer | Latest canonical startup frame 212 retains 22 textures / 131,072 bytes, records 646 cache hits, and zero hot conversion/upload. The Task 25 same-ROM Whispy window instead records one conversion, decode, allocation, GL create, upload, and fallback from a live weapon texture | Keep the 57,344-byte overlay layout, but trace and pre-reside the exact live weapon asset before restoring the zero-fence lifecycle claim |
+| Pre-25R same-artifact phase matrix | HISTORICAL / superseded contract | Integration | Profile-1 ROM `FB0704BA...` supplies seven eight-frame windows plus Results and remains valid historical evidence. It does not contain Task 25R's profile-0 sibling, maximums, full owner rows, interval histogram, or stable-30 deficit | Preserve the evidence; Task 25R must replace it before any remaining estimate or lane-priority claim |
+| M4 zero gameplay conversion/preparation | Startup pass / Whispy lifecycle REOPENED | Renderer | Latest canonical startup frame 212 retains 22 textures / 131,072 bytes, records 646 cache hits, and zero hot conversion/upload. The historical pre-25R Whispy window instead records one conversion, decode, allocation, GL create, upload, and fallback from a live weapon texture | Keep the 57,344-byte overlay layout, but trace and pre-reside the exact live weapon asset before restoring the zero-fence lifecycle claim |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / full runtime gate pass | Renderer + QA | The source-backed point sample changes 49 atlas pixels only inside the 12x9 `ShadowGo`; all five GO frames retain its 70-pixel count plus 10/10/10 draws/queued/emitted, 57,344 texture bytes, 608 palette bytes, and zero hot conversion/upload. The large-GO mismatch was a stale crop lock after the source-light repair: only 125/26,400 pixels changed, all inside Mario's 22x14 area, while the GO RGB555 payload remained `05330f47...`. The rebuilt full verifier passes with crop `d968b0cc...`, GO `3 OBJ + 10 quads`, and 31,168 OBJ bytes | Keep both accepted crop locks and the source-derived DS assets; no GO source change was warranted |
 | Dream Land BGM | Pass | Audio | Tyler reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |
 | Required FGM, attack/hit sounds, and Mario/Fox voices | Six common channel starts restored / acoustic and broader audit open | Audio + Gameplay | The source table `dFTMainHitCollisionFGMs` exposed an intentional DS exclusion: natural kick ID 32 produced unsupported delta 1 and no channel. The 121,720-byte pack now maps 18 exact IDs plus punch/kick IDs 40/38/37/34/32/31 from their two exact primary BattleShip samples and source frequency/volume envelopes; omitted composite forks/custom FX remain explicit fidelity debt. The repeated natural ID-32 route records pan 80, supported/unsupported/acquire `1/0/1`, a live channel mask, zero playback faults, and 187,152-byte reserve. Automated channel ACK is not an ear check; five special/projectile contacts remain fail-closed | Keep the six common mappings and natural channel/effect gate. Tyler's exact-ROM ear retest remains required. Next resolve the naturally observed unsupported Escape 11, Grind4 85, MarioFoot 110, MarioDash 121, swing 41/42, GuardOn 13, Fox special 186/189, MarioSmash3 431, and FoxDamage 375 cues; requalify the one-minute reserve before adding more resident audio |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
-| Stable reserve / no corruption | RED / current one-minute proof is 13,552 bytes short | QA | The Task 25 same-ROM CPU-on lifecycle reaches Results and reports 183,056 arena headroom with 65,536 resident audio bytes: 117,520 net versus the 131,072-byte floor. Transition, teardown, audio markers, and exact 4,084/2,042 pacing pass; reserve alone fails | Task 20 Phase A is now first. Do not add resident assets or relax the floor; require a measured ownership fix and rerun the same lifecycle |
+| Stable reserve / no corruption | RED / historical proof is 13,552 bytes short | QA | The pre-25R CPU-on lifecycle reaches Results and reports 183,056 arena headroom with 65,536 resident audio bytes: 117,520 net versus the 131,072-byte floor. Transition, teardown, audio markers, and exact 4,084/2,042 pacing pass; reserve fails | Do not add resident assets or relax the floor. Re-measure the current artifact in Task 25R, then follow its ranked ownership result |
 | Focused/checkpoint verification | DevFast + Boundary PASS / ARM-base device confirmation PASS | QA | Published battle candidate `DADB7C96...` passes the 10:17 Boundary checkpoint in 58.8 seconds with normal runtime, mode-163 CPU setup/proc/target 1/33/33, GBI fixtures, two-ROM publication, Task16 1/1/1 at 28,820-byte ITCM, zero renderer rejects, and dated visual analysis. DevFast also passes in 206.4 seconds. The same-HUD retail pair then confirms Task 17's five→four-VBlank threshold win | Keep this development checkpoint. Resume the full one-minute post-pack reserve, exact-ROM ear check, and remaining attack/hit audio-visual cue audit |
 | Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Latest capture is `2026-07-18_canonical_fast_101715-1383371-p57268.png`; its paired frame has 747/49,152 meaningful changes, 100% overlap, and all named-region/detail gates pass. Task 6 C/D, Task 8 G2, reserve repair, Task 9/16 state identity, source-light parity, both emitter splits, raw-corner cut, Down+A, and the common-contact checkpoint remain retained | Manually retest exact ROM `DADB7C96...`; automated common-contact A/V closure is focused, not global |
 

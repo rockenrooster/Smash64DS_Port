@@ -25,3 +25,25 @@ ndsCoroutineTrampoline:
     b       1b
     .size ndsCoroutineTrampoline, .-ndsCoroutineTrampoline
 
+    /* Kept separate so --gc-sections removes Task 20 from normal ROMs. */
+    .section .text.ndsCoroutineTask20StackProfile, "ax", %progbits
+    .align 2
+    .arm
+    .global ndsCoroutineReadSp
+    .type ndsCoroutineReadSp, %function
+ndsCoroutineReadSp:
+    mov     r0, sp
+    bx      lr
+    .size ndsCoroutineReadSp, .-ndsCoroutineReadSp
+
+    .global ndsCoroutinePoisonWords
+    .type ndsCoroutinePoisonWords, %function
+ndsCoroutinePoisonWords:
+1:
+    cmp     r0, r1
+    bhs     2f
+    str     r2, [r0], #4
+    b       1b
+2:
+    bx      lr
+    .size ndsCoroutinePoisonWords, .-ndsCoroutinePoisonWords

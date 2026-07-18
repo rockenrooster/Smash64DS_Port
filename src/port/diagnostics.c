@@ -2908,6 +2908,21 @@ volatile u32 gNdsRendererPhase05CalibrationTicks;
 volatile u32 gNdsRendererPhase05CalibrationIntervals;
 volatile u32 gNdsRendererPhase05WallpaperRowCount;
 volatile u32 gNdsRendererPhase05WallpaperPixelWriteCount;
+volatile u32 gNdsRendererPhase05WallpaperFullRowCount;
+volatile u32 gNdsRendererPhase05WallpaperIncrementalRowCount;
+volatile u32 gNdsRendererPhase05WallpaperChangedXCount;
+volatile u32 gNdsRendererPhase05WallpaperChangedRunCount;
+volatile u32 gNdsRendererPhase05WallpaperLongestChangedRun;
+volatile u32 gNdsRendererPhase05WallpaperRunGE2Count;
+volatile u32 gNdsRendererPhase05WallpaperRunGE2Pixels;
+volatile u32 gNdsRendererPhase05WallpaperRunGE4Count;
+volatile u32 gNdsRendererPhase05WallpaperRunGE4Pixels;
+volatile u32 gNdsRendererPhase05WallpaperRunGE8Count;
+volatile u32 gNdsRendererPhase05WallpaperRunGE8Pixels;
+volatile u32 gNdsRendererPhase05WallpaperScalarStoreCount;
+volatile u32 gNdsRendererPhase05WallpaperPackedStoreCount;
+volatile u32 gNdsRendererPhase05WallpaperDmaPixelCount;
+volatile u32 gNdsRendererPhase05WallpaperCopyPixelCount;
 #endif
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2

@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-18 11:48 Central
+Updated: 2026-07-18 13:55 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -26,18 +26,34 @@ correctness evidence, never its speed referee.
 
 ## Next Packet
 
-Task 25 is complete. Its one-ROM phase matrix uses profile-1 ROM
-`FB0704BA5E23782903A28429D58DD89C29DCF7E23131EBE270105ECCC978C144`.
-Begin Task 20 Phase A: measure full-lifecycle gameplay and Calico DTCM stack
-high-water, prove the exact capacity equation, and census every stack-pointer
-escape across DMA/GX/audio/IPC/queues. The current one-minute proof reaches
-Results but has only 117,520 net arena bytes, 13,552 below the 128 KiB floor;
-do not relax the gate. Record Phase B as `NO CANDIDATE / REWORK` unless a real
-private 1–2 KiB hot update scratch block appears. Attempt the external DTCM
-gameplay stack only if the full lifecycle fits with the required guard and
-fail-open heap fallback. Device typed-UPD is its only speed referee.
+`docs/optimization/tasks.md` is authoritative. The reconciliation began at
+HEAD `458191bef147f1c6963b2f533c601f9f68fc7730` on `master` in the root
+worktree. Preserve the user's uncommitted 344-line
+`ClaudeFable5_JumpABC_Tasks_20260715_2326.md` change; it was not edited or
+staged by this checkpoint.
 
-After Task 20, keep the renderer one-writer sequence Task 21 then Task 23;
-Task 22 remains disjoint. The matrix also reopens the M4 lifecycle fence: the
-Whispy window performs one live weapon conversion/decode/alloc/create/upload/
-fallback. Preserve that as a blocker while completing Tasks 20–25.
+The old Task 25 profile-1 matrix (`FB0704BA...`) remains historical evidence
+only and is not Task 25R. The preserved atomic units are closed:
+
+- Task 20R measurement-only: preserve the default-off sampler; no move exists.
+  The corrected startup-only export carries all eight raw rows and fit fields
+  and is absent from profile 0. Its shallow 252/2,832-byte watermark proves the
+  tooling only. Earlier 13,044/3,700-byte `NO_FIT` console output is provisional
+  because its legacy JSON omitted Task-20 rows; rerun the full lifecycle after
+  Task 25R before any DTCM candidate.
+- Task 21R measurement-only: 16/392 exact resident shade hits (4.08%); no cache.
+- Task 22R threshold-4 writer: REVERT on natural-KO wallpaper P95 +4,160;
+  candidate removed, neutral census retained.
+- Task 24: only the 17-worktree evidence-cleared batch was removed; 15 held
+  worktrees and all branches/builds/logs remain. Focused checks and the final
+  Boundary profile pass; further cleanup is deferred. `DevFast` is retired.
+
+Start Task 25R next. Build one current detailed profile-1 ROM and its matching
+profile-0 sibling; publish the complete identity pack, P50/P95/max/N owner rows,
+interval histogram, rates, reserve, exactness, and stable-30 deficit. Then use
+only its result to choose M3 (`23R Phase 0 -> 26 -> residual 23R`) or M2
+(`21R -> 27`); the disjoint lane is `20R -> 22R`, followed by `28 -> 29`, with
+Task 24 in a quiet slot and Task 30 last. `src/nds/nds_renderer.c` is always a
+one-writer surface. Emulator proves deterministic correctness/pixels; retail
+hardware decides DTCM, layout/cache, direct VRAM/DMA/GX, generated-program, and
+final pacing performance.

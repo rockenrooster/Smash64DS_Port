@@ -32,6 +32,7 @@ param(
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [switch]$RendererM2DetailedLedger,
     [switch]$RendererM3Phase0Profile,
+    [switch]$Task22WallpaperRunLab,
     [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
     [ValidateRange(0,1)][int]$RenderEconomyMode = 0,
     [ValidateRange(0,255)][int]$RenderEconomyOwnerMask = 0,
@@ -42,6 +43,7 @@ param(
     [ValidateRange(0,1)][int]$Task16FloatI2fMode = 0,
     [ValidateRange(0,1)][int]$Task16FloatAddSubMode = 0,
     [ValidateRange(0,1)][int]$Task9StateHashMode = 0,
+    [ValidateRange(0,1)][int]$Task20StackProfileMode = 0,
     [string]$Task9StateHashExportPath = '',
     [ValidateRange(0,1024)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
@@ -156,6 +158,17 @@ if ($RendererM2DetailedLedger -and ($RendererProfileLevel -ne 1)) {
 if ($RendererM3Phase0Profile -and
     (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9))) {
     throw 'RendererM3Phase0Profile requires RendererProfileLevel 1 and RendererFastRunMode 9.'
+}
+if (($Task20StackProfileMode -eq 1) -and
+    ($RendererProfileLevel -ne 1)) {
+    throw 'Task20StackProfileMode requires RendererProfileLevel 1.'
+}
+if (($Task20StackProfileMode -eq 1) -and $PhaseMatrixMode) {
+    throw 'Task20StackProfileMode is a separate startup stack census and cannot contaminate the phase matrix.'
+}
+if (($Task20StackProfileMode -eq 1) -and -not $MatchLifecycleProof -and
+    ($RendererBenchmarkSamples -lt 1)) {
+    throw 'Task20StackProfileMode requires a lifecycle proof or at least one benchmark sample for startup census capture.'
 }
 if (($RendererScreenSpaceCensusMode -eq 1) -and
     (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9) -or
@@ -439,13 +452,15 @@ function Get-BenchmarkMakeIdentity {
     }
     $required = @(
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
-        'M3_PHASE0_PROFILE', 'SCREEN_SPACE_CENSUS', 'RENDER_ECONOMY',
+        'M3_PHASE0_PROFILE', 'TASK22_WALLPAPER_RUN_LAB',
+        'SCREEN_SPACE_CENSUS', 'RENDER_ECONOMY',
         'RENDER_ECONOMY_OWNER_MASK', 'RENDERER_BENCHMARK_MODE',
         'FAST_RUN_DEFAULT',
         'SCENE_MIP_CACHE_LAB', 'BATTLE_STATIC_TEXTURE_DEFAULT',
         'IFCOMMON_HYBRID_OAM', 'TASK9_FLOAT_CENSUS', 'TASK9_FLOAT_ITCM',
         'TASK9_FLOAT_PHASE2', 'TASK16_FLOAT_COMPARE', 'TASK16_FLOAT_I2F',
         'TASK16_FLOAT_ADDSUB', 'TASK9_STATE_HASH',
+        'TASK20_STACK_PROFILE',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
     foreach ($key in $required) {
@@ -460,6 +475,7 @@ function Get-BenchmarkMakeIdentity {
         Profile = [int]$values.PROFILE
         M2DetailedLedger = [int]$values.M2_DETAILED_LEDGER
         M3Phase0Profile = [int]$values.M3_PHASE0_PROFILE
+        Task22WallpaperRunLab = [int]$values.TASK22_WALLPAPER_RUN_LAB
         ScreenSpaceCensusMode = [int]$values.SCREEN_SPACE_CENSUS
         RenderEconomyMode = [int]$values.RENDER_ECONOMY
         RenderEconomyOwnerMask = [int]$values.RENDER_ECONOMY_OWNER_MASK
@@ -476,6 +492,7 @@ function Get-BenchmarkMakeIdentity {
         Task16FloatI2fMode = [int]$values.TASK16_FLOAT_I2F
         Task16FloatAddSubMode = [int]$values.TASK16_FLOAT_ADDSUB
         Task9StateHashMode = [int]$values.TASK9_STATE_HASH
+        Task20StackProfileMode = [int]$values.TASK20_STACK_PROFILE
         CommonCFlags = $values.CFLAGS_COMMON
         RendererCFlags = $values.CFLAGS_RENDERER
         SceneCFlags = $values.CFLAGS_SCENE
@@ -568,6 +585,7 @@ $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARN
 $makeArgs += "NDS_RENDERER_PROFILE_LEVEL=$RendererProfileLevel"
 $makeArgs += "NDS_RENDERER_M2_DETAILED_LEDGER=$([int]$RendererM2DetailedLedger.IsPresent)"
 $makeArgs += "NDS_RENDERER_M3_PHASE0_PROFILE=$([int]$RendererM3Phase0Profile.IsPresent)"
+$makeArgs += "NDS_TASK22_WALLPAPER_RUN_LAB=$([int]$Task22WallpaperRunLab.IsPresent)"
 $makeArgs += "NDS_RENDERER_SCREEN_SPACE_CENSUS=$RendererScreenSpaceCensusMode"
 $makeArgs += "NDS_RENDER_ECONOMY=$RenderEconomyMode"
 $makeArgs += "NDS_RENDER_ECONOMY_OWNER_MASK=$renderEconomyCompileOwnerMask"
@@ -579,6 +597,7 @@ $makeArgs += "NDS_TASK16_FLOAT_COMPARE=$effectiveTask16FloatCompareMode"
 $makeArgs += "NDS_TASK16_FLOAT_I2F=$effectiveTask16FloatI2fMode"
 $makeArgs += "NDS_TASK16_FLOAT_ADDSUB=$effectiveTask16FloatAddSubMode"
 $makeArgs += "NDS_TASK9_STATE_HASH=$Task9StateHashMode"
+$makeArgs += "NDS_TASK20_STACK_PROFILE=$Task20StackProfileMode"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
 }
@@ -673,6 +692,8 @@ if ($RendererBenchmarkSamples -gt 0) {
             [int]$RendererM2DetailedLedger.IsPresent -and
         $benchmarkMakeIdentity.M3Phase0Profile -eq
             [int]$RendererM3Phase0Profile.IsPresent -and
+        $benchmarkMakeIdentity.Task22WallpaperRunLab -eq
+            [int]$Task22WallpaperRunLab.IsPresent -and
         $benchmarkMakeIdentity.ScreenSpaceCensusMode -eq
             $RendererScreenSpaceCensusMode -and
         $benchmarkMakeIdentity.RenderEconomyMode -eq
@@ -691,6 +712,8 @@ if ($RendererBenchmarkSamples -gt 0) {
             $effectiveTask16FloatI2fMode -and
         $benchmarkMakeIdentity.Task16FloatAddSubMode -eq
             $effectiveTask16FloatAddSubMode -and
+        $benchmarkMakeIdentity.Task20StackProfileMode -eq
+            $Task20StackProfileMode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
         'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/Task11/IFCommon/Task9/Task16 configuration.' `
@@ -940,6 +963,7 @@ try {
                         $coarseBenchmarkCommands += 'printf "M3_PHASE0=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3Phase0PreflightTicks, gNdsRendererM3Phase0PrepareRunTicks, gNdsRendererM3Phase0VertexPrepareTicks, gNdsRendererM3Phase0NearTransformTicks, gNdsRendererM3Phase0RunTransitionTicks, gNdsRendererM3Phase0RawEmitTicks, gNdsRendererM3Phase0RangeEmitTicks, gNdsRendererM3Phase0NoZEmitTicks, gNdsRendererM3Phase0NoZMatrixTicks, gNdsRendererM3Phase0AccountingTicks, gNdsRendererM3Phase0CommitTicks, gNdsRendererM3Phase0TimerReadCount, gNdsRendererM3Phase0TimerSpanCount, gNdsRendererM3Phase0CalibrationTicks, gNdsRendererM3Phase0CalibrationIntervals, gNdsRendererM3Phase0PreparedDenseCount, gNdsRendererM3Phase0NearTransformCount, gNdsRendererM3Phase0NoZMatrixCount'
                         $coarseBenchmarkCommands += 'printf "G2_STATE=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3G2TextureParamWriteCount, gNdsRendererM3G2TextureParamSkipCount, gNdsRendererM3G2MatrixModeWriteCount, gNdsRendererM3G2MatrixModeSkipCount, gNdsRendererM3G2PolyFmtWriteCount, gNdsRendererM3G2PolyFmtSkipCount'
                         $coarseBenchmarkCommands += 'printf "PHASE05=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererPhase05WallpaperSetupTicks, gNdsRendererPhase05WallpaperXMapTicks, gNdsRendererPhase05WallpaperYMapTicks, gNdsRendererPhase05WallpaperWriteTicks, gNdsRendererPhase05WallpaperCommitTicks, gNdsRendererPhase05PresentHardwareTicks, gNdsRendererPhase05GCDrawAllTicks, gNdsRendererPhase05StageTransitionTicks, gNdsRendererPhase05FighterWrapperTicks, gNdsRendererPhase05FrameResetTicks, gNdsRendererPhase05PresentTailTicks, gNdsRendererPhase05ProfileBookkeepingTicks, gNdsRendererPhase05ProfilePublishTicks, gNdsRendererPhase05FlushPrepTicks, gNdsRendererPhase05TimerReadCount, gNdsRendererPhase05TimerSpanCount, gNdsRendererPhase05CalibrationTicks, gNdsRendererPhase05CalibrationIntervals, gNdsRendererPhase05WallpaperRowCount, gNdsRendererPhase05WallpaperPixelWriteCount'
+                        $coarseBenchmarkCommands += 'printf "WALL_RUNS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererPhase05WallpaperFullRowCount, gNdsRendererPhase05WallpaperIncrementalRowCount, gNdsRendererPhase05WallpaperChangedXCount, gNdsRendererPhase05WallpaperChangedRunCount, gNdsRendererPhase05WallpaperLongestChangedRun, gNdsRendererPhase05WallpaperRunGE2Count, gNdsRendererPhase05WallpaperRunGE2Pixels, gNdsRendererPhase05WallpaperRunGE4Count, gNdsRendererPhase05WallpaperRunGE4Pixels, gNdsRendererPhase05WallpaperRunGE8Count, gNdsRendererPhase05WallpaperRunGE8Pixels, gNdsRendererPhase05WallpaperScalarStoreCount, gNdsRendererPhase05WallpaperPackedStoreCount, gNdsRendererPhase05WallpaperDmaPixelCount, gNdsRendererPhase05WallpaperCopyPixelCount, gNdsRendererPhase05WallpaperPixelWriteCount'
                     }
                 }
                 if ($m4CandidateEvidence) {
@@ -970,6 +994,7 @@ try {
                     foreach ($ownerIndex in 1..2) {
                         $coarseBenchmarkCommands += Get-RendererM2BenchmarkCommand -OwnerIndex $ownerIndex
                     }
+                    $coarseBenchmarkCommands += 'printf "M2_SHADE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM2ShadeEpochCount, gNdsRendererM2ShadeKeyHitCount, gNdsRendererM2ShadeResidentHitCount, gNdsRendererM2ShadeHashCollisionCount, gNdsRendererM2ShadeDenseVisitCount, gNdsRendererM2ShadeComputeCount, gNdsRendererM2ShadeLutComputeCount, gNdsRendererM2ShadePreparedComputeCount, gNdsRendererM2ShadeAliasCopyCount, gNdsRendererM2ShadeMaterialPackCount, gNdsRendererM2ShadeOwnerEpochCount[0], gNdsRendererM2ShadeOwnerKeyHitCount[0], gNdsRendererM2ShadeOwnerResidentHitCount[0], gNdsRendererM2ShadeOwnerEpochCount[1], gNdsRendererM2ShadeOwnerKeyHitCount[1], gNdsRendererM2ShadeOwnerResidentHitCount[1]'
                 }
                 if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                     $coarseBenchmarkCommands += 'printf "SINK_BENCH=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSinkCursor, gNdsRendererBenchmarkSinkWordCount, gNdsRendererBenchmarkSinkCalibrationWords, gNdsRendererBenchmarkSinkCalibrationTicks, gNdsRendererBenchmarkSinkOwnerWords[0], gNdsRendererBenchmarkSinkOwnerWords[1], gNdsRendererBenchmarkSinkOwnerWords[2]'
@@ -983,6 +1008,11 @@ try {
                     }
                     $coarseBenchmarkCommands += Get-RendererSemanticBenchmarkCommand
                 }
+            }
+            if ($Task20StackProfileMode -eq 1) {
+                $coarseBenchmarkCommands += @(
+                    'printf "TASK20_STACK=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsTask20GameplayStackBase, gNdsTask20GameplayStackSize, gNdsTask20GameplayStackHighWater, gNdsTask20MainStackBottom, gNdsTask20MainStackPoisonStart, gNdsTask20MainStackTop, gNdsTask20MainStackHighWater, gNdsTask20SampleCount'
+                )
             }
             $benchmarkTriangleSymbol = if ($RendererBenchmarkOnly -and
                 ($RendererFastRunMode -ne 9)) {
@@ -1387,6 +1417,9 @@ try {
             $lifecycleCommands += 'printf "MATCH_SAFETY=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerRelocStaleFiles, gNdsMemoryLedgerRelocStaleBytes, gNdsFighterNaturalMotionUnsafeCount, gNdsFighterNaturalMotionFigatreeTableInvalidCount, gNdsFighterNaturalMotionFigatreeAnimInvalidCount, gNdsAObjEvent32NormalizeFailCount, gNdsMObjSubAttachFailCount, gNdsStagePupupuExternalFixupFailCount, gNdsFighterMarioFoxExternalFixupFailCount, gNdsAudioBgmOpenFailCount, gNdsAudioBgmReadFailCount, gNdsAudioBgmUnsafeWriteCount, gNdsAudioBgmOverrunCount, gNdsStageCollisionLoopNoGeometryCount, gNdsStageCollisionLoopOutOfRangeLineCount, gNdsStageCollisionLoopBadVertexCount, gNdsFighterDisplayContractBoundsFailCount'
             $lifecycleCommands += 'printf "DAMAGE_FLOOR=%u,%u,%u,%u,%u,%u,%u,%u,%d,%d,%d,%d,%d,%d,%#x,%#x,%u,%u,%u\n", gNdsCollisionRuntimeDiagnostics.damage_check_calls, gNdsCollisionRuntimeDiagnostics.damage_proc_calls, gNdsCollisionRuntimeDiagnostics.damage_floor_tests, gNdsCollisionRuntimeDiagnostics.damage_floor_hits, gNdsCollisionRuntimeDiagnostics.damage_floor_landings, gNdsCollisionRuntimeDiagnostics.damage_floor_edge_deferred, gNdsCollisionRuntimeDiagnostics.damage_results, gNdsCollisionRuntimeDiagnostics.damage_invalid, gNdsCollisionRuntimeDiagnostics.damage_last_line, gNdsCollisionRuntimeDiagnostics.damage_last_status, gNdsCollisionRuntimeDiagnostics.damage_last_root_y_before_milli, gNdsCollisionRuntimeDiagnostics.damage_last_root_y_after_milli, gNdsCollisionRuntimeDiagnostics.damage_last_pos_diff_y_milli, gNdsCollisionRuntimeDiagnostics.damage_last_angle_y_milli, gNdsCollisionRuntimeDiagnostics.damage_last_mask_curr, gNdsCollisionRuntimeDiagnostics.damage_last_mask_stat, gNdsCollisionRuntimeDiagnostics.floor_flat_ascending_accepts, gNdsCollisionRuntimeDiagnostics.floor_adj_ambiguous, (gNdsCollisionRuntimeDiagnostics.damage_last_status >= nFTCommonStatusDamageStart && gNdsCollisionRuntimeDiagnostics.damage_last_status <= nFTCommonStatusDamageFall)'
         }
+        if ($Task20StackProfileMode -eq 1) {
+            $lifecycleCommands += 'printf "TASK20_STACK=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsTask20GameplayStackBase, gNdsTask20GameplayStackSize, gNdsTask20GameplayStackHighWater, gNdsTask20MainStackBottom, gNdsTask20MainStackPoisonStart, gNdsTask20MainStackTop, gNdsTask20MainStackHighWater, gNdsTask20SampleCount'
+        }
         $gdbCommands = @($beforeDetach + $lifecycleCommands + $afterDetach)
     }
     if ($ImportBattleShipIFCommon) {
@@ -1496,6 +1529,82 @@ try {
         -Name 'TASK9_STATE_SUMMARY' -FieldCount 3)
     $task9StateRecords = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'TASK9_STATE' -FieldCount 6)
+    $task20StackRecords = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+        -Name 'TASK20_STACK' -FieldCount 8)
+    $task20StackRows = @()
+    $task20StackEvidence = $null
+    $task20StackSummary = ''
+    if ($Task20StackProfileMode -eq 1) {
+        Assert-Condition ($task20StackRecords.Count -gt 0) `
+            'Task 20 stack profile emitted no watermark record.' $gdbStdout
+        $task20StackRows = @($task20StackRecords | ForEach-Object {
+            , @(Get-Ints $_)
+        })
+        $task20StackLast = $task20StackRows[-1]
+        $task20SampleCountValid = if ($MatchLifecycleProof) {
+            $task20StackLast[7] -ge 1
+        } else {
+            @($task20StackRows | Where-Object { $_[7] -ne 1 }).Count -eq 0
+        }
+        $task20GameplayCapacity = [int64]$task20StackLast[1]
+        $task20GameplayHighWater = [int64]$task20StackLast[2]
+        $task20DtcmGap = [int64]$task20StackLast[5] -
+            [int64]$task20StackLast[3]
+        $task20MainHighWater = [int64]$task20StackLast[6]
+        Assert-Condition ($task20StackLast[0] -ne 0 -and
+            (($task20StackLast[0] -band 7) -eq 0) -and
+            $task20GameplayCapacity -eq 16384 -and
+            $task20GameplayHighWater -gt 0 -and
+            $task20GameplayHighWater -le ($task20GameplayCapacity - 64) -and
+            $task20StackLast[3] -lt $task20StackLast[4] -and
+            $task20StackLast[4] -lt $task20StackLast[5] -and
+            (($task20StackLast[3] -band 3) -eq 0) -and
+            (($task20StackLast[5] -band 3) -eq 0) -and
+            $task20MainHighWater -gt 0 -and
+            $task20MainHighWater -le ($task20DtcmGap - 64) -and
+            $task20SampleCountValid) `
+            'Task 20 stack profile lost its exact capacity, alignment, 64-byte guards, or watermark.' `
+            $gdbStdout
+        $task20RawNeed = $task20GameplayHighWater + 64 +
+            $task20MainHighWater
+        $task20MarginNeed = $task20GameplayHighWater + 1024 + 64 +
+            $task20MainHighWater + 1024
+        $task20RawFit = if ($task20RawNeed -le $task20DtcmGap) {
+            'FIT'
+        } else {
+            'NO_FIT'
+        }
+        $task20StackEvidence = [ordered]@{
+            scope = if ($MatchLifecycleProof) {
+                'startup/final request-gated'
+            } else {
+                'startup-only'
+            }
+            recordCount = $task20StackRows.Count
+            latest = [ordered]@{
+                gameplayBase = [int64]$task20StackLast[0]
+                gameplayCapacity = $task20GameplayCapacity
+                gameplayHighWater = $task20GameplayHighWater
+                mainBottom = [int64]$task20StackLast[3]
+                mainPoisonStart = [int64]$task20StackLast[4]
+                mainTop = [int64]$task20StackLast[5]
+                mainHighWater = $task20MainHighWater
+                sampleCount = [int64]$task20StackLast[7]
+            }
+            fit = [ordered]@{
+                dtcmGap = $task20DtcmGap
+                guardBytes = 64
+                rawNeed = $task20RawNeed
+                rawDelta = $task20DtcmGap - $task20RawNeed
+                rawFits = $task20RawNeed -le $task20DtcmGap
+                marginNeed = $task20MarginNeed
+                marginDelta = $task20DtcmGap - $task20MarginNeed
+                marginFits = $task20MarginNeed -le $task20DtcmGap
+            }
+        }
+        $task20StackSummary =
+            "Task20 startup/final stack: records=$($task20StackRecords.Count) samples=$($task20StackLast[7]) gameplay=$($task20StackLast[0])/$task20GameplayCapacity/hwm$task20GameplayHighWater mainPostInit=$($task20StackLast[3])..$($task20StackLast[4])..$($task20StackLast[5])/hwm$task20MainHighWater dtcmGap=$task20DtcmGap fit=$task20RawFit/rawNeed$task20RawNeed/delta$($task20DtcmGap-$task20RawNeed) marginNeed$task20MarginNeed/delta$($task20DtcmGap-$task20MarginNeed) guards=64"
+    }
     $matchSafety = [regex]::Match($gdbStdout, 'MATCH_SAFETY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $damageFloor = [regex]::Match($gdbStdout, 'DAMAGE_FLOOR=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
     $run = [regex]::Match($gdbStdout, 'GCRUNALL_RUN=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -1544,10 +1653,12 @@ try {
     $m3Phase0Benchmark = @()
     $g2StateBenchmark = @()
     $phase05Benchmark = @()
+    $wallRunBenchmark = @()
     $m4WaterStillBenchmark = @()
     $m4StaticBenchmark = @()
     $m4FenceBenchmark = @()
     $m2Benchmark = @()
+    $m2ShadeBenchmark = @()
     $rendererSemanticBenchmark = @()
     $task9FloatPairBenchmark = @()
     $task9FloatCostBenchmark = @()
@@ -1588,6 +1699,7 @@ try {
                 $m3Phase0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_PHASE0' -FieldCount 19)
                 $g2StateBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'G2_STATE' -FieldCount 7)
                 $phase05Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'PHASE05' -FieldCount 21)
+                $wallRunBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'WALL_RUNS' -FieldCount 17)
             }
         }
         if ($m4CandidateEvidence) {
@@ -1597,6 +1709,7 @@ try {
         $m4FenceBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M4_FENCE' -FieldCount 13)
         if ($RendererM2DetailedLedger) {
             $m2Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M2_BENCH' -FieldCount 50)
+            $m2ShadeBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M2_SHADE' -FieldCount 17)
         }
         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
             $sinkBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'SINK_BENCH' -FieldCount 8)
@@ -1970,6 +2083,7 @@ try {
             $gdbStdout
 
         if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
+        if ($task20StackSummary) { Write-Output $task20StackSummary }
         $task9StateSummaryText = if ($Task9StateHashMode -eq 1) {
             " stateHash=$($task9StateSummaryValues[0])/overflow$($task9StateSummaryValues[1])"
         } else { '' }
@@ -2206,10 +2320,13 @@ try {
                 $m3StageMetricSummary = ''
                 $m3Phase0MetricSummary = ''
                 $g2StateMetricSummary = ''
+                $phase05MetricSummary = ''
+                $wallRunMetricSummary = ''
                 $m4WaterStillMetricSummary = ''
                 $m4StaticMetricSummary = ''
                 $m4FenceMetricSummary = ''
                 $m2MetricSummary = ''
+                $m2ShadeMetricSummary = ''
                 $semanticMetricSummary = ''
                 $semanticChurnSummary = ''
                 $semanticProvenanceSummaries = @()
@@ -2298,6 +2415,7 @@ try {
                         } elseif ($naturalScreenSpaceCensusWindow) {
                             $sampleTriangles -ge 202
                         } elseif ($PhaseMatrixMode -or
+                            $Task22WallpaperRunLab -or
                             $m3StageOnlyBenchmarkWindow -or
                             ($RendererBenchmarkStartEvent -ne 'None')) {
                             $sampleTriangles -ge 202
@@ -2382,6 +2500,7 @@ try {
                     $m3StageSamples = [System.Collections.Generic.List[object]]::new()
                     $m3Phase0Samples = [System.Collections.Generic.List[object]]::new()
                     $phase05Samples = [System.Collections.Generic.List[object]]::new()
+                    $wallRunSamples = [System.Collections.Generic.List[object]]::new()
                     $m4WaterStillSamples = [System.Collections.Generic.List[object]]::new()
                     $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
                     $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
@@ -2397,6 +2516,8 @@ try {
                     )
                     $m2CombinedSamples =
                         [System.Collections.Generic.List[object]]::new()
+                    $m2ShadeSamples =
+                        [System.Collections.Generic.List[object]]::new()
                     $logicTickResetCount = 0
                     if ($RendererProfileLevel -ge 1) {
                         Assert-Condition ($coarseBenchmark.Count -eq $RendererBenchmarkSamples) "Coarse renderer benchmark captured $($coarseBenchmark.Count) of $RendererBenchmarkSamples synchronized frames." $gdbStdout
@@ -2404,6 +2525,7 @@ try {
                         Assert-Condition ($stage0Benchmark.Count -eq $RendererBenchmarkSamples) "Stage layer-0 benchmark captured $($stage0Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         if ($RendererM2DetailedLedger) {
                             Assert-Condition ($m2Benchmark.Count -eq (2 * $RendererBenchmarkSamples)) "M2 renderer benchmark captured $($m2Benchmark.Count) of $(2 * $RendererBenchmarkSamples) synchronized fighter records." $gdbStdout
+                            Assert-Condition ($m2ShadeBenchmark.Count -eq $RendererBenchmarkSamples) "M2 shade census captured $($m2ShadeBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
                         if ($RendererProfileLevel -ge 2) {
                             Assert-Condition ($ownerBenchmark.Count -eq (3 * $RendererBenchmarkSamples)) "Owner renderer benchmark captured $($ownerBenchmark.Count) of $(3 * $RendererBenchmarkSamples) synchronized owner records." $gdbStdout
@@ -2438,6 +2560,8 @@ try {
                         )
                         $m2CombinedSamples =
                             [System.Collections.Generic.List[object]]::new()
+                        $m2ShadeSamples =
+                            [System.Collections.Generic.List[object]]::new()
                         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                             Assert-Condition ($sinkBenchmark.Count -eq $RendererBenchmarkSamples) "CPU_PREP_NO_GX sink benchmark captured $($sinkBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
@@ -2451,6 +2575,7 @@ try {
                             Assert-Condition ($m3Phase0Benchmark.Count -eq $RendererBenchmarkSamples) "M3 Phase-0 benchmark captured $($m3Phase0Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($g2StateBenchmark.Count -eq $RendererBenchmarkSamples) "G2 state benchmark captured $($g2StateBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($phase05Benchmark.Count -eq $RendererBenchmarkSamples) "Phase-0.5 benchmark captured $($phase05Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                            Assert-Condition ($wallRunBenchmark.Count -eq $RendererBenchmarkSamples) "Wallpaper run census captured $($wallRunBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         }
                         }
                         if ($m4CandidateEvidence) {
@@ -2602,7 +2727,8 @@ try {
                                     ) "M3 natural-event window lost the exact stage/fighter owners, 16-triangle death/rebirth effect, or zero-fallback accounting at frame $frame (actual=$($fastRun -join ',') rendered=$($render[11]))." $gdbStdout
                                 } elseif ($m3StageOnlyBenchmarkWindow) {
                                     Assert-Condition ($fastRun[2] -ge 54 -and $fastRun[3] -ge 202 -and $fastRun[4] -eq 202 -and $fastRun[7] -eq 0 -and $fastRun[8] -eq 0 -and $fastRun[9] -eq 0) "M3 countdown-stage window did not preserve the exact 202-triangle stage owner, positive transient fast-owner census, and zero fallbacks at frame $frame (actual=$($fastRun -join ',') rendered=$($render[11]))." $gdbStdout
-                                } elseif ($PhaseMatrixMode) {
+                                } elseif ($PhaseMatrixMode -or
+                                    $Task22WallpaperRunLab) {
                                     Assert-Condition (
                                         $fastRun[2] -gt 0 -and
                                         $fastRun[3] -eq
@@ -2639,7 +2765,18 @@ try {
                                     Assert-Condition ($phase0[2] -ge $phase0[3] -and $phase0[3] -ge $phase0[4] -and $phase0[8] -ge $phase0[9] -and $phase0[1] -ge $phase0[2] -and $phase0[11] -ge ($phase0[5] + $phase0[6] + $phase0[7] + $phase0[8] + $phase0[10])) "M3 Phase-0 nested bucket conservation failed at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
                                     $m3Phase0Samples.Add($phase0)
                                     $g2State = Get-Ints $g2StateBenchmark[$sampleIndex]
-                                    Assert-Condition ($g2State[0] -eq $frame -and $g2State[1] -eq 44 -and $g2State[2] -eq 13 -and $g2State[3] -eq 164 -and $g2State[4] -eq 0 -and $g2State[5] -eq 69 -and $g2State[6] -eq 34) "G2 state write/skip census drifted at frame $frame (actual=$($g2State -join ','))." $gdbStdout
+                                    if ($Task22WallpaperRunLab -and
+                                        (($RendererBenchmarkStartFrame -ne 438) -or
+                                         ($RendererBenchmarkStartEvent -ne 'None'))) {
+                                        Assert-Condition (
+                                            $g2State[0] -eq $frame -and
+                                            $g2State[1] -ge 0 -and $g2State[2] -ge 0 -and
+                                            $g2State[3] -ge 0 -and $g2State[4] -ge 0 -and
+                                            $g2State[5] -ge 0 -and $g2State[6] -ge 0
+                                        ) "Task22 lab G2 state census lost synchronization or produced a negative count at frame $frame (actual=$($g2State -join ','))." $gdbStdout
+                                    } else {
+                                        Assert-Condition ($g2State[0] -eq $frame -and $g2State[1] -eq 44 -and $g2State[2] -eq 13 -and $g2State[3] -eq 164 -and $g2State[4] -eq 0 -and $g2State[5] -eq 69 -and $g2State[6] -eq 34) "G2 state write/skip census drifted at frame $frame (actual=$($g2State -join ','))." $gdbStdout
+                                    }
                                     $g2StateSamples.Add($g2State)
                                     $phase05 = Get-Ints $phase05Benchmark[$sampleIndex]
                                     $phase05WallpaperSubtotal =
@@ -2668,6 +2805,9 @@ try {
                                     Assert-Condition ($phase05[0] -eq $frame -and $phase05[18] -eq 16 -and $phase05[19] -eq 192 -and $phase05PixelWritesValid -and $phase05[15] -gt $phase05[16] -and $phase05[16] -gt 0) "Phase-0.5 timer/count census drifted at frame $frame (actual=$($phase05 -join ','))." $gdbStdout
                                     Assert-Condition ($phase05WallpaperSubtotal -le $coarse[10] -and $coarse[11] -ge $phase05[8] -and $phase05[7] -ge $phase05StageExecute -and $phase05[9] -gt 0 -and $phase05[6] -ge ($phase05[7] + $phase05[8] + $phase05[9]) -and $coarse[19] -ge $phase05NamedDrawShell -and $coarse[20] -ge ($phase05[10] + $phase05[11] + $phase05[14]) -and $coarse[21] -ge ($phase05[12] + $phase05[13])) "Phase-0.5 nested conservation failed at frame $frame (phase05=$($phase05 -join ',') coarse=$($coarse -join ','))." $gdbStdout
                                     $phase05Samples.Add($phase05)
+                                    $wallRuns = Get-Ints $wallRunBenchmark[$sampleIndex]
+                                    Assert-Condition ($wallRuns[0] -eq $frame -and ($wallRuns[1] + $wallRuns[2]) -eq 192 -and $wallRuns[3] -le 256 -and $wallRuns[4] -le $wallRuns[3] -and $wallRuns[5] -le $wallRuns[3] -and $wallRuns[7] -le $wallRuns[3] -and $wallRuns[9] -le $wallRuns[7] -and $wallRuns[11] -le $wallRuns[9] -and ([int64]$wallRuns[12] + (2 * [int64]$wallRuns[13]) + [int64]$wallRuns[14] + [int64]$wallRuns[15]) -eq [int64]$wallRuns[16] -and $wallRuns[16] -eq $phase05[20]) "Wallpaper run/store census failed exact row, nesting, or physical-write conservation at frame $frame (actual=$($wallRuns -join ','))." $gdbStdout
+                                    $wallRunSamples.Add($wallRuns)
                                 }
                             } else {
                                 Assert-Condition ($fastRun[2] -gt 0 -and $fastRun[3] -gt 0) "Selected laboratory fast mode executed no fast triangles at frame $frame." $gdbStdout
@@ -2762,6 +2902,23 @@ try {
                             }
                             $m4FenceSamples.Add($m4Fence)
                             if ($RendererM2DetailedLedger) {
+                                $m2Shade = Get-Ints $m2ShadeBenchmark[$sampleIndex]
+                                Assert-Condition (
+                                    $m2Shade[0] -eq $frame -and
+                                    $m2Shade[1] -eq 49 -and
+                                    $m2Shade[1] -eq ($m2Shade[11] + $m2Shade[14]) -and
+                                    $m2Shade[2] -eq ($m2Shade[12] + $m2Shade[15]) -and
+                                    $m2Shade[3] -eq ($m2Shade[13] + $m2Shade[16]) -and
+                                    $m2Shade[11] -eq 18 -and
+                                    $m2Shade[14] -eq 31 -and
+                                    $m2Shade[3] -le $m2Shade[2] -and
+                                    $m2Shade[2] -le $m2Shade[1] -and
+                                    $m2Shade[4] -eq 0 -and
+                                    $m2Shade[5] -eq ($m2Shade[6] + $m2Shade[9]) -and
+                                    $m2Shade[6] -eq ($m2Shade[7] + $m2Shade[8]) -and
+                                    $m2Shade[10] -le $m2Shade[5]
+                                ) "M2 shade census lost frame, owner, exact-key, producer-residency, or dense-work conservation at frame $frame (actual=$($m2Shade -join ','))." $gdbStdout
+                                $m2ShadeSamples.Add($m2Shade)
                                 $m2Combined = [int64[]]::new(50)
                                 $m2Combined[0] = $frame
                                 for ($m2OwnerOffset = 0;
@@ -3082,6 +3239,8 @@ try {
                                 $phase05CalibrationPerRead = @($phase05Samples | ForEach-Object { [int64]$_.Item(17) / [int64]$_.Item(18) })
                                 $phase05Last = $phase05Samples[-1]
                                 $phase05MetricSummary = "Renderer Phase 0.5: samples=$RendererBenchmarkSamples wallpaper setup/x/y/write/commit=$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 1))/$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 2))/$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 3))/$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 4))/$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 5)) wallpaperResidual=$(Get-MedianP95 $phase05WallpaperResidual) presentHardware=$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 6)) gcShell=$(Get-MedianP95 $phase05GCDrawShell) transition=$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 8)) fighterShell=$(Get-MedianP95 $phase05FighterShell) presentShell=$(Get-MedianP95 $phase05PresentShell) drawOuter=$(Get-MedianP95 $phase05DrawOuter) reset/tail/flushPrep=$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 10))/$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 11))/$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 14)) presentOuter=$(Get-MedianP95 $phase05PresentOuter) bookkeeping/publish/loopOuter=$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 12))/$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 13))/$(Get-MedianP95 $phase05LoopOuter) timerReads/spans=$($phase05Last[15])/$($phase05Last[16]) calibrationTotal/perRead=$(Get-MedianP95 (Get-SampleFieldValues $phase05Samples 17))/$(Get-MedianP95 $phase05CalibrationPerRead) rows/pixels=$($phase05Last[19])/$($phase05Last[20])"
+                                $wallRunLast = $wallRunSamples[-1]
+                                $wallRunMetricSummary = "Wallpaper runs: full/incrementalRows=$($wallRunLast[1])/$($wallRunLast[2]) changedX/runs/max=$($wallRunLast[3])/$($wallRunLast[4])/$($wallRunLast[5]) ge2=$($wallRunLast[6])/$($wallRunLast[7]) ge4=$($wallRunLast[8])/$($wallRunLast[9]) ge8=$($wallRunLast[10])/$($wallRunLast[11]) scalar16/packed32/dma/copy/pixels=$($wallRunLast[12])/$($wallRunLast[13])/$($wallRunLast[14])/$($wallRunLast[15])/$($wallRunLast[16])"
                             }
                         }
                         if ($m4CandidateEvidence) {
@@ -3108,6 +3267,16 @@ try {
                                 'BELOW_130K'
                             }
                             $m2MetricSummary = "Renderer M2 fighter phases: samples=$RendererBenchmarkSamples capture=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 2)) collection=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 3)) validation=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 4)) census=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 5)) camera=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 6)) hashParent=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 7)) local=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 8)) worldAffine=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 9)) worldCamera=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 10)) compose=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 11)) material=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 12)) production=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 13)) preflightState=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 14)) lighting=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 15)) rootGX=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 16)) runPrepare=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 17)) emitAccount=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 18)) residual=$(Get-MedianP95 (Get-SampleFieldValues $m2CombinedSamples 19)) worldCameraComposeRootSubtotal=$(Get-MedianP95 $m2Subtotal) gate=$m2SubtotalGate"
+                            $m2ShadeEpochTotal = [int64](
+                                ($m2ShadeSamples | ForEach-Object { $_[1] } |
+                                    Measure-Object -Sum).Sum)
+                            $m2ShadeKeyHitTotal = [int64](
+                                ($m2ShadeSamples | ForEach-Object { $_[2] } |
+                                    Measure-Object -Sum).Sum)
+                            $m2ShadeResidentHitTotal = [int64](
+                                ($m2ShadeSamples | ForEach-Object { $_[3] } |
+                                    Measure-Object -Sum).Sum)
+                            $m2ShadeMetricSummary = "Renderer M2 shade census: samples=$RendererBenchmarkSamples epochs/keyHits/residentHits=$m2ShadeEpochTotal/$m2ShadeKeyHitTotal/$m2ShadeResidentHitTotal key/residentRateBp=$(Get-RatioBasisPoints $m2ShadeKeyHitTotal $m2ShadeEpochTotal)/$(Get-RatioBasisPoints $m2ShadeResidentHitTotal $m2ShadeEpochTotal) dense/compute/lut/prepared/alias/material=$(Get-MedianP95 (Get-SampleFieldValues $m2ShadeSamples 5))/$(Get-MedianP95 (Get-SampleFieldValues $m2ShadeSamples 6))/$(Get-MedianP95 (Get-SampleFieldValues $m2ShadeSamples 7))/$(Get-MedianP95 (Get-SampleFieldValues $m2ShadeSamples 8))/$(Get-MedianP95 (Get-SampleFieldValues $m2ShadeSamples 9))/$(Get-MedianP95 (Get-SampleFieldValues $m2ShadeSamples 10)) collisions=$(Get-MedianP95 (Get-SampleFieldValues $m2ShadeSamples 4))"
                         }
 
                         $ownerLabels = @('stage', 'Mario', 'Fox')
@@ -3155,6 +3324,10 @@ try {
                             $benchmarkMakeIdentity.M2DetailedLedger
                         rendererM3Phase0Profile =
                             $benchmarkMakeIdentity.M3Phase0Profile
+                        task20StackProfileMode =
+                            $benchmarkMakeIdentity.Task20StackProfileMode
+                        task22WallpaperRunLab =
+                            $benchmarkMakeIdentity.Task22WallpaperRunLab
                         rendererScreenSpaceCensusMode =
                             $benchmarkMakeIdentity.ScreenSpaceCensusMode
                         renderEconomyMode =
@@ -3267,6 +3440,10 @@ try {
                                 [bool]$RequireZeroPostGoTextureFence
                             foxCpuMode = $FoxCpuMode
                             wallpaperIncrementalMode = $WallpaperIncrementalMode
+                            task20StackProfileMode =
+                                [bool]($Task20StackProfileMode -eq 1)
+                            task20Stack = $task20StackEvidence
+                            task22WallpaperRunLab = [bool]$Task22WallpaperRunLab
                             phaseMatrixMode = [bool]$PhaseMatrixMode
                             lowerTextHudMode = $LowerTextHudMode
                             rendererScreenSpaceCensusMode =
@@ -3280,6 +3457,7 @@ try {
                                 coarse = @($coarseSamples)
                                 texturePhases = @($texturePhaseSamples)
                                 fastRaw = @($fastRunSamples)
+                                task20Stack = @($task20StackRows)
                                 economy = @($economySamples)
                                 screenSpaceCensusRows =
                                     @($screenSpaceCensusRowValues)
@@ -3289,6 +3467,7 @@ try {
                                 m3Phase0 = @($m3Phase0Samples)
                                 g2State = @($g2StateSamples)
                                 phase05 = @($phase05Samples)
+                                wallpaperRuns = @($wallRunSamples)
                                 m4WaterStill = @($m4WaterStillSamples)
                                 m4Static = @($m4StaticSamples)
                                 m4Fence = @($m4FenceSamples)
@@ -3302,10 +3481,12 @@ try {
                                     @($m2Samples[1])
                                 )
                                 m2Combined = @($m2CombinedSamples)
+                                m2Shade = @($m2ShadeSamples)
                                 semantic = @($semanticSamples)
                                 task9FloatPairs = @($task9Pairs)
                                 task9FloatRows = @($task9FloatRows)
                                 task9FloatTimer = @($task9Timer)
+                                wallpaperOracle = @($wo)
                             }
                         }
                         Set-Content -LiteralPath $resolvedExportPath -Encoding utf8 `
@@ -3362,13 +3543,16 @@ try {
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
                     if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
-                            if ($phase05MetricSummary) { Write-Output $phase05MetricSummary }
+                    if ($phase05MetricSummary) { Write-Output $phase05MetricSummary }
+                    if ($wallRunMetricSummary) { Write-Output $wallRunMetricSummary }
                     if ($m4WaterStillMetricSummary) { Write-Output $m4WaterStillMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
                     if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
                     if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
                     if ($m2MetricSummary) { Write-Output $m2MetricSummary }
+                    if ($m2ShadeMetricSummary) { Write-Output $m2ShadeMetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
+                    if ($task20StackSummary) { Write-Output $task20StackSummary }
                     Write-Output "$Label renderer benchmark-only sample passed."
                     return
                 }
@@ -3862,11 +4046,13 @@ try {
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
                     if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
                     if ($phase05MetricSummary) { Write-Output $phase05MetricSummary }
+                    if ($wallRunMetricSummary) { Write-Output $wallRunMetricSummary }
                     if ($m4WaterStillMetricSummary) { Write-Output $m4WaterStillMetricSummary }
                     if ($m4StaticMetricSummary) { Write-Output $m4StaticMetricSummary }
                     if ($m4FenceMetricSummary) { Write-Output $m4FenceMetricSummary }
                     if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
                     if ($m2MetricSummary) { Write-Output $m2MetricSummary }
+                    if ($m2ShadeMetricSummary) { Write-Output $m2ShadeMetricSummary }
                     $ownerCensusSummaries | ForEach-Object { Write-Output $_ }
                     $ownerChurnSummaries | ForEach-Object { Write-Output $_ }
                     if ($RendererProfileLevel -ge 2) {
@@ -3877,6 +4063,7 @@ try {
                         Write-Output $semanticChurnSummary
                     }
                 }
+                if ($task20StackSummary) { Write-Output $task20StackSummary }
             }
             Write-Output ("$Label realtime pacing smoke passed: frames=$($bp[3]) fps=$($bp[6])/$($bp[7]) ticks=$($bp[5])$hardwareSummary$aobjSummary")
             return
@@ -3905,6 +4092,7 @@ try {
                 $fighter1StatusOk = if ($resultsFighters[3] -eq 0) { $resultsFighters[4] -ge 0x10001 -and $resultsFighters[4] -le 0x10003 -and $resultsFighters[5] -ge 1 -and $resultsFighters[5] -le 3 } else { $resultsFighters[4] -eq 0x10005 -and $resultsFighters[5] -eq 5 }
                 Assert-Condition ($vsResultsFighters.Success -and $resultsFighters[0] -ne $resultsFighters[3] -and $fighter0StatusOk -and $fighter1StatusOk) 'Original VS Results fighters did not enter the source win/lose status and submotion paths.' $gdbStdout
                 Assert-Condition ($vsResultsDisplay.Success -and $resultsDisplay[1] -gt 0 -and $resultsDisplay[2] -eq 256 -and $resultsDisplay[3] -eq 192 -and $resultsDisplay[4] -ge 1) 'Original VS Results SObj display did not commit a full DS frame or clear the battle-only lower HUD.' $gdbStdout
+                if ($task20StackSummary) { Write-Output $task20StackSummary }
                 Write-Output ("$Label one-minute lifecycle passed: adapter=$($life[1]) taskman=$($life[2]) ticks=$($life[6]) sudden=$($life[10]) scene=$($life[8])->$($life[9]) results=$($results[3])/files$($results[4])/fighters$($results[5])/sobjs$($results[7])")
             }
             Write-Output ("$Label original CPU proof passed: setup=$($cpu[0]) process=$($cpu[2]) target=$($cpu[3]) objective=0x$('{0:x}' -f $cpu[4]) behavior=0x$('{0:x}' -f $cpu[5]) inputs=$($cpu[6]) stick=$($cpu[7]) buttons=$($cpu[8])/$($cpu[9])/$($cpu[10]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) status=$($cpu[15]) damage=$($cpu[19]) x=$($cpu[21])/$($cpu[22])..$($cpu[23])/$($cpu[24])")

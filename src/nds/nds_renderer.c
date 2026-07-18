@@ -1106,6 +1106,34 @@ volatile u32 gNdsRendererM3CrossForeignCornerCount;
 volatile u32 gNdsRendererM3TopologyFullValidationCount;
 volatile u32 gNdsRendererM3TopologyCacheHitCount;
 volatile u32 gNdsRendererM3TopologyStampMismatchCount;
+#if NDS_RENDERER_M2_DETAILED_LEDGER
+volatile u32 gNdsRendererM2ShadeEpochCount;
+volatile u32 gNdsRendererM2ShadeKeyHitCount;
+volatile u32 gNdsRendererM2ShadeResidentHitCount;
+volatile u32 gNdsRendererM2ShadeHashCollisionCount;
+volatile u32 gNdsRendererM2ShadeDenseVisitCount;
+volatile u32 gNdsRendererM2ShadeComputeCount;
+volatile u32 gNdsRendererM2ShadeLutComputeCount;
+volatile u32 gNdsRendererM2ShadePreparedComputeCount;
+volatile u32 gNdsRendererM2ShadeAliasCopyCount;
+volatile u32 gNdsRendererM2ShadeMaterialPackCount;
+volatile u32 gNdsRendererM2ShadeOwnerEpochCount[2];
+volatile u32 gNdsRendererM2ShadeOwnerKeyHitCount[2];
+volatile u32 gNdsRendererM2ShadeOwnerResidentHitCount[2];
+static u32 sNdsRendererM2ShadeEpochCount;
+static u32 sNdsRendererM2ShadeKeyHitCount;
+static u32 sNdsRendererM2ShadeResidentHitCount;
+static u32 sNdsRendererM2ShadeHashCollisionCount;
+static u32 sNdsRendererM2ShadeDenseVisitCount;
+static u32 sNdsRendererM2ShadeComputeCount;
+static u32 sNdsRendererM2ShadeLutComputeCount;
+static u32 sNdsRendererM2ShadePreparedComputeCount;
+static u32 sNdsRendererM2ShadeAliasCopyCount;
+static u32 sNdsRendererM2ShadeMaterialPackCount;
+static u32 sNdsRendererM2ShadeOwnerEpochCount[2];
+static u32 sNdsRendererM2ShadeOwnerKeyHitCount[2];
+static u32 sNdsRendererM2ShadeOwnerResidentHitCount[2];
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
 volatile u32 gNdsRendererM3TopologyFaultInjectionCount;
 volatile u32 gNdsRendererM3TopologyFaultRevalidationCount;
@@ -2641,6 +2669,236 @@ typedef struct NDSNativeFighterOwnerExecution
     u32 slot;
     u32 active;
 } NDSNativeFighterOwnerExecution;
+
+#if NDS_RENDERER_M2_DETAILED_LEDGER
+typedef struct NDSNativeFighterShadeKey
+{
+    u32 owner_generation;
+    u32 slot;
+    u32 epoch_index;
+    u32 epoch_policy;
+    u32 combine_w0;
+    u32 combine_w1;
+    u32 policy_flags;
+    u32 geometry_mode;
+    u32 prim_color;
+    u32 light_color_1;
+    u32 light_color_2;
+    u32 light_masks;
+    s32 light_dir_x;
+    s32 light_dir_y;
+    s32 light_dir_z;
+    u32 light_dir_valid;
+} NDSNativeFighterShadeKey;
+
+typedef struct NDSNativeFighterShadeCensusEntry
+{
+    NDSNativeFighterShadeKey key;
+    u32 hash;
+    u32 valid;
+} NDSNativeFighterShadeCensusEntry;
+
+static NDSNativeFighterShadeCensusEntry sNdsNativeFighterShadeCensus[2][
+    NDS_NATIVE_FIGHTER_HIERARCHY_EPOCH_COUNT];
+static u32 sNdsNativeFighterShadeProducerGeneration[
+    sizeof(sNdsNativeFighterDenseVertices) /
+        sizeof(sNdsNativeFighterDenseVertices[0])];
+static u8 sNdsNativeFighterShadeProducerTag[
+    sizeof(sNdsNativeFighterDenseVertices) /
+        sizeof(sNdsNativeFighterDenseVertices[0])];
+
+static u32 ndsRendererM2ShadeHash(
+    const NDSNativeFighterShadeKey *key)
+{
+    const u32 *word = (const u32 *)key;
+    u32 hash = 2166136261u;
+    u32 i;
+
+    for (i = 0u; i < sizeof(*key) / sizeof(*word); i++)
+    {
+        u32 value = word[i];
+        u32 byte;
+
+        for (byte = 0u; byte < sizeof(value); byte++)
+        {
+            hash ^= (value >> (byte * 8u)) & 0xffu;
+            hash *= 16777619u;
+        }
+    }
+    return (hash != 0u) ? hash : 1u;
+}
+
+static s32 ndsRendererM2ShadeOutputsResident(
+    u32 slot,
+    u32 epoch_index,
+    u32 owner_generation,
+    const NDSNativeEpoch *epoch)
+{
+    u8 producer_tag = (u8)((slot << 7) | (epoch_index + 1u));
+    u32 action_offset;
+
+    for (action_offset = 0u;
+         action_offset < epoch->action_count;
+         action_offset++)
+    {
+        u32 action_index = epoch->first_action + action_offset;
+        u32 span = sNdsNativeFighterActionDenseSpans[action_index];
+        u32 dense_first = span & NDS_NATIVE_DENSE_ID_MASK;
+        u32 dense_count = span >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT;
+        u32 dense_offset;
+
+        for (dense_offset = 0u;
+             dense_offset < dense_count;
+             dense_offset++)
+        {
+            u32 dense_id = dense_first + dense_offset;
+
+            if ((sNdsNativeFighterShadeProducerGeneration[dense_id] !=
+                 owner_generation) ||
+                (sNdsNativeFighterShadeProducerTag[dense_id] !=
+                 producer_tag))
+            {
+                return FALSE;
+            }
+        }
+    }
+    return TRUE;
+}
+
+static void __attribute__((noinline)) ndsRendererM2ShadeCensusEpoch(
+    u32 slot,
+    u32 owner_generation,
+    u32 epoch_index,
+    const NDSNativeEpoch *epoch,
+    const NDSRendererHardwareLightDirection *prepared_direction,
+    u32 prepared_direction_valid,
+    const NDSRendererStats *stats)
+{
+    const u32 epoch_policy =
+        sNdsNativeFighterEpochDirectPolicy[epoch_index];
+    const NDSNativeDirectPolicy *policy =
+        &sNdsNativeFighterDirectPolicies[
+            epoch_policy & NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK];
+    NDSNativeFighterShadeCensusEntry *entry =
+        &sNdsNativeFighterShadeCensus[slot][epoch_index];
+    NDSNativeFighterShadeKey key = {
+        owner_generation,
+        slot,
+        epoch_index,
+        epoch_policy,
+        policy->combine_w0,
+        policy->combine_w1,
+        (u32)policy->vertex_flags | ((u32)policy->textured << 8),
+        stats->geometry_mode,
+        stats->prim_color,
+        stats->light_color_1,
+        stats->light_color_2,
+        stats->light_color_mask | (stats->light_dir_mask << 16),
+        (prepared_direction != NULL) ? prepared_direction->x : 0,
+        (prepared_direction != NULL) ? prepared_direction->y : 0,
+        (prepared_direction != NULL) ? prepared_direction->z : 0,
+        prepared_direction_valid
+    };
+    u32 hash;
+
+    sNdsRendererM2ShadeEpochCount++;
+    sNdsRendererM2ShadeOwnerEpochCount[slot]++;
+    if (epoch->action_count == 0u)
+    {
+        return;
+    }
+    hash = ndsRendererM2ShadeHash(&key);
+    if ((entry->valid != 0u) && (entry->hash == hash))
+    {
+        if (memcmp(&entry->key, &key, sizeof(key)) == 0)
+        {
+            sNdsRendererM2ShadeKeyHitCount++;
+            sNdsRendererM2ShadeOwnerKeyHitCount[slot]++;
+            if (ndsRendererM2ShadeOutputsResident(
+                    slot, epoch_index, owner_generation, epoch) != FALSE)
+            {
+                sNdsRendererM2ShadeResidentHitCount++;
+                sNdsRendererM2ShadeOwnerResidentHitCount[slot]++;
+            }
+        }
+        else
+        {
+            sNdsRendererM2ShadeHashCollisionCount++;
+        }
+    }
+    entry->key = key;
+    entry->hash = hash;
+    entry->valid = TRUE;
+}
+
+static void __attribute__((noinline)) ndsRendererM2ShadeRecordProduced(
+    u32 slot,
+    u32 owner_generation,
+    u32 epoch_index,
+    const NDSNativeEpoch *epoch,
+    u32 epoch_policy,
+    const NDSRendererStats *stats)
+{
+    const NDSNativeDirectPolicy *policy =
+        &sNdsNativeFighterDirectPolicies[
+            epoch_policy & NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK];
+    u32 use_material =
+        policy->vertex_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
+    u32 use_lut =
+        ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
+        ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u) &&
+        ((stats->light_color_mask &
+          (NDS_RENDERER_LIGHT_COLOR_1_MASK |
+           NDS_RENDERER_LIGHT_COLOR_2_MASK)) ==
+         (NDS_RENDERER_LIGHT_COLOR_1_MASK |
+          NDS_RENDERER_LIGHT_COLOR_2_MASK));
+    u32 action_offset;
+
+    for (action_offset = 0u;
+         action_offset < epoch->action_count;
+         action_offset++)
+    {
+        u32 action_index = epoch->first_action + action_offset;
+        u32 span = sNdsNativeFighterActionDenseSpans[action_index];
+        u32 dense_first = span & NDS_NATIVE_DENSE_ID_MASK;
+        u32 dense_count = span >> NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT;
+        u32 dense_offset;
+
+        sNdsRendererM2ShadeDenseVisitCount += dense_count;
+        if (use_material != 0u)
+        {
+            sNdsRendererM2ShadeMaterialPackCount += dense_count;
+        }
+        for (dense_offset = 0u;
+             dense_offset < dense_count;
+             dense_offset++)
+        {
+            u32 dense_id = dense_first + dense_offset;
+
+            if (sNdsNativeFighterDenseColorSource[dense_id] != dense_id)
+            {
+                sNdsRendererM2ShadeAliasCopyCount++;
+            }
+            else
+            {
+                sNdsRendererM2ShadeComputeCount++;
+                if (use_lut != 0u)
+                {
+                    sNdsRendererM2ShadeLutComputeCount++;
+                }
+                else
+                {
+                    sNdsRendererM2ShadePreparedComputeCount++;
+                }
+            }
+            sNdsNativeFighterShadeProducerGeneration[dense_id] =
+                owner_generation;
+            sNdsNativeFighterShadeProducerTag[dense_id] =
+                (u8)((slot << 7) | (epoch_index + 1u));
+        }
+    }
+}
+#endif
 
 typedef struct NDSNativeStagePreparedDense
 {
@@ -14387,6 +14645,13 @@ static s32 ndsRendererNativePreflightProductionOwner(
         {
             return FALSE;
         }
+#if NDS_RENDERER_M2_DETAILED_LEDGER
+        if ((input->owner_generation == 0u) ||
+            (input->owner_generation != inputs[0].owner_generation))
+        {
+            return FALSE;
+        }
+#endif
         for (epoch_index = 0u;
              epoch_index < root->epoch_count;
              epoch_index++)
@@ -18274,6 +18539,16 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                 }
             }
 #endif
+#if NDS_RENDERER_M2_DETAILED_LEDGER
+            ndsRendererM2ShadeCensusEpoch(
+                slot, inputs[0].owner_generation, epoch_index, epoch,
+                (state->prepared_light_direction_valid != 0u) ?
+                    &state->prepared_light_direction : NULL,
+                state->prepared_light_direction_valid, stats);
+            ndsRendererM2ShadeRecordProduced(
+                slot, inputs[0].owner_generation, epoch_index, epoch,
+                sNdsNativeFighterEpochDirectPolicy[epoch_index], stats);
+#endif
 
             for (run_offset = 0u;
                  run_offset < epoch->run_count;
@@ -19818,6 +20093,25 @@ void ndsRendererProfileFrameBegin(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     memset((void *)gNdsRendererProfileOwners, 0,
            sizeof(gNdsRendererProfileOwners));
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsRendererM2ShadeEpochCount = 0u;
+    sNdsRendererM2ShadeKeyHitCount = 0u;
+    sNdsRendererM2ShadeResidentHitCount = 0u;
+    sNdsRendererM2ShadeHashCollisionCount = 0u;
+    sNdsRendererM2ShadeDenseVisitCount = 0u;
+    sNdsRendererM2ShadeComputeCount = 0u;
+    sNdsRendererM2ShadeLutComputeCount = 0u;
+    sNdsRendererM2ShadePreparedComputeCount = 0u;
+    sNdsRendererM2ShadeAliasCopyCount = 0u;
+    sNdsRendererM2ShadeMaterialPackCount = 0u;
+    memset(sNdsRendererM2ShadeOwnerEpochCount, 0,
+           sizeof(sNdsRendererM2ShadeOwnerEpochCount));
+    memset(sNdsRendererM2ShadeOwnerKeyHitCount, 0,
+           sizeof(sNdsRendererM2ShadeOwnerKeyHitCount));
+    memset(sNdsRendererM2ShadeOwnerResidentHitCount, 0,
+           sizeof(sNdsRendererM2ShadeOwnerResidentHitCount));
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     gNdsRendererProfileTexturePairOracleChecks = 0u;
     gNdsRendererProfileTexturePairOracleMismatches = 0u;
@@ -19922,6 +20216,35 @@ void ndsRendererProfileFrameBegin(void)
 
 void ndsRendererProfileFramePublish(void)
 {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+    gNdsRendererM2ShadeEpochCount = sNdsRendererM2ShadeEpochCount;
+    gNdsRendererM2ShadeKeyHitCount = sNdsRendererM2ShadeKeyHitCount;
+    gNdsRendererM2ShadeResidentHitCount =
+        sNdsRendererM2ShadeResidentHitCount;
+    gNdsRendererM2ShadeHashCollisionCount =
+        sNdsRendererM2ShadeHashCollisionCount;
+    gNdsRendererM2ShadeDenseVisitCount =
+        sNdsRendererM2ShadeDenseVisitCount;
+    gNdsRendererM2ShadeComputeCount = sNdsRendererM2ShadeComputeCount;
+    gNdsRendererM2ShadeLutComputeCount =
+        sNdsRendererM2ShadeLutComputeCount;
+    gNdsRendererM2ShadePreparedComputeCount =
+        sNdsRendererM2ShadePreparedComputeCount;
+    gNdsRendererM2ShadeAliasCopyCount =
+        sNdsRendererM2ShadeAliasCopyCount;
+    gNdsRendererM2ShadeMaterialPackCount =
+        sNdsRendererM2ShadeMaterialPackCount;
+    memcpy((void *)gNdsRendererM2ShadeOwnerEpochCount,
+           sNdsRendererM2ShadeOwnerEpochCount,
+           sizeof(gNdsRendererM2ShadeOwnerEpochCount));
+    memcpy((void *)gNdsRendererM2ShadeOwnerKeyHitCount,
+           sNdsRendererM2ShadeOwnerKeyHitCount,
+           sizeof(gNdsRendererM2ShadeOwnerKeyHitCount));
+    memcpy((void *)gNdsRendererM2ShadeOwnerResidentHitCount,
+           sNdsRendererM2ShadeOwnerResidentHitCount,
+           sizeof(gNdsRendererM2ShadeOwnerResidentHitCount));
+#endif
 #if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
     gNdsRendererBenchmarkTriangleCount =
         sNdsRendererBenchmarkTriangleCount;

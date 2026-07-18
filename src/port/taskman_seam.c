@@ -4267,6 +4267,21 @@ static void ndsRendererPhase05Reset(void)
     gNdsRendererPhase05CalibrationIntervals = 16u;
     gNdsRendererPhase05WallpaperRowCount = 0u;
     gNdsRendererPhase05WallpaperPixelWriteCount = 0u;
+    gNdsRendererPhase05WallpaperFullRowCount = 0u;
+    gNdsRendererPhase05WallpaperIncrementalRowCount = 0u;
+    gNdsRendererPhase05WallpaperChangedXCount = 0u;
+    gNdsRendererPhase05WallpaperChangedRunCount = 0u;
+    gNdsRendererPhase05WallpaperLongestChangedRun = 0u;
+    gNdsRendererPhase05WallpaperRunGE2Count = 0u;
+    gNdsRendererPhase05WallpaperRunGE2Pixels = 0u;
+    gNdsRendererPhase05WallpaperRunGE4Count = 0u;
+    gNdsRendererPhase05WallpaperRunGE4Pixels = 0u;
+    gNdsRendererPhase05WallpaperRunGE8Count = 0u;
+    gNdsRendererPhase05WallpaperRunGE8Pixels = 0u;
+    gNdsRendererPhase05WallpaperScalarStoreCount = 0u;
+    gNdsRendererPhase05WallpaperPackedStoreCount = 0u;
+    gNdsRendererPhase05WallpaperDmaPixelCount = 0u;
+    gNdsRendererPhase05WallpaperCopyPixelCount = 0u;
 
     calibration_tick = NDS_RENDERER_PHASE05_TICK();
     for (calibration_index = 0u;

@@ -43,7 +43,165 @@ Input/state:              canonical idle realtime BattleShip scene
 Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png
 ```
 
+## 2026-07-18 - Tasks 20R-25R atomic queue reconciliation
+
+```text
+IDEA ID: TASKS20R-25R-ATOMIC-RECONCILIATION-20260718
+STARTING ATOMIC IDENTITY:
+  Branch/worktree: master / D:\Stuff\DevFolder\Smash64DS_Port
+  HEAD: 458191bef147f1c6963b2f533c601f9f68fc7730
+  The user's 344-line ClaudeFable5_JumpABC_Tasks_20260715_2326.md change was
+  present, preserved, and excluded from this checkpoint. The new untracked
+  docs/optimization/tasks.md became the authoritative queue.
+
+AUTHORITY / QUEUE POLICY:
+  No universal melonDS-to-device multiplier is valid. Emulator is authoritative
+  for deterministic state, semantic/GX traces, arithmetic, and pixels. Retail
+  DS A/B is authoritative for DTCM, ARM/Thumb, code/data/cache layout,
+  generated-program footprint, direct VRAM stores, DMA, GX FIFO behavior, and
+  final pacing. The old Task 25 matrix below remains historical evidence and is
+  not Task 25R. After these atomic units, Task 25R is the sole next task.
+
+TASK 20R — CLASS B / MEASUREMENT ONLY:
+  Earlier diagnostic ROM / ELF:
+    A3268E7B61115012BF378B0418200400288CFC0502E45732AB3DF03ECDFC1E4B
+    ECC9BD6566B3E0BC592A18471050D1F74449B60B31B9809A7A3C0F3D16DDF46C
+  Earlier console output from Countdown, early, and Whispy agreed:
+    gameplay stack base/capacity/HWM = 0x02296140 / 16,384 / 13,044
+    post-init main DTCM/user-stack HWM = 3,700
+    __dtcm_bss_end -> __sp_usr gap = 15,848
+    raw guarded need = 13,044 + 64 + 3,700 = 16,808: NO_FIT by 960
+    two 1,024-byte margins + 64 guard = 18,856: NO_FIT by 3,008
+  The three legacy JSON exports retained renderer timing and artifact identity
+  but omitted the Task-20 compile flag, raw TASK20_STACK rows, and derived fit.
+  They therefore do not independently substantiate those console values and
+  remain local, uncommitted diagnostics. Treat the deeper NO_FIT observation
+  as provisional until Task 20R runs a complete exported lifecycle census
+  after Task 25R establishes the new baseline.
+  No scratch block or external-stack candidate was added. IRQ/SVC high-water,
+  full lifecycle/repeat execution, and pointer-escape proof remain incomplete,
+  so this is not Phase A completion. Retained support is compile-gated,
+  garbage-collectable from profile 0, refuses phase-matrix co-measurement, and
+  scans once at the first suspension-safe startup return or on coroutine
+  completion.
+  Self-contained evidence:
+    2026-07-18_task20-reconciled-stack-countdown438.json
+      6173F456D742484A7237A8B7FD38CB632BCADA41E278CAABACA3BEB0D7D2E36C
+      ROM CA743BF94FC16A13D9EB8D10EEB2051557035A548994E67A057577416010101F
+      ELF 9DE93ADA8275DB11BD31F1F6BDBCF258AAEF7ECE4D9913700F0777FE78304396
+      Focused frames 438..445 pass exact 16 KiB capacity, alignment, 64-byte
+      guards, and fit arithmetic. The export carries identity flag 1, eight raw
+      records, scope `startup-only`, and sampleCount 1. Its 252/2,832-byte HWM
+      and FIT 3,148/5,196-byte raw/margin needs prove exporter and
+      instrumentation safety only; they do not decide a gameplay-phase stack
+      move. The rebuilt profile-0 ELF contains zero Task-20/profile-helper
+      symbols.
+  VERDICT: PRESERVE CENSUS SUPPORT / NO CANDIDATE / TASK 25R INPUT.
+
+TASK 21R — CLASS B / CUT 21A CENSUS ONLY:
+  Census ROM / ELF:
+    E43A24875DCB2328E9ADF14CFDC3036A30AED19B68AD26F7BC4EBA32C3322316
+    131AA6C7FD84BD7CF83FC49F04543E97C9DE55B0017D49B5706C20B0C9DADF02
+  Frames 438..445 contain 392 production epochs: Mario 144, Fox 248.
+  Exact-key and producer-resident hits are 16 total (Mario 11, Fox 5),
+  4.08%, with zero hash collisions. Each frame visits 541 dense outputs:
+  519 computed + 22 aliases; all 519 computed shades use the LUT and 297
+  outputs use material packing. This is below the 20% cache gate.
+  The owner-slot/generation-aware census is compile-gated and attached only to
+  the actual mode-9 production loop. No cache, 21B, 21C, or Task 23R work was
+  implemented. Task 21C remains only the compact-table foundation for Task 27.
+  ITCM is 29,688/32,768, 3,080 free. Task16 modes were 0/0/0, so timing from
+  this census build is not a performance comparison.
+  Evidence:
+    2026-07-18_task21a-shade-census-countdown438-445.json
+      2CD54EF21AD90C6D9B4C307ADB6C63A0725C1679BF32D5E310B1167BCC7706D2
+  VERDICT: PRESERVE CENSUS / CUT 21A CACHE KILLED BELOW 20%.
+
+TASK 22R — CLASS A / THRESHOLD-4 PACKED DIRTY-SPAN WRITER:
+  Same profile-1 candidate ROM, runtime selector A=0/B=1:
+    285867B3D8182E0991D2A5C17234DB2E934722670B2597D9A4A38ABB6185BAD6
+  Phase                 wallpaper P50/P95/max A -> B       writer P50/P95/max A -> B
+  Countdown 438..445    342656/425856/425856 -> 336128/411264/411264
+                       294176/376192/376192 -> 283904/356992/356992
+  Early 600..607        403904/428032/428032 -> 377920/400896/400896
+                       355040/379008/379008 -> 326560/348608/348608
+  Whispy 1398..1405     383520/433984/433984 -> 374592/419456/419456
+                       334496/384000/384000 -> 321280/364864/364864
+  Natural KO            109440/366784/366784 -> 109504/370944/370944
+                        62496/316160/316160 -> 61952/315968/315968
+  KO wallpaper regresses +64/+4,160/+4,160 while its physical writer saves
+  only -544/-192/-192. The +4,160 P95 exceeds the +2,000 gate and independently
+  forces REVERT, despite positive moving-camera windows. Retail A/B was not run.
+  Profile-2 ROM B5E03AD6A11D6DB87C0A6BDE5B8A955DF986CE80A97718F3BFD084DF8322850E
+  records 136,192 map checks and 14,942,208 pixel checks with zero mismatches
+  and no first failure. The writer, scratch plan, threshold, runtime selector,
+  and selector plumbing were removed. Neutral default-off maximal-run/store
+  census remains. Post-revert ROM
+  3556D08FB1C31C2420F0505E5FC29B0E33E101500EA033BC963DC9E8031F87E7
+  passes 192-row conservation: 10,570 scalar + 10,496 DMA = 21,066 pixels.
+  Evidence SHA-256:
+    threshold4-A-countdown  D8BAEE8790E4FF33972807BE493BDA4C35B9CABEFA9ABE6687C1B4474F63208E
+    threshold4-B-countdown  6C5C88969B82F5ED60A454E70217B7F0B0761DFA86BEBF5A620172882B4C19C8
+    threshold4-A-early      16A65D188247FB88E09CE3FEF1E70F8F6456DD7BDF1B112B167039A74C6B5B37
+    threshold4-B-early      542DD8B1220017D86411CC3AE8E7D5566D57FA50AD3B129E8C01EEC0BBDF405B
+    threshold4-A-whispy     410F809FC9B410BD0C69D887FDB236C5EC335A00C73B8672C838ECD587172AE3
+    threshold4-B-whispy     D2054415AC3AD0C355569BB1E61DF18C3752347F7E1B85743D022CAF59D3FF0A
+    threshold4-A-KO         909348B5EE8AE8018242623B8C7C907786D9F300FDF8732BD942202A32A0883E
+    threshold4-B-KO         57A4572039E3BDFA94AE00DE5E04CA7019024D074D265CF44AA8C995AADA79A6
+    threshold4-profile2-B   B80C5AA3A1EFD027F3D262A780E310E87DB35CBAFABDE5B405B2300338D462DD
+    post-revert census      888F8D4F3B747B217BCCD66BC7BBCF8743F5FAADACE09C1FB74DA2B7B2C38748
+  VERDICT: REVERT / CENSUS RETAINED / NO NEXT TASK-22 CUT.
+
+TASK 24 — CLASS C / EVIDENCE-CLEARED WORKTREE BATCH ONLY:
+  Evidence migration commit: 458191bef14 chore: preserve closed-worktree evidence
+  Manifest:
+    artifacts/performance/2026-07-18_task24-worktree-evidence-migration-manifest-v3.json
+    62585F0AE38C8B2ED4E0DC855DE56102B046585C69A208A6624EC0C16A8AF1BB
+  Audit: 33 worktrees; 1,522 canonical files / 253,169,779 bytes and
+  292 external files / 24,666,164 bytes hashed. Migration copied 225 unique
+  files / 20,501,076 bytes; 50 were already canonical and 17 duplicated a
+  migrated file. All 292 destinations were rehashed; zero failures.
+  The manifest itself is a pre-deletion assessment. After its evidence commit,
+  the 17 cleared worktrees below were rechecked clean and removed:
+    .tura/goal-task11
+    .tura/goal-task10
+    .tura/goal-task9-phase2-proof
+    ../Smash64DS_Port-worktrees/{audio-union,countdown-refine,integration,mario,
+      shadowgo-point-qual,visual,visual-control}
+    ../Smash64DS_Port-wt-m4-aot
+    ../Smash64DS_Port-wt-root-countdown-review
+    ../Smash64DS_Port_baseline_audit
+    ../Smash64DS_Port_task12_{arm_hud,thumb_hud}
+    ../Smash64DS_Port_task16_fmul
+    ../Smash64DS_Port_task18_probe
+  Exactly 15 ambiguous/dirty worktrees remain held:
+    .tura/control-task8-cut-e
+    %TEMP%/smash64ds-task16-{bisect-51fc,statehash-b175cffb,statehash-c9a}
+    ../Smash64DS_Port-worktrees/{attack,fox,hit}
+    ../Smash64DS_Port-wt-{audio,gameplay,soak}
+    ../Smash64DS_Port_task14_verifier
+    ../Smash64DS_Port_task16_{fadd_fsub,i2f,i2f_c9}
+    ../Smash64DS_Port_task17_census
+  No branches, builds, logs, root snapshot, telemetry, or git objects were
+  deleted. No honest byte-reclaim total was captured before removal, so none is
+  fabricated. Further Task 24 work is deferred to a quiet slot.
+  SAFETY GATE: focused hash/parser/checker checks and the final profile-0
+  Boundary profile pass. DevFast is retired and is not a valid registry profile;
+  it was not revived.
+
+QUEUE AFTER THIS ATOMIC CHECKPOINT:
+  Task 25R -> priority selected by its current artifact:
+    M3: 23R Phase 0 -> 26 -> residual 23R Phase 1
+    M2: 21R -> 27
+    disjoint: 20R -> 22R
+    then 28 -> 29; Task 24 quiet-slot only; Task 30 final.
+  src/nds/nds_renderer.c remains a mandatory one-writer surface.
+```
+
 ## 2026-07-18 - Task 25 same-artifact all-phase matrix
+
+Historical predecessor only: this row remains valid evidence under its old
+contract, but it is superseded by Task 25R and does not set current priority.
 
 ```text
 IDEA ID: TASK25-SAME-ARTIFACT-PHASE-MATRIX-20260718

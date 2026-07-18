@@ -999,6 +999,47 @@ ndsSObjDrawOpaqueWallpaperFinal(
     }
 
 #if NDS_RENDERER_M3_PHASE0_PROFILE
+    gNdsRendererPhase05WallpaperChangedXCount = changed_x_count;
+    if (changed_x_count != 0u)
+    {
+        u32 run_start = 0u;
+
+        while (run_start < changed_x_count)
+        {
+            u32 run_end = run_start + 1u;
+            u32 run_length;
+
+            while ((run_end < changed_x_count) &&
+                   (changed_x_indices[run_end] ==
+                    (u16)(changed_x_indices[run_end - 1u] + 1u)))
+            {
+                run_end++;
+            }
+            run_length = run_end - run_start;
+            gNdsRendererPhase05WallpaperChangedRunCount++;
+            if (run_length >
+                gNdsRendererPhase05WallpaperLongestChangedRun)
+            {
+                gNdsRendererPhase05WallpaperLongestChangedRun = run_length;
+            }
+            if (run_length >= 2u)
+            {
+                gNdsRendererPhase05WallpaperRunGE2Count++;
+                gNdsRendererPhase05WallpaperRunGE2Pixels += run_length;
+            }
+            if (run_length >= 4u)
+            {
+                gNdsRendererPhase05WallpaperRunGE4Count++;
+                gNdsRendererPhase05WallpaperRunGE4Pixels += run_length;
+            }
+            if (run_length >= 8u)
+            {
+                gNdsRendererPhase05WallpaperRunGE8Count++;
+                gNdsRendererPhase05WallpaperRunGE8Pixels += run_length;
+            }
+            run_start = run_end;
+        }
+    }
     phase05_end = NDS_RENDERER_PHASE05_TICK();
     gNdsRendererPhase05WallpaperXMapTicks += phase05_end - phase05_start;
     gNdsRendererPhase05TimerSpanCount++;
@@ -1072,6 +1113,14 @@ ndsSObjDrawOpaqueWallpaperFinal(
                      (changed_x_count >= (overlay_width >> 1)))) ?
             TRUE : FALSE;
 #if NDS_RENDERER_M3_PHASE0_PROFILE
+        if (full_row != FALSE)
+        {
+            gNdsRendererPhase05WallpaperFullRowCount++;
+        }
+        else
+        {
+            gNdsRendererPhase05WallpaperIncrementalRowCount++;
+        }
         phase05_end = NDS_RENDERER_PHASE05_TICK();
         gNdsRendererPhase05WallpaperYMapTicks +=
             phase05_end - phase05_start;
@@ -1130,6 +1179,9 @@ ndsSObjDrawOpaqueWallpaperFinal(
                 0, expanded_row, dst,
                 overlay_width * sizeof(expanded_row[0]));
             pixel_write_count += overlay_width;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            gNdsRendererPhase05WallpaperDmaPixelCount += overlay_width;
+#endif
         }
         else if ((full_row != FALSE) &&
                  (src != NULL) && (src == previous_src) &&
@@ -1138,6 +1190,9 @@ ndsSObjDrawOpaqueWallpaperFinal(
             memcpy(dst, previous_dst,
                    overlay_width * sizeof(dst[0]));
             pixel_write_count += overlay_width;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            gNdsRendererPhase05WallpaperCopyPixelCount += overlay_width;
+#endif
         }
         else if ((full_row != FALSE) &&
                  (src != NULL) && (packed_rows != FALSE))
@@ -1174,6 +1229,10 @@ ndsSObjDrawOpaqueWallpaperFinal(
                     ((u32)src[pair >> 16] << 16);
             }
             pixel_write_count += overlay_width;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            gNdsRendererPhase05WallpaperPackedStoreCount +=
+                overlay_width >> 1;
+#endif
         }
         else if (full_row != FALSE)
         {
@@ -1184,6 +1243,9 @@ ndsSObjDrawOpaqueWallpaperFinal(
                     src[source_x_map[x]] : 0u;
             }
             pixel_write_count += overlay_width;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            gNdsRendererPhase05WallpaperScalarStoreCount += overlay_width;
+#endif
         }
         else
         {
@@ -1196,6 +1258,9 @@ ndsSObjDrawOpaqueWallpaperFinal(
                     src[source_x_map[changed_x]] : 0u;
             }
             pixel_write_count += changed_x_count;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            gNdsRendererPhase05WallpaperScalarStoreCount += changed_x_count;
+#endif
         }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         phase05_end = NDS_RENDERER_PHASE05_TICK();

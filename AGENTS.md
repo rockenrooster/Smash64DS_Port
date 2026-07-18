@@ -34,6 +34,11 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 - User-facing ROMs must be verifier-covered configurations.
 - Use only repo-local scripted melonDS. Do not commit runner configs, binaries,
   logs, or shard artifacts.
+- In a Task 24 quiet slot, hash-migrate permanent performance and visibility
+  evidence before deleting any closed lab build or worktree. Rotate only
+  uncited verifier/emulator telemetry; `artifacts/performance` and
+  `artifacts/visibility` are permanent evidence. Never combine cleanup with an
+  active implementation or remove an ambiguous/dirty worktree.
 - Run `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` after verified progress as
   the final project command. Run nothing after it.
 
