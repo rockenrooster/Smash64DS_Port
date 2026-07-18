@@ -2864,6 +2864,8 @@ volatile u32 gNdsRendererProfileHudTicks;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 volatile u32 gNdsRendererProfileLoopWallTicks;
 volatile u32 gNdsRendererProfileInputTicks;
+volatile u32 gNdsRendererProfileSourceUpdate1Ticks;
+volatile u32 gNdsRendererProfileSourceUpdate2Ticks;
 volatile u32 gNdsRendererProfileSourceUpdateTicks;
 volatile u32 gNdsRendererProfileAudioUpdateTicks;
 volatile u32 gNdsRendererProfileBeginFrameTicks;
@@ -2880,6 +2882,7 @@ volatile u32 gNdsRendererProfilePresentResidualTicks;
 volatile u32 gNdsRendererProfileLoopResidualTicks;
 volatile u32 gNdsRendererProfileConservationErrorTicks;
 volatile u32 gNdsRendererProfileLogicTick;
+volatile u32 gNdsRendererProfilePresentIntervalVBlanks;
 volatile u32 gNdsRendererProfileGXStatusBeforeFlush;
 volatile u32 gNdsRendererProfileGXStatusAfterFlush;
 volatile u32 gNdsRendererProfileGXControlBeforeFlush;

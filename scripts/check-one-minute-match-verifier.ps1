@@ -117,6 +117,8 @@ Assert-Text $owner "(?s)439,292,154.*154,439,292.*370,289,154.*154,370,289" `
     'One-minute verifier lost the exact Mario/Fox regular/up-star KO call orders.'
 Assert-Text $owner '(?s)\$fgmKo\[10\] -eq 0.*\$fgmKo\[11\] -eq 0.*\$fgmKo\[12\] -eq 0.*\$fgmKo\[13\] -eq 0' `
     'One-minute verifier no longer requires clean included-KO playback.'
+Assert-Text $owner '(?s)\$audioFgmKoPass = .*?if \(-not \$Task25RPacingTrace\) \{\s*Assert-Condition \$audioFgmKoPass.*?exactKoFgmTriplet = \$audioFgmKoPass' `
+    'Task 25R no longer reports KO-audio failure while the normal verifier remains strict.'
 Assert-Text $owner '\$safety\[0\.\.15\] \| Where-Object \{ \$_ -ne 0 \}' `
     'One-minute verifier no longer requires every true safety counter to remain zero.'
 Assert-Text $owner '\$fdc\[3\] -eq \$fdc\[0\]' `
@@ -127,7 +129,7 @@ Assert-Text $owner '\$safety\[16\] -eq \$fdc\[8\]' `
     'One-minute verifier no longer cross-checks natural visibility failures.'
 Assert-Text $owner '(?s)for \(\$phase = 0; \$phase -lt 5; \$phase\+\+\).*?\$phaseRateX10 -ge 590.*?\$phaseRateX10 -le 610' `
     'One-minute lifecycle path no longer hard-gates held-30 phase update rates.'
-Assert-Text $owner '\(\$ma\[6\] - \$audioResidentBytes\) -ge 131072' `
+Assert-Text $owner '(?s)\$reserveBytes = \[int64\]\$ma\[6\] - \$audioResidentBytes.*?\$reservePass = \$reserveBytes -ge 131072.*?if \(-not \$Task25RPacingTrace\) \{\s*Assert-Condition \$reservePass' `
     'One-minute verifier lost the conservative 128 KiB reserve gate.'
 Assert-Text $owner '\$expectedM4TeardownCount = if \(\$OneMinuteMatchProof\) \{ 1 \} else \{ 0 \}' `
     'One-minute verifier no longer requires exactly one M4 teardown.'

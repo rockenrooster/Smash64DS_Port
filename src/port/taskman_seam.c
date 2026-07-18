@@ -4762,6 +4762,9 @@ static void ndsBattlePlayablePresentRealtimeFrame(void)
     ndsBattlePlayablePresentFrame();
     actual = ndsPlatformVBlankCount();
     interval = actual - sNdsBattlePlayableLastPresentVBlank;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfilePresentIntervalVBlanks = interval;
+#endif
     if (interval < NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS)
     {
         gNdsBattlePlayablePacingCadenceViolationCount++;
@@ -7378,6 +7381,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
                 u32 profile_input_ticks = 0u;
                 u32 profile_update_ticks = 0u;
+                u32 profile_source_update_by_index[2] = {0u, 0u};
                 u32 profile_source_update_ticks = 0u;
                 u32 profile_audio_update_ticks = 0u;
 
@@ -7435,6 +7439,11 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
                     profile_update_ticks +=
                         gNdsRendererProfileUpdateTicks;
+                    if (update_in_iteration < 2u)
+                    {
+                        profile_source_update_by_index[update_in_iteration] =
+                            gNdsRendererProfileSourceUpdateTicks;
+                    }
                     profile_source_update_ticks +=
                         gNdsRendererProfileSourceUpdateTicks;
                     profile_audio_update_ticks +=
@@ -7532,6 +7541,10 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
                     gNdsRendererProfileInputTicks = profile_input_ticks;
                     gNdsRendererProfileUpdateTicks = profile_update_ticks;
+                    gNdsRendererProfileSourceUpdate1Ticks =
+                        profile_source_update_by_index[0];
+                    gNdsRendererProfileSourceUpdate2Ticks =
+                        profile_source_update_by_index[1];
                     gNdsRendererProfileSourceUpdateTicks =
                         profile_source_update_ticks;
                     gNdsRendererProfileAudioUpdateTicks =

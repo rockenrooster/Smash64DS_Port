@@ -60,6 +60,8 @@ param(
     [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
     [string]$RendererBenchmarkExportPath = '',
     [string]$RendererBenchmarkScreenshot = '',
+    [switch]$Task25RPacingTrace,
+    [string]$Task25RLifecycleExportPath = '',
     [Parameter(Mandatory = $true)][string]$Harness,
     [Parameter(Mandatory = $true)][string]$Target,
     [Parameter(Mandatory = $true)][string]$Build,
@@ -118,6 +120,14 @@ if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
 }
 if ($OneMinuteMatchProof -and -not $RealtimePresentation) {
     throw 'OneMinuteMatchProof requires realtime presentation so wall-clock pacing is hardware-vblank anchored.'
+}
+if ($Task25RPacingTrace -and -not (
+        $OneMinuteMatchProof -and $MatchLifecycleProof -and
+        $RealtimePresentation -and ($RendererProfileLevel -eq 0))) {
+    throw 'Task25RPacingTrace requires the realtime profile-0 one-minute lifecycle proof.'
+}
+if ($Task25RLifecycleExportPath -and -not $Task25RPacingTrace) {
+    throw 'Task25RLifecycleExportPath requires Task25RPacingTrace.'
 }
 if ($OneMinuteMatchProof -and
     (-not $ImportBattleShipAudioAssets -or -not $ImportBattleShipAudioBGM)) {
@@ -578,6 +588,96 @@ function Complete-Task9StateHashCapture {
         Rows = $rows
     }
 }
+function Complete-Task25RPacingTrace {
+    param(
+        [System.Collections.IEnumerable]$Matches,
+        [int64[]]$Pacing,
+        [string]$GdbOutput
+    )
+
+    $phaseNames = @('countdown', 'earlyCombat', 'lateCombat', 'koRebirth', 'results')
+    $rows = @($Matches | ForEach-Object { , @(Get-Ints $_) })
+    Assert-Condition ($rows.Count -eq $Pacing[3]) `
+        "Task 25R profile-0 trace captured $($rows.Count) of $($Pacing[3]) presentations." `
+        $GdbOutput
+    $histogram = [ordered]@{ vblank2 = 0; vblank3 = 0; vblank4 = 0; vblank5Plus = 0 }
+    $phaseHistograms = @($phaseNames | ForEach-Object {
+        [ordered]@{ phase = $_; vblank2 = 0; vblank3 = 0; vblank4 = 0; vblank5Plus = 0; slips = 0 }
+    })
+    $previous = @(0) * 14
+    $previousVBlank = $null
+    $totalSlips = [int64]0
+
+    for ($index = 0; $index -lt $rows.Count; $index++) {
+        $row = $rows[$index]
+        Assert-Condition ($row[1] -eq ($index + 1) -and
+            $row[2] -eq (2 * $row[1]) -and $row[3] -eq 0) `
+            "Task 25R profile-0 trace lost fixed-two accounting at presentation $($index + 1)." `
+            $GdbOutput
+        $activePhase = -1
+        $intervalSlips = [int64]0
+        for ($phase = 0; $phase -lt 5; $phase++) {
+            $presentDelta = [int64]$row[4 + $phase] - $previous[4 + $phase]
+            $slipDelta = [int64]$row[9 + $phase] - $previous[9 + $phase]
+            Assert-Condition ($presentDelta -ge 0 -and $slipDelta -ge 0) `
+                "Task 25R profile-0 phase counters regressed at presentation $($index + 1)." `
+                $GdbOutput
+            if ($presentDelta -eq 1) {
+                Assert-Condition ($activePhase -eq -1) `
+                    "Task 25R profile-0 trace attributed one presentation to multiple phases." `
+                    $GdbOutput
+                $activePhase = $phase
+            } else {
+                Assert-Condition ($presentDelta -eq 0 -and $slipDelta -eq 0) `
+                    "Task 25R profile-0 trace changed a non-owning phase counter." `
+                    $GdbOutput
+            }
+            $intervalSlips += $slipDelta
+        }
+        Assert-Condition ($activePhase -ge 0) `
+            "Task 25R profile-0 trace did not attribute presentation $($index + 1) to one phase." `
+            $GdbOutput
+        $interval = 2 + $intervalSlips
+        if ($null -ne $previousVBlank) {
+            Assert-Condition (($row[0] - $previousVBlank) -eq $interval) `
+                "Task 25R profile-0 VBlank delta disagreed with cumulative slip accounting at presentation $($index + 1)." `
+                $GdbOutput
+        }
+        $bucket = if ($interval -eq 2) { 'vblank2' } elseif ($interval -eq 3) {
+            'vblank3'
+        } elseif ($interval -eq 4) { 'vblank4' } else { 'vblank5Plus' }
+        $histogram[$bucket]++
+        $phaseHistograms[$activePhase][$bucket]++
+        $phaseHistograms[$activePhase].slips += $intervalSlips
+        $totalSlips += $intervalSlips
+        $previous = $row
+        $previousVBlank = $row[0]
+    }
+    for ($phase = 0; $phase -lt 5; $phase++) {
+        Assert-Condition ($previous[4 + $phase] -eq $Pacing[12 + $phase] -and
+            $previous[9 + $phase] -eq $Pacing[17 + $phase]) `
+            "Task 25R profile-0 trace did not reconcile phase $phase with BPLAY_PACE." `
+            $GdbOutput
+    }
+    Assert-Condition ($previous[1] -eq $Pacing[3] -and
+        $previous[2] -eq $Pacing[2] -and $previous[3] -eq $Pacing[11] -and
+        $totalSlips -eq (($Pacing[17..21] | Measure-Object -Sum).Sum)) `
+        'Task 25R profile-0 trace did not reconcile its final pacing totals.' `
+        $GdbOutput
+
+    return [PSCustomObject]@{
+        rows = $rows
+        histogram = $histogram
+        phases = $phaseHistograms
+        presentations = [int64]$Pacing[3]
+        sourceUpdates = [int64]$Pacing[2]
+        presentationRateX10 = [int64]$Pacing[6]
+        sourceUpdateRateX10 = [int64]$Pacing[7]
+        slips = $totalSlips
+        stable30 = ($histogram.vblank3 -eq 0 -and
+            $histogram.vblank4 -eq 0 -and $histogram.vblank5Plus -eq 0)
+    }
+}
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
 $renderEconomyCompileOwnerMask = if ($RenderEconomyMode -eq 1) { 255 } else { 0 }
@@ -682,7 +782,7 @@ if (($Task9FloatItcmMode -eq 1) -or
 }
 if (-not (Test-Path $melonDsPath)) { throw "melonDS executable not found: $melonDsPath" }
 if (-not (Test-Path $Gdb)) { throw "GDB executable not found: $Gdb" }
-if ($RendererBenchmarkSamples -gt 0) {
+if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
     $benchmarkMakeIdentity = Get-BenchmarkMakeIdentity -BaseMakeArgs $makeArgs
     Assert-Condition ($benchmarkMakeIdentity.Target -eq $Target -and
         $benchmarkMakeIdentity.Harness -eq $Harness -and
@@ -755,7 +855,7 @@ try {
         -GdbPort $verifierContext.GdbPort `
         -Persistent:([bool]$verifierContext.PersistentConfig) `
         -MuteAudio:$OneMinuteMatchProof
-    if ($RendererBenchmarkSamples -gt 0) {
+    if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
         $benchmarkMelonConfigSha256 =
             (Get-FileHash -LiteralPath $configState.Config -Algorithm SHA256).Hash
     }
@@ -800,6 +900,14 @@ try {
             'end'
         )
     }
+    $task25rScreenshotCommands = if ($Task25RPacingTrace -and
+        -not [string]::IsNullOrWhiteSpace($RendererBenchmarkScreenshot)) {
+        @(
+            'if gNdsRendererProfileFrameCount == 607',
+            $captureCommand,
+            'end'
+        )
+    } else { @() }
     # The natural combat chain runs ~1000+ bounded updates; battle_playable
     # continues into an input-driven KO -> Rebirth -> Wait. The lifecycle ROM
     # uses a one-minute source timer and gets one GDB session after startup;
@@ -918,11 +1026,22 @@ try {
                 'end'
             )
         } else { @() }
+        $task25rPacingCommands = if ($Task25RPacingTrace) {
+            @(
+                'break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingRestartRequested == 0 && gNdsBattlePlayablePacingPresentedFrames > 0',
+                'commands',
+                'silent',
+                'printf "TASK25R_PACE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", sNdsBattlePlayableLastPresentVBlank, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePlayablePacingLogicFrames, gNdsBattlePlayablePacingCadenceViolationCount, gNdsBattlePlayablePacingPhasePresentCount[0], gNdsBattlePlayablePacingPhasePresentCount[1], gNdsBattlePlayablePacingPhasePresentCount[2], gNdsBattlePlayablePacingPhasePresentCount[3], gNdsBattlePlayablePacingPhasePresentCount[4], gNdsBattlePlayablePacingPhaseSlipCount[0], gNdsBattlePlayablePacingPhaseSlipCount[1], gNdsBattlePlayablePacingPhaseSlipCount[2], gNdsBattlePlayablePacingPhaseSlipCount[3], gNdsBattlePlayablePacingPhaseSlipCount[4]'
+            ) + $task25rScreenshotCommands + @(
+                'continue',
+                'end'
+            )
+        } else { @() }
         $matchWaitCommands = @(
             'tbreak scVSBattleFuncUpdate if gSCManagerBattleState->time_limit == 1 && gSCManagerBattleState->time_remain == 3600 && gSCManagerBattleState->time_passed == 0',
             'continue',
             'printf "MATCH_START=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->game_status, gSCManagerBattleState->time_limit, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, sIFCommonTimerIsStarted, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsMemoryLedgerArenaHeadroom'
-        ) + $task9StateStartCommands + @(
+        ) + $task9StateStartCommands + $task25rPacingCommands + @(
             'set variable gNdsBattlePlayablePacingRestartRequested = 1',
             'tbreak ndsRendererHardwareDiscardBattleStaticTextures',
             'continue',
@@ -942,7 +1061,7 @@ try {
         if ($RendererBenchmarkSamples -gt 0) {
             $coarseBenchmarkCommands = @()
             if ($RendererProfileLevel -ge 1) {
-                $coarseBenchmarkCommands += 'printf "COARSE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileLoopWallTicks, gNdsRendererProfileInputTicks, gNdsRendererProfileUpdateTicks, gNdsRendererProfileSourceUpdateTicks, gNdsRendererProfileAudioUpdateTicks, gNdsRendererProfilePresentActiveTicks, gNdsRendererProfileVBlankWaitTicks, gNdsRendererProfileBeginFrameTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileWallpaperTicks, gNdsRendererProfileOwners[0].exclusive_ticks, gNdsRendererProfileOwners[1].exclusive_ticks, gNdsRendererProfileOwners[2].exclusive_ticks, gNdsRendererProfileForegroundTicks, gNdsRendererProfileHudTicks, gNdsRendererProfileFlushTicks, gNdsRendererProfilePostVBlankTicks, gNdsRendererProfileThreadTicks, gNdsRendererProfileDrawResidualTicks, gNdsRendererProfilePresentResidualTicks, gNdsRendererProfileLoopResidualTicks, gNdsRendererProfileConservationErrorTicks, gNdsRendererProfileLogicTick'
+                $coarseBenchmarkCommands += 'printf "COARSE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileLoopWallTicks, gNdsRendererProfileInputTicks, gNdsRendererProfileUpdateTicks, gNdsRendererProfileSourceUpdateTicks, gNdsRendererProfileAudioUpdateTicks, gNdsRendererProfilePresentActiveTicks, gNdsRendererProfileVBlankWaitTicks, gNdsRendererProfileBeginFrameTicks, gNdsRendererProfileDrawTicks, gNdsRendererProfileWallpaperTicks, gNdsRendererProfileOwners[0].exclusive_ticks, gNdsRendererProfileOwners[1].exclusive_ticks, gNdsRendererProfileOwners[2].exclusive_ticks, gNdsRendererProfileForegroundTicks, gNdsRendererProfileHudTicks, gNdsRendererProfileFlushTicks, gNdsRendererProfilePostVBlankTicks, gNdsRendererProfileThreadTicks, gNdsRendererProfileDrawResidualTicks, gNdsRendererProfilePresentResidualTicks, gNdsRendererProfileLoopResidualTicks, gNdsRendererProfileConservationErrorTicks, gNdsRendererProfileLogicTick, gNdsRendererProfileSourceUpdate1Ticks, gNdsRendererProfileSourceUpdate2Ticks, gNdsRendererProfilePresentIntervalVBlanks'
                 $coarseBenchmarkCommands += 'printf "STAGE0_BENCH=%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileStageLayer0Ticks'
                 $coarseBenchmarkCommands += 'printf "GX_BOUNDARY=%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileGXStatusBeforeFlush, gNdsRendererProfileGXControlBeforeFlush, gNdsRendererProfileGXStatusAfterFlush, gNdsRendererProfileGXStatusPostVBlank, gNdsRendererProfileGXControlPostVBlank, gNdsRendererProfileFlushTicks'
                 $coarseBenchmarkCommands += 'printf "TEXTURE_PHASE_BENCH=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererProfileTextureConvertTicks, gNdsRendererProfileTextureUploadTicks, gNdsRendererProfileTextureUploads, gNdsRendererProfileTextureUploadBytes, gNdsRendererProfileTexturePairOracleChecks, gNdsRendererProfileTexturePairOracleMismatches, gNdsRendererProfileTextureVBlankQueuedUploads, gNdsRendererProfileTextureVBlankQueuedBytes, gNdsRendererProfileTextureVBlankCommittedUploads, gNdsRendererProfileTextureVBlankCommitTicks, gNdsRendererProfileTextureVBlankOutsideCount, gNdsRendererProfileTextureVBlankFallbackCount, gNdsRendererProfileTextureVBlankStartLine, gNdsRendererProfileTextureVBlankEndLine'
@@ -1499,6 +1618,10 @@ try {
     $battlePlayableKO = [regex]::Match($gdbStdout, 'BPLAY_KO=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battlePlayableStatus = [regex]::Match($gdbStdout, 'BPLAY_STATUS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battlePlayablePacing = [regex]::Match($gdbStdout, 'BPLAY_PACE=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $task25rPacing = if ($Task25RPacingTrace) {
+        @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+            -Name 'TASK25R_PACE' -FieldCount 14)
+    } else { @() }
     $battlePlayableFpsHud = [regex]::Match($gdbStdout, 'FPS_HUD=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battleTextHud = [regex]::Match($gdbStdout, 'BATTLE_TEXT_HUD=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $battlePlayableStart = [regex]::Match($gdbStdout, 'BPLAY_START=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -1674,7 +1797,7 @@ try {
     $m4WaterStillFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'M4_WATER_STILL_FINAL' -FieldCount 3)
     if (($RendererProfileLevel -ge 1) -and ($RendererBenchmarkSamples -gt 0)) {
-        $coarseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'COARSE_BENCH' -FieldCount 24)
+        $coarseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'COARSE_BENCH' -FieldCount 27)
         $gxBoundaryBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'GX_BOUNDARY' -FieldCount 7)
         $stage0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE0_BENCH' -FieldCount 2)
         $texturePhaseBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TEXTURE_PHASE_BENCH' -FieldCount 15)
@@ -1773,6 +1896,8 @@ try {
     $audioBgm = [regex]::Match($gdbStdout, 'AUDIO_BGM=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     $m4FenceFinalSummary = ''
+    $m4FenceFinalPass = $true
+    $m4FenceFinalValues = @()
     $expectedM4TeardownCount = if ($OneMinuteMatchProof) { 1 } else { 0 }
     if ($RequireZeroPostGoTextureFence) {
         Assert-Condition ($m4FenceFinal.Count -eq 1) `
@@ -1783,7 +1908,7 @@ try {
         foreach ($fenceCount in $m4FenceFinalValues[14..23]) {
             $m4FenceFinalCountSum += $fenceCount
         }
-        Assert-Condition (
+        $m4FenceFinalPass =
             $m4FenceFinalValues[1] -eq 1 -and
             $m4FenceFinalValues[2] -eq 1 -and
             $m4FenceFinalValues[3] -eq 0 -and
@@ -1795,7 +1920,11 @@ try {
             $m4FenceFinalValues[12] -eq 0 -and
             $m4FenceFinalValues[13] -eq 0 -and
             $m4FenceFinalCountSum -eq 0
-        ) "M4 terminal post-GO texture fence failed (actual=$($m4FenceFinalValues -join ','))." $gdbStdout
+        if (-not $Task25RPacingTrace) {
+            Assert-Condition $m4FenceFinalPass `
+                "M4 terminal post-GO texture fence failed (actual=$($m4FenceFinalValues -join ','))." `
+                $gdbStdout
+        }
         if (-not $OneMinuteMatchProof -and ($RendererBenchmarkSamples -gt 0)) {
             Assert-Condition (
                 $m4FenceFinalValues[8] -eq 0x3fffff -and
@@ -1804,7 +1933,7 @@ try {
             ) 'M4 strict benchmark did not cover every prepared owner through pinned hits.' $gdbStdout
         }
         $m4FenceFinalSummary =
-            "M4 terminal post-GO texture fence: teardown=$($m4FenceFinalValues[7]) first=0/0 counts=$($m4FenceFinalValues[14..23] -join ',')"
+            "M4 terminal post-GO texture fence: pass=$m4FenceFinalPass teardown=$($m4FenceFinalValues[7]) first=$($m4FenceFinalValues[12])/$($m4FenceFinalValues[13]) counts=$($m4FenceFinalValues[14..23] -join ',')"
     }
     $publishedRendererDefaultsSummary = ''
     if ($usesPublishedIntrinsicRendererDefaults) {
@@ -1922,6 +2051,10 @@ try {
         $ab = Get-Ints $audioBgm
         $fgmKo = Get-Ints $audioFgmKo
         $audioResidentBytes = if ($audioBgm.Success) { $ab[13] } else { 0 }
+        $task25rPacingEvidence = if ($Task25RPacingTrace) {
+            Complete-Task25RPacingTrace -Matches $task25rPacing `
+                -Pacing $bp -GdbOutput $gdbStdout
+        } else { $null }
 
         # BattleShip ifcommon.c:2533-2542 initializes one minute as 3,600
         # source tics; :2472-2529 decrements it and invokes the unchanged Time
@@ -1991,13 +2124,16 @@ try {
             $fgmKo[5] -gt 0 -and (($fgmKo[0] -band 0x13) -eq 0x13)
         $foxCounts = $fgmKo[3] -gt 0 -and $fgmKo[4] -gt 0 -and
             $fgmKo[5] -gt 0 -and (($fgmKo[0] -band 0x1c) -eq 0x1c)
-        Assert-Condition ($audioFgmKo.Success -and $fgmKo[6] -ge 3 -and
+        $audioFgmKoPass = $audioFgmKo.Success -and $fgmKo[6] -ge 3 -and
             ((($marioRegular -or $marioUpStar) -and $marioCounts) -or
              (($foxRegular -or $foxUpStar) -and $foxCounts)) -and
             $fgmKo[10] -eq 0 -and $fgmKo[11] -eq 0 -and
-            $fgmKo[12] -eq 0 -and $fgmKo[13] -eq 0) `
-            'Natural one-minute combat did not play one exact source KO FGM triplet cleanly.' `
-            $gdbStdout
+            $fgmKo[12] -eq 0 -and $fgmKo[13] -eq 0
+        if (-not $Task25RPacingTrace) {
+            Assert-Condition $audioFgmKoPass `
+                'Natural one-minute combat did not play one exact source KO FGM triplet cleanly.' `
+                $gdbStdout
+        }
 
         # scvsbattle.c:513-560 returns from the battle task, scores the match,
         # and changes VSBattle (22) to VS Results (24). Results creates the
@@ -2010,6 +2146,11 @@ try {
             ($life[10] -eq 0 -or $life[10] -eq 1)) `
             'Original one-minute timer/end flow did not reach Time Up and transition VSBattle to VS Results.' `
             $gdbStdout
+        if ($Task25RPacingTrace) {
+            Assert-Condition ($life[2] -eq 1) `
+                'Task 25R lifecycle trace did not observe exactly one battle teardown.' `
+                $gdbStdout
+        }
         Assert-Condition ($vsResults.Success -and
             $results[0] -eq 0x56535231 -and
             (($results[1] -band 0x1f) -eq 0x1f) -and
@@ -2050,15 +2191,22 @@ try {
         Assert-Condition ($audioBgm.Success -and $audioResidentBytes -eq 65536) `
             'One-minute match did not report the resident BGM allocation used by the reserve gate.' `
             $gdbStdout
-        Assert-Condition ($vsbMemoryArena.Success -and
+        $arenaLedgerValid = $vsbMemoryArena.Success -and
             $ma[0] -eq 0x4d4c4544 -and $ma[1] -eq 22 -and
             $ma[3] -ge 0x130000 -and $ma[5] -le $ma[3] -and
             $ma[6] -eq ($ma[3] - $ma[5]) -and
-            ($ma[6] - $audioResidentBytes) -ge 131072 -and
             $ma[7] -eq 163840 -and
-            $ma[8] -eq 106496 -and $ma[9] -eq 49152 -and $ma[10] -gt 0) `
-            'One-minute match did not preserve the 128 KiB battle arena reserve.' `
+            $ma[8] -eq 106496 -and $ma[9] -eq 49152 -and $ma[10] -gt 0
+        $reserveBytes = [int64]$ma[6] - $audioResidentBytes
+        $reservePass = $reserveBytes -ge 131072
+        Assert-Condition $arenaLedgerValid `
+            'One-minute match arena ledger was internally inconsistent.' `
             $gdbStdout
+        if (-not $Task25RPacingTrace) {
+            Assert-Condition $reservePass `
+                'One-minute match did not preserve the 128 KiB battle arena reserve.' `
+                $gdbStdout
+        }
         Assert-Condition ($vsbMemoryReloc.Success -and $mr[0] -gt 0 -and
             $mr[1] -gt 0 -and $mr[2] -gt 0 -and $mr[3] -gt 0 -and
             $mr[4] -gt 0 -and $mr[5] -eq 0 -and $mr[6] -eq 0 -and
@@ -2084,10 +2232,88 @@ try {
 
         if ($m4FenceFinalSummary) { Write-Output $m4FenceFinalSummary }
         if ($task20StackSummary) { Write-Output $task20StackSummary }
+        if ($Task25RLifecycleExportPath) {
+            $resolvedTask25RPath = if ([System.IO.Path]::IsPathRooted(
+                    $Task25RLifecycleExportPath)) {
+                $Task25RLifecycleExportPath
+            } else {
+                Join-Path $root $Task25RLifecycleExportPath
+            }
+            $task25rParent = Split-Path -Parent $resolvedTask25RPath
+            if ($task25rParent -and -not (Test-Path -LiteralPath $task25rParent)) {
+                New-Item -ItemType Directory -Path $task25rParent -Force |
+                    Out-Null
+            }
+            $task25rGitHead = (& git -C $root rev-parse HEAD).Trim()
+            $task25rGitStatus = @(& git -C $root status --short)
+            $task25rFocusedDiff = @(& git -C $root diff -- Makefile include/nds src/nds src/port scripts)
+            $task25rExport = [ordered]@{
+                schema = 1
+                kind = 'smash64ds-task25r-profile0-lifecycle'
+                identity = [ordered]@{
+                    gitHead = $task25rGitHead
+                    gitStatus = $task25rGitStatus
+                    focusedDiff = $task25rFocusedDiff
+                    submodules = @(& git -C $root submodule status)
+                    target = $Target
+                    build = $Build
+                    makeCommand = @('make') + @($makeArgs)
+                    make = $benchmarkMakeIdentity
+                    artifacts = [ordered]@{
+                        rom = [ordered]@{
+                            path = $rom
+                            sha256 = $benchmarkRomIdentity.Sha256
+                            bytes = $benchmarkRomIdentity.Bytes
+                        }
+                        elf = [ordered]@{
+                            path = $elf
+                            sha256 = $benchmarkElfIdentity.Sha256
+                            bytes = $benchmarkElfIdentity.Bytes
+                        }
+                        screenshot = if ($screenshotPath -and
+                            (Test-Path -LiteralPath $screenshotPath)) {
+                            [ordered]@{
+                                path = $screenshotPath
+                                sha256 = (Get-FileHash -LiteralPath $screenshotPath `
+                                    -Algorithm SHA256).Hash
+                            }
+                        } else { $null }
+                    }
+                }
+                pacing = $task25rPacingEvidence
+                gates = [ordered]@{
+                    exactTwoUpdatesPerPresentation = ($bp[2] -eq (2 * $bp[3]))
+                    zeroDebtOrCatchUp = $true
+                    cadenceViolationCount = [int64]$bp[11]
+                    exactlyOneTeardown = ($life[2] -eq 1)
+                    reserveBytes = $reserveBytes
+                    reserveFloorBytes = [int64]131072
+                    reservePass = $reservePass
+                    exactKoFgmTriplet = $audioFgmKoPass
+                    zeroPostGoTextureFence = $m4FenceFinalPass
+                    stable30 = [bool]$task25rPacingEvidence.stable30
+                }
+                lifecycle = [ordered]@{
+                    matchStart = $start
+                    pacingFinal = $bp
+                    battleEnd = $life
+                    results = $results
+                    memoryArena = $ma
+                    memoryReloc = $mr
+                    memoryEvict = $me
+                    safety = $safety
+                    audioFgmKo = $fgmKo
+                    m4FenceFinal = $m4FenceFinalValues
+                }
+            }
+            Set-Content -LiteralPath $resolvedTask25RPath -Encoding utf8 `
+                -Value ($task25rExport | ConvertTo-Json -Depth 9)
+        }
         $task9StateSummaryText = if ($Task9StateHashMode -eq 1) {
             " stateHash=$($task9StateSummaryValues[0])/overflow$($task9StateSummaryValues[1])"
         } else { '' }
-        Write-Output ("$Label one-minute match lifecycle passed: logic/present=$($bp[2])/$($bp[3]) timer=$($start[3])->$($life[5])/$($life[6]) phaseRate=$($phaseRatesX10 -join '/')x0.1 phaseSlip=$($bp[17..21] -join '/') boundsOutside=$($fdc[8])/$($fdc[7]+$fdc[8]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])$task9StateSummaryText")
+        $lifecycleResult = if ($Task25RPacingTrace) { 'captured' } else { 'passed' }
+        Write-Output ("$Label one-minute match lifecycle ${lifecycleResult}: logic/present=$($bp[2])/$($bp[3]) timer=$($start[3])->$($life[5])/$($life[6]) phaseRate=$($phaseRatesX10 -join '/')x0.1 phaseSlip=$($bp[17..21] -join '/') boundsOutside=$($fdc[8])/$($fdc[7]+$fdc[8]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) koExact=$audioFgmKoPass scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])$task9StateSummaryText")
         return
     }
     if ($ExpectedMode -eq 54) {
@@ -2635,6 +2861,7 @@ try {
                                 Assert-Condition ($frame -eq ($previousCoarse[0] + 1) -and ($logicTickContinues -or $logicTimerStartReset)) "Coarse renderer benchmark frame/logic window is not contiguous at the required $expectedLogicTickDelta source ticks per present or the single source timer-start reset at frame $frame tick $($coarse[23])." $gdbStdout
                             }
                             Assert-Condition (($sourceUpdate + $audioUpdate) -le $update) "Coarse renderer benchmark update subphases exceed update wall time at frame $frame." $gdbStdout
+                            Assert-Condition (($coarse[24] + $coarse[25]) -eq $sourceUpdate -and $coarse[26] -ge 2) "Coarse renderer benchmark did not retain two individually timed source updates and an exact presentation interval at frame $frame." $gdbStdout
                             Assert-Condition ($presentActive -eq $expectedPresentActive -and $coarse[19] -eq $expectedDrawResidual -and $coarse[20] -eq $expectedPresentResidual -and $coarse[21] -eq $expectedLoopResidual -and $coarse[22] -eq $expectedConservationError) "Coarse renderer benchmark residual equations failed at frame $frame." $gdbStdout
                             Assert-Condition ($loopWall -gt 0 -and ($coarse[22] * 100) -le ($loopWall * 2)) "Coarse renderer benchmark conservation error exceeded 2 percent at frame $frame." $gdbStdout
                             Assert-Condition (($presentActive -eq 0) -or (($coarse[20] * 100) -le ($presentActive * 2))) "Coarse renderer benchmark present residual exceeded 2 percent at frame $frame." $gdbStdout
@@ -3313,6 +3540,11 @@ try {
                     }
                     $benchmarkIdentity = [ordered]@{
                         schema = 1
+                        gitHead = (& git -C $root rev-parse HEAD).Trim()
+                        gitStatus = @(& git -C $root status --short)
+                        focusedDiff = @(& git -C $root diff -- Makefile include/nds src/nds src/port scripts)
+                        submodules = @(& git -C $root submodule status)
+                        makeCommand = @('make') + @($makeArgs)
                         target = $benchmarkMakeIdentity.Target
                         build = $Build
                         harness = [ordered]@{

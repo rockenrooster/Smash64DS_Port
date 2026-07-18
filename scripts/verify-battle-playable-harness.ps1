@@ -29,9 +29,17 @@ param(
     [ValidateRange(0,1)][int]$FoxCpuMode = 1,
     [switch]$RequireZeroPostGoTextureFence,
     [switch]$RendererM2DetailedLedger,
+    [ValidateRange(0,1)][int]$Task9FloatItcmMode = 1,
+    [ValidateRange(0,1)][int]$Task9FloatPhase2Mode = 1,
+    [ValidateRange(0,1)][int]$Task16FloatCompareMode = 0,
+    [ValidateRange(0,1)][int]$Task16FloatI2fMode = 0,
+    [ValidateRange(0,1)][int]$Task16FloatAddSubMode = 0,
     [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
-    [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30
+    [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30,
+    [switch]$Task25RPacingTrace,
+    [string]$Task25RLifecycleExportPath = '',
+    [string]$RendererBenchmarkScreenshot = ''
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -156,9 +164,17 @@ try {
     -FoxCpuMode $FoxCpuMode `
     -RequireZeroPostGoTextureFence:$RequireZeroPostGoTextureFence `
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
+    -Task9FloatItcmMode $Task9FloatItcmMode `
+    -Task9FloatPhase2Mode $Task9FloatPhase2Mode `
+    -Task16FloatCompareMode $Task16FloatCompareMode `
+    -Task16FloatI2fMode $Task16FloatI2fMode `
+    -Task16FloatAddSubMode $Task16FloatAddSubMode `
     -RendererBenchmarkSamples $RendererBenchmarkSamples `
     -RendererBenchmarkStartFrame $RendererBenchmarkStartFrame `
     -RendererBenchmarkTimeoutSeconds $RendererBenchmarkTimeoutSeconds `
+    -Task25RPacingTrace:$Task25RPacingTrace `
+    -Task25RLifecycleExportPath $Task25RLifecycleExportPath `
+    -RendererBenchmarkScreenshot $RendererBenchmarkScreenshot `
     -Harness $harness `
     -Target $target `
     -Build $build `
