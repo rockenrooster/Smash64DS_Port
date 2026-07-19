@@ -97,7 +97,8 @@ typedef enum gmFGMID
     nSYAudioFGMFloorDamageFire = 286,
     nSYAudioFGMFoxDeadSlam = 289,
     nSYAudioFGMMarioDeadSlam = 292,
-    nSYAudioFGMFoxDownBounce = 300
+    nSYAudioFGMFoxDownBounce = 300,
+    nSYAudioFGMMarioDownBounce = 303
 } gmFGMID;
 
 typedef enum gmVoiceID

@@ -479,7 +479,7 @@ try {
             $gdbStdout
         Assert-Condition ($audioState.Success -and
             $asv[0] -eq 0x46474d31 -and $asv[1] -eq 1 -and
-            $asv[2] -eq 121720 -and $asv[3] -eq 0 -and
+            $asv[2] -eq 128196 -and $asv[3] -eq 0 -and
             $asv[4] -eq 0 -and $asv[5] -eq 0 -and $asv[6] -ne 0) `
             'Hit-audio pack load/channel state is invalid.' $gdbStdout
         Write-Output (('Natural attack/hit runtime route passed: ' +
@@ -547,7 +547,7 @@ try {
         $gdbStdout
     Assert-Condition ($audioState.Success -and
         $asv[0] -eq 0x46474d31 -and $asv[1] -eq 1 -and
-        $asv[2] -eq 121720 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
+        $asv[2] -eq 128196 -and $asv[3] -eq 0 -and $asv[4] -eq 0 -and
         $asv[5] -eq 0 -and $asv[6] -ne 0) `
         'Fighter-voice pack load/channel state is invalid.' $gdbStdout
     Assert-Condition ($bgm.Success -and

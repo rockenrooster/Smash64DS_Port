@@ -411,6 +411,56 @@ SELECTED = (
         "fidelity_debt": (),
     },
     {
+        "id": 373,
+        "name": "nSYAudioVoiceFoxSmash2",
+        "kind": "voice",
+        "articulation": 225,
+        "sound": 106,
+        "notes": ((13, 7, 30), (13, 7, 30)),
+        "duration_ticks": 60,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 914896,
+        "wave_length": 2746,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 4880,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "31e0f930408f183574b932348e9f39249ca52bf77be66977d2eedfddd3fba7e3",
+        "render_program_sha256":
+            "31e0f930408f183574b932348e9f39249ca52bf77be66977d2eedfddd3fba7e3",
+        "articulation_program_sha256":
+            "2294d0495fe6cfefe4a4a8fef0dc424ab7c240b076f3f43548d9b1a4cabdd419",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 374,
+        "name": "nSYAudioVoiceFoxSmash3",
+        "kind": "voice",
+        "articulation": 226,
+        "sound": 107,
+        "notes": ((13, 7, 40), (13, 7, 46)),
+        "duration_ticks": 86,
+        "ucd_volume": 235,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 917648,
+        "wave_length": 4420,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 7856,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "94945442f30c506fa46780c19c6219fb7ad77dc22ad7f703341cccc0adfc63c4",
+        "render_program_sha256":
+            "94945442f30c506fa46780c19c6219fb7ad77dc22ad7f703341cccc0adfc63c4",
+        "articulation_program_sha256":
+            "eebd142b7b78621d8940cf10d430d7084bef448db6cc3838bfcb5675878cdf46",
+        "fidelity_debt": (),
+    },
+    {
         "id": 430,
         "name": "nSYAudioVoiceMarioSmash2",
         "kind": "voice",
@@ -587,6 +637,51 @@ SELECTED = (
         "fidelity_debt": (),
     },
     {
+        "id": 303,
+        "name": "nSYAudioFGMMarioDownBounce",
+        "kind": "movement",
+        "render_program": 298,
+        "articulation": 187,
+        "sound": 28,
+        "notes": ((12, 7, 10), (12, 7, 15)),
+        "duration_ticks": 25,
+        "ucd_volume": 130,
+        "articulation_pitch_cents": -1100,
+        "loop": False,
+        "wave_base": 251360,
+        "wave_length": 3762,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 2301,
+        "root_fork_programs": (298,),
+        "root_program_sha256":
+            "0a7645ae1249ff5140ddbf80859b52c127b73d2b80e0b97d90cc3b61b0c4b262",
+        "render_program_sha256":
+            "9ed69d587dab562768d6321d349477c4f522c0b65115fb7cb2c1f27d5b27c4c2",
+        "articulation_program_sha256":
+            "bbcff809d0113bec03d327dd08e85ef84fe10c8b18ba2f922b581416a958de0b",
+        "aot_modulator_index": 22,
+        "aot_modulator": {
+            "shape": 0,
+            "target": 11,
+            "postproc": 0,
+            "init_phase": 49,
+            "period": 100.0,
+            "amplitude": 50.0,
+            "offset": 50.0,
+        },
+        "aot_source_schedule": True,
+        "source_actions": (
+            {"action": "nFTCommonStatusDownBounceU",
+             "trigger_game_tick": 0, "call": "func_800269C0_275C0"},
+            {"action": "nFTCommonStatusDownBounceD",
+             "trigger_game_tick": 0, "call": "func_800269C0_275C0"},
+        ),
+        "source_action_file":
+            "decomp/src/ft/ftcommon/ftcommondownwaitbounce.c",
+        "fidelity_debt": (),
+    },
+    {
         "id": 154,
         "name": "nSYAudioFGMDeadExplodeL",
         "kind": "ko",
@@ -645,10 +740,37 @@ SELECTED = (
     },
 )
 
-# These source cues are deliberately audited but not packed.  Both retune an
+# These source cues are deliberately audited but not packed.  Each retunes an
 # already-running voice after playback starts; the current DS entry format has
 # no frequency schedule, so first-note playback would be behaviorally wrong.
 EXCLUDED_SOURCE_CUES = (
+    {
+        "id": 375,
+        "name": "nSYAudioVoiceFoxDamage",
+        "kind": "voice",
+        "articulation": 222,
+        "sound": 103,
+        "notes": ((13, 7, 40), (12, 7, 35)),
+        "duration_ticks": 75,
+        "ucd_volume": 215,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 904840,
+        "wave_length": 3582,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 6368,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "5b8f4ad012a8f6bcfc306b797ca1d40ca61f6b4a14e0149d59f89a9ef0707f82",
+        "render_program_sha256":
+            "5b8f4ad012a8f6bcfc306b797ca1d40ca61f6b4a14e0149d59f89a9ef0707f82",
+        "articulation_program_sha256":
+            "96c8e7d9f930325621d2561698a1a711ab95ad24e2c51b9a80d7713111168afe",
+        "fidelity_debt": ("ucd_pitch_automation",),
+        "exclusion_reason":
+            "continuous_voice_pitch_schedule_not_representable",
+    },
     {
         "id": 429,
         "name": "nSYAudioVoiceMarioSmash1",
@@ -673,6 +795,34 @@ EXCLUDED_SOURCE_CUES = (
             "305f617ac74e0c0d714d7a107d18d481bdfbd8d0c26d29f1dd1d00593f104269",
         "articulation_program_sha256":
             "213f87188a79bd2c5ac6c58d1162a54912cc95f33afaa742be3c35f71311c2a3",
+        "fidelity_debt": ("ucd_pitch_automation",),
+        "exclusion_reason":
+            "continuous_voice_pitch_schedule_not_representable",
+    },
+    {
+        "id": 431,
+        "name": "nSYAudioVoiceMarioSmash3",
+        "kind": "voice",
+        "articulation": 298,
+        "sound": 175,
+        "notes": ((12, 7, 6), (12, 7, 20), (11, 7, 30),
+                  (10, 7, 40)),
+        "duration_ticks": 96,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1441936,
+        "wave_length": 2206,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 3920,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "ffccc361f7892f37fde0c9c9c4697aeeb957f4db25982a1d0e0e8461f3a2b111",
+        "render_program_sha256":
+            "ffccc361f7892f37fde0c9c9c4697aeeb957f4db25982a1d0e0e8461f3a2b111",
+        "articulation_program_sha256":
+            "05da0a2d82e126953a3a3f6fb217fe045dbab46c5c21db52d3addf5e0f4e94a1",
         "fidelity_debt": ("ucd_pitch_automation",),
         "exclusion_reason":
             "continuous_voice_pitch_schedule_not_representable",
@@ -704,6 +854,34 @@ EXCLUDED_SOURCE_CUES = (
         "fidelity_debt": ("ucd_pitch_automation",),
         "exclusion_reason":
             "combined_ucd_and_articulation_pitch_schedule_not_representable",
+    },
+    {
+        "id": 440,
+        "name": "nSYAudioVoiceMarioDamage",
+        "kind": "voice",
+        "articulation": 307,
+        "sound": 184,
+        "notes": ((13, 7, 6), (13, 7, 20), (12, 7, 50),
+                  (12, 7, 40)),
+        "duration_ticks": 116,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1508136,
+        "wave_length": 5544,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 9856,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "845b4218667280d1bede59a6a651ce370b09ab652e2f68b15246138fd5b4b596",
+        "render_program_sha256":
+            "845b4218667280d1bede59a6a651ce370b09ab652e2f68b15246138fd5b4b596",
+        "articulation_program_sha256":
+            "3c9d6e4bd2d00ea0dc117b5757a516271097d7189bee6d2e33fae826d6981e80",
+        "fidelity_debt": ("ucd_pitch_automation",),
+        "exclusion_reason":
+            "continuous_voice_pitch_schedule_not_representable",
     },
 )
 
@@ -1932,10 +2110,10 @@ def validate_source_actions(repo_root: Path, selector: dict) -> list[dict]:
                    selector["source_action_file"])
     source = source_path.read_text(encoding="utf-8")
 
-    if selector["id"] == 300:
+    if selector["id"] in (300, 303):
         call = "func_800269C0_275C0(dFTCommonDataDownBounceSFX[fp->fkind])"
         if source.count(call) != 1:
-            raise ValueError("Fox DownBounce source callsite changed")
+            raise ValueError("DownBounce source callsite changed")
         status = re.search(
             r"void\s+ftCommonDownBounceSetStatus\([^)]*\)\s*\{(.*?)\n\}",
             source, re.DOTALL)
@@ -1943,12 +2121,12 @@ def validate_source_actions(repo_root: Path, selector: dict) -> list[dict]:
                 status.group(1).find("ftMainSetStatus") < 0 or
                 status.group(1).find("ftCommonDownBounceUpdateEffects") <
                 status.group(1).find("ftMainSetStatus")):
-            raise ValueError("Fox DownBounce status-entry trigger changed")
+            raise ValueError("DownBounce status-entry trigger changed")
         common_data = (repo_root / "decomp/BattleShip-main/decomp/src/ft/"
                        "ftcommondata.c").read_text(encoding="utf-8")
-        # Fox and Polygon Fox share the same source table entry.
-        if common_data.count("nSYAudioFGMFoxDownBounce") != 2:
-            raise ValueError("Fox DownBounce fighter-to-FGM mapping changed")
+        expected_mapping_count = 2 if selector["id"] == 300 else 6
+        if common_data.count(selector["name"]) != expected_mapping_count:
+            raise ValueError("DownBounce fighter-to-FGM mapping changed")
         return actions
 
     cue = f"{actions[0]['call']}({selector['name']})"

@@ -10,9 +10,10 @@ durable unresolved gaps.
   display-capture reset, and the raw-corner dense-ID cut.
 - Renderer M3 is source/semantic-correct but remains above its 150-250K target
   at 489,184/489,536 stage ticks.
-- One natural source voice per fighter now plays (FoxSmash1 ID372 and
-  MarioSmash2 ID430); remaining variants, exact pitch automation, and Tyler's
-  voice ear check remain open. Dream Land BGM and the opening crowd are
+- All three random Fox smash variants (IDs 372/373/374) and Mario Smash2 ID430
+  now play from their exact source programs. Mario Smash1/Smash3 and exact
+  damage/jump pitch automation remain fail-closed; Tyler's remaining voice ear
+  checks remain open. Dream Land BGM and the opening crowd are
   automation/user-confirmed.
 - Fox remains the imported level-3 CPU in the public ROM. Automated visual
   captures alone select the documented Fox/countdown-off fast-iteration switch;
@@ -35,10 +36,12 @@ durable unresolved gaps.
 - `ftparam.c` is not fully imported; current transform invalidators are narrow
   source-shaped compatibility seams.
 - Mario/Fox special wall, ceiling, and edge adjustment is incomplete.
-- Common particle script/texture banks are not resident; particle calls remain
-  bounded no-op/diagnostic seams.
-- Fireball/weapon heavy wall/ceiling/edge collision and some common effects are
-  incomplete.
+- Original common particle script/texture banks are not resident. All 178
+  Mario/Fox motion-effect calls plus the P1 reflector, blaster-glow, and
+  fireball seams route to bounded source-derived DS presentation, but they do
+  not reproduce the original particle-bank textures/scripts exactly.
+- Fireball/weapon heavy wall/ceiling/edge collision and general common-effect
+  texture-bank fidelity remain incomplete.
 - Items are disabled for P1; general item manager/runtime is P2.
 
 ## Renderer And Presentation
@@ -57,12 +60,15 @@ durable unresolved gaps.
 ## Audio
 
 - The DS backend does not yet prove every reachable source pitch/voice event.
-  The current 121,720-byte pack covers 18 exact source IDs plus six common
+  The current 128,196-byte pack covers 21 exact source IDs plus six common
   punch/kick contacts (40/38/37/34/32/31) from their exact primary BattleShip
-  samples; their composite forks/custom FX remain bounded fidelity debt. Five
-  special/projectile contacts remain fail-closed. IDs 429 and 435 require
-  continuous pitch schedules that the packed DS format cannot yet represent;
-  forked DeadExplode voice 685 remains explicit fidelity debt.
+  samples and has 2,876 bytes resident headroom. Their composite forks/custom
+  FX remain bounded fidelity debt. Five special/projectile hit composites
+  (216/28/2/0/188) remain fail-closed. Fighter voices 375/429/431/435/440
+  require live pitch schedules the packed DS format cannot represent; direct
+  activation programs with source FX/loops/forks or over-cap samples likewise
+  fail closed instead of playing a wrong substitute. Forked DeadExplode voice
+  685 remains explicit fidelity debt.
 - Existing ACK counters cannot prove the final acoustic mix. The ID626 AOT cue
   passed Tyler's exact-ROM ear check; retain user retests for remaining voices.
 - Dream Land BGM now has an exact nonzero initial-ring acoustic fixture and a

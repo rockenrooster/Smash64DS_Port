@@ -251,6 +251,7 @@ function Invoke-VisibleCaptureAssert {
         Publish-StableCapture -Image $output
     }
 }
+& (Join-Path $PSScriptRoot 'check-battle-playable-attack-effects.ps1')
 $harnessArgs = @(
     '-NoProfile',
     '-ExecutionPolicy', 'Bypass',

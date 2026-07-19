@@ -175,6 +175,7 @@ $marioMotionText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
     'src/relocData/202_MarioMainMotion.c') -Raw
 foreach ($fixture in @(
         @{ Call = 'ftMotionPlayFGM(nSYAudioFGMMarioLanding)'; Count = 7 },
+        @{ Call = 'ftMotionPlayFGM(nSYAudioFGMMarioDownBounce)'; Count = 1 },
         @{ Call = 'ftMotionPlayVoice(nSYAudioVoiceMarioSmash1)'; Count = 4 },
         @{ Call = 'ftMotionPlayVoice(nSYAudioVoiceMarioJump)'; Count = 3 }
     )) {
@@ -186,11 +187,34 @@ foreach ($fixture in @(
     }
 }
 
+$commonDataText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
+    'src/ft/ftcommondata.c') -Raw
+if (([regex]::Matches($commonDataText,
+            '\bnSYAudioFGMMarioDownBounce\b').Count -ne 6) -or
+    ([regex]::Matches($commonDataText,
+            '\bnSYAudioFGMFoxDownBounce\b').Count -ne 2)) {
+    throw 'BattleShip Mario/Fox down-bounce fighter table changed.'
+}
+$downBounceText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
+    'src/ft/ftcommon/ftcommondownwaitbounce.c') -Raw
+if ([regex]::Matches($downBounceText,
+        [regex]::Escape(
+            'func_800269C0_275C0(dFTCommonDataDownBounceSFX[fp->fkind])'
+        )).Count -ne 1) {
+    throw 'BattleShip down-bounce source audio dispatch changed.'
+}
+
 $marioMainText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
     'src/relocData/203_MarioMain.c') -Raw
 if (-not $marioMainText.Contains(
         '{ nSYAudioVoiceMarioSmash1, nSYAudioVoiceMarioSmash2, nSYAudioVoiceMarioSmash3 }, /* smash_sfx */')) {
     throw 'BattleShip Mario random smash-voice table changed.'
+}
+$foxMainText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
+    'src/relocData/209_FoxMain.c') -Raw
+if (-not $foxMainText.Contains(
+        '{ nSYAudioVoiceFoxSmash3, nSYAudioVoiceFoxSmash1, nSYAudioVoiceFoxSmash2 }, /* smash_sfx */')) {
+    throw 'BattleShip Fox random smash-voice table changed.'
 }
 $ftMainText = Get-Content -LiteralPath (Join-Path $BattleShipRoot `
     'src/ft/ftmain.c') -Raw
@@ -452,9 +476,9 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output (
     'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
-    'mixed-u16 words each, 14 Mario motion callsites across 1 included and 2 ' +
-    'source-audited excluded cues plus the random smash table/dispatch, ' +
-    'exact Mario/Fox ' +
+    'mixed-u16 words each, 15 Mario motion callsites across 2 included and 2 ' +
+    'source-audited excluded cues plus the random smash tables/dispatch, ' +
+    'exact Mario/Fox down-bounce mapping and ' +
     'regular-KO call order, no rebirth-audio claim, source attack-motion ' +
     'callsites, target layouts, ' +
     'source IDs, persisted DS loop point/length, and recyclable BattleShip ' +

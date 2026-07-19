@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-19 05:45 Central
+Updated: 2026-07-19 06:45 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -16,8 +16,8 @@ Integrated user-facing candidate:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,681,088 bytes
-SHA-256 21D789F3439FB2223C7F0F4F097B5A2ABD9652F2BDE4A6648B1A6808C404EEC1
+14,688,256 bytes
+SHA-256 C344CA8B89903A35678A6DC4A849F217B690CBCE16841FAC47974626899EB9DF
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -130,6 +130,39 @@ preserved, unedited, and outside this checkpoint; the user-supplied
 | Task 25R | **E -> complete report-only baseline** | bounded profile-1 source-update/interval timers; profile-0 external pacing trace; phase-matrix/identity checker; evidence only | One profile-1 ROM supplies all seven detailed windows and one profile-0 sibling supplies the 4,084/2,042 lifecycle. Pixels are 0/49,152 and reserve is 166,672, but stable-30, fixed-window exactness, KO-audio cleanliness, and the post-GO texture fence fail. The same-ROM P95 ranking selects M3-first. No production executor or profile-0 symbol/layout changed. |
 | Task 23R Phase 1 | Complete census / cache **REVERT** | compile-gated residual counters and marker/checker exports only | Five passing eight-frame windows find 40/40 complete-key hits and an 832–896-tick key against an 85.4–86.3K-tick avoided upper bound. One same-ROM narrow cache saves about 13.1K residual-prepare and 12.0K active/draw ticks with exact pixels, but changes the DS working set, leaves the VBlank histogram unchanged, and lacks the required profile-2 sampled recompute and retail falsification. All cache code/data/selectors were removed; retained production footprint is zero. |
 | Task 29 | **Complete Phase-A census / no Phase-B or Phase-C promotion** | default-off GX command/owner census; exact verifier exports; runner-port isolation; report | Three synchronized windows conserve every command, word, owner, boundary, and actual triangle with zero census faults. Control and alpha are the only untried state-sized opportunities, but retail proof is mandatory and the user declined repeats. Existing texture/poly shadows already remove their safe repeats; matrix mode has none; prior color/texcoord suppression regressed. Task-26 segment 0 is not an immutable Task-29 run and misses the 5K actual-run gate. Keep diagnostic infrastructure only; profile 0 gains no behavior or footprint. |
+
+## Attack / hit audio-visual asset audit (2026-07-19)
+
+The pre-Task-30 audit is complete. Preserve all seven `five-effects-*`
+branches and the patch-unique attack/Fox/hit worktrees; none was reset, merged,
+or deleted. Their source requirements are reconciled with the current DS paths
+in `artifacts/performance/2026-07-19_attack-hit-av-asset-audit.md`.
+
+The exact resident FGM pack now has 27 entries / 128,196 bytes, 20 unique
+samples / 127,044 bytes, and 2,876 bytes remaining under its 128 KiB cap.
+Mario down-bounce ID 303 is an exact 32-byte alias of Fox ID 300's byte-identical
+source program and AOT sample. Fox Smash2/Smash3 IDs 373/374 add their exact
+source samples and schedules with zero fidelity debt, so all three random Fox
+smash variants are present. The focused deterministic window improves from
+22 supported + 19 unsupported requests to 26 + 15; focused runtime keeps
+183,056 bytes reserve. Pitch-scheduled fighter voices 375/429/431/435/440,
+nonrepresentable activation cues, and composite hit cues remain explicitly
+fail-closed rather than playing a wrong substitute.
+
+The new Boundary-owned visual checker regenerates exactly 178 Mario/Fox motion
+effect calls across 17 source kinds and proves a bounded live DS presentation
+route for every one. It separately guards Fox reflector, Fox blaster glow, and
+all three Mario fireball effect kinds. Focused fireball and natural hit paths
+pass at 3 created / 13 submitted / 96 triangles and source contact ID 32 with
+audio `1/0/1`, visual `3/3/24`, respectively. This is P1 source-derived routing,
+not a claim that the original common particle texture/script banks are resident.
+
+The rebuilt canonical Boundary passes with the current ROM identity above. Its
+fixed-frame capture reports 786 / 49,152 meaningfully changed motion pixels
+(1.599%) and all independent visibility/detail gates green; the smoke is
+25.9 presentations/s / 51.6 updates/s. A PowerShell-only checker integration
+bug that could exit before the build was removed; thrown checker failures now
+propagate through the existing `ErrorActionPreference = Stop` contract.
 
 During the only renderer edit, `/root/task21_23_renderer` was the sole writer of
 `src/nds/nds_renderer.c`; that lane is stopped. Focused PowerShell parsing, GBI

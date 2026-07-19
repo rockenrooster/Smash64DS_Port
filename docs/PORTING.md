@@ -21363,3 +21363,21 @@ remains skipped for the requested fast iteration cadence.
   retail falsification will be collected, and its sampled window did not cover
   the required profile-2 recompute. Retained only the compile-gated census and
   checker/harness export; production footprint is zero.
+
+## 2026-07-19 - Reconciled attack and hit audio-visual assets
+
+- Preserved the seven in-flight `five-effects-*` branches/worktrees and audited
+  their source requirements against the current BattleShip Mario/Fox motion,
+  hit, voice, projectile, and DS presentation routes.
+- Added exact source-backed Fox Smash2/Smash3 voices and an exact deduplicated
+  Mario down-bounce alias. The resident pack is 27 entries / 128,196 bytes;
+  its deterministic window improves from 22 supported + 19 unsupported play
+  requests to 26 + 15 while focused reserve remains 183,056 bytes.
+- Kept live pitch schedules, composite forks/FX, infinite loops, over-frequency,
+  and over-cap cues explicitly fail-closed. No approximate or unrelated sample
+  is substituted for a missing source program.
+- Added a generated static coverage gate for all 178 Mario/Fox motion effects
+  across 17 source kinds plus reflector, blaster glow, and fireball routes.
+  Focused fireball and natural hit proofs pass; the canonical Boundary ROM is
+  14,688,256 bytes / `C344CA8B...` and its synchronized motion pair keeps all
+  visibility/detail gates green.

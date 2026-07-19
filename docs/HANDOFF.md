@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 05:45 Central
+Updated: 2026-07-19 06:45 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -149,10 +149,28 @@ Recovery snapshot:
 `C:\Users\Tyler\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip`.
 Evidence: `artifacts/performance/2026-07-19_task24r-quiet-slot-cleanup.md`.
 
-Next reconcile the existing attack/hit audio-visual asset audit before Task
-30. Preserve the three unique `five-effects-{attack,fox,hit}` branches and
-their worktrees: their cue packs still contain patch-unique work, so Task 24R
-did not remove them. Determine which attack, hit, projectile, movement, voice,
-and effect cues/assets are source-required, wired, supported, missing, or
-intentionally fail-closed; keep exact source-backed additions only. No user
-response or retail repeat is available tonight.
+The attack/hit audio-visual audit is complete. Preserve all seven
+`five-effects-*` branches and the three patch-unique attack/Fox/hit worktrees.
+The 128,196-byte / 27-entry pack adds exact Mario down-bounce ID 303 and exact
+Fox Smash2/Smash3 IDs 373/374; the deterministic focused window improves from
+22 supported + 19 unsupported requests to 26 + 15. It has 2,876 bytes pack
+headroom and the focused runtime retains 183,056 bytes. Fighter voices
+375/429/431/435/440, nonrepresentable activation programs, and composite hit
+cues remain explicitly fail-closed. Do not replace them with approximate or
+unrelated samples.
+
+Every one of the 178 Mario/Fox motion-effect calls across 17 source kinds now
+has a Boundary-guarded bounded DS route, as do Fox reflector, Fox blaster glow,
+and the Mario fireball dust/fire/sparkle paths. This is source-derived P1
+presentation, not original common-particle-bank texture/script exactness.
+Focused fireball and natural hit routes pass, then final Boundary passes on
+the 14,688,256-byte battle ROM `C344CA8...`; its fixed-frame meaningful delta
+is 786/49,152 (1.599%). Evidence:
+`artifacts/performance/2026-07-19_attack-hit-av-asset-audit.md`.
+
+Next run Task 30's precondition and final qualification logic. The Task 25R
+profile-0 truth remains only 18.6 presentations/s with 1,981 intervals of
+three or more VBlanks, so do not manufacture a stable-30 pass or request the
+three unavailable retail lifecycles. Bind the red precondition to the exact
+Task 25R owners, publish the honest stop/failure packet, and then continue the
+remaining publish-task queue.

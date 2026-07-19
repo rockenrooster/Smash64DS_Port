@@ -95,9 +95,9 @@ $sectionTotals = @{
     }
 }
 if (($sectionTotals.text -gt 3584) -or
-    ($sectionTotals.rodata -gt 512) -or
+    ($sectionTotals.rodata -gt 576) -or
     ($sectionTotals.data -gt 16) -or
-    ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1792L)) -or
+    ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1856L)) -or
     ($sectionTotals.itcm -ne 0)) {
     throw (('FGM backend binary budget failed: text={0} rodata={1} data={2} ' +
         'bss={3} itcm={4}.') -f
