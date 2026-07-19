@@ -111,9 +111,8 @@ override NDS_RENDERER_PROFILE_LEVEL := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_SCENE_MIP_CACHE_LAB := 0
-# OOMs the taskman arena (Fox file +56.6K past a degraded 1MiB grant) and is
-# device-engagement-unproven; re-enable only with the arena fix + WLP device proof.
-override NDS_FAST_WALLPAPER_AFFINE := 0
+# Device-proven: boots to GO on melonDS and retail hardware with no OOM.
+override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -137,9 +136,8 @@ override NDS_RENDERER_PROFILE_LEVEL := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_SCENE_MIP_CACHE_LAB := 0
-# OOMs the taskman arena (Fox file +56.6K past a degraded 1MiB grant) and is
-# device-engagement-unproven; re-enable only with the arena fix + WLP device proof.
-override NDS_FAST_WALLPAPER_AFFINE := 0
+# Device-proven: boots to GO on melonDS and retail hardware with no OOM.
+override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0

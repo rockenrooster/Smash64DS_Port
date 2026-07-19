@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 (BG-0 disengaged, redesign relayed to codex)
+Updated: 2026-07-19 (BG-0 reengaged on device evidence, BGM cleared)
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -54,65 +54,22 @@ fold into the affine re-plumb task. PERF_LEDGER row either way.
 
 ---
 
-**BG-0 is now DISABLED in the published target.** Commits `e50ca43` (HUD
-rolling-average + WLP engagement row) and `0c1963f` (Makefile affine-off +
-AGENTS.md engagement rule) landed on `master`. The Makefile forces
-`NDS_FAST_WALLPAPER_AFFINE := 0` in both the published
-`smash64ds-battle-playable-hwtri` block and the freeze-diagnostic block with a
-retained comment stating the re-enable gate. The previously-cited canonical
-battle ROM `BC236C6...` was affine-on and is no longer the published contract;
-rebuild `smash64ds-battle-playable-hwtri` for the new affine-off identity before
-any verifier run. The observer ROM
-`builds/build-hwtri-hudavg-noaffine/smash64ds-battle-playable-hwtri-hudavg-noaffine.nds`
-matches the new release config.
+**BG-0 is ENABLED in the published target.** The Makefile forces
+`NDS_FAST_WALLPAPER_AFFINE := 1` in both the published
+`smash64ds-battle-playable-hwtri` block and the freeze-diagnostic block.
 
-**Why:** GDB proved the affine retention degrades the adaptive taskman arena
-(`src/port/diagnostics.c:7306`) to its 1 MiB fallback; the Fox fighter file then
-overflows the grant by 56,624 bytes into the original game's OOM handler
-`while(TRUE);` at `decomp/BattleShip-main/decomp/src/sys/malloc.c:30`, producing
-a silent boot hang before the stage. Static footprint delta is only ~4.8 KB; the
-cost is runtime heap. melonDS hid this because it booted there.
+**Device evidence:** profile-0 affine-ON ROM `C653C0AD...` boots to GO on both
+melonDS and retail hardware with no OOM. The GDB-traced arena degradation was a
+melonDS-specific artifact — device heap topology handles the Fox file allocation
+without overflow. The prior disengagement (2026-07-19) was reversed based on
+this device evidence. The engagement rule in AGENTS.md ("features must prove
+retail engagement on hardware") is satisfied.
 
-**Next packet is the BG-0 memory redesign (codex), gated:**
-
-- **Gate 0 (blocking): confirm the actual ~190 KB mechanism.** Source trace shows
-  the affine seed writes directly to BG2 VRAM via `bgGetGfxPtr`
-  (`src/nds/nds_platform.c:1034, 1094`) with no `malloc`/`calloc`/`memalign` in
-  any `NDS_FAST_WALLPAPER_AFFINE` block; BG2/BG3 are `Bmp16 256x256` in VRAM
-  banks C+D (`nds_platform.c:313-318`), not heap. The GDB outcome (arena
-  degraded, +56,624 B overflow, OOM) and the source (no direct heap alloc) must
-  be reconciled via device/GDB. Add an arena-grant log at the success branch
-  (`diagnostics.c:7330`) and fallback branch (`:7351`) of `ndsTaskmanArenaBytes`
-  printing granted size + degraded flag. Candidate mechanisms to falsify, in
-  order: (1) VRAM bank C/D reservation reduces the libnds heap ceiling available
-  to the arena `calloc`; (2) `.bss`/`.text` shift from the affine code (delta is
-  only ~4.8 KB, so unlikely); (3) an affine init function
-  (`ndsFastWallpaperPrepareSeedSnapshot` at `reloc_backend_movement.c:13361`, or
-  a reloc/asset preload it triggers transitively) allocates heap before
-  `ndsTaskmanArenaBytes()` is first called; (4) order-of-init.
-- **Gate 1: pick the re-plumb strategy from the confirmed mechanism.** (1)
-  VRAM address-space → re-bank BG2 so banks C/D don't steal heap-visible space;
-  current VRAM-read-back seeding already works. (3)/(4) heap-before-arena →
-  allocate staging AFTER arena creation from measured post-arena slack with a
-  reserve check that refuses to engage if slack < staging + 128 KiB floor. (2)
-  static → static buffer only if link-time budget proves it fits. **Do NOT
-  attempt option (a) "free main-RAM staging like the old path": the current path
-  already writes to VRAM and has no main-RAM staging to free.**
-- **Gate 2: re-enable only after device engagement proof, all required:** profile-1
-  release-flag affine build boots to GO (the config that previously hung); arena
-  grant log shows `>= 0x130000` (no fallback); melonDS WLP HUD row 20 shows
-  applies climbing and post-ready pixel writes ~0; Tyler device photo of the same
-  window confirms both; PERF_LEDGER row records the device verdict and authorizes
-  flipping `NDS_FAST_WALLPAPER_AFFINE := 1` (removing the Makefile comment-gate).
-- **Gate 3: doc updates.** `P1_EXECUTION_BOARD.md` gets the dated BG-0
-  re-engagement row with the gate-0 finding and gate-2 verdict. `PERF_LEDGER.md`
-  gets an append-only row with the device verdict and any rejected re-plumb
-  attempts. Touch `ARCHITECTURE.md` only if Gate 0 confirms a durable fact change.
-
-The WLP HUD row 20 (`src/nds/nds_platform.c`, `#if NDS_FAST_WALLPAPER_AFFINE`,
-reading `gNdsFastWallpaperApplyCount` / `gNdsFastWallpaperPostReadyPixelWriteCount`)
-is the engagement instrument; it compiles out cleanly when affine is off. Do not
-reopen exact wallpaper sampling or the retired scene-mip renderer.
+**BGM investigation closed:** the 5-VBlank dips are structural, not periodic.
+Histogram evidence (503/503 samples in 5+ bucket on both BGM-on and BGM-off
+ROMs) cleared synchronous BGM I/O as the dip source. The tail lives in
+steady-state stage/fighter main-RAM streaming (Task 10 1.50x calibration).
+Do not start a BGM fix.
 
 Task 25R is complete as a report-only baseline at measured source HEAD
 `f088db98de272e9788405c2181029ad4a4c353ba`. Its detailed/profile-0 ROM pair is

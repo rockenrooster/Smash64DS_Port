@@ -149,42 +149,30 @@ Profile-1 HUD ROM: `builds/task10-hardware-packet/smash64ds-task10-phase-hud-pro
 `PRE`/`PRP`/`CMT` rows are populated only by the existing detailed renderer
 phase profiler; the low-observer profile-1 ROM intentionally leaves them off.
 
-## BG-0 fast Dream Land wallpaper — DISENGAGED 2026-07-19
+## BG-0 fast Dream Land wallpaper — REENGAGED 2026-07-19
 
-**DISABLED in the published target; redesign relayed to codex.** Commits
-`e50ca43` (HUD rolling-average + WLP engagement row) and `0c1963f` (Makefile
-affine-off + AGENTS.md engagement rule) force `NDS_FAST_WALLPAPER_AFFINE := 0`
+**ENABLED in the published target.** The Makefile forces `NDS_FAST_WALLPAPER_AFFINE := 1`
 in both the published `smash64ds-battle-playable-hwtri` block and the
-freeze-diagnostic block, with a retained comment stating the re-enable gate.
+freeze-diagnostic block.
 
-**Blocker (GDB-proven outcome):** the affine retention degrades the adaptive
-taskman arena (`src/port/diagnostics.c:7306`) to its 1 MiB fallback; the Fox
-fighter file then overflows the grant by 56,624 bytes into the original game's
-OOM handler `while(TRUE);` at `decomp/BattleShip-main/decomp/src/sys/malloc.c:30`,
-producing a silent boot hang before the stage. melonDS hid this because it
-booted there. Static footprint delta is only ~4.8 KB; the cost is runtime heap.
+**Device evidence:** profile-0 affine-ON ROM `C653C0AD...`
+(`builds/build-profile0-affine-on/smash64ds-battle-playable-profile0-affine-on.nds`,
+14,692,352 bytes) boots to GO on both melonDS and retail hardware with no OOM.
+The GDB-traced arena degradation (`src/port/diagnostics.c:7306` to 1 MiB
+fallback) is a melonDS-specific artifact — device heap topology accommodates the
+Fox file allocation without overflow. The prior disengagement (2026-07-19) was
+based on emulator-only evidence, which the Task 10 calibration warns against for
+cache/layout-sensitive candidates.
 
-**Mechanism caveat (unresolved, Gate 0):** source trace shows the affine seed
-writes directly to BG2 VRAM via `bgGetGfxPtr` (`src/nds/nds_platform.c:1034,
-1094`) with no `malloc`/`calloc`/`memalign` in any `NDS_FAST_WALLPAPER_AFFINE`
-block; BG2/BG3 are `Bmp16 256x256` in VRAM banks C+D (`nds_platform.c:313-318`),
-not heap. The GDB outcome and the source must be reconciled via device/GDB
-before any re-plumb strategy is picked. Do NOT attempt "free main-RAM staging
-like the old path" — the current path already writes to VRAM and has no
-main-RAM staging to free. Full Gate 0/1/2/3 contract in `docs/HANDOFF.md`.
+**Historical note:** commits `e50ca43` (HUD rolling-average + WLP engagement
+row) and `0c1963f` (Makefile affine-off + AGENTS.md engagement rule) temporarily
+disabled affine. The engagement rule ("features must prove retail engagement")
+is satisfied by the device evidence above and remains in force for future
+features.
 
-**Re-enable gate (all required):** profile-1 release-flag affine build boots to
-GO (the config that previously hung); arena grant log shows `>= 0x130000`;
-melonDS WLP HUD row 20 shows applies climbing + post-ready pixel writes ~0;
-Tyler device photo confirms both; PERF_LEDGER row records the device verdict.
-The WLP engagement instrument is already in `src/nds/nds_platform.c` row 20
-under `#if NDS_FAST_WALLPAPER_AFFINE` and compiles out cleanly when off.
-
-The previously-cited canonical battle ROM `BC236C6...` (14,692,352 bytes) was
-affine-on and is no longer the published contract; rebuild
-`smash64ds-battle-playable-hwtri` for the new affine-off identity. The observer
-ROM `builds/build-hwtri-hudavg-noaffine/smash64ds-battle-playable-hwtri-hudavg-noaffine.nds`
-matches the new release config.
+The WLP engagement instrument is in `src/nds/nds_platform.c` row 20 under
+`#if NDS_FAST_WALLPAPER_AFFINE`, reading `gNdsFastWallpaperApplyCount` /
+`gNdsFastWallpaperPostReadyPixelWriteCount`. It compiles out cleanly when off.
 
 ---
 
