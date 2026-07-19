@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Generate the canonical Mario/Fox native-owner IR include.
+"""Generate the canonical Mario/Fox native-owner IR from exact O2R inputs.
 
-The hashed profile-2 export supplies the geometry and baseline state IR.  The
-generator validates the exact Mario/Fox O2R payloads, preserves their compact
-root light prefixes, and restores omitted intra-root G_MW_LIGHTCOL changes in
-source order.  The old runtime executor remains excluded because it re-entered
-generic state/triangle machinery and failed the big-jump performance gate.
+The generator walks the source display lists, preserves their compact root
+light prefixes, and restores intra-root G_MW_LIGHTCOL changes in source order.
+The old runtime executor remains excluded because it re-entered generic
+state/triangle machinery and failed the big-jump performance gate.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import json
 import struct
@@ -235,39 +233,15 @@ SOURCE_CLOSURE_POLICIES = (
 )
 
 
-EXPORT = {
-    "state": (
-        "ARAA4wCAAAACAAAABX4S/P/zF/8DAAAAAAEA9QAAAAUHAAAAAABQ9VBAAQcHAAAAAARA9VBBCQAHAAAAAAAA8ADAAwUIAAAAAgAA1xic//8EAAAAIAAI8nzAFwAKAAAAAABQ/fBlAAAGAAAAAAAA8wD0CwcJAAAAARAA4wAAAAACAAAABX4y/P/9F/8DAAAAAAAA1wAAAAAEAAAABf7//P99Fv8DAAAAAARA9VBDCQAHAAAAAAAQ/XBvAAAGAAAAAgAA1xKD//8EAAAAmwAn8hfBNgAKAAAAAAAA8wD0DwcJAAAAAABQ9UBAAQcHAAAAAAJA9UBDCQAHAAAAAgAA1///z9wEAAAAVUEP8rEBFwAKAAAAAABQ/XhsAAAGAAAAAAAA8wD4BQcJAAAABX4y/P/3F/8DAAAAAAAA+v8AKX0LAAAAAAAA+v+Z4f8LAAAAAgAA1/////8EAAAAAAAA8nzABwAKAAAAAABQ/dh5AAAGAAAAAAAA8wD4BwcJAAAA//v/2QAAAAAFAAAA////2QAEAAAFAAAAAgAA17ny//8EAAAAJoAD8qJACwAKAAAAAABQ/dB1AAAGAAAAAAAA+v8EYqgLAAAAAABQ9VAAAQcHAAAAAARA9VACCQAHAAAAAAAQ/Qh4AAAGAAAAAgAA1///H10EAAAAPOIX8niiHwAKAAAAAAAA8wD0BwcJAAAAAAAQ/dhyAAAGAAAAAgAA1///rWkEAAAAM8EH8q+BFwAKAAAAAAAA+v+q7u4LAAAAAABQ9TDAAAcHAAAAAAJA9TDCCAAHAAAAAAAQ/Qh1AAAGAAAAAAAA8hzAAQAKAAAAAABQ/eB6AAAGAAAAAAAA8wD4AQcJAAAA",
-        "b332130988708066b956a2c43160ffe77c07c8281cbb7da380e2ad8492252045",
-    ),
-    "sequence": (
-        "AAECAwQFBgcICQoLDAsMDQwAAQIDDg8FEBESExQFFRYXGAoLDBkaGwsMCwwNDAsMCwwNDAsMCwwNDAsMAAECExQFHB0eHwoLDCAhDQsAAQITFAUiIyQfCgsMDRklDA0MGSUMAAECJicoBSkqKwMOLAUtLhIKDQwZLyULDA0ZJQwNDAsMCwwLDA0LDAsMCwwNAAECMDEyBRwzNDUKAAECMDEyBRwzNDUK",
-        "3feef24dc68c5a1600c196b4b57cb7402163ab02c439b3c16d758315928b2a2e",
-    ),
-    "vertex": (
-        "ABUAGZgHAAAAAAAAAAgACSgJAAAAAAAAAQgAAAAAAAAAAAAAAQkBAAAAAAAAAAAAAQoCAAAAAAAAAAAAAQsDAAAAAAAAAAAAAAwEBLgJAAAAAAAAAAcAEPgJAAAAAAAAABUAE/gKAAAAAAAAADEABigMAAAAAAAAADkAFogMAAAAAAAAAEoAEOgNAAAAAAAAAFkAF+gOAAAAAAAAAAgACVgQAAAAAAAAAQgAAAAAAAAAAAAAAQkBAAAAAAAAAAAAAQoCAAAAAAAAAAAAAQsDAAAAAAAAAAAAAAwEBugQAAAAAAAAAAcAEEgRAAAAAAAAAAgAC0gSAAAAAAAAAQgAAAAAAAAAAAAAAQkBAAAAAAAAAAAAAQoCAAAAAAAAAAAAAQsDAAAAAAAAAAAAAQwEAAAAAAAAAAAAAA0FBvgSAAAAAAAAAAQAEFgTAAAAAAAAAAgAC1gUAAAAAAAAAQgAAAAAAAAAAAAAAQkBAAAAAAAAAAAAAQoCAAAAAAAAAAAAAQsDAAAAAAAAAAAAAQwEAAAAAAAAAAAAAA0FBggVAAAAAAAAAAQAEGgVAAAAAAAAAAgACJAIAAAAAAAAAB4ACRAJAAAAAAAAAAkABqAJAAAAAAAAAA0ABgAKAAAAAAAAABcABmAKAAAAAAAAACAAAmAKAAAAAAAAACECApAKAAAAAAAAACIEBcAKAAAAAAAAADkACRALAAAAAAAAAAgACaALAAAAAAAAABEABKALAAAAAAAAABIEBTAMAAAAAAAAAAgABYAMAAAAAAAAAAcACdAMAAAAAAAAAAgABWANAAAAAAAAABUACrANAAAAAAAAACkAClAOAAAAAAAAADYAFvAOAAAAAAAAAEsADVAQAAAAAAAAAFIAHyARAAAAAAAAAAgACRATAAAAAAAAABEAAhATAAAAAAAAABICAlATAAAAAAAAABMEBaATAAAAAAAAAAgABfATAAAAAAAAAAcACUAUAAAAAAAAAAgADNAUAAAAAAAAAAgAB5AVAAAAAAAAAAgABgAWAAAAAAAAABIABWAWAAAAAAAAAAgADLAWAAAAAAAAAAgAB3AXAAAAAAAAAAgABuAXAAAAAAAAABIABUAYAAAAAAAAABUACZAYAAAAAAAAARUAAAAAAABOApoAARYBAAAAAAC8AvQAARcCAAAAAABOApoAARgDAAAAAACcAQkAABkEBSAZAAAAAAAA",
-        "0582f7e74a4649498a9f60e6518d0aa494416258cc42cb170520dd1db3a3d36b",
-    ),
-    "triangles": (
-        "9uL4VtTid1ZW3tFSFMOPQhDXDlZy3rNVLNLLVdLG0Ckpsm4haJ0GHbHITxFIualEA5liGEShKRSJjGgQjL6APYmB6kEEvAkQaIjoDOOYwwChoAQVpJgBCaCEwBTkoMQcR4xnGEGcxQxlgAUE4ZAlEM29zDVsuW4pi6VJLei57zROmawV5KHkPGmoiQnImawIp7RiJKKEIgwFhOUABJxmBEaNJgAGoAQBMMoyPtDFrkWNxW0xTa1LJQql6iDMxKZEpJiGLcSMKwmBjGYNY4lhAEOA7SjNneVFg5SjCKKEIgCT1rJSs8aSQhK+bka1xVU2LrKNRfKt6yktsUshbaENJXK1Rh2nmKYQxJlCDUGMAwTDAc297DlvtY8tyrWqJW2hix3NpA0Z5bBkHWugpxBjkWIQgoQlEAUEtNp2UpXKsUoSxs09jr2rPcq1LD2KuS8tqq0qMSup5iComGIQgoQBCAOgAx0HmagY5JgFAYWY4xCDiKQEJIgFBAmMASRpoEMc45hHBCGVJxDNva4x67nKMcup7SXoreg8rJmsKEuVaBGmsAcNxYgkICiMqxBEhEUQoqXCNCC9KQgJhAEM4J3gDEKNIilIpegoKJlkKESdyBRJhCkYBpQmAKSAqBzkFEqMaiQojWgQR6UnIUKZiADChMcoB5UIFKGAwRSnGM297DltuW4pyanMJQupJyksnasZ6KjLIOyUxxQHmWIQQZAEBIOoSREqoUchQ53JIOWgiQCmoKcIR4zFBCWIKRgJBICoSRGJjEAhSJ0qHcOkQxgilMkcopimHKCEABUFHc29jTnLseo5K7nKJYuh6ySsmQsdzKDlIAWZqSjplGIQgoQBCMWc5BjljEQc44ihDAOEQwDmoAYV5JjEDGSIwxSjhGIEIoAFBIOUIAiDlCAIg5RFDGGIAgRoiAcJR4TmBAWd5RjFkAEQxATmoKgYpKBlGESMIxgChGQUYQjmoKYcBpEDHUOgJwynhAAJgKCGFKGQgQBioAIdaITmIEWcKBAFiAYRppyhEAGUhhRikCIMgoACBOagBR3kmOUQBo3ECAGVYSAGiGYAAYxFAIWIoQBikCIMgoACBAelJxmmnKQYxIxDEEGMIQFAhCYMCYEmBQelyRwloaQgI5WjCGmEASST1nRKs8YzQm/CMDoPto5B67VLPaulSC2poWglh8rHUKeYhxRElkcSzI3DCUOEIwAgsGwAarGKJQuxxRyGnGYQIAi8+35zXu9Zex371V710nRWctLRVrHCL0LUydI1jrVJLQul6CRLmSUdhaRmLIKUYRgBDOag5RjFkMMgxIxiIGSEQwADhEcgp4AHCEOgAx0GiQcVRoTIFIGYARCGlOAQYJzkFGKQIxABkEAQ5qAGFaSgBA2mkMcII5ADBIaEJggBiOMAA53gCEmtCSlLnWkZqaBEIcmU5CjrjAQVS5hrCOOEhwSkgGIEBIQGFEaAQASkmIUMg4gkCAOUYAgFiKEIg5RiFCSUQBQBFGKQQRAEBEmtKC0qncosBa0kIaas5CTqjAQVxYhhHOGQpABFgIEAAYhKGGqIQQykmMMURYzBDKGAARhhiEEUg5RDEKOEIwADCGKQggQBCGiIYCBInEcE6JgAFSeQ5hDIlIYUAZShEGKgAh3moAYVBY2GHOKQZQCChAQEppCkAA==",
-        "b9e792e1730d8fb1e170eb4b7aad1070eb1bc762f9be31ea02aed66f41901246",
-    ),
-    "runs": (
-        "AAAkAP///wEkAAwA/wEAADAACAH/AAAAOAAcAP//AABUABgA//8HAGwABAA/AAAAcAAZAP//PwCJABMA//8AAJwAFAD//38AsAAMAP8BAAC8AAgB/wMAAMQAHAD//wAA4AAPAP8HAADvAAQBHAcAAPMAAgCABwAA9QADAVcFAAD4AAIA4AUAAPoAAwFjAQAA/QABAOAAAAD+ABIA//8AABABDwD/BwAAHwEEARkHAAAjAQIAgAcAACUBAwFuAgAAKAEBAMACAAApAQEBZAAAACoBAQDgAAAAKwECASMBAAAtAQEAoAEAAC4BEgD//wAAQAEIAP8AAABIAQoA/wEAAFIBAgA/AAAAVAECAD8AAABWAQQAPwAAAFoBCQD/AQAAYwEJAP8BAABsAQwA/wEAAHgBDAD/AQAAhAEEAB8AAACIAQ4A/wEAAJYBBAAfAAAAmgEMAP8DAACmAQgA/wMAAK4BGgD//z8AyAEHAP8fAADPARkA////f+gBDAD/AQAA9AEMAP8BAAAAAgQAHwAAAAQCDgD/AQAAEgIUAP8PAAAmAggAfwAAAC4CBQA/AAAAMwIDAB8AAAA2AhQA/w8AAEoCCAB/AAAAUgIFAD8AAABXAgMAHwAAAFoCDAD/AQAAZgICAYwBAABoAgIA4AEAAGoCAQEoAQAAawIBANAAAABsAgQBvwAAAHACAQBwAAAAcQIBATEAAAA=",
-        "ba135565be9a942bae556f12fbf221e56d6feebb71e172472cfc19805803486c",
-    ),
-    "epochs": (
-        "AAAFAAAAAAAFBQIEAQEAFgsADAABAAEAAQEBAAEBAAkNAA4AAgACAAEBAQAFAQANDwD//wcAAwACAAEAAQH/CBEAGgAIAAQACQEEAgEBABYbAB0ACQAFAAIFAQQBAQEyIgAkAAoABgACAQEAAQECOiUA//8LAAcAAgABAAEB/0snAP//DAAIAAEAAQABAf9aKAApAA0ACQABAQEAAQEACSoAKwAOAAoAAQEBAAUBAA0sAP//EwALAAIAAQABAf8ILgAvABQADAABAQEAAQEACTAAMQAVAA0AAQEBAAYGAA4yADMAGwATAAEBAQABAQAFNAA1ABwAFAABAQEAAQEACTYANwAdABUAAQEBAAYIAA44ADkAIwAdAAEBAQABAQAFOgA7ACQAHgABAQEAAQEBCTwAQQAlAB8ABQUCBAEBAB9HAEgAJgAgAAECAQABAQMKSgD//ycAIQAAAAEAAQECDkoASgAoACIAAAIBAAEBARhMAP//KQAjAAEAAQADAf8jTQBSACwAJAAFBQIEAQEAOlgAWQAtACUAAQEBAAEBAAlaAP//LgAmAAEAAQACAf8TWwD//zAAJwADAAEAAQH/CV4A//8xACgAAgABAAEB/whgAP//MgApAAMAAQABAf8JYwBsADMAKgAJAQQCAQEBFm0AcwA0ACsABgEDAgEBACp0AP//NQAsAAMAAQABAf83dwD//zYALQACAAEAAQH/THkA//83AC4AAQABAAEB/1N6AHsAOAAvAAEBAQABAQAJfAD//zkAMAABAAEAAwH/FH0A//88ADEAAwABAAEB/wmAAP//PQAyAAIAAQABAf8IggCDAD4AMwABAQEAAQEACYQAhQA/ADQAAQEBAAEBAAmGAIcAQAA1AAEBAQABAQAJiAD//0EANgABAAEAAQH/E4kAigBCADcAAQEBAAEBAAmLAIwAQwA4AAEBAQABAQAJjQCOAEQAOQABAQEAAQEACY8A//9FADoAAQABAAEB/xOQAP//RgA7AAsABgABAf8WnAD//0cAPAALAAYABQf/Gg==",
-        "7f0fa1a3dba3660c899e7c3184ef5f62bddec6b38d96ad4cbd9966f7946ce9e5",
-    ),
-    "mario_roots": (
-        "aBYAAAAACgAsAAEBAgAAAMgXAAABAP//EAABAAAAAABIGAAAAgD//xIAAQAAAAAA2BgAAAMA//8XAAEAAAAAAJAZAAAEAP//ZQAFAAAAAAC4HAAACQD//xAAAQAAAAAAOB0AAAoA//8SAAEAAAAAAMgdAAALAP//FwABAAAAAACAHgAADAD//xIAAQAAAAAAEB8AAA0A//8XAAEAAAAAAMgfAAAOAP//DwABAAAAAABAIAAADwD//xIAAQAAAAAA0CAAABAA//8XAAEAAAAAAIghAAARAP//DwABAAAAAAA=",
-        "bbc51381b9baa20e09b6a14e12e3ef6d9d253b7845cd2b4718b5148d5e38cac2",
-    ),
-    "fox_roots": (
-        "cBkAABIARgAoAAIBAgAAALAaAAAUAFcAQwAFAQIAAADIHAAAGQD//xoAAgAAAAAAmB0AABsA//8MAAEAAAAAAPgdAAAcAP//EAABAAAAAAB4HgAAHQD//wwAAQAAAAAA2B4AAB4A//9hAAUAAAAAAOAhAAAjAP//GwACAAAAAAC4IgAAJQD//wwAAQAAAAAAGCMAACYA//8QAAEAAAAAAJgjAAAnAP//FAABAAAAAAA4JAAAKAD//w4AAQAAAAAAqCQAACkA//8WAAIAAAAAAFglAAArAP//FAABAAAAAAD4JQAALAD//w4AAQAAAAAAaCYAAC0A//8WAAIAAAAAABgnAAAvAJsAIAABAQIAAAAYKAAAMACnACQAAQECAAAA",
-        "2f82f144939c5c952f79b8961593b84e7c2d6484a92bee07b84c9014d395a7c7",
-    ),
+SOURCE_EXPORT_HASHES = {
+    "state": "b332130988708066b956a2c43160ffe77c07c8281cbb7da380e2ad8492252045",
+    "sequence": "3feef24dc68c5a1600c196b4b57cb7402163ab02c439b3c16d758315928b2a2e",
+    "vertex": "0582f7e74a4649498a9f60e6518d0aa494416258cc42cb170520dd1db3a3d36b",
+    "triangles": "b9e792e1730d8fb1e170eb4b7aad1070eb1bc762f9be31ea02aed66f41901246",
+    "runs": "ba135565be9a942bae556f12fbf221e56d6feebb71e172472cfc19805803486c",
+    "epochs": "7f0fa1a3dba3660c899e7c3184ef5f62bddec6b38d96ad4cbd9966f7946ce9e5",
+    "mario_roots": "bbc51381b9baa20e09b6a14e12e3ef6d9d253b7845cd2b4718b5148d5e38cac2",
+    "fox_roots": "2f82f144939c5c952f79b8961593b84e7c2d6484a92bee07b84c9014d395a7c7",
 }
 
 O2R_ASSETS = {
@@ -408,15 +382,301 @@ FIFO_PATCH_EPOCH_POLY = "epoch_poly"
 FIFO_PATCH_EPOCH_BEGIN = "epoch_begin"
 FIFO_PATCH_EPOCH_BEGIN_PARAM = "epoch_begin_param"
 
-def decode_export() -> dict[str, bytes]:
-    decoded: dict[str, bytes] = {}
-    for name, (encoded, expected_hash) in EXPORT.items():
-        payload = base64.b64decode(encoded, validate=True)
-        actual_hash = hashlib.sha256(payload).hexdigest()
+SOURCE_STATE_EFFECTS = {
+    0xe3: 2, 0xfc: 3, 0xd7: 4, 0xd9: 5, 0xfd: 6,
+    0xf5: 7, 0xf0: 8, 0xf3: 9, 0xf2: 10, 0xfa: 11,
+}
+SOURCE_SYNC_OPS = frozenset((0xe6, 0xe7, 0xe8))
+SOURCE_TRIANGLE_OPS = frozenset((0x05, 0x06))
+SOURCE_ACTION_OPS = frozenset((0x01, 0x02))
+SOURCE_MATERIAL_DL = 0xde
+SOURCE_END_DL = 0xdf
+
+
+def _discover_owner_roots(payload: bytes, owner_name: str) -> list[int]:
+    joint_tree_offset, descriptor_count = OWNER_JOINT_TREES[owner_name]
+    if joint_tree_offset + descriptor_count * DOBJ_DESC_SIZE > len(payload):
+        raise ValueError(f"{owner_name} JointTree is out of range")
+    descriptors = []
+    for descriptor_index in range(descriptor_count):
+        offset = joint_tree_offset + descriptor_index * DOBJ_DESC_SIZE
+        depth, reloc_pointer = struct.unpack_from(">II", payload, offset)
+        display_offset = None if reloc_pointer == 0 else \
+            (reloc_pointer & 0xffff) * 4
+        if display_offset is not None and display_offset >= len(payload):
+            raise ValueError(
+                f"{owner_name} JointTree entry {descriptor_index}: "
+                f"display target 0x{display_offset:x} is out of range"
+            )
+        descriptors.append((depth, display_offset))
+    if descriptors[-1] != (18, None):
+        raise ValueError(f"{owner_name} JointTree lost its depth-18 sentinel")
+    descriptors = descriptors[:-1]
+    setup_words = OWNER_SETUP_PARTS[owner_name]
+    selected = [
+        index for index in range(len(descriptors))
+        if setup_words[index // 32] & (1 << (31 - (index & 31)))
+    ]
+    if selected != list(range(len(selected))):
+        raise ValueError(f"{owner_name} setup_parts is not a contiguous prefix")
+    if len(selected) + 1 != len(descriptors):
+        raise ValueError(f"{owner_name} selected JointTree cardinality changed")
+    if any(offset is not None for _, offset in descriptors[len(selected):]):
+        raise ValueError(f"{owner_name} setup_parts dropped a drawable descriptor")
+    roots = [
+        offset for _, offset in descriptors[:len(selected)]
+        if offset is not None
+    ]
+    if len(roots) != OWNER_PLAN_COUNTS[owner_name][1]:
+        raise ValueError(f"{owner_name} drawable root cardinality changed")
+    return roots
+
+
+def _source_commands(payload: bytes, owner_name: str, root_offset: int):
+    commands = []
+    while len(commands) < 256:
+        offset = root_offset + len(commands) * 8
+        if offset + 8 > len(payload):
+            raise ValueError(f"{owner_name} root 0x{root_offset:x} is truncated")
+        w0, w1 = struct.unpack_from(">II", payload, offset)
+        commands.append((w0 >> 24, w0, w1))
+        if (w0 >> 24) == SOURCE_END_DL:
+            return commands
+    raise ValueError(f"{owner_name} root 0x{root_offset:x} exceeds 255 commands")
+
+
+def _decode_control(owner_name: str, root_index: int, commands):
+    before, after = [], []
+    before_sync = after_sync = 0
+    material = INVALID_U8
+    after_material = False
+    for command_index, op, w0, w1 in commands:
+        if op == SOURCE_MATERIAL_DL:
+            if material != INVALID_U8 or (w1 >> 24) != SOURCE_SEGMENT_E or \
+                    (w1 & 7) != 0:
+                raise ValueError(
+                    f"{owner_name} root {root_index} command {command_index}: "
+                    "invalid material callback"
+                )
+            material = (w1 & 0x00ffffff) // 8
+            if material >= INVALID_U8:
+                raise ValueError(f"{owner_name} root {root_index}: material overflow")
+            after_material = True
+        elif op in SOURCE_SYNC_OPS:
+            if after_material:
+                after_sync += 1
+            else:
+                before_sync += 1
+        elif (op == SOURCE_G_MOVEWORD and
+              ((w0 >> 16) & 0xff) == SOURCE_G_MW_LIGHTCOL and
+              (w0 & 0xffff) in SOURCE_LIGHTCOL_OFFSETS):
+            continue
+        elif op in SOURCE_STATE_EFFECTS:
+            if op == 0xfd:
+                w1 = (w1 & 0xffff) * 4
+            row = (w0, w1, SOURCE_STATE_EFFECTS[op])
+            (after if after_material else before).append(row)
+        else:
+            raise ValueError(
+                f"{owner_name} root {root_index} command {command_index}: "
+                f"unsupported control opcode 0x{op:02x}"
+            )
+    return before, after, before_sync, after_sync, material
+
+
+def _append_state_span(rows, states, state_lookup, sequence):
+    first = len(sequence)
+    for row in rows:
+        state_index = state_lookup.get(row)
+        if state_index is None:
+            state_index = len(states)
+            if state_index >= 256:
+                raise ValueError("native fighter state table exceeds u8 indices")
+            state_lookup[row] = state_index
+            states.append(row)
+        sequence.append(state_index)
+    return first, len(rows)
+
+
+def _decode_action(
+        payload: bytes, owner_name: str, root_index: int, command_index: int,
+        command, slots, actions) -> None:
+    op, w0, w1 = command
+    if op == 0x01:
+        count = (w0 >> 12) & 0xff
+        end = (w0 >> 1) & 0x7f
+        index = end - count
+        source_offset = (w1 & 0xffff) * 4
+        if (count == 0 or index < 0 or end > VERTEX_CACHE_SIZE or
+                source_offset + count * SOURCE_VERTEX_SIZE > len(payload)):
+            raise ValueError(
+                f"{owner_name} root {root_index} command {command_index}: "
+                "invalid vertex load"
+            )
+        actions.append((0, command_index, index, count, source_offset, 0, 0))
+        for slot in range(index, end):
+            slots[slot] = root_index
+    else:
+        index = (w0 & 0xffff) >> 1
+        if ((w0 >> 16) & 0xff) != 0x14 or index >= VERTEX_CACHE_SIZE or \
+                slots[index] is None:
+            raise ValueError(
+                f"{owner_name} root {root_index} command {command_index}: "
+                "invalid MODIFYVTX ST"
+            )
+        s, t = struct.unpack(">hh", w1.to_bytes(4, "big"))
+        actions.append((1, command_index, index, 0, 0, s, t))
+
+
+def _pack_rows(fmt: str, rows) -> bytes:
+    return b"".join(struct.pack(fmt, *row) for row in rows)
+
+
+def build_source_export(repo_root: Path) -> dict[str, bytes]:
+    """Rebuild the former profile export directly from Mario/Fox O2R data."""
+    states, sequence, actions, triangles, runs, epochs = [], [], [], [], [], []
+    state_lookup = {}
+    owner_roots = {}
+    for owner_name in ("mario", "fox"):
+        payload = load_o2r_payload(repo_root, owner_name)
+        roots = []
+        slots = [None] * VERTEX_CACHE_SIZE
+        for root_index, root_offset in enumerate(
+                _discover_owner_roots(payload, owner_name)):
+            commands = _source_commands(payload, owner_name, root_offset)
+            triangle_blocks = []
+            command_index = 0
+            while command_index < len(commands) - 1:
+                if commands[command_index][0] not in SOURCE_TRIANGLE_OPS:
+                    command_index += 1
+                    continue
+                block_start = command_index
+                while (command_index < len(commands) - 1 and
+                       commands[command_index][0] in SOURCE_TRIANGLE_OPS):
+                    command_index += 1
+                triangle_blocks.append((block_start, command_index))
+            if not triangle_blocks:
+                raise ValueError(f"{owner_name} root {root_index} has no triangles")
+
+            first_epoch = len(epochs)
+            cursor = 0
+            for block_start, block_end in triangle_blocks:
+                action_indices = [
+                    index for index in range(cursor, block_start)
+                    if commands[index][0] in SOURCE_ACTION_OPS
+                ]
+                if not action_indices or any(
+                        commands[index][0] not in SOURCE_ACTION_OPS
+                        for index in range(action_indices[0], block_start)):
+                    raise ValueError(
+                        f"{owner_name} root {root_index}: malformed action span"
+                    )
+                control = [
+                    (index, *commands[index])
+                    for index in range(cursor, action_indices[0])
+                ]
+                before, after, before_sync, after_sync, material = \
+                    _decode_control(owner_name, root_index, control)
+                before_first, before_count = _append_state_span(
+                    before, states, state_lookup, sequence
+                )
+                if after:
+                    after_first, after_count = _append_state_span(
+                        after, states, state_lookup, sequence
+                    )
+                else:
+                    after_first, after_count = 0xffff, 0
+
+                first_action = len(actions)
+                for index in action_indices:
+                    _decode_action(
+                        payload, owner_name, root_index, index,
+                        commands[index], slots, actions
+                    )
+
+                first_run = len(runs)
+                current_class = None
+                run_first = len(triangles)
+                run_mask = 0
+                for index in range(block_start, block_end):
+                    op, w0, w1 = commands[index]
+                    for half, indices in enumerate(
+                            stage_manifest.decode_triangles(op, w0, w1)):
+                        bindings = {slots[slot] for slot in indices}
+                        if None in bindings or root_index not in bindings:
+                            raise ValueError(
+                                f"{owner_name} root {root_index} command {index}: "
+                                "triangle uses an invalid binding"
+                            )
+                        submit_class = 0 if bindings == {root_index} else 1
+                        if current_class is not None and \
+                                submit_class != current_class:
+                            runs.append((
+                                run_first, len(triangles) - run_first,
+                                current_class, run_mask,
+                            ))
+                            run_first = len(triangles)
+                            run_mask = 0
+                        current_class = submit_class
+                        compact = (indices[0] << 10) | (indices[1] << 5) | indices[2]
+                        if op == 0x06 and half == 0:
+                            compact |= 0x8000
+                        triangles.append(compact)
+                        run_mask |= sum(1 << slot for slot in set(indices))
+                runs.append((
+                    run_first, len(triangles) - run_first,
+                    current_class, run_mask,
+                ))
+                epochs.append((
+                    before_first, after_first, first_action, first_run,
+                    before_count, after_count, before_sync, after_sync,
+                    len(actions) - first_action, len(runs) - first_run,
+                    material, block_start,
+                ))
+                cursor = block_end
+
+            tail_control = [
+                (index, *commands[index])
+                for index in range(cursor, len(commands) - 1)
+            ]
+            tail, tail_after, tail_sync, tail_after_sync, tail_material = \
+                _decode_control(owner_name, root_index, tail_control)
+            if tail_after or tail_after_sync or tail_material != INVALID_U8:
+                raise ValueError(f"{owner_name} root {root_index}: invalid tail")
+            if tail:
+                tail_first, tail_count = _append_state_span(
+                    tail, states, state_lookup, sequence
+                )
+            else:
+                tail_first, tail_count = 0xffff, 0
+            roots.append((
+                root_offset, first_epoch, tail_first, len(commands),
+                len(epochs) - first_epoch, tail_count, tail_sync, 0,
+            ))
+        owner_roots[owner_name] = roots
+
+    data = {
+        "state": _pack_rows("<IIB3x", states),
+        "sequence": bytes(sequence),
+        "vertex": _pack_rows("<BBBBIhh", actions),
+        "triangles": _pack_rows("<H", ((value,) for value in triangles)),
+        "runs": _pack_rows("<HBBI", runs),
+        "epochs": _pack_rows("<HHHHBBBBBBBB", epochs),
+        "mario_roots": _pack_rows("<IHHHBBBB2x", owner_roots["mario"]),
+        "fox_roots": _pack_rows("<IHHHBBBB2x", owner_roots["fox"]),
+    }
+    for name, expected_hash in SOURCE_EXPORT_HASHES.items():
+        actual_hash = hashlib.sha256(data[name]).hexdigest()
         if actual_hash != expected_hash:
             raise ValueError(f"{name}: SHA256 {actual_hash} != {expected_hash}")
-        decoded[name] = payload
-    return decoded
+    return data
+
+
+def decode_export(repo_root: Path | None = None) -> dict[str, bytes]:
+    """Compatibility entry point for the existing generator checkers."""
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parents[1]
+    return build_source_export(Path(repo_root).resolve())
 
 
 def unpack_many(fmt: str, payload: bytes):
@@ -1730,7 +1990,7 @@ def emit_rows(
 
 def build_owner_source_context(repo_root: Path) -> dict[str, object]:
     """Recover the exact shared Mario/Fox source-order program inputs."""
-    data = decode_export()
+    data = build_source_export(repo_root)
     state = unpack_many("<IIB3x", data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])

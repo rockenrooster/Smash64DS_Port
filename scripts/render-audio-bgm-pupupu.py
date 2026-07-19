@@ -344,7 +344,11 @@ def main() -> int:
         "gain": args.gain,
         **loop,
     }
-    output.with_suffix(".json").write_text(json.dumps(metadata, indent=2) + "\n")
+    output.with_suffix(".json").write_text(
+        json.dumps(metadata, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
 
     print(f"rendered {output}")
     print(f"bytes={len(pcm)} sample_rate={OUTPUT_SAMPLE_RATE} sha256={digest}")
