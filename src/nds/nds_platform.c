@@ -2090,6 +2090,9 @@ void ndsPlatformEndFrame(void)
         profile_start = cpuGetTiming();
 #endif
         NDS_FREEZE_DIAGNOSTICS_FLUSH();
+#if NDS_TASK29_GX_CENSUS
+        ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
+#endif
         glFlush(GL_TRANS_MANUALSORT);
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileFlushTicks = cpuGetTiming() - profile_start;
@@ -2098,6 +2101,9 @@ void ndsPlatformEndFrame(void)
         gNdsHardwareRendererFlushCount++;
         sOriginalSpriteOverlayNeedsFlush = FALSE;
     }
+#if NDS_TASK29_GX_CENSUS
+    ndsRendererTask29GXPublishFrame();
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     if (phase05_flush_prep_done == FALSE)
     {

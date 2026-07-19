@@ -5,7 +5,8 @@ param(
     [int]$RunnerSlot = -1,
     [switch]$NoBuild,
     [int]$DelaySeconds = 5,
-    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0
+    [ValidateRange(0,256)][int]$RendererBenchmarkSamples = 0,
+    [ValidateRange(5,600)][int]$RendererBenchmarkTimeoutSeconds = 30
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -26,7 +27,8 @@ $selectedGdbPort = if (($RunnerSlot -ge 0) -and
     -RealtimePresentation `
     -ImportBattleShipFTComputer `
     -RendererProfileLevel 2 `
-    -RendererBenchmarkSamples $RendererBenchmarkSamples
+    -RendererBenchmarkSamples $RendererBenchmarkSamples `
+    -RendererBenchmarkTimeoutSeconds $RendererBenchmarkTimeoutSeconds
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

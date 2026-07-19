@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 03:56 Central
+Updated: 2026-07-19 05:21 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -125,9 +125,24 @@ the source/call sites are restored exactly. Do not promote the candidate from
 host proof or disassembly and do not request another retail run. Evidence:
 `artifacts/performance/2026-07-19_task28-armv5te-matrix.md`.
 
-Resume Task 29 at Phase A only: census current GX commands, exact owner/reset/
-flush lifetimes, identical consecutive values, side-effect classification, and
-the emitted semantic/GX stream without suppressing or streaming anything.
-Retail is mandatory before any state/MMIO/FIFO performance promotion; the user
-declined repeats, so keep later phases fail-closed unless already-valid device
-evidence applies. Preserve one-writer ownership of `src/nds/nds_renderer.c`.
+Task 29 is closed with diagnostic infrastructure only. Its profile-1,
+real-GX-only census conserves exact commands, words, owner/reset/flush
+boundaries, actual triangles, and semantic hashes across early, Whispy, and
+natural-KO windows with zero faults. Paired frame 445 is exactly `0/49,152`
+changed pixels and the independent profile-2 oracle passes. Control and alpha
+remain unpromoted opportunities because retail proof is mandatory and the user
+declined repeats; existing texture/poly shadows already remove safe repeats,
+matrix mode has none, and prior color/texcoord suppression regressed. Task-26
+segment 0 is not an immutable Task-29 run and misses the 5K actual-run gate.
+Do not add a suppression or stream template. Evidence:
+`artifacts/performance/2026-07-19_task29-gx-census.md`.
+Final profile-0 Boundary ROM/ELF are `21D789F3...` / `89C83C40...`; the ELF
+contains zero Task-29 symbols and the public sibling remains `D0632348...`.
+
+Resume with Task 24R in this quiet slot. Preserve every current baseline,
+generated-program A/B, open device pair, performance/visibility artifact, and
+file cited by an OPEN ledger decision. Delete only evidence-cleared closed or
+superseded worktrees/build/log/telemetry material, record exact before/after
+sizes and retained roots, and run the prescribed citation/hash/checker plus
+profile-0 Boundary safety gates. Then reconcile the required attack/hit A/V
+asset audit before Task 30; no user response or new retail repeat is available.

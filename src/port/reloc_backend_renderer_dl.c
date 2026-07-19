@@ -6751,6 +6751,9 @@ s32 ndsRendererAdapterCommitNativeStageDisplay(
                 (void)ndsRendererCommitNativeStageSegment(0xffffffffu);
                 return TRUE;
             }
+#if NDS_TASK29_GX_CENSUS
+            ndsRendererTask29GXSetOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
+#endif
             ndsRendererAdapterCommitNativeStageMaterials(workspace, i);
             if (ndsRendererCommitNativeStageSegment(i) == FALSE)
             {
@@ -6772,6 +6775,9 @@ void ndsRendererAdapterFinishNativeStageOwner(void)
     {
         ndsRendererFinishNativeStageOwner();
     }
+#if NDS_TASK29_GX_CENSUS
+    ndsRendererTask29GXSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
+#endif
     workspace->active = FALSE;
     workspace->next_segment = 0u;
 }

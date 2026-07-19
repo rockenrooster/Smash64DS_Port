@@ -447,6 +447,552 @@ static inline void ndsRendererBenchmarkGlTexCoord2t16(t16 s, t16 t)
 #define glTexCoord2t16 ndsRendererBenchmarkGlTexCoord2t16
 #endif
 
+#if NDS_TASK29_GX_CENSUS && NDS_RENDERER_HW_TRIANGLES
+#define NDS_TASK29_GX_MAX_WORDS 16u
+#define NDS_TASK29_GX_CENSUS_CODE \
+    __attribute__((noinline, noclone, cold, optimize("Os"), \
+                   section(".text.task29_gx_census")))
+
+volatile u32 gNdsTask29GXFrame;
+volatile u32 gNdsTask29GXCommandCount[NDS_TASK29_GX_CLASS_COUNT];
+volatile u32 gNdsTask29GXWordCount[NDS_TASK29_GX_CLASS_COUNT];
+volatile u32 gNdsTask29GXRepeatCount[NDS_TASK29_GX_CLASS_COUNT];
+volatile u32 gNdsTask29GXOwnerCommandCount
+    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
+volatile u32 gNdsTask29GXOwnerWordCount
+    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
+volatile u32 gNdsTask29GXOwnerRepeatCount
+    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
+volatile u32 gNdsTask29GXTotalCommandCount;
+volatile u32 gNdsTask29GXTotalWordCount;
+volatile u32 gNdsTask29GXTotalRepeatCount;
+volatile u32 gNdsTask29GXStreamHashA;
+volatile u32 gNdsTask29GXStreamHashB;
+volatile u32 gNdsTask29GXOwnerHashA[NDS_TASK29_GX_OWNER_COUNT];
+volatile u32 gNdsTask29GXOwnerHashB[NDS_TASK29_GX_OWNER_COUNT];
+volatile u32 gNdsTask29GXBoundaryHashA;
+volatile u32 gNdsTask29GXBoundaryHashB;
+volatile u32 gNdsTask29GXBoundaryCount;
+volatile u32 gNdsTask29GXFaultCount;
+volatile u32 gNdsTask29GXNeverSuppressMask =
+    (1u << NDS_TASK29_GX_TEXTURE_BIND) |
+    (1u << NDS_TASK29_GX_MATRIX_IDENTITY) |
+    (1u << NDS_TASK29_GX_MATRIX_LOAD4X4) |
+    (1u << NDS_TASK29_GX_MATRIX_MULT4X4) |
+    (1u << NDS_TASK29_GX_MATRIX_PUSH) |
+    (1u << NDS_TASK29_GX_MATRIX_POP) |
+    (1u << NDS_TASK29_GX_MATRIX_STORE) |
+    (1u << NDS_TASK29_GX_MATRIX_RESTORE) |
+    (1u << NDS_TASK29_GX_BEGIN) |
+    (1u << NDS_TASK29_GX_END) |
+    (1u << NDS_TASK29_GX_VERTEX16) |
+    (1u << NDS_TASK29_GX_FLUSH);
+
+static u32 sNdsTask29GXCommandCount[NDS_TASK29_GX_CLASS_COUNT];
+static u32 sNdsTask29GXWordCount[NDS_TASK29_GX_CLASS_COUNT];
+static u32 sNdsTask29GXRepeatCount[NDS_TASK29_GX_CLASS_COUNT];
+static u32 sNdsTask29GXOwnerCommandCount
+    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
+static u32 sNdsTask29GXOwnerWordCount
+    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
+static u32 sNdsTask29GXOwnerRepeatCount
+    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
+static u32 sNdsTask29GXLastWords
+    [NDS_TASK29_GX_CLASS_COUNT][NDS_TASK29_GX_MAX_WORDS];
+static u8 sNdsTask29GXLastWordCount[NDS_TASK29_GX_CLASS_COUNT];
+static u32 sNdsTask29GXLastValidMask;
+static u32 sNdsTask29GXOwnerHashA[NDS_TASK29_GX_OWNER_COUNT];
+static u32 sNdsTask29GXOwnerHashB[NDS_TASK29_GX_OWNER_COUNT];
+static u32 sNdsTask29GXTotalCommandCount;
+static u32 sNdsTask29GXTotalWordCount;
+static u32 sNdsTask29GXTotalRepeatCount;
+static u32 sNdsTask29GXStreamHashA;
+static u32 sNdsTask29GXStreamHashB;
+static u32 sNdsTask29GXBoundaryHashA;
+static u32 sNdsTask29GXBoundaryHashB;
+static u32 sNdsTask29GXBoundaryCount;
+static u32 sNdsTask29GXFaultCount;
+static u32 sNdsTask29GXOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
+static u32 sNdsTask29GXActive;
+
+static inline u32 ndsRendererTask29GXHashA(u32 hash, u32 value)
+{
+    return (hash ^ value) * 16777619u;
+}
+
+static inline u32 ndsRendererTask29GXHashB(u32 hash, u32 value)
+{
+    hash ^= value + 0x9e3779b9u + (hash << 6) + (hash >> 2);
+    return ((hash << 7) | (hash >> 25)) * 0x85ebca6bu;
+}
+
+static void NDS_TASK29_GX_CENSUS_CODE
+ndsRendererTask29GXResetWorking(void)
+{
+    u32 owner;
+
+    memset(sNdsTask29GXCommandCount, 0,
+           sizeof(sNdsTask29GXCommandCount));
+    memset(sNdsTask29GXWordCount, 0, sizeof(sNdsTask29GXWordCount));
+    memset(sNdsTask29GXRepeatCount, 0,
+           sizeof(sNdsTask29GXRepeatCount));
+    memset(sNdsTask29GXOwnerCommandCount, 0,
+           sizeof(sNdsTask29GXOwnerCommandCount));
+    memset(sNdsTask29GXOwnerWordCount, 0,
+           sizeof(sNdsTask29GXOwnerWordCount));
+    memset(sNdsTask29GXOwnerRepeatCount, 0,
+           sizeof(sNdsTask29GXOwnerRepeatCount));
+    memset(sNdsTask29GXLastWordCount, 0,
+           sizeof(sNdsTask29GXLastWordCount));
+    sNdsTask29GXLastValidMask = 0u;
+    sNdsTask29GXTotalCommandCount = 0u;
+    sNdsTask29GXTotalWordCount = 0u;
+    sNdsTask29GXTotalRepeatCount = 0u;
+    sNdsTask29GXStreamHashA = 2166136261u;
+    sNdsTask29GXStreamHashB = 0x9e3779b9u;
+    sNdsTask29GXBoundaryHashA = 2166136261u;
+    sNdsTask29GXBoundaryHashB = 0x9e3779b9u;
+    sNdsTask29GXBoundaryCount = 0u;
+    sNdsTask29GXFaultCount = 0u;
+    sNdsTask29GXOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
+    for (owner = 0u; owner < NDS_TASK29_GX_OWNER_COUNT; owner++)
+    {
+        sNdsTask29GXOwnerHashA[owner] = 2166136261u;
+        sNdsTask29GXOwnerHashB[owner] = 0x9e3779b9u;
+    }
+    sNdsTask29GXActive = TRUE;
+}
+
+static inline void ndsRendererTask29GXEnsureActive(void)
+{
+    if (sNdsTask29GXActive == FALSE)
+    {
+        ndsRendererTask29GXResetWorking();
+    }
+}
+
+static void NDS_TASK29_GX_CENSUS_CODE
+ndsRendererTask29GXRecord(
+    NDSRendererTask29GXClass command_class,
+    const u32 *words,
+    u32 word_count)
+{
+    u32 class_index = (u32)command_class;
+    u32 owner;
+    u32 word_index;
+    u32 repeat = TRUE;
+
+    ndsRendererTask29GXEnsureActive();
+    if ((class_index >= NDS_TASK29_GX_CLASS_COUNT) ||
+        (word_count > NDS_TASK29_GX_MAX_WORDS) ||
+        ((word_count != 0u) && (words == NULL)))
+    {
+        sNdsTask29GXFaultCount++;
+        return;
+    }
+    owner = (sNdsTask29GXOwner < NDS_TASK29_GX_OWNER_COUNT) ?
+        sNdsTask29GXOwner : (u32)NDS_RENDERER_PROFILE_OWNER_NONE;
+    if (((sNdsTask29GXLastValidMask & (1u << class_index)) == 0u) ||
+        (sNdsTask29GXLastWordCount[class_index] != word_count))
+    {
+        repeat = FALSE;
+    }
+    for (word_index = 0u; (word_index < word_count) && repeat; word_index++)
+    {
+        if (sNdsTask29GXLastWords[class_index][word_index] !=
+            words[word_index])
+        {
+            repeat = FALSE;
+        }
+    }
+
+    sNdsTask29GXCommandCount[class_index]++;
+    sNdsTask29GXWordCount[class_index] += word_count;
+    sNdsTask29GXOwnerCommandCount[owner][class_index]++;
+    sNdsTask29GXOwnerWordCount[owner][class_index] += word_count;
+    sNdsTask29GXTotalCommandCount++;
+    sNdsTask29GXTotalWordCount += word_count;
+    if (repeat != FALSE)
+    {
+        sNdsTask29GXRepeatCount[class_index]++;
+        sNdsTask29GXOwnerRepeatCount[owner][class_index]++;
+        sNdsTask29GXTotalRepeatCount++;
+    }
+
+    sNdsTask29GXStreamHashA = ndsRendererTask29GXHashA(
+        sNdsTask29GXStreamHashA, 0xc0000000u | class_index);
+    sNdsTask29GXStreamHashB = ndsRendererTask29GXHashB(
+        sNdsTask29GXStreamHashB, 0xc0000000u | class_index);
+    sNdsTask29GXStreamHashA = ndsRendererTask29GXHashA(
+        sNdsTask29GXStreamHashA, owner);
+    sNdsTask29GXStreamHashB = ndsRendererTask29GXHashB(
+        sNdsTask29GXStreamHashB, owner);
+    sNdsTask29GXStreamHashA = ndsRendererTask29GXHashA(
+        sNdsTask29GXStreamHashA, word_count);
+    sNdsTask29GXStreamHashB = ndsRendererTask29GXHashB(
+        sNdsTask29GXStreamHashB, word_count);
+    sNdsTask29GXOwnerHashA[owner] = ndsRendererTask29GXHashA(
+        sNdsTask29GXOwnerHashA[owner], class_index);
+    sNdsTask29GXOwnerHashB[owner] = ndsRendererTask29GXHashB(
+        sNdsTask29GXOwnerHashB[owner], class_index);
+    for (word_index = 0u; word_index < word_count; word_index++)
+    {
+        u32 word = words[word_index];
+
+        sNdsTask29GXStreamHashA = ndsRendererTask29GXHashA(
+            sNdsTask29GXStreamHashA, word);
+        sNdsTask29GXStreamHashB = ndsRendererTask29GXHashB(
+            sNdsTask29GXStreamHashB, word);
+        sNdsTask29GXOwnerHashA[owner] = ndsRendererTask29GXHashA(
+            sNdsTask29GXOwnerHashA[owner], word);
+        sNdsTask29GXOwnerHashB[owner] = ndsRendererTask29GXHashB(
+            sNdsTask29GXOwnerHashB[owner], word);
+        sNdsTask29GXLastWords[class_index][word_index] = word;
+    }
+    sNdsTask29GXLastWordCount[class_index] = (u8)word_count;
+    sNdsTask29GXLastValidMask |= 1u << class_index;
+}
+
+void NDS_TASK29_GX_CENSUS_CODE
+ndsRendererTask29GXSetOwner(NDSRendererProfileOwner owner)
+{
+    u32 owner_index = ((u32)owner < NDS_TASK29_GX_OWNER_COUNT) ?
+        (u32)owner : (u32)NDS_RENDERER_PROFILE_OWNER_NONE;
+    u32 boundary_word;
+
+    ndsRendererTask29GXEnsureActive();
+    boundary_word = 0xb0000000u | owner_index;
+    sNdsTask29GXBoundaryHashA = ndsRendererTask29GXHashA(
+        sNdsTask29GXBoundaryHashA, boundary_word);
+    sNdsTask29GXBoundaryHashB = ndsRendererTask29GXHashB(
+        sNdsTask29GXBoundaryHashB, boundary_word);
+    sNdsTask29GXStreamHashA = ndsRendererTask29GXHashA(
+        sNdsTask29GXStreamHashA, boundary_word);
+    sNdsTask29GXStreamHashB = ndsRendererTask29GXHashB(
+        sNdsTask29GXStreamHashB, boundary_word);
+    sNdsTask29GXBoundaryCount++;
+    sNdsTask29GXOwner = owner_index;
+    sNdsTask29GXLastValidMask = 0u;
+}
+
+void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXRecordFlush(u32 mode)
+{
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_FLUSH, &mode, 1u);
+    sNdsTask29GXLastValidMask = 0u;
+}
+
+void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXPublishFrame(void)
+{
+    u32 command_class;
+    u32 owner;
+
+    ndsRendererTask29GXEnsureActive();
+    gNdsTask29GXFrame = gNdsRendererProfileFrameCount;
+    for (command_class = 0u;
+         command_class < NDS_TASK29_GX_CLASS_COUNT;
+         command_class++)
+    {
+        gNdsTask29GXCommandCount[command_class] =
+            sNdsTask29GXCommandCount[command_class];
+        gNdsTask29GXWordCount[command_class] =
+            sNdsTask29GXWordCount[command_class];
+        gNdsTask29GXRepeatCount[command_class] =
+            sNdsTask29GXRepeatCount[command_class];
+        for (owner = 0u; owner < NDS_TASK29_GX_OWNER_COUNT; owner++)
+        {
+            gNdsTask29GXOwnerCommandCount[owner][command_class] =
+                sNdsTask29GXOwnerCommandCount[owner][command_class];
+            gNdsTask29GXOwnerWordCount[owner][command_class] =
+                sNdsTask29GXOwnerWordCount[owner][command_class];
+            gNdsTask29GXOwnerRepeatCount[owner][command_class] =
+                sNdsTask29GXOwnerRepeatCount[owner][command_class];
+        }
+    }
+    for (owner = 0u; owner < NDS_TASK29_GX_OWNER_COUNT; owner++)
+    {
+        gNdsTask29GXOwnerHashA[owner] = sNdsTask29GXOwnerHashA[owner];
+        gNdsTask29GXOwnerHashB[owner] = sNdsTask29GXOwnerHashB[owner];
+    }
+    gNdsTask29GXTotalCommandCount = sNdsTask29GXTotalCommandCount;
+    gNdsTask29GXTotalWordCount = sNdsTask29GXTotalWordCount;
+    gNdsTask29GXTotalRepeatCount = sNdsTask29GXTotalRepeatCount;
+    gNdsTask29GXStreamHashA = sNdsTask29GXStreamHashA;
+    gNdsTask29GXStreamHashB = sNdsTask29GXStreamHashB;
+    gNdsTask29GXBoundaryHashA = sNdsTask29GXBoundaryHashA;
+    gNdsTask29GXBoundaryHashB = sNdsTask29GXBoundaryHashB;
+    gNdsTask29GXBoundaryCount = sNdsTask29GXBoundaryCount;
+    gNdsTask29GXFaultCount = sNdsTask29GXFaultCount;
+    gNdsTask29GXNeverSuppressMask =
+        (1u << NDS_TASK29_GX_TEXTURE_BIND) |
+        (1u << NDS_TASK29_GX_MATRIX_IDENTITY) |
+        (1u << NDS_TASK29_GX_MATRIX_LOAD4X4) |
+        (1u << NDS_TASK29_GX_MATRIX_MULT4X4) |
+        (1u << NDS_TASK29_GX_MATRIX_PUSH) |
+        (1u << NDS_TASK29_GX_MATRIX_POP) |
+        (1u << NDS_TASK29_GX_MATRIX_STORE) |
+        (1u << NDS_TASK29_GX_MATRIX_RESTORE) |
+        (1u << NDS_TASK29_GX_BEGIN) |
+        (1u << NDS_TASK29_GX_END) |
+        (1u << NDS_TASK29_GX_VERTEX16) |
+        (1u << NDS_TASK29_GX_FLUSH);
+    sNdsTask29GXActive = FALSE;
+}
+
+static inline void ndsRendererTask29GlEnable(int bits)
+{
+    u32 value;
+
+    glEnable(bits);
+    value = (u32)GFX_CONTROL;
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_CONTROL, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlDisable(int bits)
+{
+    u32 value;
+
+    glDisable(bits);
+    value = (u32)GFX_CONTROL;
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_CONTROL, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlAlphaFunc(int threshold)
+{
+    u32 value = (u32)threshold;
+
+    glAlphaFunc(threshold);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_ALPHA_TEST, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlFogDensity(int index, int density)
+{
+    u32 words[2] = {(u32)index, (u32)density};
+
+    glFogDensity(index, density);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_FOG_TABLE, words, 2u);
+}
+
+static inline void ndsRendererTask29GlFogShift(int shift)
+{
+    u32 value;
+
+    glFogShift(shift);
+    value = (u32)GFX_CONTROL;
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_CONTROL, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlFogOffset(int offset)
+{
+    u32 value = (u32)offset;
+
+    glFogOffset(offset);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_FOG_OFFSET, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlFogColor(
+    u8 red, u8 green, u8 blue, u8 alpha)
+{
+    u32 value = RGB15(red, green, blue) | ((u32)alpha << 16);
+
+    glFogColor(red, green, blue, alpha);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_FOG_COLOR, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlTexParameter(int target, int param)
+{
+    u32 value;
+
+    glTexParameter(target, param);
+    value = glGetTexParameter();
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_TEXTURE_PARAM, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlBindTexture(int target, int name)
+{
+    u32 words[2];
+
+    glBindTexture(target, name);
+    words[0] = (u32)name;
+    words[1] = glGetTexParameter();
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_TEXTURE_BIND, words, 2u);
+}
+
+static inline void ndsRendererTask29GlMatrixMode(int mode)
+{
+    u32 value = (u32)mode;
+
+    glMatrixMode(mode);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_MODE, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlLoadIdentity(void)
+{
+    u32 value = 0u;
+
+    glLoadIdentity();
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_IDENTITY, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlLoadMatrix4x4(const m4x4 *matrix)
+{
+    glLoadMatrix4x4(matrix);
+    ndsRendererTask29GXRecord(
+        NDS_TASK29_GX_MATRIX_LOAD4X4, (const u32 *)matrix, 16u);
+}
+
+static inline void ndsRendererTask29GlMultMatrix4x4(const m4x4 *matrix)
+{
+    glMultMatrix4x4(matrix);
+    ndsRendererTask29GXRecord(
+        NDS_TASK29_GX_MATRIX_MULT4X4, (const u32 *)matrix, 16u);
+}
+
+static inline void ndsRendererTask29GlPushMatrix(void)
+{
+    u32 value = 0u;
+
+    glPushMatrix();
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_PUSH, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlPopMatrix(int count)
+{
+    u32 value = (u32)count;
+
+    glPopMatrix(count);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_POP, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlStoreMatrix(int index)
+{
+    u32 value = (u32)index;
+
+    glStoreMatrix(index);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_STORE, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlRestoreMatrix(int index)
+{
+    u32 value = (u32)index;
+
+    glRestoreMatrix(index);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_MATRIX_RESTORE, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlPolyFmt(u32 params)
+{
+    glPolyFmt(params);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_POLY_FORMAT, &params, 1u);
+}
+
+static inline void ndsRendererTask29GlBegin(GL_GLBEGIN_ENUM mode)
+{
+    u32 value = (u32)mode;
+
+    glBegin(mode);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_BEGIN, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlEnd(void)
+{
+    u32 value = 0u;
+
+    glEnd();
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_END, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlColor(rgb color)
+{
+    u32 value = (u32)color;
+
+    glColor(color);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlTexCoord2t16(t16 s, t16 t)
+{
+    u32 value = (u32)(u16)s | ((u32)(u16)t << 16);
+
+    glTexCoord2t16(s, t);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
+}
+
+static inline void ndsRendererTask29GlVertex3v16(v16 x, v16 y, v16 z)
+{
+    u32 words[2] = {
+        (u32)(u16)x | ((u32)(u16)y << 16),
+        (u32)(u16)z
+    };
+
+    glVertex3v16(x, y, z);
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);
+}
+
+#define glEnable ndsRendererTask29GlEnable
+#define glDisable ndsRendererTask29GlDisable
+#define glAlphaFunc ndsRendererTask29GlAlphaFunc
+#define glFogDensity ndsRendererTask29GlFogDensity
+#define glFogShift ndsRendererTask29GlFogShift
+#define glFogOffset ndsRendererTask29GlFogOffset
+#define glFogColor ndsRendererTask29GlFogColor
+#define glTexParameter ndsRendererTask29GlTexParameter
+#define glBindTexture ndsRendererTask29GlBindTexture
+#define glMatrixMode ndsRendererTask29GlMatrixMode
+#define glLoadIdentity ndsRendererTask29GlLoadIdentity
+#define glLoadMatrix4x4 ndsRendererTask29GlLoadMatrix4x4
+#define glMultMatrix4x4 ndsRendererTask29GlMultMatrix4x4
+#define glPushMatrix ndsRendererTask29GlPushMatrix
+#define glPopMatrix ndsRendererTask29GlPopMatrix
+#define glStoreMatrix ndsRendererTask29GlStoreMatrix
+#define glRestoreMatrix ndsRendererTask29GlRestoreMatrix
+#define glPolyFmt ndsRendererTask29GlPolyFmt
+#define glBegin ndsRendererTask29GlBegin
+#define glEnd ndsRendererTask29GlEnd
+#define glColor ndsRendererTask29GlColor
+#define glTexCoord2t16 ndsRendererTask29GlTexCoord2t16
+#define glVertex3v16 ndsRendererTask29GlVertex3v16
+#endif
+
+static inline void ndsRendererHardwareWriteColorWord(u32 value)
+{
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(value);
+#else
+#if NDS_TASK29_GX_CENSUS
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
+#endif
+    GFX_COLOR = value;
+#endif
+}
+
+static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
+{
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(value);
+#else
+#if NDS_TASK29_GX_CENSUS
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
+#endif
+    GFX_TEX_COORD = value;
+#endif
+}
+
+static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
+{
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(xy);
+    ndsRendererBenchmarkSinkWord(z);
+#else
+#if NDS_TASK29_GX_CENSUS
+    u32 words[2] = {xy, z};
+
+    ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);
+#endif
+    GFX_VERTEX16 = xy;
+    GFX_VERTEX16 = z;
+#endif
+}
+
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 {
@@ -15383,12 +15929,12 @@ ndsRendererNativeEmitProductionRawTexturedRun(
         const NDSNativePreparedDenseVertex *prepared =
             &sNdsNativeFighterPreparedDense[dense_id];
 
-        GFX_COLOR = prepared->packed_color;
-        GFX_TEX_COORD =
+        ndsRendererHardwareWriteColorWord(prepared->packed_color);
+        ndsRendererHardwareWriteTexCoordWord(
             (u32)(u16)prepared->s |
-            ((u32)(u16)prepared->t << 16);
-        GFX_VERTEX16 = prepared->gx_xy;
-        GFX_VERTEX16 = prepared->gx_z;
+            ((u32)(u16)prepared->t << 16));
+        ndsRendererHardwareWriteVertex16Words(
+            prepared->gx_xy, prepared->gx_z);
     }
 }
 
@@ -15408,9 +15954,9 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
         const NDSNativePreparedDenseVertex *prepared =
             &sNdsNativeFighterPreparedDense[dense_id];
 
-        GFX_COLOR = prepared->packed_color;
-        GFX_VERTEX16 = prepared->gx_xy;
-        GFX_VERTEX16 = prepared->gx_z;
+        ndsRendererHardwareWriteColorWord(prepared->packed_color);
+        ndsRendererHardwareWriteVertex16Words(
+            prepared->gx_xy, prepared->gx_z);
     }
 }
 
@@ -15456,15 +16002,15 @@ ndsRendererNativeEmitProductionCrossRun(
             glRestoreMatrix((int)palette_slot);
             active_palette_slot = palette_slot;
         }
-        GFX_COLOR = prepared->packed_color;
+        ndsRendererHardwareWriteColorWord(prepared->packed_color);
         if (textured != 0u)
         {
-            GFX_TEX_COORD =
+            ndsRendererHardwareWriteTexCoordWord(
                 (u32)(u16)prepared->s |
-                ((u32)(u16)prepared->t << 16);
+                ((u32)(u16)prepared->t << 16));
         }
-        GFX_VERTEX16 = prepared->gx_xy;
-        GFX_VERTEX16 = prepared->gx_z;
+        ndsRendererHardwareWriteVertex16Words(
+            prepared->gx_xy, prepared->gx_z);
     }
     if (active_palette_slot != current_palette_slot)
     {
@@ -15663,12 +16209,13 @@ ndsRendererNativeEmitDenseRawRun(
                 &sNdsNativeFighterPreparedDense[dense_id];
             u32 slot = vertex->cache_slot;
 
-            GFX_COLOR = state->prepared_vertex_colors[slot];
-            GFX_TEX_COORD =
+            ndsRendererHardwareWriteColorWord(
+                state->prepared_vertex_colors[slot]);
+            ndsRendererHardwareWriteTexCoordWord(
                 (u32)(u16)state->prepared_texcoord_s[slot] |
-                ((u32)(u16)state->prepared_texcoord_t[slot] << 16);
-            GFX_VERTEX16 = prepared->gx_xy;
-            GFX_VERTEX16 = prepared->gx_z;
+                ((u32)(u16)state->prepared_texcoord_t[slot] << 16));
+            ndsRendererHardwareWriteVertex16Words(
+                prepared->gx_xy, prepared->gx_z);
         }
     }
     else
@@ -15682,9 +16229,10 @@ ndsRendererNativeEmitDenseRawRun(
                 &sNdsNativeFighterPreparedDense[dense_id];
             u32 slot = vertex->cache_slot;
 
-            GFX_COLOR = state->prepared_vertex_colors[slot];
-            GFX_VERTEX16 = prepared->gx_xy;
-            GFX_VERTEX16 = prepared->gx_z;
+            ndsRendererHardwareWriteColorWord(
+                state->prepared_vertex_colors[slot]);
+            ndsRendererHardwareWriteVertex16Words(
+                prepared->gx_xy, prepared->gx_z);
         }
     }
 }
@@ -18316,29 +18864,17 @@ static void ndsRendererNativeStageAccountRun(
 
 static inline void ndsRendererNativeStageWriteColor(u32 value)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(value);
-#else
-    GFX_COLOR = value;
-#endif
+    ndsRendererHardwareWriteColorWord(value);
 }
 
 static inline void ndsRendererNativeStageWriteTexCoord(u32 value)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(value);
-#else
-    GFX_TEX_COORD = value;
-#endif
+    ndsRendererHardwareWriteTexCoordWord(value);
 }
 
-static inline void ndsRendererNativeStageWriteVertex16(u32 value)
+static inline void ndsRendererNativeStageWriteVertex16(u32 xy, u32 z)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
-    ndsRendererBenchmarkSinkWord(value);
-#else
-    GFX_VERTEX16 = value;
-#endif
+    ndsRendererHardwareWriteVertex16Words(xy, z);
 }
 
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
@@ -18620,8 +19156,7 @@ static inline void ndsRendererNativeStageEmitVertex(
             (u32)(u16)((s32)dense->x *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
             ((u32)(u16)((s32)dense->y *
-                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16));
-        ndsRendererNativeStageWriteVertex16(
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16),
             (u16)((s32)dense->z *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))));
     }
@@ -18631,8 +19166,7 @@ static inline void ndsRendererNativeStageEmitVertex(
             (u32)(u16)(ndsRendererNativeStageVertexShift(dense->x, 1u) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
             ((u32)(u16)(ndsRendererNativeStageVertexShift(dense->y, 1u) *
-                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16));
-        ndsRendererNativeStageWriteVertex16(
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16),
             (u16)(ndsRendererNativeStageVertexShift(dense->z, 1u) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))));
     }
@@ -18703,8 +19237,8 @@ static void ndsRendererNativeStageEmitNoZVertex(
             (u32)(u16)prepared->s | ((u32)(u16)prepared->t << 16));
     }
     ndsRendererNativeStageWriteVertex16(
-        (u32)(u16)(x * 16) | ((u32)(u16)(y * 16) << 16));
-    ndsRendererNativeStageWriteVertex16((u16)(z * 16));
+        (u32)(u16)(x * 16) | ((u32)(u16)(y * 16) << 16),
+        (u16)(z * 16));
 }
 
 static void ndsRendererNativeStageEmitClippedVertex(
@@ -18739,8 +19273,7 @@ static void ndsRendererNativeStageEmitClippedVertex(
         ndsRendererNativeStageWriteTexCoord(
             (u32)(u16)vertex->s | ((u32)(u16)vertex->t << 16));
     }
-    ndsRendererNativeStageWriteVertex16(0u);
-    ndsRendererNativeStageWriteVertex16(0u);
+    ndsRendererNativeStageWriteVertex16(0u, 0u);
 }
 
 static u32 __attribute__((noinline, cold, optimize("Os")))
@@ -20986,6 +21519,9 @@ u32 ndsRendererHardwareNoOracleEnabled(void)
 
 void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
 {
+#if NDS_TASK29_GX_CENSUS
+    ndsRendererTask29GXSetOwner(owner);
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     u32 mode = gNdsRendererFastRunMode;
 

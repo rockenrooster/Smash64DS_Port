@@ -5701,3 +5701,65 @@ DISPOSITION / EVIDENCE:
   artifacts/performance/2026-07-19_task28-armv5te-matrix.md
 KEEP / REWORK / REVERT: REVERT MATRIX LEAF / NO RETAINED CODE / TASK 29 NEXT
 ```
+
+## 2026-07-19 - Task 29 exact GX command/owner census
+
+```text
+IDEA ID: TASK29-EXACT-GX-CENSUS-20260719
+BOUND / IDENTITY:
+  Source 214051254a80eb9d18406d765d79f25f519a7dae. Canonical mode 163,
+  fast mode 9, live Fox, static AOT, incremental wallpaper, and retained
+  Task-26 segment 0. The census is profile-1/real-GX-only and performs no
+  suppression. Census ROM / ELF:
+    8CD572E096F33CABDB43EB720A204882C20EA6C248A9AC84C1DD14EC01BD4684
+    DCB10C9C8D56056EF1F5F0A851EF976DD13FD898583692EEBE3424FE25FE9D39
+  Compiled-out control ROM / ELF:
+    C04071BDE55DF038705B29A950917C1E8F5F943EF5116C5151CEC7DFD2C4404F
+    770672436F882B1EF3C4CEE405E5A4EB96E1DB140C92E297C365C6C5F1061685
+
+PHASE A — KEEP DIAGNOSTICS:
+  Every control, texture, matrix, geometry, and flush class is counted by
+  exact logical command and parameter words, with owner partitions, equal-
+  consecutive counts limited by owner/flush reset boundaries, dual stream
+  hashes, boundary hashes, and a fail-closed never-suppress mask. Early
+  frames 438..445 conserve 121 runs, 828 actual triangles, 202/320/306 fast
+  ownership, 7,227 commands, 14,415 words, 1,976..1,991 equal observations,
+  13 boundaries, and zero faults. Whispy conserves 844..856 actual triangles;
+  KO conserves 524, including the dynamic stage/effect residuals instead of
+  hiding them inside the fixed-owner total.
+
+PHASE B — NOT ATTEMPTED:
+  Control has 330/412 equal values and alpha test 28/36 in the early window,
+  but GX/MMIO performance promotion requires a repeatable retail result and
+  the user declined repeats. Texture parameter and polygon format are already
+  protected by the retained exact Task-8 shadow and show zero safe repeats;
+  matrix mode shows zero repeats; previously measured color/texcoord
+  suppression regressed and remains reverted. No new state shadow exists.
+
+PHASE C — STOP AT ENTRY GATE:
+  Task-26 segment 0 is a retained generated representation rather than one
+  immutable Task-29 GX span. Its five same-control phase pairs save only
+  3,424..3,616 stage P50 ticks, below the 5,000 actual-run entry gate. The
+  user's single retail observation saves 21,568 draw ticks but changes active
+  +4,288 and is explicitly non-repeatable. No immutable command template,
+  packet, copy, scanner, DMA feed, or new runtime footprint is admitted.
+
+EXACTNESS / SAFETY:
+  Instrumented versus compiled-out frame 445 is 0/49,152 changed pixels,
+  mean delta 0.00, overlap 100%. The independent profile-2 oracle passes all
+  828 semantic events and exact 202/320/306 provenance with zero overflow.
+  All census windows retain zero fallback/fence faults and one flush; lab
+  reserve is 174,864 bytes. Final profile-0 Boundary ROM / ELF are
+  21D789F3439FB2223C7F0F4F097B5A2ABD9652F2BDE4A6648B1A6808C404EEC1 /
+  89C83C403E59365BC938A2DF5745C506EE66F63DAB8AF772C93440EC5CF1C355;
+  the ELF contains zero Task-29 symbols. Keep the owner-conservation verifier,
+  runner-slot GDB-port isolation repair, and forensic timeout forwarding.
+
+EVIDENCE:
+  artifacts/performance/2026-07-19_task29-gx-census.md
+  artifacts/performance/2026-07-19_task29-gx-census-early.json
+  artifacts/performance/2026-07-19_task29-gx-census-whispy.json
+  artifacts/performance/2026-07-19_task29-gx-census-ko.json
+  artifacts/performance/2026-07-19_task29-control-early.json
+KEEP / REWORK / REVERT: KEEP PHASE-A DIAGNOSTICS / NO PHASE-B SHADOW / NO PHASE-C STREAM / TASK 24R NEXT
+```

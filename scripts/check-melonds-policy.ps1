@@ -95,6 +95,14 @@ try {
 Assert-Policy $outsideRejected `
     'An external melonDS path escaped the repo-local executable guard.'
 
+$fastRawBenchmark = Get-Content -LiteralPath (
+    Join-Path $Root 'scripts\benchmark-renderer-fast-raw.ps1') -Raw
+Assert-Policy ($fastRawBenchmark -match
+    '(?s)\$selectedGdbPort\s*=\s*if\s*\(\(\$RunnerSlot\s*-ge\s*0\).*?' +
+    'Get-MelonDSRunnerPort\s+-RunnerSlot\s+\$RunnerSlot\s+-Cpu\s+ARM9.*?' +
+    '-GdbPort\s+\$selectedGdbPort') `
+    'Fast-raw benchmark no longer preserves runner-slot GDB port isolation.'
+
 $launchScripts = @(Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
     -Filter '*.ps1' -File | Where-Object {
         (Get-Content -LiteralPath $_.FullName -Raw).Contains('Start-Process') -and

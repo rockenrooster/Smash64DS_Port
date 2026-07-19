@@ -10,6 +10,7 @@ param(
     [switch]$RendererM2DetailedLedger,
     [switch]$RendererM3Phase0Profile,
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
+    [switch]$Task29GXCensus,
     [switch]$Task20StackProfile,
     [switch]$Task22WallpaperRunLab,
     [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
@@ -38,6 +39,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'lib\melonds.ps1')
+$selectedGdbPort = if (($RunnerSlot -ge 0) -and
+    -not $PSBoundParameters.ContainsKey('GdbPort')) {
+    Get-MelonDSRunnerPort -RunnerSlot $RunnerSlot -Cpu ARM9
+} else {
+    $GdbPort
+}
 $nativeStageGeneratedSegment0Selected =
     $PSBoundParameters.ContainsKey('NativeStageGeneratedSegment0Enable')
 if (($FastRunMode -eq 9) -and ($RendererProfileLevel -ne 1)) {
@@ -70,6 +78,10 @@ if ($RendererM3Phase0Profile -and
 if (($NativeStageGeneratedSegment0Enable -eq 1) -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
     throw 'NativeStageGeneratedSegment0Enable=1 requires fast-run mode 9 and renderer profile 1.'
+}
+if ($Task29GXCensus -and
+    (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
+    throw 'Task29GXCensus requires fast-run mode 9 and renderer profile 1.'
 }
 if (($RendererScreenSpaceCensusMode -eq 1) -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
@@ -106,6 +118,8 @@ $build = if ($Task20StackProfile) {
     'builds/build-task20-reconcile'
 } elseif ($Task22WallpaperRunLab) {
     "builds/build-task22-wallpaper-profile${RendererProfileLevel}-lab"
+} elseif ($Task29GXCensus) {
+    'builds/build-task29-gx-census-lab'
 } elseif ($nativeStageGeneratedSegment0Selected) {
     "builds/build-task26-segment0-e${NativeStageGeneratedSegment0Enable}-p$([int]$RendererM3Phase0Profile.IsPresent)-lab"
 } elseif ($RendererScreenSpaceCensusMode -eq 1) {
@@ -137,7 +151,7 @@ $build = if ($Task20StackProfile) {
 & (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') `
     -MelonDS $MelonDS `
     -Gdb $Gdb `
-    -GdbPort $GdbPort `
+    -GdbPort $selectedGdbPort `
     -RunnerSlot $RunnerSlot `
     -NoBuild:$NoBuild `
     -DelaySeconds $DelaySeconds `
@@ -150,6 +164,7 @@ $build = if ($Task20StackProfile) {
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
     -RendererM3Phase0Profile:$RendererM3Phase0Profile `
     -NativeStageGeneratedSegment0Enable $NativeStageGeneratedSegment0Enable `
+    -Task29GXCensus:$Task29GXCensus `
     -Task20StackProfileMode ([int]$Task20StackProfile.IsPresent) `
     -Task22WallpaperRunLab:$Task22WallpaperRunLab `
     -RendererScreenSpaceCensusMode $RendererScreenSpaceCensusMode `
@@ -182,7 +197,7 @@ $build = if ($Task20StackProfile) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode generated segment0 $NativeStageGeneratedSegment0Enable static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode task20 startup stack census $([int]$Task20StackProfile.IsPresent) task22 run census $([int]$Task22WallpaperRunLab.IsPresent) phase matrix $([int]$PhaseMatrixMode.IsPresent) lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
+    -Label "battle_playable fast raw mode $FastRunMode generated segment0 $NativeStageGeneratedSegment0Enable task29 GX census $([int]$Task29GXCensus.IsPresent) static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode task20 startup stack census $([int]$Task20StackProfile.IsPresent) task22 run census $([int]$Task22WallpaperRunLab.IsPresent) phase matrix $([int]$PhaseMatrixMode.IsPresent) lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

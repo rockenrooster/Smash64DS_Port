@@ -51,6 +51,20 @@
 #error "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE must be 0 or 1"
 #endif
 
+/* Task 29's no-behavior GX census is a profile-1 lab surface only.  Shipping
+ * builds retain no counters, wrappers, or state. */
+#ifndef NDS_TASK29_GX_CENSUS
+#define NDS_TASK29_GX_CENSUS 0
+#endif
+
+#if (NDS_TASK29_GX_CENSUS != 0) && (NDS_TASK29_GX_CENSUS != 1)
+#error "NDS_TASK29_GX_CENSUS must be 0 or 1"
+#endif
+
+#if NDS_TASK29_GX_CENSUS && (NDS_RENDERER_PROFILE_LEVEL != 1)
+#error "NDS_TASK29_GX_CENSUS requires profile level 1"
+#endif
+
 #ifndef NDS_RENDERER_SCREEN_SPACE_CENSUS
 #define NDS_RENDERER_SCREEN_SPACE_CENSUS 0
 #endif
@@ -100,6 +114,11 @@
 
 #ifndef NDS_RENDERER_BENCHMARK_MODE
 #define NDS_RENDERER_BENCHMARK_MODE NDS_RENDERER_BENCHMARK_NONE
+#endif
+
+#if NDS_TASK29_GX_CENSUS && \
+    (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE)
+#error "NDS_TASK29_GX_CENSUS requires real GX emission"
 #endif
 
 #if (NDS_RENDERER_BENCHMARK_MODE < NDS_RENDERER_BENCHMARK_NONE) || \
@@ -228,6 +247,65 @@ typedef enum NDSRendererProfileOwner
     NDS_RENDERER_PROFILE_OWNER_COUNT,
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
 } NDSRendererProfileOwner;
+
+#if NDS_TASK29_GX_CENSUS
+typedef enum NDSRendererTask29GXClass
+{
+    NDS_TASK29_GX_CONTROL = 0,
+    NDS_TASK29_GX_ALPHA_TEST,
+    NDS_TASK29_GX_FOG_TABLE,
+    NDS_TASK29_GX_FOG_OFFSET,
+    NDS_TASK29_GX_FOG_COLOR,
+    NDS_TASK29_GX_TEXTURE_PARAM,
+    NDS_TASK29_GX_TEXTURE_BIND,
+    NDS_TASK29_GX_MATRIX_MODE,
+    NDS_TASK29_GX_MATRIX_IDENTITY,
+    NDS_TASK29_GX_MATRIX_LOAD4X4,
+    NDS_TASK29_GX_MATRIX_MULT4X4,
+    NDS_TASK29_GX_MATRIX_PUSH,
+    NDS_TASK29_GX_MATRIX_POP,
+    NDS_TASK29_GX_MATRIX_STORE,
+    NDS_TASK29_GX_MATRIX_RESTORE,
+    NDS_TASK29_GX_POLY_FORMAT,
+    NDS_TASK29_GX_BEGIN,
+    NDS_TASK29_GX_END,
+    NDS_TASK29_GX_COLOR,
+    NDS_TASK29_GX_TEX_COORD,
+    NDS_TASK29_GX_VERTEX16,
+    NDS_TASK29_GX_FLUSH,
+    NDS_TASK29_GX_CLASS_COUNT
+} NDSRendererTask29GXClass;
+
+#define NDS_TASK29_GX_OWNER_COUNT \
+    (NDS_RENDERER_PROFILE_OWNER_COUNT + 1u)
+
+extern volatile u32 gNdsTask29GXFrame;
+extern volatile u32 gNdsTask29GXCommandCount[NDS_TASK29_GX_CLASS_COUNT];
+extern volatile u32 gNdsTask29GXWordCount[NDS_TASK29_GX_CLASS_COUNT];
+extern volatile u32 gNdsTask29GXRepeatCount[NDS_TASK29_GX_CLASS_COUNT];
+extern volatile u32 gNdsTask29GXOwnerCommandCount
+    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
+extern volatile u32 gNdsTask29GXOwnerWordCount
+    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
+extern volatile u32 gNdsTask29GXOwnerRepeatCount
+    [NDS_TASK29_GX_OWNER_COUNT][NDS_TASK29_GX_CLASS_COUNT];
+extern volatile u32 gNdsTask29GXTotalCommandCount;
+extern volatile u32 gNdsTask29GXTotalWordCount;
+extern volatile u32 gNdsTask29GXTotalRepeatCount;
+extern volatile u32 gNdsTask29GXStreamHashA;
+extern volatile u32 gNdsTask29GXStreamHashB;
+extern volatile u32 gNdsTask29GXOwnerHashA[NDS_TASK29_GX_OWNER_COUNT];
+extern volatile u32 gNdsTask29GXOwnerHashB[NDS_TASK29_GX_OWNER_COUNT];
+extern volatile u32 gNdsTask29GXBoundaryHashA;
+extern volatile u32 gNdsTask29GXBoundaryHashB;
+extern volatile u32 gNdsTask29GXBoundaryCount;
+extern volatile u32 gNdsTask29GXFaultCount;
+extern volatile u32 gNdsTask29GXNeverSuppressMask;
+
+void ndsRendererTask29GXRecordFlush(u32 mode);
+void ndsRendererTask29GXSetOwner(NDSRendererProfileOwner owner);
+void ndsRendererTask29GXPublishFrame(void);
+#endif
 
 #if NDS_RENDERER_SCREEN_SPACE_CENSUS
 #define NDS_RENDERER_SCREEN_SPACE_CENSUS_PART_COUNT 42u
