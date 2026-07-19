@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-19 10:13 Central
+Updated: 2026-07-19 10:32 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -24,7 +24,7 @@ Laboratory profile-1 ROMs are evidence only and never replace this filename.
 
 ## Publish lane (2026-07-19)
 
-Tasks P1 through P3 are complete. The source audit's mandatory divergence stop was
+Tasks P1 through P4 are complete. The source audit's mandatory divergence stop was
 resolved by Tyler's selected closest-base-plus-reviewed-patch path. The retained
 P2 commits are `369b6ea0b26` (publish-safe generators), `84dc33dbf49`
 (`build.ps1`, pins, five-file patch), and this documentation checkpoint
@@ -44,9 +44,21 @@ repeat both reproduce the 14,688,256-byte `C344CA8B...` ROM; missing and wrong
 ROMs fail closed, the temporary external-decomp junction cleans up, and the
 clone remains clean. Evidence: `docs/publish/PUBLISH_VERIFICATION.md`.
 
-Next: Task P4 safety bundle, evidence-aware local master-only cleanup, and public
-push from the staging repository only. No public push has occurred yet. The dev
-repository remains local and dirty user-owned files remain preserved.
+P4 rechecks both P3 gates, then verifies the 45,485,731-byte full recovery bundle
+at `435000D2...`. Eleven clean worktrees are removed only after all 50 permanent
+evidence files revalidate through the Task-24 migration manifest; the four dirty
+or special auxiliary worktrees remain untouched. All 23 non-master local branch
+tips are recorded in the bundle and log. The dev repo is now branch `master`
+only; its single no-reflog-expiry GC reduces `.git` from 3,611,206,095 to
+46,442,900 bytes. User dirt remains preserved.
+
+The one-commit staging tree is live at
+`https://github.com/rockenrooster/Smash64DS_Port`, public visibility unchanged,
+default and only branch `master`, commit `0199d8f665da1c319dddd7e66364b651d5f63f27`.
+Its remote tree exactly matches staging, contains 275 blobs, and has zero
+forbidden paths. The old README-only `main` text is archived before deletion.
+The development repo still has no remote. Full evidence and Tyler's review
+checklist: `docs/publish/PUBLISH_LOG.md`.
 
 ## Hardware reality (2026-07-18)
 
@@ -460,7 +472,7 @@ authoritative pair and selects the implementation order:
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Task 30 closed red / publish P3 green / P4 next | live tree + fresh staging repo | Retained Task-26 segment 0, Task-27 Phase-A fighter certificate, exact A/V additions, rejected performance candidates, integrated battle ROM, permanent evidence, and verified 275-file one-commit public export | no runner active; P4 starts with leak/clean-room preflight, then safety bundle before cleanup or push |
+| Integration/release | Task 30 closed red / publish P4 complete / repo live | local `master` + public one-commit staging history | Retained Task-26 segment 0, Task-27 Phase-A fighter certificate, exact A/V additions, integrated battle ROM, permanent evidence, verified recovery bundle, and byte-clean 275-file public export | no runner active; public repo defaults to its only branch `master`, while the dev repo has no remote |
 | Renderer implementation | ARM restored; Task 12 closed REVERT; Task 14 KEEP | shared integration tree | Retail hardware rejects blanket Thumb by +594,816 DRW ticks (+34.1%); its renderer hot group is device noise and reverts with that base. The renderer TU is ARM again with Task 14 intact | no runner active |
 | Gameplay + QA | Playtest review fixed / manual candidate retest pending | shared live tree / disjoint files | Down+A is source-fixed at the shared ClearAll seam. Human-P2 Fox completes all nine Down-Air callbacks and exits naturally; Mario completes the same focused route with eight live imported CPU updates. Latest then passes canonical mode 163, two-ROM publication, runtime, registry, renderer/ITCM, and visual gates. Countdown also remains fixed | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
@@ -510,7 +522,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Required FGM, attack/hit sounds, and Mario/Fox voices | Exact pack PASS / residual cue debt explicit | Audio + Gameplay | The 128,196-byte / 27-entry pack covers 21 exact runtime IDs plus six exact primary common-contact samples. Exact Mario down-bounce 303 and Fox Smash2/Smash3 373/374 improve the focused deterministic window from 22+19 to 26+15 supported/unsupported, with phase mask `0x1f`, channel mask `0xe`, max three live channels, 66 envelope steps, and 183,056-byte reserve | Keep exact retirement, pack, static/runtime fixtures, and ear-test distinction. Pitch/FX/loop/fork/composite cues remain fail-closed; never substitute a wrong sample |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | PASS / current Task 26 artifact | QA | The refreshed profile-0 lifecycle reaches Results once with 232,208 arena headroom and 65,536 resident audio bytes: 166,672 net versus the 131,072-byte floor after the exact 5,120-byte static-texture payload increase. Exact 4,084/2,042 pacing and teardown pass; stale/safety/eviction counters stay zero | Preserve the floor and recheck after every representation or resident-asset change |
-| Focused/checkpoint verification | Task 30 closed red / publish P3 green / P4 next | QA | Task 24R safety, exact A/V audit, current Boundary, strict Task-30 decision, byte-clean public export, and exact clean-room stranger-build evidence are documented. The stable-30 gate still fails independently on 1,981 long intervals and 2,457 slips | Preserve the honest performance statement; P4 may publish only after its repeated leak and clean-room preflight |
+| Focused/checkpoint verification | Task 30 closed red / publish P4 complete | QA | Task 24R safety, exact A/V audit, current Boundary, strict Task-30 decision, byte-clean export, exact stranger build, recovery bundle, local cleanup, and remote tree identity are documented. The stable-30 gate still fails independently on 1,981 long intervals and 2,457 slips | Preserve the public 13.5–15 FPS hardware statement and follow the review checklist in `docs/publish/PUBLISH_LOG.md` |
 | Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Latest capture is `2026-07-18_canonical_fast_101715-1383371-p57268.png`; its paired frame has 747/49,152 meaningful changes, 100% overlap, and all named-region/detail gates pass. Task 6 C/D, Task 8 G2, reserve repair, Task 9/16 state identity, source-light parity, both emitter splits, raw-corner cut, Down+A, and the common-contact checkpoint remain retained | Manually retest exact ROM `DADB7C96...`; automated common-contact A/V closure is focused, not global |
 
 ## Dated Gates

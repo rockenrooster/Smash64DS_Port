@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 10:13 Central
+Updated: 2026-07-19 10:32 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -183,7 +183,7 @@ stable-30-qualified release. Publish text must state the observed 13.5–15 FPS
 heavy-combat range on real hardware and must not turn the exact two-updates-per-
 presentation semantic rule into a 30 FPS claim.
 
-Publish Tasks P1 through P3 are complete. P1 audited the exact 906-file build-input
+Publish Tasks P1 through P4 are complete. P1 audited the exact 906-file build-input
 closure and stopped on real decomp divergence. Tyler selected the recommended
 closest-base-plus-patch path. P2 commits `369b6ea0b26`, `84dc33dbf49`, and the
 current documentation checkpoint add publish-safe O2R/relocData/fighter
@@ -203,9 +203,19 @@ both reproduce the 14,688,256-byte `C344CA8B...` ROM. Missing/wrong-ROM cases
 exit 1, the external-decomp junction is removed, and the final clone is clean.
 Evidence: `docs/publish/PUBLISH_VERIFICATION.md`.
 
-Next execute Task P4 in
-`docs/optimization/ClaudeFable5_Publish_Tasks_20260718_2200.md`: recheck the P3
-gates, create and verify the full safety bundle, then perform evidence-aware
-worktree/branch cleanup and publish from the staging repository only. No push
-has occurred yet. Preserve every dirty or ambiguous worktree and user-owned
-file; the dev repository is never pushed.
+P4 is live at `https://github.com/rockenrooster/Smash64DS_Port`: visibility
+remains public; default/only branch `master` points at the one-commit staging
+HEAD `0199d8f665da1c319dddd7e66364b651d5f63f27`; its 275-blob remote tree equals
+the local staging tree and has zero forbidden paths. The old `main` README is
+archived in `docs/publish/PUBLISH_LOG.md` before deletion. The development repo
+still has no remote.
+
+Local branches are `master` only. Eleven clean worktrees were removed after all
+50 worktree evidence files revalidated through the 1,745-destination Task-24
+manifest. Keep `.tura/control-task8-cut-e` and the three dirty detached `%TEMP%`
+Task-16 worktrees exactly as listed in the publication log. The complete
+recovery bundle is
+`D:\Stuff\DevFolder\_backups\smash64ds-full-20260718.bundle`, SHA-256
+`435000D2503DE30457BA2A35DA1C9AA230C7BA372835B936E1413B8630B96593`.
+No publish-lane task remains; Tyler's file-list/README/NOTICE/license review
+checklist is the final handoff.
