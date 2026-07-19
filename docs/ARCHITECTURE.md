@@ -136,8 +136,10 @@ checks, and build selector are deleted.
 ## Audio
 
 BattleShip chooses music and FGM IDs. ARM9 maps original requests to the DS audio
-backend; ARM7 owns playback/refill. Host muting never disables ROM audio state or
-counters. Source pitch, required voices, and audible mixed output remain release
+backend; ARM7 owns sample playback, while ARM9 performs the BGM file reads,
+ring-buffer refill, and cache maintenance synchronously in the update path
+(nds_audio_bgm.c fread + DC_FlushRange) — a known hardware-sensitive owner on
+flashcart media. Host muting never disables ROM audio state or counters. Source pitch, required voices, and audible mixed output remain release
 gates where listed on the P1 board.
 
 ## Memory
