@@ -152,11 +152,20 @@ A/B saves 21,568 draw ticks while loop remains in the same VBlank bucket. That
 retail observation is not a repeatability claim. Because the generated working
 set cannot be widened under the current no-repeat device constraint, controlled
 Task 26 expansion stops while the exact smaller win remains banked. Task 23R
-Phase 1 may now remeasure only residual work and may retain a cache only at
-least 20% exact complete-key hits with key cost below half the avoided work.
+Phase 1 then measured only the residual owner. Its complete 484-byte key hit
+40/40 opportunities at 832–896 ticks against an 85.4–86.3K-tick avoided upper
+bound. A same-ROM cache of only the 204 residual dense color/UV values saved
+about 13.1K preparation and 12.0K active/draw ticks with exactly 0/49,152
+changed pixels, while matrices, near transforms, state, materials, and texture
+selection stayed live. The VBlank histogram did not improve. Because this
+working-set-sensitive mechanism lacks retail falsification and the measured
+window lacked its required profile-2 sampled recompute, the cache is reverted.
+Only the compile-gated census remains; production footprint is zero.
 
 Incremental no-Z matrix transport remains reverted because it regressed. M3
-remains REWORK after the retained Task 26 segment-0 slice.
+remains REWORK after the retained Task 26 segment-0 slice. Continue with the M2
+Task 21R foundation and Task 27; do not widen M3 under the current no-repeat
+retail constraint.
 
 ## M4 — Pre-GO Texture Residency
 

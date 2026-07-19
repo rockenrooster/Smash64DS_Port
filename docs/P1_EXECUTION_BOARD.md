@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-18 23:16 Central
+Updated: 2026-07-19 00:26 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -127,6 +127,7 @@ preserved, unedited, and outside this checkpoint; the user-supplied
 | Task 24 | **C** — the already evidence-cleared worktree batch | committed manifest/evidence, worktree administration, `AGENTS.md`, ledger/board | Manifest SHA-256 `62585F0AE38C8B2ED4E0DC855DE56102B046585C69A208A6624EC0C16A8AF1BB`; 225 unique files / 20,501,076 bytes copied and 292 destinations rehashed with zero failures. Exactly 17 cleared worktrees were removed; all 15 held/dirty worktrees, every branch, builds, logs, and telemetry remain. No more cleanup until a quiet slot. |
 | Old Task 25 | Not live — completed immediately before reconciliation | historical phase-matrix evidence/tooling | Preserve as historical input only. It is not Task 25R and cannot set current priority. |
 | Task 25R | **E -> complete report-only baseline** | bounded profile-1 source-update/interval timers; profile-0 external pacing trace; phase-matrix/identity checker; evidence only | One profile-1 ROM supplies all seven detailed windows and one profile-0 sibling supplies the 4,084/2,042 lifecycle. Pixels are 0/49,152 and reserve is 166,672, but stable-30, fixed-window exactness, KO-audio cleanliness, and the post-GO texture fence fail. The same-ROM P95 ranking selects M3-first. No production executor or profile-0 symbol/layout changed. |
+| Task 23R Phase 1 | Complete census / cache **REVERT** | compile-gated residual counters and marker/checker exports only | Five passing eight-frame windows find 40/40 complete-key hits and an 832–896-tick key against an 85.4–86.3K-tick avoided upper bound. One same-ROM narrow cache saves about 13.1K residual-prepare and 12.0K active/draw ticks with exact pixels, but changes the DS working set, leaves the VBlank histogram unchanged, and lacks the required profile-2 sampled recompute and retail falsification. All cache code/data/selectors were removed; retained production footprint is zero. |
 
 During the only renderer edit, `/root/task21_23_renderer` was the sole writer of
 `src/nds/nds_renderer.c`; that lane is stopped. Focused PowerShell parsing, GBI
@@ -239,6 +240,22 @@ widen the generated working set. Task 23R Phase 1 now owns residual
 remeasurement; add no cache unless exact hits are at least 20% and key cost is
 less than half the avoided residual.
 
+Task 23R Phase 1 is now closed. Five passing synchronized windows cover
+Countdown/GO, early combat, the material transition, natural KO, and natural
+rebirth. The complete 484-byte residual key hits 40/40 opportunities and costs
+832–896 ticks, while the measured avoided upper bound is 85,376–86,272 ticks.
+A same-ROM, default-off candidate reused only the 204 residual dense color/UV
+values; all state spans, texture resolution, material progression, matrices,
+and 118 near transforms stayed live. Early-combat P50/P95 moved residual
+prepare 108,480/108,672 -> 95,360/95,616, draw
+1,406,912/1,431,040 -> 1,394,944/1,419,072, and active
+1,413,312/1,437,376 -> 1,401,312/1,425,408. Pixels are exactly
+`0/49,152`, but loop and the `3/4/4` VBlank interval row are unchanged. The
+working-set-sensitive mechanism cannot be promoted without retail
+falsification, and its measured window did not exercise the required profile-2
+sampled recompute. The cache, selector, globals, BSS, and helper code are
+removed. Keep only the compile-gated census; production footprint is zero.
+
 ## Historical pre-Task-25R phase evidence
 
 Every timed row below came from one profile-1 ROM with live Fox, production
@@ -272,9 +289,10 @@ profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 The old Task 25 matrix above remains historical. Task 25R now supplies the
 authoritative pair and selects the implementation order:
 
-1. **Selected M3 lane:** Task 23R Phase 0 and Task 26 segment 0 are complete;
-   Task 23R residual Phase 1 is next.
-2. M2 lane: Task 21R -> Task 27. Task 21C is only the compact-table
+1. **M3 lane complete at its current expansion gate:** Task 23R Phase 0,
+   Task 26 segment 0, and Task 23R residual Phase 1 are closed. The exact Task
+   26 slice remains banked; the residual cache is reverted.
+2. **Selected next M2 lane:** Task 21R -> Task 27. Task 21C is only the compact-table
    foundation for Task 27, not the completed generated fighter architecture.
 3. Disjoint lane: Task 20R -> Task 22R, with retail hardware deciding DTCM and
    direct-VRAM/DMA performance.
@@ -287,7 +305,7 @@ authoritative pair and selects the implementation order:
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Task 26 segment 0 KEEP / Task 23R Phase 1 next | live tree | Generated segment-0 program and exact 2,775-word trace, five phase A/Bs, single-sample retail observation, exact pixels, static-residency/audio lifecycle repairs, integrated battle ROM, and current terminal lifecycle | no runner active; renderer TU remains one-writer for residual remeasurement |
+| Integration/release | Task 23R Phase 1 cache REVERT / Task 21R next | live tree | Retained Task-26 segment 0, compile-gated residual census, same-ROM cache falsification, exact pixels, static-residency/audio lifecycle repairs, integrated battle ROM, and current terminal lifecycle | no runner active; renderer TU remains one-writer for the M2 lane |
 | Renderer implementation | ARM restored; Task 12 closed REVERT; Task 14 KEEP | shared integration tree | Retail hardware rejects blanket Thumb by +594,816 DRW ticks (+34.1%); its renderer hot group is device noise and reverts with that base. The renderer TU is ARM again with Task 14 intact | no runner active |
 | Gameplay + QA | Playtest review fixed / manual candidate retest pending | shared live tree / disjoint files | Down+A is source-fixed at the shared ClearAll seam. Human-P2 Fox completes all nine Down-Air callbacks and exits naturally; Mario completes the same focused route with eight live imported CPU updates. Latest then passes canonical mode 163, two-ROM publication, runtime, registry, renderer/ITCM, and visual gates. Countdown also remains fixed | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
@@ -337,7 +355,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Required FGM, attack/hit sounds, and Mario/Fox voices | Common contacts and KO lifecycle PASS / residual cue debt | Audio + Gameplay | The 121,720-byte pack retains the exact common punch/kick paths and natural `439/292/154` Mario-KO sequence. Task 26 fixed a Calico/software-owner race: an exactly completed hardware channel now retires its stale owner before reuse, while inconsistent ownership remains fail-closed. The focused automated qualification passes 21 supported starts, 17 explicit unsupported cues, phase mask `0x1f`, channel mask `0xe`, max three live channels, 59 envelope steps, zero playback/generation failure, and 187,152-byte headroom | Keep the exact retirement seam and automated channel/acoustic gate. This is not an ear test. Residual unsupported special/projectile/movement cues remain explicit fidelity debt for the existing A/V audit before Task 30; do not require another user response tonight |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | PASS / current Task 26 artifact | QA | The refreshed profile-0 lifecycle reaches Results once with 232,208 arena headroom and 65,536 resident audio bytes: 166,672 net versus the 131,072-byte floor after the exact 5,120-byte static-texture payload increase. Exact 4,084/2,042 pacing and teardown pass; stale/safety/eviction counters stay zero | Preserve the floor and recheck after every representation or resident-asset change |
-| Focused/checkpoint verification | Current Boundary PASS / Task 26 segment 0 complete | QA | Published battle candidate `757ED786...` and public ROM `D0632348...` pass the 22:57 Boundary checkpoint in 168.4 seconds with the generated-program/manifest checkers, GBI fixtures, canonical mode-163 runtime, registry, audio fixtures, and two-ROM publication. Latest capture `2026-07-18_canonical_fast_225700-0515661-p61432.png` has a normal adjacent-frame temporal delta; synchronized Task 26 A/B pixels are exactly 0/49,152 | Keep this checkpoint. Start Task 23R Phase 1 residual remeasurement. The remaining attack/hit audio-visual cue audit stays required before Task 30; no retail repeat is requested |
+| Focused/checkpoint verification | Current Boundary PASS / Task 23R Phase 1 cache reverted | QA | Published battle candidate `757ED786...` and public ROM `D0632348...` pass the 00:25 Boundary checkpoint in 165.3 seconds with the 589-field manifest, Task-26 subset, GBI fixtures, canonical mode-163 runtime, registry, audio fixtures, and two-ROM publication. The Phase-1 same-ROM top screens are exactly 0/49,152 changed pixels; no cache symbols remain in the retained tree | Keep the Task-26 checkpoint and compile-gated residual census. Start Task 21R. The remaining attack/hit audio-visual cue audit stays required before Task 30; no retail repeat is requested |
 | Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Latest capture is `2026-07-18_canonical_fast_101715-1383371-p57268.png`; its paired frame has 747/49,152 meaningful changes, 100% overlap, and all named-region/detail gates pass. Task 6 C/D, Task 8 G2, reserve repair, Task 9/16 state identity, source-light parity, both emitter splits, raw-corner cut, Down+A, and the common-contact checkpoint remain retained | Manually retest exact ROM `DADB7C96...`; automated common-contact A/V closure is focused, not global |
 
 ## Dated Gates

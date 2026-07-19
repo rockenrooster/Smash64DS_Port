@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-18 23:16 Central
+Updated: 2026-07-19 00:26 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -79,10 +79,19 @@ exactly completed Calico channel owner before reuse. The refreshed lifecycle
 passes exact `439/292/154` KO audio, all ten texture-fence counters, one
 teardown, and 166,672-byte net reserve; stable-30 pacing remains red.
 
-Start Task 23R Phase 1. Remeasure only residual work left after generated
-segment 0. A residual cache is admissible only when its complete exact key hits
-at least 20% and key computation costs less than half the avoided residual;
-otherwise close Phase 1 report-only. Do not reconstruct Task 14, Task 23R Phase
-0, or Task 26 work. `src/nds/nds_renderer.c` remains a mandatory one-writer
-surface. Evidence is
-`artifacts/performance/2026-07-18_task26-generated-segment0.md`.
+Task 23R Phase 1 is closed: keep the compile-gated residual census and **do not
+restore its cache**. Five passing windows produced 40/40 complete-key hits and
+an 832–896-tick key against an 85.4–86.3K-tick avoided upper bound. The narrow
+same-ROM candidate saved about 12K active/draw ticks with exactly 0/49,152
+changed pixels, but did not change the VBlank histogram and cannot clear its
+working-set-sensitive retail gate. It also lacked the required profile-2
+sampled recompute. All candidate code/data/selectors are removed; retained
+production footprint is zero. Evidence is
+`artifacts/performance/2026-07-18_task23r-phase1.md`.
+
+Start Task 21R on the existing Task-25R M2 owner truth. Preserve the completed
+21A census result: 16/392 exact resident hits (4.08%), so no shade/color/UV
+cache is admissible. Rebind Phase 0 consumed fields and current object/stack/
+call evidence, then take one independent 21B hot/cold/prebind cut through exact
+A/B before 21C. Do not call 21C the Task-27 generated fighter program.
+`src/nds/nds_renderer.c` remains a mandatory one-writer surface.

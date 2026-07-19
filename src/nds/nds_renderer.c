@@ -1365,6 +1365,16 @@ volatile u32 gNdsRendererM3Phase0CalibrationIntervals;
 volatile u32 gNdsRendererM3Phase0PreparedDenseCount;
 volatile u32 gNdsRendererM3Phase0NearTransformCount;
 volatile u32 gNdsRendererM3Phase0NoZMatrixCount;
+volatile u32 gNdsRendererM3ResidualPrepareTicks;
+volatile u32 gNdsRendererM3ResidualVertexTicks;
+volatile u32 gNdsRendererM3ResidualNearTicks;
+volatile u32 gNdsRendererM3ResidualKeyTicks;
+volatile u32 gNdsRendererM3ResidualKeyHitCount;
+volatile u32 gNdsRendererM3ResidualKeyMissCount;
+volatile u32 gNdsRendererM3ResidualKeyByteCount;
+volatile u32 gNdsRendererM3ResidualRunCount;
+volatile u32 gNdsRendererM3ResidualDenseCount;
+volatile u32 gNdsRendererM3ResidualNearCount;
 volatile u32 gNdsRendererM3G2TextureParamWriteCount;
 volatile u32 gNdsRendererM3G2TextureParamSkipCount;
 volatile u32 gNdsRendererM3G2MatrixModeWriteCount;
@@ -1377,6 +1387,21 @@ static inline u32 ndsRendererM3Phase0Tick(void)
     gNdsRendererM3Phase0TimerReadCount++;
     return cpuGetTiming();
 }
+
+typedef struct NDSRendererM3ResidualKey
+{
+    const void *asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
+    NDSRendererNativeMaterial materials[NDS_RENDERER_NATIVE_STAGE_MATERIAL_COUNT];
+    NDSRendererConfig config;
+    u32 topology_generation;
+    u32 topology_stamp;
+    u32 static_prepared_count;
+    u32 static_prepared_bytes;
+    u32 static_arm_count;
+} NDSRendererM3ResidualKey;
+
+static NDSRendererM3ResidualKey sNdsRendererM3ResidualKey;
+static u32 sNdsRendererM3ResidualKeyValid;
 
 static inline void ndsRendererM3Phase0FinishSpan(
     volatile u32 *bucket, u32 start)
@@ -1408,6 +1433,16 @@ static void ndsRendererM3Phase0Reset(void)
     gNdsRendererM3Phase0PreparedDenseCount = 0u;
     gNdsRendererM3Phase0NearTransformCount = 0u;
     gNdsRendererM3Phase0NoZMatrixCount = 0u;
+    gNdsRendererM3ResidualPrepareTicks = 0u;
+    gNdsRendererM3ResidualVertexTicks = 0u;
+    gNdsRendererM3ResidualNearTicks = 0u;
+    gNdsRendererM3ResidualKeyTicks = 0u;
+    gNdsRendererM3ResidualKeyHitCount = 0u;
+    gNdsRendererM3ResidualKeyMissCount = 0u;
+    gNdsRendererM3ResidualKeyByteCount = sizeof(sNdsRendererM3ResidualKey);
+    gNdsRendererM3ResidualRunCount = 0u;
+    gNdsRendererM3ResidualDenseCount = 0u;
+    gNdsRendererM3ResidualNearCount = 0u;
     gNdsRendererM3G2TextureParamWriteCount = 0u;
     gNdsRendererM3G2TextureParamSkipCount = 0u;
     gNdsRendererM3G2MatrixModeWriteCount = 0u;
@@ -1425,6 +1460,54 @@ static void ndsRendererM3Phase0Reset(void)
         gNdsRendererM3Phase0CalibrationTicks += next_tick - calibration_tick;
         calibration_tick = next_tick;
     }
+}
+
+static void ndsRendererM3MeasureResidualKey(
+    const NDSRendererNativeStageFrame *frame)
+{
+    u32 start = cpuGetTiming();
+    s32 hit = FALSE;
+
+    if ((sNdsRendererM3ResidualKeyValid != FALSE) &&
+        (sNdsRendererM3ResidualKey.topology_generation ==
+         frame->topology_generation) &&
+        (sNdsRendererM3ResidualKey.topology_stamp == frame->topology_stamp) &&
+        (sNdsRendererM3ResidualKey.static_prepared_count ==
+         gNdsRendererBattleStaticTexturePreparedCount) &&
+        (sNdsRendererM3ResidualKey.static_prepared_bytes ==
+         gNdsRendererBattleStaticTexturePreparedBytes) &&
+        (sNdsRendererM3ResidualKey.static_arm_count ==
+         gNdsRendererBattleStaticTextureArmCount) &&
+        (memcmp(sNdsRendererM3ResidualKey.asset_bases, frame->asset_bases,
+                sizeof(sNdsRendererM3ResidualKey.asset_bases)) == 0) &&
+        (memcmp(sNdsRendererM3ResidualKey.materials, frame->materials,
+                sizeof(sNdsRendererM3ResidualKey.materials)) == 0) &&
+        (memcmp(&sNdsRendererM3ResidualKey.config, frame->config,
+                sizeof(sNdsRendererM3ResidualKey.config)) == 0))
+    {
+        hit = TRUE;
+    }
+    else
+    {
+        memcpy(sNdsRendererM3ResidualKey.asset_bases, frame->asset_bases,
+               sizeof(sNdsRendererM3ResidualKey.asset_bases));
+        memcpy(sNdsRendererM3ResidualKey.materials, frame->materials,
+               sizeof(sNdsRendererM3ResidualKey.materials));
+        sNdsRendererM3ResidualKey.config = *frame->config;
+        sNdsRendererM3ResidualKey.topology_generation =
+            frame->topology_generation;
+        sNdsRendererM3ResidualKey.topology_stamp = frame->topology_stamp;
+        sNdsRendererM3ResidualKey.static_prepared_count =
+            gNdsRendererBattleStaticTexturePreparedCount;
+        sNdsRendererM3ResidualKey.static_prepared_bytes =
+            gNdsRendererBattleStaticTexturePreparedBytes;
+        sNdsRendererM3ResidualKey.static_arm_count =
+            gNdsRendererBattleStaticTextureArmCount;
+        sNdsRendererM3ResidualKeyValid = TRUE;
+    }
+    gNdsRendererM3ResidualKeyTicks = cpuGetTiming() - start;
+    gNdsRendererM3ResidualKeyHitCount = (hit != FALSE) ? 1u : 0u;
+    gNdsRendererM3ResidualKeyMissCount = (hit != FALSE) ? 0u : 1u;
 }
 #endif
 #endif
@@ -17787,6 +17870,9 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 use_texture;
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     u32 vertex_prepare_start;
+    u32 residual_vertex_ticks_start;
+    u32 residual_near_ticks_start;
+    u32 residual_near_count_start;
 #endif
 
     epoch = &sNdsNativeStageTextureEpochs[run->texture_epoch];
@@ -17862,6 +17948,9 @@ static s32 ndsRendererNativeStagePrepareRun(
         return FALSE;
     }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
+    residual_vertex_ticks_start = gNdsRendererM3Phase0VertexPrepareTicks;
+    residual_near_ticks_start = gNdsRendererM3Phase0NearTransformTicks;
+    residual_near_count_start = gNdsRendererM3Phase0NearTransformCount;
     vertex_prepare_start = ndsRendererM3Phase0Tick();
 #endif
     for (dense_offset = first_visit_offset;
@@ -17934,6 +18023,20 @@ static s32 ndsRendererNativeStagePrepareRun(
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     ndsRendererM3Phase0FinishSpan(
         &gNdsRendererM3Phase0VertexPrepareTicks, vertex_prepare_start);
+    if (run_index >= NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT)
+    {
+        gNdsRendererM3ResidualVertexTicks +=
+            gNdsRendererM3Phase0VertexPrepareTicks -
+            residual_vertex_ticks_start;
+        gNdsRendererM3ResidualNearTicks +=
+            gNdsRendererM3Phase0NearTransformTicks -
+            residual_near_ticks_start;
+        gNdsRendererM3ResidualDenseCount +=
+            first_visit_end - first_visit_offset;
+        gNdsRendererM3ResidualNearCount +=
+            gNdsRendererM3Phase0NearTransformCount -
+            residual_near_count_start;
+    }
 #endif
     if (alpha == UINT_MAX)
     {
@@ -18846,6 +18949,9 @@ s32 ndsRendererPrepareNativeStageOwner(
     {
         goto done;
     }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    ndsRendererM3MeasureResidualKey(frame);
+#endif
 
     for (segment_index = 0u;
          segment_index < NDS_NATIVE_STAGE_SEGMENT_COUNT;
@@ -18900,6 +19006,8 @@ s32 ndsRendererPrepareNativeStageOwner(
                 }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
                 {
+                    u32 residual_prepare_ticks_start =
+                        gNdsRendererM3Phase0PrepareRunTicks;
                     u32 prepare_run_start = ndsRendererM3Phase0Tick();
                     s32 prepare_run_result = ndsRendererNativeStagePrepareRun(
                         run_index, frame,
@@ -18909,6 +19017,14 @@ s32 ndsRendererPrepareNativeStageOwner(
                     ndsRendererM3Phase0FinishSpan(
                         &gNdsRendererM3Phase0PrepareRunTicks,
                         prepare_run_start);
+                    if (run_index >=
+                        NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT)
+                    {
+                        gNdsRendererM3ResidualPrepareTicks +=
+                            gNdsRendererM3Phase0PrepareRunTicks -
+                            residual_prepare_ticks_start;
+                        gNdsRendererM3ResidualRunCount++;
+                    }
                     if (prepare_run_result == FALSE)
                     {
                         goto done;
@@ -19095,6 +19211,9 @@ void ndsRendererResetNativeStageValidationCache(void)
 {
     memset(&sNdsNativeStageValidationCache, 0,
            sizeof(sNdsNativeStageValidationCache));
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    sNdsRendererM3ResidualKeyValid = FALSE;
+#endif
 }
 
 #if NDS_RENDER_ECONOMY

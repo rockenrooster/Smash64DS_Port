@@ -21350,3 +21350,16 @@ remains skipped for the requested fast iteration cadence.
   completed-channel audio-owner retirement so the natural `439/292/154` KO
   sequence plays without a generation mismatch. The refreshed lifecycle keeps
   166,672 bytes net reserve and reaches Results with one teardown.
+
+## 2026-07-19 - Closed Task 23R residual reuse report-only
+
+- Measured the post-Task-26 residual stage owner across five synchronized
+  eight-frame windows. The complete 484-byte key hit 40/40 opportunities and
+  cost 832–896 ticks against an 85.4–86.3K-tick avoided upper bound.
+- A same-ROM narrow cache of only 204 dense color/UV outputs saved about 13.1K
+  preparation and 12.0K active/draw ticks with an exact 0 / 49,152 top-screen
+  delta. It left the VBlank interval row unchanged at 3/4/4.
+- Reverted the cache because it changes the retail DS working set, no further
+  retail falsification will be collected, and its sampled window did not cover
+  the required profile-2 recompute. Retained only the compile-gated census and
+  checker/harness export; production footprint is zero.

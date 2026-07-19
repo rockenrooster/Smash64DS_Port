@@ -1162,6 +1162,7 @@ try {
                     }
                     if ($RendererM3Phase0Profile) {
                         $coarseBenchmarkCommands += 'printf "M3_PHASE0=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3Phase0PreflightTicks, gNdsRendererM3Phase0PrepareRunTicks, gNdsRendererM3Phase0VertexPrepareTicks, gNdsRendererM3Phase0NearTransformTicks, gNdsRendererM3Phase0RunTransitionTicks, gNdsRendererM3Phase0RawEmitTicks, gNdsRendererM3Phase0RangeEmitTicks, gNdsRendererM3Phase0NoZEmitTicks, gNdsRendererM3Phase0NoZMatrixTicks, gNdsRendererM3Phase0AccountingTicks, gNdsRendererM3Phase0CommitTicks, gNdsRendererM3Phase0TimerReadCount, gNdsRendererM3Phase0TimerSpanCount, gNdsRendererM3Phase0CalibrationTicks, gNdsRendererM3Phase0CalibrationIntervals, gNdsRendererM3Phase0PreparedDenseCount, gNdsRendererM3Phase0NearTransformCount, gNdsRendererM3Phase0NoZMatrixCount'
+                        $coarseBenchmarkCommands += 'printf "M3_RESIDUAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3ResidualPrepareTicks, gNdsRendererM3ResidualVertexTicks, gNdsRendererM3ResidualNearTicks, gNdsRendererM3ResidualKeyTicks, gNdsRendererM3ResidualKeyHitCount, gNdsRendererM3ResidualKeyMissCount, gNdsRendererM3ResidualKeyByteCount, gNdsRendererM3ResidualRunCount, gNdsRendererM3ResidualDenseCount, gNdsRendererM3ResidualNearCount'
                         # Debugger-only FNV-1a prepared-output stability
                         # census: no target state, cache, or reuse mechanism
                         # is added to the measured ROM.
@@ -1964,6 +1965,7 @@ try {
     $m3GeneratedSegment0TraceWordValues = @()
     $m3GeneratedSegment0TraceRunValues = @()
     $m3Phase0Benchmark = @()
+    $m3ResidualBenchmark = @()
     $m3PreparedBenchmark = @()
     $m3WhispyBenchmark = @()
     $g2StateBenchmark = @()
@@ -2018,6 +2020,7 @@ try {
             }
             if ($RendererM3Phase0Profile) {
                 $m3Phase0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_PHASE0' -FieldCount 19)
+                $m3ResidualBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_RESIDUAL' -FieldCount 11)
                 $m3PreparedBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_PREPARED' -FieldCount 15)
                 $m3WhispyBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_WHISPY' -FieldCount 5)
                 $g2StateBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'G2_STATE' -FieldCount 7)
@@ -2761,6 +2764,7 @@ try {
                 $m3GeneratedSegment0ShadowMetricSummary = ''
                 $m3GeneratedSegment0GxMetricSummary = ''
                 $m3Phase0MetricSummary = ''
+                $m3ResidualMetricSummary = ''
                 $m3PreparedMetricSummary = ''
                 $m3PreparedCounts = [ordered]@{
                     comparison = 'adjacent-within-window'
@@ -2951,6 +2955,7 @@ try {
                     $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                     $m3StageSamples = [System.Collections.Generic.List[object]]::new()
                     $m3Phase0Samples = [System.Collections.Generic.List[object]]::new()
+                    $m3ResidualSamples = [System.Collections.Generic.List[object]]::new()
                     $m3PreparedSamples = [System.Collections.Generic.List[object]]::new()
                     $m3WhispySamples = [System.Collections.Generic.List[object]]::new()
                     $phase05Samples = [System.Collections.Generic.List[object]]::new()
@@ -2999,6 +3004,7 @@ try {
                         $m3GeneratedSegment0TraceWordValues = @()
                         $m3GeneratedSegment0TraceRunValues = @()
                         $m3Phase0Samples = [System.Collections.Generic.List[object]]::new()
+                        $m3ResidualSamples = [System.Collections.Generic.List[object]]::new()
                         $m3PreparedSamples = [System.Collections.Generic.List[object]]::new()
                         $m3WhispySamples = [System.Collections.Generic.List[object]]::new()
                         $g2StateSamples = [System.Collections.Generic.List[object]]::new()
@@ -3096,6 +3102,7 @@ try {
                         }
                         if ($RendererM3Phase0Profile) {
                             Assert-Condition ($m3Phase0Benchmark.Count -eq $RendererBenchmarkSamples) "M3 Phase-0 benchmark captured $($m3Phase0Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                            Assert-Condition ($m3ResidualBenchmark.Count -eq $RendererBenchmarkSamples) "Task 23R residual benchmark captured $($m3ResidualBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($m3PreparedBenchmark.Count -eq $RendererBenchmarkSamples) "M3 prepared-output stability census captured $($m3PreparedBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($m3WhispyBenchmark.Count -eq $RendererBenchmarkSamples) "M3 Whispy source-state census captured $($m3WhispyBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($g2StateBenchmark.Count -eq $RendererBenchmarkSamples) "G2 state benchmark captured $($g2StateBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
@@ -3370,6 +3377,18 @@ try {
                                     Assert-Condition ($phase0[0] -eq $frame -and $phase0[12] -eq $expectedPhase0Counts[0] -and $phase0[13] -eq $expectedPhase0Counts[1] -and $phase0[15] -eq $expectedPhase0Counts[2] -and $phase0[16] -eq $expectedPhase0Counts[3] -and $phase0[17] -eq $expectedPhase0Counts[4] -and $phase0[18] -eq $expectedPhase0Counts[5]) "M3 Phase-0 timer/count census drifted at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
                                     Assert-Condition ($phase0[2] -ge $phase0[3] -and $phase0[3] -ge $phase0[4] -and $phase0[8] -ge $phase0[9] -and $phase0[1] -ge $phase0[2] -and $phase0[11] -ge ($phase0[5] + $phase0[6] + $phase0[7] + $phase0[8] + $phase0[10])) "M3 Phase-0 nested bucket conservation failed at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
                                     $m3Phase0Samples.Add($phase0)
+                                    $m3Residual = Get-Ints $m3ResidualBenchmark[$sampleIndex]
+                                    Assert-Condition (
+                                        $m3Residual[0] -eq $frame -and
+                                        ($m3Residual[5] + $m3Residual[6]) -eq 1 -and
+                                        $m3Residual[7] -eq 484 -and
+                                        $m3Residual[8] -eq 28 -and
+                                        $m3Residual[9] -eq 204 -and
+                                        $m3Residual[10] -eq 118 -and
+                                        $m3Residual[1] -ge $m3Residual[2] -and
+                                        $m3Residual[2] -ge $m3Residual[3]
+                                    ) "Task 23R residual key/cost census drifted at frame $frame (actual=$($m3Residual -join ','))." $gdbStdout
+                                    $m3ResidualSamples.Add($m3Residual)
                                     $g2State = Get-Ints $g2StateBenchmark[$sampleIndex]
                                     if ($PhaseMatrixMode) {
                                         $expectedG2State = if (
@@ -3883,6 +3902,12 @@ try {
                                 $phase0CalibrationPerRead = @($m3Phase0Samples | ForEach-Object { [int64]$_.Item(14) / [int64]$_.Item(15) })
                                 $phase0Last = $m3Phase0Samples[-1]
                                 $m3Phase0MetricSummary = "Renderer M3 Phase 0: samples=$RendererBenchmarkSamples preflight=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 1)) prepareRuns=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 2)) attributeExclusive=$(Get-MedianP95 $phase0AttributeExclusive) nearTransform=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 4)) prepareResidual=$(Get-MedianP95 $phase0PrepareResidual) preflightResidual=$(Get-MedianP95 $phase0PreflightResidual) beginBind=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 5)) raw=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 6)) range=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 7)) noZInclusive=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 8)) noZMatrix=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 9)) noZExclusive=$(Get-MedianP95 $phase0NoZExclusive) accounting=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 10)) commit=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 11)) commitResidual=$(Get-MedianP95 $phase0CommitResidual) timerReads/spans=$($phase0Last[12])/$($phase0Last[13]) calibrationTotal/perRead=$(Get-MedianP95 (Get-SampleFieldValues $m3Phase0Samples 14))/$(Get-MedianP95 $phase0CalibrationPerRead) counts=dense$($phase0Last[16])/near$($phase0Last[17])/matrix$($phase0Last[18])"
+                                $m3ResidualAvoided = @($m3ResidualSamples | ForEach-Object { [int64]$_[1] - [int64]$_[3] })
+                                $m3ResidualHits = [int64](($m3ResidualSamples | ForEach-Object { $_[5] } | Measure-Object -Sum).Sum)
+                                $m3ResidualMisses = [int64](($m3ResidualSamples | ForEach-Object { $_[6] } | Measure-Object -Sum).Sum)
+                                $m3ResidualOpportunities = $m3ResidualHits + $m3ResidualMisses
+                                $m3ResidualHitRate = if ($m3ResidualOpportunities -gt 0) { [Math]::Round((100.0 * $m3ResidualHits) / $m3ResidualOpportunities, 2) } else { 0.0 }
+                                $m3ResidualMetricSummary = "Renderer Task 23R residual: prepare=$(Get-MedianP95 (Get-SampleFieldValues $m3ResidualSamples 1)) vertex=$(Get-MedianP95 (Get-SampleFieldValues $m3ResidualSamples 2)) near=$(Get-MedianP95 (Get-SampleFieldValues $m3ResidualSamples 3)) avoidedUpper=$(Get-MedianP95 $m3ResidualAvoided) key=$(Get-MedianP95 (Get-SampleFieldValues $m3ResidualSamples 4)) hits/misses/rate=$m3ResidualHits/$m3ResidualMisses/$m3ResidualHitRate% keyBytes=$($m3ResidualSamples[-1][7]) counts=runs$($m3ResidualSamples[-1][8])/dense$($m3ResidualSamples[-1][9])/near$($m3ResidualSamples[-1][10])"
                                 $m3PreparedCounts = [ordered]@{
                                     comparison = 'adjacent-within-window'
                                     boundary = 'unknown'
@@ -4166,6 +4191,7 @@ try {
                                 m3GeneratedSegment0TraceRuns =
                                     @($m3GeneratedSegment0TraceRunValues)
                                 m3Phase0 = @($m3Phase0Samples)
+                                m3Residual = @($m3ResidualSamples)
                                 m3PreparedOutput = @($m3PreparedSamples)
                                 m3WhispySourceState = @($m3WhispySamples)
                                 g2State = @($g2StateSamples)
@@ -4272,6 +4298,7 @@ try {
                     if ($m3GeneratedSegment0ShadowMetricSummary) { Write-Output $m3GeneratedSegment0ShadowMetricSummary }
                     if ($m3GeneratedSegment0GxMetricSummary) { Write-Output $m3GeneratedSegment0GxMetricSummary }
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
+                    if ($m3ResidualMetricSummary) { Write-Output $m3ResidualMetricSummary }
                     if ($m3PreparedMetricSummary) { Write-Output $m3PreparedMetricSummary }
                     if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
                     if ($phase05MetricSummary) { Write-Output $phase05MetricSummary }
@@ -4778,6 +4805,7 @@ try {
                     if ($m3GeneratedSegment0ShadowMetricSummary) { Write-Output $m3GeneratedSegment0ShadowMetricSummary }
                     if ($m3GeneratedSegment0GxMetricSummary) { Write-Output $m3GeneratedSegment0GxMetricSummary }
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
+                    if ($m3ResidualMetricSummary) { Write-Output $m3ResidualMetricSummary }
                     if ($m3PreparedMetricSummary) { Write-Output $m3PreparedMetricSummary }
                     if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
                     if ($phase05MetricSummary) { Write-Output $phase05MetricSummary }

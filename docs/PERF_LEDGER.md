@@ -5354,3 +5354,68 @@ EVIDENCE:
     620BA8E56785A30A63D0FF7C094DDB42FA1B56EB9BCF39FCBC53A1BF8E7EA443
 KEEP / REWORK / REVERT: KEEP SEGMENT 0 / STOP EXPANSION / TASK 23R PHASE 1 NEXT
 ```
+
+## 2026-07-19 - Task 23R Phase 1 residual census and cache falsification
+
+```text
+IDEA ID: TASK23R-PHASE1-RESIDUAL-DENSE-CACHE-20260719
+BOUND / IDENTITY:
+  Post-Task-26 residual owner only. Five synchronized eight-frame census
+  windows use mode 163, generated segment 0, static residency, incremental
+  wallpaper, live Fox, Task 9 1/1, and Task 16 1/1/1.
+
+  Census ROM / ELF:
+    D0B6C5781135A83D8CADA939DEB1D25027CDD9B12EE3B3E8D0FF59788E6D2B18
+    7F0220052975A964067243627801BAD2E07568AC60C8294A82C7D1A3D11710FD
+  Same-ROM candidate/control ROM / ELF:
+    A1E9D574552ED004DA8E6F3D5295A7505CEFADA9BC1F45EA665FD15E47E3D77D
+    B44EC74AB267EEF14B261937ED78DDFB8EAC49E69D72C08676FAB6ECB987539A
+
+CENSUS:
+  Countdown, early, material-transition, natural-KO, and natural-rebirth
+  windows produce 40/40 hits for the collision-free 484-byte complete key.
+  Worst key P95 is 896 ticks. Residual prepare is 102,784-103,168 ticks and
+  the avoided upper bound is 85,376-86,272 ticks, so the hit/cost experiment
+  gate clears. Exact stage/cross/dense/near/matrix, Task-26 shadow, texture,
+  fallback, and ownership gates pass in all five windows.
+
+ONE NARROW SAME-ROM CANDIDATE:
+  Reuse only the 204 residual dense packed color/UV values. Keep every state
+  span, texture resolve, material progression, matrix, and all 118 near-plane
+  transforms live. Candidate markers report 8/8 hits, 204 reused values per
+  sample, and forced key mutation inject/reject/revalidate 1/1/1. The exact
+  sampled window records zero recomputes.
+
+  Metric              control P50/P95       candidate P50/P95     delta
+  residual prepare    108480/108672         95360/95616          -13120/-13056
+  residual vertex      52832/53056          39552/39872          -13280/-13184
+  stage               750112/750528        738336/738432        -11776/-12096
+  draw               1406912/1431040      1394944/1419072      -11968/-11968
+  active             1413312/1437376      1401312/1425408      -12000/-11968
+  loop               1680448/2240640      1680448/2240640           0/0
+  VBlank interval       3/4/4                3/4/4                  0/0/0
+
+  Synchronized frame 607 is exactly 0/49,152 changed native pixels, mean
+  delta 0.00, overlap 100%. The lab candidate adds 548 BSS bytes, 360 bytes
+  for two out-of-line helpers, +1,024 ROM bytes, and +6,484 ELF bytes versus
+  the census build.
+
+DECISION / NEXT:
+  REVERT CACHE / KEEP CENSUS. The exact emulator-local compute deletion is
+  real, but this code/data/record-layout change is cache-sensitive on retail
+  DS. No retail falsification will be collected, the interval histogram does
+  not improve, and the candidate window does not exercise profile-2 sampled
+  recomputation. Remove every selector, helper, global, BSS byte, and runtime
+  cache path. Retain only compile-gated census/checker/harness exports with
+  zero production footprint. Continue with Task 21R -> Task 27.
+
+EVIDENCE:
+  artifacts/performance/2026-07-18_task23r-phase1.md
+  candidate/control JSON:
+    5417D1C284495CBB010C9AB84FEC35B7D0514820FDFCFBFEC39BF548812BCD6A
+    0887E2D914C3D1053134EB2146241E2C5052CCAE70A1503B503E7AF7E561507B
+  candidate/control screenshots:
+    8DE92BDF28F28228478231E3B7BF0E04EC1F420AC2790803F199ED614927B3CA
+    DA2368F56C81476C88D0003FBC286979E3E40F3CFCC7F84A6C8862A57AEA726F
+KEEP / REWORK / REVERT: KEEP CENSUS / REVERT CACHE / TASK 21R NEXT
+```
