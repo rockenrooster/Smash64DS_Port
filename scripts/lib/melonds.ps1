@@ -320,6 +320,9 @@ function Set-MelonDSManualProfile {
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM9' -Key 'Port' -Value '3333'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM7' -Key 'BreakOnStartup' -Value 'true'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM7' -Key 'Port' -Value '3334'
+    # The ROM is DSi-hybrid (unitcode 2); DSi mode doubles the ARM9 clock and
+    # invalidates every device comparison. Force DS console mode explicitly.
+    $Text = Set-MelonDSTomlValue -Text $Text -Section 'Emu' -Key 'ConsoleType' -Value '0'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'JIT' -Key 'Enable' -Value 'false'
     $Text = Set-MelonDSTomlValue -Text $Text -Section '3D' -Key 'Renderer' -Value '1'
     $Text = Set-MelonDSTomlValue -Text $Text -Section '3D.GL' -Key 'ScaleFactor' -Value '6'
@@ -348,6 +351,9 @@ function Set-MelonDSAutomationProfile {
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM9' -Key 'Port' -Value "$GdbPort"
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM7' -Key 'BreakOnStartup' -Value 'false'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM7' -Key 'Port' -Value "$Arm7Port"
+    # Force DS console mode: the ROM is DSi-hybrid and DSi mode doubles the
+    # ARM9 clock, invalidating device comparisons.
+    $Text = Set-MelonDSTomlValue -Text $Text -Section 'Emu' -Key 'ConsoleType' -Value '0'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'JIT' -Key 'Enable' -Value 'false'
     $Text = Set-MelonDSTomlValue -Text $Text -Section '3D' -Key 'Renderer' -Value '0'
     $Text = Set-MelonDSTomlValue -Text $Text -Section '3D.GL' -Key 'ScaleFactor' -Value '1'
