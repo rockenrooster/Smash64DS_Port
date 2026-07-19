@@ -2814,6 +2814,13 @@ volatile u32 gNdsBattlePlayablePacingVBlanks;
 volatile u32 gNdsBattlePlayablePacingRestartRequested;
 volatile u32 gNdsBattlePlayablePacingPresentIntervalMin;
 volatile u32 gNdsBattlePlayablePacingPresentIntervalMax;
+/* Per-VBlank-interval presentation counts. Indices 0 and 1 are unused
+ * (impossible under the locked-2-present scheduler); 2/3/4 are populated
+ * directly and index 5 is the "5 or more VBlanks" bucket. Device A/B reports
+ * read this histogram, never min FPS, because min FPS is discontinuous across
+ * the 4->5 VBlank boundary. See AGENTS.md. */
+volatile u32 gNdsBattlePlayablePacingPresentIntervalBucket[
+    NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_COUNT];
 volatile u32 gNdsBattlePlayablePacingCadenceViolationCount;
 volatile u32 gNdsBattlePlayablePacingPhasePresentCount[
     NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];

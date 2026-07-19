@@ -32,6 +32,28 @@ uncommitted `docs/playtesting/PLAYTESTING_Review.md`,
 `docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md` changes; none
 belongs to this checkpoint.
 
+**ACTIVE PACKET — BGM-stall falsifier device run (Tyler):** prove or clear the
+synchronous ARM9 BGM refill (`nds_audio_bgm.c:278` fread + `:289`
+DC_FlushRange, in-frame via `ndsAudioBackendUpdate` at
+`taskman_seam.c:4358`) as the source of the retail 5-VBlank dips that read as
+~12 FPS. The instrument and falsifier are committed:
+
+- VBlank interval histogram on phase-HUD rows 21-22 (new AGENTS.md house rule:
+  device A/B reports must show the histogram, never min FPS).
+- BGM refill-tick last/max + `[OFF]` tag on row 22 so photos prove which ROM.
+- A ROM = `builds/build/smash64ds-battle-playable-coarse-hwtri.nds` (BGM on).
+- B ROM = `builds/build-bgm-off-hwtri/smash64ds-battle-playable-bgm-off-hwtri.nds`
+  (BGM off; `NDS_BGM_FALSIFIER_OFF=1` skips open/read/flush/play while every
+  BGM state word and counter still advances).
+
+Run the same heavy-combat minute on each, photograph HUD rows 12-22. Verdict
+fork and full contract in the P1_EXECUTION_BOARD "BGM-stall falsifier" row:
+dips vanish under B => BGM I/O confirmed, then check Calico ARM7 blkdev and
+prefer block-aligned IMA ADPCM over ring growth; dips persist => BGM cleared,
+fold into the affine re-plumb task. PERF_LEDGER row either way.
+
+---
+
 **BG-0 is now DISABLED in the published target.** Commits `e50ca43` (HUD
 rolling-average + WLP engagement row) and `0c1963f` (Makefile affine-off +
 AGENTS.md engagement rule) landed on `master`. The Makefile forces

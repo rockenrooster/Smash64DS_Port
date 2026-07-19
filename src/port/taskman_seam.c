@@ -692,6 +692,12 @@ void ndsResetStartupDiagnostics(void)
     gNdsBattlePlayablePacingRestartRequested = 0;
     gNdsBattlePlayablePacingPresentIntervalMin = 0;
     gNdsBattlePlayablePacingPresentIntervalMax = 0;
+    gNdsBattlePlayablePacingPresentIntervalBucket[0] = 0;
+    gNdsBattlePlayablePacingPresentIntervalBucket[1] = 0;
+    gNdsBattlePlayablePacingPresentIntervalBucket[2] = 0;
+    gNdsBattlePlayablePacingPresentIntervalBucket[3] = 0;
+    gNdsBattlePlayablePacingPresentIntervalBucket[4] = 0;
+    gNdsBattlePlayablePacingPresentIntervalBucket[5] = 0;
     gNdsBattlePlayablePacingCadenceViolationCount = 0;
     gNdsBattlePlayablePacingPhasePresentCount[0] = 0;
     gNdsBattlePlayablePacingPhasePresentCount[1] = 0;
@@ -4402,6 +4408,12 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     gNdsBattlePlayablePacingVBlanks = 0u;
     gNdsBattlePlayablePacingPresentIntervalMin = 0xffffffffu;
     gNdsBattlePlayablePacingPresentIntervalMax = 0u;
+    for (phase = 0u;
+         phase < NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_COUNT;
+         phase++)
+    {
+        gNdsBattlePlayablePacingPresentIntervalBucket[phase] = 0u;
+    }
     gNdsBattlePlayablePacingCadenceViolationCount = 0u;
     for (phase = 0u;
          phase < NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT;
@@ -4776,6 +4788,19 @@ static void ndsBattlePlayablePresentRealtimeFrame(void)
     if (interval > gNdsBattlePlayablePacingPresentIntervalMax)
     {
         gNdsBattlePlayablePacingPresentIntervalMax = interval;
+    }
+    /* Bucket the interval into 2/3/4/(5+) for the device A/B histogram. The
+     * locked-2-present scheduler makes 2 the floor, so anything below is
+     * defensive; anything 5 or above collapses into the 5+ bucket. */
+    {
+        u32 bucket = (interval < NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS)
+            ? interval
+            : NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS;
+
+        if (bucket >= NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS)
+        {
+            gNdsBattlePlayablePacingPresentIntervalBucket[bucket]++;
+        }
     }
     gNdsBattlePlayablePacingPhasePresentCount[phase]++;
     if (interval > NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS)

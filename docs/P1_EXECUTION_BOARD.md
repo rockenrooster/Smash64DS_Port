@@ -188,6 +188,60 @@ matches the new release config.
 
 ---
 
+## BGM-stall falsifier (2026-07-19) — device A/B pending Tyler
+
+**Goal:** prove or clear the synchronous ARM9 BGM refill (`nds_audio_bgm.c:278`
+`fread` + `:289` `DC_FlushRange`, run inside the frame via
+`ndsAudioBackendUpdate` at `taskman_seam.c:4358`, after the UPD counter closes)
+as the source of the retail 5-VBlank dips that read as ~12 FPS.
+
+**Instrument (committed):**
+- VBlank interval histogram `gNdsBattlePlayablePacingPresentIntervalBucket[6]`
+  (indices 2/3/4 + 5+ bucket) populated at `taskman_seam.c` next to Min/Max,
+  rendered on phase-HUD rows 21-22. Max interval on row 22. The new AGENTS.md
+  house rule requires the histogram on every device A/B, never min FPS.
+- BGM refill-tick last/max (`gNdsAudioBgmRefillTicksLast/Max`, profile-1 only)
+  rendered on row 22 as `BGM last/max`, with a `[OFF]` tag when the falsifier
+  ROM is running so Tyler's photo proves which ROM is which.
+
+**Falsifier (committed):**
+- New Makefile flag `NDS_BGM_FALSIFIER_OFF` (default 0, never set in a
+  published target). Under it, `ndsAudioBgmPlay` skips open/read/play while
+  preserving every BGM state word and counter; `ndsAudioBgmUpdate` then
+  short-circuits on `sNdsAudioBgmFile == NULL`, so no refill/fread/flush runs.
+- A ROM (BGM on) = existing `smash64ds-battle-playable-coarse-hwtri`
+  (profile-1, zero behavior change beyond the new HUD rows).
+  `builds/build/smash64ds-battle-playable-coarse-hwtri.nds` (14,686,208 bytes),
+  SHA-256 `CD0F0F92A2552BE926C76DBC9D401E6EA38B8E5CE2244202D6A620E59D12E234`.
+- B ROM (BGM off) = new `smash64ds-battle-playable-bgm-off-hwtri`, byte-for-byte
+  identical config except `NDS_BGM_FALSIFIER_OFF := 1`. Code diff is three
+  stubbed audio call sites far from any renderer/fighter hot path.
+  `builds/build-bgm-off-hwtri/smash64ds-battle-playable-bgm-off-hwtri.nds`
+  (14,686,208 bytes, same length — no data layout change),
+  SHA-256 `91953C0CC8CCAA49F01C011FAF5C4FBCA9F6077849365D5AFBE156A3730088DF`.
+  Hashes are distinct, confirming the flag changed the binary.
+
+**Device run (Tyler, TBD):** flash both ROMs, run the same heavy-combat minute
+on each, photograph HUD rows 12-22. Note specifically whether 5-VBlank events
+recur at ~0.743 s cadence under A and whether they vanish under B.
+
+**Verdict fork:**
+- **Dips vanish (or sharply decline) under B, and refill-tick-max spikes
+  correlate with 5-VBlank intervals under A:** BGM synchronous I/O confirmed.
+  Next step is fix design — check whether Calico already services `fread` via
+  an ARM7 blkdev path before designing anything, and prefer block-aligned IMA
+  ADPCM BGM (4x bandwidth cut, existing IMA infra) over ring growth (RAM is
+  tight; the taskman-arena OOM ledger entry is binding). Do not start the fix
+  without this verdict.
+- **Dips persist under B:** BGM cleared. Fold the histogram + refill-tick
+  findings into the affine re-plumb task's evidence; the tail source is
+  elsewhere (likely stage/fighter main-RAM streaming per the Task 10 1.50x
+  calibration).
+- Either way: append a PERF_LEDGER row with both ROM hashes, the histogram,
+  the refill-tick max, and the verdict.
+
+---
+
 ## BG-0 fast Dream Land wallpaper (2026-07-19) — HISTORICAL, superseded above
 
 **KEEP in production; retail pacing qualification pending.** The published

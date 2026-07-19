@@ -60,6 +60,11 @@ extern volatile u32 gNdsAudioBgmStreamBytesPerSecond;
 extern volatile u32 gNdsAudioBgmExpectedBytesPerSecond;
 extern volatile u32 gNdsAudioBgmLoopCount;
 extern volatile u32 gNdsAudioBgmRefillCount;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+extern volatile u32 gNdsAudioBgmRefillTicksLast;
+extern volatile u32 gNdsAudioBgmRefillTicksMax;
+#endif
+extern volatile u32 gNdsAudioBgmFalsifierOff;
 extern volatile u32 gNdsAudioBgmPlaybackPositionBytes;
 extern volatile u32 gNdsAudioBgmWritePositionBytes;
 extern volatile u32 gNdsAudioBgmPlaybackHalf;

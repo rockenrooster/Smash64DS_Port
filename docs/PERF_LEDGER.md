@@ -5515,9 +5515,44 @@ PHASE A CERTIFICATE — KEEP:
 MARIO-ONLY RUNTIME A/B — REVERT:
   Candidate ROM/ELF:
     207588F9640B4312FCD0ED08223F8AF7C3327E268668B4E704564741349F82AC
-    A6A8CCC927C442297A4199C50108068373C6817F7D940B9B6AD8016210468DF2
+    A6A8CCC927C4422974199C50108068373C6817F7D940B9B6AD8016210468DF2
   Complete current preflight and live material/light/texture preparation ran
   before GX; the generated program owned Mario only and Fox remained control.
+
+## 2026-07-19 - BGM-stall falsifier setup (device A/B pending Tyler)
+
+```text
+IDEA ID: BGM-STALL-FALSIFIER-20260719
+GOAL: prove or clear synchronous ARM9 BGM refill (nds_audio_bgm.c:278 fread +
+      :289 DC_FlushRange, in-frame via ndsAudioBackendUpdate at
+      taskman_seam.c:4358 after the UPD counter closes) as the source of the
+      retail 5-VBlank dips that read as ~12 FPS.
+INSTRUMENT (committed, profile-1 only):
+  - gNdsBattlePlayablePacingPresentIntervalBucket[6] populated at
+    taskman_seam.c next to Min/Max; indices 2/3/4 + 5+ bucket.
+  - HUD rows 21-22: VBI 2:n 3:n 4:n / 5+:n max:n BGM last/max [OFF]
+  - gNdsAudioBgmRefillTicksLast/Max around ndsAudioBgmRefillHalf.
+FALSIFIER (committed):
+  - NDS_BGM_FALSIFIER_OFF flag (default 0, never in a published target).
+    Under it ndsAudioBgmPlay skips open/read/play but keeps every BGM state
+    word and counter; ndsAudioBgmUpdate short-circuits on sNdsAudioBgmFile ==
+    NULL, so no refill/fread/flush runs.
+A ROM (BGM on, profile-1 coarse-hwtri):
+  builds/build/smash64ds-battle-playable-coarse-hwtri.nds
+  14,686,208 bytes
+  CD0F0F92A2552BE926C76DBC9D401E6EA38B8E5CE2244202D6A620E59D12E234
+B ROM (BGM off, profile-1 bgm-off-hwtri):
+  builds/build-bgm-off-hwtri/smash64ds-battle-playable-bgm-off-hwtri.nds
+  14,686,208 bytes (same length; no data layout change)
+  91953C0CC8CCAA49F01C011FAF5C4FBCA9F6077849365D5AFBE156A3730088DF
+  Distinct hashes confirm the flag changed the binary.
+VERDICT: PENDING Tyler device run (same heavy-combat minute on each, photograph
+  HUD rows 12-22).
+  - Dips vanish under B AND refill-tick-max spikes correlate with 5-VBlank
+    intervals under A => BGM I/O confirmed; then check Calico ARM7 blkdev,
+    prefer block-aligned IMA ADPCM over ring growth.
+  - Dips persist under B => BGM cleared; fold into affine re-plumb evidence.
+```
   A one-time 106-event validator failed before GX and no post-GX fallback
   existed. ITCM remained 28,808/32,768 with 3,960 free.
 

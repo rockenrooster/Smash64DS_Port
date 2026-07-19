@@ -178,6 +178,12 @@
 #define NDS_FIGHTER_BATTLE_PLAYABLE_PASS 0x42504c59u
 #define NDS_BATTLE_PLAYABLE_PACING_PASS 0x42505443u
 #define NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT 5u
+/* Interval histogram: indices 2/3/4 are the 2/3/4-VBlank buckets; index 5 is
+ * the "5 or more VBlanks" bucket. Indices 0/1 are unused (impossible under the
+ * locked-2-present scheduler) but retained so array index == VBlank count for
+ * the in-range buckets. */
+#define NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_COUNT 6u
+#define NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS 5u
 #define NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNTDOWN 0u
 #define NDS_BATTLE_PLAYABLE_PACING_PHASE_EARLY_COMBAT 1u
 #define NDS_BATTLE_PLAYABLE_PACING_PHASE_LATE_COMBAT 2u
@@ -3956,6 +3962,8 @@ extern volatile u32 gNdsBattlePlayablePacingVBlanks;
 extern volatile u32 gNdsBattlePlayablePacingRestartRequested;
 extern volatile u32 gNdsBattlePlayablePacingPresentIntervalMin;
 extern volatile u32 gNdsBattlePlayablePacingPresentIntervalMax;
+extern volatile u32 gNdsBattlePlayablePacingPresentIntervalBucket[
+    NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_COUNT];
 extern volatile u32 gNdsBattlePlayablePacingCadenceViolationCount;
 extern volatile u32 gNdsBattlePlayablePacingPhasePresentCount[
     NDS_BATTLE_PLAYABLE_PACING_PHASE_COUNT];

@@ -53,6 +53,10 @@ NDS_RENDER_ECONOMY_OWNER_MASK ?= 32
 NDS_RENDERER_BENCHMARK_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
 NDS_FAST_WALLPAPER_AFFINE ?= 0
+# Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
+# open/read/flush/play while preserving all BGM state/counters so the rest of
+# the system believes BGM is active. Never set in a published target.
+NDS_BGM_FALSIFIER_OFF ?= 0
 NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT ?= 0
 NDS_IFCOMMON_HYBRID_OAM ?= 0
 NDS_DEBUG_HUD ?= 1
@@ -159,6 +163,22 @@ override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 8
+endif
+ifeq ($(TARGET),smash64ds-battle-playable-bgm-off-hwtri)
+# BGM-stall falsifier B ROM: byte-for-byte identical to smash64ds-battle-playable-
+# coarse-hwtri except NDS_BGM_FALSIFIER_OFF=1. BGM open/read/flush/play become
+# no-ops while every BGM state word and counter still advances, so the rest of
+# the system believes BGM is active. Run both ROMs through the same heavy-combat
+# minute on device; if the 5-VBlank dips vanish under B, synchronous BGM I/O is
+# the tail source. Never publish this target.
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 1
+override NDS_RENDERER_FAST_RUN_DEFAULT := 8
+override NDS_BGM_FALSIFIER_OFF := 1
 endif
 ifeq ($(TARGET),smash64ds-task10-hardware-calibration)
 # Standalone lab payload: it boots from main before any game or harness setup.
@@ -960,6 +980,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
 		echo '#define NDS_FAST_WALLPAPER_AFFINE $(NDS_FAST_WALLPAPER_AFFINE)'; \
+		echo '#define NDS_BGM_FALSIFIER_OFF $(NDS_BGM_FALSIFIER_OFF)'; \
 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \

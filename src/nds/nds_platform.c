@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <nds/nds_boot.h>
+#include <nds/nds_audio_bgm.h>
 #include <nds/nds_controller.h>
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
@@ -2011,6 +2012,8 @@ static void ndsPlatformRenderBattleFpsHud(void)
         ndsPlatformPrintDebugLine(18u, "CMT        --");
 #endif
         ndsPlatformPrintDebugLine(19u, "SLIP        0");
+        ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
+        ndsPlatformPrintDebugLine(22u, "5+  --  max --  BGM --/--");
         ndsPlatformPrintDebugLine(23u, "GIT %s", NDS_TASK10_GIT_SHORT);
 #endif
         return;
@@ -2097,6 +2100,27 @@ static void ndsPlatformRenderBattleFpsHud(void)
                         sBattlePhaseHudLastSlipCount));
     sBattlePhaseHudLastSlipCount =
         gNdsBattlePlayablePacingCadenceViolationCount;
+    /* Presentation-interval histogram, cumulative since HUD reset. Device A/B
+     * reports read this, never min FPS, because one frame crossing the 4->5
+     * VBlank boundary reads as 12 FPS while the histogram stays continuous. */
+    ndsPlatformPrintDebugLine(
+        21u, "VBI 2:%-5lu 3:%-5lu 4:%-5lu",
+        (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[2u],
+        (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[3u],
+        (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[4u]);
+    ndsPlatformPrintDebugLine(
+        22u, "5+:%-5lu max:%lu BGM %lu/%lu%s",
+        (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[
+            NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS],
+        (unsigned long)gNdsBattlePlayablePacingPresentIntervalMax,
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        (unsigned long)gNdsAudioBgmRefillTicksLast,
+        (unsigned long)gNdsAudioBgmRefillTicksMax,
+#else
+        0ul,
+        0ul,
+#endif
+        (gNdsAudioBgmFalsifierOff != 0u) ? " [OFF]" : "");
 #endif
 
     /* sm64-nds also dedicates the lower console to FPS. Keep this port's

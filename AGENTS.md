@@ -42,6 +42,10 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 - Performance features must prove ENGAGEMENT on retail hardware (a counter, HUD
   row, or device photo), not only a melonDS win. A feature that silently
   degrades, falls back, or disables itself on device may not ship enabled.
+- Device A/B reports must show the 2/3/4/5+ VBlank-interval histogram and the
+  max interval, never min FPS or a half-second average. Min FPS is
+  discontinuous: one frame crossing the 4->5 VBlank boundary reads as ~12 FPS
+  while the histogram stays continuous and is the actual pacing signal.
 - Run `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` after verified progress as
   the final project command. Run nothing after it.
 

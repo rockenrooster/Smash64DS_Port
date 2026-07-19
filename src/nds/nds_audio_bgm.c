@@ -79,6 +79,19 @@ volatile u32 gNdsAudioBgmStreamBytesPerSecond;
 volatile u32 gNdsAudioBgmExpectedBytesPerSecond;
 volatile u32 gNdsAudioBgmLoopCount;
 volatile u32 gNdsAudioBgmRefillCount;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+/* Last/max cpuGetTiming() delta around a BGM half-ring refill. Profile-1 only;
+ * the published profile-0 ROM never declares or touches these. */
+volatile u32 gNdsAudioBgmRefillTicksLast;
+volatile u32 gNdsAudioBgmRefillTicksMax;
+#endif
+#if NDS_BGM_FALSIFIER_OFF
+/* Compile-time label so the HUD can prove which A/B ROM is running. Always 0
+ * in any build that did not set NDS_BGM_FALSIFIER_OFF=1. */
+volatile u32 gNdsAudioBgmFalsifierOff = 1u;
+#else
+volatile u32 gNdsAudioBgmFalsifierOff;
+#endif
 volatile u32 gNdsAudioBgmPlaybackPositionBytes;
 volatile u32 gNdsAudioBgmWritePositionBytes;
 volatile u32 gNdsAudioBgmPlaybackHalf;
@@ -343,6 +356,9 @@ static void ndsAudioBgmUpdateRateMarkers(void)
 static s32 ndsAudioBgmRefillHalf(u32 write_half, u32 playback_half)
 {
     u32 write_pos = write_half * NDS_AUDIO_BGM_HALF_BYTES;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 refill_start = cpuGetTiming();
+#endif
 
     gNdsAudioBgmPlaybackHalf = playback_half;
     gNdsAudioBgmWriteHalf = write_half;
@@ -356,6 +372,20 @@ static s32 ndsAudioBgmRefillHalf(u32 write_half, u32 playback_half)
     {
         return FALSE;
     }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    /* Measure the half-ring refill cost (fread + DC_FlushRange inside
+     * ndsAudioBgmReadInto). Device A/B correlation of these ticks against
+     * 5-VBlank presentation intervals is the falsifier's decisive evidence. */
+    {
+        u32 refill_dt = cpuGetTiming() - refill_start;
+
+        gNdsAudioBgmRefillTicksLast = refill_dt;
+        if (refill_dt > gNdsAudioBgmRefillTicksMax)
+        {
+            gNdsAudioBgmRefillTicksMax = refill_dt;
+        }
+    }
+#endif
     gNdsAudioBgmRefillCount++;
     gNdsAudioBgmChunkPlayCount++;
     return TRUE;
@@ -579,6 +609,15 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
 
     soundEnable();
 
+#if NDS_BGM_FALSIFIER_OFF
+    /* Falsifier B path: skip open/read/play so no storage I/O or cache flush
+     * runs, but still mark BGM active so the rest of the system (and every
+     * BGM counter above) believes playback is running. ndsAudioBgmUpdate then
+     * short-circuits on sNdsAudioBgmFile == NULL, so no refill work happens. */
+    (void)ndsAudioBgmOpenFile;
+    (void)ndsAudioBgmReadInto;
+    (void)ndsAudioBgmPlayRing;
+#else
     if ((ndsAudioBgmOpenFile() == FALSE) ||
         (ndsAudioBgmReadInto(sNdsAudioBgmRing,
                              NDS_AUDIO_BGM_CHUNK_BYTES) == FALSE))
@@ -592,6 +631,7 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
         ndsAudioBgmFailPlayback();
         return;
     }
+#endif
     gNdsAudioBgmPlaying = 1;
     gNdsAudioBgmMask |= 1u << 0;
     gNdsAudioBgmResult = NDS_AUDIO_BGM_PASS;
