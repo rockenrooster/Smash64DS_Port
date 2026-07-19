@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 07:10 Central
+Updated: 2026-07-19 09:27 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -183,8 +183,20 @@ stable-30-qualified release. Publish text must state the observed 13.5–15 FPS
 heavy-combat range on real hardware and must not turn the exact two-updates-per-
 presentation semantic rule into a 30 FPS claim.
 
-Next execute `docs/optimization/ClaudeFable5_Publish_Tasks_20260718_2200.md`
-strictly in order, beginning with read/trace-only Task P1. Preserve every
-existing dirty file, branch, worktree, and ROM-derived byte. The publish lane
-uses an allowlist and a fresh staging history; the dev repository is never
-pushed.
+Publish Tasks P1 and P2 are complete. P1 audited the exact 906-file build-input
+closure and stopped on real decomp divergence. Tyler selected the recommended
+closest-base-plus-patch path. P2 commits `369b6ea0b26`, `84dc33dbf49`, and the
+current documentation checkpoint add publish-safe O2R/relocData/fighter
+regeneration, the pinned five-file source delivery, the one-command
+`build.ps1`, and the verified 272-file P3 input allowlist. G1 has zero
+differences across 2,159 O2R files,
+3,130 relocData files, and 16 derived outputs; G2/G3 reproduce the exact
+14,688,256-byte `C344CA8B...` ROM, including a complete idempotent rerun. The
+requested DevFast sanity passes.
+
+Next execute Task P3 in
+`docs/optimization/ClaudeFable5_Publish_Tasks_20260718_2200.md`: construct the
+public export only from `docs/publish/publish_manifest.json`, then rehearse the
+stranger build from that export. Preserve every existing dirty file, branch,
+worktree, and ROM-derived byte. The publish lane uses an allowlist and a fresh
+staging history; the dev repository is never pushed.

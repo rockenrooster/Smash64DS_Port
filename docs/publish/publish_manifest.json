@@ -8184,8 +8184,7 @@
   "embedded_data_audit": {
     "content_files": [
       "src/nds/nds_native_stage_owner.generated.inc",
-      "src/nds/nds_native_fighter_owner.generated.inc",
-      "scripts/generate_nds_native_owners.py"
+      "src/nds/nds_native_fighter_owner.generated.inc"
     ],
     "initialized_symbols_at_least_65536_bytes": 0,
     "metadata_files": [
@@ -8206,32 +8205,49 @@
       "cmake --build \"build\\us\" --config Release --target ExtractAssets"
     ],
     "o2r_archive_output": "<build>/extracted/BattleShip.o2r",
-    "o2r_directory_materializer": null,
-    "relocdata_command": "make extract VERSION=us",
+    "o2r_directory_materializer": "build.ps1 via System.IO.Compression.ZipFile; exactly 2159 files",
+    "relocdata_command": "pinned tools/splat/split.py, then scripts/extract-battleship-relocdata.py --version us",
+    "relocdata_upstream_command": "make extract VERSION=us (upstream rejects native Windows)",
     "relocdata_same_pipeline_as_torch": false,
     "torch_equivalent": "torch o2r baserom.us.z64 -s <BattleShip-source> -d <build>/extracted"
   },
-  "generated_utc": "2026-07-19T12:22:27.651478+00:00",
-  "head": "c82519df89a4ab593d12610ce9cdafe2ea009057",
+  "generated_utc": "2026-07-19T14:14:48.9285823Z",
+  "head": "84dc33dbf4957d88b644f24af5980ff50c35d1b6",
   "license": {
     "battleship": "MIT for port-specific source",
     "decomp": "no explicit upstream license; BattleShip MIT does not cover it",
     "required_notice": "Copyright (c) 2026 JRickey and contributors"
   },
-  "p2_gap_list": [
-    "blocking source-delivery choice: filtered DECOMP-SOURCE vendor or exact base-plus-patch",
-    "remove embedded profile content from generate_nds_native_owners.py",
-    "materialize and byte-verify unpacked BattleShip_o2r directory",
-    "run and qualify separate decomp make extract VERSION=us for relocData",
-    "regenerate native stage and fighter content includes before make",
-    "refresh manifest and final allowlist after P2 changes"
-  ],
+  "p2_gap_list": [],
+  "p2_verification": {
+    "g1": {
+      "derived_output_differences": 0,
+      "derived_outputs_compared": 16,
+      "o2r_differences": 0,
+      "o2r_files": 2159,
+      "relocdata_differences": 0,
+      "relocdata_files": 3130,
+      "verdict": "PASS"
+    },
+    "g2": {
+      "bytes": 14688256,
+      "sha256": "c344ca8b89903a35678a6dc4a849f217b690cbce16841fac47974626899eb9df",
+      "verdict": "PASS"
+    },
+    "g3": {
+      "idempotent_rerun": "PASS",
+      "missing_prerequisite": "PASS",
+      "missing_rom": "PASS",
+      "wrong_hash_rom": "PASS"
+    },
+    "requested_sanity": ".\\scripts\\verify-dev-fast.ps1 -Build: PASS"
+  },
   "reference_rom": {
     "bytes": 14688256,
     "detached_byte_identical": true,
     "detached_last_write_utc": "2026-07-19T12:03:22.5340348Z",
     "path": "smash64ds-battle-playable-hwtri.nds",
-    "root_last_write_utc": "2026-07-19T11:38:36.3036964Z",
+    "root_last_write_utc": "2026-07-19T14:13:12.0966082Z",
     "sha256": "c344ca8b89903a35678a6dc4a849f217b690cbce16841fac47974626899eb9df",
     "stale_prompt_expectation": {
       "bytes": 14669824,
@@ -8295,16 +8311,26 @@
       "publish_safe": true
     },
     {
-      "gap": "derive embedded export from user-ROM inputs before shipping",
       "inputs": [
         "Mario/Fox O2R resources",
-        "embedded base64 profile export"
+        "typed decomp declarations"
       ],
       "outputs": [
         "src/nds/nds_native_fighter_owner.generated.inc"
       ],
       "path": "scripts/generate_nds_native_owners.py",
-      "publish_safe": false
+      "publish_safe": true
+    },
+    {
+      "inputs": [
+        "Splat-generated assets/us/relocData.bin",
+        "pinned relocFileDescriptions.us.txt"
+      ],
+      "outputs": [
+        "decomp assets/us/relocData directory (3130 files)"
+      ],
+      "path": "scripts/extract-battleship-relocdata.py",
+      "publish_safe": true
     }
   ],
   "rom_derived_inventory": {
@@ -8320,17 +8346,9 @@
       {
         "bucket": "ROM-DERIVED",
         "bytes": 344835,
-        "generator": "scripts/generate_nds_native_owners.py (currently content-bearing)",
+        "generator": "scripts/generate_nds_native_owners.py",
         "path": "src/nds/nds_native_fighter_owner.generated.inc",
         "sha256": "dddcfcde85cd3df82157be98ba803d2717bd0c4c11aa7e6ad091c99143f94b0d",
-        "shipping": false
-      },
-      {
-        "bucket": "ROM-DERIVED",
-        "bytes": 117506,
-        "path": "scripts/generate_nds_native_owners.py",
-        "reason": "embedded base64 state/sequence/vertex profile export",
-        "sha256": "9d4863bff3737808de3b4fb7fa2ac12beedb1e32daf7d3dcb1c3426fc4aed27d",
         "shipping": false
       }
     ],
@@ -8347,7 +8365,7 @@
       "bytes": 22609962,
       "files": 3130,
       "path": "decomp/BattleShip-main/decomp/assets/us/relocData",
-      "regenerator": "decomp make extract VERSION=us",
+      "regenerator": "pinned Splat plus scripts/extract-battleship-relocdata.py",
       "shipping": false
     },
     "tracked_assets": [
@@ -8453,10 +8471,24 @@
     },
     {
       "bucket": "PORT-CODE",
+      "bytes": 1713,
+      "path": "DECOMP_PIN.txt",
+      "reason": "pinned public source and reference identity contract",
+      "sha256": "dc3f16a23596857462c718be855491e250cf27865ebd2b30e6acd15165091554"
+    },
+    {
+      "bucket": "PORT-CODE",
       "bytes": 48916,
       "path": "Makefile",
       "reason": "exact shipping build closure",
       "sha256": "aeac750015e5b30fe5c5986dead886efe45c22510e0525e04aa82b042ac08013"
+    },
+    {
+      "bucket": "PORT-CODE",
+      "bytes": 25387,
+      "path": "build.ps1",
+      "reason": "single-command public source acquisition, regeneration, and build entry point",
+      "sha256": "5fd593671abed8da9f3896a0bcf3a5296c263df6edca61272db57b2ff44a3926"
     },
     {
       "bucket": "PORT-CODE",
@@ -9167,6 +9199,20 @@
     },
     {
       "bucket": "PORT-CODE",
+      "bytes": 9863,
+      "path": "scripts/extract-battleship-relocdata.py",
+      "reason": "required publish-safe native-Windows relocData regenerator",
+      "sha256": "dca89a4a66099f99a363f01f78f5e4a6539732ce7074fd194c643db8e9f329c4"
+    },
+    {
+      "bucket": "PORT-CODE",
+      "bytes": 123413,
+      "path": "scripts/generate_nds_native_owners.py",
+      "reason": "required publish-safe fighter owner regenerator",
+      "sha256": "0e7a2158a836cbae8688be2ff94d9953aa7f484addc24c11f6df683a7d5c2648"
+    },
+    {
+      "bucket": "PORT-CODE",
       "bytes": 158402,
       "path": "scripts/generate_nds_native_stage.py",
       "reason": "required publish-safe asset regenerator",
@@ -9181,10 +9227,17 @@
     },
     {
       "bucket": "PORT-CODE",
-      "bytes": 12155,
+      "bytes": 26263,
+      "path": "scripts/publish/patches/ssb-decomp-re-ds.patch",
+      "reason": "reviewed five-file DS source delivery patch",
+      "sha256": "377151b88e60dde59f05ad3290b991cfa3b8090f8237e7b00b16037a5b24e259"
+    },
+    {
+      "bucket": "PORT-CODE",
+      "bytes": 12218,
       "path": "scripts/render-audio-bgm-pupupu.py",
       "reason": "required publish-safe asset regenerator",
-      "sha256": "341603854d62316f58cfa353d1c5c5a506e0faa4d49771958f30c98d2094ac2f"
+      "sha256": "f38c1caf3c5a25d7e15b0b2d32eacbe993351075922ed21010c477518314c449"
     },
     {
       "bucket": "PORT-CODE",
@@ -10314,7 +10367,7 @@
       "sha256": "002e906e91fe21c08559f4a31d1fd6cd54518e1b2abecaca2aeb36357849d94c"
     }
   ],
-  "shipping_allowlist_state": "P1_SAFE_NOT_FINAL",
+  "shipping_allowlist_state": "P2_SAFE_INPUT_TO_P3",
   "shipping_target": {
     "audit_command": "make TARGET=smash64ds-battle-playable-hwtri BUILD=build-build-publish-p1-closure-20260719 NDS_OUTPUT_ROOT=D:/Stuff/DevFolder/Smash64DS_Port/builds/build-publish-p1-closure-20260719 -j4",
     "canonical_command": "make TARGET=smash64ds-battle-playable-hwtri -j4",
@@ -10322,10 +10375,11 @@
     "nitrofs_file_count": 296,
     "object_directory": "builds/build-build-publish-p1-closure-20260719",
     "output_directory": "builds/build-publish-p1-closure-20260719",
+    "public_command": ".\\build.ps1 -Rom C:\\path\\to\\baserom.us.z64 [-Jobs N] [-Clean] [-DecompPath dir]",
     "target": "smash64ds-battle-playable-hwtri"
   },
-  "status": "BLOCKED_BEFORE_P2_SOURCE_DELIVERY_DECISION",
-  "task": "P1",
+  "status": "P2_VERIFIED",
+  "task": "P2",
   "toolchain": {
     "arm_none_eabi_gcc": "15.2.0",
     "calico": "1.2.0-1",
@@ -10388,7 +10442,16 @@
         "verdict": "IDENTICAL"
       }
     },
+    "source_delivery": {
+      "decomp_base_commit": "e6f3eee68dbe19fbac87914b613ff4ea6f29e251",
+      "decomp_base_url": "https://github.com/VetriTheRetri/ssb-decomp-re",
+      "patch": "scripts/publish/patches/ssb-decomp-re-ds.patch",
+      "patch_sha256": "377151b88e60dde59f05ad3290b991cfa3b8090f8237e7b00b16037a5b24e259",
+      "patched_files": 5,
+      "pin_file": "DECOMP_PIN.txt",
+      "verdict": "VERIFIED_BASE_PLUS_PATCH"
+    },
     "url": "https://github.com/JRickey/BattleShip",
-    "verdict": "DIVERGED"
+    "verdict": "RESOLVED_BASE_PLUS_PATCH"
   }
 }

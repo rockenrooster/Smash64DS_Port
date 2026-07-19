@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-19 07:10 Central
+Updated: 2026-07-19 09:27 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -21,6 +21,23 @@ SHA-256 C344CA8B89903A35678A6DC4A849F217B690CBCE16841FAC47974626899EB9DF
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
+
+## Publish lane (2026-07-19)
+
+Tasks P1 and P2 are complete. The source audit's mandatory divergence stop was
+resolved by Tyler's selected closest-base-plus-reviewed-patch path. The retained
+P2 commits are `369b6ea0b26` (publish-safe generators), `84dc33dbf49`
+(`build.ps1`, pins, five-file patch), and this documentation checkpoint
+(verified manifest and restart state).
+
+P2 G1 reports zero byte differences across 2,159 O2R files, 3,130 relocData
+files, and 16 derived port outputs. G2 produces the exact integrated candidate
+identity above. G3 negative cases and a complete warm idempotence rerun pass;
+the requested `verify-dev-fast.ps1 -Build` sanity also passes. The machine
+manifest contains 272 hash-validated, non-ROM-derived inputs for Task P3.
+
+Next: Task P3 public export and clean-room stranger-build rehearsal. The dev
+repository remains local and dirty user-owned files remain outside the export.
 
 ## Hardware reality (2026-07-18)
 

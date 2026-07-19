@@ -1,8 +1,10 @@
-# Smash64DS publish manifest — TASK P1
+# Smash64DS publish manifest — TASK P1/P2
 
 Audit date: 2026-07-19
 
-Audited commit: `c82519df89a4ab593d12610ce9cdafe2ea009057` (`master`)
+P1 audit commit: `c82519df89a4ab593d12610ce9cdafe2ea009057` (`master`)
+
+P2 implementation commit: `84dc33dbf4957d88b644f24af5980ff50c35d1b6`
 
 Shipping target: `smash64ds-battle-playable-hwtri`
 
@@ -10,24 +12,35 @@ Machine-readable companion: `docs/publish/publish_manifest.json`
 
 ## Result
 
-The current ROM is reproducible from the current checkout, but the public-source
-delivery decision is blocked before TASK P2. The local BattleShip shell matches
-upstream commit `62b513e9895ac5a4e833102e098afdfc05c9a48c`; its `decomp/` subtree does not
-match that commit's pinned submodule. A pinned recursive clone therefore cannot
-reproduce the current source closure or ROM without an additional, deliberate
-source-delivery mechanism.
+TASK P2 is verified. Tyler selected the closest-upstream-base plus reviewed
+source-patch option. `DECOMP_PIN.txt` now pins the BattleShip shell, its
+libultraship and Torch submodules, VetriTheRetri's closest decomp base, the five
+DS-specific source identities, the canonical ROM identity, and the reference DS
+ROM identity. `scripts/publish/patches/ssb-decomp-re-ds.patch` contains only the
+five reviewed source changes and is itself pinned by SHA-256.
 
-Do not start TASK P2, publish an upstream pin, or export a public tree until the
-source-delivery choice is made. The two safe choices are:
+The supported build entry point is:
 
-1. vendor the exact filtered DECOMP-SOURCE closure with the decomp's upstream
-   licensing limitation recorded; or
-2. fetch the closest identified decomp base and apply a reviewed source-only
-   patch set that reproduces the five DS-specific files and all required source
-   identities.
+```powershell
+.\build.ps1 -Rom "C:\path\to\baserom.us.z64" [-Jobs N] [-Clean] [-DecompPath <BattleShip-root>]
+```
 
-The task's fallback policy requires Tyler to choose between those approaches.
-No ROM, O2R, extracted asset, or generated content is included in this audit.
+The script checks prerequisites and ROM identity, acquires or reuses the pinned
+source, extracts O2R and relocData, regenerates all ROM-derived port content,
+builds `smash64ds-battle-playable-hwtri`, and reports its identity. It never
+ships the ROM, O2R archive/tree, relocData, the 11 derived asset files, or either
+native-owner content include.
+
+| P2 gate | Result |
+|---|---|
+| G1 regeneration | PASS: 2,159/2,159 O2R files, 3,130/3,130 relocData files, and 16 derived port outputs had zero byte differences |
+| G2 ROM identity | PASS: 14,688,256 bytes; SHA-256 `C344CA8B89903A35678A6DC4A849F217B690CBCE16841FAC47974626899EB9DF` |
+| G3 failures | PASS: missing devkitPro, missing ROM, and wrong-hash ROM each returned nonzero with the designed message |
+| G3 idempotence | PASS: a complete warm rerun succeeded and reproduced the same ROM identity |
+| Requested sanity | PASS: `.\scripts\verify-dev-fast.ps1 -Build` completed its fixtures, build contracts, published-ROM check, and realtime smoke |
+
+No ROM, O2R, extracted asset, or generated content is included in the publish
+allowlist.
 
 ## Shipping ROM identity
 
@@ -132,9 +145,10 @@ torch o2r baserom.us.z64 -s <BattleShip-source> -d <build>/extracted
 This produces the zip-format archive
 `<build>/extracted/BattleShip.o2r`. The DS Makefile does not consume that
 archive; it consumes an unpacked `decomp/BattleShip-main/BattleShip_o2r/`
-directory. No checked-in port or BattleShip script materializes that directory.
-TASK P2 must add deterministic archive extraction and byte-compare the resulting
-2,159-file tree.
+directory. `build.ps1` now materializes the archive with
+`System.IO.Compression.ZipFile`, requires exactly 2,159 files, and replaces only
+that validated generated directory. G1 found zero path, size, or SHA-256
+differences against the pre-P2 tree.
 
 Torch does **not** emit `decomp/assets/us/relocData/`. That 3,130-file tree is a
 separate output of the decomp's extraction pipeline:
@@ -144,10 +158,13 @@ separate output of the decomp's extraction pipeline:
 make extract VERSION=us
 ```
 
-The target runs Splat, then `tools/relocData.py extractAll`, and produces
-`assets/us/relocData/`. It is not part of the current shipping target's active
-closure, but the P2 G1 instructions explicitly require reproducing and comparing
-it.
+The upstream Makefile explicitly rejects native Windows, while its VPK0 helper
+is published only for Linux and macOS. `build.ps1` therefore runs the same
+pinned Splat split directly, then uses
+`scripts/extract-battleship-relocdata.py`, a source-licensed host adapter for the
+same VPK0/table extraction. It produces `assets/us/relocData/`; G1 found zero
+path, size, or SHA-256 differences across all 3,130 files. The tree remains
+inactive in the shipping target.
 
 ### Port-generated outputs
 
@@ -157,16 +174,16 @@ it.
 | `fgm_phase_pack_ima.bin/.json` | `scripts/render-audio-fgm-phase-pack.py`; reads five O2R FGM/sound-bank resources, three decomp audio decoders, source audio/mixer/scene/sine/action files, and the DS FGM header | Complete and deterministic |
 | Static texture payload + metadata include | `scripts/generate_battle_playable_static_textures.py`, `generate_battle_playable_texture_census.py`, and `generate_pupupu_water_aot.py`; reads pinned stage/actor/Fox O2R resources and typed decomp declarations | Complete and deterministic |
 | `nds_native_stage_owner.generated.inc` | `scripts/generate_nds_native_stage.py`; reads four pinned stage O2R resources and pinned decomp declarations | Complete, but must run before the public build because the output is content |
-| `nds_native_fighter_owner.generated.inc` | `scripts/generate_nds_native_owners.py`; reads Mario/Fox O2R resources **and an embedded base64 profile export in the generator itself** | Gap: generator is not publish-safe yet |
+| `nds_native_fighter_owner.generated.inc` | `scripts/generate_nds_native_owners.py`; deterministically parses the exact Mario/Fox O2R joint trees and display lists | Complete and deterministic; embedded profile content removed |
+| Decomp `assets/us/relocData/` | pinned Splat plus `scripts/extract-battleship-relocdata.py`; reads the canonical ROM-derived `relocData.bin` | Complete and byte-identical on native Windows |
 
 There are 11 tracked `assets/` files. Six are active binary NitroFS inputs; five
 JSON files are regeneration evidence rather than Make inputs. All 11 are
 ROM-DERIVED and excluded from the public export.
 
 The expected set was incomplete: two tracked native-owner includes also contain
-ROM-derived geometry/state, and the fighter generator embeds the profile export
-used to create one of them. These are additional ROM-derived findings, not
-GENERATED-METADATA.
+ROM-derived geometry/state. They remain excluded and are regenerated from the
+user's extracted O2R. The fighter generator no longer embeds any profile export.
 
 ## Embedded-data audit
 
@@ -178,7 +195,7 @@ not make smaller content arrays publishable; provenance still controls.
 |---|---|---|
 | `src/nds/nds_native_stage_owner.generated.inc` | CONTENT / ROM-DERIVED | Contains source geometry, corners, state and material programs. The built object includes a 4,992-byte vertex array. Exclude; regenerate from O2R with `generate_nds_native_stage.py`. |
 | `src/nds/nds_native_fighter_owner.generated.inc` | CONTENT / ROM-DERIVED | Contains Mario/Fox vertices, corners, triangles and state programs. The built object includes a 6,492-byte dense-vertex array. Exclude; regenerate only after the generator gap is removed. |
-| `scripts/generate_nds_native_owners.py` | CONTENT-bearing / ROM-DERIVED | Its `EXPORT` constant embeds base64 state, sequence and vertex data from a profile-2 export. Exclude in current form. |
+| `scripts/generate_nds_native_owners.py` | PORT-CODE | Parses exact user-ROM O2R inputs at build time; contains no embedded state, sequence, vertex, triangle, or texture payload. May ship. |
 | `src/nds/generated/battle_playable_static_textures.generated.inc` | GENERATED-METADATA | 6,432 bytes of built records containing keys, flags, offsets, sizes and hashes; texels live only in the excluded NitroFS payload. May ship. |
 | `src/nds/battle_playable_static_textures.c` | PORT-CODE | Lookup/validation code only; it includes the metadata file and no texel/sample array. |
 | `src/nds/nds_renderer.c` light-shade LUT | PORT-CODE / runtime state | The LUT is a 2,096-byte BSS cache. `ndsRendererHardwareGetLightShadeLut` computes its 128 RGB entries from live diffuse/ambient colors. It is not an initializer and carries no ROM content. |
@@ -211,9 +228,11 @@ The recursive source tree is not identical:
   `src/mn/mncommon/mnstartup.c`, `src/mv/mvopening/mvopeningroom.c`,
   `src/sc/scmanager.c`, `src/sys/objhelper.c`, and `src/sys/taskman.c`.
 
-All five modified files are in the shipping build closure. This is a real
-source-delivery divergence, not output noise, and it triggers the TASK P1 stop
-rule.
+All five modified files are in the shipping build closure. TASK P1 therefore
+stopped correctly. TASK P2 resolves the divergence by fetching the identified
+`e6f3eee...` base and applying the reviewed five-file patch. The patch SHA-256
+is `377151B88E60DDE59F05AD3290B991CFA3B8090F8237E7B00B16037A5B24E259`;
+the five post-patch file hashes are independently pinned in `DECOMP_PIN.txt`.
 
 ## License and attribution result
 
@@ -256,33 +275,27 @@ The DS build requires `DEVKITPRO=C:\devkitPro` and
 build should accept any correctly installed compatible location and print the
 detected versions.
 
-## TASK P2 gap list
+## TASK P2 gap resolution
 
-1. **Blocking source-delivery choice:** a recursive BattleShip pin is not exact.
-   Choose filtered source vendoring or an explicit base-plus-patch delivery.
-2. **Fighter generator content:** remove the embedded base64 profile export from
-   `generate_nds_native_owners.py` and derive it deterministically from the
-   user-ROM extraction, or supply a new build-time capture/generator that does.
-3. **O2R materialization:** deterministically unpack `BattleShip.o2r` into the
-   directory layout consumed by the DS Makefile and verify all 2,159 files.
-4. **Separate relocData extraction:** run and qualify the decomp's `make extract
-   VERSION=us`; Torch does not produce this directory. Record that it remains
-   inactive in the current shipping target.
-5. **Additional generated-content outputs:** regenerate the native stage and
-   fighter includes before `make`, not only the 11 `assets/` files named in the
-   original P2 prompt.
-6. **Manifest refresh:** after resolving gaps 1-5, add the final `build.ps1`, pin
-   or filtered-source mechanism, publish-safe fighter generator, and templates
-   to `shipping_allowlist`; then re-run the closure and identity proof.
+1. **Source delivery:** resolved by the pinned base-plus-five-file-patch path.
+2. **Fighter generator:** embedded profile content removed; exact O2R parsing is
+   deterministic and reproduces the owner include byte-for-byte.
+3. **O2R materialization:** deterministic 2,159-file zip extraction added and
+   byte-qualified.
+4. **relocData:** native-Windows Splat/VPK0 adapter added; 3,130 files reproduce
+   exactly and remain inactive in the shipping target.
+5. **Generated content:** all 11 tracked assets, static metadata, native stage,
+   native fighter, and both consumed-field manifests regenerate before `make`.
+6. **Manifest:** human and machine inventories refreshed after G1/G2/G3.
 
 ## Machine allowlist state
 
 `publish_manifest.json` contains all 906 classified closure files and a
-conservative 267-file P1-safe shipping allowlist: the exact 260 tracked
-PORT-CODE/GENERATED-METADATA build files, six publish-safe regeneration scripts,
-and `.gitattributes`. It intentionally excludes all assets, decomp/O2R paths,
-both native-owner content includes, and the current content-bearing fighter
-generator.
+272-file P2-safe shipping allowlist: the exact 260 tracked
+PORT-CODE/GENERATED-METADATA build files, eight publish-safe regeneration
+scripts, `.gitattributes`, `build.ps1`, `DECOMP_PIN.txt`, and the reviewed source
+patch. It intentionally excludes all assets, decomp/O2R/relocData paths, and
+both native-owner content includes.
 
-This is an audit allowlist, not the final P3 export list. TASK P2 must amend it
-after the blocking source decision and regeneration gaps are resolved.
+This is the input allowlist for the P3 public-export rehearsal; P3 may add only
+its reviewed public documentation, license, notice, and packaging files.
