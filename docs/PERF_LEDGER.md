@@ -5816,3 +5816,44 @@ EVIDENCE:
   artifacts/performance/2026-07-19_task24r-quiet-slot-cleanup.md
 KEEP / REWORK / REVERT: KEEP CLEANUP + MANIFEST CHECKER / TASK 24R COMPLETE / A/V AUDIT NEXT
 ```
+
+## 2026-07-19 - Task 30 stable-30 entry gate
+
+```text
+IDEA ID: TASK30-FINAL-STABLE30-PRECONDITION-20260719
+SOURCE / CANDIDATE:
+  Decision HEAD 45ae233a502. Current verifier-covered battle ROM:
+    C344CA8B89903A35678A6DC4A849F217B690CBCE16841FAC47974626899EB9DF
+  This ROM is not designated a Task-30 qualification artifact because no
+  same-HEAD profile-1 sibling or three-run retail packet exists.
+
+ENTRY PRECONDITION:
+  FAIL. Task 25R's immutable same-artifact matrix has six of seven phase
+  P95/maximum loop rows above the 1,120,380-tick two-VBlank deadline. Profile 0
+  completes exact 4,084/2,042 update/presentation accounting and one teardown,
+  but reaches only 18.6 presentations/s / 37.3 updates/s. Histogram 2/3/4/5+
+  is 61/1547/396/38: 1,981 intervals are 3+ VBlanks and slips are 2,457.
+
+POST-MATRIX ACCOUNTING:
+  Retained Task 26 fixes historical KO-audio/texture-fence debts and saves
+  3,424..3,616 stage P50 ticks. Its single device sample saves draw 21,568,
+  changes active +4,288, and leaves loop near 2.24M ticks. Task 23R's ~12K
+  exact cache left its histogram unchanged and was reverted. Tasks 20R/21R/
+  22R/27/28/29 add no retained profile-0 speed mechanism beyond diagnostics or
+  inert certificates.
+
+STRICT CHECKER:
+  stable30=False intervals3plus=1981 slips=2457 reserve=166672.
+  The old KO-FGM/fence false flags belong to the immutable Task 25R packet and
+  were repaired later; pacing independently fails.
+
+TASK30 DISPOSITION:
+  Run 0/3 retail lifecycles. Do not build a ceremonial final pair, average
+  failed phases, weaken a checker, or claim stable-30. Freeze retained exact
+  mechanisms and reverted selectors. Publishing may proceed only with honest
+  observed retail performance of approximately 13.5-15 FPS in heavy combat.
+
+EVIDENCE:
+  artifacts/performance/2026-07-19_task30-stable30-precondition.md
+KEEP / REWORK / REVERT: TASK 30 CLOSED AT PRECONDITION / STABLE-30 RED / PUBLISH P1 NEXT
+```

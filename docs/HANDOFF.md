@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 06:45 Central
+Updated: 2026-07-19 07:10 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -168,9 +168,23 @@ the 14,688,256-byte battle ROM `C344CA8...`; its fixed-frame meaningful delta
 is 786/49,152 (1.599%). Evidence:
 `artifacts/performance/2026-07-19_attack-hit-av-asset-audit.md`.
 
-Next run Task 30's precondition and final qualification logic. The Task 25R
-profile-0 truth remains only 18.6 presentations/s with 1,981 intervals of
-three or more VBlanks, so do not manufacture a stable-30 pass or request the
-three unavailable retail lifecycles. Bind the red precondition to the exact
-Task 25R owners, publish the honest stop/failure packet, and then continue the
-remaining publish-task queue.
+Task 30 is closed at its entry precondition; **stable-30 is not qualified**.
+The strict Task 25R checker reproduces 1,981 intervals of three or more VBlanks
+and 2,457 slips at 18.6 presentations/s / 37.3 updates/s; six of seven phase
+P95/maximum rows miss the two-VBlank deadline. Task 26 repaired the historical
+KO-audio and texture-fence gates, but its exact segment-0 gain does not change
+the pacing conclusion and the single retail loop remains near 2.24 million
+ticks. No final same-HEAD pair or retail qualification packet was designated,
+and no retail repeat was requested. Evidence:
+`artifacts/performance/2026-07-19_task30-stable30-precondition.md`.
+
+The current `C344CA8B...` battle ROM is a verifier-covered candidate, not a
+stable-30-qualified release. Publish text must state the observed 13.5–15 FPS
+heavy-combat range on real hardware and must not turn the exact two-updates-per-
+presentation semantic rule into a 30 FPS claim.
+
+Next execute `docs/optimization/ClaudeFable5_Publish_Tasks_20260718_2200.md`
+strictly in order, beginning with read/trace-only Task P1. Preserve every
+existing dirty file, branch, worktree, and ROM-derived byte. The publish lane
+uses an allowlist and a fresh staging history; the dev repository is never
+pushed.

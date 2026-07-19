@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-19 06:45 Central
+Updated: 2026-07-19 07:10 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -181,6 +181,31 @@ State, audio, lifecycle, geometry, material, texture, depth, and ownership must
 remain exact; synchronized native top-screen delta must be `0/49,152`; net
 reserve must be at least 128 KiB. Each phase publishes P50, P95, maximum, N,
 the interval histogram, presentations/s, and source updates/s.
+
+## Task 30 final gate (2026-07-19)
+
+Task 30 is **closed at its entry precondition; stable-30 is not qualified**.
+The authoritative Task 25R profile-0 lifecycle is 18.6 presentations/s and
+37.3 source updates/s with interval histogram `61/1547/396/38`, 1,981
+intervals of three or more VBlanks, and 2,457 slip events. Six of seven phase
+P95/maximum rows exceed the 1,120,380-tick two-VBlank deadline. The strict
+checker reproduces that failure exactly.
+
+Retained Task 26 fixes the historical KO-audio and texture-fence failures and
+banks its exact segment-0 gain, but its same-control savings are only
+3,424–3,616 stage P50 ticks; the user's single retail observation leaves loop
+near 2.24 million ticks. Subsequent performance candidates are reverted or
+diagnostic-only. The matrix therefore cannot predict adequate margin, and no
+final same-HEAD profile pair or three-cold-boot retail packet was designated.
+Zero of three retail lifecycles were run; the user is unavailable and has
+declined repeats.
+
+The current 14,688,256-byte / `C344CA8B...` ROM remains a verifier-covered
+candidate, not a stable-30-qualified release. Public documentation must report
+the observed 13.5–15 FPS real-hardware heavy-combat range and must distinguish
+the exact two-updates-per-presentation semantic contract from achieved
+throughput. Evidence and the retained/rejected freeze list are in
+`artifacts/performance/2026-07-19_task30-stable30-precondition.md`.
 
 ## Task 25R authoritative matrix (2026-07-18)
 
@@ -397,9 +422,11 @@ authoritative pair and selects the implementation order:
    retail/repeatability and first-run gates.
 6. **Quiet-slot cleanup complete:** Task 24R reclaims 3,746,285,595 bytes
    without changing permanent evidence, held Git surfaces, or current A/Bs.
-7. **Selected next lane:** reconcile the attack/hit A/V asset audit already in
-   the board before Task 30.
-8. Task 30 is the final stable-30 gate.
+7. **A/V audit complete:** exact source-backed cue additions and all 178/178
+   motion-effect routes are banked; nonrepresentable cues remain fail-closed.
+8. **Task 30 closed at precondition:** the stable-30 release gate remains red;
+   proceed to the publish-input/provenance lane with explicit performance
+   honesty.
 
 `src/nds/nds_renderer.c` is a mandatory one-writer surface throughout.
 
@@ -407,7 +434,7 @@ authoritative pair and selects the implementation order:
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Task 24R closed / A/V audit next | live tree | Retained Task-26 segment 0, Task-27 Phase-A fighter certificate, rejected performance candidates, integrated battle ROM, permanent evidence, and current terminal lifecycle | no runner active; attack/hit asset ownership is the next existing red release row |
+| Integration/release | Task 30 closed red / publish P1 next | live tree | Retained Task-26 segment 0, Task-27 Phase-A fighter certificate, exact A/V additions, rejected performance candidates, integrated battle ROM, permanent evidence, and current terminal lifecycle | no runner active; publish P1 is read/trace-only input closure |
 | Renderer implementation | ARM restored; Task 12 closed REVERT; Task 14 KEEP | shared integration tree | Retail hardware rejects blanket Thumb by +594,816 DRW ticks (+34.1%); its renderer hot group is device noise and reverts with that base. The renderer TU is ARM again with Task 14 intact | no runner active |
 | Gameplay + QA | Playtest review fixed / manual candidate retest pending | shared live tree / disjoint files | Down+A is source-fixed at the shared ClearAll seam. Human-P2 Fox completes all nine Down-Air callbacks and exits naturally; Mario completes the same focused route with eight live imported CPU updates. Latest then passes canonical mode 163, two-ROM publication, runtime, registry, renderer/ITCM, and visual gates. Countdown also remains fixed | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
@@ -427,7 +454,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Locked-30 scheduler | Pass / slowdown published | Integration | Task 9 natural match: 4,084 updates / 2,042 presents, exact fixed-two pacing; phase rates 39.9/37.4/39.3/n.a./58.2 updates/s and slips 196/1088/946/0/3. Latest profile-0 smoke is 19.7 FPS. Focused natural KO/rebirth active P95 is 1,524,864/1,112,256 ticks | Keep exact 2:1 and conditional 59.0–61.0 gates; full-speed locked 30 remains unmet |
 | Mario can damage Fox | Pass / continuous gate | Gameplay | User confirmed the repair manually. The focused current-ROM route now damages Fox 0→59, lets imported level-3 Recover return naturally to line 3, then damages Fox again 59→72 within 78 frames while all 11 damage colliders and global/special/star hit statuses remain normal | Keep the post-Recover assertion in `verify-battle-playable-fox-recovery.ps1` |
 | Fireball spawn/render/damage/destruction | Pass | Gameplay | Source spawn/damage/lifetime and 40 moving visible textured hardware draws pass with zero rejects | Keep dedicated natural-input gate |
-| Common visual effects | Natural common-hit pass / broader attack-hit audit open | Renderer + Gameplay | A natural mode-163 Mario contact reached BattleShip kick ID 32 at frame 125. Its following source hitlog selected DS `HitNormal` kind 1, created the normal/orb/spark trio with zero drops, and submitted 3/3 effects / 24 triangles with zero texture or draw rejects. Dated Dream Land capture `2026-07-17_220144-9409465_fox-recovery.png` passes nonblank green/detail/single-color gates. Fireball's separate focused route remains green | Keep the exact-event counter and image-content gate. Continue tracing the remaining reported attack visuals; common particle banks remain unresolved and this row is not globally closed |
+| Common visual effects | P1 routed / original particle-bank fidelity debt | Renderer + Gameplay | All 178 Mario/Fox motion-effect calls across 17 source kinds have a Boundary-guarded bounded DS route, as do reflector, blaster glow, and fireball dust/fire/sparkle. Natural ID-32 hit submits 3/3 effects / 24 triangles; focused fireball creates 3 and submits 13 / 96 triangles | Keep the generated route checker and focused captures. Original common particle texture/script banks are not resident, so this is P1 source-derived presentation rather than N64 bank exactness |
 | Fireball trajectory, floor rebound, and terminal | Pass | Gameplay | Current custom `0x47` submits 40/40 and first rebound is 55→46.75 at lifetime 122. The exact ELF destroy callsite then records the same weapon crossing Pupupu bottom −3500 at x/y/z −4650.5/−3504.8/−66.9 with lifetime 10; it is absent next frame. The deterministic source-MVP ROI changes 50→0 orange pixels | Keep the focused countdown/Fox-off gate and both `20260716_fireball-source-mvp-long-travel*.png` captures; the earlier far-left theory was false |
 | Damage/throw map collision | P1 Dream Land boundary pass | Gameplay | Five source up-smashes proved DamageFall recovery. A separate external-input route then used nine short source Walk/Dash/Run steps for one Mario catch/forward throw: Fox took 0→12%, released status 169→186, swept/clamped to line 3, DownBounced once, cleared every catch link, and retained 202,256 bytes. Source Dream Land contains one static collision group: 4 floors, 1 ceiling, 1 right wall, and 1 left wall | Keep both sparse gates; throw evidence is `2026-07-16_063512-7696185_throw-release-recovery-p21764.png`. Moving-stage/project providers are P2 and must not delay this static-stage P1 |
 | One-way platform semantics | Pass / hardened natural gate | Gameplay | Current-ROM mode 163 completed 715 natural frames: six ordered continued-ascent/strict-descent/downward-crossing flights (`0x3f`), all three platform masks `0x7`, two side cycles, three exact ignore-line Pass crossings, nine landings, and 214,544-byte reserve | Keep the focused gate; screenshot `2026-07-16_052652-7356809_platform-semantics-p984.png` |
@@ -454,10 +481,10 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / full runtime gate pass | Renderer + QA | The source-backed point sample changes 49 atlas pixels only inside the 12x9 `ShadowGo`; all five GO frames retain its 70-pixel count plus 10/10/10 draws/queued/emitted, 57,344 texture bytes, 608 palette bytes, and zero hot conversion/upload. The large-GO mismatch was a stale crop lock after the source-light repair: only 125/26,400 pixels changed, all inside Mario's 22x14 area, while the GO RGB555 payload remained `05330f47...`. The rebuilt full verifier passes with crop `d968b0cc...`, GO `3 OBJ + 10 quads`, and 31,168 OBJ bytes | Keep both accepted crop locks and the source-derived DS assets; no GO source change was warranted |
 | Dream Land BGM | Pass | Audio | Tyler reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |
-| Required FGM, attack/hit sounds, and Mario/Fox voices | Common contacts and KO lifecycle PASS / residual cue debt | Audio + Gameplay | The 121,720-byte pack retains the exact common punch/kick paths and natural `439/292/154` Mario-KO sequence. Task 26 fixed a Calico/software-owner race: an exactly completed hardware channel now retires its stale owner before reuse, while inconsistent ownership remains fail-closed. The focused automated qualification passes 21 supported starts, 17 explicit unsupported cues, phase mask `0x1f`, channel mask `0xe`, max three live channels, 59 envelope steps, zero playback/generation failure, and 187,152-byte headroom | Keep the exact retirement seam and automated channel/acoustic gate. This is not an ear test. Residual unsupported special/projectile/movement cues remain explicit fidelity debt for the existing A/V audit before Task 30; do not require another user response tonight |
+| Required FGM, attack/hit sounds, and Mario/Fox voices | Exact pack PASS / residual cue debt explicit | Audio + Gameplay | The 128,196-byte / 27-entry pack covers 21 exact runtime IDs plus six exact primary common-contact samples. Exact Mario down-bounce 303 and Fox Smash2/Smash3 373/374 improve the focused deterministic window from 22+19 to 26+15 supported/unsupported, with phase mask `0x1f`, channel mask `0xe`, max three live channels, 66 envelope steps, and 183,056-byte reserve | Keep exact retirement, pack, static/runtime fixtures, and ear-test distinction. Pitch/FX/loop/fork/composite cues remain fail-closed; never substitute a wrong sample |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | PASS / current Task 26 artifact | QA | The refreshed profile-0 lifecycle reaches Results once with 232,208 arena headroom and 65,536 resident audio bytes: 166,672 net versus the 131,072-byte floor after the exact 5,120-byte static-texture payload increase. Exact 4,084/2,042 pacing and teardown pass; stale/safety/eviction counters stay zero | Preserve the floor and recheck after every representation or resident-asset change |
-| Focused/checkpoint verification | Task 24R complete / A/V audit queued | QA | The quiet-slot batch reclaims 3.49 GiB while protected evidence digests and 1,745 immutable migration destinations remain exact. All held worktrees/branches and current A/Bs survive; focused checks and post-delete Boundary pass | Commit and Lean-snapshot Task 24R, then reconcile the existing attack/hit audio-visual cue audit before Task 30 |
+| Focused/checkpoint verification | Task 30 closed red / publish P1 next | QA | Task 24R safety, exact A/V audit, current Boundary, and strict Task-30 precondition decision are documented. The stable-30 gate fails independently on 1,981 long intervals and 2,457 slips; no retail repeats are available | Preserve current checkpoint and begin read-only publish input/provenance closure without claiming stable-30 |
 | Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Latest capture is `2026-07-18_canonical_fast_101715-1383371-p57268.png`; its paired frame has 747/49,152 meaningful changes, 100% overlap, and all named-region/detail gates pass. Task 6 C/D, Task 8 G2, reserve repair, Task 9/16 state identity, source-light parity, both emitter splits, raw-corner cut, Down+A, and the common-contact checkpoint remain retained | Manually retest exact ROM `DADB7C96...`; automated common-contact A/V closure is focused, not global |
 
 ## Dated Gates

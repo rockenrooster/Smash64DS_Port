@@ -21381,3 +21381,19 @@ remains skipped for the requested fast iteration cadence.
   Focused fireball and natural hit proofs pass; the canonical Boundary ROM is
   14,688,256 bytes / `C344CA8B...` and its synchronized motion pair keeps all
   visibility/detail gates green.
+
+## 2026-07-19 - Closed Task 30 at the stable-30 precondition
+
+- Re-ran the strict immutable Task 25R gate: the complete lifecycle remains
+  18.6 presentations/s / 37.3 updates/s with 1,981 intervals of three or more
+  VBlanks and 2,457 slips. Six of seven phase P95/maximum rows exceed the
+  two-VBlank deadline.
+- Accounted for every retained post-matrix result. Task 26 repairs KO audio and
+  texture residency and keeps its exact segment-0 gain, but its few-thousand-
+  tick emulator savings and one roughly 2.24-million-tick retail loop sample
+  do not create stable-30 margin. Later runtime candidates are reverted or
+  diagnostic-only.
+- Stopped before final ROM-pair designation and the three unavailable retail
+  lifecycles. The current candidate remains verifier-covered but is explicitly
+  not stable-30 qualified; public release text must report the observed
+  13.5–15 FPS heavy-combat performance honestly.
