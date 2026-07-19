@@ -5655,3 +5655,49 @@ EVIDENCE / CLOSEOUT:
   current production remains byte-identical.
 KEEP / REWORK / REVERT: KEEP PRODUCTION KEY + CENSUS / REVERT WRITER / SKIP DMA / TASK 28 NEXT
 ```
+
+## 2026-07-19 - Task 28 bounded ARMv5TE matrix leaf
+
+```text
+IDEA ID: TASK28-ARMV5TE-MATRIX-S32-20260719
+BOUND / IDENTITY:
+  Source d06c01497b673a679adb08b6ffd04e6271575880. Production ROM / ELF:
+    757ED78612607BEB8780BF197CC701570926B52EBDD745368DC32B6D44AC89E4
+    5F77112C0487DFF4B053AAA4227279B2472D31F72F70D7CE7B57CF0617046639
+  Task-21R proves 52 scheduled joints plus 32 binding roots, so the leaf is
+  called 84 times / 756 three-term dots per presentation. The existing matrix
+  owner is 158,464/158,528/158,528 P50/P95/max ticks.
+
+CURRENT -> CANDIDATE CODEGEN:
+  Exact profile-1 control/candidate configs match: mode 163, profile 1, M2
+  detailed 1, Task-26 segment 0, Task-16 1/1/1, renderer ARM. The linked leaf
+  changes 256 -> 248 bytes, 52 -> 40 stack bytes, and 64 -> 62 static
+  instructions. Its dot changes one SMULL + two SMLAL into one MUL + two MLA;
+  both leaves have zero helper calls, divides, and veneers. ITCM/text.hot/BSS/
+  DTCM are unchanged; the full candidate .main grows 40 bytes because of the
+  finite-domain admission and pre-GX fallback.
+
+ARITHMETIC PROOF:
+  Admit every matrix element only in [-16384,16383]. Three signed products
+  have magnitude <=805,306,368, so product, sum, negation, and the 2048
+  rounding bias remain signed-32 exact and current s64 saturation cannot fire.
+  Outside that partition the literal current owner remains the pre-GX
+  fallback. A 100,000,000-vector deterministic run with seed 6D2B79F5 plus
+  directed signed/range boundaries reported zero mismatches.
+
+FAILED PROMOTION GATES:
+  Two exact control attempts in runner slots 7 and 2 completed static checks
+  but melonDS never listened on 127.0.0.1:4333, so no control JSON or candidate
+  runtime was produced. There is no natural-owner/microbench timing, literal
+  ARM9 golden corpus, state/matrix/geometry/material/audio rows, synchronized
+  pixel proof, runtime reserve, or retail ARM/cache/layout evidence. The user
+  declined retail repeats. No result is inferred from transport.
+
+DISPOSITION / EVIDENCE:
+  Restore the exact s64 leaf and direct call sites. Do not retain a checker for
+  rejected code, open another arithmetic family, or claim a speedup from host
+  proof/disassembly. Packed lighting already emits MUL + two MLA in current
+  ITCM and was not reopened.
+  artifacts/performance/2026-07-19_task28-armv5te-matrix.md
+KEEP / REWORK / REVERT: REVERT MATRIX LEAF / NO RETAINED CODE / TASK 29 NEXT
+```

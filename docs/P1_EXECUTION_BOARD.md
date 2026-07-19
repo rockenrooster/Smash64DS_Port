@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-19 00:26 Central
+Updated: 2026-07-19 03:56 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -298,8 +298,12 @@ authoritative pair and selects the implementation order:
    executor regressed complete draw and stopped before Fox.
 3. **Disjoint lane complete:** Tasks 20R and 22R are closed without retained
    DTCM/span-writer placement.
-4. **Selected next lane:** Task 28 -> Task 29.
-5. Task 24 only in a quiet slot; Task 30 is the final stable-30 gate.
+4. **Exact-kernel lane closed at its evidence gate:** Task 28 tested one
+   bounded matrix leaf, proved its host arithmetic and desired ARMv5TE shape,
+   then reverted it because the runner never produced the required natural,
+   ARM9-golden, state/pixel, or retail evidence.
+5. **Selected next lane:** Task 29 no-behavior GX census.
+6. Task 24 only in a quiet slot; Task 30 is the final stable-30 gate.
 
 `src/nds/nds_renderer.c` is a mandatory one-writer surface throughout.
 
@@ -307,7 +311,7 @@ authoritative pair and selects the implementation order:
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Task 22R closed / Task 28 next | live tree | Retained Task-26 segment 0, Task-27 Phase-A fighter certificate, rejected Task-20 DTCM and Task-22 span-writer placements, integrated battle ROM, and current terminal lifecycle | no runner active; Task 28 owns one measured arithmetic leaf at a time |
+| Integration/release | Task 28 closed / Task 29 next | live tree | Retained Task-26 segment 0, Task-27 Phase-A fighter certificate, rejected Task-20 DTCM, Task-22 span-writer, and Task-28 bounded-matrix placements, integrated battle ROM, and current terminal lifecycle | no runner active; Task 29 begins with a read-only GX census |
 | Renderer implementation | ARM restored; Task 12 closed REVERT; Task 14 KEEP | shared integration tree | Retail hardware rejects blanket Thumb by +594,816 DRW ticks (+34.1%); its renderer hot group is device noise and reverts with that base. The renderer TU is ARM again with Task 14 intact | no runner active |
 | Gameplay + QA | Playtest review fixed / manual candidate retest pending | shared live tree / disjoint files | Down+A is source-fixed at the shared ClearAll seam. Human-P2 Fox completes all nine Down-Air callbacks and exits naturally; Mario completes the same focused route with eight live imported CPU updates. Latest then passes canonical mode 163, two-ROM publication, runtime, registry, renderer/ITCM, and visual gates. Countdown also remains fixed | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
@@ -357,7 +361,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Required FGM, attack/hit sounds, and Mario/Fox voices | Common contacts and KO lifecycle PASS / residual cue debt | Audio + Gameplay | The 121,720-byte pack retains the exact common punch/kick paths and natural `439/292/154` Mario-KO sequence. Task 26 fixed a Calico/software-owner race: an exactly completed hardware channel now retires its stale owner before reuse, while inconsistent ownership remains fail-closed. The focused automated qualification passes 21 supported starts, 17 explicit unsupported cues, phase mask `0x1f`, channel mask `0xe`, max three live channels, 59 envelope steps, zero playback/generation failure, and 187,152-byte headroom | Keep the exact retirement seam and automated channel/acoustic gate. This is not an ear test. Residual unsupported special/projectile/movement cues remain explicit fidelity debt for the existing A/V audit before Task 30; do not require another user response tonight |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | PASS / current Task 26 artifact | QA | The refreshed profile-0 lifecycle reaches Results once with 232,208 arena headroom and 65,536 resident audio bytes: 166,672 net versus the 131,072-byte floor after the exact 5,120-byte static-texture payload increase. Exact 4,084/2,042 pacing and teardown pass; stale/safety/eviction counters stay zero | Preserve the floor and recheck after every representation or resident-asset change |
-| Focused/checkpoint verification | Task 22R complete / Task 28 queued | QA | The committed same-ROM A/B reproduces the natural-KO +4,160 P95 rejection; all four run histograms close 1,536 rows and conserve final writes. Current source/ELF contain no candidate selector/writer or profile-0 Task-22/oracle symbols. GBI fixtures and the exact production ROM `757ED786...` remain green; no emulator or retail repeat is required for a fully removed candidate | Commit and Lean-snapshot the report-only closeout, then start Task 28 from measured hot leaves; the attack/hit audio-visual cue audit remains required before Task 30 |
+| Focused/checkpoint verification | Task 28 complete / Task 29 queued | QA | The bounded signed-32 matrix candidate passed 100M deterministic vectors plus the complete mathematical partition and compiled to one `MUL` + two `MLA`, but the exact control failed twice before sampling because melonDS exposed no ARM9 GDB listener. The candidate is fully removed; current source returns to the exact 64-bit golden. No natural-owner, ARM9, pixel, reserve, or retail claim was made | Commit and Lean-snapshot the fail-closed Task-28 report, then begin Task 29 with its no-behavior GX census. The attack/hit audio-visual cue audit remains required before Task 30 |
 | Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Latest capture is `2026-07-18_canonical_fast_101715-1383371-p57268.png`; its paired frame has 747/49,152 meaningful changes, 100% overlap, and all named-region/detail gates pass. Task 6 C/D, Task 8 G2, reserve repair, Task 9/16 state identity, source-light parity, both emitter splits, raw-corner cut, Down+A, and the common-contact checkpoint remain retained | Manually retest exact ROM `DADB7C96...`; automated common-contact A/V closure is focused, not global |
 
 ## Dated Gates

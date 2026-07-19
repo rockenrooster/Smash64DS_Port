@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 01:30 Central
+Updated: 2026-07-19 03:56 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -114,7 +114,20 @@ span/store census, and exact oracle. Do not restore the threshold-4 writer: it
 regresses natural-KO wallpaper P95 by 4,160 ticks. Phase D is ineligible
 without a retained CPU writer and retail proof; the user declined repeats.
 
-Resume Task 28 with one measured exact arithmetic leaf at a time. Rebind the
-current production ELF/disassembly and Task 25R owner rows before editing;
-preserve Task-16's retained compare/i2f/add-sub leaves and test no speculative
-compiler sweep. Task 29 follows only after Task 28 stabilizes.
+Task 28 is closed without retained code. Its one bounded signed-32 3x3-matrix
+candidate passed the mathematical domain proof, 100,000,000 deterministic host
+vectors, and the actual ARMv5TE shape gate: 256 -> 248 leaf bytes, 52 -> 40
+stack bytes, and the hot dot changed from one `SMULL` plus two `SMLAL` to one
+`MUL` plus two `MLA`. The exact profile-1 control failed twice before sampling
+because repo-local melonDS never opened the ARM9 GDB listener. Therefore there
+is no natural-owner, literal ARM9, state/pixel, reserve, or retail evidence and
+the source/call sites are restored exactly. Do not promote the candidate from
+host proof or disassembly and do not request another retail run. Evidence:
+`artifacts/performance/2026-07-19_task28-armv5te-matrix.md`.
+
+Resume Task 29 at Phase A only: census current GX commands, exact owner/reset/
+flush lifetimes, identical consecutive values, side-effect classification, and
+the emitted semantic/GX stream without suppressing or streaming anything.
+Retail is mandatory before any state/MMIO/FIFO performance promotion; the user
+declined repeats, so keep later phases fail-closed unless already-valid device
+evidence applies. Preserve one-writer ownership of `src/nds/nds_renderer.c`.
