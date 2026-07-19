@@ -5558,3 +5558,57 @@ EVIDENCE:
   docs/optimization/NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json
 KEEP / REWORK / REVERT: KEEP PHASE-A CERTIFICATE / REVERT MARIO RUNTIME / STOP BEFORE FOX / TASK 20R NEXT
 ```
+
+## 2026-07-19 - Task 20R DTCM capacity and ownership closeout
+
+```text
+IDEA ID: TASK20R-DTCM-SCRATCH-STACK-20260719
+BOUND / IDENTITY:
+  Source start 0102a741d6faf8650396d9b101e4ecced2bc39df. Profile-0
+  battle ROM / ELF:
+    757ED78612607BEB8780BF197CC701570926B52EBDD745368DC32B6D44AC89E4
+    5F77112C0487DFF4B053AAA4227279B2472D31F72F70D7CE7B57CF0617046639
+  No production placement or Task-20 symbol exists.
+
+CURRENT LAYOUT:
+  .dtcm/.dtcm.bss are 0/152 bytes. The only owners are __irq_table at
+  02FF0000+128 and __sched_state at 02FF0080+24. __dtcm_bss_end is 02FF0098;
+  __sp_usr/__sp_irq/__sp_svc are 02FF3E80/02FF3F80/02FF3FC0. The shared
+  data/user-stack gap is 15,848 bytes; IRQ/SVC/BIOS reserves are 256/64/64.
+  The linker rejects static data past __sp_usr. A new post-link checker now
+  rejects every unreviewed application DTCM owner and prints the exact bounds.
+
+PHASE C STACK — STOP BEFORE IMPLEMENTATION:
+  The unchanged gameplay allocation is 16,384 bytes. Capacity plus one
+  64-byte guard needs 16,448 bytes, NO_FIT by 600 even with zero live user
+  stack. Shrinking from an incomplete route is forbidden. The earlier
+  provisional 13,044/3,700 high-waters replay as 16,808 guarded bytes,
+  NO_FIT by 960, or 18,856 with two 1,024-byte margins, NO_FIT by 3,008.
+  Three current lifecycle launches failed before ROM execution because the
+  ARM9 GDB listener never opened; no result is inferred from transport.
+
+PHASE B SCRATCH — NO PROMOTION:
+  The only credible bounded object is the 2,048-byte, 32-matrix
+  sNdsRendererAdapterNativeOwnerModelviews at 02217F80. It is completely
+  overwritten and synchronously consumed by ARM9 each presentation, with no
+  DMA/IPC/ARM7/audio/asynchronous-GX pointer escape. It is nevertheless a
+  DTCM/cache-layout candidate and has no existing retail A/B. The user
+  declined repeats, so emulator timing cannot promote it. No move was made.
+
+DMA / POINTER CLOSURE:
+  The gameplay stack pointer is retained only by PortCoroutine, OSThread, and
+  the synchronous CPU scheduler. Renderer DMA reads texture staging, and ARM7
+  audio reads the BGM ring/FGM pack; neither candidate reaches those paths.
+  Since profile 0 has zero application DTCM objects, forbidden direct DMA
+  references are zero by construction. Any future third owner fails closed.
+
+VERIFICATION / EVIDENCE:
+  Production and profile-1 lab post-link checks pass; the guarded evidence
+  replay prints the exact NO_FIT margins. GBI fixtures pass with the new
+  canonical-verifier hook. Boundary also passes registry, Task-9/16, renderer,
+  and DTCM placement after rebuilding the production ROM byte-identically,
+  then exits 1 in emulator launch transport without a new runtime artifact.
+  Do not infer game behavior or spend another duplicate launch.
+  artifacts/performance/2026-07-19_task20r-dtcm-audit.md
+KEEP / REWORK / REVERT: KEEP CHECKER + CENSUS / NO SCRATCH MOVE / NO STACK MOVE / TASK 22R NEXT
+```

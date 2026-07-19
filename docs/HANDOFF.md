@@ -104,9 +104,12 @@ wrapper's only miss is the duplicate unattended-host capture-window failure;
 binary identity proves the retained certificate has no production/pixel
 effect, so do not spend another capture.
 
-Resume Task 20R from its retained default-off stack/DTCM census. Reconcile the
-current map and already-collected
-hardware evidence first. The user requested no further retail repeats, so do
-not promote any cache/layout-sensitive speed claim that lacks existing device
-falsification. Keep Task 22R's rejected threshold writer removed and preserve
-one-writer ownership if any later step reaches the renderer TU.
+Task 20R is closed without a placement. Preserve its default-off census and
+`scripts/check-task20-dtcm-layout.ps1`: the intact 16 KiB stack is statically
+too large for the 15,848-byte shared gap, and the plausible 2 KiB matrix
+scratch lacks the declined retail A/B. Do not restore either candidate.
+
+Resume Task 22R by reconciling its retained neutral span/store census and the
+already-reverted threshold-4 writer. The user requested no further retail
+repeats, so do not promote direct-VRAM/DMA/cache-layout performance from
+melonDS. Preserve one-writer ownership if any step reaches the renderer TU.

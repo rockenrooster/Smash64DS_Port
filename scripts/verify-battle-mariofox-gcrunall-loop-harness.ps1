@@ -852,6 +852,8 @@ if (($Task9FloatItcmMode -eq 1) -or
         -BenchmarkAblation:($Target -like '*triangle-noop*')
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
+& (Join-Path $PSScriptRoot 'check-task20-dtcm-layout.ps1') -Elf $elf
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if (-not (Test-Path $melonDsPath)) { throw "melonDS executable not found: $melonDsPath" }
 if (-not (Test-Path $Gdb)) { throw "GDB executable not found: $Gdb" }
 if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
