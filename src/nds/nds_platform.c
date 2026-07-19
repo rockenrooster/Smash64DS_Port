@@ -1957,6 +1957,14 @@ static void ndsPlatformPrintDebugLine(u32 row, const char *format, ...)
 }
 
 #if NDS_BATTLE_FPS_HUD_ENABLED
+#if NDS_BATTLE_PHASE_HUD_ENABLED
+static u64 sBattlePhaseHudUpdTickSum;
+static u64 sBattlePhaseHudDrawTickSum;
+static u64 sBattlePhaseHudActiveTickSum;
+static u64 sBattlePhaseHudLoopTickSum;
+static u32 sBattlePhaseHudAvgSampleCount;
+#endif
+
 static void ndsPlatformRenderBattleFpsHud(void)
 {
     u32 now_tick = cpuGetTiming();
@@ -1988,6 +1996,11 @@ static void ndsPlatformRenderBattleFpsHud(void)
 #if NDS_BATTLE_PHASE_HUD_ENABLED
         sBattlePhaseHudLastSlipCount =
             gNdsBattlePlayablePacingCadenceViolationCount;
+        sBattlePhaseHudUpdTickSum = 0u;
+        sBattlePhaseHudDrawTickSum = 0u;
+        sBattlePhaseHudActiveTickSum = 0u;
+        sBattlePhaseHudLoopTickSum = 0u;
+        sBattlePhaseHudAvgSampleCount = 0u;
         ndsPlatformPrintDebugLine(12u, "UPD        --");
         ndsPlatformPrintDebugLine(13u, "DRW        --");
         ndsPlatformPrintDebugLine(14u, "ACT        --");
@@ -2027,17 +2040,46 @@ static void ndsPlatformRenderBattleFpsHud(void)
     sBattleFpsHudLastLogicFrames = logic_frames;
 
 #if NDS_BATTLE_PHASE_HUD_ENABLED
-    ndsPlatformPrintDebugLine(
-        12u, "UPD %10lu",
-        (unsigned long)gNdsRendererProfileSourceUpdateTicks);
-    ndsPlatformPrintDebugLine(
-        13u, "DRW %10lu", (unsigned long)gNdsRendererProfileDrawTicks);
-    ndsPlatformPrintDebugLine(
-        14u, "ACT %10lu",
-        (unsigned long)gNdsRendererProfilePresentActiveTicks);
-    ndsPlatformPrintDebugLine(
-        15u, "LOOP%10lu",
-        (unsigned long)gNdsRendererProfileLoopWallTicks);
+    /* Left column = latest snapshot; right column = running mean of these
+     * once-per-sample-window snapshots since HUD reset (not per-frame). */
+    {
+        u32 upd_ticks = gNdsRendererProfileSourceUpdateTicks;
+        u32 drw_ticks = gNdsRendererProfileDrawTicks;
+        u32 act_ticks = gNdsRendererProfilePresentActiveTicks;
+        u32 loop_ticks = gNdsRendererProfileLoopWallTicks;
+        u32 avg_count;
+
+        sBattlePhaseHudUpdTickSum += upd_ticks;
+        sBattlePhaseHudDrawTickSum += drw_ticks;
+        sBattlePhaseHudActiveTickSum += act_ticks;
+        sBattlePhaseHudLoopTickSum += loop_ticks;
+        sBattlePhaseHudAvgSampleCount++;
+        avg_count = sBattlePhaseHudAvgSampleCount;
+
+        ndsPlatformPrintDebugLine(
+            12u, "UPD %8lu %8lu", (unsigned long)upd_ticks,
+            (unsigned long)(sBattlePhaseHudUpdTickSum / avg_count));
+        ndsPlatformPrintDebugLine(
+            13u, "DRW %8lu %8lu", (unsigned long)drw_ticks,
+            (unsigned long)(sBattlePhaseHudDrawTickSum / avg_count));
+        ndsPlatformPrintDebugLine(
+            14u, "ACT %8lu %8lu", (unsigned long)act_ticks,
+            (unsigned long)(sBattlePhaseHudActiveTickSum / avg_count));
+        ndsPlatformPrintDebugLine(
+            15u, "LOOP%8lu %8lu", (unsigned long)loop_ticks,
+            (unsigned long)(sBattlePhaseHudLoopTickSum / avg_count));
+#if NDS_FAST_WALLPAPER_AFFINE
+        /* Engagement proof for the affine wallpaper: applies must climb and
+         * post-ready pixel writes must stay near zero, ON DEVICE, or the
+         * feature is not actually running there. */
+        {
+            ndsPlatformPrintDebugLine(
+                20u, "WLP %8lu %8lu",
+                (unsigned long)gNdsFastWallpaperApplyCount,
+                (unsigned long)gNdsFastWallpaperPostReadyPixelWriteCount);
+        }
+#endif
+    }
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && NDS_RENDERER_M3_PHASE0_PROFILE
     ndsPlatformPrintDebugLine(
         16u, "PRE %10lu",
