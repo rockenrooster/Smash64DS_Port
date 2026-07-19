@@ -109,7 +109,12 @@ Task 20R is closed without a placement. Preserve its default-off census and
 too large for the 15,848-byte shared gap, and the plausible 2 KiB matrix
 scratch lacks the declined retail A/B. Do not restore either candidate.
 
-Resume Task 22R by reconciling its retained neutral span/store census and the
-already-reverted threshold-4 writer. The user requested no further retail
-repeats, so do not promote direct-VRAM/DMA/cache-layout performance from
-melonDS. Preserve one-writer ownership if any step reaches the renderer TU.
+Task 22R is closed. Preserve the production complete final key, neutral
+span/store census, and exact oracle. Do not restore the threshold-4 writer: it
+regresses natural-KO wallpaper P95 by 4,160 ticks. Phase D is ineligible
+without a retained CPU writer and retail proof; the user declined repeats.
+
+Resume Task 28 with one measured exact arithmetic leaf at a time. Rebind the
+current production ELF/disassembly and Task 25R owner rows before editing;
+preserve Task-16's retained compare/i2f/add-sub leaves and test no speculative
+compiler sweep. Task 29 follows only after Task 28 stabilizes.

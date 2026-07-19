@@ -5612,3 +5612,46 @@ VERIFICATION / EVIDENCE:
   artifacts/performance/2026-07-19_task20r-dtcm-audit.md
 KEEP / REWORK / REVERT: KEEP CHECKER + CENSUS / NO SCRATCH MOVE / NO STACK MOVE / TASK 22R NEXT
 ```
+
+## 2026-07-19 - Task 22R wallpaper writer final disposition
+
+```text
+IDEA ID: TASK22R-WALLPAPER-FINAL-DISPOSITION-20260719
+IDENTITY / RETAINED SURFACE:
+  The same-ROM profile-1 A/B remains ROM 285867B3... / ELF 8177EE12....
+  The profile-2 oracle pair is B5E03AD6... / 85B282CE.... The post-revert
+  census is 3556D08F... / 1CA31FDE.... Current production is the unchanged
+  757ED786... / 5F77112C... pair and has zero Task-22/profile/oracle symbols.
+
+PHASE A / B:
+  Retain the neutral setup/X-map/Y-map/write/commit and maximal-run/store
+  census. Across each eight-frame window, full+incremental rows close at
+  1,536 and scalar+2*packed+DMA+copy equals final writes. Production already
+  has a complete 16-field final key over source identity/generation/layout,
+  overlay epoch, origin, scales, combine mode, mapping version, and map slot.
+  Exact hits skip all map/write work; changed-camera source hits alternate the
+  existing two exact X/Y map slots. Do not add a second axis cache.
+
+PHASE C:
+  The threshold-4 writer improves Countdown, early, and Whispy wallpaper P95
+  by 14,592 / 27,136 / 14,528 ticks. Natural-KO wallpaper regresses
+  366,784 -> 370,944 (+4,160) while its writer changes only
+  316,160 -> 315,968 (-192). This exceeds the +2,000 gate and forces REVERT.
+  Profile 2 recorded 136,192 map and 14,942,208 pixel checks with zero
+  mismatch. Candidate writer, threshold, selector, scratch, and plumbing are
+  absent. The current verifier exports/fails on the oracle row; the older
+  profile-2 JSON binds identity but predates that JSON field.
+
+PHASE D:
+  NOT ADMISSIBLE. DMA testing requires a retained CPU writer. Retail is the
+  performance referee, no device A/B exists, and the user declined repeats.
+  Do not infer a crossover from melonDS or revive many-small-job DMA.
+
+EVIDENCE / CLOSEOUT:
+  artifacts/performance/2026-07-19_task22r-wallpaper-closeout.md
+  The ten committed Task-22 JSONs and SHA-256 values in the reconciliation
+  entry remain authoritative. Post-revert frame 445 conserves 10,570 scalar
+  + 10,496 DMA = 21,066 final pixels across 192 rows. GBI fixtures pass and
+  current production remains byte-identical.
+KEEP / REWORK / REVERT: KEEP PRODUCTION KEY + CENSUS / REVERT WRITER / SKIP DMA / TASK 28 NEXT
+```
