@@ -89,11 +89,24 @@ sampled recompute. All candidate code/data/selectors are removed; retained
 production footprint is zero. Evidence is
 `artifacts/performance/2026-07-18_task23r-phase1.md`.
 
-Task 21R is closed: preserve 21A's 16/392 no-cache result; its 21B/21C runtime
-cuts are exact-pixel draw/P95 regressions and stay reverted. Retain only the
-32/49/67 compact tables and six-closure generated manifest. The ROMs remain
-byte-identical to the 00:25 full-Boundary pair; two fresh lifecycle smokes pass,
-and duplicate capture is transport-only. Evidence: `artifacts/performance/2026-07-19_task21r-m2-foundation.md`.
-Start Task 27 Phase A. Use the retained tables/manifest, compute the Mario-only
-bound first, and prove Mario's fixed program with Fox as the in-frame control.
-Do not restore rejected cuts or add a cache; the renderer TU remains one-writer.
+Task 27 is closed at its expansion gate. Preserve the deterministic Mario
+Phase-A certificate (25/14/18/30 events, 320 triangles, 62 immutable effects),
+but do not restore its runtime executor: matrix improved about 3.1K while Mario
+and complete draw regressed, missing the 8K continuation gate by 8,128 ticks.
+Fox was not attempted. Evidence:
+`artifacts/performance/2026-07-19_task27-generated-m2.md`.
+
+Its closeout restores the exact already-green Boundary ROM pair: battle
+`757ED78612607BEB8780BF197CC701570926B52EBDD745368DC32B6D44AC89E4`, public
+`D06323485C866D74BA5D82F87B58182C82A3D7FBE5E9AAC08B83807583171A9E`.
+Focused gates, canonical lifecycle smoke, and publication pass. The full
+wrapper's only miss is the duplicate unattended-host capture-window failure;
+binary identity proves the retained certificate has no production/pixel
+effect, so do not spend another capture.
+
+Resume Task 20R from its retained default-off stack/DTCM census. Reconcile the
+current map and already-collected
+hardware evidence first. The user requested no further retail repeats, so do
+not promote any cache/layout-sensitive speed claim that lacks existing device
+falsification. Keep Task 22R's rejected threshold writer removed and preserve
+one-writer ownership if any later step reaches the renderer TU.

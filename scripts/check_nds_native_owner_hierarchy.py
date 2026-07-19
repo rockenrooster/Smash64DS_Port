@@ -30,6 +30,12 @@ EXPECTED_SCHEDULES = {
     ),
 }
 
+EXPECTED_MARIO_PROGRAM_CHECKSUMS = {
+    "source": 0x791c164e,
+    "tables": 0xd78db920,
+    "events": 0xbf8dccfd,
+}
+
 
 def require(condition: bool, message: str):
     if not condition:
@@ -372,6 +378,148 @@ def commit_trace(preflighted):
     return len(states), len(corners), sum(row[2] for row in corners)
 
 
+def check_generated_mario_program(
+        source_root: Path, manifest: dict, generated: str) -> int:
+    first_context = native.build_owner_source_context(source_root)
+    first = native.build_generated_mario_program(source_root, first_context)
+    second = native.build_generated_mario_program(source_root)
+    require(first == second, "Task 27 Mario program is nondeterministic")
+    require(
+        (first["source_checksum"], first["table_checksum"],
+         first["event_checksum"]) == (
+            EXPECTED_MARIO_PROGRAM_CHECKSUMS["source"],
+            EXPECTED_MARIO_PROGRAM_CHECKSUMS["tables"],
+            EXPECTED_MARIO_PROGRAM_CHECKSUMS["events"],
+        ),
+        "Task 27 Mario certificate checksum drifted",
+    )
+    require(
+        (len(first["schedule"]), len(first["root_order"]),
+         len(first["epoch_order"]), len(first["run_order"]),
+         first["triangle_count"], first["raw_run_count"],
+         first["cross_run_count"], first["light_command_counts"]) ==
+        (25, 14, 18, 30, 320, 21, 9, (48, 4)),
+        "Task 27 Mario generated-program census drifted",
+    )
+    require(
+        first["root_order"] == tuple(range(14)) and
+        first["epoch_order"] == tuple(range(18)) and
+        first["run_order"] == tuple(range(30)),
+        "Task 27 Mario generated-program source order drifted",
+    )
+    require(
+        len(first["state_events"]) == 62 and
+        sum(event["phase"] == "before"
+            for event in first["state_events"]) == 39 and
+        sum(event["phase"] == "after"
+            for event in first["state_events"]) == 22 and
+        sum(event["phase"] == "tail"
+            for event in first["state_events"]) == 1,
+        "Task 27 Mario immutable state-effect order drifted",
+    )
+    opcodes = [opcode for opcode, _ in first["events"]]
+    require(
+        len(opcodes) == 106 and
+        [opcodes.count(name) for name in (
+            "JOINT", "ROOT", "EPOCH", "RUN", "ROOT_END", "POP"
+        )] == [25, 14, 18, 30, 14, 5] and
+        sum(operands[0] for opcode, operands in first["events"]
+            if opcode == "POP") == 5,
+        "Task 27 Mario straight-line event census drifted",
+    )
+    rendered = "\n".join(native.render_generated_mario_program(first))
+    require(
+        rendered in generated and
+        "NDS_NATIVE_MARIO_GENERATED_PROGRAM" in rendered and
+        "NDS_TASK27_RUN(29u, 17u, 0u, 18u);" in rendered and
+        all(token not in rendered for token in (
+            "for (", "switch (", "FifoWords", "Packet",
+            "sNdsNativeFighterRuns[", "sNdsNativeFighterEpochs[",
+        )),
+        "Task 27 Mario program is scanner-like or packet-based",
+    )
+
+    recorded = manifest["generated_mario_program"]
+    require(
+        recorded["schema"] == "smash64ds.task27-mario-program.v1" and
+        recorded["source_order"] == {
+            "roots": list(range(14)),
+            "epochs": list(range(18)),
+            "runs": list(range(30)),
+        } and
+        recorded["checksums"] == {
+            name: f"0x{value:08x}"
+            for name, value in EXPECTED_MARIO_PROGRAM_CHECKSUMS.items()
+        } and
+        recorded["counts"] == {
+            "joints": 25,
+            "roots": 14,
+            "epochs": 18,
+            "runs": 30,
+            "raw_runs": 21,
+            "cross_runs": 9,
+            "triangles": 320,
+            "corners": 960,
+            "root_prefix_light_commands": 48,
+            "intra_root_light_commands": 4,
+        },
+        "Task 27 Mario manifest certificate drifted",
+    )
+    require(
+        len(recorded["root_program"]) == 14 and
+        len(recorded["epoch_program"]) == 18 and
+        len(recorded["run_program"]) == 30 and
+        len(recorded["immutable_state_effects"]) == 62 and
+        recorded["continuation_gate"] == {
+            "measured_mario_p95_ceiling_ticks": 171520,
+            "minimum_combined_fighter_p50_saving_ticks": 8000,
+            "minimum_projected_both_fighters_saving_ticks": 35000,
+        },
+        "Task 27 Mario manifest spans or measured bound drifted",
+    )
+    require(
+        recorded["status"] == "phase_a_retained_runtime_reverted" and
+        recorded["runtime_disposition"] == {
+            "verdict": "REVERT_MARIO_STOP_BEFORE_FOX",
+            "matrix_delta_p50_p95_ticks": [-3136, -3008],
+            "mario_delta_p50_p95_ticks": [128, 128],
+            "draw_delta_p50_p95_ticks": [2624, 2560],
+            "reason": (
+                "the local matrix reduction was erased inside Mario and "
+                "regressed complete draw; the 8K continuation gate failed"
+            ),
+        },
+        "Task 27 Mario runtime disposition drifted",
+    )
+
+    table_mutation = dict(first_context)
+    mutated_runs = list(first_context["runs"])
+    mutated_runs[0] = (
+        mutated_runs[0][0], mutated_runs[0][1], mutated_runs[0][2],
+        mutated_runs[0][3] ^ 1,
+    )
+    table_mutation["runs"] = mutated_runs
+    changed = native.build_generated_mario_program(source_root, table_mutation)
+    require(
+        changed["source_checksum"] == first["source_checksum"] and
+        changed["table_checksum"] != first["table_checksum"] and
+        changed["event_checksum"] == first["event_checksum"],
+        "Task 27 table mutation did not isolate its checksum",
+    )
+    invalid_class = dict(first_context)
+    invalid_runs = list(first_context["runs"])
+    invalid_runs[0] = (
+        invalid_runs[0][0], invalid_runs[0][1], 1, invalid_runs[0][3]
+    )
+    invalid_class["runs"] = invalid_runs
+    expect_value_error(
+        lambda: native.build_generated_mario_program(
+            source_root, invalid_class),
+        "Task 27 accepted a run-class mutation",
+    )
+    return 2
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -410,6 +558,8 @@ def main() -> int:
     require(args.manifest.read_bytes() == rendered_manifest,
             f"stale consumed-field manifest: {args.manifest}")
     manifest = json.loads(rendered_manifest)
+    task27_mutations = check_generated_mario_program(
+        source_root, manifest, generated)
 
     renderer = (source_root / "src/nds/nds_renderer.c").read_text()
     for record, width in (
@@ -462,7 +612,7 @@ def main() -> int:
     total_binding_cells = 0
     total_cross_corner_samples = 0
     commits = []
-    mutations = 0
+    mutations = task27_mutations
     for owner_name in ("mario", "fox"):
         payload = native.load_o2r_payload(source_root, owner_name)
         (

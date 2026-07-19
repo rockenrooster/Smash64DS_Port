@@ -3,6 +3,119 @@
 /* Dense geometry: 541 immutable vertices, 1878 indexed corners. */
 /* Exact O2R state: 120 root-prefix and 28 intra-root light commands. */
 
+#define NDS_NATIVE_MARIO_GENERATED_SOURCE_CHECKSUM 0x791c164eu
+#define NDS_NATIVE_MARIO_GENERATED_TABLE_CHECKSUM 0xd78db920u
+#define NDS_NATIVE_MARIO_GENERATED_EVENT_CHECKSUM 0xbf8dccfdu
+#define NDS_NATIVE_MARIO_GENERATED_PROGRAM \
+    do { \
+        NDS_TASK27_JOINT(0u, 1u); \
+        NDS_TASK27_JOINT(1u, 0u); \
+        NDS_TASK27_JOINT(2u, 0u); \
+        NDS_TASK27_JOINT(3u, 1u); \
+        NDS_TASK27_ROOT(0u, 3u, 31u, 0u, 1u, 44u); \
+        NDS_TASK27_EPOCH(0u, 0u, 0u, 1u, 0u, 1u); \
+        NDS_TASK27_RUN(0u, 0u, 0u, 36u); \
+        NDS_TASK27_ROOT_END(0u); \
+        NDS_TASK27_JOINT(4u, 1u); \
+        NDS_TASK27_JOINT(5u, 0u); \
+        NDS_TASK27_ROOT(1u, 5u, 16u, 1u, 1u, 16u); \
+        NDS_TASK27_EPOCH(1u, 1u, 1u, 1u, 0u, 1u); \
+        NDS_TASK27_RUN(1u, 1u, 0u, 12u); \
+        NDS_TASK27_ROOT_END(1u); \
+        NDS_TASK27_JOINT(6u, 0u); \
+        NDS_TASK27_ROOT(2u, 6u, 17u, 2u, 1u, 18u); \
+        NDS_TASK27_EPOCH(2u, 1u, 2u, 1u, 0u, 5u); \
+        NDS_TASK27_RUN(2u, 2u, 1u, 8u); \
+        NDS_TASK27_ROOT_END(2u); \
+        NDS_TASK27_JOINT(7u, 0u); \
+        NDS_TASK27_ROOT(3u, 7u, 31u, 3u, 1u, 23u); \
+        NDS_TASK27_EPOCH(3u, 2u, 3u, 1u, 255u, 1u); \
+        NDS_TASK27_RUN(3u, 3u, 0u, 28u); \
+        NDS_TASK27_ROOT_END(3u); \
+        NDS_TASK27_POP(1u); \
+        NDS_TASK27_JOINT(8u, 1u); \
+        NDS_TASK27_JOINT(9u, 0u); \
+        NDS_TASK27_ROOT(4u, 9u, 31u, 4u, 5u, 101u); \
+        NDS_TASK27_EPOCH(4u, 0u, 4u, 1u, 0u, 1u); \
+        NDS_TASK27_RUN(4u, 4u, 0u, 24u); \
+        NDS_TASK27_EPOCH(5u, 0u, 5u, 1u, 1u, 1u); \
+        NDS_TASK27_RUN(5u, 5u, 0u, 4u); \
+        NDS_TASK27_EPOCH(6u, 1u, 6u, 1u, 2u, 1u); \
+        NDS_TASK27_RUN(6u, 6u, 0u, 25u); \
+        NDS_TASK27_EPOCH(7u, 3u, 7u, 1u, 255u, 1u); \
+        NDS_TASK27_RUN(7u, 7u, 0u, 19u); \
+        NDS_TASK27_EPOCH(8u, 3u, 8u, 1u, 255u, 1u); \
+        NDS_TASK27_RUN(8u, 8u, 0u, 20u); \
+        NDS_TASK27_ROOT_END(4u); \
+        NDS_TASK27_POP(1u); \
+        NDS_TASK27_JOINT(10u, 0u); \
+        NDS_TASK27_JOINT(11u, 0u); \
+        NDS_TASK27_ROOT(5u, 11u, 18u, 9u, 1u, 16u); \
+        NDS_TASK27_EPOCH(9u, 1u, 9u, 1u, 0u, 1u); \
+        NDS_TASK27_RUN(9u, 9u, 0u, 12u); \
+        NDS_TASK27_ROOT_END(5u); \
+        NDS_TASK27_JOINT(12u, 0u); \
+        NDS_TASK27_ROOT(6u, 12u, 19u, 10u, 1u, 18u); \
+        NDS_TASK27_EPOCH(10u, 1u, 10u, 1u, 0u, 5u); \
+        NDS_TASK27_RUN(10u, 10u, 1u, 8u); \
+        NDS_TASK27_ROOT_END(6u); \
+        NDS_TASK27_JOINT(13u, 0u); \
+        NDS_TASK27_ROOT(7u, 13u, 31u, 11u, 1u, 23u); \
+        NDS_TASK27_EPOCH(11u, 2u, 11u, 1u, 255u, 1u); \
+        NDS_TASK27_RUN(11u, 11u, 0u, 28u); \
+        NDS_TASK27_ROOT_END(7u); \
+        NDS_TASK27_JOINT(14u, 0u); \
+        NDS_TASK27_POP(1u); \
+        NDS_TASK27_JOINT(15u, 1u); \
+        NDS_TASK27_JOINT(16u, 0u); \
+        NDS_TASK27_ROOT(8u, 16u, 20u, 12u, 1u, 18u); \
+        NDS_TASK27_EPOCH(12u, 1u, 12u, 1u, 0u, 1u); \
+        NDS_TASK27_RUN(12u, 12u, 0u, 15u); \
+        NDS_TASK27_ROOT_END(8u); \
+        NDS_TASK27_JOINT(17u, 0u); \
+        NDS_TASK27_ROOT(9u, 17u, 21u, 13u, 1u, 23u); \
+        NDS_TASK27_EPOCH(13u, 1u, 13u, 6u, 0u, 6u); \
+        NDS_TASK27_RUN(13u, 13u, 1u, 4u); \
+        NDS_TASK27_RUN(14u, 13u, 0u, 2u); \
+        NDS_TASK27_RUN(15u, 13u, 1u, 3u); \
+        NDS_TASK27_RUN(16u, 13u, 0u, 2u); \
+        NDS_TASK27_RUN(17u, 13u, 1u, 3u); \
+        NDS_TASK27_RUN(18u, 13u, 0u, 1u); \
+        NDS_TASK27_ROOT_END(9u); \
+        NDS_TASK27_JOINT(18u, 0u); \
+        NDS_TASK27_JOINT(19u, 0u); \
+        NDS_TASK27_ROOT(10u, 19u, 31u, 14u, 1u, 15u); \
+        NDS_TASK27_EPOCH(14u, 2u, 19u, 1u, 0u, 1u); \
+        NDS_TASK27_RUN(19u, 14u, 0u, 18u); \
+        NDS_TASK27_ROOT_END(10u); \
+        NDS_TASK27_POP(1u); \
+        NDS_TASK27_JOINT(20u, 0u); \
+        NDS_TASK27_JOINT(21u, 0u); \
+        NDS_TASK27_ROOT(11u, 21u, 22u, 15u, 1u, 18u); \
+        NDS_TASK27_EPOCH(15u, 1u, 20u, 1u, 0u, 1u); \
+        NDS_TASK27_RUN(20u, 15u, 0u, 15u); \
+        NDS_TASK27_ROOT_END(11u); \
+        NDS_TASK27_JOINT(22u, 0u); \
+        NDS_TASK27_ROOT(12u, 22u, 23u, 16u, 1u, 23u); \
+        NDS_TASK27_EPOCH(16u, 1u, 21u, 8u, 0u, 6u); \
+        NDS_TASK27_RUN(21u, 16u, 1u, 4u); \
+        NDS_TASK27_RUN(22u, 16u, 0u, 2u); \
+        NDS_TASK27_RUN(23u, 16u, 1u, 3u); \
+        NDS_TASK27_RUN(24u, 16u, 0u, 1u); \
+        NDS_TASK27_RUN(25u, 16u, 1u, 1u); \
+        NDS_TASK27_RUN(26u, 16u, 0u, 1u); \
+        NDS_TASK27_RUN(27u, 16u, 1u, 2u); \
+        NDS_TASK27_RUN(28u, 16u, 0u, 1u); \
+        NDS_TASK27_ROOT_END(12u); \
+        NDS_TASK27_JOINT(23u, 0u); \
+        NDS_TASK27_JOINT(24u, 0u); \
+        NDS_TASK27_ROOT(13u, 24u, 31u, 17u, 1u, 15u); \
+        NDS_TASK27_EPOCH(17u, 2u, 29u, 1u, 0u, 1u); \
+        NDS_TASK27_RUN(29u, 17u, 0u, 18u); \
+        NDS_TASK27_ROOT_END(13u); \
+        NDS_TASK27_POP(1u); \
+    } while (0)
+
 static const NDSNativeStateDelta sNdsNativeFighterStateDeltas[70] =
 {
     { 0xe3001001u, 0x00008000u, 2u, { 0u, 0u, 0u } },

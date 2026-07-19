@@ -5489,3 +5489,72 @@ EVIDENCE:
   artifacts/performance/2026-07-19_task21r-21c-candidate.json
 KEEP / REWORK / REVERT: KEEP CENSUS + COMPACT MANIFEST / REVERT 21B + 21C RUNTIME / TASK 27 NEXT
 ```
+
+## 2026-07-19 - Task 27 generated M2 Mario root/epoch program
+
+```text
+IDEA ID: TASK27-GENERATED-M2-MARIO-20260719
+BOUND / IDENTITY:
+  Source checkpoint c6b0d6695e22a6d11f6d6acf56b3da4d541cde42. Canonical
+  mode-8 owner, profile 1, frames 600..607 / updates 1206..1220, static AOT,
+  incremental wallpaper, hybrid OAM, Task 9 phase 2, and Task 16 1/1/1.
+  Task 25R sets the Mario P95 ceiling at 171,520 ticks. Continue broad
+  generation only for >=8,000 combined-fighter P50 ticks or a credible
+  >=35,000 two-fighter projection.
+
+PHASE A CERTIFICATE — KEEP:
+  The hashed Mario O2R and Task-21R compact tables deterministically produce
+  25 joints, 14 roots, 18 epochs, 30 runs, 21 raw + 9 cross runs, 320
+  triangles, 960 corners, 48 root-prefix + 4 intra-root light commands, and 62
+  immutable state effects. Source/table/event checksums are
+  791C164E/D78DB920/BF8DCCFD. Roots 0..13, epochs 0..17, and runs 0..29 are
+  exact source order. Rebuild determinism, scanner/packet exclusion, a table
+  checksum mutation, and a rejected run-class mutation pass. Retain the
+  generated manifest/checker; it has no production runtime footprint.
+
+MARIO-ONLY RUNTIME A/B — REVERT:
+  Candidate ROM/ELF:
+    207588F9640B4312FCD0ED08223F8AF7C3327E268668B4E704564741349F82AC
+    A6A8CCC927C442297A4199C50108068373C6817F7D940B9B6AD8016210468DF2
+  Complete current preflight and live material/light/texture preparation ran
+  before GX; the generated program owned Mario only and Fox remained control.
+  A one-time 106-event validator failed before GX and no post-GX fallback
+  existed. ITCM remained 28,808/32,768 with 3,960 free.
+
+  Against the retained same-slot Task-21R control, matrix improves
+  158,464/158,528 -> 155,328/155,520 (-3,136/-3,008 P50/P95), but Mario
+  regresses 169,792/171,392 -> 169,920/171,520 (+128/+128), Fox layout
+  regresses +224/+192, and complete draw regresses
+  1,002,496/1,005,824 -> 1,005,120/1,008,384 (+2,624/+2,560). DL is
+  +704/+704 and whole-loop P95 is +64. Both sides retain exact 70/686,
+  60/320/306, 29/0/0 fallback state/vertex/command, and zero conservation
+  error. The candidate is 8,128 ticks short of the continuation threshold.
+  Timing is decisive, so no pixel promotion run was spent.
+
+DISPOSITION:
+  Remove all selector, renderer, validation, and runtime executor code. Do not
+  attempt Fox. Keep only the Phase-A provenance/source-order/state-effect
+  manifest and falsifiers as a bounded architecture record. No emulator or
+  retail repeat is requested.
+
+CLOSEOUT VERIFICATION:
+  Generation/check mode, eight hierarchy falsifiers, packet census, GBI,
+  Task-9/16 float placement, renderer ITCM, canonical lifecycle smoke, and the
+  two-ROM publication contract pass. The restored production ROMs are
+  byte-identical to the already-green Task-21R Boundary pair: battle
+  757ED78612607BEB8780BF197CC701570926B52EBDD745368DC32B6D44AC89E4 and
+  public D06323485C866D74BA5D82F87B58182C82A3D7FBE5E9AAC08B83807583171A9E.
+  The full wrapper then stops only because unattended melonDS again exposes no
+  capturable top-level window. Treat that duplicate host UI failure as
+  screenshot transport; binary identity proves the retained certificate has
+  zero production and pixel effect, so do not request another capture or
+  retail repeat.
+
+EVIDENCE:
+  artifacts/performance/2026-07-19_task27-generated-m2.md
+  artifacts/performance/2026-07-19_task27-phasea-mario-bound.json
+  artifacts/performance/2026-07-19_task27-mario-generated-candidate.json
+  artifacts/performance/2026-07-19_task21r-21c-control.json
+  docs/optimization/NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json
+KEEP / REWORK / REVERT: KEEP PHASE-A CERTIFICATE / REVERT MARIO RUNTIME / STOP BEFORE FOX / TASK 20R NEXT
+```

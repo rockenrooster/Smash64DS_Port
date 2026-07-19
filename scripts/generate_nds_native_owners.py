@@ -1728,10 +1728,8 @@ def emit_rows(
     return result
 
 
-def generate(repo_root: Path | None = None) -> str:
-    if repo_root is None:
-        repo_root = Path(__file__).resolve().parents[1]
-    repo_root = Path(repo_root).resolve()
+def build_owner_source_context(repo_root: Path) -> dict[str, object]:
+    """Recover the exact shared Mario/Fox source-order program inputs."""
     data = decode_export()
     state = unpack_many("<IIB3x", data["state"])
     sequence = list(data["sequence"])
@@ -1752,12 +1750,14 @@ def generate(repo_root: Path | None = None) -> str:
         class_triangles[submit_class] += triangle_count
     if class_triangles != [582, 44]:
         raise ValueError(f"submit-class census changed: {class_triangles}")
+
     direct_epoch_policies = build_direct_epoch_policies(len(epochs))
     owner_roots = (("mario", mario_roots), ("fox", fox_roots))
     owner_topologies = []
     light_state_additions = {index: ([], []) for index in range(len(epochs))}
     light_preambles = [(0, 0)]
     owner_light_preamble_indices = {}
+    owner_light_command_counts = {}
     root_prefix_light_command_count = 0
     intra_root_light_command_count = 0
     for owner_name, roots in owner_roots:
@@ -1769,6 +1769,9 @@ def generate(repo_root: Path | None = None) -> str:
          owner_prefix_command_count, owner_intra_command_count) = \
             decode_epoch_light_color_state(
                 payload, owner_name, roots, epochs)
+        owner_light_command_counts[owner_name] = (
+            owner_prefix_command_count, owner_intra_command_count
+        )
         for epoch_index, (before, after) in owner_light_state.items():
             light_state_additions[epoch_index][0].extend(before)
             light_state_additions[epoch_index][1].extend(after)
@@ -1800,7 +1803,237 @@ def generate(repo_root: Path | None = None) -> str:
             state, sequence, epochs, (mario_roots, fox_roots),
             light_state_additions)
     mario_roots, fox_roots = rebuilt_root_groups
-    owner_roots = (("mario", mario_roots), ("fox", fox_roots))
+
+    return {
+        "data": data,
+        "state": state,
+        "sequence": sequence,
+        "vertex": vertex,
+        "triangles": triangles,
+        "runs": runs,
+        "epochs": epochs,
+        "mario_roots": mario_roots,
+        "fox_roots": fox_roots,
+        "owner_roots": (("mario", mario_roots), ("fox", fox_roots)),
+        "owner_topologies": owner_topologies,
+        "direct_epoch_policies": direct_epoch_policies,
+        "light_preambles": light_preambles,
+        "owner_light_preamble_indices": owner_light_preamble_indices,
+        "owner_light_command_counts": owner_light_command_counts,
+    }
+
+
+def _append_checksum_rows(words: list[int], tag: int, rows) -> None:
+    rows = tuple(rows)
+    words.extend((tag, len(rows)))
+    for row in rows:
+        words.extend(int(value) for value in row)
+
+
+def build_generated_mario_program(
+        repo_root: Path, context: dict[str, object] | None = None
+        ) -> dict[str, object]:
+    """Build Task 27's fixed Mario joint/root/epoch/run program."""
+    if context is None:
+        context = build_owner_source_context(repo_root)
+    roots = context["mario_roots"]
+    epochs = context["epochs"]
+    runs = context["runs"]
+    state = context["state"]
+    sequence = context["sequence"]
+    policies = context["direct_epoch_policies"]
+    light_indices = context["owner_light_preamble_indices"]["mario"]
+    schedule, binding_parents, binding_joints, cross_slots, hierarchy_counts = \
+        context["owner_topologies"][0]
+    events = []
+    root_rows = []
+    epoch_rows = []
+    run_rows = []
+    state_rows = []
+    state_events = []
+    root_order = []
+    epoch_order = []
+    run_order = []
+    raw_runs = 0
+    cross_runs = 0
+    triangle_count = 0
+    phase_ids = {"before": 0, "after": 1, "tail": 2}
+
+    def append_state_span(
+            phase: str, root_index: int, epoch_index: int | None,
+            first: int, count: int) -> None:
+        for offset in range(count):
+            sequence_index = first + offset
+            delta_index = sequence[sequence_index]
+            w0, w1, effect = state[delta_index]
+            state_rows.append((
+                phase_ids[phase], root_index,
+                0xff if epoch_index is None else epoch_index,
+                sequence_index, delta_index, effect, w0, w1,
+            ))
+            state_events.append({
+                "phase": phase,
+                "root": root_index,
+                "epoch": epoch_index,
+                "sequence_index": sequence_index,
+                "delta_index": delta_index,
+                "effect": effect,
+                "w0": f"0x{w0:08x}",
+                "w1": f"0x{w1:08x}",
+            })
+
+    for joint_index, packed in enumerate(schedule):
+        binding = (packed >> 5) & 31
+        events.append(("JOINT", (
+            joint_index, 1 if packed & JOINT_SCHEDULE_PUSH_BEFORE else 0,
+        )))
+        if binding != 31:
+            root = roots[binding]
+            root_order.append(binding)
+            root_rows.append((
+                binding, *root[:7], light_indices[binding],
+                binding_joints[binding], cross_slots[binding],
+            ))
+            events.append(("ROOT", (
+                binding, binding_joints[binding], cross_slots[binding],
+                root[1], root[4], root[3],
+            )))
+            for epoch_index in range(root[1], root[1] + root[4]):
+                epoch = epochs[epoch_index]
+                epoch_order.append(epoch_index)
+                epoch_rows.append((binding, epoch_index, policies[epoch_index],
+                                   *epoch))
+                append_state_span(
+                    "before", binding, epoch_index, epoch[0], epoch[4])
+                append_state_span(
+                    "after", binding, epoch_index, epoch[1], epoch[5])
+                events.append(("EPOCH", (
+                    epoch_index, policies[epoch_index], epoch[3], epoch[9],
+                    epoch[10], epoch[8],
+                )))
+                for run_index in range(epoch[3], epoch[3] + epoch[9]):
+                    run = runs[run_index]
+                    run_order.append(run_index)
+                    run_rows.append((binding, epoch_index, run_index, *run))
+                    raw_runs += run[2] == 0
+                    cross_runs += run[2] == 1
+                    triangle_count += run[1]
+                    events.append(("RUN", (
+                        run_index, epoch_index, run[2], run[1],
+                    )))
+            append_state_span(
+                "tail", binding, None, root[2], root[5])
+            events.append(("ROOT_END", (binding,)))
+
+        next_parent = ((schedule[joint_index + 1] & 31)
+                       if joint_index + 1 < len(schedule) else 31)
+        cursor = joint_index
+        pop_count = 0
+        while cursor != next_parent:
+            cursor_packed = schedule[cursor]
+            if cursor_packed & JOINT_SCHEDULE_PUSH_BEFORE:
+                pop_count += 1
+            cursor = cursor_packed & 31
+        if pop_count:
+            events.append(("POP", (pop_count,)))
+
+    if (root_order != list(range(14)) or
+            epoch_order != list(range(18)) or
+            run_order != list(range(30))):
+        raise ValueError("Mario generated program lost source order")
+    if (len(schedule), len(root_order), len(epoch_order), len(run_order),
+            triangle_count, raw_runs, cross_runs) != (25, 14, 18, 30,
+                                                      320, 21, 9):
+        raise ValueError("Mario generated program cardinality changed")
+    if sum(value[0] for opcode, value in events if opcode == "POP") != 5:
+        raise ValueError("Mario generated program pop census changed")
+
+    source_words = [0x4d325341, O2R_ASSETS["mario"][1]]
+    source_words.extend(bytes.fromhex(O2R_ASSETS["mario"][2]))
+    table_words = []
+    _append_checksum_rows(table_words, 0x4d325352, root_rows)
+    _append_checksum_rows(table_words, 0x4d325353, epoch_rows)
+    _append_checksum_rows(table_words, 0x4d325354, run_rows)
+    _append_checksum_rows(table_words, 0x4d325358, state_rows)
+    _append_checksum_rows(
+        table_words, 0x4d325355, ((index, value)
+                                  for index, value in enumerate(schedule)))
+    _append_checksum_rows(
+        table_words, 0x4d325356, ((index, value)
+                                  for index, value in enumerate(binding_joints)))
+    _append_checksum_rows(
+        table_words, 0x4d325357, ((index, value)
+                                  for index, value in enumerate(cross_slots)))
+    opcode_ids = {
+        "JOINT": 1, "ROOT": 2, "EPOCH": 3,
+        "RUN": 4, "ROOT_END": 5, "POP": 6,
+    }
+    event_words = [0x4d325350, len(events)]
+    for opcode, operands in events:
+        event_words.extend((opcode_ids[opcode], len(operands), *operands))
+
+    return {
+        "events": tuple(events),
+        "root_rows": tuple(root_rows),
+        "epoch_rows": tuple(epoch_rows),
+        "run_rows": tuple(run_rows),
+        "state_events": tuple(state_events),
+        "root_order": tuple(root_order),
+        "epoch_order": tuple(epoch_order),
+        "run_order": tuple(run_order),
+        "schedule": tuple(schedule),
+        "binding_parents": tuple(binding_parents),
+        "binding_joints": tuple(binding_joints),
+        "cross_slots": tuple(cross_slots),
+        "hierarchy_counts": tuple(hierarchy_counts),
+        "source_checksum": stage_manifest.fnv1a_u32(source_words),
+        "table_checksum": stage_manifest.fnv1a_u32(table_words),
+        "event_checksum": stage_manifest.fnv1a_u32(event_words),
+        "triangle_count": triangle_count,
+        "raw_run_count": raw_runs,
+        "cross_run_count": cross_runs,
+        "light_command_counts": tuple(
+            context["owner_light_command_counts"]["mario"]),
+    }
+
+
+def render_generated_mario_program(program: dict[str, object]) -> list[str]:
+    lines = [
+        f"#define NDS_NATIVE_MARIO_GENERATED_SOURCE_CHECKSUM "
+        f"0x{program['source_checksum']:08x}u",
+        f"#define NDS_NATIVE_MARIO_GENERATED_TABLE_CHECKSUM "
+        f"0x{program['table_checksum']:08x}u",
+        f"#define NDS_NATIVE_MARIO_GENERATED_EVENT_CHECKSUM "
+        f"0x{program['event_checksum']:08x}u",
+        "#define NDS_NATIVE_MARIO_GENERATED_PROGRAM \\",
+        "    do { \\",
+    ]
+    for opcode, operands in program["events"]:
+        rendered = ", ".join(f"{value}u" for value in operands)
+        lines.append(f"        NDS_TASK27_{opcode}({rendered}); \\")
+    lines.extend(("    } while (0)", ""))
+    return lines
+
+
+def generate(repo_root: Path | None = None) -> str:
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parents[1]
+    repo_root = Path(repo_root).resolve()
+    context = build_owner_source_context(repo_root)
+    state = context["state"]
+    sequence = context["sequence"]
+    vertex = context["vertex"]
+    triangles = context["triangles"]
+    runs = context["runs"]
+    epochs = context["epochs"]
+    mario_roots = context["mario_roots"]
+    fox_roots = context["fox_roots"]
+    owner_roots = context["owner_roots"]
+    owner_topologies = context["owner_topologies"]
+    direct_epoch_policies = context["direct_epoch_policies"]
+    light_preambles = context["light_preambles"]
+    owner_light_preamble_indices = context["owner_light_preamble_indices"]
+    mario_program = build_generated_mario_program(repo_root, context)
     (
         dense_vertices,
         dense_color_sources,
@@ -1856,6 +2089,7 @@ def generate(repo_root: Path | None = None) -> str:
         "/* Exact O2R state: 120 root-prefix and 28 intra-root light commands. */",
         "",
     ]
+    lines += render_generated_mario_program(mario_program)
     lines += emit_rows(
         "NDSNativeStateDelta", "sNdsNativeFighterStateDeltas",
         [f"{{ 0x{w0:08x}u, 0x{w1:08x}u, {effect}u, {{ 0u, 0u, 0u }} }}"
@@ -2102,12 +2336,14 @@ def generate(repo_root: Path | None = None) -> str:
 
 
 def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
-    data = decode_export()
-    mario_roots = unpack_many("<IHHHBBBB2x", data["mario_roots"])
-    fox_roots = unpack_many("<IHHHBBBB2x", data["fox_roots"])
-    epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
-    runs = unpack_many("<HBBI", data["runs"])
+    context = build_owner_source_context(repo_root)
+    data = context["data"]
+    mario_roots = context["mario_roots"]
+    fox_roots = context["fox_roots"]
+    epochs = context["epochs"]
+    runs = context["runs"]
     triangles = struct.unpack(f"<{len(data['triangles']) // 2}H", data["triangles"])
+    mario_program = build_generated_mario_program(repo_root, context)
     closures = stage_manifest.build_consumed_closure_rows(
         repo_root, SOURCE_CLOSURE_POLICIES, {}
     )
@@ -2160,6 +2396,111 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
                 "field_bytes": 1,
                 "consumer": "Task 27 generated fighter program",
                 "lookup": "checked direct indices in exact source order",
+            },
+        },
+        "generated_mario_program": {
+            "schema": "smash64ds.task27-mario-program.v1",
+            "status": "phase_a_retained_runtime_reverted",
+            "source_order": {
+                "roots": list(mario_program["root_order"]),
+                "epochs": list(mario_program["epoch_order"]),
+                "runs": list(mario_program["run_order"]),
+            },
+            "checksums": {
+                "source": f"0x{mario_program['source_checksum']:08x}",
+                "tables": f"0x{mario_program['table_checksum']:08x}",
+                "events": f"0x{mario_program['event_checksum']:08x}",
+            },
+            "counts": {
+                "joints": len(mario_program["schedule"]),
+                "roots": len(mario_program["root_order"]),
+                "epochs": len(mario_program["epoch_order"]),
+                "runs": len(mario_program["run_order"]),
+                "raw_runs": mario_program["raw_run_count"],
+                "cross_runs": mario_program["cross_run_count"],
+                "triangles": mario_program["triangle_count"],
+                "corners": mario_program["triangle_count"] * 3,
+                "root_prefix_light_commands":
+                    mario_program["light_command_counts"][0],
+                "intra_root_light_commands":
+                    mario_program["light_command_counts"][1],
+            },
+            "root_program": [
+                {
+                    "root": row[0],
+                    "root_offset": f"0x{row[1]:08x}",
+                    "first_epoch": row[2],
+                    "tail_state_first": row[3],
+                    "source_command_count": row[4],
+                    "epoch_count": row[5],
+                    "tail_state_count": row[6],
+                    "tail_sync_count": row[7],
+                    "light_preamble": row[8],
+                    "binding_joint": row[9],
+                    "cross_palette_slot": row[10],
+                }
+                for row in mario_program["root_rows"]
+            ],
+            "epoch_program": [
+                {
+                    "root": row[0],
+                    "epoch": row[1],
+                    "direct_policy": row[2],
+                    "before_state_first": row[3],
+                    "after_state_first": row[4],
+                    "first_action": row[5],
+                    "first_run": row[6],
+                    "before_state_count": row[7],
+                    "after_state_count": row[8],
+                    "before_sync_count": row[9],
+                    "after_sync_count": row[10],
+                    "action_count": row[11],
+                    "run_count": row[12],
+                    "material_slot": row[13],
+                    "first_source_triangle": row[14],
+                }
+                for row in mario_program["epoch_rows"]
+            ],
+            "run_program": [
+                {
+                    "root": row[0],
+                    "epoch": row[1],
+                    "run": row[2],
+                    "first_triangle": row[3],
+                    "triangle_count": row[4],
+                    "submit_class": row[5],
+                    "required_vertex_mask": f"0x{row[6]:08x}",
+                }
+                for row in mario_program["run_rows"]
+            ],
+            "immutable_state_effects": list(mario_program["state_events"]),
+            "live_operands": [
+                "projection and camera modelview",
+                "joint locals and parent/binding identity",
+                "root preamble and material snapshots",
+                "prepared light direction and shaded colors",
+                "texture residency, parameters, palette, and alpha",
+                "persistent vertex cache and cross-matrix palette slots",
+            ],
+            "validation": {
+                "timing": "complete before the first GX mutation",
+                "failure": "return to the caller before GX; no post-GX fallback",
+                "field_coverage": "source_closures plus ownership_contracts",
+            },
+            "continuation_gate": {
+                "measured_mario_p95_ceiling_ticks": 171520,
+                "minimum_combined_fighter_p50_saving_ticks": 8000,
+                "minimum_projected_both_fighters_saving_ticks": 35000,
+            },
+            "runtime_disposition": {
+                "verdict": "REVERT_MARIO_STOP_BEFORE_FOX",
+                "matrix_delta_p50_p95_ticks": [-3136, -3008],
+                "mario_delta_p50_p95_ticks": [128, 128],
+                "draw_delta_p50_p95_ticks": [2624, 2560],
+                "reason": (
+                    "the local matrix reduction was erased inside Mario and "
+                    "regressed complete draw; the 8K continuation gate failed"
+                ),
             },
         },
         "task21c_disposition": {
