@@ -5763,3 +5763,56 @@ EVIDENCE:
   artifacts/performance/2026-07-19_task29-control-early.json
 KEEP / REWORK / REVERT: KEEP PHASE-A DIAGNOSTICS / NO PHASE-B SHADOW / NO PHASE-C STREAM / TASK 24R NEXT
 ```
+
+## 2026-07-19 - Task 24R evidence-safe quiet-slot cleanup
+
+```text
+IDEA ID: TASK24R-QUIET-SLOT-DIET-20260719
+SOURCE / RECOVERY:
+  HEAD f2534ccaafb1abe3ae522bf7e88b006e3212feda.
+  Pre-delete Lean snapshot:
+    C:\Users\Tyler\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip
+
+DELETED BATCH:
+  7,929 files / 3,746,285,595 bytes from 17 exact immediate children of
+  builds/ or artifacts/.
+  - 6,581 files / 699,406,817 bytes: 14 lab roots owned by CLOSED/REVERT
+    Tasks 13, 20R, 21R, 22R, 28, and 29.
+  - 1,348 files / 3,046,878,778 bytes: artifacts/verifier-cost,
+    artifacts/verifier-temp, and artifacts/emulator-logs.
+  No worktree, branch, ref, Git object, logs/ entry, permanent evidence,
+  current generated-program A/B, hardware pair, canonical build, or user file
+  was removed. No git gc was run.
+
+PERMANENT EVIDENCE:
+  Immediately before and after deletion:
+    performance 329 files / 91,169,794 bytes / aggregate
+      25B1BD9A9D17824E7C0FD35A6C032C7A14F0209084DE948B2AE4FE39B306DDAD
+    visibility 1,577 files / 209,195,688 bytes / aggregate
+      586ADF5B846D789678598DD1551461551C0BAB537B68DFFBC023554827B1122D
+  The post-delete Boundary gate then added two normal dated captures. A new
+  fail-closed checker uses each migration record's deduplicated destination,
+  rejects path/size/hash drift and disagreement, and excludes only rolling
+  latest.png/previous.png. It passes 1,814 records / 1,745 immutable
+  destinations / two aliases / zero failures.
+
+GIT SURFACES:
+  16 registered worktrees remain: main plus all 15 prior holds. Three temp
+  Task-16 worktrees are dirty; seven named worktree branches retain unique
+  commits; four detached clean tips remain non-ancestors. All 24 branches are
+  preserved. The five-effects attack/Fox/hit branches remain specifically for
+  the required pre-Task-30 A/V reconciliation.
+
+POST-DIET STATE / GATES:
+  builds/: 38,255 files / 4,397,115,650 bytes.
+  artifacts/: 1,950 files / 391,137,559 bytes after the dated capture pair.
+  Parser, GBI/source fixtures, melonDS policy, migration-manifest replay, and
+  final profile-0 Boundary all pass. Battle ROM/ELF remain
+    21D789F3439FB2223C7F0F4F097B5A2ABD9652F2BDE4A6648B1A6808C404EEC1 /
+    89C83C403E59365BC938A2DF5745C506EE66F63DAB8AF772C93440EC5CF1C355
+  and public ROM remains D06323485C866D74BA5D82F87B58182C82A3D7FBE5E9AAC08B83807583171A9E.
+
+EVIDENCE:
+  artifacts/performance/2026-07-19_task24r-quiet-slot-cleanup.md
+KEEP / REWORK / REVERT: KEEP CLEANUP + MANIFEST CHECKER / TASK 24R COMPLETE / A/V AUDIT NEXT
+```

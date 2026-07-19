@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-19 05:21 Central
+Updated: 2026-07-19 05:45 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -125,7 +125,7 @@ preserved, unedited, and outside this checkpoint; the user-supplied
 | Task 21R | **Complete** — 21A no-cache; 21B runtime REVERT; 21C compact foundation KEEP / runtime consumer REVERT | `scripts/generate_nds_native_owners.py`; `scripts/check_nds_native_owner_hierarchy.py`; `docs/optimization/NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json`; report | Preserve 21A's 16/392 exact hits (4.08%). A poison fill proves full prepared-run assignment, but deleting the clear/dead store regresses draw P50/P95 +640/+576. Replacing 463 pointer comparisons with 32 direct checks saves matrix -1,440/-896 but regresses complete draw +1,376/+1,344 and active P95 +9,344 in a same-slot A/B; both runtime cuts are exact-pixel REVERTs. Retain the 32/49/67 compact `u16`/`u8` tables, provenance, widths, source order, and six-closure consumed-field manifest for Task 27 only. |
 | Task 27 | **Complete** — Phase-A generated certificate KEEP / Mario runtime REVERT / Fox not attempted | `scripts/generate_nds_native_owners.py`; `scripts/check_nds_native_owner_hierarchy.py`; generated manifest/include; report | Deterministically certify Mario's 25/14/18/30 joint/root/epoch/run program, 320 triangles, 960 corners, 48/4 light commands, 62 immutable effects, and source/table/event checksums. The temporary Mario executor saves matrix -3,136/-3,008 but regresses Mario +128/+128, Fox +224/+192, and draw +2,624/+2,560 P50/P95; it misses the 8K gate by 8,128 ticks. All runtime/selector code is removed. Retain only the inert Phase-A certificate and stop before Fox. |
 | Task 22R | **Complete** — production key/census KEEP; threshold-4 writer REVERT; DMA not admissible | retained production complete key; neutral span/store census; verifier oracle; closeout report | Production already has complete 16-field exact final-key reuse and double-buffered X/Y maps. The candidate improves moving-camera windows but regresses natural-KO wallpaper P95 366,784 -> 370,944 (+4,160), over the +2,000 gate; profile 2 records 136,192 map and 14,942,208 pixel checks with zero mismatch. The writer/selector remain absent. Phase D requires a retained CPU writer and retail proof, so it is skipped. Profile 0 has zero Task-22/profile/oracle symbols. |
-| Task 24 | **C** — the already evidence-cleared worktree batch | committed manifest/evidence, worktree administration, `AGENTS.md`, ledger/board | Manifest SHA-256 `62585F0AE38C8B2ED4E0DC855DE56102B046585C69A208A6624EC0C16A8AF1BB`; 225 unique files / 20,501,076 bytes copied and 292 destinations rehashed with zero failures. Exactly 17 cleared worktrees were removed; all 15 held/dirty worktrees, every branch, builds, logs, and telemetry remain. No more cleanup until a quiet slot. |
+| Task 24R | **Complete** — prior worktree batch plus quiet-slot output diet | migration manifest; retained evidence checker; closed lab-build/telemetry deletion report | The prior batch migrated 225 unique evidence files and removed 17 proven worktrees. The quiet-slot batch removes 7,929 files / 3,746,285,595 bytes from 14 closed/reverted lab builds and three telemetry roots. Protected performance/visibility digests are unchanged across deletion; 1,745 immutable migration destinations rehash with zero failures. All 15 held worktrees, all 24 branches, current generated A/Bs, hardware pairs, logs, and user dirt remain. Post-delete Boundary passes. |
 | Old Task 25 | Not live — completed immediately before reconciliation | historical phase-matrix evidence/tooling | Preserve as historical input only. It is not Task 25R and cannot set current priority. |
 | Task 25R | **E -> complete report-only baseline** | bounded profile-1 source-update/interval timers; profile-0 external pacing trace; phase-matrix/identity checker; evidence only | One profile-1 ROM supplies all seven detailed windows and one profile-0 sibling supplies the 4,084/2,042 lifecycle. Pixels are 0/49,152 and reserve is 166,672, but stable-30, fixed-window exactness, KO-audio cleanliness, and the post-GO texture fence fail. The same-ROM P95 ranking selects M3-first. No production executor or profile-0 symbol/layout changed. |
 | Task 23R Phase 1 | Complete census / cache **REVERT** | compile-gated residual counters and marker/checker exports only | Five passing eight-frame windows find 40/40 complete-key hits and an 832–896-tick key against an 85.4–86.3K-tick avoided upper bound. One same-ROM narrow cache saves about 13.1K residual-prepare and 12.0K active/draw ticks with exact pixels, but changes the DS working set, leaves the VBlank histogram unchanged, and lacks the required profile-2 sampled recompute and retail falsification. All cache code/data/selectors were removed; retained production footprint is zero. |
@@ -291,6 +291,29 @@ Evidence: `artifacts/performance/2026-07-19_task29-gx-census.md` and its four
 JSON captures plus paired exact-pixel screenshots. Final profile-0 Boundary
 ROM/ELF are `21D789F3...` / `89C83C40...`; the ELF has zero Task-29 symbols.
 
+## Task 24R quiet-slot cleanup (2026-07-19)
+
+The evidence-first batch removes exactly 7,929 files / 3,746,285,595 bytes:
+6,581 files / 699,406,817 bytes from 14 closed/reverted Task-13, Task-20R,
+Task-21R, Task-22R, Task-28, and Task-29 lab directories, plus 1,348 files /
+3,046,878,778 bytes from `verifier-cost`, `verifier-temp`, and
+`emulator-logs`. The pre-delete Lean snapshot at
+`C:\Users\Tyler\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip`
+is the recovery surface. No worktree, branch, ref, Git object, log entry,
+permanent evidence file, canonical build, active hardware pair, current
+generated A/B, or user-owned file was removed.
+
+`artifacts/performance` stays exactly 329 files / 91,169,794 bytes with digest
+`25B1BD9A...`, and `artifacts/visibility` stays exactly 1,577 files /
+209,195,688 bytes with digest `586ADF5B...` across the deletion itself. The
+post-delete Boundary gate then adds its normal two dated captures. The new
+fail-closed manifest checker verifies 1,745 immutable destinations and skips
+only the two intentional rolling aliases. All 15 held worktrees and all 24
+branches remain because their dirty/unique/detached state is not safely
+discardable. Focused parsers, GBI fixtures, melonDS policy, the migration
+manifest, and final profile-0 Boundary pass. Full inventory:
+`artifacts/performance/2026-07-19_task24r-quiet-slot-cleanup.md`.
+
 ## Phase Evidence (historical pre-Task-25R)
 
 Every timed row below came from one profile-1 ROM with live Fox, production
@@ -339,8 +362,11 @@ authoritative pair and selects the implementation order:
 5. **GX lane closed at its evidence gate:** Task 29 retains its exact
    no-behavior census only. No suppression or immutable stream clears the
    retail/repeatability and first-run gates.
-6. **Selected next lane:** Task 24R quiet-slot evidence-safe repository diet.
-7. Task 30 is the final stable-30 gate after the A/V asset audit is reconciled.
+6. **Quiet-slot cleanup complete:** Task 24R reclaims 3,746,285,595 bytes
+   without changing permanent evidence, held Git surfaces, or current A/Bs.
+7. **Selected next lane:** reconcile the attack/hit A/V asset audit already in
+   the board before Task 30.
+8. Task 30 is the final stable-30 gate.
 
 `src/nds/nds_renderer.c` is a mandatory one-writer surface throughout.
 
@@ -348,7 +374,7 @@ authoritative pair and selects the implementation order:
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Task 29 closed / Task 24R next | live tree | Retained Task-26 segment 0, Task-27 Phase-A fighter certificate, rejected Task-20 DTCM, Task-22 span-writer, Task-28 bounded matrix, and Task-29 GX candidates, integrated battle ROM, and current terminal lifecycle | no runner active; Task 24R is documentation/evidence cleanup only |
+| Integration/release | Task 24R closed / A/V audit next | live tree | Retained Task-26 segment 0, Task-27 Phase-A fighter certificate, rejected performance candidates, integrated battle ROM, permanent evidence, and current terminal lifecycle | no runner active; attack/hit asset ownership is the next existing red release row |
 | Renderer implementation | ARM restored; Task 12 closed REVERT; Task 14 KEEP | shared integration tree | Retail hardware rejects blanket Thumb by +594,816 DRW ticks (+34.1%); its renderer hot group is device noise and reverts with that base. The renderer TU is ARM again with Task 14 intact | no runner active |
 | Gameplay + QA | Playtest review fixed / manual candidate retest pending | shared live tree / disjoint files | Down+A is source-fixed at the shared ClearAll seam. Human-P2 Fox completes all nine Down-Air callbacks and exits naturally; Mario completes the same focused route with eight live imported CPU updates. Latest then passes canonical mode 163, two-ROM publication, runtime, registry, renderer/ITCM, and visual gates. Countdown also remains fixed | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
@@ -398,7 +424,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Required FGM, attack/hit sounds, and Mario/Fox voices | Common contacts and KO lifecycle PASS / residual cue debt | Audio + Gameplay | The 121,720-byte pack retains the exact common punch/kick paths and natural `439/292/154` Mario-KO sequence. Task 26 fixed a Calico/software-owner race: an exactly completed hardware channel now retires its stale owner before reuse, while inconsistent ownership remains fail-closed. The focused automated qualification passes 21 supported starts, 17 explicit unsupported cues, phase mask `0x1f`, channel mask `0xe`, max three live channels, 59 envelope steps, zero playback/generation failure, and 187,152-byte headroom | Keep the exact retirement seam and automated channel/acoustic gate. This is not an ear test. Residual unsupported special/projectile/movement cues remain explicit fidelity debt for the existing A/V audit before Task 30; do not require another user response tonight |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | PASS / current Task 26 artifact | QA | The refreshed profile-0 lifecycle reaches Results once with 232,208 arena headroom and 65,536 resident audio bytes: 166,672 net versus the 131,072-byte floor after the exact 5,120-byte static-texture payload increase. Exact 4,084/2,042 pacing and teardown pass; stale/safety/eviction counters stay zero | Preserve the floor and recheck after every representation or resident-asset change |
-| Focused/checkpoint verification | Task 29 complete / Task 24R queued | QA | The no-behavior GX census conserves all commands, words, boundaries, owners, and actual triangles across early, Whispy, and KO windows; paired pixels are 0/49,152 and the independent semantic oracle passes. No state suppression or immutable stream clears Task 29's retail/repeatability gates, so profile 0 remains unchanged | Commit and Lean-snapshot Task 29, then run the evidence-safe quiet-slot cleanup. The attack/hit audio-visual cue audit remains required before Task 30 |
+| Focused/checkpoint verification | Task 24R complete / A/V audit queued | QA | The quiet-slot batch reclaims 3.49 GiB while protected evidence digests and 1,745 immutable migration destinations remain exact. All held worktrees/branches and current A/Bs survive; focused checks and post-delete Boundary pass | Commit and Lean-snapshot Task 24R, then reconcile the existing attack/hit audio-visual cue audit before Task 30 |
 | Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Latest capture is `2026-07-18_canonical_fast_101715-1383371-p57268.png`; its paired frame has 747/49,152 meaningful changes, 100% overlap, and all named-region/detail gates pass. Task 6 C/D, Task 8 G2, reserve repair, Task 9/16 state identity, source-light parity, both emitter splits, raw-corner cut, Down+A, and the common-contact checkpoint remain retained | Manually retest exact ROM `DADB7C96...`; automated common-contact A/V closure is focused, not global |
 
 ## Dated Gates

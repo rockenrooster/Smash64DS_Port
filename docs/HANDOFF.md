@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 05:21 Central
+Updated: 2026-07-19 05:45 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -139,10 +139,20 @@ Do not add a suppression or stream template. Evidence:
 Final profile-0 Boundary ROM/ELF are `21D789F3...` / `89C83C40...`; the ELF
 contains zero Task-29 symbols and the public sibling remains `D0632348...`.
 
-Resume with Task 24R in this quiet slot. Preserve every current baseline,
-generated-program A/B, open device pair, performance/visibility artifact, and
-file cited by an OPEN ledger decision. Delete only evidence-cleared closed or
-superseded worktrees/build/log/telemetry material, record exact before/after
-sizes and retained roots, and run the prescribed citation/hash/checker plus
-profile-0 Boundary safety gates. Then reconcile the required attack/hit A/V
-asset audit before Task 30; no user response or new retail repeat is available.
+Task 24R is complete. Its quiet-slot batch removes 7,929 files /
+3,746,285,595 bytes from 14 closed/reverted lab directories and three telemetry
+roots. Protected performance/visibility roots are byte-identical across the
+deletion, 1,745 immutable migration destinations rehash with zero failures,
+and post-delete Boundary passes. All 15 held worktrees, all 24 branches,
+current generated A/Bs, hardware pairs, logs, and user-owned files remain.
+Recovery snapshot:
+`C:\Users\Tyler\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip`.
+Evidence: `artifacts/performance/2026-07-19_task24r-quiet-slot-cleanup.md`.
+
+Next reconcile the existing attack/hit audio-visual asset audit before Task
+30. Preserve the three unique `five-effects-{attack,fox,hit}` branches and
+their worktrees: their cue packs still contain patch-unique work, so Task 24R
+did not remove them. Determine which attack, hit, projectile, movement, voice,
+and effect cues/assets are source-required, wired, supported, missing, or
+intentionally fail-closed; keep exact source-backed additions only. No user
+response or retail repeat is available tonight.
