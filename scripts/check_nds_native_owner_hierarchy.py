@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
+import re
 
 import check_nds_native_owner_packet as packet
 import generate_nds_native_owners as native
@@ -383,6 +385,12 @@ def main() -> int:
         default=Path(__file__).resolve().parents[1] / "src" / "nds" /
         "nds_native_fighter_owner.generated.inc",
     )
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=Path(__file__).resolve().parents[1]
+        / native.DEFAULT_CONSUMED_FIELDS_OUTPUT,
+    )
     args = parser.parse_args()
     source_root = args.source_root.resolve()
 
@@ -396,6 +404,52 @@ def main() -> int:
     generated = native.generate(source_root)
     require(checked_in_generated == generated,
             f"stale generated include: {args.generated}")
+    require(args.manifest.is_file(),
+            f"missing consumed-field manifest: {args.manifest}")
+    rendered_manifest = native.render_consumed_fields_manifest(source_root)
+    require(args.manifest.read_bytes() == rendered_manifest,
+            f"stale consumed-field manifest: {args.manifest}")
+    manifest = json.loads(rendered_manifest)
+
+    renderer = (source_root / "src/nds/nds_renderer.c").read_text()
+    for record, width in (
+        ("NDSNativeRun", 8), ("NDSNativeEpoch", 16), ("NDSNativeRoot", 16),
+    ):
+        require(re.search(
+            rf"_Static_assert\(sizeof\({record}\)\s*==\s*{width}u", renderer
+        ) is not None, f"{record}: compact width gate changed")
+
+    prepared = manifest["prepared_record_census"]
+    manifest_consumed = set(prepared["hot_fields"]["fields"]) | set(
+        prepared["cold_validation_fields"]["fields"]
+    )
+    manifest_unconsumed = set(prepared["unconsumed_fields"]["fields"])
+    observed_consumed = set(re.findall(
+        r"\bprepared_run\s*->\s*([A-Za-z_]\w*)", renderer
+    ))
+    observed_assigned = set(re.findall(
+        r"\bhierarchy_run\s*->\s*([A-Za-z_]\w*)\s*=", renderer
+    ))
+    require(observed_consumed == manifest_consumed,
+            "prepared-run consumed-field closure changed")
+    require(observed_assigned == manifest_consumed | manifest_unconsumed,
+            "prepared-run full-assignment closure changed")
+    require(prepared["record_bytes"] == 56 and prepared["records"] == 49 and
+            prepared["array_bytes"] == 2744 and
+            prepared["array_line_equivalents"] == 86,
+            "prepared-run object or 32-byte line census changed")
+
+    compact = manifest["compact_program"]
+    require(compact["roots"]["count"] == 32 and
+            compact["epochs"]["count"] == 49 and
+            compact["runs"]["count"] == 67 and
+            compact["triangles"] == 626 and compact["corners"] == 1878 and
+            compact["joint_schedule"]["field_bytes"] == 2 and
+            compact["binding_joints"]["field_bytes"] == 1,
+            "consumed-field manifest lost compact source-order cardinality")
+    require(manifest["task21c_disposition"]["verdict"] ==
+            "REVERT_RUNTIME_KEEP_FOUNDATION",
+            "Task 21C runtime/table disposition changed")
     retained_plans, _ = packet.parse_generated_plans(checked_in_generated)
     _, context = packet.build_plans(source_root)
 

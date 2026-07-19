@@ -13,8 +13,226 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import json
 import struct
 from pathlib import Path
+
+import generate_nds_native_stage as stage_manifest
+
+
+DEFAULT_CONSUMED_FIELDS_OUTPUT = Path(
+    "docs/optimization/NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json"
+)
+
+FIELD_CLASS_IMMUTABLE = stage_manifest.FIELD_CLASS_IMMUTABLE
+FIELD_CLASS_CAMERA = stage_manifest.FIELD_CLASS_CAMERA
+FIELD_CLASS_LIVE = stage_manifest.FIELD_CLASS_LIVE
+FIELD_CLASS_CALLBACK = stage_manifest.FIELD_CLASS_CALLBACK
+FIELD_CLASSES = stage_manifest.FIELD_CLASSES
+
+
+def _classified(classification: str, fields: str) -> dict[str, str]:
+    return {field: classification for field in fields.split()}
+
+
+SOURCE_CLOSURE_POLICIES = (
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterPrepareNativeOwnerHierarchy",
+        "tracked_bases": ("fp", "joint", "m2_owner", "workspace", "xobj"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                joint.parent joint.xobjs joint.xobjs_num workspace.hierarchy.joint_bindings
+                workspace.hierarchy.joint_count workspace.hierarchy.joint_parents
+                workspace.hierarchy_bindings workspace.hierarchy_joints
+                workspace.hierarchy_parents xobj.kind
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CAMERA,
+                """
+                workspace.hierarchy.camera_modelview workspace.hierarchy.joint_locals
+                workspace.hierarchy.projection workspace.hierarchy_camera_modelview
+                workspace.hierarchy_locals workspace.hierarchy_projection
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_LIVE,
+                "fp.is_use_animlocks fp.shuffle_tics",
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                m2_owner.m2_camera_fetch_count m2_owner.m2_camera_fetch_ticks
+                m2_owner.m2_local_matrix_build_count m2_owner.m2_local_matrix_ticks
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativePreflightFighterHierarchy",
+        "tracked_bases": (
+            "epoch", "execution", "hierarchy", "input", "m2_owner",
+            "prepared_epoch", "root", "scratch", "state", "stats", "tables",
+        ),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                epoch.action_count epoch.after_state_count epoch.after_state_first
+                epoch.after_sync_count epoch.before_state_count epoch.before_state_first
+                epoch.before_sync_count epoch.first_run epoch.material_slot epoch.run_count
+                hierarchy.joint_bindings hierarchy.joint_count hierarchy.joint_parents
+                hierarchy.root_count input.root_offset root.epoch_count root.first_epoch
+                root.root_offset root.tail_state_count root.tail_state_first root.tail_sync_count
+                tables.binding_joints tables.joint_count tables.root_count tables.roots
+                tables.schedule
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CAMERA,
+                """
+                execution.hierarchy_world hierarchy.camera_modelview hierarchy.joint_locals
+                hierarchy.projection prepared_epoch.light_direction
+                state.matrix state.modelview state.prepared_light_direction
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                execution.hierarchy_epochs execution.hierarchy_runs execution.preflight_stats
+                execution.traversal hierarchy.config hierarchy.roots input.composed_matrix
+                input.config input.material_count input.materials input.modelview_matrix
+                input.preamble input.preamble.flags prepared_epoch.light_direction_valid
+                scratch.blocker scratch.geometry_mode scratch.light_color_1
+                scratch.light_color_2 scratch.light_color_mask scratch.light_dir_mask
+                state.current_transform_vertex_mask state.input_vertex_valid_mask
+                state.matrix_generation state.matrix_valid state.modelview_valid
+                state.prepared_light_direction_valid state.prepared_texcoord_valid_mask
+                state.prepared_vertex_color_valid_mask state.texture_prepare_valid
+                state.vertex_color_valid_mask state.vertex_valid_mask stats.blocker
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                "m2_owner.m2_lighting_shading_ticks m2_owner.m2_run_prepare_ticks",
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativePrepareHierarchyTexcoords",
+        "tracked_bases": ("dense", "prepared", "prepared_run"),
+        "fields": {
+            **_classified(FIELD_CLASS_IMMUTABLE, "dense.s dense.t"),
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                prepared.s prepared.t prepared_run.origin_s prepared_run.origin_t
+                prepared_run.scale_s prepared_run.scale_t prepared_run.texture_offset
+                prepared_run.textured
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeBeginHierarchyBatch",
+        "tracked_bases": ("entry", "prepared_run", "stats"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                entry.last_used_frame entry.params entry.pinned prepared_run.poly_fmt
+                prepared_run.texture_entry prepared_run.texture_format
+                prepared_run.texture_height prepared_run.texture_name
+                prepared_run.texture_params prepared_run.texture_width prepared_run.textured
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                stats.hardware_texture_format stats.hardware_texture_height
+                stats.hardware_texture_ready_count stats.hardware_texture_width
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeCommitHierarchyRoot",
+        "tracked_bases": (
+            "epoch", "execution", "input", "m2_owner", "prepared_epoch",
+            "prepared_run", "root", "run", "state", "stats",
+        ),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                epoch.after_state_count epoch.after_state_first epoch.after_sync_count
+                epoch.before_state_count epoch.before_state_first epoch.before_sync_count
+                epoch.first_run epoch.material_slot epoch.run_count root.epoch_count
+                root.first_epoch root.source_command_count root.tail_state_count
+                root.tail_state_first root.tail_sync_count run.submit_class run.triangle_count
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CAMERA,
+                """
+                execution.hierarchy_world prepared_epoch.light_direction state.matrix
+                state.modelview state.prepared_light_direction
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_LIVE,
+                """
+                execution.hierarchy_epochs execution.hierarchy_runs
+                input.materials input.preamble prepared_epoch.light_direction_valid
+                prepared_run.textured state.current_transform_vertex_mask
+                state.input_vertex_valid_mask state.matrix_generation state.matrix_valid
+                state.modelview_valid state.prepared_light_direction_valid
+                state.prepared_texcoord_valid_mask state.prepared_vertex_color_valid_mask
+                state.texture_prepare_valid state.vertex_color_valid_mask state.vertex_valid_mask
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                m2_owner.m2_corner_emit_account_ticks
+                m2_owner.m2_lighting_shading_ticks m2_owner.m2_run_prepare_ticks
+                stats.command_count stats.end_command_count stats.first_opcode
+                stats.triangle_count
+                """,
+            ),
+        },
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererExecuteNativeFighterOwnerHierarchy",
+        "tracked_bases": ("hierarchy", "m2_owner", "stats"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_CAMERA,
+                "hierarchy.camera_modelview hierarchy.joint_locals hierarchy.projection",
+            ),
+            **_classified(FIELD_CLASS_LIVE, "hierarchy.roots"),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                m2_owner.m2_corner_emit_account_ticks
+                m2_owner.m2_corner_emit_run_count m2_owner.m2_lighting_epoch_count
+                m2_owner.m2_lighting_shading_ticks m2_owner.m2_root_gx_count
+                m2_owner.m2_root_gx_ticks m2_owner.m2_run_prepare_count
+                m2_owner.m2_run_prepare_ticks stats.hardware_matrix_seed_count
+                stats.matrix_pop_count stats.matrix_push_count
+                """,
+            ),
+        },
+    },
+)
 
 
 EXPORT = {
@@ -1883,6 +2101,195 @@ def generate(repo_root: Path | None = None) -> str:
     return "\n".join(lines)
 
 
+def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
+    data = decode_export()
+    mario_roots = unpack_many("<IHHHBBBB2x", data["mario_roots"])
+    fox_roots = unpack_many("<IHHHBBBB2x", data["fox_roots"])
+    epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
+    runs = unpack_many("<HBBI", data["runs"])
+    triangles = struct.unpack(f"<{len(data['triangles']) // 2}H", data["triangles"])
+    closures = stage_manifest.build_consumed_closure_rows(
+        repo_root, SOURCE_CLOSURE_POLICIES, {}
+    )
+
+    return {
+        "schema": "smash64ds.m2-consumed-fields.v1",
+        "generated_by": "scripts/generate_nds_native_owners.py",
+        "allowed_classifications": list(FIELD_CLASSES),
+        "source_closures": closures,
+        "table_provenance": [
+            {
+                "owner": owner,
+                "path": str(path).replace("\\", "/"),
+                "resource_offset": f"0x{resource_offset:04x}",
+                "sha256": sha256,
+            }
+            for owner, (path, resource_offset, sha256) in O2R_ASSETS.items()
+        ],
+        "compact_program": {
+            "source_order": ["mario", "fox"],
+            "roots": {
+                "count": len(mario_roots) + len(fox_roots),
+                "mario": len(mario_roots),
+                "fox": len(fox_roots),
+                "record_bytes": 16,
+                "index_fields": ["first_epoch", "epoch_count"],
+            },
+            "epochs": {
+                "count": len(epochs),
+                "record_bytes": 16,
+                "index_fields": ["first_run", "run_count", "material_slot"],
+            },
+            "runs": {
+                "count": len(runs),
+                "record_bytes": 8,
+                "index_fields": ["first_triangle", "triangle_count", "submit_class"],
+            },
+            "triangles": len(triangles),
+            "corners": len(triangles) * 3,
+            "joint_schedule": {
+                "count": sum(counts[0] for counts in OWNER_PLAN_COUNTS.values()),
+                "field_bytes": 2,
+                "packed_fields": [
+                    "parent:5", "binding:5", "cross_palette_slot:5",
+                    "push_before:1",
+                ],
+            },
+            "binding_joints": {
+                "count": sum(counts[1] for counts in OWNER_PLAN_COUNTS.values()),
+                "field_bytes": 1,
+                "consumer": "Task 27 generated fighter program",
+                "lookup": "checked direct indices in exact source order",
+            },
+        },
+        "task21c_disposition": {
+            "verdict": "REVERT_RUNTIME_KEEP_FOUNDATION",
+            "retained": [
+                "u16 joint schedules", "u8 binding-joint indices",
+                "16-byte root/epoch records", "8-byte run records",
+                "consumed-field and invalidation manifest",
+            ],
+            "reverted": (
+                "the adapter direct-index binding consumer; its exact same-slot A/B "
+                "reduced matrix ticks but regressed complete fighter draw and P95"
+            ),
+        },
+        "prepared_record_census": {
+            "record": "NDSNativeHierarchyPreparedRun",
+            "record_bytes": 56,
+            "records": len(epochs),
+            "array_bytes": len(epochs) * 56,
+            "line_bytes": 32,
+            "array_line_equivalents": (len(epochs) * 56 + 31) // 32,
+            "hot_fields": {
+                "bytes_per_record": 40,
+                "fields": [
+                    "texture_entry", "texture_name", "texture_params", "poly_fmt",
+                    "scale_s", "scale_t", "origin_s", "origin_t",
+                    "texture_offset", "textured",
+                ],
+            },
+            "cold_validation_fields": {
+                "bytes_per_record": 12,
+                "fields": ["texture_format", "texture_width", "texture_height"],
+            },
+            "unconsumed_fields": {
+                "bytes_per_record": 4,
+                "fields": ["vertex_flags"],
+            },
+            "task21b_disposition": (
+                "record split and clear deletion require an independently positive "
+                "exact A/B; retain the 56-byte layout when that gate is not met"
+            ),
+        },
+        "ownership_contracts": [
+            {
+                "name": "root_selection",
+                "classification": FIELD_CLASS_IMMUTABLE,
+                "inputs": [
+                    "generated root_offset/first_epoch/epoch_count",
+                    "live selected display-list root_offset equality",
+                ],
+                "invalidation": "asset identity, generation, root order, or root offset",
+            },
+            {
+                "name": "matrix_input",
+                "classification": FIELD_CLASS_CAMERA,
+                "inputs": [
+                    "live camera projection/modelview", "live DObj local matrices",
+                    "generated parent/binding schedule",
+                ],
+                "invalidation": "recompute every frame; never cache camera or DObj operands",
+            },
+            {
+                "name": "material_progression",
+                "classification": FIELD_CLASS_LIVE,
+                "inputs": [
+                    "generated epoch material_slot", "live material snapshots",
+                    "before/after state spans",
+                ],
+                "invalidation": "any material, color, alpha, image, tile, or selector change",
+            },
+            {
+                "name": "light_preambles",
+                "classification": FIELD_CLASS_CAMERA,
+                "inputs": [
+                    "generated root light_preamble", "live source preamble",
+                    "live light colors/direction", "live binding world matrix",
+                ],
+                "invalidation": "recompute prepared direction for every live owner frame",
+            },
+            {
+                "name": "run_class_texture_alpha",
+                "classification": FIELD_CLASS_LIVE,
+                "inputs": [
+                    "generated submit_class/required_mask", "live texture residency",
+                    "live poly alpha/color/material state",
+                ],
+                "invalidation": "resident texture, palette, dimensions, poly format, or alpha change",
+            },
+            {
+                "name": "vertex_cache_and_cross_matrix",
+                "classification": FIELD_CLASS_LIVE,
+                "inputs": [
+                    "generated dense vertex/corner stream", "persistent owner vertex cache",
+                    "generated logical binding and physical cross-palette slot",
+                ],
+                "invalidation": (
+                    "preserve source-order cache ownership across all roots; reject before GX "
+                    "on topology, binding, corner, or matrix mismatch"
+                ),
+            },
+        ],
+        "invalidation_manifest": [
+            "asset data pointer, asset ID, size, owner generation, root offset, or material count changes",
+            "joint parent/child/sibling order, XObj kind, selected display-list, or binding identity changes",
+            "camera projection/modelview or any DObj local matrix changes: recompute every frame",
+            "material, light, texture, alpha, color, geometry, or selector changes: rebuild live preparation",
+            "generated root/epoch/run/schedule provenance or cardinality changes: regenerate and reverify",
+            "any validation mismatch: fail before GX; no fallback after mutation",
+        ],
+        "task27_inputs": [
+            "u16 parent/binding/cross-slot joint schedules",
+            "u8 binding-joint direct indices",
+            "16-byte root and epoch records",
+            "8-byte run records",
+            "root/epoch/run source order and complete consumed-field closure",
+        ],
+    }
+
+
+def render_consumed_fields_manifest(repo_root: Path) -> bytes:
+    return (
+        json.dumps(
+            build_consumed_fields_manifest(repo_root),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
+    ).encode("utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1895,16 +2302,35 @@ def main() -> int:
         default=Path(__file__).resolve().parents[1],
         help="repo root containing the read-only BattleShip O2R inputs",
     )
+    parser.add_argument(
+        "--manifest-output", type=Path,
+        default=Path(__file__).resolve().parents[1]
+        / DEFAULT_CONSUMED_FIELDS_OUTPUT,
+    )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    generated = generate(args.source_root)
+    source_root = args.source_root.resolve()
+    manifest_output = args.manifest_output
+    if not manifest_output.is_absolute():
+        manifest_output = source_root / manifest_output
+    generated = generate(source_root)
+    rendered_manifest = render_consumed_fields_manifest(source_root)
     if args.check:
         if not args.output.is_file() or args.output.read_text() != generated:
             raise SystemExit(f"stale generated native-owner IR: {args.output}")
+        if (not manifest_output.is_file() or
+                manifest_output.read_bytes() != rendered_manifest):
+            raise SystemExit(
+                f"stale generated native-owner consumed fields: {manifest_output}"
+            )
         return 0
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if not args.output.is_file() or args.output.read_text() != generated:
         args.output.write_text(generated)
+    manifest_output.parent.mkdir(parents=True, exist_ok=True)
+    if (not manifest_output.is_file() or
+            manifest_output.read_bytes() != rendered_manifest):
+        manifest_output.write_bytes(rendered_manifest)
     return 0
 
 

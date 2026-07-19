@@ -5419,3 +5419,73 @@ EVIDENCE:
     DA2368F56C81476C88D0003FBC286979E3E40F3CFCC7F84A6C8862A57AEA726F
 KEEP / REWORK / REVERT: KEEP CENSUS / REVERT CACHE / TASK 21R NEXT
 ```
+
+## 2026-07-19 - Task 21R M2 structural foundation
+
+```text
+IDEA ID: TASK21R-M2-STRUCTURAL-FOUNDATION-20260719
+BOUND / IDENTITY:
+  Canonical mode-8 owner, profile 1, frames 600..607, static residency,
+  incremental wallpaper, hybrid OAM, Task 9 phase 2, and Task 16 1/1/1.
+  Control ROM / ELF:
+    C777D2D1CE323769706A51E913CE4A3014A05E6F23CF1F9080CEA9C64A1BA0A4
+    25953C4345722EC1CC853C00A982AAA4455CD3517087D6715F9BBB7614E6AAF0
+  Source owner remains BattleShip ftdisplaymain/ftdisplaylights. No retained
+  production renderer or gameplay change.
+
+PHASE 0 / CUT 21A:
+  Current owner is 5,812 ARM main-RAM bytes with a 308-byte local frame;
+  prepared-run workspace is 49*56=2,744 bytes inside the unchanged 8,800-byte
+  owner BSS. Generated control remains 32 roots, 49 epochs, 67 runs, 626
+  triangles, 1,878 corners, 52 u16 schedule entries, and 32 u8 binding indices.
+  Preserve the prior 16/392 (4.08%) exact-hit census and no-cache verdict.
+
+CUT 21B:
+  A temporary 0xA5 poison run proves every consumed prepared-run field is
+  assigned and keeps 0/49,152 changed pixels. Removing the 49 clears and dead
+  vertex_flags store saves matrix 1,344/960 P50/P95 and 12 ITCM bytes, but
+  regresses Mario +544/+576, Fox +608/+576, draw +640/+576, and active
+  +576/+448. Loop remains 1,680,448. REVERT the entire runtime cut and layout.
+  Three attempted A2 launches failed before measurement when melonDS did not
+  open the GDB listener; they are excluded from evidence.
+
+CUT 21C SAME-SLOT A/B:
+  One compact consumer replaces 463 pointer comparisons with 32 checked direct
+  binding indices. Candidate ROM:
+    F7F78ECF833E30AA662C013812AF3372B07EFE036BFE05737FE6C9A3A8B6F02C
+  Matrix improves 158,464/158,528 -> 157,024/157,632 (-1,440/-896), but
+  complete draw regresses 1,002,496/1,005,824 -> 1,003,872/1,007,168
+  (+1,376/+1,344), Mario +640/+576, Fox +768/+704, and active P95 +9,344.
+  Loop is unchanged. Synchronized pixels are exactly 0/49,152 and all
+  70/686 run/triangle, 320/306 ownership, fallback, fence, and conservation
+  gates pass. The candidate adds 120 main text/rodata bytes. REVERT its API,
+  adapter consumer, code, and symbols.
+
+RETAINED FOUNDATION / NEXT:
+  KEEP the already-valid compact root/epoch/run tables, u16 schedule, u8
+  binding indices, source order/provenance, exact widths, and generated
+  six-closure consumed-field/invalidation manifest. The checker proves full
+  prepared-run assignment, immutable/live/camera/callback ownership, and
+  32/49/67/626/1,878 cardinality. This is Task 27 input only, not a completed
+  generated fighter and not permission to restore either rejected runtime cut.
+
+CLOSEOUT VERIFICATION:
+  Generation, hierarchy, packet, GBI, parity-corpus, registry, Task-9 float
+  ITCM, and renderer-ITCM checks pass. Restored published ROMs are byte-identical
+  to the 00:25 full-Boundary checkpoint: battle 757ED78612607BEB8780BF197CC701570926B52EBDD745368DC32B6D44AC89E4,
+  public D06323485C866D74BA5D82F87B58182C82A3D7FBE5E9AAC08B83807583171A9E.
+  Two independent no-build runs pass canonical lifecycle smoke and publication,
+  then fail only when unattended melonDS exposes no capturable window. The
+  already-retained synchronized A/B proves 0/49,152 changed pixels; exclude the
+  duplicate host UI capture failure and do not request another repeat.
+
+EVIDENCE:
+  artifacts/performance/2026-07-19_task21r-m2-foundation.md
+  docs/optimization/NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json
+  artifacts/performance/2026-07-19_task21r-21b-control.json
+  artifacts/performance/2026-07-19_task21r-21b-poison.json
+  artifacts/performance/2026-07-19_task21r-21b-candidate.json
+  artifacts/performance/2026-07-19_task21r-21c-control.json
+  artifacts/performance/2026-07-19_task21r-21c-candidate.json
+KEEP / REWORK / REVERT: KEEP CENSUS + COMPACT MANIFEST / REVERT 21B + 21C RUNTIME / TASK 27 NEXT
+```

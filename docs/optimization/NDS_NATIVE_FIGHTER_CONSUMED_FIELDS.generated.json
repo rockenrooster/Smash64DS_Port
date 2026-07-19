@@ -1,0 +1,944 @@
+{
+  "allowed_classifications": [
+    "immutable_generation",
+    "live_camera_dependent",
+    "live_camera_independent",
+    "callback_visible_mutation_output"
+  ],
+  "compact_program": {
+    "binding_joints": {
+      "consumer": "Task 27 generated fighter program",
+      "count": 32,
+      "field_bytes": 1,
+      "lookup": "checked direct indices in exact source order"
+    },
+    "corners": 1878,
+    "epochs": {
+      "count": 49,
+      "index_fields": [
+        "first_run",
+        "run_count",
+        "material_slot"
+      ],
+      "record_bytes": 16
+    },
+    "joint_schedule": {
+      "count": 52,
+      "field_bytes": 2,
+      "packed_fields": [
+        "parent:5",
+        "binding:5",
+        "cross_palette_slot:5",
+        "push_before:1"
+      ]
+    },
+    "roots": {
+      "count": 32,
+      "fox": 18,
+      "index_fields": [
+        "first_epoch",
+        "epoch_count"
+      ],
+      "mario": 14,
+      "record_bytes": 16
+    },
+    "runs": {
+      "count": 67,
+      "index_fields": [
+        "first_triangle",
+        "triangle_count",
+        "submit_class"
+      ],
+      "record_bytes": 8
+    },
+    "source_order": [
+      "mario",
+      "fox"
+    ],
+    "triangles": 626
+  },
+  "generated_by": "scripts/generate_nds_native_owners.py",
+  "invalidation_manifest": [
+    "asset data pointer, asset ID, size, owner generation, root offset, or material count changes",
+    "joint parent/child/sibling order, XObj kind, selected display-list, or binding identity changes",
+    "camera projection/modelview or any DObj local matrix changes: recompute every frame",
+    "material, light, texture, alpha, color, geometry, or selector changes: rebuild live preparation",
+    "generated root/epoch/run/schedule provenance or cardinality changes: regenerate and reverify",
+    "any validation mismatch: fail before GX; no fallback after mutation"
+  ],
+  "ownership_contracts": [
+    {
+      "classification": "immutable_generation",
+      "inputs": [
+        "generated root_offset/first_epoch/epoch_count",
+        "live selected display-list root_offset equality"
+      ],
+      "invalidation": "asset identity, generation, root order, or root offset",
+      "name": "root_selection"
+    },
+    {
+      "classification": "live_camera_dependent",
+      "inputs": [
+        "live camera projection/modelview",
+        "live DObj local matrices",
+        "generated parent/binding schedule"
+      ],
+      "invalidation": "recompute every frame; never cache camera or DObj operands",
+      "name": "matrix_input"
+    },
+    {
+      "classification": "live_camera_independent",
+      "inputs": [
+        "generated epoch material_slot",
+        "live material snapshots",
+        "before/after state spans"
+      ],
+      "invalidation": "any material, color, alpha, image, tile, or selector change",
+      "name": "material_progression"
+    },
+    {
+      "classification": "live_camera_dependent",
+      "inputs": [
+        "generated root light_preamble",
+        "live source preamble",
+        "live light colors/direction",
+        "live binding world matrix"
+      ],
+      "invalidation": "recompute prepared direction for every live owner frame",
+      "name": "light_preambles"
+    },
+    {
+      "classification": "live_camera_independent",
+      "inputs": [
+        "generated submit_class/required_mask",
+        "live texture residency",
+        "live poly alpha/color/material state"
+      ],
+      "invalidation": "resident texture, palette, dimensions, poly format, or alpha change",
+      "name": "run_class_texture_alpha"
+    },
+    {
+      "classification": "live_camera_independent",
+      "inputs": [
+        "generated dense vertex/corner stream",
+        "persistent owner vertex cache",
+        "generated logical binding and physical cross-palette slot"
+      ],
+      "invalidation": "preserve source-order cache ownership across all roots; reject before GX on topology, binding, corner, or matrix mismatch",
+      "name": "vertex_cache_and_cross_matrix"
+    }
+  ],
+  "prepared_record_census": {
+    "array_bytes": 2744,
+    "array_line_equivalents": 86,
+    "cold_validation_fields": {
+      "bytes_per_record": 12,
+      "fields": [
+        "texture_format",
+        "texture_width",
+        "texture_height"
+      ]
+    },
+    "hot_fields": {
+      "bytes_per_record": 40,
+      "fields": [
+        "texture_entry",
+        "texture_name",
+        "texture_params",
+        "poly_fmt",
+        "scale_s",
+        "scale_t",
+        "origin_s",
+        "origin_t",
+        "texture_offset",
+        "textured"
+      ]
+    },
+    "line_bytes": 32,
+    "record": "NDSNativeHierarchyPreparedRun",
+    "record_bytes": 56,
+    "records": 49,
+    "task21b_disposition": "record split and clear deletion require an independently positive exact A/B; retain the 56-byte layout when that gate is not met",
+    "unconsumed_fields": {
+      "bytes_per_record": 4,
+      "fields": [
+        "vertex_flags"
+      ]
+    }
+  },
+  "schema": "smash64ds.m2-consumed-fields.v1",
+  "source_closures": [
+    {
+      "closure": "ndsRendererAdapterPrepareNativeOwnerHierarchy",
+      "fields": [
+        {
+          "access": "fp.is_use_animlocks",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "fp.shuffle_tics",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "joint.parent",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "joint.xobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "joint.xobjs_num",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "m2_owner.m2_camera_fetch_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_camera_fetch_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_local_matrix_build_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_local_matrix_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "workspace.hierarchy.camera_modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.hierarchy.joint_bindings",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.hierarchy.joint_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.hierarchy.joint_locals",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.hierarchy.joint_parents",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.hierarchy.projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.hierarchy_bindings",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.hierarchy_camera_modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.hierarchy_joints",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.hierarchy_locals",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.hierarchy_parents",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.hierarchy_projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "xobj.kind",
+          "classification": "immutable_generation"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererNativePreflightFighterHierarchy",
+      "fields": [
+        {
+          "access": "epoch.action_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.after_state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.after_state_first",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.after_sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.before_state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.before_state_first",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.before_sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.material_slot",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "execution.hierarchy_epochs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "execution.hierarchy_runs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "execution.hierarchy_world",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "execution.preflight_stats",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "execution.traversal",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "hierarchy.camera_modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "hierarchy.config",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "hierarchy.joint_bindings",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "hierarchy.joint_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "hierarchy.joint_locals",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "hierarchy.joint_parents",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "hierarchy.projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "hierarchy.root_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "hierarchy.roots",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "input.composed_matrix",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "input.config",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "input.material_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "input.materials",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "input.modelview_matrix",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "input.preamble",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "input.preamble.flags",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "input.root_offset",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "m2_owner.m2_lighting_shading_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_run_prepare_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared_epoch.light_direction",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "prepared_epoch.light_direction_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "root.epoch_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.first_epoch",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.root_offset",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.tail_state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.tail_state_first",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.tail_sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "scratch.blocker",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "scratch.geometry_mode",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "scratch.light_color_1",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "scratch.light_color_2",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "scratch.light_color_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "scratch.light_dir_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.current_transform_vertex_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.input_vertex_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.matrix",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "state.matrix_generation",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.matrix_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "state.modelview_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.prepared_light_direction",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "state.prepared_light_direction_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.prepared_texcoord_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.prepared_vertex_color_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.texture_prepare_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.vertex_color_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.vertex_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.blocker",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "tables.binding_joints",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tables.joint_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tables.root_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tables.roots",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tables.schedule",
+          "classification": "immutable_generation"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativePrepareHierarchyTexcoords",
+      "fields": [
+        {
+          "access": "dense.s",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "dense.t",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "prepared.s",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared.t",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.origin_s",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.origin_t",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.scale_s",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.scale_t",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.texture_offset",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.textured",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeBeginHierarchyBatch",
+      "fields": [
+        {
+          "access": "entry.last_used_frame",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.params",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "entry.pinned",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.poly_fmt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.texture_entry",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.texture_format",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.texture_height",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.texture_name",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.texture_params",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.texture_width",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.textured",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.hardware_texture_format",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.hardware_texture_height",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.hardware_texture_ready_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.hardware_texture_width",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeCommitHierarchyRoot",
+      "fields": [
+        {
+          "access": "epoch.after_state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.after_state_first",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.after_sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.before_state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.before_state_first",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.before_sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.material_slot",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "epoch.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "execution.hierarchy_epochs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "execution.hierarchy_runs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "execution.hierarchy_world",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "input.materials",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "input.preamble",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "m2_owner.m2_corner_emit_account_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_lighting_shading_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_run_prepare_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared_epoch.light_direction",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "prepared_epoch.light_direction_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.textured",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "root.epoch_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.first_epoch",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.source_command_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.tail_state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.tail_state_first",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "root.tail_sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.submit_class",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.triangle_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "state.current_transform_vertex_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.input_vertex_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.matrix",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "state.matrix_generation",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.matrix_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "state.modelview_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.prepared_light_direction",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "state.prepared_light_direction_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.prepared_texcoord_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.prepared_vertex_color_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.texture_prepare_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.vertex_color_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.vertex_valid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.end_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.first_opcode",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.triangle_count",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererExecuteNativeFighterOwnerHierarchy",
+      "fields": [
+        {
+          "access": "hierarchy.camera_modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "hierarchy.joint_locals",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "hierarchy.projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "hierarchy.roots",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "m2_owner.m2_corner_emit_account_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_corner_emit_run_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_lighting_epoch_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_lighting_shading_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_root_gx_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_root_gx_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_run_prepare_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "m2_owner.m2_run_prepare_ticks",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.hardware_matrix_seed_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.matrix_pop_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.matrix_push_count",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    }
+  ],
+  "table_provenance": [
+    {
+      "owner": "mario",
+      "path": "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/MarioModel",
+      "resource_offset": "0x0128",
+      "sha256": "be1c3b6f909b42da2a973e2fe1977cd72c046d2447f0c4afa97fe8cd5429854f"
+    },
+    {
+      "owner": "fox",
+      "path": "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/FoxModel",
+      "resource_offset": "0x0139",
+      "sha256": "8c49ded8144d153b25101afc6c71f5e455ef43e2ddc5326c0f71a72ae740b5a5"
+    }
+  ],
+  "task21c_disposition": {
+    "retained": [
+      "u16 joint schedules",
+      "u8 binding-joint indices",
+      "16-byte root/epoch records",
+      "8-byte run records",
+      "consumed-field and invalidation manifest"
+    ],
+    "reverted": "the adapter direct-index binding consumer; its exact same-slot A/B reduced matrix ticks but regressed complete fighter draw and P95",
+    "verdict": "REVERT_RUNTIME_KEEP_FOUNDATION"
+  },
+  "task27_inputs": [
+    "u16 parent/binding/cross-slot joint schedules",
+    "u8 binding-joint direct indices",
+    "16-byte root and epoch records",
+    "8-byte run records",
+    "root/epoch/run source order and complete consumed-field closure"
+  ]
+}

@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 00:26 Central
+Updated: 2026-07-19 01:30 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -89,9 +89,11 @@ sampled recompute. All candidate code/data/selectors are removed; retained
 production footprint is zero. Evidence is
 `artifacts/performance/2026-07-18_task23r-phase1.md`.
 
-Start Task 21R on the existing Task-25R M2 owner truth. Preserve the completed
-21A census result: 16/392 exact resident hits (4.08%), so no shade/color/UV
-cache is admissible. Rebind Phase 0 consumed fields and current object/stack/
-call evidence, then take one independent 21B hot/cold/prebind cut through exact
-A/B before 21C. Do not call 21C the Task-27 generated fighter program.
-`src/nds/nds_renderer.c` remains a mandatory one-writer surface.
+Task 21R is closed: preserve 21A's 16/392 no-cache result; its 21B/21C runtime
+cuts are exact-pixel draw/P95 regressions and stay reverted. Retain only the
+32/49/67 compact tables and six-closure generated manifest. The ROMs remain
+byte-identical to the 00:25 full-Boundary pair; two fresh lifecycle smokes pass,
+and duplicate capture is transport-only. Evidence: `artifacts/performance/2026-07-19_task21r-m2-foundation.md`.
+Start Task 27 Phase A. Use the retained tables/manifest, compute the Mario-only
+bound first, and prove Mario's fixed program with Fox as the in-frame control.
+Do not restore rejected cuts or add a cache; the renderer TU remains one-writer.
