@@ -1,0 +1,901 @@
+diff --git a/src/mn/mncommon/mnstartup.c b/src/mn/mncommon/mnstartup.c
+index 7db877d0..7cbb34f7 100644
+--- a/src/mn/mncommon/mnstartup.c
++++ b/src/mn/mncommon/mnstartup.c
+@@ -5,6 +5,9 @@
+ #include <sys/video.h>
+ #include <sys/rdp.h>
+ #include <reloc_data.h>
++#if defined(SSB64_TARGET_NDS)
++#include <nds/nds_startup.h>
++#endif
+ 
+ 
+ // // // // // // // // // // // //
+@@ -183,6 +186,10 @@ void mnStartupFuncStart(void)
+ 	Sprite *sprite;
+ 	SYColorRGBA color;
+ 
++#if defined(SSB64_TARGET_NDS)
++	gNdsStartupFuncStartResult = NDS_STARTUP_FUNC_START_PASS;
++#endif
++
+ 	sMNStartupSkipAllowWait = 8;
+ 	sMNStartupIsProceedOpening = FALSE;
+ 
+@@ -269,6 +276,18 @@ void mnStartupStartScene(void)
+ 	dMNStartupVideoSetup.zbuffer = SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
+ 	syVideoInit(&dMNStartupVideoSetup);
+ 
++#if defined(SSB64_TARGET_NDS)
++	ndsResetStartupDiagnostics();
++	dMNStartupTaskmanSetup.scene_setup.arena_start = ndsTaskmanArenaStart();
++	dMNStartupTaskmanSetup.scene_setup.arena_size = ndsTaskmanArenaSize();
++	gNdsStartupTaskmanResult = NDS_STARTUP_TASKMAN_PASS;
++	gNdsStartupTaskmanSceneKind = gSCManagerSceneData.scene_curr;
++	gNdsStartupTaskmanDL0Size = dMNStartupTaskmanSetup.scene_setup.dl_buffer0_size;
++	gNdsStartupTaskmanDL1Size = dMNStartupTaskmanSetup.scene_setup.dl_buffer1_size;
++	gNdsStartupTaskmanControllerSet =
++		(dMNStartupTaskmanSetup.scene_setup.func_controller == syControllerFuncRead) ? 1u : 0u;
++#else
+ 	dMNStartupTaskmanSetup.scene_setup.arena_size = (size_t) ((uintptr_t)&ovl1_VRAM - (uintptr_t)&ovl58_BSS_END);
++#endif
+ 	syTaskmanStartTask(&dMNStartupTaskmanSetup);
+ }
+diff --git a/src/mv/mvopening/mvopeningroom.c b/src/mv/mvopening/mvopeningroom.c
+index 7b2154ed..740e8109 100644
+--- a/src/mv/mvopening/mvopeningroom.c
++++ b/src/mv/mvopening/mvopeningroom.c
+@@ -1,11 +1,741 @@
+ #include <ft/fighter.h>
++#if !defined(SSB64_TARGET_NDS)
+ #include <gr/ground.h>
++#endif
+ #include <mv/movie.h>
+ #include <sc/scene.h>
+ #include <sys/video.h>
+ #include <sys/rdp.h>
+ #include <reloc_data.h>
+ 
++#if defined(SSB64_TARGET_NDS)
++
++#include <nds/nds_startup.h>
++#include <sys/controller.h>
++#include <sys/obj.h>
++#include <sys/objanim.h>
++#include <sys/objdisplay.h>
++#include <sys/objhelper.h>
++#include <sys/objman.h>
++#include <sys/taskman.h>
++#include <sys/utils.h>
++
++/* NDS entry slice.
++ *
++ * Keep the original scene entry, task setup, actor, camera, and first update
++ * on the executable path. The rest of this file still needs the Opening Room
++ * relocation assets, fighter manager, effects, audio, and display-list
++ * backend, so the N64 body remains below for builds with those dependencies.
++ * This is a port boundary, not replacement movie/gameplay logic. */
++
++s32 sMVOpeningRoomTotalTimeTics;
++GObj *sMVOpeningRoomCameraGObj;
++s32 sMVOpeningRoomPulledFighterKind;
++s32 sMVOpeningRoomDroppedFighterKind;
++s32 sMVOpeningRoomUnused0x80134D54;
++GObj *sMVOpeningRoomPencilsGObj;
++s32 sMVOpeningRoomOverlayAlpha;
++GObj *sMVOpeningRoomOverlayGObj;
++GObj *sMVOpeningRoomMainCameraGObj;
++GObj *sMVOpeningRoomFighterCameraGObj;
++GObj *sMVOpeningRoomLogoCameraGObj;
++GObj *sMVOpeningRoomLogoGObj;
++GObj *sMVOpeningRoomBossShadowGObj;
++GObj *sMVOpeningRoomSpotlightGObj;
++
++u32 dMVOpeningRoomFileIDs[/* */] =
++{
++	(u32)&llMVCommonFileID,
++	(u32)&llMVOpeningRoomTransitionFileID,
++	(u32)&llMVOpeningRoomScene1FileID,
++	(u32)&llMVOpeningRoomScene2FileID,
++	(u32)&llMVOpeningRoomScene3FileID,
++	(u32)&llMVOpeningRoomScene4FileID,
++	(u32)&llMVOpeningRunCrashFileID,
++	(u32)&llMVOpeningRoomWallpaperFileID
++};
++
++LBFileNode sMVOpeningRoomStatusBuffer[100];
++LBFileNode sMVOpeningRoomForceStatusBuffer[7];
++void *sMVOpeningRoomFiles[ARRAY_COUNT(dMVOpeningRoomFileIDs)];
++
++void mvOpeningRoomMakePencils(void);
++void mvOpeningRoomInitScene1Cameras(GObj *gobj);
++void mvOpeningRoomMakeScene1Cameras(void);
++void mvOpeningRoomEjectCameraGObjs(void);
++void mvOpeningRoomInitScene2Cameras(GObj *gobj);
++void mvOpeningRoomMakeScene2Cameras(void);
++void mvOpeningRoomMakeCloseUpOverlayCamera(void);
++void mvOpeningRoomMakeWallpaperCamera(void);
++void mvOpeningRoomMakeLogoCamera(void);
++void mvOpeningRoomMakeLogoWallpaper(void);
++void mvOpeningRoomMakeLogo(void);
++void mvOpeningRoomMakeBossShadow(void);
++void mvOpeningRoomCloseUpOverlayProcDisplay(GObj *gobj);
++void mvOpeningRoomMakeCloseUpOverlay(void);
++void mvOpeningRoomSetSpotlightPosition(GObj *gobj, s32 fkind);
++void mvOpeningRoomMakeSpotlight(void);
++void lbCommonDrawSprite(GObj *camera_gobj);
++
++s32 mvOpeningRoomGetDroppedFighterKind(void)
++{
++	s32 fkinds[] =
++	{
++		nFTKindMario,
++		nFTKindFox,
++		nFTKindDonkey,
++		nFTKindSamus,
++		nFTKindLink,
++		nFTKindYoshi,
++		nFTKindKirby,
++		nFTKindPikachu
++	};
++	s32 fkind;
++
++	do
++	{
++		fkind = fkinds[syUtilsRandTimeUCharRange(ARRAY_COUNT(fkinds))];
++	}
++	while (fkind == sMVOpeningRoomPulledFighterKind);
++
++	return fkind;
++}
++
++s32 mvOpeningRoomGetPulledFighterKind(void)
++{
++	s32 fkinds[] =
++	{
++		nFTKindMario,
++		nFTKindFox,
++		nFTKindDonkey,
++		nFTKindSamus,
++		nFTKindLink,
++		nFTKindYoshi,
++		nFTKindKirby,
++		nFTKindPikachu
++	};
++
++	return fkinds[syUtilsRandTimeUCharRange(ARRAY_COUNT(fkinds))];
++}
++
++void mvOpeningRoomInitVars(void)
++{
++	sMVOpeningRoomTotalTimeTics = 0;
++	sMVOpeningRoomPencilsGObj = NULL;
++	sMVOpeningRoomPulledFighterKind = mvOpeningRoomGetPulledFighterKind();
++	sMVOpeningRoomDroppedFighterKind = mvOpeningRoomGetDroppedFighterKind();
++	gNdsOpeningRoomPulledFighterKind = (u32)sMVOpeningRoomPulledFighterKind;
++	gNdsOpeningRoomDroppedFighterKind = (u32)sMVOpeningRoomDroppedFighterKind;
++}
++
++void mvOpeningRoomFuncRun(GObj *gobj)
++{
++	(void)gobj;
++	sMVOpeningRoomTotalTimeTics++;
++
++	if (sMVOpeningRoomTotalTimeTics >= 10)
++	{
++		gNdsOpeningRoomControllerCheckCount++;
++
++		if (sMVOpeningRoomUnused0x80134D54 != 0)
++		{
++			sMVOpeningRoomUnused0x80134D54--;
++		}
++		if
++		(
++			(scSubsysControllerGetPlayerStickInRangeLR(-15, 15) != FALSE) &&
++			(scSubsysControllerGetPlayerStickInRangeUD(-15, 15) != FALSE)
++		)
++		{
++			sMVOpeningRoomUnused0x80134D54 = 0;
++		}
++		if (scSubsysControllerGetPlayerTapButtons(A_BUTTON | B_BUTTON | START_BUTTON) != FALSE)
++		{
++			gSCManagerSceneData.scene_prev = gSCManagerSceneData.scene_curr;
++			gSCManagerSceneData.scene_curr = nSCKindTitle;
++			gNdsOpeningRoomSkipToTitleCount++;
++			syTaskmanSetLoadScene();
++		}
++		if (sMVOpeningRoomTotalTimeTics == 280)
++		{
++			/*
++			 * Preserve the first tick-280 object boundary without importing
++			 * the fighter/effect/render stack yet. The original tick order is
++			 * fighter creation, pencils, then logo/overlay/boss-shadow
++			 * ejections. Logo, overlay, and boss-shadow ejections are now real
++			 * because their setup objects are in this slice.
++			 */
++			gNdsOpeningRoomFighterDeferredKind =
++				(u32)sMVOpeningRoomPulledFighterKind;
++			gNdsOpeningRoomFighterDeferredResult =
++				NDS_OPENING_ROOM_FIGHTER_DEFER_PASS;
++			gNdsOpeningRoomFirstEventDeferredMask =
++				NDS_OPENING_ROOM_TICK280_DEFER_MASK;
++
++			ndsOpeningRoomCapturePencilsCountsBefore();
++			mvOpeningRoomMakePencils();
++			ndsOpeningRoomCapturePencilsCreation();
++			gNdsOpeningRoomFirstEventRunResult =
++				NDS_OPENING_ROOM_FIRST_EVENT_RUN_PASS;
++
++			if (sMVOpeningRoomLogoGObj != NULL)
++			{
++				gNdsOpeningRoomLogoEjectBeforeGObjCount =
++					(u32)gcGetGObjsActiveNum();
++				gcEjectGObj(sMVOpeningRoomLogoGObj);
++				gNdsOpeningRoomLogoEjectAfterGObjCount =
++					(u32)gcGetGObjsActiveNum();
++				ndsOpeningRoomRecordLogoEject(sMVOpeningRoomLogoGObj);
++			}
++			if (sMVOpeningRoomOverlayGObj != NULL)
++			{
++				gNdsOpeningRoomOverlayEjectBeforeGObjCount =
++					(u32)gcGetGObjsActiveNum();
++				gcEjectGObj(sMVOpeningRoomOverlayGObj);
++				gNdsOpeningRoomOverlayEjectAfterGObjCount =
++					(u32)gcGetGObjsActiveNum();
++				ndsOpeningRoomRecordOverlayEject(sMVOpeningRoomOverlayGObj);
++			}
++			if (sMVOpeningRoomBossShadowGObj != NULL)
++			{
++				gNdsOpeningRoomBossShadowEjectBeforeGObjCount =
++					(u32)gcGetGObjsActiveNum();
++				gcEjectGObj(sMVOpeningRoomBossShadowGObj);
++				gNdsOpeningRoomBossShadowEjectAfterGObjCount =
++					(u32)gcGetGObjsActiveNum();
++				ndsOpeningRoomRecordBossShadowEject(sMVOpeningRoomBossShadowGObj);
++			}
++		}
++		if (sMVOpeningRoomTotalTimeTics == 380)
++		{
++			gNdsOpeningRoomTick380DeferredMask =
++				NDS_OPENING_ROOM_TICK380_DEFER_MASK;
++			gNdsOpeningRoomTick380DeferredResult =
++				NDS_OPENING_ROOM_TICK380_DEFER_PASS;
++		}
++		if (sMVOpeningRoomTotalTimeTics == 450)
++		{
++			/*
++			 * The original event creates the close-up overlay and ejects the
++			 * sunlight GObj. Sunlight belongs to the unimported room object
++			 * slice, so only that ejection remains deferred here.
++			 */
++			ndsOpeningRoomCaptureCloseUpOverlayCountsBefore();
++			mvOpeningRoomMakeCloseUpOverlay();
++			ndsOpeningRoomCaptureCloseUpOverlayCreation(sMVOpeningRoomOverlayGObj);
++			gNdsOpeningRoomTick450DeferredMask =
++				NDS_OPENING_ROOM_TICK450_DEFER_MASK;
++			gNdsOpeningRoomTick450RunResult =
++				NDS_OPENING_ROOM_TICK450_RUN_PASS;
++		}
++		if (sMVOpeningRoomTotalTimeTics == 500)
++		{
++			/*
++			 * The original event first moves the pulled fighter's display
++			 * link, then creates the spotlight. The fighter is still guarded,
++			 * so keep that first branch explicit and run only the bounded
++			 * original spotlight object path.
++			 */
++			gNdsOpeningRoomTick500DeferredMask =
++				NDS_OPENING_ROOM_TICK500_DEFER_MASK;
++			ndsOpeningRoomCaptureSpotlightCountsBefore();
++			mvOpeningRoomMakeSpotlight();
++			ndsOpeningRoomCaptureSpotlightCreation(sMVOpeningRoomSpotlightGObj);
++			gNdsOpeningRoomTick500RunResult =
++				NDS_OPENING_ROOM_TICK500_RUN_PASS;
++		}
++		if (sMVOpeningRoomTotalTimeTics == 560)
++		{
++			/*
++			 * The original tick-560 event swaps Scene 1 cameras for Scene 2
++			 * cameras, then updates the Boss fighter status. Boss fighter
++			 * creation is still outside this slice, so the fighter-status
++			 * branch remains a named defer while the camera transition is real.
++			 */
++			ndsOpeningRoomCaptureScene2CameraEjectBefore();
++			mvOpeningRoomEjectCameraGObjs();
++			ndsOpeningRoomRecordScene2CameraEject();
++			ndsOpeningRoomCaptureScene2CameraCountsBefore();
++			mvOpeningRoomMakeScene2Cameras();
++			ndsOpeningRoomCaptureScene2CameraCreation();
++			gNdsOpeningRoomTick560DeferredMask =
++				NDS_OPENING_ROOM_TICK560_DEFER_MASK;
++			gNdsOpeningRoomTick560RunResult =
++				NDS_OPENING_ROOM_TICK560_RUN_PASS;
++		}
++	}
++}
++
++void mvOpeningRoomFuncStart(void)
++{
++	LBRelocSetup rl_setup;
++
++	gNdsOpeningRoomFuncStartResult = NDS_OPENING_ROOM_FUNC_START_PASS;
++
++	rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
++	rl_setup.table_files_num = (u32)&llRelocFileCount;
++	rl_setup.file_heap = NULL;
++	rl_setup.file_heap_size = 0;
++	rl_setup.status_buffer = sMVOpeningRoomStatusBuffer;
++	rl_setup.status_buffer_size = ARRAY_COUNT(sMVOpeningRoomStatusBuffer);
++	rl_setup.force_status_buffer = sMVOpeningRoomForceStatusBuffer;
++	rl_setup.force_status_buffer_size = ARRAY_COUNT(sMVOpeningRoomForceStatusBuffer);
++
++	lbRelocInitSetup(&rl_setup);
++	lbRelocLoadFilesListed(dMVOpeningRoomFileIDs, sMVOpeningRoomFiles);
++
++	gcMakeGObjSPAfter(0, mvOpeningRoomFuncRun, 0, GOBJ_PRIORITY_DEFAULT);
++	sMVOpeningRoomCameraGObj = gcMakeDefaultCameraGObj(
++		0,
++		GOBJ_PRIORITY_DEFAULT,
++		100,
++		COBJ_FLAG_FILLCOLOR | COBJ_FLAG_ZBUFFER,
++		GPACK_RGBA8888(0x00, 0x00, 0x00, 0xFF));
++
++	mvOpeningRoomInitVars();
++	mvOpeningRoomMakeScene1Cameras();
++	mvOpeningRoomMakeCloseUpOverlayCamera();
++	mvOpeningRoomMakeWallpaperCamera();
++	mvOpeningRoomMakeLogoCamera();
++	mvOpeningRoomMakeLogoWallpaper();
++	mvOpeningRoomMakeLogo();
++	mvOpeningRoomMakeBossShadow();
++}
++
++void mvOpeningRoomCommonProcUpdate(GObj *gobj)
++{
++	if (sMVOpeningRoomTotalTimeTics >= 560)
++	{
++		gcPlayAnimAll(gobj);
++	}
++}
++
++void mvOpeningRoomMakePencils(void)
++{
++	GObj *gobj;
++
++	sMVOpeningRoomPencilsGObj = gobj = gcMakeGObjSPAfter(0, NULL, 17, GOBJ_PRIORITY_DEFAULT);
++	gcSetupCommonDObjs(gobj, lbRelocGetFileData(DObjDesc*, sMVOpeningRoomFiles[0], &llMVCommonRoomPencilsDObjDesc), NULL);
++	gcAddGObjDisplay(gobj, gcDrawDObjTreeForGObj, 6, GOBJ_PRIORITY_DEFAULT, ~0);
++	gcAddAnimJointAll(gobj, lbRelocGetFileData(AObjEvent32**, sMVOpeningRoomFiles[0], &llMVCommonRoomPencilsAnimJoint), 0.0F);
++	gcAddGObjProcess(gobj, mvOpeningRoomCommonProcUpdate, nGCProcessKindFunc, 1);
++	gcPlayAnimAll(gobj);
++}
++
++void mvOpeningRoomInitScene1Cameras(GObj *gobj)
++{
++	CObj *cobj = CObjGetStruct(gobj);
++
++	syRdpSetViewport(&cobj->viewport, 10.0F, 10.0F, 310.0F, 230.0F);
++
++	cobj->projection.persp.near = 80.0F;
++	cobj->projection.persp.far = 15000.0F;
++
++	gcAddCObjCamAnimJoint(cobj, lbRelocGetFileData(AObjEvent32*, sMVOpeningRoomFiles[2], &llMVOpeningRoomScene1CamAnimJoint), 0.0F);
++	gcAddGObjProcess(gobj, gcPlayCamAnim, nGCProcessKindFunc, 1);
++
++	cobj->flags |= COBJ_FLAG_DLBUFFERS;
++}
++
++void mvOpeningRoomMakeScene1Cameras(void)
++{
++	GObj *gobj;
++
++	ndsOpeningRoomCaptureScene1CameraCountsBefore();
++	sMVOpeningRoomMainCameraGObj = gobj = gcMakeCameraGObj
++	(
++		nGCCommonKindSceneCamera,
++		NULL,
++		16,
++		GOBJ_PRIORITY_DEFAULT,
++		func_80017EC0,
++		80,
++		COBJ_MASK_DLLINK(6),
++		~0,
++		FALSE,
++		nGCProcessKindFunc,
++		NULL,
++		1,
++		FALSE
++	);
++	gcAddXObjForCamera(CObjGetStruct(gobj), nGCMatrixKindPerspFastF, 0);
++	gcAddXObjForCamera(CObjGetStruct(gobj), 14, 0);
++	mvOpeningRoomInitScene1Cameras(gobj);
++
++	sMVOpeningRoomFighterCameraGObj = gobj = gcMakeCameraGObj
++	(
++		nGCCommonKindSceneCamera,
++		NULL,
++		16,
++		GOBJ_PRIORITY_DEFAULT,
++		func_80017EC0,
++		40,
++		COBJ_MASK_DLLINK(27) | COBJ_MASK_DLLINK(9),
++		~0,
++		TRUE,
++		nGCProcessKindFunc,
++		NULL,
++		1,
++		FALSE
++	);
++	mvOpeningRoomInitScene1Cameras(gobj);
++	ndsOpeningRoomCaptureScene1CameraCreation();
++}
++
++void mvOpeningRoomEjectCameraGObjs(void)
++{
++	gcEjectGObj(sMVOpeningRoomMainCameraGObj);
++	gcEjectGObj(sMVOpeningRoomFighterCameraGObj);
++}
++
++void mvOpeningRoomInitScene2Cameras(GObj *gobj)
++{
++	CObj *cobj = CObjGetStruct(gobj);
++
++	syRdpSetViewport(&cobj->viewport, 10.0F, 10.0F, 310.0F, 230.0F);
++	gcAddCObjCamAnimJoint(cobj, lbRelocGetFileData(AObjEvent32*, sMVOpeningRoomFiles[3], &llMVOpeningRoomScene2CamAnimJoint), 0.0F);
++	gcAddGObjProcess(gobj, gcPlayCamAnim, nGCProcessKindFunc, 1);
++
++	cobj->flags |= COBJ_FLAG_DLBUFFERS;
++}
++
++void mvOpeningRoomMakeScene2Cameras(void)
++{
++	GObj *gobj;
++
++	sMVOpeningRoomMainCameraGObj = gobj = gcMakeCameraGObj
++	(
++		nGCCommonKindSceneCamera,
++		NULL,
++		16,
++		GOBJ_PRIORITY_DEFAULT,
++		func_80017EC0,
++		80,
++		COBJ_MASK_DLLINK(6),
++		~0,
++		FALSE,
++		nGCProcessKindFunc,
++		NULL,
++		1,
++		FALSE
++	);
++	gcAddXObjForCamera(CObjGetStruct(gobj), nGCMatrixKindPerspFastF, 0);
++	gcAddXObjForCamera(CObjGetStruct(gobj), 8, 0);
++	mvOpeningRoomInitScene2Cameras(gobj);
++
++	sMVOpeningRoomFighterCameraGObj = gobj = gcMakeCameraGObj
++	(
++		nGCCommonKindSceneCamera,
++		NULL,
++		16,
++		GOBJ_PRIORITY_DEFAULT,
++		func_80017EC0,
++		40,
++		COBJ_MASK_DLLINK(27) | COBJ_MASK_DLLINK(9),
++		~0,
++		TRUE,
++		nGCProcessKindFunc,
++		NULL,
++		1,
++		FALSE
++	);
++	mvOpeningRoomInitScene2Cameras(gobj);
++}
++
++void mvOpeningRoomMakeCloseUpOverlayCamera(void)
++{
++	GObj *gobj;
++	CObj *cobj;
++
++	ndsOpeningRoomCaptureCloseUpOverlayCameraCountsBefore();
++	gobj = gcMakeCameraGObj
++	(
++		nGCCommonKindSceneCamera,
++		NULL,
++		16,
++		GOBJ_PRIORITY_DEFAULT,
++		lbCommonDrawSprite,
++		60,
++		COBJ_MASK_DLLINK(26),
++		~0,
++		FALSE,
++		nGCProcessKindFunc,
++		NULL,
++		1,
++		FALSE
++	);
++	cobj = CObjGetStruct(gobj);
++	syRdpSetViewport(&cobj->viewport, 10.0F, 10.0F, 310.0F, 230.0F);
++	ndsOpeningRoomCaptureCloseUpOverlayCameraCreation(gobj);
++}
++
++void mvOpeningRoomMakeWallpaperCamera(void)
++{
++	GObj *gobj;
++	CObj *cobj;
++
++	ndsOpeningRoomCaptureWallpaperCameraCountsBefore();
++	gobj = gcMakeCameraGObj
++	(
++		nGCCommonKindSceneCamera,
++		NULL,
++		16,
++		GOBJ_PRIORITY_DEFAULT,
++		lbCommonDrawSprite,
++		90,
++		COBJ_MASK_DLLINK(28),
++		~0,
++		FALSE,
++		nGCProcessKindFunc,
++		NULL,
++		1,
++		FALSE
++	);
++	cobj = CObjGetStruct(gobj);
++
++	syRdpSetViewport(&cobj->viewport, 10.0F, 10.0F, 310.0F, 230.0F);
++	ndsOpeningRoomCaptureWallpaperCameraCreation(gobj);
++}
++
++void mvOpeningRoomMakeLogoCamera(void)
++{
++	GObj *gobj;
++	CObj *cobj;
++
++	ndsOpeningRoomCaptureLogoCameraCountsBefore();
++	sMVOpeningRoomLogoCameraGObj = gobj = gcMakeCameraGObj
++	(
++		nGCCommonKindSceneCamera,
++		NULL,
++		16,
++		GOBJ_PRIORITY_DEFAULT,
++		func_80017EC0,
++		50,
++		COBJ_MASK_DLLINK(29),
++		~0,
++		TRUE,
++		nGCProcessKindFunc,
++		NULL,
++		1,
++		FALSE
++	);
++	cobj = CObjGetStruct(gobj);
++
++	syRdpSetViewport(&cobj->viewport, 10.0F, 10.0F, 310.0F, 230.0F);
++	gcAddCObjCamAnimJoint(cobj, lbRelocGetFileData(AObjEvent32*, sMVOpeningRoomFiles[2], &llMVOpeningRoomScene1CamAnimJoint), 0.0F);
++	gcAddGObjProcess(gobj, gcPlayCamAnim, nGCProcessKindFunc, 1);
++	ndsOpeningRoomCaptureLogoCameraCreation(gobj);
++}
++
++void mvOpeningRoomLogoWallpaperProcDisplay(GObj *gobj)
++{
++	(void)gobj;
++
++	if (sMVOpeningRoomTotalTimeTics >= 60)
++	{
++		if (sMVOpeningRoomOverlayAlpha > 0x00)
++		{
++			sMVOpeningRoomOverlayAlpha -= 0x0D;
++
++			if (sMVOpeningRoomOverlayAlpha < 0x00)
++			{
++				sMVOpeningRoomOverlayAlpha = 0x00;
++			}
++		}
++	}
++	/* N64 RDP fill-rectangle commands stay parked until the display-list
++	 * backend can translate them. The original N64 body remains below. */
++}
++
++void mvOpeningRoomMakeLogoWallpaper(void)
++{
++	GObj *gobj;
++
++	sMVOpeningRoomOverlayAlpha = 0xFF;
++	sMVOpeningRoomOverlayGObj = gobj = gcMakeGObjSPAfter(0, NULL, 18, GOBJ_PRIORITY_DEFAULT);
++	gcAddGObjDisplay(gobj, mvOpeningRoomLogoWallpaperProcDisplay, 26, GOBJ_PRIORITY_DEFAULT, ~0);
++
++	gNdsOpeningRoomOverlayCreateResult = NDS_OPENING_ROOM_OVERLAY_CREATE_PASS;
++	gNdsOpeningRoomOverlayDisplaySet =
++		((gobj->proc_display == mvOpeningRoomLogoWallpaperProcDisplay) &&
++		 (gobj->dl_link_id == 26)) ? 1u : 0u;
++	gNdsOpeningRoomOverlayAlphaInit = (u32)sMVOpeningRoomOverlayAlpha;
++	gNdsOpeningRoomOverlayCreateGObjCount = (u32)gcGetGObjsActiveNum();
++}
++
++void mvOpeningRoomCloseUpOverlayProcDisplay(GObj *gobj)
++{
++	(void)gobj;
++
++	if (sMVOpeningRoomOverlayAlpha < 0xA0)
++	{
++		sMVOpeningRoomOverlayAlpha += 0x09;
++
++		if (sMVOpeningRoomOverlayAlpha > 0xA0)
++		{
++			sMVOpeningRoomOverlayAlpha = 0xA0;
++		}
++	}
++	/* N64 RDP fill-rectangle commands stay parked until the display-list
++	 * backend can translate them. The original N64 body remains below. */
++}
++
++void mvOpeningRoomMakeCloseUpOverlay(void)
++{
++	GObj *gobj;
++
++	sMVOpeningRoomOverlayAlpha = 0x00;
++	gNdsOpeningRoomCloseUpOverlayAlphaInit =
++		(u32)sMVOpeningRoomOverlayAlpha;
++	sMVOpeningRoomOverlayGObj = gobj = gcMakeGObjSPAfter(0, NULL, 18, GOBJ_PRIORITY_DEFAULT);
++	gcAddGObjDisplay(gobj, mvOpeningRoomCloseUpOverlayProcDisplay, 26, GOBJ_PRIORITY_DEFAULT, ~0);
++}
++
++void mvOpeningRoomSetSpotlightPosition(GObj *gobj, s32 fkind)
++{
++	Vec3f translates[/* */] =
++	{
++		{ -38.310F,   74.904F, -122.733F },
++		{ -38.870F,   74.904F, -121.776F },
++		{ -38.870F,   74.904F, -119.480F },
++		{ -38.870F,   74.904F, -119.480F },
++		{   0.000F,    0.000F,    0.000F },
++		{ -37.040F,   74.904F, -119.600F },
++		{ -39.390F,   74.904F, -118.380F },
++		{   0.000F,    0.000F,    0.000F },
++		{ -38.310F,   74.904F, -122.733F },
++		{ -39.390F,   74.904F, -118.380F },
++		{   0.000F,    0.000F,    0.000F },
++		{   0.000F,    0.000F,    0.000F }
++	};
++	Vec3f scales[/* */] =
++	{
++		{ 1.00F, 1.00F, 1.00F },
++		{ 1.10F, 1.00F, 1.10F },
++		{ 1.30F, 1.00F, 1.30F },
++		{ 1.30F, 1.00F, 1.30F },
++		{ 0.00F, 0.00F, 0.00F },
++		{ 1.00F, 1.00F, 1.00F },
++		{ 1.20F, 1.00F, 1.20F },
++		{ 0.00F, 0.00F, 0.00F },
++		{ 1.17F, 1.00F, 1.17F },
++		{ 1.20F, 1.00F, 1.20F },
++		{ 0.00F, 0.00F, 0.00F },
++		{ 0.00F, 0.00F, 0.00F }
++	};
++
++	DObjGetStruct(gobj)->translate.vec.f.x = translates[fkind].x * 30.0F;
++	DObjGetStruct(gobj)->translate.vec.f.y = translates[fkind].y * 30.0F;
++	DObjGetStruct(gobj)->translate.vec.f.z = translates[fkind].z * 30.0F;
++	DObjGetStruct(gobj)->scale.vec.f.x = scales[fkind].x;
++	DObjGetStruct(gobj)->scale.vec.f.y = scales[fkind].y;
++	DObjGetStruct(gobj)->scale.vec.f.z = scales[fkind].z;
++}
++
++void mvOpeningRoomMakeSpotlight(void)
++{
++	GObj *gobj;
++
++	sMVOpeningRoomSpotlightGObj = gobj = gcMakeGObjSPAfter(0, NULL, 17, GOBJ_PRIORITY_DEFAULT);
++
++	gcAddXObjForDObjFixed(gcAddDObjForGObj(gobj, lbRelocGetFileData(void*, sMVOpeningRoomFiles[0], &llMVCommonRoomSpotlightDisplayList)), nGCMatrixKindTraRotRpyRSca, 0);
++	gcAddGObjDisplay(gobj, gcDrawDObjDLHead1, 27, GOBJ_PRIORITY_DEFAULT, ~0);
++	gcAddMObjAll(gobj, lbRelocGetFileData(MObjSub***, sMVOpeningRoomFiles[0], &llMVCommonRoomSpotlightMObjSub));
++	gcAddMatAnimJointAll(gobj, lbRelocGetFileData(AObjEvent32***, sMVOpeningRoomFiles[0], &llMVCommonRoomSpotlightMatAnimJoint), 0.0F);
++	gcAddGObjProcess(gobj, gcPlayAnimAll, nGCProcessKindFunc, 1);
++	gcPlayAnimAll(gobj);
++
++	mvOpeningRoomSetSpotlightPosition(gobj, sMVOpeningRoomPulledFighterKind);
++}
++
++void mvOpeningRoomMakeLogo(void)
++{
++	GObj *gobj;
++
++	ndsOpeningRoomCaptureLogoCountsBefore();
++	sMVOpeningRoomLogoGObj = gobj = gcMakeGObjSPAfter(0, NULL, 21, GOBJ_PRIORITY_DEFAULT);
++	gcSetupCommonDObjs(gobj, lbRelocGetFileData(DObjDesc*, sMVOpeningRoomFiles[0], &llMVCommonRoomLogoDObjDesc), NULL);
++	gcAddGObjDisplay(gobj, gcDrawDObjTreeDLLinksForGObj, 29, GOBJ_PRIORITY_DEFAULT, ~0);
++	gcAddMObjAll(gobj, lbRelocGetFileData(MObjSub***, sMVOpeningRoomFiles[0], &llMVCommonRoomLogoMObjSub));
++	gcAddMatAnimJointAll(gobj, lbRelocGetFileData(AObjEvent32***, sMVOpeningRoomFiles[0], &llMVCommonRoomLogoMatAnimJoint), 0.0F);
++	ndsOpeningRoomCaptureLogoCreation(gobj);
++}
++
++void mvOpeningRoomMakeBossShadow(void)
++{
++	GObj *gobj;
++	DObj *dobj;
++
++	ndsOpeningRoomCaptureBossShadowCountsBefore();
++	sMVOpeningRoomBossShadowGObj = gobj = gcMakeGObjSPAfter(0, NULL, 17, GOBJ_PRIORITY_DEFAULT);
++	dobj = gcAddDObjForGObj(gobj, lbRelocGetFileData(void*, sMVOpeningRoomFiles[0], &llMVCommonRoomBossShadowDisplayList));
++	gcAddXObjForDObjFixed(dobj, nGCMatrixKindTraRotRpyRSca, 0);
++	gcAddGObjDisplay(gobj, gcDrawDObjDLHead1, 9, GOBJ_PRIORITY_DEFAULT, ~0);
++	gcAddDObjAnimJoint(dobj, lbRelocGetFileData(AObjEvent32*, sMVOpeningRoomFiles[0], &llMVCommonRoomBossShadowAnimJoint), 0.0F);
++	gcAddGObjProcess(gobj, gcPlayAnimAll, nGCProcessKindFunc, 1);
++	ndsOpeningRoomCaptureBossShadowCreation(gobj);
++}
++
++SYVideoSetup dMVOpeningRoomVideoSetup = SYVIDEO_SETUP_DEFAULT();
++
++SYTaskmanSetup dMVOpeningRoomTaskmanSetup =
++{
++	{
++		0,
++		gcRunAll,
++		scManagerFuncDraw,
++		&ovl34_BSS_END,
++		0,
++		1,
++		2,
++		sizeof(Gfx) * 1500,
++		sizeof(Gfx) * 512,
++		0,
++		0,
++		0x8000,
++		2,
++		0xC000,
++		NULL,
++		syControllerFuncRead,
++	},
++	0,
++	sizeof(u64) * 192,
++	0,
++	0,
++	0,
++	0,
++	sizeof(GObj),
++	0,
++	NULL,
++	NULL,
++	0,
++	0,
++	0,
++	sizeof(DObj),
++	0,
++	sizeof(SObj),
++	0,
++	sizeof(CObj),
++	mvOpeningRoomFuncStart
++};
++
++void mvOpeningRoomStartScene(void)
++{
++	gNdsOpeningRoomDispatchCount++;
++	gNdsOpeningRoomStartResult = NDS_OPENING_ROOM_START_PASS;
++
++	dMVOpeningRoomVideoSetup.zbuffer = SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
++	syVideoInit(&dMVOpeningRoomVideoSetup);
++
++	dMVOpeningRoomTaskmanSetup.scene_setup.arena_start = ndsTaskmanArenaStart();
++	dMVOpeningRoomTaskmanSetup.scene_setup.arena_size = ndsTaskmanArenaSize();
++	scManagerFuncUpdate(&dMVOpeningRoomTaskmanSetup);
++
++	syTaskmanSetFuncSwapBuffer(NULL);
++}
++
++#else
++
+ 
+ // // // // // // // // // // // //
+ //                               //
+@@ -1419,3 +2149,5 @@ void mvOpeningRoomStartScene(void)
+ 
+ 	syTaskmanSetFuncSwapBuffer(NULL);
+ }
++
++#endif
+diff --git a/src/sc/scmanager.c b/src/sc/scmanager.c
+index a3b0d7a2..06853477 100644
+--- a/src/sc/scmanager.c
++++ b/src/sc/scmanager.c
+@@ -853,7 +853,11 @@ void scManagerRunLoop(sb32 arg)
+ 	lbBackupApplyOptions();
+ 
+ 	framebuffer = (u16*) gSYFramebufferSets;
++	#if defined(SSB64_TARGET_NDS)
++	end = (uintptr_t)gSYFramebufferSets + sizeof(gSYFramebufferSets);
++	#else
+ 	end = 0x80400000;
++	#endif
+ 
+ 	while ((uintptr_t)framebuffer < end)
+ 	{
+@@ -1282,6 +1286,7 @@ void scManagerRunLoop(sb32 arg)
+ 	}
+ }
+ 
++#if !defined(SSB64_TARGET_NDS)
+ // 0x800A2698
+ void scManagerFuncUpdate(SYTaskmanSetup *arg)
+ {
+@@ -1552,3 +1557,4 @@ void scManagerRunPrintGObjStatus(void)
+ {
+ 	syDebugRunFuncPrint(scManagerFuncPrint);
+ }
++#endif
+diff --git a/src/sys/objhelper.c b/src/sys/objhelper.c
+index 1b33ae45..5998b2e1 100644
+--- a/src/sys/objhelper.c
++++ b/src/sys/objhelper.c
+@@ -1,4 +1,7 @@
+ #include <sys/obj.h>
++#if defined(SSB64_TARGET_NDS)
++#include <nds/nds_startup.h>
++#endif
+ 
+ // // // // // // // // // // // //
+ //                               //
+@@ -132,6 +135,9 @@ void gcDefaultFuncRun(GObj *gobj)
+ // 0x8000B1E8
+ void gcSleepCurrentGObjThread(s32 tics)
+ {
++#if defined(SSB64_TARGET_NDS)
++    gNdsTaskmanGObjThreadSleeps++;
++#endif
+     if (gGCCurrentProcess->exec.gobjthread->stack[7] != 0xFEDCBA98)
+     {
+         syDebugPrintf("gobjthread stack over  gobjid = %d\n", gGCCurrentProcess->parent_gobj->id);
+diff --git a/src/sys/taskman.c b/src/sys/taskman.c
+index 242fe494..2923e124 100644
+--- a/src/sys/taskman.c
++++ b/src/sys/taskman.c
+@@ -17,6 +17,9 @@
+ #include <PR/mbi.h>
+ #include <PR/ucode.h>
+ #include <PR/ultratypes.h>
++#if defined(SSB64_TARGET_NDS)
++#include <nds/nds_startup.h>
++#endif
+ 
+ // externs
+ extern void syTaskmanCheckBufferLengths();
+@@ -39,6 +42,10 @@ typedef struct SYTaskFunction
+ 
+ } SYTaskFunction; // size == 0x14 (sSYTaskmanDefaultFunction)
+ 
++#if defined(SSB64_TARGET_NDS)
++extern void syTaskmanRunTask(SYTaskFunction *tfunc);
++#endif
++
+ // // // // // // // // // // // //
+ //                               //
+ //       INITIALIZED DATA        //
+@@ -263,7 +270,11 @@ void syTaskmanInitGeneralHeap(void *start, u32 size)
+ // 0x80004980
+ void* syTaskmanMalloc(size_t size, u32 align) // alloc_with_alignment
+ {
+-	return syMallocSet(&gSYTaskmanGeneralHeap, size, align);
++	void *ptr = syMallocSet(&gSYTaskmanGeneralHeap, size, align);
++#if defined(SSB64_TARGET_NDS)
++	gNdsTaskmanMallocCount++;
++#endif
++	return ptr;
+ }
+ 
+ // 0x800049B0
+@@ -943,6 +954,7 @@ void func_80005D10()
+ }
+ 
+ // 0x80005DA0
++#if !defined(SSB64_TARGET_NDS)
+ void syTaskmanRunTask(SYTaskFunction *tfunc)
+ {
+ 	s32 i;
+@@ -1068,6 +1080,7 @@ void syTaskmanRunTask(SYTaskFunction *tfunc)
+ 	syRdpSetFuncLights(NULL);
+ 	D_800454BC = 2;
+ }
++#endif
+ 
+ // 0x800062B4
+ void func_800062B4(SYTaskFunction *tfunc)
