@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 09:27 Central
+Updated: 2026-07-19 10:13 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -183,7 +183,7 @@ stable-30-qualified release. Publish text must state the observed 13.5–15 FPS
 heavy-combat range on real hardware and must not turn the exact two-updates-per-
 presentation semantic rule into a 30 FPS claim.
 
-Publish Tasks P1 and P2 are complete. P1 audited the exact 906-file build-input
+Publish Tasks P1 through P3 are complete. P1 audited the exact 906-file build-input
 closure and stopped on real decomp divergence. Tyler selected the recommended
 closest-base-plus-patch path. P2 commits `369b6ea0b26`, `84dc33dbf49`, and the
 current documentation checkpoint add publish-safe O2R/relocData/fighter
@@ -194,9 +194,18 @@ differences across 2,159 O2R files,
 14,688,256-byte `C344CA8B...` ROM, including a complete idempotent rerun. The
 requested DevFast sanity passes.
 
-Next execute Task P3 in
-`docs/optimization/ClaudeFable5_Publish_Tasks_20260718_2200.md`: construct the
-public export only from `docs/publish/publish_manifest.json`, then rehearse the
-stranger build from that export. Preserve every existing dirty file, branch,
-worktree, and ROM-derived byte. The publish lane uses an allowlist and a fresh
-staging history; the dev repository is never pushed.
+P3 leaves the one-commit public staging repository at
+`D:\Stuff\DevFolder\smash64ds-publish`, branch `master`, HEAD
+`0199d8f665da1c319dddd7e66364b651d5f63f27`. Its 272 manifest rows plus three
+public templates total 275 files / 8,391,073 bytes outside `.git`; all leak
+counters are zero. A real-network clean-room build and final exact-head repeat
+both reproduce the 14,688,256-byte `C344CA8B...` ROM. Missing/wrong-ROM cases
+exit 1, the external-decomp junction is removed, and the final clone is clean.
+Evidence: `docs/publish/PUBLISH_VERIFICATION.md`.
+
+Next execute Task P4 in
+`docs/optimization/ClaudeFable5_Publish_Tasks_20260718_2200.md`: recheck the P3
+gates, create and verify the full safety bundle, then perform evidence-aware
+worktree/branch cleanup and publish from the staging repository only. No push
+has occurred yet. Preserve every dirty or ambiguous worktree and user-owned
+file; the dev repository is never pushed.

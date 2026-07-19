@@ -428,6 +428,23 @@ function Main {
     Stage-Rom $romPath (Join-Path $battleRoot 'baserom.us.z64')
     Stage-Rom $romPath (Join-Path $decompRoot 'baserom.us.z64')
 
+    $temporaryDecompJunction = $null
+    $defaultBattleFull = [IO.Path]::GetFullPath($defaultBattleRoot).TrimEnd('\', '/')
+    $battleFull = [IO.Path]::GetFullPath($battleRoot).TrimEnd('\', '/')
+    if ($defaultBattleFull -ine $battleFull) {
+        if (Test-Path -LiteralPath $defaultBattleFull) {
+            Stop-Build (
+                "cannot expose -DecompPath at $defaultBattleFull because that path already exists"
+            )
+        }
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $defaultBattleFull) |
+            Out-Null
+        New-Item -ItemType Junction -Path $defaultBattleFull -Target $battleFull | Out-Null
+        $temporaryDecompJunction = $defaultBattleFull
+        Write-Host "    temporary decomp junction -> $battleFull"
+    }
+
+    try {
     $moduleCheck = 'import yaml,tqdm,intervaltree,colorama,spimdisasm,rabbitizer,pygfxd,n64img,crunch64'
     $moduleOutput = @(& $python.Path @($python.Prefix) -c $moduleCheck 2>&1)
     if ($LASTEXITCODE -ne 0) {
@@ -572,6 +589,18 @@ function Main {
             "$($pins.OUTPUT_SHA256)). Compare the printed toolchain versions before treating " +
             'this as a source regression.'
         )
+    }
+    } finally {
+        if ($temporaryDecompJunction -and
+            (Test-Path -LiteralPath $temporaryDecompJunction)) {
+            $junction = Get-Item -LiteralPath $temporaryDecompJunction -Force
+            if ($junction.LinkType -ne 'Junction') {
+                Stop-Build (
+                    "refusing to remove non-junction path: $temporaryDecompJunction"
+                )
+            }
+            Remove-Item -LiteralPath $temporaryDecompJunction -Force
+        }
     }
 }
 

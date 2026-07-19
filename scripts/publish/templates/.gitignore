@@ -1,0 +1,34 @@
+# User-supplied ROMs and extracted archives
+/baserom*
+*.z64
+*.n64
+*.v64
+*.nds
+*.o2r
+
+# Downloaded source and ROM-derived build data
+/decomp/
+**/BattleShip_o2r/
+**/relocData/
+/assets/
+/docs/optimization/NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json
+/docs/optimization/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json
+/src/nds/nds_native_fighter_owner.generated.inc
+/src/nds/nds_native_stage_owner.generated.inc
+
+# Build products and logs
+/build/
+/build-*/
+/builds/
+/logs/
+*.elf
+*.map
+*.sym
+*.ds.gba
+_*.gdb
+_*.gdb.out
+_*.gdb.err
+
+# Local caches
+__pycache__/
+*.pyc

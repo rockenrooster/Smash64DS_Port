@@ -8485,10 +8485,10 @@
     },
     {
       "bucket": "PORT-CODE",
-      "bytes": 25387,
+      "bytes": 26661,
       "path": "build.ps1",
       "reason": "single-command public source acquisition, regeneration, and build entry point",
-      "sha256": "5fd593671abed8da9f3896a0bcf3a5296c263df6edca61272db57b2ff44a3926"
+      "sha256": "9f66f5ee1df80cc0df93aa5e10d8000eed58f2c18a36bffd49dd8a39a2b30f1a"
     },
     {
       "bucket": "PORT-CODE",
