@@ -110,6 +110,39 @@ EXPECTED_DENSE_FIRST_VISIT_OFFSETS = (
 
 EXPECTED_STAGE_DEPTH_TRACE_HASH = 0x3BB26905
 
+EXPECTED_SEGMENT0_BINDING_COMPOSED = (
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+    12, 12, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 19,
+)
+EXPECTED_SEGMENT0_SOURCE_CHECKSUM = 0x47C2C19D
+EXPECTED_SEGMENT0_TABLE_CHECKSUM = 0xCEA1FF03
+EXPECTED_SEGMENT0_HOT_CHECKSUM = 0x54327DFB
+EXPECTED_SEGMENT0_PREPARED_DENSE_CHECKSUM = 0xF1C6FADC
+EXPECTED_SEGMENT0_EFFECT_MACROS = {
+    2: "OTHERMODE",
+    3: "COMBINE",
+    4: "TEXTURE",
+    5: "GEOMETRY",
+    6: "IMAGE",
+    7: "TILE",
+    8: "LOAD_TLUT",
+    9: "LOAD_BLOCK",
+    10: "TILE_SIZE",
+    12: "BLEND",
+}
+EXPECTED_SEGMENT0_EFFECT_COUNTS = Counter(
+    OTHERMODE=18,
+    COMBINE=5,
+    TEXTURE=1,
+    GEOMETRY=6,
+    IMAGE=30,
+    TILE=21,
+    LOAD_TLUT=15,
+    LOAD_BLOCK=15,
+    TILE_SIZE=11,
+    BLEND=1,
+)
+
 EXPECTED_PROJECTED_CROSS_MATRIX_RUNS = (32, 34, 45, 47, 49)
 EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES = 10
 EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS = 15
@@ -167,7 +200,7 @@ def verify_input_falsifier(repo_root: Path) -> None:
             raise generator.falsify("one-byte O2R mutation was accepted")
 
 
-def verify_consumed_fields_manifest(repo_root: Path) -> int:
+def verify_consumed_fields_manifest(repo_root: Path) -> tuple[int, int]:
     first = generator.render_consumed_fields_manifest(repo_root)
     second = generator.render_consumed_fields_manifest(repo_root)
     require(first == second, "consumed-field manifest is nondeterministic")
@@ -183,6 +216,22 @@ def verify_consumed_fields_manifest(repo_root: Path) -> int:
         [row["index"] for row in manifest["task26_live_operand_order"]]
         == list(range(4)),
         "Task 26 live-operand order is not dense",
+    )
+    require(
+        [row["operand"] for row in manifest["task26_live_operand_order"]]
+        == ["asset_bases[4]", "binding_composed[42]", "materials[4]", "config"],
+        "Task 26 live-operand names drifted",
+    )
+    require(
+        (
+            generator.LIVE_OPERAND_ASSET_BASES,
+            generator.LIVE_OPERAND_BINDING_COMPOSED,
+            generator.LIVE_OPERAND_MATERIALS,
+            generator.LIVE_OPERAND_CONFIG,
+            generator.LIVE_OPERAND_COUNT,
+        )
+        == (0, 1, 2, 3, 4),
+        "Task 26 generated live-operand indices drifted",
     )
     require(
         [row["segment"] for row in manifest["callback_commit_order"]]
@@ -212,6 +261,59 @@ def verify_consumed_fields_manifest(repo_root: Path) -> int:
         },
         "Task 23R census dimensions drifted",
     )
+    require(
+        manifest["task26_segment0_program"]
+        == {
+            "admission": (
+                "execute only after the existing generation/stamp topology "
+                "admission has populated sNdsNativeStageValidationCache"
+            ),
+            "segment": 0,
+            "dobjs": {"first": 0, "count": 21},
+            "bindings": {"first": 0, "count": 20},
+            "runs": {"first": 0, "count": 26},
+            "triangle_count": 54,
+            "texture_epochs": {
+                "first": 0,
+                "count": 22,
+                "mask": "0x00000000003fffff",
+            },
+            "material_count": 0,
+            "final_tail_span": 73,
+            "final_tail_state_sync": [4, 2],
+            "prepared_dense_cache": {
+                "source": "sNdsNativeStageValidationCache",
+                "offset_indices": [0, 26],
+                "offset_count": 27,
+                "terminal": 108,
+                "first_visit_count": 108,
+                "order_checksum": (
+                    f"0x{EXPECTED_SEGMENT0_PREPARED_DENSE_CHECKSUM:08x}"
+                ),
+                "disposition": (
+                    "reuse the Task-14 prepared_dense_offsets/indices; do not "
+                    "emit a second schedule"
+                ),
+            },
+            "retained_live_seams": [
+                "ndsRendererHardwareResolveOrBindTexture and mutable texture residency",
+                "per-frame composed-matrix transforms and near-plane classification",
+                "one shared traversal/stats/epoch-mask transaction across all eight segments",
+            ],
+        },
+        "Task 26 segment-0 topology-cache dependency drifted",
+    )
+    task26_closures = manifest["task26_generated_closures"]
+    require(
+        [row["closure"] for row in task26_closures]
+        == [
+            "ndsRendererNativeStageValidateGeneratedSegment0",
+            "ndsRendererNativeStagePrepareGeneratedSegment0",
+            "ndsRendererNativeStageHashGeneratedSegment0Outputs",
+        ]
+        and sum(len(row["fields"]) for row in task26_closures) == 119,
+        "Task 26 generated-closure field certificate drifted",
+    )
     bound_closures = {
         row["closure"] for row in manifest["source_closures"]
     }
@@ -237,7 +339,51 @@ def verify_consumed_fields_manifest(repo_root: Path) -> int:
         )
     else:
         raise generator.falsify("unclassified source read was accepted")
-    return sum(len(row["fields"]) for row in manifest["source_closures"])
+    try:
+        observed = generator.observed_static_fields(
+            "{ generated_cache.known; generated_cache.unclassified; }",
+            ("generated_cache",),
+        )
+        generator.validate_observed_field_policy(
+            {"generated_cache.known": generator.FIELD_CLASS_IMMUTABLE},
+            observed,
+            "in-memory static falsifier",
+        )
+    except generator.Falsifier as exc:
+        require(
+            "unclassified reads" in str(exc),
+            "unclassified-static-read falsifier failed for the wrong reason",
+        )
+    else:
+        raise generator.falsify("unclassified static source read was accepted")
+    return (
+        sum(len(row["fields"]) for row in manifest["source_closures"]),
+        sum(len(row["fields"]) for row in task26_closures),
+    )
+
+
+def verify_task26_execution_shape(repo_root: Path) -> None:
+    renderer = (repo_root / "src/nds/nds_renderer.c").read_text(encoding="utf-8")
+    closure = generator.named_c_closure(
+        renderer, "ndsRendererNativeStagePrepareGeneratedSegment0"
+    )
+    forbidden = (
+        "ndsRendererNativeStageApplyStateSpan(",
+        "sNdsNativeStageStateSequence",
+        "sNdsNativeStageStateDeltas",
+        "->effect",
+        "switch (",
+    )
+    present = [token for token in forbidden if token in closure]
+    require(
+        not present,
+        "Task 26 generated segment still scans immutable state effects: "
+        + ", ".join(present),
+    )
+    require(
+        "NDS_NATIVE_STAGE_SEGMENT0_GENERATED_PROGRAM" in closure,
+        "Task 26 generated segment does not invoke the straight-line program",
+    )
 
 
 def verify_packet(packet: generator.Packet) -> None:
@@ -587,6 +733,306 @@ def verify_packet(packet: generator.Packet) -> None:
     require(packet.slab_bytes() <= 16 * 1024, "whole-stage slab exceeds 16 KiB")
 
 
+def verify_generated_segment0_program(
+    packet: generator.Packet,
+) -> generator.GeneratedStageProgram:
+    first = generator.build_generated_segment0_program(packet)
+    second = generator.build_generated_segment0_program(packet)
+    require(first == second, "generated segment-0 program is nondeterministic")
+    certificate = first.certificate
+    require(
+        certificate
+        == generator.GeneratedStageCertificate(
+            source_checksum=EXPECTED_SEGMENT0_SOURCE_CHECKSUM,
+            table_checksum=EXPECTED_SEGMENT0_TABLE_CHECKSUM,
+            hot_checksum=EXPECTED_SEGMENT0_HOT_CHECKSUM,
+            prepared_dense_checksum=EXPECTED_SEGMENT0_PREPARED_DENSE_CHECKSUM,
+            first_state=0,
+            state_count=123,
+            sync_count=90,
+            segment_index=0,
+            first_dobj=0,
+            dobj_count=21,
+            owner=generator.OWNER_LAYER0,
+            link=4,
+            submit_class=generator.SUBMIT_PROJECTED_NO_Z,
+            first_binding=0,
+            binding_count=20,
+            first_run=0,
+            run_count=26,
+            first_texture_epoch=0,
+            triangle_count=54,
+            texture_epoch_count=22,
+            live_operand_mask=(
+                (1 << generator.LIVE_OPERAND_ASSET_BASES)
+                | (1 << generator.LIVE_OPERAND_BINDING_COMPOSED)
+                | (1 << generator.LIVE_OPERAND_CONFIG)
+            ),
+            asset_base_mask=(1 << 0) | (1 << 1),
+            material_count=0,
+            final_tail_span=73,
+            prepared_dense_count=108,
+            prepared_dense_offset_count=27,
+        ),
+        "generated segment-0 cold certificate drifted",
+    )
+    require(
+        tuple(row.run_index for row in first.runs) == tuple(range(26)),
+        "generated segment-0 run order drifted",
+    )
+    require(
+        tuple(row.binding_composed_index for row in first.runs)
+        == EXPECTED_SEGMENT0_BINDING_COMPOSED,
+        "generated segment-0 run-owner binding indices drifted",
+    )
+    for row in first.runs:
+        require(
+            row.run_index < len(packet.runs),
+            "generated segment-0 run index exceeds the packet",
+        )
+        require(
+            row.binding_composed_index
+            == packet.runs[row.run_index].binding_index,
+            "generated segment-0 run-owner binding disagrees with its run",
+        )
+        require(
+            0 <= row.run_index <= 0xFF
+            and 0 <= row.binding_composed_index <= 0xFF,
+            "generated segment-0 hot row exceeds u8",
+        )
+    prepared_dense_offsets = [0]
+    prepared_dense_indices = []
+    prepared_dense_seen = set()
+    for row in first.runs:
+        run = packet.runs[row.run_index]
+        for corner_index in range(
+            run.first_corner, run.first_corner + run.triangle_count * 3
+        ):
+            dense_index = packet.corners[corner_index]
+            if dense_index not in prepared_dense_seen:
+                prepared_dense_seen.add(dense_index)
+                prepared_dense_indices.append(dense_index)
+        prepared_dense_offsets.append(len(prepared_dense_indices))
+    prepared_dense_words = [
+        0x4D33535D,
+        len(prepared_dense_offsets),
+        *prepared_dense_offsets,
+        0x4D33535E,
+        len(prepared_dense_indices),
+        *prepared_dense_indices,
+    ]
+    require(
+        tuple(prepared_dense_offsets) == EXPECTED_DENSE_FIRST_VISIT_OFFSETS[:27]
+        and prepared_dense_offsets[-1] == 108
+        and len(prepared_dense_indices) == 108
+        and generator.fnv1a_u32(prepared_dense_words)
+        == EXPECTED_SEGMENT0_PREPARED_DENSE_CHECKSUM,
+        "generated segment-0 Task-14 prepared-dense schedule drifted",
+    )
+    require(
+        Counter(
+            generator.stage_vertex_coordinate_shift(packet.vertices[index])
+            for index in prepared_dense_indices
+        )
+        == Counter({0: 78, 1: 30})
+        and all(
+            (packet.vertices[index].rgba & 0xFF) == 0xFF
+            for index in prepared_dense_indices
+        ),
+        "generated segment-0 prepared-dense shift/alpha census drifted",
+    )
+    require(
+        {packet.runs[row.run_index].texture_epoch for row in first.runs}
+        == set(range(22)),
+        "generated segment-0 texture epoch bits drifted",
+    )
+    tail = packet.state_spans[certificate.final_tail_span]
+    require(
+        (tail.first_state, tail.state_count, tail.sync_count) == (119, 4, 2),
+        "generated segment-0 final binding tail drifted",
+    )
+
+    expected_instructions: list[tuple[str, tuple[int, ...]]] = []
+
+    def append_expected_span(span: generator.StateSpan) -> None:
+        expected_instructions.append(("SYNC", (span.sync_count,)))
+        for position in range(
+            span.first_state, span.first_state + span.state_count
+        ):
+            delta = packet.state_deltas[packet.state_sequence[position]]
+            effect = EXPECTED_SEGMENT0_EFFECT_MACROS.get(delta.effect)
+            require(
+                effect is not None,
+                f"segment-0 state effect {delta.effect} is not generated",
+            )
+            if delta.effect == 6:
+                operands = (delta.asset_index, delta.w0, delta.w1)
+            elif delta.effect in (8, 12):
+                operands = (delta.w1,)
+            else:
+                operands = (delta.w0, delta.w1)
+            expected_instructions.append((effect, operands))
+
+    for row in first.runs:
+        append_expected_span(packet.state_spans[row.run_index])
+        expected_instructions.append(("RUN", (row.run_index,)))
+    append_expected_span(tail)
+    instruction_counts = Counter(opcode for opcode, _ in first.instructions)
+    require(
+        first.instructions == tuple(expected_instructions),
+        "generated segment-0 straight-line instruction order drifted",
+    )
+    require(
+        Counter(
+            {
+                opcode: count
+                for opcode, count in instruction_counts.items()
+                if opcode not in ("SYNC", "RUN")
+            }
+        )
+        == EXPECTED_SEGMENT0_EFFECT_COUNTS
+        and instruction_counts["SYNC"] == 27
+        and sum(
+            operands[0]
+            for opcode, operands in first.instructions
+            if opcode == "SYNC"
+        )
+        == 90
+        and instruction_counts["RUN"] == 26
+        and tuple(
+            operands[0]
+            for opcode, operands in first.instructions
+            if opcode == "RUN"
+        )
+        == tuple(range(26)),
+        "generated segment-0 straight-line instruction census drifted",
+    )
+    rendered_program = "\n".join(
+        generator.render_generated_segment0_program(first)
+    )
+    require(
+        "NDS_NATIVE_STAGE_SEGMENT0_GENERATED_PROGRAM" in rendered_program
+        and "NDS_TASK26_RUN(25u);" in rendered_program
+        and "NDS_TASK26_SYNC(2u);" in rendered_program
+        and all(
+            token not in rendered_program
+            for token in (
+                "StateSequence",
+                "StateDeltas",
+                "->effect",
+                "switch (",
+                "NDS_TASK26_TAIL",
+            )
+        ),
+        "generated segment-0 macro is scanner-like or lost its tail",
+    )
+    require(
+        all(
+            0 <= value <= 0xFF
+            for value in (
+                certificate.first_state,
+                certificate.state_count,
+                certificate.sync_count,
+                certificate.segment_index,
+                certificate.first_dobj,
+                certificate.dobj_count,
+                certificate.owner,
+                certificate.link,
+                certificate.submit_class,
+                certificate.first_binding,
+                certificate.binding_count,
+                certificate.first_run,
+                certificate.run_count,
+                certificate.first_texture_epoch,
+                certificate.triangle_count,
+                certificate.texture_epoch_count,
+                certificate.live_operand_mask,
+                certificate.asset_base_mask,
+                certificate.material_count,
+                certificate.final_tail_span,
+                certificate.prepared_dense_count,
+                certificate.prepared_dense_offset_count,
+            )
+        ),
+        "generated segment-0 cold certificate exceeds its field widths",
+    )
+    require(
+        first.footprint_bytes() == 92
+        and generator.GENERATED_SEGMENT_COLD_BYTES == 40
+        and generator.GENERATED_SEGMENT_HOT_ROW_BYTES == 2
+        and packet.slab_bytes() + first.footprint_bytes() == 12755
+        and packet.slab_bytes() + first.footprint_bytes() <= generator.MAX_SLAB_BYTES,
+        "generated segment-0 footprint drifted",
+    )
+
+    mutated_assets = list(packet.assets)
+    mutated_assets[0] = replace(
+        mutated_assets[0],
+        payload_checksum=mutated_assets[0].payload_checksum ^ 1,
+    )
+    provenance_mutation = generator.build_generated_segment0_program(
+        replace(packet, assets=tuple(mutated_assets))
+    )
+    require(
+        provenance_mutation.certificate.source_checksum
+        != certificate.source_checksum
+        and provenance_mutation.certificate.table_checksum
+        == certificate.table_checksum
+        and provenance_mutation.certificate.hot_checksum
+        == certificate.hot_checksum
+        and provenance_mutation.certificate.prepared_dense_checksum
+        == certificate.prepared_dense_checksum,
+        "generated segment-0 provenance checksum did not isolate source drift",
+    )
+
+    mutated_corners = list(packet.corners)
+    mutated_corners[0] = (mutated_corners[0] + 1) % len(packet.vertices)
+    table_mutation = generator.build_generated_segment0_program(
+        replace(packet, corners=tuple(mutated_corners))
+    )
+    require(
+        table_mutation.certificate.source_checksum == certificate.source_checksum
+        and table_mutation.certificate.table_checksum != certificate.table_checksum
+        and table_mutation.certificate.hot_checksum == certificate.hot_checksum
+        and table_mutation.certificate.prepared_dense_checksum
+        != certificate.prepared_dense_checksum,
+        "generated segment-0 table checksum did not isolate packet drift",
+    )
+
+    bad_runs = list(packet.runs)
+    bad_runs[0] = replace(bad_runs[0], binding_index=1)
+    try:
+        generator.build_generated_segment0_program(
+            replace(packet, runs=tuple(bad_runs))
+        )
+    except generator.Falsifier:
+        pass
+    else:
+        raise generator.falsify(
+            "generated segment-0 live-operand mutation was accepted"
+        )
+
+    unsupported_deltas = list(packet.state_deltas)
+    unsupported_index = packet.state_sequence[0]
+    unsupported_deltas[unsupported_index] = replace(
+        unsupported_deltas[unsupported_index], effect=generator.STATE_EFFECT_PRIM
+    )
+    try:
+        generator.build_generated_segment0_program(
+            replace(packet, state_deltas=tuple(unsupported_deltas))
+        )
+    except generator.Falsifier as exc:
+        require(
+            "unsupported immutable state effect" in str(exc),
+            "unsupported-effect falsifier failed for the wrong reason",
+        )
+    else:
+        raise generator.falsify(
+            "unsupported generated segment-0 state effect was accepted"
+        )
+    return first
+
+
 def state_span_oracle(
     events: list[generator.CommandEvent],
 ) -> tuple[tuple[tuple[int, int], ...], tuple[int, int]]:
@@ -891,9 +1337,13 @@ def main() -> int:
         second = generator.generate(repo_root)
         require(first == second, "two in-process generations differ")
         verify_packet(first)
+        segment0_program = verify_generated_segment0_program(first)
+        verify_task26_execution_shape(repo_root)
         replay_commands = verify_command_replay(first, repo_root)
         perturbations = verify_fail_closed(first)
-        manifest_fields = verify_consumed_fields_manifest(repo_root)
+        manifest_fields, task26_manifest_fields = verify_consumed_fields_manifest(
+            repo_root
+        )
 
         rendered_first = generator.render_include(first)
         rendered_second = generator.render_include(second)
@@ -923,7 +1373,17 @@ def main() -> int:
         f"replay_commands={replay_commands} "
         f"fail_closed_perturbations={perturbations} "
         f"manifest_fields={manifest_fields} "
-        f"slab_bytes={first.slab_bytes()} sha256={include_hash}"
+        f"task26_manifest_fields={task26_manifest_fields} "
+        f"segment0_program_runs={len(segment0_program.runs)} "
+        f"segment0_program_bytes={segment0_program.footprint_bytes()} "
+        f"segment0_source_checksum=0x{segment0_program.certificate.source_checksum:08x} "
+        f"segment0_table_checksum=0x{segment0_program.certificate.table_checksum:08x} "
+        f"segment0_hot_checksum=0x{segment0_program.certificate.hot_checksum:08x} "
+        f"segment0_prepared_dense_checksum="
+        f"0x{segment0_program.certificate.prepared_dense_checksum:08x} "
+        f"slab_bytes={first.slab_bytes()} "
+        f"total_const_max_bytes={first.slab_bytes() + segment0_program.footprint_bytes()} "
+        f"sha256={include_hash}"
     )
     return 0
 

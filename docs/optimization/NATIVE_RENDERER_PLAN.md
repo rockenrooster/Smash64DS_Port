@@ -130,44 +130,53 @@ draw to 962,816/962,880. Exact bounded `s16` vertex rounding removes the generic
 point remains the next milestone target, not a discard gate; correct measured
 gains accumulate.
 
-Task 23R Phase 0 now closes the consumed-field surface before Task 26. Its
-generated checker binds 588 pointer-field accesses in 36 production closures,
-including live texture-cache records and every callback-visible output base,
-and fixes the
-Task 26 live operand order to generation-validated asset bases, 42 per-frame
-composed matrices, four per-frame material snapshots, and current renderer
-config. Eight eight-frame windows cover all lifecycle phases; one synchronizes
-the natural Whispy Wait→Open/material-animation edge at frames 675→676, while
-the other cross-window boundaries remain explicitly unknown. All eight prepared
-segment lanes and four material lanes are stable within every window; the
-transition capture separately exports its source state and exact G2 tuple
-change. This is a control certificate, not permission to cache matrices,
-near-plane results, or work Task 26 will remove. The first Task 26 cut is
-segment 0 / `layer0` generated
-preflight/control only, retaining current prepared storage, commit loop, GX
-emitters, and pre-GX fallback.
+Task 23R Phase 0 closes the consumed-field surface around Task 26. Its generated
+checker binds 588 pointer-field accesses in 36 production closures, including
+live texture-cache records and every callback-visible output base. Task 26 then
+retains one exact fixed generated program for segment 0 / `layer0`: 21 DObjs,
+bindings 0–19, runs 0–25, 54 triangles, 22 epochs, 108 dense vertices, 123 state
+effects, and 90 synchronization effects. It consumes generation-validated
+asset bases, 42 per-frame composed matrices, four per-frame material snapshots,
+and current renderer config without a runtime opcode scan, packet copy/patch,
+per-frame list construction, sorting, or second topology cache. Existing
+prepared storage, matrix and near-plane work, material/texture/color/alpha/UV
+selection, validation, commit loop, GX emitters, and fail-closed fallback before
+GX remain live.
+
+The current/generated CPU trace matches all 2,775 words and 26 rows over eight
+frames; forced live mutation records inject/mismatch/revalidate `1/1/1` before
+GX. Five Task-25R-control phases save 3,424–3,616 stage P50 ticks without a
+relevant P95 loss, and synchronized pixels remain `0/49,152`. A hardware-style
+melonDS pair saves 10,240/10,368 stage P50/P95 ticks; the user's single retail
+A/B saves 21,568 draw ticks while loop remains in the same VBlank bucket. That
+retail observation is not a repeatability claim. Because the generated working
+set cannot be widened under the current no-repeat device constraint, controlled
+Task 26 expansion stops while the exact smaller win remains banked. Task 23R
+Phase 1 may now remeasure only residual work and may retain a cache only at
+least 20% exact complete-key hits with key cost below half the avoided work.
 
 Incremental no-Z matrix transport remains reverted because it regressed. M3
-remains REWORK.
+remains REWORK after the retained Task 26 segment-0 slice.
 
 ## M4 — Pre-GO Texture Residency
 
 The current static corpus is the only P1 design:
 
-- 17 source blocks, 22 keys, 21 deduplicated outputs;
-- 126,976-byte payload and 131,072 prepared bytes in VRAM A;
+- 19 source blocks, 24 keys, 23 deduplicated outputs;
+- 132,096-byte payload and 136,192 prepared bytes across VRAM A+B;
 - frozen water contributes 36,864 bytes on original runs 42-43;
 - scene setup prepares and pins the set before GO;
 - gameplay binds resident records only.
 
 BattleShip changes Whispy's mouth and eye material image IDs during the match
-(`grpupupu.c:565-623`). Those cosmetic frames are not part of the pinned
-22-key corpus. The DS representation therefore reuses the already-resident
-pre-GO source image when the primary image pointer is the sole difference in
-the exact 59-word key. It never changes gameplay state, animation timing,
-geometry, texture dimensions, palette, combine mode, tile state, or sampling.
-If any other key field differs, the owner still fails closed. This is the
-accepted 90% visual approximation; do not replace it with gameplay conversion.
+(`grpupupu.c:565-623`), and late Fox material progression selects a second
+runtime-observed source image. Both exact source assets are now generated and
+pinned as keys 152 and 313 before GO. The exact-key checker reports 24 hits, 23
+deduplicated outputs, 1,344 classified field misses, three explicit misses, and
+six invalid-key falsifiers. Gameplay performs no conversion, decode,
+allocation, GL create/upload, fallback, refresh, or fence violation across the
+complete one-minute lifecycle; one teardown releases both banks. Do not restore
+the former primary-image approximation or any gameplay conversion path.
 
 The animated tiled-water implementation, asset, generator, draw path, residency
 path, checks, and build selector are deleted. Do not recreate them.

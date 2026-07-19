@@ -20,7 +20,7 @@ import json
 import re
 import struct
 import sys
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -70,9 +70,18 @@ EXPECTED_STATE_SPANS = EXPECTED_RUNS + EXPECTED_BINDINGS
 PRODUCTION_PACKET_ABI = 0x4D335031
 PRODUCTION_SYMBOL_BYTES = 4
 
+GENERATED_SEGMENT_INDEX = 0
+LIVE_OPERAND_ASSET_BASES = 0
+LIVE_OPERAND_BINDING_COMPOSED = 1
+LIVE_OPERAND_MATERIALS = 2
+LIVE_OPERAND_CONFIG = 3
+LIVE_OPERAND_COUNT = 4
+GENERATED_SEGMENT_COLD_BYTES = 40
+GENERATED_SEGMENT_HOT_ROW_BYTES = 2
+
 # Filled after the first independently checked generation.  Keeping the
 # packet hash outside the generated file avoids a self-referential checksum.
-EXPECTED_INCLUDE_SHA256 = "053444f8474b4e7a80e0ad7f8f68272af9d7cb7089036e665574abf3dee95ec7"
+EXPECTED_INCLUDE_SHA256 = "f055605a13ab93ca9ba1dd378da32770d5fe8984b07be6b246ce8b6e1a6c18a2"
 
 INVALID_U8 = 0xFF
 INVALID_U16 = 0xFFFF
@@ -160,6 +169,18 @@ STATE_EFFECT_TILE_SIZE = 10
 STATE_EFFECT_PRIM = 11
 STATE_EFFECT_BLEND = 12
 STATE_EFFECT_MATERIAL = 13
+GENERATED_SEGMENT0_EFFECT_MACROS = {
+    STATE_EFFECT_OTHERMODE: "OTHERMODE",
+    STATE_EFFECT_COMBINE: "COMBINE",
+    STATE_EFFECT_TEXTURE: "TEXTURE",
+    STATE_EFFECT_GEOMETRY: "GEOMETRY",
+    STATE_EFFECT_IMAGE: "IMAGE",
+    STATE_EFFECT_TILE: "TILE",
+    STATE_EFFECT_LOAD_TLUT: "LOAD_TLUT",
+    STATE_EFFECT_LOAD_BLOCK: "LOAD_BLOCK",
+    STATE_EFFECT_TILE_SIZE: "TILE_SIZE",
+    STATE_EFFECT_BLEND: "BLEND",
+}
 
 STATE_OPS = frozenset(
     (
@@ -471,7 +492,7 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_IMMUTABLE,
                 """
                 binding.first_run binding.run_count
-                frame.binding_display_lists frame.dobjs
+                frame.asset_bases frame.binding_display_lists frame.dobjs
                 segment.binding_count segment.first_binding
                 segment.initial_geometry
                 """,
@@ -1003,6 +1024,136 @@ SOURCE_CLOSURE_POLICIES = (
 )
 
 
+# Task 23R's 588-field source certificate remains a stable baseline.  Task 26
+# adds only these generated-program closures, so keep their reads separately
+# counted while applying the same fail-closed classification audit.
+TASK26_GENERATED_CLOSURE_POLICIES = (
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeStageValidateGeneratedSegment0",
+        "tracked_bases": (
+            "certificate", "generated", "run", "segment", "span", "tail",
+        ),
+        "fields": _classified(
+            FIELD_CLASS_IMMUTABLE,
+            """
+            certificate.asset_base_mask certificate.binding_count
+            certificate.dobj_count certificate.final_tail_span
+            certificate.first_binding certificate.first_dobj
+            certificate.first_run certificate.first_state
+            certificate.first_texture_epoch certificate.hot_checksum
+            certificate.link certificate.live_operand_mask
+            certificate.material_count certificate.owner
+            certificate.prepared_dense_checksum
+            certificate.prepared_dense_count
+            certificate.prepared_dense_offset_count certificate.run_count
+            certificate.segment_index certificate.source_checksum
+            certificate.state_count certificate.submit_class
+            certificate.sync_count certificate.table_checksum
+            certificate.texture_epoch_count certificate.triangle_count
+            generated.binding_composed_index generated.run_index
+            run.binding_index run.flags run.submit_class run.texture_epoch
+            run.triangle_count segment.binding_count segment.dobj_count
+            segment.first_binding segment.first_dobj segment.first_run
+            segment.link segment.owner segment.run_count span.first_state
+            span.state_count span.sync_count tail.first_state
+            tail.state_count tail.sync_count
+            """,
+        ),
+        "tracked_static_bases": ("sNdsNativeStageValidationCache",),
+        "static_fields": _classified(
+            FIELD_CLASS_IMMUTABLE,
+            """
+            sNdsNativeStageValidationCache.prepared_dense_indices
+            sNdsNativeStageValidationCache.prepared_dense_offsets
+            """,
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeStagePrepareGeneratedSegment0",
+        "tracked_bases": ("certificate", "frame", "stats"),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                certificate.material_count certificate.run_count
+                certificate.texture_epoch_count certificate.triangle_count
+                frame.asset_bases
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                """
+                stats.blend_color stats.color_command_count
+                stats.geometry_clear_mask stats.geometry_command_count
+                stats.geometry_mode stats.geometry_set_mask
+                stats.sync_command_count
+                """,
+            ),
+        },
+        "tracked_static_bases": ("sNdsNativeStageValidationCache",),
+        "static_fields": _classified(
+            FIELD_CLASS_IMMUTABLE,
+            "sNdsNativeStageValidationCache.valid",
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeStageHashGeneratedSegment0Outputs",
+        "tracked_bases": ("prepared", "state", "stats"),
+        "fields": _classified(
+            FIELD_CLASS_CALLBACK,
+            """
+            prepared.alpha_ref prepared.alpha_test prepared.near_inside
+            prepared.packed_color prepared.poly_fmt prepared.s prepared.t
+            prepared.texture_entry prepared.texture_format
+            prepared.texture_height prepared.texture_name
+            prepared.texture_params prepared.texture_width prepared.textured
+            state.texture_prepare_alpha_constant
+            state.texture_prepare_decal_depth state.texture_prepare_enabled
+            state.texture_prepare_material_color state.texture_prepare_name
+            state.texture_prepare_offset state.texture_prepare_origin_s
+            state.texture_prepare_origin_t state.texture_prepare_poly_alpha
+            state.texture_prepare_poly_fmt state.texture_prepare_prim_depth
+            state.texture_prepare_scale_s state.texture_prepare_scale_t
+            state.texture_prepare_source_zbuffered
+            state.texture_prepare_valid state.texture_prepare_vertex_flags
+            stats.blend_color stats.color_command_count
+            stats.first_othermode_opcode stats.first_othermode_w0
+            stats.first_othermode_w1 stats.geometry_clear_mask
+            stats.geometry_command_count stats.geometry_mode
+            stats.geometry_set_mask stats.ignored_state_command_count
+            stats.othermode_command_count stats.othermode_h stats.othermode_l
+            stats.state_command_count stats.sync_command_count
+            stats.texture_combine_count stats.texture_combine_w0
+            stats.texture_combine_w1 stats.texture_command_count
+            stats.texture_image stats.texture_mask stats.texture_source_hash1
+            stats.texture_source_hash2 stats.texture_state_flags
+            """,
+        ),
+        "tracked_static_bases": (
+            "sNdsNativeStageOwnerExecution",
+            "sNdsNativeStageSegment0HotRuns",
+            "sNdsNativeStageValidationCache",
+        ),
+        "static_fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                sNdsNativeStageSegment0HotRuns.run_index
+                sNdsNativeStageValidationCache.prepared_dense_indices
+                """,
+            ),
+            **_classified(
+                FIELD_CLASS_CALLBACK,
+                "sNdsNativeStageOwnerExecution.runs",
+            ),
+        },
+    },
+)
+
+
 GENERATED_RUNTIME_FIELDS = {
     "NDSNativeStageAsset": ("payload_size",),
     "NDSNativeStageSegment": (
@@ -1043,6 +1194,19 @@ GENERATED_RUNTIME_FIELDS = {
         "material_command",
     ),
     "NDSNativeStageStateSpan": ("first_state", "state_count", "sync_count"),
+    "NDSNativeStageGeneratedRun": (
+        "run_index", "binding_composed_index",
+    ),
+    "NDSNativeStageGeneratedCertificate": (
+        "source_checksum", "table_checksum", "hot_checksum",
+        "prepared_dense_checksum", "first_state", "state_count",
+        "sync_count", "segment_index", "first_dobj", "dobj_count",
+        "owner", "link", "submit_class", "first_binding",
+        "binding_count", "first_run", "run_count", "first_texture_epoch",
+        "triangle_count", "texture_epoch_count", "live_operand_mask",
+        "asset_base_mask", "material_count", "final_tail_span",
+        "prepared_dense_count", "prepared_dense_offset_count",
+    ),
     "sNdsNativeStageCorners": ("all_indices",),
     "sNdsNativeStageStateSequence": ("all_indices",),
 }
@@ -1415,6 +1579,55 @@ class Packet:
             + len(self.state_sequence)
             + len(self.state_spans) * 4
             + PRODUCTION_SYMBOL_BYTES
+        )
+
+
+@dataclass(frozen=True)
+class GeneratedStageRun:
+    run_index: int
+    binding_composed_index: int
+
+
+@dataclass(frozen=True)
+class GeneratedStageCertificate:
+    source_checksum: int
+    table_checksum: int
+    hot_checksum: int
+    prepared_dense_checksum: int
+    first_state: int
+    state_count: int
+    sync_count: int
+    segment_index: int
+    first_dobj: int
+    dobj_count: int
+    owner: int
+    link: int
+    submit_class: int
+    first_binding: int
+    binding_count: int
+    first_run: int
+    run_count: int
+    first_texture_epoch: int
+    triangle_count: int
+    texture_epoch_count: int
+    live_operand_mask: int
+    asset_base_mask: int
+    material_count: int
+    final_tail_span: int
+    prepared_dense_count: int
+    prepared_dense_offset_count: int
+
+
+@dataclass(frozen=True)
+class GeneratedStageProgram:
+    certificate: GeneratedStageCertificate
+    runs: tuple[GeneratedStageRun, ...]
+    instructions: tuple[tuple[str, tuple[int, ...]], ...]
+
+    def footprint_bytes(self) -> int:
+        return (
+            GENERATED_SEGMENT_COLD_BYTES
+            + len(self.runs) * GENERATED_SEGMENT_HOT_ROW_BYTES
         )
 
 
@@ -2556,6 +2769,284 @@ def validate_packet(packet: Packet) -> None:
         raise falsify("state span exceeds its compact ABI")
 
 
+def _append_records(words: list[int], tag: int, rows: Sequence[object]) -> None:
+    words.extend((tag, len(rows)))
+    for row in rows:
+        words.extend(int(value) for value in astuple(row))
+
+
+def _append_values(words: list[int], tag: int, values: Sequence[int]) -> None:
+    words.extend((tag, len(values), *(int(value) for value in values)))
+
+
+def build_generated_segment0_program(packet: Packet) -> GeneratedStageProgram:
+    segment = packet.segments[GENERATED_SEGMENT_INDEX]
+    binding_indices = tuple(
+        range(segment.first_binding, segment.first_binding + segment.binding_count)
+    )
+    run_indices = tuple(range(segment.first_run, segment.first_run + segment.run_count))
+    bindings = tuple(packet.bindings[index] for index in binding_indices)
+    runs = tuple(packet.runs[index] for index in run_indices)
+    epochs = tuple(
+        packet.epochs[index]
+        for index in sorted({run.texture_epoch for run in runs})
+    )
+    run_spans = tuple(packet.state_spans[index] for index in run_indices)
+    tail_indices = tuple(len(packet.runs) + index for index in binding_indices)
+    tail_spans = tuple(packet.state_spans[index] for index in tail_indices)
+    live_tail_indices = tuple(
+        index
+        for index, span in zip(tail_indices, tail_spans)
+        if span.state_count != 0 or span.sync_count != 0
+    )
+    execution_spans = run_spans + tuple(
+        packet.state_spans[index] for index in live_tail_indices
+    )
+    state_positions = tuple(
+        position
+        for span in execution_spans
+        for position in range(span.first_state, span.first_state + span.state_count)
+    )
+    state_sequence = tuple(packet.state_sequence[index] for index in state_positions)
+    state_delta_indices = tuple(sorted(set(state_sequence)))
+    policy_indices = tuple(sorted({run.state_policy for run in runs}))
+    corners = tuple(
+        packet.corners[index]
+        for run in runs
+        for index in range(run.first_corner, run.first_corner + run.triangle_count * 3)
+    )
+    dense_indices = tuple(sorted(set(corners)))
+    asset_indices = {
+        epoch.asset_index for epoch in epochs
+    }
+    asset_indices.update(
+        packet.state_deltas[index].asset_index
+        for index in state_delta_indices
+        if packet.state_deltas[index].effect == STATE_EFFECT_IMAGE
+    )
+    material_indices = {
+        packet.state_deltas[index].material_event
+        for index in state_delta_indices
+        if packet.state_deltas[index].effect == STATE_EFFECT_MATERIAL
+    }
+    hot_rows = tuple(
+        GeneratedStageRun(index, packet.runs[index].binding_index)
+        for index in run_indices
+    )
+    prepared_dense_offsets = [0]
+    prepared_dense_indices: list[int] = []
+    prepared_dense_seen: set[int] = set()
+    for run in runs:
+        for corner_index in range(
+            run.first_corner, run.first_corner + run.triangle_count * 3
+        ):
+            dense_index = packet.corners[corner_index]
+            if dense_index not in prepared_dense_seen:
+                prepared_dense_seen.add(dense_index)
+                prepared_dense_indices.append(dense_index)
+        prepared_dense_offsets.append(len(prepared_dense_indices))
+    expected_run_bindings = tuple(
+        binding_index
+        for binding_index, binding in zip(binding_indices, bindings)
+        for _ in range(binding.first_run, binding.first_run + binding.run_count)
+    )
+
+    if (
+        (segment.owner, segment.link, segment.first_binding,
+         segment.binding_count, segment.first_run, segment.run_count)
+        != (OWNER_LAYER0, 4, 0, 20, 0, 26)
+    ):
+        raise falsify("generated segment-0 callback partition changed")
+    if any(
+        run.submit_class != SUBMIT_PROJECTED_NO_Z or run.flags != 0
+        for run in runs
+    ):
+        raise falsify("generated segment-0 run class changed")
+    if tuple(run.binding_index for run in runs) != expected_run_bindings or tuple(
+        row.binding_composed_index for row in hot_rows
+    ) != expected_run_bindings:
+        raise falsify("generated segment-0 run-owner binding changed")
+    if any(binding.material_event != INVALID_U8 for binding in bindings):
+        raise falsify("generated segment-0 unexpectedly owns a material event")
+    if material_indices:
+        raise falsify("generated segment-0 state unexpectedly consumes materials")
+    if live_tail_indices != (len(packet.runs) + binding_indices[-1],):
+        raise falsify("generated segment-0 binding-tail program changed")
+    if state_positions != tuple(range(123)):
+        raise falsify("generated segment-0 state order changed")
+    if tuple(epoch.asset_index for epoch in epochs) != (1,) * 22:
+        raise falsify("generated segment-0 texture asset order changed")
+    if {run.texture_epoch for run in runs} != set(range(22)):
+        raise falsify("generated segment-0 texture epoch bits changed")
+    if sum(run.triangle_count for run in runs) != 54:
+        raise falsify("generated segment-0 triangle count changed")
+    if len(prepared_dense_indices) != 108 or len(prepared_dense_offsets) != 27:
+        raise falsify("generated segment-0 prepared-dense schedule changed")
+    if (
+        sum(
+            stage_vertex_coordinate_shift(packet.vertices[index]) == 0
+            for index in prepared_dense_indices
+        ),
+        sum(
+            stage_vertex_coordinate_shift(packet.vertices[index]) == 1
+            for index in prepared_dense_indices
+        ),
+    ) != (78, 30):
+        raise falsify("generated segment-0 prepared-dense shift census changed")
+    if any(
+        (packet.vertices[index].rgba & 0xFF) != 0xFF
+        for index in prepared_dense_indices
+    ):
+        raise falsify("generated segment-0 prepared-dense alpha changed")
+
+    instructions: list[tuple[str, tuple[int, ...]]] = []
+
+    def append_state_span(span: StateSpan) -> None:
+        instructions.append(("SYNC", (span.sync_count,)))
+        for position in range(
+            span.first_state, span.first_state + span.state_count
+        ):
+            delta = packet.state_deltas[packet.state_sequence[position]]
+            effect = GENERATED_SEGMENT0_EFFECT_MACROS.get(delta.effect)
+            if effect is None:
+                raise falsify(
+                    "generated segment-0 has unsupported immutable state "
+                    f"effect {delta.effect}"
+                )
+            if delta.effect == STATE_EFFECT_IMAGE:
+                operands = (delta.asset_index, delta.w0, delta.w1)
+            elif delta.effect in (STATE_EFFECT_LOAD_TLUT, STATE_EFFECT_BLEND):
+                operands = (delta.w1,)
+            else:
+                operands = (delta.w0, delta.w1)
+            instructions.append((effect, operands))
+
+    for run_index, span in zip(run_indices, run_spans):
+        append_state_span(span)
+        instructions.append(("RUN", (run_index,)))
+    append_state_span(packet.state_spans[live_tail_indices[0]])
+
+    asset_base_mask = sum(1 << index for index in asset_indices)
+    live_operand_mask = (
+        (1 << LIVE_OPERAND_ASSET_BASES)
+        | (1 << LIVE_OPERAND_BINDING_COMPOSED)
+        | (1 << LIVE_OPERAND_CONFIG)
+    )
+
+    source_words: list[int] = []
+    _append_records(
+        source_words,
+        0x4D335341,
+        tuple(packet.assets[index] for index in sorted(asset_indices)),
+    )
+    _append_records(source_words, 0x4D335342, (segment,))
+    _append_records(source_words, 0x4D335343, bindings)
+    owner = OWNER_SPECS[GENERATED_SEGMENT_INDEX]
+    source_checksum = fnv1a_u32(
+        source_words,
+        fnv1a_bytes(
+            b"\0".join(
+                value.encode("ascii")
+                for value in (
+                    owner.name,
+                    owner.resource_name,
+                    owner.callback,
+                )
+            )
+        ),
+    )
+
+    table_words: list[int] = []
+    _append_records(table_words, 0x4D335351, (segment,))
+    _append_records(
+        table_words,
+        0x4D335352,
+        tuple(
+            packet.dobjs[index]
+            for index in range(
+                segment.first_dobj, segment.first_dobj + segment.dobj_count
+            )
+        ),
+    )
+    _append_records(table_words, 0x4D335353, bindings)
+    _append_records(table_words, 0x4D335354, runs)
+    _append_values(table_words, 0x4D335355, corners)
+    _append_records(
+        table_words,
+        0x4D335356,
+        tuple(packet.vertices[index] for index in dense_indices),
+    )
+    _append_records(table_words, 0x4D335357, epochs)
+    _append_records(
+        table_words,
+        0x4D335358,
+        tuple(packet.policies[index] for index in policy_indices),
+    )
+    _append_records(table_words, 0x4D335359, run_spans)
+    _append_records(table_words, 0x4D33535A, tail_spans)
+    _append_values(table_words, 0x4D33535B, state_sequence)
+    _append_records(
+        table_words,
+        0x4D33535C,
+        tuple(packet.state_deltas[index] for index in state_delta_indices),
+    )
+    table_checksum = fnv1a_u32(table_words)
+
+    hot_words: list[int] = []
+    _append_records(hot_words, 0x4D335348, hot_rows)
+    hot_checksum = fnv1a_u32(hot_words)
+    prepared_dense_words: list[int] = []
+    _append_values(
+        prepared_dense_words, 0x4D33535D, prepared_dense_offsets
+    )
+    _append_values(
+        prepared_dense_words, 0x4D33535E, prepared_dense_indices
+    )
+    prepared_dense_checksum = fnv1a_u32(prepared_dense_words)
+    certificate = GeneratedStageCertificate(
+        source_checksum=source_checksum,
+        table_checksum=table_checksum,
+        hot_checksum=hot_checksum,
+        prepared_dense_checksum=prepared_dense_checksum,
+        first_state=state_positions[0],
+        state_count=len(state_positions),
+        sync_count=sum(span.sync_count for span in execution_spans),
+        segment_index=GENERATED_SEGMENT_INDEX,
+        first_dobj=segment.first_dobj,
+        dobj_count=segment.dobj_count,
+        owner=segment.owner,
+        link=segment.link,
+        submit_class=SUBMIT_PROJECTED_NO_Z,
+        first_binding=segment.first_binding,
+        binding_count=segment.binding_count,
+        first_run=segment.first_run,
+        run_count=segment.run_count,
+        first_texture_epoch=min(run.texture_epoch for run in runs),
+        triangle_count=sum(run.triangle_count for run in runs),
+        texture_epoch_count=len(epochs),
+        live_operand_mask=live_operand_mask,
+        asset_base_mask=asset_base_mask,
+        material_count=len(material_indices),
+        final_tail_span=live_tail_indices[0],
+        prepared_dense_count=len(prepared_dense_indices),
+        prepared_dense_offset_count=len(prepared_dense_offsets),
+    )
+    compact_u8 = astuple(certificate)[4:]
+    if any(
+        value < 0 or value > 0xFF for value in compact_u8
+    ):
+        raise falsify("generated segment-0 certificate exceeds compact ABI")
+    if any(
+        row.run_index > 0xFF or row.binding_composed_index > 0xFF
+        for row in hot_rows
+    ):
+        raise falsify("generated segment-0 hot row exceeds compact ABI")
+    program = GeneratedStageProgram(certificate, hot_rows, tuple(instructions))
+    if program.footprint_bytes() != 92:
+        raise falsify("generated segment-0 program footprint changed")
+    return program
+
+
 def c_u8(value: int) -> str:
     return f"{value}u"
 
@@ -2585,6 +3076,29 @@ def c_u32(value: int) -> str:
     return f"0x{value:08x}u"
 
 
+def render_generated_segment0_program(program: GeneratedStageProgram) -> list[str]:
+    lines = [
+        "#define NDS_NATIVE_STAGE_SEGMENT0_GENERATED_PROGRAM \\",
+        "    do { \\",
+    ]
+    for opcode, operands in program.instructions:
+        if opcode in ("SYNC", "RUN"):
+            rendered = ", ".join(c_u8(value) for value in operands)
+        elif opcode == "IMAGE":
+            rendered = ", ".join(
+                (
+                    c_u8(operands[0]),
+                    c_u32(operands[1]),
+                    c_u32(operands[2]),
+                )
+            )
+        else:
+            rendered = ", ".join(c_u32(value) for value in operands)
+        lines.append(f"        NDS_TASK26_{opcode}({rendered}); \\")
+    lines.append("    } while (0)")
+    return lines
+
+
 def render_rows(type_name: str, array_name: str, rows: Sequence[str]) -> list[str]:
     lines = [f"static const {type_name} {array_name}[{len(rows)}] = {{"]
     lines.extend(f"    {row}," for row in rows)
@@ -2593,6 +3107,9 @@ def render_rows(type_name: str, array_name: str, rows: Sequence[str]) -> list[st
 
 
 def render_include(packet: Packet) -> bytes:
+    program = build_generated_segment0_program(packet)
+    certificate = program.certificate
+    hot_bytes = len(program.runs) * GENERATED_SEGMENT_HOT_ROW_BYTES
     lines = [
         "/* Generated by scripts/generate_nds_native_stage.py.  Do not edit. */",
         "/* Production-linkable packet; runtime selection remains external. */",
@@ -2619,9 +3136,52 @@ def render_include(packet: Packet) -> bytes:
         f"#define NDS_NATIVE_STAGE_STATE_SEQUENCE_COUNT {len(packet.state_sequence)}u",
         f"#define NDS_NATIVE_STAGE_STATE_SPAN_COUNT {len(packet.state_spans)}u",
         f"#define NDS_NATIVE_STAGE_SLAB_BYTES {packet.slab_bytes()}u",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT {len(program.runs)}u",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_COLD_BYTES "
+        f"{GENERATED_SEGMENT_COLD_BYTES}u",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_HOT_BYTES {hot_bytes}u",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_BYTES "
+        f"{program.footprint_bytes()}u",
+        f"#define NDS_NATIVE_STAGE_TOTAL_CONST_MAX_BYTES "
+        f"{packet.slab_bytes() + program.footprint_bytes()}u",
         f"#define NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI {c_u32(PRODUCTION_PACKET_ABI)}",
         "#define NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX (1u << 0)",
         "#define NDS_NATIVE_STAGE_COORDINATE_SHIFT 5u",
+        f"#define NDS_NATIVE_STAGE_LIVE_OPERAND_ASSET_BASES "
+        f"{LIVE_OPERAND_ASSET_BASES}u",
+        f"#define NDS_NATIVE_STAGE_LIVE_OPERAND_BINDING_COMPOSED "
+        f"{LIVE_OPERAND_BINDING_COMPOSED}u",
+        f"#define NDS_NATIVE_STAGE_LIVE_OPERAND_MATERIALS "
+        f"{LIVE_OPERAND_MATERIALS}u",
+        f"#define NDS_NATIVE_STAGE_LIVE_OPERAND_CONFIG {LIVE_OPERAND_CONFIG}u",
+        f"#define NDS_NATIVE_STAGE_LIVE_OPERAND_COUNT {LIVE_OPERAND_COUNT}u",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_SOURCE_CHECKSUM "
+        f"{c_u32(certificate.source_checksum)}",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_TABLE_CHECKSUM "
+        f"{c_u32(certificate.table_checksum)}",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_HOT_CHECKSUM "
+        f"{c_u32(certificate.hot_checksum)}",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_CHECKSUM "
+        f"{c_u32(certificate.prepared_dense_checksum)}",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT "
+        f"{certificate.prepared_dense_count}u",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_OFFSET_COUNT "
+        f"{certificate.prepared_dense_offset_count}u",
+        "#define NDS_NATIVE_STAGE_SEGMENT0_TEXTURE_EPOCH_MASK "
+        "0x00000000003fffffULL",
+        "#ifndef NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE",
+        "#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE 0",
+        "#endif",
+        "#if (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE != 0) && \\",
+        "    (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE != 1)",
+        '#error "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE must be 0 or 1"',
+        "#endif",
+        "#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_LINKED_BYTES \\",
+        "    (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE * \\",
+        "     NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_BYTES)",
+        "#define NDS_NATIVE_STAGE_TOTAL_CONST_BYTES \\",
+        "    (NDS_NATIVE_STAGE_SLAB_BYTES + \\",
+        "     NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_LINKED_BYTES)",
         "",
         "typedef struct NDSNativeStageAsset {",
         "    u32 asset_id;",
@@ -2733,6 +3293,40 @@ def render_include(packet: Packet) -> bytes:
         "    u8 sync_count;",
         "} NDSNativeStageStateSpan;",
         "",
+        "typedef struct NDSNativeStageGeneratedRun {",
+        "    u8 run_index;",
+        "    u8 binding_composed_index;",
+        "} NDSNativeStageGeneratedRun;",
+        "",
+        "typedef struct NDSNativeStageGeneratedCertificate {",
+        "    u32 source_checksum;",
+        "    u32 table_checksum;",
+        "    u32 hot_checksum;",
+        "    u32 prepared_dense_checksum;",
+        "    u8 first_state;",
+        "    u8 state_count;",
+        "    u8 sync_count;",
+        "    u8 segment_index;",
+        "    u8 first_dobj;",
+        "    u8 dobj_count;",
+        "    u8 owner;",
+        "    u8 link;",
+        "    u8 submit_class;",
+        "    u8 first_binding;",
+        "    u8 binding_count;",
+        "    u8 first_run;",
+        "    u8 run_count;",
+        "    u8 first_texture_epoch;",
+        "    u8 triangle_count;",
+        "    u8 texture_epoch_count;",
+        "    u8 live_operand_mask;",
+        "    u8 asset_base_mask;",
+        "    u8 material_count;",
+        "    u8 final_tail_span;",
+        "    u8 prepared_dense_count;",
+        "    u8 prepared_dense_offset_count;",
+        "} NDSNativeStageGeneratedCertificate;",
+        "",
         '_Static_assert(sizeof(NDSNativeStageAsset) == 16u, "stage asset ABI");',
         '_Static_assert(sizeof(NDSNativeStageSegment) == 12u, "stage segment ABI");',
         '_Static_assert(sizeof(NDSNativeStageDObj) == 12u, "stage DObj ABI");',
@@ -2744,9 +3338,48 @@ def render_include(packet: Packet) -> bytes:
         '_Static_assert(sizeof(NDSNativeStageStatePolicy) == 28u, "stage policy ABI");',
         '_Static_assert(sizeof(NDSNativeStageStateDelta) == 12u, "stage state delta ABI");',
         '_Static_assert(sizeof(NDSNativeStageStateSpan) == 4u, "stage state span ABI");',
+        '_Static_assert(sizeof(NDSNativeStageGeneratedRun) == 2u, "generated stage run ABI");',
+        '_Static_assert(sizeof(NDSNativeStageGeneratedCertificate) == 40u, "generated stage certificate ABI");',
+        '_Static_assert(NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT == 26u, "generated segment-0 run order");',
         '_Static_assert(NDS_NATIVE_STAGE_SLAB_BYTES <= 16384u, "stage slab exceeds 16 KiB");',
+        '_Static_assert(NDS_NATIVE_STAGE_TOTAL_CONST_MAX_BYTES <= 16384u, "generated stage data exceeds 16 KiB");',
         "",
+        "#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE",
     ]
+
+    lines.extend(
+        (
+            *render_generated_segment0_program(program),
+            "",
+            "static const NDSNativeStageGeneratedCertificate",
+            "    sNdsNativeStageSegment0ColdCertificate = {",
+            f"        {c_u32(certificate.source_checksum)},",
+            f"        {c_u32(certificate.table_checksum)},",
+            f"        {c_u32(certificate.hot_checksum)},",
+            f"        {c_u32(certificate.prepared_dense_checksum)},",
+            "        "
+            + ", ".join(
+                c_u8(value) for value in astuple(certificate)[4:]
+            ),
+            "    };",
+            "",
+        )
+    )
+    lines.extend(
+        render_rows(
+            "NDSNativeStageGeneratedRun",
+            "sNdsNativeStageSegment0HotRuns",
+            [
+                "{ "
+                + ", ".join(
+                    (c_u8(row.run_index), c_u8(row.binding_composed_index))
+                )
+                + " }"
+                for row in program.runs
+            ],
+        )
+    )
+    lines.extend(("#endif", ""))
 
     lines.extend(
         render_rows(
@@ -3121,6 +3754,27 @@ def observed_arrow_fields(closure: str, tracked_bases: Sequence[str]) -> set[str
     return fields
 
 
+def observed_static_fields(
+    closure: str, tracked_bases: Sequence[str]
+) -> set[str]:
+    fields = set()
+    missing_bases = []
+    for base in tracked_bases:
+        matches = re.findall(
+            rf"\b{re.escape(base)}\s*(?:\[[^\]]+\]\s*)?\.\s*"
+            r"([A-Za-z_]\w*)",
+            closure,
+        )
+        if not matches:
+            missing_bases.append(base)
+        fields.update(f"{base}.{field}" for field in matches)
+    if missing_bases:
+        raise falsify(
+            f"tracked static bases are no longer read {sorted(missing_bases)}"
+        )
+    return fields
+
+
 def validate_observed_field_policy(
     policy: dict[str, str], observed: set[str], context: str
 ) -> None:
@@ -3135,10 +3789,13 @@ def validate_observed_field_policy(
         raise falsify(f"{context}: classified fields are no longer read {missing}")
 
 
-def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
-    source_cache: dict[str, str] = {}
+def build_consumed_closure_rows(
+    repo_root: Path,
+    specs: Sequence[dict[str, object]],
+    source_cache: dict[str, str],
+) -> list[dict[str, object]]:
     closures = []
-    for spec in SOURCE_CLOSURE_POLICIES:
+    for spec in specs:
         path = str(spec["path"])
         if path not in source_cache:
             source_cache[path] = (repo_root / path).read_text(encoding="utf-8")
@@ -3149,6 +3806,19 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
             tuple(spec["tracked_bases"]),
         )
         validate_observed_field_policy(policy, observed, f"{path}:{name}")
+        static_policy = dict(spec.get("static_fields", {}))
+        observed_static = observed_static_fields(
+            named_c_closure(source_cache[path], name),
+            tuple(spec.get("tracked_static_bases", ())),
+        )
+        validate_observed_field_policy(
+            static_policy, observed_static, f"{path}:{name}:static"
+        )
+        overlap = set(policy) & set(static_policy)
+        if overlap:
+            raise falsify(f"{path}:{name}: duplicate field policy {sorted(overlap)}")
+        policy.update(static_policy)
+        observed.update(observed_static)
         closures.append(
             {
                 "path": path,
@@ -3159,12 +3829,25 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
                 ],
             }
         )
+    return closures
+
+
+def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
+    source_cache: dict[str, str] = {}
+    closures = build_consumed_closure_rows(
+        repo_root, SOURCE_CLOSURE_POLICIES, source_cache
+    )
+    task26_closures = build_consumed_closure_rows(
+        repo_root, TASK26_GENERATED_CLOSURE_POLICIES, source_cache
+    )
+    segment0 = build_generated_segment0_program(generate(repo_root)).certificate
 
     return {
         "schema": "smash64ds.m3-consumed-fields.v1",
         "generated_by": "scripts/generate_nds_native_stage.py",
         "allowed_classifications": list(FIELD_CLASSES),
         "source_closures": closures,
+        "task26_generated_closures": task26_closures,
         "generated_runtime_fields": [
             {
                 "record": record,
@@ -3288,6 +3971,53 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
                 "disposition": "bind_current_exact_callbacks_and_limits",
             },
         ],
+        "task26_segment0_program": {
+            "admission": (
+                "execute only after the existing generation/stamp topology "
+                "admission has populated sNdsNativeStageValidationCache"
+            ),
+            "segment": 0,
+            "dobjs": {
+                "first": segment0.first_dobj,
+                "count": segment0.dobj_count,
+            },
+            "bindings": {
+                "first": segment0.first_binding,
+                "count": segment0.binding_count,
+            },
+            "runs": {
+                "first": segment0.first_run,
+                "count": segment0.run_count,
+            },
+            "triangle_count": segment0.triangle_count,
+            "texture_epochs": {
+                "first": segment0.first_texture_epoch,
+                "count": segment0.texture_epoch_count,
+                "mask": "0x00000000003fffff",
+            },
+            "material_count": segment0.material_count,
+            "final_tail_span": segment0.final_tail_span,
+            "final_tail_state_sync": [4, 2],
+            "prepared_dense_cache": {
+                "source": "sNdsNativeStageValidationCache",
+                "offset_indices": [
+                    0, segment0.prepared_dense_offset_count - 1,
+                ],
+                "offset_count": segment0.prepared_dense_offset_count,
+                "terminal": segment0.prepared_dense_count,
+                "first_visit_count": segment0.prepared_dense_count,
+                "order_checksum": f"0x{segment0.prepared_dense_checksum:08x}",
+                "disposition": (
+                    "reuse the Task-14 prepared_dense_offsets/indices; do not "
+                    "emit a second schedule"
+                ),
+            },
+            "retained_live_seams": [
+                "ndsRendererHardwareResolveOrBindTexture and mutable texture residency",
+                "per-frame composed-matrix transforms and near-plane classification",
+                "one shared traversal/stats/epoch-mask transaction across all eight segments",
+            ],
+        },
         "admission_only": [
             "dobjs[57]", "binding_display_lists[42]", "projection",
             "topology_generation", "topology_stamp",
@@ -3408,8 +4138,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         manifest_output = repo_root / manifest_output
     try:
         packet = generate(repo_root)
+        segment0_program = build_generated_segment0_program(packet)
         rendered = render_include(packet)
         rendered_manifest = render_consumed_fields_manifest(repo_root)
+        manifest = json.loads(rendered_manifest)
         rendered_hash = sha256(rendered)
         if (
             EXPECTED_INCLUDE_SHA256 != "TO_BE_FILLED"
@@ -3450,7 +4182,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"policies={len(packet.policies)} state_deltas={len(packet.state_deltas)} "
         f"state_events={len(packet.state_sequence)} "
         f"state_spans={len(packet.state_spans)} slab_bytes={packet.slab_bytes()} "
-        f"manifest_fields={sum(len(row['fields']) for row in build_consumed_fields_manifest(repo_root)['source_closures'])} "
+        f"segment0_program_runs={len(segment0_program.runs)} "
+        f"segment0_program_bytes={segment0_program.footprint_bytes()} "
+        f"total_const_max_bytes={packet.slab_bytes() + segment0_program.footprint_bytes()} "
+        f"manifest_fields={sum(len(row['fields']) for row in manifest['source_closures'])} "
+        f"task26_manifest_fields={sum(len(row['fields']) for row in manifest['task26_generated_closures'])} "
         f"sha256={rendered_hash}"
     )
     return 0

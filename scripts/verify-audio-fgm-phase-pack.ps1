@@ -95,9 +95,9 @@ $sectionTotals = @{
     }
 }
 if (($sectionTotals.text -gt 3584) -or
-    ($sectionTotals.rodata -gt 384) -or
+    ($sectionTotals.rodata -gt 512) -or
     ($sectionTotals.data -gt 16) -or
-    ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1536L)) -or
+    ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1792L)) -or
     ($sectionTotals.itcm -ne 0)) {
     throw (('FGM backend binary budget failed: text={0} rodata={1} data={2} ' +
         'bss={3} itcm={4}.') -f
@@ -235,11 +235,14 @@ try {
             [int64](Convert-MarkerUInt32 $ko.Groups[$_].Value)
         })
     $koIsIdle = (($koValues -join ',') -eq '0,0,0,0,0,0,0,0,0,0')
+    $koIsExactMarioTrio = (($koValues -join ',') -eq
+        '19,1,1,0,0,1,3,439,292,154')
     $koIsExactFoxTrio = (($koValues -join ',') -eq
         '28,0,0,1,1,1,3,370,289,154')
-    if (-not $koIsIdle -and -not $koIsExactFoxTrio) {
-        throw ('Natural regular-KO state was neither idle nor the exact Fox ' +
-            "voice/slam/explosion order.`n$gdbStdout")
+    if (-not $koIsIdle -and -not $koIsExactMarioTrio -and
+        -not $koIsExactFoxTrio) {
+        throw ('Natural regular-KO state was neither idle nor an exact Mario/' +
+            "Fox voice/slam/explosion order.`n$gdbStdout")
     }
     $fgmChannelMask = if ($pool.Success) {
         Convert-MarkerUInt32 $pool.Groups[8].Value

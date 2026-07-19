@@ -5263,3 +5263,94 @@ EVIDENCE:
   Eight per-window JSON captures share the task23r-phase0 evidence prefix.
 KEEP / REWORK / REVERT: KEEP PHASE-0 CERTIFICATE / NO RUNTIME REUSE / TASK 26 NEXT
 ```
+
+## 2026-07-18 - Task 26 exact generated M3 segment 0
+
+```text
+IDEA ID: TASK26-GENERATED-M3-SEGMENT0-20260718
+BOUND / IDENTITY:
+  One fixed generated program for Dream Land segment 0 / layer0 only: 21
+  DObjs, bindings 0-19, runs 0-25, 54 triangles, 22 epochs, 108 dense
+  vertices, 123 immutable state effects, and 90 synchronization effects.
+  Matrices, clipping, materials, texture/color/alpha/UV selection, validation,
+  current commit/GX emission, and fail-closed fallback before GX remain live.
+  There is no runtime opcode scan, packet copy/patch, per-frame list build,
+  sorting, second topology cache, or post-GX fallback.
+
+  Implementation base HEAD:
+    4e8ecbf0406cac77ab69b9f9980a9885f4bd7df1
+  Published battle ROM / ELF:
+    757ED78612607BEB8780BF197CC701570926B52EBDD745368DC32B6D44AC89E4
+    443475D101D79DC6C069EFD9AFBF537CD363CA00CF587CD7AF7A967EC5084631
+  Published ROM size: 14,681,088 bytes
+
+EXACTNESS:
+  Frames 438-445 compare all 2,775 CPU-preparation words and 26 rows with zero
+  differences. Owner-word conservation is exactly 15,126 = 7,011 stage +
+  4,130 Mario + 3,985 Fox. The live-mutation falsifier reports
+  inject/mismatch/revalidate 1/1/1 and zero ARM faults, before GX. Exact
+  8/255/57/42/54/202/49/4, 121/828, and 202/320/306 contracts remain, with
+  zero fallback, fence, or conservation failure. Synchronized native pixels
+  are 0/49,152 in both production and hardware-style pairs.
+
+TASK-25R-CONTROL PHASE A/B (P50/P95 ARM9 TICKS):
+  Phase               stage control -> candidate           stage delta       draw delta
+  Countdown / GO      464128/464320 -> 460544/460608       -3584/-3712       -3296/-3264
+  Early combat        464352/464448 -> 460736/461056       -3616/-3392       -3680/-3648
+  Material edge       464480/467712 -> 460928/464064       -3552/-3648       -3488/-3584
+  Whispy steady       464288/464576 -> 460864/461056       -3424/-3520       -3104/-3200
+  Natural KO          468256/468480 -> 464640/464896       -3616/-3584       -3552/-3520
+  No relevant phase or P95 regression occurs.
+
+CURRENT HARDWARE-STYLE MELONDS PAIR:
+  Countdown stage 465472/465600 -> 455232/455232 (-10240/-10368), draw
+  1148864/1217088 -> 1137632/1205888 (-11232/-11200), and active
+  1152896/1221184 -> 1141728/1210048 (-11168/-11136). Loop P50 remains
+  1680448 and P95 moves +64 ticks inside the same VBlank bucket.
+
+SINGLE RETAIL OBSERVATION (USER SUPPLIED; NO REPEATABILITY CLAIM):
+  generated: UPD 330944, DRW 1706688, ACT 1709440, LOOP 2240384
+  control:   UPD 1547072 spike, DRW 1728256, ACT 1705152, LOOP 2240768
+  delta:     UPD excluded, DRW -21568 (-1.25%), ACT +4288 (+0.25%),
+             LOOP -384 (-0.02%, same VBlank bucket)
+  ACT below DRW in the control photo is valid because HUD rows refresh at
+  staggered times. The user declines repeats; do not infer a stable cache or
+  layout effect from this one pair.
+
+FOOTPRINT / PLACEMENT:
+  Canonical owner/helper are ARM, 8,292 / 1,472 bytes; the compact hot-run
+  table is 52 bytes. Canonical local frames including saved registers are
+  192 / 168 bytes. Instrumented loaded footprint grows 7,748 bytes (+20 ITCM,
+  +7,696 main text/rodata, +32 BSS); the hardware-style pair ROM grows 6,144
+  bytes. Canonical ITCM is 28,820 / 32,768, leaving 3,948 bytes.
+
+INTEGRATED LIFECYCLE REPAIRS:
+  Exact static residency adds runtime-observed Whispy asset 152 and late Fox
+  asset 313: 24 keys, 23 outputs, 132,096 payload and 136,192 prepared bytes
+  across VRAM A+B. All ten post-GO fence counters stay zero. An exactly
+  completed Calico hardware channel now retires its stale software audio owner
+  before reuse; inconsistent ownership remains fail-closed. The refreshed
+  lifecycle passes the exact 439/292/154 KO sequence, 4,084/2,042 fixed-two
+  pacing, one teardown, Results, and 166,672-byte net reserve. Stable-30
+  remains correctly red.
+
+DECISION / NEXT:
+  KEEP the exact positive segment-0 slice. STOP broader Task-26 expansion
+  because the generated working-set effect cannot be device-falsified without
+  another retail A/B, which the user declines. This expansion gate does not
+  revert the smaller exact win. Task 23R Phase 1 next measures only residual
+  work and may retain a cache only at >=20% exact complete-key hits with key
+  cost below half the avoided work.
+
+EVIDENCE:
+  artifacts/performance/2026-07-18_task26-generated-segment0.md
+  artifacts/performance/2026-07-18_task26-segment0-cpu-prep-trace-e0.json
+    14F263B7C51A468562C74E7AFCB0508EAC455BECE21F72A2CC6C127A7983FD9A
+  artifacts/performance/2026-07-18_task26-segment0-cpu-prep-trace-e1.json
+    486464C680B4CD13479E5A8324FA4AA0297A0B7EE7EEC720786B6FE77D4CD5DC
+  artifacts/performance/2026-07-18_task26-hardware-control-melonds.json
+    E2D37CFC3C6F58AE5ED48056498FB48F90A274009E15FFFC7E6BA6B0F06830CE
+  artifacts/performance/2026-07-18_task26-hardware-generated-melonds.json
+    620BA8E56785A30A63D0FF7C094DDB42FA1B56EB9BCF39FCBC53A1BF8E7EA443
+KEEP / REWORK / REVERT: KEEP SEGMENT 0 / STOP EXPANSION / TASK 23R PHASE 1 NEXT
+```

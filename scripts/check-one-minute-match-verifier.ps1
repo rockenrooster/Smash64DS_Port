@@ -55,7 +55,7 @@ if ($taskman -match 'updates_owed|RealtimeUpdatesOwed|REALTIME_UPDATE_CAP|Pacing
 
 Assert-Text $wrapper '-CPUOpponentProof\s+`\s*\r?\n\s*-MatchLifecycleProof\s+`\s*\r?\n\s*-OneMinuteMatchProof' `
     'One-minute wrapper does not select the existing CPU/lifecycle mode-163 path.'
-Assert-Text $wrapper '(?s)-OneMinuteMatchProof\s+`.*?-RendererFastRunMode 9\s+`.*?-StaticTextureAotMode 1\s+`.*?-IFCommonHybridOamMode 0\s+`.*?-RequireZeroPostGoTextureFence' `
+Assert-Text $wrapper '(?s)-OneMinuteMatchProof\s+`.*?-RendererFastRunMode 9\s+`.*?-NativeStageGeneratedSegment0Enable 1\s+`.*?-StaticTextureAotMode 1\s+`.*?-IFCommonHybridOamMode 0\s+`.*?-RequireZeroPostGoTextureFence' `
     'One-minute wrapper does not select the published-equivalent M3/M4 renderer and strict post-GO fence.'
 Assert-Text $owner '(?s)if \(\$MatchLifecycleProof\) \{\s*\$CPUOpponentProof = \$true.*?\}\s*if \(\$CPUOpponentProof\) \{\s*\$FoxCpuMode = 1\s*\$foxCpuModeSelected = \$true\s*\}' `
     'CPU/lifecycle proof no longer forces the Fox CPU decision path on.'
@@ -91,6 +91,8 @@ Assert-Text $battle '-OneMinuteMatchProof:\$OneMinuteMatchProof' `
     'One-minute selector is not forwarded to the natural-runtime owner.'
 Assert-Text $battle '-StaticTextureAotMode \$StaticTextureAotMode' `
     'One-minute verifier no longer forwards static texture residency.'
+Assert-Text $battle '-NativeStageGeneratedSegment0Enable \$NativeStageGeneratedSegment0Enable' `
+    'One-minute verifier no longer forwards the generated stage-program selector.'
 Assert-Text $battle '-IFCommonHybridOamMode \$IFCommonHybridOamMode' `
     'One-minute verifier no longer forwards published IFCommon OAM ownership.'
 Assert-Text $battle '-RequireZeroPostGoTextureFence:\$RequireZeroPostGoTextureFence' `
@@ -109,6 +111,8 @@ Assert-Text $owner '(?s)\$life\[4\] -eq 1.*\$life\[5\] -eq 0.*\$life\[6\] -eq 36
     'One-minute verifier lost its exact timer-expiry assertion.'
 Assert-Text $owner '(?s)\$life\[8\] -eq 22.*\$life\[9\] -eq 24' `
     'One-minute verifier lost the VSBattle-to-VS-Results transition assertion.'
+Assert-Text $owner '\$expectedMemoryArenaScene = if \(\$OneMinuteMatchProof\) \{ 24 \} else \{ 22 \}' `
+    'One-minute verifier no longer accepts the final memory ledger from VS Results while retaining VSBattle elsewhere.'
 Assert-Text $owner 'MATCH_SAFETY=' `
     'One-minute verifier lost its safety-counter marker.'
 Assert-Text $owner 'AUDIO_FGM_KO=' `
@@ -133,7 +137,7 @@ Assert-Text $owner '(?s)\$reserveBytes = \[int64\]\$ma\[6\] - \$audioResidentByt
     'One-minute verifier lost the conservative 128 KiB reserve gate.'
 Assert-Text $owner '\$expectedM4TeardownCount = if \(\$OneMinuteMatchProof\) \{ 1 \} else \{ 0 \}' `
     'One-minute verifier no longer requires exactly one M4 teardown.'
-Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq 22.*?\$m4FenceFinalValues\[5\] -eq 131072.*?\$m4FenceFinalValues\[7\] -eq \$expectedM4TeardownCount.*?\$m4FenceFinalCountSum -eq 0' `
+Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq 24.*?\$m4FenceFinalValues\[5\] -eq 136192.*?\$m4FenceFinalValues\[7\] -eq \$expectedM4TeardownCount.*?\$m4FenceFinalCountSum -eq 0' `
     'One-minute verifier lost the exact M4 residency and zero post-GO work assertions.'
 Assert-Text $owner '\$bp\[2\] -eq \(2 \* \$bp\[3\]\)' `
     'One-minute verifier lost the hard exact-two-updates-per-present ratio gate.'

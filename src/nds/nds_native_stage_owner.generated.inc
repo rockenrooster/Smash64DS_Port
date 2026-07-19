@@ -21,9 +21,39 @@
 #define NDS_NATIVE_STAGE_STATE_SEQUENCE_COUNT 423u
 #define NDS_NATIVE_STAGE_STATE_SPAN_COUNT 96u
 #define NDS_NATIVE_STAGE_SLAB_BYTES 12663u
+#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT 26u
+#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_COLD_BYTES 40u
+#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_HOT_BYTES 52u
+#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_BYTES 92u
+#define NDS_NATIVE_STAGE_TOTAL_CONST_MAX_BYTES 12755u
 #define NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI 0x4d335031u
 #define NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX (1u << 0)
 #define NDS_NATIVE_STAGE_COORDINATE_SHIFT 5u
+#define NDS_NATIVE_STAGE_LIVE_OPERAND_ASSET_BASES 0u
+#define NDS_NATIVE_STAGE_LIVE_OPERAND_BINDING_COMPOSED 1u
+#define NDS_NATIVE_STAGE_LIVE_OPERAND_MATERIALS 2u
+#define NDS_NATIVE_STAGE_LIVE_OPERAND_CONFIG 3u
+#define NDS_NATIVE_STAGE_LIVE_OPERAND_COUNT 4u
+#define NDS_NATIVE_STAGE_SEGMENT0_SOURCE_CHECKSUM 0x47c2c19du
+#define NDS_NATIVE_STAGE_SEGMENT0_TABLE_CHECKSUM 0xcea1ff03u
+#define NDS_NATIVE_STAGE_SEGMENT0_HOT_CHECKSUM 0x54327dfbu
+#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_CHECKSUM 0xf1c6fadcu
+#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT 108u
+#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_OFFSET_COUNT 27u
+#define NDS_NATIVE_STAGE_SEGMENT0_TEXTURE_EPOCH_MASK 0x00000000003fffffULL
+#ifndef NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
+#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE 0
+#endif
+#if (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE != 0) && \
+    (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE != 1)
+#error "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE must be 0 or 1"
+#endif
+#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_LINKED_BYTES \
+    (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE * \
+     NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_BYTES)
+#define NDS_NATIVE_STAGE_TOTAL_CONST_BYTES \
+    (NDS_NATIVE_STAGE_SLAB_BYTES + \
+     NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_LINKED_BYTES)
 
 typedef struct NDSNativeStageAsset {
     u32 asset_id;
@@ -135,6 +165,40 @@ typedef struct NDSNativeStageStateSpan {
     u8 sync_count;
 } NDSNativeStageStateSpan;
 
+typedef struct NDSNativeStageGeneratedRun {
+    u8 run_index;
+    u8 binding_composed_index;
+} NDSNativeStageGeneratedRun;
+
+typedef struct NDSNativeStageGeneratedCertificate {
+    u32 source_checksum;
+    u32 table_checksum;
+    u32 hot_checksum;
+    u32 prepared_dense_checksum;
+    u8 first_state;
+    u8 state_count;
+    u8 sync_count;
+    u8 segment_index;
+    u8 first_dobj;
+    u8 dobj_count;
+    u8 owner;
+    u8 link;
+    u8 submit_class;
+    u8 first_binding;
+    u8 binding_count;
+    u8 first_run;
+    u8 run_count;
+    u8 first_texture_epoch;
+    u8 triangle_count;
+    u8 texture_epoch_count;
+    u8 live_operand_mask;
+    u8 asset_base_mask;
+    u8 material_count;
+    u8 final_tail_span;
+    u8 prepared_dense_count;
+    u8 prepared_dense_offset_count;
+} NDSNativeStageGeneratedCertificate;
+
 _Static_assert(sizeof(NDSNativeStageAsset) == 16u, "stage asset ABI");
 _Static_assert(sizeof(NDSNativeStageSegment) == 12u, "stage segment ABI");
 _Static_assert(sizeof(NDSNativeStageDObj) == 12u, "stage DObj ABI");
@@ -146,7 +210,232 @@ _Static_assert(sizeof(NDSNativeStageMaterialEvent) == 12u, "stage material ABI")
 _Static_assert(sizeof(NDSNativeStageStatePolicy) == 28u, "stage policy ABI");
 _Static_assert(sizeof(NDSNativeStageStateDelta) == 12u, "stage state delta ABI");
 _Static_assert(sizeof(NDSNativeStageStateSpan) == 4u, "stage state span ABI");
+_Static_assert(sizeof(NDSNativeStageGeneratedRun) == 2u, "generated stage run ABI");
+_Static_assert(sizeof(NDSNativeStageGeneratedCertificate) == 40u, "generated stage certificate ABI");
+_Static_assert(NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT == 26u, "generated segment-0 run order");
 _Static_assert(NDS_NATIVE_STAGE_SLAB_BYTES <= 16384u, "stage slab exceeds 16 KiB");
+_Static_assert(NDS_NATIVE_STAGE_TOTAL_CONST_MAX_BYTES <= 16384u, "generated stage data exceeds 16 KiB");
+
+#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
+#define NDS_NATIVE_STAGE_SEGMENT0_GENERATED_PROGRAM \
+    do { \
+        NDS_TASK26_SYNC(7u); \
+        NDS_TASK26_GEOMETRY(0xd9fdffffu, 0x00000000u); \
+        NDS_TASK26_OTHERMODE(0xe3001001u, 0x00008000u); \
+        NDS_TASK26_BLEND(0x00000008u); \
+        NDS_TASK26_TILE(0xf5000100u, 0x05000000u); \
+        NDS_TASK26_TEXTURE(0xd7000002u, 0xffffffffu); \
+        NDS_TASK26_OTHERMODE(0xe2001e01u, 0x00000001u); \
+        NDS_TASK26_OTHERMODE(0xe200001cu, 0x005041c8u); \
+        NDS_TASK26_COMBINE(0xfc121824u, 0xff33ffffu); \
+        NDS_TASK26_TILE(0xf5500000u, 0x07014050u); \
+        NDS_TASK26_TILE(0xf5400400u, 0x00094250u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00000238u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x002fc07cu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00000260u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x070ff400u); \
+        NDS_TASK26_RUN(0u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_OTHERMODE(0xe2001e01u, 0x00000000u); \
+        NDS_TASK26_OTHERMODE(0xe200001cu, 0x00552048u); \
+        NDS_TASK26_TILE(0xf5500000u, 0x07018060u); \
+        NDS_TASK26_TILE(0xf5400800u, 0x000d8360u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00000df8u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x003fc1fcu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00000e20u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x073ff200u); \
+        NDS_TASK26_RUN(1u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_OTHERMODE(0xe2001e01u, 0x00000001u); \
+        NDS_TASK26_OTHERMODE(0xe200001cu, 0x005041c8u); \
+        NDS_TASK26_TILE(0xf5400800u, 0x00098360u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x000005c8u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x001fc0fcu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x000005f0u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x073ff200u); \
+        NDS_TASK26_RUN(2u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_TILE(0xf5500000u, 0x07014050u); \
+        NDS_TASK26_TILE(0xf5400400u, 0x00094250u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002b88u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x0007c07cu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00002bb0u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x070ff400u); \
+        NDS_TASK26_RUN(3u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(4u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(5u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_OTHERMODE(0xe2001e01u, 0x00000000u); \
+        NDS_TASK26_OTHERMODE(0xe200001cu, 0x00552048u); \
+        NDS_TASK26_GEOMETRY(0xd9dfffffu, 0x00000000u); \
+        NDS_TASK26_COMBINE(0xfc127e24u, 0xfffff3f9u); \
+        NDS_TASK26_TILE(0xf5500000u, 0x07010040u); \
+        NDS_TASK26_TILE(0xf5400200u, 0x00090240u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002ad8u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x0003c03cu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00002b00u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x0703f800u); \
+        NDS_TASK26_RUN(6u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(7u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(8u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(9u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_GEOMETRY(0xd9ffffffu, 0x00200000u); \
+        NDS_TASK26_OTHERMODE(0xe2001e01u, 0x00000001u); \
+        NDS_TASK26_OTHERMODE(0xe200001cu, 0x005041c8u); \
+        NDS_TASK26_COMBINE(0xfc121824u, 0xff33ffffu); \
+        NDS_TASK26_TILE(0xf5500000u, 0x07014050u); \
+        NDS_TASK26_TILE(0xf5400400u, 0x00094350u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00001628u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x000fc07cu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00001650u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x070ff400u); \
+        NDS_TASK26_RUN(10u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(11u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_TILE(0xf5500000u, 0x07018060u); \
+        NDS_TASK26_TILE(0xf5400800u, 0x00098260u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x000005c8u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x000fc0fcu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x000005f0u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x073ff200u); \
+        NDS_TASK26_RUN(12u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(13u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(14u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(15u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_TILE(0xf5400800u, 0x00098360u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x001fc0fcu); \
+        NDS_TASK26_RUN(16u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_GEOMETRY(0xd9dfffffu, 0x00000000u); \
+        NDS_TASK26_COMBINE(0xfc127e24u, 0xfffff3f9u); \
+        NDS_TASK26_TILE(0xf5500000u, 0x07010030u); \
+        NDS_TASK26_TILE(0xf5400200u, 0x00090330u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002f18u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x0003c03cu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00002f40u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x0703f800u); \
+        NDS_TASK26_RUN(17u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002db8u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00002de0u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x0703f800u); \
+        NDS_TASK26_RUN(18u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002e68u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00002e90u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x0703f800u); \
+        NDS_TASK26_RUN(19u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002db8u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00002de0u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x0703f800u); \
+        NDS_TASK26_RUN(20u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002f18u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00002f40u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x0703f800u); \
+        NDS_TASK26_RUN(21u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002e68u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00002e90u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x0703f800u); \
+        NDS_TASK26_RUN(22u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_OTHERMODE(0xe2001e01u, 0x00000000u); \
+        NDS_TASK26_OTHERMODE(0xe200001cu, 0x00552048u); \
+        NDS_TASK26_GEOMETRY(0xd9ffffffu, 0x00200000u); \
+        NDS_TASK26_COMBINE(0xfc121824u, 0xff33ffffu); \
+        NDS_TASK26_TILE(0xf5500000u, 0x07014050u); \
+        NDS_TASK26_TILE(0xf5400400u, 0x00094250u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002678u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x0017c07cu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x000026a0u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x070ff400u); \
+        NDS_TASK26_RUN(23u); \
+        NDS_TASK26_SYNC(5u); \
+        NDS_TASK26_OTHERMODE(0xe2001e01u, 0x00000001u); \
+        NDS_TASK26_OTHERMODE(0xe200001cu, 0x005041c8u); \
+        NDS_TASK26_TILE(0xf5500000u, 0x07018050u); \
+        NDS_TASK26_TILE(0xf5400400u, 0x00098250u); \
+        NDS_TASK26_IMAGE(0u, 0xfd100000u, 0x00002248u); \
+        NDS_TASK26_LOAD_TLUT(0x0503c000u); \
+        NDS_TASK26_TILE_SIZE(0xf2000000u, 0x0017c0fcu); \
+        NDS_TASK26_IMAGE(0u, 0xfd500000u, 0x00002270u); \
+        NDS_TASK26_LOAD_BLOCK(0xf3000000u, 0x071ff400u); \
+        NDS_TASK26_RUN(24u); \
+        NDS_TASK26_SYNC(1u); \
+        NDS_TASK26_RUN(25u); \
+        NDS_TASK26_SYNC(2u); \
+        NDS_TASK26_GEOMETRY(0xd9ffffffu, 0x00020000u); \
+        NDS_TASK26_OTHERMODE(0xe3001001u, 0x00000000u); \
+        NDS_TASK26_OTHERMODE(0xe2001e01u, 0x00000000u); \
+        NDS_TASK26_OTHERMODE(0xe200001cu, 0x00552048u); \
+    } while (0)
+
+static const NDSNativeStageGeneratedCertificate
+    sNdsNativeStageSegment0ColdCertificate = {
+        0x47c2c19du,
+        0xcea1ff03u,
+        0x54327dfbu,
+        0xf1c6fadcu,
+        0u, 123u, 90u, 0u, 0u, 21u, 0u, 4u, 3u, 0u, 20u, 0u, 26u, 0u, 54u, 22u, 11u, 3u, 0u, 73u, 108u, 27u
+    };
+
+static const NDSNativeStageGeneratedRun sNdsNativeStageSegment0HotRuns[26] = {
+    { 0u, 0u },
+    { 1u, 1u },
+    { 2u, 2u },
+    { 3u, 3u },
+    { 4u, 4u },
+    { 5u, 5u },
+    { 6u, 6u },
+    { 7u, 7u },
+    { 8u, 8u },
+    { 9u, 9u },
+    { 10u, 10u },
+    { 11u, 11u },
+    { 12u, 12u },
+    { 13u, 12u },
+    { 14u, 12u },
+    { 15u, 12u },
+    { 16u, 12u },
+    { 17u, 13u },
+    { 18u, 14u },
+    { 19u, 15u },
+    { 20u, 16u },
+    { 21u, 17u },
+    { 22u, 18u },
+    { 23u, 19u },
+    { 24u, 19u },
+    { 25u, 19u },
+};
+
+#endif
 
 static const NDSNativeStageAsset sNdsNativeStageAssets[4] = {
     { 0x00000067u, 0x00002fc0u, 0x8a7ee08du, 0x00000002u },

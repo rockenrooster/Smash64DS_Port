@@ -21329,3 +21329,24 @@ remains skipped for the requested fast iteration cadence.
   ROM SHA-256
   `36218F25F3C69929CEBF4F62B8E2BEBFFCCC13739DBBE5B5D28376352677A686`.
   Profile-0 smoke is 22.3 FPS, so P1 full-speed remains open.
+
+## 2026-07-18 - Retained generated stage segment 0
+
+- Generated a fixed source-backed program for Dream Land segment 0 only: 21
+  DObjs, 20 bindings, 26 runs, 54 triangles, and 22 epochs. All live matrices,
+  clipping, materials, texture/color/alpha/UV selection, validation, commit, and
+  GX emission remain on the exact current path.
+- Current/generated preparation traces match all 2,775 words over eight frames,
+  the live-mutation proof fails/revalidates before GX, and synchronized pixels
+  remain 0 / 49,152. Five Task-25R-control phases save 3,424–3,616 stage P50
+  ticks; a current hardware-style pair saves 10,240/10,368 stage P50/P95.
+- One user-supplied retail A/B saves 21,568 draw ticks and remains in the same
+  VBlank loop bucket. It is retained as single-sample device evidence only;
+  generated-program expansion stops because no further retail repeats will be
+  collected. Task 23R Phase 1 now measures only residual work.
+- Added exact pre-GO residency for the naturally observed Whispy and late-Fox
+  material assets, bringing the corpus to 24 keys / 23 outputs / 136,192
+  prepared bytes and restoring a zero-fence full lifecycle. Also fixed exact
+  completed-channel audio-owner retirement so the natural `439/292/154` KO
+  sequence plays without a generation mismatch. The refreshed lifecycle keeps
+  166,672 bytes net reserve and reaches Results with one teardown.

@@ -65,6 +65,8 @@
 #define NDS_RENDERER_BENCHMARK_SINK_WORDS 1024u
 #define NDS_RENDERER_BENCHMARK_SINK_MASK \
     (NDS_RENDERER_BENCHMARK_SINK_WORDS - 1u)
+#define NDS_RENDERER_BENCHMARK_SEGMENT0_TRACE_WORDS 3072u
+#define NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT 26u
 
 u32 gNdsRendererBenchmarkSink[
     NDS_RENDERER_BENCHMARK_SINK_WORDS] __attribute__((aligned(32)));
@@ -74,13 +76,78 @@ volatile u32 gNdsRendererBenchmarkSinkOwnerWords[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 volatile u32 gNdsRendererBenchmarkSinkCalibrationWords;
 volatile u32 gNdsRendererBenchmarkSinkCalibrationTicks;
+volatile u32 gNdsRendererBenchmarkSinkHashA;
+volatile u32 gNdsRendererBenchmarkSinkHashB;
+volatile u32 gNdsRendererBenchmarkSegment0SinkWords;
+volatile u32 gNdsRendererBenchmarkSegment0SinkHashA;
+volatile u32 gNdsRendererBenchmarkSegment0SinkHashB;
+volatile u32 gNdsRendererBenchmarkSegment0SinkArmFaults;
+u32 gNdsRendererBenchmarkSegment0Trace[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_TRACE_WORDS] __attribute__((aligned(32)));
+volatile u32 gNdsRendererBenchmarkSegment0RunWords[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunHashA[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunHashB[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunRawTextureName[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunTextureEpochPlus1[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunTextureImage[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunTextureTlut[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunTextureKeyHashA[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunTextureKeyHashB[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunTextureDescriptor[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
+volatile u32 gNdsRendererBenchmarkSegment0RunTextureParams[
+    NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT];
 static u32 sNdsRendererBenchmarkSinkCursor;
 static u32 sNdsRendererBenchmarkSinkWordCount;
 static u32 sNdsRendererBenchmarkSinkLastOwnerCursor;
 static u32 sNdsRendererBenchmarkSinkOwnerWords[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
+static u32 sNdsRendererBenchmarkSinkHashA;
+static u32 sNdsRendererBenchmarkSinkHashB;
+static u32 sNdsRendererBenchmarkSegment0SinkWords;
+static u32 sNdsRendererBenchmarkSegment0SinkHashA;
+static u32 sNdsRendererBenchmarkSegment0SinkHashB;
+static u32 sNdsRendererBenchmarkSegment0SinkActive;
+static u32 sNdsRendererBenchmarkSegment0SinkArmFaults;
+static u32 sNdsRendererBenchmarkSegment0TextureEpochPlus1;
+static u32 sNdsRendererBenchmarkSegment0TextureEpochSourceOffset;
+static u32 sNdsRendererBenchmarkSegment0TextureEpochMetadata;
+static u32 sNdsRendererBenchmarkSegment0TextureImage;
+static u32 sNdsRendererBenchmarkSegment0TextureTlut;
+static u32 sNdsRendererBenchmarkSegment0TextureTexel1;
+static u32 sNdsRendererBenchmarkSegment0TextureKeyHashA;
+static u32 sNdsRendererBenchmarkSegment0TextureKeyHashB;
+static u32 sNdsRendererBenchmarkSegment0TextureDescriptor;
+static u32 sNdsRendererBenchmarkSegment0TextureFlags;
+static u32 sNdsRendererBenchmarkSegment0TextureParams;
+static u32 sNdsRendererBenchmarkSegment0TexturePolyFmt;
+static u32 sNdsRendererBenchmarkSegment0TextureBinding;
+static u32 sNdsRendererBenchmarkSegment0TextureValid;
+static const void *sNdsRendererBenchmarkSegment0AssetBases[
+    NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
 static u32 sNdsRendererBenchmarkFakeTextureName = 1u;
 static u32 sNdsRendererBenchmarkTextureParameter;
+
+static inline u32 ndsRendererBenchmarkSinkHashWordA(u32 hash, u32 value)
+{
+    return (hash ^ value) * 16777619u;
+}
+
+static inline u32 ndsRendererBenchmarkSinkHashWordB(u32 hash, u32 value)
+{
+    hash ^= value + 0x9e3779b9u + (hash << 6) + (hash >> 2);
+    hash = (hash << 7) | (hash >> 25);
+    return hash * 0x85ebca6bu;
+}
 
 static inline void ndsRendererBenchmarkSinkWord(u32 value)
 {
@@ -89,6 +156,87 @@ static inline void ndsRendererBenchmarkSinkWord(u32 value)
         NDS_RENDERER_BENCHMARK_SINK_MASK] = value;
     sNdsRendererBenchmarkSinkCursor++;
     sNdsRendererBenchmarkSinkWordCount++;
+    sNdsRendererBenchmarkSinkHashA = ndsRendererBenchmarkSinkHashWordA(
+        sNdsRendererBenchmarkSinkHashA, value);
+    sNdsRendererBenchmarkSinkHashB = ndsRendererBenchmarkSinkHashWordB(
+        sNdsRendererBenchmarkSinkHashB, value);
+    if (sNdsRendererBenchmarkSegment0SinkActive != 0u)
+    {
+        if (sNdsRendererBenchmarkSegment0SinkWords <
+            NDS_RENDERER_BENCHMARK_SEGMENT0_TRACE_WORDS)
+        {
+            gNdsRendererBenchmarkSegment0Trace[
+                sNdsRendererBenchmarkSegment0SinkWords] = value;
+        }
+        else
+        {
+            sNdsRendererBenchmarkSegment0SinkArmFaults++;
+        }
+        sNdsRendererBenchmarkSegment0SinkWords++;
+        sNdsRendererBenchmarkSegment0SinkHashA =
+            ndsRendererBenchmarkSinkHashWordA(
+                sNdsRendererBenchmarkSegment0SinkHashA, value);
+        sNdsRendererBenchmarkSegment0SinkHashB =
+            ndsRendererBenchmarkSinkHashWordB(
+                sNdsRendererBenchmarkSegment0SinkHashB, value);
+    }
+}
+
+static void ndsRendererBenchmarkSegment0SinkBegin(void)
+{
+    if (sNdsRendererBenchmarkSegment0SinkActive != 0u)
+    {
+        sNdsRendererBenchmarkSegment0SinkArmFaults++;
+    }
+    sNdsRendererBenchmarkSegment0SinkWords = 0u;
+    sNdsRendererBenchmarkSegment0SinkHashA = 2166136261u;
+    sNdsRendererBenchmarkSegment0SinkHashB = 0x9e3779b9u;
+    sNdsRendererBenchmarkSegment0SinkActive = TRUE;
+    sNdsRendererBenchmarkSegment0TextureEpochPlus1 = 0u;
+    sNdsRendererBenchmarkSegment0TextureEpochSourceOffset = 0u;
+    sNdsRendererBenchmarkSegment0TextureEpochMetadata = 0u;
+    sNdsRendererBenchmarkSegment0TextureImage = 0u;
+    sNdsRendererBenchmarkSegment0TextureTlut = 0u;
+    sNdsRendererBenchmarkSegment0TextureTexel1 = 0u;
+    sNdsRendererBenchmarkSegment0TextureKeyHashA = 0u;
+    sNdsRendererBenchmarkSegment0TextureKeyHashB = 0u;
+    sNdsRendererBenchmarkSegment0TextureDescriptor = 0u;
+    sNdsRendererBenchmarkSegment0TextureFlags = 0u;
+    sNdsRendererBenchmarkSegment0TextureParams = 0u;
+    sNdsRendererBenchmarkSegment0TexturePolyFmt = 0u;
+    sNdsRendererBenchmarkSegment0TextureBinding = 0u;
+    sNdsRendererBenchmarkSegment0TextureValid = FALSE;
+    memset((void *)gNdsRendererBenchmarkSegment0RunWords, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunWords));
+    memset((void *)gNdsRendererBenchmarkSegment0RunHashA, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunHashA));
+    memset((void *)gNdsRendererBenchmarkSegment0RunHashB, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunHashB));
+    memset((void *)gNdsRendererBenchmarkSegment0RunRawTextureName, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunRawTextureName));
+    memset((void *)gNdsRendererBenchmarkSegment0RunTextureEpochPlus1, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunTextureEpochPlus1));
+    memset((void *)gNdsRendererBenchmarkSegment0RunTextureImage, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunTextureImage));
+    memset((void *)gNdsRendererBenchmarkSegment0RunTextureTlut, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunTextureTlut));
+    memset((void *)gNdsRendererBenchmarkSegment0RunTextureKeyHashA, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunTextureKeyHashA));
+    memset((void *)gNdsRendererBenchmarkSegment0RunTextureKeyHashB, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunTextureKeyHashB));
+    memset((void *)gNdsRendererBenchmarkSegment0RunTextureDescriptor, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunTextureDescriptor));
+    memset((void *)gNdsRendererBenchmarkSegment0RunTextureParams, 0,
+           sizeof(gNdsRendererBenchmarkSegment0RunTextureParams));
+}
+
+static void ndsRendererBenchmarkSegment0SinkEnd(void)
+{
+    if (sNdsRendererBenchmarkSegment0SinkActive == 0u)
+    {
+        sNdsRendererBenchmarkSegment0SinkArmFaults++;
+    }
+    sNdsRendererBenchmarkSegment0SinkActive = FALSE;
 }
 
 static inline void ndsRendererBenchmarkGlEnable(int bits)
@@ -145,6 +293,44 @@ static inline u32 ndsRendererBenchmarkGlGetTexParameter(void)
 static inline void ndsRendererBenchmarkGlBindTexture(int target, int name)
 {
     (void)target;
+    if (sNdsRendererBenchmarkSegment0SinkActive != 0u)
+    {
+        /* A libnds texture name is an opaque CPU handle, not a GX word.
+         * Segment 0 instead records the certified epoch and the actual
+         * pointer-normalized prepared cache key/descriptor. */
+        if (sNdsRendererBenchmarkSegment0TextureValid == FALSE)
+        {
+            sNdsRendererBenchmarkSegment0SinkArmFaults++;
+        }
+        ndsRendererBenchmarkSinkWord(
+            0xb1000000u |
+            (sNdsRendererBenchmarkSegment0TextureEpochPlus1 & 0xffffu));
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureEpochSourceOffset);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureEpochMetadata);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureImage);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureTlut);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureTexel1);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureDescriptor);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureFlags);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureParams);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TexturePolyFmt);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureBinding);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureKeyHashA);
+        ndsRendererBenchmarkSinkWord(
+            sNdsRendererBenchmarkSegment0TextureKeyHashB);
+        return;
+    }
     ndsRendererBenchmarkSinkWord((u32)name);
 }
 
@@ -1106,6 +1292,28 @@ volatile u32 gNdsRendererM3CrossForeignCornerCount;
 volatile u32 gNdsRendererM3TopologyFullValidationCount;
 volatile u32 gNdsRendererM3TopologyCacheHitCount;
 volatile u32 gNdsRendererM3TopologyStampMismatchCount;
+#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
+volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
+volatile u32 gNdsRendererM3GeneratedSegment0SuccessCount;
+volatile u32 gNdsRendererM3GeneratedSegment0PreGxFallbackCount;
+volatile u32 gNdsRendererM3GeneratedSegment0RunCount;
+volatile u32 gNdsRendererM3GeneratedSegment0TriangleCount;
+volatile u32 gNdsRendererM3GeneratedSegment0EpochCount;
+volatile u32 gNdsRendererM3GeneratedSegment0MaterialCount;
+volatile u32 gNdsRendererM3GeneratedSegment0CertificateValidationCount;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowDenseCount;
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowStateEntryCount;
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowSyncCount;
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowFieldComparisonCount;
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowMismatchCount;
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowFaultInjectedCount;
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowFaultRejectedCount;
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowLiveFaultInjectedCount;
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowLiveFaultRejectedCount;
+volatile u32 gNdsRendererM3GeneratedSegment0ShadowLiveFaultRevalidatedCount;
+#endif
+#endif
 #if NDS_RENDERER_M2_DETAILED_LEDGER
 volatile u32 gNdsRendererM2ShadeEpochCount;
 volatile u32 gNdsRendererM2ShadeKeyHitCount;
@@ -8162,7 +8370,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     sNdsRendererBattleStaticTextureArmed = FALSE;
 
     /* A battle owns the cache from this point forward. Starting empty makes
-     * the 22-key residency and its one-bank VRAM cost deterministic. */
+     * the generated residency and its exact VRAM span deterministic. */
     ndsRendererHardwareDiscardTextureCache();
     file = ndsRendererHardwareFencedTextureFopen(
         NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_PAYLOAD_PATH, "rb");
@@ -8384,8 +8592,9 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
           gNdsRendererBattleStaticTextureFirstAddress) !=
          ndsBattlePlayableStaticTexturePreparedBytes()) ||
         (gNdsRendererBattleStaticTextureFirstAddress != (u32)VRAM_A) ||
-        (gNdsRendererBattleStaticTextureEndAddress != (u32)VRAM_B) ||
-        (gNdsRendererBattleStaticTextureBankMask != 1u))
+        (gNdsRendererBattleStaticTextureEndAddress !=
+         ((u32)VRAM_A + ndsBattlePlayableStaticTexturePreparedBytes())) ||
+        (gNdsRendererBattleStaticTextureBankMask != 3u))
     {
         goto fail;
     }
@@ -16921,6 +17130,182 @@ static s32 ndsRendererNativeStageValidateStateSpanTopology(
     return TRUE;
 }
 
+#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
+static u32 ndsRendererNativeStageGeneratedHashU32(u32 hash, u32 value)
+{
+    u32 shift;
+
+    for (shift = 0u; shift < 32u; shift += 8u)
+    {
+        hash ^= (value >> shift) & 0xffu;
+        hash *= 16777619u;
+    }
+    return hash;
+}
+
+/* This runs only behind the existing generation/stamp full validation.  It
+ * binds the compact Task-26 rows to the exact production packet and to the
+ * Task-14 dense first-visit plan consumed by PrepareRun. */
+static s32 ndsRendererNativeStageValidateGeneratedSegment0(u32 inject_fault)
+{
+    const NDSNativeStageGeneratedCertificate *certificate =
+        &sNdsNativeStageSegment0ColdCertificate;
+    const NDSNativeStageSegment *segment = &sNdsNativeStageSegments[0];
+    u32 hot_hash = 2166136261u;
+    u32 dense_hash = 2166136261u;
+    u32 state_count = 0u;
+    u32 sync_count = 0u;
+    u32 state_cursor = certificate->first_state;
+    u32 triangle_count = 0u;
+    u64 epoch_mask = 0u;
+    u32 i;
+
+    if ((certificate->source_checksum !=
+         NDS_NATIVE_STAGE_SEGMENT0_SOURCE_CHECKSUM) ||
+        (certificate->table_checksum !=
+         NDS_NATIVE_STAGE_SEGMENT0_TABLE_CHECKSUM) ||
+        (certificate->hot_checksum !=
+         NDS_NATIVE_STAGE_SEGMENT0_HOT_CHECKSUM) ||
+        (certificate->prepared_dense_checksum !=
+         NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_CHECKSUM) ||
+        (certificate->segment_index != 0u) ||
+        (certificate->first_dobj != segment->first_dobj) ||
+        (certificate->dobj_count != segment->dobj_count) ||
+        (certificate->owner != segment->owner) ||
+        (certificate->link != segment->link) ||
+        (certificate->submit_class !=
+         NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ||
+        (certificate->first_binding != segment->first_binding) ||
+        (certificate->binding_count != segment->binding_count) ||
+        (certificate->first_run != segment->first_run) ||
+        (certificate->run_count != segment->run_count) ||
+        (certificate->first_texture_epoch != 0u) ||
+        (certificate->triangle_count != 54u) ||
+        (certificate->texture_epoch_count != 22u) ||
+        (certificate->live_operand_mask !=
+         (((u32)1u << NDS_NATIVE_STAGE_LIVE_OPERAND_ASSET_BASES) |
+          ((u32)1u << NDS_NATIVE_STAGE_LIVE_OPERAND_BINDING_COMPOSED) |
+          ((u32)1u << NDS_NATIVE_STAGE_LIVE_OPERAND_CONFIG))) ||
+        (certificate->asset_base_mask != 3u) ||
+        (certificate->material_count != 0u) ||
+        (certificate->final_tail_span != 73u) ||
+        (certificate->prepared_dense_count !=
+         NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT) ||
+        (certificate->prepared_dense_offset_count !=
+         NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_OFFSET_COUNT) ||
+        (sNdsNativeStageValidationCache.prepared_dense_offsets[0] != 0u) ||
+        (sNdsNativeStageValidationCache.prepared_dense_offsets[
+             NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT] !=
+         NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT))
+    {
+        return FALSE;
+    }
+
+    hot_hash = ndsRendererNativeStageGeneratedHashU32(
+        hot_hash, 0x4d335348u);
+    hot_hash = ndsRendererNativeStageGeneratedHashU32(
+        hot_hash, NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT);
+    for (i = 0u; i < NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT; i++)
+    {
+        const NDSNativeStageGeneratedRun *generated =
+            &sNdsNativeStageSegment0HotRuns[i];
+        u32 run_index = generated->run_index;
+        const NDSNativeStageRun *run;
+        const NDSNativeStageStateSpan *span;
+
+        if ((inject_fault != 0u) && (i == 0u))
+        {
+            run_index ^= 1u;
+        }
+        hot_hash = ndsRendererNativeStageGeneratedHashU32(
+            hot_hash, run_index);
+        hot_hash = ndsRendererNativeStageGeneratedHashU32(
+            hot_hash, generated->binding_composed_index);
+        if (run_index != (u32)certificate->first_run + i)
+        {
+            return FALSE;
+        }
+        run = &sNdsNativeStageRuns[run_index];
+        span = &sNdsNativeStageStateSpans[run_index];
+        if ((run->binding_index != generated->binding_composed_index) ||
+            (run->submit_class != certificate->submit_class) ||
+            (run->flags != 0u) ||
+            (run->texture_epoch < certificate->first_texture_epoch) ||
+            (run->texture_epoch >=
+             (u32)certificate->first_texture_epoch +
+                 certificate->texture_epoch_count))
+        {
+            return FALSE;
+        }
+        if ((span->state_count != 0u) &&
+            (span->first_state != state_cursor))
+        {
+            return FALSE;
+        }
+        state_cursor += span->state_count;
+        state_count += span->state_count;
+        sync_count += span->sync_count;
+        triangle_count += run->triangle_count;
+        epoch_mask |= (u64)1u << run->texture_epoch;
+    }
+    {
+        const NDSNativeStageStateSpan *tail =
+            &sNdsNativeStageStateSpans[certificate->final_tail_span];
+
+        if ((tail->state_count != 0u) &&
+            (tail->first_state != state_cursor))
+        {
+            return FALSE;
+        }
+        state_cursor += tail->state_count;
+        state_count += tail->state_count;
+        sync_count += tail->sync_count;
+    }
+    if ((hot_hash != certificate->hot_checksum) ||
+        (state_count != certificate->state_count) ||
+        (sync_count != certificate->sync_count) ||
+        (state_cursor !=
+         (u32)certificate->first_state + certificate->state_count) ||
+        (triangle_count != certificate->triangle_count) ||
+        (epoch_mask != (((u64)1u << certificate->texture_epoch_count) - 1u)))
+    {
+        return FALSE;
+    }
+
+    dense_hash = ndsRendererNativeStageGeneratedHashU32(
+        dense_hash, 0x4d33535du);
+    dense_hash = ndsRendererNativeStageGeneratedHashU32(
+        dense_hash, certificate->prepared_dense_offset_count);
+    for (i = 0u; i < certificate->prepared_dense_offset_count; i++)
+    {
+        dense_hash = ndsRendererNativeStageGeneratedHashU32(
+            dense_hash,
+            sNdsNativeStageValidationCache.prepared_dense_offsets[i]);
+    }
+    dense_hash = ndsRendererNativeStageGeneratedHashU32(
+        dense_hash, 0x4d33535eu);
+    dense_hash = ndsRendererNativeStageGeneratedHashU32(
+        dense_hash, certificate->prepared_dense_count);
+    for (i = 0u; i < certificate->prepared_dense_count; i++)
+    {
+        dense_hash = ndsRendererNativeStageGeneratedHashU32(
+            dense_hash,
+            sNdsNativeStageValidationCache.prepared_dense_indices[i]);
+    }
+    if (dense_hash != certificate->prepared_dense_checksum)
+    {
+        return FALSE;
+    }
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    if (inject_fault == 0u)
+    {
+        gNdsRendererM3GeneratedSegment0CertificateValidationCount++;
+    }
+#endif
+    return TRUE;
+}
+#endif
+
 static s32 ndsRendererNativeStageValidateTopologyFull(
     const NDSRendererNativeStageFrame *frame,
     NDSNativeStageTopologySummary *summary)
@@ -17206,6 +17591,21 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
     }
     sNdsNativeStageValidationCache.prepared_dense_offsets[
         NDS_NATIVE_STAGE_RUN_COUNT] = (u16)prepared_dense_count;
+#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
+    if ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT !=
+         NDS_NATIVE_STAGE_RUN_COUNT + NDS_NATIVE_STAGE_BINDING_COUNT) ||
+        (prepared_dense_count != NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) ||
+        (summary->raw_triangles != 66u) ||
+        (summary->projected_no_z_triangles != 126u) ||
+        (summary->projected_range_triangles != 10u) ||
+        (summary->cross_runs != 5u) ||
+        (summary->cross_triangles != 10u) ||
+        (summary->cross_foreign_corners != 15u))
+    {
+        return FALSE;
+    }
+    return ndsRendererNativeStageValidateGeneratedSegment0(FALSE);
+#else
     return ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT ==
              NDS_NATIVE_STAGE_RUN_COUNT + NDS_NATIVE_STAGE_BINDING_COUNT) &&
             (prepared_dense_count == NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) &&
@@ -17215,6 +17615,7 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             (summary->cross_runs == 5u) &&
             (summary->cross_triangles == 10u) &&
             (summary->cross_foreign_corners == 15u)) ? TRUE : FALSE;
+#endif
 }
 
 static s32 ndsRendererNativeStageValidateTopology(
@@ -17543,6 +17944,246 @@ static s32 ndsRendererNativeStagePrepareRun(
     return TRUE;
 }
 
+#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
+static s32 ndsRendererNativeStagePrepareGeneratedSegment0(
+    const NDSRendererNativeStageFrame *frame,
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u64 *epoch_mask)
+{
+    const NDSNativeStageGeneratedCertificate *certificate =
+        &sNdsNativeStageSegment0ColdCertificate;
+
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererM3GeneratedSegment0AttemptCount++;
+#endif
+    if ((frame == NULL) || (stats == NULL) || (state == NULL) ||
+        (epoch_mask == NULL) ||
+        (sNdsNativeStageValidationCache.valid == FALSE))
+    {
+        goto fail;
+    }
+#define NDS_TASK26_SYNC(count) \
+    do { \
+        stats->sync_command_count += (u32)(count); \
+    } while (0)
+#define NDS_TASK26_OTHERMODE(w0, w1) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        ndsRendererRecordOtherMode( \
+            stats, ((u32)(w0)) >> 24, (u32)(w0), (u32)(w1)); \
+    } while (0)
+#define NDS_TASK26_COMBINE(w0, w1) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        ndsRendererRecordSetCombine(stats, (u32)(w0), (u32)(w1)); \
+    } while (0)
+#define NDS_TASK26_TEXTURE(w0, w1) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        ndsRendererRecordTextureState(stats, (u32)(w0), (u32)(w1)); \
+    } while (0)
+#define NDS_TASK26_GEOMETRY(clear_mask, set_mask) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        stats->geometry_mode = \
+            (stats->geometry_mode & (u32)(clear_mask)) | (u32)(set_mask); \
+        stats->geometry_clear_mask = (u32)(clear_mask); \
+        stats->geometry_set_mask = (u32)(set_mask); \
+        stats->geometry_command_count++; \
+    } while (0)
+#define NDS_TASK26_IMAGE(asset_index, w0, offset) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        ndsRendererRecordSetImage( \
+            stats, (u32)(w0), \
+            (u32)(uintptr_t)(frame->asset_bases[(u32)(asset_index)] + \
+                             (u32)(offset))); \
+    } while (0)
+#define NDS_TASK26_TILE(w0, w1) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        ndsRendererRecordSetTile(stats, (u32)(w0), (u32)(w1)); \
+    } while (0)
+#define NDS_TASK26_LOAD_TLUT(w1) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        ndsRendererRecordLoadTlut(stats, (u32)(w1)); \
+    } while (0)
+#define NDS_TASK26_LOAD_BLOCK(w0, w1) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        ndsRendererRecordLoadBlock(stats, (u32)(w0), (u32)(w1)); \
+    } while (0)
+#define NDS_TASK26_TILE_SIZE(w0, w1) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        ndsRendererRecordSetTileSize(stats, (u32)(w0), (u32)(w1)); \
+    } while (0)
+#define NDS_TASK26_BLEND(w1) \
+    do { \
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state); \
+        stats->blend_color = (u32)(w1); \
+        stats->color_command_count++; \
+    } while (0)
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+#define NDS_TASK26_RUN(run_index) \
+    do { \
+        u32 task26_prepare_start = ndsRendererM3Phase0Tick(); \
+        s32 task26_prepare_result = ndsRendererNativeStagePrepareRun( \
+            (u32)(run_index), frame, stats, state, epoch_mask); \
+        ndsRendererM3Phase0FinishSpan( \
+            &gNdsRendererM3Phase0PrepareRunTicks, task26_prepare_start); \
+        if (task26_prepare_result == FALSE) \
+        { \
+            goto fail; \
+        } \
+    } while (0)
+#else
+#define NDS_TASK26_RUN(run_index) \
+    do { \
+        if (ndsRendererNativeStagePrepareRun( \
+                (u32)(run_index), frame, stats, state, epoch_mask) == FALSE) \
+        { \
+            goto fail; \
+        } \
+    } while (0)
+#endif
+    NDS_NATIVE_STAGE_SEGMENT0_GENERATED_PROGRAM;
+#undef NDS_TASK26_RUN
+#undef NDS_TASK26_BLEND
+#undef NDS_TASK26_TILE_SIZE
+#undef NDS_TASK26_LOAD_BLOCK
+#undef NDS_TASK26_LOAD_TLUT
+#undef NDS_TASK26_TILE
+#undef NDS_TASK26_IMAGE
+#undef NDS_TASK26_GEOMETRY
+#undef NDS_TASK26_TEXTURE
+#undef NDS_TASK26_COMBINE
+#undef NDS_TASK26_OTHERMODE
+#undef NDS_TASK26_SYNC
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererM3GeneratedSegment0SuccessCount++;
+    gNdsRendererM3GeneratedSegment0RunCount += certificate->run_count;
+    gNdsRendererM3GeneratedSegment0TriangleCount +=
+        certificate->triangle_count;
+    gNdsRendererM3GeneratedSegment0EpochCount +=
+        certificate->texture_epoch_count;
+    gNdsRendererM3GeneratedSegment0MaterialCount +=
+        certificate->material_count;
+#endif
+    return TRUE;
+
+fail:
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererM3GeneratedSegment0PreGxFallbackCount++;
+#endif
+    return FALSE;
+}
+
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+static void ndsRendererNativeStageHashGeneratedSegment0Outputs(
+    const NDSRendererStats *stats,
+    const NDSRendererTraversalState *state,
+    u64 epoch_mask,
+    u32 *out_hash_a,
+    u32 *out_hash_b,
+    u32 *out_field_count)
+{
+    u32 hash_a = 2166136261u;
+    u32 hash_b = 0x9e3779b9u;
+    u32 field_count = 0u;
+    u32 i;
+
+#define NDS_TASK26_HASH_FIELD(value) \
+    do { \
+        u32 task26_value = (u32)(value); \
+        hash_a = (hash_a ^ task26_value) * 16777619u; \
+        hash_b ^= task26_value + 0x9e3779b9u + \
+            (hash_b << 6) + (hash_b >> 2); \
+        hash_b = ((hash_b << 7) | (hash_b >> 25)) * 0x85ebca6bu; \
+        field_count++; \
+    } while (0)
+
+    for (i = 0u; i < NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT; i++)
+    {
+        u32 run_index = sNdsNativeStageSegment0HotRuns[i].run_index;
+        const NDSNativeStagePreparedRun *prepared =
+            &sNdsNativeStageOwnerExecution.runs[run_index];
+
+        NDS_TASK26_HASH_FIELD((uintptr_t)prepared->texture_entry);
+        NDS_TASK26_HASH_FIELD(prepared->texture_name);
+        NDS_TASK26_HASH_FIELD(prepared->texture_params);
+        NDS_TASK26_HASH_FIELD(prepared->poly_fmt);
+        NDS_TASK26_HASH_FIELD(prepared->texture_width);
+        NDS_TASK26_HASH_FIELD(prepared->texture_height);
+        NDS_TASK26_HASH_FIELD(prepared->texture_format);
+        NDS_TASK26_HASH_FIELD(prepared->textured);
+        NDS_TASK26_HASH_FIELD(prepared->alpha_test);
+        NDS_TASK26_HASH_FIELD(prepared->alpha_ref);
+    }
+    for (i = 0u; i < NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT; i++)
+    {
+        u32 dense_index =
+            sNdsNativeStageValidationCache.prepared_dense_indices[i];
+        const NDSNativeStagePreparedDense *prepared =
+            &sNdsNativeStagePreparedDense[dense_index];
+
+        NDS_TASK26_HASH_FIELD(prepared->packed_color);
+        NDS_TASK26_HASH_FIELD((u16)prepared->s);
+        NDS_TASK26_HASH_FIELD((u16)prepared->t);
+        NDS_TASK26_HASH_FIELD((u16)prepared->near_inside);
+    }
+    NDS_TASK26_HASH_FIELD(stats->sync_command_count);
+    NDS_TASK26_HASH_FIELD(stats->state_command_count);
+    NDS_TASK26_HASH_FIELD(stats->othermode_command_count);
+    NDS_TASK26_HASH_FIELD(stats->ignored_state_command_count);
+    NDS_TASK26_HASH_FIELD(stats->first_othermode_opcode);
+    NDS_TASK26_HASH_FIELD(stats->first_othermode_w0);
+    NDS_TASK26_HASH_FIELD(stats->first_othermode_w1);
+    NDS_TASK26_HASH_FIELD(stats->othermode_h);
+    NDS_TASK26_HASH_FIELD(stats->othermode_l);
+    NDS_TASK26_HASH_FIELD(stats->geometry_mode);
+    NDS_TASK26_HASH_FIELD(stats->geometry_clear_mask);
+    NDS_TASK26_HASH_FIELD(stats->geometry_set_mask);
+    NDS_TASK26_HASH_FIELD(stats->geometry_command_count);
+    NDS_TASK26_HASH_FIELD(stats->texture_mask);
+    NDS_TASK26_HASH_FIELD(stats->texture_command_count);
+    NDS_TASK26_HASH_FIELD(stats->texture_state_flags);
+    NDS_TASK26_HASH_FIELD(stats->texture_image);
+    NDS_TASK26_HASH_FIELD(stats->texture_combine_w0);
+    NDS_TASK26_HASH_FIELD(stats->texture_combine_w1);
+    NDS_TASK26_HASH_FIELD(stats->texture_combine_count);
+    NDS_TASK26_HASH_FIELD(stats->color_command_count);
+    NDS_TASK26_HASH_FIELD(stats->blend_color);
+    NDS_TASK26_HASH_FIELD(stats->texture_source_hash1);
+    NDS_TASK26_HASH_FIELD(stats->texture_source_hash2);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_valid);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_enabled);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_name);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_material_color);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_scale_s);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_scale_t);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_origin_s);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_origin_t);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_offset);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_vertex_flags);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_source_zbuffered);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_decal_depth);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_prim_depth);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_alpha_constant);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_poly_alpha);
+    NDS_TASK26_HASH_FIELD(state->texture_prepare_poly_fmt);
+    NDS_TASK26_HASH_FIELD((u32)epoch_mask);
+#undef NDS_TASK26_HASH_FIELD
+
+    *out_hash_a = hash_a;
+    *out_hash_b = hash_b;
+    *out_field_count = field_count;
+}
+#endif
+#endif
+
 static void ndsRendererNativeStageAccountRun(
     NDSRendererStats *stats, u32 submit_class, u32 triangle_count)
 {
@@ -17569,6 +18210,201 @@ static void ndsRendererNativeStageAccountRun(
     stats->hardware_vertex_count += triangle_count * 3u;
     sNdsRendererHardwareSubmitted = TRUE;
 }
+
+static inline void ndsRendererNativeStageWriteColor(u32 value)
+{
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(value);
+#else
+    GFX_COLOR = value;
+#endif
+}
+
+static inline void ndsRendererNativeStageWriteTexCoord(u32 value)
+{
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(value);
+#else
+    GFX_TEX_COORD = value;
+#endif
+}
+
+static inline void ndsRendererNativeStageWriteVertex16(u32 value)
+{
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(value);
+#else
+    GFX_VERTEX16 = value;
+#endif
+}
+
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+static u32 ndsRendererBenchmarkSegment0NormalizeAssetAddress(
+    u32 address, u32 *valid)
+{
+    u32 asset_index;
+
+    if (address == 0u)
+    {
+        return 0u;
+    }
+    for (asset_index = 0u;
+         asset_index < NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT;
+         asset_index++)
+    {
+        u32 base = (u32)(uintptr_t)
+            sNdsRendererBenchmarkSegment0AssetBases[asset_index];
+        u32 offset = address - base;
+
+        if ((base != 0u) && (address >= base) &&
+            (offset < sNdsNativeStageAssets[asset_index].payload_size) &&
+            (offset < 0x01000000u))
+        {
+            return ((asset_index + 1u) << 24) | offset;
+        }
+    }
+    *valid = FALSE;
+    return 0xffffffffu;
+}
+
+static void ndsRendererBenchmarkSegment0HashTextureKey(
+    const NDSRendererHardwareTextureCacheEntry *entry,
+    u32 *valid,
+    u32 *image,
+    u32 *tlut,
+    u32 *texel1,
+    u32 *out_hash_a,
+    u32 *out_hash_b)
+{
+    NDSRendererHardwareTextureKey normalized = entry->key;
+    const u32 *words;
+    u32 hash_a = 2166136261u;
+    u32 hash_b = 0x9e3779b9u;
+    u32 i;
+
+    normalized.image = ndsRendererBenchmarkSegment0NormalizeAssetAddress(
+        normalized.image, valid);
+    normalized.tlut_image =
+        ndsRendererBenchmarkSegment0NormalizeAssetAddress(
+            normalized.tlut_image, valid);
+    normalized.texel1_image =
+        ndsRendererBenchmarkSegment0NormalizeAssetAddress(
+            normalized.texel1_image, valid);
+    *image = normalized.image;
+    *tlut = normalized.tlut_image;
+    *texel1 = normalized.texel1_image;
+    words = (const u32 *)&normalized;
+    for (i = 0u; i < (sizeof(normalized) / sizeof(u32)); i++)
+    {
+        hash_a = ndsRendererBenchmarkSinkHashWordA(hash_a, words[i]);
+        hash_b = ndsRendererBenchmarkSinkHashWordB(hash_b, words[i]);
+    }
+    *out_hash_a = hash_a;
+    *out_hash_b = hash_b;
+}
+
+static void ndsRendererBenchmarkSegment0ArmRun(
+    u32 run_offset,
+    const NDSNativeStageRun *run,
+    const NDSNativeStagePreparedRun *prepared)
+{
+    const NDSRendererHardwareTextureCacheEntry *entry;
+    const NDSNativeStageTextureEpoch *epoch;
+    u32 image = 0u;
+    u32 tlut = 0u;
+    u32 texel1 = 0u;
+    u32 key_hash_a = 0u;
+    u32 key_hash_b = 0u;
+    u32 valid = TRUE;
+
+    if ((run_offset >= NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT) ||
+        (run == NULL) || (prepared == NULL) ||
+        (run->texture_epoch >= NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT))
+    {
+        sNdsRendererBenchmarkSegment0SinkArmFaults++;
+        sNdsRendererBenchmarkSegment0TextureValid = FALSE;
+        return;
+    }
+    epoch = &sNdsNativeStageTextureEpochs[run->texture_epoch];
+    entry = prepared->texture_entry;
+    if (prepared->textured != 0u)
+    {
+        if ((entry == NULL) || (entry->ready == 0u) ||
+            (prepared->texture_name == 0u) ||
+            (prepared->texture_name != (u32)entry->name))
+        {
+            valid = FALSE;
+        }
+        if (entry != NULL)
+        {
+            ndsRendererBenchmarkSegment0HashTextureKey(
+                entry, &valid, &image, &tlut, &texel1,
+                &key_hash_a, &key_hash_b);
+        }
+    }
+    else if ((entry != NULL) || (prepared->texture_name != 0u))
+    {
+        valid = FALSE;
+    }
+    sNdsRendererBenchmarkSegment0TextureEpochPlus1 =
+        (u32)run->texture_epoch + 1u;
+    sNdsRendererBenchmarkSegment0TextureEpochSourceOffset =
+        epoch->source_command_offset;
+    sNdsRendererBenchmarkSegment0TextureEpochMetadata =
+        (u32)epoch->asset_index |
+        ((u32)epoch->policy_index << 8) |
+        ((u32)epoch->material_event << 16) |
+        ((u32)epoch->flags << 24);
+    sNdsRendererBenchmarkSegment0TextureImage = image;
+    sNdsRendererBenchmarkSegment0TextureTlut = tlut;
+    sNdsRendererBenchmarkSegment0TextureTexel1 = texel1;
+    sNdsRendererBenchmarkSegment0TextureKeyHashA = key_hash_a;
+    sNdsRendererBenchmarkSegment0TextureKeyHashB = key_hash_b;
+    sNdsRendererBenchmarkSegment0TextureDescriptor =
+        ((u32)prepared->texture_format & 0xffu) |
+        (((u32)prepared->texture_width & 0xfffu) << 8) |
+        (((u32)prepared->texture_height & 0xfffu) << 20);
+    sNdsRendererBenchmarkSegment0TextureFlags =
+        (u32)prepared->textured |
+        ((u32)prepared->alpha_test << 8) |
+        ((u32)prepared->alpha_ref << 16);
+    sNdsRendererBenchmarkSegment0TextureParams = prepared->texture_params;
+    sNdsRendererBenchmarkSegment0TexturePolyFmt = prepared->poly_fmt;
+    sNdsRendererBenchmarkSegment0TextureBinding = run->binding_index;
+    sNdsRendererBenchmarkSegment0TextureValid = valid;
+    gNdsRendererBenchmarkSegment0RunRawTextureName[run_offset] =
+        prepared->texture_name;
+    gNdsRendererBenchmarkSegment0RunTextureEpochPlus1[run_offset] =
+        sNdsRendererBenchmarkSegment0TextureEpochPlus1;
+    gNdsRendererBenchmarkSegment0RunTextureImage[run_offset] = image;
+    gNdsRendererBenchmarkSegment0RunTextureTlut[run_offset] = tlut;
+    gNdsRendererBenchmarkSegment0RunTextureKeyHashA[run_offset] = key_hash_a;
+    gNdsRendererBenchmarkSegment0RunTextureKeyHashB[run_offset] = key_hash_b;
+    gNdsRendererBenchmarkSegment0RunTextureDescriptor[run_offset] =
+        sNdsRendererBenchmarkSegment0TextureDescriptor;
+    gNdsRendererBenchmarkSegment0RunTextureParams[run_offset] =
+        prepared->texture_params;
+    if (valid == FALSE)
+    {
+        sNdsRendererBenchmarkSegment0SinkArmFaults++;
+    }
+}
+
+static void ndsRendererBenchmarkSegment0CheckpointRun(u32 run_offset)
+{
+    if (run_offset >= NDS_RENDERER_BENCHMARK_SEGMENT0_RUN_COUNT)
+    {
+        sNdsRendererBenchmarkSegment0SinkArmFaults++;
+        return;
+    }
+    gNdsRendererBenchmarkSegment0RunWords[run_offset] =
+        sNdsRendererBenchmarkSegment0SinkWords;
+    gNdsRendererBenchmarkSegment0RunHashA[run_offset] =
+        sNdsRendererBenchmarkSegment0SinkHashA;
+    gNdsRendererBenchmarkSegment0RunHashB[run_offset] =
+        sNdsRendererBenchmarkSegment0SinkHashB;
+}
+#endif
 
 static void ndsRendererNativeStageBeginRun(
     const NDSNativeStagePreparedRun *run,
@@ -17669,32 +18505,33 @@ static inline void ndsRendererNativeStageEmitVertex(
     const NDSNativeStagePreparedRun *run,
     u32 submit_class)
 {
-    GFX_COLOR = prepared->packed_color;
+    ndsRendererNativeStageWriteColor(prepared->packed_color);
     if (run->textured != 0u)
     {
-        GFX_TEX_COORD = (u32)(u16)prepared->s |
-            ((u32)(u16)prepared->t << 16);
+        ndsRendererNativeStageWriteTexCoord(
+            (u32)(u16)prepared->s | ((u32)(u16)prepared->t << 16));
     }
     if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
     {
-        GFX_VERTEX16 =
+        ndsRendererNativeStageWriteVertex16(
             (u32)(u16)((s32)dense->x *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
             ((u32)(u16)((s32)dense->y *
-                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
-        GFX_VERTEX16 = (u16)((s32)dense->z *
-            (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16));
+        ndsRendererNativeStageWriteVertex16(
+            (u16)((s32)dense->z *
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))));
     }
     else
     {
-        GFX_VERTEX16 =
+        ndsRendererNativeStageWriteVertex16(
             (u32)(u16)(ndsRendererNativeStageVertexShift(dense->x, 1u) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
             ((u32)(u16)(ndsRendererNativeStageVertexShift(dense->y, 1u) *
-                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16);
-        GFX_VERTEX16 =
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16));
+        ndsRendererNativeStageWriteVertex16(
             (u16)(ndsRendererNativeStageVertexShift(dense->z, 1u) *
-                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+                (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))));
     }
 }
 
@@ -17756,14 +18593,15 @@ static void ndsRendererNativeStageEmitNoZVertex(
     s32 y = ndsRendererNativeStageVertexShift(dense->y, coordinate_shift);
     s32 z = ndsRendererNativeStageVertexShift(dense->z, coordinate_shift);
 
-    GFX_COLOR = prepared->packed_color;
+    ndsRendererNativeStageWriteColor(prepared->packed_color);
     if (run->textured != 0u)
     {
-        GFX_TEX_COORD = (u32)(u16)prepared->s |
-            ((u32)(u16)prepared->t << 16);
+        ndsRendererNativeStageWriteTexCoord(
+            (u32)(u16)prepared->s | ((u32)(u16)prepared->t << 16));
     }
-    GFX_VERTEX16 = (u32)(u16)(x * 16) | ((u32)(u16)(y * 16) << 16);
-    GFX_VERTEX16 = (u16)(z * 16);
+    ndsRendererNativeStageWriteVertex16(
+        (u32)(u16)(x * 16) | ((u32)(u16)(y * 16) << 16));
+    ndsRendererNativeStageWriteVertex16((u16)(z * 16));
 }
 
 static void ndsRendererNativeStageEmitClippedVertex(
@@ -17792,14 +18630,14 @@ static void ndsRendererNativeStageEmitClippedVertex(
     gNdsRendererM3Phase0NoZMatrixCount++;
 #endif
 
-    GFX_COLOR = vertex->packed_color;
+    ndsRendererNativeStageWriteColor(vertex->packed_color);
     if (run->textured != 0u)
     {
-        GFX_TEX_COORD = (u32)(u16)vertex->s |
-            ((u32)(u16)vertex->t << 16);
+        ndsRendererNativeStageWriteTexCoord(
+            (u32)(u16)vertex->s | ((u32)(u16)vertex->t << 16));
     }
-    GFX_VERTEX16 = 0u;
-    GFX_VERTEX16 = 0u;
+    ndsRendererNativeStageWriteVertex16(0u);
+    ndsRendererNativeStageWriteVertex16(0u);
 }
 
 static u32 __attribute__((noinline, cold, optimize("Os")))
@@ -17963,6 +18801,27 @@ s32 ndsRendererPrepareNativeStageOwner(
     gNdsRendererM3CrossRunCount = 0u;
     gNdsRendererM3CrossTriangleCount = 0u;
     gNdsRendererM3CrossForeignCornerCount = 0u;
+#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
+    gNdsRendererM3GeneratedSegment0AttemptCount = 0u;
+    gNdsRendererM3GeneratedSegment0SuccessCount = 0u;
+    gNdsRendererM3GeneratedSegment0PreGxFallbackCount = 0u;
+    gNdsRendererM3GeneratedSegment0RunCount = 0u;
+    gNdsRendererM3GeneratedSegment0TriangleCount = 0u;
+    gNdsRendererM3GeneratedSegment0EpochCount = 0u;
+    gNdsRendererM3GeneratedSegment0MaterialCount = 0u;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    gNdsRendererM3GeneratedSegment0ShadowDenseCount = 0u;
+    gNdsRendererM3GeneratedSegment0ShadowStateEntryCount = 0u;
+    gNdsRendererM3GeneratedSegment0ShadowSyncCount = 0u;
+    gNdsRendererM3GeneratedSegment0ShadowFieldComparisonCount = 0u;
+    gNdsRendererM3GeneratedSegment0ShadowMismatchCount = 0u;
+    gNdsRendererM3GeneratedSegment0ShadowFaultInjectedCount = 0u;
+    gNdsRendererM3GeneratedSegment0ShadowFaultRejectedCount = 0u;
+    gNdsRendererM3GeneratedSegment0ShadowLiveFaultInjectedCount = 0u;
+    gNdsRendererM3GeneratedSegment0ShadowLiveFaultRejectedCount = 0u;
+    gNdsRendererM3GeneratedSegment0ShadowLiveFaultRevalidatedCount = 0u;
+#endif
+#endif
 #endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     ndsRendererM3Phase0Reset();
@@ -17970,6 +18829,10 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    memset(sNdsRendererBenchmarkSegment0AssetBases, 0,
+           sizeof(sNdsRendererBenchmarkSegment0AssetBases));
+#endif
     if ((gNdsRendererFastRunMode !=
          NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ||
         (frame == NULL) || (stats == NULL) ||
@@ -17999,6 +18862,20 @@ s32 ndsRendererPrepareNativeStageOwner(
             state, frame->config,
             &sNdsNativeStageOwnerExecution.preflight_stats,
             NULL, NULL, 0u);
+#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE && \
+    !NDS_RENDERER_M3_PHASE0_PROFILE
+        if (segment_index == 0u)
+        {
+            if (ndsRendererNativeStagePrepareGeneratedSegment0(
+                    frame,
+                    &sNdsNativeStageOwnerExecution.preflight_stats,
+                    state, &epoch_mask) == FALSE)
+            {
+                goto done;
+            }
+            continue;
+        }
+#endif
         for (binding_offset = 0u;
              binding_offset < segment->binding_count;
              binding_offset++)
@@ -18056,6 +18933,98 @@ s32 ndsRendererPrepareNativeStageOwner(
                 goto done;
             }
         }
+#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE && \
+    NDS_RENDERER_M3_PHASE0_PROFILE
+        if (segment_index == 0u)
+        {
+            u32 current_hash_a;
+            u32 current_hash_b;
+            u32 current_field_count;
+            u32 generated_hash_a;
+            u32 generated_hash_b;
+            u32 generated_field_count;
+            u64 generated_epoch_mask = 0u;
+            NDSRendererNativeStageFrame live_fault_frame;
+            NDSNativeStageTopologySummary live_fault_topology;
+
+            ndsRendererNativeStageHashGeneratedSegment0Outputs(
+                &sNdsNativeStageOwnerExecution.preflight_stats, state,
+                epoch_mask, &current_hash_a, &current_hash_b,
+                &current_field_count);
+            gNdsRendererM3GeneratedSegment0ShadowFaultInjectedCount++;
+            if (ndsRendererNativeStageValidateGeneratedSegment0(TRUE) ==
+                FALSE)
+            {
+                gNdsRendererM3GeneratedSegment0ShadowFaultRejectedCount++;
+            }
+            else
+            {
+                gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                goto done;
+            }
+            live_fault_frame = *frame;
+            live_fault_frame.asset_bases[1] =
+                (const void *)((const u8 *)frame->asset_bases[1] + 8u);
+            gNdsRendererM3GeneratedSegment0ShadowLiveFaultInjectedCount++;
+            if (ndsRendererNativeStageValidateTopologyFull(
+                    &live_fault_frame, &live_fault_topology) == FALSE)
+            {
+                gNdsRendererM3GeneratedSegment0ShadowLiveFaultRejectedCount++;
+            }
+            else
+            {
+                gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                goto done;
+            }
+            if ((ndsRendererNativeStageValidateTopologyFull(
+                     frame, &live_fault_topology) == FALSE) ||
+                (memcmp(&live_fault_topology, &topology,
+                        sizeof(live_fault_topology)) != 0))
+            {
+                gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                goto done;
+            }
+            gNdsRendererM3GeneratedSegment0ShadowLiveFaultRevalidatedCount++;
+
+            ndsRendererInitStats(
+                &sNdsNativeStageOwnerExecution.preflight_stats);
+            sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
+                segment->initial_geometry;
+            ndsRendererInitTraversalState(
+                state, frame->config,
+                &sNdsNativeStageOwnerExecution.preflight_stats,
+                NULL, NULL, 0u);
+            if (ndsRendererNativeStagePrepareGeneratedSegment0(
+                    frame,
+                    &sNdsNativeStageOwnerExecution.preflight_stats,
+                    state, &generated_epoch_mask) == FALSE)
+            {
+                gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                goto done;
+            }
+            ndsRendererNativeStageHashGeneratedSegment0Outputs(
+                &sNdsNativeStageOwnerExecution.preflight_stats, state,
+                generated_epoch_mask, &generated_hash_a,
+                &generated_hash_b, &generated_field_count);
+            gNdsRendererM3GeneratedSegment0ShadowDenseCount =
+                NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT;
+            gNdsRendererM3GeneratedSegment0ShadowStateEntryCount =
+                sNdsNativeStageSegment0ColdCertificate.state_count;
+            gNdsRendererM3GeneratedSegment0ShadowSyncCount =
+                sNdsNativeStageSegment0ColdCertificate.sync_count;
+            gNdsRendererM3GeneratedSegment0ShadowFieldComparisonCount =
+                generated_field_count;
+            if ((current_hash_a != generated_hash_a) ||
+                (current_hash_b != generated_hash_b) ||
+                (current_field_count != generated_field_count) ||
+                (generated_epoch_mask != epoch_mask))
+            {
+                gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                goto done;
+            }
+            epoch_mask = generated_epoch_mask;
+        }
+#endif
     }
     if ((epoch_mask != (((u64)1u <<
                          NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) - 1u)) ||
@@ -18072,6 +19041,10 @@ s32 ndsRendererPrepareNativeStageOwner(
     sNdsNativeStageOwnerExecution.raw_composed =
         frame->binding_composed[29u];
     sNdsNativeStageOwnerExecution.binding_composed = frame->binding_composed;
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    memcpy(sNdsRendererBenchmarkSegment0AssetBases, frame->asset_bases,
+           sizeof(sNdsRendererBenchmarkSegment0AssetBases));
+#endif
     if (ndsRendererBuildShiftedRawHardwareMatrix(
             &sNdsNativeStageOwnerExecution.raw_composed,
             &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
@@ -18190,6 +19163,12 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         return TRUE;
     }
     segment = &sNdsNativeStageSegments[segment_index];
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    if (segment_index == 0u)
+    {
+        ndsRendererBenchmarkSegment0SinkBegin();
+    }
+#endif
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_STAGE;
 #if NDS_RENDERER_SCREEN_SPACE_CENSUS
     ndsRendererScreenSpaceCensusStageSegment(segment);
@@ -18222,6 +19201,13 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         u32 phase_start = ndsRendererM3Phase0Tick();
 #endif
 
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+        if (segment_index == 0u)
+        {
+            ndsRendererBenchmarkSegment0ArmRun(
+                run_offset, run, prepared_run);
+        }
+#endif
         ndsRendererNativeStageBeginRun(
             prepared_run, run->submit_class, segment->owner, stats);
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -18285,6 +19271,12 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         phase_start = ndsRendererM3Phase0Tick();
 #endif
         ndsRendererHardwareEndBatch();
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+        if (segment_index == 0u)
+        {
+            ndsRendererBenchmarkSegment0CheckpointRun(run_offset);
+        }
+#endif
         ndsRendererNativeStageAccountRun(
             stats,
             (run->submit_class ==
@@ -18322,6 +19314,14 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     }
 #endif
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    if (segment_index == 0u)
+    {
+        ndsRendererBenchmarkSegment0SinkEnd();
+        sNdsRendererBenchmarkSegment0TextureValid = FALSE;
+    }
+    ndsRendererBenchmarkSinkEndOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
+#endif
     return TRUE;
 }
 
@@ -18330,6 +19330,9 @@ void ndsRendererFinishNativeStageOwner(void)
     if (sNdsNativeStageOwnerExecution.active != FALSE)
     {
         ndsRendererHardwareEndBatch();
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+        ndsRendererBenchmarkSinkEndOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
+#endif
         if ((sNdsNativeStageOwnerExecution.next_segment !=
              NDS_NATIVE_STAGE_SEGMENT_COUNT) ||
             (sNdsNativeStageOwnerExecution.stats == NULL) ||
@@ -20075,6 +21078,13 @@ void ndsRendererProfileFrameBegin(void)
     sNdsRendererBenchmarkSinkCursor = 0u;
     sNdsRendererBenchmarkSinkWordCount = 0u;
     sNdsRendererBenchmarkSinkLastOwnerCursor = 0u;
+    sNdsRendererBenchmarkSinkHashA = 2166136261u;
+    sNdsRendererBenchmarkSinkHashB = 0x9e3779b9u;
+    sNdsRendererBenchmarkSegment0SinkWords = 0u;
+    sNdsRendererBenchmarkSegment0SinkHashA = 2166136261u;
+    sNdsRendererBenchmarkSegment0SinkHashB = 0x9e3779b9u;
+    sNdsRendererBenchmarkSegment0SinkActive = FALSE;
+    sNdsRendererBenchmarkSegment0SinkArmFaults = 0u;
     memset(sNdsRendererBenchmarkSinkOwnerWords, 0,
            sizeof(sNdsRendererBenchmarkSinkOwnerWords));
 #endif
@@ -20254,6 +21264,16 @@ void ndsRendererProfileFramePublish(void)
         sNdsRendererBenchmarkSinkCursor;
     gNdsRendererBenchmarkSinkWordCount =
         sNdsRendererBenchmarkSinkWordCount;
+    gNdsRendererBenchmarkSinkHashA = sNdsRendererBenchmarkSinkHashA;
+    gNdsRendererBenchmarkSinkHashB = sNdsRendererBenchmarkSinkHashB;
+    gNdsRendererBenchmarkSegment0SinkWords =
+        sNdsRendererBenchmarkSegment0SinkWords;
+    gNdsRendererBenchmarkSegment0SinkHashA =
+        sNdsRendererBenchmarkSegment0SinkHashA;
+    gNdsRendererBenchmarkSegment0SinkHashB =
+        sNdsRendererBenchmarkSegment0SinkHashB;
+    gNdsRendererBenchmarkSegment0SinkArmFaults =
+        sNdsRendererBenchmarkSegment0SinkArmFaults;
     memcpy((void *)gNdsRendererBenchmarkSinkOwnerWords,
            sNdsRendererBenchmarkSinkOwnerWords,
            sizeof(gNdsRendererBenchmarkSinkOwnerWords));

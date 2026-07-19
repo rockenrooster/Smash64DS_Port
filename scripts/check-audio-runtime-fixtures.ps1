@@ -383,6 +383,17 @@ foreach ($required in @(
         throw "FGM token-lifecycle fixture is missing: $required"
     }
 }
+$completedChannelReap = [regex]::Match(
+    $fgmText,
+    '(?s)if \(sNdsAudioFgmChannelOwners\[channel\] != NULL\).*?' +
+        'NDSAudioFgmHandle \*completed_handle =.*?' +
+        'ndsAudioFgmReleaseHandle\(\s*completed_handle, FALSE.*?' +
+        'gNdsAudioFgmDurationStopCount\+\+;.*?else\s*\{.*?' +
+        'soundKill\(channel\);.*?gNdsAudioFgmGenerationMismatchCount\+\+;.*?' +
+        'gNdsAudioFgmPlayFailCount\+\+;')
+if (-not $completedChannelReap.Success) {
+    throw 'FGM completed-channel reuse no longer retires an exact stale owner while failing closed on inconsistent ownership.'
+}
 foreach ($forbidden in @(
         'u16 reserved;',
         '(ndsAudioFgmReadLe16(&header[4]) != 2u)',

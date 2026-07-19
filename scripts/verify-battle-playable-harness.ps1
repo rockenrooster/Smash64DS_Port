@@ -24,6 +24,7 @@ param(
     [switch]$RequireLocked30Pacing,
     [int]$RendererProfileLevel = -1,
     [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
+    [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
     [ValidateRange(0,1)][int]$FoxCpuMode = 1,
@@ -159,6 +160,7 @@ try {
     -RequireLocked30Pacing:$RequireLocked30Pacing `
     -RendererProfileLevel $RendererProfileLevel `
     -RendererFastRunMode $RendererFastRunMode `
+    -NativeStageGeneratedSegment0Enable $NativeStageGeneratedSegment0Enable `
     -StaticTextureAotMode $StaticTextureAotMode `
     -IFCommonHybridOamMode $IFCommonHybridOamMode `
     -FoxCpuMode $FoxCpuMode `

@@ -40,6 +40,17 @@
 #error "NDS_RENDERER_M3_PHASE0_PROFILE requires profile level 1"
 #endif
 
+/* Task 26 is compile-selected so disabled control builds retain the exact
+ * existing stage executor and linked layout. */
+#ifndef NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
+#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE 0
+#endif
+
+#if (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE != 0) && \
+    (NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE != 1)
+#error "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE must be 0 or 1"
+#endif
+
 #ifndef NDS_RENDERER_SCREEN_SPACE_CENSUS
 #define NDS_RENDERER_SCREEN_SPACE_CENSUS 0
 #endif
@@ -572,9 +583,9 @@ typedef struct NDSRendererNativeStageDObj
     u8 depth;
 } NDSRendererNativeStageDObj;
 
-/* Mode-9 Dream Land owner input. The adapter owns these pointers only for the
- * synchronous preflight call; the renderer copies every value needed by the
- * eight later display-link commits before reporting success. */
+/* Mode-9 Dream Land owner input. Preflight consumes all fields synchronously,
+ * but successful execution retains binding_composed through the eight later
+ * display-link commits; the adapter workspace must remain live until finish. */
 typedef struct NDSRendererNativeStageFrame
 {
     const void *asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
@@ -923,6 +934,28 @@ extern volatile u32 gNdsRendererM3CrossForeignCornerCount;
 extern volatile u32 gNdsRendererM3TopologyFullValidationCount;
 extern volatile u32 gNdsRendererM3TopologyCacheHitCount;
 extern volatile u32 gNdsRendererM3TopologyStampMismatchCount;
+#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
+extern volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0SuccessCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0PreGxFallbackCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0RunCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0TriangleCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0EpochCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0MaterialCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0CertificateValidationCount;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowDenseCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowStateEntryCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowSyncCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowFieldComparisonCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowMismatchCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowFaultInjectedCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowFaultRejectedCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowLiveFaultInjectedCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowLiveFaultRejectedCount;
+extern volatile u32 gNdsRendererM3GeneratedSegment0ShadowLiveFaultRevalidatedCount;
+#endif
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
 extern volatile u32 gNdsRendererM3TopologyFaultInjectionCount;
 extern volatile u32 gNdsRendererM3TopologyFaultRevalidationCount;
@@ -1023,6 +1056,24 @@ extern volatile u32 gNdsRendererBattleTextureFenceCounts[
 extern volatile u32 gNdsRendererBattleTextureFenceFirstClassPlus1;
 extern volatile u32 gNdsRendererBattleTextureFenceFirstFrame;
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+extern volatile u32 gNdsRendererBenchmarkSinkHashA;
+extern volatile u32 gNdsRendererBenchmarkSinkHashB;
+extern volatile u32 gNdsRendererBenchmarkSegment0SinkWords;
+extern volatile u32 gNdsRendererBenchmarkSegment0SinkHashA;
+extern volatile u32 gNdsRendererBenchmarkSegment0SinkHashB;
+extern volatile u32 gNdsRendererBenchmarkSegment0SinkArmFaults;
+extern u32 gNdsRendererBenchmarkSegment0Trace[3072];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunWords[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunHashA[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunHashB[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunRawTextureName[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunTextureEpochPlus1[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunTextureImage[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunTextureTlut[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunTextureKeyHashA[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunTextureKeyHashB[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunTextureDescriptor[26];
+extern volatile u32 gNdsRendererBenchmarkSegment0RunTextureParams[26];
 void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner);
 #endif
 #endif

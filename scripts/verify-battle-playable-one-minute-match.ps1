@@ -35,6 +35,7 @@ Write-Output 'Starting mode-163 one-minute match (locked-30, exactly two source 
     -OneMinuteMatchProof `
     -RequireLocked30Pacing `
     -RendererFastRunMode 9 `
+    -NativeStageGeneratedSegment0Enable 1 `
     -StaticTextureAotMode 1 `
     -IFCommonHybridOamMode 0 `
     -RequireZeroPostGoTextureFence

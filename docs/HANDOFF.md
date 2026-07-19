@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-18 16:38 Central
+Updated: 2026-07-18 23:16 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -59,11 +59,30 @@ seconds. Evidence is under `artifacts/performance/2026-07-18_task23r-phase0-*`,
 with the authoritative manifest at
 `docs/optimization/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json`.
 
-Start Task 26. The smallest first candidate is generated preflight/control for
-segment 0 / `layer0` only: bindings 0–19, runs 0–25, 54 triangles, 22 epochs,
-all projected-no-Z, no material event. Reuse the existing prepared storage,
-commit loop, and GX emitters; keep matrices, near-plane work, texture/color/
-alpha/UV selection, validation, and pre-GX fallback live. Do not add a second
-topology cache or a residual Task 23R cache. `src/nds/nds_renderer.c` remains
-a mandatory one-writer surface. Attempt Task 23R Phase 1 only after Task 26
-stabilizes and remeasurement proves residual work remains.
+Task 26 segment 0 is retained and broad generated-program expansion stops. The
+fixed program covers 21 DObjs, bindings 0–19, runs 0–25, 54 triangles, and 22
+epochs while all live matrices, clipping, material/texture/color/alpha/UV
+selection, validation, commit, GX emission, and pre-GX fallback remain current.
+The current/generated trace matches all 2,775 words across frames 438–445,
+live mutation fails/revalidates before GX at `1/1/1`, five same-control phases
+save 3,424–3,616 stage P50 ticks, and synchronized pixels are exactly
+`0/49,152`. The current hardware-style melonDS pair saves 10,240/10,368 stage
+P50/P95 and 11,232/11,200 draw ticks. The user's one retail A/B saves 21,568
+DRW ticks, changes ACT +4,288, and leaves LOOP in the same VBlank bucket. It is
+single-sample device evidence only; do not claim repeatability and do not ask
+for another retail run.
+
+The same checkpoint closes the post-GO texture fence with an exact 24-key /
+23-output / 136,192-prepared-byte corpus including Whispy asset 152 and late
+Fox asset 313. It also fixes the KO playback/generation failure by retiring an
+exactly completed Calico channel owner before reuse. The refreshed lifecycle
+passes exact `439/292/154` KO audio, all ten texture-fence counters, one
+teardown, and 166,672-byte net reserve; stable-30 pacing remains red.
+
+Start Task 23R Phase 1. Remeasure only residual work left after generated
+segment 0. A residual cache is admissible only when its complete exact key hits
+at least 20% and key computation costs less than half the avoided residual;
+otherwise close Phase 1 report-only. Do not reconstruct Task 14, Task 23R Phase
+0, or Task 26 work. `src/nds/nds_renderer.c` remains a mandatory one-writer
+surface. Evidence is
+`artifacts/performance/2026-07-18_task26-generated-segment0.md`.

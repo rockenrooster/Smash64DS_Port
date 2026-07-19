@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-18 16:38 Central
+Updated: 2026-07-18 23:16 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -16,8 +16,8 @@ Integrated user-facing candidate:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,669,824 bytes
-SHA-256 F3252C5C1A08D89FA040313D5DFEA5F3862A6A80020E8CE3D641E215B3AA1B0B
+14,681,088 bytes
+SHA-256 757ED78612607BEB8780BF197CC701570926B52EBDD745368DC32B6D44AC89E4
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -219,11 +219,25 @@ Evidence is `artifacts/performance/2026-07-18_task23r-phase0.md`, the eight
 adjacent JSON captures, and
 `docs/optimization/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json`.
 
-Task 26 owns the next renderer cut. Begin with segment 0 / `layer0` generated
-preflight/control only (bindings 0–19, runs 0–25, 54 triangles, 22 epochs, no
-material event), reusing current prepared storage, commit loop, and GX emitters.
-Retail hardware remains the performance referee. Task 23R Phase 1 is deferred
-until Task 26 stabilizes and only residual work is remeasured.
+Task 26 segment 0 is retained and broad expansion stops at that atomic unit.
+The generated fixed program covers 21 DObjs, bindings 0–19, runs 0–25, 54
+triangles, 22 epochs, 108 dense vertices, 123 state effects, and 90
+synchronization effects, while matrices, clipping, materials, texture/color/
+alpha/UV selection, validation, commit, and GX emission remain live. Exact
+current/generated CPU traces match all 2,775 words and 26 rows across eight
+frames; the live-mutation proof is inject/mismatch/revalidate `1/1/1` before
+GX. Five Task-25R-control phase pairs save 3,424–3,616 stage P50 ticks with no
+relevant P95 loss and synchronized pixels remain `0/49,152`.
+
+The current hardware-HUD melonDS pair saves 10,240/10,368 stage P50/P95 ticks
+and 11,232/11,200 draw ticks. The user's single retail observation saves
+21,568 DRW ticks (-1.25%), changes ACT +4,288 (+0.25%), and leaves LOOP in the
+same VBlank bucket (-384); its refreshing control UPD spike is excluded.
+This is device-informed KEEP evidence, not a repeatability or general hardware-
+speed claim. The user declines further retail repeats, so Task 26 does not
+widen the generated working set. Task 23R Phase 1 now owns residual
+remeasurement; add no cache unless exact hits are at least 20% and key cost is
+less than half the avoided residual.
 
 ## Historical pre-Task-25R phase evidence
 
@@ -258,7 +272,8 @@ profile-0 release baselines. M2 detail and profile-2 forensic samples stay in
 The old Task 25 matrix above remains historical. Task 25R now supplies the
 authoritative pair and selects the implementation order:
 
-1. **Selected M3 lane:** Task 23R Phase 0 -> Task 26 -> Task 23R residual Phase 1.
+1. **Selected M3 lane:** Task 23R Phase 0 and Task 26 segment 0 are complete;
+   Task 23R residual Phase 1 is next.
 2. M2 lane: Task 21R -> Task 27. Task 21C is only the compact-table
    foundation for Task 27, not the completed generated fighter architecture.
 3. Disjoint lane: Task 20R -> Task 22R, with retail hardware deciding DTCM and
@@ -272,7 +287,7 @@ authoritative pair and selects the implementation order:
 
 | Lane | State | Branch / worktree | Owned surface | Runner |
 |---|---|---|---|---|
-| Integration/release | Task 23R Phase 0 complete / Task 26 next | live tree | 588-access consumed-field certificate, eight same-ROM 8x12 prepared-output windows, exact frame-607 pixels, integrated battle ROM, and current terminal lifecycle | no runner active; renderer TU remains one-writer for Task 26 |
+| Integration/release | Task 26 segment 0 KEEP / Task 23R Phase 1 next | live tree | Generated segment-0 program and exact 2,775-word trace, five phase A/Bs, single-sample retail observation, exact pixels, static-residency/audio lifecycle repairs, integrated battle ROM, and current terminal lifecycle | no runner active; renderer TU remains one-writer for residual remeasurement |
 | Renderer implementation | ARM restored; Task 12 closed REVERT; Task 14 KEEP | shared integration tree | Retail hardware rejects blanket Thumb by +594,816 DRW ticks (+34.1%); its renderer hot group is device noise and reverts with that base. The renderer TU is ARM again with Task 14 intact | no runner active |
 | Gameplay + QA | Playtest review fixed / manual candidate retest pending | shared live tree / disjoint files | Down+A is source-fixed at the shared ClearAll seam. Human-P2 Fox completes all nine Down-Air callbacks and exits naturally; Mario completes the same focused route with eight live imported CPU updates. Latest then passes canonical mode 163, two-ROM publication, runtime, registry, renderer/ITCM, and visual gates. Countdown also remains fixed | no runner active |
 | Performance research | Measured cuts accumulate | shared live tree / read-only | Milestone targets no longer discard smaller correct gains; measured regressions and invalid visual packets remain rejected | no runner active |
@@ -305,7 +320,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Incremental compute KEEP at 385.3K | Renderer | Current ledger-off Mode 8 is 385,312/388,480 after exact light-state restoration. The raw texture-class split moves the synchronized current-build combined fighter 386,624/389,824 → 385,312/388,480, draw 1,011,648/1,014,976 → 1,009,824/1,013,120, and active 1,015,680/1,018,880 → 1,014,048/1,017,088. The corpus proves 43 untextured and 11 textured raw calls, so the untextured callee removes 172 main-RAM stack word transfers per frame. Exact 70/686, 60/320/306/29/0/0, all sampled non-timing fields, and 0/49,152 changed pixels remain | Keep the scalar reset, raw-corner representation, and two raw texture-class callees. ITCM is 28,052/32,768; full inlining, tail dispatch, and shared camera hoist remain rejected. The 170–250K milestone is still red and directional |
 | Mode-8 generic/fast forensic parity | PASS / source-exact light state | Renderer | F3DEX2 `G_MOVEWORD` decodes/emits index bits 16..23 and offset bits 0..15. The exact O2R census is 148 fighter `G_MW_LIGHTCOL` commands: 120 compact root preambles plus 28 intra-root changes carried by epoch state spans. Current profile-2 ROM `75A731E1...` frames 180–187 has 0 semantic, owner, or geometry mismatches and retains 686 triangles in both arms | Keep the exact 120/28 representation and validator gate. Evidence: `2026-07-17_m2-raw-texture-split-{generic,fast}-profile2.json` |
-| M3 complete stage AOT, 150–250K ticks | Task 6 accumulated KEEP at 489K / STOP | Renderer | R0→Cut D moves combat stage 539,616/539,904 → 489,184/489,536 and draw+flush P50 1,297,056 → 1,245,664. Cut C and Cut D each preserve exact 121/828, 8/255/57/42/54/202/49/4, cross 5/10/15, zero fallback/fence/conservation, and 0/49,152 native pixels | Bank both gains. The remaining 455,664-tick gap to ~790K is required work or lies behind forbidden packet/order/poly/translucency boundaries; do not manufacture another cut from nested profiler noise |
+| M3 complete stage AOT, 150–250K ticks | Task 26 segment 0 KEEP / broad expansion STOP | Renderer | The fixed generated layer0 program covers 21 DObjs, 20 bindings, 26 runs, 54 triangles, and 22 epochs. Current/generated traces match 2,775 words over eight frames, the live-fault proof is `1/1/1`, and pixels are 0/49,152. Five Task-25R-control phases save 3,424–3,616 stage P50 ticks; the current hardware-style pair saves 10,240/10,368 stage P50/P95 and 11,232/11,200 draw. One retail sample saves DRW 21,568 while ACT rises 4,288 and LOOP stays in the same VBlank bucket | Bank this exact segment beside the retained Task-6 cuts. Do not claim retail repeatability or widen the generated working set without device falsification. Task 23R Phase 1 may measure only residual work and must satisfy its 20% hit/cost gate |
 | Task 8 CUT A constant-depth GX painter | PASS / already canonical | Renderer | The requested mechanism had already landed at the pause/depth root-cause fix: each no-Z band loads a matrix whose Z row is the exact band constant times W, so the GX divider produces constant post-divide depth without the retired CPU `div64` projector. The subsequent exact AOT-shift and zero-shift specializations saved another 22,016/22,208 and 14,304/14,080 stage ticks | Reconcile as completed; do not add a second constant-depth path. Retain the depth trace, 121/828 census, zero fallback/fence/conservation, and pixel gates |
 | Task 9 bit-exact soft-float | PASS / Phase 1 16.54%, Phase 2 8.86% owner gains | Renderer + Gameplay | Phase 1 keeps six byte-identical GCC 15.2.0 objects (1,952 ITCM bytes). Phase 2 replaces only the 556.25-calls/update `__aeabi_fcmpeq` with a 36-byte, nine-instruction ARM leaf: source-update 236,640/238,016 → 215,680/217,024 P50/P95. Host proof covers 16,777,216 directed plus 100,000,000 deterministic random pairs; the standalone ARM9 ROM covers 2,916 directed pairs; 3,892 full-state rows match exactly | Keep both phases. ITCM is 28,088/32,768 with 4,680 bytes free. The renamed stock helper remains the linked golden only in Phase 2; Phase 1 proves it absent. Main-RAM coroutine stack finding remains report-only |
 | Task 12 renderer code placement | CLOSED / Phase A REVERT; Phase B REVERT WITH BASE | Renderer | Device ARM→Thumb moves DRW 1,743,296→2,338,112 (+594,816/+34.1%), LOOP 2,240,384→2,800,640, and FPS 13.5→10.6. The Thumb hot group then changes DRW only -5,440 (-0.23%) while ACT/LOOP worsen slightly: noise | Keep mode-163 renderer ARM. Retain the safe placement mechanism, not either rejected Task 12 candidate; melonDS cannot referee cache placement |
@@ -315,14 +330,14 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Task 17 update hot-text round 2 | KEEP CONFIRMED / update-only on ARM | Gameplay + Toolchain | The original Thumb-base device pair moves UPD 386,240→342,080 (-44,160/-11.4%). The decisive ARM-base pair narrows that claim: UPD 366,016→363,456 (-2,560/-0.70%) and DRW -2,688 cross LOOP 2,800,832→2,240,448 (five→four VBlanks) and FPS 13.9→14.3, while ACT rises 15,872. Exact retained surface remains 11 functions / 5,016 bytes under an 8 KiB ASSERT; Task 14 and Task 16 1/1/1 remain intact | Keep the threshold win and both device photos. Do not claim -44K on ARM or infer cache placement from melonDS; continue phase-wide performance qualification normally |
 | Task 18 KO wallpaper spike | CLOSED / bad baseline | Renderer + Platform | Production incremental mode measures KO wallpaper at 302,880/357,824 versus steady 292,224/360,000: +10,656/-2,176, not the cited 547,584/547,648 full-raster control. No runtime change is justified | Keep incremental mode and the affine lab retired. The Task 18 ledger row is the durable correction |
 | Pre-25R same-artifact phase matrix | HISTORICAL / replaced | Integration | Profile-1 ROM `FB0704BA...` remains valid historical evidence but lacks the Task 25R sibling, maximums, full rows, interval histogram, and identity packet | Preserve as history; current estimates and priority come only from Task 25R ROM `6E90D414...` |
-| M4 zero gameplay conversion/preparation | Startup pass / current lifecycle RED | Renderer | Task 25R reconfirms 22 textures / 131,072 bytes and zero hot work through early combat, then first trips class+1/frame `10/1111`; Whispy, late, Time Up, and profile-0 lifecycle all record conversion/decode/allocation/GL create/upload/fallback counts `1/1/1/1/1/1` | Keep the overlay layout, but trace and pre-reside the exact live weapon asset before restoring the zero-fence lifecycle claim |
+| M4 zero gameplay conversion/preparation | PASS / exact complete lifecycle | Renderer | The generated corpus now includes naturally observed Whispy mouth asset 152 and late Fox material asset 313: 24 keys, 23 outputs, 132,096 payload bytes, and 136,192 prepared bytes in VRAM A+B. The checker reports hits/outputs 24/23, classified/explicit misses 1,344/3, and six invalid-key falsifiers. The refreshed one-minute lifecycle has all ten post-GO conversion/upload/fallback/fence counts zero and one teardown | Keep the exact corpus and fail-closed key checks. No primary-image approximation remains; reserve is requalified after the 5,120-byte payload increase |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / full runtime gate pass | Renderer + QA | The source-backed point sample changes 49 atlas pixels only inside the 12x9 `ShadowGo`; all five GO frames retain its 70-pixel count plus 10/10/10 draws/queued/emitted, 57,344 texture bytes, 608 palette bytes, and zero hot conversion/upload. The large-GO mismatch was a stale crop lock after the source-light repair: only 125/26,400 pixels changed, all inside Mario's 22x14 area, while the GO RGB555 payload remained `05330f47...`. The rebuilt full verifier passes with crop `d968b0cc...`, GO `3 OBJ + 10 quads`, and 31,168 OBJ bytes | Keep both accepted crop locks and the source-derived DS assets; no GO source change was warranted |
 | Dream Land BGM | Pass | Audio | Tyler reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |
-| Required FGM, attack/hit sounds, and Mario/Fox voices | Six common channel starts restored / current full-lifecycle audio gate RED | Audio + Gameplay | The source table `dFTMainHitCollisionFGMs` exposed an intentional DS exclusion: natural kick ID 32 produced unsupported delta 1 and no channel. The 121,720-byte pack now maps 18 exact IDs plus punch/kick IDs 40/38/37/34/32/31 from their two exact primary BattleShip samples and source frequency/volume envelopes; omitted composite forks/custom FX remain explicit fidelity debt. The repeated natural ID-32 route records pan 80, supported/unsupported/acquire `1/0/1`, a live channel mask, zero playback faults, and 187,152-byte reserve. Task 25R observes the exact natural Mario-KO source sequence `439/292/154` and mask `0x13`, but playback/generation failures are `1/1`; the current complete-lifecycle audio gate is therefore false. Automated channel ACK is not an ear check; five special/projectile contacts remain fail-closed | Keep the six common mappings and natural channel/effect gate. Before Task 30, fix the Task 25R KO playback/generation failure and rerun the complete lifecycle. Tyler's exact-ROM ear retest remains required. Next resolve the naturally observed unsupported Escape 11, Grind4 85, MarioFoot 110, MarioDash 121, swing 41/42, GuardOn 13, Fox special 186/189, MarioSmash3 431, and FoxDamage 375 cues; requalify the one-minute reserve before adding more resident audio |
+| Required FGM, attack/hit sounds, and Mario/Fox voices | Common contacts and KO lifecycle PASS / residual cue debt | Audio + Gameplay | The 121,720-byte pack retains the exact common punch/kick paths and natural `439/292/154` Mario-KO sequence. Task 26 fixed a Calico/software-owner race: an exactly completed hardware channel now retires its stale owner before reuse, while inconsistent ownership remains fail-closed. The focused automated qualification passes 21 supported starts, 17 explicit unsupported cues, phase mask `0x1f`, channel mask `0xe`, max three live channels, 59 envelope steps, zero playback/generation failure, and 187,152-byte headroom | Keep the exact retirement seam and automated channel/acoustic gate. This is not an ear test. Residual unsupported special/projectile/movement cues remain explicit fidelity debt for the existing A/V audit before Task 30; do not require another user response tonight |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
-| Stable reserve / no corruption | PASS / current Task 25R artifact | QA | The current CPU-on profile-0 sibling reaches Results once with 232,208 arena headroom and 65,536 resident audio bytes: 166,672 net versus the 131,072-byte floor. Exact 4,084/2,042 pacing and teardown pass; stale/safety/eviction counters stay zero | Preserve the floor and recheck after every representation or resident-asset change |
-| Focused/checkpoint verification | Current Boundary PASS / Task 23R Phase 0 complete | QA | Published battle candidate `F3252C5C...` and public ROM `D0632348...` pass the 17:32 Boundary checkpoint in 77.8 seconds with the 588-field manifest checker, GBI fixtures, canonical mode-163 runtime, registry and two-ROM publication. Capture `2026-07-18_canonical_fast_173223-9494262-p47600.png` has 675/49,152 meaningful changes and 100% overlap against its expected paired frame. Task 23R's synchronized frame 607 remains exactly 0/49,152 against Task 25R | Keep this checkpoint. Start Task 26; the exact-ROM ear check and remaining attack/hit audio-visual cue audit remain required before Task 30 |
+| Stable reserve / no corruption | PASS / current Task 26 artifact | QA | The refreshed profile-0 lifecycle reaches Results once with 232,208 arena headroom and 65,536 resident audio bytes: 166,672 net versus the 131,072-byte floor after the exact 5,120-byte static-texture payload increase. Exact 4,084/2,042 pacing and teardown pass; stale/safety/eviction counters stay zero | Preserve the floor and recheck after every representation or resident-asset change |
+| Focused/checkpoint verification | Current Boundary PASS / Task 26 segment 0 complete | QA | Published battle candidate `757ED786...` and public ROM `D0632348...` pass the 22:57 Boundary checkpoint in 168.4 seconds with the generated-program/manifest checkers, GBI fixtures, canonical mode-163 runtime, registry, audio fixtures, and two-ROM publication. Latest capture `2026-07-18_canonical_fast_225700-0515661-p61432.png` has a normal adjacent-frame temporal delta; synchronized Task 26 A/B pixels are exactly 0/49,152 | Keep this checkpoint. Start Task 23R Phase 1 residual remeasurement. The remaining attack/hit audio-visual cue audit stays required before Task 30; no retail repeat is requested |
 | Cut G capture / final dated capture / manual retest | Automated exactness pass / manual current-ROM retest pending | QA + user | Latest capture is `2026-07-18_canonical_fast_101715-1383371-p57268.png`; its paired frame has 747/49,152 meaningful changes, 100% overlap, and all named-region/detail gates pass. Task 6 C/D, Task 8 G2, reserve repair, Task 9/16 state identity, source-light parity, both emitter splits, raw-corner cut, Down+A, and the common-contact checkpoint remain retained | Manually retest exact ROM `DADB7C96...`; automated common-contact A/V closure is focused, not global |
 
 ## Dated Gates

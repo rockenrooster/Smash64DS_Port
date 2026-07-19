@@ -32,6 +32,7 @@ param(
     [ValidateRange(0,2)][int]$RendererProfileLevel = 2,
     [switch]$RendererM2DetailedLedger,
     [switch]$RendererM3Phase0Profile,
+    [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
     [switch]$Task22WallpaperRunLab,
     [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
     [ValidateRange(0,1)][int]$RenderEconomyMode = 0,
@@ -79,6 +80,11 @@ $usesIntrinsicTask16FloatHelpers = $Target -in @(
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
+$usesIntrinsicNativeStageGeneratedSegment0 = $Target -in @(
+    'smash64ds-battle-playable-hwtri',
+    'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
+    'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
+)
 $effectiveTask16FloatCompareMode = if (
     $usesIntrinsicTask16FloatHelpers) { 1 } else { $Task16FloatCompareMode }
 $effectiveTask16FloatI2fMode = if (
@@ -90,6 +96,15 @@ $staticTextureAotSelected =
 $staticTextureAotSelected =
     $staticTextureAotSelected -or $RequireZeroPostGoTextureFence
 $foxCpuModeSelected = $PSBoundParameters.ContainsKey('FoxCpuMode')
+$nativeStageGeneratedSegment0Selected =
+    $PSBoundParameters.ContainsKey('NativeStageGeneratedSegment0Enable') -or
+    $usesIntrinsicNativeStageGeneratedSegment0
+$effectiveNativeStageGeneratedSegment0Enable = if (
+    $usesIntrinsicNativeStageGeneratedSegment0) {
+    1
+} else {
+    $NativeStageGeneratedSegment0Enable
+}
 $effectiveStaticTextureAotMode = if ($usesPublishedIntrinsicRendererDefaults) {
     1
 } else {
@@ -168,6 +183,10 @@ if ($RendererM2DetailedLedger -and ($RendererProfileLevel -ne 1)) {
 if ($RendererM3Phase0Profile -and
     (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9))) {
     throw 'RendererM3Phase0Profile requires RendererProfileLevel 1 and RendererFastRunMode 9.'
+}
+if (($effectiveNativeStageGeneratedSegment0Enable -eq 1) -and
+    ($RendererFastRunMode -ne 9)) {
+    throw 'NativeStageGeneratedSegment0Enable=1 requires RendererFastRunMode 9.'
 }
 if (($Task20StackProfileMode -eq 1) -and
     ($RendererProfileLevel -ne 1)) {
@@ -477,7 +496,8 @@ function Get-BenchmarkMakeIdentity {
     }
     $required = @(
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
-        'M3_PHASE0_PROFILE', 'TASK22_WALLPAPER_RUN_LAB',
+        'M3_PHASE0_PROFILE', 'NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE',
+        'TASK22_WALLPAPER_RUN_LAB',
         'SCREEN_SPACE_CENSUS', 'RENDER_ECONOMY',
         'RENDER_ECONOMY_OWNER_MASK', 'RENDERER_BENCHMARK_MODE',
         'FAST_RUN_DEFAULT',
@@ -500,6 +520,8 @@ function Get-BenchmarkMakeIdentity {
         Profile = [int]$values.PROFILE
         M2DetailedLedger = [int]$values.M2_DETAILED_LEDGER
         M3Phase0Profile = [int]$values.M3_PHASE0_PROFILE
+        NativeStageGeneratedSegment0Enable =
+            [int]$values.NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
         Task22WallpaperRunLab = [int]$values.TASK22_WALLPAPER_RUN_LAB
         ScreenSpaceCensusMode = [int]$values.SCREEN_SPACE_CENSUS
         RenderEconomyMode = [int]$values.RENDER_ECONOMY
@@ -700,6 +722,7 @@ $makeArgs = @('-C', $root, "TARGET=$Target", "BUILD=$Build", "NDS_DEV_SCENE_HARN
 $makeArgs += "NDS_RENDERER_PROFILE_LEVEL=$RendererProfileLevel"
 $makeArgs += "NDS_RENDERER_M2_DETAILED_LEDGER=$([int]$RendererM2DetailedLedger.IsPresent)"
 $makeArgs += "NDS_RENDERER_M3_PHASE0_PROFILE=$([int]$RendererM3Phase0Profile.IsPresent)"
+$makeArgs += "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE=$effectiveNativeStageGeneratedSegment0Enable"
 $makeArgs += "NDS_TASK22_WALLPAPER_RUN_LAB=$([int]$Task22WallpaperRunLab.IsPresent)"
 $makeArgs += "NDS_RENDERER_SCREEN_SPACE_CENSUS=$RendererScreenSpaceCensusMode"
 $makeArgs += "NDS_RENDER_ECONOMY=$RenderEconomyMode"
@@ -776,6 +799,40 @@ if (-not $NoBuild) {
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw "$Label harness build did not produce the expected ROM and ELF."
 }
+if ($nativeStageGeneratedSegment0Selected) {
+    $task26BuildDirectory = Resolve-Smash64DSBuildPath `
+        -Root $root -Build $Build
+    $task26BuildConfig = Join-Path $task26BuildDirectory 'nds_build_config.h'
+    Assert-Condition (Test-Path -LiteralPath $task26BuildConfig -PathType Leaf) `
+        'Built generated-segment0 configuration is missing; refusing stale -NoBuild evidence.' `
+        $task26BuildConfig
+    $task26BuildConfigText = Get-Content -LiteralPath $task26BuildConfig -Raw
+    Assert-Condition ($task26BuildConfigText -match
+        "(?m)^#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $effectiveNativeStageGeneratedSegment0Enable$") `
+        'Built generated-segment0 configuration does not match the requested selector; refusing stale -NoBuild evidence.' `
+        $task26BuildConfigText
+    if ($RendererProfileLevel -eq 1) {
+        $nm = Join-Path $env:DEVKITARM 'bin/arm-none-eabi-nm.exe'
+        if (-not (Test-Path -LiteralPath $nm -PathType Leaf)) {
+            throw "ARM symbol reader not found: $nm"
+        }
+        $nmOutput = @(& $nm $elf 2>&1 | ForEach-Object { "$_" })
+        if ($LASTEXITCODE -ne 0) {
+            throw "ARM symbol query failed.`n$($nmOutput -join "`n")"
+        }
+        $hasGeneratedAttempt = [bool]($nmOutput -match
+            '\bgNdsRendererM3GeneratedSegment0AttemptCount$')
+        $hasGeneratedHot = [bool]($nmOutput -match
+            '\bsNdsNativeStageSegment0HotRuns$')
+        $expectGeneratedSymbols =
+            ($effectiveNativeStageGeneratedSegment0Enable -eq 1)
+        Assert-Condition (
+            ($hasGeneratedAttempt -eq $expectGeneratedSymbols) -and
+            ($hasGeneratedHot -eq $expectGeneratedSymbols)
+        ) 'Built profile-1 ELF generated-segment0 symbols do not match the requested selector; refusing stale -NoBuild evidence.' `
+            ($nmOutput -join "`n")
+    }
+}
 if ($Task9FloatItcmMode -eq 1) {
     $task9BuildDirectory = Resolve-Smash64DSBuildPath `
         -Root $root -Build $Build
@@ -799,6 +856,7 @@ if (-not (Test-Path $melonDsPath)) { throw "melonDS executable not found: $melon
 if (-not (Test-Path $Gdb)) { throw "GDB executable not found: $Gdb" }
 if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
     $benchmarkMakeIdentity = Get-BenchmarkMakeIdentity -BaseMakeArgs $makeArgs
+    $isCpuPrepNoGx = $benchmarkMakeIdentity.RendererBenchmarkMode -eq 2
     Assert-Condition ($benchmarkMakeIdentity.Target -eq $Target -and
         $benchmarkMakeIdentity.Harness -eq $Harness -and
         $benchmarkMakeIdentity.HarnessId -eq $ExpectedMode -and
@@ -807,6 +865,8 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
             [int]$RendererM2DetailedLedger.IsPresent -and
         $benchmarkMakeIdentity.M3Phase0Profile -eq
             [int]$RendererM3Phase0Profile.IsPresent -and
+        $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq
+            $effectiveNativeStageGeneratedSegment0Enable -and
         $benchmarkMakeIdentity.Task22WallpaperRunLab -eq
             [int]$Task22WallpaperRunLab.IsPresent -and
         $benchmarkMakeIdentity.ScreenSpaceCensusMode -eq
@@ -831,11 +891,12 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
             $Task20StackProfileMode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
-        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M4/Task11/IFCommon/Task9/Task16 configuration.' `
+        'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M3/Task26/M4/Task11/IFCommon/Task9/Task16 configuration.' `
         ($benchmarkMakeIdentity | Format-List | Out-String)
     if ($usesPublishedIntrinsicRendererDefaults) {
         Assert-Condition (
             $benchmarkMakeIdentity.FastRunDefault -eq 9 -and
+            $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1 -and
             $benchmarkMakeIdentity.SceneMipCacheLab -eq 0 -and
             $benchmarkMakeIdentity.BattleStaticTextureDefault -eq 1
         ) 'Published battle renderer build identity is not the intrinsic M3/M4 9/0/1 configuration.' `
@@ -1093,6 +1154,12 @@ try {
                         'gNdsRendererM3TopologyFaultRevalidationCount'
                     } else { '0' }
                     $coarseBenchmarkCommands += ('printf "M3_STAGE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3PreflightAttemptCount, gNdsRendererM3PreflightSuccessCount, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3SegmentCount, gNdsRendererM3SegmentMask, gNdsRendererM3PostArmFailureCount, gNdsRendererM3DObjCount, gNdsRendererM3BindingCount, gNdsRendererM3RunCount, gNdsRendererM3TriangleCount, gNdsRendererM3ResidentEpochCount, gNdsRendererM3MaterialShadowCount, gNdsRendererM3MaterialCommitCount, gNdsRendererM3CrossRunCount, gNdsRendererM3CrossTriangleCount, gNdsRendererM3CrossForeignCornerCount, gNdsRendererM3TopologyFullValidationCount, gNdsRendererM3TopologyCacheHitCount, gNdsRendererM3TopologyStampMismatchCount, {0}, {1}' -f $topologyFaultInjectionExpression, $topologyFaultRevalidationExpression)
+                    if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
+                        $coarseBenchmarkCommands += 'printf "M3_GEN0=%u,1,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3GeneratedSegment0AttemptCount, gNdsRendererM3GeneratedSegment0SuccessCount, gNdsRendererM3GeneratedSegment0PreGxFallbackCount, gNdsRendererM3GeneratedSegment0RunCount, gNdsRendererM3GeneratedSegment0TriangleCount, gNdsRendererM3GeneratedSegment0EpochCount, gNdsRendererM3GeneratedSegment0MaterialCount, gNdsRendererM3GeneratedSegment0CertificateValidationCount'
+                        if ($RendererM3Phase0Profile) {
+                            $coarseBenchmarkCommands += 'printf "M3_GEN0_SHADOW=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3GeneratedSegment0AttemptCount, gNdsRendererM3GeneratedSegment0RunCount, gNdsRendererM3GeneratedSegment0ShadowDenseCount, gNdsRendererM3GeneratedSegment0ShadowStateEntryCount, gNdsRendererM3GeneratedSegment0ShadowSyncCount, gNdsRendererM3GeneratedSegment0EpochCount, gNdsRendererM3GeneratedSegment0TriangleCount, gNdsRendererM3GeneratedSegment0ShadowFieldComparisonCount, gNdsRendererM3GeneratedSegment0ShadowMismatchCount, gNdsRendererM3GeneratedSegment0ShadowFaultInjectedCount, gNdsRendererM3GeneratedSegment0ShadowFaultRejectedCount, gNdsRendererM3GeneratedSegment0ShadowLiveFaultInjectedCount, gNdsRendererM3GeneratedSegment0ShadowLiveFaultRejectedCount, gNdsRendererM3GeneratedSegment0ShadowLiveFaultRevalidatedCount'
+                        }
+                    }
                     if ($RendererM3Phase0Profile) {
                         $coarseBenchmarkCommands += 'printf "M3_PHASE0=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3Phase0PreflightTicks, gNdsRendererM3Phase0PrepareRunTicks, gNdsRendererM3Phase0VertexPrepareTicks, gNdsRendererM3Phase0NearTransformTicks, gNdsRendererM3Phase0RunTransitionTicks, gNdsRendererM3Phase0RawEmitTicks, gNdsRendererM3Phase0RangeEmitTicks, gNdsRendererM3Phase0NoZEmitTicks, gNdsRendererM3Phase0NoZMatrixTicks, gNdsRendererM3Phase0AccountingTicks, gNdsRendererM3Phase0CommitTicks, gNdsRendererM3Phase0TimerReadCount, gNdsRendererM3Phase0TimerSpanCount, gNdsRendererM3Phase0CalibrationTicks, gNdsRendererM3Phase0CalibrationIntervals, gNdsRendererM3Phase0PreparedDenseCount, gNdsRendererM3Phase0NearTransformCount, gNdsRendererM3Phase0NoZMatrixCount'
                         # Debugger-only FNV-1a prepared-output stability
@@ -1212,6 +1279,25 @@ try {
                 }
                 if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                     $coarseBenchmarkCommands += 'printf "SINK_BENCH=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSinkCursor, gNdsRendererBenchmarkSinkWordCount, gNdsRendererBenchmarkSinkCalibrationWords, gNdsRendererBenchmarkSinkCalibrationTicks, gNdsRendererBenchmarkSinkOwnerWords[0], gNdsRendererBenchmarkSinkOwnerWords[1], gNdsRendererBenchmarkSinkOwnerWords[2]'
+                    if ($RendererFastRunMode -eq 9) {
+                        $coarseBenchmarkCommands += 'printf "M3_GEN0_GX=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSinkWordCount, gNdsRendererBenchmarkSinkHashA, gNdsRendererBenchmarkSinkHashB, gNdsRendererBenchmarkSegment0SinkWords, gNdsRendererBenchmarkSegment0SinkHashA, gNdsRendererBenchmarkSegment0SinkHashB, gNdsRendererBenchmarkSegment0SinkArmFaults'
+                        $coarseBenchmarkCommands += @(
+                            ('if $renderer_benchmark_samples == {0}' -f
+                                ($RendererBenchmarkSamples - 1)),
+                            'printf "M3_GEN0_TRACE_SUMMARY=%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSegment0SinkWords',
+                            'set $m3_gen0_word = 0',
+                            'while $m3_gen0_word < gNdsRendererBenchmarkSegment0SinkWords && $m3_gen0_word < 3072',
+                            'printf "M3_GEN0_TRACE_WORD=%u,%u\n", $m3_gen0_word, gNdsRendererBenchmarkSegment0Trace[$m3_gen0_word]',
+                            'set $m3_gen0_word = $m3_gen0_word + 1',
+                            'end',
+                            'set $m3_gen0_run = 0',
+                            'while $m3_gen0_run < 26',
+                            'printf "M3_GEN0_TRACE_RUN=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $m3_gen0_run, gNdsRendererBenchmarkSegment0RunWords[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunHashA[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunHashB[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunRawTextureName[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunTextureEpochPlus1[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunTextureImage[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunTextureTlut[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunTextureKeyHashA[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunTextureKeyHashB[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunTextureDescriptor[$m3_gen0_run], gNdsRendererBenchmarkSegment0RunTextureParams[$m3_gen0_run]',
+                            'set $m3_gen0_run = $m3_gen0_run + 1',
+                            'end',
+                            'end'
+                        )
+                    }
                 }
                 if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
                     $coarseBenchmarkCommands += 'printf "WARM_BENCH=%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBenchmarkSuppressedTextureUploads, gNdsRendererBenchmarkSuppressedTextureUploadBytes'
@@ -1868,6 +1954,15 @@ try {
     $texturePhaseBenchmark = @()
     $fastRunBenchmark = @()
     $m3StageBenchmark = @()
+    $m3GeneratedSegment0Benchmark = @()
+    $m3GeneratedSegment0ShadowBenchmark = @()
+    $m3GeneratedSegment0GxBenchmark = @()
+    $m3GeneratedSegment0TraceSummary = @()
+    $m3GeneratedSegment0TraceWords = @()
+    $m3GeneratedSegment0TraceRuns = @()
+    $m3GeneratedSegment0TraceSummaryValues = @()
+    $m3GeneratedSegment0TraceWordValues = @()
+    $m3GeneratedSegment0TraceRunValues = @()
     $m3Phase0Benchmark = @()
     $m3PreparedBenchmark = @()
     $m3WhispyBenchmark = @()
@@ -1915,6 +2010,12 @@ try {
         if (($RendererProfileLevel -eq 1) -and
             ($RendererFastRunMode -eq 9)) {
             $m3StageBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_STAGE' -FieldCount 22)
+            if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
+                $m3GeneratedSegment0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_GEN0' -FieldCount 10)
+                if ($RendererM3Phase0Profile) {
+                    $m3GeneratedSegment0ShadowBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_GEN0_SHADOW' -FieldCount 15)
+                }
+            }
             if ($RendererM3Phase0Profile) {
                 $m3Phase0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_PHASE0' -FieldCount 19)
                 $m3PreparedBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_PREPARED' -FieldCount 15)
@@ -1935,6 +2036,12 @@ try {
         }
         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
             $sinkBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'SINK_BENCH' -FieldCount 8)
+            if ($RendererFastRunMode -eq 9) {
+                $m3GeneratedSegment0GxBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_GEN0_GX' -FieldCount 8)
+                $m3GeneratedSegment0TraceSummary = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_GEN0_TRACE_SUMMARY' -FieldCount 2)
+                $m3GeneratedSegment0TraceWords = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_GEN0_TRACE_WORD' -FieldCount 2)
+                $m3GeneratedSegment0TraceRuns = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_GEN0_TRACE_RUN' -FieldCount 12)
+            }
         }
         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
             $warmBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'WARM_BENCH' -FieldCount 3)
@@ -1998,6 +2105,8 @@ try {
     $m4FenceFinalPass = $true
     $m4FenceFinalValues = @()
     $expectedM4TeardownCount = if ($OneMinuteMatchProof) { 1 } else { 0 }
+    $expectedM4SeenMask = if ($OneMinuteMatchProof) { 0xffffff } else { 0x3fffff }
+    $expectedM4OwnerMask = if ($OneMinuteMatchProof) { 0x1f } else { 0x7 }
     if ($RequireZeroPostGoTextureFence) {
         Assert-Condition ($m4FenceFinal.Count -eq 1) `
             "M4 terminal texture fence captured $($m4FenceFinal.Count) records instead of one." `
@@ -2011,23 +2120,28 @@ try {
             $m4FenceFinalValues[1] -eq 1 -and
             $m4FenceFinalValues[2] -eq 1 -and
             $m4FenceFinalValues[3] -eq 0 -and
-            $m4FenceFinalValues[4] -eq 22 -and
-            $m4FenceFinalValues[5] -eq 131072 -and
+            $m4FenceFinalValues[4] -eq 24 -and
+            $m4FenceFinalValues[5] -eq 136192 -and
             $m4FenceFinalValues[6] -eq 1 -and
             $m4FenceFinalValues[7] -eq $expectedM4TeardownCount -and
             $m4FenceFinalValues[10] -eq 0 -and
             $m4FenceFinalValues[12] -eq 0 -and
             $m4FenceFinalValues[13] -eq 0 -and
             $m4FenceFinalCountSum -eq 0
-        if (-not $Task25RPacingTrace -and -not $PhaseMatrixMode) {
+        if ($isCpuPrepNoGx) {
+            Assert-Condition ($m4FenceFinalCountSum -eq 0) `
+                'CPU_PREP_NO_GX unexpectedly recorded post-GO texture-fence activity.' `
+                $gdbStdout
+        }
+        elseif (-not $Task25RPacingTrace -and -not $PhaseMatrixMode) {
             Assert-Condition $m4FenceFinalPass `
                 "M4 terminal post-GO texture fence failed (actual=$($m4FenceFinalValues -join ','))." `
                 $gdbStdout
         }
-        if (-not $OneMinuteMatchProof -and ($RendererBenchmarkSamples -gt 0)) {
+        if (-not $isCpuPrepNoGx -and -not $OneMinuteMatchProof -and ($RendererBenchmarkSamples -gt 0)) {
             Assert-Condition (
-                $m4FenceFinalValues[8] -eq 0x3fffff -and
-                $m4FenceFinalValues[9] -eq 0x7 -and
+                $m4FenceFinalValues[8] -eq $expectedM4SeenMask -and
+                $m4FenceFinalValues[9] -eq $expectedM4OwnerMask -and
                 $m4FenceFinalValues[11] -gt 0
             ) 'M4 strict benchmark did not cover every prepared owner through pinned hits.' $gdbStdout
         }
@@ -2073,12 +2187,12 @@ try {
             $publishedM4[1] -eq 1 -and
             $publishedM4[2] -eq 1 -and
             $publishedM4[3] -eq 0 -and
-            $publishedM4[4] -eq 22 -and
-            $publishedM4[5] -eq 131072 -and
+            $publishedM4[4] -eq 24 -and
+            $publishedM4[5] -eq 136192 -and
             $publishedM4[6] -eq 1 -and
             $publishedM4[7] -eq $expectedM4TeardownCount -and
-            $publishedM4[8] -eq 0x3fffff -and
-            $publishedM4[9] -eq 0x7 -and
+            $publishedM4[8] -eq $expectedM4SeenMask -and
+            $publishedM4[9] -eq $expectedM4OwnerMask -and
             $publishedM4[10] -eq 0 -and
             $publishedM4[11] -gt 0 -and
             $publishedM4[12] -eq 0 -and
@@ -2096,12 +2210,12 @@ try {
             $publishedBanks[6] -eq 0x8b -and
             $publishedBanks[7] -eq 0x81 -and
             $publishedBanks[8] -eq 0x06800000 -and
-            $publishedBanks[9] -eq 0x06820000 -and
-            $publishedBanks[10] -eq 131072 -and
-            $publishedBanks[11] -eq 1
-        ) "Published ROM did not naturally preserve the IFCommon OBJ/source-alpha palette banks and the exact bank-A static span (actual=$($publishedBanks -join ','))." $gdbStdout
+            $publishedBanks[9] -eq 0x06821400 -and
+            $publishedBanks[10] -eq 136192 -and
+            $publishedBanks[11] -eq 3
+        ) "Published ROM did not naturally preserve the IFCommon OBJ/source-alpha palette banks and the exact contiguous bank-A/B static span (actual=$($publishedBanks -join ','))." $gdbStdout
         $publishedRendererDefaultsSummary =
-            " intrinsicM3=9/$($publishedFast[1])/$($publishedFast[2]) intrinsicM4=22/$($publishedM4[5])/hits$($publishedM4[11])/fence0 water=2/0/1"
+            " intrinsicM3=9/$($publishedFast[1])/$($publishedFast[2]) intrinsicM4=24/$($publishedM4[5])/hits$($publishedM4[11])/fence0 water=2/0/1"
     }
     Assert-Condition ($aobj32.Success -and [int64]$aobj32.Groups[4].Value -eq 0) 'AObjEvent32 source-command normalization rejected a live script.' $gdbStdout
     $aobjSummary = " aobj32=$($aobj32.Groups[1].Value)/$($aobj32.Groups[2].Value)/reuse$($aobj32.Groups[3].Value)/fail0"
@@ -2643,6 +2757,9 @@ try {
                 $texturePhaseMetricSummary = ''
                 $fastRunMetricSummary = ''
                 $m3StageMetricSummary = ''
+                $m3GeneratedSegment0MetricSummary = ''
+                $m3GeneratedSegment0ShadowMetricSummary = ''
+                $m3GeneratedSegment0GxMetricSummary = ''
                 $m3Phase0MetricSummary = ''
                 $m3PreparedMetricSummary = ''
                 $m3PreparedCounts = [ordered]@{
@@ -2876,6 +2993,11 @@ try {
                         $texturePhaseSamples = [System.Collections.Generic.List[object]]::new()
                         $fastRunSamples = [System.Collections.Generic.List[object]]::new()
                         $m3StageSamples = [System.Collections.Generic.List[object]]::new()
+                        $m3GeneratedSegment0Samples = [System.Collections.Generic.List[object]]::new()
+                        $m3GeneratedSegment0ShadowSamples = [System.Collections.Generic.List[object]]::new()
+                        $m3GeneratedSegment0GxSamples = [System.Collections.Generic.List[object]]::new()
+                        $m3GeneratedSegment0TraceWordValues = @()
+                        $m3GeneratedSegment0TraceRunValues = @()
                         $m3Phase0Samples = [System.Collections.Generic.List[object]]::new()
                         $m3PreparedSamples = [System.Collections.Generic.List[object]]::new()
                         $m3WhispySamples = [System.Collections.Generic.List[object]]::new()
@@ -2903,6 +3025,62 @@ try {
                             [System.Collections.Generic.List[object]]::new()
                         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                             Assert-Condition ($sinkBenchmark.Count -eq $RendererBenchmarkSamples) "CPU_PREP_NO_GX sink benchmark captured $($sinkBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                            if ($RendererFastRunMode -eq 9) {
+                                Assert-Condition ($m3GeneratedSegment0GxBenchmark.Count -eq $RendererBenchmarkSamples) "Task 26 GX sink captured $($m3GeneratedSegment0GxBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                                Assert-Condition ($m3GeneratedSegment0TraceSummary.Count -eq 1) "Task 26 exact trace captured $($m3GeneratedSegment0TraceSummary.Count) terminal summaries." $gdbStdout
+                                $m3GeneratedSegment0TraceSummaryValues = Get-Ints $m3GeneratedSegment0TraceSummary[0]
+                                Assert-Condition (
+                                    $m3GeneratedSegment0TraceSummaryValues[0] -eq
+                                        $benchFrames[-1] -and
+                                    $m3GeneratedSegment0TraceSummaryValues[1] -gt 0 -and
+                                    $m3GeneratedSegment0TraceSummaryValues[1] -le 3072 -and
+                                    $m3GeneratedSegment0TraceWords.Count -eq
+                                        $m3GeneratedSegment0TraceSummaryValues[1] -and
+                                    $m3GeneratedSegment0TraceRuns.Count -eq 26
+                                ) 'Task 26 exact typed trace is incomplete, oversized, or not synchronized to the terminal sample.' $gdbStdout
+                                $m3GeneratedSegment0TraceWordValues = @(
+                                    $m3GeneratedSegment0TraceWords |
+                                        ForEach-Object { , @(Get-Ints $_) })
+                                for ($traceIndex = 0;
+                                     $traceIndex -lt $m3GeneratedSegment0TraceWordValues.Count;
+                                     $traceIndex++) {
+                                    Assert-Condition (
+                                        $m3GeneratedSegment0TraceWordValues[$traceIndex][0] -eq
+                                            $traceIndex
+                                    ) "Task 26 exact trace index drifted at word $traceIndex." $gdbStdout
+                                }
+                                $m3GeneratedSegment0TraceRunValues = @(
+                                    $m3GeneratedSegment0TraceRuns |
+                                        ForEach-Object { , @(Get-Ints $_) })
+                                for ($runIndex = 0;
+                                     $runIndex -lt $m3GeneratedSegment0TraceRunValues.Count;
+                                     $runIndex++) {
+                                    $runTrace = $m3GeneratedSegment0TraceRunValues[$runIndex]
+                                    $previousRunWords = if ($runIndex -eq 0) {
+                                        0
+                                    } else {
+                                        $m3GeneratedSegment0TraceRunValues[$runIndex - 1][1]
+                                    }
+                                    Assert-Condition (
+                                        $runTrace[0] -eq $runIndex -and
+                                        $runTrace[1] -gt $previousRunWords -and
+                                        $runTrace[1] -le
+                                            $m3GeneratedSegment0TraceSummaryValues[1] -and
+                                        $runTrace[4] -gt 0 -and
+                                        $runTrace[5] -ge 1 -and
+                                        $runTrace[5] -le 22 -and
+                                        $runTrace[6] -ne 0 -and
+                                        $runTrace[6] -ne 0xffffffff -and
+                                        $runTrace[8] -ne 0 -and
+                                        $runTrace[9] -ne 0 -and
+                                        $runTrace[10] -ne 0
+                                    ) "Task 26 run checkpoint $runIndex is incomplete or lacks an actual normalized texture descriptor." $gdbStdout
+                                }
+                                Assert-Condition (
+                                    $m3GeneratedSegment0TraceRunValues[-1][1] -eq
+                                        $m3GeneratedSegment0TraceSummaryValues[1]
+                                ) 'Task 26 final run checkpoint does not close the exact segment trace.' $gdbStdout
+                            }
                         }
                         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
                             Assert-Condition ($warmBenchmark.Count -eq $RendererBenchmarkSamples) "WARM_NO_UPLOAD benchmark captured $($warmBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
@@ -2910,6 +3088,12 @@ try {
                         Assert-Condition ($fastRunBenchmark.Count -eq $RendererBenchmarkSamples) "Fast-run benchmark captured $($fastRunBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         if ($RendererFastRunMode -eq 9) {
                             Assert-Condition ($m3StageBenchmark.Count -eq $RendererBenchmarkSamples) "M3 stage benchmark captured $($m3StageBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
+                            Assert-Condition ($m3GeneratedSegment0Benchmark.Count -eq $RendererBenchmarkSamples) "Task 26 generated segment-0 benchmark captured $($m3GeneratedSegment0Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                            if ($RendererM3Phase0Profile) {
+                                Assert-Condition ($m3GeneratedSegment0ShadowBenchmark.Count -eq $RendererBenchmarkSamples) "Task 26 segment-0 shadow captured $($m3GeneratedSegment0ShadowBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                            }
+                        }
                         if ($RendererM3Phase0Profile) {
                             Assert-Condition ($m3Phase0Benchmark.Count -eq $RendererBenchmarkSamples) "M3 Phase-0 benchmark captured $($m3Phase0Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             Assert-Condition ($m3PreparedBenchmark.Count -eq $RendererBenchmarkSamples) "M3 prepared-output stability census captured $($m3PreparedBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
@@ -2998,6 +3182,19 @@ try {
                                 $sinkOwnerWords = $sink[5] + $sink[6] + $sink[7]
                                 Assert-Condition ($sink[0] -eq $frame -and $sink[1] -eq $sink[2] -and $sink[2] -gt 0 -and $sink[3] -eq 1024 -and $sink[4] -gt 0 -and $sinkOwnerWords -eq $sink[2]) "CPU_PREP_NO_GX sink record is not synchronized, owner-conserved, or calibrated at frame $frame." $gdbStdout
                                 $sinkSamples.Add($sink)
+                                if ($RendererFastRunMode -eq 9) {
+                                    $m3GeneratedSegment0Gx = Get-Ints `
+                                        $m3GeneratedSegment0GxBenchmark[$sampleIndex]
+                                    Assert-Condition (
+                                        $m3GeneratedSegment0Gx[0] -eq $frame -and
+                                        $m3GeneratedSegment0Gx[1] -eq $sink[2] -and
+                                        $m3GeneratedSegment0Gx[4] -gt 0 -and
+                                        $m3GeneratedSegment0Gx[4] -le $sink[2] -and
+                                        $m3GeneratedSegment0Gx[7] -eq 0
+                                    ) "Task 26 GX-word sink is not synchronized, bounded to segment 0, or balanced at frame $frame (actual=$($m3GeneratedSegment0Gx -join ','))." $gdbStdout
+                                    $m3GeneratedSegment0GxSamples.Add(
+                                        $m3GeneratedSegment0Gx)
+                                }
                             }
                             if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
                                 $warm = Get-Ints $warmBenchmark[$sampleIndex]
@@ -3101,6 +3298,47 @@ try {
                                     Assert-Condition ($m3[1] -eq ($previousM3[1] + 1) -and $m3[2] -eq ($previousM3[2] + 1) -and $m3[3] -eq $previousM3[3] -and $m3[17] -eq $previousM3[17] -and $m3[18] -eq ($previousM3[18] + 1) -and $m3[19] -eq $previousM3[19] -and $m3[20] -eq $previousM3[20] -and $m3[21] -eq $previousM3[21]) "M3 stage owner did not remain continuously armed on cache hits across frame $frame (previous=$($previousM3 -join ',') actual=$($m3 -join ','))." $gdbStdout
                                 }
                                 $m3StageSamples.Add($m3)
+                                if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
+                                    $m3GeneratedSegment0 = Get-Ints `
+                                        $m3GeneratedSegment0Benchmark[$sampleIndex]
+                                    Assert-Condition (
+                                        $m3GeneratedSegment0[0] -eq $frame -and
+                                        $m3GeneratedSegment0[1] -eq 1 -and
+                                        $m3GeneratedSegment0[2] -eq 1 -and
+                                        $m3GeneratedSegment0[3] -eq 1 -and
+                                        $m3GeneratedSegment0[4] -eq 0 -and
+                                        $m3GeneratedSegment0[5] -eq 26 -and
+                                        $m3GeneratedSegment0[6] -eq 54 -and
+                                        $m3GeneratedSegment0[7] -eq 22 -and
+                                        $m3GeneratedSegment0[8] -eq 0 -and
+                                        $m3GeneratedSegment0[9] -gt 0
+                                    ) "Task 26 generated segment-0 path lost its exact pre-GX 26-run/54-triangle/22-epoch/no-material contract at frame $frame (actual=$($m3GeneratedSegment0 -join ','))." $gdbStdout
+                                    $m3GeneratedSegment0Samples.Add(
+                                        $m3GeneratedSegment0)
+                                    if ($RendererM3Phase0Profile) {
+                                        $m3GeneratedSegment0Shadow = Get-Ints `
+                                            $m3GeneratedSegment0ShadowBenchmark[$sampleIndex]
+                                        Assert-Condition (
+                                            $m3GeneratedSegment0Shadow[0] -eq $frame -and
+                                            $m3GeneratedSegment0Shadow[1] -eq 1 -and
+                                            $m3GeneratedSegment0Shadow[2] -eq 26 -and
+                                            $m3GeneratedSegment0Shadow[3] -eq 108 -and
+                                            $m3GeneratedSegment0Shadow[4] -eq 123 -and
+                                            $m3GeneratedSegment0Shadow[5] -eq 90 -and
+                                            $m3GeneratedSegment0Shadow[6] -eq 22 -and
+                                            $m3GeneratedSegment0Shadow[7] -eq 54 -and
+                                            $m3GeneratedSegment0Shadow[8] -eq 733 -and
+                                            $m3GeneratedSegment0Shadow[9] -eq 0 -and
+                                            $m3GeneratedSegment0Shadow[10] -eq 1 -and
+                                            $m3GeneratedSegment0Shadow[11] -eq 1 -and
+                                            $m3GeneratedSegment0Shadow[12] -eq 1 -and
+                                            $m3GeneratedSegment0Shadow[13] -eq 1 -and
+                                            $m3GeneratedSegment0Shadow[14] -eq 1
+                                        ) "Task 26 segment-0 shadow lost exact output coverage, generation-fault rejection, or live-operand pre-GX rejection/revalidation at frame $frame (actual=$($m3GeneratedSegment0Shadow -join ','))." $gdbStdout
+                                        $m3GeneratedSegment0ShadowSamples.Add(
+                                            $m3GeneratedSegment0Shadow)
+                                    }
+                                }
                                 if ($RendererM3Phase0Profile) {
                                     $m3Prepared = Get-Ints $m3PreparedBenchmark[$sampleIndex]
                                     Assert-Condition (
@@ -3128,7 +3366,8 @@ try {
                                     }
                                     $m3WhispySamples.Add($m3Whispy)
                                     $phase0 = Get-Ints $m3Phase0Benchmark[$sampleIndex]
-                                    Assert-Condition ($phase0[0] -eq $frame -and $phase0[12] -eq 1319 -and $phase0[13] -eq 651 -and $phase0[15] -eq 16 -and $phase0[16] -eq 312 -and $phase0[17] -eq 226 -and $phase0[18] -eq 146) "M3 Phase-0 timer/count census drifted at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
+                                    $expectedPhase0Counts = if (($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) -and $RendererM3Phase0Profile) { @(1639, 811, 16, 420, 334, 146) } else { @(1319, 651, 16, 312, 226, 146) }
+                                    Assert-Condition ($phase0[0] -eq $frame -and $phase0[12] -eq $expectedPhase0Counts[0] -and $phase0[13] -eq $expectedPhase0Counts[1] -and $phase0[15] -eq $expectedPhase0Counts[2] -and $phase0[16] -eq $expectedPhase0Counts[3] -and $phase0[17] -eq $expectedPhase0Counts[4] -and $phase0[18] -eq $expectedPhase0Counts[5]) "M3 Phase-0 timer/count census drifted at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
                                     Assert-Condition ($phase0[2] -ge $phase0[3] -and $phase0[3] -ge $phase0[4] -and $phase0[8] -ge $phase0[9] -and $phase0[1] -ge $phase0[2] -and $phase0[11] -ge ($phase0[5] + $phase0[6] + $phase0[7] + $phase0[8] + $phase0[10])) "M3 Phase-0 nested bucket conservation failed at frame $frame (actual=$($phase0 -join ','))." $gdbStdout
                                     $m3Phase0Samples.Add($phase0)
                                     $g2State = Get-Ints $g2StateBenchmark[$sampleIndex]
@@ -3192,8 +3431,9 @@ try {
                                         ($phase05[20] -ge 0) -and ($phase05[20] -le 49152)
                                     }
                                     $phase05WallpaperInactive =
-                                        $PhaseMatrixMode -and
-                                        ($RendererBenchmarkStartEvent -in @('Late','TimeUp')) -and
+                                        (($PhaseMatrixMode -and
+                                          ($RendererBenchmarkStartEvent -in @('Late','TimeUp'))) -or
+                                         ($m4CandidateEvidence -and $fastIterationUnarmedM4)) -and
                                         ($phase05[19] -eq 0) -and ($phase05[20] -eq 0)
                                     Assert-Condition ($phase05[0] -eq $frame -and $phase05[18] -eq 16 -and (($phase05[19] -eq 192 -and $phase05PixelWritesValid) -or $phase05WallpaperInactive) -and $phase05[15] -gt $phase05[16] -and $phase05[16] -gt 0) "Phase-0.5 timer/count census drifted at frame $frame (actual=$($phase05 -join ','))." $gdbStdout
                                     Assert-Condition ($phase05WallpaperSubtotal -le $coarse[10] -and $coarse[11] -ge $phase05[8] -and $phase05[7] -ge $phase05StageExecute -and $phase05[9] -gt 0 -and $phase05[6] -ge ($phase05[7] + $phase05[8] + $phase05[9]) -and $coarse[19] -ge $phase05NamedDrawShell -and $coarse[20] -ge ($phase05[10] + $phase05[11] + $phase05[14]) -and $coarse[21] -ge ($phase05[12] + $phase05[13])) "Phase-0.5 nested conservation failed at frame $frame (phase05=$($phase05 -join ',') coarse=$($coarse -join ','))." $gdbStdout
@@ -3218,13 +3458,21 @@ try {
                             $m4Static = Get-Ints $m4StaticBenchmark[$sampleIndex]
                             Assert-Condition ($m4Static[0] -eq $frame -and
                                 $m4Static[1] -eq $effectiveStaticTextureAotMode) "M4 static-texture accounting is not synchronized or in the effective mode at frame $frame." $gdbStdout
-                            if ($effectiveStaticTextureAotMode -eq 1) {
+                            if ($isCpuPrepNoGx -and
+                                ($effectiveStaticTextureAotMode -eq 1)) {
+                                Assert-Condition (
+                                    $m4Static[2] -eq 1 -and
+                                    $m4Static[3] -eq 1 -and
+                                    @($m4Static[4..10] |
+                                        Where-Object { $_ -ne 0 }).Count -eq 0
+                                ) "CPU_PREP_NO_GX did not retain the expected mocked static-texture preparation failure at frame $frame (actual=$($m4Static -join ','))." $gdbStdout
+                            } elseif ($effectiveStaticTextureAotMode -eq 1) {
                                 if ($fastIterationUnarmedM4) {
                                     Assert-Condition (
                                         $m4Static[2] -eq 1 -and
                                         $m4Static[3] -eq 0 -and
-                                        $m4Static[4] -eq 22 -and
-                                        $m4Static[5] -eq 131072 -and
+                                        $m4Static[4] -eq 24 -and
+                                        $m4Static[5] -eq 136192 -and
                                         @($m4Static[6..10] |
                                             Where-Object { $_ -ne 0 }).Count -eq 0
                                     ) "Fast iteration did not preserve the prepared, deliberately unarmed M4 corpus at frame $frame (actual=$($m4Static -join ','))." $gdbStdout
@@ -3232,8 +3480,8 @@ try {
                                     Assert-Condition (
                                         $m4Static[2] -eq 1 -and
                                         $m4Static[3] -eq 0 -and
-                                        $m4Static[4] -eq 22 -and
-                                        $m4Static[5] -eq 131072 -and
+                                        $m4Static[4] -eq 24 -and
+                                        $m4Static[5] -eq 136192 -and
                                         $m4Static[6] -eq 1 -and
                                         $m4Static[7] -eq 0x3fffff -and
                                         $m4Static[8] -eq 0x7 -and
@@ -3602,6 +3850,11 @@ try {
                         $stage0Summary = "Renderer stage layer-0 benchmark: samples=$RendererBenchmarkSamples frames=$($benchFrames[0])..$($benchFrames[-1]) median/p95 ticks=$(Get-MedianP95 (Get-SampleFieldValues $stage0Samples 1)) adjacent changes/distinct values=$(Get-AdjacentChurn (Get-SampleFieldValues $stage0Samples 1))"
                         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                             $sinkMetricSummary = "Renderer CPU_PREP_NO_GX sink: samples=$RendererBenchmarkSamples words=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 2)) cursor=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 1)) stageWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 5)) MarioWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 6)) FoxWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 7)) calibrationWords=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 3)) calibrationTicks=$(Get-MedianP95 (Get-SampleFieldValues $sinkSamples 4))"
+                            if ($RendererFastRunMode -eq 9) {
+                                $m3GeneratedSegment0GxLast =
+                                    $m3GeneratedSegment0GxSamples[-1]
+                                $m3GeneratedSegment0GxMetricSummary = "Renderer Task 26 GX sink: totalWords=$($m3GeneratedSegment0GxLast[1]) totalHash=$($m3GeneratedSegment0GxLast[2])/$($m3GeneratedSegment0GxLast[3]) segment0Words=$($m3GeneratedSegment0GxLast[4]) segment0Hash=$($m3GeneratedSegment0GxLast[5])/$($m3GeneratedSegment0GxLast[6]) armFaults=$($m3GeneratedSegment0GxLast[7])"
+                            }
                         }
                         if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
                             Assert-Condition (((Get-SampleFieldValues $warmSamples 1) | Measure-Object -Sum).Sum -gt 0) 'WARM_NO_UPLOAD window did not observe any animated texture refresh to suppress.' $gdbStdout
@@ -3611,6 +3864,16 @@ try {
                         if ($RendererFastRunMode -eq 9) {
                             $m3Last = $m3StageSamples[-1]
                             $m3StageMetricSummary = "Renderer M3 stage owner: attempts/success/fallback=$($m3Last[1])/$($m3Last[2])/$($m3Last[3]) segments/mask=$($m3Last[4])/$($m3Last[5]) postArm=$($m3Last[6]) dobjs/bindings/runs/triangles/epochs=$($m3Last[7])/$($m3Last[8])/$($m3Last[9])/$($m3Last[10])/$($m3Last[11]) materials=$($m3Last[12])/$($m3Last[13]) cross=$($m3Last[14])/$($m3Last[15])/$($m3Last[16]) topology=full$($m3Last[17])/hit$($m3Last[18])/mismatch$($m3Last[19])/inject$($m3Last[20])/revalidate$($m3Last[21])"
+                            if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
+                                $m3GeneratedSegment0Last =
+                                    $m3GeneratedSegment0Samples[-1]
+                                $m3GeneratedSegment0MetricSummary = "Renderer Task 26 segment 0: attempts/success/fallback=$($m3GeneratedSegment0Last[2])/$($m3GeneratedSegment0Last[3])/$($m3GeneratedSegment0Last[4]) runs/triangles/epochs/materials=$($m3GeneratedSegment0Last[5])/$($m3GeneratedSegment0Last[6])/$($m3GeneratedSegment0Last[7])/$($m3GeneratedSegment0Last[8]) certificateValidations=$($m3GeneratedSegment0Last[9])"
+                                if ($RendererM3Phase0Profile) {
+                                    $m3GeneratedSegment0ShadowLast =
+                                        $m3GeneratedSegment0ShadowSamples[-1]
+                                    $m3GeneratedSegment0ShadowMetricSummary = "Renderer Task 26 shadow: runs/dense/state/sync/epochs/triangles=$($m3GeneratedSegment0ShadowLast[2])/$($m3GeneratedSegment0ShadowLast[3])/$($m3GeneratedSegment0ShadowLast[4])/$($m3GeneratedSegment0ShadowLast[5])/$($m3GeneratedSegment0ShadowLast[6])/$($m3GeneratedSegment0ShadowLast[7]) fields/mismatches=$($m3GeneratedSegment0ShadowLast[8])/$($m3GeneratedSegment0ShadowLast[9]) faultInjected/rejected=$($m3GeneratedSegment0ShadowLast[10])/$($m3GeneratedSegment0ShadowLast[11])"
+                                }
+                            }
                             if ($RendererM3Phase0Profile) {
                                 $phase0AttributeExclusive = @($m3Phase0Samples | ForEach-Object { [int64]$_[3] - [int64]$_[4] })
                                 $phase0PrepareResidual = @($m3Phase0Samples | ForEach-Object { [int64]$_[2] - [int64]$_[3] })
@@ -3744,6 +4007,8 @@ try {
                             $benchmarkMakeIdentity.M2DetailedLedger
                         rendererM3Phase0Profile =
                             $benchmarkMakeIdentity.M3Phase0Profile
+                        nativeStageGeneratedSegment0Enable =
+                            $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable
                         task20StackProfileMode =
                             $benchmarkMakeIdentity.Task20StackProfileMode
                         task22WallpaperRunLab =
@@ -3864,6 +4129,8 @@ try {
                                 [bool]($Task20StackProfileMode -eq 1)
                             task20Stack = $task20StackEvidence
                             task22WallpaperRunLab = [bool]$Task22WallpaperRunLab
+                            nativeStageGeneratedSegment0Enable =
+                                $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable
                             phaseMatrixMode = [bool]$PhaseMatrixMode
                             lowerTextHudMode = $LowerTextHudMode
                             rendererScreenSpaceCensusMode =
@@ -3878,6 +4145,7 @@ try {
                                 coarse = @($coarseSamples)
                                 texturePhases = @($texturePhaseSamples)
                                 fastRaw = @($fastRunSamples)
+                                sink = @($sinkSamples)
                                 task20Stack = @($task20StackRows)
                                 economy = @($economySamples)
                                 screenSpaceCensusRows =
@@ -3885,6 +4153,18 @@ try {
                                 screenSpaceCensusStageOwners =
                                     @($screenSpaceCensusStageOwnerValues)
                                 m3Stage = @($m3StageSamples)
+                                m3GeneratedSegment0 =
+                                    @($m3GeneratedSegment0Samples)
+                                m3GeneratedSegment0Shadow =
+                                    @($m3GeneratedSegment0ShadowSamples)
+                                m3GeneratedSegment0Gx =
+                                    @($m3GeneratedSegment0GxSamples)
+                                m3GeneratedSegment0TraceSummary =
+                                    @($m3GeneratedSegment0TraceSummaryValues)
+                                m3GeneratedSegment0TraceWords =
+                                    @($m3GeneratedSegment0TraceWordValues)
+                                m3GeneratedSegment0TraceRuns =
+                                    @($m3GeneratedSegment0TraceRunValues)
                                 m3Phase0 = @($m3Phase0Samples)
                                 m3PreparedOutput = @($m3PreparedSamples)
                                 m3WhispySourceState = @($m3WhispySamples)
@@ -3922,7 +4202,25 @@ try {
                         $banks = Get-Ints $vramBanks
                         $expectedBankF = 0x83
                         $expectedBankG = 0x8b
-                        Assert-Condition ($vramBanks.Success -and $banks[0] -eq 0x83 -and $banks[1] -eq 0x8b -and $banks[2] -eq 0x81 -and $banks[3] -eq 0x89 -and $banks[4] -eq 0x82 -and $banks[5] -eq $expectedBankF -and $banks[6] -eq $expectedBankG -and $banks[7] -eq 0x81 -and $banks[8] -eq 0x06800000 -and $banks[9] -eq 0x06820000 -and $banks[10] -eq 131072 -and $banks[11] -eq 1) "M4 VRAM bank ownership or exact contiguous bank-A static span does not match the battle contract (actual=$($banks -join ','))." $gdbStdout
+                        $bankModesValid =
+                            $vramBanks.Success -and
+                            $banks[0] -eq 0x83 -and $banks[1] -eq 0x8b -and
+                            $banks[2] -eq 0x81 -and $banks[3] -eq 0x89 -and
+                            $banks[4] -eq 0x82 -and
+                            $banks[5] -eq $expectedBankF -and
+                            $banks[6] -eq $expectedBankG -and
+                            $banks[7] -eq 0x81
+                        if ($isCpuPrepNoGx) {
+                            Assert-Condition ($bankModesValid -and
+                                @($banks[8..11] |
+                                    Where-Object { $_ -ne 0 }).Count -eq 0) "CPU_PREP_NO_GX unexpectedly claimed a real static-texture VRAM span (actual=$($banks -join ','))." $gdbStdout
+                        } else {
+                            Assert-Condition ($bankModesValid -and
+                                $banks[8] -eq 0x06800000 -and
+                                $banks[9] -eq 0x06821400 -and
+                                $banks[10] -eq 136192 -and
+                                $banks[11] -eq 3) "M4 VRAM bank ownership or exact contiguous bank-A/B static span does not match the battle contract (actual=$($banks -join ','))." $gdbStdout
+                        }
                     }
                     if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
                         $sinkProfile = Get-Ints $renderProfile
@@ -3930,8 +4228,14 @@ try {
                         $sinkSubmit = Get-Ints $renderSubmit
                         $sinkPlatform = Get-Ints $platformHw
                         Assert-Condition ($renderProfile.Success -and $sinkProfile[15] -eq 2484 -and $sinkProfile[16] -eq 828 -and $sinkProfile[17] -eq 0) 'CPU_PREP_NO_GX did not execute exact 2,484-vertex/828-triangle CPU preparation.' $gdbStdout
-                        Assert-Condition ($renderBatch.Success -and $sinkBatch[0] -eq 121 -and $sinkBatch[1] -eq 707 -and $sinkBatch[2] -eq 121 -and $sinkBatch[3] -eq 98 -and $sinkBatch[4] -eq 730) 'CPU_PREP_NO_GX drifted from exact batch and texture-preparation policy.' $gdbStdout
-                        Assert-Condition ($renderSubmit.Success -and $sinkSubmit[0] -eq 648 -and $sinkSubmit[1] -eq 0 -and $sinkSubmit[2] -eq 44 -and $sinkSubmit[3] -eq 126 -and $sinkSubmit[4] -eq 0 -and $sinkSubmit[5] -eq 0 -and $sinkSubmit[6] -eq 10 -and $sinkSubmit[7] -eq 0) 'CPU_PREP_NO_GX drifted from the exact 648/44/126/10 submit-class partition.' $gdbStdout
+                        $expectedSinkTexturePrepareBegin =
+                            if ($RendererFastRunMode -eq 9) { 49 } else { 98 }
+                        $expectedSinkTexturePrepareReuse =
+                            if ($RendererFastRunMode -eq 9) { 725 } else { 730 }
+                        Assert-Condition ($renderBatch.Success -and $sinkBatch[0] -eq 121 -and $sinkBatch[1] -eq 707 -and $sinkBatch[2] -eq 121 -and $sinkBatch[3] -eq $expectedSinkTexturePrepareBegin -and $sinkBatch[4] -eq $expectedSinkTexturePrepareReuse) 'CPU_PREP_NO_GX drifted from exact batch and texture-preparation policy.' $gdbStdout
+                        $expectedSinkRawSubmitCount = if ($RendererFastRunMode -eq 9) { 658 } else { 648 }
+                        $expectedSinkRangeSubmitCount = if ($RendererFastRunMode -eq 9) { 0 } else { 10 }
+                        Assert-Condition ($renderSubmit.Success -and $sinkSubmit[0] -eq $expectedSinkRawSubmitCount -and $sinkSubmit[1] -eq 0 -and $sinkSubmit[2] -eq 44 -and $sinkSubmit[3] -eq 126 -and $sinkSubmit[4] -eq 0 -and $sinkSubmit[5] -eq 0 -and $sinkSubmit[6] -eq $expectedSinkRangeSubmitCount -and $sinkSubmit[7] -eq 0) "CPU_PREP_NO_GX drifted from the exact $expectedSinkRawSubmitCount/44/126/$expectedSinkRangeSubmitCount submit-class partition." $gdbStdout
                         Assert-Condition ($platformHw.Success -and $sinkPlatform[0] -gt 0 -and $sinkPlatform[2] -eq 0 -and $sinkPlatform[3] -eq 0) 'CPU_PREP_NO_GX unexpectedly emitted GX geometry or failed to complete benchmark frames.' $gdbStdout
                     }
                     if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 4) {
@@ -3964,6 +4268,9 @@ try {
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
+                    if ($m3GeneratedSegment0MetricSummary) { Write-Output $m3GeneratedSegment0MetricSummary }
+                    if ($m3GeneratedSegment0ShadowMetricSummary) { Write-Output $m3GeneratedSegment0ShadowMetricSummary }
+                    if ($m3GeneratedSegment0GxMetricSummary) { Write-Output $m3GeneratedSegment0GxMetricSummary }
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
                     if ($m3PreparedMetricSummary) { Write-Output $m3PreparedMetricSummary }
                     if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
@@ -4467,6 +4774,9 @@ try {
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
+                    if ($m3GeneratedSegment0MetricSummary) { Write-Output $m3GeneratedSegment0MetricSummary }
+                    if ($m3GeneratedSegment0ShadowMetricSummary) { Write-Output $m3GeneratedSegment0ShadowMetricSummary }
+                    if ($m3GeneratedSegment0GxMetricSummary) { Write-Output $m3GeneratedSegment0GxMetricSummary }
                     if ($m3Phase0MetricSummary) { Write-Output $m3Phase0MetricSummary }
                     if ($m3PreparedMetricSummary) { Write-Output $m3PreparedMetricSummary }
                     if ($g2StateMetricSummary) { Write-Output $g2StateMetricSummary }
@@ -4609,7 +4919,8 @@ try {
             Assert-Condition ($battlePlayableKO.Success -and $bpk[0] -eq 0x42504c59 -and (($bpk[1] -band 0xff) -eq 0xff) -and $victimStockDelta -gt 0 -and $victimStockDelta -eq $battleStockDelta -and $victimStockDelta -eq $fallsDelta) 'battle_playable stock/fall KO proof failed.' $gdbStdout
             Assert-Condition ($battlePlayableStatus.Success -and $bps[0] -gt 0 -and $bps[1] -gt 0 -and $bps[2] -gt 0 -and $bps[3] -gt 0 -and $bps[5] -ge 8 -and $bps[6] -eq 10 -and $bps[7] -eq 0 -and $bps[8] -eq 0 -and $bps[9] -gt 0) 'battle_playable Dead/Rebirth/return-control proof failed.' $gdbStdout
             $interfaceBytesOk = if ($ImportBattleShipIFCommon) { $mr[4] -gt 0 } else { $true }
-            Assert-Condition ($memoryArena.Success -and $ma[0] -eq 0x4d4c4544 -and $ma[1] -eq 22 -and $ma[3] -ge 0x130000 -and ($ma[6] - $audioBgmResidentBytes) -ge 131072 -and $ma[7] -eq 163840 -and $ma[8] -eq 106496 -and $ma[9] -eq 49152 -and $ma[10] -gt 0) 'battle_playable memory arena ledger failed reserve or VSBattle taskman buffer assertions.' $gdbStdout
+            $expectedMemoryArenaScene = if ($OneMinuteMatchProof) { 24 } else { 22 }
+            Assert-Condition ($memoryArena.Success -and $ma[0] -eq 0x4d4c4544 -and $ma[1] -eq $expectedMemoryArenaScene -and $ma[3] -ge 0x130000 -and ($ma[6] - $audioBgmResidentBytes) -ge 131072 -and $ma[7] -eq 163840 -and $ma[8] -eq 106496 -and $ma[9] -eq 49152 -and $ma[10] -gt 0) 'battle_playable memory arena ledger failed reserve or final-scene taskman buffer assertions.' $gdbStdout
             Assert-Condition ($memoryReloc.Success -and $mr[0] -gt 0 -and $mr[1] -gt 0 -and $mr[2] -gt 0 -and $mr[3] -gt 0 -and $interfaceBytesOk -and $mr[5] -eq 0 -and $mr[6] -eq 0 -and $mr[8] -eq 0 -and $mr[9] -eq 0) 'battle_playable reloc memory ledger found stale or missing resident groups.' $gdbStdout
             Assert-Condition ($memoryEvict.Success) 'battle_playable reloc eviction ledger was not printed.' $gdbStdout
             $battlePlayableSummary = " bplay=stock$($bpk[3])->$($bpk[4]) falls$($bpk[7])->$($bpk[8]) dead=$($bps[0]) rebirth=$($bps[1])/$($bps[2])/$($bps[3]) recover=$($bps[4])/$($bps[5])"

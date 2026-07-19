@@ -248,8 +248,8 @@ foreach ($phaseName in $phaseOrder) {
             $textureFailureSamples += $index
         }
         $m4Exact = ($m4Static[1] -eq 1 -and $m4Static[2] -eq 1 -and
-            $m4Static[3] -eq 0 -and $m4Static[4] -eq 22 -and
-            $m4Static[5] -eq 131072 -and $m4Static[6] -eq 1 -and
+            $m4Static[3] -eq 0 -and $m4Static[4] -eq 24 -and
+            $m4Static[5] -eq 136192 -and $m4Static[6] -eq 1 -and
             $m4Static[7] -eq 0x3fffff -and $m4Static[8] -eq 0x7 -and
             $m4Static[9] -eq 0 -and $m4Static[10] -gt 0 -and
             @($m4Fence[1..12] | Where-Object { $_ -ne 0 }).Count -eq 0)

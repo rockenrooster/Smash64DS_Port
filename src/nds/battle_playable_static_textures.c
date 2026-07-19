@@ -5,13 +5,13 @@
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_WORDS ==
                    NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT,
                "generated/runtime texture key width mismatch");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 22u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 24u,
                "canonical static texture key count changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 21u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 23u,
                "canonical static texture output count changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 126976u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 132096u,
                "canonical static texture payload size changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 131072u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 136192u,
                "canonical static texture prepared size changed");
 
 static void ndsBattlePlayableStaticTextureClearView(

@@ -9,8 +9,10 @@ RGB5A1 bytes.  Exact metadata is emitted as C while pixels are emitted as one
 NitroFS-ready binary.  Generated pixels are checked with a separate slow oracle.
 
 The two source-initial Pupupu water composites are included for the retained
-frame-0 freeze cut. Animated actors, fighters, weapons, effects, and shadows
-remain outside this corpus, so this tool cannot claim M4 complete by itself.
+frame-0 freeze cut. Natural-lifecycle Whispy-mouth and Fox material keys are
+also qualified from complete runtime captures and their pinned source bytes.
+Other animated actors, fighter variants, weapons, effects, and shadows remain
+outside this corpus, so this tool cannot claim M4 complete by itself.
 """
 
 from __future__ import annotations
@@ -41,19 +43,26 @@ OWNER_SPECS = (
     ("pupupu_layer3", 0x2BF8, 5, 1 << 2),
 )
 
-EXPECTED_KEY_COUNT = 22
-EXPECTED_OUTPUT_COUNT = 21
-EXPECTED_RESIDENCY_BYTES = 131072
-EXPECTED_PAYLOAD_BYTES = 126976
-EXPECTED_ORACLE_PIXELS = 62464
+FOX_LATE_MATERIAL_OWNER_MASK = 1 << 3
+WHISPY_MOUTH_OWNER_MASK = 1 << 4
+OWNER_LABELS = tuple((name, mask) for name, _root, _count, mask in OWNER_SPECS) + (
+    ("fox_late_material", FOX_LATE_MATERIAL_OWNER_MASK),
+    ("whispy_mouth", WHISPY_MOUTH_OWNER_MASK),
+)
+
+EXPECTED_KEY_COUNT = 24
+EXPECTED_OUTPUT_COUNT = 23
+EXPECTED_RESIDENCY_BYTES = 136192
+EXPECTED_PAYLOAD_BYTES = 132096
+EXPECTED_ORACLE_PIXELS = 65024
 EXPECTED_PAYLOAD_SHA256 = (
-    "f94b82c030f062f0641bdbbadbd547eae460158956f6f8af07485dfe7ccf15f1"
+    "59bfd565c4c0c18c605107e0f7b49e4cc6c360cd9ce9a67712066c2a58e182d2"
 )
 EXPECTED_METADATA_SHA256 = (
-    "beae3762e706ff0bc1ac3df064502fd7444a54dfdf2806da619a530806908573"
+    "1129f8b59a4be9a44583bef06ba998682b9f7ad14e8844c4e1d843948a668081"
 )
 EXPECTED_INCLUDE_SHA256 = (
-    "22ba02c9b7e9bd41cee2ed112741d8cb61ce2737a6787f0d79d582925206321b"
+    "cef1256e16f20d90d137312de099d4ff4044883cdc6f1aef38e9c4d8cca66430"
 )
 
 G_SETTIMG = 0xFD
@@ -195,7 +204,7 @@ class GeneratedArtifacts:
     def summary(self) -> dict[str, object]:
         owner_counts = {
             name: sum(1 for record in self.records if record.owner_mask & mask)
-            for name, _root, _count, mask in OWNER_SPECS
+            for name, mask in OWNER_LABELS
         }
         return {
             "schema": 2,
@@ -821,6 +830,185 @@ def build_water_records(repo_root: Path) -> list[PreparedRecord]:
     return records
 
 
+def build_runtime_qualified_whispy_record(
+    repo_root: Path, blocks: Sequence[dict[str, object]]
+) -> PreparedRecord:
+    """Build the exact Whispy-mouth key captured in the lifecycle.
+
+    The complete 59-word key was captured at profile frame 699 in stage display
+    list 0x1630. Pointer provenance resolved it to actor asset 152. Running the
+    capture through the normal conversion and slow oracle binds the retained
+    entry to source texture 0x0c20 and palette 0x0998.
+    """
+    actors = census.load_o2r(repo_root, census.O2R_INPUTS["stage_actors"])
+    state = DisplayState(
+        tlut_image=census.PointerRef(actors.file_id, 0x0998),
+        tlut_count=16,
+        texture_seen=True,
+        texture_on=True,
+        texture_tile=0,
+    )
+    state.tiles[0] = TileState(
+        set_seen=True,
+        size_seen=True,
+        format=FMT_CI,
+        size=SIZ_4B,
+        line=1,
+        tmem=0,
+        palette=0,
+        cmt=2,
+        maskt=5,
+        shiftt=0,
+        cms=2,
+        masks=4,
+        shifts=0,
+        uls=0,
+        ult=0,
+        lrs=0x03C,
+        lrt=0x07C,
+        width=16,
+        height=32,
+    )
+    state.tiles[LOAD_TILE] = TileState(set_seen=True)
+    state.loads = [
+        LoadState(
+            image=census.PointerRef(actors.file_id, 0x0C20),
+            image_format=FMT_CI,
+            image_size=SIZ_16B,
+            image_width=1,
+            load_kind=LOAD_KIND_BLOCK,
+            load_tile=LOAD_TILE,
+            load_uls=0,
+            load_ult=0,
+            load_lrs=0x07F,
+            load_dxt=0x800,
+            load_texels=0x080,
+            load_tmem=0,
+        )
+    ]
+    record = capture_record(
+        WHISPY_MOUTH_OWNER_MASK, 0x16B0, state, actors, blocks
+    )
+    expected_key = (
+        0x00000C20, 0x00000002, 0x00000002, 0x00000001,
+        0x00000998, 0x00000010, 0x00000001, 0x00000002,
+        0x00000000, 0x00000010, 0x00000020, 0x00000000,
+        0x00000000, 0x00000000, 0x00000002, 0x00000002,
+        0x00000004, 0x00000005, 0x00000000, 0x00000000,
+        0x00000007, 0x00000000, 0x00000000, 0x0000007F,
+        0x00000800, 0x00000080, 0x00000000, 0x00000000,
+        0x0000003C, 0x0000007C, 0x00000001, 0x000020B7,
+    ) + (0,) * 27
+    if record.key_words != expected_key:
+        raise falsify("runtime-qualified Whispy key no longer matches its capture")
+    if record.output_sha256 != (
+        "f66ad1991b31c42e215f2f0c1cf90c6873d53082732603572e07d632286d2aaa"
+    ):
+        raise falsify("runtime-qualified Whispy output changed")
+    if (
+        record.image != census.PointerRef(152, 0x0C20)
+        or record.tlut_image != census.PointerRef(152, 0x0998)
+        or record.logical_width != 16
+        or record.logical_height != 32
+        or record.upload_width != 16
+        or record.upload_height != 32
+        or len(record.pixels) != 1024
+    ):
+        raise falsify(
+            "runtime-qualified Whispy record geometry or provenance changed"
+        )
+    return record
+
+
+def build_runtime_qualified_fox_record(
+    repo_root: Path, blocks: Sequence[dict[str, object]]
+) -> PreparedRecord:
+    """Build the exact late Fox key captured in the canonical lifecycle.
+
+    The complete 59-word key was captured at profile frame 1111 in native
+    fighter run 43. Pointer provenance resolved it to FoxModel asset 313.
+    Reconstructing the record through the same conversion/oracle functions
+    binds the capture to the pinned source block and palette rather than to a
+    runtime address or copied pixels.
+    """
+    fox = census.load_o2r(repo_root, census.O2R_INPUTS["fox_model"])
+    state = DisplayState(
+        tlut_image=census.PointerRef(fox.file_id, 0x72D8),
+        tlut_count=16,
+        texture_seen=True,
+        texture_on=True,
+        texture_tile=0,
+    )
+    state.tiles[0] = TileState(
+        set_seen=True,
+        size_seen=True,
+        format=FMT_CI,
+        size=SIZ_4B,
+        line=2,
+        tmem=0,
+        palette=0,
+        cmt=2,
+        maskt=5,
+        shiftt=0,
+        cms=3,
+        masks=5,
+        shifts=0,
+        uls=0x07C,
+        ult=0x133,
+        lrs=0x178,
+        lrt=0x1AF,
+        width=64,
+        height=32,
+    )
+    state.tiles[LOAD_TILE] = TileState(set_seen=True)
+    state.loads = [
+        LoadState(
+            image=census.PointerRef(fox.file_id, 0x70D0),
+            image_format=FMT_CI,
+            image_size=SIZ_16B,
+            image_width=1,
+            load_kind=LOAD_KIND_BLOCK,
+            load_tile=LOAD_TILE,
+            load_uls=0,
+            load_ult=0,
+            load_lrs=0x0FF,
+            load_dxt=0x400,
+            load_texels=0x100,
+            load_tmem=0,
+        )
+    ]
+    record = capture_record(
+        FOX_LATE_MATERIAL_OWNER_MASK, 43, state, fox, blocks
+    )
+    expected_key = (
+        0x000070D0, 0x00000002, 0x00000002, 0x00000001,
+        0x000072D8, 0x00000010, 0x00000001, 0x00000002,
+        0x00000000, 0x00000040, 0x00000020, 0x00000000,
+        0x00000000, 0x00000000, 0x00000003, 0x00000002,
+        0x00000005, 0x00000005, 0x00000000, 0x00000000,
+        0x00000007, 0x00000000, 0x00000000, 0x000000FF,
+        0x00000400, 0x00000100, 0x0000007C, 0x00000133,
+        0x00000178, 0x000001AF, 0x00000002, 0x000020BF,
+    ) + (0,) * 27
+    if record.key_words != expected_key:
+        raise falsify("runtime-qualified Fox key no longer matches its capture")
+    if record.output_sha256 != (
+        "332934f7f039f915965adf856a01e34297f02d48127a9e21207c05163a5f1598"
+    ):
+        raise falsify("runtime-qualified Fox output changed")
+    if (
+        record.image != census.PointerRef(313, 0x70D0)
+        or record.tlut_image != census.PointerRef(313, 0x72D8)
+        or record.logical_width != 64
+        or record.logical_height != 32
+        or record.upload_width != 64
+        or record.upload_height != 32
+        or len(record.pixels) != 4096
+    ):
+        raise falsify("runtime-qualified Fox record geometry or provenance changed")
+    return record
+
+
 def walk_display_list(
     resource: census.O2RResource,
     images: census.O2RResource,
@@ -1130,6 +1318,16 @@ def generate(repo_root: Path) -> GeneratedArtifacts:
             f"static owner mask 0x{owner_union:x} != 0x{expected_owner_union:x}"
         )
     records.extend(build_water_records(repo_root))
+    dynamic = manifest["dynamic_animated_owners"]
+    if not isinstance(dynamic, dict):
+        raise falsify("source census lost dynamic_animated_owners")
+    dynamic_blocks = dynamic["source_blocks"]
+    if not isinstance(dynamic_blocks, list):
+        raise falsify("source census lost dynamic source blocks")
+    records.append(
+        build_runtime_qualified_whispy_record(repo_root, dynamic_blocks)
+    )
+    records.append(build_runtime_qualified_fox_record(repo_root, dynamic_blocks))
     records.sort(
         key=lambda record: (
             record.image.asset_id,
@@ -1171,7 +1369,7 @@ def summary_lines(artifacts: GeneratedArtifacts) -> Iterable[str]:
     )
     yield (
         "BATTLE_PLAYABLE_STATIC_TEXTURE_OWNERS "
-        + " ".join(f"{name}={owners[name]}" for name, *_rest in OWNER_SPECS)
+        + " ".join(f"{name}={owners[name]}" for name, _mask in OWNER_LABELS)
     )
     yield (
         "BATTLE_PLAYABLE_STATIC_TEXTURE_DIGEST "

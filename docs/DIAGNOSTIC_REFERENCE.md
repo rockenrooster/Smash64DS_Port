@@ -713,6 +713,27 @@ Opening movie / Opening Portraits:
   of 2048 polygons and 6144 vertices. The verifier first breaks at
   `ndsBattlePlayableFrameCompleteMarker`; reading during the frame-start reset
   can otherwise produce a false zero-sample oracle result.
+- `M3_GEN0`: Task 26 production generated-segment marker. Its ten fields are
+  frame, selector, attempts, successes, pre-GX fallbacks, run count, triangle
+  count, epoch count, material-event count, and certificate validations. The
+  retained segment-0 program requires selector 1, one successful attempt, zero
+  fallback, `26/54/22/0`, and one certificate validation.
+- `M3_GEN0_SHADOW`: Task 26 current/generated control-comparison marker. Its 15
+  fields are frame, attempts, runs, dense vertices, state entries,
+  synchronization entries, epochs, triangles, compared fields, mismatches,
+  generation-fault injected/rejected, and live-fault
+  injected/rejected/revalidated. The normal shadow requires zero mismatch; the
+  falsifier requires the final live-fault triplet `1/1/1` before any GX word.
+- `M3_GEN0_GX`: Task 26 semantic/GX sink marker. Its eight fields are frame,
+  complete-owner sink word count and two hashes, segment-0 word count and two
+  hashes, and ARM faults. Current and generated arms must have the same word
+  count and both hashes, with zero ARM faults.
+- `M3_GEN0_TRACE_SUMMARY`, `M3_GEN0_TRACE_WORD`, and `M3_GEN0_TRACE_RUN`: exact
+  Task 26 CPU-preparation trace. The summary binds frame and total word count;
+  each word row exports its index/value; each of 26 run rows exports run index,
+  cumulative word count, two hashes, raw texture name, texture epoch/image/TLUT,
+  two normalized key hashes, descriptor, and parameters. Normalize generated
+  asset addresses before comparison; every word and run checkpoint must match.
 - `RENDER_BATCH`: canonical HW adjacent-triangle marker. Fields are logical GX
   batch begins, reused triangle submissions, and batch ends. Canonical requires
   begin plus reuse to equal submitted hardware triangles, positive reuse, fewer

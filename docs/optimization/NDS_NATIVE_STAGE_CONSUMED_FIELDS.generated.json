@@ -194,6 +194,46 @@
     {
       "classification": "immutable_generation",
       "fields": [
+        "run_index",
+        "binding_composed_index"
+      ],
+      "record": "NDSNativeStageGeneratedRun"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
+        "source_checksum",
+        "table_checksum",
+        "hot_checksum",
+        "prepared_dense_checksum",
+        "first_state",
+        "state_count",
+        "sync_count",
+        "segment_index",
+        "first_dobj",
+        "dobj_count",
+        "owner",
+        "link",
+        "submit_class",
+        "first_binding",
+        "binding_count",
+        "first_run",
+        "run_count",
+        "first_texture_epoch",
+        "triangle_count",
+        "texture_epoch_count",
+        "live_operand_mask",
+        "asset_base_mask",
+        "material_count",
+        "final_tail_span",
+        "prepared_dense_count",
+        "prepared_dense_offset_count"
+      ],
+      "record": "NDSNativeStageGeneratedCertificate"
+    },
+    {
+      "classification": "immutable_generation",
+      "fields": [
         "all_indices"
       ],
       "record": "sNdsNativeStageCorners"
@@ -934,6 +974,10 @@
         },
         {
           "access": "binding.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.asset_bases",
           "classification": "immutable_generation"
         },
         {
@@ -2844,6 +2888,502 @@
       "path": "src/port/reloc_backend_renderer_dl.c"
     }
   ],
+  "task26_generated_closures": [
+    {
+      "closure": "ndsRendererNativeStageValidateGeneratedSegment0",
+      "fields": [
+        {
+          "access": "certificate.asset_base_mask",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.binding_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.dobj_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.final_tail_span",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_binding",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_dobj",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_state",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.first_texture_epoch",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.hot_checksum",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.link",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.live_operand_mask",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.material_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.owner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.prepared_dense_checksum",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.prepared_dense_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.prepared_dense_offset_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.segment_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.source_checksum",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.submit_class",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.table_checksum",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.texture_epoch_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.triangle_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "generated.binding_composed_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "generated.run_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.binding_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.flags",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.submit_class",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.texture_epoch",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "run.triangle_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "sNdsNativeStageValidationCache.prepared_dense_indices",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "sNdsNativeStageValidationCache.prepared_dense_offsets",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.binding_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.dobj_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_binding",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_dobj",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.first_run",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.link",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.owner",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "segment.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "span.first_state",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "span.state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "span.sync_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tail.first_state",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tail.state_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "tail.sync_count",
+          "classification": "immutable_generation"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeStagePrepareGeneratedSegment0",
+      "fields": [
+        {
+          "access": "certificate.material_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.run_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.texture_epoch_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "certificate.triangle_count",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.asset_bases",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "sNdsNativeStageValidationCache.valid",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "stats.blend_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.color_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_clear_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_mode",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_set_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.sync_command_count",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeStageHashGeneratedSegment0Outputs",
+      "fields": [
+        {
+          "access": "prepared.alpha_ref",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.alpha_test",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.near_inside",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.packed_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.poly_fmt",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.s",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.t",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_entry",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_format",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_height",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_name",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_params",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_width",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.textured",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "sNdsNativeStageOwnerExecution.runs",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "sNdsNativeStageSegment0HotRuns.run_index",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "sNdsNativeStageValidationCache.prepared_dense_indices",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "state.texture_prepare_alpha_constant",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_decal_depth",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_enabled",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_material_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_name",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_offset",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_origin_s",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_origin_t",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_poly_alpha",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_poly_fmt",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_prim_depth",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_scale_s",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_scale_t",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_source_zbuffered",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_valid",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "state.texture_prepare_vertex_flags",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.blend_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.color_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.first_othermode_opcode",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.first_othermode_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.first_othermode_w1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_clear_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_mode",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.geometry_set_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.ignored_state_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.othermode_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.othermode_h",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.othermode_l",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.state_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.sync_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.texture_combine_w0",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.texture_combine_w1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.texture_command_count",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.texture_image",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.texture_mask",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.texture_source_hash1",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.texture_source_hash2",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "stats.texture_state_flags",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    }
+  ],
   "task26_live_operand_order": [
     {
       "classification": "immutable_generation",
@@ -2874,6 +3414,51 @@
     "consume": "immutable generated control fields plus the ordered live operand block above",
     "forbid": "a second topology cache, cached camera/near results, a generic runtime scanner, or post-GX fallback",
     "retain_current": "generation/stamp admission, all per-frame matrices and near-plane computation, exact material rebuild, callback restoration, and pre-GX fail-closed validation"
+  },
+  "task26_segment0_program": {
+    "admission": "execute only after the existing generation/stamp topology admission has populated sNdsNativeStageValidationCache",
+    "bindings": {
+      "count": 20,
+      "first": 0
+    },
+    "dobjs": {
+      "count": 21,
+      "first": 0
+    },
+    "final_tail_span": 73,
+    "final_tail_state_sync": [
+      4,
+      2
+    ],
+    "material_count": 0,
+    "prepared_dense_cache": {
+      "disposition": "reuse the Task-14 prepared_dense_offsets/indices; do not emit a second schedule",
+      "first_visit_count": 108,
+      "offset_count": 27,
+      "offset_indices": [
+        0,
+        26
+      ],
+      "order_checksum": "0xf1c6fadc",
+      "source": "sNdsNativeStageValidationCache",
+      "terminal": 108
+    },
+    "retained_live_seams": [
+      "ndsRendererHardwareResolveOrBindTexture and mutable texture residency",
+      "per-frame composed-matrix transforms and near-plane classification",
+      "one shared traversal/stats/epoch-mask transaction across all eight segments"
+    ],
+    "runs": {
+      "count": 26,
+      "first": 0
+    },
+    "segment": 0,
+    "texture_epochs": {
+      "count": 22,
+      "first": 0,
+      "mask": "0x00000000003fffff"
+    },
+    "triangle_count": 54
   },
   "transitive_inputs": [
     {

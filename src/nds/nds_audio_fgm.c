@@ -933,10 +933,33 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
     }
     if (sNdsAudioFgmChannelOwners[channel] != NULL)
     {
-        soundKill(channel);
-        gNdsAudioFgmGenerationMismatchCount++;
-        gNdsAudioFgmPlayFailCount++;
-        return NULL;
+        NDSAudioFgmHandle *completed_handle =
+            sNdsAudioFgmChannelOwners[channel];
+
+        /* soundPlaySample synchronizes with ARM7 and only selects an inactive
+         * hardware channel. Retire its completed software owner instead of
+         * killing the newly started sample when the source-duration clock
+         * trails the hardware one-shot completion. */
+        if ((completed_handle->allocated != FALSE) &&
+            (completed_handle->live != FALSE) &&
+            (completed_handle->channel == channel) &&
+            (sNdsAudioFgmChannelGenerations[channel] ==
+             completed_handle->generation))
+        {
+            ndsAudioFgmReleaseHandle(
+                completed_handle, FALSE
+                NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                    NDS_AUDIO_FGM_RELEASE_REASON_DURATION,
+                    cpuGetTiming()));
+            gNdsAudioFgmDurationStopCount++;
+        }
+        else
+        {
+            soundKill(channel);
+            gNdsAudioFgmGenerationMismatchCount++;
+            gNdsAudioFgmPlayFailCount++;
+            return NULL;
+        }
     }
 
     memset(&handle->effect, 0, sizeof(handle->effect));
