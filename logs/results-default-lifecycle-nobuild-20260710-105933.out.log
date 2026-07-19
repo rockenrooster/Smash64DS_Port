@@ -1,2 +1,0 @@
-battle_playable Pupupu five-minute lifecycle passed: adapter=1 taskman=1 ticks=18000 sudden=0 scene=22->24 results=124/files8/fighters2/sobjs12
-battle_playable Pupupu original CPU proof passed: setup=1 process=36394 target=36394 objective=0x714 behavior=0x1d inputs=150 stick=14844 buttons=117/93/14223 attack=2908/303 guard=6366 recover=8486 status=833 damage=124 x=-1397000/-2239999..2247100/746662

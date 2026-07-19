@@ -1,8 +1,0 @@
-make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
-scene_backend.c
-linking smash64ds-battle-playable-cpu-proof.elf
-Nintendo DS rom tool 2.3.1 - Jan  8 2024
-by Rafael Vuijk, Dave Murphy, Alexei Karpenko
-built ... smash64ds-battle-playable-cpu-proof.nds
-make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
-battle_playable Pupupu stock KO original CPU proof passed: setup=1 process=7008 target=7008 objective=0x504 behavior=0x15 inputs=91 stick=1946 buttons=72/45/2811 attack=1203/142 guard=1403 recover=0 status=201 damage=108 x=-1397000/-2238099..2247100/1101100

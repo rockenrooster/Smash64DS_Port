@@ -1,6 +1,0 @@
-battleship_ftcomputer.c
-battleship_fox_special_hi.c
-scene_backend.c
-battleship_ftmain.c
-scene_harness.c
-linking smash64ds-ftcomputer-probe.elf

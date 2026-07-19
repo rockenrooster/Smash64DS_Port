@@ -1,8 +1,0 @@
-make: Entering directory '/d/Stuff/DevFolder/Smash64DS_Port'
-nds_audio_assets.c
-linking smash64ds-battle-playable-fast-hwtri.elf
-Nintendo DS rom tool 2.3.1 - Jan  8 2024
-by Rafael Vuijk, Dave Murphy, Alexei Karpenko
-built ... smash64ds-battle-playable-fast-hwtri.nds
-make: Leaving directory '/d/Stuff/DevFolder/Smash64DS_Port'
-battle_playable Pupupu ftmanager natural-combat harness passed: wait=1419/1316 walk=8/8 dash=7/16 run=8/9 attack=11 hitbox=4 dmg=0->0 status=40 knock=6954502 guard=2/10/6 retries=0 updates=2529 mask=0x6ffff projectile=actor0/kind0 b=1 status=8 accessory=8 flag0=0 spawn=1 ok=1 destroy=0/0/1 weaponFrames=0 max=1 kindMask=0x1 attackMask=0x4 dmg=7 life=140 map=0x0 reflector=0xff fox1 proj0 shine=35/14/35 reflect=49 lr=-1 clear=1802 proc=1 vx=49809->-49809 owner=1 attrs=ref1/abs1/shield1/count1/dmg7/size100000 delta=0/0 special=350000/50 bplay=stock8->6 falls0->2 dead=23 rebirth=37/20/138 recover=33/8 pace=fast logic3200 draw0 mem=head237948 reloc681632 stage202816 fighter175440 if208672 stale0/0 evict0/0 moveset=0x7ff phase=15 tilt=20/13/13 smash=17 aerial=17 landing=98 grab=18/1 throw=12/5/618 throwDmg=13->25 specials=0xfff phase=7 mhi=1/22/8/71/328 y=1542000 mlw=1/0/48 dust=1 wait=601 foxhi=1/3/17/8/5/0/61 y=1542000 audio=seq47 bank1=1/42/117@32000 bank2=1/1/322@44100 fgm=100/464/695 raw=4422960 resident=0 scratch=16 bgm=track0 play=1 stop=1 refills=35 read=1212416 rate=44099 loop=0 hwloop=0 resident=65536 hud=dmg25/digits0x2050a stock9->7 hwflush=1/1 hwsubmit=42 hwtri=192 hwdepth=z0/proj192/decal0 hwtex=bind32/upload27/ready187/reject0/fmt4/max64x64 hwftr=2/626 oracle=2388/0/0

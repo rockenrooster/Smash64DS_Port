@@ -1,8 +1,0 @@
-GBI decode fixtures passed: F3DEX2 VTX/TRI/MTX/POPMTX packing, F3DEX MVP-recalc matrix move-word packing, transformed and hardware raw/material triangle readiness, N64 matrix to DS 20.12 modelview-projection/modelview-stack vertex transform, and source snippets verified.
-Harness registry check passed: 161 harness mappings, 166 verifier scripts, 0 drift.
-Running verifier: runtime [verify-runtime.ps1]
-Runtime verification passed (401 frames, fps=60/up=0/dl=60, cv=0/ch=32, verifyfps=2.93).
-Running verifier: title [verify-title-harness.ps1]
-Skipping make because SMASH64DS_VERIFY_NO_BUILD=1.
-Title harness passed: scene=1/46 room=0 title=0x54494457
-Running verifier: battle_playable_realtime [verify-battle-playable-realtime-harness.ps1]

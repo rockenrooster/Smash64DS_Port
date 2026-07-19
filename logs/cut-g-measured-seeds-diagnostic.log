@@ -1,2 +1,0 @@
-Renderer ITCM placement passed: elf=smash64ds-battle-playable-coarse-mipcache-hwtri.elf itcm=17944/32768 renderer=15480 symbols=[ndsRendererHardwareLitShadeColorPrepared=460, ndsRendererHardwareConvertTexel01Ci4Direct.isra.0=2600, ndsRendererHardwareSubmitVertex=2236, ndsRendererSubmitHardwareTriangle=2600, ndsRendererScanList=7584]
-Cut G measured seeds diagnostic realtime HW textured perf below 60fps target: fps=118/118 x0.1; renderer-cache follow-up still required.

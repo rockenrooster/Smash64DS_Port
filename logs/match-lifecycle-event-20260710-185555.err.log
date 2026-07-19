@@ -1,8 +1,0 @@
-[31;1mException: [0mD:\Stuff\DevFolder\Smash64DS_Port\scripts\lib\gdb-markers.ps1:66[0m
-[31;1m[0m[36;1mLine |[0m
-[31;1m[0m[36;1m[36;1m  66 | [0m         [36;1mthrow "GDB marker capture failed with exit $($gdbProcess.Exit[0m .[0m
-[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
-[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mGDB marker capture failed with exit 1. Ignoring packet error, continuing... Ignoring packet error, continuing... Ignoring[0m
-[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mpacket error, continuing...  warning: unrecognized item "timeout" in "qSupported" response[0m
-[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mD:\Stuff\DevFolder\Smash64DS_Port\artifacts\verifier-temp\default\_battle_playable_lifecycle_poll.gdb:4: Error in sourced[0m
-[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mcommand file: Remote replied unexpectedly to 'vMustReplyEmpty': timeout[0m
