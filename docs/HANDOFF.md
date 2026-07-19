@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 12:41 Central
+Updated: 2026-07-19 (BG-0 disengaged, redesign relayed to codex)
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -27,28 +27,70 @@ correctness evidence, never its speed referee.
 ## Next Packet
 
 `docs/optimization/tasks.md` remains authoritative. Preserve the user's
-uncommitted `AGENTS.md` and 344-line
-`docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md` changes; neither
+uncommitted `docs/playtesting/PLAYTESTING_Review.md`,
+`docs/optimization/ClaudeFable5_Publish_Tasks_20260718_2200.md`, and
+`docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md` changes; none
 belongs to this checkpoint.
 
-BG-0 is retained in the published target. The canonical battle ROM is
-`BC236C610581A6361DE84677ED05878B05FF01A259F00736BE5D2D155171DE7D`
-(14,692,352 bytes) and proves fast wallpaper `1` with scene-mip lab `0`.
-Profile-1 moving-camera wallpaper P50/P95 falls 340,672/363,072 ->
-2,016/2,048 ticks; draw falls 1,057,184/1,079,808 -> 715,744/715,904.
-Countdown saves 284,160 wallpaper P50 ticks. One seed succeeds, source state
-restores exactly, and post-ready software draws/pixel writes remain 0/0.
-The one-minute lifecycle passes behavior, reserve, teardown, audio, and texture
-fences but remains stable-30 red at 19.6 presentations/s and 2,137 slips.
+**BG-0 is now DISABLED in the published target.** Commits `e50ca43` (HUD
+rolling-average + WLP engagement row) and `0c1963f` (Makefile affine-off +
+AGENTS.md engagement rule) landed on `master`. The Makefile forces
+`NDS_FAST_WALLPAPER_AFFINE := 0` in both the published
+`smash64ds-battle-playable-hwtri` block and the freeze-diagnostic block with a
+retained comment stating the re-enable gate. The previously-cited canonical
+battle ROM `BC236C6...` was affine-on and is no longer the published contract;
+rebuild `smash64ds-battle-playable-hwtri` for the new affine-off identity before
+any verifier run. The observer ROM
+`builds/build-hwtri-hudavg-noaffine/smash64ds-battle-playable-hwtri-hudavg-noaffine.nds`
+matches the new release config.
 
-The next BG-0 action is retail A/B and a visual sweep only. Use
-`builds/task-bg0-hardware-pair/smash64ds-bg0-control-profile1.nds`
-(`849D5CD9...`) and `smash64ds-bg0-affine-profile1.nds` (`A9F6C661...`) in
-the same moving-camera phase. Check countdown, ordinary combat, widest view,
-Whispy, KO/rebirth, pause orbit when available, Time Up, and Results for holes,
-seams, jumps, shimmer, or layer errors. For planning, project local melonDS
-throughput at `0.75x`; retail remains the final speed referee. Do not reopen
-exact wallpaper sampling or the retired scene-mip renderer.
+**Why:** GDB proved the affine retention degrades the adaptive taskman arena
+(`src/port/diagnostics.c:7306`) to its 1 MiB fallback; the Fox fighter file then
+overflows the grant by 56,624 bytes into the original game's OOM handler
+`while(TRUE);` at `decomp/BattleShip-main/decomp/src/sys/malloc.c:30`, producing
+a silent boot hang before the stage. Static footprint delta is only ~4.8 KB; the
+cost is runtime heap. melonDS hid this because it booted there.
+
+**Next packet is the BG-0 memory redesign (codex), gated:**
+
+- **Gate 0 (blocking): confirm the actual ~190 KB mechanism.** Source trace shows
+  the affine seed writes directly to BG2 VRAM via `bgGetGfxPtr`
+  (`src/nds/nds_platform.c:1034, 1094`) with no `malloc`/`calloc`/`memalign` in
+  any `NDS_FAST_WALLPAPER_AFFINE` block; BG2/BG3 are `Bmp16 256x256` in VRAM
+  banks C+D (`nds_platform.c:313-318`), not heap. The GDB outcome (arena
+  degraded, +56,624 B overflow, OOM) and the source (no direct heap alloc) must
+  be reconciled via device/GDB. Add an arena-grant log at the success branch
+  (`diagnostics.c:7330`) and fallback branch (`:7351`) of `ndsTaskmanArenaBytes`
+  printing granted size + degraded flag. Candidate mechanisms to falsify, in
+  order: (1) VRAM bank C/D reservation reduces the libnds heap ceiling available
+  to the arena `calloc`; (2) `.bss`/`.text` shift from the affine code (delta is
+  only ~4.8 KB, so unlikely); (3) an affine init function
+  (`ndsFastWallpaperPrepareSeedSnapshot` at `reloc_backend_movement.c:13361`, or
+  a reloc/asset preload it triggers transitively) allocates heap before
+  `ndsTaskmanArenaBytes()` is first called; (4) order-of-init.
+- **Gate 1: pick the re-plumb strategy from the confirmed mechanism.** (1)
+  VRAM address-space → re-bank BG2 so banks C/D don't steal heap-visible space;
+  current VRAM-read-back seeding already works. (3)/(4) heap-before-arena →
+  allocate staging AFTER arena creation from measured post-arena slack with a
+  reserve check that refuses to engage if slack < staging + 128 KiB floor. (2)
+  static → static buffer only if link-time budget proves it fits. **Do NOT
+  attempt option (a) "free main-RAM staging like the old path": the current path
+  already writes to VRAM and has no main-RAM staging to free.**
+- **Gate 2: re-enable only after device engagement proof, all required:** profile-1
+  release-flag affine build boots to GO (the config that previously hung); arena
+  grant log shows `>= 0x130000` (no fallback); melonDS WLP HUD row 20 shows
+  applies climbing and post-ready pixel writes ~0; Tyler device photo of the same
+  window confirms both; PERF_LEDGER row records the device verdict and authorizes
+  flipping `NDS_FAST_WALLPAPER_AFFINE := 1` (removing the Makefile comment-gate).
+- **Gate 3: doc updates.** `P1_EXECUTION_BOARD.md` gets the dated BG-0
+  re-engagement row with the gate-0 finding and gate-2 verdict. `PERF_LEDGER.md`
+  gets an append-only row with the device verdict and any rejected re-plumb
+  attempts. Touch `ARCHITECTURE.md` only if Gate 0 confirms a durable fact change.
+
+The WLP HUD row 20 (`src/nds/nds_platform.c`, `#if NDS_FAST_WALLPAPER_AFFINE`,
+reading `gNdsFastWallpaperApplyCount` / `gNdsFastWallpaperPostReadyPixelWriteCount`)
+is the engagement instrument; it compiles out cleanly when affine is off. Do not
+reopen exact wallpaper sampling or the retired scene-mip renderer.
 
 Task 25R is complete as a report-only baseline at measured source HEAD
 `f088db98de272e9788405c2181029ad4a4c353ba`. Its detailed/profile-0 ROM pair is

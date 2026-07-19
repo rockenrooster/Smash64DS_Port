@@ -149,7 +149,46 @@ Profile-1 HUD ROM: `builds/task10-hardware-packet/smash64ds-task10-phase-hud-pro
 `PRE`/`PRP`/`CMT` rows are populated only by the existing detailed renderer
 phase profiler; the low-observer profile-1 ROM intentionally leaves them off.
 
-## BG-0 fast Dream Land wallpaper (2026-07-19)
+## BG-0 fast Dream Land wallpaper — DISENGAGED 2026-07-19
+
+**DISABLED in the published target; redesign relayed to codex.** Commits
+`e50ca43` (HUD rolling-average + WLP engagement row) and `0c1963f` (Makefile
+affine-off + AGENTS.md engagement rule) force `NDS_FAST_WALLPAPER_AFFINE := 0`
+in both the published `smash64ds-battle-playable-hwtri` block and the
+freeze-diagnostic block, with a retained comment stating the re-enable gate.
+
+**Blocker (GDB-proven outcome):** the affine retention degrades the adaptive
+taskman arena (`src/port/diagnostics.c:7306`) to its 1 MiB fallback; the Fox
+fighter file then overflows the grant by 56,624 bytes into the original game's
+OOM handler `while(TRUE);` at `decomp/BattleShip-main/decomp/src/sys/malloc.c:30`,
+producing a silent boot hang before the stage. melonDS hid this because it
+booted there. Static footprint delta is only ~4.8 KB; the cost is runtime heap.
+
+**Mechanism caveat (unresolved, Gate 0):** source trace shows the affine seed
+writes directly to BG2 VRAM via `bgGetGfxPtr` (`src/nds/nds_platform.c:1034,
+1094`) with no `malloc`/`calloc`/`memalign` in any `NDS_FAST_WALLPAPER_AFFINE`
+block; BG2/BG3 are `Bmp16 256x256` in VRAM banks C+D (`nds_platform.c:313-318`),
+not heap. The GDB outcome and the source must be reconciled via device/GDB
+before any re-plumb strategy is picked. Do NOT attempt "free main-RAM staging
+like the old path" — the current path already writes to VRAM and has no
+main-RAM staging to free. Full Gate 0/1/2/3 contract in `docs/HANDOFF.md`.
+
+**Re-enable gate (all required):** profile-1 release-flag affine build boots to
+GO (the config that previously hung); arena grant log shows `>= 0x130000`;
+melonDS WLP HUD row 20 shows applies climbing + post-ready pixel writes ~0;
+Tyler device photo confirms both; PERF_LEDGER row records the device verdict.
+The WLP engagement instrument is already in `src/nds/nds_platform.c` row 20
+under `#if NDS_FAST_WALLPAPER_AFFINE` and compiles out cleanly when off.
+
+The previously-cited canonical battle ROM `BC236C6...` (14,692,352 bytes) was
+affine-on and is no longer the published contract; rebuild
+`smash64ds-battle-playable-hwtri` for the new affine-off identity. The observer
+ROM `builds/build-hwtri-hudavg-noaffine/smash64ds-battle-playable-hwtri-hudavg-noaffine.nds`
+matches the new release config.
+
+---
+
+## BG-0 fast Dream Land wallpaper (2026-07-19) — HISTORICAL, superseded above
 
 **KEEP in production; retail pacing qualification pending.** The published
 VSBattle target now forces `NDS_FAST_WALLPAPER_AFFINE=1` while proving
@@ -157,6 +196,11 @@ VSBattle target now forces `NDS_FAST_WALLPAPER_AFFINE=1` while proving
 raster, fills any transparent holes with an opaque source-compatible sky, and
 then changes only affine registers. Stage, fighter, GX, texture, HUD, audio,
 gameplay, and BG3 foreground owners are untouched.
+
+> SUPERSEDED: the section above marked DISENGAGED 2026-07-19 records that this
+> KEEP was reversed after the GDB-proven arena OOM. Retain this historical
+> section only as measurement provenance for the melonDS tick savings below;
+> do not treat it as current production state.
 
 | Synchronized profile-1 window | Control wallpaper P50/P95/max | BG-0 wallpaper P50/P95/max | P50 saving | Draw P50/P95 control -> BG-0 |
 |---|---:|---:|---:|---:|
