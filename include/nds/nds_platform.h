@@ -25,6 +25,13 @@ enum NDSOriginalSpriteOverlayLayer {
         NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND
 };
 
+typedef enum NDSFastWallpaperState {
+    NDS_FAST_WALLPAPER_UNSEEDED = 0,
+    NDS_FAST_WALLPAPER_CAPTURING,
+    NDS_FAST_WALLPAPER_READY,
+    NDS_FAST_WALLPAPER_STATIC_DEGRADED
+} NDSFastWallpaperState;
+
 void ndsPlatformInit(void);
 u32 ndsPlatformReadInput(void);
 void ndsPlatformBeginFrame(void);
@@ -48,6 +55,18 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpritePreview(void);
 void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask);
 void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
+u32 ndsPlatformFastWallpaperCanSeed(void);
+u32 ndsPlatformFastWallpaperBeginSeed(s32 origin_x, s32 origin_y,
+                                       u32 scale_x_q16,
+                                       u32 scale_y_q16,
+                                       u32 asset_identity);
+u32 ndsPlatformFastWallpaperFinishSeed(u32 software_draw_succeeded);
+u32 ndsPlatformFastWallpaperQueueTransform(s32 origin_x, s32 origin_y,
+                                            u32 scale_x_q16,
+                                            u32 scale_y_q16,
+                                            u32 asset_identity);
+void ndsPlatformFastWallpaperRecordSoftwareDraw(void);
+void ndsPlatformFastWallpaperReset(void);
 u32 ndsPlatformSceneWallpaperQueueTransform(s32 origin_x, s32 origin_y,
                                              u32 scale_x_q16,
                                              u32 scale_y_q16);
@@ -105,6 +124,26 @@ extern volatile u32 gNdsHardwareRendererPolyRamCount;
 extern volatile u32 gNdsHardwareRendererVertexRamCount;
 extern volatile u32 gNdsHardwareRendererStatus;
 extern volatile u32 gNdsHardwareRendererControl;
+extern volatile u32 gNdsFastWallpaperState;
+extern volatile u32 gNdsFastWallpaperSeedAttemptCount;
+extern volatile u32 gNdsFastWallpaperSeedSuccessCount;
+extern volatile u32 gNdsFastWallpaperSeedFailureCount;
+extern volatile u32 gNdsFastWallpaperStaticDegradedCount;
+extern volatile u32 gNdsFastWallpaperSeedTicks;
+extern volatile u32 gNdsFastWallpaperQueueCount;
+extern volatile u32 gNdsFastWallpaperApplyCount;
+extern volatile u32 gNdsFastWallpaperUnchangedSkipCount;
+extern volatile u32 gNdsFastWallpaperClampXCount;
+extern volatile u32 gNdsFastWallpaperClampYCount;
+extern volatile u32 gNdsFastWallpaperClampScaleCount;
+extern volatile u32 gNdsFastWallpaperInvalidTransformCount;
+extern volatile u32 gNdsFastWallpaperReusePreviousCount;
+extern volatile u32 gNdsFastWallpaperAffineLastTicks;
+extern volatile u32 gNdsFastWallpaperPostReadySoftwareDrawCount;
+extern volatile u32 gNdsFastWallpaperPostReadyPixelWriteCount;
+extern volatile u32 gNdsFastWallpaperSeedHash;
+extern volatile u32 gNdsFastWallpaperSeedOpaquePixelCount;
+extern volatile u32 gNdsFastWallpaperSeedRestoreMismatchCount;
 void ndsPlatformRenderDebugHud(void);
 void ndsPlatformClearBattleTextHud(void);
 u32 ndsPlatformVBlankCount(void);

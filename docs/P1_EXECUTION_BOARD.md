@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-19 10:32 Central
+Updated: 2026-07-19 12:41 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -16,8 +16,8 @@ Integrated user-facing candidate:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,688,256 bytes
-SHA-256 C344CA8B89903A35678A6DC4A849F217B690CBCE16841FAC47974626899EB9DF
+14,692,352 bytes
+SHA-256 BC236C610581A6361DE84677ED05878B05FF01A259F00736BE5D2D155171DE7D
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -62,10 +62,12 @@ checklist: `docs/publish/PUBLISH_LOG.md`.
 
 ## Hardware reality (2026-07-18)
 
-A manual retail-DS observation currently puts real-hardware throughput near
-`0.75x` the local melonDS run, but that is a starting observation rather than
-an admitted uniform multiplier. Task 10 separates CPU/ITCM, CPU/main-RAM, and
-GX work so each owner can be projected from its matching on-device bench.
+A manual retail-DS observation puts project-level real-hardware throughput at
+`0.75x` the local melonDS run. Use that single factor as planning headroom for
+whole-game FPS/throughput estimates. Same-ROM retail A/B remains the promotion
+referee for a hardware-sensitive mechanism; Task 10's CPU/ITCM, CPU/main-RAM,
+and GX rows explain why individual owner tick deltas cannot be converted with
+the planning factor.
 
 The first same-workload retail baseline is now authoritative: the mode-163 ARM
 control photographed `UPD 374,464`, `DRW 1,743,296`, `ACT 1,745,984`,
@@ -120,15 +122,15 @@ Calibrated findings (2026-07-18):
    (TASK 8 CUT A style) is worth more on-device than melonDS credits, and
    GX FIFO DMA feeding is deprioritized (no hidden stall tax observed).
 
-No emulator-to-device formula or universal multiplier is admissible. The rows
-above describe only their exact microbench workloads; they may rank a matching
-diagnostic, but they cannot synthesize a whole-frame device result or promote a
-candidate. Emulator evidence remains authoritative for deterministic state,
-semantic/GX traces, arithmetic, and pixels. Retail A/B is authoritative for
-DTCM, ARM/Thumb, code/data/cache layout, generated-program footprint, direct
-VRAM stores, DMA, GX FIFO behavior, and final pacing. The former `840,000`
-melonDS planning figure is retired; stable 30 is decided by the device's actual
-two-VBlank interval distribution and zero-slip lifecycle.
+The planning rule is simply `retail throughput = 0.75 * local melonDS
+throughput`; do not apply it to individual tick owners or use it to promote a
+cache/layout-sensitive candidate. The rows above describe only their exact
+microbench workloads. Emulator evidence remains authoritative for deterministic
+state, semantic/GX traces, arithmetic, and pixels. Retail A/B is authoritative
+for DTCM, ARM/Thumb, code/data/cache layout, generated-program footprint,
+direct VRAM stores, DMA, GX FIFO behavior, and final pacing. Stable 30 is still
+decided by the device's actual two-VBlank interval distribution and zero-slip
+lifecycle.
 
 Hardware operator packet:
 
@@ -146,6 +148,45 @@ Profile-1 HUD ROM: `builds/task10-hardware-packet/smash64ds-task10-phase-hud-pro
 
 `PRE`/`PRP`/`CMT` rows are populated only by the existing detailed renderer
 phase profiler; the low-observer profile-1 ROM intentionally leaves them off.
+
+## BG-0 fast Dream Land wallpaper (2026-07-19)
+
+**KEEP in production; retail pacing qualification pending.** The published
+VSBattle target now forces `NDS_FAST_WALLPAPER_AFFINE=1` while proving
+`NDS_SCENE_MIP_CACHE_LAB=0`. BG2 receives one neutral-distance Dream Land seed
+raster, fills any transparent holes with an opaque source-compatible sky, and
+then changes only affine registers. Stage, fighter, GX, texture, HUD, audio,
+gameplay, and BG3 foreground owners are untouched.
+
+| Synchronized profile-1 window | Control wallpaper P50/P95/max | BG-0 wallpaper P50/P95/max | P50 saving | Draw P50/P95 control -> BG-0 |
+|---|---:|---:|---:|---:|
+| moving combat, frames 600-607 | 340,672 / 363,072 / 363,072 | 2,016 / 2,048 / 2,048 | 338,656 | 1,057,184 / 1,079,808 -> 715,744 / 715,904 |
+| countdown, frames 438-445 | 286,208 / 351,424 / 351,424 | 2,048 / 2,048 / 2,048 | 284,160 | 1,144,896 / 1,213,248 -> 857,504 / 860,736 |
+
+The one-time profile-1 seed costs about 4.18M ticks and is excluded from
+gameplay timing. The representative ready-state marker is
+`2,1,1,0,0,...,post=0/0,hash=5F10E8BB,opaque=42834,restore=0`: one attempt, one
+success, no degraded admission, no post-ready software draw or BG2 pixel write,
+42,834 source-opaque pixels before hole fill, and exact restoration of every
+temporarily changed source camera/wallpaper field. Whispy frames 1398-1405 keep
+the same ~2K wallpaper owner; screenshots cover countdown, early combat,
+Whispy, and Results with recognizable full-screen Dream Land and no visible
+holes or repeating seam.
+
+The strict profile-0 one-minute lifecycle passes 4,084 updates / 2,042
+presentations, exact two updates per presentation, KO/rebirth, Time Up, Results,
+one teardown, the audio/texture fences, and 166,672-byte reserve. It remains a
+stable-30 pacing failure: 19.6 presentations/s, 2,137 slip events, and
+1,950 intervals of three or more VBlanks. The shorter published smoke reports
+28.1 presentations/s and 56.0 updates/s in melonDS; the agreed `0.75x` planning
+rule projects about 21.1 presentations/s on retail, not a hardware claim.
+
+Retail packet:
+`builds/task-bg0-hardware-pair/smash64ds-bg0-control-profile1.nds`
+(`849D5CD9...`) and
+`builds/task-bg0-hardware-pair/smash64ds-bg0-affine-profile1.nds`
+(`A9F6C661...`). A single same-phase device pair plus the required visual sweep
+is the remaining BG-0 qualification; do not rerun the old exact-wallpaper labs.
 
 ## Tasks 20R-25R atomic reconciliation checkpoint
 

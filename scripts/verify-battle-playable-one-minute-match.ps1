@@ -38,5 +38,6 @@ Write-Output 'Starting mode-163 one-minute match (locked-30, exactly two source 
     -NativeStageGeneratedSegment0Enable 1 `
     -StaticTextureAotMode 1 `
     -IFCommonHybridOamMode 0 `
+    -FastWallpaperAffineMode 1 `
     -RequireZeroPostGoTextureFence
 exit $LASTEXITCODE

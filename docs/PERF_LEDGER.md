@@ -5857,3 +5857,83 @@ EVIDENCE:
   artifacts/performance/2026-07-19_task30-stable30-precondition.md
 KEEP / REWORK / REVERT: TASK 30 CLOSED AT PRECONDITION / STABLE-30 RED / PUBLISH P1 NEXT
 ```
+
+## 2026-07-19 - BG-0 retained hardware-affine Dream Land wallpaper
+
+```text
+IDEA ID: BG0-FAST-WALLPAPER-AFFINE-20260719
+SCOPE / IDENTITY:
+  Dream Land VSBattle wallpaper only. Stage/fighter/GX/texture/audio/gameplay,
+  BG3 foreground, and src/nds/nds_renderer.c are unchanged. Control and
+  candidate are profile 1, mode 163, live Fox, renderer mode 9, generated stage
+  segment 1, static texture mode 1, scene-mip lab 0, and identical synchronized
+  windows. Candidate alone sets NDS_FAST_WALLPAPER_AFFINE=1.
+
+MECHANISM:
+  At first eligible presentation, save camera/wallpaper source state, derive
+  the proven 14000.0 neutral wallpaper transform, restore source state exactly,
+  prefill BG2 with opaque Dream Land sky, and invoke the existing final
+  wallpaper compositor once. Retain that 256x256 B16 surface. Every later
+  wallpaper SObj computes a clamped 8.8 BG2 affine tuple with 64-bit
+  intermediates and quarter-pixel Q8 scroll quantization; VBlank commits only
+  changed register tuples. Invalid live state retains the prior tuple. A seed
+  failure admits STATIC_DEGRADED and never reopens recurring software work.
+
+SYNCHRONIZED MELONDS A/B:
+  Window                 wallpaper P50/P95/max A -> B       draw P50/P95 A -> B
+  early 600..607         340672/363072/363072 -> 2016/2048/2048
+                                                       1057184/1079808 -> 715744/715904
+  countdown 438..445     286208/351424/351424 -> 2048/2048/2048
+                                                       1144896/1213248 -> 857504/860736
+  Early wallpaper saves 338,656 P50 / 361,024 P95 ticks; countdown saves
+  284,160 P50. Candidate warning-rate sampling rises 21.4 -> 26.3 FPS in the
+  early window. Whispy frames 1398..1405 retain about 1,984-2,048 wallpaper
+  ticks. No hardware speed claim is made from these emulator rows.
+
+ONE-TIME SEED / HARD FAIL-CLOSED CONTRACT:
+  Representative profile-1 marker:
+    state 2; attempts/success/failure/degraded 1/1/0/0;
+    seed 4,184,640 ticks; affine last 1,600 ticks;
+    post-ready software draw/pixel writes 0/0;
+    seed hash 5F10E8BB; source-opaque 42,834; restore mismatch 0.
+  The 4.18M seed is pre-gameplay one-time work and excluded from ready-state
+  timing. The verifier requires exactly one successful seed, >=75% source
+  opacity, nonzero hash, no restore mismatch, and zero recurring draws/writes.
+
+VISUAL / LIFECYCLE:
+  Candidate captures are recognizable Dream Land with full opaque coverage,
+  stable movement, no repeating seam, and unchanged countdown/HUD/foreground/
+  stage/fighter layering. Pixel equality is intentionally not a BG-0 gate.
+  The strict profile-0 lifecycle passes 4,084 updates / 2,042 presentations,
+  exactly two source updates per presentation, KO/rebirth, Time Up, Results,
+  one teardown, exact KO FGM, zero post-GO texture-fence failures, and reserve
+  166,672. It remains stable30=False: 19.6 presentations/s, 39.2 updates/s,
+  2,137 slips, and VBlank histogram 2/3/4/5+ = 92/1780/153/17.
+  Final-source strict-wrapper ROM F6132D93DAE9CD80914550EC952D7D523B8C453BD2737D98F569E25C2C46E92F
+  repeats the complete lifecycle pass in 68 seconds on a clean runner slot.
+  Its first launch timed out only because slot 6 still owned an earlier BG-0
+  control process; exact executable/ROM inspection identified and stopped that
+  orphan before the clean no-build rerun. Do not classify that transport event
+  as a game hang, and verify a selected runner slot is idle before a long gate.
+
+PUBLISHED / HARDWARE:
+  smash64ds-battle-playable-hwtri.nds
+    14,692,352 bytes
+    BC236C610581A6361DE84677ED05878B05FF01A259F00736BE5D2D155171DE7D
+  Published melonDS smoke: 28.1 presentations/s, 56.0 updates/s. Use the
+  project planning rule of 0.75x throughput (about 21.1 presentations/s here),
+  while treating retail DS as the performance referee.
+  Hardware pair:
+    control 849D5CD93E6C8F5D5F3F78C812DC622620449714D6653D9A70B73D0ECF0E6E47
+    affine  A9F6C66169498AFC8B55B00994899A98E8A7D33A16148E7845D94587E2E54FC1
+
+EVIDENCE:
+  artifacts/performance/2026-07-19-bg0-{control,candidate}-early600-607.json
+  artifacts/performance/2026-07-19-bg0-{control,candidate}-countdown438-445.json
+  artifacts/performance/2026-07-19-bg0-profile0-lifecycle.json
+  artifacts/visibility/2026-07-19-bg0-{control,candidate}-early600.png
+  artifacts/visibility/2026-07-19-bg0-candidate-{countdown438,whispy1398}.png
+  artifacts/visibility/2026-07-19-bg0-profile0-results.png
+  builds/task-bg0-hardware-pair/README.md
+KEEP / REWORK / REVERT: KEEP BG-0 PRODUCTION / RETAIL A/B PENDING / STABLE-30 STILL RED
+```

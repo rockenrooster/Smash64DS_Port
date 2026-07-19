@@ -55,8 +55,8 @@ if ($taskman -match 'updates_owed|RealtimeUpdatesOwed|REALTIME_UPDATE_CAP|Pacing
 
 Assert-Text $wrapper '-CPUOpponentProof\s+`\s*\r?\n\s*-MatchLifecycleProof\s+`\s*\r?\n\s*-OneMinuteMatchProof' `
     'One-minute wrapper does not select the existing CPU/lifecycle mode-163 path.'
-Assert-Text $wrapper '(?s)-OneMinuteMatchProof\s+`.*?-RendererFastRunMode 9\s+`.*?-NativeStageGeneratedSegment0Enable 1\s+`.*?-StaticTextureAotMode 1\s+`.*?-IFCommonHybridOamMode 0\s+`.*?-RequireZeroPostGoTextureFence' `
-    'One-minute wrapper does not select the published-equivalent M3/M4 renderer and strict post-GO fence.'
+Assert-Text $wrapper '(?s)-OneMinuteMatchProof\s+`.*?-RendererFastRunMode 9\s+`.*?-NativeStageGeneratedSegment0Enable 1\s+`.*?-StaticTextureAotMode 1\s+`.*?-IFCommonHybridOamMode 0\s+`.*?-FastWallpaperAffineMode 1\s+`.*?-RequireZeroPostGoTextureFence' `
+    'One-minute wrapper does not select the published-equivalent M3/M4/BG-0 renderer and strict post-GO fence.'
 Assert-Text $owner '(?s)if \(\$MatchLifecycleProof\) \{\s*\$CPUOpponentProof = \$true.*?\}\s*if \(\$CPUOpponentProof\) \{\s*\$FoxCpuMode = 1\s*\$foxCpuModeSelected = \$true\s*\}' `
     'CPU/lifecycle proof no longer forces the Fox CPU decision path on.'
 Assert-Text $owner '(?s)\$preBattleSelectorSelected =\s*\$staticTextureAotSelected -or \$foxCpuModeSelected.*?if \(\$preBattleSelectorSelected\) \{.*?''tbreak scVSBattleStartBattle''.*?if \(\$foxCpuModeSelected\) \{\s*\$preBattleSetupCommands \+=\s*\(''set variable gNdsBattlePlayableFoxCpuEnabled = \{0\}'' -f\s*\$FoxCpuMode\).*?\}.*?\$gdbCommands = @\(\s*\$gdbCommands\[0\.\.3\]\s*\$preBattleSetupCommands' `
@@ -81,8 +81,10 @@ Assert-Text $battle '\$build = ''build-battle-playable-one-minute-match-hwtri-ha
     'One-minute verifier build directory is not isolated.'
 Assert-Text $battle '(?s)if \(\$OneMinuteMatchProof -and.*?\$RendererFastRunMode -ne 9.*?\$StaticTextureAotMode -ne 1.*?\$IFCommonHybridOamMode -ne 0.*?-not \$RequireZeroPostGoTextureFence' `
     'One-minute verifier no longer rejects a non-published-equivalent M3/M4 configuration.'
-Assert-Text $battle "(?s)NDS_RENDERER_FAST_RUN_DEFAULT = '9'.*NDS_SCENE_MIP_CACHE_LAB = '0'.*NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT = '1'.*NDS_DEBUG_HUD = '0'" `
+Assert-Text $battle "(?s)NDS_RENDERER_FAST_RUN_DEFAULT = '9'.*NDS_SCENE_MIP_CACHE_LAB = '0'.*NDS_FAST_WALLPAPER_AFFINE = '1'.*NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT = '1'.*NDS_DEBUG_HUD = '0'" `
     'One-minute verifier no longer supplies the isolated target exact 9/0/1 release defaults.'
+Assert-Text $owner 'FAST_WALLPAPER=%u,%u,%u,%u,%u,0,0,0,0,0,0,0,0,0,0,%u,%u,%#x,%u,%u\\n' `
+    'Profile-0 BG-0 marker again reads detailed counters that deliberately link out.'
 Assert-Text $battle '-HardwareTriangles:\$hardwareTriangles' `
     'One-minute verifier no longer forwards hardware rendering from its hwtri target.'
 Assert-Text $battle '\$RendererProfileLevel = if \(\$OneMinuteMatchProof\) \{ 0 \} else \{ 2 \}' `

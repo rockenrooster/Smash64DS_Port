@@ -35,6 +35,7 @@ param(
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
     [switch]$Task29GXCensus,
     [switch]$Task22WallpaperRunLab,
+    [ValidateRange(0,1)][int]$FastWallpaperAffineMode = 0,
     [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
     [ValidateRange(0,1)][int]$RenderEconomyMode = 0,
     [ValidateRange(0,255)][int]$RenderEconomyOwnerMask = 0,
@@ -86,6 +87,11 @@ $usesIntrinsicNativeStageGeneratedSegment0 = $Target -in @(
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
+$usesIntrinsicFastWallpaper = $Target -in @(
+    'smash64ds-battle-playable-hwtri',
+    'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
+    'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
+)
 $effectiveTask16FloatCompareMode = if (
     $usesIntrinsicTask16FloatHelpers) { 1 } else { $Task16FloatCompareMode }
 $effectiveTask16FloatI2fMode = if (
@@ -115,6 +121,11 @@ $effectiveIFCommonHybridOamMode = if ($usesPublishedIntrinsicRendererDefaults) {
     0
 } else {
     $IFCommonHybridOamMode
+}
+$effectiveFastWallpaperAffineMode = if ($usesIntrinsicFastWallpaper) {
+    1
+} else {
+    $FastWallpaperAffineMode
 }
 $m4CandidateEvidence =
     ($effectiveStaticTextureAotMode -eq 1) -and
@@ -293,6 +304,7 @@ $benchmarkElfIdentity = $null
 $benchmarkMelonIdentity = $null
 $benchmarkMelonConfigSha256 = $null
 $usesRetainedWallpaper = $false
+$usesFastWallpaper = $effectiveFastWallpaperAffineMode -eq 1
 function Assert-Condition {
     param([bool]$Condition, [string]$Message, [string]$Context)
     if (-not $Condition) { throw "$Message`n$Context" }
@@ -507,7 +519,8 @@ function Get-BenchmarkMakeIdentity {
         'SCREEN_SPACE_CENSUS', 'RENDER_ECONOMY',
         'RENDER_ECONOMY_OWNER_MASK', 'RENDERER_BENCHMARK_MODE',
         'FAST_RUN_DEFAULT',
-        'SCENE_MIP_CACHE_LAB', 'BATTLE_STATIC_TEXTURE_DEFAULT',
+        'SCENE_MIP_CACHE_LAB', 'FAST_WALLPAPER_AFFINE',
+        'BATTLE_STATIC_TEXTURE_DEFAULT',
         'IFCOMMON_HYBRID_OAM', 'TASK9_FLOAT_CENSUS', 'TASK9_FLOAT_ITCM',
         'TASK9_FLOAT_PHASE2', 'TASK16_FLOAT_COMPARE', 'TASK16_FLOAT_I2F',
         'TASK16_FLOAT_ADDSUB', 'TASK9_STATE_HASH',
@@ -536,6 +549,7 @@ function Get-BenchmarkMakeIdentity {
         RendererBenchmarkMode = [int]$values.RENDERER_BENCHMARK_MODE
         FastRunDefault = [int]$values.FAST_RUN_DEFAULT
         SceneMipCacheLab = [int]$values.SCENE_MIP_CACHE_LAB
+        FastWallpaperAffine = [int]$values.FAST_WALLPAPER_AFFINE
         BattleStaticTextureDefault =
             [int]$values.BATTLE_STATIC_TEXTURE_DEFAULT
         IFCommonHybridOamMode = [int]$values.IFCOMMON_HYBRID_OAM
@@ -732,6 +746,7 @@ $makeArgs += "NDS_RENDERER_M3_PHASE0_PROFILE=$([int]$RendererM3Phase0Profile.IsP
 $makeArgs += "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE=$effectiveNativeStageGeneratedSegment0Enable"
 $makeArgs += "NDS_TASK29_GX_CENSUS=$([int]$Task29GXCensus.IsPresent)"
 $makeArgs += "NDS_TASK22_WALLPAPER_RUN_LAB=$([int]$Task22WallpaperRunLab.IsPresent)"
+$makeArgs += "NDS_FAST_WALLPAPER_AFFINE=$effectiveFastWallpaperAffineMode"
 $makeArgs += "NDS_RENDERER_SCREEN_SPACE_CENSUS=$RendererScreenSpaceCensusMode"
 $makeArgs += "NDS_RENDER_ECONOMY=$RenderEconomyMode"
 $makeArgs += "NDS_RENDER_ECONOMY_OWNER_MASK=$renderEconomyCompileOwnerMask"
@@ -807,6 +822,16 @@ if (-not $NoBuild) {
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {
     throw "$Label harness build did not produce the expected ROM and ELF."
 }
+$bg0BuildDirectory = Resolve-Smash64DSBuildPath -Root $root -Build $Build
+$bg0BuildConfig = Join-Path $bg0BuildDirectory 'nds_build_config.h'
+Assert-Condition (Test-Path -LiteralPath $bg0BuildConfig -PathType Leaf) `
+    'Built fast-wallpaper configuration is missing; refusing stale evidence.' `
+    $bg0BuildConfig
+$bg0BuildConfigText = Get-Content -LiteralPath $bg0BuildConfig -Raw
+Assert-Condition ($bg0BuildConfigText -match
+    "(?m)^#define NDS_FAST_WALLPAPER_AFFINE $effectiveFastWallpaperAffineMode$") `
+    'Built fast-wallpaper configuration does not match the requested selector.' `
+    $bg0BuildConfigText
 if ($nativeStageGeneratedSegment0Selected) {
     $task26BuildDirectory = Resolve-Smash64DSBuildPath `
         -Root $root -Build $Build
@@ -900,6 +925,8 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
             [int]$Task29GXCensus.IsPresent -and
         $benchmarkMakeIdentity.Task22WallpaperRunLab -eq
             [int]$Task22WallpaperRunLab.IsPresent -and
+        $benchmarkMakeIdentity.FastWallpaperAffine -eq
+            $effectiveFastWallpaperAffineMode -and
         $benchmarkMakeIdentity.ScreenSpaceCensusMode -eq
             $RendererScreenSpaceCensusMode -and
         $benchmarkMakeIdentity.RenderEconomyMode -eq
@@ -929,6 +956,7 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
             $benchmarkMakeIdentity.FastRunDefault -eq 9 -and
             $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1 -and
             $benchmarkMakeIdentity.SceneMipCacheLab -eq 0 -and
+            $benchmarkMakeIdentity.FastWallpaperAffine -eq 1 -and
             $benchmarkMakeIdentity.BattleStaticTextureDefault -eq 1
         ) 'Published battle renderer build identity is not the intrinsic M3/M4 9/0/1 configuration.' `
             ($benchmarkMakeIdentity | Format-List | Out-String)
@@ -1711,6 +1739,16 @@ try {
         if ($BattlePlayable -and $RealtimePresentation) {
             $hardwareCommands += 'printf "SOBJ_WALL_CACHE=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperCacheBuildCount, gNdsSObjWallpaperCacheHitCount, gNdsSObjWallpaperCacheFastDrawCount, gNdsSObjWallpaperCacheFallbackCount, gNdsSObjWallpaperCacheWidth, gNdsSObjWallpaperCacheHeight, gNdsSObjWallpaperCacheOpaquePixels, gNdsSObjWallpaperCacheBuildTicks, gNdsSObjWallpaperCacheDrawTicks'
             $hardwareCommands += 'printf "SOBJ_WALL_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSObjWallpaperFinalDirectCount, gNdsSObjWallpaperFinalSkipCount, gNdsSObjWallpaperFinalKeyChangeCount, gNdsSObjWallpaperFinalPixelWriteCount, gNdsSObjBackgroundStagingClearBytes, gNdsSObjForegroundStagingClearBytes, gNdsOriginalSpriteBg2ClearBytes, gNdsOriginalSpriteBg2CopyBytes, gNdsOriginalSpriteBg2FinalWriteBytes, gNdsOriginalSpriteBg3ClearBytes, gNdsOriginalSpriteBg3CopyBytes, gNdsOriginalSpriteBg3FinalWriteBytes'
+            if ($usesFastWallpaper) {
+                if ($RendererProfileLevel -ge 1) {
+                    $hardwareCommands += 'printf "FAST_WALLPAPER=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u\n", gNdsFastWallpaperState, gNdsFastWallpaperSeedAttemptCount, gNdsFastWallpaperSeedSuccessCount, gNdsFastWallpaperSeedFailureCount, gNdsFastWallpaperStaticDegradedCount, gNdsFastWallpaperSeedTicks, gNdsFastWallpaperQueueCount, gNdsFastWallpaperApplyCount, gNdsFastWallpaperUnchangedSkipCount, gNdsFastWallpaperClampXCount, gNdsFastWallpaperClampYCount, gNdsFastWallpaperClampScaleCount, gNdsFastWallpaperInvalidTransformCount, gNdsFastWallpaperReusePreviousCount, gNdsFastWallpaperAffineLastTicks, gNdsFastWallpaperPostReadySoftwareDrawCount, gNdsFastWallpaperPostReadyPixelWriteCount, gNdsFastWallpaperSeedHash, gNdsFastWallpaperSeedOpaquePixelCount, gNdsFastWallpaperSeedRestoreMismatchCount'
+                } else {
+                    # Detailed BG-0 timing/churn counters deliberately link out
+                    # of profile 0. Preserve the marker schema without asking
+                    # GDB to read discarded symbols.
+                    $hardwareCommands += 'printf "FAST_WALLPAPER=%u,%u,%u,%u,%u,0,0,0,0,0,0,0,0,0,0,%u,%u,%#x,%u,%u\n", gNdsFastWallpaperState, gNdsFastWallpaperSeedAttemptCount, gNdsFastWallpaperSeedSuccessCount, gNdsFastWallpaperSeedFailureCount, gNdsFastWallpaperStaticDegradedCount, gNdsFastWallpaperPostReadySoftwareDrawCount, gNdsFastWallpaperPostReadyPixelWriteCount, gNdsFastWallpaperSeedHash, gNdsFastWallpaperSeedOpaquePixelCount, gNdsFastWallpaperSeedRestoreMismatchCount'
+                }
+            }
             # Profile 0 intentionally links out post-VBlank timing state. Keep
             # the marker's stable 31-field schema without forcing a diagnostic
             # symbol into the user-facing ROM solely for GDB sampling.
@@ -2128,6 +2166,7 @@ try {
     $wallpaperCache = [regex]::Match($gdbStdout, 'SOBJ_WALL_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperFinal = [regex]::Match($gdbStdout, 'SOBJ_WALL_FINAL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperOracle = [regex]::Match($gdbStdout, 'SOBJ_WALL_ORACLE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $fastWallpaper = [regex]::Match($gdbStdout, 'FAST_WALLPAPER=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+)')
     $ifCommonOamFieldPattern = ((0..30 | ForEach-Object {
         if ($_ -eq 24) { '(0x[0-9a-fA-F]+|0)' }
         else { '([0-9]+)' }
@@ -2783,6 +2822,9 @@ try {
                 $wc = Get-Ints $wallpaperCache
                 $wf = Get-Ints $wallpaperFinal
                 $wo = Get-Ints $wallpaperOracle
+                if ($usesFastWallpaper) {
+                    $fw = Get-Ints $fastWallpaper
+                }
                 if ($usesRetainedWallpaper) {
                     $ioam = Get-Ints $ifCommonOam
                     # Native OBJ bytes exclude the two source-alpha contour atlases, which live in texture VRAM.
@@ -4251,6 +4293,8 @@ try {
                             $benchmarkMakeIdentity.FastRunDefault
                         sceneMipCacheLab =
                             $benchmarkMakeIdentity.SceneMipCacheLab
+                        fastWallpaperAffine =
+                            $benchmarkMakeIdentity.FastWallpaperAffine
                         battleStaticTextureDefault =
                             $benchmarkMakeIdentity.BattleStaticTextureDefault
                         staticTextureAotMode = $StaticTextureAotMode
@@ -4349,6 +4393,14 @@ try {
                                 [bool]$RequireZeroPostGoTextureFence
                             foxCpuMode = $FoxCpuMode
                             wallpaperIncrementalMode = $WallpaperIncrementalMode
+                            fastWallpaperAffineMode =
+                                $effectiveFastWallpaperAffineMode
+                            fastWallpaper = @(
+                                if ($usesFastWallpaper -and
+                                    $fastWallpaper.Success) {
+                                    Get-Ints $fastWallpaper
+                                }
+                            )
                             task20StackProfileMode =
                                 [bool]($Task20StackProfileMode -eq 1)
                             task20Stack = $task20StackEvidence
@@ -4548,6 +4600,29 @@ try {
                 }
                 Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Canonical realtime HW build did not flush submitted DS 3D frames.' $gdbStdout
                 Assert-Condition ($hw[2] -gt 0 -and $hw[3] -gt 0) 'Canonical realtime HW build submitted CPU-side triangles but DS GX polygon/vertex RAM stayed empty.' $gdbStdout
+                if ($usesFastWallpaper) {
+                    $expectedFastWallpaperTerminalState = if (
+                        $MatchLifecycleProof) {
+                        0
+                    } else {
+                        2
+                    }
+                    Assert-Condition (
+                        $fastWallpaper.Success -and
+                        $fw[0] -eq $expectedFastWallpaperTerminalState -and
+                        $fw[1] -eq 1 -and
+                        $fw[2] -eq 1 -and $fw[3] -eq 0 -and
+                        $fw[4] -eq 0 -and $fw[15] -eq 0 -and
+                        $fw[16] -eq 0 -and $fw[17] -ne 0 -and
+                        $fw[18] -ge 36864 -and $fw[19] -eq 0
+                    ) 'BG-0 did not retain one valid opaque seed or re-entered software/pixel writes after READY.' $gdbStdout
+                    if ($RendererProfileLevel -ge 1) {
+                        Assert-Condition (
+                            $fw[5] -gt 0 -and $fw[6] -gt 0 -and
+                            $fw[7] -gt 0 -and $fw[14] -gt 0
+                        ) 'BG-0 profile build did not publish seed/queue/apply timing evidence.' $gdbStdout
+                    }
+                }
                 $stageFrameCount = if ($usesRetainedWallpaper) {
                     $smc[6] + $smc[7]
                 } else {
@@ -4788,6 +4863,23 @@ try {
                         (($swa[4] -ne 256) -or ($swa[5] -ne 256) -or
                          ($swa[6] -ne 0) -or ($swa[7] -ne 0))
                     ) 'Cut G BG2 affine updates lacked exact frame conservation, coverage, nonidentity motion, or the 35K-tick ceiling.' $gdbStdout
+                } elseif ($usesFastWallpaper) {
+                    Assert-Condition (
+                        $wallpaperCache.Success -and
+                        $wc[0] -eq 1 -and $wc[1] -eq 0 -and
+                        $wc[2] -eq 1 -and $wc[3] -eq 0 -and
+                        $wc[4] -eq 300 -and $wc[5] -eq 220 -and
+                        $wc[6] -eq 66000 -and
+                        $wc[7] -gt 0 -and $wc[8] -gt 0
+                    ) 'BG-0 did not decode and software-compose exactly one Dream Land seed.' $gdbStdout
+                    Assert-Condition (
+                        $wallpaperFinal.Success -and
+                        $wf[0] -eq 1 -and $wf[1] -eq 0 -and
+                        $wf[2] -eq 1 -and $wf[3] -gt 0 -and
+                        $wf[3] -le 49152 -and $wf[4] -eq 0 -and
+                        $wf[6] -eq 0 -and $wf[7] -eq 0 -and
+                        $wf[8] -eq (2 * $wf[3]) -and $wf[11] -eq 0
+                    ) 'BG-0 performed more than its one admitted BG2 software seed or disturbed BG3 ownership.' $gdbStdout
                 } else {
                     Assert-Condition ($wallpaperCache.Success -and $wc[0] -eq 1 -and $wc[1] -ge 1 -and $wc[2] -eq ($wc[0] + $wc[1]) -and $wc[3] -eq 0 -and $wc[4] -eq 300 -and $wc[5] -eq 220 -and $wc[6] -eq 66000 -and $wc[7] -gt 0 -and $wc[8] -gt 0) 'Canonical realtime HW build did not construct once and reuse the exact opaque Dream Land wallpaper decode cache.' $gdbStdout
                     $isTopHudBenchmarkBaseline =
@@ -4921,6 +5013,9 @@ try {
                 $hardwareSummary = " rprof=$RendererProfileLevel$benchmarkSummary gxram=$($hw[2])/$($hw[3]) gxstat=0x{0:x}/ctrl=0x{1:x} ftrContract=$($fdc[0])/$($fdc[3])/geom0x{17:x}/cycle0x{18:x}/rm0x{19:x}/light$($fdc[5])/$($fdc[6])/bounds$($fdc[7])/$($fdc[8]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) batch=$($rb[0])/$($rb[1])/$($rb[2])/texprep$($rb[3])/$($rb[4]) wallCache=$($wc[0])/$($wc[1])/$($wc[2])/fb$($wc[3])/src$($wc[4])x$($wc[5])/$($wc[6])/ticks$($wc[7])/$($wc[8]) wallFinal=direct$($wf[0])/skip$($wf[1])/change$($wf[2])/px$($wf[3])/stage$($wf[4])/$($wf[5])/bg2$($wf[6])/$($wf[7])/$($wf[8])/bg3$($wf[9])/$($wf[10])/$($wf[11]) mtx=load$($rm[0])/scale$($rm[1])/p$($rm[2]),$($rm[3]),$($rm[4]),$($rm[5])/mv$($rm[6]),$($rm[7]),$($rm[8]),$($rm[9]),$($rm[10]),$($rm[11]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/dec$($rs[4])/prim$($rs[5])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/w$($rrm[6])/c$($rrm[7])/mw$($rrm[8])/drop$($rrm[9]) vraw=$($rv[0])..$($rv[1])/$($rv[2])..$($rv[3])/$($rv[4])..$($rv[5]) vhw=$($rv[6])..$($rv[7])/$($rv[8])..$($rv[9])/$($rv[10])..$($rv[11]) depth=stage$($rd[0]):$($rd[1])..$($rd[2])/p0$($rd[5]):$($rd[6])..$($rd[7])/p1$($rd[10]):$($rd[11]) clip=$($rclip[0]) texProof=$($rt[1])/$($rt[2])/$($rt[3]) sample=$($rt[5])/$($rt[6])/$($rt[4]) alias=$($rt[7]) st=$($rt[8])..$($rt[9])/$($rt[10])..$($rt[11]) texUse=$($rtu[0])/$($rtu[1])/$($rtu[2])/$($rtu[3])/$($rtu[4])/impl$($rtu[5])/first0x{7:x}/flags0x{8:x}/w0x{9:x}/w1x{10:x}/geom0x{11:x} texFmt=conv0x{2:x}/bind0x{3:x}/pal0x{4:x}/rej0x{5:x}/why0x{6:x} texLane=layout0x{12:x}/byte$($rtl[1])/half$($rtl[2])/bFmt0x{13:x}/hFmt0x{14:x}/bMap0x{15:x}/hMap0x{16:x} stageCarry=$($scarry[0])/$($scarry[1])/tex$($scarry[2])/tile$($scarry[3])/short$($scarry[4])/$($scarry[5])/seg$($scarry[6]) stageAcct=frames$stageFrameCount/boot$stageStartupSubmitCount,$stageStartupTriangleCount/weapon$($wr[2]),$($wr[4])/terminal$terminalWeaponQuadCount combine=$($rc[0])/$($rc[1])/lit$($rc[2])/mat$($rc[3])/proj$($rc[4]) light=$($rl[0])/$($rl[1])/$($rl[2]) profile=present$($rp[2])/draw$($rp[3])/stage$($rp[5])/mat$($rp[6])/dl$($rp[8])/tex$($rp[9])/conv$($rp[10])/upload$($rp[11]) texUploads=$($rp[12])/$($rp[13]) binds=$($rp[14]) vtx=$($rp[15]) tri=$($rp[16])" -f $hw[4], $hw[5], $rtf[0], $rtf[1], $rtf[2], $rtf[3], $rtf[4], $rtu[6], $rtu[7], $rtu[8], $rtu[9], $rtu[10], $rtl[0], $rtl[3], $rtl[4], $rtl[5], $rtl[6], $fdc[4], $fdc[13], $fdc[14]
                 $hardwareSummary += " texDirect=$($rt1[11])"
                 $hardwareSummary += $publishedRendererDefaultsSummary
+                if ($usesFastWallpaper) {
+                    $hardwareSummary += " fastWall=state$($fw[0])/seed$($fw[1])/$($fw[2])/$($fw[3])/degraded$($fw[4])/seedTicks$($fw[5])/queue$($fw[6])/apply$($fw[7])/skip$($fw[8])/clamp$($fw[9])/$($fw[10])/$($fw[11])/invalid$($fw[12])/reuse$($fw[13])/affine$($fw[14])/post$($fw[15])/$($fw[16])/hash0x$('{0:x}' -f $fw[17])/opaque$($fw[18])/restore$($fw[19])"
+                }
                 if ($RendererProfileLevel -ge 2) {
                     $hardwareSummary += " wallOracle=$($wo[0])/$($wo[1])/$($wo[2])/$($wo[3])"
                     $hardwareSummary += " texel1state=0x{0:x}/0x{1:x}" -f $rt1[7], $rt1[8]

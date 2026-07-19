@@ -27,6 +27,10 @@
 #define NDS_SCENE_MIP_CACHE_LAB 0
 #endif
 
+#ifndef NDS_FAST_WALLPAPER_AFFINE
+#define NDS_FAST_WALLPAPER_AFFINE 0
+#endif
+
 extern volatile u32 gNdsBootSelfTestResult;
 extern volatile u32 gNdsFrameCounter;
 
@@ -96,6 +100,49 @@ static int sOriginalSpriteOverlayForegroundBg = -1;
 static u32 sOriginalSpriteOverlayLayerMask;
 static s32 sOriginalSpriteOverlayNeedsFlush;
 static u32 sOriginalSpriteOverlayEpoch[2] = { 1u, 1u };
+#if NDS_FAST_WALLPAPER_AFFINE
+typedef struct NDSFastWallpaperTransform
+{
+    s32 origin_x;
+    s32 origin_y;
+    u32 scale_x_q16;
+    u32 scale_y_q16;
+} NDSFastWallpaperTransform;
+
+typedef struct NDSFastWallpaperAffine
+{
+    s32 hdx;
+    s32 vdy;
+    s32 dx;
+    s32 dy;
+} NDSFastWallpaperAffine;
+
+typedef struct NDSFastWallpaperOwner
+{
+    NDSFastWallpaperState state;
+    NDSFastWallpaperTransform seed;
+    NDSFastWallpaperTransform latest;
+    NDSFastWallpaperAffine pending;
+    NDSFastWallpaperAffine committed;
+    u32 latest_valid;
+    u32 pending_valid;
+    u32 committed_valid;
+    u32 overlay_generation;
+    u32 asset_identity;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 seed_start_ticks;
+#endif
+} NDSFastWallpaperOwner;
+
+static NDSFastWallpaperOwner sFastWallpaper = {
+    .state = NDS_FAST_WALLPAPER_UNSEEDED,
+    .committed = { 1 << 8, 1 << 8, 0, 0 },
+    .committed_valid = TRUE
+};
+
+static void ndsPlatformFastWallpaperResetInternal(void);
+static void ndsPlatformFastWallpaperCommitAffine(void);
+#endif
 #if NDS_SCENE_MIP_CACHE_LAB
 typedef struct NDSSceneWallpaperTransform
 {
@@ -200,6 +247,26 @@ volatile s32 gNdsSceneWallpaperAffineHdx;
 volatile s32 gNdsSceneWallpaperAffineVdy;
 volatile s32 gNdsSceneWallpaperAffineDx;
 volatile s32 gNdsSceneWallpaperAffineDy;
+volatile u32 gNdsFastWallpaperState;
+volatile u32 gNdsFastWallpaperSeedAttemptCount;
+volatile u32 gNdsFastWallpaperSeedSuccessCount;
+volatile u32 gNdsFastWallpaperSeedFailureCount;
+volatile u32 gNdsFastWallpaperStaticDegradedCount;
+volatile u32 gNdsFastWallpaperSeedTicks;
+volatile u32 gNdsFastWallpaperQueueCount;
+volatile u32 gNdsFastWallpaperApplyCount;
+volatile u32 gNdsFastWallpaperUnchangedSkipCount;
+volatile u32 gNdsFastWallpaperClampXCount;
+volatile u32 gNdsFastWallpaperClampYCount;
+volatile u32 gNdsFastWallpaperClampScaleCount;
+volatile u32 gNdsFastWallpaperInvalidTransformCount;
+volatile u32 gNdsFastWallpaperReusePreviousCount;
+volatile u32 gNdsFastWallpaperAffineLastTicks;
+volatile u32 gNdsFastWallpaperPostReadySoftwareDrawCount;
+volatile u32 gNdsFastWallpaperPostReadyPixelWriteCount;
+volatile u32 gNdsFastWallpaperSeedHash;
+volatile u32 gNdsFastWallpaperSeedOpaquePixelCount;
+volatile u32 gNdsFastWallpaperSeedRestoreMismatchCount;
 
 static void ndsPlatformVBlankInterrupt(void)
 {
@@ -500,6 +567,13 @@ u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
     }
     else
     {
+#if NDS_FAST_WALLPAPER_AFFINE
+        if ((sFastWallpaper.state == NDS_FAST_WALLPAPER_READY) ||
+            (sFastWallpaper.state == NDS_FAST_WALLPAPER_STATIC_DEGRADED))
+        {
+            gNdsFastWallpaperPostReadyPixelWriteCount += pixel_write_count;
+        }
+#endif
         gNdsOriginalSpriteBg2FinalWriteBytes += bytes;
     }
     sOriginalSpriteDisplayPreviewWidth = SCREEN_WIDTH;
@@ -710,6 +784,15 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
             }
             else
             {
+#if NDS_FAST_WALLPAPER_AFFINE
+                if ((sFastWallpaper.state == NDS_FAST_WALLPAPER_READY) ||
+                    (sFastWallpaper.state ==
+                        NDS_FAST_WALLPAPER_STATIC_DEGRADED))
+                {
+                    gNdsFastWallpaperPostReadyPixelWriteCount +=
+                        (u32)dst_w * (u32)dst_h;
+                }
+#endif
                 gNdsOriginalSpriteBg2CopyBytes +=
                     (u32)dst_w * (u32)dst_h * sizeof(u16);
                 ndsPlatformAdvanceOriginalSpriteOverlayEpoch(0u);
@@ -732,6 +815,12 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
 
     if (bg >= 0)
     {
+#if NDS_FAST_WALLPAPER_AFFINE
+        if (is_foreground == FALSE)
+        {
+            ndsPlatformFastWallpaperResetInternal();
+        }
+#endif
         u32 clear_bytes =
             ndsPlatformOriginalSpriteOverlayClearPixels() * sizeof(u16);
 
@@ -758,6 +847,13 @@ void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
     u32 previous_mask = sOriginalSpriteOverlayLayerMask;
 
     layer_mask &= NDS_ORIGINAL_SPRITE_OVERLAY_ALL;
+#if NDS_FAST_WALLPAPER_AFFINE
+    if (((previous_mask ^ layer_mask) &
+         NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u)
+    {
+        ndsPlatformFastWallpaperResetInternal();
+    }
+#endif
     if ((layer_mask != 0u) && (layer_mask != previous_mask))
     {
         sOriginalSpriteOverlayNeedsFlush = TRUE;
@@ -814,6 +910,506 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
     ndsPlatformSetOriginalSpriteOverlayLayerMask(
         (is_enabled != FALSE) ? NDS_ORIGINAL_SPRITE_OVERLAY_ALL : 0u);
 }
+
+#if NDS_RENDERER_HW_TRIANGLES && NDS_FAST_WALLPAPER_AFFINE
+#define NDS_FAST_WALLPAPER_PREFILL_COLOR (RGB15(8, 20, 27) | BIT(15))
+#define NDS_FAST_WALLPAPER_SCROLL_QUANTUM_Q8 0x40
+
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#define NDS_FAST_WALLPAPER_PROFILE_INC(value) ((value)++)
+#else
+#define NDS_FAST_WALLPAPER_PROFILE_INC(value) ((void)0)
+#endif
+
+static u32 ndsPlatformFastWallpaperAffineEqual(
+    const NDSFastWallpaperAffine *a,
+    const NDSFastWallpaperAffine *b)
+{
+    return ((a->hdx == b->hdx) && (a->vdy == b->vdy) &&
+            (a->dx == b->dx) && (a->dy == b->dy)) ? TRUE : FALSE;
+}
+
+static u32 ndsPlatformFastWallpaperIsAdmitted(void)
+{
+    return ((sFastWallpaper.state == NDS_FAST_WALLPAPER_READY) ||
+            (sFastWallpaper.state ==
+                NDS_FAST_WALLPAPER_STATIC_DEGRADED)) ? TRUE : FALSE;
+}
+
+static void ndsPlatformFastWallpaperQueueAffine(
+    const NDSFastWallpaperAffine *affine, u32 count_queue)
+{
+    if ((sFastWallpaper.pending_valid != FALSE) &&
+        (ndsPlatformFastWallpaperAffineEqual(
+            &sFastWallpaper.pending, affine) != FALSE))
+    {
+        if (count_queue != FALSE)
+        {
+            NDS_FAST_WALLPAPER_PROFILE_INC(
+                gNdsFastWallpaperUnchangedSkipCount);
+        }
+        return;
+    }
+    if ((sFastWallpaper.pending_valid == FALSE) &&
+        (sFastWallpaper.committed_valid != FALSE) &&
+        (ndsPlatformFastWallpaperAffineEqual(
+            &sFastWallpaper.committed, affine) != FALSE))
+    {
+        if (count_queue != FALSE)
+        {
+            NDS_FAST_WALLPAPER_PROFILE_INC(
+                gNdsFastWallpaperUnchangedSkipCount);
+        }
+        return;
+    }
+    sFastWallpaper.pending = *affine;
+    sFastWallpaper.pending_valid = TRUE;
+    gNdsSceneWallpaperAffineHdx = affine->hdx;
+    gNdsSceneWallpaperAffineVdy = affine->vdy;
+    gNdsSceneWallpaperAffineDx = affine->dx;
+    gNdsSceneWallpaperAffineDy = affine->dy;
+    if (count_queue != FALSE)
+    {
+        NDS_FAST_WALLPAPER_PROFILE_INC(gNdsFastWallpaperQueueCount);
+    }
+}
+
+static void ndsPlatformFastWallpaperQueueIdentity(void)
+{
+    const NDSFastWallpaperAffine identity = {
+        1 << 8, 1 << 8, 0, 0
+    };
+
+    ndsPlatformFastWallpaperQueueAffine(&identity, FALSE);
+}
+
+static void ndsPlatformFastWallpaperResetInternal(void)
+{
+    if ((sFastWallpaper.state == NDS_FAST_WALLPAPER_UNSEEDED) &&
+        (sFastWallpaper.pending_valid == FALSE) &&
+        (sFastWallpaper.committed_valid != FALSE) &&
+        (sFastWallpaper.committed.hdx == (1 << 8)) &&
+        (sFastWallpaper.committed.vdy == (1 << 8)) &&
+        (sFastWallpaper.committed.dx == 0) &&
+        (sFastWallpaper.committed.dy == 0))
+    {
+        return;
+    }
+    sFastWallpaper.state = NDS_FAST_WALLPAPER_UNSEEDED;
+    memset(&sFastWallpaper.seed, 0, sizeof(sFastWallpaper.seed));
+    memset(&sFastWallpaper.latest, 0, sizeof(sFastWallpaper.latest));
+    sFastWallpaper.latest_valid = FALSE;
+    sFastWallpaper.overlay_generation = 0u;
+    sFastWallpaper.asset_identity = 0u;
+    gNdsFastWallpaperState = NDS_FAST_WALLPAPER_UNSEEDED;
+    ndsPlatformFastWallpaperQueueIdentity();
+}
+
+u32 ndsPlatformFastWallpaperCanSeed(void)
+{
+    if ((ndsPlatformFastWallpaperIsAdmitted() != FALSE) &&
+        (sFastWallpaper.overlay_generation !=
+            sOriginalSpriteOverlayEpoch[0]))
+    {
+        ndsPlatformFastWallpaperResetInternal();
+    }
+    return ((sFastWallpaper.state == NDS_FAST_WALLPAPER_UNSEEDED) &&
+            (sOriginalSpriteOverlayBg >= 0) &&
+            ((sOriginalSpriteOverlayLayerMask &
+                NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u) &&
+            (bgGetGfxPtr(sOriginalSpriteOverlayBg) != NULL)) ? TRUE : FALSE;
+}
+
+u32 ndsPlatformFastWallpaperBeginSeed(s32 origin_x, s32 origin_y,
+                                       u32 scale_x_q16,
+                                       u32 scale_y_q16,
+                                       u32 asset_identity)
+{
+    u16 *wallpaper;
+
+    if (ndsPlatformFastWallpaperCanSeed() == FALSE)
+    {
+        return FALSE;
+    }
+    wallpaper = (u16 *)bgGetGfxPtr(sOriginalSpriteOverlayBg);
+    if (wallpaper == NULL)
+    {
+        return FALSE;
+    }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    sFastWallpaper.seed_start_ticks = cpuGetTiming();
+#endif
+    sFastWallpaper.state = NDS_FAST_WALLPAPER_CAPTURING;
+    sFastWallpaper.seed.origin_x = origin_x;
+    sFastWallpaper.seed.origin_y = origin_y;
+    sFastWallpaper.seed.scale_x_q16 = scale_x_q16;
+    sFastWallpaper.seed.scale_y_q16 = scale_y_q16;
+    sFastWallpaper.latest_valid = FALSE;
+    sFastWallpaper.asset_identity = asset_identity;
+    gNdsFastWallpaperState = NDS_FAST_WALLPAPER_CAPTURING;
+    gNdsFastWallpaperSeedAttemptCount++;
+
+    dmaFillHalfWords(NDS_FAST_WALLPAPER_PREFILL_COLOR, wallpaper,
+                     SCREEN_WIDTH * SCREEN_HEIGHT * sizeof(u16));
+    sFastWallpaper.overlay_generation =
+        ndsPlatformAdvanceOriginalSpriteOverlayEpoch(0u);
+    return TRUE;
+}
+
+static u32 ndsPlatformFastWallpaperHashVisible(const u16 *pixels)
+{
+    u32 hash = 2166136261u;
+    u32 y;
+
+    for (y = 0u; y < SCREEN_HEIGHT; y++)
+    {
+        u32 x;
+
+        for (x = 0u; x < SCREEN_WIDTH; x++)
+        {
+            u16 pixel = pixels[(y * 256u) + x];
+
+            hash ^= pixel & 0xffu;
+            hash *= 16777619u;
+            hash ^= pixel >> 8;
+            hash *= 16777619u;
+        }
+    }
+    return hash;
+}
+
+u32 ndsPlatformFastWallpaperFinishSeed(u32 software_draw_succeeded)
+{
+    u16 *wallpaper;
+    u32 source_opaque = 0u;
+    u32 filled = 0u;
+    u32 final_layer_committed;
+    u32 valid;
+    u32 y;
+
+    if (sFastWallpaper.state != NDS_FAST_WALLPAPER_CAPTURING)
+    {
+        return FALSE;
+    }
+    wallpaper = (sOriginalSpriteOverlayBg >= 0) ?
+        (u16 *)bgGetGfxPtr(sOriginalSpriteOverlayBg) : NULL;
+    final_layer_committed =
+        (sFastWallpaper.overlay_generation !=
+            sOriginalSpriteOverlayEpoch[0]) ? TRUE : FALSE;
+    if (wallpaper != NULL)
+    {
+        for (y = 0u; y < SCREEN_HEIGHT; y++)
+        {
+            u32 x;
+
+            for (x = 0u; x < SCREEN_WIDTH; x++)
+            {
+                u16 *pixel = &wallpaper[(y * 256u) + x];
+
+                if ((*pixel & BIT(15)) != 0u)
+                {
+                    source_opaque++;
+                }
+                else
+                {
+                    *pixel = NDS_FAST_WALLPAPER_PREFILL_COLOR;
+                    filled++;
+                }
+            }
+        }
+        if (filled != 0u)
+        {
+            ndsPlatformAdvanceOriginalSpriteOverlayEpoch(0u);
+        }
+        gNdsFastWallpaperSeedHash =
+            ndsPlatformFastWallpaperHashVisible(wallpaper);
+    }
+    gNdsFastWallpaperSeedOpaquePixelCount = source_opaque;
+    sFastWallpaper.overlay_generation = sOriginalSpriteOverlayEpoch[0];
+    valid = ((software_draw_succeeded != FALSE) &&
+             (final_layer_committed != FALSE) &&
+             (wallpaper != NULL) &&
+             (source_opaque >=
+                ((SCREEN_WIDTH * SCREEN_HEIGHT * 3u) / 4u)) &&
+             (sFastWallpaper.seed.scale_x_q16 != 0u) &&
+             (sFastWallpaper.seed.scale_y_q16 != 0u) &&
+             (sFastWallpaper.asset_identity != 0u)) ?
+        TRUE : FALSE;
+    if (valid != FALSE)
+    {
+        sFastWallpaper.state = NDS_FAST_WALLPAPER_READY;
+        gNdsFastWallpaperSeedSuccessCount++;
+    }
+    else
+    {
+        sFastWallpaper.state = NDS_FAST_WALLPAPER_STATIC_DEGRADED;
+        gNdsFastWallpaperSeedFailureCount++;
+        gNdsFastWallpaperStaticDegradedCount++;
+    }
+    gNdsFastWallpaperState = (u32)sFastWallpaper.state;
+    ndsPlatformFastWallpaperQueueIdentity();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsFastWallpaperSeedTicks =
+        cpuGetTiming() - sFastWallpaper.seed_start_ticks;
+#endif
+    return TRUE;
+}
+
+static s64 ndsPlatformFastWallpaperQ16ToQ8(s64 value_q16)
+{
+    if (value_q16 < 0)
+    {
+        return -(((-value_q16) + 0x80) >> 8);
+    }
+    return (value_q16 + 0x80) >> 8;
+}
+
+static s64 ndsPlatformFastWallpaperClampS64(s64 value,
+                                             s64 minimum,
+                                             s64 maximum)
+{
+    if (value < minimum) return minimum;
+    if (value > maximum) return maximum;
+    return value;
+}
+
+static void ndsPlatformFastWallpaperBuildAffine(
+    const NDSFastWallpaperTransform *live,
+    NDSFastWallpaperAffine *affine)
+{
+    const s64 preview_pixel_center_q16 = 0xa000;
+    const s32 max_hdx =
+        (((SCREEN_WIDTH << 8) - 1) / (SCREEN_WIDTH - 1));
+    const s32 max_vdy =
+        (((SCREEN_HEIGHT << 8) - 1) / (SCREEN_HEIGHT - 1));
+    u64 ratio_x_q16;
+    u64 ratio_y_q16;
+    u64 raw_hdx;
+    u64 raw_vdy;
+    s64 offset_x_q16;
+    s64 offset_y_q16;
+    s64 raw_dx;
+    s64 raw_dy;
+    s64 dx;
+    s64 dy;
+    s64 max_dx;
+    s64 max_dy;
+    u32 scale_clamped = FALSE;
+
+    ratio_x_q16 = ((((u64)sFastWallpaper.seed.scale_x_q16 << 16) +
+                    (live->scale_x_q16 >> 1)) /
+                   live->scale_x_q16);
+    ratio_y_q16 = ((((u64)sFastWallpaper.seed.scale_y_q16 << 16) +
+                    (live->scale_y_q16 >> 1)) /
+                   live->scale_y_q16);
+    raw_hdx = (ratio_x_q16 + 0x80u) >> 8;
+    raw_vdy = (ratio_y_q16 + 0x80u) >> 8;
+    affine->hdx = (s32)ndsPlatformFastWallpaperClampS64(
+        (s64)raw_hdx, 1, max_hdx);
+    affine->vdy = (s32)ndsPlatformFastWallpaperClampS64(
+        (s64)raw_vdy, 1, max_vdy);
+    if ((raw_hdx != (u64)affine->hdx) ||
+        (raw_vdy != (u64)affine->vdy))
+    {
+        scale_clamped = TRUE;
+    }
+    if ((affine->hdx - affine->vdy <= 1) &&
+        (affine->vdy - affine->hdx <= 1))
+    {
+        s32 uniform = (affine->hdx + affine->vdy + 1) >> 1;
+
+        affine->hdx = uniform;
+        affine->vdy = uniform;
+    }
+    if (scale_clamped != FALSE)
+    {
+        NDS_FAST_WALLPAPER_PROFILE_INC(
+            gNdsFastWallpaperClampScaleCount);
+    }
+
+    ratio_x_q16 = (u64)affine->hdx << 8;
+    ratio_y_q16 = (u64)affine->vdy << 8;
+    offset_x_q16 = (((s64)ratio_x_q16 *
+        (preview_pixel_center_q16 -
+         ((s64)live->origin_x * 65536))) / 65536) +
+        ((s64)sFastWallpaper.seed.origin_x * 65536) -
+        preview_pixel_center_q16;
+    offset_y_q16 = (((s64)ratio_y_q16 *
+        (preview_pixel_center_q16 -
+         ((s64)live->origin_y * 65536))) / 65536) +
+        ((s64)sFastWallpaper.seed.origin_y * 65536) -
+        preview_pixel_center_q16;
+    offset_x_q16 = (offset_x_q16 * 4) / 5;
+    offset_y_q16 = (offset_y_q16 * 4) / 5;
+    raw_dx = ndsPlatformFastWallpaperQ16ToQ8(offset_x_q16);
+    raw_dy = ndsPlatformFastWallpaperQ16ToQ8(offset_y_q16);
+    max_dx = (((s64)SCREEN_WIDTH << 8) - 1) -
+        ((s64)affine->hdx * (SCREEN_WIDTH - 1));
+    max_dy = (((s64)SCREEN_HEIGHT << 8) - 1) -
+        ((s64)affine->vdy * (SCREEN_HEIGHT - 1));
+    dx = ndsPlatformFastWallpaperClampS64(raw_dx, 0, max_dx);
+    dy = ndsPlatformFastWallpaperClampS64(raw_dy, 0, max_dy);
+    if (dx != raw_dx)
+    {
+        NDS_FAST_WALLPAPER_PROFILE_INC(gNdsFastWallpaperClampXCount);
+    }
+    if (dy != raw_dy)
+    {
+        NDS_FAST_WALLPAPER_PROFILE_INC(gNdsFastWallpaperClampYCount);
+    }
+    dx = ((dx + (NDS_FAST_WALLPAPER_SCROLL_QUANTUM_Q8 / 2)) /
+          NDS_FAST_WALLPAPER_SCROLL_QUANTUM_Q8) *
+        NDS_FAST_WALLPAPER_SCROLL_QUANTUM_Q8;
+    dy = ((dy + (NDS_FAST_WALLPAPER_SCROLL_QUANTUM_Q8 / 2)) /
+          NDS_FAST_WALLPAPER_SCROLL_QUANTUM_Q8) *
+        NDS_FAST_WALLPAPER_SCROLL_QUANTUM_Q8;
+    affine->dx = (s32)ndsPlatformFastWallpaperClampS64(dx, 0, max_dx);
+    affine->dy = (s32)ndsPlatformFastWallpaperClampS64(dy, 0, max_dy);
+}
+
+u32 ndsPlatformFastWallpaperQueueTransform(s32 origin_x, s32 origin_y,
+                                            u32 scale_x_q16,
+                                            u32 scale_y_q16,
+                                            u32 asset_identity)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 profile_start = cpuGetTiming();
+#endif
+    NDSFastWallpaperTransform live;
+    NDSFastWallpaperAffine affine;
+
+    if (ndsPlatformFastWallpaperIsAdmitted() == FALSE)
+    {
+        return FALSE;
+    }
+    if ((sFastWallpaper.overlay_generation !=
+            sOriginalSpriteOverlayEpoch[0]) ||
+        (sFastWallpaper.asset_identity != asset_identity))
+    {
+        ndsPlatformFastWallpaperResetInternal();
+        return FALSE;
+    }
+    if (sFastWallpaper.state == NDS_FAST_WALLPAPER_STATIC_DEGRADED)
+    {
+        NDS_FAST_WALLPAPER_PROFILE_INC(
+            gNdsFastWallpaperUnchangedSkipCount);
+        return TRUE;
+    }
+    if ((scale_x_q16 == 0u) || (scale_y_q16 == 0u))
+    {
+        NDS_FAST_WALLPAPER_PROFILE_INC(
+            gNdsFastWallpaperInvalidTransformCount);
+        NDS_FAST_WALLPAPER_PROFILE_INC(
+            gNdsFastWallpaperReusePreviousCount);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        gNdsFastWallpaperAffineLastTicks =
+            cpuGetTiming() - profile_start;
+#endif
+        return TRUE;
+    }
+    live.origin_x = origin_x;
+    live.origin_y = origin_y;
+    live.scale_x_q16 = scale_x_q16;
+    live.scale_y_q16 = scale_y_q16;
+    sFastWallpaper.latest = live;
+    sFastWallpaper.latest_valid = TRUE;
+    ndsPlatformFastWallpaperBuildAffine(&live, &affine);
+    ndsPlatformFastWallpaperQueueAffine(&affine, TRUE);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsFastWallpaperAffineLastTicks =
+        cpuGetTiming() - profile_start;
+#endif
+    return TRUE;
+}
+
+void ndsPlatformFastWallpaperRecordSoftwareDraw(void)
+{
+    if (ndsPlatformFastWallpaperIsAdmitted() != FALSE)
+    {
+        gNdsFastWallpaperPostReadySoftwareDrawCount++;
+    }
+}
+
+void ndsPlatformFastWallpaperReset(void)
+{
+    ndsPlatformFastWallpaperResetInternal();
+}
+
+static void ndsPlatformFastWallpaperCommitAffine(void)
+{
+    if ((sOriginalSpriteOverlayBg < 0) ||
+        (sFastWallpaper.pending_valid == FALSE))
+    {
+        return;
+    }
+    if ((sFastWallpaper.committed_valid != FALSE) &&
+        (ndsPlatformFastWallpaperAffineEqual(
+            &sFastWallpaper.pending,
+            &sFastWallpaper.committed) != FALSE))
+    {
+        sFastWallpaper.pending_valid = FALSE;
+        return;
+    }
+    bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg,
+                            sFastWallpaper.pending.hdx, 0, 0,
+                            sFastWallpaper.pending.vdy,
+                            sFastWallpaper.pending.dx,
+                            sFastWallpaper.pending.dy);
+    sFastWallpaper.committed = sFastWallpaper.pending;
+    sFastWallpaper.committed_valid = TRUE;
+    sFastWallpaper.pending_valid = FALSE;
+    NDS_FAST_WALLPAPER_PROFILE_INC(gNdsFastWallpaperApplyCount);
+}
+
+#undef NDS_FAST_WALLPAPER_PROFILE_INC
+#endif
+
+#if !(NDS_RENDERER_HW_TRIANGLES && NDS_FAST_WALLPAPER_AFFINE)
+u32 ndsPlatformFastWallpaperCanSeed(void)
+{
+    return FALSE;
+}
+
+u32 ndsPlatformFastWallpaperBeginSeed(s32 origin_x, s32 origin_y,
+                                       u32 scale_x_q16,
+                                       u32 scale_y_q16,
+                                       u32 asset_identity)
+{
+    (void)origin_x;
+    (void)origin_y;
+    (void)scale_x_q16;
+    (void)scale_y_q16;
+    (void)asset_identity;
+    return FALSE;
+}
+
+u32 ndsPlatformFastWallpaperFinishSeed(u32 software_draw_succeeded)
+{
+    (void)software_draw_succeeded;
+    return FALSE;
+}
+
+u32 ndsPlatformFastWallpaperQueueTransform(s32 origin_x, s32 origin_y,
+                                            u32 scale_x_q16,
+                                            u32 scale_y_q16,
+                                            u32 asset_identity)
+{
+    (void)origin_x;
+    (void)origin_y;
+    (void)scale_x_q16;
+    (void)scale_y_q16;
+    (void)asset_identity;
+    return FALSE;
+}
+
+void ndsPlatformFastWallpaperRecordSoftwareDraw(void)
+{
+}
+
+void ndsPlatformFastWallpaperReset(void)
+{
+}
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && NDS_SCENE_MIP_CACHE_LAB
 static s32 ndsPlatformSceneWallpaperQ16ToQ8(s64 value_q16)
@@ -2121,6 +2717,9 @@ void ndsPlatformEndFrame(void)
 #endif
 #if NDS_SCENE_MIP_CACHE_LAB
     ndsPlatformSceneWallpaperCommitAffine();
+#endif
+#if NDS_FAST_WALLPAPER_AFFINE
+    ndsPlatformFastWallpaperCommitAffine();
 #endif
     ndsRendererHardwareCommitPendingTextureRefreshes();
     ndsIFCommonNativeOamCommit();

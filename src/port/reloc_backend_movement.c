@@ -5,6 +5,10 @@
 #define NDS_SCENE_MIP_CACHE_LAB 0
 #endif
 
+#ifndef NDS_FAST_WALLPAPER_AFFINE
+#define NDS_FAST_WALLPAPER_AFFINE 0
+#endif
+
 extern void ndsIFCommonRecordHUDState(void);
 
 static void ndsFighterWalkRecordBefore(u32 slot, FTStruct *fp, DObj *root,
@@ -13350,6 +13354,84 @@ static void ndsStageGCDrawAllLoopBeginHardwareFrame(void)
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 }
 
+#if NDS_FAST_WALLPAPER_AFFINE
+extern Mtx44f gGMCameraMatrix;
+extern void ndsSObjFastWallpaperOfferSeed(const SObj *seed);
+
+static void ndsFastWallpaperPrepareSeedSnapshot(void)
+{
+    const f32 seed_dist = 14000.0F;
+    CObj *cobj;
+    SObj *wallpaper_sobj;
+    SObj seed_snapshot;
+    CObjVec saved_vec;
+    Mtx44f saved_matrix;
+    Vec2f saved_wallpaper_pos;
+    f32 saved_target_dist;
+    f32 saved_wallpaper_scale_x;
+    f32 saved_wallpaper_scale_y;
+
+    if ((ndsPlatformFastWallpaperCanSeed() == FALSE) ||
+        (gGMCameraGObj == NULL) ||
+        ((cobj = CObjGetStruct(gGMCameraGObj)) == NULL) ||
+        (sGRWallpaperGObj == NULL) ||
+        ((wallpaper_sobj = SObjGetStruct(sGRWallpaperGObj)) == NULL))
+    {
+        return;
+    }
+
+    saved_vec = cobj->vec;
+    saved_target_dist = gGMCameraStruct.target_dist;
+    saved_wallpaper_pos = wallpaper_sobj->pos;
+    saved_wallpaper_scale_x = wallpaper_sobj->sprite.scalex;
+    saved_wallpaper_scale_y = wallpaper_sobj->sprite.scaley;
+    memcpy(saved_matrix, gGMCameraMatrix, sizeof(saved_matrix));
+
+    cobj->vec.eye.x = cobj->vec.at.x;
+    cobj->vec.eye.y = cobj->vec.at.y;
+    cobj->vec.eye.z = cobj->vec.at.z + seed_dist;
+    gGMCameraStruct.target_dist = seed_dist;
+    grWallpaperCalcPersp(wallpaper_sobj);
+    seed_snapshot = *wallpaper_sobj;
+    seed_snapshot.next = NULL;
+    seed_snapshot.prev = NULL;
+
+    cobj->vec = saved_vec;
+    gGMCameraStruct.target_dist = saved_target_dist;
+    wallpaper_sobj->pos = saved_wallpaper_pos;
+    wallpaper_sobj->sprite.scalex = saved_wallpaper_scale_x;
+    wallpaper_sobj->sprite.scaley = saved_wallpaper_scale_y;
+    memcpy(gGMCameraMatrix, saved_matrix, sizeof(saved_matrix));
+
+    if ((memcmp(&cobj->vec, &saved_vec, sizeof(saved_vec)) != 0) ||
+        (memcmp(&gGMCameraStruct.target_dist, &saved_target_dist,
+                sizeof(saved_target_dist)) != 0) ||
+        (memcmp(&wallpaper_sobj->pos, &saved_wallpaper_pos,
+                sizeof(saved_wallpaper_pos)) != 0) ||
+        (memcmp(&wallpaper_sobj->sprite.scalex,
+                &saved_wallpaper_scale_x,
+                sizeof(saved_wallpaper_scale_x)) != 0) ||
+        (memcmp(&wallpaper_sobj->sprite.scaley,
+                &saved_wallpaper_scale_y,
+                sizeof(saved_wallpaper_scale_y)) != 0) ||
+        (memcmp(gGMCameraMatrix, saved_matrix, sizeof(saved_matrix)) != 0))
+    {
+        u32 asset_identity = (u32)(uintptr_t)
+            wallpaper_sobj->sprite.bitmap;
+
+        gNdsFastWallpaperSeedRestoreMismatchCount++;
+        if (ndsPlatformFastWallpaperBeginSeed(
+                0, 0, 1u << 16, 1u << 16,
+                asset_identity) != FALSE)
+        {
+            (void)ndsPlatformFastWallpaperFinishSeed(FALSE);
+        }
+        return;
+    }
+    ndsSObjFastWallpaperOfferSeed(&seed_snapshot);
+}
+#endif
+
 #if NDS_SCENE_MIP_CACHE_LAB
 #define NDS_SCENE_MIP_COUNT 1u
 
@@ -13555,6 +13637,10 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     {
         return;
     }
+
+#if NDS_FAST_WALLPAPER_AFFINE
+    ndsFastWallpaperPrepareSeedSnapshot();
+#endif
 
 #if NDS_SCENE_MIP_CACHE_LAB
     if (ndsSceneMipCachePresentSeedFrame() != FALSE)

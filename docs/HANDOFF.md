@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-19 10:32 Central
+Updated: 2026-07-19 12:41 Central
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -30,6 +30,25 @@ correctness evidence, never its speed referee.
 uncommitted `AGENTS.md` and 344-line
 `docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md` changes; neither
 belongs to this checkpoint.
+
+BG-0 is retained in the published target. The canonical battle ROM is
+`BC236C610581A6361DE84677ED05878B05FF01A259F00736BE5D2D155171DE7D`
+(14,692,352 bytes) and proves fast wallpaper `1` with scene-mip lab `0`.
+Profile-1 moving-camera wallpaper P50/P95 falls 340,672/363,072 ->
+2,016/2,048 ticks; draw falls 1,057,184/1,079,808 -> 715,744/715,904.
+Countdown saves 284,160 wallpaper P50 ticks. One seed succeeds, source state
+restores exactly, and post-ready software draws/pixel writes remain 0/0.
+The one-minute lifecycle passes behavior, reserve, teardown, audio, and texture
+fences but remains stable-30 red at 19.6 presentations/s and 2,137 slips.
+
+The next BG-0 action is retail A/B and a visual sweep only. Use
+`builds/task-bg0-hardware-pair/smash64ds-bg0-control-profile1.nds`
+(`849D5CD9...`) and `smash64ds-bg0-affine-profile1.nds` (`A9F6C661...`) in
+the same moving-camera phase. Check countdown, ordinary combat, widest view,
+Whispy, KO/rebirth, pause orbit when available, Time Up, and Results for holes,
+seams, jumps, shimmer, or layer errors. For planning, project local melonDS
+throughput at `0.75x`; retail remains the final speed referee. Do not reopen
+exact wallpaper sampling or the retired scene-mip renderer.
 
 Task 25R is complete as a report-only baseline at measured source HEAD
 `f088db98de272e9788405c2181029ad4a4c353ba`. Its detailed/profile-0 ROM pair is

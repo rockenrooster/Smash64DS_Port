@@ -1327,6 +1327,8 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
 #endif
 
+    ndsPlatformFastWallpaperRecordSoftwareDraw();
+
     if ((sobj == NULL) || (combine_mode != 0u))
     {
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -2058,6 +2060,130 @@ static SObj sNdsSObjFramePendingWallpaperSnapshot;
 static u32 sNdsSObjFramePendingWallpaperCombine;
 static u32 sNdsSObjFrameForegroundCommitted;
 static u32 sNdsSObjOverlayForegroundPopulated;
+static SObj sNdsFastWallpaperSeedSnapshot;
+static u32 sNdsFastWallpaperSeedSnapshotValid;
+
+void ndsSObjFastWallpaperOfferSeed(const SObj *seed)
+{
+#if NDS_FAST_WALLPAPER_AFFINE
+    if ((seed != NULL) &&
+        (ndsPlatformFastWallpaperCanSeed() != FALSE))
+    {
+        sNdsFastWallpaperSeedSnapshot = *seed;
+        sNdsFastWallpaperSeedSnapshot.next = NULL;
+        sNdsFastWallpaperSeedSnapshot.prev = NULL;
+        sNdsFastWallpaperSeedSnapshotValid = TRUE;
+    }
+#else
+    (void)seed;
+#endif
+}
+
+static u32 ndsSObjFastWallpaperFloatFinite(f32 value)
+{
+    u32 bits;
+
+    memcpy(&bits, &value, sizeof(bits));
+    return ((bits & 0x7f800000u) != 0x7f800000u) ? TRUE : FALSE;
+}
+
+static u32 ndsSObjFastWallpaperGetTransform(
+    const SObj *wallpaper, s32 *origin_x, s32 *origin_y,
+    u32 *scale_x_q16, u32 *scale_y_q16)
+{
+    f32 scale_x;
+    f32 scale_y;
+
+    if ((wallpaper == NULL) || (origin_x == NULL) || (origin_y == NULL) ||
+        (scale_x_q16 == NULL) || (scale_y_q16 == NULL))
+    {
+        return FALSE;
+    }
+    if (((wallpaper->sprite.attr & SP_FASTCOPY) == 0u) &&
+        ((ndsSObjFastWallpaperFloatFinite(
+            wallpaper->sprite.scalex) == FALSE) ||
+         (ndsSObjFastWallpaperFloatFinite(
+            wallpaper->sprite.scaley) == FALSE)))
+    {
+        return FALSE;
+    }
+    if ((ndsSObjFastWallpaperFloatFinite(wallpaper->pos.x) == FALSE) ||
+        (ndsSObjFastWallpaperFloatFinite(wallpaper->pos.y) == FALSE) ||
+        (wallpaper->pos.x < -32768.0F) ||
+        (wallpaper->pos.x > 32767.0F) ||
+        (wallpaper->pos.y < -32768.0F) ||
+        (wallpaper->pos.y > 32767.0F))
+    {
+        return FALSE;
+    }
+    if ((wallpaper->sprite.attr & SP_FASTCOPY) != 0u)
+    {
+        scale_x = 1.0F;
+        scale_y = 1.0F;
+    }
+    else
+    {
+        scale_x = wallpaper->sprite.scalex;
+        scale_y = wallpaper->sprite.scaley;
+    }
+    if ((scale_x < 0.0001F) || (scale_y < 0.0001F) ||
+        (scale_x > 32767.0F) || (scale_y > 32767.0F))
+    {
+        return FALSE;
+    }
+    *origin_x = (s32)wallpaper->pos.x;
+    *origin_y = (s32)wallpaper->pos.y;
+    *scale_x_q16 = (u32)((scale_x * 65536.0F) + 0.5F);
+    *scale_y_q16 = (u32)((scale_y * 65536.0F) + 0.5F);
+    return ((*scale_x_q16 != 0u) && (*scale_y_q16 != 0u)) ? TRUE : FALSE;
+}
+
+static u32 ndsSObjFastWallpaperCaptureSeed(u32 combine_mode)
+{
+#if NDS_FAST_WALLPAPER_AFFINE
+    s32 origin_x;
+    s32 origin_y;
+    u32 scale_x_q16;
+    u32 scale_y_q16;
+    u32 asset_identity;
+    u32 draw_succeeded;
+
+    if ((sNdsFastWallpaperSeedSnapshotValid == FALSE) ||
+        (combine_mode != 0u))
+    {
+        return FALSE;
+    }
+    asset_identity = (u32)(uintptr_t)
+        sNdsFastWallpaperSeedSnapshot.sprite.bitmap;
+    if (ndsSObjFastWallpaperGetTransform(
+            &sNdsFastWallpaperSeedSnapshot,
+            &origin_x, &origin_y,
+            &scale_x_q16, &scale_y_q16) == FALSE)
+    {
+        if (ndsPlatformFastWallpaperBeginSeed(
+                0, 0, 1u << 16, 1u << 16,
+                asset_identity) == FALSE)
+        {
+            return FALSE;
+        }
+        sNdsFastWallpaperSeedSnapshotValid = FALSE;
+        return ndsPlatformFastWallpaperFinishSeed(FALSE);
+    }
+    if (ndsPlatformFastWallpaperBeginSeed(
+            origin_x, origin_y, scale_x_q16, scale_y_q16,
+            asset_identity) == FALSE)
+    {
+        return FALSE;
+    }
+    draw_succeeded = ndsSObjDrawCachedWallpaperFinal(
+        &sNdsFastWallpaperSeedSnapshot, combine_mode);
+    sNdsFastWallpaperSeedSnapshotValid = FALSE;
+    return ndsPlatformFastWallpaperFinishSeed(draw_succeeded);
+#else
+    (void)combine_mode;
+    return FALSE;
+#endif
+}
 
 static void ndsSObjPreviewBeginStagingLayer(void)
 {
@@ -2129,29 +2255,46 @@ static void ndsSObjPreviewCommitLayer(void)
             u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
 #endif
             SObj *wallpaper = sNdsSObjFramePendingWallpaper;
+            s32 origin_x = 0;
+            s32 origin_y = 0;
             u32 scale_x_q16 = 0u;
             u32 scale_y_q16 = 0u;
+            u32 asset_identity = (u32)(uintptr_t)
+                wallpaper->sprite.bitmap;
             u32 retained_wallpaper = FALSE;
 
-            if ((wallpaper->sprite.scalex >= 0.0001F) &&
-                (wallpaper->sprite.scaley >= 0.0001F))
+            (void)ndsSObjFastWallpaperGetTransform(
+                wallpaper, &origin_x, &origin_y,
+                &scale_x_q16, &scale_y_q16);
+            retained_wallpaper =
+                ndsPlatformFastWallpaperQueueTransform(
+                    origin_x, origin_y, scale_x_q16, scale_y_q16,
+                    asset_identity);
+            if ((retained_wallpaper == FALSE) &&
+                (sNdsFastWallpaperSeedSnapshotValid == FALSE) &&
+                (ndsPlatformFastWallpaperCanSeed() != FALSE))
             {
-                if ((wallpaper->sprite.attr & SP_FASTCOPY) != 0u)
-                {
-                    scale_x_q16 = 1u << 16;
-                    scale_y_q16 = 1u << 16;
-                }
-                else
-                {
-                    scale_x_q16 = (u32)(
-                        (wallpaper->sprite.scalex * 65536.0F) + 0.5F);
-                    scale_y_q16 = (u32)(
-                        (wallpaper->sprite.scaley * 65536.0F) + 0.5F);
-                }
+                /* An identity/generation change can invalidate the owner after
+                 * neutral seed preparation. Admit this live SObj as the one
+                 * conservative seed instead of reopening frame-by-frame work. */
+                ndsSObjFastWallpaperOfferSeed(wallpaper);
+            }
+            if ((retained_wallpaper == FALSE) &&
+                (ndsSObjFastWallpaperCaptureSeed(
+                    sNdsSObjFramePendingWallpaperCombine) != FALSE))
+            {
+                retained_wallpaper =
+                    ndsPlatformFastWallpaperQueueTransform(
+                        origin_x, origin_y,
+                        scale_x_q16, scale_y_q16,
+                        asset_identity);
+            }
+            if ((retained_wallpaper == FALSE) &&
+                (scale_x_q16 != 0u) && (scale_y_q16 != 0u))
+            {
                 retained_wallpaper =
                     ndsPlatformSceneWallpaperQueueTransform(
-                        (s32)wallpaper->pos.x,
-                        (s32)wallpaper->pos.y,
+                        origin_x, origin_y,
                         scale_x_q16, scale_y_q16);
             }
             if (retained_wallpaper != FALSE)
@@ -2320,6 +2463,11 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 void ndsSObjPreviewBeginFrame(void)
 {
     ndsIFCommonNativeOamBeginFrame();
+    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    {
+        ndsPlatformFastWallpaperReset();
+    }
+    sNdsFastWallpaperSeedSnapshotValid = FALSE;
     sNdsSObjFramePreview = NULL;
     sNdsSObjFramePreviewPitch = 0u;
     sNdsSObjFramePreviewDrawCount = 0u;

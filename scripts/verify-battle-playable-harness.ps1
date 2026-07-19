@@ -27,6 +27,7 @@ param(
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
+    [ValidateRange(0,1)][int]$FastWallpaperAffineMode = 0,
     [ValidateRange(0,1)][int]$FoxCpuMode = 1,
     [switch]$RequireZeroPostGoTextureFence,
     [switch]$RendererM2DetailedLedger,
@@ -58,8 +59,10 @@ if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
 }
 if ($OneMinuteMatchProof -and
     (($RendererFastRunMode -ne 9) -or ($StaticTextureAotMode -ne 1) -or
-     ($IFCommonHybridOamMode -ne 0) -or -not $RequireZeroPostGoTextureFence)) {
-    throw 'OneMinuteMatchProof requires the published-equivalent hardware renderer configuration: mode 9, mip 0, static textures 1, bitmap OAM 0, and the strict post-GO fence.'
+     ($IFCommonHybridOamMode -ne 0) -or
+     ($FastWallpaperAffineMode -ne 1) -or
+     -not $RequireZeroPostGoTextureFence)) {
+    throw 'OneMinuteMatchProof requires the published-equivalent hardware renderer configuration: mode 9, mip 0, fast wallpaper 1, static textures 1, bitmap OAM 0, and the strict post-GO fence.'
 }
 $ImportBattleShipNormalMoveset = $true
 $ImportBattleShipMarioFireball = $true
@@ -119,6 +122,7 @@ $rendererMakeEnvironment = if ($OneMinuteMatchProof) {
     @{
         NDS_RENDERER_FAST_RUN_DEFAULT = '9'
         NDS_SCENE_MIP_CACHE_LAB = '0'
+        NDS_FAST_WALLPAPER_AFFINE = '1'
         NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT = '1'
         NDS_DEBUG_HUD = '0'
     }
@@ -163,6 +167,7 @@ try {
     -NativeStageGeneratedSegment0Enable $NativeStageGeneratedSegment0Enable `
     -StaticTextureAotMode $StaticTextureAotMode `
     -IFCommonHybridOamMode $IFCommonHybridOamMode `
+    -FastWallpaperAffineMode $FastWallpaperAffineMode `
     -FoxCpuMode $FoxCpuMode `
     -RequireZeroPostGoTextureFence:$RequireZeroPostGoTextureFence `
     -RendererM2DetailedLedger:$RendererM2DetailedLedger `
