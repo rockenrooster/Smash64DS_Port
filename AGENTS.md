@@ -39,6 +39,9 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
   uncited verifier/emulator telemetry; `artifacts/performance` and
   `artifacts/visibility` are permanent evidence. Never combine cleanup with an
   active implementation or remove an ambiguous/dirty worktree.
+- Performance features must prove ENGAGEMENT on retail hardware (a counter, HUD
+  row, or device photo), not only a melonDS win. A feature that silently
+  degrades, falls back, or disables itself on device may not ship enabled.
 - Run `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` after verified progress as
   the final project command. Run nothing after it.
 
