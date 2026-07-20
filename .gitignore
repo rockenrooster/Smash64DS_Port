@@ -36,3 +36,4 @@
 # Python
 __pycache__/
 *.pyc
+worktree_report.md
