@@ -71,20 +71,36 @@ Artifacts:
 
 ## Retail packet and remaining gate
 
-Both ROMs are profile 1 and keep `NDS_FAST_WALLPAPER_AFFINE=0`:
+The first copied device pair used `LowerTextHudMode=1`, which rendered the
+retired generic debug wall instead of the required phase rows. It was unusable
+for this gate and has been removed from `builds/`. The corrected pair rebuilds
+the same documented control/candidate revisions with `NDS_DEBUG_HUD=0`:
 
-- control: `builds/task30-bgm-slice-pair/smash64ds-task30-control-profile1.nds`,
+- control:
+  `builds/task30-bgm-slice-clean-hud-pair/smash64ds-task30-control-clean-hud.nds`,
   SHA-256
-  `00BC098C91722A7A63B239C96B1A5FFC70F5165DF7149DC3ADECC12479231319`;
+  `FFC2FEA839566D0ACB93B8BF700A69B4F9079ED4B50965DE9550947FB93E6B51`;
 - candidate:
-  `builds/task30-bgm-slice-pair/smash64ds-task30-sliced-profile1.nds`,
+  `builds/task30-bgm-slice-clean-hud-pair/smash64ds-task30-sliced-clean-hud.nds`,
   SHA-256
-  `393B63A69C3B653C86AF93D74AD3AE33BC19F7AA3D2A5C0CA00CA462A88AC157`.
+  `EB01127F9AA5EE997AD2143C370002C6B113D7A1FE312A12564595A7D60053F5`.
+
+Their generated configs differ only in the embedded Git hash (`9185897`
+control, `8add112` candidate); the focused Task-30 commit remains the source
+delta. Both are profile 1, mode 9, static textures on, generated segment 0 on,
+Task 16 `1/1/1`, affine wallpaper off, and clean phase HUD on. Repo-local
+captures prove the bottom timing panel and candidate engagement:
+
+- control: `artifacts/visibility/2026-07-20_task30-control-clean-hud-device-preview.png`,
+  SHA-256 `58EB79F2365A4C92FD734DCA9078E34E9468524AF3643086A96B548799743F8F`;
+- candidate: `artifacts/visibility/2026-07-20_task30-sliced-clean-hud-device-preview.png`,
+  SHA-256 `FCEFE3AACBE20EAC59D5CC4A709237A0DF11296084EFE812899BE3C43AAAFE07`.
 
 Retail checklist:
 
 1. Boot control, then candidate with identical flashcart/loader settings.
-2. In the same heavy-combat phase, photograph HUD rows 12–23. Record the
+2. At approximately the same match timer, photograph the complete bottom
+   screen. Record the
    2/3/4/5+ interval histogram, max interval, BGM last/max, and candidate
    `BGM slices`; the slice counter must climb above zero.
 3. Listen for an unchanged Dream Land track start. Leave Results running long

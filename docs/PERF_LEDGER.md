@@ -51,6 +51,9 @@ DECISION: CANDIDATE; listen and retail engagement passed, performance gate pendi
 CONTROL/CANDIDATE ROM:
   00BC098C91722A7A63B239C96B1A5FFC70F5165DF7149DC3ADECC12479231319
   393B63A69C3B653C86AF93D74AD3AE33BC19F7AA3D2A5C0CA00CA462A88AC157
+CORRECTED CLEAN-HUD DEVICE ROM:
+  FFC2FEA839566D0ACB93B8BF700A69B4F9079ED4B50965DE9550947FB93E6B51
+  EB01127F9AA5EE997AD2143C370002C6B113D7A1FE312A12564595A7D60053F5
 WINDOW: profile 1, affine 0, mode 9, Fox active, frames 600..607, n=8
 REFILL LAST/MAX: 76,160 / 76,224 ticks
 SLICES/HALVES/SAFETY: 160 / 40 / unsafe-overrun-readfail 0-0-0
@@ -73,6 +76,8 @@ rare resync remain whole. Full evidence and retail checklist:
 Tyler reported on 2026-07-20 that the sliced profile-1 ROM audio sounds good.
 Task-32 retail photos later prove sliced-path engagement with `BGM slices`
 counts 180 and 184. The dedicated whole-half/sliced histogram A/B remains.
+The original copied device pair exposed the generic debug wall and was removed;
+the corrected pair shows the focused phase panel in both repo-local previews.
 
 ## 2026-07-20 - Task 31 coroutine-stack census
 

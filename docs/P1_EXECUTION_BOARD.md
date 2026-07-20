@@ -405,6 +405,10 @@ Tyler reported that the sliced profile-1 ROM "audio sounds good," closing the
 human listen-quality gate. Task-32 device photos show `BGM slices 180/184`,
 closing retail engagement. Do not promote yet: the dedicated profile-1
 whole-half/sliced packet must still publish both interval histograms/maxima.
+The first copied packet mistakenly used the generic debug wall and was
+unreadable on device. Use only the corrected clean-HUD pair `FFC2FEA8...` /
+`EB01127F...`; repo-local previews prove the required timing panel and the
+candidate `BGM slices 184` row.
 Evidence and exact ROM hashes:
 `artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 

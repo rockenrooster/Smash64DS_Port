@@ -36,6 +36,16 @@ engagement, but the whole-half and sliced ROMs still need matched 2/3/4/5+
 interval histograms and maxima. Do not promote a hardware pacing claim from
 the host timing packet alone.
 
+Use only the corrected clean-HUD pair under
+`builds/task30-bgm-slice-clean-hud-pair`: control `FFC2FEA8...`, candidate
+`EB01127F...`. The original `task30-bgm-slice-pair` was removed because it
+showed the generic debug wall and could not expose the required pacing rows.
+The candidate preview shows `BGM slices 184`; both previews show the complete
+UPD/DRW/ACT/LOOP and 2/3/4/5+/maximum panel.
+The generic debug wall is retired project-wide: `NDS_DEBUG_HUD` defaults to 0
+and value 1 fails closed. The rebuilt normal ROM retains its preview/counter
+owners and passes the 401-frame runtime verifier without linking wall text.
+
 Task 34 is closed at E1. Its three required windows contain 24 synchronized
 frames and an exact 2,557-command / 6,894-parameter-word native-stage stream.
 All 42 display-bearing DObjs vary, 15 hierarchy nodes have no stream, and the

@@ -1082,7 +1082,9 @@ static inline void ndsRendererTask29GlVertex3v16(v16 x, v16 y, v16 z)
 
 static inline void ndsRendererHardwareWriteColorWord(u32 value)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)value;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS
@@ -1094,7 +1096,9 @@ static inline void ndsRendererHardwareWriteColorWord(u32 value)
 
 static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)value;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS
@@ -1106,7 +1110,10 @@ static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
 
 static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
 {
-#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)xy;
+    (void)z;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(xy);
     ndsRendererBenchmarkSinkWord(z);
 #else

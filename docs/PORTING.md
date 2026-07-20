@@ -21466,3 +21466,18 @@ remains skipped for the requested fast iteration cadence.
 - The certified immutable share is therefore `0 / 6,894` (`0.000%`), below the
   approximately 60% continuation gate. E2/E3, replay, DMA, and retail testing
   were not started; the focused checker and Boundary verifier pass.
+
+## 2026-07-20 - Retired the generic debug wall
+
+- The first Task-30 retail copies were built with the legacy generic debug
+  wall, so they could not display the pacing rows required by their own gate.
+- Rebuilt the same `9185897` control and `8add112` sliced revisions with the
+  clean profile-1 phase HUD. Both repo-local previews show the full timing
+  panel, and the candidate shows `BGM slices 184`.
+- Changed the project default to `NDS_DEBUG_HUD=0` and made any attempt to set
+  it to 1 fail at build and compile time. The obsolete wall-ROM pair was
+  removed; permanent historical screenshots remain evidence-only.
+- Restored the default software-renderer build by making its three raw GX write
+  helpers explicit no-ops outside hardware mode. The rebuilt normal ROM passes
+  the 401-frame runtime verifier, while both current ELFs contain no legacy
+  wall strings.

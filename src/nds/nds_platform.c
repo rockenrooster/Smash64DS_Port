@@ -21,7 +21,11 @@
 #endif
 
 #ifndef NDS_DEBUG_HUD
-#define NDS_DEBUG_HUD 1
+#define NDS_DEBUG_HUD 0
+#endif
+
+#if NDS_DEBUG_HUD
+#error "NDS_DEBUG_HUD legacy debug wall is retired"
 #endif
 
 #ifndef NDS_SCENE_MIP_CACHE_LAB
@@ -186,8 +190,10 @@ static u32 sOriginalDLPreviewHeight;
 static u32 sOriginalDLDisplayPreviewWidth;
 static u32 sOriginalDLDisplayPreviewHeight;
 static u32 sOriginalDLPreviewReady;
+#if NDS_DEBUG_HUD
 static u32 sDebugTextFingerprint = 0xffffffffu;
 static u32 sDebugTextReady;
+#endif
 
 volatile u32 gNdsOriginalSpritePreviewReady;
 volatile u32 gNdsOriginalSpritePreviewCommitCount;
@@ -2410,6 +2416,7 @@ static void ndsPlatformUpdatePerfCounters(void)
     sPerfLastPreviewCommitCount = preview_commit_count;
 }
 
+#if NDS_DEBUG_HUD
 static u32 ndsPlatformOpeningHudTickMilestone(void)
 {
     u32 tick = gNdsOpeningRoomTickCount;
@@ -2569,11 +2576,15 @@ static u32 ndsPlatformDebugTextFingerprint(void)
 
     return hash;
 }
+#endif
 
 void ndsPlatformRenderDebugHud(void)
 {
-    u32 debug_text_fingerprint;
-
+#if !NDS_RENDERER_HW_TRIANGLES
+    ndsPlatformDrawOriginalDLPreview();
+    ndsPlatformDrawOriginalSpritePreview();
+    ndsPlatformUpdatePerfCounters();
+#endif
 #if NDS_BATTLE_FPS_HUD_ENABLED && !NDS_DEBUG_HUD
     if (gNdsBattlePlayablePacingDrawCalls != 0u)
     {
@@ -2581,14 +2592,8 @@ void ndsPlatformRenderDebugHud(void)
         ndsPlatformRenderBattleTextHud();
     }
 #endif
-#if !NDS_DEBUG_HUD
-    return;
-#endif
-#if !NDS_RENDERER_HW_TRIANGLES
-    ndsPlatformDrawOriginalDLPreview();
-    ndsPlatformDrawOriginalSpritePreview();
-#endif
-    ndsPlatformUpdatePerfCounters();
+#if NDS_DEBUG_HUD
+    u32 debug_text_fingerprint;
 
     debug_text_fingerprint = ndsPlatformDebugTextFingerprint();
     if ((sDebugTextReady != 0) &&
@@ -2696,6 +2701,7 @@ void ndsPlatformRenderDebugHud(void)
                               (int)gSYControllerDevices[0].stick_range.x,
                               (int)gSYControllerDevices[0].stick_range.y,
                               (long)gNdsFighterBattlePlayableFinalXMilli);
+#endif
 }
 
 u32 ndsPlatformVBlankCount(void)
