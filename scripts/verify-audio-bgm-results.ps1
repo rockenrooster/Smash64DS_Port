@@ -66,6 +66,7 @@ if (-not $NoBuild) {
         'NDS_DEV_LIVE_INPUT_PREVIEW=1' `
         'NDS_HARNESS_FAST_LOGIC=1' `
         'NDS_DEV_RESULTS_VISUAL_SMOKE=1' `
+        'NDS_RENDERER_HW_TRIANGLES=1' `
         'NDS_RENDERER_PROFILE_LEVEL=0' `
         -j16
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -199,7 +200,7 @@ try {
         $audioLife[6] -ne 0 -and $audioLife[7] -ge 0) `
         'BGM file/channel lifecycle or error-cleanup invariant failed.' $gdbOutput
     $reserveAfterAudio = $memory[6] - $core[11]
-    Assert-Result ($memory[0] -eq 0x4d4c4544 -and $memory[1] -eq 22 -and
+    Assert-Result ($memory[0] -eq 0x4d4c4544 -and $memory[1] -eq 24 -and
         $memory[3] -ge 0x130000 -and $reserveAfterAudio -ge 131072) `
         'Battle arena reserve fell below the audio-adjusted floor.' $gdbOutput
 

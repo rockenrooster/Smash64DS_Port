@@ -274,6 +274,7 @@ if ($OneMinuteMatchProof) {
         '-RendererFastRunMode', '9',
         '-StaticTextureAotMode', '1',
         '-IFCommonHybridOamMode', '0',
+        '-FastWallpaperAffineMode', '1',
         '-RequireZeroPostGoTextureFence'
     )
 }

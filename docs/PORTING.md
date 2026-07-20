@@ -21397,3 +21397,17 @@ remains skipped for the requested fast iteration cadence.
   lifecycles. The current candidate remains verifier-covered but is explicitly
   not stable-30 qualified; public release text must report the observed
   13.5–15 FPS heavy-combat performance honestly.
+
+## 2026-07-20 - Task 30 BGM refill slicing candidate
+
+- Split each steady-state 32 KiB BGM half-ring refill into four 8 KiB
+  read/flush slices. The existing deadline becomes a catch-up guard; preload
+  and recovery resync stay whole, and every audio lifecycle exit cancels
+  pending slice state.
+- Added a low-frequency slice engagement counter to the profile-1 HUD and
+  benchmark export. The early synchronized window caps a slice at 76,224
+  ticks and removes 112,512 ticks from audio-shell P95 while preserving exact
+  frame-607 pixels and the 44,100 B/s stream contract.
+- DevFast, Boundary, the full one-minute match, and focused natural Results
+  audio pass with zero read/unsafe/overrun/cleanup failures. Retail engagement
+  and Tyler's track-start/loop-seam listen check remain before KEEP.

@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-19 12:41 Central
+Updated: 2026-07-20 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -346,6 +346,23 @@ State, audio, lifecycle, geometry, material, texture, depth, and ownership must
 remain exact; synchronized native top-screen delta must be `0/49,152`; net
 reserve must be at least 128 KiB. Each phase publishes P50, P95, maximum, N,
 the interval histogram, presentations/s, and source updates/s.
+
+## Task 30 BGM refill slicing (2026-07-20)
+
+**Verifier-backed candidate; retail gate pending.** Steady-state BGM half-ring
+refills are split into four 8 KiB reads/flushes with a two-frame catch-up guard.
+The synchronized early window reduces audio-shell P95 268,672 -> 156,160 and
+complete-update P95 423,104 -> 311,424; slice max is 76,224 ticks. Source-update
+P95 changes +128, loop wall is unchanged, and synchronized pixels are exactly
+0/49,152. DevFast, Boundary, published-equivalent one-minute lifecycle, and
+focused natural Results audio pass with zero unsafe/overrun/read failures and
+462,160 bytes reserve after the ring.
+
+Do not promote yet. The profile-1 control/candidate device packet must show the
+candidate `BGM slices` HUD counter engaged on retail, publish both interval
+histograms/maxima, and pass Tyler's track-start/Results-loop listen check.
+Evidence and exact ROM hashes:
+`artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 
 ## Task 30 final gate (2026-07-19)
 

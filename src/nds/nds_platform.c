@@ -2012,6 +2012,9 @@ static void ndsPlatformRenderBattleFpsHud(void)
         ndsPlatformPrintDebugLine(18u, "CMT        --");
 #endif
         ndsPlatformPrintDebugLine(19u, "SLIP        0");
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        ndsPlatformPrintDebugLine(20u, "BGM slices       0");
+#endif
         ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
         ndsPlatformPrintDebugLine(22u, "5+  --  max --  BGM --/--");
         ndsPlatformPrintDebugLine(23u, "GIT %s", NDS_TASK10_GIT_SHORT);
@@ -2071,7 +2074,11 @@ static void ndsPlatformRenderBattleFpsHud(void)
         ndsPlatformPrintDebugLine(
             15u, "LOOP%8lu %8lu", (unsigned long)loop_ticks,
             (unsigned long)(sBattlePhaseHudLoopTickSum / avg_count));
-#if NDS_FAST_WALLPAPER_AFFINE
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        ndsPlatformPrintDebugLine(
+            20u, "BGM slices %7lu",
+            (unsigned long)gNdsAudioBgmSliceCount);
+#elif NDS_FAST_WALLPAPER_AFFINE
         /* Engagement proof for the affine wallpaper: applies must climb and
          * post-ready pixel writes must stay near zero, ON DEVICE, or the
          * feature is not actually running there. */

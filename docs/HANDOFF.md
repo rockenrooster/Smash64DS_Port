@@ -65,11 +65,19 @@ without overflow. The prior disengagement (2026-07-19) was reversed based on
 this device evidence. The engagement rule in AGENTS.md ("features must prove
 retail engagement on hardware") is satisfied.
 
-**BGM investigation closed:** the 5-VBlank dips are structural, not periodic.
+**BGM dip investigation closed; Task-30 spike smoothing authorized
+2026-07-20.** The 5-VBlank dips are structural, not periodic.
 Histogram evidence (503/503 samples in 5+ bucket on both BGM-on and BGM-off
 ROMs) cleared synchronous BGM I/O as the dip source. The tail lives in
 steady-state stage/fighter main-RAM streaming (Task 10 1.50x calibration).
-Do not start a BGM fix.
+
+The new 8 KiB sliced-refill candidate passes DevFast, Boundary, the full
+one-minute lifecycle, and focused Results audio. Its profile-1 early window
+reduces audio-shell P95 268,672 -> 156,160 and caps refill slices at 76,224
+ticks with 0/0/0 unsafe/overrun/read failures; frame 607 is 0/49,152 changed
+pixels. Retail engagement and a human track-start/loop-seam listen check remain
+before KEEP. Packet and checklist:
+`artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 
 Task 25R is complete as a report-only baseline at measured source HEAD
 `f088db98de272e9788405c2181029ad4a4c353ba`. Its detailed/profile-0 ROM pair is

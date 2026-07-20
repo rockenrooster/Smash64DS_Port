@@ -43,6 +43,33 @@ Input/state:              canonical idle realtime BattleShip scene
 Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png
 ```
 
+## 2026-07-20 - Task 30 BGM refill slicing candidate
+
+```text
+IDEA ID: TASK30-BGM-REFILL-SLICING-20260720
+DECISION: CANDIDATE; retail engagement/listen gate pending
+CONTROL/CANDIDATE ROM:
+  00BC098C91722A7A63B239C96B1A5FFC70F5165DF7149DC3ADECC12479231319
+  393B63A69C3B653C86AF93D74AD3AE33BC19F7AA3D2A5C0CA00CA462A88AC157
+WINDOW: profile 1, affine 0, mode 9, Fox active, frames 600..607, n=8
+REFILL LAST/MAX: 76,160 / 76,224 ticks
+SLICES/HALVES/SAFETY: 160 / 40 / unsafe-overrun-readfail 0-0-0
+AUDIO SHELL P50/P95: 2,368/268,672 -> 3,040/156,160
+COMPLETE UPDATE P50/P95: 156,800/423,104 -> 157,536/311,424
+SOURCE UPDATE P50/P95: 153,952/155,584 -> 154,048/155,712
+DRAW P50/P95: 1,068,544/1,091,200 -> 1,071,392/1,094,144
+LOOP P50/P95: 1,680,448/1,680,512 -> identical
+PIXELS: synchronized frame 607 = 0/49,152, mean 0.00
+LIFECYCLE: DevFast PASS; Boundary PASS; one-minute PASS; Results audio PASS
+RESULTS AUDIO: Fox 16 -> Results 22, 95 refills, 44,040/44,100 B/s,
+  errors/unsafe/overrun/cleanup 0, reserve after ring 462,160 bytes
+```
+
+The normal path reads and flushes one 8 KiB slice per audio update; only the
+two-frame deadline guard finishes the remaining slices together. Preload and
+rare resync remain whole. Full evidence and retail checklist:
+`artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
+
 ## 2026-07-18 - Tasks 20R-25R atomic queue reconciliation
 
 ```text
