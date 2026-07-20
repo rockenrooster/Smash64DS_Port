@@ -1,10 +1,10 @@
 # Handoff
 
-Updated: 2026-07-19 (BG-0 reengaged on device evidence, BGM cleared)
+Updated: 2026-07-20 (Task 31 census stop; Task 32 next)
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
-Branch: `master`
+Branch: `codex/task30-bgm-slices-device-gate`
 
 Boundary: `battle_playable_realtime`, mode `163`.
 
@@ -26,31 +26,21 @@ correctness evidence, never its speed referee.
 
 ## Next Packet
 
-`docs/optimization/tasks.md` remains authoritative. Preserve the user's
-uncommitted `docs/playtesting/PLAYTESTING_Review.md`,
-`docs/optimization/ClaudeFable5_Publish_Tasks_20260718_2200.md`, and
-`docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md` changes; none
-belongs to this checkpoint.
+`docs/optimization/ClaudeFable5_Perf_Tasks_20260720.md` is the active queue.
+Preserve that untracked user file and `Smash64DS_Port.zip`; neither belongs to
+implementation commits.
 
-**ACTIVE PACKET — BGM-stall falsifier device run (Tyler):** prove or clear the
-synchronous ARM9 BGM refill (`nds_audio_bgm.c:278` fread + `:289`
-DC_FlushRange, in-frame via `ndsAudioBackendUpdate` at
-`taskman_seam.c:4358`) as the source of the retail 5-VBlank dips that read as
-~12 FPS. The instrument and falsifier are committed:
+**NEXT IMPLEMENTATION — Task 32 draw-path hot-text grouping.** Task 31 stopped
+at its mandatory census: frames 600–607 contain five concurrent 16 KiB
+coroutines (IDs 1, 3, 4, 5, and 6), peak six, with ID 5 owning the gameplay
+watermark. Retain the default-off lifetime census, but do not add a DTCM stack
+or multi-stack scheme. Evidence:
+`artifacts/performance/2026-07-20_task31-coroutine-census.md`.
 
-- VBlank interval histogram on phase-HUD rows 21-22 (new AGENTS.md house rule:
-  device A/B reports must show the histogram, never min FPS).
-- BGM refill-tick last/max + `[OFF]` tag on row 22 so photos prove which ROM.
-- A ROM = `builds/build/smash64ds-battle-playable-coarse-hwtri.nds` (BGM on).
-- B ROM = `builds/build-bgm-off-hwtri/smash64ds-battle-playable-bgm-off-hwtri.nds`
-  (BGM off; `NDS_BGM_FALSIFIER_OFF=1` skips open/read/flush/play while every
-  BGM state word and counter still advances).
-
-Run the same heavy-combat minute on each, photograph HUD rows 12-22. Verdict
-fork and full contract in the P1_EXECUTION_BOARD "BGM-stall falsifier" row:
-dips vanish under B => BGM I/O confirmed, then check Calico ARM7 blkdev and
-prefer block-aligned IMA ADPCM over ring growth; dips persist => BGM cleared,
-fold into the affine re-plumb task. PERF_LEDGER row either way.
+Task 30 remains device-gated. Its sliced ROM must show `BGM slices` engagement,
+both ROMs need 2/3/4/5+ interval histograms and maximum, and Tyler must listen
+for unchanged track start and Results loop seam. Do not start deferred Task 33
+unless Task 30 ships and fresh audio-shell P95 remains above about 40K.
 
 ---
 

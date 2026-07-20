@@ -149,6 +149,15 @@ Profile-1 HUD ROM: `builds/task10-hardware-packet/smash64ds-task10-phase-hud-pro
 `PRE`/`PRP`/`CMT` rows are populated only by the existing detailed renderer
 phase profiler; the low-observer profile-1 ROM intentionally leaves them off.
 
+## Task 31 DTCM gameplay stack — STOPPED AT CENSUS 2026-07-20
+
+The required profile-only lifetime census found five concurrent 16 KiB
+coroutines in combat (IDs 1, 3, 4, 5, and 6) and a peak of six; ID 5 owns the
+existing gameplay high-water. This directly trips Task 31's several-large-
+coroutines stop rule. No stack was resized or placed in DTCM and no multi-stack
+scheme was attempted. Keep the default-off 64-row census and proceed to Task
+32. Evidence: `artifacts/performance/2026-07-20_task31-coroutine-census.md`.
+
 ## BG-0 fast Dream Land wallpaper — REENGAGED 2026-07-19
 
 **ENABLED in the published target.** The Makefile forces `NDS_FAST_WALLPAPER_AFFINE := 1`

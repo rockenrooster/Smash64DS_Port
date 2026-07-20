@@ -27,10 +27,15 @@ static void ndsOsTask20SampleStack(const OSThread *thread, s32 finished)
 {
     size_t high_water;
 
-    if (thread == NULL || thread->id != 5 ||
-        thread->port_coroutine == NULL) return;
+    if (thread == NULL || thread->port_coroutine == NULL) return;
+    if (finished != FALSE) {
+        portCoroutineTask20Sample(thread->port_coroutine);
+    }
+    if (thread->id != 5) return;
     if ((gNdsTask20SampleRequest == 0u) && (finished == FALSE)) return;
     gNdsTask20SampleRequest = 0u;
+
+    portCoroutineTask20Sample(thread->port_coroutine);
 
     gNdsTask20GameplayStackBase = (u32)(uintptr_t)
         portCoroutineStackBase(thread->port_coroutine);
@@ -126,7 +131,8 @@ void osStartThread(OSThread *thread)
     if (coroutine == NULL) {
         stack_size = (thread->id < 100) ? NDS_OS_SERVICE_STACK_SIZE
                                         : NDS_OS_GOBJ_STACK_SIZE;
-        coroutine = portCoroutineCreate(ndsOsThreadEntry, thread, stack_size);
+        coroutine = portCoroutineCreate(ndsOsThreadEntry, thread, stack_size,
+                                        thread->id);
         if (coroutine == NULL) return;
         thread->port_coroutine = coroutine;
     }

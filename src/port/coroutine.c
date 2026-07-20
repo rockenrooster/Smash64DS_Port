@@ -33,6 +33,15 @@ static PortCoroutine *sCurrentCoroutine;
 extern u8 __dtcm_bss_end[];
 extern u8 __sp_usr[];
 static uintptr_t sMainStackPoisonStart;
+
+volatile NDSTask20CoroutineCensusRow
+    gNdsTask20CoroutineCensus[NDS_TASK20_COROUTINE_CENSUS_CAPACITY];
+volatile uint32_t gNdsTask20CoroutineCensusCount;
+volatile uint32_t gNdsTask20CoroutineCensusOverflowCount;
+volatile uint32_t gNdsTask20CoroutineCensusLiveCount;
+volatile uint32_t gNdsTask20CoroutineCensusPeakLiveCount;
+volatile uint32_t gNdsTask20CoroutineCensusLargeLiveCount;
+volatile uint32_t gNdsTask20CoroutineCensusPeakLargeLiveCount;
 #endif
 
 extern void ndsCoroutineSwap(NDSCoroutineContext *from,
@@ -51,6 +60,88 @@ static size_t portCoroutinePoisonHighWater(const void *stack,
         if (bytes[i] != NDS_TASK20_STACK_POISON) break;
     }
     return stack_size - i;
+}
+
+static volatile NDSTask20CoroutineCensusRow *
+portCoroutineTask20FindRow(const PortCoroutine *coroutine)
+{
+    uint32_t i;
+    uint32_t address = (uint32_t)(uintptr_t)coroutine;
+
+    for (i = 0; i < gNdsTask20CoroutineCensusCount; i++) {
+        if (gNdsTask20CoroutineCensus[i].coroutine_address == address) {
+            return &gNdsTask20CoroutineCensus[i];
+        }
+    }
+    return NULL;
+}
+
+static void portCoroutineTask20Register(PortCoroutine *coroutine,
+                                        int owner_id,
+                                        size_t requested_stack_size)
+{
+    volatile NDSTask20CoroutineCensusRow *row;
+    uint32_t index = gNdsTask20CoroutineCensusCount;
+
+    gNdsTask20CoroutineCensusLiveCount++;
+    if (gNdsTask20CoroutineCensusLiveCount >
+        gNdsTask20CoroutineCensusPeakLiveCount) {
+        gNdsTask20CoroutineCensusPeakLiveCount =
+            gNdsTask20CoroutineCensusLiveCount;
+    }
+    if (coroutine->stack_size >= (16u * 1024u)) {
+        gNdsTask20CoroutineCensusLargeLiveCount++;
+        if (gNdsTask20CoroutineCensusLargeLiveCount >
+            gNdsTask20CoroutineCensusPeakLargeLiveCount) {
+            gNdsTask20CoroutineCensusPeakLargeLiveCount =
+                gNdsTask20CoroutineCensusLargeLiveCount;
+        }
+    }
+
+    if (index >= NDS_TASK20_COROUTINE_CENSUS_CAPACITY) {
+        gNdsTask20CoroutineCensusOverflowCount++;
+        return;
+    }
+    gNdsTask20CoroutineCensusCount = index + 1u;
+    row = &gNdsTask20CoroutineCensus[index];
+    row->owner_id = owner_id;
+    row->requested_stack_size = (uint32_t)requested_stack_size;
+    row->actual_stack_size = (uint32_t)coroutine->stack_size;
+    row->stack_base = (uint32_t)(uintptr_t)coroutine->stack;
+    row->coroutine_address = (uint32_t)(uintptr_t)coroutine;
+    row->state = 1u;
+}
+
+void portCoroutineTask20Sample(PortCoroutine *coroutine)
+{
+    volatile NDSTask20CoroutineCensusRow *row;
+    size_t high_water;
+
+    if (coroutine == NULL || coroutine->stack == NULL) return;
+    row = portCoroutineTask20FindRow(coroutine);
+    if (row == NULL) return;
+    high_water = portCoroutinePoisonHighWater(coroutine->stack,
+                                              coroutine->stack_size);
+    if (high_water > row->high_water) {
+        row->high_water = (uint32_t)high_water;
+    }
+}
+
+static void portCoroutineTask20Retire(PortCoroutine *coroutine)
+{
+    volatile NDSTask20CoroutineCensusRow *row;
+
+    if (coroutine == NULL) return;
+    portCoroutineTask20Sample(coroutine);
+    row = portCoroutineTask20FindRow(coroutine);
+    if (row != NULL) row->state = 2u;
+    if (gNdsTask20CoroutineCensusLiveCount != 0u) {
+        gNdsTask20CoroutineCensusLiveCount--;
+    }
+    if ((coroutine->stack_size >= (16u * 1024u)) &&
+        (gNdsTask20CoroutineCensusLargeLiveCount != 0u)) {
+        gNdsTask20CoroutineCensusLargeLiveCount--;
+    }
 }
 #endif
 
@@ -78,10 +169,15 @@ void portCoroutineInitMain(void)
 }
 
 PortCoroutine *portCoroutineCreate(void (*entry)(void *), void *arg,
-                                   size_t stack_size)
+                                   size_t stack_size, int owner_id)
 {
     PortCoroutine *coroutine;
     uintptr_t stack_top;
+#if NDS_TASK20_STACK_PROFILE
+    size_t requested_stack_size = stack_size;
+#else
+    (void)owner_id;
+#endif
 
     if (entry == NULL) return NULL;
     if (stack_size < NDS_COROUTINE_MIN_STACK) {
@@ -109,6 +205,10 @@ PortCoroutine *portCoroutineCreate(void (*entry)(void *), void *arg,
     coroutine->context.r4 = (u32)(uintptr_t)coroutine;
     coroutine->context.sp = (u32)stack_top;
     coroutine->context.lr = (u32)(uintptr_t)ndsCoroutineTrampoline;
+#if NDS_TASK20_STACK_PROFILE
+    portCoroutineTask20Register(coroutine, owner_id,
+                                requested_stack_size);
+#endif
 
     return coroutine;
 }
@@ -116,6 +216,9 @@ PortCoroutine *portCoroutineCreate(void (*entry)(void *), void *arg,
 void portCoroutineDestroy(PortCoroutine *coroutine)
 {
     if (coroutine == NULL || coroutine == sCurrentCoroutine) return;
+#if NDS_TASK20_STACK_PROFILE
+    portCoroutineTask20Retire(coroutine);
+#endif
     free(coroutine->stack);
     memset(coroutine, 0, sizeof(*coroutine));
     free(coroutine);

@@ -491,6 +491,16 @@ function Get-RendererSemanticBenchmarkCommand {
     }
     return ('printf "RENDER_SEMANTIC={0}\n", {1}' -f $format, ($arguments -join ', '))
 }
+function Get-Task20CoroutineCensusCommands {
+    return @(
+        'printf "TASK31_CENSUS_SUMMARY=%u,%u,%u,%u,%u,%u\n", gNdsTask20CoroutineCensusCount, gNdsTask20CoroutineCensusOverflowCount, gNdsTask20CoroutineCensusLiveCount, gNdsTask20CoroutineCensusPeakLiveCount, gNdsTask20CoroutineCensusLargeLiveCount, gNdsTask20CoroutineCensusPeakLargeLiveCount',
+        'set $task31_census_index = 0',
+        'while $task31_census_index < gNdsTask20CoroutineCensusCount && $task31_census_index < 64',
+        'printf "TASK31_CENSUS=%u,%u,%u,%u,%u,%u,%u,%u\n", $task31_census_index, gNdsTask20CoroutineCensus[$task31_census_index].owner_id, gNdsTask20CoroutineCensus[$task31_census_index].requested_stack_size, gNdsTask20CoroutineCensus[$task31_census_index].actual_stack_size, gNdsTask20CoroutineCensus[$task31_census_index].stack_base, gNdsTask20CoroutineCensus[$task31_census_index].coroutine_address, gNdsTask20CoroutineCensus[$task31_census_index].state, gNdsTask20CoroutineCensus[$task31_census_index].high_water',
+        'set $task31_census_index = $task31_census_index + 1',
+        'end'
+    )
+}
 function Get-BenchmarkMakeIdentity {
     param([string[]]$BaseMakeArgs)
 
@@ -1397,6 +1407,7 @@ try {
                 $coarseBenchmarkCommands += @(
                     'printf "TASK20_STACK=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsTask20GameplayStackBase, gNdsTask20GameplayStackSize, gNdsTask20GameplayStackHighWater, gNdsTask20MainStackBottom, gNdsTask20MainStackPoisonStart, gNdsTask20MainStackTop, gNdsTask20MainStackHighWater, gNdsTask20SampleCount'
                 )
+                $coarseBenchmarkCommands += Get-Task20CoroutineCensusCommands
             }
             $benchmarkTriangleSymbol = if ($RendererBenchmarkOnly -and
                 ($RendererFastRunMode -ne 9)) {
@@ -1813,6 +1824,7 @@ try {
         }
         if ($Task20StackProfileMode -eq 1) {
             $lifecycleCommands += 'printf "TASK20_STACK=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsTask20GameplayStackBase, gNdsTask20GameplayStackSize, gNdsTask20GameplayStackHighWater, gNdsTask20MainStackBottom, gNdsTask20MainStackPoisonStart, gNdsTask20MainStackTop, gNdsTask20MainStackHighWater, gNdsTask20SampleCount'
+            $lifecycleCommands += Get-Task20CoroutineCensusCommands
         }
         $gdbCommands = @($beforeDetach + $lifecycleCommands + $afterDetach)
     }
@@ -1929,7 +1941,12 @@ try {
         -Name 'TASK9_STATE' -FieldCount 6)
     $task20StackRecords = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'TASK20_STACK' -FieldCount 8)
+    $task20CensusSummaryRecords = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+        -Name 'TASK31_CENSUS_SUMMARY' -FieldCount 6)
+    $task20CensusRecords = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+        -Name 'TASK31_CENSUS' -FieldCount 8)
     $task20StackRows = @()
+    $task20CensusRows = @()
     $task20StackEvidence = $null
     $task20StackSummary = ''
     if ($Task20StackProfileMode -eq 1) {
@@ -1939,6 +1956,52 @@ try {
             , @(Get-Ints $_)
         })
         $task20StackLast = $task20StackRows[-1]
+        Assert-Condition ($task20CensusSummaryRecords.Count -gt 0) `
+            'Task 31 coroutine census emitted no summary record.' $gdbStdout
+        $task20CensusSummary = Get-Ints $task20CensusSummaryRecords[-1]
+        $task20CensusCount = [int]$task20CensusSummary[0]
+        Assert-Condition ($task20CensusCount -gt 0 -and
+            $task20CensusCount -le 64 -and
+            $task20CensusSummary[1] -eq 0 -and
+            $task20CensusRecords.Count -ge $task20CensusCount) `
+            'Task 31 coroutine census was empty, overflowed, or omitted rows.' `
+            $gdbStdout
+        $task20CensusRows = @($task20CensusRecords |
+            Select-Object -Last $task20CensusCount |
+            ForEach-Object { , @(Get-Ints $_) })
+        for ($task20CensusIndex = 0;
+             $task20CensusIndex -lt $task20CensusRows.Count;
+             $task20CensusIndex++) {
+            $task20CensusRow = $task20CensusRows[$task20CensusIndex]
+            $task20ExpectedStackSize = if ($task20CensusRow[1] -lt 100) {
+                16 * 1024
+            } else {
+                4 * 1024
+            }
+            Assert-Condition ($task20CensusRow[0] -eq $task20CensusIndex -and
+                $task20CensusRow[2] -eq $task20ExpectedStackSize -and
+                $task20CensusRow[3] -eq $task20ExpectedStackSize -and
+                $task20CensusRow[4] -ne 0 -and
+                (($task20CensusRow[4] -band 7) -eq 0) -and
+                $task20CensusRow[5] -ne 0 -and
+                ($task20CensusRow[6] -eq 1 -or
+                 $task20CensusRow[6] -eq 2) -and
+                $task20CensusRow[7] -le $task20CensusRow[3]) `
+                'Task 31 coroutine census row lost owner sizing, address, state, or watermark integrity.' `
+                $gdbStdout
+        }
+        $task20CensusLiveRows = @($task20CensusRows |
+            Where-Object { $_[6] -eq 1 })
+        $task20CensusLargeLiveRows = @($task20CensusLiveRows |
+            Where-Object { $_[3] -ge (16 * 1024) })
+        Assert-Condition ($task20CensusSummary[2] -eq
+                $task20CensusLiveRows.Count -and
+            $task20CensusSummary[3] -ge $task20CensusSummary[2] -and
+            $task20CensusSummary[4] -eq
+                $task20CensusLargeLiveRows.Count -and
+            $task20CensusSummary[5] -ge $task20CensusSummary[4] -and
+            $task20CensusSummary[5] -le $task20CensusSummary[3]) `
+            'Task 31 coroutine census live/peak conservation failed.' $gdbStdout
         $task20SampleCountValid = if ($MatchLifecycleProof) {
             $task20StackLast[7] -ge 1
         } else {
@@ -1949,6 +2012,12 @@ try {
         $task20DtcmGap = [int64]$task20StackLast[5] -
             [int64]$task20StackLast[3]
         $task20MainHighWater = [int64]$task20StackLast[6]
+        $task20GameplayCensusRows = @($task20CensusRows |
+            Where-Object { $_[4] -eq $task20StackLast[0] })
+        Assert-Condition ($task20GameplayCensusRows.Count -eq 1) `
+            'Task 31 census did not identify exactly one owner for the measured gameplay stack.' `
+            $gdbStdout
+        $task20GameplayOwnerId = [int64]$task20GameplayCensusRows[0][1]
         Assert-Condition ($task20StackLast[0] -ne 0 -and
             (($task20StackLast[0] -band 7) -eq 0) -and
             $task20GameplayCapacity -eq 16384 -and
@@ -1999,9 +2068,30 @@ try {
                 marginDelta = $task20DtcmGap - $task20MarginNeed
                 marginFits = $task20MarginNeed -le $task20DtcmGap
             }
+            census = [ordered]@{
+                count = $task20CensusCount
+                overflowCount = [int64]$task20CensusSummary[1]
+                liveCount = [int64]$task20CensusSummary[2]
+                peakLiveCount = [int64]$task20CensusSummary[3]
+                largeLiveCount = [int64]$task20CensusSummary[4]
+                peakLargeLiveCount = [int64]$task20CensusSummary[5]
+                gameplayOwnerId = $task20GameplayOwnerId
+                rows = @($task20CensusRows | ForEach-Object {
+                    [ordered]@{
+                        index = [int64]$_[0]
+                        ownerId = [int64]$_[1]
+                        requestedStackSize = [int64]$_[2]
+                        actualStackSize = [int64]$_[3]
+                        stackBase = [int64]$_[4]
+                        coroutineAddress = [int64]$_[5]
+                        state = [int64]$_[6]
+                        highWater = [int64]$_[7]
+                    }
+                })
+            }
         }
         $task20StackSummary =
-            "Task20 startup/final stack: records=$($task20StackRecords.Count) samples=$($task20StackLast[7]) gameplay=$($task20StackLast[0])/$task20GameplayCapacity/hwm$task20GameplayHighWater mainPostInit=$($task20StackLast[3])..$($task20StackLast[4])..$($task20StackLast[5])/hwm$task20MainHighWater dtcmGap=$task20DtcmGap fit=$task20RawFit/rawNeed$task20RawNeed/delta$($task20DtcmGap-$task20RawNeed) marginNeed$task20MarginNeed/delta$($task20DtcmGap-$task20MarginNeed) guards=64"
+            "Task20 startup/final stack: records=$($task20StackRecords.Count) samples=$($task20StackLast[7]) gameplay=id$task20GameplayOwnerId/$($task20StackLast[0])/$task20GameplayCapacity/hwm$task20GameplayHighWater mainPostInit=$($task20StackLast[3])..$($task20StackLast[4])..$($task20StackLast[5])/hwm$task20MainHighWater dtcmGap=$task20DtcmGap fit=$task20RawFit/rawNeed$task20RawNeed/delta$($task20DtcmGap-$task20RawNeed) marginNeed$task20MarginNeed/delta$($task20DtcmGap-$task20MarginNeed) guards=64 census=$task20CensusCount/live$($task20CensusSummary[2])/peak$($task20CensusSummary[3])/large$($task20CensusSummary[4])/largePeak$($task20CensusSummary[5])/overflow$($task20CensusSummary[1])"
     }
     $matchSafety = [regex]::Match($gdbStdout, 'MATCH_SAFETY=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $damageFloor = [regex]::Match($gdbStdout, 'DAMAGE_FLOOR=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+)')
@@ -4434,6 +4524,7 @@ try {
                                 fastRaw = @($fastRunSamples)
                                 sink = @($sinkSamples)
                                 task20Stack = @($task20StackRows)
+                                task20CoroutineCensus = @($task20CensusRows)
                                 economy = @($economySamples)
                                 screenSpaceCensusRows =
                                     @($screenSpaceCensusRowValues)

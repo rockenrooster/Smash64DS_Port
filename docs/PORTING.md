@@ -21411,3 +21411,13 @@ remains skipped for the requested fast iteration cadence.
 - DevFast, Boundary, the full one-minute match, and focused natural Results
   audio pass with zero read/unsafe/overrun/cleanup failures. Retail engagement
   and Tyler's track-start/loop-seam listen check remain before KEEP.
+
+## 2026-07-20 - Task 31 stopped at the coroutine census
+
+- Extended the existing profile-only stack profiler into a fixed 64-row
+  lifetime census with owner IDs, requested/actual sizes, addresses,
+  live/destroyed state, high-water, overflow, and current/peak live counts.
+- The canonical combat window has five concurrent 16 KiB stacks (IDs 1, 3, 4,
+  5, and 6) and a peak of six. ID 5 owns the measured gameplay watermark.
+- Obeyed Task 31's mandatory stop rule: no stack sizing, DTCM placement,
+  static-coroutine API, canary, shipping flag, or device packet was added.

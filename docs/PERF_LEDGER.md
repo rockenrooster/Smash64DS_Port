@@ -70,6 +70,28 @@ two-frame deadline guard finishes the remaining slices together. Preload and
 rare resync remain whole. Full evidence and retail checklist:
 `artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 
+## 2026-07-20 - Task 31 coroutine-stack census
+
+```text
+IDEA ID: TASK31-DTCM-GAMEPLAY-STACK-20260720
+DECISION: STOP AT MANDATORY CENSUS; NO DTCM PLACEMENT
+WINDOW: profile 1, affine 0, mode 9, frames 600..607
+CENSUS: 7 rows, 5 live, peak 6, overflow 0
+LARGE 16-KIB STACKS: 5 live, peak 6
+GAMEPLAY WATERMARK OWNER: thread ID 5
+DTCM LAYOUT: .dtcm/.dtcm.bss 0/152; shared gap 15,848 bytes
+ROM / ELF:
+  874E9CB9C1CAEFB89A88D405514BAD3C9FED6F260F55566433FF5EB229C4666F
+  0834451F31AD98181C9A35AED489A5664442F881C5077E492EC8971C928C0040
+```
+
+Task 31 required exactly one large gameplay-class coroutine before sizing or
+placement. Ordinary combat instead retains IDs 1, 3, 4, 5, and 6 as concurrent
+16 KiB allocations, with six large stacks at peak. The profile-only lifetime
+census is retained; no stack was resized or moved and no device A/B is needed
+for an unimplemented feature. Full evidence:
+`artifacts/performance/2026-07-20_task31-coroutine-census.md`.
+
 ## 2026-07-18 - Tasks 20R-25R atomic queue reconciliation
 
 ```text
