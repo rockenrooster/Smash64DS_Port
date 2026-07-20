@@ -1,10 +1,10 @@
 # Handoff
 
-Updated: 2026-07-20 (Tasks 30-34 queue resolved)
+Updated: 2026-07-20 (Task 36 hardware-compose doctrine checkpoint)
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
-Branch: `codex/task30-bgm-slices-device-gate`
+Branch: `codex/task36-hw-compose`
 
 Boundary: `battle_playable_realtime`, mode `163`.
 
@@ -25,6 +25,9 @@ not carry the earlier -44K Thumb-base result into ARM claims. melonDS remains
 correctness evidence, never its speed referee.
 
 ## Next Packet
+
+Task 36's rendering-fidelity and batched-device doctrine is now codified in
+`AGENTS.md`; next is its Phase-A rigid-stage hardware-compose implementation.
 
 `docs/optimization/ClaudeFable5_Perf_Tasks_20260720.md` is resolved: Task 30
 REVERT, Task 31 STOP at its mandatory census, Task 32 retail KEEP, Task 33 not

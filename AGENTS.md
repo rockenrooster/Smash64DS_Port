@@ -42,6 +42,14 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 - Performance features must prove ENGAGEMENT on retail hardware (a counter, HUD
   row, or device photo), not only a melonDS win. A feature that silently
   degrades, falls back, or disables itself on device may not ship enabled.
+- Rendering-side changes may approximate: they gate on a reported fidelity
+  budget (synchronized screenshot diffs plus Tyler's visual approval), not
+  pixel exactness. Gameplay/source behavior remains bit-exact and verifier-
+  gated. Engagement proof is a counter on the shared engagement HUD row,
+  confirmed by batched device smoke boots; per-feature retail runs are reserved
+  for cache/TCM/DMA/IO-class claims, which melonDS cannot referee. CPU-work-
+  removal claims may KEEP on melonDS typed A/B evidence behind their flag until
+  the next device checkpoint.
 - Device A/B reports must show the 2/3/4/5+ VBlank-interval histogram and the
   max interval, never min FPS or a half-second average. Min FPS is
   discontinuous: one frame crossing the 4->5 VBlank boundary reads as ~12 FPS
