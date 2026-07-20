@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-20 (Task 34 stopped at E1; Task 30 retail A/B remains)
+Updated: 2026-07-20 (Tasks 30-34 queue resolved)
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -26,25 +26,21 @@ correctness evidence, never its speed referee.
 
 ## Next Packet
 
-`docs/optimization/ClaudeFable5_Perf_Tasks_20260720.md` is the active queue.
-Preserve that untracked user file and `Smash64DS_Port.zip`; neither belongs to
-implementation commits.
+`docs/optimization/ClaudeFable5_Perf_Tasks_20260720.md` is resolved: Task 30
+REVERT, Task 31 STOP at its mandatory census, Task 32 retail KEEP, Task 33 not
+admitted, and Task 34 STOP at E1. Preserve that untracked user file and
+`Smash64DS_Port.zip`; neither belongs to implementation commits.
 
-**NEXT — finish Task 30's dedicated retail A/B when Tyler is available.** Human
-listening passed and Task-32 retail photos prove `BGM slices 180/184`
-engagement, but the whole-half and sliced ROMs still need matched 2/3/4/5+
-interval histograms and maxima. Do not promote a hardware pacing claim from
-the host timing packet alone.
+Task 30's corrected retail pair closes the last open gate. At the same `00:50`
+point, whole-half control reports `0/95/321/88` across VBI 2/3/4/5+ (N=504,
+4+=81.15%, max=17); sliced reports `0/74/336/90` (N=500, 4+=85.20%, max=16)
+with `BGM slices 180`. Despite the lower refill tick row, normalized 4+ and 5+
+intervals regress, so the histogram-first rule rejects slicing. Whole-half
+refill is restored; no repeat device run is requested. Evidence:
+`artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 
-Use only the corrected clean-HUD pair under
-`builds/task30-bgm-slice-clean-hud-pair`: control `FFC2FEA8...`, candidate
-`EB01127F...`. The original `task30-bgm-slice-pair` was removed because it
-showed the generic debug wall and could not expose the required pacing rows.
-The candidate preview shows `BGM slices 184`; both previews show the complete
-UPD/DRW/ACT/LOOP and 2/3/4/5+/maximum panel.
-The generic debug wall is retired project-wide: `NDS_DEBUG_HUD` defaults to 0
-and value 1 fails closed. The rebuilt normal ROM retains its preview/counter
-owners and passes the 401-frame runtime verifier without linking wall text.
+The generic debug wall remains retired project-wide: `NDS_DEBUG_HUD` defaults
+to 0 and value 1 fails closed.
 
 Task 34 is closed at E1. Its three required windows contain 24 synchronized
 frames and an exact 2,557-command / 6,894-parameter-word native-stage stream.
@@ -54,9 +50,8 @@ gate. This matches Task 23R's live `projection` plus 42 composed matrices. Do
 not start E2/E3 or add stream replay/DMA. Evidence:
 `artifacts/performance/2026-07-20_task34-e1-stage-stream.md`.
 
-Task 32 remains the published retail KEEP at battle ROM `B73D9BDB...`.
-Do not start deferred Task 33 unless Task 30 ships and fresh audio-shell P95
-remains above about 40K.
+Task 32 remains the published retail KEEP. Task 33's entry gate is false
+because Task 30 did not ship; do not start ADPCM work from this queue.
 
 ---
 

@@ -21481,3 +21481,16 @@ remains skipped for the requested fast iteration cadence.
   helpers explicit no-ops outside hardware mode. The rebuilt normal ROM passes
   the 401-frame runtime verifier, while both current ELFs contain no legacy
   wall strings.
+
+## 2026-07-20 - Reverted Task 30 BGM refill slicing on retail pacing
+
+- Tyler ran the corrected whole-half and sliced ROMs once each at the same
+  `00:50` match point. The candidate engaged (`BGM slices 180`) and retained
+  the prior listen-quality pass.
+- Control VBI 2/3/4/5+ is `0/95/321/88` (N=504, 4+=81.15%, max=17); sliced is
+  `0/74/336/90` (N=500, 4+=85.20%, max=16). Normalized 4+ regresses 4.05
+  percentage points and 5+ regresses 0.54 points.
+- Restored the proved whole-half refill owner and its verifier contract. Kept
+  the profile-only refill last/max reset and all historical A/B evidence. No
+  repeat device run is requested, and Task 33 remains gated off because Task
+  30 did not ship.

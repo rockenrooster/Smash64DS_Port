@@ -1460,7 +1460,6 @@ extern volatile u32 gNdsAudioBgmStreamBytesPerSecond;
 extern volatile u32 gNdsAudioBgmExpectedBytesPerSecond;
 extern volatile u32 gNdsAudioBgmLoopCount;
 extern volatile u32 gNdsAudioBgmRefillCount;
-extern volatile u32 gNdsAudioBgmSliceCount;
 extern volatile u32 gNdsAudioBgmPlaybackPositionBytes;
 extern volatile u32 gNdsAudioBgmWritePositionBytes;
 extern volatile u32 gNdsAudioBgmPlaybackHalf;

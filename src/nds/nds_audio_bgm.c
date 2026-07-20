@@ -12,12 +12,8 @@
 #define NDS_AUDIO_BGM_HALF_TICKS \
     (((u64)BUS_CLOCK * NDS_AUDIO_BGM_HALF_BYTES) / \
      NDS_AUDIO_BGM_BYTES_PER_SECOND)
-#define NDS_BGM_REFILL_SLICE_BYTES 8192u
-#define NDS_AUDIO_BGM_REFILL_CATCHUP_TICKS (2u * (BUS_CLOCK / 15u))
 _Static_assert((NDS_AUDIO_BGM_CHUNK_BYTES % 2u) == 0u,
                "BGM ring buffer must split into two whole halves");
-_Static_assert((NDS_AUDIO_BGM_HALF_BYTES % NDS_BGM_REFILL_SLICE_BYTES) == 0u,
-               "BGM half-ring must split into whole refill slices");
 _Static_assert(NDS_AUDIO_BGM_BYTES_PER_SECOND == 44100u,
                "BGM PCM16 mono streams must consume 44100 bytes/sec");
 
@@ -83,11 +79,9 @@ volatile u32 gNdsAudioBgmStreamBytesPerSecond;
 volatile u32 gNdsAudioBgmExpectedBytesPerSecond;
 volatile u32 gNdsAudioBgmLoopCount;
 volatile u32 gNdsAudioBgmRefillCount;
-volatile u32 gNdsAudioBgmSliceCount;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
-/* Last/max cpuGetTiming() delta around one steady-state refill slice. Recovery
- * resyncs remain whole-half operations. Profile-1 only; the published
- * profile-0 ROM never declares or touches these. */
+/* Last/max cpuGetTiming() delta around a BGM half-ring refill. Profile-1 only;
+ * the published profile-0 ROM never declares or touches these. */
 volatile u32 gNdsAudioBgmRefillTicksLast;
 volatile u32 gNdsAudioBgmRefillTicksMax;
 #endif
@@ -138,18 +132,8 @@ static u64 sNdsAudioBgmNextRefillByte;
 static u64 sNdsAudioBgmNextRefillTick;
 static s32 sNdsAudioBgmNaturalStopArmed;
 static u32 sNdsAudioBgmTrackReadStartBytes;
-static u32 sNdsAudioBgmPendingWriteHalf;
-static u32 sNdsAudioBgmPendingWritePosition;
-static u32 sNdsAudioBgmPendingBytesRemaining;
 
 static void ndsAudioBgmKillSound(void);
-
-static void ndsAudioBgmCancelPendingRefill(void)
-{
-    sNdsAudioBgmPendingWriteHalf = 0u;
-    sNdsAudioBgmPendingWritePosition = 0u;
-    sNdsAudioBgmPendingBytesRemaining = 0u;
-}
 
 static u8 ndsAudioBgmScaleVolume(u32 vol)
 {
@@ -407,66 +391,6 @@ static s32 ndsAudioBgmRefillHalf(u32 write_half, u32 playback_half)
     return TRUE;
 }
 
-static s32 ndsAudioBgmRefillPending(u32 playback_half)
-{
-    u64 deadline_tick = sNdsAudioBgmNextRefillTick +
-        NDS_AUDIO_BGM_HALF_TICKS;
-    u64 remaining_ticks = (deadline_tick > sNdsAudioBgmTimerTicksTotal) ?
-        (deadline_tick - sNdsAudioBgmTimerTicksTotal) : 0u;
-    u32 slice_count =
-        (remaining_ticks < NDS_AUDIO_BGM_REFILL_CATCHUP_TICKS) ?
-        (sNdsAudioBgmPendingBytesRemaining / NDS_BGM_REFILL_SLICE_BYTES) : 1u;
-
-    if ((sNdsAudioBgmPendingBytesRemaining == 0u) ||
-        (sNdsAudioBgmPendingWriteHalf == playback_half))
-    {
-        gNdsAudioBgmUnsafeWriteCount++;
-        return FALSE;
-    }
-    while (slice_count-- != 0u)
-    {
-        u32 written = NDS_AUDIO_BGM_HALF_BYTES -
-            sNdsAudioBgmPendingBytesRemaining;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        u32 refill_start = cpuGetTiming();
-#endif
-
-        gNdsAudioBgmPlaybackHalf = playback_half;
-        gNdsAudioBgmWriteHalf = sNdsAudioBgmPendingWriteHalf;
-        gNdsAudioBgmWritePositionBytes =
-            sNdsAudioBgmPendingWritePosition + written;
-        if (ndsAudioBgmReadInto(
-                &sNdsAudioBgmRing[gNdsAudioBgmWritePositionBytes],
-                NDS_BGM_REFILL_SLICE_BYTES) == FALSE)
-        {
-            return FALSE;
-        }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        {
-            u32 refill_dt = cpuGetTiming() - refill_start;
-
-            gNdsAudioBgmRefillTicksLast = refill_dt;
-            if (refill_dt > gNdsAudioBgmRefillTicksMax)
-            {
-                gNdsAudioBgmRefillTicksMax = refill_dt;
-            }
-        }
-#endif
-        sNdsAudioBgmPendingBytesRemaining -= NDS_BGM_REFILL_SLICE_BYTES;
-        gNdsAudioBgmSliceCount++;
-    }
-    if (sNdsAudioBgmPendingBytesRemaining == 0u)
-    {
-        ndsAudioBgmCancelPendingRefill();
-        gNdsAudioBgmRefillCount++;
-        gNdsAudioBgmChunkPlayCount++;
-        sNdsAudioBgmNextRefillByte += NDS_AUDIO_BGM_HALF_BYTES;
-        sNdsAudioBgmNextRefillTick += NDS_AUDIO_BGM_HALF_TICKS;
-        ndsAudioBgmUpdateRateMarkers();
-    }
-    return TRUE;
-}
-
 static s32 ndsAudioBgmResync(u64 playback_bytes)
 {
     u64 current_half = playback_bytes / NDS_AUDIO_BGM_HALF_BYTES;
@@ -476,7 +400,6 @@ static s32 ndsAudioBgmResync(u64 playback_bytes)
     u32 playback_half = (u32)(current_half & 1u);
     u32 file_offset = ndsAudioBgmMapPlaybackByte(refill_boundary);
 
-    ndsAudioBgmCancelPendingRefill();
     gNdsAudioBgmOverrunCount++;
     if (ndsAudioBgmSeekFile(file_offset) == FALSE)
     {
@@ -492,7 +415,6 @@ static s32 ndsAudioBgmResync(u64 playback_bytes)
 static s32 ndsAudioBgmPlayRing(void)
 {
     ndsAudioBgmKillSound();
-    ndsAudioBgmCancelPendingRefill();
 
     sNdsAudioBgmSoundID = soundPlaySample(sNdsAudioBgmRing,
                                           SoundFormat_16Bit,
@@ -534,7 +456,6 @@ static void ndsAudioBgmKillSound(void)
 
 static void ndsAudioBgmFailPlayback(void)
 {
-    ndsAudioBgmCancelPendingRefill();
     ndsAudioBgmKillSound();
     ndsAudioBgmCloseFile();
     gNdsAudioBgmPlaying = 0;
@@ -549,7 +470,6 @@ static void ndsAudioBgmFailPlayback(void)
 static void ndsAudioBgmFinishNaturally(void)
 {
     ndsAudioBgmUpdateRateMarkers();
-    ndsAudioBgmCancelPendingRefill();
     ndsAudioBgmKillSound();
     ndsAudioBgmCloseFile();
     gNdsAudioBgmPlaying = 0;
@@ -571,7 +491,6 @@ void ndsAudioBgmDiagnosticsReset(void)
     sNdsAudioBgmNextRefillTick = 0;
     sNdsAudioBgmNaturalStopArmed = FALSE;
     sNdsAudioBgmTrackReadStartBytes = 0;
-    ndsAudioBgmCancelPendingRefill();
 
     gNdsAudioBgmResult = 0;
     gNdsAudioBgmMask = 0;
@@ -596,7 +515,6 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmExpectedBytesPerSecond = NDS_AUDIO_BGM_BYTES_PER_SECOND;
     gNdsAudioBgmLoopCount = 0;
     gNdsAudioBgmRefillCount = 0;
-    gNdsAudioBgmSliceCount = 0;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsAudioBgmRefillTicksLast = 0;
     gNdsAudioBgmRefillTicksMax = 0;
@@ -645,7 +563,6 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
         gNdsAudioBgmUnsupportedTrackCount++;
         return;
     }
-    ndsAudioBgmCancelPendingRefill();
     gNdsAudioBgmTrackID = (u32)bgm_id;
     if (gNdsAudioBgmPlaying != 0)
     {
@@ -727,7 +644,6 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
 void ndsAudioBgmStopAll(void)
 {
     gNdsAudioBgmStopCalls++;
-    ndsAudioBgmCancelPendingRefill();
     ndsAudioBgmKillSound();
     if (gNdsAudioBgmPlaying != 0)
     {
@@ -807,22 +723,6 @@ void ndsAudioBgmUpdate(void)
         return;
     }
 
-    if (sNdsAudioBgmPendingBytesRemaining != 0u)
-    {
-        u32 playback_half =
-            (u32)((playback_bytes / NDS_AUDIO_BGM_HALF_BYTES) & 1u);
-
-        if (ndsAudioBgmRefillPending(playback_half) == FALSE)
-        {
-            ndsAudioBgmFailPlayback();
-            return;
-        }
-        if (sNdsAudioBgmPendingBytesRemaining != 0u)
-        {
-            return;
-        }
-    }
-
     while (sNdsAudioBgmTimerTicksTotal >= sNdsAudioBgmNextRefillTick)
     {
         u64 refill_half_index =
@@ -848,18 +748,13 @@ void ndsAudioBgmUpdate(void)
             gNdsAudioBgmUnsafeWriteCount++;
             break;
         }
-        sNdsAudioBgmPendingWriteHalf = write_half;
-        sNdsAudioBgmPendingWritePosition =
-            write_half * NDS_AUDIO_BGM_HALF_BYTES;
-        sNdsAudioBgmPendingBytesRemaining = NDS_AUDIO_BGM_HALF_BYTES;
-        if (ndsAudioBgmRefillPending(playback_half) == FALSE)
+        if (ndsAudioBgmRefillHalf(write_half, playback_half) == FALSE)
         {
             ndsAudioBgmFailPlayback();
             return;
         }
-        if (sNdsAudioBgmPendingBytesRemaining != 0u)
-        {
-            break;
-        }
+        sNdsAudioBgmNextRefillByte += NDS_AUDIO_BGM_HALF_BYTES;
+        sNdsAudioBgmNextRefillTick += NDS_AUDIO_BGM_HALF_TICKS;
+        ndsAudioBgmUpdateRateMarkers();
     }
 }

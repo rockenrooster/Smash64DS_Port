@@ -1,6 +1,6 @@
 # Task 30 — BGM refill slicing
 
-Status: **candidate; listen and retail engagement gates passed, performance gate pending**.
+Status: **REVERT; retail pacing distribution regressed**.
 
 Source HEAD: `91858977402e66a399d4fe6aa487d25faff296c8` plus the focused
 Task-30 diff. Boundary is `battle_playable_realtime`, mode 163.
@@ -106,6 +106,35 @@ Retail checklist:
 3. Listen for an unchanged Dream Land track start. Leave Results running long
    enough to hear a Results loop seam and report any click, gap, or corruption.
 
+## Retail decision
+
+Tyler ran the corrected pair once each at the same `00:50` match point. The
+photos are permanent evidence:
+
+- control whole-half refill:
+  `artifacts/visibility/2026-07-20_task30-retail-control-whole-half.jpg`,
+  SHA-256 `5938AA6AE8DCBFCB796C9B2D128BC30EC78536954443AEF334528ABCA752479A`;
+- sliced candidate (`BGM slices 180`):
+  `artifacts/visibility/2026-07-20_task30-retail-candidate-sliced.jpg`,
+  SHA-256 `071E3B61F78745B53079CA7E07F7073E6EE6EB6F018C7B0DDB9C34329395A262`.
+
+| Retail ROM | N | VBI 2 | VBI 3 | VBI 4 | VBI 5+ | 4+ | max |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| whole-half control | 504 | 0 (0.00%) | 95 (18.85%) | 321 (63.69%) | 88 (17.46%) | 81.15% | 17 |
+| sliced candidate | 500 | 0 (0.00%) | 74 (14.80%) | 336 (67.20%) | 90 (18.00%) | 85.20% | 16 |
+
+The candidate lowers the photographed latest refill from `363,760` to
+`65,640` ticks and lowers maximum interval 17 -> 16, but those do not override
+the cumulative pacing distribution. Normalized 4+ intervals regress by 4.05
+percentage points and 5+ by 0.54 points. The HUD clips the trailing digits of
+the cumulative BGM-max field at the right screen edge, so no exact max-tick
+claim is made from these photos.
+
+Per the device-histogram referee rule, Task 30 is REVERT. The implementation
+returns to the proved whole-half refill path; the profile-only last/max refill
+instrumentation and all historical control/candidate evidence remain. No repeat
+device run is requested.
+
 Tyler reported on 2026-07-20 that
 `smash64ds-task30-sliced-profile1.nds` "audio sounds good." This passes the
 required human listen-quality gate. The later Task-32 retail photos preserve
@@ -116,5 +145,4 @@ engagement:
 have slicing enabled, so these photos do not replace the whole-half versus
 sliced performance A/B.
 
-The candidate is not a KEEP or shipping promotion until the dedicated control
-and candidate pacing histograms/maxima pass.
+The dedicated retail gate failed, so the sliced mechanism is not shipped.

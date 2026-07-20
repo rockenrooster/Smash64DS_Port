@@ -17,7 +17,7 @@ Integrated user-facing candidate:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,692,352 bytes
-SHA-256 B73D9BDBF36C780C44F4898213A069FFF250716F2B77C6773C22DA28B8BB98D2
+SHA-256 722EABE96D2BBCEE57005CB5B44EC395F26F12E305204EDB32BA710298140E4A
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -392,8 +392,9 @@ the interval histogram, presentations/s, and source updates/s.
 
 ## Task 30 BGM refill slicing (2026-07-20)
 
-**Verifier-backed candidate; listen and retail engagement passed, performance gate pending.** Steady-state BGM half-ring
-refills are split into four 8 KiB reads/flushes with a two-frame catch-up guard.
+**REVERT — retail pacing distribution regressed.** The measured candidate split
+steady-state BGM half-ring refills into four 8 KiB reads/flushes with a
+two-frame catch-up guard.
 The synchronized early window reduces audio-shell P95 268,672 -> 156,160 and
 complete-update P95 423,104 -> 311,424; slice max is 76,224 ticks. Source-update
 P95 changes +128, loop wall is unchanged, and synchronized pixels are exactly
@@ -401,14 +402,14 @@ P95 changes +128, loop wall is unchanged, and synchronized pixels are exactly
 focused natural Results audio pass with zero unsafe/overrun/read failures and
 462,160 bytes reserve after the ring.
 
-Tyler reported that the sliced profile-1 ROM "audio sounds good," closing the
-human listen-quality gate. Task-32 device photos show `BGM slices 180/184`,
-closing retail engagement. Do not promote yet: the dedicated profile-1
-whole-half/sliced packet must still publish both interval histograms/maxima.
-The first copied packet mistakenly used the generic debug wall and was
-unreadable on device. Use only the corrected clean-HUD pair `FFC2FEA8...` /
-`EB01127F...`; repo-local previews prove the required timing panel and the
-candidate `BGM slices 184` row.
+Tyler reported that the sliced profile-1 ROM "audio sounds good," and retail
+photos prove `BGM slices 180`, but the dedicated corrected pair rejects the
+performance mechanism. At the same `00:50` point, control VBI 2/3/4/5+ is
+`0/95/321/88` (N=504, 4+=81.15%, max=17); sliced is `0/74/336/90` (N=500,
+4+=85.20%, max=16). Normalized 4+ regresses 4.05 percentage points and 5+
+regresses 0.54 points. The whole-half path is restored, historical candidate
+evidence is retained, and no repeat device run is requested. Task 33 is not
+admitted because Task 30 did not ship.
 Evidence and exact ROM hashes:
 `artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 

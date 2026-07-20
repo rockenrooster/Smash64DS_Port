@@ -43,11 +43,11 @@ Input/state:              canonical idle realtime BattleShip scene
 Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-0241726-p3736.png
 ```
 
-## 2026-07-20 - Task 30 BGM refill slicing candidate
+## 2026-07-20 - Task 30 BGM refill slicing — REVERT
 
 ```text
 IDEA ID: TASK30-BGM-REFILL-SLICING-20260720
-DECISION: CANDIDATE; listen and retail engagement passed, performance gate pending
+DECISION: REVERT; refill spike dropped but retail pacing distribution regressed
 CONTROL/CANDIDATE ROM:
   00BC098C91722A7A63B239C96B1A5FFC70F5165DF7149DC3ADECC12479231319
   393B63A69C3B653C86AF93D74AD3AE33BC19F7AA3D2A5C0CA00CA462A88AC157
@@ -66,18 +66,23 @@ PIXELS: synchronized frame 607 = 0/49,152, mean 0.00
 LIFECYCLE: DevFast PASS; Boundary PASS; one-minute PASS; Results audio PASS
 RESULTS AUDIO: Fox 16 -> Results 22, 95 refills, 44,040/44,100 B/s,
   errors/unsafe/overrun/cleanup 0, reserve after ring 462,160 bytes
+RETAIL CONTROL: VBI 2/3/4/5+=0/95/321/88, N=504, 4+=81.15%, max=17
+RETAIL SLICED: VBI 2/3/4/5+=0/74/336/90, N=500, 4+=85.20%, max=16,
+  BGM slices=180
+RETAIL DELTA: normalized 4+ +4.05 pp; 5+ +0.54 pp; REVERT
 ```
 
-The normal path reads and flushes one 8 KiB slice per audio update; only the
-two-frame deadline guard finishes the remaining slices together. Preload and
-rare resync remain whole. Full evidence and retail checklist:
+The candidate read and flushed one 8 KiB slice per audio update; only the
+two-frame deadline guard finished the remaining slices together. Preload and
+rare resync remained whole. Full evidence and final retail decision:
 `artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 
 Tyler reported on 2026-07-20 that the sliced profile-1 ROM audio sounds good.
-Task-32 retail photos later prove sliced-path engagement with `BGM slices`
-counts 180 and 184. The dedicated whole-half/sliced histogram A/B remains.
-The original copied device pair exposed the generic debug wall and was removed;
-the corrected pair shows the focused phase panel in both repo-local previews.
+Task-32 retail photos first proved sliced-path engagement with `BGM slices`
+counts 180 and 184. The corrected dedicated pair then failed the pacing gate:
+4+ and 5+ both shifted worse after normalization. The original copied device
+pair exposed the generic debug wall and was removed; the clean pair and final
+retail photos are permanent evidence. Whole-half refill is restored.
 
 ## 2026-07-20 - Task 31 coroutine-stack census
 
