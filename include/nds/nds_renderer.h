@@ -65,6 +65,20 @@
 #error "NDS_TASK29_GX_CENSUS requires profile level 1"
 #endif
 
+/* Task 34 E1 records the exact native-stage GX stream without changing it. */
+#ifndef NDS_TASK34_STAGE_STREAM_CENSUS
+#define NDS_TASK34_STAGE_STREAM_CENSUS 0
+#endif
+
+#if (NDS_TASK34_STAGE_STREAM_CENSUS != 0) && \
+    (NDS_TASK34_STAGE_STREAM_CENSUS != 1)
+#error "NDS_TASK34_STAGE_STREAM_CENSUS must be 0 or 1"
+#endif
+
+#if NDS_TASK34_STAGE_STREAM_CENSUS && !NDS_TASK29_GX_CENSUS
+#error "NDS_TASK34_STAGE_STREAM_CENSUS requires NDS_TASK29_GX_CENSUS"
+#endif
+
 #ifndef NDS_RENDERER_SCREEN_SPACE_CENSUS
 #define NDS_RENDERER_SCREEN_SPACE_CENSUS 0
 #endif
@@ -301,6 +315,37 @@ extern volatile u32 gNdsTask29GXBoundaryHashB;
 extern volatile u32 gNdsTask29GXBoundaryCount;
 extern volatile u32 gNdsTask29GXFaultCount;
 extern volatile u32 gNdsTask29GXNeverSuppressMask;
+
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+#define NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY 4096u
+#define NDS_TASK34_STAGE_STREAM_WORD_CAPACITY 8192u
+#define NDS_TASK34_STAGE_STREAM_DOBJ_NONE 0xffffu
+
+typedef struct NDSRendererTask34StageStreamEntry
+{
+    u16 word_offset;
+    u16 dobj_index;
+    u8 command_class;
+    u8 word_count;
+    u8 segment_index;
+    u8 reserved;
+} NDSRendererTask34StageStreamEntry;
+
+extern volatile u32 gNdsTask34StageStreamFrame;
+extern volatile u32 gNdsTask34StageStreamCaptureEnabled;
+extern volatile u32 gNdsTask34StageStreamEntryCount;
+extern volatile u32 gNdsTask34StageStreamWordCount;
+extern volatile u32 gNdsTask34StageStreamOverflowCount;
+extern volatile u32 gNdsTask34StageStreamFaultCount;
+extern volatile NDSRendererTask34StageStreamEntry
+    gNdsTask34StageStreamEntries[NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY];
+extern volatile u32
+    gNdsTask34StageStreamWords[NDS_TASK34_STAGE_STREAM_WORD_CAPACITY];
+
+void ndsRendererTask34StageStreamBeginSegment(u32 segment_index);
+void ndsRendererTask34StageStreamSetDObj(u32 dobj_index);
+void ndsRendererTask34StageStreamEndSegment(void);
+#endif
 
 void ndsRendererTask29GXRecordFlush(u32 mode);
 void ndsRendererTask29GXSetOwner(NDSRendererProfileOwner owner);

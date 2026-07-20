@@ -128,6 +128,29 @@ rule. The generic default stays off while published/release-equivalent targets
 force the feature on. Full evidence:
 `artifacts/performance/2026-07-20_task32-draw-hot-text.md`.
 
+## 2026-07-20 - Task 34 E1 native-stage stream certificate
+
+```text
+IDEA ID: TASK34-IMMUTABLE-STAGE-STREAM-E1-20260720
+DECISION: STOP_BELOW_60_PERCENT; E2/E3 NOT AUTHORIZED
+WINDOWS: 438..445, 600..607, 1398..1405; 24 synchronized frames
+STREAM/FRAME: 2,557 commands; 6,894 parameter words; 30,136 serialized bytes
+DOBJ PARTITION: bit-identical 0; varying 42; no-stream 15
+IDENTICAL SHARE: 0 / 6,894 words = 0.000% (gate approximately 60%)
+FAULTS/OVERFLOW: 0 / 0 in every frame
+ROM / ELF:
+  F64EA4E6EC15334DD730FF75A92D8CAB4E7BE0E90FA42E615328ABF8A8F130A2
+  E698CE3A708E2A278F3CD45E90A659A66128207499725E7C5CFB37D9E7BAECD4
+```
+
+Every display-bearing DObj emits live matrix operands. This matches Task 23R's
+classification of `projection` and all 42 `binding_composed` matrices as
+camera-dependent, and falsifies the proposed immutable stream before any
+buffer, replay, DMA, overlap, arena, or retail work. The retained default-off
+census copies only during the selected eight-frame gate and changes no shipping
+behavior. Full certificate:
+`artifacts/performance/2026-07-20_task34-e1-stage-stream.md`.
+
 ## 2026-07-18 - Tasks 20R-25R atomic queue reconciliation
 
 ```text

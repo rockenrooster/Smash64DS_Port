@@ -523,7 +523,8 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_IMMUTABLE,
                 """
-                run.first_corner run.submit_class run.triangle_count
+                run.binding_index run.first_corner run.submit_class
+                run.triangle_count
                 segment.first_run segment.owner segment.run_count
                 """,
             ),

@@ -1043,6 +1043,10 @@
       "closure": "ndsRendererCommitNativeStageSegment",
       "fields": [
         {
+          "access": "run.binding_index",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "run.first_corner",
           "classification": "immutable_generation"
         },

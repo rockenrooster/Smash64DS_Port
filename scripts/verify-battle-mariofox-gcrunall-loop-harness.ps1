@@ -34,6 +34,7 @@ param(
     [switch]$RendererM3Phase0Profile,
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
     [switch]$Task29GXCensus,
+    [switch]$Task34StageStreamCensus,
     [switch]$Task22WallpaperRunLab,
     [ValidateRange(0,1)][int]$FastWallpaperAffineMode = 0,
     [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
@@ -207,6 +208,14 @@ if ($Task29GXCensus -and
     (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9))) {
     throw 'Task29GXCensus requires profile 1 and complete-stage fast-run mode 9.'
 }
+if ($Task34StageStreamCensus -and -not $Task29GXCensus) {
+    throw 'Task34StageStreamCensus requires Task29GXCensus.'
+}
+if ($Task34StageStreamCensus -and
+    (($RendererBenchmarkSamples -ne 8) -or
+     ($RendererBenchmarkStartFrame -le 0))) {
+    throw 'Task34StageStreamCensus requires one exact eight-frame gate.'
+}
 if ($RendererM3Phase0Profile -and
     (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9))) {
     throw 'RendererM3Phase0Profile requires RendererProfileLevel 1 and RendererFastRunMode 9.'
@@ -307,6 +316,20 @@ $logDir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot (Get-MelonDSActiveRu
 $stdout = Join-Path $logDir "melonds.$($Harness.Replace('_','-'))-harness.stdout.log"
 $stderr = Join-Path $logDir "melonds.$($Harness.Replace('_','-'))-harness.stderr.log"
 $scriptName = "_$($Harness)_harness.gdb"
+$task34StageDumpFiles = @()
+if ($Task34StageStreamCensus) {
+    $task34DumpToken = [guid]::NewGuid().ToString('N')
+    $task34StageDumpFiles = @(for ($sampleIndex = 0;
+        $sampleIndex -lt $RendererBenchmarkSamples; $sampleIndex++) {
+        [PSCustomObject]@{
+            Sample = $sampleIndex
+            Entries = Join-Path $logDir (
+                "task34-$task34DumpToken-$sampleIndex-entries.bin")
+            Words = Join-Path $logDir (
+                "task34-$task34DumpToken-$sampleIndex-words.bin")
+        }
+    })
+}
 $configState = $null
 $emulator = $null
 $benchmarkMakeIdentity = $null
@@ -535,7 +558,7 @@ function Get-BenchmarkMakeIdentity {
     $required = @(
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
         'M3_PHASE0_PROFILE', 'NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE',
-        'TASK29_GX_CENSUS',
+        'TASK29_GX_CENSUS', 'TASK34_STAGE_STREAM_CENSUS',
         'TASK22_WALLPAPER_RUN_LAB',
         'SCREEN_SPACE_CENSUS', 'RENDER_ECONOMY',
         'RENDER_ECONOMY_OWNER_MASK', 'RENDERER_BENCHMARK_MODE',
@@ -563,6 +586,7 @@ function Get-BenchmarkMakeIdentity {
         NativeStageGeneratedSegment0Enable =
             [int]$values.NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
         Task29GXCensus = [int]$values.TASK29_GX_CENSUS
+        Task34StageStreamCensus = [int]$values.TASK34_STAGE_STREAM_CENSUS
         Task22WallpaperRunLab = [int]$values.TASK22_WALLPAPER_RUN_LAB
         ScreenSpaceCensusMode = [int]$values.SCREEN_SPACE_CENSUS
         RenderEconomyMode = [int]$values.RENDER_ECONOMY
@@ -767,6 +791,7 @@ $makeArgs += "NDS_RENDERER_M2_DETAILED_LEDGER=$([int]$RendererM2DetailedLedger.I
 $makeArgs += "NDS_RENDERER_M3_PHASE0_PROFILE=$([int]$RendererM3Phase0Profile.IsPresent)"
 $makeArgs += "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE=$effectiveNativeStageGeneratedSegment0Enable"
 $makeArgs += "NDS_TASK29_GX_CENSUS=$([int]$Task29GXCensus.IsPresent)"
+$makeArgs += "NDS_TASK34_STAGE_STREAM_CENSUS=$([int]$Task34StageStreamCensus.IsPresent)"
 $makeArgs += "NDS_TASK22_WALLPAPER_RUN_LAB=$([int]$Task22WallpaperRunLab.IsPresent)"
 $makeArgs += "NDS_FAST_WALLPAPER_AFFINE=$effectiveFastWallpaperAffineMode"
 $makeArgs += "NDS_RENDERER_SCREEN_SPACE_CENSUS=$RendererScreenSpaceCensusMode"
@@ -893,10 +918,14 @@ if ($Task29GXCensus) {
     $task29BuildDirectory = Resolve-Smash64DSBuildPath `
         -Root $root -Build $Build
     $task29BuildConfig = Join-Path $task29BuildDirectory 'nds_build_config.h'
+    $task29BuildConfigText = Get-Content -LiteralPath $task29BuildConfig -Raw
     Assert-Condition (
         (Test-Path -LiteralPath $task29BuildConfig -PathType Leaf) -and
-        ((Get-Content -LiteralPath $task29BuildConfig -Raw) -match
-            '(?m)^#define NDS_TASK29_GX_CENSUS 1$')
+        ($task29BuildConfigText -match
+            '(?m)^#define NDS_TASK29_GX_CENSUS 1$') -and
+        ($task29BuildConfigText -match
+            ("(?m)^#define NDS_TASK34_STAGE_STREAM_CENSUS {0}$" -f
+             [int]$Task34StageStreamCensus.IsPresent))
     ) 'Built Task 29 GX census configuration is absent or stale.' `
         $task29BuildConfig
     $task29Nm = Join-Path $env:DEVKITARM 'bin/arm-none-eabi-nm.exe'
@@ -904,7 +933,13 @@ if ($Task29GXCensus) {
     Assert-Condition (
         $LASTEXITCODE -eq 0 -and
         ($task29NmOutput -match '\bgNdsTask29GXCommandCount$') -and
-        ($task29NmOutput -match '\bgNdsTask29GXNeverSuppressMask$')
+        ($task29NmOutput -match '\bgNdsTask29GXNeverSuppressMask$') -and
+        ([bool]($task29NmOutput -match
+            '\bgNdsTask34StageStreamEntries$') -eq
+         [bool]$Task34StageStreamCensus) -and
+        ([bool]($task29NmOutput -match
+            '\bgNdsTask34StageStreamCaptureEnabled$') -eq
+         [bool]$Task34StageStreamCensus)
     ) 'Built Task 29 GX census ELF lacks its fail-closed command/mask exports.' `
         ($task29NmOutput -join "`n")
 }
@@ -946,6 +981,8 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
             $effectiveNativeStageGeneratedSegment0Enable -and
         $benchmarkMakeIdentity.Task29GXCensus -eq
             [int]$Task29GXCensus.IsPresent -and
+        $benchmarkMakeIdentity.Task34StageStreamCensus -eq
+            [int]$Task34StageStreamCensus.IsPresent -and
         $benchmarkMakeIdentity.Task22WallpaperRunLab -eq
             [int]$Task22WallpaperRunLab.IsPresent -and
         $benchmarkMakeIdentity.FastWallpaperAffine -eq
@@ -1360,6 +1397,31 @@ try {
                         'set $task29_gx_owner = $task29_gx_owner + 1',
                         'end'
                     )
+                    if ($Task34StageStreamCensus) {
+                        $coarseBenchmarkCommands +=
+                            'printf "TASK34_STAGE_META=%u,%u,%u,%u,%u\n", gNdsTask34StageStreamFrame, gNdsTask34StageStreamEntryCount, gNdsTask34StageStreamWordCount, gNdsTask34StageStreamOverflowCount, gNdsTask34StageStreamFaultCount'
+                        foreach ($dump in $task34StageDumpFiles) {
+                            $entriesPath = [IO.Path]::GetRelativePath(
+                                $root, $dump.Entries).Replace('\', '/')
+                            $wordsPath = [IO.Path]::GetRelativePath(
+                                $root, $dump.Words).Replace('\', '/')
+                            $coarseBenchmarkCommands += @(
+                                ('if $renderer_benchmark_samples == {0}' -f
+                                    $dump.Sample),
+                                ('dump binary memory {0} &gNdsTask34StageStreamEntries[0] &gNdsTask34StageStreamEntries[gNdsTask34StageStreamEntryCount]' -f
+                                    $entriesPath),
+                                ('dump binary memory {0} &gNdsTask34StageStreamWords[0] &gNdsTask34StageStreamWords[gNdsTask34StageStreamWordCount]' -f
+                                    $wordsPath),
+                                'end'
+                            )
+                        }
+                        $coarseBenchmarkCommands += @(
+                            ('if $renderer_benchmark_samples == {0}' -f
+                                ($RendererBenchmarkSamples - 1)),
+                            'set variable gNdsTask34StageStreamCaptureEnabled = 0',
+                            'end'
+                        )
+                    }
                 }
                 if ($Task9FloatCensusMode -eq 1) {
                     $coarseBenchmarkCommands += @(
@@ -1480,6 +1542,15 @@ try {
                             ($RendererBenchmarkStartFrame - 1)),
                         'set variable gNdsRendererScreenSpaceCensusResetRequested = 1',
                         'set variable gNdsRendererScreenSpaceCensusArmed = 1',
+                        'continue',
+                        'end'
+                    )
+                }
+                if ($Task34StageStreamCensus) {
+                    $benchmarkStartGateCommands += @(
+                        ('if gNdsRendererProfileFrameCount == {0}' -f
+                            ($RendererBenchmarkStartFrame - 1)),
+                        'set variable gNdsTask34StageStreamCaptureEnabled = 1',
                         'continue',
                         'end'
                     )
@@ -2171,6 +2242,9 @@ try {
     $task29GxMetaBenchmark = @()
     $task29GxClassBenchmark = @()
     $task29GxOwnerBenchmark = @()
+    $task34StageMetaBenchmark = @()
+    $task34StageEntryValues = [Collections.Generic.List[object]]::new()
+    $task34StageWordValues = [Collections.Generic.List[object]]::new()
     $phase05Benchmark = @()
     $wallRunBenchmark = @()
     $m4WaterStillBenchmark = @()
@@ -2219,6 +2293,52 @@ try {
                 -Text $gdbStdout -Name 'TASK29_GX_CLASS' -FieldCount 67)
             $task29GxOwnerBenchmark = @(Get-UnsignedMarkerMatches `
                 -Text $gdbStdout -Name 'TASK29_GX_OWNER' -FieldCount 70)
+            if ($Task34StageStreamCensus) {
+                $task34StageMetaBenchmark = @(Get-UnsignedMarkerMatches `
+                    -Text $gdbStdout -Name 'TASK34_STAGE_META' -FieldCount 5)
+                Assert-Condition (
+                    $task34StageMetaBenchmark.Count -eq
+                        $RendererBenchmarkSamples -and
+                    $task34StageDumpFiles.Count -eq
+                        $RendererBenchmarkSamples
+                ) "Task 34 E1 did not publish one meta row and dump pair per sample." $gdbStdout
+                for ($sampleIndex = 0;
+                     $sampleIndex -lt $RendererBenchmarkSamples;
+                     $sampleIndex++) {
+                    $meta = Get-Ints $task34StageMetaBenchmark[$sampleIndex]
+                    $dump = $task34StageDumpFiles[$sampleIndex]
+                    $entryBytes = [IO.File]::ReadAllBytes($dump.Entries)
+                    $wordBytes = [IO.File]::ReadAllBytes($dump.Words)
+                    Assert-Condition (
+                        $entryBytes.Length -eq (8 * $meta[1]) -and
+                        $wordBytes.Length -eq (4 * $meta[2])
+                    ) "Task 34 E1 binary dump size diverged at frame $($meta[0])." (
+                        "entries=$($entryBytes.Length)/$((8 * $meta[1])) words=$($wordBytes.Length)/$((4 * $meta[2]))")
+                    for ($entryIndex = 0;
+                         $entryIndex -lt $meta[1]; $entryIndex++) {
+                        $offset = 8 * $entryIndex
+                        Assert-Condition ($entryBytes[$offset + 7] -eq 0) `
+                            "Task 34 E1 binary entry has a nonzero reserved byte." `
+                            "frame=$($meta[0]) entry=$entryIndex"
+                        $task34StageEntryValues.Add(@(
+                            $meta[0],
+                            $entryIndex,
+                            [BitConverter]::ToUInt16($entryBytes, $offset + 2),
+                            $entryBytes[$offset + 4],
+                            [BitConverter]::ToUInt16($entryBytes, $offset),
+                            $entryBytes[$offset + 5],
+                            $entryBytes[$offset + 6]))
+                    }
+                    for ($wordIndex = 0;
+                         $wordIndex -lt $meta[2]; $wordIndex++) {
+                        $task34StageWordValues.Add(@(
+                            $meta[0],
+                            $wordIndex,
+                            [BitConverter]::ToUInt32(
+                                $wordBytes, 4 * $wordIndex)))
+                    }
+                }
+            }
         }
         if (($RendererProfileLevel -eq 1) -and
             ($RendererFastRunMode -eq 9)) {
@@ -2355,8 +2475,10 @@ try {
         }
         if (-not $isCpuPrepNoGx -and -not $OneMinuteMatchProof -and ($RendererBenchmarkSamples -gt 0)) {
             Assert-Condition (
-                $m4FenceFinalValues[8] -eq $expectedM4SeenMask -and
-                $m4FenceFinalValues[9] -eq $expectedM4OwnerMask -and
+                ($m4FenceFinalValues[8] -band $expectedM4SeenMask) -eq
+                    $expectedM4SeenMask -and
+                ($m4FenceFinalValues[9] -band $expectedM4OwnerMask) -eq
+                    $expectedM4OwnerMask -and
                 $m4FenceFinalValues[11] -gt 0
             ) 'M4 strict benchmark did not cover every prepared owner through pinned hits.' $gdbStdout
         }
@@ -2771,7 +2893,8 @@ try {
                 $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
                 $bp[2] -eq (2 * $bp[3]) -and $bp[3] -ge 180 -and
                 $bp[4] -eq $bp[3] -and $bp[5] -gt 0 -and
-                $bp[6] -gt 0 -and $bp[6] -le 305 -and
+                $bp[6] -gt 0 -and
+                ($Task34StageStreamCensus -or $bp[6] -le 305) -and
                 $bp[8] -gt 0 -and $bp[9] -ge 2 -and
                 $bp[10] -ge $bp[9] -and $bp[11] -eq 0 -and
                 (($bp[12] + $bp[13] + $bp[14] + $bp[15] + $bp[16]) -eq
@@ -3177,6 +3300,9 @@ try {
                     $task29GxMetaSamples = [System.Collections.Generic.List[object]]::new()
                     $task29GxClassSamples = [System.Collections.Generic.List[object]]::new()
                     $task29GxOwnerSamples = [System.Collections.Generic.List[object]]::new()
+                    $task34StageMetaSamples = [System.Collections.Generic.List[object]]::new()
+                    $task34StageEntrySamples = [System.Collections.Generic.List[object]]::new()
+                    $task34StageWordSamples = [System.Collections.Generic.List[object]]::new()
                     $phase05Samples = [System.Collections.Generic.List[object]]::new()
                     $wallRunSamples = [System.Collections.Generic.List[object]]::new()
                     $m4WaterStillSamples = [System.Collections.Generic.List[object]]::new()
@@ -3232,6 +3358,9 @@ try {
                         $task29GxMetaSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxClassSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxOwnerSamples = [System.Collections.Generic.List[object]]::new()
+                        $task34StageMetaSamples = [System.Collections.Generic.List[object]]::new()
+                        $task34StageEntrySamples = [System.Collections.Generic.List[object]]::new()
+                        $task34StageWordSamples = [System.Collections.Generic.List[object]]::new()
                         $m4WaterStillSamples = [System.Collections.Generic.List[object]]::new()
                         $m4StaticSamples = [System.Collections.Generic.List[object]]::new()
                         $m4FenceSamples = [System.Collections.Generic.List[object]]::new()
@@ -3347,6 +3476,14 @@ try {
                                 $task29GxOwnerBenchmark.Count -eq
                                     (4 * $RendererBenchmarkSamples)
                             ) "Task 29 GX census is incomplete (meta=$($task29GxMetaBenchmark.Count) class=$($task29GxClassBenchmark.Count) owner=$($task29GxOwnerBenchmark.Count))." $gdbStdout
+                            if ($Task34StageStreamCensus) {
+                                Assert-Condition (
+                                    $task34StageMetaBenchmark.Count -eq
+                                        $RendererBenchmarkSamples -and
+                                    $task34StageEntryValues.Count -gt 0 -and
+                                    $task34StageWordValues.Count -gt 0
+                                ) "Task 34 E1 raw stream census is incomplete (meta=$($task34StageMetaBenchmark.Count) entries=$($task34StageEntryValues.Count) words=$($task34StageWordValues.Count))." $gdbStdout
+                            }
                         }
                         $expectedLogicTickDelta = if (
                             $BattlePlayable -and $RealtimePresentation -and
@@ -3495,6 +3632,70 @@ try {
                                         (3 * $task29FastRun[6]) -and
                                     (Get-Ints $task29GxOwnerBenchmark[(4 * $sampleIndex) + 3])[64] -eq 0
                                 ) "Task 29 GX vertex ownership diverged from the synchronized fast-owner lifecycle or failed to assign all residual triangles to the stage at frame $frame." $gdbStdout
+                                if ($Task34StageStreamCensus) {
+                                    $task34Meta = Get-Ints `
+                                        $task34StageMetaBenchmark[$sampleIndex]
+                                    $task34FrameEntries = @(
+                                        $task34StageEntryValues | Where-Object {
+                                            $_[0] -eq $frame
+                                        })
+                                    $task34FrameWords = @(
+                                        $task34StageWordValues | Where-Object {
+                                            $_[0] -eq $frame
+                                        })
+                                    Assert-Condition (
+                                        $task34Meta[0] -eq $frame -and
+                                        $task34Meta[1] -le
+                                            $task29OwnerCommandSums[0] -and
+                                        $task34Meta[2] -le
+                                            $task29OwnerWordSums[0] -and
+                                        $task34Meta[3] -eq 0 -and
+                                        $task34Meta[4] -eq 0 -and
+                                        $task34FrameEntries.Count -eq
+                                            $task34Meta[1] -and
+                                        $task34FrameWords.Count -eq
+                                            $task34Meta[2]
+                                    ) "Task 34 E1 native-stage stream exceeded the broad Task-29 stage/effects owner or hit an overflow/fault at frame $frame (meta=$($task34Meta -join ',') owner=$($task29OwnerCommandSums[0])/$($task29OwnerWordSums[0]))." $gdbStdout
+                                    $task34WordCursor = 0
+                                    for ($task34EntryIndex = 0;
+                                         $task34EntryIndex -lt
+                                            $task34FrameEntries.Count;
+                                         $task34EntryIndex++) {
+                                        $task34Entry =
+                                            $task34FrameEntries[$task34EntryIndex]
+                                        Assert-Condition (
+                                            $task34Entry[1] -eq
+                                                $task34EntryIndex -and
+                                            $task34Entry[2] -lt 57 -and
+                                            $task34Entry[3] -lt 22 -and
+                                            $task34Entry[4] -eq
+                                                $task34WordCursor -and
+                                            $task34Entry[5] -le 16 -and
+                                            $task34Entry[6] -lt 8
+                                        ) "Task 34 E1 entry $task34EntryIndex is out of order, unowned, or out of range at frame $frame (actual=$($task34Entry -join ','))." $gdbStdout
+                                        $task34WordCursor += $task34Entry[5]
+                                    }
+                                    Assert-Condition (
+                                        $task34WordCursor -eq
+                                            $task34Meta[2]
+                                    ) "Task 34 E1 entry word spans do not close the frame-$frame stream." $gdbStdout
+                                    for ($task34WordIndex = 0;
+                                         $task34WordIndex -lt
+                                            $task34FrameWords.Count;
+                                         $task34WordIndex++) {
+                                        Assert-Condition (
+                                            $task34FrameWords[$task34WordIndex][1] -eq
+                                                $task34WordIndex
+                                        ) "Task 34 E1 word $task34WordIndex is out of order at frame $frame." $gdbStdout
+                                    }
+                                    $task34StageMetaSamples.Add($task34Meta)
+                                    foreach ($task34Entry in $task34FrameEntries) {
+                                        $task34StageEntrySamples.Add($task34Entry)
+                                    }
+                                    foreach ($task34Word in $task34FrameWords) {
+                                        $task34StageWordSamples.Add($task34Word)
+                                    }
+                                }
                                 $task29GxMetaSamples.Add($task29Meta)
                                 $task29GxClassSamples.Add($task29Class)
                             }
@@ -3855,8 +4056,9 @@ try {
                                         $m4Static[4] -eq 24 -and
                                         $m4Static[5] -eq 136192 -and
                                         $m4Static[6] -eq 1 -and
-                                        $m4Static[7] -eq 0x3fffff -and
-                                        $m4Static[8] -eq 0x7 -and
+                                        ($m4Static[7] -band 0x3fffff) -eq
+                                            0x3fffff -and
+                                        ($m4Static[8] -band 0x7) -eq 0x7 -and
                                         $m4Static[9] -eq 0 -and
                                         $m4Static[10] -gt 0
                                     ) "M4 static-texture AOT corpus was not fully prepared, armed, covered, and pinned at frame $frame (actual=$($m4Static -join ','))." $gdbStdout
@@ -4522,6 +4724,8 @@ try {
                             task20Stack = $task20StackEvidence
                             task22WallpaperRunLab = [bool]$Task22WallpaperRunLab
                             task29GxCensus = [bool]$Task29GXCensus
+                            task34StageStreamCensus =
+                                [bool]$Task34StageStreamCensus
                             nativeStageGeneratedSegment0Enable =
                                 $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable
                             phaseMatrixMode = [bool]$PhaseMatrixMode
@@ -4568,6 +4772,10 @@ try {
                                 task29GxMeta = @($task29GxMetaSamples)
                                 task29GxClass = @($task29GxClassSamples)
                                 task29GxOwner = @($task29GxOwnerSamples)
+                                task34StageMeta = @($task34StageMetaSamples)
+                                task34StageEntries =
+                                    @($task34StageEntrySamples)
+                                task34StageWords = @($task34StageWordSamples)
                                 phase05 = @($phase05Samples)
                                 wallpaperRuns = @($wallRunSamples)
                                 m4WaterStill = @($m4WaterStillSamples)

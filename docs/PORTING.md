@@ -21453,3 +21453,16 @@ remains skipped for the requested fast iteration cadence.
 - The same photos show `BGM slices 180/184` on retail, closing Task 30's
   engagement gate. Its dedicated whole-half/sliced pacing A/B remains open.
   This closes its listen gate, while retail engagement/histograms remain.
+
+## 2026-07-20 - Stopped Task 34 at the immutable-stream census
+
+- Added a default-off, request-gated Task-29 extension that bulk-dumps the
+  bounded native-stage command/parameter stream by DObj without changing GX
+  behavior. All three required eight-frame windows pass with zero recorder
+  overflow or faults.
+- The 24 synchronized frames contain 2,557 commands and 6,894 parameter words
+  per frame. All 42 display-bearing DObjs vary with the live camera; the other
+  15 hierarchy DObjs emit no stream.
+- The certified immutable share is therefore `0 / 6,894` (`0.000%`), below the
+  approximately 60% continuation gate. E2/E3, replay, DMA, and retail testing
+  were not started; the focused checker and Boundary verifier pass.

@@ -488,6 +488,19 @@ volatile u32 gNdsTask29GXNeverSuppressMask =
     (1u << NDS_TASK29_GX_VERTEX16) |
     (1u << NDS_TASK29_GX_FLUSH);
 
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+volatile u32 gNdsTask34StageStreamFrame;
+volatile u32 gNdsTask34StageStreamCaptureEnabled;
+volatile u32 gNdsTask34StageStreamEntryCount;
+volatile u32 gNdsTask34StageStreamWordCount;
+volatile u32 gNdsTask34StageStreamOverflowCount;
+volatile u32 gNdsTask34StageStreamFaultCount;
+volatile NDSRendererTask34StageStreamEntry
+    gNdsTask34StageStreamEntries[NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY];
+volatile u32
+    gNdsTask34StageStreamWords[NDS_TASK34_STAGE_STREAM_WORD_CAPACITY];
+#endif
+
 static u32 sNdsTask29GXCommandCount[NDS_TASK29_GX_CLASS_COUNT];
 static u32 sNdsTask29GXWordCount[NDS_TASK29_GX_CLASS_COUNT];
 static u32 sNdsTask29GXRepeatCount[NDS_TASK29_GX_CLASS_COUNT];
@@ -514,6 +527,15 @@ static u32 sNdsTask29GXBoundaryCount;
 static u32 sNdsTask29GXFaultCount;
 static u32 sNdsTask29GXOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
 static u32 sNdsTask29GXActive;
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+static u32 sNdsTask34StageStreamEntryCount;
+static u32 sNdsTask34StageStreamWordCount;
+static u32 sNdsTask34StageStreamOverflowCount;
+static u32 sNdsTask34StageStreamFaultCount;
+static u32 sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
+static u32 sNdsTask34StageStreamSegment;
+static u32 sNdsTask34StageStreamActive;
+#endif
 
 static inline u32 ndsRendererTask29GXHashA(u32 hash, u32 value)
 {
@@ -555,6 +577,15 @@ ndsRendererTask29GXResetWorking(void)
     sNdsTask29GXBoundaryCount = 0u;
     sNdsTask29GXFaultCount = 0u;
     sNdsTask29GXOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+    sNdsTask34StageStreamEntryCount = 0u;
+    sNdsTask34StageStreamWordCount = 0u;
+    sNdsTask34StageStreamOverflowCount = 0u;
+    sNdsTask34StageStreamFaultCount = 0u;
+    sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
+    sNdsTask34StageStreamSegment = 0u;
+    sNdsTask34StageStreamActive = FALSE;
+#endif
     for (owner = 0u; owner < NDS_TASK29_GX_OWNER_COUNT; owner++)
     {
         sNdsTask29GXOwnerHashA[owner] = 2166136261u;
@@ -592,6 +623,45 @@ ndsRendererTask29GXRecord(
     }
     owner = (sNdsTask29GXOwner < NDS_TASK29_GX_OWNER_COUNT) ?
         sNdsTask29GXOwner : (u32)NDS_RENDERER_PROFILE_OWNER_NONE;
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+    if (sNdsTask34StageStreamActive != FALSE)
+    {
+        u32 entry_index = sNdsTask34StageStreamEntryCount;
+        u32 first_word = sNdsTask34StageStreamWordCount;
+
+        if ((sNdsTask34StageStreamDObj ==
+             NDS_TASK34_STAGE_STREAM_DOBJ_NONE) ||
+            (owner != NDS_RENDERER_PROFILE_OWNER_STAGE))
+        {
+            sNdsTask34StageStreamFaultCount++;
+        }
+        else if ((entry_index >= NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY) ||
+                 (first_word + word_count >
+                  NDS_TASK34_STAGE_STREAM_WORD_CAPACITY))
+        {
+            sNdsTask34StageStreamOverflowCount++;
+        }
+        else
+        {
+            volatile NDSRendererTask34StageStreamEntry *entry =
+                &gNdsTask34StageStreamEntries[entry_index];
+
+            entry->word_offset = (u16)first_word;
+            entry->dobj_index = (u16)sNdsTask34StageStreamDObj;
+            entry->command_class = (u8)class_index;
+            entry->word_count = (u8)word_count;
+            entry->segment_index = (u8)sNdsTask34StageStreamSegment;
+            entry->reserved = 0u;
+            for (word_index = 0u; word_index < word_count; word_index++)
+            {
+                gNdsTask34StageStreamWords[first_word + word_index] =
+                    words[word_index];
+            }
+            sNdsTask34StageStreamEntryCount++;
+            sNdsTask34StageStreamWordCount += word_count;
+        }
+    }
+#endif
     if (((sNdsTask29GXLastValidMask & (1u << class_index)) == 0u) ||
         (sNdsTask29GXLastWordCount[class_index] != word_count))
     {
@@ -681,6 +751,55 @@ void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXRecordFlush(u32 mode)
     sNdsTask29GXLastValidMask = 0u;
 }
 
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+void NDS_TASK29_GX_CENSUS_CODE
+ndsRendererTask34StageStreamBeginSegment(u32 segment_index)
+{
+    if (gNdsTask34StageStreamCaptureEnabled == FALSE)
+    {
+        return;
+    }
+    ndsRendererTask29GXEnsureActive();
+    if (sNdsTask34StageStreamActive != FALSE)
+    {
+        sNdsTask34StageStreamFaultCount++;
+    }
+    sNdsTask34StageStreamSegment = segment_index;
+    sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
+    sNdsTask34StageStreamActive = TRUE;
+}
+
+void NDS_TASK29_GX_CENSUS_CODE
+ndsRendererTask34StageStreamSetDObj(u32 dobj_index)
+{
+    if (gNdsTask34StageStreamCaptureEnabled == FALSE)
+    {
+        return;
+    }
+    if (sNdsTask34StageStreamActive == FALSE)
+    {
+        sNdsTask34StageStreamFaultCount++;
+        return;
+    }
+    sNdsTask34StageStreamDObj = dobj_index;
+}
+
+void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask34StageStreamEndSegment(void)
+{
+    if (gNdsTask34StageStreamCaptureEnabled == FALSE)
+    {
+        return;
+    }
+    if (sNdsTask34StageStreamActive == FALSE)
+    {
+        sNdsTask34StageStreamFaultCount++;
+        return;
+    }
+    sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
+    sNdsTask34StageStreamActive = FALSE;
+}
+#endif
+
 void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXPublishFrame(void)
 {
     u32 command_class;
@@ -722,6 +841,14 @@ void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXPublishFrame(void)
     gNdsTask29GXBoundaryHashB = sNdsTask29GXBoundaryHashB;
     gNdsTask29GXBoundaryCount = sNdsTask29GXBoundaryCount;
     gNdsTask29GXFaultCount = sNdsTask29GXFaultCount;
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+    gNdsTask34StageStreamFrame = gNdsRendererProfileFrameCount;
+    gNdsTask34StageStreamEntryCount = sNdsTask34StageStreamEntryCount;
+    gNdsTask34StageStreamWordCount = sNdsTask34StageStreamWordCount;
+    gNdsTask34StageStreamOverflowCount =
+        sNdsTask34StageStreamOverflowCount;
+    gNdsTask34StageStreamFaultCount = sNdsTask34StageStreamFaultCount;
+#endif
     gNdsTask29GXNeverSuppressMask =
         (1u << NDS_TASK29_GX_TEXTURE_BIND) |
         (1u << NDS_TASK29_GX_MATRIX_IDENTITY) |
@@ -19832,6 +19959,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     commit_start = ndsRendererM3Phase0Tick();
 #endif
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+    ndsRendererTask34StageStreamBeginSegment(segment_index);
+#endif
 #if NDS_RENDER_ECONOMY
     if ((gNdsRendererEconomyActiveOwnerMask &
          ((u32)1u << segment->owner)) != 0u)
@@ -19849,6 +19979,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             &sNdsNativeStageOwnerExecution.runs[run_index];
         u32 emitted_triangles = 0u;
         u32 triangle_offset;
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+        u32 task34_dobj_index;
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         u32 phase_start = ndsRendererM3Phase0Tick();
 #endif
@@ -19859,6 +19992,21 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             ndsRendererBenchmarkSegment0ArmRun(
                 run_offset, run, prepared_run);
         }
+#endif
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+        for (task34_dobj_index = 0u;
+             task34_dobj_index < NDS_NATIVE_STAGE_DOBJ_COUNT;
+             task34_dobj_index++)
+        {
+            if (sNdsNativeStageDObjs[task34_dobj_index].binding_index ==
+                run->binding_index)
+            {
+                break;
+            }
+        }
+        ndsRendererTask34StageStreamSetDObj(
+            (task34_dobj_index < NDS_NATIVE_STAGE_DOBJ_COUNT) ?
+                task34_dobj_index : NDS_TASK34_STAGE_STREAM_DOBJ_NONE);
 #endif
         ndsRendererNativeStageBeginRun(
             prepared_run, run->submit_class, segment->owner, stats);
@@ -19943,6 +20091,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             &gNdsRendererM3Phase0AccountingTicks, phase_start);
 #endif
     }
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+    ndsRendererTask34StageStreamEndSegment();
+#endif
     sNdsRendererFastRunCount += segment->run_count;
     sNdsRendererFastTriangleCount += segment_triangles;
     sNdsRendererFastOwnerTriangleCount[

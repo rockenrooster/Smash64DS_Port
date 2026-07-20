@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-20 (Task 32 retail KEEP; Task 34 E1 next)
+Updated: 2026-07-20 (Task 34 stopped at E1; Task 30 retail A/B remains)
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -30,25 +30,23 @@ correctness evidence, never its speed referee.
 Preserve that untracked user file and `Smash64DS_Port.zip`; neither belongs to
 implementation commits.
 
-**NEXT — Task 34 Phase E1 only.** Task 32 is a retail KEEP: `DHT 1` improves
-normalized 4+ intervals 69.00% -> 66.95% and 5+ 11.17% -> 10.27%, with maximum
-unchanged at 7 and exact host semantic/GX/0-of-49,152 pixel gates. The generic
-flag remains 0; published and release-equivalent freeze-diagnostic targets
-force the 8,060/8,168-byte section on. DevFast and Boundary pass; the promoted
-battle ROM is `B73D9BDB...`. Evidence:
-`artifacts/performance/2026-07-20_task32-draw-hot-text.md`.
+**NEXT — finish Task 30's dedicated retail A/B when Tyler is available.** Human
+listening passed and Task-32 retail photos prove `BGM slices 180/184`
+engagement, but the whole-half and sliced ROMs still need matched 2/3/4/5+
+interval histograms and maxima. Do not promote a hardware pacing claim from
+the host timing packet alone.
 
-Start Task 34 E1 as measurement-only work: capture the full per-DObj stage GX
-stream over countdown 438–445, early 600–607, and Whispy 1398–1405, partition
-identical versus varying words, cross-check Task-23R consumed fields, and stop
-if the identical share is below about 60%. Do not begin E2 in the same atomic
-unit; E1 must document and commit its certificate first.
+Task 34 is closed at E1. Its three required windows contain 24 synchronized
+frames and an exact 2,557-command / 6,894-parameter-word native-stage stream.
+All 42 display-bearing DObjs vary, 15 hierarchy nodes have no stream, and the
+bit-identical share is `0 / 6,894` (`0.000%`) versus the approximately 60%
+gate. This matches Task 23R's live `projection` plus 42 composed matrices. Do
+not start E2/E3 or add stream replay/DMA. Evidence:
+`artifacts/performance/2026-07-20_task34-e1-stage-stream.md`.
 
-Task 30 remains device-gated, but human listening passed and Task-32 retail
-photos prove `BGM slices 180/184` engagement. Its dedicated whole-half/sliced
-ROMs still need both 2/3/4/5+ interval histograms and maxima.
-Do not start deferred Task 33
-unless Task 30 ships and fresh audio-shell P95 remains above about 40K.
+Task 32 remains the published retail KEEP at battle ROM `B73D9BDB...`.
+Do not start deferred Task 33 unless Task 30 ships and fresh audio-shell P95
+remains above about 40K.
 
 ---
 

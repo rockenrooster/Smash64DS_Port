@@ -176,6 +176,22 @@ preserve the full histogram. The generic flag default remains 0; published and
 release-equivalent freeze-diagnostic targets force it to 1. Evidence:
 `artifacts/performance/2026-07-20_task32-draw-hot-text.md`.
 
+## Task 34 immutable stage stream — STOPPED AT E1 2026-07-20
+
+The required 24-frame per-DObj GX certificate covers countdown 438–445, early
+600–607, and Whispy 1398–1405 on one profile-1 ROM/ELF. Every frame closes at
+2,557 native-stage commands / 6,894 parameter words with zero overflow/faults.
+All 42 display-bearing DObjs vary; 15 hierarchy-only DObjs have no stream; no
+DObj is bit-identical. The immutable share is therefore `0 / 6,894` words
+(`0.000%`) versus the approximately 60% continuation gate.
+
+This directly agrees with Task 23R: `projection` and all 42 composed matrices
+are live-camera-dependent and are serialized into each DObj stream. Task 34
+stops before E2. Do not add CPU replay, an arena/static buffer, GX-FIFO DMA,
+update overlap, or device ROMs. Preserve only the default-off measurement
+certificate. Evidence:
+`artifacts/performance/2026-07-20_task34-e1-stage-stream.md`.
+
 ## BG-0 fast Dream Land wallpaper — REENGAGED 2026-07-19
 
 **ENABLED in the published target.** The Makefile forces `NDS_FAST_WALLPAPER_AFFINE := 1`
