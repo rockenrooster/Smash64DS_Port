@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-20 (Task 31 census stop; Task 32 next)
+Updated: 2026-07-20 (Task 32 retail packet ready; device decision next)
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -30,16 +30,21 @@ correctness evidence, never its speed referee.
 Preserve that untracked user file and `Smash64DS_Port.zip`; neither belongs to
 implementation commits.
 
-**NEXT IMPLEMENTATION — Task 32 draw-path hot-text grouping.** Task 31 stopped
-at its mandatory census: frames 600–607 contain five concurrent 16 KiB
-coroutines (IDs 1, 3, 4, 5, and 6), peak six, with ID 5 owning the gameplay
-watermark. Retain the default-off lifetime census, but do not add a DTCM stack
-or multi-stack scheme. Evidence:
-`artifacts/performance/2026-07-20_task31-coroutine-census.md`.
+**NEXT DECISION — Task 32 retail A/B.** The default-off 13-function draw-hot
+candidate is 8,168 bytes in profile 1 / 8,060 in profile 0, keeps Task 17 at
+5,016 bytes, and passes exact semantic/GX/0-of-49,152 pixel gates. melonDS
+regresses M3/DRW about 4.3K ticks and cannot referee instruction-cache locality.
+Run `builds/task32-draw-hot-device-pair/README.txt`: control `28CCE187...`, then
+candidate `69B0050E...`, and report DHT, DRW latest/mean, 2/3/4/5+, and maximum.
+A retail win keeps and promotes the section; flat/worse hardware removes it.
+Evidence: `artifacts/performance/2026-07-20_task32-draw-hot-text.md`.
+Focused fixtures, DevFast, and Boundary pass with the published default still
+off.
 
-Task 30 remains device-gated. Its sliced ROM must show `BGM slices` engagement,
-both ROMs need 2/3/4/5+ interval histograms and maximum, and Tyler must listen
-for unchanged track start and Results loop seam. Do not start deferred Task 33
+Task 30 remains device-gated, but its human listen check passed: Tyler reported
+that the sliced profile-1 ROM audio sounds good. It must still show `BGM slices`
+engagement on retail and both ROMs need 2/3/4/5+ interval histograms and maximum.
+Do not start deferred Task 33
 unless Task 30 ships and fresh audio-shell P95 remains above about 40K.
 
 ---

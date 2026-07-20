@@ -47,6 +47,7 @@ param(
     [ValidateRange(0,1)][int]$Task16FloatAddSubMode = 0,
     [ValidateRange(0,1)][int]$Task9StateHashMode = 0,
     [ValidateRange(0,1)][int]$Task20StackProfileMode = 0,
+    [ValidateRange(0,1)][int]$Task32DrawHotTextMode = 0,
     [string]$Task9StateHashExportPath = '',
     [ValidateRange(0,1024)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
@@ -534,7 +535,7 @@ function Get-BenchmarkMakeIdentity {
         'IFCOMMON_HYBRID_OAM', 'TASK9_FLOAT_CENSUS', 'TASK9_FLOAT_ITCM',
         'TASK9_FLOAT_PHASE2', 'TASK16_FLOAT_COMPARE', 'TASK16_FLOAT_I2F',
         'TASK16_FLOAT_ADDSUB', 'TASK9_STATE_HASH',
-        'TASK20_STACK_PROFILE',
+        'TASK20_STACK_PROFILE', 'TASK32_DRAW_HOT_TEXT',
         'CFLAGS_COMMON', 'CFLAGS_RENDERER', 'CFLAGS_SCENE'
     )
     foreach ($key in $required) {
@@ -571,6 +572,7 @@ function Get-BenchmarkMakeIdentity {
         Task16FloatAddSubMode = [int]$values.TASK16_FLOAT_ADDSUB
         Task9StateHashMode = [int]$values.TASK9_STATE_HASH
         Task20StackProfileMode = [int]$values.TASK20_STACK_PROFILE
+        Task32DrawHotTextMode = [int]$values.TASK32_DRAW_HOT_TEXT
         CommonCFlags = $values.CFLAGS_COMMON
         RendererCFlags = $values.CFLAGS_RENDERER
         SceneCFlags = $values.CFLAGS_SCENE
@@ -769,6 +771,7 @@ $makeArgs += "NDS_TASK16_FLOAT_I2F=$effectiveTask16FloatI2fMode"
 $makeArgs += "NDS_TASK16_FLOAT_ADDSUB=$effectiveTask16FloatAddSubMode"
 $makeArgs += "NDS_TASK9_STATE_HASH=$Task9StateHashMode"
 $makeArgs += "NDS_TASK20_STACK_PROFILE=$Task20StackProfileMode"
+$makeArgs += "NDS_TASK32_DRAW_HOT_TEXT=$Task32DrawHotTextMode"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
 }
@@ -957,6 +960,8 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
             $effectiveTask16FloatAddSubMode -and
         $benchmarkMakeIdentity.Task20StackProfileMode -eq
             $Task20StackProfileMode -and
+        $benchmarkMakeIdentity.Task32DrawHotTextMode -eq
+            $Task32DrawHotTextMode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
         'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M3/Task26/Task29/M4/Task11/IFCommon/Task9/Task16 configuration.' `
@@ -4376,6 +4381,8 @@ try {
                             [bool]($benchmarkMakeIdentity.Task29GXCensus -eq 1)
                         task20StackProfileMode =
                             $benchmarkMakeIdentity.Task20StackProfileMode
+                        task32DrawHotTextMode =
+                            $benchmarkMakeIdentity.Task32DrawHotTextMode
                         task22WallpaperRunLab =
                             $benchmarkMakeIdentity.Task22WallpaperRunLab
                         rendererScreenSpaceCensusMode =

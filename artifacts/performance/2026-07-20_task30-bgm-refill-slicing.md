@@ -1,6 +1,6 @@
 # Task 30 — BGM refill slicing
 
-Status: **candidate; retail engagement/listen gate pending**.
+Status: **candidate; listen gate passed, retail engagement/performance gate pending**.
 
 Source HEAD: `91858977402e66a399d4fe6aa487d25faff296c8` plus the focused
 Task-30 diff. Boundary is `battle_playable_realtime`, mode 163.
@@ -90,5 +90,10 @@ Retail checklist:
 3. Listen for an unchanged Dream Land track start. Leave Results running long
    enough to hear a Results loop seam and report any click, gap, or corruption.
 
-The candidate is not a KEEP or shipping promotion until those retail
-engagement and human-audibility checks pass.
+Tyler reported on 2026-07-20 that
+`smash64ds-task30-sliced-profile1.nds` "audio sounds good." This passes the
+required human listen-quality gate. The playback platform was not stated, so
+the report is not used as retail engagement or performance evidence.
+
+The candidate is not a KEEP or shipping promotion until the retail engagement
+photo and both pacing histograms/maxima pass.

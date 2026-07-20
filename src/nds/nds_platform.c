@@ -2017,7 +2017,9 @@ static void ndsPlatformRenderBattleFpsHud(void)
 #endif
         ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
         ndsPlatformPrintDebugLine(22u, "5+  --  max --  BGM --/--");
-        ndsPlatformPrintDebugLine(23u, "GIT %s", NDS_TASK10_GIT_SHORT);
+        ndsPlatformPrintDebugLine(
+            23u, "GIT %s DHT %u", NDS_TASK10_GIT_SHORT,
+            (unsigned int)NDS_TASK32_DRAW_HOT_TEXT);
 #endif
         return;
     }

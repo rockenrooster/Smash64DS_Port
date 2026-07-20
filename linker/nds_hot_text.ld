@@ -1,7 +1,7 @@
 /* Repo copy of Calico 1.2.0-1 ds9.ld (source SHA-256
  * 3DC451DCA9FE7E2B005CD8CBADAD9FAD2A39DC2B83E901D7DBBC3CD92EE36F87).
- * Policy changes are the separate measured .text.hot output and making the
- * Calico main-RAM load range begin at that new leading section. */
+ * Policy changes are the measured update/draw hot outputs and making the
+ * Calico main-RAM load range begin at the leading update section. */
 /*--------------------------------------------------------------------------------
 	** Linker script for DS/DSi homebrew, ARM9 side **
 --------------------------------------------------------------------------------*/
@@ -174,6 +174,15 @@ SECTIONS {
 	} >main AT>lma9 :main = 0xff
 	ASSERT(SIZEOF(.text.hot) <= 8192,
 		"Task 17 update hot text exceeds 8 KiB")
+
+	/* Device-refereed draw working set. The build-generated include is empty
+	 * for control ROMs and contains only measured input sections when enabled. */
+	.text.hot.draw : {
+		INCLUDE nds_task32_draw_hot.inc
+		. = ALIGN(4);
+	} >main AT>lma9 :main = 0xff
+	ASSERT(SIZEOF(.text.hot.draw) <= 8192,
+		"Task 32 draw hot text exceeds 8 KiB")
 
 	/* Main user code/read-only data section */
 	.main : ALIGN_WITH_INPUT {

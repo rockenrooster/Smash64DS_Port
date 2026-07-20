@@ -12,6 +12,7 @@ param(
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
     [switch]$Task29GXCensus,
     [switch]$Task20StackProfile,
+    [ValidateRange(0,1)][int]$Task32DrawHotTextMode = 0,
     [switch]$Task22WallpaperRunLab,
     [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
     [ValidateRange(0,1)][int]$RenderEconomyMode = 0,
@@ -114,7 +115,9 @@ $target = if ($FastRunMode -eq 9) {
 } else {
     'smash64ds-battle-playable-coarse-hwtri'
 }
-$build = if ($Task20StackProfile) {
+$build = if ($PSBoundParameters.ContainsKey('Task32DrawHotTextMode')) {
+    "builds/build-task32-draw-hot-e${Task32DrawHotTextMode}-lab"
+} elseif ($Task20StackProfile) {
     'builds/build-task20-reconcile'
 } elseif ($Task22WallpaperRunLab) {
     "builds/build-task22-wallpaper-profile${RendererProfileLevel}-lab"
@@ -166,6 +169,7 @@ $build = if ($Task20StackProfile) {
     -NativeStageGeneratedSegment0Enable $NativeStageGeneratedSegment0Enable `
     -Task29GXCensus:$Task29GXCensus `
     -Task20StackProfileMode ([int]$Task20StackProfile.IsPresent) `
+    -Task32DrawHotTextMode $Task32DrawHotTextMode `
     -Task22WallpaperRunLab:$Task22WallpaperRunLab `
     -RendererScreenSpaceCensusMode $RendererScreenSpaceCensusMode `
     -RenderEconomyMode $RenderEconomyMode `
@@ -197,7 +201,7 @@ $build = if ($Task20StackProfile) {
     -ExpectedMode 163 `
     -ExpectedHarnessSceneCurr 22 `
     -ExpectedHarnessScenePrev 21 `
-    -Label "battle_playable fast raw mode $FastRunMode generated segment0 $NativeStageGeneratedSegment0Enable task29 GX census $([int]$Task29GXCensus.IsPresent) static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode task20 startup stack census $([int]$Task20StackProfile.IsPresent) task22 run census $([int]$Task22WallpaperRunLab.IsPresent) phase matrix $([int]$PhaseMatrixMode.IsPresent) lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
+    -Label "battle_playable fast raw mode $FastRunMode generated segment0 $NativeStageGeneratedSegment0Enable task29 GX census $([int]$Task29GXCensus.IsPresent) static texture AOT $StaticTextureAotMode strict texture fence $([int]$RequireZeroPostGoTextureFence.IsPresent) frozen water $StaticTextureAotMode hybrid OAM $IFCommonHybridOamMode Fox CPU $FoxCpuMode wallpaper incremental $WallpaperIncrementalMode task20 startup stack census $([int]$Task20StackProfile.IsPresent) task32 draw hot text $Task32DrawHotTextMode task22 run census $([int]$Task22WallpaperRunLab.IsPresent) phase matrix $([int]$PhaseMatrixMode.IsPresent) lower text HUD $LowerTextHudMode screen census $RendererScreenSpaceCensusMode economy $RenderEconomyMode/$RenderEconomyOwnerMask task9 float census/ITCM/phase2 $Task9FloatCensusMode/$Task9FloatItcmMode/$Task9FloatPhase2Mode task16 compare/i2f/addsub $Task16FloatCompareMode/$Task16FloatI2fMode/$Task16FloatAddSubMode" `
     -HarnessSelectMessage 'Fast raw benchmark did not select Pupupu VSBattle from Maps.'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE

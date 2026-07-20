@@ -21421,3 +21421,20 @@ remains skipped for the requested fast iteration cadence.
   5, and 6) and a peak of six. ID 5 owns the measured gameplay watermark.
 - Obeyed Task 31's mandatory stop rule: no stack sizing, DTCM placement,
   static-coroutine API, canary, shipping flag, or device packet was added.
+
+## 2026-07-20 - Prepared Task 32 draw-hot retail gate
+
+- Captured two 450-sample draw PC censuses over frames 600–1498 and grouped 13
+  stage/draw functions behind default-off `NDS_TASK32_DRAW_HOT_TEXT`.
+  `.text.hot.draw` is 8,168 bytes in profile 1 and 8,060 bytes in profile 0;
+  Task 17 remains 5,016 bytes at the unchanged main-load start.
+- The synchronized profile-1 A2/B keeps semantic/GX traces and pixels exact at
+  0 / 49,152, but melonDS regresses stage/draw about 4.3K ticks. Retail remains
+  the cache-placement referee, so the candidate is not enabled or promoted.
+- Prepared distinct `DHT 0/1` device ROMs with typed DRW and 2/3/4/5+/maximum
+  rows. Their configs differ only on the draw-hot flag; the retail result will
+  independently KEEP/promote or remove the list.
+- Focused GBI/placement checks, DevFast, and Boundary pass with the published
+  default still off.
+- Recorded Tyler's report that the Task-30 sliced profile-1 audio sounds good.
+  This closes its listen gate, while retail engagement/histograms remain.

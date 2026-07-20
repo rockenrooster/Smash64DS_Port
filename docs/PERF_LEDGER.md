@@ -47,7 +47,7 @@ Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-
 
 ```text
 IDEA ID: TASK30-BGM-REFILL-SLICING-20260720
-DECISION: CANDIDATE; retail engagement/listen gate pending
+DECISION: CANDIDATE; listen passed, retail engagement/performance gate pending
 CONTROL/CANDIDATE ROM:
   00BC098C91722A7A63B239C96B1A5FFC70F5165DF7149DC3ADECC12479231319
   393B63A69C3B653C86AF93D74AD3AE33BC19F7AA3D2A5C0CA00CA462A88AC157
@@ -70,6 +70,10 @@ two-frame deadline guard finishes the remaining slices together. Preload and
 rare resync remain whole. Full evidence and retail checklist:
 `artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 
+Tyler reported on 2026-07-20 that the sliced profile-1 ROM audio sounds good.
+This closes the human listen gate, but the unspecified playback platform is not
+retail engagement evidence; histogram/max and `BGM slices` device proof remain.
+
 ## 2026-07-20 - Task 31 coroutine-stack census
 
 ```text
@@ -91,6 +95,32 @@ placement. Ordinary combat instead retains IDs 1, 3, 4, 5, and 6 as concurrent
 census is retained; no stack was resized or moved and no device A/B is needed
 for an unimplemented feature. Full evidence:
 `artifacts/performance/2026-07-20_task31-coroutine-census.md`.
+
+## 2026-07-20 - Task 32 draw-path hot-text candidate
+
+```text
+IDEA ID: TASK32-DRAW-HOT-TEXT-20260720
+DECISION: DEFAULT-OFF CANDIDATE; RETAIL A/B REQUIRED
+PC CENSUS: 2 x 450 samples, frames 600..1498, 30 s source time each
+SELECTED: 13 functions; 382/900 combined samples
+SECTION: profile1 8,168 bytes; profile0 8,060 bytes; limit 8,192
+TASK17: unchanged 5,016 bytes; __main_start unchanged
+MELONDS M3 P50/P95: 461,088/461,376 -> 465,344/465,728
+MELONDS DRW P50/P95: 857,312/860,736 -> 861,760/865,024
+LOOP P50/P95: 1,120,256/1,120,256 -> 1,120,256/1,120,320
+PIXELS: synchronized frame 607 = 0/49,152, mean 0.00
+SEMANTIC / GX TRACE: exact
+DEVICE ROMS:
+  control   28CCE18784D8AA413C2E58A9811547258A905C06DCFFCF5C39455BDCCF6D17EC
+  candidate 69B0050E6CECBBBA78FDFC43AF0945A0549049380349C69824623D976C914016
+```
+
+The linker rejected the first 8,292-byte profile-1 set. Removing only the
+124-byte, once-per-frame `gcDrawAll` entry leaves every sampled stage leaf and
+fits both profiles. The device configs differ only on `DHT 0/1`; repo-local HUD
+captures prove the typed DRW and interval rows. Retail instruction-cache
+behavior decides KEEP versus removal. Full evidence:
+`artifacts/performance/2026-07-20_task32-draw-hot-text.md`.
 
 ## 2026-07-18 - Tasks 20R-25R atomic queue reconciliation
 

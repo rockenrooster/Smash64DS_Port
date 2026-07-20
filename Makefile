@@ -71,6 +71,7 @@ NDS_TASK16_FLOAT_ADDSUB ?= 0
 NDS_TASK9_STATE_HASH ?= 0
 NDS_TASK10_HARDWARE_CALIBRATION ?= 0
 NDS_TASK20_STACK_PROFILE ?= 0
+NDS_TASK32_DRAW_HOT_TEXT ?= 0
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_FAST_WALLPAPER_AFFINE),1)
 ifneq ($(NDS_SCENE_MIP_CACHE_LAB),0)
@@ -307,6 +308,7 @@ CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 NDS_HOT_TEXT_SPECS := $(PROJECT_ROOT)/linker/ds9_hot_text.specs
 NDS_HOT_TEXT_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_hot_text.ld
+NDS_TASK32_DRAW_HOT_FRAGMENT := $(PROJECT_ROOT)/$(BUILD)/nds_task32_draw_hot.inc
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -994,6 +996,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK9_STATE_HASH $(NDS_TASK9_STATE_HASH)'; \
 		echo '#define NDS_TASK10_HARDWARE_CALIBRATION $(NDS_TASK10_HARDWARE_CALIBRATION)'; \
 		echo '#define NDS_TASK20_STACK_PROFILE $(NDS_TASK20_STACK_PROFILE)'; \
+		echo '#define NDS_TASK32_DRAW_HOT_TEXT $(NDS_TASK32_DRAW_HOT_TEXT)'; \
 		echo '#define NDS_TASK10_GIT_SHORT "$(NDS_TASK10_GIT_SHORT)"'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
@@ -1030,9 +1033,33 @@ $(NDS_SCENE_HARNESS_CONFIG): FORCE
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
 
+$(NDS_TASK32_DRAW_HOT_FRAGMENT): FORCE
+	@tmp="$@.tmp"; \
+	{ \
+		if test "$(NDS_TASK32_DRAW_HOT_TEXT)" = 1; then \
+			echo '*scene_backend.o(.text.ndsRendererAdapterFindDObjWorldMatrix)'; \
+			echo '*scene_backend.o(.text.ndsRendererAdapterBuildDObjWorldMatrix)'; \
+			echo '*nds_renderer.o(.text.ndsRendererNativeStagePrepareRun.constprop.0)'; \
+			echo '*nds_renderer.o(.text.ndsRendererMtxMul20p12)'; \
+			echo '*nds_renderer.o(.text.ndsRendererMtxMulAffine20p12)'; \
+			echo '*nds_renderer.o(.text.ndsRendererMtxLoadN64ToDS20p12)'; \
+			echo '*nds_renderer.o(.text.ndsRendererLoadHardwareMatrixPair.isra.0)'; \
+			echo '*nds_renderer.o(.text.ndsRendererCommitNativeStageSegment)'; \
+			echo '*nds_renderer.o(.text.ndsRendererNativeStageLoadNoZMatrix)'; \
+			echo '*nds_renderer.o(.text.ndsRendererNativeStageEmitNoZTriangle)'; \
+			echo '*nds_renderer.o(.text.ndsRendererNativeApplyStateDelta.part.0)'; \
+			echo '*nds_renderer.o(.text.ndsRendererNativeApplyStateSpan)'; \
+			echo '*nds_renderer.o(.text.ndsRendererSyncTextureTile)'; \
+		else \
+			echo '/* Task 32 draw hot text disabled. */'; \
+		fi; \
+	} > "$$tmp"; \
+	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
+
 $(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
-	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT)
+	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
+	$(NDS_TASK32_DRAW_HOT_FRAGMENT)
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
 NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
@@ -1161,6 +1188,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK9_STATE_HASH=$(NDS_TASK9_STATE_HASH)'
 	@printf '%s\n' 'BENCH_MAKE_TASK10_HARDWARE_CALIBRATION=$(NDS_TASK10_HARDWARE_CALIBRATION)'
 	@printf '%s\n' 'BENCH_MAKE_TASK20_STACK_PROFILE=$(NDS_TASK20_STACK_PROFILE)'
+	@printf '%s\n' 'BENCH_MAKE_TASK32_DRAW_HOT_TEXT=$(NDS_TASK32_DRAW_HOT_TEXT)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'
