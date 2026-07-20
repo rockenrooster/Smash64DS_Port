@@ -1,6 +1,6 @@
 # Task 30 — BGM refill slicing
 
-Status: **candidate; listen gate passed, retail engagement/performance gate pending**.
+Status: **candidate; listen and retail engagement gates passed, performance gate pending**.
 
 Source HEAD: `91858977402e66a399d4fe6aa487d25faff296c8` plus the focused
 Task-30 diff. Boundary is `battle_playable_realtime`, mode 163.
@@ -92,8 +92,13 @@ Retail checklist:
 
 Tyler reported on 2026-07-20 that
 `smash64ds-task30-sliced-profile1.nds` "audio sounds good." This passes the
-required human listen-quality gate. The playback platform was not stated, so
-the report is not used as retail engagement or performance evidence.
+required human listen-quality gate. The later Task-32 retail photos preserve
+the sliced path running on device at `BGM slices 180` and `184`, proving retail
+engagement:
+`artifacts/visibility/2026-07-20_task32-retail-control-dht0.jpg` and
+`artifacts/visibility/2026-07-20_task32-retail-candidate-dht1.jpg`. Both ROMs
+have slicing enabled, so these photos do not replace the whole-half versus
+sliced performance A/B.
 
-The candidate is not a KEEP or shipping promotion until the retail engagement
-photo and both pacing histograms/maxima pass.
+The candidate is not a KEEP or shipping promotion until the dedicated control
+and candidate pacing histograms/maxima pass.

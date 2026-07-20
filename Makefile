@@ -120,6 +120,8 @@ override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
 override NDS_TASK16_FLOAT_COMPARE := 1
 override NDS_TASK16_FLOAT_I2F := 1
 override NDS_TASK16_FLOAT_ADDSUB := 1
+# Retail Task-32 A/B reduced the normalized 4+/5+ pacing tail.
+override NDS_TASK32_DRAW_HOT_TEXT := 1
 endif
 NDS_FREEZE_DIAGNOSTIC_TARGETS := \
 	smash64ds-battle-playable-freeze-diagnostics-on-hwtri \
@@ -145,6 +147,7 @@ override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
 override NDS_TASK16_FLOAT_COMPARE := 1
 override NDS_TASK16_FLOAT_I2F := 1
 override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_FREEZE_DIAGNOSTICS := $(if $(filter %-on-hwtri,$(TARGET)),1,0)
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-freeze-diagnostics-off-hwtri)

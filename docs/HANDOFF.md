@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-20 (Task 32 retail packet ready; device decision next)
+Updated: 2026-07-20 (Task 32 retail KEEP; Task 34 E1 next)
 `P1_EXECUTION_BOARD.md` owns all current state. This is only the restart surface.
 
 ## Restart
@@ -30,20 +30,23 @@ correctness evidence, never its speed referee.
 Preserve that untracked user file and `Smash64DS_Port.zip`; neither belongs to
 implementation commits.
 
-**NEXT DECISION — Task 32 retail A/B.** The default-off 13-function draw-hot
-candidate is 8,168 bytes in profile 1 / 8,060 in profile 0, keeps Task 17 at
-5,016 bytes, and passes exact semantic/GX/0-of-49,152 pixel gates. melonDS
-regresses M3/DRW about 4.3K ticks and cannot referee instruction-cache locality.
-Run `builds/task32-draw-hot-device-pair/README.txt`: control `28CCE187...`, then
-candidate `69B0050E...`, and report DHT, DRW latest/mean, 2/3/4/5+, and maximum.
-A retail win keeps and promotes the section; flat/worse hardware removes it.
-Evidence: `artifacts/performance/2026-07-20_task32-draw-hot-text.md`.
-Focused fixtures, DevFast, and Boundary pass with the published default still
-off.
+**NEXT — Task 34 Phase E1 only.** Task 32 is a retail KEEP: `DHT 1` improves
+normalized 4+ intervals 69.00% -> 66.95% and 5+ 11.17% -> 10.27%, with maximum
+unchanged at 7 and exact host semantic/GX/0-of-49,152 pixel gates. The generic
+flag remains 0; published and release-equivalent freeze-diagnostic targets
+force the 8,060/8,168-byte section on. DevFast and Boundary pass; the promoted
+battle ROM is `B73D9BDB...`. Evidence:
+`artifacts/performance/2026-07-20_task32-draw-hot-text.md`.
 
-Task 30 remains device-gated, but its human listen check passed: Tyler reported
-that the sliced profile-1 ROM audio sounds good. It must still show `BGM slices`
-engagement on retail and both ROMs need 2/3/4/5+ interval histograms and maximum.
+Start Task 34 E1 as measurement-only work: capture the full per-DObj stage GX
+stream over countdown 438–445, early 600–607, and Whispy 1398–1405, partition
+identical versus varying words, cross-check Task-23R consumed fields, and stop
+if the identical share is below about 60%. Do not begin E2 in the same atomic
+unit; E1 must document and commit its certificate first.
+
+Task 30 remains device-gated, but human listening passed and Task-32 retail
+photos prove `BGM slices 180/184` engagement. Its dedicated whole-half/sliced
+ROMs still need both 2/3/4/5+ interval histograms and maxima.
 Do not start deferred Task 33
 unless Task 30 ships and fresh audio-shell P95 remains above about 40K.
 

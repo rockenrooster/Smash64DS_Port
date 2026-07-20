@@ -17,7 +17,7 @@ Integrated user-facing candidate:
 ```text
 smash64ds-battle-playable-hwtri.nds
 14,692,352 bytes
-SHA-256 BC236C610581A6361DE84677ED05878B05FF01A259F00736BE5D2D155171DE7D
+SHA-256 B73D9BDBF36C780C44F4898213A069FFF250716F2B77C6773C22DA28B8BB98D2
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -158,7 +158,7 @@ coroutines stop rule. No stack was resized or placed in DTCM and no multi-stack
 scheme was attempted. Keep the default-off 64-row census and proceed to Task
 32. Evidence: `artifacts/performance/2026-07-20_task31-coroutine-census.md`.
 
-## Task 32 draw hot text — DEVICE-GATED CANDIDATE 2026-07-20
+## Task 32 draw hot text — RETAIL KEEP / PUBLISHED 2026-07-20
 
 Two 450-sample PC censuses over frames 600–1498 intersect with the current
 map/call structure to select 13 stage/draw functions. `.text.hot.draw` is 8,168
@@ -167,10 +167,13 @@ remains 5,016 bytes and the main-load start is unchanged. The focused checker,
 semantic/GX traces, and synchronized 0/49,152 pixel gate pass.
 
 melonDS deterministically regresses stage/draw P50 by +4,256/+4,448 ticks; it
-cannot referee the instruction-cache mechanism. Keep the published default at
-0. Retail pair `28CCE187...` / `69B0050E...` exposes `DHT 0/1`, typed DRW,
-2/3/4/5+, and maximum. A retail DRW/histogram win keeps the list; flat or worse
-hardware removes it. Evidence:
+cannot referee the instruction-cache mechanism. Retail pair `28CCE187...` /
+`69B0050E...` improves normalized 4+ intervals 69.00% -> 66.95%, 5+ intervals
+11.17% -> 10.27%, and 2–3 intervals 31.00% -> 33.05%; maximum remains 7. The
+instantaneous photographed DRW row is 1,677,760 -> 1,658,560, supporting but
+not synchronized evidence. Permanent `DHT 0/1` photos prove engagement and
+preserve the full histogram. The generic flag default remains 0; published and
+release-equivalent freeze-diagnostic targets force it to 1. Evidence:
 `artifacts/performance/2026-07-20_task32-draw-hot-text.md`.
 
 ## BG-0 fast Dream Land wallpaper — REENGAGED 2026-07-19
@@ -373,7 +376,7 @@ the interval histogram, presentations/s, and source updates/s.
 
 ## Task 30 BGM refill slicing (2026-07-20)
 
-**Verifier-backed candidate; listen passed, retail performance gate pending.** Steady-state BGM half-ring
+**Verifier-backed candidate; listen and retail engagement passed, performance gate pending.** Steady-state BGM half-ring
 refills are split into four 8 KiB reads/flushes with a two-frame catch-up guard.
 The synchronized early window reduces audio-shell P95 268,672 -> 156,160 and
 complete-update P95 423,104 -> 311,424; slice max is 76,224 ticks. Source-update
@@ -383,9 +386,9 @@ focused natural Results audio pass with zero unsafe/overrun/read failures and
 462,160 bytes reserve after the ring.
 
 Tyler reported that the sliced profile-1 ROM "audio sounds good," closing the
-human listen-quality gate. Do not promote yet. The profile-1 control/candidate
-device packet must still show the candidate `BGM slices` HUD counter engaged on
-retail and publish both interval histograms/maxima.
+human listen-quality gate. Task-32 device photos show `BGM slices 180/184`,
+closing retail engagement. Do not promote yet: the dedicated profile-1
+whole-half/sliced packet must still publish both interval histograms/maxima.
 Evidence and exact ROM hashes:
 `artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 

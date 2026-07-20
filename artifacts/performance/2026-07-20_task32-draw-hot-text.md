@@ -1,6 +1,6 @@
 # Task 32 — draw-path hot-text grouping
 
-Status: **default-off candidate; retail A/B is the performance gate**.
+Status: **KEEP; retail histogram improved and the published target is enabled**.
 
 Source HEAD: `04baf2ca885e5877f30fbd004603c1d32d1ed071` plus the focused
 Task-32 diff. Boundary remains `battle_playable_realtime`, mode 163. This is
@@ -102,7 +102,7 @@ Host A/B artifacts:
 - `artifacts/visibility/2026-07-20_task32-control-a2-frame607.png`;
 - `artifacts/visibility/2026-07-20_task32-candidate-frame607.png`.
 
-## Retail packet and pending decision
+## Retail decision
 
 The profile-1 device configs differ on exactly one generated line. Both use
 mode 9, static textures, Task 16 1/1/1, generated segment 0, lower phase HUD,
@@ -121,20 +121,44 @@ maximum, Git hash, and `DHT 0/1`.
 The repo-local captures prove the HUD/config distinction:
 `artifacts/visibility/2026-07-20_task32-device-control-hud.png` (`DHT 0`) and
 `artifacts/visibility/2026-07-20_task32-device-candidate-hud.png` (`DHT 1`).
-The bundle README requests one control run then one candidate run in the same
-device session, with DRW latest/mean, 2/3/4/5+, and maximum reported.
 
-KEEP requires a retail DRW drop and/or interval-histogram improvement without
-a relevant regression. Flat or worse hardware results remove the section list.
-Until that result exists, the published target remains flag-off.
+Tyler ran the pair on retail hardware in one session. The preserved device
+photos are:
+
+- control `DHT 0`:
+  `artifacts/visibility/2026-07-20_task32-retail-control-dht0.jpg`, SHA-256
+  `7981529E133041615B7163166A66974B2DC9140E866C7036AAF053BC668B7516`;
+- candidate `DHT 1`:
+  `artifacts/visibility/2026-07-20_task32-retail-candidate-dht1.jpg`, SHA-256
+  `6436DA33D6CCB8A0E5A6C60F4833A833813AF6F2E27F95B82DACC1B2C500CD26`.
+
+| Retail HUD | DRW latest | VBI 2 | VBI 3 | VBI 4 | VBI 5+ | max |
+|---|---:|---:|---:|---:|---:|---:|
+| control, `DHT 0` | 1,677,760 | 0 | 186 | 347 | 67 | 7 |
+| candidate, `DHT 1` | 1,658,560 | 6 | 187 | 331 | 60 | 7 |
+
+The photos contain 600 control and 584 candidate classified intervals, so raw
+counts are not compared as though the sample sizes were identical. Normalized
+4+ intervals improve from 69.00% to 66.95% (-2.05 percentage points), 5+
+improves from 11.17% to 10.27% (-0.89 points), and 2–3 improves from 31.00% to
+33.05% (+2.05 points); maximum remains 7. The photographed instantaneous DRW
+row is also 19,200 ticks lower, but it is a half-second sample and is supporting
+rather than synchronized evidence. Both photos show 15.0 FPS / 30.0 UP and
+zero slip at the photographed instant. This satisfies the task's retail
+histogram KEEP rule. `NDS_TASK32_DRAW_HOT_TEXT` remains generic-default 0 but is
+forced to 1 by the published and release-equivalent freeze-diagnostic targets.
 
 ## Verification
 
 - focused GBI/static fixtures: pass;
 - profile-0/profile-1 flag-on placement checker and profile-1 flag-off checker:
   pass;
-- `verify-dev-fast.ps1`: pass;
-- `verify-boundary.ps1`: pass, including published ROM contract and dated
-  visibility capture;
+- post-promotion profile-0 placement: 13 symbols / 8,060 bytes, Task 17 still
+  5,016 bytes at `0x020013C0`;
+- `verify-dev-fast.ps1`: pass after promotion;
+- `verify-boundary.ps1`: pass after promotion, including published ROM contract
+  and dated visibility capture;
+- promoted battle ROM: 14,692,352 bytes, SHA-256
+  `B73D9BDBF36C780C44F4898213A069FFF250716F2B77C6773C22DA28B8BB98D2`;
 - no imported/shared gameplay translation unit changed, so no full Regression
   shard was required.

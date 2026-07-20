@@ -47,7 +47,7 @@ Reference capture:        artifacts/visibility/2026-07-12_canonical_fast_121423-
 
 ```text
 IDEA ID: TASK30-BGM-REFILL-SLICING-20260720
-DECISION: CANDIDATE; listen passed, retail engagement/performance gate pending
+DECISION: CANDIDATE; listen and retail engagement passed, performance gate pending
 CONTROL/CANDIDATE ROM:
   00BC098C91722A7A63B239C96B1A5FFC70F5165DF7149DC3ADECC12479231319
   393B63A69C3B653C86AF93D74AD3AE33BC19F7AA3D2A5C0CA00CA462A88AC157
@@ -71,8 +71,8 @@ rare resync remain whole. Full evidence and retail checklist:
 `artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 
 Tyler reported on 2026-07-20 that the sliced profile-1 ROM audio sounds good.
-This closes the human listen gate, but the unspecified playback platform is not
-retail engagement evidence; histogram/max and `BGM slices` device proof remain.
+Task-32 retail photos later prove sliced-path engagement with `BGM slices`
+counts 180 and 184. The dedicated whole-half/sliced histogram A/B remains.
 
 ## 2026-07-20 - Task 31 coroutine-stack census
 
@@ -96,11 +96,11 @@ census is retained; no stack was resized or moved and no device A/B is needed
 for an unimplemented feature. Full evidence:
 `artifacts/performance/2026-07-20_task31-coroutine-census.md`.
 
-## 2026-07-20 - Task 32 draw-path hot-text candidate
+## 2026-07-20 - Task 32 draw-path hot-text retail KEEP
 
 ```text
 IDEA ID: TASK32-DRAW-HOT-TEXT-20260720
-DECISION: DEFAULT-OFF CANDIDATE; RETAIL A/B REQUIRED
+DECISION: KEEP; PUBLISHED TARGET ENABLED AFTER RETAIL HISTOGRAM WIN
 PC CENSUS: 2 x 450 samples, frames 600..1498, 30 s source time each
 SELECTED: 13 functions; 382/900 combined samples
 SECTION: profile1 8,168 bytes; profile0 8,060 bytes; limit 8,192
@@ -113,13 +113,19 @@ SEMANTIC / GX TRACE: exact
 DEVICE ROMS:
   control   28CCE18784D8AA413C2E58A9811547258A905C06DCFFCF5C39455BDCCF6D17EC
   candidate 69B0050E6CECBBBA78FDFC43AF0945A0549049380349C69824623D976C914016
+RETAIL CONTROL DHT0: DRW 1,677,760; VBI 2/3/4/5+ 0/186/347/67; max 7
+RETAIL CANDIDATE DHT1: DRW 1,658,560; VBI 2/3/4/5+ 6/187/331/60; max 7
+NORMALIZED 4+: 69.00% -> 66.95%; 5+: 11.17% -> 10.27%
+PROMOTED ROM: B73D9BDBF36C780C44F4898213A069FFF250716F2B77C6773C22DA28B8BB98D2
+VERIFY: focused placement PASS; DevFast PASS; Boundary PASS
 ```
 
 The linker rejected the first 8,292-byte profile-1 set. Removing only the
 124-byte, once-per-frame `gcDrawAll` entry leaves every sampled stage leaf and
-fits both profiles. The device configs differ only on `DHT 0/1`; repo-local HUD
-captures prove the typed DRW and interval rows. Retail instruction-cache
-behavior decides KEEP versus removal. Full evidence:
+fits both profiles. Retail hardware shifts the normalized histogram toward
+shorter intervals without increasing the maximum, satisfying the task's KEEP
+rule. The generic default stays off while published/release-equivalent targets
+force the feature on. Full evidence:
 `artifacts/performance/2026-07-20_task32-draw-hot-text.md`.
 
 ## 2026-07-18 - Tasks 20R-25R atomic queue reconciliation

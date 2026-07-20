@@ -93,6 +93,11 @@ $usesIntrinsicFastWallpaper = $Target -in @(
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
+$usesIntrinsicTask32DrawHotText = $Target -in @(
+    'smash64ds-battle-playable-hwtri',
+    'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
+    'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
+)
 $effectiveTask16FloatCompareMode = if (
     $usesIntrinsicTask16FloatHelpers) { 1 } else { $Task16FloatCompareMode }
 $effectiveTask16FloatI2fMode = if (
@@ -127,6 +132,11 @@ $effectiveFastWallpaperAffineMode = if ($usesIntrinsicFastWallpaper) {
     1
 } else {
     $FastWallpaperAffineMode
+}
+$effectiveTask32DrawHotTextMode = if ($usesIntrinsicTask32DrawHotText) {
+    1
+} else {
+    $Task32DrawHotTextMode
 }
 $m4CandidateEvidence =
     ($effectiveStaticTextureAotMode -eq 1) -and
@@ -771,7 +781,7 @@ $makeArgs += "NDS_TASK16_FLOAT_I2F=$effectiveTask16FloatI2fMode"
 $makeArgs += "NDS_TASK16_FLOAT_ADDSUB=$effectiveTask16FloatAddSubMode"
 $makeArgs += "NDS_TASK9_STATE_HASH=$Task9StateHashMode"
 $makeArgs += "NDS_TASK20_STACK_PROFILE=$Task20StackProfileMode"
-$makeArgs += "NDS_TASK32_DRAW_HOT_TEXT=$Task32DrawHotTextMode"
+$makeArgs += "NDS_TASK32_DRAW_HOT_TEXT=$effectiveTask32DrawHotTextMode"
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
 }
@@ -961,7 +971,7 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
         $benchmarkMakeIdentity.Task20StackProfileMode -eq
             $Task20StackProfileMode -and
         $benchmarkMakeIdentity.Task32DrawHotTextMode -eq
-            $Task32DrawHotTextMode -and
+            $effectiveTask32DrawHotTextMode -and
         $benchmarkMakeIdentity.IFCommonHybridOamMode -eq
             $effectiveIFCommonHybridOamMode) `
         'Makefile benchmark identity does not match the requested verifier target/harness/profile/M2/M3/Task26/Task29/M4/Task11/IFCommon/Task9/Task16 configuration.' `

@@ -21437,4 +21437,19 @@ remains skipped for the requested fast iteration cadence.
 - Focused GBI/placement checks, DevFast, and Boundary pass with the published
   default still off.
 - Recorded Tyler's report that the Task-30 sliced profile-1 audio sounds good.
+
+## 2026-07-20 - Promoted Task 32 from retail pacing evidence
+
+- Preserved the `DHT 0/1` retail photos under `artifacts/visibility`. The
+  candidate shifts normalized 4+ VBlank intervals from 69.00% to 66.95% and
+  5+ from 11.17% to 10.27%, while maximum remains 7; its photographed DRW
+  latest row is also 19,200 ticks lower.
+- Kept the exact 13-function / 8,060-byte profile-0 draw-hot section. The
+  generic flag default remains off for labs; the published and
+  release-equivalent freeze-diagnostic targets now force it on and their
+  verifier derives that intrinsic configuration. Focused placement, DevFast,
+  and Boundary pass; the promoted battle ROM is 14,692,352 bytes /
+  `B73D9BDB...`.
+- The same photos show `BGM slices 180/184` on retail, closing Task 30's
+  engagement gate. Its dedicated whole-half/sliced pacing A/B remains open.
   This closes its listen gate, while retail engagement/histograms remain.
