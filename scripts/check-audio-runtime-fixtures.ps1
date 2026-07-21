@@ -401,7 +401,11 @@ foreach ($required in @(
         'gNdsAudioFgmHandleReleaseCount++;',
         'gNdsAudioFgmInstanceTokenWrapCount++;',
         'gNdsAudioFgmKoPlayCounts[ko_index]++;',
-        'gNdsAudioFgmKoTrace[gNdsAudioFgmKoTraceCount++] = fgm_id;'
+        'gNdsAudioFgmKoTrace[gNdsAudioFgmKoTraceCount++] = fgm_id;',
+        'gNdsAudioFgmMissRingIDs[i] == id',
+        'gNdsAudioFgmMissRingCounts[i]++;',
+        '(i + 1u) % NDS_AUDIO_FGM_MISS_RING_CAPACITY;',
+        'ndsAudioFgmRecordMiss(fgm_id);'
     )) {
     if (-not $fgmText.Contains($required)) {
         throw "FGM token-lifecycle fixture is missing: $required"

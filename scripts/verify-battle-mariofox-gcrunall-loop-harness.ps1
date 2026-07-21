@@ -2006,7 +2006,8 @@ try {
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $audioCommands = @(
             'printf "AUDIO_ASSET=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioAssetResult, gNdsAudioAssetMask, gNdsAudioAssetOpenCount, gNdsAudioAssetOpenFailCount, gNdsAudioAssetFormatFailCount, gNdsAudioAssetShortReadCount, gNdsAudioAssetRawBytes, gNdsAudioAssetResidentBytes, gNdsAudioAssetScratchMaxBytes, gNdsAudioAssetSeqCount, gNdsAudioAssetSeqFirstOffset, gNdsAudioAssetSeqFirstLength, gNdsAudioAssetSeqMaxLength, gNdsAudioAssetBank1BankCount, gNdsAudioAssetBank1InstrumentCount, gNdsAudioAssetBank1WaveCount, gNdsAudioAssetBank1SampleRate, gNdsAudioAssetBank2BankCount, gNdsAudioAssetBank2InstrumentCount, gNdsAudioAssetBank2WaveCount, gNdsAudioAssetBank2SampleRate, gNdsAudioAssetFgmUnkCount, gNdsAudioAssetFgmTableCount, gNdsAudioAssetFgmUcodeCount',
-            'printf "AUDIO_FGM_KO=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmKoPlayMask, gNdsAudioFgmKoPlayCounts[0], gNdsAudioFgmKoPlayCounts[1], gNdsAudioFgmKoPlayCounts[2], gNdsAudioFgmKoPlayCounts[3], gNdsAudioFgmKoPlayCounts[4], gNdsAudioFgmKoTraceCount, gNdsAudioFgmKoTrace[0], gNdsAudioFgmKoTrace[1], gNdsAudioFgmKoTrace[2], gNdsAudioFgmIncludedLookupFailCount, gNdsAudioFgmPlayFailCount, gNdsAudioFgmPoolExhaustCount, gNdsAudioFgmGenerationMismatchCount'
+            'printf "AUDIO_FGM_KO=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmKoPlayMask, gNdsAudioFgmKoPlayCounts[0], gNdsAudioFgmKoPlayCounts[1], gNdsAudioFgmKoPlayCounts[2], gNdsAudioFgmKoPlayCounts[3], gNdsAudioFgmKoPlayCounts[4], gNdsAudioFgmKoTraceCount, gNdsAudioFgmKoTrace[0], gNdsAudioFgmKoTrace[1], gNdsAudioFgmKoTrace[2], gNdsAudioFgmIncludedLookupFailCount, gNdsAudioFgmPlayFailCount, gNdsAudioFgmPoolExhaustCount, gNdsAudioFgmGenerationMismatchCount',
+            'printf "AUDIO_FGM_MISS=%u,%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u,%u:%u\n", gNdsAudioFgmMissRingCount, gNdsAudioFgmMissRingNext, gNdsAudioFgmMissRingIDs[0], gNdsAudioFgmMissRingCounts[0], gNdsAudioFgmMissRingIDs[1], gNdsAudioFgmMissRingCounts[1], gNdsAudioFgmMissRingIDs[2], gNdsAudioFgmMissRingCounts[2], gNdsAudioFgmMissRingIDs[3], gNdsAudioFgmMissRingCounts[3], gNdsAudioFgmMissRingIDs[4], gNdsAudioFgmMissRingCounts[4], gNdsAudioFgmMissRingIDs[5], gNdsAudioFgmMissRingCounts[5], gNdsAudioFgmMissRingIDs[6], gNdsAudioFgmMissRingCounts[6], gNdsAudioFgmMissRingIDs[7], gNdsAudioFgmMissRingCounts[7], gNdsAudioFgmMissRingIDs[8], gNdsAudioFgmMissRingCounts[8], gNdsAudioFgmMissRingIDs[9], gNdsAudioFgmMissRingCounts[9], gNdsAudioFgmMissRingIDs[10], gNdsAudioFgmMissRingCounts[10], gNdsAudioFgmMissRingIDs[11], gNdsAudioFgmMissRingCounts[11], gNdsAudioFgmMissRingIDs[12], gNdsAudioFgmMissRingCounts[12], gNdsAudioFgmMissRingIDs[13], gNdsAudioFgmMissRingCounts[13], gNdsAudioFgmMissRingIDs[14], gNdsAudioFgmMissRingCounts[14], gNdsAudioFgmMissRingIDs[15], gNdsAudioFgmMissRingCounts[15]'
         )
         $gdbCommands = @($beforeDetach + $audioCommands + $afterDetach)
     }
@@ -2532,6 +2533,17 @@ try {
     $specials = [regex]::Match($gdbStdout, 'SPECIALS=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+)')
     $audioAsset = [regex]::Match($gdbStdout, 'AUDIO_ASSET=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $audioFgmKo = [regex]::Match($gdbStdout, 'AUDIO_FGM_KO=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $audioFgmMissPairPattern = ((0..15 | ForEach-Object {
+        '([0-9]+):([0-9]+)'
+    }) -join ',')
+    $audioFgmMiss = [regex]::Match(
+        $gdbStdout,
+        ([regex]::Escape('AUDIO_FGM_MISS=') +
+         '([0-9]+),([0-9]+),' + $audioFgmMissPairPattern))
+    if ($ImportBattleShipAudioAssets) {
+        Assert-Condition $audioFgmMiss.Success `
+            'Audio FGM unsupported-ID census marker is missing.' $gdbStdout
+    }
     $audioBgm = [regex]::Match($gdbStdout, 'AUDIO_BGM=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     $m4FenceFinalSummary = ''
@@ -2698,6 +2710,7 @@ try {
         $fdc = Get-Ints $fighterDisplayContract
         $ab = Get-Ints $audioBgm
         $fgmKo = Get-Ints $audioFgmKo
+        $fgmMiss = Get-Ints $audioFgmMiss
         $audioResidentBytes = if ($audioBgm.Success) { $ab[13] } else { 0 }
         $task25rPacingEvidence = if ($Task25RPacingTrace) {
             Complete-Task25RPacingTrace -Matches $task25rPacing `
@@ -2961,7 +2974,7 @@ try {
             " stateHash=$($task9StateSummaryValues[0])/overflow$($task9StateSummaryValues[1])"
         } else { '' }
         $lifecycleResult = if ($Task25RPacingTrace) { 'captured' } else { 'passed' }
-        Write-Output ("$Label one-minute match lifecycle ${lifecycleResult}: logic/present=$($bp[2])/$($bp[3]) timer=$($start[3])->$($life[5])/$($life[6]) phaseRate=$($phaseRatesX10 -join '/')x0.1 phaseSlip=$($bp[17..21] -join '/') boundsOutside=$($fdc[8])/$($fdc[7]+$fdc[8]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) koExact=$audioFgmKoPass scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])$task9StateSummaryText")
+        Write-Output ("$Label one-minute match lifecycle ${lifecycleResult}: logic/present=$($bp[2])/$($bp[3]) timer=$($start[3])->$($life[5])/$($life[6]) phaseRate=$($phaseRatesX10 -join '/')x0.1 phaseSlip=$($bp[17..21] -join '/') boundsOutside=$($fdc[8])/$($fdc[7]+$fdc[8]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) koExact=$audioFgmKoPass fgmMiss=$($fgmMiss[0])/$($fgmMiss[1]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])$task9StateSummaryText")
         return
     }
     if ($ExpectedMode -eq 54) {
@@ -5724,8 +5737,9 @@ try {
         $audioBgmResidentBytes = 0
         if ($ImportBattleShipAudioAssets) {
             $aa = Get-Ints $audioAsset
+            $fm = Get-Ints $audioFgmMiss
             Assert-Condition ($audioAsset.Success -and $aa[0] -eq 0x41554431 -and $aa[1] -eq 0xff -and $aa[2] -eq 8 -and $aa[3] -eq 0 -and $aa[4] -eq 0 -and $aa[5] -eq 0 -and $aa[6] -eq 4422960 -and $aa[7] -eq 0 -and $aa[8] -le 65536 -and $aa[9] -eq 47 -and $aa[10] -eq 380 -and $aa[11] -eq 7999 -and $aa[12] -gt 0 -and $aa[13] -eq 1 -and $aa[14] -eq 42 -and $aa[15] -eq 117 -and $aa[16] -eq 32000 -and $aa[17] -eq 1 -and $aa[18] -eq 1 -and $aa[19] -eq 322 -and $aa[20] -eq 44100 -and $aa[21] -eq 100 -and $aa[22] -eq 464 -and $aa[23] -eq 695) 'Original audio asset parse-only proof failed.' $gdbStdout
-            $audioSummary = " audio=seq$($aa[9]) bank1=$($aa[13])/$($aa[14])/$($aa[15])@$($aa[16]) bank2=$($aa[17])/$($aa[18])/$($aa[19])@$($aa[20]) fgm=$($aa[21])/$($aa[22])/$($aa[23]) raw=$($aa[6]) resident=$($aa[7]) scratch=$($aa[8])"
+            $audioSummary = " audio=seq$($aa[9]) bank1=$($aa[13])/$($aa[14])/$($aa[15])@$($aa[16]) bank2=$($aa[17])/$($aa[18])/$($aa[19])@$($aa[20]) fgm=$($aa[21])/$($aa[22])/$($aa[23]) raw=$($aa[6]) resident=$($aa[7]) scratch=$($aa[8]) fgmMiss=$($fm[0])/$($fm[1])"
         }
         if ($ImportBattleShipAudioBGM) {
             $ab = Get-Ints $audioBgm

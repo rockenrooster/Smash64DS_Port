@@ -10,6 +10,7 @@
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
 #define NDS_AUDIO_FGM_KO_TRACE_CAPACITY 8u
+#define NDS_AUDIO_FGM_MISS_RING_CAPACITY 16u
 #ifndef NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 #define NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS 0
 #endif
@@ -83,6 +84,12 @@ extern volatile u32 gNdsAudioFgmFormatFailCount;
 extern volatile u32 gNdsAudioFgmPlayCalls;
 extern volatile u32 gNdsAudioFgmSupportedPlayCount;
 extern volatile u32 gNdsAudioFgmUnsupportedCallCount;
+extern volatile u32 gNdsAudioFgmMissRingCount;
+extern volatile u32 gNdsAudioFgmMissRingNext;
+extern volatile u16
+    gNdsAudioFgmMissRingIDs[NDS_AUDIO_FGM_MISS_RING_CAPACITY];
+extern volatile u32
+    gNdsAudioFgmMissRingCounts[NDS_AUDIO_FGM_MISS_RING_CAPACITY];
 extern volatile u32 gNdsAudioFgmIncludedLookupFailCount;
 extern volatile u32 gNdsAudioFgmPlayFailCount;
 extern volatile u32 gNdsAudioFgmPhasePlayMask;

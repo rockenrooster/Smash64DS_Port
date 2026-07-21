@@ -77,6 +77,10 @@ volatile u32 gNdsAudioFgmFormatFailCount;
 volatile u32 gNdsAudioFgmPlayCalls;
 volatile u32 gNdsAudioFgmSupportedPlayCount;
 volatile u32 gNdsAudioFgmUnsupportedCallCount;
+volatile u32 gNdsAudioFgmMissRingCount;
+volatile u32 gNdsAudioFgmMissRingNext;
+volatile u16 gNdsAudioFgmMissRingIDs[NDS_AUDIO_FGM_MISS_RING_CAPACITY];
+volatile u32 gNdsAudioFgmMissRingCounts[NDS_AUDIO_FGM_MISS_RING_CAPACITY];
 volatile u32 gNdsAudioFgmIncludedLookupFailCount;
 volatile u32 gNdsAudioFgmPlayFailCount;
 volatile u32 gNdsAudioFgmPhasePlayMask;
@@ -189,6 +193,29 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
         return TRUE;
     default:
         return FALSE;
+    }
+}
+
+static void ndsAudioFgmRecordMiss(u16 id)
+{
+    u32 i;
+
+    for (i = 0u; i < gNdsAudioFgmMissRingCount; i++)
+    {
+        if (gNdsAudioFgmMissRingIDs[i] == id)
+        {
+            gNdsAudioFgmMissRingCounts[i]++;
+            return;
+        }
+    }
+    i = gNdsAudioFgmMissRingNext;
+    gNdsAudioFgmMissRingIDs[i] = id;
+    gNdsAudioFgmMissRingCounts[i] = 1u;
+    gNdsAudioFgmMissRingNext =
+        (i + 1u) % NDS_AUDIO_FGM_MISS_RING_CAPACITY;
+    if (gNdsAudioFgmMissRingCount < NDS_AUDIO_FGM_MISS_RING_CAPACITY)
+    {
+        gNdsAudioFgmMissRingCount++;
     }
 }
 
@@ -619,6 +646,12 @@ void ndsAudioFgmDiagnosticsReset(void)
     gNdsAudioFgmPlayCalls = 0u;
     gNdsAudioFgmSupportedPlayCount = 0u;
     gNdsAudioFgmUnsupportedCallCount = 0u;
+    gNdsAudioFgmMissRingCount = 0u;
+    gNdsAudioFgmMissRingNext = 0u;
+    memset((void *)gNdsAudioFgmMissRingIDs, 0,
+           sizeof(gNdsAudioFgmMissRingIDs));
+    memset((void *)gNdsAudioFgmMissRingCounts, 0,
+           sizeof(gNdsAudioFgmMissRingCounts));
     gNdsAudioFgmIncludedLookupFailCount = 0u;
     gNdsAudioFgmPlayFailCount = 0u;
     gNdsAudioFgmPhasePlayMask = 0u;
@@ -890,6 +923,7 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
         else
         {
             gNdsAudioFgmUnsupportedCallCount++;
+            ndsAudioFgmRecordMiss(fgm_id);
         }
         return NULL;
     }
