@@ -456,6 +456,7 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_IMMUTABLE,
                 """
                 dense.matrix_binding dense.rgba dense.s dense.t
+                frame.rigid_binding_mask
                 run.first_corner run.state_policy run.submit_class
                 run.texture_epoch
                 """,
@@ -492,14 +493,15 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_IMMUTABLE,
                 """
                 binding.first_run binding.run_count
-                frame.asset_bases frame.binding_display_lists frame.dobjs
+                frame.asset_bases frame.binding_display_lists frame.binding_world
+                frame.dobjs frame.rigid_binding_mask
                 segment.binding_count segment.first_binding
                 segment.initial_geometry
                 """,
             ),
             **_classified(
                 FIELD_CLASS_CAMERA,
-                "frame.binding_composed frame.projection",
+                "frame.binding_composed frame.camera_modelview frame.projection",
             ),
             **_classified(
                 FIELD_CLASS_LIVE,
@@ -918,11 +920,13 @@ SOURCE_CLOSURE_POLICIES = (
         "tracked_bases": ("workspace",),
         "fields": {
             **_classified(
-                FIELD_CLASS_IMMUTABLE, "workspace.binding_dobjs"
+                FIELD_CLASS_IMMUTABLE,
+                "workspace.binding_dobjs workspace.binding_world",
             ),
             **_classified(
                 FIELD_CLASS_CAMERA,
-                "workspace.binding_composed workspace.projection",
+                "workspace.binding_composed workspace.camera_modelview "
+                "workspace.projection",
             ),
         },
     },
@@ -965,8 +969,10 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_IMMUTABLE,
                 """
                 workspace.binding_count workspace.binding_display_lists
+                workspace.binding_world
                 workspace.dobj_count workspace.frame.asset_bases
                 workspace.frame.binding_display_lists workspace.frame.dobjs
+                workspace.frame.binding_world workspace.frame.rigid_binding_mask
                 workspace.frame.topology_generation
                 workspace.frame.topology_stamp
                 workspace.live_dobjs workspace.loaded
@@ -977,7 +983,8 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_CAMERA,
                 """
-                workspace.binding_composed workspace.frame.binding_composed
+                workspace.binding_composed workspace.camera_modelview
+                workspace.frame.binding_composed workspace.frame.camera_modelview
                 workspace.frame.projection workspace.projection
                 """,
             ),
@@ -3861,12 +3868,15 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
             {
                 "fields": [
                     "asset_bases", "dobjs", "binding_display_lists",
+                    "binding_world", "rigid_binding_mask",
                     "topology_generation", "topology_stamp",
                 ],
                 "classification": FIELD_CLASS_IMMUTABLE,
             },
             {
-                "fields": ["projection", "binding_composed"],
+                "fields": [
+                    "projection", "camera_modelview", "binding_composed"
+                ],
                 "classification": FIELD_CLASS_CAMERA,
             },
             {
@@ -3885,8 +3895,8 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
                     "ndsRendererAdapterPrepareNativeStageMatrices",
                 ],
                 "disposition": (
-                    "recompute from live CObj and DObj operands every frame; "
-                    "never cache composed or near-plane results"
+                    "recompute the live camera and dynamic DObj operands every "
+                    "frame; retain only generation-bound rigid world matrices"
                 ),
             },
             {

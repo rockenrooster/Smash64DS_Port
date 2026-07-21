@@ -139,6 +139,9 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     const void *binding_display_lists[
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 camera_modelview;
+    NDSRendererMatrix20p12 binding_world[
+        NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     NDSRendererMatrix20p12 binding_composed[
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     NDSRendererNativeMaterial materials[
@@ -158,6 +161,12 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     u32 topology_stamp;
     u32 topology_valid;
 } NDSRendererAdapterNativeStageWorkspace;
+
+#if NDS_TASK36_HW_COMPOSE
+/* Binding 29's raw source-Z/range output remains CPU-composed: its hardware
+ * depth overlaps the later projected no-Z platform cards. */
+#define NDS_RENDERER_TASK36_RIGID_BINDING_MASK 0x00000381c00fffffULL
+#endif
 
 /* The stage owner remains armed across fighter links 9, so it cannot share
  * the complete-fighter workspace. */
@@ -2277,6 +2286,47 @@ static void ndsRendererAdapterBuildDefaultBattleCameraMatrices(
     ndsRendererAdapterMtxFromN64(&mtx, modelview);
     *modelview_valid = TRUE;
 }
+
+#if NDS_TASK36_HW_COMPOSE
+static sb32 ndsRendererAdapterBuildTask36StageCameraMatrices(
+    CObj *cobj,
+    NDSRendererMatrix20p12 *projection,
+    NDSRendererMatrix20p12 *modelview)
+{
+    LookAt look_at;
+    Mtx mtx;
+    u32 i;
+
+    if ((cobj == NULL) || (projection == NULL) || (modelview == NULL))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < (u32)cobj->xobjs_num; i++)
+    {
+        if ((cobj->xobjs[i] == NULL) ||
+            (cobj->xobjs[i]->kind != NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND))
+        {
+            continue;
+        }
+        syMatrixLookAtReflect(&mtx, &look_at,
+                              cobj->vec.eye.x, cobj->vec.eye.y,
+                              cobj->vec.eye.z, cobj->vec.at.x,
+                              cobj->vec.at.y, cobj->vec.at.z,
+                              cobj->vec.up.x, cobj->vec.up.y,
+                              cobj->vec.up.z);
+        ndsRendererAdapterMtxFromN64(&mtx, modelview);
+        syMatrixPerspFast(&mtx, &cobj->projection.persp.norm,
+                          cobj->projection.persp.fovy,
+                          cobj->projection.persp.aspect,
+                          cobj->projection.persp.near,
+                          cobj->projection.persp.far,
+                          cobj->projection.persp.scale);
+        ndsRendererAdapterMtxFromN64(&mtx, projection);
+        return TRUE;
+    }
+    return FALSE;
+}
+#endif
 
 static void ndsRendererAdapterGetFrameCameraMatrices(
     CObj *cobj,
@@ -6505,10 +6555,64 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
 {
     u32 binding_index;
 
+#if NDS_TASK36_HW_COMPOSE
+    {
+        if (ndsRendererAdapterBuildTask36StageCameraMatrices(
+                cobj, &workspace->projection,
+                &workspace->camera_modelview) == FALSE)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererTask36AdapterRejectReason = 51u;
+#endif
+            return FALSE;
+        }
+    }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    gNdsRendererTask36ObservedDynamicMaskLo = 0u;
+    gNdsRendererTask36ObservedDynamicMaskHi = 0u;
     for (binding_index = 0u;
          binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
          binding_index++)
     {
+        NDSRendererMatrix20p12 current_world;
+
+        if ((ndsRendererAdapterBuildDObjWorldMatrixUncached(
+                 workspace->binding_dobjs[binding_index],
+                 &current_world) == FALSE) ||
+            (memcmp(&current_world, &workspace->binding_world[binding_index],
+                    sizeof(current_world)) != 0))
+        {
+            if (binding_index < 32u)
+            {
+                gNdsRendererTask36ObservedDynamicMaskLo |= 1u << binding_index;
+            }
+            else
+            {
+                gNdsRendererTask36ObservedDynamicMaskHi |=
+                    1u << (binding_index - 32u);
+            }
+            if ((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+                 ((u64)1u << binding_index)) != 0u)
+            {
+                gNdsRendererTask36RigidConstancyMismatchCount++;
+                return FALSE;
+            }
+        }
+    }
+#endif
+#endif
+
+    for (binding_index = 0u;
+         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index++)
+    {
+#if NDS_TASK36_HW_COMPOSE
+        if ((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+             ((u64)1u << binding_index)) != 0u)
+        {
+            continue;
+        }
+#endif
         NDSRendererMatrix20p12 projection;
         NDSRendererMatrix20p12 modelview;
         const NDSRendererMatrix20p12 *projection_ptr;
@@ -6517,14 +6621,31 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
         ndsRendererAdapterPrepareInitialMatrices(
             workspace->binding_dobjs[binding_index], cobj, TRUE,
             &projection, &projection_ptr, &modelview, &modelview_ptr);
-        if ((projection_ptr == NULL) || (modelview_ptr == NULL) ||
-            ((binding_index != 0u) &&
-             (memcmp(&workspace->projection, projection_ptr,
-                     sizeof(workspace->projection)) != 0)) ||
-            (ndsRendererAdapterComposeNativeRootMatrix(
-                 modelview_ptr, projection_ptr,
-                 &workspace->binding_composed[binding_index]) == FALSE))
+        if ((projection_ptr == NULL) || (modelview_ptr == NULL))
         {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+            gNdsRendererTask36AdapterRejectReason = 52u;
+#endif
+            return FALSE;
+        }
+#if !NDS_TASK36_HW_COMPOSE
+        if ((binding_index != 0u) &&
+            (memcmp(&workspace->projection, projection_ptr,
+                    sizeof(workspace->projection)) != 0))
+        {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+            gNdsRendererTask36AdapterRejectReason = 53u;
+#endif
+            return FALSE;
+        }
+#endif
+        if (ndsRendererAdapterComposeNativeRootMatrix(
+                modelview_ptr, projection_ptr,
+                &workspace->binding_composed[binding_index]) == FALSE)
+        {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+            gNdsRendererTask36AdapterRejectReason = 54u;
+#endif
             return FALSE;
         }
         if (binding_index == 0u)
@@ -6534,6 +6655,27 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     }
     return TRUE;
 }
+
+#if NDS_TASK36_HW_COMPOSE
+static sb32 ndsRendererAdapterCaptureTask36StageWorld(
+    NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    u32 binding_index;
+
+    for (binding_index = 0u;
+         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index++)
+    {
+        if (ndsRendererAdapterBuildDObjWorldMatrixUncached(
+                workspace->binding_dobjs[binding_index],
+                &workspace->binding_world[binding_index]) == FALSE)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+#endif
 
 static sb32 ndsRendererAdapterPrepareNativeStageMaterials(
     NDSRendererAdapterNativeStageWorkspace *workspace)
@@ -6603,6 +6745,11 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     u32 topology_stamp = 0u;
     sb32 topology_cached = FALSE;
     u32 i;
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+    u32 task36_reject_reason = 1u;
+
+    gNdsRendererTask36AdapterRejectReason = 0u;
+#endif
 
     workspace->active = FALSE;
     if (gNdsRendererFastRunMode !=
@@ -6612,6 +6759,9 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     }
     if (cobj == NULL)
     {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        task36_reject_reason = 2u;
+#endif
         goto reject;
     }
     for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
@@ -6623,6 +6773,9 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             ((i != 0u) &&
              (loaded[i]->owner_generation != topology_generation)))
         {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+            task36_reject_reason = 3u;
+#endif
             goto reject;
         }
         topology_generation = loaded[i]->owner_generation;
@@ -6656,9 +6809,15 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             workspace->frame.asset_bases[i] = loaded[i]->data;
         }
         if ((ndsRendererAdapterCollectNativeStageTopology(workspace) == FALSE) ||
+#if NDS_TASK36_HW_COMPOSE
+            (ndsRendererAdapterCaptureTask36StageWorld(workspace) == FALSE) ||
+#endif
             (ndsRendererAdapterBuildNativeStageTopologyStamp(
                  workspace, topology_generation, &topology_stamp) == FALSE))
         {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+            task36_reject_reason = 4u;
+#endif
             goto reject;
         }
         workspace->topology_generation = topology_generation;
@@ -6672,9 +6831,20 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             workspace->frame.asset_bases[i] = loaded[i]->data;
         }
     }
-    if ((ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE) ||
-        (ndsRendererAdapterPrepareNativeStageMaterials(workspace) == FALSE))
+    if (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE)
     {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        task36_reject_reason =
+            (gNdsRendererTask36AdapterRejectReason != 0u) ?
+                gNdsRendererTask36AdapterRejectReason : 5u;
+#endif
+        goto reject;
+    }
+    if (ndsRendererAdapterPrepareNativeStageMaterials(workspace) == FALSE)
+    {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        task36_reject_reason = 7u;
+#endif
         goto reject;
     }
 
@@ -6696,6 +6866,16 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     workspace->frame.binding_display_lists =
         workspace->binding_display_lists;
     workspace->frame.projection = &workspace->projection;
+#if NDS_TASK36_HW_COMPOSE
+    workspace->frame.camera_modelview = &workspace->camera_modelview;
+    workspace->frame.binding_world = workspace->binding_world;
+    workspace->frame.rigid_binding_mask =
+        NDS_RENDERER_TASK36_RIGID_BINDING_MASK;
+#else
+    workspace->frame.camera_modelview = NULL;
+    workspace->frame.binding_world = NULL;
+    workspace->frame.rigid_binding_mask = 0u;
+#endif
     workspace->frame.binding_composed = workspace->binding_composed;
     workspace->frame.materials = workspace->materials;
     workspace->frame.config = &workspace->config;
@@ -6705,6 +6885,9 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             &workspace->frame, &workspace->stats) == FALSE)
     {
         workspace->topology_valid = FALSE;
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        task36_reject_reason = 6u;
+#endif
         goto reject;
     }
     workspace->next_segment = 0u;
@@ -6718,6 +6901,9 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     return TRUE;
 
 reject:
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+    gNdsRendererTask36AdapterRejectReason = task36_reject_reason;
+#endif
     workspace->active = FALSE;
     /* Before GO, a transient incomplete display graph falls back through the
      * prepared pinned corpus without conversion.  Only a post-arm owner

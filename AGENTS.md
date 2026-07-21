@@ -16,10 +16,8 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 - Inspect relevant BattleShip source before changing gameplay or renderer behavior.
 - Inspect `decomp/sm64-nds` before DS backend architecture changes.
 - Prefer coherent original translation-unit imports under `src/import`.
-- Put DS/backend behavior under `src/nds` or `src/port`; compatibility declarations
-  belong under `include`.
-- Graduate imported subsystems live. Do not add proof-only branch reruns,
-  one-bit proof masks, or permanent seed/restore wrappers.
+- Put DS/backend behavior under `src/nds` or `src/port`; compatibility declarations belong under `include`.
+- Graduate imported subsystems live. Do not add proof-only branch reruns, one-bit proof masks, or permanent seed/restore wrappers.
 - Migrate or delete obsolete bounded modes when natural runtime replaces them.
 - New harness modes are only for scene-level capabilities.
 - Fix root causes at the shared seam. Do not hide symptoms with arbitrary
@@ -39,8 +37,7 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
   uncited verifier/emulator telemetry; `artifacts/performance` and
   `artifacts/visibility` are permanent evidence. Never combine cleanup with an
   active implementation or remove an ambiguous/dirty worktree.
-- Performance features must prove ENGAGEMENT on retail hardware (a counter, HUD
-  row, or device photo), not only a melonDS win. A feature that silently
+- Performance features must prove ENGAGEMENT on retail hardware (a counter, HUD row, or device photo), not only a melonDS win. A feature that silently
   degrades, falls back, or disables itself on device may not ship enabled.
 - Rendering-side changes may approximate: they gate on a reported fidelity
   budget (synchronized screenshot diffs plus Tyler's visual approval), not
@@ -54,8 +51,7 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
   max interval, never min FPS or a half-second average. Min FPS is
   discontinuous: one frame crossing the 4->5 VBlank boundary reads as ~12 FPS
   while the histogram stays continuous and is the actual pacing signal.
-- Run `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` after verified progress as
-  the final project command. Run nothing after it.
+- Run `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` after verified progress as the final project command. Run nothing after it.
 
 ## DS Visual Fidelity
 

@@ -2021,8 +2021,17 @@ static void ndsPlatformRenderBattleFpsHud(void)
         ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
         ndsPlatformPrintDebugLine(22u, "5+  --  max --  BGM --/--");
         ndsPlatformPrintDebugLine(
+#if NDS_TASK36_HW_COMPOSE
+            23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
+            (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
+            (unsigned long)(gNdsRendererTask36AdapterRejectReason |
+                            gNdsRendererTask36RendererRejectReason |
+                            gNdsRendererTask36PrepareRunRejectReason),
+            (unsigned long)gNdsRendererM3PostArmFailureCount);
+#else
             23u, "GIT %s DHT %u", NDS_TASK10_GIT_SHORT,
             (unsigned int)NDS_TASK32_DRAW_HOT_TEXT);
+#endif
 #endif
         return;
     }
@@ -2129,6 +2138,15 @@ static void ndsPlatformRenderBattleFpsHud(void)
         0ul,
 #endif
         (gNdsAudioBgmFalsifierOff != 0u) ? " [OFF]" : "");
+#if NDS_TASK36_HW_COMPOSE
+    ndsPlatformPrintDebugLine(
+        23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
+        (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
+        (unsigned long)(gNdsRendererTask36AdapterRejectReason |
+                        gNdsRendererTask36RendererRejectReason |
+                        gNdsRendererTask36PrepareRunRejectReason),
+        (unsigned long)gNdsRendererM3PostArmFailureCount);
+#endif
 #endif
 
     /* sm64-nds also dedicates the lower console to FPS. Keep this port's

@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-20 Central
+Updated: 2026-07-20 19:53 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -191,6 +191,33 @@ stops before E2. Do not add CPU replay, an arena/static buffer, GX-FIFO DMA,
 update overlap, or device ROMs. Preserve only the default-off measurement
 certificate. Evidence:
 `artifacts/performance/2026-07-20_task34-e1-stage-stream.md`.
+
+## Task 36 hardware matrix compose — PHASE A2 VERIFIED, VISUAL APPROVAL PENDING 2026-07-20
+
+The missing upper platform is fixed. Per-DObj isolation identified bindings
+39/40 (DObjs 54/55, runs 50/51) as projected no-Z painter cards. Hardware clip
+matrix readback for binding 39 differs from the CPU reference by at most two
+20.12 units and has a coherent translation row, disproving overflow. The failed
+per-band experiment was removed. Root cause was the mixed fallback seam:
+excluding binding 29 left its raw composed matrices uninitialized and polluted
+later depth. Binding 29 now remains exact CPU-composed and hardware admission is
+deferred to the first rigid run.
+
+The default-off candidate composes 26 rigid bindings in GX (3 camera loads / 31
+world multiplies), retains 202 triangles and 54 runs, and reports one pre-GO
+fallback with zero post-arm failures. Synchronized stage P50/P95 deltas are
+`-40,128/-40,000` at frames 438..445, `-40,128/-39,872` at 600..607, and
+`-40,000/-39,936` at 1398..1405. All three synchronized screenshot pairs change
+355/49,152 pixels (0.722%, mean 0.28, 100% overlap); the main floor and all three
+platforms are visible.
+
+DevFast, Boundary, focused fixtures, and three complete one-minute Results
+lifecycles pass. The direct lab target's strict soak wrapper samples its
+`BPLAY_START` marker at Results, so its initial-Wait assertion is not claimed;
+the runs nevertheless complete 4,084 updates / 2,042 presentations with exact
+2:1 cadence and zero runtime safety faults. Phase B remains fenced until Tyler
+explicitly approves the screenshots. Evidence:
+`artifacts/performance/2026-07-20_task36-phasea-hw-compose-wip.md`.
 
 ## BG-0 fast Dream Land wallpaper — REENGAGED 2026-07-19
 

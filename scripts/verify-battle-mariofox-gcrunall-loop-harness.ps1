@@ -35,6 +35,7 @@ param(
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
     [switch]$Task29GXCensus,
     [switch]$Task34StageStreamCensus,
+    [ValidateRange(0,1)][int]$Task36HwComposeMode = 0,
     [switch]$Task22WallpaperRunLab,
     [ValidateRange(0,1)][int]$FastWallpaperAffineMode = 0,
     [ValidateRange(0,1)][int]$RendererScreenSpaceCensusMode = 0,
@@ -559,6 +560,7 @@ function Get-BenchmarkMakeIdentity {
         'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
         'M3_PHASE0_PROFILE', 'NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE',
         'TASK29_GX_CENSUS', 'TASK34_STAGE_STREAM_CENSUS',
+        'TASK36_HW_COMPOSE',
         'TASK22_WALLPAPER_RUN_LAB',
         'SCREEN_SPACE_CENSUS', 'RENDER_ECONOMY',
         'RENDER_ECONOMY_OWNER_MASK', 'RENDERER_BENCHMARK_MODE',
@@ -587,6 +589,7 @@ function Get-BenchmarkMakeIdentity {
             [int]$values.NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
         Task29GXCensus = [int]$values.TASK29_GX_CENSUS
         Task34StageStreamCensus = [int]$values.TASK34_STAGE_STREAM_CENSUS
+        Task36HwComposeMode = [int]$values.TASK36_HW_COMPOSE
         Task22WallpaperRunLab = [int]$values.TASK22_WALLPAPER_RUN_LAB
         ScreenSpaceCensusMode = [int]$values.SCREEN_SPACE_CENSUS
         RenderEconomyMode = [int]$values.RENDER_ECONOMY
@@ -792,6 +795,7 @@ $makeArgs += "NDS_RENDERER_M3_PHASE0_PROFILE=$([int]$RendererM3Phase0Profile.IsP
 $makeArgs += "NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE=$effectiveNativeStageGeneratedSegment0Enable"
 $makeArgs += "NDS_TASK29_GX_CENSUS=$([int]$Task29GXCensus.IsPresent)"
 $makeArgs += "NDS_TASK34_STAGE_STREAM_CENSUS=$([int]$Task34StageStreamCensus.IsPresent)"
+$makeArgs += "NDS_TASK36_HW_COMPOSE=$Task36HwComposeMode"
 $makeArgs += "NDS_TASK22_WALLPAPER_RUN_LAB=$([int]$Task22WallpaperRunLab.IsPresent)"
 $makeArgs += "NDS_FAST_WALLPAPER_AFFINE=$effectiveFastWallpaperAffineMode"
 $makeArgs += "NDS_RENDERER_SCREEN_SPACE_CENSUS=$RendererScreenSpaceCensusMode"
@@ -879,6 +883,10 @@ $bg0BuildConfigText = Get-Content -LiteralPath $bg0BuildConfig -Raw
 Assert-Condition ($bg0BuildConfigText -match
     "(?m)^#define NDS_FAST_WALLPAPER_AFFINE $effectiveFastWallpaperAffineMode$") `
     'Built fast-wallpaper configuration does not match the requested selector.' `
+    $bg0BuildConfigText
+Assert-Condition ($bg0BuildConfigText -match
+    "(?m)^#define NDS_TASK36_HW_COMPOSE $Task36HwComposeMode$") `
+    'Built Task 36 hardware-compose configuration does not match the requested selector.' `
     $bg0BuildConfigText
 if ($nativeStageGeneratedSegment0Selected) {
     $task26BuildDirectory = Resolve-Smash64DSBuildPath `
@@ -983,6 +991,8 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
             [int]$Task29GXCensus.IsPresent -and
         $benchmarkMakeIdentity.Task34StageStreamCensus -eq
             [int]$Task34StageStreamCensus.IsPresent -and
+        $benchmarkMakeIdentity.Task36HwComposeMode -eq
+            $Task36HwComposeMode -and
         $benchmarkMakeIdentity.Task22WallpaperRunLab -eq
             [int]$Task22WallpaperRunLab.IsPresent -and
         $benchmarkMakeIdentity.FastWallpaperAffine -eq
@@ -1275,6 +1285,21 @@ try {
                         'gNdsRendererM3TopologyFaultRevalidationCount'
                     } else { '0' }
                     $coarseBenchmarkCommands += ('printf "M3_STAGE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3PreflightAttemptCount, gNdsRendererM3PreflightSuccessCount, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3SegmentCount, gNdsRendererM3SegmentMask, gNdsRendererM3PostArmFailureCount, gNdsRendererM3DObjCount, gNdsRendererM3BindingCount, gNdsRendererM3RunCount, gNdsRendererM3TriangleCount, gNdsRendererM3ResidentEpochCount, gNdsRendererM3MaterialShadowCount, gNdsRendererM3MaterialCommitCount, gNdsRendererM3CrossRunCount, gNdsRendererM3CrossTriangleCount, gNdsRendererM3CrossForeignCornerCount, gNdsRendererM3TopologyFullValidationCount, gNdsRendererM3TopologyCacheHitCount, gNdsRendererM3TopologyStampMismatchCount, {0}, {1}' -f $topologyFaultInjectionExpression, $topologyFaultRevalidationExpression)
+                    if ($Task36HwComposeMode -eq 1) {
+                        $task36MismatchExpression =
+                            if ($RendererM3Phase0Profile) {
+                                'gNdsRendererTask36RigidConstancyMismatchCount'
+                            } else { '0' }
+                        $task36DynamicLoExpression =
+                            if ($RendererM3Phase0Profile) {
+                                'gNdsRendererTask36ObservedDynamicMaskLo'
+                            } else { '0' }
+                        $task36DynamicHiExpression =
+                            if ($RendererM3Phase0Profile) {
+                                'gNdsRendererTask36ObservedDynamicMaskHi'
+                            } else { '0' }
+                        $coarseBenchmarkCommands += ('printf "TASK36_HW=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererTask36HardwareComposedDObjCount, gNdsRendererTask36CameraLoadCount, gNdsRendererTask36WorldMultCount, {0}, {1}, {2}, gNdsRendererTask36AdapterRejectReason, gNdsRendererTask36RendererRejectReason, gNdsRendererTask36PrepareRunRejectReason, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3PostArmFailureCount' -f $task36MismatchExpression, $task36DynamicLoExpression, $task36DynamicHiExpression)
+                    }
                     if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
                         $coarseBenchmarkCommands += 'printf "M3_GEN0=%u,1,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererM3GeneratedSegment0AttemptCount, gNdsRendererM3GeneratedSegment0SuccessCount, gNdsRendererM3GeneratedSegment0PreGxFallbackCount, gNdsRendererM3GeneratedSegment0RunCount, gNdsRendererM3GeneratedSegment0TriangleCount, gNdsRendererM3GeneratedSegment0EpochCount, gNdsRendererM3GeneratedSegment0MaterialCount, gNdsRendererM3GeneratedSegment0CertificateValidationCount'
                         if ($RendererM3Phase0Profile) {
@@ -2223,6 +2248,7 @@ try {
     $texturePhaseBenchmark = @()
     $fastRunBenchmark = @()
     $m3StageBenchmark = @()
+    $task36HwBenchmark = @()
     $m3GeneratedSegment0Benchmark = @()
     $m3GeneratedSegment0ShadowBenchmark = @()
     $m3GeneratedSegment0GxBenchmark = @()
@@ -2340,6 +2366,9 @@ try {
         if (($RendererProfileLevel -eq 1) -and
             ($RendererFastRunMode -eq 9)) {
             $m3StageBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_STAGE' -FieldCount 22)
+            if ($Task36HwComposeMode -eq 1) {
+                $task36HwBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK36_HW' -FieldCount 12)
+            }
             if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
                 $m3GeneratedSegment0Benchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'M3_GEN0' -FieldCount 10)
                 if ($RendererM3Phase0Profile) {
@@ -3349,6 +3378,7 @@ try {
                         $m3PreparedSamples = [System.Collections.Generic.List[object]]::new()
                         $m3WhispySamples = [System.Collections.Generic.List[object]]::new()
                         $g2StateSamples = [System.Collections.Generic.List[object]]::new()
+                        $task36HwSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxMetaSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxClassSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxOwnerSamples = [System.Collections.Generic.List[object]]::new()
@@ -3441,6 +3471,9 @@ try {
                         Assert-Condition ($fastRunBenchmark.Count -eq $RendererBenchmarkSamples) "Fast-run benchmark captured $($fastRunBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                         if ($RendererFastRunMode -eq 9) {
                             Assert-Condition ($m3StageBenchmark.Count -eq $RendererBenchmarkSamples) "M3 stage benchmark captured $($m3StageBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        if ($Task36HwComposeMode -eq 1) {
+                            Assert-Condition ($task36HwBenchmark.Count -eq $RendererBenchmarkSamples) "Task 36 hardware-compose benchmark captured $($task36HwBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                        }
                         if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
                             Assert-Condition ($m3GeneratedSegment0Benchmark.Count -eq $RendererBenchmarkSamples) "Task 26 generated segment-0 benchmark captured $($m3GeneratedSegment0Benchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             if ($RendererM3Phase0Profile) {
@@ -3850,6 +3883,33 @@ try {
                                     Assert-Condition ($m3[1] -eq ($previousM3[1] + 1) -and $m3[2] -eq ($previousM3[2] + 1) -and $m3[3] -eq $previousM3[3] -and $m3[17] -eq $previousM3[17] -and $m3[18] -eq ($previousM3[18] + 1) -and $m3[19] -eq $previousM3[19] -and $m3[20] -eq $previousM3[20] -and $m3[21] -eq $previousM3[21]) "M3 stage owner did not remain continuously armed on cache hits across frame $frame (previous=$($previousM3 -join ',') actual=$($m3 -join ','))." $gdbStdout
                                 }
                                 $m3StageSamples.Add($m3)
+                                if ($Task36HwComposeMode -eq 1) {
+                                    $task36 = Get-Ints $task36HwBenchmark[$sampleIndex]
+                                    $task36ExpectedDynamicLo =
+                                        if ($RendererM3Phase0Profile) {
+                                            0x1ff00000
+                                        } else { 0 }
+                                    $task36ExpectedDynamicHi =
+                                        if ($RendererM3Phase0Profile) {
+                                            0x7e
+                                        } else { 0 }
+                                    Assert-Condition (
+                                        $task36[0] -eq $frame -and
+                                        $task36[1] -eq 26 -and
+                                        $task36[2] -gt 0 -and
+                                        $task36[3] -ge $task36[1] -and
+                                        $task36[4] -eq 0 -and
+                                        $task36[5] -eq
+                                            $task36ExpectedDynamicLo -and
+                                        $task36[6] -eq
+                                            $task36ExpectedDynamicHi -and
+                                        $task36[7] -eq 0 -and
+                                        $task36[8] -eq 0 -and
+                                        $task36[9] -eq 0 -and
+                                        $task36[11] -eq 0
+                                    ) "Task 36 hardware compose lost its rigid/dynamic partition, engagement, or zero-rejection/post-arm contract at frame $frame (actual=$($task36 -join ','))." $gdbStdout
+                                    $task36HwSamples.Add($task36)
+                                }
                                 if ($benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable -eq 1) {
                                     $m3GeneratedSegment0 = Get-Ints `
                                         $m3GeneratedSegment0Benchmark[$sampleIndex]
@@ -4578,6 +4638,8 @@ try {
                             $benchmarkMakeIdentity.M2DetailedLedger
                         rendererM3Phase0Profile =
                             $benchmarkMakeIdentity.M3Phase0Profile
+                        task36HwComposeMode =
+                            $benchmarkMakeIdentity.Task36HwComposeMode
                         nativeStageGeneratedSegment0Enable =
                             $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable
                         task29GxCensus =
@@ -4717,6 +4779,7 @@ try {
                             task29GxCensus = [bool]$Task29GXCensus
                             task34StageStreamCensus =
                                 [bool]$Task34StageStreamCensus
+                            task36HwComposeMode = $Task36HwComposeMode
                             nativeStageGeneratedSegment0Enable =
                                 $benchmarkMakeIdentity.NativeStageGeneratedSegment0Enable
                             phaseMatrixMode = [bool]$PhaseMatrixMode
@@ -4742,6 +4805,7 @@ try {
                                 screenSpaceCensusStageOwners =
                                     @($screenSpaceCensusStageOwnerValues)
                                 m3Stage = @($m3StageSamples)
+                                task36Hw = @($task36HwSamples)
                                 m3GeneratedSegment0 =
                                     @($m3GeneratedSegment0Samples)
                                 m3GeneratedSegment0Shadow =

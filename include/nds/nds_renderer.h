@@ -79,6 +79,14 @@
 #error "NDS_TASK34_STAGE_STREAM_CENSUS requires NDS_TASK29_GX_CENSUS"
 #endif
 
+#ifndef NDS_TASK36_HW_COMPOSE
+#define NDS_TASK36_HW_COMPOSE 0
+#endif
+
+#if (NDS_TASK36_HW_COMPOSE != 0) && (NDS_TASK36_HW_COMPOSE != 1)
+#error "NDS_TASK36_HW_COMPOSE must be 0 or 1"
+#endif
+
 #ifndef NDS_RENDERER_SCREEN_SPACE_CENSUS
 #define NDS_RENDERER_SCREEN_SPACE_CENSUS 0
 #endif
@@ -715,11 +723,14 @@ typedef struct NDSRendererNativeStageFrame
     const NDSRendererNativeStageDObj *dobjs;
     const void *const *binding_display_lists;
     const NDSRendererMatrix20p12 *projection;
+    const NDSRendererMatrix20p12 *camera_modelview;
+    const NDSRendererMatrix20p12 *binding_world;
     const NDSRendererMatrix20p12 *binding_composed;
     const NDSRendererNativeMaterial *materials;
     const NDSRendererConfig *config;
     u32 topology_generation;
     u32 topology_stamp;
+    u64 rigid_binding_mask;
 } NDSRendererNativeStageFrame;
 
 typedef struct NDSRendererStats
@@ -1057,6 +1068,17 @@ extern volatile u32 gNdsRendererM3CrossForeignCornerCount;
 extern volatile u32 gNdsRendererM3TopologyFullValidationCount;
 extern volatile u32 gNdsRendererM3TopologyCacheHitCount;
 extern volatile u32 gNdsRendererM3TopologyStampMismatchCount;
+#if NDS_TASK36_HW_COMPOSE
+extern volatile u32 gNdsRendererTask36HardwareComposedDObjCount;
+extern volatile u32 gNdsRendererTask36CameraLoadCount;
+extern volatile u32 gNdsRendererTask36WorldMultCount;
+extern volatile u32 gNdsRendererTask36AdapterRejectReason;
+extern volatile u32 gNdsRendererTask36RendererRejectReason;
+extern volatile u32 gNdsRendererTask36PrepareRunRejectReason;
+extern volatile u32 gNdsRendererTask36RigidConstancyMismatchCount;
+extern volatile u32 gNdsRendererTask36ObservedDynamicMaskLo;
+extern volatile u32 gNdsRendererTask36ObservedDynamicMaskHi;
+#endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 extern volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
 extern volatile u32 gNdsRendererM3GeneratedSegment0SuccessCount;

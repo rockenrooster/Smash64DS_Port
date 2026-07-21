@@ -284,6 +284,8 @@
         "asset_bases",
         "dobjs",
         "binding_display_lists",
+        "binding_world",
+        "rigid_binding_mask",
         "topology_generation",
         "topology_stamp"
       ]
@@ -292,6 +294,7 @@
       "classification": "live_camera_dependent",
       "fields": [
         "projection",
+        "camera_modelview",
         "binding_composed"
       ]
     },
@@ -859,6 +862,10 @@
           "classification": "live_camera_independent"
         },
         {
+          "access": "frame.rigid_binding_mask",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "prepared.alpha_ref",
           "classification": "callback_visible_mutation_output"
         },
@@ -989,6 +996,14 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "frame.binding_world",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.camera_modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
           "access": "frame.config",
           "classification": "live_camera_independent"
         },
@@ -1003,6 +1018,10 @@
         {
           "access": "frame.projection",
           "classification": "live_camera_dependent"
+        },
+        {
+          "access": "frame.rigid_binding_mask",
+          "classification": "immutable_generation"
         },
         {
           "access": "segment.binding_count",
@@ -2659,6 +2678,14 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "workspace.binding_world",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.camera_modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
           "access": "workspace.projection",
           "classification": "live_camera_dependent"
         }
@@ -2729,6 +2756,14 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "workspace.binding_world",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.camera_modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
           "access": "workspace.config",
           "classification": "live_camera_independent"
         },
@@ -2789,6 +2824,14 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "workspace.frame.binding_world",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.frame.camera_modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
           "access": "workspace.frame.config",
           "classification": "live_camera_independent"
         },
@@ -2803,6 +2846,10 @@
         {
           "access": "workspace.frame.projection",
           "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.frame.rigid_binding_mask",
+          "classification": "immutable_generation"
         },
         {
           "access": "workspace.frame.topology_generation",
@@ -3473,7 +3520,7 @@
         "ndsRendererAdapterApplyMvpRecalcRpy0x47",
         "ndsRendererAdapterPrepareNativeStageMatrices"
       ],
-      "disposition": "recompute from live CObj and DObj operands every frame; never cache composed or near-plane results",
+      "disposition": "recompute the live camera and dynamic DObj operands every frame; retain only generation-bound rigid world matrices",
       "name": "camera_and_dobj_matrix_operands"
     },
     {

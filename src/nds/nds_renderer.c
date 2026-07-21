@@ -1277,6 +1277,7 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY 1u
 #define NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED 2u
 #define NDS_RENDERER_HW_MATRIX_MODE_FIGHTER_HIERARCHY 3u
+#define NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE 4u
 #define NDS_RENDERER_HW_POS_TEST_MAX 40u
 #define NDS_RENDERER_HW_POS_TEST_TOLERANCE 16u
 #define NDS_RENDERER_HW_POS_TEST_MATRIX_WORD_DELTA 4352
@@ -1972,6 +1973,17 @@ volatile u32 gNdsRendererM3CrossForeignCornerCount;
 volatile u32 gNdsRendererM3TopologyFullValidationCount;
 volatile u32 gNdsRendererM3TopologyCacheHitCount;
 volatile u32 gNdsRendererM3TopologyStampMismatchCount;
+#if NDS_TASK36_HW_COMPOSE
+volatile u32 gNdsRendererTask36HardwareComposedDObjCount;
+volatile u32 gNdsRendererTask36CameraLoadCount;
+volatile u32 gNdsRendererTask36WorldMultCount;
+volatile u32 gNdsRendererTask36AdapterRejectReason;
+volatile u32 gNdsRendererTask36RendererRejectReason;
+volatile u32 gNdsRendererTask36PrepareRunRejectReason;
+volatile u32 gNdsRendererTask36RigidConstancyMismatchCount;
+volatile u32 gNdsRendererTask36ObservedDynamicMaskLo;
+volatile u32 gNdsRendererTask36ObservedDynamicMaskHi;
+#endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
 volatile u32 gNdsRendererM3GeneratedSegment0SuccessCount;
@@ -3907,6 +3919,17 @@ typedef struct NDSNativeStageOwnerExecution
     NDSRendererStats preflight_stats;
     NDSNativeStagePreparedRun runs[NDS_NATIVE_STAGE_RUN_COUNT];
     const NDSRendererMatrix20p12 *binding_composed;
+#if NDS_TASK36_HW_COMPOSE
+    const NDSRendererMatrix20p12 *projection;
+    const NDSRendererMatrix20p12 *camera_modelview;
+    const NDSRendererMatrix20p12 *binding_world;
+    u64 rigid_binding_mask;
+    u64 task36_seen_binding_mask;
+    u32 task36_binding;
+    u32 task36_coordinate_shift;
+    u32 task36_local_pushed;
+    u32 task36_segment_active;
+#endif
     NDSRendererMatrix20p12 raw_composed;
     NDSRendererMatrix20p12 scaled_raw_modelview;
     NDSRendererStats *stats;
@@ -18550,6 +18573,9 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 dense_offset;
     u32 alpha = UINT_MAX;
     u32 use_texture;
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+    gNdsRendererTask36PrepareRunRejectReason = 0u;
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     u32 vertex_prepare_start;
     u32 residual_vertex_ticks_start;
@@ -18561,6 +18587,9 @@ static s32 ndsRendererNativeStagePrepareRun(
     policy = &sNdsNativeStageStatePolicies[run->state_policy];
     if (ndsRendererNativeStagePolicyMatches(policy, stats) == FALSE)
     {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        gNdsRendererTask36PrepareRunRejectReason = 1u;
+#endif
         return FALSE;
     }
 
@@ -18577,6 +18606,9 @@ static s32 ndsRendererNativeStagePrepareRun(
         (ndsRendererHardwareResolveStageSourceFrameTexture(
              stats, frame->config, state, &resolved) == FALSE))
     {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        gNdsRendererTask36PrepareRunRejectReason = 2u;
+#endif
         return FALSE;
     }
     if ((use_texture != FALSE) && (implicit_texture_on != FALSE))
@@ -18627,6 +18659,9 @@ static s32 ndsRendererNativeStagePrepareRun(
     if ((first_visit_offset > first_visit_end) ||
         (first_visit_end > NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT))
     {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        gNdsRendererTask36PrepareRunRejectReason = 3u;
+#endif
         return FALSE;
     }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -18647,6 +18682,9 @@ static s32 ndsRendererNativeStagePrepareRun(
 
         if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
         {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+            gNdsRendererTask36PrepareRunRejectReason = 4u;
+#endif
             return FALSE;
         }
         dense = &sNdsNativeStageVertices[dense_index];
@@ -18668,8 +18706,19 @@ static s32 ndsRendererNativeStagePrepareRun(
                 texture_offset);
         }
         if (run->submit_class ==
-                 NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+                  NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
         {
+#if NDS_TASK36_HW_COMPOSE
+            if ((frame->rigid_binding_mask &
+                 ((u64)1u << dense->matrix_binding)) != 0u)
+            {
+                /* GX performs the rigid near-plane clip after hardware
+                 * composition; dynamic bindings keep the exact CPU clip. */
+                prepared_dense->near_inside = TRUE;
+            }
+            else
+#endif
+            {
             NDSRendererInputVertex input;
             NDSRendererClipVertex20p12 clip;
 
@@ -18689,6 +18738,9 @@ static s32 ndsRendererNativeStagePrepareRun(
 #endif
             if (clip.w == 0)
             {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+                gNdsRendererTask36PrepareRunRejectReason = 5u;
+#endif
                 return FALSE;
             }
             if (ndsRendererHardwareClipZWInsideNearPlane(
@@ -18699,6 +18751,7 @@ static s32 ndsRendererNativeStagePrepareRun(
             else
             {
                 prepared_dense->near_inside = FALSE;
+            }
             }
         }
     }
@@ -18722,6 +18775,9 @@ static s32 ndsRendererNativeStagePrepareRun(
 #endif
     if (alpha == UINT_MAX)
     {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        gNdsRendererTask36PrepareRunRejectReason = 6u;
+#endif
         return FALSE;
     }
     prepared->poly_fmt = ndsRendererHardwarePolyFmt(stats, alpha);
@@ -19179,7 +19235,198 @@ static void ndsRendererBenchmarkSegment0CheckpointRun(u32 run_offset)
 }
 #endif
 
+#if NDS_TASK36_HW_COMPOSE
+static s32 ndsRendererNativeStageTask36BindingIsRigid(u32 binding_index)
+{
+    return ((binding_index < NDS_NATIVE_STAGE_BINDING_COUNT) &&
+            ((sNdsNativeStageOwnerExecution.rigid_binding_mask &
+              ((u64)1u << binding_index)) != 0u)) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererNativeStageTask36BuildWorld(
+    u32 binding_index, u32 coordinate_shift, m4x4 *hardware)
+{
+    NDSRendererMatrix20p12 scaled;
+    u32 row;
+    u32 col;
+
+    if ((binding_index >= NDS_NATIVE_STAGE_BINDING_COUNT) ||
+        (sNdsNativeStageOwnerExecution.binding_world == NULL) ||
+        (hardware == NULL))
+    {
+        return FALSE;
+    }
+    scaled = sNdsNativeStageOwnerExecution.binding_world[binding_index];
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            s64 value = (s64)scaled.m[row][col] << coordinate_shift;
+
+            if ((value > INT_MAX) || (value < INT_MIN))
+            {
+                return FALSE;
+            }
+            scaled.m[row][col] = (s32)value;
+        }
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        scaled.m[3][col] = ndsRendererRoundShiftS32Signed(
+            scaled.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+    ndsRendererCopyMtx20p12ToM4x4(&scaled, hardware);
+    return TRUE;
+}
+
+static u32 ndsRendererNativeStageTask36TriangleShift(
+    const NDSNativeStageRun *run, u32 triangle_offset)
+{
+    u32 first_corner = (u32)run->first_corner + triangle_offset * 3u;
+    u32 coordinate_shift = 0u;
+    u32 corner_offset;
+
+    for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+    {
+        u32 dense_index = sNdsNativeStageCorners[first_corner + corner_offset];
+        u32 vertex_shift = sNdsNativeStageVertices[dense_index].packed_cache_shift >>
+            NDS_NATIVE_STAGE_COORDINATE_SHIFT;
+
+        if (vertex_shift > coordinate_shift)
+        {
+            coordinate_shift = vertex_shift;
+        }
+    }
+    return coordinate_shift;
+}
+
+static s32 ndsRendererNativeStageTask36BeginSegment(void)
+{
+    m4x4 projection_hardware;
+    m4x4 camera_hardware;
+
+    if ((sNdsNativeStageOwnerExecution.projection == NULL) ||
+        (sNdsNativeStageOwnerExecution.camera_modelview == NULL) ||
+        (sNdsNativeStageOwnerExecution.binding_world == NULL))
+    {
+        return FALSE;
+    }
+    ndsRendererHardwareEndBatch();
+    ndsRendererCopyMtx20p12ToM4x4(
+        sNdsNativeStageOwnerExecution.projection, &projection_hardware);
+    ndsRendererNativeBuildHierarchyHardwareAffine(
+        sNdsNativeStageOwnerExecution.camera_modelview, &camera_hardware);
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+    glLoadMatrix4x4(&projection_hardware);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    glLoadMatrix4x4(&camera_hardware);
+    ndsRendererProfileRecordMatrixLoad();
+    sNdsRendererHardwareMatrixMode =
+        NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
+    sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
+    sNdsRendererHardwareMatrixLoaded = TRUE;
+    sNdsNativeStageOwnerExecution.task36_binding = UINT_MAX;
+    sNdsNativeStageOwnerExecution.task36_coordinate_shift = UINT_MAX;
+    sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
+    sNdsNativeStageOwnerExecution.task36_segment_active = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererTask36CameraLoadCount++;
+#endif
+    return TRUE;
+}
+
+static s32 ndsRendererNativeStageTask36EnsureWorld(
+    u32 binding_index, u32 coordinate_shift)
+{
+    m4x4 world_hardware;
+
+    if ((sNdsNativeStageOwnerExecution.task36_segment_active == FALSE) ||
+        (ndsRendererNativeStageTask36BindingIsRigid(binding_index) == FALSE) ||
+        (ndsRendererNativeStageTask36BuildWorld(
+             binding_index, coordinate_shift, &world_hardware) == FALSE))
+    {
+        return FALSE;
+    }
+    if ((sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE) &&
+        (sNdsNativeStageOwnerExecution.task36_binding == binding_index) &&
+        (sNdsNativeStageOwnerExecution.task36_coordinate_shift ==
+         coordinate_shift))
+    {
+        return TRUE;
+    }
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    if (sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE)
+    {
+        glPopMatrix(1);
+    }
+    glPushMatrix();
+    glMultMatrix4x4(&world_hardware);
+    sNdsNativeStageOwnerExecution.task36_binding = binding_index;
+    sNdsNativeStageOwnerExecution.task36_coordinate_shift = coordinate_shift;
+    sNdsNativeStageOwnerExecution.task36_local_pushed = TRUE;
+    sNdsRendererHardwareMatrixMode =
+        NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
+    sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
+    sNdsRendererHardwareMatrixLoaded = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    {
+        u64 binding_bit = (u64)1u << binding_index;
+
+        if ((sNdsNativeStageOwnerExecution.task36_seen_binding_mask &
+             binding_bit) == 0u)
+        {
+            sNdsNativeStageOwnerExecution.task36_seen_binding_mask |=
+                binding_bit;
+            gNdsRendererTask36HardwareComposedDObjCount++;
+        }
+    }
+    gNdsRendererTask36WorldMultCount++;
+#endif
+    return TRUE;
+}
+
+static void ndsRendererNativeStageTask36LoadNoZProjection(s16 projected_z)
+{
+    NDSRendererMatrix20p12 projection =
+        *sNdsNativeStageOwnerExecution.projection;
+    m4x4 projection_hardware;
+    u32 row;
+
+    for (row = 0u; row < 4u; row++)
+    {
+        projection.m[row][2] = (s32)ndsRendererRoundShiftS64(
+            (s64)projection.m[row][3] * projected_z, 12u);
+    }
+    ndsRendererCopyMtx20p12ToM4x4(&projection, &projection_hardware);
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+    glLoadMatrix4x4(&projection_hardware);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    ndsRendererProfileRecordMatrixLoad();
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+    gNdsRendererM3Phase0NoZMatrixCount++;
+#endif
+}
+
+static void ndsRendererNativeStageTask36EndSegment(void)
+{
+    if (sNdsNativeStageOwnerExecution.task36_segment_active == FALSE)
+    {
+        return;
+    }
+    ndsRendererHardwareEndBatch();
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    if (sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE)
+    {
+        glPopMatrix(1);
+    }
+    sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
+    sNdsNativeStageOwnerExecution.task36_segment_active = FALSE;
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+}
+#endif
+
 static void ndsRendererNativeStageBeginRun(
+    const NDSNativeStageRun *native_run,
     const NDSNativeStagePreparedRun *run,
     u32 submit_class,
     u32 segment_owner,
@@ -19197,6 +19444,33 @@ static void ndsRendererNativeStageBeginRun(
         poly_fmt |= POLY_CULL_BACK;
     }
     ndsRendererHardwareEndBatch();
+#if NDS_TASK36_HW_COMPOSE
+    if (ndsRendererNativeStageTask36BindingIsRigid(
+            native_run->binding_index) != FALSE)
+    {
+        u32 coordinate_shift =
+            (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
+                1u :
+            (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ?
+                ndsRendererNativeStageTask36TriangleShift(native_run, 0u) : 0u;
+
+        if ((sNdsNativeStageOwnerExecution.task36_segment_active == FALSE) &&
+            (ndsRendererNativeStageTask36BeginSegment() == FALSE))
+        {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererM3PostArmFailureCount++;
+#endif
+        }
+        if (ndsRendererNativeStageTask36EnsureWorld(
+                native_run->binding_index, coordinate_shift) == FALSE)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererM3PostArmFailureCount++;
+#endif
+        }
+    }
+    else
+#endif
     if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
     {
         ndsRendererLoadHardwareRawComposedMatrix(
@@ -19260,12 +19534,22 @@ static void ndsRendererNativeStageBeginRun(
     sNdsRendererHardwareTriangleBatchAlphaKey = run->alpha_test;
     sNdsRendererHardwareTriangleBatchFogKey = 0u;
     sNdsRendererHardwareTriangleBatchMatrixMode =
+#if NDS_TASK36_HW_COMPOSE
+        (ndsRendererNativeStageTask36BindingIsRigid(
+             native_run->binding_index) != FALSE) ?
+            NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE :
+#endif
         ((submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ||
          (submit_class ==
           NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)) ?
             NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED :
             NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY;
     sNdsRendererHardwareTriangleBatchMatrixGeneration =
+#if NDS_TASK36_HW_COMPOSE
+        (ndsRendererNativeStageTask36BindingIsRigid(
+             native_run->binding_index) != FALSE) ?
+            sNdsRendererHardwareMatrixGeneration :
+#endif
         (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
             1u :
         (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
@@ -19476,6 +19760,48 @@ ndsRendererNativeStageEmitNoZTriangle(
     u32 coordinate_shift = 0u;
     s32 one_binding = TRUE;
 
+#if NDS_TASK36_HW_COMPOSE
+    if (ndsRendererNativeStageTask36BindingIsRigid(run->binding_index) != FALSE)
+    {
+        coordinate_shift = ndsRendererNativeStageTask36TriangleShift(
+            run, triangle_offset);
+        for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+        {
+            u32 dense_index =
+                sNdsNativeStageCorners[first_corner + corner_offset];
+
+            if (sNdsNativeStageVertices[dense_index].matrix_binding !=
+                run->binding_index)
+            {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+                gNdsRendererM3PostArmFailureCount++;
+#endif
+                return 0u;
+            }
+        }
+        if (ndsRendererNativeStageTask36EnsureWorld(
+                run->binding_index, coordinate_shift) == FALSE)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererM3PostArmFailureCount++;
+#endif
+            return 0u;
+        }
+        ndsRendererNativeStageTask36LoadNoZProjection(projected_z);
+        for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+        {
+            u32 dense_index =
+                sNdsNativeStageCorners[first_corner + corner_offset];
+
+            ndsRendererNativeStageEmitNoZVertex(
+                &sNdsNativeStageVertices[dense_index],
+                &sNdsNativeStagePreparedDense[dense_index],
+                prepared_run, coordinate_shift);
+        }
+        return 1u;
+    }
+#endif
+
     for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
     {
         u32 dense_index = sNdsNativeStageCorners[first_corner + corner_offset];
@@ -19553,6 +19879,11 @@ s32 ndsRendererPrepareNativeStageOwner(
     u64 epoch_mask = 0u;
     u32 segment_index;
     s32 accepted = FALSE;
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+    u32 task36_reject_reason = 1u;
+
+    gNdsRendererTask36RendererRejectReason = 0u;
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     u32 phase0_preflight_start;
 #endif
@@ -19571,6 +19902,11 @@ s32 ndsRendererPrepareNativeStageOwner(
     gNdsRendererM3CrossRunCount = 0u;
     gNdsRendererM3CrossTriangleCount = 0u;
     gNdsRendererM3CrossForeignCornerCount = 0u;
+#if NDS_TASK36_HW_COMPOSE
+    gNdsRendererTask36HardwareComposedDObjCount = 0u;
+    gNdsRendererTask36CameraLoadCount = 0u;
+    gNdsRendererTask36WorldMultCount = 0u;
+#endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
     gNdsRendererM3GeneratedSegment0AttemptCount = 0u;
     gNdsRendererM3GeneratedSegment0SuccessCount = 0u;
@@ -19599,6 +19935,15 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
+#if NDS_TASK36_HW_COMPOSE
+    sNdsNativeStageOwnerExecution.projection = NULL;
+    sNdsNativeStageOwnerExecution.camera_modelview = NULL;
+    sNdsNativeStageOwnerExecution.binding_world = NULL;
+    sNdsNativeStageOwnerExecution.rigid_binding_mask = 0u;
+    sNdsNativeStageOwnerExecution.task36_seen_binding_mask = 0u;
+    sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
+    sNdsNativeStageOwnerExecution.task36_segment_active = FALSE;
+#endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     memset(sNdsRendererBenchmarkSegment0AssetBases, 0,
            sizeof(sNdsRendererBenchmarkSegment0AssetBases));
@@ -19609,6 +19954,11 @@ s32 ndsRendererPrepareNativeStageOwner(
         (frame->dobjs == NULL) ||
         (frame->binding_display_lists == NULL) ||
         (frame->projection == NULL) ||
+#if NDS_TASK36_HW_COMPOSE
+        (frame->camera_modelview == NULL) ||
+        (frame->binding_world == NULL) ||
+        (frame->rigid_binding_mask == 0u) ||
+#endif
         (frame->binding_composed == NULL) ||
         (frame->materials == NULL) || (frame->config == NULL) ||
         (NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI != 0x4d335031u) ||
@@ -19616,6 +19966,9 @@ s32 ndsRendererPrepareNativeStageOwner(
     {
         goto done;
     }
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+    task36_reject_reason = 2u;
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     ndsRendererM3MeasureResidualKey(frame);
 #endif
@@ -19644,6 +19997,9 @@ s32 ndsRendererPrepareNativeStageOwner(
                     &sNdsNativeStageOwnerExecution.preflight_stats,
                     state, &epoch_mask) == FALSE)
             {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+                task36_reject_reason = 100u;
+#endif
                 goto done;
             }
             continue;
@@ -19669,6 +20025,9 @@ s32 ndsRendererPrepareNativeStageOwner(
                          &sNdsNativeStageOwnerExecution.preflight_stats,
                          state) == FALSE)
                 {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+                    task36_reject_reason = 200u + run_index;
+#endif
                     goto done;
                 }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -19694,6 +20053,9 @@ s32 ndsRendererPrepareNativeStageOwner(
                     }
                     if (prepare_run_result == FALSE)
                     {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+                        task36_reject_reason = 300u + run_index;
+#endif
                         goto done;
                     }
                 }
@@ -19703,6 +20065,9 @@ s32 ndsRendererPrepareNativeStageOwner(
                         &sNdsNativeStageOwnerExecution.preflight_stats,
                         state, &epoch_mask) == FALSE)
                 {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+                    task36_reject_reason = 300u + run_index;
+#endif
                     goto done;
                 }
 #endif
@@ -19713,6 +20078,9 @@ s32 ndsRendererPrepareNativeStageOwner(
                     frame, &sNdsNativeStageOwnerExecution.preflight_stats,
                     state) == FALSE)
             {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+                task36_reject_reason = 400u + binding_index;
+#endif
                 goto done;
             }
         }
@@ -19809,6 +20177,9 @@ s32 ndsRendererPrepareNativeStageOwner(
         }
 #endif
     }
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+    task36_reject_reason = 3u;
+#endif
     if ((epoch_mask != (((u64)1u <<
                          NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) - 1u)) ||
         (topology.raw_triangles != 66u) ||
@@ -19820,14 +20191,38 @@ s32 ndsRendererPrepareNativeStageOwner(
     {
         goto done;
     }
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+    task36_reject_reason = 4u;
+#endif
 
+    sNdsNativeStageOwnerExecution.binding_composed = frame->binding_composed;
+#if NDS_TASK36_HW_COMPOSE
+    sNdsNativeStageOwnerExecution.projection = frame->projection;
+    sNdsNativeStageOwnerExecution.camera_modelview = frame->camera_modelview;
+    sNdsNativeStageOwnerExecution.binding_world = frame->binding_world;
+    sNdsNativeStageOwnerExecution.rigid_binding_mask =
+        frame->rigid_binding_mask;
+    if ((frame->rigid_binding_mask & ((u64)1u << 29u)) == 0u)
+    {
+        sNdsNativeStageOwnerExecution.raw_composed =
+            frame->binding_composed[29u];
+        if (ndsRendererBuildShiftedRawHardwareMatrix(
+                &sNdsNativeStageOwnerExecution.raw_composed,
+                &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
+                1u) == FALSE)
+        {
+            goto done;
+        }
+    }
+#else
     sNdsNativeStageOwnerExecution.raw_composed =
         frame->binding_composed[29u];
-    sNdsNativeStageOwnerExecution.binding_composed = frame->binding_composed;
+#endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     memcpy(sNdsRendererBenchmarkSegment0AssetBases, frame->asset_bases,
            sizeof(sNdsRendererBenchmarkSegment0AssetBases));
 #endif
+#if !NDS_TASK36_HW_COMPOSE
     if (ndsRendererBuildShiftedRawHardwareMatrix(
             &sNdsNativeStageOwnerExecution.raw_composed,
             &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
@@ -19835,6 +20230,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     {
         goto done;
     }
+#endif
     ndsRendererInitStats(stats);
     stats->command_count = NDS_NATIVE_STAGE_SOURCE_COMMAND_COUNT;
     stats->vertex_count = NDS_NATIVE_STAGE_SOURCE_VERTEX_COUNT;
@@ -19863,8 +20259,17 @@ done:
 #endif
     if (accepted == FALSE)
     {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        gNdsRendererTask36RendererRejectReason = task36_reject_reason;
+#endif
         sNdsNativeStageOwnerExecution.stats = NULL;
         sNdsNativeStageOwnerExecution.binding_composed = NULL;
+#if NDS_TASK36_HW_COMPOSE
+        sNdsNativeStageOwnerExecution.projection = NULL;
+        sNdsNativeStageOwnerExecution.camera_modelview = NULL;
+        sNdsNativeStageOwnerExecution.binding_world = NULL;
+        sNdsNativeStageOwnerExecution.rigid_binding_mask = 0u;
+#endif
         sNdsNativeStageOwnerExecution.next_segment = 0u;
         sNdsNativeStageOwnerExecution.active = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
@@ -20016,7 +20421,7 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                 task34_dobj_index : NDS_TASK34_STAGE_STREAM_DOBJ_NONE);
 #endif
         ndsRendererNativeStageBeginRun(
-            prepared_run, run->submit_class, segment->owner, stats);
+            run, prepared_run, run->submit_class, segment->owner, stats);
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         ndsRendererM3Phase0FinishSpan(
             &gNdsRendererM3Phase0RunTransitionTicks, phase_start);
@@ -20098,6 +20503,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             &gNdsRendererM3Phase0AccountingTicks, phase_start);
 #endif
     }
+#if NDS_TASK36_HW_COMPOSE
+    ndsRendererNativeStageTask36EndSegment();
+#endif
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamEndSegment();
 #endif
@@ -20139,6 +20547,9 @@ void ndsRendererFinishNativeStageOwner(void)
 {
     if (sNdsNativeStageOwnerExecution.active != FALSE)
     {
+#if NDS_TASK36_HW_COMPOSE
+        ndsRendererNativeStageTask36EndSegment();
+#endif
         ndsRendererHardwareEndBatch();
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
         ndsRendererBenchmarkSinkEndOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
@@ -20156,6 +20567,12 @@ void ndsRendererFinishNativeStageOwner(void)
     }
     sNdsNativeStageOwnerExecution.stats = NULL;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
+#if NDS_TASK36_HW_COMPOSE
+    sNdsNativeStageOwnerExecution.projection = NULL;
+    sNdsNativeStageOwnerExecution.camera_modelview = NULL;
+    sNdsNativeStageOwnerExecution.binding_world = NULL;
+    sNdsNativeStageOwnerExecution.rigid_binding_mask = 0u;
+#endif
     sNdsNativeStageOwnerExecution.next_segment = 0u;
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
