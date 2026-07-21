@@ -86,8 +86,9 @@ if ($Task29GXCensus -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
     throw 'Task29GXCensus requires fast-run mode 9 and renderer profile 1.'
 }
-if ($Task34StageStreamCensus -and -not $Task29GXCensus) {
-    throw 'Task34StageStreamCensus requires Task29GXCensus.'
+if ($Task34StageStreamCensus -and
+    (($RendererProfileLevel -ne 1) -or ($FastRunMode -ne 9))) {
+    throw 'Task34StageStreamCensus requires profile 1 and complete-stage fast-run mode 9.'
 }
 if (($Task36HwComposeMode -eq 1) -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {

@@ -294,6 +294,10 @@ static NDSRelocLoadedFile *ndsOpeningActionPreviewLoadFile(
 
 static s32 ndsOpeningActionPreviewRender(u32 scene_kind)
 {
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+    (void)scene_kind;
+    return FALSE;
+#else
     const NDSOpeningActionPreviewDesc *desc =
         ndsOpeningActionPreviewDescForKind(scene_kind);
     NDSOpeningActionPreviewCache *cache;
@@ -354,6 +358,7 @@ static s32 ndsOpeningActionPreviewRender(u32 scene_kind)
 
     gNdsOpeningMovieActionPreviewCount++;
     return TRUE;
+#endif
 }
 
 static void ndsOpeningActionPreviewHoldFrames(u32 frames)

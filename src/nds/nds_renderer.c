@@ -447,12 +447,136 @@ static inline void ndsRendererBenchmarkGlTexCoord2t16(t16 s, t16 t)
 #define glTexCoord2t16 ndsRendererBenchmarkGlTexCoord2t16
 #endif
 
-#if NDS_TASK29_GX_CENSUS && NDS_RENDERER_HW_TRIANGLES
+#if (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS) && \
+    NDS_RENDERER_HW_TRIANGLES
 #define NDS_TASK29_GX_MAX_WORDS 16u
 #define NDS_TASK29_GX_CENSUS_CODE \
     __attribute__((noinline, noclone, cold, optimize("Os"), \
                    section(".text.task29_gx_census")))
 
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+volatile u32 gNdsTask34StageStreamFrame;
+volatile u32 gNdsTask34StageStreamCaptureEnabled;
+volatile u32 gNdsTask34StageStreamEntryCount;
+volatile u32 gNdsTask34StageStreamWordCount;
+volatile u32 gNdsTask34StageStreamOverflowCount;
+volatile u32 gNdsTask34StageStreamFaultCount;
+volatile NDSRendererTask34StageStreamEntry
+    gNdsTask34StageStreamEntries[NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY];
+volatile u32
+    gNdsTask34StageStreamWords[NDS_TASK34_STAGE_STREAM_WORD_CAPACITY];
+
+static u32 sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
+static u32 sNdsTask34StageStreamSegment;
+static u32 sNdsTask34StageStreamActive;
+
+static void NDS_TASK29_GX_CENSUS_CODE
+ndsRendererTask34StageStreamRecord(
+    NDSRendererTask29GXClass command_class,
+    const u32 *words,
+    u32 word_count)
+{
+    u32 entry_index;
+    u32 first_word;
+    u32 word_index;
+    volatile NDSRendererTask34StageStreamEntry *entry;
+
+    if ((gNdsTask34StageStreamCaptureEnabled == FALSE) ||
+        (sNdsTask34StageStreamActive == FALSE))
+    {
+        return;
+    }
+    entry_index = gNdsTask34StageStreamEntryCount;
+    first_word = gNdsTask34StageStreamWordCount;
+    if ((sNdsTask34StageStreamDObj ==
+         NDS_TASK34_STAGE_STREAM_DOBJ_NONE) ||
+        ((u32)command_class >= NDS_TASK29_GX_CLASS_COUNT) ||
+        (word_count > NDS_TASK29_GX_MAX_WORDS) ||
+        ((word_count != 0u) && (words == NULL)))
+    {
+        gNdsTask34StageStreamFaultCount++;
+        return;
+    }
+    if ((entry_index >= NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY) ||
+        (first_word + word_count > NDS_TASK34_STAGE_STREAM_WORD_CAPACITY))
+    {
+        gNdsTask34StageStreamOverflowCount++;
+        return;
+    }
+    entry = &gNdsTask34StageStreamEntries[entry_index];
+    entry->word_offset = (u16)first_word;
+    entry->dobj_index = (u16)sNdsTask34StageStreamDObj;
+    entry->command_class = (u8)command_class;
+    entry->word_count = (u8)word_count;
+    entry->segment_index = (u8)sNdsTask34StageStreamSegment;
+    entry->reserved = 0u;
+    for (word_index = 0u; word_index < word_count; word_index++)
+    {
+        gNdsTask34StageStreamWords[first_word + word_index] = words[word_index];
+    }
+    gNdsTask34StageStreamEntryCount++;
+    gNdsTask34StageStreamWordCount += word_count;
+}
+
+void NDS_TASK29_GX_CENSUS_CODE
+ndsRendererTask34StageStreamBeginSegment(u32 segment_index)
+{
+    if (gNdsTask34StageStreamCaptureEnabled == FALSE)
+    {
+        return;
+    }
+    if (gNdsTask34StageStreamFrame != gNdsRendererProfileFrameCount)
+    {
+        gNdsTask34StageStreamFrame = gNdsRendererProfileFrameCount;
+        gNdsTask34StageStreamEntryCount = 0u;
+        gNdsTask34StageStreamWordCount = 0u;
+        gNdsTask34StageStreamOverflowCount = 0u;
+        gNdsTask34StageStreamFaultCount = 0u;
+        sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
+        sNdsTask34StageStreamActive = FALSE;
+    }
+    if (sNdsTask34StageStreamActive != FALSE)
+    {
+        gNdsTask34StageStreamFaultCount++;
+    }
+    sNdsTask34StageStreamSegment = segment_index;
+    sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
+    sNdsTask34StageStreamActive = TRUE;
+}
+
+void NDS_TASK29_GX_CENSUS_CODE
+ndsRendererTask34StageStreamSetDObj(u32 dobj_index)
+{
+    if (gNdsTask34StageStreamCaptureEnabled == FALSE)
+    {
+        return;
+    }
+    if (sNdsTask34StageStreamActive == FALSE)
+    {
+        gNdsTask34StageStreamFaultCount++;
+        return;
+    }
+    sNdsTask34StageStreamDObj = dobj_index;
+}
+
+void NDS_TASK29_GX_CENSUS_CODE
+ndsRendererTask34StageStreamEndSegment(void)
+{
+    if (gNdsTask34StageStreamCaptureEnabled == FALSE)
+    {
+        return;
+    }
+    if (sNdsTask34StageStreamActive == FALSE)
+    {
+        gNdsTask34StageStreamFaultCount++;
+        return;
+    }
+    sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
+    sNdsTask34StageStreamActive = FALSE;
+}
+#endif
+
+#if NDS_TASK29_GX_CENSUS
 volatile u32 gNdsTask29GXFrame;
 volatile u32 gNdsTask29GXCommandCount[NDS_TASK29_GX_CLASS_COUNT];
 volatile u32 gNdsTask29GXWordCount[NDS_TASK29_GX_CLASS_COUNT];
@@ -488,19 +612,6 @@ volatile u32 gNdsTask29GXNeverSuppressMask =
     (1u << NDS_TASK29_GX_VERTEX16) |
     (1u << NDS_TASK29_GX_FLUSH);
 
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-volatile u32 gNdsTask34StageStreamFrame;
-volatile u32 gNdsTask34StageStreamCaptureEnabled;
-volatile u32 gNdsTask34StageStreamEntryCount;
-volatile u32 gNdsTask34StageStreamWordCount;
-volatile u32 gNdsTask34StageStreamOverflowCount;
-volatile u32 gNdsTask34StageStreamFaultCount;
-volatile NDSRendererTask34StageStreamEntry
-    gNdsTask34StageStreamEntries[NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY];
-volatile u32
-    gNdsTask34StageStreamWords[NDS_TASK34_STAGE_STREAM_WORD_CAPACITY];
-#endif
-
 static u32 sNdsTask29GXCommandCount[NDS_TASK29_GX_CLASS_COUNT];
 static u32 sNdsTask29GXWordCount[NDS_TASK29_GX_CLASS_COUNT];
 static u32 sNdsTask29GXRepeatCount[NDS_TASK29_GX_CLASS_COUNT];
@@ -527,15 +638,6 @@ static u32 sNdsTask29GXBoundaryCount;
 static u32 sNdsTask29GXFaultCount;
 static u32 sNdsTask29GXOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
 static u32 sNdsTask29GXActive;
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-static u32 sNdsTask34StageStreamEntryCount;
-static u32 sNdsTask34StageStreamWordCount;
-static u32 sNdsTask34StageStreamOverflowCount;
-static u32 sNdsTask34StageStreamFaultCount;
-static u32 sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
-static u32 sNdsTask34StageStreamSegment;
-static u32 sNdsTask34StageStreamActive;
-#endif
 
 static inline u32 ndsRendererTask29GXHashA(u32 hash, u32 value)
 {
@@ -577,15 +679,6 @@ ndsRendererTask29GXResetWorking(void)
     sNdsTask29GXBoundaryCount = 0u;
     sNdsTask29GXFaultCount = 0u;
     sNdsTask29GXOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-    sNdsTask34StageStreamEntryCount = 0u;
-    sNdsTask34StageStreamWordCount = 0u;
-    sNdsTask34StageStreamOverflowCount = 0u;
-    sNdsTask34StageStreamFaultCount = 0u;
-    sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
-    sNdsTask34StageStreamSegment = 0u;
-    sNdsTask34StageStreamActive = FALSE;
-#endif
     for (owner = 0u; owner < NDS_TASK29_GX_OWNER_COUNT; owner++)
     {
         sNdsTask29GXOwnerHashA[owner] = 2166136261u;
@@ -613,6 +706,9 @@ ndsRendererTask29GXRecord(
     u32 word_index;
     u32 repeat = TRUE;
 
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+    ndsRendererTask34StageStreamRecord(command_class, words, word_count);
+#endif
     ndsRendererTask29GXEnsureActive();
     if ((class_index >= NDS_TASK29_GX_CLASS_COUNT) ||
         (word_count > NDS_TASK29_GX_MAX_WORDS) ||
@@ -623,45 +719,6 @@ ndsRendererTask29GXRecord(
     }
     owner = (sNdsTask29GXOwner < NDS_TASK29_GX_OWNER_COUNT) ?
         sNdsTask29GXOwner : (u32)NDS_RENDERER_PROFILE_OWNER_NONE;
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-    if (sNdsTask34StageStreamActive != FALSE)
-    {
-        u32 entry_index = sNdsTask34StageStreamEntryCount;
-        u32 first_word = sNdsTask34StageStreamWordCount;
-
-        if ((sNdsTask34StageStreamDObj ==
-             NDS_TASK34_STAGE_STREAM_DOBJ_NONE) ||
-            (owner != NDS_RENDERER_PROFILE_OWNER_STAGE))
-        {
-            sNdsTask34StageStreamFaultCount++;
-        }
-        else if ((entry_index >= NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY) ||
-                 (first_word + word_count >
-                  NDS_TASK34_STAGE_STREAM_WORD_CAPACITY))
-        {
-            sNdsTask34StageStreamOverflowCount++;
-        }
-        else
-        {
-            volatile NDSRendererTask34StageStreamEntry *entry =
-                &gNdsTask34StageStreamEntries[entry_index];
-
-            entry->word_offset = (u16)first_word;
-            entry->dobj_index = (u16)sNdsTask34StageStreamDObj;
-            entry->command_class = (u8)class_index;
-            entry->word_count = (u8)word_count;
-            entry->segment_index = (u8)sNdsTask34StageStreamSegment;
-            entry->reserved = 0u;
-            for (word_index = 0u; word_index < word_count; word_index++)
-            {
-                gNdsTask34StageStreamWords[first_word + word_index] =
-                    words[word_index];
-            }
-            sNdsTask34StageStreamEntryCount++;
-            sNdsTask34StageStreamWordCount += word_count;
-        }
-    }
-#endif
     if (((sNdsTask29GXLastValidMask & (1u << class_index)) == 0u) ||
         (sNdsTask29GXLastWordCount[class_index] != word_count))
     {
@@ -751,55 +808,6 @@ void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXRecordFlush(u32 mode)
     sNdsTask29GXLastValidMask = 0u;
 }
 
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-void NDS_TASK29_GX_CENSUS_CODE
-ndsRendererTask34StageStreamBeginSegment(u32 segment_index)
-{
-    if (gNdsTask34StageStreamCaptureEnabled == FALSE)
-    {
-        return;
-    }
-    ndsRendererTask29GXEnsureActive();
-    if (sNdsTask34StageStreamActive != FALSE)
-    {
-        sNdsTask34StageStreamFaultCount++;
-    }
-    sNdsTask34StageStreamSegment = segment_index;
-    sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
-    sNdsTask34StageStreamActive = TRUE;
-}
-
-void NDS_TASK29_GX_CENSUS_CODE
-ndsRendererTask34StageStreamSetDObj(u32 dobj_index)
-{
-    if (gNdsTask34StageStreamCaptureEnabled == FALSE)
-    {
-        return;
-    }
-    if (sNdsTask34StageStreamActive == FALSE)
-    {
-        sNdsTask34StageStreamFaultCount++;
-        return;
-    }
-    sNdsTask34StageStreamDObj = dobj_index;
-}
-
-void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask34StageStreamEndSegment(void)
-{
-    if (gNdsTask34StageStreamCaptureEnabled == FALSE)
-    {
-        return;
-    }
-    if (sNdsTask34StageStreamActive == FALSE)
-    {
-        sNdsTask34StageStreamFaultCount++;
-        return;
-    }
-    sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
-    sNdsTask34StageStreamActive = FALSE;
-}
-#endif
-
 void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXPublishFrame(void)
 {
     u32 command_class;
@@ -841,14 +849,6 @@ void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXPublishFrame(void)
     gNdsTask29GXBoundaryHashB = sNdsTask29GXBoundaryHashB;
     gNdsTask29GXBoundaryCount = sNdsTask29GXBoundaryCount;
     gNdsTask29GXFaultCount = sNdsTask29GXFaultCount;
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-    gNdsTask34StageStreamFrame = gNdsRendererProfileFrameCount;
-    gNdsTask34StageStreamEntryCount = sNdsTask34StageStreamEntryCount;
-    gNdsTask34StageStreamWordCount = sNdsTask34StageStreamWordCount;
-    gNdsTask34StageStreamOverflowCount =
-        sNdsTask34StageStreamOverflowCount;
-    gNdsTask34StageStreamFaultCount = sNdsTask34StageStreamFaultCount;
-#endif
     gNdsTask29GXNeverSuppressMask =
         (1u << NDS_TASK29_GX_TEXTURE_BIND) |
         (1u << NDS_TASK29_GX_MATRIX_IDENTITY) |
@@ -864,6 +864,10 @@ void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXPublishFrame(void)
         (1u << NDS_TASK29_GX_FLUSH);
     sNdsTask29GXActive = FALSE;
 }
+#else
+#define ndsRendererTask29GXRecord(command_class, words, word_count) \
+    ndsRendererTask34StageStreamRecord((command_class), (words), (word_count))
+#endif
 
 static inline void ndsRendererTask29GlEnable(int bits)
 {
@@ -1087,7 +1091,7 @@ static inline void ndsRendererHardwareWriteColorWord(u32 value)
 #elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
-#if NDS_TASK29_GX_CENSUS
+#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
 #endif
     GFX_COLOR = value;
@@ -1101,7 +1105,7 @@ static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
 #elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
-#if NDS_TASK29_GX_CENSUS
+#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
 #endif
     GFX_TEX_COORD = value;
@@ -1117,7 +1121,7 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
     ndsRendererBenchmarkSinkWord(xy);
     ndsRendererBenchmarkSinkWord(z);
 #else
-#if NDS_TASK29_GX_CENSUS
+#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS
     u32 words[2] = {xy, z};
 
     ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);

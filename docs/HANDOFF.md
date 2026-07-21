@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-20 (Task 36 Phase-A2 visual approval gate)
+Updated: 2026-07-20 (Task 36 Phase-B conservation stop)
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
@@ -21,24 +21,22 @@ compare/i2f/addsub `1/1/1`. Do not edit `decomp/`.
 
 ## Next Packet
 
-Task 36 Phase A2 is fixed and verified behind `NDS_TASK36_HW_COMPOSE=0` by
-default. Binding 29 stays on the exact CPU path; 26 rigid bindings use hardware
-composition. Three synchronized windows save approximately 40K stage P50/P95
-ticks. The whole-stage, early, and Whispy screenshot pairs each change
-355/49,152 pixels (0.722%, mean 0.28) with the main floor and all three platforms
-visible.
+Task 36 is closed at its Phase-B gate. Phase A commit `c08e8ee` keeps 26 rigid
+bindings on hardware composition, binding 29 on the exact CPU path, all stage
+surfaces visible, and approximately 40K stage ticks saved. Tyler approved the
+screenshots.
 
-Focused fixtures, DevFast, Boundary, and three complete one-minute Results
-lifecycles pass. The retired Regression fleet must not be restored. The direct
-lab target's strict start-state assertion samples at Results and is not claimed;
-runtime lifecycle and exact 2:1 cadence are green.
+The standalone Task-34 census runs Task29/34/36/affine `0/1/1/0`. Its full-arena
+gate is `0x150000/0`; a degraded arm is rejected before capture. Valid countdown
+and early captures contain 2,762 entries / 6,664 words per frame. The 26 rigid
+DObjs own at most 3,929 words (58.959% of the stage stream), and only 3,896 are
+constant across both windows (58.463%). This is below the mandatory 60% gate;
+Whispy cannot raise an intersection and was not rerun after its fixed timeout.
+Do not implement the Phase-B bake/replay, DMA, or device pair. Evidence:
+`artifacts/performance/2026-07-20_task36-phaseb-conservation.md`.
 
-Tyler must explicitly approve the screenshots before Phase B begins. After
-approval: commit Phase A as KEEP, run Task 36 Phase B conservation census, and
-continue only if at least 60% of rigid words are conserved. Evidence and ROM
-hashes:
-
-`artifacts/performance/2026-07-20_task36-phasea-hw-compose-wip.md`
+No next implementation task is claimed in this handoff. Select the highest
+unowned red P1 row from `P1_EXECUTION_BOARD.md`.
 
 Preserve the unrelated untracked optimization task documents and user files;
 they are not part of the Task 36 implementation commit.

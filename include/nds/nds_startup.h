@@ -684,6 +684,8 @@
 void ndsResetStartupDiagnostics(void);
 void *ndsTaskmanArenaStart(void);
 size_t ndsTaskmanArenaSize(void);
+extern volatile u32 gNdsTaskmanArenaChosenSize;
+extern volatile u32 gNdsTaskmanArenaAllocFailCount;
 void ndsOpeningRoomCapturePencilsCountsBefore(void);
 void ndsOpeningRoomCapturePencilsCreation(void);
 void ndsOpeningRoomRecordOverlayEject(void *gobj);

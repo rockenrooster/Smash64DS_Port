@@ -75,10 +75,6 @@
 #error "NDS_TASK34_STAGE_STREAM_CENSUS must be 0 or 1"
 #endif
 
-#if NDS_TASK34_STAGE_STREAM_CENSUS && !NDS_TASK29_GX_CENSUS
-#error "NDS_TASK34_STAGE_STREAM_CENSUS requires NDS_TASK29_GX_CENSUS"
-#endif
-
 #ifndef NDS_TASK36_HW_COMPOSE
 #define NDS_TASK36_HW_COMPOSE 0
 #endif
@@ -270,7 +266,7 @@ typedef enum NDSRendererProfileOwner
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
 } NDSRendererProfileOwner;
 
-#if NDS_TASK29_GX_CENSUS
+#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS
 typedef enum NDSRendererTask29GXClass
 {
     NDS_TASK29_GX_CONTROL = 0,
@@ -297,7 +293,9 @@ typedef enum NDSRendererTask29GXClass
     NDS_TASK29_GX_FLUSH,
     NDS_TASK29_GX_CLASS_COUNT
 } NDSRendererTask29GXClass;
+#endif
 
+#if NDS_TASK29_GX_CENSUS
 #define NDS_TASK29_GX_OWNER_COUNT \
     (NDS_RENDERER_PROFILE_OWNER_COUNT + 1u)
 
@@ -323,10 +321,11 @@ extern volatile u32 gNdsTask29GXBoundaryHashB;
 extern volatile u32 gNdsTask29GXBoundaryCount;
 extern volatile u32 gNdsTask29GXFaultCount;
 extern volatile u32 gNdsTask29GXNeverSuppressMask;
+#endif
 
 #if NDS_TASK34_STAGE_STREAM_CENSUS
-#define NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY 4096u
-#define NDS_TASK34_STAGE_STREAM_WORD_CAPACITY 8192u
+#define NDS_TASK34_STAGE_STREAM_ENTRY_CAPACITY 2800u
+#define NDS_TASK34_STAGE_STREAM_WORD_CAPACITY 7000u
 #define NDS_TASK34_STAGE_STREAM_DOBJ_NONE 0xffffu
 
 typedef struct NDSRendererTask34StageStreamEntry
@@ -355,6 +354,7 @@ void ndsRendererTask34StageStreamSetDObj(u32 dobj_index);
 void ndsRendererTask34StageStreamEndSegment(void);
 #endif
 
+#if NDS_TASK29_GX_CENSUS
 void ndsRendererTask29GXRecordFlush(u32 mode);
 void ndsRendererTask29GXSetOwner(NDSRendererProfileOwner owner);
 void ndsRendererTask29GXPublishFrame(void);

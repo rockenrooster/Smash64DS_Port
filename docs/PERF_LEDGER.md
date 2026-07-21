@@ -165,7 +165,7 @@ behavior. Full certificate:
 
 ```text
 IDEA ID: TASK36-PHASEA2-HARDWARE-COMPOSE-20260720
-STATUS: VERIFIED DEFAULT-OFF CANDIDATE; TYLER VISUAL APPROVAL PENDING
+STATUS: PHASE A KEEP; TYLER VISUAL APPROVED; PHASE B STOPPED BELOW 60%
 MECHANISM: 26 rigid projected no-Z bindings compose camera x local in GX;
   binding 29 raw source-Z/range remains exact CPU-composed
 ENGAGEMENT: 26 DObjs; 3 camera loads; 31 world multiplies; pre-GO fallback 1;
@@ -187,9 +187,18 @@ hardware clip readback differs from the exact CPU reference by at most two
 20.12 units with no translation wrap. The discarded band-view experiment was
 not the fix: excluding binding 29 had left raw fallback matrices uninitialized.
 Initializing that exact fallback and delaying GX admission until the first rigid
-run restores the platform and slightly exceeds the original WIP saving. Phase B
-remains fenced on Tyler's visual approval. Full evidence:
-`artifacts/performance/2026-07-20_task36-phasea-hw-compose-wip.md`.
+run restores the platform and slightly exceeds the original WIP saving. Tyler
+approved the result and Phase A is committed at `c08e8ee`.
+
+Phase B's admitted standalone ROM/ELF are `E5E6F66...` / `13713DDE...`, with
+Task29/34/36/affine `0/1/1/0` and full arena `0x150000/0`. Across countdown and
+early combat, 3,896 of 6,664 whole-stage words are conserved (58.463%). The
+entire 3,929-word rigid partition is itself only 58.959% of the stage stream,
+making 60% impossible even before Whispy. The 33 varying rigid words are the 11
+live camera `MATRIX_LOAD4X4` lanes at DObjs 0, 40, and 54. Whispy timed out at
+the fixed 30-second limit and was not rerun; the upper-bound proof already kills
+the bake. Full evidence:
+`artifacts/performance/2026-07-20_task36-phaseb-conservation.md`.
 
 ## 2026-07-18 - Tasks 20R-25R atomic queue reconciliation
 

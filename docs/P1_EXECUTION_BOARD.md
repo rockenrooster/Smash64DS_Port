@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-20 19:53 Central
+Updated: 2026-07-20 21:20 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -192,7 +192,7 @@ update overlap, or device ROMs. Preserve only the default-off measurement
 certificate. Evidence:
 `artifacts/performance/2026-07-20_task34-e1-stage-stream.md`.
 
-## Task 36 hardware matrix compose — PHASE A2 VERIFIED, VISUAL APPROVAL PENDING 2026-07-20
+## Task 36 hardware matrix compose — PHASE A KEEP / PHASE B STOPPED 2026-07-20
 
 The missing upper platform is fixed. Per-DObj isolation identified bindings
 39/40 (DObjs 54/55, runs 50/51) as projected no-Z painter cards. Hardware clip
@@ -212,12 +212,19 @@ fallback with zero post-arm failures. Synchronized stage P50/P95 deltas are
 platforms are visible.
 
 DevFast, Boundary, focused fixtures, and three complete one-minute Results
-lifecycles pass. The direct lab target's strict soak wrapper samples its
-`BPLAY_START` marker at Results, so its initial-Wait assertion is not claimed;
-the runs nevertheless complete 4,084 updates / 2,042 presentations with exact
-2:1 cadence and zero runtime safety faults. Phase B remains fenced until Tyler
-explicitly approves the screenshots. Evidence:
-`artifacts/performance/2026-07-20_task36-phasea-hw-compose-wip.md`.
+lifecycles pass. Tyler approved the visuals. Phase A is committed at `c08e8ee`
+and remains default-off pending the Task-36 campaign's later device packet.
+
+Phase B's first standalone arm was rejected at the boot gate: arena
+`0x135000` / 27 failed allocations versus required `0x150000` / 0. Removing the
+unreachable mode-163 opening-action cache only in the Task-34 census build
+restores the exact full arena. Countdown and early captures then conserve 3,896
+of 6,664 whole-stage words (58.463%); even all 3,929 rigid words would be only
+58.959%, below the 60% continuation gate. The 33 varying words are the 11 live
+camera matrix lanes at DObjs 0, 40, and 54. Whispy timed out at the unchanged
+30-second limit; no rerun or extension was made, and more frames cannot increase
+the already-failing conserved intersection. Do not build the bake/replay path.
+Evidence: `artifacts/performance/2026-07-20_task36-phaseb-conservation.md`.
 
 ## BG-0 fast Dream Land wallpaper — REENGAGED 2026-07-19
 

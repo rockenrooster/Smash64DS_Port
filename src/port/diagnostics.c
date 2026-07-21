@@ -7285,7 +7285,8 @@ extern void func_80005BFC(void);
 #define NDS_OPENING_MOVIE_DRAW_INTERVAL 30u
 static void *sNdsTaskmanArenaAlloc;
 static u8 *sNdsTaskmanArenaBytes;
-static size_t sNdsTaskmanArenaSize;
+volatile u32 gNdsTaskmanArenaChosenSize;
+volatile u32 gNdsTaskmanArenaAllocFailCount;
 
 #define NDS_OPENING_ROOM_PENCILS_DOBJ_ENTRIES 4u
 #define NDS_OPENING_ROOM_PENCILS_RENDER_DOBJS 3u
@@ -7333,9 +7334,10 @@ static u8 *ndsTaskmanArenaBytes(void)
             {
                 uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
                 sNdsTaskmanArenaBytes = (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
-                sNdsTaskmanArenaSize = arena_size;
+                gNdsTaskmanArenaChosenSize = (u32)arena_size;
                 break;
             }
+            gNdsTaskmanArenaAllocFailCount++;
         }
         for (i = 0;
              (sNdsTaskmanArenaBytes == NULL) &&
@@ -7354,7 +7356,11 @@ static u8 *ndsTaskmanArenaBytes(void)
                 uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
                 sNdsTaskmanArenaBytes =
                     (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
-                sNdsTaskmanArenaSize = lower_arena_sizes[i];
+                gNdsTaskmanArenaChosenSize = (u32)lower_arena_sizes[i];
+            }
+            else
+            {
+                gNdsTaskmanArenaAllocFailCount++;
             }
         }
     }
@@ -7368,7 +7374,8 @@ void *ndsTaskmanArenaStart(void)
 
 size_t ndsTaskmanArenaSize(void)
 {
-    return (ndsTaskmanArenaBytes() != NULL) ? sNdsTaskmanArenaSize : 0u;
+    return (ndsTaskmanArenaBytes() != NULL) ?
+        (size_t)gNdsTaskmanArenaChosenSize : 0u;
 }
 
 #define NDS_OVERLAY_LIST(X) \

@@ -209,13 +209,12 @@ if ($Task29GXCensus -and
     (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9))) {
     throw 'Task29GXCensus requires profile 1 and complete-stage fast-run mode 9.'
 }
-if ($Task34StageStreamCensus -and -not $Task29GXCensus) {
-    throw 'Task34StageStreamCensus requires Task29GXCensus.'
-}
 if ($Task34StageStreamCensus -and
-    (($RendererBenchmarkSamples -ne 8) -or
+    (($RendererProfileLevel -ne 1) -or
+     ($RendererFastRunMode -ne 9) -or
+     ($RendererBenchmarkSamples -ne 8) -or
      ($RendererBenchmarkStartFrame -le 0))) {
-    throw 'Task34StageStreamCensus requires one exact eight-frame gate.'
+    throw 'Task34StageStreamCensus requires profile 1, fast mode 9, and one exact eight-frame gate.'
 }
 if ($RendererM3Phase0Profile -and
     (($RendererProfileLevel -ne 1) -or ($RendererFastRunMode -ne 9))) {
@@ -930,10 +929,7 @@ if ($Task29GXCensus) {
     Assert-Condition (
         (Test-Path -LiteralPath $task29BuildConfig -PathType Leaf) -and
         ($task29BuildConfigText -match
-            '(?m)^#define NDS_TASK29_GX_CENSUS 1$') -and
-        ($task29BuildConfigText -match
-            ("(?m)^#define NDS_TASK34_STAGE_STREAM_CENSUS {0}$" -f
-             [int]$Task34StageStreamCensus.IsPresent))
+            '(?m)^#define NDS_TASK29_GX_CENSUS 1$')
     ) 'Built Task 29 GX census configuration is absent or stale.' `
         $task29BuildConfig
     $task29Nm = Join-Path $env:DEVKITARM 'bin/arm-none-eabi-nm.exe'
@@ -941,15 +937,32 @@ if ($Task29GXCensus) {
     Assert-Condition (
         $LASTEXITCODE -eq 0 -and
         ($task29NmOutput -match '\bgNdsTask29GXCommandCount$') -and
-        ($task29NmOutput -match '\bgNdsTask29GXNeverSuppressMask$') -and
-        ([bool]($task29NmOutput -match
-            '\bgNdsTask34StageStreamEntries$') -eq
-         [bool]$Task34StageStreamCensus) -and
-        ([bool]($task29NmOutput -match
-            '\bgNdsTask34StageStreamCaptureEnabled$') -eq
-         [bool]$Task34StageStreamCensus)
+        ($task29NmOutput -match '\bgNdsTask29GXNeverSuppressMask$')
     ) 'Built Task 29 GX census ELF lacks its fail-closed command/mask exports.' `
         ($task29NmOutput -join "`n")
+}
+if ($Task34StageStreamCensus) {
+    $task34BuildDirectory = Resolve-Smash64DSBuildPath -Root $root -Build $Build
+    $task34BuildConfig = Join-Path $task34BuildDirectory 'nds_build_config.h'
+    $task34BuildConfigText = Get-Content -LiteralPath $task34BuildConfig -Raw
+    $task34Nm = Join-Path $env:DEVKITARM 'bin/arm-none-eabi-nm.exe'
+    $task34NmOutput = @(& $task34Nm $elf 2>&1 | ForEach-Object { "$_" })
+    Assert-Condition (
+        (Test-Path -LiteralPath $task34BuildConfig -PathType Leaf) -and
+        ($task34BuildConfigText -match
+            '(?m)^#define NDS_TASK34_STAGE_STREAM_CENSUS 1$') -and
+        ($task34BuildConfigText -match
+            ("(?m)^#define NDS_TASK29_GX_CENSUS {0}$" -f
+             [int]$Task29GXCensus.IsPresent)) -and
+        ($task34BuildConfigText -match
+            '(?m)^#define NDS_FAST_WALLPAPER_AFFINE 0$') -and
+        $LASTEXITCODE -eq 0 -and
+        ($task34NmOutput -match '\bgNdsTask34StageStreamEntries$') -and
+        ($task34NmOutput -match '\bgNdsTask34StageStreamCaptureEnabled$') -and
+        ($task34NmOutput -match '\bgNdsTaskmanArenaChosenSize$') -and
+        ($task34NmOutput -match '\bgNdsTaskmanArenaAllocFailCount$')
+    ) 'Built Task 34 standalone stream census is stale, affine-enabled, or missing its arena/stream exports.' `
+        (($task34NmOutput + $task34BuildConfigText) -join "`n")
 }
 if ($Task9FloatItcmMode -eq 1) {
     $task9BuildDirectory = Resolve-Smash64DSBuildPath `
@@ -1421,7 +1434,8 @@ try {
                         'set $task29_gx_owner = $task29_gx_owner + 1',
                         'end'
                     )
-                    if ($Task34StageStreamCensus) {
+                }
+                if ($Task34StageStreamCensus) {
                         $coarseBenchmarkCommands +=
                             'printf "TASK34_STAGE_META=%u,%u,%u,%u,%u\n", gNdsTask34StageStreamFrame, gNdsTask34StageStreamEntryCount, gNdsTask34StageStreamWordCount, gNdsTask34StageStreamOverflowCount, gNdsTask34StageStreamFaultCount'
                         foreach ($dump in $task34StageDumpFiles) {
@@ -1445,7 +1459,6 @@ try {
                             'set variable gNdsTask34StageStreamCaptureEnabled = 0',
                             'end'
                         )
-                    }
                 }
                 if ($Task9FloatCensusMode -eq 1) {
                     $coarseBenchmarkCommands += @(
@@ -1766,6 +1779,15 @@ try {
             'tbreak scVSBattleStartBattle',
             'continue'
         )
+        if ($Task34StageStreamCensus) {
+            $preBattleSetupCommands += @(
+                'printf "TASK34_ARENA_BOOT=%u,%u\n", gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount',
+                'if gNdsTaskmanArenaChosenSize != 1376256 || gNdsTaskmanArenaAllocFailCount != 0',
+                'printf "TASK34_ARENA_REJECT=%u,%u\n", gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount',
+                'quit 86',
+                'end'
+            )
+        }
         if ($staticTextureAotSelected -and
             -not $usesPublishedIntrinsicRendererDefaults) {
             $preBattleSetupCommands +=
@@ -1989,9 +2011,35 @@ try {
         )
         $gdbCommands = @($beforeDetach + $audioBgmCommands + $afterDetach)
     }
-    $gdbStdout = (Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf -Root $root `
-        -Commands $gdbCommands -ScriptName $scriptName `
-        -TimeoutSeconds $gdbCaptureTimeoutSeconds).Stdout
+    try {
+        $gdbStdout = (Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf -Root $root `
+            -Commands $gdbCommands -ScriptName $scriptName `
+            -TimeoutSeconds $gdbCaptureTimeoutSeconds).Stdout
+    } catch {
+        if ($Task34StageStreamCensus -and
+            $_.Exception.Message.StartsWith('GDB marker capture timed out')) {
+            $timeoutEvidence = $_.Exception.Message
+            try {
+                $autopsy = Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf `
+                    -Root $root -ScriptName ($scriptName + '.autopsy') `
+                    -TimeoutSeconds 15 -Commands @(
+                        'set pagination off',
+                        "target remote 127.0.0.1:$($verifierContext.GdbPort)",
+                        'printf "TASK34_STALL_ARENA=%u,%u\n", gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount',
+                        'info registers pc lr sp',
+                        'x/i $pc',
+                        'bt',
+                        'detach',
+                        'quit'
+                    )
+                $autopsyEvidence = "$($autopsy.Stdout)`n$($autopsy.Stderr)"
+            } catch {
+                $autopsyEvidence = "AUTOPSY_ATTACH_FAILED: $($_.Exception.Message)"
+            }
+            throw "$timeoutEvidence`nTask 34 timeout autopsy:`n$autopsyEvidence"
+        }
+        throw
+    }
     $aobj32 = [regex]::Match($gdbStdout, 'AOBJ32=([0-9]+),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $mobjAttach = [regex]::Match($gdbStdout, 'MOBJ_ATTACH=([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0)')
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
@@ -2266,6 +2314,7 @@ try {
     $task29GxMetaBenchmark = @()
     $task29GxClassBenchmark = @()
     $task29GxOwnerBenchmark = @()
+    $task34ArenaBoot = @()
     $task34StageMetaBenchmark = @()
     $task34StageEntryValues = [Collections.Generic.List[object]]::new()
     $task34StageWordValues = [Collections.Generic.List[object]]::new()
@@ -2284,6 +2333,18 @@ try {
     $screenSpaceCensusSummary = @()
     $screenSpaceCensusRows = @()
     $screenSpaceCensusStageOwners = @()
+    if ($Task34StageStreamCensus) {
+        $task34ArenaBootRows = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
+            -Name 'TASK34_ARENA_BOOT' -FieldCount 2)
+        Assert-Condition ($task34ArenaBootRows.Count -eq 1) `
+            'Task 34 standalone census did not publish one pre-capture arena row.' `
+            $gdbStdout
+        $task34ArenaBoot = Get-Ints $task34ArenaBootRows[0]
+        Assert-Condition (
+            $task34ArenaBoot[0] -eq 1376256 -and
+            $task34ArenaBoot[1] -eq 0
+        ) "Task 34 standalone census degraded the adaptive arena before capture (actual=$($task34ArenaBoot -join ','))." $gdbStdout
+    }
     $m4FenceFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'M4_FENCE_FINAL' -FieldCount 24)
     $fastFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
@@ -2316,7 +2377,8 @@ try {
                 -Text $gdbStdout -Name 'TASK29_GX_CLASS' -FieldCount 67)
             $task29GxOwnerBenchmark = @(Get-UnsignedMarkerMatches `
                 -Text $gdbStdout -Name 'TASK29_GX_OWNER' -FieldCount 70)
-            if ($Task34StageStreamCensus) {
+        }
+        if ($Task34StageStreamCensus) {
                 $task34StageMetaBenchmark = @(Get-UnsignedMarkerMatches `
                     -Text $gdbStdout -Name 'TASK34_STAGE_META' -FieldCount 5)
                 Assert-Condition (
@@ -2361,7 +2423,6 @@ try {
                                 $wordBytes, 4 * $wordIndex)))
                     }
                 }
-            }
         }
         if (($RendererProfileLevel -eq 1) -and
             ($RendererFastRunMode -eq 9)) {
@@ -3503,14 +3564,14 @@ try {
                                 $task29GxOwnerBenchmark.Count -eq
                                     (4 * $RendererBenchmarkSamples)
                             ) "Task 29 GX census is incomplete (meta=$($task29GxMetaBenchmark.Count) class=$($task29GxClassBenchmark.Count) owner=$($task29GxOwnerBenchmark.Count))." $gdbStdout
-                            if ($Task34StageStreamCensus) {
-                                Assert-Condition (
-                                    $task34StageMetaBenchmark.Count -eq
-                                        $RendererBenchmarkSamples -and
-                                    $task34StageEntryValues.Count -gt 0 -and
-                                    $task34StageWordValues.Count -gt 0
-                                ) "Task 34 E1 raw stream census is incomplete (meta=$($task34StageMetaBenchmark.Count) entries=$($task34StageEntryValues.Count) words=$($task34StageWordValues.Count))." $gdbStdout
-                            }
+                        }
+                        if ($Task34StageStreamCensus) {
+                            Assert-Condition (
+                                $task34StageMetaBenchmark.Count -eq
+                                    $RendererBenchmarkSamples -and
+                                $task34StageEntryValues.Count -gt 0 -and
+                                $task34StageWordValues.Count -gt 0
+                            ) "Task 34 E1 raw stream census is incomplete (meta=$($task34StageMetaBenchmark.Count) entries=$($task34StageEntryValues.Count) words=$($task34StageWordValues.Count))." $gdbStdout
                         }
                         $expectedLogicTickDelta = if (
                             $BattlePlayable -and $RealtimePresentation -and
@@ -3659,72 +3720,69 @@ try {
                                         (3 * $task29FastRun[6]) -and
                                     (Get-Ints $task29GxOwnerBenchmark[(4 * $sampleIndex) + 3])[64] -eq 0
                                 ) "Task 29 GX vertex ownership diverged from the synchronized fast-owner lifecycle or failed to assign all residual triangles to the stage at frame $frame." $gdbStdout
-                                if ($Task34StageStreamCensus) {
-                                    $task34Meta = Get-Ints `
-                                        $task34StageMetaBenchmark[$sampleIndex]
-                                    $task34FrameEntries = @(
-                                        $task34StageEntryValues | Where-Object {
-                                            $_[0] -eq $frame
-                                        })
-                                    $task34FrameWords = @(
-                                        $task34StageWordValues | Where-Object {
-                                            $_[0] -eq $frame
-                                        })
-                                    Assert-Condition (
-                                        $task34Meta[0] -eq $frame -and
-                                        $task34Meta[1] -le
-                                            $task29OwnerCommandSums[0] -and
-                                        $task34Meta[2] -le
-                                            $task29OwnerWordSums[0] -and
-                                        $task34Meta[3] -eq 0 -and
-                                        $task34Meta[4] -eq 0 -and
-                                        $task34FrameEntries.Count -eq
-                                            $task34Meta[1] -and
-                                        $task34FrameWords.Count -eq
-                                            $task34Meta[2]
-                                    ) "Task 34 E1 native-stage stream exceeded the broad Task-29 stage/effects owner or hit an overflow/fault at frame $frame (meta=$($task34Meta -join ',') owner=$($task29OwnerCommandSums[0])/$($task29OwnerWordSums[0]))." $gdbStdout
-                                    $task34WordCursor = 0
-                                    for ($task34EntryIndex = 0;
-                                         $task34EntryIndex -lt
-                                            $task34FrameEntries.Count;
-                                         $task34EntryIndex++) {
-                                        $task34Entry =
-                                            $task34FrameEntries[$task34EntryIndex]
-                                        Assert-Condition (
-                                            $task34Entry[1] -eq
-                                                $task34EntryIndex -and
-                                            $task34Entry[2] -lt 57 -and
-                                            $task34Entry[3] -lt 22 -and
-                                            $task34Entry[4] -eq
-                                                $task34WordCursor -and
-                                            $task34Entry[5] -le 16 -and
-                                            $task34Entry[6] -lt 8
-                                        ) "Task 34 E1 entry $task34EntryIndex is out of order, unowned, or out of range at frame $frame (actual=$($task34Entry -join ','))." $gdbStdout
-                                        $task34WordCursor += $task34Entry[5]
-                                    }
-                                    Assert-Condition (
-                                        $task34WordCursor -eq
-                                            $task34Meta[2]
-                                    ) "Task 34 E1 entry word spans do not close the frame-$frame stream." $gdbStdout
-                                    for ($task34WordIndex = 0;
-                                         $task34WordIndex -lt
-                                            $task34FrameWords.Count;
-                                         $task34WordIndex++) {
-                                        Assert-Condition (
-                                            $task34FrameWords[$task34WordIndex][1] -eq
-                                                $task34WordIndex
-                                        ) "Task 34 E1 word $task34WordIndex is out of order at frame $frame." $gdbStdout
-                                    }
-                                    $task34StageMetaSamples.Add($task34Meta)
-                                    foreach ($task34Entry in $task34FrameEntries) {
-                                        $task34StageEntrySamples.Add($task34Entry)
-                                    }
-                                    foreach ($task34Word in $task34FrameWords) {
-                                        $task34StageWordSamples.Add($task34Word)
-                                    }
-                                }
                                 $task29GxMetaSamples.Add($task29Meta)
                                 $task29GxClassSamples.Add($task29Class)
+                            }
+                            if ($Task34StageStreamCensus) {
+                                $task34Meta = Get-Ints `
+                                    $task34StageMetaBenchmark[$sampleIndex]
+                                $task34FrameEntries = @(
+                                    $task34StageEntryValues | Where-Object {
+                                        $_[0] -eq $frame
+                                    })
+                                $task34FrameWords = @(
+                                    $task34StageWordValues | Where-Object {
+                                        $_[0] -eq $frame
+                                    })
+                                Assert-Condition (
+                                    $task34Meta[0] -eq $frame -and
+                                    $task34Meta[1] -gt 0 -and
+                                    $task34Meta[2] -gt 0 -and
+                                    $task34Meta[3] -eq 0 -and
+                                    $task34Meta[4] -eq 0 -and
+                                    $task34FrameEntries.Count -eq
+                                        $task34Meta[1] -and
+                                    $task34FrameWords.Count -eq
+                                        $task34Meta[2]
+                                ) "Task 34 standalone native-stage stream is empty or hit an overflow/fault at frame $frame (meta=$($task34Meta -join ','))." $gdbStdout
+                                $task34WordCursor = 0
+                                for ($task34EntryIndex = 0;
+                                     $task34EntryIndex -lt
+                                        $task34FrameEntries.Count;
+                                     $task34EntryIndex++) {
+                                    $task34Entry =
+                                        $task34FrameEntries[$task34EntryIndex]
+                                    Assert-Condition (
+                                        $task34Entry[1] -eq
+                                            $task34EntryIndex -and
+                                        $task34Entry[2] -lt 57 -and
+                                        $task34Entry[3] -lt 22 -and
+                                        $task34Entry[4] -eq
+                                            $task34WordCursor -and
+                                        $task34Entry[5] -le 16 -and
+                                        $task34Entry[6] -lt 8
+                                    ) "Task 34 entry $task34EntryIndex is out of order, unowned, or out of range at frame $frame (actual=$($task34Entry -join ','))." $gdbStdout
+                                    $task34WordCursor += $task34Entry[5]
+                                }
+                                Assert-Condition (
+                                    $task34WordCursor -eq $task34Meta[2]
+                                ) "Task 34 entry word spans do not close the frame-$frame stream." $gdbStdout
+                                for ($task34WordIndex = 0;
+                                     $task34WordIndex -lt
+                                        $task34FrameWords.Count;
+                                     $task34WordIndex++) {
+                                    Assert-Condition (
+                                        $task34FrameWords[$task34WordIndex][1] -eq
+                                            $task34WordIndex
+                                    ) "Task 34 word $task34WordIndex is out of order at frame $frame." $gdbStdout
+                                }
+                                $task34StageMetaSamples.Add($task34Meta)
+                                foreach ($task34Entry in $task34FrameEntries) {
+                                    $task34StageEntrySamples.Add($task34Entry)
+                                }
+                                foreach ($task34Word in $task34FrameWords) {
+                                    $task34StageWordSamples.Add($task34Word)
+                                }
                             }
                             if ($sampleIndex -gt 0) {
                                 $previousCoarse = Get-Ints $coarseBenchmark[$sampleIndex - 1]
@@ -4826,6 +4884,7 @@ try {
                                 task29GxMeta = @($task29GxMetaSamples)
                                 task29GxClass = @($task29GxClassSamples)
                                 task29GxOwner = @($task29GxOwnerSamples)
+                                task34ArenaBoot = @($task34ArenaBoot)
                                 task34StageMeta = @($task34StageMetaSamples)
                                 task34StageEntries =
                                     @($task34StageEntrySamples)
