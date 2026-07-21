@@ -85,104 +85,32 @@ Assert-True ($restoreCount -ge 2) `
     'BattleShip Fox up/down-smash hit-status restore commands were not found.'
 
 $foxRelocDescriptions = Get-Content $foxRelocDescriptionsPath -Raw
-$foxCommonRows = @([regex]::Matches(
+$foxRows = @([regex]::Matches(
     $foxRelocDescriptions,
-    '(?m)^-(?<id>64[2-9]|65[0-9]|66[01]): FTFoxAnim(?<name>[A-Za-z0-9]+)$') |
+    '(?m)^-(?<id>6(?:4[2-9]|[5-9][0-9])|7[0-9][0-9]): FTFoxAnim(?<name>[A-Za-z0-9]+)$') |
     ForEach-Object {
         [pscustomobject]@{
             Id = [int]$_.Groups['id'].Value
             Name = $_.Groups['name'].Value
         }
-    } | Sort-Object Id)
-Assert-True ($foxCommonRows.Count -eq 20) `
-    'BattleShip Fox files 642..661 are no longer one complete common bank.'
-
-# Files 751..771 are BattleShip's contiguous Fox Jab1-through-Down-Air bank.
-# Pin both banks' semantic manifests, O2R identities, packaged paths, and
-# token-table order so adjacent motions cannot silently share stale data.
-$foxCombatRows = @([regex]::Matches(
-    $foxRelocDescriptions,
-    '(?m)^-(?<id>75[1-9]|76[0-9]|77[01]): FTFoxAnim(?<name>[A-Za-z0-9]+)$') |
-    ForEach-Object {
-        [pscustomobject]@{
-            Id = [int]$_.Groups['id'].Value
-            Name = $_.Groups['name'].Value
-        }
-    } | Sort-Object Id)
-Assert-True ($foxCombatRows.Count -eq 21) `
-    'BattleShip Fox files 751..771 are no longer one complete combat bank.'
+    } | Where-Object Id -le 799 | Sort-Object Id)
+Assert-True ($foxRows.Count -eq 158) `
+    'BattleShip Fox files 642..799 are no longer one complete animation bank.'
 
 $makefile = Get-Content $makefilePath -Raw
 $ndsRelocAssets = Get-Content $ndsRelocAssetsPath -Raw
 $relocBackendAssets = Get-Content $relocBackendAssetsPath -Raw
-$foxCommonTableMatch = [regex]::Match(
-    $relocBackendAssets,
-    '(?s)sNdsRelocFoxCommonAnimFileIDs\[\]\s*=\s*\{(?<body>.*?)\};')
-Assert-True $foxCommonTableMatch.Success `
-    'The Fox common animation token table is missing.'
-$foxCommonTableSymbols = @([regex]::Matches(
-    $foxCommonTableMatch.Groups['body'].Value,
-    '&(?<symbol>llFTFoxAnim[A-Za-z0-9]+FileID)') |
-    ForEach-Object { $_.Groups['symbol'].Value })
-Assert-True ($foxCommonTableSymbols.Count -eq $foxCommonRows.Count) `
-    'The Fox common token table does not cover files 642..661 exactly.'
-
-for ($i = 0; $i -lt $foxCommonRows.Count; $i++) {
-    $row = $foxCommonRows[$i]
-    $expectedId = 642 + $i
-    $animName = 'FTFoxAnim{0:D3}' -f $i
-    $o2rPath = Join-Path $foxO2RRoot $animName
-    $expectedSymbol = "llFTFoxAnim$($row.Name)FileID"
-    $hexId = '0x{0:x}' -f $expectedId
-
-    Assert-True ($row.Id -eq $expectedId) `
-        "Fox common semantic manifest skipped file $expectedId."
-    Assert-True ($foxCommonTableSymbols[$i] -eq $expectedSymbol) `
-        "Fox common token $expectedId maps $($foxCommonTableSymbols[$i]) instead of $expectedSymbol."
-    Assert-True (Test-Path -LiteralPath $o2rPath -PathType Leaf) `
-        "Fox common O2R asset is missing: $animName."
-    [byte[]]$o2r = [System.IO.File]::ReadAllBytes($o2rPath)
-    Assert-True (($o2r.Length -ge 0x50) -and
-        ([BitConverter]::ToUInt32($o2r, 0x40) -eq $expectedId)) `
-        "$animName does not carry BattleShip file ID $expectedId."
-    Assert-True ($makefile.Contains("reloc_animations/$animName")) `
-        "$animName is absent from NDS_MARIOFOX_FIGHTER_RELOC_FILES."
-    $assetEntry = ('{{ 0x{0:x}, 0x{0:x}, "nitro:/reloc/reloc_animations/{1}" }}' -f
-        $expectedId, $animName)
-    Assert-True ($ndsRelocAssets.Contains($assetEntry)) `
-        "$animName lacks its exact $hexId DS relocation entry."
-}
-Assert-True ($relocBackendAssets.Contains(
-        '#define NDS_RELOC_ASSET_FOX_ANIM_EGGLAY 0x282u')) `
-    'Fox common token-table base is no longer exact file 642.'
-Assert-True ($relocBackendAssets.Contains(
-        '#define NDS_RELOC_ASSET_FOX_ANIM_LANDING_AIR_X 0x295u')) `
-    'Fox common token-table end is no longer exact LandingAirX file 661.'
-Assert-True ($relocBackendAssets.Contains(
-        'return NDS_RELOC_ASSET_FOX_ANIM_EGGLAY + i;')) `
-    'Fox common token-table order is not translated from its exact base.'
-Assert-True ([regex]::IsMatch(
-        $relocBackendAssets,
-        '(?s)asset_id >= NDS_RELOC_ASSET_FOX_ANIM_EGGLAY\).*?asset_id <= NDS_RELOC_ASSET_FOX_ANIM_LANDING_AIR_X')) `
-    'Fox common bank is not covered by AObj16 normalization.'
-Assert-True (-not $relocBackendAssets.Contains(
-        '#define NDS_RELOC_ASSET_FOX_ANIM_JUMP_F 0x292u')) `
-    'The old JumpF-to-Crouch shifted mapping returned.'
-Assert-True (-not $relocBackendAssets.Contains(
-        '#define NDS_RELOC_ASSET_FOX_ANIM_JUMP_AERIAL_B 0x295u')) `
-    'The old JumpAerialB-to-LandingAirX shifted mapping returned.'
-
 $foxTableMatch = [regex]::Match(
     $relocBackendAssets,
-    '(?s)sNdsRelocFoxCombatAnimFileIDs\[\]\s*=\s*\{(?<body>.*?)\};')
+    '(?s)sNdsRelocFoxAnimFileIDs\[\]\s*=\s*\{(?<body>.*?)\};')
 Assert-True $foxTableMatch.Success `
-    'The Fox combat animation token table is missing.'
+    'The complete Fox animation token table is missing.'
 $foxTableSymbols = @([regex]::Matches(
     $foxTableMatch.Groups['body'].Value,
     '&(?<symbol>llFTFoxAnim[A-Za-z0-9]+FileID)') |
     ForEach-Object { $_.Groups['symbol'].Value })
-Assert-True ($foxTableSymbols.Count -eq $foxCombatRows.Count) `
-    'The Fox combat token table does not cover files 751..771 exactly.'
+Assert-True ($foxTableSymbols.Count -eq $foxRows.Count) `
+    'The Fox token table does not cover files 642..799 exactly.'
 
 $aerialHashes = @{
     767 = '184d08bd10b21223c4195a9ea630176e5e7f4e76d21b2e05b115b0189d9c44b2'
@@ -191,31 +119,25 @@ $aerialHashes = @{
     770 = 'fbbb01e9912f9170c1e5979cd4098ab5f716ca2f62d2e326f490db944b632815'
     771 = '8f5a16e26b90ea7e55f33ae16d5ff05e1f0d8fb2a604446862c92e96d842827c'
 }
-for ($i = 0; $i -lt $foxCombatRows.Count; $i++) {
-    $row = $foxCombatRows[$i]
-    $expectedId = 751 + $i
-    $animIndex = 109 + $i
-    $animName = 'FTFoxAnim{0:D3}' -f $animIndex
+for ($i = 0; $i -lt $foxRows.Count; $i++) {
+    $row = $foxRows[$i]
+    $expectedId = 642 + $i
+    $animName = 'FTFoxAnim{0:D3}' -f $i
     $o2rPath = Join-Path $foxO2RRoot $animName
     $expectedSymbol = "llFTFoxAnim$($row.Name)FileID"
-    $hexId = '0x{0:x}' -f $expectedId
 
     Assert-True ($row.Id -eq $expectedId) `
-        "Fox combat semantic manifest skipped file $expectedId."
+        "Fox semantic manifest skipped file $expectedId."
     Assert-True ($foxTableSymbols[$i] -eq $expectedSymbol) `
-        "Fox combat token $expectedId maps $($foxTableSymbols[$i]) instead of $expectedSymbol."
+        "Fox token $expectedId maps $($foxTableSymbols[$i]) instead of $expectedSymbol."
     Assert-True (Test-Path -LiteralPath $o2rPath -PathType Leaf) `
-        "Fox combat O2R asset is missing: $animName."
+        "Fox O2R asset is missing: $animName."
     [byte[]]$o2r = [System.IO.File]::ReadAllBytes($o2rPath)
     Assert-True (($o2r.Length -ge 0x50) -and
         ([BitConverter]::ToUInt32($o2r, 0x40) -eq $expectedId)) `
         "$animName does not carry BattleShip file ID $expectedId."
     Assert-True ($makefile.Contains("reloc_animations/$animName")) `
         "$animName is absent from NDS_MARIOFOX_FIGHTER_RELOC_FILES."
-    $assetEntry = ('{{ 0x{0:x}, 0x{0:x}, "nitro:/reloc/reloc_animations/{1}" }}' -f
-        $expectedId, $animName)
-    Assert-True ($ndsRelocAssets.Contains($assetEntry)) `
-        "$animName lacks its exact $hexId DS relocation entry."
 
     if ($aerialHashes.ContainsKey($expectedId)) {
         $actualHash = (Get-FileHash -LiteralPath $o2rPath `
@@ -225,18 +147,32 @@ for ($i = 0; $i -lt $foxCombatRows.Count; $i++) {
     }
 }
 Assert-True ($relocBackendAssets.Contains(
-        '#define NDS_RELOC_ASSET_FOX_ANIM_JAB1 0x2efu')) `
-    'Fox combat token-table base is no longer exact file 751.'
+        '#define NDS_RELOC_ASSET_FOX_ANIM_FIRST 0x282u')) `
+    'Fox animation-bank base is no longer exact file 642.'
 Assert-True ($relocBackendAssets.Contains(
-        '#define NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_D 0x303u')) `
-    'Fox combat token-table end is no longer exact Down-Air file 771.'
+        '#define NDS_RELOC_ASSET_FOX_ANIM_LAST 0x31fu')) `
+    'Fox animation-bank end is no longer exact file 799.'
 Assert-True ($relocBackendAssets.Contains(
-        'return NDS_RELOC_ASSET_FOX_ANIM_JAB1 + i;')) `
-    'Fox combat token-table order is not translated from its exact base.'
-Assert-True ([regex]::Matches(
+        'return NDS_RELOC_ASSET_FOX_ANIM_FIRST + i;')) `
+    'Fox token-table order is not translated from its exact base.'
+Assert-True ([regex]::IsMatch(
         $relocBackendAssets,
-        'asset_id <= NDS_RELOC_ASSET_FOX_ANIM_ATTACK_AIR_D').Count -eq 2) `
-    'Fox Down-Air is not covered by both AObj16 and fighter ownership ranges.'
+        '(?s)asset_id >= NDS_RELOC_ASSET_FOX_ANIM_FIRST\).*?asset_id <= NDS_RELOC_ASSET_FOX_ANIM_LAST')) `
+    'The complete Fox bank is not covered by AObj16 normalization.'
+Assert-True ($ndsRelocAssets.Contains(
+        '#define NDS_RELOC_FOX_ANIM_FIRST 0x282u')) `
+    'The Fox dynamic NitroFS path range has the wrong base.'
+Assert-True ($ndsRelocAssets.Contains(
+        '#define NDS_RELOC_FOX_ANIM_LAST 0x31fu')) `
+    'The Fox dynamic NitroFS path range has the wrong end.'
+Assert-True ($ndsRelocAssets.Contains(
+        '"nitro:/reloc/reloc_animations/FTFoxAnim%03lu"')) `
+    'The Fox dynamic NitroFS path owner is missing.'
+Assert-True ([regex]::IsMatch(
+        $relocBackendAssets,
+        '(?s)memset\(heap, 0, asset_size\);.*?fail:.*?memset\(heap, 0, asset_size\);')) `
+    'Failed fighter-animation loads can retain stale heap bytes.'
+
 
 $localShim = Get-Content $localShimPath -Raw
 $partAll = Get-FunctionSlice $localShim 'ftParamSetHitStatusPartAll' `
@@ -271,4 +207,4 @@ Assert-True (-not $all.Contains('special_hitstatus')) `
 Write-Output ('FT hit-status fixtures passed: ' +
     "None=$($localValues['None']) Normal=$($localValues['Normal']) " +
     "Invincible=$($localValues['Invincible']) " +
-    "Intangible=$($localValues['Intangible']); Fox files 642..661/751..771 and smash restore semantics guarded.")
+    "Intangible=$($localValues['Intangible']); all 158 Fox animations and smash restore semantics guarded.")

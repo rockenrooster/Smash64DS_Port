@@ -786,10 +786,95 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTFoxAnim017 \
 	reloc_animations/FTFoxAnim018 \
 	reloc_animations/FTFoxAnim019 \
+	reloc_animations/FTFoxAnim020 \
+	reloc_animations/FTFoxAnim021 \
+	reloc_animations/FTFoxAnim022 \
+	reloc_animations/FTFoxAnim023 \
+	reloc_animations/FTFoxAnim024 \
+	reloc_animations/FTFoxAnim025 \
+	reloc_animations/FTFoxAnim026 \
+	reloc_animations/FTFoxAnim027 \
+	reloc_animations/FTFoxAnim028 \
+	reloc_animations/FTFoxAnim029 \
+	reloc_animations/FTFoxAnim030 \
+	reloc_animations/FTFoxAnim031 \
+	reloc_animations/FTFoxAnim032 \
+	reloc_animations/FTFoxAnim033 \
+	reloc_animations/FTFoxAnim034 \
+	reloc_animations/FTFoxAnim035 \
+	reloc_animations/FTFoxAnim036 \
+	reloc_animations/FTFoxAnim037 \
+	reloc_animations/FTFoxAnim038 \
+	reloc_animations/FTFoxAnim039 \
+	reloc_animations/FTFoxAnim040 \
+	reloc_animations/FTFoxAnim041 \
+	reloc_animations/FTFoxAnim042 \
+	reloc_animations/FTFoxAnim043 \
+	reloc_animations/FTFoxAnim044 \
+	reloc_animations/FTFoxAnim045 \
+	reloc_animations/FTFoxAnim046 \
+	reloc_animations/FTFoxAnim047 \
+	reloc_animations/FTFoxAnim048 \
+	reloc_animations/FTFoxAnim049 \
+	reloc_animations/FTFoxAnim050 \
+	reloc_animations/FTFoxAnim051 \
+	reloc_animations/FTFoxAnim052 \
+	reloc_animations/FTFoxAnim053 \
+	reloc_animations/FTFoxAnim054 \
+	reloc_animations/FTFoxAnim055 \
+	reloc_animations/FTFoxAnim056 \
+	reloc_animations/FTFoxAnim057 \
+	reloc_animations/FTFoxAnim058 \
+	reloc_animations/FTFoxAnim059 \
+	reloc_animations/FTFoxAnim060 \
+	reloc_animations/FTFoxAnim061 \
+	reloc_animations/FTFoxAnim062 \
+	reloc_animations/FTFoxAnim063 \
+	reloc_animations/FTFoxAnim064 \
+	reloc_animations/FTFoxAnim065 \
+	reloc_animations/FTFoxAnim066 \
+	reloc_animations/FTFoxAnim067 \
+	reloc_animations/FTFoxAnim068 \
+	reloc_animations/FTFoxAnim069 \
+	reloc_animations/FTFoxAnim070 \
+	reloc_animations/FTFoxAnim071 \
+	reloc_animations/FTFoxAnim072 \
+	reloc_animations/FTFoxAnim073 \
+	reloc_animations/FTFoxAnim074 \
+	reloc_animations/FTFoxAnim075 \
+	reloc_animations/FTFoxAnim076 \
+	reloc_animations/FTFoxAnim077 \
+	reloc_animations/FTFoxAnim078 \
+	reloc_animations/FTFoxAnim079 \
+	reloc_animations/FTFoxAnim080 \
+	reloc_animations/FTFoxAnim081 \
+	reloc_animations/FTFoxAnim082 \
+	reloc_animations/FTFoxAnim083 \
+	reloc_animations/FTFoxAnim084 \
+	reloc_animations/FTFoxAnim085 \
+	reloc_animations/FTFoxAnim086 \
+	reloc_animations/FTFoxAnim087 \
+	reloc_animations/FTFoxAnim088 \
+	reloc_animations/FTFoxAnim089 \
 	reloc_animations/FTFoxAnim090 \
 	reloc_animations/FTFoxAnim091 \
 	reloc_animations/FTFoxAnim092 \
 	reloc_animations/FTFoxAnim093 \
+	reloc_animations/FTFoxAnim094 \
+	reloc_animations/FTFoxAnim095 \
+	reloc_animations/FTFoxAnim096 \
+	reloc_animations/FTFoxAnim097 \
+	reloc_animations/FTFoxAnim098 \
+	reloc_animations/FTFoxAnim099 \
+	reloc_animations/FTFoxAnim100 \
+	reloc_animations/FTFoxAnim101 \
+	reloc_animations/FTFoxAnim102 \
+	reloc_animations/FTFoxAnim103 \
+	reloc_animations/FTFoxAnim104 \
+	reloc_animations/FTFoxAnim105 \
+	reloc_animations/FTFoxAnim106 \
+	reloc_animations/FTFoxAnim107 \
+	reloc_animations/FTFoxAnim108 \
 	reloc_animations/FTFoxAnim109 \
 	reloc_animations/FTFoxAnim110 \
 	reloc_animations/FTFoxAnim111 \
@@ -811,6 +896,13 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTFoxAnim127 \
 	reloc_animations/FTFoxAnim128 \
 	reloc_animations/FTFoxAnim129 \
+	reloc_animations/FTFoxAnim130 \
+	reloc_animations/FTFoxAnim131 \
+	reloc_animations/FTFoxAnim132 \
+	reloc_animations/FTFoxAnim133 \
+	reloc_animations/FTFoxAnim134 \
+	reloc_animations/FTFoxAnim135 \
+	reloc_animations/FTFoxAnim136 \
 	reloc_animations/FTFoxAnim137 \
 	reloc_animations/FTFoxAnim138 \
 	reloc_animations/FTFoxAnim139 \
@@ -821,7 +913,17 @@ NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTFoxAnim144 \
 	reloc_animations/FTFoxAnim145 \
 	reloc_animations/FTFoxAnim146 \
-	reloc_animations/FTFoxAnim147
+	reloc_animations/FTFoxAnim147 \
+	reloc_animations/FTFoxAnim148 \
+	reloc_animations/FTFoxAnim149 \
+	reloc_animations/FTFoxAnim150 \
+	reloc_animations/FTFoxAnim151 \
+	reloc_animations/FTFoxAnim152 \
+	reloc_animations/FTFoxAnim153 \
+	reloc_animations/FTFoxAnim154 \
+	reloc_animations/FTFoxAnim155 \
+	reloc_animations/FTFoxAnim156 \
+	reloc_animations/FTFoxAnim157
 
 NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects1 \

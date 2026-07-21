@@ -106,62 +106,6 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
     { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
     { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
-    { 0x282, 0x282, "nitro:/reloc/reloc_animations/FTFoxAnim000" },
-    { 0x283, 0x283, "nitro:/reloc/reloc_animations/FTFoxAnim001" },
-    { 0x284, 0x284, "nitro:/reloc/reloc_animations/FTFoxAnim002" },
-    { 0x285, 0x285, "nitro:/reloc/reloc_animations/FTFoxAnim003" },
-    { 0x286, 0x286, "nitro:/reloc/reloc_animations/FTFoxAnim004" },
-    { 0x287, 0x287, "nitro:/reloc/reloc_animations/FTFoxAnim005" },
-    { 0x288, 0x288, "nitro:/reloc/reloc_animations/FTFoxAnim006" },
-    { 0x289, 0x289, "nitro:/reloc/reloc_animations/FTFoxAnim007" },
-    { 0x28a, 0x28a, "nitro:/reloc/reloc_animations/FTFoxAnim008" },
-    { 0x28b, 0x28b, "nitro:/reloc/reloc_animations/FTFoxAnim009" },
-    { 0x28c, 0x28c, "nitro:/reloc/reloc_animations/FTFoxAnim010" },
-    { 0x28d, 0x28d, "nitro:/reloc/reloc_animations/FTFoxAnim011" },
-    { 0x28e, 0x28e, "nitro:/reloc/reloc_animations/FTFoxAnim012" },
-    { 0x28f, 0x28f, "nitro:/reloc/reloc_animations/FTFoxAnim013" },
-    { 0x290, 0x290, "nitro:/reloc/reloc_animations/FTFoxAnim014" },
-    { 0x291, 0x291, "nitro:/reloc/reloc_animations/FTFoxAnim015" },
-    { 0x292, 0x292, "nitro:/reloc/reloc_animations/FTFoxAnim016" },
-    { 0x293, 0x293, "nitro:/reloc/reloc_animations/FTFoxAnim017" },
-    { 0x294, 0x294, "nitro:/reloc/reloc_animations/FTFoxAnim018" },
-    { 0x295, 0x295, "nitro:/reloc/reloc_animations/FTFoxAnim019" },
-    { 0x2dc, 0x2dc, "nitro:/reloc/reloc_animations/FTFoxAnim090" },
-    { 0x2dd, 0x2dd, "nitro:/reloc/reloc_animations/FTFoxAnim091" },
-    { 0x2de, 0x2de, "nitro:/reloc/reloc_animations/FTFoxAnim092" },
-    { 0x2df, 0x2df, "nitro:/reloc/reloc_animations/FTFoxAnim093" },
-    { 0x2ef, 0x2ef, "nitro:/reloc/reloc_animations/FTFoxAnim109" },
-    { 0x2f0, 0x2f0, "nitro:/reloc/reloc_animations/FTFoxAnim110" },
-    { 0x2f1, 0x2f1, "nitro:/reloc/reloc_animations/FTFoxAnim111" },
-    { 0x2f2, 0x2f2, "nitro:/reloc/reloc_animations/FTFoxAnim112" },
-    { 0x2f3, 0x2f3, "nitro:/reloc/reloc_animations/FTFoxAnim113" },
-    { 0x2f4, 0x2f4, "nitro:/reloc/reloc_animations/FTFoxAnim114" },
-    { 0x2f5, 0x2f5, "nitro:/reloc/reloc_animations/FTFoxAnim115" },
-    { 0x2f6, 0x2f6, "nitro:/reloc/reloc_animations/FTFoxAnim116" },
-    { 0x2f7, 0x2f7, "nitro:/reloc/reloc_animations/FTFoxAnim117" },
-    { 0x2f8, 0x2f8, "nitro:/reloc/reloc_animations/FTFoxAnim118" },
-    { 0x2f9, 0x2f9, "nitro:/reloc/reloc_animations/FTFoxAnim119" },
-    { 0x2fa, 0x2fa, "nitro:/reloc/reloc_animations/FTFoxAnim120" },
-    { 0x2fb, 0x2fb, "nitro:/reloc/reloc_animations/FTFoxAnim121" },
-    { 0x2fc, 0x2fc, "nitro:/reloc/reloc_animations/FTFoxAnim122" },
-    { 0x2fd, 0x2fd, "nitro:/reloc/reloc_animations/FTFoxAnim123" },
-    { 0x2fe, 0x2fe, "nitro:/reloc/reloc_animations/FTFoxAnim124" },
-    { 0x2ff, 0x2ff, "nitro:/reloc/reloc_animations/FTFoxAnim125" },
-    { 0x300, 0x300, "nitro:/reloc/reloc_animations/FTFoxAnim126" },
-    { 0x301, 0x301, "nitro:/reloc/reloc_animations/FTFoxAnim127" },
-    { 0x302, 0x302, "nitro:/reloc/reloc_animations/FTFoxAnim128" },
-    { 0x303, 0x303, "nitro:/reloc/reloc_animations/FTFoxAnim129" },
-    { 0x30b, 0x30b, "nitro:/reloc/reloc_animations/FTFoxAnim137" },
-    { 0x30c, 0x30c, "nitro:/reloc/reloc_animations/FTFoxAnim138" },
-    { 0x30d, 0x30d, "nitro:/reloc/reloc_animations/FTFoxAnim139" },
-    { 0x30e, 0x30e, "nitro:/reloc/reloc_animations/FTFoxAnim140" },
-    { 0x30f, 0x30f, "nitro:/reloc/reloc_animations/FTFoxAnim141" },
-    { 0x310, 0x310, "nitro:/reloc/reloc_animations/FTFoxAnim142" },
-    { 0x311, 0x311, "nitro:/reloc/reloc_animations/FTFoxAnim143" },
-    { 0x312, 0x312, "nitro:/reloc/reloc_animations/FTFoxAnim144" },
-    { 0x313, 0x313, "nitro:/reloc/reloc_animations/FTFoxAnim145" },
-    { 0x314, 0x314, "nitro:/reloc/reloc_animations/FTFoxAnim146" },
-    { 0x315, 0x315, "nitro:/reloc/reloc_animations/FTFoxAnim147" },
 };
 
 static u16 ndsReadLe16(const u8 *bytes)
@@ -179,6 +123,8 @@ static u32 ndsReadLe32(const u8 *bytes)
 
 #define NDS_RELOC_MARIO_ANIM_FIRST 0x1f3u
 #define NDS_RELOC_MARIO_ANIM_LAST 0x281u
+#define NDS_RELOC_FOX_ANIM_FIRST 0x282u
+#define NDS_RELOC_FOX_ANIM_LAST 0x31fu
 #define NDS_RELOC_MARIO_ANIM_PATH_CAPACITY 64u
 
 static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
@@ -226,6 +172,32 @@ static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
     return &entry;
 }
 
+static const NDSRelocAssetEntry *ndsRelocAssetFoxAnimEntry(u32 asset_id)
+{
+    static NDSRelocAssetEntry entry;
+    static char path[NDS_RELOC_MARIO_ANIM_PATH_CAPACITY];
+    int written;
+
+    if ((asset_id < NDS_RELOC_FOX_ANIM_FIRST) ||
+        (asset_id > NDS_RELOC_FOX_ANIM_LAST))
+    {
+        return NULL;
+    }
+
+    written = snprintf(path, sizeof(path),
+                       "nitro:/reloc/reloc_animations/FTFoxAnim%03lu",
+                       (unsigned long)(asset_id - NDS_RELOC_FOX_ANIM_FIRST));
+    if ((written < 0) || ((size_t)written >= sizeof(path)))
+    {
+        return NULL;
+    }
+
+    entry.asset_id = asset_id;
+    entry.file_id = asset_id;
+    entry.path = path;
+    return &entry;
+}
+
 static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
 {
     size_t i;
@@ -234,6 +206,11 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
         (asset_id <= NDS_RELOC_MARIO_ANIM_LAST))
     {
         return ndsRelocAssetMarioAnimEntry(asset_id);
+    }
+    if ((asset_id >= NDS_RELOC_FOX_ANIM_FIRST) &&
+        (asset_id <= NDS_RELOC_FOX_ANIM_LAST))
+    {
+        return ndsRelocAssetFoxAnimEntry(asset_id);
     }
 
     for (i = 0; i < (sizeof(sNdsRelocAssets) / sizeof(sNdsRelocAssets[0])); i++)
