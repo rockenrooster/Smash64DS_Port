@@ -1,22 +1,22 @@
 # TASK 39 — Visual-effects audit + faithful DS implementations
 
-**STATE (2026-07-21): stopped pre-Phase-A, map corrected, ready to resume.**
-The preflight (artifacts/performance/2026-07-21_task39-visual-effects-preflight.md)
-correctly fired this task's first stop rule: the original structural map claimed
-shield had no DS-specific code, but shield is actually a lane-3 substitute (see
-corrected map below). The map is now fixed. Resume order: Phase A census →
-Phase B contact sheet → Tyler marks it → Phase C.
+**STATE (2026-07-21, second revision): EXECUTE.** The preflight
+(artifacts/performance/2026-07-21_task39-visual-effects-preflight.md) correctly
+stopped the first attempt on a map error; the map below is corrected (shield is a
+lane-3 substitute). Tyler has now pre-marked THREE effects as WRONG — **hurt
+flash, hit sparks, shield** — which is the Phase-B oracle input for those rows:
+implement them without waiting for the full contact sheet (each still ships only
+after its own fidelity A/B pair gets Tyler's approval). Everything else keeps the
+census → contact sheet → markup gate.
 
 **Standing rules apply in full: read `docs/optimization/TASK_STANDING_RULES.md`
 first.** This task is melonDS-sufficient class (visual fidelity + CPU-add work);
 device confirmation folds into the next batched retail checkpoint.
 
-**SEQUENCING:** Phases A/B (census + captures) are read-mostly and may run anytime
-in their own session. Phase C touches the renderer material path (shield, hurt
-flash) which overlaps Task 36's territory — do not run Phase C concurrently with
-the active Task 36 session (one writer); start it only after 36 lands or is
-checkpointed. Independent of Tasks 37/38 (38 is the AUDIO twin of this task; same
-complaint, disjoint files).
+**SEQUENCING:** the Task 36 session is over (rigid stage replay kept, 60e1e662),
+so the renderer lane is free — run this in its own session, one writer as always.
+Independent of Tasks 37/38/45 (38/45 are the AUDIO twin of this complaint;
+disjoint files).
 
 ## Reported symptoms (Tyler, 2026-07-20)
 
@@ -85,9 +85,11 @@ efparticle.c/h, efdisplay.c, efground.c) — read-only reference.
    (scripted scenarios). Assemble ONE contact-sheet doc: effect name → screenshot →
    Phase A classification → decomp citation of what the original does (descriptor,
    texture, prim colors, frame count — readable from efmanager.c/efparticle.c).
-2. Tyler marks each row OK / wrong / missing / don't-care. Do NOT start Phase C
-   before the marked sheet returns. Pre-populate his known complaints: hurt flash,
-   hit sparks, shield look.
+2. Tyler marks each row OK / wrong / missing / don't-care.
+3. **Pre-marked rows (Tyler, 2026-07-21): hurt flash = WRONG, hit sparks = WRONG,
+   shield = WRONG.** These three are authorized for Phase C immediately — do not
+   hold them on the sheet. Every OTHER row waits for the marked sheet before any
+   Phase C work.
 
 ## Phase C — implement, most-DS-efficient-first
 
@@ -114,6 +116,14 @@ Efficiency ladder — take the highest rung that passes Tyler's eye:
 
 Specific items:
 
+- **Hit sparks:** first trace the spawn seam — which lbParticle/efManager calls
+  the imported hit-collision code actually makes on contact, per hit strength
+  (the GFX analog of the FGM request table; start from the ftmain hit branches
+  and the EFCommon damage slash/spark/orb descriptors at decomp
+  efmanager.c:104-107, :224-227, :254-257). Then reproduce the correct per-
+  strength spark type, size, colors, and frame count from the ORIGINAL
+  descriptors via the ladder (rung 1 OAM sprites expected). Correctness first:
+  the right spark at the right position/strength, then efficiency.
 - **Hurt color-flash:** material color modulation at draw time (per-part
   diffuse/prim override while the flash is active — a few GX writes per fighter,
   no texture rebaking). Flash timing/color comes from the original fighter

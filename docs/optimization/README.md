@@ -13,12 +13,14 @@ second task to an existing file.
 - `ClaudeFable5_Task37_ItcmRepack_20260720.md` — queued task.
 - `ClaudeFable5_Task38_FgmAudit_20260720.md` — queued task: FGM coverage audit +
   missing Up-B/Down-B sounds + layered-hit fixes.
-- `ClaudeFable5_Task39_VisualEffects_20260720.md` — queued task (visual-effects audit +
-  faithful DS implementations; Phase C sequenced after Task 36). 2026-07-21: preflight
-  stopped it pre-Phase-A on a shield-map contradiction; the map is corrected in the file
-  (shield is a lane-3 substitute template) and it is ready to resume.
-- `ClaudeFable5_Task40_FighterAnimAudit_20260720.md` — queued task: fighter animation
-  coverage/correctness audit + faithful fixes (Fox first; run after Task 36).
+- `ClaudeFable5_Task39_VisualEffects_20260720.md` — ACTIVE/EXECUTE: visual-effects audit +
+  faithful DS implementations. 2026-07-21: map corrected after the preflight stop (shield
+  is a lane-3 substitute template); Tyler pre-marked hurt flash / hit sparks / shield as
+  WRONG, authorizing immediate Phase C on those three; the rest gates on the contact sheet.
+- `ClaudeFable5_Task40_FighterAnimAudit_20260720.md` — visual sweep COMPLETE 2026-07-21:
+  full Mario/Fox banks landed, both contact strips Tyler-approved (Mario 7/21 am, Fox
+  7/21 pm); residual duration-matrix evidence stays provisional per the audit report;
+  missing sounds are Task 38/45 scope.
 - `ClaudeFable5_Task41_ShipLeanTickHud_20260721.md`, `..Task42_AdpcmBgm_20260721.md`,
   `..Task43_MicroSweep_20260721.md`, `..Task44_StageSteadyState_20260721.md` — queued
   tasks (see each file's header for sequencing).
