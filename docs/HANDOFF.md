@@ -1,13 +1,13 @@
 # Handoff
 
-Updated: 2026-07-20 (Task 36 Phase-B replay keep and profile-0 promotion)
+Updated: 2026-07-21 (Tasks 38-40 audit gates)
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
 
 ## Restart
 
-Branch: `codex/task36-hw-compose`
+Branch: `codex/tasks38-40-audits`
 Boundary: `battle_playable_realtime`, mode `163`
 
 ```powershell
@@ -21,27 +21,26 @@ compare/i2f/addsub `1/1/1`. Do not edit `decomp/`.
 
 ## Next Packet
 
-Task 36 is implementation-complete. Tyler explicitly accepted the measured
-58.463% conservation on 2026-07-20. Mode 2 now captures and CPU-replays the 3,916
-exact GX words owned by rigid segments 0/5/7 while dynamic stage segments remain
-live. The lab gate proves READY, one bake, 3 segments, 33 runs, 26 rigid bindings,
-full arena `0x150000/0`, and zero fallback/faults through countdown, early combat,
-and Whispy.
+Task 38's unsupported-FGM census is implemented and verifier-exported. Exact
+special cues remain blocked by representation and the 128 KiB resident cap;
+never substitute another sound. Tyler's listen pass remains the hit-sound oracle.
 
-Against the Phase-A control at frames 438..445, stage P50/P95 falls
-430,368/430,528 -> 284,320/284,544 (`-146,048/-145,984`) and draw falls
-832,736/835,776 -> 704,672/707,712 (`-128,064/-128,064`). The replay image is
-0/49,152 changed pixels versus Phase A, with the floor and all three platforms
-visible. The profile-0 one-minute Time Up/Results soak and Boundary pass. The
-published ROM is `C1B3DDE3...` with Task36/generated-M3/affine/Task32
-`2/1/1/1`. Evidence:
-`artifacts/performance/2026-07-20_task36-phaseb-conservation.md`.
+Task 39 stopped on its mandated structural-map contradiction: shield already
+uses a DS substitute. Resume only from a corrected owner map and Tyler's marked
+contact sheet.
 
-Retail engagement/performance remains queued for the next device checkpoint;
-do not claim a hardware-speed number from the melonDS result.
+Task 40 delivered its mandatory Phase-0 map. Fox has 102 unique unmapped motion
+symbols, and invalid lookup can replay stale heap data. Review the report before
+adding the Phase-1 cycler/counters or any gameplay-adjacent mapping fix.
 
-No next implementation task is claimed in this handoff. Select the highest
-unowned red P1 row from `P1_EXECUTION_BOARD.md`.
+Evidence is in the three `2026-07-21_task38/39/40-*` reports under
+`artifacts/performance`.
 
-Preserve the unrelated untracked optimization task documents and user files;
-they are not part of the Task 36 implementation commit.
+Verification is not green. Audio fixtures and the new marker pass, but DevFast
+and Boundary both stop at frame 212 in the existing Task-36 mode-2 water gate:
+`RENDER_TEXEL1=2,2,0,...` versus an all-zero assertion. Boundary never reaches
+the one-minute census. Reconcile that base-`60e1e66` contract without weakening
+it, then rerun DevFast -> Boundary before promotion.
+
+Preserve the unrelated `.gitignore` edit and all untracked optimization task,
+stage, review, and README files; they are user-owned.

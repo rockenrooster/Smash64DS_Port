@@ -433,6 +433,37 @@ post-revert census, and the final profile-0 Boundary gate are green. `DevFast`
 is retired and is not a registry profile; no obsolete gate was revived. This
 closes the Task 24 safety gate for the evidence-cleared batch.
 
+## Tasks 38-40 audit gates (2026-07-21)
+
+Task 38 adds a 16-ID/count unsupported-FGM ring and Boundary export without
+changing playback. The 128,196-byte exact pack has only 2,876 bytes free; Mario
+Up-B/Down-B and Fox neutral-B/Up-B/Down-B remain fail-closed because their exact
+loop/pitch/fork/FX/rate representations do not fit. Even ID 34's smallest exact
+fused-fork form exceeds the cap by 15,560 bytes. Hit-sound correctness still
+requires Tyler's listen pass. Evidence:
+`artifacts/performance/2026-07-21_task38-fgm-audit.md`.
+
+Task 39 stops before Phase C because its planner map is false: the live shield
+symbol already routes to the DS `nNDSVisualEffectShield` substitute/template,
+not an untouched generic material path. No effect counters or visual changes
+were added before the required corrected map and Tyler-marked contact sheet.
+Evidence: `artifacts/performance/2026-07-21_task39-visual-effects-preflight.md`.
+
+Task 40 stops at its mandatory Phase-0 review. Mario maps all 143 unique motion
+symbols; Fox references 158, but only 56 map and 102 are missing. The animation
+path is direct O2R/NitroFS/reloc loading into the imported object-animation
+interpreter, not `generate_nds_native_owners.py`. Invalid IDs currently return
+the supplied heap, permitting stale prior animation bytes. No cycler, mapping,
+or gameplay-adjacent behavior change was made before review. Evidence:
+`artifacts/performance/2026-07-21_task40-fighter-animation-phase0.md`.
+
+Focused audio fixtures and the new GDB marker pass. The final DevFast and
+Boundary attempts both stop in the existing Task-36 fast-iteration gate before
+the one-minute route: actual `RENDER_TEXEL1=2,2,0,...` conflicts with mode 2's
+all-zero replay assertion. The FGM marker at that point is a clean 16-slot zero
+ring. Do not call this a green Boundary; reconcile the Task-36 replay/live-water
+contract on base `60e1e66`, then rerun the same DevFast -> Boundary chain.
+
 ## Stable-30 retail contract
 
 The final profile-0 device gate requires exactly two unchanged source updates

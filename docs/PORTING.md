@@ -21494,3 +21494,29 @@ remains skipped for the requested fast iteration cadence.
   the profile-only refill last/max reset and all historical A/B evidence. No
   repeat device run is requested, and Task 33 remains gated off because Task
   30 did not ship.
+
+## 2026-07-21 - Task 38 exact-FGM audit stopped at capacity
+
+- Added a bounded unsupported-ID/count ring at the shared fail-closed FGM seam
+  and exported it through the existing Boundary audio marker path.
+- Audited Mario/Fox specials and common hits against source UCD/articulation
+  constraints. The 128,196-byte pack has 2,876 bytes free; missing exact cues
+  do not fit safely, and primary-only hit forks remain Tyler-listen debt.
+- The focused fixture and marker pass, but both final verifier entries stop in
+  the pre-existing Task-36 mode-2 water assertion before the one-minute route;
+  recorded the exact `RENDER_TEXEL1=2,2,0,...` blocker instead of claiming green.
+
+## 2026-07-21 - Task 39 stopped on the shield owner contradiction
+
+- Proved the live weak shield symbol already routes to the DS shield template,
+  contradicting the planner's generic-material-only map.
+- Obeyed the stop rule before counters or visual changes; the corrected owner
+  map and Tyler-marked contact sheet are the restart gate.
+
+## 2026-07-21 - Task 40 completed mandatory Phase 0
+
+- Traced direct O2R/NitroFS/reloc animation loading into the imported object
+  animation interpreter; native-owner generation is not on this data path.
+- Mario maps all 143 unique symbols. Fox maps 56 of 158, leaving 102 missing;
+  invalid lookup can return stale heap bytes. Stopped before cycler, asset, or
+  gameplay-adjacent changes for Phase-0 review.
