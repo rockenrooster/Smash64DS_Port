@@ -5422,12 +5422,7 @@ try {
                     Assert-Condition ($renderTexel1.Success -and
                         @($rt1 | Where-Object { $_ -ne 0 }).Count -eq 0) 'Fast iteration did not leave the deliberately unarmed TEXEL0/TEXEL1 path idle.' $gdbStdout
                 } elseif ($effectiveStaticTextureAotMode -eq 1) {
-                    if ($effectiveTask36HwComposeMode -eq 2) {
-                        Assert-Condition ($renderTexel1.Success -and
-                            @($rt1 | Where-Object { $_ -ne 0 }).Count -eq 0) 'Task 36 replay re-entered live frozen-water material evaluation, refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
-                    } else {
-                        Assert-Condition ($renderTexel1.Success -and $rt1[0] -eq 2 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -eq 0 -and $rt1[10] -eq 0 -and $rt1[11] -eq 0) 'Static-resident Dream Land water drifted from its two live frozen-water TEXEL0/TEXEL1 material matches or performed refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
-                    }
+                    Assert-Condition ($renderTexel1.Success -and $rt1[0] -eq 2 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -eq 0 -and $rt1[10] -eq 0 -and $rt1[11] -eq 0) 'Static-resident Dream Land water drifted from its two live frozen-water TEXEL0/TEXEL1 material matches or performed refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
                 } else {
                     # Legacy static-off control: the terminal frame may reuse
                     # its resident composite, while the scene-lifetime refresh
