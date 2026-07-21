@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include <PR/ultratypes.h>
+#include <sys/vector.h>
 
 #ifndef NDS_IFCOMMON_HYBRID_OAM
 #define NDS_IFCOMMON_HYBRID_OAM 0
@@ -18,6 +19,16 @@ s32 ndsIFCommonNativeOamPrepareClouds(void);
 void ndsIFCommonNativeOamBeginFrame(void);
 s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj);
 void ndsIFCommonNativeOamCommit(void);
+
+#define NDS_TASK39_FX_ENGAGED_SPRITES (1u << 0)
+#define NDS_TASK39_FX_ENGAGED_FLASH (1u << 1)
+#define NDS_TASK39_FX_ENGAGED_SHIELD (1u << 2)
+
+void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
+                            sb32 is_static, sb32 is_heavy);
+void ndsTask39EffectsUpdate(void);
+void ndsTask39EffectsAddDrawTicks(u32 ticks);
+void ndsTask39EffectsEngage(u32 mask);
 
 extern volatile u32 gNdsIFCommonNativeOamEnabled;
 extern volatile u32 gNdsIFCommonNativeOamPrepareCount;
@@ -51,5 +62,20 @@ extern volatile u32 gNdsIFCommonNativeOamFrameCloudDrawCount;
 extern volatile u32 gNdsIFCommonNativeOamFrameSemanticHash;
 extern volatile u32 gNdsIFCommonNativeOamLastFallbackReason;
 extern volatile u32 gNdsIFCommonNativeOamCommitCount;
+extern volatile u32 gNdsTask39FxSpawnTicks;
+extern volatile u32 gNdsTask39FxUpdateTicks;
+extern volatile u32 gNdsTask39FxDrawTicks;
+extern volatile u32 gNdsTask39FxFrameTicks;
+extern volatile u32 gNdsTask39FxMaxFrameTicks;
+extern volatile u32 gNdsTask39FxEngagementMask;
+extern volatile u32 gNdsTask39FxHitSparkSpawnCount;
+extern volatile u32 gNdsTask39FxHitSparkUpdateCount;
+extern volatile u32 gNdsTask39FxHitSparkDrawCount;
+extern volatile u32 gNdsTask39FxHitSparkDropCount;
+extern volatile u32 gNdsTask39FxFlashDrawCount;
+extern volatile u32 gNdsTask39FxShieldDrawCount;
+extern volatile u32 gNdsTask39FxArenaRejectCount;
+extern volatile u32 gNdsTask39FxObjVramBytes;
+extern volatile u32 gNdsTask39FxObjVramRemaining;
 
 #endif

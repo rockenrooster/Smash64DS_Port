@@ -10,6 +10,8 @@
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
+#include <nds/nds_task39_effect_census.h>
+#include <gm/generic.h>
 #include <sys/obj.h>
 
 s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
@@ -45,6 +47,32 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 #define NDS_IFCOMMON_TRAFFIC_PROOF_OFFSET 9u
 #define NDS_IFCOMMON_OVERLAY_SPEC_COUNT 16u
 #define NDS_IFCOMMON_HASH_SEED 0x49464f41u
+
+#define NDS_TASK39_HIT_SPARK_CAPACITY 16u
+#define NDS_TASK39_HIT_SPARK_CELL_BYTES 512u
+#define NDS_TASK39_HIT_SPARK_FRAME_COUNT 44u
+#define NDS_TASK39_HIT_SPARK_LIGHT_FRAMES 8u
+#define NDS_TASK39_HIT_SPARK_LIGHT_LIFETIME 17u
+#define NDS_TASK39_HIT_SPARK_HEAVY_OFFSET 32u
+#define NDS_TASK39_HIT_SPARK_HEAVY_FRAMES 3u
+#define NDS_TASK39_HIT_SPARK_HEAVY_LIFETIME 6u
+#define NDS_TASK39_HIT_SPARK_SCREEN_SCALE 1.6F
+
+#if NDS_TASK39_FX_SPRITES
+#include "generated/task39_hit_sparks.generated.inc"
+#endif
+
+extern Mtx44f gGMCameraMatrix;
+extern GObj *gGMCameraGObj;
+extern f32 syUtilsRandFloat(void);
+extern f32 __cosf(f32 value);
+extern f32 __sinf(f32 value);
+extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
+                               f32 *dist_x, f32 *dist_y);
+
+#ifndef CObjGetStruct
+#define CObjGetStruct(gobj) ((CObj *)((gobj)->obj))
+#endif
 
 enum NDSIFCommonNativeAssetKind
 {
@@ -155,6 +183,18 @@ typedef struct NDSIFCommonNativeAsset
     u32 runtime_env_blue;
     NDSIFCommonNativeTile tiles[NDS_IFCOMMON_MAX_TILES];
 } NDSIFCommonNativeAsset;
+
+typedef struct NDSTask39HitSpark
+{
+    Vec3f pos;
+    Vec3f vel;
+    f32 scale;
+    s16 size;
+    u8 age;
+    u8 player;
+    u8 is_heavy;
+    u8 active;
+} NDSTask39HitSpark;
 
 #define TILE(sx, sy, sw, sh, cw, ch, px, py) \
     { (sx), (sy), (sw), (sh), (cw), (ch), (px), (py) }
@@ -279,6 +319,13 @@ static u16 sNdsIFCommonMatrixInverse[32];
 static u32 sNdsIFCommonFrameNeedsCommit;
 static u32 sNdsIFCommonCloudTextureNames[NDS_IFCOMMON_CLOUD_ATLAS_COUNT];
 static u32 sNdsIFCommonTrafficTextureName;
+static NDSTask39HitSpark sNdsTask39HitSparks[
+    NDS_TASK39_HIT_SPARK_CAPACITY];
+static u16 *sNdsTask39HitSparkGfx;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+static u32 sNdsTask39FxSpawnTickAccum;
+static u32 sNdsTask39FxUpdateTickAccum;
+#endif
 
 volatile u32 gNdsIFCommonNativeOamEnabled = 1u;
 volatile u32 gNdsIFCommonNativeOamPrepareCount;
@@ -313,6 +360,25 @@ volatile u32 gNdsIFCommonNativeOamFrameCloudDrawCount;
 volatile u32 gNdsIFCommonNativeOamFrameSemanticHash;
 volatile u32 gNdsIFCommonNativeOamLastFallbackReason;
 volatile u32 gNdsIFCommonNativeOamCommitCount;
+volatile u32 gNdsTask39FxSpawnTicks;
+volatile u32 gNdsTask39FxUpdateTicks;
+volatile u32 gNdsTask39FxDrawTicks;
+volatile u32 gNdsTask39FxFrameTicks;
+volatile u32 gNdsTask39FxMaxFrameTicks;
+volatile u32 gNdsTask39FxEngagementMask;
+volatile u32 gNdsTask39FxHitSparkSpawnCount;
+volatile u32 gNdsTask39FxHitSparkUpdateCount;
+volatile u32 gNdsTask39FxHitSparkDrawCount;
+volatile u32 gNdsTask39FxHitSparkDropCount;
+volatile u32 gNdsTask39FxFlashDrawCount;
+volatile u32 gNdsTask39FxShieldDrawCount;
+volatile u32 gNdsTask39FxArenaRejectCount;
+volatile u32 gNdsTask39FxArenaBootSize;
+volatile u32 gNdsTask39FxObjVramBytes;
+volatile u32 gNdsTask39FxObjVramRemaining;
+
+static void ndsTask39HitSparksDraw(void);
+static s32 ndsIFCommonRoundFloatHalfUp(f32 value);
 
 static u32 ndsIFCommonHashMix(u32 hash, u32 value)
 {
@@ -1615,6 +1681,203 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
     return TRUE;
 }
 
+void ndsTask39EffectsEngage(u32 mask)
+{
+    gNdsTask39FxEngagementMask |= mask;
+}
+
+void ndsTask39EffectsAddDrawTicks(u32 ticks)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsTask39FxDrawTicks += ticks;
+    gNdsTask39FxFrameTicks = gNdsTask39FxSpawnTicks +
+                             gNdsTask39FxUpdateTicks +
+                             gNdsTask39FxDrawTicks;
+    if (gNdsTask39FxFrameTicks > gNdsTask39FxMaxFrameTicks)
+    {
+        gNdsTask39FxMaxFrameTicks = gNdsTask39FxFrameTicks;
+    }
+#else
+    (void)ticks;
+#endif
+}
+
+static s32 ndsTask39EffectsArenaValid(void)
+{
+    if ((gNdsTask39FxArenaBootSize == 0u) &&
+        (gNdsTaskmanArenaChosenSize != 0u))
+    {
+        gNdsTask39FxArenaBootSize = gNdsTaskmanArenaChosenSize;
+    }
+    if ((gNdsTask39FxArenaBootSize == 0u) ||
+        (gNdsTaskmanArenaChosenSize != gNdsTask39FxArenaBootSize))
+    {
+        gNdsTask39FxArenaRejectCount = 1u;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
+                            sb32 is_static, sb32 is_heavy)
+{
+#if NDS_TASK39_FX_SPRITES
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 start = cpuGetTiming();
+#endif
+    u32 index;
+    NDSTask39HitSpark *spark = NULL;
+
+    if ((pos == NULL) || (sNdsTask39HitSparkGfx == NULL) ||
+        (ndsTask39EffectsArenaValid() == FALSE))
+    {
+        gNdsTask39FxHitSparkDropCount++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        sNdsTask39FxSpawnTickAccum += cpuGetTiming() - start;
+#endif
+        return;
+    }
+    for (index = 0u; index < NDS_TASK39_HIT_SPARK_CAPACITY; index++)
+    {
+        if (sNdsTask39HitSparks[index].active == FALSE)
+        {
+            spark = &sNdsTask39HitSparks[index];
+            break;
+        }
+    }
+    if (spark == NULL)
+    {
+        gNdsTask39FxHitSparkDropCount++;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        sNdsTask39FxSpawnTickAccum += cpuGetTiming() - start;
+#endif
+        return;
+    }
+
+    *spark = (NDSTask39HitSpark){0};
+    spark->pos = *pos;
+    spark->player = (u8)((u32)player & 3u);
+    spark->size = (s16)size;
+    spark->is_heavy = (is_heavy != FALSE) ? TRUE : FALSE;
+    spark->active = TRUE;
+    if (spark->is_heavy != FALSE)
+    {
+        spark->scale = 1.0F;
+    }
+    else
+    {
+        f32 angle;
+        f32 velocity = (is_static != FALSE) ? 0.0F :
+            ((syUtilsRandFloat() * 38.0F) + 12.0F);
+
+        angle = syUtilsRandFloat() * 6.28318530718F;
+        spark->vel.x = __cosf(angle) * velocity;
+        spark->vel.y = __sinf(angle) * velocity;
+        spark->scale = (size < 10) ?
+            (((10 - size) * -0.05F) + 1.0F) :
+            (((size - 10) * 0.13F) + 1.0F);
+    }
+    gNdsTask39FxHitSparkSpawnCount++;
+    ndsTask39EffectsEngage(NDS_TASK39_FX_ENGAGED_SPRITES);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    sNdsTask39FxSpawnTickAccum += cpuGetTiming() - start;
+#endif
+#else
+    (void)pos;
+    (void)player;
+    (void)size;
+    (void)is_static;
+    (void)is_heavy;
+#endif
+}
+
+void ndsTask39EffectsUpdate(void)
+{
+#if NDS_TASK39_FX_SPRITES
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 start = cpuGetTiming();
+#endif
+    u32 index;
+
+    if (ndsTask39EffectsArenaValid() == FALSE)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        sNdsTask39FxUpdateTickAccum += cpuGetTiming() - start;
+#endif
+        return;
+    }
+    for (index = 0u; index < NDS_TASK39_HIT_SPARK_CAPACITY; index++)
+    {
+        NDSTask39HitSpark *spark = &sNdsTask39HitSparks[index];
+        u32 lifetime;
+
+        if (spark->active == FALSE)
+        {
+            continue;
+        }
+        spark->pos.x += spark->vel.x;
+        spark->pos.y += spark->vel.y;
+        spark->age++;
+        gNdsTask39FxHitSparkUpdateCount++;
+        lifetime = (spark->is_heavy != FALSE) ?
+            NDS_TASK39_HIT_SPARK_HEAVY_LIFETIME :
+            NDS_TASK39_HIT_SPARK_LIGHT_LIFETIME;
+        if (spark->age >= lifetime)
+        {
+            if (spark->is_heavy != FALSE)
+            {
+                Vec3f pos = spark->pos;
+                s32 player = spark->player;
+                s32 size = spark->size;
+
+                spark->active = FALSE;
+                ndsTask39EffectCensusRecord(
+                    NDS_TASK39_EFFECT_EF_MANAGER_DAMAGE_NORMAL_LIGHT_MAKE_EFFECT,
+                    NDS_TASK39_EFFECT_SUBSTITUTE);
+                ndsTask39HitSparkSpawn(&pos, player, size, FALSE, FALSE);
+            }
+            else
+            {
+                spark->active = FALSE;
+            }
+        }
+    }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    sNdsTask39FxUpdateTickAccum += cpuGetTiming() - start;
+#endif
+#endif
+}
+
+static s32 ndsTask39PrepareHitSparks(u32 *vram_cursor)
+{
+#if NDS_TASK39_FX_SPRITES
+    u32 bytes = sizeof(sNdsTask39HitSparkPixels);
+
+    _Static_assert(sizeof(sNdsTask39HitSparkPixels) ==
+                       NDS_TASK39_HIT_SPARK_CELL_BYTES *
+                           NDS_TASK39_HIT_SPARK_FRAME_COUNT,
+                   "Task 39 hit-spark payload size drifted");
+    *vram_cursor = (*vram_cursor +
+                    (NDS_IFCOMMON_OBJ_GFX_ALIGNMENT - 1u)) &
+                   ~(NDS_IFCOMMON_OBJ_GFX_ALIGNMENT - 1u);
+    if ((*vram_cursor + bytes) > NDS_IFCOMMON_OBJ_VRAM_BYTES)
+    {
+        return FALSE;
+    }
+    sNdsTask39HitSparkGfx =
+        (u16 *)((u8 *)SPRITE_GFX + *vram_cursor);
+    dmaCopyWords(0, sNdsTask39HitSparkPixels,
+                 sNdsTask39HitSparkGfx, bytes);
+    *vram_cursor += bytes;
+    gNdsTask39FxObjVramBytes = bytes;
+    gNdsTask39FxObjVramRemaining =
+        NDS_IFCOMMON_OBJ_VRAM_BYTES - *vram_cursor;
+#else
+    (void)vram_cursor;
+#endif
+    return TRUE;
+}
+
 void ndsIFCommonNativeOamInit(void)
 {
     /* Traffic conversion and all four IFCommon atlases happen before
@@ -1631,6 +1894,28 @@ void ndsIFCommonNativeOamInit(void)
            sizeof(sNdsIFCommonCloudTextureNames));
     sNdsIFCommonTrafficTextureName = 0u;
     sNdsIFCommonPreparedFileSize = 0u;
+    memset(sNdsTask39HitSparks, 0, sizeof(sNdsTask39HitSparks));
+    sNdsTask39HitSparkGfx = NULL;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    sNdsTask39FxSpawnTickAccum = 0u;
+    sNdsTask39FxUpdateTickAccum = 0u;
+#endif
+    gNdsTask39FxSpawnTicks = 0u;
+    gNdsTask39FxUpdateTicks = 0u;
+    gNdsTask39FxDrawTicks = 0u;
+    gNdsTask39FxFrameTicks = 0u;
+    gNdsTask39FxMaxFrameTicks = 0u;
+    gNdsTask39FxEngagementMask = 0u;
+    gNdsTask39FxHitSparkSpawnCount = 0u;
+    gNdsTask39FxHitSparkUpdateCount = 0u;
+    gNdsTask39FxHitSparkDrawCount = 0u;
+    gNdsTask39FxHitSparkDropCount = 0u;
+    gNdsTask39FxFlashDrawCount = 0u;
+    gNdsTask39FxShieldDrawCount = 0u;
+    gNdsTask39FxArenaRejectCount = 0u;
+    gNdsTask39FxArenaBootSize = gNdsTaskmanArenaChosenSize;
+    gNdsTask39FxObjVramBytes = 0u;
+    gNdsTask39FxObjVramRemaining = NDS_IFCOMMON_OBJ_VRAM_BYTES;
 #if NDS_RENDERER_HW_TRIANGLES
     oamInit(&oamMain, SpriteMapping_Bmp_1D_128, false);
     oamClear(&oamMain, 0, 128);
@@ -1706,6 +1991,14 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
             return FALSE;
         }
     }
+    if (ndsTask39PrepareHitSparks(&vram_cursor) == FALSE)
+    {
+        gNdsIFCommonNativeOamPrepareFailCount++;
+        gNdsIFCommonNativeOamPrepareTicks = cpuGetTiming() - start;
+        gNdsIFCommonNativeOamLastFallbackReason =
+            nNDSIFCommonFallbackBadAsset;
+        return FALSE;
+    }
 
     memcpy(SPRITE_PALETTE, palette_storage, sizeof(palette_storage));
     gNdsIFCommonNativeOamPreparePaletteBytes += sizeof(palette_storage);
@@ -1775,6 +2068,15 @@ s32 ndsIFCommonNativeOamPrepareClouds(void)
 
 void ndsIFCommonNativeOamBeginFrame(void)
 {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsTask39FxSpawnTicks = sNdsTask39FxSpawnTickAccum;
+    gNdsTask39FxUpdateTicks = sNdsTask39FxUpdateTickAccum;
+    gNdsTask39FxDrawTicks = 0u;
+    gNdsTask39FxFrameTicks = gNdsTask39FxSpawnTicks +
+                             gNdsTask39FxUpdateTicks;
+    sNdsTask39FxSpawnTickAccum = 0u;
+    sNdsTask39FxUpdateTickAccum = 0u;
+#endif
     gNdsIFCommonNativeOamFrameBeginTicks = 0u;
     gNdsIFCommonNativeOamFrameCommitTicks = 0u;
     gNdsIFCommonNativeOamFrameCommitCalls = 0u;
@@ -1806,6 +2108,7 @@ void ndsIFCommonNativeOamBeginFrame(void)
     gNdsIFCommonNativeOamFrameSemanticHash = NDS_IFCOMMON_HASH_SEED;
     gNdsIFCommonNativeOamLastFallbackReason =
         nNDSIFCommonFallbackNone;
+    ndsTask39HitSparksDraw();
 }
 
 static s32 ndsIFCommonAssetForSObj(const SObj *sobj)
@@ -1868,6 +2171,107 @@ static s32 ndsIFCommonMatrixForScale(u16 inverse)
     sNdsIFCommonMatrixInverse[matrix_index] = inverse;
     oamRotateScale(&oamMain, (int)matrix_index, 0, inverse, inverse);
     return (s32)matrix_index;
+}
+
+static void ndsTask39HitSparksDraw(void)
+{
+#if NDS_TASK39_FX_SPRITES
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 start = cpuGetTiming();
+#endif
+    u32 index;
+
+    if ((sNdsTask39HitSparkGfx == NULL) || (gGMCameraGObj == NULL) ||
+        (CObjGetStruct(gGMCameraGObj) == NULL) ||
+        (ndsTask39EffectsArenaValid() == FALSE))
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        ndsTask39EffectsAddDrawTicks(cpuGetTiming() - start);
+#endif
+        return;
+    }
+    for (index = 0u; index < NDS_TASK39_HIT_SPARK_CAPACITY; index++)
+    {
+        NDSTask39HitSpark *spark = &sNdsTask39HitSparks[index];
+        Vec3f pos;
+        f32 projected_x;
+        f32 projected_y;
+        f32 scale;
+        u32 scale_q16;
+        u32 frame;
+        u16 inverse;
+        s32 matrix_index;
+        s32 center_x;
+        s32 center_y;
+        s32 size_double;
+
+        if (spark->active == FALSE)
+        {
+            continue;
+        }
+        if (sNdsIFCommonNextOamID < 0)
+        {
+            gNdsTask39FxHitSparkDropCount++;
+            break;
+        }
+        pos = spark->pos;
+        func_ovl2_800EB924(CObjGetStruct(gGMCameraGObj),
+                           gGMCameraMatrix, &pos,
+                           &projected_x, &projected_y);
+        center_x = ndsIFCommonRoundFloatHalfUp(
+            128.0F + (projected_x * 0.8F));
+        center_y = ndsIFCommonRoundFloatHalfUp(
+            96.0F - (projected_y * 0.8F));
+        if ((center_x < -16) || (center_x > 272) ||
+            (center_y < -16) || (center_y > 208))
+        {
+            continue;
+        }
+
+        scale = spark->scale * NDS_TASK39_HIT_SPARK_SCREEN_SCALE;
+        scale_q16 = (u32)((scale * 65536.0F) + 0.5F);
+        if (scale_q16 == 0u)
+        {
+            continue;
+        }
+        inverse = (u16)(((1u << 24) + (scale_q16 / 2u)) / scale_q16);
+        matrix_index = ndsIFCommonMatrixForScale(inverse);
+        if (matrix_index < 0)
+        {
+            gNdsTask39FxHitSparkDropCount++;
+            continue;
+        }
+        if (spark->is_heavy != FALSE)
+        {
+            frame = NDS_TASK39_HIT_SPARK_HEAVY_OFFSET +
+                ((u32)spark->player * NDS_TASK39_HIT_SPARK_HEAVY_FRAMES) +
+                (((u32)spark->age * NDS_TASK39_HIT_SPARK_HEAVY_FRAMES) /
+                 NDS_TASK39_HIT_SPARK_HEAVY_LIFETIME);
+        }
+        else
+        {
+            frame = ((u32)spark->player *
+                     NDS_TASK39_HIT_SPARK_LIGHT_FRAMES) +
+                (((u32)spark->age * NDS_TASK39_HIT_SPARK_LIGHT_FRAMES) /
+                 NDS_TASK39_HIT_SPARK_LIGHT_LIFETIME);
+        }
+        size_double = (scale_q16 > (1u << 16)) ? TRUE : FALSE;
+        oamSet(&oamMain, sNdsIFCommonNextOamID,
+               center_x - (size_double ? 16 : 8),
+               center_y - (size_double ? 16 : 8),
+               0, 15, SpriteSize_16x16, SpriteColorFormat_Bmp,
+               sNdsTask39HitSparkGfx +
+                   (frame * (NDS_TASK39_HIT_SPARK_CELL_BYTES / 2u)),
+               matrix_index, size_double, false, false, false, false);
+        sNdsIFCommonNextOamID--;
+        sNdsIFCommonFrameNeedsCommit = TRUE;
+        gNdsIFCommonNativeOamFrameObjectCount++;
+        gNdsTask39FxHitSparkDrawCount++;
+    }
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    ndsTask39EffectsAddDrawTicks(cpuGetTiming() - start);
+#endif
+#endif
 }
 
 static void ndsIFCommonRecordSemantic(const SObj *sobj, u32 asset_index)

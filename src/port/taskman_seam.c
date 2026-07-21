@@ -1,6 +1,7 @@
 #include "nds_scene_harness_config.h"
 
 #include <nds/nds_freeze_diagnostics.h>
+#include <nds/nds_ifcommon_oam.h>
 
 extern u32 sySchedulerGetTicCount(void);
 extern void sySchedulerSetTicCount(u32 tics);
@@ -4350,6 +4351,7 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 #if NDS_TASK9_FLOAT_CENSUS
     ndsTask9FloatCensusBeginUpdate();
 #endif
+    ndsTask39EffectsUpdate();
     scVSBattleFuncUpdate();
 #if NDS_TASK9_FLOAT_CENSUS
     ndsTask9FloatCensusEndUpdate();

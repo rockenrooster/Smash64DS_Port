@@ -1,5 +1,20 @@
 # TASK 39 — Visual-effects audit + faithful DS implementations
 
+**STATUS (2026-07-21): COMPLETE.** Tyler approved the source-timed hurt flash,
+OAM hit sparks, and flat transparent 2D shield with white shine in candidate
+`8964A5C3...`. The three feature flags are enabled in the published and
+release-equivalent targets. Final profile-0 ROM: 14,986,240 bytes / SHA-256
+`2385FDD8E411F47B41FD6FE6C05B341D5CBFF53D5A048113992C860F6BFE19AF`;
+DevFast and Boundary pass. No approved visual row was replayed.
+
+Phase A inventories 111 entry points. Its bounded Fox-AI-off runtime snapshot
+records light hit 1, particle-script skips 2, shield 1, and source color state
+1; OBJ VRAM is 22,528 used / 11,776 remaining, the full 1,282,048-byte arena
+is retained, and Task-39 arena rejects are zero. The fast census intentionally
+does not claim draw-cost evidence because that diagnostic build skipped render
+after pre-existing taskman allocation failures. Profile-0 timing observers now
+compile out; only engagement and safety counters remain.
+
 **STATE (2026-07-21, second revision): EXECUTE.** The preflight
 (artifacts/performance/2026-07-21_task39-visual-effects-preflight.md) correctly
 stopped the first attempt on a map error; the map below is corrected (shield is a

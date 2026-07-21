@@ -604,6 +604,7 @@ typedef struct NDSRendererConfig
     const NDSRendererMatrix20p12 *initial_projection;
     const NDSRendererMatrix20p12 *initial_modelview;
     u32 initial_geometry_mode;
+    u32 color_modulate;
     NDSRendererTextureDataLayout texture_data_layout;
     NDSRendererValidateRange validate_range;
     NDSRendererImmutableCommandSpan immutable_command_span;

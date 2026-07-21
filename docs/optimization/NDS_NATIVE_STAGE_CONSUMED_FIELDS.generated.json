@@ -1792,6 +1792,10 @@
       "closure": "ndsRendererInitTraversalState",
       "fields": [
         {
+          "access": "config.color_modulate",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "config.initial_geometry_mode",
           "classification": "live_camera_independent"
         },
@@ -1802,6 +1806,10 @@
         {
           "access": "config.initial_projection",
           "classification": "live_camera_independent"
+        },
+        {
+          "access": "state.color_modulate",
+          "classification": "callback_visible_mutation_output"
         },
         {
           "access": "state.current_matrix_snapshot",

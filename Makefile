@@ -79,6 +79,9 @@ NDS_TASK20_STACK_PROFILE ?= 0
 NDS_TASK32_DRAW_HOT_TEXT ?= 0
 NDS_FIGHTER_ANIM_AUDIT ?= 0
 NDS_FIGHTER_ANIM_CYCLER_KIND ?= -1
+NDS_TASK39_FX_SPRITES ?= 0
+NDS_TASK39_FX_FLASH ?= 0
+NDS_TASK39_FX_SHIELD ?= 0
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_FAST_WALLPAPER_AFFINE),1)
 ifneq ($(NDS_SCENE_MIP_CACHE_LAB),0)
@@ -130,6 +133,10 @@ override NDS_TASK16_FLOAT_I2F := 1
 override NDS_TASK16_FLOAT_ADDSUB := 1
 # Retail Task-32 A/B reduced the normalized 4+/5+ pacing tail.
 override NDS_TASK32_DRAW_HOT_TEXT := 1
+# Task 39: Tyler-approved hurt flash, hit sparks, and flat 2D shield.
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+override NDS_TASK39_FX_SHIELD := 1
 endif
 NDS_FREEZE_DIAGNOSTIC_TARGETS := \
 	smash64ds-battle-playable-freeze-diagnostics-on-hwtri \
@@ -156,6 +163,9 @@ override NDS_TASK16_FLOAT_COMPARE := 1
 override NDS_TASK16_FLOAT_I2F := 1
 override NDS_TASK16_FLOAT_ADDSUB := 1
 override NDS_TASK32_DRAW_HOT_TEXT := 1
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+override NDS_TASK39_FX_SHIELD := 1
 override NDS_FREEZE_DIAGNOSTICS := $(if $(filter %-on-hwtri,$(TARGET)),1,0)
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-freeze-diagnostics-off-hwtri)
@@ -328,6 +338,7 @@ ASFLAGS := -g $(ARCH)
 NDS_HOT_TEXT_SPECS := $(PROJECT_ROOT)/linker/ds9_hot_text.specs
 NDS_HOT_TEXT_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_hot_text.ld
 NDS_TASK32_DRAW_HOT_FRAGMENT := $(PROJECT_ROOT)/$(BUILD)/nds_task32_draw_hot.inc
+NDS_TASK39_HIT_SPARKS_INC := $(PROJECT_ROOT)/src/nds/generated/task39_hit_sparks.generated.inc
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -382,7 +393,7 @@ export DEPSDIR := $(CURDIR)/$(BUILD)
 NDS_PRIVATE_CHECK_CFILES :=
 NDS_MPPROCESS_SOURCE_CFILES := battleship_mpprocess_edge_support.c \
 	battleship_mpprocess.c
-CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c port_probe.c n64_stubs.c coroutine.c \
+CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c port_probe.c n64_stubs.c coroutine.c \
 	libultra_os.c os_selftest.c boot_stubs.c battleship_sys_main.c \
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
@@ -1122,6 +1133,9 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK32_DRAW_HOT_TEXT $(NDS_TASK32_DRAW_HOT_TEXT)'; \
 		echo '#define NDS_FIGHTER_ANIM_AUDIT $(NDS_FIGHTER_ANIM_AUDIT)'; \
 		echo '#define NDS_FIGHTER_ANIM_CYCLER_KIND $(NDS_FIGHTER_ANIM_CYCLER_KIND)'; \
+		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
+		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
+		echo '#define NDS_TASK39_FX_SHIELD $(NDS_TASK39_FX_SHIELD)'; \
 		echo '#define NDS_TASK10_GIT_SHORT "$(NDS_TASK10_GIT_SHORT)"'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
@@ -1185,6 +1199,12 @@ $(NDS_TASK32_DRAW_HOT_FRAGMENT): FORCE
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
 
+$(NDS_TASK39_HIT_SPARKS_INC): \
+		$(PROJECT_ROOT)/scripts/generate_task39_hit_sparks.py \
+		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
+		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb
+	python "$(PROJECT_ROOT)/scripts/generate_task39_hit_sparks.py"
+
 $(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
@@ -1236,6 +1256,7 @@ nds_renderer.o: CFLAGS += -marm
 endif
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
+nds_ifcommon_oam.o: $(NDS_TASK39_HIT_SPARKS_INC)
 
 $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
 	@mkdir -p $(dir $@)
@@ -1320,6 +1341,9 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK10_HARDWARE_CALIBRATION=$(NDS_TASK10_HARDWARE_CALIBRATION)'
 	@printf '%s\n' 'BENCH_MAKE_TASK20_STACK_PROFILE=$(NDS_TASK20_STACK_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK32_DRAW_HOT_TEXT=$(NDS_TASK32_DRAW_HOT_TEXT)'
+	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_SPRITES=$(NDS_TASK39_FX_SPRITES)'
+	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_FLASH=$(NDS_TASK39_FX_FLASH)'
+	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_SHIELD=$(NDS_TASK39_FX_SHIELD)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'

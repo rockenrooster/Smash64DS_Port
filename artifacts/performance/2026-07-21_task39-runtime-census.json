@@ -1,0 +1,18 @@
+{
+  "rom_sha256": "3ADCF123EF7FE30F873C13596B0966DFA136DFA723A20390F0528C0D635A4A39",
+  "stop_update": 600,
+  "stop_phase": 20,
+  "fox_cpu": 0,
+  "engagement_mask": 1,
+  "obj_vram_bytes": 22528,
+  "obj_vram_remaining": 11776,
+  "arena_boot_bytes": 1282048,
+  "arena_chosen_bytes": 1282048,
+  "arena_rejects": 0,
+  "effects": {
+    "efManagerDamageNormalLightMakeEffect": [1, 0, 1, 0],
+    "lbParticleMakeScriptID": [2, 0, 0, 2],
+    "efManagerShieldMakeEffect": [1, 0, 1, 0],
+    "ftParamCheckSetFighterColAnimID": [1, 1, 0, 0]
+  }
+}

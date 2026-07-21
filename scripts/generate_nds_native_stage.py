@@ -721,7 +721,7 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
-                config.initial_geometry_mode config.initial_modelview
+                config.color_modulate config.initial_geometry_mode config.initial_modelview
                 config.initial_projection stats.geometry_mode
                 """,
             ),
@@ -729,6 +729,7 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_CALLBACK,
                 """
                 state.current_matrix_snapshot state.current_transform_vertex_mask
+                state.color_modulate
                 state.input_vertex_valid_mask state.input_vertices
                 state.matrix_generation state.matrix_snapshot_count
                 state.matrix_snapshots state.matrix_valid

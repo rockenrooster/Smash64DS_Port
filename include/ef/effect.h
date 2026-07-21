@@ -128,5 +128,6 @@ void lbParticleDrawTextures(GObj *gobj);
 
 LBParticle *efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player,
                                                  s32 size);
+GObj *efManagerShieldMakeEffect(GObj *fighter_gobj);
 
 #endif

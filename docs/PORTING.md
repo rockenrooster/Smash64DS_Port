@@ -21534,3 +21534,15 @@ remains skipped for the requested fast iteration cadence.
   the first captures predate the live-joint-bound correction; Mario 203 proves
   the corrected path at 83/83. Profile-0 instrumentation compiles out, reserve
   is 166,672 bytes, and the fresh `AEE10EB3...` ROM passes Boundary.
+
+## 2026-07-21 - Task 39 visual-effects completion
+
+- Added the source-timed fighter hurt flash, source-derived OAM hit sparks, and
+  flat translucent shield disc with the approved white shine. Tyler approved
+  all three in the same `8964A5C3...` ROM; no accepted row was replayed.
+- The profile-1 census inventories 111 entry points and reports 22,528 OBJ-VRAM
+  bytes used, 11,776 free, the full arena, and zero Task-39 arena rejects.
+  Profile-0 timing observers compile out while engagement counters remain.
+- Enabled all three flags in the published/release-equivalent targets. The
+  14,986,240-byte `2385FDD8...` profile-0 ROM keeps Fox AI source-normal by
+  default and passes DevFast plus Boundary.

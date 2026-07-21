@@ -2,6 +2,8 @@
 #include "nds_scene_harness_config.h"
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_effects.h>
+#include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_task39_effect_census.h>
 #include <sys/vector.h>
 
 static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
@@ -386,29 +388,49 @@ FTOpeningDesc *D_ovl1_80390D20[] = {
 
 #define NDS_GM_COL_FIELD(value, start, len) \
     ((((u32)(value)) & ((1u << (len)) - 1u)) << (start))
-#define NDS_GM_COL_COMMAND_END() NDS_GM_COL_FIELD(nGMColEventEnd, 26, 6)
+/* ARM allocates these imported u32 bitfields least-significant field first. */
+#define NDS_GM_COL_COMMAND_END() NDS_GM_COL_FIELD(nGMColEventEnd, 0, 6)
 #define NDS_GM_COL_COMMAND_WAIT(frames) \
-    (NDS_GM_COL_FIELD(nGMColEventWait, 26, 6) | \
-     NDS_GM_COL_FIELD(frames, 0, 26))
+    (NDS_GM_COL_FIELD(nGMColEventWait, 0, 6) | \
+     NDS_GM_COL_FIELD(frames, 6, 26))
 #define NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL() \
-    NDS_GM_COL_FIELD(nGMColEventClearColorAll, 26, 6)
+    NDS_GM_COL_FIELD(nGMColEventClearColorAll, 0, 6)
 #define NDS_GM_COL_COMMAND_SET_COLOR1_S1() \
-    NDS_GM_COL_FIELD(nGMColEventSetColor1, 26, 6)
+    NDS_GM_COL_FIELD(nGMColEventSetColor1, 0, 6)
 #define NDS_GM_COL_COMMAND_SET_COLOR1_S2(r, g, b, a) \
-    (NDS_GM_COL_FIELD(r, 24, 8) | NDS_GM_COL_FIELD(g, 16, 8) | \
-     NDS_GM_COL_FIELD(b, 8, 8) | NDS_GM_COL_FIELD(a, 0, 8))
+    (NDS_GM_COL_FIELD(r, 0, 8) | NDS_GM_COL_FIELD(g, 8, 8) | \
+     NDS_GM_COL_FIELD(b, 16, 8) | NDS_GM_COL_FIELD(a, 24, 8))
 #define NDS_GM_COL_COMMAND_SET_COLOR1(r, g, b, a) \
     NDS_GM_COL_COMMAND_SET_COLOR1_S1(), \
         NDS_GM_COL_COMMAND_SET_COLOR1_S2(r, g, b, a)
 #define NDS_GM_COL_COMMAND_BLEND_COLOR1_S1(frames) \
-    (NDS_GM_COL_FIELD(nGMColEventBlendColor1, 26, 6) | \
-     NDS_GM_COL_FIELD(frames, 0, 26))
+    (NDS_GM_COL_FIELD(nGMColEventBlendColor1, 0, 6) | \
+     NDS_GM_COL_FIELD(frames, 6, 26))
 #define NDS_GM_COL_COMMAND_BLEND_COLOR1_S2(r, g, b, a) \
-    (NDS_GM_COL_FIELD(r, 24, 8) | NDS_GM_COL_FIELD(g, 16, 8) | \
-     NDS_GM_COL_FIELD(b, 8, 8) | NDS_GM_COL_FIELD(a, 0, 8))
+    (NDS_GM_COL_FIELD(r, 0, 8) | NDS_GM_COL_FIELD(g, 8, 8) | \
+     NDS_GM_COL_FIELD(b, 16, 8) | NDS_GM_COL_FIELD(a, 24, 8))
 #define NDS_GM_COL_COMMAND_BLEND_COLOR1(frames, r, g, b, a) \
     NDS_GM_COL_COMMAND_BLEND_COLOR1_S1(frames), \
         NDS_GM_COL_COMMAND_BLEND_COLOR1_S2(r, g, b, a)
+#define NDS_GM_COL_COMMAND_SET_LIGHT(angle1, angle2) \
+    (NDS_GM_COL_FIELD(nGMColEventSetLight, 0, 6) | \
+     NDS_GM_COL_FIELD(angle1, 6, 13) | \
+     NDS_GM_COL_FIELD(angle2, 19, 13))
+
+#if NDS_TASK39_FX_FLASH
+/* Exact decomp gmcolscripts.c dGMColScriptsFighterDamageCommon commands. */
+static u32 sNdsGMColScriptsFighterDamageCommon[] = {
+    NDS_GM_COL_COMMAND_SET_LIGHT(90, 0),
+    NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0xE6),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(6, 0xFF, 0xFF, 0xFF, 0x1E),
+    NDS_GM_COL_COMMAND_WAIT(6),
+    NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
+    NDS_GM_COL_COMMAND_END()
+};
+#endif
 
 static u32 sNdsGMColScriptsScreenFlashDeadExplode[] = {
     NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x00),
@@ -448,7 +470,11 @@ static u32 sNdsGMColScriptsScreenFlashDamageIce[] = {
     NDS_GM_COL_COMMAND_END()
 };
 
-GMColDesc dGMColScriptsDescs[64] = {
+GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
+#if NDS_TASK39_FX_FLASH
+    [nGMColAnimFighterDamageCommon] =
+        { sNdsGMColScriptsFighterDamageCommon, 100, FALSE },
+#endif
     [nGMColAnimScreenFlashDeadExplode] =
         { sNdsGMColScriptsScreenFlashDeadExplode, 60, TRUE },
     [nGMColAnimScreenFlashDamageNormal] =
@@ -460,6 +486,9 @@ GMColDesc dGMColScriptsDescs[64] = {
     [nGMColAnimScreenFlashDamageIce] =
         { sNdsGMColScriptsScreenFlashDamageIce, 60, TRUE }
 };
+
+_Static_assert(ARRAY_COUNT(dGMColScriptsDescs) == nGMColAnimEnumCount,
+               "BattleShip color-animation table count changed");
 
 static FTParts sNdsFTManagerPartsAllocPool[64];
 static FTParts *sNdsFTManagerPartsAllocFree;
@@ -791,12 +820,16 @@ sb32 ftParamCheckSetColAnimID(GMColAnim *colanim, s32 colanim_id, s32 length)
 {
     s32 i;
 
-    if (colanim == NULL)
+    if ((colanim == NULL) || (colanim_id < 0) ||
+        (colanim_id >= nGMColAnimEnumCount) ||
+        (dGMColScriptsDescs[colanim_id].p_script == NULL))
     {
         return FALSE;
     }
-    if (dGMColScriptsDescs[colanim_id].priority <
-        dGMColScriptsDescs[colanim->colanim_id].priority)
+    if ((colanim->colanim_id >= 0) &&
+        (colanim->colanim_id < nGMColAnimEnumCount) &&
+        (dGMColScriptsDescs[colanim_id].priority <
+         dGMColScriptsDescs[colanim->colanim_id].priority))
     {
         return FALSE;
     }
@@ -819,7 +852,9 @@ sb32 ftParamCheckSetColAnimID(GMColAnim *colanim, s32 colanim_id, s32 length)
 sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
                                      s32 unused)
 {
-    (void)fighter_gobj;
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_FT_PARAM_CHECK_SET_FIGHTER_COL_ANIM_I_D,
+        NDS_TASK39_EFFECT_ORIGINAL);
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
     {
@@ -830,10 +865,20 @@ sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
             sNdsFighterDashRunDamageSetupColAnimCount++;
         }
     }
+#if NDS_TASK39_FX_FLASH
+    if ((fighter_gobj != NULL) && (ftGetStruct(fighter_gobj) != NULL))
+    {
+        return ftParamCheckSetColAnimID(&ftGetStruct(fighter_gobj)->colanim,
+                                       colanim_id, unused);
+    }
+    return FALSE;
+#else
+    (void)fighter_gobj;
     return ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
             (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
                ? TRUE
                : FALSE;
+#endif
 }
 
 sb32 ftParamCheckSetSkeletonColAnimID(GObj *fighter_gobj, s32 damage_level)
@@ -1619,8 +1664,22 @@ void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
 __attribute__((weak)) GObj *efManagerShieldMakeEffect(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
-    f32 scale = ((fp != NULL) && (fp->attr != NULL)) ?
-                    fp->attr->shield_size * 0.05F : 1.5F;
+    f32 scale = 1.0F;
+
+    if ((fp != NULL) && (fp->attr != NULL))
+    {
+        f32 health_scale = fp->shield_health /
+                           FTCOMMON_GUARD_SIZE_HEALTH_DIV;
+
+        scale = (((FTCOMMON_GUARD_SIZE_SCALE_MUL_INIT * health_scale) +
+                  FTCOMMON_GUARD_SIZE_SCALE_MUL_ADD) *
+                 fp->attr->shield_size) /
+                FTCOMMON_GUARD_SIZE_SCALE_MUL_DIV;
+    }
+
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_SHIELD_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SUBSTITUTE);
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunGuardOnActive != FALSE))
@@ -5625,7 +5684,8 @@ void ftParamSetStarHitStatusInvincible(FTStruct *fp, s32 invincible_tics)
     }
     fp->star_hitstatus = nGMHitStatusInvincible;
     fp->star_invincible_tics = invincible_tics;
-    ftParamCheckSetFighterColAnimID(fp->fighter_gobj, 74, 0);
+    ftParamCheckSetFighterColAnimID(fp->fighter_gobj,
+                                    nGMColAnimFighterStar, 0);
 }
 
 void ftParamSetHealDamage(FTStruct *fp, s32 heal)
@@ -5635,7 +5695,8 @@ void ftParamSetHealDamage(FTStruct *fp, s32 heal)
         return;
     }
     fp->damage_heal += heal;
-    ftParamCheckSetFighterColAnimID(fp->fighter_gobj, 9, 0);
+    ftParamCheckSetFighterColAnimID(fp->fighter_gobj,
+                                    nGMColAnimFighterHeal, 0);
 }
 
 void ftParamStopVoiceRunProcDamage(GObj *fighter_gobj)
@@ -7653,11 +7714,18 @@ efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size,
                                      sb32 is_static)
 {
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_DAMAGE_NORMAL_LIGHT_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SUBSTITUTE);
+#if NDS_TASK39_FX_SPRITES
+    ndsTask39HitSparkSpawn(pos, player, size, is_static, FALSE);
+#else
     (void)player;
     (void)is_static;
     (void)ndsEFManagerMakeVisualEffect(
         nNDSVisualEffectHitNormal, pos,
         ndsVisualDamageScale(size, 0.45F, 0.025F), 1, NULL);
+#endif
     return NULL;
 }
 
@@ -7665,10 +7733,17 @@ __attribute__((weak)) LBParticle *
 efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player, s32 size)
 {
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_DAMAGE_NORMAL_HEAVY_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SUBSTITUTE);
+#if NDS_TASK39_FX_SPRITES
+    ndsTask39HitSparkSpawn(pos, player, size, FALSE, TRUE);
+#else
     (void)player;
     (void)ndsEFManagerMakeVisualEffect(
         nNDSVisualEffectHitNormal, pos,
         ndsVisualDamageScale(size, 0.70F, 0.035F), 1, NULL);
+#endif
     return NULL;
 }
 
@@ -12794,6 +12869,9 @@ GObj *ftShadowMakeShadow(GObj *fighter_gobj)
 
 LBParticle *lbParticleMakeScriptID(s32 bank_id, s32 script_id)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_LB_PARTICLE_MAKE_SCRIPT_I_D,
+        NDS_TASK39_EFFECT_SKIPPED);
     (void)bank_id;
     (void)script_id;
     gNdsPupupuUpdateParticleScriptCount++;
@@ -12865,6 +12943,9 @@ efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
 
 LBGenerator *lbParticleMakeGenerator(s32 bank_id, s32 generator_id)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_LB_PARTICLE_MAKE_GENERATOR,
+        NDS_TASK39_EFFECT_SKIPPED);
     (void)bank_id;
     (void)generator_id;
     gNdsPupupuGroundDeferredMask |= 1u << 1;
@@ -12873,6 +12954,9 @@ LBGenerator *lbParticleMakeGenerator(s32 bank_id, s32 generator_id)
 
 LBParticle *lbParticleMakeCommon(s32 bank_id, s32 script_id)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_LB_PARTICLE_MAKE_COMMON,
+        NDS_TASK39_EFFECT_SKIPPED);
     (void)bank_id;
     (void)script_id;
     gNdsPupupuGroundDeferredMask |= 1u << 1;
@@ -12883,6 +12967,9 @@ LBParticle *lbParticleMakePosVel(s32 bank_id, s32 script_id, f32 pos_x,
                                  f32 pos_y, f32 pos_z, f32 vel_x,
                                  f32 vel_y, f32 vel_z)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_LB_PARTICLE_MAKE_POS_VEL,
+        NDS_TASK39_EFFECT_SKIPPED);
     (void)bank_id;
     (void)script_id;
     (void)pos_x;

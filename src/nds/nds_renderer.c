@@ -4,6 +4,7 @@
 
 #include <nds/battle_playable_static_textures.h>
 #include <nds/nds_gbi_decode.h>
+#include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
@@ -3460,6 +3461,7 @@ typedef struct NDSRendererTraversalState
     u32 matrix_generation;
     u32 matrix_snapshot_count;
     u32 current_matrix_snapshot;
+    u32 color_modulate;
     NDSRendererHardwareLightDirection prepared_light_direction;
     u32 prepared_light_direction_valid;
     u32 texture_prepare_valid;
@@ -5678,6 +5680,7 @@ static void ndsRendererInitTraversalState(NDSRendererTraversalState *state,
     state->current_transform_vertex_mask = 0u;
     state->matrix_generation = 0u;
     state->current_matrix_snapshot = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
+    state->color_modulate = (config != NULL) ? config->color_modulate : 0u;
     state->prepared_light_direction_valid = 0u;
     state->texture_prepare_valid = 0u;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -7833,11 +7836,47 @@ static u32 ndsRendererHardwareLitShadeColor(
         stats, vtx, prepared_direction);
 }
 
+static inline u16 ndsRendererHardwareModulatePackedColor(
+    u16 color, u32 color_modulate)
+{
+#if NDS_TASK39_FX_FLASH
+    u32 alpha = color_modulate & 0xffu;
+
+    if (alpha != 0u)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        u32 start = cpuGetTiming();
+#endif
+        u32 inverse = 255u - alpha;
+        u32 red = (((u32)(color & 0x1fu) * inverse) +
+                   (((color_modulate >> 27) & 0x1fu) * alpha) + 127u) /
+                  255u;
+        u32 green = (((u32)((color >> 5) & 0x1fu) * inverse) +
+                     (((color_modulate >> 19) & 0x1fu) * alpha) + 127u) /
+                    255u;
+        u32 blue = (((u32)((color >> 10) & 0x1fu) * inverse) +
+                    (((color_modulate >> 11) & 0x1fu) * alpha) + 127u) /
+                   255u;
+
+        color = RGB15(red, green, blue);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        ndsTask39EffectsAddDrawTicks(cpuGetTiming() - start);
+#endif
+    }
+#else
+    (void)color_modulate;
+#endif
+    return color;
+}
+
 static inline u16 ndsRendererHardwarePackedResolvedColor(
     u32 color,
     u32 material_color,
-    s32 use_material_color)
+    s32 use_material_color,
+    u32 color_modulate)
 {
+    u16 packed;
+
     if (use_material_color != FALSE)
     {
         u32 r = ((ndsRendererHardwareColorByte(color, 24) *
@@ -7850,31 +7889,41 @@ static inline u16 ndsRendererHardwarePackedResolvedColor(
                   ndsRendererHardwareColorByte(material_color, 8)) + 127u) /
             255u;
 
-        return RGB15((u8)(r >> 3), (u8)(g >> 3), (u8)(b >> 3));
+        packed = RGB15((u8)(r >> 3), (u8)(g >> 3), (u8)(b >> 3));
     }
-    return RGB15((u8)((color >> 27) & 0x1fu),
-                 (u8)((color >> 19) & 0x1fu),
-                 (u8)((color >> 11) & 0x1fu));
+    else
+    {
+        packed = RGB15((u8)((color >> 27) & 0x1fu),
+                       (u8)((color >> 19) & 0x1fu),
+                       (u8)((color >> 11) & 0x1fu));
+    }
+    return ndsRendererHardwareModulatePackedColor(packed,
+                                                   color_modulate);
 }
 
 static inline u16 ndsRendererHardwarePackedValidVertexColor(
     u32 material_color,
     s32 use_material_color,
     s32 use_vertex_color,
-    u32 vertex_color)
+    u32 vertex_color,
+    u32 color_modulate)
 {
     if ((use_material_color != FALSE) && (use_vertex_color == FALSE))
     {
-        return RGB15((u8)((material_color >> 27) & 0x1fu),
-                     (u8)((material_color >> 19) & 0x1fu),
-                     (u8)((material_color >> 11) & 0x1fu));
+        return ndsRendererHardwareModulatePackedColor(
+            RGB15((u8)((material_color >> 27) & 0x1fu),
+                  (u8)((material_color >> 19) & 0x1fu),
+                  (u8)((material_color >> 11) & 0x1fu)),
+            color_modulate);
     }
     if (use_vertex_color == FALSE)
     {
-        return RGB15(31u, 31u, 31u);
+        return ndsRendererHardwareModulatePackedColor(
+            RGB15(31u, 31u, 31u), color_modulate);
     }
     return ndsRendererHardwarePackedResolvedColor(
-        vertex_color, material_color, use_material_color);
+        vertex_color, material_color, use_material_color,
+        color_modulate);
 }
 
 static u16 ndsRendererHardwarePackedVertexColor(
@@ -7884,7 +7933,8 @@ static u16 ndsRendererHardwarePackedVertexColor(
     s32 use_material_color,
     s32 use_vertex_color,
     u32 vertex_color,
-    s32 vertex_color_valid)
+    s32 vertex_color_valid,
+    u32 color_modulate)
 {
     u32 color;
 
@@ -7892,23 +7942,23 @@ static u16 ndsRendererHardwarePackedVertexColor(
     {
         return ndsRendererHardwarePackedValidVertexColor(
             material_color, use_material_color,
-            use_vertex_color, vertex_color);
+            use_vertex_color, vertex_color, color_modulate);
     }
     if ((use_material_color != FALSE) && (use_vertex_color == FALSE))
     {
         return ndsRendererHardwarePackedValidVertexColor(
             material_color, use_material_color,
-            use_vertex_color, vertex_color);
+            use_vertex_color, vertex_color, color_modulate);
     }
     if (use_vertex_color == FALSE)
     {
         return ndsRendererHardwarePackedValidVertexColor(
             material_color, use_material_color,
-            use_vertex_color, vertex_color);
+            use_vertex_color, vertex_color, color_modulate);
     }
     color = ndsRendererHardwareLitShadeColor(stats, vtx, NULL);
     return ndsRendererHardwarePackedResolvedColor(
-        color, material_color, use_material_color);
+        color, material_color, use_material_color, color_modulate);
 }
 
 static const void *ndsRendererResolveTextureDataPointer(
@@ -13343,7 +13393,8 @@ ndsRendererHardwareSubmitVertex(
     {
         hardware_color = ndsRendererHardwarePackedVertexColor(
             stats, vtx, material_color, use_material_color,
-            use_vertex_color, vertex_color, vertex_color_valid);
+            use_vertex_color, vertex_color, vertex_color_valid,
+            state->color_modulate);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         if ((state != NULL) && (vertex_index < NDS_RENDERER_MAX_VTX))
         {
@@ -14630,7 +14681,8 @@ static void NDS_RENDERER_FAST_RUN_CODE ndsRendererFastPrepareRawSlots(
                 context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX,
                 state->vertex_colors[vertex_index],
                 ((state->vertex_color_valid_mask & vertex_mask) != 0u) ?
-                    TRUE : FALSE);
+                    TRUE : FALSE,
+                state->color_modulate);
         state->prepared_vertex_color_valid_mask |= vertex_mask;
         missing_color &= ~vertex_mask;
     }
@@ -16287,6 +16339,9 @@ ndsRendererNativeShadeProductionActions(
                               (color >> 19) & 0x1fu,
                               (color >> 11) & 0x1fu);
                 }
+                prepared->packed_color =
+                    ndsRendererHardwareModulatePackedColor(
+                        prepared->packed_color, state->color_modulate);
             }
         }
     }
@@ -19173,7 +19228,8 @@ static s32 ndsRendererNativeStagePrepareRun(
         prepared_dense->packed_color =
             ndsRendererHardwarePackedValidVertexColor(
                 material_color, use_material_color,
-                use_vertex_color, dense->rgba);
+                use_vertex_color, dense->rgba,
+                frame->config->color_modulate);
         if (use_texture != FALSE)
         {
             prepared_dense->s = ndsRendererHardwareTexCoord(

@@ -4192,17 +4192,20 @@ enum {
     nGMColAnimFighterDamageCommon = 5,
     nGMColAnimFighterFallSpecial = 7,
     nGMColAnimFighterFastFall = 8,
+    nGMColAnimFighterHeal = 9,
     nGMColAnimFighterRebirth = 11,
     nGMColAnimFighterDamageFireStart = 12,
     nGMColAnimFighterDamageIceStart = 32,
     nGMColAnimFighterShieldBreakFly = 36,
     nGMColAnimFighterFuraFura = 37,
     nGMColAnimFighterFuraSleep = 38,
-    nGMColAnimScreenFlashDeadExplode = 57,
-    nGMColAnimScreenFlashDamageNormal = 58,
-    nGMColAnimScreenFlashDamageFire = 59,
-    nGMColAnimScreenFlashDamageElectric = 60,
-    nGMColAnimScreenFlashDamageIce = 61
+    nGMColAnimFighterStar = 74,
+    nGMColAnimScreenFlashDeadExplode = 81,
+    nGMColAnimScreenFlashDamageNormal = 82,
+    nGMColAnimScreenFlashDamageFire = 83,
+    nGMColAnimScreenFlashDamageElectric = 84,
+    nGMColAnimScreenFlashDamageIce = 85,
+    nGMColAnimEnumCount = 86
 };
 
 #endif

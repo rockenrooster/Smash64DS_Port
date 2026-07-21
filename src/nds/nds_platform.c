@@ -2001,6 +2001,9 @@ static void ndsPlatformRenderBattleFpsHud(void)
         consoleClear();
         ndsPlatformPrintDebugLine(0u, "FPS --.-  UP --.-");
 #if NDS_BATTLE_PHASE_HUD_ENABLED
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        ndsPlatformPrintDebugLine(11u, "FX 0/0/0 E0 A0");
+#endif
         sBattlePhaseHudLastSlipCount =
             gNdsBattlePlayablePacingCadenceViolationCount;
         sBattlePhaseHudUpdTickSum = 0u;
@@ -2094,6 +2097,15 @@ static void ndsPlatformRenderBattleFpsHud(void)
         ndsPlatformPrintDebugLine(
             15u, "LOOP%8lu %8lu", (unsigned long)loop_ticks,
             (unsigned long)(sBattlePhaseHudLoopTickSum / avg_count));
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        ndsPlatformPrintDebugLine(
+            11u, "FX %lu/%lu/%lu E%lx A%lu",
+            (unsigned long)gNdsTask39FxSpawnTicks,
+            (unsigned long)gNdsTask39FxUpdateTicks,
+            (unsigned long)gNdsTask39FxDrawTicks,
+            (unsigned long)gNdsTask39FxEngagementMask,
+            (unsigned long)gNdsTask39FxArenaRejectCount);
+#endif
 #if NDS_FAST_WALLPAPER_AFFINE
         /* Engagement proof for the affine wallpaper: applies must climb and
          * post-ready pixel writes must stay near zero, ON DEVICE, or the

@@ -1,6 +1,7 @@
 #include <sys/matrix.h>
 
 #include <nds/nds_fighter_matrix_index.h>
+#include <nds/nds_ifcommon_oam.h>
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_HW_TRIANGLES 0
@@ -59,6 +60,24 @@
 static const Gfx sNdsRendererAdapterEmptySegmentEDL[1] = {
     { { NDS_FIGHTER_DL_OP_ENDDL << 24, 0u } }
 };
+
+static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
+{
+#if NDS_TASK39_FX_FLASH
+    if ((fp != NULL) && (fp->colanim.is_use_color1 != FALSE))
+    {
+        const GMColKeys *color = &fp->colanim.color1;
+
+        gNdsTask39FxFlashDrawCount++;
+        ndsTask39EffectsEngage(NDS_TASK39_FX_ENGAGED_FLASH);
+        return ((u32)color->r << 24) | ((u32)color->g << 16) |
+               ((u32)color->b << 8) | color->a;
+    }
+#else
+    (void)fp;
+#endif
+    return 0u;
+}
 
 #if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -3091,7 +3110,7 @@ static void ndsFighterMarioFoxScanDLForSlot(u32 slot, FTStruct *fp)
     DObj *selected;
     const Gfx *dl;
     NDSRelocLoadedFile *loaded;
-    NDSRendererConfig config;
+    NDSRendererConfig config = {0};
     NDSRendererStats stats;
     NDSFighterDLScanContext context;
     u32 dobj_index;
@@ -3712,7 +3731,7 @@ static void ndsFighterMarioFoxExecuteDLForSlot(u32 slot, FTStruct *fp)
     DObj *selected;
     const Gfx *dl;
     NDSRelocLoadedFile *loaded;
-    NDSRendererConfig config;
+    NDSRendererConfig config = {0};
     NDSRendererStats stats;
     NDSFighterDLExecState state;
     u32 root_x_before;
@@ -7534,7 +7553,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                             u32 initial_geometry_mode)
 {
     NDSRelocLoadedFile *loaded;
-    NDSRendererConfig config;
+    NDSRendererConfig config = {0};
     NDSRendererStats stats;
     NDSRendererStats *render_stats;
     NDSFighterDLDrawState state;
@@ -8415,7 +8434,7 @@ static void ndsFighterMarioFoxDrawDLForSlot(u32 slot, FTStruct *fp,
     DObj *selected;
     const Gfx *dl;
     NDSRelocLoadedFile *loaded;
-    NDSRendererConfig config;
+    NDSRendererConfig config = {0};
     NDSRendererStats stats;
     NDSFighterDLDrawState state;
     NDSRendererMatrix20p12 initial_projection;
@@ -9313,7 +9332,7 @@ static void ndsFighterMarioFoxDLMultiDrawForSlot(u32 slot, FTStruct *fp,
         const Gfx *dl = collection.dobjs[i]->dl;
         NDSRelocLoadedFile *loaded =
             ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
-        NDSRendererConfig config;
+        NDSRendererConfig config = {0};
         NDSRendererMatrix20p12 initial_projection;
         NDSRendererMatrix20p12 initial_modelview;
         const NDSRendererMatrix20p12 *initial_projection_ptr;
@@ -10270,6 +10289,7 @@ static const Gfx *ndsFighterDLAllDrawResolveBranch(const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 static sb32 ndsRendererAdapterBuildNativeProductionInputs(
     u32 slot,
+    u32 color_modulate,
     NDSRelocLoadedFile *owner_file,
     const NDSFighterDLAllDrawCollection *collection,
     const NDSRendererMatrix20p12 *projection,
@@ -10319,6 +10339,7 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
         config->initial_modelview = modelviews[i];
         config->initial_geometry_mode =
             (event != NULL) ? event->geometry_mode : 0u;
+        config->color_modulate = color_modulate;
         config->texture_data_layout =
             NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
         config->validate_range = ndsFighterDLAllDrawValidateRange;
@@ -10393,6 +10414,7 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
 
 static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
     u32 slot,
+    u32 color_modulate,
     NDSRelocLoadedFile *owner_file,
     const NDSFighterDLAllDrawCollection *collection,
     NDSFighterDLDrawState *resolver,
@@ -10421,6 +10443,7 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
     config->max_commands = 2048u;
     config->max_list_commands = 512u;
     config->initial_geometry_mode = 0u;
+    config->color_modulate = color_modulate;
     config->texture_data_layout =
         NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
     config->validate_range = ndsFighterDLAllDrawValidateRange;
@@ -11213,6 +11236,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
     u32 root_x_before;
     u32 root_x_after;
+    u32 color_modulate;
     u32 i;
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererProfileOwner owner_id;
@@ -11264,6 +11288,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     }
 
     root = fp->joints[nFTPartsJointTopN];
+    color_modulate = ndsRendererAdapterFighterColorModulate(fp);
     root_x_before = (root != NULL) ? ndsFloatBits(root->translate.vec.f.x) :
         0u;
 
@@ -11586,11 +11611,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     {
         if (((native_owner_hierarchy_mode != FALSE) &&
              (ndsRendererAdapterBuildNativeHierarchyInputs(
-                slot, native_owner_file, &collection, &persistent_state,
+                slot, color_modulate, native_owner_file, &collection,
+                &persistent_state,
                 &sNdsRendererAdapterNativeOwnerWorkspace) == FALSE)) ||
             ((native_owner_hierarchy_mode == FALSE) &&
              (ndsRendererAdapterBuildNativeProductionInputs(
-                slot, native_owner_file, &collection,
+                slot, color_modulate, native_owner_file, &collection,
                 native_owner_projection, native_owner_modelviews,
                 &persistent_state,
                 &sNdsRendererAdapterNativeOwnerWorkspace
@@ -11709,7 +11735,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             collection.dobjs[i]->dl;
         NDSRelocLoadedFile *loaded;
         NDSFighterDLDrawState *current_state;
-        NDSRendererConfig config;
+        NDSRendererConfig config = {0};
         NDSRendererStats *current_stats;
         NDSRendererMatrix20p12 initial_projection;
         NDSRendererMatrix20p12 initial_modelview;
@@ -11920,6 +11946,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         config.initial_geometry_mode =
             (sNdsFighterDisplayContractPlayback != FALSE) ?
                 contract_event->geometry_mode : 0u;
+        config.color_modulate = color_modulate;
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
         if (native_root_enabled != FALSE)
         {

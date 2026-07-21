@@ -4,6 +4,7 @@
 #include <if/interface.h>
 #include <it/item.h>
 #include <nds/nds_effects.h>
+#include <nds/nds_task39_effect_census.h>
 #include <sc/scene.h>
 #include <sys/objtypes.h>
 
@@ -117,6 +118,9 @@ NDS_WEAK void itMainDestroyItem(GObj *item_gobj)
 NDS_WEAK GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player,
                                               u32 kind)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_DEAD_EXPLODE_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SUBSTITUTE);
     (void)player;
     return ndsEFManagerMakeVisualEffect(nNDSVisualEffectDeath, pos,
                                         2.0F + ((f32)(kind & 3u) * 0.2F),
@@ -126,6 +130,9 @@ NDS_WEAK GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player,
 NDS_WEAK LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos,
                                                          f32 scale)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_SPARKLE_WHITE_DEAD_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SUBSTITUTE);
     (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectSparkle, pos,
                                        scale, 1, NULL);
     return NULL;
@@ -133,6 +140,9 @@ NDS_WEAK LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos,
 
 NDS_WEAK GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_REBIRTH_HALO_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SUBSTITUTE);
     f32 scale = (size > 5.0F) ? size * 0.05F : size;
 
     return ndsEFManagerMakeVisualEffect(nNDSVisualEffectRebirth, NULL,
@@ -210,24 +220,36 @@ NDS_WEAK void ftPublicDefeatedAddID(u16 sfx_id)
 
 NDS_WEAK void efManagerStockSnapMakeEffect(f32 pos_x, f32 pos_y)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_STOCK_SNAP_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SKIPPED);
     (void)pos_x;
     (void)pos_y;
 }
 
 NDS_WEAK void efManagerStockStealStartMakeEffect(f32 pos_x, f32 pos_y)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_STOCK_STEAL_START_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SKIPPED);
     (void)pos_x;
     (void)pos_y;
 }
 
 NDS_WEAK void efManagerStockStealEndMakeEffect(f32 pos_x, f32 pos_y)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_STOCK_STEAL_END_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SKIPPED);
     (void)pos_x;
     (void)pos_y;
 }
 
 NDS_WEAK LBParticle *efManagerBattleScoreMakeEffect(Vec3f *pos, s32 score)
 {
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_BATTLE_SCORE_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SKIPPED);
     (void)pos;
     (void)score;
     return NULL;

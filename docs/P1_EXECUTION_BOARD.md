@@ -16,8 +16,8 @@ Integrated user-facing candidate:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,958,592 bytes
-SHA-256 AEE10EB3912A9954090A40EE151406255FD22AA94C7EDF04DE3BB399DECF0415
+14,986,240 bytes
+SHA-256 2385FDD8E411F47B41FD6FE6C05B341D5CBFF53D5A048113992C860F6BFE19AF
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -443,11 +443,15 @@ fused-fork form exceeds the cap by 15,560 bytes. Hit-sound correctness still
 requires Tyler's listen pass. Evidence:
 `artifacts/performance/2026-07-21_task38-fgm-audit.md`.
 
-Task 39 stops before Phase C because its planner map is false: the live shield
-symbol already routes to the DS `nNDSVisualEffectShield` substitute/template,
-not an untouched generic material path. No effect counters or visual changes
-were added before the required corrected map and Tyler-marked contact sheet.
-Evidence: `artifacts/performance/2026-07-21_task39-visual-effects-preflight.md`.
+Task 39 is complete. Its corrected-map Phase C uses the original color-animation
+state for hurt flash, source-derived OAM frames for hit sparks, and a flat
+transparent 2D shield with white shine. Tyler approved all three in ROM
+`8964A5C3...`; no visual row was replayed. The 111-entry census records the
+bounded natural sample, 22,528 OBJ-VRAM bytes used / 11,776 free, full
+1,282,048-byte arena, and zero Task-39 arena rejects. Published profile-0 ROM
+`2385FDD8...` enables all three flags with Fox AI source-normal by default and
+passes DevFast plus Boundary. Evidence:
+`artifacts/performance/2026-07-21_task39-visual-effects-{preflight,census}.md`.
 
 Task 40 completes its source-backed animation bank and Phase-1 visual/load
 coverage checkpoint. All 195 non-null Mario and 209 non-null Fox table rows have
