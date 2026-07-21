@@ -127,8 +127,12 @@
 #define NDS_RELOC_ASSET_MARIO_ANIM_TORNADO_AIR 0x27fu
 #define NDS_RELOC_ASSET_MARIO_ANIM_DAMAGE 0x280u
 #define NDS_RELOC_ASSET_MARIO_ANIM_FIRE_FLOWER_AIR 0x281u
+#define NDS_RELOC_ASSET_MARIO_ANIM_APPEAR1 0x279u
+#define NDS_RELOC_ASSET_MARIO_ANIM_APPEAR2 0x27au
 #define NDS_RELOC_ASSET_FOX_ANIM_FIRST 0x282u
 #define NDS_RELOC_ASSET_FOX_ANIM_LAST 0x31fu
+#define NDS_RELOC_ASSET_FOX_ANIM_APPEAR 0x309u
+#define NDS_RELOC_ASSET_FOX_ANIM_ARWING 0x30au
 
 #define NDS_FIGHTER_MARIOFOX_FILE_MASK 0x7fffu
 #define NDS_FIGHTER_MARIOFOX_SETUP_FILES (1u << 0)
@@ -210,6 +214,7 @@
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_Q 0x4f10u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_R 0x5418u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_S 0x57f0u
+#define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_T 0x5bd0u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_U 0x60d8u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_V 0x65d8u
 #define NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_W 0x6c00u
@@ -2657,7 +2662,19 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 
 static s32 ndsRelocIsFighterAObj16Asset(u32 asset_id)
 {
-    return ndsRelocIsMarioFoxAnimID(asset_id);
+    return ((ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) &&
+            (asset_id != NDS_RELOC_ASSET_MARIO_ANIM_APPEAR1) &&
+            (asset_id != NDS_RELOC_ASSET_MARIO_ANIM_APPEAR2) &&
+            (asset_id != NDS_RELOC_ASSET_FOX_ANIM_APPEAR) &&
+            (asset_id != NDS_RELOC_ASSET_FOX_ANIM_ARWING)) ? TRUE : FALSE;
+}
+
+static s32 ndsRelocIsFighterAObj32Asset(u32 asset_id)
+{
+    return ((asset_id == NDS_RELOC_ASSET_MARIO_ANIM_APPEAR1) ||
+            (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_APPEAR2) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_APPEAR) ||
+            (asset_id == NDS_RELOC_ASSET_FOX_ANIM_ARWING)) ? TRUE : FALSE;
 }
 
 s32 ndsRelocPointerIsFighterAObj16(const void *ptr)
@@ -2667,6 +2684,16 @@ s32 ndsRelocPointerIsFighterAObj16(const void *ptr)
 
     return ((loaded != NULL) &&
             (ndsRelocIsFighterAObj16Asset(loaded->asset_id) != FALSE)) ?
+               TRUE : FALSE;
+}
+
+s32 ndsRelocPointerIsFighterAObj32(const void *ptr)
+{
+    NDSRelocLoadedFile *loaded =
+        ndsRelocFindLoadedFileContaining(ptr, sizeof(u32));
+
+    return ((loaded != NULL) &&
+            (ndsRelocIsFighterAObj32Asset(loaded->asset_id) != FALSE)) ?
                TRUE : FALSE;
 }
 
@@ -3814,6 +3841,8 @@ static void ndsRelocNormalizeIFAnnounceMarioSprites(NDSRelocLoadedFile *loaded)
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_R);
     ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_S);
+    ndsRelocNormalizeIFAnnounceSprite(
+        loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_T);
     ndsRelocNormalizeIFAnnounceSprite(
         loaded, NDS_RELOC_SYMBOL_IF_ANNOUNCE_LETTER_U);
     ndsRelocNormalizeIFAnnounceSprite(
@@ -5355,7 +5384,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     size_t asset_size;
 
     if ((heap == NULL) ||
-        (ndsRelocIsFighterAObj16Asset(asset_id) == FALSE))
+        (ndsRelocIsMarioFoxAnimID(asset_id) == FALSE))
     {
         return NULL;
     }
@@ -5410,9 +5439,15 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
     NDSRelocLoadedFile *loaded;
 
     if ((heap != NULL) &&
-        (ndsRelocIsFighterAObj16Asset(asset_id) != FALSE))
+        (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE))
     {
         file = ndsRelocForceLoadFighterAObj16File(token, asset_id, heap);
+#if NDS_FIGHTER_ANIM_AUDIT
+        gNdsFighterAnimAuditLoadSerial++;
+        gNdsFighterAnimAuditLoadAssetID = asset_id;
+        gNdsFighterAnimAuditLoadResolved = (file != NULL) ? 1u : 0u;
+        gNdsFighterAnimAuditLoadFallback = (file == NULL) ? 1u : 0u;
+#endif
         return (file != NULL) ? file : heap;
     }
 #endif

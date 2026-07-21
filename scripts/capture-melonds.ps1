@@ -19,7 +19,9 @@ param(
     [int]$SecondDelayMilliseconds = 0,
     [ValidateRange(-1,1000000)][int]$ExactFirstFrame = -1,
     [ValidateRange(-1,1000000)][int]$ExactSecondFrame = -1,
-    [ValidateRange(-1,1)][int]$FoxCpuMode = -1
+    [ValidateRange(-1,1)][int]$FoxCpuMode = -1,
+    [ValidateSet('','Fox','Mario','Natural')][string]$FighterAnimAudit = '',
+    [ValidateRange(0,218)][int]$FighterAnimStartMotion = 0
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -45,6 +47,7 @@ $gdbPath = if ([System.IO.Path]::IsPathRooted($Gdb)) {
 $elfPath = $null
 $rendererSelectionEnabled = ($RendererFastRunMode -ge 0)
 $foxSelectionEnabled = ($FoxCpuMode -ge 0)
+$fighterAnimAuditEnabled = -not [string]::IsNullOrWhiteSpace($FighterAnimAudit)
 $gdbSelectionEnabled = $rendererSelectionEnabled -or $foxSelectionEnabled
 $exactFrameCaptureEnabled =
     (($ExactFirstFrame -ge 0) -or ($ExactSecondFrame -ge 0))
@@ -65,7 +68,8 @@ if ($exactFrameCaptureEnabled) {
         throw '-RendererFastRunMode cannot be combined with exact Cut G capture.'
     }
 }
-$gdbControlEnabled = $gdbSelectionEnabled -or $exactFrameCaptureEnabled
+$gdbControlEnabled = $gdbSelectionEnabled -or $exactFrameCaptureEnabled -or
+    $fighterAnimAuditEnabled
 if ($gdbControlEnabled) {
     if (-not (Test-Path -LiteralPath $gdbPath -PathType Leaf)) {
         throw "GDB executable not found: $gdbPath"
@@ -93,7 +97,19 @@ if (-not (Test-Path $melonDsPath)) {
 if (-not (Test-Path $romPath)) {
     throw "ROM not found: $romPath. Run make first or pass -Build."
 }
-if ([string]::IsNullOrWhiteSpace($Output)) {
+if ($fighterAnimAuditEnabled) {
+    if ($exactFrameCaptureEnabled -or $rendererSelectionEnabled -or
+        $foxSelectionEnabled -or -not [string]::IsNullOrWhiteSpace($SecondOutput)) {
+        throw '-FighterAnimAudit cannot be combined with other GDB/capture selectors.'
+    }
+    if ([string]::IsNullOrWhiteSpace($Output)) {
+        $stamp = Get-Date -Format 'yyyy-MM-dd'
+        $Output = Join-Path $root "artifacts\visibility\${stamp}_task40-$($FighterAnimAudit.ToLowerInvariant())"
+    } elseif (-not [System.IO.Path]::IsPathRooted($Output)) {
+        $Output = Join-Path $root $Output
+    }
+    New-Item -ItemType Directory -Path $Output -Force | Out-Null
+} elseif ([string]::IsNullOrWhiteSpace($Output)) {
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $Output = Join-Path $root "artifacts\visibility\melonds-$stamp.png"
 } elseif (-not [System.IO.Path]::IsPathRooted($Output)) {
@@ -264,7 +280,7 @@ try {
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
                 -Section 'Instance0.Gdb' -Key 'Enabled' -Value 'true'
             $arm9BreakOnStartup = if ($exactFrameCaptureEnabled -or
-                $foxSelectionEnabled) {
+                $foxSelectionEnabled -or $fighterAnimAuditEnabled) {
                 'true'
             } else {
                 'false'
@@ -325,7 +341,22 @@ try {
         Set-MelonDSCaptureRuntimeMode -GdbPath $gdbPath -ElfPath $elfPath `
             -Port $GdbPort -Mode $RendererFastRunMode -FoxMode $FoxCpuMode
     }
-    if ($exactFrameCaptureEnabled) {
+    if ($fighterAnimAuditEnabled) {
+        Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
+        [void][Smash64DSWindowCapture]::SetForegroundWindow(
+            $emulator.MainWindowHandle)
+        Start-Sleep -Milliseconds 100
+        Wait-MelonDSGdbListener -Process $emulator -Port $GdbPort | Out-Null
+        & (Join-Path $PSScriptRoot 'capture-fighter-animation-audit.ps1') `
+            -AuditMode $FighterAnimAudit `
+            -Gdb $gdbPath `
+            -Elf $elfPath `
+            -GdbPort $GdbPort `
+            -EmulatorProcessId $emulator.Id `
+            -WindowHandle ([long]$emulator.MainWindowHandle) `
+            -OutputDirectory $Output `
+            -StartMotion $FighterAnimStartMotion
+    } elseif ($exactFrameCaptureEnabled) {
         # Establish geometry once while emulation is running. Moving or
         # foregrounding the window after an exact frame pause can capture a Qt
         # resize transition instead of the completed DS presentation.
@@ -375,7 +406,7 @@ try {
     } catch {
         Write-Warning "Could not lower melonDS window: $_"
     }
-    if (-not $exactFrameCaptureEnabled) {
+    if (-not $exactFrameCaptureEnabled -and -not $fighterAnimAuditEnabled) {
         Write-Output "Captured live melonDS window: $Output ($size)"
     }
 } finally {

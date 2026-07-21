@@ -11,6 +11,50 @@
 #define NDS_STARTUP_LOGO_RELOC_PASS 0x4c524c43u
 #define NDS_STARTUP_LOGO_DRAW_PASS 0x4c445257u
 
+#if NDS_FIGHTER_ANIM_AUDIT
+#define NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT 2u
+#define NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY 219u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_SOURCE_NULL 0x0001u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_LOAD_FALLBACK 0x0002u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_EXTERN_FAIL 0x0004u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_FIGATREE_INVALID 0x0008u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_UNSAFE 0x0010u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_DURATION_END 0x0020u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_DURATION_LOOP 0x0040u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_DURATION_TIMEOUT 0x0080u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_DURATION_MISMATCH 0x0100u
+#define NDS_FIGHTER_ANIM_AUDIT_FLAG_EXPECTED_INVALID 0x0200u
+
+extern volatile u16 gNdsFighterAnimAuditRequested
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+extern volatile u16 gNdsFighterAnimAuditResolved
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+extern volatile u16 gNdsFighterAnimAuditFallback
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+extern volatile u16 gNdsFighterAnimAuditExpectedFrames
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+extern volatile u16 gNdsFighterAnimAuditPlayedFrames
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+extern volatile u16 gNdsFighterAnimAuditFlags
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+extern volatile u32 gNdsFighterAnimAuditActiveKind;
+extern volatile u32 gNdsFighterAnimAuditActiveMotion;
+extern volatile u32 gNdsFighterAnimAuditEpoch;
+extern volatile u32 gNdsFighterAnimAuditCaptureCount;
+extern volatile u32 gNdsFighterAnimAuditCompleteCount;
+extern volatile u32 gNdsFighterAnimAuditInvalidMotionCount;
+extern volatile u32 gNdsFighterAnimAuditLoadSerial;
+extern volatile u32 gNdsFighterAnimAuditLoadAssetID;
+extern volatile u32 gNdsFighterAnimAuditLoadResolved;
+extern volatile u32 gNdsFighterAnimAuditLoadFallback;
+#endif
+
 #define NDS_STARTUP_LOGO_BLOCKER_NONE 0u
 #define NDS_STARTUP_LOGO_BLOCKER_NO_SOBJ 1u
 #define NDS_STARTUP_LOGO_BLOCKER_UNSUPPORTED_FORMAT 2u

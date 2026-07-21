@@ -2599,6 +2599,36 @@ volatile u32 gNdsFighterNaturalMotionFigatreeNullCount;
 volatile u32 gNdsFighterNaturalMotionFigatreeTableInvalidCount;
 volatile u32 gNdsFighterNaturalMotionFigatreeAnimInvalidCount;
 volatile u32 gNdsFighterNaturalMotionUnsafeCount;
+#if NDS_FIGHTER_ANIM_AUDIT
+volatile u16 gNdsFighterAnimAuditRequested
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+volatile u16 gNdsFighterAnimAuditResolved
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+volatile u16 gNdsFighterAnimAuditFallback
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+volatile u16 gNdsFighterAnimAuditExpectedFrames
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+volatile u16 gNdsFighterAnimAuditPlayedFrames
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+volatile u16 gNdsFighterAnimAuditFlags
+    [NDS_FIGHTER_ANIM_AUDIT_KIND_COUNT]
+    [NDS_FIGHTER_ANIM_AUDIT_MOTION_CAPACITY];
+volatile u32 gNdsFighterAnimAuditActiveKind;
+volatile u32 gNdsFighterAnimAuditActiveMotion;
+volatile u32 gNdsFighterAnimAuditEpoch;
+volatile u32 gNdsFighterAnimAuditCaptureCount;
+volatile u32 gNdsFighterAnimAuditCompleteCount;
+volatile u32 gNdsFighterAnimAuditInvalidMotionCount;
+volatile u32 gNdsFighterAnimAuditLoadSerial;
+volatile u32 gNdsFighterAnimAuditLoadAssetID;
+volatile u32 gNdsFighterAnimAuditLoadResolved;
+volatile u32 gNdsFighterAnimAuditLoadFallback;
+#endif
 volatile u32 gNdsFighterNaturalCombatPhase;
 volatile u32 gNdsFighterNaturalCombatPhaseFrames;
 volatile u32 gNdsFighterNaturalCombatStallCount;

@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-20 21:20 Central
+Updated: 2026-07-21 12:40 Central
 
 Deadline: 2026-07-19 23:59 Central
 
@@ -16,8 +16,8 @@ Integrated user-facing candidate:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-14,692,352 bytes
-SHA-256 722EABE96D2BBCEE57005CB5B44EC395F26F12E305204EDB32BA710298140E4A
+14,958,592 bytes
+SHA-256 AEE10EB3912A9954090A40EE151406255FD22AA94C7EDF04DE3BB399DECF0415
 ```
 
 Laboratory profile-1 ROMs are evidence only and never replace this filename.
@@ -449,20 +449,33 @@ not an untouched generic material path. No effect counters or visual changes
 were added before the required corrected map and Tyler-marked contact sheet.
 Evidence: `artifacts/performance/2026-07-21_task39-visual-effects-preflight.md`.
 
-Task 40 stops at its mandatory Phase-0 review. Mario maps all 143 unique motion
-symbols; Fox references 158, but only 56 map and 102 are missing. The animation
-path is direct O2R/NitroFS/reloc loading into the imported object-animation
-interpreter, not `generate_nds_native_owners.py`. Invalid IDs currently return
-the supplied heap, permitting stale prior animation bytes. No cycler, mapping,
-or gameplay-adjacent behavior change was made before review. Evidence:
-`artifacts/performance/2026-07-21_task40-fighter-animation-phase0.md`.
+Task 40 completes its source-backed animation bank and Phase-1 visual/load
+coverage checkpoint. All 195 non-null Mario and 209 non-null Fox table rows have
+asserted non-clear screenshots; the 9/10 remaining rows are decomp-authored
+nulls. Tyler approved the complete Mario strip, excluding missing sounds which
+remain Task 38/audio scope. Fox remains pending Tyler. The natural pass requests
+21 Mario and 42 Fox motions, leaving 183/177 unrequested, with zero load-
+fallback or hard-seam flags.
 
-Focused audio fixtures and the new GDB marker pass. The final DevFast and
-Boundary attempts both stop in the existing Task-36 fast-iteration gate before
-the one-minute route: actual `RENDER_TEXEL1=2,2,0,...` conflicts with mode 2's
-all-zero replay assertion. The FGM marker at that point is a clean 16-slot zero
-ring. Do not call this a green Boundary; reconcile the Task-36 replay/live-water
-contract on base `60e1e66`, then rerun the same DevFast -> Boundary chain.
+Fox motion 198 exposed the hang root cause: `FTFoxAnimAppear` (`0x309`) and
+three sibling appear assets are AObjEvent32. Format classification now separates
+them while the shared force loader admits the full Mario/Fox bank; stale heap
+replay is gone. The missing `T` in `DEATH` is normalized at the same source-
+sprite seam. Current ROM growth is 266,240 bytes; runtime still loads one motion
+into the existing heap and net reserve remains 166,672 bytes.
+
+The initial complete duration matrix predates the live-joint-bound fix and is
+not claimed green. Mario motion 203 passes 83/83 post-fix; Tyler requested no
+replay of known-good rows, so the coverage CSV labels the remaining numeric
+evidence provisional. Evidence:
+`artifacts/performance/2026-07-21_task40-fighter-animation-audit.md` and the
+423-row coverage CSV plus Mario/Fox contact sheets.
+
+DevFast's preflight/build checks and corrected focused runtime pass. Boundary
+passes against profile-0 ROM `AEE10EB3...`; profile-0 audit-symbol hits are zero.
+The fresh rebuild proved Task-36 replay correctly keeps the live-water counter
+all-zero, so the stale-ROM verifier edit was reverted and its fail-closed source
+fixture restored. The retired four-shard Regression fleet was not revived.
 
 ## Stable-30 retail contract
 

@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-21 (Tasks 38-40 audit gates)
+Updated: 2026-07-21 (Tasks 38-40 audit closeout)
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
@@ -25,22 +25,21 @@ Task 38's unsupported-FGM census is implemented and verifier-exported. Exact
 special cues remain blocked by representation and the 128 KiB resident cap;
 never substitute another sound. Tyler's listen pass remains the hit-sound oracle.
 
-Task 39 stopped on its mandated structural-map contradiction: shield already
-uses a DS substitute. Resume only from a corrected owner map and Tyler's marked
-contact sheet.
+Task 39 stopped on its mandatory owner-map contradiction: shield already uses a
+DS substitute. Resume only from a corrected map and Tyler-marked contact sheet.
 
-Task 40 delivered its mandatory Phase-0 map. Fox has 102 unique unmapped motion
-symbols, and invalid lookup can replay stale heap data. Review the report before
-adding the Phase-1 cycler/counters or any gameplay-adjacent mapping fix.
+Task 40 has complete visual/load coverage: Mario 195/195 non-null motions are
+Tyler-approved, Fox 209/209 are captured and pending Tyler. The full source-
+backed bank, AObj16/AObj32 loader fix, `DEATH` letter `T`, watchdog, resume, and
+Fox-AI-off cycler are retained. Do not rerun known-good rows. The full corrected
+numeric duration matrix remains provisional; only resume specifically requested
+or unverified rows if Tyler asks.
 
-Evidence is in the three `2026-07-21_task38/39/40-*` reports under
-`artifacts/performance`.
-
-Verification is not green. Audio fixtures and the new marker pass, but DevFast
-and Boundary both stop at frame 212 in the existing Task-36 mode-2 water gate:
-`RENDER_TEXEL1=2,2,0,...` versus an all-zero assertion. Boundary never reaches
-the one-minute census. Reconcile that base-`60e1e66` contract without weakening
-it, then rerun DevFast -> Boundary before promotion.
+Evidence is under `artifacts/performance/2026-07-21_task38/39/40-*`; Task 40's
+423-row CSV and two contact sheets are permanent. Profile-0 ROM is 14,958,592
+bytes / `AEE10EB3...`, net reserve 166,672, audit-symbol hits zero. DevFast's
+components and the final Boundary are green. The retired Regression fleet stays
+retired.
 
 Preserve the unrelated `.gitignore` edit and all untracked optimization task,
 stage, review, and README files; they are user-owned.

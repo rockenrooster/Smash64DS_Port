@@ -21520,3 +21520,17 @@ remains skipped for the requested fast iteration cadence.
 - Mario maps all 143 unique symbols. Fox maps 56 of 158, leaving 102 missing;
   invalid lookup can return stale heap bytes. Stopped before cycler, asset, or
   gameplay-adjacent changes for Phase-0 review.
+
+## 2026-07-21 - Task 40 Phase 1 visual/load checkpoint
+
+- Completed the source-backed Mario/Fox animation bank and captured all 195
+  non-null Mario plus 209 non-null Fox motions. Tyler approved Mario; Fox is
+  pending review. The natural match requests 21/42 unique motions with zero
+  load fallback or hard-seam flags.
+- Fixed the hang at Fox motion 198 by classifying the four appear/Arwing assets
+  as AObjEvent32 while keeping every animation admissible at the shared force
+  loader. Added the missing `T` to the existing announce-sprite normalizer.
+- Kept the full duration matrix provisional rather than replay known-good rows:
+  the first captures predate the live-joint-bound correction; Mario 203 proves
+  the corrected path at 83/83. Profile-0 instrumentation compiles out, reserve
+  is 166,672 bytes, and the fresh `AEE10EB3...` ROM passes Boundary.
