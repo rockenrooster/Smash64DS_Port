@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-20 (Task 36 Phase-B conservation stop)
+Updated: 2026-07-20 (Task 36 Phase-B replay keep and profile-0 promotion)
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
@@ -21,19 +21,24 @@ compare/i2f/addsub `1/1/1`. Do not edit `decomp/`.
 
 ## Next Packet
 
-Task 36 is closed at its Phase-B gate. Phase A commit `c08e8ee` keeps 26 rigid
-bindings on hardware composition, binding 29 on the exact CPU path, all stage
-surfaces visible, and approximately 40K stage ticks saved. Tyler approved the
-screenshots.
+Task 36 is implementation-complete. Tyler explicitly accepted the measured
+58.463% conservation on 2026-07-20. Mode 2 now captures and CPU-replays the 3,916
+exact GX words owned by rigid segments 0/5/7 while dynamic stage segments remain
+live. The lab gate proves READY, one bake, 3 segments, 33 runs, 26 rigid bindings,
+full arena `0x150000/0`, and zero fallback/faults through countdown, early combat,
+and Whispy.
 
-The standalone Task-34 census runs Task29/34/36/affine `0/1/1/0`. Its full-arena
-gate is `0x150000/0`; a degraded arm is rejected before capture. Valid countdown
-and early captures contain 2,762 entries / 6,664 words per frame. The 26 rigid
-DObjs own at most 3,929 words (58.959% of the stage stream), and only 3,896 are
-constant across both windows (58.463%). This is below the mandatory 60% gate;
-Whispy cannot raise an intersection and was not rerun after its fixed timeout.
-Do not implement the Phase-B bake/replay, DMA, or device pair. Evidence:
+Against the Phase-A control at frames 438..445, stage P50/P95 falls
+430,368/430,528 -> 284,320/284,544 (`-146,048/-145,984`) and draw falls
+832,736/835,776 -> 704,672/707,712 (`-128,064/-128,064`). The replay image is
+0/49,152 changed pixels versus Phase A, with the floor and all three platforms
+visible. The profile-0 one-minute Time Up/Results soak and Boundary pass. The
+published ROM is `C1B3DDE3...` with Task36/generated-M3/affine/Task32
+`2/1/1/1`. Evidence:
 `artifacts/performance/2026-07-20_task36-phaseb-conservation.md`.
+
+Retail engagement/performance remains queued for the next device checkpoint;
+do not claim a hardware-speed number from the melonDS result.
 
 No next implementation task is claimed in this handoff. Select the highest
 unowned red P1 row from `P1_EXECUTION_BOARD.md`.

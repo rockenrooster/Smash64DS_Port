@@ -121,6 +121,17 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
 static NDSRendererAdapterNativeOwnerWorkspace
     sNdsRendererAdapterNativeOwnerWorkspace;
 
+typedef struct NDSRendererAdapterStageWorldSourceKey
+{
+    u32 base_translate[3];
+    u32 base_rotate[4];
+    u32 base_scale[3];
+    u8 xobj_kinds[5];
+    u8 xobj_present_mask;
+    u8 xobjs_num;
+    u8 reserved;
+} NDSRendererAdapterStageWorldSourceKey;
+
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT 8u
 #define NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT 57u
@@ -144,6 +155,11 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     NDSRendererMatrix20p12 binding_composed[
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+#if NDS_TASK36_HW_COMPOSE
+    NDSRendererAdapterStageWorldSourceKey task36_rigid_source_keys[
+        NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    u64 task36_runtime_rigid_mask;
+#endif
     NDSRendererNativeMaterial materials[
         NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT];
     MObj *material_mobjs[NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT];
@@ -161,12 +177,6 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     u32 topology_stamp;
     u32 topology_valid;
 } NDSRendererAdapterNativeStageWorkspace;
-
-#if NDS_TASK36_HW_COMPOSE
-/* Binding 29's raw source-Z/range output remains CPU-composed: its hardware
- * depth overlaps the later projected no-Z platform cards. */
-#define NDS_RENDERER_TASK36_RIGID_BINDING_MASK 0x00000381c00fffffULL
-#endif
 
 /* The stage owner remains armed across fighter links 9, so it cannot share
  * the complete-fighter workspace. */
@@ -217,17 +227,6 @@ typedef struct NDSRendererAdapterDObjWorldCacheEntry
     const DObj *dobj;
     NDSRendererMatrix20p12 world;
 } NDSRendererAdapterDObjWorldCacheEntry;
-
-typedef struct NDSRendererAdapterStageWorldSourceKey
-{
-    u32 base_translate[3];
-    u32 base_rotate[4];
-    u32 base_scale[3];
-    u8 xobj_kinds[5];
-    u8 xobj_present_mask;
-    u8 xobjs_num;
-    u8 reserved;
-} NDSRendererAdapterStageWorldSourceKey;
 
 typedef struct NDSRendererAdapterStageWorldCacheEntry
 {
@@ -6591,7 +6590,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
                 gNdsRendererTask36ObservedDynamicMaskHi |=
                     1u << (binding_index - 32u);
             }
-            if ((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+            if ((workspace->task36_runtime_rigid_mask &
                  ((u64)1u << binding_index)) != 0u)
             {
                 gNdsRendererTask36RigidConstancyMismatchCount++;
@@ -6607,7 +6606,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
          binding_index++)
     {
 #if NDS_TASK36_HW_COMPOSE
-        if ((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+        if ((workspace->task36_runtime_rigid_mask &
              ((u64)1u << binding_index)) != 0u)
         {
             continue;
@@ -6672,8 +6671,49 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
         {
             return FALSE;
         }
+        if (((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+              ((u64)1u << binding_index)) != 0u) &&
+            (ndsRendererAdapterCaptureStageWorldSourceKey(
+                 workspace->binding_dobjs[binding_index],
+                 &workspace->task36_rigid_source_keys[binding_index]) ==
+             FALSE))
+        {
+            return FALSE;
+        }
     }
+    workspace->task36_runtime_rigid_mask =
+        NDS_RENDERER_TASK36_RIGID_BINDING_MASK;
     return TRUE;
+}
+
+static void ndsRendererAdapterValidateTask36StageWorld(
+    NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    u32 binding_index;
+
+    workspace->task36_runtime_rigid_mask =
+        NDS_RENDERER_TASK36_RIGID_BINDING_MASK;
+    for (binding_index = 0u;
+         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index++)
+    {
+        if ((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+             ((u64)1u << binding_index)) == 0u)
+        {
+            continue;
+        }
+        if (ndsRendererAdapterStageWorldSourceKeyMatches(
+                workspace->binding_dobjs[binding_index],
+                &workspace->task36_rigid_source_keys[binding_index]) ==
+            FALSE)
+        {
+            workspace->task36_runtime_rigid_mask = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererTask36RigidConstancyMismatchCount++;
+#endif
+            return;
+        }
+    }
 }
 #endif
 
@@ -6831,6 +6871,9 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             workspace->frame.asset_bases[i] = loaded[i]->data;
         }
     }
+#if NDS_TASK36_HW_COMPOSE
+    ndsRendererAdapterValidateTask36StageWorld(workspace);
+#endif
     if (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE)
     {
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
@@ -6870,7 +6913,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     workspace->frame.camera_modelview = &workspace->camera_modelview;
     workspace->frame.binding_world = workspace->binding_world;
     workspace->frame.rigid_binding_mask =
-        NDS_RENDERER_TASK36_RIGID_BINDING_MASK;
+        workspace->task36_runtime_rigid_mask;
 #else
     workspace->frame.camera_modelview = NULL;
     workspace->frame.binding_world = NULL;

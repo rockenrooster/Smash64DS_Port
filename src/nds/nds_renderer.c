@@ -447,7 +447,8 @@ static inline void ndsRendererBenchmarkGlTexCoord2t16(t16 s, t16 t)
 #define glTexCoord2t16 ndsRendererBenchmarkGlTexCoord2t16
 #endif
 
-#if (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS) && \
+#if (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
+     (NDS_TASK36_HW_COMPOSE == 2)) && \
     NDS_RENDERER_HW_TRIANGLES
 #define NDS_TASK29_GX_MAX_WORDS 16u
 #define NDS_TASK29_GX_CENSUS_CODE \
@@ -574,6 +575,13 @@ ndsRendererTask34StageStreamEndSegment(void)
     sNdsTask34StageStreamDObj = NDS_TASK34_STAGE_STREAM_DOBJ_NONE;
     sNdsTask34StageStreamActive = FALSE;
 }
+#endif
+
+#if NDS_TASK36_HW_COMPOSE == 2
+static void ndsRendererTask36ReplayRecord(
+    NDSRendererTask29GXClass command_class,
+    const u32 *words,
+    u32 word_count);
 #endif
 
 #if NDS_TASK29_GX_CENSUS
@@ -708,6 +716,9 @@ ndsRendererTask29GXRecord(
 
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamRecord(command_class, words, word_count);
+#endif
+#if NDS_TASK36_HW_COMPOSE == 2
+    ndsRendererTask36ReplayRecord(command_class, words, word_count);
 #endif
     ndsRendererTask29GXEnsureActive();
     if ((class_index >= NDS_TASK29_GX_CLASS_COUNT) ||
@@ -865,8 +876,18 @@ void NDS_TASK29_GX_CENSUS_CODE ndsRendererTask29GXPublishFrame(void)
     sNdsTask29GXActive = FALSE;
 }
 #else
-#define ndsRendererTask29GXRecord(command_class, words, word_count) \
-    ndsRendererTask34StageStreamRecord((command_class), (words), (word_count))
+static inline void ndsRendererTask29GXRecord(
+    NDSRendererTask29GXClass command_class,
+    const u32 *words,
+    u32 word_count)
+{
+#if NDS_TASK34_STAGE_STREAM_CENSUS
+    ndsRendererTask34StageStreamRecord(command_class, words, word_count);
+#endif
+#if NDS_TASK36_HW_COMPOSE == 2
+    ndsRendererTask36ReplayRecord(command_class, words, word_count);
+#endif
+}
 #endif
 
 static inline void ndsRendererTask29GlEnable(int bits)
@@ -1091,7 +1112,8 @@ static inline void ndsRendererHardwareWriteColorWord(u32 value)
 #elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
-#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS
+#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
+    (NDS_TASK36_HW_COMPOSE == 2)
     ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
 #endif
     GFX_COLOR = value;
@@ -1105,7 +1127,8 @@ static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
 #elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     ndsRendererBenchmarkSinkWord(value);
 #else
-#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS
+#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
+    (NDS_TASK36_HW_COMPOSE == 2)
     ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
 #endif
     GFX_TEX_COORD = value;
@@ -1121,7 +1144,8 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
     ndsRendererBenchmarkSinkWord(xy);
     ndsRendererBenchmarkSinkWord(z);
 #else
-#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS
+#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
+    (NDS_TASK36_HW_COMPOSE == 2)
     u32 words[2] = {xy, z};
 
     ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);
@@ -1987,6 +2011,20 @@ volatile u32 gNdsRendererTask36PrepareRunRejectReason;
 volatile u32 gNdsRendererTask36RigidConstancyMismatchCount;
 volatile u32 gNdsRendererTask36ObservedDynamicMaskLo;
 volatile u32 gNdsRendererTask36ObservedDynamicMaskHi;
+#if NDS_TASK36_HW_COMPOSE == 2
+volatile u32 gNdsRendererTask36ReplayState;
+volatile u32 gNdsRendererTask36BakeAttemptCount;
+volatile u32 gNdsRendererTask36BakeSuccessCount;
+volatile u32 gNdsRendererTask36BakeFailureCount;
+volatile u32 gNdsRendererTask36ReplayFrameCount;
+volatile u32 gNdsRendererTask36ReplaySegmentCount;
+volatile u32 gNdsRendererTask36ReplayRunCount;
+volatile u32 gNdsRendererTask36ReplayWordCount;
+volatile u32 gNdsRendererTask36ReplayFallbackCount;
+volatile u32 gNdsRendererTask36ReplayArenaRejectCount;
+volatile u32 gNdsRendererTask36ReplayMaterialRejectCount;
+volatile u32 gNdsRendererTask36ReplayCaptureWordCount;
+#endif
 #endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
@@ -3968,6 +4006,442 @@ static NDSNativeStageOwnerExecution sNdsNativeStageOwnerExecution;
 static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
     NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
 static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
+#if NDS_TASK36_HW_COMPOSE == 2
+#define NDS_TASK36_REPLAY_WORD_CAPACITY 4608u
+#define NDS_TASK36_REPLAY_SEGMENT_MASK \
+    ((1u << 0u) | (1u << 5u) | (1u << 7u))
+
+typedef enum NDSRendererTask36ReplayState
+{
+    NDS_TASK36_REPLAY_UNSEEDED = 0,
+    NDS_TASK36_REPLAY_CAPTURING,
+    NDS_TASK36_REPLAY_READY,
+    NDS_TASK36_REPLAY_DISABLED
+} NDSRendererTask36ReplayState;
+
+typedef struct NDSRendererTask36ReplayRun
+{
+    NDSNativeStagePreparedRun prepared;
+    u16 word_offset;
+    u16 word_count;
+    u8 valid;
+    u8 world_mult_count;
+    u8 reserved[2];
+} NDSRendererTask36ReplayRun;
+
+typedef struct NDSRendererTask36ReplayOwner
+{
+    u32 words[NDS_TASK36_REPLAY_WORD_CAPACITY] __attribute__((aligned(32)));
+    NDSRendererTask36ReplayRun runs[NDS_NATIVE_STAGE_RUN_COUNT];
+    NDSRendererStats segment_stats[NDS_NATIVE_STAGE_SEGMENT_COUNT];
+    NDSRendererConfig config;
+    u64 segment_epoch_mask[NDS_NATIVE_STAGE_SEGMENT_COUNT];
+    u32 topology_generation;
+    u32 topology_stamp;
+    u32 word_count;
+    u32 command_word_index;
+    u32 command_slot;
+    u32 current_run;
+    u32 captured_segment_mask;
+    u32 capture_active;
+    u32 capture_fault;
+    u32 frame_capture;
+    u32 frame_replay;
+    NDSRendererTask36ReplayState state;
+} NDSRendererTask36ReplayOwner;
+
+static NDSRendererTask36ReplayOwner sNdsRendererTask36ReplayOwner;
+
+static s32 ndsRendererTask36ReplaySegmentEligible(u32 segment_index)
+{
+    return ((segment_index < NDS_NATIVE_STAGE_SEGMENT_COUNT) &&
+            ((NDS_TASK36_REPLAY_SEGMENT_MASK &
+              (1u << segment_index)) != 0u)) ? TRUE : FALSE;
+}
+
+static void ndsRendererTask36ReplayReset(void)
+{
+    memset(&sNdsRendererTask36ReplayOwner, 0,
+           sizeof(sNdsRendererTask36ReplayOwner));
+    sNdsRendererTask36ReplayOwner.current_run = UINT_MAX;
+    sNdsRendererTask36ReplayOwner.command_word_index = UINT_MAX;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererTask36ReplayState = NDS_TASK36_REPLAY_UNSEEDED;
+#endif
+}
+
+static s32 ndsRendererTask36ReplayTexturesValid(void)
+{
+    u32 run_index;
+
+    for (run_index = 0u; run_index < NDS_NATIVE_STAGE_RUN_COUNT; run_index++)
+    {
+        const NDSRendererTask36ReplayRun *run =
+            &sNdsRendererTask36ReplayOwner.runs[run_index];
+        const NDSRendererHardwareTextureCacheEntry *entry =
+            run->prepared.texture_entry;
+
+        if (run->valid == FALSE)
+        {
+            continue;
+        }
+        if ((run->prepared.textured != FALSE) &&
+            ((entry == NULL) || (entry->ready == FALSE) ||
+             ((u32)entry->name != run->prepared.texture_name)))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static void ndsRendererTask36ReplayBeginFrame(
+    const NDSRendererNativeStageFrame *frame)
+{
+    NDSRendererTask36ReplayOwner *owner =
+        &sNdsRendererTask36ReplayOwner;
+
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererTask36ReplaySegmentCount = 0u;
+    gNdsRendererTask36ReplayRunCount = 0u;
+    gNdsRendererTask36ReplayWordCount = 0u;
+#endif
+    owner->frame_capture = FALSE;
+    owner->frame_replay = FALSE;
+    if ((owner->topology_generation != frame->topology_generation) ||
+        (owner->topology_stamp != frame->topology_stamp))
+    {
+        ndsRendererTask36ReplayReset();
+        owner->topology_generation = frame->topology_generation;
+        owner->topology_stamp = frame->topology_stamp;
+    }
+    if (frame->rigid_binding_mask !=
+        NDS_RENDERER_TASK36_RIGID_BINDING_MASK)
+    {
+        if (owner->state == NDS_TASK36_REPLAY_READY)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererTask36ReplayFallbackCount++;
+#endif
+        }
+        return;
+    }
+    if ((gNdsTaskmanArenaChosenSize != 0x150000u) ||
+        (gNdsTaskmanArenaAllocFailCount != 0u))
+    {
+        if ((gNdsTaskmanArenaChosenSize != 0u) &&
+            (owner->state != NDS_TASK36_REPLAY_DISABLED))
+        {
+            owner->state = NDS_TASK36_REPLAY_DISABLED;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererTask36ReplayArenaRejectCount++;
+            gNdsRendererTask36ReplayState = NDS_TASK36_REPLAY_DISABLED;
+#endif
+        }
+        return;
+    }
+    if (owner->state == NDS_TASK36_REPLAY_UNSEEDED)
+    {
+        return;
+    }
+    if (owner->state != NDS_TASK36_REPLAY_READY)
+    {
+        return;
+    }
+    if (memcmp(&owner->config, frame->config, sizeof(owner->config)) != 0)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererTask36ReplayMaterialRejectCount++;
+        gNdsRendererTask36ReplayFallbackCount++;
+#endif
+        return;
+    }
+    if (ndsRendererTask36ReplayTexturesValid() == FALSE)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererTask36ReplayFallbackCount++;
+#endif
+        return;
+    }
+    owner->frame_replay = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererTask36ReplayFrameCount++;
+#endif
+}
+
+static void ndsRendererTask36ReplayStartCapture(
+    const NDSRendererNativeStageFrame *frame)
+{
+    NDSRendererTask36ReplayOwner *owner =
+        &sNdsRendererTask36ReplayOwner;
+
+    if ((owner->state != NDS_TASK36_REPLAY_UNSEEDED) ||
+        (frame->rigid_binding_mask !=
+         NDS_RENDERER_TASK36_RIGID_BINDING_MASK) ||
+        (gNdsTaskmanArenaChosenSize != 0x150000u) ||
+        (gNdsTaskmanArenaAllocFailCount != 0u))
+    {
+        return;
+    }
+    owner->state = NDS_TASK36_REPLAY_CAPTURING;
+    owner->frame_capture = TRUE;
+    owner->word_count = 0u;
+    owner->captured_segment_mask = 0u;
+    owner->capture_fault = FALSE;
+    owner->config = *frame->config;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererTask36BakeAttemptCount++;
+    gNdsRendererTask36ReplayState = NDS_TASK36_REPLAY_CAPTURING;
+#endif
+}
+
+static void ndsRendererTask36ReplayCapturePreparedSegment(
+    u32 segment_index,
+    const NDSRendererStats *stats,
+    u64 epoch_mask)
+{
+    NDSRendererTask36ReplayOwner *owner =
+        &sNdsRendererTask36ReplayOwner;
+
+    if (((owner->frame_capture == FALSE) &&
+         (owner->state != NDS_TASK36_REPLAY_UNSEEDED)) ||
+        (ndsRendererTask36ReplaySegmentEligible(segment_index) == FALSE))
+    {
+        return;
+    }
+    owner->segment_stats[segment_index] = *stats;
+    owner->segment_epoch_mask[segment_index] = epoch_mask;
+}
+
+static s32 ndsRendererTask36ReplayUsePreparedSegment(
+    u32 segment_index,
+    NDSRendererStats *stats,
+    u64 *epoch_mask)
+{
+    NDSRendererTask36ReplayOwner *owner =
+        &sNdsRendererTask36ReplayOwner;
+
+    if ((owner->frame_replay == FALSE) || (stats == NULL) ||
+        (epoch_mask == NULL) ||
+        (ndsRendererTask36ReplaySegmentEligible(segment_index) == FALSE))
+    {
+        return FALSE;
+    }
+    *stats = owner->segment_stats[segment_index];
+    *epoch_mask |= owner->segment_epoch_mask[segment_index];
+    return TRUE;
+}
+
+static void ndsRendererTask36ReplayCaptureBeginRun(u32 run_index)
+{
+    NDSRendererTask36ReplayOwner *owner =
+        &sNdsRendererTask36ReplayOwner;
+    NDSRendererTask36ReplayRun *run;
+
+    if ((owner->frame_capture == FALSE) ||
+        (run_index >= NDS_NATIVE_STAGE_RUN_COUNT) ||
+        (owner->capture_active != FALSE))
+    {
+        owner->capture_fault = TRUE;
+        return;
+    }
+    run = &owner->runs[run_index];
+    memset(run, 0, sizeof(*run));
+    run->prepared = sNdsNativeStageOwnerExecution.runs[run_index];
+    run->word_offset = (u16)owner->word_count;
+    owner->current_run = run_index;
+    owner->command_word_index = UINT_MAX;
+    owner->command_slot = 4u;
+    owner->capture_active = TRUE;
+}
+
+static void ndsRendererTask36ReplayCaptureEndRun(u32 run_index)
+{
+    NDSRendererTask36ReplayOwner *owner =
+        &sNdsRendererTask36ReplayOwner;
+    NDSRendererTask36ReplayRun *run;
+    u32 word_count;
+
+    if ((owner->capture_active == FALSE) ||
+        (owner->current_run != run_index) ||
+        (run_index >= NDS_NATIVE_STAGE_RUN_COUNT))
+    {
+        owner->capture_fault = TRUE;
+        return;
+    }
+    run = &owner->runs[run_index];
+    word_count = owner->word_count - run->word_offset;
+    if ((word_count == 0u) || (word_count > USHRT_MAX))
+    {
+        owner->capture_fault = TRUE;
+    }
+    else
+    {
+        run->word_count = (u16)word_count;
+        run->valid = TRUE;
+    }
+    owner->capture_active = FALSE;
+    owner->current_run = UINT_MAX;
+    owner->command_word_index = UINT_MAX;
+}
+
+static s32 ndsRendererTask36ReplayOpcode(
+    NDSRendererTask29GXClass command_class,
+    u32 *opcode,
+    u32 *parameter_count)
+{
+    switch (command_class)
+    {
+    case NDS_TASK29_GX_MATRIX_MODE:
+        *opcode = REG2ID(MATRIX_CONTROL); *parameter_count = 1u; return TRUE;
+    case NDS_TASK29_GX_MATRIX_IDENTITY:
+        *opcode = REG2ID(MATRIX_IDENTITY); *parameter_count = 0u; return TRUE;
+    case NDS_TASK29_GX_MATRIX_LOAD4X4:
+        *opcode = REG2ID(MATRIX_LOAD4x4); *parameter_count = 16u; return TRUE;
+    case NDS_TASK29_GX_MATRIX_MULT4X4:
+        *opcode = REG2ID(MATRIX_MULT4x4); *parameter_count = 16u; return TRUE;
+    case NDS_TASK29_GX_MATRIX_PUSH:
+        *opcode = REG2ID(MATRIX_PUSH); *parameter_count = 0u; return TRUE;
+    case NDS_TASK29_GX_MATRIX_POP:
+        *opcode = REG2ID(MATRIX_POP); *parameter_count = 1u; return TRUE;
+    case NDS_TASK29_GX_MATRIX_STORE:
+        *opcode = REG2ID(MATRIX_STORE); *parameter_count = 1u; return TRUE;
+    case NDS_TASK29_GX_MATRIX_RESTORE:
+        *opcode = REG2ID(MATRIX_RESTORE); *parameter_count = 1u; return TRUE;
+    case NDS_TASK29_GX_BEGIN:
+        *opcode = FIFO_BEGIN; *parameter_count = 1u; return TRUE;
+    case NDS_TASK29_GX_COLOR:
+        *opcode = FIFO_COLOR; *parameter_count = 1u; return TRUE;
+    case NDS_TASK29_GX_TEX_COORD:
+        *opcode = FIFO_TEX_COORD; *parameter_count = 1u; return TRUE;
+    case NDS_TASK29_GX_VERTEX16:
+        *opcode = FIFO_VERTEX16; *parameter_count = 2u; return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static void ndsRendererTask36ReplayRecord(
+    NDSRendererTask29GXClass command_class,
+    const u32 *words,
+    u32 word_count)
+{
+    NDSRendererTask36ReplayOwner *owner =
+        &sNdsRendererTask36ReplayOwner;
+    u32 opcode;
+    u32 parameter_count;
+    u32 i;
+
+    if ((owner->capture_active == FALSE) ||
+        (ndsRendererTask36ReplayOpcode(
+             command_class, &opcode, &parameter_count) == FALSE))
+    {
+        return;
+    }
+    if (command_class == NDS_TASK29_GX_MATRIX_MULT4X4)
+    {
+        NDSRendererTask36ReplayRun *run =
+            &owner->runs[owner->current_run];
+
+        if (run->world_mult_count == UCHAR_MAX)
+        {
+            owner->capture_fault = TRUE;
+            return;
+        }
+        run->world_mult_count++;
+    }
+    if ((parameter_count > word_count) ||
+        ((parameter_count != 0u) && (words == NULL)))
+    {
+        owner->capture_fault = TRUE;
+        return;
+    }
+    if (owner->command_slot >= 4u)
+    {
+        if (owner->word_count >= NDS_TASK36_REPLAY_WORD_CAPACITY)
+        {
+            owner->capture_fault = TRUE;
+            return;
+        }
+        owner->command_word_index = owner->word_count++;
+        owner->words[owner->command_word_index] = 0u;
+        owner->command_slot = 0u;
+    }
+    if (owner->word_count + parameter_count >
+        NDS_TASK36_REPLAY_WORD_CAPACITY)
+    {
+        owner->capture_fault = TRUE;
+        return;
+    }
+    owner->words[owner->command_word_index] |=
+        opcode << (owner->command_slot * 8u);
+    owner->command_slot++;
+    for (i = 0u; i < parameter_count; i++)
+    {
+        owner->words[owner->word_count++] = words[i];
+    }
+}
+
+static void ndsRendererTask36ReplayFinishFrame(void)
+{
+    NDSRendererTask36ReplayOwner *owner =
+        &sNdsRendererTask36ReplayOwner;
+    u32 segment_index;
+    u32 valid = TRUE;
+
+    if (owner->frame_capture == FALSE)
+    {
+        return;
+    }
+    if ((owner->capture_active != FALSE) || (owner->capture_fault != FALSE) ||
+        (owner->captured_segment_mask != NDS_TASK36_REPLAY_SEGMENT_MASK) ||
+        (owner->word_count == 0u) ||
+        (owner->word_count > NDS_TASK36_REPLAY_WORD_CAPACITY))
+    {
+        valid = FALSE;
+    }
+    for (segment_index = 0u;
+         (segment_index < NDS_NATIVE_STAGE_SEGMENT_COUNT) && valid;
+         segment_index++)
+    {
+        const NDSNativeStageSegment *segment;
+        u32 run_offset;
+
+        if (ndsRendererTask36ReplaySegmentEligible(segment_index) == FALSE)
+        {
+            continue;
+        }
+        segment = &sNdsNativeStageSegments[segment_index];
+        for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
+        {
+            u32 run_index = (u32)segment->first_run + run_offset;
+
+            if (owner->runs[run_index].valid == FALSE)
+            {
+                valid = FALSE;
+                break;
+            }
+        }
+    }
+    owner->frame_capture = FALSE;
+    if (valid == FALSE)
+    {
+        owner->state = NDS_TASK36_REPLAY_DISABLED;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererTask36BakeFailureCount++;
+        gNdsRendererTask36ReplayState = NDS_TASK36_REPLAY_DISABLED;
+#endif
+        return;
+    }
+    DC_FlushRange(owner->words, owner->word_count * sizeof(owner->words[0]));
+    owner->state = NDS_TASK36_REPLAY_READY;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererTask36BakeSuccessCount++;
+    gNdsRendererTask36ReplayCaptureWordCount = owner->word_count;
+    gNdsRendererTask36ReplayState = NDS_TASK36_REPLAY_READY;
+#endif
+}
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
 static u32 sNdsNativeStageTopologyFaultInjected;
 #endif
@@ -19434,7 +19908,8 @@ static void ndsRendererNativeStageBeginRun(
     const NDSNativeStagePreparedRun *run,
     u32 submit_class,
     u32 segment_owner,
-    NDSRendererStats *stats)
+    NDSRendererStats *stats,
+    u32 replay)
 {
     u32 poly_fmt = run->poly_fmt;
 
@@ -19448,6 +19923,8 @@ static void ndsRendererNativeStageBeginRun(
         poly_fmt |= POLY_CULL_BACK;
     }
     ndsRendererHardwareEndBatch();
+    if (replay == FALSE)
+    {
 #if NDS_TASK36_HW_COMPOSE
     if (ndsRendererNativeStageTask36BindingIsRigid(
             native_run->binding_index) != FALSE)
@@ -19495,6 +19972,7 @@ static void ndsRendererNativeStageBeginRun(
     {
         ndsRendererLoadHardwareMatrices(NULL, FALSE);
     }
+    }
     glEnable(GL_TEXTURE_2D);
     if (run->textured != 0u)
     {
@@ -19529,36 +20007,109 @@ static void ndsRendererNativeStageBeginRun(
     }
     glDisable(GL_FOG);
     ndsRendererHardwareSetPolyFmt(poly_fmt);
-    glBegin(GL_TRIANGLE);
+    if (replay == FALSE)
+    {
+        glBegin(GL_TRIANGLE);
+        ndsRendererProfileRecordBatchBegin();
+        sNdsRendererHardwareTriangleBatchOpen = TRUE;
+        sNdsRendererHardwareTriangleBatchTextured = run->textured;
+        sNdsRendererHardwareTriangleBatchTextureName = run->texture_name;
+        sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
+        sNdsRendererHardwareTriangleBatchAlphaKey = run->alpha_test;
+        sNdsRendererHardwareTriangleBatchFogKey = 0u;
+        sNdsRendererHardwareTriangleBatchMatrixMode =
+#if NDS_TASK36_HW_COMPOSE
+            (ndsRendererNativeStageTask36BindingIsRigid(
+                 native_run->binding_index) != FALSE) ?
+                NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE :
+#endif
+            ((submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ||
+             (submit_class ==
+              NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)) ?
+                NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED :
+                NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY;
+        sNdsRendererHardwareTriangleBatchMatrixGeneration =
+#if NDS_TASK36_HW_COMPOSE
+            (ndsRendererNativeStageTask36BindingIsRigid(
+                 native_run->binding_index) != FALSE) ?
+                sNdsRendererHardwareMatrixGeneration :
+#endif
+            (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
+                1u :
+            (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
+                2u : 0u;
+    }
+}
+
+#if NDS_TASK36_HW_COMPOSE == 2
+static s32 NDS_RENDERER_FAST_RUN_CODE ndsRendererTask36ReplayRun(
+    u32 run_index,
+    const NDSNativeStageRun *native_run,
+    u32 segment_owner,
+    NDSRendererStats *stats)
+{
+    NDSRendererTask36ReplayOwner *owner =
+        &sNdsRendererTask36ReplayOwner;
+    const NDSRendererTask36ReplayRun *run;
+    const u32 *words;
+    u32 i;
+
+    if ((run_index >= NDS_NATIVE_STAGE_RUN_COUNT) ||
+        (native_run == NULL) || (stats == NULL))
+    {
+        return FALSE;
+    }
+    run = &owner->runs[run_index];
+    if ((run->valid == FALSE) || (run->word_count == 0u) ||
+        ((u32)run->word_offset + (u32)run->word_count > owner->word_count))
+    {
+        return FALSE;
+    }
+    ndsRendererNativeStageBeginRun(
+        native_run, &run->prepared, native_run->submit_class,
+        segment_owner, stats, TRUE);
+    words = &owner->words[run->word_offset];
+    for (i = 0u; i < run->word_count; i++)
+    {
+        GFX_FIFO = words[i];
+    }
+    sNdsNativeStageOwnerExecution.task36_local_pushed = TRUE;
+    sNdsNativeStageOwnerExecution.task36_binding = native_run->binding_index;
+    sNdsRendererHardwareMatrixMode =
+        NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
+    sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
+    sNdsRendererHardwareMatrixLoaded = TRUE;
     ndsRendererProfileRecordBatchBegin();
     sNdsRendererHardwareTriangleBatchOpen = TRUE;
-    sNdsRendererHardwareTriangleBatchTextured = run->textured;
-    sNdsRendererHardwareTriangleBatchTextureName = run->texture_name;
-    sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
-    sNdsRendererHardwareTriangleBatchAlphaKey = run->alpha_test;
+    sNdsRendererHardwareTriangleBatchTextured = run->prepared.textured;
+    sNdsRendererHardwareTriangleBatchTextureName = run->prepared.texture_name;
+    sNdsRendererHardwareTriangleBatchPolyFmt = run->prepared.poly_fmt;
+    sNdsRendererHardwareTriangleBatchAlphaKey = run->prepared.alpha_test;
     sNdsRendererHardwareTriangleBatchFogKey = 0u;
     sNdsRendererHardwareTriangleBatchMatrixMode =
-#if NDS_TASK36_HW_COMPOSE
-        (ndsRendererNativeStageTask36BindingIsRigid(
-             native_run->binding_index) != FALSE) ?
-            NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE :
-#endif
-        ((submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ||
-         (submit_class ==
-          NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)) ?
-            NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED :
-            NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY;
+        NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
     sNdsRendererHardwareTriangleBatchMatrixGeneration =
-#if NDS_TASK36_HW_COMPOSE
-        (ndsRendererNativeStageTask36BindingIsRigid(
-             native_run->binding_index) != FALSE) ?
-            sNdsRendererHardwareMatrixGeneration :
+        sNdsRendererHardwareMatrixGeneration;
+    ndsRendererHardwareEndBatch();
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    {
+        u64 binding_bit = (u64)1u << native_run->binding_index;
+
+        if ((sNdsNativeStageOwnerExecution.task36_seen_binding_mask &
+             binding_bit) == 0u)
+        {
+            sNdsNativeStageOwnerExecution.task36_seen_binding_mask |=
+                binding_bit;
+            gNdsRendererTask36HardwareComposedDObjCount++;
+        }
+    }
+    gNdsRendererTask36WorldMultCount += run->world_mult_count;
+    gNdsRendererTask36ReplayRunCount++;
+    gNdsRendererTask36ReplayWordCount += run->word_count;
 #endif
-        (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
-            1u :
-        (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
-            2u : 0u;
+    return TRUE;
 }
+#endif
 
 static inline void ndsRendererNativeStageEmitVertex(
     const NDSNativeStageDenseVertex *dense,
@@ -19961,7 +20512,6 @@ s32 ndsRendererPrepareNativeStageOwner(
 #if NDS_TASK36_HW_COMPOSE
         (frame->camera_modelview == NULL) ||
         (frame->binding_world == NULL) ||
-        (frame->rigid_binding_mask == 0u) ||
 #endif
         (frame->binding_composed == NULL) ||
         (frame->materials == NULL) || (frame->config == NULL) ||
@@ -19975,6 +20525,9 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     ndsRendererM3MeasureResidualKey(frame);
+#endif
+#if NDS_TASK36_HW_COMPOSE == 2
+    ndsRendererTask36ReplayBeginFrame(frame);
 #endif
 
     for (segment_index = 0u;
@@ -19992,6 +20545,15 @@ s32 ndsRendererPrepareNativeStageOwner(
             state, frame->config,
             &sNdsNativeStageOwnerExecution.preflight_stats,
             NULL, NULL, 0u);
+#if NDS_TASK36_HW_COMPOSE == 2
+        if (ndsRendererTask36ReplayUsePreparedSegment(
+                segment_index,
+                &sNdsNativeStageOwnerExecution.preflight_stats,
+                &epoch_mask) != FALSE)
+        {
+            continue;
+        }
+#endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE && \
     !NDS_RENDERER_M3_PHASE0_PROFILE
         if (segment_index == 0u)
@@ -20006,6 +20568,12 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
                 goto done;
             }
+#if NDS_TASK36_HW_COMPOSE == 2
+            ndsRendererTask36ReplayCapturePreparedSegment(
+                segment_index,
+                &sNdsNativeStageOwnerExecution.preflight_stats,
+                epoch_mask);
+#endif
             continue;
         }
 #endif
@@ -20180,6 +20748,12 @@ s32 ndsRendererPrepareNativeStageOwner(
             epoch_mask = generated_epoch_mask;
         }
 #endif
+#if NDS_TASK36_HW_COMPOSE == 2
+        ndsRendererTask36ReplayCapturePreparedSegment(
+            segment_index,
+            &sNdsNativeStageOwnerExecution.preflight_stats,
+            epoch_mask);
+#endif
     }
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
     task36_reject_reason = 3u;
@@ -20255,6 +20829,9 @@ s32 ndsRendererPrepareNativeStageOwner(
         topology.cross_foreign_corners;
 #endif
     accepted = TRUE;
+#if NDS_TASK36_HW_COMPOSE == 2
+    ndsRendererTask36ReplayStartCapture(frame);
+#endif
 
 done:
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -20263,6 +20840,13 @@ done:
 #endif
     if (accepted == FALSE)
     {
+#if NDS_TASK36_HW_COMPOSE == 2
+        if (sNdsRendererTask36ReplayOwner.frame_capture != FALSE)
+        {
+            sNdsRendererTask36ReplayOwner.capture_fault = TRUE;
+            ndsRendererTask36ReplayFinishFrame();
+        }
+#endif
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
         gNdsRendererTask36RendererRejectReason = task36_reject_reason;
 #endif
@@ -20287,6 +20871,9 @@ void ndsRendererResetNativeStageValidationCache(void)
 {
     memset(&sNdsNativeStageValidationCache, 0,
            sizeof(sNdsNativeStageValidationCache));
+#if NDS_TASK36_HW_COMPOSE == 2
+    ndsRendererTask36ReplayReset();
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     sNdsRendererM3ResidualKeyValid = FALSE;
 #endif
@@ -20337,6 +20924,10 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     const NDSNativeStageSegment *segment;
     u32 run_offset;
     u32 segment_triangles = 0u;
+#if NDS_TASK36_HW_COMPOSE == 2
+    u32 task36_capture_segment = FALSE;
+    u32 task36_replay_segment = FALSE;
+#endif
 #if NDS_RENDERER_SCREEN_SPACE_CENSUS
     u32 census_owner_start = 0u;
 #endif
@@ -20377,6 +20968,22 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 #endif
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamBeginSegment(segment_index);
+#endif
+#if NDS_TASK36_HW_COMPOSE == 2
+    task36_capture_segment =
+        (sNdsRendererTask36ReplayOwner.frame_capture != FALSE) &&
+        (ndsRendererTask36ReplaySegmentEligible(segment_index) != FALSE);
+    task36_replay_segment =
+        (sNdsRendererTask36ReplayOwner.frame_replay != FALSE) &&
+        (ndsRendererTask36ReplaySegmentEligible(segment_index) != FALSE);
+    if ((task36_capture_segment || task36_replay_segment) &&
+        (ndsRendererNativeStageTask36BeginSegment() == FALSE))
+    {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererM3PostArmFailureCount++;
+#endif
+        return TRUE;
+    }
 #endif
 #if NDS_RENDER_ECONOMY
     if ((gNdsRendererEconomyActiveOwnerMask &
@@ -20424,8 +21031,67 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             (task34_dobj_index < NDS_NATIVE_STAGE_DOBJ_COUNT) ?
                 task34_dobj_index : NDS_TASK34_STAGE_STREAM_DOBJ_NONE);
 #endif
+#if NDS_TASK36_HW_COMPOSE == 2
+        if (task36_replay_segment != FALSE)
+        {
+            if (ndsRendererTask36ReplayRun(
+                    run_index, run, segment->owner, stats) == FALSE)
+            {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+                gNdsRendererM3PostArmFailureCount++;
+#endif
+                return TRUE;
+            }
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            ndsRendererM3Phase0FinishSpan(
+                &gNdsRendererM3Phase0RunTransitionTicks, phase_start);
+            phase_start = ndsRendererM3Phase0Tick();
+#endif
+            for (triangle_offset = 0u;
+                 triangle_offset < run->triangle_count;
+                 triangle_offset++)
+            {
+                if (run->submit_class ==
+                    NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+                {
+                    (void)ndsRendererHardwareNextProjectedDepth();
+                }
+                else
+                {
+                    ndsRendererHardwareEnterProjectedForeground();
+                }
+            }
+            emitted_triangles = run->triangle_count;
+#if NDS_RENDERER_M3_PHASE0_PROFILE
+            if (run->submit_class ==
+                NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
+            {
+                ndsRendererM3Phase0FinishSpan(
+                    &gNdsRendererM3Phase0RawEmitTicks, phase_start);
+            }
+            else if (run->submit_class ==
+                     NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
+            {
+                ndsRendererM3Phase0FinishSpan(
+                    &gNdsRendererM3Phase0RangeEmitTicks, phase_start);
+            }
+            else
+            {
+                ndsRendererM3Phase0FinishSpan(
+                    &gNdsRendererM3Phase0NoZEmitTicks, phase_start);
+            }
+            phase_start = ndsRendererM3Phase0Tick();
+#endif
+            goto task36_account_run;
+        }
+        if (task36_capture_segment != FALSE)
+        {
+            ndsRendererTask36ReplayCaptureBeginRun(run_index);
+        }
+#endif
         ndsRendererNativeStageBeginRun(
-            run, prepared_run, run->submit_class, segment->owner, stats);
+            run, prepared_run, run->submit_class, segment->owner, stats,
+            FALSE);
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         ndsRendererM3Phase0FinishSpan(
             &gNdsRendererM3Phase0RunTransitionTicks, phase_start);
@@ -20487,6 +21153,13 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         phase_start = ndsRendererM3Phase0Tick();
 #endif
         ndsRendererHardwareEndBatch();
+#if NDS_TASK36_HW_COMPOSE == 2
+        if (task36_capture_segment != FALSE)
+        {
+            ndsRendererTask36ReplayCaptureEndRun(run_index);
+        }
+task36_account_run:
+#endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
         if (segment_index == 0u)
         {
@@ -20509,6 +21182,19 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     }
 #if NDS_TASK36_HW_COMPOSE
     ndsRendererNativeStageTask36EndSegment();
+#endif
+#if NDS_TASK36_HW_COMPOSE == 2
+    if (task36_capture_segment != FALSE)
+    {
+        sNdsRendererTask36ReplayOwner.captured_segment_mask |=
+            1u << segment_index;
+    }
+    if (task36_replay_segment != FALSE)
+    {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererTask36ReplaySegmentCount++;
+#endif
+    }
 #endif
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamEndSegment();
@@ -20549,6 +21235,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 
 void ndsRendererFinishNativeStageOwner(void)
 {
+#if NDS_TASK36_HW_COMPOSE == 2
+    ndsRendererTask36ReplayFinishFrame();
+#endif
     if (sNdsNativeStageOwnerExecution.active != FALSE)
     {
 #if NDS_TASK36_HW_COMPOSE

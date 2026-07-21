@@ -25,6 +25,7 @@ param(
     [int]$RendererProfileLevel = -1,
     [ValidateRange(0,9)][int]$RendererFastRunMode = 0,
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
+    [ValidateRange(0,2)][int]$Task36HwComposeMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
     [ValidateRange(0,1)][int]$FastWallpaperAffineMode = 0,
@@ -58,7 +59,8 @@ if ($OneMinuteMatchProof -and -not $MatchLifecycleProof) {
     throw 'OneMinuteMatchProof requires MatchLifecycleProof.'
 }
 if ($OneMinuteMatchProof -and
-    (($RendererFastRunMode -ne 9) -or ($StaticTextureAotMode -ne 1) -or
+    (($RendererFastRunMode -ne 9) -or ($Task36HwComposeMode -ne 2) -or
+     ($StaticTextureAotMode -ne 1) -or
      ($IFCommonHybridOamMode -ne 0) -or
      ($FastWallpaperAffineMode -ne 1) -or
      -not $RequireZeroPostGoTextureFence)) {
@@ -121,6 +123,7 @@ $hardwareTriangles = $target -like '*-hwtri'
 $rendererMakeEnvironment = if ($OneMinuteMatchProof) {
     @{
         NDS_RENDERER_FAST_RUN_DEFAULT = '9'
+        NDS_TASK36_HW_COMPOSE = '2'
         NDS_SCENE_MIP_CACHE_LAB = '0'
         NDS_FAST_WALLPAPER_AFFINE = '1'
         NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT = '1'
@@ -165,6 +168,7 @@ try {
     -RendererProfileLevel $RendererProfileLevel `
     -RendererFastRunMode $RendererFastRunMode `
     -NativeStageGeneratedSegment0Enable $NativeStageGeneratedSegment0Enable `
+    -Task36HwComposeMode $Task36HwComposeMode `
     -StaticTextureAotMode $StaticTextureAotMode `
     -IFCommonHybridOamMode $IFCommonHybridOamMode `
     -FastWallpaperAffineMode $FastWallpaperAffineMode `

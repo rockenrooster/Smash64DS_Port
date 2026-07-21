@@ -192,7 +192,7 @@ update overlap, or device ROMs. Preserve only the default-off measurement
 certificate. Evidence:
 `artifacts/performance/2026-07-20_task34-e1-stage-stream.md`.
 
-## Task 36 hardware matrix compose — PHASE A KEEP / PHASE B STOPPED 2026-07-20
+## Task 36 hardware matrix compose — PHASE A + PHASE B KEEP 2026-07-20
 
 The missing upper platform is fixed. Per-DObj isolation identified bindings
 39/40 (DObjs 54/55, runs 50/51) as projected no-Z painter cards. Hardware clip
@@ -212,19 +212,39 @@ fallback with zero post-arm failures. Synchronized stage P50/P95 deltas are
 platforms are visible.
 
 DevFast, Boundary, focused fixtures, and three complete one-minute Results
-lifecycles pass. Tyler approved the visuals. Phase A is committed at `c08e8ee`
-and remains default-off pending the Task-36 campaign's later device packet.
+lifecycles pass. Tyler approved the visuals. Phase A is committed at `c08e8ee`.
 
 Phase B's first standalone arm was rejected at the boot gate: arena
 `0x135000` / 27 failed allocations versus required `0x150000` / 0. Removing the
 unreachable mode-163 opening-action cache only in the Task-34 census build
 restores the exact full arena. Countdown and early captures then conserve 3,896
 of 6,664 whole-stage words (58.463%); even all 3,929 rigid words would be only
-58.959%, below the 60% continuation gate. The 33 varying words are the 11 live
-camera matrix lanes at DObjs 0, 40, and 54. Whispy timed out at the unchanged
-30-second limit; no rerun or extension was made, and more frames cannot increase
-the already-failing conserved intersection. Do not build the bake/replay path.
-Evidence: `artifacts/performance/2026-07-20_task36-phaseb-conservation.md`.
+58.959%. The 33 varying words are the 11 live camera matrix lanes at DObjs 0,
+40, and 54. Whispy timed out at the unchanged 30-second limit; no rerun or
+extension was made. Tyler explicitly accepted the measured 58.463% on
+2026-07-20, superseding the task-local 60% continuation threshold.
+
+Phase B captures the first admitted frame once, then replays the complete rigid
+segments 0/5/7 (mask `0xA1`): 33 runs, 26 rigid bindings, and exactly 3,916 FIFO
+words from a fixed 4,608-word BSS buffer. Dynamic segments remain live. Config,
+topology, texture, full-arena, and per-binding source-key guards remain fail
+closed. The final engagement row is
+`445,2,1,1,0,443,3,33,3916,0,0,0,3916,1376256,0,3916,161,0,0`.
+
+At frames 438..445, stage P50/P95 changes 430,368/430,528 ->
+284,320/284,544 (`-146,048/-145,984`), draw changes 832,736/835,776 ->
+704,672/707,712 (`-128,064/-128,064`), and replay is 0/49,152 pixels changed
+versus Phase A. Frames 600..607 and 1398..1405 retain exact 202 triangles, 54
+runs, eight segments, 57 DObjs, 42 bindings, and 49 epochs with zero fallback,
+arena, capture, or post-arm failure.
+
+The published profile-0 target now forces Task 36 mode 2. Its Task-32 hot set
+substitutes the replay emitter for the superseded generic commit owner and fits
+6,760/8,192 bytes. The exact profile-0 one-minute Time Up/Results soak and final
+Boundary pass with ROM `C1B3DDE3044BFF2C5F9B66F9D5CFFE7E4600A0467F43CB1CF032D3E086460761`.
+Retail engagement/performance is still required before assigning a hardware
+speed number. Evidence:
+`artifacts/performance/2026-07-20_task36-phaseb-conservation.md`.
 
 ## BG-0 fast Dream Land wallpaper — REENGAGED 2026-07-19
 

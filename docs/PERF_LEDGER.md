@@ -165,7 +165,7 @@ behavior. Full certificate:
 
 ```text
 IDEA ID: TASK36-PHASEA2-HARDWARE-COMPOSE-20260720
-STATUS: PHASE A KEEP; TYLER VISUAL APPROVED; PHASE B STOPPED BELOW 60%
+STATUS: PHASE A KEEP; TYLER VISUAL APPROVED; PHASE B USER-OVERRIDE KEEP
 MECHANISM: 26 rigid projected no-Z bindings compose camera x local in GX;
   binding 29 raw source-Z/range remains exact CPU-composed
 ENGAGEMENT: 26 DObjs; 3 camera loads; 31 world multiplies; pre-GO fallback 1;
@@ -196,9 +196,33 @@ early combat, 3,896 of 6,664 whole-stage words are conserved (58.463%). The
 entire 3,929-word rigid partition is itself only 58.959% of the stage stream,
 making 60% impossible even before Whispy. The 33 varying rigid words are the 11
 live camera `MATRIX_LOAD4X4` lanes at DObjs 0, 40, and 54. Whispy timed out at
-the fixed 30-second limit and was not rerun; the upper-bound proof already kills
-the bake. Full evidence:
+the fixed 30-second limit and was not rerun. Tyler explicitly accepted 58.463%
+on 2026-07-20, superseding the task-local 60% threshold. Full evidence:
 `artifacts/performance/2026-07-20_task36-phaseb-conservation.md`.
+
+Phase B captures and replays complete rigid segments 0/5/7: 33 runs, 26 rigid
+bindings, and 3,916 FIFO words in a fixed 4,608-word BSS buffer. The final lab
+row proves READY/one-bake/full-arena/zero-fallback:
+`445,2,1,1,0,443,3,33,3916,0,0,0,3916,1376256,0,3916,161,0,0`.
+
+```text
+CONTROL ROM: 08B8D0D78F4CFF56F58E13C291A99376D1FCD337BAA89DA633F706A122592BDF
+REPLAY ROM:  048F32EDD864D638228ACCEB5C61ADA0D8FAD1D8DFB8D7BCF0906F41C74762A2
+STAGE P50/P95: 430,368/430,528 -> 284,320/284,544 (-146,048/-145,984)
+DRAW P50/P95:  832,736/835,776 -> 704,672/707,712 (-128,064/-128,064)
+FIDELITY: 0/49,152 changed pixels, mean 0.00, 100% overlap
+WINDOWS: 438..445, 600..607, and 1398..1405 all engaged with zero fallback
+```
+
+The published profile-0 target forces Task 36 mode 2 alongside generated segment
+0, affine BG-0, static textures, and Task-32 hot text. Mode 2 substitutes the
+3,916-word replay emitter for the now-oversized generic commit owner in the
+Task-32 set; final draw-hot size is 6,760/8,192 bytes. The profile-0 one-minute
+Time Up/Results soak and Boundary pass. Final ROM/ELF are
+`C1B3DDE3044BFF2C5F9B66F9D5CFFE7E4600A0467F43CB1CF032D3E086460761` /
+`6E21517AA50D6C479A967AD38F65C7DF28750D3E1AC364BA045EBD400CBA74A5`.
+These are melonDS correctness/performance results; retail engagement remains the
+hardware referee.
 
 ## 2026-07-18 - Tasks 20R-25R atomic queue reconciliation
 

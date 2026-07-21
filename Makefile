@@ -116,6 +116,7 @@ override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
 override NDS_SCENE_MIP_CACHE_LAB := 0
 # Device-proven: boots to GO on melonDS and retail hardware with no OOM.
 override NDS_FAST_WALLPAPER_AFFINE := 1
@@ -1054,7 +1055,11 @@ $(NDS_TASK32_DRAW_HOT_FRAGMENT): FORCE
 			echo '*nds_renderer.o(.text.ndsRendererMtxMulAffine20p12)'; \
 			echo '*nds_renderer.o(.text.ndsRendererMtxLoadN64ToDS20p12)'; \
 			echo '*nds_renderer.o(.text.ndsRendererLoadHardwareMatrixPair.isra.0)'; \
-			echo '*nds_renderer.o(.text.ndsRendererCommitNativeStageSegment)'; \
+			if test "$(NDS_TASK36_HW_COMPOSE)" = 2; then \
+				echo '*nds_renderer.o(.text.ndsRendererTask36ReplayRun)'; \
+			else \
+				echo '*nds_renderer.o(.text.ndsRendererCommitNativeStageSegment)'; \
+			fi; \
 			echo '*nds_renderer.o(.text.ndsRendererNativeStageLoadNoZMatrix)'; \
 			echo '*nds_renderer.o(.text.ndsRendererNativeStageEmitNoZTriangle)'; \
 			echo '*nds_renderer.o(.text.ndsRendererNativeApplyStateDelta.part.0)'; \

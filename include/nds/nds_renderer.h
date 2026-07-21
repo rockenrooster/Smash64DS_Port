@@ -79,8 +79,17 @@
 #define NDS_TASK36_HW_COMPOSE 0
 #endif
 
-#if (NDS_TASK36_HW_COMPOSE != 0) && (NDS_TASK36_HW_COMPOSE != 1)
-#error "NDS_TASK36_HW_COMPOSE must be 0 or 1"
+#if (NDS_TASK36_HW_COMPOSE < 0) || (NDS_TASK36_HW_COMPOSE > 2)
+#error "NDS_TASK36_HW_COMPOSE must be 0, 1, or 2"
+#endif
+
+#if NDS_TASK36_HW_COMPOSE
+#define NDS_RENDERER_TASK36_RIGID_BINDING_MASK 0x00000381c00fffffULL
+#endif
+
+#if (NDS_TASK36_HW_COMPOSE == 2) && \
+    (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS)
+#error "Task 36 replay cannot be combined with the Task 29/34 stream census"
 #endif
 
 #ifndef NDS_RENDERER_SCREEN_SPACE_CENSUS
@@ -266,7 +275,8 @@ typedef enum NDSRendererProfileOwner
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
 } NDSRendererProfileOwner;
 
-#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS
+#if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
+    (NDS_TASK36_HW_COMPOSE == 2)
 typedef enum NDSRendererTask29GXClass
 {
     NDS_TASK29_GX_CONTROL = 0,
@@ -1078,6 +1088,20 @@ extern volatile u32 gNdsRendererTask36PrepareRunRejectReason;
 extern volatile u32 gNdsRendererTask36RigidConstancyMismatchCount;
 extern volatile u32 gNdsRendererTask36ObservedDynamicMaskLo;
 extern volatile u32 gNdsRendererTask36ObservedDynamicMaskHi;
+#if NDS_TASK36_HW_COMPOSE == 2
+extern volatile u32 gNdsRendererTask36ReplayState;
+extern volatile u32 gNdsRendererTask36BakeAttemptCount;
+extern volatile u32 gNdsRendererTask36BakeSuccessCount;
+extern volatile u32 gNdsRendererTask36BakeFailureCount;
+extern volatile u32 gNdsRendererTask36ReplayFrameCount;
+extern volatile u32 gNdsRendererTask36ReplaySegmentCount;
+extern volatile u32 gNdsRendererTask36ReplayRunCount;
+extern volatile u32 gNdsRendererTask36ReplayWordCount;
+extern volatile u32 gNdsRendererTask36ReplayFallbackCount;
+extern volatile u32 gNdsRendererTask36ReplayArenaRejectCount;
+extern volatile u32 gNdsRendererTask36ReplayMaterialRejectCount;
+extern volatile u32 gNdsRendererTask36ReplayCaptureWordCount;
+#endif
 #endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 extern volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;

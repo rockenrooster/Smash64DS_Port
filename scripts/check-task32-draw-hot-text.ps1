@@ -60,6 +60,16 @@ foreach ($line in (& $Nm -S -n $Elf)) {
         }
     }
 }
+if ($nmRows.ContainsKey('ndsRendererTask36ReplayRun')) {
+    $expected = @($expected | Where-Object {
+        $_[0] -ne 'ndsRendererCommitNativeStageSegment'
+    })
+    $expected += ,@(
+        'ndsRendererTask36ReplayRun',
+        '.text.ndsRendererTask36ReplayRun',
+        'nds_renderer.o'
+    )
+}
 
 $mapText = Get-Content -LiteralPath $Map -Raw
 $mainStartMatch = [regex]::Match(

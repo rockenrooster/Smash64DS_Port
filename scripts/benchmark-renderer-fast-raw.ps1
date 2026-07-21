@@ -12,7 +12,7 @@ param(
     [ValidateRange(0,1)][int]$NativeStageGeneratedSegment0Enable = 0,
     [switch]$Task29GXCensus,
     [switch]$Task34StageStreamCensus,
-    [ValidateRange(0,1)][int]$Task36HwComposeMode = 0,
+    [ValidateRange(0,2)][int]$Task36HwComposeMode = 0,
     [switch]$Task20StackProfile,
     [ValidateRange(0,1)][int]$Task32DrawHotTextMode = 0,
     [switch]$Task22WallpaperRunLab,
@@ -90,9 +90,9 @@ if ($Task34StageStreamCensus -and
     (($RendererProfileLevel -ne 1) -or ($FastRunMode -ne 9))) {
     throw 'Task34StageStreamCensus requires profile 1 and complete-stage fast-run mode 9.'
 }
-if (($Task36HwComposeMode -eq 1) -and
+if (($Task36HwComposeMode -gt 0) -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
-    throw 'Task36HwComposeMode=1 requires fast-run mode 9 and renderer profile 1.'
+    throw 'Task36HwComposeMode requires fast-run mode 9 and renderer profile 1.'
 }
 if (($RendererScreenSpaceCensusMode -eq 1) -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {

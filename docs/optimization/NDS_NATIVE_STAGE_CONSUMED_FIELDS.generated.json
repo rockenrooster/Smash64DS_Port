@@ -2688,6 +2688,10 @@
         {
           "access": "workspace.projection",
           "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.task36_runtime_rigid_mask",
+          "classification": "live_camera_independent"
         }
       ],
       "path": "src/port/reloc_backend_renderer_dl.c"
@@ -2889,6 +2893,10 @@
         },
         {
           "access": "workspace.stats",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.task36_runtime_rigid_mask",
           "classification": "live_camera_independent"
         },
         {

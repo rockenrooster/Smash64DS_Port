@@ -1,6 +1,54 @@
 # Task 36 Phase B — rigid-stage conservation census
 
-Verdict: **STOP_BELOW_60_PERCENT. Do not build the Phase-B bake.**
+Verdict: **USER-OVERRIDE KEEP at 58.463%; replay and profile-0 promotion pass.**
+
+## Superseding product decision and final replay result
+
+Tyler explicitly accepted the measured 58.463% conservation on 2026-07-20,
+superseding this task's original 60.000% continuation threshold. The census
+below remains the evidence for the exact admitted subset; it is no longer a
+stop verdict.
+
+Mode 2 captures and replays only complete rigid segments 0, 5, and 7 (mask
+`0xA1`). That is 33 runs, 26 rigid bindings, and exactly 3,916 DS FIFO words in
+a fixed 4,608-word BSS buffer. Dynamic segments remain on the live path. The
+final engagement row is:
+
+```text
+445,2,1,1,0,443,3,33,3916,0,0,0,3916,1376256,0,3916,161,0,0
+```
+
+This proves READY state 2; one bake attempt/success and zero failures; 3 replay
+segments / 33 runs / 3,916 words; full arena `0x150000` with zero allocation
+failures; captured mask `0xA1`; and zero fallback, guard rejection, capture
+fault, or active capture.
+
+Synchronized frames 438--445:
+
+| Metric | Phase-A control P50/P95 | Replay P50/P95 | Delta |
+|---|---:|---:|---:|
+| Stage | 430,368 / 430,528 | 284,320 / 284,544 | -146,048 / -145,984 |
+| Draw | 832,736 / 835,776 | 704,672 / 707,712 | -128,064 / -128,064 |
+| Active | 836,832 / 945,600 | 708,672 / 711,680 | -128,160 / -233,920 |
+| Update | 210,848 / 510,528 | 210,944 / 212,992 | +96 / -297,536 |
+| Loop | 1,120,256 / 1,680,512 | 1,120,256 / 1,120,320 | 0 / -560,192 |
+
+The replay image is exactly 0/49,152 changed pixels versus Phase A (mean 0.00,
+100% overlap), with the main floor and all three platforms visible. Frames
+600--607 and 1398--1405 retain the exact 202 triangles / 54 runs / 8 segments /
+57 DObjs / 42 bindings / 49 epochs and remain engaged with zero fallback.
+
+```text
+Phase-A control ROM 08B8D0D78F4CFF56F58E13C291A99376D1FCD337BAA89DA633F706A122592BDF
+Replay lab ROM      048F32EDD864D638228ACCEB5C61ADA0D8FAD1D8DFB8D7BCF0906F41C74762A2
+Published p0 ROM    C1B3DDE3044BFF2C5F9B66F9D5CFFE7E4600A0467F43CB1CF032D3E086460761
+Published p0 ELF    6E21517AA50D6C479A967AD38F65C7DF28750D3E1AC364BA045EBD400CBA74A5
+```
+
+The profile-0 one-minute Time Up/Results soak and final Boundary pass with Task
+36 mode 2, generated segment 0, affine BG-0, static textures, and Task-32 hot
+text enabled. Task-32 substitutes the replay emitter for the superseded generic
+commit owner and fits 6,760/8,192 bytes. Retail remains the performance referee.
 
 ## Invalid and rejected arms
 
@@ -83,9 +131,10 @@ ordinals `18,19,20,23,24,26,27,28,30,31,32`). These are the three live camera
 view loads; local matrices, vertices, and prepared state remain constant.
 
 Adding Whispy frames can only remove words from the conserved intersection, so
-the two-window 58.463% is already a mathematical upper bound. Phase B stops at
-the mandated gate. Phase A's approximately 40K-tick hardware-compose KEEP is
-retained unchanged; no bake buffer, replay path, DMA path, or device ROM is made.
+the two-window 58.463% remains the mathematical upper bound used by Tyler's
+override. The final replay keeps only complete rigid segments; DMA remains
+unimplemented.
 
-Focused GBI/native-stage fixtures and canonical Boundary pass after the census
-and fail-closed arena/autopsy changes. The selectors remain default-off.
+Focused GBI/native-stage fixtures, the profile-0 one-minute lifecycle, and
+canonical Boundary pass. The generic selector default remains zero; the
+published profile-0 target intrinsically selects mode 2.

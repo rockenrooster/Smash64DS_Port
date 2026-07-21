@@ -928,6 +928,9 @@ SOURCE_CLOSURE_POLICIES = (
                 "workspace.binding_composed workspace.camera_modelview "
                 "workspace.projection",
             ),
+            **_classified(
+                FIELD_CLASS_LIVE, "workspace.task36_runtime_rigid_mask"
+            ),
         },
     },
     {
@@ -1000,6 +1003,7 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.frame.config workspace.frame.materials
                 workspace.materials workspace.resolver
                 workspace.resolver.primary_file workspace.stats
+                workspace.task36_runtime_rigid_mask
                 """,
             ),
             **_classified(

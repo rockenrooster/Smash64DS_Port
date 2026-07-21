@@ -272,6 +272,7 @@ if ($OneMinuteMatchProof) {
         '-MatchLifecycleProof',
         '-OneMinuteMatchProof',
         '-RendererFastRunMode', '9',
+        '-Task36HwComposeMode', '2',
         '-StaticTextureAotMode', '1',
         '-IFCommonHybridOamMode', '0',
         '-FastWallpaperAffineMode', '1',
