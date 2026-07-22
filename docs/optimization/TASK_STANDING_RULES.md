@@ -44,6 +44,32 @@ of the way there while saving 50% CPU cost, I'm all for giving it a try."
   camera math, collision, RNG, the fixed-two scheduler: non-negotiable. Only the
   GX/render derivation path may approximate.
 
+### Exactness is within reason (the owner, 2026-07-22)
+
+"Exactness is supposed to be within reason since we are translating an N64 game
+with floats to a DS with fixed point math."
+
+This is the port's whole premise, and it bounds what any exactness gate is
+entitled to assert. A verifier that demands bit-identity from a translation
+that is inherently approximate is measuring the wrong thing, and a gate failure
+is not automatically a defect — the gate itself has to be shown to be asking a
+question the port ever promised to answer.
+
+- An exactness gate must state WHICH quantity it holds bit-exact and why that
+  quantity is one the port guarantees. "Every byte of every struct" is not such
+  a statement: gameplay-bearing state and render-derived state get hashed
+  together and the verdict cannot be attributed.
+- Before a gate failure reverts a change, establish that the differing quantity
+  is on the gameplay side of the doctrine. A difference confined to
+  render-derived or timing-derived fields is explicitly permitted above.
+- **This does not license waving failures through.** The float-to-fixed argument
+  explains approximation in *derivation*; it does not explain a difference
+  between two builds of identical source. Task 37 demonstrated the distinction:
+  800 bytes of dead padding produced byte-identical state across 3,892 updates,
+  proving the port is deterministic and reproducible build-to-build, so its
+  relocation-only divergence needs a real explanation and does not get one from
+  this clause. See `ClaudeFable5_Task37_ItcmRepack_20260722.md`.
+
 ## Content-completeness doctrine (the owner, 2026-07-21)
 
 Battle-reachable game content — SFX cues, animations, visual effects the original

@@ -461,6 +461,39 @@ crosses the same class boundary.
 If instead the offset is a genuine gameplay member, Task 37 is a real defect and
 stays reverted permanently.
 
+### The standard this is judged against (the owner, 2026-07-22)
+
+"Exactness is supposed to be within reason since we are translating an N64 game
+with floats to a DS with fixed point math." Recorded in `TASK_STANDING_RULES.md`
+under the fidelity doctrine.
+
+That reframes the verdict here. The relevant question is not "did every byte
+match" — it is "did a quantity the port actually guarantees change". The region
+bisect already answers most of it: RNG, battle state, camera, ground, collision
+and controllers are bit-identical for all 3,892 updates, and those are precisely
+the quantities the doctrine calls non-negotiable. The residue is inside
+`FTStruct`, which is hashed as one blob mixing gameplay fields with
+display-adjacent ones, so the gate cannot say which kind changed.
+
+`FTStruct` carrying render-derived state is the outcome to check first, because
+draw cadence is speed-dependent and the doctrine already permits the render
+derivation path to approximate. If the differing member is render-derived, this
+change is within the doctrine and shippable, and the correct fix is to the gate.
+
+What this clause does NOT do is excuse the divergence on its own. Task 37 is
+pure relocation: the same compiled instructions at different addresses, with the
+library members byte-identical objects from SHA-pinned archives. No float-to-fixed
+approximation is introduced, and the padding controls proved the port is
+deterministic build-to-build — 800 bytes of dead padding in either `.main` or
+`.itcm` produced byte-identical state across the whole match. So something real
+still differs and still needs naming before this ships.
+
+The owner reports `smash64ds-task37-itcm-candidate.nds` played correctly and
+faster on retail. That is meaningful evidence and it is consistent with the core
+regions matching, but it is not a substitute for identifying the field: a
+difference in a render-derived member would be invisible in play, and so would a
+rare gameplay difference that a single session does not surface.
+
 Either outcome is worth having beyond Task 37: this gate currently blocks every
 future performance change, and Task 44 already worked around it by proving
 exactness with the Task 36 replay word stream instead.
