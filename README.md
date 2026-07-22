@@ -9,7 +9,7 @@ The current build focuses on a one-minute Mario-versus-Fox match on Dream Land,
 with items off. Bring your own legally obtained North American Super Smash Bros.
 ROM; this repository contains no Nintendo assets or ROM-derived data.
 
-Please support me on Patreon to help me continue this project! (paused for now) https://www.patreon.com/cw/Rockenrooster
+Please support me on Patreon to help me continue this project! (slow progress for now) https://www.patreon.com/cw/Rockenrooster
 
 ## Quick start
 
