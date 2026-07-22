@@ -55,6 +55,33 @@ report; silent or agent-chosen exclusions are a failed task. Capacity budgets
 (resident caps, reserves) are negotiable levers to present to Tyler with numbers
 — never reasons to drop content unilaterally.
 
+## Merge & branch policy (Tyler, 2026-07-21)
+
+- Every task runs on its own branch `codex/task<NN>-<slug>`, branched from
+  CURRENT master. Do not stack a new task branch on an unmerged task branch
+  unless the two tasks are declared dependent in their files — independent
+  branches stay independently mergeable and revertable.
+- **A KEEP is not done until it is on master.** When all gates are green and
+  docs + snapshot are committed, the session's final git actions are: merge the
+  task branch into master with `--no-ff` (merge message = one-line task
+  verdict), then run `verify-dev-fast.ps1` once on master. Report the merge
+  commit hash.
+- STOP / REJECT / WIP outcomes do NOT merge. The branch stays as the
+  checkpoint; name it in the report. Evidence/docs-only commits may merge when
+  verify is green.
+- Merging a KEEP that is still flag-gated pending its device checkpoint is
+  expected (device-economy rule) — master stays one-line revertable.
+- **KEEPs ship ENABLED in the published profile-0 target at merge time (Tyler,
+  2026-07-21).** The Makefile flag exists so a device-checkpoint revert is one
+  line — it is NOT a deferral mechanism. A task whose keep is merged but not
+  forced on in the published target block is incomplete; state the published
+  on/off decision explicitly in the task report.
+- Master must remain stranger-buildable at every merge: publish identity pins
+  (README expected SHA-256, DECOMP_PIN outputs) travel in the same branch as
+  any change to the published ROM.
+- **NEVER push.** Master is the public GitHub repository; `git push` is Tyler's
+  explicit, per-event call. No agent runs push, ever.
+
 ## Device-test economy (Tyler, 2026-07-20)
 
 Retail sessions cost Tyler real time. Minimize them by CLASS, not by skipping proof:

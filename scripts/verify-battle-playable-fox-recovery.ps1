@@ -20,8 +20,9 @@ $context = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$rom = Join-Path $root 'smash64ds-battle-playable-hwtri.nds'
-$elf = Join-Path $root 'smash64ds-battle-playable-hwtri.elf'
+$target = 'smash64ds-battle-playable-proof-hwtri'
+$rom = Join-Path $root "$target.nds"
+$elf = Join-Path $root "$target.elf"
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 $melonDsPath = $context.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
@@ -66,8 +67,8 @@ function Get-ElfSymbolAddress {
 
 if (-not $NoBuild) {
     & make -C $root `
-        TARGET=smash64ds-battle-playable-hwtri `
-        BUILD=build-battle-playable-canonical-hwtri-harness `
+        "TARGET=$target" `
+        BUILD=build-battle-playable-proof-hwtri-harness `
         NDS_DEV_SCENE_HARNESS=battle_playable_realtime `
         NDS_DEV_LIVE_INPUT_PREVIEW=1 `
         NDS_HARNESS_FAST_LOGIC=0 `

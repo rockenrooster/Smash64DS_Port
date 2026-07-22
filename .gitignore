@@ -21,6 +21,7 @@
 /logs/
 /.tura/
 /.zcode/
+/.freebuff
 /.agents/
 /.claude/
 /prompts/

@@ -97,7 +97,9 @@ sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
 void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
 {
     battleship_ftMainPlayAnimEventsAll(fighter_gobj);
+#if NDS_SHIP_TELEMETRY
     ndsDiagnosticsRecordImportedFTMainAnimEvents(fighter_gobj);
+#endif
 }
 
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
@@ -110,7 +112,9 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     }
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
+#if NDS_SHIP_TELEMETRY
     ndsDiagnosticsRecordImportedFTMainSetStatus(fighter_gobj, status_id,
                                                  frame_begin, anim_speed,
                                                  flags);
+#endif
 }

@@ -12,6 +12,19 @@
 #error "NDS_RENDERER_PROFILE_LEVEL must be 0, 1, or 2"
 #endif
 
+#ifndef NDS_SHIP_TELEMETRY
+#define NDS_SHIP_TELEMETRY 1
+#endif
+
+#ifndef NDS_TICK_HUD
+#define NDS_TICK_HUD 0
+#endif
+
+#if ((NDS_SHIP_TELEMETRY != 0) && (NDS_SHIP_TELEMETRY != 1)) || \
+    ((NDS_TICK_HUD != 0) && (NDS_TICK_HUD != 1))
+#error "NDS_SHIP_TELEMETRY and NDS_TICK_HUD must be 0 or 1"
+#endif
+
 #ifndef NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_RENDERER_M2_DETAILED_LEDGER 0
 #endif

@@ -21,13 +21,15 @@ from pathlib import Path
 
 
 PACK_MAGIC = b"FGM1"
-PACK_VERSION = 3
+PACK_VERSION = 4
 PACK_HEADER = struct.Struct("<4sHHII")
 PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
-MAX_RESIDENT_BYTES = 128 * 1024
+MAX_PACK_BYTES = 512 * 1024
+RUNTIME_CACHE_BYTES = (52 * 1024) + (3 * 28 * 1024) + (4 * 16 * 1024)
+MAX_RESIDENT_BYTES = 128 * 1024  # historical Phase-C comparison only
 PUBLIC_EXCITED_ID = 626
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
 PUBLIC_EXCITED_RAMP_SAMPLES = 184
@@ -39,6 +41,18 @@ PUBLIC_EXCITED_LOOP_POINT_WORDS = 1
 REPEAT_ORACLE_CYCLES = 3
 SOURCE_SINE_TABLE_SHA256 = (
     "bc184c0dbd76adecf7ff264d39cc58456546173beba727f189d2716dd8eabf16")
+
+FULL_COVERAGE_IDS = (
+    626, 470, 469, 467, 490, 74, 363, 364, 372, 373, 374, 430, 439,
+    292, 370, 289, 300, 303, 154, 77, 215, 40, 38, 37, 34, 32, 31,
+    375, 429, 431, 435, 440, 19, 41, 42, 43, 185, 186, 187, 189, 190,
+    217, 218, 219, 216, 28, 2, 0, 188,
+)
+FULL_PROGRAM_AOT_IDS = frozenset((
+    154, 40, 38, 37, 34, 32, 31,
+    375, 429, 431, 435, 440, 19, 41, 42, 43, 185, 186, 187, 189, 190,
+    217, 218, 219, 216, 28, 2, 0, 188,
+))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
     "ae7690adc1d646e8c0a755510064a324c6ff59f4f578a2f6fdd719351744c601")
@@ -2340,6 +2354,282 @@ def render_modulated_voice_aot(pcm: list[int], selector: dict,
     }
 
 
+def _fgm_relative_u7(value: int, current: int) -> int:
+    return (value if value <= 127 else
+            min(127, max(0, current + value - 192)))
+
+
+def _fgm_relative_pitch(value: int, current: int) -> int:
+    return (min(1200, max(-1200, value))
+            if -1200 <= value <= 1200 else
+            min(1200, max(-1200, current + value - 2400)))
+
+
+def _fgm_modulator_value(state: dict, sine_table: list[int]) -> float:
+    modulator = state["modulator"]
+    shape = int(modulator["shape"])
+    period = f32(modulator["period"])
+    phase = f32(state["phase"] + f32(1.0))
+    if period < phase:
+        phase = f32(phase - period)
+    state["phase"] = phase
+    amplitude = f32(modulator["amplitude"])
+    offset = f32(modulator["offset"])
+    if shape == 0:
+        sine_index = int(f32(f32(phase / period) * f32(4096.0))) & 0xFFF
+        angle = f32(sine_table[sine_index & 0x7FF] / f32(65536.0))
+        if sine_index & 0x800:
+            angle = f32(-angle)
+        return f32(f32(angle * amplitude) + offset)
+    if shape == 1:
+        return amplitude if f32(period / f32(2.0)) < phase else offset
+    if shape == 2:
+        return f32(f32(amplitude * phase) / period + offset)
+    if shape == 3:
+        return f32(f32(amplitude * f32(period - phase)) / period + offset)
+    raise ValueError(f"unsupported deterministic FGM modulator shape {shape}")
+
+
+def articulation_program_states(program: list[list], modulators: dict,
+                                sine_table: list[int],
+                                tick_count: int) -> list[dict]:
+    pc = 0
+    loop_pc = 0
+    next_tick = 0
+    stopped = False
+    volume = 127
+    pitch = 0
+    fx_mix = 0
+    active_modulators: dict[int, dict] = {}
+    states = []
+    for tick in range(tick_count):
+        guard = 0
+        while not stopped and next_tick <= tick:
+            guard += 1
+            if guard > 1024 or pc >= len(program):
+                raise ValueError("unbounded FGM articulation program")
+            row = program[pc]
+            pc += 1
+            op = row[0]
+            if op == "vol":
+                volume = _fgm_relative_u7(int(row[1]), volume)
+            elif op == "pitch":
+                pitch = _fgm_relative_pitch(int(row[1]), pitch)
+            elif op == "unk36":
+                fx_mix = _fgm_relative_u7(int(row[1]), fx_mix)
+            elif op == "spawn_mod":
+                slot = int(row[1])
+                modulator = modulators["entries"][int(row[2])]
+                active_modulators[slot] = {
+                    "modulator": modulator,
+                    "phase": f32(f32(f32(modulator["period"]) *
+                                     f32(modulator["init_phase"])) *
+                                 f32(1.0 / 256.0)),
+                }
+            elif op == "stop_mod":
+                active_modulators.pop(int(row[1]), None)
+            elif op == "mark_loop":
+                loop_pc = pc
+            elif op == "jump_loop":
+                pc = loop_pc
+            elif op == "end":
+                stopped = True
+            elif op not in ("trigger", "pan"):
+                raise ValueError(f"unsupported FGM articulation op {op}")
+            wait = int(row[-1])
+            if stopped:
+                break
+            if wait != 0:
+                next_tick = tick + wait
+                break
+        for slot in sorted(active_modulators):
+            modulator = active_modulators[slot]["modulator"]
+            value = _fgm_modulator_value(active_modulators[slot], sine_table)
+            target = int(modulator["target"])
+            if target == 10:
+                volume = int(min(127.0, max(0.0, value)))
+            elif target == 11:
+                volume = int(min(127.0, max(0.0, value + volume)))
+            elif target == 12:
+                pitch = int(min(1200.0, max(-1200.0, value)))
+            elif target == 13:
+                pitch = int(min(1200.0, max(-1200.0, value + pitch)))
+            else:
+                raise ValueError(f"unsupported FGM AOT modulator target {target}")
+        states.append({"volume": volume, "pitch": pitch,
+                       "fx_mix": fx_mix})
+    return states
+
+
+def fgm_program_notes(program: list[list]) -> tuple[list[dict], list[dict]]:
+    root_volume = 255
+    cut_before_note_end = False
+    pitch_offset = 0
+    tick = 0
+    previous_duration = None
+    previous_cut = False
+    notes = []
+    forks = []
+    for row in program:
+        op = row[0]
+        if op == "set_unk1E":
+            cut_before_note_end = (int(row[1]) & 0x80) != 0
+        elif op == "set_volume":
+            root_volume = int(row[1])
+        elif op == "vol_delta":
+            root_volume = min(255, max(0, root_volume + int(row[1])))
+        elif op == "set_t5_neg2400":
+            pitch_offset = -2400
+        elif op == "set_t5_neg4800":
+            pitch_offset = -4800
+        elif op == "fork_voice":
+            forks.append({"program_id": int(row[1]), "start_tick": tick})
+        elif op == "note":
+            duration = int(row[3])
+            starts_new = (previous_duration is None or
+                          (previous_cut and previous_duration > 1))
+            notes.append({
+                "start_tick": tick,
+                "end_tick": tick + duration,
+                "duration_ticks": duration,
+                "pitch_code": int(row[1]),
+                "pitch_offset_cents": pitch_offset,
+                "root_volume": root_volume,
+                "starts_new_voice": starts_new,
+                "release_tick": (tick + duration - 1
+                                 if cut_before_note_end and duration > 1
+                                 else None),
+            })
+            pitch_offset = 0
+            tick += duration
+            previous_duration = duration
+            previous_cut = cut_before_note_end
+    if not notes:
+        raise ValueError("FGM program has no notes")
+    return notes, forks
+
+
+def decode_fgm_program_voice(program_id: int, ucd: dict,
+                             articulations: dict, instrument: dict,
+                             ctl_by_offset: dict, source_tbl: bytes,
+                             audio_codec) -> tuple[dict, list[int]]:
+    audit = fgm_voice_source_audit(
+        program_id, ucd, articulations, instrument, ctl_by_offset,
+        source_tbl, audio_codec)
+    sound = ctl_by_offset[audit["sound_offset"]]
+    wave = ctl_by_offset[sound["wavetable_off"]]
+    book = ctl_by_offset[wave["book_off"]]
+    vadpcm = source_tbl[wave["base"]:wave["base"] + wave["length"]]
+    frame_bytes = len(vadpcm) - (len(vadpcm) % 9)
+    pcm = audio_codec.adpcm_decode(
+        vadpcm[:frame_bytes], book["entries"], book["order"],
+        book["npredictors"])
+    return audit, pcm
+
+
+def render_fgm_program_voice_aot(program_id: int, ucd: dict,
+                                 articulations: dict, modulators: dict,
+                                 instrument: dict, ctl_by_offset: dict,
+                                 source_tbl: bytes, audio_codec,
+                                 sine_table: list[int]) -> tuple[list[int], dict]:
+    audit, pcm = decode_fgm_program_voice(
+        program_id, ucd, articulations, instrument, ctl_by_offset,
+        source_tbl, audio_codec)
+    notes, forks = fgm_program_notes(audit["ucd_program"])
+    tick_count = max(note["end_tick"] for note in notes)
+    articulation_states = articulation_program_states(
+        audit["articulation_program"], modulators, sine_table, tick_count)
+    loop = audit["source_loop"]
+    output = []
+    source_phase = 0.0
+    voice_start_tick = 0
+    active_root_volume = 255
+    previous_target = 0
+    for tick in range(tick_count):
+        note = next(note for note in notes
+                    if note["start_tick"] <= tick < note["end_tick"])
+        if tick == note["start_tick"] and note["starts_new_voice"]:
+            source_phase = 0.0
+            voice_start_tick = tick
+            active_root_volume = note["root_volume"]
+            local_state = articulation_states[0]
+            previous_target = source_quadratic_target(
+                active_root_volume, local_state["volume"])
+        local_tick = tick - voice_start_tick
+        if local_tick >= len(articulation_states):
+            local_tick = len(articulation_states) - 1
+        state = articulation_states[local_tick]
+        target = source_quadratic_target(active_root_volume, state["volume"])
+        if note["release_tick"] == tick:
+            target = 0
+        frequency = round(FGM_OUTPUT_RATE * (2.0 ** (
+            (state["pitch"] + note["pitch_code"] * 100 - 1300 +
+             note["pitch_offset_cents"]) / 1200.0)))
+        for sample_in_tick in range(184):
+            if loop is not None:
+                loop_start = int(loop["start"])
+                loop_end = int(loop["end"])
+                if source_phase >= loop_end:
+                    source_phase = loop_start + ((source_phase - loop_start) %
+                                                  (loop_end - loop_start))
+            source_index = int(source_phase)
+            if source_index >= len(pcm):
+                source_sample = 0
+            else:
+                fraction = source_phase - source_index
+                right = pcm[source_index + 1] if source_index + 1 < len(pcm) else pcm[source_index]
+                source_sample = int(round(
+                    pcm[source_index] * (1.0 - fraction) + right * fraction))
+            gain = previous_target + round_div_signed(
+                (target - previous_target) * (sample_in_tick + 1), 184)
+            output.append(min(32767, max(-32768,
+                round_div_signed(source_sample * gain, 32767))))
+            source_phase += frequency / FGM_OUTPUT_RATE
+        previous_target = target
+    return output, {
+        "program_id": program_id,
+        "duration_ticks": tick_count,
+        "forks": forks,
+        "requires_custom_fx": audit["requires_custom_fx"],
+        "source_audit": audit,
+    }
+
+
+def render_fgm_composite_aot(program_id: int, ucd: dict,
+                             articulations: dict, modulators: dict,
+                             instrument: dict, ctl_by_offset: dict,
+                             source_tbl: bytes, audio_codec,
+                             sine_table: list[int]) -> tuple[list[int], dict]:
+    root, root_meta = render_fgm_program_voice_aot(
+        program_id, ucd, articulations, modulators, instrument,
+        ctl_by_offset, source_tbl, audio_codec, sine_table)
+    voices = [(0, root, root_meta)]
+    for fork in root_meta["forks"]:
+        rendered, metadata = render_fgm_program_voice_aot(
+            fork["program_id"], ucd, articulations, modulators, instrument,
+            ctl_by_offset, source_tbl, audio_codec, sine_table)
+        voices.append((fork["start_tick"] * 184, rendered, metadata))
+    sample_count = max(offset + len(rendered)
+                       for offset, rendered, _metadata in voices)
+    mixed = [0] * sample_count
+    for offset, rendered, _metadata in voices:
+        for index, sample in enumerate(rendered):
+            mixed[offset + index] = min(32767, max(-32768,
+                                                   mixed[offset + index] + sample))
+    return mixed, {
+        "aot_strategy": "source_program_schedule_and_simultaneous_forks",
+        "aot_output_frequency_hz": FGM_OUTPUT_RATE,
+        "aot_output_samples": sample_count,
+        "duration_ticks": (sample_count + 183) // 184,
+        "voice_program_ids": [metadata["program_id"]
+                              for _offset, _rendered, metadata in voices],
+        "source_custom_fx_dry_only": any(
+            metadata["requires_custom_fx"]
+            for _offset, _rendered, metadata in voices),
+        "aot_rendered_pcm_sha256": ima_pcm_sha256(mixed),
+    }
+
+
 def round_div_signed(numerator: int, denominator: int) -> int:
     if denominator <= 0:
         raise ValueError("rounding denominator must be positive")
@@ -3381,15 +3671,68 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "source_loop_end": actual_loop[1],
         })
 
-    runtime_selected = [selector for selector in SELECTED
-                        if not selector.get("runtime_excluded", False)]
-    excluded_hit_cues = [
-        excluded_hit_source_audit(
-            selector, ucd, articulations, instrument, ctl_by_offset,
-            source_raw["B1_sounds2_tbl"], audio_codec)
-        for selector in SELECTED
-        if selector.get("runtime_excluded", False)
-    ]
+    declared_selectors = {
+        int(selector["id"]): dict(selector)
+        for selector in (*SELECTED, *EXCLUDED_SOURCE_CUES)
+    }
+    attack_cue_by_id = {int(cue["id"]): cue for cue in ATTACK_CUE_AUDIT}
+    runtime_selected = []
+    for fgm_id in FULL_COVERAGE_IDS:
+        selector = declared_selectors.get(fgm_id)
+        if selector is None:
+            cue = attack_cue_by_id[fgm_id]
+            program = ucd["entries"][fgm_id]["program"]
+            if json_sha256(program) != cue["root_program_sha256"]:
+                raise ValueError(f"FGM {fgm_id} root UCD program changed")
+            articulation_id = first_program_arg(program, "set_articulation")
+            art_program = articulations["entries"][articulation_id]["program"]
+            sound_id = first_program_arg(art_program, "trigger")
+            sound_offset = instrument["soundArray_offs"][sound_id]
+            sound = ctl_by_offset[sound_offset]
+            wave = ctl_by_offset[sound["wavetable_off"]]
+            loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+            notes = tuple(tuple(int(value) for value in row[1:])
+                          for row in program if row[0] == "note")
+            volumes = [int(row[1]) for row in program
+                       if row[0] == "set_volume"]
+            pitches = [int(row[1]) for row in art_program
+                       if row[0] == "pitch"]
+            forks = tuple(int(row[1]) for row in program
+                          if row[0] == "fork_voice")
+            selector = {
+                "id": fgm_id,
+                "name": cue["name"],
+                "kind": "attack",
+                "articulation": articulation_id,
+                "sound": sound_id,
+                "notes": notes,
+                "duration_ticks": sum(note[2] for note in notes),
+                "ucd_volume": volumes[0],
+                "articulation_pitch_cents": pitches[0],
+                "loop": loop is not None,
+                "source_loop_infinite": loop is not None,
+                "wave_base": wave["base"],
+                "wave_length": wave["length"],
+                "loop_start": loop["start"] if loop else 0,
+                "loop_end": loop["end"] if loop else 0,
+                "expected_retained_samples": 1,
+                "root_fork_programs": forks,
+                "omitted_fork_programs": forks,
+                "root_program_sha256": cue["root_program_sha256"],
+                "render_program_sha256": cue["root_program_sha256"],
+                "omitted_fork_program_sha256": tuple(
+                    json_sha256(ucd["entries"][fork]["program"])
+                    for fork in forks),
+                "articulation_program_sha256": json_sha256(art_program),
+                "fidelity_debt": (),
+            }
+        selector.pop("runtime_excluded", None)
+        if fgm_id in FULL_PROGRAM_AOT_IDS:
+            selector["aot_full_program"] = True
+        runtime_selected.append(selector)
+    if tuple(int(selector["id"]) for selector in runtime_selected) != FULL_COVERAGE_IDS:
+        raise AssertionError("full FGM coverage order changed")
+    excluded_hit_cues = []
     attack_actions = build_attack_action_audit(repo_root)
     attack_fx = attack_custom_fx_contract(repo_root)
     attack_cues = build_attack_cue_audit(
@@ -3454,7 +3797,31 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         frequency = note_frequency_hz(
             selector["articulation_pitch_cents"], first_pitch_code)
         envelope = articulation_envelope(art_program, selector)
-        if selector["id"] == PUBLIC_EXCITED_ID:
+        if selector.get("aot_full_program"):
+            root_duration_ticks = selector["duration_ticks"]
+            runtime_pcm, acoustic_oracle = render_fgm_composite_aot(
+                selector["id"], ucd, articulations, modulators, instrument,
+                ctl_by_offset, source_raw["B1_sounds2_tbl"], audio_codec,
+                sine_table)
+            selector["duration_ticks"] = acoustic_oracle["duration_ticks"]
+            frequency = FGM_OUTPUT_RATE
+            loop_strategy = "source_program_aot"
+            flags = 0
+            loop_point_words = 0
+            packed_envelope = []
+            volume = 127
+            trim = {
+                "trim_strategy": "source_program_schedule_and_forks_aot",
+                "trim_source_samples_removed": 0,
+                "trim_applied": True,
+                "trim_retained_source_prefix_pcm_sha256": None,
+                "trim_retained_prefix_exact": False,
+                "trim_proven_reachable_samples": len(runtime_pcm),
+                "trim_one_sample_ceiling": 1,
+                "source_root_duration_ticks": root_duration_ticks,
+            }
+            old_loop_ima = b""
+        elif selector["id"] == PUBLIC_EXCITED_ID:
             runtime_pcm, acoustic_oracle = render_public_excited(
                 pcm, selector, frequency, envelope)
             loop_strategy = "finite_source_loop_aot"
@@ -3596,8 +3963,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "ucd_program": ucd_program,
             "root_fork_programs": list(selector.get(
                 "root_fork_programs", ())),
-            "omitted_fork_programs": list(selector.get(
-                "omitted_fork_programs", ())),
+            "omitted_fork_programs": ([] if selector.get("aot_full_program")
+                                      else list(selector.get(
+                                          "omitted_fork_programs", ()))),
             "articulation_index": selector["articulation"],
             "articulation_program": art_program,
             "source_sound_index": selector["sound"],
@@ -3648,8 +4016,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "and baked with the pitch schedule into the AOT sample"
                 if selector.get("aot_source_schedule") else
                 "pre_mixer target mapped from 0..32767 to DS 0..127"),
-            "runtime_fidelity_debt": list(selector.get(
-                "fidelity_debt", ())),
+            "runtime_fidelity_debt": ([] if selector.get("aot_full_program")
+                                      else list(selector.get(
+                                          "fidelity_debt", ()))),
             "ima_adpcm_bytes": len(ima),
             "ima_adpcm_sha256": sha256(ima),
             "acoustic_oracle": acoustic_oracle,
@@ -3699,9 +4068,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             bytes(entries_blob) + bytes(sample_body) + bytes(envelope_body))
     if len(pack) != pack_size:
         raise AssertionError("pack size accounting mismatch")
-    if len(pack) > MAX_RESIDENT_BYTES:
+    if len(pack) > MAX_PACK_BYTES:
         raise ValueError(
-            f"FGM pack exceeds {MAX_RESIDENT_BYTES // 1024} KiB: "
+            f"FGM pack exceeds {MAX_PACK_BYTES // 1024} KiB: "
             f"{len(pack)} bytes")
     fgm218_feasibility = build_fgm218_feasibility(
         repo_root, attack_actions, attack_cues, attack_fx, len(pack))
@@ -3760,7 +4129,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         "envelope_point_bytes": PACK_ENVELOPE_POINT.size,
         "header_bytes": PACK_HEADER.size,
         "resident_bytes": len(pack),
-        "resident_limit_bytes": MAX_RESIDENT_BYTES,
+        "resident_limit_bytes": RUNTIME_CACHE_BYTES,
+        "pack_limit_bytes": MAX_PACK_BYTES,
         "mapping_sha256": mapping_sha,
         "mapping_sha256_lo": f"0x{mapping_sha_lo:08x}",
         "pack_sha256": sha256(pack),
@@ -3776,7 +4146,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             PACK_ENVELOPE_POINT.pack(point["tick"], point["ds_volume"], 0)
             for record in records if record["flags"] == 0
             for point in record["envelope"])),
-        "strict_hit_contact_status": "punch_kick_primary_aot",
+        "strict_hit_contact_status": "full_source_program_aot",
         "runtime_excluded_hit_ids": [entry["id"]
                                      for entry in excluded_hit_cues],
         "excluded_hit_cues": excluded_hit_cues,
@@ -3786,8 +4156,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "Entries carrying articulation or UCD automation debt retain "
             "their source wavetable and bounded initial DS state, but their "
             "listed pitch or volume automation is not yet reproduced.",
-            "DeadExplodeL currently renders its primary UCD voice; forked "
-            "source voice 685 remains explicit metadata fidelity debt.",
+            "AL_FX_CUSTOM cues currently ship their exact dry source-program "
+            "render while the wet delay tail remains a named listen lever.",
         ],
         "attack_activation_qualification": {
             "source_action_audit": attack_actions,
@@ -3803,7 +4173,8 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             }
             for name in source_raw
         },
-        "excluded_entries": excluded_entries,
+        "prior_excluded_source_audit": excluded_entries,
+        "excluded_entries": [],
         "entries": metadata_entries,
     }
     metadata["sources"]["source_sine_table"] = {

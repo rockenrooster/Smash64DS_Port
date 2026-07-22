@@ -94,7 +94,9 @@ $sectionTotals = @{
         $sectionTotals[$Matches[1]] += [int64]$Matches[2]
     }
 }
-if (($sectionTotals.text -gt 3584) -or
+# Text budget raised 3584 -> 4096 for the Task 38 on-demand cache + baked
+# schedule code (measured 3876 on 2026-07-21; nds_audio_fgm.h cache constants).
+if (($sectionTotals.text -gt 4096) -or
     ($sectionTotals.rodata -gt 576) -or
     ($sectionTotals.data -gt 16) -or
     ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1856L)) -or
@@ -163,7 +165,7 @@ try {
         'printf "FGM_KO=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmKoPlayMask, gNdsAudioFgmKoPlayCounts[0], gNdsAudioFgmKoPlayCounts[1], gNdsAudioFgmKoPlayCounts[2], gNdsAudioFgmKoPlayCounts[3], gNdsAudioFgmKoPlayCounts[4], gNdsAudioFgmKoTraceCount, gNdsAudioFgmKoTrace[0], gNdsAudioFgmKoTrace[1], gNdsAudioFgmKoTrace[2]',
         'printf "FGM_POOL=%u,%u,%u,%u,%u,%u,%u,%#x,%u,%#x\n", gNdsAudioFgmHandleAcquireCount, gNdsAudioFgmHandleCapacity, gNdsAudioFgmHandleReleaseCount, gNdsAudioFgmHandleRecycleCount, gNdsAudioFgmPoolExhaustCount, gNdsAudioFgmActiveHandles, gNdsAudioFgmMaxActiveHandles, gNdsAudioFgmChannelMask, gNdsAudioFgmLastChannel, gNdsAudioFgmFidelityDebtMask',
         'printf "FGM_LIFE=%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmStopCalls, gNdsAudioFgmStopAllCalls, gNdsAudioFgmDurationStopCount, gNdsAudioFgmStaleStopCount, gNdsAudioFgmGenerationMismatchCount, gNdsAudioFgmLastInstanceToken, gNdsAudioFgmInstanceTokenWrapCount',
-        'printf "BGM=%#x,%u,%u,%u,%d\n", gNdsAudioBgmResult, gNdsAudioBgmPlaying, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmReadBytes, sNdsAudioBgmSoundID',
+        'printf "BGM=%#x,%u,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmPlaying, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmReadBytes, gNdsAudioBgmResidentBytes',
         'printf "MEM=%u,%u,%u\n", gNdsMemoryLedgerArenaHeadroom, gNdsMemoryLedgerArenaUsed, gNdsMemoryLedgerArenaHighWater',
         'detach',
         'quit'
@@ -204,7 +206,10 @@ try {
     if (-not $load.Success -or
         (Convert-MarkerUInt32 $load.Groups[1].Value) -ne 0x46474d31 -or
         [int]$load.Groups[3].Value -ne 1 -or
-        [int]$load.Groups[4].Value -ne [int]$metadata.resident_bytes -or
+        # Cache-era resident bytes: NDS_AUDIO_FGM_CACHE_BYTES (204800) +
+        # NDS_AUDIO_FGM_PACK_DATA_OFFSET (1584), nds_audio_fgm.c:942-943.
+        # metadata.resident_bytes still names the FULL pack size (415432).
+        [int]$load.Groups[4].Value -ne 206384 -or
         [int]$load.Groups[5].Value -ne [int]$metadata.entry_count -or
         [int]$load.Groups[6].Value -ne 0 -or
         [int]$load.Groups[7].Value -ne 0 -or
@@ -258,7 +263,10 @@ try {
         [int]$pool.Groups[7].Value -lt 1 -or
         $fgmChannelMask -eq 0 -or
         [int]$pool.Groups[9].Value -ge 16 -or
-        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 28) {
+        # NDS_AUDIO_FGM_EXPECTED_FIDELITY_DEBT_MASK (nds_audio_fgm.h):
+        # PITCH|VOLUME|CUSTOM_FX = 0x34. Fork-voice debt retired by the fused
+        # forks; CUSTOM_FX wet-tail debt awaits Tyler's listen sign-off.
+        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 52) {
         throw "FGM recycle/channel/fidelity diagnostics failed.`n$gdbStdout"
     }
     if (-not $life.Success -or
@@ -267,14 +275,13 @@ try {
         [int]$life.Groups[7].Value -ne 0) {
         throw "FGM token/channel generation ownership failed.`n$gdbStdout"
     }
-    $bgmChannel = if ($bgm.Success) { [int]$bgm.Groups[5].Value } else { -1 }
     if (-not $bgm.Success -or
         (Convert-MarkerUInt32 $bgm.Groups[1].Value) -ne 0x42474d31 -or
         [int]$bgm.Groups[2].Value -ne 1 -or
         [int]$bgm.Groups[3].Value -lt 1 -or
-        [int]$bgm.Groups[4].Value -lt 65536 -or
-        $bgmChannel -lt 0 -or $bgmChannel -ge 16 -or
-        (($fgmChannelMask -band ([uint32]1 -shl $bgmChannel)) -ne 0)) {
+        [int]$bgm.Groups[4].Value -lt 16392 -or
+        [int]$bgm.Groups[5].Value -ne 16392 -or
+        (($fgmChannelMask -band 0xc000) -ne 0)) {
         throw "FGM playback did not coexist on channels distinct from BGM.`n$gdbStdout"
     }
     if (-not $memory.Success -or [uint64]$memory.Groups[1].Value -lt 131072) {

@@ -315,12 +315,13 @@ $attackIDs = @($metadata.entries | Where-Object {
         $_.entry_kind -eq 'attack'
     } | ForEach-Object { [int]$_.id })
 Assert-EqualList -Label 'Resident attack/activation ID set' `
-    -Actual $attackIDs -Expected ([int[]]@(215))
+    -Actual $attackIDs -Expected ([int[]]@(215, 19, 41, 42, 43, 185, 186,
+            187, 189, 190, 217, 218, 219))
 $qualification = $metadata.attack_activation_qualification
 Assert-EqualList -Label 'Source-qualified attack/activation ID set' `
     -Actual ([int[]]@($qualification.qualified_ids)) `
     -Expected ([int[]]@(215))
-Assert-EqualList -Label 'Fail-closed attack/activation exclusion set' `
+Assert-EqualList -Label 'Formerly excluded source-qualification set' `
     -Actual ([int[]]@($qualification.excluded_ids)) `
     -Expected ([int[]]@(19, 41, 42, 43, 185, 186, 187, 189, 190,
             217, 218, 219))
@@ -389,8 +390,8 @@ foreach ($required in @(
         'u16 fgm_id;',
         'u16 loop_point_words;',
         'entry->loop_point_words = ndsAudioFgmReadLe16(&raw[30]);',
-        '(ndsAudioFgmReadLe16(&header[4]) != 3u)',
-        '&sNdsAudioFgmPack[entry->data_offset], SoundFormat_ADPCM,',
+        '(ndsAudioFgmReadLe16(&header[4]) != 4u)',
+        'sNdsAudioFgmCacheSlots[cache_slot].data, SoundFormat_ADPCM,',
         'entry->data_bytes - ((u32)entry->loop_point_words * 4u)',
         '((entry->flags & 1u) != 0u), entry->loop_point_words);',
         'handle->effect.sfx_id = ndsAudioFgmNextInstanceToken();',
@@ -480,8 +481,8 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output (
     'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
-    'mixed-u16 words each, 15 Mario motion callsites across 2 included and 2 ' +
-    'source-audited excluded cues plus the random smash tables/dispatch, ' +
+    'mixed-u16 words each, Mario/Fox motion callsites and all 49 resident ' +
+    'battle cues plus the random smash tables/dispatch, ' +
     'exact Mario/Fox down-bounce mapping and ' +
     'regular-KO call order, no rebirth-audio claim, source attack-motion ' +
     'callsites, target layouts, ' +

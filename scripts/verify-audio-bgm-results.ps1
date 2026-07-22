@@ -137,7 +137,8 @@ try {
         'delete breakpoints',
         'printf "AUDIO_CORE=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmMask, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmPlayCalls, gNdsAudioBgmStopCalls, gNdsAudioBgmCheckCalls, gNdsAudioBgmOpenFailCount, gNdsAudioBgmReadFailCount, gNdsAudioBgmUnsupportedTrackCount, gNdsAudioBgmReadBytes, gNdsAudioBgmResidentBytes, gNdsAudioBgmChunkBytes, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmElapsedFrames, gNdsAudioBgmRefillCount, gNdsAudioBgmUnsafeWriteCount, gNdsAudioBgmOverrunCount, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmExpectedBytesPerSecond, gNdsAudioBgmLoopCount',
         'printf "AUDIO_RESULTS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioBgmStreamBytes, gNdsAudioBgmLoopStartBytes, gNdsAudioBgmIsLooping, gNdsAudioBgmPupupuPlayCount, gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, gNdsAudioBgmResultsPlayCount, gNdsAudioBgmNaturalStopCount, gNdsAudioBgmLastNaturalStopTrackID, gNdsAudioBgmPostNaturalTransitionCount, gNdsAudioBgmPostNaturalTransitionFromTrackID, gNdsAudioBgmPostNaturalTransitionToTrackID, gNdsAudioBgmTrackSwitchCount, gNdsAudioBgmFinitePaddingBytes',
-        'printf "AUDIO_LIFE=%u,%u,%u,%u,%u,%d,%#x,%d\n", gNdsAudioBgmFileOpen, gNdsAudioBgmSoundActive, gNdsAudioBgmPlayFailCount, gNdsAudioBgmErrorStopCount, gNdsAudioBgmErrorCleanupFailCount, gSYAudioCSPlayers[0]->state, sNdsAudioBgmFile, sNdsAudioBgmSoundID',
+        'printf "AUDIO_ADPCM=%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioBgmHeaderFailCount, gNdsAudioBgmPacketFailCount, gNdsAudioBgmPreparedCount, gNdsAudioBgmSeamStartCount, gNdsAudioBgmSeamMissCount, gNdsAudioBgmTimerEventDropCount, gNdsAudioBgmWorkerWakeCount',
+        'printf "AUDIO_LIFE=%u,%u,%u,%u,%u,%d,%#x,%u\n", gNdsAudioBgmFileOpen, gNdsAudioBgmSoundActive, gNdsAudioBgmPlayFailCount, gNdsAudioBgmErrorStopCount, gNdsAudioBgmErrorCleanupFailCount, gSYAudioCSPlayers[0]->state, sNdsAudioBgmFile, sNdsAudioBgmCurrentBuffer',
         'printf "MEMARENA=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerGeneration, gNdsMemoryLedgerArenaCapacity, gNdsMemoryLedgerArenaUsed, gNdsMemoryLedgerArenaHighWater, gNdsMemoryLedgerArenaHeadroom, gNdsMemoryLedgerDLBytes, gNdsMemoryLedgerGraphicsBytes, gNdsMemoryLedgerRdpBytes, gNdsMemoryLedgerFigatreeHeapSize',
         'printf "VSB_END=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsSCVSBattleLifecycleResult, gNdsSCVSBattleLifecycleArenaAdapterCount, gNdsSCVSBattleLifecycleTaskmanExitCount, gNdsSCVSBattleLifecycleTaskmanStatus, gNdsSCVSBattleLifecycleTimeLimit, gNdsSCVSBattleLifecycleTimeRemain, gNdsSCVSBattleLifecycleTimePassed, gNdsSCVSBattleLifecycleGameStatus, gNdsSCVSBattleLifecycleScenePrev, gNdsSCVSBattleLifecycleSceneCurr, gNdsSCVSBattleLifecycleIsSuddenDeath',
         'printf "VS_RESULTS=%#x,%#x,%u,%u,%u,%u,%u,%u,%u\n", gNdsVSResultsResult, gNdsVSResultsMask, gNdsVSResultsStartCount, gNdsVSResultsTickCount, gNdsVSResultsLoadedFileCount, gNdsVSResultsFighterCount, gNdsVSResultsGObjCount, gNdsVSResultsSObjCount, gNdsVSResultsKind',
@@ -151,17 +152,19 @@ try {
 
     $coreMatch = [regex]::Match($gdbOutput, 'AUDIO_CORE=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $resultsMatch = [regex]::Match($gdbOutput, 'AUDIO_RESULTS=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
-    $lifeMatch = [regex]::Match($gdbOutput, 'AUDIO_LIFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(-?[0-9]+)')
+    $adpcmMatch = [regex]::Match($gdbOutput, 'AUDIO_ADPCM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $lifeMatch = [regex]::Match($gdbOutput, 'AUDIO_LIFE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+)')
     $memoryMatch = [regex]::Match($gdbOutput, 'MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $battleMatch = [regex]::Match($gdbOutput, 'VSB_END=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $vsResultsMatch = [regex]::Match($gdbOutput, 'VS_RESULTS=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
-    Assert-Result ($coreMatch.Success -and $resultsMatch.Success -and
+    Assert-Result ($coreMatch.Success -and $resultsMatch.Success -and $adpcmMatch.Success -and
         $lifeMatch.Success -and $memoryMatch.Success -and
         $battleMatch.Success -and $vsResultsMatch.Success) `
         'Results audio GDB marker set was incomplete.' $gdbOutput
 
     $core = Get-Ints $coreMatch
     $results = Get-Ints $resultsMatch
+    $adpcm = Get-Ints $adpcmMatch
     $audioLife = Get-Ints $lifeMatch
     $memory = Get-Ints $memoryMatch
     $battle = Get-Ints $battleMatch
@@ -181,23 +184,28 @@ try {
     Assert-Result ($core[0] -eq 0x42474d31 -and $core[2] -eq 1 -and
         $core[3] -eq 22 -and $core[4] -eq 3 -and $core[5] -ge 1 -and
         $core[7] -eq 0 -and $core[8] -eq 0 -and $core[9] -eq 0 -and
-        $core[11] -eq 65536 -and $core[12] -eq 65536 -and
+        $core[10] -gt 0 -and $core[11] -eq 16392 -and
+        $core[12] -ge 4 -and $core[12] -le 8196 -and
         $core[16] -eq 0 -and $core[17] -eq 0 -and
         $core[18] -ge 42100 -and $core[18] -le 46100 -and
         $core[19] -eq 44100) `
         'BGM streamer failed its exact I/O, residency, rate, or safety contract.' $gdbOutput
+    Assert-Result ($adpcm[0] -eq 0 -and $adpcm[1] -eq 0 -and
+        $adpcm[2] -gt 0 -and $adpcm[3] -gt 0 -and
+        $adpcm[4] -eq 0 -and $adpcm[5] -eq 0) `
+        'BGM ADPCM packet preparation or seam contract failed.' $gdbOutput
     Assert-Result ($results[0] -eq 1624750 -and $results[1] -eq 34912 -and
         $results[2] -eq 1 -and $results[3] -eq 1 -and
         $winnerCount -eq 1 -and $results[6] -eq 1 -and
         $results[7] -eq 1 -and $results[8] -eq $winnerTrack -and
         $results[9] -eq 1 -and $results[10] -eq $winnerTrack -and
         $results[11] -eq 22 -and $results[12] -eq 0 -and
-        $results[13] -gt 0) `
+        $results[13] -eq 0) `
         'Winner BGM did not naturally stop and release the source Results thread into track 22.' $gdbOutput
     Assert-Result ($audioLife[0] -eq 1 -and $audioLife[1] -eq 1 -and
         $audioLife[2] -eq 0 -and $audioLife[3] -eq 0 -and
         $audioLife[4] -eq 0 -and $audioLife[5] -eq 1 -and
-        $audioLife[6] -ne 0 -and $audioLife[7] -ge 0) `
+        $audioLife[6] -ne 0 -and $audioLife[7] -le 1) `
         'BGM file/channel lifecycle or error-cleanup invariant failed.' $gdbOutput
     $reserveAfterAudio = $memory[6] - $core[11]
     Assert-Result ($memory[0] -eq 0x4d4c4544 -and $memory[1] -eq 24 -and
@@ -208,14 +216,14 @@ try {
     $romSha = (Get-FileHash -LiteralPath $rom -Algorithm SHA256).Hash.ToLowerInvariant()
     $summaryFormat = 'Audio Results natural PASS: winner={0}({1}) transition={1}->22 ' +
         'plays={2}/pupupu{3}/mario{4}/fox{5}/results{6} natural={7} ' +
-        'errors={8}/{9}/{10} unsafe={11} overrun={12} cleanup={13}/{14}/{15} ' +
-        'read={16} refills={17} padding={18} resident={19} headroom={20} reserve_after_audio={21} ' +
-        'results_tick={22} runner=slot{23}@{24}/{25} pid={26} rom={27}/{28}'
+        'errors={8}/{9}/{10} unsafe={11} overrun={12} cleanup={13}/{14}/{15} seams={16}/{17} ' +
+        'read={18} refills={19} padding={20} resident={21} headroom={22} reserve_after_audio={23} ' +
+        'results_tick={24} runner=slot{25}@{26}/{27} pid={28} rom={29}/{30}'
     $summary = $summaryFormat -f (
         $winnerName, $winnerTrack, $core[4], $results[3], $results[4],
         $results[5], $results[6], $results[7], $core[7], $core[8],
         $core[9], $core[16], $core[17], $audioLife[2], $audioLife[3],
-        $audioLife[4], $core[10], $core[15], $results[13], $core[11],
+        $audioLife[4], $adpcm[3], $adpcm[4], $core[10], $core[15], $results[13], $core[11],
         $memory[6], $reserveAfterAudio, $vsResults[3], $RunnerSlot,
         $context.GdbPort, $context.Arm7Port, $emulator.Id, $romItem.Length,
         $romSha)

@@ -27,13 +27,17 @@ if ($ObserverFreeSnapshot -and $FreezeDiagnostics) {
 }
 $target = if ($FreezeDiagnostics) {
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri'
-} else {
+} elseif ($ObserverFreeSnapshot) {
     'smash64ds-battle-playable-hwtri'
+} else {
+    'smash64ds-battle-playable-proof-hwtri'
 }
 $build = if ($FreezeDiagnostics) {
     'build-freeze-diagnostics-on-hwtri'
-} else {
+} elseif ($ObserverFreeSnapshot) {
     'build-battle-playable-canonical-hwtri-harness'
+} else {
+    'build-battle-playable-proof-hwtri-harness'
 }
 $artifactDir = if ($FreezeDiagnostics) {
     Join-Path $root (Join-Path 'builds' $build)

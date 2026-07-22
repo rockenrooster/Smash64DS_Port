@@ -8,6 +8,15 @@
 #include <nds/timers.h>
 #include <PR/sp.h>
 #include <nds/nds_ifcommon_oam.h>
+
+#if NDS_SHIP_TELEMETRY
+#define NDS_IFCOMMON_TELEMETRY_TICK() cpuGetTiming()
+#define NDS_IFCOMMON_TELEMETRY_ADD(dst, start) \
+    ((dst) += cpuGetTiming() - (start))
+#else
+#define NDS_IFCOMMON_TELEMETRY_TICK() 0u
+#define NDS_IFCOMMON_TELEMETRY_ADD(dst, start) ((void)(start))
+#endif
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task39_effect_census.h>
@@ -2077,8 +2086,10 @@ void ndsIFCommonNativeOamBeginFrame(void)
     sNdsTask39FxSpawnTickAccum = 0u;
     sNdsTask39FxUpdateTickAccum = 0u;
 #endif
+#if NDS_SHIP_TELEMETRY
     gNdsIFCommonNativeOamFrameBeginTicks = 0u;
     gNdsIFCommonNativeOamFrameCommitTicks = 0u;
+#endif
     gNdsIFCommonNativeOamFrameCommitCalls = 0u;
     gNdsIFCommonNativeOamFrameClearedObjects = 0u;
     gNdsIFCommonNativeOamFrameIdle = 0u;
@@ -2086,26 +2097,31 @@ void ndsIFCommonNativeOamBeginFrame(void)
 #if NDS_RENDERER_HW_TRIANGLES
     if (sNdsIFCommonPreviousLowestOamID < 128)
     {
-        u32 start = cpuGetTiming();
+        u32 start = NDS_IFCOMMON_TELEMETRY_TICK();
 
         gNdsIFCommonNativeOamFrameClearedObjects =
             (u32)(128 - sNdsIFCommonPreviousLowestOamID);
         oamClear(&oamMain, sNdsIFCommonPreviousLowestOamID,
                  (int)gNdsIFCommonNativeOamFrameClearedObjects);
-        gNdsIFCommonNativeOamFrameBeginTicks = cpuGetTiming() - start;
+        NDS_IFCOMMON_TELEMETRY_ADD(
+            gNdsIFCommonNativeOamFrameBeginTicks, start);
         sNdsIFCommonFrameNeedsCommit = TRUE;
     }
 #endif
     sNdsIFCommonNextOamID = 127;
     sNdsIFCommonMatrixCount = 0u;
+#if NDS_SHIP_TELEMETRY
     gNdsIFCommonNativeOamFrameTicks = 0u;
+#endif
     gNdsIFCommonNativeOamFrameRecognizedCalls = 0u;
     gNdsIFCommonNativeOamFrameDrawCalls = 0u;
     gNdsIFCommonNativeOamFrameFallbackCalls = 0u;
+#if NDS_SHIP_TELEMETRY
     gNdsIFCommonNativeOamFrameSObjCount = 0u;
+    gNdsIFCommonNativeOamFrameSemanticHash = NDS_IFCOMMON_HASH_SEED;
+#endif
     gNdsIFCommonNativeOamFrameObjectCount = 0u;
     gNdsIFCommonNativeOamFrameCloudDrawCount = 0u;
-    gNdsIFCommonNativeOamFrameSemanticHash = NDS_IFCOMMON_HASH_SEED;
     gNdsIFCommonNativeOamLastFallbackReason =
         nNDSIFCommonFallbackNone;
     ndsTask39HitSparksDraw();
@@ -2274,6 +2290,7 @@ static void ndsTask39HitSparksDraw(void)
 #endif
 }
 
+#if NDS_SHIP_TELEMETRY
 static void ndsIFCommonRecordSemantic(const SObj *sobj, u32 asset_index)
 {
     u32 hash = gNdsIFCommonNativeOamFrameSemanticHash;
@@ -2297,6 +2314,7 @@ static void ndsIFCommonRecordSemantic(const SObj *sobj, u32 asset_index)
     gNdsIFCommonNativeOamFrameSemanticHash = hash;
     gNdsIFCommonNativeOamFrameSObjCount++;
 }
+#endif
 
 static u32 ndsIFCommonBitmapAlpha(u8 source_alpha)
 {
@@ -2554,7 +2572,7 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     SObj *sobj;
     SObj *scan;
     u32 required_objects = 0u;
-    u32 start = cpuGetTiming();
+    u32 start = NDS_IFCOMMON_TELEMETRY_TICK();
     s32 oam_id_before;
     u32 matrix_count_before;
     u32 object_count_before;
@@ -2590,7 +2608,8 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
             gNdsIFCommonNativeOamFrameFallbackCalls++;
             gNdsIFCommonNativeOamLastFallbackReason =
                 nNDSIFCommonFallbackUnknownSprite;
-            gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+            NDS_IFCOMMON_TELEMETRY_ADD(
+                gNdsIFCommonNativeOamFrameTicks, start);
             return FALSE;
         }
         if (asset_index == -2)
@@ -2598,7 +2617,8 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
             gNdsIFCommonNativeOamFrameFallbackCalls++;
             gNdsIFCommonNativeOamLastFallbackReason =
                 nNDSIFCommonFallbackRuntimeColor;
-            gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+            NDS_IFCOMMON_TELEMETRY_ADD(
+                gNdsIFCommonNativeOamFrameTicks, start);
             return FALSE;
         }
         recognized = TRUE;
@@ -2612,14 +2632,17 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
             gNdsIFCommonNativeOamFrameFallbackCalls++;
             gNdsIFCommonNativeOamLastFallbackReason =
                 nNDSIFCommonFallbackBadAsset;
-            gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+            NDS_IFCOMMON_TELEMETRY_ADD(
+                gNdsIFCommonNativeOamFrameTicks, start);
             return FALSE;
         }
         if ((traffic == NULL) && (cloud == NULL))
         {
             required_objects += sNdsIFCommonAssets[asset_index].tile_count;
         }
+#if NDS_SHIP_TELEMETRY
         ndsIFCommonRecordSemantic(scan, (u32)asset_index);
+#endif
     }
     if (recognized == FALSE)
     {
@@ -2631,7 +2654,8 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
         gNdsIFCommonNativeOamFrameFallbackCalls++;
         gNdsIFCommonNativeOamLastFallbackReason =
             nNDSIFCommonFallbackDisabled;
-        gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+        NDS_IFCOMMON_TELEMETRY_ADD(
+            gNdsIFCommonNativeOamFrameTicks, start);
         return FALSE;
     }
     if (sNdsIFCommonPrepared == FALSE)
@@ -2639,7 +2663,8 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
         gNdsIFCommonNativeOamFrameFallbackCalls++;
         gNdsIFCommonNativeOamLastFallbackReason =
             nNDSIFCommonFallbackNotPrepared;
-        gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+        NDS_IFCOMMON_TELEMETRY_ADD(
+            gNdsIFCommonNativeOamFrameTicks, start);
         return FALSE;
     }
     if (required_objects > (u32)(sNdsIFCommonNextOamID + 1))
@@ -2647,7 +2672,8 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
         gNdsIFCommonNativeOamFrameFallbackCalls++;
         gNdsIFCommonNativeOamLastFallbackReason =
             nNDSIFCommonFallbackObjectLimit;
-        gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+        NDS_IFCOMMON_TELEMETRY_ADD(
+            gNdsIFCommonNativeOamFrameTicks, start);
         return FALSE;
     }
 
@@ -2683,7 +2709,8 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
             gNdsIFCommonNativeOamFrameFallbackCalls++;
             gNdsIFCommonNativeOamLastFallbackReason =
                 nNDSIFCommonFallbackMatrixLimit;
-            gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+            NDS_IFCOMMON_TELEMETRY_ADD(
+                gNdsIFCommonNativeOamFrameTicks, start);
             return FALSE;
         }
     }
@@ -2710,7 +2737,8 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
             gNdsIFCommonNativeOamFrameFallbackCalls++;
             gNdsIFCommonNativeOamLastFallbackReason =
                 nNDSIFCommonFallbackBadAsset;
-            gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+            NDS_IFCOMMON_TELEMETRY_ADD(
+                gNdsIFCommonNativeOamFrameTicks, start);
             return FALSE;
         }
     }
@@ -2719,7 +2747,7 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     {
         sNdsIFCommonFrameNeedsCommit = TRUE;
     }
-    gNdsIFCommonNativeOamFrameTicks += cpuGetTiming() - start;
+    NDS_IFCOMMON_TELEMETRY_ADD(gNdsIFCommonNativeOamFrameTicks, start);
     return TRUE;
 #else
     (void)gobj;
@@ -2732,10 +2760,12 @@ void ndsIFCommonNativeOamCommit(void)
 #if NDS_RENDERER_HW_TRIANGLES
     if (sNdsIFCommonFrameNeedsCommit != FALSE)
     {
-        u32 start = cpuGetTiming();
+        u32 start = NDS_IFCOMMON_TELEMETRY_TICK();
 
         oamUpdate(&oamMain);
+#if NDS_SHIP_TELEMETRY
         gNdsIFCommonNativeOamFrameCommitTicks = cpuGetTiming() - start;
+#endif
         gNdsIFCommonNativeOamFrameCommitCalls = 1u;
         gNdsIFCommonNativeOamCommitCount++;
     }

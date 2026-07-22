@@ -125,7 +125,8 @@ function Get-GdbShellWait([string]$ReadyPath, [string]$GoPath,
     $publish = if ($CreateReady) {
         "Set-Content -LiteralPath '$readyGdb' -Value ready; "
     } else { '' }
-    return "shell powershell.exe -NoProfile -Command `"${publish}while (-not (Test-Path -LiteralPath '$goGdb')) { Start-Sleep -Milliseconds 25 }`""
+    $waitSeconds = [Math]::Min($TimeoutSeconds, 35)
+    return "shell powershell.exe -NoProfile -Command `"${publish}`$deadline=(Get-Date).AddSeconds($waitSeconds); while (-not (Test-Path -LiteralPath '$goGdb') -and (Get-Date) -lt `$deadline) { Start-Sleep -Milliseconds 25 }; if (-not (Test-Path -LiteralPath '$goGdb')) { exit 124 }`""
 }
 
 $commands = @(
@@ -167,6 +168,7 @@ foreach ($name in $arrays) {
 }
 $commands += (Get-GdbShellWait $complete $completeGo)
 if ($AuditMode -ne 'Natural') { $commands += @('end','continue') }
+$commands += 'set variable gNdsBattlePlayableFoxCpuEnabled = 1'
 $commands += @('detach','quit')
 Set-Content -LiteralPath $gdbScript -Value ($commands -join "`n")
 

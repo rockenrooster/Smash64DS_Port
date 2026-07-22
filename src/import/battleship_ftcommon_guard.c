@@ -5,6 +5,7 @@
  * deferred.
  */
 #include <PR/ultratypes.h>
+#include <ef/effect.h>
 #include <math.h>
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
@@ -16,15 +17,6 @@
 #define AOBJ_ANIM_NULL 0.0F
 #endif
 
-typedef struct EFStruct {
-    struct {
-        struct {
-            sb32 is_damage_shield;
-        } shield;
-    } effect_vars;
-} EFStruct;
-typedef struct LBParticle LBParticle;
-
 void ftParamSetHitStatusPartID(GObj *fighter_gobj, s32 joint_id,
                                s32 hitstatus);
 void ftParamResetModelPartAll(GObj *fighter_gobj);
@@ -34,10 +26,6 @@ void ftParamsUpdateFighterPartsTransform(DObj *joint);
 void ftParamsUpdateFighterPartsTransformAll(DObj *joint);
 void ftCommonShieldBreakFlyCommonSetStatus(GObj *fighter_gobj);
 void gmCollisionGetFighterPartsWorldPosition(DObj *main_dobj, Vec3f *vec);
-LBParticle *efManagerEggBreakMakeEffect(Vec3f *pos);
-GObj *efManagerShieldMakeEffect(GObj *fighter_gobj);
-GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj);
-EFStruct *efGetStruct(GObj *effect_gobj);
 f32 syUtilsArcTan2(f32 y, f32 x);
 void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
                         f32 anim_frame);
@@ -129,11 +117,3 @@ void ndsBaseFTCommonGuardOffSetStatus(GObj *fighter_gobj);
 #undef ftCommonGuardOffSetStatus
 #undef ftCommonGuardSetOffProcUpdate
 #undef ftCommonGuardSetOffSetStatus
-
-EFStruct *efGetStruct(GObj *effect_gobj)
-{
-    static EFStruct s_effect;
-
-    (void)effect_gobj;
-    return &s_effect;
-}

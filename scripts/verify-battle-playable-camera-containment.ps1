@@ -28,8 +28,8 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -GdbPort $GdbPort `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
-$target = 'smash64ds-battle-playable-hwtri'
-$build = 'build-battle-playable-canonical-hwtri-harness'
+$target = 'smash64ds-battle-playable-proof-hwtri'
+$build = 'build-battle-playable-proof-hwtri-harness'
 $rom = Join-Path $root "$target.nds"
 $elf = Join-Path $root "$target.elf"
 $melonDsPath = $verifierContext.MelonDSPath

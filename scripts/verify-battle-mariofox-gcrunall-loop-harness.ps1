@@ -78,27 +78,32 @@ param(
     [Parameter(Mandatory = $true)][string]$HarnessSelectMessage
 )
 $ErrorActionPreference = 'Stop'
-$usesPublishedIntrinsicRendererDefaults =
-    ($Target -eq 'smash64ds-battle-playable-hwtri')
-$usesIntrinsicTask36Replay =
-    ($Target -eq 'smash64ds-battle-playable-hwtri')
+$usesPublishedIntrinsicRendererDefaults = $Target -in @(
+    'smash64ds-battle-playable-hwtri',
+    'smash64ds-battle-playable-proof-hwtri'
+)
+$usesIntrinsicTask36Replay = $usesPublishedIntrinsicRendererDefaults
 $usesIntrinsicTask16FloatHelpers = $Target -in @(
     'smash64ds-battle-playable-hwtri',
+    'smash64ds-battle-playable-proof-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
 $usesIntrinsicNativeStageGeneratedSegment0 = $Target -in @(
     'smash64ds-battle-playable-hwtri',
+    'smash64ds-battle-playable-proof-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
 $usesIntrinsicFastWallpaper = $Target -in @(
     'smash64ds-battle-playable-hwtri',
+    'smash64ds-battle-playable-proof-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
 $usesIntrinsicTask32DrawHotText = $Target -in @(
     'smash64ds-battle-playable-hwtri',
+    'smash64ds-battle-playable-proof-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-on-hwtri',
     'smash64ds-battle-playable-freeze-diagnostics-off-hwtri'
 )
@@ -560,7 +565,8 @@ function Get-BenchmarkMakeIdentity {
         }
     }
     $required = @(
-        'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'M2_DETAILED_LEDGER',
+        'TARGET', 'HARNESS', 'HARNESS_ID', 'PROFILE', 'SHIP_TELEMETRY',
+        'TICK_HUD', 'M2_DETAILED_LEDGER',
         'M3_PHASE0_PROFILE', 'NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE',
         'TASK29_GX_CENSUS', 'TASK34_STAGE_STREAM_CENSUS',
         'TASK36_HW_COMPOSE',
@@ -586,6 +592,8 @@ function Get-BenchmarkMakeIdentity {
         Harness = $values.HARNESS
         HarnessId = [int]$values.HARNESS_ID
         Profile = [int]$values.PROFILE
+        ShipTelemetry = [int]$values.SHIP_TELEMETRY
+        TickHud = [int]$values.TICK_HUD
         M2DetailedLedger = [int]$values.M2_DETAILED_LEDGER
         M3Phase0Profile = [int]$values.M3_PHASE0_PROFILE
         NativeStageGeneratedSegment0Enable =
@@ -883,6 +891,11 @@ Assert-Condition (Test-Path -LiteralPath $bg0BuildConfig -PathType Leaf) `
     'Built fast-wallpaper configuration is missing; refusing stale evidence.' `
     $bg0BuildConfig
 $bg0BuildConfigText = Get-Content -LiteralPath $bg0BuildConfig -Raw
+Assert-Condition (
+    $bg0BuildConfigText -match '(?m)^#define NDS_SHIP_TELEMETRY 1$' -and
+    $bg0BuildConfigText -match '(?m)^#define NDS_TICK_HUD 0$'
+) 'GDB proof runs require full telemetry and must not use TICKHUD.' `
+    $bg0BuildConfigText
 Assert-Condition ($bg0BuildConfigText -match
     "(?m)^#define NDS_FAST_WALLPAPER_AFFINE $effectiveFastWallpaperAffineMode$") `
     'Built fast-wallpaper configuration does not match the requested selector.' `
@@ -998,6 +1011,8 @@ if (($RendererBenchmarkSamples -gt 0) -or $Task25RPacingTrace) {
         $benchmarkMakeIdentity.Harness -eq $Harness -and
         $benchmarkMakeIdentity.HarnessId -eq $ExpectedMode -and
         $benchmarkMakeIdentity.Profile -eq $RendererProfileLevel -and
+        $benchmarkMakeIdentity.ShipTelemetry -eq 1 -and
+        $benchmarkMakeIdentity.TickHud -eq 0 -and
         $benchmarkMakeIdentity.M2DetailedLedger -eq
             [int]$RendererM2DetailedLedger.IsPresent -and
         $benchmarkMakeIdentity.M3Phase0Profile -eq
@@ -2015,7 +2030,8 @@ try {
         $beforeDetach = $gdbCommands[0..($gdbCommands.Count - 3)]
         $afterDetach = $gdbCommands[($gdbCommands.Count - 2)..($gdbCommands.Count - 1)]
         $audioBgmCommands = @(
-            'printf "AUDIO_BGM=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmMask, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmVolume, gNdsAudioBgmPlayCalls, gNdsAudioBgmStopCalls, gNdsAudioBgmCheckCalls, gNdsAudioBgmSetVolumeCalls, gNdsAudioBgmOpenFailCount, gNdsAudioBgmReadFailCount, gNdsAudioBgmUnsupportedTrackCount, gNdsAudioBgmReadBytes, gNdsAudioBgmResidentBytes, gNdsAudioBgmChunkBytes, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmStoppedOnTeardown, gNdsAudioBgmElapsedFrames, gNdsAudioBgmStreamedBytes, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmExpectedBytesPerSecond, gNdsAudioBgmLoopCount, gNdsAudioBgmRefillCount, gNdsAudioBgmPlaybackPositionBytes, gNdsAudioBgmWritePositionBytes, gNdsAudioBgmPlaybackHalf, gNdsAudioBgmWriteHalf, gNdsAudioBgmUnsafeWriteCount, gNdsAudioBgmTimerTicks, gNdsAudioBgmPlaybackBytes, gNdsAudioBgmPlaybackLoopCount, gNdsAudioBgmOverrunCount'
+            'printf "AUDIO_BGM=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmMask, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmVolume, gNdsAudioBgmPlayCalls, gNdsAudioBgmStopCalls, gNdsAudioBgmCheckCalls, gNdsAudioBgmSetVolumeCalls, gNdsAudioBgmOpenFailCount, gNdsAudioBgmReadFailCount, gNdsAudioBgmUnsupportedTrackCount, gNdsAudioBgmReadBytes, gNdsAudioBgmResidentBytes, gNdsAudioBgmChunkBytes, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmStoppedOnTeardown, gNdsAudioBgmElapsedFrames, gNdsAudioBgmStreamedBytes, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmExpectedBytesPerSecond, gNdsAudioBgmLoopCount, gNdsAudioBgmRefillCount, gNdsAudioBgmPlaybackPositionBytes, gNdsAudioBgmWritePositionBytes, gNdsAudioBgmPlaybackHalf, gNdsAudioBgmWriteHalf, gNdsAudioBgmUnsafeWriteCount, gNdsAudioBgmTimerTicks, gNdsAudioBgmPlaybackBytes, gNdsAudioBgmPlaybackLoopCount, gNdsAudioBgmOverrunCount',
+            'printf "AUDIO_BGM_ADPCM=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioBgmHeaderFailCount, gNdsAudioBgmPacketFailCount, gNdsAudioBgmPreparedCount, gNdsAudioBgmSeamStartCount, gNdsAudioBgmSeamMissCount, gNdsAudioBgmTimerEventDropCount, gNdsAudioBgmWorkerWakeCount, gNdsAudioBgmErrorStopCount, gNdsAudioBgmErrorCleanupFailCount'
         )
         $gdbCommands = @($beforeDetach + $audioBgmCommands + $afterDetach)
     }
@@ -2545,6 +2561,7 @@ try {
             'Audio FGM unsupported-ID census marker is missing.' $gdbStdout
     }
     $audioBgm = [regex]::Match($gdbStdout, 'AUDIO_BGM=(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $audioBgmAdpcm = [regex]::Match($gdbStdout, 'AUDIO_BGM_ADPCM=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $boundary = [regex]::Match($gdbStdout, 'BOUNDARY=(0x[0-9a-fA-F]+|0),([0-9]+)')
     $m4FenceFinalSummary = ''
     $m4FenceFinalPass = $true
@@ -2849,7 +2866,7 @@ try {
         # The arena ledger records the VSBattle high-water mark. Require the
         # same conservative reserve used by the integrated battle verifier
         # after accounting for the resident BGM buffer.
-        Assert-Condition ($audioBgm.Success -and $audioResidentBytes -eq 65536) `
+        Assert-Condition ($audioBgm.Success -and $audioResidentBytes -eq 16392) `
             'One-minute match did not report the resident BGM allocation used by the reserve gate.' `
             $gdbStdout
         $arenaLedgerValid = $vsbMemoryArena.Success -and
@@ -5604,7 +5621,8 @@ try {
             }
             if ($ImportBattleShipAudioBGM) {
                 $ab = Get-Ints $audioBgm
-                Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x1) -eq 0x1) -and (($ab[2] -eq 1) -or ($ab[6] -ge 1)) -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0) 'Minimal BGM backend realtime smoke failed hardware-timer byte-rate or safe half refill guard.' $gdbStdout
+                $ad = Get-Ints $audioBgmAdpcm
+                Assert-Condition ($audioBgm.Success -and $audioBgmAdpcm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x1) -eq 0x1) -and (($ab[2] -eq 1) -or ($ab[6] -ge 1)) -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[13] -eq 16392 -and $ab[14] -ge 4 -and $ab[14] -le 8196 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 2886710 -and (($ab[24] -eq 0) -or ($ab[24] -eq 8196)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0 -and $ad[0] -eq 0 -and $ad[1] -eq 0 -and $ad[2] -gt 0 -and $ad[3] -gt 0 -and $ad[4] -eq 0 -and $ad[5] -eq 0 -and $ad[7] -eq 0 -and $ad[8] -eq 0) 'Minimal BGM ADPCM realtime smoke failed rate, residency, packet, seam, or cleanup guards.' $gdbStdout
             }
             if ($RendererBenchmarkSamples -gt 0) {
                 Write-Output $benchmarkIdentitySummary
@@ -5743,9 +5761,10 @@ try {
         }
         if ($ImportBattleShipAudioBGM) {
             $ab = Get-Ints $audioBgm
+            $ad = Get-Ints $audioBgmAdpcm
             $audioBgmResidentBytes = $ab[13]
-            Assert-Condition ($audioBgm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x3) -eq 0x3) -and $ab[2] -eq 0 -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[6] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[12] -gt 65536 -and $ab[13] -eq 65536 -and $ab[14] -eq 32768 -and $ab[15] -ge 1 -and $ab[16] -eq 1 -and $ab[17] -ge 3200 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 65536 -and (($ab[24] -eq 0) -or ($ab[24] -eq 32768)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0 -and $ab[31] -eq 0) 'Minimal BGM backend proof failed natural start/stop or hardware-timer 44100 B/s stream-rate guard.' $gdbStdout
-            $audioBgmSummary = " bgm=track$($ab[3]) play=$($ab[5]) stop=$($ab[6]) refills=$($ab[22]) read=$($ab[12]) rate=$($ab[19]) loop=$($ab[21]) hwloop=$($ab[30]) resident=$($ab[13])"
+            Assert-Condition ($audioBgm.Success -and $audioBgmAdpcm.Success -and $ab[0] -eq 0x42474d31 -and (($ab[1] -band 0x3) -eq 0x3) -and $ab[2] -eq 0 -and $ab[3] -eq 0 -and $ab[4] -eq 0x7800 -and $ab[5] -ge 1 -and $ab[6] -ge 1 -and $ab[9] -eq 0 -and $ab[10] -eq 0 -and $ab[11] -eq 0 -and $ab[12] -gt 16392 -and $ab[13] -eq 16392 -and $ab[14] -ge 4 -and $ab[14] -le 8196 -and $ab[15] -ge 1 -and $ab[16] -eq 1 -and $ab[17] -ge 3200 -and $ab[19] -ge 42100 -and $ab[19] -le 46100 -and $ab[20] -eq 44100 -and $ab[22] -ge 4 -and $ab[23] -lt 2886710 -and (($ab[24] -eq 0) -or ($ab[24] -eq 8196)) -and (($ab[25] -eq 0) -or ($ab[25] -eq 1)) -and (($ab[26] -eq 0) -or ($ab[26] -eq 1)) -and $ab[25] -ne $ab[26] -and $ab[27] -eq 0 -and $ab[28] -gt 0 -and $ab[29] -gt 0 -and $ab[31] -eq 0 -and $ad[0] -eq 0 -and $ad[1] -eq 0 -and $ad[2] -gt 0 -and $ad[3] -gt 0 -and $ad[4] -eq 0 -and $ad[5] -eq 0 -and $ad[7] -eq 0 -and $ad[8] -eq 0) 'Minimal BGM ADPCM proof failed natural stop, rate, residency, packet, seam, or cleanup guards.' $gdbStdout
+            $audioBgmSummary = " bgm=track$($ab[3]) play=$($ab[5]) stop=$($ab[6]) refills=$($ab[22]) read=$($ab[12]) rate=$($ab[19]) loop=$($ab[21]) seams=$($ad[3])/$($ad[4]) resident=$($ab[13])"
         }
         $movesetSummary = ''
         if ($ImportBattleShipNormalMoveset) {

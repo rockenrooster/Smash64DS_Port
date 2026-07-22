@@ -2190,7 +2190,7 @@ static u32 ndsOpeningRoomMaterialDLExpandMapRendererBlocker(u32 blocker)
 static void ndsOpeningRoomProbeMaterialDLExpandedShape(void)
 {
     const Gfx *dl = sNdsOpeningRoomMaterialPreviewDL;
-    NDSRendererConfig config;
+    NDSRendererConfig config = {0};
     NDSRendererStats stats;
 
     if (gNdsOpeningRoomMaterialDLExpandResult != 0)
@@ -3410,7 +3410,7 @@ static void ndsOpeningRoomRenderDLPreview(DObj *dobj, Gfx *dl)
     u32 combine_mode = NDS_OPENING_ROOM_DL_COMBINE_MODE_UNKNOWN;
     u32 combine_flags = 0;
     NDSDLPreviewParseState parse_state;
-    NDSRendererConfig renderer_config;
+    NDSRendererConfig renderer_config = {0};
     NDSRendererStats renderer_stats;
     NDSRendererMatrix20p12 initial_projection;
     NDSRendererMatrix20p12 initial_modelview;

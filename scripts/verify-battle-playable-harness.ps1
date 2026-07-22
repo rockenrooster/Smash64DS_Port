@@ -88,8 +88,8 @@ if ($OneMinuteMatchProof) {
 } elseif ($RealtimePresentation) {
     if ($RendererProfileLevel -lt 0) { $RendererProfileLevel = 0 }
     if ($RendererProfileLevel -eq 0) {
-        $target = 'smash64ds-battle-playable-hwtri'
-        $build = 'build-battle-playable-canonical-hwtri-harness'
+        $target = 'smash64ds-battle-playable-proof-hwtri'
+        $build = 'build-battle-playable-proof-hwtri-harness'
     } elseif ($RendererProfileLevel -eq 1) {
         $target = 'smash64ds-battle-playable-coarse-hwtri'
         $build = 'build-battle-playable-coarse-hwtri-harness'
@@ -108,7 +108,8 @@ if ($RendererProfileLevel -lt 0) {
     # minute release gate selects realtime profile 0 and fixed-two pacing.
     $RendererProfileLevel = if ($OneMinuteMatchProof) { 0 } else { 2 }
 }
-if (($target -eq 'smash64ds-battle-playable-hwtri') -and
+if (($target -in @('smash64ds-battle-playable-hwtri',
+                   'smash64ds-battle-playable-proof-hwtri')) -and
     -not $PSBoundParameters.ContainsKey('RendererFastRunMode')) {
     $RendererFastRunMode = 9
 }

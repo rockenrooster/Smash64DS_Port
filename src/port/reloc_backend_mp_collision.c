@@ -12594,7 +12594,7 @@ static void ndsStageInishieScaleLoopScanSourceDObj(
     u32 scan_bit,
     void (*proc_display)(GObj *))
 {
-    NDSRendererConfig config;
+    NDSRendererConfig config = {0};
     NDSRendererStats stats;
 
     if ((dobj != NULL) && (dobj->parent_gobj != NULL) &&
@@ -12965,7 +12965,7 @@ static void ndsStageInishieScaleLoopPreviewSourceDObj(
     DObj *dobj, NDSFighterDLDrawState *state, NDSRendererStats *stats,
     u8 *clean)
 {
-    NDSRendererConfig config;
+    NDSRendererConfig config = {0};
 
     if ((state == NULL) || (stats == NULL) || (clean == NULL))
     {

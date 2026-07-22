@@ -11,8 +11,9 @@ second task to an existing file.
   economy. Read first for any task.
 - `ClaudeFable5_Task36_HwCompose_20260720.md` — active task (canonical per-file form).
 - `ClaudeFable5_Task37_ItcmRepack_20260720.md` — queued task.
-- `ClaudeFable5_Task38_FgmAudit_20260720.md` — queued task: FGM coverage audit +
-  missing Up-B/Down-B sounds + layered-hit fixes.
+- `ClaudeFable5_Task38_FgmAudit_20260720.md` — PRIORITY, RESUMED 2026-07-21: audit
+  phases closed (evidence committed); fix phases now mandated — ship every
+  battle-reachable FGM cue exactly, per the content-completeness doctrine.
 - `ClaudeFable5_Task39_VisualEffects_20260720.md` — ACTIVE/EXECUTE: visual-effects audit +
   faithful DS implementations. 2026-07-21: map corrected after the preflight stop (shield
   is a lane-3 substitute template); Tyler pre-marked hurt flash / hit sparks / shield as
@@ -24,9 +25,6 @@ second task to an existing file.
 - `ClaudeFable5_Task41_ShipLeanTickHud_20260721.md`, `..Task42_AdpcmBgm_20260721.md`,
   `..Task43_MicroSweep_20260721.md`, `..Task44_StageSteadyState_20260721.md` — queued
   tasks (see each file's header for sequencing).
-- `ClaudeFable5_Task45_FgmFullCoverage_20260721.md` — PRIORITY task: ship every
-  battle-reachable FGM cue exactly (reverses Task 38's exclusions; enforces the
-  content-completeness doctrine in TASK_STANDING_RULES.md).
 - `NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json`,
   `NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json` — generated certificates
   (referenced by HANDOFF and task specs). Not task files; stay here.

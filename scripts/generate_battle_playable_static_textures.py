@@ -79,6 +79,7 @@ G_TRI2 = 0x06
 
 FMT_RGBA = 0
 FMT_CI = 2
+FMT_IA = 3
 SIZ_4B = 0
 SIZ_8B = 1
 SIZ_16B = 2
@@ -246,6 +247,13 @@ def source_bytes(format_: int, size: int, texels: int) -> int:
             return texels * 2
         if size == SIZ_32B:
             return texels * 4
+    if format_ == FMT_IA:
+        if size == SIZ_4B:
+            return (texels + 1) >> 1
+        if size == SIZ_8B:
+            return texels
+        if size == SIZ_16B:
+            return texels * 2
     return 0
 
 
@@ -356,8 +364,10 @@ def make_key_words(
     width: int,
     height: int,
 ) -> tuple[int, ...]:
-    if state.tlut_image is None:
+    if format_ == FMT_CI and state.tlut_image is None:
         raise falsify("static CI key has no TLUT image")
+    if format_ != FMT_CI and state.tlut_image is not None:
+        raise falsify("non-CI static key unexpectedly has a TLUT image")
     fields = {name: 0 for name in census.EXPECTED_KEY_FIELDS}
     fields.update(
         {
@@ -365,7 +375,7 @@ def make_key_words(
             "image_format": load.image_format,
             "image_size": load.image_size,
             "image_width": load.image_width,
-            "tlut_image": state.tlut_image.offset,
+            "tlut_image": state.tlut_image.offset if state.tlut_image else 0,
             "tlut_count": state.tlut_count,
             "data_layout": DATA_LAYOUT_O2R_WORD_SWAPPED,
             "format": format_,
@@ -425,9 +435,10 @@ def resolve_key_geometry(
             size = SIZ_8B
         else:
             raise falsify("static CI key has invalid size and TLUT count")
-    if format_ != FMT_CI or size != SIZ_4B:
+    if (format_, size) not in ((FMT_CI, SIZ_4B), (FMT_IA, SIZ_8B)):
         raise falsify(
-            f"static owner escaped the accepted CI4 lane: format={format_} size={size}"
+            f"static owner escaped the accepted CI4/IA8 lanes: "
+            f"format={format_} size={size}"
         )
     loaded_bytes = load.load_texels * (4 if size == SIZ_32B else 2)
     width = tile.width
@@ -519,40 +530,55 @@ def convert_fast(
     materialize_s: bool,
     materialize_t: bool,
 ) -> tuple[bytes, int]:
-    if state.tlut_image is None or state.tlut_image.asset_id != images.file_id:
-        raise falsify("static TLUT is not in StagePupupuImages")
     if load.image.asset_id != images.file_id:
-        raise falsify("static texels are not in StagePupupuImages")
+        raise falsify("static texels are not in their pinned image asset")
     qwords = (G_TX_DXT_ONE + load.load_dxt - 1) // load.load_dxt
-    source_width = line_pixels(SIZ_4B, qwords)
+    source_width = line_pixels(tile.size, qwords)
     source_read_width = (1 << tile.masks) if materialize_s else width
     source_read_height = (1 << tile.maskt) if materialize_t else height
     source_last = (source_read_height - 1) * source_width + source_read_width - 1
-    required = source_bytes(FMT_CI, SIZ_4B, source_last + 1)
+    required = source_bytes(tile.format, tile.size, source_last + 1)
     if load.image.offset + required > len(images.payload):
         raise falsify(f"texel source {load.image.key()} exceeds asset bounds")
-    palette_base = tile.palette * 16
-    palette_entries = palette_base + 16
-    if state.tlut_count < palette_entries:
-        raise falsify("static CI4 key has an incomplete TLUT")
-    palette_end = state.tlut_image.offset + palette_entries * 2
-    if palette_end > len(images.payload):
-        raise falsify(f"TLUT source {state.tlut_image.key()} exceeds asset bounds")
-    palette = tuple(
-        n64_rgba5551_to_ds(
-            struct.unpack_from(">H", images.payload, state.tlut_image.offset + i * 2)[0]
+    palette: tuple[int, ...] = ()
+    palette_base = 0
+    if tile.format == FMT_CI:
+        if state.tlut_image is None or state.tlut_image.asset_id != images.file_id:
+            raise falsify("static TLUT is not in its pinned image asset")
+        palette_base = tile.palette * 16
+        palette_entries = palette_base + 16
+        if state.tlut_count < palette_entries:
+            raise falsify("static CI4 key has an incomplete TLUT")
+        palette_end = state.tlut_image.offset + palette_entries * 2
+        if palette_end > len(images.payload):
+            raise falsify(f"TLUT source {state.tlut_image.key()} exceeds asset bounds")
+        palette = tuple(
+            n64_rgba5551_to_ds(
+                struct.unpack_from(
+                    ">H", images.payload, state.tlut_image.offset + i * 2
+                )[0]
+            )
+            for i in range(palette_entries)
         )
-        for i in range(palette_entries)
-    )
     output = [0] * (upload_width * upload_height)
     for y in range(height):
         source_y = masked_address(y, tile.cmt, tile.maskt) if materialize_t else y
         for x in range(width):
             source_x = masked_address(x, tile.cms, tile.masks) if materialize_s else x
             source_index = source_y * source_width + source_x
-            packed = images.payload[load.image.offset + (source_index >> 1)]
-            palette_index = (packed >> 4) if not (source_index & 1) else (packed & 0xF)
-            output[y * upload_width + x] = palette[palette_base + palette_index]
+            if tile.format == FMT_CI:
+                packed = images.payload[load.image.offset + (source_index >> 1)]
+                palette_index = (
+                    (packed >> 4) if not (source_index & 1) else (packed & 0xF)
+                )
+                color = palette[palette_base + palette_index]
+            else:
+                value = images.payload[load.image.offset + (source_index ^ 3)]
+                intensity = (value >> 4) * 0x11
+                alpha = (value & 0xF) * 0x11
+                gray = intensity >> 3
+                color = 0 if alpha == 0 else 0x8000 | gray | (gray << 5) | (gray << 10)
+            output[y * upload_width + x] = color
     return b"".join(struct.pack("<H", color) for color in output), width * height
 
 
@@ -568,11 +594,11 @@ def convert_slow_oracle(
     materialize_s: bool,
     materialize_t: bool,
 ) -> bytes:
-    if state.tlut_image is None:
+    if tile.format == FMT_CI and state.tlut_image is None:
         raise falsify("slow oracle has no TLUT")
     result = bytearray(upload_width * upload_height * 2)
     qwords = (2048 + load.load_dxt - 1) // load.load_dxt
-    source_stride = qwords * 16
+    source_stride = line_pixels(tile.size, qwords)
     for output_y in range(upload_height):
         for output_x in range(upload_width):
             color = 0
@@ -590,22 +616,35 @@ def convert_slow_oracle(
                     if (tile.cmt & 1) and (period & 1):
                         source_y = (1 << tile.maskt) - 1 - source_y
                 logical_texel = source_y * source_stride + source_x
-                source_byte = images.payload[
-                    load.image.offset + logical_texel // 2
-                ]
-                ci = source_byte >> 4 if logical_texel % 2 == 0 else source_byte & 15
-                n64 = struct.unpack_from(
-                    ">H",
-                    images.payload,
-                    state.tlut_image.offset + (tile.palette * 16 + ci) * 2,
-                )[0]
-                if n64 & 1:
-                    color = (
-                        0x8000
-                        | ((n64 >> 11) & 31)
-                        | (((n64 >> 6) & 31) << 5)
-                        | (((n64 >> 1) & 31) << 10)
+                if tile.format == FMT_CI:
+                    source_byte = images.payload[
+                        load.image.offset + logical_texel // 2
+                    ]
+                    ci = (
+                        source_byte >> 4
+                        if logical_texel % 2 == 0
+                        else source_byte & 15
                     )
+                    assert state.tlut_image is not None
+                    n64 = struct.unpack_from(
+                        ">H",
+                        images.payload,
+                        state.tlut_image.offset + (tile.palette * 16 + ci) * 2,
+                    )[0]
+                    if n64 & 1:
+                        color = (
+                            0x8000
+                            | ((n64 >> 11) & 31)
+                            | (((n64 >> 6) & 31) << 5)
+                            | (((n64 >> 1) & 31) << 10)
+                        )
+                else:
+                    value = images.payload[
+                        load.image.offset + (logical_texel ^ 3)
+                    ]
+                    if value & 0xF:
+                        gray = ((value >> 4) * 0x11) >> 3
+                        color = 0x8000 | gray | (gray << 5) | (gray << 10)
             struct.pack_into("<H", result, (output_y * upload_width + output_x) * 2, color)
     return bytes(result)
 
@@ -630,8 +669,8 @@ def capture_record(
         materialize_s,
         materialize_t,
     ) = resolve_key_geometry(state)
-    if state.tlut_image is None:
-        raise falsify("static key lost its TLUT")
+    if format_ == FMT_CI and state.tlut_image is None:
+        raise falsify("static CI key lost its TLUT")
     source_block, block_bytes = block_for_image(load.image, blocks)
     pixels, oracle_pixels = convert_fast(
         images,
@@ -671,9 +710,9 @@ def capture_record(
     source_last = (
         ((1 << tile.maskt) if materialize_t else height) - 1
     ) * line_pixels(
-        SIZ_4B, (G_TX_DXT_ONE + load.load_dxt - 1) // load.load_dxt
+        size, (G_TX_DXT_ONE + load.load_dxt - 1) // load.load_dxt
     ) + ((1 << tile.masks) if materialize_s else width) - 1
-    required_bytes = source_bytes(FMT_CI, SIZ_4B, source_last + 1)
+    required_bytes = source_bytes(format_, size, source_last + 1)
     if load.image.offset + required_bytes > source_block.offset + block_bytes:
         raise falsify(
             f"{load.image.key()}: prepared span escapes census block "
@@ -681,13 +720,14 @@ def capture_record(
         )
     canonical_key = {
         "image_asset_id": load.image.asset_id,
-        "tlut_asset_id": state.tlut_image.asset_id,
+        "tlut_asset_id": state.tlut_image.asset_id if state.tlut_image else 0,
         "key_words": key_words,
     }
+    tlut_image = state.tlut_image or census.PointerRef(0, 0)
     return PreparedRecord(
         owner_mask=owner_mask,
         image=load.image,
-        tlut_image=state.tlut_image,
+        tlut_image=tlut_image,
         source_block=source_block,
         key_words=key_words,
         logical_width=width,

@@ -25,11 +25,13 @@ Task 38's unsupported-FGM census is implemented and verifier-exported. Exact
 special cues remain blocked by representation and the 128 KiB resident cap;
 never substitute another sound. Tyler's listen pass remains the hit-sound oracle.
 
-Task 39 stopped on its mandatory owner-map contradiction: shield already uses a
-DS substitute. Resume only from a corrected map and Tyler-marked contact sheet.
+Task 39's corrected-map Phase C implements hurt flash, OAM hit sparks, and the
+flat transparent 2D shield with white shine. Tyler approved all three in the
+same ROM. The published/release-equivalent targets enable them; DevFast and
+Boundary pass. Task 39 is complete and no visual row needs replay.
 
-Task 40 has complete visual/load coverage: Mario 195/195 non-null motions are
-Tyler-approved, Fox 209/209 are captured and pending Tyler. The full source-
+Task 40 is complete: Mario 195/195 and Fox 209/209 non-null motions are
+Tyler-approved. The full source-
 backed bank, AObj16/AObj32 loader fix, `DEATH` letter `T`, watchdog, resume, and
 Fox-AI-off cycler are retained. Do not rerun known-good rows. The full corrected
 numeric duration matrix remains provisional; only resume specifically requested

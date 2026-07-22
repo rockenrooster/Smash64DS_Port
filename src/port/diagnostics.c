@@ -2898,6 +2898,16 @@ volatile u32 gNdsRendererProfileUpdateTicks;
 volatile u32 gNdsRendererProfilePresentTicks;
 volatile u32 gNdsRendererProfileDrawTicks;
 volatile u32 gNdsRendererProfileHudTicks;
+#if NDS_TICK_HUD
+volatile u32 gNdsTickHudBuckets[nNDSTickHudBucketCount];
+volatile u32 gNdsTickHudFighterTicks;
+volatile u32 gNdsTickHudStageTicks;
+volatile u32 gNdsTickHudBackgroundTicks;
+volatile u32 gNdsTickHudForegroundTicks;
+volatile u32 gNdsTickHudAudioTicks;
+volatile u32 gNdsTickHudSourceTicks;
+volatile u32 gNdsTickHudFlushTicks;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 volatile u32 gNdsRendererProfileLoopWallTicks;
 volatile u32 gNdsRendererProfileInputTicks;

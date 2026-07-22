@@ -1,113 +1,149 @@
-# TASK 38 — FGM audit: missing Up-B/Down-B sounds + incorrect hit sounds
+# TASK 38 — FGM coverage: audit ✔ done, fix RESUMED (no cue stays excluded)
 
 **Standing rules apply in full: read `docs/optimization/TASK_STANDING_RULES.md`
-first.**
+first — including the content-completeness doctrine (Tyler, 2026-07-21) this
+resumption enforces.**
 
-**SEQUENCING:** independent of Tasks 36/37 (audio side only: the pack script,
-src/nds/nds_audio_fgm.c, and its seam callsites — no linker or renderer overlap).
-Run it in its own session; do not run concurrently with the active Task 36 session
-in the same worktree (one writer).
+**STATUS (2026-07-21): PHASE E CACHE CANDIDATE BUILT; TYLER LISTEN PENDING.** The audit phases ran and are CLOSED — evidence at
+`artifacts/performance/2026-07-21_task38-fgm-audit.md` (manifest inventory,
+special-move source census, per-id miss ring landed and verifier-exported).
+Consume that evidence; do not redo it. The original Phase C capacity stop-gate is
+REMOVED by Tyler's mandate: "I don't want to formally exclude necessary SFX
+assets from the game. We need to fix it now." Resume from Phase C below. The
+original goal stands: implement the missing/incorrect sounds — audit alone does
+not close this task.
 
-## Reported symptoms (Tyler, 2026-07-20)
+Tyler authorized the recommended exact on-demand cache on 2026-07-21. The
+runtime now exposes all 49 required IDs through a 204,800-byte, eight-slot
+reference-counted NitroFS cache; no cue remains excluded. The regenerated pack
+is 415,432 bytes (`8025f6bf...b1e797d`). The seven hit/KO fork repairs are fused
+from their simultaneous source programs. The focused generator/cache gate and
+profile-0 build pass. A single listen pass remains; AL_FX_CUSTOM cues currently
+use their source-program dry render while the wet delay tail is the only named
+quality lever still awaiting Tyler's judgment.
 
-1. Up-B and Down-B specials play NO sound (verify per fighter, and cover neutral-B
-   in the census too).
-2. Hurt/hit sounds play, but some are wrong / sound different from the original.
+The corrected Phase C lower bound is recorded at
+`artifacts/performance/2026-07-21_task38-full-coverage-cost.md`. Pack
+deduplication makes the seven fused repairs add 99,908 bytes, not 72,260. With
+every other missing cue in its cheapest shared dry-source form, the projected
+pack floor is 300,540 bytes and post-Task-42 reserve is at most 40,920 bytes
+before schedules or exact FX tails. No cap changed; Tyler's representation
+decision is required.
 
-This is a correctness task, not perf. BGM is out of scope (owned elsewhere). Audio
-verdicts: counters and manifests prove a sound was REQUESTED and a channel STARTED;
-per standing rules only Tyler's listen pass proves it sounds right — never report
-symptom 2 fixed from counters alone. melonDS audio output is audible to Tyler, so
-the listen loop runs in melonDS; device confirmation folds into the next batched
-retail checkpoint, not its own session.
+**SEQUENCING:** independent of Tasks 39/41/43/44 (no file overlap) and of Task 42
+(which owns BGM; do not touch the BGM stream). Own session, one writer.
 
-## Architecture facts (verify, then lean on them)
+## Mandate and end state
 
-- FGM effects are AOT-rendered by scripts/render-audio-fgm-phase-pack.py into a
-  resident IMA-ADPCM pack played on hardware channels
-  (src/nds/nds_audio_fgm.c:926, SoundFormat_ADPCM). The script is
-  articulation-faithful (UCD programs, tick schedules, pitch cents, volume ramps)
-  and heavily oracle-checked.
-- The script has a FORMAL EXCLUSION mechanism: `excluded_hit_source_audit`
-  (script :1629) emits entries with `runtime_included: False` +
-  `runtime_excluded_reasons`; included entries can carry `omitted_fork_programs` —
-  multi-voice FGMs where only the root voice was rendered and the other layered
-  voices were dropped, with pinned hashes (:1640-1649).
-- Request-side counters already exist: `gNdsAudioFgmPlayCalls`
-  (nds_audio_fgm.c:77, ticks at :879 on every request) vs
-  `gNdsAudioFgmSupportedPlayCount` (:78, ticks at :1018 only when the id resolved
-  to a pack entry). The delta is requested-but-unsupported — but anonymous.
-- Seam callers: src/port/taskman_seam.c and src/port/reloc_backend_compat_shims.c.
+Every battle-reachable FGM cue plays its EXACT source sound. Substitution stays
+banned. An id that still cannot ship at the end must be listed with its reason
+and get Tyler's explicit per-item sign-off in the report — silent or unilateral
+exclusion is a failed task.
 
-Working hypotheses to confirm or kill: symptom 1 = special-move FGM ids
-runtime-excluded / absent from the selector list / requests never reaching the
-seam; symptom 2 = layered hit FGMs playing only the root voice (omitted forks)
-and/or articulation parameter deltas.
+## Inputs you already have (from the closed audit + the tree)
 
-## Phase A — inventory (static, no build)
+- The excluded set with reasons, source callsites, per-move ids: specials Mario
+  217 (Up-B), 218/219 (Down-B), Fox 185 (neutral-B), 186/187 (Up-B start/fly),
+  189 (Down-B start), 190 (AttackAirLw); voices 375/429/431/435/440;
+  attack/activation 19/41/42/43; omitted fork programs 653-658/685 behind hits
+  31/32/34/37/38/40 and 154. (Mario neutral-B 215 already included.)
+- Pack state: 27 entries, 128,196 / 131,072 bytes, headroom 2,876. The cap is a
+  BUDGET constant, not hardware: `MAX_RESIDENT_BYTES = 128 * 1024`
+  (scripts/render-audio-fgm-phase-pack.py:30) with a runtime counterpart sizing
+  the resident buffer in src/nds/nds_audio_fgm.c — find it and keep both in
+  lockstep; a script/runtime mismatch must fail the build or load loudly, never
+  truncate.
+- Machinery already in embryo (extend, don't reinvent): loop encode + repeat
+  oracle (`ima_encode_loop_body`, `ima_ds_repeat_cycles`, `ima_repeat_oracle`,
+  script :1788-1900); AOT-baked modulation (`render_modulated_voice_aot` :2256);
+  fused-fork form already sized for id 34 (audit capacity note); per-call
+  playback rate (soundPlaySample takes a rate — BGM precedent
+  nds_audio_bgm.c:419-426) vs the script's single `FGM_OUTPUT_RATE = 32000`
+  (:29); runtime stop/handle API (`ndsAudioFgmStop`/`StopAll`, bounded handles).
+- RAM context: net reserve 166,672 bytes on the current ROM; the adaptive
+  taskman arena (src/port/diagnostics.c:7306-7350) must always reach full size.
 
-1. Locate the selector manifest the script consumes. Commit an artifact table:
-   every FGM id → name, included/excluded, `runtime_excluded_reasons`,
-   `omitted_fork_programs`, `source_callsites`.
-2. From `source_callsites` + the decomp (read-only), name which engine path
-   requests each id — especially Mario/Fox Up-B and Down-B sound events (these may
-   come from animation-command streams rather than C callsites; say which).
+## Phase C — cost the whole problem before touching the cap
 
-## Phase B — runtime request census (decisive for symptom 1)
+1. For EVERY excluded battle-reachable id: compute the exact resident byte cost
+   in its cheapest EXACT form (hardware-loop form where the source loops — loop
+   body + loop point is usually SMALLER than a baked tail; fused-dry fork where
+   forks are simultaneous; per-entry output rate where the source rate demands
+   it) plus its representation class (loop / schedule / fork / rate / overlap).
+2. Deliver a costed coverage table and the total: proposed new
+   `MAX_RESIDENT_BYTES`, projected pack bytes, projected net reserve.
+3. STOP-AND-ASK line: if full exact coverage would push net reserve below
+   96 KiB or shrink the arena, stop and present Tyler the numbers with fallback
+   levers (per-entry output-rate reduction on named low-salience entries; other
+   options he might weigh). Do not pick a fidelity tradeoff for him.
 
-1. Add a per-id miss ring (last ~16 unsupported fgm_ids + counts; volatile,
-   GDB-readable, profile-agnostic like the pacing histogram) so the anonymous
-   PlayCalls/Supported delta names its ids.
-2. Scripted melonDS run driving BOTH fighters through neutral-B, Up-B, Down-B,
-   jumps, taunt, hits at low/mid/high damage, shield, KO, star KO (reuse the
-   natural-motion input infra). For each expected sound event, record which case
-   holds:
-   (a) request arrived, id missing from pack → Phase C;
-   (b) request never arrived (PlayCalls didn't tick) → upstream seam gap: find the
-       original call path and wire it, citing decomp file:line for the source
-       behavior (uncited seam changes get reverted);
-   (c) request arrived and played → symptom-2 candidates for Phase D.
-3. Commit the census table next to the Phase A artifact.
+## Phase D — representation extensions (each oracle-gated like the existing ones)
 
-## Phase C — add the missing sounds
+Priority order; extend the script's validator/oracle culture to each — an
+extension without its oracle is not done:
 
-1. Flip stale exclusions to included; add selectors for never-listed ids following
-   the script's existing validation contracts. Do not weaken or bypass a validator
-   to make an entry fit; cite source for any expectation you touch.
-2. Regenerate the pack; report the size delta (~128 KiB resident today).
-   HARD GATE: after boot the adaptive taskman arena
-   (src/port/diagnostics.c:7306-7350) must still reach full size — a degraded
-   arena is a failed gate even if the ROM boots (the affine-OOM lesson). If the
-   grown pack threatens the margin, stop and report numbers.
-3. Re-run the Phase B census: miss ring EMPTY across the full scripted scenario;
-   Up-B/Down-B show request→supported→channel-start for both fighters.
+1. **Per-entry output rate** — lift the single-rate assumption; store rate per
+   entry; runtime passes it per channel start.
+2. **Hardware-looped entries** — encode loop body + predictor-exact loop point
+   (the repeat oracle proves the seam); runtime plays looped channels and STOPS
+   them on the owning move/status end. Cite the source stop condition
+   (decomp file:line) per looped cue — Fox Up-B fly (187) and similar must end
+   exactly when the source ends them, wired through the existing handle API.
+3. **AOT-baked pitch/volume schedules** — extend `render_modulated_voice_aot`
+   coverage to the excluded schedule classes with terminating schedules.
+4. **Fused forks** — productionize the id-34 fused-dry path for simultaneous
+   forks (this also retires the hit-sound fork debt: 653-658, 685). Offset
+   forks → multi-channel only with a worst-case channel-budget table (16
+   hardware channels; BGM holds one; show the concurrent worst case) — never
+   spend channels silently.
+5. **Overlap/handles** — multi-instance handles where the source overlaps the
+   same cue; cite the source overlap behavior per id.
 
-## Phase D — the "sounds different" set (symptom 2)
+## Phase E — enable everything, regenerate, prove engagement
 
-1. For every hit/hurt id Tyler flags plus every id with `omitted_fork_programs`:
-   use the script's own audit output to state WHAT differs from source (omitted
-   fork voices? pitch/envelope approximation? resample to FGM_OUTPUT_RATE?).
-   Commit that table — the honest menu of what "different" means.
-2. Fix the fork-omission class first (most likely audible): if fork voices start
-   simultaneously with the root (check tick schedules), pre-MIX them into one
-   rendered sample at AOT time — exact, zero runtime cost, no extra channels. If
-   offset, report channel-budget math (BGM + worst-case concurrent FGM vs 16
-   hardware channels) before choosing multi-channel playback; never spend channels
-   silently.
-3. Tyler's listen kit: ONE melonDS-ready ROM + a one-page checklist
-   (move → what changed → expected difference), one pass. Batch every audio change
-   into that single pass.
+1. Flip every battle-reachable exclusion to included, specials first (Tyler's
+   reported symptom), then voices, then attack/activation, then the fork-debt
+   hits. Raise the cap constants in lockstep per Phase C's number.
+2. Regenerate the pack. HARD GATES: boot with the arena at FULL size (a degraded
+   arena fails the task even if the ROM boots); report final pack bytes, cap,
+   and net reserve.
+3. Re-run the scripted census (both fighters: all specials, jumps, taunt, hits
+   at low/mid/high damage, shield, KO, star KO): the miss ring must be EMPTY
+   end-to-end this time. Flip the Boundary harness expectation that the audit
+   deliberately left permissive
+   (`verify-battle-mariofox-gcrunall-loop-harness.ps1`); per standing rules,
+   grep scripts/ for every counter/mask whose semantics you touch and update
+   expectations in the same commit, cited.
+
+## Phase F — Tyler's listen pass and sign-off
+
+1. ONE melonDS-ready ROM + one checklist covering every new/changed cue: each
+   special per fighter, the six fork-fixed hit sounds, the damage/jump voices.
+   Batch everything into a single pass; device confirmation folds into the next
+   batched retail checkpoint per standing rules.
+2. Final report table: every formerly excluded id → shipped-exact | shipped with
+   named fidelity lever (Tyler-approved in Phase C) | still excluded with
+   Tyler's explicit sign-off. No fourth category exists.
 
 ## Gates
 
-- Standing verify chain green. BEFORE changing any FGM counter/mask semantics,
-  grep scripts/ for every counter touched (`gNdsAudioFgmPhasePlayMask`, KO masks,
-  etc. are verifier-read) and update expectations in the same commit, cited.
-- Phase A/B/D artifacts committed; miss ring empty on the final ROM.
-- Pack regeneration changes ROM bytes: update the expected-output identity
-  everywhere the publish pipeline pins it (README expected SHA-256, DECOMP_PIN
-  output fields, publish manifest) in the SAME commit.
+- Standing verify chain green; publish identity pins (README expected SHA-256,
+  DECOMP_PIN output fields, publish manifest) updated in the SAME commit as the
+  pack regeneration.
 - Full-match soak: no new `gNdsAudioFgmPlayFailCount`, no ARM7 ACK stalls
-  (NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS available for a probe build if one appears).
-- Final report: symptom 1 closed by counters + Tyler confirmation; symptom 2 items
-  listed fixed/deferred per Tyler's listen pass — his ear is the oracle, say so.
+  (NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS probe build if one appears), BGM
+  untouched.
+- Commit the Phase C costed table and Phase E census as artifacts next to the
+  existing audit evidence.
+
+## Closeout — 2026-07-21 (Tyler sign-off)
+
+Tyler's listen pass on ROM `3D5C18FB...` (post cache-init fix `5c278710d`)
+APPROVED all cues — formerly missing specials, fused-fork layered hits, KO
+sequence — **including explicit sign-off on the dry AL_FX_CUSTOM wet tails**
+(the one named fidelity lever; debt mask bit stays documented, no further
+approval needed). The production silence bug (cache slot table initialized
+only on the diagnostics path) is fixed at the load fence. Runtime verifier
+fully green: 64 supported plays / 0 failures / phase mask 0x1f / exact KO trio.
+Shipped by Tyler's override with the frozen-water diagnostic regression
+tracked separately (it pre-dates and is unrelated to the audio work).

@@ -62,6 +62,8 @@ extern volatile u32 gNdsFrameCounter;
      (NDS_DEBUG_HUD == 0))
 #define NDS_BATTLE_PHASE_HUD_ENABLED \
     (NDS_BATTLE_FPS_HUD_ENABLED && (NDS_RENDERER_PROFILE_LEVEL >= 1))
+#define NDS_BATTLE_TICK_HUD_ENABLED \
+    (NDS_BATTLE_FPS_HUD_ENABLED && NDS_TICK_HUD)
 #if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
 static u16 *sFramebuffers[2];
@@ -282,8 +284,8 @@ static void ndsPlatformVBlankInterrupt(void)
 
 void ndsPlatformInit(void)
 {
-    /* libultra time/count are sub-frame hardware counters. Reserve timers 0/1
-     * for libnds' 32-bit CPU timing source before original code can sample it. */
+    /* Calico's system tick owns timers 2/3. Initialize it before original
+     * code can sample libultra time/count; BGM seam timing uses free timer 0. */
     cpuStartTiming(0);
     sVBlankCount = 0u;
     sEarliestPresentVBlank = 0u;
@@ -1971,6 +1973,14 @@ static u64 sBattlePhaseHudActiveTickSum;
 static u64 sBattlePhaseHudLoopTickSum;
 static u32 sBattlePhaseHudAvgSampleCount;
 #endif
+#if NDS_BATTLE_TICK_HUD_ENABLED
+static u64 sBattleTickHudSums[nNDSTickHudBucketCount];
+static u32 sBattleTickHudSampleCount;
+static const char *const sBattleTickHudNames[nNDSTickHudBucketCount] = {
+    "ALL ", "FTR ", "STG ", "BG  ", "AUD ", "HUD ", "SRC ",
+    "MISC", "OTHR"
+};
+#endif
 
 static void ndsPlatformRenderBattleFpsHud(void)
 {
@@ -2041,6 +2051,22 @@ static void ndsPlatformRenderBattleFpsHud(void)
             23u, "GIT %s DHT %u", NDS_TASK10_GIT_SHORT,
             (unsigned int)NDS_TASK32_DRAW_HOT_TEXT);
 #endif
+#endif
+#if NDS_BATTLE_TICK_HUD_ENABLED
+        memset(sBattleTickHudSums, 0, sizeof(sBattleTickHudSums));
+        sBattleTickHudSampleCount = 0u;
+        {
+            u32 bucket;
+
+            for (bucket = 0u; bucket < nNDSTickHudBucketCount; bucket++)
+            {
+                ndsPlatformPrintDebugLine(11u + bucket, "%s       --",
+                                          sBattleTickHudNames[bucket]);
+            }
+        }
+        ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
+        ndsPlatformPrintDebugLine(22u, "5+  --  max --");
+        ndsPlatformPrintDebugLine(23u, "GIT %s TICKHUD", NDS_TASK10_GIT_SHORT);
 #endif
         return;
     }
@@ -2172,6 +2198,33 @@ static void ndsPlatformRenderBattleFpsHud(void)
                         gNdsRendererTask36PrepareRunRejectReason),
         (unsigned long)gNdsRendererM3PostArmFailureCount);
 #endif
+#endif
+#if NDS_BATTLE_TICK_HUD_ENABLED
+    {
+        u32 bucket;
+        u32 sample_count = ++sBattleTickHudSampleCount;
+
+        for (bucket = 0u; bucket < nNDSTickHudBucketCount; bucket++)
+        {
+            u32 ticks = gNdsTickHudBuckets[bucket];
+
+            sBattleTickHudSums[bucket] += ticks;
+            ndsPlatformPrintDebugLine(
+                11u + bucket, "%s%8lu %8lu", sBattleTickHudNames[bucket],
+                (unsigned long)ticks,
+                (unsigned long)(sBattleTickHudSums[bucket] / sample_count));
+        }
+        ndsPlatformPrintDebugLine(
+            21u, "VBI 2:%-5lu 3:%-5lu 4:%-5lu",
+            (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[2u],
+            (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[3u],
+            (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[4u]);
+        ndsPlatformPrintDebugLine(
+            22u, "5+:%-5lu max:%lu",
+            (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[
+                NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS],
+            (unsigned long)gNdsBattlePlayablePacingPresentIntervalMax);
+    }
 #endif
 
     /* sm64-nds also dedicates the lower console to FPS. Keep this port's
@@ -2320,9 +2373,16 @@ static void ndsPlatformRenderBattlePlayerText(u32 player, u32 row,
 
 static void ndsPlatformRenderBattleTextHud(void)
 {
+#if NDS_SHIP_TELEMETRY
     u32 fingerprint = ndsPlatformBattleTextHudStateFingerprint();
+#endif
     u32 seconds = ndsPlatformBattleHudDisplaySeconds();
+    u32 p0_damage = ndsPlatformBattleHudDisplayDamage(
+        gNdsIFCommonHUDP0DamageCurrent);
+    u32 p1_damage = ndsPlatformBattleHudDisplayDamage(
+        gNdsIFCommonHUDP1DamageCurrent);
 
+#if NDS_SHIP_TELEMETRY
     gNdsBattleTextHudRenderCount++;
     if ((sBattleTextHudReady != FALSE) &&
         (fingerprint == sBattleTextHudFingerprint))
@@ -2333,11 +2393,24 @@ static void ndsPlatformRenderBattleTextHud(void)
     sBattleTextHudFingerprint = fingerprint;
     gNdsBattleTextHudChangeCount++;
     gNdsBattleTextHudFingerprint = fingerprint;
+#else
+    if ((sBattleTextHudReady != FALSE) &&
+        (gNdsBattleTextHudTimeSeconds == seconds) &&
+        (gNdsBattleTextHudP0Damage == p0_damage) &&
+        (gNdsBattleTextHudP1Damage == p1_damage) &&
+        (gNdsBattleTextHudP0Stock == gNdsIFCommonHUDP0LowerStock) &&
+        (gNdsBattleTextHudP1Stock == gNdsIFCommonHUDP1LowerStock) &&
+        (gNdsBattleTextHudActiveMask == gNdsIFCommonHUDActivePlayerMask) &&
+        (gNdsBattleTextHudShowDamageMask ==
+            gNdsIFCommonHUDShowDamageMask))
+    {
+        return;
+    }
+    sBattleTextHudReady = TRUE;
+#endif
     gNdsBattleTextHudTimeSeconds = seconds;
-    gNdsBattleTextHudP0Damage = ndsPlatformBattleHudDisplayDamage(
-        gNdsIFCommonHUDP0DamageCurrent);
-    gNdsBattleTextHudP1Damage = ndsPlatformBattleHudDisplayDamage(
-        gNdsIFCommonHUDP1DamageCurrent);
+    gNdsBattleTextHudP0Damage = p0_damage;
+    gNdsBattleTextHudP1Damage = p1_damage;
     gNdsBattleTextHudP0Stock = gNdsIFCommonHUDP0LowerStock;
     gNdsBattleTextHudP1Stock = gNdsIFCommonHUDP1LowerStock;
     gNdsBattleTextHudActiveMask = gNdsIFCommonHUDActivePlayerMask;
@@ -2355,13 +2428,11 @@ static void ndsPlatformRenderBattleTextHud(void)
     }
     ndsPlatformRenderBattlePlayerText(
         0u, 5u, gNdsIFCommonHUDP0FighterKind,
-        ndsPlatformBattleHudDisplayDamage(
-            gNdsIFCommonHUDP0DamageCurrent),
+        p0_damage,
         gNdsIFCommonHUDP0LowerStock);
     ndsPlatformRenderBattlePlayerText(
         1u, 9u, gNdsIFCommonHUDP1FighterKind,
-        ndsPlatformBattleHudDisplayDamage(
-            gNdsIFCommonHUDP1DamageCurrent),
+        p1_damage,
         gNdsIFCommonHUDP1LowerStock);
 }
 #endif
@@ -2766,6 +2837,9 @@ static void ndsPlatformWaitForScheduledVBlank(void)
 
 void ndsPlatformEndFrame(void)
 {
+#if NDS_TICK_HUD
+    u32 tickhud_flush_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     u32 profile_start;
 
@@ -2788,10 +2862,12 @@ void ndsPlatformEndFrame(void)
         {
             gNdsHardwareRendererSubmittedFrameCount++;
         }
+#if NDS_SHIP_TELEMETRY || (NDS_RENDERER_PROFILE_LEVEL >= 1)
         gNdsHardwareRendererPolyRamCount = GFX_POLYGON_RAM_USAGE;
         gNdsHardwareRendererVertexRamCount = GFX_VERTEX_RAM_USAGE;
         gNdsHardwareRendererStatus = GFX_STATUS;
         gNdsHardwareRendererControl = GFX_CONTROL;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileGXStatusBeforeFlush = GFX_STATUS;
         gNdsRendererProfileGXControlBeforeFlush = GFX_CONTROL;
@@ -2803,10 +2879,16 @@ void ndsPlatformEndFrame(void)
         profile_start = cpuGetTiming();
 #endif
         NDS_FREEZE_DIAGNOSTICS_FLUSH();
+#if NDS_TICK_HUD
+        tickhud_flush_start = cpuGetTiming();
+#endif
 #if NDS_TASK29_GX_CENSUS
         ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
 #endif
         glFlush(GL_TRANS_MANUALSORT);
+#if NDS_TICK_HUD
+        gNdsTickHudFlushTicks += cpuGetTiming() - tickhud_flush_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         gNdsRendererProfileFlushTicks = cpuGetTiming() - profile_start;
         gNdsRendererProfileGXStatusAfterFlush = GFX_STATUS;

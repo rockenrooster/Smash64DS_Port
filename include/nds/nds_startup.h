@@ -4040,6 +4040,28 @@ extern volatile u32 gNdsRendererProfileUpdateTicks;
 extern volatile u32 gNdsRendererProfilePresentTicks;
 extern volatile u32 gNdsRendererProfileDrawTicks;
 extern volatile u32 gNdsRendererProfileHudTicks;
+#if NDS_TICK_HUD
+enum NDSTickHudBucket {
+    nNDSTickHudBucketAll,
+    nNDSTickHudBucketFighters,
+    nNDSTickHudBucketStage,
+    nNDSTickHudBucketBackground,
+    nNDSTickHudBucketAudio,
+    nNDSTickHudBucketHud,
+    nNDSTickHudBucketSourceUpdate,
+    nNDSTickHudBucketMiscDraw,
+    nNDSTickHudBucketOther,
+    nNDSTickHudBucketCount
+};
+extern volatile u32 gNdsTickHudBuckets[nNDSTickHudBucketCount];
+extern volatile u32 gNdsTickHudFighterTicks;
+extern volatile u32 gNdsTickHudStageTicks;
+extern volatile u32 gNdsTickHudBackgroundTicks;
+extern volatile u32 gNdsTickHudForegroundTicks;
+extern volatile u32 gNdsTickHudAudioTicks;
+extern volatile u32 gNdsTickHudSourceTicks;
+extern volatile u32 gNdsTickHudFlushTicks;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 extern volatile u32 gNdsRendererProfileLoopWallTicks;
 extern volatile u32 gNdsRendererProfileInputTicks;

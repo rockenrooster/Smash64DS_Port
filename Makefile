@@ -40,6 +40,8 @@ NDS_HARNESS_FAST_LOGIC ?= 0
 NDS_RENDERER_HW_TRIANGLES ?= 0
 NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY ?= 0
 NDS_RENDERER_PROFILE_LEVEL ?= 2
+NDS_SHIP_TELEMETRY ?= 1
+NDS_TICK_HUD ?= 0
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_RENDERER_M3_PHASE0_PROFILE ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
@@ -119,6 +121,8 @@ override NDS_HARNESS_FAST_LOGIC := 0
 override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_SHIP_TELEMETRY := 0
+override NDS_TICK_HUD := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
@@ -134,6 +138,38 @@ override NDS_TASK16_FLOAT_ADDSUB := 1
 # Retail Task-32 A/B reduced the normalized 4+/5+ pacing tail.
 override NDS_TASK32_DRAW_HOT_TEXT := 1
 # Task 39: Tyler-approved hurt flash, hit sparks, and flat 2D shield.
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+override NDS_TASK39_FX_SHIELD := 1
+endif
+ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-battle-playable-proof-hwtri),)
+# Profile-0 shipping path plus either the lightweight Task 41 timers or the
+# full diagnostic publications required by GDB proof runs.
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+ifeq ($(TARGET),smash64ds-battle-playable-tickhud-hwtri)
+override NDS_SHIP_TELEMETRY := 0
+override NDS_TICK_HUD := 1
+else
+override NDS_SHIP_TELEMETRY := 1
+override NDS_TICK_HUD := 0
+endif
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_FAST_WALLPAPER_AFFINE := 1
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_TASK39_FX_SHIELD := 1
@@ -997,11 +1033,19 @@ NDS_AUDIO_FILES := \
 NDS_AUDIO_DERIVED_FILES :=
 ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_BGM),1)
 NDS_AUDIO_DERIVED_FILES := \
+	audio/bgm_pupupu_ima.bin \
+	audio/bgm_win_mario_ima.bin \
+	audio/bgm_win_fox_ima.bin \
+	audio/bgm_results_ima.bin
+endif
+
+# Removed Task 42 PCM assets can survive an incremental build-directory reuse
+# and are otherwise silently repacked by ndstool.
+export NDS_AUDIO_OBSOLETE_DERIVED_FILES := \
 	audio/bgm_pupupu_pcm16.raw \
 	audio/bgm_win_mario_pcm16.raw \
 	audio/bgm_win_fox_pcm16.raw \
 	audio/bgm_results_pcm16.raw
-endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_FGM),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/fgm_phase_pack_ima.bin
@@ -1045,7 +1089,7 @@ NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES := \
 endif
 endif
 
-.PHONY: all clean clean-generated distclean run $(BUILD)
+.PHONY: all clean clean-generated distclean run $(BUILD) prune-obsolete-audio
 
 all: $(BUILD)
 
@@ -1086,7 +1130,7 @@ SCENE_BACKEND_SLICES := \
 	$(PROJECT_ROOT)/src/port/opening_movie_backend.c \
 	$(PROJECT_ROOT)/src/port/title_backend.c
 
-.PHONY: all FORCE
+.PHONY: all FORCE prune-obsolete-audio
 
 all: $(OUTPUT).nds
 
@@ -1100,6 +1144,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_HW_TRIANGLES $(NDS_RENDERER_HW_TRIANGLES)'; \
 		echo '#define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY $(NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY)'; \
 		echo '#define NDS_RENDERER_PROFILE_LEVEL $(NDS_RENDERER_PROFILE_LEVEL)'; \
+		echo '#define NDS_SHIP_TELEMETRY $(NDS_SHIP_TELEMETRY)'; \
+		echo '#define NDS_TICK_HUD $(NDS_TICK_HUD)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \
 		echo '#define NDS_RENDERER_M3_PHASE0_PROFILE $(NDS_RENDERER_M3_PHASE0_PROFILE)'; \
 		echo '#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'; \
@@ -1205,7 +1251,10 @@ $(NDS_TASK39_HIT_SPARKS_INC): \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb
 	python "$(PROJECT_ROOT)/scripts/generate_task39_hit_sparks.py"
 
-$(OUTPUT).nds: $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES)
+prune-obsolete-audio:
+	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
+
+$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT)
@@ -1266,19 +1315,19 @@ $(NITROFS_DIR)/relocdata/us/%: $(BATTLESHIP_RELOCDATA)/%
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
-$(NITROFS_DIR)/audio/bgm_pupupu_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_pupupu_pcm16.raw
+$(NITROFS_DIR)/audio/bgm_pupupu_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_pupupu_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
-$(NITROFS_DIR)/audio/bgm_win_mario_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_win_mario_pcm16.raw
+$(NITROFS_DIR)/audio/bgm_win_mario_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_mario_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
-$(NITROFS_DIR)/audio/bgm_win_fox_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_win_fox_pcm16.raw
+$(NITROFS_DIR)/audio/bgm_win_fox_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_fox_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
-$(NITROFS_DIR)/audio/bgm_results_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_results_pcm16.raw
+$(NITROFS_DIR)/audio/bgm_results_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_results_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
@@ -1315,6 +1364,8 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_HARNESS=$(NDS_DEV_SCENE_HARNESS)'
 	@printf '%s\n' 'BENCH_MAKE_HARNESS_ID=$(NDS_DEV_SCENE_HARNESS_ID)'
 	@printf '%s\n' 'BENCH_MAKE_PROFILE=$(NDS_RENDERER_PROFILE_LEVEL)'
+	@printf '%s\n' 'BENCH_MAKE_SHIP_TELEMETRY=$(NDS_SHIP_TELEMETRY)'
+	@printf '%s\n' 'BENCH_MAKE_TICK_HUD=$(NDS_TICK_HUD)'
 	@printf '%s\n' 'BENCH_MAKE_M2_DETAILED_LEDGER=$(NDS_RENDERER_M2_DETAILED_LEDGER)'
 	@printf '%s\n' 'BENCH_MAKE_M3_PHASE0_PROFILE=$(NDS_RENDERER_M3_PHASE0_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE=$(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'

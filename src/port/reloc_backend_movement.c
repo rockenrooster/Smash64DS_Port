@@ -1,5 +1,6 @@
 #include "nds_scene_harness_config.h"
 #include <nds/nds_effects.h>
+#include <nds/nds_scene_harness.h>
 
 #ifndef NDS_SCENE_MIP_CACHE_LAB
 #define NDS_SCENE_MIP_CACHE_LAB 0
@@ -10333,7 +10334,9 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         gNdsFighterSpecialsFoxSlot = 1u;
     }
 #endif
-    sNdsNaturalCombatAttackerSlot = (p1->fkind == nFTKindFox) ? 1u : 0u;
+    sNdsNaturalCombatAttackerSlot =
+        ((gNdsBattlePlayableFoxCpuEnabled != 0u) &&
+         (p1->fkind == nFTKindFox)) ? 1u : 0u;
     sNdsNaturalCombatVictimSlot = 1u - sNdsNaturalCombatAttackerSlot;
     sNdsNaturalCombatVictimStartPercent =
         (u32)((sNdsNaturalCombatVictimSlot == 0u) ? p0 : p1)->percent_damage;
@@ -12212,7 +12215,6 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
         gNdsFighterNaturalMotionUnsafeCount++;
         return;
     }
-
     sNdsFighterNaturalMotionWalkInputActive =
         (sNdsNaturalCombatPhase == nNDSNaturalCombatPhaseWalk) ? 1u : 0u;
 
@@ -13240,14 +13242,19 @@ s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 #if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL == 1)
         u32 owner_start = cpuGetTiming();
         s32 handled = ndsRendererAdapterCommitNativeStageDisplay(
             display, link_id);
 
+#if NDS_TICK_HUD
+        gNdsTickHudStageTicks += cpuGetTiming() - owner_start;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL == 1
         gNdsRendererProfileOwners[
             NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
             cpuGetTiming() - owner_start;
+#endif
         return handled;
 #else
         return ndsRendererAdapterCommitNativeStageDisplay(display, link_id);
@@ -13263,7 +13270,8 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     u32 mask;
     sb32 is_layer;
     u32 callback_kind = kind;
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL >= 1)
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1))
     u32 owner_start = 0u;
 #endif
 
@@ -13307,7 +13315,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
         owner_start = cpuGetTiming();
 #endif
         ndsRendererAdapterBeginStageTraversal();
@@ -13319,11 +13327,15 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
     {
         ndsRendererAdapterEndStageTraversal();
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
         if (owner_start != 0u)
         {
             u32 owner_ticks = cpuGetTiming() - owner_start;
 
+#if NDS_TICK_HUD
+            gNdsTickHudStageTicks += owner_ticks;
+#endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
             gNdsRendererProfileOwners[
                 NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
                 owner_ticks;
@@ -13331,6 +13343,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
             {
                 gNdsRendererProfileStageLayer0Ticks += owner_ticks;
             }
+#endif
         }
 #endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
@@ -13623,6 +13636,9 @@ static void ndsStageGCDrawAllLoopSubmitHardwareFrame(void)
 
 static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 {
+#if NDS_TICK_HUD
+    u32 tickhud_owner_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     u32 owner_start;
     u32 profile_m3;
@@ -13679,9 +13695,15 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
         owner_start = cpuGetTiming();
     }
 #endif
+#if NDS_TICK_HUD
+    tickhud_owner_start = cpuGetTiming();
+#endif
     sNdsStageGCDrawAllLoopNativeStageArmed =
         ndsRendererAdapterPrepareNativeStageOwner(
             ndsBattleCompatMainCameraGObj());
+#if NDS_TICK_HUD
+    gNdsTickHudStageTicks += cpuGetTiming() - tickhud_owner_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     if (profile_m3 != FALSE)
     {
@@ -13707,10 +13729,16 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 #endif
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
+#if NDS_TICK_HUD
+        tickhud_owner_start = cpuGetTiming();
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
         owner_start = cpuGetTiming();
 #endif
         ndsRendererAdapterFinishNativeStageOwner();
+#if NDS_TICK_HUD
+        gNdsTickHudStageTicks += cpuGetTiming() - tickhud_owner_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         owner_ticks = cpuGetTiming() - owner_start;

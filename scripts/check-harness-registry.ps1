@@ -77,6 +77,8 @@ $realtimeText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle
 $verifyAllText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-all.ps1') -Raw
 $battleLoopText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'verify-battle-mariofox-gcrunall-loop-harness.ps1') -Raw
 $captureText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'capture-melonds.ps1') -Raw
+$fighterAuditText = Get-Content -LiteralPath (
+    Join-Path $PSScriptRoot 'capture-fighter-animation-audit.ps1') -Raw
 $runningCaptureText = Get-Content -LiteralPath (
     Join-Path $PSScriptRoot 'capture-running-melonds-window.ps1') -Raw
 $foxRecoveryText = Get-Content -LiteralPath (
@@ -114,7 +116,8 @@ if (($realtimeText -match 'RequireRealtime60Fps') -or
 }
 if (($ftComputerText -notmatch 'gNdsBattlePlayableFoxCpuEnabled\s*=\s*1u') -or
     ($realtimeText -notmatch '(?s)if \(\$FastIteration\).*?\$captureRuntimeArgs\.FoxCpuMode\s*=\s*0') -or
-    ($captureText -notmatch '(?s)tbreak scVSBattleStartBattle.*?gNdsBattlePlayableFoxCpuEnabled')) {
+    ($captureText -notmatch '(?s)tbreak scVSBattleStartBattle.*?gNdsBattlePlayableFoxCpuEnabled') -or
+    ($fighterAuditText -notmatch '(?s)set variable gNdsBattlePlayableFoxCpuEnabled = 1.*?detach')) {
     Fail-Check 'published battle default must retain source countdown/CPU while visible fast iteration disables both before battle'
 }
 if (($realtimeText -notmatch 'Resolve-MelonDSRunnerSlot') -or
