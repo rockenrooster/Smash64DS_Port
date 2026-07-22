@@ -1,7 +1,7 @@
 # Task 38 FGM audit
 
 Verdict: **BLOCKED** for exact missing special cues; hit-sound fidelity is
-**PENDING TYLER LISTEN**. No sample substitution was made.
+**PENDING OWNER LISTEN**. No sample substitution was made.
 
 ## Source-to-speaker chain
 

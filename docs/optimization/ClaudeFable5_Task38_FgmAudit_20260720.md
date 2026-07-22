@@ -4,7 +4,7 @@
 first — including the content-completeness doctrine (the owner, 2026-07-21) this
 resumption enforces.**
 
-**STATUS (2026-07-21): PHASE E CACHE CANDIDATE BUILT; TYLER LISTEN PENDING.** The audit phases ran and are CLOSED — evidence at
+**STATUS (2026-07-21): PHASE E CACHE CANDIDATE BUILT; OWNER LISTEN PENDING.** The audit phases ran and are CLOSED — evidence at
 `artifacts/performance/2026-07-21_task38-fgm-audit.md` (manifest inventory,
 special-move source census, per-id miss ring landed and verifier-exported).
 Consume that evidence; do not redo it. The original Phase C capacity stop-gate is

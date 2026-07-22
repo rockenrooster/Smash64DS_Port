@@ -88,6 +88,40 @@ NDS_TASK39_FX_SHIELD ?= 0
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
 NDS_TASK44_STAGE_STEADY ?= 0
+# Task 37 census instrument. Opens the repo melonDS build's ARM9 per-PC profiler
+# over a fixed window of settled battle frames (reset at START, dump START+FRAMES
+# later) so the census measures the steady-state loop and not boot. Lab only:
+# never set in a published target, and it compiles to nothing at 0.
+NDS_TASK37_PROFILE ?= 0
+NDS_TASK37_PROFILE_START ?= 438
+NDS_TASK37_PROFILE_FRAMES ?= 128
+# Task 37 placement repack: admit the measured non-memory-stall toppers into the
+# 1,060 free ITCM bytes. Placement only -- no ISA switch, no optimization change,
+# no eviction of any current resident.
+#
+# A BITMASK, not a boolean, so the admissions can be bisected. The 0/1 A/B on
+# 2026-07-22 failed its state-hash gate and the owner confirmed the enabled lab
+# build misbehaves, so which of these groups is at fault has to be established
+# before any of it can be trusted:
+#   1  libc leaves   memset, memcpy, memcmp
+#   2  libm leaf     __ieee754_sqrtf
+#   4  port leaves   TextureSourceBytes, PolyFmt, FTParamsInvalidateFighterParts
+#   7  all of them (what the failing A/B ran)
+NDS_TASK37_ITCM_LEAVES ?= 0
+NDS_TASK37_ITCM_LIBC := $(if $(filter 1 3 5 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+NDS_TASK37_ITCM_LIBM := $(if $(filter 2 3 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+NDS_TASK37_ITCM_PORT := $(if $(filter 4 5 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+# Layout control: N bytes of never-executed padding in .main, nothing in ITCM.
+# Separates "ITCM residency breaks it" from "any layout change breaks it".
+NDS_TASK37_LAYOUT_PROBE ?= 0
+NDS_TASK37_LAYOUT_PROBE_ITCM ?= 0
+# Lab-only: drop the controller devices from the Task 9 state hash. They are
+# filled from the ARM7 on real time while fast-logic runs the ARM9 unpaced, so
+# they encode execution speed. Diagnostic for Task 37 only.
+NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS ?= 0
+# Lab-only: bitmask of NDSTask9StateRecordKind values the state hash includes.
+# Diagnostic for Task 37 region isolation only; a filtered hash is a weaker gate.
+NDS_TASK9_STATE_HASH_REGION_MASK ?= 0xFFFFFFFF
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_FAST_WALLPAPER_AFFINE),1)
 ifneq ($(NDS_SCENE_MIP_CACHE_LAB),0)
@@ -133,6 +167,11 @@ override NDS_TASK36_HW_COMPOSE := 2
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
 override NDS_TASK44_STAGE_STEADY := 1
+# Task 37 (seven hot leaves into ITCM free space) is NOT enabled here. The
+# emulator A/B is strong -- named work P50 -59,328 ticks, 3-VBlank share
+# 71.7% -> 76.0% -- but its exactness gate did not pass, so it is not a KEEP and
+# must not reach the published ROM. See the RESULTS section of
+# docs/optimization/ClaudeFable5_Task37_ItcmRepack_20260722.md.
 override NDS_SCENE_MIP_CACHE_LAB := 0
 # Device-proven: boots to GO on melonDS and retail hardware with no OOM.
 override NDS_FAST_WALLPAPER_AFFINE := 1
@@ -171,6 +210,41 @@ override NDS_TASK36_HW_COMPOSE := 2
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
 override NDS_TASK44_STAGE_STEADY := 1
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_FAST_WALLPAPER_AFFINE := 1
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+override NDS_TASK39_FX_SHIELD := 1
+endif
+NDS_TASK37_DEVICE_TARGETS := \
+	smash64ds-battle-playable-task37-on-hwtri \
+	smash64ds-battle-playable-task37-off-hwtri
+ifneq ($(filter $(TARGET),$(NDS_TASK37_DEVICE_TARGETS)),)
+# Nonpublishing retail A/B pair for the Task 37 device checkpoint. Identical to
+# the profile-0 tick-HUD build except for NDS_TASK37_ITCM_LEAVES; the distinct
+# target and build names keep one ROM from overwriting the other. Placement is
+# the device-only class -- the emulator now models icache/dcache, but TCM
+# residency is still the category where melonDS was historically blind.
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_SHIP_TELEMETRY := 0
+override NDS_TICK_HUD := 1
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
+override NDS_TASK44_STAGE_STEADY := 1
+override NDS_TASK37_ITCM_LEAVES := $(if $(filter %-task37-on-hwtri,$(TARGET)),1,0)
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -467,6 +541,29 @@ NDS_TASK9_FLOAT_ITCM_MEMBERS := \
 NDS_TASK9_FLOAT_ITCM_OFILES := \
 	$(addsuffix .itcm.o,$(basename $(NDS_TASK9_FLOAT_ITCM_MEMBERS)))
 
+# Task 37 measured leaves. The census split every profiled instruction's stall
+# cycles by whether the instruction touched data, because only the non-memory
+# half is recoverable by moving code. These five sit in .main today and carry
+# 7,387,317 non-memory stall cycles across 906 bytes -- the densest set that
+# fits ITCM's 1,060 free bytes with no eviction of any current resident.
+#
+#   memset       140 B   2,391,465    memcpy       170 B   1,173,373
+#   memcmp        70 B   1,249,372    __ieee754_sqrtf 236 B 1,054,412
+#   (port side: ndsFTParamsInvalidateFighterParts, TextureSourceBytes, PolyFmt)
+#
+# Same mechanism as Task 9: extract from a SHA-verified private copy of the
+# archive and rename the section. The code is byte-identical; only where it
+# lives changes, so the A/B measures placement and nothing else.
+NDS_TASK37_LIBC_SHA256 := \
+	01424211f6f671e0b07b52fb72086f14e18000fca089e9ecfe45aa77b36873e2
+NDS_TASK37_LIBM_SHA256 := \
+	b437e8747f520c891d2784df015ab6f8cd30bb91cd02430f03657c20027d6685
+NDS_TASK37_LIBC_MEMBERS := libc_a-memset.o libc_a-memcpy-stub.o libc_a-memcmp.o
+NDS_TASK37_LIBM_MEMBERS := libm_a-ef_sqrt.o
+NDS_TASK37_ITCM_OFILES := \
+	$(if $(filter 1,$(NDS_TASK37_ITCM_LIBC)),$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBC_MEMBERS)))) \
+	$(if $(filter 1,$(NDS_TASK37_ITCM_LIBM)),$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBM_MEMBERS))))
+
 LIBS := -lfat -lfilesystem -lnds9 -lm
 LIBDIRS := $(LIBNDS)
 
@@ -638,6 +735,7 @@ endif
 export LD := $(CC)
 export OFILES := \
 	$(if $(filter 1,$(NDS_TASK9_FLOAT_ITCM)),$(NDS_TASK9_FLOAT_ITCM_OFILES)) \
+	$(NDS_TASK37_ITCM_OFILES) \
 	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 export NDS_PRIVATE_CHECK_OFILES := $(NDS_PRIVATE_CHECK_CFILES:.c=.o)
 export NDS_MPPROCESS_STRICT_OFILES := $(NDS_PRIVATE_CHECK_OFILES) \
@@ -1204,6 +1302,15 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK34_STAGE_STREAM_CENSUS $(NDS_TASK34_STAGE_STREAM_CENSUS)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
+		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
+		echo '#define NDS_TASK37_ITCM_LEAVES $(NDS_TASK37_ITCM_LEAVES)'; \
+		echo '#define NDS_TASK37_ITCM_PORT $(NDS_TASK37_ITCM_PORT)'; \
+		echo '#define NDS_TASK37_LAYOUT_PROBE $(NDS_TASK37_LAYOUT_PROBE)'; \
+		echo '#define NDS_TASK37_LAYOUT_PROBE_ITCM $(NDS_TASK37_LAYOUT_PROBE_ITCM)'; \
+		echo '#define NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS $(NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS)'; \
+		echo '#define NDS_TASK9_STATE_HASH_REGION_MASK $(NDS_TASK9_STATE_HASH_REGION_MASK)u'; \
+		echo '#define NDS_TASK37_PROFILE_START $(NDS_TASK37_PROFILE_START)u'; \
+		echo '#define NDS_TASK37_PROFILE_FRAMES $(NDS_TASK37_PROFILE_FRAMES)u'; \
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
@@ -1347,6 +1454,30 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 	done
 	@rm -rf ".task9-float-itcm"
 endif
+ifneq ($(strip $(NDS_TASK37_ITCM_OFILES)),)
+NDS_TASK37_LIBC := $(shell $(CC) $(ARCH) -print-file-name=libc.a)
+NDS_TASK37_LIBM := $(shell $(CC) $(ARCH) -print-file-name=libm.a)
+NDS_TASK37_AR := $(shell $(CC) -print-prog-name=ar)
+# Grouped recipe, one verified private copy per archive, extract only the named
+# members. Same shape as the Task 9 block above and for the same reason: the
+# installed archives must stay out of Make's prerequisite graph.
+$(NDS_TASK37_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
+	@test "$(NDS_TASK37_ITCM_LIBC)" != "1" || echo "$(NDS_TASK37_LIBC_SHA256) *$(NDS_TASK37_LIBC)" | sha256sum -c -
+	@test "$(NDS_TASK37_ITCM_LIBM)" != "1" || echo "$(NDS_TASK37_LIBM_SHA256) *$(NDS_TASK37_LIBM)" | sha256sum -c -
+	@rm -rf ".task37-itcm" $(NDS_TASK37_ITCM_OFILES)
+	@mkdir -p ".task37-itcm"
+	@cp "$(NDS_TASK37_LIBC)" ".task37-itcm/libc.a"
+	@cp "$(NDS_TASK37_LIBM)" ".task37-itcm/libm.a"
+	@test "$(NDS_TASK37_ITCM_LIBC)" != "1" || (cd ".task37-itcm" && $(NDS_TASK37_AR) x "libc.a" $(NDS_TASK37_LIBC_MEMBERS))
+	@test "$(NDS_TASK37_ITCM_LIBM)" != "1" || (cd ".task37-itcm" && $(NDS_TASK37_AR) x "libm.a" $(NDS_TASK37_LIBM_MEMBERS))
+	@for member in $(if $(filter 1,$(NDS_TASK37_ITCM_LIBC)),$(NDS_TASK37_LIBC_MEMBERS)) $(if $(filter 1,$(NDS_TASK37_ITCM_LIBM)),$(NDS_TASK37_LIBM_MEMBERS)); do \
+		stem="$${member%.o}"; \
+		$(OBJCOPY) \
+			--rename-section .text=.itcm,alloc,load,readonly,code,contents \
+			".task37-itcm/$$member" "$$stem.itcm.o" || exit $$?; \
+	done
+	@rm -rf ".task37-itcm"
+endif
 ifneq ($(strip $(NDS_MPPROCESS_STRICT_OFILES)),)
 $(NDS_MPPROCESS_STRICT_OFILES): CFLAGS += -Werror=implicit-function-declaration -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=return-type
 endif
@@ -1425,6 +1556,8 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK34_STAGE_STREAM_CENSUS=$(NDS_TASK34_STAGE_STREAM_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK36_HW_COMPOSE=$(NDS_TASK36_HW_COMPOSE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK44_STAGE_STEADY=$(NDS_TASK44_STAGE_STEADY)'
+	@printf '%s\n' 'BENCH_MAKE_TASK37_PROFILE=$(NDS_TASK37_PROFILE)'
+	@printf '%s\n' 'BENCH_MAKE_TASK37_ITCM_LEAVES=$(NDS_TASK37_ITCM_LEAVES)'
 	@printf '%s\n' 'BENCH_MAKE_TASK22_WALLPAPER_RUN_LAB=$(NDS_TASK22_WALLPAPER_RUN_LAB)'
 	@printf '%s\n' 'BENCH_MAKE_SCREEN_SPACE_CENSUS=$(NDS_RENDERER_SCREEN_SPACE_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_RENDER_ECONOMY=$(NDS_RENDER_ECONOMY)'

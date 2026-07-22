@@ -13,7 +13,11 @@ $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 ```
 
 Use only `emulators/melonds/melonDS.exe` for manual launch and repo-owned
-`emulators/melonds-runners/slotN/melonDS.exe` copies for automation. Every TOML
+`emulators/melonds-runners/slotN/melonDS.exe` copies for automation. Never a
+system, PATH, or package-manager melonDS. After replacing the source executable,
+refresh every slot with `.\scripts\New-MelonDSRunnerSlots.ps1 -Count <N> -Force`;
+`check-melonds-policy.ps1` fails if any slot binary is not that exact build, so
+manual and sharded runs can never disagree about which emulator ran. Every TOML
 uses the 416x664 outer-window profile: its 400x600 content viewport is the exact
 2:3 aspect of two stacked 256x192 screens, with no capture bars, equal sizing,
 zero gap, no swap, nearest filtering, and OSD off. Ports `3333/3334` are manual-only; slot 0 uses

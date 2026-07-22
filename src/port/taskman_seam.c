@@ -2,6 +2,7 @@
 
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_task37_profile.h>
 
 extern u32 sySchedulerGetTicCount(void);
 extern void sySchedulerSetTicCount(u32 tics);
@@ -4917,8 +4918,14 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
         gNdsTickHudBuckets[nNDSTickHudBucketAll] = all;
         gNdsTickHudBuckets[nNDSTickHudBucketOther] =
             (all >= named) ? (all - named) : 0u;
+        /* Feed the HUD percentile window here, on the per-iteration path. The
+         * HUD renderer only runs about twice a second, so sampling inside it
+         * would build the distribution from half-second-spaced single frames
+         * instead of from every presented frame. */
+        ndsPlatformTickHudSample();
     }
 #endif
+    NDS_TASK37_PROFILE_FRAME_TICK(gNdsBattlePlayablePacingPresentedFrames);
     ndsBattlePlayableFrameCompleteMarker();
     NDS_FREEZE_DIAGNOSTICS_HEARTBEAT();
 }

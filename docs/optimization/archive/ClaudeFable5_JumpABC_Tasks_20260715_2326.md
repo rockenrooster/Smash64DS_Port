@@ -175,7 +175,7 @@ no-Z class onto hardware depth and would inherit a broken seam.
 stage P50/P95 from the previous task (do not reuse 645,248 if the depth fix
 moved it). Target: stage P50 <=500K, then push toward 450K.
 
-TYLER'S AUTHORIZATION — ledger rule amendment: the PERF_LEDGER
+THE OWNER'S AUTHORIZATION — ledger rule amendment: the PERF_LEDGER
 M3-DENSE-PREPARE-ONCE row's "do not retry or widen dense-only preparation
 reuse" is amended to: dense-index preparation reuse may be re-landed ONLY as
 the base of this measured stack, and the keep gate applies to the STACK TOTAL

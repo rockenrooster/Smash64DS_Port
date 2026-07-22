@@ -21578,3 +21578,46 @@ remains skipped for the requested fast iteration cadence.
   11,428,864 bytes, `9E27BD3D...`). The retail A/B pair is queued in
   `builds/device-queue/task44-stage-steady-pair/` from two new nonpublishing
   targets, and the shared device HUD `GIT` row carries an `S` engagement digit.
+
+## Task 37 — hot-code placement repack against measured per-symbol cost (2026-07-22)
+
+- First placement work in the port refereed by measurement rather than by
+  device A/B. The repo melonDS fork carries an ARM9 per-PC profiler that
+  attributes emulated cycles including cache fills, streaming, write-buffer
+  drains, bus waits, interlocks, and pipeline refills. `NDS_TASK37_PROFILE=1`
+  arms it over a fixed window of settled battle frames with CP15 markers
+  (reset at presented frame 438, dump at 566) so the census describes the
+  steady-state loop and not boot. At 0 it compiles to nothing: the published
+  ROM rebuilt byte-identical to its pin under the instrument.
+- The census does not rank by cycles. Every profiled PC is classified by opcode
+  as memory or non-memory, because placement changes what an instruction fetch
+  costs and does nothing for what a load costs. Ranking by raw cycles picks
+  `memset`/`memcpy`/`memcmp` (38.9M cycles, 7.8% of the loop); ranking by
+  recoverable stall shows 34.8M of that is data traffic no placement can touch.
+- Tier result, which outranks the repack itself: `.itcm` 14.7% non-memory stall,
+  `.text.hot.draw` 22.4%, `.main` 29.5%, `.text.hot` 30.0%. ITCM works and Task
+  32's draw tier works; **the Task 17 `.text.hot` tier is not measurably buying
+  anything** and its 3,716 free bytes are free because they are not worth much.
+  Probable discriminator is re-entry frequency inside one frame, not address
+  grouping.
+- `.itcm` is fully enumerated by the ELF: 64 residents cover 31,628 of 31,676
+  bytes, not the ~12.6 KB "unenumerated" the plan assumed. 5,040 bytes of it
+  never executed in 128 frames, an eviction budget left deliberately unspent.
+- Shipped: seven measured toppers moved from `.main` into ITCM free space, 906
+  bytes carrying 7,387,317 non-memory stall cycles. Placement only — library
+  members are byte-identical objects extracted from SHA-pinned `libc.a`/`libm.a`
+  and re-sectioned; port functions carry a section attribute with no ISA or
+  optimization change. No eviction, no verifier contract edited.
+- melonDS matched pair, frames 438..637, 200 samples: named work P50 -59,328
+  ticks (STG -40,320/-6.60%, FTR -15,296/-2.58%, SRC -3,648). `ALL` P95 fell
+  559,680 — one whole VBlank interval. VBlank share 3-VBI 71.7% -> 76.0%, 5+
+  5.2% -> 3.1%. STG, which the task plan itself called exhausted with a hard
+  median floor, gave up 6.6% to pure code placement.
+- The plan's stated gate (FTR+SRC P50 down >= 40,000) was **not** met: they fell
+  18,944 combined. The gate named the wrong buckets — it was written before the
+  census existed, and the census put the recoverable stall in the renderer/stage
+  path. Recorded as a gate mismatch, not massaged into a pass.
+- Shipped enabled in profile-0 (`smash64ds-battle-playable-hwtri`, 11,428,864
+  bytes, `1818AA77...`). Retail A/B pair queued in
+  `builds/device-queue/task37-itcm-leaves-pair/`; the device HUD `GIT` row
+  carries an `L` engagement digit.

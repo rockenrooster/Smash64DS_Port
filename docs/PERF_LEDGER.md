@@ -4,6 +4,23 @@ Do not delete reverted or inconclusive rows. Measurements use synchronized
 canonical mode 163 unless a row explicitly says otherwise. Nested renderer
 timers are diagnostic subdivisions and are never added to the whole-loop sum.
 
+**Emulator change, 2026-07-22.** Every row dated before 2026-07-22 was measured
+on a stock melonDS that does not model ARMv5 icache/dcache. The repo emulator is
+now the owner's cache-modelling fork, which reports roughly 40% more ticks for
+the same work. Old and new tick counts are NOT comparable in absolute terms;
+within-row A/B deltas measured on one emulator remain valid. See
+`TICK-HUD BASELINE / FORK EMULATOR` at the end of this file.
+
+**Consequence: `verify-dev-fast.ps1` is red on the fork.** The `battle_playable`
+locked-30 contract (exact 2:1 update/present, 30 Hz present cap) fails under the
+fork and passed under stock melonDS. Confirmed to be the emulator and not a
+source change by stashing all local edits and reproducing on clean `093690b`.
+The contract is not being met because it was never met on hardware either - the
+retail and fork VBI histograms both show 3/4/5+ VBlank intervals, not a locked
+30 Hz - so stock melonDS was flattering the pacing and the contract encoded that
+artefact. Decide whether to re-baseline the contract against the fork or gate it
+by emulator; do not "fix" it by reverting the emulator.
+
 ## Benchmark identities
 
 Both accepted runs use the canonical idle `battle_playable_realtime` mode-163
@@ -165,7 +182,7 @@ behavior. Full certificate:
 
 ```text
 IDEA ID: TASK36-PHASEA2-HARDWARE-COMPOSE-20260720
-STATUS: PHASE A KEEP; TYLER VISUAL APPROVED; PHASE B USER-OVERRIDE KEEP
+STATUS: PHASE A KEEP; OWNER VISUAL APPROVED; PHASE B USER-OVERRIDE KEEP
 MECHANISM: 26 rigid projected no-Z bindings compose camera x local in GX;
   binding 29 raw source-Z/range remains exact CPU-composed
 ENGAGEMENT: 26 DObjs; 3 camera loads; 31 world multiplies; pre-GO fallback 1;
@@ -6152,4 +6169,271 @@ EVIDENCE:
   artifacts/visibility/2026-07-19-bg0-profile0-results.png
   builds/task-bg0-hardware-pair/README.md
 KEEP / REWORK / REVERT: KEEP BG-0 PRODUCTION / RETAIL A/B PENDING / STABLE-30 STILL RED
+```
+
+## TICK-HUD BASELINE / FORK EMULATOR (2026-07-22)
+
+First tick-HUD bucket capture taken over GDB instead of photographed off the
+HUD, and the first measurement of any kind on the cache-modelling melonDS fork.
+This row is the new emulator baseline for the shipping profile-0 configuration.
+
+```text
+IDENTITY:
+  target                  smash64ds-battle-playable-tickhud-hwtri
+  git                     093690b
+  ROM                     11,430,912 bytes
+                          20D25EE075A4B8B9C0CF0541A0842BCDCEF284647C0E17FBCBC2E9604407E022
+  melonDS                 emulators/melonds/melonDS.exe (owner fork, cache-modelling)
+                          DE80E46BDCF1FD986162DE6AFFD9EE1148F8C40565DBAF667B9C2B3EF5475715
+  config                  profile 0, TICK_HUD=1, SHIP_TELEMETRY=0, HW compose 2,
+                          Task 44 on, fast-run 9, static textures on
+  command                 scripts/sample-tick-hud-buckets.ps1 -Samples 256
+                            -StartFrame 438 -Build build-task41-tickhud-current
+  sampling                256 presented iterations, frames 438..693, CPU Fox
+  reproducibility         two independent runs byte-identical in every field
+                          including min/max: this scene has NO run-to-run noise
+
+BUCKETS (guest cpuGetTiming ticks per presented iteration).
+P50/P95 are the decision basis per docs/VERIFYING.md; spread = p95/p50 names the
+buckets whose mean is not usable. %ALLp50 is p50-relative and does not sum to 100
+because percentiles do not add - the additive identity is on the means.
+
+  bucket        p50        p95  spread       mean        min        max  %ALLp50
+  ALL     1,680,448  2,800,512    1.67  1,879,473  1,679,424  3,361,280    100.0
+  FTR       590,144    598,848    1.01    557,730    324,672  1,046,080     35.1
+  STG       597,632    605,440    1.01    598,236    589,760    615,744     35.6
+  BG          4,032      4,096    1.02      4,036      3,904      4,224      0.2
+  AUD         1,344     65,216   48.52      6,542      1,152     68,544      0.1
+  HUD         1,024    198,272  193.62     25,732        832    200,256      0.1
+  SRC       324,096    955,904    2.95    378,464    162,688  1,293,568     19.3
+  MISC       82,432    129,152    1.57     77,537     45,888    198,592      4.9
+  OTHR      134,080    546,624    4.08    231,195     24,512    577,024      8.0
+
+  Read the spread column first. FTR/STG/BG at 1.01-1.02 are steady enough that
+  p50, p95 and mean agree; those three are the trustworthy numbers and the only
+  ones comparable against a device running mean. SRC 2.95 and OTHR 4.08 are
+  moderately bursty. AUD 48.52 and HUD 193.62 are pure burst - audio refill and
+  text redraw fire on a minority of frames - so their means are an artefact of
+  how many bursts a window happens to contain and must not be compared at all.
+
+  mean named sum 1,648,277 (87.7% of mean ALL); ALL is measured wall ticks and
+  OTHR is the remainder, so named + OTHR == ALL exactly on the means.
+  ALL p50 1,680,448 == exactly 3 VBlank intervals at 33.51 MHz / 59.83 Hz.
+  VBI 2:0 3:516 4:147 5+:30 max:19 over 693 presents; cadence slips 0.
+
+FORK VS RETAIL (owner device measurement, same nine buckets).
+The retail and ownerFork columns are HUD running means, so only buckets with
+spread near 1.00 can be compared at all - there, mean and p50 coincide and the
+comparison is meaningful. The rest are listed for completeness and marked.
+
+  bucket    retail   ownerFork    p50 here   p50 vs R   mean vs R  comparable
+  FTR      617,246     606,840     590,144      -4.4%       -9.6%  YES
+  STG      616,721     597,698     597,632      -3.1%       -3.0%  YES
+  BG         4,164       4,032       4,032      -3.2%       -3.1%  YES
+  MISC      71,789      72,203      82,432     +14.8%       +8.0%  marginal
+  ALL    2,020,898   1,841,744   1,680,448     -16.8%       -7.0%  no (mix)
+  SRC      443,284     363,493     324,096     -26.9%      -14.6%  no (burst)
+  OTHR     252,720     181,582     134,080     -46.9%       -8.5%  no (burst)
+  AUD       10,172       7,110       1,344     -86.8%      -35.7%  no (burst)
+  HUD        4,904       8,693       1,024     -79.1%     +424.7%  no (burst)
+
+  The headline: on the three steady buckets the fork lands within 3.1-4.4% of
+  retail. Stock melonDS for comparison was ALL 1,322,741, -34.5% vs retail.
+  That is the result that makes the fork usable as a stand-in for the device.
+
+  FTR is the correction the P50 view bought: its mean reads -9.6% only because
+  a fighter is dead/respawning for part of this window (min 324,672 against a
+  p50 of 590,144). Its p50 is -4.4% and its spread is 1.01, so per-frame fighter
+  cost tracks retail far better than the mean suggested.
+
+  ALL cannot be compared directly. It is a mix of 3-VBlank and 4-VBlank frames
+  (516/147/30), so its p50 snaps to exactly 3 VBlanks while the device mean
+  reflects a different 3/4/5+ ratio from a played match. Compare the VBI
+  histogram for whole-loop questions, never ALL alone.
+
+  AUD/HUD/SRC/OTHR differences are workload and burst-count, not emulator
+  accuracy: this is a scripted CPU-Fox window, the retail column came from a
+  continuously played match.
+
+CONSEQUENCE FOR TASK 10 CALIBRATION:
+  The Task 10 multipliers (whole draw x1.51, update x1.73, cache-resident x0.88,
+  main-RAM streaming x1.50, ...) exist to correct stock melonDS for unmodelled
+  cache behaviour. On this emulator STG is already within 3% of retail, so
+  applying x1.51 on top would overstate a stage saving by roughly 50%. Treat
+  those multipliers as stale for any measurement taken on the fork. They have
+  not been re-derived; that is a decision for the owner, not an assumption to
+  make silently.
+
+EVIDENCE:
+  artifacts/performance/tick-hud-buckets-fork-20260722-run1.json  (n=32)
+  artifacts/performance/tick-hud-buckets-fork-20260722-run2.json  (n=256)
+  artifacts/performance/tick-hud-buckets-fork-20260722-run3.json  (n=256, repeat)
+KEEP / REWORK / REVERT: BASELINE RECORDED / TASK 10 MULTIPLIERS STALE
+```
+## TASK 37 HOT-CODE PLACEMENT REPACK (2026-07-22)
+
+```
+IDENTITY:
+  branch codex/task37-itcm-repack, git bfb72d9
+  melonDS DE80E46BDCF1FD98 (repo fork, cache-accurate), JIT off, DS console mode
+  target smash64ds-battle-playable-tickhud-hwtri, profile 0
+  control  ROM 8919BE714709A8C9   candidate ROM 84A34592D3676E0B
+  matched window frames 438..637, 200 samples each, slips=0 both
+
+WHAT WAS MEASURED, AND WHY IT IS A NEW KIND OF MEASUREMENT:
+  The fork's ARM9 per-PC profiler was armed over 128 settled battle frames by
+  CP15 markers the ROM emits at frame 438 and 566 (NDS_TASK37_PROFILE=1).
+  500,810,896 cycles, 168,894,530 instructions, 60,709 PCs, 0.00% unattributed.
+
+  Every PC was then classified by opcode as memory or non-memory. Placement
+  changes what an instruction FETCH costs and does nothing for what a LOAD
+  costs, so only non-memory stall -- cycles beyond one per instruction on
+  instructions that touch no data -- is recoverable by moving code. Ranking by
+  raw cycles would have picked memset, memcpy and memcmp (38.9M cycles, 7.8%)
+  as the top targets; ranking by recoverable stall shows 34.8M of that is data
+  traffic no placement can touch.
+
+  armWaitForIrq is excluded from tier statistics. It is 8 bytes of deliberate
+  VBlank spinning worth 9.21% of all cycles, and including it makes the
+  zero-waitstate tier look like the worst-stalling one.
+
+TIER RESULTS (the finding that outranks the repack itself):
+  tier              cycles      insns  cyc/insn  non-mem stall %   mem stall %
+  .itcm         88,250,502  52,480,774    1.68            14.7          25.8
+  .text.hot     15,851,755   4,805,435    3.30            30.0          39.7
+  .text.hot.draw 65,601,182 24,985,828    2.63            22.4          39.5
+  .main        284,956,329  86,619,628    3.29            29.5          40.1
+
+  ITCM works: half the non-memory stall rate of ordinary code.
+  .text.hot.draw works: 22.4% vs 29.5%. Task 32 earned its retail KEEP.
+  .text.hot DOES NOT WORK: 30.0% against .main's 29.5%, and a marginally worse
+  cycles-per-instruction. The Task 17 update-path tier is buying nothing
+  measurable, and its 3,716 free bytes are free because they are not worth much.
+
+  Probable discriminator: re-entry frequency, not address grouping.
+  .text.hot.draw holds functions called thousands of times inside one frame,
+  where grouping compounds; .text.hot holds update functions called once per
+  frame, cold on arrival regardless of their neighbours. Any future plan resting
+  on "group the hot functions together" should be checked against this first.
+
+  Also corrected: .itcm is NOT ~12.6 KB unenumerated. 64 residents cover 31,628
+  of 31,676 bytes; 48 bytes are unnamed. And 5,040 bytes of it never executed
+  once in 128 frames -- an eviction budget worth ~26.3M non-memory stall cycles,
+  deliberately left unspent here (dead in this scene's steady state is not dead,
+  and several are pinned by the renderer and Task 9/16 float checkers).
+
+WHAT SHIPPED: NDS_TASK37_ITCM_LEAVES=1
+  Seven measured toppers moved from .main into ITCM's free space. Placement
+  only: library members are byte-identical objects from SHA-pinned archives with
+  the section renamed, port functions carry a section attribute with no ISA or
+  optimization change. No eviction, no verifier contract edited.
+  906 bytes carrying 7,387,317 non-memory stall cycles.
+  .itcm 31,676 -> 32,596 of a 32,736 hard cap; .main -800 B.
+
+RESULT (P50/P95, never means -- HUD spread is 310x):
+  bucket   ctl P50     cand P50      d P50       %      d P95
+  ALL    1,680,192   1,680,192          0    0.00   -559,680
+  FTR      591,936     576,640    -15,296   -2.58    -26,624
+  STG      610,560     570,240    -40,320   -6.60    -40,512
+  SRC      326,080     322,432     -3,648   -1.12    -10,496
+  MISC      47,808      47,680       -128   -0.27     -2,688
+  AUD        2,240       2,176        -64   -2.86       -192
+  BG         4,096       4,224       +128   +3.12        +64
+  HUD        1,024       1,024          0    0.00    -11,200
+  OTHR     126,784     165,696    +38,912  +30.69    -83,776
+
+  Named work P50 -59,328 ticks. OTHR rising is the correct signature: ALL is
+  VBlank-quantized and did not move, so work removed from named buckets
+  reappears as pacing slack inside the same 3-VBlank envelope.
+
+  VBI share, normalized by sample count (n=637 each), never min-FPS:
+                3-VBI  4-VBI  5+-VBI
+    control      71.7   23.1    5.2
+    candidate    76.0   20.9    3.1
+
+  +4.3 points into the 3-VBlank bucket; 5+ frames cut from 5.2% to 3.1%.
+  ALL P95 fell 559,680 -- one whole VBlank interval (560,190), so the 95th
+  percentile frame moved from a 5-VBlank frame to a 4-VBlank one.
+
+GATE STATUS, STATED HONESTLY:
+  The plan's success gate was "FTR + SRC P50 down >= 40,000 combined". They fell
+  18,944. THE GATE AS WRITTEN IS NOT MET. It named the wrong buckets: the census
+  showed the recoverable stall sits in the renderer/stage path, and that is
+  where the win landed. STG -- which the Task 37 plan itself called "exhausted,
+  no variance left, hard median floor" -- gave up 40,320 ticks to pure code
+  placement. The gate predates the measurement that replaced it.
+
+EVIDENCE:
+  artifacts/task37-census/census.txt        (full census, three ranked tables)
+  artifacts/task37-census/census.json
+  artifacts/task37-census/arm9-profile.csv  (per-PC, 60,709 rows)
+  artifacts/task37-census/ab-control.json
+  artifacts/task37-census/ab-candidate.json
+  artifacts/task37-census/ab-report.txt
+EXACTNESS GATE: FAILED -- THIS IS NOT A KEEP
+  verify-task37-itcm-state-hash-ab.ps1 requires every per-update game-state
+  record to match across the placement change. 692 of 3,892 differ (17.8%),
+  first at update 1412, in three bursts separated by runs of identical records
+  (the last run is 1,357 consecutive identical updates).
+
+  Evidence that this is probably the instrument and not a real divergence:
+  the hash covers syUtilsRandSeed() and a divergent RNG stream cannot
+  re-converge, yet it re-converges three times; heap offset (57,168) and GObj
+  count (646) are identical in all 3,892 records; and two fighters at different
+  positions do not return to bit-identical whole-state. The likely source is a
+  GObj field touched by the draw path rather than by logic -- and Task 44, also
+  a perf change, deliberately proved exactness with the Task 36 replay word
+  stream instead of this gate.
+
+  Probably is not the standard for changing a published ROM, and moving the gate
+  after seeing its result would make it worthless. NDS_TASK37_ITCM_LEAVES stays
+  0 in every target; the published ROM is unchanged at 9E27BD3D...; nothing
+  merged. The enabled build would have been 1818AA77..., 11,428,864 bytes.
+
+  TO SETTLE IT: the instrument already tags inputs by region
+  (SCENE/BATTLE/CAMERA/GROUND/CONTROLLERS/COLLISION/GObjs). Export a per-region
+  hash instead of one combined pair and the diverging region names itself in one
+  run. If it is GObj draw state, exclude the draw-touched fields and this gate
+  becomes usable for every future perf task. If it is a gameplay region, Task 37
+  is a real bug and stays reverted.
+INVESTIGATION (all runs on the fast-logic match-lifecycle gate, mask 0 vs 7):
+  same ROM twice                            IDENTICAL  gate is deterministic
+  mask 1 / 2 / 4 individually               FAIL 692   byte-identical signature
+  BGM falsified                             FAIL 692   not audio
+  gSYControllerDevices excluded             FAIL 692   not ARM7 input phase
+  realtime pacing                           BLOCKED    hits the pre-existing
+                                                       locked-30 pacing red
+  +800B dead padding in .main               PASS 3892  layout is invisible
+  +800B dead padding in .itcm               PASS 3892  section growth invisible
+
+  Padding changes layout but not speed; relocation changes speed. Every failing
+  arm changes speed, every passing arm does not -- and three disjoint symbol
+  groups produce ONE byte-identical failure signature, which no per-symbol fault
+  explains.
+
+REGION BISECT (NDS_TASK9_STATE_HASH_REGION_MASK, added for this):
+  core: scalars/RNG, scene, battle, camera, ground,
+        controllers, collision                        PASS 3892 identical
+  object tree                                         FAIL 692
+    gameplay objects                                  FAIL 692
+      fighter/item/weapon/effect                      FAIL 692
+        fighter FTStruct alone                        FAIL 692
+
+  The core PASS is the load-bearing result. syUtilsRandSeed() is in it: both
+  builds draw the same random numbers in the same order for all 3,892 updates,
+  and agree on battle state, camera, ground and collision throughout. The
+  simulation is not running a different match. The camera in particular tracks
+  fighter positions and is identical on every update, which is hard to reconcile
+  with fighter positions differing.
+
+STOPPED at the standing time-box (~twelve full match lifecycles). FTStruct is
+hashed as one blob so region masks cannot resolve further. Next step is
+mechanical, not another guess: split FTStruct across the free mask bits 23..31
+and binary-search the differing offset in three runs. If it lands on a code
+pointer, note that ndsTask9StateCanonicalWord collapses main-RAM addresses to
+0x20000000 and ITCM to 0x30000000 -- a pointer whose target moved to ITCM
+changes class with no behavioural change, which would explain the identical
+signature across disjoint groups. If it lands on a gameplay member, Task 37 is a
+real defect.
+KEEP / REWORK / REVERT: WIP -- measured win real, exactness unresolved, NOT shipped
 ```
