@@ -182,7 +182,7 @@ behavior. Full certificate:
 
 ```text
 IDEA ID: TASK36-PHASEA2-HARDWARE-COMPOSE-20260720
-STATUS: PHASE A KEEP; TYLER VISUAL APPROVED; PHASE B USER-OVERRIDE KEEP
+STATUS: PHASE A KEEP; OWNER VISUAL APPROVED; PHASE B USER-OVERRIDE KEEP
 MECHANISM: 26 rigid projected no-Z bindings compose camera x local in GX;
   binding 29 raw source-Z/range remains exact CPU-composed
 ENGAGEMENT: 26 DObjs; 3 camera loads; 31 world multiplies; pre-GO fallback 1;
