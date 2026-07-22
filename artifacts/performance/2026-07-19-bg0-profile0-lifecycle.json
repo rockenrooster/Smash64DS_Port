@@ -1418,7 +1418,7 @@
     "makeCommand": [
       "make",
       "-C",
-      "D:\\Stuff\\DevFolder\\Smash64DS_Port",
+      ".",
       "TARGET=smash64ds-battle-playable-one-minute-match-hwtri",
       "BUILD=build-battle-playable-one-minute-match-hwtri-harness",
       "NDS_DEV_SCENE_HARNESS=battle_playable_match_lifecycle",
@@ -1488,23 +1488,23 @@
       "Task16FloatAddSubMode": 0,
       "Task9StateHashMode": 0,
       "Task20StackProfileMode": 0,
-      "CommonCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os",
-      "RendererCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os -marm",
-      "SceneCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os"
+      "CommonCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os",
+      "RendererCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os -marm",
+      "SceneCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os"
     },
     "artifacts": {
       "rom": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.nds",
+        "path": ".\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.nds",
         "sha256": "38EB40E9F6AF4DC045D134FFEC6331B8288C51ED7239AF79A4D841835B539DB0",
         "bytes": 14596096
       },
       "elf": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.elf",
+        "path": ".\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.elf",
         "sha256": "6AAC047CC4324C69C413ABD74F18DA9AA2138C8B82958C923D9B602E98C194B9",
         "bytes": 8457500
       },
       "screenshot": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\visibility\\2026-07-19-bg0-profile0-results.png",
+        "path": ".\\artifacts\\visibility\\2026-07-19-bg0-profile0-results.png",
         "sha256": "7050D50567976C24561012B2E4DBDBD08EDDBD9B4C27EA1F60604B2538D4246B"
       }
     }

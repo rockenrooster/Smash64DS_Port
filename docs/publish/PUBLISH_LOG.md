@@ -27,7 +27,7 @@ The bundle was created and verified before any worktree or branch deletion.
 
 | Property | Value |
 |---|---|
-| Path | `D:\Stuff\DevFolder\_backups\smash64ds-full-20260718.bundle` |
+| Path | `..\_backups\smash64ds-full-20260718.bundle` |
 | Bytes | 45,485,731 |
 | SHA-256 | `435000D2503DE30457BA2A35DA1C9AA230C7BA372835B936E1413B8630B96593` |
 | Dev HEAD recorded | `ad4dafd18bec6cb21c55845e9a351a687a8929a3` |
@@ -230,5 +230,5 @@ pushed. Repository visibility was not changed.
   publishes no project-wide license; upstream notices and the decomp-source
   caveat are in `NOTICE.md`.
 
-Recovery surface: `D:\Stuff\DevFolder\_backups\smash64ds-full-20260718.bundle`
+Recovery surface: `..\_backups\smash64ds-full-20260718.bundle`
 (`435000D2503DE30457BA2A35DA1C9AA230C7BA372835B936E1413B8630B96593`).

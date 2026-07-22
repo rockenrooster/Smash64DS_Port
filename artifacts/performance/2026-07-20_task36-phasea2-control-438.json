@@ -367,7 +367,7 @@
     "makeCommand": [
       "make",
       "-C",
-      "D:\\Stuff\\DevFolder\\Smash64DS_Port",
+      ".",
       "TARGET=smash64ds-battle-playable-m3-stage-owner-lab",
       "BUILD=builds/build-task36-hw-compose-e0-lab",
       "NDS_DEV_SCENE_HARNESS=battle_playable_realtime",
@@ -440,20 +440,20 @@
     "phaseMatrixMode": false,
     "lowerTextHudMode": 0,
     "effectiveCFlags": {
-      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-task36-hw-compose-e0-lab/nds_build_config.h -O2",
-      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-task36-hw-compose-e0-lab/nds_build_config.h -O2 -marm",
-      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-task36-hw-compose-e0-lab/nds_build_config.h -O2",
+      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-task36-hw-compose-e0-lab/nds_build_config.h -O2",
+      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-task36-hw-compose-e0-lab/nds_build_config.h -O2 -marm",
+      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-task36-hw-compose-e0-lab/nds_build_config.h -O2",
       "source": "make print-benchmark-flags"
     },
     "artifacts": {
       "rom": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task36-hw-compose-e0-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
+        "path": ".\\builds\\build-task36-hw-compose-e0-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
         "sha256": "8E85E951EED6805F350BBDE0DEFB29706A7A5D49433119D82E016BA38D9CD71D",
         "bytes": 14694400,
         "lastWriteUtc": "2026-07-21T00:08:52.7131835Z"
       },
       "elf": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task36-hw-compose-e0-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
+        "path": ".\\builds\\build-task36-hw-compose-e0-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
         "sha256": "BC93A784036F707EE12D65B49322E2F2D36ED94874BCB458A37F94E0ADBF99E1",
         "bytes": 9091124,
         "lastWriteUtc": "2026-07-21T00:08:52.2874443Z"
@@ -462,8 +462,8 @@
     "melonDS": {
       "version": "1.1",
       "executableSha256": "04738277BA1D7EA0B7408608755D746193A68A9BFA628E2759140A9F2D5AB109",
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds-runners\\slot2\\melonDS.exe",
-      "configPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds-runners\\slot2\\melonDS.toml",
+      "path": ".\\emulators\\melonds-runners\\slot2\\melonDS.exe",
+      "configPath": ".\\emulators\\melonds-runners\\slot2\\melonDS.toml",
       "configSha256": "6EC9BA07403CDFC95F0F8DD5C3E67A1F746F4EF17DBB78A1092A6E2884E8E4C8",
       "settings": {
         "limitFPS": false,

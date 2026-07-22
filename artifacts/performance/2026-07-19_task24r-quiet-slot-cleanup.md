@@ -3,7 +3,7 @@
 Date: 2026-07-19
 Source HEAD: `f2534ccaafb1abe3ae522bf7e88b006e3212feda`
 Recovery snapshot:
-`C:\Users\the owner\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip`
+`<user profile>\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip`
 
 ## Scope decision
 

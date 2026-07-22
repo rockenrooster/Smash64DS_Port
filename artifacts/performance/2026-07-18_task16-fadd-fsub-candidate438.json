@@ -32,20 +32,20 @@
     "wallpaperIncrementalMode": 1,
     "lowerTextHudMode": 1,
     "effectiveCFlags": {
-      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port_task16_fadd_fsub/builds/build-task16-fadd-fsub-lab/nds_build_config.h -O2",
-      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port_task16_fadd_fsub/builds/build-task16-fadd-fsub-lab/nds_build_config.h -O2",
-      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port_task16_fadd_fsub/builds/build-task16-fadd-fsub-lab/nds_build_config.h -O2",
+      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ._task16_fadd_fsub/builds/build-task16-fadd-fsub-lab/nds_build_config.h -O2",
+      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ._task16_fadd_fsub/builds/build-task16-fadd-fsub-lab/nds_build_config.h -O2",
+      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ._task16_fadd_fsub/builds/build-task16-fadd-fsub-lab/nds_build_config.h -O2",
       "source": "make print-benchmark-flags"
     },
     "artifacts": {
       "rom": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port_task16_fadd_fsub\\builds\\build-task16-fadd-fsub-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
+        "path": "._task16_fadd_fsub\\builds\\build-task16-fadd-fsub-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
         "sha256": "ED62E5E9A2A02BF96E660385F73C32C6A4FBCB4F0AF8D6F458A2342A037F184E",
         "bytes": 14658560,
         "lastWriteUtc": "2026-07-18T09:03:54.8245292Z"
       },
       "elf": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port_task16_fadd_fsub\\builds\\build-task16-fadd-fsub-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
+        "path": "._task16_fadd_fsub\\builds\\build-task16-fadd-fsub-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
         "sha256": "08CCBE204DD64C95D2871142C7D84B977EA122F79EDCF8E3C6DCFD0E0D240C21",
         "bytes": 9063612,
         "lastWriteUtc": "2026-07-18T09:03:53.6674980Z"
@@ -54,8 +54,8 @@
     "melonDS": {
       "version": "1.1",
       "executableSha256": "04738277BA1D7EA0B7408608755D746193A68A9BFA628E2759140A9F2D5AB109",
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port_task16_fadd_fsub\\emulators\\melonds-runners\\slot7\\melonDS.exe",
-      "configPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port_task16_fadd_fsub\\emulators\\melonds-runners\\slot7\\melonDS.toml",
+      "path": "._task16_fadd_fsub\\emulators\\melonds-runners\\slot7\\melonDS.exe",
+      "configPath": "._task16_fadd_fsub\\emulators\\melonds-runners\\slot7\\melonDS.toml",
       "configSha256": "F676207C1EF9E344AAE1E41DA35AD0DB671933C76BCA8749A4AABA4ABBA56AA9",
       "settings": {
         "limitFPS": false,

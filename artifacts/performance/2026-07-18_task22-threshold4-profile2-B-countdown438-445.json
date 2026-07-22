@@ -37,20 +37,20 @@
     "phaseMatrixMode": false,
     "lowerTextHudMode": 1,
     "effectiveCFlags": {
-      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-task22-wallpaper-profile2-lab/nds_build_config.h -O2 -Os",
-      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-task22-wallpaper-profile2-lab/nds_build_config.h -O2 -Os -marm",
-      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-task22-wallpaper-profile2-lab/nds_build_config.h -O2 -Os",
+      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-task22-wallpaper-profile2-lab/nds_build_config.h -O2 -Os",
+      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-task22-wallpaper-profile2-lab/nds_build_config.h -O2 -Os -marm",
+      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-task22-wallpaper-profile2-lab/nds_build_config.h -O2 -Os",
       "source": "make print-benchmark-flags"
     },
     "artifacts": {
       "rom": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task22-wallpaper-profile2-lab\\smash64ds-battle-playable-forensic-hwtri.nds",
+        "path": ".\\builds\\build-task22-wallpaper-profile2-lab\\smash64ds-battle-playable-forensic-hwtri.nds",
         "sha256": "B5E03AD6A11D6DB87C0A6BDE5B8A955DF986CE80A97718F3BFD084DF8322850E",
         "bytes": 14522368,
         "lastWriteUtc": "2026-07-18T17:54:22.7218116Z"
       },
       "elf": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task22-wallpaper-profile2-lab\\smash64ds-battle-playable-forensic-hwtri.elf",
+        "path": ".\\builds\\build-task22-wallpaper-profile2-lab\\smash64ds-battle-playable-forensic-hwtri.elf",
         "sha256": "85B282CE836A3C81C42045B0703D95D9CA68245336AEEFEDF23AAC5CCAF1AD41",
         "bytes": 8313844,
         "lastWriteUtc": "2026-07-18T17:54:21.7609887Z"
@@ -59,8 +59,8 @@
     "melonDS": {
       "version": "1.1",
       "executableSha256": "04738277BA1D7EA0B7408608755D746193A68A9BFA628E2759140A9F2D5AB109",
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds-runners\\slot2\\melonDS.exe",
-      "configPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds-runners\\slot2\\melonDS.toml",
+      "path": ".\\emulators\\melonds-runners\\slot2\\melonDS.exe",
+      "configPath": ".\\emulators\\melonds-runners\\slot2\\melonDS.toml",
       "configSha256": "234FA20315D956D9FD6791A205EF44825D041FBDB2B972162626C02DCC1A072A",
       "settings": {
         "limitFPS": false,

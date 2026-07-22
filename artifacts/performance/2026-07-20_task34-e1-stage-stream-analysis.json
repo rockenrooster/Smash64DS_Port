@@ -5,26 +5,26 @@
   "frame_count": 24,
   "captures": [
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-20_task34-e1-countdown438-445.json",
+      "path": ".\\artifacts\\performance\\2026-07-20_task34-e1-countdown438-445.json",
       "sha256": "71B291004BBB2EB908F261B9713716DEB3A717D25F532A0BABCC4DC00B13FDD3",
       "frame_start": 438,
       "frame_end": 445
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-20_task34-e1-early600-607.json",
+      "path": ".\\artifacts\\performance\\2026-07-20_task34-e1-early600-607.json",
       "sha256": "13066FB0B211CCEEAB8B12BDB15CAC7BB0BA387CD1CE85F3E02F296BA1C7689D",
       "frame_start": 600,
       "frame_end": 607
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-20_task34-e1-whispy1398-1405.json",
+      "path": ".\\artifacts\\performance\\2026-07-20_task34-e1-whispy1398-1405.json",
       "sha256": "9F795D2990B4E003B242B191C7BDFC1FF83891A856506BDF30FE24502F48F84E",
       "frame_start": 1398,
       "frame_end": 1405
     }
   ],
   "task23r_manifest": {
-    "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\docs\\optimization\\NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json",
+    "path": ".\\docs\\optimization\\NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json",
     "sha256": "FBE23C4DA19E41162C96E0CF4FCDB51B7A9ED9FBA96BF1044B4388B4EA93F29C",
     "live_camera_fields": [
       "projection",

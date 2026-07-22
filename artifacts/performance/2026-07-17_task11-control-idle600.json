@@ -27,20 +27,20 @@
     "wallpaperIncrementalMode": 1,
     "lowerTextHudMode": 1,
     "effectiveCFlags": {
-      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/.tura/goal-task11/builds/build-task9-float-itcm-lab/nds_build_config.h -O2",
-      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/.tura/goal-task11/builds/build-task9-float-itcm-lab/nds_build_config.h -O2 -marm",
-      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/.tura/goal-task11/builds/build-task9-float-itcm-lab/nds_build_config.h -O2",
+      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./.tura/goal-task11/builds/build-task9-float-itcm-lab/nds_build_config.h -O2",
+      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./.tura/goal-task11/builds/build-task9-float-itcm-lab/nds_build_config.h -O2 -marm",
+      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./.tura/goal-task11/builds/build-task9-float-itcm-lab/nds_build_config.h -O2",
       "source": "make print-benchmark-flags"
     },
     "artifacts": {
       "rom": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.tura\\goal-task11\\builds\\build-task9-float-itcm-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
+        "path": ".\\.tura\\goal-task11\\builds\\build-task9-float-itcm-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
         "sha256": "1D55C7F38B1E987488882CFC51FA36B5DE7E9F457F24627D231BC6DBD8F11018",
         "bytes": 14675968,
         "lastWriteUtc": "2026-07-18T04:00:49.8692846Z"
       },
       "elf": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.tura\\goal-task11\\builds\\build-task9-float-itcm-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
+        "path": ".\\.tura\\goal-task11\\builds\\build-task9-float-itcm-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
         "sha256": "E720BDF5533172CB21A23787C458F78480B2D21F7EDA2481D749DE6F5AC50C11",
         "bytes": 9064908,
         "lastWriteUtc": "2026-07-18T04:00:44.1862959Z"
@@ -49,8 +49,8 @@
     "melonDS": {
       "version": "1.1",
       "executableSha256": "04738277BA1D7EA0B7408608755D746193A68A9BFA628E2759140A9F2D5AB109",
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.tura\\goal-task11\\emulators\\melonds\\melonDS.exe",
-      "configPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.tura\\goal-task11\\emulators\\melonds\\melonDS.toml",
+      "path": ".\\.tura\\goal-task11\\emulators\\melonds\\melonDS.exe",
+      "configPath": ".\\.tura\\goal-task11\\emulators\\melonds\\melonDS.toml",
       "configSha256": "66B516C0B932E4FB0A0AF086DAC7BE6DEB2461A8D819E2BEA87CBA5D6C538791",
       "settings": {
         "limitFPS": false,

@@ -1,8 +1,8 @@
 {
   "target": "smash64ds-battle-playable-tickhud-hwtri",
-  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task37-cand\\smash64ds-battle-playable-tickhud-hwtri.nds",
+  "rom": ".\\builds\\build-task37-cand\\smash64ds-battle-playable-tickhud-hwtri.nds",
   "romSha256": "84A34592D3676E0BE835648288E95F781EA4981E62C318B3E8A8D4BD55C97A3F",
-  "melonDS": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds-runners\\slot1\\melonDS.exe",
+  "melonDS": ".\\emulators\\melonds-runners\\slot1\\melonDS.exe",
   "melonDSSha256": "DE80E46BDCF1FD986162DE6AFFD9EE1148F8C40565DBAF667B9C2B3EF5475715",
   "melonDSVersion": "1.0",
   "gitShort": "bfb72d9",

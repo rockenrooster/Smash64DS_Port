@@ -3,7 +3,7 @@
 Goal: publish this port to GitHub as a MINIMAL public-ready repo that a stranger can build
 into `smash64ds-battle-playable-hwtri.nds` with ONE PowerShell script, providing their own
 legally-obtained ROM. Locally, reduce to master-only. Clean-room verification happens in
-`D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\`.
+`._MinimalGithub\`.
 
 Relay order: **P1 → P2 → P3 → P4, strictly serial, exclusive lane** (pause the R-lane; one-writer
 rule). P1 is read/trace only. P2 is the heavy one (asset regeneration mechanics). P3+P4 close it.
@@ -206,11 +206,11 @@ bring-up debugging to ~1h per rat-hole, checkpoint findings to the manifest, con
 
 ```
 /task Assemble the publishable repo from an allowlist and prove the stranger flow end-to-end
-in D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\.
+in ._MinimalGithub\.
 
 1. Author scripts/publish/export_minimal.ps1: manifest-driven ALLOWLIST copy from
    docs/publish/publish_manifest.json into a staging repo at
-   D:\Stuff\DevFolder\smash64ds-publish\. Contents = PORT-CODE + GENERATED-METADATA closure
+   ..\smash64ds-publish\. Contents = PORT-CODE + GENERATED-METADATA closure
    files, build.ps1 + DECOMP_PIN.txt + required scripts subset, .gitattributes, plus the
    new public files below. EXCLUDED always: logs/, artifacts/, docs/ (dev docs), prompts/,
    .agents/, .zcode/, .github, emulators/, assets/ (regenerated at build), AGENTS.md,
@@ -254,7 +254,7 @@ in D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\.
    (zero hits outside README credits if the owner wants credit). Record total repo size
    (expect single-digit MB).
 
-5. CLEAN-ROOM PROOF in D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\ (the owner-designated
+5. CLEAN-ROOM PROOF in ._MinimalGithub\ (the owner-designated
    scratch): list then wipe its contents; git clone the staging repo into it; from a fresh
    pwsh -NoProfile session, run ONLY:
      .\build.ps1 -Rom <absolute path to the owner's existing baserom, OUTSIDE the clone>
@@ -265,7 +265,7 @@ in D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\.
 
 6. Deliverables: docs/publish/PUBLISH_VERIFICATION.md (leak-audit results, clean-room build
    log excerpt, final hash, repo size, file count) committed to the dev repo; exporter +
-   templates committed; staging repo left ready at D:\Stuff\DevFolder\smash64ds-publish\.
+   templates committed; staging repo left ready at ..\smash64ds-publish\.
    Snapshot as final command.
 
 Constraints: allowlist only — if a build in the clean room fails on a missing file, the fix
@@ -283,7 +283,7 @@ pushing IS publishing — preflight: TASK P3's leak audit AND clean-room gate mu
 green, re-checked at the top of this task.
 
 1. SAFETY BUNDLE (before anything is deleted): git bundle create
-   D:\Stuff\DevFolder\_backups\smash64ds-full-20260718.bundle --all, then git bundle verify
+   ..\_backups\smash64ds-full-20260718.bundle --all, then git bundle verify
    on it; record its size + SHA-256 in docs/publish/PUBLISH_LOG.md. This is the recovery
    path for every branch deleted below.
 
@@ -309,7 +309,7 @@ green, re-checked at the top of this task.
        README.md). If ANYTHING else appeared since 2026-07-18, STOP and report.
    (c) Archive the existing remote README.md text into PUBLISH_LOG.md (nothing is lost
        when main goes away; P3's README already folded its content).
-   (d) From D:\Stuff\DevFolder\smash64ds-publish\:
+   (d) From ..\smash64ds-publish\:
          git remote add origin https://github.com/rockenrooster/Smash64DS_Port.git
          git push -u origin master
    (e) gh repo edit rockenrooster/Smash64DS_Port --default-branch master

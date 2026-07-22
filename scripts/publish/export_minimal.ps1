@@ -6,7 +6,8 @@ $ErrorActionPreference = 'Stop'
 
 $SourceRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $ManifestPath = Join-Path $SourceRoot 'docs\publish\publish_manifest.json'
-$Destination = [IO.Path]::GetFullPath('D:\Stuff\DevFolder\smash64ds-publish').TrimEnd('\', '/')
+$Destination = [IO.Path]::GetFullPath(
+    (Join-Path $SourceRoot '..\smash64ds-publish')).TrimEnd('\', '/')
 
 function Stop-Export {
     param([string]$Message)
@@ -87,7 +88,8 @@ foreach ($row in $rows) {
     }
 }
 
-$expectedParent = [IO.Path]::GetFullPath('D:\Stuff\DevFolder').TrimEnd('\', '/')
+$expectedParent = [IO.Path]::GetFullPath(
+    (Join-Path $SourceRoot '..')).TrimEnd('\', '/')
 if ([IO.Path]::GetDirectoryName($Destination) -ine $expectedParent -or
     [IO.Path]::GetFileName($Destination) -ine 'smash64ds-publish') {
     Stop-Export "refusing unsafe export destination: $Destination"

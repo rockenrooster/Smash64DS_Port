@@ -23,7 +23,7 @@ or deleted.
 | `codex/five-effects-visual` | `4d23dedf6ca339756a20d87fe52bda52176b4d29` | preserve |
 
 The three patch-unique worktrees remain at
-`D:\Stuff\DevFolder\Smash64DS_Port-worktrees\{attack,fox,hit}`.
+`.-worktrees\{attack,fox,hit}`.
 
 ## Exact audio additions
 

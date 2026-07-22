@@ -31,20 +31,20 @@
     "wallpaperIncrementalMode": 1,
     "lowerTextHudMode": 1,
     "effectiveCFlags": {
-      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port_task16_i2f/builds/build-task9-float-phase2-fcmpeq-lab/nds_build_config.h -O2",
-      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port_task16_i2f/builds/build-task9-float-phase2-fcmpeq-lab/nds_build_config.h -O2",
-      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port_task16_i2f/builds/build-task9-float-phase2-fcmpeq-lab/nds_build_config.h -O2",
+      "common": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ._task16_i2f/builds/build-task9-float-phase2-fcmpeq-lab/nds_build_config.h -O2",
+      "renderer": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ._task16_i2f/builds/build-task9-float-phase2-fcmpeq-lab/nds_build_config.h -O2",
+      "scene": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ._task16_i2f/builds/build-task9-float-phase2-fcmpeq-lab/nds_build_config.h -O2",
       "source": "make print-benchmark-flags"
     },
     "artifacts": {
       "rom": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port_task16_i2f\\builds\\build-task9-float-phase2-fcmpeq-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
+        "path": "._task16_i2f\\builds\\build-task9-float-phase2-fcmpeq-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
         "sha256": "66BDD5FF9E58C55B9C9B157F111D84DA14D9EF03452387E9E388918F9B95F171",
         "bytes": 14657536,
         "lastWriteUtc": "2026-07-18T08:07:37.6428883Z"
       },
       "elf": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port_task16_i2f\\builds\\build-task9-float-phase2-fcmpeq-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
+        "path": "._task16_i2f\\builds\\build-task9-float-phase2-fcmpeq-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
         "sha256": "F5354B796EDB6631CF3D8E1883639F8CBA82EF20D68466EBFD3315E509677040",
         "bytes": 9055036,
         "lastWriteUtc": "2026-07-18T08:07:33.8146885Z"
@@ -53,8 +53,8 @@
     "melonDS": {
       "version": "1.1",
       "executableSha256": "04738277BA1D7EA0B7408608755D746193A68A9BFA628E2759140A9F2D5AB109",
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port_task16_i2f\\emulators\\melonds-runners\\slot10\\melonDS.exe",
-      "configPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port_task16_i2f\\emulators\\melonds-runners\\slot10\\melonDS.toml",
+      "path": "._task16_i2f\\emulators\\melonds-runners\\slot10\\melonDS.exe",
+      "configPath": "._task16_i2f\\emulators\\melonds-runners\\slot10\\melonDS.toml",
       "configSha256": "629C7DD2470CA3C1FD60D08A1D4DDCA65A11518FC1A26E4F652D36976C192AE9",
       "settings": {
         "limitFPS": false,

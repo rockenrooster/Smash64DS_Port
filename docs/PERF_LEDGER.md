@@ -246,7 +246,7 @@ hardware referee.
 ```text
 IDEA ID: TASKS20R-25R-ATOMIC-RECONCILIATION-20260718
 STARTING ATOMIC IDENTITY:
-  Branch/worktree: master / D:\Stuff\DevFolder\Smash64DS_Port
+  Branch/worktree: master / .
   HEAD: 458191bef147f1c6963b2f533c601f9f68fc7730
   The user's 344-line ClaudeFable5_JumpABC_Tasks_20260715_2326.md change was
   present, preserved, and excluded from this checkpoint. The new untracked
@@ -6004,7 +6004,7 @@ IDEA ID: TASK24R-QUIET-SLOT-DIET-20260719
 SOURCE / RECOVERY:
   HEAD f2534ccaafb1abe3ae522bf7e88b006e3212feda.
   Pre-delete Lean snapshot:
-    C:\Users\the owner\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip
+    <user profile>\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip
 
 DELETED BATCH:
   7,929 files / 3,746,285,595 bytes from 17 exact immediate children of

@@ -14,7 +14,7 @@
     "makeCommand": [
       "make",
       "-C",
-      "D:\\Stuff\\DevFolder\\Smash64DS_Port",
+      ".",
       "TARGET=smash64ds-battle-playable-one-minute-match-hwtri",
       "BUILD=build-battle-playable-one-minute-match-hwtri-harness",
       "NDS_DEV_SCENE_HARNESS=battle_playable_match_lifecycle",
@@ -78,23 +78,23 @@
       "Task16FloatAddSubMode": 1,
       "Task9StateHashMode": 0,
       "Task20StackProfileMode": 0,
-      "CommonCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os",
-      "RendererCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os -marm",
-      "SceneCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include /d/Stuff/DevFolder/Smash64DS_Port/builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os"
+      "CommonCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os",
+      "RendererCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os -marm",
+      "SceneCFlags": "-std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -march=armv5te -mtune=arm946e-s -mthumb -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS -DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef -include ./builds/build-battle-playable-one-minute-match-hwtri-harness/nds_build_config.h -Os"
     },
     "artifacts": {
       "rom": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.nds",
+        "path": ".\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.nds",
         "sha256": "E685C034D301D3C6881D398B14820D0D60A112FA259657A6B05408C90683C5CE",
         "bytes": 14576640
       },
       "elf": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.elf",
+        "path": ".\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.elf",
         "sha256": "E9428051194F9E6917427DCD54BE44838C049E856ECBAFD6A702D605A34A1A96",
         "bytes": 8408264
       },
       "screenshot": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\visibility\\2026-07-18_task25r-profile0-frame607.png",
+        "path": ".\\artifacts\\visibility\\2026-07-18_task25r-profile0-frame607.png",
         "sha256": "8FE8473D3854B25B28EC6FD7B68F60D8E9927DAEE597CCF31ED812C2E7F155A6"
       }
     }

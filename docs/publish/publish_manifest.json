@@ -10369,7 +10369,7 @@
   ],
   "shipping_allowlist_state": "P2_SAFE_INPUT_TO_P3",
   "shipping_target": {
-    "audit_command": "make TARGET=smash64ds-battle-playable-hwtri BUILD=build-build-publish-p1-closure-20260719 NDS_OUTPUT_ROOT=D:/Stuff/DevFolder/Smash64DS_Port/builds/build-publish-p1-closure-20260719 -j4",
+    "audit_command": "make TARGET=smash64ds-battle-playable-hwtri BUILD=build-build-publish-p1-closure-20260719 NDS_OUTPUT_ROOT=./builds/build-publish-p1-closure-20260719 -j4",
     "canonical_command": "make TARGET=smash64ds-battle-playable-hwtri -j4",
     "dependency_file_count": 146,
     "nitrofs_file_count": 296,

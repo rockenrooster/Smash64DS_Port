@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param(
-    [string]$Root = 'D:\Stuff\DevFolder\smash64ds-publish'
+    # Sibling of the repository, derived so the checkout is not tied to one
+    # machine's folder layout.
+    [string]$Root = [IO.Path]::GetFullPath(
+        (Join-Path $PSScriptRoot '..\..\..\smash64ds-publish'))
 )
 
 Set-StrictMode -Version Latest

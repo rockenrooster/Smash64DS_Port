@@ -55,7 +55,7 @@ The clean audit used an isolated object tree and output directory:
 ```powershell
 make TARGET=smash64ds-battle-playable-hwtri `
   BUILD=build-build-publish-p1-closure-20260719 `
-  NDS_OUTPUT_ROOT=D:/Stuff/DevFolder/Smash64DS_Port/builds/build-publish-p1-closure-20260719 `
+  NDS_OUTPUT_ROOT=./builds/build-publish-p1-closure-20260719 `
   -j4
 ```
 

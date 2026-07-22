@@ -12,12 +12,12 @@
     "profile1RomSha256": "6E90D4140E6332E8F37BB05CB8B35ED192AAB448B26E110916992F2C15701921",
     "profile1ElfSha256": "55CC8EF067E68310441F7025978FCF7569E95E51A3B6B937E7811A7D25B44C06",
     "profile0": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-profile0-lifecycle.json",
+      "path": ".\\artifacts\\performance\\2026-07-18_task25r-profile0-lifecycle.json",
       "sha256": "EEA807FB39AD374E1A7FE8458C454AC64E4DE586F6C2C58181177753B1B584F3",
       "bytes": 424840
     },
     "identityPacket": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\identity.json",
+      "path": ".\\artifacts\\performance\\2026-07-18_task25r-identity\\identity.json",
       "sha256": "3EABC8119CF8D1AADC911BEEEAB3F90EC6E33FA02CD259DFAF056CB7F9755314",
       "bytes": 21197
     },
@@ -26,12 +26,12 @@
       "comparedPixels": 49152,
       "meanMaxChannelDelta": 0.0,
       "profile1": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\visibility\\2026-07-18_task25r-profile1-frame607.png",
+        "path": ".\\artifacts\\visibility\\2026-07-18_task25r-profile1-frame607.png",
         "sha256": "ECEE8B8720C382A1123F2F278F35D5CA5AE64D080F2E171AFF7ED040F142BCA0",
         "bytes": 65372
       },
       "profile0": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\visibility\\2026-07-18_task25r-profile0-frame607.png",
+        "path": ".\\artifacts\\visibility\\2026-07-18_task25r-profile0-frame607.png",
         "sha256": "8FE8473D3854B25B28EC6FD7B68F60D8E9927DAEE597CCF31ED812C2E7F155A6",
         "bytes": 56824
       }
@@ -49,7 +49,7 @@
         "logicTickEnd": 498
       },
       "source": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-countdown438-445-profile1.json",
+        "path": ".\\artifacts\\performance\\2026-07-18_task25r-countdown438-445-profile1.json",
         "sha256": "3AB5B9936DB7700E6A0D83D1888A49BF0C7262CCFB3BC0C183B9C154A69D69DC",
         "bytes": 20994
       },
@@ -414,7 +414,7 @@
         "logicTickEnd": 822
       },
       "source": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-early600-607-profile1.json",
+        "path": ".\\artifacts\\performance\\2026-07-18_task25r-early600-607-profile1.json",
         "sha256": "D0054A83B81B01077DA4BA2BF6C3EBA362F7389F7DF070ECE25580F1E5280563",
         "bytes": 20946
       },
@@ -781,7 +781,7 @@
         "logicTickEnd": 2418
       },
       "source": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-whispy1398-1405-profile1.json",
+        "path": ".\\artifacts\\performance\\2026-07-18_task25r-whispy1398-1405-profile1.json",
         "sha256": "BE595635394A0D14C931092F444D33DA0304BD55DA5A61A16A8B15D77119C340",
         "bytes": 21141
       },
@@ -1148,7 +1148,7 @@
         "logicTickEnd": 3314
       },
       "source": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-late3300-3307-profile1.json",
+        "path": ".\\artifacts\\performance\\2026-07-18_task25r-late3300-3307-profile1.json",
         "sha256": "13BDEAA6A25DA277A6ED5939E46A3D70D36EAB45340CF8CB1908E0F7925AC412",
         "bytes": 21069
       },
@@ -1515,7 +1515,7 @@
         "logicTickEnd": 754
       },
       "source": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-natural-ko-profile1.json",
+        "path": ".\\artifacts\\performance\\2026-07-18_task25r-natural-ko-profile1.json",
         "sha256": "CE651FE1AF5B70A77568107F5E8F59CE8C3AA48AF0BEE3309274385EA825BB81",
         "bytes": 20910
       },
@@ -1882,7 +1882,7 @@
         "logicTickEnd": 800
       },
       "source": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-natural-rebirth-profile1.json",
+        "path": ".\\artifacts\\performance\\2026-07-18_task25r-natural-rebirth-profile1.json",
         "sha256": "5C616F22471BDD3FF2E85F0E822032B58092521897A5D41637B2FAF71B37E535",
         "bytes": 20949
       },
@@ -2249,7 +2249,7 @@
         "logicTickEnd": 3598
       },
       "source": {
-        "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-timeup-results-profile1.json",
+        "path": ".\\artifacts\\performance\\2026-07-18_task25r-timeup-results-profile1.json",
         "sha256": "39FC7D00CF79DBDFF0EF7D433ED4C005B64756E7B04D429F34C11AD76147A6F8",
         "bytes": 21074
       },

@@ -1,4 +1,4 @@
-D:\Stuff\DevFolder\Smash64DS_Port\builds\build-task16-float-c1-i1-a1-lab\smash64ds-battle-playable-m3-stage-owner-lab.elf  :
+.\builds\build-task16-float-c1-i1-a1-lab\smash64ds-battle-playable-m3-stage-owner-lab.elf  :
 section              size        addr
 .secure              2048   234881024
 .bootstub             408   234883072

@@ -9,13 +9,13 @@
   "submodules": [],
   "profile1": {
     "rom": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\smash64ds-battle-playable-m3-stage-owner-lab.nds",
       "sha256": "6E90D4140E6332E8F37BB05CB8B35ED192AAB448B26E110916992F2C15701921",
       "bytes": 14676992,
       "lastWriteUtc": "2026-07-18T19:59:03.3716222Z"
     },
     "elf": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\smash64ds-battle-playable-m3-stage-owner-lab.elf",
       "sha256": "55CC8EF067E68310441F7025978FCF7569E95E51A3B6B937E7811A7D25B44C06",
       "bytes": 9046264,
       "lastWriteUtc": "2026-07-18T19:59:02.3384797Z"
@@ -23,7 +23,7 @@
     "buildCommand": [
       "make",
       "-C",
-      "D:\\Stuff\\DevFolder\\Smash64DS_Port",
+      ".",
       "TARGET=smash64ds-battle-playable-m3-stage-owner-lab",
       "BUILD=builds/build-task16-float-c1-i1-a1-lab",
       "NDS_DEV_SCENE_HARNESS=battle_playable_realtime",
@@ -65,19 +65,19 @@
   },
   "profile0": {
     "rom": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.nds",
+      "path": ".\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.nds",
       "sha256": "E685C034D301D3C6881D398B14820D0D60A112FA259657A6B05408C90683C5CE",
       "bytes": 14576640
     },
     "elf": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.elf",
+      "path": ".\\builds\\build-battle-playable-one-minute-match-hwtri-harness\\smash64ds-battle-playable-one-minute-match-hwtri.elf",
       "sha256": "E9428051194F9E6917427DCD54BE44838C049E856ECBAFD6A702D605A34A1A96",
       "bytes": 8408264
     },
     "buildCommand": [
       "make",
       "-C",
-      "D:\\Stuff\\DevFolder\\Smash64DS_Port",
+      ".",
       "TARGET=smash64ds-battle-playable-one-minute-match-hwtri",
       "BUILD=build-battle-playable-one-minute-match-hwtri-harness",
       "NDS_DEV_SCENE_HARNESS=battle_playable_match_lifecycle",
@@ -120,89 +120,89 @@
   },
   "relevantObjects": [
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_renderer.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\nds_renderer.o",
       "sha256": "3A8DA6A64A689F9C74C9FAEE7F59D2F3FCCAFF8CF28488DF97E6FCE44D751A94",
       "bytes": 861676
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_platform.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\nds_platform.o",
       "sha256": "5CDA1435F1E44898BBF1919CD3024E3E6F4055B9136EF23FA3587A842F64D0CB",
       "bytes": 126260
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\scene_backend.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\scene_backend.o",
       "sha256": "0BE10C24867F05579B93827C51619D2D22BC177474D7DA2C2573979F4921229B",
       "bytes": 4120032
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\battle_playable_static_textures.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\battle_playable_static_textures.o",
       "sha256": "3D5A30589336B8A7D570613C61B11B4625002A8F55540B9B0FB4EE8EE21B6B69",
       "bytes": 18784
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task16_float_compare.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task16_float_compare.o",
       "sha256": "9AE60943C9ECB744A0954018DD04C2FA31346EB7E732728C1D5B02BB368A8EE4",
       "bytes": 2468
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task16_float_i2f.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task16_float_i2f.o",
       "sha256": "22E840B0023FA74628945A06E2E253373E5AF2D718DBFA175CC0A3503C36074D",
       "bytes": 2016
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task16_float_addsub.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task16_float_addsub.o",
       "sha256": "7FB05F9A67617EEC181A4F028E6C350CA50CF571CA7627CADC340262F0735FC0",
       "bytes": 2492
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task9_float_phase2.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\nds_task9_float_phase2.o",
       "sha256": "AD1E64F21D55BD9C66D41B81F3CE53803D6ACB23611C55EC2F320E8DA461657C",
       "bytes": 1964
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_cmpsf2.itcm.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_cmpsf2.itcm.o",
       "sha256": "7E5EE9D99986A7A5A183E22FAE8109D8F07A2FCB7D2144F9B548114D455ED1F9",
       "bytes": 3872
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_unordsf2.itcm.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_unordsf2.itcm.o",
       "sha256": "005881BE10DC6934777FFED5A7AFFEC111AEFAF2F19D2503E04C068498C8C9AC",
       "bytes": 2284
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_fixsfsi.itcm.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_fixsfsi.itcm.o",
       "sha256": "2AD8B203759EC56E0A5DD725AE53E67F79845BC749CE310177A77F74B8D093A8",
       "bytes": 2316
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_fixunssfsi.itcm.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_fixunssfsi.itcm.o",
       "sha256": "97483C15A1620E754388A08EDB6DC0DF0E6A3701AEC46F0EC2FA903A0E4C5BB0",
       "bytes": 2312
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_addsubsf3.itcm.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_addsubsf3.itcm.o",
       "sha256": "608FBCF55AA3457319B10DC56FBB1042F0D7738E378FE85806921CFAB435D405",
       "bytes": 4048
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_muldivsf3.itcm.o",
+      "path": ".\\builds\\build-task16-float-c1-i1-a1-lab\\_arm_muldivsf3.itcm.o",
       "sha256": "805BF06648027884D563AD23A01136F82C425B8370F437EF43E732708774C669",
       "bytes": 3360
     }
   ],
   "generatedTables": [
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_native_stage_owner.generated.inc",
+      "path": ".\\src\\nds\\nds_native_stage_owner.generated.inc",
       "sha256": "053444F8474B4E7A80E0AD7F8F68272AF9D7CB7089036E665574ABF3DEE95EC7",
       "bytes": 59361
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_native_fighter_owner.generated.inc",
+      "path": ".\\src\\nds\\nds_native_fighter_owner.generated.inc",
       "sha256": "2DCDAB1EC7D55420D9BEFE0E8534D7EF1036FFB6616A6F6208E56AF62AB8F8CB",
       "bytes": 339866
     },
     {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\generated\\battle_playable_static_textures.generated.inc",
+      "path": ".\\src\\nds\\generated\\battle_playable_static_textures.generated.inc",
       "sha256": "22BA02C9B7E9BD41CEE2ED112741D8CB61CE2737A6787F0D79D582925206321B",
       "bytes": 26364
     }
@@ -693,37 +693,37 @@
   "reserveBytes": 166672,
   "raw": {
     "nm": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-nm-size-sort.txt",
+      "path": ".\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-nm-size-sort.txt",
       "sha256": "815969B7329D9372751964DABE9F4CDDE6A919F0D33848E50999A5E92671513F",
       "bytes": 643484
     },
     "readelf": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-readelf-sections-symbols-relocs-attributes.txt",
+      "path": ".\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-readelf-sections-symbols-relocs-attributes.txt",
       "sha256": "D9F9F17347DC766A20A04852CDF923C91220F8C0CB86DEE1FD5770177180EF23",
       "bytes": 1900434
     },
     "objdumpGzip": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-objdump-d-S-r-w.txt.gz",
+      "path": ".\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-objdump-d-S-r-w.txt.gz",
       "sha256": "C1FD286E315067F2BB19B9F871AFF37035FA3B3E339C21A708E92E1DC1A39F4E",
       "bytes": 3461095
     },
     "size": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-size-sections.txt",
+      "path": ".\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-size-sections.txt",
       "sha256": "BA82C29794F61C3D790372EBE0CACD97340E602D95B6C9148E04640B68963A06",
       "bytes": 1561
     },
     "profile0Nm": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile0-nm-size-sort.txt",
+      "path": ".\\artifacts\\performance\\2026-07-18_task25r-identity\\profile0-nm-size-sort.txt",
       "sha256": "BAD2D0CA82EB9D403CED0C09BC458805A9F3B59C8FB730A211A3B52AEA76CEFD",
       "bytes": 666465
     },
     "linkerMapGzip": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-linker.map.gz",
+      "path": ".\\artifacts\\performance\\2026-07-18_task25r-identity\\profile1-linker.map.gz",
       "sha256": "5B669794758B509E9F5D8C42E5995C646269019001EF579C10E15BCE6674F9DE",
       "bytes": 280753
     },
     "toolchain": {
-      "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task25r-identity\\toolchain-versions.txt",
+      "path": ".\\artifacts\\performance\\2026-07-18_task25r-identity\\toolchain-versions.txt",
       "sha256": "0816695415DE24FDE232649D4BC24A654DE4D9A0181137708E5E9A87FF0D904B",
       "bytes": 3278
     }

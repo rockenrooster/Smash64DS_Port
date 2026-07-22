@@ -2,9 +2,9 @@
 
 Verification date: 2026-07-19
 
-Public staging repository: `D:\Stuff\DevFolder\smash64ds-publish`
+Public staging repository: `..\smash64ds-publish`
 
-Clean-room clone: `D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub`
+Clean-room clone: `._MinimalGithub`
 
 Reference output:
 

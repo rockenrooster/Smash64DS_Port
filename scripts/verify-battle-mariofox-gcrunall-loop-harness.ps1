@@ -637,6 +637,21 @@ function Get-BenchmarkMakeIdentity {
         SceneCFlags = $values.CFLAGS_SCENE
     }
 }
+function Get-RepoRelativePath {
+    param([Parameter(Mandatory=$true)][string]$Path)
+
+    # Artifacts are committed and published, so they must not record one
+    # machine's folder layout. Emit a repo-relative path when the file lives
+    # inside the checkout; fall back to the leaf name when it does not, rather
+    # than leaking an absolute path from outside the tree.
+    $full = [IO.Path]::GetFullPath($Path)
+    $base = [IO.Path]::GetFullPath($root).TrimEnd('', '/')
+    if ($full.StartsWith($base + [IO.Path]::DirectorySeparatorChar,
+                         [StringComparison]::OrdinalIgnoreCase)) {
+        return '.' + $full.Substring($base.Length + 1)
+    }
+    return [IO.Path]::GetFileName($full)
+}
 function Get-BenchmarkFileIdentity {
     param([Parameter(Mandatory=$true)][string]$Path)
 
@@ -2963,19 +2978,19 @@ try {
                     make = $benchmarkMakeIdentity
                     artifacts = [ordered]@{
                         rom = [ordered]@{
-                            path = $rom
+                            path = (Get-RepoRelativePath $rom)
                             sha256 = $benchmarkRomIdentity.Sha256
                             bytes = $benchmarkRomIdentity.Bytes
                         }
                         elf = [ordered]@{
-                            path = $elf
+                            path = (Get-RepoRelativePath $elf)
                             sha256 = $benchmarkElfIdentity.Sha256
                             bytes = $benchmarkElfIdentity.Bytes
                         }
                         screenshot = if ($screenshotPath -and
                             (Test-Path -LiteralPath $screenshotPath)) {
                             [ordered]@{
-                                path = $screenshotPath
+                                path = (Get-RepoRelativePath $screenshotPath)
                                 sha256 = (Get-FileHash -LiteralPath $screenshotPath `
                                     -Algorithm SHA256).Hash
                             }
@@ -4907,13 +4922,13 @@ try {
                         }
                         artifacts = [ordered]@{
                             rom = [ordered]@{
-                                path = $rom
+                                path = (Get-RepoRelativePath $rom)
                                 sha256 = $benchmarkRomIdentity.Sha256
                                 bytes = $benchmarkRomIdentity.Bytes
                                 lastWriteUtc = $benchmarkRomIdentity.LastWriteUtc
                             }
                             elf = [ordered]@{
-                                path = $elf
+                                path = (Get-RepoRelativePath $elf)
                                 sha256 = $benchmarkElfIdentity.Sha256
                                 bytes = $benchmarkElfIdentity.Bytes
                                 lastWriteUtc = $benchmarkElfIdentity.LastWriteUtc
@@ -4922,7 +4937,7 @@ try {
                         melonDS = [ordered]@{
                             version = $benchmarkMelonIdentity.Version
                             executableSha256 = $benchmarkMelonIdentity.Sha256
-                            path = $benchmarkMelonIdentity.Path
+                            path = (Get-RepoRelativePath $benchmarkMelonIdentity.Path)
                             configPath = $configState.Config
                             configSha256 = $benchmarkMelonConfigSha256
                             settings = [ordered]@{

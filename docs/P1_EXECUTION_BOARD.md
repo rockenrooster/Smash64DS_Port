@@ -374,7 +374,7 @@ is the remaining BG-0 qualification; do not rerun the old exact-wallpaper labs.
 ## Tasks 20R-25R atomic reconciliation checkpoint
 
 Live-unit capture began on branch `master`, worktree
-`D:\Stuff\DevFolder\Smash64DS_Port`, HEAD
+`.`, HEAD
 `458191bef147f1c6963b2f533c601f9f68fc7730`. The tree was intentionally dirty:
 the user's 344-line
 `docs/optimization/ClaudeFable5_JumpABC_Tasks_20260715_2326.md` change is
@@ -689,7 +689,7 @@ The evidence-first batch removes exactly 7,929 files / 3,746,285,595 bytes:
 Task-21R, Task-22R, Task-28, and Task-29 lab directories, plus 1,348 files /
 3,046,878,778 bytes from `verifier-cost`, `verifier-temp`, and
 `emulator-logs`. The pre-delete Lean snapshot at
-`C:\Users\the owner\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip`
+`<user profile>\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip`
 is the recovery surface. No worktree, branch, ref, Git object, log entry,
 permanent evidence file, canonical build, active hardware pair, current
 generated A/B, or user-owned file was removed.
