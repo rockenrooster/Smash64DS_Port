@@ -1974,12 +1974,98 @@ static u64 sBattlePhaseHudLoopTickSum;
 static u32 sBattlePhaseHudAvgSampleCount;
 #endif
 #if NDS_BATTLE_TICK_HUD_ENABLED
-static u64 sBattleTickHudSums[nNDSTickHudBucketCount];
-static u32 sBattleTickHudSampleCount;
+/* The tick HUD reports P50 and P95, not latest-and-mean. Per-frame buckets here
+ * are heavily skewed: audio refill and HUD text redraw fire on a minority of
+ * frames, so a mean measures how many bursts a window happened to contain
+ * rather than what a frame costs. Measured 2026-07-22, HUD p50 was 1,024 ticks
+ * against a max of 200,256, and fighter cost read 9.6% below retail as a mean
+ * but 4.4% below as a P50. docs/VERIFYING.md already made P50/P95 the decision
+ * basis; this makes the device HUD report the same statistic.
+ *
+ * A window of raw samples is kept and the order statistics are recomputed once
+ * per refresh interval instead of every frame. That is strictly cheaper than
+ * what it replaces: nine iprintf calls per presented frame become nine per
+ * refresh, so the HUD now perturbs the loop it measures far less. */
+#define NDS_TICK_HUD_WINDOW 128u
+static u32 sBattleTickHudRing[nNDSTickHudBucketCount][NDS_TICK_HUD_WINDOW];
+static u32 sBattleTickHudScratch[NDS_TICK_HUD_WINDOW];
+static u32 sBattleTickHudRingHead;
+static u32 sBattleTickHudRingCount;
+/* The values last printed. Retained so the HUD can be asserted over GDB
+ * instead of only photographed - scripts/sample-tick-hud-buckets.ps1 computes
+ * the same order statistics from the raw buckets and the two must agree. */
+static u32 sBattleTickHudP50[nNDSTickHudBucketCount];
+static u32 sBattleTickHudP95[nNDSTickHudBucketCount];
 static const char *const sBattleTickHudNames[nNDSTickHudBucketCount] = {
     "ALL ", "FTR ", "STG ", "BG  ", "AUD ", "HUD ", "SRC ",
     "MISC", "OTHR"
 };
+
+/* Shell sort, Knuth gaps: no recursion, no allocation, and no worst case that
+ * can stall a frame the way a naive quicksort pivot can. It runs once per
+ * refresh window over 128 u32, which is far below the cost of the console
+ * writes it shares that frame with. */
+static void ndsPlatformTickHudSort(u32 *values, u32 count)
+{
+    u32 gap = 1u;
+
+    while (gap < (count / 3u))
+    {
+        gap = (gap * 3u) + 1u;
+    }
+    while (gap != 0u)
+    {
+        u32 i;
+
+        for (i = gap; i < count; i++)
+        {
+            u32 value = values[i];
+            u32 j = i;
+
+            while ((j >= gap) && (values[j - gap] > value))
+            {
+                values[j] = values[j - gap];
+                j -= gap;
+            }
+            values[j] = value;
+        }
+        gap = (gap - 1u) / 3u;
+    }
+}
+
+/* floor((count - 1) * percent / 100), byte-for-byte the index used by
+ * scripts/sample-tick-hud-buckets.ps1, so the device HUD and the GDB sampler
+ * report the same number for the same window instead of two near-misses. */
+static u32 ndsPlatformTickHudPercentile(const u32 *sorted, u32 count,
+                                        u32 percent)
+{
+    return sorted[((count - 1u) * percent) / 100u];
+}
+#endif
+
+/* Emitted only when the tick HUD is compiled in. An empty external-linkage
+ * function still occupies text and shifts layout, which changed the published
+ * lean ROM's SHA-256 for a diagnostic it does not contain; the only caller is
+ * likewise under NDS_TICK_HUD. The inner guard keeps the symbol resolvable when
+ * NDS_TICK_HUD is set but the FPS HUD it draws into is not enabled. */
+#if NDS_TICK_HUD
+void ndsPlatformTickHudSample(void)
+{
+#if NDS_BATTLE_TICK_HUD_ENABLED
+    u32 bucket;
+    u32 head = sBattleTickHudRingHead;
+
+    for (bucket = 0u; bucket < nNDSTickHudBucketCount; bucket++)
+    {
+        sBattleTickHudRing[bucket][head] = gNdsTickHudBuckets[bucket];
+    }
+    sBattleTickHudRingHead = (head + 1u) % NDS_TICK_HUD_WINDOW;
+    if (sBattleTickHudRingCount < NDS_TICK_HUD_WINDOW)
+    {
+        sBattleTickHudRingCount++;
+    }
+#endif
+}
 #endif
 
 static void ndsPlatformRenderBattleFpsHud(void)
@@ -2054,17 +2140,23 @@ static void ndsPlatformRenderBattleFpsHud(void)
 #endif
 #endif
 #if NDS_BATTLE_TICK_HUD_ENABLED
-        memset(sBattleTickHudSums, 0, sizeof(sBattleTickHudSums));
-        sBattleTickHudSampleCount = 0u;
+        sBattleTickHudRingHead = 0u;
+        sBattleTickHudRingCount = 0u;
+        memset(sBattleTickHudP50, 0, sizeof(sBattleTickHudP50));
+        memset(sBattleTickHudP95, 0, sizeof(sBattleTickHudP95));
         {
             u32 bucket;
 
             for (bucket = 0u; bucket < nNDSTickHudBucketCount; bucket++)
             {
-                ndsPlatformPrintDebugLine(11u + bucket, "%s       --",
+                ndsPlatformPrintDebugLine(11u + bucket, "%s      --       --",
                                           sBattleTickHudNames[bucket]);
             }
         }
+        /* Column legend sits below the table because rows 9-10 belong to the
+         * P2 block of the battle text HUD; n is the live window depth, so a
+         * reading taken before it reaches 128 is visibly partial. */
+        ndsPlatformPrintDebugLine(20u, "         P50      P95 n:0");
         ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
         ndsPlatformPrintDebugLine(22u, "5+  --  max --");
         ndsPlatformPrintDebugLine(23u, "GIT %s TICKHUD", NDS_TASK10_GIT_SHORT);
@@ -2204,28 +2296,61 @@ static void ndsPlatformRenderBattleFpsHud(void)
 #if NDS_BATTLE_TICK_HUD_ENABLED
     {
         u32 bucket;
-        u32 sample_count = ++sBattleTickHudSampleCount;
+        u32 count = sBattleTickHudRingCount;
 
-        for (bucket = 0u; bucket < nNDSTickHudBucketCount; bucket++)
+        /* Samples arrive per presented iteration via ndsPlatformTickHudSample.
+         * This renderer runs about twice a second, which is both a readable
+         * update rate and cheap enough to re-derive all nine order statistics
+         * every time rather than hold stale values. Nothing is printed until a
+         * sample exists; the percentile index would underflow at count 0. */
+        if (count != 0u)
         {
-            u32 ticks = gNdsTickHudBuckets[bucket];
-
-            sBattleTickHudSums[bucket] += ticks;
+            for (bucket = 0u; bucket < nNDSTickHudBucketCount; bucket++)
+            {
+                memcpy(sBattleTickHudScratch, sBattleTickHudRing[bucket],
+                       count * sizeof(sBattleTickHudScratch[0]));
+                ndsPlatformTickHudSort(sBattleTickHudScratch, count);
+                sBattleTickHudP50[bucket] = ndsPlatformTickHudPercentile(
+                    sBattleTickHudScratch, count, 50u);
+                sBattleTickHudP95[bucket] = ndsPlatformTickHudPercentile(
+                    sBattleTickHudScratch, count, 95u);
+                ndsPlatformPrintDebugLine(
+                    11u + bucket, "%s%8lu %8lu", sBattleTickHudNames[bucket],
+                    (unsigned long)sBattleTickHudP50[bucket],
+                    (unsigned long)sBattleTickHudP95[bucket]);
+            }
             ndsPlatformPrintDebugLine(
-                11u + bucket, "%s%8lu %8lu", sBattleTickHudNames[bucket],
-                (unsigned long)ticks,
-                (unsigned long)(sBattleTickHudSums[bucket] / sample_count));
+                20u, "         P50      P95 n:%lu", (unsigned long)count);
+            /* Presentation-interval histogram, cumulative since HUD reset.
+             * Device A/B reports read this, never min FPS, because one frame
+             * crossing the 4->5 VBlank boundary reads as 12 FPS while the
+             * histogram stays continuous. */
+            ndsPlatformPrintDebugLine(
+                21u, "VBI 2:%-5lu 3:%-5lu 4:%-5lu",
+                (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[2u],
+                (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[3u],
+                (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[4u]);
+            ndsPlatformPrintDebugLine(
+                22u, "5+:%-5lu max:%lu",
+                (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[
+                    NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS],
+                (unsigned long)gNdsBattlePlayablePacingPresentIntervalMax);
+            /* Build/engagement identity. This used to be published only when
+             * the profile-1 phase HUD was compiled in, so the profile-0 tick
+             * HUD had no way to confirm which ROM was running - which made the
+             * S-digit check in a device A/B packet impossible to perform.
+             *
+             * The phase HUD's H/P/F replay counters cannot appear here: they
+             * are declared under NDS_RENDERER_PROFILE_LEVEL == 1 and do not
+             * exist in a profile-0 build. Everything printed below is either a
+             * compile-time constant or an unguarded global, so this row costs
+             * the lean build nothing and cannot go stale against the flags. */
+            ndsPlatformPrintDebugLine(
+                23u, "GIT %s A%lx S%u C%u", NDS_TASK10_GIT_SHORT,
+                (unsigned long)(gNdsTaskmanArenaChosenSize >> 12),
+                (unsigned int)NDS_TASK44_STAGE_STEADY,
+                (unsigned int)NDS_TASK36_HW_COMPOSE);
         }
-        ndsPlatformPrintDebugLine(
-            21u, "VBI 2:%-5lu 3:%-5lu 4:%-5lu",
-            (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[2u],
-            (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[3u],
-            (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[4u]);
-        ndsPlatformPrintDebugLine(
-            22u, "5+:%-5lu max:%lu",
-            (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[
-                NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS],
-            (unsigned long)gNdsBattlePlayablePacingPresentIntervalMax);
     }
 #endif
 

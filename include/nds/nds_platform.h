@@ -146,6 +146,12 @@ extern volatile u32 gNdsFastWallpaperSeedOpaquePixelCount;
 extern volatile u32 gNdsFastWallpaperSeedRestoreMismatchCount;
 void ndsPlatformRenderDebugHud(void);
 void ndsPlatformClearBattleTextHud(void);
+/* Push one presented-iteration snapshot of gNdsTickHudBuckets into the tick-HUD
+ * percentile window. Must be called from the per-frame path: the HUD renderer
+ * itself only runs about twice a second, so sampling there would build the
+ * distribution out of half-second-spaced single frames. No-op unless the tick
+ * HUD is compiled in. */
+void ndsPlatformTickHudSample(void);
 u32 ndsPlatformVBlankCount(void);
 void ndsPlatformSchedulePresentAtVBlank(u32 vblank);
 void ndsPlatformEndFrame(void);

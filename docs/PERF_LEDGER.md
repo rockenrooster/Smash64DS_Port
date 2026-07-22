@@ -4,6 +4,23 @@ Do not delete reverted or inconclusive rows. Measurements use synchronized
 canonical mode 163 unless a row explicitly says otherwise. Nested renderer
 timers are diagnostic subdivisions and are never added to the whole-loop sum.
 
+**Emulator change, 2026-07-22.** Every row dated before 2026-07-22 was measured
+on a stock melonDS that does not model ARMv5 icache/dcache. The repo emulator is
+now the owner's cache-modelling fork, which reports roughly 40% more ticks for
+the same work. Old and new tick counts are NOT comparable in absolute terms;
+within-row A/B deltas measured on one emulator remain valid. See
+`TICK-HUD BASELINE / FORK EMULATOR` at the end of this file.
+
+**Consequence: `verify-dev-fast.ps1` is red on the fork.** The `battle_playable`
+locked-30 contract (exact 2:1 update/present, 30 Hz present cap) fails under the
+fork and passed under stock melonDS. Confirmed to be the emulator and not a
+source change by stashing all local edits and reproducing on clean `093690b`.
+The contract is not being met because it was never met on hardware either - the
+retail and fork VBI histograms both show 3/4/5+ VBlank intervals, not a locked
+30 Hz - so stock melonDS was flattering the pacing and the contract encoded that
+artefact. Decide whether to re-baseline the contract against the fork or gate it
+by emulator; do not "fix" it by reverting the emulator.
+
 ## Benchmark identities
 
 Both accepted runs use the canonical idle `battle_playable_realtime` mode-163
@@ -6152,4 +6169,104 @@ EVIDENCE:
   artifacts/visibility/2026-07-19-bg0-profile0-results.png
   builds/task-bg0-hardware-pair/README.md
 KEEP / REWORK / REVERT: KEEP BG-0 PRODUCTION / RETAIL A/B PENDING / STABLE-30 STILL RED
+```
+
+## TICK-HUD BASELINE / FORK EMULATOR (2026-07-22)
+
+First tick-HUD bucket capture taken over GDB instead of photographed off the
+HUD, and the first measurement of any kind on the cache-modelling melonDS fork.
+This row is the new emulator baseline for the shipping profile-0 configuration.
+
+```text
+IDENTITY:
+  target                  smash64ds-battle-playable-tickhud-hwtri
+  git                     093690b
+  ROM                     11,430,912 bytes
+                          20D25EE075A4B8B9C0CF0541A0842BCDCEF284647C0E17FBCBC2E9604407E022
+  melonDS                 emulators/melonds/melonDS.exe (owner fork, cache-modelling)
+                          DE80E46BDCF1FD986162DE6AFFD9EE1148F8C40565DBAF667B9C2B3EF5475715
+  config                  profile 0, TICK_HUD=1, SHIP_TELEMETRY=0, HW compose 2,
+                          Task 44 on, fast-run 9, static textures on
+  command                 scripts/sample-tick-hud-buckets.ps1 -Samples 256
+                            -StartFrame 438 -Build build-task41-tickhud-current
+  sampling                256 presented iterations, frames 438..693, CPU Fox
+  reproducibility         two independent runs byte-identical in every field
+                          including min/max: this scene has NO run-to-run noise
+
+BUCKETS (guest cpuGetTiming ticks per presented iteration).
+P50/P95 are the decision basis per docs/VERIFYING.md; spread = p95/p50 names the
+buckets whose mean is not usable. %ALLp50 is p50-relative and does not sum to 100
+because percentiles do not add - the additive identity is on the means.
+
+  bucket        p50        p95  spread       mean        min        max  %ALLp50
+  ALL     1,680,448  2,800,512    1.67  1,879,473  1,679,424  3,361,280    100.0
+  FTR       590,144    598,848    1.01    557,730    324,672  1,046,080     35.1
+  STG       597,632    605,440    1.01    598,236    589,760    615,744     35.6
+  BG          4,032      4,096    1.02      4,036      3,904      4,224      0.2
+  AUD         1,344     65,216   48.52      6,542      1,152     68,544      0.1
+  HUD         1,024    198,272  193.62     25,732        832    200,256      0.1
+  SRC       324,096    955,904    2.95    378,464    162,688  1,293,568     19.3
+  MISC       82,432    129,152    1.57     77,537     45,888    198,592      4.9
+  OTHR      134,080    546,624    4.08    231,195     24,512    577,024      8.0
+
+  Read the spread column first. FTR/STG/BG at 1.01-1.02 are steady enough that
+  p50, p95 and mean agree; those three are the trustworthy numbers and the only
+  ones comparable against a device running mean. SRC 2.95 and OTHR 4.08 are
+  moderately bursty. AUD 48.52 and HUD 193.62 are pure burst - audio refill and
+  text redraw fire on a minority of frames - so their means are an artefact of
+  how many bursts a window happens to contain and must not be compared at all.
+
+  mean named sum 1,648,277 (87.7% of mean ALL); ALL is measured wall ticks and
+  OTHR is the remainder, so named + OTHR == ALL exactly on the means.
+  ALL p50 1,680,448 == exactly 3 VBlank intervals at 33.51 MHz / 59.83 Hz.
+  VBI 2:0 3:516 4:147 5+:30 max:19 over 693 presents; cadence slips 0.
+
+FORK VS RETAIL (owner device measurement, same nine buckets).
+The retail and ownerFork columns are HUD running means, so only buckets with
+spread near 1.00 can be compared at all - there, mean and p50 coincide and the
+comparison is meaningful. The rest are listed for completeness and marked.
+
+  bucket    retail   ownerFork    p50 here   p50 vs R   mean vs R  comparable
+  FTR      617,246     606,840     590,144      -4.4%       -9.6%  YES
+  STG      616,721     597,698     597,632      -3.1%       -3.0%  YES
+  BG         4,164       4,032       4,032      -3.2%       -3.1%  YES
+  MISC      71,789      72,203      82,432     +14.8%       +8.0%  marginal
+  ALL    2,020,898   1,841,744   1,680,448     -16.8%       -7.0%  no (mix)
+  SRC      443,284     363,493     324,096     -26.9%      -14.6%  no (burst)
+  OTHR     252,720     181,582     134,080     -46.9%       -8.5%  no (burst)
+  AUD       10,172       7,110       1,344     -86.8%      -35.7%  no (burst)
+  HUD        4,904       8,693       1,024     -79.1%     +424.7%  no (burst)
+
+  The headline: on the three steady buckets the fork lands within 3.1-4.4% of
+  retail. Stock melonDS for comparison was ALL 1,322,741, -34.5% vs retail.
+  That is the result that makes the fork usable as a stand-in for the device.
+
+  FTR is the correction the P50 view bought: its mean reads -9.6% only because
+  a fighter is dead/respawning for part of this window (min 324,672 against a
+  p50 of 590,144). Its p50 is -4.4% and its spread is 1.01, so per-frame fighter
+  cost tracks retail far better than the mean suggested.
+
+  ALL cannot be compared directly. It is a mix of 3-VBlank and 4-VBlank frames
+  (516/147/30), so its p50 snaps to exactly 3 VBlanks while the device mean
+  reflects a different 3/4/5+ ratio from a played match. Compare the VBI
+  histogram for whole-loop questions, never ALL alone.
+
+  AUD/HUD/SRC/OTHR differences are workload and burst-count, not emulator
+  accuracy: this is a scripted CPU-Fox window, the retail column came from a
+  continuously played match.
+
+CONSEQUENCE FOR TASK 10 CALIBRATION:
+  The Task 10 multipliers (whole draw x1.51, update x1.73, cache-resident x0.88,
+  main-RAM streaming x1.50, ...) exist to correct stock melonDS for unmodelled
+  cache behaviour. On this emulator STG is already within 3% of retail, so
+  applying x1.51 on top would overstate a stage saving by roughly 50%. Treat
+  those multipliers as stale for any measurement taken on the fork. They have
+  not been re-derived; that is a decision for the owner, not an assumption to
+  make silently.
+
+EVIDENCE:
+  artifacts/performance/tick-hud-buckets-fork-20260722-run1.json  (n=32)
+  artifacts/performance/tick-hud-buckets-fork-20260722-run2.json  (n=256)
+  artifacts/performance/tick-hud-buckets-fork-20260722-run3.json  (n=256, repeat)
+KEEP / REWORK / REVERT: BASELINE RECORDED / TASK 10 MULTIPLIERS STALE
 ```

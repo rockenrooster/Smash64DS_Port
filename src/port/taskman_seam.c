@@ -4917,6 +4917,11 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
         gNdsTickHudBuckets[nNDSTickHudBucketAll] = all;
         gNdsTickHudBuckets[nNDSTickHudBucketOther] =
             (all >= named) ? (all - named) : 0u;
+        /* Feed the HUD percentile window here, on the per-iteration path. The
+         * HUD renderer only runs about twice a second, so sampling inside it
+         * would build the distribution from half-second-spaced single frames
+         * instead of from every presented frame. */
+        ndsPlatformTickHudSample();
     }
 #endif
     ndsBattlePlayableFrameCompleteMarker();

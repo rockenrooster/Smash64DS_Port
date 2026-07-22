@@ -95,6 +95,44 @@ try {
 Assert-Policy $outsideRejected `
     'An external melonDS path escaped the repo-local executable guard.'
 
+# Path shape alone never proved the runner slots hold the SAME build as
+# emulators\melonds\melonDS.exe. On 2026-07-22 all nine slots were found still
+# carrying a stock 2025-11-18 melonDS while the source had been replaced with the
+# owner's instrumented fork, so every sharded run silently used a different
+# emulator than the manual one. Binaries are gitignored, so this stays advisory
+# when the source is absent (clean clone) and hard-fails only on real drift.
+$slotIdentity = 'skipped'
+$sourceMelonDS = Join-Path $Root 'emulators\melonds\melonDS.exe'
+$runnerRoot = Join-Path $Root 'emulators\melonds-runners'
+if ((Test-Path -LiteralPath $sourceMelonDS -PathType Leaf) -and
+    (Test-Path -LiteralPath $runnerRoot -PathType Container)) {
+    $sourceLength = (Get-Item -LiteralPath $sourceMelonDS).Length
+    $sourceHash = $null
+    $checked = 0
+    foreach ($slotDir in (Get-ChildItem -LiteralPath $runnerRoot -Directory |
+            Where-Object { $_.Name -match '^slot[0-9]+$' } | Sort-Object Name)) {
+        $slotMelonDS = Join-Path $slotDir.FullName 'melonDS.exe'
+        if (-not (Test-Path -LiteralPath $slotMelonDS -PathType Leaf)) { continue }
+        $checked++
+        # Length first: it separates a wrong build for free and keeps the common
+        # all-correct case to exactly one hash pass over each slot.
+        $slotMatches = ((Get-Item -LiteralPath $slotMelonDS).Length -eq $sourceLength)
+        if ($slotMatches) {
+            if ($null -eq $sourceHash) {
+                $sourceHash = (Get-FileHash -LiteralPath $sourceMelonDS `
+                    -Algorithm SHA256).Hash
+            }
+            $slotMatches = ((Get-FileHash -LiteralPath $slotMelonDS `
+                -Algorithm SHA256).Hash -eq $sourceHash)
+        }
+        Assert-Policy $slotMatches (
+            "Runner $($slotDir.Name) melonDS.exe is not the repo-owned build in " +
+            "emulators\melonds. Refresh every slot with " +
+            ".\scripts\New-MelonDSRunnerSlots.ps1 -Count <N> -Force.")
+    }
+    $slotIdentity = "$checked/$checked"
+}
+
 $fastRawBenchmark = Get-Content -LiteralPath (
     Join-Path $Root 'scripts\benchmark-renderer-fast-raw.ps1') -Raw
 Assert-Policy ($fastRawBenchmark -match
@@ -132,4 +170,5 @@ Write-Output (
     'melonDS policy check passed: repo-local executable only; ' +
     "$($script:MelonDSCanonicalWindowWidth)x$($script:MelonDSCanonicalWindowHeight) " +
     'vertical/equal/native/nearest no-bar window profile; manual and automation isolated; ' +
+    "runner_slots_match_source=$slotIdentity; " +
     "local_config_audit=$([int]($AuditLocalConfigs -and -not $SkipLocalConfigs)).")
