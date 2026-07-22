@@ -9,9 +9,9 @@ below supersedes that checkpoint and restores the missing upper platform.
 
 ## Status
 
-Phase A2 is implemented, default-off, verifier-backed, and ready for Tyler's
+Phase A2 is implemented, default-off, verifier-backed, and ready for the owner's
 visual decision. It is not yet a final Phase-A KEEP because the fidelity doctrine
-requires Tyler's explicit approval. Phase B must not start before that approval.
+requires the owner's explicit approval. Phase B must not start before that approval.
 
 The candidate keeps 26 rigid projected no-Z bindings on GX composition and leaves
 binding 29's raw source-Z/range owner on the exact CPU-composed path. Gameplay
@@ -120,7 +120,7 @@ Additional synchronized pairs:
 
 Each pair reports 355/49,152 changed native pixels (0.722%), mean channel delta
 0.28, and 100% overlap. All three platforms, the main floor, fighters, Whispy,
-and wallpaper are present. Tyler remains the approval oracle.
+and wallpaper are present. the owner remains the approval oracle.
 
 ## Verification
 

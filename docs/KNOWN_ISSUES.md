@@ -12,12 +12,12 @@ durable unresolved gaps.
   at 489,184/489,536 stage ticks.
 - All three random Fox smash variants (IDs 372/373/374) and Mario Smash2 ID430
   now play from their exact source programs. Mario Smash1/Smash3 and exact
-  damage/jump pitch automation remain fail-closed; Tyler's remaining voice ear
+  damage/jump pitch automation remain fail-closed; the owner's remaining voice ear
   checks remain open. Dream Land BGM and the opening crowd are
   automation/user-confirmed.
 - Fox remains the imported level-3 CPU in the public ROM. Automated visual
   captures alone select the documented Fox/countdown-off fast-iteration switch;
-  final P1 still needs Tyler's CPU-on manual qualification.
+  final P1 still needs the owner's CPU-on manual qualification.
 - The exact two-ROM build and Current checkpoint pass with a dated
   fast-iteration capture. Release still needs the final CPU-on complete-match
   capture under `artifacts/visibility` and manual user retest.
@@ -70,7 +70,7 @@ durable unresolved gaps.
   fail closed instead of playing a wrong substitute. Forked DeadExplode voice
   685 remains explicit fidelity debt.
 - Existing ACK counters cannot prove the final acoustic mix. The ID626 AOT cue
-  passed Tyler's exact-ROM ear check; retain user retests for remaining voices.
+  passed the owner's exact-ROM ear check; retain user retests for remaining voices.
 - Dream Land BGM now has an exact nonzero initial-ring acoustic fixture and a
   natural public-ROM ARM7-shared active-channel proof; do not reopen it without
   a reproduced audible or stream-state regression.

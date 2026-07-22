@@ -4,7 +4,7 @@ Verdict: **USER-OVERRIDE KEEP at 58.463%; replay and profile-0 promotion pass.**
 
 ## Superseding product decision and final replay result
 
-Tyler explicitly accepted the measured 58.463% conservation on 2026-07-20,
+the owner explicitly accepted the measured 58.463% conservation on 2026-07-20,
 superseding this task's original 60.000% continuation threshold. The census
 below remains the evidence for the exact admitted subset; it is no longer a
 stop verdict.
@@ -131,7 +131,7 @@ ordinals `18,19,20,23,24,26,27,28,30,31,32`). These are the three live camera
 view loads; local matrices, vertices, and prepared state remain constant.
 
 Adding Whispy frames can only remove words from the conserved intersection, so
-the two-window 58.463% remains the mathematical upper bound used by Tyler's
+the two-window 58.463% remains the mathematical upper bound used by the owner's
 override. The final replay keeps only complete rigid segments; DMA remains
 unimplemented.
 

@@ -61,5 +61,5 @@ custom FX, overlapping voices, or source rates above the current representation.
 Therefore Phase C stops at the resident/representation gate.
 
 Symptom 1 remains blocked for exact representation/capacity. Symptom 2 cannot be
-closed from manifests or counters: Tyler's batched melonDS listen pass remains
+closed from manifests or counters: the owner's batched melonDS listen pass remains
 the acoustic oracle for the six primary-only common hit sounds.

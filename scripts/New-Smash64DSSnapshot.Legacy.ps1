@@ -1,10 +1,10 @@
 # Legacy broad snapshot exporter retained for fallback/debug reference.
 # Normal handoff snapshots should use scripts/New-Smash64DSSnapshot.ps1.
 # Create a fastest-compression 7z snapshot of the Smash64DS_Port dev folder.
-# Output: C:\Users\Tyler\Desktop\Snapshots\Smash64DS_Port_<yyyyMMdd_HHmmss>.7z
+# Output: <user profile>\Desktop\Snapshots\Smash64DS_Port_<yyyyMMdd_HHmmss>.7z
 $ErrorActionPreference = 'Stop'
 $source  = 'D:\Stuff\DevFolder\Smash64DS_Port'
-$destDir = 'C:\Users\Tyler\Desktop\Snapshots'
+$destDir = Join-Path $HOME 'Desktop\Snapshots'
 if (-not (Test-Path -LiteralPath $source)) {
     throw "Source folder not found: $source"
 }

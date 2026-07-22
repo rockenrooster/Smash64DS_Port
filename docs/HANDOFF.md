@@ -23,19 +23,19 @@ compare/i2f/addsub `1/1/1`. Do not edit `decomp/`.
 
 Task 38's unsupported-FGM census is implemented and verifier-exported. Exact
 special cues remain blocked by representation and the 128 KiB resident cap;
-never substitute another sound. Tyler's listen pass remains the hit-sound oracle.
+never substitute another sound. the owner's listen pass remains the hit-sound oracle.
 
 Task 39's corrected-map Phase C implements hurt flash, OAM hit sparks, and the
-flat transparent 2D shield with white shine. Tyler approved all three in the
+flat transparent 2D shield with white shine. the owner approved all three in the
 same ROM. The published/release-equivalent targets enable them; DevFast and
 Boundary pass. Task 39 is complete and no visual row needs replay.
 
 Task 40 is complete: Mario 195/195 and Fox 209/209 non-null motions are
-Tyler-approved. The full source-
+the owner-approved. The full source-
 backed bank, AObj16/AObj32 loader fix, `DEATH` letter `T`, watchdog, resume, and
 Fox-AI-off cycler are retained. Do not rerun known-good rows. The full corrected
 numeric duration matrix remains provisional; only resume specifically requested
-or unverified rows if Tyler asks.
+or unverified rows if the owner asks.
 
 Evidence is under `artifacts/performance/2026-07-21_task38/39/40-*`; Task 40's
 423-row CSV and two contact sheets are permanent. Profile-0 ROM is 14,958,592

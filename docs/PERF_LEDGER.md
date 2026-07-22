@@ -77,7 +77,7 @@ two-frame deadline guard finished the remaining slices together. Preload and
 rare resync remained whole. Full evidence and final retail decision:
 `artifacts/performance/2026-07-20_task30-bgm-refill-slicing.md`.
 
-Tyler reported on 2026-07-20 that the sliced profile-1 ROM audio sounds good.
+the owner reported on 2026-07-20 that the sliced profile-1 ROM audio sounds good.
 Task-32 retail photos first proved sliced-path engagement with `BGM slices`
 counts 180 and 184. The corrected dedicated pair then failed the pacing gate:
 4+ and 5+ both shifted worse after normalization. The original copied device
@@ -187,7 +187,7 @@ hardware clip readback differs from the exact CPU reference by at most two
 20.12 units with no translation wrap. The discarded band-view experiment was
 not the fix: excluding binding 29 had left raw fallback matrices uninitialized.
 Initializing that exact fallback and delaying GX admission until the first rigid
-run restores the platform and slightly exceeds the original WIP saving. Tyler
+run restores the platform and slightly exceeds the original WIP saving. the owner
 approved the result and Phase A is committed at `c08e8ee`.
 
 Phase B's admitted standalone ROM/ELF are `E5E6F66...` / `13713DDE...`, with
@@ -196,7 +196,7 @@ early combat, 3,896 of 6,664 whole-stage words are conserved (58.463%). The
 entire 3,929-word rigid partition is itself only 58.959% of the stage stream,
 making 60% impossible even before Whispy. The 33 varying rigid words are the 11
 live camera `MATRIX_LOAD4X4` lanes at DObjs 0, 40, and 54. Whispy timed out at
-the fixed 30-second limit and was not rerun. Tyler explicitly accepted 58.463%
+the fixed 30-second limit and was not rerun. the owner explicitly accepted 58.463%
 on 2026-07-20, superseding the task-local 60% threshold. Full evidence:
 `artifacts/performance/2026-07-20_task36-phaseb-conservation.md`.
 
@@ -818,7 +818,7 @@ RETAIL-DS ARM-BASE CONFIRMATION (2026-07-18, TIMER 00:58):
   The earlier -44,160 UPD result on the Thumb base does not carry to this ARM
   sample. The retained 5,016-byte set is still a device KEEP because its small
   compute win crosses the presentation threshold in the matched phase; that is
-  the admitted claim, not a broad 11.4% ARM-base update reduction. Tyler also
+  the admitted claim, not a broad 11.4% ARM-base update reduction. the owner also
   reports that the update-hot ROM runs better.
   Photos and SHA-256:
     artifacts/visibility/2026-07-18_task19-arm-control-retail-ds.jpg
@@ -2527,7 +2527,7 @@ EXACTNESS RESULT:
   The accepted mapper contains two integer sampling stages. The host/profile
   model found coordinate mismatches in both axes across all 128 observed
   origin/scale states for a single q8 affine transform. No bounded sampling
-  difference was approved by Tyler.
+  difference was approved by the owner.
 PERFORMANCE RESULT:
   None. The architecture failed its required exactness/approval preflight, so
   no ROM rebuild or misleading timing run was performed.
@@ -3423,7 +3423,7 @@ RESULT P50/P95:
 CORRECTNESS / VISUALS:
   Exact 121 runs / 828 triangles = stage 202 + Mario 320 + Fox 306, zero
   fallback; M4 remains 22/131072 with every sampled post-GO fence class zero.
-  Normal/front/+33.6 degree focused captures pass, and Tyler accepted the
+  Normal/front/+33.6 degree focused captures pass, and the owner accepted the
   repaired view. The synchronized GO frame remains recognizable and intact.
 EVIDENCE:
   artifacts/performance/2026-07-15_m3-scaled-raw-clip-b.json (SHA-256
@@ -3477,7 +3477,7 @@ Candidate ROM SHA-256
 pause-orbit evidence is
 `artifacts/visibility/20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png`.
 Both pant legs render blue and the underside is closed in that view. Decision:
-KEEP pending Tyler's visual confirmation. The camera gate reports 128,528 bytes
+KEEP pending the owner's visual confirmation. The camera gate reports 128,528 bytes
 of arena headroom, but an isolated unmodified `7abdec43ef` baseline reports the
 same value; the 2,544-byte P1 reserve deficit is inherited and is not bundled
 into this correctness change.
@@ -3812,7 +3812,7 @@ DECISION: KEEP
 ```text
 IDEA ID: M3-AOT-COORDINATE-SHIFT-20260716
 RECONCILIATION:
-  Tyler's Jump A Cut 3 constant-depth GX painter mechanism already landed with
+  the owner's Jump A Cut 3 constant-depth GX painter mechanism already landed with
   the pause/depth work. Its normal M3 path no longer calls the old CPU div64
   projector, so duplicating Cut 2 or Cut 3 would be incorrect. The retained
   Phase-0 bucket is 174,624/174,720 no-Z emitter ticks and 146 matrix loads.
@@ -3902,7 +3902,7 @@ RESULT P50/P95:
   Combined Mario+Fox 402,560/402,624 -> 398,048/398,144, saving 4,512/4,480.
 CORRECTNESS / VISUALS:
   Exact 70/686 and 60/320/306/29/0/0, zero fallback/texture fence, and zero
-  conservation error hold. Tyler inspected the candidate PNG and confirmed it
+  conservation error hold. the owner inspected the candidate PNG and confirmed it
   is visually normal. No allocation, packet, or ITCM change is introduced.
 EVIDENCE:
   artifacts/performance/2026-07-16_m2-itcm-restore-b.json
@@ -4083,7 +4083,7 @@ KEEP / REWORK / REVERT: KEEP
 IDEA ID: M3-S16-ROUNDSHIFT-RETAKE-20260716
 RECONCILIATION:
   The earlier treatment was reverted under the withdrawn <=500K discard gate
-  and a viewer-side screenshot false alarm. Tyler confirmed that PNG looked
+  and a viewer-side screenshot false alarm. the owner confirmed that PNG looked
   normal; deterministic native-pixel comparison now owns the visual decision.
 SOURCE / BOUND:
   Generated NDSNativeStageDenseVertex coordinates are signed 16-bit and encode
@@ -5057,7 +5057,7 @@ KEEP / REWORK / REVERT: KEEP TOOLING / HARDWARE CALIBRATION COMPLETE
 IDEA ID: TASK9-PHASE2-FCMPEQ-ARM-20260717
 RECONCILIATION / BOUND:
   The earlier Phase-1 row stopped before custom code because its 16.54% owner
-  win was already decisive. Tyler explicitly resumed the staged Phase 2. The
+  win was already decisive. the owner explicitly resumed the staged Phase 2. The
   census names fcmpeq as the safest next exact cut: 556.25 calls/update,
   40 median ticks/call, and a 127,148-tick observed bound. This ratchet changes
   only that helper; fadd/fmul and conversion helpers retain stock libgcc.
@@ -5204,7 +5204,7 @@ SYNCHRONIZED EIGHT-FRAME A/B, FRAMES 438..445:
 DECISION:
   REVERT. More removed geometry monotonically increases the loss and the
   smallest useful subset cannot repay the fixed hash-lookup/substitution cost.
-  The decisive performance gate failed before Tyler visual sign-off; no
+  The decisive performance gate failed before the owner visual sign-off; no
   default-on or user-facing flag-ON ROM is warranted. All Task 13 runtime,
   tooling, generated pack/manifest, and generated include changes were removed.
 
@@ -5700,7 +5700,7 @@ MARIO-ONLY RUNTIME A/B — REVERT:
   Complete current preflight and live material/light/texture preparation ran
   before GX; the generated program owned Mario only and Fox remained control.
 
-## 2026-07-19 - BGM-stall falsifier setup (device A/B pending Tyler)
+## 2026-07-19 - BGM-stall falsifier setup (device A/B pending the owner)
 
 ```text
 IDEA ID: BGM-STALL-FALSIFIER-20260719
@@ -5727,7 +5727,7 @@ B ROM (BGM off, profile-1 bgm-off-hwtri):
   14,686,208 bytes (same length; no data layout change)
   91953C0CC8CCAA49F01C011FAF5C4FBCA9F6077849365D5AFBE156A3730088DF
   Distinct hashes confirm the flag changed the binary.
-VERDICT: PENDING Tyler device run (same heavy-combat minute on each, photograph
+VERDICT: PENDING the owner device run (same heavy-combat minute on each, photograph
   HUD rows 12-22).
   - Dips vanish under B AND refill-tick-max spikes correlate with 5-VBlank
     intervals under A => BGM I/O confirmed; then check Calico ARM7 blkdev,
@@ -5987,7 +5987,7 @@ IDEA ID: TASK24R-QUIET-SLOT-DIET-20260719
 SOURCE / RECOVERY:
   HEAD f2534ccaafb1abe3ae522bf7e88b006e3212feda.
   Pre-delete Lean snapshot:
-    C:\Users\Tyler\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip
+    C:\Users\the owner\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip
 
 DELETED BATCH:
   7,929 files / 3,746,285,595 bytes from 17 exact immediate children of

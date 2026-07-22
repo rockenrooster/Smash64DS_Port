@@ -8,7 +8,7 @@ it restores the published AI-on default before detaching.
 **Standing rules apply in full: read `docs/optimization/TASK_STANDING_RULES.md`
 first.**
 
-**Tyler's report (2026-07-20):** some fighter animations are missing or look
+**the owner's report (2026-07-20):** some fighter animations are missing or look
 different from the original game. Mario looks fine so far — start the audit with
 FOX, then sweep Mario anyway (the harness makes the second pass cheap).
 
@@ -20,7 +20,7 @@ clause covers rendering SHORTCUTS (matrix precision, approximated effects). It d
 NOT cover animation pose data: animations are data-driven and the source data is
 authoritative, so the target here is FAITHFUL, not approximate. Approximation is
 allowed only if a specific track feature proves genuinely expensive at runtime —
-and then it goes through Tyler with an A/B screenshot pair like any approximation.
+and then it goes through the owner with an A/B screenshot pair like any approximation.
 
 ## Phase 0 — map the pipeline and the seams (report before building anything)
 
@@ -62,9 +62,9 @@ and then it goes through Tyler with an A/B screenshot pair like any approximatio
    report which motion IDs were NEVER requested naturally (expected for items-off /
    unreachable states — classify, don't fix).
 5. **Deliverable — the coverage table**, per fighter, one row per motion ID:
-   `plays-correct (pending Tyler) / plays-wrong (seam or duration evidence) /
-   missing-data / never-triggered`, plus the screenshot strips for Tyler's review.
-   **Tyler is the correctness oracle for "looks different"** — attach strips, wait
+   `plays-correct (pending the owner) / plays-wrong (seam or duration evidence) /
+   missing-data / never-triggered`, plus the screenshot strips for the owner's review.
+   **the owner is the correctness oracle for "looks different"** — attach strips, wait
    for his row-by-row verdict before Phase 2 fixes anything visual-only. Rows with
    hard evidence (missing data, duration mismatch, seam hit) may proceed without
    waiting.
@@ -78,7 +78,7 @@ and then it goes through Tyler with an A/B screenshot pair like any approximatio
 ## Phase 2 — implement the fixes, DS-efficient
 
 Order: missing-data rows first (usually pure asset-pipeline fixes), then seam
-fixes, then Tyler-flagged visual rows.
+fixes, then the owner-flagged visual rows.
 
 1. **Missing/misconverted data → fix at BUILD TIME.** Extend the O2R extraction /
    `generate_nds_native_owners.py` conversion so the data ships pre-converted —
@@ -100,8 +100,8 @@ fixes, then Tyler-flagged visual rows.
    (last known 166,672 bytes) must not go below ~100K, and the taskman arena must
    still get its full size (assert + report, per the arena lesson).
 5. Re-run the Phase 1 audit after fixes: the coverage table must show every
-   previously-bad row now `plays-correct (pending Tyler)`, and a fresh screenshot
-   strip goes to Tyler for final approval.
+   previously-bad row now `plays-correct (pending the owner)`, and a fresh screenshot
+   strip goes to the owner for final approval.
 
 ## Gates
 

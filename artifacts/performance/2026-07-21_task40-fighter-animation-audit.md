@@ -6,12 +6,12 @@ Date: 2026-07-21
 
 The source-backed Mario/Fox animation bank and visual/load sweep are complete.
 All 195 non-null Mario motions and 209 non-null Fox motions produced asserted
-non-clear screenshots. Tyler approved the Mario strip; missing Mario sounds are
-Task 38/audio scope. The Fox strip remains pending Tyler's visual verdict.
+non-clear screenshots. the owner approved the Mario strip; missing Mario sounds are
+Task 38/audio scope. The Fox strip remains pending the owner's visual verdict.
 
 This is not a green full-duration matrix. The first complete captures predate a
 checker fix that bounded joint inspection with `ndsFTStructJointLoopLimit`.
-Tyler explicitly asked not to replay known-good motions. The coverage CSV
+the owner explicitly asked not to replay known-good motions. The coverage CSV
 therefore records those rows as full-play visual captures while keeping their
 numeric duration evidence provisional. A post-fix spot run proves Mario motion
 203 at 83/83 frames; the resumed Fox 198-218 CSV still contains invalid expected
@@ -37,8 +37,8 @@ lengths and false early-loop results and is not presented as correctness proof.
 
 | Fighter | Table rows | Source-null | Captured non-null | Natural requested | Natural never requested | Visual verdict |
 |---|---:|---:|---:|---:|---:|---|
-| Mario | 204 | 9 | 195 | 21 | 183 | Tyler approved; sounds excluded |
-| Fox | 219 | 10 | 209 | 42 | 177 | pending Tyler |
+| Mario | 204 | 9 | 195 | 21 | 183 | the owner approved; sounds excluded |
+| Fox | 219 | 10 | 209 | 42 | 177 | pending the owner |
 
 The natural match ran with Fox AI enabled; both cyclers disabled Fox AI so it
 could not interrupt Mario. Natural evidence reports zero load fallback,

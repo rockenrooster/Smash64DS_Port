@@ -1,6 +1,6 @@
 # TASK 41 — True ship configuration + profile-0 per-owner tick HUD
 
-**State: EXECUTE — implementation and static/build gates pass; Tyler/runtime
+**State: EXECUTE — implementation and static/build gates pass; the owner/runtime
 qualification remains.**
 
 **Standing rules apply in full: read `docs/optimization/TASK_STANDING_RULES.md`
@@ -26,7 +26,7 @@ It ALSO pays at UPDATE cadence (twice per present — planner-verified 7/21) for
   `scVSBattleFuncUpdate` (src/port/taskman_seam.c:4353; verify which dispatch
   chain actually executes per update in mode 163);
 - taskman per-update proof bookkeeping and FGM proof counters.
-None of it changes pixels. Tyler independently requested the same thing plus a
+None of it changes pixels. the owner independently requested the same thing plus a
 realtime per-owner tick HUD that does not require profile 1 (profile-1 ROMs
 distort timing and cannot run affine without the arena OOM).
 
@@ -63,7 +63,7 @@ distort timing and cannot run affine without the arena OOM).
    GDB-reads a gated counter must keep a build that still has it (diagnostic
    targets keep NDS_SHIP_TELEMETRY=1) — list which scripts read what.
 3. **Tick HUD.** `NDS_TICK_HUD` flag (LEAN=0, TICKHUD=1): cpuGetTiming() reads
-   at the existing phase boundaries, accumulated into Tyler's nine buckets —
+   at the existing phase boundaries, accumulated into the owner's nine buckets —
    ALL, Mario+Fox, Stage, Background(wallpaper), Audio, HUD(OAM/interface),
    SourceUpd, MiscDraw(residual+gxFlush), Other(=ALL − sum, so nothing hides).
    Present as rows on the lower screen at the existing half-second HUD cadence
@@ -145,7 +145,7 @@ Static/build gates: all three variants compile; generated configurations are
 `0/0/0`, `0/0/1`, and `0/1/0` for profile/telemetry/tick HUD respectively;
 `check-gbi-decode-fixtures.ps1` and `check-harness-registry.ps1` pass.
 
-Runtime gates still open and must not be inferred from compilation: Tyler's
+Runtime gates still open and must not be inferred from compilation: the owner's
 pixel check, LEAN pacing/engagement GDB read, TICKHUD <=3K overhead and ~1% sum
 conservation, synchronized LEAN/control timing, and full-match soaks. No
 emulator rerun was made while recovering from the prior hang loop.
@@ -162,12 +162,12 @@ buckets were `0/0/519/73/7`, max 17, BGM seams 31, and the Task 39 engagement
 mask was nonzero. The <=3K instrumentation-overhead A/B and full-match soak
 remain open.
 
-Tyler then found that the post-Task-42 LEAN and TICKHUD FPS/UP values were wrong
+the owner then found that the post-Task-42 LEAN and TICKHUD FPS/UP values were wrong
 and updated infrequently, while the pre-Task-42 TICKHUD ROM was correct. Root
 cause: Task 42 assigned its seam IRQ to ARM9 timer 2, but current Calico
 `tickInit` owns timers 2/3 and `cpuGetTiming()` reads that system tick. The BGM
 seam IRQ now uses free timer 0; the asset checker fails if it regresses to 2/3.
-The rebuilt hashes above contain that fix. Tyler's confirmation remains open.
+The rebuilt hashes above contain that fix. the owner's confirmation remains open.
 
 Metric readers and their diagnostic configurations:
 

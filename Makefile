@@ -137,7 +137,7 @@ override NDS_TASK16_FLOAT_I2F := 1
 override NDS_TASK16_FLOAT_ADDSUB := 1
 # Retail Task-32 A/B reduced the normalized 4+/5+ pacing tail.
 override NDS_TASK32_DRAW_HOT_TEXT := 1
-# Task 39: Tyler-approved hurt flash, hit sparks, and flat 2D shield.
+# Task 39: the owner-approved hurt flash, hit sparks, and flat 2D shield.
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_TASK39_FX_SHIELD := 1

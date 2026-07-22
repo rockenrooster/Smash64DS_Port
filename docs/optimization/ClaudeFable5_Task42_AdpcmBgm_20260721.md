@@ -4,13 +4,13 @@
 first.**
 
 **Supersession notice:** the old Task 33 was "not admitted" because its entry
-gate (Task 30 shipping) went false. Tyler explicitly authorized ADPCM on
+gate (Task 30 shipping) went false. the owner explicitly authorized ADPCM on
 2026-07-21 — that authorization replaces the gate. Task 30's retail verdict
 still stands and constrains DESIGN: do NOT smear refill work across frames
 (sliced refills regressed the retail histogram); keep the concentrated
 whole-half shape and make it smaller instead.
 
-**PRIORITY + COUPLING (Tyler, 2026-07-21): this task runs NEXT, and Phase B is
+**PRIORITY + COUPLING (the owner, 2026-07-21): this task runs NEXT, and Phase B is
 the priority outcome.** Task 38 (FGM full coverage) is PAUSED at its Phase C
 capacity stop. The initial 72,260-byte estimate was superseded by the exact
 deduplicated census: full resident coverage has a 300,540-byte dry floor. Phase
@@ -21,7 +21,7 @@ on-demand/prefetched cache.
 Therefore: (a) the final report MUST state the static-footprint delta and the
 new net reserve + full-arena confirmation — Task 38's resume math consumes
 those numbers; (b) if only Phase A lands (which ADDS ~8 KiB staging), say so
-loudly — Task 38 then stays paused and re-presents its numbers to Tyler rather
+loudly — Task 38 then stays paused and re-presents its numbers to the owner rather
 than resuming.
 
 ## Current facts
@@ -75,7 +75,7 @@ than resuming.
    Phase 0 cover it).
 3. Gates: profile-1 refill-ticks counter shows the new spike (report exact);
    zero read-fail/overrun/unsafe counters across a full natural match; finite
-   and looping tracks both verified (verify-boundary Results audio); **Tyler
+   and looping tracks both verified (verify-boundary Results audio); **the owner
    listen check** — track start, loop seam, and general quality vs PCM.
 
 ## Phase B — hardware ADPCM ping-pong (the prize; bounded probe first)
@@ -84,7 +84,7 @@ than resuming.
    ONE-SHOT buffers (halves A/B, each with its own IMA header). While A plays,
    fill B; start B when A ends; alternate. Start scheduling: timer-IRQ or
    tick-deadline from the existing playback-position math (:710-712) —
-   measure the seam gap/jitter in samples and report it. **Tyler listen check
+   measure the seam gap/jitter in samples and report it. **the owner listen check
    on the probe**: continuous tone + music, listening for seam ticks/pops.
    The probe never touches the shipping loader.
 2. If the seam is clean: implement in the loader — replaces `soundPlaySample`
@@ -100,7 +100,7 @@ than resuming.
    device-class); melonDS refill-ticks + counters are the working referee.
 
 **Kill criteria:** Phase A decode measurably worse than expected (>150K decode
-alone) → report before shipping; Phase B seam gap audible to Tyler or
+alone) → report before shipping; Phase B seam gap audible to the owner or
 seam-miss counter nonzero in soak → keep Phase A, close B with the probe
 numbers. Separate commits per phase; snapshot at the end.
 
@@ -132,11 +132,11 @@ overwrote Calico's timers 2/3 system tick and corrupted every `cpuGetTiming()`
 consumer, visibly breaking FPS/UP and TICKHUD cadence. The retained runtime now
 uses free timer 0, and `check-audio-bgm-derived-assets.ps1` rejects timer 2/3.
 
-Open gates: Tyler start/quality/seam listen approval, full-match arena proof,
+Open gates: the owner start/quality/seam listen approval, full-match arena proof,
 and device economy queue. Do not approve or ship the ADPCM path from the short
 runtime smoke alone.
 
 The 2026-07-21 retained Boundary smoke passed with prepared/seam counts nonzero
 and header, packet, seam-miss, timer-drop, error-stop, cleanup-fail, unsafe-write,
-and overrun counters all zero. Tyler's audible approval, full-match arena proof,
+and overrun counters all zero. the owner's audible approval, full-match arena proof,
 and retail queue remain open.

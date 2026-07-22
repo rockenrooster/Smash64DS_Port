@@ -1,7 +1,7 @@
 # Big-Jumps Review & Plan — 17fps lab / ~15fps canonical → target
 
 **Author:** Claude Fable (planner) — 2026-07-15 12:39 Central
-**Audience:** codex + Tyler. Review + plan only; no implementation.
+**Audience:** codex + the owner. Review + plan only; no implementation.
 **Grounded in:** OPTIMIZATION_ROADMAP.md, P1_EXECUTION_BOARD.md,
 NATIVE_RENDERER_PLAN.md, PERF_LEDGER.md, and live reads of
 `reloc_backend_renderer_dl.c` (matrix path) + `nds_platform.c` (BG/VRAM).
@@ -69,7 +69,7 @@ is a stable, verifier-clean, locked-30 "playable preview."** That was always
 the documented floor. Build the plan below to *maximize* the cut (every tick
 helps input latency and headroom), but make the 7/16 checkpoint decision with
 locked-30 as the expected outcome, not a fallback you're ashamed of. Say this
-to Tyler now, not on the 18th.
+to the owner now, not on the 18th.
 
 ---
 
@@ -218,7 +218,7 @@ matrix+lighting+KRAW; otherwise land the matrix cut alone as its own row.
   roadmap already specifies (60Hz source logic, 29.9Hz present, no catch-up
   spiral) — that is itself ~half a day; account for it.
 - If active is materially below that and 60 looks live: keep pushing, but do
-  not claim P1 complete below real-time without Tyler's explicit approval.
+  not claim P1 complete below real-time without the owner's explicit approval.
 - Either way: **do not silently redefine the target.** Present the number.
 
 ## Part 4 — What NOT to do (so the last two days aren't burned re-litigating)
@@ -233,7 +233,7 @@ matrix+lighting+KRAW; otherwise land the matrix cut alone as its own row.
 - No new harness modes, one-bit proof masks, or synthetic reruns (standing
   rule).
 
-## Part 5 — One-line summary for Tyler
+## Part 5 — One-line summary for the owner
 
 The recent big wins all came from handing work to fixed-function DS hardware or
 branchless kernels; every failed attempt tried to cache-and-replay a 3D command

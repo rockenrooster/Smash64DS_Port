@@ -73,7 +73,7 @@ foreach ($file in $files) {
     }
 
     $latin = [Text.Encoding]::Latin1.GetString($bytes)
-    foreach ($needle in @('SMASH BROTHERS', 'D:\Stuff', 'Tyler')) {
+    foreach ($needle in @('SMASH BROTHERS', 'D:\Stuff', $env:USERNAME)) {
         if ($latin.Contains($needle, [StringComparison]::Ordinal)) {
             $stringHits.Add("$($relative[$file.FullName]): $needle")
         }

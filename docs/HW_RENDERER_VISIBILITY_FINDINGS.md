@@ -69,7 +69,7 @@ The frame is now identifiable as Dream Land with fighter pixels and the shipped
 ROM is no longer blank, but fidelity and speed are still not demo-grade. The
 raw DS matrix/depth path still needs repair, and immediate per-frame
 `gcDrawAll` traversal plus projected fallback are below 60fps in the realtime
-smoke. Renderer-cache/performance work remains the next slice after Tyler's
+smoke. Renderer-cache/performance work remains the next slice after the owner's
 playtest.
 
 ## 2026-07-10 Source-Depth Unit Checkpoint

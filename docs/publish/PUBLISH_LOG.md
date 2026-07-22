@@ -70,7 +70,7 @@ already hash-migrated evidence. Counts were captured before removal.
 These four dirty auxiliary worktrees are kept. No file in them is reset, cleaned,
 or overwritten:
 
-- `.tura/control-task8-cut-e` — special Tyler-tool worktree; untracked
+- `.tura/control-task8-cut-e` — special the owner-tool worktree; untracked
   `.tura-control-runtime.log`;
 - `%TEMP%/smash64ds-task16-bisect-51fc-5e0a55200438495f9604859939edd894`
   — one modified verifier script;
@@ -216,7 +216,7 @@ pushed and made default. The staging repository is clean and tracks
 `origin/master`. The development repository still has no remote; it was never
 pushed. Repository visibility was not changed.
 
-## Tyler review checklist
+## the owner review checklist
 
 - Open the [GitHub file listing](https://github.com/rockenrooster/Smash64DS_Port)
   and eyeball it against the leak-audit exclusions: no ROM, `.nds`, O2R,

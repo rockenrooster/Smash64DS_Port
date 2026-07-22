@@ -122,7 +122,7 @@ The repo-local captures prove the HUD/config distinction:
 `artifacts/visibility/2026-07-20_task32-device-control-hud.png` (`DHT 0`) and
 `artifacts/visibility/2026-07-20_task32-device-candidate-hud.png` (`DHT 1`).
 
-Tyler ran the pair on retail hardware in one session. The preserved device
+the owner ran the pair on retail hardware in one session. The preserved device
 photos are:
 
 - control `DHT 0`:

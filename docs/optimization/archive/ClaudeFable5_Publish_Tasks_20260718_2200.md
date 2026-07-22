@@ -17,7 +17,7 @@ rule). P1 is read/trace only. P2 is the heavy one (asset regeneration mechanics)
   The dev repo's 2.6GB history is never pushed anywhere.
 - The target repo **already exists and is PUBLIC** (`rockenrooster/Smash64DS_Port`) — the moment
   P4 pushes, content is live. Therefore the P3 leak audit + clean-room gate are the publication
-  gates and MUST be green before any push. Codex never changes repo visibility; if Tyler wants a
+  gates and MUST be green before any push. Codex never changes repo visibility; if the owner wants a
   staged review he flips it private himself before relaying P4.
 - Export is an explicit **ALLOWLIST** (manifest-driven copy). Never "everything minus ignores" —
   the dev repo tracks 533 `logs/` and 275 `artifacts/` files that must not ride along.
@@ -27,19 +27,19 @@ rule). P1 is read/trace only. P2 is the heavy one (asset regeneration mechanics)
   publish artifacts per AGENTS.md; they are already gitignored — keep it that way in the public
   `.gitignore` too.
 
-## Decisions for Tyler (defaults so codex is not blocked)
+## Decisions for the owner (defaults so codex is not blocked)
 
-1. **Repo (CONFIRMED by Tyler 2026-07-18)**: `https://github.com/rockenrooster/Smash64DS_Port`.
+1. **Repo (CONFIRMED by the owner 2026-07-18)**: `https://github.com/rockenrooster/Smash64DS_Port`.
    It exists, is PUBLIC, and contains only a 2-commit README stub on branch `main`
    (verified via gh 2026-07-18: single file README.md 1,480 B; commits e8db67a45 "Initial
-   commit" + 0d76ca9b7 README expansion). Tyler's requirement: the GitHub repo contains ONLY
+   commit" + 0d76ca9b7 README expansion). the owner's requirement: the GitHub repo contains ONLY
    `master` — so `main` gets replaced per P4 step 4.
-2. **Visibility**: already public — pushing IS publishing. P3's gates are the review. Tyler may
+2. **Visibility**: already public — pushing IS publishing. P3's gates are the review. the owner may
    optionally flip the repo private before relaying P4 if he wants to inspect the pushed tree
    first; codex never touches visibility either way.
 3. **License**: v1 ships NO LICENSE file; `NOTICE.md` states provenance (BattleShip decomp,
    sm64-nds architecture reference, libultraship/torch, devkitPro) and the "you must own the
-   game; no Nintendo assets distributed" policy. Tyler decides a license at flip-public review.
+   game; no Nintendo assets distributed" policy. the owner decides a license at flip-public review.
    Codex must read `decomp/BattleShip-main/LICENSE` and mirror any attribution it requires.
 4. **Decomp delivery**: default = the build script FETCHES BattleShip upstream at a pinned commit
    (public repo stays tiny). Fallback if upstream is unreachable or diverged: vendor a filtered
@@ -99,7 +99,7 @@ only — no source changes; new files go under docs/publish/ only.
    scripts, config.yml-style inputs, generated-header inputs.
 
 3. Classify EVERY closure file into exactly one bucket, with evidence:
-   PORT-CODE (Tyler's tracked src/include/linker/Makefile/scripts — ships),
+   PORT-CODE (the owner's tracked src/include/linker/Makefile/scripts — ships),
    DECOMP-SOURCE (under decomp/BattleShip-main — arrives via pinned fetch, does not ship),
    ROM-DERIVED (bytes derive from ROM content — never ships; must be regenerated),
    GENERATED-METADATA (generated from decomp/port ANALYSIS, values are offsets/flags/indices,
@@ -163,8 +163,8 @@ docs/publish/PUBLISH_MANIFEST.md from TASK P1 as ground truth.
    (c) Decomp acquisition: if decomp/BattleShip-main is absent, git-clone upstream at the
        PINNED commit from the P1 manifest (record the pin in a checked-in file, e.g.
        DECOMP_PIN.txt) including required submodules (libultraship/torch per its
-       .gitmodules); -DecompPath reuses an existing checkout instead (used by Tyler and the
-       clean-room rehearsals to skip re-downloads). If P1 found divergence, STOP — Tyler
+       .gitmodules); -DecompPath reuses an existing checkout instead (used by the owner and the
+       clean-room rehearsals to skip re-downloads). If P1 found divergence, STOP — the owner
        decision pending.
    (d) Asset extraction: stage the ROM where BattleShip expects it, run the torch/
        ExtractAssets sequence from the P1 manifest to produce BattleShip.o2r + relocData,
@@ -181,7 +181,7 @@ docs/publish/PUBLISH_MANIFEST.md from TASK P1 as ground truth.
 
 2. Byte-identity gates (all must pass before commit):
    G1 REGENERATION EXACTNESS: in the dev repo, move aside the current BattleShip_o2r dir,
-      relocData, and the 11 tracked assets/ files; run build.ps1 with Tyler's existing
+      relocData, and the 11 tracked assets/ files; run build.ps1 with the owner's existing
       baserom; diff every regenerated file byte-for-byte against the moved-aside originals.
       Any mismatch = investigate, do not ship a "close enough" generator. Restore/commit.
    G2 ROM IDENTITY: the script-built smash64ds-battle-playable-hwtri.nds SHA-256 equals the
@@ -220,7 +220,7 @@ in D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\.
 2. Author the public-facing files (they live in the dev repo under scripts/publish/templates/
    or similar and are copied by the exporter):
    (a) README.md: first fetch the EXISTING README from
-       https://github.com/rockenrooster/Smash64DS_Port (main branch) and fold Tyler's
+       https://github.com/rockenrooster/Smash64DS_Port (main branch) and fold the owner's
        authored content/intent into the new one — do not silently discard it. Then cover:
        what this is (DS port of Smash 64 via the BattleShip decomp, Mario vs Fox on Dream
        Land vertical slice), status/perf honesty (locked-30 pacing, device ~13.5-15fps
@@ -236,9 +236,9 @@ in D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\.
        30 fps pacing; heavy fights dip lower on real hardware"). Before committing, re-read
        it as a first-time visitor who has never heard of this project and fix anything that
        needs prior context. No game screenshots in v1 — they are ROM-derived imagery; adding
-       any is Tyler's explicit call.
+       any is the owner's explicit call.
    (b) NOTICE.md: provenance + no-assets policy + BattleShip LICENSE attribution as P1
-       found it requires. No LICENSE file in v1 (Tyler decides at flip-public).
+       found it requires. No LICENSE file in v1 (the owner decides at flip-public).
    (c) Public .gitignore: baserom*/z64/n64/v64/nds/o2r, decomp/, build dirs, BattleShip_o2r,
        regenerated assets/ paths, logs — so a builder's clone can never accidentally commit
        Nintendo-derived bytes back in a fork.
@@ -250,14 +250,14 @@ in D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\.
    zero files matching \.z64|\.n64|\.v64|\.nds|\.o2r|baserom; zero BattleShip_o2r/relocData/
    assets-audio/assets-renderer content; no binary file >256KiB; byte-scan every file for
    N64 ROM magic (80 37 12 40 / 37 80 40 12 / 40 12 37 80) and for "SMASH BROTHERS"; no
-   embedded-CONTENT arrays per the P1 embedded-data audit; grep for "D:\\Stuff" and "Tyler"
-   (zero hits outside README credits if Tyler wants credit). Record total repo size
+   embedded-CONTENT arrays per the P1 embedded-data audit; grep for "D:\\Stuff" and "the owner"
+   (zero hits outside README credits if the owner wants credit). Record total repo size
    (expect single-digit MB).
 
-5. CLEAN-ROOM PROOF in D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\ (Tyler-designated
+5. CLEAN-ROOM PROOF in D:\Stuff\DevFolder\Smash64DS_Port_MinimalGithub\ (the owner-designated
    scratch): list then wipe its contents; git clone the staging repo into it; from a fresh
    pwsh -NoProfile session, run ONLY:
-     .\build.ps1 -Rom <absolute path to Tyler's existing baserom, OUTSIDE the clone>
+     .\build.ps1 -Rom <absolute path to the owner's existing baserom, OUTSIDE the clone>
    Gate: produced smash64ds-battle-playable-hwtri.nds SHA-256 == reference identity.
    Exercise the real network decomp fetch at least once here (the -DecompPath shortcut may
    be used for repeat runs). Then re-run the two negative tests (no ROM / wrong ROM) in the
@@ -290,14 +290,14 @@ green, re-checked at the top of this task.
 2. Worktree cleanup (16 registered). For EACH worktree: git -C <path> status --porcelain.
    CLEAN → check PERF_LEDGER/board for evidence citations pointing INTO that worktree path
    (hash-migrate anything cited, per AGENTS.md Task-24 rule) → git worktree remove it.
-   DIRTY or ambiguous → leave it, list it in PUBLISH_LOG for Tyler. Special cases: the three
+   DIRTY or ambiguous → leave it, list it in PUBLISH_LOG for the owner. Special cases: the three
    %TEMP% task16 worktrees are closed-lab scratch (remove if clean); leave
-   .tura/control-task8-cut-e ALONE (Tyler's tool manages it) and just note it. Finish with
+   .tura/control-task8-cut-e ALONE (the owner's tool manages it) and just note it. Finish with
    git worktree prune.
 
 3. Branch cleanup (after bundle verify only): delete every local branch except master —
    the 22 codex/* branches and wip/ftmain-import — recording each name + tip SHA in
-   PUBLISH_LOG. Branches pinned by a kept (dirty) worktree stay, listed for Tyler. Then an
+   PUBLISH_LOG. Branches pinned by a kept (dirty) worktree stay, listed for the owner. Then an
    optional single git gc --prune=now (no reflog expiry); report .git size before/after.
    Do NOT rewrite master history; deep repo diet remains the deferred R-lane TASK 24.
 
@@ -313,12 +313,12 @@ green, re-checked at the top of this task.
          git remote add origin https://github.com/rockenrooster/Smash64DS_Port.git
          git push -u origin master
    (e) gh repo edit rockenrooster/Smash64DS_Port --default-branch master
-   (f) git push origin --delete main   (Tyler's requirement: repo contains ONLY master)
+   (f) git push origin --delete main   (the owner's requirement: repo contains ONLY master)
    (g) Set a one-line repo description via gh repo edit; verify final state with
        gh repo view (default branch master, only branch master) and record it in
        PUBLISH_LOG. Do NOT touch visibility.
 
-5. Hand-off: finish PUBLISH_LOG.md with a "repo is LIVE" note and Tyler's prompt-review
+5. Hand-off: finish PUBLISH_LOG.md with a "repo is LIVE" note and the owner's prompt-review
    checklist (open the GitHub file listing and eyeball it against the leak-audit items,
    read README/NOTICE as a stranger would, decide license), plus the kept-worktree/branch
    list, the archived old README text, and the bundle location. Commit the log. Snapshot
@@ -338,5 +338,5 @@ doubt at push time, push nothing and report.
   If a generator can't reach byte-identity inside the timebox, checkpoint and report — do not
   weaken G1/G2 to "close".
 - P3 + P4 fit one session once P2 is green.
-- This lane runs EXCLUSIVE (R-lane paused) — Tyler prioritized publish. After P4, resume the
+- This lane runs EXCLUSIVE (R-lane paused) — the owner prioritized publish. After P4, resume the
   R-plan queue (25R first).

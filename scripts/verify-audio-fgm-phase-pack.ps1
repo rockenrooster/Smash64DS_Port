@@ -265,7 +265,7 @@ try {
         [int]$pool.Groups[9].Value -ge 16 -or
         # NDS_AUDIO_FGM_EXPECTED_FIDELITY_DEBT_MASK (nds_audio_fgm.h):
         # PITCH|VOLUME|CUSTOM_FX = 0x34. Fork-voice debt retired by the fused
-        # forks; CUSTOM_FX wet-tail debt awaits Tyler's listen sign-off.
+        # forks; CUSTOM_FX wet-tail debt awaits the owner's listen sign-off.
         (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 52) {
         throw "FGM recycle/channel/fidelity diagnostics failed.`n$gdbStdout"
     }

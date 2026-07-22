@@ -1,6 +1,6 @@
 # TASK 39 — Visual-effects audit + faithful DS implementations
 
-**STATUS (2026-07-21): COMPLETE.** Tyler approved the source-timed hurt flash,
+**STATUS (2026-07-21): COMPLETE.** the owner approved the source-timed hurt flash,
 OAM hit sparks, and flat transparent 2D shield with white shine in candidate
 `8964A5C3...`. The three feature flags are enabled in the published and
 release-equivalent targets. Final profile-0 ROM: 14,986,240 bytes / SHA-256
@@ -18,10 +18,10 @@ compile out; only engagement and safety counters remain.
 **STATE (2026-07-21, second revision): EXECUTE.** The preflight
 (artifacts/performance/2026-07-21_task39-visual-effects-preflight.md) correctly
 stopped the first attempt on a map error; the map below is corrected (shield is a
-lane-3 substitute). Tyler has now pre-marked THREE effects as WRONG — **hurt
+lane-3 substitute). the owner has now pre-marked THREE effects as WRONG — **hurt
 flash, hit sparks, shield** — which is the Phase-B oracle input for those rows:
 implement them without waiting for the full contact sheet (each still ships only
-after its own fidelity A/B pair gets Tyler's approval). Everything else keeps the
+after its own fidelity A/B pair gets the owner's approval). Everything else keeps the
 census → contact sheet → markup gate.
 
 **Standing rules apply in full: read `docs/optimization/TASK_STANDING_RULES.md`
@@ -33,7 +33,7 @@ so the renderer lane is free — run this in its own session, one writer as alwa
 Independent of Tasks 37/38/45 (38/45 are the AUDIO twin of this complaint;
 disjoint files).
 
-## Reported symptoms (Tyler, 2026-07-20)
+## Reported symptoms (the owner, 2026-07-20)
 
 Hurt/hit/shield visuals PLAY, but some look wrong / different from the original.
 Audit that ALL visual effects are used/played/correct, then implement the missing
@@ -94,14 +94,14 @@ efparticle.c/h, efdisplay.c, efground.c) — read-only reference.
 3. Deliverable: a markdown checklist table — the "is everything being played"
    answer with numbers, not impressions.
 
-## Phase B — visual triage (Tyler is the oracle)
+## Phase B — visual triage (the owner is the oracle)
 
 1. For every entry that fired, capture melonDS screenshots at the effect moment
    (scripted scenarios). Assemble ONE contact-sheet doc: effect name → screenshot →
    Phase A classification → decomp citation of what the original does (descriptor,
    texture, prim colors, frame count — readable from efmanager.c/efparticle.c).
-2. Tyler marks each row OK / wrong / missing / don't-care.
-3. **Pre-marked rows (Tyler, 2026-07-21): hurt flash = WRONG, hit sparks = WRONG,
+2. the owner marks each row OK / wrong / missing / don't-care.
+3. **Pre-marked rows (the owner, 2026-07-21): hurt flash = WRONG, hit sparks = WRONG,
    shield = WRONG.** These three are authorized for Phase C immediately — do not
    hold them on the sheet. Every OTHER row waits for the marked sheet before any
    Phase C work.
@@ -111,7 +111,7 @@ efparticle.c/h, efdisplay.c, efground.c) — read-only reference.
 Fix order: hit sparks + hurt flash + shield first, then KO/stock/score
 substitutes, then the rest of the marked sheet.
 
-Efficiency ladder — take the highest rung that passes Tyler's eye:
+Efficiency ladder — take the highest rung that passes the owner's eye:
 
 1. **2D hardware (OAM sprites, ~free):** billboard-type effects (hit sparks,
    slashes, sparkles, dust) are screen-facing quads in the original. Render as OAM
@@ -126,7 +126,7 @@ Efficiency ladder — take the highest rung that passes Tyler's eye:
    the existing renderer, poly-alpha translucency, prim color from the original
    descriptor. Costs GX words — keep per-effect budgets small and counted.
 3. **Import original TU (last resort):** `efparticle.c` runs the real particle sim
-   on the update path — CPU + arena cost. Only if Tyler rejects rung 1/2 fidelity
+   on the update path — CPU + arena cost. Only if the owner rejects rung 1/2 fidelity
    for a specific effect class; behind its own flag with a 25R-window cost A/B.
 
 Specific items:
@@ -148,7 +148,7 @@ Specific items:
   original `efManagerShieldMakeEffect` (decomp efmanager.c:4095-4148): geometry/
   shape, translucency (poly_alpha vs original combiner alpha), color source,
   size-from-shield-health scaling, and joint attachment. Fix the template/adapter
-  in place; one fidelity A/B pair for Tyler.
+  in place; one fidelity A/B pair for the owner.
 - **Generic-substitute upgrades (death explosion, rebirth halo, stock/score):**
   upgrade `ndsEFManagerMakeVisualEffect` toward the original descriptors via rung
   1/2 — correct EFCommon textures, frame counts, colors from the descriptor tables

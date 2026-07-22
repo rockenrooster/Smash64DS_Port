@@ -2,7 +2,7 @@
 
 **Standing rules apply in full: read `docs/optimization/TASK_STANDING_RULES.md`
 first** (process, fidelity doctrine, device-test economy). One prior-decision note:
-Tyler CANCELLED the Task 35 attribution census (2026-07-20) — the evidence below
+the owner CANCELLED the Task 35 attribution census (2026-07-20) — the evidence below
 already answers it; do not build census instrumentation.
 
 **Supersession notice:** Task 34's closure ("do not start E2/E3") was correct for
@@ -43,7 +43,7 @@ sub-pixel vertex wobble, covered by the fidelity doctrine.
 
 Add to AGENTS.md (Hard Rules, adjacent to the retail-engagement rule):
 > "Rendering-side changes may approximate: they gate on a reported fidelity budget
-> (synchronized screenshot diffs + Tyler's visual approval), not pixel-exactness.
+> (synchronized screenshot diffs + the owner's visual approval), not pixel-exactness.
 > Gameplay/source behavior remains bit-exact and verifier-gated. Engagement proof is
 > a counter on the shared engagement HUD row, confirmed by batched device smoke
 > boots — per-feature retail runs are reserved for cache/TCM/DMA/IO-class claims,
@@ -79,7 +79,7 @@ Commit separately with a one-line HANDOFF note.
      markers/trace identical to control (rendering-only diff).
    - Fidelity: synchronized A/B screenshots for the standard windows
      (countdown438-445, early600-607, whispy1398-1405); report changed-pixel counts
-     + mean delta; attach PNGs; **Tyler approves visuals**. Watch specifically for
+     + mean delta; attach PNGs; **the owner approves visuals**. Watch specifically for
      lighting shifts (vector matrix) and no-Z painter-band misorders (band×W depth
      rows must stay coherent with hardware-composed W).
    - Perf: melonDS synchronized A/B on the stage owner typed counter (must drop;
@@ -87,9 +87,9 @@ Commit separately with a one-line HANDOFF note.
      melonDS-sufficient class: KEEP on melonDS evidence. Add a hardware-composed-
      DObjs-per-frame counter to the shared engagement HUD row and BUILD the retail
      A/B pair into `builds/device-queue/` for the next batched checkpoint — do not
-     ask Tyler to run it now.
+     ask the owner to run it now.
    - Full-match soak, zero fallbacks/asserts, results screen clean.
-   **Kill criterion:** fidelity artifacts Tyler rejects, or painter/no-Z depth
+   **Kill criterion:** fidelity artifacts the owner rejects, or painter/no-Z depth
    breaks structurally, or melonDS stage saving < ~40K (not worth the added
    pipeline) → checkpoint on WIP branch, report, stop.
 
@@ -110,12 +110,12 @@ Commit separately with a one-line HANDOFF note.
 3. Fidelity: replay output should be EXACT vs Phase A (same words) — pixel-compare
    against Phase A and report; any divergence is a bug, not an approximation.
 4. Transport: CPU word-copy replay ONLY (melonDS-sufficient class). GX-FIFO DMA is
-   device-only class and OPT-IN: do not build it unless Tyler explicitly grants a
+   device-only class and OPT-IN: do not build it unless the owner explicitly grants a
    device session. If the copy loop itself measures ≥~80K in the typed counter,
    REPORT that as the DMA opportunity and stop there.
 5. Device: nothing per-phase. Queue the Phase A and Phase B A/B pairs plus the
    updated smoke-boot ROM in `builds/device-queue/` with a one-page ordered
-   checklist; the whole campaign is confirmed in ONE batched session whenever Tyler
+   checklist; the whole campaign is confirmed in ONE batched session whenever the owner
    chooses.
    **Kill criterion:** conservation <60% after hardware compose (report WHY — which
    words still vary), or replay instability in soak → keep Phase A, stop B.

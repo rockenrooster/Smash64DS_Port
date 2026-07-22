@@ -1,33 +1,33 @@
 # TASK 38 — FGM coverage: audit ✔ done, fix RESUMED (no cue stays excluded)
 
 **Standing rules apply in full: read `docs/optimization/TASK_STANDING_RULES.md`
-first — including the content-completeness doctrine (Tyler, 2026-07-21) this
+first — including the content-completeness doctrine (the owner, 2026-07-21) this
 resumption enforces.**
 
 **STATUS (2026-07-21): PHASE E CACHE CANDIDATE BUILT; TYLER LISTEN PENDING.** The audit phases ran and are CLOSED — evidence at
 `artifacts/performance/2026-07-21_task38-fgm-audit.md` (manifest inventory,
 special-move source census, per-id miss ring landed and verifier-exported).
 Consume that evidence; do not redo it. The original Phase C capacity stop-gate is
-REMOVED by Tyler's mandate: "I don't want to formally exclude necessary SFX
+REMOVED by the owner's mandate: "I don't want to formally exclude necessary SFX
 assets from the game. We need to fix it now." Resume from Phase C below. The
 original goal stands: implement the missing/incorrect sounds — audit alone does
 not close this task.
 
-Tyler authorized the recommended exact on-demand cache on 2026-07-21. The
+the owner authorized the recommended exact on-demand cache on 2026-07-21. The
 runtime now exposes all 49 required IDs through a 204,800-byte, eight-slot
 reference-counted NitroFS cache; no cue remains excluded. The regenerated pack
 is 415,432 bytes (`8025f6bf...b1e797d`). The seven hit/KO fork repairs are fused
 from their simultaneous source programs. The focused generator/cache gate and
 profile-0 build pass. A single listen pass remains; AL_FX_CUSTOM cues currently
 use their source-program dry render while the wet delay tail is the only named
-quality lever still awaiting Tyler's judgment.
+quality lever still awaiting the owner's judgment.
 
 The corrected Phase C lower bound is recorded at
 `artifacts/performance/2026-07-21_task38-full-coverage-cost.md`. Pack
 deduplication makes the seven fused repairs add 99,908 bytes, not 72,260. With
 every other missing cue in its cheapest shared dry-source form, the projected
 pack floor is 300,540 bytes and post-Task-42 reserve is at most 40,920 bytes
-before schedules or exact FX tails. No cap changed; Tyler's representation
+before schedules or exact FX tails. No cap changed; the owner's representation
 decision is required.
 
 **SEQUENCING:** independent of Tasks 39/41/43/44 (no file overlap) and of Task 42
@@ -37,7 +37,7 @@ decision is required.
 
 Every battle-reachable FGM cue plays its EXACT source sound. Substitution stays
 banned. An id that still cannot ship at the end must be listed with its reason
-and get Tyler's explicit per-item sign-off in the report — silent or unilateral
+and get the owner's explicit per-item sign-off in the report — silent or unilateral
 exclusion is a failed task.
 
 ## Inputs you already have (from the closed audit + the tree)
@@ -73,7 +73,7 @@ exclusion is a failed task.
 2. Deliver a costed coverage table and the total: proposed new
    `MAX_RESIDENT_BYTES`, projected pack bytes, projected net reserve.
 3. STOP-AND-ASK line: if full exact coverage would push net reserve below
-   96 KiB or shrink the arena, stop and present Tyler the numbers with fallback
+   96 KiB or shrink the arena, stop and present the owner the numbers with fallback
    levers (per-entry output-rate reduction on named low-salience entries; other
    options he might weigh). Do not pick a fidelity tradeoff for him.
 
@@ -101,7 +101,7 @@ extension without its oracle is not done:
 
 ## Phase E — enable everything, regenerate, prove engagement
 
-1. Flip every battle-reachable exclusion to included, specials first (Tyler's
+1. Flip every battle-reachable exclusion to included, specials first (the owner's
    reported symptom), then voices, then attack/activation, then the fork-debt
    hits. Raise the cap constants in lockstep per Phase C's number.
 2. Regenerate the pack. HARD GATES: boot with the arena at FULL size (a degraded
@@ -115,15 +115,15 @@ extension without its oracle is not done:
    grep scripts/ for every counter/mask whose semantics you touch and update
    expectations in the same commit, cited.
 
-## Phase F — Tyler's listen pass and sign-off
+## Phase F — the owner's listen pass and sign-off
 
 1. ONE melonDS-ready ROM + one checklist covering every new/changed cue: each
    special per fighter, the six fork-fixed hit sounds, the damage/jump voices.
    Batch everything into a single pass; device confirmation folds into the next
    batched retail checkpoint per standing rules.
 2. Final report table: every formerly excluded id → shipped-exact | shipped with
-   named fidelity lever (Tyler-approved in Phase C) | still excluded with
-   Tyler's explicit sign-off. No fourth category exists.
+   named fidelity lever (the owner-approved in Phase C) | still excluded with
+   the owner's explicit sign-off. No fourth category exists.
 
 ## Gates
 
@@ -136,14 +136,14 @@ extension without its oracle is not done:
 - Commit the Phase C costed table and Phase E census as artifacts next to the
   existing audit evidence.
 
-## Closeout — 2026-07-21 (Tyler sign-off)
+## Closeout — 2026-07-21 (the owner sign-off)
 
-Tyler's listen pass on ROM `3D5C18FB...` (post cache-init fix `5c278710d`)
+the owner's listen pass on ROM `3D5C18FB...` (post cache-init fix `5c278710d`)
 APPROVED all cues — formerly missing specials, fused-fork layered hits, KO
 sequence — **including explicit sign-off on the dry AL_FX_CUSTOM wet tails**
 (the one named fidelity lever; debt mask bit stays documented, no further
 approval needed). The production silence bug (cache slot table initialized
 only on the diagnostics path) is fixed at the load fence. Runtime verifier
 fully green: 64 supported plays / 0 failures / phase mask 0x1f / exact KO trio.
-Shipped by Tyler's override with the frozen-water diagnostic regression
+Shipped by the owner's override with the frozen-water diagnostic regression
 tracked separately (it pre-dates and is unrelated to the audio work).

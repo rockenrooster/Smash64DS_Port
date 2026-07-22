@@ -1,6 +1,6 @@
 # docs/optimization — layout and convention
 
-**Convention (Tyler, 2026-07-20): one task per .md file.** Naming:
+**Convention (the owner, 2026-07-20): one task per .md file.** Naming:
 `ClaudeFable5_Task<NN>_<slug>_<YYYYMMDD>.md`. Shared process/doctrine lives once in
 `TASK_STANDING_RULES.md`; every task file opens by requiring it. Never append a
 second task to an existing file.
@@ -16,10 +16,10 @@ second task to an existing file.
   battle-reachable FGM cue exactly, per the content-completeness doctrine.
 - `ClaudeFable5_Task39_VisualEffects_20260720.md` — ACTIVE/EXECUTE: visual-effects audit +
   faithful DS implementations. 2026-07-21: map corrected after the preflight stop (shield
-  is a lane-3 substitute template); Tyler pre-marked hurt flash / hit sparks / shield as
+  is a lane-3 substitute template); the owner pre-marked hurt flash / hit sparks / shield as
   WRONG, authorizing immediate Phase C on those three; the rest gates on the contact sheet.
 - `ClaudeFable5_Task40_FighterAnimAudit_20260720.md` — visual sweep COMPLETE 2026-07-21:
-  full Mario/Fox banks landed, both contact strips Tyler-approved (Mario 7/21 am, Fox
+  full Mario/Fox banks landed, both contact strips the owner-approved (Mario 7/21 am, Fox
   7/21 pm); residual duration-matrix evidence stays provisional per the audit report;
   missing sounds are Task 38/45 scope.
 - `ClaudeFable5_Task41_ShipLeanTickHud_20260721.md`, `..Task42_AdpcmBgm_20260721.md`,

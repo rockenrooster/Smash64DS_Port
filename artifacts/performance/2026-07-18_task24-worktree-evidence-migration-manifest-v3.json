@@ -68,9 +68,9 @@
   ],
   "heldWorktrees": [
     "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.tura\\control-task8-cut-e",
-    "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-bisect-51fc-5e0a55200438495f9604859939edd894",
-    "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
-    "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc",
+    "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-bisect-51fc-5e0a55200438495f9604859939edd894",
+    "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
+    "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc",
     "D:\\Stuff/DevFolder/Smash64DS_Port-worktrees/attack",
     "D:\\Stuff/DevFolder/Smash64DS_Port-worktrees/fox",
     "D:\\Stuff/DevFolder/Smash64DS_Port-worktrees/hit",
@@ -173,7 +173,7 @@
       "deletionAssessment": "evidence-and-promotion-safe-candidate; destructive step not performed"
     },
     {
-      "path": "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-bisect-51fc-5e0a55200438495f9604859939edd894",
+      "path": "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-bisect-51fc-5e0a55200438495f9604859939edd894",
       "head": "51fc1fe3e0aa9c900b95b70e158c509453da4663",
       "branch": null,
       "detached": true,
@@ -204,7 +204,7 @@
       "deletionAssessment": "HOLD"
     },
     {
-      "path": "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
+      "path": "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
       "head": "ecdf63d18127152714fe66881b122825c8411779",
       "branch": null,
       "detached": true,
@@ -239,7 +239,7 @@
       "deletionAssessment": "HOLD"
     },
     {
-      "path": "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc",
+      "path": "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc",
       "head": "c9a5906d51032a14188fb98ef67e842908ae030a",
       "branch": null,
       "detached": true,
@@ -22629,13 +22629,13 @@
       "verified": true
     },
     {
-      "worktreePath": "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-bisect-51fc-5e0a55200438495f9604859939edd894",
+      "worktreePath": "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-bisect-51fc-5e0a55200438495f9604859939edd894",
       "worktreeHead": "51fc1fe3e0aa9c900b95b70e158c509453da4663",
       "worktreeBranch": null,
       "worktreeStatus": "dirty",
       "category": "performance",
       "relativePath": "2026-07-18_task16-bisect-51fc-control-state.json",
-      "sourcePath": "C:\\Users\\Tyler\\AppData\\Local\\Temp\\smash64ds-task16-bisect-51fc-5e0a55200438495f9604859939edd894\\artifacts\\performance\\2026-07-18_task16-bisect-51fc-control-state.json",
+      "sourcePath": "C:\\Users\\the owner\\AppData\\Local\\Temp\\smash64ds-task16-bisect-51fc-5e0a55200438495f9604859939edd894\\artifacts\\performance\\2026-07-18_task16-bisect-51fc-control-state.json",
       "destinationPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task16-bisect-51fc-control-state.json",
       "sha256": "C7BCEFF65F0C855B450C99D8B3B253EBF166DA67F99CD9C09D6E1F5E5CA14FE3",
       "bytes": 391005,
@@ -22643,13 +22643,13 @@
       "verified": true
     },
     {
-      "worktreePath": "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
+      "worktreePath": "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
       "worktreeHead": "ecdf63d18127152714fe66881b122825c8411779",
       "worktreeBranch": null,
       "worktreeStatus": "dirty",
       "category": "performance",
       "relativePath": "2026-07-18_task16-hot-text-align-fix-candidate-state.json",
-      "sourcePath": "C:\\Users\\Tyler\\AppData\\Local\\Temp\\smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55\\artifacts\\performance\\2026-07-18_task16-hot-text-align-fix-candidate-state.json",
+      "sourcePath": "C:\\Users\\the owner\\AppData\\Local\\Temp\\smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55\\artifacts\\performance\\2026-07-18_task16-hot-text-align-fix-candidate-state.json",
       "destinationPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task16-hot-text-align-fix-candidate-state.json",
       "sha256": "86EB7D1201513F362E7E4ADE1F82E387E3762F0BF17D93C3BCC5B4F1C33B20B1",
       "bytes": 391023,
@@ -22657,13 +22657,13 @@
       "verified": true
     },
     {
-      "worktreePath": "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
+      "worktreePath": "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
       "worktreeHead": "ecdf63d18127152714fe66881b122825c8411779",
       "worktreeBranch": null,
       "worktreeStatus": "dirty",
       "category": "performance",
       "relativePath": "2026-07-18_task16-hot-text-align-fix-control-state.json",
-      "sourcePath": "C:\\Users\\Tyler\\AppData\\Local\\Temp\\smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55\\artifacts\\performance\\2026-07-18_task16-hot-text-align-fix-control-state.json",
+      "sourcePath": "C:\\Users\\the owner\\AppData\\Local\\Temp\\smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55\\artifacts\\performance\\2026-07-18_task16-hot-text-align-fix-control-state.json",
       "destinationPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task16-hot-text-align-fix-control-state.json",
       "sha256": "565237E36B787A535EA05C7B747097AFAA852425E9C889978C988247C58FEC87",
       "bytes": 391019,
@@ -22671,13 +22671,13 @@
       "verified": true
     },
     {
-      "worktreePath": "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
+      "worktreePath": "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55",
       "worktreeHead": "ecdf63d18127152714fe66881b122825c8411779",
       "worktreeBranch": null,
       "worktreeStatus": "dirty",
       "category": "performance",
       "relativePath": "2026-07-18_task16-known-good-state.json",
-      "sourcePath": "C:\\Users\\Tyler\\AppData\\Local\\Temp\\smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55\\artifacts\\performance\\2026-07-18_task16-known-good-state.json",
+      "sourcePath": "C:\\Users\\the owner\\AppData\\Local\\Temp\\smash64ds-task16-statehash-b175cffb1c29460db0b919896223da55\\artifacts\\performance\\2026-07-18_task16-known-good-state.json",
       "destinationPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-17_task9-state-phase2-fcmpeq.json",
       "sha256": "7EC98FCD359E97F2C21DB0B8E38CC3AC88D9A9BFD827F0C6B6521EC794577C78",
       "bytes": 390966,
@@ -22685,13 +22685,13 @@
       "verified": true
     },
     {
-      "worktreePath": "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc",
+      "worktreePath": "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc",
       "worktreeHead": "c9a5906d51032a14188fb98ef67e842908ae030a",
       "worktreeBranch": null,
       "worktreeStatus": "dirty",
       "category": "performance",
       "relativePath": "2026-07-18_task16-compare-c9-candidate-state.json",
-      "sourcePath": "C:\\Users\\Tyler\\AppData\\Local\\Temp\\smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc\\artifacts\\performance\\2026-07-18_task16-compare-c9-candidate-state.json",
+      "sourcePath": "C:\\Users\\the owner\\AppData\\Local\\Temp\\smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc\\artifacts\\performance\\2026-07-18_task16-compare-c9-candidate-state.json",
       "destinationPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task16-compare-c9-candidate-state.json",
       "sha256": "AB860614889CCB5209E8039E82BCD8CAD17BDAB4ED4F468D8C9FFE496E358A97",
       "bytes": 390972,
@@ -22699,13 +22699,13 @@
       "verified": true
     },
     {
-      "worktreePath": "C:\\Users/Tyler/AppData/Local/Temp/smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc",
+      "worktreePath": "C:\\Users/the owner/AppData/Local/Temp/smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc",
       "worktreeHead": "c9a5906d51032a14188fb98ef67e842908ae030a",
       "worktreeBranch": null,
       "worktreeStatus": "dirty",
       "category": "performance",
       "relativePath": "2026-07-18_task16-compare-c9-control-state.json",
-      "sourcePath": "C:\\Users\\Tyler\\AppData\\Local\\Temp\\smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc\\artifacts\\performance\\2026-07-18_task16-compare-c9-control-state.json",
+      "sourcePath": "C:\\Users\\the owner\\AppData\\Local\\Temp\\smash64ds-task16-statehash-c9a-a73b9b169db34003914e4a329b69c7bc\\artifacts\\performance\\2026-07-18_task16-compare-c9-control-state.json",
       "destinationPath": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-07-18_task16-compare-c9-control-state.json",
       "sha256": "07FEF8D5FC3A2CBC781E195CBFC80E02A901B67676592545245834866AB4906F",
       "bytes": 390968,

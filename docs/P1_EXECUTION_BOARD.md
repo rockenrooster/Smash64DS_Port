@@ -25,7 +25,7 @@ Laboratory profile-1 ROMs are evidence only and never replace this filename.
 ## Publish lane (2026-07-19)
 
 Tasks P1 through P4 are complete. The source audit's mandatory divergence stop was
-resolved by Tyler's selected closest-base-plus-reviewed-patch path. The retained
+resolved by the owner's selected closest-base-plus-reviewed-patch path. The retained
 P2 commits are `369b6ea0b26` (publish-safe generators), `84dc33dbf49`
 (`build.ps1`, pins, five-file patch), and this documentation checkpoint
 (verified manifest and restart state).
@@ -57,7 +57,7 @@ The one-commit staging tree is live at
 default and only branch `master`, commit `0199d8f665da1c319dddd7e66364b651d5f63f27`.
 Its remote tree exactly matches staging, contains 275 blobs, and has zero
 forbidden paths. The old README-only `main` text is archived before deletion.
-The development repo still has no remote. Full evidence and Tyler's review
+The development repo still has no remote. Full evidence and the owner's review
 checklist: `docs/publish/PUBLISH_LOG.md`.
 
 ## Hardware reality (2026-07-18)
@@ -95,7 +95,7 @@ The ARM-base Task 19 pair now confirms the update-only placement at the same
 | GX / GX-BRST | 10,000 immediate triangles, flush every 2,048 | 2,729,728 | 2,378,432 | 0.87 |
 | CARD (optional) | no safe media-independent run admitted | not run | not run | — |
 
-Retail column source: Tyler's device photo
+Retail column source: the owner's device photo
 `artifacts/visibility/2026-07-17_233353-8578811_task10-hardware-calibration_real_nds.jpg`
 (claude-read 2026-07-18). Two photo digits were disambiguated by physics, not
 guessed: ALU-ITCM must exceed the 16,777,216-bus-tick single-issue floor for
@@ -212,7 +212,7 @@ fallback with zero post-arm failures. Synchronized stage P50/P95 deltas are
 platforms are visible.
 
 DevFast, Boundary, focused fixtures, and three complete one-minute Results
-lifecycles pass. Tyler approved the visuals. Phase A is committed at `c08e8ee`.
+lifecycles pass. the owner approved the visuals. Phase A is committed at `c08e8ee`.
 
 Phase B's first standalone arm was rejected at the boot gate: arena
 `0x135000` / 27 failed allocations versus required `0x150000` / 0. Removing the
@@ -221,7 +221,7 @@ restores the exact full arena. Countdown and early captures then conserve 3,896
 of 6,664 whole-stage words (58.463%); even all 3,929 rigid words would be only
 58.959%. The 33 varying words are the 11 live camera matrix lanes at DObjs 0,
 40, and 54. Whispy timed out at the unchanged 30-second limit; no rerun or
-extension was made. Tyler explicitly accepted the measured 58.463% on
+extension was made. the owner explicitly accepted the measured 58.463% on
 2026-07-20, superseding the task-local 60% continuation threshold.
 
 Phase B captures the first admitted frame once, then replays the complete rigid
@@ -273,7 +273,7 @@ The WLP engagement instrument is in `src/nds/nds_platform.c` row 20 under
 
 ---
 
-## BGM-stall falsifier (2026-07-19) — device A/B pending Tyler
+## BGM-stall falsifier (2026-07-19) — device A/B pending the owner
 
 **Goal:** prove or clear the synchronous ARM9 BGM refill (`nds_audio_bgm.c:278`
 `fread` + `:289` `DC_FlushRange`, run inside the frame via
@@ -287,7 +287,7 @@ as the source of the retail 5-VBlank dips that read as ~12 FPS.
   house rule requires the histogram on every device A/B, never min FPS.
 - BGM refill-tick last/max (`gNdsAudioBgmRefillTicksLast/Max`, profile-1 only)
   rendered on row 22 as `BGM last/max`, with a `[OFF]` tag when the falsifier
-  ROM is running so Tyler's photo proves which ROM is which.
+  ROM is running so the owner's photo proves which ROM is which.
 
 **Falsifier (committed):**
 - New Makefile flag `NDS_BGM_FALSIFIER_OFF` (default 0, never set in a
@@ -306,7 +306,7 @@ as the source of the retail 5-VBlank dips that read as ~12 FPS.
   SHA-256 `91953C0CC8CCAA49F01C011FAF5C4FBCA9F6077849365D5AFBE156A3730088DF`.
   Hashes are distinct, confirming the flag changed the binary.
 
-**Device run (Tyler, TBD):** flash both ROMs, run the same heavy-combat minute
+**Device run (the owner, TBD):** flash both ROMs, run the same heavy-combat minute
 on each, photograph HUD rows 12-22. Note specifically whether 5-VBlank events
 recur at ~0.743 s cadence under A and whether they vanish under B.
 
@@ -440,12 +440,12 @@ changing playback. The 128,196-byte exact pack has only 2,876 bytes free; Mario
 Up-B/Down-B and Fox neutral-B/Up-B/Down-B remain fail-closed because their exact
 loop/pitch/fork/FX/rate representations do not fit. Even ID 34's smallest exact
 fused-fork form exceeds the cap by 15,560 bytes. Hit-sound correctness still
-requires Tyler's listen pass. Evidence:
+requires the owner's listen pass. Evidence:
 `artifacts/performance/2026-07-21_task38-fgm-audit.md`.
 
 Task 39 is complete. Its corrected-map Phase C uses the original color-animation
 state for hurt flash, source-derived OAM frames for hit sparks, and a flat
-transparent 2D shield with white shine. Tyler approved all three in ROM
+transparent 2D shield with white shine. the owner approved all three in ROM
 `8964A5C3...`; no visual row was replayed. The 111-entry census records the
 bounded natural sample, 22,528 OBJ-VRAM bytes used / 11,776 free, full
 1,282,048-byte arena, and zero Task-39 arena rejects. Published profile-0 ROM
@@ -456,8 +456,8 @@ passes DevFast plus Boundary. Evidence:
 Task 40 completes its source-backed animation bank and Phase-1 visual/load
 coverage checkpoint. All 195 non-null Mario and 209 non-null Fox table rows have
 asserted non-clear screenshots; the 9/10 remaining rows are decomp-authored
-nulls. Tyler approved the complete Mario strip, excluding missing sounds which
-remain Task 38/audio scope. Fox remains pending Tyler. The natural pass requests
+nulls. the owner approved the complete Mario strip, excluding missing sounds which
+remain Task 38/audio scope. Fox remains pending the owner. The natural pass requests
 21 Mario and 42 Fox motions, leaving 183/177 unrequested, with zero load-
 fallback or hard-seam flags.
 
@@ -469,7 +469,7 @@ sprite seam. Current ROM growth is 266,240 bytes; runtime still loads one motion
 into the existing heap and net reserve remains 166,672 bytes.
 
 The initial complete duration matrix predates the live-joint-bound fix and is
-not claimed green. Mario motion 203 passes 83/83 post-fix; Tyler requested no
+not claimed green. Mario motion 203 passes 83/83 post-fix; the owner requested no
 replay of known-good rows, so the coverage CSV labels the remaining numeric
 evidence provisional. Evidence:
 `artifacts/performance/2026-07-21_task40-fighter-animation-audit.md` and the
@@ -504,7 +504,7 @@ P95 changes +128, loop wall is unchanged, and synchronized pixels are exactly
 focused natural Results audio pass with zero unsafe/overrun/read failures and
 462,160 bytes reserve after the ring.
 
-Tyler reported that the sliced profile-1 ROM "audio sounds good," and retail
+the owner reported that the sliced profile-1 ROM "audio sounds good," and retail
 photos prove `BGM slices 180`, but the dedicated corrected pair rejects the
 performance mechanism. At the same `00:50` point, control VBI 2/3/4/5+ is
 `0/95/321/88` (N=504, 4+=81.15%, max=17); sliced is `0/74/336/90` (N=500,
@@ -689,7 +689,7 @@ The evidence-first batch removes exactly 7,929 files / 3,746,285,595 bytes:
 Task-21R, Task-22R, Task-28, and Task-29 lab directories, plus 1,348 files /
 3,046,878,778 bytes from `verifier-cost`, `verifier-temp`, and
 `emulator-logs`. The pre-delete Lean snapshot at
-`C:\Users\Tyler\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip`
+`C:\Users\the owner\Desktop\Snapshots\Smash64DS_Port_Lean_20260719_053053.zip`
 is the recovery surface. No worktree, branch, ref, Git object, log entry,
 permanent evidence file, canonical build, active hardware pair, current
 generated A/B, or user-owned file was removed.
@@ -795,7 +795,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | Down+A CPU-stall report | FIXED / source-exact shared clear + three runtime gates | Gameplay + QA | BattleShip ClearAll preserves reusable collider payload; the port shim incorrectly erased it before Fox's scripted one-tick-later Refresh. The shim now clears only `attack_state` plus `is_attack_active`, and the existing damage-common probe requires seeded damage 7 to survive. Human-P2 Fox completes 9 callbacks and exits to status 31 with logic/cpu/reads 8/0/12, 116,992 update ticks, and 205,744-byte reserve. Mario exits to status 26 with 8/8/12, 134,784 ticks, and 203,536-byte reserve. Both routes load their exact `0x303`/`0x272` source assets. CPU-on Current passes in 661.5 seconds with the two-ROM contract and mode-163 CPU setup/proc/target 1/33/33 | Keep `verify-battle-playable-down-air-stall.ps1` for both actors and the corrected payload-preservation assertion. Do not restore the compatibility shim's non-source field clearing |
 | Normal-play stage painter/depth order | FIXED / pixel + profile-2 pass | Renderer + QA | BattleShip layer modes classify 66 source-Z and 126 no-Z triangles; one full v16 step per no-Z triangle removes the grass/bush overlap, preserves 202 triangles, and reserves disjoint endpoint bands | Keep as correctness fix; final frame 438/501 captures and zero-collision trace are authoritative |
 | Pause-orbit geometry containment | FIXED / user confirmed | Renderer + QA | Clip-space near-plane containment removes screen-blocking triangles at the breaking orbit angles without changing normal-play profile-2 output | Keep focused angle gate; paused −33.6° is also the strongest Mario underside view |
-| Mario pant/underside visual | FIXED / user confirmed | Renderer + QA | Source root light preambles were missing; replay restores blue right pant and closed underside with unchanged 320-triangle census | Tyler accepted `20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png` on 2026-07-16 |
+| Mario pant/underside visual | FIXED / user confirmed | Renderer + QA | Source root light preambles were missing; replay restores blue right pant and closed underside with unchanged 320-triangle census | the owner accepted `20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png` on 2026-07-16 |
 | Natural Fox recovery | Pass | Gameplay | Current-ROM mode 163 used only external Mario input: Fox took 0→59 damage, selected BattleShip Recover for 40 frames at offstage x=2379.905, grounded on line 3 at x=1336.084, and took a later hit to 72 without KO/rebirth in 897 frames | Keep focused gate; reserve 202,256 and screenshot `20260716_fox-recovery-post-hit.png` |
 | Cut G M1 affine BG2, 5–35K ticks | Pass | Renderer | 1,856/1,856 ticks; exact frames 438/439 pass and publish | Keep canonical |
 | M2 Mario/Fox AOT, 170–250K ticks | Incremental compute KEEP at 385.3K | Renderer | Current ledger-off Mode 8 is 385,312/388,480 after exact light-state restoration. The raw texture-class split moves the synchronized current-build combined fighter 386,624/389,824 → 385,312/388,480, draw 1,011,648/1,014,976 → 1,009,824/1,013,120, and active 1,015,680/1,018,880 → 1,014,048/1,017,088. The corpus proves 43 untextured and 11 textured raw calls, so the untextured callee removes 172 main-RAM stack word transfers per frame. Exact 70/686, 60/320/306/29/0/0, all sampled non-timing fields, and 0/49,152 changed pixels remain | Keep the scalar reset, raw-corner representation, and two raw texture-class callees. ITCM is 28,052/32,768; full inlining, tail dispatch, and shared camera hoist remain rejected. The 170–250K milestone is still red and directional |
@@ -813,7 +813,7 @@ owns current-truth docs, shared-file arbitration, commits, and publication.
 | M4 zero gameplay conversion/preparation | PASS / exact complete lifecycle | Renderer | The generated corpus now includes naturally observed Whispy mouth asset 152 and late Fox material asset 313: 24 keys, 23 outputs, 132,096 payload bytes, and 136,192 prepared bytes in VRAM A+B. The checker reports hits/outputs 24/23, classified/explicit misses 1,344/3, and six invalid-key falsifiers. The refreshed one-minute lifecycle has all ten post-GO conversion/upload/fallback/fence counts zero and one teardown | Keep the exact corpus and fail-closed key checks. No primary-image approximation remains; reserve is requalified after the 5,120-byte payload increase |
 | Lower HUD: FPS, timer, labels, stock, damage | Pass | Integration | User approved; lifecycle and Results clear hook pass | Keep |
 | Countdown/3-2-1/GO top presentation | FIXED / full runtime gate pass | Renderer + QA | The source-backed point sample changes 49 atlas pixels only inside the 12x9 `ShadowGo`; all five GO frames retain its 70-pixel count plus 10/10/10 draws/queued/emitted, 57,344 texture bytes, 608 palette bytes, and zero hot conversion/upload. The large-GO mismatch was a stale crop lock after the source-light repair: only 125/26,400 pixels changed, all inside Mario's 22x14 area, while the GO RGB555 payload remained `05330f47...`. The rebuilt full verifier passes with crop `d968b0cc...`, GO `3 OBJ + 10 quads`, and 31,168 OBJ bytes | Keep both accepted crop locks and the source-derived DS assets; no GO source change was warranted |
-| Dream Land BGM | Pass | Audio | Tyler reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |
+| Dream Land BGM | Pass | Audio | the owner reports the stage theme sounds normal. The exact source-derived initial 65,536-byte DS ring has peak 9,928 / RMS 2,283.623; the natural public-ROM recovery route observes the live BGM channel bit in Calico's ARM7-shared mask with clean 44.1 KB/s streaming and zero I/O/unsafe/overrun faults | Keep; repeat only in final lifecycle qualification |
 | Required FGM, attack/hit sounds, and Mario/Fox voices | Exact pack PASS / residual cue debt explicit | Audio + Gameplay | The 128,196-byte / 27-entry pack covers 21 exact runtime IDs plus six exact primary common-contact samples. Exact Mario down-bounce 303 and Fox Smash2/Smash3 373/374 improve the focused deterministic window from 22+19 to 26+15 supported/unsupported, with phase mask `0x1f`, channel mask `0xe`, max three live channels, 66 envelope steps, and 183,056-byte reserve | Keep exact retirement, pack, static/runtime fixtures, and ear-test distinction. Pitch/FX/loop/fork/composite cues remain fail-closed; never substitute a wrong sample |
 | Winner and Results BGM | Pass | Audio | Natural Fox winner 16 → Results 22; errors/overrun/cleanup zero, reserve 172,024 | Keep gate |
 | Stable reserve / no corruption | PASS / current Task 26 artifact | QA | The refreshed profile-0 lifecycle reaches Results once with 232,208 arena headroom and 65,536 resident audio bytes: 166,672 net versus the 131,072-byte floor after the exact 5,120-byte static-texture payload increase. Exact 4,084/2,042 pacing and teardown pass; stale/safety/eviction counters stay zero | Preserve the floor and recheck after every representation or resident-asset change |

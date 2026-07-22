@@ -18137,7 +18137,7 @@ does not assert.
 
 ## 2026-07-08 - Canonical HW Pixel-Proof Gate
 
-- Reproduced Tyler's playtest symptom with screenshots: both
+- Reproduced the owner's playtest symptom with screenshots: both
   `smash64ds-battle-playable-canonical-hwtri.nds` and the shipped
   `smash64ds-battle-playable-hwtri.nds` initially showed only the top-screen
   clear color. A direct DS sentinel triangle proved the screen routing and 3D
@@ -18211,7 +18211,7 @@ does not assert.
   `verify-boundary.ps1 -DelaySeconds 3`, `build-verify-profile.ps1 -Profile
   RegressionCore`, and
   `verify-all.ps1 -Profile RegressionCore -NoBuild -DelaySeconds 3`.
-  No full Regression sweep was run in-session; Tyler owns the daily overnight
+  No full Regression sweep was run in-session; the owner owns the daily overnight
   sweep.
 
 ## 2026-07-09 - Canonical HW per-tile and input checkpoint
@@ -18508,7 +18508,7 @@ does not assert.
   `verify-dev-fast -Build`, Boundary, and RegressionCore without expectation
   changes. The detached core prebuild took `523.13s`, its stamp validated in
   `0.37s`, and all six no-build entries passed. Full Regression remains in
-  Tyler's nightly queue.
+  the owner's nightly queue.
 
 ## 2026-07-10 - Original VS battle timer/end lifecycle
 
@@ -18590,7 +18590,7 @@ does not assert.
   realtime/pixels, dev-fast (`564.9s`), Boundary (`498.8s`), docs,
   architecture, registry, and detached seven-target RegressionCore prebuild
   (`1592.139s`, stamp `0.79s`) plus no-build run (`307.7s`). Full Regression
-  remains Tyler's once-daily overnight action.
+  remains the owner's once-daily overnight action.
 
 ## 2026-07-10 - Canonical projected-depth unit repair
 
@@ -18907,7 +18907,7 @@ verifier expectations: none.
 - Fixtures cover DXT=1024 row widths for CI4/CI8/RGBA16/RGBA32 and native/O2R
   Fox-tail row stepping. Focused all-DL HW passed `320/306` with zero rejects;
   stage-inclusive HW passed `192+626`; canonical realtime retained zero oracle
-  and texture rejects. Tyler visually accepted the corrected tail in
+  and texture rejects. the owner visually accepted the corrected tail in
   `artifacts/visibility/2026-07-11_fox-tail-dxt-hudoff-candidate.png`.
 - The source-start camera had made the old texture-detail crop measure trunk/
   sky. It now targets the actual flowering left bush with the unchanged 50%
@@ -18952,10 +18952,10 @@ Coverage-reduced verifier expectations: none.
   Final pond detail is `46.053%/23px`, versus the archived solid-white frame's
   `27.997%/105px`. Capture:
   `artifacts/visibility/2026-07-11_dream-land-texel1-materials-hudoff-final.png`.
-  Tyler visually accepted the water; foreground fence occlusion by the
+  the owner visually accepted the water; foreground fence occlusion by the
   floor/path is the next confirmed stage-order target.
 - Focused all-DL/stage/canonical, DevFast, Boundary, stamped RegressionCore,
-  the 184-frame cache run, and shipped parity passed. Tyler explicitly chose
+  the 184-frame cache run, and shipped parity passed. the owner explicitly chose
   faster iteration over the full 105-output Regression prebuild; it was stopped
   before completion and its four no-build shards were not run.
 
@@ -18978,13 +18978,13 @@ regression that the broader temporal ceiling could not detect.
   traversal and implements the source ST replacement in renderer/diagnostics.
 - All five original flower groups are visible. The ten restored textured
   triangles raise canonical stage output from `192` to `202`; there is no new
-  geometry, asset, MObj, or gameplay rewrite. Tyler accepted both flowers and
+  geometry, asset, MObj, or gameplay rewrite. the owner accepted both flowers and
   the foreground fences in the canonical capture.
 - GBI fixtures, focused `battle_playable`, DevFast, and Boundary passed with
   zero texture rejects and oracle `2403/0/0`. A fresh RegressionCore prebuild
   stamp passed. Optional no-build shards exposed a moving fixed fighter crop
   and an unsigned-to-Int32 verifier parse overflow, not ROM marker failures.
-  Full Regression was intentionally skipped for faster iteration per Tyler.
+  Full Regression was intentionally skipped for faster iteration per the owner.
 
 Source-corrected verifier expectations: stage HW output gains ten original
 flower triangles (`192 -> 202`) and fixtures require source-Z draws not to
@@ -19027,7 +19027,7 @@ full Regression was not run by explicit user choice.
   rejects, and oracle `2403/0/0`; its `320.024s` time was one-time recompilation
   in dedicated build dirs after Makefile/config changes. The final runner-slot
   fast capture passed in `52s`. Full Regression was intentionally skipped for
-  Tyler's faster iteration cadence.
+  the owner's faster iteration cadence.
 - Canonical still reports `8/8 x0.1` pacing, about `0.8fps`; renderer caching
   remains P1 debt. Accepted fast-loop capture:
   `artifacts/visibility/2026-07-11_canonical_fast_140330-5991418-p17400.png`.
@@ -19068,7 +19068,7 @@ default `50%/35%` gate and both `16px/60px` flat-run caps.
   stage/fighter animation remain live. Same-state consecutive-triangle batching
   is the next renderer-state candidate; no composed stage-frame cache is safe.
 - GBI fixtures, DevFast (`50.4s`), all four P1Gate legs (`296.4s`), and Boundary
-  (`75.7s`) passed. Full Regression was intentionally skipped for Tyler's
+  (`75.7s`) passed. Full Regression was intentionally skipped for the owner's
   faster P1 iteration cadence.
 
 Source-corrected verifier expectations: none. Coverage-reduced verifier
@@ -19108,7 +19108,7 @@ fixtures, oracle, depth, and pixel contracts remain unchanged.
   `147F8EAE0148F1FABA15F6F48CF197DE7120BD7578042946B227BDBA78164679`.
   All four compact P1 legs pass in final state; split combat/lifecycle reruns
   took `18.2s/89.1s`, and fresh Boundary passed in `202.7s`. Full Regression
-  remains intentionally skipped for Tyler's faster P1 iteration request.
+  remains intentionally skipped for the owner's faster P1 iteration request.
 - Two P1Gate visual runs reached every runtime/cache contract but valid live
   camera samples put fixed shrub/stage/pond crops at `35.128%/24.837%/22.953%`.
   Visual inspection confirmed their detail. FastIteration now uses variation
@@ -19144,7 +19144,7 @@ the generic/SW SObj path and historical profiles remain available.
   `artifacts/visibility/2026-07-11_canonical_fast_154544-4627518-p18756.png`;
   pond, flowers, foreground fence ordering, fighters, oracle, depth, GX RAM,
   and canonical/shipped byte parity pass. P1Gate passes in `278.9s` and fresh
-  Boundary in `152.2s`; Full Regression remains skipped for Tyler's faster P1
+  Boundary in `152.2s`; Full Regression remains skipped for the owner's faster P1
   cadence.
 
 Source-corrected verifier expectations: none. Coverage-reduced verifier
@@ -19179,7 +19179,7 @@ removing historical diagnostics.
   The accepted capture is
   `artifacts/visibility/2026-07-11_canonical_fast_162528-9583521-p27704.png`;
   pond, flowers, foreground fence ordering, and fighters remain intact. Full
-  Regression was intentionally skipped for Tyler's faster P1 cadence.
+  Regression was intentionally skipped for the owner's faster P1 cadence.
 
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: none; the lookup is exact against the prior pixel oracle and the
@@ -19200,7 +19200,7 @@ generic path remains available.
   pixel/depth contracts. Present falls `20,285,888 -> 19,725,696` (`-2.8%`),
   draw `20,014,528 -> 19,412,800` (`-3.0%`), and DL
   `14,508,800 -> 13,881,152` (`-4.3%`); pacing still rounds to `1.6fps`.
-- Reconciled Tyler's four 17:00 optimization reviews without modifying them.
+- Reconciled the owner's four 17:00 optimization reviews without modifying them.
   A broader dirty-state light cache measured slightly worse and was removed.
   The review-backed next architectural sequence is performance/forensic profile
   separation, a corrected hybrid raw-GX matrix proof, then exact final-resolution
@@ -19209,7 +19209,7 @@ generic path remains available.
   Canonical/shipped parity is `11,581,440` bytes at SHA-256
   `50FBD84612C47E94122D8C54396D0C5C0F47F2939D808107C7233963752E1CB3`.
   Accepted capture: `artifacts/visibility/2026-07-11_canonical_fast_170758-1981780-p35312.png`.
-  Full Regression remains skipped for Tyler's faster P1 cadence.
+  Full Regression remains skipped for the owner's faster P1 cadence.
 
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: none; the normalization result and all integrated gates remain
@@ -19217,7 +19217,7 @@ unchanged while repeated command-local work is removed.
 
 ## 2026-07-11 - Compile-time renderer performance and forensic profiles
 
-- Implemented the first architectural step from Tyler's optimization reviews:
+- Implemented the first architectural step from the owner's optimization reviews:
   one source renderer now has compile-time profiles instead of paying full
   proof cost in the shipped ROM. Profile 0 is canonical/shipped, profile 1 adds
   coarse phase timers, and profile 2 retains the full pixel/oracle, texture-
@@ -19247,7 +19247,7 @@ unchanged while repeated command-local work is removed.
   The accepted capture is
   `artifacts/visibility/2026-07-11_canonical_fast_174928-5579684-p21988.png`;
   pond, five flower groups, foreground fence ordering, and fighters pass. Full
-  Regression remains intentionally skipped for Tyler's faster P1 cadence.
+  Regression remains intentionally skipped for the owner's faster P1 cadence.
 
 Source-corrected verifier expectations: none. Coverage-reduced verifier
 expectations: profiles 0/1 intentionally zero detailed renderer proofs; the
@@ -19289,7 +19289,7 @@ same-source profile-2 configuration retains the complete assertions.
   `6954F4316079BBBF555873DEBA3588DC4023D6AD2BC2A58B7A45CD59EBEDDD09`.
   Accepted capture:
   `artifacts/visibility/2026-07-11_canonical_fast_183846-0107333-p39400.png`.
-  Full Regression remains skipped for Tyler's faster P1 cadence.
+  Full Regression remains skipped for the owner's faster P1 cadence.
 
 Source-corrected verifier expectations: none; production output remains
 projected. Coverage-reduced verifier expectations: none; profiles 0/1 retain
@@ -19378,7 +19378,7 @@ hardware and CPU oracles.
   Canonical visibility/parity and the separate forensic run pass; flowers,
   fence, pond, fighters,
   and depth remain unchanged. Fresh P1Gate/Boundary pass in `213.9s/143.6s`.
-  Full Regression remains intentionally skipped for Tyler's fast P1 cadence.
+  Full Regression remains intentionally skipped for the owner's fast P1 cadence.
   Canonical/shipped SHA-256 is
   `10741FC4C6497325023006F8ED4C117428E65B93D254CBDEFBC074D05083543C`.
   Accepted capture:
@@ -19425,7 +19425,7 @@ the persistent RSP slots. Coverage-reduced verifier expectations: none; profile
   accepted capture is
   `artifacts/visibility/2026-07-11_canonical_fast_205024-5917438-p10196.png`.
 - Fresh P1Gate passes all four legs in `281.4s`; Boundary passes all three in
-  `167.0s`. Full Regression remains intentionally skipped for Tyler's fast P1
+  `167.0s`. Full Regression remains intentionally skipped for the owner's fast P1
   cadence. Canonical/shipped parity remains 11,581,440 bytes at the hash above.
 
 Source-corrected verifier expectations: none; this is an exact composition of
@@ -19505,7 +19505,7 @@ launches still execute the same ROM and capture restores local preferences.
   Flowers, foreground fence ordering, pond, fighters, and dual-screen layout
   remain intact. Fresh P1Gate/Boundary pass in `214.8s/140.3s`; the post-fix
   forensic oracle also passes. Full Regression remains intentionally skipped
-  for Tyler's fast P1 cadence.
+  for the owner's fast P1 cadence.
 
 Source-corrected verifier expectations: none; all reuse is scoped to unchanged
 source state within one command run or presented frame. Coverage-reduced
@@ -19637,7 +19637,7 @@ interpreter, eager transform oracle, and dynamic validation paths.
   `353F5B98D230808CD0EACB38037A99462405DF3CB6EE53AEA710A0496F70740A`.
 - GBI/static checks, DevFast, forensic, P1Gate, and all three Boundary entries
   pass in `2.2s/43.7s/16.8s/198.2s/106.2s`. Full/Legacy Regression remains
-  intentionally skipped for Tyler's fast P1 iteration cadence.
+  intentionally skipped for the owner's fast P1 iteration cadence.
 
 Source-corrected verifier expectations: none; the reused object preserves the
 same explicitly enumerated source state and resets every prior per-list field.
@@ -20289,7 +20289,7 @@ remains skipped for the requested fast iteration cadence.
   `161/162` pass. P1Gate and Boundary mode `163` repeatably stop at the
   9,000-tick natural-motion assertion after the preceding source floor/edge
   activation, with no affine or vertex oracle mismatch. Full Regression remains
-  intentionally skipped for Tyler's fast P1 iteration cadence.
+  intentionally skipped for the owner's fast P1 iteration cadence.
 
 ## 2026-07-12 - Restored battle-playable natural collision choreography
 
@@ -20333,7 +20333,7 @@ remains skipped for the requested fast iteration cadence.
   visibility, detail, and paired-motion gates.
 - Docs/architecture/registry/GBI/dry-run checks, focused fast/realtime forensic,
   DevFast, P1Gate, and Boundary `161/162/163` pass. Full Regression remains
-  intentionally skipped for Tyler's requested fast iteration. Next renderer
+  intentionally skipped for the owner's requested fast iteration. Next renderer
   work is fused direct stage-owner records/live binding, not standalone no-Z.
 
 ## 2026-07-13 - Direct compact animated-water rows
@@ -20366,7 +20366,7 @@ remains skipped for the requested fast iteration cadence.
 - Capture `2026-07-13_canonical_fast_021218-4461378-p24268.png` passes paired
   visibility/detail/motion and exact ROM parity. Static checks, forensic,
   DevFast, P1Gate, and Boundary `161/162/163` pass; Full Regression remains
-  intentionally skipped for Tyler's requested fast iteration.
+  intentionally skipped for the owner's requested fast iteration.
 
 ## 2026-07-13 - Exact final-wallpaper recurrence and packed pairs
 
@@ -20391,7 +20391,7 @@ remains skipped for the requested fast iteration cadence.
   `F596FE642FA176946E06D318293BC3543FA1A5E4C93D3D7B7A176F6406513163`.
 - Capture `2026-07-13_canonical_fast_041102-8008285-p44652.png`, static checks,
   forensic, DevFast, P1Gate, and Boundary `161/162/163` pass. Full Regression
-  remains intentionally skipped for Tyler's requested fast iteration.
+  remains intentionally skipped for the owner's requested fast iteration.
 ## 2026-07-13 - Exact incremental Dream Land BG2 maps and dirty-row DMA
 
 - Kept imported `grWallpaperCalcPersp` and the accepted destination-driven
@@ -20438,7 +20438,7 @@ remains skipped for the requested fast iteration cadence.
   visibility/detail/motion.
 - Focused mode 163, DevFast, Boundary `161/162/163`, GBI fixtures, docs,
   architecture, and registry checks pass. An earlier equivalent-path P1Gate
-  also passes; Full Regression remains intentionally skipped for Tyler's
+  also passes; Full Regression remains intentionally skipped for the owner's
   requested fast iteration.
 
 ## 2026-07-13 - Restored Mario Super Jump Punch root physics and map modes
@@ -20590,11 +20590,11 @@ remains skipped for the requested fast iteration cadence.
 
 - Routed FPS, timer, Mario/Fox labels, stock, and damage to change-driven lower
   text while retaining countdown/3-2-1/GO on the top screen. The lower state is
-  battle-only and clears at VS Results. Tyler approved the presentation.
+  battle-only and clears at VS Results. the owner approved the presentation.
 - Same-ROM HUD A/B/A at frames 600..607 removed steady foreground work
   `788,160/788,288 -> 0/0`, reduced draw median `3,044,672 -> 2,256,192`
   (25.90%), present 17.57%, and loop 17.50%; the disabled control repeated.
-- Tyler manually confirmed Mario can damage Fox. Continuous automated post-GO
+- the owner manually confirmed Mario can damage Fox. Continuous automated post-GO
   natural-hit observation remains coverage debt.
 - Codex single-run melonDS now reserves `4333/4334`, leaving `3333/3334` for a
   user-opened manual instance; runner-slot mappings remain isolated.
@@ -20984,16 +20984,16 @@ remains skipped for the requested fast iteration cadence.
   source sample 0, repeats exact source range `[1,28215)`, bakes BattleShip's
   quadratic gain law and 5.75 ms ramps, then carries the silent tail through the
   natural 6.9 s stop. Runtime loop/envelope commands are gone. The acoustic
-  oracle and natural single-handle timing gate pass, and Tyler confirmed the
+  oracle and natural single-handle timing gate pass, and the owner confirmed the
   opening no longer sounds doubled, seamful, or too long.
 - Added clip-space near-plane containment before the CPU perspective divide.
   Previously breaking pause-orbit angles no longer fling saturated triangles
   across the screen, while normal profile-2 frames retain their exact geometry.
-  Tyler confirmed the pause-orbit repair.
+  the owner confirmed the pause-orbit repair.
 - Replayed the source fighter root light preambles omitted by the generated
   native IR. The exact Mario 320-triangle census is unchanged; the paused
   −33.6° candidate shows both pant legs blue and a closed underside. Final
-  visual acceptance remains with Tyler, so this item is not yet marked FIXED.
+  visual acceptance remains with the owner, so this item is not yet marked FIXED.
 
 ## 2026-07-16 - Stopped Jump A/C at measured renderer boundaries
 
@@ -21074,7 +21074,7 @@ remains skipped for the requested fast iteration cadence.
 - Evidence: `scripts/check-audio-fgm-phase-pack.ps1`,
   `scripts/verify-battle-playable-fox-recovery.ps1`, and
   `artifacts/visibility/2026-07-16_055015-5167574_fox-recovery.png`. Acoustic
-  completion still requires Tyler's audible fighter-voice check.
+  completion still requires the owner's audible fighter-voice check.
 
 ## 2026-07-16 - Natural Dream Land BGM channel/acoustic proof
 
@@ -21090,7 +21090,7 @@ remains skipped for the requested fast iteration cadence.
   `0x02FFFF8C`; the non-blocking shared-state observation contained the live BGM
   channel bit. This closes the missing hardware-channel proof without adding a
   production counter, mixer, synthetic trigger, or ROM change.
-- Tyler had already reported the Dream Land theme sounds normal. Evidence is
+- the owner had already reported the Dream Land theme sounds normal. Evidence is
   `scripts/check-audio-bgm-derived-assets.ps1`,
   `scripts/verify-battle-playable-fox-recovery.ps1`, and
   `artifacts/visibility/2026-07-16_055935-2694387_fox-recovery.png`.
@@ -21112,7 +21112,7 @@ remains skipped for the requested fast iteration cadence.
 - Four eight-frame CPU-on windows on one exact ROM measured active P95 between
   1.415M and 1.618M ticks, versus roughly 560K for one VBlank.
 - The exhausted Jump A/C bounds cannot close that deficit by July 19. Requested
-  approval for stable 20 FPS while keeping 60 FPS explicitly unmet until Tyler
+  approval for stable 20 FPS while keeping 60 FPS explicitly unmet until the owner
   decides; correctness work continues without speculative optimization sweeps.
 
 ## 2026-07-16 - Closed the natural Mario Fireball terminal gate
@@ -21152,14 +21152,14 @@ remains skipped for the requested fast iteration cadence.
 
 ## 2026-07-16 - Accepted Mario pant and underside repair
 
-- Tyler accepted the paused −33.6° candidate
+- the owner accepted the paused −33.6° candidate
   `artifacts/visibility/20260716-034036_slot3_p10612_mode163_camera_pause_minus33p6.png`.
   The right pant leg is blue and the underside reads closed; the source root-light
   replay remains the kept fix with Mario's 320-triangle census unchanged.
 
 ## 2026-07-16 - Kept the M3 dense preparation reduction
 
-- Tyler removed the all-or-nothing intermediate renderer keep gates. The
+- the owner removed the all-or-nothing intermediate renderer keep gates. The
   restored 40-byte stack bitset prepares each of 312 compatible stage dense
   vertices once instead of repeating 294 attribute preparations and 162
   transforms. Same-ROM stage time falls 619,744 → 577,440 ticks with exact
@@ -21410,7 +21410,7 @@ remains skipped for the requested fast iteration cadence.
   frame-607 pixels and the 44,100 B/s stream contract.
 - DevFast, Boundary, the full one-minute match, and focused natural Results
   audio pass with zero read/unsafe/overrun/cleanup failures. Retail engagement
-  and Tyler's track-start/loop-seam listen check remain before KEEP.
+  and the owner's track-start/loop-seam listen check remain before KEEP.
 
 ## 2026-07-20 - Task 31 stopped at the coroutine census
 
@@ -21436,7 +21436,7 @@ remains skipped for the requested fast iteration cadence.
   independently KEEP/promote or remove the list.
 - Focused GBI/placement checks, DevFast, and Boundary pass with the published
   default still off.
-- Recorded Tyler's report that the Task-30 sliced profile-1 audio sounds good.
+- Recorded the owner's report that the Task-30 sliced profile-1 audio sounds good.
 
 ## 2026-07-20 - Promoted Task 32 from retail pacing evidence
 
@@ -21484,7 +21484,7 @@ remains skipped for the requested fast iteration cadence.
 
 ## 2026-07-20 - Reverted Task 30 BGM refill slicing on retail pacing
 
-- Tyler ran the corrected whole-half and sliced ROMs once each at the same
+- the owner ran the corrected whole-half and sliced ROMs once each at the same
   `00:50` match point. The candidate engaged (`BGM slices 180`) and retained
   the prior listen-quality pass.
 - Control VBI 2/3/4/5+ is `0/95/321/88` (N=504, 4+=81.15%, max=17); sliced is
@@ -21501,7 +21501,7 @@ remains skipped for the requested fast iteration cadence.
   and exported it through the existing Boundary audio marker path.
 - Audited Mario/Fox specials and common hits against source UCD/articulation
   constraints. The 128,196-byte pack has 2,876 bytes free; missing exact cues
-  do not fit safely, and primary-only hit forks remain Tyler-listen debt.
+  do not fit safely, and primary-only hit forks remain the owner-listen debt.
 - The focused fixture and marker pass, but both final verifier entries stop in
   the pre-existing Task-36 mode-2 water assertion before the one-minute route;
   recorded the exact `RENDER_TEXEL1=2,2,0,...` blocker instead of claiming green.
@@ -21511,7 +21511,7 @@ remains skipped for the requested fast iteration cadence.
 - Proved the live weak shield symbol already routes to the DS shield template,
   contradicting the planner's generic-material-only map.
 - Obeyed the stop rule before counters or visual changes; the corrected owner
-  map and Tyler-marked contact sheet are the restart gate.
+  map and the owner-marked contact sheet are the restart gate.
 
 ## 2026-07-21 - Task 40 completed mandatory Phase 0
 
@@ -21524,7 +21524,7 @@ remains skipped for the requested fast iteration cadence.
 ## 2026-07-21 - Task 40 Phase 1 visual/load checkpoint
 
 - Completed the source-backed Mario/Fox animation bank and captured all 195
-  non-null Mario plus 209 non-null Fox motions. Tyler approved Mario; Fox is
+  non-null Mario plus 209 non-null Fox motions. the owner approved Mario; Fox is
   pending review. The natural match requests 21/42 unique motions with zero
   load fallback or hard-seam flags.
 - Fixed the hang at Fox motion 198 by classifying the four appear/Arwing assets
@@ -21538,7 +21538,7 @@ remains skipped for the requested fast iteration cadence.
 ## 2026-07-21 - Task 39 visual-effects completion
 
 - Added the source-timed fighter hurt flash, source-derived OAM hit sparks, and
-  flat translucent shield disc with the approved white shine. Tyler approved
+  flat translucent shield disc with the approved white shine. the owner approved
   all three in the same `8964A5C3...` ROM; no accepted row was replayed.
 - The profile-1 census inventories 111 entry points and reports 22,528 OBJ-VRAM
   bytes used, 11,776 free, the full arena, and zero Task-39 arena rejects.

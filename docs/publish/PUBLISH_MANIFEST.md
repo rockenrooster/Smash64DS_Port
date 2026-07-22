@@ -12,7 +12,7 @@ Machine-readable companion: `docs/publish/publish_manifest.json`
 
 ## Result
 
-TASK P2 is verified. Tyler selected the closest-upstream-base plus reviewed
+TASK P2 is verified. the owner selected the closest-upstream-base plus reviewed
 source-patch option. `DECOMP_PIN.txt` now pins the BattleShip shell, its
 libultraship and Torch submodules, VetriTheRetri's closest decomp base, the five
 DS-specific source identities, the canonical ROM identity, and the reference DS

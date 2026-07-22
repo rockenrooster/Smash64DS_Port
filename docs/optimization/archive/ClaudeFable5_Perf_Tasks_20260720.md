@@ -26,11 +26,11 @@ House rules that apply to EVERY task below (do not restate per task, just obey):
 - Time-box open-ended debugging to ~10 emulator runs or ~1 hour; then checkpoint to a WIP
   branch and report honestly. Never leave the session with uncommitted verified work.
 - You cannot hear audio and you cannot see the screen. Audio-quality gates are "flag for
-  Tyler listen check". Rendered-output gates need `capture-melonds.ps1` screenshots with a
+  the owner listen check". Rendered-output gates need `capture-melonds.ps1` screenshots with a
   non-clear-color pixel assertion, not submission counters.
 
 Note for Tasks 30/33: docs/HANDOFF.md says "Do not start a BGM fix". That line was about
-chasing BGM as the *device dip source* (device-cleared, 503/503 histogram). Tyler has now
+chasing BGM as the *device dip source* (device-cleared, 503/503 histogram). the owner has now
 explicitly requested BGM *spike smoothing* (2026-07-20). Update the HANDOFF line to say:
 "BGM cleared as dip source; spike-smoothing (Task 30) authorized 2026-07-20."
 
@@ -87,7 +87,7 @@ single frame pays more than ~75K.
   → time-up → results).
 - audioUpdateShell P95 in the captured window drops accordingly; UPD/DRW buckets
   unchanged (this must not touch them).
-- Flag for Tyler: one listen check on device or melonDS (you cannot hear); loop seam and
+- Flag for the owner: one listen check on device or melonDS (you cannot hear); loop seam and
   track start must sound unchanged.
 
 **Stop rule.** If slicing ever trips the unsafe-write or overrun counters in soak, revert
@@ -159,7 +159,7 @@ fallback would show 0x02xxxxxx below 0x02FF0000).
   the referee here (no cache/TCM fidelity). Record it anyway.
 - DEVICE A/B, one session, two ROMs (flag on/off), same scripted scenario: histogram +
   typed UPD HUD row photos. This is the decisive gate. Prepare both ROMs and a one-line
-  flash/run checklist for Tyler.
+  flash/run checklist for the owner.
 
 **Stop rule.** Census shows multiple big coroutines, or fit check fails, or any canary
 trip in soak → checkpoint, report, stop. Do not widen scope to other stacks.
@@ -205,7 +205,7 @@ treatment. Same axis, same mechanism, device-refereed.
 
 **Constraints.** Pure placement task: zero code edits inside decomp-imported functions,
 no ITCM changes, no Thumb conversions (Task 12's blanket-Thumb failure is graveyard).
-If Tyler is flashing Task 31's A/B the same day, hand him ONE bundle with all four ROMs
+If the owner is flashing Task 31's A/B the same day, hand him ONE bundle with all four ROMs
 and an ordered checklist — one device session, not two.
 
 ---
@@ -213,7 +213,7 @@ and an ordered checklist — one device session, not two.
 ## TASK 33 — DEFERRED: ADPCM BGM (only if audio still shows after Task 30)
 
 **Gate to even start:** Task 30 shipped AND a fresh profile-1 capture still shows
-audioUpdateShell P95 > ~40K, or Tyler complains about the match-start preload hitch.
+audioUpdateShell P95 > ~40K, or the owner complains about the match-start preload hitch.
 Otherwise skip — do not run this task just because it is written down.
 
 **Why 4×.** BGM is PCM16 mono 22,050 Hz (`SoundFormat_16Bit`, nds_audio_bgm.c:420),
@@ -242,11 +242,11 @@ streaming is therefore presumed broken until proven otherwise.
   the refill disappears into noise. Match-start preload also shrinks 4×.
 **Approach B (bounded experiment only, optional):** one throwaway harness probe that
 plays a hardware-ADPCM looping ring with live rewrites and checks for wrap glitches —
-Tyler listen check required (you cannot hear). Only if A's decode cost measures worse
+the owner listen check required (you cannot hear). Only if A's decode cost measures worse
 than expected. Do not ship B without that proof.
 
 **Gates.** verify chain green; full-match soak zero read-fail/overrun; profile-1 capture
-shows refill slice ticks at noise level; loop seam flagged for Tyler listen check;
+shows refill slice ticks at noise level; loop seam flagged for the owner listen check;
 byte-identity note: this CHANGES the generated BGM asset — regenerate via the pinned
 script, update the asset-identity notes the publish pipeline relies on (DECOMP_PIN /
 identity report expectations) in the same commit, or the public build.ps1 identity gate

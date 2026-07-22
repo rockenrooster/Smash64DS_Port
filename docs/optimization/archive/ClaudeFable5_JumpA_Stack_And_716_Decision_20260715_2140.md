@@ -53,7 +53,7 @@ CUT 2 — fixed-point no-Z projection (the dominant stage lever).
   source-Z triangle, nds_renderer.c:10417-10419, :11368). The synthetic no-Z
   painter counter semantics must not change.
 - Gate: profile-2 oracle exact OR, if fixed-point drifts sub-pixel, publish max
-  per-vertex deviation and hold for Tyler's capture sign-off (pixel goldens are
+  per-vertex deviation and hold for the owner's capture sign-off (pixel goldens are
   his call). Same-ROM A/B/A P50 delta in the ledger. Expected: this is where the
   large stage saving is; target this cut alone >=150K.
 
@@ -99,7 +99,7 @@ writing, before the 7/17 freeze. Do NOT silently redefine P1.
        this at ~half a day before the 7/17 freeze;
    (c) stable capped ~20 FPS "playable preview" — if the stage will not crack to
        the ~400K locked-30 needs.
-5. Recommend one option with reasoning; Tyler makes the final call. Whatever is
+5. Recommend one option with reasoning; the owner makes the final call. Whatever is
    chosen, restore the strict pacing assertion for that target as default-hard in
    the canonical verifier in the SAME change. Append the decision to the board's
    Dated Gates (July 16) and the ledger.
@@ -148,7 +148,7 @@ CUT 1 — fighter local-matrix construction (measured ~72,896 ticks).
   rather than float. This is display math (the RSP sees the fixed result anyway)
   — sub-LSB drift is acceptable if gated.
 - Gate: profile-2 matrix oracle exact, OR publish max per-element deviation vs
-  the float path and hold for Tyler capture sign-off. Same-ROM A/B/A P50 delta
+  the float path and hold for the owner capture sign-off. Same-ROM A/B/A P50 delta
   in the ledger. Bank if >=40K exact. Do not regress the fixed-W quantization the
   RSP contract depends on.
 
@@ -174,7 +174,7 @@ falsifier then 32/128 for kept cuts. Ledger row per cut. Snapshot last.
 
 ## TASK 4 — TWO DEPTH BUGS (fix BEFORE Jump A CUT 2; these are correctness, not perf)
 
-Tyler reported two visible defects. Both live in the CPU-projected depth path
+the owner reported two visible defects. Both live in the CPU-projected depth path
 that Jump A CUT 2 rewrites, so they must be fixed FIRST, as their own
 pixel/oracle-gated commits (one variable each), and THEN CUT 2's fixed-point
 conversion sits on the corrected path. **Amendment to Task 1 CUT 2:** its
@@ -262,7 +262,7 @@ Bug 1 and from CUT 2.
 - **Do not** let the fixed-point projection touch gameplay collision/position
   math — it is renderer-display-only. The stage owner reads live camera/DObj
   transforms; only the final screen-projection arithmetic changes.
-- **Frozen water** is a visible compromise riding on the published ROM; Tyler
+- **Frozen water** is a visible compromise riding on the published ROM; the owner
   must sign off the static-water capture regardless of the fps outcome.
 - **Locked-30 scheduler** is itself pre-freeze work — if option (b), it competes
   with CUT 3 for the same hours. Prefer banking locked-30 over chasing CUT 3.

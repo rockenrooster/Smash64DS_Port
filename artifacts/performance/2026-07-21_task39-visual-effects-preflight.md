@@ -30,5 +30,5 @@ The reported wrong shield can therefore be a substitute-template or adapter
 fidelity issue, not the planner's claimed generic-material-only issue. Per Task
 39's first stop rule, no per-entry counters, OAM/VRAM work, flags, screenshots,
 or visual changes were added. Resume only after the architecture map is corrected
-and Tyler returns the required marked contact sheet; then census the actual
+and the owner returns the required marked contact sheet; then census the actual
 original/substitute/particle owners before choosing a fix lane.

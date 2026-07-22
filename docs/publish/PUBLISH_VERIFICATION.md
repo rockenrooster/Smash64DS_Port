@@ -60,7 +60,7 @@ The final staging tree reports:
 | Embedded native-owner content includes | 0 |
 | Binary files larger than 256 KiB | 0 |
 | N64 ROM-magic byte hits | 0 |
-| `SMASH BROTHERS`, `D:\Stuff`, or `Tyler` string hits | 0 |
+| `SMASH BROTHERS`, `D:\Stuff`, or `the owner` string hits | 0 |
 
 Final audit result: `LEAK_AUDIT=PASS`.
 

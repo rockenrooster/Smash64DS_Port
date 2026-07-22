@@ -569,7 +569,7 @@ try {
     Set-Content -LiteralPath $configState.Config -Value $configText -NoNewline
 
     # Canonical window coordinates derived from the accepted frame-198 capture.
-    # The exact GO crop locks Tyler's approved nearest-pixel presentation; the
+    # The exact GO crop locks the owner's approved nearest-pixel presentation; the
     # traffic crop excludes the unrelated lower-stage geometry and separately
     # proves a blue flare, shaded housing/lamps, and countdown disappearance.
     $trafficRegion = New-Object System.Drawing.Rectangle 115, 56, 235, 120

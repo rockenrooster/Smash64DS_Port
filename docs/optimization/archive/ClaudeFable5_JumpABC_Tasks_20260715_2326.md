@@ -32,7 +32,7 @@ reserve against the crowd-audio bake (handled in the audio task).
 
 Task order: TASK 1 (depth-band fix landing) -> TASK 2 (Jump A stack v2) ->
 TASK 3 (Jump C v2). Task 1 changes no-Z depth semantics, so no A/B baseline
-for Task 2 may be sampled before Task 1 lands and Tyler signs off.
+for Task 2 may be sampled before Task 1 lands and the owner signs off.
 
 ---
 
@@ -70,13 +70,13 @@ Gates (all must pass before commit):
 3. Same-ROM A/B/A ticks vs the committed 645,248/645,440 stage baseline:
    expected roughly neutral; publish the delta either way in the ledger row.
    If the fix costs >10K stage P50, report before committing.
-4. Visual evidence for Tyler: frames 438/439 plus the pause-orbit camera set
+4. Visual evidence for the owner: frames 438/439 plus the pause-orbit camera set
    (normal / front / +33.6 degrees, same deterministic gate as the clip fix)
    showing (a) grass/bushes no longer overlapped by stage floor triangles and
    (b) whether the "main floor path texture moving around" symptom under
    camera motion is gone — the shared-depth collision was Z-fighting, which
    reads as texture swimming, so this fix is the most likely cure. Do NOT
-   mark the PLAYTESTING_Review.md pause line FIXED yourself; Tyler confirms
+   mark the PLAYTESTING_Review.md pause line FIXED yourself; the owner confirms
    by eyeball and marks it.
 
 Ledger row (correctness class) with ROM SHA, JSON, screenshots. Commit as its
@@ -88,7 +88,7 @@ edits; snapshot with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
 
 ## TASK 1B — Grass/bush overlap persists after the painter fix (paste to codex)
 
-Added 2026-07-16 after Tyler's retest: commit 87e04fa5d3 landed with zero
+Added 2026-07-16 after the owner's retest: commit 87e04fa5d3 landed with zero
 painter collisions, strict order, and source citations — and the visual
 overlap is UNCHANGED. The counter bug was real but was not this defect. This
 task replaces the old "Bug 1" block's diagnosis tree.
@@ -121,9 +121,9 @@ matrix must not halve or rescale depth relative to the unscaled raw class.
 PHASE 1 — identify, do not guess (all probes are build-flag or config
 toggles, one variable each, screenshot per probe):
 1. Reproduce the offending composition. The existing frame 438/501 pixel
-   gates PASS while Tyler sees the defect, so the current gates look at the
+   gates PASS while the owner sees the defect, so the current gates look at the
    wrong pixels. Capture the grass-top edge and side-bush regions at the
-   camera position matching Tyler's report; Claude reads the captures.
+   camera position matching the owner's report; Claude reads the captures.
 2. Class isolation: render once with the 10 range triangles skipped, once
    with the 66 source-Z skipped (or forced through the CPU-projected
    fallback path the M3 contract guarantees), once with the 126 no-Z
@@ -151,7 +151,7 @@ PHASE 2 — root-cause per Phase 1 outcome:
   correct the port classification to match.
 
 PHASE 3 — gates: new ROI pixel gate ON THE DEFECT REGION (grass-top edge +
-side bushes at the reproducing camera), kept as a permanent ratchet; Tyler
+side bushes at the reproducing camera), kept as a permanent ratchet; the owner
 eyeball confirms before the playtest line is marked FIXED; profile-2
 202-triangle order and class census unchanged (66/126/10); painter bands
 still strict/zero-collision; exact 121/828; M4 fence classes zero; DevFast +
@@ -245,7 +245,7 @@ raw matrix (the dominant lever; mechanism already proven in-tree).
 - X/Y drift: hardware transform may differ sub-pixel from CPU div64
   projection. Presentation follows the 90% DS rule (NATIVE_RENDERER_PLAN
   Shared Rules) — publish max per-vertex X/Y deviation and hold the captures
-  for Tyler's sign-off, exactly as the scaled-raw clip fix did. Fence-over-
+  for the owner's sign-off, exactly as the scaled-raw clip fix did. Fence-over-
   floor layering across background/foreground phases must be visually intact
   in the pause-orbit camera set.
 - Fallback: keep the CPU class-3 path compiled and selectable; any triangle
@@ -302,7 +302,7 @@ CUT 1 — fighter local-matrix construction in fixed point / source tables.
   fixed point rather than float.
 - Exactness: the output contract is the composed 16.16 matrix the RSP-side
   consumer sees. Gate: profile-2 matrix oracle bit-exact against the float
-  path, OR publish max per-element deviation and hold captures for Tyler's
+  path, OR publish max per-element deviation and hold captures for the owner's
   sign-off (display math; sub-LSB drift is acceptable ONLY if gated and
   signed off). Do not regress the fixed-W quantization boundary.
 - Keep the float path compiled as the shadow oracle during qualification.
@@ -331,14 +331,14 @@ Snapshot with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
 
 ## TASK 4 — Mario black right pant leg + missing underside polys (paste to codex)
 
-Added 2026-07-16. Tyler confirmed against the original: the underside is
+Added 2026-07-16. the owner confirmed against the original: the underside is
 closed and blue on N64 — both symptoms are port defects, no source-accurate
-branch. Reference: Tyler's melonDS capture, Mario airborne from behind/below.
+branch. Reference: the owner's melonDS capture, Mario airborne from behind/below.
 
 ```
 /task Mario fighter visual defect, two co-located symptoms: (1) right pant
 leg renders black (left is correct blue); (2) underside/crotch is missing
-one or two polygons. Tyler verified the original: underside is CLOSED and
+one or two polygons. the owner verified the original: underside is CLOSED and
 BLUE — both are port defects. Longstanding and stable ("for a while"),
 likely the documented "Mario facing/light A/B" visual-debt item.
 CORRECTNESS task, own commit, NOT perf-gated, no optimization bundled, no
@@ -361,7 +361,7 @@ PHASE 1 — locate, then discriminate (one A/B, no fix yet):
    cross-matrix class. Do not guess the part index.
 2. Owner A/B: build one ROM with the Mode-8 native fighter owner disabled
    (source-driven fallback path), same scene, scripted-jump deterministic
-   airborne capture, both ROMs to Tyler / captures for Claude.
+   airborne capture, both ROMs to the owner / captures for Claude.
    - Defect only with owner ON -> owner bug: dump the offending runs'
      vertex-cache epochs and run->epoch->material/light bindings vs the
      recorded contract; fix the binding/cache handling, not the lighting
@@ -381,7 +381,7 @@ PHASE 1 — locate, then discriminate (one A/B, no fix yet):
    re-record/extend the contract; census and checker numbers update ONLY
    together with the source citation justifying the new count.
 
-Gates: side-by-side captures (owner on/off/fixed) — Tyler eyeballs leg
+Gates: side-by-side captures (owner on/off/fixed) — the owner eyeballs leg
 color AND closed blue underside before any FIXED claim; M2 contract counts
 unchanged unless a recorder gap is proven with source citation; stage owner
 untouched; M4 fence classes zero; exact vertex-cache/cross-matrix semantics
@@ -394,7 +394,7 @@ nds_renderer.c edits with the depth-fix lane (one-writer). Snapshot last.
 
 ## TASK 5 — Locked-30 fixed-two source scheduler (completed)
 
-Added and completed 2026-07-16. Tyler's amended checkpoint decision selects a
+Added and completed 2026-07-16. the owner's amended checkpoint decision selects a
 locked-30 cap with exactly two unchanged source updates per presented frame and
 no catch-up. A phase that fits two vblanks reaches 60 source updates/s; an
 overloaded phase slows uniformly like the source console while audio remains
@@ -404,7 +404,7 @@ presents and phase rates 39.9/37.9/39.5/n.a./58.2 updates/s.
 ```
 /task Implement the locked-30 scheduler: presentation is capped at a 2-vblank
 cadence and each presented frame owns exactly two source updates. Never repay
-a slipped slot. DECISION RECORD: this is Tyler's amended July-16 checkpoint
+a slipped slot. DECISION RECORD: this is the owner's amended July-16 checkpoint
 outcome — target is locked 30 when the budget permits; 60 FPS presentation is
 not claimed, and source-faithful slowdown is accepted under load. Update the P1
 board explicitly (never silently). Reconcile first (R0).
@@ -474,7 +474,7 @@ now includes multiple updates — old baselines are not comparable).
 
 Surfaces: taskman_seam.c, nds_platform.c, verifiers, docs — disjoint from
 nds_renderer.c, so this may run in a parallel lane to the stage-depth task
-with one-writer coordination. Rebuild the canonical ROM; Tyler playtest
+with one-writer coordination. Rebuild the canonical ROM; the owner playtest
 gate: correct game speed by feel/stopwatch, stable cadence. Separate
 commit(s); snapshot with New-Smash64DSSnapshot.ps1 -Mode Lean last.
 ```
@@ -505,13 +505,13 @@ FAST ITERATION PROTOCOL (use for every cut; full match only at the end):
   and fighter window 600..607 as applicable): stage/draw/active P50/P95.
 - Quick visual: the deterministic native 256x192 top-screen compare
   (expect 0/49,152 changed pixels when exactness is claimed; publish any
-  nonzero with the exact-aspect capture for Tyler).
+  nonzero with the exact-aspect capture for the owner).
 - Fast FPS check: canonical smoke
   verify-battle-playable-realtime-harness.ps1 -RequireLocked30Pacing
   -SkipScreenshot -> presents/s + updates/s + cadence violations in ~1 min.
 - Only after the last banked cut: full one-minute natural CPU-on match
   (phase updates/s + slip counts + fences + teardown + reserve) and one
-  30-second Tyler eyeball ROM. Snapshot last.
+  30-second the owner eyeball ROM. Snapshot last.
 
 PHASE 0 — current-HEAD bucket profile (no code): publish the stage owner's
 internal composition (per-class emit ticks: 66 raw / 10 range / 126 no-Z,
@@ -535,7 +535,7 @@ CUT A — constant-depth GX submission for the 126 no-Z painter triangles
   stage depth trace (record the hardware-path depth beside the CPU
   submitted_z; every band value must match). X/Y may drift sub-pixel under
   the 90% presentation rule — publish the pixel delta; first CUT-A ROM gets
-  a Tyler eyeball including: grass/bush overlap UNCHANGED (known open bug —
+  a the owner eyeball including: grass/bush overlap UNCHANGED (known open bug —
   parity against the current baseline, defect included), fence-over-floor
   layering intact, water intact, pause-orbit set clean.
 - Transport bound pre-code: ~126 per-primitive Z-row matrix updates/frame
@@ -566,7 +566,7 @@ Per-cut gates: exact stage census 8/57/42/54/202 + cross 5/10/15, owner
 reserve >=128 KiB, ledger row per cut (KEEP or REVERT with numbers). End of
 task: canonical rebuild, one-minute natural match with per-phase updates/s
 and slip counts published (combat updates/s vs the 37.9-39.9 baseline IS the
-user-visible result), Tyler playtest ROM, board/handoff updates, snapshot
+user-visible result), the owner playtest ROM, board/handoff updates, snapshot
 with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
 ```
 
@@ -574,7 +574,7 @@ with New-Smash64DSSnapshot.ps1 -Mode Lean as the final action.
 
 ## TASK 7 — Freeze forensics kit + scripted repro (paste to codex)
 
-Added 2026-07-16. Tyler reports periodic random freezes; latest trigger:
+Added 2026-07-16. the owner reports periodic random freezes; latest trigger:
 Mario down-air connecting on Fox while airborne. Hit events fire three
 freeze-shaped paths at once — FGM ARM7 ACK spin-wait, hit-effect poly spawn
 (GX poly/vertex RAM overflow -> permanent swap-buffer stall), and the
@@ -602,7 +602,7 @@ steady-state cost):
    RAM counts, swap-buffer pending flag, IPC/FIFO queue state, audio FGM
    command/ACK counters and the channel owner map, current update phase and
    frame/update counters. The report must stay on screen (freeze persists) so
-   Tyler can photograph it.
+   the owner can photograph it.
 3. Breadcrumbs: a tiny fixed ring buffer of phase markers written at cheap
    boundaries — update start, hit-search/damage entry, effect spawn, FGM
    play/ACK wait entry+exit, draw start, flush, vblank wait, present done.
@@ -628,7 +628,7 @@ delta; heartbeat+breadcrumbs are plain stores); canonical ROM rebuilt with
 kit enabled; DevFast + Boundary green; existing safety counters unchanged;
 one-minute natural match still passes with zero watchdog trips in normal
 play. Ledger note (diagnostic class). Docs: DIAGNOSTIC_REFERENCE.md gains
-the STALL report field key so Tyler's photos are decodable. Snapshot last.
+the STALL report field key so the owner's photos are decodable. Snapshot last.
 ```
 
 ---
@@ -678,7 +678,7 @@ the no-Z painter class (bound: ~60-90K of the measured 98,816 inclusive;
 no-Z matrix bucket alone is 50,432). Mechanism unchanged from TASK 6: Z row
 = band_constant x W_row so post-divide depth is exactly the band constant;
 zero-tolerance depth proof via the stage depth trace; X/Y sub-pixel drift
-published + one Tyler eyeball; parity against current baseline including
+published + one the owner eyeball; parity against current baseline including
 the known grass/bush defect; per-run fail-closed fallback; transport bound
 before coding (T2B rule).
 
@@ -688,7 +688,7 @@ quantization has landed). Route rotation through the BattleShip source's
 own u16-angle sin/cos tables (cite file:line; no hand-authored trig); do
 the concat in fixed point where the source already quantizes to 16.16.
 DISPLAY math only — the shadow float oracle stays compiled; gate bit-exact
-OR publish max per-element deviation for Tyler sign-off. Do not regress the
+OR publish max per-element deviation for the owner sign-off. Do not regress the
 fixed-W quantization boundary.
 
 CUT G2 — idempotent GX state elision in begin/bind (bound: share of
@@ -709,7 +709,7 @@ conservation error, reserve >=128 KiB, native compare 0/49,152 for exact
 cuts, ledger row per cut incl. reverts. End of task: canonical rebuild,
 one-minute natural CPU-on match with per-phase updates/s + slip counts
 (combat updates/s vs the current baseline IS the user-visible result),
-Tyler playtest ROM, board/handoff updates, snapshot last.
+the owner playtest ROM, board/handoff updates, snapshot last.
 ```
 
 ---
@@ -826,7 +826,7 @@ row identity.
 
 # 2026-07-17 — Hardware-reality addendum (TASKS 10–12)
 
-Context: Tyler observed real-DS hardware running ≈0.75× melonDS on this build.
+Context: the owner observed real-DS hardware running ≈0.75× melonDS on this build.
 The multiplier is almost certainly per-resource, not uniform (ITCM ALU ~1.0×,
 waitstated main RAM worse, GX FIFO stalls likely unmodeled in melonDS), so it
 must be calibrated before re-ranking anything. Agreed strategy pivot: the big
@@ -843,7 +843,7 @@ draw P50 ~1,149K, update owner ~260K (post TASK9-P1), loop 1,680K (3 vblanks).
 
 ```
 /task TASK 10 — Hardware calibration lab ROM + profile-1 phase-tick HUD.
-Real DS hardware measures ≈0.75× melonDS on this build (Tyler, 2026-07-17).
+Real DS hardware measures ≈0.75× melonDS on this build (the owner, 2026-07-17).
 Before re-ranking any optimization we need per-resource multipliers and an
 on-device measurement loop. Zero behavior change anywhere in this task.
 
@@ -889,7 +889,7 @@ bench under the canonical harness config; record the melonDS version and
 any timing/cache-accuracy options (if such an option exists, run the
 bench under it too and record the delta). Add to docs/P1_EXECUTION_BOARD.md
 a "Hardware reality (2026-07-17)" section: the bench table with melonDS
-values filled and hardware cells left TBD for Tyler's photo numbers, plus
+values filled and hardware cells left TBD for the owner's photo numbers, plus
 the provisional rule "hardware-30 budget ≈ 840K melonDS-equivalent until
 calibrated". Add a PERF_LEDGER.md methodology note defining per-bucket
 hardware projection (CPU-ITCM / CPU-mainRAM / GX buckets × multipliers).
@@ -897,7 +897,7 @@ hardware projection (CPU-ITCM / CPU-mainRAM / GX buckets × multipliers).
 Gates: profile-0 ROM byte-identical; DevFast + Boundary green; fixtures
 untouched; no decomp/gameplay/renderer-behavior edits; lab ROM not
 registered as a harness mode. Deliver: lab ROM path + SHA-256, HUD ROM
-path + SHA-256, and one-paragraph instructions for Tyler (what to run,
+path + SHA-256, and one-paragraph instructions for the owner (what to run,
 what to photograph). Ledger row for the task. End: canonical rebuild,
 snapshot New-Smash64DSSnapshot.ps1 -Mode Lean last.
 ```
@@ -986,12 +986,12 @@ PHASE A — Thumb conversion.
    0/49,152, DevFast + Boundary green.
 5. Measure: melonDS A/B (report even if a wash) AND hardware A/B — build
    a control/candidate profile-1 ROM pair carrying the TASK 10 HUD and
-   hand Tyler one-paragraph instructions (which ROM, which HUD rows to
+   hand the owner one-paragraph instructions (which ROM, which HUD rows to
    photograph). KEEP rule for this task (new precedent, memory-system
    changes only): hardware numbers are primary; a melonDS wash does not
    veto a hardware win ≥1% of loop; a melonDS regression >1% alongside a
    hardware win → REWORK, understand it before banking. Record both
-   columns in the ledger; mark hardware cells PENDING-HW if Tyler's
+   columns in the ledger; mark hardware cells PENDING-HW if the owner's
    device run lands later — never guess them.
 
 PHASE B — hot/cold grouping (after Phase A lands).
@@ -1025,7 +1025,7 @@ numbers. End: canonical rebuild, snapshot -Mode Lean last.
   TASK 11/12 touch the renderer TU — one-writer: do not run them in the
   same codex lane as TASK 8's renderer cuts.
 - Demo window: TASK 10 and 11 are bankable before 7/19; TASK 12's
-  hardware referee depends on Tyler's device availability.
+  hardware referee depends on the owner's device availability.
 - The decimation-pack task (fighter + stage-solid LOD, the biggest
   visual-economy payoff) is deliberately NOT written yet: its targets
   come straight from TASK 11's census table.
@@ -1096,7 +1096,7 @@ full-res, rest keep):
     protocol, flag ON vs OFF; report melonDS values and the ×1.2-1.5
     hardware-weighted projection. Optional: profile-1 HUD ROM pair for a
     retail-DS spot check.
-  - Tyler feel/eyeball gate: flag-ON ROM plays a natural match; visual
+  - the owner feel/eyeball gate: flag-ON ROM plays a natural match; visual
     sign-off before default-ON is even discussed (not in this task).
 
 Hard rules: no decomp edits; no gameplay reads/writes; stage meshes are
@@ -1128,7 +1128,7 @@ snapshot New-Smash64DSSnapshot.ps1 -Mode Lean last.
 ```
 /task TASK 14 — Dense-preparation reuse, revived. AUTHORIZATION: the ledger
 row M3-DENSE-PREPARE-ONCE (2026-07-15) says "Do not retry or widen
-dense-only preparation reuse." That instruction is SUPERSEDED by Tyler's
+dense-only preparation reuse." That instruction is SUPERSEDED by the owner's
 2026-07-16 policy override recorded at the head of this document: the
 threshold gates (>=164,544 required saving, <=500K stage) are withdrawn
 and every repeatable correctness-preserving gain is kept and accumulated.
@@ -1270,7 +1270,7 @@ set from TASK 12 + this update set) target <=12 KiB with the hottest
 final region size and ordering from the map.
 
 MEASURE: melonDS A/B (expect a wash — report it anyway) + hardware A/B:
-control/candidate profile-1 HUD ROM pair for Tyler's device, one
+control/candidate profile-1 HUD ROM pair for the owner's device, one
 paragraph of instructions, UPD row is the number that decides. PENDING-HW
 ledger cells until the photos exist — never guessed. KEEP on hardware
 win; REVERT on hardware wash (dead weight in the linker script helps
@@ -1312,7 +1312,7 @@ order:
   b. If (a) is structurally unavailable: reduced re-render cadence
      during zoom with affine interpolation between renders. This changes
      intermediate-frame pixels: gate becomes named KO-window captures
-     with meaningful delta <=500/49,152 per frame plus Tyler's explicit
+     with meaningful delta <=500/49,152 per frame plus the owner's explicit
      eyeball sign-off on the KO moment — flag-gated, default OFF until
      his sign-off.
   Steady-state behavior byte-identical either way; only the zoom-window
@@ -1340,6 +1340,6 @@ can also slot earlier if a renderer task blocks.
 Two lanes, if run: lane A (renderer TU) 13 → 14 → 15; lane B
 (non-renderer) 16 → 18, then 17 after 12 lands. One-writer holds per
 lane; nothing in lane B touches the renderer TU.
-Morning deliverables to Tyler: TASK 12/17 HUD ROM pairs for device
+Morning deliverables to the owner: TASK 12/17 HUD ROM pairs for device
 photos; TASK 13 flag-ON ROM for the feel/eyeball gate; TASK 18 KO
 captures if branch (b) was taken.

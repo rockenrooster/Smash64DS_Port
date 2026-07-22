@@ -108,7 +108,7 @@ Retail checklist:
 
 ## Retail decision
 
-Tyler ran the corrected pair once each at the same `00:50` match point. The
+the owner ran the corrected pair once each at the same `00:50` match point. The
 photos are permanent evidence:
 
 - control whole-half refill:
@@ -135,7 +135,7 @@ returns to the proved whole-half refill path; the profile-only last/max refill
 instrumentation and all historical control/candidate evidence remain. No repeat
 device run is requested.
 
-Tyler reported on 2026-07-20 that
+the owner reported on 2026-07-20 that
 `smash64ds-task30-sliced-profile1.nds` "audio sounds good." This passes the
 required human listen-quality gate. The later Task-32 retail photos preserve
 the sliced path running on device at `BGM slices 180` and `184`, proving retail
