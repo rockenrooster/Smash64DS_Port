@@ -6396,5 +6396,44 @@ EXACTNESS GATE: FAILED -- THIS IS NOT A KEEP
   run. If it is GObj draw state, exclude the draw-touched fields and this gate
   becomes usable for every future perf task. If it is a gameplay region, Task 37
   is a real bug and stays reverted.
-KEEP / REWORK / REVERT: WIP -- measured win real, exactness unproven, not shipped
+INVESTIGATION (all runs on the fast-logic match-lifecycle gate, mask 0 vs 7):
+  same ROM twice                            IDENTICAL  gate is deterministic
+  mask 1 / 2 / 4 individually               FAIL 692   byte-identical signature
+  BGM falsified                             FAIL 692   not audio
+  gSYControllerDevices excluded             FAIL 692   not ARM7 input phase
+  realtime pacing                           BLOCKED    hits the pre-existing
+                                                       locked-30 pacing red
+  +800B dead padding in .main               PASS 3892  layout is invisible
+  +800B dead padding in .itcm               PASS 3892  section growth invisible
+
+  Padding changes layout but not speed; relocation changes speed. Every failing
+  arm changes speed, every passing arm does not -- and three disjoint symbol
+  groups produce ONE byte-identical failure signature, which no per-symbol fault
+  explains.
+
+REGION BISECT (NDS_TASK9_STATE_HASH_REGION_MASK, added for this):
+  core: scalars/RNG, scene, battle, camera, ground,
+        controllers, collision                        PASS 3892 identical
+  object tree                                         FAIL 692
+    gameplay objects                                  FAIL 692
+      fighter/item/weapon/effect                      FAIL 692
+        fighter FTStruct alone                        FAIL 692
+
+  The core PASS is the load-bearing result. syUtilsRandSeed() is in it: both
+  builds draw the same random numbers in the same order for all 3,892 updates,
+  and agree on battle state, camera, ground and collision throughout. The
+  simulation is not running a different match. The camera in particular tracks
+  fighter positions and is identical on every update, which is hard to reconcile
+  with fighter positions differing.
+
+STOPPED at the standing time-box (~twelve full match lifecycles). FTStruct is
+hashed as one blob so region masks cannot resolve further. Next step is
+mechanical, not another guess: split FTStruct across the free mask bits 23..31
+and binary-search the differing offset in three runs. If it lands on a code
+pointer, note that ndsTask9StateCanonicalWord collapses main-RAM addresses to
+0x20000000 and ITCM to 0x30000000 -- a pointer whose target moved to ITCM
+changes class with no behavioural change, which would explain the identical
+signature across disjoint groups. If it lands on a gameplay member, Task 37 is a
+real defect.
+KEEP / REWORK / REVERT: WIP -- measured win real, exactness unresolved, NOT shipped
 ```

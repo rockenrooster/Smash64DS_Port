@@ -98,7 +98,30 @@ NDS_TASK37_PROFILE_FRAMES ?= 128
 # Task 37 placement repack: admit the measured non-memory-stall toppers into the
 # 1,060 free ITCM bytes. Placement only -- no ISA switch, no optimization change,
 # no eviction of any current resident.
+#
+# A BITMASK, not a boolean, so the admissions can be bisected. The 0/1 A/B on
+# 2026-07-22 failed its state-hash gate and the owner confirmed the enabled lab
+# build misbehaves, so which of these groups is at fault has to be established
+# before any of it can be trusted:
+#   1  libc leaves   memset, memcpy, memcmp
+#   2  libm leaf     __ieee754_sqrtf
+#   4  port leaves   TextureSourceBytes, PolyFmt, FTParamsInvalidateFighterParts
+#   7  all of them (what the failing A/B ran)
 NDS_TASK37_ITCM_LEAVES ?= 0
+NDS_TASK37_ITCM_LIBC := $(if $(filter 1 3 5 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+NDS_TASK37_ITCM_LIBM := $(if $(filter 2 3 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+NDS_TASK37_ITCM_PORT := $(if $(filter 4 5 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+# Layout control: N bytes of never-executed padding in .main, nothing in ITCM.
+# Separates "ITCM residency breaks it" from "any layout change breaks it".
+NDS_TASK37_LAYOUT_PROBE ?= 0
+NDS_TASK37_LAYOUT_PROBE_ITCM ?= 0
+# Lab-only: drop the controller devices from the Task 9 state hash. They are
+# filled from the ARM7 on real time while fast-logic runs the ARM9 unpaced, so
+# they encode execution speed. Diagnostic for Task 37 only.
+NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS ?= 0
+# Lab-only: bitmask of NDSTask9StateRecordKind values the state hash includes.
+# Diagnostic for Task 37 region isolation only; a filtered hash is a weaker gate.
+NDS_TASK9_STATE_HASH_REGION_MASK ?= 0xFFFFFFFF
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_FAST_WALLPAPER_AFFINE),1)
 ifneq ($(NDS_SCENE_MIP_CACHE_LAB),0)
@@ -538,8 +561,8 @@ NDS_TASK37_LIBM_SHA256 := \
 NDS_TASK37_LIBC_MEMBERS := libc_a-memset.o libc_a-memcpy-stub.o libc_a-memcmp.o
 NDS_TASK37_LIBM_MEMBERS := libm_a-ef_sqrt.o
 NDS_TASK37_ITCM_OFILES := \
-	$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBC_MEMBERS))) \
-	$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBM_MEMBERS)))
+	$(if $(filter 1,$(NDS_TASK37_ITCM_LIBC)),$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBC_MEMBERS)))) \
+	$(if $(filter 1,$(NDS_TASK37_ITCM_LIBM)),$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBM_MEMBERS))))
 
 LIBS := -lfat -lfilesystem -lnds9 -lm
 LIBDIRS := $(LIBNDS)
@@ -712,7 +735,7 @@ endif
 export LD := $(CC)
 export OFILES := \
 	$(if $(filter 1,$(NDS_TASK9_FLOAT_ITCM)),$(NDS_TASK9_FLOAT_ITCM_OFILES)) \
-	$(if $(filter 1,$(NDS_TASK37_ITCM_LEAVES)),$(NDS_TASK37_ITCM_OFILES)) \
+	$(NDS_TASK37_ITCM_OFILES) \
 	$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)
 export NDS_PRIVATE_CHECK_OFILES := $(NDS_PRIVATE_CHECK_CFILES:.c=.o)
 export NDS_MPPROCESS_STRICT_OFILES := $(NDS_PRIVATE_CHECK_OFILES) \
@@ -1281,6 +1304,11 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
 		echo '#define NDS_TASK37_ITCM_LEAVES $(NDS_TASK37_ITCM_LEAVES)'; \
+		echo '#define NDS_TASK37_ITCM_PORT $(NDS_TASK37_ITCM_PORT)'; \
+		echo '#define NDS_TASK37_LAYOUT_PROBE $(NDS_TASK37_LAYOUT_PROBE)'; \
+		echo '#define NDS_TASK37_LAYOUT_PROBE_ITCM $(NDS_TASK37_LAYOUT_PROBE_ITCM)'; \
+		echo '#define NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS $(NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS)'; \
+		echo '#define NDS_TASK9_STATE_HASH_REGION_MASK $(NDS_TASK9_STATE_HASH_REGION_MASK)u'; \
 		echo '#define NDS_TASK37_PROFILE_START $(NDS_TASK37_PROFILE_START)u'; \
 		echo '#define NDS_TASK37_PROFILE_FRAMES $(NDS_TASK37_PROFILE_FRAMES)u'; \
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
@@ -1426,7 +1454,7 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 	done
 	@rm -rf ".task9-float-itcm"
 endif
-ifeq ($(NDS_TASK37_ITCM_LEAVES),1)
+ifneq ($(strip $(NDS_TASK37_ITCM_OFILES)),)
 NDS_TASK37_LIBC := $(shell $(CC) $(ARCH) -print-file-name=libc.a)
 NDS_TASK37_LIBM := $(shell $(CC) $(ARCH) -print-file-name=libm.a)
 NDS_TASK37_AR := $(shell $(CC) -print-prog-name=ar)
@@ -1434,15 +1462,15 @@ NDS_TASK37_AR := $(shell $(CC) -print-prog-name=ar)
 # members. Same shape as the Task 9 block above and for the same reason: the
 # installed archives must stay out of Make's prerequisite graph.
 $(NDS_TASK37_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
-	@echo "$(NDS_TASK37_LIBC_SHA256) *$(NDS_TASK37_LIBC)" | sha256sum -c -
-	@echo "$(NDS_TASK37_LIBM_SHA256) *$(NDS_TASK37_LIBM)" | sha256sum -c -
+	@test "$(NDS_TASK37_ITCM_LIBC)" != "1" || echo "$(NDS_TASK37_LIBC_SHA256) *$(NDS_TASK37_LIBC)" | sha256sum -c -
+	@test "$(NDS_TASK37_ITCM_LIBM)" != "1" || echo "$(NDS_TASK37_LIBM_SHA256) *$(NDS_TASK37_LIBM)" | sha256sum -c -
 	@rm -rf ".task37-itcm" $(NDS_TASK37_ITCM_OFILES)
 	@mkdir -p ".task37-itcm"
 	@cp "$(NDS_TASK37_LIBC)" ".task37-itcm/libc.a"
 	@cp "$(NDS_TASK37_LIBM)" ".task37-itcm/libm.a"
-	@cd ".task37-itcm" && $(NDS_TASK37_AR) x "libc.a" $(NDS_TASK37_LIBC_MEMBERS)
-	@cd ".task37-itcm" && $(NDS_TASK37_AR) x "libm.a" $(NDS_TASK37_LIBM_MEMBERS)
-	@for member in $(NDS_TASK37_LIBC_MEMBERS) $(NDS_TASK37_LIBM_MEMBERS); do \
+	@test "$(NDS_TASK37_ITCM_LIBC)" != "1" || (cd ".task37-itcm" && $(NDS_TASK37_AR) x "libc.a" $(NDS_TASK37_LIBC_MEMBERS))
+	@test "$(NDS_TASK37_ITCM_LIBM)" != "1" || (cd ".task37-itcm" && $(NDS_TASK37_AR) x "libm.a" $(NDS_TASK37_LIBM_MEMBERS))
+	@for member in $(if $(filter 1,$(NDS_TASK37_ITCM_LIBC)),$(NDS_TASK37_LIBC_MEMBERS)) $(if $(filter 1,$(NDS_TASK37_ITCM_LIBM)),$(NDS_TASK37_LIBM_MEMBERS)); do \
 		stem="$${member%.o}"; \
 		$(OBJCOPY) \
 			--rename-section .text=.itcm,alloc,load,readonly,code,contents \

@@ -351,6 +351,120 @@ pass against the original numbers would be false; reporting it as a failure
 would be worse. The measurement is above, the gate is above, and the mismatch is
 the finding.
 
+### Exactness — the investigation
+
+The 0-vs-7 gate failed: 692 of 3,892 per-update records differ, in three bursts
+(1412..1733, 1992..2327, 2501..2534). What follows is the control set that
+narrowed it, because the first two explanations reached for were both wrong and
+neither was tested before being believed.
+
+```
+control                                    result
+same ROM run twice                         IDENTICAL   gate is a valid oracle
+mask 1 (memset/memcpy/memcmp)              FAIL 692    same three bursts
+mask 2 (__ieee754_sqrtf alone)             FAIL 692    same three bursts
+mask 4 (three port functions)              FAIL 692    same three bursts
+mask 7 with BGM falsified                  FAIL 692    same three bursts
+mask 0 + 800B dead padding in .main        PASS 3892   layout shift is invisible
+mask 0 + 800B dead padding in .itcm        PASS 3892   section growth is invisible
+```
+
+Read together these are strongly constraining:
+
+- **The gate is deterministic.** Two runs of one ROM produce byte-identical
+  records, so the divergences are real signal, not noise. This control should
+  have been run before the gate was ever used to judge anything.
+- **It is not the moved symbols.** Three disjoint groups — one of them a single
+  236-byte float leaf that nothing stores a pointer to — produce a byte-identical
+  failure signature. Three unrelated changes do not cause one identical fault.
+- **It is not layout.** 800 bytes of never-executed padding in `.main` shifts
+  every subsequent address and the arena base, and the gate does not notice. The
+  hash's pointer canonicalization is doing its job.
+- **It is not ITCM section size or its load image.** The same padding in `.itcm`
+  also passes.
+- **It is not BGM**, despite the audio symptom that first suggested it.
+
+Padding changes layout but not execution speed. Relocation changes speed. That
+is the one variable every failing arm shares and every passing arm does not.
+
+Three explanations were then tested and all three were wrong, which is recorded
+here because the pattern matters more than the individual guesses:
+
+```
+hypothesis                                  test                        result
+async BGM position                          NDS_BGM_FALSIFIER_OFF=1     FAIL, same 692
+ARM7 input phase under fast logic            exclude gSYControllerDevices FAIL, same 692
+VBlank pacing removes the speed dependence   -RealtimePresentation        blocked: hits the
+                                                                          pre-existing locked-30
+                                                                          pacing red on this
+                                                                          emulator, unrelated to
+                                                                          Task 37
+```
+
+Guessing one region per run cost three full match lifecycles and found nothing,
+so the instrument was changed to answer the question directly.
+`NDS_TASK9_STATE_HASH_REGION_MASK` selects which record kinds enter the hash, and
+the state was bisected:
+
+```
+region set                                                        result
+core: scalars/RNG, scene, battle, camera, ground,
+      controllers, collision bounds + speeds                      PASS 3892 identical
+object tree: GObj..transform                                      FAIL 692
+  gameplay objects: GObj, process, fighter, item, weapon, effect  FAIL 692
+    fighter/item/weapon/effect payload only                       FAIL 692
+      fighter FTStruct alone                                      FAIL 692
+```
+
+**The core result is the significant one.** `syUtilsRandSeed()` is inside it, and
+so are battle state, camera, ground and collision. All bit-identical for the
+entire 3,892-update match. The two builds draw the same random numbers in the
+same order and agree on the battle, the camera and the collision world
+throughout. Whatever differs, the simulation is not running a different match.
+
+The camera passing is a further constraint worth keeping in view: the camera
+tracks fighter positions, and it is identical on every update. That is hard to
+reconcile with fighter positions differing.
+
+`FTStruct` is hashed as a single raw blob, so "the fighter region differs" does
+not separate a differing position from a differing pointer or animation field.
+Region masks cannot resolve further.
+
+**Stopped here, per the standing time-box** (~10 emulator runs or ~1 hour on
+open-ended debugging; this had reached roughly twelve full match lifecycles).
+The shipping decision does not depend on the answer — the kill criteria settle it
+either way — and what remains is a question about the instrument, not about this
+task.
+
+### Next step, specified so it is not another guess
+
+Do not continue one hypothesis per run. Split `FTStruct` into chunks emitted
+under distinct record kinds: kinds 1..22 are used, bits 23..31 of
+`NDS_TASK9_STATE_HASH_REGION_MASK` are free, so eight chunk kinds fit. A binary
+search over those chunks localizes the differing offset in three runs, and the
+offset maps to a member of `FTStruct` by `offsetof`.
+
+The single most useful constraint to carry in: **the camera is bit-identical on
+every one of the 3,892 updates**, and the camera tracks fighter positions. That
+is difficult to reconcile with fighter positions differing, which points at a
+non-positional member — a pointer, an animation field, or render-cached state.
+If the differing offset turns out to be a pointer, check whether it is a code
+pointer: `ndsTask9StateCanonicalWord` collapses main-RAM addresses to
+`0x20000000` and ITCM addresses to `0x30000000`, so a pointer whose target moved
+into ITCM changes canonical class without any behavioural change. That is a real
+gap — the canonicalizer neutralizes `.main` relocation precisely so layout does
+not register, and simply does not extend that to the ITCM destination. It would
+also explain the one fact nothing else has: three disjoint symbol groups
+producing one byte-identical failure signature, because any move into ITCM
+crosses the same class boundary.
+
+If instead the offset is a genuine gameplay member, Task 37 is a real defect and
+stays reverted permanently.
+
+Either outcome is worth having beyond Task 37: this gate currently blocks every
+future performance change, and Task 44 already worked around it by proving
+exactness with the Task 36 replay word stream instead.
+
 ### Exactness — FAILED, and this is why the task does not ship
 
 `scripts/verify-task37-itcm-state-hash-ab.ps1` runs the full match lifecycle on

@@ -151,11 +151,33 @@ static void ndsTask9StateMixWord(NDSTask9StateHashContext *ctx, u32 value)
     ctx->hash2 ^= ctx->hash2 >> 6;
 }
 
+/* Lab-only region filter for the Task 37 investigation.
+ *
+ * Every Task 37 arm that changes execution speed diverges in exactly the same
+ * 692 of 3,892 records, while arms that change only layout pass. Guessing at
+ * the responsible region one hypothesis at a time has now cost several full
+ * runs (BGM, controllers) and found nothing, so this makes the instrument name
+ * the region instead: include only the record kinds selected by the mask, and
+ * whichever half of the state carries the divergence identifies itself.
+ *
+ * Bit N corresponds to NDSTask9StateRecordKind value N. Default is every kind.
+ * Never set in a shipping or verification configuration -- a filtered hash is a
+ * strictly weaker gate. */
+#ifndef NDS_TASK9_STATE_HASH_REGION_MASK
+#define NDS_TASK9_STATE_HASH_REGION_MASK 0xFFFFFFFFu
+#endif
+
 static void ndsTask9StateHashBytes(NDSTask9StateHashContext *ctx, u32 kind,
                                    const void *data, size_t bytes)
 {
     const u8 *src = data;
     size_t offset;
+
+    if ((kind < 32u) &&
+        (((u32)NDS_TASK9_STATE_HASH_REGION_MASK & (1u << kind)) == 0u))
+    {
+        return;
+    }
 
     ndsTask9StateMixWord(ctx, 0x53544154u ^ kind);
     ndsTask9StateMixWord(ctx, (u32)bytes);
@@ -476,9 +498,17 @@ void ndsTask9StateHashRecordUpdate(void)
                            &gGMCameraStruct, sizeof(gGMCameraStruct));
     ndsTask9StateHashBytes(&ctx, NDS_TASK9_STATE_RECORD_GROUND,
                            &gGRCommonStruct, sizeof(gGRCommonStruct));
+#if !NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS
+    /* Lab-only exclusion for Task 37. Under NDS_HARNESS_FAST_LOGIC the ARM9 runs
+     * unpaced while the ARM7 owns input on real time, so a build that executes
+     * faster samples these devices at a different phase. That makes this record
+     * a function of execution speed, which is precisely what a placement change
+     * alters -- so with it included the gate cannot referee one. Never set in a
+     * shipping or verification configuration; it weakens the gate. */
     ndsTask9StateHashBytes(&ctx, NDS_TASK9_STATE_RECORD_CONTROLLERS,
                            gSYControllerDevices,
                            sizeof(gSYControllerDevices));
+#endif
     ndsTask9StateHashBytes(&ctx, NDS_TASK9_STATE_RECORD_COLLISION_BOUNDS,
                            &gMPCollisionBounds, sizeof(gMPCollisionBounds));
     if ((gMPCollisionSpeeds != NULL) &&
