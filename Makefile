@@ -149,36 +149,61 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_TASK39_FX_SHIELD := 1
 endif
-NDS_TASK44_DEVICE_TARGETS := \
-	smash64ds-battle-playable-task44-on-hwtri \
-	smash64ds-battle-playable-task44-off-hwtri
-ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-battle-playable-proof-hwtri $(NDS_TASK44_DEVICE_TARGETS)),)
+ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-battle-playable-proof-hwtri),)
 # Profile-0 shipping path plus either the lightweight Task 41 timers or the
-# full diagnostic publications required by GDB proof runs. The two Task 44
-# targets are the nonpublishing retail A/B pair: release-equivalent to the
-# tick-HUD build except for NDS_TASK44_STAGE_STEADY, with distinct target and
-# build names so one ROM cannot overwrite the other.
+# full diagnostic publications required by GDB proof runs.
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 0
 override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
-ifeq ($(TARGET),smash64ds-battle-playable-proof-hwtri)
-override NDS_SHIP_TELEMETRY := 1
-override NDS_TICK_HUD := 0
-else
+ifeq ($(TARGET),smash64ds-battle-playable-tickhud-hwtri)
 override NDS_SHIP_TELEMETRY := 0
 override NDS_TICK_HUD := 1
+else
+override NDS_SHIP_TELEMETRY := 1
+override NDS_TICK_HUD := 0
 endif
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
-# fidelity change); ships on with Task 36 replay. The device A/B pair is the
-# only place this is allowed off in a profile-0 build.
-override NDS_TASK44_STAGE_STEADY := \
-	$(if $(filter smash64ds-battle-playable-task44-off-hwtri,$(TARGET)),0,1)
+# fidelity change); ships on with Task 36 replay.
+override NDS_TASK44_STAGE_STEADY := 1
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_FAST_WALLPAPER_AFFINE := 1
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+override NDS_TASK39_FX_SHIELD := 1
+endif
+NDS_TASK44_DEVICE_TARGETS := \
+	smash64ds-battle-playable-task44-on-hwtri \
+	smash64ds-battle-playable-task44-off-hwtri
+ifneq ($(filter $(TARGET),$(NDS_TASK44_DEVICE_TARGETS)),)
+# Nonpublishing retail A/B pair for the Task 44 device checkpoint. Equivalent to
+# the profile-0 tick-HUD build except for NDS_TASK44_STAGE_STEADY; the distinct
+# target and build names prevent one ROM from overwriting the other. This is the
+# only place Task 44 is allowed off in a profile-0 configuration.
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 0
+override NDS_SHIP_TELEMETRY := 0
+override NDS_TICK_HUD := 1
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
+override NDS_TASK44_STAGE_STEADY := $(if $(filter %-task44-on-hwtri,$(TARGET)),1,0)
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
