@@ -1102,6 +1102,16 @@ extern volatile u32 gNdsRendererTask36PrepareRunRejectReason;
 extern volatile u32 gNdsRendererTask36RigidConstancyMismatchCount;
 extern volatile u32 gNdsRendererTask36ObservedDynamicMaskLo;
 extern volatile u32 gNdsRendererTask36ObservedDynamicMaskHi;
+#if NDS_TASK44_STAGE_STEADY
+/* Task 44 item 3 accounting. Admit = generation compare passed and the full
+ * four-asset/topology validation was skipped. Revalidate = the generation moved
+ * or the cheap segment guard failed, so the full path ran. Their sum is the
+ * preparation count; a revalidation that never fires across a stage-asset
+ * invalidation event is the failure this pair exists to catch. */
+extern volatile u32 gNdsRendererTask44SteadyAdmitCount;
+extern volatile u32 gNdsRendererTask44RevalidateCount;
+extern volatile u32 gNdsRendererTask44AdmissionGeneration;
+#endif
 #if NDS_TASK36_HW_COMPOSE == 2
 extern volatile u32 gNdsRendererTask36ReplayState;
 extern volatile u32 gNdsRendererTask36BakeAttemptCount;

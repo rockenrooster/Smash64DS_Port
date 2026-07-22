@@ -273,6 +273,10 @@ if ($OneMinuteMatchProof) {
         '-OneMinuteMatchProof',
         '-RendererFastRunMode', '9',
         '-Task36HwComposeMode', '2',
+        # Task 44 ships on with the Task 36 replay, so the full-match soak
+        # (KO/rebirth/results transitions) must exercise stage admission in
+        # its shipping configuration.
+        '-Task44StageSteadyMode', '1',
         '-StaticTextureAotMode', '1',
         '-IFCommonHybridOamMode', '0',
         '-FastWallpaperAffineMode', '1',

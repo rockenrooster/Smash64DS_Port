@@ -916,6 +916,23 @@ SOURCE_CLOSURE_POLICIES = (
         ),
     },
     {
+        # Task 44 item 4 split the per-binding compose out of the iteration so
+        # steady state can walk the dense dynamic list. The operand reads moved
+        # with it; both halves stay bound here.
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterPrepareNativeStageBindingMatrix",
+        "tracked_bases": ("workspace",),
+        "fields": {
+            **_classified(
+                FIELD_CLASS_IMMUTABLE, "workspace.binding_dobjs"
+            ),
+            **_classified(
+                FIELD_CLASS_CAMERA,
+                "workspace.binding_composed workspace.projection",
+            ),
+        },
+    },
+    {
         "path": "src/port/reloc_backend_renderer_dl.c",
         "closure": "ndsRendererAdapterPrepareNativeStageMatrices",
         "tracked_bases": ("workspace",),
@@ -926,11 +943,16 @@ SOURCE_CLOSURE_POLICIES = (
             ),
             **_classified(
                 FIELD_CLASS_CAMERA,
-                "workspace.binding_composed workspace.camera_modelview "
-                "workspace.projection",
+                "workspace.camera_modelview workspace.projection",
             ),
             **_classified(
-                FIELD_CLASS_LIVE, "workspace.task36_runtime_rigid_mask"
+                FIELD_CLASS_LIVE,
+                """
+                workspace.task36_runtime_rigid_mask
+                workspace.task44_binding_lists_valid
+                workspace.task44_dynamic_binding_count
+                workspace.task44_dynamic_bindings
+                """,
             ),
         },
     },
@@ -1005,6 +1027,7 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.materials workspace.resolver
                 workspace.resolver.primary_file workspace.stats
                 workspace.task36_runtime_rigid_mask
+                workspace.task44_admission_generation
                 """,
             ),
             **_classified(
@@ -3898,6 +3921,7 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
                     "ndsRendererAdapterBuildDObjLocalMatrix",
                     "ndsRendererAdapterApplyMvpRecalcRpy0x47",
                     "ndsRendererAdapterPrepareNativeStageMatrices",
+                    "ndsRendererAdapterPrepareNativeStageBindingMatrix",
                 ],
                 "disposition": (
                     "recompute the live camera and dynamic DObj operands every "

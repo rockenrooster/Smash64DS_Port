@@ -579,10 +579,34 @@ ndsRendererTask34StageStreamEndSegment(void)
 #endif
 
 #if NDS_TASK36_HW_COMPOSE == 2
+/* Task 44 item 2: the single source of truth for "the replay capture window is
+ * open". It lives out here, next to the wrapped GX record sites, so the hot
+ * path can test it inline instead of calling the recorder to learn that it has
+ * nothing to do. The replay owner owns every write; see
+ * ndsRendererTask36ReplayCaptureBeginRun/EndRun and ...ReplayReset. */
+static u32 sNdsRendererTask36CaptureActive;
+
 static void ndsRendererTask36ReplayRecord(
     NDSRendererTask29GXClass command_class,
     const u32 *words,
     u32 word_count);
+
+#if NDS_TASK44_STAGE_STEADY
+/* Replay steady state pays one predictable test-and-skip per wrapped GX
+ * command. The capture window itself is bit-identical: when the scalar is set
+ * the recorder runs exactly as before. */
+#define NDS_TASK36_REPLAY_RECORD(command_class, words, word_count) \
+    do { \
+        if (sNdsRendererTask36CaptureActive != 0u) \
+        { \
+            ndsRendererTask36ReplayRecord((command_class), (words), \
+                                          (word_count)); \
+        } \
+    } while (0)
+#else
+#define NDS_TASK36_REPLAY_RECORD(command_class, words, word_count) \
+    ndsRendererTask36ReplayRecord((command_class), (words), (word_count))
+#endif
 #endif
 
 #if NDS_TASK29_GX_CENSUS
@@ -719,7 +743,7 @@ ndsRendererTask29GXRecord(
     ndsRendererTask34StageStreamRecord(command_class, words, word_count);
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
-    ndsRendererTask36ReplayRecord(command_class, words, word_count);
+    NDS_TASK36_REPLAY_RECORD(command_class, words, word_count);
 #endif
     ndsRendererTask29GXEnsureActive();
     if ((class_index >= NDS_TASK29_GX_CLASS_COUNT) ||
@@ -886,7 +910,7 @@ static inline void ndsRendererTask29GXRecord(
     ndsRendererTask34StageStreamRecord(command_class, words, word_count);
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
-    ndsRendererTask36ReplayRecord(command_class, words, word_count);
+    NDS_TASK36_REPLAY_RECORD(command_class, words, word_count);
 #endif
 }
 #endif
@@ -2012,6 +2036,11 @@ volatile u32 gNdsRendererTask36PrepareRunRejectReason;
 volatile u32 gNdsRendererTask36RigidConstancyMismatchCount;
 volatile u32 gNdsRendererTask36ObservedDynamicMaskLo;
 volatile u32 gNdsRendererTask36ObservedDynamicMaskHi;
+#if NDS_TASK44_STAGE_STEADY
+volatile u32 gNdsRendererTask44SteadyAdmitCount;
+volatile u32 gNdsRendererTask44RevalidateCount;
+volatile u32 gNdsRendererTask44AdmissionGeneration;
+#endif
 #if NDS_TASK36_HW_COMPOSE == 2
 volatile u32 gNdsRendererTask36ReplayState;
 volatile u32 gNdsRendererTask36BakeAttemptCount;
@@ -4045,7 +4074,8 @@ typedef struct NDSRendererTask36ReplayOwner
     u32 command_slot;
     u32 current_run;
     u32 captured_segment_mask;
-    u32 capture_active;
+    /* Task 44 item 2: capture_active moved out to sNdsRendererTask36CaptureActive
+     * so the wrapped GX sites can test it without reaching into this owner. */
     u32 capture_fault;
     u32 frame_capture;
     u32 frame_replay;
@@ -4065,6 +4095,8 @@ static void ndsRendererTask36ReplayReset(void)
 {
     memset(&sNdsRendererTask36ReplayOwner, 0,
            sizeof(sNdsRendererTask36ReplayOwner));
+    /* Kept in step with the memset that used to clear the owner's copy. */
+    sNdsRendererTask36CaptureActive = FALSE;
     sNdsRendererTask36ReplayOwner.current_run = UINT_MAX;
     sNdsRendererTask36ReplayOwner.command_word_index = UINT_MAX;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
@@ -4242,7 +4274,7 @@ static void ndsRendererTask36ReplayCaptureBeginRun(u32 run_index)
 
     if ((owner->frame_capture == FALSE) ||
         (run_index >= NDS_NATIVE_STAGE_RUN_COUNT) ||
-        (owner->capture_active != FALSE))
+        (sNdsRendererTask36CaptureActive != FALSE))
     {
         owner->capture_fault = TRUE;
         return;
@@ -4254,7 +4286,7 @@ static void ndsRendererTask36ReplayCaptureBeginRun(u32 run_index)
     owner->current_run = run_index;
     owner->command_word_index = UINT_MAX;
     owner->command_slot = 4u;
-    owner->capture_active = TRUE;
+    sNdsRendererTask36CaptureActive = TRUE;
 }
 
 static void ndsRendererTask36ReplayCaptureEndRun(u32 run_index)
@@ -4264,7 +4296,7 @@ static void ndsRendererTask36ReplayCaptureEndRun(u32 run_index)
     NDSRendererTask36ReplayRun *run;
     u32 word_count;
 
-    if ((owner->capture_active == FALSE) ||
+    if ((sNdsRendererTask36CaptureActive == FALSE) ||
         (owner->current_run != run_index) ||
         (run_index >= NDS_NATIVE_STAGE_RUN_COUNT))
     {
@@ -4282,7 +4314,7 @@ static void ndsRendererTask36ReplayCaptureEndRun(u32 run_index)
         run->word_count = (u16)word_count;
         run->valid = TRUE;
     }
-    owner->capture_active = FALSE;
+    sNdsRendererTask36CaptureActive = FALSE;
     owner->current_run = UINT_MAX;
     owner->command_word_index = UINT_MAX;
 }
@@ -4334,7 +4366,7 @@ static void ndsRendererTask36ReplayRecord(
     u32 parameter_count;
     u32 i;
 
-    if ((owner->capture_active == FALSE) ||
+    if ((sNdsRendererTask36CaptureActive == FALSE) ||
         (ndsRendererTask36ReplayOpcode(
              command_class, &opcode, &parameter_count) == FALSE))
     {
@@ -4395,7 +4427,8 @@ static void ndsRendererTask36ReplayFinishFrame(void)
     {
         return;
     }
-    if ((owner->capture_active != FALSE) || (owner->capture_fault != FALSE) ||
+    if ((sNdsRendererTask36CaptureActive != FALSE) ||
+        (owner->capture_fault != FALSE) ||
         (owner->captured_segment_mask != NDS_TASK36_REPLAY_SEGMENT_MASK) ||
         (owner->word_count == 0u) ||
         (owner->word_count > NDS_TASK36_REPLAY_WORD_CAPACITY))

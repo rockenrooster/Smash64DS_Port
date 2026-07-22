@@ -21546,3 +21546,35 @@ remains skipped for the requested fast iteration cadence.
 - Enabled all three flags in the published/release-equivalent targets. The
   14,986,240-byte `2385FDD8...` profile-0 ROM keeps Fox AI source-normal by
   default and passes DevFast plus Boundary.
+
+## 2026-07-22 - Task 44 stage steady-state excision
+
+- Reimplemented the two Task 44 items an earlier session had reverted while
+  chasing a frozen-water failure that was never Task 44 (a verifier contract
+  `636fcce93` had un-fixed and `bdbb28144` restored). Steady-state stage
+  admission is now one Dream Land asset-mutation generation compare plus an
+  eight-segment structural guard, replacing four loaded-file table scans, eight
+  DL-link list walks, two layer-0 order walks, and the 57-DObj/42-binding
+  topology stamp rebuild. Every seam that can invalidate the four Dream Land
+  assets bumps the generation: `ndsRelocResetLoadedFiles`,
+  `ndsRelocRegisterLoadedFile` for those four ids, and the scene-generation bump
+  in `ndsRelocPrepareSceneCache`. Any mismatch takes the full path and fails
+  closed.
+- Stage capture builds dense rigid (26) and dynamic (16) binding lists, so
+  matrix preparation and rigid validation no longer scan 42 entries re-testing a
+  64-bit mask; both fall back to the full scan whenever the runtime rigid mask
+  no longer matches the captured one. The replay owner's `capture_active` moved
+  to a file-scope scalar beside the wrapped GX record sites, which now test it
+  inline instead of calling the recorder.
+- melonDS typed stage owner 281,688 -> 265,680 ticks (-16,008, -5.68%) over 8
+  synchronized samples from frame 438; item 2 alone -6,248, items 3+4 -9,760.
+  Calibration-predicted retail delta ~-24,200. The kill criteria required both
+  halves to be small, so this is a KEEP. The Task 36 replay word stream is
+  unchanged (3,916 words, mask 0xA1, zero fallback), which is the exactness
+  proof. A Rebirth-event run reports `admit=594..601 revalidate=2..2
+  generation=6` against 603 preparation attempts - admit plus revalidate
+  conserves exactly.
+- Shipped enabled in profile-0 (`smash64ds-battle-playable-hwtri`,
+  11,428,864 bytes, `9E27BD3D...`). The retail A/B pair is queued in
+  `builds/device-queue/task44-stage-steady-pair/` from two new nonpublishing
+  targets, and the shared device HUD `GIT` row carries an `S` engagement digit.

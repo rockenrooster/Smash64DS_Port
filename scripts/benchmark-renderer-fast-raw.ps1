@@ -13,6 +13,7 @@ param(
     [switch]$Task29GXCensus,
     [switch]$Task34StageStreamCensus,
     [ValidateRange(0,2)][int]$Task36HwComposeMode = 0,
+    [ValidateRange(0,1)][int]$Task44StageSteadyMode = 0,
     [switch]$Task20StackProfile,
     [ValidateRange(0,1)][int]$Task32DrawHotTextMode = 0,
     [switch]$Task22WallpaperRunLab,
@@ -94,6 +95,9 @@ if (($Task36HwComposeMode -gt 0) -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
     throw 'Task36HwComposeMode requires fast-run mode 9 and renderer profile 1.'
 }
+if (($Task44StageSteadyMode -eq 1) -and ($Task36HwComposeMode -eq 0)) {
+    throw 'Task44StageSteadyMode requires Task36HwComposeMode.'
+}
 if (($RendererScreenSpaceCensusMode -eq 1) -and
     (($FastRunMode -ne 9) -or ($RendererProfileLevel -ne 1))) {
     throw 'RendererScreenSpaceCensusMode requires fast-run mode 9 and renderer profile 1.'
@@ -125,7 +129,9 @@ $target = if ($FastRunMode -eq 9) {
 } else {
     'smash64ds-battle-playable-coarse-hwtri'
 }
-$build = if ($PSBoundParameters.ContainsKey('Task36HwComposeMode')) {
+$build = if ($PSBoundParameters.ContainsKey('Task44StageSteadyMode')) {
+    "builds/build-task44-stage-steady-e${Task44StageSteadyMode}-lab"
+} elseif ($PSBoundParameters.ContainsKey('Task36HwComposeMode')) {
     "builds/build-task36-hw-compose-e${Task36HwComposeMode}-lab"
 } elseif ($PSBoundParameters.ContainsKey('Task32DrawHotTextMode')) {
     "builds/build-task32-draw-hot-e${Task32DrawHotTextMode}-lab"
@@ -184,6 +190,7 @@ $build = if ($PSBoundParameters.ContainsKey('Task36HwComposeMode')) {
     -Task29GXCensus:$Task29GXCensus `
     -Task34StageStreamCensus:$Task34StageStreamCensus `
     -Task36HwComposeMode $Task36HwComposeMode `
+    -Task44StageSteadyMode $Task44StageSteadyMode `
     -Task20StackProfileMode ([int]$Task20StackProfile.IsPresent) `
     -Task32DrawHotTextMode $Task32DrawHotTextMode `
     -Task22WallpaperRunLab:$Task22WallpaperRunLab `
