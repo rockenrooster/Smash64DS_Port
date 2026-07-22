@@ -2,6 +2,7 @@
 
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_task37_profile.h>
 
 extern u32 sySchedulerGetTicCount(void);
 extern void sySchedulerSetTicCount(u32 tics);
@@ -4924,6 +4925,7 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
         ndsPlatformTickHudSample();
     }
 #endif
+    NDS_TASK37_PROFILE_FRAME_TICK(gNdsBattlePlayablePacingPresentedFrames);
     ndsBattlePlayableFrameCompleteMarker();
     NDS_FREEZE_DIAGNOSTICS_HEARTBEAT();
 }

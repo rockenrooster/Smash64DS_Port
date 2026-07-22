@@ -8,6 +8,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
+#include <nds/nds_task37_itcm.h>
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_HW_TRIANGLES 0
@@ -7433,7 +7434,10 @@ static s32 ndsRendererHardwareAlphaUsesVertex(
     return TRUE;
 }
 
-static u32 ndsRendererHardwarePolyFmt(const NDSRendererStats *stats, u32 alpha)
+/* Task 37: 100 bytes, 3.60 cycles per instruction, on the per-polygon submit
+ * path. */
+static u32 NDS_TASK37_ITCM_CODE ndsRendererHardwarePolyFmt(
+    const NDSRendererStats *stats, u32 alpha)
 {
     u32 poly_id = (stats != NULL) ?
         (stats->texture_combine_count & NDS_RENDERER_POLY_ID_MASK) : 0u;
@@ -10136,8 +10140,11 @@ static u32 ndsRendererHardwareTextureLinePixels(u32 size, u32 line)
     }
 }
 
-static u32 ndsRendererHardwareTextureSourceBytes(u32 format, u32 size,
-                                                 u32 texels)
+/* Task 37: 132 bytes at 8.54 cycles per instruction, called from every texture
+ * bind and resolve. Small, hot, and reached from many different call sites --
+ * the shape that never stays resident in a shared instruction cache. */
+static u32 NDS_TASK37_ITCM_CODE ndsRendererHardwareTextureSourceBytes(
+    u32 format, u32 size, u32 texels)
 {
     if (format == NDS_RENDERER_HW_TEXTURE_FMT_CI)
     {

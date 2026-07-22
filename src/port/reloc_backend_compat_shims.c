@@ -4,6 +4,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_task39_effect_census.h>
+#include <nds/nds_task37_itcm.h>
 #include <sys/vector.h>
 
 static sb32 ndsMPReadMapObj(s32 index, u16 *kind, s16 *x, s16 *y);
@@ -1408,7 +1409,12 @@ void ftParamProcStopEffect(GObj *fighter_gobj)
     }
 }
 
-static void ndsFTParamsInvalidateFighterParts(DObj *joint, sb32 reset_mode)
+/* Task 37: 58 bytes, 24,980 calls per census window, and a measured 7.12
+ * cycles per instruction -- a recursive walk down the joint tree whose every
+ * hot PC is a pointer-chasing load. The loads keep their cost wherever this
+ * lives; what ITCM buys is the fetch of the loop around them. */
+static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateFighterParts(
+    DObj *joint, sb32 reset_mode)
 {
     DObj *child;
     FTParts *parts;

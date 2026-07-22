@@ -6270,3 +6270,131 @@ EVIDENCE:
   artifacts/performance/tick-hud-buckets-fork-20260722-run3.json  (n=256, repeat)
 KEEP / REWORK / REVERT: BASELINE RECORDED / TASK 10 MULTIPLIERS STALE
 ```
+## TASK 37 HOT-CODE PLACEMENT REPACK (2026-07-22)
+
+```
+IDENTITY:
+  branch codex/task37-itcm-repack, git bfb72d9
+  melonDS DE80E46BDCF1FD98 (repo fork, cache-accurate), JIT off, DS console mode
+  target smash64ds-battle-playable-tickhud-hwtri, profile 0
+  control  ROM 8919BE714709A8C9   candidate ROM 84A34592D3676E0B
+  matched window frames 438..637, 200 samples each, slips=0 both
+
+WHAT WAS MEASURED, AND WHY IT IS A NEW KIND OF MEASUREMENT:
+  The fork's ARM9 per-PC profiler was armed over 128 settled battle frames by
+  CP15 markers the ROM emits at frame 438 and 566 (NDS_TASK37_PROFILE=1).
+  500,810,896 cycles, 168,894,530 instructions, 60,709 PCs, 0.00% unattributed.
+
+  Every PC was then classified by opcode as memory or non-memory. Placement
+  changes what an instruction FETCH costs and does nothing for what a LOAD
+  costs, so only non-memory stall -- cycles beyond one per instruction on
+  instructions that touch no data -- is recoverable by moving code. Ranking by
+  raw cycles would have picked memset, memcpy and memcmp (38.9M cycles, 7.8%)
+  as the top targets; ranking by recoverable stall shows 34.8M of that is data
+  traffic no placement can touch.
+
+  armWaitForIrq is excluded from tier statistics. It is 8 bytes of deliberate
+  VBlank spinning worth 9.21% of all cycles, and including it makes the
+  zero-waitstate tier look like the worst-stalling one.
+
+TIER RESULTS (the finding that outranks the repack itself):
+  tier              cycles      insns  cyc/insn  non-mem stall %   mem stall %
+  .itcm         88,250,502  52,480,774    1.68            14.7          25.8
+  .text.hot     15,851,755   4,805,435    3.30            30.0          39.7
+  .text.hot.draw 65,601,182 24,985,828    2.63            22.4          39.5
+  .main        284,956,329  86,619,628    3.29            29.5          40.1
+
+  ITCM works: half the non-memory stall rate of ordinary code.
+  .text.hot.draw works: 22.4% vs 29.5%. Task 32 earned its retail KEEP.
+  .text.hot DOES NOT WORK: 30.0% against .main's 29.5%, and a marginally worse
+  cycles-per-instruction. The Task 17 update-path tier is buying nothing
+  measurable, and its 3,716 free bytes are free because they are not worth much.
+
+  Probable discriminator: re-entry frequency, not address grouping.
+  .text.hot.draw holds functions called thousands of times inside one frame,
+  where grouping compounds; .text.hot holds update functions called once per
+  frame, cold on arrival regardless of their neighbours. Any future plan resting
+  on "group the hot functions together" should be checked against this first.
+
+  Also corrected: .itcm is NOT ~12.6 KB unenumerated. 64 residents cover 31,628
+  of 31,676 bytes; 48 bytes are unnamed. And 5,040 bytes of it never executed
+  once in 128 frames -- an eviction budget worth ~26.3M non-memory stall cycles,
+  deliberately left unspent here (dead in this scene's steady state is not dead,
+  and several are pinned by the renderer and Task 9/16 float checkers).
+
+WHAT SHIPPED: NDS_TASK37_ITCM_LEAVES=1
+  Seven measured toppers moved from .main into ITCM's free space. Placement
+  only: library members are byte-identical objects from SHA-pinned archives with
+  the section renamed, port functions carry a section attribute with no ISA or
+  optimization change. No eviction, no verifier contract edited.
+  906 bytes carrying 7,387,317 non-memory stall cycles.
+  .itcm 31,676 -> 32,596 of a 32,736 hard cap; .main -800 B.
+
+RESULT (P50/P95, never means -- HUD spread is 310x):
+  bucket   ctl P50     cand P50      d P50       %      d P95
+  ALL    1,680,192   1,680,192          0    0.00   -559,680
+  FTR      591,936     576,640    -15,296   -2.58    -26,624
+  STG      610,560     570,240    -40,320   -6.60    -40,512
+  SRC      326,080     322,432     -3,648   -1.12    -10,496
+  MISC      47,808      47,680       -128   -0.27     -2,688
+  AUD        2,240       2,176        -64   -2.86       -192
+  BG         4,096       4,224       +128   +3.12        +64
+  HUD        1,024       1,024          0    0.00    -11,200
+  OTHR     126,784     165,696    +38,912  +30.69    -83,776
+
+  Named work P50 -59,328 ticks. OTHR rising is the correct signature: ALL is
+  VBlank-quantized and did not move, so work removed from named buckets
+  reappears as pacing slack inside the same 3-VBlank envelope.
+
+  VBI share, normalized by sample count (n=637 each), never min-FPS:
+                3-VBI  4-VBI  5+-VBI
+    control      71.7   23.1    5.2
+    candidate    76.0   20.9    3.1
+
+  +4.3 points into the 3-VBlank bucket; 5+ frames cut from 5.2% to 3.1%.
+  ALL P95 fell 559,680 -- one whole VBlank interval (560,190), so the 95th
+  percentile frame moved from a 5-VBlank frame to a 4-VBlank one.
+
+GATE STATUS, STATED HONESTLY:
+  The plan's success gate was "FTR + SRC P50 down >= 40,000 combined". They fell
+  18,944. THE GATE AS WRITTEN IS NOT MET. It named the wrong buckets: the census
+  showed the recoverable stall sits in the renderer/stage path, and that is
+  where the win landed. STG -- which the Task 37 plan itself called "exhausted,
+  no variance left, hard median floor" -- gave up 40,320 ticks to pure code
+  placement. The gate predates the measurement that replaced it.
+
+EVIDENCE:
+  artifacts/task37-census/census.txt        (full census, three ranked tables)
+  artifacts/task37-census/census.json
+  artifacts/task37-census/arm9-profile.csv  (per-PC, 60,709 rows)
+  artifacts/task37-census/ab-control.json
+  artifacts/task37-census/ab-candidate.json
+  artifacts/task37-census/ab-report.txt
+EXACTNESS GATE: FAILED -- THIS IS NOT A KEEP
+  verify-task37-itcm-state-hash-ab.ps1 requires every per-update game-state
+  record to match across the placement change. 692 of 3,892 differ (17.8%),
+  first at update 1412, in three bursts separated by runs of identical records
+  (the last run is 1,357 consecutive identical updates).
+
+  Evidence that this is probably the instrument and not a real divergence:
+  the hash covers syUtilsRandSeed() and a divergent RNG stream cannot
+  re-converge, yet it re-converges three times; heap offset (57,168) and GObj
+  count (646) are identical in all 3,892 records; and two fighters at different
+  positions do not return to bit-identical whole-state. The likely source is a
+  GObj field touched by the draw path rather than by logic -- and Task 44, also
+  a perf change, deliberately proved exactness with the Task 36 replay word
+  stream instead of this gate.
+
+  Probably is not the standard for changing a published ROM, and moving the gate
+  after seeing its result would make it worthless. NDS_TASK37_ITCM_LEAVES stays
+  0 in every target; the published ROM is unchanged at 9E27BD3D...; nothing
+  merged. The enabled build would have been 1818AA77..., 11,428,864 bytes.
+
+  TO SETTLE IT: the instrument already tags inputs by region
+  (SCENE/BATTLE/CAMERA/GROUND/CONTROLLERS/COLLISION/GObjs). Export a per-region
+  hash instead of one combined pair and the diverging region names itself in one
+  run. If it is GObj draw state, exclude the draw-touched fields and this gate
+  becomes usable for every future perf task. If it is a gameplay region, Task 37
+  is a real bug and stays reverted.
+KEEP / REWORK / REVERT: WIP -- measured win real, exactness unproven, not shipped
+```

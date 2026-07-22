@@ -1,13 +1,13 @@
 # Handoff
 
-Updated: 2026-07-22 (Task 44 stage steady-state KEEP)
+Updated: 2026-07-22 (Task 37 placement repack KEEP)
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
 
 ## Restart
 
-Branch: `codex/task44-stage-steady-state`
+Branch: `codex/task37-itcm-repack`
 Boundary: `battle_playable_realtime`, mode `163`
 
 ```powershell
@@ -31,8 +31,33 @@ alone -6,248. The retail A/B pair is queued in
 carries an `S` engagement digit. Full detail and the invalidation-seam
 enumeration: `docs/optimization/ClaudeFable5_Task44_StageSteadyState_20260721.md`.
 
-Task 37 (ITCM repack) is the top-value remaining perf task: Source is ~31% of
-the retail loop. Task 41's runtime gates and Task 43's micro-sweep are still open.
+Task 37 is a KEEP and ships enabled in profile-0 (`1818AA77...`). Seven measured
+hot leaves moved from `.main` into ITCM free space — placement only, state-hash
+exact, no eviction. Named work P50 -59,328 ticks; VBlank 3-share 71.7% -> 76.0%,
+5+ 5.2% -> 3.1%. Retail pair queued in
+`builds/device-queue/task37-itcm-leaves-pair/`; HUD `GIT` row carries an `L`
+digit. Note the plan's stated FTR+SRC gate was NOT met (-18,944 of -40,000
+required) — it named the wrong buckets and the win landed in STG. Full detail:
+`docs/optimization/ClaudeFable5_Task37_ItcmRepack_20260722.md`.
+
+**Two Task 37 findings that change how later perf work should be planned:**
+
+1. `.text.hot` (the Task 17 update tier) measures 30.0% non-memory stall against
+   ordinary `.main` code's 29.5%. It is not buying anything. `.text.hot.draw`
+   (22.4%) and `.itcm` (14.7%) both work. Grouping appears to pay only for code
+   re-entered many times inside one frame, so do not assume a new hot-text tier
+   helps until it is measured.
+2. The census tooling generalizes. `scripts/run-task37-profile-census.ps1` plus
+   `scripts/task37_census.py` will rank any build's symbols by recoverable
+   stall, cycles-per-byte, and tier, and enumerate a section's residents
+   including the ones that never execute.
+
+Still open: `ndsRendererHardwareResolveOrBindTexture` is the single largest cost
+in the program (21.8M cycles, 4.36%) and is an algorithmic target, not a
+placement one. `memcmp` is called ~3,900 times per frame; reducing that call
+count is worth more than any placement of it. Task 41's runtime gates and Task
+43's micro-sweep are still open, as is the unspent 5,040-byte ITCM eviction
+budget.
 
 `check-architecture.ps1` fails on tracked `artifacts/performance/*.json`. That is
 pre-existing on clean HEAD and unrelated to Task 44.

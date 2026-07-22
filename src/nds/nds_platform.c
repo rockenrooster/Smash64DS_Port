@@ -11,6 +11,7 @@
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_task37_itcm.h>
 #include <nds/nds_scene.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_video.h>
@@ -2346,10 +2347,11 @@ static void ndsPlatformRenderBattleFpsHud(void)
              * compile-time constant or an unguarded global, so this row costs
              * the lean build nothing and cannot go stale against the flags. */
             ndsPlatformPrintDebugLine(
-                23u, "GIT %s A%lx S%u C%u", NDS_TASK10_GIT_SHORT,
+                23u, "GIT %s A%lx S%u C%u L%u", NDS_TASK10_GIT_SHORT,
                 (unsigned long)(gNdsTaskmanArenaChosenSize >> 12),
                 (unsigned int)NDS_TASK44_STAGE_STEADY,
-                (unsigned int)NDS_TASK36_HW_COMPOSE);
+                (unsigned int)NDS_TASK36_HW_COMPOSE,
+                (unsigned int)NDS_TASK37_ITCM_LEAVES);
         }
     }
 #endif

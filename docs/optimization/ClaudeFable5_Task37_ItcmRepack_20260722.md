@@ -2,7 +2,14 @@
 
 Standing rules apply (`docs/optimization/TASK_STANDING_RULES.md`).
 
-Branch: `codex/task37-itcm-repack`. Status: PLANNED, not started.
+Branch: `codex/task37-itcm-repack`. Status: EXECUTED — see RESULTS below.
+
+> **The census overturned this plan's Phase 2 ordering.** The plan assumed
+> `.text.hot`'s 3,716 free bytes were the cheapest win because they need no
+> eviction. Measurement says `.text.hot` is not a working tier: it stalls at the
+> same rate as ordinary `.main` code. ITCM is the only tier that pays, so the
+> repack went there instead, using free space only. The original Phase 2 text is
+> kept below unedited as the record of what was believed before measuring.
 
 Scope note: the queue calls this "ITCM repack", but the port has **three**
 placement tiers, and ITCM is the one with the least room left. The task covers
@@ -188,6 +195,264 @@ normalized by sample count, never min FPS.
 3. Are the 8 KiB caps on `.text.hot` / `.text.hot.draw` physical or policy? If
    policy, the census may justify raising one — but that trades against `.main`
    locality and needs its own measurement, not an assumption.
+
+## RESULTS (2026-07-22)
+
+### Phase 0 — instrument
+
+`include/nds/nds_task37_profile.h` implements the emulator's CP15 marker
+protocol (the constants are its published interface; no emulator source is
+vendored). `NDS_TASK37_PROFILE=1` resets the profiler at presented frame 438 and
+dumps at 566, so the CSV covers 128 settled battle frames instead of boot.
+
+- MCR is ARM-only and the battle seam is Thumb, so the marker write is
+  `__attribute__((noinline, target("arm")))`. Two interworking calls per run.
+- **Lean gate held:** at `NDS_TASK37_PROFILE=0` the published ROM rebuilt to
+  `9E27BD3D5DCBE00DC72A47221CFDD170FFE690BC1516F0B16241029F937CE369`,
+  11,428,864 bytes — byte-identical to `DECOMP_PIN.txt`.
+
+Driver: `scripts/run-task37-profile-census.ps1`. Analysis:
+`scripts/task37_census.py`. Artifacts in `artifacts/task37-census/`.
+
+### Phase 1 — census
+
+128 frames, 500,810,896 emulated cycles, 168,894,530 instructions, 60,709
+distinct PCs, 844 of 3,319 FUNC symbols executed. 0.00% unattributed.
+
+**The census asks a question cycles alone cannot answer.** Placement changes
+what an instruction *fetch* costs; it does nothing for what a *load* costs. So
+every profiled PC is classified by opcode as memory or non-memory, and only
+non-memory stall — cycles beyond one per instruction on instructions that touch
+no data — is treated as recoverable. `armWaitForIrq` is excluded throughout: it
+is 8 bytes of deliberate VBlank spinning that alone accounts for 9.21% of all
+cycles, and leaving it in makes the zero-waitstate tier look like the worst one.
+
+```
+tier              cycles      insns  cyc/insn  non-mem stall     %   mem stall     %
+.itcm         88,250,502  52,480,774    1.68     12,980,124   14.7  22,789,604  25.8
+.text.hot     15,851,755   4,805,435    3.30      4,754,539   30.0   6,291,781  39.7
+.text.hot.draw 65,601,182 24,985,828    2.63     14,698,523   22.4  25,916,831  39.5
+.main        284,956,329  86,619,628    3.29     84,002,286   29.5 114,334,415  40.1
+```
+
+Three findings:
+
+1. **ITCM works.** Half the non-memory stall rate of `.main` (14.7% vs 29.5%).
+2. **`.text.hot` does not work.** 30.0% non-memory stall against `.main`'s 29.5%,
+   and a marginally *worse* cycles-per-instruction. The Task 17 update-path tier
+   is not measurably buying anything. Its 3,716 free bytes are therefore not the
+   cheap win this plan assumed — they are free because they are not worth much.
+3. **`.text.hot.draw` does work.** 22.4% vs 29.5%. Task 32 earned its retail KEEP.
+
+The likely discriminator between 2 and 3 is re-entry frequency, not address
+grouping: `.text.hot.draw` holds functions called thousands of times inside one
+frame, where grouping into contiguous cache lines compounds; `.text.hot` holds
+update-path functions called once per frame, which are cold on arrival no matter
+who their neighbours are. Anything built on "group the hot functions together"
+should be checked against that before it is trusted.
+
+**The ITCM enumeration gap in this plan's opening section was wrong.** 64
+residents cover 31,628 of 31,676 section bytes; only 48 bytes are unnamed, not
+~12,636. What the checkers did not enumerate, the ELF always could.
+
+**5,040 bytes of ITCM never executed once** in 128 frames — dead stock-libgcc
+float copies (`__addsf3`, `__aeabi_frsub`), the Task 9/16 `*_golden` verifier
+references, `ndsRendererHardwareConvertTexel01Ci4Direct` (2,600 B), and others.
+That is an eviction budget worth roughly 26.3M non-memory stall cycles if spent.
+It was deliberately **not** spent in this task: those symbols are dead *in this
+scene's steady state*, which is not the same as dead, and several are pinned by
+`check-renderer-itcm-placement.ps1` and the Task 9/16 float checkers. Spending it
+is a separate task with its own cross-scene evidence.
+
+The biggest single cost in the program, `ndsRendererHardwareResolveOrBindTexture`
+(21.8M cycles, 4.36%), is 10,260 bytes and fits no tier. It is an algorithmic
+target, not a placement one.
+
+Likewise `memset`/`memcpy`/`memcmp` cost 38.9M cycles between them (7.8%), but
+only 4.8M of that is non-memory stall — the rest is data traffic that placement
+cannot touch. `memcmp` alone is called ~3,900 times per frame. **Reducing those
+call counts is worth far more than moving the code**, and belongs in its own task.
+
+### Phase 2 — repack (placement only, zero eviction)
+
+`NDS_TASK37_ITCM_LEAVES=1` admits the seven densest non-memory-stall symbols
+that fit ITCM's 1,060 free bytes, all from `.main`, all keeping their exact
+compiled form — `NDS_TASK37_ITCM_CODE` sets a section and nothing else. No ISA
+switch, no optimization change, no eviction, no verifier contract touched.
+
+```
+symbol                                  bytes  non-mem stall  mechanism
+memset                                    140      2,391,465  libc.a, SHA-pinned objcopy
+memcpy                                    170      1,173,373  libc.a, SHA-pinned objcopy
+memcmp                                     70      1,249,372  libc.a, SHA-pinned objcopy
+__ieee754_sqrtf                           236      1,054,412  libm.a, SHA-pinned objcopy
+ndsRendererHardwareTextureSourceBytes     132        644,164  NDS_TASK37_ITCM_CODE
+ndsFTParamsInvalidateFighterParts          58        501,888  NDS_TASK37_ITCM_CODE
+ndsRendererHardwarePolyFmt                100        372,643  NDS_TASK37_ITCM_CODE
+                                    ---------  -------------
+                                          906      7,387,317
+```
+
+`.itcm` 31,676 → 32,596 of a 32,736 hard cap (140 B free); `.main` −800 B.
+
+`ndsRendererMtxMul20p12` was prepared and then dropped: it carries the largest
+raw figure that fits (1,733,057) but it already lives in `.text.hot.draw`, so its
+measured tier delta is the smallest of the candidates (22.4%→14.7%, against
+29.5%→14.7% for `.main` symbols), and it is the only one whose move would have
+required editing a verifier contract
+(`scripts/check-task32-draw-hot-text.ps1:22`). Worst candidate, highest cost.
+
+### Phase 3 — emulator A/B
+
+Matched pair, frames 438..637, 200 samples each, same melonDS
+(`DE80E46BDCF1FD98`), `slips=0` on both. Windows asserted equal by
+`scripts/compare-tick-hud-buckets.ps1`. P50/P95 only — never the means.
+
+```
+bucket   ctl P50     cand P50      d P50       %      ctl P95     cand P95      d P95
+ALL    1,680,192   1,680,192          0    0.00    2,800,448    2,240,768   -559,680
+FTR      591,936     576,640    -15,296   -2.58    1,032,448    1,005,824    -26,624
+STG      610,560     570,240    -40,320   -6.60      618,624      578,112    -40,512
+BG         4,096       4,224       +128   +3.12        4,224        4,288        +64
+AUD        2,240       2,176        -64   -2.86       64,960       64,768       -192
+HUD        1,024       1,024          0    0.00      329,152      317,952    -11,200
+SRC      326,080     322,432     -3,648   -1.12      985,472      974,976    -10,496
+MISC      47,808      47,680       -128   -0.27      168,256      165,568     -2,688
+OTHR     126,784     165,696    +38,912  +30.69      530,560      446,784    -83,776
+```
+
+**Named work P50 fell 59,328 ticks.** Every named bucket improved or held except
+BG (+128, a rounding-scale move on a 4,096-tick bucket).
+
+`OTHR` rising is the correct signature, not a regression. `ALL` is
+VBlank-quantized and did not move (both sit on exactly 3 VBlanks), and `OTHR` is
+defined as the `ALL` remainder — so work removed from named buckets reappears as
+pacing slack inside the same envelope. The question is whether that slack is
+enough to change which envelope the frame lands in, and it is:
+
+```
+VBlank interval share, normalized by sample count (n=637 each)
+              3-VBI   4-VBI   5+-VBI
+  control      71.7    23.1     5.2
+  candidate    76.0    20.9     3.1
+```
+
+**+4.3 points into the 3-VBlank bucket and 5+ frames cut from 5.2% to 3.1%.**
+`ALL` P95 fell 559,680 ticks — one whole VBlank interval (560,190), i.e. the 95th
+percentile frame moved from a 5-VBlank frame to a 4-VBlank one.
+
+**Against the stated success gate: FTR+SRC P50 fell 18,944 combined, short of the
+40,000 the plan required.** The gate is not met as written. It named the wrong
+buckets: the census showed the recoverable stall was concentrated in the
+renderer/stage path, and that is where the win landed — STG, the bucket this
+plan's own opening section called "exhausted... no variance left, hard median
+floor", gave up 40,320 ticks (6.60%) to pure code placement. Reporting this as a
+pass against the original numbers would be false; reporting it as a failure
+would be worse. The measurement is above, the gate is above, and the mismatch is
+the finding.
+
+### Exactness — FAILED, and this is why the task does not ship
+
+`scripts/verify-task37-itcm-state-hash-ab.ps1` runs the full match lifecycle on
+both builds with the Task 9 per-update state-hash instrument and requires every
+record to match. **It does not match.** 692 of 3,892 update records differ
+(17.8%), first at update 1412.
+
+Per the kill criteria above — "Any state-hash divergence → REVERT immediately" —
+this is not a KEEP. `NDS_TASK37_ITCM_LEAVES` stays 0 in every target, the
+published ROM is unchanged at `9E27BD3D...`, and nothing merges.
+
+The evidence says this is probably an instrument limit rather than a real
+divergence, but "probably" is not the standard for changing a published ROM, and
+redefining the gate after seeing its result would make it worthless:
+
+```
+divergence structure                     off vs on
+  updates    0..1411   identical         (1,412 records)
+  updates 1412..1733   differ            (322)
+  updates 1734..1991   identical         (258)
+  updates 1992..2327   differ            (336)
+  updates 2328..2500   identical         (173)
+  updates 2501..2534   differ            (34)
+  updates 2535..3891   identical         (1,357 consecutive)
+```
+
+- The hash covers `syUtilsRandSeed()`. A divergent RNG stream cannot re-converge,
+  and this re-converges three times — so both builds are drawing the same random
+  numbers in the same order.
+- Heap offset (57,168) and GObj count (646) are byte-identical in **all 3,892**
+  records, so allocation behaviour is identical throughout.
+- A genuine simulation divergence — two fighters at different positions — does
+  not return to bit-identical whole-state three separate times, once for 1,357
+  consecutive updates.
+
+That pattern is a transient, self-healing quantity inside the hash, and the most
+likely source is a GObj field touched by the draw path rather than by logic. Two
+of the seven moved symbols are renderer functions and the measured win is
+concentrated in STG, so a change that alters when frames are presented would
+perturb exactly such a field and then let it settle.
+
+Supporting circumstantial point: **Task 44, also a performance change, did not
+use this gate.** It proved exactness with the Task 36 replay word stream (3,916
+words, mask 0xA1, zero fallback) instead. That choice looks deliberate in
+hindsight.
+
+**What would settle it** — the instrument already tags its inputs by region
+(`NDS_TASK9_STATE_RECORD_SCENE` / `_BATTLE` / `_CAMERA` / `_GROUND` /
+`_CONTROLLERS` / `_COLLISION_*` / GObjs). Export a per-region hash instead of one
+combined pair and the diverging region names itself in a single run. If it is
+GObj draw-state, the fix is to exclude draw-touched fields and the gate becomes
+usable for every future perf task; if it is a gameplay region, Task 37 is a real
+bug and stays reverted. That work belongs to the instrument, not to this task,
+which is why it was not done here under the flag of a task that benefits from
+the answer.
+
+### Publication — NOT shipped
+
+Flag stays 0 everywhere. Published ROM unchanged: `smash64ds-battle-playable-hwtri.nds`,
+11,428,864 bytes, `9E27BD3D5DCBE00DC72A47221CFDD170FFE690BC1516F0B16241029F937CE369`.
+`DECOMP_PIN.txt` and the README pin are unchanged from master.
+
+For the record, the enabled build was produced and measured: it links (ITCM
+31,676 → 32,596 of a 32,736 hard cap) and its published-target hash would be
+`1818AA775DCFFD52C82B35ED3D4FA6C6D02FCE232E9EE70D9B3F1DA3FDF54207`, 11,428,864
+bytes. The lean ROM does not embed `NDS_TASK10_GIT_SHORT`, so that hash is
+commit-stable if the task is later revived.
+
+HUD row 23 gains an `L` digit for `NDS_TASK37_ITCM_LEAVES` so a device session
+can confirm which ROM booted: `GIT <hash> A<arena> S<t44> C<t36> L<t37>`. That
+row costs nothing at `L0` and is kept.
+
+### Phase 4 — retail queue (built, but NOT queued for a session)
+
+`builds/device-queue/task37-itcm-leaves-pair/` holds the pair, targets
+`smash64ds-battle-playable-task37-{on,off}-hwtri`. It is left in place because it
+is already built and costs nothing to keep, but **it should not be run until the
+exactness question is settled** — device time spent confirming a speedup that
+might be riding on a behaviour change is wasted either way.
+
+If it is run: the number to check is **not** the bucket medians but the 3-VBlank
+share. The emulator says 71.7% → 76.0%; retail sits closer to the cliff (47.7%
+in the matched 2026-07-22 pair), so the same tick saving should move more
+distribution there, not less.
+
+## Verdict
+
+**WIP / NOT MERGED.** Branch `codex/task37-itcm-repack` is the checkpoint.
+
+What is proven and worth keeping regardless of what happens to the repack:
+
+- The census method and tooling, including the memory/non-memory stall split
+  that separates a placement target from an algorithmic one.
+- `.text.hot` is not a working tier (30.0% non-memory stall vs `.main`'s 29.5%).
+  This is independent of the repack and should inform any future hot-text plan.
+- `.itcm` is fully enumerated and holds 5,040 bytes that never execute.
+- The Phase 0 instrument, which costs the published ROM nothing (hash-verified).
+
+What is measured but unproven: the −59,328 tick P50 win and the +4.3-point
+3-VBlank shift are real measurements of these two ROMs, but until the exactness
+gate is resolved it is not established that the candidate ROM is playing the
+same game.
 
 ## Known context
 
