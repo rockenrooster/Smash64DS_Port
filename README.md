@@ -65,8 +65,8 @@ little-endian `.n64` dumps are rejected.
 The reference toolchain produces:
 
 - File: `smash64ds-battle-playable-hwtri.nds`
-- Size: 14,688,256 bytes
-- SHA-256: `C344CA8B89903A35678A6DC4A849F217B690CBCE16841FAC47974626899EB9DF`
+- Size: 11,424,768 bytes
+- SHA-256: `3D5C18FBBDB9DC715B2F69476CA56BCDA51C11F152C22B1875C992262B3BA595`
 
 The build script prints the versions it found and clearly reports whether the
 output matches this identity.

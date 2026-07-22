@@ -135,3 +135,15 @@ extension without its oracle is not done:
   untouched.
 - Commit the Phase C costed table and Phase E census as artifacts next to the
   existing audit evidence.
+
+## Closeout — 2026-07-21 (Tyler sign-off)
+
+Tyler's listen pass on ROM `3D5C18FB...` (post cache-init fix `5c278710d`)
+APPROVED all cues — formerly missing specials, fused-fork layered hits, KO
+sequence — **including explicit sign-off on the dry AL_FX_CUSTOM wet tails**
+(the one named fidelity lever; debt mask bit stays documented, no further
+approval needed). The production silence bug (cache slot table initialized
+only on the diagnostics path) is fixed at the load fence. Runtime verifier
+fully green: 64 supported plays / 0 failures / phase mask 0x1f / exact KO trio.
+Shipped by Tyler's override with the frozen-water diagnostic regression
+tracked separately (it pre-dates and is unrelated to the audio work).
