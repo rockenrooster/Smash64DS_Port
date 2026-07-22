@@ -66,28 +66,127 @@ enumerated invalidation-path list in the report — an admission skip without
 that enumeration is an automatic reject. Separate commits per item; snapshot
 at the end.
 
-## Execution checkpoint — 2026-07-21
+## Resolution — 2026-07-22: KEEP, shipped enabled in profile-0
 
-- Item 2: the two wrapped GX record sites now read a hot capture-active scalar
-  before calling the recorder. Capture behavior is unchanged; replay steady
-  state skips the call.
-- Item 3: steady admission is one Dream Land asset-mutation generation compare.
-  The complete invalidation list is the shared `ndsRelocRegisterLoadedFile`
-  seam (new load or same-id replacement) and `ndsRelocResetLoadedFiles` seam
-  (all unload/reset paths). Only the five Dream Land asset IDs bump this
-  generation, so fighter animation loads do not cause false revalidation.
-  A mismatch takes the existing full four-asset/topology validation path and
-  fails closed on rejection.
-- Item 4: stage capture now builds dense rigid and dynamic-transform index
-  lists. Steady matrix preparation walks 16 dynamic bindings and rigid
-  validation walks 26 rigid bindings, with no 42-entry mask-test scans. The
-  existing four-entry material list was already dense; no animator mutation
-  version exists, so speculative material dirty tracking was not added.
+An earlier 2026-07-21 session implemented all three items, then reverted items 3
+and 4 while chasing a frozen-water verifier failure. That failure was never
+Task 44: `f75b0f748` had fixed the water assert to expect `composite==2`, and
+`636fcce93` accidentally reverted that fix in two linked places (restored by
+`bdbb28144`). Items 3 and 4 were therefore discarded on a disproven premise and
+have been reimplemented here.
 
-The proof target compiles and the generated 608-field native-stage certificate
-and shared checker pass. Runtime A/B, screenshot, invalidation-transition soak,
-and device-queue gates remain open.
+### What shipped
 
-The 2026-07-21 retained Boundary smoke and canonical screenshot/detail contract
-pass with replay engaged and Fox CPU on. Typed A/B, explicit invalidation-event
-coverage, full-match soak, and the retail queue remain open.
+- **Item 2 (capture/replay split).** `capture_active` left the replay owner
+  struct and became `sNdsRendererTask36CaptureActive`, a file-scope scalar
+  declared next to the wrapped GX record sites. It is the single source of truth
+  — there is no mirrored copy to drift. The two record sites go through
+  `NDS_TASK36_REPLAY_RECORD`, which under the flag does one inline test-and-skip
+  instead of calling the recorder to learn it has nothing to do. The capture
+  window is bit-identical.
+- **Item 3 (generation-based admission).** Steady-state admission is one compare
+  against `sNdsRelocStageAssetMutation` plus a cheap eight-segment structural
+  guard. **The complete invalidation enumeration is three seams**, all commented
+  at the counter in `src/port/reloc_backend_assets.c`:
+  1. `ndsRelocResetLoadedFiles` — every unload/reset path funnels here
+     (scene-cache eviction, title backend teardown).
+  2. `ndsRelocRegisterLoadedFile`, for the four Dream Land asset ids
+     (`0x67`, `0x68`, `0x98`, `0xff`) — the only writer of
+     `NDSRelocLoadedFile::data`, so a first load and a same-id replacement in
+     place are both caught. Scoped to those four ids, so fighter/animation loads
+     do not force stage revalidation.
+  3. `ndsRelocPrepareSceneCache` at the `sNdsRelocSceneGeneration` bump —
+     covered explicitly because that path skips the reset when nothing was
+     resident, which would otherwise leave the owner armed across a scene change.
+- **Item 4 (dense operand lists).** Stage capture builds dense rigid (26) and
+  dynamic (16) binding index lists from
+  `NDS_RENDERER_TASK36_RIGID_BINDING_MASK`. Steady matrix preparation walks the
+  dynamic list; rigid validation walks the rigid list. No 42-entry scans, no
+  per-entry 64-bit mask test. Both consult the dense list only while the runtime
+  rigid mask still equals the captured one — a rigid-constancy fallback drops
+  that mask to 0, making every binding dynamic, and takes the full scan. The
+  four-entry material list was already dense; no material animator mutation
+  version exists, so speculative material dirty tracking was **not** added.
+
+### Deliberate deviation from the item-3 wording
+
+The spec says per-frame admission is "one generation compare". It is one
+generation compare **plus eight segment checks**. The asset-mutation generation
+proves the four reloc payloads have not moved; it says nothing about the scene
+graph hanging off them, which the old topology stamp also covered. The guard
+re-checks each segment GObj's identity, hidden flag, `dl_link_id`,
+`proc_display`, and root DObj — five direct global loads per segment, no list
+walks. What steady state stops paying for is all the O(n) work: four loaded-file
+table scans, eight DL-link list walks (up to 256 nodes each), two layer-0 order
+walks, and the 57-DObj / 42-binding stamp rebuild with its per-DObj
+transform-flag derivation. Any guard failure drops through to exactly that full
+validation and fails closed.
+
+Residual accepted risk: the stamp additionally covered per-DObj
+parent/child/sibling/mobj/dv identity, flags, and xobj kinds. Reaching a
+divergence there requires rebuilding the Dream Land display graph in place
+without replacing a reloc file and without replacing any segment root DObj.
+No such path exists in the port — the graph is built by the `grPupupu*` stage
+load, which loads those assets and therefore bumps the generation.
+
+### Measurements (melonDS, typed stage owner, 8 synchronized samples, frame 438)
+
+| build | typed stage ticks | delta |
+|---|---|---|
+| E0, all off | 281,688 | — |
+| items 3+4 only | 271,928 | −9,760 |
+| items 2+3+4 | 265,680 | **−16,008 (−5.68%)** |
+
+Item 2 in isolation is **−6,248** (E1 minus items-3+4-only), which is the
+"item 1" price of the GX capture recorder the spec asked for first. Per-sample
+spread inside each arm is ~400 ticks, so the delta is ~40x the noise.
+Whole-loop context: draw −14,680, present-active −14,552, update −896.
+Calibration-predicted retail delta (Task 10 whole-draw x1.51): ~−24,200.
+
+**Kill criteria not met.** They required item 1 under ~5K **and** items 3-4
+under ~10K combined. Item 1 priced at 6,248, so the conjunction fails and the
+task is a KEEP. Items 3+4 at 9,760 are marginally under their own threshold and
+would not have justified the invalidation risk alone — that is worth recording
+honestly.
+
+### Gates
+
+- **Exactness.** These are exact, not fidelity-budget, changes. The strongest
+  evidence is that the Task 36 replay word stream is unchanged across both arms:
+  3,916 captured words, segment mask `0xA1`, `word_count == capture_word_count`,
+  zero fallback / arena / material rejects. The GX stream is byte-identical, so
+  there is nothing for a screenshot diff to find.
+- **Admission ledger.** `TASK44_ADMIT` GDB marker + harness summary row. On a
+  profile-1 run through a natural Rebirth event:
+  `admit=594..601 revalidate=2..2 generation=6` against
+  `attempts/success/fallback=603/602/1`. Admit + revalidate = 603 = the stage
+  preparation attempt count exactly — no silent third path. Revalidation fired
+  twice (initial arm, then one generation move) and never spuriously after.
+  Per-sample asserts require admit to advance by exactly 1 with revalidate and
+  generation held constant.
+- **Full-match soak.** `verify-battle-playable-realtime-harness.ps1
+  -OneMinuteMatchProof` passed with Task 44 forced on, including the
+  `scene=22->24 results=120` transition (a real stage-asset invalidation event),
+  exact KO trio 439/292/154, `koExact=True`, `evict=0/0`, `stale=0/0`.
+- **`verify-dev-fast.ps1`** green; `check-gbi-decode-fixtures.ps1` green
+  (611-field native-stage certificate, up from 608: the new dense-list and
+  admission-generation operands are bound in the certificate, and a new
+  Task 44 source assert guards the flag plumbing, marker, mutation seam and
+  hoisted scalar); `check-published-roms.ps1`, `check-harness-registry.ps1`,
+  `check-docs.ps1` green.
+- **Device queue.** `builds/device-queue/task44-stage-steady-pair/` holds a
+  release-equivalent retail A/B pair built from two new nonpublishing targets
+  (`smash64ds-battle-playable-task44-{on,off}-hwtri`) differing only in
+  `NDS_TASK44_STAGE_STEADY`. The shared device HUD `GIT` row gained an `S`
+  digit so one batched-checkpoint photo proves Task 36 and Task 44 engagement
+  together.
+
+### Published decision
+
+`NDS_TASK44_STAGE_STEADY := 1` is forced on in the `smash64ds-battle-playable-hwtri`
+block, so the keep **ships enabled in profile-0**. The flag remains the one-line
+revert if the retail checkpoint disagrees.
+
+Known unrelated red: `check-architecture.ps1` fails on tracked
+`artifacts/performance/*.json`. Verified pre-existing on clean HEAD; not touched
+here.

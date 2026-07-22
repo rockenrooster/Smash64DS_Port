@@ -1,13 +1,13 @@
 # Handoff
 
-Updated: 2026-07-21 (Tasks 38-40 audit closeout)
+Updated: 2026-07-22 (Task 44 stage steady-state KEEP)
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
 
 ## Restart
 
-Branch: `codex/tasks38-40-audits`
+Branch: `codex/task44-stage-steady-state`
 Boundary: `battle_playable_realtime`, mode `163`
 
 ```powershell
@@ -20,6 +20,23 @@ residency, source countdown, exact Dream Land water frame 0, and Task 16
 compare/i2f/addsub `1/1/1`. Do not edit `decomp/`.
 
 ## Next Packet
+
+Task 44 is a KEEP on master and ships enabled in profile-0. Steady-state stage
+admission is a Dream Land asset-mutation generation compare plus an eight-segment
+structural guard; matrix preparation and rigid validation walk dense 16/26
+binding lists; the wrapped GX record sites test a hoisted capture-active scalar.
+melonDS typed stage owner 281,688 -> 265,680 ticks (-16,008, -5.68%); item 2
+alone -6,248. The retail A/B pair is queued in
+`builds/device-queue/task44-stage-steady-pair/` and the device HUD `GIT` row now
+carries an `S` engagement digit. Full detail and the invalidation-seam
+enumeration: `docs/optimization/ClaudeFable5_Task44_StageSteadyState_20260721.md`.
+
+Task 37 (ITCM repack) is the top-value remaining perf task: Source is ~31% of
+the retail loop. Task 41's runtime gates and Task 43's micro-sweep are still open.
+
+`check-architecture.ps1` fails on tracked `artifacts/performance/*.json`. That is
+pre-existing on clean HEAD and unrelated to Task 44.
+
 
 Task 38's unsupported-FGM census is implemented and verifier-exported. Exact
 special cues remain blocked by representation and the 128 KiB resident cap;
