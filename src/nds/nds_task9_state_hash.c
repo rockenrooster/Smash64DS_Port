@@ -108,8 +108,22 @@ static u32 ndsTask9StateCanonicalWord(u32 word)
         return 0u;
     }
     if (ndsTask9StateRangeContains(gSYTaskmanGeneralHeap.start,
-                                   gSYTaskmanGeneralHeap.ptr, value, 1u))
+                                   gSYTaskmanGeneralHeap.end, value, 1u))
     {
+        /* Bound on .end (stable arena capacity), not .ptr (the live allocation
+         * high-water). Both the offset form here and the generic main-RAM
+         * constant below individually absorb a uniform heap relocation, but a
+         * pointer's CLASS must not depend on the high-water: .ptr advances as
+         * the match allocates, so a pointer that sits just below it in one
+         * build and just above it in a build whose heap slid down (Task 37
+         * moved 3 libc leaves out of .main, shrinking the image 0x180 and
+         * relocating every heap object -0x180) canonicalizes as offset-form in
+         * one and constant in the other. That produced 692 of 3,892 records
+         * differing in bursts that healed as .ptr moved -- purely the
+         * instrument, with zero gameplay difference (Task 45: every differing
+         * word a heap pointer, all exactly +0x180). .end is fixed at init and
+         * relocates with .start, so (value - start) is preserved and the class
+         * is stable. The graphics-heap case below already bounds on .end. */
         start = (uintptr_t)gSYTaskmanGeneralHeap.start;
         return 0x10000000u | (u32)(value - start) | (word & 1u);
     }
