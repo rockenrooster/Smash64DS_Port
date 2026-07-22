@@ -70,6 +70,28 @@ question the port ever promised to answer.
   relocation-only divergence needs a real explanation and does not get one from
   this clause. See `ClaudeFable5_Task37_ItcmRepack_20260722.md`.
 
+### The play test is a gate, not a courtesy (the owner, 2026-07-22)
+
+"Exactness is still useful obviously but the 'eyeball test' when sacrifices are
+being made matter a lot."
+
+An automated gate measures what it was written to measure. When a change trades
+something away, the owner playing it is evidence about the thing that actually
+matters, and it is not a softer substitute for a verifier — on Task 37 a
+state-hash gate reverted a build the owner had already played and found faster
+and correct, while RNG, battle state, camera, ground and collision were all
+bit-identical.
+
+- Record a play test as a result, not an impression: what ROM (by hash), on what
+  hardware, for how long, and what was watched for. "Looked fine" is unciteable
+  six weeks later; "candidate hash 6D2582D4, retail, one full match, no visual
+  artifacts, faster" is evidence.
+- Its limit is coverage, not validity — one session cannot surface a rare
+  divergence. So pair it with a gate that names which quantity it holds exact,
+  and do not let either stand alone.
+- An agent cannot perform this gate. Agents cannot see or hear; never
+  self-approve on the strength of counters or a passing verifier alone.
+
 ## Content-completeness doctrine (the owner, 2026-07-21)
 
 Battle-reachable game content — SFX cues, animations, visual effects the original
