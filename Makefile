@@ -84,6 +84,10 @@ NDS_FIGHTER_ANIM_CYCLER_KIND ?= -1
 NDS_TASK39_FX_SPRITES ?= 0
 NDS_TASK39_FX_FLASH ?= 0
 NDS_TASK39_FX_SHIELD ?= 0
+# Task 44 stage steady-state excision: generation-based admission, dense
+# rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
+# the Task 36 hardware-compose stage owner; meaningless without it.
+NDS_TASK44_STAGE_STEADY ?= 0
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_FAST_WALLPAPER_AFFINE),1)
 ifneq ($(NDS_SCENE_MIP_CACHE_LAB),0)
@@ -110,6 +114,11 @@ ifneq ($(NDS_TASK9_FLOAT_PHASE2),1)
 $(error NDS_TASK16_FLOAT_ADDSUB=1 requires NDS_TASK9_FLOAT_PHASE2=1)
 endif
 endif
+ifeq ($(NDS_TASK44_STAGE_STEADY),1)
+ifeq ($(NDS_TASK36_HW_COMPOSE),0)
+$(error NDS_TASK44_STAGE_STEADY=1 requires NDS_TASK36_HW_COMPOSE)
+endif
+endif
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
 ifeq ($(TARGET),smash64ds-battle-playable-hwtri)
 # This is the only published P1 battle ROM. Keep the complete realtime
@@ -126,6 +135,9 @@ override NDS_TICK_HUD := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Task 44: stage steady-state admission + dense binding lists. Exact (no
+# fidelity change); ships on with Task 36 replay.
+override NDS_TASK44_STAGE_STEADY := 1
 override NDS_SCENE_MIP_CACHE_LAB := 0
 # Device-proven: boots to GO on melonDS and retail hardware with no OOM.
 override NDS_FAST_WALLPAPER_AFFINE := 1
@@ -161,6 +173,9 @@ endif
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Task 44: stage steady-state admission + dense binding lists. Exact (no
+# fidelity change); ships on with Task 36 replay.
+override NDS_TASK44_STAGE_STEADY := 1
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -1152,6 +1167,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK29_GX_CENSUS $(NDS_TASK29_GX_CENSUS)'; \
 		echo '#define NDS_TASK34_STAGE_STREAM_CENSUS $(NDS_TASK34_STAGE_STREAM_CENSUS)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
+		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
@@ -1372,6 +1388,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK29_GX_CENSUS=$(NDS_TASK29_GX_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK34_STAGE_STREAM_CENSUS=$(NDS_TASK34_STAGE_STREAM_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK36_HW_COMPOSE=$(NDS_TASK36_HW_COMPOSE)'
+	@printf '%s\n' 'BENCH_MAKE_TASK44_STAGE_STEADY=$(NDS_TASK44_STAGE_STEADY)'
 	@printf '%s\n' 'BENCH_MAKE_TASK22_WALLPAPER_RUN_LAB=$(NDS_TASK22_WALLPAPER_RUN_LAB)'
 	@printf '%s\n' 'BENCH_MAKE_SCREEN_SPACE_CENSUS=$(NDS_RENDERER_SCREEN_SPACE_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_RENDER_ECONOMY=$(NDS_RENDER_ECONOMY)'

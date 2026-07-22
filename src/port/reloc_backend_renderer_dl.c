@@ -178,6 +178,17 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     NDSRendererAdapterStageWorldSourceKey task36_rigid_source_keys[
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     u64 task36_runtime_rigid_mask;
+#if NDS_TASK44_STAGE_STEADY
+    /* Task 44 item 4: the rigid/dynamic partition of the 42 bindings is fixed
+     * for one topology, so build it once at stage capture. Steady-state matrix
+     * preparation and rigid validation then walk their own dense list instead
+     * of scanning all 42 and re-testing the 64-bit mask per entry. */
+    u8 task44_rigid_bindings[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    u8 task44_dynamic_bindings[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    u8 task44_rigid_binding_count;
+    u8 task44_dynamic_binding_count;
+    u8 task44_binding_lists_valid;
+#endif
 #endif
     NDSRendererNativeMaterial materials[
         NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT];
@@ -195,6 +206,14 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
     u32 topology_generation;
     u32 topology_stamp;
     u32 topology_valid;
+#if NDS_TASK44_STAGE_STEADY
+    /* Task 44 item 3: the stage-asset mutation generation this workspace was
+     * last fully validated against. Zero means "never admitted". */
+    u32 task44_admission_generation;
+    /* Per-segment root DObj recorded at collect time, so steady admission can
+     * catch a display graph rebuilt underneath an unchanged segment GObj. */
+    DObj *task44_segment_roots[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT];
+#endif
 } NDSRendererAdapterNativeStageWorkspace;
 
 /* The stage owner remains armed across fighter links 9, so it cannot share
@@ -6529,6 +6548,41 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
     return TRUE;
 }
 
+#if NDS_TASK44_STAGE_STEADY
+/* Task 44 item 3: the cheap half of stage admission.
+ *
+ * The asset-mutation generation proves the four reloc payloads have not been
+ * replaced or unloaded; it says nothing about the scene graph that hangs off
+ * them. These eight checks cover the graph mutations the stage owner must fail
+ * closed on — a segment GObj swapped, hidden, relinked, or given a different
+ * display proc — and every one of them is a direct global load. What steady
+ * state no longer pays for is the O(n) work: the four loaded-file table scans,
+ * the eight DL-link list walks, the two layer-0 order walks, and the 57-DObj /
+ * 42-binding stamp rebuild with its per-DObj transform-flag derivation. Any
+ * failure here drops through to exactly that full validation. */
+static sb32 ndsRendererAdapterNativeStageSegmentsUnchanged(
+    const NDSRendererAdapterNativeStageWorkspace *workspace)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    {
+        GObj *gobj = ndsRendererAdapterNativeStageSegmentGObj(i);
+
+        if ((gobj == NULL) || (gobj != workspace->segments[i]) ||
+            ((gobj->flags & GOBJ_FLAG_HIDDEN) != 0u) ||
+            (gobj->dl_link_id !=
+             ndsRendererAdapterNativeStageSegmentLink(i)) ||
+            (DObjGetStruct(gobj) != workspace->task44_segment_roots[i]) ||
+            (ndsRendererAdapterNativeStageProcMatches(i, gobj) == FALSE))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+#endif
+
 static sb32 ndsRendererAdapterCollectNativeStageTopology(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
@@ -6559,6 +6613,9 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
         {
             return FALSE;
         }
+#if NDS_TASK44_STAGE_STEADY
+        workspace->task44_segment_roots[i] = DObjGetStruct(gobj);
+#endif
     }
     return ((workspace->dobj_count ==
              NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) &&
@@ -6566,6 +6623,49 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
              NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) &&
             (ndsRendererAdapterNativeStageLayer0OrderMatches(
                  workspace->segments) != FALSE)) ? TRUE : FALSE;
+}
+
+static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
+    CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace,
+    u32 binding_index)
+{
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    const NDSRendererMatrix20p12 *projection_ptr;
+    const NDSRendererMatrix20p12 *modelview_ptr;
+
+    ndsRendererAdapterPrepareInitialMatrices(
+        workspace->binding_dobjs[binding_index], cobj, TRUE,
+        &projection, &projection_ptr, &modelview, &modelview_ptr);
+    if ((projection_ptr == NULL) || (modelview_ptr == NULL))
+    {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        gNdsRendererTask36AdapterRejectReason = 52u;
+#endif
+        return FALSE;
+    }
+#if !NDS_TASK36_HW_COMPOSE
+    if ((binding_index != 0u) &&
+        (memcmp(&workspace->projection, projection_ptr,
+                sizeof(workspace->projection)) != 0))
+    {
+        return FALSE;
+    }
+#endif
+    if (ndsRendererAdapterComposeNativeRootMatrix(
+            modelview_ptr, projection_ptr,
+            &workspace->binding_composed[binding_index]) == FALSE)
+    {
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+        gNdsRendererTask36AdapterRejectReason = 54u;
+#endif
+        return FALSE;
+    }
+    if (binding_index == 0u)
+    {
+        workspace->projection = *projection_ptr;
+    }
+    return TRUE;
 }
 
 static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
@@ -6620,6 +6720,31 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
 #endif
 #endif
 
+#if NDS_TASK36_HW_COMPOSE && NDS_TASK44_STAGE_STEADY
+    /* Task 44 item 4: steady state composes exactly the 16 dynamic bindings.
+     * The dense list is trusted only while the runtime rigid mask still equals
+     * the captured one — a rigid-constancy fallback drops the mask to 0, which
+     * makes every binding dynamic and must take the full scan. */
+    if ((workspace->task44_binding_lists_valid != FALSE) &&
+        (workspace->task36_runtime_rigid_mask ==
+         NDS_RENDERER_TASK36_RIGID_BINDING_MASK))
+    {
+        u32 dynamic_slot;
+
+        for (dynamic_slot = 0u;
+             dynamic_slot < workspace->task44_dynamic_binding_count;
+             dynamic_slot++)
+        {
+            if (ndsRendererAdapterPrepareNativeStageBindingMatrix(
+                    cobj, workspace,
+                    workspace->task44_dynamic_bindings[dynamic_slot]) == FALSE)
+            {
+                return FALSE;
+            }
+        }
+        return TRUE;
+    }
+#endif
     for (binding_index = 0u;
          binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
          binding_index++)
@@ -6631,44 +6756,10 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
             continue;
         }
 #endif
-        NDSRendererMatrix20p12 projection;
-        NDSRendererMatrix20p12 modelview;
-        const NDSRendererMatrix20p12 *projection_ptr;
-        const NDSRendererMatrix20p12 *modelview_ptr;
-
-        ndsRendererAdapterPrepareInitialMatrices(
-            workspace->binding_dobjs[binding_index], cobj, TRUE,
-            &projection, &projection_ptr, &modelview, &modelview_ptr);
-        if ((projection_ptr == NULL) || (modelview_ptr == NULL))
+        if (ndsRendererAdapterPrepareNativeStageBindingMatrix(
+                cobj, workspace, binding_index) == FALSE)
         {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
-            gNdsRendererTask36AdapterRejectReason = 52u;
-#endif
             return FALSE;
-        }
-#if !NDS_TASK36_HW_COMPOSE
-        if ((binding_index != 0u) &&
-            (memcmp(&workspace->projection, projection_ptr,
-                    sizeof(workspace->projection)) != 0))
-        {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
-            gNdsRendererTask36AdapterRejectReason = 53u;
-#endif
-            return FALSE;
-        }
-#endif
-        if (ndsRendererAdapterComposeNativeRootMatrix(
-                modelview_ptr, projection_ptr,
-                &workspace->binding_composed[binding_index]) == FALSE)
-        {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
-            gNdsRendererTask36AdapterRejectReason = 54u;
-#endif
-            return FALSE;
-        }
-        if (binding_index == 0u)
-        {
-            workspace->projection = *projection_ptr;
         }
     }
     return TRUE;
@@ -6702,6 +6793,27 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
     }
     workspace->task36_runtime_rigid_mask =
         NDS_RENDERER_TASK36_RIGID_BINDING_MASK;
+#if NDS_TASK44_STAGE_STEADY
+    workspace->task44_rigid_binding_count = 0u;
+    workspace->task44_dynamic_binding_count = 0u;
+    for (binding_index = 0u;
+         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index++)
+    {
+        if ((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+             ((u64)1u << binding_index)) != 0u)
+        {
+            workspace->task44_rigid_bindings[
+                workspace->task44_rigid_binding_count++] = (u8)binding_index;
+        }
+        else
+        {
+            workspace->task44_dynamic_bindings[
+                workspace->task44_dynamic_binding_count++] = (u8)binding_index;
+        }
+    }
+    workspace->task44_binding_lists_valid = TRUE;
+#endif
     return TRUE;
 }
 
@@ -6709,9 +6821,38 @@ static void ndsRendererAdapterValidateTask36StageWorld(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     u32 binding_index;
+#if NDS_TASK44_STAGE_STEADY
+    u32 rigid_slot;
+#endif
 
     workspace->task36_runtime_rigid_mask =
         NDS_RENDERER_TASK36_RIGID_BINDING_MASK;
+#if NDS_TASK44_STAGE_STEADY
+    /* Task 44 item 4: walk the 26 rigid bindings directly. The list is only
+     * consulted when capture built it for this topology; otherwise fall back
+     * to the mask scan below so a torn workspace can never skip validation. */
+    if (workspace->task44_binding_lists_valid != FALSE)
+    {
+        for (rigid_slot = 0u;
+             rigid_slot < workspace->task44_rigid_binding_count;
+             rigid_slot++)
+        {
+            binding_index = workspace->task44_rigid_bindings[rigid_slot];
+            if (ndsRendererAdapterStageWorldSourceKeyMatches(
+                    workspace->binding_dobjs[binding_index],
+                    &workspace->task36_rigid_source_keys[binding_index]) ==
+                FALSE)
+            {
+                workspace->task36_runtime_rigid_mask = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+                gNdsRendererTask36RigidConstancyMismatchCount++;
+#endif
+                return;
+            }
+        }
+        return;
+    }
+#endif
     for (binding_index = 0u;
          binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
          binding_index++)
@@ -6804,6 +6945,9 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     u32 topology_stamp = 0u;
     sb32 topology_cached = FALSE;
     u32 i;
+#if NDS_TASK44_STAGE_STEADY
+    sb32 steady_admitted = FALSE;
+#endif
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
     u32 task36_reject_reason = 1u;
 
@@ -6823,6 +6967,33 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #endif
         goto reject;
     }
+#if NDS_TASK44_STAGE_STEADY
+    /* Task 44 item 3: steady-state admission. One generation compare plus the
+     * cheap segment guard replaces the four asset lookups and the whole
+     * topology stamp rebuild. Everything the fast path would have recomputed
+     * (loaded[], asset_bases[], topology_generation, topology_stamp) is
+     * already recorded in the workspace and provably unchanged, because every
+     * seam that can change it bumps sNdsRelocStageAssetMutation. */
+    if ((workspace->topology_valid != FALSE) &&
+        (workspace->task44_admission_generation != 0u) &&
+        (workspace->task44_admission_generation ==
+         sNdsRelocStageAssetMutation) &&
+        (ndsRendererAdapterNativeStageSegmentsUnchanged(workspace) != FALSE))
+    {
+        steady_admitted = TRUE;
+        topology_generation = workspace->topology_generation;
+        topology_stamp = workspace->topology_stamp;
+        topology_cached = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererTask44SteadyAdmitCount++;
+#endif
+    }
+    if (steady_admitted == FALSE)
+#endif
+    {
+#if NDS_TASK44_STAGE_STEADY && (NDS_RENDERER_PROFILE_LEVEL == 1)
+    gNdsRendererTask44RevalidateCount++;
+#endif
     for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
     {
         loaded[i] = ndsRelocFindLoadedFileByAsset(asset_ids[i]);
@@ -6889,6 +7060,14 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
         {
             workspace->frame.asset_bases[i] = loaded[i]->data;
         }
+    }
+#if NDS_TASK44_STAGE_STEADY
+    /* Only a completed full validation may arm the fast path. */
+    workspace->task44_admission_generation = sNdsRelocStageAssetMutation;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    gNdsRendererTask44AdmissionGeneration = sNdsRelocStageAssetMutation;
+#endif
+#endif
     }
 #if NDS_TASK36_HW_COMPOSE
     ndsRendererAdapterValidateTask36StageWorld(workspace);

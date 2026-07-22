@@ -1916,9 +1916,53 @@ static s32 ndsRelocIsOpeningRoomAsset(u32 asset_id)
 
 extern void ndsAObjEvent32ResetNormalizedScripts(void);
 
+#if NDS_TASK44_STAGE_STEADY
+/* Task 44 item 3: the Dream Land stage-asset mutation generation.
+ *
+ * The complete-stage owner used to re-look-up its four assets and rebuild the
+ * 57-DObj topology stamp on every preparation just to learn nothing had moved.
+ * Steady-state admission now compares this counter instead, so EVERY path that
+ * can replace, unload, or invalidate one of those four files must bump it.
+ * The complete enumeration is exactly three seams, all of them below:
+ *
+ *   1. ndsRelocResetLoadedFiles  - every unload/reset path funnels here
+ *      (scene-cache eviction, title backend teardown).
+ *   2. ndsRelocRegisterLoadedFile - the only writer of NDSRelocLoadedFile::data;
+ *      covers both a first load and a same-asset-id replacement in place.
+ *      Bumped only for the four Dream Land ids, so fighter/animation loads do
+ *      not force stage revalidation.
+ *   3. ndsRelocPrepareSceneCache - bumps sNdsRelocSceneGeneration; covered
+ *      explicitly because that path skips the reset when nothing was resident.
+ *
+ * It starts at 1 so a zero in the owner workspace always means "never
+ * admitted" and takes the full validation path.
+ */
+static u32 sNdsRelocStageAssetMutation = 1u;
+
+static s32 ndsRelocIsDreamLandStageAsset(u32 asset_id)
+{
+    return ((asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_103) ||
+            (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_104) ||
+            (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_152) ||
+            (asset_id == NDS_RELOC_ASSET_GR_PUPUPU_MAP)) ? TRUE : FALSE;
+}
+
+static void ndsRelocBumpStageAssetMutation(void)
+{
+    sNdsRelocStageAssetMutation++;
+    if (sNdsRelocStageAssetMutation == 0u)
+    {
+        sNdsRelocStageAssetMutation = 1u;
+    }
+}
+#endif
+
 static void ndsRelocResetLoadedFiles(void)
 {
     ndsAObjEvent32ResetNormalizedScripts();
+#if NDS_TASK44_STAGE_STEADY
+    ndsRelocBumpStageAssetMutation();
+#endif
     memset(sNdsRelocLoadedFiles, 0, sizeof(sNdsRelocLoadedFiles));
     sNdsRelocLoadedFileCount = 0;
     memset(sNdsRelocNormalizedMObjSubs, 0,
@@ -1959,6 +2003,11 @@ static void ndsRelocPrepareSceneCache(void)
 
     sNdsRelocOwnerScene = scene;
     sNdsRelocSceneGeneration++;
+#if NDS_TASK44_STAGE_STEADY
+    /* Seam 3: a scene change with nothing resident skips the reset above, so
+     * the stage owner would otherwise never learn its generation moved. */
+    ndsRelocBumpStageAssetMutation();
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     /* The adapter's frame-local matrix storage lives in this scene's original
      * taskman heap. Drop its pointer before that heap can be reused. */
@@ -2524,6 +2573,14 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(u32 asset_id, u32 bit,
         loaded = &sNdsRelocLoadedFiles[sNdsRelocLoadedFileCount++];
     }
 
+#if NDS_TASK44_STAGE_STEADY
+    /* Seam 2: this is the only writer of ->data, so a new load and a same-id
+     * replacement are both caught here. */
+    if (ndsRelocIsDreamLandStageAsset(asset_id) != FALSE)
+    {
+        ndsRelocBumpStageAssetMutation();
+    }
+#endif
     loaded->asset_id = asset_id;
     loaded->bit = bit;
     loaded->data = data;

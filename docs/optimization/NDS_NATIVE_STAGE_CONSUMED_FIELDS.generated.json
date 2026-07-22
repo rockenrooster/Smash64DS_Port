@@ -2675,12 +2675,26 @@
       "path": "src/port/reloc_backend_renderer_dl.c"
     },
     {
-      "closure": "ndsRendererAdapterPrepareNativeStageMatrices",
+      "closure": "ndsRendererAdapterPrepareNativeStageBindingMatrix",
       "fields": [
         {
           "access": "workspace.binding_composed",
           "classification": "live_camera_dependent"
         },
+        {
+          "access": "workspace.binding_dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.projection",
+          "classification": "live_camera_dependent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterPrepareNativeStageMatrices",
+      "fields": [
         {
           "access": "workspace.binding_dobjs",
           "classification": "immutable_generation"
@@ -2699,6 +2713,18 @@
         },
         {
           "access": "workspace.task36_runtime_rigid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.task44_binding_lists_valid",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.task44_dynamic_binding_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.task44_dynamic_bindings",
           "classification": "live_camera_independent"
         }
       ],
@@ -2905,6 +2931,10 @@
         },
         {
           "access": "workspace.task36_runtime_rigid_mask",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "workspace.task44_admission_generation",
           "classification": "live_camera_independent"
         },
         {
@@ -3534,7 +3564,8 @@
         "ndsRendererAdapterBuildDObjXObjMatrix",
         "ndsRendererAdapterBuildDObjLocalMatrix",
         "ndsRendererAdapterApplyMvpRecalcRpy0x47",
-        "ndsRendererAdapterPrepareNativeStageMatrices"
+        "ndsRendererAdapterPrepareNativeStageMatrices",
+        "ndsRendererAdapterPrepareNativeStageBindingMatrix"
       ],
       "disposition": "recompute the live camera and dynamic DObj operands every frame; retain only generation-bound rigid world matrices",
       "name": "camera_and_dobj_matrix_operands"
