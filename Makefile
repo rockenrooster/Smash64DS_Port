@@ -122,6 +122,11 @@ NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS ?= 0
 # Lab-only: bitmask of NDSTask9StateRecordKind values the state hash includes.
 # Diagnostic for Task 37 region isolation only; a filtered hash is a weaker gate.
 NDS_TASK9_STATE_HASH_REGION_MASK ?= 0xFFFFFFFF
+# Lab-only: snapshot raw FTStruct bytes for both fighters on updates N-1 and N,
+# so the Task 37 divergence names an offset instead of a 3,012-byte blob.
+# Costs ~12 KiB of BSS when enabled; observation only, never in a shipping build.
+NDS_TASK9_FTSTRUCT_SNAPSHOT ?= 0
+NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE ?= 0
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_FAST_WALLPAPER_AFFINE),1)
 ifneq ($(NDS_SCENE_MIP_CACHE_LAB),0)
@@ -1309,6 +1314,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK37_LAYOUT_PROBE_ITCM $(NDS_TASK37_LAYOUT_PROBE_ITCM)'; \
 		echo '#define NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS $(NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS)'; \
 		echo '#define NDS_TASK9_STATE_HASH_REGION_MASK $(NDS_TASK9_STATE_HASH_REGION_MASK)u'; \
+		echo '#define NDS_TASK9_FTSTRUCT_SNAPSHOT $(NDS_TASK9_FTSTRUCT_SNAPSHOT)'; \
+		echo '#define NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE $(NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE)u'; \
 		echo '#define NDS_TASK37_PROFILE_START $(NDS_TASK37_PROFILE_START)u'; \
 		echo '#define NDS_TASK37_PROFILE_FRAMES $(NDS_TASK37_PROFILE_FRAMES)u'; \
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
