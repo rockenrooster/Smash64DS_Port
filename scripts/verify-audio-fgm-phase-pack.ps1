@@ -94,7 +94,9 @@ $sectionTotals = @{
         $sectionTotals[$Matches[1]] += [int64]$Matches[2]
     }
 }
-if (($sectionTotals.text -gt 3584) -or
+# Text budget raised 3584 -> 4096 for the Task 38 on-demand cache + baked
+# schedule code (measured 3876 on 2026-07-21; nds_audio_fgm.h cache constants).
+if (($sectionTotals.text -gt 4096) -or
     ($sectionTotals.rodata -gt 576) -or
     ($sectionTotals.data -gt 16) -or
     ($sectionTotals.bss -gt ([int64]$metadata.resident_bytes + 1856L)) -or
@@ -204,7 +206,10 @@ try {
     if (-not $load.Success -or
         (Convert-MarkerUInt32 $load.Groups[1].Value) -ne 0x46474d31 -or
         [int]$load.Groups[3].Value -ne 1 -or
-        [int]$load.Groups[4].Value -ne [int]$metadata.resident_bytes -or
+        # Cache-era resident bytes: NDS_AUDIO_FGM_CACHE_BYTES (204800) +
+        # NDS_AUDIO_FGM_PACK_DATA_OFFSET (1584), nds_audio_fgm.c:942-943.
+        # metadata.resident_bytes still names the FULL pack size (415432).
+        [int]$load.Groups[4].Value -ne 206384 -or
         [int]$load.Groups[5].Value -ne [int]$metadata.entry_count -or
         [int]$load.Groups[6].Value -ne 0 -or
         [int]$load.Groups[7].Value -ne 0 -or
@@ -258,7 +263,10 @@ try {
         [int]$pool.Groups[7].Value -lt 1 -or
         $fgmChannelMask -eq 0 -or
         [int]$pool.Groups[9].Value -ge 16 -or
-        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 28) {
+        # NDS_AUDIO_FGM_EXPECTED_FIDELITY_DEBT_MASK (nds_audio_fgm.h):
+        # PITCH|VOLUME|CUSTOM_FX = 0x34. Fork-voice debt retired by the fused
+        # forks; CUSTOM_FX wet-tail debt awaits Tyler's listen sign-off.
+        (Convert-MarkerUInt32 $pool.Groups[10].Value) -ne 52) {
         throw "FGM recycle/channel/fidelity diagnostics failed.`n$gdbStdout"
     }
     if (-not $life.Success -or

@@ -937,6 +937,16 @@ void ndsAudioFgmLoadFenced(void)
         return;
     }
 
+    /* The production boot path reaches this load fence without ever calling
+     * ndsAudioFgmDiagnosticsReset, so the cache slot table must be initialized
+     * here or every ndsAudioFgmCacheAcquire fails eligibility (capacity 0). */
+    ndsAudioFgmCacheReset();
+    for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
+    {
+        sNdsAudioFgmHandles[i].channel = -1;
+        sNdsAudioFgmHandles[i].cache_slot = -1;
+    }
+
     sNdsAudioFgmFile = file;
     gNdsAudioFgmLoaded = 1u;
     gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_CACHE_BYTES +
