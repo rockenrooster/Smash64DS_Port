@@ -12,7 +12,13 @@ file contradicts this document, the task file wins only where it says so explici
 ## Process
 
 - `decomp/` is read-only. Port-side edits only (src/nds, src/port, include, linker,
-  scripts, docs).
+  scripts, docs). **Read-only protects the reference, it does not freeze the
+  algorithm (the owner, 2026-07-22):** "if we can write a DS optimized equivalent,
+  we should do that." When profiled cost lands in decomp-sourced code, the move is
+  a port-side DS-native equivalent behind a Makefile flag with the decomp path kept
+  as the comparator/oracle — the shape Tasks 9/16 used for the float helpers. Never
+  report decomp-sourced cost as unaddressable; that retires ~7% of the loop
+  (soft-float) by misreading this rule.
 - Verify chain: `.\scripts\verify-dev-fast.ps1` then `.\scripts\verify-boundary.ps1`.
   Full sharded Regression ONLY if shared/imported TUs changed, once, at session end.
 - Long builds run detached (Start-Process → log → poll completion stamp), never
