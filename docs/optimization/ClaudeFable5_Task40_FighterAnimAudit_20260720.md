@@ -1,6 +1,6 @@
 # TASK 40 — Fighter animation audit: every animation used, played, and correct
 
-**STATUS (2026-07-21): COMPLETE / TYLER APPROVED.** Mario 195/195 and Fox
+**STATUS (2026-07-21): COMPLETE / OWNER APPROVED.** Mario 195/195 and Fox
 209/209 non-null motions are visually approved. Preserve the existing captures;
 do not rerun known-good rows. The audit may disable Fox only while cycling rows;
 it restores the published AI-on default before detaching.
