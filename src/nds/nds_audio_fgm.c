@@ -19,6 +19,8 @@
 #define NDS_AUDIO_FGM_HANDLE_COUNT NDS_AUDIO_FGM_HANDLE_CAPACITY
 #define NDS_AUDIO_FGM_CHANNEL_COUNT 16u
 #define NDS_AUDIO_FGM_TIMER_MICROSECONDS 5750u
+#define NDS_AUDIO_FGM_CACHE_SLOT_COUNT 8u
+#define NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS 32u
 
 #define NDS_AUDIO_FGM_MASK_PACK_LOADED (1u << 0)
 #define NDS_AUDIO_FGM_MASK_SUPPORTED_PLAY (1u << 1)
@@ -56,15 +58,25 @@ typedef struct NDSAudioFgmHandle {
     u32 generation;
     u32 start_tick;
     u32 end_tick;
-    u32 envelope_offset;
+    u8 envelope_points[NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS *
+                       NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES];
     u16 envelope_count;
     u16 envelope_index;
     u16 fgm_id;
     s8 channel;
+    s8 cache_slot;
     u8 allocated;
     u8 live;
     u8 ever_allocated;
 } NDSAudioFgmHandle;
+
+typedef struct NDSAudioFgmCacheSlot {
+    u8 *data;
+    u32 capacity;
+    u32 data_bytes;
+    u16 fgm_id;
+    u16 references;
+} NDSAudioFgmCacheSlot;
 
 volatile u32 gNdsAudioFgmResult;
 volatile u32 gNdsAudioFgmMask;
@@ -114,8 +126,14 @@ volatile u32 gNdsAudioFgmFidelityDebtMask;
 volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
 #endif
 
-static u8 sNdsAudioFgmPack[NDS_AUDIO_FGM_PACK_BYTES]
+static u8 sNdsAudioFgmMetadata[NDS_AUDIO_FGM_PACK_DATA_OFFSET]
     __attribute__((aligned(4)));
+#define sNdsAudioFgmPack sNdsAudioFgmMetadata
+static u8 sNdsAudioFgmCache[NDS_AUDIO_FGM_CACHE_BYTES]
+    __attribute__((aligned(4)));
+static NDSAudioFgmCacheSlot
+    sNdsAudioFgmCacheSlots[NDS_AUDIO_FGM_CACHE_SLOT_COUNT];
+static FILE *sNdsAudioFgmFile;
 static NDSAudioFgmPackEntry
     sNdsAudioFgmEntries[NDS_AUDIO_FGM_ENTRY_COUNT];
 static NDSAudioFgmHandle sNdsAudioFgmHandles[NDS_AUDIO_FGM_HANDLE_COUNT];
@@ -127,10 +145,10 @@ static u32 sNdsAudioFgmArm7AckSequence;
 #endif
 static u16 sNdsAudioFgmInstanceToken;
 
-_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 880u,
+_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 1584u,
                "FGM pack header layout changed");
-_Static_assert(NDS_AUDIO_FGM_PACK_BYTES <= (128u * 1024u),
-               "FGM pack exceeds its resident-memory gate");
+_Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (200u * 1024u),
+               "FGM cache budget changed");
 _Static_assert(offsetof(NDSAudioFgmHandle, effect) == 0u,
                "BattleShip audio handle must be the backend handle prefix");
 _Static_assert(offsetof(alSoundEffect, sfx_id) == 0x26u,
@@ -190,6 +208,28 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMKickS:
     case nSYAudioFGMKickM:
     case nSYAudioFGMKickL:
+    case nSYAudioVoiceFoxDamage:
+    case nSYAudioVoiceMarioSmash1:
+    case nSYAudioVoiceMarioSmash3:
+    case 435u: /* Mario jump voice */
+    case nSYAudioVoiceMarioDamage:
+    case nSYAudioFGMCatch:
+    case nSYAudioFGMLightSwingL:
+    case nSYAudioFGMLightSwingM:
+    case nSYAudioFGMLightSwingS:
+    case nSYAudioFGMFoxSpecialN:
+    case nSYAudioFGMFoxSpecialHiStart:
+    case nSYAudioFGMFoxSpecialHiFly:
+    case nSYAudioFGMFoxSpecialLwStart:
+    case nSYAudioFGMFoxAttackAirLw:
+    case nSYAudioFGMMarioSpecialHiJump:
+    case nSYAudioFGMMarioUnkSwing1:
+    case nSYAudioFGMMarioUnkSwing2:
+    case nSYAudioFGMMarioSpecialHiCoin:
+    case nSYAudioFGMBurnS:
+    case nSYAudioFGMFireShoot1:
+    case nSYAudioFGMExplodeS:
+    case 188u: /* Fox reflector-hit cue */
         return TRUE;
     default:
         return FALSE;
@@ -269,6 +309,59 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
         }
     }
     return NULL;
+}
+
+static void ndsAudioFgmCacheReset(void)
+{
+    static const u32 capacities[NDS_AUDIO_FGM_CACHE_SLOT_COUNT] = {
+        53248u, 28672u, 28672u, 28672u,
+        16384u, 16384u, 16384u, 16384u
+    };
+    u32 offset = 0u;
+    u32 i;
+
+    memset(sNdsAudioFgmCacheSlots, 0, sizeof(sNdsAudioFgmCacheSlots));
+    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+    {
+        sNdsAudioFgmCacheSlots[i].data = &sNdsAudioFgmCache[offset];
+        sNdsAudioFgmCacheSlots[i].capacity = capacities[i];
+        offset += capacities[i];
+    }
+}
+
+static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
+{
+    s32 best = -1;
+    u32 i;
+
+    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+    {
+        NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
+        if ((slot->fgm_id == entry->id) &&
+            (slot->data_bytes == entry->data_bytes))
+        {
+            return (s32)i;
+        }
+        if ((slot->references == 0u) &&
+            (slot->capacity >= entry->data_bytes) &&
+            ((best < 0) ||
+             (slot->capacity < sNdsAudioFgmCacheSlots[best].capacity)))
+        {
+            best = (s32)i;
+        }
+    }
+    if ((best < 0) || (sNdsAudioFgmFile == NULL) ||
+        (fseek(sNdsAudioFgmFile, (long)entry->data_offset, SEEK_SET) != 0) ||
+        (fread(sNdsAudioFgmCacheSlots[best].data, 1u, entry->data_bytes,
+               sNdsAudioFgmFile) != entry->data_bytes))
+    {
+        gNdsAudioFgmReadFailCount++;
+        return -1;
+    }
+    sNdsAudioFgmCacheSlots[best].fgm_id = entry->id;
+    sNdsAudioFgmCacheSlots[best].data_bytes = entry->data_bytes;
+    DC_FlushRange(sNdsAudioFgmCacheSlots[best].data, entry->data_bytes);
+    return best;
 }
 
 static u16 ndsAudioFgmNextInstanceToken(void)
@@ -402,6 +495,13 @@ static void ndsAudioFgmReleaseHandle(
             gNdsAudioFgmActiveHandles--;
         }
     }
+    if ((handle->cache_slot >= 0) &&
+        (handle->cache_slot < (s8)NDS_AUDIO_FGM_CACHE_SLOT_COUNT) &&
+        (sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].references != 0u))
+    {
+        sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].references--;
+    }
+    handle->cache_slot = -1;
     handle->effect.sfx_id = 0u;
     handle->fgm_id = 0u;
     handle->allocated = FALSE;
@@ -422,7 +522,8 @@ static NDSAudioFgmHandle *ndsAudioFgmHandleFromEffect(alSoundEffect *effect)
     return (NDSAudioFgmHandle *)effect;
 }
 
-static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
+static s32 __attribute__((unused)) ndsAudioFgmValidateEntry(
+    u32 index, const u8 *raw)
 {
     static const u16 expected_ids[NDS_AUDIO_FGM_ENTRY_COUNT] = {
         nSYAudioVoicePublicExcited,
@@ -597,6 +698,47 @@ static s32 ndsAudioFgmValidateEntry(u32 index, const u8 *raw)
     return TRUE;
 }
 
+static s32 ndsAudioFgmValidateCachedEntry(u32 index, const u8 *raw)
+{
+    NDSAudioFgmPackEntry *entry = &sNdsAudioFgmEntries[index];
+    u32 prior;
+
+    entry->id = ndsAudioFgmReadLe16(&raw[0]);
+    entry->flags = ndsAudioFgmReadLe16(&raw[2]);
+    entry->data_offset = ndsAudioFgmReadLe32(&raw[4]);
+    entry->data_bytes = ndsAudioFgmReadLe32(&raw[8]);
+    entry->sample_count = ndsAudioFgmReadLe32(&raw[12]);
+    entry->frequency = ndsAudioFgmReadLe16(&raw[16]);
+    entry->duration_ticks = ndsAudioFgmReadLe16(&raw[18]);
+    entry->volume = raw[20];
+    entry->pan = raw[21];
+    entry->source_sound_index = ndsAudioFgmReadLe16(&raw[22]);
+    entry->envelope_offset = ndsAudioFgmReadLe32(&raw[24]);
+    entry->envelope_count = ndsAudioFgmReadLe16(&raw[28]);
+    entry->loop_point_words = ndsAudioFgmReadLe16(&raw[30]);
+    if ((entry->flags & ~1u) || (entry->data_bytes < 4u) ||
+        ((entry->data_bytes & 3u) != 0u) ||
+        (entry->data_offset < NDS_AUDIO_FGM_PACK_DATA_OFFSET) ||
+        (entry->data_offset > NDS_AUDIO_FGM_PACK_BYTES) ||
+        (entry->data_bytes > NDS_AUDIO_FGM_PACK_BYTES - entry->data_offset) ||
+        (entry->sample_count == 0u) || (entry->frequency == 0u) ||
+        (entry->duration_ticks == 0u) || (entry->volume > 127u) ||
+        (entry->pan != 64u) ||
+        (entry->envelope_count > NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS) ||
+        ((u32)entry->loop_point_words * 4u >= entry->data_bytes))
+    {
+        return FALSE;
+    }
+    for (prior = 0u; prior < index; prior++)
+    {
+        if (sNdsAudioFgmEntries[prior].id == entry->id)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 void ndsAudioFgmDiagnosticsReset(void)
 {
     u32 i;
@@ -615,6 +757,11 @@ void ndsAudioFgmDiagnosticsReset(void)
                     NDS_AUDIO_FGM_RELEASE_REASON_RESET, 0u));
         }
     }
+    if (sNdsAudioFgmFile != NULL)
+    {
+        fclose(sNdsAudioFgmFile);
+        sNdsAudioFgmFile = NULL;
+    }
     memset(sNdsAudioFgmHandles, 0, sizeof(sNdsAudioFgmHandles));
     memset(sNdsAudioFgmChannelOwners, 0,
            sizeof(sNdsAudioFgmChannelOwners));
@@ -624,7 +771,9 @@ void ndsAudioFgmDiagnosticsReset(void)
     for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
     {
         sNdsAudioFgmHandles[i].channel = -1;
+        sNdsAudioFgmHandles[i].cache_slot = -1;
     }
+    ndsAudioFgmCacheReset();
     if (++sNdsAudioFgmNextGeneration == 0u)
     {
         sNdsAudioFgmNextGeneration = 1u;
@@ -718,22 +867,22 @@ void ndsAudioFgmLoadFenced(void)
         gNdsAudioFgmFormatFailCount++;
         return;
     }
-    if (fread(sNdsAudioFgmPack, 1, NDS_AUDIO_FGM_PACK_BYTES, file) !=
-        NDS_AUDIO_FGM_PACK_BYTES)
+    if (fread(sNdsAudioFgmMetadata, 1, NDS_AUDIO_FGM_PACK_DATA_OFFSET,
+              file) != NDS_AUDIO_FGM_PACK_DATA_OFFSET)
     {
         fclose(file);
         gNdsAudioFgmReadFailCount++;
         return;
     }
-    fclose(file);
 
     if ((memcmp(header, "FGM1", 4) != 0) ||
-        (ndsAudioFgmReadLe16(&header[4]) != 3u) ||
+        (ndsAudioFgmReadLe16(&header[4]) != 4u) ||
         (ndsAudioFgmReadLe16(&header[6]) != NDS_AUDIO_FGM_ENTRY_COUNT) ||
         (ndsAudioFgmReadLe32(&header[8]) != NDS_AUDIO_FGM_PACK_BYTES) ||
         (ndsAudioFgmReadLe32(&header[12]) !=
          NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO))
     {
+        fclose(file);
         gNdsAudioFgmFormatFailCount++;
         return;
     }
@@ -743,10 +892,11 @@ void ndsAudioFgmLoadFenced(void)
             NDS_AUDIO_FGM_PACK_HEADER_BYTES +
             (i * NDS_AUDIO_FGM_PACK_ENTRY_BYTES)];
 
-        if (ndsAudioFgmValidateEntry(i, raw) == FALSE)
+        if (ndsAudioFgmValidateCachedEntry(i, raw) == FALSE)
         {
             memset(sNdsAudioFgmEntries, 0,
                    sizeof(sNdsAudioFgmEntries));
+            fclose(file);
             gNdsAudioFgmFormatFailCount++;
             return;
         }
@@ -782,13 +932,15 @@ void ndsAudioFgmLoadFenced(void)
         (envelope_cursor != NDS_AUDIO_FGM_PACK_BYTES))
     {
         memset(sNdsAudioFgmEntries, 0, sizeof(sNdsAudioFgmEntries));
+        fclose(file);
         gNdsAudioFgmFormatFailCount++;
         return;
     }
 
-    DC_FlushRange(sNdsAudioFgmPack, NDS_AUDIO_FGM_PACK_BYTES);
+    sNdsAudioFgmFile = file;
     gNdsAudioFgmLoaded = 1u;
-    gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_PACK_BYTES;
+    gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_CACHE_BYTES +
+                                NDS_AUDIO_FGM_PACK_DATA_OFFSET;
     gNdsAudioFgmSupportedCount = NDS_AUDIO_FGM_ENTRY_COUNT;
     gNdsAudioFgmHandleCapacity = NDS_AUDIO_FGM_HANDLE_COUNT;
     gNdsAudioFgmMask |= NDS_AUDIO_FGM_MASK_PACK_LOADED;
@@ -799,9 +951,14 @@ void ndsAudioFgmLoadFenced(void)
 
 void ndsAudioFgmUpdate(void)
 {
-    u32 now = cpuGetTiming();
+    u32 now;
     u32 i;
 
+    if (gNdsAudioFgmActiveHandles == 0u)
+    {
+        return;
+    }
+    now = cpuGetTiming();
     for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
     {
         NDSAudioFgmHandle *handle = &sNdsAudioFgmHandles[i];
@@ -815,10 +972,9 @@ void ndsAudioFgmUpdate(void)
 
             while (handle->envelope_index < handle->envelope_count)
             {
-                const u8 *point = &sNdsAudioFgmPack[
-                    handle->envelope_offset +
-                    ((u32)handle->envelope_index *
-                     NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES)];
+                const u8 *point = &handle->envelope_points[
+                    (u32)handle->envelope_index *
+                    NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES];
                 u16 point_tick = ndsAudioFgmReadLe16(point);
 
                 if (elapsed_fgm_ticks < point_tick)
@@ -902,6 +1058,7 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
     s32 phase_index;
     s32 ko_index;
     s32 channel;
+    s32 cache_slot;
     u32 i;
     u32 duration_cpu_ticks;
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
@@ -948,6 +1105,22 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
         gNdsAudioFgmPlayFailCount++;
         return NULL;
     }
+    cache_slot = ndsAudioFgmCacheAcquire(entry);
+    if (cache_slot < 0)
+    {
+        gNdsAudioFgmPlayFailCount++;
+        return NULL;
+    }
+    if ((entry->envelope_count != 0u) &&
+        ((fseek(sNdsAudioFgmFile, (long)entry->envelope_offset, SEEK_SET) != 0) ||
+         (fread(handle->envelope_points, NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES,
+                entry->envelope_count, sNdsAudioFgmFile) !=
+          entry->envelope_count)))
+    {
+        gNdsAudioFgmReadFailCount++;
+        gNdsAudioFgmPlayFailCount++;
+        return NULL;
+    }
 
     NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(fgm_id);
     soundEnable();
@@ -958,7 +1131,7 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
     }
 #endif
     channel = soundPlaySample(
-        &sNdsAudioFgmPack[entry->data_offset], SoundFormat_ADPCM,
+        sNdsAudioFgmCacheSlots[cache_slot].data, SoundFormat_ADPCM,
         entry->data_bytes - ((u32)entry->loop_point_words * 4u),
         entry->frequency, entry->volume, pan,
         ((entry->flags & 1u) != 0u), entry->loop_point_words);
@@ -1019,10 +1192,11 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
                                1000000u);
     handle->start_tick = cpuGetTiming();
     handle->end_tick = handle->start_tick + duration_cpu_ticks;
-    handle->envelope_offset = entry->envelope_offset;
     handle->envelope_count = entry->envelope_count;
     handle->envelope_index = 0u;
     handle->channel = (s8)channel;
+    handle->cache_slot = (s8)cache_slot;
+    sNdsAudioFgmCacheSlots[cache_slot].references++;
     if (handle->ever_allocated != FALSE)
     {
         gNdsAudioFgmHandleRecycleCount++;

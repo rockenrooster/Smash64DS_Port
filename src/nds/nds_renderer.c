@@ -21103,19 +21103,16 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
                 &gNdsRendererM3Phase0RunTransitionTicks, phase_start);
             phase_start = ndsRendererM3Phase0Tick();
 #endif
-            for (triangle_offset = 0u;
-                 triangle_offset < run->triangle_count;
-                 triangle_offset++)
+            if (run->submit_class ==
+                NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
             {
-                if (run->submit_class ==
-                    NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
-                {
-                    (void)ndsRendererHardwareNextProjectedDepth();
-                }
-                else
-                {
-                    ndsRendererHardwareEnterProjectedForeground();
-                }
+                sNdsRendererHardwareProjectedDepth -=
+                    (s32)run->triangle_count *
+                    NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
+            }
+            else
+            {
+                ndsRendererHardwareEnterProjectedForeground();
             }
             emitted_triangles = run->triangle_count;
 #if NDS_RENDERER_M3_PHASE0_PROFILE

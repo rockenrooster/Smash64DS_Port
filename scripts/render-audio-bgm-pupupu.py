@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render a BattleShip BGM sequence to a DS-friendly PCM16 stream.
+"""Render a BattleShip BGM sequence to a DS-friendly audio stream.
 
 This is intentionally a small compatibility renderer for the port's audible
 BGM gates. It derives each stream from the original O2R sequence/bank files
@@ -21,6 +21,25 @@ from pathlib import Path
 SEQ_INDEX_PUPUPU = 0
 OUTPUT_SAMPLE_RATE = 22050
 DEFAULT_GAIN = 0.22
+BGM_IMA_MAGIC = b"BGA1"
+BGM_IMA_VERSION = 1
+BGM_IMA_PACKET_SAMPLES = 16384
+BGM_IMA_HEADER = struct.Struct("<4sHHIIIIIIII")
+BGM_IMA_PACKET = struct.Struct("<II")
+IMA_INDEX_TABLE = (
+    -1, -1, -1, -1, 2, 4, 6, 8,
+    -1, -1, -1, -1, 2, 4, 6, 8,
+)
+IMA_STEP_TABLE = (
+    7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31,
+    34, 37, 41, 45, 50, 55, 60, 66, 73, 80, 88, 97, 107, 118, 130,
+    143, 157, 173, 190, 209, 230, 253, 279, 307, 337, 371, 408, 449,
+    494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411,
+    1552, 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026,
+    4428, 4871, 5358, 5894, 6484, 7132, 7845, 8630, 9493, 10442,
+    11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623,
+    27086, 29794, 32767,
+)
 
 
 def load_module(path: Path, name: str):
@@ -292,6 +311,119 @@ def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float
     return bytes(pcm16)
 
 
+def initial_ima_index(samples: list[int]) -> int:
+    if len(samples) < 2:
+        return 0
+    target = max(7, abs(samples[1] - samples[0]))
+    return min(range(len(IMA_STEP_TABLE)),
+               key=lambda index: abs(IMA_STEP_TABLE[index] - target))
+
+
+def ima_encode_sample(sample: int, predictor: int,
+                      index: int) -> tuple[int, int, int]:
+    step = IMA_STEP_TABLE[index]
+    delta = sample - predictor
+    code = 0
+    if delta < 0:
+        code = 8
+        delta = -delta
+    diff = step >> 3
+    if delta >= step:
+        code |= 4
+        delta -= step
+        diff += step
+    if delta >= (step >> 1):
+        code |= 2
+        delta -= step >> 1
+        diff += step >> 1
+    if delta >= (step >> 2):
+        code |= 1
+        diff += step >> 2
+    predictor += -diff if code & 8 else diff
+    predictor = max(-32768, min(32767, predictor))
+    index = max(0, min(88, index + IMA_INDEX_TABLE[code]))
+    return code, predictor, index
+
+
+def build_ima_packets(pcm: bytes, loop_start_byte: int,
+                      looping: bool) -> tuple[bytes, dict]:
+    if len(pcm) == 0 or len(pcm) & 1 or loop_start_byte & 1:
+        raise ValueError("PCM and loop offsets must contain whole samples")
+    samples = list(struct.unpack(f"<{len(pcm) // 2}h", pcm))
+    loop_start_sample = loop_start_byte // 2
+    if looping and not 0 < loop_start_sample < len(samples):
+        raise ValueError("looping track has an invalid loop start")
+
+    boundaries: list[tuple[int, int]] = []
+    split = loop_start_sample if looping else len(samples)
+    for start, end in ((0, split), (split, len(samples))):
+        for offset in range(start, end, BGM_IMA_PACKET_SAMPLES):
+            boundaries.append((offset, min(end, offset + BGM_IMA_PACKET_SAMPLES)))
+        if not looping:
+            break
+    loop_packet_index = (
+        sum(1 for start, _end in boundaries if start < split)
+        if looping else 0xFFFFFFFF
+    )
+
+    predictor = samples[0]
+    index = initial_ima_index(samples)
+    records: list[bytes] = []
+    squared_error = 0
+    source_energy = 0
+    max_error = 0
+    for start, end in boundaries:
+        packet_predictor = predictor
+        packet_index = index
+        codes = []
+        for sample in samples[start:end]:
+            code, predictor, index = ima_encode_sample(
+                sample, predictor, index)
+            codes.append(code)
+            error = sample - predictor
+            squared_error += error * error
+            source_energy += sample * sample
+            max_error = max(max_error, abs(error))
+        while len(codes) & 7:
+            codes.append(0)
+        payload = bytearray(struct.pack(
+            "<hBB", packet_predictor, packet_index, 0))
+        for pos in range(0, len(codes), 2):
+            payload.append(codes[pos] | (codes[pos + 1] << 4))
+        if len(payload) & 3:
+            raise AssertionError("DS IMA packet is not word aligned")
+        records.append(
+            BGM_IMA_PACKET.pack(end - start, len(payload)) + payload)
+
+    loop_record_offset = 0
+    if looping:
+        loop_record_offset = BGM_IMA_HEADER.size + sum(
+            len(record) for record in records[:loop_packet_index])
+    flags = 1 if looping else 0
+    header = BGM_IMA_HEADER.pack(
+        BGM_IMA_MAGIC, BGM_IMA_VERSION, BGM_IMA_HEADER.size,
+        OUTPUT_SAMPLE_RATE, len(samples),
+        loop_start_sample if looping else 0xFFFFFFFF,
+        BGM_IMA_PACKET_SAMPLES, len(records), loop_packet_index,
+        loop_record_offset, flags)
+    encoded = header + b"".join(records)
+    rms_error = math.sqrt(squared_error / len(samples))
+    snr_db = (10.0 * math.log10(source_energy / squared_error)
+              if squared_error else float("inf"))
+    return encoded, {
+        "container_magic": BGM_IMA_MAGIC.decode("ascii"),
+        "container_version": BGM_IMA_VERSION,
+        "header_bytes": BGM_IMA_HEADER.size,
+        "packet_samples": BGM_IMA_PACKET_SAMPLES,
+        "packet_count": len(records),
+        "loop_packet_index": loop_packet_index,
+        "loop_record_offset": loop_record_offset,
+        "ima_rms_error": rms_error,
+        "ima_snr_db": snr_db,
+        "ima_max_error": max_error,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
@@ -299,8 +431,11 @@ def main() -> int:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("assets/audio/bgm_pupupu_pcm16.raw"),
+        default=Path("assets/audio/bgm_pupupu_ima.bin"),
     )
+    parser.add_argument(
+        "--format", choices=("ima-packets", "pcm16"),
+        default="ima-packets")
     parser.add_argument("--gain", type=float, default=DEFAULT_GAIN)
     args = parser.parse_args()
 
@@ -325,8 +460,17 @@ def main() -> int:
 
     output = (repo / args.output).resolve() if not args.output.is_absolute() else args.output
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_bytes(pcm)
-    digest = hashlib.sha256(pcm).hexdigest()
+    source_pcm_digest = hashlib.sha256(pcm).hexdigest()
+    if args.format == "ima-packets":
+        payload, format_metadata = build_ima_packets(
+            pcm, loop["loop_start_byte"], loop["looping"])
+        format_name = "Nintendo DS IMA-ADPCM packet stream"
+    else:
+        payload = pcm
+        format_metadata = {}
+        format_name = "signed PCM16LE mono raw"
+    output.write_bytes(payload)
+    digest = hashlib.sha256(payload).hexdigest()
 
     metadata = {
         "source": (
@@ -335,13 +479,16 @@ def main() -> int:
         ),
         "tool": "scripts/render-audio-bgm-pupupu.py",
         "sample_rate": OUTPUT_SAMPLE_RATE,
-        "format": "signed PCM16LE mono raw",
-        "bytes": len(pcm),
+        "format": format_name,
+        "bytes": len(payload),
         "sha256": digest,
+        "source_pcm_bytes": len(pcm),
+        "source_pcm_sha256": source_pcm_digest,
         "sequence_index": args.sequence_index,
         "note_count": len(notes),
         "tempo_us_per_quarter": tempo_us,
         "gain": args.gain,
+        **format_metadata,
         **loop,
     }
     output.with_suffix(".json").write_text(
@@ -351,7 +498,7 @@ def main() -> int:
     )
 
     print(f"rendered {output}")
-    print(f"bytes={len(pcm)} sample_rate={OUTPUT_SAMPLE_RATE} sha256={digest}")
+    print(f"bytes={len(payload)} sample_rate={OUTPUT_SAMPLE_RATE} sha256={digest}")
     return 0
 
 

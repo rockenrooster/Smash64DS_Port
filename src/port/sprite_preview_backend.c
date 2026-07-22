@@ -2213,7 +2213,7 @@ static void ndsSObjPreviewFlushPendingWallpaperToStaging(void)
 {
     SObj *wallpaper = sNdsSObjFramePendingWallpaper;
     u32 combine_mode = sNdsSObjFramePendingWallpaperCombine;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     u32 profile_start;
 #endif
 
@@ -2223,7 +2223,7 @@ static void ndsSObjPreviewFlushPendingWallpaperToStaging(void)
     {
         return;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     profile_start = cpuGetTiming();
 #endif
     ndsSObjPreviewBeginStagingLayer();
@@ -2235,8 +2235,16 @@ static void ndsSObjPreviewFlushPendingWallpaperToStaging(void)
     {
         sNdsSObjFramePreviewDrawCount++;
     }
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+    {
+        u32 ticks = cpuGetTiming() - profile_start;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
-    gNdsRendererProfileWallpaperTicks += cpuGetTiming() - profile_start;
+        gNdsRendererProfileWallpaperTicks += ticks;
+#endif
+#if NDS_TICK_HUD
+        gNdsTickHudBackgroundTicks += ticks;
+#endif
+    }
 #endif
 }
 
@@ -2248,7 +2256,7 @@ static void ndsSObjPreviewCommitLayer(void)
 
         if (sNdsSObjFrameForeground == FALSE)
         {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
             u32 wallpaper_start = cpuGetTiming();
 #endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -2325,9 +2333,16 @@ static void ndsSObjPreviewCommitLayer(void)
                     gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
 #endif
             }
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
+            {
+                u32 ticks = cpuGetTiming() - wallpaper_start;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
-            gNdsRendererProfileWallpaperTicks +=
-                cpuGetTiming() - wallpaper_start;
+                gNdsRendererProfileWallpaperTicks += ticks;
+#endif
+#if NDS_TICK_HUD
+                gNdsTickHudBackgroundTicks += ticks;
+#endif
+            }
 #endif
         }
         if (final_wallpaper != FALSE)
@@ -2362,7 +2377,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
     SObj *sobj = (gobj != NULL) ? SObjGetStruct(gobj) : NULL;
     u32 foreground = FALSE;
     u32 cache_wallpaper = FALSE;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     u32 foreground_start = 0u;
     u32 profile_foreground = FALSE;
 #endif
@@ -2383,7 +2398,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         ndsSObjPreviewCommitLayer();
         sNdsSObjFrameForeground = TRUE;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     if ((foreground != FALSE) &&
         (gSCManagerSceneData.scene_curr == nSCKindVSBattle))
     {
@@ -2396,11 +2411,16 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         (gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
         (ndsIFCommonNativeOamDrawGObj(gobj) != FALSE))
     {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
         if (profile_foreground != FALSE)
         {
-            gNdsRendererProfileForegroundTicks +=
-                cpuGetTiming() - foreground_start;
+            u32 ticks = cpuGetTiming() - foreground_start;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+            gNdsRendererProfileForegroundTicks += ticks;
+#endif
+#if NDS_TICK_HUD
+            gNdsTickHudForegroundTicks += ticks;
+#endif
         }
 #endif
         return;
@@ -2451,11 +2471,16 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         }
         sobj = sobj->next;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     if (profile_foreground != FALSE)
     {
-        gNdsRendererProfileForegroundTicks +=
-            cpuGetTiming() - foreground_start;
+        u32 ticks = cpuGetTiming() - foreground_start;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        gNdsRendererProfileForegroundTicks += ticks;
+#endif
+#if NDS_TICK_HUD
+        gNdsTickHudForegroundTicks += ticks;
+#endif
     }
 #endif
 }
@@ -2480,7 +2505,7 @@ void ndsSObjPreviewBeginFrame(void)
 
 void ndsSObjPreviewEndFrame(void)
 {
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     u32 profile_foreground =
         ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
          ((sNdsSObjFrameForeground != FALSE) ||
@@ -2500,11 +2525,16 @@ void ndsSObjPreviewEndFrame(void)
         ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
         sNdsSObjOverlayForegroundPopulated = FALSE;
     }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     if (profile_foreground != FALSE)
     {
-        gNdsRendererProfileForegroundTicks +=
-            cpuGetTiming() - foreground_start;
+        u32 ticks = cpuGetTiming() - foreground_start;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+        gNdsRendererProfileForegroundTicks += ticks;
+#endif
+#if NDS_TICK_HUD
+        gNdsTickHudForegroundTicks += ticks;
+#endif
     }
 #endif
     sNdsSObjFramePreview = NULL;

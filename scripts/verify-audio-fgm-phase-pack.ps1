@@ -163,7 +163,7 @@ try {
         'printf "FGM_KO=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmKoPlayMask, gNdsAudioFgmKoPlayCounts[0], gNdsAudioFgmKoPlayCounts[1], gNdsAudioFgmKoPlayCounts[2], gNdsAudioFgmKoPlayCounts[3], gNdsAudioFgmKoPlayCounts[4], gNdsAudioFgmKoTraceCount, gNdsAudioFgmKoTrace[0], gNdsAudioFgmKoTrace[1], gNdsAudioFgmKoTrace[2]',
         'printf "FGM_POOL=%u,%u,%u,%u,%u,%u,%u,%#x,%u,%#x\n", gNdsAudioFgmHandleAcquireCount, gNdsAudioFgmHandleCapacity, gNdsAudioFgmHandleReleaseCount, gNdsAudioFgmHandleRecycleCount, gNdsAudioFgmPoolExhaustCount, gNdsAudioFgmActiveHandles, gNdsAudioFgmMaxActiveHandles, gNdsAudioFgmChannelMask, gNdsAudioFgmLastChannel, gNdsAudioFgmFidelityDebtMask',
         'printf "FGM_LIFE=%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioFgmStopCalls, gNdsAudioFgmStopAllCalls, gNdsAudioFgmDurationStopCount, gNdsAudioFgmStaleStopCount, gNdsAudioFgmGenerationMismatchCount, gNdsAudioFgmLastInstanceToken, gNdsAudioFgmInstanceTokenWrapCount',
-        'printf "BGM=%#x,%u,%u,%u,%d\n", gNdsAudioBgmResult, gNdsAudioBgmPlaying, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmReadBytes, sNdsAudioBgmSoundID',
+        'printf "BGM=%#x,%u,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmPlaying, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmReadBytes, gNdsAudioBgmResidentBytes',
         'printf "MEM=%u,%u,%u\n", gNdsMemoryLedgerArenaHeadroom, gNdsMemoryLedgerArenaUsed, gNdsMemoryLedgerArenaHighWater',
         'detach',
         'quit'
@@ -267,14 +267,13 @@ try {
         [int]$life.Groups[7].Value -ne 0) {
         throw "FGM token/channel generation ownership failed.`n$gdbStdout"
     }
-    $bgmChannel = if ($bgm.Success) { [int]$bgm.Groups[5].Value } else { -1 }
     if (-not $bgm.Success -or
         (Convert-MarkerUInt32 $bgm.Groups[1].Value) -ne 0x42474d31 -or
         [int]$bgm.Groups[2].Value -ne 1 -or
         [int]$bgm.Groups[3].Value -lt 1 -or
-        [int]$bgm.Groups[4].Value -lt 65536 -or
-        $bgmChannel -lt 0 -or $bgmChannel -ge 16 -or
-        (($fgmChannelMask -band ([uint32]1 -shl $bgmChannel)) -ne 0)) {
+        [int]$bgm.Groups[4].Value -lt 16392 -or
+        [int]$bgm.Groups[5].Value -ne 16392 -or
+        (($fgmChannelMask -band 0xc000) -ne 0)) {
         throw "FGM playback did not coexist on channels distinct from BGM.`n$gdbStdout"
     }
     if (-not $memory.Success -or [uint64]$memory.Groups[1].Value -lt 131072) {

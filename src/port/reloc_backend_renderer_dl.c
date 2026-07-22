@@ -12259,7 +12259,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     u32 submitted_before;
     u32 triangles_before;
     u32 triangles_after;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     u32 owner_start;
     NDSRendererProfileOwner owner_id;
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -12291,7 +12291,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     }
     sNdsFighterDisplayContractLastFrame[(u32)fp->nds_slot] =
         gNdsRendererProfileFrameCount;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
+#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     owner_id = ((u32)fp->nds_slot == 0u) ?
         NDS_RENDERER_PROFILE_OWNER_MARIO : NDS_RENDERER_PROFILE_OWNER_FOX;
     owner_start = cpuGetTiming();
@@ -12308,6 +12308,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #endif
     if (sNdsFighterDisplayContract.event_count == 0u)
     {
+#if NDS_TICK_HUD
+        gNdsTickHudFighterTicks += cpuGetTiming() - owner_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -12344,6 +12347,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
                 triangles_after - triangles_before;
         }
     }
+#if NDS_TICK_HUD
+    gNdsTickHudFighterTicks += cpuGetTiming() - owner_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER

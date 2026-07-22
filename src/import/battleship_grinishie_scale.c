@@ -308,7 +308,7 @@ static void ndsGRInishieScalePatchDLPointer(Gfx *dl, u32 index, const void *ptr)
 
 static sb32 ndsGRInishieScaleScanNativeDL(const Gfx *dl)
 {
-    NDSRendererConfig config;
+    NDSRendererConfig config = {0};
     NDSRendererStats stats;
 
     config.max_depth = 2u;

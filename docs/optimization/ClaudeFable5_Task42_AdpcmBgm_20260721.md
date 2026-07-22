@@ -10,6 +10,20 @@ still stands and constrains DESIGN: do NOT smear refill work across frames
 (sliced refills regressed the retail histogram); keep the concentrated
 whole-half shape and make it smaller instead.
 
+**PRIORITY + COUPLING (Tyler, 2026-07-21): this task runs NEXT, and Phase B is
+the priority outcome.** Task 38 (FGM full coverage) is PAUSED at its Phase C
+capacity stop. The initial 72,260-byte estimate was superseded by the exact
+deduplicated census: full resident coverage has a 300,540-byte dry floor. Phase
+B here retires the 64 KiB static PCM ring (`sNdsAudioBgmRing`,
+nds_audio_bgm.c:124) in favor of ~16 KiB of ADPCM ping-pong buffers, but the
+46,592-byte recovery does not fund that resident floor; Task 38 needs an
+on-demand/prefetched cache.
+Therefore: (a) the final report MUST state the static-footprint delta and the
+new net reserve + full-arena confirmation — Task 38's resume math consumes
+those numbers; (b) if only Phase A lands (which ADDS ~8 KiB staging), say so
+loudly — Task 38 then stays paused and re-presents its numbers to Tyler rather
+than resuming.
+
 ## Current facts
 
 - BGM is PCM16 mono 22,050 Hz (`SoundFormat_16Bit`, src/nds/nds_audio_bgm.c:420),
@@ -89,3 +103,40 @@ whole-half shape and make it smaller instead.
 alone) → report before shipping; Phase B seam gap audible to Tyler or
 seam-miss counter nonzero in soak → keep Phase A, close B with the probe
 numbers. Separate commits per phase; snapshot at the end.
+
+## Execution — 2026-07-21
+
+Phase B is implemented directly because the bounded source/API census found a
+safe existing seam: two fixed one-shot ADPCM channels (14/15), Timer 2 IRQ to a
+one-slot Calico mailbox, and a 1 KiB high-priority worker that issues
+`soundStart` outside IRQ context. There is no hardware loop; every packet owns
+its IMA state header, and file loops seek the exact recorded loop packet/state.
+
+- Four `BGA1` v1 assets: 1,284,428 compressed bytes from 5,125,414 exact source
+  PCM bytes; 159 validated packets; maximum payload 8,196 bytes.
+- Resident audio buffers: 16,392 bytes, down from the 65,536-byte PCM ring.
+- Proof-map `__main_bss_end`: `0x0227e210` before → `0x02272c10` after. Net
+  contiguous main-RAM recovery after all code, worker, mailbox, and stack cost:
+  **46,592 bytes**.
+- Corrected Task 38 funding math: 166,672 current reserve + 46,592 recovery =
+  213,264; the 300,540-byte full resident dry floor would leave **40,920 bytes**,
+  **57,384 below** its 98,304-byte gate before schedules and exact FX tails.
+  Task 42 alone therefore does not fund a full resident pack.
+- Static gates passed: all four asset/hash/container/packet/source identities,
+  PowerShell parse, shared GBI fixtures, PROOF and LEAN compilation. LEAN listen
+  candidate: 11,141,120 bytes, SHA-256
+  `0418EB71119F99108D85757566F5CDFE8FF1EB7AE4D3C1682B207CE819C2477E`.
+
+The first Phase-B candidate used ARM9 timer 2 for packet-seam scheduling. That
+overwrote Calico's timers 2/3 system tick and corrupted every `cpuGetTiming()`
+consumer, visibly breaking FPS/UP and TICKHUD cadence. The retained runtime now
+uses free timer 0, and `check-audio-bgm-derived-assets.ps1` rejects timer 2/3.
+
+Open gates: Tyler start/quality/seam listen approval, full-match arena proof,
+and device economy queue. Do not approve or ship the ADPCM path from the short
+runtime smoke alone.
+
+The 2026-07-21 retained Boundary smoke passed with prepared/seam counts nonzero
+and header, packet, seam-miss, timer-drop, error-stop, cleanup-fail, unsafe-write,
+and overrun counters all zero. Tyler's audible approval, full-match arena proof,
+and retail queue remain open.

@@ -65,3 +65,29 @@ risk" and keep only any free wins already landed. Item 3 ships only with the
 enumerated invalidation-path list in the report — an admission skip without
 that enumeration is an automatic reject. Separate commits per item; snapshot
 at the end.
+
+## Execution checkpoint — 2026-07-21
+
+- Item 2: the two wrapped GX record sites now read a hot capture-active scalar
+  before calling the recorder. Capture behavior is unchanged; replay steady
+  state skips the call.
+- Item 3: steady admission is one Dream Land asset-mutation generation compare.
+  The complete invalidation list is the shared `ndsRelocRegisterLoadedFile`
+  seam (new load or same-id replacement) and `ndsRelocResetLoadedFiles` seam
+  (all unload/reset paths). Only the five Dream Land asset IDs bump this
+  generation, so fighter animation loads do not cause false revalidation.
+  A mismatch takes the existing full four-asset/topology validation path and
+  fails closed on rejection.
+- Item 4: stage capture now builds dense rigid and dynamic-transform index
+  lists. Steady matrix preparation walks 16 dynamic bindings and rigid
+  validation walks 26 rigid bindings, with no 42-entry mask-test scans. The
+  existing four-entry material list was already dense; no animator mutation
+  version exists, so speculative material dirty tracking was not added.
+
+The proof target compiles and the generated 608-field native-stage certificate
+and shared checker pass. Runtime A/B, screenshot, invalidation-transition soak,
+and device-queue gates remain open.
+
+The 2026-07-21 retained Boundary smoke and canonical screenshot/detail contract
+pass with replay engaged and Fox CPU on. Typed A/B, explicit invalidation-event
+coverage, full-match soak, and the retail queue remain open.

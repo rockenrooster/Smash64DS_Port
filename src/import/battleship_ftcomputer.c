@@ -27,13 +27,13 @@ volatile u32 gNdsBattlePlayableFoxCpuEnabled = 1u;
 #undef ftComputerProcessAll
 #undef ftComputerSetFighterDamageDetectSize
 
+#if NDS_SHIP_TELEMETRY
 static s32 ndsFTComputerXMilli(FTStruct *fp)
 {
     DObj *root = fp->joints[nFTPartsJointTopN];
 
     return (root != NULL) ? (s32)(root->translate.vec.f.x * 1000.0F) : 0;
 }
-
 static void ndsFTComputerRecord(FTStruct *fp)
 {
     FTComputer *com = &fp->computer;
@@ -124,14 +124,18 @@ static void ndsFTComputerRecord(FTStruct *fp)
     gNdsFTComputerFinalInputKind = com->input_kind;
     gNdsFTComputerFinalXMilli = x;
 }
+#endif
 
 void ftComputerSetupAll(GObj *fighter_gobj)
 {
+#if NDS_SHIP_TELEMETRY
     FTStruct *fp = ftGetStruct(fighter_gobj);
     s32 x;
+#endif
 
     ndsMPCollisionEnsureLineGroups();
     ndsBaseFTComputerSetupAll(fighter_gobj);
+#if NDS_SHIP_TELEMETRY
     gNdsFTComputerSetupCount++;
     gNdsFTComputerFloorLineCount =
         gMPCollisionLineGroups[nMPLineKindFloor].line_count;
@@ -143,6 +147,7 @@ void ftComputerSetupAll(GObj *fighter_gobj)
     gNdsFTComputerFinalGA = (u32)fp->ga;
     gNdsFTComputerFinalInputKind = fp->computer.input_kind;
     gNdsFTComputerFinalXMilli = x;
+#endif
 }
 
 void ftComputerProcessAll(GObj *fighter_gobj)
@@ -162,12 +167,16 @@ void ftComputerProcessAll(GObj *fighter_gobj)
     }
 
     ndsBaseFTComputerProcessAll(fighter_gobj);
+#if NDS_SHIP_TELEMETRY
     gNdsFTComputerProcessCount++;
     ndsFTComputerRecord(fp);
+#endif
 }
 
 void ftComputerSetFighterDamageDetectSize(GObj *fighter_gobj)
 {
     ndsBaseFTComputerSetFighterDamageDetectSize(fighter_gobj);
+#if NDS_SHIP_TELEMETRY
     gNdsFTComputerDamageDetectCount++;
+#endif
 }

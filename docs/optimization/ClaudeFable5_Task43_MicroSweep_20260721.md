@@ -62,3 +62,28 @@ been wrong before); if a claim doesn't reproduce, record that and skip the item.
 change adds any complexity, revert that item and note it — this sweep ships
 only free wins. Time-box the OAM item hardest; it is the only one with real
 structural risk.
+
+## Execution checkpoint — 2026-07-21
+
+- Item 1: replaced the replay-only per-triangle painter loop with one exact
+  run-count advance. The proof build and shared native-stage checker pass.
+- Item 2: the three scans reproduce, but the chain is short and the proposed
+  cache adds scene invalidation and ordering risk. No change without a >=1K
+  measurement.
+- Item 3: kept the free zero-handle return before `cpuGetTiming`; the remaining
+  active/free-list and deadline rewrite is disproportionate to the eight-slot
+  pool and remains unkept pending measurement.
+- Item 4: closed as moot in LEAN; Task 41 compiles the rate markers out.
+- Item 5: not changed. The preflight stats object contains traversal state, not
+  only reporting fields; selective clearing is not a free exact edit.
+- Item 6: load-bearing. Non-batch GX paths can follow batch end without applying
+  source alpha state, so the disable cannot be removed globally.
+- Item 7: claim does not reproduce in mode 163. Compile-time harness selection
+  reaches one `ndsRunMarioFoxProofUpdate` call per update; there is no runtime
+  predicate dispatch chain to specialize.
+
+Runtime A/B and the final combined soak remain open; approved Task 39/40 visual
+and animation checks will not be rerun.
+
+The 2026-07-21 retained Boundary smoke and screenshot/detail contract pass with
+Fox CPU on. This is functional evidence only; it is not the missing typed A/B.
