@@ -6481,3 +6481,34 @@ Two silent Makefile defects surfaced shipping it: `LIBC/LIBM/PORT` derived with
 the device A/B pair would have built control == candidate), and the device pair
 literal `1` left over from when `LEAVES` was a boolean rather than a bitmask,
 silently narrowing seven leaves to three. Both fixed.
+
+## 2026-07-23 - Task 50 hardware divider / sqrt — STOP at E0
+
+```text
+IDEA: TASK50-HW-DIVIDER
+DECISION: STOP at E0; no shipped code, nothing merges
+PUBLISHED ROM: unchanged 1818AA77..FDF54207 (no code converted)
+ELIGIBLE RENDER-SIDE CEILING: ~0.55% of battle budget (static-site attribution)
+REALISTIC RECOVERABLE: below the ~0.5% bar
+```
+
+E0 caller census (`artifacts/performance/2026-07-23_task50-divide-census.md`)
+of the 2.31% divide+sqrt callee cost (`__ieee754_sqrtf` 0.88%, `__aeabi_fdiv`
+0.75%, `__aeabi_ddiv` 0.27%, `__udivsi3` 0.25%, `sqrtf` 0.10%, integer div/mod
+~0.07%) classifies every call site from `arm-none-eabi-objdump -d` of all caller
+objects against the census. The majority of the cost lives in gameplay code the
+Task 9 state hash forbids changing (`gmcollision`, `mp*` stage collision,
+`ftMainProcPhysicsMap`, `ftComputer` AI, shield/jump/damage/twister physics,
+`wp*` collision, `lbCommonSim2D`, `gcParse*AnimJoint`). The hot eligible render
+callers are a small set (billboard look-at `ndsRendererAdapterBuildBillboardMtxF`
+`reloc_backend_renderer_dl.c:598-711`, light-direction normalize
+`nds_renderer.c:7742-7760`, `syMatrixLookAtReflectF`/`PerspFastF`), and the DS
+divider is async with a busy-wait that can negate the win at battle call density
+(device-only measurability — melonDS cannot referee). The `__aeabi_ddiv` "free
+win" is absent: every double caller is cold in battle (the `syMatrix*D` path at
+`matrix.c:1441-1486` is not reached; the adapter uses the `*F`/`*R` float/radix
+paths). The only warm ddiv caller is `ftDisplayLightsDrawReflect` (0.0634%, 2
+sites). No accidental `1.0`-promotion class. This honest finding is the
+deliverable; E1 does not run. Branch `codex/task50-hardware-divider` is the
+checkpoint.
+

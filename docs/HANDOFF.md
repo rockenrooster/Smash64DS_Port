@@ -1,9 +1,22 @@
 # Handoff
 
-Updated: 2026-07-22 (Task 45 — Task 37 SHIPPED over a red gate, owner's call)
+Updated: 2026-07-23 (Task 50 hardware divider — STOP at E0; no code, nothing merged)
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
+
+## Task 50 — STOP at E0 (2026-07-23)
+
+Branch `codex/task50-hardware-divider` (from master `61469f7`) census-classified
+every divide/sqrt call site. Eligible render-side ceiling ~0.55% of the battle
+budget under generous static-site attribution; realistic recoverable below the
+~0.5% bar, and the DS divider's async busy-wait can negate the win at battle
+call density (device-only measurability). The `__aeabi_ddiv` "free win" is
+absent — every double caller is cold in battle (`syMatrix*D` not reached). **No
+code converted; E1 did not run; nothing merges.** Published ROM unchanged
+`1818AA77...`. Full table:
+`artifacts/performance/2026-07-23_task50-divide-census.md`,
+`docs/optimization/ClaudeFable5_Task50_HardwareDivider_20260723.md`.
 
 ## Published ROM changed
 
