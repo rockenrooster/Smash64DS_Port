@@ -1,9 +1,23 @@
 # Handoff
 
-Updated: 2026-07-22 (Task 45 — Task 37 SHIPPED over a red gate, owner's call)
+Updated: 2026-07-23 (Task 49 — `NDS_BATTLE_PROFILE` axis + GX equivalence differ; KEEP candidate, branch `codex/task49-battle-profile-axis`, not merged)
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
+
+## Task 49 — GX equivalence differ (KEEP candidate, not merged)
+
+Branch `codex/task49-battle-profile-axis` (4 commits). Ships no rendering
+change. Part 1: `NDS_BATTLE_PROFILE` axis (additive; `=0` fails the build
+closed until Task 51; default 1 = today's shipping path). Part 2: the GX
+equivalence differ (default off; capture instrument + host analyzer, Tier 1
+bit-exact / Tier 2 screen-space pixels). Part 3: both controls pass —
+positive (profile-1 vs profile-1, 0 divergences, 0 px) and negative (VERTEX16
+word + matrix LSB both named by the differ). Published ROM byte-identical
+`1818AA77...`. Ready to judge Tasks 51/52. The `60C68AFF` tick-HUD reference
+is unreproducible from clean master today (47 bytes header relocation; the
+honest no-op test is master-vs-mine in matched fresh dirs, both `C24867BA...`).
+
 
 ## Published ROM changed
 

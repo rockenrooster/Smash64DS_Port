@@ -6481,3 +6481,46 @@ Two silent Makefile defects surfaced shipping it: `LIBC/LIBM/PORT` derived with
 the device A/B pair would have built control == candidate), and the device pair
 literal `1` left over from when `LEAVES` was a boolean rather than a bitmask,
 silently narrowing seven leaves to three. Both fixed.
+
+## Task 49 — `NDS_BATTLE_PROFILE` axis + GX equivalence differ (2026-07-23)
+
+```text
+IDEA ID: TASK49-GX-DIFFER-20260723
+DECISION: KEEP CANDIDATE; DIFFER PROVEN ON BOTH CONTROLS; READY TO JUDGE PROFILE-0 (TASKS 51/52)
+TARGET: smash64ds-battle-playable-task49-differ-hwtri (dedicated lab block)
+OWNER CAPTURED: STAGE (owner 0), one owner per run
+WINDOW: 438..445 (8 frames); dump at the last presented frame, per-frame reset
+STREAM/FRAME (STAGE): 2,229 entries; 2,996 words; 8 bindings (MATRIX_LOAD4X4)
+OVERFLOW/FAULT: 0 / 0 in every capture
+PUBLISHED ROM (default off): 1818AA775DCFFD52C82B35ED3D4FA6C6D02FCE232E9EE70D9B3F1DA3FDF54207
+```
+
+This task ships no rendering change. Part 1 is the `NDS_BATTLE_PROFILE` axis
+(additive; `=0` fails the build closed until Task 51 lands; `=1` is today's
+shipping path / correctness oracle). Part 2 is the GX equivalence differ:
+default-off capture instrument + host analyzer reporting Tier 1 (non-matrix,
+bit-exact, zero tolerance) and Tier 2 (matrix effective transform, screen-space
+pixels) separately.
+
+**Positive control:** profile-1 vs profile-1, same ROM, two runs — Tier 1
+2860/2860 words matched, 0 divergences; Tier 2 8 bindings, max 0.0 px. The
+capture is deterministic (the control Task 45 flagged as the one that should
+have run first and did not).
+
+**Negative control:** one VERTEX16 word perturbed → Tier 1 FAIL, named (cls19,
+entry 9, word_index 0). One LOAD4X4 matrix word +1 LSB → Tier 2
+max_screen_px = 0.0312 (binding 0; non-zero). A differ that has never reported
+a divergence is not known to work; this one has reported both.
+
+**Tier 2 threshold: 1.0 screen-space pixel per binding** (half a DS pixel on
+the 256x192 framebuffer; below it is sub-pixel/imperceptible; the 1-LSB
+perturbation measures 0.03 px = 32x under, so a real defect clears it).
+
+**No-op:** published ROM byte-identical `1818AA77...` (clean builds, master and
+this branch). The `60C68AFF` tick-HUD reference is unreproducible from clean
+master today (47 bytes of header relocation, same class Task 45 documented);
+the honest no-op test is master-vs-mine in matched fresh dirs, both
+`C24867BA...`, byte-identical.
+
+Full certificate: `artifacts/performance/2026-07-23_task49-gx-differ.md`.
+Spec + results: `docs/optimization/ClaudeFable5_Task49_BattleProfileAxisAndGxDiffer_20260723.md`.

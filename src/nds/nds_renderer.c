@@ -9,9 +9,18 @@
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_itcm.h>
+#include <nds/nds_task49_gx_differ.h>
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_HW_TRIANGLES 0
+#endif
+
+#if NDS_TASK49_GX_DIFFER
+/* Forward declaration: the lean ndsRendererTask29GXRecord funnel below needs
+ * the current runtime owner, which is defined later in this TU. The whole
+ * block (comment included) is compiled only when the differ is armed, so the
+ * default-off build stays byte-identical to master. */
+static NDSRendererProfileOwner sNdsRendererRuntimeOwner;
 #endif
 
 #ifndef NDS_SCENE_MIP_CACHE_LAB
@@ -746,6 +755,11 @@ ndsRendererTask29GXRecord(
 #if NDS_TASK36_HW_COMPOSE == 2
     NDS_TASK36_REPLAY_RECORD(command_class, words, word_count);
 #endif
+    /* Task 49 GX-differ hook (mirror of the lean-funnel hook below). */
+#if NDS_TASK49_GX_DIFFER
+    ndsRendererTask49GxDifferRecord(
+        (u32)sNdsRendererRuntimeOwner, (u32)command_class, words, word_count);
+#endif
     ndsRendererTask29GXEnsureActive();
     if ((class_index >= NDS_TASK29_GX_CLASS_COUNT) ||
         (word_count > NDS_TASK29_GX_MAX_WORDS) ||
@@ -912,6 +926,13 @@ static inline void ndsRendererTask29GXRecord(
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
     NDS_TASK36_REPLAY_RECORD(command_class, words, word_count);
+#endif
+    /* Task 49 GX-differ hook: the single writer touch on this TU for the
+     * differ. Records the per-owner stream word-for-word (body in the
+     * nds_task49_gx_differ TU; compiles to nothing at the default). */
+#if NDS_TASK49_GX_DIFFER
+    ndsRendererTask49GxDifferRecord(
+        (u32)sNdsRendererRuntimeOwner, (u32)command_class, words, word_count);
 #endif
 }
 #endif
@@ -1139,7 +1160,7 @@ static inline void ndsRendererHardwareWriteColorWord(u32 value)
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2)
+    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
     ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
 #endif
     GFX_COLOR = value;
@@ -1154,7 +1175,7 @@ static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2)
+    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
     ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
 #endif
     GFX_TEX_COORD = value;
@@ -1171,7 +1192,7 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
     ndsRendererBenchmarkSinkWord(z);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2)
+    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
     u32 words[2] = {xy, z};
 
     ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);

@@ -289,7 +289,7 @@ typedef enum NDSRendererProfileOwner
 } NDSRendererProfileOwner;
 
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2)
+    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
 typedef enum NDSRendererTask29GXClass
 {
     NDS_TASK29_GX_CONTROL = 0,
