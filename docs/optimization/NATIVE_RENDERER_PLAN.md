@@ -4,6 +4,27 @@
 `docs/PERF_LEDGER.md` owns measurements and rejected experiments. This file owns
 only the retained M2-M4 implementation contract.
 
+## The two build axes (Task 49, 2026-07-23)
+
+There are **two orthogonal knobs** that both look like "profile". Conflating them
+is the easiest way to misread a measurement, so they are stated once here:
+
+- **`NDS_BATTLE_PROFILE`** — the *battle pipeline selector*.
+  - `0` = DS-native precompiled path (Tasks 51/52; not implemented yet; the
+    build fails closed with `$(error)` until it exists).
+  - `1` = today's shipping translation path — the correctness oracle. This is
+    what the published `smash64ds-battle-playable-hwtri` and tick-HUD/proof
+    targets build.
+  - `2` = instrumented / semantic-oracle build of that same translation path.
+- **`NDS_RENDERER_PROFILE_LEVEL`** — the *instrumentation level within profiles
+  1 and 2*. It keeps its existing values (0 lean, 1 phase timers, 2 full
+  oracle) and is **not** renumbered. The ~700 sites that reference it are
+  instrumentation, not pipeline selection.
+
+The demotion in the Profile-0 Native Campaign is realized by adopting
+`NDS_BATTLE_PROFILE`, not by renumbering `NDS_RENDERER_PROFILE_LEVEL`. See
+`docs/optimization/PROFILE0_NATIVE_CAMPAIGN.md` §4.
+
 ## Shared Rules
 
 - Preserve BattleShip draw order, selected display lists, material progression,

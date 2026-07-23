@@ -48,6 +48,13 @@ NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
 NDS_TASK29_GX_CENSUS ?= 0
 NDS_TASK34_STAGE_STREAM_CENSUS ?= 0
 NDS_TASK36_HW_COMPOSE ?= 0
+# Battle pipeline selector. Orthogonal to NDS_RENDERER_PROFILE_LEVEL, which
+# is the *instrumentation* level within profiles 1 and 2 and keeps its
+# existing values (0 lean, 1 phase timers, 2 full oracle).
+#   0 = DS-native precompiled path (Tasks 51/52; not implemented yet)
+#   1 = today's shipping translation path -- the correctness oracle
+#   2 = instrumented / semantic oracle build of that same path
+NDS_BATTLE_PROFILE ?= 1
 NDS_TASK22_WALLPAPER_RUN_LAB ?= 0
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
 NDS_RENDER_ECONOMY ?= 0
@@ -160,6 +167,19 @@ ifneq ($(NDS_TASK9_FLOAT_PHASE2),1)
 $(error NDS_TASK16_FLOAT_ADDSUB=1 requires NDS_TASK9_FLOAT_PHASE2=1)
 endif
 endif
+# NDS_BATTLE_PROFILE must be exactly 0, 1, or 2. Anything else is a typo or a
+# stale command-line; fail loudly rather than fall through to profile 1.
+ifneq ($(NDS_BATTLE_PROFILE),$(filter $(NDS_BATTLE_PROFILE),0 1 2))
+$(error NDS_BATTLE_PROFILE must be 0, 1, or 2; got "$(NDS_BATTLE_PROFILE)")
+endif
+# NDS_BATTLE_PROFILE=0 (DS-native precompiled path) is not implemented yet --
+# it lands with Task 51. It must NEVER silently fall through to profile 1:
+# this project has paid for silent no-ops three times (Task 37 := vs =, Task 46
+# gc-sections). Fail the build with an actionable message until the native
+# path exists.
+ifeq ($(NDS_BATTLE_PROFILE),0)
+$(error NDS_BATTLE_PROFILE=0 (DS-native precompiled path) is not implemented yet; it lands with Task 51. Set NDS_BATTLE_PROFILE=1.)
+endif
 NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
 ifeq ($(TARGET),smash64ds-battle-playable-hwtri)
 # This is the only published P1 battle ROM. Keep the complete realtime
@@ -176,6 +196,10 @@ override NDS_TICK_HUD := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Task 49: the battle-pipeline selector. Profile 1 = today's shipping path
+# (the correctness oracle). Kept explicit here so the published ROM cannot
+# silently slip to the not-yet-implemented profile 0.
+override NDS_BATTLE_PROFILE := 1
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
 override NDS_TASK44_STAGE_STEADY := 1
@@ -231,6 +255,10 @@ endif
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Task 49: battle-pipeline selector. Standing rule: any flag on the published
+# block is on this block too -- a tick-HUD/proof reading a different binary
+# silently corrupts every measurement.
+override NDS_BATTLE_PROFILE := 1
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
 override NDS_TASK44_STAGE_STEADY := 1
@@ -1340,6 +1368,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK29_GX_CENSUS $(NDS_TASK29_GX_CENSUS)'; \
 		echo '#define NDS_TASK34_STAGE_STREAM_CENSUS $(NDS_TASK34_STAGE_STREAM_CENSUS)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
+		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
 		echo '#define NDS_TASK37_ITCM_LEAVES $(NDS_TASK37_ITCM_LEAVES)'; \
@@ -1596,6 +1625,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK29_GX_CENSUS=$(NDS_TASK29_GX_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK34_STAGE_STREAM_CENSUS=$(NDS_TASK34_STAGE_STREAM_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK36_HW_COMPOSE=$(NDS_TASK36_HW_COMPOSE)'
+	@printf '%s\n' 'BENCH_MAKE_BATTLE_PROFILE=$(NDS_BATTLE_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK44_STAGE_STEADY=$(NDS_TASK44_STAGE_STEADY)'
 	@printf '%s\n' 'BENCH_MAKE_TASK37_PROFILE=$(NDS_TASK37_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK37_ITCM_LEAVES=$(NDS_TASK37_ITCM_LEAVES)'
