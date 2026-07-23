@@ -52,6 +52,10 @@ param(
     [ValidateRange(0,1)][int]$Task20StackProfileMode = 0,
     [ValidateRange(0,1)][int]$Task32DrawHotTextMode = 0,
     [string]$Task9StateHashExportPath = '',
+    # Task 45: dump the raw FTStruct snapshot buffer after the match so the
+    # Task 37 divergence resolves to a byte offset instead of a 3,012-byte blob.
+    # Requires the ROM to be built with NDS_TASK9_FTSTRUCT_SNAPSHOT=1.
+    [string]$Task9FTStructSnapshotPath = '',
     [ValidateRange(0,1024)][int]$RendererBenchmarkSamples = 0,
     [ValidateRange(0,1000000)][int]$RendererBenchmarkStartFrame = 0,
     [ValidateSet('None','KO','Rebirth','Late','TimeUp')]
@@ -196,6 +200,9 @@ if (($Task9StateHashMode -eq 1) -and -not $MatchLifecycleProof) {
 }
 if ($Task9StateHashExportPath -and ($Task9StateHashMode -ne 1)) {
     throw 'Task9StateHashExportPath requires Task9StateHashMode 1.'
+}
+if ($Task9FTStructSnapshotPath -and ($Task9StateHashMode -ne 1)) {
+    throw 'Task9FTStructSnapshotPath requires Task9StateHashMode 1.'
 }
 if ($RendererBenchmarkOnly -and ($RendererBenchmarkSamples -eq 0)) {
     throw 'RendererBenchmarkOnly requires RendererBenchmarkSamples greater than zero.'
@@ -1271,6 +1278,26 @@ try {
         'detach',
         'quit'
     )
+    # Task 45: raw FTStruct snapshot dump, appended to whichever match-finish
+    # block runs. Same 'dump binary memory' form the Task 34 stage stream uses.
+    $task9FTStructDumpCommands = if ($Task9FTStructSnapshotPath) {
+        $snapshotFull = if ([IO.Path]::IsPathRooted($Task9FTStructSnapshotPath)) {
+            $Task9FTStructSnapshotPath
+        } else {
+            Join-Path $root $Task9FTStructSnapshotPath
+        }
+        $snapshotDir = Split-Path -Parent $snapshotFull
+        if ($snapshotDir -and -not (Test-Path -LiteralPath $snapshotDir)) {
+            New-Item -ItemType Directory -Force -Path $snapshotDir | Out-Null
+        }
+        $snapshotRel =
+            [IO.Path]::GetRelativePath($root, $snapshotFull).Replace('\', '/')
+        @(
+            'printf "TASK9_FTSNAP=%u,%u\n", gNdsTask9FTStructSnapshotFilled[0], gNdsTask9FTStructSnapshotFilled[1]',
+            ('dump binary memory {0} &gNdsTask9FTStructSnapshot[0][0][0] &gNdsTask9FTStructSnapshot[2][0][0]' -f
+                $snapshotRel)
+        )
+    } else { @() }
     if ($OneMinuteMatchProof) {
         # BattleShip ifcommon.c:2533-2542 creates the 1:00 timer before the
         # first VSBattle update. Stop there once, then run naturally until the
@@ -1292,7 +1319,7 @@ try {
                 'printf "TASK9_STATE=%u,%u,%u,%u,%u,%u\n", $task9_state_index, gNdsTask9StateHashes[$task9_state_index].hash1, gNdsTask9StateHashes[$task9_state_index].hash2, gNdsTask9StateHashes[$task9_state_index].bytes, gNdsTask9StateHashes[$task9_state_index].records, gNdsTask9StateHashes[$task9_state_index].overflow',
                 'set $task9_state_index = $task9_state_index + 1',
                 'end'
-            )
+            ) + $task9FTStructDumpCommands
         } else { @() }
         $task25rPacingCommands = if ($Task25RPacingTrace) {
             @(
@@ -1878,7 +1905,7 @@ try {
                     'printf "TASK9_STATE=%u,%u,%u,%u,%u,%u\n", $task9_state_index, gNdsTask9StateHashes[$task9_state_index].hash1, gNdsTask9StateHashes[$task9_state_index].hash2, gNdsTask9StateHashes[$task9_state_index].bytes, gNdsTask9StateHashes[$task9_state_index].records, gNdsTask9StateHashes[$task9_state_index].overflow',
                     'set $task9_state_index = $task9_state_index + 1',
                     'end'
-                )
+                ) + $task9FTStructDumpCommands
             }
         }
         $gdbCommands = @(

@@ -108,9 +108,16 @@ NDS_TASK37_PROFILE_FRAMES ?= 128
 #   4  port leaves   TextureSourceBytes, PolyFmt, FTParamsInvalidateFighterParts
 #   7  all of them (what the failing A/B ran)
 NDS_TASK37_ITCM_LEAVES ?= 0
-NDS_TASK37_ITCM_LIBC := $(if $(filter 1 3 5 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
-NDS_TASK37_ITCM_LIBM := $(if $(filter 2 3 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
-NDS_TASK37_ITCM_PORT := $(if $(filter 4 5 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+# Deferred (=), not immediate (:=). The per-target blocks below override
+# NDS_TASK37_ITCM_LEAVES, and they are parsed AFTER these lines -- with := these
+# would latch the default 0 and the override would silently do nothing, so the
+# published target and the device A/B pair would both build with no leaves moved
+# and produce a byte-identical ROM. Environment-driven builds were unaffected
+# (the env value is in place before line 110), which is why the lab A/B runs
+# were valid and this stayed hidden.
+NDS_TASK37_ITCM_LIBC = $(if $(filter 1 3 5 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+NDS_TASK37_ITCM_LIBM = $(if $(filter 2 3 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+NDS_TASK37_ITCM_PORT = $(if $(filter 4 5 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
 # Layout control: N bytes of never-executed padding in .main, nothing in ITCM.
 # Separates "ITCM residency breaks it" from "any layout change breaks it".
 NDS_TASK37_LAYOUT_PROBE ?= 0
@@ -122,6 +129,11 @@ NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS ?= 0
 # Lab-only: bitmask of NDSTask9StateRecordKind values the state hash includes.
 # Diagnostic for Task 37 region isolation only; a filtered hash is a weaker gate.
 NDS_TASK9_STATE_HASH_REGION_MASK ?= 0xFFFFFFFF
+# Lab-only: snapshot raw FTStruct bytes for both fighters on updates N-1 and N,
+# so the Task 37 divergence names an offset instead of a 3,012-byte blob.
+# Costs ~12 KiB of BSS when enabled; observation only, never in a shipping build.
+NDS_TASK9_FTSTRUCT_SNAPSHOT ?= 0
+NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE ?= 0
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
 ifeq ($(NDS_FAST_WALLPAPER_AFFINE),1)
 ifneq ($(NDS_SCENE_MIP_CACHE_LAB),0)
@@ -167,11 +179,23 @@ override NDS_TASK36_HW_COMPOSE := 2
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
 override NDS_TASK44_STAGE_STEADY := 1
-# Task 37 (seven hot leaves into ITCM free space) is NOT enabled here. The
-# emulator A/B is strong -- named work P50 -59,328 ticks, 3-VBlank share
-# 71.7% -> 76.0% -- but its exactness gate did not pass, so it is not a KEEP and
-# must not reach the published ROM. See the RESULTS section of
-# docs/optimization/ClaudeFable5_Task37_ItcmRepack_20260722.md.
+# Task 37: seven hot leaves (memset, memcpy, memcmp, __ieee754_sqrtf and three
+# renderer/fighter helpers, 906 bytes) into ITCM free space. Named work P50
+# -59,328 ticks, 3-VBlank share 71.7% -> 76.0%, 5+ VBlank 5.2% -> 3.1%.
+#
+# Shipping on the owner's explicit decision, 2026-07-22, with the state-hash
+# gate still RED. That is deliberate and the reasoning is on the record:
+# Task 45 dumped the raw FTStruct bytes of both builds and found all 215
+# differing words are main-RAM heap pointers offset by exactly +0x180 -- the
+# image shrinks 384 bytes when this code leaves .main, so every heap object
+# below it relocates. Zero gameplay values differ. The gate is reporting
+# relocated addresses as changed state. The leak was NOT root-caused (two
+# mechanism hypotheses were falsified), so the gate stays red rather than being
+# adjusted to pass. See ClaudeFable5_Task45_FTStructLocalize_20260722.md.
+#
+# 7, not 1: LEAVES was a boolean when this was measured and play-tested, and
+# became a bitmask (1=libc 2=libm 4=port) in 729c3a2. All seven leaves is 7.
+override NDS_TASK37_ITCM_LEAVES := 7
 override NDS_SCENE_MIP_CACHE_LAB := 0
 # Device-proven: boots to GO on melonDS and retail hardware with no OOM.
 override NDS_FAST_WALLPAPER_AFFINE := 1
@@ -244,7 +268,11 @@ override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 override NDS_TASK44_STAGE_STEADY := 1
-override NDS_TASK37_ITCM_LEAVES := $(if $(filter %-task37-on-hwtri,$(TARGET)),1,0)
+# 7 = all seven leaves. This read 1 and was stale: LEAVES was a boolean when the
+# device pair was built and measured, and 729c3a2 made it a bitmask, so 1 had
+# silently narrowed this A/B to the libc leaves only -- a smaller change than the
+# one the -59,328 figure and the owner's play test refer to.
+override NDS_TASK37_ITCM_LEAVES := $(if $(filter %-task37-on-hwtri,$(TARGET)),7,0)
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -1309,6 +1337,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK37_LAYOUT_PROBE_ITCM $(NDS_TASK37_LAYOUT_PROBE_ITCM)'; \
 		echo '#define NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS $(NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS)'; \
 		echo '#define NDS_TASK9_STATE_HASH_REGION_MASK $(NDS_TASK9_STATE_HASH_REGION_MASK)u'; \
+		echo '#define NDS_TASK9_FTSTRUCT_SNAPSHOT $(NDS_TASK9_FTSTRUCT_SNAPSHOT)'; \
+		echo '#define NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE $(NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE)u'; \
 		echo '#define NDS_TASK37_PROFILE_START $(NDS_TASK37_PROFILE_START)u'; \
 		echo '#define NDS_TASK37_PROFILE_FRAMES $(NDS_TASK37_PROFILE_FRAMES)u'; \
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \

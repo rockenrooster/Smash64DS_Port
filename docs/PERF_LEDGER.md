@@ -6437,3 +6437,47 @@ signature across disjoint groups. If it lands on a gameplay member, Task 37 is a
 real defect.
 KEEP / REWORK / REVERT: WIP -- measured win real, exactness unresolved, NOT shipped
 ```
+
+## TASK 45 — the Task 37 exactness gate was measuring relocation (2026-07-22)
+
+Method: dump raw `FTStruct` bytes for both fighters at updates 1411 (last
+identical record) and 1412 (first differing), baseline `LEAVES=0` vs candidate,
+and diff. Two runs instead of the planned ~6-run region-mask bisect, and it
+yields exact offsets rather than a 376-byte window.
+
+```
+215 differing words, both fighters, both updates
+  ALL are main-RAM heap pointers
+  ALL differ by exactly +0x180 (384 bytes)
+  ZERO non-pointer differences
+delta histogram: one bucket, 384 x215
+```
+
+Members hit: next, fighter_gobj, coll_data, input, damage_colls[0..10],
+joints[0..25], motion_scripts, computer, attack_colls. Every one a pointer. The
+image shrinks when the leaves leave `.main`, so every heap object below it
+relocates. The fighters are in bit-identical logical state.
+
+Exports corroborate: on all 692 differing records `bytes` (57,168), `records`
+(646) and `overflow` (0) are identical between builds. Hash-only differs, so the
+traversal walked identical structure.
+
+FALSIFIED, both mine:
+  ITCM boundary crossing        no ITCM-range values exist in the diff
+  .ptr vs .end class flip       changed nothing at all -- same 692, same 1412
+                                (reverted, 60ce8eb)
+
+STILL OPEN: why exactly 692 of 3,892 in bursts that heal, when the delta is one
+constant present at both sampled updates. Next step is a measurement, not a
+guess: dump `gSYTaskmanGeneralHeap.start/.ptr/.end` alongside the snapshot so
+canonical values compute offline. Key question: does `start` shift by the same
++0x180 as the pointers?
+
+SHIPPED ANYWAY on the owner's decision, gate still red. Published ROM
+`9E27BD3D..37CE369` -> `1818AA77..FDF54207`; `.itcm` 31,676 -> 32,596 of 32,736.
+
+Two silent Makefile defects surfaced shipping it: `LIBC/LIBM/PORT` derived with
+`:=` before the per-target overrides (first "shipped" build was byte-identical;
+the device A/B pair would have built control == candidate), and the device pair
+literal `1` left over from when `LEAVES` was a boolean rather than a bitmask,
+silently narrowing seven leaves to three. Both fixed.

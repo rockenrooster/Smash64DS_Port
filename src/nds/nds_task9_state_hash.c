@@ -167,6 +167,80 @@ static void ndsTask9StateMixWord(NDSTask9StateHashContext *ctx, u32 value)
 #define NDS_TASK9_STATE_HASH_REGION_MASK 0xFFFFFFFFu
 #endif
 
+/* Lab-only raw FTStruct snapshot for the Task 37 investigation.
+ *
+ * The region bisect localized the divergence to FTStruct and then ran out of
+ * resolution: FTStruct is hashed as one 3,012-byte blob, so "the fighter region
+ * differs" cannot separate a differing position from a differing pointer. This
+ * captures the raw bytes of both fighters so the differing offset names itself,
+ * and offsets map back to members through the NDS_FTSTRUCT_OFF_* table in
+ * <ft/fighter.h>.
+ *
+ * Two consecutive updates are captured: slot 0 is UPDATE-1, slot 1 is UPDATE.
+ * Capturing the update *before* the first divergence is the point -- if slot 0
+ * is byte-identical across the two builds and slot 1 differs at offset X, then
+ * the state entering the divergence was identical and X is the origin rather
+ * than a downstream consequence of something that already drifted.
+ *
+ * Never set in a shipping or verification configuration. */
+#ifndef NDS_TASK9_FTSTRUCT_SNAPSHOT
+#define NDS_TASK9_FTSTRUCT_SNAPSHOT 0
+#endif
+#ifndef NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE
+#define NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE 0u
+#endif
+
+#if NDS_TASK9_FTSTRUCT_SNAPSHOT
+#define NDS_TASK9_FTSTRUCT_SNAPSHOT_SLOTS 2u
+#define NDS_TASK9_FTSTRUCT_SNAPSHOT_FIGHTERS 2u
+
+/* [slot][fighter][byte]. Fighter index is GObj traversal order, which is the
+ * same order the hash itself walks, so it matches between the two builds for
+ * the same reason the record sequence does. */
+volatile u8 gNdsTask9FTStructSnapshot[NDS_TASK9_FTSTRUCT_SNAPSHOT_SLOTS]
+                                     [NDS_TASK9_FTSTRUCT_SNAPSHOT_FIGHTERS]
+                                     [NDS_FTSTRUCT_LAYOUT_SIZE];
+/* Per-slot fighters captured, so a short capture is visible in the dump
+ * instead of being misread as a run of legitimately zero bytes. */
+volatile u32 gNdsTask9FTStructSnapshotFilled[NDS_TASK9_FTSTRUCT_SNAPSHOT_SLOTS];
+
+static void ndsTask9FTStructSnapshotCapture(const void *fighter)
+{
+    u32 update = gNdsTask9StateHashCount;
+    const u8 *src = fighter;
+    size_t offset;
+    u32 slot;
+    u32 which;
+
+    if (update == ((u32)NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE - 1u))
+    {
+        slot = 0u;
+    }
+    else if (update == (u32)NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE)
+    {
+        slot = 1u;
+    }
+    else
+    {
+        return;
+    }
+
+    which = gNdsTask9FTStructSnapshotFilled[slot];
+    if (which >= NDS_TASK9_FTSTRUCT_SNAPSHOT_FIGHTERS)
+    {
+        return;
+    }
+    /* Deliberately a byte loop and not memcpy: memcpy is one of the three libc
+     * leaves Task 37 relocates, so calling it here would make the instrument
+     * itself a function of the change under test. */
+    for (offset = 0u; offset < (size_t)NDS_FTSTRUCT_LAYOUT_SIZE; offset++)
+    {
+        gNdsTask9FTStructSnapshot[slot][which][offset] = src[offset];
+    }
+    gNdsTask9FTStructSnapshotFilled[slot] = which + 1u;
+}
+#endif
+
 static void ndsTask9StateHashBytes(NDSTask9StateHashContext *ctx, u32 kind,
                                    const void *data, size_t bytes)
 {
@@ -377,6 +451,9 @@ static void ndsTask9StateHashUserData(NDSTask9StateHashContext *ctx,
     switch (link)
     {
     case nGCCommonLinkIDFighter:
+#if NDS_TASK9_FTSTRUCT_SNAPSHOT
+        ndsTask9FTStructSnapshotCapture(user_data);
+#endif
         ndsTask9StateHashGeneral(ctx, NDS_TASK9_STATE_RECORD_FIGHTER,
                                  user_data, sizeof(FTStruct));
         break;

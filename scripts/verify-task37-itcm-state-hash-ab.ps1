@@ -38,7 +38,12 @@ param(
     # Hex bitmask of NDSTask9StateRecordKind values to include in the hash.
     # Splits the state so the divergent half identifies itself instead of being
     # guessed at one region per run.
-    [string]$RegionMask = ''
+    [string]$RegionMask = '',
+    # Task 45: capture raw FTStruct bytes for both fighters on updates N-1 and N
+    # and diff them, so the divergence resolves to an offset and a member rather
+    # than "the fighter region differs". 1412 is the first differing record of
+    # the 0-vs-7 run. Region masks cannot resolve past the 3,012-byte blob.
+    [int]$FTStructSnapshotUpdate = 0
 )
 
 # Task 37 exactness gate, bisecting.
@@ -68,11 +73,17 @@ if ($ProbeItcm) { $suffix += '-itcmpad' }
 if ($Realtime) { $suffix += '-rt' }
 if ($NoControllers) { $suffix += '-noctl' }
 if ($RegionMask) { $suffix += "-rm$($RegionMask -replace '^0x','')" }
+if ($FTStructSnapshotUpdate -gt 0) { $suffix += "-ftsnap$FTStructSnapshotUpdate" }
 
 function Get-Task37ExportPath {
     param([int]$Mask, [int]$Probe = 0)
     $tag = if ($Probe -gt 0) { "$suffix-p$Probe" } else { $suffix }
     return (Join-Path $root "artifacts\performance\2026-07-22_task37-state-mask$Mask$tag.json")
+}
+
+function Get-Task37SnapshotPath {
+    param([int]$Mask)
+    return (Join-Path $root "artifacts\task37-census\ftstruct-snapshot-mask$Mask.bin")
 }
 
 function Invoke-Task37StateRun {
@@ -90,7 +101,10 @@ function Invoke-Task37StateRun {
     # NDS_TASK37_ITCM_LEAVES is declared with ?= so the environment wins.
     [Environment]::SetEnvironmentVariable(
         'NDS_TASK37_ITCM_LEAVES', "$Mask", 'Process')
-    & $owner `
+    $snapshotArgs = if ($FTStructSnapshotUpdate -gt 0) {
+        @{ Task9FTStructSnapshotPath = (Get-Task37SnapshotPath -Mask $Mask) }
+    } else { @{} }
+    & $owner @snapshotArgs `
         -MelonDS $MelonDS `
         -Gdb $Gdb `
         -GdbPort $GdbPort `
@@ -127,6 +141,8 @@ $environment = @{
     NDS_BGM_FALSIFIER_OFF = $(if ($BgmOff) { '1' } else { '0' })
     NDS_TASK9_STATE_HASH_SKIP_CONTROLLERS = $(if ($NoControllers) { '1' } else { '0' })
     NDS_TASK9_STATE_HASH_REGION_MASK = $(if ($RegionMask) { $RegionMask } else { '0xFFFFFFFF' })
+    NDS_TASK9_FTSTRUCT_SNAPSHOT = $(if ($FTStructSnapshotUpdate -gt 0) { '1' } else { '0' })
+    NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE = "$FTStructSnapshotUpdate"
     NDS_TASK37_LAYOUT_PROBE = "$LayoutProbe"
     NDS_TASK37_LAYOUT_PROBE_ITCM = $(if ($ProbeItcm) { '1' } else { '0' })
     NDS_RENDERER_FAST_RUN_DEFAULT = '9'
@@ -199,6 +215,21 @@ foreach ($arm in $arms) {
         Write-Output ("$label  FAIL  $differing of $($baseline.rows.Count) " +
             "records differ, first at update $first")
         $failed += $label
+    }
+}
+
+if ($FTStructSnapshotUpdate -gt 0) {
+    # Runs before the throw on purpose: in snapshot mode a record diff is the
+    # expected input to this diff, not a reason to abort before producing it.
+    Write-Output ''
+    Write-Output ('=== FTStruct snapshot diff, updates ' +
+        "$($FTStructSnapshotUpdate - 1) and $FTStructSnapshotUpdate ===")
+    $comparer = Join-Path $PSScriptRoot 'compare-task37-ftstruct-snapshot.ps1'
+    foreach ($m in ($Masks | Select-Object -Skip 1)) {
+        Write-Output "--- baseline mask $baselineMask vs candidate mask $m ---"
+        & $comparer `
+            -Baseline (Get-Task37SnapshotPath -Mask $baselineMask) `
+            -Candidate (Get-Task37SnapshotPath -Mask $m)
     }
 }
 
