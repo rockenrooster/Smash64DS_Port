@@ -1160,7 +1160,7 @@ static inline void ndsRendererHardwareWriteColorWord(u32 value)
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2)
+    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
     ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
 #endif
     GFX_COLOR = value;
@@ -1175,7 +1175,7 @@ static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2)
+    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
     ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
 #endif
     GFX_TEX_COORD = value;
@@ -1192,7 +1192,7 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
     ndsRendererBenchmarkSinkWord(z);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2)
+    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
     u32 words[2] = {xy, z};
 
     ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);

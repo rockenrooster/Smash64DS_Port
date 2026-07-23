@@ -284,6 +284,26 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_TASK39_FX_SHIELD := 1
 endif
+# Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
+# block breaks the structural pin at check-gbi-decode-fixtures.ps1:1847).
+# Profile 1 (oracle instrumentation), HW_COMPOSE=2 (capture the real shipping
+# compose stream), affine off (profile 1 + affine OOMs the arena), and NO
+# NDS_TASK37_ITCM_LEAVES so the differ hook has ITCM headroom. The tickhud
+# block overrides ITCM_LEAVES:=7 and PROFILE_LEVEL:=0; those overrides beat
+# the command line, so the differ must NOT build on the tickhud target.
+ifeq ($(TARGET),smash64ds-battle-playable-task49-differ-hwtri)
+override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+override NDS_DEV_LIVE_INPUT_PREVIEW := 1
+override NDS_HARNESS_FAST_LOGIC := 0
+override NDS_RENDERER_HW_TRIANGLES := 1
+override NDS_DEBUG_HUD := 0
+override NDS_RENDERER_PROFILE_LEVEL := 1
+override NDS_FAST_WALLPAPER_AFFINE := 0
+override NDS_RENDERER_FAST_RUN_DEFAULT := 9
+override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
+override NDS_TASK36_HW_COMPOSE := 2
+override NDS_TASK49_GX_DIFFER := 1
+endif
 NDS_TASK37_DEVICE_TARGETS := \
 	smash64ds-battle-playable-task37-on-hwtri \
 	smash64ds-battle-playable-task37-off-hwtri

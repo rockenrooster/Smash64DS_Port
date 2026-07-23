@@ -21,7 +21,8 @@
 #if NDS_TASK49_GX_DIFFER
 
 #define NDS_TASK49_GX_DIFFER_CODE \
-    __attribute__((noinline, noclone, cold, optimize("Os")))
+    __attribute__((noinline, noclone, cold, optimize("Os"), \
+                   section(".text.task49_gx_differ")))
 
 /* The largest GX command word count (a 4x4 matrix load = 16). Mirrors
  * NDS_TASK29_GX_MAX_WORDS in nds_renderer.c; defined locally so this TU does

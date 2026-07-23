@@ -50,12 +50,12 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # GX command classes (include/nds/nds_renderer.h:293-318).
-# Matrix classes: MATRIX_MODE(7) .. MATRIX_RESTORE(14); LOAD4X4=10, MULT4X4=11,
-# PUSH=12, POP=13. Tier 1 is everything NON-matrix. Note: MULT4x3 (profile 0)
-# does not exist in the enum yet; profile 0 lands with Task 51. The differ
-# handles it as a matrix class when it appears.
+# Matrix classes: MATRIX_MODE(7) .. MATRIX_RESTORE(14); LOAD4X4=9, MULT4X4=10,
+# PUSH=11, POP=12, STORE=13, RESTORE=14. Tier 1 is everything NON-matrix.
+# Note: MULT4x3 (profile 0) does not exist in the enum yet; profile 0 lands
+# with Task 51. The differ handles it as a matrix class when it appears.
 $script:matrixClasses = 7,8,9,10,11,12,13,14   # MATRIX_MODE..MATRIX_RESTORE
-$script:load4x4Class = 10
+$script:load4x4Class = 9                         # NDS_TASK29_GX_MATRIX_LOAD4X4
 $script:matrixMult4x3Class = 99                 # reserved for profile 0 (Task 51)
 
 # DS screen resolution.
@@ -83,8 +83,8 @@ function Test-Tier1BitExact {
     )
     # Compare non-matrix classes word-for-word, entry-by-entry. The capture is
     # per-owner, one frame, so the two streams must align entry-for-entry.
-    $aNonMatrix = @($CapA.entries | Where-Object { $script:matrixClasses -notcontains $_.command_class })
-    $bNonMatrix = @($CapB.entries | Where-Object { $script:matrixClasses -notcontains $_.command_class })
+    $aNonMatrix = @($CapA.entries | Where-Object { -not ($script:matrixClasses -contains [int]$_.command_class) })
+    $bNonMatrix = @($CapB.entries | Where-Object { -not ($script:matrixClasses -contains [int]$_.command_class) })
 
     $maxLen = [Math]::Max($aNonMatrix.Count, $bNonMatrix.Count)
     $divergences = [Collections.Generic.List[object]]::new()
@@ -119,7 +119,7 @@ function Test-Tier1BitExact {
             # 20.12 s32 field. Normalize via UInt32.
             $va = [uint32]$wa[$w]
             $vb = [uint32]$wb[$w]
-            if ($va -eq $vb) { $wordsMatched } else {
+            if ($va -eq $vb) { $wordsMatched++ } else {
                 $divergences.Add([pscustomobject]@{
                     entry=$i; class="cls$($ea.command_class)"; reason='word-mismatch'
                     word_index=$w; a_value=('0x{0:X8}' -f $va); b_value=('0x{0:X8}' -f $vb) })
@@ -140,33 +140,37 @@ function Test-Tier1BitExact {
 }
 
 function ConvertTo-ClipMatrix {
-    param([Parameter(Mandatory=$true)][uint32[]]$Words)
+    param([Parameter(Mandatory=$true)]$Words)
     # 16 words = s32 m[4][4] in 20.12 fixed-point, row-major. Convert each to a
-    # signed double. uint32 -> int32 reinterpretation.
-    if ($Words.Count -ne 16) { return $null }
-    $m = [double[,]]::new(4,4)
-    for ($r = 0; $r -lt 4; $r++) {
-        for ($c = 0; $c -lt 4; $c++) {
-            $u = [uint32]$Words[($r*4)+$c]
-            # Reinterpret as signed int32.
-            $s = if ($u -ge 0x80000000) { ([double]$u - 4294967296.0) } else { [double]$u }
-            $m[$r,$c] = $s / $script:one20p12
-        }
+    # signed double in a FLAT 16-element array (PowerShell unwraps 2D arrays on
+    # function return; a flat array indexed [r*4+c] avoids that). uint32 ->
+    # int32 reinterpretation. Accepts the Object[] JSON deserialization produces.
+    $w = @($Words)
+    if ($w.Count -ne 16) { return $null }
+    $m = [double[]]::new(16)
+    for ($i = 0; $i -lt 16; $i++) {
+        $u = [uint32][int64]$w[$i]
+        # Reinterpret as signed int32.
+        $s = if ($u -ge 0x80000000) { ([double]$u - 4294967296.0) } else { [double]$u }
+        $m[$i] = $s / $script:one20p12
     }
-    return $m
+    # Wrap in a single-element array so PowerShell returns the array object
+    # itself rather than unrolling it.
+    , $m
 }
 
 function Invoke-ClipTransform {
     param(
-        [Parameter(Mandatory=$true)][double[,]]$M,
-        [Parameter(Mandatory=$true)][double[]]$V   # x,y,z (w=1)
+        [Parameter(Mandatory=$true)][double[]]$M,   # flat 16, row-major
+        [Parameter(Mandatory=$true)]$V              # x,y,z (w=1)
     )
     # M is the projection*view*model clip matrix. Transform a model-space point.
-    $cx = $M[0,0]*$V[0] + $M[0,1]*$V[1] + $M[0,2]*$V[2] + $M[0,3]
-    $cy = $M[1,0]*$V[0] + $M[1,1]*$V[1] + $M[1,2]*$V[2] + $M[1,3]
-    $cz = $M[2,0]*$V[0] + $M[2,1]*$V[1] + $M[2,2]*$V[2] + $M[2,3]
-    $cw = $M[3,0]*$V[0] + $M[3,1]*$V[1] + $M[3,2]*$V[2] + $M[3,3]
-    return @($cx,$cy,$cz,$cw)
+    $v = @($V)
+    $cx = $M[0]*$v[0]  + $M[1]*$v[1]  + $M[2]*$v[2]  + $M[3]
+    $cy = $M[4]*$v[0]  + $M[5]*$v[1]  + $M[6]*$v[2]  + $M[7]
+    $cz = $M[8]*$v[0]  + $M[9]*$v[1]  + $M[10]*$v[2] + $M[11]
+    $cw = $M[12]*$v[0] + $M[13]*$v[1] + $M[14]*$v[2] + $M[15]
+    , @([double]$cx,[double]$cy,[double]$cz,[double]$cw)
 }
 
 function ConvertTo-ScreenPx {
@@ -195,8 +199,8 @@ function Test-Tier2EffectiveTransform {
 
     # The 8 unit-cube corners (the binding's local bbox, normalized).
     $corners = @(
-        ,@(-1.0,-1.0,-1.0), @(1.0,-1.0,-1.0), @(-1.0,1.0,-1.0), @(1.0,1.0,-1.0),
-        ,@(-1.0,-1.0,1.0), @(1.0,-1.0,1.0), @(-1.0,1.0,1.0), @(1.0,1.0,1.0))
+        @(-1.0,-1.0,-1.0), @(1.0,-1.0,-1.0), @(-1.0,1.0,-1.0), @(1.0,1.0,-1.0),
+        @(-1.0,-1.0,1.0), @(1.0,-1.0,1.0), @(-1.0,1.0,1.0), @(1.0,1.0,1.0))
 
     $n = [Math]::Min($aBindings.Count, $bBindings.Count)
     $perBinding = [Collections.Generic.List[object]]::new()
@@ -204,8 +208,8 @@ function Test-Tier2EffectiveTransform {
     $sumDev = 0.0
     $devCount = 0
     for ($bi = 0; $bi -lt $n; $bi++) {
-        $ma = ConvertTo-ClipMatrix ([uint32[]]@($aBindings[$bi].words))
-        $mb = ConvertTo-ClipMatrix ([uint32[]]@($bBindings[$bi].words))
+        $ma = ConvertTo-ClipMatrix @($aBindings[$bi].words)
+        $mb = ConvertTo-ClipMatrix @($bBindings[$bi].words)
         if ($null -eq $ma -or $null -eq $mb) { continue }
         $bMax = 0.0
         for ($ci = 0; $ci -lt 8; $ci++) {
