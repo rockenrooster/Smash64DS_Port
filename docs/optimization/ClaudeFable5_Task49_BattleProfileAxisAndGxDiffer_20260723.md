@@ -238,3 +238,81 @@ Tier 2 gate, because Tasks 51 and 52 will both be judged by it.
    `HANDOFF.md` update.
 5. `.\scripts\verify-dev-fast.ps1` green, then
    `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` as the final action.
+
+---
+
+## Results (2026-07-23)
+
+**Outcome: KEEP candidate. Both controls pass; the differ is proven and ready
+to judge Tasks 51/52.**
+
+### Part 1 — the axis
+
+`NDS_BATTLE_PROFILE` wired through all five Makefile sites (declaration,
+validation, config-header emit, print-benchmark-flags, both target blocks).
+`=0` fails closed:
+
+```text
+Makefile:181: *** NDS_BATTLE_PROFILE=0 (DS-native precompiled path) is not
+implemented yet; it lands with Task 51. Set NDS_BATTLE_PROFILE=1.  Stop.
+```
+
+Bad values fail: `NDS_BATTLE_PROFILE must be 0, 1, or 2; got "3"` (Makefile:173).
+`check-tickhud-parity.ps1` green at **43 flags**, 0 drift.
+
+**No-op proof:** published ROM byte-identical `1818AA77...` (clean builds,
+master and this branch). The two-axis note is in
+`docs/optimization/NATIVE_RENDERER_PLAN.md`.
+
+### Part 2 — the differ
+
+Default off (`NDS_TASK49_GX_DIFFER ?= 0`), byte-invisible at default (published
+ROM `1818AA77...`). When armed, captures the per-owner GX stream word-for-word
+(STAGE owner: 2,229 entries / 2,996 words / 8 bindings per frame, 0 overflow /
+0 fault). The single `src/nds/nds_renderer.c` writer touch is a flag-gated hook
+in `ndsRendererTask29GXRecord` plus three record-site guards so the differ
+activates its own COLOR/TEX_COORD/VERTEX16 capture points.
+
+### Part 3 — the controls (the deliverable)
+
+**Positive (self-identity):** profile-1 vs profile-1, same ROM, two runs.
+
+| tier | result |
+|---|---|
+| Tier 1 (non-matrix, bit-exact) | 2860/2860 words matched, 0 divergences, PASS |
+| Tier 2 (matrix, screen-space px) | 8 bindings, max 0.0 px, ZERO_DEVIATION |
+
+The capture is deterministic.
+
+**Negative (known-divergence injection):**
+
+| injection | what the differ said |
+|---|---|
+| 1 VERTEX16 word, bit flip `0x020F0C0F->0x020F0C0E` | Tier 1 FAIL: cls19 (VERTEX16), entry 9, word_index 0, word-mismatch. Tier 2 = 0.0 px (vertex, not matrix) |
+| 1 LOAD4X4 matrix word, +1 LSB `0x00001000->0x00001001` | Tier 1 PASS (matrix is Tier 2). Tier 2: max_screen_px = **0.0312** (binding 0 named; non-zero) |
+
+A differ that has never reported a divergence is not known to work; this one
+has reported both a Tier-1 word mismatch and a Tier-2 screen-space deviation.
+
+### Tier 2 threshold
+
+**1.0 screen-space pixel per binding.** Justification: the DS framebuffer is
+256x192, so 1 px is the unit of the fidelity doctrine's ~90% likeness target;
+below it is sub-pixel and imperceptible. The 1-LSB matrix perturbation
+(smallest possible 20.12 change) measures 0.03 px (32x under), so a real
+compositional defect would clear it easily. The threshold does not make an
+arbitrary gate pass — it is grounded in the DS pixel grid.
+
+### ROM hashes (the gate)
+
+- Published ROM (default off): `1818AA775DCFFD52C82B35ED3D4FA6C6D02FCE232E9EE70D9B3F1DA3FDF54207` — byte-identical master-vs-this-branch (clean builds).
+- Tick-HUD ROM: master-vs-this-branch in matched fresh dirs both
+  `C24867BA7717EBF6C70FD473D980868A6F59B4598305781DDCE3261F737162B4`
+  (byte-identical; `default_off_noop = True`). The `60C68AFF...` reference is
+  unreproducible from clean master today — a fresh build differs by exactly 47
+  bytes, all `.nds`-header load-address fields plus one code pointer, the same
+  relocation class Task 45 documented (`docs/HANDOFF.md:20`). It is a stale
+  pin, not a valid byte-identity target for any change.
+
+Full certificate: `artifacts/performance/2026-07-23_task49-gx-differ.md`.
+

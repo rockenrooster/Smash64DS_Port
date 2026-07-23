@@ -21621,3 +21621,17 @@ remains skipped for the requested fast iteration cadence.
   bytes, `1818AA77...`). Retail A/B pair queued in
   `builds/device-queue/task37-itcm-leaves-pair/`; the device HUD `GIT` row
   carries an `L` engagement digit.
+
+### 2026-07-23 — Task 49: NDS_BATTLE_PROFILE axis + GX equivalence differ
+
+Branch `codex/task49-battle-profile-axis` (not merged). Added the
+`NDS_BATTLE_PROFILE` selector (additive; 0 = DS-native precompiled, fails the
+build closed until Task 51; 1 = today's shipping path / correctness oracle; 2 =
+instrumented oracle), orthogonal to `NDS_RENDERER_PROFILE_LEVEL` (which keeps
+its meaning as the instrumentation level within profiles 1/2). Wired through
+all five Makefile sites + both target blocks. Added the GX equivalence differ
+(`NDS_TASK49_GX_DIFFER`, default off): a per-owner word-level recorder (new TU
++ one flag-gated hook in `ndsRendererTask29GXRecord`) and a host analyzer
+reporting Tier 1 (non-matrix, bit-exact) and Tier 2 (matrix effective transform,
+screen-space pixels) separately. Both controls pass; the differ is proven and
+ready to judge Tasks 51/52. Published ROM byte-identical `1818AA77...`.
