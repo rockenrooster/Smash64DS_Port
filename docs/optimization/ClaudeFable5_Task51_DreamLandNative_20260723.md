@@ -160,3 +160,52 @@ so the differ can see it, mirroring the existing `MATRIX_LOAD4X4` wrapper
    hashes; `artifacts/visibility/` screenshots.
 5. Results section here; `PERF_LEDGER.md` entry; `HANDOFF.md`/`PORTING.md`.
 6. `.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean` as the final action.
+
+## E0 investigation (2026-07-23, in progress)
+
+Branch `codex/task51-dreamland-native` from master `11087ff` (Task 49 merged).
+Build environment verified working through the devkitPro msys2 bash (Git Bash's
+direct `make` hits the documented `/opt/devkitpro` recursive sub-make path
+quirk; msys2 bash resolves the fstab mount). A clean build of
+`smash64ds-battle-playable-hwtri` from a fresh dir reproduces **1818AA77…**
+byte-for-byte — the default-off gate is GREEN at baseline.
+
+Architectural findings that refine the literal spec (no contradiction, just
+precision on where the win lives):
+
+- **Task 36 (`NDS_TASK36_HW_COMPOSE == 2`, already shipping enabled) covers
+  26/42 bindings as rigid** (`NDS_RENDERER_TASK36_RIGID_BINDING_MASK =
+  0x00000381c00fffff`). It already loads projection + view once per segment and
+  emits `glMultMatrix4x4(world)` per rigid binding with PUSH/POP
+  (`ndsRendererNativeStageTask36EnsureWorld`, nds_renderer.c:19933).
+- **The 16 non-rigid bindings (indices 20-29, 33-38) still take the full
+  per-triangle CPU-compose + LOAD4X4 path** via `ndsRendererNativeStageLoadNoZMatrix`
+  (nds_renderer.c:20278) reading `binding_composed[binding_index]`. **This is
+  the STG prize.** Task 48 proved 42/43 binding world matrices are constant
+  across frames, so these 16 are conservatively dynamic in Task 36 — Task 51
+  captures them.
+- **Host-side matrix baking IS mechanically possible.** The 44-byte DObj
+  descriptors the generator already checksums
+  (`generate_nds_native_stage.py:1813`) are `DObjDesc`-shaped: bytes [8:20] =
+  translate (Vec3f), [20:32] = rotate (Vec3f), [32:44] = scale (Vec3f). Probed
+  values decode to real Dream Land transforms (e.g. map0[1] translate
+  (-525.0, +187.5, -1219.4)). The generator parses topology but currently
+  discards the transform values; E0 extracts them.
+- The runtime local-matrix builder has two paths: the XObj-callback path
+  (`dobj->xobjs[]`, preferred) and the `syMatrixTraRotRpyRSca` fallback
+  (`BuildDObjFallbackMtx`, nds_renderer.c:574). The host bake replicates the
+  fallback path bit-exactly; the Task 49 differ is the gate that proves the
+  bake matches the runtime for each converted binding (Tier 1 geometry = 0,
+  Tier 2 matrix effective-transform ≤ 1.0 screen-px).
+- `glMultMatrix4x3` / `m4x3` / `MATRIX_MULT4x3` confirmed available in libnds
+  (`videoGL.h:913`, `video.h:793`). The Task 49 differ analyzer reserved
+  `matrixMult4x3Class = 99` for exactly this addition
+  (`analyze-task49-gx-differ.ps1:59`).
+- Slab budget: 12663/16384 bytes used; ~3.6 KiB headroom. 42 baked 4×3 × 4
+  bytes/cell × 12 cells = 2016 bytes — fits.
+
+Foundation committed: `scripts/native_matrix_math.py` — a bit-exact host-side
+replica of the runtime stage-DObj matrix pipeline (`gSYSinTable` →
+`syGetSinCosUShort` → `syMatrixTraRotRpyRSca` → `MtxLoadN64ToDS20p12` →
+`MtxMulAffine20p12`). Self-test passes (identity/translate/affine-mul all
+correct). The differ is the final correctness gate for the converted bindings.
