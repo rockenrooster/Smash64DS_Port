@@ -28,7 +28,8 @@ if ($List) {
         [PSCustomObject]@{ Step = 'One-minute verifier contract'; Script = 'check-one-minute-match-verifier.ps1' },
         [PSCustomObject]@{ Step = 'FGM phase pack'; Script = 'check-audio-fgm-phase-pack.ps1' },
         [PSCustomObject]@{ Step = 'Pupupu water AOT corpus'; Script = 'check-pupupu-water-aot.ps1' },
-        [PSCustomObject]@{ Step = 'Renderer parity corpus'; Script = 'check-renderer-parity-corpus.ps1' }
+        [PSCustomObject]@{ Step = 'Renderer parity corpus'; Script = 'check-renderer-parity-corpus.ps1' },
+        [PSCustomObject]@{ Step = 'Tick-HUD target parity'; Script = 'check-tickhud-parity.ps1' }
     )
     if (-not $SkipRegistryCheck) {
         $steps += [PSCustomObject]@{ Step = 'Harness registry'; Script = 'check-harness-registry.ps1' }
@@ -70,6 +71,9 @@ Invoke-DevFastStep -Script 'check-one-minute-match-verifier.ps1'
 Invoke-DevFastStep -Script 'check-audio-fgm-phase-pack.ps1'
 Invoke-DevFastStep -Script 'check-pupupu-water-aot.ps1'
 Invoke-DevFastStep -Script 'check-renderer-parity-corpus.ps1'
+# The tick-HUD ROM must stay the published program plus timers, or every bucket
+# it reports describes a binary that is not the one shipping.
+Invoke-DevFastStep -Script 'check-tickhud-parity.ps1'
 if (-not $SkipRegistryCheck) {
     Invoke-DevFastStep -Script 'check-harness-registry.ps1'
 }

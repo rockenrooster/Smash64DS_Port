@@ -234,6 +234,11 @@ override NDS_TASK36_HW_COMPOSE := 2
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
 override NDS_TASK44_STAGE_STEADY := 1
+# Must track the published block above. These two targets exist to measure and
+# prove the shipping program, so any flag that is on there and off here makes
+# every tick-HUD bucket and every GDB proof a reading of a different binary.
+# Task 37 shipped on 2026-07-22 and this block was not updated with it.
+override NDS_TASK37_ITCM_LEAVES := 7
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -290,10 +295,16 @@ NDS_TASK44_DEVICE_TARGETS := \
 	smash64ds-battle-playable-task44-on-hwtri \
 	smash64ds-battle-playable-task44-off-hwtri
 ifneq ($(filter $(TARGET),$(NDS_TASK44_DEVICE_TARGETS)),)
-# Nonpublishing retail A/B pair for the Task 44 device checkpoint. Equivalent to
-# the profile-0 tick-HUD build except for NDS_TASK44_STAGE_STEADY; the distinct
+# Nonpublishing retail A/B pair for the Task 44 device checkpoint. The distinct
 # target and build names prevent one ROM from overwriting the other. This is the
 # only place Task 44 is allowed off in a profile-0 configuration.
+#
+# This pair is NOT tick-HUD-equivalent any more: it predates Task 37 shipping and
+# both arms still build with NDS_TASK37_ITCM_LEAVES at the default 0, matching the
+# ROMs already queued in builds/device-queue/task44-stage-steady-pair/. The A/B is
+# still internally valid (the arms differ only in NDS_TASK44_STAGE_STEADY), but it
+# measures Task 44 against a pre-Task-37 baseline. Rebuild both arms with LEAVES
+# set to 7 before drawing any conclusion about Task 44 on the shipping program.
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 0
