@@ -1,13 +1,35 @@
 # Handoff
 
-Updated: 2026-07-22 (Task 37 placement repack KEEP)
+Updated: 2026-07-22 (Task 45 — Task 37 SHIPPED over a red gate, owner's call)
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
 
+## Published ROM changed
+
+`smash64ds-battle-playable-hwtri.nds` is now
+`1818AA775DCFFD52C82B35ED3D4FA6C6D02FCE232E9EE70D9B3F1DA3FDF54207`
+(was `9E27BD3D…37CE369`). README and `DECOMP_PIN.txt` pins travel with it.
+
+Task 37's seven ITCM leaves ship enabled (`NDS_TASK37_ITCM_LEAVES := 7`).
+`.itcm` 31,676 → 32,596 of a 32,736 cap — **140 bytes free**, so ITCM is now
+effectively full and any future placement work must evict first. The 5,040-byte
+never-executed resident budget identified by the Task 37 census is where to look.
+
+**The state-hash gate is still RED and was not repaired.** Task 45 established
+the divergence is relocated heap pointers, not gameplay (215/215 differing words
+at a constant +0x180, zero gameplay values), but the leak mechanism was never
+found — two hypotheses were falsified and the speculative fix reverted. Shipping
+was the owner's explicit decision on that evidence. Do not read a red
+`verify-task37-itcm-state-hash-ab.ps1` as a new regression; it is the known
+state. Do not "fix" it by loosening the canonicalizer without evidence.
+
+`verify-dev-fast.ps1` is red on the `battle_playable` locked-30 pacing contract.
+Pre-existing emulator-fork artefact, see `PERF_LEDGER.md:14-22`.
+
 ## Restart
 
-Branch: `codex/task37-itcm-repack`
+Branch: `codex/task45-ftstruct-localize` (merged to master)
 Boundary: `battle_playable_realtime`, mode `163`
 
 ```powershell
