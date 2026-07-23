@@ -47,6 +47,10 @@ NDS_RENDERER_M3_PHASE0_PROFILE ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
 NDS_TASK29_GX_CENSUS ?= 0
 NDS_TASK34_STAGE_STREAM_CENSUS ?= 0
+# Task 49 GX equivalence differ capture (Part 2 instrument). Records the
+# per-owner GX stream word-for-word for host-side profile-0-vs-profile-1
+# diffing. Lab-only; built via command line, never in a shipping target.
+NDS_TASK49_GX_DIFFER ?= 0
 NDS_TASK36_HW_COMPOSE ?= 0
 # Battle pipeline selector. Orthogonal to NDS_RENDERER_PROFILE_LEVEL, which
 # is the *instrumentation* level within profiles 1 and 2 and keeps its
@@ -489,6 +493,13 @@ ifneq ($(filter -1 0 1,$(NDS_FIGHTER_ANIM_CYCLER_KIND)),$(NDS_FIGHTER_ANIM_CYCLE
 $(error NDS_FIGHTER_ANIM_CYCLER_KIND must be -1, 0 (Mario), or 1 (Fox))
 endif
 endif
+# Task 49 GX differ hooks the HW-triangle GX command funnel
+# (ndsRendererTask29GXRecord), which is compiled only under HW triangles.
+ifeq ($(NDS_TASK49_GX_DIFFER),1)
+ifneq ($(NDS_RENDERER_HW_TRIANGLES),1)
+$(error NDS_TASK49_GX_DIFFER=1 requires NDS_RENDERER_HW_TRIANGLES=1)
+endif
+endif
 # Checked here, after every target block has applied its overrides, so a target
 # that turns both on is accepted while a bare command-line NDS_TASK44_STAGE_STEADY=1
 # without the Task 36 stage owner still fails loudly.
@@ -773,6 +784,9 @@ CFILES += nds_task9_float_census.c
 endif
 ifeq ($(NDS_TASK9_STATE_HASH),1)
 CFILES += nds_task9_state_hash.c
+endif
+ifeq ($(NDS_TASK49_GX_DIFFER),1)
+CFILES += nds_task49_gx_differ.c
 endif
 ifeq ($(NDS_TASK10_HARDWARE_CALIBRATION),1)
 CFILES += nds_task10_hardware_calibration.c
@@ -1367,6 +1381,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'; \
 		echo '#define NDS_TASK29_GX_CENSUS $(NDS_TASK29_GX_CENSUS)'; \
 		echo '#define NDS_TASK34_STAGE_STREAM_CENSUS $(NDS_TASK34_STAGE_STREAM_CENSUS)'; \
+		echo '#define NDS_TASK49_GX_DIFFER $(NDS_TASK49_GX_DIFFER)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
@@ -1624,6 +1639,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE=$(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK29_GX_CENSUS=$(NDS_TASK29_GX_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK34_STAGE_STREAM_CENSUS=$(NDS_TASK34_STAGE_STREAM_CENSUS)'
+	@printf '%s\n' 'BENCH_MAKE_TASK49_GX_DIFFER=$(NDS_TASK49_GX_DIFFER)'
 	@printf '%s\n' 'BENCH_MAKE_TASK36_HW_COMPOSE=$(NDS_TASK36_HW_COMPOSE)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_PROFILE=$(NDS_BATTLE_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK44_STAGE_STEADY=$(NDS_TASK44_STAGE_STEADY)'
