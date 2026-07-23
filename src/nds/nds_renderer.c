@@ -1046,6 +1046,15 @@ static inline void ndsRendererTask29GlMultMatrix4x4(const m4x4 *matrix)
         NDS_TASK29_GX_MATRIX_MULT4X4, (const u32 *)matrix, 16u);
 }
 
+/* Task 51: wrapped emit so the differ (Task 49) observes the 12-word 4x3
+ * model-matrix command. Mirrors the MULT4X4 wrapper; records the new class. */
+static inline void ndsRendererTask29GlMultMatrix4x3(const m4x3 *matrix)
+{
+    glMultMatrix4x3(matrix);
+    ndsRendererTask29GXRecord(
+        NDS_TASK29_GX_MATRIX_MULT4x3, (const u32 *)matrix, 12u);
+}
+
 static inline void ndsRendererTask29GlPushMatrix(void)
 {
     u32 value = 0u;
@@ -1140,6 +1149,7 @@ static inline void ndsRendererTask29GlVertex3v16(v16 x, v16 y, v16 z)
 #define glLoadIdentity ndsRendererTask29GlLoadIdentity
 #define glLoadMatrix4x4 ndsRendererTask29GlLoadMatrix4x4
 #define glMultMatrix4x4 ndsRendererTask29GlMultMatrix4x4
+#define glMultMatrix4x3 ndsRendererTask29GlMultMatrix4x3
 #define glPushMatrix ndsRendererTask29GlPushMatrix
 #define glPopMatrix ndsRendererTask29GlPopMatrix
 #define glStoreMatrix ndsRendererTask29GlStoreMatrix
@@ -19980,6 +19990,80 @@ static s32 ndsRendererNativeStageTask36EnsureWorld(
     return TRUE;
 }
 
+#if NDS_TASK51_STAGE_NATIVE
+/* Task 51: emit the baked constant world matrix for a non-rigid stage binding
+ * via MTX_MULT4x3 under the once-loaded camera view, instead of the per-frame
+ * CPU projection x view x model compose in ndsRendererNativeStageLoadNoZMatrix.
+ *
+ * The baked matrices come from the host generator
+ * (sNdsNativeStageBakedWorldMatrices, NDSRendererMatrix20p12 s20.12 row-major
+ * m[row][col] with translation in m[3][0..2]). The DS MTX_MULT4x3 command
+ * consumes a column-major 4x3 (4 columns of 3 elements: the decomp's
+ * Matrix4x3_FromTranslation puts the identity diagonal at indices 0,4,8 and
+ * translation at 9,10,11), so the conversion transposes the rotation and
+ * places translation in column 3. The Task 49 differ Tier-2 (<= 1.0 screen-px)
+ * gates that this matches the CPU-composed oracle. Mirrors Task 36's
+ * EnsureWorld (PUSH + mult) but uses the 12-word 4x3 and the generator-baked
+ * constant instead of a runtime recomputed scaled world. */
+static s32 ndsRendererNativeStageTask51EnsureWorld(u32 binding_index)
+{
+    const s32 *baked;
+    m4x3 world_hardware;
+
+    if ((binding_index >= NDS_NATIVE_STAGE_BAKED_WORLD_COUNT) ||
+        (sNdsNativeStageOwnerExecution.task36_segment_active == FALSE))
+    {
+        return FALSE;
+    }
+    /* Reuse Task 36's segment bracket: projection + view were loaded once at
+     * BeginSegment, so we only need to push the per-binding world onto the
+     * modelview stack. */
+    if (sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE)
+    {
+        glPopMatrix(1);
+    }
+    baked = sNdsNativeStageBakedWorldMatrices[binding_index];
+    /* Column-major 4x3: col c, row r -> m[c*3 + r]. baked[row*4+col] is
+     * row-major m[row][col]. Translation m[3][0..2] -> column 3. */
+    world_hardware.m[0] = baked[0];  /* col0,row0 = m[0][0] */
+    world_hardware.m[1] = baked[4];  /* col0,row1 = m[1][0] */
+    world_hardware.m[2] = baked[8];  /* col0,row2 = m[2][0] */
+    world_hardware.m[3] = baked[1];  /* col1,row0 = m[0][1] */
+    world_hardware.m[4] = baked[5];  /* col1,row1 = m[1][1] */
+    world_hardware.m[5] = baked[9];  /* col1,row2 = m[2][1] */
+    world_hardware.m[6] = baked[2];  /* col2,row0 = m[0][2] */
+    world_hardware.m[7] = baked[6];  /* col2,row1 = m[1][2] */
+    world_hardware.m[8] = baked[10]; /* col2,row2 = m[2][2] */
+    world_hardware.m[9] = baked[12]; /* col3,row0 = m[3][0] (translate x) */
+    world_hardware.m[10] = baked[13];/* col3,row1 = m[3][1] (translate y) */
+    world_hardware.m[11] = baked[14];/* col3,row2 = m[3][2] (translate z) */
+    glPushMatrix();
+    glMultMatrix4x3(&world_hardware);
+    sNdsNativeStageOwnerExecution.task36_binding = binding_index;
+    sNdsNativeStageOwnerExecution.task36_coordinate_shift = 0u;
+    sNdsNativeStageOwnerExecution.task36_local_pushed = TRUE;
+    sNdsRendererHardwareMatrixMode =
+        NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
+    sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
+    sNdsRendererHardwareMatrixLoaded = TRUE;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+    {
+        u64 binding_bit = (u64)1u << binding_index;
+
+        if ((sNdsNativeStageOwnerExecution.task36_seen_binding_mask &
+             binding_bit) == 0u)
+        {
+            sNdsNativeStageOwnerExecution.task36_seen_binding_mask |=
+                binding_bit;
+            gNdsRendererTask36HardwareComposedDObjCount++;
+        }
+    }
+    gNdsRendererTask36WorldMultCount++;
+#endif
+    return TRUE;
+}
+#endif
+
 static void ndsRendererNativeStageTask36LoadNoZProjection(s16 projected_z)
 {
     NDSRendererMatrix20p12 projection =
@@ -20471,6 +20555,49 @@ ndsRendererNativeStageEmitNoZTriangle(
                 prepared_run, coordinate_shift);
         }
         return 1u;
+    }
+#endif
+#if NDS_TASK51_STAGE_NATIVE
+    /* Task 51: non-rigid bindings use the baked constant world matrix via
+     * MTX_MULT4x3 instead of the per-frame CPU compose in LoadNoZMatrix.
+     * Reuses Task 36's NoZ projection loader and segment bracket; only the
+     * per-binding world-matrix emit changes (12-word 4x3 vs 16-word load). */
+    if (ndsRendererNativeStageTask36BindingIsRigid(run->binding_index) == FALSE)
+    {
+        u32 t51_shift;
+
+        for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+        {
+            u32 dense_index =
+                sNdsNativeStageCorners[first_corner + corner_offset];
+
+            if (sNdsNativeStageVertices[dense_index].matrix_binding !=
+                run->binding_index)
+            {
+                break;
+            }
+        }
+        if (corner_offset == 3u)
+        {
+            t51_shift = ndsRendererNativeStageTask36TriangleShift(
+                run, triangle_offset);
+            if (ndsRendererNativeStageTask51EnsureWorld(
+                    run->binding_index) != FALSE)
+            {
+                ndsRendererNativeStageTask36LoadNoZProjection(projected_z);
+                for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+                {
+                    u32 dense_index =
+                        sNdsNativeStageCorners[first_corner + corner_offset];
+
+                    ndsRendererNativeStageEmitNoZVertex(
+                        &sNdsNativeStageVertices[dense_index],
+                        &sNdsNativeStagePreparedDense[dense_index],
+                        prepared_run, t51_shift);
+                }
+                return 1u;
+            }
+        }
     }
 #endif
 
