@@ -585,6 +585,20 @@ distribution there, not less.
 
 ## Verdict
 
+> **SUPERSEDED 2026-07-22 — Task 37 SHIPPED.** Everything below stood at the time
+> it was written and is kept as history, but the conclusion did not survive
+> Task 45. The exactness gate was measuring the wrong thing: dumping the raw
+> `FTStruct` bytes of both builds showed all 215 differing words are main-RAM
+> heap pointers at a constant +0x180 offset, with **zero gameplay values
+> differing** — the image shrinks when this code leaves `.main`, so every heap
+> object below it relocates. The owner directed it to ship with the gate still
+> red. Published ROM is now `1818AA77…FDF54207`. See
+> `ClaudeFable5_Task45_FTStructLocalize_20260722.md`.
+>
+> The paragraph below — "until the exactness gate is resolved it is not
+> established that the candidate ROM is playing the same game" — is precisely
+> the question Task 45 answered: it is playing the same game.
+
 **WIP / NOT MERGED.** Branch `codex/task37-itcm-repack` is the checkpoint.
 
 What is proven and worth keeping regardless of what happens to the repack:

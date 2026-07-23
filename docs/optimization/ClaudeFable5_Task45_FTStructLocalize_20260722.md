@@ -211,6 +211,57 @@ Task 37 stays reverted for now. Not because it is believed defective — the
 evidence says it is not — but because "the gate is red and I could not repair
 it" is not the same as "the gate is green."
 
+## Shipped — the owner's decision, 2026-07-22
+
+The owner reviewed the above and directed that Task 37 ship anyway. Enabled in
+the published profile-0 target with the state-hash gate still RED.
+
+This is a deliberate exception to "KEEPs ship green", taken with the evidence in
+view and recorded as such: 215 of 215 differing words are relocated heap
+pointers at a constant offset, no gameplay value differs, the core regions are
+bit-identical for the whole match, and the owner has played the candidate on
+retail. The gate was **not** adjusted to make it pass — the speculative fix was
+reverted and the leak remains unexplained. It is red, and the change ships over
+it on the owner's authority, which is a different and more honest thing than a
+gate quietly tuned until it agreed.
+
+| | before | after |
+|---|---|---|
+| published ROM SHA-256 | `9E27BD3D…37CE369` | `1818AA77…FDF54207` |
+| `.itcm` | 31,676 | **32,596** (cap 32,736; 140 free) |
+| `.main` | 802,976 | 802,056 |
+| ROM bytes | 11,428,864 | 11,428,864 |
+
+### Two Makefile defects found while shipping
+
+Both were latent, both would have made this a no-op or a misreport, and neither
+was visible from the source alone.
+
+**1. The override was inert.** `NDS_TASK37_ITCM_LIBC/LIBM/PORT` were derived
+from `NDS_TASK37_ITCM_LEAVES` with `:=` at Makefile:111-113, which evaluates
+immediately — long before the per-target blocks that override `LEAVES`. The
+first "shipped" build produced a **byte-identical ROM** (`9E27BD3D…`, `.itcm`
+unchanged at 31,676): the override set `LEAVES=7` and the three derived flags
+stayed at the latched default 0. Changed to deferred `=`.
+
+This also means the **device A/B pair target was silently broken** — built by
+target name it would have produced control == candidate. The lab runs were
+unaffected because they set `LEAVES` through the environment, which is in place
+before line 110 is parsed, which is exactly why it stayed hidden.
+
+Caught only by checking that the ROM hash actually changed. A build that
+succeeds and a ROM that changed are different claims.
+
+**2. The device pair had stale semantics.** Makefile:252 read `,1,0)`. `LEAVES`
+was a boolean when the pair was measured and play-tested (`6b4253a:715`,
+`$(if $(filter 1,…))` pulls in *all* the objects), and `729c3a2` made it a
+bitmask where 1 = libc only. So the A/B pair had silently narrowed from seven
+leaves to three, while still being compared against the −59,328 figure and the
+owner's play test, which refer to all seven. Set to 7.
+
+The published target ships **7** for the same reason: it is the configuration
+that was measured and played, not the one the stale literal would have given.
+
 ## Files
 
 | File | Change |
