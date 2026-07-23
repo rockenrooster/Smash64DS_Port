@@ -111,7 +111,105 @@ so on an agent's judgement — it still needs the owner's play test.
 
 ## Results
 
-<!-- filled in when the runs land -->
+### The divergence is relocation, not gameplay — established
+
+The snapshot diff at updates 1411 and 1412, baseline mask 0 vs candidate mask 1:
+
+```
+215 differing words across both fighters, both updates
+    ALL 215 are main-RAM heap pointers
+    ALL 215 differ by exactly +0x180 (384 bytes)
+    ZERO non-pointer differences
+```
+
+Delta histogram — one bucket, no spread:
+
+| delta | count |
+|---|---|
+| +0x180 (384) | 215 |
+
+The candidate moves three libc leaves (`memset`, `memcpy`, `memcmp`) out of
+`.main` into ITCM. The main-RAM image shrinks by 384 bytes and every heap object
+below it relocates by exactly that. The differing members are `next`,
+`fighter_gobj`, `coll_data`, `input`, all ten `damage_colls`, all twenty-five
+`joints`, `motion_scripts`, `computer`, `attack_colls` — every one a pointer.
+**No position, velocity, status, damage or any other gameplay value differs
+anywhere in either fighter.**
+
+This settles criterion **B**: the fighters are in bit-identical logical state, so
+Task 37 is not a real defect. Combined with the earlier region bisect (core state
+bit-identical for the whole match, camera identical on all 3,892 updates) and the
+owner's retail play test, the simulation is not diverging.
+
+### The leak mechanism is NOT identified — two hypotheses falsified
+
+Criterion **A** as pre-registered is also falsified: there is **no ITCM boundary
+crossing**. Every value stays inside main RAM. The mechanism I predicted does not
+exist, and the fix the plan named (merging the ITCM class into `0x20000000`)
+would have been the wrong edit.
+
+A second hypothesis — that a pointer's canonical *class* flips because
+general-heap membership is bounded on `.ptr`, the live allocation high-water —
+was tested by bounding on `.end` instead. **It changed nothing at all:** masks
+1/2/4/7 each still failed with exactly 692 of 3,892, first at update 1412, an
+identical signature. That change was reverted (`60ce8eb`), because its entire
+justification was the hypothesis the data killed and an unjustified widening of
+what counts as a heap pointer is a gate change with no evidence behind it.
+
+A third hypothesis — that the FTStruct fell outside the heap bound in one build
+and was skipped — is excluded for free from the existing exports:
+
+```
+of the 692 differing records:
+  bytes differ    : 0     (57,168 in both)
+  records differ  : 0     (646 in both)
+  overflow differ : 0     (zero in both)
+  hash-only differ: 692
+```
+
+Identical traversal, identical byte count, no overflow. Only canonicalized
+content differs. This also explains why `.ptr` → `.end` was inert: the pointers
+were already below the high-water in both builds, so widening the range moved
+nothing.
+
+### What remains open
+
+Why exactly 692 of 3,892 records, first at 1412, in bursts that heal — when the
+underlying pointer delta is a single constant present at *both* sampled updates.
+A constant delta on constant objects should mismatch every record or none. That
+it does neither means something changes at 1412 that the two dumps do not
+capture; the likeliest remaining candidate is a reallocation moving an object to
+an address where the two builds' canonical forms stop coinciding.
+
+**Stopped here, at the time-box.** This task has cost roughly eleven emulator
+runs against a ~6-run budget, and I have now been wrong twice about the
+mechanism. Continuing to guess is the failure mode this campaign already paid
+for once.
+
+### Next step, specified so it is not a fourth guess
+
+Dump `gSYTaskmanGeneralHeap.start`, `.ptr` and `.end` alongside the FTStruct
+snapshot, at the same two updates, in both builds. With `start` known, the
+canonical value of every captured word can be **computed offline** from bytes
+already in hand and compared directly — which branch each pointer takes and what
+it produces stops being an inference and becomes arithmetic. One run pair.
+
+The single most useful question it answers: **does `start` shift by the same
++0x180 as the pointers?** If yes, the offset form absorbs and the leak is
+elsewhere. If no, the offset form is the leak and the canonicalizer needs a
+relocation-invariant base.
+
+### Verdict
+
+| question | answer |
+|---|---|
+| Is Task 37 a real gameplay defect? | **No** — 215/215 differing words are relocated pointers, constant delta, zero gameplay differences |
+| Is the gate repaired? | **No** — mechanism unidentified, speculative fix reverted |
+| Does Task 37 ship on this? | **Not on my judgement.** The evidence for artifact is now strong, but the gate is still red and the shipping call is the owner's |
+
+Task 37 stays reverted for now. Not because it is believed defective — the
+evidence says it is not — but because "the gate is red and I could not repair
+it" is not the same as "the gate is green."
 
 ## Files
 
