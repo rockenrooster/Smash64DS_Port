@@ -27,6 +27,35 @@ state. Do not "fix" it by loosening the canonicalizer without evidence.
 `verify-dev-fast.ps1` is red on the `battle_playable` locked-30 pacing contract.
 Pre-existing emulator-fork artefact, see `PERF_LEDGER.md:14-22`.
 
+## Always build the tick-HUD ROM too (the owner, 2026-07-22)
+
+Rebuilding the published ROM means rebuilding
+`smash64ds-battle-playable-tickhud-hwtri` in the same change — it is the same
+program plus the Task 41 timers, and it is the instrument every measurement uses
+(device VBlank histograms, `sample-tick-hud-buckets.ps1`, and the Task 37 census,
+which hardcodes that target). A tick-HUD build that lags the published one
+reports a different binary's buckets while looking authoritative.
+
+Task 37 shipped without it: `NDS_TASK37_ITCM_LEAVES := 7` went into the published
+target block only, so the tick-HUD and GDB-proof targets stayed at 0. Both now
+carry it, and the current tick-HUD ROM is
+`builds/build-task41-tickhud-current/smash64ds-battle-playable-tickhud-hwtri.nds`
+= `60C68AFFC1154A072B07A3B01D0850985A2E4293A76F3900BD39EBBA1D51EECC`,
+11,430,912 bytes, `.itcm` 32,596 with all four libc/libm leaves resident.
+
+`scripts/check-tickhud-parity.ps1` now guards this and runs inside
+`verify-dev-fast.ps1`. It diffs `make print-benchmark-flags` between the two
+targets — the Makefile's own resolved values, not a text scrape — and allows only
+`BENCH_MAKE_TARGET` and `BENCH_MAKE_TICK_HUD` to differ. 41 flags compared, 0
+drift. It builds nothing and takes about a second.
+
+**Two device-queue pairs are stale against this.**
+`task37-itcm-leaves-pair/` predates both Makefile fixes from the ship (the `:=`
+no-op and the boolean-vs-bitmask `1`), so its candidate is not what ships.
+`task44-stage-steady-pair/` still builds both arms with Task 37 off — internally
+valid as an A/B, but it measures Task 44 against a pre-Task-37 baseline. Rebuild
+both pairs before flashing either.
+
 ## Restart
 
 Branch: `codex/task45-ftstruct-localize` (merged to master)

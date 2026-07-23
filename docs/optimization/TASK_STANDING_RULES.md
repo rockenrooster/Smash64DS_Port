@@ -19,6 +19,14 @@ file contradicts this document, the task file wins only where it says so explici
   as the comparator/oracle — the shape Tasks 9/16 used for the float helpers. Never
   report decomp-sourced cost as unaddressable; that retires ~7% of the loop
   (soft-float) by misreading this rule.
+- **Always build the tick-HUD ROM too (the owner, 2026-07-22).** Whenever the
+  published `smash64ds-battle-playable-hwtri` ROM is rebuilt, rebuild
+  `smash64ds-battle-playable-tickhud-hwtri` in the same change. It is the same
+  program plus the Task 41 timers, so it is how the ship gets measured on device
+  and in the census — a tick-HUD ROM that lags the published one silently reports
+  a different binary's buckets. Its target block in the Makefile must carry every
+  flag the published block carries; when adding a flag to one, add it to both.
+  Task 37 shipped without this and the tick-HUD build was left a release behind.
 - Verify chain: `.\scripts\verify-dev-fast.ps1` then `.\scripts\verify-boundary.ps1`.
   Full sharded Regression ONLY if shared/imported TUs changed, once, at session end.
 - Long builds run detached (Start-Process → log → poll completion stamp), never
