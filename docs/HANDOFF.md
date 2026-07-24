@@ -318,3 +318,55 @@ structurally cannot reach.
 Published ROM unchanged (Task 53's shipped ROM). No `NDS_TASK54_STAGE_DMA_MODE`
 runtime path added. Full analysis:
 `artifacts/performance/2026-07-24_task54-stage-dma-e0.md`. Never push.
+
+---
+
+## Task 55 — Stage geometry reduction (state-write elision): STOP (2026-07-24)
+
+Branch `codex/task55-stage-geom-reduction`, parent `a463975`. **STOP — elision
+works and is lossless but ALL is flat; the floor is VERTEX16 transforms, not
+state words.**
+
+**E0 census** of the 2,996-word stream: VERTEX16 40.5%, COLOR 20.2%, TEX_COORD
+19.7%. Spec's two named levers: **VTX_10 INFEASIBLE** (coords ±30,272 vs s10
+±511 — 91% would clip); **stripify 5.6%** (topology-limited). Real find:
+`GFX_COLOR`/`GFX_TEX_COORD` are persistent registers, re-written per vertex —
+**618 raw state words redundant (COLOR 556 + TEX_COORD 62), lossless to elide.**
+
+**E1 (commit `c6a6228`):** elision in `ndsRendererTask36ReplayRecord` behind
+`NDS_TASK55_STAGE_GEOM`. Override-trap avoided (config header verified);
+default-off ROM = `4D795B4E` byte-for-byte. Runtime: replay buffer 3,916 →
+3,561 words (−355, −9.1%), state=READY, no fault.
+
+**E2 A/B (128 samples):** ALL 1,680,128 → 1,680,192 (**+64, flat**); STG −4,224;
+OTHR +7,616; STG+OTHR ~constant (720,064 → 723,456). VBlank unchanged.
+
+**Decisive reconciliation (completes Task 54):** Task 53 removed stage CPU prep
+(−187K STG); Task 55 removed redundant state writes (−355 FIFO words); BOTH
+left ALL flat. Neither touched the 606 `FIFO_VERTEX16` commands — the actual
+vertex transforms. `GFX_COLOR`/`GFX_TEX_COORD` update a state register but do
+not trigger a vertex transform. **The ~720K floor is the geometry engine
+transforming 606 vertices + per-triangle setup, invariant to everything except
+fewer VERTEX16 commands.**
+
+**Only remaining untested lever: stripify** — reduces the VERTEX16 count
+(ceiling 84 verts / 5.6%); a follow-up could prototype `GL_TRIANGLE_STRIP` for
+the binding-3 run (66 verts / 22 tris, best candidate) and measure whether a
+vertex-count cut actually drops ALL.
+
+STOP. No ship, no merge; flag default-off; published ROM unchanged
+(`4D795B4E`). Full evidence:
+`artifacts/performance/2026-07-24_task55-stage-geom-e2.md`; visual A/B in
+`artifacts/visibility/task55/`. Never push.
+
+## Owner visual A/B follow-up (2026-07-24, post-STOP)
+
+Owner (visual oracle per AGENTS.md) reports mode 0 vs mode 1 ROMs visually
+differ under normal-battle play with **some surfaces pulsating in color** in
+mode 1. The preceding E2 evidence's "lossless by construction / Tier-2 0.0
+px" claim was scoped to a single static-frame capture and did NOT referee
+state carryover between frames. Held `GFX_COLOR` / `GFX_TEX_COORD` register
+content carries across frame boundaries, and a downstream consumer for
+which write-count timing matters (vs summed value) sees a frame-rate-
+sensitive delta when intermediate writes are elided. STOP remains correct
+(perf gate fails AND now visual differs); published ROM unchanged.

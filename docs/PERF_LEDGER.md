@@ -6727,3 +6727,88 @@ This is the lever DMA structurally cannot reach.
 Published ROM unchanged (Task 53's shipped `4D795B4E…`). No
 `NDS_TASK54_STAGE_DMA_MODE` flag added, no DMA channel selected. Full analysis:
 `artifacts/performance/2026-07-24_task54-stage-dma-e0.md`.
+
+## Task 55 — Stage geometry reduction (state-write elision): STOP — floor is VERTEX16
+
+**Outcome: STOP.** The chosen lever (redundant COLOR/TEX_COORD elision at
+capture) works and is lossless (replay buffer 3,916 → 3,561 words, −9.1%), but
+ALL is flat because the geometry-engine floor is the 606 `FIFO_VERTEX16`
+vertex transforms, not the state words. Branch `codex/task55-stage-geom-reduction`,
+parent `a463975`.
+
+### E0 census (the 2,996-word stage stream)
+
+| class | words | % | | class | words | % |
+|---|---|---|---|---|---|---|
+| VERTEX16 | 1,212 | 40.5% | | COLOR | 606 | 20.2% |
+| TEX_COORD | 591 | 19.7% | | CONTROL | 216 | 7.2% |
+| MATRIX_LOAD4X4 | 128 | 4.3% | | (rest) | 243 | 8.1% |
+
+The spec's two named levers: **VTX_10 INFEASIBLE** (coords reach ±30,272; s10
+range ±511 — 91% X / 100% Z would clip). **Stripify 5.6%** (168 words; 42/148
+adjacent tri-pairs share an edge — topology-limited, below the 10% gate).
+
+The real find: `GFX_COLOR`/`GFX_TEX_COORD` are persistent registers;
+`ndsRendererNativeStageEmitNoZVertex` (`nds_renderer.c:20448`) writes color
+unconditionally per vertex. **COLOR 556/606 redundant (91.7%), TEX_COORD
+62/591 (10.5%)** → 618 raw state words hoist-able, lossless.
+
+### E1 (commit `c6a6228`) — implemented + verified
+
+Elision in `ndsRendererTask36ReplayRecord` skips a COLOR/TEX_COORD word equal
+to the last recorded. Override-trap proven avoided (config header carries the
+flag); default-off ROM reproduces `4D795B4E` byte-for-byte. Runtime: replay
+buffer 3,916 → 3,561 (−355, −9.1%), state=READY, no fault.
+
+### E2 A/B (128 samples, frame 438, deterministic)
+
+| bucket | A (off) | B (on) | Δ |
+|---|---|---|---|
+| **ALL** | 1,680,128 | 1,680,192 | **+64 (flat)** |
+| STG | 381,632 | 377,408 | −4,224 |
+| OTHR | 338,432 | 346,048 | +7,616 |
+| STG+OTHR | 720,064 | 723,456 | +3,392 (~constant) |
+
+VBlank: 3:474/4:80/5+:12 → 3:478/4:76/5+:11, max 18, slips 0 (unchanged).
+
+### The decisive reconciliation (completes Task 54)
+
+| task | cut | STG Δ | OTHR Δ | ALL Δ |
+|---|---|---|---|---|
+| Task 53 (replay) | stage CPU prep | −187,648 | +174,720 | −128 (flat) |
+| Task 55 (elision) | redundant state words | −4,224 | +7,616 | +64 (flat) |
+
+Both removed real stage work; both left ALL flat. Neither touched the 606
+`FIFO_VERTEX16` commands. A `GFX_COLOR`/`GFX_TEX_COORD` write updates a state
+register but does not trigger a vertex transform. **The ~720K floor is the
+geometry engine transforming 606 vertices + per-triangle setup, and it is
+invariant to everything except fewer VERTEX16 commands.** Task 54 said "the
+floor is the geometry drain on 2,996 words"; Tasks 53+55 refine that to "the
+floor is the 606 VERTEX16 transforms, specifically."
+
+### Only remaining lever (untested): stripify
+
+Reduces the VERTEX16 count itself (ceiling 84 verts / 5.6% from E0). A targeted
+follow-up could prototype `GL_TRIANGLE_STRIP` for the binding-3 run (66 verts /
+22 tris in one primitive — best candidate) and measure whether a vertex-count
+cut actually drops ALL. Carries topology-reorder correctness surface; ceiling
+small. VTX_10 remains infeasible for stage-scale coordinates.
+
+**STOP.** Elision correct + lossless but perf gate not met. No ship, no merge;
+flag `NDS_TASK55_STAGE_GEOM` default-off; published ROM unchanged
+(`4D795B4E`). Full evidence:
+`artifacts/performance/2026-07-24_task55-stage-geom-e2.md`.
+
+### Owner visual A/B follow-up (2026-07-24)
+
+Owner (visual oracle per AGENTS.md) reports mode 0 vs mode 1 ROMs visually
+differ under normal-battle play with **some surfaces pulsating in color** in
+mode 1. The earlier "lossless by construction / Tier-2 0.0 px" claim was
+scoped to a single static-frame capture and did not referee animation. Held
+`GFX_COLOR` / `GFX_TEX_COORD` register state carries across frame
+boundaries, and a frame whose first vertex's same-color emit was elided sees
+a write-count-timing-sensitive downstream diverging from baseline. STOP
+stands on TWO grounds now: perf gate fail AND owner A/B visual delta.
+Negative-evidence note: future state-write elision candidates must sample
+multiple frames and compare held register state at start-of-frame, not rely
+on single-frame byte-equivalence.
