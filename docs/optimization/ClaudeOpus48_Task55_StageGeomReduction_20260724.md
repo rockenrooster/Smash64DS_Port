@@ -233,3 +233,54 @@ COLOR/TEX_COORD word whose value equals the last recorded one (per-owner
 `last_color`/`last_texcoord`); replay loop unchanged, buffer just shorter.
 Stripify deferred as an optional additive 2nd commit (lossless +5.6%) but not
 the primary lever. VTX_10 dropped.
+
+---
+
+## Result (2026-07-24): E2 — STOP. Elision works + is lossless, but ALL flat.
+
+Branch `codex/task55-stage-geom-reduction`. Elision implemented behind
+`NDS_TASK55_STAGE_GEOM` (commit `c6a6228`), override-trap proven avoided
+(config header carries the flag), byte-identity proven (default-off ROM =
+`4D795B4E`). Runtime-proven: replay buffer 3,916 → 3,561 words (−355, −9.1%),
+state=READY, no fault. Full E2 evidence:
+`artifacts/performance/2026-07-24_task55-stage-geom-e2.md`.
+
+### A/B (128 samples, frame 438, deterministic fork)
+
+| bucket | A (off) P50 | B (on) P50 | Δ |
+|---|---|---|---|
+| **ALL** | 1,680,128 | 1,680,192 | **+64 (flat)** |
+| **STG** | 381,632 | 377,408 | **−4,224** |
+| **OTHR** | 338,432 | 346,048 | **+7,616** |
+| STG+OTHR | 720,064 | 723,456 | +3,392 (~constant) |
+
+VBlank: A 3:474/4:80/5+:12, B 3:478/4:76/5+:11, max 18, slips 0 — unchanged.
+
+**The same invariant Task 53 hit:** STG drops (stage work removed), OTHR rises
+(redistributed backpressure), STG+OTHR ~constant, ALL flat.
+
+### Why — the floor is VERTEX16 transforms, not state words
+
+Task 53 removed stage CPU prep (−187K STG); Task 55 removed redundant state
+writes (−355 FIFO words); BOTH left ALL flat. Neither touched the **606
+`FIFO_VERTEX16` commands** — the actual vertex transforms the geometry engine
+performs. `GFX_COLOR`/`GFX_TEX_COORD` writes update a state register but do
+not trigger a vertex transform. **The ~720K floor is the geometry engine
+transforming 606 vertices + per-triangle setup.** Removing CPU prep or state
+words removes their FIFO-store time, but the geometry engine still transforms
+the same 606 vertices, and that drain dominates.
+
+This completes Task 54's "what is the floor" question: the floor is the
+VERTEX16 count, invariant to everything except **fewer VERTEX16 commands**.
+
+### Verdict: STOP
+
+Elision is correct + lossless + 9.1% buffer cut, but the perf gate is not met
+(ALL flat). Per the spec's honest-STOP clause, this is a STOP. No ship, no
+merge; flag stays default-off, published ROM unchanged (`4D795B4E`).
+
+**Only remaining lever (untested): stripify** — reduces the VERTEX16 count
+itself (ceiling 84 verts / 5.6% from E0). A targeted follow-up could prototype
+GL_TRIANGLE_STRIP for the binding-3 run (best candidate: 66 verts / 22 tris in
+one primitive) and measure whether the vertex-count cut actually drops ALL.
+Carries topology-reorder correctness surface; ceiling is small.
