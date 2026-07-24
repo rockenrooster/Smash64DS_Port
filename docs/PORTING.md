@@ -21772,3 +21772,38 @@ for the probe/differ/sampler commands waiting on a turned-up session.
 
 E0 findings: `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`
 (re-recorded under Task 53 ownership for the same replay path).
+
+### Task 53 E2 — measured (2026-07-24): KEEP-candidate, STG win / ALL flat
+
+E2 executed on `codex/task53-replay-arena-fix`. Three load-bearing gaps in the E0/E1 flag
+wiring were found and fixed first (commit `f67e571`): (1) the config-header emit was
+missing — the C reads every flag via `-include nds_build_config.h` (Makefile:598) but
+`NDS_TASK53_REPLAY_ARENA_FIX` was never echoed into it, so `#if NDS_TASK53...` always saw
+0 and a command-line `=1` built a TASK53=0 ROM (the override trap); (2) the TASK36
+cross-check validation ran at Makefile:192, before the tick-HUD target block's
+`override NDS_TASK36_HW_COMPOSE := 2` applied, wrongly rejecting a command-line TASK53=1
+against the TASK36-forcing target — moved beside the Task 44 cross-check (Makefile:554)
+after all overrides; (3) the staleness counter was declared inside the
+`#if NDS_RENDERER_PROFILE_LEVEL == 1` block (nds_renderer.c:2041) but its use site is
+gated only on TASK53 (no profile gate), so the profile-0 tick-HUD build failed
+'undeclared' — moved to file scope outside profile-1 (mirrors the header extern).
+
+After the fixes (all verified by building): flag-on tick-HUD ROM carries
+`gNdsRendererTask36ReplayArenaStaleCount` (@ 0x02194f80) and `ndsRendererTask36ReplayRun`
+in the ELF; config reads `#define NDS_TASK53_REPLAY_ARENA_FIX 1`. Default-off published
+ROM still reproduces `1818AA77…` byte-for-byte.
+
+**Probe:** replay now admits — `state=READY`, `frame_replay=1`, `word_count=3916`, arena
+unchanged at `0x14C000`/4 fails. **Differ (STAGE owner, flag-ON vs flag-OFF):** Tier 1
+0 divergences (2860/2860 words bit-identical); Tier 2 0.0 px → ZERO_DEVIATION. **STG A/B**
+(128 samples, deterministic): STG P50 569,280 → 381,632 (−187,648, −33%); OTHR 163,712 →
+338,432 (+174,720); ALL P50 flat (1,680,256 → 1,680,128). VBlank tail improves (3-VBlank
+share 426→474, 4 122→80, 5+ 17→12). **Memory:** unchanged (arena identical off/on; static
+BSS replay buffer; +4-byte staleness counter only).
+
+The STG win is real (replay skips the per-triangle geometry walk) but the saved CPU
+redistributes to OTHR — most likely GX-backpressure redistribution (replay submits the
+same 2996 words with less prep; the GX stall moves outside the stage-owner window).
+KEEP-candidate, default-off, pending owner visual + device A/B for the ALL-level pacing
+claim. Unblocks the Task 52 DMA follow-up on a now-live replay loop. Full evidence:
+`artifacts/performance/2026-07-24_task53-replay-arena-fix-e2.md`.

@@ -198,28 +198,61 @@ Approx diff stats:
 - `src/nds/nds_renderer.c`: +44/-3 lines (macros + 2 guard swaps + counter).
 - `docs/optimization/ClaudeOpus48_Task53_ReplayArenaFix_20260723.md`: +this file.
 
-### E2 — deferred to next session
+### E2 — executed (2026-07-24)
 
-No build emulator snapshot materialised in this turn: `make` through
-`C:/devkitPro/msys2/usr/bin/bash.exe` and `melonDS` via GDB did not run.
-E2 is documented but not executed. The spec's E2 commands (Task 49 differ
-for Tier 1=0 / Tier 2=0.0 px, owner-visual synchronised screenshots, STG
-A/B >=128 samples with VBlank histogram, memory-unchanged proof, owner
-visual approval) all wait on a turned-up session.
+Full E2 ran on branch `codex/task53-replay-arena-fix`. Three load-bearing gaps in the
+E0/E1 flag wiring were found and fixed first (commit `f67e571`): the config-header emit
+was missing (the flag never reached the C), the TASK36 cross-check validation was
+mis-ordered (ran before target overrides applied), and the staleness counter was declared
+inside the profile-1 block (use site is not profile-gated → undeclared at profile-0). All
+verified by building. Default-off still reproduces `1818AA77…`.
 
-### Verdict — **MERGE / KEEP-candidate**
+**Probe:** flag-on tick-HUD ROM — `state=READY`, `frame_replay=1`, `word_count=3916`,
+arena unchanged at `0x14C000`/4 fails. Replay re-activates; the legacy strict guard would
+have blocked (staleness detector confirms).
 
-With E2 deferred, the merge decision is *infrastructure* only: the
-relaxed guard and staleness detector are in place, and the published ROM
-is unchanged. If E2's STG A/B shows a meaningful replay win, the flag
-becomes the ship mechanism (the canonical Task 37 / Task 32 / Task 49
-path: feature behind a Makefile flag, default off, device-confirm, then
-the owner's explicit override on publish). If E2's STG A/B shows
-replay activates but the win is illusory, that is the same honest STOP
-Task 52 reported — Task 36's credited win never materialised in the
-generic-emit path either, and the campaign's STG premise will need to
-find a different lever.
+**Correctness (Task 49 differ, STAGE owner, flag-ON vs flag-OFF):** Tier 1 **0
+divergences** (2213 entries / 2860 words, 2860 matched); Tier 2 **0.0 px** max, all 8
+bindings → **ZERO_DEVIATION**. The replayed stream is bit-identical to the generic emit.
 
-Do not override `NDS_TASK53_REPLAY_ARENA_FIX := 1` in the published or
-tick-HUD target blocks. Doing so would change shipping behavior before
-E2 is green and the owner approves it.
+**STG A/B (128 samples, frame 438, deterministic — B run twice, byte-identical):**
+
+| bucket | A P50 (generic) | B P50 (replay) | Δ P50 |
+|---|---|---|---|
+| **STG** | **569,280** | **381,632** | **−187,648 (−33.0%)** |
+| **OTHR** | 163,712 | 338,432 | **+174,720** |
+| **ALL** | 1,680,256 | 1,680,128 | **−128 (flat)** |
+
+STG drops 33%, but the saved CPU redistributes to OTHR (the `all − named` residual), so
+ALL P50 is flat. Most likely GX-backpressure redistribution: replay submits the same 2996
+words with less CPU prep, so STG-CPU drops but the GX stall moves outside the stage-owner
+window. **VBlank histogram improves at the tail** (3-VBlank share 426→474, 4-VBlank
+122→80, 5+ 17→12) — the pacing signal a device A/B would confirm (melonDS cannot referee
+bucket-edge pacing).
+
+**Memory:** arena size/fail count identical flag-off/on (`0x14C000`/4); replay buffer is
+static BSS; +4-byte staleness counter is the only BSS delta. No heap growth, no reserve
+erosion.
+
+**Visual:** A/B screenshots in `artifacts/visibility/task53/` (owner is the oracle); the
+differ's ZERO_DEVIATION is the stronger proof of identical render.
+
+### Verdict — **KEEP-candidate (STG win, ALL flat, pacing tail up), default-off**
+
+Replay re-activates, is bit-exact correct, and cuts STG 33% — but ALL is flat because the
+saved CPU redistributes to OTHR (GX backpressure). The VBlank tail improves. This is a
+real stage-owner win gated on device confirmation for the ALL-level claim. The flag
+(`NDS_TASK53_REPLAY_ARENA_FIX`, default 0) is the ship mechanism; it stays default-off,
+**not overridden in any published or tick-HUD target block**, until the owner approves the
+visual + a device A/B confirms the pacing-tail gain (activating replay changes
+timing/memory-access patterns — device-only class).
+
+**Unblocks Task 52 DMA:** the replay loop is now live. The OTHR redistribution measured
+here is exactly the GX-backpressure cost a DMA deferred-barrier (mode 2) would target for
+overlap.
+
+Full E2 evidence: `artifacts/performance/2026-07-24_task53-replay-arena-fix-e2.md`.
+
+Do not override `NDS_TASK53_REPLAY_ARENA_FIX := 1` in the published or tick-HUD target
+blocks. Doing so changes shipping behavior before the owner approves it and device
+confirms.

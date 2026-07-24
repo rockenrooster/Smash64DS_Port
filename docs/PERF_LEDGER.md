@@ -6630,3 +6630,46 @@ help). Full certificate:
 spec + results: `docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`.
 Branch `codex/task52-stage-gxdma-replay` is the checkpoint. Published ROM stays
 `1818AA77…`. Never push.
+
+## Task 53 — Re-activate Task 36 rigid stage replay: KEEP-candidate, STG win / ALL flat
+
+**Outcome: KEEP-candidate, default-off behind `NDS_TASK53_REPLAY_ARENA_FIX`.** Re-activates
+the Task 36 rigid-stage replay path that Task 52 E0 found structurally disabled in shipping
+(the arena admission guard demanded exactly `0x150000`; the robust downward-stepping
+allocator secures only `0x14C000`). The relaxed guard admits any arena ≥ `0x130000`.
+
+E1 build-fixes (the prior session's flag never reached the C): config-header emit was
+missing; the TASK36 cross-check validation was mis-ordered (before target overrides); the
+staleness counter was declared inside the profile-1 block. All fixed (commit `f67e571`),
+verified by building. Default-off still `1818AA77…`.
+
+**Probe:** replay now admits — `state=READY`, `frame_replay=1`, `word_count=3916`,
+arena unchanged at `0x14C000`/4 fails.
+
+**Correctness (Task 49 differ, STAGE owner, flag-ON vs flag-OFF):** Tier 1 **0
+divergences** (2860/2860 words bit-identical); Tier 2 **0.0 px** → ZERO_DEVIATION. The
+replayed stream is bit-exact with the generic emit.
+
+**STG A/B (128 samples, frame 438, deterministic, B run twice byte-identical):**
+
+| bucket | A P50 | B P50 | Δ |
+|---|---|---|---|
+| STG | 569,280 | 381,632 | **−187,648 (−33%)** |
+| OTHR | 163,712 | 338,432 | +174,720 |
+| ALL | 1,680,256 | 1,680,128 | −128 (flat) |
+
+STG drops 33% (replay skips the per-triangle geometry walk), but the saved CPU
+redistributes to OTHR (the `all − named` residual) — most likely GX-backpressure
+redistribution (replay submits the same 2996 words with less prep; the GX stall moves
+outside the stage-owner window). ALL P50 is flat. **VBlank tail improves**: 3-VBlank
+share 426→474, 4 122→80, 5+ 17→12 (the pacing signal a device A/B would confirm —
+melonDS cannot referee bucket-edge pacing).
+
+**Memory:** unchanged (arena `0x14C000`/4 fails identical off/on; static BSS replay
+buffer; +4-byte staleness counter only).
+
+This unblocks the **Task 52 DMA follow-up** on a now-live replay loop: the OTHR
+redistribution is exactly the GX-backpressure cost a DMA deferred-barrier would target.
+Branch `codex/task53-replay-arena-fix`; published ROM stays `1818AA77…`; not overridden
+in any target block. Owner visual + device A/B pending before ship. Full evidence:
+`artifacts/performance/2026-07-24_task53-replay-arena-fix-e2.md`.
