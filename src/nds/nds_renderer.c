@@ -4121,6 +4121,17 @@ typedef struct NDSRendererTask36ReplayOwner
     u32 frame_capture;
     u32 frame_replay;
     NDSRendererTask36ReplayState state;
+#if NDS_TASK55_STAGE_GEOM
+    /* Task 55: redundant state-write elision. GFX_COLOR/GFX_TEX_COORD are
+     * persistent geometry-engine state, so a COLOR/TEX_COORD word whose value
+     * equals the last recorded one changes nothing. Tracking the last value
+     * during capture lets us skip recording it -> owner->words[] shrinks
+     * ~20.6% losslessly. The valid flag clears at capture start so the first
+     * value of each class is always recorded. */
+    u32 task55_last_color;
+    u32 task55_last_texcoord;
+    u32 task55_state_valid;
+#endif
 } NDSRendererTask36ReplayOwner;
 
 static NDSRendererTask36ReplayOwner sNdsRendererTask36ReplayOwner;
@@ -4296,6 +4307,11 @@ static void ndsRendererTask36ReplayStartCapture(
     owner->captured_segment_mask = 0u;
     owner->capture_fault = FALSE;
     owner->config = *frame->config;
+#if NDS_TASK55_STAGE_GEOM
+    owner->task55_state_valid = 0u;
+    owner->task55_last_color = 0u;
+    owner->task55_last_texcoord = 0u;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     gNdsRendererTask36BakeAttemptCount++;
     gNdsRendererTask36ReplayState = NDS_TASK36_REPLAY_CAPTURING;
@@ -4463,6 +4479,37 @@ static void ndsRendererTask36ReplayRecord(
         owner->capture_fault = TRUE;
         return;
     }
+#if NDS_TASK55_STAGE_GEOM
+    /* Task 55: elide a COLOR/TEX_COORD word that is identical to the last one
+     * recorded this capture frame. GFX_COLOR/GFX_TEX_COORD are persistent
+     * geometry-engine state (a vertex uses the held value until rewritten), so
+     * a redundant write changes nothing about the render. Omitting it from
+     * owner->words[] shrinks the replay stream losslessly. Both classes carry
+     * exactly one parameter word (ndsRendererTask36ReplayOpcode). */
+    if (parameter_count == 1u)
+    {
+        if (command_class == NDS_TASK29_GX_COLOR)
+        {
+            if ((owner->task55_state_valid != 0u) &&
+                (owner->task55_last_color == words[0u]))
+            {
+                return;
+            }
+            owner->task55_last_color = words[0u];
+            owner->task55_state_valid |= 0x1u;
+        }
+        else if (command_class == NDS_TASK29_GX_TEX_COORD)
+        {
+            if ((owner->task55_state_valid & 0x2u) != 0u &&
+                (owner->task55_last_texcoord == words[0u]))
+            {
+                return;
+            }
+            owner->task55_last_texcoord = words[0u];
+            owner->task55_state_valid |= 0x2u;
+        }
+    }
+#endif
     if (owner->command_slot >= 4u)
     {
         if (owner->word_count >= NDS_TASK36_REPLAY_WORD_CAPACITY)

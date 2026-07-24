@@ -124,6 +124,22 @@
 #error "NDS_TASK53_REPLAY_ARENA_FIX=1 requires NDS_TASK36_HW_COMPOSE=2"
 #endif
 
+#ifndef NDS_TASK55_STAGE_GEOM
+#define NDS_TASK55_STAGE_GEOM 0
+#endif
+
+#if (NDS_TASK55_STAGE_GEOM != 0) && (NDS_TASK55_STAGE_GEOM != 1)
+#error "NDS_TASK55_STAGE_GEOM must be 0 or 1"
+#endif
+
+#if NDS_TASK55_STAGE_GEOM && (NDS_TASK36_HW_COMPOSE != 2)
+#error "NDS_TASK55_STAGE_GEOM=1 requires NDS_TASK36_HW_COMPOSE=2"
+#endif
+
+#if NDS_TASK55_STAGE_GEOM && !NDS_TASK53_REPLAY_ARENA_FIX
+#error "NDS_TASK55_STAGE_GEOM=1 requires NDS_TASK53_REPLAY_ARENA_FIX=1 (capture path must be live)"
+#endif
+
 #if (NDS_TASK36_HW_COMPOSE == 2) && \
     (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS)
 #error "Task 36 replay cannot be combined with the Task 29/34 stream census"

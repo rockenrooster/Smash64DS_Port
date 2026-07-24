@@ -62,6 +62,15 @@ NDS_TASK36_HW_COMPOSE ?= 0
 # relaxes the guard; the published and tick-HUD target blocks don't
 # override it (default 0 keeps the published ROM 1818AA77-sh equivalent).
 NDS_TASK53_REPLAY_ARENA_FIX ?= 0
+# Task 55: redundant state-write elision at capture. GFX_COLOR/GFX_TEX_COORD
+# are persistent geometry-engine state; ndsRendererNativeStageEmitNoZVertex
+# (src/nds/nds_renderer.c:20448) re-writes color unconditionally per vertex.
+# E0 measured 618/1197 of those state words (COLOR 556 + TEX_COORD 62) as
+# identical to the immediately preceding write -- pure redundancy. Setting
+# this flag to 1 elides them at capture so owner->words[] is 20.6% smaller
+# and bit-identical render (lossless). Default 0 keeps the published ROM
+# byte-identical; the published/tick-HUD blocks do NOT override it.
+NDS_TASK55_STAGE_GEOM ?= 0
 # Task 51 native stage path. When on, the STAGE owner emits the 42 baked
 # constant world matrices via MTX_MULT4x3 under a once-loaded view (instead of
 # CPU-composing projection x view x model per binding per frame). Generalizes
@@ -192,6 +201,10 @@ endif
 ifneq ($(filter $(NDS_TASK53_REPLAY_ARENA_FIX),0 1),)
 else
 $(error NDS_TASK53_REPLAY_ARENA_FIX must be 0 or 1)
+endif
+ifneq ($(filter $(NDS_TASK55_STAGE_GEOM),0 1),)
+else
+$(error NDS_TASK55_STAGE_GEOM must be 0 or 1)
 endif
 # NDS_BATTLE_PROFILE must be exactly 0, 1, or 2. Anything else is a typo or a
 # stale command-line; fail loudly rather than fall through to profile 1.
@@ -339,6 +352,11 @@ override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 override NDS_TASK49_GX_DIFFER := 1
+# Task 55 E2: the differ target keeps the replay path live (Task 53) so the
+# Task 55 elision can be captured. NDS_TASK55_STAGE_GEOM stays command-line
+# controlled here (0 = baseline stream, 1 = elided stream) so a single target
+# captures both halves of the A/B.
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
 endif
 NDS_TASK37_DEVICE_TARGETS := \
 	smash64ds-battle-playable-task37-on-hwtri \
@@ -572,6 +590,17 @@ endif
 ifeq ($(NDS_TASK53_REPLAY_ARENA_FIX),1)
 ifneq ($(NDS_TASK36_HW_COMPOSE),2)
 $(error NDS_TASK53_REPLAY_ARENA_FIX=1 requires NDS_TASK36_HW_COMPOSE=2)
+endif
+endif
+# Task 55 elides redundant COLOR/TEX_COORD words inside the Task 36 capture
+# path (ndsRendererTask36ReplayCapture), so it needs both Task 36 compose==2
+# and the replay path admitted. Same post-override placement as Task 53/44.
+ifeq ($(NDS_TASK55_STAGE_GEOM),1)
+ifneq ($(NDS_TASK36_HW_COMPOSE),2)
+$(error NDS_TASK55_STAGE_GEOM=1 requires NDS_TASK36_HW_COMPOSE=2)
+endif
+ifeq ($(NDS_TASK53_REPLAY_ARENA_FIX),0)
+$(error NDS_TASK55_STAGE_GEOM=1 requires NDS_TASK53_REPLAY_ARENA_FIX=1 (capture path must be live))
 endif
 endif
 NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP ?= 0
@@ -1451,6 +1480,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
 		echo '#define NDS_TASK53_REPLAY_ARENA_FIX $(NDS_TASK53_REPLAY_ARENA_FIX)'; \
+		echo '#define NDS_TASK55_STAGE_GEOM $(NDS_TASK55_STAGE_GEOM)'; \
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
@@ -1708,6 +1738,8 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK29_GX_CENSUS=$(NDS_TASK29_GX_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK34_STAGE_STREAM_CENSUS=$(NDS_TASK34_STAGE_STREAM_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK49_GX_DIFFER=$(NDS_TASK49_GX_DIFFER)'
+	@printf '%s\n' 'BENCH_MAKE_TASK53_REPLAY_ARENA_FIX=$(NDS_TASK53_REPLAY_ARENA_FIX)'
+	@printf '%s\n' 'BENCH_MAKE_TASK55_STAGE_GEOM=$(NDS_TASK55_STAGE_GEOM)'
 	@printf '%s\n' 'BENCH_MAKE_TASK36_HW_COMPOSE=$(NDS_TASK36_HW_COMPOSE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK51_STAGE_NATIVE=$(NDS_TASK51_STAGE_NATIVE)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_PROFILE=$(NDS_BATTLE_PROFILE)'
