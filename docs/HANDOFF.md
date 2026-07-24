@@ -153,44 +153,37 @@ retired.
 Preserve the unrelated `.gitignore` edit and all untracked optimization task,
 stage, review, and README files; they are user-owned.
 
-## Task 51 — Dream Land native stage (WIP, branch `codex/task51-dreamland-native`)
+## Task 51 — Dream Land native stage: KILL (branch `codex/task51-dreamland-native`)
 
-Restart surface: `git checkout codex/task51-dreamland-native` from master
-`11087ff`. The spec is `docs/optimization/ClaudeFable5_Task51_DreamLandNative_20260723.md`
-(branched from master since Task 49 merged). Read its "E0 investigation" section
-for the architecture findings.
+**Outcome: STG KILL, does not merge.** STG P50 587,968 ≫ the 200,000 kill line
+(target was ≤120,000); the native path is ~18,752 ticks *worse*. The path is
+mechanically correct (differ ZERO_DEVIATION) but the 16 non-rigid bindings it
+targets **do not draw** in the battle_playable scene — they are economy-skipped
+stage elements, so there is no STG cost to recover. Published ROM stays
+`1818AA77…` (default-off; `NDS_TASK51_STAGE_NATIVE` is not in any target block).
 
-**State: E0 foundation committed (`d0e9af3`), generator integration next.**
+Branch `codex/task51-dreamland-native` (6 commits) is the checkpoint:
+matrix-math foundation + E0 generator bake + E1a/E1c flag+enum + E1b runtime +
+E2 measurement. The differ result (Tier 1 = 0, Tier 2 = 0.0 px) and the
+bit-exact matrix math are retained as recoverable work should a later task find
+a scene state where bindings 20–29 / 33–38 actually draw.
 
-Done and validated:
-- `scripts/native_matrix_math.py` — bit-exact host replica of the runtime
-  stage-DObj matrix pipeline. Self-test + end-to-end prototype (all 57 DObjs)
-  produce sane Dream Land world matrices.
-- Build environment confirmed working: Git Bash direct `make` hits the
-  `/opt/devkitpro` recursive sub-make path quirk; **build through the devkitPro
-  msys2 bash instead**: `C:/devkitPro/msys2/usr/bin/bash.exe -lc 'cd repo && make TARGET=smash64ds-battle-playable-hwtri BUILD=builds/<name> -j16'`. Clean build from a fresh dir reproduces **1818AA77** byte-for-byte.
-- The win is precisely located: 26/42 bindings already ship on Task 36's
-  load-view-once + `glMultMatrix4x4` rigid path; the **16 non-rigid bindings
-  (indices 20-29, 33-38)** still take the per-triangle CPU-compose + LOAD4X4
-  path and are the STG prize. Host-bake is mechanically achievable (the 44-byte
-  DObj descriptors carry translate/rotate/scale as Vec3f in bytes [8:44]).
+**Build environment note (applies to all future work):** Git Bash's direct
+`make` hits the documented `/opt/devkitpro` recursive sub-make path quirk.
+**Build through the devkitPro msys2 bash instead:**
+`C:/devkitPro/msys2/usr/bin/bash.exe -lc 'cd repo && make TARGET=... BUILD=... -j16'`.
+This reproduces `1818AA77` byte-for-byte from a fresh dir.
 
-Next packet (E0 completion → E1):
-1. Extend `descriptor_rows` (generate_nds_native_stage.py:1760) to also return
-   each DObj's local matrix; compose parent-chain worlds in `generate()` after
-   the `dobjs` list is built (line 2199-2212); emit a new const table
-   `sNdsNativeStageBakedWorldMatrices[42]` (2016 bytes, fits the ~3.6 KiB slab
-   headroom). Update the two-way closure cert + EXPECTED counts.
-2. E1: `NDS_TASK51_STAGE_NATIVE ?= 0` Makefile flag (4 sites + both target
-   blocks, Task 46 header idiom). Runtime consume in a new TU: for the 16
-   non-rigid bindings, `glMultMatrix4x3(baked)` under once-loaded view instead
-   of `LoadNoZMatrix`. One-writer hook in nds_renderer.c. Add
-   `NDS_TASK29_GX_MATRIX_MULT4x3` enum class + wrapped emit **under the
-   record-site guard** (Task 49 trap 2).
-3. E2: differ Tier 1 = 0, Tier 2 ≤ 1.0 px (update `analyze-task49-gx-differ.ps1`
-   class 99 → real enum value); STG P50 ≤ 120,000 (kill > 200,000); state hash
-   exact; owner visual approval (agent cannot self-approve — capture A/B, flag
-   for owner). Default-off byte-identical 1818AA77.
+**Decisive question for any revisit of native-stage work:** find a scene/match
+state where bindings 20–29 / 33–38 submit GX, or confirm they are structurally
+undrawn in battle_playable. The campaign's STG 597,632 baseline is owned by the
+8 rigid `layer0` bindings (indices 0–7) that draw every frame via
+`LoadNoZMatrix` — and Task 36 (`NDS_TASK36_HW_COMPOSE==2`, already shipping)
+already owns the rigid subset.
+
+Full evidence: `artifacts/performance/2026-07-23_task51-stage-native.md`;
+spec + results: `docs/optimization/ClaudeFable5_Task51_DreamLandNative_20260723.md`;
+PERF_LEDGER entry appended.
 
 Do **not** flip `NDS_BATTLE_PROFILE=0` or remove its `$(error)` — fighters are
 not native until Task 52. Never push.

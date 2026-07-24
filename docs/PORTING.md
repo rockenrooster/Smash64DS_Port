@@ -21635,3 +21635,37 @@ all five Makefile sites + both target blocks. Added the GX equivalence differ
 reporting Tier 1 (non-matrix, bit-exact) and Tier 2 (matrix effective transform,
 screen-space pixels) separately. Both controls pass; the differ is proven and
 ready to judge Tasks 51/52. Published ROM byte-identical `1818AA77...`.
+
+## Task 51 — Dream Land native stage (2026-07-23) — STG KILL, not merged
+
+- Branch `codex/task51-dreamland-native` from master `11087ff` (Task 49 merged).
+  Six commits: spec, bit-exact host matrix-math foundation, E0 generator bake,
+  E1a/E1c flag + GX enum, E1b runtime consume, E2 measurement + docs.
+- **STG KILL:** P50 587,968 (native on) vs 569,216 (off), target ≤120,000, kill
+  >200,000. Native is ~18,752 ticks worse. Published ROM stays `1818AA77…`
+  (default-off; `NDS_TASK51_STAGE_NATIVE` is in no target block).
+- E0 extended `generate_nds_native_stage.py` to bake the 42 constant Dream Land
+  world matrices host-side (the 44-byte DObj descriptors carry translate/
+  rotate/scale as Vec3f in bytes [8:44]); emitted as a flag-gated const table
+  `sNdsNativeStageBakedWorldMatrices[42][16]`. `scripts/native_matrix_math.py`
+  replicates the runtime fixed-point pipeline bit-for-bit
+  (`gSYSinTable` → `syGetSinCosUShort` → `syMatrixTraRotRpyRSca` →
+  `MtxLoadN64ToDS20p12` → `MtxMulAffine20p12`).
+- E1 wired `NDS_TASK51_STAGE_NATIVE ?= 0` (Makefile declare + config-emit +
+  print-benchmark-flags); appended `NDS_TASK29_GX_MATRIX_MULT4x3` to the GX enum
+  (appended, not inserted — inserting shifted PUSH/POP/STORE/RESTORE and broke
+  the `gNdsTask29GXNeverSuppressMask` bit pattern, changing the default ROM to
+  `ede74e4b…`); runtime hook converts non-rigid bindings via `glMultMatrix4x3`
+  with a wrapped emit under the Task 49 record-site guard.
+- **Differ ZERO_DEVIATION** (Tier 1 = 0/2860 words, Tier 2 = 0.0 px) for the
+  bindings that draw — the host bake is bit-exact with the runtime.
+- **Root cause of the KILL:** the 16 non-rigid bindings Task 51 targets (20–29,
+  33–38 — `map0–3`, `layer1`) do not draw in battle_playable — they are
+  economy-skipped (`gNdsRendererEconomySkippedRunCount`, nds_renderer.c:21159).
+  Only 8 rigid `layer0` bindings (0–7) draw, and they already take `LoadNoZMatrix`
+  in both A and B. There is no STG cost for Task 51 to recover; the campaign's
+  STG 597,632 is owned by the rigid `layer0` set that Task 36 already targets.
+- **Build env note:** Git Bash direct `make` hits the `/opt/devkitpro`
+  recursive sub-make quirk; build through `C:/devkitPro/msys2/usr/bin/bash.exe`.
+- Decisive open question: do bindings 20–29 / 33–38 ever submit GX in any scene
+  state, or are they structurally undrawn in battle_playable?

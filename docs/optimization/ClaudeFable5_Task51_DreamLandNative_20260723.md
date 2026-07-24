@@ -209,3 +209,44 @@ replica of the runtime stage-DObj matrix pipeline (`gSYSinTable` →
 `syGetSinCosUShort` → `syMatrixTraRotRpyRSca` → `MtxLoadN64ToDS20p12` →
 `MtxMulAffine20p12`). Self-test passes (identity/translate/affine-mul all
 correct). The differ is the final correctness gate for the converted bindings.
+
+## Result (2026-07-23): STG KILL — does not merge
+
+**Outcome: KILL.** STG P50 587,968 ≫ the 200,000 kill line (target was
+≤120,000). The path is mechanically correct and the differ passes for what
+draws, but the 16 non-rigid bindings Task 51 targets **do not draw in the
+battle_playable scene**, so there is no STG cost to recover. Recorded per the
+spec's kill criterion; the branch is the checkpoint and nothing merges.
+
+**STG A/B (tick-HUD bucket, 64 samples, frame 438):**
+
+| side | STG P50 | STG P95 | STG max | tickhud ROM |
+|---|---|---|---|---|
+| A: native OFF | 569,216 | 574,208 | 584,512 | `B07E384F…` |
+| B: native ON  | 587,968 | 595,008 | 597,504 | `24B7A6E9…` |
+
+Native is ~18,752 ticks *worse* — it adds the baked-matrix table + wrapper
+bookkeeping without converting any binding that actually draws.
+
+**Differ (the path is correct, just not exercised):** STAGE owner, frames
+438–445, oracle vs native — **Tier 1 = 0 divergences (2860/2860 words matched),
+Tier 2 = 0.0 screen-px (ZERO_DEVIATION).** The host-side bake is bit-exact with
+the runtime for the bindings that draw.
+
+**Root cause:** the differ captured frames 438–445, 600–607, and 1200–1207. In
+every window only **8 bindings draw** (indices 0–7, all `layer0`, all rigid),
+and **class MATRIX_MULT4x3 = 0** — the Task 51 path never fired. The 8 drawing
+bindings are rigid, so the `if (!IsRigid)` Task 51 branch skips them; they take
+the existing `LoadNoZMatrix` path in both A and B. The 16 non-rigid bindings
+(20–29, 33–38 — `map0–3`, `layer1`) submit no GX commands; they are
+economy-skipped stage elements (see `gNdsRendererEconomySkippedRunCount`,
+nds_renderer.c:21159). Their world matrices are constant (Task 48) but
+constant-and-undrawn costs zero either way.
+
+The decisive question for any revisit: find a scene/match state where bindings
+20–29 / 33–38 submit GX, or confirm they are structurally undrawn in
+battle_playable. If the latter, the non-rigid subset is not a real STG cost and
+the campaign's STG 597,632 is owned by the 8 rigid `layer0` bindings — which
+Task 36 (`NDS_TASK36_HW_COMPOSE==2`, already shipping) already targets.
+
+Full evidence: `artifacts/performance/2026-07-23_task51-stage-native.md`.

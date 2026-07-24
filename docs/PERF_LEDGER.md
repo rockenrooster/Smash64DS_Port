@@ -6524,3 +6524,34 @@ the honest no-op test is master-vs-mine in matched fresh dirs, both
 
 Full certificate: `artifacts/performance/2026-07-23_task49-gx-differ.md`.
 Spec + results: `docs/optimization/ClaudeFable5_Task49_BattleProfileAxisAndGxDiffer_20260723.md`.
+
+## Task 51 — Dream Land native stage (2026-07-23)
+
+```text
+IDEA ID: TASK51-STAGE-NATIVE
+DECISION: KILL — STG budget not met; the targeted bindings don't draw
+ROM (published, default-off): 1818AA77..FDF54207 (byte-identical to master)
+ROM (tickhud A native off):    B07E384F7BC42C70..
+ROM (tickhud B native on):     24B7A6E98E237988..
+WINDOW: profile 0 tickhud, mode 9, frames 438+64 samples, NDS_TASK51_STAGE_NATIVE 0 vs 1
+STG P50 A (off): 569,216  P95: 574,208
+STG P50 B (on):  587,968  P95: 595,008   (target <=120,000; kill >200,000)
+DIFFER STAGE owner 438-445: Tier 1 = 0/2860 words, Tier 2 = 0.0 px (ZERO_DEVIATION)
+```
+
+STG P50 587,968 ≫ the 200,000 kill line; the native path is ~18,752 ticks
+*worse*. Root cause: the differ (frames 438–445, 600–607, 1200–1207) shows only
+8 bindings draw (indices 0–7, all `layer0`, all rigid) and MATRIX_MULT4x3 = 0 —
+the Task 51 path never fired. The 16 non-rigid bindings Task 51 targets (20–29,
+33–38 — `map0–3`, `layer1`) submit no GX commands; they are economy-skipped stage
+elements (`gNdsRendererEconomySkippedRunCount`, nds_renderer.c:21159). Their
+world matrices are constant (Task 48) but constant-and-undrawn costs zero either
+way, so there is no STG cost for Task 51 to recover. The campaign's STG 597,632
+is owned by the 8 rigid `layer0` bindings that Task 36 already targets.
+
+The differ proves the path is mechanically correct (ZERO_DEVIATION) and the
+matrix-math foundation is bit-exact — but the prize the campaign assumed (the 16
+non-rigid bindings) is not a real cost in this scene. Default-off byte-identity
+holds (`1818AA77…`). Branch `codex/task51-dreamland-native` is the checkpoint;
+nothing merges. Full evidence:
+`artifacts/performance/2026-07-23_task51-stage-native.md`.
