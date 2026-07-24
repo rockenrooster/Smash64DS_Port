@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-23 (Task 49 — `NDS_BATTLE_PROFILE` axis + GX equivalence differ; KEEP candidate, branch `codex/task49-battle-profile-axis`, not merged)
+Updated: 2026-07-23 — all logged to master: Task 49 (`NDS_BATTLE_PROFILE` axis + GX equivalence differ) MERGED; Task 51 (Dream Land stage-native) KILLED — stage cost is vertex-emit, not matrix; Task 50 (hardware divider/sqrt) STOP at E0. Task 50/51 shipped no code (default-off); published ROM `1818AA77…` unchanged. Section statuses below are point-in-time and pre-date this merge.
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
@@ -18,6 +18,18 @@ word + matrix LSB both named by the differ). Published ROM byte-identical
 is unreproducible from clean master today (47 bytes header relocation; the
 honest no-op test is master-vs-mine in matched fresh dirs, both `C24867BA...`).
 
+## Task 50 — STOP at E0 (2026-07-23)
+
+Branch `codex/task50-hardware-divider` (from master `61469f7`) census-classified
+every divide/sqrt call site. Eligible render-side ceiling ~0.55% of the battle
+budget under generous static-site attribution; realistic recoverable below the
+~0.5% bar, and the DS divider's async busy-wait can negate the win at battle
+call density (device-only measurability). The `__aeabi_ddiv` "free win" is
+absent — every double caller is cold in battle (`syMatrix*D` not reached). **No
+code converted; E1 did not run; nothing merges.** Published ROM unchanged
+`1818AA77...`. Full table:
+`artifacts/performance/2026-07-23_task50-divide-census.md`,
+`docs/optimization/ClaudeFable5_Task50_HardwareDivider_20260723.md`.
 
 ## Published ROM changed
 

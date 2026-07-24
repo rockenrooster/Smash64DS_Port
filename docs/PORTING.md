@@ -21669,3 +21669,32 @@ ready to judge Tasks 51/52. Published ROM byte-identical `1818AA77...`.
   recursive sub-make quirk; build through `C:/devkitPro/msys2/usr/bin/bash.exe`.
 - Decisive open question: do bindings 20–29 / 33–38 ever submit GX in any scene
   state, or are they structurally undrawn in battle_playable?
+## Task 50 — hardware divider / sqrt: STOP at E0 (2026-07-23)
+
+- Branch `codex/task50-hardware-divider` from master `61469f7`. Independent task;
+  no pipeline or oracle dependency.
+- E0 census only — no shipped code, no Makefile flag, nothing merged. The branch
+  is the checkpoint.
+- The DS hardware divider (`REG_DIVCNT` 0x04000280, `divf32`/`div32`) and sqrt
+  unit (`sqrtf32`) are in libnds but referenced nowhere in `src/`/`include/`.
+- Census source `artifacts/task37-census/census.json` (500,810,896 cycles/frame):
+  divide+sqrt callees total 2.31% (`__ieee754_sqrtf` 0.88%, `__aeabi_fdiv` 0.75%,
+  `__aeabi_ddiv` 0.27%, `__udivsi3` 0.25%, `sqrtf` 0.10%, integer div/mod ~0.07%).
+- `arm-none-eabi-objdump -d` of every caller object classified each call site
+  render-side (eligible) vs gameplay-side (ineligible, reaches the Task 9 state
+  hash). Eligible render-side ceiling ~0.55% of the budget under generous
+  static-site attribution; realistic recoverable below the ~0.5% bar.
+- The majority of the 2.31% is in gameplay code (`gmcollision`, `mp*` stage
+  collision, `ftMainProcPhysicsMap`, `ftComputer` AI, shield/jump/damage/twister
+  physics, `wp*` collision, `lbCommonSim2D`, `gcParse*AnimJoint`) — ineligible by
+  construction, and the densest, hottest sites.
+- The DS divider is asynchronous with a busy-wait; at battle call density (a few
+  dozen divides/frame) the per-call overhead can negate the win. melonDS cannot
+  referee divider timing (device-only class).
+- The anticipated `__aeabi_ddiv` "free win" (accidental double promotions fixable
+  bit-exact) is absent in battle: every double caller is cold (`syMatrix*D` at
+  `decomp/BattleShip-main/decomp/src/sys/matrix.c:1441-1486` is not reached; the
+  adapter uses the `*F`/`*R` float/radix paths). Only warm ddiv caller is
+  `ftDisplayLightsDrawReflect` (0.0634%, 2 sites).
+- Full table: `artifacts/performance/2026-07-23_task50-divide-census.md`.
+
