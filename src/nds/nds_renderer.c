@@ -16813,11 +16813,10 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
     (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
 /* Task 56: emit a RAW run's triangles as DS-native primitive groups
  * (GL_TRIANGLE_STRIP + residual GL_TRIANGLES) compiled host-side by the
- * generator. Walks sNdsNativeFighterPrimitiveGroup*; per group, uses
- * begin-direct to set up state (textures, poly format, matrix) via the
- * batch reuse fast-path, then switches glBegin to the group's primitive
- * type before emitting vertex refs. All state/glBegin management is
- * contained in this cold function -- zero ITCM footprint from TASK56. */
+ * generator. The batch is already open from PrepareProductionRun
+ * (glBegin(GL_TRIANGLE)). Per group, switches glBegin type only when the
+ * group type differs; never restarts the batch between groups, so state
+ * (textures, poly format, matrix) stays set. Zero ITCM footprint. */
 static void __attribute__((noinline, cold, optimize("Os")))
 ndsRendererNativeEmitProductionPrimitiveGroups(
     u32 run_index,
@@ -16828,6 +16827,7 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
     u32 group_first = sNdsNativeFighterPrimitiveGroupFirst[run_index];
     u32 group_count = sNdsNativeFighterPrimitiveGroupCount[run_index];
     u32 group_index;
+    u32 current_type = (u32)GL_TRIANGLE;
 
     for (group_index = 0u; group_index < group_count; group_index++)
     {
@@ -16838,14 +16838,11 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
         const u16 *vref = &sNdsNativeFighterPrimitiveVertices[vfirst];
         u32 remaining = vcount;
 
-        ndsRendererHardwareEndBatch();
-        ndsRendererNativeBeginDirectBatch(
-            stats, textured, state->texture_prepare_name,
-            state->texture_prepare_poly_fmt, state->matrix_generation);
-        if (gtype != (u32)GL_TRIANGLE)
+        if (gtype != current_type)
         {
             glEnd();
             glBegin((GL_GLBEGIN_ENUM)gtype);
+            current_type = gtype;
         }
         while (remaining-- != 0u)
         {
