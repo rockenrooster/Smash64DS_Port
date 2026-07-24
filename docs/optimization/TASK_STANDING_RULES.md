@@ -6,8 +6,11 @@ file contradicts this document, the task file wins only where it says so explici
 
 ## File convention (the owner, 2026-07-20)
 
-- **One task per .md file.** Naming: `ClaudeFable5_Task<NN>_<slug>_<YYYYMMDD>.md`.
-  Resolved task files stay in place as history; never append a second task to one.
+- **One task per .md file.** Naming: `Claude<Model>_Task<NN>_<slug>_<YYYYMMDD>.md`,
+  where `<Model>` is the planner's current model — currently **`ClaudeOpus48_`**
+  (was `ClaudeFable5_` through Task 51; bump it when the planner model changes).
+  Resolved task files stay in place as history under the prefix of their era; never
+  rename them and never append a second task to one.
 
 ## Process
 
