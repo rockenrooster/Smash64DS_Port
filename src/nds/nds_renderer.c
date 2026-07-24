@@ -2448,10 +2448,6 @@ static u32 sNdsRendererHardwareTriangleBatchAlphaKey;
 static u32 sNdsRendererHardwareTriangleBatchFogKey;
 static u32 sNdsRendererHardwareTriangleBatchMatrixMode;
 static u32 sNdsRendererHardwareTriangleBatchMatrixGeneration;
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
-static u32 sNdsRendererHardwareTriangleBatchPrimitiveMode;
-#endif
 static u32 sNdsRendererHardwareBoundTextureName;
 static int sNdsRendererHardwareNoTextureName;
 static s32 sNdsRendererHardwareProjectedDepth =
@@ -13417,10 +13413,6 @@ static void ndsRendererHardwareEndBatch(void)
         sNdsRendererHardwareTriangleBatchMatrixMode =
             NDS_RENDERER_HW_MATRIX_MODE_NONE;
         sNdsRendererHardwareTriangleBatchMatrixGeneration = 0u;
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
-        sNdsRendererHardwareTriangleBatchPrimitiveMode = (u32)GL_TRIANGLE;
-#endif
     }
 }
 
@@ -16193,12 +16185,7 @@ static inline void ndsRendererNativeBeginDirectBatch(
     u32 textured,
     u32 texture_name,
     u32 poly_fmt,
-    u32 matrix_generation
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
-    , u32 primitive_mode
-#endif
-    )
+    u32 matrix_generation)
 {
     if ((sNdsRendererHardwareTriangleBatchOpen != 0u) &&
         (sNdsRendererHardwareTriangleBatchTextured == textured) &&
@@ -16207,12 +16194,7 @@ static inline void ndsRendererNativeBeginDirectBatch(
         (sNdsRendererHardwareTriangleBatchMatrixMode ==
          NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
         (sNdsRendererHardwareTriangleBatchMatrixGeneration ==
-         matrix_generation)
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
-        && (sNdsRendererHardwareTriangleBatchPrimitiveMode == primitive_mode)
-#endif
-        )
+         matrix_generation))
     {
         ndsRendererProfileRecordBatchReuse();
         return;
@@ -16227,12 +16209,7 @@ static inline void ndsRendererNativeBeginDirectBatch(
     glDisable(GL_ALPHA_TEST);
     glDisable(GL_FOG);
     ndsRendererHardwareSetPolyFmt(poly_fmt);
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
-    glBegin((GL_GLBEGIN_ENUM)primitive_mode);
-#else
     glBegin(GL_TRIANGLE);
-#endif
     ndsRendererProfileRecordBatchBegin();
 
     sNdsRendererHardwareTriangleBatchOpen = TRUE;
@@ -16244,10 +16221,6 @@ static inline void ndsRendererNativeBeginDirectBatch(
     sNdsRendererHardwareTriangleBatchMatrixMode =
         NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
     sNdsRendererHardwareTriangleBatchMatrixGeneration = matrix_generation;
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
-    sNdsRendererHardwareTriangleBatchPrimitiveMode = primitive_mode;
-#endif
     (void)stats;
 }
 
@@ -16781,33 +16754,9 @@ ndsRendererNativePrepareProductionRun(
     }
     else if (packet_mode == 0u)
     {
-#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
-    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
-        /* Task 56: a RAW run emits its first primitive group's type here; the
-         * group emit walk re-begins the batch only when the group type changes
-         * (the reuse fast-path coalesces same-type groups). Cross-matrix runs
-         * keep GL_TRIANGLES. */
-        u32 primitive_mode = (u32)GL_TRIANGLE;
-        if (sNdsNativeFighterRuns[run_index].submit_class ==
-            NDS_NATIVE_RUN_RAW_CURRENT)
-        {
-            u32 group_first =
-                sNdsNativeFighterPrimitiveGroupFirst[run_index];
-            if (sNdsNativeFighterPrimitiveGroupCount[run_index] != 0u)
-            {
-                primitive_mode =
-                    sNdsNativeFighterPrimitiveGroupType[group_first];
-            }
-        }
-        ndsRendererNativeBeginDirectBatch(
-            stats, policy->textured, state->texture_prepare_name,
-            state->texture_prepare_poly_fmt, state->matrix_generation,
-            primitive_mode);
-#else
         ndsRendererNativeBeginDirectBatch(
             stats, policy->textured, state->texture_prepare_name,
             state->texture_prepare_poly_fmt, state->matrix_generation);
-#endif
     }
     return TRUE;
 }
@@ -16864,13 +16813,12 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
     (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
 /* Task 56: emit a RAW run's triangles as DS-native primitive groups
  * (GL_TRIANGLE_STRIP + residual GL_TRIANGLES) compiled host-side by the
- * generator. Walks sNdsNativeFighterPrimitiveGroup*; per group, begins the
- * batch with that group's type (the reuse fast-path coalesces same-type
- * groups), then emits each vertex ref from the flat stream as
- * COLOR -> [TEX_COORD] -> VERTEX16 over the existing dense records. Fewer
- * emitted vertices means fewer color/texcoord writes (E1 LIGHTING rule; no
- * second lighting approximation). */
-static void NDS_RENDERER_NATIVE_FIGHTER_CODE
+ * generator. Walks sNdsNativeFighterPrimitiveGroup*; per group, uses
+ * begin-direct to set up state (textures, poly format, matrix) via the
+ * batch reuse fast-path, then switches glBegin to the group's primitive
+ * type before emitting vertex refs. All state/glBegin management is
+ * contained in this cold function -- zero ITCM footprint from TASK56. */
+static void __attribute__((noinline, cold, optimize("Os")))
 ndsRendererNativeEmitProductionPrimitiveGroups(
     u32 run_index,
     u32 textured,
@@ -16890,10 +16838,15 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
         const u16 *vref = &sNdsNativeFighterPrimitiveVertices[vfirst];
         u32 remaining = vcount;
 
+        ndsRendererHardwareEndBatch();
         ndsRendererNativeBeginDirectBatch(
             stats, textured, state->texture_prepare_name,
-            state->texture_prepare_poly_fmt, state->matrix_generation,
-            gtype);
+            state->texture_prepare_poly_fmt, state->matrix_generation);
+        if (gtype != (u32)GL_TRIANGLE)
+        {
+            glEnd();
+            glBegin((GL_GLBEGIN_ENUM)gtype);
+        }
         while (remaining-- != 0u)
         {
             u32 dense_id = (*vref++) & 0x3FFu;
