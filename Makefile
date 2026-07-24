@@ -189,12 +189,6 @@ $(error NDS_TASK16_FLOAT_ADDSUB=1 requires NDS_TASK9_FLOAT_PHASE2=1)
 endif
 endif
 
-ifeq ($(NDS_TASK53_REPLAY_ARENA_FIX),1)
-ifneq ($(NDS_TASK36_HW_COMPOSE),2)
-$(error NDS_TASK53_REPLAY_ARENA_FIX=1 requires NDS_TASK36_HW_COMPOSE=2)
-endif
-endif
-
 ifneq ($(filter $(NDS_TASK53_REPLAY_ARENA_FIX),0 1),)
 else
 $(error NDS_TASK53_REPLAY_ARENA_FIX must be 0 or 1)
@@ -554,6 +548,16 @@ endif
 ifeq ($(NDS_TASK44_STAGE_STEADY),1)
 ifeq ($(NDS_TASK36_HW_COMPOSE),0)
 $(error NDS_TASK44_STAGE_STEADY=1 requires NDS_TASK36_HW_COMPOSE)
+endif
+endif
+# Same post-override placement as the Task 44 check above: the tick-HUD target
+# overrides NDS_TASK36_HW_COMPOSE := 2 in its block (line ~285), so this cross-
+# check must run after the overrides or a command-line
+# NDS_TASK53_REPLAY_ARENA_FIX=1 against a TASK36-forcing target is wrongly
+# rejected (TASK36 still reads its ?= 0 default at the top of the file).
+ifeq ($(NDS_TASK53_REPLAY_ARENA_FIX),1)
+ifneq ($(NDS_TASK36_HW_COMPOSE),2)
+$(error NDS_TASK53_REPLAY_ARENA_FIX=1 requires NDS_TASK36_HW_COMPOSE=2)
 endif
 endif
 NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP ?= 0
@@ -1432,6 +1436,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK49_GX_DIFFER $(NDS_TASK49_GX_DIFFER)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
+		echo '#define NDS_TASK53_REPLAY_ARENA_FIX $(NDS_TASK53_REPLAY_ARENA_FIX)'; \
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \

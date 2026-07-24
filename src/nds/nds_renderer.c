@@ -2087,10 +2087,6 @@ volatile u32 gNdsRendererTask36ReplayArenaRejectCount;
 volatile u32 gNdsRendererTask36ReplayMaterialRejectCount;
 volatile u32 gNdsRendererTask36ReplayCaptureWordCount;
 #endif
-
-#if NDS_TASK36_HW_COMPOSE == 2 && NDS_TASK53_REPLAY_ARENA_FIX
-volatile u32 gNdsRendererTask36ReplayArenaStaleCount;
-#endif
 #endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
@@ -2310,6 +2306,15 @@ static void ndsRendererM3MeasureResidualKey(
     gNdsRendererM3ResidualKeyMissCount = (hit != FALSE) ? 0u : 1u;
 }
 #endif
+#endif
+/* Task 53: the arena-staleness counter is declared at file scope here (outside
+ * the profile-1 block above) so it exists at profile-0 too. Its use site in
+ * ndsRendererTask36ReplayBeginFrame is gated only on NDS_TASK53_REPLAY_ARENA_FIX
+ * (no profile gate), so the definition must match. The staleness detector is a
+ * regression catch -- proof the relaxed guard is admitting frames the legacy
+ * strict guard would have blocked -- not a profiling instrument. */
+#if NDS_TASK36_HW_COMPOSE == 2 && NDS_TASK53_REPLAY_ARENA_FIX
+volatile u32 gNdsRendererTask36ReplayArenaStaleCount;
 #endif
 static NDSRendererProfileOwner sNdsRendererRuntimeOwner =
     NDS_RENDERER_PROFILE_OWNER_NONE;

@@ -1148,12 +1148,15 @@ extern volatile u32 gNdsRendererTask36ReplayRunCount;
 extern volatile u32 gNdsRendererTask36ReplayWordCount;
 extern volatile u32 gNdsRendererTask36ReplayFallbackCount;
 extern volatile u32 gNdsRendererTask36ReplayArenaRejectCount;
-#if NDS_TASK36_HW_COMPOSE == 2 && NDS_TASK53_REPLAY_ARENA_FIX
-extern volatile u32 gNdsRendererTask36ReplayArenaStaleCount;
-#endif
 extern volatile u32 gNdsRendererTask36ReplayMaterialRejectCount;
 extern volatile u32 gNdsRendererTask36ReplayCaptureWordCount;
 #endif
+#endif
+/* Task 53: declared outside the profile-1 block above so it is visible at
+ * profile-0 too (mirrors the definition in nds_renderer.c) -- the staleness
+ * detector is a regression catch, not a profiling instrument. */
+#if NDS_TASK36_HW_COMPOSE == 2 && NDS_TASK53_REPLAY_ARENA_FIX
+extern volatile u32 gNdsRendererTask36ReplayArenaStaleCount;
 #endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 extern volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
