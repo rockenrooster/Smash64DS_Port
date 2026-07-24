@@ -21698,3 +21698,41 @@ ready to judge Tasks 51/52. Published ROM byte-identical `1818AA77...`.
   `ftDisplayLightsDrawReflect` (0.0634%, 2 sites).
 - Full table: `artifacts/performance/2026-07-23_task50-divide-census.md`.
 
+
+### Task 52 — Dream Land stage GX DMA replay: STOP at E0 (2026-07-23)
+
+E0 path-activity proof stopped the task before any DMA work. Task 36's
+FIFO-replay loop — the loop this task was chartered to replace with
+`DMA_FIFO` transport — does not run in the shipping profile-0 program.
+
+- Probed the always-compiled-in `sNdsRendererTask36ReplayOwner` struct (gated
+  only on `NDS_TASK36_HW_COMPOSE==2`; the `gNds*` replay counters are
+  profile-1-only) at `ndsBattlePlayableFrameCompleteMarker`, frames 438–445,
+  on both the profile-0 tick-HUD ROM and the published `1818AA77…` ROM.
+  Result: `state=DISABLED`, `frame_replay=0`, `word_count=0` in both.
+- `ndsRendererTask36ReplayBeginFrame` (src/nds/nds_renderer.c:4195) admits
+  replay only when `gNdsTaskmanArenaChosenSize == 0x150000u`. The robust
+  downward-stepping arena allocator (src/port/diagnostics.c:7368-7381)
+  cannot secure the full `0x150000` on the DS heap — it steps down to
+  `0x14C000` (tickhud) / `0x14E000` (published) and the exact-size guard
+  disables replay. `rigid_binding_mask` matches the constant; the arena
+  guard is what fires.
+- The 8 rigid layer0 bindings draw through the generic per-word emit loop
+  (src/nds/nds_renderer.c:21241-21375), not any replay FIFO. There is no
+  replay loop to DMA-replace; removable CPU transport cost = 0 ticks.
+
+No DMA runtime path added. DMA ownership census completed: ARM9 DMA channels
+1 and 2 are unused throughout the tree (no src/ call site, ISR, ELF symbol, or
+reservation); channel 0 is live during stage draw (texture staging +
+wallpaper overlay at nds_renderer.c:8507/8526), channel 3 for mid-frame fills
+(platform.c). The VBlank IRQ (src/nds/nds_platform.c:293) does no DMA, so no
+async-in-flight collision exists. Channel 1 is the provably-free choice —
+retained as recoverable evidence should the replay path be revived.
+
+This STOP corrects Task 51's attribution: the campaign's STG cost is owned by
+the generic emit path, not Task 36 replay (which is disabled). The decisive
+question for the owner is whether the `== 0x150000` arena guard is a latent
+bug (replay was meant to ship) or whether the replay path is intentionally
+retired. Either way, this task ships no code; published ROM stays `1818AA77…`.
+Full evidence: `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`;
+spec: `docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`.

@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-23 — all logged to master: Task 49 (`NDS_BATTLE_PROFILE` axis + GX equivalence differ) MERGED; Task 51 (Dream Land stage-native) KILLED — stage cost is vertex-emit, not matrix; Task 50 (hardware divider/sqrt) STOP at E0. Task 50/51 shipped no code (default-off); published ROM `1818AA77…` unchanged. Section statuses below are point-in-time and pre-date this merge.
+Updated: 2026-07-23 — all logged to master: Task 49 (`NDS_BATTLE_PROFILE` axis + GX equivalence differ) MERGED; Task 51 (Dream Land stage-native) KILLED — stage cost is vertex-emit, not matrix; Task 50 (hardware divider/sqrt) STOP at E0; Task 52 (Dream Land stage GX DMA replay) STOP at E0 — Task 36 replay is structurally disabled in the shipping ROM. Task 50/51/52 shipped no code (default-off / none added); published ROM `1818AA77…` unchanged. Section statuses below are point-in-time and pre-date these merges.
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
@@ -199,3 +199,41 @@ PERF_LEDGER entry appended.
 
 Do **not** flip `NDS_BATTLE_PROFILE=0` or remove its `$(error)` — fighters are
 not native until Task 52. Never push.
+
+## Task 52 — Dream Land stage GX DMA replay: STOP at E0 (branch `codex/task52-stage-gxdma-replay`)
+
+**Outcome: STOP at E0, does not merge.** The FIFO-replay loop this task was
+chartered to DMA-replace **does not run** in the shipping profile-0 program.
+
+E0 path-activity proof (the spec's first gate) probed the always-compiled-in
+internal struct `sNdsRendererTask36ReplayOwner` (gated only on
+`NDS_TASK36_HW_COMPOSE==2`; the `gNds*` replay counters are profile-1-only) at
+`ndsBattlePlayableFrameCompleteMarker`, frames 438–445, on both the profile-0
+tick-HUD ROM and the published `1818AA77…` ROM: `state=DISABLED`,
+`frame_replay=0`, `word_count=0` in both.
+
+Root cause: `ndsRendererTask36ReplayBeginFrame` (src/nds/nds_renderer.c:4195)
+admits replay only when `gNdsTaskmanArenaChosenSize == 0x150000u`, but the robust
+downward-stepping arena allocator (src/port/diagnostics.c:7368-7381) cannot
+secure the full `0x150000` on the DS heap — it steps down to `0x14C000`
+(tickhud) / `0x14E000` (published), so the exact-size admission guard disables
+replay. `rigid_binding_mask` matches (`0x00000381c00fffff`); the arena guard is
+what fires. The 8 rigid layer0 bindings draw through the generic per-word emit
+loop (nds_renderer.c:21241-21375), not any replay FIFO. No DMA runtime path was
+added. DMA ownership census: ARM9 DMA channels 1/2 unused throughout the tree
+(channel 0 live during stage draw for texture staging; channel 3 mid-frame
+fills) — channel 1 is the provably-free choice, retained as recoverable evidence.
+
+**This STOP reframes the campaign's STG premise and corrects Task 51's
+attribution:** Task 36 replay is dead code in the shipping ROM, so STG 569K is
+owned by the generic emit path, not "Task 36 replay" (which Task 51 cited).
+Decisive question for the owner: is the `== 0x150000` arena guard a latent bug
+(replay was meant to ship — fix: admit when the buffer fits the *actual* chosen
+arena, a Task-36-correctness fix, not a DMA task) or is the replay path
+intentionally retired?
+
+Full evidence: `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`;
+spec + results:
+`docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`;
+PERF_LEDGER entry appended. Branch is the checkpoint; published ROM stays
+`1818AA77…`. Never push.

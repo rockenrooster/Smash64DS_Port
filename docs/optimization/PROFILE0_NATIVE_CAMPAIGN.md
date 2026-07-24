@@ -258,6 +258,19 @@ Per-part model-space packed lists plus a per-frame bone matrix palette.
 Smash 64 fighters are hierarchical rigid parts — no arbitrary weighted skinning
 is needed, which is why this is tractable at all.
 
+> **Numbering note (2026-07-23):** the owner issued an actual `/task Task 52`
+> titled *"Dream Land stage: Task 36 FIFO transport census + GX DMA replay"*
+> (`ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`) — a *different* Task 52
+> from this campaign-plan slot (fighters). That executed task **STOPPED at E0**:
+> Task 36 replay is structurally disabled in the shipping ROM
+> (`gNdsTaskmanArenaChosenSize != 0x150000` — the robust downward-stepping arena
+> allocator at `src/port/diagnostics.c:7368` cannot secure the full 0x150000, so
+> the exact-size admission guard at `nds_renderer.c:4195` disables replay). The
+> FIFO-replay loop DMA was meant to replace does not run; no DMA admitted. This
+> also **corrects Task 51's attribution**: STG 569K is owned by the *generic emit
+> path*, not Task 36 replay (which was disabled). The fighter-native work below
+> is **not yet started**; this slot's number was reused for the stage-DMA task.
+
 - **Budget:** FTR P50 **590,144 → ≤250,000** (−340,000).
 - **Gate:** Task 9 state hash exact (this must not touch gameplay state); GX
   differ on the pose stream; owner visual approval.
