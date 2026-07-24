@@ -2087,6 +2087,10 @@ volatile u32 gNdsRendererTask36ReplayArenaRejectCount;
 volatile u32 gNdsRendererTask36ReplayMaterialRejectCount;
 volatile u32 gNdsRendererTask36ReplayCaptureWordCount;
 #endif
+
+#if NDS_TASK36_HW_COMPOSE == 2 && NDS_TASK53_REPLAY_ARENA_FIX
+volatile u32 gNdsRendererTask36ReplayArenaStaleCount;
+#endif
 #endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
@@ -4116,6 +4120,30 @@ typedef struct NDSRendererTask36ReplayOwner
 
 static NDSRendererTask36ReplayOwner sNdsRendererTask36ReplayOwner;
 
+/* Task 53: arena admission macros. Default-off keeps the legacy exact
+ * guard byte-identical so the published ROM hashes the same as master
+ * (1818AA77+). When NDS_TASK53_REPLAY_ARENA_FIX is 1, admit any arena
+ * of >= 0x130000 bytes (the documented floor of the robust downward-
+ * stepping allocator at src/port/diagnostics.c:7354) regardless of
+ * the alloc-fail count; the captured words live in a static BSS buffer
+ * (no arena-layout dependency) and the per-frame rigid_binding_mask,
+ * config memcmp, and texture-validity walkers at :4185 / :4217 / :4139
+ * are the real per-frame correctness envelope. The legacy macro is
+ * retained for the staleness detector so a future re-tightening of
+ * the gate is visible to the verifier. */
+#define NDS_TASK36_REPLAY_ARENA_STRICT_LEGACY_BLOCKED() \
+    ((gNdsTaskmanArenaChosenSize != 0x150000u) || \
+     (gNdsTaskmanArenaAllocFailCount != 0u))
+#define NDS_TASK53_REPLAY_ARENA_RELAXED_BLOCKED() \
+    (gNdsTaskmanArenaChosenSize < 0x130000u)
+#if NDS_TASK53_REPLAY_ARENA_FIX
+#define NDS_TASK36_REPLAY_ARENA_BLOCKED() \
+    NDS_TASK53_REPLAY_ARENA_RELAXED_BLOCKED()
+#else
+#define NDS_TASK36_REPLAY_ARENA_BLOCKED() \
+    NDS_TASK36_REPLAY_ARENA_STRICT_LEGACY_BLOCKED()
+#endif
+
 static s32 ndsRendererTask36ReplaySegmentEligible(u32 segment_index)
 {
     return ((segment_index < NDS_NATIVE_STAGE_SEGMENT_COUNT) &&
@@ -4192,8 +4220,7 @@ static void ndsRendererTask36ReplayBeginFrame(
         }
         return;
     }
-    if ((gNdsTaskmanArenaChosenSize != 0x150000u) ||
-        (gNdsTaskmanArenaAllocFailCount != 0u))
+    if (NDS_TASK36_REPLAY_ARENA_BLOCKED())
     {
         if ((gNdsTaskmanArenaChosenSize != 0u) &&
             (owner->state != NDS_TASK36_REPLAY_DISABLED))
@@ -4206,6 +4233,16 @@ static void ndsRendererTask36ReplayBeginFrame(
         }
         return;
     }
+#if NDS_TASK53_REPLAY_ARENA_FIX
+    /* Task 53: staleness detector. Each frame the relaxed guard admits
+     * and the legacy strict guard would have DISABLED -- proof that the
+     * fix is doing its job, and a hook that a future re-tightening of
+     * the gate would push to zero (alerting the verifier). */
+    if (NDS_TASK36_REPLAY_ARENA_STRICT_LEGACY_BLOCKED())
+    {
+        gNdsRendererTask36ReplayArenaStaleCount++;
+    }
+#endif
     if (owner->state == NDS_TASK36_REPLAY_UNSEEDED)
     {
         return;
@@ -4244,8 +4281,7 @@ static void ndsRendererTask36ReplayStartCapture(
     if ((owner->state != NDS_TASK36_REPLAY_UNSEEDED) ||
         (frame->rigid_binding_mask !=
          NDS_RENDERER_TASK36_RIGID_BINDING_MASK) ||
-        (gNdsTaskmanArenaChosenSize != 0x150000u) ||
-        (gNdsTaskmanArenaAllocFailCount != 0u))
+        NDS_TASK36_REPLAY_ARENA_BLOCKED())
     {
         return;
     }

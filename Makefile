@@ -52,6 +52,16 @@ NDS_TASK34_STAGE_STREAM_CENSUS ?= 0
 # diffing. Lab-only; built via command line, never in a shipping target.
 NDS_TASK49_GX_DIFFER ?= 0
 NDS_TASK36_HW_COMPOSE ?= 0
+
+# Task 53: default-off re-activation guard for the Task 36 rigid-stage
+# replay path. The robust downward-stepping arena allocator at
+# src/port/diagnostics.c:7368 secures anywhere from the 0x130000 floor
+# (after stepping down from NDS_TASKMAN_ARENA_SIZE) up to the full
+# arena; the legacy exact-arena guard at src/nds/nds_renderer.c:4223
+# was a stale "pristine environment only" check. Setting this flag to 1
+# relaxes the guard; the published and tick-HUD target blocks don't
+# override it (default 0 keeps the published ROM 1818AA77-sh equivalent).
+NDS_TASK53_REPLAY_ARENA_FIX ?= 0
 # Task 51 native stage path. When on, the STAGE owner emits the 42 baked
 # constant world matrices via MTX_MULT4x3 under a once-loaded view (instead of
 # CPU-composing projection x view x model per binding per frame). Generalizes
@@ -177,6 +187,17 @@ ifeq ($(NDS_TASK16_FLOAT_ADDSUB),1)
 ifneq ($(NDS_TASK9_FLOAT_PHASE2),1)
 $(error NDS_TASK16_FLOAT_ADDSUB=1 requires NDS_TASK9_FLOAT_PHASE2=1)
 endif
+endif
+
+ifeq ($(NDS_TASK53_REPLAY_ARENA_FIX),1)
+ifneq ($(NDS_TASK36_HW_COMPOSE),2)
+$(error NDS_TASK53_REPLAY_ARENA_FIX=1 requires NDS_TASK36_HW_COMPOSE=2)
+endif
+endif
+
+ifneq ($(filter $(NDS_TASK53_REPLAY_ARENA_FIX),0 1),)
+else
+$(error NDS_TASK53_REPLAY_ARENA_FIX must be 0 or 1)
 endif
 # NDS_BATTLE_PROFILE must be exactly 0, 1, or 2. Anything else is a typo or a
 # stale command-line; fail loudly rather than fall through to profile 1.
