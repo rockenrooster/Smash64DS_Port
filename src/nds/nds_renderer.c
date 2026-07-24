@@ -2448,6 +2448,10 @@ static u32 sNdsRendererHardwareTriangleBatchAlphaKey;
 static u32 sNdsRendererHardwareTriangleBatchFogKey;
 static u32 sNdsRendererHardwareTriangleBatchMatrixMode;
 static u32 sNdsRendererHardwareTriangleBatchMatrixGeneration;
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+static u32 sNdsRendererHardwareTriangleBatchPrimitiveMode;
+#endif
 static u32 sNdsRendererHardwareBoundTextureName;
 static int sNdsRendererHardwareNoTextureName;
 static s32 sNdsRendererHardwareProjectedDepth =
@@ -13413,6 +13417,10 @@ static void ndsRendererHardwareEndBatch(void)
         sNdsRendererHardwareTriangleBatchMatrixMode =
             NDS_RENDERER_HW_MATRIX_MODE_NONE;
         sNdsRendererHardwareTriangleBatchMatrixGeneration = 0u;
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+        sNdsRendererHardwareTriangleBatchPrimitiveMode = (u32)GL_TRIANGLE;
+#endif
     }
 }
 
@@ -16185,7 +16193,12 @@ static inline void ndsRendererNativeBeginDirectBatch(
     u32 textured,
     u32 texture_name,
     u32 poly_fmt,
-    u32 matrix_generation)
+    u32 matrix_generation
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+    , u32 primitive_mode
+#endif
+    )
 {
     if ((sNdsRendererHardwareTriangleBatchOpen != 0u) &&
         (sNdsRendererHardwareTriangleBatchTextured == textured) &&
@@ -16194,7 +16207,12 @@ static inline void ndsRendererNativeBeginDirectBatch(
         (sNdsRendererHardwareTriangleBatchMatrixMode ==
          NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
         (sNdsRendererHardwareTriangleBatchMatrixGeneration ==
-         matrix_generation))
+         matrix_generation)
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+        && (sNdsRendererHardwareTriangleBatchPrimitiveMode == primitive_mode)
+#endif
+        )
     {
         ndsRendererProfileRecordBatchReuse();
         return;
@@ -16209,7 +16227,12 @@ static inline void ndsRendererNativeBeginDirectBatch(
     glDisable(GL_ALPHA_TEST);
     glDisable(GL_FOG);
     ndsRendererHardwareSetPolyFmt(poly_fmt);
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+    glBegin((GL_GLBEGIN_ENUM)primitive_mode);
+#else
     glBegin(GL_TRIANGLE);
+#endif
     ndsRendererProfileRecordBatchBegin();
 
     sNdsRendererHardwareTriangleBatchOpen = TRUE;
@@ -16221,6 +16244,10 @@ static inline void ndsRendererNativeBeginDirectBatch(
     sNdsRendererHardwareTriangleBatchMatrixMode =
         NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
     sNdsRendererHardwareTriangleBatchMatrixGeneration = matrix_generation;
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+    sNdsRendererHardwareTriangleBatchPrimitiveMode = primitive_mode;
+#endif
     (void)stats;
 }
 
@@ -16754,9 +16781,33 @@ ndsRendererNativePrepareProductionRun(
     }
     else if (packet_mode == 0u)
     {
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+        /* Task 56: a RAW run emits its first primitive group's type here; the
+         * group emit walk re-begins the batch only when the group type changes
+         * (the reuse fast-path coalesces same-type groups). Cross-matrix runs
+         * keep GL_TRIANGLES. */
+        u32 primitive_mode = (u32)GL_TRIANGLE;
+        if (sNdsNativeFighterRuns[run_index].submit_class ==
+            NDS_NATIVE_RUN_RAW_CURRENT)
+        {
+            u32 group_first =
+                sNdsNativeFighterPrimitiveGroupFirst[run_index];
+            if (sNdsNativeFighterPrimitiveGroupCount[run_index] != 0u)
+            {
+                primitive_mode =
+                    sNdsNativeFighterPrimitiveGroupType[group_first];
+            }
+        }
+        ndsRendererNativeBeginDirectBatch(
+            stats, policy->textured, state->texture_prepare_name,
+            state->texture_prepare_poly_fmt, state->matrix_generation,
+            primitive_mode);
+#else
         ndsRendererNativeBeginDirectBatch(
             stats, policy->textured, state->texture_prepare_name,
             state->texture_prepare_poly_fmt, state->matrix_generation);
+#endif
     }
     return TRUE;
 }
@@ -16808,6 +16859,60 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
             prepared->gx_xy, prepared->gx_z);
     }
 }
+
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+/* Task 56: emit a RAW run's triangles as DS-native primitive groups
+ * (GL_TRIANGLE_STRIP + residual GL_TRIANGLES) compiled host-side by the
+ * generator. Walks sNdsNativeFighterPrimitiveGroup*; per group, begins the
+ * batch with that group's type (the reuse fast-path coalesces same-type
+ * groups), then emits each vertex ref from the flat stream as
+ * COLOR -> [TEX_COORD] -> VERTEX16 over the existing dense records. Fewer
+ * emitted vertices means fewer color/texcoord writes (E1 LIGHTING rule; no
+ * second lighting approximation). */
+static void NDS_RENDERER_NATIVE_FIGHTER_CODE
+ndsRendererNativeEmitProductionPrimitiveGroups(
+    u32 run_index,
+    u32 textured,
+    const NDSRendererStats *stats,
+    const NDSRendererTraversalState *state)
+{
+    u32 group_first = sNdsNativeFighterPrimitiveGroupFirst[run_index];
+    u32 group_count = sNdsNativeFighterPrimitiveGroupCount[run_index];
+    u32 group_index;
+
+    for (group_index = 0u; group_index < group_count; group_index++)
+    {
+        u32 g = group_first + group_index;
+        u32 gtype = sNdsNativeFighterPrimitiveGroupType[g];
+        u32 vfirst = sNdsNativeFighterPrimitiveGroupFirstVertex[g];
+        u32 vcount = sNdsNativeFighterPrimitiveGroupVertexCount[g];
+        const u16 *vref = &sNdsNativeFighterPrimitiveVertices[vfirst];
+        u32 remaining = vcount;
+
+        ndsRendererNativeBeginDirectBatch(
+            stats, textured, state->texture_prepare_name,
+            state->texture_prepare_poly_fmt, state->matrix_generation,
+            gtype);
+        while (remaining-- != 0u)
+        {
+            u32 dense_id = (*vref++) & 0x3FFu;
+            const NDSNativePreparedDenseVertex *prepared =
+                &sNdsNativeFighterPreparedDense[dense_id];
+
+            ndsRendererHardwareWriteColorWord(prepared->packed_color);
+            if (textured != 0u)
+            {
+                ndsRendererHardwareWriteTexCoordWord(
+                    (u32)(u16)prepared->s |
+                    ((u32)(u16)prepared->t << 16));
+            }
+            ndsRendererHardwareWriteVertex16Words(
+                prepared->gx_xy, prepared->gx_z);
+        }
+    }
+}
+#endif
 
 static void NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativeEmitProductionCrossRun(
@@ -16980,6 +17085,15 @@ static s32 ndsRendererNativeSubmitProductionRun(
     }
     else
     {
+#if (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+        /* Task 56: RAW runs emit DS-native primitive groups (strips + residual
+         * triangles) compiled host-side. The first group's begin-batch already
+         * ran in PrepareProductionRun; this walk re-begins only on type change.
+         */
+        ndsRendererNativeEmitProductionPrimitiveGroups(
+            run_index, state->texture_prepare_enabled, stats, state);
+#else
         if (state->texture_prepare_enabled != 0u)
         {
             ndsRendererNativeEmitProductionRawTexturedRun(
@@ -16990,6 +17104,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
             ndsRendererNativeEmitProductionRawUntexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
+#endif
     }
 #else
     (void)epoch_policy;
