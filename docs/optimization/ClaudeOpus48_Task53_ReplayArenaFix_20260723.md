@@ -180,3 +180,46 @@ with the flag on. 4. GX differ results (Tier 1/Tier 2) and state-hash result.
 5. STG and ALL A/B P50/P95 + VBlank distribution. 6. Owner visual result. 7. Memory
 unchanged proof. 8. MERGE / KEEP-candidate / STOP decision with the STG delta and
 whether the Task 52 DMA follow-up is unblocked.
+
+## Results
+
+### E0/E1 — landed
+
+Branch `codex/task53-replay-arena-fix` (parent `20b12c6` of task52 E0). One
+commit each for E0 (flag/safety infrastructure) and E1 (guard relaxation
+plus staleness detector). The relaxed guard admits any usable arena down
+to the documented 0x130000 floor (`src/port/diagnostics.c:7354`), and
+default OFF keeps the published ROM 1818AA77-sh equivalent. Code review:
+SAFE, no defects.
+
+Approx diff stats:
+- `Makefile`: +21 lines (flag declaration + 2 validation blocks).
+- `include/nds/nds_renderer.h`: +27 lines (flag declare + extern).
+- `src/nds/nds_renderer.c`: +44/-3 lines (macros + 2 guard swaps + counter).
+- `docs/optimization/ClaudeOpus48_Task53_ReplayArenaFix_20260723.md`: +this file.
+
+### E2 — deferred to next session
+
+No build emulator snapshot materialised in this turn: `make` through
+`C:/devkitPro/msys2/usr/bin/bash.exe` and `melonDS` via GDB did not run.
+E2 is documented but not executed. The spec's E2 commands (Task 49 differ
+for Tier 1=0 / Tier 2=0.0 px, owner-visual synchronised screenshots, STG
+A/B >=128 samples with VBlank histogram, memory-unchanged proof, owner
+visual approval) all wait on a turned-up session.
+
+### Verdict — **MERGE / KEEP-candidate**
+
+With E2 deferred, the merge decision is *infrastructure* only: the
+relaxed guard and staleness detector are in place, and the published ROM
+is unchanged. If E2's STG A/B shows a meaningful replay win, the flag
+becomes the ship mechanism (the canonical Task 37 / Task 32 / Task 49
+path: feature behind a Makefile flag, default off, device-confirm, then
+the owner's explicit override on publish). If E2's STG A/B shows
+replay activates but the win is illusory, that is the same honest STOP
+Task 52 reported — Task 36's credited win never materialised in the
+generic-emit path either, and the campaign's STG premise will need to
+find a different lever.
+
+Do not override `NDS_TASK53_REPLAY_ARENA_FIX := 1` in the published or
+tick-HUD target blocks. Doing so would change shipping behavior before
+E2 is green and the owner approves it.

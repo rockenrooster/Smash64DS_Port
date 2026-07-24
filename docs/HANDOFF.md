@@ -237,3 +237,51 @@ spec + results:
 `docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`;
 PERF_LEDGER entry appended. Branch is the checkpoint; published ROM stays
 `1818AA77…`. Never push.
+
+## Task 53 — Task 36 replay arena-guard relaxation: E0+E1 landed, E2 deferred
+
+Branch `codex/task53-replay-arena-fix` (parent SHA `20b12c6` from
+`codex/task52-stage-gxdma-replay`, the task52 E0 finding commit). New
+default-off flag `NDS_TASK53_REPLAY_ARENA_FIX` declared in
+`Makefile:64` and validated in `Makefile:191-200`; cross-check requires
+`NDS_TASK36_HW_COMPOSE=2` when ON.
+
+**E0 (safety) and E1 (code) shipped.** Two edits relax the guard at
+both call sites — the BeginFrame replay guard at `@4223` and the
+StartCapture OR-chain at `@4284` — behind the same macro. Default OFF
+keeps the rendered source byte-identical to master (the macros expand
+to the legacy `((arena != 0x150000u) || (alloc_fails != 0u))`). ON
+admits any usable arena down to the documented 0x130000 floor
+(`src/port/diagnostics.c:7354`). The per-frame
+`rigid_binding_mask`/config memcmp/texture-validity envelope at
+`:4187`/`:4226`/`:4234` is left intact; the inner DISABLED-escalation
+block stays as-is.
+
+**Staleness detector.** New profile-1-only counter
+`gNdsRendererTask36ReplayArenaStaleCount` increments per frame the
+relaxed guard admits and the legacy guard would have DISABLED. The
+legacy macro is retained so a future re-tightening of the gate is
+visible to the verifier — closes the "KEEP silently died" failure
+mode Task 52 found.
+
+**E2 (correctness + measurement) deferred** to next session: no build
+emulator snapshot materialised in this turn. The probe script
+(`scripts/probe-task52-replay-active.ps1`), the Task 49 differ, and
+the tick-HUD bucket sampler are all in place; the gate files the
+following commands waiting for a turned-up session:
+
+```powershell
+# A-side (default)
+.\scripts\probe-task52-replay-active.ps1 -Build build-task53-a-baseline
+# B-side (flag ON, replay engages)
+make TARGET=smash64ds-battle-playable-tickhud-hwtri BUILD=build-task53-b-active NDS_TASK53_REPLAY_ARENA_FIX=1 -j16
+.\scripts\probe-task52-replay-active.ps1 -Build build-task53-b-active -StartFrame 438 -EndFrame 800
+.\scripts\run-task49-gx-differ.ps1 -Owner 0 -Target smash64ds-battle-playable-tickhud-hwtri
+.\scripts\sample-tick-hud-buckets.ps1 -Build build-task53-b-active
+```
+
+Result ledger slot: `artifacts/performance/2026-07-23_task53-replay-arena-measurement.md`
+(not yet written — E2 deferred).
+
+**Published ROM stays `1818AA77…`** — flag default is 0, no override
+in the published or tick-HUD target blocks (`Makefile:209`, `:280`).

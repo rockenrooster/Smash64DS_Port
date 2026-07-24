@@ -21736,3 +21736,39 @@ bug (replay was meant to ship) or whether the replay path is intentionally
 retired. Either way, this task ships no code; published ROM stays `1818AA77…`.
 Full evidence: `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`;
 spec: `docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`.
+
+## 2026-07-23: Task 53 — Task 36 replay arena-guard relaxation
+
+Branch `codex/task53-replay-arena-fix` (parent `codex/task52-stage-gxdma-replay`,
+SHA `20b12c6`).
+
+DS backend change. Re-activates the Task 36 rigid-stage replay by relaxing the
+stale exact-arena admission guard at `src/nds/nds_renderer.c:4195` (BeginFrame)
+and `:4243` (StartCapture), behind a new Makefile flag `NDS_TASK53_REPLAY_ARENA_FIX`
+that defaults to 0 (no shipping behavior change; published and tick-HUD target
+blocks keep the flag at 0).
+
+The captured BSS replay buffer at `sNdsRendererTask36ReplayOwner.words[4608]`
+was *always* static, never arena-allocated; the legacy `0x150000 + zero-fails`
+guard was a stale "pristine environment only" check left behind when the robust
+downward-stepping arena allocator at `src/port/diagnostics.c:7368` was made
+resilient. The per-frame correctness envelope (`rigid_binding_mask@:4187`,
+`config memcmp@:4217`, `texture validity@:4139`) is unchanged.
+
+Key invariants:
+
+- The begin/capture guards swap to a single `NDS_TASK36_REPLAY_ARENA_BLOCKED()`
+  macro that preprocessor-resolves to either the legacy condition or the relaxed
+  `arena < 0x130000u` floor.
+- Both guards *must* relax together — capture-only-while-replay-admission-disabled
+  would feed nothing to the replay site.
+- A profile-1-only `gNdsRendererTask36ReplayArenaStaleCount` increments each
+  frame the legacy guard would have DISABLED but the relaxed guard admits,
+  so a future re-tightening is visible to the verifier.
+
+E2 (correctness + measurement) deferred — see
+`docs/HANDOFF.md#task-53-task-36-replay-arena-guard-relaxation-e0e1-landed-e2-deferred`
+for the probe/differ/sampler commands waiting on a turned-up session.
+
+E0 findings: `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`
+(re-recorded under Task 53 ownership for the same replay path).
