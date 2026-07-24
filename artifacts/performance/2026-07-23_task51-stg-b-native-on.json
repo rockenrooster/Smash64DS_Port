@@ -1,0 +1,96 @@
+{
+  "target": "smash64ds-battle-playable-tickhud-hwtri",
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\task51-stg-b\\smash64ds-battle-playable-tickhud-hwtri.nds",
+  "romSha256": "24B7A6E98E237988E7788DA74C02C1ABED95CA5E5C0E344C7A4FFD29B79AA291",
+  "melonDS": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds\\melonDS.exe",
+  "melonDSSha256": "DE80E46BDCF1FD986162DE6AFFD9EE1148F8C40565DBAF667B9C2B3EF5475715",
+  "melonDSVersion": "1.0",
+  "gitShort": "c3ee1b6",
+  "samples": 64,
+  "startFrame": 438,
+  "endFrame": 501,
+  "buckets": [
+    {
+      "bucket": "ALL",
+      "mean": 1968949,
+      "p50": 1680320,
+      "p95": 2800448,
+      "min": 1679168,
+      "max": 3361088
+    },
+    {
+      "bucket": "FTR",
+      "mean": 628261,
+      "p50": 580800,
+      "p95": 1015488,
+      "min": 574016,
+      "max": 1019776
+    },
+    {
+      "bucket": "STG",
+      "mean": 588670,
+      "p50": 587968,
+      "p95": 595008,
+      "min": 581760,
+      "max": 597504
+    },
+    {
+      "bucket": "BG",
+      "mean": 4001,
+      "p50": 4032,
+      "p95": 4096,
+      "min": 3904,
+      "max": 4160
+    },
+    {
+      "bucket": "AUD",
+      "mean": 7065,
+      "p50": 2432,
+      "p95": 65280,
+      "min": 1152,
+      "max": 67264
+    },
+    {
+      "bucket": "HUD",
+      "mean": 39345,
+      "p50": 1024,
+      "p95": 320832,
+      "min": 832,
+      "max": 322560
+    },
+    {
+      "bucket": "SRC",
+      "mean": 412119,
+      "p50": 319232,
+      "p95": 951744,
+      "min": 168768,
+      "max": 1287360
+    },
+    {
+      "bucket": "MISC",
+      "mean": 70179,
+      "p50": 47424,
+      "p95": 165312,
+      "min": 46720,
+      "max": 195072
+    },
+    {
+      "bucket": "OTHR",
+      "mean": 219309,
+      "p50": 146432,
+      "p95": 481984,
+      "min": 28608,
+      "max": 569344
+    }
+  ],
+  "meanAll": 1968949,
+  "meanNamed": 1749640.0,
+  "vbi2": 0,
+  "vbi3": 375,
+  "vbi4": 101,
+  "vbi5plus": 25,
+  "vbiMax": 18,
+  "vbiTotal": 501,
+  "cadenceViolations": 0,
+  "capturedUtc": "2026-07-24T00:14:43.3053182Z"
+}

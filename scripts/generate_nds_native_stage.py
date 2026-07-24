@@ -24,6 +24,11 @@ from dataclasses import astuple, dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+# Task 51: bit-exact host-side replica of the runtime stage-DObj matrix
+# pipeline. Imported lazily so the host checker and unrelated generation paths
+# are unaffected if the module is moved.
+import native_matrix_math as stage_matrix_math
+
 
 DEFAULT_OUTPUT = Path("src/nds/nds_native_stage_owner.generated.inc")
 DEFAULT_CONSUMED_FIELDS_OUTPUT = Path(
@@ -81,7 +86,7 @@ GENERATED_SEGMENT_HOT_ROW_BYTES = 2
 
 # Filled after the first independently checked generation.  Keeping the
 # packet hash outside the generated file avoids a self-referential checksum.
-EXPECTED_INCLUDE_SHA256 = "f055605a13ab93ca9ba1dd378da32770d5fe8984b07be6b246ce8b6e1a6c18a2"
+EXPECTED_INCLUDE_SHA256 = "c89bf07e05fdcb0aca87042dc2e57b9da2933c3806af539ecdb3d2352d71b074"
 
 INVALID_U8 = 0xFF
 INVALID_U16 = 0xFFFF
@@ -1598,6 +1603,10 @@ class Packet:
     source_command_count: int
     vertex_command_count: int
     triangle_command_count: int
+    # Task 51: baked world matrix per binding (flat-16 s20.12, row-major).
+    # Lives outside the 16 KiB slab as a flag-gated const table; not counted
+    # in slab_bytes so the published ROM stays byte-identical at default.
+    baked_world_matrices: tuple[tuple[int, ...], ...] = ()
 
     def slab_bytes(self) -> int:
         return (
@@ -1823,6 +1832,82 @@ def descriptor_rows(
             )
         )
     return result, display_offsets
+
+
+# Task 51: baked world matrix per binding. The runtime computes these every
+# frame via ndsRendererAdapterBuildDObjWorldMatrixUncached (parent-chain
+# compose of syMatrixTraRotRpyRSca local matrices); the bake reproduces that
+# host-side bit-for-bit so a Task 51 path can emit MTX_MULT4x3 of a constant
+# matrix instead of CPU-composing projection x view x model per binding. The
+# Task 49 differ is the correctness gate (Tier 1 geometry = 0, Tier 2 matrix
+# effective-transform <= 1.0 screen-px).
+def baked_stage_world_matrices(
+    resources: dict[str, O2RResource],
+    dobjs: list[StageDObj],
+    repo_root: Path,
+) -> tuple[tuple[int, ...], ...]:
+    """One flat-16 world matrix (row-major s20.12) per binding, indexed by
+    binding_index. Each binding has exactly one owning DObj (verified 1:1), so
+    a binding's world = its DObj's parent-chain world.
+    """
+    sin_table = stage_matrix_math._load_sint_table(repo_root)
+
+    # Walk every owner's descriptor table once, building a per-global-DObj local
+    # matrix.  The global index ordering matches generate()'s dobjs list
+    # (owner-by-owner, sentinel excluded).
+    local_matrices: list[stage_matrix_math.NdsMatrix20p12] = []
+    for owner in OWNER_SPECS:
+        resource = resources[owner.resource_name]
+        for local_index in range(owner.descriptor_count - 1):
+            offset = owner.dobj_offset + local_index * 44
+            tail = resource.payload[offset + 8 : offset + 44]
+            translate_rotate_scale = struct.unpack(">9f", tail)
+            translate = translate_rotate_scale[0:3]
+            rotate = translate_rotate_scale[3:6]
+            scale = translate_rotate_scale[6:9]
+            local_matrices.append(
+                stage_matrix_math.build_local_from_descriptor(
+                    translate, rotate, scale, sin_table))
+
+    if len(local_matrices) != len(dobjs):
+        raise falsify(
+            f"baked local matrix count {len(local_matrices)} != dobj count "
+            f"{len(dobjs)}")
+
+    # Compose each DObj's parent-chain world (root -> self), matching
+    # ndsRendererAdapterBuildDObjWorldMatrixUncached.
+    world_by_dobj: list[stage_matrix_math.NdsMatrix20p12] = []
+    for index, dobj in enumerate(dobjs):
+        chain_indices: list[int] = []
+        cursor = index
+        # parent_index is INVALID_U16 at the root; the depth is bounded by the
+        # topology the generator already validated.
+        guard = 0
+        while cursor != INVALID_U16 and guard <= len(dobjs):
+            chain_indices.append(cursor)
+            parent = dobjs[cursor].parent_index
+            if parent == INVALID_U16:
+                break
+            cursor = parent
+            guard += 1
+        chain = [local_matrices[i] for i in reversed(chain_indices)]
+        world_by_dobj.append(stage_matrix_math.build_world_from_chain(chain))
+
+    # Bind by binding_index: each binding owns exactly one DObj.
+    baked: list[tuple[int, ...] | None] = [None] * EXPECTED_BINDINGS
+    for index, dobj in enumerate(dobjs):
+        if dobj.binding_index == INVALID_U16:
+            continue
+        matrix = world_by_dobj[index]
+        flat = tuple(
+            int(matrix.m[row][col]) for row in range(4) for col in range(4))
+        if baked[dobj.binding_index] is None:
+            baked[dobj.binding_index] = flat
+    if any(entry is None for entry in baked):
+        missing = [i for i, entry in enumerate(baked) if entry is None]
+        raise falsify(f"baked world matrix missing for bindings {missing}")
+    return tuple(baked)  # type: ignore[return-value]
+
 
 
 def selected_roots(resource: O2RResource, owner: OwnerSpec) -> list[int]:
@@ -2527,6 +2612,8 @@ def generate(repo_root: Path) -> Packet:
             )
         )
 
+    baked_world = baked_stage_world_matrices(resources, dobjs, repo_root)
+
     packet = Packet(
         assets,
         tuple(segments),
@@ -2544,6 +2631,7 @@ def generate(repo_root: Path) -> Packet:
         source_command_total,
         vertex_command_total,
         triangle_command_total,
+        baked_world,
     )
     if modify_vertex_total != EXPECTED_MODIFY_VERTEX_COMMANDS:
         raise falsify(
@@ -3112,6 +3200,13 @@ def c_u32(value: int) -> str:
     return f"0x{value:08x}u"
 
 
+def c_s32(value: int) -> str:
+    """Signed 32-bit literal for s32 matrix cells (Task 51 baked matrices)."""
+    if value < -0x80000000 or value > 0x7FFFFFFF:
+        raise falsify(f"s32 value {value} out of range")
+    return f"{value}"
+
+
 def render_generated_segment0_program(program: GeneratedStageProgram) -> list[str]:
     lines = [
         "#define NDS_NATIVE_STAGE_SEGMENT0_GENERATED_PROGRAM \\",
@@ -3676,6 +3771,39 @@ def render_include(packet: Packet) -> bytes:
                 + " }"
                 for row in packet.state_spans
             ],
+        )
+    )
+    # Task 51: baked per-binding world matrices (4x4 s20.12, row-major). Emitted
+    # as a flag-gated const table so the published ROM is byte-identical at the
+    # default NDS_TASK51_STAGE_NATIVE=0. The runtime Task 51 path reads this in
+    # place of the per-frame CPU compose for the bindings it converts; the Task
+    # 49 differ gates that the bake matches the runtime (Tier 1 = 0, Tier 2
+    # <= 1.0 screen-px).
+    baked_checksum = fnv1a_u32(
+        b"".join(
+            value.to_bytes(4, "little", signed=True)
+            for matrix in packet.baked_world_matrices
+            for value in matrix))
+    lines.extend(
+        (
+            f"#define NDS_NATIVE_STAGE_BAKED_WORLD_COUNT "
+            f"{len(packet.baked_world_matrices)}u",
+            f"#define NDS_NATIVE_STAGE_BAKED_WORLD_CHECKSUM 0x{baked_checksum:08x}u",
+            "#if NDS_TASK51_STAGE_NATIVE",
+            "static const s32 sNdsNativeStageBakedWorldMatrices"
+            "[NDS_NATIVE_STAGE_BAKED_WORLD_COUNT][16] = {",
+        )
+    )
+    for matrix in packet.baked_world_matrices:
+        lines.append(
+            "    { "
+            + ", ".join(c_s32(value) for value in matrix)
+            + " },")
+    lines.extend(
+        (
+            "};",
+            "#endif",
+            "",
         )
     )
     lines.extend(

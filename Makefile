@@ -52,6 +52,13 @@ NDS_TASK34_STAGE_STREAM_CENSUS ?= 0
 # diffing. Lab-only; built via command line, never in a shipping target.
 NDS_TASK49_GX_DIFFER ?= 0
 NDS_TASK36_HW_COMPOSE ?= 0
+# Task 51 native stage path. When on, the STAGE owner emits the 42 baked
+# constant world matrices via MTX_MULT4x3 under a once-loaded view (instead of
+# CPU-composing projection x view x model per binding per frame). Generalizes
+# Task 36's rigid-subset replay to the full 42-binding model-space form.
+# Default off; the published ROM stays byte-identical at 0. Ship-ready only
+# once the differ (Tier 1 = 0, Tier 2 <= 1.0 px) and STG budget clear.
+NDS_TASK51_STAGE_NATIVE ?= 0
 # Battle pipeline selector. Orthogonal to NDS_RENDERER_PROFILE_LEVEL, which
 # is the *instrumentation* level within profiles 1 and 2 and keeps its
 # existing values (0 lean, 1 phase timers, 2 full oracle).
@@ -1403,6 +1410,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK34_STAGE_STREAM_CENSUS $(NDS_TASK34_STAGE_STREAM_CENSUS)'; \
 		echo '#define NDS_TASK49_GX_DIFFER $(NDS_TASK49_GX_DIFFER)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
+		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
@@ -1661,6 +1669,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK34_STAGE_STREAM_CENSUS=$(NDS_TASK34_STAGE_STREAM_CENSUS)'
 	@printf '%s\n' 'BENCH_MAKE_TASK49_GX_DIFFER=$(NDS_TASK49_GX_DIFFER)'
 	@printf '%s\n' 'BENCH_MAKE_TASK36_HW_COMPOSE=$(NDS_TASK36_HW_COMPOSE)'
+	@printf '%s\n' 'BENCH_MAKE_TASK51_STAGE_NATIVE=$(NDS_TASK51_STAGE_NATIVE)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_PROFILE=$(NDS_BATTLE_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK44_STAGE_STEADY=$(NDS_TASK44_STAGE_STEADY)'
 	@printf '%s\n' 'BENCH_MAKE_TASK37_PROFILE=$(NDS_TASK37_PROFILE)'

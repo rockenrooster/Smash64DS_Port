@@ -49,14 +49,14 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# GX command classes (include/nds/nds_renderer.h:293-318).
+# GX command classes (include/nds/nds_renderer.h:293-319).
 # Matrix classes: MATRIX_MODE(7) .. MATRIX_RESTORE(14); LOAD4X4=9, MULT4X4=10,
 # PUSH=11, POP=12, STORE=13, RESTORE=14. Tier 1 is everything NON-matrix.
-# Note: MULT4x3 (profile 0) does not exist in the enum yet; profile 0 lands
-# with Task 51. The differ handles it as a matrix class when it appears.
-$script:matrixClasses = 7,8,9,10,11,12,13,14   # MATRIX_MODE..MATRIX_RESTORE
-$script:load4x4Class = 9                         # NDS_TASK29_GX_MATRIX_LOAD4X4
-$script:matrixMult4x3Class = 99                 # reserved for profile 0 (Task 51)
+# MULT4x3 (Task 51: 12-word model matrix) is appended at class 22 so the
+# existing classes stay byte-stable; it is a matrix class for Tier-2 purposes.
+$script:matrixClasses = 7,8,9,10,11,12,13,14,22   # MATRIX_MODE..MATRIX_RESTORE + MULT4x3
+$script:load4x4Class = 9                          # NDS_TASK29_GX_MATRIX_LOAD4X4
+$script:matrixMult4x3Class = 22                   # NDS_TASK29_GX_MATRIX_MULT4x3 (Task 51, appended)
 
 # DS screen resolution.
 $script:screenW = 256

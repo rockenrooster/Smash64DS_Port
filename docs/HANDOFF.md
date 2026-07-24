@@ -152,3 +152,38 @@ retired.
 
 Preserve the unrelated `.gitignore` edit and all untracked optimization task,
 stage, review, and README files; they are user-owned.
+
+## Task 51 — Dream Land native stage: KILL (branch `codex/task51-dreamland-native`)
+
+**Outcome: STG KILL, does not merge.** STG P50 587,968 ≫ the 200,000 kill line
+(target was ≤120,000); the native path is ~18,752 ticks *worse*. The path is
+mechanically correct (differ ZERO_DEVIATION) but the 16 non-rigid bindings it
+targets **do not draw** in the battle_playable scene — they are economy-skipped
+stage elements, so there is no STG cost to recover. Published ROM stays
+`1818AA77…` (default-off; `NDS_TASK51_STAGE_NATIVE` is not in any target block).
+
+Branch `codex/task51-dreamland-native` (6 commits) is the checkpoint:
+matrix-math foundation + E0 generator bake + E1a/E1c flag+enum + E1b runtime +
+E2 measurement. The differ result (Tier 1 = 0, Tier 2 = 0.0 px) and the
+bit-exact matrix math are retained as recoverable work should a later task find
+a scene state where bindings 20–29 / 33–38 actually draw.
+
+**Build environment note (applies to all future work):** Git Bash's direct
+`make` hits the documented `/opt/devkitpro` recursive sub-make path quirk.
+**Build through the devkitPro msys2 bash instead:**
+`C:/devkitPro/msys2/usr/bin/bash.exe -lc 'cd repo && make TARGET=... BUILD=... -j16'`.
+This reproduces `1818AA77` byte-for-byte from a fresh dir.
+
+**Decisive question for any revisit of native-stage work:** find a scene/match
+state where bindings 20–29 / 33–38 submit GX, or confirm they are structurally
+undrawn in battle_playable. The campaign's STG 597,632 baseline is owned by the
+8 rigid `layer0` bindings (indices 0–7) that draw every frame via
+`LoadNoZMatrix` — and Task 36 (`NDS_TASK36_HW_COMPOSE==2`, already shipping)
+already owns the rigid subset.
+
+Full evidence: `artifacts/performance/2026-07-23_task51-stage-native.md`;
+spec + results: `docs/optimization/ClaudeFable5_Task51_DreamLandNative_20260723.md`;
+PERF_LEDGER entry appended.
+
+Do **not** flip `NDS_BATTLE_PROFILE=0` or remove its `$(error)` — fighters are
+not native until Task 52. Never push.

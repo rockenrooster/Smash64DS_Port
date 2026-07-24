@@ -314,6 +314,7 @@ typedef enum NDSRendererTask29GXClass
     NDS_TASK29_GX_TEX_COORD,
     NDS_TASK29_GX_VERTEX16,
     NDS_TASK29_GX_FLUSH,
+    NDS_TASK29_GX_MATRIX_MULT4x3,  /* Task 51: 12-word model matrix under a once-loaded view. Appended so existing enum values (and the masks that index them) stay byte-stable at default. */
     NDS_TASK29_GX_CLASS_COUNT
 } NDSRendererTask29GXClass;
 #endif
