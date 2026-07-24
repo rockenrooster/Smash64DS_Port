@@ -140,6 +140,25 @@
 #error "NDS_TASK55_STAGE_GEOM=1 requires NDS_TASK53_REPLAY_ARENA_FIX=1 (capture path must be live)"
 #endif
 
+#ifndef NDS_TASK56_FIGHTER_PRIMITIVES
+#define NDS_TASK56_FIGHTER_PRIMITIVES 0
+#endif
+
+#if (NDS_TASK56_FIGHTER_PRIMITIVES != 0) && (NDS_TASK56_FIGHTER_PRIMITIVES != 1) && \
+    (NDS_TASK56_FIGHTER_PRIMITIVES != 2)
+#error "NDS_TASK56_FIGHTER_PRIMITIVES must be 0, 1, or 2"
+#endif
+
+/* Task 56 emits fighter GL_TRIANGLE_STRIP/QUAD primitive streams; the native
+ * fighter production path is compiled only when HW triangles are on and the
+ * instrumentation level is below the forensic oracle. */
+#if NDS_TASK56_FIGHTER_PRIMITIVES && !NDS_RENDERER_HW_TRIANGLES
+#error "NDS_TASK56_FIGHTER_PRIMITIVES requires NDS_RENDERER_HW_TRIANGLES (native fighter path)"
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#error "NDS_TASK56_FIGHTER_PRIMITIVES requires NDS_RENDERER_PROFILE_LEVEL < 2"
+#endif
+
 #if (NDS_TASK36_HW_COMPOSE == 2) && \
     (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS)
 #error "Task 36 replay cannot be combined with the Task 29/34 stream census"

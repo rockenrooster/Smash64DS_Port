@@ -71,6 +71,18 @@ NDS_TASK53_REPLAY_ARENA_FIX ?= 0
 # and bit-identical render (lossless). Default 0 keeps the published ROM
 # byte-identical; the published/tick-HUD blocks do NOT override it.
 NDS_TASK55_STAGE_GEOM ?= 0
+# Task 56: fighter DS-native primitive streams. Compiles the immutable Mario/Fox
+# topology offline into GL_TRIANGLE_STRIP / GL_QUAD primitive descriptors (one
+# GFX_BEGIN per primitive group + an N+2-vertex strip sequence) instead of the
+# current GL_TRIANGLES (3 verts/tri, no sharing). E0 measured mode 2 (within-run
+# reorder strips) at 47.0% / 882 fewer VERTEX16 submissions per two-fighter
+# traversal -- the VERTEX16-transform floor Tasks 53/55 proved is invariant.
+#   0 = current native-fighter GL_TRIANGLES emission (control)
+#   1 = exact source-order strips (E0: 9.9%)
+#   2 = within-run opaque-run topology reorder strips (E0: 47.0%)
+# Topology is compiled host-side (no runtime strip finding). Default 0 keeps the
+# published ROM byte-identical; the published/tick-HUD blocks do NOT override it.
+NDS_TASK56_FIGHTER_PRIMITIVES ?= 0
 # Task 51 native stage path. When on, the STAGE owner emits the 42 baked
 # constant world matrices via MTX_MULT4x3 under a once-loaded view (instead of
 # CPU-composing projection x view x model per binding per frame). Generalizes
@@ -205,6 +217,10 @@ endif
 ifneq ($(filter $(NDS_TASK55_STAGE_GEOM),0 1),)
 else
 $(error NDS_TASK55_STAGE_GEOM must be 0 or 1)
+endif
+# Task 56: NDS_TASK56_FIGHTER_PRIMITIVES must be 0, 1, or 2.
+ifneq ($(NDS_TASK56_FIGHTER_PRIMITIVES),$(filter $(NDS_TASK56_FIGHTER_PRIMITIVES),0 1 2))
+$(error NDS_TASK56_FIGHTER_PRIMITIVES must be 0, 1, or 2; got "$(NDS_TASK56_FIGHTER_PRIMITIVES)")
 endif
 # NDS_BATTLE_PROFILE must be exactly 0, 1, or 2. Anything else is a typo or a
 # stale command-line; fail loudly rather than fall through to profile 1.
@@ -1481,6 +1497,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
 		echo '#define NDS_TASK53_REPLAY_ARENA_FIX $(NDS_TASK53_REPLAY_ARENA_FIX)'; \
 		echo '#define NDS_TASK55_STAGE_GEOM $(NDS_TASK55_STAGE_GEOM)'; \
+		echo '#define NDS_TASK56_FIGHTER_PRIMITIVES $(NDS_TASK56_FIGHTER_PRIMITIVES)'; \
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
@@ -1740,6 +1757,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK49_GX_DIFFER=$(NDS_TASK49_GX_DIFFER)'
 	@printf '%s\n' 'BENCH_MAKE_TASK53_REPLAY_ARENA_FIX=$(NDS_TASK53_REPLAY_ARENA_FIX)'
 	@printf '%s\n' 'BENCH_MAKE_TASK55_STAGE_GEOM=$(NDS_TASK55_STAGE_GEOM)'
+	@printf '%s\n' 'BENCH_MAKE_TASK56_FIGHTER_PRIMITIVES=$(NDS_TASK56_FIGHTER_PRIMITIVES)'
 	@printf '%s\n' 'BENCH_MAKE_TASK36_HW_COMPOSE=$(NDS_TASK36_HW_COMPOSE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK51_STAGE_NATIVE=$(NDS_TASK51_STAGE_NATIVE)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_PROFILE=$(NDS_BATTLE_PROFILE)'

@@ -848,6 +848,93 @@ def check_nonaligned_split_matrix_falsifier():
             "unsafe split matrices unexpectedly match raw composition")
 
 
+def check_task56_primitive_streams(source_root: Path) -> None:
+    """Task 56: validate the generated fighter primitive streams.
+
+    Rebuilds the strip plans for both mode 1 (exact order) and mode 2
+    (within-run reorder) and asserts that every RAW run's strip-expanded
+    triangle multiset equals its source triangle multiset -- i.e. stripify is
+    a pure geometry-preserving reorder/merge. Cross-matrix runs are unchanged
+    (one GL_TRIANGLES group, source order). Also asserts the per-run group/
+    vertex counts are consistent and bounded.
+    """
+    import collections
+    context = native.build_owner_source_context(source_root)
+    vertex = context["vertex"]
+    triangles = context["triangles"]
+    runs = context["runs"]
+    epochs = context["epochs"]
+    owner_roots = context["owner_roots"]
+    (dense_vertices, dense_color_sources, dense_owners, dense_corners,
+     action_dense_first, run_first_corner, run_owners, run_root_bindings,
+     run_binding_sets) = native.build_dense_geometry(
+        vertex, triangles, runs, epochs, owner_roots, source_root)
+    owner_cross_slots = [t[3] for t in context["owner_topologies"]]
+    (_a, packed_corners, _b, _c, _d) = native.build_direct_dense_tables(
+        vertex, runs, dense_vertices, dense_color_sources, dense_corners,
+        action_dense_first, run_first_corner, run_owners, run_root_bindings,
+        run_binding_sets, owner_cross_slots)
+    current_vertices = sum(count * 3 for _, count, _, _ in runs)
+
+    def expand(groups):
+        out = []
+        for gtype, verts in groups:
+            if gtype == 0:  # GL_TRIANGLES
+                require(len(verts) == 3,
+                        "Task 56 GL_TRIANGLES group must have 3 vertices")
+                out.append(frozenset(verts))
+            elif gtype == 2:  # GL_TRIANGLE_STRIP
+                require(len(verts) >= 3,
+                        "Task 56 GL_TRIANGLE_STRIP group must have >= 3 verts")
+                for k in range(len(verts) - 2):
+                    out.append(frozenset(verts[k:k + 3]))
+            else:
+                require(False, f"Task 56 unknown primitive type {gtype}")
+        return out
+
+    for mode in (1, 2):
+        (rgf, rgc, gt, gfv, gvc, pv) = \
+            native.build_fighter_primitive_streams(
+                runs, packed_corners, run_first_corner, mode)
+        # group/vertex bookkeeping consistency
+        require(len(rgf) == len(runs) and len(rgc) == len(runs),
+                f"Task 56 mode {mode}: per-run group bookkeeping length")
+        total_groups = sum(rgc)
+        require(total_groups == len(gt) == len(gfv) == len(gvc),
+                f"Task 56 mode {mode}: group table length consistency")
+        require(len(pv) <= current_vertices,
+                f"Task 56 mode {mode}: strip must not add vertices")
+        # semantic identity per RAW run
+        raw_runs_checked = 0
+        for r in range(len(runs)):
+            _, count, submit_class, _ = runs[r]
+            if count == 0 or submit_class == 1:
+                continue
+            raw_runs_checked += 1
+            src_geo = collections.Counter(
+                frozenset(packed_corners[run_first_corner[r] + t * 3 + k]
+                          & 0x3FF for k in range(3))
+                for t in range(count))
+            tris = native._run_triangles(runs, r, packed_corners,
+                                         run_first_corner)
+            groups = native._stripify_run(tris, mode)
+            exp_geo = collections.Counter(expand(groups))
+            require(src_geo == exp_geo,
+                    f"Task 56 mode {mode} run {r}: strip expansion diverged "
+                    f"from source triangle multiset")
+        require(raw_runs_checked > 0,
+                f"Task 56 mode {mode}: no RAW runs checked")
+    # mode 2 must beat mode 1 (the spec's justification for mode 2)
+    (_m1rgf, _m1rgc, _m1gt, _m1gfv, _m1gvc, m1pv) = \
+        native.build_fighter_primitive_streams(
+            runs, packed_corners, run_first_corner, 1)
+    (_m2rgf, _m2rgc, _m2gt, _m2gfv, _m2gvc, m2pv) = \
+        native.build_fighter_primitive_streams(
+            runs, packed_corners, run_first_corner, 2)
+    require(len(m2pv) < len(m1pv),
+            "Task 56: mode 2 must use fewer vertices than mode 1")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -885,6 +972,7 @@ def main() -> int:
             "combined texcoord patch count changed")
     require(max_words == 4034,
             "maximum staging payload changed")
+    check_task56_primitive_streams(source_root)
     print("combined: triangles=626 corners=1878 textured=381 maxStage=16136B")
     return 0
 

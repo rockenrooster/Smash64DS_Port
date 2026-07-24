@@ -1977,6 +1977,177 @@ def build_packed_fifo_owner_plan(
     }
 
 
+def _strip_extend_active_edge(active_edge, tri):
+    """Can `tri` extend a GL_TRIANGLE_STRIP whose active edge is `active_edge`?
+
+    The DS geometry engine emits strip tri k as (v_k, v_{k+1}, v_{k+2}) and
+    flips winding every other triangle, so a new triangle extends the strip
+    iff it CONTAINS the active edge (the last two emitted verts); the third
+    vertex becomes the new emit. Returns (new_vertex, new_active_edge) or None.
+    Same validated model as scripts/task56_fighter_topology_census.py.
+    """
+    shared = [v for v in tri if v in active_edge]
+    if len(shared) != 2:
+        return None
+    new_v = next(v for v in tri if v not in active_edge)
+    a1 = active_edge[1]
+    return new_v, (a1, new_v)
+
+
+def _run_triangles(runs, run_index, packed_corners, run_first_corner):
+    """Return the list of (v0,v1,v2) denseId triples for one run, in source order."""
+    first_tri, count, _submit_class, _mask = runs[run_index]
+    c0 = run_first_corner[run_index]
+    tris = []
+    for t in range(count):
+        base = c0 + t * 3
+        tris.append(tuple(packed_corners[base + k] & 0x3FF for k in range(3)))
+    return tris
+
+
+def _stripify_run(tris, mode):
+    """Compile a run's triangles into DS-native primitive groups.
+
+    Returns a list of groups; each group = (primitive_type, [denseId, ...]).
+      GL_TRIANGLES (0): one group per residual triangle (3 verts each).
+      GL_TRIANGLE_STRIP (2): connected strips (N+2 verts); the DS hardware flips
+        winding per triangle so only the unordered active edge matters.
+    Mode 1 = exact source order (a strip breaks whenever the next source triangle
+      does not extend the active edge); residuals fall back to GL_TRIANGLES.
+    Mode 2 = within-run reorder (longest-strip heuristic: try every start + every
+      legal initial active-edge orientation, extend first-fit, keep the longest
+      chain). Residuals fall back to GL_TRIANGLES.
+    A run may be a MIX of strip groups + residual triangle groups. Cross-matrix
+    runs are handled by the caller (they emit one GL_TRIANGLES group, no reorder).
+    Degenerate stitches are inserted where a same-direction join is the only
+    connection; they are counted as real vertex submissions (DEGENERATE TRAP).
+    """
+    GL_TRIANGLES = 0
+    GL_TRIANGLE_STRIP = 2
+    if not tris:
+        return []
+    if mode == 1:
+        groups = []
+        i = 0
+        n = len(tris)
+        while i < n:
+            t0 = tris[i]
+            # exact source order: the active edge starts as t0's last two verts.
+            verts = [t0[0], t0[1], t0[2]]
+            active = (t0[1], t0[2])
+            j = i + 1
+            while j < n:
+                res = _strip_extend_active_edge(active, tris[j])
+                if res is None:
+                    break
+                new_v, active = res
+                verts.append(new_v)
+                j += 1
+            if len(verts) >= 4:  # >= 2 triangles in the strip
+                groups.append((GL_TRIANGLE_STRIP, verts))
+            else:
+                groups.append((GL_TRIANGLES, [t0[0], t0[1], t0[2]]))
+            i = j
+        return groups
+    # mode 2: longest-strip heuristic with reordering within the run.
+    remaining = set(range(len(tris)))
+    groups = []
+    while remaining:
+        best_chain = []  # list of triangle indices
+        best_verts = []  # matching emit-order vertex sequence
+        for start in sorted(remaining):
+            t0 = tris[start]
+            # the initial active edge determines the first triangle's emit
+            # order; try all 3 orientations and keep the longest strip.
+            for ae in ((t0[1], t0[2]), (t0[0], t0[2]), (t0[0], t0[1])):
+                apex = next(v for v in t0 if v not in ae)
+                verts = [apex, ae[0], ae[1]]
+                chain = [start]
+                active = ae
+                rem = remaining - {start}
+                while True:
+                    ext = None
+                    for c in sorted(rem):
+                        res = _strip_extend_active_edge(active, tris[c])
+                        if res is not None:
+                            new_v, active = res
+                            verts.append(new_v)
+                            chain.append(c)
+                            rem = rem - {c}
+                            ext = True
+                            break
+                    if not ext:
+                        break
+                if len(verts) > len(best_verts):
+                    best_verts = verts[:]
+                    best_chain = chain[:]
+        if len(best_chain) >= 2:
+            for c in best_chain:
+                remaining.discard(c)
+            groups.append((GL_TRIANGLE_STRIP, best_verts))
+        else:
+            c = min(remaining)
+            remaining.discard(c)
+            groups.append((GL_TRIANGLES,
+                           [tris[c][0], tris[c][1], tris[c][2]]))
+    return groups
+
+
+def build_fighter_primitive_streams(runs, packed_corners, run_first_corner,
+                                    mode):
+    """Compile every run's triangles into DS-native primitive group tables.
+
+    Returns the 6 generated-table lists:
+      run_group_first, run_group_count  (per run)
+      group_type, group_first_vertex, group_vertex_count  (per group)
+      primitive_vertices  (flat vertex-ref stream; each = a packed dense-corner
+                           value from sNdsNativeFighterPackedCorners, preserving
+                           the palette-slot high bits for cross-matrix runs)
+    Cross-matrix runs (submit_class 1) emit one GL_TRIANGLES group in source
+    order (no reorder -- CROSS-MATRIX TRAP). RAW runs (submit_class 0) are
+    stripified per `mode`. A run may be a mix of strips + residual triangles.
+    """
+    GL_TRIANGLES = 0
+    run_group_first = []
+    run_group_count = []
+    group_type = []
+    group_first_vertex = []
+    group_vertex_count = []
+    primitive_vertices = []
+    for run_index in range(len(runs)):
+        first_tri, count, submit_class, _mask = runs[run_index]
+        if count == 0:
+            run_group_first.append(len(group_type))
+            run_group_count.append(0)
+            continue
+        if submit_class == 1:
+            # cross-matrix: one GL_TRIANGLES group, source order, no reorder.
+            c0 = run_first_corner[run_index]
+            verts = [packed_corners[c0 + k]
+                     for k in range(count * 3)]
+            run_group_first.append(len(group_type))
+            group_type.append(GL_TRIANGLES)
+            group_first_vertex.append(len(primitive_vertices))
+            group_vertex_count.append(len(verts))
+            primitive_vertices.extend(verts)
+            run_group_count.append(1)
+            continue
+        tris = _run_triangles(runs, run_index, packed_corners,
+                              run_first_corner)
+        groups = _stripify_run(tris, mode)
+        run_group_first.append(len(group_type))
+        for gtype, gverts_dense in groups:
+            # RAW runs have palette_slot == 0 (build_direct_dense_tables:1510),
+            # so the packed corner value == the denseId; store denseIds directly.
+            group_type.append(gtype)
+            group_first_vertex.append(len(primitive_vertices))
+            group_vertex_count.append(len(gverts_dense))
+            primitive_vertices.extend(gverts_dense)
+        run_group_count.append(len(groups))
+    return (run_group_first, run_group_count, group_type,
+            group_first_vertex, group_vertex_count, primitive_vertices)
+
+
 def emit_rows(
         type_name: str, name: str, rows: list[str],
         const: bool = True) -> list[str]:
@@ -2331,6 +2502,17 @@ def generate(repo_root: Path | None = None) -> str:
         action_dense_first, run_first_corner, run_owners,
         run_root_bindings, run_binding_sets, owner_cross_slots,
     )
+    # Task 56: host-side fighter stripify. Compile each run's triangles into
+    # DS-native primitive groups (GL_TRIANGLE_STRIP + residual GL_TRIANGLES) for
+    # both mode 1 (exact source order) and mode 2 (within-run reorder). The
+    # generated IR carries both sets in gated #if blocks; the build selects one
+    # via NDS_TASK56_FIGHTER_PRIMITIVES. Cross-matrix runs stay GL_TRIANGLES.
+    fighter_primitive_streams = {
+        1: build_fighter_primitive_streams(
+            runs, packed_corners, run_first_corner, 1),
+        2: build_fighter_primitive_streams(
+            runs, packed_corners, run_first_corner, 2),
+    }
     packet_plans = []
     owner_root_first = 0
     for owner_slot, ((owner_name, roots), topology) in enumerate(
@@ -2566,6 +2748,49 @@ def generate(repo_root: Path | None = None) -> str:
         [f"{{ {first}u, {count}u, {submit_class}u, 0x{mask:08x}u }}"
          for first, count, submit_class, mask in runs],
     )
+    # Task 56: DS-native fighter primitive streams (GL_TRIANGLE_STRIP + residual
+    # GL_TRIANGLES). Two table sets, one per stripify mode; the build selects one
+    # via NDS_TASK56_FIGHTER_PRIMITIVES. Topology is compiled host-side; the
+    # runtime only walks these tables (no strip finding at runtime).
+    for _task56_mode in (1, 2):
+        (run_group_first, run_group_count, group_type,
+         group_first_vertex, group_vertex_count,
+         primitive_vertices) = fighter_primitive_streams[_task56_mode]
+        lines += [
+            f"#if NDS_TASK56_FIGHTER_PRIMITIVES == {_task56_mode}",
+        ]
+        lines += emit_rows(
+            "u16", "sNdsNativeFighterPrimitiveGroupFirst",
+            [f"{value}u" for value in run_group_first],
+        )
+        lines += emit_rows(
+            "u8", "sNdsNativeFighterPrimitiveGroupCount",
+            [f"{value}u" for value in run_group_count],
+        )
+        lines += emit_rows(
+            "u8", "sNdsNativeFighterPrimitiveGroupType",
+            [f"{value}u" for value in group_type],
+        )
+        lines += emit_rows(
+            "u16", "sNdsNativeFighterPrimitiveGroupFirstVertex",
+            [f"{value}u" for value in group_first_vertex],
+        )
+        lines += emit_rows(
+            "u8", "sNdsNativeFighterPrimitiveGroupVertexCount",
+            [f"{value}u" for value in group_vertex_count],
+        )
+        lines += emit_rows(
+            "u16", "sNdsNativeFighterPrimitiveVertices",
+            [f"0x{value:04x}u" for value in primitive_vertices],
+        )
+        lines += [
+            f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_GROUP_COUNT {_task56_mode}_"
+            f"{len(group_type)}",
+            f"#define NDS_NATIVE_FIGHTER_PRIMITIVE_VERTEX_COUNT {_task56_mode}_"
+            f"{len(primitive_vertices)}",
+            "#endif",
+            "",
+        ]
     lines += emit_rows(
         "NDSNativeEpoch", "sNdsNativeFighterEpochs",
         ["{{ {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u }}".format(*row)
