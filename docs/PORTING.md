@@ -21807,3 +21807,22 @@ same 2996 words with less prep; the GX stall moves outside the stage-owner windo
 KEEP-candidate, default-off, pending owner visual + device A/B for the ALL-level pacing
 claim. Unblocks the Task 52 DMA follow-up on a now-live replay loop. Full evidence:
 `artifacts/performance/2026-07-24_task53-replay-arena-fix-e2.md`.
+
+**Task 54 (2026-07-24) — Stage replay DMA + CPU overlap: STOP at E0.** Branch
+`codex/task54-stage-dma-overlap`, parent `482eb57`. Chartered to reclaim Task
+53's OTHR backpressure by DMA-ing the stage FIFO feed and overlapping the
+drain with CPU work. E0 (measure-before-build) found the OTHR is unavoidable:
+the DS geometry command pipe (`GFX_FIFO`, one register, one geometry engine)
+is shared by stage and fighters in arrival order; `glFlush` is non-blocking and
+no explicit geometry-wait exists anywhere in the frame loop (frame-wide grep
+empty), so backpressure is purely implicit pipe-full store stalls. The
+decisive evidence is the Task 53 A/B already in tree: removing 187,648 ticks
+of stage CPU work (generic-emit → replay) left STG+OTHR ~constant
+(732,992 → 720,064) and ALL flat — the stage cost is GX-throughput-bound on
+its fixed 2,996 words, invariant to the issuer. Mode 2's only overlap
+candidate (fighter non-GX prep) is bounded and the stage drain has no slack
+to absorb it; a deferred-barrier reorder across the owner boundary into a
+shared FIFO carries a corruption risk the differ cannot referee. STOP, no DMA
+admitted, no flag added, published ROM unchanged. Recommended next lever:
+geometry reduction (VTX_10/stripify/cull) — cuts the GX floor itself.
+Full analysis: `artifacts/performance/2026-07-24_task54-stage-dma-e0.md`.

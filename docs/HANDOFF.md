@@ -278,3 +278,43 @@ would target. Full evidence:
 
 **Published ROM stays `1818AA77…`** — flag default is 0, no override
 in the published or tick-HUD target blocks (`Makefile:209`, `:280`).
+
+---
+
+## Task 54 — Stage replay DMA + CPU overlap: STOP at E0 (2026-07-24)
+
+Branch `codex/task54-stage-dma-overlap`, parent `482eb57` (Task 53 shipped,
+replay live, default-on). **STOP at E0 — no DMA implementation admitted.**
+Recommended next lever: geometry reduction.
+
+**The decisive hardware facts (libnds, read-only):** `GFX_FIFO`
+(`0x04000400`) is one register into one pipe feeding one geometry engine;
+stage and fighters share it in strict arrival order. `glFlush` is
+non-blocking (`videoGL.h:724`). A frame-wide grep for `GFX_STATUS`/`GFX_BUSY`/
+any FIFO-empty poll across `src/` is **empty** — no explicit geometry-wait
+exists; backpressure is purely implicit (a CPU store to a full pipe stalls
+inline until one slot drains).
+
+**The decisive measurement (Task 53 A/B, already in tree, 128 samples,
+deterministic — B run1 = B run2 byte-identical):** removing 187,648 ticks of
+stage CPU work (generic-emit → replay) moved **STG+OTHR 732,992 → 720,064**
+(~constant, −1.8%) and left **ALL flat** (1,680,256 → 1,680,128). The stage's
+frame cost is dominated by the geometry engine draining its fixed 2,996 words
+— GX-throughput-bound, invariant to who issues the stores.
+
+**Why mode 2 cannot reclaim it:** the only overlappable work is fighter non-GX
+prep during the stage drain, but the drain has no slack (it is the ~720K
+bottleneck, fully utilized) and the fighter's own GX writes append behind it
+in the same pipe. Max ALL win bounded to a few percent, against a
+deferred-barrier reorder crossing the stage→fighter owner boundary into a
+shared FIFO (trap #1) that the differ cannot referee (trap #4). Adverse
+cost/benefit → STOP.
+
+**Next lever (recommended, not pursued here):** geometry reduction cuts the
+~720K GX floor itself — packed `VTX_10`/`VTX_XY` vertex formats, stripify the
+rigid static topology, cull off-screen bindings. This is the lever DMA
+structurally cannot reach.
+
+Published ROM unchanged (Task 53's shipped ROM). No `NDS_TASK54_STAGE_DMA_MODE`
+runtime path added. Full analysis:
+`artifacts/performance/2026-07-24_task54-stage-dma-e0.md`. Never push.

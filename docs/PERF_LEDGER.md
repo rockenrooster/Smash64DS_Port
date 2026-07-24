@@ -6673,3 +6673,57 @@ redistribution is exactly the GX-backpressure cost a DMA deferred-barrier would 
 Branch `codex/task53-replay-arena-fix`; published ROM stays `1818AA77…`; not overridden
 in any target block. Owner visual + device A/B pending before ship. Full evidence:
 `artifacts/performance/2026-07-24_task53-replay-arena-fix-e2.md`.
+
+*(Task 53 subsequently shipped default-on with owner visual approval — published
+ROM `4D795B4E…`, merge `482eb57`. The DMA follow-up is Task 54 below.)*
+
+## Task 54 — Stage replay DMA + CPU overlap: STOP at E0 (no overlap window)
+
+**Outcome: STOP at E0 — no DMA implementation admitted.** Chartered to reclaim
+Task 53's OTHR backpressure by DMA-ing the stage FIFO feed and overlapping the
+geometry-engine drain with non-GX CPU work (deferred-barrier mode 2).
+
+E0 found the backpressure is unavoidable and the overlap window is not material.
+Branch `codex/task54-stage-dma-overlap`, parent `482eb57`.
+
+**Decisive hardware facts (libnds, read-only):** `GFX_FIFO` (`0x04000400`) is
+one register into one command pipe feeding one geometry engine — stage and
+fighters share it in strict arrival order. `glFlush` is non-blocking
+(`videoGL.h:724`: `GFX_FLUSH = mode;`). A frame-wide grep for `GFX_STATUS` /
+`GFX_BUSY` / any FIFO-empty poll across `src/` is **empty** — there is no
+explicit geometry-wait anywhere in the frame loop; backpressure is purely
+implicit (a CPU store to a full pipe stalls inline until one slot drains, not
+until the frame completes).
+
+**Decisive measurement (Task 53 A/B, already in tree, 128 samples,
+deterministic — B run1 = B run2 byte-identical):**
+
+| sum / bucket (P50, ticks) | generic-emit (A) | replay (B = mode 0) | Δ |
+|---|---|---|---|
+| STG+OTHR | **732,992** | **720,064** | **−12,928 (~constant)** |
+| ALL | 1,680,256 | 1,680,128 | −128 (flat) |
+
+Removing 187,648 ticks of stage CPU work (the generic→replay switch) moved
+STG+OTHR only ~1.8% and left ALL flat. **The stage's frame cost is dominated by
+the geometry engine draining its fixed 2,996 words — GX-throughput-bound,
+invariant to who issues the stores.** This is the direct measurement of the
+premise DMA rests on, and the premise does not hold: substituting a DMA issuer
+for a CPU store loop into the same pipe cannot shorten the drain.
+
+**Why mode 2 cannot reclaim it:** the only overlappable work is the fighter's
+non-GX prep (`ndsFighterDisplayContractCapture`, counter
+`m2_contract_capture_ticks`) during the stage drain, but the drain has no slack
+(it is the ~720K bottleneck, fully utilized) and the fighter's own GX writes
+append behind the stage drain in the same pipe — they cannot run during it.
+Max ALL win bounded to a few percent, against a deferred-barrier reorder
+crossing the stage→fighter owner boundary into a shared FIFO (trap #1: two
+writers to `GFX_FIFO` = corruption) that the differ cannot referee (trap #4).
+
+**Recommended next lever (not pursued here):** geometry reduction cuts the
+~720K GX floor itself — packed `VTX_10` / `VTX_XY` vertex formats (fewer words
+per vertex), stripify the rigid static topology, cull off-screen bindings.
+This is the lever DMA structurally cannot reach.
+
+Published ROM unchanged (Task 53's shipped `4D795B4E…`). No
+`NDS_TASK54_STAGE_DMA_MODE` flag added, no DMA channel selected. Full analysis:
+`artifacts/performance/2026-07-24_task54-stage-dma-e0.md`.
