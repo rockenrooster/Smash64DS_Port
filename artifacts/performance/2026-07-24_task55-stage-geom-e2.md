@@ -134,3 +134,13 @@ stays default-off; the published ROM is unchanged (`4D795B4E`).
 **STOP.** Branch `codex/task55-stage-geom-reduction` holds E0+E1+E2. No merge
 (STOP outcome). The implementation is correct and retained on the branch as a
 checkpoint. Published ROM unchanged. Never push.
+
+---
+
+## Owner visual A/B follow-up (2026-07-24, post-STOP)
+
+The Task 49 differ (Tier-2) "0.0 px" verdict was measured on a **single static-frame** capture; it did NOT referee state carryover between frames. The owner (visual oracle per AGENTS.md) reports that mode 0 vs mode 1 ROMs visually differ under normal-battle play, with **some surfaces pulsating in color** in mode 1. This contradicts the abstract losslessness claim and confirms the elision interacts with frame-boundary held state in ways a single-frame differ could not see. Likely mechanism: held `GFX_COLOR` / `GFX_TEX_COORD` register content carries across frame boundaries, and a subsequent frame's first emit of an elided-then-same value sees a write-count-timing-sensitive downstream that diverges from baseline.
+
+**Disposition unchanged — STOP**, on two grounds now: (1) perf gate fails (ALL flat; floor is the 606 VERTEX16 transforms); (2) owner A/B finds an animation-frame visual delta the differ did not catch.
+
+Negative-evidence note: "lossless by construction" applies to summed-state at one drained moment only. Future elision-class levers must sample multiple frames and compare held register state at start-of-frame, not rely on a single static-frame byte-equivalence.

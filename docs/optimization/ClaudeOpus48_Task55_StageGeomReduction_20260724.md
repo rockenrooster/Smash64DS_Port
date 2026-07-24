@@ -50,6 +50,32 @@ reduction is where the floor lives.
    is — E0 measures it. **No precision loss** — this is the safe lever if the
    topology cooperates.
 
+## Where the reduction lives (CodeGraph orientation — verify in E0)
+
+The vertex format and triangle-list emission are governed by an **offline
+generator + companion-checker toolchain**, not (only) the runtime C hot path.
+Start here, not in `glVertex3v16`:
+
+- `scripts/generate_nds_native_owners.py:1587` `pack_fifo_vertex16(x,y,z)` hard-codes
+  the **2-word VERTEX16** encoding. VTX_10 = a `pack_fifo_vertex10` sibling here.
+- `:360` `FIFO_PARAMETER_COUNTS` = the shared opcode→param-count table
+  (`FIFO_VERTEX16=0x23`→2). Add `FIFO_VERTEX10=0x24`→1 here; the **companion
+  checker (`check_nds_native_owner_packet.py` / `check_nds_native_stage.py`)
+  decodes every generated payload before it can reach the ARM build** (`:344`) —
+  it must learn the new opcode or it will (correctly) reject the packet.
+- `:1781` `FIFO_BEGIN` is emitted as **`GL_TRIANGLE`** (lists). Stripify
+  restructures the per-corner loop (`:1806-1843`) to `GL_TRIANGLE_STRIP`.
+- `:1939-1948` **hard census asserts** (`expected_triangles = 320/306`, corners,
+  store/restore) reject any geometry change until deliberately updated — a safety
+  net; update them *with cited justification*, never silence them.
+- `generate_nds_native_stage.py:3185` `stage_vertex_coordinate_shift` already fits
+  x/y/z to ±2048 (12-bit) — the precision headroom E0 sizes is partly precomputed.
+
+**Note:** `build_packed_fifo_owner_plan` above is the **fighter** (mario/fox) path;
+the **stage** is `generate_nds_native_stage.py` (`GeneratedStageProgram`,
+`DenseVertex`, `StageRun`). E0 step 0 resolves which locus actually produces the
+shipping stage's 2,996 words.
+
 ## Fidelity posture (READ THIS — it changes what the differ means here)
 
 This is a **render-side** change. Per the standing render-fidelity doctrine
@@ -74,6 +100,15 @@ oracle**; gameplay stays bit-exact):
 
 The discipline that saved Tasks 51/52/54: prove the win exists before building it.
 
+0. **Locate the stage emit locus (do this first — it decides E1's file).** Is the
+   shipping stage's 2,996-word stream **generator-baked** (a `GeneratedStageProgram`
+   instruction stream emitted offline, like the fighter packet) or **Task-36
+   runtime-captured** (`sNdsRendererTask36ReplayOwner.words[]` filled from the live
+   `glVertex3v16`/`GFX_VERTEX16` emit at `nds_renderer.c:20254`+)? Trace where the
+   words the replay loop blasts originate. If generator-baked → E1 edits the Python
+   generator + companion checker + census asserts. If runtime-captured → E1 changes
+   the C emit format (`glVertex3v16`→packed, `glBegin(GL_TRIANGLE)`→strip) upstream
+   of capture. Report the locus with `file:line` before proceeding.
 1. **Break the 2,996 words down by GX command class** for the 8 rigid layer0
    bindings (reuse the Task 49 differ / Task 51 class histogram, or dump
    `owner->words[]` and classify). Report the exact count of: vertex
@@ -101,10 +136,17 @@ The discipline that saved Tasks 51/52/54: prove the win exists before building i
 
 ### E1 — implement the chosen reduction behind `NDS_TASK55_STAGE_GEOM`
 
-- Apply the reduction **at capture** (where `owner->words[]` is built once), so the
-  replay loop is unchanged and no per-frame cost is added; the buffer is just
+- Apply the reduction at the E0-identified locus so the **replay loop is unchanged**
+  and no per-frame cost is added; the emitted `owner->words[]` buffer is just
   shorter. Verify the one-time `DC_FlushRange` at capture still covers the (now
   smaller) buffer.
+  - **If generator-baked:** add `pack_fifo_vertex10` + `FIFO_VERTEX10=0x24` to
+    `FIFO_PARAMETER_COUNTS`, teach the companion checker to decode it, and update
+    the census asserts (`expected_triangles`/corners) with cited justification —
+    the checker + asserts are the correctness net, do not bypass them.
+  - **If runtime-captured:** change the C emit upstream of capture
+    (`glVertex3v16`→packed vertex, `glBegin(GL_TRIANGLE)`→`GL_TRIANGLE_STRIP`),
+    behind the flag, leaving mode 0 byte-identical.
 - Mode 1 = the E0-chosen lever. If E0 finds **both** safe and additive, they may
   compose, but land them as separate commits so the A/B can attribute each.
 - Whole-owner, deterministic; no per-binding runtime branching in the hot path.
@@ -158,7 +200,13 @@ The discipline that saved Tasks 51/52/54: prove the win exists before building i
   target or `=1` is silently ignored (Task 53 hit exactly this — the flag never
   reached the C compiler). Prove the built ROM took mode 1 (preproc/objdump/boot
   marker) before trusting numbers.
-- **One writer** on `src/nds/nds_renderer.c`.
+- **Generator/checker must move together.** A new vertex opcode or strip topology
+  that the generator emits but the companion checker can't decode = a (correct)
+  rejected packet; a census-assert left stale = a build failure. Update generator +
+  checker + asserts in one commit. This is the toolchain protecting you, not
+  fighting you — never silence a checker to make a packet pass.
+- **One writer** on `src/nds/nds_renderer.c` (and, if generator-baked, on the
+  `generate_nds_native_*.py` / `check_nds_native_*.py` pair).
 - **Capacity:** a *smaller* buffer is fine, but confirm the capture path's
   bounds/asserts don't assume the old word count.
 
@@ -284,3 +332,35 @@ itself (ceiling 84 verts / 5.6% from E0). A targeted follow-up could prototype
 GL_TRIANGLE_STRIP for the binding-3 run (best candidate: 66 verts / 22 tris in
 one primitive) and measure whether the vertex-count cut actually drops ALL.
 Carries topology-reorder correctness surface; ceiling is small.
+
+---
+
+## Owner visual A/B follow-up (2026-07-24, post-STOP)
+
+The prior "lossless by construction / Tier-2 0.0 px" claim was scoped to a
+**single static-frame** Task 49 differ capture (frame 438, replay buffer
+drained pre-emptively for byte-comparison). It demonstrated summed-state
+equivalence at one drained moment, not motion correctness through the
+capture window.
+
+The owner (the visual oracle per AGENTS.md) subsequently observed mode 0 vs
+mode 1 in normal-battle play and reported that **some surfaces are
+pulsating in color** in mode 1. This is a meaningful fidelity finding —
+the elision is **not actually lossless across animation frames**, and the
+static-frame differ did not referee it. Likely mechanism: `GFX_COLOR` /
+`GFX_TEX_COORD` register state carries across frame boundaries, and a
+downstream consumer for which write-count timing matters (vs summed value)
+sees a frame-rate-sensitive delta when intermediate writes are elided.
+
+**Disposition unchanged — STOP.** This is one more reason the elision does
+not ship (in addition to the perf-gate fail already documented): the owner
+A/B found a real visual delta. Flag stays default-off; published ROM stays
+byte-identical to Task 53's `4D795B4E…`. Implementation is retained on the
+branch as a checkpoint with negative-evidence value for future Tasks.
+
+**Negative-evidence note for future elision candidates:** "lossless by
+construction" is a *necessary-but-not-sufficient* claim. Cross-frame
+held-state and any frame-rate-sensitive downstream must be verified, not
+assumed. A robust differ for future state-write-elision candidates should
+sample multiple frames and compare held register state at start-of-frame,
+not only the drained word stream at one moment.

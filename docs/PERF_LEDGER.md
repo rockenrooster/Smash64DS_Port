@@ -6798,3 +6798,17 @@ small. VTX_10 remains infeasible for stage-scale coordinates.
 flag `NDS_TASK55_STAGE_GEOM` default-off; published ROM unchanged
 (`4D795B4E`). Full evidence:
 `artifacts/performance/2026-07-24_task55-stage-geom-e2.md`.
+
+### Owner visual A/B follow-up (2026-07-24)
+
+Owner (visual oracle per AGENTS.md) reports mode 0 vs mode 1 ROMs visually
+differ under normal-battle play with **some surfaces pulsating in color** in
+mode 1. The earlier "lossless by construction / Tier-2 0.0 px" claim was
+scoped to a single static-frame capture and did not referee animation. Held
+`GFX_COLOR` / `GFX_TEX_COORD` register state carries across frame
+boundaries, and a frame whose first vertex's same-color emit was elided sees
+a write-count-timing-sensitive downstream diverging from baseline. STOP
+stands on TWO grounds now: perf gate fail AND owner A/B visual delta.
+Negative-evidence note: future state-write elision candidates must sample
+multiple frames and compare held register state at start-of-frame, not rely
+on single-frame byte-equivalence.

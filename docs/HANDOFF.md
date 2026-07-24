@@ -358,3 +358,15 @@ STOP. No ship, no merge; flag default-off; published ROM unchanged
 (`4D795B4E`). Full evidence:
 `artifacts/performance/2026-07-24_task55-stage-geom-e2.md`; visual A/B in
 `artifacts/visibility/task55/`. Never push.
+
+## Owner visual A/B follow-up (2026-07-24, post-STOP)
+
+Owner (visual oracle per AGENTS.md) reports mode 0 vs mode 1 ROMs visually
+differ under normal-battle play with **some surfaces pulsating in color** in
+mode 1. The preceding E2 evidence's "lossless by construction / Tier-2 0.0
+px" claim was scoped to a single static-frame capture and did NOT referee
+state carryover between frames. Held `GFX_COLOR` / `GFX_TEX_COORD` register
+content carries across frame boundaries, and a downstream consumer for
+which write-count timing matters (vs summed value) sees a frame-rate-
+sensitive delta when intermediate writes are elided. STOP remains correct
+(perf gate fails AND now visual differs); published ROM unchanged.
