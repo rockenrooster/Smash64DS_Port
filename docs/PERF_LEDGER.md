@@ -6812,3 +6812,34 @@ stands on TWO grounds now: perf gate fail AND owner A/B visual delta.
 Negative-evidence note: future state-write elision candidates must sample
 multiple frames and compare held register state at start-of-frame, not rely
 on single-frame byte-equivalence.
+
+---
+
+## Task 56 — Fighter stripify (2026-07-24): KILL
+
+| tag | date | subject |
+|-----|------|---------|
+| T56 | 2026-07-24 | DS-native fighter primitive strips (mode 1: 9.9%; mode 2: 47% vertex reduction) |
+
+**Verdict: KILL.** The 47% fighter-vertex reduction from within-run strip
+reorder (mode 2) does not move ALL. FTR is dominated by non-vertex work
+(matrix arithmetic, lighting, dense-vertex preparation, hierarchy traversal)
+rather than geometry-engine transform — the same structural finding as
+Tasks 53/55. Published ROM unchanged (default-off flag).
+
+**A/B results** (melonDS fork, tick-HUD, frame 600, 111–128 samples):
+
+| bucket | mode 0 (control) | mode 2 | Δ |
+|--------|-----------------|--------|---|
+| **ALL** | 1,680,000 | 1,679,936 | **−64 (flat)** |
+| FTR | 575,360 | 581,184 | +5,824 (+1.0%) |
+| STG | 382,720 | 385,408 | +2,688 |
+| SRC | 320,256 | 325,184 | +4,928 |
+| OTHR | 275,008 | 276,736 | +1,728 |
+
+VBlank: both 3:~580 / 4:~93 / 5+:15 / max:18.
+
+**Device A/B not scheduled** — KILL verdict does not require it.
+
+Full census: `docs/ClaudeOpus48_Task56_FighterNativeStrips_20260724.md` (from
+E0); branch `codex/task56-fighter-stripify` (6 commits).

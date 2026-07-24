@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-24 — all logged to master: Task 49 (`NDS_BATTLE_PROFILE` axis + GX equivalence differ) MERGED; Task 51 (Dream Land stage-native) KILLED — stage cost is vertex-emit, not matrix; Task 50 (hardware divider/sqrt) STOP at E0; Task 52 (Dream Land stage GX DMA replay) STOP at E0 — Task 36 replay structurally disabled in shipping; **Task 53 (re-activate Task 36 replay via arena-guard relaxation) KEEP-candidate** — replay re-activates, STG −33% (−187,648) but ALL flat (saved CPU redistributes to OTHR; VBlank tail up), bit-exact differ, default-off behind `NDS_TASK53_REPLAY_ARENA_FIX`, unblocks the Task 52 DMA follow-up. Task 50/51/52 shipped no code; Task 53 ships the flag default-off (not overridden in any target block); published ROM `1818AA77…` unchanged. Section statuses below are point-in-time and pre-date these merges.
+Updated: 2026-07-24 — all logged to master: Task 49 (`NDS_BATTLE_PROFILE` axis + GX equivalence differ) MERGED; Task 51 (Dream Land stage-native) KILLED — stage cost is vertex-emit, not matrix; Task 50 (hardware divider/sqrt) STOP at E0; Task 52 (Dream Land stage GX DMA replay) STOP at E0 — Task 36 replay structurally disabled in shipping; **Task 53 (re-activate Task 36 replay via arena-guard relaxation) KEEP-candidate** — replay re-activates, STG −33% (−187,648) but ALL flat; Task 56 (fighter stripify) **KILL** — 47% vertex reduction, ALL flat because FTR is dominated by non-vertex work. Task 50/51/52 shipped no code; Task 53 ships the flag default-off; Task 56 ships default-off; published ROM `1818AA77…` unchanged. Section statuses below are point-in-time and pre-date these merges.
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
@@ -237,6 +237,30 @@ spec + results:
 `docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`;
 PERF_LEDGER entry appended. Branch is the checkpoint; published ROM stays
 `1818AA77…`. Never push.
+
+## Task 56 — Mario/Fox DS-native geometry stripify: KILL (branch `codex/task56-fighter-stripify`)
+
+**Outcome: KILL, does not merge.** The 47% fighter-vertex reduction from
+within-run strip reorder (mode 2, `NDS_TASK56_FIGHTER_PRIMITIVES=2`) does
+not measurably change the frame cost — ALL P50 1,679,936 vs baseline
+1,680,000 (flat). FTR P50 581,184 vs 575,360 (+1.0%, within noise).
+Mode 1 (exact-order strips, 9.9% reduction) similarly flat.
+
+The E0 offline topology census correctly predicted 47% / 882-fewer VERTEX16
+submissions, but FTR is dominated by non-vertex work (matrix arithmetic,
+lighting evaluations, dense vertex preparation, hierarchy traversal), not
+geometry-engine transform. This is the same "ALL flat" pattern as Tasks 53/55.
+
+Implementation: host-side stripifier in `generate_nds_native_owners.py`
+(active-edge-tracked DS winding model, longest-strip heuristic for mode 2).
+Runtime emit in `nds_renderer.c` (cold non-ITCM function, keeps batch open
+across groups to avoid per-group state-setup overhead). Semantic primitive
+differ passes (expanded strip == source triangles, 0 mismatches). The
+pre-existing PowerShell 127u parse bug in `check-gbi-decode-fixtures.ps1`
+was also fixed.
+
+Branch `codex/task56-fighter-stripify` (6 commits) is the checkpoint.
+No runtime flag overrides published or tick-HUD blocks (default `?= 0`).
 
 ## Task 53 — Task 36 replay arena-guard relaxation: KEEP-candidate, STG win / ALL flat
 
