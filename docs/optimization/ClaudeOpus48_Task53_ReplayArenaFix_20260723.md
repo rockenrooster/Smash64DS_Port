@@ -253,6 +253,22 @@ overlap.
 
 Full E2 evidence: `artifacts/performance/2026-07-24_task53-replay-arena-fix-e2.md`.
 
-Do not override `NDS_TASK53_REPLAY_ARENA_FIX := 1` in the published or tick-HUD target
-blocks. Doing so changes shipping behavior before the owner approves it and device
-confirms.
+### Ship decision (2026-07-24) — **SHIPPED, default-on, merged to master**
+
+**Owner visual approval (2026-07-24):** the owner reviewed the synchronized A/B
+screenshots in `artifacts/visibility/task53/`
+(`task53-A-flagoff-genericemit.png`, `task53-B-flagon-replay.png`) against the flag-on
+ship-on ROM and approved: "it looks good." The owner accepted the flat-ALL /
+device-unconfirmed tradeoff (STG −33%, VBlank tail up, ALL P50 flat) and directed
+default-on + merge + push.
+
+- `NDS_TASK53_REPLAY_ARENA_FIX := 1` now in **both** the published and tick-HUD target
+  blocks (flag-on-one → flag-on-both parity; tick-HUD parity check passes, 44 flags 0
+  drift).
+- Published ROM `1818AA77…` → **`4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090`**
+  (11,428,864 bytes, unchanged size — replay is a code-path change, not an asset change).
+  README:69 and DECOMP_PIN.txt:22 identity pins updated in the same branch.
+- Merged `--no-ff` to master; pushed to GitHub origin/master (owner per-event authorization
+  overriding the standing no-agent-push rule, 2026-07-24).
+- The flag stays one-line revertable (`override := 0`) if a device A/B later rejects the
+  pacing gain. The OTHR/GX-backpressure finding and the Task 52 DMA follow-up remain open.

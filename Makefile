@@ -222,6 +222,17 @@ override NDS_TICK_HUD := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Task 53: re-activate Task 36 rigid-stage replay. Relaxes the arena admission
+# guard (nds_renderer.c:4195/:4247) from the legacy exact-0x150000 check to
+# "admit any usable arena >= 0x130000" -- the robust downward-stepping allocator
+# (src/port/diagnostics.c:7368) cannot secure the full 0x150000 on the DS heap,
+# so replay had been silently DISABLED since the allocator was made robust.
+# E2 (2026-07-24): replay bit-exact with the generic emit (Task 49 differ
+# ZERO_DEVIATION, 2860/2860 words); STG P50 -187,648 (-33%), VBlank tail up
+# (3-VBlank share 426->474, 4->80, 5+->12), ALL P50 flat (saved CPU
+# redistributes to OTHR). Owner visual approved 2026-07-24. Default-on here;
+# the flag is one-line revertable if a device A/B rejects the pacing gain.
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
 # Task 49: the battle-pipeline selector. Profile 1 = today's shipping path
 # (the correctness oracle). Kept explicit here so the published ROM cannot
 # silently slip to the not-yet-implemented profile 0.
@@ -281,6 +292,9 @@ endif
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Task 53: matches the published block -- replay must be active here too or
+# every tick-HUD STG bucket reads a different binary than the shipping ROM.
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
 # Task 49: battle-pipeline selector. Standing rule: any flag on the published
 # block is on this block too -- a tick-HUD/proof reading a different binary
 # silently corrupts every measurement.
