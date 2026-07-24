@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-23 — all logged to master: Task 49 (`NDS_BATTLE_PROFILE` axis + GX equivalence differ) MERGED; Task 51 (Dream Land stage-native) KILLED — stage cost is vertex-emit, not matrix; Task 50 (hardware divider/sqrt) STOP at E0. Task 50/51 shipped no code (default-off); published ROM `1818AA77…` unchanged. Section statuses below are point-in-time and pre-date this merge.
+Updated: 2026-07-24 — all logged to master: Task 49 (`NDS_BATTLE_PROFILE` axis + GX equivalence differ) MERGED; Task 51 (Dream Land stage-native) KILLED — stage cost is vertex-emit, not matrix; Task 50 (hardware divider/sqrt) STOP at E0; Task 52 (Dream Land stage GX DMA replay) STOP at E0 — Task 36 replay structurally disabled in shipping; **Task 53 (re-activate Task 36 replay via arena-guard relaxation) KEEP-candidate** — replay re-activates, STG −33% (−187,648) but ALL flat (saved CPU redistributes to OTHR; VBlank tail up), bit-exact differ, default-off behind `NDS_TASK53_REPLAY_ARENA_FIX`, unblocks the Task 52 DMA follow-up. Task 50/51/52 shipped no code; Task 53 ships the flag default-off (not overridden in any target block); published ROM `1818AA77…` unchanged. Section statuses below are point-in-time and pre-date these merges.
 
 `P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
 surface and next packet.
@@ -199,3 +199,82 @@ PERF_LEDGER entry appended.
 
 Do **not** flip `NDS_BATTLE_PROFILE=0` or remove its `$(error)` — fighters are
 not native until Task 52. Never push.
+
+## Task 52 — Dream Land stage GX DMA replay: STOP at E0 (branch `codex/task52-stage-gxdma-replay`)
+
+**Outcome: STOP at E0, does not merge.** The FIFO-replay loop this task was
+chartered to DMA-replace **does not run** in the shipping profile-0 program.
+
+E0 path-activity proof (the spec's first gate) probed the always-compiled-in
+internal struct `sNdsRendererTask36ReplayOwner` (gated only on
+`NDS_TASK36_HW_COMPOSE==2`; the `gNds*` replay counters are profile-1-only) at
+`ndsBattlePlayableFrameCompleteMarker`, frames 438–445, on both the profile-0
+tick-HUD ROM and the published `1818AA77…` ROM: `state=DISABLED`,
+`frame_replay=0`, `word_count=0` in both.
+
+Root cause: `ndsRendererTask36ReplayBeginFrame` (src/nds/nds_renderer.c:4195)
+admits replay only when `gNdsTaskmanArenaChosenSize == 0x150000u`, but the robust
+downward-stepping arena allocator (src/port/diagnostics.c:7368-7381) cannot
+secure the full `0x150000` on the DS heap — it steps down to `0x14C000`
+(tickhud) / `0x14E000` (published), so the exact-size admission guard disables
+replay. `rigid_binding_mask` matches (`0x00000381c00fffff`); the arena guard is
+what fires. The 8 rigid layer0 bindings draw through the generic per-word emit
+loop (nds_renderer.c:21241-21375), not any replay FIFO. No DMA runtime path was
+added. DMA ownership census: ARM9 DMA channels 1/2 unused throughout the tree
+(channel 0 live during stage draw for texture staging; channel 3 mid-frame
+fills) — channel 1 is the provably-free choice, retained as recoverable evidence.
+
+**This STOP reframes the campaign's STG premise and corrects Task 51's
+attribution:** Task 36 replay is dead code in the shipping ROM, so STG 569K is
+owned by the generic emit path, not "Task 36 replay" (which Task 51 cited).
+Decisive question for the owner: is the `== 0x150000` arena guard a latent bug
+(replay was meant to ship — fix: admit when the buffer fits the *actual* chosen
+arena, a Task-36-correctness fix, not a DMA task) or is the replay path
+intentionally retired?
+
+Full evidence: `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`;
+spec + results:
+`docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`;
+PERF_LEDGER entry appended. Branch is the checkpoint; published ROM stays
+`1818AA77…`. Never push.
+
+## Task 53 — Task 36 replay arena-guard relaxation: KEEP-candidate, STG win / ALL flat
+
+Branch `codex/task53-replay-arena-fix`. Re-activates the Task 36 rigid-stage replay path
+that Task 52 E0 found structurally disabled in shipping (the arena admission guard at
+`nds_renderer.c:4195`/`:4247` demanded exactly `0x150000`; the robust downward-stepping
+allocator at `src/port/diagnostics.c:7368` secures only `0x14C000`). Default-off flag
+`NDS_TASK53_REPLAY_ARENA_FIX`; relaxed guard admits any arena ≥ `0x130000`; per-frame
+`rigid_binding_mask`/config memcmp/texture-validity envelope left intact; staleness
+detector `gNdsRendererTask36ReplayArenaStaleCount` catches a future re-tightening.
+
+**E1 build-fixes (commit `f67e571`):** the prior session's flag never reached the C —
+config-header emit was missing, the TASK36 cross-check validation was mis-ordered (before
+target overrides), and the staleness counter was declared inside the profile-1 block (use
+site isn't profile-gated). All fixed and verified by building. Default-off still
+`1818AA77…`.
+
+**E2 results (2026-07-24):**
+- **Probe:** replay now admits — `state=READY`, `frame_replay=1`, `word_count=3916`,
+  arena unchanged at `0x14C000`/4 fails.
+- **Correctness (Task 49 differ, STAGE owner, flag-ON vs flag-OFF):** Tier 1 **0
+  divergences** (2860/2860 words bit-identical); Tier 2 **0.0 px** → ZERO_DEVIATION.
+- **STG A/B (128 samples, deterministic, B run twice byte-identical):** STG P50
+  569,280 → 381,632 (**−187,648, −33%**); but OTHR 163,712 → 338,432 (+174,720), so
+  **ALL P50 is flat (1,680,256 → 1,680,128, −128)**. The saved stage CPU redistributes to
+  OTHR (most likely GX-backpressure redistribution). **VBlank tail improves:** 3-VBlank
+  share 426→474, 4-VBlank 122→80, 5+ 17→12.
+- **Memory:** unchanged (arena `0x14C000`/4 fails identical off/on; static BSS replay
+  buffer; +4-byte staleness counter only).
+
+**Verdict: KEEP-candidate, default-off.** Real STG-owner win + pacing-tail improvement,
+but ALL is flat pending a device A/B to confirm the bucket-edge pacing gain (activating
+replay changes timing/memory-access — device-only class). Not overridden in any published
+or tick-HUD target block; published ROM stays `1818AA77…`. **Unblocks Task 52 DMA** on a
+now-live replay loop — the OTHR redistribution is the GX-backpressure cost DMA overlap
+would target. Full evidence:
+`artifacts/performance/2026-07-24_task53-replay-arena-fix-e2.md`; visual A/B in
+`artifacts/visibility/task53/` (owner is the oracle). Never push.
+
+**Published ROM stays `1818AA77…`** — flag default is 0, no override
+in the published or tick-HUD target blocks (`Makefile:209`, `:280`).

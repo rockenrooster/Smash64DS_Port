@@ -52,6 +52,16 @@ NDS_TASK34_STAGE_STREAM_CENSUS ?= 0
 # diffing. Lab-only; built via command line, never in a shipping target.
 NDS_TASK49_GX_DIFFER ?= 0
 NDS_TASK36_HW_COMPOSE ?= 0
+
+# Task 53: default-off re-activation guard for the Task 36 rigid-stage
+# replay path. The robust downward-stepping arena allocator at
+# src/port/diagnostics.c:7368 secures anywhere from the 0x130000 floor
+# (after stepping down from NDS_TASKMAN_ARENA_SIZE) up to the full
+# arena; the legacy exact-arena guard at src/nds/nds_renderer.c:4223
+# was a stale "pristine environment only" check. Setting this flag to 1
+# relaxes the guard; the published and tick-HUD target blocks don't
+# override it (default 0 keeps the published ROM 1818AA77-sh equivalent).
+NDS_TASK53_REPLAY_ARENA_FIX ?= 0
 # Task 51 native stage path. When on, the STAGE owner emits the 42 baked
 # constant world matrices via MTX_MULT4x3 under a once-loaded view (instead of
 # CPU-composing projection x view x model per binding per frame). Generalizes
@@ -178,6 +188,11 @@ ifneq ($(NDS_TASK9_FLOAT_PHASE2),1)
 $(error NDS_TASK16_FLOAT_ADDSUB=1 requires NDS_TASK9_FLOAT_PHASE2=1)
 endif
 endif
+
+ifneq ($(filter $(NDS_TASK53_REPLAY_ARENA_FIX),0 1),)
+else
+$(error NDS_TASK53_REPLAY_ARENA_FIX must be 0 or 1)
+endif
 # NDS_BATTLE_PROFILE must be exactly 0, 1, or 2. Anything else is a typo or a
 # stale command-line; fail loudly rather than fall through to profile 1.
 ifneq ($(NDS_BATTLE_PROFILE),$(filter $(NDS_BATTLE_PROFILE),0 1 2))
@@ -207,6 +222,17 @@ override NDS_TICK_HUD := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Task 53: re-activate Task 36 rigid-stage replay. Relaxes the arena admission
+# guard (nds_renderer.c:4195/:4247) from the legacy exact-0x150000 check to
+# "admit any usable arena >= 0x130000" -- the robust downward-stepping allocator
+# (src/port/diagnostics.c:7368) cannot secure the full 0x150000 on the DS heap,
+# so replay had been silently DISABLED since the allocator was made robust.
+# E2 (2026-07-24): replay bit-exact with the generic emit (Task 49 differ
+# ZERO_DEVIATION, 2860/2860 words); STG P50 -187,648 (-33%), VBlank tail up
+# (3-VBlank share 426->474, 4->80, 5+->12), ALL P50 flat (saved CPU
+# redistributes to OTHR). Owner visual approved 2026-07-24. Default-on here;
+# the flag is one-line revertable if a device A/B rejects the pacing gain.
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
 # Task 49: the battle-pipeline selector. Profile 1 = today's shipping path
 # (the correctness oracle). Kept explicit here so the published ROM cannot
 # silently slip to the not-yet-implemented profile 0.
@@ -266,6 +292,9 @@ endif
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Task 53: matches the published block -- replay must be active here too or
+# every tick-HUD STG bucket reads a different binary than the shipping ROM.
+override NDS_TASK53_REPLAY_ARENA_FIX := 1
 # Task 49: battle-pipeline selector. Standing rule: any flag on the published
 # block is on this block too -- a tick-HUD/proof reading a different binary
 # silently corrupts every measurement.
@@ -533,6 +562,16 @@ endif
 ifeq ($(NDS_TASK44_STAGE_STEADY),1)
 ifeq ($(NDS_TASK36_HW_COMPOSE),0)
 $(error NDS_TASK44_STAGE_STEADY=1 requires NDS_TASK36_HW_COMPOSE)
+endif
+endif
+# Same post-override placement as the Task 44 check above: the tick-HUD target
+# overrides NDS_TASK36_HW_COMPOSE := 2 in its block (line ~285), so this cross-
+# check must run after the overrides or a command-line
+# NDS_TASK53_REPLAY_ARENA_FIX=1 against a TASK36-forcing target is wrongly
+# rejected (TASK36 still reads its ?= 0 default at the top of the file).
+ifeq ($(NDS_TASK53_REPLAY_ARENA_FIX),1)
+ifneq ($(NDS_TASK36_HW_COMPOSE),2)
+$(error NDS_TASK53_REPLAY_ARENA_FIX=1 requires NDS_TASK36_HW_COMPOSE=2)
 endif
 endif
 NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP ?= 0
@@ -1411,6 +1450,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK49_GX_DIFFER $(NDS_TASK49_GX_DIFFER)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
+		echo '#define NDS_TASK53_REPLAY_ARENA_FIX $(NDS_TASK53_REPLAY_ARENA_FIX)'; \
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \

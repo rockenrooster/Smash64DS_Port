@@ -66,7 +66,7 @@ The reference toolchain produces:
 
 - File: `smash64ds-battle-playable-hwtri.nds`
 - Size: 11,428,864 bytes
-- SHA-256: `1818AA775DCFFD52C82B35ED3D4FA6C6D02FCE232E9EE70D9B3F1DA3FDF54207`
+- SHA-256: `4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090`
 
 The build script prints the versions it found and clearly reports whether the
 output matches this identity.

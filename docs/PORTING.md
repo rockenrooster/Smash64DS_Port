@@ -21698,3 +21698,112 @@ ready to judge Tasks 51/52. Published ROM byte-identical `1818AA77...`.
   `ftDisplayLightsDrawReflect` (0.0634%, 2 sites).
 - Full table: `artifacts/performance/2026-07-23_task50-divide-census.md`.
 
+
+### Task 52 — Dream Land stage GX DMA replay: STOP at E0 (2026-07-23)
+
+E0 path-activity proof stopped the task before any DMA work. Task 36's
+FIFO-replay loop — the loop this task was chartered to replace with
+`DMA_FIFO` transport — does not run in the shipping profile-0 program.
+
+- Probed the always-compiled-in `sNdsRendererTask36ReplayOwner` struct (gated
+  only on `NDS_TASK36_HW_COMPOSE==2`; the `gNds*` replay counters are
+  profile-1-only) at `ndsBattlePlayableFrameCompleteMarker`, frames 438–445,
+  on both the profile-0 tick-HUD ROM and the published `1818AA77…` ROM.
+  Result: `state=DISABLED`, `frame_replay=0`, `word_count=0` in both.
+- `ndsRendererTask36ReplayBeginFrame` (src/nds/nds_renderer.c:4195) admits
+  replay only when `gNdsTaskmanArenaChosenSize == 0x150000u`. The robust
+  downward-stepping arena allocator (src/port/diagnostics.c:7368-7381)
+  cannot secure the full `0x150000` on the DS heap — it steps down to
+  `0x14C000` (tickhud) / `0x14E000` (published) and the exact-size guard
+  disables replay. `rigid_binding_mask` matches the constant; the arena
+  guard is what fires.
+- The 8 rigid layer0 bindings draw through the generic per-word emit loop
+  (src/nds/nds_renderer.c:21241-21375), not any replay FIFO. There is no
+  replay loop to DMA-replace; removable CPU transport cost = 0 ticks.
+
+No DMA runtime path added. DMA ownership census completed: ARM9 DMA channels
+1 and 2 are unused throughout the tree (no src/ call site, ISR, ELF symbol, or
+reservation); channel 0 is live during stage draw (texture staging +
+wallpaper overlay at nds_renderer.c:8507/8526), channel 3 for mid-frame fills
+(platform.c). The VBlank IRQ (src/nds/nds_platform.c:293) does no DMA, so no
+async-in-flight collision exists. Channel 1 is the provably-free choice —
+retained as recoverable evidence should the replay path be revived.
+
+This STOP corrects Task 51's attribution: the campaign's STG cost is owned by
+the generic emit path, not Task 36 replay (which is disabled). The decisive
+question for the owner is whether the `== 0x150000` arena guard is a latent
+bug (replay was meant to ship) or whether the replay path is intentionally
+retired. Either way, this task ships no code; published ROM stays `1818AA77…`.
+Full evidence: `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`;
+spec: `docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`.
+
+## 2026-07-23: Task 53 — Task 36 replay arena-guard relaxation
+
+Branch `codex/task53-replay-arena-fix` (parent `codex/task52-stage-gxdma-replay`,
+SHA `20b12c6`).
+
+DS backend change. Re-activates the Task 36 rigid-stage replay by relaxing the
+stale exact-arena admission guard at `src/nds/nds_renderer.c:4195` (BeginFrame)
+and `:4243` (StartCapture), behind a new Makefile flag `NDS_TASK53_REPLAY_ARENA_FIX`
+that defaults to 0 (no shipping behavior change; published and tick-HUD target
+blocks keep the flag at 0).
+
+The captured BSS replay buffer at `sNdsRendererTask36ReplayOwner.words[4608]`
+was *always* static, never arena-allocated; the legacy `0x150000 + zero-fails`
+guard was a stale "pristine environment only" check left behind when the robust
+downward-stepping arena allocator at `src/port/diagnostics.c:7368` was made
+resilient. The per-frame correctness envelope (`rigid_binding_mask@:4187`,
+`config memcmp@:4217`, `texture validity@:4139`) is unchanged.
+
+Key invariants:
+
+- The begin/capture guards swap to a single `NDS_TASK36_REPLAY_ARENA_BLOCKED()`
+  macro that preprocessor-resolves to either the legacy condition or the relaxed
+  `arena < 0x130000u` floor.
+- Both guards *must* relax together — capture-only-while-replay-admission-disabled
+  would feed nothing to the replay site.
+- A profile-1-only `gNdsRendererTask36ReplayArenaStaleCount` increments each
+  frame the legacy guard would have DISABLED but the relaxed guard admits,
+  so a future re-tightening is visible to the verifier.
+
+E2 (correctness + measurement) deferred — see
+`docs/HANDOFF.md#task-53-task-36-replay-arena-guard-relaxation-e0e1-landed-e2-deferred`
+for the probe/differ/sampler commands waiting on a turned-up session.
+
+E0 findings: `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`
+(re-recorded under Task 53 ownership for the same replay path).
+
+### Task 53 E2 — measured (2026-07-24): KEEP-candidate, STG win / ALL flat
+
+E2 executed on `codex/task53-replay-arena-fix`. Three load-bearing gaps in the E0/E1 flag
+wiring were found and fixed first (commit `f67e571`): (1) the config-header emit was
+missing — the C reads every flag via `-include nds_build_config.h` (Makefile:598) but
+`NDS_TASK53_REPLAY_ARENA_FIX` was never echoed into it, so `#if NDS_TASK53...` always saw
+0 and a command-line `=1` built a TASK53=0 ROM (the override trap); (2) the TASK36
+cross-check validation ran at Makefile:192, before the tick-HUD target block's
+`override NDS_TASK36_HW_COMPOSE := 2` applied, wrongly rejecting a command-line TASK53=1
+against the TASK36-forcing target — moved beside the Task 44 cross-check (Makefile:554)
+after all overrides; (3) the staleness counter was declared inside the
+`#if NDS_RENDERER_PROFILE_LEVEL == 1` block (nds_renderer.c:2041) but its use site is
+gated only on TASK53 (no profile gate), so the profile-0 tick-HUD build failed
+'undeclared' — moved to file scope outside profile-1 (mirrors the header extern).
+
+After the fixes (all verified by building): flag-on tick-HUD ROM carries
+`gNdsRendererTask36ReplayArenaStaleCount` (@ 0x02194f80) and `ndsRendererTask36ReplayRun`
+in the ELF; config reads `#define NDS_TASK53_REPLAY_ARENA_FIX 1`. Default-off published
+ROM still reproduces `1818AA77…` byte-for-byte.
+
+**Probe:** replay now admits — `state=READY`, `frame_replay=1`, `word_count=3916`, arena
+unchanged at `0x14C000`/4 fails. **Differ (STAGE owner, flag-ON vs flag-OFF):** Tier 1
+0 divergences (2860/2860 words bit-identical); Tier 2 0.0 px → ZERO_DEVIATION. **STG A/B**
+(128 samples, deterministic): STG P50 569,280 → 381,632 (−187,648, −33%); OTHR 163,712 →
+338,432 (+174,720); ALL P50 flat (1,680,256 → 1,680,128). VBlank tail improves (3-VBlank
+share 426→474, 4 122→80, 5+ 17→12). **Memory:** unchanged (arena identical off/on; static
+BSS replay buffer; +4-byte staleness counter only).
+
+The STG win is real (replay skips the per-triangle geometry walk) but the saved CPU
+redistributes to OTHR — most likely GX-backpressure redistribution (replay submits the
+same 2996 words with less prep; the GX stall moves outside the stage-owner window).
+KEEP-candidate, default-off, pending owner visual + device A/B for the ALL-level pacing
+claim. Unblocks the Task 52 DMA follow-up on a now-live replay loop. Full evidence:
+`artifacts/performance/2026-07-24_task53-replay-arena-fix-e2.md`.
