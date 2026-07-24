@@ -32,7 +32,7 @@ function Add-TextureLookupFixtureEntry {
         [int]$EntryIndex
     )
     $slotValue = $EntryIndex + 1
-    $slot = [int]([uint32]$Entries[$EntryIndex].Hash -band 127u)
+    $slot = [int]([uint32]$Entries[$EntryIndex].Hash -band 127)
     for ($probe = 0; $probe -lt 128; $probe++) {
         $value = [int]$Table[$slot]
         if ($value -eq $slotValue) { return }
@@ -50,7 +50,7 @@ function Remove-TextureLookupFixtureEntry {
         [int]$EntryIndex
     )
     $slotValue = $EntryIndex + 1
-    $slot = [int]([uint32]$Entries[$EntryIndex].Hash -band 127u)
+    $slot = [int]([uint32]$Entries[$EntryIndex].Hash -band 127)
     for ($probe = 0; $probe -lt 128; $probe++) {
         $value = [int]$Table[$slot]
         if ($value -eq 0) { return }
@@ -75,7 +75,7 @@ function Find-TextureLookupFixtureEntry {
         [uint32]$Hash,
         [string]$Key
     )
-    $slot = [int]($Hash -band 127u)
+    $slot = [int]($Hash -band 127)
     for ($probe = 0; $probe -lt 128; $probe++) {
         $value = [int]$Table[$slot]
         if ($value -eq 0) { return -1 }
