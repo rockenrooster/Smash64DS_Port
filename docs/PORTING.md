@@ -21826,3 +21826,30 @@ shared FIFO carries a corruption risk the differ cannot referee. STOP, no DMA
 admitted, no flag added, published ROM unchanged. Recommended next lever:
 geometry reduction (VTX_10/stripify/cull) — cuts the GX floor itself.
 Full analysis: `artifacts/performance/2026-07-24_task54-stage-dma-e0.md`.
+
+**Task 55 (2026-07-24) — Stage geometry reduction (state-write elision): STOP.**
+Branch `codex/task55-stage-geom-reduction`, parent `a463975`. Chartered to cut
+the ~720K GX floor (Task 54's recommended lever). E0 census of the 2,996-word
+stage stream found the spec's two named levers weak: VTX_10 INFEASIBLE (model-
+space coords reach ±30,272; s10 range is ±511 — 91% would clip); stripify 5.6%
+(topology-limited, 42/148 adjacent tri-pairs share an edge). The real find was
+a third lever: `GFX_COLOR`/`GFX_TEX_COORD` are persistent geometry-engine state,
+re-written unconditionally per vertex by `ndsRendererNativeStageEmitNoZVertex`
+(nds_renderer.c:20448) — 618 raw state words redundant (COLOR 556 + TEX_COORD
+62), lossless to elide. Implemented behind `NDS_TASK55_STAGE_GEOM` (commit
+`c6a6228`): elision in `ndsRendererTask36ReplayRecord` skips a COLOR/TEX_COORD
+word equal to the last recorded. Override-trap avoided, default-off ROM =
+`4D795B4E` byte-for-byte, runtime replay buffer 3,916→3,561 words (−9.1%),
+state=READY. **But E2 A/B (128 samples) showed ALL flat (+64):** STG −4,224,
+OTHR +7,616, STG+OTHR ~constant — the same invariant Task 53 hit. The
+decisive reconciliation: Task 53 removed stage CPU prep (−187K STG), Task 55
+removed redundant state writes (−355 FIFO words), BOTH left ALL flat. Neither
+touched the 606 `FIFO_VERTEX16` commands. `GFX_COLOR`/`GFX_TEX_COORD` update a
+state register but do not trigger a vertex transform. **The ~720K floor is the
+geometry engine transforming 606 vertices + per-triangle setup — invariant to
+everything except fewer VERTEX16 commands.** This completes Task 54's "what is
+the floor" question. STOP, no ship/merge, flag default-off, published ROM
+unchanged. Only remaining untested lever: stripify (reduces VERTEX16 count;
+ceiling 5.6%) — a follow-up could prototype it for the binding-3 run (66 verts /
+22 tris, best candidate). Full evidence:
+`artifacts/performance/2026-07-24_task55-stage-geom-e2.md`.
