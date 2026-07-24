@@ -338,10 +338,10 @@ Carries topology-reorder correctness surface; ceiling is small.
 ## Owner visual A/B follow-up (2026-07-24, post-STOP)
 
 The prior "lossless by construction / Tier-2 0.0 px" claim was scoped to a
-**single static-frame** Task 49 differ capture (frame 438, replay buffer
-drained pre-emptively for byte-comparison). It demonstrated summed-state
-equivalence at one drained moment, not motion correctness through the
-capture window.
+**single static-frame** Task 49 differ capture, run on the captured replay
+stream at frame 438 and byte-comparing `words[]` against the same-frame
+mode-1 capture. It demonstrated summed-state equivalence at one drained
+moment, not motion correctness through the capture window.
 
 The owner (the visual oracle per AGENTS.md) subsequently observed mode 0 vs
 mode 1 in normal-battle play and reported that **some surfaces are
