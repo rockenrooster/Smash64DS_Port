@@ -1,0 +1,14 @@
+{
+  "candidate": "r_keep6_c55",
+  "chosen_policy": "VERTEX16+axis_reuse",
+  "chosen_policy_iou": 0.7517318233841335,
+  "opcode_counts": {
+    "VERTEX10": 124,
+    "VERTEX16": 0,
+    "VERTEX_XY": 0,
+    "VERTEX_XZ": 1,
+    "VERTEX_YZ": 2
+  },
+  "task": "Task 61 \u2014 encoded vertex stream",
+  "v10_rebasis_scale": 50.86497064579256
+}

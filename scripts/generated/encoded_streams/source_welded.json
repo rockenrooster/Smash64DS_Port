@@ -1,0 +1,14 @@
+{
+  "candidate": "source_welded",
+  "chosen_policy": "VERTEX10+axis_reuse",
+  "chosen_policy_iou": 0.9968664667174001,
+  "opcode_counts": {
+    "VERTEX10": 368,
+    "VERTEX16": 0,
+    "VERTEX_XY": 0,
+    "VERTEX_XZ": 3,
+    "VERTEX_YZ": 6
+  },
+  "task": "Task 61 \u2014 encoded vertex stream",
+  "v10_rebasis_scale": 50.86497064579256
+}
