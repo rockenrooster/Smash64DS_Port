@@ -2046,6 +2046,12 @@ volatile u32 gNdsRendererM3SegmentCount;
 volatile u32 gNdsRendererM3SegmentMask;
 volatile u32 gNdsRendererM3PostArmFailureCount;
 volatile u32 gNdsRendererM3DObjCount;
+#if NDS_DREAMLAND_DS_MESH
+/* Task 62 engagement counters (shared HUD row). */
+volatile u32 gNdsDreamLandDSSubmittedVertices;
+volatile u32 gNdsDreamLandDSGroups;
+volatile u32 gNdsDreamLandDSWords;
+#endif
 volatile u32 gNdsRendererM3BindingCount;
 volatile u32 gNdsRendererM3RunCount;
 volatile u32 gNdsRendererM3TriangleCount;
@@ -3716,6 +3722,7 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
                "native direct policy ABI must stay compact");
 #include "nds_native_fighter_owner.generated.inc"
 #include "nds_native_stage_owner.generated.inc"
+#include "dreamland_ds_mesh.generated.inc"
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_FIGHTER_HIERARCHY_JOINT_MAX 27u
@@ -20821,6 +20828,168 @@ ndsRendererNativeStageEmitNoZTriangle(
     return 1u;
 }
 
+#if NDS_DREAMLAND_DS_MESH
+/* Task 62: generated Dream Land DS-native static 3D mesh. Draws candidate c120
+ * directly from the baked blob (scripts/generate_dreamland_ds_mesh.py), bypassing
+ * the segment0 program entirely. The blob's vertices are pre-quantized to s10.3
+ * (VERTEX10) in a rebased coordinate space; a compensating 4x3 (scale + origin)
+ * restores the exact world shape. Default-off keeps the shipping path byte-
+ * identical; this compiles only under NDS_DREAMLAND_DS_MESH.
+ *
+ * This first integration emits a flat white material (no textures) as a geometry
+ * proof-of-concept — the owner's visual A/B (Commit 5 KEEP gate) confirms the
+ * silhouette renders before textures/materials are layered in. The matrix setup
+ * mirrors Task 51's EnsureWorld pattern: load projection + camera_modelview, push
+ * the rebasis as MTX_MULT4x3, emit, pop. */
+static void ndsRendererDreamLandDrawStatic3D(
+    const NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 *camera_modelview,
+    NDSRendererStats *stats)
+{
+    m4x4 proj_hardware;
+    m4x4 view_hardware;
+    m4x3 rebasis;
+    u32 group_index;
+    /* Engagement counters (AGENTS rule: a feature that silently degrades may
+     * not ship enabled; surface on the shared HUD row). */
+    u32 submitted_vertices = 0u;
+    u32 gx_words = 0u;
+
+    /* Column-major 4x4 from the row-major s20.12 input (mirrors how the
+     * segment0 path loads projection/view). */
+    proj_hardware.m[0] = projection->m[0][0];
+    proj_hardware.m[1] = projection->m[1][0];
+    proj_hardware.m[2] = projection->m[2][0];
+    proj_hardware.m[3] = projection->m[3][0];
+    proj_hardware.m[4] = projection->m[0][1];
+    proj_hardware.m[5] = projection->m[1][1];
+    proj_hardware.m[6] = projection->m[2][1];
+    proj_hardware.m[7] = projection->m[3][1];
+    proj_hardware.m[8] = projection->m[0][2];
+    proj_hardware.m[9] = projection->m[1][2];
+    proj_hardware.m[10] = projection->m[2][2];
+    proj_hardware.m[11] = projection->m[3][2];
+    proj_hardware.m[12] = 0;
+    proj_hardware.m[13] = 0;
+    proj_hardware.m[14] = 0;
+    proj_hardware.m[15] = projection->m[3][3];
+    view_hardware.m[0] = camera_modelview->m[0][0];
+    view_hardware.m[1] = camera_modelview->m[1][0];
+    view_hardware.m[2] = camera_modelview->m[2][0];
+    view_hardware.m[3] = camera_modelview->m[3][0];
+    view_hardware.m[4] = camera_modelview->m[0][1];
+    view_hardware.m[5] = camera_modelview->m[1][1];
+    view_hardware.m[6] = camera_modelview->m[2][1];
+    view_hardware.m[7] = camera_modelview->m[3][1];
+    view_hardware.m[8] = camera_modelview->m[0][2];
+    view_hardware.m[9] = camera_modelview->m[1][2];
+    view_hardware.m[10] = camera_modelview->m[2][2];
+    view_hardware.m[11] = camera_modelview->m[3][2];
+    view_hardware.m[12] = 0;
+    view_hardware.m[13] = 0;
+    view_hardware.m[14] = 0;
+    view_hardware.m[15] = camera_modelview->m[3][3];
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadMatrix4x4(&proj_hardware);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrix4x4(&view_hardware);
+
+    /* VERTEX10 rebasis: world = rebased * scale + origin. The blob's vertices
+     * are in (world - origin)/scale s10.3 space; this 4x3 inverts that so the
+     * hardware reconstructs world space. Scale on the diagonal, origin in col3. */
+    {
+        s32 scale = NDS_DREAMLAND_DS_REBASIS_SCALE_S20P12;
+        s32 ox = NDS_DREAMLAND_DS_REBASIS_ORIGIN_X_S20P12;
+        s32 oy = NDS_DREAMLAND_DS_REBASIS_ORIGIN_Y_S20P12;
+        s32 oz = NDS_DREAMLAND_DS_REBASIS_ORIGIN_Z_S20P12;
+        rebasis.m[0] = scale;  rebasis.m[1] = 0;      rebasis.m[2] = 0;
+        rebasis.m[3] = 0;      rebasis.m[4] = scale;  rebasis.m[5] = 0;
+        rebasis.m[6] = 0;      rebasis.m[7] = 0;      rebasis.m[8] = scale;
+        rebasis.m[9] = ox;     rebasis.m[10] = oy;    rebasis.m[11] = oz;
+    }
+    glPushMatrix();
+    glMultMatrix4x3(&rebasis);
+
+    /* Flat white material for the geometry proof. Per-group texture/material
+     * binding is layered in once the silhouette renders correctly. */
+    GFX_COLOR = 0x7FFFu;
+
+    for (group_index = 0u; group_index < NDS_DREAMLAND_DS_GROUP_COUNT;
+         group_index++)
+    {
+        u32 prim = sNdsDreamLandDSGroupPrim[group_index];
+        u32 first = sNdsDreamLandDSGroupFirstVertex[group_index];
+        u32 count = sNdsDreamLandDSGroupVertexCount[group_index];
+        u32 v;
+
+        GFX_BEGIN = prim;
+        gx_words += 1u;  /* BEGIN */
+        for (v = 0u; v < count; v++)
+        {
+            u32 idx = first + v;
+            u8 opcode = sNdsDreamLandDSVertexOpcode[idx];
+            s16 vx = sNdsDreamLandDSVertexX[idx];
+            s16 vy = sNdsDreamLandDSVertexY[idx];
+            s16 vz = sNdsDreamLandDSVertexZ[idx];
+
+            /* COLOR word per vertex (flat white). */
+            GFX_COLOR = 0x7FFFu;
+            gx_words += 1u;
+
+            if (opcode == NDS_DREAMLAND_DS_OP_VERTEX10)
+            {
+                /* VERTEX10: one word, packed s10.3 XYZ (10 bits each, padded). */
+                u32 packed = ((((u32)vx) & 0x3FFu)) |
+                             ((((u32)vy) & 0x3FFu) << 10) |
+                             ((((u32)vz) & 0x3FFu) << 20);
+                GFX_VERTEX10 = packed;
+                gx_words += 1u;
+            }
+            else if (opcode == NDS_DREAMLAND_DS_OP_VERTEX_XZ)
+            {
+                GFX_VERTEX_XY = ((u32)vx & 0xFFFFu) |
+                                (((u32)vz & 0xFFFFu) << 16);
+                gx_words += 1u;
+            }
+            else if (opcode == NDS_DREAMLAND_DS_OP_VERTEX_XY)
+            {
+                GFX_VERTEX_XY = ((u32)vx & 0xFFFFu) |
+                                (((u32)vy & 0xFFFFu) << 16);
+                gx_words += 1u;
+            }
+            else if (opcode == NDS_DREAMLAND_DS_OP_VERTEX_YZ)
+            {
+                GFX_VERTEX_YZ = ((u32)vy & 0xFFFFu) |
+                                (((u32)vz & 0xFFFFu) << 16);
+                gx_words += 1u;
+            }
+            else  /* VERTEX16 fallback: two words (XY, Z). */
+            {
+                GFX_VERTEX16 = ((u32)vx & 0xFFFFu) |
+                               (((u32)vy & 0xFFFFu) << 16);
+                GFX_VERTEX16 = (u32)vz & 0xFFFFu;
+                gx_words += 2u;
+            }
+            submitted_vertices++;
+        }
+        /* GFX_END is a GBATEK dummy (no effect, bloats the list); the next
+         * GFX_BEGIN implicitly closes this group, matching the existing
+         * renderer's convention. */
+    }
+
+    glPopMatrix(1);
+
+    if (stats != NULL)
+    {
+        stats->triangle_count += NDS_DREAMLAND_DS_VERTEX_COUNT;
+    }
+    gNdsDreamLandDSSubmittedVertices = submitted_vertices;
+    gNdsDreamLandDSGroups = NDS_DREAMLAND_DS_GROUP_COUNT;
+    gNdsDreamLandDSWords = gx_words;
+}
+#endif /* NDS_DREAMLAND_DS_MESH */
+
 s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats)
@@ -20925,6 +21094,19 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
     ndsRendererTask36ReplayBeginFrame(frame);
+#endif
+
+#if NDS_DREAMLAND_DS_MESH
+    /* Task 62: when the generated DS mesh is enabled, draw the baked c120 blob
+     * directly and skip the segment0 program entirely. The draw function does
+     * its own projection/view/rebasis matrix setup and clean pop, so the
+     * modelview stack is balanced on return. Dynamic actors (Whispy/flowers)
+     * still draw via their own owners after this returns. */
+    ndsRendererDreamLandDrawStatic3D(frame->projection,
+                                     frame->camera_modelview, stats);
+    accepted = TRUE;
+    sNdsNativeStageOwnerExecution.active = TRUE;
+    goto done;
 #endif
 
     for (segment_index = 0u;
