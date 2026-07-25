@@ -20824,17 +20824,13 @@ ndsRendererNativeStageEmitNoZTriangle(
 
 #if NDS_DREAMLAND_DS_MESH
 /* Task 62: generated Dream Land DS-native static 3D mesh. Draws candidate c120
- * directly from the baked blob (scripts/generate_dreamland_ds_mesh.py), bypassing
- * the segment0 program entirely. The blob's vertices are pre-quantized to s10.3
- * (VERTEX10) in a rebased coordinate space; a compensating 4x3 (scale + origin)
- * restores the exact world shape. Default-off keeps the shipping path byte-
- * identical; this compiles only under NDS_DREAMLAND_DS_MESH.
+ * directly from the baked blob (scripts/generate_dreamland_ds_mesh.py),
+ * bypassing the segment0 program entirely. Default-off keeps the shipping path
+ * byte-identical; this compiles only under NDS_DREAMLAND_DS_MESH.
  *
  * This first integration emits a flat white material (no textures) as a geometry
  * proof-of-concept — the owner's visual A/B (Commit 5 KEEP gate) confirms the
- * silhouette renders before textures/materials are layered in. The matrix setup
- * mirrors Task 51's EnsureWorld pattern: load projection + camera_modelview, push
- * the rebasis as MTX_MULT4x3, emit, pop. */
+ * silhouette renders before textures/materials are layered in. */
 
 /* Task 62 engagement counters (shared HUD row). Gated only by the feature
  * flag, not by PROFILE_LEVEL, so the counter survives in the published
@@ -20842,18 +20838,15 @@ ndsRendererNativeStageEmitNoZTriangle(
 volatile u32 gNdsDreamLandDSSubmittedVertices;
 volatile u32 gNdsDreamLandDSGroups;
 volatile u32 gNdsDreamLandDSWords;
+static const NDSRendererMatrix20p12 *sNdsDreamLandDSProjection;
+static const NDSRendererMatrix20p12 *sNdsDreamLandDSCameraModelview;
 
 /* Draws the generated Dream Land DS-native static mesh directly from the baked
- * blob, bypassing the segment0 program. Vertex coords are stored as world/256
- * (the segment0 world-unit convention); the runtime emits each as VERTEX16
- * (coord << 4) and pushes a compensating world matrix (scale 256 + origin).
- *
- * Matrix conventions (verified against the working paths):
- *   - projection/modelview load via the row-major ndsRendererCopyMtx20p12ToM4x4
- *     + glLoadMatrix4x4 helper (the same pair the rest of the renderer uses);
- *   - the compensating world matrix is pushed as a column-major m4x3 via
- *     glMultMatrix4x3, mirroring ndsRendererNativeStageTask51EnsureWorld (col c,
- *     row r -> m[c*3 + r], translation in column 3 = m[9..11]).
+ * blob, bypassing the segment0 program. Vertex coords are baked as source-world
+ * / 2 and emitted with the same coord << 4 conversion as segment0. A uniform
+ * scale-2 matrix restores their size. The shared hierarchy-camera helper
+ * divides camera translation by 256, so both sides of the affine use the
+ * renderer's source-world / 256 hardware convention once.
  *
  * First integration emits flat white (no textures); the owner's visual A/B
  * confirms the silhouette before textures/materials are layered in. */
@@ -20871,35 +20864,30 @@ static void ndsRendererDreamLandDrawStatic3D(
     u32 submitted_vertices = 0u;
     u32 gx_words = 0u;
 
-    /* Row-major 4x4 load via the shared helper (identical to the segment0
-     * ndsRendererLoadHardwareMatrixPair path). */
+    ndsRendererHardwareEndBatch();
     ndsRendererCopyMtx20p12ToM4x4(projection, &proj_hardware);
-    ndsRendererCopyMtx20p12ToM4x4(camera_modelview, &view_hardware);
+    ndsRendererNativeBuildHierarchyHardwareAffine(
+        camera_modelview, &view_hardware);
     ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
     glLoadMatrix4x4(&proj_hardware);
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     glLoadMatrix4x4(&view_hardware);
-
-    /* Compensating world matrix: world = stored_coord * 256 + origin. Stored
-     * coords are world/256, so this 4x3 restores exact world positions. Column-
-     * major layout (translation in column 3 = m[9..11]), matching Task 51. */
-    {
-        s32 scale = NDS_DREAMLAND_DS_MATRIX_SCALE_S20P12;
-        s32 ox = NDS_DREAMLAND_DS_MATRIX_ORIGIN_X_S20P12;
-        s32 oy = NDS_DREAMLAND_DS_MATRIX_ORIGIN_Y_S20P12;
-        s32 oz = NDS_DREAMLAND_DS_MATRIX_ORIGIN_Z_S20P12;
-        /* col0 = [scale, 0, 0], col1 = [0, scale, 0], col2 = [0, 0, scale],
-         * col3 = [ox, oy, oz] (translation). */
-        world.m[0] = scale;  world.m[1] = 0;       world.m[2] = 0;
-        world.m[3] = 0;      world.m[4] = scale;   world.m[5] = 0;
-        world.m[6] = 0;      world.m[7] = 0;       world.m[8] = scale;
-        world.m[9] = ox;     world.m[10] = oy;     world.m[11] = oz;
-    }
+    ndsRendererProfileRecordMatrixLoad();
+    memset(&world, 0, sizeof(world));
+    world.m[0] = NDS_DREAMLAND_DS_COORDINATE_SCALE_S20P12;
+    world.m[4] = NDS_DREAMLAND_DS_COORDINATE_SCALE_S20P12;
+    world.m[8] = NDS_DREAMLAND_DS_COORDINATE_SCALE_S20P12;
     glPushMatrix();
     glMultMatrix4x3(&world);
 
     /* Flat white material for the geometry proof. Per-group texture/material
      * binding is layered in once the silhouette renders correctly. */
+    glEnable(GL_TEXTURE_2D);
+    ndsRendererHardwareBindNoTexture(NULL);
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_FOG);
+    ndsRendererHardwareSetPolyFmt(
+        POLY_CULL_NONE | POLY_ALPHA(31) | POLY_ID(1));
     GFX_COLOR = 0x7FFFu;
 
     for (group_index = 0u; group_index < NDS_DREAMLAND_DS_GROUP_COUNT;
@@ -20915,9 +20903,8 @@ static void ndsRendererDreamLandDrawStatic3D(
         for (v = 0u; v < count; v++)
         {
             u32 idx = first + v;
-            /* VERTEX16 (coord << 4): the stored world/256 s16 occupies the
-             * integer field of an s.12 vertex, matching the segment0 path's
-             * coord * (1 << (12 - WORLD_UNIT_SHIFT)). */
+            /* VERTEX16 (coord << 4), then scale 2: source-world / 256 in DS
+             * 4.12, matching ndsRendererNativeStageEmitVertex. */
             s32 vx = ((s32)sNdsDreamLandDSVertexX[idx]) << 4;
             s32 vy = ((s32)sNdsDreamLandDSVertexY[idx]) << 4;
             s32 vz = ((s32)sNdsDreamLandDSVertexZ[idx]) << 4;
@@ -20936,13 +20923,16 @@ static void ndsRendererDreamLandDrawStatic3D(
          * GFX_BEGIN implicitly closes this group, matching the existing
          * renderer's convention. */
     }
-
     glPopMatrix(1);
 
     if (stats != NULL)
     {
-        stats->triangle_count += NDS_DREAMLAND_DS_VERTEX_COUNT;
+        stats->triangle_count += NDS_DREAMLAND_DS_TRIANGLE_COUNT;
     }
+    sNdsRendererHardwareSubmitted = TRUE;
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+    sNdsRendererHardwareMatrixGeneration = 0u;
     gNdsDreamLandDSSubmittedVertices = submitted_vertices;
     gNdsDreamLandDSGroups = NDS_DREAMLAND_DS_GROUP_COUNT;
     gNdsDreamLandDSWords = gx_words;
@@ -21056,16 +21046,13 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
 
 #if NDS_DREAMLAND_DS_MESH
-    /* Task 62: when the generated DS mesh is enabled, draw the baked c120 blob
-     * directly and skip the segment0 program entirely. The draw function does
-     * its own projection/view/rebasis matrix setup and clean pop, so the
-     * modelview stack is balanced on return. Dynamic actors (Whispy/flowers)
-     * still draw via their own owners after this returns. */
-    ndsRendererDreamLandDrawStatic3D(frame->projection,
-                                     frame->camera_modelview, stats);
-    accepted = TRUE;
-    sNdsNativeStageOwnerExecution.active = TRUE;
-    goto done;
+    /* The generated static mesh is submitted from segment 0's display commit,
+     * not during preparation. Keep preflighting the native owner so the map
+     * segments that own Whispy and the flowers remain live. */
+    if ((frame->projection == NULL) || (frame->camera_modelview == NULL))
+    {
+        goto done;
+    }
 #endif
 
     for (segment_index = 0u;
@@ -21357,6 +21344,10 @@ s32 ndsRendererPrepareNativeStageOwner(
     sNdsNativeStageOwnerExecution.stats = stats;
     sNdsNativeStageOwnerExecution.next_segment = 0u;
     sNdsNativeStageOwnerExecution.active = TRUE;
+#if NDS_DREAMLAND_DS_MESH
+    sNdsDreamLandDSProjection = frame->projection;
+    sNdsDreamLandDSCameraModelview = frame->camera_modelview;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     gNdsRendererM3PreflightSuccessCount++;
     gNdsRendererM3ResidentEpochCount =
@@ -21487,6 +21478,40 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         return TRUE;
     }
     segment = &sNdsNativeStageSegments[segment_index];
+#if NDS_DREAMLAND_DS_MESH
+    /* Owners 0..3 are layer0..layer3 (static stage geometry); owners 4..7 are
+     * map0..map3 (dynamic Whispy/flower actors). Replace all static owners with
+     * one generated draw at layer0's normal commit point, while allowing the
+     * dynamic owners to continue through the native stage path below. */
+    if (segment->owner < 4u)
+    {
+        if (segment_index == 0u)
+        {
+            sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_STAGE;
+            ndsRendererDreamLandDrawStatic3D(
+                sNdsDreamLandDSProjection,
+                sNdsDreamLandDSCameraModelview,
+                stats);
+            segment_triangles = NDS_DREAMLAND_DS_TRIANGLE_COUNT;
+            sNdsRendererFastRunCount += NDS_DREAMLAND_DS_GROUP_COUNT;
+            sNdsRendererFastTriangleCount += segment_triangles;
+            sNdsRendererFastOwnerTriangleCount[
+                NDS_RENDERER_PROFILE_OWNER_STAGE] += segment_triangles;
+        }
+        sNdsNativeStageOwnerExecution.next_segment++;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+        gNdsRendererM3SegmentCount++;
+        gNdsRendererM3SegmentMask |= (u32)1u << segment_index;
+        if (segment_index == 0u)
+        {
+            gNdsRendererM3RunCount += NDS_DREAMLAND_DS_GROUP_COUNT;
+            gNdsRendererM3TriangleCount += segment_triangles;
+        }
+#endif
+        sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
+        return TRUE;
+    }
+#endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     if (segment_index == 0u)
     {
@@ -21804,6 +21829,10 @@ void ndsRendererFinishNativeStageOwner(void)
     sNdsNativeStageOwnerExecution.next_segment = 0u;
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
+#if NDS_DREAMLAND_DS_MESH
+    sNdsDreamLandDSProjection = NULL;
+    sNdsDreamLandDSCameraModelview = NULL;
+#endif
 }
 #else
 s32 ndsRendererPrepareNativeStageOwner(
