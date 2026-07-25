@@ -30,6 +30,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import math
@@ -62,9 +63,13 @@ VIEWPORT_H_PX = 240
 ASPECT = VIEWPORT_W_PX / VIEWPORT_H_PX
 
 # Configurable thresholds (plan section 6; not sacred).
+# Primary visual metric is region IoU (1.0 = pixel-identical outline). The
+# equivalent-displacement-px figure is secondary. A candidate passes the
+# silhouette gate when worst-case IoU across fixtures >= REGION_IOU_MIN.
 THRESHOLD_PROTECTED_EDGE_PX = 0.5
 THRESHOLD_SILHOUETTE_PX = 1.5
 THRESHOLD_DECORATIVE_PX = 2.0
+THRESHOLD_REGION_IOU_MIN = 0.95      # >=95% region overlap = visually acceptable
 
 # Protected-edge auto-detect: top-facing surfaces within this many degrees of +Y.
 PROTECTED_MAX_TILT_DEG = 15.0
@@ -411,6 +416,11 @@ def connected_components(mesh: Mesh) -> dict[int, int]:
             parent[ra] = rb
 
     for tri in mesh.triangles:
+        # Seed every triangle vertex as its own root before union, so the
+        # returned map covers every vertex referenced by any triangle (a
+        # vertex that is only ever a union target would otherwise be absent).
+        for v in (tri.v0, tri.v1, tri.v2):
+            parent.setdefault(v, v)
         union(tri.v0, tri.v1)
         union(tri.v1, tri.v2)
         union(tri.v0, tri.v2)
@@ -475,9 +485,18 @@ def silhouette_edges(mesh: Mesh) -> list[tuple[int, int]]:
 
 @dataclass(frozen=True)
 class FixtureProjection:
-    """Projected source mesh under one fixture, for comparison."""
+    """Projected source mesh under one fixture, for comparison.
+
+    The primary visual-fidelity metric is the rasterized filled region: the
+    silhouette is compared as the 2D UNION of projected triangles (what the
+    player sees), not a per-fragment boundary point cloud. This is LOD-
+    independent — a coarser mesh that fills the same screen region scores
+    well, while genuine outline movement is caught. (Plan Task 58 req 5:
+    "coarse image mask difference".)
+    """
     name: str
-    silhouette_points: tuple[tuple[float, float], ...]
+    # Rasterized filled mask: 1 byte per pixel over the 320x240 viewport.
+    region_mask: bytes
     protected_points: tuple[tuple[float, float], ...]
     bbox: tuple[float, float, float, float]  # min_x, min_y, max_x, max_y
 
@@ -490,32 +509,45 @@ def project_mesh(mesh: Mesh, fixture: Fixture,
     for v in mesh.vertices:
         sx, sy, _, _ = project_point((v.x, v.y, v.z), vp)
         screen.append((sx, sy))
-    # Silhouette points: endpoints of boundary edges.
-    sil_edges = silhouette_edges(mesh)
-    sil_pts: list[tuple[float, float]] = []
-    for a, b in sil_edges:
-        sil_pts.append(screen[a])
-        sil_pts.append(screen[b])
+    # Rasterize the union of projected triangles (filled region). This is the
+    # true visual silhouette: what the player sees as the stage's outline.
+    region = bytearray(VIEWPORT_W_PX * VIEWPORT_H_PX)
+    for tri in mesh.triangles:
+        ax, ay = screen[tri.v0]
+        bx, by = screen[tri.v1]
+        cx, cy = screen[tri.v2]
+        _rasterize_triangle(region, ax, ay, bx, by, cx, cy)
     # Protected points: projected protected vertices.
     prot_pts = [screen[i] for i in range(len(mesh.vertices)) if i in protected_verts]
-    xs = [p[0] for p in sil_pts]
-    ys = [p[1] for p in sil_pts]
+    xs = [p[0] for p in screen]
+    ys = [p[1] for p in screen]
     bbox = (min(xs), min(ys), max(xs), max(ys)) if xs else (0, 0, 0, 0)
-    return FixtureProjection(
-        fixture.name, tuple(sil_pts), tuple(prot_pts), bbox)
+    return FixtureProjection(fixture.name, bytes(region), tuple(prot_pts), bbox)
 
 
-def _nearest_distance_sq(point: tuple[float, float],
-                         pts: Sequence[tuple[float, float]]) -> float:
-    best = float("inf")
-    px, py = point
-    for qx, qy in pts:
-        dx = px - qx
-        dy = py - qy
-        d = dx * dx + dy * dy
-        if d < best:
-            best = d
-    return best
+def _rasterize_triangle(mask: bytearray, ax: float, ay: float,
+                        bx: float, by: float, cx: float, cy: float) -> None:
+    """Fill triangle (ax,ay)-(bx,by)-(cx,cy) into the mask via barycentric test.
+
+    Clips to the viewport; samples pixel centers. Backface/direction-agnostic
+    (the visual region is the filled area regardless of facing).
+    """
+    x0 = max(0, int(min(ax, bx, cx) - 1))
+    y0 = max(0, int(min(ay, by, cy) - 1))
+    x1 = min(VIEWPORT_W_PX - 1, int(max(ax, bx, cx) + 1))
+    y1 = min(VIEWPORT_H_PX - 1, int(max(ay, by, cy) + 1))
+    for py in range(y0, y1 + 1):
+        fy = py + 0.5
+        row = py * VIEWPORT_W_PX
+        for px in range(x0, x1 + 1):
+            fx = px + 0.5
+            d1 = (fx - bx) * (ay - by) - (ax - bx) * (fy - by)
+            d2 = (fx - cx) * (by - cy) - (bx - cx) * (fy - cy)
+            d3 = (fx - ax) * (cy - ay) - (cx - ax) * (fy - ay)
+            has_neg = (d1 < 0) or (d2 < 0) or (d3 < 0)
+            has_pos = (d1 > 0) or (d2 > 0) or (d3 > 0)
+            if not (has_neg and has_pos):
+                mask[row + px] = 1
 
 
 def _percentile(sorted_vals: list[float], pct: float) -> float:
@@ -531,22 +563,58 @@ def displacement_metrics(
     candidate_proj: FixtureProjection,
     reference_proj: FixtureProjection,
 ) -> dict[str, float]:
-    """Directed Hausdorff-ish displacement from candidate -> reference."""
-    ref_sil = reference_proj.silhouette_points
-    cand_sil = candidate_proj.silhouette_points
+    """Rasterized-region visual difference + directed protected-edge distance.
+
+    Primary metric: the symmetric-difference of the two filled-region masks,
+    reported as (a) IoU (intersection-over-union, 1.0 = identical outline) and
+    (b) the symmetric-difference pixel count converted to an equivalent
+    displacement: sqrt(symdiff / perimeter). The perimeter is approximated by
+    the source region's pixel boundary length so the metric scales like a
+    pixel-distance along the outline. Protected edges stay as a directed
+    nearest-point distance over the projected protected vertices (these are
+    comparable 1:1 across LODs).
+    """
+    ref_mask = reference_proj.region_mask
+    cand_mask = candidate_proj.region_mask
+    assert len(ref_mask) == len(cand_mask) == VIEWPORT_W_PX * VIEWPORT_H_PX
+    inter = 0
+    symdiff = 0
+    ref_only = 0
+    for i in range(len(ref_mask)):
+        r = ref_mask[i]
+        c = cand_mask[i]
+        if r and c:
+            inter += 1
+        elif r or c:
+            symdiff += 1
+        if r and not c:
+            ref_only += 1
+    uni = inter + symdiff
+    iou = inter / uni if uni else 1.0
+    # Equivalent outline displacement: treat symdiff as a band of width w along
+    # the source outline of perimeter P => symdiff ~= w * P => w = symdiff / P.
+    # Approximate P by the source boundary pixel count (edge between filled/
+    # empty). Convert to a px figure.
+    src_perim = _mask_perimeter(ref_mask)
+    equiv_displacement_px = (symdiff / src_perim) if src_perim > 0 else float(symdiff)
+
+    # Protected-edge directed distance (candidate protected -> source protected).
     ref_prot = reference_proj.protected_points
     cand_prot = candidate_proj.protected_points
-
-    def directed(points: Sequence[tuple[float, float]],
-                 ref: Sequence[tuple[float, float]]) -> tuple[list[float], float, float]:
-        if not points or not ref:
-            return [], 0.0, 0.0
-        dists = [math.sqrt(_nearest_distance_sq(p, ref)) for p in points]
-        dists.sort()
-        return dists, dists[-1], _percentile(dists, 95.0)
-
-    sil_dists, sil_max, sil_p95 = directed(cand_sil, ref_sil)
-    prot_dists, prot_max, prot_p95 = directed(cand_prot, ref_prot)
+    prot_dists: list[float] = []
+    if cand_prot and ref_prot:
+        for px_, py_ in cand_prot:
+            best = float("inf")
+            for qx, qy in ref_prot:
+                dx = px_ - qx
+                dy = py_ - qy
+                d = dx * dx + dy * dy
+                if d < best:
+                    best = d
+            prot_dists.append(math.sqrt(best))
+    prot_dists.sort()
+    prot_max = prot_dists[-1] if prot_dists else 0.0
+    prot_p95 = _percentile(prot_dists, 95.0)
 
     rb = reference_proj.bbox
     cb = candidate_proj.bbox
@@ -557,14 +625,40 @@ def displacement_metrics(
         "max_y": abs(cb[3] - rb[3]),
     }
     return {
-        "max_silhouette_displacement_px": sil_max,
-        "p95_silhouette_displacement_px": sil_p95,
+        # Primary visual metric: higher IoU is better (1.0 = identical).
+        "region_iou": iou,
+        # Equivalent outline displacement in px (symdiff / source perimeter).
+        "max_silhouette_displacement_px": equiv_displacement_px,
+        "p95_silhouette_displacement_px": equiv_displacement_px,
+        "symmetric_difference_px": symdiff,
+        "ref_only_px": ref_only,
+        # Protected edges stay directed nearest-point.
         "protected_edge_max_displacement_px": prot_max,
         "protected_edge_p95_displacement_px": prot_p95,
         "projected_bbox_delta_px": bbox_delta,
-        "silhouette_point_count": len(cand_sil),
-        "protected_point_count": len(cand_prot),
+        "region_filled_px": inter + (uni - inter),  # union size
     }
+
+
+def _mask_perimeter(mask: bytes) -> int:
+    """Count 4-connected boundary edges of the filled region (approx perimeter)."""
+    perim = 0
+    for y in range(VIEWPORT_H_PX):
+        row = y * VIEWPORT_W_PX
+        up_row = (y - 1) * VIEWPORT_W_PX
+        down_row = (y + 1) * VIEWPORT_W_PX
+        for x in range(VIEWPORT_W_PX):
+            if not mask[row + x]:
+                continue
+            if x == 0 or not mask[row + x - 1]:
+                perim += 1
+            if x == VIEWPORT_W_PX - 1 or not mask[row + x + 1]:
+                perim += 1
+            if y == 0 or not mask[up_row + x]:
+                perim += 1
+            if y == VIEWPORT_H_PX - 1 or not mask[down_row + x]:
+                perim += 1
+    return perim
 
 
 # ---------------------------------------------------------------------------
@@ -591,7 +685,10 @@ def build_reference(mesh: Mesh, fixtures: list[Fixture]) -> dict[str, Any]:
         "fixtures": [
             {
                 "name": p.name,
-                "silhouette_points": [list(pt) for pt in p.silhouette_points],
+                # Region mask: base64 of the 320x240 filled-region bitmap. The
+                # displacement metric compares masks directly (symmetric diff).
+                "region_mask_b64": base64.b64encode(p.region_mask).decode("ascii"),
+                "region_filled_pixels": sum(p.region_mask),
                 "protected_points": [list(pt) for pt in p.protected_points],
                 "bbox": list(p.bbox),
             }
@@ -634,31 +731,37 @@ def _load_fixtures() -> list[Fixture]:
     ]
 
 
+def _load_ref_projection(fix_entry: dict[str, Any]) -> FixtureProjection:
+    """Reconstruct a FixtureProjection from the stored reference JSON."""
+    return FixtureProjection(
+        fix_entry["name"],
+        base64.b64decode(fix_entry["region_mask_b64"]),
+        tuple(tuple(pt) for pt in fix_entry["protected_points"]),
+        tuple(fix_entry["bbox"]),
+    )
+
+
 def cmd_compare(candidate_path: Path) -> int:
     fixtures = _load_fixtures()
     ref_ir = json.loads(REFERENCE_OUTPUT.read_text(encoding="utf-8"))
     candidate = load_mesh(candidate_path)
     protected = detect_protected_components(candidate)
     ref_projections = {
-        f["name"]: FixtureProjection(
-            f["name"],
-            tuple(tuple(pt) for pt in f["silhouette_points"]),
-            tuple(tuple(pt) for pt in f["protected_points"]),
-            tuple(f["bbox"]),
-        )
-        for f in ref_ir["fixtures"]
+        f["name"]: _load_ref_projection(f) for f in ref_ir["fixtures"]
     }
     report: list[dict[str, Any]] = []
     worst_sil = 0.0
     worst_prot = 0.0
+    worst_iou = 1.0
     for fixture in fixtures:
         cand_proj = project_mesh(candidate, fixture, protected)
         ref_proj = ref_projections[fixture.name]
         m = displacement_metrics(cand_proj, ref_proj)
-        sil_pass = m["max_silhouette_displacement_px"] <= THRESHOLD_SILHOUETTE_PX
+        sil_pass = m["region_iou"] >= THRESHOLD_REGION_IOU_MIN
         prot_pass = m["protected_edge_max_displacement_px"] <= THRESHOLD_PROTECTED_EDGE_PX
         worst_sil = max(worst_sil, m["max_silhouette_displacement_px"])
         worst_prot = max(worst_prot, m["protected_edge_max_displacement_px"])
+        worst_iou = min(worst_iou, m["region_iou"])
         report.append({
             "fixture": fixture.name,
             "metrics": m,
@@ -668,11 +771,13 @@ def cmd_compare(candidate_path: Path) -> int:
     summary = {
         "task": "Task 58 — candidate vs source comparison",
         "candidate": str(candidate_path),
-        "thresholds_px": {
-            "protected_edge": THRESHOLD_PROTECTED_EDGE_PX,
-            "silhouette": THRESHOLD_SILHOUETTE_PX,
-            "decorative": THRESHOLD_DECORATIVE_PX,
+        "thresholds": {
+            "region_iou_min": THRESHOLD_REGION_IOU_MIN,
+            "protected_edge_px": THRESHOLD_PROTECTED_EDGE_PX,
+            "silhouette_px_secondary": THRESHOLD_SILHOUETTE_PX,
+            "decorative_px": THRESHOLD_DECORATIVE_PX,
         },
+        "worst_region_iou": worst_iou,
         "worst_silhouette_displacement_px": worst_sil,
         "worst_protected_displacement_px": worst_prot,
         "all_pass": all(r["silhouette_pass"] and r["protected_pass"] for r in report),
@@ -689,23 +794,21 @@ def cmd_self() -> int:
     mesh = load_source_mesh()
     protected = set(ref_ir["protected_vertex_indices"])
     ref_projections = {
-        f["name"]: FixtureProjection(
-            f["name"],
-            tuple(tuple(pt) for pt in f["silhouette_points"]),
-            tuple(tuple(pt) for pt in f["protected_points"]),
-            tuple(f["bbox"]),
-        )
-        for f in ref_ir["fixtures"]
+        f["name"]: _load_ref_projection(f) for f in ref_ir["fixtures"]
     }
-    worst = 0.0
+    worst_iou = 1.0
+    worst_prot = 0.0
     for fixture in fixtures:
         cand_proj = project_mesh(mesh, fixture, protected)
         ref_proj = ref_projections[fixture.name]
         m = displacement_metrics(cand_proj, ref_proj)
-        worst = max(worst, m["max_silhouette_displacement_px"],
-                    m["protected_edge_max_displacement_px"])
-    print(f"TASK58 identity probe: worst displacement = {worst:.10f} px")
-    return 0 if worst < 1e-6 else 1
+        worst_iou = min(worst_iou, m["region_iou"])
+        worst_prot = max(worst_prot, m["protected_edge_max_displacement_px"])
+    # Identity: IoU must be 1.0 and protected-edge displacement 0 (same mesh).
+    ok = (worst_iou >= 1.0 - 1e-9) and (worst_prot < 1e-6)
+    print(f"TASK58 identity probe: worst IoU = {worst_iou:.10f}, "
+          f"protected = {worst_prot:.10f} px")
+    return 0 if ok else 1
 
 
 def cmd_check() -> int:
@@ -750,8 +853,8 @@ def cmd_check() -> int:
             if p is None:
                 errors.append(f"reference missing fixture {f.name}")
                 continue
-            if len(p["silhouette_points"]) == 0:
-                errors.append(f"fixture {f.name}: empty silhouette (mesh not visible)")
+            if p.get("region_filled_pixels", 0) == 0:
+                errors.append(f"fixture {f.name}: empty region (mesh not visible)")
 
         # 3. Protected-edge auto-detect determinism.
         prot_rebuilt = detect_protected_components(mesh)
