@@ -1,0 +1,253 @@
+{
+  "candidate": "r_keep6_c40",
+  "groups": [
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "verts": [
+        2,
+        4,
+        3,
+        8
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "verts": [
+        5,
+        6,
+        7,
+        9
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "verts": [
+        9,
+        7,
+        10,
+        8
+      ]
+    },
+    {
+      "binding": 19,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        14,
+        13,
+        1
+      ]
+    },
+    {
+      "binding": 19,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        12,
+        11,
+        0
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        17,
+        20,
+        15,
+        16
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        22,
+        24,
+        23,
+        21
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        24,
+        26,
+        25,
+        22
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        27,
+        30,
+        28,
+        29
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        33,
+        34,
+        35
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        32,
+        35,
+        52
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        28,
+        31,
+        30
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        20,
+        19,
+        15
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        18,
+        17,
+        16
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        35,
+        32,
+        33
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        34,
+        55,
+        54
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        35,
+        54,
+        53
+      ]
+    },
+    {
+      "binding": 31,
+      "prim": "GL_QUAD",
+      "verts": [
+        37,
+        41,
+        38,
+        36
+      ]
+    },
+    {
+      "binding": 31,
+      "prim": "GL_QUAD",
+      "verts": [
+        41,
+        43,
+        39,
+        38
+      ]
+    },
+    {
+      "binding": 31,
+      "prim": "GL_QUAD",
+      "verts": [
+        42,
+        41,
+        43,
+        40
+      ]
+    },
+    {
+      "binding": 32,
+      "prim": "GL_QUAD",
+      "verts": [
+        45,
+        49,
+        46,
+        44
+      ]
+    },
+    {
+      "binding": 32,
+      "prim": "GL_QUAD",
+      "verts": [
+        49,
+        51,
+        47,
+        46
+      ]
+    },
+    {
+      "binding": 32,
+      "prim": "GL_QUAD",
+      "verts": [
+        50,
+        49,
+        51,
+        48
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        55,
+        34,
+        33
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        54,
+        35,
+        34
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        53,
+        52,
+        35
+      ]
+    }
+  ],
+  "task": "Task 60 \u2014 DS primitive stream"
+}

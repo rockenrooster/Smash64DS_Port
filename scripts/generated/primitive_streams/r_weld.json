@@ -1,0 +1,1005 @@
+{
+  "candidate": "r_weld",
+  "groups": [
+    {
+      "binding": 0,
+      "prim": "GL_QUAD",
+      "verts": [
+        1,
+        2,
+        3,
+        0
+      ]
+    },
+    {
+      "binding": 1,
+      "prim": "GL_QUAD",
+      "verts": [
+        4,
+        5,
+        7,
+        85
+      ]
+    },
+    {
+      "binding": 1,
+      "prim": "GL_QUAD",
+      "verts": [
+        5,
+        7,
+        6,
+        87
+      ]
+    },
+    {
+      "binding": 2,
+      "prim": "GL_QUAD",
+      "verts": [
+        9,
+        10,
+        12,
+        8
+      ]
+    },
+    {
+      "binding": 2,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        12,
+        11,
+        10
+      ]
+    },
+    {
+      "binding": 3,
+      "prim": "GL_QUAD",
+      "verts": [
+        14,
+        17,
+        15,
+        13
+      ]
+    },
+    {
+      "binding": 3,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        17,
+        16,
+        15
+      ]
+    },
+    {
+      "binding": 4,
+      "prim": "GL_QUAD",
+      "verts": [
+        19,
+        22,
+        20,
+        18
+      ]
+    },
+    {
+      "binding": 4,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        22,
+        21,
+        20
+      ]
+    },
+    {
+      "binding": 5,
+      "prim": "GL_QUAD",
+      "verts": [
+        24,
+        26,
+        25,
+        23
+      ]
+    },
+    {
+      "binding": 5,
+      "prim": "GL_QUAD",
+      "verts": [
+        26,
+        27,
+        29,
+        25
+      ]
+    },
+    {
+      "binding": 5,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        29,
+        28,
+        27
+      ]
+    },
+    {
+      "binding": 6,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        32,
+        31,
+        30
+      ]
+    },
+    {
+      "binding": 7,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        35,
+        34,
+        33
+      ]
+    },
+    {
+      "binding": 8,
+      "prim": "GL_QUAD",
+      "verts": [
+        37,
+        39,
+        38,
+        36
+      ]
+    },
+    {
+      "binding": 9,
+      "prim": "GL_QUAD",
+      "verts": [
+        41,
+        43,
+        42,
+        40
+      ]
+    },
+    {
+      "binding": 10,
+      "prim": "GL_QUAD",
+      "verts": [
+        45,
+        48,
+        46,
+        44
+      ]
+    },
+    {
+      "binding": 10,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        48,
+        47,
+        46
+      ]
+    },
+    {
+      "binding": 11,
+      "prim": "GL_QUAD",
+      "verts": [
+        50,
+        53,
+        51,
+        49
+      ]
+    },
+    {
+      "binding": 11,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        53,
+        52,
+        51
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "verts": [
+        54,
+        57,
+        55,
+        62
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "verts": [
+        56,
+        57,
+        55,
+        63
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "verts": [
+        58,
+        59,
+        61,
+        64
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "verts": [
+        60,
+        59,
+        61,
+        65
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "verts": [
+        62,
+        55,
+        63,
+        65
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "verts": [
+        64,
+        61,
+        65,
+        62
+      ]
+    },
+    {
+      "binding": 13,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        68,
+        67,
+        66
+      ]
+    },
+    {
+      "binding": 14,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        71,
+        70,
+        69
+      ]
+    },
+    {
+      "binding": 15,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        74,
+        73,
+        72
+      ]
+    },
+    {
+      "binding": 16,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        77,
+        76,
+        75
+      ]
+    },
+    {
+      "binding": 17,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        80,
+        79,
+        78
+      ]
+    },
+    {
+      "binding": 18,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        83,
+        82,
+        81
+      ]
+    },
+    {
+      "binding": 19,
+      "prim": "GL_QUAD",
+      "verts": [
+        84,
+        7,
+        85,
+        88
+      ]
+    },
+    {
+      "binding": 19,
+      "prim": "GL_QUAD",
+      "verts": [
+        86,
+        5,
+        87,
+        89
+      ]
+    },
+    {
+      "binding": 19,
+      "prim": "GL_QUAD",
+      "verts": [
+        89,
+        86,
+        138,
+        137
+      ]
+    },
+    {
+      "binding": 19,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        85,
+        140,
+        136
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        136,
+        135,
+        88,
+        85
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        90,
+        95,
+        92,
+        91
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        91,
+        92,
+        93,
+        130
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        108,
+        111,
+        92,
+        134
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        93,
+        111,
+        110,
+        130
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        94,
+        90,
+        95,
+        132
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        133,
+        132,
+        95,
+        134
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        96,
+        97,
+        98,
+        114
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        97,
+        100,
+        99,
+        98
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        112,
+        99,
+        98,
+        113
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        99,
+        100,
+        101,
+        117
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        99,
+        117,
+        115,
+        112
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        101,
+        120,
+        119,
+        117
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        102,
+        105,
+        103,
+        121
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        122,
+        105,
+        102,
+        123
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        104,
+        106,
+        103,
+        105
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        124,
+        126,
+        103,
+        121
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        106,
+        104,
+        107,
+        129
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        106,
+        128,
+        126,
+        103
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        108,
+        111,
+        109,
+        133
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        109,
+        111,
+        110,
+        131
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        132,
+        133,
+        109,
+        131
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        113,
+        116,
+        114,
+        98
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        113,
+        116,
+        115,
+        112
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        116,
+        119,
+        117,
+        115
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        116,
+        119,
+        118,
+        114
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        121,
+        124,
+        123,
+        102
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        122,
+        127,
+        125,
+        123
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        124,
+        126,
+        125,
+        123
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        128,
+        126,
+        125,
+        127
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        128,
+        106,
+        129,
+        127
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        136,
+        140,
+        139,
+        172
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        138,
+        142,
+        141,
+        176
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "verts": [
+        139,
+        141,
+        142,
+        140
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        101,
+        100,
+        120
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        119,
+        120,
+        118
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        92,
+        93,
+        111
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        134,
+        108,
+        133
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        95,
+        92,
+        134
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        110,
+        130,
+        131
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        138,
+        142,
+        86
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        141,
+        147,
+        146
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        139,
+        146,
+        172
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_QUAD",
+      "verts": [
+        144,
+        147,
+        145,
+        143
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        146,
+        139,
+        141
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        145,
+        146,
+        147
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        147,
+        176,
+        175
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        144,
+        175,
+        174
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        145,
+        174,
+        173
+      ]
+    },
+    {
+      "binding": 31,
+      "prim": "GL_QUAD",
+      "verts": [
+        149,
+        153,
+        150,
+        148
+      ]
+    },
+    {
+      "binding": 31,
+      "prim": "GL_QUAD",
+      "verts": [
+        153,
+        155,
+        151,
+        150
+      ]
+    },
+    {
+      "binding": 31,
+      "prim": "GL_QUAD",
+      "verts": [
+        154,
+        153,
+        155,
+        152
+      ]
+    },
+    {
+      "binding": 32,
+      "prim": "GL_QUAD",
+      "verts": [
+        157,
+        161,
+        158,
+        156
+      ]
+    },
+    {
+      "binding": 32,
+      "prim": "GL_QUAD",
+      "verts": [
+        161,
+        163,
+        159,
+        158
+      ]
+    },
+    {
+      "binding": 32,
+      "prim": "GL_QUAD",
+      "verts": [
+        162,
+        161,
+        163,
+        160
+      ]
+    },
+    {
+      "binding": 39,
+      "prim": "GL_QUAD",
+      "verts": [
+        165,
+        166,
+        167,
+        164
+      ]
+    },
+    {
+      "binding": 40,
+      "prim": "GL_QUAD",
+      "verts": [
+        169,
+        171,
+        170,
+        168
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_QUAD",
+      "verts": [
+        136,
+        172,
+        177,
+        135
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_QUAD",
+      "verts": [
+        138,
+        137,
+        181,
+        176
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_QUAD",
+      "verts": [
+        174,
+        144,
+        143,
+        145
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_QUAD",
+      "verts": [
+        146,
+        145,
+        173,
+        172
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_QUAD",
+      "verts": [
+        178,
+        173,
+        172,
+        177
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_QUAD",
+      "verts": [
+        179,
+        174,
+        173,
+        178
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_QUAD",
+      "verts": [
+        179,
+        180,
+        175,
+        174
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_QUAD",
+      "verts": [
+        176,
+        181,
+        180,
+        175
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        176,
+        147,
+        141
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_TRIANGLE_STRIP",
+      "verts": [
+        175,
+        144,
+        147
+      ]
+    }
+  ],
+  "task": "Task 60 \u2014 DS primitive stream"
+}
