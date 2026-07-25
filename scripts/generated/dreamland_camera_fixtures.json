@@ -1,0 +1,218 @@
+{
+  "constants": {
+    "aspect": 1.3333333333333333,
+    "fovy_deg": 38.0,
+    "protected_component_count": 4,
+    "protected_max_tilt_deg": 15.0,
+    "viewport_h_px": 240,
+    "viewport_w_px": 320,
+    "zoom_range_2p": 1.32
+  },
+  "fixtures": [
+    {
+      "at": [
+        0.0,
+        2251.2,
+        -613.0
+      ],
+      "eye": [
+        0.0,
+        2740.2,
+        8728.42333015306
+      ],
+      "far": 44530.846660306124,
+      "fovy_deg": 38.0,
+      "name": "center_medium",
+      "near": 215.4,
+      "source_note": "stage center; base 2-player zoom distance",
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "at": [
+        -2534.2200000000003,
+        2251.2,
+        -613.0
+      ],
+      "eye": [
+        -2534.2200000000003,
+        2740.2,
+        8728.42333015306
+      ],
+      "far": 44530.846660306124,
+      "fovy_deg": 38.0,
+      "name": "left_medium",
+      "near": 215.4,
+      "source_note": "horizontal left framing",
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "at": [
+        2534.2200000000003,
+        2251.2,
+        -613.0
+      ],
+      "eye": [
+        2534.2200000000003,
+        2740.2,
+        8728.42333015306
+      ],
+      "far": 44530.846660306124,
+      "fovy_deg": 38.0,
+      "name": "right_medium",
+      "near": 215.4,
+      "source_note": "horizontal right framing",
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "at": [
+        0.0,
+        2251.2,
+        -613.0
+      ],
+      "eye": [
+        0.0,
+        2740.2,
+        6112.824797710204
+      ],
+      "far": 44530.846660306124,
+      "fovy_deg": 38.0,
+      "name": "center_close",
+      "near": 215.4,
+      "source_note": "close zoom (reduced multiplier)",
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "at": [
+        0.0,
+        2251.2,
+        -613.0
+      ],
+      "eye": [
+        0.0,
+        2740.2,
+        11344.021862595919
+      ],
+      "far": 44530.846660306124,
+      "fovy_deg": 38.0,
+      "name": "center_maxzoom",
+      "near": 215.4,
+      "source_note": "maximum normal 2-player zoom-out",
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "at": [
+        0.0,
+        3327.0,
+        -613.0
+      ],
+      "eye": [
+        0.0,
+        3816.0,
+        8728.42333015306
+      ],
+      "far": 44530.846660306124,
+      "fovy_deg": 38.0,
+      "name": "high_frame",
+      "near": 215.4,
+      "source_note": "high vertical framing",
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "at": [
+        0.0,
+        1175.3999999999999,
+        -613.0
+      ],
+      "eye": [
+        0.0,
+        1664.3999999999999,
+        8728.42333015306
+      ],
+      "far": 44530.846660306124,
+      "fovy_deg": 38.0,
+      "name": "low_frame",
+      "near": 215.4,
+      "source_note": "low vertical framing",
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "at": [
+        0.0,
+        2838.0,
+        -613.0
+      ],
+      "eye": [
+        0.0,
+        3962.7,
+        10409.87952958061
+      ],
+      "far": 44530.846660306124,
+      "fovy_deg": 38.0,
+      "name": "respawn_frame",
+      "near": 215.4,
+      "source_note": "representative KO/respawn framing (wider+higher)",
+      "up": [
+        0.0,
+        1.0,
+        0.0
+      ]
+    }
+  ],
+  "stage_envelope_world_units": {
+    "center": [
+      0.0,
+      1371.0,
+      -613.0
+    ],
+    "extent": [
+      6498.0,
+      4890.0,
+      4308.0
+    ],
+    "max": [
+      3249.0,
+      3816.0,
+      1541.0
+    ],
+    "min": [
+      -3249.0,
+      -1074.0,
+      -2767.0
+    ]
+  },
+  "task": "Task 58 \u2014 Dream Land gameplay camera fixtures",
+  "thresholds_px": {
+    "decorative": 2.0,
+    "protected_edge": 0.5,
+    "silhouette": 1.5
+  },
+  "version": 1
+}
