@@ -159,6 +159,24 @@
 #error "NDS_TASK56_FIGHTER_PRIMITIVES requires NDS_RENDERER_PROFILE_LEVEL < 2"
 #endif
 
+/* Task 62: generated Dream Land DS-native static 3D mesh (candidate c120). The
+ * runtime draw path bypasses the segment0 program and emits the baked blob
+ * directly via GFX_FIFO. Default off; the published ROM is byte-identical at 0. */
+#ifndef NDS_DREAMLAND_DS_MESH
+#define NDS_DREAMLAND_DS_MESH 0
+#endif
+
+#if (NDS_DREAMLAND_DS_MESH != 0) && (NDS_DREAMLAND_DS_MESH != 1)
+#error "NDS_DREAMLAND_DS_MESH must be 0 or 1"
+#endif
+
+#if NDS_DREAMLAND_DS_MESH && !NDS_RENDERER_HW_TRIANGLES
+#error "NDS_DREAMLAND_DS_MESH requires NDS_RENDERER_HW_TRIANGLES (native stage path)"
+#endif
+#if NDS_DREAMLAND_DS_MESH && (NDS_RENDERER_PROFILE_LEVEL >= 2)
+#error "NDS_DREAMLAND_DS_MESH requires NDS_RENDERER_PROFILE_LEVEL < 2"
+#endif
+
 #if (NDS_TASK36_HW_COMPOSE == 2) && \
     (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS)
 #error "Task 36 replay cannot be combined with the Task 29/34 stream census"

@@ -90,6 +90,10 @@ NDS_TASK56_FIGHTER_PRIMITIVES ?= 0
 # Default off; the published ROM stays byte-identical at 0. Ship-ready only
 # once the differ (Tier 1 = 0, Tier 2 <= 1.0 px) and STG budget clear.
 NDS_TASK51_STAGE_NATIVE ?= 0
+# Task 62: generated Dream Land DS-native static 3D mesh (candidate c120).
+# Default off; the published ROM stays byte-identical at 0. Ship-ready only
+# once the owner's visual A/B + perf A/B (Commit 5 KEEP gate) clears.
+NDS_DREAMLAND_DS_MESH ?= 0
 # Battle pipeline selector. Orthogonal to NDS_RENDERER_PROFILE_LEVEL, which
 # is the *instrumentation* level within profiles 1 and 2 and keeps its
 # existing values (0 lean, 1 phase timers, 2 full oracle).
@@ -1495,6 +1499,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK49_GX_DIFFER $(NDS_TASK49_GX_DIFFER)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
+		echo '#define NDS_DREAMLAND_DS_MESH $(NDS_DREAMLAND_DS_MESH)'; \
 		echo '#define NDS_TASK53_REPLAY_ARENA_FIX $(NDS_TASK53_REPLAY_ARENA_FIX)'; \
 		echo '#define NDS_TASK55_STAGE_GEOM $(NDS_TASK55_STAGE_GEOM)'; \
 		echo '#define NDS_TASK56_FIGHTER_PRIMITIVES $(NDS_TASK56_FIGHTER_PRIMITIVES)'; \
@@ -1760,6 +1765,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK56_FIGHTER_PRIMITIVES=$(NDS_TASK56_FIGHTER_PRIMITIVES)'
 	@printf '%s\n' 'BENCH_MAKE_TASK36_HW_COMPOSE=$(NDS_TASK36_HW_COMPOSE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK51_STAGE_NATIVE=$(NDS_TASK51_STAGE_NATIVE)'
+	@printf '%s\n' 'BENCH_MAKE_DREAMLAND_DS_MESH=$(NDS_DREAMLAND_DS_MESH)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_PROFILE=$(NDS_BATTLE_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK44_STAGE_STEADY=$(NDS_TASK44_STAGE_STEADY)'
 	@printf '%s\n' 'BENCH_MAKE_TASK37_PROFILE=$(NDS_TASK37_PROFILE)'
