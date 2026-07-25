@@ -2046,12 +2046,6 @@ volatile u32 gNdsRendererM3SegmentCount;
 volatile u32 gNdsRendererM3SegmentMask;
 volatile u32 gNdsRendererM3PostArmFailureCount;
 volatile u32 gNdsRendererM3DObjCount;
-#if NDS_DREAMLAND_DS_MESH
-/* Task 62 engagement counters (shared HUD row). */
-volatile u32 gNdsDreamLandDSSubmittedVertices;
-volatile u32 gNdsDreamLandDSGroups;
-volatile u32 gNdsDreamLandDSWords;
-#endif
 volatile u32 gNdsRendererM3BindingCount;
 volatile u32 gNdsRendererM3RunCount;
 volatile u32 gNdsRendererM3TriangleCount;
@@ -20841,6 +20835,14 @@ ndsRendererNativeStageEmitNoZTriangle(
  * silhouette renders before textures/materials are layered in. The matrix setup
  * mirrors Task 51's EnsureWorld pattern: load projection + camera_modelview, push
  * the rebasis as MTX_MULT4x3, emit, pop. */
+
+/* Task 62 engagement counters (shared HUD row). Gated only by the feature
+ * flag, not by PROFILE_LEVEL, so the counter survives in the published
+ * profile-0 hwtri ROM that must report engagement. */
+volatile u32 gNdsDreamLandDSSubmittedVertices;
+volatile u32 gNdsDreamLandDSGroups;
+volatile u32 gNdsDreamLandDSWords;
+
 static void ndsRendererDreamLandDrawStatic3D(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *camera_modelview,
