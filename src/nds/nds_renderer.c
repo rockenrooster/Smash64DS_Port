@@ -20843,6 +20843,20 @@ volatile u32 gNdsDreamLandDSSubmittedVertices;
 volatile u32 gNdsDreamLandDSGroups;
 volatile u32 gNdsDreamLandDSWords;
 
+/* Draws the generated Dream Land DS-native static mesh directly from the baked
+ * blob, bypassing the segment0 program. Vertex coords are stored as world/256
+ * (the segment0 world-unit convention); the runtime emits each as VERTEX16
+ * (coord << 4) and pushes a compensating world matrix (scale 256 + origin).
+ *
+ * Matrix conventions (verified against the working paths):
+ *   - projection/modelview load via the row-major ndsRendererCopyMtx20p12ToM4x4
+ *     + glLoadMatrix4x4 helper (the same pair the rest of the renderer uses);
+ *   - the compensating world matrix is pushed as a column-major m4x3 via
+ *     glMultMatrix4x3, mirroring ndsRendererNativeStageTask51EnsureWorld (col c,
+ *     row r -> m[c*3 + r], translation in column 3 = m[9..11]).
+ *
+ * First integration emits flat white (no textures); the owner's visual A/B
+ * confirms the silhouette before textures/materials are layered in. */
 static void ndsRendererDreamLandDrawStatic3D(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *camera_modelview,
@@ -20850,68 +20864,39 @@ static void ndsRendererDreamLandDrawStatic3D(
 {
     m4x4 proj_hardware;
     m4x4 view_hardware;
-    m4x3 rebasis;
+    m4x3 world;
     u32 group_index;
     /* Engagement counters (AGENTS rule: a feature that silently degrades may
      * not ship enabled; surface on the shared HUD row). */
     u32 submitted_vertices = 0u;
     u32 gx_words = 0u;
 
-    /* Column-major 4x4 from the row-major s20.12 input (mirrors how the
-     * segment0 path loads projection/view). */
-    proj_hardware.m[0] = projection->m[0][0];
-    proj_hardware.m[1] = projection->m[1][0];
-    proj_hardware.m[2] = projection->m[2][0];
-    proj_hardware.m[3] = projection->m[3][0];
-    proj_hardware.m[4] = projection->m[0][1];
-    proj_hardware.m[5] = projection->m[1][1];
-    proj_hardware.m[6] = projection->m[2][1];
-    proj_hardware.m[7] = projection->m[3][1];
-    proj_hardware.m[8] = projection->m[0][2];
-    proj_hardware.m[9] = projection->m[1][2];
-    proj_hardware.m[10] = projection->m[2][2];
-    proj_hardware.m[11] = projection->m[3][2];
-    proj_hardware.m[12] = 0;
-    proj_hardware.m[13] = 0;
-    proj_hardware.m[14] = 0;
-    proj_hardware.m[15] = projection->m[3][3];
-    view_hardware.m[0] = camera_modelview->m[0][0];
-    view_hardware.m[1] = camera_modelview->m[1][0];
-    view_hardware.m[2] = camera_modelview->m[2][0];
-    view_hardware.m[3] = camera_modelview->m[3][0];
-    view_hardware.m[4] = camera_modelview->m[0][1];
-    view_hardware.m[5] = camera_modelview->m[1][1];
-    view_hardware.m[6] = camera_modelview->m[2][1];
-    view_hardware.m[7] = camera_modelview->m[3][1];
-    view_hardware.m[8] = camera_modelview->m[0][2];
-    view_hardware.m[9] = camera_modelview->m[1][2];
-    view_hardware.m[10] = camera_modelview->m[2][2];
-    view_hardware.m[11] = camera_modelview->m[3][2];
-    view_hardware.m[12] = 0;
-    view_hardware.m[13] = 0;
-    view_hardware.m[14] = 0;
-    view_hardware.m[15] = camera_modelview->m[3][3];
-
-    glMatrixMode(GL_PROJECTION);
+    /* Row-major 4x4 load via the shared helper (identical to the segment0
+     * ndsRendererLoadHardwareMatrixPair path). */
+    ndsRendererCopyMtx20p12ToM4x4(projection, &proj_hardware);
+    ndsRendererCopyMtx20p12ToM4x4(camera_modelview, &view_hardware);
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
     glLoadMatrix4x4(&proj_hardware);
-    glMatrixMode(GL_MODELVIEW);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     glLoadMatrix4x4(&view_hardware);
 
-    /* VERTEX10 rebasis: world = rebased * scale + origin. The blob's vertices
-     * are in (world - origin)/scale s10.3 space; this 4x3 inverts that so the
-     * hardware reconstructs world space. Scale on the diagonal, origin in col3. */
+    /* Compensating world matrix: world = stored_coord * 256 + origin. Stored
+     * coords are world/256, so this 4x3 restores exact world positions. Column-
+     * major layout (translation in column 3 = m[9..11]), matching Task 51. */
     {
-        s32 scale = NDS_DREAMLAND_DS_REBASIS_SCALE_S20P12;
-        s32 ox = NDS_DREAMLAND_DS_REBASIS_ORIGIN_X_S20P12;
-        s32 oy = NDS_DREAMLAND_DS_REBASIS_ORIGIN_Y_S20P12;
-        s32 oz = NDS_DREAMLAND_DS_REBASIS_ORIGIN_Z_S20P12;
-        rebasis.m[0] = scale;  rebasis.m[1] = 0;      rebasis.m[2] = 0;
-        rebasis.m[3] = 0;      rebasis.m[4] = scale;  rebasis.m[5] = 0;
-        rebasis.m[6] = 0;      rebasis.m[7] = 0;      rebasis.m[8] = scale;
-        rebasis.m[9] = ox;     rebasis.m[10] = oy;    rebasis.m[11] = oz;
+        s32 scale = NDS_DREAMLAND_DS_MATRIX_SCALE_S20P12;
+        s32 ox = NDS_DREAMLAND_DS_MATRIX_ORIGIN_X_S20P12;
+        s32 oy = NDS_DREAMLAND_DS_MATRIX_ORIGIN_Y_S20P12;
+        s32 oz = NDS_DREAMLAND_DS_MATRIX_ORIGIN_Z_S20P12;
+        /* col0 = [scale, 0, 0], col1 = [0, scale, 0], col2 = [0, 0, scale],
+         * col3 = [ox, oy, oz] (translation). */
+        world.m[0] = scale;  world.m[1] = 0;       world.m[2] = 0;
+        world.m[3] = 0;      world.m[4] = scale;   world.m[5] = 0;
+        world.m[6] = 0;      world.m[7] = 0;       world.m[8] = scale;
+        world.m[9] = ox;     world.m[10] = oy;     world.m[11] = oz;
     }
     glPushMatrix();
-    glMultMatrix4x3(&rebasis);
+    glMultMatrix4x3(&world);
 
     /* Flat white material for the geometry proof. Per-group texture/material
      * binding is layered in once the silhouette renders correctly. */
@@ -20930,49 +20915,21 @@ static void ndsRendererDreamLandDrawStatic3D(
         for (v = 0u; v < count; v++)
         {
             u32 idx = first + v;
-            u8 opcode = sNdsDreamLandDSVertexOpcode[idx];
-            s16 vx = sNdsDreamLandDSVertexX[idx];
-            s16 vy = sNdsDreamLandDSVertexY[idx];
-            s16 vz = sNdsDreamLandDSVertexZ[idx];
+            /* VERTEX16 (coord << 4): the stored world/256 s16 occupies the
+             * integer field of an s.12 vertex, matching the segment0 path's
+             * coord * (1 << (12 - WORLD_UNIT_SHIFT)). */
+            s32 vx = ((s32)sNdsDreamLandDSVertexX[idx]) << 4;
+            s32 vy = ((s32)sNdsDreamLandDSVertexY[idx]) << 4;
+            s32 vz = ((s32)sNdsDreamLandDSVertexZ[idx]) << 4;
 
             /* COLOR word per vertex (flat white). */
             GFX_COLOR = 0x7FFFu;
             gx_words += 1u;
 
-            if (opcode == NDS_DREAMLAND_DS_OP_VERTEX10)
-            {
-                /* VERTEX10: one word, packed s10.3 XYZ (10 bits each, padded). */
-                u32 packed = ((((u32)vx) & 0x3FFu)) |
-                             ((((u32)vy) & 0x3FFu) << 10) |
-                             ((((u32)vz) & 0x3FFu) << 20);
-                GFX_VERTEX10 = packed;
-                gx_words += 1u;
-            }
-            else if (opcode == NDS_DREAMLAND_DS_OP_VERTEX_XZ)
-            {
-                GFX_VERTEX_XY = ((u32)vx & 0xFFFFu) |
-                                (((u32)vz & 0xFFFFu) << 16);
-                gx_words += 1u;
-            }
-            else if (opcode == NDS_DREAMLAND_DS_OP_VERTEX_XY)
-            {
-                GFX_VERTEX_XY = ((u32)vx & 0xFFFFu) |
-                                (((u32)vy & 0xFFFFu) << 16);
-                gx_words += 1u;
-            }
-            else if (opcode == NDS_DREAMLAND_DS_OP_VERTEX_YZ)
-            {
-                GFX_VERTEX_YZ = ((u32)vy & 0xFFFFu) |
-                                (((u32)vz & 0xFFFFu) << 16);
-                gx_words += 1u;
-            }
-            else  /* VERTEX16 fallback: two words (XY, Z). */
-            {
-                GFX_VERTEX16 = ((u32)vx & 0xFFFFu) |
-                               (((u32)vy & 0xFFFFu) << 16);
-                GFX_VERTEX16 = (u32)vz & 0xFFFFu;
-                gx_words += 2u;
-            }
+            GFX_VERTEX16 = ((u32)vx & 0xFFFFu) |
+                           (((u32)vy & 0xFFFFu) << 16);
+            GFX_VERTEX16 = (u32)vz & 0xFFFFu;
+            gx_words += 2u;
             submitted_vertices++;
         }
         /* GFX_END is a GBATEK dummy (no effect, bloats the list); the next

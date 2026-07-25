@@ -1,14 +1,26 @@
 #!/usr/bin/env python3
-"""Task 62 (Commit 1) — generate the runtime Dream Land DS-mesh data blob.
+"""Task 62 — generate the runtime Dream Land DS-mesh data blob.
 
-Consumes the Task 60 primitive stream + Task 61 encoded stream + Task 57 source
-mesh for candidate c120, and emits a generated C include
-``src/nds/dreamland_ds_mesh.generated.inc`` containing:
-  - per-group descriptor table (prim, first-vertex, vertex-count, binding)
-  - flat vertex stream: each entry is (opcode, rebased XYZ in s10.3) in group
-    emission order, ready for the runtime to emit verbatim
-  - the VERTEX10 rebasis (scale + origin) as the compensating-matrix constants
-  - a certificate (checksums) the runtime validates at init
+Consumes the Task 60 primitive stream + Task 57 source mesh for candidate c120,
+and emits a generated C include ``src/nds/dreamland_ds_mesh.generated.inc``
+containing:
+  - per-group descriptor table (prim, first-vertex, vertex-count)
+  - flat vertex stream: per-emission XYZ as s16, in the segment0 world-unit
+    convention (world coord / 256), ready for the runtime to emit as VERTEX16
+    (coord << 4) with no per-vertex opcode selection
+  - a compensating world matrix (scale 256 + origin translation) the runtime
+    pushes as a column-major m4x3 via glMultMatrix4x3, mirroring Task 51's
+    EnsureWorld
+  - a certificate (checksum) the runtime validates at init
+
+Convention (matches the proven segment0 path, ndsRendererNativeStageEmitVertex):
+the Dream Land world coords are large (up to +-3816), but divided by 256 they
+become small integers (+-15) that fit s16 VERTEX16 (coord << 4 -> +-240). The
+compensating world matrix carries the x256 scale so the composed position lands
+in world space. VERTEX16-only — no VERTEX10 / axis-reuse: the segment0 path
+proves this convention renders correctly, and the VERTEX10 s.3/s.12 packing has
+no in-repo precedent to confirm. The opcode-selection word savings from Task 61
+are deferred to a later measured task behind a visual gate.
 
 Host-only. ``--check`` rebuilds and compares the include deterministically
 (same contract as generate_nds_native_stage); the Makefile runs it with
@@ -29,7 +41,6 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import dreamland_primitive_compiler as pc
-import dreamland_quantizer as q
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPTS_DIR.parent
@@ -50,12 +61,11 @@ PRIM_NAME_TO_ID = {"GL_TRIANGLES": PRIM_TRIANGLES,
                    "GL_QUAD": PRIM_QUAD,
                    "GL_TRIANGLE_STRIP": PRIM_STRIP}
 
-# DS vertex opcode ids (GBATEK) — mirrors dreamland_quantizer.
-OP_VERTEX16 = 0x23
-OP_VERTEX10 = 0x2D
-OP_VERTEX_XY = 0x21
-OP_VERTEX_XZ = 0x22
-OP_VERTEX_YZ = 0x24
+# Segment0 world-unit convention (NDS_RENDERER_HW_WORLD_UNIT_SHIFT = 8): source
+# coords are divided by 256 so the VERTEX16 coord<<4 fits s16 for the Dream
+# Land world range (max +-3816 -> +-15). A compensating world matrix carries
+# the x256 scale (+ origin) so the composed position lands in world space.
+WORLD_UNIT_DIVISOR = 256
 
 
 def fnv1a_u32(words: Sequence[int], seed: int = 2166136261) -> int:
@@ -83,65 +93,54 @@ def load_stream(name: str) -> list[dict[str, Any]]:
 
 
 def build_blob(name: str) -> dict[str, Any]:
-    """Build the runtime blob: groups + flat encoded vertex stream + rebasis."""
+    """Build the runtime blob: groups + flat vertex stream + compensating world
+    matrix. Vertex coords are stored as round(world / 256) s16, matching the
+    segment0 world-unit convention; the compensating world matrix carries the
+    x256 scale (+ origin) as a column-major m4x3."""
     positions, triangles, bindings = load_candidate(name)
     stream_groups = load_stream(name)
 
-    # VERTEX10 rebasis over the candidate's positions.
-    rebasis = q.find_v10_rebasis(positions)
-    if rebasis is None:
-        raise ValueError(f"{name}: VERTEX10 rebasis infeasible")
-    scale, origin = rebasis
+    # The Dream Land mesh is static (all stage_geometry bindings share one
+    # world transform). The compensating matrix is a uniform scale of 256
+    # (inverting the /256 coord storage) plus a translation by the mesh's
+    # coordinate origin, so composed positions land exactly in world space.
+    # The origin is the midpoint of the world extents (keeps coords centered,
+    # minimizing signed magnitude).
+    mins = [min(p[i] for p in positions) for i in range(3)]
+    maxs = [max(p[i] for p in positions) for i in range(3)]
+    origin = tuple((mins[i] + maxs[i]) / 2.0 for i in range(3))
 
-    # Walk groups in emission order, selecting the cheapest legal opcode per
-    # vertex (mirrors dreamland_quantizer.select_vertex_opcode). Each emitted
-    # vertex carries its opcode + rebased s10.3 coords.
-    flat: list[dict[str, Any]] = []   # per-emission: opcode, x, y, z (rebased)
-    groups: list[dict[str, Any]] = []  # per-group: prim, first, count, binding
-    prev: tuple[float, float, float] | None = None
+    flat: list[dict[str, Any]] = []   # per-emission: x, y, z (world/256, s16)
+    groups: list[dict[str, Any]] = []  # per-group: prim, first, count
     for g in stream_groups:
         prim_id = PRIM_NAME_TO_ID[g["prim"]]
         verts = g["verts"]
         first = len(flat)
         for vi in verts:
             x, y, z = positions[vi]
-            ev = q.select_vertex_opcode(x, y, z, prev, True, scale, origin)
-            # Rebased s10.3 coords (quantized), for the runtime to emit verbatim.
-            if ev.opcode == q.OP_VERTEX10:
-                sx = q._quantize_v10((x - origin[0]) / scale)
-                sy = q._quantize_v10((y - origin[1]) / scale)
-                sz = q._quantize_v10((z - origin[2]) / scale)
-            elif ev.opcode == q.OP_VERTEX_XZ:
-                sx = q._quantize_v10((x - origin[0]) / scale)
-                sz = q._quantize_v10((z - origin[2]) / scale)
-                sy = 0
-            elif ev.opcode == q.OP_VERTEX_XY:
-                sx = q._quantize_v10((x - origin[0]) / scale)
-                sy = q._quantize_v10((y - origin[1]) / scale)
-                sz = 0
-            elif ev.opcode == q.OP_VERTEX_YZ:
-                sy = q._quantize_v10((y - origin[1]) / scale)
-                sz = q._quantize_v10((z - origin[2]) / scale)
-                sx = 0
-            else:  # VERTEX16 fallback (s16.12)
-                sx = int(round(x * 4096))
-                sy = int(round(y * 4096))
-                sz = int(round(z * 4096))
-            flat.append({"opcode": ev.opcode, "x": sx, "y": sy, "z": sz})
-            prev = ev.decoded
+            # Center on the origin, then divide by 256 (world-unit convention).
+            sx = int(round((x - origin[0]) / WORLD_UNIT_DIVISOR))
+            sy = int(round((y - origin[1]) / WORLD_UNIT_DIVISOR))
+            sz = int(round((z - origin[2]) / WORLD_UNIT_DIVISOR))
+            if not (-32768 <= sx <= 32767 and
+                    -32768 <= sy <= 32767 and
+                    -32768 <= sz <= 32767):
+                raise ValueError(
+                    f"{name}: vertex {vi} world/256 out of s16 range: "
+                    f"({sx},{sy},{sz})")
+            flat.append({"x": sx, "y": sy, "z": sz})
         groups.append({
             "prim": prim_id, "first": first, "count": len(verts),
-            "binding": g["binding"],
         })
 
-    # Certificate: FNV1a over the group table + flat vertex stream + rebasis.
+    # Certificate: FNV1a over the group table + flat vertex stream + matrix.
     cert_words: list[int] = []
     for g in groups:
-        cert_words += [g["prim"], g["first"], g["count"], g["binding"]]
+        cert_words += [g["prim"], g["first"], g["count"]]
     for v in flat:
-        cert_words += [v["opcode"], v["x"] & 0xFFFF, v["y"] & 0xFFFF, v["z"] & 0xFFFF]
-    # Rebasis as s20.12 fixed point.
-    scale_s20p12 = int(round(scale * 4096))
+        cert_words += [v["x"] & 0xFFFF, v["y"] & 0xFFFF, v["z"] & 0xFFFF]
+    # Compensating matrix: scale 256 + origin translation, as s20.12.
+    scale_s20p12 = int(round(WORLD_UNIT_DIVISOR * 4096))
     origin_s20p12 = [int(round(o * 4096)) for o in origin]
     cert_words += [scale_s20p12] + origin_s20p12
     certificate = fnv1a_u32(cert_words)
@@ -150,8 +149,8 @@ def build_blob(name: str) -> dict[str, Any]:
         "candidate": name,
         "groups": groups,
         "vertices": flat,
-        "rebasis_scale_s20p12": scale_s20p12,
-        "rebasis_origin_s20p12": origin_s20p12,
+        "matrix_scale_s20p12": scale_s20p12,
+        "matrix_origin_s20p12": origin_s20p12,
         "certificate": certificate,
         "position_count": len(positions),
         "triangle_count": len(triangles),
@@ -202,13 +201,6 @@ def render_include(blob: dict[str, Any]) -> bytes:
     lines.append("#define NDS_DREAMLAND_DS_PRIM_QUAD            1u")
     lines.append("#define NDS_DREAMLAND_DS_PRIM_TRIANGLE_STRIP  2u")
     lines.append("")
-    lines.append("/* DS vertex opcode ids (GBATEK). */")
-    lines.append("#define NDS_DREAMLAND_DS_OP_VERTEX16   0x23u")
-    lines.append("#define NDS_DREAMLAND_DS_OP_VERTEX10   0x2Du")
-    lines.append("#define NDS_DREAMLAND_DS_OP_VERTEX_XY  0x21u")
-    lines.append("#define NDS_DREAMLAND_DS_OP_VERTEX_XZ  0x22u")
-    lines.append("#define NDS_DREAMLAND_DS_OP_VERTEX_YZ  0x24u")
-    lines.append("")
     lines.append("#define NDS_DREAMLAND_DS_GROUP_COUNT "
                  + str(len(g)) + "u")
     lines.append("#define NDS_DREAMLAND_DS_VERTEX_COUNT "
@@ -235,14 +227,9 @@ def render_include(blob: dict[str, Any]) -> bytes:
     lines.append("};")
     lines.append("")
 
-    # Flat vertex stream: opcode + rebased XYZ per emission.
-    lines.append("/* Per-emission vertex: opcode (u8) + rebased s10.3 XYZ (s16 each). */")
-    lines.append("static const u8 sNdsDreamLandDSVertexOpcode["
-                 + str(len(v)) + "] = {")
-    for i in range(0, len(v), 16):
-        lines.append("    " + ", ".join(hex(vv["opcode"]) for vv in v[i:i+16]) + ",")
-    lines.append("};")
-    lines.append("")
+    # Flat vertex stream: world/256 XYZ (s16) per emission. The runtime emits
+    # each as VERTEX16 (coord << 4) with a compensating world matrix (Task 62).
+    lines.append("/* Per-emission vertex: world/256 XYZ (s16 each). */")
     lines.append("static const s16 sNdsDreamLandDSVertexX["
                  + str(len(v)) + "] = {")
     for i in range(0, len(v), 12):
@@ -262,16 +249,16 @@ def render_include(blob: dict[str, Any]) -> bytes:
     lines.append("};")
     lines.append("")
 
-    # Rebasis compensating-matrix constants (s20.12).
-    lines.append("/* VERTEX10 rebasis: world = rebased * scale + origin. */")
-    lines.append("#define NDS_DREAMLAND_DS_REBASIS_SCALE_S20P12  "
-                 + c_s32(blob["rebasis_scale_s20p12"]))
-    lines.append("#define NDS_DREAMLAND_DS_REBASIS_ORIGIN_X_S20P12 "
-                 + c_s32(blob["rebasis_origin_s20p12"][0]))
-    lines.append("#define NDS_DREAMLAND_DS_REBASIS_ORIGIN_Y_S20P12 "
-                 + c_s32(blob["rebasis_origin_s20p12"][1]))
-    lines.append("#define NDS_DREAMLAND_DS_REBASIS_ORIGIN_Z_S20P12 "
-                 + c_s32(blob["rebasis_origin_s20p12"][2]))
+    # Compensating world matrix (s20.12): uniform scale 256 + origin translate.
+    lines.append("/* Compensating world matrix: world = stored_coord * 256 + origin. */")
+    lines.append("#define NDS_DREAMLAND_DS_MATRIX_SCALE_S20P12  "
+                 + c_s32(blob["matrix_scale_s20p12"]))
+    lines.append("#define NDS_DREAMLAND_DS_MATRIX_ORIGIN_X_S20P12 "
+                 + c_s32(blob["matrix_origin_s20p12"][0]))
+    lines.append("#define NDS_DREAMLAND_DS_MATRIX_ORIGIN_Y_S20P12 "
+                 + c_s32(blob["matrix_origin_s20p12"][1]))
+    lines.append("#define NDS_DREAMLAND_DS_MATRIX_ORIGIN_Z_S20P12 "
+                 + c_s32(blob["matrix_origin_s20p12"][2]))
     lines.append("")
 
     # Certificate.
