@@ -47,6 +47,33 @@ file contradicts this document, the task file wins only where it says so explici
   `NDS_RENDERER_PROFILE_LEVEL>=1` (profile-1 + affine OOMs the taskman arena —
   known, unfixed, accepted). Shipping profile-0 keeps affine=1.
 
+## Which number a task is judged on (Tasks 64-66, 2026-07-26)
+
+**Search on `WORK-H` P50. Gate on `WORK-H` P95 ≤ 1.12M. Use `ALL` only to
+confirm the VBlank step was actually crossed.**
+
+`ALL` is wall time for the whole presented iteration, so it is quantized to
+whole 560,190-tick VBlank periods. A change that removes real work but less
+than one period *cannot* move it — the reclaimed time becomes VBlank wait.
+"ALL flat" therefore never means "this removed nothing," and reading it that
+way produced four uninformative verdicts (Tasks 53, 55, 56, 63), including a
+KILL on a 47% fighter-vertex reduction.
+
+`scripts/sample-tick-hud-buckets.ps1` reports the buckets a task is judged on:
+
+- `WAIT` — the idle `swiWaitForVBlank` span. Cross-checked against the host
+  per-PC profiler to 0.15%.
+- `WORK` — `ALL − WAIT`, sampled as its own series so it has a real P95. The
+  P95 of a difference is not the difference of two P95s.
+- `WORK-H` — `WORK` minus the tick HUD's own console redraw, which costs a few
+  hundred thousand ticks on the ~2 frames per second where it runs. That is
+  invisible in a mean and decisive in a P95, and the published profile-0 ROM
+  does not pay it.
+
+Report P50 **and** P95 with the spread ratio, never the mean alone. Two
+different problems hide in one bucket: steady-state cost lives in P50,
+burstiness lives in the P50→P95 gap, and they take opposite fixes.
+
 ## Fidelity doctrine (the owner, 2026-07-20)
 
 `PROJECT_GOAL.md` owns the fidelity contract. Gameplay/source behavior must be

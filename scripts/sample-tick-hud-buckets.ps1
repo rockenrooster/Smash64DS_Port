@@ -227,6 +227,12 @@ try {
         startFrame = [uint64]$frames[0]
         endFrame = [uint64]$frames[-1]
         buckets = $stats
+        # The per-frame series, not just its order statistics. A P95 says how
+        # bad the bad frames are; only the series says whether they are periodic
+        # (a scheduled refill or a cart read) or event-driven (a hit, a KO).
+        # Those want opposite fixes, and the summary cannot tell them apart.
+        bucketNames = $bucketNames
+        rows = $rows
         meanAll = $meanAll
         meanNamed = $meanNamed
         vbi2 = $vbi[0]
