@@ -90,3 +90,61 @@ to notice that Task 86's own result already implied a limit. Nine sites bought
 18,432; if the effect were per-site rather than per-hot-site, twelve more should
 have bought comparable. It did not, and the reason was available a priori in the
 code-size arithmetic.
+
+---
+
+## 5. Task 89 - and placement is at a local optimum too
+
+One more attempt, deliberately in a *different* family in case the boundary was
+specific to `mem*`.
+
+Task 82 moved four symbols out of `.text.hot.draw` into ITCM and left **2,672 of
+its 8,192 bytes unused**. The tier table in `include/nds/nds_task37_itcm.h` rates
+`.text.hot.draw` at 2.63 cycles/instruction against `.main`'s 3.29, so refilling
+that space with the densest `.main` symbols by non-mem stall per byte should pay.
+
+Seven admitted, 1,088 bytes, ~28,000 ticks/frame of non-mem stall nominally in
+reach: `ndsRendererHardwareBindTextureName`, `ndsRendererLoadHardwareRawComposedMatrix`,
+`ndsRelocFindLoadedFileContaining`, `ndsRendererAdapterStageWorldSourceKeyMatches`,
+`ndsFighterDisplayContractCountFlags`, `ndsRendererAdapterFindStageWorldEntry`,
+`ndsRendererNativeApplyRootLightPreamble`. Section grew 5,628 -> 6,716 bytes and
+the symbols relocated, both verified in the ELF.
+
+| | Task 86 (shipped) | Task 89 | delta |
+|---|---|---|---|
+| `WORK-H` P95 | 1,742,080 | 1,753,728 | **+11,648** |
+| `WORK-H` P50 | 1,340,032 | 1,351,424 | **+11,392** |
+| VBlank 3-interval | 499 | 491 | -8 |
+
+Better on 10 of 128 frames. Reverted.
+
+## 6. Three failures with one shape
+
+| task | family | mechanism | result |
+|---|---|---|---|
+| 87 | `mem*` | inline more 64-byte copies | +17,728 |
+| 88 | `mem*` | remove redundant clears | +9,536 |
+| 89 | placement | refill `.text.hot.draw` | +11,648 |
+
+Three independent, separately-reasoned changes, in two different families, all
+regressing by a similar amount. That is not three unlucky guesses - it says the
+build **sits at a local optimum**. Tasks 82, 85 and 86 took the wins that were
+available at this granularity, and the frame is now arranged such that small
+perturbations in any direction cost more than they return.
+
+The practical rule for the next session: **stop looking for micro-fixes.** The
+remaining levers named by measurement are design-level and both need work before
+they can be attempted:
+
+- **Texture lookup memo**, up to ~40,000 ticks. Task 81 closed this on the belief
+  that the residual was upload work; a later census found **zero texture uploads
+  and zero cache evictions** in the window, so the 42,420 ticks in
+  `ndsRendererHardwareResolveOrBindTexture` are lookup, and memoisable in
+  principle. It needs a generation counter that provably covers all 59 key
+  fields, with an oracle assertion, not care.
+- **`ndsRendererInitStats` call reduction**, up to 41,468 ticks. Task 84 E2 closed
+  the two cheap routes; what remains is understanding why 11.7 traversals a frame
+  each need a full re-initialisation.
+
+Neither is a one-build change, and attempting either as one is how the last three
+tasks went.
