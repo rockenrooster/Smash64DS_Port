@@ -11,13 +11,13 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`.
 | `HARNESSES.md` | Registry authority and harness naming |
 | `ARCHITECTURE.md` | Stable source/backend/component boundaries |
 | `KNOWN_ISSUES.md` | Unresolved durable gaps only |
+| `BUGS.md` | User-reported playtest bugs |
 | `optimization/NATIVE_RENDERER_PLAN.md` | Current M2-M4 implementation contract |
 | `PERF_LEDGER.md` | Reproducible measurements and rejected experiments |
 | `DIAGNOSTIC_REFERENCE.md` | Marker definitions and manual diagnostics |
 | `PORTING.md` | Append-only chronological history |
-| `goal-objective.md` | User-owned P1/P2 acceptance contract |
+| `../PROJECT_GOAL.md` | Authoritative product, fidelity, milestone, and definition-of-done contract |
 | `DECOMP_MAP.md` | Read-only upstream map |
-| `EMULATOR_STRATEGY.md` | melonDS/no$gba boundary |
 | `FTSTRUCT_PARITY.md` | BattleShip/DS fighter ABI parity |
 | `MEMORY_OVERLAY_PLAN.md` | Memory and reloc budget reference |
 | `AUDIO_BACKEND_SCOUT.md` | Dated audio reference |

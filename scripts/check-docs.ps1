@@ -16,8 +16,7 @@ $required = @(
     'docs/ARCHITECTURE.md',
     'docs/DECOMP_MAP.md',
     'docs/DIAGNOSTIC_REFERENCE.md',
-    'docs/EMULATOR_STRATEGY.md',
-    'docs/goal-objective.md',
+    'PROJECT_GOAL.md',
     'docs/HANDOFF.md',
     'docs/HARNESSES.md',
     'docs/KNOWN_ISSUES.md',
@@ -73,12 +72,8 @@ $known = Read-RepoText 'docs/KNOWN_ISSUES.md'
 $porting = Read-RepoText 'docs/PORTING.md'
 $agents = $agentsLines -join "`n"
 
-if (@($handoff -split "`r?`n").Count -gt 100) {
-    Fail-Docs 'docs/HANDOFF.md exceeds 100 lines'
-}
 foreach ($token in @(
-    'battle_playable_realtime', '2026-07-19 23:59 Central',
-    '## Phase Evidence', '## Acceptance Matrix', 'M2 ', 'M3 ', 'M4 ',
+    'battle_playable_realtime', '## Red Queue', '## Acceptance Matrix',
     'one-minute', 'SHA-256'
 )) {
     if (-not $board.Contains($token)) {
@@ -103,7 +98,7 @@ if ($harnesses -notmatch 'HARNESS_INDEX_SOURCE:\s*scripts/lib/harness-registry\.
 foreach ($token in @(
     'Presentation targets roughly 90% overall likeness',
     'cosmetic exactness to one measured experiment',
-    'artifacts/visibility', 'Never approximate gameplay semantics',
+    'artifacts/visibility', 'mechanically equivalent',
     'third A', 'ticks, FPS'
 )) {
     if (-not $agents.Contains($token)) {

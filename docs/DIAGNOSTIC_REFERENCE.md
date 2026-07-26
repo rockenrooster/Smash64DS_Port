@@ -200,8 +200,8 @@ visible no$gba windows for renderer/hardware handoff evidence:
 .\scripts\verify-nogba-smoke.ps1 -Build
 ```
 
-Use `docs/EMULATOR_STRATEGY.md` before renderer work to decide whether the next
-test belongs in melonDS, no$gba, or both.
+Use `docs/VERIFYING.md` to decide whether the next test belongs in melonDS,
+no$gba, or both.
 
 Capture the actual melonDS window to a PNG (default: timestamped file under
 `artifacts/`) with:

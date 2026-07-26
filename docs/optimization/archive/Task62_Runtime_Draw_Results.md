@@ -4,6 +4,52 @@ The first runtime task. Adds a flag-gated runtime path that draws the generated
 c120 mesh directly from the baked blob, bypassing the segment0 program. Touches
 `src/nds/nds_renderer.c` (one writer). No gameplay/collision change.
 
+## 2026-07-25 owner gate — REVERT
+
+The owner rejected the first flag-on ROM: “i see just mario and fox on
+invisible platforms, no stage, must be invisible or really small.” A corrected
+runtime lifecycle draw and a working local capture then exposed the complete
+failure rather than rescuing the candidate:
+
+- `task62_v5.png`: all 119 generated triangles were counted, but the static
+  mesh was absent. The generated candidate had hard-coded every triangle to
+  raw-Z class 0 even though the source static mesh contains 66 raw-Z, 99
+  projected no-Z, and 10 rejected triangles.
+- `task62_v7.png`: restoring source depth classes made the geometry visible,
+  but the result is opaque white screen-covering cards, not a recognizable
+  Dream Land island or three-platform silhouette.
+- `task62_raw_core_probe.png`: retaining only the source raw-Z portion again
+  produces no visible stage.
+- `task62_raw_core_noz_probe.png`: forcing that raw core to neutral depth
+  reveals only two thin horizontal surface bands. It cannot provide the
+  promised island silhouette by itself.
+
+The root problem is upstream of the draw loop. Task 59's candidate IR writes
+`s`, `t`, and `rgba` as zero and writes `run_index=-1`,
+`texture_epoch=-1`, and `submit_class=0`. The Task 60 primitive stream
+retains topology and binding only. Most Dream Land scenery in this mesh is
+alpha-textured no-Z card geometry; drawing those cards flat white necessarily
+fills their rectangular bounds. The Task 58 oracle also rasterizes every
+projected triangle without clip/depth/material/alpha semantics, so its high IoU
+does not qualify a runtime-visible stage.
+
+**Verdict: REVERT.** Keep `NDS_DREAMLAND_DS_MESH=0`; do not enable or publish
+this path. The measured CPU/GX reduction remains useful rejected-experiment
+evidence, but it cannot override the owner visual gate. Any future attempt must
+preserve material epochs, UVs, vertex color/alpha, source depth classes, and
+runtime clipping through simplification and primitive compilation, then pass a
+visual gate before performance promotion.
+
+The flag-on experiment had overwritten the root published battle ROM. On
+2026-07-25 it was rebuilt with `NDS_DREAMLAND_DS_MESH=0` as
+`smash64ds-battle-playable-hwtri.nds`, SHA-256
+`4d795b4e83b335598b20a3b5953fdb1821797cc5e0a825fa96a0643abba4a090`.
+Boundary then passed against that publication; its synchronized capture restored
+the full textured stage (`artifacts/visibility/latest.png`, 37.642% dominant
+green and 58.181% non-white/non-green detail). `check-published-roms.ps1` now
+rejects the known Task 62 payload signature so this failed candidate cannot
+silently replace the published ROM again.
+
 ## Deliverables
 
 - **Commit 1 (`3ebb30aae`)** — generated data blob: `scripts/generate_dreamland_ds_mesh.py` + `src/nds/dreamland_ds_mesh.generated.inc`. c120 baked as 71 groups (48 GL_QUAD + 23 GL_TRIANGLE_STRIP) + 261 rebased s10.3 vertices + VERTEX10 rebasis constants + FNV1a certificate. `--check` rebuilds deterministically.
@@ -44,11 +90,11 @@ Both gates now pass. The earlier "nitrofs build-environment failure" was a misdi
 | flag=1 clean compiles + links | ✅ proven (ROM + ELF built) |
 | generated data + counters present in ELF | ✅ proven (nm) |
 | host blob/checker determinism | ✅ proven (all 6 host checkers pass) |
-| draw function renders the silhouette correctly | ❌ not yet (needs flag=1 ROM run + owner visual A/B) |
-| perf improvement (ALL/P95) | ❌ not yet (needs the KEEP-gate A/B) |
+| draw function renders the silhouette correctly | ❌ rejected by owner and follow-up captures |
+| perf improvement (ALL/P95) | ✅ measured, but rejected on fidelity |
 
-## Next step (owner-gated KEEP)
+## Retired path
 
-128-frame synchronized A/B (flag 0 vs 1) on the canonical Boundary configuration (`battle_playable_realtime`, mode 163, Dream Land, 3600-tick Time mode). Report ALL/STG/FTR/OTHR P50/P95 + the engagement counters on the shared HUD row. **Visual A/B mandatory** (owner is the oracle): normal gameplay side-by-side, no holes, platform silhouettes correct, main island recognizable, pause-orbit swimming check. KEEP only if visual quality acceptable AND frame-level ALL/P95 improves materially (AGENTS rule: do not keep on STG reduction alone).
-
-No claim of a KEEP this cycle — the clean-compile gate is met; the KEEP is explicitly deferred to the owner-gated visual + perf measurement.
+Do not run another A/B on this representation. A future compiler must retain
+the omitted material/depth semantics and earn a fresh owner visual gate before
+performance measurement.

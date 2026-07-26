@@ -64,7 +64,7 @@ and risks the published ROM for zero measured gain.
    checker and confirming the flag count rises from 42.
 
 6. Document the two axes once, in `docs/optimization/NATIVE_RENDERER_PLAN.md`
-   (the renderer contract doc named by `docs/goal-objective.md:114`), so the
+   (the renderer contract doc named by `PROJECT_GOAL.md:117`), so the
    next reader is not left inferring it from the Makefile.
 
 **Gate for Part 1: the published ROM must still hash `1818AA77…` and the
@@ -315,4 +315,3 @@ arbitrary gate pass — it is grounded in the DS pixel grid.
   pin, not a valid byte-identity target for any change.
 
 Full certificate: `artifacts/performance/2026-07-23_task49-gx-differ.md`.
-

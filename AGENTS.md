@@ -14,26 +14,29 @@ If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is 
 
 ## Mission
 
-This repo is a Nintendo DS source port of the BattleShip Smash 64 decompilation:
+This repo recreates SSB64 on Nintendo DS, using BattleShip as the behavioral reference:
 
 ```text
-Original Smash 64 decomp game code + Nintendo DS backend = playable port
+Original SSB64 behavior + fastest correct Nintendo DS implementation = Smash64DS
 ```
 
-Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
+Preserve mechanically equivalent SSB64 behavior and feel; the DS implementation may differ radically from the original engine.
 
 ## Hard Rules
 
 - Treat `decomp/` as read-only reference source. Never edit it.
 - Inspect relevant BattleShip source before changing gameplay or renderer behavior.
-- Inspect `decomp/sm64-nds` before DS backend architecture changes.
-- Prefer coherent original translation-unit imports under `src/import`.
+- Inspect `decomp/sm64-nds` and `decomp/sm64ds-decomp` before substantial DS
+  renderer, memory, asset, hardware, or backend architecture changes.
+- Reuse original code when competitive. Generated, precomputed, manually
+  rewritten, and fighter/stage/move-specific DS implementations are encouraged
+  when they are faster and mechanically equivalent.
 - Put DS/backend behavior under `src/nds` or `src/port`; compatibility declarations belong under `include`.
 - Graduate imported subsystems live. Do not add proof-only branch reruns, one-bit proof masks, or permanent seed/restore wrappers.
 - Migrate or delete obsolete bounded modes when natural runtime replaces them.
 - New harness modes are only for scene-level capabilities.
-- Fix root causes at the shared seam. Do not hide symptoms with arbitrary
-  offsets/constants, duplicated state, frame checks, or asset-specific hacks.
+- Fix bugs at their owning seam. Specialization is allowed; do not hide shared
+  defects with arbitrary offsets/constants, duplicated state, or frame checks.
 - Treat flashes, corruption, nondeterminism, hangs, and unexplained state
   differences as failures.
 - Respect DS CPU, RAM, VRAM, bandwidth, alignment, fixed-point, and graphics
@@ -49,16 +52,13 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
   uncited verifier/emulator telemetry; `artifacts/performance` and
   `artifacts/visibility` are permanent evidence. Never combine cleanup with an
   active implementation or remove an ambiguous/dirty worktree.
-- Performance features must prove ENGAGEMENT on retail hardware (a counter, HUD row, or device photo), not only a melonDS win. A feature that silently
-  degrades, falls back, or disables itself on device may not ship enabled.
+- Use the custom accuracy-focused melonDS build as the primary development and
+  performance reference. Ordinary optimization does not block on repeated
+  retail-hardware tests; reserve them for hardware-specific risk and acceptance.
 - Rendering-side changes may approximate: they gate on a reported fidelity
   budget (synchronized screenshot diffs plus the owner's visual approval), not
-  pixel exactness. Gameplay/source behavior remains bit-exact and verifier-
-  gated. Engagement proof is a counter on the shared engagement HUD row,
-  confirmed by batched device smoke boots; per-feature retail runs are reserved
-  for cache/TCM/DMA/IO-class claims, which melonDS cannot referee. CPU-work-
-  removal claims may KEEP on melonDS typed A/B evidence behind their flag until
-  the next device checkpoint.
+  pixel exactness. Gameplay/source behavior remains mechanically equivalent and
+  verifier-gated; bit exactness applies only to a named guaranteed quantity.
 - Device A/B reports must show the 2/3/4/5+ VBlank-interval histogram and the
   max interval, never min FPS or a half-second average. Min FPS is
   discontinuous: one frame crossing the 4->5 VBlank boundary reads as ~12 FPS
@@ -67,15 +67,14 @@ Do not turn it into a handwritten Smash clone or DS-native gameplay rewrite.
 
 ## DS Visual Fidelity
 
-Gameplay, collision, rules, state, camera meaning, and flow stay source-faithful.
-Presentation targets roughly 90% overall likeness, not pixel identity. Timebox
-cosmetic exactness to one measured experiment; on a tick, memory, or P1 miss,
-keep the cheapest recognizable source-derived approximation and move on.
-Prefer still frames, reduced cadence, simpler geometry/layout, and DS-native
-effects. Record the source, visible delta, measured reason, and screenshot under
-`artifacts/visibility`. Never approximate gameplay semantics or telegraphs and
-never accept missing or corrupt presentation. Dream Land water is frozen at
-exact source frame 0 on the original geometry; its animated replacement is gone.
+Gameplay, collision, rules, state, camera meaning, and flow stay mechanically
+equivalent to the source contract in `PROJECT_GOAL.md`.
+Presentation must remain recognizable, readable, and consistent with SSB64's
+identity. Timebox cosmetic exactness to one measured experiment, then keep the
+cheapest acceptable source-derived approximation.
+Record its source, visible delta, measured reason, and `artifacts/visibility`
+screenshot. Never accept changed telegraphs, missing/corrupt presentation, or
+unexplained behavior. Dream Land water is frozen at source frame 0.
 
 ## Operating Model
 
@@ -104,8 +103,8 @@ repeatable correctness-preserving gain and accumulate it toward the target.
 
 Use the smallest focused checker or benchmark while editing. Run one widest
 relevant verifier for a kept checkpoint: Boundary for battle-only work, or
-Current instead when normal/shared startup is affected. Do not stack DevFast,
-Boundary, and Current when they cover the same runtime. The registry exposes
+Latest instead when normal/shared startup is affected. Do not stack DevFast,
+Boundary, and Latest when they cover the same runtime. The registry exposes
 only Latest and Boundary; the retired diagnostic fleet must not return.
 
 Subagent switch: **OFF**.
@@ -115,12 +114,12 @@ Subagent switch: **OFF**.
 - `ON`: when work cleanly parallelizes, keep up to three helper agents on
   bounded, disjoint lanes; do not manufacture work merely to fill slots.
 
-Prefer deletion, existing helpers, fixed DS hardware paths, and the smallest
-source-backed implementation. Equivalent output from less code or fewer ticks
-wins. Do not add speculative abstractions, selectors, caches, or tooling.
+Prefer deletion, existing helpers, fixed DS hardware paths, and the fastest
+correct mechanically equivalent implementation. At equal cost, less code wins.
+Do not add speculative abstractions, selectors, caches, or tooling.
 
-Milestones cover natural initialization, gameplay, transitions, cleanup, and
-repeat execution; compilation or one good frame is not completion.
+Milestones cover every requirement assigned by `PROJECT_GOAL.md`; compilation
+or one good frame is not completion.
 
 ## Continuous Improvement
 
@@ -133,24 +132,13 @@ concise actionable item in the owning doc; do not detour into unrelated cleanup.
 
 Canonical Boundary is `battle_playable_realtime`, mode `163`: Mario human versus
 the imported level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick)
-Time mode. The public ROM temporarily pauses Fox decision/input only; proof runs
-enable it. Never launch the obsolete five-minute configuration.
+Time mode. A diagnostic ROM may pause Fox decision/input only; proof runs
+and milestone acceptance enable it. Never launch the obsolete five-minute configuration.
 
 ## Documentation Ownership
 
-- `P1_EXECUTION_BOARD.md`: dynamic state, artifact identity, blockers, dates.
-- `HANDOFF.md`: exact restart command and next packet only.
-- `VERIFYING.md`: iteration, A/B, verifier, emulator, capture, snapshot policy.
-- `HARNESSES.md`: registry and harness naming only.
-- `ARCHITECTURE.md`: stable ownership and component boundaries.
-- `KNOWN_ISSUES.md`: unresolved durable gaps only.
-- `optimization/NATIVE_RENDERER_PLAN.md`: current M2-M4 implementation contract.
-- `PERF_LEDGER.md`: measurements and rejected experiments.
-- `DIAGNOSTIC_REFERENCE.md`: marker definitions and manual diagnostics.
-- `PORTING.md`: append-only history; do not rewrite or use as a planning surface.
-
-Do not duplicate current hashes, milestone histories, or command stacks across
-active docs. Put screenshots only under `artifacts/visibility`.
+`PROJECT_GOAL.md` owns the product contract; `docs/README.md` owns other roles.
+Do not duplicate current truth. `PORTING.md` is append-only; screenshots stay in `artifacts/visibility`.
 
 ## Editing
 

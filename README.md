@@ -5,6 +5,9 @@ This project combines the original game logic reconstructed by the
 backend. The result is a playable Nintendo DS port rather than a new Smash-style
 game written from scratch.
 
+See [PROJECT_GOAL.md](PROJECT_GOAL.md) for the authoritative product, fidelity,
+milestone, and definition-of-done contract.
+
 The current build focuses on a one-minute Mario-versus-Fox match on Dream Land,
 with items off. Bring your own legally obtained North American Super Smash Bros.
 ROM; this repository contains no Nintendo assets or ROM-derived data.

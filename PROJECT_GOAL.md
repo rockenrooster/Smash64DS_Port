@@ -1,5 +1,9 @@
 # Smash64DS — Project Goal
 
+This file is the authoritative product, fidelity, milestone, and definition-of-done
+contract. Operational documents may define measurable gates, but may not silently
+tighten this contract.
+
 ## Ultimate Goal
  
 Recreate the complete Super Smash Bros. 64 game for the Nintendo DS.

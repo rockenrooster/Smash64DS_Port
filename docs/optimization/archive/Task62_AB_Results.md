@@ -6,6 +6,71 @@ items off, one-minute Time mode). Frame window 438–445 (the canonical first
 steady-state gate after GO). melonDS, repo-local runner slot 0, identical window
 profile. Date 2026-07-24.
 
+## Superseding verdict — REVERT (2026-07-25)
+
+The owner visual gate failed. Follow-up local captures proved the failure was
+not an emulator capture artifact:
+
+- the corrected source-depth draw is visible but consists of opaque white
+  alpha-card rectangles (`artifacts/visibility/task62_v7.png`);
+- the source raw-Z core alone is invisible
+  (`artifacts/visibility/task62_raw_core_probe.png`);
+- forcing that core to neutral depth reveals only thin horizontal bands
+  (`artifacts/visibility/task62_raw_core_noz_probe.png`).
+
+The candidate/compiler discarded the UV, color/alpha, material-epoch, and depth
+metadata required to turn the static cards into Dream Land. The host silhouette
+oracle ignored those same runtime semantics. Therefore the `-29.6%` stage-work
+measurement below is retained as rejected-experiment evidence only.
+`NDS_DREAMLAND_DS_MESH` must remain 0 and must not ship enabled.
+
+The published root ROM was subsequently restored to the flag-0 path (SHA-256
+`4d795b4e83b335598b20a3b5953fdb1821797cc5e0a825fa96a0643abba4a090`).
+Boundary passed with the complete textured Dream Land visible in
+`artifacts/visibility/latest.png`. The publication checker now rejects this
+candidate's mesh payload signature.
+
+## Material-complete follow-up — exact control passes, reduction gate fails
+
+A source-exact generated control now retains each source run, segment, dense
+vertex, texture, UV, color, alpha, submit class, and live binding transform.
+Its exact frame-438 top-screen capture is pixel-identical to the flag-0 control
+(0 changed pixels):
+
+- flag 0: `artifacts/visibility/2026-07-25_task62-material-baseline2-frame438.png`
+- flag 1: `artifacts/visibility/2026-07-25_task62-material-livebinding-frame438.png`
+
+The live binding transform is required. The Task 57 host IR contains descriptor
+world matrices, but not the live DObj transforms that lift the three
+pass-through platforms; drawing its baked coordinates directly placed those
+platforms near ground level.
+
+This control submits the same 525 static vertices as the source and therefore
+does not meet Task 62's performance gate. More importantly, the reduced Task 59
+candidates store `source_dense_index=-1`, `run_index=-1`, and
+`texture_epoch=-1`. Their geometry-only camera IoU cannot qualify their
+materials or runtime render identity. The Task 60 and Task 61 reports now mark
+every such candidate `material_qualified=false` and recommend no candidate.
+
+The plan's STOP gate therefore applies before a reduced runtime candidate:
+
+- Task 59 `proceed_gate_met=false`;
+- Task 60 has no material-qualified recommendation and no qualified
+  `<=200`-vertex candidate;
+- Task 61 has no material-qualified encoding recommendation;
+- Tasks 63–65 are not entered; Task 64 is unnecessary.
+
+Shipping remains `NDS_DREAMLAND_DS_MESH=0`. A future attempt must preserve
+render identity during simplification (at least run/epoch/material/UV/color)
+and retain or correctly reconstruct live binding transforms before runtime
+integration.
+
+The flag-0 published ROM was restored at SHA-256
+`4d795b4e83b335598b20a3b5953fdb1821797cc5e0a825fa96a0643abba4a090`.
+`verify-all.ps1 -Profile Boundary -NoBuild` passed on that ROM, including the
+published-ROM contract and live top-screen visibility/detail checks; the
+canonical capture was refreshed at `artifacts/visibility/latest.png`.
+
 ## Build identity
 
 Both arms built from the same tree (`dfff37d59`, post counter-relocation fix),
@@ -59,7 +124,7 @@ signal; total-tick jitter is host timing, not the change.
 host-side projection (525 → 261 verts, 50% geometry cut, further reduced by
 VERTEX10 + stripification). The stage submission work dropped materially.
 
-## Visual A/B — INCONCLUSIVE (capture-environment artifact)
+## Original visual assessment — INCONCLUSIVE (superseded above)
 
 **The visual gate is NOT satisfied in this environment.** All screenshot
 captures returned the same static blue frame regardless of arm, timing, or
@@ -82,7 +147,7 @@ when the (blue) capture fired.
 Per VERIFYING.md: "a successful API call alone never qualifies an image." The
 blue captures qualify as nothing — they are non-evidence.
 
-## Verdict
+## Original 2026-07-24 verdict (superseded above)
 
 This is a **CPU-work-removal claim behind a flag**, for which AGENTS permits a
 melonDS KEEP on typed A/B evidence. The tick evidence is decisive and large:

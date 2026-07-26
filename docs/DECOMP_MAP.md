@@ -1,9 +1,17 @@
 # Decomp Reference Map
 
+`PROJECT_GOAL.md` owns the product, fidelity, milestone, performance, and
+definition-of-done contract. This file only maps read-only evidence. BattleShip
+defines original SSB64 behavior; it does not dictate the DS runtime
+representation. Generated, specialized, precomputed, or rewritten DS-native
+implementations are valid when they preserve the required behavior and are the
+fastest correct option.
+
 Everything under `decomp/` is read-only reference material. Those folders are
 independent upstream repositories or extracted upstream assets. Do not patch
-them to make this port compile; add wrappers in `src/import`, DS backend code in
-`src/nds` or `src/port`, and compatibility declarations in `include`.
+them to make this port compile. Imported BattleShip code belongs in
+`src/import`, DS backend code in `src/nds` or `src/port`, and compatibility
+declarations in `include`.
 Lean handoff snapshots include the decomp source/reference and build-critical
 top-level O2R context needed for current imports, but exclude upstream decomp
 build outputs, baseroms, generated binaries, duplicate nested O2R copies, and
@@ -48,11 +56,11 @@ asset packs, and tools that explain how the original data is interpreted.
 ### BattleShip Decomp Subtree
 
 `decomp/BattleShip-main/decomp` is the original N64 Smash 64 decompilation and
-the port's game-code source of truth.
+the port's source of truth for original game behavior.
 
 | Path | Usefulness | Use For | Notes |
 |---|---:|---|---|
-| `decomp/BattleShip-main/decomp/src` | Critical | Original translation units for systems, scenes, menus, fighters, stages, items, effects, and libraries. | Import narrow slices through wrappers in `src/import`. |
+| `decomp/BattleShip-main/decomp/src` | Critical | Original translation units for systems, scenes, menus, fighters, stages, items, effects, and libraries. | Inspect before changing behavior. When direct import is the fastest correct path, use coherent translation-unit imports under `src/import`. |
 | `decomp/BattleShip-main/decomp/include` | Critical | Original ABI, structs, enums, libultra declarations, and reloc symbol declarations. | Inspect before adding project-owned shadow declarations. Do not add globally without checking conflicts. |
 | `decomp/BattleShip-main/decomp/BattleShip_o2r` | Avoid | Duplicate nested copy of extracted O2R resources. | The DS Makefile uses `decomp/BattleShip-main/BattleShip_o2r`; Lean snapshots exclude this nested duplicate to keep handoffs smaller. |
 | `decomp/BattleShip-main/decomp/symbols` | High | Symbol maps for source/data offset resolution. | Use when adding relocation symbol coverage. |
@@ -74,13 +82,13 @@ Important `src` folders:
 | `src/sc` | Critical | Scene manager and scene-subsystem controller flow. |
 | `src/mn` | Critical | Startup, Title, menus, menu-state flow. |
 | `src/mv` | Critical | Opening movie and cinematic scene flow. |
-| `src/ft`, `src/gm`, `src/gr`, `src/it`, `src/wp` | Critical | Fighter, game, stage, item, and weapon systems for later gameplay milestones. |
+| `src/ft`, `src/gm`, `src/gr`, `src/it`, `src/wp` | Critical | Fighter, game, stage, item, and weapon behavior. |
 | `src/lb` | High | Common helpers for sprites, relocation, math, particles, and display helpers. |
-| `src/ef`, `src/particles` | High | Effect/particle systems needed after scene boundaries. |
+| `src/ef`, `src/particles` | High | Original effect and particle behavior. |
 | `src/libultra` | High | Original N64 platform contracts to shim on DS. |
-| `src/audio` | Medium | Original audio flow for later backend replacement. |
+| `src/audio` | Medium | Original audio flow and event timing for DS backend replacement. |
 | `src/relocData` | High | Relocation data declarations and generated references. |
-| `src/db`, `src/ovl8`, `src/credits`, `src/mp`, `src/if` | Medium | Menus/interface/debug/overlay subsystems as milestones reach them. |
+| `src/db`, `src/ovl8`, `src/credits`, `src/mp`, `src/if` | Medium | Debug, overlay, credits, pass-through platform, and interface behavior. |
 
 ## sm64-nds
 
@@ -98,7 +106,7 @@ decomp port structure this DS backend problem?"
 | `decomp/sm64-nds/tools` | High | DS overlay scripts, segment stub generation, asset converters, audio tools. | Reference for project-owned tooling and linker/overlay ideas. |
 | `decomp/sm64-nds/levels`, `actors`, `textures`, `sound`, `data` | Medium | Asset organization and extraction/build flow. | Useful architecture comparison only; not Smash assets. |
 | `decomp/sm64-nds/rsp` | Medium | RSP/Fast3D-related reference material. | Useful when display-list command semantics are unclear. |
-| `decomp/sm64-nds/src/audio` | Medium | N64 audio system hosted on DS. | Use later for audio backend architecture. |
+| `decomp/sm64-nds/src/audio` | Medium | N64 audio system hosted on DS. | Use for audio backend architecture. |
 | `decomp/sm64-nds/src/buffers` | Medium | Buffer ownership and memory-layout examples. | Useful for DS memory pressure planning. |
 | `decomp/sm64-nds/src/menu` | Medium | Menu integration patterns. | Architecture reference only, not Smash menu source. |
 | `decomp/sm64-nds/src/goddard` | Low | SM64-specific face/goddard subsystem. | Usually irrelevant to Smash. |
@@ -120,17 +128,38 @@ Important `src/nds` files:
 | `src/nds/nds_overlay.c`, `.h` and `tools/nds_*overlay*` | High | Overlay/linker strategy reference. |
 | `src/nds/nds_sample_cache.c`, `.h` and `src/nds/arm7` | Medium | Audio/sample handling architecture. |
 | `src/nds/gfx` | High | DS graphics helpers/assets used by the reference backend. |
-| `src/nds/nds_menu*`, `nds_net*`, `nds_netplay*` | Low/Medium | UI/network examples; generally not needed for the Smash port core. |
+| `src/nds/nds_menu*`, `nds_net*`, `nds_netplay*` | Low/Medium | DS UI and network integration examples; not Smash behavior source. |
+
+## sm64ds-decomp
+
+`decomp/sm64ds-decomp` reconstructs the retail Nintendo DS implementation of
+Super Mario 64 DS. Unlike `sm64-nds`, it is not an N64-decomp-to-DS port. Use
+its verified source as evidence for how a shipped DS game handled comparable
+hardware, fixed-point, overlay, memory, rendering, audio, input, and content
+problems. It is not a source of Smash gameplay or an architecture to copy
+wholesale.
+
+| Path | Usefulness | Use For | Notes |
+|---|---:|---|---|
+| `decomp/sm64ds-decomp/src` | High | Verified retail DS routines and concrete DS-era implementation patterns. | Source is organized as one function per file; use symbols to find relevant routines. Compare patterns, then implement the smallest Smash-specific solution in project-owned code. |
+| `decomp/sm64ds-decomp/symbols` | High | Verified addresses, overlay ownership, and symbol-name cross-references. | Start here when locating a comparable routine in the flat `src` tree. |
+| `decomp/sm64ds-decomp/notes` | Medium | ARM9, mwccarm, code-generation, overlay, and reverse-engineering findings. | Useful supporting evidence; current project contracts remain authoritative. |
+| `decomp/sm64ds-decomp/tools` | Medium | DS binary, relocation, symbol, and matching-analysis tooling. | Reference only; do not couple this port's build to the upstream matching workflow. |
+| `decomp/sm64ds-decomp/config` | Low | Matching-decomp coordination and provenance data. | Rarely relevant to Smash64DS implementation. |
+| `decomp/sm64ds-decomp/nearmiss` | Avoid | Unverified near-match candidates. | Do not treat as authoritative source. |
+| `decomp/sm64ds-decomp/docs` | Low | Upstream progress presentation. | Project orientation only. |
+| Root files (`README.md`, `CLAIMS.md`, `CONTRIBUTING.md`, `MERGE.md`) | Low | Upstream scope, verification standard, and contribution workflow. | Useful for provenance; not this project's workflow. |
+| `.git`, `.github` | Avoid | Upstream repository metadata. | Do not edit. |
 
 ## How To Use This Map
 
 Before adding a subsystem:
 
-1. Read the relevant BattleShip source/header under `decomp/BattleShip-main`.
-2. Check BattleShip docs/tools for data-layout, relocation, renderer, or asset
-   notes.
-3. Check `decomp/sm64-nds/src/nds` and neighboring engine/build files for the
-   DS backend architecture pattern.
-4. Add or adjust only project-owned code.
-5. Update `docs/PORTING.md`, `docs/HANDOFF.md`, and any verifier that proves
-   the new boundary.
+1. Read the relevant BattleShip source/header to establish original behavior.
+2. Check BattleShip docs, tools, and assets when data interpretation is unclear.
+3. Compare `sm64-nds` for N64-to-DS port seams and `sm64ds-decomp` for verified
+   retail-DS implementation patterns.
+4. Choose the fastest correct project-owned implementation: coherent import,
+   generated specialization, precomputed data, or DS-native replacement.
+5. Follow the current verifier workflow and update only the document that owns
+   any changed truth.

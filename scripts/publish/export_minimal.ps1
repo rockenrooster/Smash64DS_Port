@@ -34,7 +34,7 @@ function Assert-ExportPath {
         }
     }
 
-    if (@('AGENTS.md', 'architect.md', 'worktree_report.md') -icontains $normalized -or
+    if (@('AGENTS.md', 'worktree_report.md') -icontains $normalized -or
         $normalized -match '(?i)(^|/)baserom' -or
         $normalized -match '(?i)\.(z64|n64|v64|nds|o2r)$') {
         Stop-Export "forbidden public path: $RelativePath"

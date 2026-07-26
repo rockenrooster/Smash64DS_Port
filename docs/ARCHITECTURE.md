@@ -12,11 +12,12 @@ asset relocation, and narrow ABI compatibility.
 
 ## Fidelity Boundary
 
-Gameplay, hitboxes, collision, physics, timing, rules, camera meaning, and state
-flow stay source-faithful. Presentation targets roughly 90% overall likeness.
-After one measured cosmetic attempt, a cheaper recognizable source-derived DS
-representation may replace pixel-exact presentation. It may not change gameplay
-geometry, telegraphs, depth meaning, or scene state. Evidence includes the
+`PROJECT_GOAL.md` owns the fidelity contract. Gameplay, hitboxes, collision,
+physics, timing, rules, camera meaning, and state flow must remain mechanically
+equivalent. Bit exactness is required only for a named quantity whose exactness
+the port guarantees. Presentation targets roughly 90% overall likeness; after
+one measured cosmetic attempt, a cheaper recognizable source-derived DS
+representation may replace pixel-exact presentation. Evidence includes the
 source, visible delta, measured reason, and `artifacts/visibility` screenshot.
 
 Dream Land water is the precedent: exact BattleShip frame 0/fraction 114 is
@@ -82,9 +83,10 @@ weak stubs are temporary boundaries and stay listed in `KNOWN_ISSUES.md`.
 ## Scheduling, Input, And Timing
 
 BattleShip object/process order remains authoritative. The port's coroutine and
-taskman seams map original scheduling to the single ARM9 runtime without changing
-callback order. DS VBlank is presentation pacing; source logic still advances at
-the original 60 Hz contract.
+taskman seams map original scheduling to the single ARM9 runtime. The original
+60 Hz simulation is preferred, not sacred; a compensated lower-rate
+implementation must prove mechanically equivalent behavior under the goal
+contract. DS VBlank remains presentation pacing.
 
 `osGetTime` and `osGetCount` use shared libnds CPU timers 0/1. Other DS code must
 not claim those timers. Live DS buttons and stick values feed the original input
