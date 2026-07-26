@@ -11400,9 +11400,25 @@ static void ndsFighterDLAllDrawAccumulateStats(
         state->vertex_range_reject_count;
 }
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+/* Task 91 E1. The M2 phase ledger already measures this split but is restricted
+ * to profile level 1 (nds_renderer.h:39) and its one target overrides
+ * FAST_RUN_DEFAULT, so it cannot referee the Boundary configuration. These
+ * three counters are the minimum that can: ticks spent rediscovering the DObj
+ * tree, ticks spent revalidating that it still matches the generated program,
+ * and the call count to normalise both. Lab only, default off. */
+u32 gNdsTask91WalkTicks;
+u32 gNdsTask91ValidateTicks;
+u32 gNdsTask91DrawCalls;
+u32 gNdsTask91NativeEligible;
+#endif
+
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                u16 *pixels, u32 pitch)
 {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    u32 task91_phase_start;
+#endif
     DObj *root;
     NDSFighterDLAllDrawCollection collection;
     NDSFighterDLDrawState *states;
@@ -11488,7 +11504,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     m2_phase_start = cpuGetTiming();
 #endif
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsTask91DrawCalls++;
+    task91_phase_start = cpuGetTiming();
+#endif
     ndsFighterCollectAllDObjsWithDL(root, &collection);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsTask91WalkTicks += cpuGetTiming() - task91_phase_start;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_owner->m2_collection_ticks += cpuGetTiming() - m2_phase_start;
@@ -11608,6 +11631,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     if (native_owner_enabled != FALSE)
     {
         u32 expected_asset_id = (slot == 0u) ? 0x128u : 0x139u;
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        task91_phase_start = cpuGetTiming();
+#endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
         m2_phase_start = cpuGetTiming();
@@ -11711,6 +11737,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 nNDSTickHudNativeOwnerFallbackValidate);
 #endif
         }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        gNdsTask91ValidateTicks += cpuGetTiming() - task91_phase_start;
+        if (native_owner_enabled != FALSE) { gNdsTask91NativeEligible++; }
+#endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
         m2_owner->m2_owner_validation_ticks +=

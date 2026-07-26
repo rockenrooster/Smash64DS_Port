@@ -334,6 +334,47 @@ frame is, and its generated tables are **under-used rather than absent**. That
 is a different campaign from the one this document opens with — the compiler
 largely exists; what is missing is the runtime consuming it.
 
+## Amended by Task 91 E1 — Task 79 is 13,888, not ≥100,000. **STOP.**
+
+`ClaudeOpus5_Task91_Task79Refuted_20260726.md` measured Task 79's own
+"path to remove" on the tick-HUD ROM — the configuration the P95 gate uses —
+with `NDS_TASK91_DRAW_PHASE_CENSUS=1`:
+
+| phase | ticks/frame |
+|---|---|
+| `ndsFighterCollectAllDObjsWithDL` (generic DObj tree walk) | 3,232 |
+| native-owner revalidation loop + `ValidateNativeOwnerCached` | 10,656 |
+| **total Task 79 deletes** | **13,888** |
+
+Two draw calls per frame, native owner eligible on 2 of 2. Task 79's target is
+≥100,000; the path it names is **7.2× smaller**, below this document's own
+"~20K–30K simple exact change" band, and only 1.7× the ±8,000 placement noise
+floor that Tasks 87–89 all regressed inside.
+
+**Task 79 is STOP as specified.** Do not build generated render-program dispatch
+to recover 13,888 ticks.
+
+The wider consequence is this document's sizing premise, not its engineering
+rule. Three consecutive plan tasks have now come in under their gate on
+measurement — Task 77 E0 (the compiler already exists), Task 78 E0 (animation
+82,807 vs ≥100K), Task 91 E1 (render programs 13,888 vs ≥100K). The generic
+abstraction this campaign was written to delete has largely already been deleted
+by Tasks 36, 53, 54 and the native-owner work. `FTR` P50 is 543,552 and the
+generic scaffolding inside it is 2.6%; the other 97% is native production,
+shading, matrix preparation and GX submission — real rendering that a
+compiler-first rewrite does not remove.
+
+**New scheduling rule, binding on every task after this one:** a task proposing
+to delete a runtime phase must first name that phase and measure it on the
+tick-HUD ROM, as Task 91 E1 did. Sizing from per-symbol census totals is
+forbidden as a basis for scheduling — it has now been wrong by 3–15× (Task 83),
+1.8× (Task 84 E0) and 8× (Task 91 E0). Extend
+`scripts/census-fighter-draw-phases.ps1` to the candidate phase; it is one build
+and one run.
+
+The remaining 606,912 to the gate is not in scaffolding. Where it is, is an open
+question this document no longer claims to answer.
+
 ---
 
 ## Task 75 — Minimal animation preload bridge (optional)
@@ -558,6 +599,11 @@ material changes, dynamic effects, and direct GX submission.
 **≥100K `FTR` reduction** with full visual correctness. Same caveat as Task 78:
 the figure is a hypothesis until Task 81 re-derives it.
 
+> **STOPPED by Task 91 E1 (2026-07-26).** Re-derived early, on the tick-HUD ROM:
+> the walk plus revalidation this task deletes is **13,888 ticks/frame**, 7.2×
+> under the target. See the Task 91 E1 amendment above. This section is retained
+> as the record of what was proposed and why it was not built.
+
 ---
 
 ## Task 80 — Prepared texture and material runtime
@@ -651,26 +697,31 @@ stage-specific DS code.
 ## Final roadmap
 
 ```text
-75  Minimal preload bridge (OPTIONAL - throwaway if 78 lands soon)
+75  Minimal preload bridge             OPTIONAL, never built
     |
     v
-77  Fighter compiler foundation        BattleShip -> canonical Fighter IR
-    |                                  + gameplay-bone flag + IR checker
-    v
-78  Generated DS animation engine      Mario + Fox
-    |                                  two gates, split per bone
-    v
-79  Generated fighter render programs  consume native animation directly
+77  Fighter compiler foundation        DONE - E0 found it already existed
     |
     v
-80  Prepared texture/material bindings preferably folded into 79
+78  Generated DS animation engine      STOP - 82,807 vs >=100K target
     |
     v
-81  Re-profile the new architecture    re-derive the budget as a partition
+79  Generated fighter render programs  STOP - 13,888 vs >=100K target (Task 91 E1)
     |
     v
-82+ Scale the compiler to more fighters/stages
+80  Prepared texture/material bindings CLOSED by Tasks 79 E1 / 81
+    |
+    v
+81  Re-profile the new architecture    <- the only live item on this roadmap
+    |
+    v
+82+ Scale the compiler                 not reachable until 81 names a new lever
 ```
+
+Every implementation item on this roadmap has now been measured and stopped
+under its own gate. **Task 81 is what remains**, and its job has changed: not
+"re-profile after the rewrite" but "find where the 606,912 actually is, given
+that the rewrite this document proposed would not have recovered it.
 
 ---
 
