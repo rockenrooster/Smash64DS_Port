@@ -1992,6 +1992,20 @@ static u32 sBattleTickHudRing[nNDSTickHudBucketCount][NDS_TICK_HUD_WINDOW];
 static u32 sBattleTickHudScratch[NDS_TICK_HUD_WINDOW];
 static u32 sBattleTickHudRingHead;
 static u32 sBattleTickHudRingCount;
+#if NDS_TASK68_FALLBACK_CENSUS
+/* Task 70. The native-owner counters are cumulative, and a run-level total
+ * cannot say whether the frames that fell back are the frames that cost the
+ * P95 or merely as numerous as them. Ringing the per-frame delta alongside the
+ * buckets puts both on the same index, so the two medians can be compared
+ * directly instead of correlated across separate runs.
+ *
+ * volatile because nothing in the ROM ever reads it: the bucket ring survives
+ * because the HUD computes percentiles from it, but a static array that is only
+ * ever stored to is a dead store and GCC deletes it outright -- the first build
+ * linked with no such symbol at all. */
+static volatile u32 sBattleTickHudFallbackRing[NDS_TICK_HUD_WINDOW];
+static u32 sBattleTickHudFallbackPrev;
+#endif
 /* The values last printed. Retained so the HUD can be asserted over GDB
  * instead of only photographed - scripts/sample-tick-hud-buckets.ps1 computes
  * the same order statistics from the raw buckets and the two must agree. */
@@ -2060,6 +2074,14 @@ void ndsPlatformTickHudSample(void)
     {
         sBattleTickHudRing[bucket][head] = gNdsTickHudBuckets[bucket];
     }
+#if NDS_TASK68_FALLBACK_CENSUS
+    {
+        u32 total = gNdsTickHudNativeOwnerFallbackCount;
+
+        sBattleTickHudFallbackRing[head] = total - sBattleTickHudFallbackPrev;
+        sBattleTickHudFallbackPrev = total;
+    }
+#endif
     sBattleTickHudRingHead = (head + 1u) % NDS_TICK_HUD_WINDOW;
     if (sBattleTickHudRingCount < NDS_TICK_HUD_WINDOW)
     {

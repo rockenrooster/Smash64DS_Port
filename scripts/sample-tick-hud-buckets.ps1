@@ -128,6 +128,7 @@ try {
     $sampleColumnCount = $bucketNames.Count + $fallbackFields.Count
     $tickHudFormat = (, '%u' * ($sampleColumnCount + 1)) -join ','
     $ringPath = Join-Path $temp 'tick-hud-ring.bin'
+    $fbRingPath = Join-Path $temp 'tick-hud-fallback-ring.bin'
     $ringWindow = 128
     $ringBytes = $bucketNames.Count * $ringWindow * 4
     $ringEndFrame = $StartFrame + $Samples
@@ -173,6 +174,9 @@ try {
         # bound, which is the same form the Task 34 stage-stream dump uses.
         ("dump binary memory $ringPath &sBattleTickHudRing[0][0] " +
             "&sBattleTickHudRing[$($bucketNames.Count)][0]"),
+        $(if ($FallbackCensus) {
+            "dump binary memory $fbRingPath &sBattleTickHudFallbackRing[0] " +
+                "&sBattleTickHudFallbackRing[$ringWindow]" }),
         ('printf "TICKVBI=%u,%u,%u,%u,%u\n", ' +
             'gNdsBattlePlayablePacingPresentIntervalBucket[2], ' +
             'gNdsBattlePlayablePacingPresentIntervalBucket[3], ' +
@@ -267,6 +271,20 @@ try {
         # zero yet.
         $ringStart = if ($ringCount -lt $ringWindow) { 0 } else { $ringHead }
         $skip = $ringCount - $Samples
+        # Task 70: the per-frame fallback deltas share the ring index, so they
+        # append as one more column and every frame carries its own count.
+        $fbRaw = if ($FallbackCensus) {
+            if (-not (Test-Path -LiteralPath $fbRingPath -PathType Leaf)) {
+                throw ("Fallback ring dump wrote no file at $fbRingPath. The " +
+                    'ROM must be built NDS_TASK68_FALLBACK_CENSUS=1.')
+            }
+            $bytes = [System.IO.File]::ReadAllBytes($fbRingPath)
+            if ($bytes.Length -ne ($ringWindow * 4)) {
+                throw ("Fallback ring dump is $($bytes.Length) bytes, expected " +
+                    "$($ringWindow * 4).")
+            }
+            $bytes
+        } else { $null }
         @(0..($Samples - 1) | ForEach-Object {
             $slot = ($ringStart + $skip + $_) % $ringWindow
             # The label is derived from the presented-frame counter read at the
@@ -279,6 +297,9 @@ try {
             for ($b = 0; $b -lt $bucketNames.Count; $b++) {
                 $row.Add([BitConverter]::ToUInt32($raw,
                     ((($b * $ringWindow) + $slot) * 4)))
+            }
+            if ($null -ne $fbRaw) {
+                $row.Add([BitConverter]::ToUInt32($fbRaw, ($slot * 4)))
             }
             , [uint64[]]$row.ToArray()
         })
@@ -372,10 +393,18 @@ try {
     $fbBase = $bucketNames.Count + 1
     $workCol = [array]::IndexOf($bucketNames, 'WORK') + 1
     $hudCol = [array]::IndexOf($bucketNames, 'HUD') + 1
-    # Ring mode carries no per-frame fallback column: the ROM rings the buckets
-    # and nothing else, so with -RingDump the fallback census degrades to the
-    # run-level by-reason totals read at the stop.
-    $fbPerFrame = @(if ($FallbackCensus -and (-not $RingDump)) {
+    # Ring mode rings the delta itself, so the column is already per-frame and
+    # every sample counts. The per-stop column is cumulative and has to be
+    # differenced, which costs the first sample.
+    $fbPerFrame = @(if ($FallbackCensus -and $RingDump) {
+        for ($i = 0; $i -lt $rows.Count; $i++) {
+            [PSCustomObject]@{
+                frame = $rows[$i][0]
+                total = [uint64]$rows[$i][$fbBase]
+                workH = [uint64]$rows[$i][$workCol] - [uint64]$rows[$i][$hudCol]
+            }
+        }
+    } elseif ($FallbackCensus) {
         for ($i = 1; $i -lt $rows.Count; $i++) {
             [PSCustomObject]@{
                 frame = $rows[$i][0]
@@ -502,6 +531,8 @@ try {
             $fbWindow[0], $rows.Count, $fbWindow[1], $fbReasonSum,
             (100.0 * $fbReasonSum / [Math]::Max(1.0, $fbCalls)),
             (($fbByReason | Select-Object -Skip $fbDenominators) -join ' '))
+        Write-Output ("  frames with a fallback: {0} of {1}" -f
+            $fbFrames.Count, $fbPerFrame.Count)
     } else {
         Write-Output (("native-owner fallback: {0} of {1} frames took one  [{2}]") -f
             $fbFrames.Count, $fbPerFrame.Count, ($fbByReason -join ' '))
@@ -513,6 +544,20 @@ try {
             [int][Math]::Floor(($cleanFrames.Count - 1) * 0.5)])
         Write-Output (("  WORK-H median: fallback {0:N0} vs clean {1:N0} " +
             "({2:N2}x)") -f $fbMed, $clMed, ($fbMed / [double]$clMed))
+        # A median over a handful of frames is a weak basis for "the fallback
+        # frames are the expensive frames". What settles it is whether the two
+        # populations separate: how many clean frames reach the cheapest
+        # fallback frame. Zero overlap is the claim; anything else is not.
+        $fbMin = ($fbFrames.workH | Measure-Object -Minimum).Minimum
+        $cleanAbove = @($cleanFrames | Where-Object { $_.workH -ge $fbMin })
+        $cleanSorted = @($cleanFrames.workH | Sort-Object)
+        Write-Output (("  separation: cheapest fallback frame {0:N0}; " +
+            "{1} of {2} clean frames reach it; clean P95 {3:N0}") -f
+            $fbMin, $cleanAbove.Count, $cleanFrames.Count,
+            $cleanSorted[[int][Math]::Floor(($cleanSorted.Count - 1) * 0.95)])
+        Write-Output ("  fallback frames: " + (($fbFrames |
+            ForEach-Object { '{0}({1}):{2:N0}' -f
+                $_.frame, $_.total, $_.workH }) -join ' '))
     }
     }
 
@@ -532,6 +577,7 @@ try {
     }
     Restore-MelonDSGdbConfig -State $configState
     Remove-Item $gdbScript, $gdbOut, $gdbErr, $emulatorOut, $emulatorErr, `
-        (Join-Path $temp 'tick-hud-ring.bin') `
+        (Join-Path $temp 'tick-hud-ring.bin'), `
+        (Join-Path $temp 'tick-hud-fallback-ring.bin') `
         -Force -ErrorAction SilentlyContinue
 }
