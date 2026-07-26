@@ -474,6 +474,94 @@ s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
     return TRUE;
 }
 
+/* Task 76. The same redundancy one level up, and the larger half of it. A
+ * caller that must zero its destination before the read needs the payload size
+ * first, and the only way it had to learn that was ndsRelocAssetAllocSize --
+ * which opens the file and parses the header this load then re-reads. On the
+ * fighter-animation path that is a whole second NitroFS directory walk per
+ * load, inside the frame that needs the move (Task 71).
+ *
+ * One open supplies both. `align` is the caller's allocation granularity; the
+ * zeroed region is data_size rounded up to it, which is exactly the region the
+ * caller used to memset from ndsRelocAssetAllocSize's return, and it is
+ * reported back so the caller can size its own failure handling.
+ *
+ * The zero happens after the header is known and before the payload read, so
+ * the bytes left in dst are identical to the old memset-then-load order. On
+ * every failure path reachable once the header is known, dst is left fully
+ * zeroed -- which is what the animation caller's `fail:` memset did. */
+s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
+                                    size_t *out_alloc_size,
+                                    NDSRelocAssetHeader *out_header)
+{
+    const NDSRelocAssetEntry *entry;
+    FILE *file;
+    NDSRelocAssetHeader header;
+    long data_offset;
+    size_t alloc_size;
+
+    if (out_alloc_size != NULL)
+    {
+        *out_alloc_size = 0u;
+    }
+    if ((dst == NULL) || (align == 0u))
+    {
+        return FALSE;
+    }
+
+    entry = ndsRelocAssetFindEntry(asset_id);
+    if (entry == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+
+    file = fopen(entry->path, "rb");
+    if (file == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+
+    if (ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header,
+                                        &data_offset) == FALSE)
+    {
+        fclose(file);
+        return FALSE;
+    }
+    gNdsRelocAssetHeaderReadCount++;
+
+    alloc_size = ((size_t)header.data_size + (size_t)align - 1u) &
+                 ~((size_t)align - 1u);
+    memset(dst, 0, alloc_size);
+    if (out_alloc_size != NULL)
+    {
+        *out_alloc_size = alloc_size;
+    }
+
+    if (fseek(file, data_offset, SEEK_SET) != 0)
+    {
+        gNdsRelocAssetShortReadCount++;
+        fclose(file);
+        return FALSE;
+    }
+    if (fread(dst, 1, header.data_size, file) != header.data_size)
+    {
+        gNdsRelocAssetShortReadCount++;
+        memset(dst, 0, alloc_size);
+        fclose(file);
+        return FALSE;
+    }
+    fclose(file);
+
+    if (out_header != NULL)
+    {
+        *out_header = header;
+    }
+    gNdsRelocAssetPayloadReadCount++;
+    return TRUE;
+}
+
 /* Header and payload from one open.
  *
  * Callers that need both used to call ndsRelocAssetReadHeader and then

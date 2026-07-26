@@ -330,7 +330,11 @@
 #define NDS_TITLE_MAX_WIDTH 320u
 #define NDS_TITLE_MAX_HEIGHT 240u
 #define NDS_TITLE_FILE_BUFFER_SIZE 176000u
-#define NDS_RELOC_ALIGN(value) (((value) + 0xFu) & ~0xFu)
+/* One granularity, named once, so a caller that has to pass it as a value
+ * cannot drift from the macro that rounds with it. */
+#define NDS_RELOC_ALIGN_BYTES 0x10u
+#define NDS_RELOC_ALIGN(value) \
+    (((value) + (NDS_RELOC_ALIGN_BYTES - 1u)) & ~(NDS_RELOC_ALIGN_BYTES - 1u))
 #define NDS_RELOC_STAGE_CASTLE_STATIC_SIZE NDS_RELOC_ALIGN(0x26cd0u)
 #define NDS_RELOC_EXTERN_DATA_BANK_113_STATIC_SIZE NDS_RELOC_ALIGN(0x6890u)
 #define NDS_OPENING_ACTION_PREVIEW_MAX_WIDTH 320u
@@ -5460,12 +5464,17 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         return NULL;
     }
 
-    asset_size = ndsRelocAssetAllocSize(asset_id);
-    if (asset_size == 0u)
+    /* Existence check without I/O. This used to be ndsRelocAssetAllocSize,
+     * which answers it by opening the file and parsing the header -- a full
+     * NitroFS directory walk for a question the asset table already answers,
+     * and for a size the load below reports anyway (Task 76).
+     * ndsRelocAssetGetPath is a table lookup. */
+    if (ndsRelocAssetGetPath(asset_id) == NULL)
     {
         ndsRelocRecordExternalFixupFail(asset_id);
         return NULL;
     }
+    asset_size = 0u;
 #if NDS_TICK_HUD
     /* Observation only -- the load below is unchanged. "Force" may well mean
      * the caller wants pristine data restored, and the renderer does mutate
@@ -5483,14 +5492,15 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         }
     }
 #endif
-    memset(heap, 0, asset_size);
-    /* One open, not two. asset_size comes from ndsRelocAssetAllocSize, so the
-     * header this used to read separately was never consulted before
-     * ndsRelocAssetLoadData re-read it and overwrote it -- and this is the
-     * on-demand fighter-animation load Task 71 caught running inside the frame
-     * that needs the move, where each open is a NitroFS directory walk. */
-    if (ndsRelocAssetLoadHeaderAndData(asset_id, heap, asset_size,
-                                       &header) == FALSE)
+    /* One open for the size, the zero and the payload. Task 72 collapsed the
+     * probe-then-load pair here; the sizing call above was the third walk of
+     * the same directory for the same header, and this is the on-demand
+     * fighter-animation load Task 71 caught running inside the frame that needs
+     * the move. The callee zeroes heap over the aligned payload size before
+     * reading, which is the memset that used to stand here, and reports that
+     * size back for the failure path below. */
+    if (ndsRelocAssetLoadIntoZeroedHeap(asset_id, heap, NDS_RELOC_ALIGN_BYTES,
+                                        &asset_size, &header) == FALSE)
     {
         goto fail;
     }

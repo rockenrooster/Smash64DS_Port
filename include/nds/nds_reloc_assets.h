@@ -29,6 +29,14 @@ s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
 s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
                                    size_t dst_capacity,
                                    NDSRelocAssetHeader *out_header);
+/* Size, zero and load from one open. Prefer this over sizing with
+ * ndsRelocAssetAllocSize and then loading: that pair walks the NitroFS
+ * directory twice for a size the load's own header already carries. `align` is
+ * the caller's allocation granularity; *out_alloc_size receives data_size
+ * rounded up to it, and dst is zeroed over exactly that region. */
+s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
+                                    size_t *out_alloc_size,
+                                    NDSRelocAssetHeader *out_header);
 s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
                                u32 *out_size);
 s32 ndsRelocCopyMObjSubForAttachment(struct MObjSub *dst,
