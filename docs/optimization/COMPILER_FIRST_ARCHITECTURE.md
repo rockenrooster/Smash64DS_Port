@@ -74,6 +74,14 @@ GX submission               ~90K
 matrix work all occur *inside* renderer work. They must not be summed, and a
 task may not claim two of them as independent budgets.
 
+> **RETIRED by Task 81 (2026-07-26).** Do not size anything from this table. It
+> is kept only as the record of what this campaign was scheduled against. The
+> replacement is a true partition — every symbol in exactly one class, classes
+> summing to the frame, stall separated from instruction cost — produced by
+> `scripts/task81_partition_census.py` and reported in
+> `ClaudeOpus5_Task81_PartitionReprofile_20260726.md`. Three tasks were
+> mis-scheduled against the overlapping version.
+
 Two further constraints on how these numbers are read:
 
 - **Task 65 measured 62% of frame work as stall.** A generated program that
@@ -712,16 +720,35 @@ stage-specific DS code.
 80  Prepared texture/material bindings CLOSED by Tasks 79 E1 / 81
     |
     v
-81  Re-profile the new architecture    <- the only live item on this roadmap
+81  Re-profile the new architecture    DONE - partition retires the table above
     |
     v
-82+ Scale the compiler                 not reachable until 81 names a new lever
+82+ Scale the compiler                 NOT SCHEDULED - 81 found the generated
+                                       path is already the largest class
 ```
 
-Every implementation item on this roadmap has now been measured and stopped
-under its own gate. **Task 81 is what remains**, and its job has changed: not
-"re-profile after the rewrite" but "find where the 606,912 actually is, given
-that the rewrite this document proposed would not have recovered it.
+Every implementation item on this roadmap has been measured and stopped under
+its own gate, and **Task 81 has now run**
+(`ClaudeOpus5_Task81_PartitionReprofile_20260726.md`). Its partition retires the
+overlapping table at the top of this document. Three results decide what follows:
+
+- **The generated path is the largest class in the frame** — `fighter: native
+  production` at 255,061 ticks/frame (17.6% of work), larger than the generic
+  scaffolding around it (173,892, of which Task 91 E1 measured 13,888 as
+  removable). Generating more native code does not shrink this. The native code
+  *is* the cost. That is this document's premise inverted, and it is measured.
+- **Sixteen of seventeen classes are 52–89% stall.** The data-layout thesis is
+  correct, but ITCM is packed (Task 83 closed further repacking) and Tasks 87–89
+  proved the layout is at a local optimum.
+- **`soft-float + libgcc` is the single exception**: 191,810 ticks/frame,
+  155,151 instructions, **19.1% stall**. The only instruction-bound class in the
+  frame, and second largest. It shrinks only by executing fewer float operations.
+
+**The roadmap is complete. The next task comes from the partition, not from this
+document:** Task 92 E0, attributing soft-float to its callers and splitting it
+into state-hash-frozen gameplay versus fidelity-gated renderer. Hardware
+divide/sqrt is already closed by Task 50 (eligible ceiling ~0.55%), so the
+candidate is `__aeabi_fadd`/`__aeabi_fmul` on the renderer side.
 
 ---
 
