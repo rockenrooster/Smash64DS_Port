@@ -99,19 +99,64 @@ references it in that fighter's data. `GMColEventMakeEffect1` is classified
 cosmetic deliberately: it is spawned *by* a collision event but its own joint
 binding only places a visual effect.
 
-## 4. What E1 must do
+## 4. Most of the classification is static, in `FTAttributes`
 
-Extract the actual per-joint flags for Mario and Fox by scanning their attribute
-tables and motion-event scripts for references from the gameplay set, then emit
-`gameplay_load_bearing` per entry in `BindingJoints` and `JointSchedule`.
+`fp->attr` (`decomp/.../src/ft/fttypes.h:946`) turns out to carry the majority of
+the joint bindings directly, per fighter, with no motion-script parsing:
 
-The flag must be *conservative*: a joint whose classification cannot be
-determined is gameplay-load-bearing. An unflagged gameplay joint would let the
-animation compiler quantize a hitbox into a different position and gate it on
-the owner's eye instead of the verifier, which is the specific failure the
-plan's amendment exists to prevent.
+**Gameplay:**
 
-## 5. Checker obligation, unchanged
+| Field | Extent | Binding |
+|---|---|---|
+| `damage_coll_descs[11].joint_id` | 11 | hurtboxes |
+| `joint_rfoot_id`, `joint_lfoot_id` | 2 | slope contour — moves the fighter |
+| `joint_itemheavy_id`, `joint_itemlight_id` | 2 | item attachment |
+| `animlock` | bitfield | **joints that must not be animated** |
+| `setup_parts` | bitfield | joints initialized on creation |
+
+**Cosmetic:**
+
+| Field | Extent | Binding |
+|---|---|---|
+| `effect_joint_ids[5]` | 5 | particle attachment (electricity, flames) |
+| `shield_anim_joints[8]` | 8 | shield animation, one per ordinal direction |
+| `hiddenparts`, `modelparts_container`, `textureparts_container`, `accesspart` | — | presentation swaps |
+
+### `animlock` is the same bit Task 70 measured
+
+`animlock` points at flags "marking joints that should not be animated". A joint
+under animation lock is driven by code rather than by the animation, which makes
+it gameplay-load-bearing **by construction** — it is exactly the class the
+animation compiler must not quantize, because the animation is not what places
+it.
+
+This is the same mechanism as `fp->is_use_animlocks` at
+`reloc_backend_renderer_dl.c:11582`, the rejection that Task 69 measured
+accounting for all 10 native-owner fallback frames and Task 70 priced at 0.44%
+of the P95. It was a performance nuisance there. Here it is a correctness
+signal, and it is already extractable.
+
+## 5. What E1 must do
+
+Read `fp->attr` for Mario and Fox and emit `gameplay_load_bearing` per entry in
+`BindingJoints` and `JointSchedule` from the table above. The runtime already
+holds this struct, so a GDB snapshot on the Boundary configuration is sufficient
+ground truth and needs no new host-side asset parser — the same instrument every
+census in this campaign has used.
+
+**Hitboxes are the residue.** `FTAttackColl.joint_id` is set per-motion by
+motion-event scripts inside the animation files, so it cannot be read from
+`FTAttributes` and a single snapshot only shows currently-active hitboxes. Until
+the animation compiler parses those scripts, every joint not *provably* cosmetic
+is classified gameplay. That default is conservative in the safe direction: an
+unflagged gameplay joint would let the animation compiler quantize a hitbox into
+a different position and gate it on the owner's eye instead of the verifier,
+which is the specific failure the plan's amendment exists to prevent.
+
+Narrowing the conservative default is a by-product of the animation compiler, not
+a prerequisite for it.
+
+## 6. Checker obligation, unchanged
 
 Per the plan and the `scripts/dreamland_world_mesh.py` `check_ir` precedent, the
 extended IR ships with determinism (rebuilt IR hashes identically) and coverage
@@ -122,7 +167,7 @@ in `scripts/check_nds_native_owner_hierarchy.py` and
 `check_nds_native_owner_packet.py`, so the pattern is established — the new
 fields extend those checkers rather than adding a third.
 
-## 6. Cost avoided
+## 7. Cost avoided
 
 Writing the fighter compiler the plan describes would have duplicated a 3,164-line
 generator, a 406 KB generated IR, and two existing checkers. `AGENTS.md` — prefer
