@@ -117,6 +117,11 @@ NDS_DREAMLAND_CARD_CULL_MASK1 ?= 0
 NDS_BATTLE_PROFILE ?= 1
 NDS_TASK22_WALLPAPER_RUN_LAB ?= 0
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
+# Task 90 E0 lab probe. Counts dense-vertex shade iterations in the native
+# fighter owner and how many of them recompute a value the prepared array
+# already holds. Lab only; it adds a 541-entry key array and per-iteration
+# counters, so it must never be on in a measured or published build.
+NDS_TASK90_SHADE_CENSUS ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1562,6 +1567,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK37_PROFILE_FRAMES $(NDS_TASK37_PROFILE_FRAMES)u'; \
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
+		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \

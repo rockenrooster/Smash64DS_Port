@@ -1337,7 +1337,16 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_HW_TEXEL01_CI4_PHASE_LUT_COUNT \
     (NDS_RENDERER_HW_TEXEL01_CI4_PHASE_COUNT * \
      NDS_RENDERER_HW_TEXEL01_CI4_LUT_COUNT)
-#define NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT 4u
+/* Sized from the measured working set, not chosen: Task 90 E0 traced 128
+ * consecutive light-shade requests on the Boundary battle and found exactly 6
+ * distinct (diffuse, ambient) pairs against 49 requests per frame. At 4 entries
+ * the round-robin cache evicted live pairs and rebuilt a 128-entry table 6
+ * times every frame; at 8 the trace replay drops to 6 misses total, which is
+ * the compulsory floor -- one build per distinct pair for the whole match.
+ * Must stay a power of two: the eviction cursor masks with COUNT - 1.
+ * Re-run scripts/census-light-shade-lut.ps1 if the fighter or stage set
+ * changes; a working set above 8 would put this back into steady-state thrash. */
+#define NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT 8u
 #define NDS_RENDERER_HW_LIGHT_SHADE_LUT_COUNT 128u
 #define NDS_RENDERER_HW_CI4_INDEX_CACHE_COUNT 2u
 #define NDS_RENDERER_HW_CI4_INDEX_CACHE_TEXELS 1024u
@@ -3462,8 +3471,8 @@ static NDSRendererHardwareLightShadeCacheEntry
         NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT];
 static u32 sNdsRendererHardwareLightShadeCacheNext;
 #if defined(__arm__)
-_Static_assert(sizeof(sNdsRendererHardwareLightShadeCache) == 2096u,
-               "light shade lookup cache must stay within 2096 bytes");
+_Static_assert(sizeof(sNdsRendererHardwareLightShadeCache) == 4192u,
+               "light shade lookup cache must stay within 4192 bytes");
 #endif
 #endif
 
@@ -3744,6 +3753,23 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #include "nds_native_fighter_owner.generated.inc"
 #include "nds_native_stage_owner.generated.inc"
 #include "dreamland_ds_mesh.generated.inc"
+
+#if NDS_TASK90_SHADE_CENSUS
+/* Task 90. The instrument behind NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT: it
+ * records every light-shade request in order, so the cache size is set from the
+ * measured working set rather than from a hit rate. Keep it alive -- the size
+ * constant's comment names scripts/census-light-shade-lut.ps1 as the
+ * re-check when the fighter or stage set changes, and that script reads these.
+ * Lab only, default off; the trace array is 1 KiB of BSS.
+ *
+ * 128 entries covers ~2.6 frames at the measured 49 requests/frame. */
+#define NDS_TASK90_LUT_TRACE_COUNT 128u
+u32 gNdsTask90LutGetCalls;
+u32 gNdsTask90LutBuilds;
+u32 gNdsTask90LutTraceDiffuse[NDS_TASK90_LUT_TRACE_COUNT];
+u32 gNdsTask90LutTraceAmbient[NDS_TASK90_LUT_TRACE_COUNT];
+u32 gNdsTask90LutTraceNext;
+#endif
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_FIGHTER_HIERARCHY_JOINT_MAX 27u
@@ -7788,11 +7814,21 @@ ndsRendererHardwareGetLightShadeLut(u32 diffuse, u32 ambient)
 
     /* Cache only the exact RGB function of the two source light colors and
      * diffuse numerator. Vertex normals, direction, and alpha stay live. */
+#if NDS_TASK90_SHADE_CENSUS
+    gNdsTask90LutGetCalls++;
+    gNdsTask90LutTraceDiffuse[gNdsTask90LutTraceNext] = diffuse;
+    gNdsTask90LutTraceAmbient[gNdsTask90LutTraceNext] = ambient;
+    gNdsTask90LutTraceNext =
+        (gNdsTask90LutTraceNext + 1u) % NDS_TASK90_LUT_TRACE_COUNT;
+#endif
     resident = ndsRendererHardwareFindLightShadeLut(diffuse, ambient);
     if (resident != NULL)
     {
         return resident;
     }
+#if NDS_TASK90_SHADE_CENSUS
+    gNdsTask90LutBuilds++;
+#endif
 
     entry = &sNdsRendererHardwareLightShadeCache[
         sNdsRendererHardwareLightShadeCacheNext];

@@ -1759,9 +1759,16 @@ Assert-True ($renderer.Contains('if ((((uintptr_t)src) & 3u) == 0u)') -and $rend
 Assert-True ($renderer.Contains('xy = ndsRendererReadU32(src);') -and $renderer.Contains('rgba = ndsRendererReadU32((const u8 *)src + 12);')) 'Renderer aligned VTX decode lost the exact bytewise unaligned fallback.'
 Assert-True ($renderer.Contains('NDSRendererInputVertex *input = &state->input_vertices[index];')) 'Renderer hardware VTX path does not decode directly into the persistent 32-slot source cache.'
 Assert-True (-not $renderer.Contains('state->input_vertices[index] = input;')) 'Renderer restored the redundant temporary-to-cache VTX copy.'
-Assert-True ($renderer.Contains('NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT 4u') -and $renderer.Contains('NDS_RENDERER_HW_LIGHT_SHADE_LUT_COUNT 128u')) 'Renderer exact light-shade cache lost its four-entry/128-step bound.'
-Assert-True ($renderer.Contains('sizeof(sNdsRendererHardwareLightShadeCache) == 2096u')) 'Renderer exact light-shade cache exceeds its measured 2,096-byte bound.'
-Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL < 2\s*static NDSRendererHardwareLightShadeCacheEntry\s*sNdsRendererHardwareLightShadeCache.*?sizeof\(sNdsRendererHardwareLightShadeCache\) == 2096u.*?#endif') 'Forensic renderer restored the production light-shade cache instead of its independent exact shade path.'
+# Eight entries, not four: Task 90 traced the request stream and measured a
+# working set of 6 distinct (diffuse, ambient) pairs, so four thrashed and
+# rebuilt the 128-entry table 6 times a frame. This is the RAM-budget ratchet,
+# not a correctness bound -- the exactness assertions below (content keying,
+# per-channel integer result, incomplete-light fallback) are what protect the
+# shade result, and none of them moved. Re-derive with
+# scripts/census-light-shade-lut.ps1 before changing the number again.
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT 8u') -and $renderer.Contains('NDS_RENDERER_HW_LIGHT_SHADE_LUT_COUNT 128u')) 'Renderer exact light-shade cache lost its eight-entry/128-step bound.'
+Assert-True ($renderer.Contains('sizeof(sNdsRendererHardwareLightShadeCache) == 4192u')) 'Renderer exact light-shade cache exceeds its measured 4,192-byte bound.'
+Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL < 2\s*static NDSRendererHardwareLightShadeCacheEntry\s*sNdsRendererHardwareLightShadeCache.*?sizeof\(sNdsRendererHardwareLightShadeCache\) == 4192u.*?#endif') 'Forensic renderer restored the production light-shade cache instead of its independent exact shade path.'
 Assert-True ($renderer -match '(?s)entry->diffuse == diffuse.*?entry->ambient == ambient.*?return entry->rgb;') 'Renderer light-shade cache is not content-keyed by both source light colors.'
 Assert-True ($renderer.Contains('(ndsRendererHardwareColorByte(diffuse, 24) * i) / 127u') -and $renderer.Contains('return rgb_lut[diffuse_numer] | (u32)vtx->a;')) 'Renderer light-shade LUT does not preserve the exact per-channel integer result and source alpha.'
 Assert-True ($renderer -match '(?s)stats->light_color_mask.*?NDS_RENDERER_LIGHT_COLOR_1_MASK.*?NDS_RENDERER_LIGHT_COLOR_2_MASK.*?prepared_light_shade_lut = ndsRendererHardwareGetLightShadeLut') 'Renderer light-shade LUT bypasses the generic fallback for incomplete source light state.'
