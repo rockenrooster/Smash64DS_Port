@@ -201,3 +201,87 @@ scalar members (596). Three routes, in increasing order of risk:
    look especially unearned.
 
 Route 1 first: largest, checkable, independently revertible.
+
+---
+
+# Task 84 E2 - Route 1 disproven: there is an unguarded tile read
+
+**Date:** 2026-07-26
+**Status:** **Route 1 rejected on inspection. Route 2 refuted by data already
+held. Route 3 is what remains.** No runtime change, nothing built.
+
+## E2.1 Route 2 was already refuted and I nearly re-ran it
+
+E1 proposed "reuse one persistent stats buffer" on the theory that the 2.74
+ticks/byte rate is a cold-cache signature and a warm buffer would be cheaper.
+
+**The E1 probe already tested that.** `sNdsTask84CostProbeScratch` is a file-level
+`static` - a single persistent buffer, cleared 11.7 times a frame - and it still
+cost 3,544 ticks per call. A 1,292-byte buffer is ~40 cache lines, and the
+renderer touches far more than the dcache between two `InitStats` calls, so a
+persistent buffer is evicted just as reliably as a fresh one.
+
+Route 2 is closed, on evidence that was in hand before it was proposed. Worth
+recording because the proposal and its refutation were written on the same day.
+
+## E2.2 Route 1: the claim, and the counterexample
+
+The claim was: every `texture_tiles` entry is written by a `SETTILE` before it is
+read, so only the `set_seen` flags need clearing - 8 bytes instead of 640.
+
+`NDSRendererTileState` does carry `set_seen` and `size_seen`, and some consumers
+check them properly. `ndsRendererHardwareTextureLoadReady` (:7327) is the model:
+
+```c
+render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
+return ((render_tile->set_seen != 0u) &&
+        (render_tile->size_seen != 0u) && ...
+```
+
+But `ndsRendererSyncTextureTile` (:5299) does not:
+
+```c
+tile_index = ndsRendererActiveTextureTile(stats);
+tile = &stats->texture_tiles[tile_index];
+
+stats->texture_render_tile        = tile_index;
+stats->texture_render_tile_format = tile->format;
+stats->texture_render_tile_size   = tile->size;
+stats->texture_render_tile_line   = tile->line;
+stats->texture_render_tile_tmem   = tile->tmem;
+```
+
+Unconditional. And `ndsRendererActiveTextureTile` returns a default tile index
+(`NDS_RENDERER_RENDER_TILE`) when texture state has not been seen at all, so this
+runs on exactly the traversals where no `SETTILE` has occurred.
+
+Leaving `texture_tiles` uncleared therefore feeds the **previous traversal's**
+tile geometry into `texture_render_tile_*` instead of zeros. That is a real
+behaviour change on a path the renderer takes, not a theoretical one.
+
+**Route 1 is rejected.** Not "risky" - incorrect as specified.
+
+## E2.3 What remains
+
+**Route 3: reduce the 11.7 calls/frame.** `STG` absorbed 31,616 of the 41,468
+ticks, so most `InitStats` calls are stage traversals, and Task 81 established
+the stage performs zero texture binds during battle. A stage traversal that never
+binds a texture arguably does not need 640 bytes of tile state cleared - but that
+is the same claim Route 1 just failed, scoped smaller, and it needs the same
+standard of proof: every reader of `texture_tiles` on the stage path must be
+shown to guard, and `ndsRendererSyncTextureTile` is on that path too.
+
+The cheaper and more likely form of Route 3 is not clearing less but calling
+less: 11.7 traversals per frame each paying a full re-initialisation. Whether
+those traversals are all distinct, and whether any share state that makes
+re-initialisation unnecessary, is unmeasured.
+
+## E2.4 Standing
+
+The lever is still real and still the largest open one: up to 41,468 ticks/frame,
+5x the placement floor. Two of its three routes are now closed - one by
+measurement taken before it was proposed, one by a five-minute read of the
+consumers. Neither cost a build.
+
+That is the intended shape. The alternative was a build, an A/B, and a verifier
+run to discover the same unguarded read from a red gate.
