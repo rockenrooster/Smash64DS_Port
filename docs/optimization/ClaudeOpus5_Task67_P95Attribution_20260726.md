@@ -133,9 +133,42 @@ campaign, at 52% of mean work and now essentially all of the P95 burst too.
    59 words was already tried and cost more than it saved — so the lever is
    memoizing the resolve at the call site, not micro-optimising inside it.
 
-## 6. Caveat
+## 6. Confirmed on a second, independent spike
 
-The spike census is **one window of two frames**. The path-switch signature is
-unambiguous within it and the tick-HUD series shows the same `FTR`/`MISC`
-signature at 478–482 and 438–439, but a second census windowed on 478 should
-confirm before any fix is designed against this. That is one ~20-minute run.
+A second census windowed on frames 478–479 (`artifacts/task67-spike2-census/`)
+reproduces the signature with near-identical magnitudes:
+
+| function | spike 544 delta | spike 478 delta |
+|---|---|---|
+| `ndsRendererHardwareSubmitVertex` | +53,758 | +52,082 |
+| `ndsRendererSubmitHardwareTriangle` | +41,209 | +40,334 |
+| `ndsRendererScanList` | +32,072 | +30,734 |
+| `ndsRelocPointerRangeInLoadedFile` | +30,353 | +27,940 |
+| `ndsRendererHardwareBeginTriangleBatch` | +16,805 | +16,259 |
+| `ndsRendererDecodeInputVertex` | +13,623 | +13,206 |
+| `ndsFighterMarioFoxDLAllDrawForSlot` | +13,406 | +13,391 |
+
+Two independent frames, the same set of functions, the same magnitudes to
+within a few percent. The path switch is the mechanism.
+
+## 7. Status of the follow-up measurement
+
+The fallback itself is countable: `src/port/reloc_backend_renderer_dl.c` has
+exactly four points where it gives up on the native owner — build-inputs
+rejected (~:11812), contract rejected before GX (~:11855), rejected after GX has
+already started (~:11859), and begin-owner failed (~:11898). Counters for all
+four are committed behind `NDS_TASK68_FALLBACK_CENSUS` (default 0), with
+`-FallbackCensus` on the tick-HUD sampler.
+
+**They are not yet validated.** Every run tripped the sampler's own guard —
+*"Tick-HUD samples repeated a presented frame"* — with a **byte-identical frame
+sequence across three different ROMs**, including one where the counters
+compile to nothing. That rules the counters out as the cause and points at
+emulator state drift (the RTC was advanced by this session's census runs);
+`build-task66-tickhud` sampled cleanly twice earlier in the same session.
+
+Re-baseline the emulator state and confirm a known-good ROM still samples
+cleanly before trusting any fallback number. Do not relax the guard to make a
+run pass: a repeated presented frame means the loop iterated without
+presenting, which would silently corrupt the per-frame differencing the whole
+measurement rests on.
