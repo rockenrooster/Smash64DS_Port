@@ -164,6 +164,11 @@ NDS_TASK44_STAGE_STEADY ?= 0
 # BSS, and this ROM is cache-placement sensitive enough (see Task 37) that the
 # extra bytes shift frame pacing. Any run with it on needs its own baseline.
 NDS_TASK68_FALLBACK_CENSUS ?= 0
+# Task 85: take an aligned load/store in the reloc native accessors instead of
+# a memcpy call. 51% of every memcpy call in the frame moves 2 or 4 bytes.
+# KEEP: SRC P95 -76,544, WORK-H P95 -40,384, VBlank histogram better on all
+# four measures. Default on.
+NDS_TASK85_ALIGNED_NATIVE_ACCESS ?= 1
 # Task 82 ITCM re-pack: evict the animated-CI4 texel path (dead while Dream
 # Land water is frozen) and admit five higher-stall functions. Placement only.
 # KEEP on measurement: WORK-H P95 -52,224 with both evictions; this ships the
@@ -1537,6 +1542,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK68_FALLBACK_CENSUS $(NDS_TASK68_FALLBACK_CENSUS)'; \
+		echo '#define NDS_TASK85_ALIGNED_NATIVE_ACCESS $(NDS_TASK85_ALIGNED_NATIVE_ACCESS)'; \
 		echo '#define NDS_TASK82_ITCM_REPACK $(NDS_TASK82_ITCM_REPACK)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
 		echo '#define NDS_TASK37_ITCM_LEAVES $(NDS_TASK37_ITCM_LEAVES)'; \

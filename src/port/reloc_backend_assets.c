@@ -1390,16 +1390,43 @@ static u32 ndsRelocReadBe32(const void *addr)
            (u32)bytes[3];
 }
 
+/* Task 85. memcpy(&value, addr, 4) is the portable way to read a possibly
+ * unaligned word, and on most targets the compiler turns it into one load. It
+ * cannot here: the ARM946E-S has no unaligned-access support, so GCC must emit
+ * a real call that handles the misaligned case byte by byte.
+ *
+ * Task 85 measured the result -- 51% of every memcpy call in the frame moves 2
+ * or 4 bytes, and at ~70 ticks of call overhead each that is around 30,000
+ * ticks/frame spent almost entirely on function-call machinery.
+ *
+ * The aligned test below is two instructions and the fallback keeps the exact
+ * original behaviour, so this needs no proof about where these pointers come
+ * from. That matters more than it looks: an unaligned LDR on this core does not
+ * fault, it rotates, so a wrong alignment assumption would corrupt silently
+ * rather than crash. */
 static u32 ndsRelocReadNative32(const void *addr)
 {
     u32 value;
 
+#if NDS_TASK85_ALIGNED_NATIVE_ACCESS
+    if ((((uintptr_t)addr) & 3u) == 0u)
+    {
+        return *(const u32 *)addr;
+    }
+#endif
     memcpy(&value, addr, sizeof(value));
     return value;
 }
 
 static void ndsRelocWriteNative32(void *addr, u32 value)
 {
+#if NDS_TASK85_ALIGNED_NATIVE_ACCESS
+    if ((((uintptr_t)addr) & 3u) == 0u)
+    {
+        *(u32 *)addr = value;
+        return;
+    }
+#endif
     memcpy(addr, &value, sizeof(value));
 }
 
@@ -2854,16 +2881,30 @@ static void ndsRelocRemoveFighterAObj16LoadedAliases(u32 asset_id, void *data)
                                              asset_id, data);
 }
 
+/* Task 85, same reasoning as ndsRelocReadNative32 above. */
 static u16 ndsRelocReadNative16(const void *addr)
 {
     u16 value;
 
+#if NDS_TASK85_ALIGNED_NATIVE_ACCESS
+    if ((((uintptr_t)addr) & 1u) == 0u)
+    {
+        return *(const u16 *)addr;
+    }
+#endif
     memcpy(&value, addr, sizeof(value));
     return value;
 }
 
 static void ndsRelocWriteNative16(void *addr, u16 value)
 {
+#if NDS_TASK85_ALIGNED_NATIVE_ACCESS
+    if ((((uintptr_t)addr) & 1u) == 0u)
+    {
+        *(u16 *)addr = value;
+        return;
+    }
+#endif
     memcpy(addr, &value, sizeof(value));
 }
 
