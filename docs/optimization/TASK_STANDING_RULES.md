@@ -74,6 +74,32 @@ Report P50 **and** P95 with the spread ratio, never the mean alone. Two
 different problems hide in one bucket: steady-state cost lives in P50,
 burstiness lives in the P50→P95 gap, and they take opposite fixes.
 
+### Vary the build, not the run (Task 79, 2026-07-26)
+
+**Repeat runs of the same ROM are bit-identical.** Task 79 sampled one ROM twice
+and got the same value for every bucket, every percentile, and the anomalous
+6.4M-tick maximum `ALL` frame — identical, not close. Run-to-run variance in
+this harness is **zero**.
+
+So a third run of the *same* ROM confirms nothing except that the harness works.
+When an A/B looks noisy or surprising, re-running A is not the check; it returns
+the same digits.
+
+This also renames the ±8,000 figure. It is **not** measurement noise — it is
+build-to-build **placement** variance, deterministic and real, and it appears
+only when the binary changes. A change and its placement effect arrive together
+and no amount of re-running separates them. To attribute an effect, vary the
+build: same tree, flag off versus flag on, so everything except the change is
+held fixed. That is why Task 79's two arms were built from one tree.
+
+### A regression on every frame is a mechanism, not noise
+
+Placement variance moves a bucket by a bit on some frames. A delta present on
+**128 of 128** frames with a consistent sign is something the code now does
+differently. Task 79's stage bucket rose 6,880 on every frame — that was a
+128-entry table being shared by three owners instead of one, and reading it as
+noise would have shipped a real regression.
+
 ## Fidelity doctrine (the owner, 2026-07-20)
 
 `PROJECT_GOAL.md` owns the fidelity contract. Gameplay/source behavior must be
