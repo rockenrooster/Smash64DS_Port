@@ -316,14 +316,16 @@ Measured ranking of the frame (work = 1,515,768 after idle):
 | family | ticks/frame | % of work |
 |---|---|---|
 | renderer | 739,715 | 48.8% |
-| soft-float | 161,471 | 10.7% |
-| texture / material resolution | 159,968 | 10.6% |
+| soft-float | 161,187 | 10.6% |
 | matrix | 158,500 | 10.5% |
+| texture / material resolution | 143,434 | 9.5% |
 | `mem*` | 137,193 | 9.1% |
 | animation | 82,807 | 5.5% |
 
 **Revised order: prepared texture/material first** (this document's Task 80 —
-1.9× the animation lever, generated data already exists in
+1.7× the animation lever and third by size, taken first because it is the only
+one of the top four whose replacement is already compiled and merely unused;
+generated data exists in
 `sNdsNativeFighterStateDeltas`/`StateSequence`, no fidelity risk), then
 soft-float and `mem*`, then the animation compiler re-scoped against 82,807.
 

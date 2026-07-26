@@ -3,8 +3,8 @@
 **Date:** 2026-07-26
 **Status:** **STOP at E0.** The animation compiler cannot reach its stated target
 because the entire path it would replace is smaller than the target. Reorder to
-the texture/material task, which is roughly twice the lever and whose generated
-data already exists. No runtime change.
+the texture/material task, which is 1.7x the lever and whose generated data
+already exists. No runtime change.
 **Input:** `artifacts/task78-anim-census/` — 128 settled frames (439–567), the
 same window every Task 69–77 measurement used, per-PC ARM9 profile resolved
 through DWARF.
@@ -28,9 +28,9 @@ mean of 1,833,206 to 0.03% — the two instruments are looking at the same frame
 | family | ticks/frame | % of frame | % of work |
 |---|---|---|---|
 | renderer (`ndsRenderer*`) | 739,715 | 40.3% | 48.8% |
-| soft-float | 161,471 | 8.8% | 10.7% |
-| texture / material resolution | 159,968 | 8.7% | 10.6% |
+| soft-float | 161,187 | 8.8% | 10.6% |
 | matrix | 158,500 | 8.6% | 10.5% |
+| texture / material resolution | 143,434 | 7.8% | 9.5% |
 | `mem*` | 137,193 | 7.5% | 9.1% |
 | **animation** | **82,807** | **4.5%** | **5.5%** |
 | joint / hierarchy transform | 1,743 | 0.1% | 0.1% |
@@ -91,14 +91,16 @@ The top of the frame is not animation:
 
 Two soft-float opcodes alone — `__aeabi_fadd` and `__aeabi_fmul` — cost
 **119,912 ticks/frame**, which is 1.45× the entire animation subsystem. `mem*`
-costs 135,836. Texture and material resolution costs 159,968, with
+costs 137,193. Texture and material resolution costs 143,434, with
 `ndsRendererHardwareResolveOrBindTexture` alone at 42,420 — more than
 `battleship_ftAnimParseDObjFigatree` and `gcPlayAnimAll` combined.
 
 **Texture and material resolution is the next task**, for three reasons that
 agree:
 
-1. It is 159,968 ticks/frame — 1.9× the animation ceiling.
+1. It is 143,434 ticks/frame — 1.7× the animation ceiling. It is *third* by
+   size, behind soft-float and matrix, not first; the case for taking it next is
+   readiness, not magnitude.
 2. Its generated data already exists. Task 77 E0 found
    `sNdsNativeFighterStateDeltas[70]` and `StateSequence[196]` in the generated
    include, so the prepared bindings the plan describes are compiled already.
@@ -121,9 +123,11 @@ this measures:     the gap is small; the *use* of what is generated is the gap
 
 Revised order:
 
-1. **Prepared texture/material** (plan's Task 80) — 159,968 available, data
-   already generated, no fidelity risk.
-2. **Soft-float and `mem*`** — 161,471 and 137,193, cross-cutting, and the
+1. **Prepared texture/material** (plan's Task 80) — 143,434 available, data
+   already generated, no fidelity risk. Taken first for readiness rather than
+   size: it is the only one of the top four whose replacement is already
+   compiled and merely unused.
+2. **Soft-float and `mem*`** — 161,187 and 137,193, cross-cutting, and the
    fixed-point conversion the animation compiler would have done for its own
    path is worth more applied where the floats actually are.
 3. **Animation compiler** — 82,807, still a real number and still worth taking
@@ -146,3 +150,22 @@ the census's own subsystem rules, because `SUBSYSTEM_RULES` maps all of
 inside fighter physics, collision and state machines. That bucket is not wrong,
 it is just too coarse to answer this question — which is worth remembering the
 next time a subsystem table is used to size a lever.
+
+## 7. Correction — the texture figure above was first published as 159,968
+
+The pattern used for the first pass matched `ndsRendererNativeEmitProduction`
+**RawUntexturedRun** (33,798) and `RawTexturedRun` (11,591) on the substring
+"textured". Those are vertex-emit functions, not resolution, and folding 45,389
+ticks of geometry submission into a material-resolution total inflated it by
+32%. Corrected: **143,434**, which moves texture/material from second to third
+by size, behind soft-float (161,187) and matrix (158,500).
+
+The recommendation is unchanged but its argument is: texture/material goes next
+because it is the only lever in the top four whose replacement is already
+generated and merely unconsumed, not because it is the largest.
+
+This is the Task 55 lesson recurring in a new place — a family defined by a name
+pattern is not a family defined by what the code does, and the check is to read
+the membership list rather than the total. The three families above were
+re-derived with explicit exclusions and their membership inspected symbol by
+symbol.
