@@ -321,7 +321,7 @@ experiment, not as banked work.
 # Part V — Execution order and checkpoints
 
 ```text
-63  Repair + constrain   ── E0 census gate: <15% reduction ⇒ STOP
+63  Repair + constrain   ── E0 census gate: <15% reduction ⇒ STOP   ← STOPPED HERE
  ↓
 64  Visual gate          ── pixel-diff + owner A/B ⇒ no pass, no measurement
  ↓
@@ -329,6 +329,17 @@ experiment, not as banked work.
  ↓
 66  (conditional) words  ── strips/quads/VERTEX10, one axis at a time
 ```
+
+**2026-07-25 — Task 63 E0 result: STOP at 9.1%.** Full record in
+`ClaudeOpus5_Task63_DreamLandRepair_20260725.md`. Headlines: the lossless lever
+is empty (0 never-visible triangles under two fixture sets and four margins);
+the collapsible subset is 76 triangles over 86 vertices of which 68 are
+boundary, so the island is almost all silhouette and collapses past 9.1%;
+and the Task 58/59 oracle was quantified as blind — a candidate at subset IoU
+**0.30** scores full-mesh IoU **0.9976**, which is exactly how c120 was
+green-lit. Tasks 64–66 are not entered; the runtime repair was not performed.
+The only remaining lever is an owner-authorised scenery reduction, priced in
+§5 of that document (≈29.7% if 16 backdrop card runs are deleted).
 
 **The checkpoint that matters** is now Task 63's E0 census, not Task 60's
 paper vertex count. Revision 1 placed its checkpoint after a host-side number

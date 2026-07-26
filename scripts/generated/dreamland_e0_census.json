@@ -1,0 +1,249 @@
+{
+  "caveat": "Task 57's IR bakes descriptor world matrices, not live DObj transforms; pass-through platforms sit lower here than at runtime. Trust only culls that survive the widest margin.",
+  "collapse": {
+    "collapsible_subset": {
+      "boundary_vertices": 68,
+      "interior_vertices": 18,
+      "note": "raw-Z + range only; the 99 projected-no-Z alpha cards are drop-only under Part II.5 and are held whole here",
+      "triangles": 76,
+      "vertices": 86
+    },
+    "fixed_no_z_triangles": 99,
+    "ladder": {
+      "boundary_locked": [
+        {
+          "budget": 60,
+          "corners": 477,
+          "reduction_pct": 9.14,
+          "subset_tris": 60,
+          "subset_worst_iou": 0.9984,
+          "surviving_vertices": 78,
+          "total_tris": 159
+        },
+        {
+          "budget": 55,
+          "corners": 459,
+          "reduction_pct": 12.57,
+          "subset_tris": 54,
+          "subset_worst_iou": 0.9035,
+          "surviving_vertices": 75,
+          "total_tris": 153
+        },
+        {
+          "budget": 50,
+          "corners": 447,
+          "reduction_pct": 14.86,
+          "subset_tris": 50,
+          "subset_worst_iou": 0.8311,
+          "surviving_vertices": 73,
+          "total_tris": 149
+        },
+        {
+          "budget": 45,
+          "corners": 441,
+          "reduction_pct": 16.0,
+          "subset_tris": 48,
+          "subset_worst_iou": 0.7996,
+          "surviving_vertices": 72,
+          "total_tris": 147
+        },
+        {
+          "budget": 40,
+          "corners": 441,
+          "reduction_pct": 16.0,
+          "subset_tris": 48,
+          "subset_worst_iou": 0.7996,
+          "surviving_vertices": 72,
+          "total_tris": 147
+        },
+        {
+          "budget": 35,
+          "corners": 441,
+          "reduction_pct": 16.0,
+          "subset_tris": 48,
+          "subset_worst_iou": 0.7996,
+          "surviving_vertices": 72,
+          "total_tris": 147
+        },
+        {
+          "budget": 30,
+          "corners": 441,
+          "reduction_pct": 16.0,
+          "subset_tris": 48,
+          "subset_worst_iou": 0.7996,
+          "surviving_vertices": 72,
+          "total_tris": 147
+        },
+        {
+          "budget": 25,
+          "corners": 441,
+          "reduction_pct": 16.0,
+          "subset_tris": 48,
+          "subset_worst_iou": 0.7996,
+          "surviving_vertices": 72,
+          "total_tris": 147
+        }
+      ],
+      "unlocked": [
+        {
+          "budget": 60,
+          "corners": 477,
+          "reduction_pct": 9.14,
+          "subset_tris": 60,
+          "subset_worst_iou": 0.7109,
+          "surviving_vertices": 70,
+          "total_tris": 159
+        },
+        {
+          "budget": 55,
+          "corners": 462,
+          "reduction_pct": 12.0,
+          "subset_tris": 55,
+          "subset_worst_iou": 0.6856,
+          "surviving_vertices": 64,
+          "total_tris": 154
+        },
+        {
+          "budget": 50,
+          "corners": 447,
+          "reduction_pct": 14.86,
+          "subset_tris": 50,
+          "subset_worst_iou": 0.6118,
+          "surviving_vertices": 55,
+          "total_tris": 149
+        },
+        {
+          "budget": 45,
+          "corners": 432,
+          "reduction_pct": 17.71,
+          "subset_tris": 45,
+          "subset_worst_iou": 0.3536,
+          "surviving_vertices": 44,
+          "total_tris": 144
+        },
+        {
+          "budget": 40,
+          "corners": 414,
+          "reduction_pct": 21.14,
+          "subset_tris": 39,
+          "subset_worst_iou": 0.3242,
+          "surviving_vertices": 40,
+          "total_tris": 138
+        },
+        {
+          "budget": 35,
+          "corners": 402,
+          "reduction_pct": 23.43,
+          "subset_tris": 35,
+          "subset_worst_iou": 0.3075,
+          "surviving_vertices": 37,
+          "total_tris": 134
+        },
+        {
+          "budget": 30,
+          "corners": 387,
+          "reduction_pct": 26.29,
+          "subset_tris": 30,
+          "subset_worst_iou": 0.3012,
+          "surviving_vertices": 33,
+          "total_tris": 129
+        },
+        {
+          "budget": 25,
+          "corners": 372,
+          "reduction_pct": 29.14,
+          "subset_tris": 25,
+          "subset_worst_iou": 0.3012,
+          "surviving_vertices": 24,
+          "total_tris": 124
+        }
+      ]
+    }
+  },
+  "fixtures": [
+    "center_medium",
+    "left_medium",
+    "right_medium",
+    "center_close",
+    "center_maxzoom",
+    "high_frame",
+    "low_frame",
+    "respawn_frame",
+    "gp_center_medium",
+    "gp_center_close",
+    "gp_center_maxzoom",
+    "gp_left_medium",
+    "gp_right_medium",
+    "gp_high_frame",
+    "gp_low_frame",
+    "gp_respawn_frame"
+  ],
+  "lossless_levers": {
+    "degenerate_triangles": 0,
+    "never_visible_by_margin": {
+      "0.00": {
+        "by_submit_class": {},
+        "triangles": 0
+      },
+      "0.10": {
+        "by_submit_class": {},
+        "triangles": 0
+      },
+      "0.25": {
+        "by_submit_class": {},
+        "triangles": 0
+      },
+      "0.50": {
+        "by_submit_class": {},
+        "triangles": 0
+      }
+    },
+    "never_visible_per_fixture_set": {
+      "gameplay_surface": {
+        "0.00": 0,
+        "0.10": 0,
+        "0.25": 0,
+        "0.50": 0
+      },
+      "task58_envelope": {
+        "0.00": 0,
+        "0.10": 0,
+        "0.25": 0,
+        "0.50": 0
+      }
+    }
+  },
+  "lossless_summary": {
+    "by_submit_class": {},
+    "corners_saved": 0,
+    "margin_used": 0.5,
+    "reduction_pct": 0.0,
+    "triangles_free": 0
+  },
+  "source": {
+    "by_submit_class": {
+      "projected_no_z": 99,
+      "range_or_matrix": 10,
+      "raw_z": 66
+    },
+    "corners": 525,
+    "dense_vertices": 255,
+    "triangles": 175
+  },
+  "task": "Task 63 E0 \u2014 constrained reduction census",
+  "verdict": {
+    "best_acceptable": {
+      "budget": 60,
+      "corners": 477,
+      "policy": "boundary_locked",
+      "reduction_pct": 9.14,
+      "subset_tris": 60,
+      "subset_worst_iou": 0.9984,
+      "surviving_vertices": 78,
+      "total_tris": 159
+    },
+    "proceed": false,
+    "stop_threshold_pct": 15.0
+  },
+  "version": 1
+}
