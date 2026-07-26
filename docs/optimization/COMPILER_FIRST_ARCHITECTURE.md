@@ -454,6 +454,16 @@ generated DS animation data -> Mario_UpdatePose() / Fox_UpdatePose()
 interpolation metadata, common-pose tables, lower skeletal update rates where
 visually acceptable.
 
+> **Measured, Task 77 E1: this set is currently empty.** For both Mario and Fox
+> every joint in `effect_joint_ids` is also a hurtbox joint, so no joint is safe
+> to quantize on the grounds of being decorative. Mario: 24 joints present, 18
+> gameplay, 7 unclassified, 0 cosmetic-only. Fox: 26 / 19 / 8 / 0.
+> (`artifacts/task77-fighter-joints.json`.) Quantization, rate reduction and
+> lossy pose tables are therefore unavailable on current evidence, and this
+> task's win must come from removing interpretation and memory stalls rather
+> than from approximating the pose — which is consistent with 62% of frame work
+> being stall. The exactness-preserving techniques below are unaffected.
+
 **On gameplay-load-bearing bones** — fixed-point tracks and precomputed
 traversal order are fine because they are exactness-preserving reorganizations.
 Quantization and rate reduction are **not**, unless the resulting transform is

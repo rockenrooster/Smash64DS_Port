@@ -198,3 +198,54 @@ generator, a 406 KB generated IR, and two existing checkers. `AGENTS.md` — pre
 existing helpers, at equal cost less code wins — makes the audit the correct
 first move, and it is the reason this task produced a reordering instead of a
 second compiler.
+
+## 8. E1 result — the free-quantization set is currently empty
+
+`scripts/census-fighter-gameplay-joints.ps1` (new) reads `fp->attr` for both
+battle fighters in one stop and classifies every joint.
+`artifacts/task77-fighter-joints.json`:
+
+| | Mario (fkind 0) | Fox (fkind 1) |
+|---|---|---|
+| joints present (`setup_parts`) | 24 | 26 |
+| gameplay-load-bearing | **18** | **19** |
+| unclassified | 7 | 8 |
+| **provably cosmetic-only** | **0** | **0** |
+
+Identical across both fighters: `animlock` = `0x10425200` → joints
+{7, 13, 18, 21, 23, 26}; effect joints {9, 12, 15, 20, 25}; foot joints
+{18, 23}. Item joints differ only in the heavy slot (Mario 28, Fox 30).
+
+**The last row is the finding.** The plan's Task 78 splits techniques by bone
+class and gives quantization and rate reduction to the cosmetic set. From static
+data that set is empty: every joint in `effect_joint_ids` is *also* a hurtbox
+joint, so nothing is safe to quantize on the grounds of being decorative. The
+only candidates are the 7–8 unclassified joints, and the conservative rule
+classifies those as gameplay until motion-event scripts prove otherwise.
+
+This does not kill the animation compiler — it kills two of its listed
+techniques and leaves the rest intact. Still fully available, because they are
+exactness-preserving reorganizations rather than approximations:
+
+- fixed skeleton order and fixed parent indices
+- precomputed traversal order
+- fixed-point coefficients replacing soft-float
+- flat contiguous arrays replacing pointer-chased tree walking
+- deleting figatree parsing and per-animation file interpretation
+
+What is *not* available on current evidence is quantized rotations, reduced
+skeletal update rates, and lossy pose tables — on any joint, for either fighter.
+
+So Task 78's ≥100K target has to come from removing interpretation and memory
+stalls, not from approximating the pose. That is consistent with Task 65's
+finding that 62% of frame work is stall, but it should be stated before the task
+starts rather than discovered when the verifier goes red.
+
+### Measurement note
+
+The runtime `sizeof` guard in the census earned itself immediately: it fired on
+the first run with "joint array is 17". That was a parse bug of mine — the
+printf leads with the slot, so every payload field sat one index further along
+and `17` was the item-light joint id — but a census that had silently decoded
+the animlock words against the wrong array bound would have produced a
+plausible-looking, wrong classification with nothing to catch it.
