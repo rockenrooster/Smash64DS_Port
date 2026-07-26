@@ -94,6 +94,20 @@ NDS_TASK51_STAGE_NATIVE ?= 0
 # Default off; the published ROM stays byte-identical at 0. Ship-ready only
 # once the owner's visual A/B + perf A/B (Commit 5 KEEP gate) clears.
 NDS_DREAMLAND_DS_MESH ?= 0
+# Task 63 §5: Dream Land backdrop-card cull *visualization*. Lets the owner see
+# what an authorised scenery reduction would actually cost before deciding.
+# Compiles in a 64-bit run mask (gNdsDreamLandCardCullMask) that suppresses
+# whole projected-no-Z stage runs; the mask defaults to 0, so flag=1 with an
+# unset mask renders identically to flag=0. Lab instrument, never shipped.
+NDS_DREAMLAND_CARD_CULL ?= 0
+# Baked cull set, one bit per sNdsNativeStageRuns[] entry (MASK0 = runs 0-31,
+# MASK1 = runs 32-53). Baked rather than poked because the Task 36 replay
+# captures the stage stream once: a mask applied after capture would simply be
+# replayed away. E0 §5 candidate sets, cheapest screen coverage first:
+#   cheapest10: MASK0=0x000E03C0 MASK1=0x000C0800  -> 19 tris, 10.9%
+#   cheapest16: MASK0=0x037E03C0 MASK1=0x002C0800  -> 36 tris, 20.6%
+NDS_DREAMLAND_CARD_CULL_MASK0 ?= 0
+NDS_DREAMLAND_CARD_CULL_MASK1 ?= 0
 # Battle pipeline selector. Orthogonal to NDS_RENDERER_PROFILE_LEVEL, which
 # is the *instrumentation* level within profiles 1 and 2 and keeps its
 # existing values (0 lean, 1 phase timers, 2 full oracle).
@@ -221,6 +235,10 @@ endif
 ifneq ($(filter $(NDS_TASK55_STAGE_GEOM),0 1),)
 else
 $(error NDS_TASK55_STAGE_GEOM must be 0 or 1)
+endif
+ifneq ($(filter $(NDS_DREAMLAND_CARD_CULL),0 1),)
+else
+$(error NDS_DREAMLAND_CARD_CULL must be 0 or 1)
 endif
 # Task 56: NDS_TASK56_FIGHTER_PRIMITIVES must be 0, 1, or 2.
 ifneq ($(NDS_TASK56_FIGHTER_PRIMITIVES),$(filter $(NDS_TASK56_FIGHTER_PRIMITIVES),0 1 2))
@@ -1500,6 +1518,9 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
 		echo '#define NDS_DREAMLAND_DS_MESH $(NDS_DREAMLAND_DS_MESH)'; \
+		echo '#define NDS_DREAMLAND_CARD_CULL $(NDS_DREAMLAND_CARD_CULL)'; \
+		echo '#define NDS_DREAMLAND_CARD_CULL_MASK0 $(NDS_DREAMLAND_CARD_CULL_MASK0)u'; \
+		echo '#define NDS_DREAMLAND_CARD_CULL_MASK1 $(NDS_DREAMLAND_CARD_CULL_MASK1)u'; \
 		echo '#define NDS_TASK53_REPLAY_ARENA_FIX $(NDS_TASK53_REPLAY_ARENA_FIX)'; \
 		echo '#define NDS_TASK55_STAGE_GEOM $(NDS_TASK55_STAGE_GEOM)'; \
 		echo '#define NDS_TASK56_FIGHTER_PRIMITIVES $(NDS_TASK56_FIGHTER_PRIMITIVES)'; \
@@ -1766,6 +1787,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK36_HW_COMPOSE=$(NDS_TASK36_HW_COMPOSE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK51_STAGE_NATIVE=$(NDS_TASK51_STAGE_NATIVE)'
 	@printf '%s\n' 'BENCH_MAKE_DREAMLAND_DS_MESH=$(NDS_DREAMLAND_DS_MESH)'
+	@printf '%s\n' 'BENCH_MAKE_DREAMLAND_CARD_CULL=$(NDS_DREAMLAND_CARD_CULL)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_PROFILE=$(NDS_BATTLE_PROFILE)'
 	@printf '%s\n' 'BENCH_MAKE_TASK44_STAGE_STEADY=$(NDS_TASK44_STAGE_STEADY)'
 	@printf '%s\n' 'BENCH_MAKE_TASK37_PROFILE=$(NDS_TASK37_PROFILE)'

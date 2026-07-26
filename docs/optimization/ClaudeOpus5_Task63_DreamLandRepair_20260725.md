@@ -176,6 +176,86 @@ Whether ≈29.7% would move `ALL`/P95 is itself unproven. Task 55 measured a
 is that Tasks 54/55 localized the floor to the vertex words specifically, which
 is what this would cut. It is a real shot, not a sure thing.
 
+## 5b. The remaining lever, measured on hardware — it does not work
+
+§5 priced the scenery-deletion lever on paper. This section measures it. A
+lab-only flag `NDS_DREAMLAND_CARD_CULL` (default 0) bakes a 64-bit run mask
+that suppresses whole stage runs, so the owner can see and measure the trade
+instead of reasoning about a coverage table.
+
+Four arms, one tree, `smash64ds-battle-playable-proof-hwtri`, canonical
+Boundary configuration (mode 163, Dream Land, Mario vs level-3 CPU Fox), frame
+window 438–445:
+
+| arm | flag | culled runs | ROM sha256 (16) |
+|---|---|---|---|
+| A | 0 | — | `af8b2a5023676bcf` |
+| A0 | 1, mask 0 | none (instrument control) | `04633d8624bf5537` |
+| B | 1 | cheapest 10 | `f4db7b140b35f185` |
+| C | 1 | cheapest 16 | `235c1f0d8505a9f6` |
+
+### The instrument is proven neutral
+
+- Arm A's ROM hash `af8b2a50…` (11,432,960 B) is **byte-identical to the Task 62
+  A/B baseline arm** built before this flag existed. At default 0 the change
+  compiles out completely; the override-trap holds.
+- Arm A vs arm A0 frame-438 capture: **0 changed pixels** across the entire 3D
+  viewport, with identical counters (828 triangles, 1152 GX words). Flag on
+  with an empty mask renders exactly like flag off, which is what makes the
+  B/C comparisons trustworthy.
+
+### The cull engaged exactly as designed
+
+| arm | stage triangles | Δ | predicted Δ | GX words | Δ |
+|---|---|---|---|---|---|
+| A0 | 828 | — | — | 1152 | — |
+| B | 809 | −19 | −19 ✓ | 1038 | −9.9% |
+| C | 792 | −36 | −36 ✓ | 936 | −18.8% |
+
+### Visual cost
+
+Frame-438 pixel diff over the 3D viewport (110,592 px):
+
+- A0 vs B: **2.15% changed**
+- A0 vs C: **2.15% changed — the identical pixel set**
+
+The six extra runs in C contribute nothing at the gameplay camera, so C buys
+17 more triangles for zero additional visual cost. What is lost in both: small
+flower/bush clusters at ground level near the fighters, and a region of the
+pond edge in the lower right. Captures:
+`2026-07-25_task63-cull-{A,A0,B,C}-frame438.png`,
+`2026-07-25_task63-cull-diff-{control,B,C}.png`,
+`2026-07-25_task63-cull-sidebyside.png`.
+
+### Performance — the lever is worse than neutral
+
+RENDER_BENCH, steady-state frames 440–445 (P50):
+
+| arm | ALL total | Δ | stage CPU (FTR/STG) | Δ |
+|---|---|---|---|---|
+| A0 | 1,352,000 | — | 1,011,584 | — |
+| B | 1,358,464 | +0.5% | 1,184,512 | **+17.1%** |
+| C | 1,357,184 | +0.4% | 1,165,376 | **+15.2%** |
+
+`ALL` is **flat**, and stage CPU work gets materially **worse** — consistently
+across all 8 frames with very low variance (B: 1,179,008–1,185,344).
+
+The mechanism is visible in the counters: `RENDER_TEXHASH` jumps from 25 to 58
+and `RENDER_TEXEL1` goes from `0,0` to `2,2` in both cull arms. Removing runs
+breaks the Task 44 stage steady-state / static-texture-AOT coherence and
+re-enters live frozen-water TEXEL0/TEXEL1 material evaluation every frame. That
+re-evaluation costs ~+170,000 ticks, which dwarfs the 216 GX words the cull
+saves.
+
+**Honest caveat:** this regression is plausibly an artifact of culling inside
+the run loop rather than rebuilding the run table offline in the generator; a
+generator-level cull would likely keep the texture caching intact. But `ALL` was
+flat regardless, and an 18.8% vertex-word cut is the same order as Task 55's
+20.6% word cut, which moved `ALL` by zero. Both readings point the same way.
+
+**Verdict: the last lever is closed.** Even granting the scenery loss, deleting
+backdrop cards does not buy frame time.
+
 ## 6. Disposition
 
 - **E0 gate: failed.** 9.1% available vs 15% required. The runtime repair
@@ -198,9 +278,12 @@ rather than on guesswork:
 - Task 55: cutting 20.6% of *non-vertex* words moved `ALL` by zero.
 - Task 63 (this): cutting *vertex* words at full fidelity yields at most 9.1%.
 
-The remaining options are both owner decisions, not engineering ones: accept a
-visible scenery reduction (§5), or accept that Dream Land's stage cost is at
-its floor and look for the next 30 FPS win elsewhere.
+- Task 63 §5b (this): deleting backdrop cards leaves `ALL` flat and makes stage
+  CPU work 15–17% *worse*.
+
+Every lever on this axis is now measured and closed. **Dream Land's stage cost
+is at its floor; the next 30 FPS win is somewhere else.** The campaign should
+move off stage geometry entirely.
 
 ## Deliverables
 

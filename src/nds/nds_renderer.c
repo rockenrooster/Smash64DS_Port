@@ -20821,6 +20821,32 @@ ndsRendererNativeStageEmitNoZTriangle(
     return 1u;
 }
 
+#if NDS_DREAMLAND_CARD_CULL
+/* Task 63 §5 — backdrop-card cull visualization.
+ *
+ * E0 measured that Dream Land's static stage has no geometry to reduce at full
+ * material fidelity (9.1% ceiling, below the 15% gate). The only remaining
+ * lever is deleting whole projected-no-Z backdrop cards, which is a visible
+ * scenery loss and therefore the owner's decision, not the compiler's. This
+ * instrument exists so that decision can be made by looking rather than by
+ * reading a coverage table.
+ *
+ * One bit per entry in sNdsNativeStageRuns[] (54 runs, so two words). The
+ * mask is baked at build time from NDS_DREAMLAND_CARD_CULL_MASK0/1 so that the
+ * Task 36 replay stream is captured with the cull already applied -- poking it
+ * over GDB after capture would be replayed away. It stays volatile so a GDB
+ * poke plus a capture invalidation can still drive it interactively. At the
+ * default 0 nothing is suppressed and the frame is identical to a flag=0
+ * build, which is what makes the A/B trustworthy. Never shipped:
+ * NDS_DREAMLAND_CARD_CULL defaults to 0 and the published ROM never sets it. */
+volatile u32 gNdsDreamLandCardCullMask[2] = {
+    NDS_DREAMLAND_CARD_CULL_MASK0,
+    NDS_DREAMLAND_CARD_CULL_MASK1,
+};
+volatile u32 gNdsDreamLandCardCullSkippedRuns;
+volatile u32 gNdsDreamLandCardCullSkippedTris;
+#endif /* NDS_DREAMLAND_CARD_CULL */
+
 #if NDS_DREAMLAND_DS_MESH
 /* Task 62: generated Dream Land DS-native static 3D mesh. Draws the exact
  * source-world geometry with source material attributes from the baked blob
@@ -21591,6 +21617,19 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             &sNdsNativeStageOwnerExecution.runs[run_index];
         u32 emitted_triangles = 0u;
         u32 triangle_offset;
+#if NDS_DREAMLAND_CARD_CULL
+        /* Task 63 §5 visualization: suppress whole stage runs named by the
+         * mask so the owner can see what an authorised scenery reduction
+         * costs. The mask is written over GDB by the capture harness; at its
+         * default 0 nothing is culled and this renders exactly like flag=0. */
+        if ((gNdsDreamLandCardCullMask[run_index >> 5u] &
+             ((u32)1u << (run_index & 31u))) != 0u)
+        {
+            gNdsDreamLandCardCullSkippedRuns++;
+            gNdsDreamLandCardCullSkippedTris += run->triangle_count;
+            continue;
+        }
+#endif
 #if NDS_TASK34_STAGE_STREAM_CENSUS
         u32 task34_dobj_index;
 #endif
