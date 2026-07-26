@@ -275,6 +275,32 @@ Tasks 69–76 are closed and their numbers are spent. Task 76 is the sizing-open
 removal (`ClaudeOpus5_Task76_DropTheSizingOpen_20260726.md`), **not** the
 compiler foundation. This campaign therefore begins at **77**.
 
+## Amended by Task 77 E0 — much of this is already built
+
+`ClaudeOpus5_Task77_FighterIRAudit_20260726.md` audited the repo before writing
+the compiler this document specifies, and found `generate_nds_native_owners.py`
+(3,164 lines) already emitting "the canonical Mario/Fox native-owner IR": 541
+dense vertices, 1,878 corners, 67 render runs, 70 state deltas, per-fighter
+`BindingParents` / `BindingJoints` / `JointSchedule`, and — decisively —
+`sNdsNativeMarioFifoWords[4034]` with `FifoMatrixPatches[14]`, a **prepared GX
+command stream with matrix patch points**.
+
+That last one is Task 79's deliverable, already generated. The consequence is a
+reorder, not a retraction — the compiler-first thesis is confirmed, it is simply
+further along here than the draft assumed:
+
+- **Skeleton, render runs, materials, prepared GX** — built. Tasks 79 and 80
+  become "finish wiring and prove the runtime actually consults these" rather
+  than new subsystems.
+- **Animation tracks** — genuinely absent. This is the real frontier and should
+  be the next implementation task.
+- **`gameplay_load_bearing`** — absent, and its source of truth is now located
+  (see the audit's §3: 21 joint references across 16 structs in
+  `include/ft/fighter.h`, split gameplay vs cosmetic).
+
+The roadmap at the end of this document is superseded on ordering by the audit's
+§2. Read them together.
+
 ---
 
 ## Task 75 — Minimal animation preload bridge (optional)
