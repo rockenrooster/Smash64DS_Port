@@ -131,3 +131,96 @@ resolution and now argues against a conclusion the campaign has already reached.
    which is the same reason the pack went stale in the first place — and this
    time the follow-up census should be part of the task rather than a later
    discovery.
+
+---
+
+# Task 82 E1 — Measured KEEP, blocked on a verifier contract
+
+**Date:** 2026-07-26
+**Status:** **Measured and reverted, pending the owner's decision.** The change
+works; it breaks a deliberate contract that is the owner's to change.
+**Inputs:** `artifacts/task82-packA.json` (off), `artifacts/task82-packB.json`
+(on) — both arms built from one tree, per the Task 79 rule.
+
+## E1.1 What was built
+
+Placement only, both directions, exactly as E0 specified.
+
+**Evicted** (measured zero cycles in the battle window):
+`ndsRendererHardwareConvertTexel01Ci4Direct` (2,600 B),
+`ndsRendererHardwareLitShadeColorPrepared` (460 B) — via a macro that keeps
+`hot`, `O3` and `target("arm")` and drops only `section(".itcm")`.
+
+**Admitted** (top of the census section-D ranking):
+`ndsRendererTask36ReplayRun` (476 B), `ndsRendererNativeApplyStateDelta` (620 B),
+`ndsRendererHardwareGetLightShadeLut` (400 B), `ndsRendererMtxMul20p12` (312 B),
+`ndsRendererMtxLoadN64ToDS20p12` (256 B).
+
+Relocation verified in the ELF before measuring: the evicted pair moved from
+`0x01ff8xxx` to `0x0200xxxx`, all three admissions moved into ITCM, and the
+section went 32,596 → 31,552 bytes.
+
+## E1.2 Result — a clean KEEP on every axis
+
+| bucket | A (off) | B (on) | Δ P95 |
+|---|---|---|---|
+| **`WORK-H` P95** | 1,861,952 | **1,809,728** | **−52,224** |
+| `WORK-H` P50 | 1,365,248 | 1,354,688 | −10,560 |
+| `FTR` P95 | 1,013,760 | 1,000,896 | −12,864 |
+| `STG` P50 | 380,160 | 371,264 | −8,896 |
+| `STG` P95 | 388,032 | 378,496 | −9,536 |
+
+`WORK-H` improves on **118 of 128 frames**; mean −10,978. VBlank histogram moves
+the right way: 3-interval frames 472 → 477, 4-interval 90 → 85. `WAIT` rises
+~10,000, which is the frame finishing earlier and idling longer — the expected
+shape, and the opposite of Task 79 E1 where the targeted bucket regressed.
+
+Gap to the 1,120,000 target: **741,952 → 689,728**, 7.0% of what remains.
+
+## E1.3 Why it is reverted anyway
+
+`scripts/check-gbi-decode-fixtures.ps1:1422` asserts:
+
+```powershell
+[regex]::Matches($renderer, 'static (?:void|s32|u32) NDS_RENDERER_HOT_CODE').Count -eq 6
+  'Renderer hot-code set drifted from the six measured texture/VTX/shade/vertex/triangle/scan paths.'
+```
+
+and `check-renderer-itcm-placement.ps1` asserts post-link that those symbols have
+not escaped ITCM. Evicting two of the six trips both. The assertion is textual on
+the source, so it fails with the flag **off** as well as on — the change cannot
+sit dormant behind a default-0 flag the way Task 37's did.
+
+This is not a stale guard. It is a deliberate contract, and the two functions I
+evicted are the "texture" and "shade" members of the named six. They measure zero
+cycles *in this configuration* because Dream Land water is frozen at source frame
+0 by `PROJECT_GOAL.md` and this stage's lighting does not reach the prepared-lit
+path. On another stage, or with water unfrozen, they would run — from main RAM,
+slower than the contract intends.
+
+So the eviction is a legitimate specialisation of exactly the kind `AGENTS.md`
+encourages, *and* a narrowing of a contract that exists to stop silent drift.
+Which of those it is, is the owner's call and not mine.
+
+The admissions cannot be taken alone: ITCM is a hard 32 KB and arm A already
+occupies 32,596 of 32,768 bytes. Without eviction only 140 bytes are free, worth
+about 2,024 ticks/frame — below the noise floor.
+
+## E1.4 The decision, stated plainly
+
+Three ways forward, in the order I would rank them:
+
+1. **Evict only `ConvertTexel01Ci4Direct`** (2,600 B, enough for all five
+   admissions) and amend the contract from six paths to five, recording that the
+   animated-CI4 texel path is dead while Dream Land water is frozen. Keeps the
+   "shade" path resident. Most of the win, one contract line, one documented
+   reason.
+2. **Take both evictions** and amend the contract to four, accepting that a
+   future stage may need a re-pack. Full −52,224.
+3. **Decline** and close Task 82. The pack stays stale and the 67,045 ticks E0
+   identified stay on the table.
+
+I have not amended the verifier, because a checker that a task edits to make its
+own change pass is not a checker. The measurement is recorded here and the
+artifacts are kept so whichever option is chosen can be re-applied without
+re-deriving anything.
