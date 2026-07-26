@@ -57,7 +57,8 @@ $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
 $fallbackReasons = if ($FallbackCensus) {
     @('calls', 'eligible', 'animLock', 'selected', 'displayList',
       'materialCount', 'validate', 'matrices', 'materialPrep',
-      'inputs', 'contract', 'postGx', 'begin') } else { @() }
+      'inputs', 'contract', 'postGx', 'begin',
+      'animLoad', 'animResident') } else { @() }
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot `

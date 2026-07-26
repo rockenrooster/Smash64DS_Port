@@ -4112,6 +4112,15 @@ enum NDSTickHudNativeOwnerFallbackReason {
     nNDSTickHudNativeOwnerFallbackContract,
     nNDSTickHudNativeOwnerFallbackPostGx,
     nNDSTickHudNativeOwnerFallbackBegin,
+    /* Task 73. Not native-owner reasons -- this array is the lab counter bank
+     * and these ride along on its existing plumbing rather than earning a
+     * second one. lbRelocGetForceExternHeapFile re-reads a fighter animation
+     * off the cartridge on every call with no residency check, and Task 71
+     * showed that load setting the WORK-H P95. AnimForceResident counts the
+     * subset where the destination heap already holds that same asset, which
+     * is the size of the opportunity a residency cache would take. */
+    nNDSTickHudNativeOwnerFallbackAnimForceLoad,
+    nNDSTickHudNativeOwnerFallbackAnimForceResident,
     nNDSTickHudNativeOwnerFallbackReasonCount
 };
 extern volatile u32 gNdsTickHudNativeOwnerFallbackCount;

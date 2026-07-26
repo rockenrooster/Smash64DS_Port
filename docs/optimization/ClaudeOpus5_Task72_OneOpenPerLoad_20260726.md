@@ -91,3 +91,39 @@ option `PROJECT_GOAL.md` most directly endorses.
 
 Task 71 sized the whole on-demand-load lever at roughly 170,000 of P95. This took
 79,488 of it with a five-line change.
+
+## 6. Task 73 addendum — the residency shortcut does not exist
+
+`lbRelocGetForceExternHeapFile` calls `ndsRelocForceLoadFighterAObj16File`
+unconditionally: unlike `lbRelocGetStatusBufferFile`, which consults
+`ndsRelocFindStatusNode` and returns early, the force path has no residency check
+at all. That invited an obvious question — 26 of 128 frames load an animation, but
+two fighters in a one-minute match do not use 26 distinct new moves, so are the
+same animations being re-read?
+
+Counted rather than assumed, because "Force" plausibly means the caller wants
+pristine data restored and the renderer does mutate loaded fighter data. Two
+observation-only counters, the load path itself untouched
+(`build-task73-animcensus`, `artifacts/task73-animcensus.json`):
+
+```
+animLoad:16   animResident:0
+```
+
+**16 loads over 128 frames, and zero of them targeted a heap that already held
+that asset.** The destination is a reused slot holding a different asset each
+time, so nothing is being re-fetched redundantly and a residency cache would
+return exactly zero.
+
+Worth noting without leaning on it: 16 animation loads plus the 10 animation-lock
+fallback frames equals the 26 frames Task 70 measured above 1.5x median `SRC`. The
+arithmetic is tidy but the frame identities were not cross-checked, so it is a
+lead, not a result.
+
+The consequence is that the remaining on-demand-load cost cannot be skipped, only
+moved. Preloading a match's animations means holding them resident, which is a
+RAM budget decision rather than a code change — `PROJECT_GOAL.md` endorses the
+trade, but the size of it is the owner's call. The two cheap items are untouched
+and independent of that: the surviving open still resolves by path though the
+asset identity is numeric before it, and `ndsRelocAssetIDForToken` is still a
+hundred comparisons plus two linear table scans per relocation.

@@ -5452,6 +5452,23 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         ndsRelocRecordExternalFixupFail(asset_id);
         return NULL;
     }
+#if NDS_TICK_HUD
+    /* Observation only -- the load below is unchanged. "Force" may well mean
+     * the caller wants pristine data restored, and the renderer does mutate
+     * loaded fighter data, so the reload is not assumed redundant. This just
+     * measures how often it reloads an asset the destination already holds. */
+    NDS_TICK_HUD_NATIVE_OWNER_MARK(
+        nNDSTickHudNativeOwnerFallbackAnimForceLoad);
+    {
+        NDSRelocLoadedFile *resident = ndsRelocFindLoadedFileByData(heap);
+
+        if ((resident != NULL) && (resident->asset_id == asset_id))
+        {
+            NDS_TICK_HUD_NATIVE_OWNER_MARK(
+                nNDSTickHudNativeOwnerFallbackAnimForceResident);
+        }
+    }
+#endif
     memset(heap, 0, asset_size);
     /* One open, not two. asset_size comes from ndsRelocAssetAllocSize, so the
      * header this used to read separately was never consulted before
