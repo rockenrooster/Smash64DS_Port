@@ -13,6 +13,7 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`.
 | `KNOWN_ISSUES.md` | Unresolved durable gaps only |
 | `BUGS.md` | User-reported playtest bugs |
 | `optimization/NATIVE_RENDERER_PLAN.md` | Current M2-M4 implementation contract |
+| `optimization/COMPILER_FIRST_ARCHITECTURE.md` | Campaign direction: what gets replaced, in what order, what each replacement must prove |
 | `PERF_LEDGER.md` | Reproducible measurements and rejected experiments |
 | `DIAGNOSTIC_REFERENCE.md` | Marker definitions and manual diagnostics |
 | `PORTING.md` | Append-only chronological history |
