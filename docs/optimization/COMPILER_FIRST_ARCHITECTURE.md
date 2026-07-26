@@ -299,7 +299,38 @@ further along here than the draft assumed:
   `include/ft/fighter.h`, split gameplay vs cosmetic).
 
 The roadmap at the end of this document is superseded on ordering by the audit's
-§2. Read them together.
+§2, and again by Task 78 E0 below.
+
+## Amended by Task 78 E0 — the animation lever is 82,807, not ≥100,000
+
+`ClaudeOpus5_Task78_AnimationLeverE0_20260726.md` measured the animation path
+over the standard 128-frame window before writing the compiler. The whole
+family — 32 symbols, `gcPlayDObjAnimJoint` through
+`battleship_ftAnimParseDObjFigatree` — is **82,807 ticks/frame**, plus 1,743 for
+joint hierarchy transform. A perfect animation compiler falls 15,450 short of
+this task's own target, and Task 77 E1 already removed the approximations that
+would have widened it.
+
+Measured ranking of the frame (work = 1,515,768 after idle):
+
+| family | ticks/frame | % of work |
+|---|---|---|
+| renderer | 739,715 | 48.8% |
+| soft-float | 161,471 | 10.7% |
+| texture / material resolution | 159,968 | 10.6% |
+| matrix | 158,500 | 10.5% |
+| `mem*` | 137,193 | 9.1% |
+| animation | 82,807 | 5.5% |
+
+**Revised order: prepared texture/material first** (this document's Task 80 —
+1.9× the animation lever, generated data already exists in
+`sNdsNativeFighterStateDeltas`/`StateSequence`, no fidelity risk), then
+soft-float and `mem*`, then the animation compiler re-scoped against 82,807.
+
+Two reorders in two tasks now point the same way: the renderer is where the
+frame is, and its generated tables are **under-used rather than absent**. That
+is a different campaign from the one this document opens with — the compiler
+largely exists; what is missing is the runtime consuming it.
 
 ---
 
