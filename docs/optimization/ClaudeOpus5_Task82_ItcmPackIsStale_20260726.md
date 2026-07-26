@@ -224,3 +224,66 @@ I have not amended the verifier, because a checker that a task edits to make its
 own change pass is not a checker. The measurement is recorded here and the
 artifacts are kept so whichever option is chosen can be re-applied without
 re-deriving anything.
+
+---
+
+# Task 82 E2 — KEEP, shipped. `WORK-H` P95 −61,056
+
+**Date:** 2026-07-26
+**Status:** **KEEP, default on.** Boundary green
+(`artifacts/task82-verify-boundary.log`, "Boundary verification profile passed",
+0 failures). Post-link ITCM placement checker green.
+**Inputs:** `artifacts/task82-ci4A.json` (off) vs `artifacts/task82-ci4B.json`
+(on), one tree, 128 frames from 439.
+
+The owner chose the one-eviction option from E1.4: evict the animated-CI4 texel
+path only, keep the prepared-lit shade path resident, narrow both checkers from
+six paths to five.
+
+## E2.1 Result — better than the two-eviction variant
+
+| bucket | A (off) | B (on) | Δ |
+|---|---|---|---|
+| **`WORK-H` P95** | 1,861,952 | **1,800,896** | **−61,056** |
+| `WORK-H` P50 | 1,365,248 | 1,345,984 | −19,264 |
+| `WORK` P95 | 1,873,408 | 1,855,808 | −17,600 |
+| `FTR` P95 | 1,013,760 | 994,240 | −19,520 |
+| `FTR` P50 | 577,792 | 569,088 | −8,704 |
+| `STG` P95 | 388,032 | 378,880 | −9,152 |
+
+`WORK-H` improves on **119 of 128 frames**, mean −18,877. VBlank histogram:
+3-interval frames **472 → 487**, 4-interval **90 → 74**. Gap to the 1,120,000
+target: **741,952 → 680,896**.
+
+**Keeping the shade path resident beat evicting it.** E1 measured −52,224 with
+both evictions; this measures −61,056 with one. `ndsRendererHardwareLitShadeColorPrepared`
+showed zero cycles in the Task 78 census, but evicting it still cost ~9,000
+ticks of P95 — so it does execute, below the resolution of a 128-frame per-symbol
+census that rounds a rare call to zero.
+
+That is worth keeping in mind as a limit of the instrument: **"zero cycles in the
+census" is not "never called."** The census attributes whole cycles to program
+counters over a window; a function entered a handful of times across 128 frames
+can round away entirely. The owner's more conservative option was also the faster
+one, and not by accident.
+
+## E2.2 What shipped
+
+Evicted: `ndsRendererHardwareConvertTexel01Ci4Direct` (2,600 B) — placement only,
+keeping `hot`/`O3`/`target("arm")`.
+
+Admitted, placement only: `ndsRendererTask36ReplayRun` (476 B),
+`ndsRendererNativeApplyStateDelta` (620 B), `ndsRendererHardwareGetLightShadeLut`
+(400 B), `ndsRendererMtxMul20p12` (312 B), `ndsRendererMtxLoadN64ToDS20p12`
+(256 B). ITCM ends at 32,012 of 32,768 bytes.
+
+Both checkers narrowed from six paths to five, each with a comment naming the
+reason and the condition that reverses it: a stage shipping with live Dream Land
+water restores the CI4 path to ITCM.
+
+## E2.3 Follow-up owed
+
+E0 §8.5 required re-running the census after the repack, because a repack
+invalidates the ranking that chose it. That has **not** been done — this task
+shipped the change and the next census is outstanding. It is how the previous
+pack went stale, so it should not wait for another campaign to notice.

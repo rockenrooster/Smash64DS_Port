@@ -164,6 +164,11 @@ NDS_TASK44_STAGE_STEADY ?= 0
 # BSS, and this ROM is cache-placement sensitive enough (see Task 37) that the
 # extra bytes shift frame pacing. Any run with it on needs its own baseline.
 NDS_TASK68_FALLBACK_CENSUS ?= 0
+# Task 82 ITCM re-pack: evict the animated-CI4 texel path (dead while Dream
+# Land water is frozen) and admit five higher-stall functions. Placement only.
+# KEEP on measurement: WORK-H P95 -52,224 with both evictions; this ships the
+# owner's one-eviction variant. Default on.
+NDS_TASK82_ITCM_REPACK ?= 1
 NDS_TASK37_PROFILE ?= 0
 NDS_TASK37_PROFILE_START ?= 438
 NDS_TASK37_PROFILE_FRAMES ?= 128
@@ -1532,6 +1537,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK68_FALLBACK_CENSUS $(NDS_TASK68_FALLBACK_CENSUS)'; \
+		echo '#define NDS_TASK82_ITCM_REPACK $(NDS_TASK82_ITCM_REPACK)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
 		echo '#define NDS_TASK37_ITCM_LEAVES $(NDS_TASK37_ITCM_LEAVES)'; \
 		echo '#define NDS_TASK37_ITCM_PORT $(NDS_TASK37_ITCM_PORT)'; \

@@ -1419,7 +1419,11 @@ Assert-True ($renderer.Contains('prepared_vertex_colors[NDS_RENDERER_MAX_VTX]'))
 Assert-True ($renderer.Contains('prepared_texcoord_s[NDS_RENDERER_MAX_VTX]')) 'Renderer no longer retains exact scaled texture coordinates within one unchanged TRI run.'
 Assert-True ($renderer.Contains('prepared_projected_x[NDS_RENDERER_MAX_VTX]')) 'Renderer no longer retains exact projected coordinates within one unchanged TRI run.'
 Assert-True ($renderer.Contains('state->prepared_projected_source_z_valid_mask = 0u;')) 'Renderer does not invalidate derived projected-depth values at source-command boundaries.'
-Assert-True ([regex]::Matches($renderer, 'static (?:void|s32|u32) NDS_RENDERER_HOT_CODE').Count -eq 6) 'Renderer hot-code set drifted from the six measured texture/VTX/shade/vertex/triangle/scan paths.'
+# Task 82, owner's decision: five, not six. The animated-CI4 texel path was
+# evicted to main RAM to free ITCM for five higher-stall admissions, because it
+# measures zero cycles while PROJECT_GOAL.md freezes Dream Land water at source
+# frame 0. Narrowed rather than deleted so a stage with live water re-opens it.
+Assert-True ([regex]::Matches($renderer, 'static (?:void|s32|u32) NDS_RENDERER_HOT_CODE').Count -eq 5) 'Renderer hot-code set drifted from the five measured VTX/shade/vertex/triangle/scan paths.'
 Assert-True ($renderer -match '(?s)#define NDS_RENDERER_HOT_CODE.*?optimize\("O3"\).*?target\("arm"\).*?section\("\.itcm"\)') 'Renderer hot-code policy no longer combines targeted O3, ARM state, and ITCM placement.'
 Assert-True (-not $renderer.Contains('NDS_HOT_TEXT')) 'Rejected renderer main-RAM hot-text annotations returned.'
 Assert-True ($renderer -match '(?s)#define NDS_RENDERER_FAST_RUN_CODE.*?noinline.*?optimize\("O3"\).*?target\("arm"\)' -and $renderer.Contains('static void NDS_RENDERER_FAST_RUN_CODE ndsRendererExecuteFastRawCurrentRun')) 'Renderer shared raw-current run kernel is not isolated as one noinline ARM/O3 call.'

@@ -54,6 +54,33 @@ static NDSRendererProfileOwner sNdsRendererRuntimeOwner;
     __attribute__((noinline, hot, optimize("O3")))
 #endif
 
+/* Task 82 repack. Placement and nothing else, in both directions.
+ *
+ * include/nds/nds_task37_itcm.h states the rule this obeys: a task that moved
+ * code and recompiled it differently at the same time could not attribute its
+ * own result. Admission adds a section attribute and no more; eviction drops
+ * the section while keeping hot/O3/ARM exactly as NDS_RENDERER_HOT_CODE had
+ * them. Neither direction changes an emitted instruction, only where it lives.
+ *
+ * The pack this replaces was measured on 2026-07-22 and drifted: 27 of the 71
+ * .itcm residents no longer execute in the battle window (Task 82 E0). ITCM is
+ * a hard 32 KiB and was 32,596 bytes full, so admitting anything required
+ * evicting something first.
+ *
+ * Exactly one eviction, on the owner's decision: the animated-CI4 texel path.
+ * It measures zero cycles because PROJECT_GOAL.md freezes Dream Land water at
+ * source frame 0, so this is a stage-specific specialisation with a named
+ * reason -- not a general claim that the path is dead. A stage with live water
+ * needs this re-packed, and the checkers were narrowed from six paths to five
+ * rather than deleted so that stays visible. */
+#if NDS_TASK82_ITCM_REPACK && defined(__arm__)
+#define NDS_TASK82_ITCM_CODE __attribute__((section(".itcm")))
+#define NDS_TASK82_EVICTED_HOT_CODE     __attribute__((hot, optimize("O3"), target("arm")))
+#else
+#define NDS_TASK82_ITCM_CODE
+#define NDS_TASK82_EVICTED_HOT_CODE NDS_RENDERER_HOT_CODE
+#endif
+
 /* Profiles 0/1 publish the shipping contract through the compact frame
  * summary.  Profile 1 is the low-frequency O2 coarse build, so it must not
  * maintain the generic per-command proof ledger either.  Profile 2 retains
@@ -4653,7 +4680,8 @@ static u32 ndsRendererHardwareLitShadeColorPrepared(
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 static const u32 *ndsRendererHardwareFindLightShadeLut(
     u32 diffuse, u32 ambient);
-static const u32 *ndsRendererHardwareGetLightShadeLut(
+static const u32 * NDS_TASK82_ITCM_CODE
+ndsRendererHardwareGetLightShadeLut(
     u32 diffuse, u32 ambient);
 #endif
 static u32 ndsRendererHardwareLitShadeColor(
@@ -4802,7 +4830,8 @@ static void ndsRendererMtxStoreDS20p12ToN64(
     }
 }
 
-void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
+void NDS_TASK82_ITCM_CODE
+ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
                                     NDSRendererMatrix20p12 *dst)
 {
     u32 row;
@@ -4863,7 +4892,8 @@ void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
         (s64)mtx->m[2][3] * z + mtx->m[3][3]);
 }
 
-void ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
+void NDS_TASK82_ITCM_CODE
+ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
                             const NDSRendererMatrix20p12 *rhs,
                             NDSRendererMatrix20p12 *out)
 {
@@ -11500,7 +11530,7 @@ static s32 ndsRendererHardwareStageUniqueTextureRows(
 }
 #endif
 
-static s32 NDS_RENDERER_HOT_CODE
+static s32 NDS_TASK82_EVICTED_HOT_CODE
 ndsRendererHardwareConvertTexel01Ci4Direct(
     const NDSRendererConfig *config,
     const u8 *texels0,
@@ -15667,7 +15697,8 @@ ndsRendererNativeApplyRootLightPreamble(
 #endif
 }
 
-static void ndsRendererNativeApplyStateDelta(
+static void NDS_TASK82_ITCM_CODE
+ndsRendererNativeApplyStateDelta(
     const NDSNativeStateDelta *delta,
     const u8 *asset_base,
     NDSRendererStats *stats,
@@ -20396,7 +20427,8 @@ static void ndsRendererNativeStageBeginRun(
 }
 
 #if NDS_TASK36_HW_COMPOSE == 2
-static s32 NDS_RENDERER_FAST_RUN_CODE ndsRendererTask36ReplayRun(
+static s32 NDS_RENDERER_FAST_RUN_CODE NDS_TASK82_ITCM_CODE
+ndsRendererTask36ReplayRun(
     u32 run_index,
     const NDSNativeStageRun *native_run,
     u32 segment_owner,

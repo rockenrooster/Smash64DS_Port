@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)]
     [string[]]$Elf,
     [string]$Objdump = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-objdump.exe',
@@ -9,10 +9,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Task 82: ndsRendererHardwareConvertTexel01Ci4Direct was evicted from ITCM on
+# the owner's decision -- it measures zero cycles while Dream Land water is
+# frozen at source frame 0. Restore it here if a stage ships with live water.
 $hotFunctions = @(
     'ndsRendererApplyVertexCommand',
     'ndsRendererHardwareLitShadeColorPrepared',
-    'ndsRendererHardwareConvertTexel01Ci4Direct',
     'ndsRendererHardwareSubmitVertex',
     'ndsRendererSubmitHardwareTriangle',
     'ndsRendererScanList'
