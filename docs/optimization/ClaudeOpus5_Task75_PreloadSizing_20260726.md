@@ -60,3 +60,68 @@ must record it there.
 Second open question: whether preloading at match start pushes a visible hitch
 into the match-start transition. 711 KiB of cartridge read is not free; it is
 merely somewhere the player is already waiting.
+
+# E1 — Design constraints found, and why implementation stopped here
+
+Three facts, established by reading the call path rather than assuming it.
+
+## 1. The return value is discarded
+
+`decomp/BattleShip-main/decomp/src/ft/ftmain.c:4623`:
+
+```c
+lbRelocGetForceExternHeapFile(motion_desc->anim_file_id, (void*) fp->figatree_heap);
+fp->figatree = fp->figatree_heap;
+```
+
+The caller throws the returned pointer away and uses the slot it passed in, so
+the data must physically land at `fp->figatree_heap`. `decomp/` is read-only, so
+this cannot be changed. **The "return a resident pointer" design is unavailable**
+and a copy always remains. E0 flagged this as the question that decides the size
+of the win; the answer is the pessimistic one.
+
+## 2. But a copy is enough, and the helper already exists
+
+`ndsRelocCopyLoadedFileToHeap` memcpys and then walks the payload rebasing every
+word that points inside the source range to the destination range. A relocated
+resident copy can therefore be stamped into `figatree_heap` and stay valid.
+
+So preloading still removes the NitroFS walk, the cartridge read, the byte swap,
+the relocation and the token lookup from the frame — everything except one
+RAM-to-RAM copy, which is cheaper than the cart-backed copy it replaces.
+
+## 3. The blocker: registration capacity and renderer aliasing
+
+`NDS_RELOC_LOADED_FILE_CAPACITY` is **96**. There are **301** animations.
+Preloaded copies cannot all be registered in `sNdsRelocLoadedFiles`, and
+relocation is only expressible against a registered `NDSRelocLoadedFile`.
+
+Registering them would also be wrong even if it fit: the renderer resolves
+fighter display lists through `ndsRelocFindLoadedFileContaining`
+(`reloc_backend_renderer_dl.c:11617`, inside the native-owner validation Task 69
+mapped), and an arena copy containing the same payload could capture that
+lookup instead of the live heap slot. That is a correctness hazard in the exact
+path whose fallbacks Task 69 spent a session counting.
+
+## Two viable designs, neither of them small
+
+**A. Arena with private relocation.** Keep preloaded copies outside
+`sNdsRelocLoadedFiles` entirely and give the arena its own minimal
+relocate-in-place, so nothing the renderer queries can alias them. Needs the
+fixup logic factored out of the registered-file path.
+
+**B. Raw arena, relocate on use.** Store post-byte-swap, pre-fixup payloads and
+run the existing finalize into `figatree_heap` after the copy. Keeps
+`ndsRelocFinalizeLoadedFile` in the frame — Task 71 measured that at 28,241
+ticks/frame — so it wins less, but touches far less machinery.
+
+B is the safer first cut and still removes the walk, the cart read and the byte
+swap. A is the full win.
+
+## Status
+
+Stopped before writing either. Both need the fixup path factored or duplicated,
+and landing a half-validated change in the animation load path — with a
+correctness hazard sitting in the renderer's pointer resolution — is not worth
+the risk of finishing it in a hurry. The sizing (E0) and these constraints are
+the deliverable; implementation is a clean-context task.
