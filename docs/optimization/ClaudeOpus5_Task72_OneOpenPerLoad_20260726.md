@@ -1,7 +1,9 @@
 # Task 72 — One open per load: −94,464 on `SRC` P95
 
 **Date:** 2026-07-26
-**Status:** Measured KEEP candidate. Boundary verifier pending at time of writing.
+**Status:** KEEP. Boundary verifier green (`artifacts/task72-verify-boundary.log`,
+"Boundary verification profile passed", exit 0), including the
+`battle_playable_realtime` harness that exercises the changed load path.
 **Inputs:** `artifacts/task72-oneopen.json` against
 `artifacts/task69-ring-task66rom.json` — same instrument (`-RingDump`), same
 128-frame window, same plain tick-HUD configuration.
