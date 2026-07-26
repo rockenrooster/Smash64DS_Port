@@ -11576,12 +11576,24 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     native_owner_hierarchy_mode =
         (gNdsRendererFastRunMode ==
          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ? TRUE : FALSE;
+#if NDS_TICK_HUD
+    NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackCalls);
+    if (native_owner_enabled != FALSE)
+    {
+        NDS_TICK_HUD_NATIVE_OWNER_MARK(
+            nNDSTickHudNativeOwnerFallbackEligible);
+    }
+#endif
     if ((native_owner_enabled != FALSE) &&
         ((native_owner_production_mode != FALSE) ||
          (native_owner_hierarchy_mode != FALSE)) &&
         ((fp->is_use_animlocks != FALSE) || (fp->shuffle_tics != 0u)))
     {
         native_owner_enabled = FALSE;
+#if NDS_TICK_HUD
+        NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+            nNDSTickHudNativeOwnerFallbackAnimLock);
+#endif
     }
 #endif
     ndsRendererProfileSetOwner(owner_id);
@@ -11598,6 +11610,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
              NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
         {
             native_owner_enabled = FALSE;
+#if NDS_TICK_HUD
+            NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                nNDSTickHudNativeOwnerFallbackSelected);
+#endif
         }
         for (i = 0u;
              (native_owner_enabled != FALSE) &&
@@ -11630,6 +11646,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                  (loaded->data_size - sizeof(*native_dl))))
             {
                 native_owner_enabled = FALSE;
+#if NDS_TICK_HUD
+                NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                    nNDSTickHudNativeOwnerFallbackDisplayList);
+#endif
                 break;
             }
             native_owner_file = loaded;
@@ -11652,6 +11672,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX)
                 {
                     native_owner_enabled = FALSE;
+#if NDS_TICK_HUD
+                    NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                        nNDSTickHudNativeOwnerFallbackMaterialCount);
+#endif
                     break;
                 }
             }
@@ -11674,6 +11698,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
         {
             native_owner_enabled = FALSE;
+#if NDS_TICK_HUD
+            NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                nNDSTickHudNativeOwnerFallbackValidate);
+#endif
         }
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -11713,6 +11741,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     ) == FALSE)))
             {
                 native_owner_enabled = FALSE;
+#if NDS_TICK_HUD
+                NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                    nNDSTickHudNativeOwnerFallbackMatrices);
+#endif
             }
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             {
@@ -11756,6 +11788,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                          prepared_material_count) == FALSE))
                 {
                     native_owner_enabled = FALSE;
+#if NDS_TICK_HUD
+                    NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
+                        nNDSTickHudNativeOwnerFallbackMaterialPrep);
+#endif
                     break;
                 }
             }

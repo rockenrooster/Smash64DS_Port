@@ -4087,7 +4087,27 @@ extern volatile u32 gNdsTickHudVBlankWaitTicks;
 #define NDS_TASK68_FALLBACK_CENSUS 0
 #endif
 #if NDS_TASK68_FALLBACK_CENSUS
+/* Every point at which the fighter draw can abandon the native production
+ * owner, in execution order. The first attempt at this census counted only the
+ * last four and read exactly zero, which is true and useless: by the time
+ * control reaches them, the eight earlier rejections have already had their
+ * chance, and any one of them leaves native_owner_enabled FALSE so the block
+ * holding those four counters is skipped entirely. A give-up census has to
+ * cover every give-up or its zero means nothing.
+ *
+ * Calls and Eligible are denominators rather than reasons -- without them a
+ * count of zero rejections cannot be told apart from a path that was never
+ * taken -- so they are marked, not counted as fallbacks. */
 enum NDSTickHudNativeOwnerFallbackReason {
+    nNDSTickHudNativeOwnerFallbackCalls,
+    nNDSTickHudNativeOwnerFallbackEligible,
+    nNDSTickHudNativeOwnerFallbackAnimLock,
+    nNDSTickHudNativeOwnerFallbackSelected,
+    nNDSTickHudNativeOwnerFallbackDisplayList,
+    nNDSTickHudNativeOwnerFallbackMaterialCount,
+    nNDSTickHudNativeOwnerFallbackValidate,
+    nNDSTickHudNativeOwnerFallbackMatrices,
+    nNDSTickHudNativeOwnerFallbackMaterialPrep,
     nNDSTickHudNativeOwnerFallbackInputs,
     nNDSTickHudNativeOwnerFallbackContract,
     nNDSTickHudNativeOwnerFallbackPostGx,
@@ -4097,12 +4117,17 @@ enum NDSTickHudNativeOwnerFallbackReason {
 extern volatile u32 gNdsTickHudNativeOwnerFallbackCount;
 extern volatile u32 gNdsTickHudNativeOwnerFallbackByReason[
     nNDSTickHudNativeOwnerFallbackReasonCount];
+#define NDS_TICK_HUD_NATIVE_OWNER_MARK(reason) \
+    do { \
+        gNdsTickHudNativeOwnerFallbackByReason[(reason)]++; \
+    } while (0)
 #define NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(reason) \
     do { \
         gNdsTickHudNativeOwnerFallbackCount++; \
         gNdsTickHudNativeOwnerFallbackByReason[(reason)]++; \
     } while (0)
 #else
+#define NDS_TICK_HUD_NATIVE_OWNER_MARK(reason) ((void)0)
 #define NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(reason) ((void)0)
 #endif
 extern volatile u32 gNdsTickHudFighterTicks;
