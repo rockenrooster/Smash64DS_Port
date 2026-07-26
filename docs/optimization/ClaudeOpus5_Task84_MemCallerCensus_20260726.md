@@ -106,3 +106,98 @@ recorded address must land inside an *executable* section. My first range check
 tested only "is this in main RAM", which the BSS addresses passed — main RAM
 holds both `.main` code and `.bss`. Checking the section, not the range, is what
 caught it.
+
+---
+
+# Task 84 E1 - The clear is priced: up to 41,468 ticks/frame
+
+**Date:** 2026-07-26
+**Status:** E1 complete. **The lever is real and it is the largest open one.**
+Probe removed, source restored. No runtime change.
+**Inputs:** `artifacts/task84-costA.json` / `-costB.json`.
+
+## E1.1 The denominator, counted
+
+`ndsRendererInitStats` runs **1,496 times over 128 frames - 11.7 per frame**,
+clearing 15,100 bytes/frame. Not the ~50 calls/frame E0 guessed at; that
+estimate was 4x too high.
+
+It also dates the Task 84 sample at 2,008 / 11.7 = **172 frames**, which converts
+the whole sample to per-frame rates for the first time:
+
+| | calls/frame | bytes/frame | avg B/call | ticks/frame | ticks/call | ticks/byte |
+|---|---|---|---|---|---|---|
+| `memset` | 375 | 37,945 | 101 | 57,206 | 152.7 | 1.51 |
+| `memcpy` | 849 | 27,434 | 32 | 59,230 | 69.8 | 2.16 |
+
+**This corrects Task 83's sizing badly.** It estimated 121-242 KiB/frame for
+`memset` and 208-416 KiB/frame for `memcpy` from instruction counts. The true
+figures are **37.9 KiB** and **27.4 KiB** - off by 3-15x. That conversion assumed
+4-8 bytes moved per executed instruction; the real averages are 1.2 and 0.5,
+because both are dominated by per-call prologue and dispatch on small sizes
+rather than by their block loops.
+
+## E1.2 Pricing the clear without touching it
+
+Call count and byte count still do not price a clear: `memset` costs a per-call
+part and a per-byte part, and one equation cannot separate them. The aggregate
+bound was **1,787 to 22,765 ticks/frame** - a factor of 13, spanning "below the
+noise floor" to "worth taking".
+
+So rather than shrink the real clear and risk reading an uninitialised member of
+a 151-member struct to find out, the probe **duplicated** it onto a scratch
+buffer. The A/B delta is then exactly the cost of one 1,292-byte clear at the
+real call frequency, on the real path, with the ROM's behaviour bit-identical
+either way.
+
+| | A | B (duplicate clear) | delta |
+|---|---|---|---|
+| `WORK-H` P50 | 1,345,984 | 1,391,040 | **+45,056** |
+| `WORK-H` P95 | 1,800,896 | 1,842,368 | +41,472 |
+| `WORK-H` mean | 1,451,707 | 1,493,174 | **+41,468** |
+| `STG` P50 | 372,544 | 404,160 | +31,616 |
+| VBlank 3-interval | 487 | 459 | -28 |
+
+**One 1,292-byte clear at 11.7 calls/frame costs 41,468 ticks/frame** - 3,544
+ticks per call, **2.74 ticks per byte**.
+
+## E1.3 Why that is nearly double the average rate
+
+`memset` averages 1.51 ticks/byte across the frame; this clear runs at 2.74.
+Large clears are the *expensive* ones per byte, not the efficient ones. A
+1,292-byte buffer spans ~40 cache lines that are cold, so each costs a miss plus
+a write-allocate, while the 101-byte average `memset` usually writes lines that
+are already resident.
+
+That inverts the assumption behind E0's upper bound, which priced these bytes at
+the frame average and so *under*-estimated by 1.8x. **39.8% of `memset` bytes
+account for roughly 72% of `memset` time.**
+
+## E1.4 The honest ceiling
+
+41,468 is an **upper bound on what removing the clear would save**, not a
+prediction, for one reason: the clear also warms the cache for the writes that
+immediately follow it. Delete it and some of those misses move to the first real
+write of each field rather than disappearing.
+
+How much moves rather than vanishes cannot be inferred from this measurement.
+What it does establish is that the cost is **not** below the noise floor - the
+question E0 could not answer - and that this is the largest single open lever,
+ahead of anything in Task 83's family ranking.
+
+## E1.5 What E2 must do
+
+The struct is 1,292 bytes: `texture_tiles` (640), `texture_loads` (56), and 151
+scalar members (596). Three routes, in increasing order of risk:
+
+1. **Do not clear `texture_tiles` (640 B, half the struct)** if every tile is
+   written by a `SETTILE` before it is read. That is a checkable claim rather
+   than a judgement call, and it is half the cost.
+2. **Reuse one persistent stats buffer**, resetting only the fields whose
+   staleness is observable, instead of clearing per traversal.
+3. **Reduce the 11.7 calls/frame.** `STG` absorbed 31,616 of the 41,468, so most
+   are stage traversals - and Task 81 found the stage does zero texture binds
+   during battle, which makes a full 1,292-byte stats clear per stage traversal
+   look especially unearned.
+
+Route 1 first: largest, checkable, independently revertible.
