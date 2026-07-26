@@ -473,3 +473,82 @@ s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
     gNdsRelocAssetPayloadReadCount++;
     return TRUE;
 }
+
+/* Header and payload from one open.
+ *
+ * Callers that need both used to call ndsRelocAssetReadHeader and then
+ * ndsRelocAssetLoadData, which opens the same file twice and parses the same
+ * header twice -- and the second parse overwrites the first through
+ * out_header, so the first was only ever a validity probe. On NitroFS an open
+ * by path is a directory walk: Task 71 measured strncasecmp at 30,484
+ * ticks/frame on a frame that loads a fighter animation, second only to memcpy
+ * among that frame's risers, and half of it is this duplicate.
+ *
+ * The counters are deliberately bumped exactly as the two-call sequence bumped
+ * them -- one header, one payload -- because gNdsRelocAssetHeaderReadCount is
+ * read as a per-event delta by verify-battle-playable-down-air-stall.ps1, and
+ * a load that stopped counting its header would look like a load that never
+ * happened. */
+s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
+                                   size_t dst_capacity,
+                                   NDSRelocAssetHeader *out_header)
+{
+    const NDSRelocAssetEntry *entry;
+    FILE *file;
+    NDSRelocAssetHeader header;
+    long data_offset;
+
+    if (dst == NULL)
+    {
+        return FALSE;
+    }
+
+    entry = ndsRelocAssetFindEntry(asset_id);
+    if (entry == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+
+    file = fopen(entry->path, "rb");
+    if (file == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+
+    if (ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header,
+                                        &data_offset) == FALSE)
+    {
+        fclose(file);
+        return FALSE;
+    }
+    gNdsRelocAssetHeaderReadCount++;
+
+    if ((size_t)header.data_size > dst_capacity)
+    {
+        gNdsRelocAssetShortReadCount++;
+        fclose(file);
+        return FALSE;
+    }
+    if (fseek(file, data_offset, SEEK_SET) != 0)
+    {
+        gNdsRelocAssetShortReadCount++;
+        fclose(file);
+        return FALSE;
+    }
+    if (fread(dst, 1, header.data_size, file) != header.data_size)
+    {
+        gNdsRelocAssetShortReadCount++;
+        fclose(file);
+        return FALSE;
+    }
+    fclose(file);
+
+    if (out_header != NULL)
+    {
+        *out_header = header;
+    }
+    gNdsRelocAssetPayloadReadCount++;
+    return TRUE;
+}

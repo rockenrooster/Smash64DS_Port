@@ -24,6 +24,11 @@ s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u32 *out_file_ids,
                                    u32 capacity, u32 *out_count);
 s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
                            NDSRelocAssetHeader *out_header);
+/* Both from one open. Prefer this wherever a caller wants the header and the
+ * payload: the two-call form walks the NitroFS directory twice. */
+s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
+                                   size_t dst_capacity,
+                                   NDSRelocAssetHeader *out_header);
 s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
                                u32 *out_size);
 s32 ndsRelocCopyMObjSubForAttachment(struct MObjSub *dst,

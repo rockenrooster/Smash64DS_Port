@@ -5453,11 +5453,13 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         return NULL;
     }
     memset(heap, 0, asset_size);
-    if (ndsRelocAssetReadHeader(asset_id, &header) == FALSE)
-    {
-        goto fail;
-    }
-    if (ndsRelocAssetLoadData(asset_id, heap, asset_size, &header) == FALSE)
+    /* One open, not two. asset_size comes from ndsRelocAssetAllocSize, so the
+     * header this used to read separately was never consulted before
+     * ndsRelocAssetLoadData re-read it and overwrote it -- and this is the
+     * on-demand fighter-animation load Task 71 caught running inside the frame
+     * that needs the move, where each open is a NitroFS directory walk. */
+    if (ndsRelocAssetLoadHeaderAndData(asset_id, heap, asset_size,
+                                       &header) == FALSE)
     {
         goto fail;
     }
