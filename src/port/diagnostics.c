@@ -2913,6 +2913,21 @@ volatile u32 gNdsTickHudFlushTicks;
  * the profile level to 0 -- so the wait was measurable everywhere except in the
  * configuration every measurement is actually taken in. */
 volatile u32 gNdsTickHudVBlankWaitTicks;
+/* Task 67/68: how often the fighter draw abandons the native production owner
+ * and falls through to the generic display-list interpreter, and at which of
+ * the four rejection points. The per-PC census showed the P95 frames are not
+ * doing more work -- they are interpreting instead of replaying, with ScanList
+ * and SubmitVertex at ~10x their normal rate while animation joint playback
+ * drops to nothing. Counting the fallback directly turns that from an
+ * inference off two windowed censuses into a per-frame measurement.
+ *
+ * Cumulative; the sampler differences consecutive frames. Tick-HUD only, so
+ * the published ROM is untouched. */
+#if NDS_TASK68_FALLBACK_CENSUS
+volatile u32 gNdsTickHudNativeOwnerFallbackCount;
+volatile u32 gNdsTickHudNativeOwnerFallbackByReason[
+    nNDSTickHudNativeOwnerFallbackReasonCount];
+#endif
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 volatile u32 gNdsRendererProfileLoopWallTicks;

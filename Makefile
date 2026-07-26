@@ -159,6 +159,11 @@ NDS_TASK44_STAGE_STEADY ?= 0
 # over a fixed window of settled battle frames (reset at START, dump START+FRAMES
 # later) so the census measures the steady-state loop and not boot. Lab only:
 # never set in a published target, and it compiles to nothing at 0.
+# Task 68 lab: count how often the fighter draw abandons the native production
+# owner for the generic display-list interpreter. Default 0 -- enabling it adds
+# BSS, and this ROM is cache-placement sensitive enough (see Task 37) that the
+# extra bytes shift frame pacing. Any run with it on needs its own baseline.
+NDS_TASK68_FALLBACK_CENSUS ?= 0
 NDS_TASK37_PROFILE ?= 0
 NDS_TASK37_PROFILE_START ?= 438
 NDS_TASK37_PROFILE_FRAMES ?= 128
@@ -1526,6 +1531,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK56_FIGHTER_PRIMITIVES $(NDS_TASK56_FIGHTER_PRIMITIVES)'; \
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
+		echo '#define NDS_TASK68_FALLBACK_CENSUS $(NDS_TASK68_FALLBACK_CENSUS)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \
 		echo '#define NDS_TASK37_ITCM_LEAVES $(NDS_TASK37_ITCM_LEAVES)'; \
 		echo '#define NDS_TASK37_ITCM_PORT $(NDS_TASK37_ITCM_PORT)'; \

@@ -6,6 +6,10 @@ param(
     [int]$RunnerSlot = -1,
     [string]$Build = 'build-tick-hud-buckets',
     [switch]$NoBuild,
+    # Requires a ROM built NDS_TASK68_FALLBACK_CENSUS=1. Off by default because
+    # that flag adds BSS and this ROM's pacing is cache-placement sensitive, so a
+    # census build is not comparable to an ordinary tick-HUD baseline.
+    [switch]$FallbackCensus,
     [ValidateRange(1,512)][int]$Samples = 32,
     [ValidateRange(1,1000000)][int]$StartFrame = 438,
     [ValidateRange(30,3600)][int]$TimeoutSeconds = 900,
@@ -41,6 +45,9 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-battle-playable-tickhud-hwtri'
 $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
                  'WAIT', 'WORK')
+# Must match enum NDSTickHudNativeOwnerFallbackReason in include/nds/nds_startup.h.
+$fallbackReasons = if ($FallbackCensus) {
+    @('inputs', 'contract', 'postGx', 'begin') } else { @() }
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot `
@@ -93,9 +100,23 @@ try {
     # bucket is a one-line change. Task 66 added two and the second hardcoded
     # bound was missed, which silently dropped WAIT and WORK from the table
     # while every other check still passed.
-    $sampleFields = (0..($bucketNames.Count - 1) |
-        ForEach-Object { "gNdsTickHudBuckets[$_]" }) -join ', '
-    $tickHudFormat = (, '%u' * ($bucketNames.Count + 1)) -join ','
+    # Task 67: the native-owner fallback counters ride along on the same stop.
+    # They are cumulative, so the per-frame count is a difference between
+    # consecutive samples -- which is the point, because it lines the fallback
+    # up against the very frame whose WORK spiked instead of leaving the two to
+    # be correlated across separate runs.
+    #
+    # Only the total rides per frame. Reading the four per-reason counters here
+    # too meant five extra GDB round-trips on every stop, which stretched the
+    # stop far enough that the game's own frame pacing skipped and repeated
+    # presented frames -- the sampler's uniqueness check caught it. The reason
+    # breakdown is a run-level question, so it is read once at the end instead.
+    $fallbackFields = if ($FallbackCensus) {
+        @('gNdsTickHudNativeOwnerFallbackCount') } else { @() }
+    $sampleFields = ((0..($bucketNames.Count - 1) |
+        ForEach-Object { "gNdsTickHudBuckets[$_]" }) + $fallbackFields) -join ', '
+    $sampleColumnCount = $bucketNames.Count + $fallbackFields.Count
+    $tickHudFormat = (, '%u' * ($sampleColumnCount + 1)) -join ','
     [System.IO.File]::WriteAllLines($gdbScript, @(
         'set pagination off',
         'set confirm off',
@@ -123,6 +144,11 @@ try {
             'gNdsBattlePlayablePacingPresentIntervalBucket[5], ' +
             'gNdsBattlePlayablePacingPresentIntervalMax'),
         'printf "TICKSLIP=%u\n", gNdsBattlePlayablePacingCadenceViolationCount',
+        $(if ($FallbackCensus) {
+            "printf `"TICKFB=$((, '%u' * $fallbackReasons.Count) -join ',')\n`", " +
+                ((0..($fallbackReasons.Count - 1) | ForEach-Object {
+                    "gNdsTickHudNativeOwnerFallbackByReason[$_]" }) -join ', ')
+        }),
         'detach'))
     $gdbProcess = Start-Process -FilePath $Gdb `
         -ArgumentList @('-q', '-batch', '-x', $gdbScript, $elf) `
@@ -140,7 +166,7 @@ try {
 
     $output = Get-Content $gdbOut -Raw
     $rows = @([regex]::Matches($output,
-        "TICKHUD=([0-9]+(?:,[0-9]+){$($bucketNames.Count)})") | ForEach-Object {
+        "TICKHUD=([0-9]+(?:,[0-9]+){$sampleColumnCount})") | ForEach-Object {
             , [uint64[]]($_.Groups[1].Value -split ',')
         })
     if ($rows.Count -ne $Samples) {
@@ -195,6 +221,24 @@ try {
         min = [uint64]($workNoHud | Measure-Object -Minimum).Minimum
         max = [uint64]($workNoHud | Measure-Object -Maximum).Maximum
     }
+
+    # Task 67: fallbacks per frame, and how the frames that took one compare to
+    # the frames that did not. If the P95 really is the renderer dropping out of
+    # its native owner, the two medians separate here and nowhere else.
+    $fbBase = $bucketNames.Count + 1
+    $workCol = [array]::IndexOf($bucketNames, 'WORK') + 1
+    $hudCol = [array]::IndexOf($bucketNames, 'HUD') + 1
+    $fbPerFrame = @(if ($FallbackCensus) {
+        for ($i = 1; $i -lt $rows.Count; $i++) {
+            [PSCustomObject]@{
+                frame = $rows[$i][0]
+                total = [uint64]$rows[$i][$fbBase] - [uint64]$rows[$i - 1][$fbBase]
+                workH = [uint64]$rows[$i][$workCol] - [uint64]$rows[$i][$hudCol]
+            }
+        }
+    })
+    $fbFrames = @($fbPerFrame | Where-Object { $_.total -gt 0 })
+    $cleanFrames = @($fbPerFrame | Where-Object { $_.total -eq 0 })
 
     # ALL is measured wall ticks for the whole iteration, not a sum of the
     # others; OTHR is defined as the ALL remainder, and WAIT/WORK are two more
@@ -277,6 +321,27 @@ try {
         $meanNamed, (100.0 * $meanNamed / $meanAll),
         $vbi[0], $vbi[1], $vbi[2], $vbi[3], $vbi[4], $vbiTotal,
         $result.cadenceViolations)
+
+    if ($FallbackCensus) {
+    $fbMatch = [regex]::Match($output,
+        "TICKFB=([0-9]+(?:,[0-9]+){$($fallbackReasons.Count - 1)})")
+    $fbTotals = if ($fbMatch.Success) {
+        [uint64[]]($fbMatch.Groups[1].Value -split ',')
+    } else { @(0) * $fallbackReasons.Count }
+    $fbByReason = @(0..($fallbackReasons.Count - 1) | ForEach-Object {
+        '{0}:{1}' -f $fallbackReasons[$_], $fbTotals[$_]
+    })
+    Write-Output (("native-owner fallback: {0} of {1} frames took one  [{2}]") -f
+        $fbFrames.Count, $fbPerFrame.Count, ($fbByReason -join ' '))
+    if (($fbFrames.Count -gt 0) -and ($cleanFrames.Count -gt 0)) {
+        $fbMed = ((@($fbFrames.workH | Sort-Object))[
+            [int][Math]::Floor(($fbFrames.Count - 1) * 0.5)])
+        $clMed = ((@($cleanFrames.workH | Sort-Object))[
+            [int][Math]::Floor(($cleanFrames.Count - 1) * 0.5)])
+        Write-Output (("  WORK-H median: fallback {0:N0} vs clean {1:N0} " +
+            "({2:N2}x)") -f $fbMed, $clMed, ($fbMed / [double]$clMed))
+    }
+    }
 
     if ($JsonOut) {
         $jsonDir = Split-Path -Parent $JsonOut

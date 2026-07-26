@@ -4076,6 +4076,35 @@ enum NDSTickHudBucket {
 };
 extern volatile u32 gNdsTickHudBuckets[nNDSTickHudBucketCount];
 extern volatile u32 gNdsTickHudVBlankWaitTicks;
+
+/* The four points at which the fighter draw can give up on the native
+ * production owner and fall through to the generic display-list interpreter,
+ * in the order they are reached. Ordering matters: INPUTS and BEGIN reject
+ * before any GX traffic, CONTRACT rejects after preparation but before GX, and
+ * POST_GX is the expensive one because the frame has already paid for a
+ * partial native submission before restarting generically. */
+#ifndef NDS_TASK68_FALLBACK_CENSUS
+#define NDS_TASK68_FALLBACK_CENSUS 0
+#endif
+#if NDS_TASK68_FALLBACK_CENSUS
+enum NDSTickHudNativeOwnerFallbackReason {
+    nNDSTickHudNativeOwnerFallbackInputs,
+    nNDSTickHudNativeOwnerFallbackContract,
+    nNDSTickHudNativeOwnerFallbackPostGx,
+    nNDSTickHudNativeOwnerFallbackBegin,
+    nNDSTickHudNativeOwnerFallbackReasonCount
+};
+extern volatile u32 gNdsTickHudNativeOwnerFallbackCount;
+extern volatile u32 gNdsTickHudNativeOwnerFallbackByReason[
+    nNDSTickHudNativeOwnerFallbackReasonCount];
+#define NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(reason) \
+    do { \
+        gNdsTickHudNativeOwnerFallbackCount++; \
+        gNdsTickHudNativeOwnerFallbackByReason[(reason)]++; \
+    } while (0)
+#else
+#define NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(reason) ((void)0)
+#endif
 extern volatile u32 gNdsTickHudFighterTicks;
 extern volatile u32 gNdsTickHudStageTicks;
 extern volatile u32 gNdsTickHudBackgroundTicks;
