@@ -1999,7 +1999,7 @@ static u32 sBattleTickHudP50[nNDSTickHudBucketCount];
 static u32 sBattleTickHudP95[nNDSTickHudBucketCount];
 static const char *const sBattleTickHudNames[nNDSTickHudBucketCount] = {
     "ALL ", "FTR ", "STG ", "BG  ", "AUD ", "HUD ", "SRC ",
-    "MISC", "OTHR"
+    "MISC", "OTHR", "WAIT", "WORK"
 };
 
 /* Shell sort, Knuth gaps: no recursion, no allocation, and no worst case that
@@ -2148,16 +2148,18 @@ static void ndsPlatformRenderBattleFpsHud(void)
         {
             u32 bucket;
 
-            for (bucket = 0u; bucket < nNDSTickHudBucketCount; bucket++)
+            for (bucket = 0u; bucket < nNDSTickHudBucketDisplayCount; bucket++)
             {
                 ndsPlatformPrintDebugLine(11u + bucket, "%s      --       --",
                                           sBattleTickHudNames[bucket]);
             }
         }
-        /* Column legend sits below the table because rows 9-10 belong to the
-         * P2 block of the battle text HUD; n is the live window depth, so a
+        /* Task 66 took the row that used to hold the column legend. WORK is the
+         * number the milestone is judged on (PROJECT_GOAL.md: P95 <= 1.12M) and
+         * it earns the last row the console has; the two columns are still P50
+         * then P95, as every row above it. n is the live window depth, so a
          * reading taken before it reaches 128 is visibly partial. */
-        ndsPlatformPrintDebugLine(20u, "         P50      P95 n:0");
+        ndsPlatformPrintDebugLine(20u, "WORK      --       -- n:0");
         ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
         ndsPlatformPrintDebugLine(22u, "5+  --  max --");
         ndsPlatformPrintDebugLine(23u, "GIT %s TICKHUD", NDS_TASK10_GIT_SHORT);
@@ -2315,13 +2317,24 @@ static void ndsPlatformRenderBattleFpsHud(void)
                     sBattleTickHudScratch, count, 50u);
                 sBattleTickHudP95[bucket] = ndsPlatformTickHudPercentile(
                     sBattleTickHudScratch, count, 95u);
-                ndsPlatformPrintDebugLine(
-                    11u + bucket, "%s%8lu %8lu", sBattleTickHudNames[bucket],
-                    (unsigned long)sBattleTickHudP50[bucket],
-                    (unsigned long)sBattleTickHudP95[bucket]);
+                /* Every bucket is percentiled -- the GDB sampler asserts
+                 * against all of them -- but only the ones with a row get
+                 * drawn. WAIT is the one that does not fit; it is ALL minus
+                 * WORK, so nothing is actually hidden. */
+                if (bucket < (u32)nNDSTickHudBucketDisplayCount)
+                {
+                    ndsPlatformPrintDebugLine(
+                        11u + bucket, "%s%8lu %8lu",
+                        sBattleTickHudNames[bucket],
+                        (unsigned long)sBattleTickHudP50[bucket],
+                        (unsigned long)sBattleTickHudP95[bucket]);
+                }
             }
             ndsPlatformPrintDebugLine(
-                20u, "         P50      P95 n:%lu", (unsigned long)count);
+                20u, "WORK%8lu %8lu n:%lu",
+                (unsigned long)sBattleTickHudP50[nNDSTickHudBucketWork],
+                (unsigned long)sBattleTickHudP95[nNDSTickHudBucketWork],
+                (unsigned long)count);
             /* Presentation-interval histogram, cumulative since HUD reset.
              * Device A/B reports read this, never min FPS, because one frame
              * crossing the 4->5 VBlank boundary reads as 12 FPS while the
@@ -2968,6 +2981,7 @@ void ndsPlatformEndFrame(void)
 {
 #if NDS_TICK_HUD
     u32 tickhud_flush_start;
+    u32 tickhud_wait_start;
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     u32 profile_start;
@@ -3038,7 +3052,13 @@ void ndsPlatformEndFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     profile_start = cpuGetTiming();
 #endif
+#if NDS_TICK_HUD
+    tickhud_wait_start = cpuGetTiming();
+#endif
     ndsPlatformWaitForScheduledVBlank();
+#if NDS_TICK_HUD
+    gNdsTickHudVBlankWaitTicks += cpuGetTiming() - tickhud_wait_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();
@@ -3070,7 +3090,13 @@ void ndsPlatformEndFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     profile_start = cpuGetTiming();
 #endif
+#if NDS_TICK_HUD
+    tickhud_wait_start = cpuGetTiming();
+#endif
     ndsPlatformWaitForScheduledVBlank();
+#if NDS_TICK_HUD
+    gNdsTickHudVBlankWaitTicks += cpuGetTiming() - tickhud_wait_start;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();

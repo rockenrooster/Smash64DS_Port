@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$MelonDS = (Join-Path $PSScriptRoot '..\emulators\melonds\melonDS.exe'),
     [string]$Gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe',
@@ -12,14 +12,21 @@ param(
     [string]$JsonOut = ''
 )
 
-# Reads the nine NDS_TICK_HUD buckets (ALL/FTR/STG/BG/AUD/HUD/SRC/MISC/OTHR)
-# straight out of gNdsTickHudBuckets over GDB, one sample per presented battle
-# iteration, so the HUD instrument can be recorded instead of photographed.
+# Reads the eleven NDS_TICK_HUD buckets
+# (ALL/FTR/STG/BG/AUD/HUD/SRC/MISC/OTHR/WAIT/WORK) straight out of
+# gNdsTickHudBuckets over GDB, one sample per presented battle iteration, so the
+# HUD instrument can be recorded instead of photographed.
+#
+# Task 66 appended WAIT and WORK. ALL is VBlank-quantized wall time and so
+# cannot show a saving smaller than one 560,190-tick period; WORK = ALL - WAIT
+# is not quantized and is the series to search against. PROJECT_GOAL.md gates
+# the milestone on WORK's P95 (<= 1.12M), which is why it is sampled as its own
+# series rather than derived from the ALL and WAIT percentiles.
 #
 # The renderer benchmark path cannot do this: it asserts TICK_HUD=0 and
 # SHIP_TELEMETRY=1 because the profile counters are a different instrument. The
-# tick HUD is the only one that reports the whole loop partitioned into nine
-# named buckets, and it is the instrument the retail device columns were read
+# tick HUD is the only one that reports the whole loop partitioned into named
+# buckets, and it is the instrument the retail device columns were read
 # from, so a like-for-like emulator comparison has to come from here.
 #
 # Ticks are guest cpuGetTiming() deltas, so they do not depend on how fast the
@@ -32,7 +39,8 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-battle-playable-tickhud-hwtri'
-$bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR')
+$bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
+                 'WAIT', 'WORK')
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot `
@@ -81,7 +89,13 @@ try {
     # One stop per presented iteration from boot, gated host-side until
     # StartFrame; this matches how the renderer benchmark reaches its own start
     # frame, and keeps every sample on a real settled combat frame.
-    $sampleFields = (0..8 | ForEach-Object { "gNdsTickHudBuckets[$_]" }) -join ', '
+    # Both loop bounds and the printf arity come off $bucketNames so adding a
+    # bucket is a one-line change. Task 66 added two and the second hardcoded
+    # bound was missed, which silently dropped WAIT and WORK from the table
+    # while every other check still passed.
+    $sampleFields = (0..($bucketNames.Count - 1) |
+        ForEach-Object { "gNdsTickHudBuckets[$_]" }) -join ', '
+    $tickHudFormat = (, '%u' * ($bucketNames.Count + 1)) -join ','
     [System.IO.File]::WriteAllLines($gdbScript, @(
         'set pagination off',
         'set confirm off',
@@ -94,7 +108,7 @@ try {
         "if gNdsBattlePlayablePacingPresentedFrames < $StartFrame",
         'continue',
         'end',
-        ('printf "TICKHUD=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
+        ("printf `"TICKHUD=$tickHudFormat\n`", " +
             "gNdsBattlePlayablePacingPresentedFrames, $sampleFields"),
         'set $tick_samples = $tick_samples + 1',
         ('if $tick_samples < {0}' -f $Samples),
@@ -126,7 +140,7 @@ try {
 
     $output = Get-Content $gdbOut -Raw
     $rows = @([regex]::Matches($output,
-        'TICKHUD=([0-9]+(?:,[0-9]+){9})') | ForEach-Object {
+        "TICKHUD=([0-9]+(?:,[0-9]+){$($bucketNames.Count)})") | ForEach-Object {
             , [uint64[]]($_.Groups[1].Value -split ',')
         })
     if ($rows.Count -ne $Samples) {
@@ -141,7 +155,7 @@ try {
         throw "Tick-HUD sampling began at frame $($frames[0]), before $StartFrame."
     }
 
-    $stats = @(0..8 | ForEach-Object {
+    $stats = @(0..($bucketNames.Count - 1) | ForEach-Object {
         $bucket = $_
         $values = @($rows | ForEach-Object { $_[$bucket + 1] })
         $sorted = @($values | Sort-Object)
@@ -155,12 +169,42 @@ try {
             max = [uint64]($values | Measure-Object -Maximum).Maximum
         }
     })
-    # ALL is measured wall ticks for the whole iteration, not a sum of the other
-    # eight; OTHR is defined as the ALL remainder. Report the named share so a
-    # future run can tell "the loop got slower" from "attribution drifted".
+
+    # WORK-H: work with the tick HUD's own console render taken back out.
+    #
+    # This ROM exists to be measured, and the measuring costs something: the
+    # text HUD redraws about twice a second and each redraw is worth a few
+    # hundred thousand ticks, which is why HUD's spread is over 300x. That
+    # barely moves a mean but it lands squarely on a P95 -- and P95 is the
+    # statistic PROJECT_GOAL.md gates the milestone on. Subtracting per sample
+    # (not subtracting one percentile from another) gives the P95 the published
+    # profile-0 ROM would have, since it carries no tick HUD at all.
+    $workIndex = [array]::IndexOf($bucketNames, 'WORK') + 1
+    $hudIndex = [array]::IndexOf($bucketNames, 'HUD') + 1
+    $workNoHud = @($rows | ForEach-Object {
+        [uint64]$_[$workIndex] - [uint64]$_[$hudIndex] })
+    $sortedWorkNoHud = @($workNoHud | Sort-Object)
+    $stats += [PSCustomObject]@{
+        bucket = 'WORK-H'
+        mean = [uint64][Math]::Round((
+            $workNoHud | Measure-Object -Average).Average, 0)
+        p50 = [uint64]$sortedWorkNoHud[
+            [int][Math]::Floor(($sortedWorkNoHud.Count - 1) * 0.50)]
+        p95 = [uint64]$sortedWorkNoHud[
+            [int][Math]::Floor(($sortedWorkNoHud.Count - 1) * 0.95)]
+        min = [uint64]($workNoHud | Measure-Object -Minimum).Minimum
+        max = [uint64]($workNoHud | Measure-Object -Maximum).Maximum
+    }
+
+    # ALL is measured wall ticks for the whole iteration, not a sum of the
+    # others; OTHR is defined as the ALL remainder, and WAIT/WORK are two more
+    # views of ALL rather than additional named work. All four are therefore
+    # excluded from the named share, which exists so a future run can tell "the
+    # loop got slower" from "attribution drifted".
     $meanAll = ($stats | Where-Object { $_.bucket -eq 'ALL' }).mean
     $meanNamed = (($stats | Where-Object {
-        $_.bucket -notin @('ALL', 'OTHR') } | Measure-Object -Property mean -Sum).Sum)
+        $_.bucket -notin @('ALL', 'OTHR', 'WAIT', 'WORK', 'WORK-H') } |
+        Measure-Object -Property mean -Sum).Sum)
 
     $vbiMatch = [regex]::Match($output, 'TICKVBI=([0-9]+(?:,[0-9]+){4})')
     $slipMatch = [regex]::Match($output, 'TICKSLIP=([0-9]+)')

@@ -4051,9 +4051,31 @@ enum NDSTickHudBucket {
     nNDSTickHudBucketSourceUpdate,
     nNDSTickHudBucketMiscDraw,
     nNDSTickHudBucketOther,
-    nNDSTickHudBucketCount
+    /* Task 66. Appended after OTHR so every bucket that existed before keeps
+     * its index and every measurement already on record stays comparable.
+     *
+     * ALL is wall time for the presented iteration and therefore quantized to
+     * whole VBlank periods (Task 64), which makes it the right acceptance gate
+     * and a useless search gate: a change that removes real work but less than
+     * one 560,190-tick period cannot move it. WAIT is the idle span that
+     * absorbs the difference, and WORK = ALL - WAIT is the quantity a search
+     * actually needs.
+     *
+     * WORK is sampled as its own series rather than derived from the printed
+     * percentiles, because the P95 of a difference is not the difference of
+     * two P95s. PROJECT_GOAL.md gates on P95 <= 1.12M, so WORK's own P95 is
+     * the number that decides the milestone. */
+    nNDSTickHudBucketVBlankWait,
+    nNDSTickHudBucketWork,
+    nNDSTickHudBucketCount,
+    /* The on-screen table stops at OTHR: the console is 24 rows and rows 20-23
+     * already carry the legend, the VBlank histogram and the build stamp. WAIT
+     * and WORK are still ringed, still percentiled, and still readable over GDB
+     * by scripts/sample-tick-hud-buckets.ps1; WORK gets the one row that fits. */
+    nNDSTickHudBucketDisplayCount = nNDSTickHudBucketVBlankWait
 };
 extern volatile u32 gNdsTickHudBuckets[nNDSTickHudBucketCount];
+extern volatile u32 gNdsTickHudVBlankWaitTicks;
 extern volatile u32 gNdsTickHudFighterTicks;
 extern volatile u32 gNdsTickHudStageTicks;
 extern volatile u32 gNdsTickHudBackgroundTicks;

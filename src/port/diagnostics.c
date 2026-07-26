@@ -2907,6 +2907,12 @@ volatile u32 gNdsTickHudForegroundTicks;
 volatile u32 gNdsTickHudAudioTicks;
 volatile u32 gNdsTickHudSourceTicks;
 volatile u32 gNdsTickHudFlushTicks;
+/* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
+ * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
+ * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin
+ * the profile level to 0 -- so the wait was measurable everywhere except in the
+ * configuration every measurement is actually taken in. */
+volatile u32 gNdsTickHudVBlankWaitTicks;
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 volatile u32 gNdsRendererProfileLoopWallTicks;

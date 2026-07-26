@@ -4918,6 +4918,21 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
         gNdsTickHudBuckets[nNDSTickHudBucketAll] = all;
         gNdsTickHudBuckets[nNDSTickHudBucketOther] =
             (all >= named) ? (all - named) : 0u;
+        /* Task 66. ALL and OTHR keep their exact prior meaning so every number
+         * in the task ledger stays comparable; WAIT and WORK are additive.
+         *
+         * WAIT is the span the loop spends parked in swiWaitForVBlank, which is
+         * what OTHR has really been made of -- Task 65 measured idle at 17.50%
+         * of wall against an OTHR of 16.4%, and confirmed that GX backpressure
+         * is not pooled here but distributed through the named buckets as
+         * memory stall on the write that could not retire. WORK is the search
+         * quantity: unlike ALL it is not quantized, so a saving smaller than
+         * one VBlank shows up in it instead of vanishing into the wait. */
+        gNdsTickHudBuckets[nNDSTickHudBucketVBlankWait] =
+            gNdsTickHudVBlankWaitTicks;
+        gNdsTickHudBuckets[nNDSTickHudBucketWork] =
+            (all >= gNdsTickHudVBlankWaitTicks) ?
+            (all - gNdsTickHudVBlankWaitTicks) : 0u;
         /* Feed the HUD percentile window here, on the per-iteration path. The
          * HUD renderer only runs about twice a second, so sampling inside it
          * would build the distribution from half-second-spaced single frames
@@ -7514,6 +7529,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 gNdsTickHudAudioTicks = 0u;
                 gNdsTickHudSourceTicks = 0u;
                 gNdsTickHudFlushTicks = 0u;
+                gNdsTickHudVBlankWaitTicks = 0u;
 #endif
                 if ((use_realtime_presentation != 0u) &&
                     (gNdsBattlePlayablePacingRestartRequested != 0u))
