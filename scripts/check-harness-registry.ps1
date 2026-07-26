@@ -90,6 +90,11 @@ $publishedRomCheckPath = Join-Path $PSScriptRoot 'check-published-roms.ps1'
 if (-not (Test-Path -LiteralPath $publishedRomCheckPath -PathType Leaf)) {
     Fail-Check 'missing two-ROM publication contract checker'
 }
+$publishedRomCheckText = Get-Content -LiteralPath $publishedRomCheckPath -Raw
+if (($publishedRomCheckText -notmatch 'rejected Task 62 Dream Land DS-mesh payload') -or
+    ($publishedRomCheckText -notmatch 'NDS_DREAMLAND_DS_MESH=0')) {
+    Fail-Check 'published ROM contract no longer rejects the failed Task 62 mesh payload'
+}
 $forcedBuildTokenPattern = '(?<![A-Za-z0-9_-])[''"]?-B[''"]?(?![A-Za-z0-9_-])'
 if (($devFastText -notmatch "'-FastIteration'") -or
     ($devFastText -match "Profile\s*=\s*'BoundaryDirect'") -or
@@ -145,9 +150,15 @@ if (($foxRecoveryText -notmatch 'assert-melonds-top-visible\.ps1') -or
 }
 if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|MinRequiredRegionFighterFraction') -or
     ($battleLoopText -notmatch 'FTR_DISPLAY_CONTRACT=') -or
-    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$stageHardwareFighter\.Success.*?\$shwf\[0\]\s*-eq\s*\(2\s*\*\s*\$hw\[0\]\).*?\$shwf\[1\]\s*-eq\s*\(626\s*\*\s*\$hw\[0\]\)') -or
+    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$stageHardwareFighter\.Success.*?\$shwf\[0\]\s*-eq\s*\(2\s*\*\s*\$bp\[4\]\).*?\$shwf\[1\]\s*-eq\s*\(626\s*\*\s*\$bp\[4\]\)') -or
     ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[8\]\s*-eq\s*0')) {
     Fail-Check 'canonical realtime verifier must use selected/submitted/in-bounds GDB fighter contracts without fixed fighter crops'
+}
+if (($battleLoopText -notmatch '\$pacingSnapshotLag -ge 0 -and \$pacingSnapshotLag -le 1') -or
+    ($battleLoopText -notmatch '\$tmPace\[1\] -eq \(2 \* \$bp\[4\]\)') -or
+    ($battleLoopText -notmatch '\$hardwareSnapshotLag -ge 0 -and') -or
+    ($battleLoopText -notmatch '\$hardwareSnapshotLag -le 1')) {
+    Fail-Check 'battle verifier lost its fresh taskman/draw cross-check or bounded pacing/platform cache-lag guard'
 }
 if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''battle_playable_realtime''\).*?\$arguments \+= ''-FastIteration''') {
     Fail-Check 'verify-all does not select the one-capture canonical fast path for realtime records'

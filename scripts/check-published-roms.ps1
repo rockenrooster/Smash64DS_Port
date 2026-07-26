@@ -23,6 +23,20 @@ if ($RequireBoth) {
     }
 }
 $present = @($roms.Name | Sort-Object)
+
+$battleRomPath = Join-Path $root 'smash64ds-battle-playable-hwtri.nds'
+if (Test-Path -LiteralPath $battleRomPath -PathType Leaf) {
+    $task62Signature = [Text.Encoding]::GetEncoding(28591).GetString(
+        [byte[]](1, 2, 2, 2, 2, 2, 2, 1, 2, 1, 2, 1,
+                 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2))
+    $battleRomText = [Text.Encoding]::GetEncoding(28591).GetString(
+        [IO.File]::ReadAllBytes($battleRomPath))
+    if ($battleRomText.IndexOf(
+            $task62Signature, [StringComparison]::Ordinal) -ge 0) {
+        throw 'Published battle ROM contains the rejected Task 62 Dream Land DS-mesh payload. Rebuild it with NDS_DREAMLAND_DS_MESH=0.'
+    }
+}
+
 Write-Output ('Published ROM contract passed: {0}' -f
     $(if ($present.Count -gt 0) { $present -join ', ' } else { '(none yet)' }))
 exit 0

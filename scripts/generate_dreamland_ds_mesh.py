@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Task 62 — generate the runtime Dream Land DS-mesh data blob.
+"""Generate the material-complete Dream Land DS static-mesh candidate blob.
 
-Consumes the Task 60 primitive stream + Task 57 source mesh for candidate c120,
-and emits a generated C include ``src/nds/dreamland_ds_mesh.generated.inc``
-containing:
-  - per-group descriptor table (prim, first-vertex, vertex-count)
-  - flat vertex stream: per-emission source-world XYZ divided by two, ready for
-    the runtime to emit with the segment0 VERTEX16 ``coord << 4`` convention
+Consumes Task 57's exact world mesh and emits:
+  - one triangle group per original render run
+  - source run identity for the already-prepared texture/material state
+  - per-emission source-world XYZ and source dense-vertex identity
   - one uniform scale-2 matrix that restores source-world size
-  - a certificate (checksum) the runtime validates at init
+  - a deterministic certificate
 
 Convention (matches the proven segment0 path, ndsRendererNativeStageEmitVertex):
 the Dream Land world coords reach 3816, while ``coord << 4`` admits source
 coordinates [-2048, 2047]. Dividing by two makes the complete mesh fit; a
 uniform scale-2 matrix restores it before the shared hierarchy camera. That
 helper divides camera translation by 256, so both sides use the renderer's
-source-world / 256 hardware convention once. VERTEX16-only — no VERTEX10 or
-axis-reuse. The opcode-selection word savings from Task 61 are deferred to a
-later measured task behind a visual gate.
+source-world / 256 hardware convention once.
+
+This control intentionally keeps every static source triangle. It is the
+visual-correctness gate for later reduction: a simplified mesh is not eligible
+until it can supply the same material, UV, color, alpha, and submit semantics.
 
 Host-only. ``--check`` rebuilds and compares the include deterministically
 (same contract as generate_nds_native_stage); the Makefile runs it with
@@ -39,12 +39,10 @@ from typing import Any, Sequence
 SCRIPTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPTS_DIR.parent
 GENERATED_DIR = SCRIPTS_DIR / "generated"
-CANDIDATES_DIR = GENERATED_DIR / "candidates"
-STREAMS_DIR = GENERATED_DIR / "primitive_streams"
 DEFAULT_OUTPUT = REPO_ROOT / "src" / "nds" / "dreamland_ds_mesh.generated.inc"
 
-# The candidate Task 62 integrates (Task 60/61 recommended).
 CANDIDATE_NAME = "c120"
+CANDIDATES_DIR = GENERATED_DIR / "candidates"
 
 # DS primitive ids (libnds videoGL.h: GL_TRIANGLES=0, GL_QUAD=1, GL_TRIANGLE_STRIP=2).
 # Mirrors dreamland_primitive_compiler.PRIM_*.
@@ -55,9 +53,15 @@ PRIM_NAME_TO_ID = {"GL_TRIANGLES": PRIM_TRIANGLES,
                    "GL_QUAD": PRIM_QUAD,
                    "GL_TRIANGLE_STRIP": PRIM_STRIP}
 
-COORDINATE_DIVISOR = 2
-COORDINATE_SCALE_S20P12 = COORDINATE_DIVISOR * 4096
-
+SUBMIT_RAW_Z = 0
+SUBMIT_PROJECTED_NO_Z = 3
+SUBMIT_PROJECTED_RANGE_OR_MATRIX = 6
+SUBMIT_REJECT = 7
+SUPPORTED_SUBMIT_CLASSES = {
+    SUBMIT_RAW_Z,
+    SUBMIT_PROJECTED_NO_Z,
+    SUBMIT_PROJECTED_RANGE_OR_MATRIX,
+}
 
 def fnv1a_u32(words: Sequence[int], seed: int = 2166136261) -> int:
     value = seed
@@ -69,63 +73,88 @@ def fnv1a_u32(words: Sequence[int], seed: int = 2166136261) -> int:
     return value
 
 
-def load_candidate(name: str) -> tuple[list[tuple[float, float, float]],
-                                       list[tuple[int, int, int]], list[int]]:
-    ir = json.loads((CANDIDATES_DIR / f"{name}.json").read_text(encoding="utf-8"))
-    positions = [(v["world_x_f"], v["world_y_f"], v["world_z_f"])
-                 for v in ir["world_vertices"]]
-    triangles = [(t["v0"], t["v1"], t["v2"]) for t in ir["triangles"]]
-    bindings = [v["binding_index"] for v in ir["world_vertices"]]
-    return positions, triangles, bindings
+def build_blob(name: str, repo_root: Path = REPO_ROOT) -> dict[str, Any]:
+    """Build one material-qualified, binding-local static vertex stream."""
+    source = json.loads(
+        (CANDIDATES_DIR / f"{name}.json").read_text(encoding="utf-8")
+    )
+    if not source.get("material_qualified", False):
+        raise ValueError(f"{name}: candidate is not material-qualified")
+    vertices = source["world_vertices"]
+    triangles = source["triangles"]
+    flat: list[dict[str, Any]] = []
+    source_dense: list[int] = []
+    groups: list[dict[str, Any]] = []
 
-
-def load_stream(name: str) -> list[dict[str, Any]]:
-    return json.loads((STREAMS_DIR / f"{name}.json").read_text(encoding="utf-8"))["groups"]
-
-
-def build_blob(name: str) -> dict[str, Any]:
-    """Build groups plus a flat source-world / 2 vertex stream."""
-    positions, triangles, bindings = load_candidate(name)
-    stream_groups = load_stream(name)
-
-    flat: list[dict[str, Any]] = []   # per-emission source-world / 2 XYZ
-    groups: list[dict[str, Any]] = []  # per-group: prim, first, count
-    for g in stream_groups:
-        prim_id = PRIM_NAME_TO_ID[g["prim"]]
-        verts = g["verts"]
-        first = len(flat)
-        for vi in verts:
-            x, y, z = positions[vi]
-            sx = int(round(x / COORDINATE_DIVISOR))
-            sy = int(round(y / COORDINATE_DIVISOR))
-            sz = int(round(z / COORDINATE_DIVISOR))
-            if not (-2048 <= sx <= 2047 and
-                    -2048 <= sy <= 2047 and
-                    -2048 <= sz <= 2047):
+    for tri in triangles:
+        submit_class = int(tri["submit_class"])
+        source_run = int(tri["run_index"])
+        source_segment = int(tri["source_segment"])
+        if submit_class not in SUPPORTED_SUBMIT_CLASSES:
+            raise ValueError(
+                f"run {tri['run_index']}: unsupported submit class "
+                f"{submit_class}")
+        if (not groups or
+                groups[-1]["source_run"] != source_run or
+                groups[-1]["submit_class"] != submit_class):
+            groups.append({
+                "prim": PRIM_TRIANGLES,
+                "first": len(flat),
+                "count": 0,
+                "source_run": source_run,
+                "source_segment": source_segment,
+                "submit_class": submit_class,
+            })
+        group = groups[-1]
+        for key in ("v0", "v1", "v2"):
+            vertex = vertices[int(tri[key])]
+            dense_indices = [int(index) for index
+                             in vertex["source_dense_indices"]]
+            if (not dense_indices or
+                    not all(0 <= index <= 0xFFFF for index in dense_indices)):
                 raise ValueError(
-                    f"{name}: vertex {vi} source-world / 2 exceeds coord<<4: "
-                    f"({sx},{sy},{sz})")
-            flat.append({"x": sx, "y": sy, "z": sz})
-        groups.append({
-            "prim": prim_id, "first": first, "count": len(verts),
-        })
+                    f"run {tri['run_index']}: invalid dense provenance")
+            coords = [int(vertex[axis])
+                      for axis in ("local_x", "local_y", "local_z")]
+            if not all(-32768 <= coordinate <= 32767 for coordinate in coords):
+                raise ValueError(
+                    f"run {tri['run_index']}: local coordinate exceeds s16: "
+                    f"{tuple(coords)}")
+            flat.append({
+                "x": coords[0],
+                "y": coords[1],
+                "z": coords[2],
+                "source_first": len(source_dense),
+                "source_count": len(dense_indices),
+            })
+            source_dense.extend(dense_indices)
+            group["count"] += 1
 
-    # Certificate: FNV1a over the group table, vertex stream, and scale.
+    # Certificate: FNV1a over the group table, local vertices, and provenance.
     cert_words: list[int] = []
     for g in groups:
-        cert_words += [g["prim"], g["first"], g["count"]]
+        cert_words += [
+            g["prim"], g["first"], g["count"], g["source_run"],
+            g["source_segment"], g["submit_class"],
+        ]
     for v in flat:
-        cert_words += [v["x"] & 0xFFFF, v["y"] & 0xFFFF, v["z"] & 0xFFFF]
-    cert_words.append(COORDINATE_SCALE_S20P12)
+        cert_words += [
+            v["x"] & 0xFFFF,
+            v["y"] & 0xFFFF,
+            v["z"] & 0xFFFF,
+            v["source_first"],
+            v["source_count"],
+        ]
+    cert_words.extend(source_dense)
     certificate = fnv1a_u32(cert_words)
 
     return {
         "candidate": name,
         "groups": groups,
         "vertices": flat,
-        "coordinate_scale_s20p12": COORDINATE_SCALE_S20P12,
+        "source_dense": source_dense,
         "certificate": certificate,
-        "position_count": len(positions),
+        "position_count": len(vertices),
         "triangle_count": len(triangles),
     }
 
@@ -151,9 +180,8 @@ def render_include(blob: dict[str, Any]) -> bytes:
     lines.append(" * Candidate: " + blob["candidate"] + " (" + str(blob["position_count"])
                  + " positions, " + str(blob["triangle_count"]) + " source triangles).")
     lines.append(" * Compiled host-side by scripts/generate_dreamland_ds_mesh.py from")
-    lines.append(" * the Task 60 primitive stream + Task 61 encoded stream. The runtime")
-    lines.append(" * emits this verbatim under NDS_DREAMLAND_DS_MESH; default-off keeps")
-    lines.append(" * the shipping segment0 path byte-identical.")
+    lines.append(" * Task 57's exact world mesh. Source run and dense-vertex identities")
+    lines.append(" * preserve prepared texture, UV, color, alpha, and depth semantics.")
     lines.append(" *")
     lines.append(" * DO NOT EDIT — regenerate with: python scripts/generate_dreamland_ds_mesh.py")
     lines.append(" */")
@@ -188,16 +216,38 @@ def render_include(blob: dict[str, Any]) -> bytes:
         lines.append("    " + ", ".join(str(gr["first"]) + "u" for gr in g[i:i+8]) + ",")
     lines.append("};")
     lines.append("")
-    lines.append("static const u8 sNdsDreamLandDSGroupVertexCount["
+    lines.append("static const u16 sNdsDreamLandDSGroupVertexCount["
                  + str(len(g)) + "] = {")
     for i in range(0, len(g), 12):
         lines.append("    " + ", ".join(str(gr["count"]) + "u" for gr in g[i:i+12]) + ",")
     lines.append("};")
     lines.append("")
 
-    # Flat source-world / 2 XYZ per emission. coord << 4 plus the scale-2
-    # matrix reconstructs the renderer's source-world / 256 DS convention.
-    lines.append("/* Per-emission source-world / 2 XYZ (coord << 4 safe). */")
+    lines.append("static const u8 sNdsDreamLandDSGroupSubmitClass["
+                 + str(len(g)) + "] = {")
+    for i in range(0, len(g), 12):
+        lines.append("    " + ", ".join(
+            str(gr["submit_class"]) + "u" for gr in g[i:i+12]) + ",")
+    lines.append("};")
+    lines.append("")
+
+    lines.append("static const u8 sNdsDreamLandDSGroupSourceRun["
+                 + str(len(g)) + "] = {")
+    for i in range(0, len(g), 12):
+        lines.append("    " + ", ".join(
+            str(gr["source_run"]) + "u" for gr in g[i:i+12]) + ",")
+    lines.append("};")
+    lines.append("")
+
+    lines.append("static const u8 sNdsDreamLandDSGroupSourceSegment["
+                 + str(len(g)) + "] = {")
+    for i in range(0, len(g), 12):
+        lines.append("    " + ", ".join(
+            str(gr["source_segment"]) + "u" for gr in g[i:i+12]) + ",")
+    lines.append("};")
+    lines.append("")
+
+    lines.append("/* Per-emission binding-local XYZ (S20.12 source units). */")
     lines.append("static const s16 sNdsDreamLandDSVertexX["
                  + str(len(v)) + "] = {")
     for i in range(0, len(v), 12):
@@ -217,8 +267,31 @@ def render_include(blob: dict[str, Any]) -> bytes:
     lines.append("};")
     lines.append("")
 
-    lines.append("#define NDS_DREAMLAND_DS_COORDINATE_SCALE_S20P12 "
-                 + str(blob["coordinate_scale_s20p12"]))
+    lines.append("static const u16 sNdsDreamLandDSSourceFirst["
+                 + str(len(v)) + "] = {")
+    for i in range(0, len(v), 12):
+        lines.append("    " + ", ".join(
+            str(vv["source_first"]) + "u" for vv in v[i:i+12]) + ",")
+    lines.append("};")
+    lines.append("")
+
+    lines.append("static const u8 sNdsDreamLandDSSourceCount["
+                 + str(len(v)) + "] = {")
+    for i in range(0, len(v), 12):
+        lines.append("    " + ", ".join(
+            str(vv["source_count"]) + "u" for vv in v[i:i+12]) + ",")
+    lines.append("};")
+    lines.append("")
+
+    source_dense = blob["source_dense"]
+    lines.append("#define NDS_DREAMLAND_DS_SOURCE_DENSE_COUNT "
+                 + str(len(source_dense)) + "u")
+    lines.append("static const u16 sNdsDreamLandDSSourceDense["
+                 + str(len(source_dense)) + "] = {")
+    for i in range(0, len(source_dense), 12):
+        lines.append("    " + ", ".join(
+            str(index) + "u" for index in source_dense[i:i+12]) + ",")
+    lines.append("};")
     lines.append("")
 
     # Certificate.
@@ -253,7 +326,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     output = args.output
     if not output.is_absolute():
         output = args.repo_root / output
-    blob = build_blob(args.candidate)
+    blob = build_blob(args.candidate, args.repo_root)
     rendered = render_include(blob)
     if args.check:
         if not output.is_file():

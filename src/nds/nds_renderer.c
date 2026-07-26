@@ -16841,7 +16841,6 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
 
         if (gtype != current_type)
         {
-            glEnd();
             glBegin((GL_GLBEGIN_ENUM)gtype);
             current_type = gtype;
         }
@@ -20823,14 +20822,10 @@ ndsRendererNativeStageEmitNoZTriangle(
 }
 
 #if NDS_DREAMLAND_DS_MESH
-/* Task 62: generated Dream Land DS-native static 3D mesh. Draws candidate c120
- * directly from the baked blob (scripts/generate_dreamland_ds_mesh.py),
- * bypassing the segment0 program entirely. Default-off keeps the shipping path
- * byte-identical; this compiles only under NDS_DREAMLAND_DS_MESH.
- *
- * This first integration emits a flat white material (no textures) as a geometry
- * proof-of-concept — the owner's visual A/B (Commit 5 KEEP gate) confirms the
- * silhouette renders before textures/materials are layered in. */
+/* Task 62: generated Dream Land DS-native static 3D mesh. Draws the exact
+ * source-world geometry with source material attributes from the baked blob
+ * (scripts/generate_dreamland_ds_mesh.py), replacing the four static segments.
+ * Default-off keeps the shipping path byte-identical. */
 
 /* Task 62 engagement counters (shared HUD row). Gated only by the feature
  * flag, not by PROFILE_LEVEL, so the counter survives in the published
@@ -20838,104 +20833,141 @@ ndsRendererNativeStageEmitNoZTriangle(
 volatile u32 gNdsDreamLandDSSubmittedVertices;
 volatile u32 gNdsDreamLandDSGroups;
 volatile u32 gNdsDreamLandDSWords;
-static const NDSRendererMatrix20p12 *sNdsDreamLandDSProjection;
-static const NDSRendererMatrix20p12 *sNdsDreamLandDSCameraModelview;
 
-/* Draws the generated Dream Land DS-native static mesh directly from the baked
- * blob, bypassing the segment0 program. Vertex coords are baked as source-world
- * / 2 and emitted with the same coord << 4 conversion as segment0. A uniform
- * scale-2 matrix restores their size. The shared hierarchy-camera helper
- * divides camera translation by 256, so both sides of the affine use the
- * renderer's source-world / 256 hardware convention once.
- *
- * First integration emits flat white (no textures); the owner's visual A/B
- * confirms the silhouette before textures/materials are layered in. */
-static void ndsRendererDreamLandDrawStatic3D(
-    const NDSRendererMatrix20p12 *projection,
-    const NDSRendererMatrix20p12 *camera_modelview,
-    NDSRendererStats *stats)
+/* Draws one generated Dream Land DS-native static segment. The generated
+ * source-run and dense indices retain exact topology and material attributes;
+ * the live binding matrices retain the platform transforms that are not
+ * represented by the host world-space IR. */
+static u32 ndsRendererDreamLandDrawStatic3D(
+    NDSRendererStats *stats,
+    u32 source_segment)
 {
-    m4x4 proj_hardware;
-    m4x4 view_hardware;
-    m4x3 world;
     u32 group_index;
-    /* Engagement counters (AGENTS rule: a feature that silently degrades may
-     * not ship enabled; surface on the shared HUD row). */
+    u32 segment_triangles = 0u;
+    u32 segment_groups = 0u;
     u32 submitted_vertices = 0u;
     u32 gx_words = 0u;
-
-    ndsRendererHardwareEndBatch();
-    ndsRendererCopyMtx20p12ToM4x4(projection, &proj_hardware);
-    ndsRendererNativeBuildHierarchyHardwareAffine(
-        camera_modelview, &view_hardware);
-    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
-    glLoadMatrix4x4(&proj_hardware);
-    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
-    glLoadMatrix4x4(&view_hardware);
-    ndsRendererProfileRecordMatrixLoad();
-    memset(&world, 0, sizeof(world));
-    world.m[0] = NDS_DREAMLAND_DS_COORDINATE_SCALE_S20P12;
-    world.m[4] = NDS_DREAMLAND_DS_COORDINATE_SCALE_S20P12;
-    world.m[8] = NDS_DREAMLAND_DS_COORDINATE_SCALE_S20P12;
-    glPushMatrix();
-    glMultMatrix4x3(&world);
-
-    /* Flat white material for the geometry proof. Per-group texture/material
-     * binding is layered in once the silhouette renders correctly. */
-    glEnable(GL_TEXTURE_2D);
-    ndsRendererHardwareBindNoTexture(NULL);
-    glDisable(GL_ALPHA_TEST);
-    glDisable(GL_FOG);
-    ndsRendererHardwareSetPolyFmt(
-        POLY_CULL_NONE | POLY_ALPHA(31) | POLY_ID(1));
-    GFX_COLOR = 0x7FFFu;
 
     for (group_index = 0u; group_index < NDS_DREAMLAND_DS_GROUP_COUNT;
          group_index++)
     {
-        u32 prim = sNdsDreamLandDSGroupPrim[group_index];
+        if (sNdsDreamLandDSGroupSourceSegment[group_index] !=
+            source_segment)
+        {
+            continue;
+        }
         u32 first = sNdsDreamLandDSGroupFirstVertex[group_index];
         u32 count = sNdsDreamLandDSGroupVertexCount[group_index];
-        u32 v;
+        u32 submit_class =
+            sNdsDreamLandDSGroupSubmitClass[group_index];
+        u32 source_run = sNdsDreamLandDSGroupSourceRun[group_index];
+        const NDSNativeStageRun *native_run;
+        const NDSNativeStagePreparedRun *prepared_run;
+        u32 triangle_count = count / 3u;
+        u32 triangle_offset;
+        u32 emitted_triangles = 0u;
 
-        GFX_BEGIN = prim;
-        gx_words += 1u;  /* BEGIN */
-        for (v = 0u; v < count; v++)
+        if ((sNdsDreamLandDSGroupPrim[group_index] !=
+             NDS_DREAMLAND_DS_PRIM_TRIANGLES) ||
+            (source_run >= NDS_NATIVE_STAGE_RUN_COUNT) ||
+            (count == 0u) ||
+            ((count % 3u) != 0u) ||
+            (first + count > NDS_DREAMLAND_DS_VERTEX_COUNT) ||
+            ((submit_class !=
+              NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) &&
+             (submit_class !=
+              NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) &&
+             (submit_class !=
+              NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)))
         {
-            u32 idx = first + v;
-            /* VERTEX16 (coord << 4), then scale 2: source-world / 256 in DS
-             * 4.12, matching ndsRendererNativeStageEmitVertex. */
-            s32 vx = ((s32)sNdsDreamLandDSVertexX[idx]) << 4;
-            s32 vy = ((s32)sNdsDreamLandDSVertexY[idx]) << 4;
-            s32 vz = ((s32)sNdsDreamLandDSVertexZ[idx]) << 4;
-
-            /* COLOR word per vertex (flat white). */
-            GFX_COLOR = 0x7FFFu;
-            gx_words += 1u;
-
-            GFX_VERTEX16 = ((u32)vx & 0xFFFFu) |
-                           (((u32)vy & 0xFFFFu) << 16);
-            GFX_VERTEX16 = (u32)vz & 0xFFFFu;
-            gx_words += 2u;
-            submitted_vertices++;
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererM3PostArmFailureCount++;
+#endif
+            continue;
         }
-        /* GFX_END is a GBATEK dummy (no effect, bloats the list); the next
-         * GFX_BEGIN implicitly closes this group, matching the existing
-         * renderer's convention. */
-    }
-    glPopMatrix(1);
+        native_run = &sNdsNativeStageRuns[source_run];
+        prepared_run = &sNdsNativeStageOwnerExecution.runs[source_run];
+        if ((native_run->submit_class != submit_class) ||
+            (native_run->triangle_count != triangle_count))
+        {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererM3PostArmFailureCount++;
+#endif
+            continue;
+        }
+        ndsRendererNativeStageBeginRun(
+            native_run, prepared_run, submit_class,
+            sNdsNativeStageSegments[source_segment].owner, stats, FALSE);
+        gx_words += 1u;
+        for (triangle_offset = 0u;
+             triangle_offset < triangle_count;
+             triangle_offset++)
+        {
+            if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+            {
+                u32 emitted = ndsRendererNativeStageEmitNoZTriangle(
+                    native_run, prepared_run, triangle_offset,
+                    ndsRendererHardwareNextProjectedDepth());
 
+                emitted_triangles += emitted;
+                submitted_vertices += emitted * 3u;
+                gx_words += emitted * ((prepared_run->textured != 0u) ?
+                    4u : 3u);
+                continue;
+            }
+            {
+                u32 corner_offset;
+
+                for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+                {
+                    u32 idx = first + triangle_offset * 3u + corner_offset;
+                    u32 dense_index = sNdsDreamLandDSSourceDense[idx];
+
+                    if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
+                    {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+                        gNdsRendererM3PostArmFailureCount++;
+#endif
+                        continue;
+                    }
+                    ndsRendererNativeStageEmitVertex(
+                        &sNdsNativeStageVertices[dense_index],
+                        &sNdsNativeStagePreparedDense[dense_index],
+                        prepared_run, submit_class);
+                    submitted_vertices++;
+                    gx_words += (prepared_run->textured != 0u) ? 4u : 3u;
+                }
+                emitted_triangles++;
+                ndsRendererHardwareEnterProjectedForeground();
+            }
+        }
+        ndsRendererHardwareEndBatch();
+        ndsRendererNativeStageAccountRun(
+            stats,
+            (submit_class ==
+             NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
+                NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX :
+                submit_class,
+            emitted_triangles);
+        segment_triangles += triangle_count;
+        segment_groups++;
+    }
+
+#if NDS_TASK36_HW_COMPOSE
+    ndsRendererNativeStageTask36EndSegment();
+#endif
     if (stats != NULL)
     {
-        stats->triangle_count += NDS_DREAMLAND_DS_TRIANGLE_COUNT;
+        stats->triangle_count += segment_triangles;
     }
     sNdsRendererHardwareSubmitted = TRUE;
     sNdsRendererHardwareMatrixLoaded = FALSE;
     sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
     sNdsRendererHardwareMatrixGeneration = 0u;
-    gNdsDreamLandDSSubmittedVertices = submitted_vertices;
-    gNdsDreamLandDSGroups = NDS_DREAMLAND_DS_GROUP_COUNT;
-    gNdsDreamLandDSWords = gx_words;
+    gNdsDreamLandDSSubmittedVertices += submitted_vertices;
+    gNdsDreamLandDSGroups += segment_groups;
+    gNdsDreamLandDSWords += gx_words;
+    return segment_triangles;
 }
 #endif /* NDS_DREAMLAND_DS_MESH */
 
@@ -21345,8 +21377,6 @@ s32 ndsRendererPrepareNativeStageOwner(
     sNdsNativeStageOwnerExecution.next_segment = 0u;
     sNdsNativeStageOwnerExecution.active = TRUE;
 #if NDS_DREAMLAND_DS_MESH
-    sNdsDreamLandDSProjection = frame->projection;
-    sNdsDreamLandDSCameraModelview = frame->camera_modelview;
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     gNdsRendererM3PreflightSuccessCount++;
@@ -21479,34 +21509,30 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
     }
     segment = &sNdsNativeStageSegments[segment_index];
 #if NDS_DREAMLAND_DS_MESH
-    /* Owners 0..3 are layer0..layer3 (static stage geometry); owners 4..7 are
-     * map0..map3 (dynamic Whispy/flower actors). Replace all static owners with
-     * one generated draw at layer0's normal commit point, while allowing the
-     * dynamic owners to continue through the native stage path below. */
-    if (segment->owner < 4u)
+    /* Generator owner order is layer0,map0,map1,map2,layer1,layer2,map3,layer3.
+     * Replace each static stage_geometry segment in place and leave every
+     * stage_actors map segment live so the original painter order is retained. */
+    if ((segment_index == 0u) || (segment_index == 4u) ||
+        (segment_index == 5u) || (segment_index == 7u))
     {
-        if (segment_index == 0u)
-        {
-            sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_STAGE;
-            ndsRendererDreamLandDrawStatic3D(
-                sNdsDreamLandDSProjection,
-                sNdsDreamLandDSCameraModelview,
-                stats);
-            segment_triangles = NDS_DREAMLAND_DS_TRIANGLE_COUNT;
-            sNdsRendererFastRunCount += NDS_DREAMLAND_DS_GROUP_COUNT;
-            sNdsRendererFastTriangleCount += segment_triangles;
-            sNdsRendererFastOwnerTriangleCount[
-                NDS_RENDERER_PROFILE_OWNER_STAGE] += segment_triangles;
-        }
+        u32 group_count_before = gNdsDreamLandDSGroups;
+        u32 segment_groups;
+
+        sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_STAGE;
+        segment_triangles = ndsRendererDreamLandDrawStatic3D(
+            stats,
+            segment_index);
+        segment_groups = gNdsDreamLandDSGroups - group_count_before;
+        sNdsRendererFastRunCount += segment_groups;
+        sNdsRendererFastTriangleCount += segment_triangles;
+        sNdsRendererFastOwnerTriangleCount[
+            NDS_RENDERER_PROFILE_OWNER_STAGE] += segment_triangles;
         sNdsNativeStageOwnerExecution.next_segment++;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
         gNdsRendererM3SegmentCount++;
         gNdsRendererM3SegmentMask |= (u32)1u << segment_index;
-        if (segment_index == 0u)
-        {
-            gNdsRendererM3RunCount += NDS_DREAMLAND_DS_GROUP_COUNT;
-            gNdsRendererM3TriangleCount += segment_triangles;
-        }
+        gNdsRendererM3RunCount += segment_groups;
+        gNdsRendererM3TriangleCount += segment_triangles;
 #endif
         sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
         return TRUE;
@@ -21811,7 +21837,11 @@ void ndsRendererFinishNativeStageOwner(void)
              NDS_NATIVE_STAGE_SEGMENT_COUNT) ||
             (sNdsNativeStageOwnerExecution.stats == NULL) ||
             (sNdsNativeStageOwnerExecution.stats->triangle_count !=
+#if NDS_DREAMLAND_DS_MESH
+             (NDS_DREAMLAND_DS_TRIANGLE_COUNT + 27u)))
+#else
              NDS_NATIVE_STAGE_TRIANGLE_COUNT))
+#endif
         {
 #if NDS_RENDERER_PROFILE_LEVEL == 1
             gNdsRendererM3PostArmFailureCount++;
@@ -21830,8 +21860,6 @@ void ndsRendererFinishNativeStageOwner(void)
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsRendererRuntimeOwner = NDS_RENDERER_PROFILE_OWNER_NONE;
 #if NDS_DREAMLAND_DS_MESH
-    sNdsDreamLandDSProjection = NULL;
-    sNdsDreamLandDSCameraModelview = NULL;
 #endif
 }
 #else

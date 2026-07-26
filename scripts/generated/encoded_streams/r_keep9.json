@@ -3,11 +3,11 @@
   "chosen_policy": "VERTEX16+axis_reuse",
   "chosen_policy_iou": 0.8730087502804577,
   "opcode_counts": {
-    "VERTEX10": 263,
+    "VERTEX10": 261,
     "VERTEX16": 0,
     "VERTEX_XY": 0,
     "VERTEX_XZ": 1,
-    "VERTEX_YZ": 3
+    "VERTEX_YZ": 5
   },
   "task": "Task 61 \u2014 encoded vertex stream",
   "v10_rebasis_scale": 50.86497064579256

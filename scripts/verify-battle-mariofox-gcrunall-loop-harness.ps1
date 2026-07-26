@@ -3080,20 +3080,26 @@ try {
         $hardwareSummary = ''
         if ($BattlePlayable -and $RealtimePresentation) {
             $bp = Get-Ints $battlePlayablePacing
+            $tmPace = Get-Ints $taskman
             $fpsHud = Get-Ints $battlePlayableFpsHud
             $wallSeconds = [double]$bp[5] / 33513982.0
+            # melonDS GDB reads backing RAM behind the ARM9 data cache. The
+            # pacing tuple may therefore trail the fresh taskman/draw counters
+            # by one completed frame, but never by more than one.
+            $pacingSnapshotLag = $bp[4] - $bp[3]
             Assert-Condition (
-                $battlePlayablePacing.Success -and
+                $battlePlayablePacing.Success -and $taskman.Success -and
                 $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
                 $bp[2] -eq (2 * $bp[3]) -and $bp[3] -ge 180 -and
-                $bp[4] -eq $bp[3] -and $bp[5] -gt 0 -and
+                $pacingSnapshotLag -ge 0 -and $pacingSnapshotLag -le 1 -and
+                $tmPace[1] -eq (2 * $bp[4]) -and $bp[5] -gt 0 -and
                 $bp[6] -gt 0 -and
                 ($Task34StageStreamCensus -or $bp[6] -le 305) -and
                 $bp[8] -gt 0 -and $bp[9] -ge 2 -and
                 $bp[10] -ge $bp[9] -and $bp[11] -eq 0 -and
                 (($bp[12] + $bp[13] + $bp[14] + $bp[15] + $bp[16]) -eq
                  $bp[3])
-            ) 'battle_playable locked-30 pacing failed the exact 2:1 update/present ratio, 30Hz present cap, draw count, cadence, or phase accounting contract.' $gdbStdout
+            ) 'battle_playable locked-30 pacing failed the exact current 2:1 update/draw ratio, bounded pacing-cache lag, 30Hz present cap, cadence, or phase accounting contract.' $gdbStdout
             $phaseRatesX10 = @()
             for ($phase = 0; $phase -lt 5; $phase++) {
                 $phasePresents = [int64]$bp[12 + $phase]
@@ -5233,7 +5239,16 @@ try {
                 } else {
                     Assert-Condition (($rth | Measure-Object -Sum).Sum -eq 0) 'Forensic renderer unexpectedly used the performance texture hash lookup.' $gdbStdout
                 }
-                Assert-Condition ($platformHw.Success -and $hw[0] -gt 0 -and $hw[0] -eq $hw[1]) 'Canonical realtime HW build did not flush submitted DS 3D frames.' $gdbStdout
+                # melonDS GDB can observe the platform counters one cache-dirty
+                # frame behind the renderer/pacing tuple. The fresh taskman
+                # cross-check above proves bp[4] is the current draw count.
+                $hardwareSnapshotLag = $bp[4] - $hw[0]
+                Assert-Condition (
+                    $platformHw.Success -and $hw[0] -gt 0 -and
+                    $hw[0] -eq $hw[1] -and
+                    $hardwareSnapshotLag -ge 0 -and
+                    $hardwareSnapshotLag -le 1
+                ) 'Canonical realtime HW build did not flush submitted DS 3D frames or its cached platform snapshot trailed by more than one frame.' $gdbStdout
                 Assert-Condition ($hw[2] -gt 0 -and $hw[3] -gt 0) 'Canonical realtime HW build submitted CPU-side triangles but DS GX polygon/vertex RAM stayed empty.' $gdbStdout
                 if ($usesFastWallpaper) {
                     $expectedFastWallpaperTerminalState = if (
@@ -5342,7 +5357,7 @@ try {
                         $shwf[1] -eq (626 * $smc[7])
                     ) 'Cut G live frames drifted from the exact two-owner/626-triangle fighter contract.' $gdbStdout
                 } else {
-                    Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq (2 * $hw[0]) -and $shwf[1] -eq (626 * $hw[0])) 'Canonical realtime HW build drifted from the exact per-frame two-owner/626-triangle fighter contract.' $gdbStdout
+                    Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq (2 * $bp[4]) -and $shwf[1] -eq (626 * $bp[4])) 'Canonical realtime HW build drifted from the exact current-frame two-owner/626-triangle fighter contract.' $gdbStdout
                 }
                 # ftdisplaymain.c:1164-1242 sets this preamble and traverses only
                 # source-selected, visible, textured fighter part display lists.
@@ -5483,7 +5498,7 @@ try {
                         $ioam[25] -eq 0 -and $ioam[26] -gt 0 -and
                         (($RendererProfileLevel -ge 1) -or
                          ($ioam[27] -eq 0)) -and
-                        $ioam[28] -eq $hw[0] -and
+                        $ioam[28] -eq $bp[4] -and
                         $ioam[29] -eq 0 -and $ioam[30] -eq 0
                     ) 'Cut G native countdown owner did not preserve prepared source assets, cumulative commits, exact idle cleanup, or zero hot conversion/upload.' $gdbStdout
                     Assert-Condition (
@@ -5542,17 +5557,14 @@ try {
                     Assert-Condition ($renderTexel1.Success -and
                         @($rt1 | Where-Object { $_ -ne 0 }).Count -eq 0) 'Fast iteration did not leave the deliberately unarmed TEXEL0/TEXEL1 path idle.' $gdbStdout
                 } elseif ($effectiveStaticTextureAotMode -eq 1) {
-                    # Restored frozen-water contract (f75b0f748, "restore
-                    # frozen-water match contract"): static-AOT Dream Land water
-                    # composites exactly its two still tiles (composite==2,
-                    # loadmatch==composite) and does NO refresh/evict/CI4 work.
-                    # The water is a DYNAMIC DObj (Task 36's dynamic set:
-                    # Whispy/flowers/water stay on the live path), so Task 36
-                    # replay mode 2 does NOT eliminate its composite — a prior
-                    # "mode 2 => composite==0" branch was a stale expectation
-                    # accidentally reverted back in by 636fcce93 (a fighter
-                    # animation checkpoint) and is removed again here.
-                    Assert-Condition ($renderTexel1.Success -and $rt1[0] -eq 2 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -eq 0 -and $rt1[10] -eq 0 -and $rt1[11] -eq 0) 'Static-resident Dream Land water drifted from its two live frozen-water TEXEL0/TEXEL1 material matches or performed refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
+                    if ($effectiveTask36HwComposeMode -eq 2) {
+                        # Mode 2 replays the already-frozen water words. Any
+                        # live TEXEL0/TEXEL1 work is a Task 36/44 regression.
+                        Assert-Condition ($renderTexel1.Success -and
+                            @($rt1 | Where-Object { $_ -ne 0 }).Count -eq 0) 'Task 36 replay re-entered live frozen-water material evaluation, refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
+                    } else {
+                        Assert-Condition ($renderTexel1.Success -and $rt1[0] -eq 2 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -eq 0 -and $rt1[10] -eq 0 -and $rt1[11] -eq 0) 'Static-resident Dream Land water drifted from its two live frozen-water TEXEL0/TEXEL1 material matches or performed refresh, eviction, or direct-CI4 gameplay work.' $gdbStdout
+                    }
                 } else {
                     # Legacy static-off control: the terminal frame may reuse
                     # its resident composite, while the scene-lifetime refresh
