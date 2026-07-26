@@ -42,7 +42,16 @@ $elf = Resolve-Smash64DSBuildOutput `
 if ([string]::IsNullOrWhiteSpace($OutDir)) {
     $OutDir = Join-Path $root 'artifacts\task37-census'
 }
+# melonDS runs with its own working directory (emulators/melonds) and opens
+# MELONDS_ARM9_PROFILE_CSV verbatim. A relative -OutDir would therefore resolve
+# against the emulator directory, the open would fail against the missing
+# folder, and the run would grind through the whole census window writing
+# nothing at all -- the failure is silent and costs a full emulator run.
+if (-not [System.IO.Path]::IsPathRooted($OutDir)) {
+    $OutDir = Join-Path $root $OutDir
+}
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+$OutDir = (Resolve-Path -LiteralPath $OutDir).Path
 $csv = Join-Path $OutDir 'arm9-profile.csv'
 $meta = Join-Path $OutDir 'arm9-profile.meta.txt'
 $regions = Join-Path $OutDir 'arm9-profile.regions.csv'
