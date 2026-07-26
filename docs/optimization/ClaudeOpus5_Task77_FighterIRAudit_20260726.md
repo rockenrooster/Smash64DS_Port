@@ -144,6 +144,30 @@ holds this struct, so a GDB snapshot on the Boundary configuration is sufficient
 ground truth and needs no new host-side asset parser — the same instrument every
 census in this campaign has used.
 
+### `animlock` bit layout, from the existing reader
+
+`ftParamSetAnimLocks` (`src/port/reloc_backend_compat_shims.c:7843`) already
+decodes it, so the encoding is settled rather than guessed:
+
+```c
+animlock = fp->attr->animlock;   /* two u32 words -> 64 joint bits */
+flags0 = animlock[0];
+flags1 = animlock[1];
+for (i = nFTPartsJointCommonStart; (flags0 != 0) || (flags1 != 0); i++) {
+    current_flags = (i < ARRAY_COUNT(fp->joints) - 1) ? flags0 : flags1;
+    if (current_flags & (1u << 31)) { /* joint i is animation-locked */ }
+    ...shift...
+}
+```
+
+Joint indices start at `nFTPartsJointCommonStart` and consume **bit 31 first**
+(MSB-first), draining `flags0` for the first `ARRAY_COUNT(fp->joints) - 1`
+joints and `flags1` thereafter. Two GDB word reads per fighter yield the whole
+code-driven joint set. The confirmed absence of `animlock`, `setup_parts` and
+`damage_coll_descs` from
+`NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json` is what establishes that the
+existing generator does not already carry this.
+
 **Hitboxes are the residue.** `FTAttackColl.joint_id` is set per-motion by
 motion-event scripts inside the animation files, so it cannot be read from
 `FTAttributes` and a single snapshot only shows currently-active hitboxes. Until
