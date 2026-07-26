@@ -1762,6 +1762,20 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
     return NDS_RELOC_ASSET_INVALID;
 }
 
+/* Task 74 tried memoizing this. ndsRelocFileID returns (u32)(uintptr_t)file_id,
+ * the address of the file-id global rather than a value read from it, so every
+ * token below is a link-time constant and the chain is a pure function of its
+ * argument -- a direct-mapped cache in front of it was provably safe, and Task
+ * 71 had priced the chain at 9,306 ticks/frame on a load frame.
+ *
+ * It measured worse. SRC, the bucket it targets, rose 1,920 at P95 and WORK-H
+ * rose 11,584 at P50, while STG -- which a token lookup cannot touch -- moved
+ * 8,128. The 512 bytes of cache arrays shift layout, and this ROM's placement
+ * sensitivity puts the noise floor above the effect being chased. A hundred
+ * compares against link-time immediates are branch-predictable and already
+ * resident; three lookup arrays in .main.bss are not.
+ *
+ * Do not re-attempt without an instrument that resolves below ~8,000 ticks. */
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
     if (token == ndsRelocFileID(&llN64LogoFileID)) return NDS_RELOC_ASSET_N64_LOGO;
