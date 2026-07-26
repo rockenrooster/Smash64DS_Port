@@ -50,7 +50,7 @@ PARETO_OUTPUT = GENERATED_DIR / "dreamland_candidate_pareto.json"
 CANDIDATES_DIR = GENERATED_DIR / "candidates"
 
 # Candidate ladder: target triangle counts (plan section 5).
-CANDIDATE_TRI_TARGETS = (180, 140, 110, 90, 70, 55, 40)
+CANDIDATE_TRI_TARGETS = (180, 140, 120, 110, 90, 70, 55, 40)
 
 # Quadric-error weights.
 SILHOUETTE_PENALTY = 1.0e6        # boundary/silhouette edges resist collapse
@@ -90,6 +90,7 @@ class SimplifyMesh:
     positions: np.ndarray
     attributes: list[frozenset]
     binding: list[int]
+    render_key: list[tuple[int, int, int, int]]
     alive: list[bool]
     tris: list[tuple[int, int, int]]
 
@@ -102,18 +103,48 @@ def load_source_for_simplify() -> tuple[SimplifyMesh, dict[int, int]]:
     """
     packet = world_mesh.stage_gen.generate(REPO_ROOT)
     wv, wt, _, dense_to_local = world_mesh.build_world_mesh(packet)
-    n = len(wv)
-    positions = np.array([[v.world_x / S20P12_SCALE,
-                           v.world_y / S20P12_SCALE,
-                           v.world_z / S20P12_SCALE] for v in wv], dtype=np.float64)
-    # Attribute key per vertex: (s, t, rgba, binding).
+    positions_list: list[list[float]] = []
     attrs: list[frozenset] = []
     binding: list[int] = []
-    for v in wv:
-        attrs.append(frozenset({(v.s, v.t, v.rgba, v.binding_index)}))
-        binding.append(v.binding_index)
-    tris = [(t.v0, t.v1, t.v2) for t in wt]
-    mesh = SimplifyMesh(positions, attrs, binding, [True] * n, tris)
+    render_keys: list[tuple[int, int, int, int]] = []
+    tris: list[tuple[int, int, int]] = []
+    expanded: dict[tuple[int, tuple[int, int, int, int]], int] = {}
+    for tri in wt:
+        key = (
+            tri.run_index,
+            tri.texture_epoch,
+            tri.submit_class,
+            tri.binding_index,
+        )
+        corners: list[int] = []
+        for source_index in (tri.v0, tri.v1, tri.v2):
+            expanded_key = (source_index, key)
+            local_index = expanded.get(expanded_key)
+            if local_index is None:
+                vertex = wv[source_index]
+                local_index = len(positions_list)
+                expanded[expanded_key] = local_index
+                positions_list.append([
+                    vertex.world_x / S20P12_SCALE,
+                    vertex.world_y / S20P12_SCALE,
+                    vertex.world_z / S20P12_SCALE,
+                ])
+                attrs.append(frozenset({(
+                    vertex.s,
+                    vertex.t,
+                    vertex.rgba,
+                    vertex.binding_index,
+                    vertex.source_dense_index,
+                )}))
+                binding.append(tri.binding_index)
+                render_keys.append(key)
+            corners.append(local_index)
+        tris.append(tuple(corners))
+    positions = np.array(positions_list, dtype=np.float64)
+    mesh = SimplifyMesh(
+        positions, attrs, binding, render_keys,
+        [True] * len(positions_list), tris,
+    )
     return mesh, dense_to_local
 
 
@@ -212,6 +243,7 @@ def simplify_to_tri_budget(
         source.positions.copy(),
         list(source.attributes),
         list(source.binding),
+        list(source.render_key),
         list(source.alive),
         list(source.tris),
     )
@@ -246,7 +278,7 @@ def simplify_to_tri_budget(
         # *visibly* corrupt textures" is a visual call, not a topological one).
         if a in locked_verts or b in locked_verts:
             return False
-        if mesh.binding[a] != mesh.binding[b]:
+        if mesh.render_key[a] != mesh.render_key[b]:
             return False
         return True
 
@@ -358,13 +390,14 @@ def _compact_mesh(mesh: SimplifyMesh) -> SimplifyMesh:
     positions = mesh.positions[alive_idx]
     attributes = [mesh.attributes[i] for i in alive_idx]
     binding = [mesh.binding[i] for i in alive_idx]
+    render_key = [mesh.render_key[i] for i in alive_idx]
     alive = [True] * len(alive_idx)
     tris = []
     for v0, v1, v2 in mesh.tris:
         # All triangle verts must be alive (collapses rewired them, but guard).
         if v0 in remap and v1 in remap and v2 in remap:
             tris.append((remap[v0], remap[v1], remap[v2]))
-    return SimplifyMesh(positions, attributes, binding, alive, tris)
+    return SimplifyMesh(positions, attributes, binding, render_key, alive, tris)
 
 
 # ---------------------------------------------------------------------------
@@ -378,9 +411,10 @@ def weld_exact_duplicates(mesh: SimplifyMesh) -> SimplifyMesh:
     new_positions: list[np.ndarray] = []
     new_attributes: list[frozenset] = []
     new_binding: list[int] = []
+    new_render_key: list[tuple[int, int, int, int]] = []
     for i, p in enumerate(mesh.positions):
         key = (round(p[0], 4), round(p[1], 4), round(p[2], 4),
-               mesh.binding[i])
+               mesh.render_key[i])
         # Only weld if attribute sets match too (avoid UV seams).
         attr = mesh.attributes[i]
         full_key = key + (hash(attr),)
@@ -392,12 +426,13 @@ def weld_exact_duplicates(mesh: SimplifyMesh) -> SimplifyMesh:
             new_positions.append(p)
             new_attributes.append(attr)
             new_binding.append(mesh.binding[i])
+            new_render_key.append(mesh.render_key[i])
             remap[i] = new_idx
     positions = np.array(new_positions, dtype=np.float64)
     tris = [(remap[v0], remap[v1], remap[v2]) for v0, v1, v2 in mesh.tris]
     # Drop degenerate.
     tris = [t for t in tris if len(set(t)) == 3]
-    return SimplifyMesh(positions, new_attributes, new_binding,
+    return SimplifyMesh(positions, new_attributes, new_binding, new_render_key,
                         [True] * len(new_positions), tris)
 
 
@@ -532,8 +567,12 @@ def weld_positions_ignore_attributes(source: SimplifyMesh) -> SimplifyMesh:
     new_positions: list[np.ndarray] = []
     new_attributes: list[frozenset] = []
     new_binding: list[int] = []
+    new_render_key: list[tuple[int, int, int, int]] = []
     for i, p in enumerate(source.positions):
-        k = (round(p[0], 2), round(p[1], 2), round(p[2], 2))
+        k = (
+            round(p[0], 2), round(p[1], 2), round(p[2], 2),
+            source.render_key[i],
+        )
         idx = pos_key.get(k)
         if idx is not None:
             remap[i] = idx
@@ -543,11 +582,12 @@ def weld_positions_ignore_attributes(source: SimplifyMesh) -> SimplifyMesh:
             new_positions.append(p)
             new_attributes.append(source.attributes[i])
             new_binding.append(source.binding[i])
+            new_render_key.append(source.render_key[i])
             remap[i] = idx
     tris = [(remap[v0], remap[v1], remap[v2]) for v0, v1, v2 in source.tris]
     tris = [t for t in tris if len(set(t)) == 3]
     positions = np.array(new_positions, dtype=np.float64)
-    return SimplifyMesh(positions, new_attributes, new_binding,
+    return SimplifyMesh(positions, new_attributes, new_binding, new_render_key,
                         [True] * len(new_positions), tris)
 
 
@@ -616,38 +656,114 @@ def reconstruct_mesh(
     positions = welded.positions[alive_idx]
     attributes = [welded.attributes[i] for i in alive_idx]
     binding = [welded.binding[i] for i in alive_idx]
+    render_key = [welded.render_key[i] for i in alive_idx]
     tris = [(remap[v0], remap[v1], remap[v2]) for v0, v1, v2 in kept_tris]
-    return SimplifyMesh(positions, attributes, binding,
+    return SimplifyMesh(positions, attributes, binding, render_key,
                         [True] * len(alive_idx), tris)
 
 
 
 
-def mesh_to_ir(mesh: SimplifyMesh, name: str) -> dict[str, Any]:
-    vertices = [
-        {
-            "world_x": int(round(p[0] * S20P12_SCALE)),
-            "world_y": int(round(p[1] * S20P12_SCALE)),
-            "world_z": int(round(p[2] * S20P12_SCALE)),
-            "world_x_f": float(p[0]),
-            "world_y_f": float(p[1]),
-            "world_z_f": float(p[2]),
-            "s": 0, "t": 0, "rgba": 0,
-            "binding_index": mesh.binding[i],
-            "source_dense_index": -1,
-        }
-        for i, p in enumerate(mesh.positions)
+def _mean_rgba(values: list[int]) -> int:
+    channels = [
+        round(sum((value >> shift) & 0xff for value in values) / len(values))
+        for shift in (24, 16, 8, 0)
     ]
-    triangles = [
-        {"v0": v0, "v1": v1, "v2": v2,
-         "run_index": -1, "binding_index": mesh.binding[v0],
-         "texture_epoch": -1, "submit_class": 0}
-        for v0, v1, v2 in mesh.tris
-    ]
+    return (
+        (channels[0] << 24) | (channels[1] << 16) |
+        (channels[2] << 8) | channels[3]
+    )
+
+
+def mesh_to_ir(
+    mesh: SimplifyMesh,
+    name: str,
+    packet: world_mesh.stage_gen.Packet,
+) -> dict[str, Any]:
+    run_segment: dict[int, int] = {}
+    for segment_index, segment in enumerate(packet.segments):
+        for run_index in range(
+            segment.first_run, segment.first_run + segment.run_count
+        ):
+            run_segment[run_index] = segment_index
+    inverse_matrices = {
+        binding_index: np.linalg.pinv(
+            np.array(matrix, dtype=np.float64).reshape(4, 4)
+        )
+        for binding_index, matrix in enumerate(packet.baked_world_matrices)
+    }
+
+    vertices: list[dict[str, Any]] = []
+    for index, position in enumerate(mesh.positions):
+        run_index, texture_epoch, submit_class, render_binding = \
+            mesh.render_key[index]
+        material_sources = sorted(mesh.attributes[index])
+        world = np.array([
+            position[0] * S20P12_SCALE,
+            position[1] * S20P12_SCALE,
+            position[2] * S20P12_SCALE,
+            S20P12_SCALE,
+        ])
+        local = world @ inverse_matrices[render_binding]
+        if abs(local[3]) > 1.0e-12:
+            local = local / local[3]
+        source_dense_indices = sorted(
+            {source[4] for source in material_sources}
+        )
+        vertices.append({
+            "world_x": int(round(world[0])),
+            "world_y": int(round(world[1])),
+            "world_z": int(round(world[2])),
+            "world_x_f": float(position[0]),
+            "world_y_f": float(position[1]),
+            "world_z_f": float(position[2]),
+            "local_x": int(round(local[0])),
+            "local_y": int(round(local[1])),
+            "local_z": int(round(local[2])),
+            "s": round(sum(source[0] for source in material_sources) /
+                       len(material_sources)),
+            "t": round(sum(source[1] for source in material_sources) /
+                       len(material_sources)),
+            "rgba": _mean_rgba(
+                [source[2] for source in material_sources]
+            ),
+            "binding_index": render_binding,
+            "run_index": run_index,
+            "texture_epoch": texture_epoch,
+            "submit_class": submit_class,
+            "source_dense_index": (
+                source_dense_indices[0]
+                if len(source_dense_indices) == 1 else -1
+            ),
+            "source_dense_indices": source_dense_indices,
+            "material_source_count": len(material_sources),
+            "material_fit": (
+                "source_exact" if len(material_sources) == 1
+                else "source_attribute_mean"
+            ),
+        })
+
+    triangles: list[dict[str, int]] = []
+    for v0, v1, v2 in mesh.tris:
+        key = mesh.render_key[v0]
+        if mesh.render_key[v1] != key or mesh.render_key[v2] != key:
+            raise ValueError(f"{name}: triangle crosses a render-key seam")
+        run_index, texture_epoch, submit_class, render_binding = key
+        triangles.append({
+            "v0": v0,
+            "v1": v1,
+            "v2": v2,
+            "run_index": run_index,
+            "binding_index": render_binding,
+            "texture_epoch": texture_epoch,
+            "submit_class": submit_class,
+            "source_segment": run_segment[run_index],
+        })
     return {
         "task": f"Task 59 candidate — {name}",
-        "version": 1,
+        "version": 2,
         "candidate_name": name,
+        "material_qualified": True,
         "world_vertices": vertices,
         "triangles": triangles,
     }
@@ -746,18 +862,35 @@ def evaluate_candidate(
 # Commands
 # ---------------------------------------------------------------------------
 
-def _source_protected() -> set[int]:
+def _source_protected(mesh: SimplifyMesh) -> set[int]:
     """The Task 58 protected vertex set (from the pinned reference)."""
     ref = json.loads((GENERATED_DIR / "dreamland_source_projection_ref.json")
                      .read_text(encoding="utf-8"))
-    return set(ref["protected_vertex_indices"])
+    packet = world_mesh.stage_gen.generate(REPO_ROOT)
+    vertices, _, _, _ = world_mesh.build_world_mesh(packet)
+    positions = {
+        (
+            vertices[index].world_x,
+            vertices[index].world_y,
+            vertices[index].world_z,
+        )
+        for index in ref["protected_vertex_indices"]
+    }
+    return {
+        index for index, position in enumerate(mesh.positions)
+        if (
+            round(position[0] * S20P12_SCALE),
+            round(position[1] * S20P12_SCALE),
+            round(position[2] * S20P12_SCALE),
+        ) in positions
+    }
 
 
 def build_all_candidates() -> tuple[list[tuple[str, SimplifyMesh]], list[CandidateResult]]:
     source, _ = load_source_for_simplify()
     # Free first reduction: weld exact duplicates.
     welded = weld_exact_duplicates(source)
-    protected = _source_protected()
+    protected = _source_protected(source)
 
     fixtures = oracle._load_fixtures()
     reference = json.loads(
@@ -779,53 +912,15 @@ def build_all_candidates() -> tuple[list[tuple[str, SimplifyMesh]], list[Candida
         candidates.append((name, cand))
         results.append(evaluate_candidate(name, cand, fixtures, reference, protected))
 
-    # Procedural reconstruction candidates (plan STOP/reframe path). The source
-    # is 48 UV-fragmented components but only ~26 true geometric components
-    # (after position-weld), and only ~4-5 carry the silhouette (the main island
-    # mass + 3 platforms). Strategy: weld shared positions, drop tiny decorative
-    # fragments, then collapse within the surviving structural components.
-    #
-    # r_weld:       position-weld only (free duplicate merge, no filter).
-    # r_keep6/9:    weld + drop components with <6 / <9 tris.
-    # r_keep6_cN:   weld + drop <6, then edge-collapse to N tris.
-    r_weld = reconstruct_mesh(source, drop_below_tris=0)
-    candidates.append(("r_weld", r_weld))
-    results.append(evaluate_candidate("r_weld", r_weld, fixtures,
-                                      reference, protected))
-
-    for drop_threshold in (3, 6, 9):
-        recon = reconstruct_mesh(source, drop_below_tris=drop_threshold)
-        name = f"r_keep{drop_threshold}"
-        candidates.append((name, recon))
-        results.append(evaluate_candidate(name, recon, fixtures,
-                                          reference, protected))
-
-    # Filter to structural components, then collapse toward the ladder targets.
-    # Protected set is re-detected on the welded structural mesh (its index
-    # space differs from the source after welding).
-    structural = reconstruct_mesh(source, drop_below_tris=6)
-    structural_oracle_mesh = oracle.Mesh(
-        tuple(oracle.MeshVertex(float(p[0]), float(p[1]), float(p[2]), b)
-              for p, b in zip(structural.positions, structural.binding)),
-        tuple(oracle.MeshTriangle(v0, v1, v2) for v0, v1, v2 in structural.tris))
-    structural_protected = oracle.detect_protected_components(structural_oracle_mesh)
-    for target in (70, 55, 40):
-        if target >= len(structural.tris):
-            continue
-        cand = simplify_to_tri_budget(structural, target, structural_protected)
-        name = f"r_keep6_c{target}"
-        candidates.append((name, cand))
-        results.append(evaluate_candidate(name, cand, fixtures,
-                                          reference, protected))
-
     return candidates, results
 
 
 def cmd_build() -> int:
     candidates, results = build_all_candidates()
+    packet = world_mesh.stage_gen.generate(REPO_ROOT)
     CANDIDATES_DIR.mkdir(parents=True, exist_ok=True)
     for name, mesh in candidates:
-        ir = mesh_to_ir(mesh, name)
+        ir = mesh_to_ir(mesh, name, packet)
         (CANDIDATES_DIR / f"{name}.json").write_text(
             json.dumps(ir, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -874,7 +969,7 @@ def cmd_check() -> int:
     #    (every source protected position must still exist in source_welded).
     source_mesh, _ = load_source_for_simplify()
     welded = next(m for n, m in candidates if n == "source_welded")
-    src_prot = _source_protected()
+    src_prot = _source_protected(source_mesh)
     welded_pos = {(round(p[0], 4), round(p[1], 4), round(p[2], 4))
                   for p in welded.positions}
     # Protected vertices are positions; verify they survived welding.

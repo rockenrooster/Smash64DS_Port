@@ -4,175 +4,261 @@
     {
       "binding": 1,
       "prim": "GL_QUAD",
+      "run_index": 1,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 1,
       "verts": [
+        1,
         2,
         3,
-        4,
-        1
+        4
       ]
     },
     {
       "binding": 12,
       "prim": "GL_QUAD",
+      "run_index": 13,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 12,
       "verts": [
-        16,
-        17,
         18,
-        15
-      ]
-    },
-    {
-      "binding": 12,
-      "prim": "GL_QUAD",
-      "verts": [
+        19,
         20,
-        21,
+        21
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "run_index": 14,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 12,
+      "verts": [
         22,
-        19
-      ]
-    },
-    {
-      "binding": 12,
-      "prim": "GL_QUAD",
-      "verts": [
+        23,
         24,
-        25,
-        27,
-        23
-      ]
-    },
-    {
-      "binding": 12,
-      "prim": "GL_QUAD",
-      "verts": [
-        29,
-        32,
-        30,
-        28
-      ]
-    },
-    {
-      "binding": 12,
-      "prim": "GL_QUAD",
-      "verts": [
-        34,
-        35,
-        36,
-        33
-      ]
-    },
-    {
-      "binding": 12,
-      "prim": "GL_TRIANGLE_STRIP",
-      "verts": [
-        27,
-        26,
         25
       ]
     },
     {
       "binding": 12,
       "prim": "GL_TRIANGLE_STRIP",
+      "run_index": 14,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 12,
       "verts": [
-        32,
+        25,
+        26,
+        22
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_QUAD",
+      "run_index": 15,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 12,
+      "verts": [
+        27,
+        28,
+        29,
+        30
+      ]
+    },
+    {
+      "binding": 12,
+      "prim": "GL_TRIANGLE_STRIP",
+      "run_index": 15,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 12,
+      "verts": [
+        29,
         31,
         30
       ]
     },
     {
-      "binding": 19,
+      "binding": 12,
       "prim": "GL_QUAD",
+      "run_index": 16,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 13,
       "verts": [
-        44,
-        45,
-        46,
-        43
+        32,
+        33,
+        34,
+        35
       ]
     },
     {
       "binding": 19,
       "prim": "GL_QUAD",
+      "run_index": 23,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 20,
       "verts": [
+        43,
+        45,
+        44,
+        42
+      ]
+    },
+    {
+      "binding": 19,
+      "prim": "GL_QUAD",
+      "run_index": 23,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 20,
+      "verts": [
+        46,
+        47,
         48,
-        50,
-        49,
-        47
+        49
       ]
     },
     {
       "binding": 19,
       "prim": "GL_TRIANGLE_STRIP",
+      "run_index": 24,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 21,
+      "verts": [
+        50,
+        51,
+        52
+      ]
+    },
+    {
+      "binding": 19,
+      "prim": "GL_TRIANGLE_STRIP",
+      "run_index": 25,
+      "source_segment": 0,
+      "submit_class": 3,
+      "texture_epoch": 21,
       "verts": [
         53,
-        52,
-        51
+        54,
+        55
       ]
     },
     {
-      "binding": 19,
-      "prim": "GL_TRIANGLE_STRIP",
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "run_index": 35,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 31,
       "verts": [
         56,
-        55,
-        54
-      ]
-    },
-    {
-      "binding": 29,
-      "prim": "GL_QUAD",
-      "verts": [
+        57,
         58,
+        59
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "run_index": 35,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 31,
+      "verts": [
         60,
-        59,
-        57
-      ]
-    },
-    {
-      "binding": 29,
-      "prim": "GL_QUAD",
-      "verts": [
         61,
-        63,
         62,
-        78
+        63
       ]
     },
     {
       "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 35,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 31,
       "verts": [
-        64,
-        66,
         65,
-        80
+        67,
+        66,
+        64
       ]
     },
     {
       "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 35,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 31,
       "verts": [
-        68,
-        80,
         69,
-        67
+        71,
+        70,
+        68
       ]
     },
     {
       "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 35,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 31,
       "verts": [
         73,
-        72,
-        71,
-        70
+        75,
+        74,
+        72
       ]
     },
     {
       "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 35,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 31,
       "verts": [
-        74,
-        86,
+        77,
+        79,
+        78,
+        76
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "run_index": 36,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 32,
+      "verts": [
+        80,
+        81,
+        82,
+        83
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "run_index": 36,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 32,
+      "verts": [
+        82,
+        85,
         84,
         83
       ]
@@ -180,46 +266,78 @@
     {
       "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 36,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 32,
       "verts": [
-        75,
-        76,
-        77,
-        74
+        86,
+        87,
+        88,
+        89
       ]
     },
     {
       "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 36,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 32,
       "verts": [
-        89,
+        88,
+        91,
         90,
-        78,
-        87
+        89
       ]
     },
     {
       "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 37,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 32,
       "verts": [
-        92,
         93,
-        94,
-        91
-      ]
-    },
-    {
-      "binding": 29,
-      "prim": "GL_QUAD",
-      "verts": [
         96,
-        98,
-        97,
+        94,
         95
       ]
     },
     {
       "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "run_index": 37,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 32,
+      "verts": [
+        96,
+        93,
+        97
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_TRIANGLE_STRIP",
+      "run_index": 37,
+      "source_segment": 4,
+      "submit_class": 0,
+      "texture_epoch": 32,
+      "verts": [
+        95,
+        98,
+        93
+      ]
+    },
+    {
+      "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 38,
+      "source_segment": 4,
+      "submit_class": 6,
+      "texture_epoch": 33,
       "verts": [
         100,
         102,
@@ -230,273 +348,334 @@
     {
       "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 38,
+      "source_segment": 4,
+      "submit_class": 6,
+      "texture_epoch": 33,
       "verts": [
-        105,
+        103,
         104,
-        106,
-        103
-      ]
-    },
-    {
-      "binding": 29,
-      "prim": "GL_QUAD",
-      "verts": [
         105,
-        109,
-        108,
-        107
+        106
       ]
     },
     {
       "binding": 29,
-      "prim": "GL_TRIANGLE_STRIP",
-      "verts": [
-        86,
-        85,
-        84
-      ]
-    },
-    {
-      "binding": 29,
-      "prim": "GL_TRIANGLE_STRIP",
-      "verts": [
-        83,
-        84,
-        73
-      ]
-    },
-    {
-      "binding": 29,
-      "prim": "GL_TRIANGLE_STRIP",
-      "verts": [
-        79,
-        81,
-        80
-      ]
-    },
-    {
-      "binding": 29,
-      "prim": "GL_TRIANGLE_STRIP",
-      "verts": [
-        88,
-        90,
-        78
-      ]
-    },
-    {
-      "binding": 30,
       "prim": "GL_QUAD",
+      "run_index": 39,
+      "source_segment": 4,
+      "submit_class": 6,
+      "texture_epoch": 34,
+      "verts": [
+        107,
+        110,
+        108,
+        109
+      ]
+    },
+    {
+      "binding": 29,
+      "prim": "GL_QUAD",
+      "run_index": 39,
+      "source_segment": 4,
+      "submit_class": 6,
+      "texture_epoch": 34,
       "verts": [
         112,
-        115,
-        111,
-        110
-      ]
-    },
-    {
-      "binding": 30,
-      "prim": "GL_QUAD",
-      "verts": [
-        114,
-        116,
-        115,
-        112
-      ]
-    },
-    {
-      "binding": 30,
-      "prim": "GL_TRIANGLE_STRIP",
-      "verts": [
         114,
         113,
-        116
+        111
       ]
     },
     {
-      "binding": 31,
+      "binding": 29,
       "prim": "GL_QUAD",
+      "run_index": 40,
+      "source_segment": 4,
+      "submit_class": 6,
+      "texture_epoch": 35,
       "verts": [
+        116,
         118,
-        122,
-        119,
-        117
+        117,
+        115
       ]
     },
     {
-      "binding": 31,
+      "binding": 30,
       "prim": "GL_QUAD",
+      "run_index": 41,
+      "source_segment": 5,
+      "submit_class": 3,
+      "texture_epoch": 36,
+      "verts": [
+        119,
+        120,
+        121,
+        122
+      ]
+    },
+    {
+      "binding": 30,
+      "prim": "GL_QUAD",
+      "run_index": 41,
+      "source_segment": 5,
+      "submit_class": 3,
+      "texture_epoch": 36,
       "verts": [
         120,
         124,
-        122,
-        119
-      ]
-    },
-    {
-      "binding": 31,
-      "prim": "GL_QUAD",
-      "verts": [
         123,
-        122,
-        124,
         121
       ]
     },
     {
-      "binding": 32,
+      "binding": 30,
+      "prim": "GL_TRIANGLE_STRIP",
+      "run_index": 41,
+      "source_segment": 5,
+      "submit_class": 3,
+      "texture_epoch": 36,
+      "verts": [
+        124,
+        125,
+        123
+      ]
+    },
+    {
+      "binding": 31,
       "prim": "GL_QUAD",
+      "run_index": 42,
+      "source_segment": 5,
+      "submit_class": 3,
+      "texture_epoch": 37,
       "verts": [
         126,
-        130,
+        129,
         127,
-        125
+        128
       ]
     },
     {
-      "binding": 32,
+      "binding": 31,
       "prim": "GL_QUAD",
+      "run_index": 42,
+      "source_segment": 5,
+      "submit_class": 3,
+      "texture_epoch": 37,
       "verts": [
         128,
-        132,
-        130,
-        127
-      ]
-    },
-    {
-      "binding": 32,
-      "prim": "GL_QUAD",
-      "verts": [
         131,
         130,
-        132,
-        129
+        126
       ]
     },
     {
-      "binding": 39,
+      "binding": 31,
       "prim": "GL_QUAD",
+      "run_index": 42,
+      "source_segment": 5,
+      "submit_class": 3,
+      "texture_epoch": 37,
       "verts": [
-        136,
-        135,
-        134,
+        131,
+        128,
+        132,
         133
       ]
     },
     {
-      "binding": 40,
-      "prim": "GL_TRIANGLE_STRIP",
+      "binding": 32,
+      "prim": "GL_QUAD",
+      "run_index": 43,
+      "source_segment": 5,
+      "submit_class": 3,
+      "texture_epoch": 38,
+      "verts": [
+        134,
+        137,
+        135,
+        136
+      ]
+    },
+    {
+      "binding": 32,
+      "prim": "GL_QUAD",
+      "run_index": 43,
+      "source_segment": 5,
+      "submit_class": 3,
+      "texture_epoch": 38,
+      "verts": [
+        136,
+        139,
+        138,
+        134
+      ]
+    },
+    {
+      "binding": 32,
+      "prim": "GL_QUAD",
+      "run_index": 43,
+      "source_segment": 5,
+      "submit_class": 3,
+      "texture_epoch": 38,
       "verts": [
         139,
-        137,
-        138
+        136,
+        140,
+        141
       ]
     },
     {
       "binding": 41,
       "prim": "GL_QUAD",
+      "run_index": 52,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 47,
       "verts": [
         144,
         145,
-        143,
-        142
-      ]
-    },
-    {
-      "binding": 41,
-      "prim": "GL_QUAD",
-      "verts": [
-        145,
-        148,
         146,
-        144
+        147
       ]
     },
     {
       "binding": 41,
       "prim": "GL_QUAD",
+      "run_index": 52,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 47,
       "verts": [
         147,
-        149,
+        146,
         148,
-        146
+        149
       ]
     },
     {
       "binding": 41,
       "prim": "GL_QUAD",
+      "run_index": 52,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 47,
       "verts": [
-        152,
-        153,
+        150,
+        148,
         151,
-        150
-      ]
-    },
-    {
-      "binding": 41,
-      "prim": "GL_QUAD",
-      "verts": [
-        153,
-        154,
-        155,
         152
       ]
     },
     {
       "binding": 41,
       "prim": "GL_QUAD",
+      "run_index": 52,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 47,
       "verts": [
-        157,
-        159,
-        158,
-        156
+        151,
+        154,
+        153,
+        152
       ]
     },
     {
       "binding": 41,
       "prim": "GL_QUAD",
+      "run_index": 52,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 47,
       "verts": [
-        160,
-        161,
+        154,
+        156,
+        155,
+        153
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_TRIANGLE_STRIP",
+      "run_index": 52,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 47,
+      "verts": [
+        157,
+        155,
+        156
+      ]
+    },
+    {
+      "binding": 41,
+      "prim": "GL_TRIANGLE_STRIP",
+      "run_index": 52,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 47,
+      "verts": [
         158,
+        156,
         159
       ]
     },
     {
       "binding": 41,
       "prim": "GL_QUAD",
+      "run_index": 53,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 48,
       "verts": [
-        162,
+        160,
         163,
-        158,
-        161
+        161,
+        162
       ]
     },
     {
       "binding": 41,
       "prim": "GL_QUAD",
+      "run_index": 53,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 48,
       "verts": [
+        160,
         165,
         164,
-        158,
         163
       ]
     },
     {
       "binding": 41,
-      "prim": "GL_TRIANGLE_STRIP",
+      "prim": "GL_QUAD",
+      "run_index": 53,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 48,
       "verts": [
-        149,
-        151,
-        148
+        160,
+        167,
+        166,
+        165
       ]
     },
     {
       "binding": 41,
-      "prim": "GL_TRIANGLE_STRIP",
+      "prim": "GL_QUAD",
+      "run_index": 53,
+      "source_segment": 7,
+      "submit_class": 3,
+      "texture_epoch": 48,
       "verts": [
-        141,
-        143,
-        140
+        160,
+        169,
+        168,
+        167
       ]
     }
   ],

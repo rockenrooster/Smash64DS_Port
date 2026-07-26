@@ -1,13 +1,13 @@
 {
   "candidate": "c70",
   "chosen_policy": "VERTEX16+axis_reuse",
-  "chosen_policy_iou": 0.5194974197890958,
+  "chosen_policy_iou": 0.5247027148306036,
   "opcode_counts": {
-    "VERTEX10": 149,
+    "VERTEX10": 146,
     "VERTEX16": 0,
     "VERTEX_XY": 0,
     "VERTEX_XZ": 0,
-    "VERTEX_YZ": 0
+    "VERTEX_YZ": 1
   },
   "task": "Task 61 \u2014 encoded vertex stream",
   "v10_rebasis_scale": 43.73385518590998

@@ -73,6 +73,10 @@ WORDS_BEGIN = 1        # one BEGIN word per primitive group
 class Tri:
     v: tuple[int, int, int]
     binding: int
+    run: int
+    texture_epoch: int
+    submit_class: int
+    segment: int
 
 
 @dataclass
@@ -80,6 +84,10 @@ class PrimGroup:
     prim: int            # PRIM_TRIANGLES / PRIM_QUAD / PRIM_STRIP
     verts: list[int]     # ordered vertex indices (strip/quad order)
     binding: int
+    run: int
+    texture_epoch: int
+    submit_class: int
+    segment: int
 
 
 @dataclass
@@ -114,26 +122,16 @@ def _quad_from_pair(t_a: tuple[int, int, int],
     union = set(t_a) | set(t_b)
     if len(union) != 4:
         return None
-    shared = set(t_a) & set(t_b)
-    if len(shared) != 2:
+    if len(set(t_a) & set(t_b)) != 2:
         return None
-    a_unshared = next(v for v in t_a if v not in shared)
-    b_unshared = next(v for v in t_b if v not in shared)
-    s = tuple(shared)
-    # Try both diagonal orderings; pick the one whose expansion reproduces both
-    # source triangles (canonical, winding-independent match).
-    for s0, s1 in ((s[0], s[1]), (s[1], s[0])):
-        quad = (s0, a_unshared, s1, b_unshared)
-        exp_a = (quad[0], quad[1], quad[2])  # (s0, a_unshared, s1)
-        exp_b = (quad[0], quad[2], quad[3])  # (s0, s1, b_unshared)
-        if _canon(exp_a) == _canon(t_a) and _canon(exp_b) == _canon(t_b):
+    source = sorted((_oriented_canon(t_a), _oriented_canon(t_b)))
+    for quad in itertools.permutations(sorted(union)):
+        expanded = sorted((
+            _oriented_canon((quad[0], quad[1], quad[2])),
+            _oriented_canon((quad[0], quad[2], quad[3])),
+        ))
+        if expanded == source:
             return quad
-        # Try swapping which unshared vert is v1 vs v3.
-        quad2 = (s0, b_unshared, s1, a_unshared)
-        exp_a2 = (quad2[0], quad2[1], quad2[2])
-        exp_b2 = (quad2[0], quad2[2], quad2[3])
-        if _canon(exp_a2) == _canon(t_a) and _canon(exp_b2) == _canon(t_b):
-            return quad2
     return None  # no valid quad arrangement (degenerate)
 
 
@@ -150,11 +148,13 @@ def _same_winding(a: tuple[int, int, int], b: tuple[int, int, int]) -> bool:
 # ---------------------------------------------------------------------------
 
 def _triangle_groups_by_binding(tris: list[Tri]) -> list[list[Tri]]:
-    """Partition triangles into binding groups (material/state compatible).
-    Strips/quads never cross a binding boundary (different texture/material)."""
-    by_binding: dict[int, list[Tri]] = {}
+    """Partition triangles by their complete source render identity."""
+    by_binding: dict[tuple[int, int, int, int, int], list[Tri]] = {}
     for t in tris:
-        by_binding.setdefault(t.binding, []).append(t)
+        key = (
+            t.segment, t.run, t.texture_epoch, t.submit_class, t.binding,
+        )
+        by_binding.setdefault(key, []).append(t)
     return [group for _, group in sorted(by_binding.items())]
 
 
@@ -162,7 +162,7 @@ def _compile_group(group: list[Tri]) -> list[PrimGroup]:
     """Compile one binding group into quads + strips + residual triangles."""
     if not group:
         return []
-    binding = group[0].binding
+    first = group[0]
     remaining: set[int] = set(range(len(group)))
     groups: list[PrimGroup] = []
 
@@ -186,7 +186,10 @@ def _compile_group(group: list[Tri]) -> list[PrimGroup]:
         q = _quad_from_pair(group[i].v, group[j].v)
         if q is None:
             continue
-        quads.append(PrimGroup(PRIM_QUAD, list(q), binding))
+        quads.append(PrimGroup(
+            PRIM_QUAD, list(q), first.binding, first.run,
+            first.texture_epoch, first.submit_class, first.segment,
+        ))
         used.add(i)
         used.add(j)
     groups.extend(quads)
@@ -224,6 +227,14 @@ def _compile_group(group: list[Tri]) -> list[PrimGroup]:
                     tri_c = group[c].v
                     if active[0] in tri_c and active[1] in tri_c:
                         new_v = next(vv for vv in tri_c if vv not in active)
+                        triangle_index = len(emit) - 2
+                        emitted = (
+                            (active[0], active[1], new_v)
+                            if triangle_index % 2 == 0
+                            else (active[1], active[0], new_v)
+                        )
+                        if not _same_winding(emitted, tri_c):
+                            continue
                         chain.append(c)
                         emit.append(new_v)
                         active = (active[1], new_v)
@@ -248,13 +259,19 @@ def _compile_group(group: list[Tri]) -> list[PrimGroup]:
                 overall_best_emit = emit[:]
         if not overall_best_chain:
             break
-        groups.append(PrimGroup(PRIM_STRIP, overall_best_emit, binding))
+        groups.append(PrimGroup(
+            PRIM_STRIP, overall_best_emit, first.binding, first.run,
+            first.texture_epoch, first.submit_class, first.segment,
+        ))
         for c in overall_best_chain:
             pool_set.discard(c)
 
     # 3. Residual single triangles -> GL_TRIANGLES (3 verts each).
     for i in sorted(pool_set):
-        groups.append(PrimGroup(PRIM_TRIANGLES, list(group[i].v), binding))
+        groups.append(PrimGroup(
+            PRIM_TRIANGLES, list(group[i].v), first.binding, first.run,
+            first.texture_epoch, first.submit_class, first.segment,
+        ))
 
     return groups
 
@@ -275,9 +292,11 @@ def expand_group(g: PrimGroup) -> list[tuple[int, int, int]]:
         v = g.verts
         tris = []
         for i in range(len(v) - 2):
-            # DS hardware flips winding per triangle; canonical (non-flipped)
-            # form is (v[i], v[i+1], v[i+2]) for the multiset check.
-            tris.append((v[i], v[i+1], v[i+2]))
+            tris.append(
+                (v[i], v[i + 1], v[i + 2])
+                if i % 2 == 0
+                else (v[i + 1], v[i], v[i + 2])
+            )
         return tris
     return []
 
@@ -285,6 +304,11 @@ def expand_group(g: PrimGroup) -> list[tuple[int, int, int]]:
 def _canon(tri: tuple[int, int, int]) -> tuple[int, int, int]:
     """Canonical orientation-independent triangle key (sorted verts)."""
     return tuple(sorted(tri))
+
+
+def _oriented_canon(tri: tuple[int, int, int]) -> tuple[int, int, int]:
+    """Canonical cyclic rotation that preserves triangle orientation."""
+    return min(tuple(tri[(i + off) % 3] for i in range(3)) for off in range(3))
 
 
 # ---------------------------------------------------------------------------
@@ -318,9 +342,10 @@ def estimate_cost(name: str, groups: list[PrimGroup], tri_count: int,
     transitions = 0
     prev_binding = None
     for g in groups:
-        if prev_binding is not None and g.binding != prev_binding:
+        key = (g.run, g.texture_epoch, g.submit_class, g.binding)
+        if prev_binding is not None and key != prev_binding:
             transitions += 1
-        prev_binding = g.binding
+        prev_binding = key
     quad_g = sum(1 for g in groups if g.prim == PRIM_QUAD)
     strip_g = sum(1 for g in groups if g.prim == PRIM_STRIP)
     tri_g = sum(1 for g in groups if g.prim == PRIM_TRIANGLES)
@@ -338,7 +363,14 @@ def _load_candidate_mesh(path: Path) -> tuple[list[tuple[float, float, float]], 
     ir = json.loads(path.read_text(encoding="utf-8"))
     positions = [(v["world_x_f"], v["world_y_f"], v["world_z_f"])
                  for v in ir["world_vertices"]]
-    tris = [Tri((t["v0"], t["v1"], t["v2"]), t["binding_index"])
+    tris = [Tri(
+                (t["v0"], t["v1"], t["v2"]),
+                t["binding_index"],
+                t["run_index"],
+                t["texture_epoch"],
+                t["submit_class"],
+                t["source_segment"],
+            )
             for t in ir["triangles"]]
     return positions, tris
 
@@ -361,10 +393,10 @@ def compile_candidate(name: str, positions: list, tris: list[Tri]) -> CompiledMe
 def validate_compiled(cm: CompiledMesh, source_tris: list[Tri]) -> list[str]:
     """Return a list of error strings (empty = valid)."""
     errors: list[str] = []
-    # 1. Triangle multiset equivalence: every source triangle (canonical)
-    #    appears exactly once in the expansion, and vice versa.
-    src_canon = sorted(_canon(t.v) for t in source_tris)
-    exp_canon = sorted(_canon(t) for t in cm.expanded_tris)
+    # 1. Oriented triangle multiset equivalence: every source triangle appears
+    #    exactly once with the same winding.
+    src_canon = sorted(_oriented_canon(t.v) for t in source_tris)
+    exp_canon = sorted(_oriented_canon(t) for t in cm.expanded_tris)
     if src_canon != exp_canon:
         src_count: dict = {}
         for t in src_canon:
@@ -408,7 +440,15 @@ def cmd_build() -> int:
     compiled_all: dict[str, CompiledMesh] = {}
 
     # Compile every Task 59 candidate + the welded source.
-    candidate_files = sorted(CANDIDATES_DIR.glob("*.json"))
+    pareto = json.loads(
+        (GENERATED_DIR / "dreamland_candidate_pareto.json")
+        .read_text(encoding="utf-8")
+    )
+    candidate_names = {row["name"] for row in pareto["candidates"]}
+    candidate_files = sorted(
+        path for path in CANDIDATES_DIR.glob("*.json")
+        if path.stem in candidate_names
+    )
     for path in candidate_files:
         name = path.stem
         positions, tris = _load_candidate_mesh(path)
@@ -419,8 +459,15 @@ def cmd_build() -> int:
             "task": "Task 60 — DS primitive stream",
             "candidate": name,
             "groups": [
-                {"prim": PRIM_NAMES[g.prim], "verts": g.verts,
-                 "binding": g.binding}
+                {
+                    "prim": PRIM_NAMES[g.prim],
+                    "verts": g.verts,
+                    "binding": g.binding,
+                    "run_index": g.run,
+                    "texture_epoch": g.texture_epoch,
+                    "submit_class": g.submit_class,
+                    "source_segment": g.segment,
+                }
                 for g in cm.groups
             ],
         }
@@ -454,10 +501,13 @@ def cmd_build() -> int:
                    for c in report["candidates"]}
     accept_by_name = {c["name"]: c["visually_acceptable"]
                       for c in report["candidates"]}
+    material_by_name = {c["name"]: c["material_qualified"]
+                        for c in report["candidates"]}
     print(f"{'candidate':<16} {'tris':>4} {'quads':>5} {'strips':>6} {'tris_g':>6} "
           f"{'sub_verts':>9} {'IoU':>5} {'reduce':>7}")
     for r in reports:
-        flag = "OK" if accept_by_name.get(r.name, False) else "  "
+        flag = "OK" if (accept_by_name.get(r.name, False) and
+                         material_by_name.get(r.name, False)) else "  "
         print(f"{r.name:<16} {r.tri_count:>4} {r.quad_groups:>5} {r.strip_groups:>6} "
               f"{r.tri_groups:>6} {r.submitted_verts:>9} "
               f"{iou_by_name.get(r.name, 0.0):>5.3f} "
@@ -482,7 +532,11 @@ def cmd_check() -> int:
     rebuilt_reports: list[CostReport] = []
     compiled_all: dict[str, CompiledMesh] = {}
     val_errors: list[str] = []
-    for path in sorted(CANDIDATES_DIR.glob("*.json")):
+    stored_names = {row["name"] for row in stored["candidates"]}
+    for path in sorted(
+        path for path in CANDIDATES_DIR.glob("*.json")
+        if path.stem in stored_names
+    ):
         name = path.stem
         positions, tris = _load_candidate_mesh(path)
         cm = compile_candidate(name, positions, tris)
@@ -543,6 +597,51 @@ def _live_iou(name: str) -> float | None:
     return worst
 
 
+def candidate_material_qualified(name: str) -> bool:
+    """True only when every emitted vertex/triangle retains source render identity."""
+    path = CANDIDATES_DIR / f"{name}.json"
+    if not path.is_file():
+        return False
+    ir = json.loads(path.read_text(encoding="utf-8"))
+    vertices = ir.get("world_vertices", [])
+    triangles = ir.get("triangles", [])
+    if not vertices or not triangles or not ir.get("material_qualified", False):
+        return False
+    if not all(
+        v.get("material_source_count", 0) > 0
+        and v.get("run_index", -1) >= 0
+        and v.get("texture_epoch", -1) >= 0
+        and v.get("submit_class", -1) >= 0
+        and all(field in v for field in (
+            "local_x", "local_y", "local_z", "s", "t", "rgba",
+        ))
+        for v in vertices
+    ):
+        return False
+    for triangle in triangles:
+        key = (
+            triangle.get("run_index", -1),
+            triangle.get("texture_epoch", -1),
+            triangle.get("submit_class", -1),
+            triangle.get("binding_index", -1),
+        )
+        if min(key) < 0 or triangle.get("source_segment", -1) < 0:
+            return False
+        for field in ("v0", "v1", "v2"):
+            index = triangle.get(field, -1)
+            if index < 0 or index >= len(vertices):
+                return False
+            vertex = vertices[index]
+            if (
+                vertex["run_index"],
+                vertex["texture_epoch"],
+                vertex["submit_class"],
+                vertex["binding_index"],
+            ) != key:
+                return False
+    return True
+
+
 def _build_report(reports: list[CostReport]) -> dict[str, Any]:
     task59_iou = _load_task59_iou()
     # For candidates not in Task 59's Pareto, evaluate IoU live.
@@ -556,7 +655,7 @@ def _build_report(reports: list[CostReport]) -> dict[str, Any]:
     VISUAL_GATE = 0.95
     payload = {
         "task": "Task 60 — DS primitive cost report",
-        "version": 1,
+        "version": 2,
         "source_submitted_verts_baseline": SOURCE_SUBMITTED_BASELINE,
         "visual_gate_iou_min": VISUAL_GATE,
         "cost_model": {
@@ -574,6 +673,7 @@ def _build_report(reports: list[CostReport]) -> dict[str, Any]:
                 "reduction_vs_source_pct": round(r.reduction_vs_source_pct, 1),
                 "worst_region_iou": round(cand_iou.get(r.name, 0.0), 4),
                 "visually_acceptable": cand_iou.get(r.name, 0.0) >= VISUAL_GATE,
+                "material_qualified": candidate_material_qualified(r.name),
             }
             for r in reports
         ],
@@ -582,7 +682,8 @@ def _build_report(reports: list[CostReport]) -> dict[str, Any]:
     # the cheapest candidate that still looks acceptable"). If none acceptable,
     # note that.
     acceptable = [r for r in reports
-                  if cand_iou.get(r.name, 0.0) >= VISUAL_GATE]
+                  if cand_iou.get(r.name, 0.0) >= VISUAL_GATE
+                  and candidate_material_qualified(r.name)]
     acceptable.sort(key=lambda r: r.submitted_verts)
     if acceptable:
         payload["recommended_candidate"] = acceptable[0].name

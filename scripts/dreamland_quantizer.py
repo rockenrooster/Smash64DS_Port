@@ -355,6 +355,13 @@ def encode_candidate(name: str, positions, triangles, bindings,
 VISUAL_GATE_IOU = 0.95
 
 
+def _candidate_files() -> list[Path]:
+    primitive_report = json.loads(pc.REPORT_OUTPUT.read_text(encoding="utf-8"))
+    names = {row["name"] for row in primitive_report["candidates"]}
+    return sorted(path for path in CANDIDATES_DIR.glob("*.json")
+                  if path.stem in names)
+
+
 def cmd_build() -> int:
     ENCODED_DIR.mkdir(parents=True, exist_ok=True)
     fixtures = oracle._load_fixtures()
@@ -363,7 +370,7 @@ def cmd_build() -> int:
         .read_text(encoding="utf-8"))
 
     reports: list[QuantReport] = []
-    for path in sorted(CANDIDATES_DIR.glob("*.json")):
+    for path in _candidate_files():
         name = path.stem
         stream_path = STREAMS_DIR / f"{name}.json"
         if not stream_path.is_file():
@@ -425,13 +432,16 @@ def _build_report(reports: list[QuantReport]) -> dict[str, Any]:
             "v16_axis_iou": round(r.v16_iou, 4),  # VERTEX16+axis-reuse IoU
             "v10_axis_iou": round(r.v10_iou, 4),
             "v10_acceptable": r.v10_iou >= VISUAL_GATE_IOU,
+            "material_qualified": pc.candidate_material_qualified(r.name),
             "opcode_counts": r.opcode_counts,
         }
         for r in reports
     ]
     # Recommended: the candidate with the fewest words among acceptable policies.
     acceptable = [r for r in reports
-                  if r.v10_iou >= VISUAL_GATE_IOU or r.v16_iou >= VISUAL_GATE_IOU]
+                  if pc.candidate_material_qualified(r.name)
+                  and (r.v10_iou >= VISUAL_GATE_IOU
+                       or r.v16_iou >= VISUAL_GATE_IOU)]
 
     def best_words(r: QuantReport) -> int:
         if r.v10_iou >= VISUAL_GATE_IOU:
@@ -446,7 +456,7 @@ def _build_report(reports: list[QuantReport]) -> dict[str, Any]:
     rec = acceptable[0] if acceptable else None
     return {
         "task": "Task 61 — quantization + opcode-selection report",
-        "version": 1,
+        "version": 2,
         "visual_gate_iou_min": VISUAL_GATE_IOU,
         "opcode_word_costs": {OP_NAMES[op]: WORD_COST[op] for op in WORD_COST},
         "candidates": rows,
@@ -470,7 +480,7 @@ def cmd_check() -> int:
         (GENERATED_DIR / "dreamland_source_projection_ref.json")
         .read_text(encoding="utf-8"))
     rebuilt: list[QuantReport] = []
-    for path in sorted(CANDIDATES_DIR.glob("*.json")):
+    for path in _candidate_files():
         name = path.stem
         stream_path = STREAMS_DIR / f"{name}.json"
         if not stream_path.is_file():
