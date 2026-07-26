@@ -38,3 +38,5 @@
 __pycache__/
 *.pyc
 worktree_report.md
+# Local pre-change backups (project CLAUDE.md convention) stay on disk only.
+backups/
