@@ -164,6 +164,10 @@ NDS_TASK44_STAGE_STEADY ?= 0
 # BSS, and this ROM is cache-placement sensitive enough (see Task 37) that the
 # extra bytes shift frame pacing. Any run with it on needs its own baseline.
 NDS_TASK68_FALLBACK_CENSUS ?= 0
+# Task 86: inline the 64-byte matrix struct copies GCC turns into memcpy calls.
+# KEEP: WORK-H P95 -18,432, P50 -14,208, better on 118/128 frames, 3-VBlank
+# frames 490 -> 499. Default on.
+NDS_TASK86_MATRIX_COPY ?= 1
 # Task 85: take an aligned load/store in the reloc native accessors instead of
 # a memcpy call. 51% of every memcpy call in the frame moves 2 or 4 bytes.
 # KEEP: SRC P95 -76,544, WORK-H P95 -40,384, VBlank histogram better on all
@@ -1542,6 +1546,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_BATTLE_PROFILE $(NDS_BATTLE_PROFILE)'; \
 		echo '#define NDS_TASK44_STAGE_STEADY $(NDS_TASK44_STAGE_STEADY)'; \
 		echo '#define NDS_TASK68_FALLBACK_CENSUS $(NDS_TASK68_FALLBACK_CENSUS)'; \
+		echo '#define NDS_TASK86_MATRIX_COPY $(NDS_TASK86_MATRIX_COPY)'; \
 		echo '#define NDS_TASK85_ALIGNED_NATIVE_ACCESS $(NDS_TASK85_ALIGNED_NATIVE_ACCESS)'; \
 		echo '#define NDS_TASK82_ITCM_REPACK $(NDS_TASK82_ITCM_REPACK)'; \
 		echo '#define NDS_TASK37_PROFILE $(NDS_TASK37_PROFILE)'; \

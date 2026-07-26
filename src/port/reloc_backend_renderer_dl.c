@@ -9,6 +9,14 @@
 
 #if NDS_RENDERER_HW_TRIANGLES
 #include <nds/timers.h>
+
+/* Task 86: see ndsRendererMatrixCopy20p12 in include/nds/nds_renderer.h. Gated
+ * so the A/B is one flag, per the Task 79 rule. */
+#if NDS_TASK86_MATRIX_COPY
+#define MTXCOPY(d, s) ndsRendererMatrixCopy20p12((d), (s))
+#else
+#define MTXCOPY(d, s) (*(d) = *(s))
+#endif
 #endif
 
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
@@ -1871,7 +1879,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         cached = ndsRendererAdapterFindDObjWorldMatrix(chain[i]);
         if (cached != NULL)
         {
-            *out = *cached;
+            MTXCOPY(out, cached);
             break;
         }
     }
@@ -1948,7 +1956,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
         cached = ndsRendererAdapterFindDObjWorldMatrix(chain[i]);
         if (cached != NULL)
         {
-            *out = *cached;
+            MTXCOPY(out, cached);
             owner->m2_world_matrix_cache_hit_count++;
             break;
         }
@@ -2395,8 +2403,8 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
             gNdsRendererProfileCameraMatrixCacheHitCount++;
 #endif
-            *projection = entry->projection;
-            *modelview = entry->modelview;
+            MTXCOPY(projection, &entry->projection);
+            MTXCOPY(modelview, &entry->modelview);
             *projection_valid = entry->projection_valid;
             *modelview_valid = entry->modelview_valid;
             return;
@@ -2424,8 +2432,8 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
          * camera's draw pass consumes the same matrices. The frame token
          * prevents fighter poses or camera motion from crossing presents. */
         entry->cobj = cobj;
-        entry->projection = *projection;
-        entry->modelview = *modelview;
+        MTXCOPY(&entry->projection, projection);
+        MTXCOPY(&entry->modelview, modelview);
         entry->projection_valid = *projection_valid;
         entry->modelview_valid = *modelview_valid;
     }
@@ -2498,7 +2506,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
 
     if (camera_projection_valid != FALSE)
     {
-        *projection = camera_projection;
+        MTXCOPY(projection, &camera_projection);
         *projection_ptr = projection;
     }
 
@@ -2509,12 +2517,12 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     }
     else if (camera_modelview_valid != FALSE)
     {
-        *modelview = camera_modelview;
+        MTXCOPY(modelview, &camera_modelview);
         *modelview_ptr = modelview;
     }
     else if (dobj_world_valid != FALSE)
     {
-        *modelview = dobj_world;
+        MTXCOPY(modelview, &dobj_world);
         *modelview_ptr = modelview;
     }
     ndsRendererAdapterApplyMvpRecalcRpy0x47(

@@ -311,6 +311,39 @@ typedef struct NDSRendererMatrix20p12
     s32 m[4][4];
 } NDSRendererMatrix20p12;
 
+/* Task 86. `*dst = *src` on this struct is 64 bytes, and GCC answers that with
+ * `bl memcpy` rather than inline loads: on ARMv5 it cannot assume the pointers
+ * are aligned, and 16 words is past the size it will open-code blind. Task 85
+ * measured what that costs -- a memcpy call is ~70 ticks of call machinery
+ * whatever it carries -- and objdump shows these copies are the largest
+ * remaining group of them in the frame.
+ *
+ * Sixteen explicit element assignments instead. Straight-line rather than a
+ * loop deliberately: -ftree-loop-distribute-patterns rewrites a word-copy loop
+ * straight back into the memcpy this exists to avoid. Indexing `m` rather than
+ * casting to u32* keeps it free of aliasing games, and the compiler pairs the
+ * accesses into LDM/STM by itself. */
+static inline void ndsRendererMatrixCopy20p12(
+    NDSRendererMatrix20p12 *dst, const NDSRendererMatrix20p12 *src)
+{
+    dst->m[0][0] = src->m[0][0];
+    dst->m[0][1] = src->m[0][1];
+    dst->m[0][2] = src->m[0][2];
+    dst->m[0][3] = src->m[0][3];
+    dst->m[1][0] = src->m[1][0];
+    dst->m[1][1] = src->m[1][1];
+    dst->m[1][2] = src->m[1][2];
+    dst->m[1][3] = src->m[1][3];
+    dst->m[2][0] = src->m[2][0];
+    dst->m[2][1] = src->m[2][1];
+    dst->m[2][2] = src->m[2][2];
+    dst->m[2][3] = src->m[2][3];
+    dst->m[3][0] = src->m[3][0];
+    dst->m[3][1] = src->m[3][1];
+    dst->m[3][2] = src->m[3][2];
+    dst->m[3][3] = src->m[3][3];
+}
+
 typedef struct NDSRendererMatrixSnapshot
 {
     NDSRendererMatrix20p12 matrix;
