@@ -291,3 +291,39 @@ mechanism is. A lever is only worth pulling now if it changes enough at once
 that the working set itself shrinks -- a data-structure or representation
 rewrite, not a hoist, an inline, or a placement move.
 
+## Size a rewrite before you scope it (Task 96, 2026-07-26)
+
+Task 95's conclusion -- pull the animation lever wholesale, not one slice at a
+time -- named a subsystem-sized task. Task 96 spent one read-only probe on its
+ceiling instead of a session on its body, and the ceiling killed it: **the
+`AObj` chain is 337.8 nodes/frame, so flattening it is worth at most
+7,791-15,584 ticks/frame** against the ~68,000 of stall it was supposed to
+explain. The premise was never true.
+
+The generalisable part is the arithmetic, not the number. A structure-layout
+rewrite is bounded by `(lines touched now - lines touched packed) x cost per
+miss`, and both terms are countable from a read-only probe in one build. Do that
+before scoping the rewrite, every time. It is one build against a session.
+
+Two supporting rules fall out:
+
+- **Cross-check a new instrument against an old one before trusting it.** This
+  census (source-level node counter) and Task 92 (GDB return-address sampler)
+  independently imply 8.75 ticks per soft-float call from opposite directions.
+  Agreement that tight is what makes a single-run census safe to act on; without
+  it, a lone counter is a hypothesis.
+- **A per-symbol "stall %" does not locate the stall.** Task 92 read animation's
+  68.4% stall as a data-layout signal and said so in §5; measured, layout is
+  5-16% of the joint player's cost and frozen arithmetic is 66%. Stall share
+  tells you a class is not issue-bound. It does not tell you which memory the
+  class is waiting on, and inferring the structure from the percentage is a
+  guess.
+
+## GDB `if` at top level resumes exactly once (Task 96, 2026-07-26)
+
+In a batch script, `if <cond> / continue / end` outside a `commands` block is
+not a wait loop -- it resumes once and falls through. A 30-frame sampling window
+written that way collected **2 frames**. Use `while`. Every two-stop delta
+census in `scripts/census-*.ps1` depends on this, so check the reported window
+against the requested one before reading the numbers.
+

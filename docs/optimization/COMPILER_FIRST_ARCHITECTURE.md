@@ -357,6 +357,37 @@ would have widened it.
 > Task 94 separately proved the cost is **not** where the code sits: admitting
 > `gcPlayDObjAnimJoint` to ITCM regressed `WORK-H` P50 by 6,144 on 122 of 128
 > frames. The animation cost is what the code walks.
+>
+> **CLOSED by Task 96 (2026-07-26). Do not start the re-scoped Task 78.** The
+> two paragraphs above scope a rewrite around one premise — that the
+> `aobj->next` walk is where animation's 68.4% stall lives. That premise is now
+> measured and it is false. Instrumenting `gcPlayDObjAnimJoint` itself across
+> all three of its callers over 60 presented frames:
+>
+> ```
+> joint-player calls        104.1 / frame
+> AObj nodes walked         337.8 / frame     (3.25 per call, longest chain 9)
+> adjacent node pairs       0 of 15,687       (the chain IS fully scattered)
+> 32-byte lines spanned     675.6 / frame
+> ...if packed flat         415.9 / frame
+> ceiling on flattening     7,791-15,584 ticks/frame, charging a full cold
+>                           miss to every avoided line
+> ```
+>
+> That ceiling is below the >=20,000 bar Task 95 set, and it is generous: 338
+> nodes re-walked 104 times a frame are substantially dcache-resident.
+>
+> The cost is arithmetic, not layout. At ~293 ticks per node, **192 is
+> soft-float** — the `nGCAnimKindCubic` Hermite is 22 `fadd`/`fmul` calls per
+> channel — and at most 23-46 is the pointer chase. Two instruments built by
+> different methods agree on 8.75 ticks per soft-float call, so this is not a
+> single-counter result. And the arithmetic is the frozen part (Task 92 §6:
+> 73-74% state-hash bound); its exactness-preserving slack is ~2 of 22
+> operations, ~6,000 ticks/frame.
+>
+> Task 92 §5's sentence "its recoverable half is in data layout, not
+> arithmetic" was an inference from a stall percentage, and it is the thing
+> Task 96 overturns. See `ClaudeOpus5_Task96_TheChainIsNotTheCost_20260726.md`.
 
 Measured ranking of the frame (work = 1,515,768 after idle):
 
