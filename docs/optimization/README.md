@@ -34,8 +34,23 @@ memo (93), soft-float conversion (92), dense-vertex re-shade (90), animation as
 originally scoped (77 E1), `mem*` (87/88), placement (87/88/89/94), incremental
 animation reorganization (95), and the wholesale animation channel rewrite (96).
 
-**No remaining lever above ~20,000 ticks/frame is permitted by the current
-contracts.** Closing the gate now needs the owner to relax one — the sacrifice
-order in `PROJECT_GOAL.md` is audio fidelity, then visual fidelity, then 60 Hz
-simulation, then gameplay fidelity — or to accept the current frame rate. That
-is a decision, not a task, and it is not mine to make.
+**The exactness-preserving direction is exhausted.** No remaining lever of that
+kind is above ~20,000 ticks/frame.
+
+That is not the same as the campaign being blocked, and Task 96 first said it
+was. Tasks 78–96 were all exactness-preserving *by choice*. `PROJECT_GOAL.md`
+§Sacrifice Order does not ask for that: it ranks audio fidelity first, **visual
+fidelity second**, the original 60 Hz simulation third and gameplay fidelity
+fourth, and states that **stable 30 FPS is the most protected requirement**.
+`AGENTS.md` already carries the procedure — rendering-side changes gate on a
+reported fidelity budget (synchronized screenshot diffs plus the owner's visual
+approval), not pixel exactness.
+
+So the open direction is **visual approximation**: fewer vertices, coarser
+textures, simpler lighting, fewer draw calls. The renderer classes are 290,406
+ticks/frame between them and `fighter: native production` (255,061, which
+includes prepared dense vertices) sits on top of that. It has not been tried
+once in this campaign.
+
+Its gate is the owner's eyes on a screenshot, which is why it is a decision and
+a task rather than a task alone.

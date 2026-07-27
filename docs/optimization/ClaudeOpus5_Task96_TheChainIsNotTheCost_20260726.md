@@ -139,16 +139,44 @@ estimate:
 
 Task 92 §6 wrote that "no class in the frame above 120,000 ticks is actionable
 under the current contracts" and named animation as the one open door. This task
-closes that door. **There is now no remaining lever above 20,000 ticks/frame
-that the current contracts permit.**
+closes that door. **There is no remaining exactness-preserving lever above
+20,000 ticks/frame.**
 
-That is a decision point for the owner, not another experiment. The gate is
-613,888 ticks from being met and the ways to move it are all outside what the
-contracts currently allow — which means the next move is either relaxing one of
-them (the sacrifice order in `PROJECT_GOAL.md` names audio fidelity, then visual
-fidelity, then 60 Hz simulation, then gameplay fidelity) or accepting the
-current frame rate. I am not making that call, and this document does not claim
-a third option exists.
+## 5a. Correction — that is not the same as "no lever"
+
+I first wrote §5 as "no remaining lever the current contracts permit", and that
+was wrong in a way worth recording, because it is the same error the campaign
+has been making quietly since Task 78.
+
+Every task from 78 to 96 has been *exactness-preserving*. Task 92 §5 wrote the
+constraint into the plan explicitly ("a re-scoped Task 78 whose win must come
+from exactness-preserving reorganization only"). Nothing in the contracts asked
+for that on the rendering side. `PROJECT_GOAL.md` §Sacrifice Order says the
+opposite:
+
+> 1. Audio fidelity 2. Visual fidelity 3. Original 60 Hz simulation
+> implementation 4. Gameplay fidelity 5. Stable 30 FPS
+>
+> Stable 30 FPS is the most protected requirement.
+
+Visual fidelity is the **second** thing to give up and frame rate is the
+**last**. `AGENTS.md` already supplies the procedure and has the whole time:
+rendering-side changes "gate on a reported fidelity budget (synchronized
+screenshot diffs plus the owner's visual approval), not pixel exactness."
+
+So the honest state is narrower and better than §5 claimed:
+
+- **Exactness-preserving optimization is exhausted.** Nineteen tasks, every
+  direction closed with a measurement. That part stands.
+- **Visual approximation has not been attempted once**, and it is where the
+  contract points when the DS cannot afford everything. The renderer classes are
+  290,406 ticks/frame between them (texture+material 109,208, matrix 107,810,
+  GX submit+vertex 47,555, other 25,833), and `fighter: native production`
+  (255,061, which includes prepared dense vertices) sits above them.
+
+What that direction needs is not a contract change. It needs the owner to look
+at a screenshot and say whether the delta is acceptable — which is a decision
+only they can make, and is the reason this is reported rather than started.
 
 ## 6. Method notes
 

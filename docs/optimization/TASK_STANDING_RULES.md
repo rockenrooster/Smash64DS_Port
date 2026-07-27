@@ -319,6 +319,34 @@ Two supporting rules fall out:
   class is waiting on, and inferring the structure from the percentage is a
   guess.
 
+## Check the constraint against the contract, not against the last task (Task 96, 2026-07-26)
+
+Tasks 78 through 96 were all **exactness-preserving**, and no contract required
+that. Task 92 §5 wrote the constraint into the plan ("a re-scoped Task 78 whose
+win must come from exactness-preserving reorganization only"), every later task
+inherited it from the plan rather than from `PROJECT_GOAL.md`, and by Task 96 it
+had hardened into "no lever the contracts permit" -- which was false.
+
+What the contracts actually say:
+
+- `PROJECT_GOAL.md` §Sacrifice Order: audio fidelity, **visual fidelity**,
+  original 60 Hz simulation, gameplay fidelity -- and "Stable 30 FPS is the most
+  protected requirement." Frame rate outranks all four.
+- `AGENTS.md`: rendering-side changes "gate on a reported fidelity budget
+  (synchronized screenshot diffs plus the owner's visual approval), not pixel
+  exactness."
+
+Exactness is required for **gameplay** (state-hash gated, mechanically
+equivalent). On the rendering side it was a habit, and it cost nineteen tasks of
+searching a subset of the space while the frame stayed 613,888 ticks over gate.
+
+The rule: **when a direction closes, re-read the contract before concluding the
+space is empty.** Specifically, check whether the constraint you just failed
+against is one the contract imposes or one an earlier task's plan invented. A
+plan is not a contract, and this campaign has now twice mistaken one for the
+other -- Task 92 §4 caught the same shape when Task 78's own sizing number was
+treated as a gate.
+
 ## GDB `if` at top level resumes exactly once (Task 96, 2026-07-26)
 
 In a batch script, `if <cond> / continue / end` outside a `commands` block is
