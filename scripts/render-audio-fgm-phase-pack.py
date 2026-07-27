@@ -39,6 +39,29 @@ PUBLIC_EXCITED_IMA_INDEX = 65
 PUBLIC_EXCITED_GUARD_NIBBLES = (8, 9)
 PUBLIC_EXCITED_LOOP_POINT_WORDS = 1
 REPEAT_ORACLE_CYCLES = 3
+# BUGS.md #3.  Whispy's gust is the one packed cue whose source loop has to
+# survive onto DS.  Its note schedule outlives the sample -- that is why
+# trim_proof retains all 13360 samples rather than a shorter reachable
+# prefix -- so a one-shot puffs once and stops while the hazard keeps
+# pushing for the rest of the 470 ticks.
+#
+# 626 answered the same problem by rendering the loop out AOT, but that
+# costs one buffer per second of sound and this cue runs 7.8 s.  A DS
+# hardware loop costs nothing: the channel latches predictor/index when it
+# reaches PNT and restores them on every repeat, so putting PNT at the
+# first word after the IMA header makes the latched state the header state
+# and every cycle decodes bit-identically by construction.
+#
+# The body is the source loop plus four samples of the source's own
+# 12-sample tail, taken because 13300 nibbles do not fill whole words.
+# Real audio for the alignment debt beats synthetic guard nibbles: the
+# extra samples are what the source itself plays after loop_end.
+WHISPY_WIND_ID = 285
+WHISPY_WIND_LOOP_POINT_WORDS = 1
+WHISPY_WIND_ALIGNMENT_TAIL_SAMPLES = 4
+WHISPY_WIND_GUARD_NIBBLES = ()
+WHISPY_WIND_IMA_PREDICTOR = 335
+WHISPY_WIND_IMA_INDEX = 56
 SOURCE_SINE_TABLE_SHA256 = (
     "bc184c0dbd76adecf7ff264d39cc58456546173beba727f189d2716dd8eabf16")
 
@@ -926,10 +949,11 @@ SELECTED = (
             "7a3da92cfdceb3f4ab27bc8b5344f28c59d98074ff1d352f64aea08d82397fee",
         "fidelity_debt": ("source_loop_not_reproduced",),
     },
-    # BUGS.md #3: Whispy's wind gust. Unlike the star-KO ping this one loops
+    # BUGS.md #3: Whispy's wind gust.  Unlike the star-KO ping this one loops
     # over nearly its whole body (48..13348 of 13360), which is what makes it a
-    # sustained gust rather than a one-shot, so it ships with the loop live and
-    # the runtime's duration clock ends it.
+    # sustained gust rather than a one-shot, so it is the only packed cue that
+    # ships as a DS hardware loop -- see the WHISPY_WIND_* constants.  The
+    # runtime's duration clock ends it after the source's 470 ticks.
     {
         "id": 285,
         "name": "nSYAudioFGMPupupuWhispyWind",
@@ -2859,6 +2883,33 @@ def render_source_loop(pcm: list[int], loop_start: int, loop_end: int,
     return rendered
 
 
+def render_hardware_loop(pcm: list[int],
+                         selector: dict) -> tuple[list[int], int, int]:
+    """Slice the source loop into a word-aligned DS PNT/LEN loop body."""
+    loop_start = selector["loop_start"]
+    loop_end = selector["loop_end"]
+    if not (0 < loop_start < loop_end <= len(pcm)):
+        raise ValueError("invalid hardware-loop extent")
+    if len(pcm) != selector["expected_retained_samples"]:
+        raise ValueError(
+            f"FGM {selector['id']} retained-sample proof changed: {len(pcm)}")
+    body = list(pcm[loop_start:loop_end + WHISPY_WIND_ALIGNMENT_TAIL_SAMPLES])
+    # One DS word holds eight nibbles, and LEN counts whole words after PNT.
+    if len(body) & 7:
+        raise ValueError(
+            f"FGM {selector['id']} loop body is not word aligned: {len(body)}")
+    # Every repeat re-enters at PNT with the latched state, so the sample the
+    # decoder is predicting from is the one immediately before loop_start.
+    predictor = int(pcm[loop_start - 1])
+    index = initial_ima_index([predictor, body[0]])
+    if (predictor != WHISPY_WIND_IMA_PREDICTOR or
+            index != WHISPY_WIND_IMA_INDEX):
+        raise ValueError(
+            f"FGM {selector['id']} loop IMA seed changed: "
+            f"predictor={predictor} index={index}")
+    return body, predictor, index
+
+
 def trim_proof(selector: dict, program: list[list], pcm: list[int],
                initial_frequency: int) -> tuple[list[int], dict]:
     notes = [row for row in program if row[0] == "note"]
@@ -4054,6 +4105,25 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "old_hardware_loop_decoded_clipped_sample_count": sum(
                     abs(value) >= 32767 for value in old_loop_decoded),
             })
+        elif selector["id"] == WHISPY_WIND_ID:
+            runtime_pcm, loop_predictor, loop_index = render_hardware_loop(
+                pcm, selector)
+            acoustic_oracle = {}
+            loop_strategy = "source_loop_ds_hardware"
+            flags = 1
+            loop_point_words = WHISPY_WIND_LOOP_POINT_WORDS
+            packed_envelope = envelope[1:]
+            volume = envelope[0]["ds_volume"]
+            trim = {
+                "trim_strategy": "source_loop_body_ds_hardware_repeat",
+                "trim_source_samples_removed": len(pcm) - len(runtime_pcm),
+                "trim_applied": True,
+                "trim_retained_source_prefix_pcm_sha256": None,
+                "trim_retained_prefix_exact": False,
+                "trim_proven_reachable_samples": len(runtime_pcm),
+                "trim_one_sample_ceiling": 1,
+            }
+            old_loop_ima = b""
         elif selector.get("aot_source_schedule"):
             modulator = None
             if "aot_modulator_index" in selector:
@@ -4092,8 +4162,21 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             packed_envelope = envelope[1:]
             volume = envelope[0]["ds_volume"]
             old_loop_ima = b""
-        ima = ima_encode(runtime_pcm)
-        decoded_ima = ima_decode(ima, len(runtime_pcm))
+        if selector["id"] == WHISPY_WIND_ID:
+            # A looped entry cannot spend its first sample on the IMA header:
+            # the header is outside PNT, so a sample parked there would play
+            # once and never repeat.  Every sample is a nibble instead, seeded
+            # from the state the DS latches at PNT.
+            ima = ima_encode_loop_body(runtime_pcm, loop_predictor, loop_index,
+                                       WHISPY_WIND_GUARD_NIBBLES)
+            decoded_ima = ima_decode_nibbles(
+                ima, len(runtime_pcm), loop_point_words * 4)
+            acoustic_oracle.update(ima_repeat_oracle(
+                ima, loop_point_words, len(runtime_pcm),
+                WHISPY_WIND_GUARD_NIBBLES))
+        else:
+            ima = ima_encode(runtime_pcm)
+            decoded_ima = ima_decode(ima, len(runtime_pcm))
         metrics = audio_metrics(runtime_pcm, decoded_ima)
         if metrics["decoded_peak"] == 0 or metrics["decoded_rms"] <= 0:
             raise ValueError(f"FGM {selector['id']} decoded to silence")
@@ -4194,10 +4277,17 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 (len(ima) // 4) - loop_point_words),
             "ds_ima_header_predictor": struct.unpack_from("<h", ima, 0)[0],
             "ds_ima_header_index": ima[2],
-            "ds_ima_loop_body_nibbles": 0,
-            "ds_ima_guard_nibbles": [],
-            "ds_initial_prefix_samples_dropped": 0,
-            "ds_trailing_samples_dropped": 0,
+            "ds_ima_loop_body_nibbles": (
+                len(runtime_pcm) if selector["id"] == WHISPY_WIND_ID else 0),
+            "ds_ima_guard_nibbles": (
+                list(WHISPY_WIND_GUARD_NIBBLES)
+                if selector["id"] == WHISPY_WIND_ID else []),
+            "ds_initial_prefix_samples_dropped": (
+                selector["loop_start"]
+                if selector["id"] == WHISPY_WIND_ID else 0),
+            "ds_trailing_samples_dropped": (
+                len(pcm) - selector["loop_start"] - len(runtime_pcm)
+                if selector["id"] == WHISPY_WIND_ID else 0),
             "ds_sample_count": len(runtime_pcm),
             "net_pitch_cents": net_pitch_cents,
             "ds_frequency_hz": frequency,

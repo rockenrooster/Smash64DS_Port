@@ -19,15 +19,47 @@ FIXED -grab attacks snap player positions to wrong locations.
   hand. It now rebuilds and reads the joint's world matrix the way the decomp's
   non-US branch does (func_ovl2_800EDBA4 + parts->mtx_translate). Needs a
   play test.
--Wind hazard not working, (SFX, VFX, gameplay effects)
+-Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the
   push vector on the floor, so Whispy's gust had no effect at all. It now does
   the source assignment (ftparam.c:526-531); the consumer chain was already
   live (mpprocess.c:450 adds coll_data.vel_push to the translation,
   ftmain.c:1571 clears it each frame).
-  SFX FIXED with a fidelity note: nSYAudioFGMPupupuWhispyWind (285) was never
-  packed. Added, but its source loop is not reproduced on DS, so the gust
-  sounds once (~0.88 s) instead of sustaining the full 470-tick blow.
+  SFX FIXED: nSYAudioFGMPupupuWhispyWind (285) was never packed. Added, and
+  then it still puffed once and stopped -- the sample is 0.88 s but the blow
+  is 470 ticks x 5750 us = 2.70 s, so two thirds of the gust was silence.
+  (An earlier note here said 7.8 s; that used the wrong tick rate.)
+  Root cause, and it was not the runtime:
+  - The DS side was already complete. ndsAudioFgmValidateCachedEntry accepts
+    flags & ~1u == 0, so a looping entry already passed validation, and the
+    play path already passed the loop bit and loop point through to
+    soundPlaySample (nds_audio_fgm.c:1158-1162), with the duration clock
+    releasing the handle at 470 ticks.
+  - The generator never emitted one. All four branches in
+    render-audio-fgm-phase-pack.py hardcoded `flags = 0` and
+    `loop_point_words = 0`. The `"loop": True, loop_start: 48,
+    loop_end: 13348` on cue 285's selector was descriptive source metadata
+    that nothing acted on. My earlier note claiming it "ships with the loop
+    live" was wrong.
+  Fixed as a DS hardware loop, not an AOT render. The DS ADPCM channel
+  latches predictor/index when it reaches PNT and restores them on every
+  repeat, so putting PNT at the first word after the IMA header makes the
+  latched state the header state and every cycle decodes bit-identically by
+  construction. Cost is zero extra bytes -- the pack got 28 B smaller.
+  AOT was the other option and would have fit (~20 KB for 2.70 s), but it
+  buys nothing over a loop the hardware does for free, and 626 only renders
+  AOT because its loop feeds a volume ramp that a hardware repeat cannot.
+  Shape: body = pcm[48:13352], 13304 samples = 1663 words after a 1-word
+  PNT; the 4 samples past loop_end are the source's own tail, taken as
+  alignment debt so the seam is real audio rather than synthetic guard
+  nibbles. 6656 B, SNR 34.6 dB, ~3.07 cycles per blow.
+  The unused ima_encode_loop_body / ima_ds_repeat_cycles / ima_repeat_oracle
+  machinery is now live and proves it: three restored cycles hash identically,
+  and all three negative controls fire (carried decoder state diverges, PNT
+  at the header rejected, LEN counting the whole buffer rejected).
+  check-audio-fgm-phase-pack.ps1 pins the flag, the PNT/LEN geometry and the
+  three proofs so the loop cannot be dropped again silently.
+  Latest profile green. Needs an ear check.
   VFX still open: the same particle-bank gap as the other VFX rows below --
   lbParticleMakeScriptID is a skipped stub.
 FIXED -Missing SFX 2nd jump sound (double jump) not playing (1st jump sound plays, but not 2nd jump sound)

@@ -33,12 +33,12 @@ if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
 if (([int]$metadata.format_version -ne 4) -or
     ([int]$metadata.entry_bytes -ne 32) -or
     ([int]$metadata.envelope_point_bytes -ne 4) -or
-    ([int64]$metadata.resident_bytes -ne 482832) -or
+    ([int64]$metadata.resident_bytes -ne 482804) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     ([int64]$metadata.pack_limit_bytes -ne 524288) -or
     ($metadata.mapping_sha256_lo -ne '0xbc85ec48') -or
     ($metadata.pack_sha256 -ne
-        '86b5e506aaf003d47e5e4e2dbf6866a0bfb8fb519a8ccc656abe308898c6e54a')) {
+        '48060cc96bb89f0c9073e84ebfae83eea48cba0c35de917f002efdeae49daa6a')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -62,6 +62,27 @@ foreach ($id in @(154,40,38,37,34,32,31)) {
         throw "FGM $id did not ship its fused source fork."
     }
 }
+# BUGS.md #3.  Whispy's gust is the only DS hardware loop in the pack, and it
+# is the whole reason the hazard sounds for its full 470 ticks instead of
+# puffing once.  Losing the loop flag was the original defect, so pin the flag,
+# the PNT/LEN geometry, and the three DS repeat proofs together.
+$fgm285 = $metadata.entries | Where-Object { [int]$_.id -eq 285 }
+$oracle285 = $fgm285.acoustic_oracle
+if (($fgm285.ds_loop_strategy -ne 'source_loop_ds_hardware') -or
+    ([int]$fgm285.ds_loop_flag -ne 1) -or
+    ([int]$fgm285.ds_loop_point_words -ne 1) -or
+    ([int]$fgm285.ds_loop_length_words -ne 1663) -or
+    ([int]$fgm285.ds_ima_loop_body_nibbles -ne 13304) -or
+    (@($fgm285.ds_ima_guard_nibbles).Count -ne 0) -or
+    ([int]$fgm285.ds_ima_header_predictor -ne 335) -or
+    ([int]$fgm285.ds_ima_header_index -ne 56) -or
+    ($oracle285.ds_repeat_oracle_model -ne
+        'header_once_pnt_latch_len_restore') -or
+    ($oracle285.ds_repeat_oracle_missing_restore_detected -ne $true) -or
+    ($oracle285.ds_repeat_oracle_wrong_pnt_detected -ne $true) -or
+    ($oracle285.ds_repeat_oracle_wrong_len_detected -ne $true)) {
+    throw 'FGM 285 lost its proven DS hardware wind loop.'
+}
 $fgm218 = $metadata.entries | Where-Object { [int]$_.id -eq 218 }
 if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
     ([int]$metadata.attack_activation_qualification.fgm_218_feasibility.source_effective_fx_mix -ne 25)) {
@@ -71,7 +92,7 @@ $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
     '#define NDS_AUDIO_FGM_ENTRY_COUNT 56u',
-    '#define NDS_AUDIO_FGM_PACK_BYTES 482832u',
+    '#define NDS_AUDIO_FGM_PACK_BYTES 482804u',
     '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xbc85ec48u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
@@ -83,4 +104,5 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
 }
 
 Write-Output (('Audio FGM full coverage passed: 56 IDs, 0 exclusions, ' +
-    '482832-byte pack, 204800-byte cache, seven fused fork repairs.'))
+    '482804-byte pack, 204800-byte cache, seven fused fork repairs, ' +
+    'FGM 285 wind on a proven DS hardware loop.'))
