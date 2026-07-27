@@ -16,7 +16,8 @@ FIXED -grab attacks snap player positions to wrong locations.
   Cause: func_ovl0_800C9A38 returned identity plus the joint's *local*
   translate, so ftCommonCapturePulledRotateScale placed the victim at the
   capturer's hand offset measured from the world origin instead of from the
-  hand. It now composes the joint's world matrix up the DObj chain. Needs a
+  hand. It now rebuilds and reads the joint's world matrix the way the decomp's
+  non-US branch does (func_ovl2_800EDBA4 + parts->mtx_translate). Needs a
   play test.
 -Wind hazard not working, (SFX, VFX, gameplay effects)
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the
@@ -35,13 +36,54 @@ FIXED -Missing SFX 2nd jump sound (double jump) not playing (1st jump sound play
   202_MarioMainMotion.c:118 asks for. Added 436 to the FGM pack. Needs an ear
   check.
 -some VFX are wrong/don't look right, running foot dust VFX, fireball hit VFX, fox down B, hard landing vfx
+  Root cause, measured: every named effect does spawn -- the verifier reports
+  178/178 Mario/Fox motion calls with bounded DS presentation -- but the
+  original particle scripts never run. lbParticleMakeScriptID is a stub
+  (reloc_backend_compat_shims.c:12963) and the common particle script/texture
+  banks are not resident, so nothing here is textured. In their place,
+  13 NDSVisualEffectKind values (nds_effects.h:9-25) collapse onto 12 template
+  slots (battleship_efmanager.c:212-226) built from only FOUR untextured
+  16-vertex primitives: BuildDust (:301), BuildStar (:269), BuildRing (:333),
+  BuildDisc (:373).
+  This splits the row in two:
+  (a) A real defect -- five kinds render as a *different effect*. The switch at
+      battleship_efmanager.c:469-501 maps Coin->Sparkle, Catch->ImpactWave,
+      Slash->HitNormal, Rebirth->Death, and Reflector->Shield. "fox down B" is
+      that last one: efManagerFoxReflectorMakeEffect (:883) asks for
+      nNDSVisualEffectReflector and gets the shield disc, white->red -- P1
+      Mario's shield colors on Fox's reflector. The port also never reads
+      effect_vars.reflector.status, which ftfoxspeciallw.c:29 sets every frame,
+      so the reflector cannot react to its own state either. FIXABLE without
+      the particle bank; see the entry below.
+  (b) Fidelity debt -- running foot dust, fireball hit, and hard landing each
+      DO have their own template (Dust, Fire, Dust). They look wrong because a
+      recolored 16-vertex primitive is standing in for a textured particle
+      script. Closing that needs the particle banks ported, which is P2 in
+      KNOWN_ISSUES.md:42-47. Not fixable in this pass; the owner is the visual
+      oracle for whether the stand-ins are acceptable for P1.
 FIXED -Missing SFX, Mario down B, fox up b voice
   Cause: nSYAudioVoiceMarioSpecialLw (432) and nSYAudioVoiceFoxSpecialHi (362)
   were never packed, so both motion-script requests failed closed. Added both.
   Needs an ear check.
--Fox face never changes expression once hit in a match.
+FIXED -Fox face never changes expression once hit in a match.
+  Cause: ftParamResetTexturePartAll only rewound the FTStruct mirror and left
+  the MObj showing whatever the last ftParamSetTexturePartID wrote, so the
+  first damage face a fighter took became permanent. ftMainSetStatus calls the
+  reset on every status change that lacks FTSTATUS_PRESERVE_TEXTUREPART, and
+  the model never heard about it. It now writes the base id back through the
+  joint's MObj chain the way the source does (ftparam.c:1147-1189), using the
+  container/detail guards ftParamSetTexturePartID already applies. Needs a
+  play test.
 -Upwards KO boundary:  VFX and SFX never play for fighters
   SFX half FIXED: the star-KO path asks for nSYAudioFGMDeadUpStar (12) and the
   per-fighter deadup_sfx (Fox 360 / Mario 433); none of the three was packed.
-  All three added. VFX half still open.
+  All three added.
+  VFX half: same root cause as the VFX row above. efManagerSparkleWhiteDead
+  spawns nNDSVisualEffectSparkle at scale 5.0 and efManagerDeadExplode spawns
+  nNDSVisualEffectDeath, so something does draw -- a white star and a red ring.
+  The original star-KO is a textured particle script that is not resident.
 -KO VFX wrong.
+  Same root cause. nNDSVisualEffectDeath and nNDSVisualEffectRebirth share one
+  template (battleship_efmanager.c:492-495), a red->white BuildRing, so the KO
+  burst and the respawn platform flash are the same ring. Splitting them is
+  part of the template fix below; matching the original burst is P2.

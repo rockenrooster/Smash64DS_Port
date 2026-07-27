@@ -1376,19 +1376,58 @@ void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
     fp->is_texturepart_modify = TRUE;
 }
 
+/* BUGS.md #7: this reset only rewound the FTStruct mirror and left the MObj
+ * showing whatever the last ftParamSetTexturePartID wrote, so the first damage
+ * face a fighter took became permanent -- ftMainSetStatus calls this on every
+ * status change without FTSTATUS_PRESERVE_TEXTUREPART, and the model never
+ * heard about it. The source writes the base id back through the joint's MObj
+ * chain (ftparam.c:1147-1189); do the same, with the container/detail guards
+ * ftParamSetTexturePartID already uses. */
 void ftParamResetTexturePartAll(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    FTTexturePartContainer *container;
     s32 i;
 
     if (fp == NULL)
     {
         return;
     }
+    container = (fp->attr != NULL) ? fp->attr->textureparts_container : NULL;
     for (i = 0; i < ARRAY_COUNT(fp->texturepart_status); i++)
     {
-        fp->texturepart_status[i].texture_id_curr =
-            fp->texturepart_status[i].texture_id_base;
+        FTTexturePartStatus *status = &fp->texturepart_status[i];
+        FTTexturePart *texturepart;
+        DObj *joint;
+        MObj *mobj;
+        s32 detail;
+        s32 j;
+
+        if (status->texture_id_curr == status->texture_id_base)
+        {
+            continue;
+        }
+        status->texture_id_curr = status->texture_id_base;
+        if ((container == NULL) || (fp->detail_curr < nFTPartsDetailStart))
+        {
+            continue;
+        }
+        texturepart = &container->textureparts[i];
+        if (texturepart->joint_id >= ARRAY_COUNT(fp->joints))
+        {
+            continue;
+        }
+        detail = texturepart->detail[fp->detail_curr - nFTPartsDetailStart];
+        joint = fp->joints[texturepart->joint_id];
+        mobj = (joint != NULL) ? joint->mobj : NULL;
+        for (j = 0; (mobj != NULL) && (j < detail); j++)
+        {
+            mobj = mobj->next;
+        }
+        if (mobj != NULL)
+        {
+            mobj->texture_id_curr = status->texture_id_curr;
+        }
     }
     fp->is_texturepart_modify = FALSE;
 }
@@ -6019,29 +6058,20 @@ void ftParamSetHitStatusAll(GObj *fighter_gobj, s32 hitstatus)
     }
 }
 
-extern void func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
 extern void gmCollisionCopyMatrix(Mtx44f dst, Mtx44f src);
-
-/* gmcollision.c:337 walks the same chain through setup_dobj[18]. */
-#define NDS_DOBJ_WORLD_CHAIN_MAX 18
 
 /* BUGS.md #2: this returned identity plus the joint's *local* translate, so a
  * grab placed the victim at the capturer's hand offset measured from the world
  * origin instead of from the hand -- the snap the owner sees. The contract is
- * the joint's world matrix; ftcommoncapturepulled.c's non-US branch spells the
- * same computation out as func_ovl2_800EDBA4(joint) followed by reading
- * parts->mtx_translate. That cache is not usable here: the port sets
- * FTParts::unk_dobjtrans_0x5 once during joint population and never
- * invalidates it, so 800EDBA4 would short-circuit on the stale bind-pose
- * matrix. Compose the chain directly with the source's own local-matrix
- * builder and 4x4 concatenation instead. ftcommoncapturepulled.c is the only
- * caller; scsubsysfighter.c declares it but never calls it. */
+ * the joint's world matrix, and ftcommoncapturepulled.c's non-US branch spells
+ * the same computation out: func_ovl2_800EDBA4 to rebuild the chain, then read
+ * parts->mtx_translate. That cache is live here -- ndsFTParamsInvalidateFighterParts
+ * clears unk_dobjtrans_word every frame -- so use it rather than recomposing.
+ * ftcommoncapturepulled.c is the only caller; scsubsysfighter.c declares this
+ * but never calls it. */
 void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
 {
-    DObj *chain[NDS_DOBJ_WORLD_CHAIN_MAX];
-    Mtx44f local;
-    Mtx44f product;
-    s32 depth = 0;
+    FTParts *parts;
     s32 i;
     s32 j;
 
@@ -6052,18 +6082,15 @@ void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
             mtx[i][j] = (i == j) ? 1.0F : 0.0F;
         }
     }
-    while ((dobj != NULL) && (dobj != DOBJ_PARENT_NULL) &&
-           (depth < NDS_DOBJ_WORLD_CHAIN_MAX))
+    if ((dobj == NULL) || (dobj->parent_gobj == NULL))
     {
-        chain[depth] = dobj;
-        depth++;
-        dobj = dobj->parent;
+        return;
     }
-    for (i = depth - 1; i >= 0; i--)
+    func_ovl2_800EDBA4(dobj);
+    parts = ftGetParts(dobj);
+    if (parts != NULL)
     {
-        gmCollisionTransformMatrixAll(chain[i], ftGetParts(chain[i]), local);
-        func_ovl2_800ED490(product, mtx, local);
-        gmCollisionCopyMatrix(mtx, product);
+        gmCollisionCopyMatrix(mtx, parts->mtx_translate);
     }
 }
 
