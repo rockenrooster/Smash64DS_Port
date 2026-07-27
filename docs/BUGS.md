@@ -53,8 +53,14 @@ FIXED -Missing SFX 2nd jump sound (double jump) not playing (1st jump sound play
       nNDSVisualEffectReflector and gets the shield disc, white->red -- P1
       Mario's shield colors on Fox's reflector. The port also never reads
       effect_vars.reflector.status, which ftfoxspeciallw.c:29 sets every frame,
-      so the reflector cannot react to its own state either. FIXABLE without
-      the particle bank; see the entry below.
+      so the reflector cannot react to its own state either.
+      FIXED for the two collapses a Mario-vs-Fox match actually shows:
+      Reflector and Rebirth now have their own template slots. Fox's down B
+      draws a blue barrier disc instead of Mario's red shield. The hues reuse
+      pairs already in the file, so this is an approximation and the owner's
+      eye is the gate. Coin/Catch/Slash still share slots -- coins need items
+      (off for P1) and neither of the other two was reported, so they stay
+      collapsed rather than getting invented colors.
   (b) Fidelity debt -- running foot dust, fireball hit, and hard landing each
       DO have their own template (Dust, Fire, Dust). They look wrong because a
       recolored 16-vertex primitive is standing in for a textured particle
@@ -83,7 +89,8 @@ FIXED -Fox face never changes expression once hit in a match.
   nNDSVisualEffectDeath, so something does draw -- a white star and a red ring.
   The original star-KO is a textured particle script that is not resident.
 -KO VFX wrong.
-  Same root cause. nNDSVisualEffectDeath and nNDSVisualEffectRebirth share one
-  template (battleship_efmanager.c:492-495), a red->white BuildRing, so the KO
-  burst and the respawn platform flash are the same ring. Splitting them is
-  part of the template fix below; matching the original burst is P2.
+  Partly FIXED. nNDSVisualEffectDeath and nNDSVisualEffectRebirth shared one
+  template, a red->white ring, so the KO burst and the respawn flash were the
+  same effect. Rebirth now has its own white/cyan ring and Death keeps the red
+  one. What remains is the untextured-primitive gap: the original KO burst is a
+  particle script, and a ring is the stand-in. That half is P2.

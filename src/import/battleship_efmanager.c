@@ -201,10 +201,10 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerFoxReflectorMakeEffect
 
 #if NDS_TASK39_FX_SHIELD
-#define NDS_VISUAL_TEMPLATE_COUNT 12
+#define NDS_VISUAL_TEMPLATE_COUNT 14
 #define NDS_TASK39_SHIELD_MESH_SCALE (1.0F / 6.0F)
 #else
-#define NDS_VISUAL_TEMPLATE_COUNT 8
+#define NDS_VISUAL_TEMPLATE_COUNT 10
 #endif
 #define NDS_VISUAL_TEMPLATE_VERTICES 16
 #define NDS_VISUAL_TEMPLATE_COMMANDS 12
@@ -219,6 +219,8 @@ typedef enum NDSVisualTemplateKind
     nNDSVisualTemplateWave,
     nNDSVisualTemplateShield,
     nNDSVisualTemplateDeath,
+    nNDSVisualTemplateReflector,
+    nNDSVisualTemplateRebirth,
     nNDSVisualTemplateShieldP2,
     nNDSVisualTemplateShieldP3,
     nNDSVisualTemplateShieldP4,
@@ -453,6 +455,18 @@ static void ndsEFManagerInitVisualTemplates(void)
 #endif
     ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateDeath],
                           0xff4060ffu, 0xffffffffu);
+    /* BUGS.md #5 and #9: Reflector shared the Shield slot and Rebirth shared
+     * the Death slot, so Fox's down B drew Mario's P1 shield disc and a
+     * respawn drew the KO ring. Both get their own slot. The hues reuse pairs
+     * already chosen in this file -- the pre-Task39 shield ring's blue for the
+     * reflector barrier, the sparkle pair for the respawn flash -- so this
+     * stays a source-derived approximation rather than a new palette.
+     * Reproducing the original textured bursts needs the particle banks and
+     * is P2 (KNOWN_ISSUES.md). */
+    ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateReflector],
+                          0xe0ffff60u, 0x40b8ff50u);
+    ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateRebirth],
+                          0xffffffffu, 0x90e8ffffu);
     gNdsVisualEffectTemplateBytes =
         sizeof(*sNdsVisualTemplates) * NDS_VISUAL_TEMPLATE_COUNT;
 }
@@ -486,12 +500,16 @@ static NDSVisualTemplate *ndsEFManagerGetVisualTemplate(
         template_kind = nNDSVisualTemplateWave;
         break;
     case nNDSVisualEffectShield:
-    case nNDSVisualEffectReflector:
         template_kind = nNDSVisualTemplateShield;
         break;
+    case nNDSVisualEffectReflector:
+        template_kind = nNDSVisualTemplateReflector;
+        break;
     case nNDSVisualEffectDeath:
-    case nNDSVisualEffectRebirth:
         template_kind = nNDSVisualTemplateDeath;
+        break;
+    case nNDSVisualEffectRebirth:
+        template_kind = nNDSVisualTemplateRebirth;
         break;
     case nNDSVisualEffectSlash:
     case nNDSVisualEffectHitNormal:

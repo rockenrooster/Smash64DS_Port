@@ -520,7 +520,7 @@ try {
             'Fireball source transform was rejected or drifted.' $gdbStdout
         Assert-Condition ($visual.Success -and $vv[0] -gt 0 -and
             $vv[2] -eq 0 -and $vv[4] -gt 0 -and $vv[3] -le $vv[4] -and
-            (($vv[5] -band (1 -shl 2)) -ne 0) -and $vv[6] -eq 2816 -and
+            (($vv[5] -band (1 -shl 2)) -ne 0) -and $vv[6] -eq 3520 -and
             $vv[7] -gt 0 -and $vv[8] -eq $vv[7] -and
             $vv[9] -eq $vv[8] -and $vv[10] -ge (6 * $vv[9]) -and
             $vv[10] -le (16 * $vv[9]) -and $vv[11] -eq 0 -and
@@ -621,7 +621,7 @@ try {
         $gdbStdout
     Assert-Condition ($visual.Success -and $vv[0] -gt 0 -and
         $vv[2] -eq 0 -and $vv[4] -gt 0 -and $vv[3] -le $vv[4] -and
-        (($vv[5] -band (1 -shl 2)) -ne 0) -and $vv[6] -eq 2816 -and
+        (($vv[5] -band (1 -shl 2)) -ne 0) -and $vv[6] -eq 3520 -and
         $vv[7] -gt 0 -and $vv[8] -eq $vv[7] -and
         $vv[9] -eq $vv[8] -and $vv[10] -ge (6 * $vv[9]) -and
         $vv[10] -le (16 * $vv[9]) -and $vv[11] -eq 0 -and
