@@ -159,3 +159,31 @@ assumed.
    restore `attr->shield_break_vel_y`.
 5. Boundary verifier. `PROJECT_GOAL.md` gates gameplay on mechanical
    equivalence, so this is the widest relevant gate and the only one needed.
+
+### The one hazard, found while checking for pinned behavior
+
+**No verifier script references `ShieldBreak` or `FuraFura` at all**, so nothing
+in `scripts/` asserts the current wrong behavior and step 4 is not "editing a
+correctness contract to make a change pass" (the Task 82 E1 trap).
+
+But three **in-ROM** recorders do, at
+`reloc_backend_diagnostic_recorders.c:12169`, `:12200` and `:17248`, and they
+assert on `motion_id`:
+
+```c
+(victim_fp->status_id == nFTCommonStatusShieldBreakFly) &&
+(victim_fp->motion_id == nFTCommonMotionShieldBreakFly) &&
+(gNdsSCVSBattleLastFGM == (u32)nSYAudioFGMShieldBreak)
+```
+
+The port's entry point sets `motion_id` and `motion_script_id` **explicitly**
+(`compat_shims.c:1637-1638`); the source version does not, and relies on
+`ftMainSetStatus` to install them from the status table. Step 4 removes the
+`proc_*` overrides — it must **not** remove the two `motion_id` assignments
+until `ftMainSetStatus` is confirmed to set the same values from the table for
+`nFTCommonStatusShieldBreakFly`. If it does, drop them and the recorders still
+pass; if it does not, keeping them is the correct specialization and the reason
+goes in a comment beside them.
+
+Check that first in E1. It is a two-minute read of the status table and it is
+the difference between a clean import and three failing proof recorders.
