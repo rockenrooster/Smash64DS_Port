@@ -100,3 +100,27 @@ FIXED -Fox face never changes expression once hit in a match.
   one. What remains is the untextured-primitive gap: the original KO burst is a
   particle script, and a ring is the stand-in. That half is P2.
 -mario underside area geometry missing
+  Reproduced and localized 2026-07-27 from artifacts/visibility/latest.png:
+  Dream Land's grass and a flower show THROUGH Mario's lower torso, in the
+  band where the overalls meet the legs. It is a real hole, not a shading
+  artifact -- the pixels are stage background, not Mario's interior.
+  Mechanism narrowed, cause not yet found:
+  - The fighter DLs run with geometry mode 0x222005 =
+    G_ZBUFFER|G_SHADE|G_CULL_BACK|G_LIGHTING|G_SHADING_SMOOTH (read off
+    ftrContract=.../geom0x222005 in the Boundary run). G_CULL_BACK is
+    therefore active for Mario.
+  - ndsRendererHardwarePolyFmt (nds_renderer.c:7658) handles that correctly:
+    it starts at POLY_CULL_NONE and clears POLY_CULL_FRONT when the source
+    asks for CULL_BACK, leaving front-faces-only. So culling is faithful.
+  - With back faces legitimately culled, seeing background means the
+    FRONT-facing geometry that should cap that junction is never submitted.
+    The renderer reports no drops (rej=0, drop0) and we are far under the DS
+    per-frame limits (vtx 2484 / tri 828 of 6144 / 2048), so it is not
+    clipping or overflow.
+  NEXT: find which DObj/DL is absent. The harness pins fighters at exactly
+  626 triangles per frame for two owners (313 each); if that contract was
+  pinned against an already-incomplete model, the count will not flag the
+  loss. Compare the submitted per-DObj triangle counts against Mario's source
+  model DL, and check the DObjDLLink list_id / detail level the port selects
+  -- SSB64 carries up to 4 DL lists per DObj and picking a lower-detail list
+  would drop exactly this kind of cap.
