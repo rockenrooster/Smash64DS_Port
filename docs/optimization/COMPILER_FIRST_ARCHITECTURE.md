@@ -856,6 +856,29 @@ the second concession to make and which this campaign never attempted. That
 campaign needs its own document and the owner's judgement on what may be traded —
 it does not belong as another amendment here.
 
+### The successor campaign ran, and it also closed (2026-07-27)
+
+Recorded here only so nobody follows the paragraph above into a search that has
+already been run. Visual approximation was attempted under the owner's
+authorization and is closed by measurement in all three of its forms:
+
+| form | verdict | source |
+|---|---|---|
+| cheaper encoding of the same geometry | −27.2% words is worth ~0 ticks | Task 98 §2 (anchored on Task 55 E2: −355 words → **+64**) |
+| lower texture resolution | cost is ~1,621/**bind**, not per texel | Task 98 §3 |
+| fewer triangles | −50% of the stage → **−19,584**, stage 89% fixed | Task 99 |
+
+The mechanism is one sentence: **this frame's cost is per-operation overhead, not
+per-datum throughput** — so a change pays only if it removes a run, bind, draw or
+dispatch, never if it removes items from inside one. That is the same shape that
+inverted this document's own premise (Task 81: the native code *is* the cost),
+arriving a second time from the opposite direction.
+
+**There is no successor document to write and no live item anywhere in this
+chain.** Anything that reopens it needs a *new measurement* first — a tick anchor
+tying some quantity to ticks on the same path — not another re-reading of this
+roadmap. See `docs/optimization/TASK_STANDING_RULES.md` for the rules earned.
+
 ---
 
 ## Final engineering principle
