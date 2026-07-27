@@ -781,7 +781,12 @@ stage-specific DS code.
 77  Fighter compiler foundation        DONE - E0 found it already existed
     |
     v
-78  Generated DS animation engine      STOP - 82,807 vs >=100K target
+78  Generated DS animation engine      STOP - twice, on different grounds
+                                       E0: 82,807 vs >=100K -- REFUTED by
+                                       Task 92 S4, true cost 183,564
+                                       Task 96: the re-scoped version is
+                                       sized at 7,791-15,584 vs a >=20,000
+                                       bar. Chain walk is not the cost.
     |
     v
 79  Generated fighter render programs  STOP - 13,888 vs >=100K target (Task 91 E1)
@@ -819,6 +824,37 @@ document:** Task 92 E0, attributing soft-float to its callers and splitting it
 into state-hash-frozen gameplay versus fidelity-gated renderer. Hardware
 divide/sqrt is already closed by Task 50 (eligible ceiling ~0.55%), so the
 candidate is `__aeabi_fadd`/`__aeabi_fmul` on the renderer side.
+
+### Closed out by Task 96 (2026-07-26) — this document has no live item
+
+Task 92 E0 ran, and it reopened exactly one thing: item 78, re-scoped to
+exactness-preserving layout work (§Amended by Task 78 E0, and Task 92 §5). That
+was the document's last live item. **Task 96 closed it by measurement**, and all
+three of the re-scoped components are now sized and below the ≥20,000 bar Task
+95 set:
+
+| re-scoped component | sized by | verdict |
+|---|---|---|
+| flat channel arrays replacing the `aobj->next` walk | Task 96 — 337.8 nodes/frame | ceiling **7,791–15,584** |
+| precomputed traversal order | same arithmetic, ~10² DObj nodes/frame | same order, same answer |
+| hoisting the loop-invariant tests | Task 95 — **built and A/B'd** | mechanism worked, frame regressed on both arms |
+
+The third was not estimated — it was implemented, measured improving `FTR` on 98
+of 128 frames, and still lost the frame to re-addressing collateral. There is no
+fourth component and no further amendment pending.
+
+**Do not restart item 78.** Its cost is 66% soft-float arithmetic that the Task 9
+state hash freezes, not the data layout this document's thesis predicted, and the
+two reasons it has been stopped are now independent of each other.
+
+**What replaces this document.** Its central premise is inverted and measured so
+(Task 81: "the native code *is* the cost"), its roadmap is complete, and the
+exactness-preserving search space behind it is exhausted after nineteen tasks. The
+next campaign is not a continuation of this one: it is **visual approximation**
+under `AGENTS.md`'s fidelity-budget procedure, which `PROJECT_GOAL.md` ranks as
+the second concession to make and which this campaign never attempted. That
+campaign needs its own document and the owner's judgement on what may be traded —
+it does not belong as another amendment here.
 
 ---
 
