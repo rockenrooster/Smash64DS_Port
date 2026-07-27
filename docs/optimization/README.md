@@ -67,12 +67,29 @@ looking in the wrong third.** Against a 388,480 `STG`:
 | everything else in the run loop | 48,321 | 12.4% |
 
 Tasks 51–55, 99 and 100 all optimised the run loop, which is 35% of the bucket.
-**Two sized levers now exist:** the 21 generic runs the Task 36 replay does not
-serve (≤64,000), and the 238,254 in the owner prepare path that nothing has
-looked at. Task 103 also retires Task 55 E2's "words are free" — words cost
-**9.51 ticks each**, so that experiment was a below-noise null, not a refutation,
-and Task 98 §2's anchor row falls with it.
+Task 103 also retires Task 55 E2's "words are free" — words cost **9.51 ticks
+each**, so that experiment was a below-noise null, not a refutation, and Task
+98 §2's anchor row falls with it.
 
-Next: profile the three `gNdsTickHudStageTicks` accumulation sites in
-`src/port/reloc_backend_movement.c` with `scripts/census-stage-run-phases.ps1`'s
-in-place span method.
+**Task 103 E3/E4 then closed the attribution.** All four writers of
+`gNdsTickHudStageTicks` were tapped using the timestamps they already compute —
+zero added instrument — and the partition closes to **192 ticks (0.05%)** against
+the build's own `STG`, so it is exhaustive and does not double-count. The answer:
+
+| block | ticks/frame | share of `STG` |
+|---|---|---|
+| **`ndsRendererPrepareNativeStageOwner`** — 1 call/frame | **160,588** | 40.8% |
+| generic emit — 21 runs, 103 triangles | 63,607 | 16.2% |
+| **`ndsRendererAdapterPrepareNativeStageMatrices`** — 1 call/frame | **55,077** | 14.0% |
+| replay word push — 3,916 words | 37,233 | 9.5% |
+| everything else | 76,967 | 19.5% |
+
+**Two calls per frame are 215,665 ticks — 55% of the stage bucket and 16% of all
+frame work**, and no task in this campaign has touched either. Task 44's
+steady-state admission is confirmed working: the asset-lookup and topology path
+it replaced costs 1,725 ticks.
+
+Next: split those two internally with the same method before proposing a lever.
+Both are per-frame preparation over a topology Task 44 has already proven
+unchanged — the shape a memo or incremental update attacks, and with one call
+per frame there is no per-run transfer problem of the kind that killed Task 79 E1.

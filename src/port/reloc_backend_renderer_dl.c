@@ -6936,6 +6936,30 @@ static void ndsRendererAdapterCommitNativeStageMaterials(
     }
 }
 
+#if NDS_TASK103_STAGE_RUN_PHASE
+/* Task 103 E2/E4. Defined here rather than in nds_renderer.c because the spans
+ * they measure live in this file, and ahead of both users because C needs the
+ * declaration first.
+ *
+ * E2 wraps the segment commit and the material setup ahead of it. E3 then found
+ * that path is only 40% of the stage bucket: **236,039 ticks/frame -- 60% of
+ * STG and 18% of all frame work -- are inside
+ * ndsRendererAdapterPrepareNativeStageOwner, at one call per frame**, which no
+ * task had ever profiled. E4's six spans split that function's steady-state
+ * body into the steps it actually runs, so the number stops being a function
+ * name and becomes a lever. Lab only, default off. */
+volatile u32 gNdsTask103CommitTicks;
+volatile u32 gNdsTask103CommitCount;
+volatile u32 gNdsTask103MaterialTicks;
+volatile u32 gNdsTask103PrepAdmitTicks;
+volatile u32 gNdsTask103PrepValidateTicks;
+volatile u32 gNdsTask103PrepMatrixTicks;
+volatile u32 gNdsTask103PrepMaterialTicks;
+volatile u32 gNdsTask103PrepConfigTicks;
+volatile u32 gNdsTask103PrepOwnerTicks;
+volatile u32 gNdsTask103PrepCalls;
+#endif
+
 s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 {
     static const u32 asset_ids[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT] = {
@@ -6960,6 +6984,10 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     u32 task36_reject_reason = 1u;
 
     gNdsRendererTask36AdapterRejectReason = 0u;
+#endif
+#if NDS_TASK103_STAGE_RUN_PHASE
+    u32 task103_prep_entry = cpuGetTiming();
+    u32 task103_prep_mark;
 #endif
 
     workspace->active = FALSE;
@@ -7077,8 +7105,16 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #endif
 #endif
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    task103_prep_mark = cpuGetTiming();
+    gNdsTask103PrepAdmitTicks += task103_prep_mark - task103_prep_entry;
+#endif
 #if NDS_TASK36_HW_COMPOSE
     ndsRendererAdapterValidateTask36StageWorld(workspace);
+#endif
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103PrepValidateTicks += cpuGetTiming() - task103_prep_mark;
+    task103_prep_mark = cpuGetTiming();
 #endif
     if (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE)
     {
@@ -7089,6 +7125,10 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #endif
         goto reject;
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103PrepMatrixTicks += cpuGetTiming() - task103_prep_mark;
+    task103_prep_mark = cpuGetTiming();
+#endif
     if (ndsRendererAdapterPrepareNativeStageMaterials(workspace) == FALSE)
     {
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
@@ -7096,6 +7136,10 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #endif
         goto reject;
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103PrepMaterialTicks += cpuGetTiming() - task103_prep_mark;
+    task103_prep_mark = cpuGetTiming();
+#endif
 
     bzero(&workspace->resolver, sizeof(workspace->resolver));
     workspace->resolver.primary_file = workspace->loaded[0];
@@ -7130,6 +7174,10 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     workspace->frame.config = &workspace->config;
     workspace->frame.topology_generation = workspace->topology_generation;
     workspace->frame.topology_stamp = workspace->topology_stamp;
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103PrepConfigTicks += cpuGetTiming() - task103_prep_mark;
+    task103_prep_mark = cpuGetTiming();
+#endif
     if (ndsRendererPrepareNativeStageOwner(
             &workspace->frame, &workspace->stats) == FALSE)
     {
@@ -7139,6 +7187,10 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #endif
         goto reject;
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103PrepOwnerTicks += cpuGetTiming() - task103_prep_mark;
+    gNdsTask103PrepCalls++;
+#endif
     workspace->next_segment = 0u;
     workspace->active = TRUE;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
@@ -7163,19 +7215,6 @@ reject:
     }
     return FALSE;
 }
-
-#if NDS_TASK103_STAGE_RUN_PHASE
-/* Task 103 E2. Defined here rather than in nds_renderer.c because the spans they
- * measure wrap this file's call site: the whole segment commit, and the material
- * setup immediately ahead of it. Subtracting the run-loop total from the commit
- * total gives the per-segment scaffolding, and subtracting the commit total from
- * the STG bucket gives whatever the stage spends outside segment commits
- * altogether -- which E1 sized at ~233,500 ticks/frame, 63% of the bucket and
- * the largest unattributed block in the frame. Lab only, default off. */
-volatile u32 gNdsTask103CommitTicks;
-volatile u32 gNdsTask103CommitCount;
-volatile u32 gNdsTask103MaterialTicks;
-#endif
 
 s32 ndsRendererAdapterCommitNativeStageDisplay(
     void *display_gobj_ptr, s32 link_id)

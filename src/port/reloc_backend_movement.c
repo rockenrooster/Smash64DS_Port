@@ -13192,6 +13192,30 @@ void ndsStageGCDrawAllLoopRecordCameraCallback(void)
     gNdsStageGCDrawAllLoopCameraCallbackCount++;
 }
 
+#if NDS_TASK103_STAGE_RUN_PHASE
+/* Task 103 E3. E2 accounted for only 39% of the STG bucket; the other 238,254
+ * ticks/frame are outside ndsRendererCommitNativeStageSegment entirely, and no
+ * task has ever profiled them. gNdsTickHudStageTicks is accumulated at exactly
+ * four sites in this file, so tapping each one partitions the whole bucket.
+ *
+ * These add no timer reads at all -- every site already computes the timestamp
+ * it needs for the tick HUD, and this only forks the value it already has. That
+ * matters here: E0-E2 cost ~18,100 ticks/frame of instrument, and this span is
+ * the one being measured.
+ *
+ * The four are not known to be disjoint. If display-commit spans nest inside
+ * the traversal span, the bucket itself double-counts, and the sum exceeding
+ * STG is how that shows up. Lab only, default off. */
+volatile u32 gNdsTask103PrepareTicks;
+volatile u32 gNdsTask103PrepareCount;
+volatile u32 gNdsTask103TraversalTicks;
+volatile u32 gNdsTask103TraversalCount;
+volatile u32 gNdsTask103DisplayTicks;
+volatile u32 gNdsTask103DisplayCount;
+volatile u32 gNdsTask103FinishTicks;
+volatile u32 gNdsTask103FinishCount;
+#endif
+
 s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
                                                void *display_gobj,
                                                s32 link_id)
@@ -13248,7 +13272,15 @@ s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
             display, link_id);
 
 #if NDS_TICK_HUD
-        gNdsTickHudStageTicks += cpuGetTiming() - owner_start;
+        {
+            u32 stage_ticks = cpuGetTiming() - owner_start;
+
+            gNdsTickHudStageTicks += stage_ticks;
+#if NDS_TASK103_STAGE_RUN_PHASE
+            gNdsTask103DisplayTicks += stage_ticks;
+            gNdsTask103DisplayCount++;
+#endif
+        }
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
         gNdsRendererProfileOwners[
@@ -13334,6 +13366,10 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 
 #if NDS_TICK_HUD
             gNdsTickHudStageTicks += owner_ticks;
+#if NDS_TASK103_STAGE_RUN_PHASE
+            gNdsTask103TraversalTicks += owner_ticks;
+            gNdsTask103TraversalCount++;
+#endif
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             gNdsRendererProfileOwners[
@@ -13702,7 +13738,15 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
         ndsRendererAdapterPrepareNativeStageOwner(
             ndsBattleCompatMainCameraGObj());
 #if NDS_TICK_HUD
-    gNdsTickHudStageTicks += cpuGetTiming() - tickhud_owner_start;
+    {
+        u32 stage_ticks = cpuGetTiming() - tickhud_owner_start;
+
+        gNdsTickHudStageTicks += stage_ticks;
+#if NDS_TASK103_STAGE_RUN_PHASE
+        gNdsTask103PrepareTicks += stage_ticks;
+        gNdsTask103PrepareCount++;
+#endif
+    }
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     if (profile_m3 != FALSE)
@@ -13737,7 +13781,15 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 #endif
         ndsRendererAdapterFinishNativeStageOwner();
 #if NDS_TICK_HUD
-        gNdsTickHudStageTicks += cpuGetTiming() - tickhud_owner_start;
+        {
+            u32 stage_ticks = cpuGetTiming() - tickhud_owner_start;
+
+            gNdsTickHudStageTicks += stage_ticks;
+#if NDS_TASK103_STAGE_RUN_PHASE
+            gNdsTask103FinishTicks += stage_ticks;
+            gNdsTask103FinishCount++;
+#endif
+        }
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
 #if NDS_RENDERER_M3_PHASE0_PROFILE

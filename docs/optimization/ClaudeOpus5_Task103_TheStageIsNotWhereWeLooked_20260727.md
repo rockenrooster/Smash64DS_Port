@@ -112,13 +112,85 @@ words can ever be measured on a ±7,000 floor.
 - **Two sized levers now exist**, which is two more than the campaign had this
   morning: the 21 generic runs (≤64,000) and the unprofiled 238,254.
 
-## 7. Next
+## 7. E3 — the whole bucket, partitioned exactly
 
-Profile the stage owner prepare path — the three `gNdsTickHudStageTicks`
-accumulation sites in `src/port/reloc_backend_movement.c` — with the same
-in-place span method. It is 61% of the stage bucket and has never been looked at.
+`gNdsTickHudStageTicks` is written at exactly four sites, all in
+`src/port/reloc_backend_movement.c`. Each already computes the timestamp it
+needs for the tick HUD, so tapping all four **adds no timer reads at all** —
+which matters, because E0–E2's ~18,100 ticks/frame of instrument sat inside the
+span being measured.
 
-## 8. State
+| site | ticks/frame | calls/frame | share |
+|---|---|---|---|
+| **prepare owner** | **236,039** | **1.0** | **60.0%** |
+| display commit | 156,823 | 27.6 | 39.9% |
+| finish owner | 417 | 1.0 | 0.1% |
+| DObj traversal | 0 | 0.0 | 0.0% |
+| **SUM** | **393,280** | | |
+
+The E3 build's own `STG` P50 is **393,472**. The partition closes to **192
+ticks, 0.05%** — so the four sites are exhaustive, they do not nest, and the
+bucket does not double-count.
+
+**`ndsRendererAdapterPrepareNativeStageOwner` costs 236,039 ticks/frame at one
+call per frame.** Nothing in 103 tasks had ever profiled it.
+
+## 8. E4 — inside that one call
+
+| step | ticks/frame | share |
+|---|---|---|
+| **`ndsRendererPrepareNativeStageOwner`** | **160,588** | **68.6%** |
+| **`ndsRendererAdapterPrepareNativeStageMatrices`** | **55,077** | **23.5%** |
+| validate Task 36 world | 8,540 | 3.6% |
+| prepare materials | 5,522 | 2.4% |
+| config / frame setup | 2,535 | 1.1% |
+| admit / revalidate (Task 44 steady path) | 1,725 | 0.7% |
+| SUM | 233,987 | (vs 234,926 at the site — 939 in entry/exit) |
+
+Task 44's steady-state admission is working exactly as designed: the whole
+asset-lookup and topology-rebuild path costs **1,725 ticks**. The cost is
+entirely in what runs *after* admission.
+
+## 9. The whole stage bucket, in one table
+
+Everything above composed, against `STG` 393,472:
+
+| block | ticks/frame | share |
+|---|---|---|
+| **renderer prepare owner** — 1 call | **160,588** | 40.8% |
+| generic emit — 21 runs, 103 triangles | 63,607 | 16.2% |
+| **prepare matrices** — 1 call | **55,077** | 14.0% |
+| replay word push — 3,916 words @ 9.51 | 37,233 | 9.5% |
+| replay begin-run — 33 runs | 17,223 | 4.4% |
+| run-loop overhead | 13,466 | 3.4% |
+| per-segment scaffolding — 8 commits | 13,280 | 3.4% |
+| validate Task 36 world | 8,540 | 2.2% |
+| prepare materials | 5,522 | 1.4% |
+| replay tail + end-batch | 4,449 | 1.1% |
+| config / frame setup | 2,535 | 0.6% |
+| admit / revalidate | 1,725 | 0.4% |
+| finish owner + dispatch remainder | ~2,400 | 0.6% |
+
+**Two function calls per frame are 215,665 ticks — 55% of the stage bucket and
+16% of all frame work.** Neither has been touched by any task in this campaign.
+
+For scale: the gate needs **641,664**, and `fighter: native production` — the
+largest class in Task 81's partition — is 255,061.
+
+## 10. Next
+
+`ndsRendererPrepareNativeStageOwner` (160,588, one call) and
+`ndsRendererAdapterPrepareNativeStageMatrices` (55,077, one call), in that
+order. Both are per-frame preparation over a stage whose topology Task 44 has
+already proven unchanged — which is exactly the shape a memo or an incremental
+update attacks, and unlike Task 79's site memo there is no per-run transfer
+problem here because there is one call.
+
+Split each one internally with the same method before proposing a lever. The
+standing rule from this task is that the block you are about to optimise must be
+shown to be most of the bucket first.
+
+## 11. State
 
 `WORK-H` P95 1,732,608 on the clean baseline (`build-task100-A`) against the
 1,120,000 gate. The Task 103 instrument is default-off; `scripts/census-stage-run-phases.ps1`

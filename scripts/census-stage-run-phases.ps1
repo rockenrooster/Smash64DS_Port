@@ -53,7 +53,22 @@ $counters = @(
     'gNdsTask103IterCount',
     'gNdsTask103CommitTicks',
     'gNdsTask103CommitCount',
-    'gNdsTask103MaterialTicks'
+    'gNdsTask103MaterialTicks',
+    'gNdsTask103PrepareTicks',
+    'gNdsTask103PrepareCount',
+    'gNdsTask103TraversalTicks',
+    'gNdsTask103TraversalCount',
+    'gNdsTask103DisplayTicks',
+    'gNdsTask103DisplayCount',
+    'gNdsTask103FinishTicks',
+    'gNdsTask103FinishCount',
+    'gNdsTask103PrepAdmitTicks',
+    'gNdsTask103PrepValidateTicks',
+    'gNdsTask103PrepMatrixTicks',
+    'gNdsTask103PrepMaterialTicks',
+    'gNdsTask103PrepConfigTicks',
+    'gNdsTask103PrepOwnerTicks',
+    'gNdsTask103PrepCalls'
 )
 
 $context = Initialize-MelonDSVerifierContext `
@@ -247,9 +262,50 @@ try {
             ($iter / $frames), (($commit - $iter) / $frames))
         Write-Host ""
     }
-    Write-Host ("STG bucket to explain   ~370,000 ticks/frame. Anything material")
-    Write-Host ("prep + commit does not account for is outside them altogether.")
-    Write-Host ("Instrument overhead is 4-6 timer reads per run.")
+    $prep = [double]$delta['gNdsTask103PrepareTicks']
+    $trav = [double]$delta['gNdsTask103TraversalTicks']
+    $disp = [double]$delta['gNdsTask103DisplayTicks']
+    $fin = [double]$delta['gNdsTask103FinishTicks']
+    $stgSum = $prep + $trav + $disp + $fin
+    if ($stgSum -gt 0) {
+        Write-Host ("the whole STG bucket, by accumulation site (no added timer reads)")
+        Write-Host ("site              ticks/frame     calls/frame   share")
+        Write-Host ("prepare owner   {0,12:N0} {1,13:N1} {2,8:P1}" -f `
+            ($prep / $frames), ($delta['gNdsTask103PrepareCount'] / $frames), ($prep / $stgSum))
+        Write-Host ("dobj traversal  {0,12:N0} {1,13:N1} {2,8:P1}" -f `
+            ($trav / $frames), ($delta['gNdsTask103TraversalCount'] / $frames), ($trav / $stgSum))
+        Write-Host ("display commit  {0,12:N0} {1,13:N1} {2,8:P1}" -f `
+            ($disp / $frames), ($delta['gNdsTask103DisplayCount'] / $frames), ($disp / $stgSum))
+        Write-Host ("finish owner    {0,12:N0} {1,13:N1} {2,8:P1}" -f `
+            ($fin / $frames), ($delta['gNdsTask103FinishCount'] / $frames), ($fin / $stgSum))
+        Write-Host ("SUM             {0,12:N0}" -f ($stgSum / $frames))
+        Write-Host ""
+        Write-Host ("The four sites are the only writers of gNdsTickHudStageTicks, so")
+        Write-Host ("SUM should equal the STG bucket. If it exceeds STG the spans nest")
+        Write-Host ("and the bucket double-counts; compare against the ring dump.")
+        Write-Host ""
+    }
+    $prepCalls = [double]$delta['gNdsTask103PrepCalls']
+    if ($prepCalls -gt 0) {
+        $steps = [ordered]@{
+            'admit / revalidate' = [double]$delta['gNdsTask103PrepAdmitTicks']
+            'validate task36 world' = [double]$delta['gNdsTask103PrepValidateTicks']
+            'prepare matrices' = [double]$delta['gNdsTask103PrepMatrixTicks']
+            'prepare materials' = [double]$delta['gNdsTask103PrepMaterialTicks']
+            'config / frame setup' = [double]$delta['gNdsTask103PrepConfigTicks']
+            'renderer prepare owner' = [double]$delta['gNdsTask103PrepOwnerTicks']
+        }
+        $prepSum = ($steps.Values | Measure-Object -Sum).Sum
+        Write-Host ("inside prepare owner ({0:N1} calls/frame)" -f ($prepCalls / $frames))
+        Write-Host ("step                       ticks/frame     share")
+        foreach ($k in $steps.Keys) {
+            Write-Host ("{0,-24} {1,12:N0} {2,9:P1}" -f `
+                $k, ($steps[$k] / $frames), ($steps[$k] / $prepSum))
+        }
+        Write-Host ("{0,-24} {1,12:N0}" -f 'SUM', ($prepSum / $frames))
+        Write-Host ""
+    }
+    Write-Host ("Instrument overhead: E3 adds no timer reads; E0-E2/E4 add a few per call.")
     Write-Host ""
 
     if ($JsonOut) {

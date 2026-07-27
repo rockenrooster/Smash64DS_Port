@@ -65,14 +65,25 @@ generic runs the Task 36 replay does not serve cost 63,903 ticks for 103
 triangles, and that GX words cost 9.51 ticks each — retiring Task 55 E2's "words
 are free" as a below-noise null.
 
-Two unowned sized levers, both red:
+E3/E4 then closed the attribution exactly — all four writers of
+`gNdsTickHudStageTicks` tapped with zero added instrument, partition closing to
+192 ticks (0.05%) against the build's own `STG`. Three unowned sized levers, all
+red, in priority order:
 
-1. **Profile the owner prepare path** — the three `gNdsTickHudStageTicks` sites
-   in `src/port/reloc_backend_movement.c` (`:13251`, `:13336`, `:13704`). 238,254
-   ticks/frame, entirely unattributed. Use `scripts/census-stage-run-phases.ps1`'s
-   in-place span method. **This is the highest-value unowned row on the board.**
-2. **Bring the 21 generic stage runs under the Task 36 replay** — ≤64,000
-   ticks/frame, less the replay's own ~1,795/run.
+1. **`ndsRendererPrepareNativeStageOwner` — 160,588 ticks/frame at one call per
+   frame**, 41% of the stage bucket and 12% of all frame work. Never profiled by
+   any task. Split it internally first with
+   `scripts/census-stage-run-phases.ps1`'s method. **Highest-value unowned row on
+   the board.**
+2. **`ndsRendererAdapterPrepareNativeStageMatrices` — 55,077 ticks/frame at one
+   call per frame.** Same shape, same method.
+3. **Bring the 21 generic stage runs under the Task 36 replay** — 63,607
+   ticks/frame for 103 triangles, less the replay's own ~1,785/run.
+
+Both (1) and (2) are per-frame preparation over a topology Task 44 has already
+proven unchanged, which is the shape a memo or incremental update attacks. With
+one call per frame there is no per-run transfer problem of the kind that killed
+Task 79 E1.
 
 Task 62's reduced DS-native static mesh remains a **REVERT**. A source-exact
 follow-up now preserves material/UV/color/alpha and matches the flag-0 top
