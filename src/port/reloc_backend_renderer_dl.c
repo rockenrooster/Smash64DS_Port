@@ -7164,6 +7164,19 @@ reject:
     return FALSE;
 }
 
+#if NDS_TASK103_STAGE_RUN_PHASE
+/* Task 103 E2. Defined here rather than in nds_renderer.c because the spans they
+ * measure wrap this file's call site: the whole segment commit, and the material
+ * setup immediately ahead of it. Subtracting the run-loop total from the commit
+ * total gives the per-segment scaffolding, and subtracting the commit total from
+ * the STG bucket gives whatever the stage spends outside segment commits
+ * altogether -- which E1 sized at ~233,500 ticks/frame, 63% of the bucket and
+ * the largest unattributed block in the frame. Lab only, default off. */
+volatile u32 gNdsTask103CommitTicks;
+volatile u32 gNdsTask103CommitCount;
+volatile u32 gNdsTask103MaterialTicks;
+#endif
+
 s32 ndsRendererAdapterCommitNativeStageDisplay(
     void *display_gobj_ptr, s32 link_id)
 {
@@ -7189,11 +7202,38 @@ s32 ndsRendererAdapterCommitNativeStageDisplay(
 #if NDS_TASK29_GX_CENSUS
             ndsRendererTask29GXSetOwner(NDS_RENDERER_PROFILE_OWNER_STAGE);
 #endif
+#if NDS_TASK103_STAGE_RUN_PHASE
+            /* Task 103 E2. The run loop accounts for only 136,519 of the
+             * ~370,000 stage bucket, so these two spans say whether the
+             * remainder is per-segment scaffolding inside the commit or
+             * material setup ahead of it. Wrapped at the call site because
+             * ndsRendererCommitNativeStageSegment has several early returns
+             * and an in-function span would miss them. */
+            {
+                u32 task103_mat_start = cpuGetTiming();
+                u32 task103_commit_start;
+                s32 task103_committed;
+
+                ndsRendererAdapterCommitNativeStageMaterials(workspace, i);
+                task103_commit_start = cpuGetTiming();
+                task103_committed = ndsRendererCommitNativeStageSegment(i);
+                gNdsTask103MaterialTicks +=
+                    task103_commit_start - task103_mat_start;
+                gNdsTask103CommitTicks +=
+                    cpuGetTiming() - task103_commit_start;
+                gNdsTask103CommitCount++;
+                if (task103_committed == FALSE)
+                {
+                    return TRUE;
+                }
+            }
+#else
             ndsRendererAdapterCommitNativeStageMaterials(workspace, i);
             if (ndsRendererCommitNativeStageSegment(i) == FALSE)
             {
                 return TRUE;
             }
+#endif
             workspace->next_segment++;
             return TRUE;
         }

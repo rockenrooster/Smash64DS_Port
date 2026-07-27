@@ -20497,6 +20497,35 @@ static void ndsRendererNativeStageBeginRun(
 }
 
 #if NDS_TASK36_HW_COMPOSE == 2
+#if NDS_TASK103_STAGE_RUN_PHASE
+/* Task 103. The stage bucket is ~89% fixed (Task 99) and Task 100 refuted the
+ * last proposed currency for that remainder, so ~331,300 ticks/frame are still
+ * unattributed -- ~6,135 over each of the 54 runs. These four counters split
+ * the replay run into its three spans and normalise by run and word count, so
+ * the two live explanations separate without removing a single run. Removing
+ * runs is what Task 99 arm C did, and it disarmed the capture-once replay for
+ * +109,888.
+ *
+ * Cumulative, not per-frame: sample with a two-stop GDB delta over a known
+ * window, the way scripts/census-aobj-chain-layout.ps1 does. Lab only. */
+volatile u32 gNdsTask103BeginTicks;
+volatile u32 gNdsTask103PushTicks;
+volatile u32 gNdsTask103TailTicks;
+volatile u32 gNdsTask103RunCount;
+volatile u32 gNdsTask103WordCount;
+/* E1. The first run of this census found the whole replay function is only
+ * 59,553 of a ~370,000 stage bucket, so 84% of the stage's cost is outside the
+ * path five tasks have been optimising. These cover the other branch of the
+ * same loop -- the generic emit for runs the replay does not serve -- and the
+ * whole loop body, so "inside the run loop" and "outside it" separate too. */
+volatile u32 gNdsTask103GenericTicks;
+volatile u32 gNdsTask103GenericRunCount;
+volatile u32 gNdsTask103GenericTriangles;
+volatile u32 gNdsTask103IterTicks;
+volatile u32 gNdsTask103IterCount;
+/* E2's three counters live in reloc_backend_renderer_dl.c, next to the call
+ * site they wrap. */
+#endif
 static s32 NDS_RENDERER_FAST_RUN_CODE NDS_TASK82_ITCM_CODE
 ndsRendererTask36ReplayRun(
     u32 run_index,
@@ -20509,6 +20538,11 @@ ndsRendererTask36ReplayRun(
     const NDSRendererTask36ReplayRun *run;
     const u32 *words;
     u32 i;
+#if NDS_TASK103_STAGE_RUN_PHASE
+    u32 task103_t0;
+    u32 task103_t1;
+    u32 task103_t2;
+#endif
 
     if ((run_index >= NDS_NATIVE_STAGE_RUN_COUNT) ||
         (native_run == NULL) || (stats == NULL))
@@ -20521,14 +20555,23 @@ ndsRendererTask36ReplayRun(
     {
         return FALSE;
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    task103_t0 = cpuGetTiming();
+#endif
     ndsRendererNativeStageBeginRun(
         native_run, &run->prepared, native_run->submit_class,
         segment_owner, stats, TRUE);
+#if NDS_TASK103_STAGE_RUN_PHASE
+    task103_t1 = cpuGetTiming();
+#endif
     words = &owner->words[run->word_offset];
     for (i = 0u; i < run->word_count; i++)
     {
         GFX_FIFO = words[i];
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    task103_t2 = cpuGetTiming();
+#endif
     sNdsNativeStageOwnerExecution.task36_local_pushed = TRUE;
     sNdsNativeStageOwnerExecution.task36_binding = native_run->binding_index;
     sNdsRendererHardwareMatrixMode =
@@ -20547,6 +20590,16 @@ ndsRendererTask36ReplayRun(
     sNdsRendererHardwareTriangleBatchMatrixGeneration =
         sNdsRendererHardwareMatrixGeneration;
     ndsRendererHardwareEndBatch();
+#if NDS_TASK103_STAGE_RUN_PHASE
+    /* The tail is the bookkeeping stores plus ndsRendererHardwareEndBatch. It
+     * closes here rather than at the return so the profile-level-1 counters
+     * below, which the tick-HUD ROM does not compile, can never enter it. */
+    gNdsTask103BeginTicks += task103_t1 - task103_t0;
+    gNdsTask103PushTicks += task103_t2 - task103_t1;
+    gNdsTask103TailTicks += cpuGetTiming() - task103_t2;
+    gNdsTask103RunCount++;
+    gNdsTask103WordCount += run->word_count;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     {
         u64 binding_bit = (u64)1u << native_run->binding_index;
@@ -21719,6 +21772,11 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             &sNdsNativeStageOwnerExecution.runs[run_index];
         u32 emitted_triangles = 0u;
         u32 triangle_offset;
+#if NDS_TASK103_STAGE_RUN_PHASE
+        u32 task103_iter_start = cpuGetTiming();
+        u32 task103_generic_start = 0u;
+        u32 task103_generic_armed = 0u;
+#endif
 #if NDS_DREAMLAND_CARD_CULL
         /* Task 63 §5 visualization: suppress whole stage runs named by the
          * mask so the owner can see what an authorised scenery reduction
@@ -21816,6 +21874,10 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
             ndsRendererTask36ReplayCaptureBeginRun(run_index);
         }
 #endif
+#if NDS_TASK103_STAGE_RUN_PHASE
+        task103_generic_start = cpuGetTiming();
+        task103_generic_armed = 1u;
+#endif
         ndsRendererNativeStageBeginRun(
             run, prepared_run, run->submit_class, segment->owner, stats,
             FALSE);
@@ -21880,6 +21942,14 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         phase_start = ndsRendererM3Phase0Tick();
 #endif
         ndsRendererHardwareEndBatch();
+#if NDS_TASK103_STAGE_RUN_PHASE
+        if (task103_generic_armed != 0u)
+        {
+            gNdsTask103GenericTicks += cpuGetTiming() - task103_generic_start;
+            gNdsTask103GenericRunCount++;
+            gNdsTask103GenericTriangles += run->triangle_count;
+        }
+#endif
 #if NDS_TASK36_HW_COMPOSE == 2
         if (task36_capture_segment != FALSE)
         {
@@ -21905,6 +21975,10 @@ task36_account_run:
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         ndsRendererM3Phase0FinishSpan(
             &gNdsRendererM3Phase0AccountingTicks, phase_start);
+#endif
+#if NDS_TASK103_STAGE_RUN_PHASE
+        gNdsTask103IterTicks += cpuGetTiming() - task103_iter_start;
+        gNdsTask103IterCount++;
 #endif
     }
 #if NDS_TASK36_HW_COMPOSE

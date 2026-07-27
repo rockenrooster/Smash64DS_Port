@@ -131,6 +131,24 @@ NDS_TASK93_TEXKEY_CENSUS ?= 0
 # revalidation inside the fighter draw, on the tick-HUD ROM -- the split the M2
 # ledger measures but cannot report for the Boundary configuration.
 NDS_TASK91_DRAW_PHASE_CENSUS ?= 0
+# Task 103 lab probe (docs/optimization/RASTER_AXIS_CAMPAIGN.md fork B).
+# Task 99 left the stage bucket ~89% fixed and Task 100 refuted the last
+# proposed currency for it, so ~331,300 ticks/frame are still unattributed.
+# Over 54 runs that is ~6,135 per run, which points at per-operation
+# scaffolding -- the currency Task 99 §4 named and nothing has isolated.
+#
+# Splits ndsRendererTask36ReplayRun into its three spans: the begin-run
+# scaffolding, the GFX_FIFO word-push loop, and the end-batch tail. That
+# distinguishes the two live explanations directly. If the cost is in the push
+# loop it is FIFO stall, which is geometry-side backpressure and would mean
+# Task 55 E2's "words are free" needs re-reading; if it is in begin/end, run
+# count is the currency and the lever is run structure.
+#
+# Deliberately measures in place rather than by removing runs: Task 99 arm C
+# culled 27 of 54 and measured +109,888 because that disarms the Task 36
+# capture-once replay. Counters are cumulative; sample with a two-stop delta.
+# Lab only, default 0.
+NDS_TASK103_STAGE_RUN_PHASE ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1579,6 +1597,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \
 		echo '#define NDS_TASK91_DRAW_PHASE_CENSUS $(NDS_TASK91_DRAW_PHASE_CENSUS)'; \
+		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \

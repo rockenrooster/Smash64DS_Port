@@ -56,9 +56,23 @@ rasterizer consumes already-swapped polygon RAM during scanout and structurally
 cannot stall the CPU — so pixels join words and triangles as a refuted currency.
 Do not propose another fill, coverage, AA or overdraw lever.
 
-**The open direction is per-operation scaffolding**, the currency Task 99 §4
-named and nothing has yet isolated: ~331,300 fixed stage ticks over 54 runs is
-~6,135 per run, of which ~40,525 is texture bind. `RASTER_AXIS_CAMPAIGN.md` Task
-103 owns it, and its difficulty is the instrument — Task 99 arm C tried varying
-run count by culling and measured +109,888 because that disarms the Task 36
-capture-once replay.
+**Task 103 then partitioned the stage bucket and found the campaign had been
+looking in the wrong third.** Against a 388,480 `STG`:
+
+| block | ticks/frame | share |
+|---|---|---|
+| **outside the segment commit entirely — never profiled** | **238,254** | **61.3%** |
+| generic emit — 21 runs, 103 triangles | 63,903 | 16.4% |
+| replay word push — 3,916 words @ 9.51 each | 37,244 | 9.6% |
+| everything else in the run loop | 48,321 | 12.4% |
+
+Tasks 51–55, 99 and 100 all optimised the run loop, which is 35% of the bucket.
+**Two sized levers now exist:** the 21 generic runs the Task 36 replay does not
+serve (≤64,000), and the 238,254 in the owner prepare path that nothing has
+looked at. Task 103 also retires Task 55 E2's "words are free" — words cost
+**9.51 ticks each**, so that experiment was a below-noise null, not a refutation,
+and Task 98 §2's anchor row falls with it.
+
+Next: profile the three `gNdsTickHudStageTicks` accumulation sites in
+`src/port/reloc_backend_movement.c` with `scripts/census-stage-run-phases.ps1`'s
+in-place span method.

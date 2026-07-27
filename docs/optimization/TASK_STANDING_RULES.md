@@ -434,3 +434,33 @@ per-frame work is provably identical, and it confirms the +/-8,000 figure the
 campaign had been carrying on inheritance. Read every delta against it: Task 99's
 -19,584 for half the stage's triangles was only ~2.5x this floor, and the >=20,000
 bar Task 95 set is barely three times it.
+
+## A null below the noise floor is not a null (Task 103, 2026-07-27)
+
+Task 55 E2 elided 355 GX words per frame and measured `ALL` P50 at **+64**. That
+was read as "words do not cost ticks", and Task 98 §2 made it the anchor row of
+its per-datum-versus-per-operation thesis.
+
+Task 103 timed the word-push loop directly: **9.51 ticks per GX word**, 37,244
+ticks/frame over 3,916 words. So Task 55 E2's lever was worth ~3,376 ticks --
+below the 5,000-7,000 build-placement floor Task 100 measured. The experiment
+resolved nothing, and three later tasks reasoned from it as if it had resolved
+something.
+
+**Before recording a flat result as a refutation, compute what the change was
+worth in ticks and compare it to the floor.** If the expected effect is under
+~7,000, a flat reading is "not measurable this way", and it must be written that
+way. Reserve "refuted" for levers whose predicted size the instrument could
+actually have seen.
+
+## Profile the whole owner before optimising a loop inside it (Task 103)
+
+Tasks 51, 52, 53, 54, 55, 99 and 100 all worked on the stage run loop. Task 103
+measured that loop at **136,236 ticks/frame against a 388,480 `STG` bucket** --
+35%. The other 61% is outside `ndsRendererCommitNativeStageSegment` entirely, in
+the owner prepare path, and no task had profiled it.
+
+Seven tasks optimised a third of a bucket while calling their results statements
+about the bucket. **Partition the owner top-down and confirm the block you are
+about to work on is actually most of it**; the in-place span method in
+`scripts/census-stage-run-phases.ps1` costs one build and one 60-frame run.

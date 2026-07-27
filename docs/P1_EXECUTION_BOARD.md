@@ -57,12 +57,22 @@ reason that the DS rasterizer consumes already-swapped polygon RAM and cannot
 stall the CPU. Pixels join words and triangles; do not propose another fill,
 coverage, AA or overdraw lever.
 
-The live row is now **Task 103** (same document, fork B): attribute the ~331,300
-fixed stage ticks to per-operation scaffolding — ~6,135 per run over 54 runs, of
-which ~40,525 is texture bind. Unowned. Its difficulty is the instrument, not the
-hypothesis: Task 99 arm C varied run count by culling and measured +109,888
-because that disarms the Task 36 capture-once replay, so Task 103 must time the
-scaffolding in place rather than remove runs.
+**Task 103 ran and moved the lane.** Partitioning `STG` in place found that
+Tasks 51–55, 99 and 100 all worked the run loop, which is only 35% of the
+bucket; **61% (238,254 ticks/frame) is outside the segment commit entirely, in
+the owner prepare path, and has never been profiled.** It also found the 21
+generic runs the Task 36 replay does not serve cost 63,903 ticks for 103
+triangles, and that GX words cost 9.51 ticks each — retiring Task 55 E2's "words
+are free" as a below-noise null.
+
+Two unowned sized levers, both red:
+
+1. **Profile the owner prepare path** — the three `gNdsTickHudStageTicks` sites
+   in `src/port/reloc_backend_movement.c` (`:13251`, `:13336`, `:13704`). 238,254
+   ticks/frame, entirely unattributed. Use `scripts/census-stage-run-phases.ps1`'s
+   in-place span method. **This is the highest-value unowned row on the board.**
+2. **Bring the 21 generic stage runs under the Task 36 replay** — ≤64,000
+   ticks/frame, less the replay's own ~1,795/run.
 
 Task 62's reduced DS-native static mesh remains a **REVERT**. A source-exact
 follow-up now preserves material/UV/color/alpha and matches the flag-0 top

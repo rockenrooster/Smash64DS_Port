@@ -17,6 +17,17 @@
 > cost, if not pixels?" — now carrying a concrete sized hypothesis: ~6,135 ticks
 > per stage run × 54 runs. Everything below is preserved as written so the
 > reasoning that failed stays legible; read it with this box in force.
+>
+> **ANSWERED 2026-07-27 by Task 103, and the answer moves the campaign.** The
+> per-run hypothesis was wrong: begin-run, tail, per-segment scaffolding and
+> loop overhead together are 48,321 ticks/frame, ~12% of the bucket. **61% of
+> `STG` is outside the segment commit altogether**, in the owner prepare path
+> that no task has ever profiled — while Tasks 51–55, 99 and 100 all worked the
+> run loop, which is 35%. Two sized levers now exist: the 21 generic runs
+> (63,903 ticks for 103 triangles) and the unprofiled 238,254. Task 103 also
+> retires Task 55 E2's "words are free" — words cost **9.51 ticks each**, and
+> that experiment was a below-noise null. See
+> `ClaudeOpus5_Task103_TheStageIsNotWhereWeLooked_20260727.md`.
 
 **Opened:** 2026-07-27, after Tasks 98 and 99 closed visual approximation on the
 payload axis.
