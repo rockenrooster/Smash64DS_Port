@@ -145,7 +145,9 @@ static u32 sNdsAudioFgmArm7AckSequence;
 #endif
 static u16 sNdsAudioFgmInstanceToken;
 
-_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 1584u,
+/* 16-byte header + 55 * 32-byte entries. The header/entry sizes are the
+ * layout; the entry count is data, so this moves whenever a cue is added. */
+_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 1776u,
                "FGM pack header layout changed");
 _Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (200u * 1024u),
                "FGM cache budget changed");
@@ -230,6 +232,17 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMFireShoot1:
     case nSYAudioFGMExplodeS:
     case 188u: /* Fox reflector-hit cue */
+    /* BUGS.md #4/#6/#8. Each of these was requested by live battle code and
+     * failed closed for want of a pack entry: 436 by the JumpAerial motion
+     * script (435, the grounded jump, was packed, so only the double jump was
+     * silent), 432/362 by the Mario down-B and Fox up-B scripts, and 12/433/360
+     * by the star-KO path in ftcommondead.c. */
+    case nSYAudioFGMDeadUpStar:
+    case nSYAudioVoiceFoxDeadUp:
+    case nSYAudioVoiceFoxSpecialHi:
+    case nSYAudioVoiceMarioSpecialLw:
+    case nSYAudioVoiceMarioDeadUp:
+    case nSYAudioVoiceMarioJumpAerial:
         return TRUE;
     default:
         return FALSE;

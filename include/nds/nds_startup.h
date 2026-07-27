@@ -4160,6 +4160,14 @@ extern volatile u32 gNdsTickHudAudioTicks;
 extern volatile u32 gNdsTickHudSourceTicks;
 extern volatile u32 gNdsTickHudFlushTicks;
 #endif
+/* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
+ * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD
+ * target (the published ROM) saw no definition at all. Fail the macro open to a
+ * no-op here rather than guarding the call site, so adding a future counter
+ * cannot break the shipping build the same way. */
+#ifndef NDS_TASK75_MARK_ASSET_LOAD
+#define NDS_TASK75_MARK_ASSET_LOAD() ((void)0)
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 extern volatile u32 gNdsRendererProfileLoopWallTicks;
 extern volatile u32 gNdsRendererProfileInputTicks;

@@ -47,6 +47,9 @@ FULL_COVERAGE_IDS = (
     292, 370, 289, 300, 303, 154, 77, 215, 40, 38, 37, 34, 32, 31,
     375, 429, 431, 435, 440, 19, 41, 42, 43, 185, 186, 187, 189, 190,
     217, 218, 219, 216, 28, 2, 0, 188,
+    # BUGS.md #4/#6/#8.  Appended rather than interleaved so the existing
+    # entries keep their pack order; the mapping hash changes either way.
+    436, 432, 362, 433, 360, 12,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -751,6 +754,177 @@ SELECTED = (
             "300492238b0d3e3b82ac86f63da05c445083fe1aafa2a6d10d7b4bf4f59b7576",
         "aot_source_schedule": True,
         "fidelity_debt": (),
+    },
+    # BUGS.md #4: Mario's grounded jump voice (435) was packed but the aerial
+    # jump voice was not, so the first jump was audible and the double jump was
+    # silent.  Source callsite: decomp/src/relocData/202_MarioMainMotion.c:118,
+    # ftMotionPlayVoice(nSYAudioVoiceMarioJumpAerial).
+    {
+        "id": 436,
+        "name": "nSYAudioVoiceMarioJumpAerial",
+        "kind": "voice",
+        "articulation": 303,
+        "sound": 180,
+        "notes": ((12, 7, 6), (13, 7, 20), (12, 7, 60), (12, 7, 40)),
+        "duration_ticks": 126,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1484576,
+        "wave_length": 5598,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 9952,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "9be7d608e449e9eab8752772afa2a48acd18344db452a8d28a28028cd42f3695",
+        "render_program_sha256":
+            "9be7d608e449e9eab8752772afa2a48acd18344db452a8d28a28028cd42f3695",
+        "articulation_program_sha256":
+            "6c2e50943202a72b9efecd7c0ec688e260eac0dc14b6eed710341424dffe6561",
+        "fidelity_debt": (),
+    },
+    # BUGS.md #6: Mario down-B (tornado) voice.  Source callsites:
+    # 202_MarioMainMotion.c:920, :1389, :1415.
+    {
+        "id": 432,
+        "name": "nSYAudioVoiceMarioSpecialLw",
+        "kind": "voice",
+        "articulation": 299,
+        "sound": 176,
+        "notes": ((12, 7, 6), (12, 7, 20), (12, 7, 30), (11, 7, 40),
+                  (11, 7, 60)),
+        "duration_ticks": 156,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1444144,
+        "wave_length": 8524,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 13556,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "64b6d773fa65de93b0254fc29bd4ec68c5eacf65bd3bd97910881840323377d5",
+        "render_program_sha256":
+            "64b6d773fa65de93b0254fc29bd4ec68c5eacf65bd3bd97910881840323377d5",
+        "articulation_program_sha256":
+            "3dadacc3929a34bd0a16a6c73cb8302ef025a6f09d649b1a4b8d2dea1e3eb720",
+        "fidelity_debt": (),
+    },
+    # BUGS.md #6: Fox up-B (Firefox) voice.  Source callsites:
+    # 208_FoxMainMotion.c:1529, :1547, :1559, :1577.
+    {
+        "id": 362,
+        "name": "nSYAudioVoiceFoxSpecialHi",
+        "kind": "voice",
+        "articulation": 228,
+        "sound": 109,
+        "notes": ((13, 7, 50), (13, 7, 50), (13, 7, 25)),
+        "duration_ticks": 125,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 924192,
+        "wave_length": 5868,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 10432,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "0cc403a4f1dd31785a4162ca950246a5785a04602260565d69cae2334daa1740",
+        "render_program_sha256":
+            "0cc403a4f1dd31785a4162ca950246a5785a04602260565d69cae2334daa1740",
+        "articulation_program_sha256":
+            "750323e3e1db3ac8691fbf442899e4beeee66267591e8b1b974170ac9b13da30",
+        "fidelity_debt": (),
+    },
+    # BUGS.md #8: the two star-KO voices.  ftCommonDeadUpStarSetStatus plays
+    # fp->attr->deadup_sfx, which 203_MarioMain.c:277 and 209_FoxMain.c:298 set
+    # to these IDs.  Neither was packed, so the upward KO was silent.
+    {
+        "id": 433,
+        "name": "nSYAudioVoiceMarioDeadUp",
+        "kind": "voice",
+        "articulation": 300,
+        "sound": 177,
+        "notes": ((13, 7, 70), (13, 7, 60), (12, 7, 130), (12, 7, 300),
+                  (12, 7, 200)),
+        "duration_ticks": 760,
+        "ucd_volume": 210,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 1452672,
+        "wave_length": 24768,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 44032,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "105de9339b91cd01414a46e411c34bb0f8ca527866b3ee1b592402e6d5979ed2",
+        "render_program_sha256":
+            "105de9339b91cd01414a46e411c34bb0f8ca527866b3ee1b592402e6d5979ed2",
+        "articulation_program_sha256":
+            "f29a67af46018219ed4f286d7640121d16fd0915e092c9da48cd0289e8ac2d6e",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 360,
+        "name": "nSYAudioVoiceFoxDeadUp",
+        "kind": "voice",
+        "articulation": 233,
+        "sound": 114,
+        "notes": ((13, 7, 100), (13, 7, 100), (13, 7, 100), (13, 7, 30)),
+        "duration_ticks": 330,
+        "ucd_volume": 236,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 957768,
+        "wave_length": 16290,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 28960,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "64f2f0543e44242ec4070d378bb433050a7828133e3df124abeaef56b10231d0",
+        "render_program_sha256":
+            "64f2f0543e44242ec4070d378bb433050a7828133e3df124abeaef56b10231d0",
+        "articulation_program_sha256":
+            "efd2adf87e736a73856f6224ad762ca518b4a903d4cdb2473d8fc4f7faac59bd",
+        "fidelity_debt": (),
+    },
+    # BUGS.md #8: the star-KO spark itself, played from C rather than a motion
+    # script (ftcommondead.c:363), which is why it has no relocData callsite.
+    # The source wave carries a tail loop the DS entry format does not
+    # reproduce, so this is declared the same way DeadExplodeL is.
+    {
+        "id": 12,
+        "name": "nSYAudioFGMDeadUpStar",
+        # Deliberately not "ko": that kind is the regular side/down-KO contract
+        # (439/292/370/289/154) asserted by check-audio-runtime-fixtures.ps1 and
+        # mirrored by ndsAudioFgmKoIndex.  This is the star KO.
+        "kind": "starko",
+        "articulation": 83,
+        "sound": 40,
+        "notes": ((13, 7, 100), (13, 7, 50)),
+        "duration_ticks": 150,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "source_loop_infinite": True,
+        "wave_base": 344720,
+        "wave_length": 7660,
+        "loop_start": 11619,
+        "loop_end": 13590,
+        "expected_retained_samples": 13616,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "896391657abdce0d470fd87284b3c94926c9b6e41cd9b18df9fdde73336b0f9c",
+        "render_program_sha256":
+            "896391657abdce0d470fd87284b3c94926c9b6e41cd9b18df9fdde73336b0f9c",
+        "articulation_program_sha256":
+            "7a3da92cfdceb3f4ab27bc8b5344f28c59d98074ff1d352f64aea08d82397fee",
+        "fidelity_debt": ("source_loop_not_reproduced",),
     },
 )
 
