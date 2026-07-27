@@ -50,11 +50,19 @@ updated in the same kept change.
 **Performance lane (2026-07-27):** `WORK-H` P95 **1,761,664** against the
 1,120,000 gate. Two search spaces are closed by measurement — exactness-preserving
 (Tasks 78–96) and visual approximation in its payload form (Tasks 98–99). The
-open direction is the **raster axis**, planned in
-`optimization/RASTER_AXIS_CAMPAIGN.md`. Its first task, **Task 100**, is the
-coverage probe and doubles as the control on whether the emulator can observe
-fill cost at all; it is unowned and it gates everything after it. Do not open
-Tasks 101–105 before it reports.
+raster axis was opened in `optimization/RASTER_AXIS_CAMPAIGN.md` and **Task 100
+closed it at the first test** — a quarter of the frame's pixels stopped being
+drawn and `STG` moved −320 against a ≥40,000 criterion, for the architectural
+reason that the DS rasterizer consumes already-swapped polygon RAM and cannot
+stall the CPU. Pixels join words and triangles; do not propose another fill,
+coverage, AA or overdraw lever.
+
+The live row is now **Task 103** (same document, fork B): attribute the ~331,300
+fixed stage ticks to per-operation scaffolding — ~6,135 per run over 54 runs, of
+which ~40,525 is texture bind. Unowned. Its difficulty is the instrument, not the
+hypothesis: Task 99 arm C varied run count by culling and measured +109,888
+because that disarms the Task 36 capture-once replay, so Task 103 must time the
+scaffolding in place rather than remove runs.
 
 Task 62's reduced DS-native static mesh remains a **REVERT**. A source-exact
 follow-up now preserves material/UV/color/alpha and matches the flag-0 top

@@ -49,9 +49,16 @@ wrong: Task 54 called the stage GX-throughput-bound, but the two quantities GX
 throughput scales with, command words and triangles, were later measured at +64
 and −19,584 respectively. That bucket has never actually been attributed.
 
-**The open direction is the raster axis** — pixels, the one quantity 99 tasks
-have never varied. See `RASTER_AXIS_CAMPAIGN.md` for the thesis, its kill
-criterion, and the task list. Its first task is also the control that decides
-whether the emulator can see fill cost at all; every number this campaign owns
-came from a fork that is cache-accurate for the ARM9 and is **not** a
-cycle-accurate model of the DS rasterizer.
+The raster axis was opened on that reasoning and **closed by Task 100 at its
+first test**: a quarter of the frame's pixels stopped being drawn and `STG` moved
+−320 against a ≥40,000 kill criterion. It has an architectural reason — the DS
+rasterizer consumes already-swapped polygon RAM during scanout and structurally
+cannot stall the CPU — so pixels join words and triangles as a refuted currency.
+Do not propose another fill, coverage, AA or overdraw lever.
+
+**The open direction is per-operation scaffolding**, the currency Task 99 §4
+named and nothing has yet isolated: ~331,300 fixed stage ticks over 54 runs is
+~6,135 per run, of which ~40,525 is texture bind. `RASTER_AXIS_CAMPAIGN.md` Task
+103 owns it, and its difficulty is the instrument — Task 99 arm C tried varying
+run count by culling and measured +109,888 because that disarms the Task 36
+capture-once replay.

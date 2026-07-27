@@ -400,3 +400,37 @@ written that way collected **2 frames**. Use `while`. Every two-stop delta
 census in `scripts/census-*.ps1` depends on this, so check the reported window
 against the requested one before reading the numbers.
 
+
+## State the datapath before probing a hardware mechanism (Task 100, 2026-07-27)
+
+`RASTER_AXIS_CAMPAIGN.md` proposed that the stage's unattributed ~331,300 fixed
+ticks were rasterization time reaching the CPU as GX FIFO backpressure. Task 100
+built the probe: a quarter viewport, so a quarter of the pixels rasterize while
+the GX word stream, triangle count and every vertex transform stay bit-identical.
+`STG` P50 moved **-320** against a >=40,000 kill criterion.
+
+The refutation did not need a build. The DS 3D pipeline is decoupled at the
+polygon RAM -- the rasterizer consumes the *already-swapped* buffer during
+scanout, so it can drop polygons past its per-scanline limit but can never stall
+the CPU. The campaign had quoted `src/port/taskman_seam.c:4925` correctly and
+then over-read it: that sentence describes **FIFO** backpressure, which is
+geometry-engine throughput and scales with vertices, not fill.
+
+**Before building a probe for a hardware mechanism, write down the datapath and
+name the point where the proposed cost enters the CPU's critical path.** If you
+cannot name that point, the probe will measure zero and the reason will be
+architectural rather than empirical. This is the hardware counterpart of "find
+the tick anchor before proposing a lever" (Task 98 §7), and it costs minutes
+against the three builds and three measurement runs it would have saved.
+
+## The noise floor is ~5,000-7,000, and it is now measured (Task 100, 2026-07-27)
+
+Task 100 arm C removed one `glEnable(GL_ANTIALIAS)` call executed once at init.
+It cannot change per-frame CPU work by a single instruction. It moved `STG` P50
+by **+5,120** and `WORK-H` P50 by **+6,848**.
+
+That is a direct measurement of build-to-build placement noise from a build whose
+per-frame work is provably identical, and it confirms the +/-8,000 figure the
+campaign had been carrying on inheritance. Read every delta against it: Task 99's
+-19,584 for half the stage's triangles was only ~2.5x this floor, and the >=20,000
+bar Task 95 set is barely three times it.

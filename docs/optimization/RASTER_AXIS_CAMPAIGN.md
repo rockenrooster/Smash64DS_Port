@@ -1,5 +1,23 @@
 # The Raster Axis — campaign plan
 
+> **AMENDED 2026-07-27 by Task 100 — the thesis in §2 is REFUTED.** A quarter of
+> the frame's pixels stopped being drawn and `STG` moved **−320** against a
+> ≥40,000 kill criterion. §3.1 fires. **Do not build another coverage, fill,
+> anti-aliasing or overdraw probe**, and skip Tasks 101–102: they were fork-A
+> tasks conditional on a thesis that did not survive.
+>
+> The refutation has an architectural reason and §2 should have caught it: the DS
+> rasterizer consumes the *already-swapped* polygon RAM during scanout, so it is
+> structurally incapable of stalling the CPU. §2 conflated FIFO backpressure
+> (geometry-side, real, scales with vertices) with rasterization time
+> (scanline-side, decoupled). See `ClaudeOpus5_Task100_PixelsAreFree_20260727.md`
+> §4.
+>
+> **The campaign continues on fork B only** — §5 Task 103, "what is the fixed
+> cost, if not pixels?" — now carrying a concrete sized hypothesis: ~6,135 ticks
+> per stage run × 54 runs. Everything below is preserved as written so the
+> reasoning that failed stays legible; read it with this box in force.
+
 **Opened:** 2026-07-27, after Tasks 98 and 99 closed visual approximation on the
 payload axis.
 **Succeeds:** `COMPILER_FIRST_ARCHITECTURE.md`, whose roadmap is complete and
@@ -218,13 +236,30 @@ runs and `STG` went *up* 109,888 because the capture-once replay was disarmed.
 Any cull must either preserve the replay capture or carry its own re-capture, and
 must be measured against that risk explicitly. Do not repeat arm C.
 
-### Task 103 — Fork B: what is the fixed cost, if not pixels?
+### Task 103 — Fork B: what is the fixed cost, if not pixels? **← THE LIVE TASK**
 
-Runs only if Task 100 refutes the thesis on a **sound** instrument (row 4 of
-§4.1). If coverage, words, triangles and CPU work are all ruled out, then
-~331,300 ticks/frame are per-frame fixed setup, and the remaining suspects are
-GX register writes, matrix stack operations, and viewport/state configuration
-issued once per frame or once per run. Census them by count and cost.
+Task 100 refuted the thesis, so this is what the campaign is now. Coverage,
+words, triangles and "more CPU instructions" are all ruled out, which leaves
+per-operation scaffolding — the currency Task 99 §4 named and no task has
+isolated:
+
+```
+331,296 fixed ticks / 54 stage runs  =  ~6,135 ticks per run
+of which ~1,621 x 25 binds = 40,525 is texture bind (Task 98 §3)
+```
+
+Suspects, in order: per-run begin/end batch scaffolding
+(`ndsRendererNativeStageBeginRun` / `ndsRendererHardwareEndBatch`), matrix-mode
+and generation bookkeeping, and GX state writes issued once per run.
+
+**The instrument is the whole difficulty.** Task 99 arm C varied run count by
+culling and got **+109,888**, because changing the run set disarms the Task 36
+capture-once replay and hands back the ~100,000 that Task 53 won. Any design here
+must vary the per-run cost *without* invalidating the capture — for example by
+timing the scaffolding directly with a phase counter rather than by removing
+runs, which is the approach Task 91 E1 used successfully on the fighter draw.
+
+**Gate:** ≥20,000 ticks/frame attributable and removable, per the Task 95 bar.
 
 ### Task 104 — The MPU and cache-attribute audit (independent of the fork)
 
