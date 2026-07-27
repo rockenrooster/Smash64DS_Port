@@ -102,16 +102,29 @@ median `SRC` and leaves its tail intact: the excursion is asset loading driven
 by animation events, and fewer update ticks do not reduce how many distinct
 animations a match loads.
 
-**The gate is a tail statistic and the tail has one owner.** Task 71 identified
-it — a synchronous NitroFS open, cartridge read, relocation and figatree parse
-inside the frame that needs the animation. Tasks 72 and 76 took two of its three
-items. **The third, row 51's Task 75 preload bridge, is now the highest-value
-unowned row on the board**: preloading the match's fighter animations at match
-start removes the read, the copy and the relocation from gameplay entirely,
-which is the trade `PROJECT_GOAL.md` most directly endorses. Task 71 §5's
-confirmation obligation is still open and is its E0 — one counter on the load
-entry point, sampled per frame through the ring, to show that the high-`SRC`
-frames are all loads rather than the one frame profiled so far.
+**The gate is a tail statistic, and Task 75 E0 has now measured what owns it.**
+A load counter at `ndsRelocFinalizeLoadedFile`, ringed per frame, discharges
+Task 71 §5's obligation — and answers it **no**. All 5 load frames in the window
+are `SRC` excursions, so a load is *sufficient*; but **2 of the 7 excursions
+carry no cartridge activity at all** (frames 453 and 454, at 2.0× and 1.9× the
+`SRC` median), so a load is *not necessary*. The counter cross-validates against
+the independent native-owner counter exactly (7 loads, `animLoad:7`).
+
+Sized against the distribution rather than one frame: `WORK-H` P95 is 1,656,896
+over all frames and **1,553,408 over load-free frames only**, so eliminating
+on-demand loading is worth **~103,488** — 19% of the 536,896 gap, against Task 71
+§5's extrapolated ~170,000. And the resulting P95 would be frame 454, a load-free
+excursion, so the preload buys 103,488 and hands the gate to an unidentified
+cause.
+
+**Highest-value unowned row: profile a load-free `SRC` excursion.** Frame 453 —
+single-frame spike, `SRC` 636,096, zero loads, no fallback, `FTR`/`STG` at
+median. Task 71's per-PC census windowed on the frame is the instrument; its own
+window (469–470) contained a load, so this population has never been profiled.
+Whether the residual shares a cause with the loads (relocation, figatree parse)
+decides whether one fix serves both and whether the preload's ceiling is higher
+than 103,488. Row 51's preload bridge is real but must not start as a subsystem
+against 19% of the gap.
 
 Stage levers, still unowned, now second in priority:
 
