@@ -49,7 +49,7 @@ FULL_COVERAGE_IDS = (
     217, 218, 219, 216, 28, 2, 0, 188,
     # BUGS.md #4/#6/#8.  Appended rather than interleaved so the existing
     # entries keep their pack order; the mapping hash changes either way.
-    436, 432, 362, 433, 360, 12,
+    436, 432, 362, 433, 360, 12, 285,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -925,6 +925,35 @@ SELECTED = (
         "articulation_program_sha256":
             "7a3da92cfdceb3f4ab27bc8b5344f28c59d98074ff1d352f64aea08d82397fee",
         "fidelity_debt": ("source_loop_not_reproduced",),
+    },
+    # BUGS.md #3: Whispy's wind gust. Unlike the star-KO ping this one loops
+    # over nearly its whole body (48..13348 of 13360), which is what makes it a
+    # sustained gust rather than a one-shot, so it ships with the loop live and
+    # the runtime's duration clock ends it.
+    {
+        "id": 285,
+        "name": "nSYAudioFGMPupupuWhispyWind",
+        "kind": "stage",
+        "articulation": 451,
+        "sound": 3,
+        "notes": ((12, 7, 220), (12, 7, 250)),
+        "duration_ticks": 470,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": True,
+        "wave_base": 21040,
+        "wave_length": 7516,
+        "loop_start": 48,
+        "loop_end": 13348,
+        "expected_retained_samples": 13360,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "dbcc2506dda733515bcb1857723b257b8289c34044682ee0f4ccbc8a300a43d6",
+        "render_program_sha256":
+            "dbcc2506dda733515bcb1857723b257b8289c34044682ee0f4ccbc8a300a43d6",
+        "articulation_program_sha256":
+            "e68756e5a496a341437e5d376744e9982f8d0bea7ffab502c1b17b1c002fd90c",
+        "fidelity_debt": (),
     },
 )
 

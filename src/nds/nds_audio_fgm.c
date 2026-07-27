@@ -145,9 +145,9 @@ static u32 sNdsAudioFgmArm7AckSequence;
 #endif
 static u16 sNdsAudioFgmInstanceToken;
 
-/* 16-byte header + 55 * 32-byte entries. The header/entry sizes are the
+/* 16-byte header + 56 * 32-byte entries. The header/entry sizes are the
  * layout; the entry count is data, so this moves whenever a cue is added. */
-_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 1776u,
+_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 1808u,
                "FGM pack header layout changed");
 _Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (200u * 1024u),
                "FGM cache budget changed");
@@ -243,6 +243,8 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceMarioSpecialLw:
     case nSYAudioVoiceMarioDeadUp:
     case nSYAudioVoiceMarioJumpAerial:
+    /* BUGS.md #3: Whispy's wind gust, requested by the Pupupu ground loop. */
+    case nSYAudioFGMPupupuWhispyWind:
         return TRUE;
     default:
         return FALSE;

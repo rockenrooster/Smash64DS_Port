@@ -2,6 +2,16 @@ AI Agent should mark fixed items with FIXED prefix
 -Up B goes through main stage when underneath it.
 -grab attacks snap player positions to wrong locations.
 -Wind hazard not working, (SFX, VFX, gameplay effects)
+  Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the
+  push vector on the floor, so Whispy's gust had no effect at all. It now does
+  the source assignment (ftparam.c:526-531); the consumer chain was already
+  live (mpprocess.c:450 adds coll_data.vel_push to the translation,
+  ftmain.c:1571 clears it each frame).
+  SFX FIXED with a fidelity note: nSYAudioFGMPupupuWhispyWind (285) was never
+  packed. Added, but its source loop is not reproduced on DS, so the gust
+  sounds once (~0.88 s) instead of sustaining the full 470-tick blow.
+  VFX still open: the same particle-bank gap as the other VFX rows below --
+  lbParticleMakeScriptID is a skipped stub.
 FIXED -Missing SFX 2nd jump sound (double jump) not playing (1st jump sound plays, but not 2nd jump sound)
   Cause: the pack carried nSYAudioVoiceMarioJump (435, the grounded jump) but
   not nSYAudioVoiceMarioJumpAerial (436), which is what

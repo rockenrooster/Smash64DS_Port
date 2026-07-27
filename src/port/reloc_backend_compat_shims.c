@@ -12662,10 +12662,20 @@ FTStruct *ftGetStruct(GObj *fighter_gobj)
     return &stub;
 }
 
+/* BUGS.md #3: this discarded the push vector and only counted the call, so
+ * Whispy's wind had no gameplay effect at all. The source is a single
+ * assignment (ftparam.c:526-531); its consumer chain is already live here --
+ * mpprocess.c:450-452 adds coll_data.vel_push to the translation each step and
+ * ftmain.c:1571 clears it every frame, so nothing accumulates. The Pupupu
+ * counters stay because the ground-loop proofs assert on them. */
 void ftParamSetVelPush(GObj *fighter_gobj, Vec3f *vel)
 {
-    (void)fighter_gobj;
-    (void)vel;
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if ((fp != NULL) && (vel != NULL))
+    {
+        fp->coll_data.vel_push = *vel;
+    }
     gNdsPupupuUpdateVelPushCount++;
     gNdsPupupuGroundDeferredMask |= 1u << 2;
 }

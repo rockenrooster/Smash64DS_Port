@@ -481,7 +481,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output (
     'Audio runtime fixtures passed: 2 source FTAttributes blocks, 6 audited ' +
-    'mixed-u16 words each, Mario/Fox motion callsites and all 55 resident ' +
+    'mixed-u16 words each, Mario/Fox motion callsites and all 56 resident ' +
     'battle cues plus the random smash tables/dispatch, ' +
     'exact Mario/Fox down-bounce mapping and ' +
     'regular-KO call order, no rebirth-audio claim, source attack-motion ' +
