@@ -104,3 +104,39 @@ The remaining work is the wholesale animation channel rewrite, and it should be
 scoped as a subsystem task with its own session and its own verifier budget —
 not as another single-lever experiment. Five in a row have now failed for the
 same reason, which is enough evidence to stop trying that shape.
+
+## 6. Postscript — Task 96 E0 attempted and discarded
+
+The obvious follow-up is to size the wholesale rewrite before spending a session
+on it: if the `AObj` chain is already effectively contiguous, flattening it buys
+nothing. A read-only probe was built and run for exactly that.
+
+**Its headline metric was invalid and the number is not recorded here.** It
+compared *distinct starting cache lines* for the scattered chain against *total
+spanned lines* for a hypothetical flat array. `AObj` is 36 bytes, so every node
+straddles two 32-byte lines that the counter never saw — the two sides of the
+ratio were not the same quantity, and it duly came out below 1.0, implying
+scattering is cheaper than packing. It is not.
+
+The probe was also incomplete: it observed only the `gcPlayAnimAll` path, while
+Task 95 established at link time that `ftParamUpdateAnimKeys` and
+`ndsBaseFTCommonGuardUpdateJoints` also call the joint player directly.
+
+Discarded rather than reported, on the Task 84 precedent — that task threw away
+its `memcpy` attribution when 82% of samples resolved into BSS objects that
+cannot be return addresses, and the campaign is better for it.
+
+**What a valid version must do**, so the next attempt does not repeat this:
+
+1. Count every 32-byte line each node *spans*, not the line its first byte
+   falls in — `(addr + sizeof(AObj) - 1) / 32 - addr / 32 + 1` per node.
+2. Compare against a flat array measured the same way.
+3. Instrument the joint player itself rather than one of its three callers, so
+   `ftParamUpdateAnimKeys` and `ndsBaseFTCommonGuardUpdateJoints` are counted.
+4. Ideally pair it with a dcache-miss count rather than inferring misses from
+   addresses, since the chain may well be resident.
+
+The one datum that survives is that the chain is genuinely scattered — **0 of 68
+consecutive node pairs were adjacent in memory.** That is consistent with the
+rewrite premise but does not size it, and sizing is what was needed.
+
