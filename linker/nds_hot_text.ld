@@ -159,6 +159,14 @@ SECTIONS {
 
 	/* Device-qualified update working set; decomp sources stay untouched. */
 	.text.hot : {
+		/* Task 94 moved gcPlayDObjAnimJoint from here into .itcm -- 500 bytes
+		 * against 720 free, zero eviction, the top-ranked candidate on the Task
+		 * 81 census -- and it REGRESSED WORK-H P50 by 6,144 on 122 of 128
+		 * frames. STG rose 3,712 despite never calling it, which is the tell:
+		 * this list is a curated 8 KiB working set and removing a member
+		 * re-addresses the other ten. Do not re-try it, and do not size a
+		 * placement move from a tier cyc/insn ratio -- that estimator predicted
+		 * -7,894 here and got the sign wrong. */
 		*battleship_sys_objanim.o(.text.gcPlayDObjAnimJoint)
 		*battleship_sys_objman.o(.text.gcRunGObjProcess)
 		*battleship_sys_objman.o(.text.gcRunAll)

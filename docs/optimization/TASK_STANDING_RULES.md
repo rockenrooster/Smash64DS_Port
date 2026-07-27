@@ -10,7 +10,7 @@ file contradicts this document, the task file wins only where it says so explici
   where `<Model>` is the planner's current model — currently **`ClaudeOpus48_`**
   (was `ClaudeFable5_` through Task 51; bump it when the planner model changes).
   Resolved task files stay in place as history under the prefix of their era; never
-  rename them and never append a second task to one.
+  rename them and never append a second task to one, and archive closed tasks.
 
 ## Process
 
@@ -200,3 +200,66 @@ Retail sessions cost the owner real time. Minimize them by CLASS, not by skippin
 - **Every keep stays behind its Makefile flag until device-confirmed**, so a
   checkpoint revert is one line. Device evidence format: the 2/3/4/5+ VBlank
   interval histogram + typed HUD rows, normalized by sample count — never min-FPS.
+
+## Sizing a fixed-size cache (Task 90, 2026-07-26)
+
+**A hit rate cannot size a cache. Replay the request trace.**
+
+12% misses is equally consistent with a working set that barely overflows and
+one far too large to ever hold, and those want opposite decisions. The
+light-shade LUT cache sat at 4 entries and 88% hits for eighty-nine tasks
+without being questioned; a 128-request trace showed the working set was exactly
+6, and one digit was worth `FTR` P50 -19,584 on 128 of 128 frames.
+
+The procedure, one emulator run:
+
+1. Record the request key sequence in the ROM behind a lab flag, not a hit rate.
+2. Replay it host-side against a FIFO of each candidate size.
+3. Take the smallest size whose miss count reaches the **compulsory floor** --
+   the number of distinct keys, which no cache avoids paying once. If a larger
+   size buys nothing over it, do not spend the RAM.
+4. Confirm in the ROM (misses go to the floor) **before** spending an A/B.
+
+This also tells you when to stop: if no candidate size approaches the floor, the
+working set is unbounded and the answer is a different structure, not a bigger
+cache.
+
+## Budget ratchets vs correctness assertions (Task 90, 2026-07-26)
+
+A verifier pin that encodes a **measured budget** (a byte count, an entry count)
+may be raised by a task that brings a better measurement of that same quantity,
+recorded in the assertion message with the script that re-derives it. A pin that
+encodes a **correctness contract** (set membership, exactness, a required code
+shape) may not be edited to make a change pass -- revert the change and ask, as
+Task 82 E1 did. When in doubt about which kind a pin is, it is the second kind.
+
+## Placement is exhausted (Task 94, 2026-07-26)
+
+**Four consecutive placement experiments have regressed: Tasks 87, 88, 89 and
+94.** Task 82's repack was the last one that paid, and Task 83 said at the time
+that the cheap half was taken. Treat that as settled: do not propose another
+placement move without a new mechanism, not merely a new candidate.
+
+Task 94 is the cleanest refutation because it had every argument in its favour.
+`gcPlayDObjAnimJoint` is the largest soft-float caller in the frame (54.2% of all
+`fadd`/`fmul` calls), the top-ranked zero-eviction admission on the census, 500
+bytes against 720 free so nothing was displaced, and confirmed to have actually
+moved (0x020013c0 -> 0x01fff424). It regressed `WORK-H` P50 by **6,144 on 122 of
+128 frames**.
+
+Two estimators, both wrong:
+
+- **Non-mem stall "in reach"** -- Task 83 already measured this ~18x optimistic
+  per symbol.
+- **Tier cyc/insn ratio** (own ticks x itcm_rate / current_rate) -- predicted
+  **-7,894** and got the **sign** wrong. Retired here; do not use it again.
+
+The reason both fail is that they price the symbol that moves and ignore the
+space it vacates. `STG` rose 3,712 in an arm where the stage never calls the
+moved function -- that is pure re-addressing collateral, and Task 83 already
+found 69% of Task 82's win came from the vacated space rather than the moved
+symbols. The layout term dominates and neither estimator models it.
+
+A curated fixed-size section (`.text.hot`, `.text.hot.draw`) is a working set,
+not a list. Removing a member re-addresses every other member.
+
