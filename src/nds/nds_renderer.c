@@ -1414,6 +1414,13 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
 #define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
 #define NDS_RENDERER_HW_ORACLE_EPSILON 0u
+/* 48 is confirmed correct by measurement, not just by the checker that pins it:
+ * Task 93 E0 traced 256 consecutive bind requests on the Boundary battle and
+ * found 22 distinct keys against 25 binds per frame. A cache of 16 or fewer
+ * would miss 87.9% of the trace; 32 already reaches the compulsory floor, so 48
+ * carries real headroom and evicts nothing in steady state -- which is why Task
+ * 81 measured zero evictions and zero uploads in its window.
+ * Re-derive with scripts/census-texture-key-rebuild.ps1. */
 #define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 48u
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY 0u
@@ -3753,6 +3760,19 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #include "nds_native_fighter_owner.generated.inc"
 #include "nds_native_stage_owner.generated.inc"
 #include "dreamland_ds_mesh.generated.inc"
+
+#if NDS_TASK93_TEXKEY_CENSUS
+/* Task 93 E0. Sizes the texture-key rebuild in
+ * ndsRendererHardwareResolveOrBindTexture, the largest renderer symbol left in
+ * the frame. 256 entries covers several frames at the expected bind rate. */
+#define NDS_TASK93_KEY_TRACE_COUNT 256u
+u32 gNdsTask93BindCalls;
+u32 gNdsTask93PreflightCalls;
+u32 gNdsTask93ConsecutiveRepeat;
+u32 gNdsTask93LastKeyHash;
+u32 gNdsTask93KeyTrace[NDS_TASK93_KEY_TRACE_COUNT];
+u32 gNdsTask93KeyTraceNext;
+#endif
 
 #if NDS_TASK90_SHADE_CENSUS
 /* Task 90. The instrument behind NDS_RENDERER_HW_LIGHT_SHADE_CACHE_COUNT: it
@@ -12299,6 +12319,20 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     key_hash = ndsRendererHardwareTextureKeyHash(&key);
 #else
     key_hash = 0u;
+#endif
+#if NDS_TASK93_TEXKEY_CENSUS
+    /* Task 93 E0. Everything above this line is the key rebuild -- ~59 stats
+     * fields, the tile sync, and the extent arithmetic -- and it runs before
+     * the resident-entry lookup can say the answer was already known. This
+     * records the request sequence so a front cache is sized from the trace
+     * rather than from a hit rate, as Task 90 did for the light-shade LUT. */
+    gNdsTask93BindCalls++;
+    if (resolved != NULL) { gNdsTask93PreflightCalls++; }
+    if (key_hash == gNdsTask93LastKeyHash) { gNdsTask93ConsecutiveRepeat++; }
+    gNdsTask93LastKeyHash = key_hash;
+    gNdsTask93KeyTrace[gNdsTask93KeyTraceNext] = key_hash;
+    gNdsTask93KeyTraceNext =
+        (gNdsTask93KeyTraceNext + 1u) % NDS_TASK93_KEY_TRACE_COUNT;
 #endif
 
     fraction_entry = NULL;

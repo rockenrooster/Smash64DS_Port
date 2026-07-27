@@ -122,6 +122,11 @@ NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
 # already holds. Lab only; it adds a 541-entry key array and per-iteration
 # counters, so it must never be on in a measured or published build.
 NDS_TASK90_SHADE_CENSUS ?= 0
+# Task 93 E0 lab probe. Counts texture-key rebuilds in
+# ndsRendererHardwareResolveOrBindTexture and records the key-hash request
+# sequence, so a front-cache is sized from the measured trace the way Task 90
+# sized the light-shade LUT. Lab only.
+NDS_TASK93_TEXKEY_CENSUS ?= 0
 # Task 91 E1 lab probe. Times the generic DObj tree walk and the native-owner
 # revalidation inside the fighter draw, on the tick-HUD ROM -- the split the M2
 # ledger measures but cannot report for the Boundary configuration.
@@ -1572,6 +1577,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
+		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \
 		echo '#define NDS_TASK91_DRAW_PHASE_CENSUS $(NDS_TASK91_DRAW_PHASE_CENSUS)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
