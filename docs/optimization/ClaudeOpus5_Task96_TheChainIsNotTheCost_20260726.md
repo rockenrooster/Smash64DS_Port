@@ -54,6 +54,24 @@ deliberately generous: it charges a full cold main-RAM miss to every one of the
 across only 338 distinct nodes and is therefore substantially dcache-resident by
 construction.
 
+Two further corrections both push the number **down**, and they are worth
+stating because the ceiling is the load-bearing figure in this verdict:
+
+- **30–60 ticks per miss is itself high.** A 32-byte line fill from DS main RAM
+  is on the order of 20–30 ARM9 cycles, which is **10–15 ticks**. Substituting
+  the real figure gives a ceiling of roughly **2,600–3,900 ticks/frame** — the
+  30–60 range was carried in deliberately as a worst case.
+- **The DS ARM946E-S has no hardware data prefetcher.** That removes the usual
+  second argument for flattening (a linear array being prefetchable where a
+  chain is not) and means the entire benefit really is the line-count
+  difference — exactly the quantity measured here, with nothing uncounted
+  sitting behind it.
+
+So the honest ceiling is closer to 3,000 than to 15,584, and the STOP does not
+depend on which end of that range is used: both are below the bar, and the
+larger one is quoted throughout this document only so the verdict survives the
+most favourable assumptions available to the change.
+
 Against Task 95's own bar — *stop proposing single-lever changes worth under
 ~20,000 ticks/frame* — the wholesale rewrite does not qualify even at its
 theoretical maximum.
