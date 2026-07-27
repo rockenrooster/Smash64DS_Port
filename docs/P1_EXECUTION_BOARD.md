@@ -47,8 +47,8 @@ updated in the same kept change.
    owner play/listen pass, reserve gate, Results transition, and teardown proof
    on the exact candidate ROM.
 
-**Performance lane (2026-07-27):** `WORK-H` P95 **1,761,664** against the
-1,120,000 gate. Two search spaces are closed by measurement — exactness-preserving
+**Performance lane (2026-07-27):** `WORK-H` P95 **1,647,424** after Task 104,
+against the 1,120,000 gate. Two search spaces are closed by measurement — exactness-preserving
 (Tasks 78–96) and visual approximation in its payload form (Tasks 98–99). The
 raster axis was opened in `optimization/RASTER_AXIS_CAMPAIGN.md` and **Task 100
 closed it at the first test** — a quarter of the frame's pixels stopped being
@@ -67,23 +67,39 @@ are free" as a below-noise null.
 
 E3/E4 then closed the attribution exactly — all four writers of
 `gNdsTickHudStageTicks` tapped with zero added instrument, partition closing to
-192 ticks (0.05%) against the build's own `STG`. Three unowned sized levers, all
-red, in priority order:
+192 ticks (0.05%) against the build's own `STG`.
 
-1. **`ndsRendererPrepareNativeStageOwner` — 160,588 ticks/frame at one call per
-   frame**, 41% of the stage bucket and 12% of all frame work. Never profiled by
-   any task. Split it internally first with
-   `scripts/census-stage-run-phases.ps1`'s method. **Highest-value unowned row on
-   the board.**
+**Task 104 took the first cut out of it — KEEP, default on, Boundary green.**
+On each of the three Task 36 replay-hit segments the owner cleared a 1,292-byte
+`NDSRendererStats` and then overwrote all 1,292 bytes with a copy, to transport
+**four live bytes** (`sync_command_count`, the only member read after the segment
+loop). Eliding both accesses: `STG` P50 **−22,016**, `WORK-H` P50 **−26,240**,
+P95 **−28,352**, VBlank 4-interval **39 → 28**, `FTR` flat. `WORK-H` P95 is now
+**1,647,424**. Detail in `optimization/ClaudeOpus5_Task104_FourLiveBytes_20260727.md`.
+
+That result also explains Task 103 E7's 28% realisation and produced a standing
+rule: **size a memory lever by bytes that stop being touched, not instructions
+that stop executing** — removing one of two accesses to the same cache lines
+relocates the misses rather than eliminating them.
+
+Three unowned sized levers remain, all red, in priority order:
+
+1. **The `PrepareRun` head — 67,119 ticks/frame over 21 calls**, the largest
+   block inside `ndsRendererPrepareNativeStageOwner` (now ~138,600 after Task
+   104) that nothing has attacked. Long span, so the sizing is trustworthy.
+   Task 81's closed stage memo does **not** cover it: that was a texture-identity
+   memo at the bind seam, and Task 81 measured zero stage texture binds in
+   battle. **Highest-value unowned row on the board.**
 2. **`ndsRendererAdapterPrepareNativeStageMatrices` — 55,077 ticks/frame at one
-   call per frame.** Same shape, same method.
+   call per frame.** Never profiled; same in-place span method.
 3. **Bring the 21 generic stage runs under the Task 36 replay** — 63,607
-   ticks/frame for 103 triangles, less the replay's own ~1,785/run.
+   ticks/frame for 103 triangles, less the replay's own ~1,785/run. Note this
+   cannot be done by widening `NDS_TASK36_REPLAY_SEGMENT_MASK`, which would
+   freeze dynamic stage geometry; mode 2 replays complete rigid segments only.
 
-Both (1) and (2) are per-frame preparation over a topology Task 44 has already
-proven unchanged, which is the shape a memo or incremental update attacks. With
-one call per frame there is no per-run transfer problem of the kind that killed
-Task 79 E1.
+(1) and (2) are per-frame preparation over a topology Task 44 has already proven
+unchanged, which is the shape an incremental update attacks. With one call per
+frame there is no per-run transfer problem of the kind that killed Task 79 E1.
 
 Task 62's reduced DS-native static mesh remains a **REVERT**. A source-exact
 follow-up now preserves material/UV/color/alpha and matches the flag-0 top

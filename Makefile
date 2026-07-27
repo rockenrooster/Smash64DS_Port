@@ -149,6 +149,27 @@ NDS_TASK91_DRAW_PHASE_CENSUS ?= 0
 # capture-once replay. Counters are cumulative; sample with a two-stop delta.
 # Lab only, default 0.
 NDS_TASK103_STAGE_RUN_PHASE ?= 0
+# Task 104: elide the dead stats traffic on a Task 36 replay hit.
+#
+# The hit path cleared 1,292 bytes of `preflight_stats`, then overwrote all
+# 1,292 with `*stats = owner->segment_stats[i]`, to transport exactly one live
+# member -- `sync_command_count`, the only field read after the segment loop.
+# Every other member is overwritten before its next read, because the following
+# segment starts with `ndsRendererInitStats`.
+#
+# Task 84 E1 priced this struct at 2.74 ticks/byte: 1,292 bytes span ~41 cache
+# lines that the renderer evicts between segments. Three hit segments a frame
+# were paying the clear plus both sides of the copy -- ~3,876 bytes each.
+#
+# Task 103 E7 removed only the clear and realised 28% of its predicted saving:
+# the copy still touched those lines, so the misses relocated into it instead of
+# disappearing (Task 84 E1.4's mechanism). This removes both accesses together,
+# which is the difference between a miss that moves and a miss that vanishes.
+#
+# Measured KEEP, default on: STG P50 -22,016, WORK-H P50 -26,240, P95 -28,352,
+# FTR flat (-704), SRC flat (+1,088), VBlank 4-interval 39 -> 28. Kept as a flag
+# so the A/B stays reproducible.
+NDS_TASK104_STAGE_STATS_ELISION ?= 1
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1598,6 +1619,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \
 		echo '#define NDS_TASK91_DRAW_PHASE_CENSUS $(NDS_TASK91_DRAW_PHASE_CENSUS)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
+		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \

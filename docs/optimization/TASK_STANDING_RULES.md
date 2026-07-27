@@ -467,18 +467,42 @@ about to work on is actually most of it**; the in-place span method in
 
 ## Trust a span in proportion to its length (Task 103 E7, 2026-07-27)
 
-The E-series censuses bracket code with two `cpuGetTiming()` reads. Task 103 E6
-timed the per-segment stats/traversal reset at **3,277 ticks per call** and sized
-a lever at ~9,800 from it. The lever was built as an exact reordering and
-measured at **-2,752 on `STG`** -- 3.5x under, and the frame got worse on `FTR`
-collateral. The reset really costs ~900 per call; the rest was the bracket.
-
-Two reads cost on the order of a hundred ticks, so a span of a few hundred is
-mostly instrument. A span of a few thousand is not -- Task 103's 67,119-tick
-head at 3,196 per call is ~4% instrument and is trustworthy.
+The E-series censuses bracket code with two `cpuGetTiming()` reads. Two reads
+cost on the order of a hundred ticks, so a span of a few hundred is mostly
+instrument and a span of a few thousand is not.
 
 **Before sizing a lever from an E-series span, check the per-call figure. Under
 ~1,000, re-derive it a different way (call counts times a known unit cost, or a
 longer enclosing span) before building anything.** Combine this with the
 noise-floor rule above: a lever predicted under ~7,000 cannot be resolved by an
 A/B at all, so measure it differently or leave it.
+
+> **Corrected by Task 104 (2026-07-27).** This rule was first written blaming
+> bracket over-attribution for Task 103 E7's 3.5x miss, and cited E6's 3,277
+> ticks/call reset as an inflated span. That attribution was wrong. Task 84 E1
+> had independently priced the same clear at 3,544 ticks/call by duplication,
+> with no bracket at all, and the two agree. E7 missed for the reason in the next
+> rule, not because the instrument lied. The guidance above still holds on its
+> own terms; the example did not belong to it.
+
+## Size a memory lever by bytes that stop being touched (Task 104, 2026-07-27)
+
+Task 103 E7 removed a dead 1,292-byte clear and predicted 9,831. It measured
+**-2,752, 28%.** Task 104 removed the clear *and* the 1,292-byte copy that
+followed it on the same struct, and measured **-22,016 on `STG`** -- 8x more from
+deleting a second access to bytes the first change had already stopped clearing.
+
+Task 84 E1.4 had named the mechanism in advance: a clear warms the cache lines
+that the next writer would otherwise miss on. Remove one of two accesses to the
+same lines and the misses **relocate into the survivor** instead of disappearing.
+Remove both and there is nothing left to relocate into.
+
+**Count a memory-traffic lever in bytes that stop being touched at all, not in
+instructions that stop executing.** If any other code still walks those cache
+lines in the same frame, assume roughly a quarter of the nominal saving until
+measured -- which usually puts the lever under the noise floor and means the
+honest move is to widen the change until the bytes go completely untouched, not
+to build the partial one and read its null as a refutation.
+
+This is the general form of what closed Task 84's Routes 1 and 2, and it is why
+Route 3 paid: the win came from the bytes going cold, not from the call count.

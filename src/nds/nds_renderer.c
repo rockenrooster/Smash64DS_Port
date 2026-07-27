@@ -4424,7 +4424,29 @@ static s32 ndsRendererTask36ReplayUsePreparedSegment(
     {
         return FALSE;
     }
+#if NDS_TASK104_STAGE_STATS_ELISION
+    /* Task 104: the whole-struct assignment this replaces transported exactly
+     * four live bytes. `preflight_stats` is dead across a replay hit — the next
+     * segment's `ndsRendererInitStats` clears it, and once the segment loop
+     * ends the only member anything reads is `sync_command_count`, which is
+     * assigned into the caller's stats. Every other member is overwritten
+     * before its next read, so copying 1,292 bytes moved one u32.
+     *
+     * The clear that preceded the copy was dead for the same reason, and the
+     * pair cost ~3,876 bytes of cold traffic on each of the three hit segments
+     * per frame. Task 84 E1 priced this struct at 2.74 ticks/byte: 1,292 bytes
+     * span ~41 cache lines and the renderer evicts them between segments.
+     *
+     * Task 103 E7 removed the clear on its own and realised only 28% of the
+     * predicted saving, because the copy still touched the same lines and the
+     * misses relocated into it rather than disappearing — the mechanism Task 84
+     * E1.4 predicted. Both accesses have to go together or neither is worth
+     * removing, which is why the caller hoists this check above the clear. */
+    stats->sync_command_count =
+        owner->segment_stats[segment_index].sync_command_count;
+#else
     *stats = owner->segment_stats[segment_index];
+#endif
     *epoch_mask |= owner->segment_epoch_mask[segment_index];
     return TRUE;
 }
@@ -21348,6 +21370,24 @@ s32 ndsRendererPrepareNativeStageOwner(
 #if NDS_TASK103_STAGE_RUN_PHASE
         task103_own_mark = cpuGetTiming();
 #endif
+#if (NDS_TASK36_HW_COMPOSE == 2) && NDS_TASK104_STAGE_STATS_ELISION
+        /* Task 104: tested before the clear rather than after it. The
+         * eligibility predicate reads nothing out of the incoming stats — only
+         * the replay owner's own flags and the segment mask — so moving it is
+         * order-independent. What changes is that a hit no longer clears 1,292
+         * bytes on behalf of a copy that overwrote every one of them. */
+        if (ndsRendererTask36ReplayUsePreparedSegment(
+                segment_index,
+                &sNdsNativeStageOwnerExecution.preflight_stats,
+                &epoch_mask) != FALSE)
+        {
+#if NDS_TASK103_STAGE_RUN_PHASE
+            gNdsTask103OwnReuseTicks += cpuGetTiming() - task103_own_mark;
+            gNdsTask103OwnReuseCount++;
+#endif
+            continue;
+        }
+#endif
         ndsRendererInitStats(&sNdsNativeStageOwnerExecution.preflight_stats);
         sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
             segment->initial_geometry;
@@ -21361,6 +21401,7 @@ s32 ndsRendererPrepareNativeStageOwner(
         task103_own_mark = cpuGetTiming();
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
+#if !NDS_TASK104_STAGE_STATS_ELISION
         if (ndsRendererTask36ReplayUsePreparedSegment(
                 segment_index,
                 &sNdsNativeStageOwnerExecution.preflight_stats,
@@ -21372,6 +21413,7 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
             continue;
         }
+#endif
 #if NDS_TASK103_STAGE_RUN_PHASE
         gNdsTask103OwnReuseTicks += cpuGetTiming() - task103_own_mark;
         gNdsTask103OwnReuseMissCount++;
