@@ -82,6 +82,16 @@ rule: **size a memory lever by bytes that stop being touched, not instructions
 that stop executing** — removing one of two accesses to the same cache lines
 relocates the misses rather than eliminating them.
 
+**Task 105 then closed the rest of that axis at E0, for one census run and no
+builds.** `memset`'s residue is ~16,018 ticks split five ways (Task 84 E1.3
+priced `InitStats` at 72% of the family's time), and a re-attributed `memcpy`
+census found ~294 matrix copies/frame across five sites worth 3,300–10,600
+nominal each — every one discounting to 1,000–3,000 under Task 104's own rule,
+below the floor. Two rows in that census are inlined-range artifacts and are
+marked as such. **The memory-traffic axis is harvested;** the residue is
+structural, in `NDSRendererMatrix20p12` being 4×4/64 B for affine transforms the
+DS loads as 4×3/48 B, and is not worth a Runtime 1 refactor.
+
 Three unowned sized levers remain, all red, in priority order:
 
 1. **The `PrepareRun` head — 67,119 ticks/frame over 21 calls**, the largest
