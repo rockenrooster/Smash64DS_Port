@@ -319,6 +319,24 @@ joint hierarchy transform. A perfect animation compiler falls 15,450 short of
 this task's own target, and Task 77 E1 already removed the approximations that
 would have widened it.
 
+> **CORRECTED by Task 92 E0 (2026-07-26): 82,807 was 2.2x too small.** That
+> figure counted the animation symbols' OWN cycles. Caller attribution of
+> `__aeabi_fadd`/`__aeabi_fmul` shows the animation path owns **64.1%** of that
+> traffic — `gcPlayDObjAnimJoint` alone is 54.2% — which is 76,864 ticks/frame of
+> soft-float charged to the helpers rather than to animation. True cost is
+> **~183,564 ticks/frame**, the largest single subsystem in the frame, and it
+> clears the >=100,000 gate it was stopped on. See
+> `ClaudeOpus5_Task92_SoftFloatCallers_20260726.md`.
+>
+> This does **not** restore Task 78 as scoped: Task 77 E1 measured the
+> cosmetic-only joint set as empty, so quantization, rate reduction and lossy
+> pose tables remain unavailable, and 73% of the float is state-hash frozen. It
+> authorizes a **re-scoped** Task 78 whose win comes only from
+> exactness-preserving reorganization — flat contiguous channel arrays replacing
+> the `aobj->next` walk, precomputed traversal order, and hoisting the two
+> loop-invariant tests out of the per-channel loop. The animation class is 68.4%
+> stall, so its recoverable half is in data layout, not arithmetic.
+
 Measured ranking of the frame (work = 1,515,768 after idle):
 
 | family | ticks/frame | % of work |
