@@ -14026,6 +14026,142 @@ ndsRendererHardwareClipTriangleNearPlane(
     }
     return output_count;
 }
+
+static void __attribute__((noinline, cold, optimize("Os")))
+ndsRendererHardwareEmitClippedVertex(
+    const NDSRendererProjectedClipVertex *vertex,
+    u32 context_flags,
+    s32 projected_z)
+{
+    glColor(vertex->packed_color);
+    if ((context_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE) != 0u)
+    {
+        glTexCoord2t16((s16)vertex->s, (s16)vertex->t);
+    }
+    /* Same depth choice ndsRendererHardwareSubmitVertex makes, on the clipped
+     * vertex instead of the input one.  Its remaining branch -- raw
+     * model-space glVertex3v16 -- cannot occur here: it needs a zbuffered,
+     * non-decal, non-prim triangle, and a CPU-projected one of those has
+     * already had zbuffered cleared by the caller. */
+    if ((context_flags & NDS_RENDERER_VERTEX_CONTEXT_PRIM_DEPTH) != 0u)
+    {
+        ndsRendererHardwareClipVertex(&vertex->clip, projected_z);
+    }
+    else if ((context_flags & NDS_RENDERER_VERTEX_CONTEXT_DECAL_DEPTH) != 0u)
+    {
+        ndsRendererHardwareClipVertex(
+            &vertex->clip,
+            vertex->clip.z - NDS_RENDERER_HW_DECAL_DEPTH_BIAS);
+    }
+    else if ((context_flags &
+              NDS_RENDERER_VERTEX_CONTEXT_SOURCE_CLIP_DEPTH) != 0u)
+    {
+        ndsRendererHardwareClipVertex(&vertex->clip, vertex->clip.z);
+    }
+    else
+    {
+        ndsRendererHardwareClipVertexNdcDepth(&vertex->clip, projected_z);
+    }
+}
+
+/* The source RSP clips at the near plane before the perspective divide, so a
+ * triangle that straddles it still draws its front part.  The port used to
+ * drop the whole triangle here, which is invisible in the automated capture
+ * (the fixed camera never crosses the plane) but opens holes in geometry the
+ * player can push into the camera -- BUGS.md #10.  Clip it the way the native
+ * stage path already does, reusing that path's proven clipper. */
+static u32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererHardwareSubmitNearClippedTriangle(
+    NDSRendererStats *stats,
+    NDSRendererTraversalState *state,
+    u32 i0, u32 i1, u32 i2,
+    s32 projected_z)
+{
+    NDSRendererProjectedClipVertex input[3];
+    NDSRendererProjectedClipVertex clipped[4];
+    u32 corner_index[3];
+    u32 context_flags = state->texture_prepare_vertex_flags;
+    u32 corner;
+    u32 clipped_count;
+    u32 fan_index;
+    u32 emitted;
+
+    corner_index[0] = i0;
+    corner_index[1] = i1;
+    corner_index[2] = i2;
+    for (corner = 0u; corner < 3u; corner++)
+    {
+        u32 vertex_index = corner_index[corner];
+        u32 vertex_mask = 1u << vertex_index;
+        const NDSRendererInputVertex *vtx =
+            &state->input_vertices[vertex_index];
+
+        input[corner].clip = state->vertices[vertex_index];
+        if ((state->prepared_vertex_color_valid_mask & vertex_mask) != 0u)
+        {
+            input[corner].packed_color =
+                state->prepared_vertex_colors[vertex_index];
+        }
+        else
+        {
+            input[corner].packed_color = ndsRendererHardwarePackedVertexColor(
+                stats, vtx, state->texture_prepare_material_color,
+                (s32)(context_flags &
+                      NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL),
+                (s32)(context_flags &
+                      NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX),
+                state->vertex_colors[vertex_index],
+                ((state->vertex_color_valid_mask & vertex_mask) != 0u) ?
+                    TRUE : FALSE,
+                state->color_modulate);
+        }
+        if ((state->prepared_texcoord_valid_mask & vertex_mask) != 0u)
+        {
+            input[corner].s = state->prepared_texcoord_s[vertex_index];
+            input[corner].t = state->prepared_texcoord_t[vertex_index];
+        }
+        else
+        {
+            input[corner].s = ndsRendererHardwareTexCoord(
+                vtx->s, state->texture_prepare_scale_s,
+                state->texture_prepare_origin_s,
+                state->texture_prepare_offset);
+            input[corner].t = ndsRendererHardwareTexCoord(
+                vtx->t, state->texture_prepare_scale_t,
+                state->texture_prepare_origin_t,
+                state->texture_prepare_offset);
+        }
+    }
+    clipped_count = ndsRendererHardwareClipTriangleNearPlane(input, clipped);
+    if (clipped_count < 3u)
+    {
+        /* Wholly behind the plane: nothing to draw, and the source would not
+         * have drawn it either. */
+        return 0u;
+    }
+    emitted = 0u;
+    for (fan_index = 1u; fan_index + 1u < clipped_count; fan_index++)
+    {
+        /* The vertex emitters drop a w==0 vertex silently, which would leave
+         * this triangle two vertices long and shift every later triangle in
+         * the batch.  The old near-plane reject made that unreachable by
+         * requiring w>0 on all three corners; keep it unreachable. */
+        if ((clipped[0].clip.w == 0) ||
+            (clipped[fan_index].clip.w == 0) ||
+            (clipped[fan_index + 1u].clip.w == 0))
+        {
+            continue;
+        }
+        ndsRendererHardwareEmitClippedVertex(
+            &clipped[0], context_flags, projected_z);
+        ndsRendererHardwareEmitClippedVertex(
+            &clipped[fan_index], context_flags, projected_z);
+        ndsRendererHardwareEmitClippedVertex(
+            &clipped[fan_index + 1u], context_flags, projected_z);
+        emitted++;
+    }
+    return emitted;
+}
 #endif
 
 static s32 ndsRendererHardwareTriangleInsideNearPlane(
@@ -14165,6 +14301,9 @@ ndsRendererSubmitHardwareTriangle(
     s32 raw_submit;
     s32 source_clip_depth;
     s32 no_oracle;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    s32 near_clipped = FALSE;
+#endif
     u32 raw_snapshot_id = NDS_RENDERER_MATRIX_SNAPSHOT_INVALID;
     const NDSRendererMatrixSnapshot *raw_snapshot = NULL;
     NDSRendererHWSubmitClass submit_class;
@@ -14327,9 +14466,14 @@ ndsRendererSubmitHardwareTriangle(
              &state->vertices[i0], &state->vertices[i1],
              &state->vertices[i2]) == FALSE))
     {
-        /* The source RSP clips before perspective divide. Conservatively drop
-         * CPU-projected triangles that cross its near plane; emitting any of
-         * their post-divide vertices can create a screen-spanning primitive. */
+        /* The source RSP clips before the perspective divide, so a triangle
+         * that straddles its near plane still draws its front part.  Clip it
+         * the same way rather than dropping it (BUGS.md #10); emitting the
+         * raw post-divide vertices is what would create a screen-spanning
+         * primitive, and the clipper never does that. */
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        near_clipped = TRUE;
+#else
         if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
         {
             (void)ndsRendererHardwareNextProjectedDepth();
@@ -14338,14 +14482,13 @@ ndsRendererSubmitHardwareTriangle(
         {
             ndsRendererHardwareEnterProjectedForeground();
         }
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
         semantic_event.outcome = NDS_RENDERER_SEMANTIC_TRANSFORM_REJECT;
         semantic_event.submit_class = NDS_RENDERER_HW_SUBMIT_REJECT;
         ndsRendererSemanticCommitEvent(&semantic_event);
-#endif
         ndsRendererProfileRecordNearPlaneTriangleReject();
         ndsRendererProfileRecordSubmitClass(NDS_RENDERER_HW_SUBMIT_REJECT);
         return;
+#endif
     }
     if (no_oracle == FALSE)
     {
@@ -14587,6 +14730,18 @@ ndsRendererSubmitHardwareTriangle(
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     vertex_submit_start = cpuGetTiming();
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    if (near_clipped != FALSE)
+    {
+        if (ndsRendererHardwareSubmitNearClippedTriangle(
+                stats, state, i0, i1, i2, projected_z[0]) == 0u)
+        {
+            ndsRendererProfileRecordNearPlaneTriangleReject();
+        }
+    }
+    else
+#endif
+    {
     ndsRendererHardwareSubmitVertex(stats, state, i0, projected_z[0]
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
                                     , &semantic_event.vertex[0]
@@ -14602,6 +14757,7 @@ ndsRendererSubmitHardwareTriangle(
                                     , &semantic_event.vertex[2]
 #endif
                                     );
+    }
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererProfileVertexSubmitTicks +=
         cpuGetTiming() - vertex_submit_start;

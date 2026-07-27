@@ -96,11 +96,15 @@ AI Agent should mark fixed items with FIXED prefix
   same effect. Rebirth now has its own white/cyan ring and Death keeps the red
   one. What remains is the untextured-primitive gap: the original KO burst is a
   particle script, and a ring is the stand-in. That half is P2.
--mario underside area geometry missing
-  Reproduced and localized 2026-07-27 from artifacts/visibility/latest.png:
-  Dream Land's grass and a flower show THROUGH Mario's lower torso, in the
-  band where the overalls meet the legs. It is a real hole, not a shading
-  artifact -- the pixels are stage background, not Mario's interior.
+-mario underside area geometry missing  [FIXED -- needs an eye check]
+  Correction first: an earlier note here claimed the hole was reproduced in
+  artifacts/visibility/latest.png. It was not. The harness `mario` region is
+  the fixed box 125,85,45,55, which in that capture holds the stage platform
+  rather than Mario, and all 76 of its dominant-green pixels sit in the box's
+  bottom four rows -- that is ground, not background seen through him. The
+  automated capture has never shown this bug and, per the measurement below,
+  structurally cannot. The only sighting is the owner's pause-orbit-camera
+  screenshot taken after a jump.
   Mechanism narrowed, cause not yet found:
   - The fighter DLs run with geometry mode 0x222005 =
     G_ZBUFFER|G_SHADE|G_CULL_BACK|G_LIGHTING|G_SHADING_SMOOTH (read off
@@ -166,17 +170,44 @@ AI Agent should mark fixed items with FIXED prefix
   9. Vertex overflow in the DS 4.12 conversion. NDS_RENDERER_HW_WORLD_UNIT_SHIFT
      is 8, so the model coordinate is shifted left by 4 and saturates
      past |2047|. Mario's torso maxes at 92. Not close.
-  So all 320 triangles exist, are closed, and reach the hardware -- and a
-  hole is still visible. They are landing in the wrong place. That also
-  explains the culling probe: forcing POLY_CULL_NONE cannot fill a gap
-  between two solid parts, because no surface lies along that ray at all.
-  NEXT: the torso is a single display list under a single matrix, so a bad
-  torso matrix would move the whole torso, not hole it. The seam is
-  between parts. Suspect the leg chain: both level-2 leg nodes carry the
-  compound rotation {-pi/2, 0, -pi/2} and hang the thigh/shin/foot off it,
-  and the reported band is exactly where the thigh should overlap the
-  torso's lower rim. Compose the rest-pose joint transforms for
-  dMarioModel_JointTree entries 15-17 and 20-24 and compare the thigh's
-  world-space top against the torso's bottom rim (y = -52..-74). Bug #2 in
-  this same pass was a local matrix used where a world matrix was
-  required, which is the same class of error.
+  So all 320 triangles are counted as submitted every frame, and a hole is
+  still visible. The counter is the clue, not the alibi: it increments
+  before submission, so a triangle the renderer discards after counting is
+  invisible to it.
+  FOUND AND FIXED 2026-07-27 -- nds_renderer.c dropped triangles the source
+  clips. The N64 RSP clips at the near plane BEFORE the perspective divide,
+  so a triangle straddling that plane still draws its front part. The port
+  instead rejected the whole triangle (the old near-plane guard in
+  ndsRendererSubmitHardwareTriangle), because emitting raw post-divide
+  vertices with w<=0 wraps them across the screen. Dropping was the safe
+  half of the answer and was never finished.
+  It is finished now: the triangle is Sutherland-Hodgman clipped against the
+  near plane and fanned, which is what the source does. No new algorithm was
+  written -- ndsRendererHardwareClipTriangleNearPlane already existed and is
+  proven in production, but its only caller was the native stage path
+  (ndsRendererNativeStageEmitNearClippedTriangle). The generic path that
+  draws fighters never got it. Two cold helpers now bridge it:
+  ndsRendererHardwareSubmitNearClippedTriangle builds the clip input from
+  the same prepared colour/texcoord caches ndsRendererHardwareSubmitVertex
+  uses, and ndsRendererHardwareEmitClippedVertex reproduces its depth
+  choice (prim / decal / source-clip / NDC) on the clipped vertex.
+  One hazard the old drop was hiding, now closed explicitly: the vertex
+  emitters return without emitting when w==0, which would leave a triangle
+  two vertices long and shift every later triangle in the batch. The reject
+  made that unreachable by requiring w>0 on all three corners; the fan now
+  skips any output triangle carrying a w==0 corner instead.
+  Why this is consistent with everything above: the guard only fires when
+  geometry crosses the near plane, i.e. when the camera is close. Boundary
+  reports rej0 -- its fixed camera never crosses it -- which is exactly why
+  320/320 and "no drops" were both true while geometry went missing under a
+  close orbit camera, and why the automated capture cannot show either the
+  bug or the fix.
+  Cost and evidence: both helpers are noinline/cold/Os and linked outside
+  ITCM (0x0200xxxx); ndsRendererSubmitHardwareTriangle grew 24 bytes, ITCM
+  31360/32768. Latest profile green with every fighter counter identical to
+  baseline -- ftrTri p0=67840 (Mario 320/frame), p1=64872 (Fox 306/frame),
+  tri=828, vtx=2484, gxram=465/1422, rej0 -- so the change is provably inert
+  in the verified configuration and cannot have regressed it.
+  OPEN: the owner's pause-orbit camera is the only oracle that can confirm
+  the visible fix. Orbit under Mario after a jump, as in the original
+  report.

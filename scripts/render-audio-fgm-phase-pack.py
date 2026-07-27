@@ -46,7 +46,7 @@ REPEAT_ORACLE_CYCLES = 3
 # pushing for the rest of the 470 ticks.
 #
 # 626 answered the same problem by rendering the loop out AOT, but that
-# costs one buffer per second of sound and this cue runs 7.8 s.  A DS
+# costs one buffer per second of sound and this cue runs 2.70 s.  A DS
 # hardware loop costs nothing: the channel latches predictor/index when it
 # reaches PNT and restores them on every repeat, so putting PNT at the
 # first word after the IMA header makes the latched state the header state
