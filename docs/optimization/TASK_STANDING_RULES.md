@@ -263,3 +263,31 @@ symbols. The layout term dominates and neither estimator models it.
 A curated fixed-size section (`.text.hot`, `.text.hot.draw`) is a working set,
 not a list. Removing a member re-addresses every other member.
 
+## The layout is saturated (Task 95, 2026-07-26)
+
+**Five consecutive single-lever changes have regressed for one shared reason:
+editing a hot translation unit re-addresses its neighbours, and the collateral
+now exceeds the gain.**
+
+| task | change | collateral |
+|---|---|---|
+| 87 | inline more 64-byte copies | +17,728 |
+| 88 | remove redundant clears | +9,536 |
+| 89 | refill `.text.hot.draw` | +11,648 |
+| 94 | admit a function to ITCM | `STG` +3,712 |
+| 95 | hoist animation invariants | `STG` +3,392 / +5,056 |
+
+The tell in 94 and 95 is identical and unambiguous: `STG` rose in an arm whose
+change the stage path never executes. Nothing moved except addresses.
+
+Task 95 is the sharpest case because **the mechanism worked** -- the hoist
+improved `FTR` on 98 of 128 frames, median -2,688, exactly as sized -- and the
+frame still got worse.
+
+Practical rule: **stop proposing single-lever changes worth under ~20,000
+ticks/frame.** At this local optimum the re-addressing noise floor is comparable
+to the gain, so such a change is a coin flip regardless of how sound its
+mechanism is. A lever is only worth pulling now if it changes enough at once
+that the working set itself shrinks -- a data-structure or representation
+rewrite, not a hoist, an inline, or a placement move.
+
