@@ -170,6 +170,11 @@ NDS_TASK103_STAGE_RUN_PHASE ?= 0
 # FTR flat (-704), SRC flat (+1,088), VBlank 4-interval 39 -> 28. Kept as a flag
 # so the A/B stays reproducible.
 NDS_TASK104_STAGE_STATS_ELISION ?= 1
+# Task 106 E0: logical updates per presented frame. Ships at 2 (the source 60 Hz
+# simulation against a 30 Hz present). Building with 1 prices what a 30 Hz
+# simulation would save; it is a sizing arm only, uncompensated, and plays at
+# half speed. Do not publish a ROM built with 1.
+NDS_TASK106_UPDATES_PER_PRESENT ?= 2
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1620,6 +1625,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK91_DRAW_PHASE_CENSUS $(NDS_TASK91_DRAW_PHASE_CENSUS)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
+		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \

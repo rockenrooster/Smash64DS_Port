@@ -4226,7 +4226,22 @@ extern u32 ndsSceneMipCacheHoldLogic(void);
 #define NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX 240u
 #define NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX 60u
 #define NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX 3600u
-#define NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT 2u
+/* Task 106 E0 sizing lever. `SRC` is exactly this many logical updates per
+ * presented frame -- `ndsRunMarioFoxProofUpdate` is the only writer of
+ * `gNdsTickHudSourceTicks`, and it brackets `scVSBattleFuncUpdate`. Building
+ * with 1 prices what a 30 Hz simulation would save, which `PROJECT_GOAL.md`
+ * ranks third in the sacrifice order, above gameplay fidelity and frame rate.
+ *
+ * A build with 1 is NOT a candidate: it is uncompensated, so the match advances
+ * one logical tick per present and plays at half speed. It measures the ceiling
+ * and nothing else. Compensating it -- advancing timers, physics integration
+ * and animation by two frames per tick -- is the real work, and is the part
+ * that needs the owner's "substantially the same gameplay experience" call. */
+#ifndef NDS_TASK106_UPDATES_PER_PRESENT
+#define NDS_TASK106_UPDATES_PER_PRESENT 2u
+#endif
+#define NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT \
+    NDS_TASK106_UPDATES_PER_PRESENT
 #define NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS 2u
 #define NDS_BATTLE_PLAYABLE_EARLY_COMBAT_TICKS 1800u
 
