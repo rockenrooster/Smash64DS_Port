@@ -92,7 +92,28 @@ marked as such. **The memory-traffic axis is harvested;** the residue is
 structural, in `NDSRendererMatrix20p12` being 4×4/64 B for affine transforms the
 DS loads as 4×3/48 B, and is not worth a Runtime 1 refactor.
 
-Three unowned sized levers remain, all red, in priority order:
+**Task 106/107 E0 then sized the last untested large lever and re-aimed the
+lane.** A 30 Hz simulation (`NDS_TASK106_UPDATES_PER_PRESENT=1`, default 2,
+nothing shipped) is worth `WORK-H` P50 −158,592, taking the median to
+**1,119,616 — 384 ticks under the gate**. But `WORK-H` P95 falls only −119,744,
+because the `SRC` excursion above its own median is **+518,016 on the control
+and +522,720 on the candidate — unchanged**. Halving the update rate halves
+median `SRC` and leaves its tail intact: the excursion is asset loading driven
+by animation events, and fewer update ticks do not reduce how many distinct
+animations a match loads.
+
+**The gate is a tail statistic and the tail has one owner.** Task 71 identified
+it — a synchronous NitroFS open, cartridge read, relocation and figatree parse
+inside the frame that needs the animation. Tasks 72 and 76 took two of its three
+items. **The third, row 51's Task 75 preload bridge, is now the highest-value
+unowned row on the board**: preloading the match's fighter animations at match
+start removes the read, the copy and the relocation from gameplay entirely,
+which is the trade `PROJECT_GOAL.md` most directly endorses. Task 71 §5's
+confirmation obligation is still open and is its E0 — one counter on the load
+entry point, sampled per frame through the ring, to show that the high-`SRC`
+frames are all loads rather than the one frame profiled so far.
+
+Stage levers, still unowned, now second in priority:
 
 1. **The `PrepareRun` head — 67,119 ticks/frame over 21 calls**, the largest
    block inside `ndsRendererPrepareNativeStageOwner` (now ~138,600 after Task
