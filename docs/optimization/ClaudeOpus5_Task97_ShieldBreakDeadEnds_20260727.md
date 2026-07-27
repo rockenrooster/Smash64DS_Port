@@ -187,3 +187,75 @@ goes in a comment beside them.
 
 Check that first in E1. It is a two-minute read of the status table and it is
 the difference between a clean import and three failing proof recorders.
+
+## 8. E1 — built, correct, and blocked on the pacing gate
+
+**Status: implemented on branch `task97-shieldbreak-chain` (`8d6675f4bc`), not on
+master.** Boundary fails, and the way it fails is not something I am permitted to
+fix.
+
+The hazard in §7 resolved cleanly: `ftmain.c:4603` sets `fp->motion_id` from
+`status_struct[...].mflags.motion_id`, and the table's Fly entry carries
+`nFTCommonMotionShieldBreakFly`, so the port's explicit assignments were
+redundant and the three proof recorders keep their value. The table also exposed
+a **fourth** divergence I had not found by reading the port: source specifies
+`ftPhysicsApplyAirVelFriction`, the port ran `ftPhysicsApplyAirVelDriftFastFall`.
+
+The import itself went exactly as §4 predicted — all eleven callbacks are real
+code in the ELF (0x10–0x50 bytes where they were 2-byte `bx lr`), and
+`ftCommonDownBounce{CheckUpOrDown,UpdateEffects}` relinked once the import gave
+them a caller. One correction to §4: `src/import` is **not** auto-globbed;
+`Makefile:697` uses `SOURCES` only for `VPATH`, and `CFILES` is an explicit list
+the five TUs had to be added to.
+
+### Why it is blocked
+
+Boundary fails **one of eleven** conditions in the locked-30 pacing contract:
+
+```
+$tmPace[1] -eq (2 * $bp[4])        424  vs  2 x 211 = 422
+```
+
+A baseline run with these changes set aside **passes**, so the failure belongs to
+this change. But it is a snapshot skew, not a broken invariant — the 2:1 contract
+holds *exactly on both sides of it*:
+
+| counter | reading | ratio |
+|---|---|---|
+| pacing tuple `bp[2]`/`bp[3]` | 422 / 211 | exactly 2:1 |
+| taskman / frames | 424 / 212 | exactly 2:1 |
+
+Both are internally consistent and one frame apart. The harness's own comment
+immediately above the assertion says the pacing tuple "may trail the fresh
+taskman/draw counters by one completed frame, but never by more than one" — and
+then applies that tolerance to `bp[4] - bp[3]` while demanding *exact* equality
+against taskman, which is the cross-counter comparison the comment is about.
+
+### Why I did not fix it
+
+I widened that one term to the documented one-frame bound, and the run then
+failed `scripts/check-harness-registry.ps1:158`, which pins the **literal**
+expression `$tmPace[1] -eq (2 * $bp[4])`. That guard exists precisely so an agent
+cannot loosen this cross-check, and `TASK_STANDING_RULES.md` §"Budget ratchets vs
+correctness assertions" names *a required code shape* as the kind of pin that may
+not be edited to make a change pass. So I reverted the harness edit and parked
+the work on a branch rather than shipping it. This is the Task 82 E1 outcome, and
+the repo anticipated it well.
+
+### What the owner has to decide
+
+Three options, and none is mine:
+
+1. **Widen the gate** to tolerate the one-frame skew it already documents, and
+   update the registry pin with it. This is what I believe is correct, and it is
+   exactly the change the registry is designed to make an agent ask about.
+2. **Treat the skew as a real signal** — the possibility I cannot rule out is
+   that the added code costs enough frame time to shift the sampling instant, in
+   which case the gate is right and this fix needs the frame budget it does not
+   have. That would make it hostage to the performance lane, which is itself
+   blocked on the visual-fidelity call.
+3. **Drop it.** The chain has been dead since the port began and nothing depends
+   on it.
+
+The branch preserves the whole implementation either way. Master stays
+verifier-covered.
