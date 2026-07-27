@@ -336,6 +336,27 @@ would have widened it.
 > the `aobj->next` walk, precomputed traversal order, and hoisting the two
 > loop-invariant tests out of the per-channel loop. The animation class is 68.4%
 > stall, so its recoverable half is in data layout, not arithmetic.
+>
+> **Task 94 scouted the entry point so the next session does not have to.** The
+> interposition mechanism is established and clean: `src/import/battleship_sys_objanim.c`
+> `#define`s a decomp symbol to a port-side name, `#include`s the decomp `.c`,
+> then implements the replacement — `decomp/` is never edited, and
+> `gcPlayAnimAll`/`gcPlayMObjMatAnim` already use it.
+>
+> It does **not** reach `gcPlayDObjAnimJoint` on its own. The hot call is
+> *internal* to that translation unit (`objanim.c:1436`, inside `gcPlayAnimAll`),
+> and one `#define` renames the definition and the internal call together, so a
+> port-side replacement would be linked but never called from the hot path.
+>
+> Scope consequence: the re-scoped Task 78 must replace **`gcPlayAnimAll`'s DObj
+> tree traversal as well**, not just the joint player. That is what makes it a
+> subsystem task rather than a one-build change — and it is also the opportunity,
+> because the flat contiguous channel array wants to be built at that traversal
+> level anyway, not per DObj.
+>
+> Task 94 separately proved the cost is **not** where the code sits: admitting
+> `gcPlayDObjAnimJoint` to ITCM regressed `WORK-H` P50 by 6,144 on 122 of 128
+> frames. The animation cost is what the code walks.
 
 Measured ranking of the frame (work = 1,515,768 after idle):
 
