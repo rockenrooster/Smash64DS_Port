@@ -83,6 +83,42 @@ dispatch — not if it removes items from inside one.** That is a much narrower
 target than "fewer triangles", and it is the correct reading of every result
 from Task 55 onward.
 
+## 4a. Arm C — culling whole runs, attempted and discarded
+
+§4 says the operations are runs, binds and draws rather than triangles, so the
+obvious follow-up is to measure a run. `NDS_DREAMLAND_CARD_CULL` exists for
+exactly that (Task 63 §5) and takes a baked mask, so arm C culled 27 of the 54
+stage runs — `MASK0=0xAAAAAAAA MASK1=0x2AAAAA`, every odd run.
+
+| bucket | A | C | Δ |
+|---|---|---|---|
+| `STG` P50 | 370,496 | 480,384 | **+109,888** |
+| `OTHR` P50 | 379,072 | 284,928 | −94,144 |
+| `WAIT` P50 | 363,264 | 269,312 | −93,952 |
+| `WORK-H` P50 | 1,320,128 | 1,433,600 | +113,472 |
+| VBlank 3-interval | 512 | 443 | −69 |
+
+**Removing half the stage's runs made the stage 30% more expensive.** That is
+not a measurement of per-run cost; ~94,000 ticks left `OTHR` and `WAIT` while
+`STG` rose ~110,000 and net work rose 113,472. Work moved between buckets *and*
+grew, which is the signature of a different code path executing, not of work
+being removed.
+
+The mechanism is named in the flag's own comment: the Task 36 replay captures
+the stage stream **once**, so changing the run set plausibly disarms the replay
+fast path and forces re-translation. Task 53 shipped that replay for `STG` −33%,
+and this is approximately that win being handed back.
+
+**Discarded, not reported as a result**, on the Task 84 and Task 96 E0
+precedent. It measures pipeline substitution, not run cost. Per-run cost is
+still unmeasured, and measuring it needs an instrument that removes runs
+*without* invalidating the replay capture — which the current capture-once design
+may not permit at all.
+
+The useful by-product: the replay fast path is worth on the order of 100,000
+ticks/frame and is **fragile to any change in the stage run set**. Any future
+stage-structure work has to keep the capture valid or it starts 100K in debt.
+
 ## 5. State
 
 `WORK-H` P95 1,761,664 against the 1,120,000 gate on this build.
