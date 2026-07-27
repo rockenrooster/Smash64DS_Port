@@ -150,14 +150,17 @@ if (($foxRecoveryText -notmatch 'assert-melonds-top-visible\.ps1') -or
 }
 if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|MinRequiredRegionFighterFraction') -or
     ($battleLoopText -notmatch 'FTR_DISPLAY_CONTRACT=') -or
-    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$stageHardwareFighter\.Success.*?\$shwf\[0\]\s*-eq\s*\(2\s*\*\s*\$bp\[4\]\).*?\$shwf\[1\]\s*-eq\s*\(626\s*\*\s*\$bp\[4\]\)') -or
+    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$stageHardwareFighter\.Success.*?\$shwf\[0\]\s*-eq\s*\(2\s*\*\s*\$drawnFrames\).*?\$shwf\[1\]\s*-eq\s*\(626\s*\*\s*\$drawnFrames\)') -or
+    ($battleLoopText -notmatch '\$drawnFrames = \$hw\[0\]') -or
     ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[8\]\s*-eq\s*0')) {
     Fail-Check 'canonical realtime verifier must use selected/submitted/in-bounds GDB fighter contracts without fixed fighter crops'
 }
 if (($battleLoopText -notmatch '\$pacingSnapshotLag -ge 0 -and \$pacingSnapshotLag -le 1') -or
-    ($battleLoopText -notmatch '\$tmPace\[1\] -eq \(2 \* \$bp\[4\]\)') -or
-    ($battleLoopText -notmatch '\$hardwareSnapshotLag -ge 0 -and') -or
-    ($battleLoopText -notmatch '\$hardwareSnapshotLag -le 1')) {
+    ($battleLoopText -notmatch '\$taskmanPresentLead = \$tmPace\[1\] - \(2 \* \$bp\[4\]\)') -or
+    ($battleLoopText -notmatch '\$taskmanPresentLead -ge 0 -and \$taskmanPresentLead -le 2') -or
+    ($battleLoopText -notmatch '\$hardwareSnapshotSkew = \[Math\]::Abs\(\$bp\[4\] - \$hw\[0\]\)') -or
+    ($battleLoopText -notmatch '\$hw\[0\] -eq \$hw\[1\]') -or
+    ($battleLoopText -notmatch '\$hardwareSnapshotSkew -le 1')) {
     Fail-Check 'battle verifier lost its fresh taskman/draw cross-check or bounded pacing/platform cache-lag guard'
 }
 if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''battle_playable_realtime''\).*?\$arguments \+= ''-FastIteration''') {

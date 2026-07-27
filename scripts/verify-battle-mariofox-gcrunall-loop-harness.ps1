@@ -3087,12 +3087,25 @@ try {
             # pacing tuple may therefore trail the fresh taskman/draw counters
             # by one completed frame, but never by more than one.
             $pacingSnapshotLag = $bp[4] - $bp[3]
+            # These three counters advance at different points of one realtime
+            # iteration, so the stop point -- not the simulation -- decides how
+            # far apart they read. taskman_seam.c runs the inner update loop
+            # first (:7596, +1 per update, 2 per iteration), then the present
+            # path (:7712) which increments DrawCalls (:4744) and only then
+            # PresentedFrames (:4776). The whole present path is therefore a
+            # legal stop window in which taskman leads 2*DrawCalls by a full
+            # iteration, and a stop between the two updates leads it by one.
+            # Bound the lead structurally instead of demanding equality: an
+            # exact term here asserted that the stop never lands in the draw,
+            # which is not a property of the build under test.
+            $taskmanPresentLead = $tmPace[1] - (2 * $bp[4])
             Assert-Condition (
                 $battlePlayablePacing.Success -and $taskman.Success -and
                 $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
                 $bp[2] -eq (2 * $bp[3]) -and $bp[3] -ge 180 -and
                 $pacingSnapshotLag -ge 0 -and $pacingSnapshotLag -le 1 -and
-                $tmPace[1] -eq (2 * $bp[4]) -and $bp[5] -gt 0 -and
+                $taskmanPresentLead -ge 0 -and $taskmanPresentLead -le 2 -and
+                $bp[5] -gt 0 -and
                 $bp[6] -gt 0 -and
                 ($Task34StageStreamCensus -or $bp[6] -le 305) -and
                 $bp[8] -gt 0 -and $bp[9] -ge 2 -and
@@ -3237,6 +3250,16 @@ try {
             }
             if ($HardwareTriangles) {
                 $hw = Get-Ints $platformHw
+                # Everything the draw path counts for itself -- submitted
+                # frames, per-frame fighter owners/triangles, native OAM
+                # commits -- advances inside
+                # ndsBattlePlayablePresentRealtimeFrame, ahead of the
+                # DrawCalls bump at taskman_seam.c:4744. bp[4] is therefore
+                # the wrong reference for those: a stop anywhere in the draw
+                # reads them one frame apart. hw[0] is the count the draw path
+                # itself keeps, so the exact per-frame contracts below stay
+                # exact instead of needing a tolerance.
+                $drawnFrames = $hw[0]
                 $shw = Get-Ints $stageHardware
                 $scarry = Get-Ints $stageCarry
                 $shwf = Get-Ints $stageHardwareFighter
@@ -5240,15 +5263,18 @@ try {
                     Assert-Condition (($rth | Measure-Object -Sum).Sum -eq 0) 'Forensic renderer unexpectedly used the performance texture hash lookup.' $gdbStdout
                 }
                 # melonDS GDB can observe the platform counters one cache-dirty
-                # frame behind the renderer/pacing tuple. The fresh taskman
-                # cross-check above proves bp[4] is the current draw count.
-                $hardwareSnapshotLag = $bp[4] - $hw[0]
+                # frame behind the renderer/pacing tuple, and taskman_seam.c
+                # submits the hardware frame (:4735) one step *before* it bumps
+                # DrawCalls (:4744), so the platform counter equally leads by
+                # one whenever the stop lands in between. The skew is bounded
+                # in both directions, not signed: what this gate is for is
+                # submitted -eq flushed, which stays exact.
+                $hardwareSnapshotSkew = [Math]::Abs($bp[4] - $hw[0])
                 Assert-Condition (
                     $platformHw.Success -and $hw[0] -gt 0 -and
                     $hw[0] -eq $hw[1] -and
-                    $hardwareSnapshotLag -ge 0 -and
-                    $hardwareSnapshotLag -le 1
-                ) 'Canonical realtime HW build did not flush submitted DS 3D frames or its cached platform snapshot trailed by more than one frame.' $gdbStdout
+                    $hardwareSnapshotSkew -le 1
+                ) 'Canonical realtime HW build did not flush submitted DS 3D frames or its cached platform snapshot skewed by more than one frame.' $gdbStdout
                 Assert-Condition ($hw[2] -gt 0 -and $hw[3] -gt 0) 'Canonical realtime HW build submitted CPU-side triangles but DS GX polygon/vertex RAM stayed empty.' $gdbStdout
                 if ($usesFastWallpaper) {
                     $expectedFastWallpaperTerminalState = if (
@@ -5357,7 +5383,7 @@ try {
                         $shwf[1] -eq (626 * $smc[7])
                     ) 'Cut G live frames drifted from the exact two-owner/626-triangle fighter contract.' $gdbStdout
                 } else {
-                    Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq (2 * $bp[4]) -and $shwf[1] -eq (626 * $bp[4])) 'Canonical realtime HW build drifted from the exact current-frame two-owner/626-triangle fighter contract.' $gdbStdout
+                    Assert-Condition ($stageHardwareFighter.Success -and $shwf[0] -eq (2 * $drawnFrames) -and $shwf[1] -eq (626 * $drawnFrames)) 'Canonical realtime HW build drifted from the exact current-frame two-owner/626-triangle fighter contract.' $gdbStdout
                 }
                 # ftdisplaymain.c:1164-1242 sets this preamble and traverses only
                 # source-selected, visible, textured fighter part display lists.
@@ -5498,7 +5524,7 @@ try {
                         $ioam[25] -eq 0 -and $ioam[26] -gt 0 -and
                         (($RendererProfileLevel -ge 1) -or
                          ($ioam[27] -eq 0)) -and
-                        $ioam[28] -eq $bp[4] -and
+                        $ioam[28] -eq $drawnFrames -and
                         $ioam[29] -eq 0 -and $ioam[30] -eq 0
                     ) 'Cut G native countdown owner did not preserve prepared source assets, cumulative commits, exact idle cleanup, or zero hot conversion/upload.' $gdbStdout
                     Assert-Condition (
