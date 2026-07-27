@@ -124,10 +124,31 @@ FIXED -Fox face never changes expression once hit in a match.
   rendering both faces would have filled it with at least the interior back
   surface. It did not, so nothing is being rasterized there at all. Probe
   removed after answering; the A/B captures are the evidence.
-  NEXT: find which DObj/DL is absent. The harness pins fighters at 313
-  triangles per owner per frame; if that contract was pinned against an
-  already-incomplete model, the count cannot flag the loss. Compare the
-  submitted per-DObj triangle counts against Mario's source model DL, and
-  check the DObjDLLink list_id / detail level the port selects -- SSB64
-  carries up to 4 DL lists per DObj and picking a lower-detail list would
-  drop exactly this kind of cap.
+  Five causes eliminated with evidence, none of them it:
+  1. Inverted culling -- refuted by the probe above.
+  2. A skipped display list -- FTR_DISPLAY_CONTRACT reports 14 and 18 DLs
+     per frame, which is exactly Mario's 14 and Fox's 18 in
+     296_MarioModel.c / 303_NFoxModel.c, and selected equals submitted
+     (6784 == 6784 over 212 frames). Every DL in both models runs.
+  3. An unsupported opcode aborting a DL mid-way -- that sets
+     NDS_RENDERER_BLOCKER_UNSUPPORTED and would drop submitted below
+     selected. They are equal.
+  4. Clipping or DS limits -- 2484 of 6144 vertices, 828 of 2048 polygons,
+     rej=0, drop0.
+  5. The wrong detail level. Mario's model carries two joint trees and
+     203_MarioMain.c orders them High then Low:
+       commonparts[0] = dMarioModel_JointTree        = 14 DLs (High)
+       commonparts[1] = dMarioModel_JointTree_0x4590 = 22 DLs (Low)
+     Note Low has MORE parts, not fewer -- it splits the model further
+     rather than shedding triangles (373 vs 396 commands). scvsbattle.c
+     picks High when pl_count + cp_count < 3, and Boundary is 1+1, so High
+     is correct and 14 is what the port runs.
+  What is left: triangles inside a DL that are submitted but land wrong, or
+  are dropped without incrementing any counter. Note 313 triangles/owner is
+  the average over Mario and Fox, not Mario's own count, so it cannot be
+  compared against Mario's model directly.
+  NEXT: a per-DObj triangle census for player 0 -- scanned vs submitted per
+  display list -- which separates "geometry missing" from "geometry present
+  but mispositioned". The latter is live: bug #2 in this same pass was a
+  local matrix used where a world matrix was required, and the torso/thigh
+  junction is exactly where a joint transform error would open a seam.
