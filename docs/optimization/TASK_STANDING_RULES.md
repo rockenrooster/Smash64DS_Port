@@ -347,6 +347,39 @@ plan is not a contract, and this campaign has now twice mistaken one for the
 other -- Task 92 §4 caught the same shape when Task 78's own sizing number was
 treated as a gate.
 
+## Find the tick anchor before proposing a lever (Task 98, 2026-07-27)
+
+A reduction ratio is not a saving. "−27.2% of vertex words" and "−50% of texels"
+are only savings if some prior measurement ties *that quantity* to ticks *on that
+path*. Two levers were proposed to the owner in one session without that check
+and both were empty:
+
+- **Words do not cost ticks here.** Task 55 E2 elided 355 GX words per frame,
+  losslessly, geometry intact, and `ALL` P50 moved **+64** over 128 samples --
+  against its own prediction of ~148,000. That kills axis-reuse and VERTEX10
+  encoding for both stage and fighters.
+- **Texels do not cost ticks here.** `renderer: texture + material` is dominated
+  by `ndsRendererHardwareResolveOrBindTexture` at 40,537 ticks/frame over 25
+  binds -- **~1,621 ticks per bind, independent of texture size.**
+
+Both anchors already existed and took minutes to find. Task 96 is the
+counter-example that held up: no anchor existed for the `AObj` chain, it said so,
+measured one, and the conclusion survived review.
+
+## The cost is per-operation, not per-datum (Task 98, 2026-07-27)
+
+The frame is dispatch overhead spread thin across many small operations, not
+throughput on large ones. 79.2% stall in the texture class, 52-89% in sixteen of
+seventeen classes, ~1,621 ticks to bind a texture whatever its size.
+
+**A change only pays if it removes operations** -- binds, runs, draws,
+dispatches -- not if it shrinks their payloads. This is the same shape as the
+saturated-layout finding (Tasks 87/88/89/94/95) seen from the data side, and it
+constrains visual approximation specifically: smaller textures, coarser
+coordinates and fewer bits per vertex are all payload reductions and all buy
+nothing. Fewer triangles is an operation reduction and is the one visual lever
+still standing.
+
 ## GDB `if` at top level resumes exactly once (Task 96, 2026-07-26)
 
 In a batch script, `if <cond> / continue / end` outside a `commands` block is
