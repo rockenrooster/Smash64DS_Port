@@ -60,12 +60,18 @@ FIXED -Missing SFX 2nd jump sound (double jump) not playing (1st jump sound play
       eye is the gate. Coin/Catch/Slash still share slots -- coins need items
       (off for P1) and neither of the other two was reported, so they stay
       collapsed rather than getting invented colors.
-  (b) Fidelity debt -- running foot dust, fireball hit, and hard landing each
-      DO have their own template (Dust, Fire, Dust). They look wrong because a
-      recolored 16-vertex primitive is standing in for a textured particle
-      script. Closing that needs the particle banks ported, which is P2 in
-      KNOWN_ISSUES.md:42-47. Not fixable in this pass; the owner is the visual
-      oracle for whether the stand-ins are acceptable for P1.
+  (b) Running foot dust, fireball hit, and hard landing each DO have their own
+      template (Dust, Fire, Dust). They look wrong because a recolored
+      16-vertex primitive is standing in for a textured particle script.
+      This is P1, not P2 -- the contract is that this exact match is identical
+      to the full game with these settings, so the real scripts have to run.
+      Sized 2026-07-27 and it fits: efmanager reaches 26 of 119 efcommon
+      scripts naming 18 of 47 textures = 129,768 B, plus 4,896 B for Dream
+      Land's grpupupu bank, against 210,320 B measured arena headroom. The
+      banks are position-independent so no relocData tooling is needed.
+      OPEN: port lb/lbparticle.c (2,961 lines), ef/efparticle.c,
+      ef/efdisplay.c, add a DS pack step, and draw textured quads.
+      See KNOWN_ISSUES.md for the full measurement.
 FIXED -Missing SFX, Mario down B, fox up b voice
   Cause: nSYAudioVoiceMarioSpecialLw (432) and nSYAudioVoiceFoxSpecialHi (362)
   were never packed, so both motion-script requests failed closed. Added both.
@@ -93,3 +99,4 @@ FIXED -Fox face never changes expression once hit in a match.
   same effect. Rebirth now has its own white/cyan ring and Death keeps the red
   one. What remains is the untextured-primitive gap: the original KO burst is a
   particle script, and a ring is the stand-in. That half is P2.
+-mario underside area geometry missing

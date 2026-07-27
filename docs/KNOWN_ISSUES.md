@@ -43,6 +43,23 @@ durable unresolved gaps.
   Mario/Fox motion-effect calls plus the P1 reflector, blaster-glow, and
   fireball seams route to bounded source-derived DS presentation, but they do
   not reproduce the original particle-bank textures/scripts exactly.
+  This is **P1 scope, not P2**: the product contract is that a Dream Land
+  Mario-vs-Fox one-minute match with items off is identical to the full game
+  under those settings, so any effect that match can show has to be the real
+  one. Measured 2026-07-27 and it fits:
+  - `efmanager.c` reaches only 26 of the 119 `efcommon` scripts, and those
+    scripts name only 18 of the bank's 47 textures.
+  - That subset is 118,856 B of texture plus the whole 10,912 B script bank
+    = **129,768 B**; Dream Land's own `grpupupu` bank adds 4,896 B.
+  - Measured arena headroom at the Boundary stop is 210,320 B, so ~135 KB
+    resident leaves ~75 KB spare -- before any N64->DS texture conversion,
+    which alone should reclaim most of texture 40 (RGBA32 9 frames, 36,928 B).
+  - The banks are position-independent (every internal pointer is a
+    file-relative offset pointerized at load), so no relocData tooling is
+    involved. See `decomp/BattleShip-main/decomp/PARTICLE_BANK_DISCOVERIES.md`.
+  Remaining work is the runtime: `lb/lbparticle.c` (2,961 lines, the bytecode
+  interpreter and generator model), `ef/efparticle.c` (113) and
+  `ef/efdisplay.c` (107), plus a DS pack step and textured-quad draw.
 - Fireball/weapon heavy wall/ceiling/edge collision and general common-effect
   texture-bank fidelity remain incomplete.
 - Items are disabled for P1; general item manager/runtime is P2.
