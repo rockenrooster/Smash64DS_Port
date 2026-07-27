@@ -349,6 +349,20 @@ $objdumpPath = Resolve-Leaf $Objdump 'arm-none-eabi-objdump'
 $Nm = $nmPath
 $Objdump = $objdumpPath
 
+# BUGS.md #1 graduated mpprocess live, so the default build now links the import
+# on purpose. Every assertion below is about the opposite arrangement -- source
+# compiled but deliberately absent from the ELF -- and would report the
+# graduation as a leak. Route instead of lying: the live configuration is owned
+# by check-mpprocess-live-link.ps1, and verify-mpprocess-private-import.ps1
+# still reaches this body because it builds its own LIVE=0 gate and passes the
+# paths in.
+if ((Get-Content -LiteralPath $configPath -Raw) -match
+    '(?m)^[ \t]*#define[ \t]+NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE[ \t]+1[ \t]*\r?$') {
+    Write-Output ('mpprocess-private-import=NOT-APPLICABLE build is live-linked ' +
+        "($buildPath); run check-mpprocess-live-link.ps1 for this configuration.")
+    exit 0
+}
+
 $expectedUpstreamHash = '42639625B85ACD7CFC50416C378BBDE59747A8DD1CFCBCA4AACADF949405C3B9'
 $expectedDefinitionHash = '2A7E4E42BA6DCCDEFC99DD4B33BB2A52EA5B02C61A32022A2D0E0CC58DDF260E'
 $expectedCollisionHash = 'AF7B73F3BB0AA5E1670AB53C82666263C518C0344A0D30CF58DEC3D0CCB4EF53'
@@ -724,12 +738,17 @@ $sourceList = ($sourceListMatches[0].Groups[1].Value `
 Assert-Check ($sourceList -ceq
     'battleship_mpprocess_edge_support.c battleship_mpprocess.c') `
     'Makefile shared mpprocess source list is not the exact support/wrapper pair'
+# mpprocess graduated live for BUGS.md #1, so the defaults inverted: LIVE is now
+# the shipping runtime and the private compile-only gate is opt-in. Both gates
+# must still exist and stay mutually exclusive -- that is what the rest of this
+# checker proves, and it is what lets verify-mpprocess-private-import.ps1 keep
+# driving the private mode explicitly.
 Assert-Check ($makefileText -match
-    '(?m)^NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE\s*\?=\s*0\s*\r?$') `
-    'Makefile live import gate is missing or not disabled by default'
+    '(?m)^NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE\s*\?=\s*1\s*\r?$') `
+    'Makefile live import gate is missing or not enabled by default'
 Assert-Check ($makefileText -match
-    '(?m)^NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE\s*\?=\s*1\s*\r?$') `
-    'Makefile private import gate is missing or not enabled by default'
+    '(?m)^NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE\s*\?=\s*0\s*\r?$') `
+    'Makefile private import gate is missing or not opt-in by default'
 $mutualExclusionPattern =
     '(?m)^ifeq \(\$\(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE\)' +
     '\$\(NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE\),11\)\r?\n' +
@@ -748,12 +767,25 @@ $routingPattern =
     '\$\(NDS_MPPROCESS_SOURCE_CFILES\)\n^endif$'
 Assert-Check ($routingText -match $routingPattern) `
     'Makefile mpprocess LIVE/private source routing is not exact and mutually exclusive'
+# The link rule grew hot-text prerequisites after this assertion was written, so
+# the old end-of-line anchor could not match and this checker was failing before
+# the mpprocess graduation touched it. What matters is that the private-check
+# objects lead the prerequisite list, not that they end it.
 Assert-Check ($makefileLogical -match
-    '(?m)^\$\(OUTPUT\)\.elf:\s+\$\(OFILES\)\s+\$\(NDS_PRIVATE_CHECK_OFILES\)\s*\r?$') `
+    '(?m)^\$\(OUTPUT\)\.elf:\s+\$\(OFILES\)\s+\$\(NDS_PRIVATE_CHECK_OFILES\)(\s|$)') `
     'private-check objects are not final ELF prerequisites'
-Assert-Check ($makefileLogical -match
-    '(?m)^export OFILES\s*:=\s*\$\(CPPFILES:\.cpp=\.o\)\s+\$\(CFILES:\.c=\.o\)\s+\$\(SFILES:\.s=\.o\)\s*\r?$') `
+# The invariant is isolation, not a literal spelling: OFILES has since grown the
+# Task 9 and Task 37 ITCM object lists, and pinning the exact expansion just made
+# this assertion go stale. Assert what actually matters instead.
+$ofilesMatches = @([regex]::Matches($makefileLogical,
+    '(?m)^export OFILES\s*:=\s*([^\r\n]*)\r?$'))
+Assert-Check ($ofilesMatches.Count -eq 1) `
+    'Makefile must have one OFILES assignment'
+Assert-Check ($ofilesMatches[0].Groups[1].Value -notmatch 'NDS_PRIVATE_CHECK') `
     'OFILES is no longer isolated from private-check objects'
+Assert-Check ($ofilesMatches[0].Groups[1].Value -match
+    '\$\(CPPFILES:\.cpp=\.o\)\s+\$\(CFILES:\.c=\.o\)\s+\$\(SFILES:\.s=\.o\)\s*$') `
+    'OFILES no longer ends with the ordinary compiled-source object lists'
 $privateObjectStatements = @($makefileLogical -split '\r?\n' |
     Where-Object { $_ -match 'NDS_PRIVATE_CHECK_OFILES' } |
     ForEach-Object { (($_.Trim()) -replace '\s+', ' ') })
@@ -763,7 +795,9 @@ Assert-ExactSet $privateObjectStatements @(
      '$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)),' +
      '$(NDS_MPPROCESS_SOURCE_CFILES:.c=.o) battleship_mpprocess_live_bridge.o)'),
     'DEPENDS := $(OFILES:.o=.d) $(NDS_PRIVATE_CHECK_OFILES:.o=.d)',
-    '$(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES)',
+    ('$(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) ' +
+     '$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) ' +
+     '$(NDS_TASK32_DRAW_HOT_FRAGMENT)'),
     '$(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)'
 ) 'Makefile private-object compile-only uses'
 $strictObjectStatements = @($makefileLogical -split '\r?\n' |

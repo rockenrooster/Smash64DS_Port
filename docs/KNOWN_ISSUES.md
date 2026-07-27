@@ -35,7 +35,10 @@ durable unresolved gaps.
   owning original TU and natural runtime proof.
 - `ftparam.c` is not fully imported; current transform invalidators are narrow
   source-shaped compatibility seams.
-- Mario/Fox special wall, ceiling, and edge adjustment is incomplete.
+- Mario/Fox special wall, ceiling, and edge adjustment is complete: `mpprocess`
+  is linked live and the special-collision runner does the source's wall pair
+  and ceiling-edge adjust. `check-mpprocess-private-import.ps1` now reports
+  NOT-APPLICABLE against a live build; `check-mpprocess-live-link.ps1` owns it.
 - Original common particle script/texture banks are not resident. All 178
   Mario/Fox motion-effect calls plus the P1 reflector, blaster-glow, and
   fireball seams route to bounded source-derived DS presentation, but they do

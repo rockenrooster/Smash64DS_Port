@@ -9,14 +9,18 @@
 
 #if NDS_RENDERER_HW_TRIANGLES
 #include <nds/timers.h>
+#endif
 
 /* Task 86: see ndsRendererMatrixCopy20p12 in include/nds/nds_renderer.h. Gated
- * so the A/B is one flag, per the Task 79 rule. */
-#if NDS_TASK86_MATRIX_COPY
+ * so the A/B is one flag, per the Task 79 rule. The definition sits outside the
+ * NDS_RENDERER_HW_TRIANGLES block because ndsRendererAdapterPrepareInitialMatrices
+ * uses MTXCOPY on both sides of that switch; with it inside, the canonical
+ * software target did not compile at all. Folding the triangle flag into the
+ * condition keeps the hardware ROM's expansion exactly as it was. */
+#if NDS_RENDERER_HW_TRIANGLES && NDS_TASK86_MATRIX_COPY
 #define MTXCOPY(d, s) ndsRendererMatrixCopy20p12((d), (s))
 #else
 #define MTXCOPY(d, s) (*(d) = *(s))
-#endif
 #endif
 
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12

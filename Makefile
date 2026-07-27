@@ -652,8 +652,14 @@ override NDS_RENDERER_BENCHMARK_MODE := 4
 endif
 override NDS_IMPORT_BATTLESHIP_FTMAIN := 1
 override NDS_IMPORT_BATTLESHIP_FTMANAGER := 1
-NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE ?= 0
-NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE ?= 1
+# BUGS.md #1: graduated live. The private gate compiled mpprocess.c without
+# linking it, so the shipping ROM ran the bounded port reimplementations and
+# took mpProcessRun{L,R}WallCollisionAdjNew / mpProcessRunCeilEdgeAdjust from
+# the weak no-op bridges in battleship_wpmanager_core.c -- no wall push-out and
+# no ceiling-edge adjust at all. Both gates stay switchable; the private mode is
+# still what verify-mpprocess-private-import.ps1 drives.
+NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE ?= 1
+NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE ?= 0
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)$(NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE),11)
 $(error NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE=1 requires NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE=0)
 endif

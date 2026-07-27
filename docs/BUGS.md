@@ -1,6 +1,23 @@
 AI Agent should mark fixed items with FIXED prefix
--Up B goes through main stage when underneath it.
--grab attacks snap player positions to wrong locations.
+FIXED -Up B goes through main stage when underneath it.
+  Cause: two layers. The port's stand-in for the source's
+  mpCommonRunFighterSpecialCollisions -- the runner every special / project /
+  pass / landing entry point uses -- never ran the L/R wall tests and never
+  called mpProcessRunCeilEdgeAdjust. Without the wall pass coll_data->mask_unk
+  never carries MAP_FLAG_LWALL/RWALL, which is exactly what the ceiling test's
+  fallback branches read to catch a rise that enters the platform past the end
+  of the ceiling segment. Underneath that, mpProcessRun{L,R}WallCollisionAdjNew
+  and mpProcessRunCeilEdgeAdjust were weak no-op bridges in the shipping link,
+  because mpprocess.c was compiled as a private check and never linked.
+  Fix: restored the missing calls and graduated mpprocess live
+  (NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE now defaults to 1), so the real source
+  adjusters run. Latest profile green; needs a play test.
+FIXED -grab attacks snap player positions to wrong locations.
+  Cause: func_ovl0_800C9A38 returned identity plus the joint's *local*
+  translate, so ftCommonCapturePulledRotateScale placed the victim at the
+  capturer's hand offset measured from the world origin instead of from the
+  hand. It now composes the joint's world matrix up the DObj chain. Needs a
+  play test.
 -Wind hazard not working, (SFX, VFX, gameplay effects)
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the
   push vector on the floor, so Whispy's gust had no effect at all. It now does

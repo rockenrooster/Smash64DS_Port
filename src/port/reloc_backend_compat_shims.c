@@ -6019,8 +6019,29 @@ void ftParamSetHitStatusAll(GObj *fighter_gobj, s32 hitstatus)
     }
 }
 
+extern void func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
+extern void gmCollisionCopyMatrix(Mtx44f dst, Mtx44f src);
+
+/* gmcollision.c:337 walks the same chain through setup_dobj[18]. */
+#define NDS_DOBJ_WORLD_CHAIN_MAX 18
+
+/* BUGS.md #2: this returned identity plus the joint's *local* translate, so a
+ * grab placed the victim at the capturer's hand offset measured from the world
+ * origin instead of from the hand -- the snap the owner sees. The contract is
+ * the joint's world matrix; ftcommoncapturepulled.c's non-US branch spells the
+ * same computation out as func_ovl2_800EDBA4(joint) followed by reading
+ * parts->mtx_translate. That cache is not usable here: the port sets
+ * FTParts::unk_dobjtrans_0x5 once during joint population and never
+ * invalidates it, so 800EDBA4 would short-circuit on the stale bind-pose
+ * matrix. Compose the chain directly with the source's own local-matrix
+ * builder and 4x4 concatenation instead. ftcommoncapturepulled.c is the only
+ * caller; scsubsysfighter.c declares it but never calls it. */
 void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
 {
+    DObj *chain[NDS_DOBJ_WORLD_CHAIN_MAX];
+    Mtx44f local;
+    Mtx44f product;
+    s32 depth = 0;
     s32 i;
     s32 j;
 
@@ -6031,11 +6052,18 @@ void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
             mtx[i][j] = (i == j) ? 1.0F : 0.0F;
         }
     }
-    if (dobj != NULL)
+    while ((dobj != NULL) && (dobj != DOBJ_PARENT_NULL) &&
+           (depth < NDS_DOBJ_WORLD_CHAIN_MAX))
     {
-        mtx[3][0] = dobj->translate.vec.f.x;
-        mtx[3][1] = dobj->translate.vec.f.y;
-        mtx[3][2] = dobj->translate.vec.f.z;
+        chain[depth] = dobj;
+        depth++;
+        dobj = dobj->parent;
+    }
+    for (i = depth - 1; i >= 0; i--)
+    {
+        gmCollisionTransformMatrixAll(chain[i], ftGetParts(chain[i]), local);
+        func_ovl2_800ED490(product, mtx, local);
+        gmCollisionCopyMatrix(mtx, product);
     }
 }
 
@@ -11495,9 +11523,31 @@ static sb32 ndsMPCommonRunFighterCliffFloorCeilCollisions(
         return FALSE;
     }
 
+    /* BUGS.md #1: the wall pair and the ceiling-edge adjust were both missing
+     * here, which is the "Mario/Fox special wall, ceiling, and edge adjustment
+     * is incomplete" row in KNOWN_ISSUES. This runner stands in for the
+     * source's mpCommonRunFighterSpecialCollisions (mpcommon.c:472), which
+     * every special/project/pass/landing entry point uses, so the gap took out
+     * Up B: without the wall pass coll_data->mask_unk never carries
+     * MAP_FLAG_LWALL/RWALL, and that is exactly what
+     * mpProcessCheckTestCeilCollisionAdjNew's fallback branches
+     * (mpprocess.c:1911-1934) read to catch a rise that enters the platform
+     * past the end of the ceiling segment. Mario went straight through. */
+    if (mpProcessCheckTestLWallCollisionAdjNew(coll_data) != FALSE)
+    {
+        mpProcessRunLWallCollisionAdjNew(coll_data);
+    }
+    if (mpProcessCheckTestRWallCollisionAdjNew(coll_data) != FALSE)
+    {
+        mpProcessRunRWallCollisionAdjNew(coll_data);
+    }
     if (mpProcessCheckTestCeilCollisionAdjNew(coll_data) != FALSE)
     {
         mpProcessRunCeilCollisionAdjNew(coll_data);
+        if ((coll_data->mask_stat & MAP_FLAG_CEIL) != 0u)
+        {
+            mpProcessRunCeilEdgeAdjust(coll_data);
+        }
         if (((flags & MAP_PROC_TYPE_CEILHEAVY) != 0u) &&
             (this_fp->physics.vel_air.y >= 30.0F))
         {
