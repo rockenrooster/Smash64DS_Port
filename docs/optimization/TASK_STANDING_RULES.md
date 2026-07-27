@@ -464,3 +464,21 @@ Seven tasks optimised a third of a bucket while calling their results statements
 about the bucket. **Partition the owner top-down and confirm the block you are
 about to work on is actually most of it**; the in-place span method in
 `scripts/census-stage-run-phases.ps1` costs one build and one 60-frame run.
+
+## Trust a span in proportion to its length (Task 103 E7, 2026-07-27)
+
+The E-series censuses bracket code with two `cpuGetTiming()` reads. Task 103 E6
+timed the per-segment stats/traversal reset at **3,277 ticks per call** and sized
+a lever at ~9,800 from it. The lever was built as an exact reordering and
+measured at **-2,752 on `STG`** -- 3.5x under, and the frame got worse on `FTR`
+collateral. The reset really costs ~900 per call; the rest was the bracket.
+
+Two reads cost on the order of a hundred ticks, so a span of a few hundred is
+mostly instrument. A span of a few thousand is not -- Task 103's 67,119-tick
+head at 3,196 per call is ~4% instrument and is trustworthy.
+
+**Before sizing a lever from an E-series span, check the per-call figure. Under
+~1,000, re-derive it a different way (call counts times a known unit cost, or a
+longer enclosing span) before building anything.** Combine this with the
+noise-floor rule above: a lever predicted under ~7,000 cannot be resolved by an
+A/B at all, so measure it differently or leave it.

@@ -177,21 +177,97 @@ Everything above composed, against `STG` 393,472:
 For scale: the gate needs **641,664**, and `fighter: native production` — the
 largest class in Task 81's partition — is 255,061.
 
-## 10. Next
+## 10. E5/E6 — inside the 160,588, and the head is the target
 
-`ndsRendererPrepareNativeStageOwner` (160,588, one call) and
-`ndsRendererAdapterPrepareNativeStageMatrices` (55,077, one call), in that
-order. Both are per-frame preparation over a stage whose topology Task 44 has
-already proven unchanged — which is exactly the shape a memo or an incremental
-update attacks, and unlike Task 79's site memo there is no per-run transfer
-problem here because there is one call.
+| step | ticks/frame | calls/frame | per call |
+|---|---|---|---|
+| **`ndsRendererNativeStagePrepareRun`** | **97,044** | 21.0 | 4,621 |
+| `ndsRendererNativeStageApplyStateSpan` | 30,895 | 21.0 | 1,471 |
+| init stats + traversal | 26,218 | 8.0 | 3,277 |
+| Task 36 prepared-segment reuse | 11,858 | 8.0 (3 hit, 5 miss) | 1,482 |
+| validate topology | 554 | 1.0 | 554 |
 
-Split each one internally with the same method before proposing a lever. The
-standing rule from this task is that the block you are about to optimise must be
-shown to be most of the bucket first.
+**Only 3 of the 8 segments hit the Task 36 prepared-segment reuse.** The five
+misses are segments 1,2,3,4,6, and they own exactly the 21 runs — the same 21
+that take the generic emit path in §4. `NDS_TASK36_REPLAY_SEGMENT_MASK` is
+`(1<<0)|(1<<5)|(1<<7)`, and the exclusion is deliberate and correct: the Task 36
+Phase B conservation census records that mode 2 "captures and replays only
+complete rigid segments 0, 5 and 7 … Dynamic segments remain on the live path."
+Widening the mask would freeze moving stage geometry. **Not a free lever.**
 
-## 11. State
+Splitting `PrepareRun` itself:
 
-`WORK-H` P95 1,732,608 on the clean baseline (`build-task100-A`) against the
-1,120,000 gate. The Task 103 instrument is default-off; `scripts/census-stage-run-phases.ps1`
-drives it. No runtime change.
+| | ticks/frame |
+|---|---|
+| **head — policy match, two memsets, texture resolve, colour/alpha queries** | **67,119** |
+| dense-vertex loop | 23,351 |
+
+143 dense vertices/frame at 163 ticks each; 57 of them (39.9%) take the
+camera-dependent near-plane transform, 86 do not. **The memo candidate is those
+86**, worth at most ~14,000 — below the bar.
+
+**The head is the target: 67,119 ticks/frame, 3,196 per run.** Its inputs are
+`stats`, which the state spans build from compile-time constant tables, so for a
+given run it plausibly recomputes an identical answer every frame. Task 98 puts
+~1,621 of each run's head in `resolve-or-bind` alone.
+
+## 10a. E7 — the one lever tried, and REVERTED
+
+On a reuse hit, `ndsRendererTask36ReplayUsePreparedSegment` assigns the whole
+stats struct, so everything `ndsRendererInitStats` wrote a line earlier is
+overwritten and the traversal state is never read before the `continue`. Both
+resets are provably dead on the 3 segments the replay serves. Hoisting the reuse
+check above them is an exact reordering — the check never reads the incoming
+stats.
+
+E6's 3,277-per-call figure predicted ~9,800 ticks/frame. Measured, on a matched
+pair from one source file differing only in this block's position:
+
+| bucket | control | candidate | Δ |
+|---|---|---|---|
+| `STG` P50 | 370,048 | 367,296 | −2,752 |
+| `STG` P95 | 376,064 | 374,528 | −1,536 |
+| `FTR` P50 | 543,552 | 548,352 | +4,800 |
+| **`WORK` P50** | 1,332,864 | 1,342,272 | **+9,408** |
+| `WORK` P95 | 1,826,816 | 1,762,752 | −64,064 |
+
+**REVERTED.** `STG` moved the right way but by **less than the 5,000–7,000
+floor**, so the improvement is not even resolvable; and `FTR` rose 4,800, which
+this change cannot cause and which is the re-addressing collateral that closed
+Tasks 87–89, 94 and 95. Same shape as Task 95: mechanism correct, frame worse.
+
+**The estimate was 3.5× too high, and the reason is methodological.** Bracketing
+a *short* span with two `cpuGetTiming()` reads over-attributes, because the reads
+are a large fraction of what is being timed. The init pair really costs ~900 per
+call, not 3,277. Long spans (the 67,119 head, at 3,196 per call) are not affected
+— there the reads are ~4%. **Trust E-series span numbers in proportion to span
+length**, and re-derive any lever sized from a sub-1,000-tick span before
+building it.
+
+## 11. Next
+
+**The `PrepareRun` head — 67,119 ticks/frame over 21 runs.** It is now the
+largest precisely-sized block in the stage that nothing has attacked, it sits on
+a long span so its measurement is trustworthy (§10a), and its inputs are
+constant-table-driven render state rather than anything the camera moves.
+
+Before building a memo there, check Task 81's "stage memo inert" result — that
+task closed a texture-direction memo and this must not repeat it. If the earlier
+memo was keyed differently or applied at the emit rather than the prepare seam,
+this is a different lever; if not, it is closed and the answer is to say so.
+
+`ndsRendererAdapterPrepareNativeStageMatrices` (55,077, one call) is second, but
+Task 44 already reduced it to exactly the 16 dynamic bindings, so what remains is
+real matrix composition rather than redundancy.
+
+## 12. State
+
+`WORK-H` P95 1,732,608 on the clean baseline against the 1,120,000 gate — no
+change, because **no lever shipped in this task.** E7 was tried and reverted
+(§10a); the tree carries only the default-off census instrument and
+`scripts/census-stage-run-phases.ps1`. Both the default and census builds were
+rebuilt clean after the revert.
+
+What this task did deliver is attribution: the stage bucket is now accounted for
+to within 0.05%, three of its blocks are sized to the function, and the next
+target is named with a number instead of a hypothesis.

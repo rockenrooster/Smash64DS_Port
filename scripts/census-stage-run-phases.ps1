@@ -68,7 +68,21 @@ $counters = @(
     'gNdsTask103PrepMaterialTicks',
     'gNdsTask103PrepConfigTicks',
     'gNdsTask103PrepOwnerTicks',
-    'gNdsTask103PrepCalls'
+    'gNdsTask103PrepCalls',
+    'gNdsTask103OwnValidateTicks',
+    'gNdsTask103OwnInitTicks',
+    'gNdsTask103OwnInitCount',
+    'gNdsTask103OwnReuseTicks',
+    'gNdsTask103OwnReuseCount',
+    'gNdsTask103OwnReuseMissCount',
+    'gNdsTask103OwnStateSpanTicks',
+    'gNdsTask103OwnStateSpanCount',
+    'gNdsTask103OwnPrepareRunTicks',
+    'gNdsTask103OwnPrepareRunCount',
+    'gNdsTask103RunHeadTicks',
+    'gNdsTask103RunDenseTicks',
+    'gNdsTask103RunDenseCount',
+    'gNdsTask103RunNearCount'
 )
 
 $context = Initialize-MelonDSVerifierContext `
@@ -305,7 +319,49 @@ try {
         Write-Host ("{0,-24} {1,12:N0}" -f 'SUM', ($prepSum / $frames))
         Write-Host ""
     }
-    Write-Host ("Instrument overhead: E3 adds no timer reads; E0-E2/E4 add a few per call.")
+    $own = [double]$delta['gNdsTask103PrepOwnerTicks']
+    if ($own -gt 0) {
+        $ownSteps = [ordered]@{
+            'validate topology' = @([double]$delta['gNdsTask103OwnValidateTicks'], 1)
+            'init stats+traversal' = @([double]$delta['gNdsTask103OwnInitTicks'], [double]$delta['gNdsTask103OwnInitCount'])
+            'task36 reuse check' = @([double]$delta['gNdsTask103OwnReuseTicks'], [double]$delta['gNdsTask103OwnReuseCount'])
+            'apply state span' = @([double]$delta['gNdsTask103OwnStateSpanTicks'], [double]$delta['gNdsTask103OwnStateSpanCount'])
+            'prepare run' = @([double]$delta['gNdsTask103OwnPrepareRunTicks'], [double]$delta['gNdsTask103OwnPrepareRunCount'])
+        }
+        $ownSum = 0.0
+        foreach ($v in $ownSteps.Values) { $ownSum += $v[0] }
+        Write-Host ("inside ndsRendererPrepareNativeStageOwner")
+        Write-Host ("step                       ticks/frame   calls/frame    per call     share")
+        foreach ($k in $ownSteps.Keys) {
+            $t = $ownSteps[$k][0]; $c = $ownSteps[$k][1]
+            Write-Host ("{0,-24} {1,12:N0} {2,13:N1} {3,11:N0} {4,9:P1}" -f `
+                $k, ($t / $frames), ($c / $frames),
+                ($(if ($c -gt 0) { $t / $c } else { 0 })), ($t / $own))
+        }
+        Write-Host ("{0,-24} {1,12:N0}  (span total {2:N0}, unattributed {3:N0})" -f `
+            'SUM', ($ownSum / $frames), ($own / $frames), (($own - $ownSum) / $frames))
+        Write-Host ("task36 reuse: {0:N1} hits, {1:N1} misses per frame" -f `
+            ($delta['gNdsTask103OwnReuseCount'] / $frames),
+            ($delta['gNdsTask103OwnReuseMissCount'] / $frames))
+        Write-Host ""
+    }
+    $runHead = [double]$delta['gNdsTask103RunHeadTicks']
+    $runDense = [double]$delta['gNdsTask103RunDenseTicks']
+    $denseN = [double]$delta['gNdsTask103RunDenseCount']
+    $nearN = [double]$delta['gNdsTask103RunNearCount']
+    if (($runHead + $runDense) -gt 0) {
+        Write-Host ("inside ndsRendererNativeStagePrepareRun")
+        Write-Host ("head (policy/memset/texture) {0,10:N0} ticks/frame" -f ($runHead / $frames))
+        Write-Host ("dense vertex loop            {0,10:N0} ticks/frame" -f ($runDense / $frames))
+        Write-Host ("dense vertices               {0,10:N1} /frame  ({1:N0} ticks each)" -f `
+            ($denseN / $frames), ($(if ($denseN -gt 0) { $runDense / $denseN } else { 0 })))
+        Write-Host ("  of which near-transformed  {0,10:N1} /frame  ({1:P1} of dense)" -f `
+            ($nearN / $frames), ($(if ($denseN -gt 0) { $nearN / $denseN } else { 0 })))
+        Write-Host ("  colour+texcoord only       {0,10:N1} /frame  <- memo candidate" -f `
+            (($denseN - $nearN) / $frames))
+        Write-Host ""
+    }
+    Write-Host ("Instrument overhead: E3 adds no timer reads; E0-E2/E4-E6 add a few per call.")
     Write-Host ""
 
     if ($JsonOut) {

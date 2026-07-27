@@ -19404,6 +19404,23 @@ static void ndsRendererNativeStageInputVertex(
     input->a = (u8)dense->rgba;
 }
 
+#if NDS_TASK103_STAGE_RUN_PHASE
+/* Task 103 E6. Splits ndsRendererNativeStagePrepareRun into its head (policy
+ * match, the two memsets, texture resolve) and its per-dense-vertex loop, and
+ * counts both the dense vertices touched and the subset that take the
+ * camera-dependent near-plane transform.
+ *
+ * The point of the split: the loop's colour and texcoord terms read only
+ * compile-time vertex data plus per-run material state, while only near_inside
+ * reads frame->binding_composed, which the moving camera changes every frame.
+ * The gap between DenseCount and NearCount is therefore the size of the memo,
+ * and this measures it before anyone proposes one. */
+volatile u32 gNdsTask103RunHeadTicks;
+volatile u32 gNdsTask103RunDenseTicks;
+volatile u32 gNdsTask103RunDenseCount;
+volatile u32 gNdsTask103RunNearCount;
+#endif
+
 static s32 ndsRendererNativeStagePrepareRun(
     u32 run_index,
     const NDSRendererNativeStageFrame *frame,
@@ -19431,6 +19448,10 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 dense_offset;
     u32 alpha = UINT_MAX;
     u32 use_texture;
+#if NDS_TASK103_STAGE_RUN_PHASE
+    u32 task103_run_entry;
+    u32 task103_run_mark;
+#endif
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
     gNdsRendererTask36PrepareRunRejectReason = 0u;
 #endif
@@ -19441,6 +19462,9 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 residual_near_count_start;
 #endif
 
+#if NDS_TASK103_STAGE_RUN_PHASE
+    task103_run_entry = cpuGetTiming();
+#endif
     epoch = &sNdsNativeStageTextureEpochs[run->texture_epoch];
     policy = &sNdsNativeStageStatePolicies[run->state_policy];
     if (ndsRendererNativeStagePolicyMatches(policy, stats) == FALSE)
@@ -19528,6 +19552,16 @@ static s32 ndsRendererNativeStagePrepareRun(
     residual_near_count_start = gNdsRendererM3Phase0NearTransformCount;
     vertex_prepare_start = ndsRendererM3Phase0Tick();
 #endif
+#if NDS_TASK103_STAGE_RUN_PHASE
+    /* E6. Everything up to here is per-run head work, of which the texture
+     * resolve is the known-expensive part (Task 98: ~1,621/bind). The loop
+     * below is per dense vertex, and its colour and texcoord terms depend only
+     * on compile-time vertex data plus per-run material state -- only
+     * near_inside reads the camera-composed matrix. Splitting head from loop
+     * sizes the memo before anyone proposes it. */
+    gNdsTask103RunHeadTicks += cpuGetTiming() - task103_run_entry;
+    task103_run_mark = cpuGetTiming();
+#endif
     for (dense_offset = first_visit_offset;
          dense_offset < first_visit_end;
          dense_offset++)
@@ -19611,9 +19645,18 @@ static s32 ndsRendererNativeStagePrepareRun(
             {
                 prepared_dense->near_inside = FALSE;
             }
+#if NDS_TASK103_STAGE_RUN_PHASE
+            gNdsTask103RunNearCount++;
+#endif
             }
         }
+#if NDS_TASK103_STAGE_RUN_PHASE
+        gNdsTask103RunDenseCount++;
+#endif
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103RunDenseTicks += cpuGetTiming() - task103_run_mark;
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     ndsRendererM3Phase0FinishSpan(
         &gNdsRendererM3Phase0VertexPrepareTicks, vertex_prepare_start);
@@ -20523,8 +20566,26 @@ volatile u32 gNdsTask103GenericRunCount;
 volatile u32 gNdsTask103GenericTriangles;
 volatile u32 gNdsTask103IterTicks;
 volatile u32 gNdsTask103IterCount;
-/* E2's three counters live in reloc_backend_renderer_dl.c, next to the call
- * site they wrap. */
+/* E2's counters live in reloc_backend_renderer_dl.c, next to the call site
+ * they wrap.
+ *
+ * E5. E4 put 160,588 ticks/frame -- 41% of the stage bucket and 12% of all
+ * frame work -- inside ndsRendererPrepareNativeStageOwner at one call per
+ * frame. These split it into the steps it actually runs: the one-shot topology
+ * validation, the per-segment stats/traversal reset, the Task 36 prepared-
+ * segment reuse check, and the per-run state-span and prepare-run work for the
+ * segments that reuse misses. */
+volatile u32 gNdsTask103OwnValidateTicks;
+volatile u32 gNdsTask103OwnInitTicks;
+volatile u32 gNdsTask103OwnInitCount;
+volatile u32 gNdsTask103OwnReuseTicks;
+volatile u32 gNdsTask103OwnReuseCount;
+volatile u32 gNdsTask103OwnReuseMissCount;
+volatile u32 gNdsTask103OwnStateSpanTicks;
+volatile u32 gNdsTask103OwnStateSpanCount;
+volatile u32 gNdsTask103OwnPrepareRunTicks;
+volatile u32 gNdsTask103OwnPrepareRunCount;
+/* E6's four counters are defined ahead of ndsRendererNativeStagePrepareRun. */
 #endif
 static s32 NDS_RENDERER_FAST_RUN_CODE NDS_TASK82_ITCM_CODE
 ndsRendererTask36ReplayRun(
@@ -21170,6 +21231,10 @@ s32 ndsRendererPrepareNativeStageOwner(
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     u32 phase0_preflight_start;
 #endif
+#if NDS_TASK103_STAGE_RUN_PHASE
+    u32 task103_own_entry = cpuGetTiming();
+    u32 task103_own_mark;
+#endif
 
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     gNdsRendererM3PreflightAttemptCount++;
@@ -21248,6 +21313,10 @@ s32 ndsRendererPrepareNativeStageOwner(
     {
         goto done;
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    task103_own_mark = cpuGetTiming();
+    gNdsTask103OwnValidateTicks += task103_own_mark - task103_own_entry;
+#endif
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
     task36_reject_reason = 2u;
 #endif
@@ -21276,6 +21345,9 @@ s32 ndsRendererPrepareNativeStageOwner(
             &sNdsNativeStageSegments[segment_index];
         u32 binding_offset;
 
+#if NDS_TASK103_STAGE_RUN_PHASE
+        task103_own_mark = cpuGetTiming();
+#endif
         ndsRendererInitStats(&sNdsNativeStageOwnerExecution.preflight_stats);
         sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
             segment->initial_geometry;
@@ -21283,14 +21355,27 @@ s32 ndsRendererPrepareNativeStageOwner(
             state, frame->config,
             &sNdsNativeStageOwnerExecution.preflight_stats,
             NULL, NULL, 0u);
+#if NDS_TASK103_STAGE_RUN_PHASE
+        gNdsTask103OwnInitTicks += cpuGetTiming() - task103_own_mark;
+        gNdsTask103OwnInitCount++;
+        task103_own_mark = cpuGetTiming();
+#endif
 #if NDS_TASK36_HW_COMPOSE == 2
         if (ndsRendererTask36ReplayUsePreparedSegment(
                 segment_index,
                 &sNdsNativeStageOwnerExecution.preflight_stats,
                 &epoch_mask) != FALSE)
         {
+#if NDS_TASK103_STAGE_RUN_PHASE
+            gNdsTask103OwnReuseTicks += cpuGetTiming() - task103_own_mark;
+            gNdsTask103OwnReuseCount++;
+#endif
             continue;
         }
+#if NDS_TASK103_STAGE_RUN_PHASE
+        gNdsTask103OwnReuseTicks += cpuGetTiming() - task103_own_mark;
+        gNdsTask103OwnReuseMissCount++;
+#endif
 #endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE && \
     !NDS_RENDERER_M3_PHASE0_PROFILE
@@ -21330,6 +21415,9 @@ s32 ndsRendererPrepareNativeStageOwner(
             {
                 u32 run_index = (u32)binding->first_run + run_offset;
 
+#if NDS_TASK103_STAGE_RUN_PHASE
+                task103_own_mark = cpuGetTiming();
+#endif
                 if (ndsRendererNativeStageApplyStateSpan(
                          &sNdsNativeStageStateSpans[run_index], frame,
                          &sNdsNativeStageOwnerExecution.preflight_stats,
@@ -21370,6 +21458,11 @@ s32 ndsRendererPrepareNativeStageOwner(
                     }
                 }
 #else
+#if NDS_TASK103_STAGE_RUN_PHASE
+                gNdsTask103OwnStateSpanTicks += cpuGetTiming() - task103_own_mark;
+                gNdsTask103OwnStateSpanCount++;
+                task103_own_mark = cpuGetTiming();
+#endif
                 if (ndsRendererNativeStagePrepareRun(
                         run_index, frame,
                         &sNdsNativeStageOwnerExecution.preflight_stats,
@@ -21380,6 +21473,10 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
                     goto done;
                 }
+#if NDS_TASK103_STAGE_RUN_PHASE
+                gNdsTask103OwnPrepareRunTicks += cpuGetTiming() - task103_own_mark;
+                gNdsTask103OwnPrepareRunCount++;
+#endif
 #endif
             }
             if (ndsRendererNativeStageApplyStateSpan(
