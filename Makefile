@@ -175,6 +175,14 @@ NDS_TASK104_STAGE_STATS_ELISION ?= 1
 # simulation would save; it is a sizing arm only, uncompensated, and plays at
 # half speed. Do not publish a ROM built with 1.
 NDS_TASK106_UPDATES_PER_PRESENT ?= 2
+# Task 75 E0: count completed file loads and ride the per-frame delta on the
+# same census ring the Task 70 fallback counter uses. Answers Task 71 section
+# 5's open obligation -- one expensive SRC frame was profiled and found to be a
+# cartridge load, but it was never shown that every high-SRC frame is one.
+# Task 106 made that the gate's question: the SRC excursion survives halving the
+# update rate unchanged, so the tail is loading, not simulation.
+# Sample with -FallbackCensus -RingDump; lab only, default 0.
+NDS_TASK75_LOAD_CENSUS ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1626,6 +1634,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
+		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \

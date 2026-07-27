@@ -3392,6 +3392,10 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
         return TRUE;
     }
 
+    /* Task 75 E0: counted here rather than at the open, because this is the one
+     * point every load path funnels through exactly once per file -- the early
+     * return above is the re-entrant case and must not be counted twice. */
+    NDS_TASK75_MARK_ASSET_LOAD();
     loaded->fixups_applying = TRUE;
     if ((ndsRelocApplyInternalPointerFixups(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE) ||

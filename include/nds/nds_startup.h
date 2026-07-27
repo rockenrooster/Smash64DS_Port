@@ -4139,6 +4139,19 @@ extern volatile u32 gNdsTickHudNativeOwnerFallbackByReason[
 #define NDS_TICK_HUD_NATIVE_OWNER_MARK(reason) ((void)0)
 #define NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(reason) ((void)0)
 #endif
+
+/* Task 75 E0: completed file loads, differenced per frame into the census ring.
+ * See the definition in diagnostics.c for why this rides the same ring as the
+ * Task 70 fallback counter rather than adding a second one. */
+#if NDS_TICK_HUD && NDS_TASK75_LOAD_CENSUS
+extern volatile u32 gNdsTask75AssetLoadCount;
+#define NDS_TASK75_MARK_ASSET_LOAD() \
+    do { \
+        gNdsTask75AssetLoadCount++; \
+    } while (0)
+#else
+#define NDS_TASK75_MARK_ASSET_LOAD() ((void)0)
+#endif
 extern volatile u32 gNdsTickHudFighterTicks;
 extern volatile u32 gNdsTickHudStageTicks;
 extern volatile u32 gNdsTickHudBackgroundTicks;

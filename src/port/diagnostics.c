@@ -2928,6 +2928,20 @@ volatile u32 gNdsTickHudNativeOwnerFallbackCount;
 volatile u32 gNdsTickHudNativeOwnerFallbackByReason[
     nNDSTickHudNativeOwnerFallbackReasonCount];
 #endif
+#if NDS_TASK75_LOAD_CENSUS
+/* Task 75 E0. Task 71 profiled one expensive `SRC` frame and found a NitroFS
+ * open, a cartridge read, a relocation and a figatree parse inside the frame
+ * that needed the animation -- but section 5 left the obligation open: one
+ * frame was profiled, and it was never shown that every high-`SRC` frame is a
+ * load. Task 106 made that question the gate's, by proving the `SRC` excursion
+ * survives halving the update rate unchanged (+518,016 vs +522,720).
+ *
+ * Counts completed file loads. Cumulative, differenced per frame into the same
+ * census ring the Task 70 fallback counter uses, so the load count and the
+ * bucket costs land on one index and can be compared directly rather than
+ * correlated across separate runs. Tick-HUD lab builds only. */
+volatile u32 gNdsTask75AssetLoadCount;
+#endif
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 volatile u32 gNdsRendererProfileLoopWallTicks;

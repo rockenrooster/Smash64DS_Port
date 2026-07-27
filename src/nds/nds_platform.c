@@ -1992,7 +1992,7 @@ static u32 sBattleTickHudRing[nNDSTickHudBucketCount][NDS_TICK_HUD_WINDOW];
 static u32 sBattleTickHudScratch[NDS_TICK_HUD_WINDOW];
 static u32 sBattleTickHudRingHead;
 static u32 sBattleTickHudRingCount;
-#if NDS_TASK68_FALLBACK_CENSUS
+#if NDS_TASK68_FALLBACK_CENSUS || NDS_TASK75_LOAD_CENSUS
 /* Task 70. The native-owner counters are cumulative, and a run-level total
  * cannot say whether the frames that fell back are the frames that cost the
  * P95 or merely as numerous as them. Ringing the per-frame delta alongside the
@@ -2002,7 +2002,19 @@ static u32 sBattleTickHudRingCount;
  * volatile because nothing in the ROM ever reads it: the bucket ring survives
  * because the HUD computes percentiles from it, but a static array that is only
  * ever stored to is a dead store and GCC deletes it outright -- the first build
- * linked with no such symbol at all. */
+ * linked with no such symbol at all.
+ *
+ * Task 75 E0 rides the same ring rather than adding a second one. The two
+ * censuses answer the same shape of question about different counters and are
+ * never built together, so one ring and one selected source keeps
+ * scripts/sample-tick-hud-buckets.ps1 unchanged -- its two-stop baseline path
+ * is proven and editing a .ps1 has corrupted these files before. Which counter
+ * a dump holds is a property of the build, and each task's document records it. */
+#if NDS_TASK75_LOAD_CENSUS
+#define NDS_TICK_HUD_CENSUS_RING_SOURCE gNdsTask75AssetLoadCount
+#else
+#define NDS_TICK_HUD_CENSUS_RING_SOURCE gNdsTickHudNativeOwnerFallbackCount
+#endif
 static volatile u32 sBattleTickHudFallbackRing[NDS_TICK_HUD_WINDOW];
 static u32 sBattleTickHudFallbackPrev;
 #endif
@@ -2074,9 +2086,9 @@ void ndsPlatformTickHudSample(void)
     {
         sBattleTickHudRing[bucket][head] = gNdsTickHudBuckets[bucket];
     }
-#if NDS_TASK68_FALLBACK_CENSUS
+#if NDS_TASK68_FALLBACK_CENSUS || NDS_TASK75_LOAD_CENSUS
     {
-        u32 total = gNdsTickHudNativeOwnerFallbackCount;
+        u32 total = NDS_TICK_HUD_CENSUS_RING_SOURCE;
 
         sBattleTickHudFallbackRing[head] = total - sBattleTickHudFallbackPrev;
         sBattleTickHudFallbackPrev = total;
