@@ -377,8 +377,20 @@ dispatches -- not if it shrinks their payloads. This is the same shape as the
 saturated-layout finding (Tasks 87/88/89/94/95) seen from the data side, and it
 constrains visual approximation specifically: smaller textures, coarser
 coordinates and fewer bits per vertex are all payload reductions and all buy
-nothing. Fewer triangles is an operation reduction and is the one visual lever
-still standing.
+nothing.
+
+**Refined by Task 99: a triangle is not an operation.** Dropping half the
+stage's triangles (202 -> 101) at the emit seam moved `STG` P50 by only
+**-19,584**, or ~194 ticks per triangle, leaving the stage bucket **89% fixed**.
+The run structure was unchanged -- only corners inside each run were skipped --
+and that is exactly why it bought so little.
+
+The operative rule is therefore narrower than "fewer triangles": **a change pays
+only if it removes a run, bind, draw or dispatch, not if it removes items from
+inside one.** Task 99 also retires the estimator that produced its own
+hypothesis: dividing a bucket by its item count gave ~1,832 ticks/triangle
+against a measured 194, wrong by 9.4x, because it charged fixed overhead to the
+per-item quantity. Do not size a per-item lever by dividing a bucket total.
 
 ## GDB `if` at top level resumes exactly once (Task 96, 2026-07-26)
 
