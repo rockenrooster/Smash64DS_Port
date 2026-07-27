@@ -41,15 +41,14 @@ FIXED -Missing SFX 2nd jump sound (double jump) not playing (1st jump sound play
   original particle scripts never run. lbParticleMakeScriptID is a stub
   (reloc_backend_compat_shims.c:12963) and the common particle script/texture
   banks are not resident, so nothing here is textured. In their place,
-  13 NDSVisualEffectKind values (nds_effects.h:9-25) collapse onto 12 template
-  slots (battleship_efmanager.c:212-226) built from only FOUR untextured
-  16-vertex primitives: BuildDust (:301), BuildStar (:269), BuildRing (:333),
-  BuildDisc (:373).
+  13 NDSVisualEffectKind values (nds_effects.h:9-25) share a small set of
+  template slots (battleship_efmanager.c) built from only FOUR untextured
+  16-vertex primitives: BuildDust, BuildStar, BuildRing, BuildDisc.
   This splits the row in two:
-  (a) A real defect -- five kinds render as a *different effect*. The switch at
-      battleship_efmanager.c:469-501 maps Coin->Sparkle, Catch->ImpactWave,
-      Slash->HitNormal, Rebirth->Death, and Reflector->Shield. "fox down B" is
-      that last one: efManagerFoxReflectorMakeEffect (:883) asks for
+  (a) A real defect -- before this pass, five kinds rendered as a *different
+      effect*: Coin->Sparkle, Catch->ImpactWave, Slash->HitNormal,
+      Rebirth->Death, and Reflector->Shield. "fox down B" is
+      that last one: efManagerFoxReflectorMakeEffect asks for
       nNDSVisualEffectReflector and gets the shield disc, white->red -- P1
       Mario's shield colors on Fox's reflector. The port also never reads
       effect_vars.reflector.status, which ftfoxspeciallw.c:29 sets every frame,
