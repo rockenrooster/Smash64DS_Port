@@ -117,10 +117,17 @@ FIXED -Fox face never changes expression once hit in a match.
     The renderer reports no drops (rej=0, drop0) and we are far under the DS
     per-frame limits (vtx 2484 / tri 828 of 6144 / 2048), so it is not
     clipping or overflow.
-  NEXT: find which DObj/DL is absent. The harness pins fighters at exactly
-  626 triangles per frame for two owners (313 each); if that contract was
-  pinned against an already-incomplete model, the count will not flag the
-  loss. Compare the submitted per-DObj triangle counts against Mario's source
-  model DL, and check the DObjDLLink list_id / detail level the port selects
-  -- SSB64 carries up to 4 DL lists per DObj and picking a lower-detail list
-  would drop exactly this kind of cap.
+  TESTED and REFUTED -- it is not inverted culling. A lab probe forced
+  POLY_CULL_NONE for every polygon, ignoring the source cull bits, and the
+  hole stayed exactly where it was: same position, same size, in the same
+  crop of the same capture point. If the front/back convention were flipped,
+  rendering both faces would have filled it with at least the interior back
+  surface. It did not, so nothing is being rasterized there at all. Probe
+  removed after answering; the A/B captures are the evidence.
+  NEXT: find which DObj/DL is absent. The harness pins fighters at 313
+  triangles per owner per frame; if that contract was pinned against an
+  already-incomplete model, the count cannot flag the loss. Compare the
+  submitted per-DObj triangle counts against Mario's source model DL, and
+  check the DObjDLLink list_id / detail level the port selects -- SSB64
+  carries up to 4 DL lists per DObj and picking a lower-detail list would
+  drop exactly this kind of cap.
