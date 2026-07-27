@@ -26,31 +26,32 @@ the way Task 92 §4 corrected Task 78's sizing and Task 96 §4 corrected Task 92
 `archive/` holds retired queues and closed tasks. Move a task there once nothing
 current cites it; leave the ones the standing rules still point at in place.
 
-## Where the campaign stands (2026-07-26, Task 96)
+## Where the campaign stands (2026-07-27, Task 99)
 
-`WORK-H` P95 **1,733,888** against `PROJECT_GOAL.md`'s 1,120,000 gate —
-**613,888 over**. Every direction has been closed with a measurement: texture
-memo (93), soft-float conversion (92), dense-vertex re-shade (90), animation as
-originally scoped (77 E1), `mem*` (87/88), placement (87/88/89/94), incremental
-animation reorganization (95), and the wholesale animation channel rewrite (96).
+`WORK-H` P95 **1,761,664** on the current tick-HUD build against
+`PROJECT_GOAL.md`'s 1,120,000 gate — **641,664 over**.
 
-**The exactness-preserving direction is exhausted.** No remaining lever of that
-kind is above ~20,000 ticks/frame.
+**Two whole searches are closed by measurement, not by argument:**
 
-That is not the same as the campaign being blocked, and Task 96 first said it
-was. Tasks 78–96 were all exactness-preserving *by choice*. `PROJECT_GOAL.md`
-§Sacrifice Order does not ask for that: it ranks audio fidelity first, **visual
-fidelity second**, the original 60 Hz simulation third and gameplay fidelity
-fourth, and states that **stable 30 FPS is the most protected requirement**.
-`AGENTS.md` already carries the procedure — rendering-side changes gate on a
-reported fidelity budget (synchronized screenshot diffs plus the owner's visual
-approval), not pixel exactness.
+- **Exactness-preserving** — nineteen tasks (78–96): texture memo (93),
+  soft-float conversion (92), dense-vertex re-shade (90), animation as originally
+  scoped (77 E1), `mem*` (87/88), placement (87/88/89/94), incremental animation
+  reorganization (95), the wholesale animation channel rewrite (96). Nothing left
+  above the ~20,000 ticks/frame bar.
+- **Visual approximation, payload form** — three tasks (98, 99): cheaper vertex
+  encoding (−27.2% of words → ~0 ticks), lower texture resolution (cost is
+  ~1,621 per *bind*, flat in texel count), fewer triangles (−50% of the stage →
+  −19,584, leaving the stage bucket ~89% fixed).
 
-So the open direction is **visual approximation**: fewer vertices, coarser
-textures, simpler lighting, fewer draw calls. The renderer classes are 290,406
-ticks/frame between them and `fighter: native production` (255,061, which
-includes prepared dense vertices) sits on top of that. It has not been tried
-once in this campaign.
+Both shared an unstated assumption — **that the frame's cost is something the
+CPU does**. The record now contains a contradiction that only resolves if that is
+wrong: Task 54 called the stage GX-throughput-bound, but the two quantities GX
+throughput scales with, command words and triangles, were later measured at +64
+and −19,584 respectively. That bucket has never actually been attributed.
 
-Its gate is the owner's eyes on a screenshot, which is why it is a decision and
-a task rather than a task alone.
+**The open direction is the raster axis** — pixels, the one quantity 99 tasks
+have never varied. See `RASTER_AXIS_CAMPAIGN.md` for the thesis, its kill
+criterion, and the task list. Its first task is also the control that decides
+whether the emulator can see fill cost at all; every number this campaign owns
+came from a fork that is cache-accurate for the ARM9 and is **not** a
+cycle-accurate model of the DS rasterizer.

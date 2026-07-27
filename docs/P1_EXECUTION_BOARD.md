@@ -47,6 +47,15 @@ updated in the same kept change.
    owner play/listen pass, reserve gate, Results transition, and teardown proof
    on the exact candidate ROM.
 
+**Performance lane (2026-07-27):** `WORK-H` P95 **1,761,664** against the
+1,120,000 gate. Two search spaces are closed by measurement — exactness-preserving
+(Tasks 78–96) and visual approximation in its payload form (Tasks 98–99). The
+open direction is the **raster axis**, planned in
+`optimization/RASTER_AXIS_CAMPAIGN.md`. Its first task, **Task 100**, is the
+coverage probe and doubles as the control on whether the emulator can observe
+fill cost at all; it is unowned and it gates everything after it. Do not open
+Tasks 101–105 before it reports.
+
 Task 62's reduced DS-native static mesh remains a **REVERT**. A source-exact
 follow-up now preserves material/UV/color/alpha and matches the flag-0 top
 screen pixel-for-pixel, but submits the same 525 static vertices. The reduced
