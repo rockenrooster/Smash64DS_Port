@@ -1,24 +1,5 @@
 AI Agent should mark fixed items with FIXED prefix
-FIXED -Up B goes through main stage when underneath it.
-  Cause: two layers. The port's stand-in for the source's
-  mpCommonRunFighterSpecialCollisions -- the runner every special / project /
-  pass / landing entry point uses -- never ran the L/R wall tests and never
-  called mpProcessRunCeilEdgeAdjust. Without the wall pass coll_data->mask_unk
-  never carries MAP_FLAG_LWALL/RWALL, which is exactly what the ceiling test's
-  fallback branches read to catch a rise that enters the platform past the end
-  of the ceiling segment. Underneath that, mpProcessRun{L,R}WallCollisionAdjNew
-  and mpProcessRunCeilEdgeAdjust were weak no-op bridges in the shipping link,
-  because mpprocess.c was compiled as a private check and never linked.
-  Fix: restored the missing calls and graduated mpprocess live
-  (NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE now defaults to 1), so the real source
-  adjusters run. Latest profile green; needs a play test.
-FIXED -grab attacks snap player positions to wrong locations.
-  Cause: func_ovl0_800C9A38 returned identity plus the joint's *local*
-  translate, so ftCommonCapturePulledRotateScale placed the victim at the
-  capturer's hand offset measured from the world origin instead of from the
-  hand. It now rebuilds and reads the joint's world matrix the way the decomp's
-  non-US branch does (func_ovl2_800EDBA4 + parts->mtx_translate). Needs a
-  play test.
+
 -Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the
   push vector on the floor, so Whispy's gust had no effect at all. It now does
@@ -62,11 +43,7 @@ FIXED -grab attacks snap player positions to wrong locations.
   Latest profile green. Needs an ear check.
   VFX still open: the same particle-bank gap as the other VFX rows below --
   lbParticleMakeScriptID is a skipped stub.
-FIXED -Missing SFX 2nd jump sound (double jump) not playing (1st jump sound plays, but not 2nd jump sound)
-  Cause: the pack carried nSYAudioVoiceMarioJump (435, the grounded jump) but
-  not nSYAudioVoiceMarioJumpAerial (436), which is what
-  202_MarioMainMotion.c:118 asks for. Added 436 to the FGM pack. Needs an ear
-  check.
+  
 -some VFX are wrong/don't look right, running foot dust VFX, fireball hit VFX, fox down B, hard landing vfx
   Root cause, measured: every named effect does spawn -- the verifier reports
   178/178 Mario/Fox motion calls with bounded DS presentation -- but the
@@ -104,19 +81,7 @@ FIXED -Missing SFX 2nd jump sound (double jump) not playing (1st jump sound play
       OPEN: port lb/lbparticle.c (2,961 lines), ef/efparticle.c,
       ef/efdisplay.c, add a DS pack step, and draw textured quads.
       See KNOWN_ISSUES.md for the full measurement.
-FIXED -Missing SFX, Mario down B, fox up b voice
-  Cause: nSYAudioVoiceMarioSpecialLw (432) and nSYAudioVoiceFoxSpecialHi (362)
-  were never packed, so both motion-script requests failed closed. Added both.
-  Needs an ear check.
-FIXED -Fox face never changes expression once hit in a match.
-  Cause: ftParamResetTexturePartAll only rewound the FTStruct mirror and left
-  the MObj showing whatever the last ftParamSetTexturePartID wrote, so the
-  first damage face a fighter took became permanent. ftMainSetStatus calls the
-  reset on every status change that lacks FTSTATUS_PRESERVE_TEXTUREPART, and
-  the model never heard about it. It now writes the base id back through the
-  joint's MObj chain the way the source does (ftparam.c:1147-1189), using the
-  container/detail guards ftParamSetTexturePartID already applies. Needs a
-  play test.
+
 -Upwards KO boundary:  VFX and SFX never play for fighters
   SFX half FIXED: the star-KO path asks for nSYAudioFGMDeadUpStar (12) and the
   per-fighter deadup_sfx (Fox 360 / Mario 433); none of the three was packed.
@@ -175,12 +140,43 @@ FIXED -Fox face never changes expression once hit in a match.
      rather than shedding triangles (373 vs 396 commands). scvsbattle.c
      picks High when pl_count + cp_count < 3, and Boundary is 1+1, so High
      is correct and 14 is what the port runs.
-  What is left: triangles inside a DL that are submitted but land wrong, or
-  are dropped without incrementing any counter. Note 313 triangles/owner is
-  the average over Mario and Fox, not Mario's own count, so it cannot be
-  compared against Mario's model directly.
-  NEXT: a per-DObj triangle census for player 0 -- scanned vs submitted per
-  display list -- which separates "geometry missing" from "geometry present
-  but mispositioned". The latter is live: bug #2 in this same pass was a
-  local matrix used where a world matrix was required, and the torso/thigh
-  junction is exactly where a joint transform error would open a seam.
+  SETTLED 2026-07-27: nothing is missing. The title of this row is wrong.
+  Two measurements close the "is geometry being dropped" question:
+  6. The source has the geometry, and it is closed. Parsed Mario's
+     14 display lists straight out of the decomp: the torso
+     (Joint_0x1668) is 36 triangles over 25 vertices with 54 edges,
+     zero boundary edges and zero non-manifold edges -- Euler 20-54+36
+     = 2, a closed shell. It is capped at the bottom. (Weld the vertices
+     on position first: N64 splits a vertex per normal/UV, so v1/v3,
+     v2/v5, v7/v19, v11/v13 and v6/v18 are the same point and an
+     unwelded count reports 12 fake boundary edges.) So this is a port
+     defect, not an open-shell model the original also shows.
+  7. Every triangle is submitted, every frame. Mario's High tree totals
+     exactly 320 triangles across its 14 lists. The port submits
+     67,840 over 212 frames = 320.000/frame. Fox: 64,872 = 306/frame.
+     The old 313-per-owner contract was the average of two different
+     models and could never have shown this; it is now pinned per
+     fighter at Mario 320 / Fox 306, so a future geometry loss moves a
+     number instead of hiding in the mean.
+  Two more mechanisms eliminated while getting there:
+  8. A half-dropped G_TRI2 would have cost exactly half the model. Both
+     the general path (nds_renderer.c:14713-14736) and the fast raw
+     batch path (:14900-14912) decode and submit both halves; the fast
+     path rejects the whole plan rather than emit a partial one.
+  9. Vertex overflow in the DS 4.12 conversion. NDS_RENDERER_HW_WORLD_UNIT_SHIFT
+     is 8, so the model coordinate is shifted left by 4 and saturates
+     past |2047|. Mario's torso maxes at 92. Not close.
+  So all 320 triangles exist, are closed, and reach the hardware -- and a
+  hole is still visible. They are landing in the wrong place. That also
+  explains the culling probe: forcing POLY_CULL_NONE cannot fill a gap
+  between two solid parts, because no surface lies along that ray at all.
+  NEXT: the torso is a single display list under a single matrix, so a bad
+  torso matrix would move the whole torso, not hole it. The seam is
+  between parts. Suspect the leg chain: both level-2 leg nodes carry the
+  compound rotation {-pi/2, 0, -pi/2} and hang the thigh/shin/foot off it,
+  and the reported band is exactly where the thigh should overlap the
+  torso's lower rim. Compose the rest-pose joint transforms for
+  dMarioModel_JointTree entries 15-17 and 20-24 and compare the thigh's
+  world-space top against the torso's bottom rim (y = -52..-74). Bug #2 in
+  this same pass was a local matrix used where a world matrix was
+  required, which is the same class of error.
