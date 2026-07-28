@@ -121,6 +121,75 @@ Caveat, stated plainly: this holds under the emulator's model. But the HUD
 readings came from that same emulator, so both sides are one machine — and only
 one side has a closed ledger.
 
+## 6a. Follow-on: the idle moves into whichever phase is running
+
+Measured here, from the 128-frame control capture taken for R2-01
+(`artifacts/r2-01-ab/control.json`) — a different window (439–566) and a
+different run from the one R2-00a validated against, so this is independent
+corroboration rather than the same observation restated.
+
+29 of 128 frames run `WAIT` below 60% of its median. On those frames:
+
+| bucket | low-WAIT mean | normal mean | delta |
+|---|---|---|---|
+| `WAIT` | 70,365 | 384,805 | **−314,440** |
+| `OTHR` | 86,583 | 401,080 | **−314,496** |
+| `SRC` | 444,036 | 350,834 | +93,203 |
+| `FTR` | 634,790 | 560,772 | +74,018 |
+| `ALL` | 1,699,332 | 1,770,566 | −71,234 |
+
+**`OTHR` tracks `WAIT` to within 56 ticks.** Task 65 already established that
+`OTHR` is essentially the VBlank wait, so the two falling together says the idle
+left the wait — it did not become less idle.
+
+Per frame, it lands in **whichever phase happens to be running**, not in one
+fixed place:
+
+| frame | `WAIT` | shortfall | bucket that absorbs it |
+|---|---|---|---|
+| 547 | 3,392 | +355,584 | `FTR` +447,744 |
+| 479 | 4,480 | +354,496 | `FTR` +448,192 |
+| 481 | 20,928 | +338,048 | `FTR` +443,200 |
+| 519 | 11,136 | +347,840 | `SRC` +268,416 |
+| 542 | 11,264 | +347,712 | `SRC` +307,264 |
+| 469 | 22,848 | +336,128 | `SRC` +363,136 |
+
+`ALL` stays pinned at ~1,680,064 — three VBlanks — on every one of them.
+
+This rules out a single mis-scoped bracket and points at the CPU blocking inside
+a named phase, where the HUD has no wait accounting at all. It does **not** yet
+say on what. Two readings remain open and they take opposite actions:
+
+- If the CPU **halts** there (a library call that waits on card I/O, DMA, or a
+  ring refill), the HUD is wrong and the fix is to account for idle at its
+  source rather than only around `ndsPlatformWaitForScheduledVBlank`.
+- If the CPU **stalls on a GX FIFO write**, charging it to `FTR`/`SRC` is
+  arguably correct per `AGENTS.md` ("GX backpressure is distributed into the
+  named buckets as memory stall on the write that could not retire"), and it is
+  the *emulator idle* figure in §4 that needs re-reading.
+
+`gx_stall_events = 0` on frames 453/454 argues for the first, but 453/454 are not
+these frames. **Deciding this needs the attributor run on this window**, which is
+exactly what it was built for.
+
+### Blocked step, for the owner
+
+Installing the attributor into `emulators/melonds/` was **denied by the sandbox**
+(replacing an executable). I did not route around it. To finish this:
+
+```powershell
+Copy-Item emulators\melonds\melonDS.exe backups\melonds-pre-attributor.exe
+Copy-Item D:\Stuff\DevFolder\melonDS-Accurate\build\melonDS.exe emulators\melonds\melonDS.exe -Force
+.\scripts\New-MelonDSRunnerSlots.ps1 -Count 4 -Force
+.\scripts\check-melonds-policy.ps1
+```
+
+Then re-run the census over a window containing frames 469–547 and read the
+`gx_paid` / `gx_blamed` / `halt_wait` columns. Running it from its build path
+instead was rejected on purpose: `AGENTS.md` requires repo-local scripted
+melonDS, and a lab binary outside `emulators/` would violate the same rule that
+keeps manual and sharded runs honest.
+
 ## 7. Adoption
 
 **Not yet adopted.** R2-00b §4 warned that a new emulator binary would break
