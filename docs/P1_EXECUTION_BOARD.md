@@ -63,6 +63,39 @@ independent counter disambiguating the one aliasing pair. E8 did not create the
 window; it changed where in the frame the stop lands. Full derivation in
 `docs/optimization/TASK_STANDING_RULES.md`.
 
+## R2-03 E5 — the premise is proven, the obvious cut is not worth building
+
+Three counters over one canonical match settle whether R2-03's baked-facts
+submit is possible (`ClaudeOpus5_R203_E5_RunFactMemo_20260728.md`,
+`de34e051181`, `12968f83dd2`, `fad10d4cf91`):
+
+| question | measurement | answer |
+|---|---|---|
+| do a run's facts ever change? | 0 misses / 112,300 calls | no |
+| does the function ever reject? | entry 112,367 == success 112,367 | no |
+| does a UV write ever change anything? | 0 changes / 208,874 writes | no |
+
+`ndsRendererNativePrepareProductionRun` is a pure function of `run_index` in the
+canonical configuration. The switch plan's "consuming only baked facts, no
+policy re-checks, no per-frame texture identity proof" is achievable, and the
+table can be generated rather than discovered.
+
+**But the obvious implementation banks nothing.** The UV loop is only ~119
+writes/frame — about 13 of the 67 runs are textured, touching 106 of 541 dense
+vertices — which is low thousands of ticks against the bucket's 21,504. The cost
+is spread across per-call validation and `texture_prepare_*` bookkeeping, and
+`texture_prepare_valid` is already a cache with 44 invalidation sites. Building
+a memo for the arithmetic was dropped on the measurement rather than attempted.
+
+Next on this phase is an internal cost split of the function, not an
+implementation. Two side effects any memo must preserve are recorded in §4d of
+the writeup: the GX bind at `:17313` and the harness-visible texture-prepare
+counters.
+
+**The bigger fighter lever is MatrixPrep at 91,338/frame** — four times this
+bucket, moving every frame, and where the bulk of the ~460K gap to the 1.12M
+gate has to come from.
+
 ## Runtime 2 (2026-07-27)
 
 The owner approved `Smash64DS_Runtime2_SwitchPlan.md` and it is now the live
