@@ -42,36 +42,55 @@ R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
 | R2-00a stall attributor | **done, gate met** | `optimization/ClaudeOpus5_R200a_StallAttributor_20260727.md` |
 | R2-00b re-baseline + budgets | **done** | `optimization/ClaudeOpus5_R200b_BaselineAndBudgets_20260727.md` |
 | R2-01 battle-path skeleton | **done, gate met** | `NDS_R2_PATH`, `src/nds/r2/`; Boundary green |
-| R2-02 Dream Land direct runtime | E0 sized | `optimization/ClaudeOpus5_R202_E0_StagePrepareSizing_20260727.md` |
+| R2-02 Dream Land direct runtime | **E1a done, gate met**; E2 open | `optimization/ClaudeOpus5_R202_E1a_StagePrepareElision_20260727.md` |
 | R2-03 fighter direct draw | unowned | |
 
-### The gate metric is measuring phantom work — highest-value row on the board
+**R2-02 E1a took `STG` P50 −94,784, down on 128/128 frames**, and 4-VBlank
+frames fell 50 → 12 out of 566. Boundary green; required-region detail 62.792%
+vs 62.778%. `NDS_R2_STAGE_DIRECT`, default 0, owner visual approval outstanding.
+`STG` is now 256,704 against the frozen 180K budget — gap 76,704, was 171,488.
+E2 is `ndsRendererAdapterPrepareNativeStageMatrices` (55,077 bracketed), which
+is **not** frame-invariant: the camera moves, so a reuse key will not work
+there and E0's sizing method does not transfer.
 
-**R2-00a closed the load-free `SRC` excursion, and the answer was not a stall.**
-The attributor's ledger is closed (`stall_partition_residual = 0`) and
-**`gx_stall_events = 0`** — GX FIFO backpressure, DMA hold-off and cart spin are
-all exactly zero on frames 453/454, the three candidates Task 108 §6 named.
+### CLOSED — the gate metric is sound (R2-00c, 2026-07-27)
 
-What is actually happening: the CPU sits at `armWaitForIrq` for essentially the
-same time on excursion and median frames (**796,250 vs 801,881, 0.7% apart**),
-while the tick HUD reports `WAIT` as **210,752 vs 804,736**. Since the HUD
-computes `WORK = ALL − WAIT`, idle it fails to count reappears as work that never
-happened — 588,353 ticks against the HUD's own claimed +593,856, **99.1%
-agreement**.
+**R2-00a's phantom-work finding is refuted, and the row it opened is closed.**
+It compared halt measured in a profile ROM against `WAIT` measured in a
+different tick-HUD ROM; placement differs between builds, so a frame index does
+not name the same workload in both. One ROM carrying both instruments
+(`NDS_TASK37_PROFILE_PER_FRAME_REGION=1`, new) settles it over 128 frames of one
+run: `ALL` agrees to **0.04%**, `WAIT` to a constant **−851 ticks/frame**, and
+the 27 excursion frames (median −860) are no different from the other 100
+(median −847). `WORK-H` P95 is not inflated by a mis-scoped bracket; the 1.12M
+gap is real. Evidence:
+`optimization/ClaudeOpus5_R200c_WaitBracketAudit_20260727.md`.
 
-This was already implied by Task 108's own data (total cycles identical to
-0.006%) and is not resting on the new instrument alone.
+**What replaced it is a real optimization row.** The excursion is genuine
+execution — `armWaitForIrq` falls 323,450 ticks/frame and **+286,619** of work
+takes its place, on 21% of frames — and the same per-frame regions attribute it:
+softfloat ~49,600, **the tick HUD measuring itself ~44,300**, cart read +
+relocation + bulk copy ~36,000, geometry submission ~14,500, collision ~5,700,
+animation ~2,700, then a diffuse tail over ~59,000 PCs. Four unrelated causes on
+the same frames, which is why five previous tasks found no single mechanism.
 
-Consequences: **`WORK-H` P95 is inflated on exactly the frames the P95 gate is
-decided by**, and Task 75's ~103,488 preload estimate inherits the artifact.
-Auditing the `WAIT` bracket in `ndsPlatformEndFrame` and re-deriving how much of
-the 1.12M gap was ever real now outranks every optimization row, including
-R2-02 — optimizing against a metric that manufactures work is how Tasks 53/55/56
-produced four uninformative verdicts.
+Two consequences worth acting on:
 
-The attributor is **not yet adopted** into `emulators/melonds/`. It reproduces
-the prior census bit-identically over 27,058 rows, so adoption does not break
-comparability with the ledger.
+- **The frames are not load-free.** `_ntrcardRecvByCpu` + `ntrcardRomRead` are
+  12,639 ticks/frame higher there. Task 75's preload targets something real, but
+  its ~103,488 estimate must be re-derived against the measured ~36,000.
+- **`WORK-H` cannot remove all of the instrument.** `ndsPlatformTickHudSample()`
+  runs after the buckets are latched, so the percentile sort (19,605
+  ticks/frame) lands in the *next* frame's `ALL`. ~2% of the P95, not 33%, but
+  it is the metric charging the ROM for being measured.
+
+R2-00a's other findings stand: no GX, DMA or cart *stall*; ledger closed;
+bit-identical reproduction of the prior census.
+
+The attributor is installed repo-local at
+`emulators/melonds-attributor/melonDS.exe` (`D81FC0BF…`) rather than replacing
+`emulators/melonds/melonDS.exe`, so measurements taken with `DE80E46B…` stay
+comparable. `check-melonds-policy.ps1` passes with it present.
 
 **R2-00b replaced the stale Task 65 baseline.** REAL WORK is **1,446,348**
 ticks/frame, not 1,527,277; the gap to the 1.12M gate is **326,348**, not

@@ -92,6 +92,28 @@ and no amount of re-running separates them. To attribute an effect, vary the
 build: same tree, flag off versus flag on, so everything except the change is
 held fixed. That is why Task 79's two arms were built from one tree.
 
+### Never compare two instruments across two binaries (R2-00c, 2026-07-27)
+
+The corollary of the rule above, and it cost a whole board row. R2-00a compared
+the emulator's halt accounting, measured in a `NDS_TASK37_PROFILE=1` ROM,
+against the tick HUD's `WAIT`, measured in a tick-HUD ROM, and concluded the
+bracket under-counted idle by 588,353 ticks/frame — that the gate metric was
+manufacturing work. Placement differs between those builds, so frame 453 does
+not name the same workload in both, and the disagreement being measured was the
+build.
+
+Put both instruments in **one** ROM and read them from **one** run. When that
+was done, `ALL` agreed to 0.04% and `WAIT` to a constant −851 ticks/frame, with
+the excursion frames no different from the clean ones. Nothing was wrong with
+the bracket.
+
+`NDS_TASK37_PROFILE_PER_FRAME_REGION=1` exists for this: it numbers each
+profiled frame as its own profiler region, so the host ledger differences
+against the tick-HUD ring frame by frame instead of only over the window. Use
+it — a window total cannot tell "accurate everywhere" from "over-counts on
+clean frames, under-counts on the tail", and the tail is what the P95 gate is
+decided on.
+
 ### A regression on every frame is a mechanism, not noise
 
 Placement variance moves a bucket by a bit on some frames. A delta present on

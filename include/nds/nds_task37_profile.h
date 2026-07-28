@@ -59,9 +59,30 @@ static void ndsTask37ProfileWriteMarker(unsigned int value)
     __asm__ volatile("mcr p15, 0, %0, c13, c0, 1" : : "r"(value) : "memory");
 }
 
+/* Any marker value below the three reserved commands selects a profiler region,
+ * and the emulator keys its accumulators on it, so numbering the regions by
+ * frame makes the host ledger per-frame comparable with the ROM's own tick-HUD
+ * ring. That comparison is the whole point: window totals can hide an error
+ * that over-counts on clean frames and under-counts on the tail, and the tail
+ * is where PROJECT_GOAL.md's P95 gate is decided. Costs one extra CP15 write
+ * per frame, inside the window, in profile builds only. */
+#ifndef NDS_TASK37_PROFILE_PER_FRAME_REGION
+#define NDS_TASK37_PROFILE_PER_FRAME_REGION 0
+#endif
+
+#if NDS_TASK37_PROFILE_PER_FRAME_REGION
+/* Region ids run 1..FRAMES so that 0 keeps meaning "outside the window". */
+#if (NDS_TASK37_PROFILE_FRAMES + 1u) >= 0xFFFDu
+#error "NDS_TASK37_PROFILE_FRAMES would collide with the reserved marker commands"
+#endif
+#endif
+
 /* Called once per presented battle iteration, after the frame counter has
  * advanced. Opens the census window on one frame and closes it on one frame;
- * every other frame costs a compare. */
+ * every other frame costs a compare.
+ *
+ * The region write trails the frame it names: setting region r at the end of
+ * iteration START+r-1 means iteration START+r is what accumulates into r. */
 static inline void ndsTask37ProfileFrameTick(unsigned int presented_frames)
 {
     if (presented_frames == (unsigned int)NDS_TASK37_PROFILE_START) {
@@ -70,7 +91,17 @@ static inline void ndsTask37ProfileFrameTick(unsigned int presented_frames)
                ((unsigned int)NDS_TASK37_PROFILE_START +
                 (unsigned int)NDS_TASK37_PROFILE_FRAMES)) {
         ndsTask37ProfileWriteMarker(NDS_TASK37_PROFILE_MARKER_DUMP);
+        return;
     }
+#if NDS_TASK37_PROFILE_PER_FRAME_REGION
+    if ((presented_frames >= (unsigned int)NDS_TASK37_PROFILE_START) &&
+        (presented_frames < ((unsigned int)NDS_TASK37_PROFILE_START +
+                             (unsigned int)NDS_TASK37_PROFILE_FRAMES))) {
+        ndsTask37ProfileWriteMarker(
+            NDS_TASK37_PROFILE_MARKER_MAGIC +
+            (presented_frames - (unsigned int)NDS_TASK37_PROFILE_START) + 1u);
+    }
+#endif
 }
 
 #define NDS_TASK37_PROFILE_FRAME_TICK(frames) \

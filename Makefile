@@ -269,6 +269,12 @@ NDS_TASK82_ITCM_REPACK ?= 1
 NDS_TASK37_PROFILE ?= 0
 NDS_TASK37_PROFILE_START ?= 438
 NDS_TASK37_PROFILE_FRAMES ?= 128
+# Number each profiled frame as its own profiler region, so the host ledger can
+# be differenced against the tick-HUD ring frame by frame instead of only over
+# the window. Window totals cannot separate "accurate everywhere" from
+# "over-counts on clean frames, under-counts on the tail", and the tail is what
+# the P95 gate is decided on.
+NDS_TASK37_PROFILE_PER_FRAME_REGION ?= 0
 # Task 37 placement repack: admit the measured non-memory-stall toppers into the
 # 1,060 free ITCM bytes. Placement only -- no ISA switch, no optimization change,
 # no eviction of any current resident.
@@ -1661,6 +1667,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE $(NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE)u'; \
 		echo '#define NDS_TASK37_PROFILE_START $(NDS_TASK37_PROFILE_START)u'; \
 		echo '#define NDS_TASK37_PROFILE_FRAMES $(NDS_TASK37_PROFILE_FRAMES)u'; \
+		echo '#define NDS_TASK37_PROFILE_PER_FRAME_REGION $(NDS_TASK37_PROFILE_PER_FRAME_REGION)'; \
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
