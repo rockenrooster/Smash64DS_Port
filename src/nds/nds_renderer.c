@@ -16730,6 +16730,72 @@ static s32 ndsRendererNativePreflightProductionOwner(
     return TRUE;
 }
 
+#if NDS_R2_FIGHTER_SHADE_PROOF
+/* R2-03 E1 falsifier. ndsRendererNativeShadeProductionActions is 48,422
+ * ticks/frame -- the largest non-idle, non-soft-float function in the frame
+ * (R2-03 E0) -- and it re-lights every one of the 541 fighter dense vertices
+ * every frame. Whether it needs to is a question about the data, and R2-02 E3
+ * is the standing reminder to answer that with a counter rather than an
+ * argument.
+ *
+ * Two hashes, because they imply different cuts. The INPUT hash covers
+ * everything the shaded colour is a function of besides the constant tables:
+ * the epoch policy, the material and modulate colours, the light masks and
+ * colours, and the prepared light direction. The OUTPUT hash covers the
+ * packed_color and shaded_rgba the loop actually writes.
+ *
+ * Input constant  -> the whole loop is a memo on a dozen words.
+ * Input moves, output constant -> RGB15 quantisation is absorbing the motion,
+ *   and the memo wants a quantised key.
+ * Both move -> there is nothing to memoise and the lever is the per-vertex
+ *   math instead. That is a real answer too, and it costs one build to get. */
+volatile u32 gNdsR2ShadeInputHash;
+volatile u32 gNdsR2ShadeInputChangeCount;
+volatile u32 gNdsR2ShadeOutputHash;
+volatile u32 gNdsR2ShadeOutputChangeCount;
+volatile u32 gNdsR2ShadeCallCount;
+volatile u32 gNdsR2ShadeFrameCount;
+static u32 sNdsR2ShadeFrameInputHash = 2166136261u;
+static u32 sNdsR2ShadeFrameCallCount;
+
+#define NDS_R2_SHADE_HASH(hash, value) \
+    ((hash) = (((hash) ^ (u32)(value)) * 16777619u))
+
+static void ndsRendererR2FighterShadeProofFrame(void)
+{
+    u32 output = 2166136261u;
+    u32 i;
+
+    for (i = 0u;
+         i < (sizeof(sNdsNativeFighterPreparedDense) /
+              sizeof(sNdsNativeFighterPreparedDense[0]));
+         i++)
+    {
+        NDS_R2_SHADE_HASH(output,
+                          sNdsNativeFighterPreparedDense[i].shaded_rgba);
+        NDS_R2_SHADE_HASH(output,
+                          sNdsNativeFighterPreparedDense[i].packed_color);
+    }
+    if (gNdsR2ShadeFrameCount != 0u)
+    {
+        if (sNdsR2ShadeFrameInputHash != gNdsR2ShadeInputHash)
+        {
+            gNdsR2ShadeInputChangeCount++;
+        }
+        if (output != gNdsR2ShadeOutputHash)
+        {
+            gNdsR2ShadeOutputChangeCount++;
+        }
+    }
+    gNdsR2ShadeInputHash = sNdsR2ShadeFrameInputHash;
+    gNdsR2ShadeOutputHash = output;
+    gNdsR2ShadeCallCount = sNdsR2ShadeFrameCallCount;
+    gNdsR2ShadeFrameCount++;
+    sNdsR2ShadeFrameInputHash = 2166136261u;
+    sNdsR2ShadeFrameCallCount = 0u;
+}
+#endif
+
 static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativeShadeProductionActions(
     const NDSNativeEpoch *epoch,
@@ -16787,6 +16853,39 @@ ndsRendererNativeShadeProductionActions(
         }
     }
 
+#if NDS_R2_FIGHTER_SHADE_PROOF
+    {
+        u32 hash = sNdsR2ShadeFrameInputHash;
+        u32 i;
+
+        NDS_R2_SHADE_HASH(hash, epoch_policy);
+        NDS_R2_SHADE_HASH(hash, packet_mode);
+        NDS_R2_SHADE_HASH(hash, epoch->first_action);
+        NDS_R2_SHADE_HASH(hash, epoch->action_count);
+        NDS_R2_SHADE_HASH(hash, stats->prim_color);
+        NDS_R2_SHADE_HASH(hash, stats->geometry_mode);
+        NDS_R2_SHADE_HASH(hash, stats->light_dir_mask);
+        NDS_R2_SHADE_HASH(hash, stats->light_color_mask);
+        NDS_R2_SHADE_HASH(hash, stats->light_color_1);
+        NDS_R2_SHADE_HASH(hash, stats->light_color_2);
+        NDS_R2_SHADE_HASH(hash, state->color_modulate);
+        NDS_R2_SHADE_HASH(hash, (prepared_direction != NULL) ? 1u : 0u);
+        NDS_R2_SHADE_HASH(hash, (shade_lut != NULL) ? 1u : 0u);
+        if (prepared_direction != NULL)
+        {
+            const u32 *direction = (const u32 *)prepared_direction;
+
+            for (i = 0u;
+                 i < sizeof(NDSRendererHardwareLightDirection) / sizeof(u32);
+                 i++)
+            {
+                NDS_R2_SHADE_HASH(hash, direction[i]);
+            }
+        }
+        sNdsR2ShadeFrameInputHash = hash;
+        sNdsR2ShadeFrameCallCount++;
+    }
+#endif
     for (action_offset = 0u;
          action_offset < epoch->action_count;
          action_offset++)
@@ -24794,6 +24893,9 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
     sNdsRendererHardwareBoundTextureName = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
+#if NDS_R2_FIGHTER_SHADE_PROOF
+    ndsRendererR2FighterShadeProofFrame();
+#endif
     sNdsRendererHardwareFrameSerial++;
     return submitted;
 #else

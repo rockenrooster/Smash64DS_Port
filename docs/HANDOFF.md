@@ -66,16 +66,20 @@ single highest-value decision waiting on this file.
 
 ## Next packet, in priority order
 
-0. **R2-03 E1 — the first fighter cut. E0 is done; pick from its ranked list.**
-   `ClaudeOpus5_R203_E0_FrameRebaseline_20260728.md` §4, in order:
-   `ndsRendererNativeShadeProductionActions` **48,422** (largest single
-   non-idle, non-soft-float function in the frame — hash its inputs with an
-   E3-style falsifier before writing anything);
-   `ndsFighterMarioFoxDLAllDrawForSlot` **37,206 at 5.55 cyc/insn** (the tree
-   walk and display-list revalidation §7 names first — size it with the
-   existing `NDS_TASK91_DRAW_PHASE_CENSUS` split); the adapter matrix rebuild
-   **56,879**; then `PrepareProductionRun` 22,467 and
-   `BuildNativeMaterialSnapshot` 12,434.
+0. **R2-03 E2 — `ndsFighterMarioFoxDLAllDrawForSlot`, 37,206 ticks/frame at
+   5.55 cyc/insn.** The generic DObj tree walk plus per-frame display-list
+   revalidation, per fighter — the highest stall ratio of any large function in
+   the frame, and the first deletion §7 names. `NDS_TASK91_DRAW_PHASE_CENSUS`
+   already splits it into `gNdsTask91WalkTicks` / `gNdsTask91ValidateTicks`;
+   size with that before writing.
+   **E1 refuted the bigger-looking candidate and it is closed.**
+   `ndsRendererNativeShadeProductionActions` (48,422) is not a memo: its inputs
+   changed on 1,796 of 1,835 frames and its outputs on exactly the same 1,796,
+   so neither a plain nor a quantised key helps
+   (`ClaudeOpus5_R203_E1_ShadeMemoRefuted_20260728.md`). At 2.44 cyc/insn it is
+   compute-bound, so placement and traffic work will not touch it either.
+   Remaining after those two: the adapter matrix rebuild **56,879**, then
+   `PrepareProductionRun` 22,467 and `BuildNativeMaterialSnapshot` 12,434.
    Gate for the phase: pixel parity on the same pose (Task 49 GX differ +
    screenshot) and the provisional 250K combined-fighter budget.
    The two E3 habits that transfer: **price the work the fast path does not

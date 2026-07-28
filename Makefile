@@ -227,6 +227,10 @@ NDS_R2_STAGE_ACTORS ?= 0
 # Build it with NDS_R2_STAGE_ACTORS=0 -- it exists to prove that what E3 bakes
 # was already constant, and E3 stops preparing that data.
 NDS_R2_STAGE_ACTORS_PROOF ?= 0
+# R2-03 E1 falsifier, lab only. Hashes the inputs and the outputs of the fighter
+# shade loop once a frame and counts the frames each changes on. 48,422
+# ticks/frame re-light 541 dense vertices; this says whether they need to.
+NDS_R2_FIGHTER_SHADE_PROOF ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1709,6 +1713,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_STAGE_DMA $(NDS_R2_STAGE_DMA)'; \
 		echo '#define NDS_R2_STAGE_ACTORS $(NDS_R2_STAGE_ACTORS)'; \
 		echo '#define NDS_R2_STAGE_ACTORS_PROOF $(NDS_R2_STAGE_ACTORS_PROOF)'; \
+		echo '#define NDS_R2_FIGHTER_SHADE_PROOF $(NDS_R2_FIGHTER_SHADE_PROOF)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
