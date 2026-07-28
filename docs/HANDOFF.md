@@ -1,9 +1,77 @@
 # Handoff
 
-Updated: 2026-07-24 — all logged to master: Task 49 (`NDS_BATTLE_PROFILE` axis + GX equivalence differ) MERGED; Task 51 (Dream Land stage-native) KILLED — stage cost is vertex-emit, not matrix; Task 50 (hardware divider/sqrt) STOP at E0; Task 52 (Dream Land stage GX DMA replay) STOP at E0 — Task 36 replay structurally disabled in shipping; **Task 53 (re-activate Task 36 replay via arena-guard relaxation) KEEP-candidate** — replay re-activates, STG −33% (−187,648) but ALL flat; Task 56 (fighter stripify) **KILL** — 47% vertex reduction, ALL flat because FTR is dominated by non-vertex work. Task 50/51/52 shipped no code; Task 53 ships the flag default-off; Task 56 ships default-off; published ROM `1818AA77…` unchanged. Section statuses below are point-in-time and pre-date these merges.
+Updated: 2026-07-27 — Runtime 2 started. `P1_EXECUTION_BOARD.md` owns current
+state; this file is the restart surface and next packet.
 
-`P1_EXECUTION_BOARD.md` owns current state. This file contains only the restart
-surface and next packet.
+## Restart
+
+Branch: `codex/r2-runtime2` (not merged to master). Boundary:
+`battle_playable_realtime`, mode `163`.
+
+```powershell
+$env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
+.\scripts\verify-all.ps1 -Profile Boundary -List
+git status --short
+```
+
+Preserve canonical mode 163, intrinsic renderer mode 9, mip 0, static texture
+residency, source countdown, exact Dream Land water frame 0, and Task 16
+compare/i2f/addsub `1/1/1`. Do not edit `decomp/`.
+
+**The working tree carries three dirty bug-#10 files that are not mine and are
+on hold:** `Makefile` (three default-off `NDS_LAB_*` flags), `src/nds/nds_renderer.c`
+(the tint/no-cull lab probes) and `scripts/capture-melonds.ps1`. R2 commits
+deliberately left them unstaged. Commit or revert them with the bug-#10 work.
+
+## State as of this handoff
+
+R2-00a, R2-00b and R2-01 are done and gated; R2-02 is sized but not implemented.
+Reports are in `docs/optimization/ClaudeOpus5_R2*`. `NDS_R2_PATH` defaults to 0,
+so the published ROMs are unchanged.
+
+**Two things a restart must know before reading any performance number:**
+
+1. **`WORK-H` P95 is not trustworthy right now.** R2-00a proved the tick HUD
+   under-counts `WAIT` on tail frames and that the missing idle relocates into
+   whichever phase was running (`FTR` or `SRC`, per frame). The P95 gate is
+   decided on exactly those frames. Use `WORK` P50 and the VBlank histogram
+   until the bracket is fixed.
+2. **The renderer is 723,554 ticks/frame, half the frame's work.** Task 65's
+   table under-counted it by 147,777 because the census filed
+   `reloc_backend_renderer_dl.c` under `PORT/reloc`. Fixed in
+   `scripts/task65_subsystem_census.py`.
+
+## Next packet, in priority order
+
+1. **Adopt the attributor and finish the `WAIT` audit.** This outranks every
+   optimization row: it decides how much of the 326,348-tick gap was ever real.
+   The install step was denied by the sandbox and needs the owner:
+
+   ```powershell
+   Copy-Item emulators\melonds\melonDS.exe backups\melonds-pre-attributor.exe
+   Copy-Item D:\Stuff\DevFolder\melonDS-Accurate\build\melonDS.exe emulators\melonds\melonDS.exe -Force
+   .\scripts\New-MelonDSRunnerSlots.ps1 -Count 4 -Force
+   .\scripts\check-melonds-policy.ps1
+   ```
+
+   Then census a window containing frames 469–547 and read `gx_paid` /
+   `gx_blamed` / `halt_wait`. It reproduces the prior census bit-identically
+   over 27,058 rows, so adoption does not break comparability.
+2. **R2-02 E1a**, per `ClaudeOpus5_R202_E0_StagePrepareSizing_20260727.md`.
+   Sized at 122,196 ticks/frame with a ≥40,000 kill line. Deliberately not
+   started here: it edits a hot 24k-line file that the bug-#10 work also holds
+   dirty, and its `STG` gate reads a bucket the item above may re-define.
+3. Task 75's ~103,488 preload estimate is derived from `WORK-H` P95 and
+   inherits the artifact. Re-derive before scoping it as a subsystem.
+
+---
+
+# Superseded detail (pre-2026-07-25)
+
+The sections below are point-in-time notes from Tasks 37–56. They are kept for
+provenance; `PORTING.md` and the archived task files under
+`docs/optimization/archive/` are the durable record. Do not read them as current
+state.
 
 ## Task 49 — GX equivalence differ (KEEP candidate, not merged)
 
