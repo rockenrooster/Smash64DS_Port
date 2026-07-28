@@ -183,6 +183,18 @@ non-comparable in absolute terms. When the attributor build is adopted, this
 baseline must be re-run on it before any R2 phase gate reads absolute ticks. The
 within-arm A/B deltas survive; the absolute numbers above do not.
 
+> **Withdrawn the same day by R2-00a §7.** The attributor build reproduces the
+> prior census **bit-identically over 27,058 and 27,485 rows**, so it does not
+> perturb timing and absolute comparability survives adoption. The paragraph
+> above was a correct precaution against an untested binary; the binary has now
+> been tested and it does not apply. Do not re-run this baseline on that account.
+>
+> R2-00a also found something that *does* bear on this document: the tick HUD
+> under-counts `WAIT` on excursion frames, so `WORK-H` P95 is inflated on exactly
+> the frames the gate is decided by. The §1 figures here are census-derived
+> (cycle-attributed) and are unaffected; any `WORK-H` P95 number quoted anywhere
+> else is suspect until the bracket is fixed.
+
 ## 5. Cost
 
 One build, one 128-frame census run, one classifier fix. It replaced a two-day-old

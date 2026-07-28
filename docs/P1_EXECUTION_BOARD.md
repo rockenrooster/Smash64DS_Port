@@ -39,11 +39,39 @@ R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
 
 | phase | state | evidence |
 |---|---|---|
-| R2-00a stall attributor | in progress | melonDS-Accurate fork, out of tree |
+| R2-00a stall attributor | **done, gate met** | `optimization/ClaudeOpus5_R200a_StallAttributor_20260727.md` |
 | R2-00b re-baseline + budgets | **done** | `optimization/ClaudeOpus5_R200b_BaselineAndBudgets_20260727.md` |
-| R2-01 battle-path skeleton | in progress | `NDS_R2_PATH`, `src/nds/r2/` |
-| R2-02 Dream Land direct runtime | unowned | |
+| R2-01 battle-path skeleton | **done, gate met** | `NDS_R2_PATH`, `src/nds/r2/`; Boundary green |
+| R2-02 Dream Land direct runtime | E0 sized | `optimization/ClaudeOpus5_R202_E0_StagePrepareSizing_20260727.md` |
 | R2-03 fighter direct draw | unowned | |
+
+### The gate metric is measuring phantom work — highest-value row on the board
+
+**R2-00a closed the load-free `SRC` excursion, and the answer was not a stall.**
+The attributor's ledger is closed (`stall_partition_residual = 0`) and
+**`gx_stall_events = 0`** — GX FIFO backpressure, DMA hold-off and cart spin are
+all exactly zero on frames 453/454, the three candidates Task 108 §6 named.
+
+What is actually happening: the CPU sits at `armWaitForIrq` for essentially the
+same time on excursion and median frames (**796,250 vs 801,881, 0.7% apart**),
+while the tick HUD reports `WAIT` as **210,752 vs 804,736**. Since the HUD
+computes `WORK = ALL − WAIT`, idle it fails to count reappears as work that never
+happened — 588,353 ticks against the HUD's own claimed +593,856, **99.1%
+agreement**.
+
+This was already implied by Task 108's own data (total cycles identical to
+0.006%) and is not resting on the new instrument alone.
+
+Consequences: **`WORK-H` P95 is inflated on exactly the frames the P95 gate is
+decided by**, and Task 75's ~103,488 preload estimate inherits the artifact.
+Auditing the `WAIT` bracket in `ndsPlatformEndFrame` and re-deriving how much of
+the 1.12M gap was ever real now outranks every optimization row, including
+R2-02 — optimizing against a metric that manufactures work is how Tasks 53/55/56
+produced four uninformative verdicts.
+
+The attributor is **not yet adopted** into `emulators/melonds/`. It reproduces
+the prior census bit-identically over 27,058 rows, so adoption does not break
+comparability with the ledger.
 
 **R2-00b replaced the stale Task 65 baseline.** REAL WORK is **1,446,348**
 ticks/frame, not 1,527,277; the gap to the 1.12M gate is **326,348**, not
