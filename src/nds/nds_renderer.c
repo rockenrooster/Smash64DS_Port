@@ -16209,6 +16209,20 @@ ndsRendererNativeApplyStateDelta(
     }
 }
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+/* R2-03 E20. E19 established that the state spans cannot be priced by deleting
+ * them -- they are load-bearing, and removing them takes the emit with them. So
+ * this asks R2-02 F's question instead: how much of the replay is REDUNDANT.
+ * There are 70 fighter state deltas; a frame stamp per delta says how many of
+ * the applications in a frame are re-applying a delta that frame already
+ * applied. That fraction, not the phase total, is what a guard could actually
+ * elide -- it prices the achievable cut rather than the whole phase. */
+u32 gNdsR2SpanCalls;
+u32 gNdsR2SpanDeltasApplied;
+u32 gNdsR2SpanDeltaRepeats;
+static u32 sNdsR2DeltaLastFrame[70];
+#endif
+
 static void ndsRendererNativeApplyStateSpan(
     u16 first,
     u32 count,
@@ -16229,10 +16243,31 @@ static void ndsRendererNativeApplyStateSpan(
     {
         return;
     }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsR2SpanCalls++;
+#endif
     for (i = 0u; i < count; i++)
     {
         u32 delta_index = sNdsNativeFighterStateSequence[first + i];
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        {
+            /* +1 so an untouched entry (0) can never alias frame serial 0. */
+            u32 stamp = sNdsRendererHardwareFrameSerial + 1u;
+
+            gNdsR2SpanDeltasApplied++;
+            if (delta_index <
+                (sizeof(sNdsR2DeltaLastFrame) /
+                 sizeof(sNdsR2DeltaLastFrame[0])))
+            {
+                if (sNdsR2DeltaLastFrame[delta_index] == stamp)
+                {
+                    gNdsR2SpanDeltaRepeats++;
+                }
+                sNdsR2DeltaLastFrame[delta_index] = stamp;
+            }
+        }
+#endif
         ndsRendererNativeApplyStateDelta(
             &sNdsNativeFighterStateDeltas[delta_index],
             asset_base, stats, state);

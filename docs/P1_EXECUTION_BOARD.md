@@ -201,6 +201,41 @@ and normals must not be rotated by a projection. Same fix, wrong cause.
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E17_SplitMatrixLoad_20260728.md`.
 
+## R2-03 E20 — the state replay repeats itself 1.8x a frame (2026-07-28)
+
+E19 refuted deletion as a pricing method, so this asks R2-02 F's question
+instead: not what the phase costs, but how much of it is **redundant**.
+
+479 frames, both fighters, per frame:
+
+| counter | per frame |
+|---|---:|
+| state-span calls | 80.2 |
+| **delta applications** | **194.4** |
+| **repeats within the frame** | **124.8 (64.2%)** |
+| distinct applications | 69.6 |
+| span cost | 54,510 |
+
+70 deltas exist and 69.6 distinct applications happen a frame: **every delta is
+applied once for real and ~1.8 more times redundantly**, worth **~35,000
+ticks/frame** at 280 ticks an application.
+
+E19's structural check applied — P0 triangles 320/frame, its control rate — so
+the arm measures what it claims.
+
+**Worth 25,000–30,000 realised**, since a value compare is not free. Smaller than
+E16's ceiling, larger than E17's shipped cut, and a far smaller change than
+either: a guard inside one function, no light-space reasoning, no load-time
+table, no emit change. **Best return-to-risk on the board.**
+
+**Falsifier before building, one build:** "applied twice in a frame" is not
+"the second was a no-op" — something between them may have changed that state. So
+the guard must be **value-based, not frame-based**, and the question is how many
+of the 124.8 repeats write a value equal to the current one. If most write a
+different value, this collapses the way E19's method did.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E20_StateSpanRedundancy_20260728.md`.
+
 ## R2-03 E19 — the state spans cannot be priced by skipping them (2026-07-28)
 
 **Method refuted, no number produced.** `NDS_R2_FIGHTER_STATESPAN_SKIP`, default
