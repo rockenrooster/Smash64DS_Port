@@ -135,6 +135,15 @@ let the next mistake through too:
    and the generic emit path still reconstructs the same state at commit time.
    §7's *"the runtime shape is `DreamLand_Run17()`"* is satisfied for preflight
    and still open for commit.
+
+   **E8's mechanism does not transfer to the fighter owner — checked, in source,
+   before spending a build.** The stage's `sNdsNativeStageOwnerExecution.traversal`
+   is referenced nowhere outside `ndsRendererPrepareNativeStageOwner`, which is
+   what made its preflight elidable. `sNdsNativeFighterOwnerExecution.traversal`
+   is read at `nds_renderer.c` :18149, :18982, :22943, :23232 and :23289 — it is
+   live across the fighter draw. Only `preflight_stats` (:18404) is
+   preflight-local there, and that is the smaller half. Do not port E8 to the
+   fighter without re-checking those five sites.
 0a. **Secondary, and only once the above is sized: de-cross the flower
    triangles in the generator.** For each of the 15 foreign
    corners, `scripts/generate_nds_native_stage.py` emits a duplicate dense vertex

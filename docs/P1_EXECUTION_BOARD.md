@@ -401,8 +401,11 @@ view a gate quotes.
    owner play/listen pass, reserve gate, Results transition, and teardown proof
    on the exact candidate ROM.
 
-**Performance lane (2026-07-27):** `WORK-H` P95 **1,647,424** after Task 104,
-against the 1,120,000 gate. Two search spaces are closed by measurement — exactness-preserving
+**Performance lane (2026-07-28):** `WORK-H` P95 **1,579,584** after R2-02 E8,
+against the 1,120,000 gate — gap **459,584**. (It was 1,647,424 after Task 104;
+E7 and E8 took the rest.) `WORK` P50 is 1,163,328 and P95 1,592,320. VBlank
+intervals 2:198 3:349 4:14 5+:4 of 565, max 18 — the median frame is still three
+intervals, but 35% now present in two where 2% did before Runtime 2. Two search spaces are closed by measurement — exactness-preserving
 (Tasks 78–96) and visual approximation in its payload form (Tasks 98–99). The
 raster axis was opened in `optimization/RASTER_AXIS_CAMPAIGN.md` and **Task 100
 closed it at the first test** — a quarter of the frame's pixels stopped being
