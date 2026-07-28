@@ -1,7 +1,8 @@
 # Handoff
 
-Updated: 2026-07-27 — Runtime 2 started. `P1_EXECUTION_BOARD.md` owns current
-state; this file is the restart surface and next packet.
+Updated: 2026-07-27 — Runtime 2: R2-00a/b/c and R2-01 gated, R2-02 E1a landed.
+`P1_EXECUTION_BOARD.md` owns current state; this file is the restart surface and
+next packet.
 
 ## Restart
 
@@ -25,44 +26,81 @@ deliberately left them unstaged. Commit or revert them with the bug-#10 work.
 
 ## State as of this handoff
 
-R2-00a, R2-00b and R2-01 are done and gated; R2-02 is sized but not implemented.
-Reports are in `docs/optimization/ClaudeOpus5_R2*`. `NDS_R2_PATH` defaults to 0,
-so the published ROMs are unchanged.
+R2-00a/b/c and R2-01 are done and gated. **R2-02 E1a is landed and gated**;
+R2-02 E2 is open and needs re-sizing. Reports are `docs/optimization/ClaudeOpus5_R2*`.
+`NDS_R2_PATH` and `NDS_R2_STAGE_DIRECT` both default to 0, so the published ROMs
+are unchanged.
 
-**Two things a restart must know before reading any performance number:**
+**Three things a restart must know before reading any performance number:**
 
-1. **`WORK-H` P95 is not trustworthy right now.** R2-00a proved the tick HUD
-   under-counts `WAIT` on tail frames and that the missing idle relocates into
-   whichever phase was running (`FTR` or `SRC`, per frame). The P95 gate is
-   decided on exactly those frames. Use `WORK` P50 and the VBlank histogram
-   until the bracket is fixed.
-2. **The renderer is 723,554 ticks/frame, half the frame's work.** Task 65's
-   table under-counted it by 147,777 because the census filed
-   `reloc_backend_renderer_dl.c` under `PORT/reloc`. Fixed in
-   `scripts/task65_subsystem_census.py`.
+1. **`WORK-H` P95 *is* trustworthy — the earlier warning is withdrawn.** R2-00c
+   put both instruments in one ROM and read them from one run: `ALL` agrees to
+   0.04% and `WAIT` to a constant −851 ticks/frame, with the 27 excursion frames
+   (median −860) no different from the other 100 (median −847). R2-00a's
+   588,353-tick phantom came from comparing halt in a profile ROM against `WAIT`
+   in a tick-HUD ROM — two binaries, two placements. **Never compare two
+   instruments across two binaries** (`TASK_STANDING_RULES.md`).
+2. **`addr2line -f` names functions the linker deleted.** It charged 24,240
+   ticks/frame to `ndsRendererTask29GXRecord`, which is not in the binary.
+   `task65_subsystem_census.py` now overrides it from the ELF symbol table —
+   that renames 32% of PCs. Aggregates survive (REAL WORK 1,446,638 vs
+   1,446,348); the per-symbol table did not. Any per-function number quoted
+   before 2026-07-27 is suspect.
+3. **The frame, re-ranked on attribution that holds:** soft-float 177,857
+   (12.3% of work), matrix 156,627 (10.8%), gx-submit 144,852, texture-resolve
+   108,681, `mem*` 98,207.
 
 ## Next packet, in priority order
 
-1. **Adopt the attributor and finish the `WAIT` audit.** This outranks every
-   optimization row: it decides how much of the 326,348-tick gap was ever real.
-   The install step was denied by the sandbox and needs the owner:
+1. **Soft-float, 177,857 ticks/frame — the largest block in the frame.** It runs
+   at 1.19 cycles per instruction, so it is not stalled and there is nothing to
+   win by making it faster; `__aeabi_fadd` is already hand-written ITCM assembly
+   from Task 16. The only lever is **calling it less** — float→fixed at the call
+   sites in imported gameplay and animation (`gcPlayDObjAnimJoint` 34,148,
+   `battleship_ftAnimParseDObjFigatree` 16,744, `gmcollision.c`). Structural and
+   large; size it with E0 before scoping (`TASK_STANDING_RULES.md`, Task 96).
+2. **R2-02 E2, matrix construction — re-size first.** E0 sized it at 55,077 from
+   a bracket around one call. The symbol census says **156,627** across stage
+   *and* fighter: `ndsRendererMtxMul20p12` 29,663, `LoadHardwareMatrixPair`
+   20,176, `BuildDObjLocalMatrix` 18,596, `MtxMulAffine20p12` 16,784,
+   `MtxLoadN64ToDS20p12` 13,793, `BuildDObjWorldMatrix` 12,880,
+   `PrepareInitialMatrices` 12,233. Note the stage's 16 dynamic bindings are
+   **not** frame-invariant — the camera moves — so E1a's reuse key does not
+   transfer.
+3. **The excursion is real work, and it is four causes.** On 21% of frames
+   `armWaitForIrq` falls 323,450 and +286,619 of execution replaces it:
+   softfloat ~49,600, the tick HUD measuring itself ~44,300, cart read +
+   relocation + bulk copy ~36,000, geometry ~14,500, collision ~5,700, animation
+   ~2,700, then a diffuse tail over ~59,000 PCs. That is why five previous tasks
+   found no single mechanism.
+4. **Those frames are not load-free.** `_ntrcardRecvByCpu` + `ntrcardRomRead` are
+   12,639 ticks/frame higher there. Task 75's preload targets something real;
+   re-derive its ~103,488 estimate against the measured ~36,000.
+5. **R2-02 E1a needs the owner's visual approval.** Boundary is green and
+   required-region detail is 62.792% vs 62.778%, but `AGENTS.md` wants the owner
+   as the visual oracle for render-side change. Pair:
+   `artifacts/visibility/r2-02-e1a-{on,off}-boundary-20260727.png`. The stage is
+   unchanged; only fighter animation phase differs, which is capture timing.
+6. **E1b, deletion:** bake `NDSNativeStagePreparedRun` for all 21 runs in
+   `generate_nds_native_stage.py` and resolve `texture_entry` at match load.
+   Small runtime gain over E1a, real code deletion. Fits R2-08.
 
-   ```powershell
-   Copy-Item emulators\melonds\melonDS.exe backups\melonds-pre-attributor.exe
-   Copy-Item D:\Stuff\DevFolder\melonDS-Accurate\build\melonDS.exe emulators\melonds\melonDS.exe -Force
-   .\scripts\New-MelonDSRunnerSlots.ps1 -Count 4 -Force
-   .\scripts\check-melonds-policy.ps1
-   ```
+## Instruments added this cycle
 
-   Then census a window containing frames 469–547 and read `gx_paid` /
-   `gx_blamed` / `halt_wait`. It reproduces the prior census bit-identically
-   over 27,058 rows, so adoption does not break comparability.
-2. **R2-02 E1a**, per `ClaudeOpus5_R202_E0_StagePrepareSizing_20260727.md`.
-   Sized at 122,196 ticks/frame with a ≥40,000 kill line. Deliberately not
-   started here: it edits a hot 24k-line file that the bug-#10 work also holds
-   dirty, and its `STG` gate reads a bucket the item above may re-define.
-3. Task 75's ~103,488 preload estimate is derived from `WORK-H` P95 and
-   inherits the artifact. Re-derive before scoping it as a subsystem.
+- `NDS_TASK37_PROFILE_PER_FRAME_REGION=1` numbers each profiled frame as its own
+  profiler region, so the host ledger differences against the tick-HUD ring
+  frame by frame rather than only over a window. One CP15 write per frame,
+  profile builds only. This is what settled item 1 above and what attributed the
+  excursion.
+- `scripts/sample-tick-hud-buckets.ps1 -ExtraGlobals a,b` reads named u32
+  globals from the same run that produced the buckets, for engagement proof. It
+  throws rather than reporting zeros when the read produces no line.
+- The stall attributor is installed repo-local at
+  `emulators/melonds-attributor/melonDS.exe` (`D81FC0BF…`), **not** over
+  `emulators/melonds/melonDS.exe` (`DE80E46B…`), so every prior measurement
+  stays comparable. `check-melonds-policy.ps1` passes with it present. Pass it
+  with `-MelonDS .\emulators\melonds-attributor\melonDS.exe` and set
+  `$env:MELONDS_ARM9_PROFILE_CSV` before the run.
 
 ---
 
