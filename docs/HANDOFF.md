@@ -55,25 +55,35 @@ single highest-value decision waiting on this file.
    that renames 32% of PCs. Aggregates survive (REAL WORK 1,446,638 vs
    1,446,348); the per-symbol table did not. Any per-function number quoted
    before 2026-07-27 is suspect.
-3. **The frame, re-ranked on attribution that holds:** soft-float 177,857
-   (12.3% of work), matrix 156,627 (10.8%), gx-submit 144,852, texture-resolve
-   108,681, `mem*` 98,207.
+3. **The frame, re-baselined after R2-02** (`ClaudeOpus5_R203_E0_FrameRebaseline_20260728.md`):
+   REAL WORK **1,264,844** against the 1,120,000 budget — **gap 144,844**, from
+   407,000 at Task 65. Kernels: soft-float 177,503 (unchanged by R2-02 and now
+   the largest named one), matrix 141,130, gx-submit 110,800, `mem*` 78,428,
+   texture-resolve 74,600. 39% of the work is still memory stall.
+   The fighter's **145,366** of per-frame rediscovery — tree walk, display-list
+   revalidation, matrix rebuilds, material snapshot, policy re-check — is the
+   category §7 already decided R2-03 deletes, and it is the size of the gap.
 
 ## Next packet, in priority order
 
-0. **R2-03 — Fighter direct draw (static pose), Mario first.** Unblocked as of
-   E3 and the top of the queue: it is the next phase in the switch plan, and the
-   fighter bucket (`FTR` P50 ~547K, P95 ~999K) is now the largest single thing in
-   the frame by a wide margin. Plan §7 spells out the shape and the gate (pixel
-   parity on the same pose via the Task 49 GX differ + screenshot; combined
-   fighter budget provisionally 250K).
-   Two things E3 learned that transfer directly:
-   **(a) look for the work that never reached the fast path** — the stage's
-   remaining cost was not in the optimised path, it was in the 39% of runs that
-   were still generic; and **(b) a "dynamic" label is a claim, not a fact** —
-   `NDS_RENDERER_TASK36_RIGID_BINDING_MASK` said sixteen bindings moved and none
-   of them had since Task 51. Both patterns are very likely present in the
-   fighter owner's per-epoch policy re-checks.
+0. **R2-03 E1 — the first fighter cut. E0 is done; pick from its ranked list.**
+   `ClaudeOpus5_R203_E0_FrameRebaseline_20260728.md` §4, in order:
+   `ndsRendererNativeShadeProductionActions` **48,422** (largest single
+   non-idle, non-soft-float function in the frame — hash its inputs with an
+   E3-style falsifier before writing anything);
+   `ndsFighterMarioFoxDLAllDrawForSlot` **37,206 at 5.55 cyc/insn** (the tree
+   walk and display-list revalidation §7 names first — size it with the
+   existing `NDS_TASK91_DRAW_PHASE_CENSUS` split); the adapter matrix rebuild
+   **56,879**; then `PrepareProductionRun` 22,467 and
+   `BuildNativeMaterialSnapshot` 12,434.
+   Gate for the phase: pixel parity on the same pose (Task 49 GX differ +
+   screenshot) and the provisional 250K combined-fighter budget.
+   The two E3 habits that transfer: **price the work the fast path does not
+   admit** (for the fighter that is not the fallback — Task 70 settled that at
+   0.44% — it is the walk and revalidation that run *before* the native owner),
+   and **treat every "must re-derive this" as a claim about the data**: hash the
+   inputs, count the frames they change on, delete the recomputation if the
+   count is zero. `NDS_R2_STAGE_ACTORS_PROOF` is the pattern.
 1. **Soft-float — E0 is done, and it is two functions, not a programme.** See
    `ClaudeOpus5_R203_E0_SoftFloatCallers_20260728.md`. It runs at 1.19 cycles
    per instruction, so nothing is won by making it faster; the lever is calling

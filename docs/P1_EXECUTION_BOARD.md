@@ -90,6 +90,14 @@ through the raw composed matrix (binding 29, submit classes 0 and 6), which is
 the camera and genuinely moves. Moving it onto the segment-bracket path is
 generator work worth ~19,000. Not needed for the gate.
 
+**R2-03 is owned and E0 is done.** The frame is re-baselined on the post-R2-02
+program: **REAL WORK 1,264,844 against the 1,120,000 budget, gap 144,844** (it
+was 407,000 at Task 65). The fighter's per-frame rediscovery — generic tree
+walk, display-list revalidation, matrix rebuilds, material snapshot, policy
+re-check — is **145,366 ticks/frame**, and it is exactly the category §7 already
+decided R2-03 deletes. Ranked candidates and the falsify-first method are in
+`optimization/ClaudeOpus5_R203_E0_FrameRebaseline_20260728.md` §4.
+
 **R2-03 E1 took `sqrtf` from 15,760 to 9,720 ticks/frame, −6,040**, bit-exact
 against IEEE over 8.7M checked inputs, Boundary green. The 8-frame A/B read
 **flat on every bucket** — the saving sits inside the 5,000–7,000 placement
