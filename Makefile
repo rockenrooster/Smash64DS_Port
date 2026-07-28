@@ -199,6 +199,12 @@ NDS_TASK75_LOAD_CENSUS ?= 0
 # external linkage, so the 0 arm stays byte-identical to a build without the
 # family at all.
 NDS_R2_PATH ?= 0
+# R2-02 E1a. Elides the per-frame stage PrepareRun phase and reuses the prepared
+# run table, which is a pure function of the generated tables and a traversal
+# state Task 44 already proves unchanged. Sized at 67,119 ticks/frame by bracket
+# attribution, realized 94,784 on STG P50 over 128/128 frames. Independent of
+# NDS_R2_PATH -- it is a renderer change, measurable on either battle path.
+NDS_R2_STAGE_DIRECT ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1666,6 +1672,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
 		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
+		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
@@ -1943,6 +1950,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_FLASH=$(NDS_TASK39_FX_FLASH)'
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_SHIELD=$(NDS_TASK39_FX_SHIELD)'
 	@printf '%s\n' 'BENCH_MAKE_R2_PATH=$(NDS_R2_PATH)'
+	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DIRECT=$(NDS_R2_STAGE_DIRECT)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'

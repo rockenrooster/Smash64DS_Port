@@ -128,6 +128,48 @@ says R2 deletes rather than schedules. It is acceptable only as an E1a
 measurement step to confirm the saving is where §3 says it is before spending
 generator work.
 
+## 5a. The precondition E1 must settle first, before writing anything
+
+E1a was scoped and then deliberately not written, because reading the call chain
+surfaced a question that decides whether the whole design is legal:
+
+`ndsRendererNativeStagePrepareRun` calls
+`ndsRendererHardwareResolveStageSourceFrameTexture`
+(`nds_renderer.c:12946`), which is a thin wrapper over
+**`ndsRendererHardwareResolveOrBindTexture(stats, config, state, resolved, TRUE)`**
+— the `TRUE` is the bind argument, and that function is the single largest cost
+in the program (10,260 bytes; 26,317 ticks/frame in the R2-00b census).
+
+So the phase E1 wants to elide may not be a pure derivation. Two readings:
+
+- **Pure lookup in steady state.** Task 81 measured **zero stage texture binds in
+  battle**, which suggests the bind path is a cached fast-out and skipping it
+  changes nothing observable. If so the elision is safe and the sizing stands.
+- **Real hardware binds.** Then skipping `PrepareRun` skips binds the commit path
+  depends on, and the stage draws with whatever texture state was last set — a
+  visual defect that a counter-based gate would not catch and that only shows on
+  specific frames.
+
+**E1's first action is to answer that from the code, not from the Task 81
+inference.** Task 81's measurement was taken at a different seam (the bind
+site), and this campaign has twice been burned by carrying a measurement across
+seams — Task 98 §7 ("find the tick anchor") and Task 103 §7 ("profile the whole
+owner"). Read `ndsRendererHardwareResolveOrBindTexture` and establish which of
+the two it is under battle steady state.
+
+Two smaller preconditions fall out of the same read and are cheap to settle at
+the same time:
+
+- **`epoch_mask` must be cached and restored.** `PrepareRun` accumulates
+  `*epoch_mask |= 1u << run->texture_epoch` (`:19931`) and the value is consumed
+  after the loop by the Task 36 replay capture and the segment-0 hash. Eliding
+  the calls without restoring it silently changes those consumers.
+- **Invalidation needs a scene-change guard.** `sNdsNativeStageOwnerExecution`
+  is static, so a scene reload could reuse a prepared table built against
+  different assets. The topology validation and Task 44's generation compare
+  should both reject first, but the reuse flag should still key on
+  `frame->config` and the asset bases rather than rely on that.
+
 ## 6. Gate for E1
 
 - `STG` P50/P95 from a matched 8-frame A/B, control vs candidate, one tree, flag

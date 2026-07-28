@@ -18,6 +18,15 @@ param(
     # indexed by iteration rather than by the presented-frame counter, so it is
     # not exposed to whatever makes that counter disagree with the marker.
     [switch]$RingDump,
+    # Extra u32 globals to read once at the end of the run, reported and stored
+    # beside the buckets. This exists for engagement proof: an optimization
+    # behind a build flag that silently never fires is indistinguishable from an
+    # optimization that fired and saved nothing, and this campaign has shipped
+    # that mistake (Task 52 found the Task 36 replay structurally disabled after
+    # it had already been measured). A candidate arm should carry its own
+    # fired/skipped counters and read them from the same run that produced the
+    # buckets, not from a second run that may not have taken the same path.
+    [string[]]$ExtraGlobals = @(),
     [ValidateRange(1,512)][int]$Samples = 32,
     [ValidateRange(1,1000000)][int]$StartFrame = 438,
     [ValidateRange(30,3600)][int]$TimeoutSeconds = 900,
@@ -126,6 +135,10 @@ try {
         @('gNdsTickHudNativeOwnerFallbackCount') } else { @() }
     $sampleFields = ((0..($bucketNames.Count - 1) |
         ForEach-Object { "gNdsTickHudBuckets[$_]" }) + $fallbackFields) -join ', '
+    $extraLine = if ($ExtraGlobals.Count -ne 0) {
+        "printf `"TICKEXTRA=$((, '%u' * $ExtraGlobals.Count) -join ',')\n`", " +
+            ($ExtraGlobals -join ', ')
+    } else { $null }
     $sampleColumnCount = $bucketNames.Count + $fallbackFields.Count
     $tickHudFormat = (, '%u' * ($sampleColumnCount + 1)) -join ','
     $ringPath = Join-Path $temp 'tick-hud-ring.bin'
@@ -190,6 +203,7 @@ try {
                 ((0..($fallbackReasons.Count - 1) | ForEach-Object {
                     "gNdsTickHudNativeOwnerFallbackByReason[$_]" }) -join ', ')
         }),
+        $extraLine,
         'detach')
     } else {
         @(
@@ -224,6 +238,7 @@ try {
                 ((0..($fallbackReasons.Count - 1) | ForEach-Object {
                     "gNdsTickHudNativeOwnerFallbackByReason[$_]" }) -join ', ')
         }),
+        $extraLine,
         'detach')
     }
     # Drop the nulls the conditional lines leave behind. A null writes a blank
@@ -434,6 +449,24 @@ try {
     } else { @(0, 0, 0, 0, 0) }
     $vbiTotal = [uint64]($vbi[0] + $vbi[1] + $vbi[2] + $vbi[3])
 
+    $extraValues = if ($ExtraGlobals.Count -ne 0) {
+        $extraMatch = [regex]::Match($output,
+            "TICKEXTRA=([0-9]+(?:,[0-9]+){$($ExtraGlobals.Count - 1)})")
+        if (-not $extraMatch.Success) {
+            # Do not fall back to zeros. A missing read and a counter that never
+            # incremented look the same as zeros, and telling them apart is the
+            # entire reason -ExtraGlobals exists.
+            throw ("Requested $($ExtraGlobals.Count) extra globals but the run " +
+                "produced no TICKEXTRA line. GDB output:`n$output")
+        }
+        [uint64[]]($extraMatch.Groups[1].Value -split ',')
+    } else { @() }
+    $extras = @(if ($ExtraGlobals.Count -ne 0) {
+        0..($ExtraGlobals.Count - 1) | ForEach-Object {
+            [PSCustomObject]@{ name = $ExtraGlobals[$_]; value = $extraValues[$_] }
+        }
+    })
+
     $melonVersion = (Get-Item -LiteralPath $context.MelonDSPath).VersionInfo.FileVersion
     $result = [PSCustomObject]@{
         target = $target
@@ -465,6 +498,7 @@ try {
         vbiTotal = $vbiTotal
         cadenceViolations = if ($slipMatch.Success) {
             [uint64]$slipMatch.Groups[1].Value } else { 0 }
+        extras = $extras
         capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
     }
 
@@ -499,6 +533,10 @@ try {
         $meanNamed, (100.0 * $meanNamed / $meanAll),
         $vbi[0], $vbi[1], $vbi[2], $vbi[3], $vbi[4], $vbiTotal,
         $result.cadenceViolations)
+    if ($extras.Count -ne 0) {
+        Write-Output ('extras: ' + (($extras | ForEach-Object {
+            '{0}={1:N0}' -f $_.name, $_.value }) -join '  '))
+    }
 
     if ($FallbackCensus) {
     $fbMatch = [regex]::Match($output,

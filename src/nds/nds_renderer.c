@@ -4123,6 +4123,26 @@ typedef struct NDSNativeStageOwnerExecution
     NDSRendererStats *stats;
     u32 next_segment;
     u32 active;
+#if NDS_R2_STAGE_DIRECT
+    /* R2-02 E1a. `runs[]` is a pure function of the generated run/epoch/policy
+     * tables and the traversal state, and Task 44 already proves the traversal
+     * state unchanged every frame. Once built it is reusable, so the whole
+     * PrepareRun phase can leave the frame.
+     *
+     * Safe with respect to texture binding: ndsRendererNativeStageBeginRun
+     * binds from this record (`texture_name`, `texture_params`,
+     * `texture_entry`) and sets `last_used_frame` itself, so the resolve inside
+     * PrepareRun is a producer of the record rather than a side effect the
+     * commit path depends on.
+     *
+     * Keyed on the frame config and asset bases so a scene reload cannot reuse
+     * a table built against different assets, even though the topology
+     * validation and Task 44's generation compare should both reject first. */
+    const NDSRendererConfig *r2_prepared_config;
+    const void *r2_prepared_asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
+    u64 r2_prepared_epoch_mask;
+    u32 r2_prepared_valid;
+#endif
 } NDSNativeStageOwnerExecution;
 
 typedef struct NDSNativeStageTopologySummary
@@ -4149,6 +4169,14 @@ typedef struct NDSNativeStageValidationCache
  * preflight must survive the two complete fighter-owner submissions. */
 static NDSNativeFighterOwnerExecution sNdsNativeFighterOwnerExecution;
 static NDSNativeStageOwnerExecution sNdsNativeStageOwnerExecution;
+#if NDS_R2_STAGE_DIRECT
+/* R2-02 E1a engagement counters. Non-static so a GDB stop can read them and
+ * prove the elision actually engaged -- a flag that silently never fires is
+ * indistinguishable from a null result, and this campaign has shipped that
+ * mistake (Task 52 found the Task 36 replay structurally disabled). */
+volatile u32 gNdsR2StagePrepareReuseCount;
+volatile u32 gNdsR2StagePrepareBuildCount;
+#endif
 static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
     NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
 static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
@@ -21426,6 +21454,29 @@ s32 ndsRendererPrepareNativeStageOwner(
     u64 epoch_mask = 0u;
     u32 segment_index;
     s32 accepted = FALSE;
+#if NDS_R2_STAGE_DIRECT
+    /* R2-02 E1a. Reuse the prepared run table when it was built for this exact
+     * config and asset set. epoch_mask must be restored with it: PrepareRun
+     * accumulates it and the Task 36 replay capture and segment-0 hash consume
+     * it after the loop. */
+    u32 r2_reuse =
+        ((sNdsNativeStageOwnerExecution.r2_prepared_valid != 0u) &&
+         (sNdsNativeStageOwnerExecution.r2_prepared_config == frame->config) &&
+         (memcmp(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases,
+                 frame->asset_bases,
+                 sizeof(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases))
+          == 0)) ? 1u : 0u;
+
+    if (r2_reuse != 0u)
+    {
+        epoch_mask = sNdsNativeStageOwnerExecution.r2_prepared_epoch_mask;
+        gNdsR2StagePrepareReuseCount++;
+    }
+    else
+    {
+        gNdsR2StagePrepareBuildCount++;
+    }
+#endif
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
     u32 task36_reject_reason = 1u;
 
@@ -21656,7 +21707,11 @@ s32 ndsRendererPrepareNativeStageOwner(
                     u32 residual_prepare_ticks_start =
                         gNdsRendererM3Phase0PrepareRunTicks;
                     u32 prepare_run_start = ndsRendererM3Phase0Tick();
-                    s32 prepare_run_result = ndsRendererNativeStagePrepareRun(
+                    s32 prepare_run_result =
+#if NDS_R2_STAGE_DIRECT
+                        (r2_reuse != 0u) ? TRUE :
+#endif
+                        ndsRendererNativeStagePrepareRun(
                         run_index, frame,
                         &sNdsNativeStageOwnerExecution.preflight_stats,
                         state, &epoch_mask);
@@ -21685,6 +21740,9 @@ s32 ndsRendererPrepareNativeStageOwner(
                 gNdsTask103OwnStateSpanTicks += cpuGetTiming() - task103_own_mark;
                 gNdsTask103OwnStateSpanCount++;
                 task103_own_mark = cpuGetTiming();
+#endif
+#if NDS_R2_STAGE_DIRECT
+                if (r2_reuse == 0u)
 #endif
                 if (ndsRendererNativeStagePrepareRun(
                         run_index, frame,
@@ -21889,6 +21947,16 @@ s32 ndsRendererPrepareNativeStageOwner(
         topology.cross_foreign_corners;
 #endif
     accepted = TRUE;
+#if NDS_R2_STAGE_DIRECT
+    /* The table is only publishable as reusable once the whole owner prepare
+     * has accepted -- a run that rejected mid-loop leaves runs[] torn. */
+    sNdsNativeStageOwnerExecution.r2_prepared_config = frame->config;
+    memcpy(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases,
+           frame->asset_bases,
+           sizeof(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases));
+    sNdsNativeStageOwnerExecution.r2_prepared_epoch_mask = epoch_mask;
+    sNdsNativeStageOwnerExecution.r2_prepared_valid = 1u;
+#endif
 #if NDS_TASK36_HW_COMPOSE == 2
     ndsRendererTask36ReplayStartCapture(frame);
 #endif
@@ -21920,6 +21988,11 @@ done:
 #endif
         sNdsNativeStageOwnerExecution.next_segment = 0u;
         sNdsNativeStageOwnerExecution.active = FALSE;
+#if NDS_R2_STAGE_DIRECT
+        /* Any fallback invalidates the table: runs[] may be torn, and the
+         * reason it rejected may be exactly that the topology moved. */
+        sNdsNativeStageOwnerExecution.r2_prepared_valid = 0u;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
         gNdsRendererM3PreflightFallbackCount++;
 #endif
