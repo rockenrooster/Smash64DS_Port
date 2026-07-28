@@ -758,3 +758,42 @@ to build the partial one and read its null as a refutation.
 
 This is the general form of what closed Task 84's Routes 1 and 2, and it is why
 Route 3 paid: the win came from the bytes going cold, not from the call count.
+
+## A term over two counters incremented at different instructions asserts where the debugger stopped (bug #10 fold-in, 2026-07-28)
+
+Boundary failed twice on the locked-30 pacing gate after the bug #10 cherry-pick,
+with `logic/present = 422/212` and a phase histogram summing to 211. Both terms
+were exact: `bp[2] -eq (2 * bp[3])` and `phaseSum -eq bp[3]`.
+
+The ROM was correct. Two independent counters -- taskman's own and the fighter
+route's -- both read **424** updates for 212 presents, an exact 2:1. Only the
+pacing tuple's members disagreed with each other, and they disagreed by exactly
+one iteration.
+
+One realtime iteration touches four counters at four instructions
+(`taskman_seam.c`): the two updates run, then
+`ndsBattlePlayablePresentRealtimeFrame()` bumps `DrawCalls` (:4758),
+`PresentedFrames` (:4790) and `PhasePresentCount` (:4888) in that order, and only
+after that call *returns* does the loop add the committed updates to
+`LogicFrames` (:7890, "count only updates committed to a presented frame"). A
+stop anywhere in that span reads a legal skewed tuple. The observed one matches
+exactly one point: between :4790 and :4888.
+
+**An equality between two counters that are not incremented by the same
+instruction is an assertion about the debugger, not about the build.** The
+harness had already learned this once -- a comment above the adjacent
+`taskmanPresentLead` records a previous author relaxing that term for this exact
+reason -- but the fix stopped at the one term that had failed, leaving two more
+counters on the far side of the same window.
+
+The repair is not to loosen the bound. Enumerate the reachable stop phases and
+reject everything else: with M completed presentations only four tuples exist, so
+modelling them rejects five of the eight sign combinations, including ones an
+equality cannot express (draw ahead *while* logic lags means a counter was
+dropped). Where two stop phases alias -- a late stop and a genuinely dropped
+update pair are numerically identical -- disambiguate with a counter incremented
+by a *different* instruction, which is what `taskmanPresentLead` is for.
+
+Corollary: when a text-pinning registry check guards the term, it must pin the
+new contract, not the old spelling. `check-harness-registry.ps1` caught this
+edit twice, which is the guard working.

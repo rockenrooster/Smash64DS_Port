@@ -739,6 +739,54 @@ function Complete-Task9StateHashCapture {
         Rows = $rows
     }
 }
+function Test-BattlePlayablePacingStopPhase {
+    # One realtime iteration advances four BPLAY_PACE counters at four
+    # different instructions, so a debugger stop reads a legal but skewed
+    # tuple whenever it lands mid-iteration. taskman_seam.c runs the two
+    # source updates first, then ndsBattlePlayablePresentRealtimeFrame()
+    # bumps DrawCalls (:4758), PresentedFrames (:4790) and
+    # PhasePresentCount (:4888) in that order, and only after that call
+    # returns does the loop add the two committed updates to LogicFrames
+    # (:7890, "count only updates committed to a presented frame").
+    #
+    # With M completed presentations the only tuples the build can produce
+    # are, in iteration order:
+    #
+    #   stop point            logicLag  drawLead  phaseLag
+    #   updates / boundary       0         0         0
+    #   :4758 -> :4790           0         1         0
+    #   :4790 -> :4888           2         0         1
+    #   :4888 -> :7890           2         0         0
+    #
+    # Pinning any of the three to zero asserts that the stop never lands in
+    # the present path, which is not a property of the build under test --
+    # the same mistake already corrected for taskmanPresentLead. Model the
+    # four reachable stop phases instead: that rejects five of the eight
+    # sign combinations, including ones an equality term cannot express
+    # (drawLead ahead while logic also lags means a counter was dropped,
+    # not merely observed mid-iteration).
+    param([int64[]]$Pacing)
+
+    $presented = [int64]$Pacing[3]
+    $logicLag = (2 * $presented) - [int64]$Pacing[2]
+    $drawLead = [int64]$Pacing[4] - $presented
+    $phaseSum = [int64]$Pacing[12] + [int64]$Pacing[13] + [int64]$Pacing[14] +
+        [int64]$Pacing[15] + [int64]$Pacing[16]
+    $phaseLag = $presented - $phaseSum
+
+    return [PSCustomObject]@{
+        LogicLag = $logicLag
+        DrawLead = $drawLead
+        PhaseLag = $phaseLag
+        Valid = (
+            ($logicLag -eq 0 -or $logicLag -eq 2) -and
+            ($drawLead -eq 0 -or $drawLead -eq 1) -and
+            ($phaseLag -eq 0 -or $phaseLag -eq 1) -and
+            ($logicLag -ne 0 -or $phaseLag -eq 0) -and
+            ($drawLead -ne 1 -or $logicLag -eq 0)
+        )
+    }
+}
 function Complete-Task25RPacingTrace {
     param(
         [System.Collections.IEnumerable]$Matches,
@@ -2814,16 +2862,27 @@ try {
             $start[7] -eq 1) `
             'One-minute match did not begin at the exact locked 1:00 Wait state.' `
             $gdbStdout
-        Assert-Condition ($battlePlayablePacing.Success -and
+        $pacingStop = Test-BattlePlayablePacingStopPhase -Pacing $bp
+        # A stop in the :4888 -> :7890 window and a genuinely dropped update
+        # pair produce the identical tuple, so the stop phases alone cannot
+        # separate them. taskman's independent counter can: it is incremented
+        # per update before the present, so a dropped pair drives this lead
+        # negative while a late stop leaves it at zero.
+        $tmPace = Get-Ints $taskman
+        $taskmanPresentLead = $tmPace[1] - (2 * $bp[4])
+        Assert-Condition ($battlePlayablePacing.Success -and $taskman.Success -and
             $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
-            $bp[2] -eq (2 * $bp[3]) -and $bp[3] -gt 0 -and
-            $bp[4] -eq $bp[3] -and $bp[5] -gt 0 -and
+            $pacingStop.Valid -and $bp[3] -gt 0 -and
+            $taskmanPresentLead -ge 0 -and $taskmanPresentLead -le 2 -and
+            $bp[5] -gt 0 -and
             $bp[6] -gt 0 -and $bp[6] -le 305 -and
             $bp[8] -gt 0 -and $bp[9] -ge 2 -and
-            $bp[10] -ge $bp[9] -and $bp[11] -eq 0 -and
-            (($bp[12] + $bp[13] + $bp[14] + $bp[15] + $bp[16]) -eq
-             $bp[3])) `
-            'One-minute match did not retain exactly two committed source updates per presented frame.' `
+            $bp[10] -ge $bp[9] -and $bp[11] -eq 0) `
+            ('One-minute match did not retain exactly two committed source ' +
+             "updates per presented frame (logicLag=$($pacingStop.LogicLag) " +
+             "drawLead=$($pacingStop.DrawLead) " +
+             "phaseLag=$($pacingStop.PhaseLag) " +
+             "taskmanPresentLead=$taskmanPresentLead).") `
             $gdbStdout
         $phaseRatesX10 = @()
         for ($phase = 0; $phase -lt 5; $phase++) {
@@ -3029,7 +3088,13 @@ try {
                 }
                 pacing = $task25rPacingEvidence
                 gates = [ordered]@{
-                    exactTwoUpdatesPerPresentation = ($bp[2] -eq (2 * $bp[3]))
+                    exactTwoUpdatesPerPresentation = [bool]$pacingStop.Valid
+                    pacingStopPhaseSkew = [ordered]@{
+                        logicLag = [int64]$pacingStop.LogicLag
+                        drawLead = [int64]$pacingStop.DrawLead
+                        phaseLag = [int64]$pacingStop.PhaseLag
+                        taskmanPresentLead = [int64]$taskmanPresentLead
+                    }
                     zeroDebtOrCatchUp = $true
                     cadenceViolationCount = [int64]$bp[11]
                     exactlyOneTeardown = ($life[2] -eq 1)
@@ -3086,36 +3151,35 @@ try {
             $tmPace = Get-Ints $taskman
             $fpsHud = Get-Ints $battlePlayableFpsHud
             $wallSeconds = [double]$bp[5] / 33513982.0
-            # melonDS GDB reads backing RAM behind the ARM9 data cache. The
-            # pacing tuple may therefore trail the fresh taskman/draw counters
-            # by one completed frame, but never by more than one.
-            $pacingSnapshotLag = $bp[4] - $bp[3]
-            # These three counters advance at different points of one realtime
-            # iteration, so the stop point -- not the simulation -- decides how
-            # far apart they read. taskman_seam.c runs the inner update loop
-            # first (:7596, +1 per update, 2 per iteration), then the present
-            # path (:7712) which increments DrawCalls (:4744) and only then
-            # PresentedFrames (:4776). The whole present path is therefore a
-            # legal stop window in which taskman leads 2*DrawCalls by a full
-            # iteration, and a stop between the two updates leads it by one.
-            # Bound the lead structurally instead of demanding equality: an
-            # exact term here asserted that the stop never lands in the draw,
-            # which is not a property of the build under test.
+            # The four BPLAY_PACE counters advance at four different
+            # instructions of one realtime iteration, so the stop point -- not
+            # the simulation -- decides how far apart they read. Model the
+            # reachable stop phases rather than pinning any pair to equality;
+            # see Test-BattlePlayablePacingStopPhase for the derivation.
+            $pacingStop = Test-BattlePlayablePacingStopPhase -Pacing $bp
+            # taskman's own update counter is a fifth site (:7596, +1 per
+            # update, 2 per iteration) and leads 2*DrawCalls by up to a full
+            # iteration. Bound that lead structurally too: an exact term here
+            # asserted that the stop never lands in the draw, which is not a
+            # property of the build under test.
             $taskmanPresentLead = $tmPace[1] - (2 * $bp[4])
             Assert-Condition (
                 $battlePlayablePacing.Success -and $taskman.Success -and
                 $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
-                $bp[2] -eq (2 * $bp[3]) -and $bp[3] -ge 180 -and
-                $pacingSnapshotLag -ge 0 -and $pacingSnapshotLag -le 1 -and
+                $pacingStop.Valid -and $bp[3] -ge 180 -and
                 $taskmanPresentLead -ge 0 -and $taskmanPresentLead -le 2 -and
                 $bp[5] -gt 0 -and
                 $bp[6] -gt 0 -and
                 ($Task34StageStreamCensus -or $bp[6] -le 305) -and
                 $bp[8] -gt 0 -and $bp[9] -ge 2 -and
-                $bp[10] -ge $bp[9] -and $bp[11] -eq 0 -and
-                (($bp[12] + $bp[13] + $bp[14] + $bp[15] + $bp[16]) -eq
-                 $bp[3])
-            ) 'battle_playable locked-30 pacing failed the exact current 2:1 update/draw ratio, bounded pacing-cache lag, 30Hz present cap, cadence, or phase accounting contract.' $gdbStdout
+                $bp[10] -ge $bp[9] -and $bp[11] -eq 0
+            ) ('battle_playable locked-30 pacing failed the 2:1 update/draw ' +
+               'ratio, the reachable stop-phase skews, the 30Hz present cap, ' +
+               'cadence, or phase accounting contract ' +
+               "(logicLag=$($pacingStop.LogicLag) " +
+               "drawLead=$($pacingStop.DrawLead) " +
+               "phaseLag=$($pacingStop.PhaseLag) " +
+               "taskmanPresentLead=$taskmanPresentLead).") $gdbStdout
             $phaseRatesX10 = @()
             for ($phase = 0; $phase -lt 5; $phase++) {
                 $phasePresents = [int64]$bp[12 + $phase]

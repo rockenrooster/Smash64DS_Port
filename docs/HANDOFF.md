@@ -17,14 +17,33 @@ $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 git status --short
 ```
 
+**Do not rebuild `smash64ds.nds` for P1 work** (the owner, 2026-07-28). P1 is the
+battle vertical slice, and `smash64ds-battle-playable-hwtri` is the only
+published ROM it touches. `AGENTS.md` lists both as publishable, which is about
+what may be published, not about what every P1 change has to rebuild — building
+the second one costs a full link per iteration and proves nothing about P1.
+
 Preserve canonical mode 163, intrinsic renderer mode 9, mip 0, static texture
 residency, source countdown, exact Dream Land water frame 0, and Task 16
 compare/i2f/addsub `1/1/1`. Do not edit `decomp/`.
 
-**The working tree carries three dirty bug-#10 files that are not mine and are
-on hold:** `Makefile` (three default-off `NDS_LAB_*` flags), `src/nds/nds_renderer.c`
-(the tint/no-cull lab probes) and `scripts/capture-melonds.ps1`. R2 commits
-deliberately left them unstaged. Commit or revert them with the bug-#10 work.
+**Bug #10 is FIXED and folded into this branch** — `06992f10812` "Fix Mario
+pelvis texture clamp", cherry-picked from `2cbc6189d15` on
+`codex/fix-mario-bottom-rendering` so authorship is preserved. Epoch 0 loads a 32x24 CI4 source into a 32x32 DS
+texture; its N64 T axis is CLAMP with mask 5, so 24..31 resolve to row 23, while
+the DS sampler wrapped through the eight zero-padded transparent rows. One line
+in `ndsRendererHardwareTextureMaskedClampNeedsWrap` disables wrap when the
+logical clamp edge is at or before the mask period. It arrives with its own
+gates: a host fixture for the exact 32x24 case, a structural pin so the line
+cannot be silently reverted, the `pause_under20` camera oracle, and the
+controller-playback DTCM move that oracle needs to write pads over GDB.
+
+**What is still dirty and is not mine:** `Makefile` (three default-off
+`NDS_LAB_*` flags), `src/nds/nds_renderer.c` (the tint/no-cull lab probes) and
+`scripts/capture-melonds.ps1` (the pause-orbit camera globals). These are the
+*investigation* scaffolding for the bug that is now closed. `AGENTS.md` says to
+remove temporary probes and keep only verified diagnostics, so they should go —
+but they are the other agent's to drop, not mine.
 
 ## State as of this handoff
 

@@ -112,7 +112,12 @@ if (($realtimeText -match 'RequireRealtime60Fps') -or
     ($battleLoopText -match 'RequireRealtime60Fps|59\.3\.\.60\.3 presented') -or
     ($battleLoopText -notmatch 'RequireLocked30Pacing') -or
     ($battleLoopText -notmatch 'gNdsBattlePlayablePacingCadenceViolationCount') -or
-    ($battleLoopText -notmatch '\$bp\[2\] -eq \(2 \* \$bp\[3\]\)') -or
+    ($battleLoopText -notmatch 'Test-BattlePlayablePacingStopPhase') -or
+    ($battleLoopText -notmatch
+        '\$logicLag = \(2 \* \$presented\) - \[int64\]\$Pacing\[2\]') -or
+    ($battleLoopText -notmatch '\$logicLag -eq 0 -or \$logicLag -eq 2') -or
+    ($battleLoopText -notmatch '\$pacingStop\.Valid') -or
+    ($battleLoopText -notmatch '\$taskmanPresentLead -ge 0') -or
     ($battleLoopText -notmatch '\$phaseRateX10 -ge 590') -or
     ($battleLoopText -notmatch 'phaseUpdateRate=') -or
     ($battleLoopText -notmatch '\$bp\[6\] -le 305') -or
@@ -155,7 +160,10 @@ if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|Min
     ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[8\]\s*-eq\s*0')) {
     Fail-Check 'canonical realtime verifier must use selected/submitted/in-bounds GDB fighter contracts without fixed fighter crops'
 }
-if (($battleLoopText -notmatch '\$pacingSnapshotLag -ge 0 -and \$pacingSnapshotLag -le 1') -or
+if (($battleLoopText -notmatch
+        '\$drawLead = \[int64\]\$Pacing\[4\] - \$presented') -or
+    ($battleLoopText -notmatch '\$drawLead -eq 0 -or \$drawLead -eq 1') -or
+    ($battleLoopText -notmatch '\$phaseLag -eq 0 -or \$phaseLag -eq 1') -or
     ($battleLoopText -notmatch '\$taskmanPresentLead = \$tmPace\[1\] - \(2 \* \$bp\[4\]\)') -or
     ($battleLoopText -notmatch '\$taskmanPresentLead -ge 0 -and \$taskmanPresentLead -le 2') -or
     ($battleLoopText -notmatch '\$hardwareSnapshotSkew = \[Math\]::Abs\(\$bp\[4\] - \$hw\[0\]\)') -or

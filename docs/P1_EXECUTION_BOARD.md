@@ -31,6 +31,38 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## Bug #10 — closed and folded in (2026-07-28)
+
+`06992f10812` "Fix Mario pelvis texture clamp", cherry-picked from `2cbc6189d15`
+on `codex/fix-mario-bottom-rendering` onto the R2 branch so authorship is
+preserved. Epoch 0 loads a 32x24 CI4 source into a 32x32 DS texture; its N64 T
+axis is CLAMP with mask 5, so coordinates 24..31 resolve to row 23, while the DS
+sampler wrapped through the eight zero-padded transparent rows — the aperture
+was *inside* textured pelvis triangles, not at a geometry or culling seam, which
+is why five earlier causes were eliminated. One line in
+`ndsRendererHardwareTextureMaskedClampNeedsWrap` disables wrap when the logical
+clamp edge is at or before the mask period.
+
+It arrives with its own gates rather than needing new ones: a host fixture for
+the exact 32x24 case, a structural pin in `check-gbi-decode-fixtures.ps1` so the
+line cannot be silently reverted, the `pause_under20` camera oracle, and the
+controller-playback DTCM move that oracle needs in order to write pads over GDB.
+The DTCM layout checker was not relaxed to accommodate it — every Calico
+boundary assertion survives, parameterised by the new 32 bytes, with added
+all-or-none and per-symbol address/size/alignment pins.
+
+Folding it in did surface a real harness defect, fixed in the same cycle.
+Boundary failed twice on the locked-30 pacing gate reading
+`logic/present = 422/212` with a phase histogram summing to 211. The ROM was
+right: taskman's own counter and the fighter route both read 424 updates for 212
+presents, an exact 2:1. Two terms compared counters incremented at *different*
+instructions of one iteration, so they were asserting where the debugger stopped.
+Both are now a four-state stop-phase model that rejects five of the eight sign
+combinations — strictly stronger than the equality it replaced — with taskman's
+independent counter disambiguating the one aliasing pair. E8 did not create the
+window; it changed where in the frame the stop lands. Full derivation in
+`docs/optimization/TASK_STANDING_RULES.md`.
+
 ## Runtime 2 (2026-07-27)
 
 The owner approved `Smash64DS_Runtime2_SwitchPlan.md` and it is now the live
