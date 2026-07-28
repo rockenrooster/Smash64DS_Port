@@ -59,11 +59,15 @@ are unchanged.
    (36,236 of it `__aeabi_fadd` — ~1,184 float adds/frame, the AObj joint
    accumulator) plus 34,148 of its own self-time, and **`__ieee754_sqrtf` 14,258
    at 223 ticks per call** on only 64 calls.
-   **Do `__ieee754_sqrtf` first** — small, isolated, a fixed-point sqrt behind
-   one flag, and it calibrates verifier tolerance before the animation
-   accumulator is touched. That one is a *gameplay* path: the accumulated value
-   becomes the pose and hitboxes derive from part positions, so it is
-   verifier-gated on the Task 37 state hash, not eyeballed.
+   **`__ieee754_sqrtf` is done** — `NDS_R2_FIXED_SQRT`, KEEP, 15,760 → 9,720
+   ticks/frame, bit-exact, Boundary green
+   (`ClaudeOpus5_R203_E1_HardwareSqrt_20260728.md`). Only 38% because libnds's
+   `sqrt64` spins on the I/O bus twice; ~1,500–2,000 more is available by
+   dropping the redundant first poll.
+   **`gcPlayDObjAnimJoint` is the remaining prize** and is a *gameplay* path:
+   the accumulated value becomes the pose and hitboxes derive from part
+   positions, so it is verifier-gated on the Task 37 state hash, not eyeballed.
+   Size it at E0 before writing.
 2. **R2-02 E2, matrix construction — re-size first.** E0 sized it at 55,077 from
    a bracket around one call. The symbol census says **156,627** across stage
    *and* fighter: `ndsRendererMtxMul20p12` 29,663, `LoadHardwareMatrixPair`

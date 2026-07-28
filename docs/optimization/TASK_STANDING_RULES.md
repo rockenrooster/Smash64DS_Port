@@ -475,6 +475,15 @@ worth in ticks and compare it to the floor.** If the expected effect is under
 way. Reserve "refuted" for levers whose predicted size the instrument could
 actually have seen.
 
+**And then measure it the way that can see it (R2-03 E1, 2026-07-28).** The
+symbol census times the function directly and carries no placement term, so it
+resolves what an 8-frame A/B cannot. R2-03 E1's `sqrtf` replacement read flat on
+every bucket with no consistent sign — and the census put it at **−6,040
+ticks/frame**, real and repeatable, sitting inside the floor. Build the
+candidate a second time with `NDS_TASK37_PROFILE=1
+NDS_TASK37_PROFILE_PER_FRAME_REGION=1`, census both arms, and diff the symbol
+that changed. One extra build and run buys a verdict instead of a shrug.
+
 ## Profile the whole owner before optimising a loop inside it (Task 103)
 
 Tasks 51, 52, 53, 54, 55, 99 and 100 all worked on the stage run loop. Task 103

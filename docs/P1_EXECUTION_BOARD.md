@@ -44,6 +44,19 @@ R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
 | R2-01 battle-path skeleton | **done, gate met** | `NDS_R2_PATH`, `src/nds/r2/`; Boundary green |
 | R2-02 Dream Land direct runtime | **E1a done, gate met**; E2 open | `optimization/ClaudeOpus5_R202_E1a_StagePrepareElision_20260727.md` |
 | R2-03 fighter direct draw | unowned | |
+| R2-03 E1 hardware sqrt | **done, KEEP** | `optimization/ClaudeOpus5_R203_E1_HardwareSqrt_20260728.md` |
+
+**R2-03 E1 took `sqrtf` from 15,760 to 9,720 ticks/frame, −6,040**, bit-exact
+against IEEE over 8.7M checked inputs, Boundary green. The 8-frame A/B read
+**flat on every bucket** — the saving sits inside the 5,000–7,000 placement
+floor, and the symbol census is what resolved it. That constructive half is now
+in `TASK_STANDING_RULES.md`: when the predicted saving is near the floor, gate
+on the census, which times the function directly and has no placement term.
+
+Only 38% though, not the 17× the hardware's 13-cycle latency suggests: libnds's
+`sqrt64` is write / **poll-busy** / write / **poll-busy** / read, and the I/O
+polling costs about what the software root did. **On this hardware a coprocessor
+is only worth it if the result can be collected without spinning on it.**
 
 **R2-02 E1a took `STG` P50 −94,784, down on 128/128 frames**, and 4-VBlank
 frames fell 50 → 12 out of 566. Boundary green; required-region detail 62.792%

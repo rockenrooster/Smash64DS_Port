@@ -205,6 +205,12 @@ NDS_R2_PATH ?= 0
 # attribution, realized 94,784 on STG P50 over 128/128 frames. Independent of
 # NDS_R2_PATH -- it is a renderer change, measurable on either battle path.
 NDS_R2_STAGE_DIRECT ?= 0
+# R2-03 E1. Replaces newlib's sqrtf with a correctly-rounded one built on the DS
+# hardware square-root unit. E0 measured __ieee754_sqrtf at 223.1 ticks per call
+# and 14,258 ticks/frame. Bit-exact by construction, so the Task 37 state hash
+# must not move -- sqrtf is on the gameplay path and a last-bit difference is a
+# pose difference.
+NDS_R2_FIXED_SQRT ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -972,6 +978,9 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 ifeq ($(NDS_R2_PATH),1)
 CFILES += nds_r2_battle.c
 endif
+ifeq ($(NDS_R2_FIXED_SQRT),1)
+CFILES += nds_r2_sqrtf.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
 endif
@@ -1680,6 +1689,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
+		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
@@ -1958,6 +1968,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_SHIELD=$(NDS_TASK39_FX_SHIELD)'
 	@printf '%s\n' 'BENCH_MAKE_R2_PATH=$(NDS_R2_PATH)'
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DIRECT=$(NDS_R2_STAGE_DIRECT)'
+	@printf '%s\n' 'BENCH_MAKE_R2_FIXED_SQRT=$(NDS_R2_FIXED_SQRT)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'
