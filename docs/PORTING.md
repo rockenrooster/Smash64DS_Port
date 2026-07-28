@@ -21853,3 +21853,44 @@ unchanged. Only remaining untested lever: stripify (reduces VERTEX16 count;
 ceiling 5.6%) — a follow-up could prototype it for the binding-3 run (66 verts /
 22 tris, best candidate). Full evidence:
 `artifacts/performance/2026-07-24_task55-stage-geom-e2.md`.
+
+## 2026-07-27: Snapshot script simplified to archive + exclusions
+
+- `scripts/New-Smash64DSSnapshot.ps1` reduced from 300 to ~65 lines. It now
+  does exactly one thing: archive the repo root into a `.zip`, applying the
+  Lean exclusion rules. Removed `-Mode` (Lean/CodeOnly/Full),
+  `-IncludeArtifacts`, `-IncludeDecompGenerated`, `-DryRun`, the per-category
+  byte stats, the top-20 included/excluded lists, the in-archive
+  `SNAPSHOT_MANIFEST.txt`, the "latest verifiers" lines, and the post-create
+  self-check. Lean is now the sole mode.
+- The exclusion rules are unchanged and still owned by the shared
+  `scripts/lib/snapshot-hygiene.ps1`, which `check-snapshot-hygiene.ps1` and
+  `check-snapshot-build-context.ps1` also enforce. The simplified script calls
+  `Get-Smash64DSSnapshotPathCategory -Mode 'Lean'` for every file, so the
+  archive contents are byte-for-byte what the prior `-Mode Lean` (default
+  switches) produced.
+- For a broad Full-mode debug/repro snapshot, use
+  `scripts/New-Smash64DSSnapshot.Legacy.ps1`. There is no longer a CodeOnly
+  escape hatch; the `docs/DECOMP_MAP.md` sentence documenting it was removed.
+- `AGENTS.md` and `docs/VERIFYING.md` updated: the canonical invocation is now
+  `scripts/New-Smash64DSSnapshot.ps1` (no `-Mode Lean`).
+
+## 2026-07-27: Snapshot walk prunes excluded subtrees
+
+- The snapshot walk used to enumerate the whole repo then filter file-by-file.
+  On this repo that meant walking 276,324 files to ship 33,666 — 88% of the
+  enumeration was wasted on subtrees the Lean rules exclude anyway
+  (`build/`, `decomp/.../build/`, `target/`, `.git/`, `artifacts/`, etc.).
+- The walk now prunes directory subtrees whose leaf name matches a hardcoded
+  skip-list before descending: `.git`, `.codegraph`, `build`, `builds`,
+  `target`, `.gradle`, `artifacts`. Each name was verified to contain zero
+  Lean-included files, so pruning is a pure optimization — archive contents are
+  byte-for-byte identical (33666 entries both before and after; hygiene check
+  passes unchanged). Carve-outs like `emulators/README.md` are untouched
+  because `emulators` is not in the skip-list (its payload is excluded at the
+  file level, not the subtree level).
+- The skip-list is a second expression of a subset of the library rules. It is
+  kept narrow and deliberately trades DRY for a much cheaper walk; if the two
+  ever disagree the hygiene checkers (which use the library as the single
+  source of truth) still catch a dropped include.
+

@@ -15,8 +15,7 @@ declarations in `include`.
 Lean handoff snapshots include the decomp source/reference and build-critical
 top-level O2R context needed for current imports, but exclude upstream decomp
 build outputs, baseroms, generated binaries, duplicate nested O2R copies, and
-tool caches. Use `scripts/New-Smash64DSSnapshot.ps1 -Mode CodeOnly` when a
-handoff intentionally omits all `decomp/` material.
+tool caches.
 
 Usefulness labels:
 

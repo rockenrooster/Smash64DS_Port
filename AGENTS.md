@@ -63,7 +63,7 @@ Preserve mechanically equivalent SSB64 behavior and feel; the DS implementation 
   max interval, never min FPS or a half-second average. Min FPS is
   discontinuous: one frame crossing the 4->5 VBlank boundary reads as ~12 FPS
   while the histogram stays continuous and is the actual pacing signal.
-- Run `scripts/New-Smash64DSSnapshot.ps1 -Mode Lean` after verified progress as the final project command. Run nothing after it.
+- Run `scripts/New-Smash64DSSnapshot.ps1` after verified progress as the final project command. Run nothing after it.
 
 ## DS Visual Fidelity
 
@@ -107,12 +107,12 @@ Latest instead when normal/shared startup is affected. Do not stack DevFast,
 Boundary, and Latest when they cover the same runtime. The registry exposes
 only Latest and Boundary; the retired diagnostic fleet must not return.
 
-Subagent switch: **OFF**.
+Subagent switch: **ON**.
 
-- `OFF`: let already-running subagents finish, but do not spawn, follow up, or
+* `OFF`: let already-running subagents finish, but do not spawn, follow up, or
   reassign one until the user explicitly switches this back to `ON`.
-- `ON`: when work cleanly parallelizes, keep up to three helper agents on
-  bounded, disjoint lanes; do not manufacture work merely to fill slots.
+* `ON`: keep up to **1** long-lived helper agent and assign tasks with appropriate effort (OPUS 5: max, xhigh, high). Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings.
+
 
 Prefer deletion, existing helpers, fixed DS hardware paths, and the fastest
 correct mechanically equivalent implementation. At equal cost, less code wins.
@@ -139,6 +139,7 @@ and milestone acceptance enable it. Never launch the obsolete five-minute config
 
 `PROJECT_GOAL.md` owns the product contract; `docs/README.md` owns other roles.
 Do not duplicate current truth. `PORTING.md` is append-only; screenshots stay in `artifacts/visibility`.
+Keep documentation current and lean except for append only docs.
 
 ## Editing
 

@@ -1,12 +1,8 @@
 # CLAUDE.md
 
-`AGENTS.md` is the contract for every agent working in this repo, Claude Code
-included. It is imported here rather than restated, because `AGENTS.md` line 141
-forbids duplicating current truth and a second copy of these rules would drift
-from the first the day either is edited.
 
 @AGENTS.md
-
+READ AGENTS.md
 ## Where the rest of the truth lives
 
 Read these before starting, not after being surprised by them:

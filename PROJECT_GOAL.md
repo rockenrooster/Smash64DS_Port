@@ -264,8 +264,8 @@ When the Nintendo DS cannot afford everything, compromise in this order:
 
 1. Audio fidelity
 2. Visual fidelity
-3. Original 60 Hz simulation implementation
-4. Gameplay fidelity
+3. Gameplay fidelity
+4. Original 60 Hz simulation implementation
 5. Stable 30 FPS
 
 Stable 30 FPS is the most protected requirement.
@@ -357,7 +357,7 @@ Dream Land must include:
 * recognizable lighting/presentation
 * stage music
 
-Its visual implementation may differ heavily from the N64 version.
+Its visual implementation may differ from the N64 version.
 
 ---
 

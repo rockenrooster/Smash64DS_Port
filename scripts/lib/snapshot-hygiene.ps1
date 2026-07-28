@@ -84,6 +84,10 @@ function Get-Smash64DSSnapshotPathCategory {
         return [PSCustomObject]@{ Include = $false; Category = 'git'; Reason = '.git repository metadata' }
     }
 
+    if ($path -match '(^|/)\.codegraph($|/)') {
+        return [PSCustomObject]@{ Include = $false; Category = 'codegraph_index'; Reason = 'CodeGraph index/cache (held open by daemon)' }
+    }
+
     if (($path -match '^build($|/)') -or
         ($path -match '^build-[^/]*($|/)') -or
         ($path -match '^builds($|/)'))

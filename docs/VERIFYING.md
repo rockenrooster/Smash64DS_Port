@@ -144,7 +144,7 @@ five-minute configuration.
 After docs, the chosen verifier, static checks, `git status` inspection, and commit:
 
 ```powershell
-.\scripts\New-Smash64DSSnapshot.ps1 -Mode Lean
+.\scripts\New-Smash64DSSnapshot.ps1
 ```
 
 The snapshot is the final project command. Run nothing afterward.
