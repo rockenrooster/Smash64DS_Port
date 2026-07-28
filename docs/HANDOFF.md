@@ -108,8 +108,23 @@ let the next mistake through too:
 
 ## Next packet, in priority order
 
-0. **R2-02 owns the queue until its gate is met, and the remaining work is in
-   the generator: de-cross the flower triangles.** For each of the 15 foreign
+0. **R2-02 owns the queue until its gate is met. Start with the direct owned
+   path, not another memo.** The board carries the measured stage partition
+   (401,506 total at defaults) and the ranked line items. The headline: §7 asks
+   for *"a fully direct owned path ... the runtime shape is `DreamLand_Run17()`,
+   not discover/validate/rebuild/resolve/prepare/submit"*, segment 0 already has
+   it (`ndsRendererNativeStagePrepareGeneratedSegment0`), segments 1–7 do not,
+   and every cut this campaign has landed optimised the pipeline instead of
+   replacing it. Ranked: `prepare matrices` 54,242 (per-frame DObj parent-chain
+   walk for bindings whose worlds are provably constant), `apply state span`
+   30,117 (outside E1a's reuse guard; mutates the running `state`, so it cannot
+   be skipped per-run without proving the successor's incoming state),
+   `init stats + traversal` 16,793 (1,292-byte blanket clear ×5, §3.4-banned),
+   and 18,004 unattributed inside the owner span that nobody has bracketed.
+   Those total 101,152 against a 44,320 requirement, so **do not relax the 180K
+   budget** — §8's "no credible architectural lever left" does not apply.
+0a. **Secondary, and only once the above is sized: de-cross the flower
+   triangles in the generator.** For each of the 15 foreign
    corners, `scripts/generate_nds_native_stage.py` emits a duplicate dense vertex
    pre-transformed into the run's binding space (`v' = W_run⁻¹ · W_foreign · v`,
    compile-time because both worlds are constant). +15 dense vertices, no new

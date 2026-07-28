@@ -107,7 +107,64 @@ defaults and Boundary-green at **62.750%**, `stage_body` green 44.848% / detail
 an unmatched `glPopMatrix(1)`. Capture now records the run's actual `PUSH`/`POP`
 balance.
 
-**Next on this row — de-cross the flowers in the generator.** For each of the 15
+**The stage partition, measured 2026-07-28** (`census-stage-run-phases.ps1`,
+frames 439–499, defaults build so `NDS_R2_STAGE_DIRECT`/`DMA` are off; total
+401,506). This is the list the remaining 44,320 has to come out of:
+
+```text
+prepare owner (preflight)     238,609   59.4%
+  renderer prepare owner        165,045
+    prepare run                  98,828   21 calls @ 4,706  <- E1a takes this
+      head policy/memset/tex       69,379
+      dense vertex loop            22,339   143 dense @ 156
+    apply state span             30,117   21 calls @ 1,434  <- NOT elided by E1a
+    init stats + traversal       16,793    5 calls @ 3,359  <- 1,292-byte clear
+    task36 reuse check              693
+    validate topology               610
+    unattributed                 18,004
+  prepare matrices               54,242   16 dynamic bindings @ ~3,390
+  validate task36 world           8,577
+  prepare materials               5,675
+  config / frame setup            2,523
+display commit (actual submit) 162,399   40.4%
+finish owner                       498
+```
+
+**Read this against §7's actual instruction, which has not been followed.**
+R2-02 says the static majority becomes *"a fully direct owned path: no generic
+preflight, no stats temporaries, no per-frame texture resolution; the runtime
+shape is `DreamLand_Run17()`, not discover/validate/rebuild/resolve/prepare/
+submit"*. E1a, E2, E3, E4 and E5 all optimised the discover/validate/prepare
+pipeline instead of replacing it. Segment 0 already has the prescribed shape —
+`ndsRendererNativeStagePrepareGeneratedSegment0`, gated by
+`NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE`. Segments 1–7 do not. **Extending
+that generated program to the remaining segments is the phase's own design and
+is the credible lever §8 asks for before any budget is relaxed.**
+
+Ranked by size, and all of it is preflight the direct path deletes rather than
+optimises:
+
+1. `prepare matrices` **54,242** — `ndsRendererAdapterPrepareInitialMatrices`
+   walks each dynamic binding's DObj parent chain every frame. The flowers'
+   worlds are provably constant (E4 arm C: the runtime rigid-constancy check
+   accepted them), so this is recomputing a known-constant world and then
+   composing the camera onto it. Splitting camera from world is what Task 36
+   already does for the 26 rigid bindings via `MULT4x4` under a once-loaded
+   camera. Largest single item and the most clearly structural.
+2. `apply state span` **30,117** — 21 calls E1a's `r2_reuse` memo does not
+   cover, because it sits outside that guard. Careful: it mutates the running
+   `state` that later runs consume, so it cannot be skipped per-run without
+   also proving the successor's incoming state.
+3. `init stats + traversal` **16,793** — a 1,292-byte blanket clear plus
+   traversal init, 5× a frame, for the five segments Task 104's elision does not
+   reach. §3.4 names this shape explicitly; extend Task 104's pattern.
+4. `unattributed` **18,004** inside the owner span — uncensused, and bigger than
+   item 3. Bracket it before assuming it is small.
+
+Items 1–3 total 101,152 against a 44,320 requirement, so the budget is reachable
+without relaxing it — the work is structural, not another memo.
+
+**Also on this row — de-cross the flowers in the generator.** For each of the 15
 foreign corners emit a duplicate dense vertex pre-transformed into the run's
 binding space (`v' = W_run⁻¹ · W_foreign · v`, a compile-time transform because
 both worlds are constant). That is +15 dense vertices, no new runs or triangles,
