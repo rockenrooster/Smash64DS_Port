@@ -124,21 +124,50 @@ current transform, modulo the hardware's internal precision versus the CPU's
 20.12 rounding — which is a sub-pixel difference and a screenshot question, not a
 correctness one.
 
-**Open, and the first thing to settle when building this:** whether
-`ndsRendererAdapterComposeNativeRootMatrix` can then be *deleted*, taking a 4x4
-multiply per root out of the 120,407 MatrixPrep bracket. That depends on whether
-the composed matrix has any live consumer on the production path besides the
-hardware load. It has many consumers in the file — including
-`ndsRendererTransformVertex20p12`, a CPU vertex transform — and **it is not
-established which of them the production path actually reaches.** If the hardware
-load is its only production consumer, the compose is free to delete and the
-matrix change pays for itself; if the near-plane or snapshot paths need it, the
-compose stays and the matrix change is a small net cost that only pays off once
-the lighting lands on top of it.
+### The compose can be deleted — settled
 
-An earlier revision of this document asserted the deletion as a side benefit.
-That was stated ahead of the evidence and is downgraded here to the open question
-it actually is.
+The open question was whether `ndsRendererAdapterComposeNativeRootMatrix` can go
+once the split load replaces it, which needs the composed matrix to have no live
+value-consumer on the production path besides the hardware load. Traced
+exhaustively over every `state->matrix` / `state.matrix` / `matrix_valid`
+reference in `nds_renderer.c`.
+
+**It has exactly two consumers under canonical mode 9:**
+
+| site | consumer | kind |
+|---|---|---|
+| 23773 | `ndsRendererLoadHardwareRawComposedMatrix` | the hardware load — the call being replaced |
+| 17594 | `ndsRendererNativePrepareProductionRun` | `state->matrix_valid == 0u` — a **flag test**, not a use of the value |
+
+Every other reference is on a path `ndsRendererExecuteNativeFighterOwnerProduction`
+never reaches:
+
+- `ndsRendererNativeLoadVertexBlock` (the CPU vertex transform) is reached only
+  through `ndsRendererNativeApplyVertexActions`, whose sole call site is 18838,
+  inside `ndsRendererExecuteNativeFighterRootHardware`;
+- `ndsRendererComposeMatrix` likewise, through `ndsRendererNativeBindOwnerRootState`
+  at 18789, in the same non-production function;
+- `ndsRendererNativePreflightFighterHierarchy` (19174) and
+  `ndsRendererNativeCommitHierarchyRoot` (19473) are hierarchy mode 7;
+- `ndsRendererExecuteNativeFighterRoot` (24738), `ndsRendererApplyVertexCommand`,
+  the oracle recorder, the position-test queue and the matrix move-word handler
+  are the generic display-list interpreter.
+
+**So the compose is deletable, and the matrix change pays for itself** — a 4x4
+multiply per root leaves the 120,407 MatrixPrep bracket, independently of whether
+the lighting ever lands. That makes it worth graduating on its own, *before* the
+lighting, which is the cheaper and far less risky ordering.
+
+Two things the replacement must preserve, both cheap: `state->matrix_valid` has
+to stay TRUE for the 17594 test, and the split load needs a generation key
+equivalent to `state->matrix_generation` so the existing
+`sNdsRendererHardwareMatrixGeneration` de-duplication still elides redundant
+loads.
+
+An earlier revision of this document asserted the deletion as a side benefit
+before checking, then downgraded it to an open question. This is the answer, and
+it agrees with the original claim — which does not retroactively make asserting
+it correct.
 
 **Light vector placement follows from the same reasoning.** `GFX_LIGHT_VECTOR`
 stores the supplied vector transformed by the vector matrix *at the moment it is

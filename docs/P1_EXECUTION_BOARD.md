@@ -214,15 +214,25 @@ the current transform exactly, modulo hardware-versus-CPU rounding. The light
 vector is then written once per frame in view space while the vector matrix is
 identity.
 
-**Open question, settle it first:** whether
-`ndsRendererAdapterComposeNativeRootMatrix` can then be deleted (a 4x4 multiply
-per root out of MatrixPrep). That needs the composed matrix to have no live
-production consumer besides the hardware load, and it has many consumers in the
-file including a CPU vertex transform — unverified either way. An earlier
-revision of this board asserted the deletion as a free side benefit; that ran
-ahead of the evidence. If the compose must stay, the matrix change is a small net
-cost that only pays once the lighting lands on it, which is an argument for
-building the two together rather than the matrix change alone.
+**SETTLED — the compose is deletable, so the matrix change ships first.** Traced
+every `state->matrix` / `matrix_valid` reference in `nds_renderer.c`. Under
+canonical mode 9 the composed matrix has exactly two consumers: the hardware load
+at 23773 (the call being replaced) and a `matrix_valid == 0` **flag test** at
+17594 in `ndsRendererNativePrepareProductionRun`. Every other reference —
+`ndsRendererNativeLoadVertexBlock`'s CPU vertex transform via
+`ndsRendererNativeApplyVertexActions` (sole call site 18838),
+`ndsRendererComposeMatrix` via `ndsRendererNativeBindOwnerRootState` (18789),
+both inside the non-production `ndsRendererExecuteNativeFighterRootHardware`;
+plus hierarchy mode 7 at 19174/19473 and the generic DL interpreter — is
+unreachable from `ndsRendererExecuteNativeFighterOwnerProduction`.
+
+So `ndsRendererAdapterComposeNativeRootMatrix` can be deleted and a 4x4 multiply
+per root leaves the 120,407 MatrixPrep bracket **independently of the lighting**.
+The matrix change is therefore its own graduation, and the correct ordering is
+matrix first, lighting on top — cheaper and far less risky than one four-part
+change. The replacement must keep `state->matrix_valid` TRUE for the 17594 test
+and carry a generation key equivalent to `state->matrix_generation` so the
+existing hardware-matrix de-duplication still elides redundant loads.
 
 **NOT IMPLEMENTED.** It touches the matrix mode, the load-time table format, the
 emit's per-vertex word, and per-root light/material state. Being a rendering-side
