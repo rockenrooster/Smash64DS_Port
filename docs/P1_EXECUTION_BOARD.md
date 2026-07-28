@@ -180,8 +180,10 @@ the control on whether `FTR` is real.
 
 **NOT GRADUATED — needs the owner's eye.** Vertex positions now round in
 hardware rather than on the CPU, a sub-pixel difference, and `AGENTS.md` gates
-rendering-side changes on visual approval rather than exactness. Boundary passes
-on the default; the candidate capture
+rendering-side changes on visual approval rather than exactness. **Boundary
+passes in BOTH configurations, flag 0 and flag 1** — the second run was nearly
+skipped, and verifying only the default would have meant approving a change on a
+green run of the arm it replaces. The candidate capture
 (`artifacts/visibility/ClaudeOpus5_R203_E17_SplitMatrix_candidate_20260728.png`)
 shows both fighters and the stage correct with no distortion.
 

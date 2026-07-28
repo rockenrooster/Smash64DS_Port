@@ -91,7 +91,16 @@ exactness.
 
 Evidence for that decision: `artifacts/visibility` capture of the candidate at
 frame ~480 shows both fighters and the stage rendering correctly with no
-distortion, and Boundary passes on the default configuration.
+distortion.
+
+**Boundary passes in both configurations**, flag 0 and flag 1. The second run
+matters and was nearly skipped: the first pass verified only the *default*, which
+is the arm that does not ship if this graduates. Approving a change on a green
+run of the configuration it replaces is the same error as validating only in the
+configuration that carries the instrument — the rule this campaign wrote after
+R2-02 F and E12, arrived at from the opposite direction. The candidate
+configuration is now verifier-covered, which is also what `AGENTS.md` requires of
+any user-facing ROM.
 
 **For the owner:** the ask is to look at the candidate ROM and confirm nothing
 reads wrong. On approval, add `override NDS_R2_FIGHTER_HW_MTX := 1` to the

@@ -971,3 +971,26 @@ a drained FIFO **must** set it, and a dead read cannot. The OR came back
 
 **When the result is that something is zero, add the assertion that distinguishes
 "measured zero" from "measured nothing" — before reading the result.**
+
+### Verify the arm that ships, not the arm it replaces (R2-03 E17, 2026-07-28)
+
+E17 was measured, screenshotted, committed and written up for the owner's
+approval on the strength of a green Boundary run — of `NDS_R2_FIGHTER_HW_MTX=0`,
+the default, which is the arm that *stops* shipping if the change graduates. The
+candidate configuration had never been through the verifier at all.
+
+This is the same defect as "build the shipping flag combination, not only the
+instrumented one", approached from the other side. That rule was written about a
+graduation whose shipping combination did not compile; this is a graduation whose
+shipping combination was never verified. Both are the general failure of
+validating a configuration other than the one that will run.
+
+**Before asking for approval on a flagged change, run the widest relevant
+verifier with the flag in the state approval would put it in.** `AGENTS.md`
+already requires user-facing ROMs to be verifier-covered configurations; a
+default-off candidate awaiting graduation is a user-facing ROM one `override`
+away, and the run costs one build.
+
+Mechanically, when a harness builds with fixed make arguments and has no flag
+pass-through, flipping the Makefile default, running the profile, and restoring
+it is sufficient and leaves no trace.
