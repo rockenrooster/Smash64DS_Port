@@ -171,6 +171,25 @@ if (($battleLoopText -notmatch
     ($battleLoopText -notmatch '\$hardwareSnapshotSkew -le 1')) {
     Fail-Check 'battle verifier lost its fresh taskman/draw cross-check or bounded pacing/platform cache-lag guard'
 }
+# The Task 25R trace carried the same defect as the two Boundary assertion sites
+# -- `$row[2] -eq (2 * $row[1])` pinned one stop phase and asserted where the
+# marker sits. Its rows come from one fixed marker, so the contract is stronger
+# than the four-state model: the skew is taken from the first row, must be
+# reachable, and must hold on every later row. The final reconcile then goes
+# through Test-BattlePlayablePacingStopPhase rather than a weaker logic-only
+# bound. Pinned so an equality term cannot come back.
+if (($battleLoopText -match '\$row\[2\] -eq \(2 \* \$row\[1\]\)') -or
+    ($battleLoopText -notmatch
+        '\$rowLogicLag = \(2 \* \[int64\]\$row\[1\]\) - \[int64\]\$row\[2\]') -or
+    ($battleLoopText -notmatch '\$rowLogicLag -eq 0 -or \$rowLogicLag -eq 2') -or
+    ($battleLoopText -notmatch '\$rowLogicLag -eq \$traceLogicLag') -or
+    ($battleLoopText -notmatch
+        '\$snapshotStop = Test-BattlePlayablePacingStopPhase -Pacing \$Pacing') -or
+    ($battleLoopText -notmatch '\$snapshotStop\.Valid') -or
+    ($battleLoopText -notmatch
+        '\(\$traceLogicLag - \$snapshotStop\.LogicLag\)')) {
+    Fail-Check 'Task 25R pacing trace no longer derives its marker stop phase and reconciles the snapshot through the shared model'
+}
 if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''battle_playable_realtime''\).*?\$arguments \+= ''-FastIteration''') {
     Fail-Check 'verify-all does not select the one-capture canonical fast path for realtime records'
 }

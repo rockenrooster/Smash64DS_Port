@@ -806,12 +806,34 @@ function Complete-Task25RPacingTrace {
     $previous = @(0) * 14
     $previousVBlank = $null
     $totalSlips = [int64]0
+    # Every row is captured at ndsBattlePlayableFrameCompleteMarker, one fixed
+    # instruction, so unlike an arbitrary debugger stop the skew between
+    # LogicFrames and 2 x PresentedFrames is the SAME on every row. taskman_seam.c
+    # adds the two committed updates to LogicFrames only after
+    # ndsBattlePlayablePresentRealtimeFrame() returns (:7890), so a marker
+    # inside that call reads a lag of exactly 2 and one after it reads 0.
+    # `-eq (2 * $row[1])` pinned the second case and asserted where the marker
+    # sits, which is the defect Test-BattlePlayablePacingStopPhase was written
+    # for. A fixed marker admits a stronger test than that four-state model:
+    # take the phase from the first row, require it legal, and require every
+    # later row to agree -- a dropped or doubled update then shows up as a row
+    # that disagrees with its neighbours rather than hiding inside a tolerance.
+    $traceLogicLag = $null
 
     for ($index = 0; $index -lt $rows.Count; $index++) {
         $row = $rows[$index]
+        $rowLogicLag = (2 * [int64]$row[1]) - [int64]$row[2]
+        if ($null -eq $traceLogicLag) {
+            Assert-Condition ($rowLogicLag -eq 0 -or $rowLogicLag -eq 2) `
+                ("Task 25R profile-0 trace read an unreachable logic/present skew " +
+                 "$rowLogicLag at its marker (presented $($row[1]), logic $($row[2])).") `
+                $GdbOutput
+            $traceLogicLag = $rowLogicLag
+        }
         Assert-Condition ($row[1] -eq ($index + 1) -and
-            $row[2] -eq (2 * $row[1]) -and $row[3] -eq 0) `
-            "Task 25R profile-0 trace lost fixed-two accounting at presentation $($index + 1)." `
+            $rowLogicLag -eq $traceLogicLag -and $row[3] -eq 0) `
+            ("Task 25R profile-0 trace lost fixed-two accounting at presentation " +
+             "$($index + 1): logic/present skew $rowLogicLag, expected $traceLogicLag.") `
             $GdbOutput
         $activePhase = -1
         $intervalSlips = [int64]0
@@ -858,10 +880,29 @@ function Complete-Task25RPacingTrace {
             "Task 25R profile-0 trace did not reconcile phase $phase with BPLAY_PACE." `
             $GdbOutput
     }
+    # The final BPLAY_PACE snapshot is taken elsewhere in the run, so the last
+    # traced row and that snapshot need not share a stop phase. Two things must
+    # hold. The snapshot's own tuple must be a reachable stop phase -- reuse the
+    # joint model rather than re-deriving a weaker one here, because it also
+    # constrains DrawCalls and the phase counters and so rejects tuples a
+    # logic-only bound accepts. And the logic difference between the two reads
+    # must be exactly the difference in their stop phases; anything else means
+    # updates went missing between them.
+    #
+    # One pair aliases and cannot be separated from these reads: a snapshot at
+    # the marker's own phase is numerically identical to one that lost two
+    # updates. That is a property of the two counters, not a hole in the model.
+    $snapshotStop = Test-BattlePlayablePacingStopPhase -Pacing $Pacing
     Assert-Condition ($previous[1] -eq $Pacing[3] -and
-        $previous[2] -eq $Pacing[2] -and $previous[3] -eq $Pacing[11] -and
+        $previous[3] -eq $Pacing[11] -and
+        $snapshotStop.Valid -and
+        (([int64]$Pacing[2] - [int64]$previous[2]) -eq
+            ($traceLogicLag - $snapshotStop.LogicLag)) -and
         $totalSlips -eq (($Pacing[17..21] | Measure-Object -Sum).Sum)) `
-        'Task 25R profile-0 trace did not reconcile its final pacing totals.' `
+        ("Task 25R profile-0 trace did not reconcile its final pacing totals " +
+         "(trace skew $traceLogicLag, snapshot logicLag $($snapshotStop.LogicLag) " +
+         "drawLead $($snapshotStop.DrawLead) phaseLag $($snapshotStop.PhaseLag), " +
+         "logic $($previous[2]) -> $($Pacing[2])).") `
         $GdbOutput
 
     return [PSCustomObject]@{
