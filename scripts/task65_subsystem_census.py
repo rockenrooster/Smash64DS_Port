@@ -77,6 +77,12 @@ SUBSYSTEM_RULES = (
     ("REND/renderer", "src/nds/nds_renderer"),
     ("REND/fighter draw", "src/nds/nds_fighter"),
     ("REND/stage draw", "src/nds/nds_stage"),
+    # reloc_backend_renderer_*.c is renderer adapter code that happens to live
+    # under a reloc_ filename. It must be matched before the generic
+    # "src/port/reloc" rule below, which otherwise charges the draw path to
+    # relocation -- in the R2-00b baseline that mis-filed 147,777 ticks/frame,
+    # 10.2% of the frame's work, into a bucket named after loading.
+    ("REND/adapter", "src/port/reloc_backend_renderer"),
     ("PORT/taskman seam", "src/port/taskman_seam"),
     ("PORT/reloc", "src/port/reloc"),
     ("PORT/other", "src/port"),
