@@ -17011,6 +17011,134 @@ ndsRendererNativeShadeProductionActions(
     return TRUE;
 }
 
+#if NDS_R2_FIGHTER_RUN_PROOF
+/* R2-03 E5 falsifier. The switch plan's section 7 for this phase asks for a
+ * per-epoch generated submit "consuming only baked facts ... no
+ * PrepareProductionRun policy re-checks, no per-frame texture identity proof".
+ * That is E1a's cut moved to the fighter, and R2-02 E1a was worth 94,784
+ * ticks/frame on a table of the same shape. The question is whether those facts
+ * are constant per epoch, and the fighter differs from the stage in a way that
+ * could decide it: its materials are live (Task 39's hurt flash writes colour)
+ * where Dream Land's are not.
+ *
+ * Hooked here rather than in the hierarchy preflight. Canonical mode 9
+ * (NATIVE_COMPLETE_STAGE) selects native_owner_production_mode and leaves
+ * native_owner_hierarchy_mode FALSE, so hierarchy_runs[] is mode 7's table and
+ * the shipping build never writes it -- an earlier revision of this falsifier
+ * hooked that table and honestly reported zero calls. This is the function the
+ * live path calls, once per run per frame, with hierarchy_run == NULL: the
+ * facts are recomputed and consumed on the spot, never stored. That recompute
+ * is the cost R2-03 exists to remove.
+ *
+ * Three hashes, because they imply different cuts and R2-02 E3 is the standing
+ * reminder to answer a data question with a counter rather than an argument.
+ *
+ *   STABLE constant -> the texture and geometry facts are a per-epoch memo,
+ *     which is exactly E1a.
+ *   STABLE constant but MATERIAL moves -> bake the table and write colour per
+ *     frame. Still E1a's shape: it kept the table and recomputed the one field
+ *     that moved.
+ *   STABLE moves -> refuted for this build, and the cost has to come out of the
+ *     per-run work itself.
+ *
+ * FULL adds the texture cache entry pointer, which rotates for reasons
+ * unrelated to what is drawn; STABLE omits it deliberately. */
+volatile u32 gNdsR2RunFullHash;
+volatile u32 gNdsR2RunFullChangeCount;
+volatile u32 gNdsR2RunStableHash;
+volatile u32 gNdsR2RunStableChangeCount;
+volatile u32 gNdsR2RunMaterialHash;
+volatile u32 gNdsR2RunMaterialChangeCount;
+volatile u32 gNdsR2RunCallCount;
+volatile u32 gNdsR2RunFrameCount;
+static u32 sNdsR2RunFrameFullHash = 2166136261u;
+static u32 sNdsR2RunFrameStableHash = 2166136261u;
+static u32 sNdsR2RunFrameMaterialHash = 2166136261u;
+static u32 sNdsR2RunFrameCallCount;
+
+#define NDS_R2_RUN_HASH(hash, value)     ((hash) = (((hash) ^ (u32)(value)) * 16777619u))
+
+/* PrepareProductionRun is NDS_RENDERER_NATIVE_FIGHTER_CODE, i.e. ITCM. Inlining
+ * the hash there overflowed the region by 100 bytes, so take the Task 29 census
+ * treatment: out of line, size-optimised, and in its own .text section. The
+ * extra branch per run is measurement cost that never ships. */
+#define NDS_R2_RUN_PROOF_CODE \
+    __attribute__((noinline, noclone, cold, optimize("Os"), \
+                   section(".text.r2_run_proof")))
+
+static void NDS_R2_RUN_PROOF_CODE ndsRendererR2FighterRunProofCall(
+    u32 run_index,
+    const NDSRendererTraversalState *state,
+    const NDSRendererHardwareResolvedTexture *resolved)
+{
+    u32 full = sNdsR2RunFrameFullHash;
+    u32 stable = sNdsR2RunFrameStableHash;
+    u32 material = sNdsR2RunFrameMaterialHash;
+    u32 fields[13];
+    u32 i;
+
+    fields[0] = run_index;
+    fields[1] = state->texture_prepare_name;
+    fields[2] = resolved->params;
+    fields[3] = resolved->format;
+    fields[4] = resolved->width;
+    fields[5] = resolved->height;
+    fields[6] = state->texture_prepare_poly_fmt;
+    fields[7] = state->texture_prepare_scale_s;
+    fields[8] = state->texture_prepare_scale_t;
+    fields[9] = state->texture_prepare_origin_s;
+    fields[10] = state->texture_prepare_origin_t;
+    fields[11] = (u32)state->texture_prepare_offset;
+    fields[12] = state->texture_prepare_vertex_flags;
+    for (i = 0u; i < 13u; i++)
+    {
+        NDS_R2_RUN_HASH(full, fields[i]);
+        NDS_R2_RUN_HASH(stable, fields[i]);
+    }
+    NDS_R2_RUN_HASH(full, state->texture_prepare_enabled);
+    NDS_R2_RUN_HASH(stable, state->texture_prepare_enabled);
+    /* The live field the STABLE hash deliberately excludes. */
+    NDS_R2_RUN_HASH(material, run_index);
+    NDS_R2_RUN_HASH(material, state->texture_prepare_material_color);
+    NDS_R2_RUN_HASH(full, state->texture_prepare_material_color);
+    /* A pointer into the hardware texture cache, which rotates for reasons
+     * unrelated to what is drawn. */
+    NDS_R2_RUN_HASH(full, (u32)(uintptr_t)resolved->entry);
+    sNdsR2RunFrameFullHash = full;
+    sNdsR2RunFrameStableHash = stable;
+    sNdsR2RunFrameMaterialHash = material;
+    sNdsR2RunFrameCallCount++;
+}
+
+static void ndsRendererR2FighterRunProofFrame(void)
+{
+    if (gNdsR2RunFrameCount != 0u)
+    {
+        if (sNdsR2RunFrameFullHash != gNdsR2RunFullHash)
+        {
+            gNdsR2RunFullChangeCount++;
+        }
+        if (sNdsR2RunFrameStableHash != gNdsR2RunStableHash)
+        {
+            gNdsR2RunStableChangeCount++;
+        }
+        if (sNdsR2RunFrameMaterialHash != gNdsR2RunMaterialHash)
+        {
+            gNdsR2RunMaterialChangeCount++;
+        }
+    }
+    gNdsR2RunFullHash = sNdsR2RunFrameFullHash;
+    gNdsR2RunStableHash = sNdsR2RunFrameStableHash;
+    gNdsR2RunMaterialHash = sNdsR2RunFrameMaterialHash;
+    gNdsR2RunCallCount = sNdsR2RunFrameCallCount;
+    gNdsR2RunFrameCount++;
+    sNdsR2RunFrameFullHash = 2166136261u;
+    sNdsR2RunFrameStableHash = 2166136261u;
+    sNdsR2RunFrameMaterialHash = 2166136261u;
+    sNdsR2RunFrameCallCount = 0u;
+}
+#endif
+
 static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativePrepareProductionRun(
     u32 run_index,
@@ -17262,6 +17390,9 @@ ndsRendererNativePrepareProductionRun(
             stats, policy->textured, state->texture_prepare_name,
             state->texture_prepare_poly_fmt, state->matrix_generation);
     }
+#if NDS_R2_FIGHTER_RUN_PROOF
+    ndsRendererR2FighterRunProofCall(run_index, state, &resolved_texture);
+#endif
     return TRUE;
 }
 
@@ -25027,6 +25158,9 @@ void ndsRendererExecuteDisplayListWithVertexCache(
     {
         matrix_snapshots = vertex_cache->matrix_snapshots;
         matrix_snapshot_count = vertex_cache->matrix_snapshot_count;
+#endif
+#if NDS_R2_FIGHTER_RUN_PROOF
+    ndsRendererR2FighterRunProofFrame();
     }
 #endif
     ndsRendererInitTraversalState(&state, config, stats, &vertex_storage,

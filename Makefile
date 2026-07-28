@@ -258,6 +258,18 @@ NDS_RENDER_ECONOMY ?= 0
 NDS_RENDER_ECONOMY_OWNER_MASK ?= 32
 NDS_RENDERER_BENCHMARK_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
+# R2-03 E5 falsifier, lab only. Hashes the facts PrepareProductionRun computes
+# per run and counts the frames they change on. Section 7 for this phase asks
+# for a submit consuming only baked facts -- "no PrepareProductionRun policy
+# re-checks, no per-frame texture identity proof" -- which is R2-02 E1a's cut
+# (94,784) moved to a table of the same shape. Three hashes, because they imply
+# different cuts: STABLE is the bakeable candidate, MATERIAL is the live colour
+# alone, and FULL adds the texture cache pointer -- a hardware-cache pointer
+# moving is a different verdict from the drawn facts moving.
+# Hooked in the production path, not the hierarchy preflight: canonical mode 9
+# never writes hierarchy_runs[], so that hook measured nothing. Read
+# gNdsR2RunCallCount first; zero means the instrument did not run.
+NDS_R2_FIGHTER_RUN_PROOF ?= 0
 NDS_FAST_WALLPAPER_AFFINE ?= 0
 # Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
 # open/read/flush/play while preserving all BGM state/counters so the rest of
@@ -1785,6 +1797,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FAST_WALLPAPER_AFFINE $(NDS_FAST_WALLPAPER_AFFINE)'; \
 		echo '#define NDS_BGM_FALSIFIER_OFF $(NDS_BGM_FALSIFIER_OFF)'; \
 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
+		echo '#define NDS_R2_FIGHTER_RUN_PROOF $(NDS_R2_FIGHTER_RUN_PROOF)'; \
 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \
 		echo '#define NDS_DEBUG_HUD $(NDS_DEBUG_HUD)'; \

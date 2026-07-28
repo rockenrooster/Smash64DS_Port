@@ -797,3 +797,41 @@ by a *different* instruction, which is what `taskmanPresentLead` is for.
 Corollary: when a text-pinning registry check guards the term, it must pin the
 new contract, not the old spelling. `check-harness-registry.ps1` caught this
 edit twice, which is the guard working.
+
+## A null result must prove the instrument ran (R2-03 E5, 2026-07-28)
+
+The E5 falsifier asked whether the fighter's per-run prepared facts hold still
+enough to bake. First run, over 628 frames:
+
+```
+full=0x811c9dc5 stable=0x811c9dc5 light=0x811c9dc5   fullChg=0 stableChg=0
+```
+
+Three independent hashes, all perfectly constant across an entire match. Read as
+a verdict it is the strongest possible KEEP. It was nothing: `0x811c9dc5` is the
+FNV-1a offset basis, and the hook had never executed.
+
+The hook was at the tail of `ndsRendererNativePreflightFighterHierarchy`, which
+fills `hierarchy_runs[]`. That table belongs to `FAST_RUN_NATIVE_FIGHTERS`
+(mode 7). Canonical is mode 9, `FAST_RUN_NATIVE_COMPLETE_STAGE`, which routes
+the fighter through `...OwnerProduction` instead and never writes that table at
+all. The instrument was measuring a path the shipping build does not take.
+
+**Every counter-based falsifier needs a liveness counter that is zero if and
+only if the instrument did not run, and it has to be read before the result
+is.** Here that was `gNdsR2RunCallCount`. Without it, "the hash never changed"
+and "the code never ran" are the same observation, and the first is a headline
+while the second is a bug.
+
+Two specific traps this repo keeps re-encountering:
+
+- **An unchanged hash is an unchanged hash of nothing** when the accumulator
+  starts at a known constant. Prefer seeding from something the run produced, or
+  publish the fold count beside the digest.
+- **A renderer path guarded by `gNdsRendererFastRunMode` is not the live path
+  until checked.** Modes 7, 8 and 9 select structurally different owner entry
+  points. Grep for the mode constant, not for the plausible-looking function.
+
+The rehooked instrument, inside the function mode 9 actually calls, reported
+28 changes in 1,500 frames. The real answer and the artefact both looked like
+"constant"; only the call count told them apart.
