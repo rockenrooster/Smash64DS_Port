@@ -31,9 +31,20 @@
  * frame-cost change in EITHER direction is a defect in this file, not a win.
  */
 
+/* This file is harness-specific by construction -- the folded constants below
+ * are only constant under battle_playable -- so it binds to the canonical scene
+ * harness config rather than inheriting the macros by luck.
+ * check-harness-registry.ps1 enforces this pairing. */
+#include "nds_scene_harness_config.h"
+
+#include <nds/nds_scene_harness.h>
 #include <nds/nds_r2_battle.h>
 
 #if NDS_R2_PATH
+
+#if NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE
+#error "src/nds/r2 is specialized for the battle_playable harness (mode 163)"
+#endif
 
 #if NDS_SCENE_MIP_CACHE_LAB
 /* The Runtime 1 loop carries a mip-cache seeding excursion at i == 0. It is a
