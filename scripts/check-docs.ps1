@@ -20,7 +20,8 @@ $required = @(
     'docs/HANDOFF.md',
     'docs/HARNESSES.md',
     'docs/KNOWN_ISSUES.md',
-    'docs/optimization/NATIVE_RENDERER_PLAN.md',
+    'docs/Smash64DS_Runtime2_SwitchPlan.md',
+    'docs/optimization/TASK_STANDING_RULES.md',
     'docs/P1_EXECUTION_BOARD.md',
     'docs/PERF_LEDGER.md',
     'docs/PORTING.md',
@@ -67,7 +68,7 @@ foreach ($file in Get-ChildItem (Join-Path $root 'docs') -File -Filter '*.md') {
 $board = Read-RepoText 'docs/P1_EXECUTION_BOARD.md'
 $handoff = Read-RepoText 'docs/HANDOFF.md'
 $harnesses = Read-RepoText 'docs/HARNESSES.md'
-$native = Read-RepoText 'docs/optimization/NATIVE_RENDERER_PLAN.md'
+$runtime2 = Read-RepoText 'docs/Smash64DS_Runtime2_SwitchPlan.md'
 $known = Read-RepoText 'docs/KNOWN_ISSUES.md'
 $porting = Read-RepoText 'docs/PORTING.md'
 $agents = $agentsLines -join "`n"
@@ -86,9 +87,13 @@ if ($board -notmatch '(?m)^Updated:\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+Central\
 if ($board -notmatch '(?m)^SHA-256\s+[0-9A-F]{64}\s*$') {
     Fail-Docs 'P1 board lacks the canonical SHA-256'
 }
-if (-not $native.Contains('implementation contract') -or
-    -not $native.Contains('P1_EXECUTION_BOARD.md')) {
-    Fail-Docs 'Native renderer plan lost its ownership contract'
+foreach ($token in @(
+    'P95', '1.12M', 'src/nds/r2/', 'NDS_R2_', 'Switch acceptance',
+    'P1_EXECUTION_BOARD.md'
+)) {
+    if (-not $runtime2.Contains($token)) {
+        Fail-Docs "Runtime 2 plan is missing '$token'"
+    }
 }
 if ($harnesses -notmatch 'HARNESS_INDEX_SOURCE:\s*scripts/lib/harness-registry\.ps1' -or
     $harnesses -notmatch 'verify-all\.ps1 -Profile Boundary -List' -or
@@ -96,7 +101,6 @@ if ($harnesses -notmatch 'HARNESS_INDEX_SOURCE:\s*scripts/lib/harness-registry\.
     Fail-Docs 'Harness registry authority is missing'
 }
 foreach ($token in @(
-    'Presentation targets roughly 90% overall likeness',
     'cosmetic exactness to one measured experiment',
     'artifacts/visibility', 'mechanically equivalent',
     'third A', 'ticks, FPS'
@@ -104,6 +108,13 @@ foreach ($token in @(
     if (-not $agents.Contains($token)) {
         Fail-Docs "AGENTS.md is missing '$token'"
     }
+}
+# The likeness figure is a fidelity-contract quantity owned by ARCHITECTURE.md
+# (Fidelity Boundary). AGENTS.md carried a duplicate until 0204c54329 removed
+# it; assert the fact at its owner rather than restoring the duplication.
+if (-not (Read-RepoText 'docs/ARCHITECTURE.md').Contains(
+        'Presentation targets roughly 90% overall likeness')) {
+    Fail-Docs 'ARCHITECTURE.md lost the presentation likeness target'
 }
 
 $boundary = @(Get-Smash64DSVerifyPlan -Profile Boundary)

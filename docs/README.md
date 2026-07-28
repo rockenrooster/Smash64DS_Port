@@ -12,20 +12,17 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`.
 | `ARCHITECTURE.md` | Stable source/backend/component boundaries |
 | `KNOWN_ISSUES.md` | Unresolved durable gaps only |
 | `BUGS.md` | User-reported playtest bugs |
-| `optimization/NATIVE_RENDERER_PLAN.md` | Current M2-M4 implementation contract |
+| `Smash64DS_Runtime2_SwitchPlan.md` | Runtime 2 charter, budgets, phase plan, and the definition of the switch |
 | `optimization/COMPILER_FIRST_ARCHITECTURE.md` | Campaign direction: what gets replaced, in what order, what each replacement must prove |
+| `optimization/TASK_STANDING_RULES.md` | How a performance task is run, measured, and judged |
 | `PERF_LEDGER.md` | Reproducible measurements and rejected experiments |
 | `DIAGNOSTIC_REFERENCE.md` | Marker definitions and manual diagnostics |
 | `PORTING.md` | Append-only chronological history |
 | `../PROJECT_GOAL.md` | Authoritative product, fidelity, milestone, and definition-of-done contract |
 | `DECOMP_MAP.md` | Read-only upstream map |
 | `FTSTRUCT_PARITY.md` | BattleShip/DS fighter ABI parity |
-| `MEMORY_OVERLAY_PLAN.md` | Memory and reloc budget reference |
 | `AUDIO_BACKEND_SCOUT.md` | Dated audio reference |
-| `FT_ANIM_STATUS_SCOUT.md` | Dated fighter-status reference |
 | `HW_RENDERER_VISIBILITY_FINDINGS.md` | Dated renderer visibility reference |
-| `MP_PASS_THROUGH_SCOUT.md` | Dated platform-collision reference |
-| `SPECIALS_WEAPONS_SCOUT.md` | Dated specials/weapons reference |
 
 Do not add a new planning or workflow document. Extend the existing owner or
 delete obsolete material. New top-level docs must be indexed here.

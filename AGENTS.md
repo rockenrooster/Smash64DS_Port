@@ -11,7 +11,6 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
 <!-- CODEGRAPH_END -->
 
-
 ## Mission
 
 This repo recreates SSB64 on Nintendo DS, using BattleShip as the behavioral reference:

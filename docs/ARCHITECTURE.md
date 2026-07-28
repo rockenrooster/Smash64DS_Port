@@ -121,9 +121,11 @@ DS BG, OAM, and GX hardware.
   whole owner on unsupported state.
 - Effects and weapons outside an owner remain in original display order.
 
-The current M2-M4 owner contracts and tick gates live only in
-`optimization/NATIVE_RENDERER_PLAN.md`; measurements and rejected designs live
-only in `PERF_LEDGER.md`.
+The M2-M4 owner contracts closed with the Runtime 1 optimization campaign and
+now live in `optimization/archive/NATIVE_RENDERER_PLAN.md` as history.
+`Smash64DS_Runtime2_SwitchPlan.md` owns the live renderer direction and its
+per-subsystem budgets; measurements and rejected designs live only in
+`PERF_LEDGER.md`.
 
 ### Textures
 
