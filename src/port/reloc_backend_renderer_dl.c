@@ -1283,7 +1283,6 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
         return FALSE;
     }
 
-
     for (i = 0u; i < dobj->xobjs_num; i++)
     {
         if ((dobj->xobjs[i] != NULL) &&
