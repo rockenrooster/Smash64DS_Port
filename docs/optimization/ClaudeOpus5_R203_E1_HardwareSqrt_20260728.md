@@ -1,7 +1,14 @@
 # R2-03 E1 — the hardware square root wins, but only by 38%
 
+> **Mislabelled, corrected 2026-07-28.** "R2-03" in
+> `Smash64DS_Runtime2_SwitchPlan.md` §7 is **Fighter direct draw (static pose)**.
+> This is a Runtime 1 harvest, not that phase. At 6,040 ticks/frame it also sits
+> in §3.9's "<10K ignore unless free" band — it is kept because it is free and
+> bit-exact, not because it is architecture work. The filename stays per the
+> never-rename rule. R2-03 remains unowned.
+
 **Date:** 2026-07-28
-**Phase:** R2-03 E1, first cut from `ClaudeOpus5_R203_E0_SoftFloatCallers_20260728.md`.
+**Phase:** Runtime 1 harvest, from `ClaudeOpus5_R203_E0_SoftFloatCallers_20260728.md`.
 **Flag:** `NDS_R2_FIXED_SQRT` (default `0`).
 **Verdict: KEEP, on the census.** `sqrtf` falls from **15,760 to 9,720
 ticks/frame** — **−6,040**, bit-exact. The 8-frame A/B read flat, and that is

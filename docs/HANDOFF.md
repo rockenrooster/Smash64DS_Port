@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-27 — Runtime 2: R2-00a/b/c and R2-01 gated, R2-02 E1a landed.
+Updated: 2026-07-28 — Runtime 2: R2-00a/b/c and R2-01 gated, R2-02 E1a + E2 landed.
 `P1_EXECUTION_BOARD.md` owns current state; this file is the restart surface and
 next packet.
 
@@ -26,10 +26,14 @@ deliberately left them unstaged. Commit or revert them with the bug-#10 work.
 
 ## State as of this handoff
 
-R2-00a/b/c and R2-01 are done and gated. **R2-02 E1a is landed and gated**;
-R2-02 E2 is open and needs re-sizing. Reports are `docs/optimization/ClaudeOpus5_R2*`.
-`NDS_R2_PATH` and `NDS_R2_STAGE_DIRECT` both default to 0, so the published ROMs
-are unchanged.
+R2-00a/b/c and R2-01 are done and gated. **R2-02 E1a and E2 are landed and
+gated; R2-02 itself is not closed** — `STG` P50 is 225,792 against its 180K
+budget, 45,792 over, and §3.1/§7 forbid starting R2-03 until it closes. Reports
+are `docs/optimization/ClaudeOpus5_R2*`. `NDS_R2_PATH`, `NDS_R2_STAGE_DIRECT`
+and `NDS_R2_STAGE_DMA` all default to 0, so the published ROMs are unchanged.
+
+**E2 is the first cut that moved the histogram §4 named as the target:**
+2-VBlank frames 1 → 12, 4-VBlank 12 → 9, `ALL` max 5,874,368 → 2,800,512.
 
 **Three things a restart must know before reading any performance number:**
 
@@ -52,6 +56,18 @@ are unchanged.
 
 ## Next packet, in priority order
 
+0. **R2-02 E3 — one stream, one DMA, and the gate closes.** This outranks
+   everything below it because R2-02 blocks R2-03. `ndsRendererNativeStageBeginRun`
+   runs 21× a frame at ~654 ticks a call to set GX state that is already baked in
+   `run->prepared`, and each run then needs its own DMA setup and completion
+   poll. If `generate_nds_native_stage.py` recorded the state writes into the
+   captured stream, the whole static stage becomes **one contiguous stream and
+   one DMA per frame** — which is exactly what §7's "the runtime shape is
+   `DreamLand_Run17()`, not discover/validate/rebuild/resolve/prepare/submit"
+   asks for. It collapses `BeginRun` (13,740), 20 of the 21 DMA setups, and most
+   of `ndsRendererCommitNativeStageSegment` (27,082): ~40,000 against the 45,792
+   still owed. Generator-side work. See
+   `ClaudeOpus5_R202_E2_StageReplayDMA_20260728.md` §4.
 1. **Soft-float — E0 is done, and it is two functions, not a programme.** See
    `ClaudeOpus5_R203_E0_SoftFloatCallers_20260728.md`. It runs at 1.19 cycles
    per instruction, so nothing is won by making it faster; the lever is calling
@@ -68,7 +84,7 @@ are unchanged.
    the accumulated value becomes the pose and hitboxes derive from part
    positions, so it is verifier-gated on the Task 37 state hash, not eyeballed.
    Size it at E0 before writing.
-2. **R2-02 E2, matrix construction — re-size first.** E0 sized it at 55,077 from
+2. **Matrix construction — re-size first.** E0 sized it at 55,077 from
    a bracket around one call. The symbol census says **156,627** across stage
    *and* fighter: `ndsRendererMtxMul20p12` 29,663, `LoadHardwareMatrixPair`
    20,176, `BuildDObjLocalMatrix` 18,596, `MtxMulAffine20p12` 16,784,

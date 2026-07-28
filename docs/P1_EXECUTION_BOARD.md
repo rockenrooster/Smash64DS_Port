@@ -42,9 +42,40 @@ R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
 | R2-00a stall attributor | **done, gate met** | `optimization/ClaudeOpus5_R200a_StallAttributor_20260727.md` |
 | R2-00b re-baseline + budgets | **done** | `optimization/ClaudeOpus5_R200b_BaselineAndBudgets_20260727.md` |
 | R2-01 battle-path skeleton | **done, gate met** | `NDS_R2_PATH`, `src/nds/r2/`; Boundary green |
-| R2-02 Dream Land direct runtime | **E1a done, gate met**; E2 open | `optimization/ClaudeOpus5_R202_E1a_StagePrepareElision_20260727.md` |
-| R2-03 fighter direct draw | unowned | |
-| R2-03 E1 hardware sqrt | **done, KEEP** | `optimization/ClaudeOpus5_R203_E1_HardwareSqrt_20260728.md` |
+| R2-02 Dream Land direct runtime | **E1a KEEP, phase gate NOT met** | `optimization/ClaudeOpus5_R202_E1a_StagePrepareElision_20260727.md` |
+| R2-03 fighter direct draw | **unowned — not started** | |
+| (R1 harvest) hardware sqrt | done, KEEP | `optimization/ClaudeOpus5_R203_E1_HardwareSqrt_20260728.md` (filename mislabels it R2-03) |
+
+**R2-02 is not finished.** Its §7 gate is `STG` P50/P95 within the provisional
+**180K** budget. §3.1 and §7 both forbid carrying a phase that misses its budget
+into the next one, so R2-03 does not start until this closes. The two soft-float
+files named `R2-03` are Runtime 1 harvest, not that phase; they are corrected in
+place per the never-rename rule.
+
+```text
+STG P50   351,488  baseline
+          256,704  after E1a  (-94,784)  prepare-run elision
+          225,792  after E2   (-30,912)  GXFIFO DMA for the rigid replay
+          180,000  gate
+          -------
+           45,792  still over
+```
+
+**E2 put the first real population on the target side of the histogram.**
+`STG` down on 128/128 frames; **2-VBlank frames 1 → 12**, 4-VBlank 12 → 9, and
+`ALL`'s worst frame 5,874,368 → 2,800,512. §4 says the switch exists to move
+that histogram, and this is the first cut that visibly did. Boundary green, no
+tearing or dropped geometry.
+`optimization/ClaudeOpus5_R202_E2_StageReplayDMA_20260728.md`.
+
+**E3 is the shape §7 actually asks for and should close the gate.**
+`ndsRendererNativeStageBeginRun` runs 21× a frame at ~654 ticks a call setting GX
+state already baked in `run->prepared`, and each run needs its own DMA. If the
+capture recorded the state writes too, the whole static stage becomes **one
+contiguous stream and one DMA per frame** — `DreamLand_Run17()`, not
+discover/validate/rebuild/resolve/prepare/submit. Collapses `BeginRun`, 20 of 21
+DMA setups, and most of `ndsRendererCommitNativeStageSegment` (27,082): ~40,000,
+which closes the 45,792.
 
 **R2-03 E1 took `sqrtf` from 15,760 to 9,720 ticks/frame, −6,040**, bit-exact
 against IEEE over 8.7M checked inputs, Boundary green. The 8-frame A/B read

@@ -211,6 +211,11 @@ NDS_R2_STAGE_DIRECT ?= 0
 # must not move -- sqrtf is on the gameplay path and a last-bit difference is a
 # pose difference.
 NDS_R2_FIXED_SQRT ?= 0
+# R2-02 E2. Pushes the Task 36 rigid-replay command stream to the GX with GXFIFO
+# DMA instead of a CPU store loop. ~4,200 words/frame at Task 103's measured
+# 9.51 ticks/word; the point is the ~16 KB/frame of cache-line fills that stop
+# happening, which is how the switch plan's §3.3 says traffic work is judged.
+NDS_R2_STAGE_DMA ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1690,6 +1695,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \
+		echo '#define NDS_R2_STAGE_DMA $(NDS_R2_STAGE_DMA)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
@@ -1969,6 +1975,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_R2_PATH=$(NDS_R2_PATH)'
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DIRECT=$(NDS_R2_STAGE_DIRECT)'
 	@printf '%s\n' 'BENCH_MAKE_R2_FIXED_SQRT=$(NDS_R2_FIXED_SQRT)'
+	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DMA=$(NDS_R2_STAGE_DMA)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'

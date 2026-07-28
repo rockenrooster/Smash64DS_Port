@@ -1,5 +1,12 @@
 # R2-03 E0 — soft-float is one function, not a culture
 
+> **Mislabelled, corrected 2026-07-28.** "R2-03" in
+> `Smash64DS_Runtime2_SwitchPlan.md` §7 is **Fighter direct draw (static pose)**.
+> This work is not that phase and does not advance it. It is a Runtime 1 harvest
+> of the kind §1 sanctions ("keep harvesting exact wins while R2 is built"). The
+> filename stays per the never-rename rule; the phase number in it is wrong.
+> R2-03 remains unowned.
+
 **Date:** 2026-07-28
 **Phase:** E0 sizing only. No runtime change, no build, no emulator run beyond
 the R2-00c capture this reuses.

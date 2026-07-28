@@ -20857,10 +20857,41 @@ ndsRendererTask36ReplayRun(
     task103_t1 = cpuGetTiming();
 #endif
     words = &owner->words[run->word_offset];
+#if NDS_R2_STAGE_DMA
+    /* R2-02 E2. The replay is a flat push of a captured GX command stream out
+     * of a 32-byte-aligned buffer in main RAM -- roughly 4,200 words a frame
+     * across the 21 runs, which the CPU loop drags through the data cache one
+     * word at a time. Task 103 timed that at 9.51 ticks per word. GXFIFO DMA is
+     * what the hardware provides for exactly this: it reads main RAM directly,
+     * so the words stop being cache-line fills, and it self-throttles on FIFO
+     * space instead of stalling the core on each store.
+     *
+     * The switch plan's §3.3 is explicit that a traffic optimization is judged
+     * by cache lines that stopped being touched, and this stops ~16 KB/frame of
+     * them.
+     *
+     * Coherency is already satisfied: the capture path DC_FlushRange()s
+     * owner->words when it completes, and replay never writes the buffer.
+     *
+     * Channel 0 and this exact idiom are what libnds glCallList uses. Only
+     * channel 0 is polled, not all four: a DMA on another channel cannot
+     * interleave GX commands unless it is also in GXFIFO mode, and nothing else
+     * here is. */
+    if (run->word_count != 0u)
+    {
+        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+        DMA_SRC(0) = (u32)words;
+        DMA_DEST(0) = (u32)&GFX_FIFO;
+        DMA_CR(0) = DMA_FIFO | run->word_count;
+        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+    }
+    (void)i;
+#else
     for (i = 0u; i < run->word_count; i++)
     {
         GFX_FIFO = words[i];
     }
+#endif
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_t2 = cpuGetTiming();
 #endif
