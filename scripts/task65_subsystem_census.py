@@ -28,6 +28,7 @@ without further conversion.
 from __future__ import annotations
 
 import argparse
+import bisect
 import csv
 import re
 import subprocess
@@ -151,6 +152,51 @@ def is_memory_op(opcode: int, thumb: bool) -> bool:
     return False
 
 
+def symbol_owners(pcs: list[int], elf: Path, nm: str) -> dict[int, str]:
+    """pc -> owning text symbol, bisected out of the ELF symbol table.
+
+    addr2line resolves through DWARF, and DWARF still describes functions the
+    linker garbage-collected, so it will name a symbol that is not in the
+    binary. On the 2026-07-27 census it charged 24,240 ticks/frame to
+    ndsRendererTask29GXRecord, which `nm` does not have because
+    NDS_TASK29_GX_CENSUS is 0 and the whole function is behind that #if. The
+    symbol table cannot make that mistake, so it is the authority for the
+    function name; addr2line stays the authority for the source path, which is
+    what the subsystem classifier keys on.
+    """
+    entries: list[tuple[int, int, str]] = []
+    try:
+        listing = subprocess.run(
+            [nm, "-S", str(elf)],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
+        ).stdout
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"could not run {nm}") from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(exc.stderr.strip() or "nm failed") from exc
+    for line in listing.splitlines():
+        parts = line.split()
+        if len(parts) == 4 and parts[2] in "TtWw":
+            try:
+                entries.append((int(parts[0], 16), int(parts[1], 16), parts[3]))
+            except ValueError:
+                continue
+    entries.sort()
+    starts = [entry[0] for entry in entries]
+    out: dict[int, str] = {}
+    for pc in pcs:
+        # Thumb function symbols carry the low address bit; the recorded PC does
+        # not, so mask before comparing or every Thumb function looks like a gap.
+        addr = pc & ~1
+        index = bisect.bisect_right(starts, addr) - 1
+        if index < 0:
+            out[pc] = ""
+            continue
+        start, size, name = entries[index]
+        out[pc] = name if addr < (start + size) else ""
+    return out
+
+
 def resolve_pcs(pcs: list[int], elf: Path, addr2line: str) -> dict[int, tuple[str, str]]:
     """pc -> (function, source path). One batched addr2line call."""
     stdin = "\n".join(f"0x{pc:08x}" for pc in pcs)
@@ -234,6 +280,7 @@ def main() -> int:
     parser.add_argument("profile", type=Path)
     parser.add_argument("--elf", type=Path, required=True)
     parser.add_argument("--addr2line", default="arm-none-eabi-addr2line")
+    parser.add_argument("--nm", default="arm-none-eabi-nm")
     parser.add_argument("--frames", type=int, required=True,
                         help="presented frames in the census window")
     parser.add_argument("--root", type=Path, default=Path.cwd())
@@ -249,6 +296,19 @@ def main() -> int:
 
         pcs = sorted({int(row["pc"], 16) for row in rows})
         resolved = resolve_pcs(pcs, args.elf, args.addr2line)
+        # The symbol table overrides addr2line's function name wherever the two
+        # disagree; see symbol_owners for why addr2line cannot be trusted with
+        # it. The source path is left alone, so subsystem classification is
+        # unaffected -- only the per-function table gets more honest.
+        owners = symbol_owners(pcs, args.elf, args.nm)
+        renamed = 0
+        for pc, owner in owners.items():
+            if owner and owner != resolved[pc][0]:
+                resolved[pc] = (owner, resolved[pc][1])
+                renamed += 1
+        if renamed:
+            print(f"note           {renamed} of {len(pcs)} PCs renamed from the "
+                  f"symbol table (addr2line named a folded or removed symbol)")
 
         functions: dict[str, Function] = {}
         by_kernel: dict[str, Bucket] = defaultdict(Bucket)

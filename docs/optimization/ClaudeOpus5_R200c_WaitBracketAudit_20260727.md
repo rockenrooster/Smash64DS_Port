@@ -149,7 +149,58 @@ frame index does not name the same workload, and the disagreement you measure is
 the build, not the instrument. Put both instruments in one ROM and read them
 from one run. Recorded in `TASK_STANDING_RULES.md`.
 
-## 7. Evidence
+## 7. A second defect, found while attributing the excursion
+
+`ndsRendererTask29GXRecord` came back as 24,240 ticks/frame. It is not in the
+binary — `NDS_TASK29_GX_CENSUS` is 0 and the whole function is behind that
+`#if`, and `nm` has no such symbol. **addr2line resolves through DWARF, which
+still describes functions the linker garbage-collected**, so it will confidently
+name a symbol that does not exist and charge real cycles to it.
+
+`task65_subsystem_census.py` used `addr2line -f` for the function name, so this
+is not a scratch-script problem. Fixed: the census now bisects each PC into the
+ELF symbol table and lets that override addr2line wherever the two disagree.
+The source path still comes from addr2line, because that is what the subsystem
+classifier keys on and DWARF is right about the file even when it is wrong about
+the symbol.
+
+On the R2-00c window it **renames 18,987 of 59,366 PCs — 32%.** The per-symbol
+table was that unreliable. The aggregates were not: REAL WORK comes out at
+**1,446,638** ticks/frame against R2-00b's published 1,446,348, a 0.02%
+difference, so R2-00b's headline numbers and its subsystem split stand. It is
+the "which function" answer that was wrong, and that is the answer optimization
+picks targets from.
+
+### The frame, re-ranked on attribution that holds
+
+From the same run, by cross-cutting kernel, against REAL WORK of 1,446,638:
+
+| group | ticks/frame | % of work | cyc/insn | mem stall |
+|---|---|---|---|---|
+| soft-float | **177,857** | **12.3%** | 1.19 | 1,586 |
+| matrix | **156,627** | **10.8%** | 2.35 | 54,686 |
+| gx-submit | 144,852 | 10.0% | 2.72 | 54,627 |
+| texture-resolve | 108,681 | 7.5% | 4.91 | 53,983 |
+| `mem*` | 98,207 | 6.8% | 2.60 | 54,412 |
+| rom-read | 10,562 | 0.7% | 2.52 | 2,502 |
+
+Two readings that change what to do next:
+
+- **Soft-float is the largest block in the frame and it is not stalled.** At
+  1.19 cycles per instruction it is retiring almost as fast as the core can go,
+  so there is nothing to win by making it faster — `__aeabi_fadd` is already
+  hand-written ITCM assembly from Task 16. The only lever is calling it less,
+  which means float→fixed at the call sites, in imported gameplay and animation
+  code. Large, structural, and now measured at 177,857 ticks/frame.
+- **Matrix construction is 156,627, not the 55,077 R2-02 E2 was sized at.** The
+  bracket around `ndsRendererAdapterPrepareNativeStageMatrices` sees one call;
+  the symbol census sees `ndsRendererMtxMul20p12` 29,663,
+  `LoadHardwareMatrixPair` 20,176, `BuildDObjLocalMatrix` 18,596,
+  `MtxMulAffine20p12` 16,784, `MtxLoadN64ToDS20p12` 13,793,
+  `BuildDObjWorldMatrix` 12,880, `PrepareInitialMatrices` 12,233 and more, across
+  stage *and* fighter. E2 should be scoped against that number.
+
+## 8. Evidence
 
 | SHA-256 (first 16) | file |
 |---|---|

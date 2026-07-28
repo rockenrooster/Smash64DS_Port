@@ -87,6 +87,31 @@ Two consequences worth acting on:
 R2-00a's other findings stand: no GX, DMA or cart *stall*; ledger closed;
 bit-identical reproduction of the prior census.
 
+### The frame, re-ranked on attribution that holds (R2-00c §7)
+
+`task65_subsystem_census.py` named functions with `addr2line -f`, which resolves
+through DWARF — and DWARF still describes functions the linker
+garbage-collected. It charged 24,240 ticks/frame to `ndsRendererTask29GXRecord`,
+which is not in the binary. The census now bisects the ELF symbol table and
+overrides addr2line; that **renames 18,987 of 59,366 PCs, 32%**. Aggregates
+survive (REAL WORK 1,446,638 vs R2-00b's 1,446,348, 0.02%); the per-symbol table
+did not, and that is what targets are picked from.
+
+| group | ticks/frame | % of work | cyc/insn |
+|---|---|---|---|
+| soft-float | **177,857** | **12.3%** | 1.19 |
+| matrix | **156,627** | **10.8%** | 2.35 |
+| gx-submit | 144,852 | 10.0% | 2.72 |
+| texture-resolve | 108,681 | 7.5% | 4.91 |
+| `mem*` | 98,207 | 6.8% | 2.60 |
+
+**Soft-float is the largest block and it is not stalled** — 1.19 cyc/insn, and
+`__aeabi_fadd` is already hand-written ITCM assembly. Nothing to win by making
+it faster; the only lever is calling it less, i.e. float→fixed at the call sites
+in imported gameplay and animation. **Matrix construction is 156,627, not the
+55,077 R2-02 E2 was sized at** — the bracket saw one call, the census sees seven
+symbols across stage and fighter. Re-scope E2 against that.
+
 The attributor is installed repo-local at
 `emulators/melonds-attributor/melonDS.exe` (`D81FC0BF…`) rather than replacing
 `emulators/melonds/melonDS.exe`, so measurements taken with `DE80E46B…` stay
