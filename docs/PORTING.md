@@ -21894,3 +21894,37 @@ ceiling 5.6%) — a follow-up could prototype it for the binding-3 run (66 verts
   ever disagree the hygiene checkers (which use the library as the single
   source of truth) still catch a dropped include.
 
+
+## 2026-07-27: Runtime 2 begins — baseline, budgets, and the battle-path roof
+
+- The owner approved `Smash64DS_Runtime2_SwitchPlan.md`.
+  `optimization/archive/NATIVE_RENDERER_PLAN.md` is now history and the switch
+  plan owns the live renderer direction. `docs/README.md`, `ARCHITECTURE.md` and
+  `check-docs.ps1` were repaired to match: the archive commit had left the
+  checker requiring a doc at its old path, the index citing four scouts that no
+  longer exist, and `AGENTS.md` one line over its own 150-line cap, so
+  `check-docs.ps1` failed on clean HEAD.
+- The 90%-likeness figure now gets asserted against `ARCHITECTURE.md`, which
+  owns the Fidelity Boundary, instead of against a duplicate in `AGENTS.md`.
+  One fact, one owner.
+- **R2-00b re-baselined the frame.** REAL WORK is 1,446,348 ticks/frame against
+  Task 65's 1,527,277, and the gap to the 1.12M gate is 326,348 rather than
+  407,277 — Tasks 100–108 plus the bug-#10 work bought 80,929. Stall is
+  unchanged at 62.1%, so the architectural premise the plan rests on holds.
+- **A 147,777-tick attribution error was found and fixed in the instrument.**
+  `task65_subsystem_census.py` matched `src/port/reloc_backend_renderer_dl.c`
+  against its `src/port/reloc` rule, charging renderer adapter work to a bucket
+  named after loading. Task 65's §2 table carried this, and every plan built
+  from it under-counted the renderer. Corrected: the renderer is 723,554
+  ticks/frame, exactly half the frame's work; all gameplay is 190,649 (13.2%).
+- Standing note for future gates: the census attributes by where code lives and
+  the tick-HUD buckets attribute by bracket. Mixing them double-counts the
+  616,701 ticks/frame of shared kernels. Every gate must say which it quotes.
+- **R2-01 gave Runtime 2 the battle scene flow** behind `NDS_R2_PATH`
+  (default 0). The Runtime 1 loop sits in a ~30-condition harness chain and
+  branches on two runtime flags that are compile-time constants under Boundary;
+  `src/nds/r2/nds_r2_battle.c` is that loop with the constants folded — 116
+  bytes of text driving eight named Runtime 1 operations. It buys no ticks and
+  is not meant to; it exists so R2-02 and R2-03 swap renderers under a stable
+  roof. The default arm's link input set is unchanged, not merely equivalent:
+  the new translation unit enters `CFILES` only when the flag is 1.
