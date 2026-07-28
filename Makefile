@@ -188,6 +188,17 @@ NDS_TASK106_UPDATES_PER_PRESENT ?= 2
 # update rate unchanged, so the tail is loading, not simulation.
 # Sample with -FallbackCensus -RingDump; lab only, default 0.
 NDS_TASK75_LOAD_CENSUS ?= 0
+# Runtime 2 (docs/Smash64DS_Runtime2_SwitchPlan.md). The whole family defaults
+# to 0 and the published ROMs stay pure Runtime 1 until the switch (plan S5).
+#
+# R2-01. Selects the src/nds/r2 battle path: the same 60 Hz gameplay tick and
+# the same Runtime 1 renderer, driven by a loop specialized for the Boundary
+# configuration instead of the NDS_DEV_SCENE_HARNESS chain's runtime flags.
+# Only meaningful with the battle_playable harness; the C fails the build closed
+# on any other. Setting this to 1 also gives the shared taskman_seam helpers
+# external linkage, so the 0 arm stays byte-identical to a build without the
+# family at all.
+NDS_R2_PATH ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -757,7 +768,7 @@ BATTLESHIP_O2R := $(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r
 BATTLESHIP_RELOCDATA := $(PROJECT_ROOT)/decomp/BattleShip-main/decomp/assets/us/relocData
 
 # BattleShip source files are compiled in place. They remain the source of truth.
-SOURCES := src/nds src/port src/import $(BATTLESHIP_SYS)
+SOURCES := src/nds src/nds/r2 src/port src/import $(BATTLESHIP_SYS)
 # Do not add BattleShip's full include root globally: its N64 libc headers
 # intentionally shadow stddef/string/etc. Compatibility headers expose the
 # narrow ABI needed by each imported source slice.
@@ -942,6 +953,13 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 	battleship_ftcommon_downattack.c \
 	battleship_ftcommon_downforwardback.c \
 	battleship_ftcommon_downstand.c
+# Runtime 2 battle path (R2-01). Added only when the flag is on, so the default
+# arm's link input set is unchanged rather than merely equivalent -- an empty
+# translation unit still enters the link and this project has measured
+# re-addressing collateral from far less (Tasks 87-89/94/95).
+ifeq ($(NDS_R2_PATH),1)
+CFILES += nds_r2_battle.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
 endif
@@ -1647,6 +1665,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
 		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
+		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
@@ -1923,6 +1942,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_SPRITES=$(NDS_TASK39_FX_SPRITES)'
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_FLASH=$(NDS_TASK39_FX_FLASH)'
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_SHIELD=$(NDS_TASK39_FX_SHIELD)'
+	@printf '%s\n' 'BENCH_MAKE_R2_PATH=$(NDS_R2_PATH)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'

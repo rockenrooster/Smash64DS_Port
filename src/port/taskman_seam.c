@@ -4,6 +4,20 @@
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_task37_profile.h>
 
+#if NDS_R2_PATH
+#include <nds/nds_r2_battle.h>
+/* R2-01. The R2 loop is specialized for the Boundary configuration: it folds
+ * `is_battle_playable` and `use_realtime_presentation` to 1. Both are only
+ * constant under this harness, so any other harness would silently get a loop
+ * that does not match it. Fail the build closed rather than ship that. */
+#if NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE
+#error "NDS_R2_PATH=1 requires the battle_playable harness (mode 163)"
+#endif
+#if NDS_HARNESS_FAST_LOGIC
+#error "NDS_R2_PATH=1 is the realtime path; NDS_HARNESS_FAST_LOGIC must be 0"
+#endif
+#endif
+
 extern u32 sySchedulerGetTicCount(void);
 extern void sySchedulerSetTicCount(u32 tics);
 
@@ -4960,6 +4974,158 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
     NDS_FREEZE_DIAGNOSTICS_HEARTBEAT();
 }
 
+#if NDS_R2_PATH
+/* Runtime 2 host surface (R2-01, docs/Smash64DS_Runtime2_SwitchPlan.md).
+ *
+ * src/nds/r2 owns battle scene flow; Runtime 1 still owns the 60 Hz tick and
+ * the draw. These are the operations the R2 loop drives, and nothing more --
+ * the whole block compiles out when NDS_R2_PATH is 0, so the published arm is
+ * byte-identical to a build without the family. That matters more than it
+ * looks: Tasks 87-89/94/95 all regressed because editing this translation unit
+ * re-addressed its neighbours, so the 0 arm must not be edited at all, only
+ * added to under a flag.
+ *
+ * The per-iteration profile accumulators were locals in the harness loop. They
+ * become file statics here because the loop that owns them now lives in
+ * another translation unit; the arithmetic is unchanged. */
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+static u32 sNdsR2ProfileInputTicks;
+static u32 sNdsR2ProfileUpdateTicks;
+static u32 sNdsR2ProfileSourceUpdateByIndex[2];
+static u32 sNdsR2ProfileSourceUpdateTicks;
+static u32 sNdsR2ProfileAudioUpdateTicks;
+#endif
+
+void ndsR2HostBattlePrepare(void)
+{
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    ndsStageCollisionLoopPrepareRuntime();
+#if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
+    ndsAudioAssetLoadFenced();
+#endif
+    ndsFighterMarioFoxNaturalMotionPrepare();
+#endif
+    ndsBattlePlayablePacingStart(0u);
+}
+
+void ndsR2HostBattleIterationBegin(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    sNdsR2ProfileInputTicks = 0u;
+    sNdsR2ProfileUpdateTicks = 0u;
+    sNdsR2ProfileSourceUpdateByIndex[0] = 0u;
+    sNdsR2ProfileSourceUpdateByIndex[1] = 0u;
+    sNdsR2ProfileSourceUpdateTicks = 0u;
+    sNdsR2ProfileAudioUpdateTicks = 0u;
+    sNdsBattlePlayableProfileLoopStartTick = cpuGetTiming();
+#endif
+#if NDS_TICK_HUD
+    sNdsBattlePlayableTickHudLoopStartTick = cpuGetTiming();
+    gNdsTickHudFighterTicks = 0u;
+    gNdsTickHudStageTicks = 0u;
+    gNdsTickHudBackgroundTicks = 0u;
+    gNdsTickHudForegroundTicks = 0u;
+    gNdsTickHudAudioTicks = 0u;
+    gNdsTickHudSourceTicks = 0u;
+    gNdsTickHudFlushTicks = 0u;
+    gNdsTickHudVBlankWaitTicks = 0u;
+#endif
+    /* The lifecycle verifier requests this only after its synchronized
+     * MATCH_START stop, so debugger time is never reported as slowdown. */
+    if (gNdsBattlePlayablePacingRestartRequested != 0u)
+    {
+        ndsBattlePlayablePacingStart(0u);
+        gNdsBattlePlayablePacingRestartRequested = 0u;
+    }
+}
+
+u32 ndsR2HostBattleUpdateOnce(u32 update_index)
+{
+    u32 battle_status_before = (gSCManagerBattleState != NULL) ?
+        (u32)gSCManagerBattleState->game_status : 0xffffffffu;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    u32 input_start = cpuGetTiming();
+#endif
+
+    NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_UPDATE_START);
+    (void)ndsPlatformReadInput();
+    if (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
+    {
+        syControllerReadDeviceData();
+        syControllerUpdateGlobalData();
+    }
+    ndsBattlePlayableAdvanceRealtimeLogicClock();
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    sNdsR2ProfileInputTicks += cpuGetTiming() - input_start;
+#endif
+    ndsRunMarioFoxProofUpdate(&gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    sNdsR2ProfileUpdateTicks += gNdsRendererProfileUpdateTicks;
+    if (update_index < 2u)
+    {
+        sNdsR2ProfileSourceUpdateByIndex[update_index] =
+            gNdsRendererProfileSourceUpdateTicks;
+    }
+    sNdsR2ProfileSourceUpdateTicks += gNdsRendererProfileSourceUpdateTicks;
+    sNdsR2ProfileAudioUpdateTicks += gNdsRendererProfileAudioUpdateTicks;
+#else
+    (void)update_index;
+#endif
+    if ((battle_status_before == nSCBattleGameStatusWait) &&
+        (gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->game_status == nSCBattleGameStatusGo))
+    {
+        /* Keep all prepare-once countdown atlases resident. */
+        ndsRendererHardwareArmBattleStaticTextures();
+    }
+    /* BattleShip syTaskmanRunTask checks LoadScene immediately after
+     * task_update and never draws the terminal update. */
+    return (sSYTaskmanStatus == nSYTaskmanStatusLoadScene) ? 1u : 0u;
+}
+
+void ndsR2HostBattlePresent(void)
+{
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsRendererProfileInputTicks = sNdsR2ProfileInputTicks;
+    gNdsRendererProfileUpdateTicks = sNdsR2ProfileUpdateTicks;
+    gNdsRendererProfileSourceUpdate1Ticks = sNdsR2ProfileSourceUpdateByIndex[0];
+    gNdsRendererProfileSourceUpdate2Ticks = sNdsR2ProfileSourceUpdateByIndex[1];
+    gNdsRendererProfileSourceUpdateTicks = sNdsR2ProfileSourceUpdateTicks;
+    gNdsRendererProfileAudioUpdateTicks = sNdsR2ProfileAudioUpdateTicks;
+#endif
+    ndsBattlePlayablePresentRealtimeFrame();
+    /* Count only updates committed to a presented frame; the source-faithful
+     * LoadScene terminal update remains undrawn. */
+    gNdsBattlePlayablePacingLogicFrames +=
+        NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT;
+    ndsBattlePlayableFinalizePresentedIteration();
+}
+
+void ndsR2HostBattleFinish(void)
+{
+    ndsBattlePlayableRecordLifecycleTaskmanExit();
+    ndsBattlePlayablePacingFinish();
+}
+
+u32 ndsR2HostBattleNaturalMotionPassed(void)
+{
+    return (gNdsFighterNaturalMotionResult ==
+            NDS_FIGHTER_NATURAL_MOTION_PASS) ? 1u : 0u;
+}
+
+u32 ndsR2HostBattleUpdatesPerPresent(void)
+{
+    return NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT;
+}
+
+u32 ndsR2HostBattleUpdateMax(void)
+{
+    return (NDS_DEV_LIVE_INPUT_PREVIEW != 0) ?
+        NDS_FIGHTER_BATTLE_PLAYABLE_LIVE_UPDATE_MAX :
+        NDS_FIGHTER_BATTLE_PLAYABLE_REALTIME_SMOKE_UPDATE_MAX;
+}
+#endif /* NDS_R2_PATH */
+
 static void ndsRunMarioFoxProcessPrerequisiteLoop(void)
 {
     u32 i;
@@ -7467,6 +7633,14 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE)
+#if NDS_R2_PATH
+        /* R2-01. src/nds/r2 owns battle scene flow. The Runtime 1 loop below
+         * stays in the tree as the oracle (plan S6) but is not compiled into
+         * this arm, so the two can never both drive the scene. */
+        {
+            ndsR2BattleRun();
+        }
+#else
         {
             u32 i;
             u32 update_max;
@@ -8596,6 +8770,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             }
 #endif
         }
+#endif /* NDS_R2_PATH -- R2-01 selects src/nds/r2 instead of the loop above */
 #elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_MODEL) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_MODEL) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STRUCT) || \
