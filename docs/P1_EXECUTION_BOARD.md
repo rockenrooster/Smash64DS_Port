@@ -201,6 +201,42 @@ and normals must not be rotated by a projection. Same fix, wrong cause.
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E17_SplitMatrixLoad_20260728.md`.
 
+## R2-03 E18 — E16's ceiling is 53,760, not 90,295 (2026-07-28)
+
+**Correction to the number this board carried as the phase's largest
+opportunity.** `NDS_R2_FIGHTER_SHADE_SKIP`, lab only, default 0.
+
+E16 priced hardware lighting at "most of 90,295" off E15's shade bracket. That
+bracket came from a build carrying the whole E15/E16 census — whose own write-up
+says its absolutes are inflated 10-20% and only its ranking is safe — and it
+enclosed the per-epoch preamble as well as the per-vertex loop the cut replaces.
+
+Measured directly by skipping that loop, both arms at `HW_MTX=1`:
+
+| bucket | shade on | shade skipped | delta |
+|---|---:|---:|---:|
+| **WORK P50** | 1,099,584 | 1,044,800 | **−54,784** |
+| **FTR P50** | 489,856 | 436,096 | **−53,760** |
+| STG P50 (control) | 175,296 | 173,824 | −1,472 |
+| **VBlank 2 / 3** | 381 / 167 | **431 / 123** | **+50 frames at 30 FPS** |
+
+Engagement is unarguable: both fighters render as **black silhouettes** against
+an untouched stage (`artifacts/visibility/ClaudeOpus5_R203_E18_ShadeSkip_silhouettes_20260728.png`).
+
+**Ceiling, not expected value.** Hardware lighting still writes GX light and
+material state per epoch or root, so the honest range for E16 is **35,000–50,000**.
+
+**Does E16 still justify itself — yes, but it is no longer obvious.** 53,760 is
+21% of R2-03's 250,833 gap, and with E17's 17,600 the two are ~28% of it. Nothing
+identified in the phase is larger; the next ranked items are epoch state spans
+(~52,000) and per-root matrix work (~40,000). But it is a four-part change with a
+light-space risk against a 35,000–50,000 return, not the ~90,000 that was on this
+board. **Sequencing: E17 graduates on its own first, and the epoch state spans
+should be priced the same way before E16 is built** — they may be cheaper per
+tick won.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E18_ShadeCeiling_20260728.md`.
+
 ## R2-03 E16 — the shade pass IS the DS's hardware lighting (2026-07-28)
 
 Premise proven without exception, and it is the largest cut identified in R2-03.

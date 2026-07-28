@@ -17025,6 +17025,14 @@ ndsRendererNativeShadeProductionActions(
     if (shade_lut != NULL) { gNdsR2ShadeLutEpochs++; }
     if (use_material != 0u) { gNdsR2ShadeMaterialEpochs++; }
 #endif
+#if NDS_R2_FIGHTER_SHADE_SKIP
+    /* R2-03 E18. Prices E16's ceiling directly instead of inferring it from a
+     * bracket that also contains the epoch preamble. Skips the per-vertex
+     * lighting outright, leaving sNdsNativeFighterPreparedDense holding whatever
+     * the previous frame left -- so the fighters draw with stale, visibly wrong
+     * colours. Lab only; the engagement proof is the screenshot. */
+    return TRUE;
+#endif
     for (action_offset = 0u;
          action_offset < epoch->action_count;
          action_offset++)

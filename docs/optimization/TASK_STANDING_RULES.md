@@ -994,3 +994,27 @@ away, and the run costs one build.
 Mechanically, when a harness builds with fixed make arguments and has no flag
 pass-through, flipping the Makefile default, running the profile, and restoring
 it is sufficient and leaves no trace.
+
+### Re-measure an estimate on a clean build before it becomes a target (R2-03 E18, 2026-07-28)
+
+E16 priced the hardware-lighting cut at "most of 90,295 ticks/frame" off E15's
+shade bracket, and put that number on the board as the phase's largest
+opportunity. E18 measured it directly, by skipping the per-vertex loop the cut
+would replace: **53,760**. The estimate was ~40% high.
+
+Two compounding causes, both known at the time. The bracket came from a build
+carrying the whole E15/E16 census, whose counters inflate what they enclose —
+E15's own write-up says its absolutes are inflated 10-20% and only its ranking is
+safe. And the bracket enclosed the per-epoch preamble as well as the per-vertex
+loop, while the cut only replaces the loop.
+
+**A number produced by an instrument is safe for ranking and unsafe as a target.**
+Before a cut is scoped, budgeted, or handed to the next session, spend one build
+disabling the thing the cut would replace and measure the difference on an
+otherwise clean ROM. That arm also gives an unarguable engagement proof for free:
+here the fighters render as black silhouettes, which no tick delta could be
+mistaken for.
+
+This is the mirror of E13's positive-control rule. That one covered a zero that
+might mean nothing measured; this covers a large number that means less than it
+says.

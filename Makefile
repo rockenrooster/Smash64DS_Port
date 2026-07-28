@@ -293,6 +293,11 @@ NDS_R2_FIGHTER_RUN_MEMO ?= 0
 # what hardware lighting needs. Rendering-side -- positions now round in hardware
 # -- so it gates on a screenshot pair plus the owner's approval.
 NDS_R2_FIGHTER_HW_MTX ?= 0
+# R2-03 E18. Skips the fighter's per-vertex software lighting outright, so the
+# ceiling of E16's hardware-lighting cut can be measured rather than inferred
+# from a bracket that also contains the epoch preamble. Fighters draw with stale
+# colours -- lab only, never a playable configuration.
+NDS_R2_FIGHTER_SHADE_SKIP ?= 0
 # R2-03 E13. Skips a fighter's draw outright, which is how the campaign prices a
 # whole fighter end to end: the phase census partitions the draw, this measures
 # what the frame costs without it. Bit 0 = Mario, bit 1 = Fox. Lab only; a ROM
@@ -1849,6 +1854,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_RUN_PROOF $(NDS_R2_FIGHTER_RUN_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_MTX_DIRECT $(NDS_R2_FIGHTER_MTX_DIRECT)'; \
 		echo '#define NDS_R2_FIGHTER_HW_MTX $(NDS_R2_FIGHTER_HW_MTX)'; \
+		echo '#define NDS_R2_FIGHTER_SHADE_SKIP $(NDS_R2_FIGHTER_SHADE_SKIP)'; \
 		echo '#define NDS_R2_DRAW_SUPPRESS_MASK $(NDS_R2_DRAW_SUPPRESS_MASK)'; \
 		echo '#define NDS_R2_FIGHTER_RUN_MEMO $(NDS_R2_FIGHTER_RUN_MEMO)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
