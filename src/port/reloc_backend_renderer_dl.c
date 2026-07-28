@@ -11074,6 +11074,14 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
                 return FALSE;
             }
         }
+#elif NDS_R2_FIGHTER_HW_MTX
+        /* R2-03 E16b. The hardware performs this multiply now, and E16b traced
+         * the composed matrix to no other production consumer, so the compose
+         * is skipped outright -- one 4x4 per root out of MatrixPrep. */
+        if (modelviews[i] == NULL)
+        {
+            return FALSE;
+        }
 #else
         if ((modelviews[i] == NULL) ||
             (ndsRendererAdapterComposeNativeRootMatrix(
@@ -11088,6 +11096,9 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
         root->material_count = workspace->material_counts[i];
         root->composed_matrix = &workspace->composed_matrices[i];
         root->modelview_matrix = modelviews[i];
+#if NDS_R2_FIGHTER_HW_MTX
+        root->projection_matrix = projection;
+#endif
         root->materials = sNdsRendererAdapterNativeOwnerMaterials[i];
         root->config = config;
 #if NDS_RENDERER_M2_DETAILED_LEDGER

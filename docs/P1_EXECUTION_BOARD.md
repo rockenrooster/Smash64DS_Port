@@ -155,6 +155,50 @@ Ranked leverage:
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E15_ExecuteSplit_20260728.md`.
 
+## R2-03 E17 — split matrix load BUILT, −17,600, awaiting owner approval (2026-07-28)
+
+**First implementation of the E16 sequence, and it stands on its own.**
+`NDS_R2_FIGHTER_HW_MTX`, default 0.
+
+The fighter composed modelview x projection on the CPU (one 4x4 20.12 multiply
+per root) and loaded the product. Now both are loaded separately and the
+geometry engine — idle on 946 of 946 submissions per E14 — performs the
+multiply. The compose is skipped outright; E16b proved it has no other consumer
+under mode 9.
+
+| bucket | A: composed | B: split | delta |
+|---|---:|---:|---:|
+| **WORK P50** | 1,118,144 | 1,099,584 | **−18,560** |
+| **WORK P95** | 1,585,408 | 1,528,064 | **−57,344** |
+| **FTR P50** | 507,456 | 489,856 | **−17,600** |
+| STG P50 (control) | 175,552 | 175,296 | −256 |
+| **VBlank 2 / 3** | 320 / 233 | **381 / 167** | **+61 frames at 30 FPS** |
+
+The size matches the mechanism: ~28 roots x a 4x4x4 20.12 multiply ≈ 18,000
+predicted against 17,600 measured. `STG` moving 256 is the placement floor and is
+the control on whether `FTR` is real.
+
+**NOT GRADUATED — needs the owner's eye.** Vertex positions now round in
+hardware rather than on the CPU, a sub-pixel difference, and `AGENTS.md` gates
+rendering-side changes on visual approval rather than exactness. Boundary passes
+on the default; the candidate capture
+(`artifacts/visibility/ClaudeOpus5_R203_E17_SplitMatrix_candidate_20260728.png`)
+shows both fighters and the stage correct with no distortion.
+
+**On approval:** add `override NDS_R2_FIGHTER_HW_MTX := 1` to the published
+`smash64ds-battle-playable-hwtri` block and the tick-HUD block. E16's hardware
+lighting then builds on top of the vector matrix this establishes.
+
+**Correction to E16a/E16b's stated reason.** Both claimed the fighter loads
+through "matrix mode 1, position only, which never updates the vector matrix".
+Wrong: libnds names mode 1 `GL_POSITION` and mode 2 `GL_MODELVIEW`, and the code
+already used mode 2, so a vector matrix was always being written. Found when the
+invented name `GL_MODELVIEW_VECTOR` failed to compile. The prerequisite survives
+for a narrower reason — what landed in the vector matrix was the composed MVP,
+and normals must not be rotated by a projection. Same fix, wrong cause.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E17_SplitMatrixLoad_20260728.md`.
+
 ## R2-03 E16 — the shade pass IS the DS's hardware lighting (2026-07-28)
 
 Premise proven without exception, and it is the largest cut identified in R2-03.

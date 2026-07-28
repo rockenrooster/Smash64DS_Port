@@ -286,6 +286,13 @@ NDS_R2_FIGHTER_MTX_DIRECT ?= 0
 #       verify arm caught it each time.
 # Promote 2 -> 1 only on a zero gNdsR2TexMemoVerifyFail run.
 NDS_R2_FIGHTER_RUN_MEMO ?= 0
+# R2-03 E17. Loads the fighter's projection and modelview separately and lets the
+# geometry engine perform the multiply, instead of composing on the CPU and
+# loading the product. Measured -17,600 FTR P50 / -18,560 WORK P50, and it leaves
+# the modelview alone in the vector matrix rather than the composed MVP, which is
+# what hardware lighting needs. Rendering-side -- positions now round in hardware
+# -- so it gates on a screenshot pair plus the owner's approval.
+NDS_R2_FIGHTER_HW_MTX ?= 0
 # R2-03 E13. Skips a fighter's draw outright, which is how the campaign prices a
 # whole fighter end to end: the phase census partitions the draw, this measures
 # what the frame costs without it. Bit 0 = Mario, bit 1 = Fox. Lab only; a ROM
@@ -1841,6 +1848,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_SHADE_PROOF $(NDS_R2_FIGHTER_SHADE_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_RUN_PROOF $(NDS_R2_FIGHTER_RUN_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_MTX_DIRECT $(NDS_R2_FIGHTER_MTX_DIRECT)'; \
+		echo '#define NDS_R2_FIGHTER_HW_MTX $(NDS_R2_FIGHTER_HW_MTX)'; \
 		echo '#define NDS_R2_DRAW_SUPPRESS_MASK $(NDS_R2_DRAW_SUPPRESS_MASK)'; \
 		echo '#define NDS_R2_FIGHTER_RUN_MEMO $(NDS_R2_FIGHTER_RUN_MEMO)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \

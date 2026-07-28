@@ -831,6 +831,12 @@ typedef struct NDSRendererNativeFighterRoot
     u32 material_count;
     const NDSRendererMatrix20p12 *composed_matrix;
     const NDSRendererMatrix20p12 *modelview_matrix;
+#if NDS_R2_FIGHTER_HW_MTX
+    /* R2-03 E16b. With the split matrix load the hardware performs the
+     * modelview x projection multiply, so the projection has to reach the
+     * backend instead of being folded in by the adapter. */
+    const NDSRendererMatrix20p12 *projection_matrix;
+#endif
     const NDSRendererNativeMaterial *materials;
     const NDSRendererConfig *config;
 #if NDS_RENDERER_M2_DETAILED_LEDGER

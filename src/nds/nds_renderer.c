@@ -13234,6 +13234,73 @@ static void ndsRendererLoadHardwareRawComposedMatrix(
         generation, TRUE);
 }
 
+#if NDS_R2_FIGHTER_HW_MTX
+/* R2-03 E16b. The composed load hands the geometry engine one CPU-built
+ * modelview x projection with an identity projection. libnds `GL_MODELVIEW` is
+ * DS matrix mode 2, position AND vector, so a vector matrix is already being
+ * written on every load -- but what lands in it is the *composed* MVP, and
+ * normals must never be rotated by the projection. That is what makes hardware
+ * lighting impossible today, not a missing mode.
+ *
+ * This loads the two matrices separately, so the vector matrix holds the
+ * modelview alone and the engine performs the multiply for positions.
+ *
+ * Exactness: ndsRendererBuildRawHardwareMatrix divides row 3 of the composed
+ * matrix by the world-unit shift. Under the row-vector convention
+ * C[3] = M[3] x P, so scaling M's row 3 before the multiply yields the same
+ * row 3 afterwards -- the scaling commutes with the right-multiply. The only
+ * difference from the composed path is that the engine rounds the product in
+ * its own internal precision rather than the CPU's 20.12, which is sub-pixel
+ * and a screenshot question. */
+/* noinline is load-bearing, not style: the caller
+ * ndsRendererExecuteNativeFighterOwnerProduction lives in `.itcm.native_fighter`
+ * and ITCM has no room -- inlining this overflowed the region by 72 bytes. It
+ * runs once per root, so an out-of-line call costs nothing measurable. */
+static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
+    const NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 *modelview,
+    u32 generation)
+{
+    NDSRendererMatrix20p12 scaled_modelview;
+    m4x4 projection_hw;
+    m4x4 modelview_hw;
+    u32 col;
+
+    if ((projection == NULL) || (modelview == NULL))
+    {
+        return;
+    }
+    if ((sNdsRendererHardwareMatrixLoaded != 0u) &&
+        (sNdsRendererHardwareMatrixMode ==
+         NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
+        (sNdsRendererHardwareMatrixGeneration == generation))
+    {
+        return;
+    }
+
+    scaled_modelview = *modelview;
+    for (col = 0u; col < 4u; col++)
+    {
+        scaled_modelview.m[3][col] = ndsRendererRoundShiftS32Signed(
+            scaled_modelview.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+
+    ndsRendererHardwareEndBatch();
+    ndsRendererCopyMtx20p12ToM4x4(projection, &projection_hw);
+    ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
+
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+    glLoadMatrix4x4(&projection_hw);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    glLoadMatrix4x4(&modelview_hw);
+
+    ndsRendererProfileRecordMatrixLoad();
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
+    sNdsRendererHardwareMatrixGeneration = generation;
+    sNdsRendererHardwareMatrixLoaded = TRUE;
+}
+#endif
+
 static void ndsRendererLoadHardwareMatrices(
     const NDSRendererTraversalState *state, u32 scale_world)
 {
@@ -16678,7 +16745,17 @@ static void ndsRendererNativeBindProductionRoot(
     state->projection_valid = 0u;
     state->modelview = *input->modelview_matrix;
     state->modelview_valid = TRUE;
+#if NDS_R2_FIGHTER_HW_MTX
+    /* E16b traced every consumer: under mode 9 the composed matrix is read only
+     * by the hardware load, which the split loader replaces, and by a
+     * matrix_valid flag test in ndsRendererNativePrepareProductionRun. The
+     * value is therefore not needed here -- but the flag is, so it is still
+     * set. */
+    state->projection = *input->projection_matrix;
+    state->projection_valid = TRUE;
+#else
     state->matrix = *input->composed_matrix;
+#endif
     state->matrix_valid = TRUE;
     state->matrix_word_valid = FALSE;
     state->matrix_generation = ndsRendererNextMatrixGeneration();
@@ -16726,7 +16803,11 @@ static s32 ndsRendererNativePreflightProductionOwner(
         u32 epoch_index;
 
         if ((input->root_offset != root->root_offset) ||
+#if NDS_R2_FIGHTER_HW_MTX
+            (input->projection_matrix == NULL) ||
+#else
             (input->composed_matrix == NULL) ||
+#endif
             (input->modelview_matrix == NULL) ||
             (input->config == NULL) ||
             ((input->preamble.flags &
@@ -23727,8 +23808,14 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             u32 m2_root_gx_start = cpuGetTiming();
 #endif
         *out_hardware_started = TRUE;
+#if NDS_R2_FIGHTER_HW_MTX
+        ndsRendererLoadHardwareSplitMatrices(
+            &state->projection, &state->modelview,
+            state->matrix_generation);
+#else
         ndsRendererLoadHardwareRawComposedMatrix(
             &state->matrix, state->matrix_generation);
+#endif
         if (palette_slot <= NDS_NATIVE_GX_MATRIX_SLOT_MAX)
         {
             glStoreMatrix((int)palette_slot);
