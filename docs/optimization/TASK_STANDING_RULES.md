@@ -533,6 +533,25 @@ drops what it does not recognise will eventually drop something that mattered.**
 re-issues, catastrophic for a matrix. Make the recogniser **fault on the classes
 it must not drop** rather than trusting the next author to notice.
 
+## Compare a span to a span, not to a census row (R2-03 E3, 2026-07-28)
+
+A symbol's row in the frame-work census is **self time**: every callee is
+charged to its own symbol. A `cpuGetTiming()` bracket is **inclusive**. Mixing
+them produces a confident wrong answer.
+
+R2-03 E2 measured the fighter walk and revalidation at 13,670 ticks/frame,
+compared that against `ndsFighterMarioFoxDLAllDrawForSlot`'s census row of
+37,206, concluded the two phases were 37% of the function, and ranked the next
+cut on it. Bracketing the whole call said the function is **494,863
+ticks/frame** — 13× its census row. The two phases are 4%, and the real target
+was a 113,199-tick span the ranking had not even named.
+
+**Before sizing anything against a function's "total", say which total.** If the
+number came from the census it is self time and the callees are elsewhere; if it
+came from a bracket it is inclusive and the callees are inside. A cheap way to
+find out which you are holding: bracket the whole function once. It is one
+counter and it makes every span inside it a share of something real.
+
 ## Trust a span in proportion to its length (Task 103 E7, 2026-07-27)
 
 The E-series censuses bracket code with two `cpuGetTiming()` reads. Two reads

@@ -66,20 +66,28 @@ single highest-value decision waiting on this file.
 
 ## Next packet, in priority order
 
-0. **R2-03 E3 — split `ndsFighterMarioFoxDLAllDrawForSlot`'s unattributed
-   ~24,000.** E2 measured the two phases §7 names first and they are only
-   13,670 ticks/frame of the function's 37,206: **walk 3,289, revalidation
-   10,381**, two independent windows agreeing to 0.5%, native-owner eligible on
-   3,493 of 3,553 calls. The larger half of that function is still unmeasured,
-   and E3's lesson was that the aggregate hides the answer. One more counter
-   pair in an instrument that already exists is the cheapest information left
-   in the fighter — do it before writing any cut.
-   Then, in order: the revalidation stamp (**~10,400** — falsify its inputs
-   first, `NDS_R2_STAGE_ACTORS_PROOF` is the pattern), the cached DObj
-   collection on the same stamp (**~3,300**), then the adapter matrix rebuild
-   (**56,879**), `PrepareProductionRun` 22,467 and
-   `BuildNativeMaterialSnapshot` 12,434.
-   `ClaudeOpus5_R203_E2_WalkAndValidateSizing_20260728.md`.
+0. **R2-03 E4 — the owner-preparation span, 113,199 ticks/frame.** E3 bracketed
+   `ndsFighterMarioFoxDLAllDrawForSlot` inclusively and it is **494,863
+   ticks/frame**, not the 37,206 the symbol census reports (that is self time —
+   see the method note below). The split, over a full match at 1.94 calls/frame:
+   walk 3,138, reset 6,675, revalidation 9,916, **owner preparation 113,199**,
+   submit and tail 361,936.
+   **Owner preparation is 78% of the frame's remaining 144,844-tick gap and is
+   verbatim what §7 tells R2-03 to delete** — "no `PrepareProductionRun` policy
+   re-checks, no traversal-state/stats dependency, no per-frame texture identity
+   proof". Inside it: `BuildDObjLocalMatrix` 18,998, `BuildDObjWorldMatrix`
+   13,065, `PrepareInitialMatrices` 12,480, `BuildFighterTraRotRpyExact`
+   12,336, `BuildNativeMaterialSnapshot` 12,434, plus the matrix-kernel and
+   soft-float time they pull in. Falsify before building: hash each one's
+   inputs per frame and count the changes, `NDS_R2_STAGE_ACTORS_PROOF` style.
+   `ClaudeOpus5_R203_E3_FighterDrawSplit_20260728.md`.
+   **Demoted:** walk + reset + revalidation is 19,729 total, 4% of the function.
+   E2 ranked the revalidation stamp first against a wrong denominator; it is
+   still a real ~10,000 but it is a tidy-up, and the direct path may delete it
+   for free.
+   **Method note E3 earned:** a symbol's self time and a bracketed span's
+   inclusive time are different quantities — here by 13× — so when you bracket a
+   span, compare it to a bracket, not to a census row.
    **E1 refuted the bigger-looking candidate and it is closed.**
    `ndsRendererNativeShadeProductionActions` (48,422) is not a memo: its inputs
    changed on 1,796 of 1,835 frames and its outputs on exactly the same 1,796,

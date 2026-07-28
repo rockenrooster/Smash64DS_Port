@@ -90,13 +90,23 @@ through the raw composed matrix (binding 29, submit classes 0 and 6), which is
 the camera and genuinely moves. Moving it onto the segment-bracket path is
 generator work worth ~19,000. Not needed for the gate.
 
-**R2-03 is owned and E0 is done.** The frame is re-baselined on the post-R2-02
-program: **REAL WORK 1,264,844 against the 1,120,000 budget, gap 144,844** (it
-was 407,000 at Task 65). The fighter's per-frame rediscovery — generic tree
-walk, display-list revalidation, matrix rebuilds, material snapshot, policy
-re-check — is **145,366 ticks/frame**, and it is exactly the category §7 already
-decided R2-03 deletes. Ranked candidates and the falsify-first method are in
-`optimization/ClaudeOpus5_R203_E0_FrameRebaseline_20260728.md` §4.
+**R2-03 is owned; E0–E3 are done and the target is named.** The frame is
+re-baselined on the post-R2-02 program: **REAL WORK 1,264,844 against the
+1,120,000 budget, gap 144,844** (it was 407,000 at Task 65).
+
+**The cut is the fighter's owner-preparation span: 113,199 ticks/frame, 78% of
+the gap.** `ndsFighterMarioFoxDLAllDrawForSlot` costs 494,863 ticks/frame
+inclusive; the split is walk 3,138, reset 6,675, revalidation 9,916, **owner
+preparation 113,199**, submit and tail 361,936. That span is the matrix and
+material preparation — `BuildDObjLocalMatrix`, `BuildDObjWorldMatrix`,
+`PrepareInitialMatrices`, `BuildFighterTraRotRpyExact`,
+`BuildNativeMaterialSnapshot` — and it is verbatim what §7 tells R2-03 to
+delete. `optimization/ClaudeOpus5_R203_E3_FighterDrawSplit_20260728.md`.
+
+Two candidates were closed on the way, both with evidence rather than opinion:
+the shade loop is **not** a memo (inputs and outputs both changed on 1,796 of
+1,835 frames), and walk + revalidation is 4% of the function, not the 37% a
+self-time-versus-inclusive mix-up made it look like.
 
 **R2-03 E1 took `sqrtf` from 15,760 to 9,720 ticks/frame, −6,040**, bit-exact
 against IEEE over 8.7M checked inputs, Boundary green. The 8-frame A/B read

@@ -1,5 +1,16 @@
 # R2-03 E2 — sizing the fighter walk and revalidation
 
+> **Corrected by E3 the same day
+> (`ClaudeOpus5_R203_E3_FighterDrawSplit_20260728.md`).** §2 below compares two
+> bracketed spans against the symbol census's **37,206**, which is
+> `ndsFighterMarioFoxDLAllDrawForSlot`'s **self time** — every callee is charged
+> to its own symbol. The function's **inclusive** cost is **494,863
+> ticks/frame**. The measured spans stand and E3 reproduces them to 1.5%, but
+> the "~24,000 unattributed" and the ranking built on it do not: walk plus
+> revalidation is 4% of the function, not 37%, and the real target is the
+> **113,199-tick** owner-preparation span E3 found. The file stays per the
+> never-rename rule.
+
 **Date:** 2026-07-28
 **Phase:** R2-03 sizing, second candidate from
 `ClaudeOpus5_R203_E0_FrameRebaseline_20260728.md` §4. No runtime change.

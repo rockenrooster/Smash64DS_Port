@@ -11494,6 +11494,17 @@ u32 gNdsTask91WalkTicks;
 u32 gNdsTask91ValidateTicks;
 u32 gNdsTask91DrawCalls;
 u32 gNdsTask91NativeEligible;
+/* R2-03 E3. E2 measured the walk and the revalidation at 3,289 + 10,381
+ * ticks/frame against the 37,206 the symbol census charges to this function,
+ * and the walk is a separate symbol -- so more than half of the function's own
+ * body was unmeasured, and R2-02 E3's lesson is that the unmeasured half is
+ * where the answer lives. Total brackets the whole call so the residual is
+ * arithmetic rather than assumption; Reset covers the three bzeros plus the
+ * vertex-cache and stats initialisation; OwnerPrep covers the matrix and
+ * material preparation between the revalidation and the submit. */
+u32 gNdsTask91TotalTicks;
+u32 gNdsTask91ResetTicks;
+u32 gNdsTask91OwnerPrepTicks;
 #endif
 
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
@@ -11501,6 +11512,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 {
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     u32 task91_phase_start;
+    u32 task91_total_start;
+    u32 task91_mark;
 #endif
     DObj *root;
     NDSFighterDLAllDrawCollection collection;
@@ -11589,7 +11602,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     gNdsTask91DrawCalls++;
-    task91_phase_start = cpuGetTiming();
+    task91_total_start = cpuGetTiming();
+    task91_phase_start = task91_total_start;
 #endif
     ndsFighterCollectAllDObjsWithDL(root, &collection);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
@@ -11618,6 +11632,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             collection.selected_index_mask;
     }
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    /* Reset opens here. The bzeros a few lines down land in the memset symbol,
+     * not this function's, so the E0 census cannot see them from the top-45
+     * table -- memset is 38,393 ticks/frame across the whole program and
+     * nothing says how much of it is this. */
+    task91_phase_start = cpuGetTiming();
+#endif
     states = sNdsFighterDLAllDrawStates;
 #if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
     stats = sNdsFighterDLAllDrawStats[slot];
@@ -11691,6 +11712,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         (gNdsRendererFastRunMode ==
          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ? TRUE : FALSE;
 #if NDS_TICK_HUD
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    /* Closing Reset also re-arms the mark, so OwnerPrep is well defined even on
+     * the ~1.7% of calls where the native-owner block is skipped entirely. */
+    task91_mark = cpuGetTiming();
+    gNdsTask91ResetTicks += task91_mark - task91_phase_start;
+    task91_phase_start = task91_mark;
+#endif
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackCalls);
     if (native_owner_enabled != FALSE)
     {
@@ -11821,7 +11849,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
         }
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-        gNdsTask91ValidateTicks += cpuGetTiming() - task91_phase_start;
+        task91_mark = cpuGetTiming();
+        gNdsTask91ValidateTicks += task91_mark - task91_phase_start;
+        task91_phase_start = task91_mark;   /* OwnerPrep opens here */
         if (native_owner_enabled != FALSE) { gNdsTask91NativeEligible++; }
 #endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -11938,6 +11968,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
 #endif
     }
+#endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    /* OwnerPrep closes: everything between the revalidation and the point the
+     * owner inputs are built and submitted -- the matrix and material
+     * preparation. What follows is the submit itself, and the census already
+     * charges most of that to its own symbols. */
+    gNdsTask91OwnerPrepTicks += cpuGetTiming() - task91_phase_start;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     if ((native_owner_enabled != FALSE) &&
@@ -12559,6 +12596,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         gNdsFighterDLAllDrawP1RootXAfterBits = root_x_after;
     }
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsTask91TotalTicks += cpuGetTiming() - task91_total_start;
+#endif
     gNdsFighterMarioFoxDLAllDrawCount++;
 }
 
