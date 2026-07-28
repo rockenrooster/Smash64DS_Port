@@ -20089,6 +20089,24 @@ volatile u32 gNdsTask103RunHeadTicks;
 volatile u32 gNdsTask103RunDenseTicks;
 volatile u32 gNdsTask103RunDenseCount;
 volatile u32 gNdsTask103RunNearCount;
+/* R2-02 F1. E0 split generic emit per segment and moved the target: the four
+ * actor segments (1/2/3/6 -- Whispy's eyes and mouth, both flower beds) cost
+ * 43,998 ticks/frame for 21 triangles, nearly double segment 4's 22,843 for 76.
+ * That is 15 runs of fixed overhead, so the split has to be by *branch*, not by
+ * run: which matrix path BeginRun takes, and which of EmitNoZTriangle's three
+ * paths each triangle lands on. Both use sites are below this point. */
+volatile u32 gNdsTask103BeginMtxTicks[4];
+volatile u32 gNdsTask103BeginMtxCount[4];
+volatile u32 gNdsTask103NoZPath[4];
+volatile u32 gNdsTask103NoZWorldTicks;
+volatile u32 gNdsTask103NoZProjTicks;
+/* F3. The matrix branch is 12,341 of BeginRun's 28,880; the other 16,539 over
+ * 21 runs is this tail. Split it, because the texture bind is the one part a
+ * specialized actor path could not avoid -- the DS still has to rebind on 18 of
+ * 21 runs -- and that sets the floor any rewrite has to beat. */
+volatile u32 gNdsTask103BeginEndBatchTicks;
+volatile u32 gNdsTask103BeginTexTicks;
+volatile u32 gNdsTask103BeginTailTicks;
 #endif
 
 static s32 ndsRendererNativeStagePrepareRun(
@@ -21090,9 +21108,19 @@ static void ndsRendererNativeStageBeginRun(
         poly_fmt &= ~((u32)POLY_CULL_NONE);
         poly_fmt |= POLY_CULL_BACK;
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    u32 t103_phase = cpuGetTiming();
+#endif
     ndsRendererHardwareEndBatch();
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103BeginEndBatchTicks += cpuGetTiming() - t103_phase;
+#endif
     if (replay == FALSE)
     {
+#if NDS_TASK103_STAGE_RUN_PHASE
+    u32 t103_mtx_start = cpuGetTiming();
+    u32 t103_mtx_class = 3u;
+#endif
 #if NDS_TASK36_HW_COMPOSE
     if (ndsRendererNativeStageTask36BindingIsRigid(
             native_run->binding_index) != FALSE)
@@ -21117,6 +21145,9 @@ static void ndsRendererNativeStageBeginRun(
             gNdsRendererM3PostArmFailureCount++;
 #endif
         }
+#if NDS_TASK103_STAGE_RUN_PHASE
+        t103_mtx_class = 0u;
+#endif
     }
     else
 #endif
@@ -21124,6 +21155,9 @@ static void ndsRendererNativeStageBeginRun(
     {
         ndsRendererLoadHardwareRawComposedMatrix(
             &sNdsNativeStageOwnerExecution.raw_composed, 1u);
+#if NDS_TASK103_STAGE_RUN_PHASE
+        t103_mtx_class = 1u;
+#endif
     }
     else if (submit_class ==
              NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
@@ -21135,12 +21169,26 @@ static void ndsRendererNativeStageBeginRun(
             &projection,
             &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
             NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED, 2u, TRUE);
+#if NDS_TASK103_STAGE_RUN_PHASE
+        t103_mtx_class = 2u;
+#endif
     }
     else
     {
+        /* The actor runs land here. Every triangle of such a run then goes
+         * through Task 51's EnsureWorld + LoadNoZProjection, which replaces
+         * both matrices -- so measure whether this load survives to a vertex
+         * at all. */
         ndsRendererLoadHardwareMatrices(NULL, FALSE);
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103BeginMtxTicks[t103_mtx_class] += cpuGetTiming() - t103_mtx_start;
+    gNdsTask103BeginMtxCount[t103_mtx_class]++;
+#endif
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    t103_phase = cpuGetTiming();
+#endif
     glEnable(GL_TEXTURE_2D);
     if (run->textured != 0u)
     {
@@ -21164,6 +21212,10 @@ static void ndsRendererNativeStageBeginRun(
     {
         ndsRendererHardwareBindNoTexture(NULL);
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103BeginTexTicks += cpuGetTiming() - t103_phase;
+    t103_phase = cpuGetTiming();
+#endif
     if (run->alpha_test != 0u)
     {
         glEnable(GL_ALPHA_TEST);
@@ -21175,6 +21227,9 @@ static void ndsRendererNativeStageBeginRun(
     }
     glDisable(GL_FOG);
     ndsRendererHardwareSetPolyFmt(poly_fmt);
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103BeginTailTicks += cpuGetTiming() - t103_phase;
+#endif
     if (replay == FALSE)
     {
         glBegin(GL_TRIANGLE);
@@ -21244,6 +21299,22 @@ volatile u32 gNdsTask103IterCount;
  * per-run matrix/state head from the vertex emit, because 21 runs carrying only
  * ~103 triangles cannot be paying 3,168 ticks each for the triangles. */
 volatile u32 gNdsTask103GenericBeginTicks;
+/* R2-04 E0. Generic emit is 21 runs for 103 triangles, and BeginRun's fixed
+ * state sequence is 1,157 of the 3,129 ticks each run costs. If consecutive
+ * runs carry identical state, that sequence is being re-issued for nothing and
+ * the runs could be merged into one batch -- which is the only way to attack a
+ * per-run cost when the run count is the problem.
+ *
+ * Count it before designing it. Redundant means every field BeginRun would
+ * write matches the previous generic run: submit class, poly_fmt, texture
+ * identity and params, alpha test, and the matrix binding. */
+volatile u32 gNdsTask103GenericStateSame;
+volatile u32 gNdsTask103GenericStateDiff;
+volatile u32 gNdsTask103GenericStateFirst;
+volatile u32 gNdsTask103GenericSameTex;
+volatile u32 gNdsTask103GenericSamePoly;
+volatile u32 gNdsTask103GenericSameAlpha;
+volatile u32 gNdsTask103GenericSameBind;
 volatile u32 gNdsTask103GenericSegTicks[NDS_NATIVE_STAGE_SEGMENT_COUNT];
 volatile u32 gNdsTask103GenericSegRuns[NDS_NATIVE_STAGE_SEGMENT_COUNT];
 volatile u32 gNdsTask103GenericSegTris[NDS_NATIVE_STAGE_SEGMENT_COUNT];
@@ -21638,6 +21709,9 @@ ndsRendererNativeStageEmitNoZTriangle(
                 &sNdsNativeStagePreparedDense[dense_index],
                 prepared_run, coordinate_shift);
         }
+#if NDS_TASK103_STAGE_RUN_PHASE
+        gNdsTask103NoZPath[0]++;
+#endif
         return 1u;
     }
 #endif
@@ -21663,12 +21737,27 @@ ndsRendererNativeStageEmitNoZTriangle(
         }
         if (corner_offset == 3u)
         {
+            s32 t51_ok;
+#if NDS_TASK103_STAGE_RUN_PHASE
+            u32 t103_span = cpuGetTiming();
+#endif
+
             t51_shift = ndsRendererNativeStageTask36TriangleShift(
                 run, triangle_offset);
-            if (ndsRendererNativeStageTask51EnsureWorld(
-                    run->binding_index) != FALSE)
+            t51_ok = ndsRendererNativeStageTask51EnsureWorld(
+                run->binding_index);
+#if NDS_TASK103_STAGE_RUN_PHASE
+            gNdsTask103NoZWorldTicks += cpuGetTiming() - t103_span;
+#endif
+            if (t51_ok != FALSE)
             {
+#if NDS_TASK103_STAGE_RUN_PHASE
+                t103_span = cpuGetTiming();
+#endif
                 ndsRendererNativeStageTask36LoadNoZProjection(projected_z);
+#if NDS_TASK103_STAGE_RUN_PHASE
+                gNdsTask103NoZProjTicks += cpuGetTiming() - t103_span;
+#endif
                 for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
                 {
                     u32 dense_index =
@@ -21679,10 +21768,16 @@ ndsRendererNativeStageEmitNoZTriangle(
                         &sNdsNativeStagePreparedDense[dense_index],
                         prepared_run, t51_shift);
                 }
+#if NDS_TASK103_STAGE_RUN_PHASE
+                gNdsTask103NoZPath[1]++;
+#endif
                 return 1u;
             }
         }
     }
+#endif
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103NoZPath[2]++;
 #endif
 
     for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
@@ -22882,6 +22977,74 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         }
 #endif
 #if NDS_TASK103_STAGE_RUN_PHASE
+        {
+            /* Every field BeginRun would re-issue, plus the matrix binding it
+             * selects on. Reset per frame so the first run of a frame is never
+             * counted as redundant against the last run of the previous one. */
+            static u32 task103_prev_valid;
+            static u32 task103_prev_class;
+            static u32 task103_prev_poly;
+            static u32 task103_prev_texname;
+            static u32 task103_prev_texparams;
+            static u32 task103_prev_textured;
+            static u32 task103_prev_alpha;
+            static u32 task103_prev_alpha_ref;
+            static u32 task103_prev_binding;
+            static u32 task103_prev_frame = 0xffffffffu;
+
+            if (task103_prev_frame != sNdsRendererHardwareFrameSerial)
+            {
+                task103_prev_frame = sNdsRendererHardwareFrameSerial;
+                task103_prev_valid = 0u;
+            }
+            if (task103_prev_valid == 0u)
+            {
+                gNdsTask103GenericStateFirst++;
+            }
+            else
+            {
+                /* Split per field: whole-run redundancy is 1 in 21, so the
+                 * question is no longer "can runs merge" but "which of
+                 * BeginRun's writes are the ones that actually change". */
+                u32 same_tex = ((task103_prev_texname ==
+                                 prepared_run->texture_name) &&
+                                (task103_prev_texparams ==
+                                 prepared_run->texture_params) &&
+                                (task103_prev_textured ==
+                                 prepared_run->textured)) ? 1u : 0u;
+                u32 same_poly = (task103_prev_poly == prepared_run->poly_fmt)
+                                    ? 1u : 0u;
+                u32 same_alpha = ((task103_prev_alpha ==
+                                   prepared_run->alpha_test) &&
+                                  (task103_prev_alpha_ref ==
+                                   prepared_run->alpha_ref)) ? 1u : 0u;
+                u32 same_bind = (task103_prev_binding ==
+                                 (u32)run->binding_index) ? 1u : 0u;
+
+                gNdsTask103GenericSameTex += same_tex;
+                gNdsTask103GenericSamePoly += same_poly;
+                gNdsTask103GenericSameAlpha += same_alpha;
+                gNdsTask103GenericSameBind += same_bind;
+                if ((same_tex & same_poly & same_alpha & same_bind) != 0u &&
+                    (task103_prev_class == run->submit_class))
+                {
+                    gNdsTask103GenericStateSame++;
+                }
+                else
+                {
+                    gNdsTask103GenericStateDiff++;
+                }
+            }
+            task103_prev_valid = 1u;
+            task103_prev_class = run->submit_class;
+            task103_prev_poly = prepared_run->poly_fmt;
+            task103_prev_texname = prepared_run->texture_name;
+            task103_prev_texparams = prepared_run->texture_params;
+            task103_prev_textured = prepared_run->textured;
+            task103_prev_alpha = prepared_run->alpha_test;
+            task103_prev_alpha_ref = prepared_run->alpha_ref;
+            task103_prev_binding = (u32)run->binding_index;
+        }
         task103_generic_start = cpuGetTiming();
         task103_generic_armed = 1u;
 #endif
