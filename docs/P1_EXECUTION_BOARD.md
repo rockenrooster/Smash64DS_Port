@@ -206,12 +206,23 @@ loading the composed MVP into it instead is equally wrong because normals must
 not be rotated by the projection.
 
 Fix: load projection into `GL_PROJECTION` and modelview into
-`GL_MODELVIEW_VECTOR` (mode 2), and **delete
-`ndsRendererAdapterComposeNativeRootMatrix`** — the hardware performs that
-multiply. The adapter already carries both matrices separately, so this is a
-removal, and it takes a 4x4 multiply per root out of the 120,407 MatrixPrep
-bracket as a side effect. The light vector is then written once per frame in view
-space while the vector matrix is identity.
+`GL_MODELVIEW_VECTOR` (mode 2). The plumbing exists —
+`NDSRendererNativeFighterRoot` already carries both `composed_matrix` and
+`modelview_matrix`, and only the projection needs adding. The row-3 unit scaling
+commutes with the right-multiply by the projection, so split loading reproduces
+the current transform exactly, modulo hardware-versus-CPU rounding. The light
+vector is then written once per frame in view space while the vector matrix is
+identity.
+
+**Open question, settle it first:** whether
+`ndsRendererAdapterComposeNativeRootMatrix` can then be deleted (a 4x4 multiply
+per root out of MatrixPrep). That needs the composed matrix to have no live
+production consumer besides the hardware load, and it has many consumers in the
+file including a CPU vertex transform — unverified either way. An earlier
+revision of this board asserted the deletion as a free side benefit; that ran
+ahead of the evidence. If the compose must stay, the matrix change is a small net
+cost that only pays once the lighting lands on it, which is an argument for
+building the two together rather than the matrix change alone.
 
 **NOT IMPLEMENTED.** It touches the matrix mode, the load-time table format, the
 emit's per-vertex word, and per-root light/material state. Being a rendering-side

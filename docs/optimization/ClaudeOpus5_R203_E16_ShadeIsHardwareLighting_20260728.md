@@ -108,15 +108,37 @@ The fix is to stop composing on the CPU and let the hardware do it:
 
 - load the projection into `GL_PROJECTION` and the modelview into
   `GL_MODELVIEW_VECTOR` (mode 2), which writes the position *and* vector
-  matrices;
-- drop `ndsRendererAdapterComposeNativeRootMatrix`, whose only job is the
-  multiply the hardware would now perform.
+  matrices.
 
-The adapter already carries the two matrices separately —
-`ndsRendererAdapterPrepareNativeOwnerMatrices` produces `native_owner_projection`
-and `native_owner_modelviews[]`, and the compose is a *later* step. So this is a
-removal, not an addition, and it takes a 4x4 multiply per root out of the 120,407
-MatrixPrep bracket as a side effect.
+The plumbing for this already exists: `NDSRendererNativeFighterRoot` carries
+**both** `composed_matrix` and `modelview_matrix`, and
+`ndsRendererNativeBindProductionRoot` already loads both into the traversal
+state. Only the projection needs adding to the struct — the adapter has it as
+`sNdsRendererAdapterNativeOwnerProjection`.
+
+The scaling is exact rather than approximate. `ndsRendererBuildRawHardwareMatrix`
+divides row 3 of the composed matrix by the world-unit shift; under the
+row-vector convention `C[3] = M[3] x P`, so scaling `M`'s row 3 *before* the
+multiply gives the identical result. Split loading therefore reproduces the
+current transform, modulo the hardware's internal precision versus the CPU's
+20.12 rounding — which is a sub-pixel difference and a screenshot question, not a
+correctness one.
+
+**Open, and the first thing to settle when building this:** whether
+`ndsRendererAdapterComposeNativeRootMatrix` can then be *deleted*, taking a 4x4
+multiply per root out of the 120,407 MatrixPrep bracket. That depends on whether
+the composed matrix has any live consumer on the production path besides the
+hardware load. It has many consumers in the file — including
+`ndsRendererTransformVertex20p12`, a CPU vertex transform — and **it is not
+established which of them the production path actually reaches.** If the hardware
+load is its only production consumer, the compose is free to delete and the
+matrix change pays for itself; if the near-plane or snapshot paths need it, the
+compose stays and the matrix change is a small net cost that only pays off once
+the lighting lands on top of it.
+
+An earlier revision of this document asserted the deletion as a side benefit.
+That was stated ahead of the evidence and is downgraded here to the open question
+it actually is.
 
 **Light vector placement follows from the same reasoning.** `GFX_LIGHT_VECTOR`
 stores the supplied vector transformed by the vector matrix *at the moment it is
