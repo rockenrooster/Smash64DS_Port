@@ -457,6 +457,12 @@ static inline sb32 ndsRendererAdapterFloatPow2ToS32(
 volatile u32 gNdsR2MtxDirectCalls;
 volatile u32 gNdsR2MtxDirectFallback;
 volatile u32 gNdsR2MtxDirectVerifyFail;
+/* E10 counts the TraRotRpy branch separately: the two paths reach 20.12 by
+ * different arithmetic and a shared counter would hide one refuting while the
+ * other passed. */
+volatile u32 gNdsR2MtxDirectRpyCalls;
+volatile u32 gNdsR2MtxDirectRpyFallback;
+volatile u32 gNdsR2MtxDirectRpyVerifyFail;
 
 static s32 ndsRendererAdapterRoundShift20p12(s32 value)
 {
@@ -639,6 +645,89 @@ ndsRendererAdapterBuildFighterTraRotRpyExact(
     mtx->m[3][3] = COMBINE_FRACTIONAL((u32)fixed_z, 0x00010000u);
     return TRUE;
 }
+
+#if NDS_R2_FIGHTER_MTX_DIRECT
+/* R2-03 E10. Same observation as E9, applied to the branch E9 did not touch.
+ * This builder already works in fixed point -- the sin/cos table lookup E6
+ * proposed exists here already -- and then packs its s16.16 results into the N64
+ * split format purely so MtxFromN64 can unpack them again. The pairing is the
+ * same as F2LFixedWExact's, so the cell mapping is again the identity, and
+ * writing 20.12 straight out is bit-exact by construction.
+ *
+ * Kept as a separate function rather than parameterising the original: the two
+ * differ only in their store, and a shared version would need a branch per cell
+ * in the hottest loop of the phase. */
+static NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE sb32
+ndsRendererAdapterBuildFighterTraRotRpyDirect20p12(
+    NDSRendererMatrix20p12 *dst,
+    f32 tx,
+    f32 ty,
+    f32 tz,
+    f32 r,
+    f32 p,
+    f32 y)
+{
+    s32 indexr;
+    s32 indexp;
+    s32 indexy;
+    s32 sinr;
+    s32 sinp;
+    s32 siny;
+    s32 cosr;
+    s32 cosp;
+    s32 cosy;
+    s32 fixed_x;
+    s32 fixed_y;
+    s32 fixed_z;
+
+    if ((dst == NULL) ||
+        (ndsFighterMatrixAngleToIndexExact(r, &indexr) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(p, &indexp) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(y, &indexy) == 0) ||
+        (ndsRendererAdapterFloatPow2ToS32(tx, 16u, &fixed_x) == FALSE) ||
+        (ndsRendererAdapterFloatPow2ToS32(ty, 16u, &fixed_y) == FALSE) ||
+        (ndsRendererAdapterFloatPow2ToS32(tz, 16u, &fixed_z) == FALSE))
+    {
+        return FALSE;
+    }
+
+    sinr = ndsRendererAdapterFighterSinFromIndex(indexr);
+    cosr = ndsRendererAdapterFighterCosFromIndex(indexr);
+    sinp = ndsRendererAdapterFighterSinFromIndex(indexp);
+    cosp = ndsRendererAdapterFighterCosFromIndex(indexp);
+    siny = ndsRendererAdapterFighterSinFromIndex(indexy);
+    cosy = ndsRendererAdapterFighterCosFromIndex(indexy);
+
+#define NDS_R2_RS20P12(value) ndsRendererAdapterRoundShift20p12((s32)(value))
+
+    dst->m[0][0] = NDS_R2_RS20P12((cosp * cosy) >> 14);
+    dst->m[0][1] = NDS_R2_RS20P12((cosp * siny) >> 14);
+    dst->m[0][2] = NDS_R2_RS20P12(-sinp * 2);
+    dst->m[0][3] = 0;
+
+    dst->m[1][0] = NDS_R2_RS20P12(
+        ((((sinr * sinp) >> 15) * cosy) >> 14) - ((cosr * siny) >> 14));
+    dst->m[1][1] = NDS_R2_RS20P12(
+        ((((sinr * sinp) >> 15) * siny) >> 14) + ((cosr * cosy) >> 14));
+    dst->m[1][2] = NDS_R2_RS20P12((sinr * cosp) >> 14);
+    dst->m[1][3] = 0;
+
+    dst->m[2][0] = NDS_R2_RS20P12(
+        ((((cosr * sinp) >> 15) * cosy) >> 14) + ((sinr * siny) >> 14));
+    dst->m[2][1] = NDS_R2_RS20P12(
+        ((((cosr * sinp) >> 15) * siny) >> 14) - ((sinr * cosy) >> 14));
+    dst->m[2][2] = NDS_R2_RS20P12((cosr * cosp) >> 14);
+    dst->m[2][3] = 0;
+
+    dst->m[3][0] = NDS_R2_RS20P12(fixed_x);
+    dst->m[3][1] = NDS_R2_RS20P12(fixed_y);
+    dst->m[3][2] = NDS_R2_RS20P12(fixed_z);
+    dst->m[3][3] = NDS_R2_RS20P12(0x00010000);
+
+#undef NDS_R2_RS20P12
+    return TRUE;
+}
+#endif
 
 static void ndsRendererAdapterBuildDObjFallbackMtx(DObj *dobj, Mtx *mtx)
 {
@@ -962,6 +1051,52 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
     }
     else
     {
+#if NDS_R2_FIGHTER_MTX_DIRECT
+        {
+            NDSRendererMatrix20p12 direct;
+
+            if (ndsRendererAdapterBuildFighterTraRotRpyDirect20p12(
+                    &direct,
+                    dobj->translate.vec.f.x,
+                    dobj->translate.vec.f.y,
+                    dobj->translate.vec.f.z,
+                    dobj->rotate.vec.f.x,
+                    dobj->rotate.vec.f.y,
+                    dobj->rotate.vec.f.z) != FALSE)
+            {
+                gNdsR2MtxDirectRpyCalls++;
+#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
+                if (ndsRendererAdapterBuildFighterTraRotRpyExact(
+                        &mtx,
+                        dobj->translate.vec.f.x,
+                        dobj->translate.vec.f.y,
+                        dobj->translate.vec.f.z,
+                        dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        dobj->rotate.vec.f.z) == FALSE)
+                {
+                    syMatrixTraRotRpyR(&mtx,
+                                       dobj->translate.vec.f.x,
+                                       dobj->translate.vec.f.y,
+                                       dobj->translate.vec.f.z,
+                                       dobj->rotate.vec.f.x,
+                                       dobj->rotate.vec.f.y,
+                                       dobj->rotate.vec.f.z);
+                }
+                ndsRendererAdapterMtxFromN64(&mtx, out);
+                if (memcmp(out, &direct, sizeof(direct)) != 0)
+                {
+                    gNdsR2MtxDirectRpyVerifyFail++;
+                }
+                return TRUE;
+#else
+                *out = direct;
+                return TRUE;
+#endif
+            }
+            gNdsR2MtxDirectRpyFallback++;
+        }
+#endif
         if (ndsRendererAdapterBuildFighterTraRotRpyExact(
                 &mtx,
                 dobj->translate.vec.f.x,

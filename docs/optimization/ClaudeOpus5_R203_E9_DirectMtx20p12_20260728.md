@@ -99,3 +99,55 @@ Graduated: `override NDS_R2_FIGHTER_MTX_DIRECT := 1` in the published
 `smash64ds-battle-playable-hwtri` block, and a non-`override` default in the
 tick-HUD/proof block so the instrument stays flag-identical to the shipped ROM.
 Default remains 0 so the level-0 arm stays measurable.
+
+---
+
+## 8. E10 — the same cut on the TraRotRpy branch
+
+§6 flagged the other branches as the obvious follow-on. Extending
+`ndsRendererAdapterBuildFighterTraRotRpyExact` the same way:
+
+| counter | value |
+|---|---|
+| direct TraRotRpy conversions | 22,199 |
+| **mismatches against the two-step** | **0** |
+| fallbacks to the exact/source path | 11 |
+
+Bit-exact again, and this branch is the volume one: **32.5 calls/frame** against
+E9's 12.3. Together they cover ~44.8 of the ~46 local-matrix builds per frame.
+
+Worth noting what this branch already was: it computes its rotation from the
+sin/cos table in fixed point and *then* packs to N64 split format. The
+fixed-point trig E6 proposed as the lever already existed here. The only waste
+left was the packing.
+
+| | level 0 | E9 only | E9 + E10 |
+|---|---|---|---|
+| `BuildDObjLocalMatrix` | 62,213 | 54,740 | **50,778** |
+| world build | 105,425 | 93,830 | **90,892** |
+| **MatrixPrep** | **122,765** | **110,777** | **108,003** |
+
+### 8a. E10's incremental gain is not distinguishable from noise
+
+Combined the two are **−14,762** on MatrixPrep, which is solid. But E10 *on its
+own* adds only **−2,774** over E9 — about 85 ticks per call across 32.5
+calls/frame, against E9's ~975 per call across 12.3.
+
+That is below this project's 5,000–7,000 build-placement noise floor, and one
+sample per arm cannot separate it from placement luck. Re-running the same ROM
+would not help: melonDS is deterministic, so a repeat measures the emulator, not
+the noise.
+
+Two plausible reasons the per-call saving is an order of magnitude smaller than
+E9's, neither established: the direct builder is a second ~80-line function
+under `NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE`, and ITCM is close to full —
+the E5 falsifier overflowed it by exactly 100 bytes — so the duplicate may be
+evicting hot code it then has to pay for.
+
+**Kept, with the reservation recorded.** It is bit-exact and the combined figure
+is real, so reverting gives back a measured gain. But it costs a duplicated
+arithmetic body that must stay in sync with
+`ndsRendererAdapterBuildFighterTraRotRpyExact` — the two differ only in their
+store — and it buys an amount this experiment cannot prove. If ITCM pressure
+later forces a choice, this is the first thing to drop: E9 carries most of the
+win at a fraction of the code.
