@@ -19662,9 +19662,11 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         (summary->raw_triangles != 66u) ||
         (summary->projected_no_z_triangles != 126u) ||
         (summary->projected_range_triangles != 10u) ||
-        (summary->cross_runs != 5u) ||
-        (summary->cross_triangles != 10u) ||
-        (summary->cross_foreign_corners != 15u))
+        (summary->cross_runs != NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT) ||
+        (summary->cross_triangles !=
+         NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT) ||
+        (summary->cross_foreign_corners !=
+         NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT))
     {
         return FALSE;
     }
@@ -19676,9 +19678,13 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             (summary->raw_triangles == 66u) &&
             (summary->projected_no_z_triangles == 126u) &&
             (summary->projected_range_triangles == 10u) &&
-            (summary->cross_runs == 5u) &&
-            (summary->cross_triangles == 10u) &&
-            (summary->cross_foreign_corners == 15u)) ? TRUE : FALSE;
+            (summary->cross_runs ==
+             NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT) &&
+            (summary->cross_triangles ==
+             NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT) &&
+            (summary->cross_foreign_corners ==
+             NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT)) ?
+        TRUE : FALSE;
 #endif
 }
 
@@ -22191,9 +22197,11 @@ s32 ndsRendererPrepareNativeStageOwner(
         (topology.raw_triangles != 66u) ||
         (topology.projected_no_z_triangles != 126u) ||
         (topology.projected_range_triangles != 10u) ||
-        (topology.cross_runs != 5u) ||
-        (topology.cross_triangles != 10u) ||
-        (topology.cross_foreign_corners != 15u))
+        (topology.cross_runs != NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT) ||
+        (topology.cross_triangles !=
+         NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT) ||
+        (topology.cross_foreign_corners !=
+         NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT))
     {
         goto done;
     }

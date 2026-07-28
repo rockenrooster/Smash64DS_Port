@@ -20,7 +20,7 @@ import json
 import re
 import struct
 import sys
-from dataclasses import astuple, dataclass
+from dataclasses import astuple, dataclass, replace
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -86,7 +86,7 @@ GENERATED_SEGMENT_HOT_ROW_BYTES = 2
 
 # Filled after the first independently checked generation.  Keeping the
 # packet hash outside the generated file avoids a self-referential checksum.
-EXPECTED_INCLUDE_SHA256 = "c89bf07e05fdcb0aca87042dc2e57b9da2933c3806af539ecdb3d2352d71b074"
+EXPECTED_INCLUDE_SHA256 = "eda2dbd6ee323c3eb33a323be46b61676d2f63057e315e6f288537f76555942c"
 
 INVALID_U8 = 0xFF
 INVALID_U16 = 0xFFFF
@@ -3259,6 +3259,17 @@ def render_include(packet: Packet) -> bytes:
         f"#define NDS_NATIVE_STAGE_TRIANGLE_COMMAND_COUNT {packet.triangle_command_count}u",
         f"#define NDS_NATIVE_STAGE_TRIANGLE_COUNT {len(packet.corners) // 3}u",
         f"#define NDS_NATIVE_STAGE_CORNER_COUNT {len(packet.corners)}u",
+        # R2-02 E5. The runtime validator re-derives these three and refuses the
+        # native stage if they disagree, so they used to be hand-mirrored 5/10/15
+        # literals in nds_renderer.c. De-crossing takes them to 0 and the stale
+        # literals silently dropped the whole stage to the interpreter -- STG
+        # 224,320 -> 5,995,008. Generate them instead of mirroring them.
+        f"#define NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT "
+        f"{EXPECTED_PROJECTED_CROSS_MATRIX_RUNS}u",
+        f"#define NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT "
+        f"{EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES}u",
+        f"#define NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT "
+        f"{EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS}u",
         f"#define NDS_NATIVE_STAGE_RUN_COUNT {len(packet.runs)}u",
         f"#define NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT {len(packet.epochs)}u",
         f"#define NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT {len(packet.materials)}u",

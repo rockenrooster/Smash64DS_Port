@@ -118,8 +118,15 @@ let the next mistake through too:
    `NDS_TASK36_REPLAY_SEGMENT_MASK` (to `{0,3,5,6,7}`) together in one commit.
    Gate the transform on the Task 49 Tier-2 differ — the inverse-multiply is
    where fixed-point error enters and it is the only part that can go wrong
-   quietly. Expect most of the 51,200 back, because the flowers' cost is matrix
-   loads and not vertices; that is a prediction, not a measurement. Whispy
+   quietly. **E5 built and measured this pass and backed it out**; read §8a of
+   the E4 report before rebuilding it. Three things it establishes: rebinding
+   must rewrite the vertex in place (appending orphans the original and fails
+   `prepared_dense_count`, `STG` → 5,995,008); the runtime's mirrored
+   cross-matrix literals are already fixed and generated; and
+   `check_nds_native_stage.py` pins run indices `(32, 34, 45, 47, 49)` in five
+   places including a perturbation test, which is the remaining work. De-crossing
+   alone measures **−4,224**, inside the noise floor — the saving only arrives
+   with the mask move it unblocks. Whispy
    (20–24) is materially animated and out of scope. The alternative route is
    layer1 (item 6, ~19,000) plus `BeginRun`, which does not reach 44,320 alone.
 1. **R2-03 sizing is done but the phase is still blocked.** Everything below is

@@ -272,6 +272,55 @@ single-binding triangles it was never the expensive half. layer1 (29) is a
 separate lever — its runs submit through the raw composed matrix and it is the
 largest single generic segment at 22,738 ticks/frame for 76 triangles.
 
+## 8a. E5 — de-crossing built, measured, and backed out
+
+Built it. The transform is 60 lines in `generate_nds_native_stage.py` and works:
+0 cross-matrix triangles, dense count unchanged at 312, `slab_bytes` unchanged at
+12,663. Measured against the same control:
+
+| bucket | control P50 | de-crossed P50 | Δ |
+|---|---:|---:|---:|
+| `STG` | 224,320 | 220,096 | **−4,224** |
+| `WORK` | 1,205,184 | 1,199,488 | −5,696 |
+
+**−4,224 is inside the 5,000–7,000 build-placement noise floor**, so de-crossing
+*on its own* is a wash. That is consistent and it settles what the −51,200 was:
+removing 20 of the flowers' 35 matrix loads buys ~4,200 ticks, so the other
+~47,000 that E3 and E4-C "saved" was never work — it was the 15 triangles not
+being drawn. The prize was never de-crossing; it is that de-crossing is the
+*precondition* for the rigid path, which is where the real saving would be.
+
+Three things it turned up, in the order they bit:
+
+1. **Rebinding must rewrite the vertex in place, not append one.** All ten
+   distinct foreign vertices are referenced *only* by the run rebinding them, so
+   appending orphaned the originals — and
+   `ndsRendererNativeStageValidate` demands
+   `prepared_dense_count == NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT`. A dense vertex
+   no run's corners reach fails validation every frame. Measured: `STG` 224,320
+   → **5,995,008**, every frame 5+ VBlanks.
+2. **The runtime pins the cross-matrix counts as hand-mirrored literals.**
+   `summary->cross_runs != 5u`, `cross_triangles != 10u`,
+   `cross_foreign_corners != 15u` at three sites in `nds_renderer.c`. De-crossing
+   takes them to 0, the native stage refuses itself, and the whole stage drops to
+   the CPU interpreter — same 27× signature, second cause, and it survived fixing
+   the first. **Fixed at the root and kept:** the generator now emits
+   `NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT` / `..._TRIANGLE_COUNT` /
+   `..._FOREIGN_CORNER_COUNT` and the runtime reads those. This is the same defect
+   class as the mask that started R2-02 — a constant that mirrors the data
+   instead of being derived from it.
+3. **`check_nds_native_stage.py` pins the five run indices** `(32, 34, 45, 47,
+   49)` in five places, including a fail-closed perturbation test that flips the
+   flag on run 32 to prove the validator catches it. Teaching that checker about
+   a deliberate port-side topology change is the outstanding work, and it is not
+   a two-line edit.
+
+**Backed out**, because (3) was left failing and a broken checker in the tree is
+worse than an unbuilt optimisation. What is kept is (2), which is behaviour-
+neutral at today's 5/10/15 and is what makes the next attempt fail loudly instead
+of silently. The packet is byte-identical to before E5 apart from those three new
+defines.
+
 ## 9. Cost of the lesson
 
 Three ROM builds, three 128-frame ring dumps, two Boundary runs and four
