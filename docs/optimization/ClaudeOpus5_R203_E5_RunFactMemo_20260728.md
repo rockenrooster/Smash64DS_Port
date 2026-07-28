@@ -101,26 +101,67 @@ Compare E1, on the neighbouring loop: **97.9% changed**. This is 98.1%
 *unchanged*. The two results are mirror images and the difference is real, not
 instrument noise.
 
+### 4a. Per-run, the facts never change at all
+
+The per-frame digests fold every prepared run in submission order, so they
+cannot tell "a run's facts changed" from "a different set of runs ran". Keeping
+one digest per run index separates them:
+
+| counter | value |
+|---|---|
+| fills (first sight of a run index) | 67 |
+| **hits** (facts identical to the stored copy) | **112,300** |
+| **misses** (facts differed) | **0** |
+| out-of-range run indices | 0 |
+
+67 is the whole of `sNdsNativeFighterRuns[]`. Every run is filled once and never
+changes again. The 29 whole-frame "changes" were the *set* moving between 67 and
+37 prepared runs, never the data.
+
+This also settles §5's material caveat: colour is baked per run, and Task 39's
+hurt flash reaches the fighter through `state->color_modulate` in the vertex
+path (`ndsRendererHardwareModulatePackedColor`), which is downstream of these
+facts and untouched by a memo of them.
+
+### 4b. The function never rejects
+
+A miss counter hooked before `return TRUE` cannot see a rejected call, and a run
+that is sometimes accepted and sometimes rejected must never be baked. Counting
+entries separately:
+
+```
+entry = 112,367        hit + miss + fill = 112,300 + 0 + 67 = 112,367
+```
+
+Exactly equal. `ndsRendererNativePrepareProductionRun` returned FALSE zero times
+in the whole match, so the 67-vs-37 split is runs that were never *called*, not
+runs that were *rejected*.
+
+Taken together: for the canonical configuration this function is a pure lookup
+keyed on `run_index`. Every policy check, geometry-mode validation, texture
+resolution and UV derivation in it recomputes an answer that cannot differ.
+
 ## 5. What this does and does not license
 
-**Licensed.** The per-run prepared facts are a memo. R2-03's baked-facts submit
-is viable on the live path, in E1a's exact shape: keep the table, and recompute
-only what moves.
+**Licensed.** The per-run prepared facts are a memo keyed on `run_index` alone,
+with no per-frame revalidation required: 0 misses and 0 rejections in 112,367
+calls. R2-03's baked-facts submit is viable on the live path, and the table can
+be *generated* rather than discovered — which is what §7 asks for.
 
-**Not licensed.** Three limits worth stating before someone builds on this.
+**Not licensed.** Limits worth stating before someone builds on this.
 
-- State B is not simply "one fighter missing". Frame 1200 reads 67 runs with
-  state B's hash, so run *count* is not a valid memo key. The key has to be the
-  facts themselves or whatever selects them, not the count.
-- `MATERIAL` never moved independently of `STABLE` — the two counters are equal
-  at every one of the 31 samples. So this run does **not** demonstrate that the
-  hurt flash perturbs `texture_prepare_material_color`; it may write colour
-  elsewhere, or it may not have fired in a way that reached these runs. The
-  falsifier's own comment predicted live materials and the measurement did not
-  confirm it. A memo must still handle a colour change; it just is not the
-  common case.
+- Run *count* is not a valid key. Frame 1200 reads 67 runs carrying state B's
+  whole-frame hash. Key on the index.
 - This measures the *facts*, not the pose. The matrices were deliberately not
   hashed. They are Task #11's 91,338 ticks/frame and they move every frame.
+- Zero misses over one match is not a proof of immutability for all inputs. The
+  texture cache entry pointer held still here because nothing evicted a fighter
+  texture; a different scene, a paused camera, or a stage with more texture
+  pressure could rotate it. A shipped memo should either carry the cache's
+  `key_generation` as a cheap validity tag or be regenerated at load, not
+  silently assume the pointer is eternal.
+- One configuration, one stage, two fighters. The result is strong for canonical
+  mode 9 on Dream Land and is not evidence about modes 7 or 8.
 
 ## 6. Size of the prize
 

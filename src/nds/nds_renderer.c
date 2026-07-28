@@ -17056,6 +17056,26 @@ static u32 sNdsR2RunFrameStableHash = 2166136261u;
 static u32 sNdsR2RunFrameMaterialHash = 2166136261u;
 static u32 sNdsR2RunFrameCallCount;
 
+/* The per-frame hashes fold every prepared run in submission order, so they
+ * cannot separate "a run's facts changed" from "a different set of runs was
+ * prepared". The first sweep saw exactly two whole-frame values with 67 and 37
+ * runs, and 67 is the whole of sNdsNativeFighterRuns[] -- which points at the
+ * set changing, not the facts. That distinction decides the memo's key, so
+ * measure it directly: keep one digest per run index and count the calls whose
+ * facts differ from the copy already stored for that index.
+ *
+ * MISS == 0 after the fills means the facts are a property of the run index
+ * alone, the memo needs no per-frame revalidation, and R2-03's baked table can
+ * be generated rather than discovered. */
+#define NDS_R2_RUN_MEMO_MAX 67u
+volatile u32 gNdsR2RunMemoHitCount;
+volatile u32 gNdsR2RunMemoMissCount;
+volatile u32 gNdsR2RunMemoFillCount;
+volatile u32 gNdsR2RunMemoOutOfRange;
+volatile u32 gNdsR2RunEntryCount;
+static u32 sNdsR2RunMemoHash[NDS_R2_RUN_MEMO_MAX];
+static u8 sNdsR2RunMemoValid[NDS_R2_RUN_MEMO_MAX];
+
 #define NDS_R2_RUN_HASH(hash, value)     ((hash) = (((hash) ^ (u32)(value)) * 16777619u))
 
 /* PrepareProductionRun is NDS_RENDERER_NATIVE_FIGHTER_CODE, i.e. ITCM. Inlining
@@ -17104,6 +17124,37 @@ static void NDS_R2_RUN_PROOF_CODE ndsRendererR2FighterRunProofCall(
     /* A pointer into the hardware texture cache, which rotates for reasons
      * unrelated to what is drawn. */
     NDS_R2_RUN_HASH(full, (u32)(uintptr_t)resolved->entry);
+    {
+        /* Same field set as STABLE plus the colour, but seeded per run so the
+         * digest describes this run alone rather than the frame's sequence. */
+        u32 own = 2166136261u;
+
+        for (i = 0u; i < 13u; i++)
+        {
+            NDS_R2_RUN_HASH(own, fields[i]);
+        }
+        NDS_R2_RUN_HASH(own, state->texture_prepare_enabled);
+        NDS_R2_RUN_HASH(own, state->texture_prepare_material_color);
+        if (run_index >= NDS_R2_RUN_MEMO_MAX)
+        {
+            gNdsR2RunMemoOutOfRange++;
+        }
+        else if (sNdsR2RunMemoValid[run_index] == 0u)
+        {
+            sNdsR2RunMemoValid[run_index] = 1u;
+            sNdsR2RunMemoHash[run_index] = own;
+            gNdsR2RunMemoFillCount++;
+        }
+        else if (sNdsR2RunMemoHash[run_index] != own)
+        {
+            sNdsR2RunMemoHash[run_index] = own;
+            gNdsR2RunMemoMissCount++;
+        }
+        else
+        {
+            gNdsR2RunMemoHitCount++;
+        }
+    }
     sNdsR2RunFrameFullHash = full;
     sNdsR2RunFrameStableHash = stable;
     sNdsR2RunFrameMaterialHash = material;
@@ -17173,6 +17224,13 @@ ndsRendererNativePrepareProductionRun(
 
     memset(&resolved_texture, 0, sizeof(resolved_texture));
 
+#if NDS_R2_FIGHTER_RUN_PROOF
+    /* Counted at entry, because the proof hook sits before the single
+     * `return TRUE` and so cannot see a rejected call. entries - hook calls is
+     * the reject count, and the memo's safety depends on it: a run that is
+     * sometimes accepted and sometimes rejected must not be baked. */
+    gNdsR2RunEntryCount++;
+#endif
     if ((config == NULL) || (stats == NULL) || (state == NULL) ||
         (family >= (sizeof(sNdsNativeFighterDirectPolicies) /
                     sizeof(sNdsNativeFighterDirectPolicies[0]))))
