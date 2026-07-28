@@ -130,13 +130,26 @@ arm alone.
 
 ## 7. Instrumentation
 
-All counters added here live under the existing default-off
+The surviving counters live under the existing default-off
 `NDS_TASK103_STAGE_RUN_PHASE`, alongside the Task 103 family:
-`gNdsTask103GenericSame{Tex,Poly,Alpha,Bind}`, `gNdsTask103BeginMtx{Ticks,Count}[4]`,
-`gNdsTask103NoZPath[3]`, `gNdsTask103NoZ{World,Proj}Ticks`,
-`gNdsTask103Begin{EndBatch,Tex,Tail}Ticks`. The per-segment counters
-(`gNdsTask103GenericSeg{Ticks,Runs,Tris}[]`) already existed and had never been
-read — §3 is the first time they were.
+`gNdsTask103BeginMtx{Ticks,Count}[4]`, `gNdsTask103NoZPath[3]`,
+`gNdsTask103NoZ{World,Proj}Ticks`, `gNdsTask103Begin{EndBatch,Tex,Tail}Ticks`.
+The per-segment counters (`gNdsTask103GenericSeg{Ticks,Runs,Tris}[]`) already
+existed and had never been read — §3 is the first time they were.
+
+**§2's counters have been removed, and the removal is the point.** They read six
+`prepared_run` fields inside `ndsRendererCommitNativeStageSegment`, whose
+consumed-field closure the stage falsifier polices — and the falsifier failed
+the next Boundary run over it. A default-off `#if` does not hide the reads,
+because the check is static analysis of the source. Classifying them to make it
+pass would have asserted an immutability §2 itself disproved (18 of 21 runs
+rebind a texture). The question was answered once and does not need re-asking,
+so the probe is gone and the answer stays here.
+
+That failure is also a process finding: this document's commit was made without
+running the widest relevant verifier, on the reasoning that default-off
+instrumentation cannot change a shipping build. It cannot change the binary, but
+it can change what a *source-level* checker sees.
 
 ## 8. For the standing rules
 

@@ -2024,6 +2024,7 @@ try {
             'printf "RENDER_CI4LUT=%u,%u,%u,%u\n", gNdsRendererProfileCi4LutBuildCount, gNdsRendererProfileCi4LutReuseCount, gNdsRendererProfileCi4IndexCacheBuildCount, gNdsRendererProfileCi4IndexCacheReuseCount',
             'printf "RENDER_CI4MAP=%u,%u\n", gNdsRendererProfileCi4RepresentativePixelCount, gNdsRendererProfileCi4ReusePixelCount',
             'printf "RENDER_TEXHASH=%u,%u,%u,%u,%u\n", gNdsRendererProfileTextureLookupCallCount, gNdsRendererProfileTextureLookupProbeCount, gNdsRendererProfileTextureLookupActiveHitCount, gNdsRendererProfileTextureLookupTableHitCount, gNdsRendererProfileTextureLookupMissCount',
+            'printf "R2_TEXMEMO=%u,%u,%u,%u,%u\n", gNdsR2TexMemoHitCount, gNdsR2TexMemoMissCount, gNdsR2TexMemoFillCount, gNdsR2TexMemoStaleCount, gNdsR2TexMemoVerifyFail',
             'printf "RENDER_ORACLE=%u,%u,%u\n", gNdsRendererProfileOracleSamples, gNdsRendererProfileOracleMismatches, gNdsRendererProfileOracleMaxDelta',
             'printf "RENDER_MATRIX=%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsRendererProfileMatrixLoadCount, gNdsRendererProfileMatrixScaleWorld, gNdsRendererProfileProjectionM00, gNdsRendererProfileProjectionM11, gNdsRendererProfileProjectionM22, gNdsRendererProfileProjectionM32, gNdsRendererProfileModelviewM00, gNdsRendererProfileModelviewM11, gNdsRendererProfileModelviewM22, gNdsRendererProfileModelviewM30, gNdsRendererProfileModelviewM31, gNdsRendererProfileModelviewM32',
             'printf "RENDER_ADAPTER_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileCameraMatrixCacheHitCount, gNdsRendererProfileCameraMatrixCacheMissCount, gNdsRendererProfileCameraMatrixCacheOverflowCount, gNdsRendererProfileDObjWorldCacheHitCount, gNdsRendererProfileDObjWorldCacheMissCount, gNdsRendererProfileDObjWorldCacheOverflowCount',
@@ -2664,6 +2665,7 @@ try {
     $renderCi4Lut = [regex]::Match($gdbStdout, 'RENDER_CI4LUT=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $renderCi4Map = [regex]::Match($gdbStdout, 'RENDER_CI4MAP=([0-9]+),([0-9]+)')
     $renderTexHash = [regex]::Match($gdbStdout, 'RENDER_TEXHASH=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    $r2TexMemo = [regex]::Match($gdbStdout, 'R2_TEXMEMO=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperCache = [regex]::Match($gdbStdout, 'SOBJ_WALL_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperFinal = [regex]::Match($gdbStdout, 'SOBJ_WALL_FINAL=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $wallpaperOracle = [regex]::Match($gdbStdout, 'SOBJ_WALL_ORACLE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -5358,6 +5360,8 @@ try {
                         'Profile-2 stage class/depth order diverged from BattleShip callback order or reused a synthetic painter depth.' $gdbStdout
                 }
                 Assert-Condition $renderTexHash.Success 'Canonical realtime HW build did not publish texture lookup accounting.' $gdbStdout
+                Assert-Condition $r2TexMemo.Success 'Canonical realtime HW build did not publish R2-03 E12 texture-memo accounting.' $gdbStdout
+                $rtm = Get-Ints $r2TexMemo
                 if ($RendererProfileLevel -lt 2) {
                     # The resident texture cache survives frame boundaries, so a
                     # completed warm frame may legitimately have zero misses.
@@ -5366,7 +5370,33 @@ try {
                     # descriptors without repeating an active-entry lookup.
                     $activeHitCoverage = ($rth[2] -gt 0) -or
                         (($RendererFastRunMode -eq 7) -and ($rth[3] -gt 0))
-                    Assert-Condition ($rth[0] -gt 0 -and $activeHitCoverage -and $rth[3] -gt 0 -and ($rth[2] + $rth[3] + $rth[4]) -eq $rth[0] -and $rth[1] -ge ($rth[3] + $rth[4]) -and $rth[1] -lt (4 * $rth[0])) 'Performance/coarse texture hash lookup lacked mode-applicable active/table coverage, exact accounting, or bounded probes.' $gdbStdout
+                    $lookupLive = $rth[0] -gt 0 -and $activeHitCoverage -and
+                        $rth[3] -gt 0 -and
+                        ($rth[2] + $rth[3] + $rth[4]) -eq $rth[0] -and
+                        $rth[1] -ge ($rth[3] + $rth[4]) -and
+                        $rth[1] -lt (4 * $rth[0])
+                    # R2-03 E12 memoises the fighter's resolved texture identity
+                    # per run_index, and the fighter turned out to be the only
+                    # source of texture lookups in a warm frame -- so a memo
+                    # build legitimately reports RENDER_TEXHASH all zero.
+                    #
+                    # That must not be allowed to pass as "no lookups needed":
+                    # with every counter zero, a working memo and a dead texture
+                    # path are the same observation. The liveness proof moves to
+                    # the memo's own counters instead of being dropped. A stale
+                    # entry is not a failure (the code refills), but it must be
+                    # bounded by the fills that answered it, and a level-2
+                    # verify mismatch is never acceptable.
+                    $memoLive = $rtm[0] -gt 0 -and $rtm[4] -eq 0 -and
+                        $rtm[3] -le $rtm[2]
+                    Assert-Condition (
+                        ($lookupLive -or ($rth[0] -eq 0 -and $memoLive)) -and
+                        $rtm[4] -eq 0) `
+                        ("Texture coverage proved neither a live hash lookup " +
+                         "(calls $($rth[0]), activeHit $($rth[2]), tableHit " +
+                         "$($rth[3]), miss $($rth[4]), probes $($rth[1])) nor a " +
+                         "live E12 memo (hits $($rtm[0]), fills $($rtm[2]), " +
+                         "stale $($rtm[3]), verifyFail $($rtm[4])).") $gdbStdout
                 } else {
                     Assert-Condition (($rth | Measure-Object -Sum).Sum -eq 0) 'Forensic renderer unexpectedly used the performance texture hash lookup.' $gdbStdout
                 }

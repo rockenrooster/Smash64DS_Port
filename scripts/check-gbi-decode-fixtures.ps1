@@ -1465,7 +1465,12 @@ Assert-True ($renderer.Contains('sizeof(NDSRendererHardwareTextureKey) == 236u')
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL < 2.*?entry = .*?sNdsRendererHardwareActiveTextureEntry.*?sNdsRendererHardwareTextureLookup\[slot\].*?value - 1u.*?#else\s*\(void\)key_hash;\s*for \(i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i\+\+\)') 'Texture lookup no longer keeps the open-address performance path independent from the forensic linear oracle.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareTextureLookupRemove.*?leaving tombstones.*?while \(sNdsRendererHardwareTextureLookup\[slot\] !=.*?NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY\).*?ndsRendererHardwareTextureLookupInsert') 'Texture lookup deletion no longer repairs its collision cluster to prevent long-match probe decay.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareTextureLookupRemove\(entry\);\s*#endif\s*entry->key = key;.*?entry->ready = TRUE;\s*#if NDS_RENDERER_PROFILE_LEVEL < 2\s*ndsRendererHardwareTextureLookupInsert\(entry\);') 'Texture refresh no longer removes the old hash mapping before publishing and indexing the exact replacement key.'
-Assert-True ($harnessScript.Contains('RENDER_TEXHASH=') -and $harnessScript.Contains('bounded probes') -and $harnessScript.Contains('Forensic renderer unexpectedly used the performance texture hash lookup.')) 'Canonical verifier no longer proves bounded performance hash coverage and forensic independence.'
+# R2-03 E12: the fighter memo removed the last warm-frame texture lookup, so
+# RENDER_TEXHASH now reads all zero and the coverage proof has two legs. Pin the
+# probe bound as an expression rather than the words 'bounded probes' -- the
+# phrase moved when the message was rewritten while the invariant did not, and a
+# pin on prose fails for the wrong reason.
+Assert-True ($harnessScript.Contains('RENDER_TEXHASH=') -and $harnessScript.Contains('$rth[1] -lt (4 * $rth[0])') -and $harnessScript.Contains('R2_TEXMEMO=') -and $harnessScript.Contains('$lookupLive -or ($rth[0] -eq 0 -and $memoLive)') -and $harnessScript.Contains('Forensic renderer unexpectedly used the performance texture hash lookup.')) 'Canonical verifier no longer proves bounded performance hash coverage, E12 memo liveness, and forensic independence.'
 $textureLookupTable = [byte[]]::new(128)
 $textureLookupEntries = @(
     [pscustomobject]@{ Hash = [uint32]5; Key = 'A'; Ready = $true },

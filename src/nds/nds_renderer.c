@@ -17011,6 +17011,9 @@ ndsRendererNativeShadeProductionActions(
     return TRUE;
 }
 
+/* sNdsNativeFighterRuns[67]. Shared by the E5 proof and the E12 memo, so it
+ * lives outside both flags' guards. */
+#define NDS_R2_RUN_MEMO_MAX 67u
 #if NDS_R2_FIGHTER_RUN_PROOF
 /* R2-03 E5 falsifier. The switch plan's section 7 for this phase asks for a
  * per-epoch generated submit "consuming only baked facts ... no
@@ -17067,7 +17070,6 @@ static u32 sNdsR2RunFrameCallCount;
  * MISS == 0 after the fills means the facts are a property of the run index
  * alone, the memo needs no per-frame revalidation, and R2-03's baked table can
  * be generated rather than discovered. */
-#define NDS_R2_RUN_MEMO_MAX 67u
 volatile u32 gNdsR2RunMemoHitCount;
 volatile u32 gNdsR2RunMemoMissCount;
 volatile u32 gNdsR2RunMemoFillCount;
@@ -17088,6 +17090,7 @@ volatile u32 gNdsR2RunTailTicks;
 volatile u32 gNdsR2RunSuccessCount;
 static u32 sNdsR2RunMemoHash[NDS_R2_RUN_MEMO_MAX];
 static u8 sNdsR2RunMemoValid[NDS_R2_RUN_MEMO_MAX];
+
 
 /* The facts being constant is not on its own a licence to skip the UV loop.
  * 28 of the 541 dense vertices belong to more than one run (13..18 overlap), so
@@ -17247,6 +17250,231 @@ static void ndsRendererR2FighterRunProofFrame(void)
 }
 #endif
 
+/* E12 counters live outside the flag so a build with the memo off reads five
+ * honest zeros instead of whatever the linker left at those addresses. Two
+ * probes this cycle read an ARM opcode (0xEA80003B) out of a garbage-collected
+ * counter and had to be re-run; the verifier reads these, so it cannot afford
+ * that ambiguity. Only the increments are conditional.
+ *
+ * `volatile` is not enough. It stops the compiler from folding accesses, not
+ * the linker from dropping an object nothing references -- and at MEMO=1
+ * nothing writes VerifyFail, because only the level-2 verify does. `retain`
+ * emits SHF_GNU_RETAIN so --gc-sections keeps it and a zero reads as zero. */
+#define NDS_R2_TEXMEMO_COUNTER __attribute__((used, retain))
+volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoHitCount;
+volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoMissCount;
+volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoFillCount;
+volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoStaleCount;
+volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoVerifyFail;
+
+#if NDS_R2_FIGHTER_RUN_MEMO
+/* E12. E5 proved every field below is invariant in run_index over a whole
+ * canonical match, and E11 measured what recomputing them costs: 45.3 of 60.9
+ * calls take the full texture prepare at 1,013 ticks, because the caller resets
+ * texture_prepare_valid per DObj. The work skipped is SyncTextureTile, the
+ * ~30-field key build, its hash, and the cache lookup.
+ *
+ * What is NOT skipped, because the resolver's cache-hit tail has live effects
+ * the frame depends on: refreshing last_used_frame (this is the eviction LRU --
+ * dropping it would let the entry the memo points at be reclaimed), the name and
+ * param binds, the active-entry pointer, the pinned static-texture hit, and the
+ * four stats fields.
+ *
+ * E5 deliberately excluded resolved->entry from its STABLE hash: "a pointer into
+ * the hardware texture cache, which rotates for reasons unrelated to what is
+ * drawn". So identity being stable is not residency being stable, and the memo
+ * revalidates before trusting itself using the same two facts Task 36's replay
+ * checks -- entry->ready and entry->name -- which is the established contract in
+ * this file for exactly this hazard. A stale entry falls through to the full
+ * path and refills. */
+typedef struct NDSR2RunTextureMemo
+{
+    /* Slot index, not a pointer: sNdsRendererHardwareActiveTextureEntry is a
+     * const pointer and the memo must refresh last_used_frame, so an index into
+     * the cache array is both writable and cheaper to validate than a cast. */
+    u32 slot_plus1;
+    u32 name;
+    u32 params;
+    u32 format;
+    u32 width;
+    u32 height;
+    u32 scale_s;
+    u32 scale_t;
+    u32 origin_s;
+    u32 origin_t;
+    s32 offset;
+    u8 valid;
+} NDSR2RunTextureMemo;
+
+static NDSR2RunTextureMemo sNdsR2RunTextureMemo[NDS_R2_RUN_MEMO_MAX];
+
+/* The cheap tail of the resolver's cache-hit path, replayed from the memo. */
+static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
+    u32 run_index,
+    NDSRendererStats *stats,
+    u32 *texture_name,
+    u32 *scale_s,
+    u32 *scale_t,
+    u32 *origin_s,
+    u32 *origin_t,
+    s32 *offset)
+{
+    NDSR2RunTextureMemo *memo;
+    NDSRendererHardwareTextureCacheEntry *entry;
+
+    if (run_index >= NDS_R2_RUN_MEMO_MAX)
+    {
+        return FALSE;
+    }
+    memo = &sNdsR2RunTextureMemo[run_index];
+    if (memo->valid == 0u)
+    {
+        gNdsR2TexMemoMissCount++;
+        return FALSE;
+    }
+    entry = &sNdsRendererHardwareTextureCache[memo->slot_plus1 - 1u];
+    if ((entry->ready == FALSE) || ((u32)entry->name != memo->name))
+    {
+        memo->valid = 0u;
+        gNdsR2TexMemoStaleCount++;
+        return FALSE;
+    }
+
+    entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+    if (entry->pinned != 0u)
+    {
+        ndsRendererHardwareBindTextureName(stats, memo->name);
+        ndsRendererHardwareApplyTextureParams(entry->params);
+        sNdsRendererHardwareActiveTextureEntry = entry;
+        ndsRendererHardwareRecordBattleStaticTextureHit(entry);
+    }
+    else if (sNdsRendererHardwareActiveTextureEntry != entry)
+    {
+        ndsRendererHardwareBindTextureName(stats, memo->name);
+        ndsRendererHardwareApplyTextureParams(entry->params);
+        sNdsRendererHardwareActiveTextureEntry = entry;
+    }
+    stats->hardware_texture_ready_count++;
+    stats->hardware_texture_format = memo->format;
+    stats->hardware_texture_width = memo->width;
+    stats->hardware_texture_height = memo->height;
+
+    *texture_name = memo->name;
+    *scale_s = memo->scale_s;
+    *scale_t = memo->scale_t;
+    *origin_s = memo->origin_s;
+    *origin_t = memo->origin_t;
+    *offset = memo->offset;
+    gNdsR2TexMemoHitCount++;
+    return TRUE;
+}
+
+static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
+    u32 run_index,
+    const NDSRendererStats *stats,
+    u32 texture_name,
+    u32 scale_s,
+    u32 scale_t,
+    u32 origin_s,
+    u32 origin_t,
+    s32 offset)
+{
+    NDSR2RunTextureMemo *memo;
+    const NDSRendererHardwareTextureCacheEntry *entry =
+        sNdsRendererHardwareActiveTextureEntry;
+    u32 slot;
+
+    /* Only bake an entry the resolver actually landed on. A run whose bind took
+     * the stage-site shortcut or the no-texture path leaves no active entry, and
+     * baking one from a neighbouring run's state is exactly the class of bug the
+     * revalidation above cannot catch. */
+    if ((run_index >= NDS_R2_RUN_MEMO_MAX) || (entry == NULL) ||
+        (entry->ready == FALSE) || ((u32)entry->name != texture_name) ||
+        (texture_name == 0u))
+    {
+        return;
+    }
+    slot = (u32)(entry - sNdsRendererHardwareTextureCache);
+    if (slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT)
+    {
+        return;
+    }
+    /* Keeps the level-2 counter linked at level 1. `volatile` stops the
+     * compiler folding this away and `retain` was accepted but did not survive
+     * this linker, so the symbol needs a genuine reference or --gc-sections
+     * drops it -- and the verifier then reads whatever sits at its address
+     * (0xEA80003D, an ARM opcode, on the run that caught this). Nine fills a
+     * match, so the load/store is free. */
+    gNdsR2TexMemoVerifyFail = gNdsR2TexMemoVerifyFail;
+    memo = &sNdsR2RunTextureMemo[run_index];
+    memo->slot_plus1 = slot + 1u;
+    memo->name = texture_name;
+    memo->params = entry->params;
+    memo->format = stats->hardware_texture_format;
+    memo->width = stats->hardware_texture_width;
+    memo->height = stats->hardware_texture_height;
+    memo->scale_s = scale_s;
+    memo->scale_t = scale_t;
+    memo->origin_s = origin_s;
+    memo->origin_t = origin_t;
+    memo->offset = offset;
+    memo->valid = 1u;
+    gNdsR2TexMemoFillCount++;
+}
+
+#if NDS_R2_FIGHTER_RUN_MEMO >= 2
+/* Level 2 never takes the memo branch. It lets the full path run and then asks
+ * whether the memo would have answered differently, so a disagreement is
+ * counted instead of drawn. E8 was refuted by a key that was subtly incomplete
+ * three times running, each caught by a verify arm exactly like this one. */
+static void __attribute__((noinline)) ndsRendererR2RunTextureMemoVerify(
+    u32 run_index,
+    const NDSRendererStats *stats,
+    u32 texture_name,
+    u32 scale_s,
+    u32 scale_t,
+    u32 origin_s,
+    u32 origin_t,
+    s32 offset)
+{
+    const NDSR2RunTextureMemo *memo;
+    const NDSRendererHardwareTextureCacheEntry *entry;
+
+    if (run_index >= NDS_R2_RUN_MEMO_MAX)
+    {
+        return;
+    }
+    memo = &sNdsR2RunTextureMemo[run_index];
+    if (memo->valid == 0u)
+    {
+        return;
+    }
+    entry = &sNdsRendererHardwareTextureCache[memo->slot_plus1 - 1u];
+    if ((entry->ready == FALSE) || ((u32)entry->name != memo->name))
+    {
+        /* A stale entry is not a mismatch: the live path would have refilled
+         * it. Counted separately so the two are never conflated. */
+        gNdsR2TexMemoStaleCount++;
+        return;
+    }
+    if ((memo->name != texture_name) ||
+        (memo->format != stats->hardware_texture_format) ||
+        (memo->width != stats->hardware_texture_width) ||
+        (memo->height != stats->hardware_texture_height) ||
+        (memo->scale_s != scale_s) || (memo->scale_t != scale_t) ||
+        (memo->origin_s != origin_s) || (memo->origin_t != origin_t) ||
+        (memo->offset != offset))
+    {
+        gNdsR2TexMemoVerifyFail++;
+    }
+    else
+    {
+        gNdsR2TexMemoHitCount++;
+    }
+}
+#endif
+#endif
+
 static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativePrepareProductionRun(
     u32 run_index,
@@ -17352,6 +17580,18 @@ ndsRendererNativePrepareProductionRun(
         u32 texture_name = 0u;
 
         use_texture = FALSE;
+#if NDS_R2_FIGHTER_RUN_MEMO == 1
+        if ((policy->textured != 0u) && (hierarchy_run == NULL) &&
+            (ndsRendererR2RunTextureMemoApply(
+                 run_index, stats, &texture_name,
+                 &texture_scale_s, &texture_scale_t,
+                 &texture_origin_s, &texture_origin_t,
+                 &texture_offset) != FALSE))
+        {
+            use_texture = TRUE;
+        }
+        else
+#endif
         if (policy->textured != 0u)
         {
             u32 render_tile_index =
@@ -17416,6 +17656,21 @@ ndsRendererNativePrepareProductionRun(
                 ((stats->othermode_h & NDS_RENDERER_TEXTFILT_MASK) !=
                  NDS_RENDERER_TF_POINT) ?
                     NDS_RENDERER_TEXCOORD_FILTER_OFFSET : 0;
+#if NDS_R2_FIGHTER_RUN_MEMO
+            if (hierarchy_run == NULL)
+            {
+#if NDS_R2_FIGHTER_RUN_MEMO >= 2
+                ndsRendererR2RunTextureMemoVerify(
+                    run_index, stats, texture_name,
+                    texture_scale_s, texture_scale_t,
+                    texture_origin_s, texture_origin_t, texture_offset);
+#endif
+                ndsRendererR2RunTextureMemoFill(
+                    run_index, stats, texture_name,
+                    texture_scale_s, texture_scale_t,
+                    texture_origin_s, texture_origin_t, texture_offset);
+            }
+#endif
         }
         state->texture_prepare_valid = TRUE;
         state->texture_prepare_enabled = use_texture;
@@ -18654,6 +18909,7 @@ static s32 ndsRendererNativeHierarchyMatrixIsAffine(
              (1 << NDS_RENDERER_DS_MTX_FRAC_BITS))) ? TRUE : FALSE;
 }
 
+
 static s32 ndsRendererNativePreflightFighterHierarchy(
     u32 slot,
     const u8 *asset_base,
@@ -19029,14 +19285,14 @@ static inline void ndsRendererNativeBeginHierarchyBatch(
     }
     glDisable(GL_ALPHA_TEST);
     glDisable(GL_FOG);
-    ndsRendererHardwareSetPolyFmt(prepared_run->poly_fmt);
+    ndsRendererHardwareSetPolyFmt(poly_fmt);
     glBegin(GL_TRIANGLE);
     ndsRendererProfileRecordBatchBegin();
 
     sNdsRendererHardwareTriangleBatchOpen = TRUE;
     sNdsRendererHardwareTriangleBatchTextured = prepared_run->textured;
     sNdsRendererHardwareTriangleBatchTextureName = texture_name;
-    sNdsRendererHardwareTriangleBatchPolyFmt = prepared_run->poly_fmt;
+    sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
     sNdsRendererHardwareTriangleBatchAlphaKey = 0u;
     sNdsRendererHardwareTriangleBatchFogKey = 0u;
     sNdsRendererHardwareTriangleBatchMatrixMode =
@@ -20142,12 +20398,18 @@ volatile u32 gNdsTask103RunHeadTicks;
 volatile u32 gNdsTask103RunDenseTicks;
 volatile u32 gNdsTask103RunDenseCount;
 volatile u32 gNdsTask103RunNearCount;
-/* R2-02 F1. E0 split generic emit per segment and moved the target: the four
- * actor segments (1/2/3/6 -- Whispy's eyes and mouth, both flower beds) cost
- * 43,998 ticks/frame for 21 triangles, nearly double segment 4's 22,843 for 76.
- * That is 15 runs of fixed overhead, so the split has to be by *branch*, not by
- * run: which matrix path BeginRun takes, and which of EmitNoZTriangle's three
- * paths each triangle lands on. Both use sites are below this point. */
+/* R2-02 F1/F3. The four actor segments (1/2/3/6 -- Whispy's eyes and mouth,
+ * both flower beds) cost 43,998 ticks/frame for 21 triangles, nearly double
+ * segment 4's 22,843 for 76, so the split is by *branch*: which matrix path
+ * BeginRun takes, which of EmitNoZTriangle's three paths a triangle lands on,
+ * and where BeginRun's non-matrix half goes.
+ *
+ * F0's adjacent-run redundancy comparison lived here too and has been removed.
+ * It answered its question once -- 1.0 of 21 runs repeats the previous run's
+ * state, 18 rebind a texture -- and it read six prepared_run fields inside
+ * ndsRendererCommitNativeStageSegment, whose consumed-field closure the stage
+ * falsifier polices. Classifying them would have asserted an immutability F0
+ * itself disproved. */
 volatile u32 gNdsTask103BeginMtxTicks[4];
 volatile u32 gNdsTask103BeginMtxCount[4];
 volatile u32 gNdsTask103NoZPath[4];
@@ -21361,13 +21623,6 @@ volatile u32 gNdsTask103GenericBeginTicks;
  * Count it before designing it. Redundant means every field BeginRun would
  * write matches the previous generic run: submit class, poly_fmt, texture
  * identity and params, alpha test, and the matrix binding. */
-volatile u32 gNdsTask103GenericStateSame;
-volatile u32 gNdsTask103GenericStateDiff;
-volatile u32 gNdsTask103GenericStateFirst;
-volatile u32 gNdsTask103GenericSameTex;
-volatile u32 gNdsTask103GenericSamePoly;
-volatile u32 gNdsTask103GenericSameAlpha;
-volatile u32 gNdsTask103GenericSameBind;
 volatile u32 gNdsTask103GenericSegTicks[NDS_NATIVE_STAGE_SEGMENT_COUNT];
 volatile u32 gNdsTask103GenericSegRuns[NDS_NATIVE_STAGE_SEGMENT_COUNT];
 volatile u32 gNdsTask103GenericSegTris[NDS_NATIVE_STAGE_SEGMENT_COUNT];
@@ -23030,74 +23285,6 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         }
 #endif
 #if NDS_TASK103_STAGE_RUN_PHASE
-        {
-            /* Every field BeginRun would re-issue, plus the matrix binding it
-             * selects on. Reset per frame so the first run of a frame is never
-             * counted as redundant against the last run of the previous one. */
-            static u32 task103_prev_valid;
-            static u32 task103_prev_class;
-            static u32 task103_prev_poly;
-            static u32 task103_prev_texname;
-            static u32 task103_prev_texparams;
-            static u32 task103_prev_textured;
-            static u32 task103_prev_alpha;
-            static u32 task103_prev_alpha_ref;
-            static u32 task103_prev_binding;
-            static u32 task103_prev_frame = 0xffffffffu;
-
-            if (task103_prev_frame != sNdsRendererHardwareFrameSerial)
-            {
-                task103_prev_frame = sNdsRendererHardwareFrameSerial;
-                task103_prev_valid = 0u;
-            }
-            if (task103_prev_valid == 0u)
-            {
-                gNdsTask103GenericStateFirst++;
-            }
-            else
-            {
-                /* Split per field: whole-run redundancy is 1 in 21, so the
-                 * question is no longer "can runs merge" but "which of
-                 * BeginRun's writes are the ones that actually change". */
-                u32 same_tex = ((task103_prev_texname ==
-                                 prepared_run->texture_name) &&
-                                (task103_prev_texparams ==
-                                 prepared_run->texture_params) &&
-                                (task103_prev_textured ==
-                                 prepared_run->textured)) ? 1u : 0u;
-                u32 same_poly = (task103_prev_poly == prepared_run->poly_fmt)
-                                    ? 1u : 0u;
-                u32 same_alpha = ((task103_prev_alpha ==
-                                   prepared_run->alpha_test) &&
-                                  (task103_prev_alpha_ref ==
-                                   prepared_run->alpha_ref)) ? 1u : 0u;
-                u32 same_bind = (task103_prev_binding ==
-                                 (u32)run->binding_index) ? 1u : 0u;
-
-                gNdsTask103GenericSameTex += same_tex;
-                gNdsTask103GenericSamePoly += same_poly;
-                gNdsTask103GenericSameAlpha += same_alpha;
-                gNdsTask103GenericSameBind += same_bind;
-                if ((same_tex & same_poly & same_alpha & same_bind) != 0u &&
-                    (task103_prev_class == run->submit_class))
-                {
-                    gNdsTask103GenericStateSame++;
-                }
-                else
-                {
-                    gNdsTask103GenericStateDiff++;
-                }
-            }
-            task103_prev_valid = 1u;
-            task103_prev_class = run->submit_class;
-            task103_prev_poly = prepared_run->poly_fmt;
-            task103_prev_texname = prepared_run->texture_name;
-            task103_prev_texparams = prepared_run->texture_params;
-            task103_prev_textured = prepared_run->textured;
-            task103_prev_alpha = prepared_run->alpha_test;
-            task103_prev_alpha_ref = prepared_run->alpha_ref;
-            task103_prev_binding = (u32)run->binding_index;
-        }
         task103_generic_start = cpuGetTiming();
         task103_generic_armed = 1u;
 #endif
@@ -25438,6 +25625,9 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 #if NDS_R2_FIGHTER_SHADE_PROOF
     ndsRendererR2FighterShadeProofFrame();
 #endif
+#if NDS_R2_FIGHTER_RUN_PROOF
+    ndsRendererR2FighterRunProofFrame();
+#endif
     sNdsRendererHardwareFrameSerial++;
     return submitted;
 #else
@@ -25480,9 +25670,6 @@ void ndsRendererExecuteDisplayListWithVertexCache(
     {
         matrix_snapshots = vertex_cache->matrix_snapshots;
         matrix_snapshot_count = vertex_cache->matrix_snapshot_count;
-#endif
-#if NDS_R2_FIGHTER_RUN_PROOF
-    ndsRendererR2FighterRunProofFrame();
     }
 #endif
     ndsRendererInitTraversalState(&state, config, stats, &vertex_storage,

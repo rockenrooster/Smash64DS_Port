@@ -835,3 +835,97 @@ Two specific traps this repo keeps re-encountering:
 The rehooked instrument, inside the function mode 9 actually calls, reported
 28 changes in 1,500 frames. The real answer and the artefact both looked like
 "constant"; only the call count told them apart.
+
+## A census row is self time (R2-03 E11/E12, 2026-07-28)
+
+E5 proved `ndsRendererNativePrepareProductionRun` is a pure function of
+`run_index` and then declined to build the memo, in one line: *"~119 UV
+writes/frame can't explain 21,504 ticks."* The arithmetic was right. The premise
+was that the function's cost was inside the function.
+
+| instrument | reading |
+|---|---|
+| E5's own bracket | ~21,500 |
+| frame census symbol row | 22,205 |
+| **four brackets inside the function** | **82,042** |
+
+The difference is the texture resolver it calls out to, which the same census
+charges separately to `ndsRendererHardwareResolveOrBindTexture` (18,803) and
+`ndsRendererSyncTextureTile` (12,004). Two independent instruments agreed with
+each other and both under-reported the work by a factor of four, because both
+measure the symbol.
+
+**When a candidate is rejected for being too small, check whether the instrument
+measured the symbol or the work.** The rejection cost this campaign the largest
+single fighter cut found so far — E12 took −32,724 ticks/frame off it.
+
+### A generic fast path can be structurally unavailable to a specialized caller
+
+The resolver already opens with a site cache that skips the whole resolve. It is
+keyed on `state->source_command_site`, the address of the `Gfx` command being
+interpreted — and the native fighter path does not interpret display lists, so
+it has no site, misses on the first test, and has never once hit that cache.
+
+Nothing reports this. The cache fails by returning `FALSE`, which is
+indistinguishable from a legitimate miss. Ask it of every shared cache a native
+path inherits: **what is the key, and does this caller have one?**
+
+### A default-off `#if` does not hide a probe from a source-level checker
+
+R2-02 F0's redundancy counters were guarded by a flag that defaults to 0, so
+they could not change any shipping binary — and the next Boundary run failed
+anyway. `check_nds_native_stage.py` polices which fields
+`ndsRendererCommitNativeStageSegment` consumes by reading the source text, and
+the probe had added six `prepared_run` reads to that closure.
+
+Classifying them to make it pass would have asserted an immutability the probe
+itself disproved. The probe was deleted and its answer kept in the write-up.
+
+**Instrumentation inside a policed closure is a change to that closure.** Run
+the widest relevant verifier on a probe-only commit too; "it is default-off"
+covers the binary, not the checkers.
+
+### Build the shipping flag combination, not only the instrumented one
+
+E12 shipped a graduation (`NDS_R2_FIGHTER_RUN_MEMO := 1`) whose implementation
+sat inside the `NDS_R2_FIGHTER_RUN_PROOF` guard, beside the E5 globals it was
+derived from. Every build taken during development carried `PROOF=2`, so the
+definitions were always present. The shipping combination is `PROOF=0, MEMO=1`
+— definitions compiled out, call sites compiled in — and it failed to compile on
+the first Boundary run after graduation.
+
+That is the same root cause as the falsifier failure earlier the same day: both
+times the change was validated only in the configuration that carries the
+instrument.
+
+**Graduating a flag changes which combinations exist. Build the cross product of
+the new flag against the flags it was developed beside — at minimum
+`(0,0)`, `(0,1)`, `(instrumented,0)`, `(instrumented,1)` — before the verifier
+does it for you.** A shared helper or macro that two flags both use belongs
+outside both guards.
+
+### `volatile` keeps the compiler honest; it does not keep the linker honest
+
+Three probes in one cycle read an ARM branch opcode (`0xEA80003B`,
+`0xEA800009`, `0xEA80003D`) out of a counter that gdb resolved to a neighbouring
+address. Each time the counter was `volatile u32` at file scope with external
+linkage, so the compiler emitted it — and `--gc-sections` then dropped it,
+because at that flag level nothing referenced it.
+
+`__attribute__((used, retain))` was accepted without warning by GCC 15.2 and the
+symbol still did not survive this linker. What worked was giving it a real
+reference: `gNdsR2TexMemoVerifyFail = gNdsR2TexMemoVerifyFail;` in a function
+that exists at the shipping flag level.
+
+Two consequences:
+
+- **A counter written only by a higher instrumentation level does not exist at
+  the lower one.** A level-2 mismatch counter read from a level-1 build is not
+  zero, it is garbage, and it will read as a *failure* about as often as a pass.
+- **Verify with `nm`, not by reading the value.** `nm <elf> | grep <counter>`
+  answers "does this symbol exist" directly; a plausible-looking number does
+  not.
+
+This is the linker-side twin of "a null result must prove the instrument ran".
+That rule covered a hook that never executed; this one covers a counter that was
+never linked.

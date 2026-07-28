@@ -73,6 +73,74 @@ through `Test-BattlePlayablePacingStopPhase` rather than a logic-only bound.
 Eight synthetic cases cover it with no ROM or emulator; the registry pins the
 new contract and bans the old equality.
 
+## One fighter is worth ~400,000 ticks (owner observation, 2026-07-28)
+
+The owner noticed that knocking Fox off-screen, so he stops rendering, takes the
+build to **~29 FPS** from ~20. That is not a small effect and it is arithmetically
+informative.
+
+The frame is VBlank-quantized at 560,190 ticks. Wall is **1,531,768** = 2.73
+VBlanks, which rounds up to 3 → 20 FPS. Landing on 2 VBlanks needs wall
+**≤ 1,120,380**, a saving of **~411,000**. Removing one fighter produced exactly
+that transition, so **one fighter costs on the order of 400,000 ticks/frame** —
+render, pose, matrices and everything downstream.
+
+Two consequences.
+
+**`PROJECT_GOAL.md` §7's budget table looks mis-proportioned.** It allots 250,000
+to *combined* fighter rendering and 100,000 to fighter pose. Two fighters at
+~400,000 each is ~800,000 of a 1,120,000 frame. Either the budget or the
+implementation is wrong by a factor of two, and the budget was never validated
+against a measured per-fighter cost.
+
+**It is also a free instrument.** Suppressing one fighter's draw is a controlled
+A/B that the tick-HUD reads directly, and it partitions the per-fighter cost into
+render versus pose versus matrix without any new probe. Queued as the next
+measurement after the R2-03 gate, reporting the 2/3/4/5+ VBlank histogram and max
+interval per `AGENTS.md` — never min FPS.
+
+Recorded as an owner observation, not a measurement: the FPS figure is a HUD
+reading, and the ~411,000 is inferred from the quantization boundary rather than
+bracketed.
+
+## R2-03 E11/E12 — the fighter had no key for the cache that already existed
+
+`ClaudeOpus5_R203_E11_PrepareRunSplit_20260728.md`,
+`ClaudeOpus5_R203_E12_RunTextureMemo_20260728.md`.
+
+**`PrepareProductionRun` 82,042 → 49,318 ticks/frame; the texture prepare inside
+it 45,952 → 12,362.** Graduated to the published block.
+
+E5 proved this function is a pure function of `run_index` and then declined to
+build the memo because "~119 UV writes/frame can't explain 21,504 ticks". The
+arithmetic was right and the premise was wrong: **a census row is self time.**
+E5's bracket read ~21,500, the frame census row read 22,205, and four brackets
+inside the function read **82,042** — the difference being the texture resolver
+it calls out to, which the census charges separately to
+`ResolveOrBindTexture` (18,803) and `SyncTextureTile` (12,004).
+
+The cut is not a new mechanism. The resolver already opens with a site cache
+keyed on `state->source_command_site`; the native fighter path does not
+interpret display lists, so it has no site and has **never once hit that cache**.
+The memo is the same cache re-keyed on `run_index`. R2-05 gets it for free.
+
+| counter | value |
+|---|---|
+| memo hits | 1,074 (8.4/frame — every textured call) |
+| fills | **9 in total, not per frame** |
+| stale entries | 0 |
+| mismatches, level 2 | **0 of 1,083** |
+
+Nine distinct textured runs, resolved once each for the whole match. Predicted
+35,000–45,000 in E11 before building; delivered **−32,724**, recorded as
+measured rather than rounded into the band.
+
+Three rules added to `TASK_STANDING_RULES.md`: check whether an instrument
+measured the symbol or the work before rejecting a candidate as too small; ask
+of every shared cache a native path inherits what its key is and whether this
+caller has one; and a default-off `#if` does not hide a probe from a
+source-level checker.
+
 ## R2-02 F — generic emit split, and the stage target moved
 
 `ClaudeOpus5_R202_F_GenericEmitSplit_20260728.md`, `ea6b1fc`. The per-segment

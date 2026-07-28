@@ -252,12 +252,6 @@ NDS_R2_STAGE_PREFLIGHT ?= 0
 # shade loop once a frame and counts the frames each changes on. 48,422
 # ticks/frame re-light 541 dense vertices; this says whether they need to.
 NDS_R2_FIGHTER_SHADE_PROOF ?= 0
-NDS_RENDER_ECONOMY ?= 0
-# Owner 5 is the only census-ranked Dream Land cut that passed the canonical
-# 500-pixel ratchet.  The enclosing economy flag remains off by default.
-NDS_RENDER_ECONOMY_OWNER_MASK ?= 32
-NDS_RENDERER_BENCHMARK_MODE ?= 0
-NDS_SCENE_MIP_CACHE_LAB ?= 0
 # R2-03 E5 falsifier, lab only. Hashes the facts PrepareProductionRun computes
 # per run and counts the frames they change on. Section 7 for this phase asks
 # for a submit consuming only baked facts -- "no PrepareProductionRun policy
@@ -279,6 +273,19 @@ NDS_R2_FIGHTER_RUN_PROOF ?= 0
 #       E8 proved gets read wrong.
 # Promote 2 -> 1 only on a zero gNdsR2MtxDirectVerifyFail run.
 NDS_R2_FIGHTER_MTX_DIRECT ?= 0
+# R2-03 E12. E5 proved PrepareProductionRun is a pure function of run_index and
+# E11 measured the cost: 45.3 of 60.9 calls a frame re-resolve a texture whose
+# identity never changes, at 1,013 ticks each, because the caller resets
+# texture_prepare_valid per DObj. The memo caches that identity per run and skips
+# SyncTextureTile, the key build, its hash and the lookup -- but still binds,
+# still refreshes the eviction LRU, and revalidates residency, because E5
+# deliberately excluded the cache entry pointer from its stable set.
+#   1 = memo live.
+#   2 = memo never taken; the full path runs and the memo is asked whether it
+#       would have disagreed. E8's key was incomplete three times running and a
+#       verify arm caught it each time.
+# Promote 2 -> 1 only on a zero gNdsR2TexMemoVerifyFail run.
+NDS_R2_FIGHTER_RUN_MEMO ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -510,6 +517,15 @@ override NDS_R2_STAGE_PREFLIGHT := 1
 # 93,830. Exact: 0 mismatches over 8,108 conversions against the two-step, and
 # 0 fallbacks to the source routine.
 override NDS_R2_FIGHTER_MTX_DIRECT := 1
+# R2-03 E12: the native fighter path has no Gfx command site, so the resolver's
+# existing site cache -- keyed on state->source_command_site -- misses on every
+# fighter run and the full resolve runs each time. The memo is that same cache
+# re-keyed on run_index, which E5 proved is what the answer depends on. A/B on
+# identical source: texture prepare 45,952 -> 12,362, the whole function 82,042
+# -> 49,318. Nine distinct textured runs are resolved once each for the entire
+# match: 1,074 hits, 9 fills, 0 stale entries, and 0 mismatches over 1,083
+# level-2 comparisons.
+override NDS_R2_FIGHTER_RUN_MEMO := 1
 # Task 37: seven hot leaves (memset, memcpy, memcmp, __ieee754_sqrtf and three
 # renderer/fighter helpers, 906 bytes) into ITCM free space. Named work P50
 # -59,328 ticks, 3-VBlank share 71.7% -> 76.0%, 5+ VBlank 5.2% -> 3.1%.
@@ -591,6 +607,9 @@ NDS_R2_STAGE_PREFLIGHT := 1
 endif
 ifneq ($(origin NDS_R2_FIGHTER_MTX_DIRECT),command line)
 NDS_R2_FIGHTER_MTX_DIRECT := 1
+endif
+ifneq ($(origin NDS_R2_FIGHTER_RUN_MEMO),command line)
+NDS_R2_FIGHTER_RUN_MEMO := 1
 endif
 # Must track the published block above. These two targets exist to measure and
 # prove the shipping program, so any flag that is on there and off here makes
@@ -1815,17 +1834,17 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_STAGE_VIEWPROJ $(NDS_R2_STAGE_VIEWPROJ)'; \
 		echo '#define NDS_R2_STAGE_PREFLIGHT $(NDS_R2_STAGE_PREFLIGHT)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_PROOF $(NDS_R2_FIGHTER_SHADE_PROOF)'; \
-		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
-		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_R2_FIGHTER_RUN_PROOF $(NDS_R2_FIGHTER_RUN_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_MTX_DIRECT $(NDS_R2_FIGHTER_MTX_DIRECT)'; \
+		echo '#define NDS_R2_FIGHTER_RUN_MEMO $(NDS_R2_FIGHTER_RUN_MEMO)'; \
+		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
+		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
 		echo '#define NDS_FAST_WALLPAPER_AFFINE $(NDS_FAST_WALLPAPER_AFFINE)'; \
 		echo '#define NDS_BGM_FALSIFIER_OFF $(NDS_BGM_FALSIFIER_OFF)'; \
 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
-		echo '#define NDS_R2_FIGHTER_RUN_PROOF $(NDS_R2_FIGHTER_RUN_PROOF)'; \
 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \
 		echo '#define NDS_BUILD_HARNESS_VARIANT "$(NDS_DEV_SCENE_HARNESS)"'; \
 		echo '#define NDS_DEBUG_HUD $(NDS_DEBUG_HUD)'; \

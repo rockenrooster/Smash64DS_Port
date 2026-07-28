@@ -190,6 +190,20 @@ if (($battleLoopText -match '\$row\[2\] -eq \(2 \* \$row\[1\]\)') -or
         '\(\$traceLogicLag - \$snapshotStop\.LogicLag\)')) {
     Fail-Check 'Task 25R pacing trace no longer derives its marker stop phase and reconciles the snapshot through the shared model'
 }
+# R2-03 E12 memoises the fighter's resolved texture identity, and the fighter was
+# the only source of texture lookups in a warm frame, so RENDER_TEXHASH now reads
+# all zero on a memo build. The liveness proof moved to the memo's counters
+# rather than being dropped -- without it, a working memo and a dead texture path
+# are the same observation. Pinned so the zero-case cannot later be waved through
+# by deleting the memo half.
+if (($battleLoopText -notmatch 'R2_TEXMEMO=%u,%u,%u,%u,%u') -or
+    ($battleLoopText -notmatch 'gNdsR2TexMemoHitCount') -or
+    ($battleLoopText -notmatch 'gNdsR2TexMemoVerifyFail') -or
+    ($battleLoopText -notmatch '\$memoLive = \$rtm\[0\] -gt 0 -and \$rtm\[4\] -eq 0') -or
+    ($battleLoopText -notmatch '\$rtm\[3\] -le \$rtm\[2\]') -or
+    ($battleLoopText -notmatch '\$lookupLive -or \(\$rth\[0\] -eq 0 -and \$memoLive\)')) {
+    Fail-Check 'battle verifier no longer proves texture coverage through either a live hash lookup or a live E12 memo'
+}
 if ($verifyAllText -notmatch '(?s)\(\$record\.Name -eq ''battle_playable_realtime''\).*?\$arguments \+= ''-FastIteration''') {
     Fail-Check 'verify-all does not select the one-capture canonical fast path for realtime records'
 }
