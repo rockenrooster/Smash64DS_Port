@@ -86,6 +86,17 @@ to count reappears as work that never happened.
 **The load-free `SRC` excursion is a tick-HUD measurement artifact, not a
 hardware stall.**
 
+**Precision, added after §6a.** "Work that never happened" is the right
+description of *instructions retired* and may be too strong a description of
+*time*. §6a shows the idle relocating into whichever phase is running, and on a
+frame where the CPU blocks on card I/O or a full GX FIFO, that time is real
+elapsed time the frame genuinely needs — it is simply not the CPU computing. The
+claim that survives either reading, and the one that matters, is narrower and
+unchanged: **the P95 tail is dominated by the CPU being blocked, not by the CPU
+working, so no amount of instruction removal addresses it.** Whether the honest
+accounting calls that time `WORK` or `WAIT` is a definition to settle when the
+bracket is fixed; that it is not computation is now measured.
+
 ## 5. This was already implied by data in the tree
 
 The finding does not rest on the new instrument alone, which is what makes it
