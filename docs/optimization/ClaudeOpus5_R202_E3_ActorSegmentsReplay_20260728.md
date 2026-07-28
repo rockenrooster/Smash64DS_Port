@@ -1,5 +1,45 @@
 # R2-02 E3 — Whispy and the flowers were never dynamic, and the mask never learned
 
+> ## RETRACTED 2026-07-28. VERDICT IS **HOLD, NOT KEEP**. THE FLOWERS BREAK.
+>
+> A synchronized crop of the flower band against the default ROM shows **both
+> flower beds destroyed** with `NDS_R2_STAGE_ACTORS=1`: `flowers_back` and
+> `flowers_front` collapse into a thin smear of specks floating across the tree
+> trunk, and the front row along the dirt path is gone entirely. Those are two
+> of the four segments this cut admitted. Whispy's blossoms are fine — they
+> belong to the tree layers, which were already replaying.
+>
+> **§4's "stage visually intact ... no tearing, no dropped or duplicated
+> geometry" was wrong.** It was written from the candidate screenshot alone,
+> checking that elements were *present*, instead of diffing the changed subset
+> against the control. That is precisely the failure the
+> *measure-the-subset-that-changed* rule exists to prevent, and it was made by
+> the same task that had just written a new rule about not trusting aggregates.
+>
+> **What the automated gates missed and why.** Boundary passed and
+> required-region detail read 62.681% against the default's 62.750% — 7 pixels
+> in 7,200 — because the flower beds are not inside the required region. The
+> 1,828-frame invariance proof in §4 is still sound on its own terms: the
+> *prepared vertex data* really is constant. It does not cover what broke, which
+> from the symptom (geometry collapsed to a line) is matrix or matrix-stack
+> state, not vertex data.
+>
+> **Leading hypothesis, untested.** `ndsRendererNativeStageTask51EnsureWorld`
+> issues `glPopMatrix(1)` conditionally on `task36_local_pushed` before its
+> `glPushMatrix()`. The capture records whatever the condition did on the capture
+> frame; at replay `ndsRendererTask36ReplayRun`'s tail sets
+> `task36_local_pushed = TRUE` unconditionally and `BeginRun(replay=TRUE)` skips
+> the matrix block, so the pop/push pairing across the newly admitted runs can
+> be off by one and leave the flowers under a stale or doubly-multiplied matrix.
+>
+> **Nothing shipped.** `NDS_R2_STAGE_ACTORS` is default `0`, the published ROMs
+> are at defaults and Boundary-green. **R2-02's gate is therefore NOT met** —
+> without E3, `STG` P50 is 225,792 against the 180K budget — and R2-03 was
+> started prematurely on the strength of this file.
+>
+> Everything below is the original text, kept per the never-rename rule. The
+> measurements are real; the verdict was not earned.
+
 **Date:** 2026-07-28
 **Phase:** R2-02 (`Smash64DS_Runtime2_SwitchPlan.md` §7), third landed cut — the
 one that closes the gate.

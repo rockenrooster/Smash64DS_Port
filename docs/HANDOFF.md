@@ -1,7 +1,9 @@
 # Handoff
 
-Updated: 2026-07-28 — Runtime 2: R2-00a/b/c and R2-01 gated, **R2-02 closed**
-(E1a + E2 + E3), R2-03 unblocked.
+Updated: 2026-07-28 — Runtime 2: R2-00a/b/c and R2-01 gated. **R2-02 is NOT
+closed: E1a and E2 are clean, E3 is retracted (it breaks both flower beds).**
+`STG` P50 225,792 vs the 180K gate, 45,792 over. R2-03's E0–E4 sizing was done
+prematurely; it is sound as measurement but the phase is still blocked.
 `P1_EXECUTION_BOARD.md` owns current state; this file is the restart surface and
 next packet.
 
@@ -27,18 +29,32 @@ deliberately left them unstaged. Commit or revert them with the bug-#10 work.
 
 ## State as of this handoff
 
-R2-00a/b/c and R2-01 are done and gated. **R2-02 is closed**: E1a + E2 + E3 take
-`STG` P50 from 351,488 to **173,120** against its 180K budget (P95 181,248, 0.7%
-over and inside the placement floor). §3.1/§7 no longer block R2-03. Reports are
-`docs/optimization/ClaudeOpus5_R2*`. `NDS_R2_PATH`, `NDS_R2_STAGE_DIRECT`,
-`NDS_R2_STAGE_DMA` and `NDS_R2_STAGE_ACTORS` all default to 0, so the published
-ROMs are unchanged.
+R2-00a/b/c and R2-01 are done and gated. **R2-02 is not closed.** E1a and E2 are
+clean and take `STG` P50 from 351,488 to **225,792**; the 180K gate is 45,792
+away. **E3 is retracted**: it reached 173,120 and moved 2-VBlank frames from 12
+to 235 of 566, but it destroys `flowers_back` and `flowers_front` — they collapse
+to a smear of specks across the trunk and the front row along the dirt path
+disappears. Retraction and the leading hypothesis are at the top of
+`optimization/ClaudeOpus5_R202_E3_ActorSegmentsReplay_20260728.md`.
 
-**E3 moved the histogram §4 named as the target:** 2-VBlank frames **12 → 235 of
-566**, 3-VBlank 540 → 316, 5+ 5 → 3, 0 cadence violations. The three flags
-together are the difference between a 3-VBlank median frame and a 2-VBlank one.
-**Graduating them to default-on needs the owner's visual approval** and is the
-single highest-value decision waiting on this file.
+`NDS_R2_PATH`, `NDS_R2_STAGE_DIRECT`, `NDS_R2_STAGE_DMA` and
+`NDS_R2_STAGE_ACTORS` all default to 0, so **nothing shipped** — the published
+ROMs are at defaults and Boundary-green at 62.750%. `NDS_R2_STAGE_ACTORS=1` is
+marked known-broken in the Makefile.
+
+**Two things worth knowing about how E3 got past the gates**, because they will
+let the next mistake through too:
+
+- **Required-region detail does not cover the flower beds.** It read 62.681%
+  against the default's 62.750% — 7 pixels in 7,200 — on a frame with both
+  flower beds destroyed. Boundary passed. For any stage render change, crop the
+  changed geometry out of the candidate *and the control* and look at them
+  together; `artifacts/visibility/latest.png` and `previous.png` are a
+  ready-made pair after a verifier run.
+- **The E3 invariance falsifier was sound and still insufficient.** It proved
+  the *prepared vertex data* constant over 1,828 frames, which was true. What
+  broke is matrix or matrix-stack state, which it did not hash. A falsifier
+  bounds the hypothesis it was written for and nothing else.
 
 **Three things a restart must know before reading any performance number:**
 
@@ -66,8 +82,23 @@ single highest-value decision waiting on this file.
 
 ## Next packet, in priority order
 
-0. **The sizing is finished and the target is one function. Build, don't
-   measure.** `ndsFighterMarioFoxDLAllDrawForSlot` costs **497,231 ticks/frame
+0. **Fix or drop E3 first — R2-02 owns the queue until its gate is met.** Find
+   why `flowers_back` and `flowers_front` collapse under
+   `NDS_R2_STAGE_ACTORS=1`. Leading hypothesis: the `glPopMatrix(1)` /
+   `glPushMatrix()` pairing in `ndsRendererNativeStageTask51EnsureWorld` goes off
+   by one at replay, because `ndsRendererTask36ReplayRun`'s tail sets
+   `task36_local_pushed = TRUE` unconditionally while `BeginRun(replay=TRUE)`
+   skips the matrix block. Geometry collapsed to a line is a wrong-matrix
+   symptom. Bisect the mask one segment at a time (3 alone, then 6 alone) — that
+   also says whether `whispy_eyes`/`whispy_mouth` are safe on their own, which
+   would be a smaller but clean cut. If it cannot be fixed cheaply, drop the
+   flag and close the 45,792 with layer1 (item 6) plus `BeginRun` instead.
+1. **R2-03 sizing is done but the phase is still blocked.** Everything below is
+   measurement, and it was taken with `NDS_R2_STAGE_ACTORS=1`, so the *stage*
+   share of it is a broken-render number: with E3 out, real work rises by about
+   51,200 to ~1,316,000 and the gap to ~196,000. The fighter figures are
+   unaffected — they are fighter-side brackets — and they are the useful part.
+   `ndsFighterMarioFoxDLAllDrawForSlot` costs **497,231 ticks/frame
    inclusive** (not the 37,206 the census reports — that is self time; see the
    method note). Split over a full match, two independent builds agreeing to
    0.6%:

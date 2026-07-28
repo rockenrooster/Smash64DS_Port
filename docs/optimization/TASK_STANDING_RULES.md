@@ -533,6 +533,34 @@ drops what it does not recognise will eventually drop something that mattered.**
 re-issues, catastrophic for a matrix. Make the recogniser **fault on the classes
 it must not drop** rather than trusting the next author to notice.
 
+## Diff the changed geometry against the control, not the candidate against your expectations (R2-02 E3, 2026-07-28)
+
+R2-02 E3 was reported KEEP with "stage visually intact ... no tearing, no
+dropped or duplicated geometry". A crop of the flower band against the default
+ROM shows **both flower beds destroyed** — collapsed into a smear of specks
+across the trunk. The report had been written from the candidate screenshot
+alone, confirming that recognisable elements were *present*. Presence is not
+parity.
+
+Two gates let it through and both will do so again:
+
+- **Boundary passed** — it is a gameplay state-hash gate and says nothing about
+  scenery.
+- **Required-region detail moved 7 pixels in 7,200** (62.681% vs 62.750%),
+  because the flower beds are not inside the required region. A near-identical
+  detail percentage is not evidence that the render matches.
+
+**For any render-side change: crop the geometry you changed out of the candidate
+*and* the control, put them next to each other at 2× nearest-neighbour, and
+look.** After a verifier run `artifacts/visibility/latest.png` and
+`previous.png` are already that pair. It costs one screenshot read and it is the
+only thing in the toolchain that would have caught this.
+
+Corollary: **a falsifier bounds the hypothesis it was written for and nothing
+else.** E3's invariance proof hashed the prepared vertex data over 1,828 frames
+and was correct — that data really is constant. What broke was matrix-stack
+state, which it never touched. Passing a falsifier is not passing a review.
+
 ## Compare a span to a span, not to a census row (R2-03 E3, 2026-07-28)
 
 A symbol's row in the frame-work census is **self time**: every callee is

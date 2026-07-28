@@ -46,37 +46,51 @@ R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
 | R2-03 fighter direct draw | **unowned — not started** | |
 | (R1 harvest) hardware sqrt | done, KEEP | `optimization/ClaudeOpus5_R203_E1_HardwareSqrt_20260728.md` (filename mislabels it R2-03) |
 
-**R2-02's §7 gate is MET.** `STG` P50 is **173,120** against the provisional
-**180K** budget, 6,880 under; P95 is 181,248, 1,248 over and inside the
-5,000–7,000 build-placement floor. **R2-03 (Fighter direct draw) is unblocked.**
-The two soft-float files named `R2-03` are Runtime 1 harvest, not that phase;
-they are corrected in place per the never-rename rule.
+**R2-02's §7 gate is NOT met. E3 is retracted — it destroys both flower beds.**
+`STG` P50 stands at **225,792** after E1a and E2, **45,792 over** the
+provisional 180K budget. §3.1 and §7 forbid carrying a phase that misses its
+budget into the next one, so **R2-03 was started prematurely** and its queue
+below is sizing only, not licence to build. The two soft-float files named
+`R2-03` are Runtime 1 harvest, not that phase; they are corrected in place per
+the never-rename rule.
 
 ```text
 STG P50   351,488  baseline
-          256,704  after E1a  (-94,784)  prepare-run elision
-          225,792  after E2   (-30,912)  GXFIFO DMA for the rigid replay
-          173,120  after E3   (-51,200)  actor segments admitted to the replay
-          180,000  gate                             <-- MET
+          256,704  after E1a  (-94,784)  prepare-run elision      -- clean
+          225,792  after E2   (-30,912)  GXFIFO DMA rigid replay  -- clean
+          180,000  gate
+          -------
+           45,792  still over
+
+         (173,120  after E3   (-51,200)  RETRACTED: flowers broken)
 ```
 
-**E3 moved the histogram §4 named as the point of the whole switch:**
-**2-VBlank frames 12 → 235 of 566** (2.1% → 41.5%), 3-VBlank 540 → 316, 5+ down
-5 → 3, 0 cadence violations. On a 32-frame window the median presented frame is
-a 2-VBlank frame outright. `STG` down on 128/128; `WORK` P50 −54,528, P95
-−42,816. Boundary green, required-region detail 62.681%.
-`optimization/ClaudeOpus5_R202_E3_ActorSegmentsReplay_20260728.md`.
+**What E3 got right and what it got wrong.** The finding is real:
+`NDS_TASK36_REPLAY_SEGMENT_MASK` still names the segments whose bindings were
+rigid *before Task 51*, which replaced their per-frame compose with a `MULT4x3`
+of a generated constant table, and those four segments were paying 45,349
+ticks/frame for 27 triangles. The 1,828-frame falsifier proving their prepared
+vertex data constant is sound. The performance was real: 2-VBlank frames 12 →
+235 of 566.
 
-**E3 was one stale constant, and the E2 report's prediction was wrong.** E2
-sized E3 at "fold `BeginRun` into the capture, ~40,000"; measurement said
-`BeginRun` in the replay path is only 15,916/frame and the money was in the 21
-runs that never reached the replay. `NDS_TASK36_REPLAY_SEGMENT_MASK` still names
-the segments whose bindings were rigid *before Task 51*, which replaced their
-per-frame compose with a `MULT4x3` of a generated constant table. Whispy's eyes
-and mouth and both flower beds have composed nothing per frame since — and were
-paying 45,349 ticks/frame for 27 triangles to prove it. A 1,828-frame falsifier
-(`NDS_R2_STAGE_ACTORS_PROOF`) hashed their prepared data every frame of a full
-match: **0 changes.**
+**But the render is wrong.** `flowers_back` and `flowers_front` collapse into a
+smear of specks across the trunk; the front row along the dirt path disappears.
+Boundary passed and required-region detail moved 7 pixels in 7,200 because the
+flower beds are outside the required region — only a synchronized crop against
+the default caught it. The E3 report's "stage visually intact" was written from
+the candidate screenshot alone, checking presence instead of diffing the changed
+subset against the control.
+
+**Nothing shipped.** All four `NDS_R2_*` flags are default 0 and the published
+ROMs are at defaults and Boundary-green (62.750%). The flag discipline is what
+kept this out of a ROM.
+
+**Next on this row:** find the actual cause. Leading hypothesis is the
+`glPopMatrix(1)`/`glPushMatrix()` pairing in
+`ndsRendererNativeStageTask51EnsureWorld` going off by one at replay, since
+`ndsRendererTask36ReplayRun`'s tail sets `task36_local_pushed = TRUE`
+unconditionally while `BeginRun(replay=TRUE)` skips the matrix block. Geometry
+collapsed to a line is a wrong-matrix symptom, not a vertex-data one.
 
 **All three R2-02 flags are still default-off and the published ROMs are
 unchanged.** `AGENTS.md` makes the owner the visual oracle for render-side work,
