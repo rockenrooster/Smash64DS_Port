@@ -155,7 +155,59 @@ Ranked leverage:
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E15_ExecuteSplit_20260728.md`.
 
-**Next: R2-03 E16 — is the shade pass per-epoch work that is actually per-root?**
+## R2-03 E16 — the shade pass IS the DS's hardware lighting (2026-07-28)
+
+Premise proven without exception, and it is the largest cut identified in R2-03.
+
+`ndsRendererHardwareLitShadeColorPrepared` computes, per vertex,
+`ambient + diffuse * dot(normal, light_dir) / 127` — with `light_color_1` as
+diffuse, `light_color_2` as ambient, and the `rgba` field of the dense vertex
+holding the **normal** (F3DEX packs normals there for lit vertices). That is,
+term for term, the Nintendo DS geometry engine's hardware lighting equation.
+
+Measured over 479 frames, both fighters:
+
+| counter | per frame |
+|---|---:|
+| **lit epochs** | **48.5** |
+| **unlit epochs** | **0** |
+| epochs on the LUT path | 48.5 (100%) |
+| epochs applying a material | 27.7 (57%) |
+| **vertices lit** | **513.1** |
+| vertices copied from a shared source | 21.5 |
+
+**Not one fighter epoch in a match is unlit**, at ~169 ticks per shaded vertex.
+
+**Why E1's refutation is explained rather than worked around.** E1 found the
+shade output changes on 1,796 of 1,835 frames. It does: the light direction is
+transformed into each root's local space by that root's modelview, the fighter
+animates, so every dot product changes every frame. It is unmemoisable for a
+structural reason — and that is exactly the problem DS hardware solves, by
+setting the light vector once in view space and applying the current matrix per
+vertex in silicon.
+
+**`GFX_LIGHT_VECTOR`, `GFX_LIGHT_COLOR`, `glLight` and `POLY_FORMAT_LIGHT` appear
+nowhere in `src/nds` or `src/port`.** The renderer has never used DS hardware
+lighting, while E14 measured the geometry engine idle on 946 of 946 fighter
+submissions.
+
+Design: pack normals into `GFX_NORMAL` words at load time; set light and material
+per root (~28/frame) instead of per vertex (~534/frame), folding `color_modulate`
+into the material; emit the precomputed normal word instead of the computed
+colour word — **one FIFO word either way, traffic unchanged**. Expected: most of
+90,295 ticks/frame.
+
+**NOT IMPLEMENTED — deliberately.** It touches the load-time table format, the
+emit's per-vertex word, and per-root light/material state, and being a
+rendering-side change it gates on a screenshot pair plus **the owner's visual
+approval**. The DS light model is not bit-identical to the N64's and colours will
+shift slightly; `PROJECT_GOAL.md` lists "simplified lighting" among the allowed
+compromises, but the call is the owner's.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E16_ShadeIsHardwareLighting_20260728.md`.
+
+**Next: implement E16 behind a flag, capture the A/B screenshot pair, and put it
+in front of the owner.**
 
 ### Open, not chased: GXSTAT bit 15 is set
 

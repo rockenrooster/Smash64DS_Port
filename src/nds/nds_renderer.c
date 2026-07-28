@@ -16825,6 +16825,23 @@ static void ndsRendererR2FighterShadeProofFrame(void)
 }
 #endif
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+/* R2-03 E16 premise check. The software shade computes
+ * `ambient + diffuse * dot(normal, light_dir) / 127` per vertex, which is the
+ * DS geometry engine's hardware lighting equation, on the CPU, while E14
+ * measured that engine idle. Before designing anything around that, the premise
+ * has to hold on the data: lighting must actually be ON for fighter epochs, and
+ * the vertices must actually be going through the lit path rather than the
+ * pass-through or the shared-colour copy. Counters, not timers, so this barely
+ * perturbs. */
+u32 gNdsR2ShadeLitEpochs;
+u32 gNdsR2ShadeUnlitEpochs;
+u32 gNdsR2ShadeVerticesLit;
+u32 gNdsR2ShadeVerticesCopied;
+u32 gNdsR2ShadeLutEpochs;
+u32 gNdsR2ShadeMaterialEpochs;
+#endif
+
 static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativeShadeProductionActions(
     const NDSNativeEpoch *epoch,
@@ -16915,6 +16932,18 @@ ndsRendererNativeShadeProductionActions(
         sNdsR2ShadeFrameCallCount++;
     }
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    if (prepared_direction != NULL)
+    {
+        gNdsR2ShadeLitEpochs++;
+    }
+    else
+    {
+        gNdsR2ShadeUnlitEpochs++;
+    }
+    if (shade_lut != NULL) { gNdsR2ShadeLutEpochs++; }
+    if (use_material != 0u) { gNdsR2ShadeMaterialEpochs++; }
+#endif
     for (action_offset = 0u;
          action_offset < epoch->action_count;
          action_offset++)
@@ -16950,11 +16979,17 @@ ndsRendererNativeShadeProductionActions(
 
             if (color_source != dense_id)
             {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+                gNdsR2ShadeVerticesCopied++;
+#endif
                 sNdsNativeFighterPreparedDense[dense_id].shaded_rgba =
                     sNdsNativeFighterPreparedDense[color_source].shaded_rgba;
             }
             else
             {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+                gNdsR2ShadeVerticesLit++;
+#endif
                 const NDSNativeDenseVertex *dense =
                     &sNdsNativeFighterDenseVertices[dense_id];
                 NDSRendererInputVertex input;
