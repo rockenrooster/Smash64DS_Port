@@ -127,6 +127,11 @@ NDS_TASK90_SHADE_CENSUS ?= 0
 # sequence, so a front-cache is sized from the measured trace the way Task 90
 # sized the light-shade LUT. Lab only.
 NDS_TASK93_TEXKEY_CENSUS ?= 0
+# BUGS.md #10 lab probe. Holding SELECT draws every polygon two-sided, so the
+# owner can A/B culling in place at one fixed camera. The original culling
+# probe compared two separate captures and was judged on an image that did not
+# contain the bug; this exists so that mistake cannot repeat. Lab only.
+NDS_LAB_CULL_PROBE ?= 0
 # Task 91 E1 lab probe. Times the generic DObj tree walk and the native-owner
 # revalidation inside the fighter draw, on the tick-HUD ROM -- the split the M2
 # ledger measures but cannot report for the Boundary configuration.
@@ -1636,6 +1641,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \
+		echo '#define NDS_LAB_CULL_PROBE $(NDS_LAB_CULL_PROBE)'; \
 		echo '#define NDS_TASK91_DRAW_PHASE_CENSUS $(NDS_TASK91_DRAW_PHASE_CENSUS)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \

@@ -208,6 +208,33 @@ AI Agent should mark fixed items with FIXED prefix
   baseline -- ftrTri p0=67840 (Mario 320/frame), p1=64872 (Fox 306/frame),
   tri=828, vtx=2484, gxram=465/1422, rej0 -- so the change is provably inert
   in the verified configuration and cannot have regressed it.
-  OPEN: the owner's pause-orbit camera is the only oracle that can confirm
-  the visible fix. Orbit under Mario after a jump, as in the original
-  report.
+  THAT FIX WAS ON THE WRONG PATH. The owner tested it and the hole was
+  unchanged. Fighters do not draw through ndsRendererSubmitHardwareTriangle
+  at all: ndsRendererExecuteNativeFighterOwnerProduction (:22427) is a
+  separate generated emitter that writes straight to the GX FIFO via
+  ndsRendererHardwareWriteVertex16Words and carries its own precomputed
+  poly_fmt in NDSNativeHierarchyPreparedRun. It never calls the generic
+  triangle or vertex submitters.
+  How that was established, and it is the reusable part: three probe ROMs
+  in a row produced *no visible change on Mario* -- a forced-POLY_CULL_NONE
+  probe in ndsRendererHardwarePolyFmt, and a magenta tint on cross-matrix
+  triangles in ndsRendererHardwareSubmitVertex. The second probe is what
+  proved it, because SELECT visibly changed the stage and left Mario
+  untouched. A probe that changes nothing is only evidence if you can see
+  it firing somewhere; the earlier culling probe looked identical to a
+  probe that never ran, which is why its REFUTED verdict was worthless.
+  Always give a probe a control surface it must visibly affect.
+  THE REAL SITE: the native fighter emitter has its own two near-plane
+  rejects, :17576 and :17716, both `continue`-ing past the triangle for
+  NDS_NATIVE_RUN_CROSS_MATRIX runs -- and `stats->triangle_count +=
+  run->triangle_count` runs BEFORE the loop, so the whole run counts as
+  submitted no matter how many corners get dropped. That is the exact
+  mechanism guessed above, in the path fighters actually use, and it is why
+  every instrument read 320/320 while the joint seams opened up. Both sites
+  now call ndsRendererHardwareSubmitNearClippedTriangle, the same clip-and-fan
+  helper the generic path got, and count the fanned triangles.
+  The generic-path fix stays: it was a real defect of the same kind, it is
+  correct, and Boundary shows it inert (rej0).
+  Boundary green after the native fix; ITCM unchanged at 31360/32768.
+  OPEN: the owner's pause-orbit camera is still the only oracle. Orbit under
+  Mario after a jump, as in the original report.

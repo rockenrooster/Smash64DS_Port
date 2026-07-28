@@ -17552,9 +17552,22 @@ static s32 ndsRendererNativeSubmitRunDirect(
                     &state->vertices[indices[1]],
                     &state->vertices[indices[2]]) == FALSE)
             {
-                ndsRendererProfileRecordNearPlaneTriangleReject();
-                ndsRendererProfileRecordSubmitClass(
-                    NDS_RENDERER_HW_SUBMIT_REJECT);
+                /* BUGS.md #10. This is the path fighters actually draw
+                 * through, and it dropped the triangles the source RSP
+                 * clips -- after triangle_count above already counted the
+                 * whole run, which is why every instrument read 320/320
+                 * while Mario's joint seams opened up. Clip and fan. */
+                u32 fanned = ndsRendererHardwareSubmitNearClippedTriangle(
+                    stats, state, indices[0], indices[1], indices[2], 0);
+
+                if (fanned == 0u)
+                {
+                    ndsRendererProfileRecordNearPlaneTriangleReject();
+                    ndsRendererProfileRecordSubmitClass(
+                        NDS_RENDERER_HW_SUBMIT_REJECT);
+                    continue;
+                }
+                emitted_triangles += fanned;
                 continue;
             }
             ndsRendererHardwareSubmitVertex(
@@ -17692,9 +17705,21 @@ static void ndsRendererNativeSubmitRun(
                         &state->vertices[indices[1]],
                         &state->vertices[indices[2]]) == FALSE)
                 {
-                    ndsRendererProfileRecordNearPlaneTriangleReject();
-                    ndsRendererProfileRecordSubmitClass(
-                        NDS_RENDERER_HW_SUBMIT_REJECT);
+                    /* BUGS.md #10, same defect as the run emitter above. */
+                    u32 fanned =
+                        ndsRendererHardwareSubmitNearClippedTriangle(
+                            stats, state, indices[0], indices[1],
+                            indices[2], 0);
+
+                    if (fanned == 0u)
+                    {
+                        ndsRendererProfileRecordNearPlaneTriangleReject();
+                        ndsRendererProfileRecordSubmitClass(
+                            NDS_RENDERER_HW_SUBMIT_REJECT);
+                        continue;
+                    }
+                    ndsRendererHardwareEnterProjectedForeground();
+                    native_cross_submitted += fanned;
                     continue;
                 }
                 ndsRendererHardwareSubmitVertex(
