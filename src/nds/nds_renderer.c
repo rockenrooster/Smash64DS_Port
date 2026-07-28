@@ -17999,6 +17999,38 @@ static inline void ndsRendererNativeAccountGXCrossTriangles(
     sNdsRendererHardwareSubmitted = TRUE;
 }
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+/* R2-03 E15. E14 put ndsRendererExecuteNativeFighterOwnerProduction at 279,617
+ * ticks/frame -- 56% of the fighter, 447 ticks per hardware triangle, with the
+ * geometry engine measured idle. This function is the whole of it: prepare the
+ * run, then emit it as either a CROSS_MATRIX run or a Task 56 primitive group.
+ * Which of the three carries the cost decides whether the answer is a captured
+ * command stream (R2-02 E2's lever), a cheaper prepare, or moving work onto the
+ * idle hardware -- so it is measured before any of them is proposed.
+ *
+ * `Calls` is the liveness counter. The first cut of this experiment
+ * instrumented ndsRendererNativeSubmitRunDirect, which is the non-production
+ * path and never executes in the canonical mode, and every counter read a
+ * perfectly plausible zero. */
+u32 gNdsR2SubmitCalls;
+u32 gNdsR2SubmitPrepTicks;
+u32 gNdsR2SubmitRawEmitTicks;
+u32 gNdsR2SubmitRawCalls;
+u32 gNdsR2SubmitRawTriangles;
+u32 gNdsR2SubmitCrossEmitTicks;
+u32 gNdsR2SubmitCrossCalls;
+u32 gNdsR2SubmitCrossTriangles;
+u32 gNdsR2SubmitTotalTicks;
+/* E15b. The run loop turned out to be only 37% of the execute, so the rest is
+ * the per-root and per-epoch preamble that runs before any triangle is emitted.
+ * These name it. */
+u32 gNdsR2ExecPreflightTicks;
+u32 gNdsR2ExecRootTicks;
+u32 gNdsR2ExecStateTicks;
+u32 gNdsR2ExecShadeTicks;
+u32 gNdsR2ExecEpochCalls;
+#endif
+
 static s32 ndsRendererNativeSubmitProductionRun(
     const NDSNativeRun *run,
     u32 epoch_policy,
@@ -18019,11 +18051,20 @@ static s32 ndsRendererNativeSubmitProductionRun(
         ndsRendererProfileM2Owner();
     u32 m2_phase_start = 0u;
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    u32 e15_t0;
+    u32 e15_mark;
+#endif
 
     if ((run == NULL) || (run->triangle_count == 0u))
     {
         return ndsRendererNativeDirectReject(stats);
     }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    e15_t0 = cpuGetTiming();
+    e15_mark = e15_t0;
+    gNdsR2SubmitCalls++;
+#endif
     run_index = (u32)(run - sNdsNativeFighterRuns);
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_TRIANGLE_NOOP
     (void)epoch_policy;
@@ -18065,6 +18106,10 @@ static s32 ndsRendererNativeSubmitProductionRun(
         m2_owner->m2_run_prepare_count++;
     }
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    e15_mark = cpuGetTiming();
+    gNdsR2SubmitPrepTicks += e15_mark - e15_t0;
+#endif
     if ((run->submit_class == NDS_NATIVE_RUN_CROSS_MATRIX) &&
         (current_palette_slot > NDS_NATIVE_GX_MATRIX_SLOT_MAX))
     {
@@ -18080,6 +18125,11 @@ static s32 ndsRendererNativeSubmitProductionRun(
             run_index, (u32)run->triangle_count * 3u,
             state->texture_prepare_enabled,
             current_palette_slot, binding_palette_slots);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        gNdsR2SubmitCrossEmitTicks += cpuGetTiming() - e15_mark;
+        gNdsR2SubmitCrossCalls++;
+        gNdsR2SubmitCrossTriangles += run->triangle_count;
+#endif
     }
     else
     {
@@ -18102,6 +18152,11 @@ static s32 ndsRendererNativeSubmitProductionRun(
             ndsRendererNativeEmitProductionRawUntexturedRun(
                 run_index, (u32)run->triangle_count * 3u);
         }
+#endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        gNdsR2SubmitRawEmitTicks += cpuGetTiming() - e15_mark;
+        gNdsR2SubmitRawCalls++;
+        gNdsR2SubmitRawTriangles += run->triangle_count;
 #endif
     }
 #else
@@ -18144,6 +18199,9 @@ static s32 ndsRendererNativeSubmitProductionRun(
             cpuGetTiming() - m2_phase_start;
         m2_owner->m2_corner_emit_run_count++;
     }
+#endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsR2SubmitTotalTicks += cpuGetTiming() - e15_t0;
 #endif
     return TRUE;
 }
@@ -23556,6 +23614,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     u32 m2_run_prepare_before = 0u;
     u32 m2_emit_account_before = 0u;
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    u32 e15b_mark;
+#endif
 
     (void)callback_user;
     if (out_hardware_started == NULL)
@@ -23575,6 +23636,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     }
     m2_total_start = cpuGetTiming();
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    e15b_mark = cpuGetTiming();
+#endif
     if ((stats == NULL) ||
         (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ||
         (ndsRendererNativePreflightProductionOwner(
@@ -23590,6 +23654,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
         return FALSE;
     }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsR2ExecPreflightTicks += cpuGetTiming() - e15b_mark;
+#endif
     if (slot == 0u)
     {
         roots = sNdsNativeMarioRoots;
@@ -23614,6 +23681,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         u32 palette_slot = palette_slots[root_index];
         u32 epoch_offset;
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        e15b_mark = cpuGetTiming();
+#endif
         ndsRendererNativeBindProductionRoot(state, input, stats);
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -23645,6 +23715,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         }
         stats->command_count += root->source_command_count;
         ndsRendererNativeApplyRootLightPreamble(root, stats);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        gNdsR2ExecRootTicks += cpuGetTiming() - e15b_mark;
+#endif
 
         for (epoch_offset = 0u;
              epoch_offset < root->epoch_count;
@@ -23655,6 +23728,10 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                 &sNdsNativeFighterEpochs[epoch_index];
             u32 run_offset;
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            e15b_mark = cpuGetTiming();
+            gNdsR2ExecEpochCalls++;
+#endif
             ndsRendererNativeApplyStateSpan(
                 epoch->before_state_first, epoch->before_state_count,
                 epoch->before_sync_count,
@@ -23668,6 +23745,14 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                 epoch->after_state_first, epoch->after_state_count,
                 epoch->after_sync_count,
                 asset_base, stats, state);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            {
+                u32 e15b_state_end = cpuGetTiming();
+
+                gNdsR2ExecStateTicks += e15b_state_end - e15b_mark;
+                e15b_mark = e15b_state_end;
+            }
+#endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
             {
@@ -23678,6 +23763,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                 sNdsNativeFighterEpochDirectPolicy[epoch_index],
                 FALSE,
                 stats, state);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            gNdsR2ExecShadeTicks += cpuGetTiming() - e15b_mark;
+#endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
                 if (m2_owner != NULL)

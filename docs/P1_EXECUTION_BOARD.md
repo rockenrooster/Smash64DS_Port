@@ -104,24 +104,58 @@ submissions: FIFO entries 0 entering, 0 leaving, max 0, geometry engine busy on
 0 of 946. Positive control passes (OR of raw words `0x06009F00`, bit 26 =
 FIFO-empty set, so the register is live and the zeros are real).
 
-**447 ticks of ARM9 per hardware triangle with the geometry engine starved.**
-Consequences:
+**The ARM9 is the whole cost.** Cutting fighter polygons is the *wrong* lever: it
+spends visual fidelity to work around a CPU failing to feed hardware that has
+headroom. `PROJECT_GOAL.md` permits the trade; this says we have not earned it.
 
-- Cutting fighter polygons is the *wrong* lever. It would help — the cost is
-  per-triangle — but it spends visual fidelity to work around a CPU failing to
-  feed hardware that has headroom. `PROJECT_GOAL.md` permits the trade; this
-  says we have not earned it.
-- The lever is a cheaper emitter. **R2-02 E2 already won this fight for the
-  stage** by putting the rigid replay on GXFIFO DMA. The fighter emitter still
-  packs per triangle on the CPU, and its geometry is already a generated program
-  (`sNdsNativeFighterRuns[67]`, `sNdsNativeFighterDenseVertices[541]`) — the same
-  starting position the stage was in.
+**E15 corrects what comes next.** E14 read "447 ticks per hardware triangle" off
+this bracket and recommended a captured command stream on R2-02 E2's precedent.
+That statistic divided an inclusive bracket by the wrong denominator — most of
+the bracket is not per-triangle work. **The emit is ~99 ticks/triangle and 20% of
+the execute**, so a DMA'd stream caps out near 62,693 against a 250,833 gap. The
+recommendation is withdrawn; see the E15 section below for the real ranking.
 
 Full write-ups: `docs/optimization/ClaudeOpus5_R203_E13_FighterPriceAndGate_20260728.md`,
 `..._R203_E14_SubmitSplitAndGxIdle_20260728.md`.
 
-**Next: R2-03 E15 — price a DMA/precompiled command stream for the fighter
-emitter against the 279,617.**
+## R2-03 E15 — the fighter is a per-epoch machine (2026-07-28)
+
+The execute partitions completely. Per frame, both fighters (instrumented build;
+brackets cost ~31,165/frame, so absolutes are inflated ~10-20% and the ranking is
+the finding):
+
+| phase | ticks/frame | share |
+|---|---:|---:|
+| Preflight | 3,247 | 1.0% |
+| Per-root: bind, composed matrix, `glStoreMatrix`, light preamble | 40,785 | 13.1% |
+| Per-epoch: two state spans + material | 52,065 | 16.8% |
+| **Per-epoch: shade actions** | **86,207** | **27.7%** |
+| Run prepare | 42,520 | 13.7% |
+| Raw emit | 56,873 | 18.3% |
+| Cross emit | 5,820 | 1.9% |
+| residual | 18,487 | 5.9% |
+
+**48.5 epochs and 66.2 runs per frame, averaging 12.7 triangles per epoch.** Each
+epoch pays ~2,850 ticks of state and shade *before a triangle is emitted*, against
+~1,255 of prepare-and-emit. **~70% of the execute is per-epoch and per-root setup;
+20% is geometry.**
+
+Ranked leverage:
+
+1. **Shade actions, 86,207.** E1 refuted memoising it *across frames* and that
+   stands — but E1 never asked whether the shade recomputes **per epoch** what is
+   constant **per root**, which a cross-frame memo cannot see. 48.5 epochs against
+   ~28 roots is the shape that makes it worth asking.
+2. **Epoch state spans, 52,065.** R2-02 F found adjacent-run redundancy in the
+   stage's spans; the fighter's have never been checked.
+3. **Per-root 40,785** over ~28 roots — contains the GX matrix load and
+   `glStoreMatrix`. Whether every root needs its own palette store is unasked.
+4. Run prepare 42,520 — already cut by E12, diminishing.
+5. Emit 62,693 — ordinary, and the least promising per unit of risk.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E15_ExecuteSplit_20260728.md`.
+
+**Next: R2-03 E16 — is the shade pass per-epoch work that is actually per-root?**
 
 ### Open, not chased: GXSTAT bit 15 is set
 
