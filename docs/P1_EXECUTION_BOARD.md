@@ -73,7 +73,70 @@ through `Test-BattlePlayablePacingStopPhase` rather than a logic-only bound.
 Eight synthetic cases cover it with no ROM or emulator; the registry pins the
 new contract and bans the old equality.
 
+## R2-03 gate MISSED 2.00x, and the 56% nobody had measured (E13/E14, 2026-07-28)
+
+The owner observation below is now measured, and it turned over the phase.
+
+**The gate.** Fighter draw, both fighters, bracketed on the tick-HUD ROM over 479
+frames: **501,624 ticks/frame against §7's 250,000 for the pair.** Over by a
+factor of 2.00. Mario alone measures 237,219 per draw call; either fighter on his
+own very nearly exhausts the budget written for both. That budget was set in
+R2-00b without a measured per-fighter cost.
+
+R2-03 has shipped -47,486 (E9+E10, E12) against a 250,833 gap — 19% of it.
+
+**Where the draw actually goes** (per frame, both fighters):
+
+| phase | ticks | share |
+|---|---:|---:|
+| Walk / Validate / Reset | 20,595 | 4.1% |
+| OwnerPrep (matrices + materials) | 143,684 | 28.6% |
+| Build production inputs | 37,292 | 7.4% |
+| **`...ExecuteNativeFighterOwnerProduction`** | **279,617** | **55.7%** |
+| tail | 20,436 | 4.1% |
+
+Both shipped cuts landed in the 28.6%. The 55.7% had never been bracketed, so it
+was never a candidate — E3's split stopped at the point the owner inputs are
+built, and everything past it went into one unnamed remainder.
+
+**The 3D hardware is idle.** `GXSTAT` sampled either side of 946 fighter
+submissions: FIFO entries 0 entering, 0 leaving, max 0, geometry engine busy on
+0 of 946. Positive control passes (OR of raw words `0x06009F00`, bit 26 =
+FIFO-empty set, so the register is live and the zeros are real).
+
+**447 ticks of ARM9 per hardware triangle with the geometry engine starved.**
+Consequences:
+
+- Cutting fighter polygons is the *wrong* lever. It would help — the cost is
+  per-triangle — but it spends visual fidelity to work around a CPU failing to
+  feed hardware that has headroom. `PROJECT_GOAL.md` permits the trade; this
+  says we have not earned it.
+- The lever is a cheaper emitter. **R2-02 E2 already won this fight for the
+  stage** by putting the rigid replay on GXFIFO DMA. The fighter emitter still
+  packs per triangle on the CPU, and its geometry is already a generated program
+  (`sNdsNativeFighterRuns[67]`, `sNdsNativeFighterDenseVertices[541]`) — the same
+  starting position the stage was in.
+
+Full write-ups: `docs/optimization/ClaudeOpus5_R203_E13_FighterPriceAndGate_20260728.md`,
+`..._R203_E14_SubmitSplitAndGxIdle_20260728.md`.
+
+**Next: R2-03 E15 — price a DMA/precompiled command stream for the fighter
+emitter against the 279,617.**
+
+### Open, not chased: GXSTAT bit 15 is set
+
+Matrix stack overflow/underflow error latched at least once during a normal
+match. It is a sticky flag and may date from init or teardown rather than
+gameplay, and nothing observable is wrong. Recorded because it is an error bit
+that is on.
+
 ## One fighter is worth ~400,000 ticks (owner observation, 2026-07-28)
+
+**Superseded by the section above — measured at 271,424 WORK P50, not ~400,000.
+Kept for the reasoning trail.** The inference below was sound but read the
+quantization boundary as the whole cost; the actual transition needed less than
+the boundary implied because `WAIT` absorbed part of it.
+
 
 The owner noticed that knocking Fox off-screen, so he stops rendering, takes the
 build to **~29 FPS** from ~20. That is not a small effect and it is arithmetically
@@ -102,6 +165,16 @@ interval per `AGENTS.md` — never min FPS.
 Recorded as an owner observation, not a measurement: the FPS figure is a HUD
 reading, and the ~411,000 is inferred from the quantization boundary rather than
 bracketed.
+
+**Outcome (E13).** Built as `NDS_R2_DRAW_SUPPRESS_MASK` and run. The observation
+reproduces exactly — the median frame moves from three VBlank intervals to two,
+and the 2-interval share goes 217/566 to 458/566 (histogram `2:458 3:102 4:5
+5+:1`, max 17). The cost is **271,424 WORK P50**, not ~400,000.
+
+The frame is also **CPU-bound, and this pair is what proves it**: `WAIT` went
+*up* when Fox stopped drawing, 246,720 to 271,232. A rasterizer-bound frame that
+loses a quarter of its pixel load waits less; a CPU-bound frame that loses
+271,424 ticks of ARM9 work finishes earlier and waits longer.
 
 ## R2-03 E11/E12 — the fighter had no key for the cache that already existed
 

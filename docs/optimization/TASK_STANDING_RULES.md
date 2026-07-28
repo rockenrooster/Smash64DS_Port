@@ -929,3 +929,45 @@ Two consequences:
 This is the linker-side twin of "a null result must prove the instrument ran".
 That rule covered a hook that never executed; this one covers a counter that was
 never linked.
+
+### An intervention needs its own proof, separate from the counters (R2-03 E13/E14, 2026-07-28)
+
+The family already has two members: a hook that never executed (E5) and a
+counter that was never linked (E12). E13 added a third and it is the one the
+existing rules do not catch.
+
+The probe translated a fighter 20,000 units out of the view volume so the
+rasterizer's share of the frame could be measured with the CPU path unchanged.
+Everything about the instrument was healthy: the code ran, the counters were
+linked, the liveness counts were non-zero. It reported **-13,632 WORK P50** —
+"the rasterizer is 5% of a fighter" — a clean, quotable, entirely plausible
+result.
+
+The screenshot showed the fighter still standing on the stage. Writing
+`root->translate` never reaches the hardware, because the per-frame DObj world
+matrix cache serves the matrix it already built. Moving the write to the prepared
+modelviews did not reach it either. The measured delta was build placement, and
+it sat just above the 5,000-7,000 noise floor, which is exactly where an inert
+intervention lands.
+
+**A counter proves the instrument ran. It does not prove the intervention
+happened.** An experiment that changes what is drawn proves that with a
+screenshot; an experiment that changes what is computed proves it with a counter
+that *must* move — E13's surviving arm suppressed a fighter's draw and its
+hardware triangle count had to go to zero, which is unambiguous in a way a tick
+delta never is.
+
+Prefer the intervention whose engagement proof is structural over the cleverer
+one whose engagement has to be argued.
+
+**The same shape, inverted: an all-zero reading needs a positive control.** E14
+sampled the GX command FIFO either side of the fighter submission and every
+field read zero — entries, maximum, engine-busy. That is a real and important
+finding (the geometry engine is idle) and it is also exactly what a probe
+pointed at an unmapped address produces. The raw register word is therefore
+OR-ed across every sample: `GXSTAT` bit 26 is "FIFO empty", so a live read over
+a drained FIFO **must** set it, and a dead read cannot. The OR came back
+`0x06009F00`, and only then was the zero a measurement.
+
+**When the result is that something is zero, add the assertion that distinguishes
+"measured zero" from "measured nothing" — before reading the result.**

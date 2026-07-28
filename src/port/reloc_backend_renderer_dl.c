@@ -11945,6 +11945,40 @@ u32 gNdsTask91MaterialPrepTicks;
 /* R2-03 E6's MatrixPrep sub-counters are declared above
  * ndsRendererAdapterPrepareNativeOwnerMatrices, which is defined earlier in
  * this file than this block. */
+/* R2-03 E14. E13 measured the fighter draw at 500,833 ticks/frame and its named
+ * phases at 164,803 of that, leaving 336,030 -- 67% -- charged to a residual
+ * that has never been bracketed, because E3's split stopped at the point the
+ * owner inputs are built. These two counters cover everything past it: building
+ * the production inputs, and executing them against GX. Whatever those two do
+ * not account for is the trailing bookkeeping, by arithmetic. */
+u32 gNdsTask91InputsTicks;
+u32 gNdsTask91ExecuteTicks;
+/* R2-03 E14b. Execute is 279,617 ticks/frame for ~626 triangles, and the cut
+ * that follows depends entirely on which side of the FIFO is slow. GXSTAT bits
+ * 16-24 are the command FIFO's 40-bit entry count (0..256) and bit 27 is the
+ * geometry engine busy flag, sampled either side of the submission:
+ *   near-full at the end  -> the CPU is outrunning the geometry engine and is
+ *                            being throttled; only submitting less geometry
+ *                            helps, which is a visual-fidelity trade.
+ *   near-empty at the end -> the geometry engine is starved waiting for us and
+ *                            the cost is our own ARM9 work, which a faster
+ *                            emitter (R2-02 E2's GXFIFO DMA) addresses.
+ * Two register reads per fighter per frame, so this cannot itself perturb the
+ * thing it measures. */
+/* This translation unit is source-compatibility code and does not pull in
+ * <nds.h>, so GXSTAT is named by address rather than by adding a libnds include
+ * to it for a lab counter. */
+#define NDS_TASK91_GXSTAT (*(volatile u32 *)0x04000600u)
+u32 gNdsTask91GxFifoSamples;
+u32 gNdsTask91GxFifoEntriesEnd;
+u32 gNdsTask91GxFifoEntriesStart;
+u32 gNdsTask91GxFifoMaxEnd;
+u32 gNdsTask91GxBusyEnd;
+/* Positive control, because "every FIFO field reads zero" is also exactly what
+ * a probe pointed at nothing produces. GXSTAT bit 26 is "command FIFO empty",
+ * so a live register over a genuinely drained FIFO must OR to at least
+ * 0x04000000; an OR of 0 means the register was never read. */
+u32 gNdsTask91GxStatOr;
 #endif
 
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
@@ -12013,6 +12047,16 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
     u32 native_material_count = 0u;
     sb32 native_owner_enabled;
+#endif
+#if NDS_R2_DRAW_SUPPRESS_MASK
+    /* R2-03 E13. Prices a whole fighter: the phase census says how the draw
+     * divides internally, this says what the frame costs without it at all.
+     * Engagement is self-proving -- the slot's hardware triangle count and its
+     * half of gNdsTask91DrawCalls both go to zero. */
+    if ((slot <= 1u) && (((NDS_R2_DRAW_SUPPRESS_MASK >> slot) & 1u) != 0u))
+    {
+        return;
+    }
 #endif
 
     if ((slot > 1u) ||
@@ -12439,6 +12483,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
          (native_owner_hierarchy_mode != FALSE)) &&
         (detailed_output == FALSE) && (no_oracle != FALSE))
     {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        task91_mark = cpuGetTiming();
+#endif
         if (((native_owner_hierarchy_mode != FALSE) &&
              (ndsRendererAdapterBuildNativeHierarchyInputs(
                 slot, color_modulate, native_owner_file, &collection,
@@ -12466,12 +12513,20 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 nNDSTickHudNativeOwnerFallbackInputs);
 #endif
         }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        gNdsTask91InputsTicks += cpuGetTiming() - task91_mark;
+#endif
         if (native_owner_enabled != FALSE)
         {
             s32 production_result;
             u32 production_hardware_started = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             u32 owner_dl_start = cpuGetTiming();
+#endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            task91_mark = cpuGetTiming();
+            gNdsTask91GxFifoEntriesStart +=
+                (NDS_TASK91_GXSTAT >> 16) & 0x1FFu;
 #endif
             ndsFighterDLDrawResetRuntimeRendererStats(&persistent_stats);
             native_owner_production_attempted = TRUE;
@@ -12526,6 +12581,25 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                         NDS_RENDERER_BLOCKER_UNSUPPORTED;
                 }
             }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            {
+                u32 task91_gxstat = NDS_TASK91_GXSTAT;
+                u32 task91_entries = (task91_gxstat >> 16) & 0x1FFu;
+
+                gNdsTask91ExecuteTicks += cpuGetTiming() - task91_mark;
+                gNdsTask91GxFifoSamples++;
+                gNdsTask91GxStatOr |= task91_gxstat;
+                gNdsTask91GxFifoEntriesEnd += task91_entries;
+                if (task91_entries > gNdsTask91GxFifoMaxEnd)
+                {
+                    gNdsTask91GxFifoMaxEnd = task91_entries;
+                }
+                if ((task91_gxstat & (1u << 27)) != 0u)
+                {
+                    gNdsTask91GxBusyEnd++;
+                }
+            }
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             gNdsRendererProfileDLTicks += cpuGetTiming() - owner_dl_start;
 #endif

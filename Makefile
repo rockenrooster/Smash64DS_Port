@@ -286,6 +286,11 @@ NDS_R2_FIGHTER_MTX_DIRECT ?= 0
 #       verify arm caught it each time.
 # Promote 2 -> 1 only on a zero gNdsR2TexMemoVerifyFail run.
 NDS_R2_FIGHTER_RUN_MEMO ?= 0
+# R2-03 E13. Skips a fighter's draw outright, which is how the campaign prices a
+# whole fighter end to end: the phase census partitions the draw, this measures
+# what the frame costs without it. Bit 0 = Mario, bit 1 = Fox. Lab only; a ROM
+# built with this is not a playable configuration.
+NDS_R2_DRAW_SUPPRESS_MASK ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1836,6 +1841,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_SHADE_PROOF $(NDS_R2_FIGHTER_SHADE_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_RUN_PROOF $(NDS_R2_FIGHTER_RUN_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_MTX_DIRECT $(NDS_R2_FIGHTER_MTX_DIRECT)'; \
+		echo '#define NDS_R2_DRAW_SUPPRESS_MASK $(NDS_R2_DRAW_SUPPRESS_MASK)'; \
 		echo '#define NDS_R2_FIGHTER_RUN_MEMO $(NDS_R2_FIGHTER_RUN_MEMO)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
