@@ -17076,15 +17076,59 @@ volatile u32 gNdsR2RunEntryCount;
 static u32 sNdsR2RunMemoHash[NDS_R2_RUN_MEMO_MAX];
 static u8 sNdsR2RunMemoValid[NDS_R2_RUN_MEMO_MAX];
 
-#define NDS_R2_RUN_HASH(hash, value)     ((hash) = (((hash) ^ (u32)(value)) * 16777619u))
-
+/* The facts being constant is not on its own a licence to skip the UV loop.
+ * 28 of the 541 dense vertices belong to more than one run (13..18 overlap), so
+ * each sharing run rewrites them and the emit between two prepares reads
+ * whatever the last one left. Skipping is safe only if those writes are
+ * idempotent -- if no write ever changes the value it lands on.
+ *
+ * Measure that directly rather than infer it from the per-run digests: compare
+ * before storing, and count the writes that actually changed something. CHANGE
+ * settling to zero after the first fill means the whole loop is recomputing
+ * values that are already there. */
 /* PrepareProductionRun is NDS_RENDERER_NATIVE_FIGHTER_CODE, i.e. ITCM. Inlining
- * the hash there overflowed the region by 100 bytes, so take the Task 29 census
- * treatment: out of line, size-optimised, and in its own .text section. The
- * extra branch per run is measurement cost that never ships. */
+ * a proof body there overflowed the region by 100 bytes, so take the Task 29
+ * census treatment: out of line, size-optimised, and in its own .text section.
+ * The extra branch per run is measurement cost that never ships. */
 #define NDS_R2_RUN_PROOF_CODE \
     __attribute__((noinline, noclone, cold, optimize("Os"), \
                    section(".text.r2_run_proof")))
+
+#define NDS_R2_UV_PROOF_MAX 541u
+volatile u32 gNdsR2UvWriteCount;
+volatile u32 gNdsR2UvChangeCount;
+volatile u32 gNdsR2UvFillCount;
+volatile u32 gNdsR2UvOutOfRange;
+static s16 sNdsR2UvS[NDS_R2_UV_PROOF_MAX];
+static s16 sNdsR2UvT[NDS_R2_UV_PROOF_MAX];
+static u8 sNdsR2UvValid[NDS_R2_UV_PROOF_MAX];
+
+static void NDS_R2_RUN_PROOF_CODE ndsRendererR2FighterUvProofWrite(
+    u32 dense_id,
+    s16 s,
+    s16 t)
+{
+    gNdsR2UvWriteCount++;
+    if (dense_id >= NDS_R2_UV_PROOF_MAX)
+    {
+        gNdsR2UvOutOfRange++;
+    }
+    else if (sNdsR2UvValid[dense_id] == 0u)
+    {
+        sNdsR2UvValid[dense_id] = 1u;
+        sNdsR2UvS[dense_id] = s;
+        sNdsR2UvT[dense_id] = t;
+        gNdsR2UvFillCount++;
+    }
+    else if ((sNdsR2UvS[dense_id] != s) || (sNdsR2UvT[dense_id] != t))
+    {
+        sNdsR2UvS[dense_id] = s;
+        sNdsR2UvT[dense_id] = t;
+        gNdsR2UvChangeCount++;
+    }
+}
+
+#define NDS_R2_RUN_HASH(hash, value)     ((hash) = (((hash) ^ (u32)(value)) * 16777619u))
 
 static void NDS_R2_RUN_PROOF_CODE ndsRendererR2FighterRunProofCall(
     u32 run_index,
@@ -17422,6 +17466,10 @@ ndsRendererNativePrepareProductionRun(
                 scaled_t -
                 ((s32)state->texture_prepare_origin_t << 2) +
                 state->texture_prepare_offset);
+#if NDS_R2_FIGHTER_RUN_PROOF
+            ndsRendererR2FighterUvProofWrite(dense_id, prepared->s,
+                                             prepared->t);
+#endif
         }
     }
 

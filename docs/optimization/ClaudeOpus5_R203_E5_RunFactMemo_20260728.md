@@ -141,6 +141,48 @@ Taken together: for the canonical configuration this function is a pure lookup
 keyed on `run_index`. Every policy check, geometry-mode validation, texture
 resolution and UV derivation in it recomputes an answer that cannot differ.
 
+### 4c. The UV loop is idempotent, and it is also not the cost
+
+Constant facts do not by themselves license skipping the UV loop at :17398. It
+writes `sNdsNativeFighterPreparedDense[]` keyed by dense id, and 28 of the 541
+dense vertices belong to more than one run — runs 13..18 overlap — so each
+sharing run rewrites them and the emit between two prepares reads whatever the
+last one left. Skipping is safe only if those writes are idempotent.
+
+Comparing before storing, over the same match:
+
+| counter | value |
+|---|---|
+| UV writes | 208,874 |
+| **writes that changed the stored value** | **0** |
+| first fills | 106 |
+| out-of-range dense ids | 0 |
+
+The sharing runs write identical values. The loop is pure recomputation.
+
+**But it is not where the 21,504 goes.** 208,874 writes over ~1,750 frames is
+~119 writes per frame, because only about 13 of the 67 runs are textured
+(`policy->textured`), and 106 distinct dense vertices are touched out of 541.
+At a couple of dozen cycles per vertex that is low thousands of ticks, not
+21,504. A memo aimed at this loop would bank almost nothing.
+
+The cost is therefore spread across the other 67 calls' validation and
+`state->texture_prepare_*` bookkeeping, not concentrated in the arithmetic. The
+standing rule about profiling the whole owner before optimising a loop inside it
+applies to this function's interior too — the next step is an internal split,
+not an implementation.
+
+### 4d. Two side effects a memo must not skip
+
+Noted here because the purity result makes it tempting to bypass the whole body:
+
+- `ndsRendererHardwareBindTexture(stats, config, state)` at :17313 is a GX bind,
+  not a query. It already sits behind `state->texture_prepare_valid`, so the
+  existing code path is itself a cache; a memo must not skip the bind on the
+  calls that legitimately need it.
+- `ndsRendererProfileRecordTexturePrepare()` / `...Reuse()` are the counters the
+  harness reads. Bypassing them silently changes reported telemetry.
+
 ## 5. What this does and does not license
 
 **Licensed.** The per-run prepared facts are a memo keyed on `run_index` alone,
