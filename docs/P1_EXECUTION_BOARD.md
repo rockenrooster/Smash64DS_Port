@@ -197,12 +197,28 @@ into the material; emit the precomputed normal word instead of the computed
 colour word — **one FIFO word either way, traffic unchanged**. Expected: most of
 90,295 ticks/frame.
 
-**NOT IMPLEMENTED — deliberately.** It touches the load-time table format, the
-emit's per-vertex word, and per-root light/material state, and being a
-rendering-side change it gates on a screenshot pair plus **the owner's visual
-approval**. The DS light model is not bit-identical to the N64's and colours will
-shift slightly; `PROJECT_GOAL.md` lists "simplified lighting" among the allowed
-compromises, but the call is the owner's.
+**Prerequisite the design does not survive without.** The fighter loads an
+identity projection plus the **CPU-composed MVP** as the modelview, through
+`ndsRendererHardwareSetMatrixMode(GL_MODELVIEW)` — mode 1, position only, which
+**never updates the vector matrix**. Normals are transformed by the vector
+matrix, so a naive `GFX_NORMAL` would light against whatever was left there, and
+loading the composed MVP into it instead is equally wrong because normals must
+not be rotated by the projection.
+
+Fix: load projection into `GL_PROJECTION` and modelview into
+`GL_MODELVIEW_VECTOR` (mode 2), and **delete
+`ndsRendererAdapterComposeNativeRootMatrix`** — the hardware performs that
+multiply. The adapter already carries both matrices separately, so this is a
+removal, and it takes a 4x4 multiply per root out of the 120,407 MatrixPrep
+bracket as a side effect. The light vector is then written once per frame in view
+space while the vector matrix is identity.
+
+**NOT IMPLEMENTED.** It touches the matrix mode, the load-time table format, the
+emit's per-vertex word, and per-root light/material state. Being a rendering-side
+change it gates on a screenshot pair plus **the owner's visual approval**: the DS
+light model is not bit-identical to the N64's and colours will shift slightly.
+`PROJECT_GOAL.md` lists "simplified lighting" among the allowed compromises, but
+the call is the owner's.
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E16_ShadeIsHardwareLighting_20260728.md`.
 

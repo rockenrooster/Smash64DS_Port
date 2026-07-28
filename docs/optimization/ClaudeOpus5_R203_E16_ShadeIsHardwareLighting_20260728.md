@@ -88,6 +88,65 @@ which the emit already pays. It also drops the write traffic into
 setup.** Against R2-03's 250,833 gap that is the largest single cut identified
 in the phase.
 
+## 4a. The prerequisite the design above omits, and it is not optional
+
+Written as §4 alone, this plan produces wrong lighting and would look like a bug
+in the normal packing. The matrix path has to change first.
+
+`ndsRendererLoadHardwareRawComposedMatrix` loads an **identity projection** and
+the **CPU-composed modelview x projection** as the modelview, via
+`ndsRendererHardwareSetMatrixMode(GL_MODELVIEW)` — matrix mode 1, position
+only. Mode 1 **does not update the directional/vector matrix**, which is the
+matrix the geometry engine transforms normals by. So today there is no valid
+vector matrix at all, and a naive `GFX_NORMAL` would be lit against whatever was
+left there.
+
+Loading the composed MVP into the vector matrix instead would be equally wrong:
+normals must be rotated by the modelview only, never by the projection.
+
+The fix is to stop composing on the CPU and let the hardware do it:
+
+- load the projection into `GL_PROJECTION` and the modelview into
+  `GL_MODELVIEW_VECTOR` (mode 2), which writes the position *and* vector
+  matrices;
+- drop `ndsRendererAdapterComposeNativeRootMatrix`, whose only job is the
+  multiply the hardware would now perform.
+
+The adapter already carries the two matrices separately —
+`ndsRendererAdapterPrepareNativeOwnerMatrices` produces `native_owner_projection`
+and `native_owner_modelviews[]`, and the compose is a *later* step. So this is a
+removal, not an addition, and it takes a 4x4 multiply per root out of the 120,407
+MatrixPrep bracket as a side effect.
+
+**Light vector placement follows from the same reasoning.** `GFX_LIGHT_VECTOR`
+stores the supplied vector transformed by the vector matrix *at the moment it is
+written*. The software path transforms the light into each root's local space and
+dots it with untransformed local normals; the hardware equivalent is the mirror
+image — write the light once per frame in **view** space while the vector matrix
+is identity, then let each root's vector matrix carry its local normals into view
+space. Same relationship, computed by the engine instead of the CPU.
+
+This makes E16 a larger change than §4 implies, and a strictly better one: it
+moves the per-root matrix compose onto the idle hardware along with the
+per-vertex lighting.
+
+## 4b. Checked and cleared: the engine is used, just starved
+
+The obvious worry about §4a is that the transform unit is bypassed altogether —
+that `NDSNativePreparedDenseVertex.gx_xy` holds CPU-projected screen
+coordinates, which would explain the idle engine and would make hardware
+lighting impossible.
+
+It does not. `ndsRendererBuildRawHardwareMatrix` leaves composed rows 0..2 alone
+and rescales only row 3, for the 1/256 source-unit convention — *"preserving
+X/W, Y/W, and Z/W"*. Vertices reach the engine in model space and the hardware
+performs the transform; `gx_xy` is just the two coordinates packed into one
+`VERTEX_16` word.
+
+So the idle engine in E14 needs no exotic explanation: **the CPU is slow enough
+feeding it that the FIFO drains before the next command arrives.** The transform
+unit works, it is simply never the constraint, and E16 remains viable.
+
 ## 5. Risks, stated before building
 
 - **The DS light model is not bit-identical to the N64's.** Colours will shift
