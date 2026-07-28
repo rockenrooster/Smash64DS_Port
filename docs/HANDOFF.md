@@ -1,6 +1,7 @@
 # Handoff
 
-Updated: 2026-07-28 — Runtime 2: R2-00a/b/c and R2-01 gated, R2-02 E1a + E2 landed.
+Updated: 2026-07-28 — Runtime 2: R2-00a/b/c and R2-01 gated, **R2-02 closed**
+(E1a + E2 + E3), R2-03 unblocked.
 `P1_EXECUTION_BOARD.md` owns current state; this file is the restart surface and
 next packet.
 
@@ -26,14 +27,18 @@ deliberately left them unstaged. Commit or revert them with the bug-#10 work.
 
 ## State as of this handoff
 
-R2-00a/b/c and R2-01 are done and gated. **R2-02 E1a and E2 are landed and
-gated; R2-02 itself is not closed** — `STG` P50 is 225,792 against its 180K
-budget, 45,792 over, and §3.1/§7 forbid starting R2-03 until it closes. Reports
-are `docs/optimization/ClaudeOpus5_R2*`. `NDS_R2_PATH`, `NDS_R2_STAGE_DIRECT`
-and `NDS_R2_STAGE_DMA` all default to 0, so the published ROMs are unchanged.
+R2-00a/b/c and R2-01 are done and gated. **R2-02 is closed**: E1a + E2 + E3 take
+`STG` P50 from 351,488 to **173,120** against its 180K budget (P95 181,248, 0.7%
+over and inside the placement floor). §3.1/§7 no longer block R2-03. Reports are
+`docs/optimization/ClaudeOpus5_R2*`. `NDS_R2_PATH`, `NDS_R2_STAGE_DIRECT`,
+`NDS_R2_STAGE_DMA` and `NDS_R2_STAGE_ACTORS` all default to 0, so the published
+ROMs are unchanged.
 
-**E2 is the first cut that moved the histogram §4 named as the target:**
-2-VBlank frames 1 → 12, 4-VBlank 12 → 9, `ALL` max 5,874,368 → 2,800,512.
+**E3 moved the histogram §4 named as the target:** 2-VBlank frames **12 → 235 of
+566**, 3-VBlank 540 → 316, 5+ 5 → 3, 0 cadence violations. The three flags
+together are the difference between a 3-VBlank median frame and a 2-VBlank one.
+**Graduating them to default-on needs the owner's visual approval** and is the
+single highest-value decision waiting on this file.
 
 **Three things a restart must know before reading any performance number:**
 
@@ -56,18 +61,19 @@ and `NDS_R2_STAGE_DMA` all default to 0, so the published ROMs are unchanged.
 
 ## Next packet, in priority order
 
-0. **R2-02 E3 — one stream, one DMA, and the gate closes.** This outranks
-   everything below it because R2-02 blocks R2-03. `ndsRendererNativeStageBeginRun`
-   runs 21× a frame at ~654 ticks a call to set GX state that is already baked in
-   `run->prepared`, and each run then needs its own DMA setup and completion
-   poll. If `generate_nds_native_stage.py` recorded the state writes into the
-   captured stream, the whole static stage becomes **one contiguous stream and
-   one DMA per frame** — which is exactly what §7's "the runtime shape is
-   `DreamLand_Run17()`, not discover/validate/rebuild/resolve/prepare/submit"
-   asks for. It collapses `BeginRun` (13,740), 20 of the 21 DMA setups, and most
-   of `ndsRendererCommitNativeStageSegment` (27,082): ~40,000 against the 45,792
-   still owed. Generator-side work. See
-   `ClaudeOpus5_R202_E2_StageReplayDMA_20260728.md` §4.
+0. **R2-03 — Fighter direct draw (static pose), Mario first.** Unblocked as of
+   E3 and the top of the queue: it is the next phase in the switch plan, and the
+   fighter bucket (`FTR` P50 ~547K, P95 ~999K) is now the largest single thing in
+   the frame by a wide margin. Plan §7 spells out the shape and the gate (pixel
+   parity on the same pose via the Task 49 GX differ + screenshot; combined
+   fighter budget provisionally 250K).
+   Two things E3 learned that transfer directly:
+   **(a) look for the work that never reached the fast path** — the stage's
+   remaining cost was not in the optimised path, it was in the 39% of runs that
+   were still generic; and **(b) a "dynamic" label is a claim, not a fact** —
+   `NDS_RENDERER_TASK36_RIGID_BINDING_MASK` said sixteen bindings moved and none
+   of them had since Task 51. Both patterns are very likely present in the
+   fighter owner's per-epoch policy re-checks.
 1. **Soft-float — E0 is done, and it is two functions, not a programme.** See
    `ClaudeOpus5_R203_E0_SoftFloatCallers_20260728.md`. It runs at 1.19 cycles
    per instruction, so nothing is won by making it faster; the lever is calling
@@ -89,9 +95,12 @@ and `NDS_R2_STAGE_DMA` all default to 0, so the published ROMs are unchanged.
    *and* fighter: `ndsRendererMtxMul20p12` 29,663, `LoadHardwareMatrixPair`
    20,176, `BuildDObjLocalMatrix` 18,596, `MtxMulAffine20p12` 16,784,
    `MtxLoadN64ToDS20p12` 13,793, `BuildDObjWorldMatrix` 12,880,
-   `PrepareInitialMatrices` 12,233. Note the stage's 16 dynamic bindings are
-   **not** frame-invariant — the camera moves — so E1a's reuse key does not
-   transfer.
+   `PrepareInitialMatrices` 12,233.
+   **Correction (E3):** the note here used to say the stage's 16 dynamic
+   bindings are not frame-invariant because the camera moves. That was wrong.
+   Fifteen of the sixteen have used a *baked constant* world matrix since Task
+   51 and were proved invariant over a full 1,828-frame match; only binding 29
+   (layer1) carries the camera, through `binding_composed[29]`.
 3. **The excursion is real work, and it is four causes.** On 21% of frames
    `armWaitForIrq` falls 323,450 and +286,619 of execution replaces it:
    softfloat ~49,600, the tick HUD measuring itself ~44,300, cart read +
@@ -101,12 +110,22 @@ and `NDS_R2_STAGE_DMA` all default to 0, so the published ROMs are unchanged.
 4. **Those frames are not load-free.** `_ntrcardRecvByCpu` + `ntrcardRomRead` are
    12,639 ticks/frame higher there. Task 75's preload targets something real;
    re-derive its ~103,488 estimate against the measured ~36,000.
-5. **R2-02 E1a needs the owner's visual approval.** Boundary is green and
-   required-region detail is 62.792% vs 62.778%, but `AGENTS.md` wants the owner
-   as the visual oracle for render-side change. Pair:
-   `artifacts/visibility/r2-02-e1a-{on,off}-boundary-20260727.png`. The stage is
-   unchanged; only fighter animation phase differs, which is capture timing.
-6. **E1b, deletion:** bake `NDSNativeStagePreparedRun` for all 21 runs in
+5. **All three R2-02 flags need the owner's visual approval to graduate.**
+   `NDS_R2_STAGE_DIRECT`, `NDS_R2_STAGE_DMA`, `NDS_R2_STAGE_ACTORS`: Boundary is
+   green on all of them, required-region detail 62.681% vs the default's
+   62.778%, and E3 carries a 1,828-frame invariance proof — but `AGENTS.md`
+   wants the owner as the visual oracle for render-side change, so they are all
+   still default-off and the published ROMs do not have the gain. Screenshots:
+   `artifacts/visibility/r2-02-e1a-{on,off}-boundary-20260727.png`,
+   `r2-02-e2-dma-on-boundary-20260728.png`,
+   `r2-02-e3-actors-on-boundary-20260728.png`.
+6. **layer1 (stage segment 4), 22,738 ticks/frame for 76 triangles.** The last
+   generic stage segment. Its six runs submit through the raw composed matrix
+   (binding 29, submit classes 0 and 6), so the camera is inside what would be
+   captured. Needs the generator to move them onto the Task 36 segment bracket,
+   where the camera is loaded live at `BeginSegment` and only the baked world
+   goes in the stream. Worth ~19,000. R2-02's gate does not need it.
+7. **E1b, deletion:** bake `NDSNativeStagePreparedRun` for all 21 runs in
    `generate_nds_native_stage.py` and resolve `texture_entry` at match load.
    Small runtime gain over E1a, real code deletion. Fits R2-08.
 
@@ -119,7 +138,22 @@ and `NDS_R2_STAGE_DMA` all default to 0, so the published ROMs are unchanged.
   excursion.
 - `scripts/sample-tick-hud-buckets.ps1 -ExtraGlobals a,b` reads named u32
   globals from the same run that produced the buckets, for engagement proof. It
-  throws rather than reporting zeros when the read produces no line.
+  throws rather than reporting zeros when the read produces no line. The names
+  are passed straight to a GDB `printf`, so array subscripts
+  (`gNdsTask103GenericSegTicks[4]`) work. **Pass `-Samples 128` with
+  `-RingDump`** — `-Samples` still caps the dump and the default is 32.
+- `NDS_TASK103_STAGE_RUN_PHASE=1` now also splits the generic path per stage
+  segment (`gNdsTask103GenericSegTicks/Runs/Tris[8]`) and brackets `BeginRun`
+  separately (`gNdsTask103GenericBeginTicks`). This is what found E3: the
+  aggregate said "21 generic runs, 68,547 ticks"; the per-segment split said
+  four of the five segments were 27 triangles costing 1,680 ticks each.
+- `gNdsRendererTask36CaptureSegmentMask` / `...CaptureWordCount` /
+  `...CaptureOutcome` are written once by `ndsRendererTask36ReplayFinishFrame`,
+  non-static and not profile-gated, so any tick-HUD run can prove the replay
+  captured what it was meant to and reached `READY` rather than falling back.
+- `NDS_R2_STAGE_ACTORS_PROOF=1` (lab, build with `NDS_R2_STAGE_ACTORS=0`) hashes
+  the prepared data the four actor segments consume, once a frame, and counts
+  the frames it changes on. Reuse it before widening the replay mask again.
 - The stall attributor is installed repo-local at
   `emulators/melonds-attributor/melonDS.exe` (`D81FC0BF…`), **not** over
   `emulators/melonds/melonDS.exe` (`DE80E46B…`), so every prior measurement

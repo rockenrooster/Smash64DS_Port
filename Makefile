@@ -216,6 +216,17 @@ NDS_R2_FIXED_SQRT ?= 0
 # 9.51 ticks/word; the point is the ~16 KB/frame of cache-line fills that stop
 # happening, which is how the switch plan's §3.3 says traffic work is judged.
 NDS_R2_STAGE_DMA ?= 0
+# R2-02 E3. Admits Whispy's eyes and mouth and both flower beds to the Task 36
+# replay. Task 51 already gave those bindings a baked constant world matrix, so
+# nothing about their streams has been per-frame since; the segment mask just
+# never caught up. Measured cost of leaving them generic: 45,349 ticks/frame for
+# 27 triangles. Also raises the capture buffer to hold the extra ~1,000 words.
+NDS_R2_STAGE_ACTORS ?= 0
+# R2-02 E3 falsifier, lab only. Hashes the prepared run and dense data the four
+# actor segments consume, once a frame, and counts the frames it changes on.
+# Build it with NDS_R2_STAGE_ACTORS=0 -- it exists to prove that what E3 bakes
+# was already constant, and E3 stops preparing that data.
+NDS_R2_STAGE_ACTORS_PROOF ?= 0
 NDS_RENDER_ECONOMY ?= 0
 # Owner 5 is the only census-ranked Dream Land cut that passed the canonical
 # 500-pixel ratchet.  The enclosing economy flag remains off by default.
@@ -1696,6 +1707,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \
 		echo '#define NDS_R2_STAGE_DMA $(NDS_R2_STAGE_DMA)'; \
+		echo '#define NDS_R2_STAGE_ACTORS $(NDS_R2_STAGE_ACTORS)'; \
+		echo '#define NDS_R2_STAGE_ACTORS_PROOF $(NDS_R2_STAGE_ACTORS_PROOF)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
@@ -1976,6 +1989,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DIRECT=$(NDS_R2_STAGE_DIRECT)'
 	@printf '%s\n' 'BENCH_MAKE_R2_FIXED_SQRT=$(NDS_R2_FIXED_SQRT)'
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DMA=$(NDS_R2_STAGE_DMA)'
+	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_ACTORS=$(NDS_R2_STAGE_ACTORS)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'

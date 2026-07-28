@@ -4181,9 +4181,35 @@ static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
     NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
 static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
 #if NDS_TASK36_HW_COMPOSE == 2
+#if NDS_R2_STAGE_ACTORS
+/* R2-02 E3. The segment mask names the segments whose bindings were rigid, and
+ * it has not moved since before Task 51. Task 51 made it stale: it replaced the
+ * per-frame CPU compose for the *non*-rigid bindings with a MULT4x3 of
+ * sNdsNativeStageBakedWorldMatrices[], a generated constant table. Whispy's
+ * eyes and mouth and both flower beds have composed nothing per frame since,
+ * so their command streams are as frame-invariant as layer0/2/3's -- and they
+ * were still paying the generic path for it: 15 runs, 27 triangles, 45,349
+ * ticks/frame, measured by the Task 103 per-segment census. Twenty-seven
+ * triangles were costing 1,680 ticks each because every one of them rebuilds
+ * and reloads a 4x4 no-Z projection from the CPU.
+ *
+ * layer1 (segment 4) is deliberately still excluded. Its six runs submit
+ * through the raw composed matrix (binding 29, submit classes 0 and 6), which
+ * is the camera composition and genuinely moves; freezing it would nail the
+ * layer to the camera. Closing that one needs generator work to move layer1
+ * onto the segment-bracket path, not a mask bit.
+ *
+ * Capacity: the three mask segments record 3,908 words/frame today and the four
+ * new ones add roughly a thousand more. */
+#define NDS_TASK36_REPLAY_WORD_CAPACITY 6144u
+#define NDS_TASK36_REPLAY_SEGMENT_MASK \
+    ((1u << 0u) | (1u << 1u) | (1u << 2u) | (1u << 3u) | \
+     (1u << 5u) | (1u << 6u) | (1u << 7u))
+#else
 #define NDS_TASK36_REPLAY_WORD_CAPACITY 4608u
 #define NDS_TASK36_REPLAY_SEGMENT_MASK \
     ((1u << 0u) | (1u << 5u) | (1u << 7u))
+#endif
 
 typedef enum NDSRendererTask36ReplayState
 {
@@ -4237,6 +4263,11 @@ typedef struct NDSRendererTask36ReplayOwner
 } NDSRendererTask36ReplayOwner;
 
 static NDSRendererTask36ReplayOwner sNdsRendererTask36ReplayOwner;
+
+/* Written once, by ndsRendererTask36ReplayFinishFrame. See the comment there. */
+volatile u32 gNdsRendererTask36CaptureSegmentMask;
+volatile u32 gNdsRendererTask36CaptureWordCount;
+volatile u32 gNdsRendererTask36CaptureOutcome;
 
 /* Task 53: arena admission macros. Default-off keeps the legacy exact
  * guard byte-identical so the published ROM hashes the same as master
@@ -4547,6 +4578,8 @@ static s32 ndsRendererTask36ReplayOpcode(
         *opcode = REG2ID(MATRIX_LOAD4x4); *parameter_count = 16u; return TRUE;
     case NDS_TASK29_GX_MATRIX_MULT4X4:
         *opcode = REG2ID(MATRIX_MULT4x4); *parameter_count = 16u; return TRUE;
+    case NDS_TASK29_GX_MATRIX_MULT4x3:
+        *opcode = REG2ID(MATRIX_MULT4x3); *parameter_count = 12u; return TRUE;
     case NDS_TASK29_GX_MATRIX_PUSH:
         *opcode = REG2ID(MATRIX_PUSH); *parameter_count = 0u; return TRUE;
     case NDS_TASK29_GX_MATRIX_POP:
@@ -4579,13 +4612,37 @@ static void ndsRendererTask36ReplayRecord(
     u32 parameter_count;
     u32 i;
 
-    if ((sNdsRendererTask36CaptureActive == FALSE) ||
-        (ndsRendererTask36ReplayOpcode(
-             command_class, &opcode, &parameter_count) == FALSE))
+    if (sNdsRendererTask36CaptureActive == FALSE)
     {
         return;
     }
-    if (command_class == NDS_TASK29_GX_MATRIX_MULT4X4)
+    if (ndsRendererTask36ReplayOpcode(
+            command_class, &opcode, &parameter_count) == FALSE)
+    {
+        /* Dropping an unencoded class is deliberate: every one of them is
+         * state that ndsRendererNativeStageBeginRun re-issues live at replay
+         * (DISP3DCNT, texture bind and params, poly format, alpha test), so
+         * baking it would only duplicate a write. A *matrix* class is not in
+         * that set -- nothing re-issues it, and it decides where the geometry
+         * lands -- so silently dropping one bakes a stream that draws in the
+         * wrong place. R2-02 E3 hit exactly that: Task 51 appended
+         * MATRIX_MULT4x3 for the Task 49 differ and did not add it to the
+         * table above, and the four segments that emit it were outside the
+         * replay mask, so the omission stayed invisible until the mask
+         * widened. Refuse the capture instead of baking a wrong stream. */
+        if (((command_class >= NDS_TASK29_GX_MATRIX_MODE) &&
+             (command_class <= NDS_TASK29_GX_MATRIX_RESTORE)) ||
+            (command_class == NDS_TASK29_GX_MATRIX_MULT4x3))
+        {
+            owner->capture_fault = TRUE;
+        }
+        return;
+    }
+    /* MULT4x3 is Task 51's 12-word form of the same per-binding world matrix,
+     * so it counts as a world mult exactly like MULT4X4 -- the generic path
+     * bumps gNdsRendererTask36WorldMultCount for both. */
+    if ((command_class == NDS_TASK29_GX_MATRIX_MULT4X4) ||
+        (command_class == NDS_TASK29_GX_MATRIX_MULT4x3))
     {
         NDSRendererTask36ReplayRun *run =
             &owner->runs[owner->current_run];
@@ -4703,9 +4760,19 @@ static void ndsRendererTask36ReplayFinishFrame(void)
         }
     }
     owner->frame_capture = FALSE;
+    /* Engagement publication. The capture runs once, so these two stores are
+     * one-shot, but a widened segment mask that silently falls back is
+     * indistinguishable from one that engaged and saved nothing -- the mistake
+     * Task 52 shipped. `outcome` is the accepted state, so a fallback reads as
+     * DISABLED rather than as a missing line. Non-static and not profile-gated
+     * because the tick-HUD ROM must be able to read them from the same run that
+     * produced its buckets. */
+    gNdsRendererTask36CaptureSegmentMask = owner->captured_segment_mask;
+    gNdsRendererTask36CaptureWordCount = owner->word_count;
     if (valid == FALSE)
     {
         owner->state = NDS_TASK36_REPLAY_DISABLED;
+        gNdsRendererTask36CaptureOutcome = (u32)NDS_TASK36_REPLAY_DISABLED;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
         gNdsRendererTask36BakeFailureCount++;
         gNdsRendererTask36ReplayState = NDS_TASK36_REPLAY_DISABLED;
@@ -4714,6 +4781,7 @@ static void ndsRendererTask36ReplayFinishFrame(void)
     }
     DC_FlushRange(owner->words, owner->word_count * sizeof(owner->words[0]));
     owner->state = NDS_TASK36_REPLAY_READY;
+    gNdsRendererTask36CaptureOutcome = (u32)NDS_TASK36_REPLAY_READY;
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     gNdsRendererTask36BakeSuccessCount++;
     gNdsRendererTask36ReplayCaptureWordCount = owner->word_count;
@@ -20797,6 +20865,17 @@ volatile u32 gNdsTask103GenericRunCount;
 volatile u32 gNdsTask103GenericTriangles;
 volatile u32 gNdsTask103IterTicks;
 volatile u32 gNdsTask103IterCount;
+/* E7 (R2-02 E3 sizing). GenericTicks aggregates all five replay-ineligible
+ * segments into one number, and the two candidate cuts want different halves
+ * of it: segment 4 is a *static* layer owner that is simply absent from
+ * NDS_TASK36_REPLAY_SEGMENT_MASK, while 1/2/3/6 are the actor owners the switch
+ * plan puts on a specialized update+draw path. GenericBeginTicks splits the
+ * per-run matrix/state head from the vertex emit, because 21 runs carrying only
+ * ~103 triangles cannot be paying 3,168 ticks each for the triangles. */
+volatile u32 gNdsTask103GenericBeginTicks;
+volatile u32 gNdsTask103GenericSegTicks[NDS_NATIVE_STAGE_SEGMENT_COUNT];
+volatile u32 gNdsTask103GenericSegRuns[NDS_NATIVE_STAGE_SEGMENT_COUNT];
+volatile u32 gNdsTask103GenericSegTris[NDS_NATIVE_STAGE_SEGMENT_COUNT];
 /* E2's counters live in reloc_backend_renderer_dl.c, next to the call site
  * they wrap.
  *
@@ -21475,6 +21554,82 @@ static u32 ndsRendererDreamLandDrawStatic3D(
 }
 #endif /* NDS_DREAMLAND_DS_MESH */
 
+#if NDS_R2_STAGE_ACTORS_PROOF
+/* R2-02 E3 falsifier. Admitting whispy_eyes, whispy_mouth, flowers_back and
+ * flowers_front to the Task 36 replay bakes their command stream once and
+ * replays it for the rest of the match, so the cut is correct only if nothing
+ * those fifteen runs emit changes between frames. Three of the four inputs are
+ * already settled: Task 51 replaced their per-frame compose with a MULT4x3 of
+ * the constant sNdsNativeStageBakedWorldMatrices, and layer0/2/3 have been
+ * replaying their own per-triangle no-Z projection loads correctly for many
+ * tasks, which is a standing proof that frame->projection and the
+ * projected-depth sequence do not move either.
+ *
+ * The fourth input is the prepared dense vertex data -- the packed colours and
+ * texture coordinates the material state produces -- and Whispy has a material
+ * animation, so "it looked right in one screenshot" is not an answer. This
+ * hashes exactly the prepared run and prepared dense data those fifteen runs
+ * consume, once a frame, and counts the frames on which the hash differs from
+ * the previous one. Build with NDS_R2_STAGE_ACTORS=0 so the prepare path still
+ * runs for those segments; a non-zero change count falsifies the cut. */
+volatile u32 gNdsR2ActorPreparedHash;
+volatile u32 gNdsR2ActorPreparedChangeCount;
+volatile u32 gNdsR2ActorPreparedFrameCount;
+
+static void ndsRendererR2ActorPreparedProof(void)
+{
+    static const u8 actor_segments[4] = {1u, 2u, 3u, 6u};
+    u32 hash = 2166136261u;
+    u32 slot;
+
+    for (slot = 0u; slot < 4u; slot++)
+    {
+        const NDSNativeStageSegment *segment =
+            &sNdsNativeStageSegments[actor_segments[slot]];
+        u32 run_offset;
+
+        for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
+        {
+            u32 run_index = (u32)segment->first_run + run_offset;
+            const NDSNativeStageRun *run = &sNdsNativeStageRuns[run_index];
+            const u32 *run_words =
+                (const u32 *)&sNdsNativeStageOwnerExecution.runs[run_index];
+            u32 corner_count = (u32)run->triangle_count * 3u;
+            u32 corner;
+            u32 word;
+
+            for (word = 0u;
+                 word < sizeof(NDSNativeStagePreparedRun) / sizeof(u32);
+                 word++)
+            {
+                hash = (hash ^ run_words[word]) * 16777619u;
+            }
+            for (corner = 0u; corner < corner_count; corner++)
+            {
+                u32 dense_index =
+                    sNdsNativeStageCorners[(u32)run->first_corner + corner];
+                const u32 *dense_words =
+                    (const u32 *)&sNdsNativeStagePreparedDense[dense_index];
+
+                for (word = 0u;
+                     word < sizeof(NDSNativeStagePreparedDense) / sizeof(u32);
+                     word++)
+                {
+                    hash = (hash ^ dense_words[word]) * 16777619u;
+                }
+            }
+        }
+    }
+    if ((gNdsR2ActorPreparedFrameCount != 0u) &&
+        (hash != gNdsR2ActorPreparedHash))
+    {
+        gNdsR2ActorPreparedChangeCount++;
+    }
+    gNdsR2ActorPreparedHash = hash;
+    gNdsR2ActorPreparedFrameCount++;
+}
+#endif
+
 s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats)
@@ -21920,6 +22075,9 @@ s32 ndsRendererPrepareNativeStageOwner(
     task36_reject_reason = 4u;
 #endif
 
+#if NDS_R2_STAGE_ACTORS_PROOF
+    ndsRendererR2ActorPreparedProof();
+#endif
     sNdsNativeStageOwnerExecution.binding_composed = frame->binding_composed;
 #if NDS_TASK36_HW_COMPOSE
     sNdsNativeStageOwnerExecution.projection = frame->projection;
@@ -22305,6 +22463,9 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         ndsRendererNativeStageBeginRun(
             run, prepared_run, run->submit_class, segment->owner, stats,
             FALSE);
+#if NDS_TASK103_STAGE_RUN_PHASE
+        gNdsTask103GenericBeginTicks += cpuGetTiming() - task103_generic_start;
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         ndsRendererM3Phase0FinishSpan(
             &gNdsRendererM3Phase0RunTransitionTicks, phase_start);
@@ -22369,9 +22530,15 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 #if NDS_TASK103_STAGE_RUN_PHASE
         if (task103_generic_armed != 0u)
         {
-            gNdsTask103GenericTicks += cpuGetTiming() - task103_generic_start;
+            u32 task103_generic_span =
+                cpuGetTiming() - task103_generic_start;
+
+            gNdsTask103GenericTicks += task103_generic_span;
             gNdsTask103GenericRunCount++;
             gNdsTask103GenericTriangles += run->triangle_count;
+            gNdsTask103GenericSegTicks[segment_index] += task103_generic_span;
+            gNdsTask103GenericSegRuns[segment_index]++;
+            gNdsTask103GenericSegTris[segment_index] += run->triangle_count;
         }
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2

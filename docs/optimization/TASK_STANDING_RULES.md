@@ -496,6 +496,43 @@ about the bucket. **Partition the owner top-down and confirm the block you are
 about to work on is actually most of it**; the in-place span method in
 `scripts/census-stage-run-phases.ps1` costs one build and one 60-frame run.
 
+## Measure the work that never reaches the fast path (R2-02 E3, 2026-07-28)
+
+The rule above says partition the owner before optimising a loop inside it. E3
+is its sharper form: **also partition by what the fast path admits.** Eight
+tasks worked on the Task 36 stage replay. The replay was never the problem. Of
+54 stage runs, 33 replayed at 30,200 ticks/frame; the 21 that did not cost
+68,547, and four segments inside those 21 were **27 triangles at 1,680 ticks
+each** — 20% of the whole stage bucket for 8% of its geometry. Every previous
+task had been tuning the admitted 61%.
+
+An eligibility mask, a "supported" predicate, or a fast-path guard partitions
+the work into a measured half and an unmeasured one. **Count and price both
+halves before you optimise either.** The per-segment split that found this cost
+one `NDS_TASK103_STAGE_RUN_PHASE` build and one run.
+
+## An eligibility constant is a claim about the data; re-check it (R2-02 E3)
+
+`NDS_TASK36_REPLAY_SEGMENT_MASK` excluded four segments because their bindings
+were not in `NDS_RENDERER_TASK36_RIGID_BINDING_MASK`. That was true when it was
+written. Task 51 then replaced those bindings' per-frame compose with a
+`MULT4x3` of a generated constant table — after which nothing about them was
+dynamic, and neither mask moved. The stale constant cost 45,349 ticks/frame for
+a year of tasks, and no instrument pointed at it because the two masks are named
+for the same property and agreed with each other.
+
+**A hand-written "this is dynamic / unsupported / unsafe" constant is a claim
+about the data, not a fact about it. Re-derive it against the data before
+building around it** — and when a task changes what makes something dynamic,
+grep for every constant that encoded the old answer.
+
+Corollary, from the same cut: **a hand-maintained dispatch table that silently
+drops what it does not recognise will eventually drop something that mattered.**
+`ndsRendererTask36ReplayOpcode` had no case for the `MATRIX_MULT4x3` class Task
+51 appended, so the recorder discarded it — correct for state classes the replay
+re-issues, catastrophic for a matrix. Make the recogniser **fault on the classes
+it must not drop** rather than trusting the next author to notice.
+
 ## Trust a span in proportion to its length (Task 103 E7, 2026-07-27)
 
 The E-series censuses bracket code with two `cpuGetTiming()` reads. Two reads

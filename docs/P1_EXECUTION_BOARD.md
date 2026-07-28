@@ -46,36 +46,49 @@ R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
 | R2-03 fighter direct draw | **unowned — not started** | |
 | (R1 harvest) hardware sqrt | done, KEEP | `optimization/ClaudeOpus5_R203_E1_HardwareSqrt_20260728.md` (filename mislabels it R2-03) |
 
-**R2-02 is not finished.** Its §7 gate is `STG` P50/P95 within the provisional
-**180K** budget. §3.1 and §7 both forbid carrying a phase that misses its budget
-into the next one, so R2-03 does not start until this closes. The two soft-float
-files named `R2-03` are Runtime 1 harvest, not that phase; they are corrected in
-place per the never-rename rule.
+**R2-02's §7 gate is MET.** `STG` P50 is **173,120** against the provisional
+**180K** budget, 6,880 under; P95 is 181,248, 1,248 over and inside the
+5,000–7,000 build-placement floor. **R2-03 (Fighter direct draw) is unblocked.**
+The two soft-float files named `R2-03` are Runtime 1 harvest, not that phase;
+they are corrected in place per the never-rename rule.
 
 ```text
 STG P50   351,488  baseline
           256,704  after E1a  (-94,784)  prepare-run elision
           225,792  after E2   (-30,912)  GXFIFO DMA for the rigid replay
-          180,000  gate
-          -------
-           45,792  still over
+          173,120  after E3   (-51,200)  actor segments admitted to the replay
+          180,000  gate                             <-- MET
 ```
 
-**E2 put the first real population on the target side of the histogram.**
-`STG` down on 128/128 frames; **2-VBlank frames 1 → 12**, 4-VBlank 12 → 9, and
-`ALL`'s worst frame 5,874,368 → 2,800,512. §4 says the switch exists to move
-that histogram, and this is the first cut that visibly did. Boundary green, no
-tearing or dropped geometry.
-`optimization/ClaudeOpus5_R202_E2_StageReplayDMA_20260728.md`.
+**E3 moved the histogram §4 named as the point of the whole switch:**
+**2-VBlank frames 12 → 235 of 566** (2.1% → 41.5%), 3-VBlank 540 → 316, 5+ down
+5 → 3, 0 cadence violations. On a 32-frame window the median presented frame is
+a 2-VBlank frame outright. `STG` down on 128/128; `WORK` P50 −54,528, P95
+−42,816. Boundary green, required-region detail 62.681%.
+`optimization/ClaudeOpus5_R202_E3_ActorSegmentsReplay_20260728.md`.
 
-**E3 is the shape §7 actually asks for and should close the gate.**
-`ndsRendererNativeStageBeginRun` runs 21× a frame at ~654 ticks a call setting GX
-state already baked in `run->prepared`, and each run needs its own DMA. If the
-capture recorded the state writes too, the whole static stage becomes **one
-contiguous stream and one DMA per frame** — `DreamLand_Run17()`, not
-discover/validate/rebuild/resolve/prepare/submit. Collapses `BeginRun`, 20 of 21
-DMA setups, and most of `ndsRendererCommitNativeStageSegment` (27,082): ~40,000,
-which closes the 45,792.
+**E3 was one stale constant, and the E2 report's prediction was wrong.** E2
+sized E3 at "fold `BeginRun` into the capture, ~40,000"; measurement said
+`BeginRun` in the replay path is only 15,916/frame and the money was in the 21
+runs that never reached the replay. `NDS_TASK36_REPLAY_SEGMENT_MASK` still names
+the segments whose bindings were rigid *before Task 51*, which replaced their
+per-frame compose with a `MULT4x3` of a generated constant table. Whispy's eyes
+and mouth and both flower beds have composed nothing per frame since — and were
+paying 45,349 ticks/frame for 27 triangles to prove it. A 1,828-frame falsifier
+(`NDS_R2_STAGE_ACTORS_PROOF`) hashed their prepared data every frame of a full
+match: **0 changes.**
+
+**All three R2-02 flags are still default-off and the published ROMs are
+unchanged.** `AGENTS.md` makes the owner the visual oracle for render-side work,
+so graduating `NDS_R2_STAGE_DIRECT` / `NDS_R2_STAGE_DMA` / `NDS_R2_STAGE_ACTORS`
+to default-on is the owner's call. **This is the ask that matters most on this
+board:** the shipping ROM is running at 3 VBlanks where the flags put it at 2.
+
+**What is left in the stage, if anyone comes back for it.** layer1 (segment 4)
+is 22,738 ticks/frame for 76 triangles and is still generic: its six runs submit
+through the raw composed matrix (binding 29, submit classes 0 and 6), which is
+the camera and genuinely moves. Moving it onto the segment-bracket path is
+generator work worth ~19,000. Not needed for the gate.
 
 **R2-03 E1 took `sqrtf` from 15,760 to 9,720 ticks/frame, −6,040**, bit-exact
 against IEEE over 8.7M checked inputs, Boundary green. The 8-frame A/B read
