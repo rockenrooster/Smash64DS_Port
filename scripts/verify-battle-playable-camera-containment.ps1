@@ -13,7 +13,8 @@ param(
         'pause_plus16p8',
         'pause_minus16p8',
         'pause_plus33p6',
-        'pause_minus33p6')]
+        'pause_minus33p6',
+        'pause_under20')]
     [string]$CaseName = ''
 )
 
@@ -30,8 +31,8 @@ $verifierContext = Initialize-MelonDSVerifierContext `
     -NoBuild:$NoBuild
 $target = 'smash64ds-battle-playable-proof-hwtri'
 $build = 'build-battle-playable-proof-hwtri-harness'
-$rom = Join-Path $root "$target.nds"
-$elf = Join-Path $root "$target.elf"
+$rom = Join-Path $root "builds\$build\$target.nds"
+$elf = Join-Path $root "builds\$build\$target.elf"
 $melonDsPath = $verifierContext.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
 $runnerSlotActive = Get-MelonDSActiveRunnerSlot
@@ -57,8 +58,10 @@ $normalMinYawRatioMilli = 140 # tan(about 8 degrees) * 1000
 $normalMinSourceYawMilliDegrees = 8000
 $pausePreFrames = 45
 $pauseStickX = 80
+$pauseStickY = 80
 $expectedPauseYawDegrees = 16.790
 $expectedPauseWideYawDegrees = 33.580
+$expectedPauseUnderPitchDegrees = 20.0
 
 function Assert-Condition {
     param([bool]$Condition, [string]$Message, [string]$Context = '')
@@ -375,7 +378,6 @@ function New-CameraCaseCommands {
         'set $mroot = (DObj *)$mario->obj',
         'set $froot = (DObj *)$fox->obj'
     )
-
     if ($Case.Kind -eq 'normal') {
         $commands += @(
             ('set {{signed char}}0x{0:x8} = {1}' -f
@@ -398,8 +400,24 @@ function New-CameraCaseCommands {
         $commands += Get-ViewCalculationCommands
         $commands += 'end'
     } else {
+        $orbitFrames = $Case.OrbitFrames
+        $settleFrames = $Case.SettleFrames
+        $orbitStickX = [int]$Case.OrbitStickX
+        $orbitStickY = [int]$Case.OrbitStickY
         $commands += Get-FrameAdvanceCommands `
             -Count $pausePreFrames -CounterName 'pre_pause_frames'
+        if ($Case.Name -eq 'pause_under20') {
+            $commands += @(
+                ('set {{unsigned short}}0x{0:x8} = 0x0008' -f
+                    $PlaybackPadsAddress),
+                'tbreak ndsBattlePlayableFrameCompleteMarker',
+                'continue',
+                ('set {{unsigned short}}0x{0:x8} = 0' -f
+                    $PlaybackPadsAddress)
+            )
+            $commands += Get-FrameAdvanceCommands `
+                -Count 8 -CounterName 'jump_frames'
+        }
         $commands += @(
             # START_BUTTON enters the original source pause path. It is tapped
             # for one controller frame, then released before orbit input.
@@ -410,21 +428,25 @@ function New-CameraCaseCommands {
             ('set {{unsigned short}}0x{0:x8} = 0' -f
                 $PlaybackPadsAddress),
             ('set {{signed char}}0x{0:x8} = {1}' -f
-                ($PlaybackPadsAddress + 2), $Case.OrbitStickX)
+                ($PlaybackPadsAddress + 2), $orbitStickX),
+            ('set {{signed char}}0x{0:x8} = {1}' -f
+                ($PlaybackPadsAddress + 3), $orbitStickY)
         )
         $commands += Get-FrameAdvanceCommands `
-            -Count $Case.OrbitFrames -CounterName 'orbit_frames'
+            -Count $orbitFrames -CounterName 'orbit_frames'
         $commands += @(
             ('set {{signed char}}0x{0:x8} = 0' -f
-                ($PlaybackPadsAddress + 2))
+                ($PlaybackPadsAddress + 2)),
+            ('set {{signed char}}0x{0:x8} = 0' -f
+                ($PlaybackPadsAddress + 3))
         )
         $commands += Get-FrameAdvanceCommands `
-            -Count ($Case.SettleFrames - 1) -CounterName 'settle_frames'
+            -Count ($settleFrames - 1) -CounterName 'settle_frames'
         $commands += Get-RenderBaselineCommands
         $commands += @(
             'tbreak ndsBattlePlayableFrameCompleteMarker',
             'continue',
-            ("set `$drive_frames = {0}" -f $Case.OrbitFrames)
+            ("set `$drive_frames = {0}" -f $orbitFrames)
         )
         $commands += Get-ViewCalculationCommands
     }
@@ -492,11 +514,18 @@ function Assert-CameraCase {
     # generic stage counters, while the frame-total counter remains canonical.
     $nativeStage = $render[3] -eq 0 -and $render[4] -eq 0
     $stageTriangles = if ($nativeStage) { 202 } else { $render[4] }
-    Assert-Condition ($render[1] -eq 1 -and $render[2] -eq 1 -and
-        ($genericStage -or $nativeStage) -and
+    $fighterCensus = if ($case.Name -eq 'pause_under20') {
+        $render[5] -eq 1 -and $render[6] -eq 320 -and
+        $render[7] -eq 14 -and $render[8] -eq 14 -and
+        $render[9] -eq 1
+    } else {
         $render[5] -ge 1 -and $render[6] -gt 0 -and
         $render[7] -gt 0 -and $render[8] -gt 0 -and
-        $render[9] -le 1 -and $render[10] -eq 0 -and
+        $render[9] -le 1
+    }
+    Assert-Condition ($render[1] -eq 1 -and $render[2] -eq 1 -and
+        ($genericStage -or $nativeStage) -and
+        $fighterCensus -and $render[10] -eq 0 -and
         $render[11] -eq 0) `
         "$($case.Name) did not preserve one complete source stage/fighter hardware traversal." $context
     Assert-Condition ($render[12] -eq 0 -and
@@ -525,6 +554,11 @@ function Assert-CameraCase {
     }
     $actualYaw = [Math]::Atan2($eyeX - $atX, $eyeZ - $atZ) *
         180.0 / [Math]::PI
+    $eyeHorizontalDistance = [Math]::Sqrt(
+        (($eyeX - $atX) * ($eyeX - $atX)) +
+        (($eyeZ - $atZ) * ($eyeZ - $atZ)))
+    $actualPitch = [Math]::Atan2(
+        $atY - $eyeY, $eyeHorizontalDistance) * 180.0 / [Math]::PI
     $sourceYaw = [double]$view[13] / 1000.0
     Assert-Condition ([Math]::Abs($sourceYaw) -le 17.501) `
         "$($case.Name) escaped BattleShip's +/-17.5-degree normal-camera source envelope." $context
@@ -553,9 +587,22 @@ function Assert-CameraCase {
             $view[6] -eq 0) `
             "$($case.Name) was not the original player-0 pause/player-zoom path." $context
         Assert-Condition ($state[20] -eq 0 -and $state[21] -eq 0 -and
-            $state[22] -eq 0 -and $state[23] -eq 0 -and
-            [Math]::Abs($pausePitch) -le 0.05) `
+            $state[22] -eq 0 -and $state[23] -eq 0) `
             "$($case.Name) was not captured after neutral controller release." $context
+        $expectedPitch = if ($null -eq $case.ExpectedPitchDegrees) {
+            0.0
+        } else {
+            [double]$case.ExpectedPitchDegrees
+        }
+        Assert-Condition ([Math]::Abs(
+            $pausePitch - $expectedPitch) -le 0.15) `
+            "$($case.Name) did not retain its controller-derived vertical pitch." $context
+        if ($case.Name -eq 'pause_under20') {
+            Assert-Condition ([Math]::Abs($pausePitch - 20.0) -le 0.15 -and
+                [Math]::Abs($actualPitch - 20.0) -le 0.25 -and
+                $eyeY -lt $atY) `
+                'pause_under20 was not an exact underneath-camera view.' $context
+        }
         if ($case.ExpectedYawDegrees -eq 0.0) {
             Assert-Condition ([Math]::Abs($pauseYaw) -le 0.05 -and
                 [Math]::Abs($actualYaw) -le 2.0) `
@@ -579,6 +626,10 @@ function Assert-CameraCase {
         -NotePropertyValue $sourceYaw
     $Result | Add-Member -NotePropertyName PauseYawDegrees `
         -NotePropertyValue $pauseYaw
+    $Result | Add-Member -NotePropertyName ActualPitchDegrees `
+        -NotePropertyValue $actualPitch
+    $Result | Add-Member -NotePropertyName PausePitchDegrees `
+        -NotePropertyValue $pausePitch
 }
 
 function Invoke-CameraCase {
@@ -839,10 +890,24 @@ $cases = @(
         OrbitFrames = 22
         SettleFrames = 19
         ExpectedYawDegrees = -$expectedPauseWideYawDegrees
+    },
+    [pscustomobject]@{
+        Id = 6
+        Name = 'pause_under20'
+        Kind = 'pause'
+        OrbitStickX = 0
+        OrbitStickY = -$pauseStickY
+        OrbitFrames = 7
+        SettleFrames = 34
+        ExpectedYawDegrees = 0.0
+        ExpectedPitchDegrees = $expectedPauseUnderPitchDegrees
+        DiagnosticOnly = $true
     }
 )
 if (-not [string]::IsNullOrWhiteSpace($CaseName)) {
     $cases = @($cases | Where-Object { $_.Name -eq $CaseName })
+} else {
+    $cases = @($cases | Where-Object { -not $_.DiagnosticOnly })
 }
 
 $results = @()

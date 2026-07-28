@@ -98,20 +98,6 @@ foreach ($elfPath in $Elf) {
 
     $expectedBase = [uint32]0x02ff0000
     $physicalEnd = [uint32]0x02ff4000
-    if ($dtcm.Address -ne $expectedBase -or
-        $dtcmBss.Address -ne $expectedBase -or
-        $dtcmStart -ne $expectedBase -or
-        $dtcm.Bytes -ne 0 -or
-        $dtcmEnd -ne $expectedBase -or
-        $dtcmBss.Bytes -ne 152 -or
-        $dtcmBssEnd -ne ($expectedBase + 152) -or
-        $spUsr -ne ($expectedBase + 0x3e80) -or
-        $spIrq -ne ($spUsr + 0x100) -or
-        $spSvc -ne ($spIrq + 0x40) -or
-        $irqFlags -ne ($spSvc + 0x38) -or
-        $physicalEnd -ne ($spSvc + 0x40)) {
-        throw "DTCM section or Calico user/IRQ/SVC/BIOS boundary changed in '$resolvedElf'."
-    }
 
     $owners = [System.Collections.Generic.List[object]]::new()
     foreach ($line in $symbolLines) {
@@ -126,16 +112,68 @@ foreach ($elfPath in $Elf) {
         }) | Out-Null
     }
 
+    $playbackOwnerNames = @(
+        'sControllerPlaybackEnabled'
+        'sControllerPlaybackConnectedMask'
+        'sControllerPlaybackPads'
+    )
+    $applicationOwners = @($owners | Where-Object {
+        $playbackOwnerNames -contains $_.Name
+    })
+    if ($applicationOwners.Count -ne 0 -and
+        $applicationOwners.Count -ne $playbackOwnerNames.Count) {
+        throw "Controller playback DTCM owners must be present all-or-none in '$resolvedElf'."
+    }
+    $playbackBytes = if ($applicationOwners.Count -eq 0) { 0 } else { 32 }
+
+    if ($dtcm.Address -ne $expectedBase -or
+        $dtcmBss.Address -ne ($expectedBase + $playbackBytes) -or
+        $dtcmStart -ne $expectedBase -or
+        $dtcm.Bytes -ne $playbackBytes -or
+        $dtcmEnd -ne ($expectedBase + $playbackBytes) -or
+        $dtcmBss.Bytes -ne 152 -or
+        $dtcmBssEnd -ne ($expectedBase + $playbackBytes + 152) -or
+        $spUsr -ne ($expectedBase + 0x3e80) -or
+        $spIrq -ne ($spUsr + 0x100) -or
+        $spSvc -ne ($spIrq + 0x40) -or
+        $irqFlags -ne ($spSvc + 0x38) -or
+        $physicalEnd -ne ($spSvc + 0x40)) {
+        throw "DTCM section or Calico user/IRQ/SVC/BIOS boundary changed in '$resolvedElf'."
+    }
+
     $expectedOwners = @{
         '__irq_table' = [PSCustomObject]@{
-            Address = $expectedBase
+            Address = $expectedBase + $playbackBytes
             Section = '.dtcm.bss'
             Bytes = 128
+            Alignment = 32
         }
         '__sched_state' = [PSCustomObject]@{
-            Address = $expectedBase + 128
+            Address = $expectedBase + $playbackBytes + 128
             Section = '.dtcm.bss'
             Bytes = 24
+            Alignment = 32
+        }
+    }
+    if ($playbackBytes -ne 0) {
+        $expectedOwners['sControllerPlaybackEnabled'] = [PSCustomObject]@{
+            Address = $expectedBase
+            Section = '.dtcm'
+            Bytes = 4
+            Alignment = 4
+        }
+        $expectedOwners['sControllerPlaybackConnectedMask'] =
+            [PSCustomObject]@{
+                Address = $expectedBase + 4
+                Section = '.dtcm'
+                Bytes = 4
+                Alignment = 4
+            }
+        $expectedOwners['sControllerPlaybackPads'] = [PSCustomObject]@{
+            Address = $expectedBase + 8
+            Section = '.dtcm'
+            Bytes = 24
+            Alignment = 4
         }
     }
     if ($owners.Count -ne $expectedOwners.Count) {
@@ -149,7 +187,7 @@ foreach ($elfPath in $Elf) {
         if ($owner.Address -ne $expected.Address -or
             $owner.Section -ne $expected.Section -or
             $owner.Bytes -ne $expected.Bytes -or
-            ($owner.Address % 32) -ne 0) {
+            ($owner.Address % $expected.Alignment) -ne 0) {
             throw "DTCM owner '$($owner.Name)' changed address, section, size, or observed alignment in '$resolvedElf'."
         }
     }
@@ -175,8 +213,8 @@ foreach ($elfPath in $Elf) {
         $stackText = "gameplayHwm=$GameplayHighWater mainHwm=$MainHighWater guard=$GuardBytes raw=$rawNeed/$rawVerdict margins=2x$MarginBytes marginNeed=$marginNeed/$marginVerdict"
     }
 
-    Write-Output ("Task 20 DTCM layout passed: elf={0} sections={1}/{2} owners=[{3}] sharedGap=0x{4:x8}..0x{5:x8}/{6} stackTops=usr:0x{7:x8},irq:0x{8:x8},svc:0x{9:x8} reserves=irq:256,svc:64,bios:64 forbiddenDmaRefs=0(applicationOwners=0) stackEvidence=[{10}]" -f
+    Write-Output ("Task 20 DTCM layout passed: elf={0} sections={1}/{2} owners=[{3}] sharedGap=0x{4:x8}..0x{5:x8}/{6} stackTops=usr:0x{7:x8},irq:0x{8:x8},svc:0x{9:x8} reserves=irq:256,svc:64,bios:64 forbiddenDmaRefs=0(applicationOwners={10}) stackEvidence=[{11}]" -f
         (Split-Path -Leaf $resolvedElf), $dtcm.Bytes, $dtcmBss.Bytes,
         $ownerText, $dtcmBssEnd, $spUsr, $sharedGap, $spUsr, $spIrq,
-        $spSvc, $stackText)
+        $spSvc, $applicationOwners.Count, $stackText)
 }

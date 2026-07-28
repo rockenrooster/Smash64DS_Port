@@ -6,10 +6,18 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_platform.h>
 
+#if NDS_DEV_LIVE_INPUT_PREVIEW
+#define NDS_CONTROLLER_PLAYBACK_STATE \
+    __attribute__((section(".dtcm.bss")))
+#else
+#define NDS_CONTROLLER_PLAYBACK_STATE
+#endif
+
 static OSContStatus sControllerStatus[MAXCONTROLLERS];
-static NDSControllerPlaybackPad sControllerPlaybackPads[MAXCONTROLLERS];
-static u32 sControllerPlaybackConnectedMask;
-static sb32 sControllerPlaybackEnabled;
+static NDSControllerPlaybackPad sControllerPlaybackPads[MAXCONTROLLERS]
+    NDS_CONTROLLER_PLAYBACK_STATE;
+static u32 sControllerPlaybackConnectedMask NDS_CONTROLLER_PLAYBACK_STATE;
+static sb32 sControllerPlaybackEnabled NDS_CONTROLLER_PLAYBACK_STATE;
 
 volatile u32 gNdsControllerPollCount;
 volatile u32 gNdsControllerPlaybackEnabled;

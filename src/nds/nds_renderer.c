@@ -9610,7 +9610,7 @@ static s32 ndsRendererHardwareTextureMaskedClampNeedsWrap(
         return FALSE;
     }
     mask_extent = 1u << mask;
-    if (upload_extent != mask_extent)
+    if ((upload_extent != mask_extent) || (tile_extent <= mask_extent))
     {
         return FALSE;
     }

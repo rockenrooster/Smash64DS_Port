@@ -96,7 +96,7 @@ AI Agent should mark fixed items with FIXED prefix
   same effect. Rebirth now has its own white/cyan ring and Death keeps the red
   one. What remains is the untextured-primitive gap: the original KO burst is a
   particle script, and a ring is the stand-in. That half is P2.
--mario underside area geometry missing  [FIXED -- needs an eye check]
+-mario underside area geometry missing  [FIXED]
   Correction first: an earlier note here claimed the hole was reproduced in
   artifacts/visibility/latest.png. It was not. The harness `mario` region is
   the fixed box 125,85,45,55, which in that capture holds the stage platform
@@ -238,3 +238,14 @@ AI Agent should mark fixed items with FIXED prefix
   Boundary green after the native fix; ITCM unchanged at 31360/32768.
   OPEN: the owner's pause-orbit camera is still the only oracle. Orbit under
   Mario after a jump, as in the original report.
+  REPRODUCED 2026-07-28 on the shipping native-owner path with the focused
+  `pause_under20` jump/pause capture. The pelvis fan, side triangles, and leg
+  attachments all reached GX; the visible aperture lay inside textured pelvis
+  triangles, not at a geometry or culling seam.
+  FIXED 2026-07-28: epoch 0 loads a 32x24 CI4 source into a 32x32 DS texture.
+  Its N64 T axis is CLAMP with mask 5, so coordinates 24..31 resolve to row 23.
+  The DS sampler instead wrapped through the eight zero-padded transparent
+  rows. Masked-clamp preparation now disables wrap when the logical clamp edge
+  is at or before the mask period. The exact 32x24 case is host-checked, and
+  `20260728-084425_slot-1_p47000_mode163_camera_pause_under20.png` shows the
+  blue underside closed. The owner visually accepted that exact capture.
