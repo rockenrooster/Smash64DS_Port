@@ -1,5 +1,6 @@
 # CLAUDE.md
 
+Context limit: you have unlimited context
 
 @AGENTS.md
 READ AGENTS.md
@@ -35,3 +36,10 @@ These are about this tool, so they are not in `AGENTS.md`:
   harnesses. Editing a `.ps1` with Python heredocs or `\n` escapes has corrupted
   these files more than once — CRLF plus PowerShell quoting do not survive it.
   Use Read/Edit.
+- **Every `Start-Process` in a harness or probe needs `-WindowStyle Hidden`.**
+  Without it each launch throws a console window into the owner's foreground and
+  steals focus, and a long measurement session launches dozens. The melonDS
+  launches already had it; the `gdb` launches did not, which is how this was
+  noticed. `make` recipes spawn their own short-lived shells and are not
+  controllable this way — run builds through the PowerShell tool rather than
+  `Start-Process` so they inherit a hidden console.
