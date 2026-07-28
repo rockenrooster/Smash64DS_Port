@@ -4181,35 +4181,24 @@ static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
     NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
 static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
 #if NDS_TASK36_HW_COMPOSE == 2
-#if NDS_R2_STAGE_ACTORS
-/* R2-02 E3. The segment mask names the segments whose bindings were rigid, and
- * it has not moved since before Task 51. Task 51 made it stale: it replaced the
- * per-frame CPU compose for the *non*-rigid bindings with a MULT4x3 of
- * sNdsNativeStageBakedWorldMatrices[], a generated constant table. Whispy's
- * eyes and mouth and both flower beds have composed nothing per frame since,
- * so their command streams are as frame-invariant as layer0/2/3's -- and they
- * were still paying the generic path for it: 15 runs, 27 triangles, 45,349
- * ticks/frame, measured by the Task 103 per-segment census. Twenty-seven
- * triangles were costing 1,680 ticks each because every one of them rebuilds
- * and reloads a 4x4 no-Z projection from the CPU.
+/* Segments 0 (layer0), 5 (layer2) and 7 (layer3) -- exactly the segments whose
+ * every binding is in NDS_RENDERER_TASK36_RIGID_BINDING_MASK. That equality is
+ * the contract, not a coincidence: a rigid binding's captured stream is PUSH +
+ * MULT4x4 of a constant world under the camera the segment bracket loads live
+ * each frame, so it replays; a dynamic binding's stream is a LOAD4x4 per
+ * triangle of projection x view x model, so replaying it pins that geometry to
+ * the camera the capture frame happened to have.
  *
- * layer1 (segment 4) is deliberately still excluded. Its six runs submit
- * through the raw composed matrix (binding 29, submit classes 0 and 6), which
- * is the camera composition and genuinely moves; freezing it would nail the
- * layer to the camera. Closing that one needs generator work to move layer1
- * onto the segment-bracket path, not a mask bit.
- *
- * Capacity: the three mask segments record 3,908 words/frame today and the four
- * new ones add roughly a thousand more. */
-#define NDS_TASK36_REPLAY_WORD_CAPACITY 6144u
-#define NDS_TASK36_REPLAY_SEGMENT_MASK \
-    ((1u << 0u) | (1u << 1u) | (1u << 2u) | (1u << 3u) | \
-     (1u << 5u) | (1u << 6u) | (1u << 7u))
-#else
+ * R2-02 E3 widened this to Whispy's two segments and the two flower segments
+ * without widening the rigid mask, and those four duly stayed where the capture
+ * frame's camera had left them -- a smear of specks across the trunk. It read as
+ * -51,200 ticks of stage time that was never saved. E4 then widened the rigid
+ * mask to match and lost the flower beds entirely. Both arms are in
+ * docs/optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md; the
+ * next attempt starts in the generator, not here. */
 #define NDS_TASK36_REPLAY_WORD_CAPACITY 4608u
 #define NDS_TASK36_REPLAY_SEGMENT_MASK \
     ((1u << 0u) | (1u << 5u) | (1u << 7u))
-#endif
 
 typedef enum NDSRendererTask36ReplayState
 {
@@ -4226,7 +4215,15 @@ typedef struct NDSRendererTask36ReplayRun
     u16 word_count;
     u8 valid;
     u8 world_mult_count;
-    u8 reserved[2];
+    /* R2-02 E3: does this run's stream leave the modelview stack one push deep?
+     * The rigid runs do -- Task 36's EnsureWorld records PUSH + MULT before the
+     * vertices, so the segment's EndSegment owes a POP. The actor runs
+     * (whispy_eyes, whispy_mouth, flowers_back, flowers_front) do not: their
+     * generic emit records LOAD4x4 per triangle and never pushes. Replay used to
+     * assert task36_local_pushed = TRUE for every run, so admitting the actor
+     * segments to the mask bought four unmatched glPopMatrix(1) calls a frame. */
+    u8 local_pushed;
+    u8 reserved[1];
 } NDSRendererTask36ReplayRun;
 
 typedef struct NDSRendererTask36ReplayOwner
@@ -4246,6 +4243,10 @@ typedef struct NDSRendererTask36ReplayOwner
     /* Task 44 item 2: capture_active moved out to sNdsRendererTask36CaptureActive
      * so the wrapped GX sites can test it without reaching into this owner. */
     u32 capture_fault;
+    /* R2-02 E3: signed PUSH/POP balance of the run being captured, so
+     * CaptureEndRun can record whether the stream owes the segment a POP
+     * instead of replay assuming every run does. */
+    s32 capture_push_balance;
     u32 frame_capture;
     u32 frame_replay;
     NDSRendererTask36ReplayState state;
@@ -4530,6 +4531,7 @@ static void ndsRendererTask36ReplayCaptureBeginRun(u32 run_index)
     owner->current_run = run_index;
     owner->command_word_index = UINT_MAX;
     owner->command_slot = 4u;
+    owner->capture_push_balance = 0;
     sNdsRendererTask36CaptureActive = TRUE;
 }
 
@@ -4553,9 +4555,18 @@ static void ndsRendererTask36ReplayCaptureEndRun(u32 run_index)
     {
         owner->capture_fault = TRUE;
     }
+    else if ((owner->capture_push_balance < 0) ||
+             (owner->capture_push_balance > 1))
+    {
+        /* A run may leave the stack level (the actor segments) or one push deep
+         * (the rigid segments, whose EndSegment pops it). Anything else means the
+         * recorded stream does not describe a stack state replay can restore. */
+        owner->capture_fault = TRUE;
+    }
     else
     {
         run->word_count = (u16)word_count;
+        run->local_pushed = (owner->capture_push_balance != 0) ? TRUE : FALSE;
         run->valid = TRUE;
     }
     sNdsRendererTask36CaptureActive = FALSE;
@@ -4641,6 +4652,15 @@ static void ndsRendererTask36ReplayRecord(
     /* MULT4x3 is Task 51's 12-word form of the same per-binding world matrix,
      * so it counts as a world mult exactly like MULT4X4 -- the generic path
      * bumps gNdsRendererTask36WorldMultCount for both. */
+    if (command_class == NDS_TASK29_GX_MATRIX_PUSH)
+    {
+        owner->capture_push_balance++;
+    }
+    else if ((command_class == NDS_TASK29_GX_MATRIX_POP) &&
+             (word_count != 0u) && (words != NULL))
+    {
+        owner->capture_push_balance -= (s32)words[0u];
+    }
     if ((command_class == NDS_TASK29_GX_MATRIX_MULT4X4) ||
         (command_class == NDS_TASK29_GX_MATRIX_MULT4x3))
     {
@@ -21073,7 +21093,10 @@ ndsRendererTask36ReplayRun(
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_t2 = cpuGetTiming();
 #endif
-    sNdsNativeStageOwnerExecution.task36_local_pushed = TRUE;
+    /* Report the stack state the stream actually left, not TRUE unconditionally:
+     * ndsRendererNativeStageTask36EndSegment pops on this flag, and an actor
+     * segment's stream never pushed. */
+    sNdsNativeStageOwnerExecution.task36_local_pushed = run->local_pushed;
     sNdsNativeStageOwnerExecution.task36_binding = native_run->binding_index;
     sNdsRendererHardwareMatrixMode =
         NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
@@ -21669,8 +21692,12 @@ static u32 ndsRendererDreamLandDrawStatic3D(
  * animation, so "it looked right in one screenshot" is not an answer. This
  * hashes exactly the prepared run and prepared dense data those fifteen runs
  * consume, once a frame, and counts the frames on which the hash differs from
- * the previous one. Build with NDS_R2_STAGE_ACTORS=0 so the prepare path still
- * runs for those segments; a non-zero change count falsifies the cut. */
+ * the previous one.
+ *
+ * It answered its question -- 0 changes in 1,828 frames -- and R2-02 E3 and E4
+ * still failed, because the prepared data was never the part that moves. The
+ * actor segments' *matrices* are. Read this proof as covering vertex data only,
+ * and never as a licence to widen a replay or rigid mask. */
 volatile u32 gNdsR2ActorPreparedHash;
 volatile u32 gNdsR2ActorPreparedChangeCount;
 volatile u32 gNdsR2ActorPreparedFrameCount;

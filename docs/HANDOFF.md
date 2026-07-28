@@ -30,19 +30,32 @@ deliberately left them unstaged. Commit or revert them with the bug-#10 work.
 ## State as of this handoff
 
 R2-00a/b/c and R2-01 are done and gated. **R2-02 is not closed.** E1a and E2 are
-clean and take `STG` P50 from 351,488 to **225,792**; the 180K gate is 45,792
-away. **E3 is retracted**: it reached 173,120 and moved 2-VBlank frames from 12
-to 235 of 566, but it destroys `flowers_back` and `flowers_front` — they collapse
-to a smear of specks across the trunk and the front row along the dirt path
-disappears. Retraction and the leading hypothesis are at the top of
-`optimization/ClaudeOpus5_R202_E3_ActorSegmentsReplay_20260728.md`.
+clean and take `STG` P50 from 351,488 to **224,320**; the 180K gate is 44,320
+away. **E3 is retracted and E4 refuted the approach** — the actor segments
+cannot be admitted to the Task 36 replay by editing masks.
+`optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md` has all three
+arms; the short version:
 
-`NDS_R2_PATH`, `NDS_R2_STAGE_DIRECT`, `NDS_R2_STAGE_DMA` and
-`NDS_R2_STAGE_ACTORS` all default to 0, so **nothing shipped** — the published
-ROMs are at defaults and Boundary-green at 62.750%. `NDS_R2_STAGE_ACTORS=1` is
-marked known-broken in the Makefile.
+- A **rigid** binding's captured stream is `PUSH` + `MULT4x4` of a constant world
+  under a live-loaded camera, so it replays. A **dynamic** binding's stream is a
+  `MATRIX_LOAD4x4` per triangle of projection × view × model, so replaying it
+  pins the geometry to the capture frame's camera. **The replay segment mask must
+  name exactly the segments whose bindings are all rigid.** E3 broke that.
+- Widening the rigid mask to match (E4 arm C) restored the invariant and lost the
+  flower beds anyway: `ndsRendererNativeStageEmitNoZTriangle` **drops the
+  triangle** when `Task36EnsureWorld` fails for a rigid binding. Both arms read
+  −51,200, which is what the flowers cost to *draw*, collected by not drawing
+  them.
+- Kept from the whole exercise: replay no longer asserts
+  `task36_local_pushed = TRUE` for every run (each admitted actor segment was
+  buying an unmatched `glPopMatrix(1)`); capture records the run's real
+  `PUSH`/`POP` balance and faults anything outside {0, 1}.
 
-**Two things worth knowing about how E3 got past the gates**, because they will
+`NDS_R2_STAGE_ACTORS` is **deleted**. `NDS_R2_PATH`, `NDS_R2_STAGE_DIRECT` and
+`NDS_R2_STAGE_DMA` default to 0, so **nothing shipped** — the published ROMs are
+at defaults and Boundary-green at 62.750%.
+
+**Three things worth knowing about how E3 got past the gates**, because they will
 let the next mistake through too:
 
 - **Required-region detail does not cover the flower beds.** It read 62.681%
@@ -50,11 +63,18 @@ let the next mistake through too:
   flower beds destroyed. Boundary passed. For any stage render change, crop the
   changed geometry out of the candidate *and the control* and look at them
   together; `artifacts/visibility/latest.png` and `previous.png` are a
-  ready-made pair after a verifier run.
+  ready-made pair after a verifier run. The per-region numbers the verifier
+  already prints do carry the signal — E4 arm C moved `stage_body` green from
+  44.86% to 50.49% — but only against a control arm's numbers.
 - **The E3 invariance falsifier was sound and still insufficient.** It proved
   the *prepared vertex data* constant over 1,828 frames, which was true. What
-  broke is matrix or matrix-stack state, which it did not hash. A falsifier
-  bounds the hypothesis it was written for and nothing else.
+  broke is matrix state, which it did not hash. A falsifier bounds the hypothesis
+  it was written for and nothing else.
+- **Two of E3's premises die on the host in ten minutes.** Every actor triangle
+  carries coordinate shift 0 (read it out of `nds_native_stage_owner.generated.inc`),
+  and `NDS_TASK51_STAGE_NATIVE ?= 0` — Task 51 is compiled out of every ROM this
+  campaign has measured, so "Task 51 already baked those world matrices" was
+  never true of any binary. Check the config header, not the source.
 
 **Three things a restart must know before reading any performance number:**
 
@@ -82,22 +102,21 @@ let the next mistake through too:
 
 ## Next packet, in priority order
 
-0. **Fix or drop E3 first — R2-02 owns the queue until its gate is met.** Find
-   why `flowers_back` and `flowers_front` collapse under
-   `NDS_R2_STAGE_ACTORS=1`. Leading hypothesis: the `glPopMatrix(1)` /
-   `glPushMatrix()` pairing in `ndsRendererNativeStageTask51EnsureWorld` goes off
-   by one at replay, because `ndsRendererTask36ReplayRun`'s tail sets
-   `task36_local_pushed = TRUE` unconditionally while `BeginRun(replay=TRUE)`
-   skips the matrix block. Geometry collapsed to a line is a wrong-matrix
-   symptom. Bisect the mask one segment at a time (3 alone, then 6 alone) — that
-   also says whether `whispy_eyes`/`whispy_mouth` are safe on their own, which
-   would be a smaller but clean cut. If it cannot be fixed cheaply, drop the
-   flag and close the 45,792 with layer1 (item 6) plus `BeginRun` instead.
+0. **R2-02 owns the queue until its gate is met, and the remaining work is in
+   the generator.** The 44,320 has to come from giving the actor bindings
+   (25–28, 33–38) a genuine constant world matrix in `binding_world` space,
+   emitted by `scripts/generate_nds_native_stage.py`, gated on a Task 49 Tier-2
+   differ over the **newly added bindings'** screen positions against the CPU
+   oracle — E4 arm C would have failed that instantly — and only then widening
+   `NDS_RENDERER_TASK36_RIGID_BINDING_MASK` and `NDS_TASK36_REPLAY_SEGMENT_MASK`
+   together in one commit. Whispy (20–24) is materially animated and out of
+   scope. The alternative route to the gate is layer1 (item 6, ~19,000) plus
+   `BeginRun`, which does not reach 44,320 on its own.
 1. **R2-03 sizing is done but the phase is still blocked.** Everything below is
-   measurement, and it was taken with `NDS_R2_STAGE_ACTORS=1`, so the *stage*
-   share of it is a broken-render number: with E3 out, real work rises by about
-   51,200 to ~1,316,000 and the gap to ~196,000. The fighter figures are
-   unaffected — they are fighter-side brackets — and they are the useful part.
+   measurement, and its *stage* share was taken with the E3 flag on, so it is a
+   broken-render number: real work rises by about 51,200 to ~1,316,000 and the
+   gap to ~196,000. The fighter figures are unaffected — they are fighter-side
+   brackets — and they are the useful part.
    `ndsFighterMarioFoxDLAllDrawForSlot` costs **497,231 ticks/frame
    inclusive** (not the 37,206 the census reports — that is self time; see the
    method note). Split over a full match, two independent builds agreeing to
@@ -196,11 +215,10 @@ let the next mistake through too:
 4. **Those frames are not load-free.** `_ntrcardRecvByCpu` + `ntrcardRomRead` are
    12,639 ticks/frame higher there. Task 75's preload targets something real;
    re-derive its ~103,488 estimate against the measured ~36,000.
-5. **All three R2-02 flags need the owner's visual approval to graduate.**
-   `NDS_R2_STAGE_DIRECT`, `NDS_R2_STAGE_DMA`, `NDS_R2_STAGE_ACTORS`: Boundary is
-   green on all of them, required-region detail 62.681% vs the default's
-   62.778%, and E3 carries a 1,828-frame invariance proof — but `AGENTS.md`
-   wants the owner as the visual oracle for render-side change, so they are all
+5. **The two surviving R2-02 flags need the owner's visual approval to
+   graduate.** `NDS_R2_STAGE_DIRECT` and `NDS_R2_STAGE_DMA`: Boundary is green on
+   both and both are crop-verified clean against the control — but `AGENTS.md`
+   wants the owner as the visual oracle for render-side change, so they are
    still default-off and the published ROMs do not have the gain. Screenshots:
    `artifacts/visibility/r2-02-e1a-{on,off}-boundary-20260727.png`,
    `r2-02-e2-dma-on-boundary-20260728.png`,
@@ -237,9 +255,17 @@ let the next mistake through too:
   `...CaptureOutcome` are written once by `ndsRendererTask36ReplayFinishFrame`,
   non-static and not profile-gated, so any tick-HUD run can prove the replay
   captured what it was meant to and reached `READY` rather than falling back.
-- `NDS_R2_STAGE_ACTORS_PROOF=1` (lab, build with `NDS_R2_STAGE_ACTORS=0`) hashes
-  the prepared data the four actor segments consume, once a frame, and counts
-  the frames it changes on. Reuse it before widening the replay mask again.
+- `NDS_R2_STAGE_ACTORS_PROOF=1` (lab) hashes the prepared data the four actor
+  segments consume, once a frame, and counts the frames it changes on. It reads
+  0 changes in 1,828 frames and that was never the question — read it as covering
+  **vertex data only**. The actor segments' matrices are what move.
+- `sNdsRendererAdapterNativeStageWorkspace.task36_runtime_rigid_mask` is the
+  engagement proof for anything touching the rigid set: it must equal
+  `NDS_RENDERER_TASK36_RIGID_BINDING_MASK`, and the fail-closed validator sets it
+  to 0 otherwise. Do **not** read
+  `sNdsNativeStageOwnerExecution.rigid_binding_mask` instead — the stage draw
+  zeroes that on the way out, so it reads 0 at any frame boundary and will fake a
+  fallback that is not happening.
 - `NDS_R2_FIGHTER_SHADE_PROOF=1` (lab) does the same for the fighter shade
   loop, hashing inputs and outputs separately so a plain memo and a quantised
   one are distinguishable. It has already refuted both; re-run it before anyone

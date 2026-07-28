@@ -216,25 +216,11 @@ NDS_R2_FIXED_SQRT ?= 0
 # 9.51 ticks/word; the point is the ~16 KB/frame of cache-line fills that stop
 # happening, which is how the switch plan's §3.3 says traffic work is judged.
 NDS_R2_STAGE_DMA ?= 0
-# R2-02 E3. Admits Whispy's eyes and mouth and both flower beds to the Task 36
-# replay. Task 51 already gave those bindings a baked constant world matrix, so
-# nothing about their streams has been per-frame since; the segment mask just
-# never caught up. Measured cost of leaving them generic: 45,349 ticks/frame for
-# 27 triangles. Also raises the capture buffer to hold the extra ~1,000 words.
-#
-# *** KNOWN BROKEN AT 1 -- DO NOT ENABLE, DO NOT PUBLISH. *** It destroys both
-# flower beds: flowers_back and flowers_front collapse to a smear of specks
-# across the trunk. Boundary passes and required-region detail moves 7 pixels in
-# 7,200 because the flower beds are outside the required region, so only a
-# synchronized crop against the default catches it. Leading hypothesis is the
-# glPopMatrix/glPushMatrix pairing in ndsRendererNativeStageTask51EnsureWorld
-# going off by one at replay. See the retraction at the top of
-# docs/optimization/ClaudeOpus5_R202_E3_ActorSegmentsReplay_20260728.md.
-NDS_R2_STAGE_ACTORS ?= 0
 # R2-02 E3 falsifier, lab only. Hashes the prepared run and dense data the four
-# actor segments consume, once a frame, and counts the frames it changes on.
-# Build it with NDS_R2_STAGE_ACTORS=0 -- it exists to prove that what E3 bakes
-# was already constant, and E3 stops preparing that data.
+# actor segments consume, once a frame, and counts the frames it changes on. It
+# outlived the cut it was written for: it proved the *prepared* data constant,
+# which was true and was never the question -- the actor segments' matrices are
+# what move. Kept because it is the cheap way to re-check that half.
 NDS_R2_STAGE_ACTORS_PROOF ?= 0
 # R2-03 E1 falsifier, lab only. Hashes the inputs and the outputs of the fighter
 # shade loop once a frame and counts the frames each changes on. 48,422
@@ -1720,7 +1706,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \
 		echo '#define NDS_R2_STAGE_DMA $(NDS_R2_STAGE_DMA)'; \
-		echo '#define NDS_R2_STAGE_ACTORS $(NDS_R2_STAGE_ACTORS)'; \
 		echo '#define NDS_R2_STAGE_ACTORS_PROOF $(NDS_R2_STAGE_ACTORS_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_PROOF $(NDS_R2_FIGHTER_SHADE_PROOF)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
@@ -2003,7 +1988,6 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DIRECT=$(NDS_R2_STAGE_DIRECT)'
 	@printf '%s\n' 'BENCH_MAKE_R2_FIXED_SQRT=$(NDS_R2_FIXED_SQRT)'
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DMA=$(NDS_R2_STAGE_DMA)'
-	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_ACTORS=$(NDS_R2_STAGE_ACTORS)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'

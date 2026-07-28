@@ -514,17 +514,31 @@ one `NDS_TASK103_STAGE_RUN_PHASE` build and one run.
 ## An eligibility constant is a claim about the data; re-check it (R2-02 E3)
 
 `NDS_TASK36_REPLAY_SEGMENT_MASK` excluded four segments because their bindings
-were not in `NDS_RENDERER_TASK36_RIGID_BINDING_MASK`. That was true when it was
-written. Task 51 then replaced those bindings' per-frame compose with a
-`MULT4x3` of a generated constant table — after which nothing about them was
-dynamic, and neither mask moved. The stale constant cost 45,349 ticks/frame for
-a year of tasks, and no instrument pointed at it because the two masks are named
-for the same property and agreed with each other.
+were not in `NDS_RENDERER_TASK36_RIGID_BINDING_MASK`.
 
-**A hand-written "this is dynamic / unsupported / unsafe" constant is a claim
-about the data, not a fact about it. Re-derive it against the data before
-building around it** — and when a task changes what makes something dynamic,
-grep for every constant that encoded the old answer.
+**Correction, R2-02 E4, 2026-07-28: that constant was not stale, and this rule
+was invoked on a false premise.** E3 argued Task 51 had made those bindings
+constant. `NDS_TASK51_STAGE_NATIVE ?= 0` — Task 51 is compiled out of every ROM
+this campaign has measured, so it had made nothing constant in any binary. The
+two masks agreed with each other because **they are required to agree**: a
+dynamic binding's captured stream is a per-triangle `MATRIX_LOAD4x4` of
+projection × view × model, so replaying it pins that geometry to the capture
+frame's camera. Widening one mask deleted the flower beds; widening both deleted
+them a different way. Full account in
+`ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md`.
+
+**The surviving rule is the inverse of the one first written here: before
+declaring a constant stale, check that the *change you think made it stale* is
+compiled into the binary you measured.** Read the build config header, not the
+source. And when two constants encode the same property, ask whether they are
+duplicated or *coupled* — if coupled, that coupling is an invariant and belongs
+in a comment on both, not a redundancy to be cleaned up.
+
+The general form still holds: **a hand-written "this is dynamic / unsupported /
+unsafe" constant is a claim about the data, not a fact about it. Re-derive it
+against the data before building around it.** Much of that re-derivation is free:
+the shift census that killed E4's first hypothesis reads a checked-in generated
+file and took ten minutes with no build.
 
 Corollary, from the same cut: **a hand-maintained dispatch table that silently
 drops what it does not recognise will eventually drop something that mattered.**
@@ -558,8 +572,40 @@ only thing in the toolchain that would have caught this.
 
 Corollary: **a falsifier bounds the hypothesis it was written for and nothing
 else.** E3's invariance proof hashed the prepared vertex data over 1,828 frames
-and was correct — that data really is constant. What broke was matrix-stack
-state, which it never touched. Passing a falsifier is not passing a review.
+and was correct — that data really is constant. What broke was matrix state,
+which it never touched. Passing a falsifier is not passing a review.
+
+Second corollary, added by R2-02 E4: **the verifier's own per-region numbers do
+carry this signal, but only against a control arm's numbers.** E4 arm C moved
+`stage_body` green from 44.86% to 50.49% and detail from 52.40% to 48.77% —
+418 pixels of blossom turned into grass, visible in output the verifier already
+prints on every run — while required-region detail moved 0.056pp and Boundary
+passed. Record the control arm's region table alongside the candidate's, in the
+report, for any change that touches stage geometry.
+
+## A saving that equals the cost of drawing something is not a saving (R2-02 E4, 2026-07-28)
+
+Two different mask edits, a fortnight of reasoning apart, both measured `STG`
+−51,200 and both had stopped drawing the flower beds. 51,200 is what those 15
+triangles cost to draw. The pattern is not rare and it is not obvious in a bucket
+table, because a bucket that no longer does work looks exactly like a bucket that
+does it faster.
+
+**When a cut's measured saving is close to the full attributed cost of the thing
+it was meant to speed up, treat "it stopped happening" as the leading hypothesis,
+not the fallback.** The distinguishing evidence is cheap:
+
+- a count of what still executes — triangles emitted, runs replayed, calls made —
+  read from the same run that produced the buckets;
+- the engagement variable, read from the **persistent** owner. E4 wasted an arm
+  reading `sNdsNativeStageOwnerExecution.rigid_binding_mask`, which the stage draw
+  zeroes on the way out, so it reads 0 at any frame boundary and fakes a fallback
+  that is not happening. The live copy was in the workspace.
+
+Related: a *doubling* with a correct picture is the mirror image — the signature
+of a fail-closed guard disabling the optimisation. E4 arm B read `STG` 465,088
+against a 224,320 control and rendered perfectly, because one binding failing a
+rigid-constancy check drops the whole mask and invalidates the replay.
 
 ## Compare a span to a span, not to a census row (R2-03 E3, 2026-07-28)
 

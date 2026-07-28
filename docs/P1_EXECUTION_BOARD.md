@@ -46,8 +46,8 @@ R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
 | R2-03 fighter direct draw | **unowned — not started** | |
 | (R1 harvest) hardware sqrt | done, KEEP | `optimization/ClaudeOpus5_R203_E1_HardwareSqrt_20260728.md` (filename mislabels it R2-03) |
 
-**R2-02's §7 gate is NOT met. E3 is retracted — it destroys both flower beds.**
-`STG` P50 stands at **225,792** after E1a and E2, **45,792 over** the
+**R2-02's §7 gate is NOT met. E3 is retracted and E4 refuted the whole
+approach.** `STG` P50 stands at **224,320** after E1a and E2, **44,320 over** the
 provisional 180K budget. §3.1 and §7 forbid carrying a phase that misses its
 budget into the next one, so **R2-03 was started prematurely** and its queue
 below is sizing only, not licence to build. The two soft-float files named
@@ -57,52 +57,67 @@ the never-rename rule.
 ```text
 STG P50   351,488  baseline
           256,704  after E1a  (-94,784)  prepare-run elision      -- clean
-          225,792  after E2   (-30,912)  GXFIFO DMA rigid replay  -- clean
+          224,320  after E2   (-30,912)  GXFIFO DMA rigid replay  -- clean
           180,000  gate
           -------
-           45,792  still over
+           44,320  still over
 
-         (173,120  after E3   (-51,200)  RETRACTED: flowers broken)
+         (173,120  E3 and E4-C both  (-51,200)  BOTH REVERTED: that number is
+                                                the price of not drawing the
+                                                flowers, not of drawing them
+                                                faster)
 ```
 
-**What E3 got right and what it got wrong.** The finding is real:
-`NDS_TASK36_REPLAY_SEGMENT_MASK` still names the segments whose bindings were
-rigid *before Task 51*, which replaced their per-frame compose with a `MULT4x3`
-of a generated constant table, and those four segments were paying 45,349
-ticks/frame for 27 triangles. The 1,828-frame falsifier proving their prepared
-vertex data constant is sound. The performance was real: 2-VBlank frames 12 →
-235 of 566.
+**The mechanism, established by E4** —
+`optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md`. A **rigid**
+binding's captured stream is `PUSH` + `MULT4x4` of a constant world under the
+camera the segment bracket loads live every frame, so it replays. A **dynamic**
+binding's stream is a `MATRIX_LOAD4x4` per triangle of projection × view × model,
+so replaying it pins that geometry to the camera the capture frame happened to
+have — which is exactly why the flowers sat in a fixed screen band under every
+camera. Hence the invariant, now written into both masks:
 
-**But the render is wrong.** `flowers_back` and `flowers_front` collapse into a
-smear of specks across the trunk; the front row along the dirt path disappears.
-Boundary passed and required-region detail moved 7 pixels in 7,200 because the
-flower beds are outside the required region — only a synchronized crop against
-the default caught it. The E3 report's "stage visually intact" was written from
-the candidate screenshot alone, checking presence instead of diffing the changed
-subset against the control.
+> `NDS_TASK36_REPLAY_SEGMENT_MASK` must name exactly the segments whose every
+> binding is in `NDS_RENDERER_TASK36_RIGID_BINDING_MASK`.
 
-**Nothing shipped.** All four `NDS_R2_*` flags are default 0 and the published
-ROMs are at defaults and Boundary-green (62.750%). The flag discipline is what
-kept this out of a ROM.
+E3 broke it by widening one mask. E4 arm C restored it by widening both — and
+lost the flower beds anyway, because
+`ndsRendererNativeStageEmitNoZTriangle` **drops the triangle** when
+`Task36EnsureWorld` fails for a rigid binding. A binding that is nominally rigid
+but cannot compose its world costs geometry, not ticks.
 
-**Next on this row:** find the actual cause. Leading hypothesis is the
-`glPopMatrix(1)`/`glPushMatrix()` pairing in
-`ndsRendererNativeStageTask51EnsureWorld` going off by one at replay, since
-`ndsRendererTask36ReplayRun`'s tail sets `task36_local_pushed = TRUE`
-unconditionally while `BeginRun(replay=TRUE)` skips the matrix block. Geometry
-collapsed to a line is a wrong-matrix symptom, not a vertex-data one.
+Two hypotheses died cheaply on the host and should have died before E3 landed:
+every actor triangle carries coordinate shift 0 (so Task 51's missing shift
+compensation is irrelevant), and `NDS_TASK51_STAGE_NATIVE` defaults to 0 and is
+compiled out of every ROM measured (so E3's premise — "Task 51 already baked
+those world matrices" — was false).
 
-**All three R2-02 flags are still default-off and the published ROMs are
+**Nothing shipped.** `NDS_R2_STAGE_ACTORS` is deleted. The published ROMs are at
+defaults and Boundary-green at **62.750%**, `stage_body` green 44.848% / detail
+52.242%. One real defect was found and kept: replay asserted
+`task36_local_pushed = TRUE` for every run, so each admitted actor segment bought
+an unmatched `glPopMatrix(1)`. Capture now records the run's actual `PUSH`/`POP`
+balance.
+
+**Next on this row — generator work, not a mask.** Emit a per-binding constant
+world for 25–28 and 33–38 in `binding_world` space from
+`scripts/generate_nds_native_stage.py`; gate it on a Task 49 Tier-2 differ over
+the **newly added bindings'** screen positions; only then widen both masks in one
+commit; verify with a frame-locked crop of those segments plus
+`task36_runtime_rigid_mask` read from the run that produced the buckets. Whispy
+(20–24) is out of scope — it is materially animated.
+
+**The two surviving R2-02 flags are still default-off and the published ROMs are
 unchanged.** `AGENTS.md` makes the owner the visual oracle for render-side work,
-so graduating `NDS_R2_STAGE_DIRECT` / `NDS_R2_STAGE_DMA` / `NDS_R2_STAGE_ACTORS`
-to default-on is the owner's call. **This is the ask that matters most on this
-board:** the shipping ROM is running at 3 VBlanks where the flags put it at 2.
+so graduating `NDS_R2_STAGE_DIRECT` / `NDS_R2_STAGE_DMA` to default-on is the
+owner's call. **This is the ask that matters most on this board:** the shipping
+ROM is running at 3 VBlanks where those two flags put it at 2.
 
-**What is left in the stage, if anyone comes back for it.** layer1 (segment 4)
-is 22,738 ticks/frame for 76 triangles and is still generic: its six runs submit
-through the raw composed matrix (binding 29, submit classes 0 and 6), which is
-the camera and genuinely moves. Moving it onto the segment-bracket path is
-generator work worth ~19,000. Not needed for the gate.
+**What else is left in the stage.** layer1 (segment 4) is 22,738 ticks/frame for
+76 triangles and is still generic: its six runs submit through the raw composed
+matrix (binding 29, submit classes 0 and 6), which is the camera and genuinely
+moves. Moving it onto the segment-bracket path is generator work worth ~19,000 —
+now the *largest* remaining stage lever, and still not enough for the gate alone.
 
 **R2-03 is owned; E0–E3 are done and the target is named.** The frame is
 re-baselined on the post-R2-02 program: **REAL WORK 1,264,844 against the

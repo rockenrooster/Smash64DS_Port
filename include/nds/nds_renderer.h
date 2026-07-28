@@ -97,6 +97,18 @@
 #endif
 
 #if NDS_TASK36_HW_COMPOSE
+/* Bindings 0-19 (layer0), 30-32 (layer2) and 39-41 (layer3).
+ *
+ * R2-02 E4 tried to widen this to the two flower segments (25-28, 33-38) on the
+ * strength of their world matrices being constant. The runtime rigid-constancy
+ * check accepted them -- task36_runtime_rigid_mask held the widened value -- and
+ * STG fell to 173,120, under R2-02's 180,000 gate. The flower beds were gone.
+ * ndsRendererNativeStageEmitNoZTriangle drops a triangle outright when
+ * ndsRendererNativeStageTask36EnsureWorld fails for a rigid binding, so a
+ * binding that is nominally rigid but cannot compose its world costs geometry,
+ * not ticks. Do not widen this mask again without a differ that compares the
+ * rigid-composed screen position of the *newly added* bindings against the CPU
+ * oracle, and a crop of those segments against the control arm. */
 #define NDS_RENDERER_TASK36_RIGID_BINDING_MASK 0x00000381c00fffffULL
 #endif
 

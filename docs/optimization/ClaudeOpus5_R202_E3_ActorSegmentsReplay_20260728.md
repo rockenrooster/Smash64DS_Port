@@ -24,18 +24,21 @@
 > from the symptom (geometry collapsed to a line) is matrix or matrix-stack
 > state, not vertex data.
 >
-> **Leading hypothesis, untested.** `ndsRendererNativeStageTask51EnsureWorld`
-> issues `glPopMatrix(1)` conditionally on `task36_local_pushed` before its
-> `glPushMatrix()`. The capture records whatever the condition did on the capture
-> frame; at replay `ndsRendererTask36ReplayRun`'s tail sets
-> `task36_local_pushed = TRUE` unconditionally and `BeginRun(replay=TRUE)` skips
-> the matrix block, so the pop/push pairing across the newly admitted runs can
-> be off by one and leave the flowers under a stale or doubly-multiplied matrix.
+> **Cause established 2026-07-28 by E4** — see
+> `ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md`. It is not the
+> `Task51EnsureWorld` pop/push pairing this header first guessed;
+> `NDS_TASK51_STAGE_NATIVE` defaults to `0` and is compiled out of every build,
+> so that function never ran. The actual cause is that a **dynamic** binding's
+> captured stream is a `MATRIX_LOAD4x4` per triangle of
+> projection × view × model. Replaying it pins that geometry to the camera the
+> capture frame happened to have, which is why the flowers sit in a fixed screen
+> band no matter where the camera goes. The replay segment mask has to name
+> exactly the segments whose bindings are all rigid; E3 broke that invariant.
 >
-> **Nothing shipped.** `NDS_R2_STAGE_ACTORS` is default `0`, the published ROMs
-> are at defaults and Boundary-green. **R2-02's gate is therefore NOT met** —
-> without E3, `STG` P50 is 225,792 against the 180K budget — and R2-03 was
-> started prematurely on the strength of this file.
+> **Nothing shipped.** `NDS_R2_STAGE_ACTORS` has since been deleted, the
+> published ROMs are at defaults and Boundary-green at 62.750%. **R2-02's gate
+> is therefore NOT met** — without E3, `STG` P50 is 224,320 against the 180K
+> budget — and R2-03 was started prematurely on the strength of this file.
 >
 > Everything below is the original text, kept per the never-rename rule. The
 > measurements are real; the verdict was not earned.
