@@ -63,6 +63,42 @@ independent counter disambiguating the one aliasing pair. E8 did not create the
 window; it changed where in the frame the stop lands. Full derivation in
 `docs/optimization/TASK_STANDING_RULES.md`.
 
+The opt-in Task 25R trace carried the third instance of the same defect and is
+now fixed too (`6221406`). Its rows all come from one fixed marker, so the skew
+is constant and the contract is *stronger* than the four-state model: take the
+skew from the first row, require it reachable, require every later row to agree
+— a dropped or doubled update then disagrees with its neighbours instead of
+hiding inside a tolerance. The final reconcile runs the BPLAY_PACE snapshot
+through `Test-BattlePlayablePacingStopPhase` rather than a logic-only bound.
+Eight synthetic cases cover it with no ROM or emulator; the registry pins the
+new contract and bans the old equality.
+
+## R2-02 F — generic emit split, and the stage target moved
+
+`ClaudeOpus5_R202_F_GenericEmitSplit_20260728.md`, `ea6b1fc`. The per-segment
+counters existed and had never been read. **Segments 1/2/3/6 — Whispy's eyes and
+mouth, both flower beds — cost 43,998 ticks/frame for 21 triangles**, against
+segment 4's 22,843 for 76. At 2,095 ticks per triangle they, not segment 4, are
+the largest remaining stage lever; the "segment 4 is the largest" line below is
+superseded. R2-02's plan already named them ("small specialized update+draw
+path") and that path was never built.
+
+Three cuts refuted on the way, each with a number:
+
+| candidate | measurement | verdict |
+|---|---|---|
+| merge adjacent runs | 1.0 of 21 repeats the previous state; 18 rebind a texture | dead, ~1,200 |
+| revive Task 51 | 0.0 triangles take the path, 1,634 ticks/frame failing, emit +4,754 | structurally dead |
+| guard the texture bind | 21,978/frame over 54 runs, both guards already present | near the floor |
+
+Task 51's 2026-07-23 kill named its own revisit condition — find a scene where
+bindings 20–29/33–38 submit GX — and that condition is now met. It still fails,
+for a *different* reason: `Task51EnsureWorld` rejects on `task36_segment_active`,
+and only a rigid binding opens that bracket, which an actor segment does not
+have. Pinned so the next reader does not repeat the three builds.
+
+The texture-bind floor caps the actor rewrite near **30,000**, not 44,000.
+
 ## R2-03 E5 — the premise is proven, the obvious cut is not worth building
 
 Three counters over one canonical match settle whether R2-03's baked-facts

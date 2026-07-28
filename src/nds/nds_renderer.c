@@ -17073,6 +17073,19 @@ volatile u32 gNdsR2RunMemoMissCount;
 volatile u32 gNdsR2RunMemoFillCount;
 volatile u32 gNdsR2RunMemoOutOfRange;
 volatile u32 gNdsR2RunEntryCount;
+/* E11. Level 2 splits the call into the four spans a memo would treat
+ * differently: validation (skippable outright -- E5 proved it never rejects),
+ * texture prepare (a live GX bind a memo must still pay, split by whether the
+ * caller's per-DObj reuse flag was already set), the UV loop (E5 measured it
+ * tiny), and the tail. Sizing before designing, per E8. */
+volatile u32 gNdsR2RunValidateTicks;
+volatile u32 gNdsR2RunTexPrepTicks;
+volatile u32 gNdsR2RunTexPrepCount;
+volatile u32 gNdsR2RunTexReuseTicks;
+volatile u32 gNdsR2RunTexReuseCount;
+volatile u32 gNdsR2RunUvTicks;
+volatile u32 gNdsR2RunTailTicks;
+volatile u32 gNdsR2RunSuccessCount;
 static u32 sNdsR2RunMemoHash[NDS_R2_RUN_MEMO_MAX];
 static u8 sNdsR2RunMemoValid[NDS_R2_RUN_MEMO_MAX];
 
@@ -17265,6 +17278,10 @@ ndsRendererNativePrepareProductionRun(
     u32 unique_offset;
     s32 texture_offset = 0;
     NDSRendererHardwareResolvedTexture resolved_texture;
+#if NDS_R2_FIGHTER_RUN_PROOF >= 2
+    u32 t_r2e11_phase;
+    u32 t_r2e11_tex_valid = (state != NULL) ? state->texture_prepare_valid : 0u;
+#endif
 
     memset(&resolved_texture, 0, sizeof(resolved_texture));
 
@@ -17274,6 +17291,17 @@ ndsRendererNativePrepareProductionRun(
      * the reject count, and the memo's safety depends on it: a run that is
      * sometimes accepted and sometimes rejected must not be baked. */
     gNdsR2RunEntryCount++;
+#endif
+#if NDS_R2_FIGHTER_RUN_PROOF >= 2
+    /* E11 sizing. The census puts this function at 22,205 ticks/frame self time
+     * over ~67 runs -- 331 per call -- and E5 already proved every output is
+     * invariant in run_index. Before designing a memo, split the call: the
+     * policy validation is what a memo could skip outright, the texture-prepare
+     * block has a live GX side effect a memo must still pay, and the UV loop E5
+     * measured is tiny. E8 was refuted because its key cost as much as the work
+     * it skipped; this one is keyed on an integer index, so the question is only
+     * how much work there is to skip. */
+    t_r2e11_phase = cpuGetTiming();
 #endif
     if ((config == NULL) || (stats == NULL) || (state == NULL) ||
         (family >= (sizeof(sNdsNativeFighterDirectPolicies) /
@@ -17306,6 +17334,10 @@ ndsRendererNativePrepareProductionRun(
         return ndsRendererNativeDirectReject(stats);
     }
 
+#if NDS_R2_FIGHTER_RUN_PROOF >= 2
+    gNdsR2RunValidateTicks += cpuGetTiming() - t_r2e11_phase;
+    t_r2e11_phase = cpuGetTiming();
+#endif
     material_color =
         ((policy->vertex_flags &
           NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL) != 0u) ?
@@ -17435,6 +17467,19 @@ ndsRendererNativePrepareProductionRun(
     }
 #endif
 
+#if NDS_R2_FIGHTER_RUN_PROOF >= 2
+    if (t_r2e11_tex_valid == 0u)
+    {
+        gNdsR2RunTexPrepTicks += cpuGetTiming() - t_r2e11_phase;
+        gNdsR2RunTexPrepCount++;
+    }
+    else
+    {
+        gNdsR2RunTexReuseTicks += cpuGetTiming() - t_r2e11_phase;
+        gNdsR2RunTexReuseCount++;
+    }
+    t_r2e11_phase = cpuGetTiming();
+#endif
     unique_first = sNdsNativeFighterRunFirstUnique[run_index];
     unique_count = sNdsNativeFighterRunUniqueCount[run_index];
     /* Hierarchy preflight records immutable UV policy only; commit evaluates
@@ -17473,6 +17518,10 @@ ndsRendererNativePrepareProductionRun(
         }
     }
 
+#if NDS_R2_FIGHTER_RUN_PROOF >= 2
+    gNdsR2RunUvTicks += cpuGetTiming() - t_r2e11_phase;
+    t_r2e11_phase = cpuGetTiming();
+#endif
     if (hierarchy_run != NULL)
     {
         hierarchy_run->texture_entry = resolved_texture.entry;
@@ -17496,6 +17545,10 @@ ndsRendererNativePrepareProductionRun(
             stats, policy->textured, state->texture_prepare_name,
             state->texture_prepare_poly_fmt, state->matrix_generation);
     }
+#if NDS_R2_FIGHTER_RUN_PROOF >= 2
+    gNdsR2RunTailTicks += cpuGetTiming() - t_r2e11_phase;
+    gNdsR2RunSuccessCount++;
+#endif
 #if NDS_R2_FIGHTER_RUN_PROOF
     ndsRendererR2FighterRunProofCall(run_index, state, &resolved_texture);
 #endif
