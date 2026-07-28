@@ -946,9 +946,16 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_IMMUTABLE,
                 "workspace.binding_dobjs workspace.binding_world",
             ),
+            # R2-02 E7 hoisted camera_modelview x projection out of the dynamic
+            # binding loop, so this closure now writes binding_composed itself
+            # instead of only through PrepareNativeStageBindingMatrix. Same
+            # camera classification it carries there and in root_frame_fields.
             **_classified(
                 FIELD_CLASS_CAMERA,
-                "workspace.camera_modelview workspace.projection",
+                """
+                workspace.binding_composed workspace.camera_modelview
+                workspace.projection
+                """,
             ),
             **_classified(
                 FIELD_CLASS_LIVE,

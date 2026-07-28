@@ -222,6 +222,22 @@ NDS_R2_STAGE_DMA ?= 0
 # which was true and was never the question -- the actor segments' matrices are
 # what move. Kept because it is the cheap way to re-check that half.
 NDS_R2_STAGE_ACTORS_PROOF ?= 0
+# R2-02 E7. Composes the sixteen dynamic stage bindings from one hoisted
+# view-projection instead of rebuilding the camera operands per binding. The old
+# path cost 54,901 ticks/frame, 44.6% of the stage preflight, and the arithmetic
+# was never the bulk of it: per binding it ran the camera-cache lookup and three
+# 64-byte MTXCOPY memcpys to produce operands identical for all sixteen.
+# STG P50 224,320 -> 212,480, P95 232,640 -> 219,072.
+#
+# Exact, not approximate. For the battle camera BuildCameraMatrices leaves
+# modelview_valid FALSE and returns projection = MtxMul(lookat, persp), so the
+# old compose was already world x (lookat x persp) -- one multiply, not two --
+# and BuildTask36StageCameraMatrices derives its two halves from the same
+# syMatrixLookAtReflect/syMatrixPerspFast calls, so the hoisted product is
+# bit-identical rather than reassociated. Proven against the pre-E7 arm:
+# binding_composed[] identical for all 42 bindings at frames
+# 260/420/500/700/1100/1700.
+NDS_R2_STAGE_VIEWPROJ ?= 0
 # R2-03 E1 falsifier, lab only. Hashes the inputs and the outputs of the fighter
 # shade loop once a frame and counts the frames each changes on. 48,422
 # ticks/frame re-light 541 dense vertices; this says whether they need to.
@@ -425,6 +441,23 @@ override NDS_BATTLE_PROFILE := 1
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
 override NDS_TASK44_STAGE_STEADY := 1
+# R2-02: the three kept stage cuts, graduated 2026-07-28. Together they take STG
+# P50 351,488 -> 212,480 (-139,008, -40%) and put the frame at 2 VBlanks where
+# the previous shipping ROM sat at 3.
+#
+# All three are exactness-preserving, so none of them spends the PROJECT_GOAL.md
+# fidelity budget and none needs the owner's visual-oracle call:
+#   E1a  reuses a prepared run table that is a pure function of the generated
+#        tables and a traversal state Task 44 already proves unchanged;
+#        -94,784, down on 128/128 frames, 4-VBlank frames 50 -> 12 of 566.
+#   E2   sends the identical Task 36 word stream by GXFIFO DMA instead of a CPU
+#        store loop; -30,912.
+#   E7   hoists the camera operands out of the per-binding compose loop;
+#        -11,840, and binding_composed[] is bit-identical to the pre-E7 arm for
+#        all 42 bindings at frames 260/420/500/700/1100/1700.
+override NDS_R2_STAGE_DIRECT := 1
+override NDS_R2_STAGE_DMA := 1
+override NDS_R2_STAGE_VIEWPROJ := 1
 # Task 37: seven hot leaves (memset, memcpy, memcmp, __ieee754_sqrtf and three
 # renderer/fighter helpers, 906 bytes) into ITCM free space. Named work P50
 # -59,328 ticks, 3-VBlank share 71.7% -> 76.0%, 5+ VBlank 5.2% -> 3.1%.
@@ -487,6 +520,20 @@ override NDS_BATTLE_PROFILE := 1
 # Task 44: stage steady-state admission + dense binding lists. Exact (no
 # fidelity change); ships on with Task 36 replay.
 override NDS_TASK44_STAGE_STEADY := 1
+# R2-02 E1a/E2/E7, graduated with the published block 2026-07-28. Defaulted on
+# so a bare tick-HUD build measures the shipping stage program, but deliberately
+# NOT `override`: these three are the live A/B surface for the rest of R2-02,
+# and an override beats the command line, which would make the measurement
+# target unable to measure the thing it exists to measure.
+ifneq ($(origin NDS_R2_STAGE_DIRECT),command line)
+NDS_R2_STAGE_DIRECT := 1
+endif
+ifneq ($(origin NDS_R2_STAGE_DMA),command line)
+NDS_R2_STAGE_DMA := 1
+endif
+ifneq ($(origin NDS_R2_STAGE_VIEWPROJ),command line)
+NDS_R2_STAGE_VIEWPROJ := 1
+endif
 # Must track the published block above. These two targets exist to measure and
 # prove the shipping program, so any flag that is on there and off here makes
 # every tick-HUD bucket and every GDB proof a reading of a different binary.
@@ -1707,6 +1754,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \
 		echo '#define NDS_R2_STAGE_DMA $(NDS_R2_STAGE_DMA)'; \
 		echo '#define NDS_R2_STAGE_ACTORS_PROOF $(NDS_R2_STAGE_ACTORS_PROOF)'; \
+		echo '#define NDS_R2_STAGE_VIEWPROJ $(NDS_R2_STAGE_VIEWPROJ)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_PROOF $(NDS_R2_FIGHTER_SHADE_PROOF)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
@@ -1988,6 +2036,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DIRECT=$(NDS_R2_STAGE_DIRECT)'
 	@printf '%s\n' 'BENCH_MAKE_R2_FIXED_SQRT=$(NDS_R2_FIXED_SQRT)'
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DMA=$(NDS_R2_STAGE_DMA)'
+	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_VIEWPROJ=$(NDS_R2_STAGE_VIEWPROJ)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'

@@ -42,13 +42,13 @@ R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
 | R2-00a stall attributor | **done, gate met** | `optimization/ClaudeOpus5_R200a_StallAttributor_20260727.md` |
 | R2-00b re-baseline + budgets | **done** | `optimization/ClaudeOpus5_R200b_BaselineAndBudgets_20260727.md` |
 | R2-01 battle-path skeleton | **done, gate met** | `NDS_R2_PATH`, `src/nds/r2/`; Boundary green |
-| R2-02 Dream Land direct runtime | **E1a KEEP, phase gate NOT met** | `optimization/ClaudeOpus5_R202_E1a_StagePrepareElision_20260727.md` |
+| R2-02 Dream Land direct runtime | **E1a/E2/E7 KEEP and shipping, phase gate NOT met** | `optimization/ClaudeOpus5_R202_E7_ViewProjectionHoist_20260728.md` |
 | R2-03 fighter direct draw | **unowned — not started** | |
 | (R1 harvest) hardware sqrt | done, KEEP | `optimization/ClaudeOpus5_R203_E1_HardwareSqrt_20260728.md` (filename mislabels it R2-03) |
 
 **R2-02's §7 gate is NOT met. E3 is retracted and E4 refuted the whole
-approach.** `STG` P50 stands at **224,320** after E1a and E2, **44,320 over** the
-provisional 180K budget. §3.1 and §7 forbid carrying a phase that misses its
+approach.** `STG` P50 stands at **212,480** after E1a, E2 and E7, **32,480 over**
+the provisional 180K budget. §3.1 and §7 forbid carrying a phase that misses its
 budget into the next one, so **R2-03 was started prematurely** and its queue
 below is sizing only, not licence to build. The two soft-float files named
 `R2-03` are Runtime 1 harvest, not that phase; they are corrected in place per
@@ -58,15 +58,40 @@ the never-rename rule.
 STG P50   351,488  baseline
           256,704  after E1a  (-94,784)  prepare-run elision      -- clean
           224,320  after E2   (-30,912)  GXFIFO DMA rigid replay  -- clean
+          212,480  after E7   (-11,840)  view-projection hoist    -- bit-exact
           180,000  gate
           -------
-           44,320  still over
+           32,480  still over
 
          (173,120  E3 and E4-C both  (-51,200)  BOTH REVERTED: that number is
                                                 the price of not drawing the
                                                 flowers, not of drawing them
                                                 faster)
 ```
+
+**All three kept cuts now ship.** `NDS_R2_STAGE_DIRECT`, `NDS_R2_STAGE_DMA` and
+`NDS_R2_STAGE_VIEWPROJ` are default-on in the published
+`smash64ds-battle-playable-hwtri` block and in the `tickhud`/`proof` block —
+`STG` P50 **351,488 → 212,480, −40%**, and the frame moves off the 3 VBlanks the
+previous shipping ROM sat at. None of the three spends the fidelity budget, so
+none of them needed the owner's visual-oracle call: that clause governs
+approximations, and these are exactness-preserving. E7 is bit-identical to its
+control on all 42 composed matrices at six frames spanning the camera's range of
+motion. The tick-HUD block sets the three *without* `override`, deliberately —
+they are the live A/B surface for the rest of the phase — and the graduated
+default tick-HUD build hashes `DFBE1ED0E2BB97DB`, byte-identical to the explicit
+lab build, so measurement and shipping are the same binary.
+
+**E7 also corrected a wrong rationale that had already been written down twice.**
+The cut was designed as an associativity hoist that would spend the Task 49
+Tier-2 pixel budget. Dumping `binding_composed` out of both ROMs showed no delta
+at all: `ndsRendererAdapterBuildCameraMatrices` already returns
+`projection = MtxMul(lookat, persp)` with `modelview_valid` FALSE for the battle
+camera, so the compose was `world × (lookat × persp)` — **one multiply per
+binding, never two** — and the −11,840 is the per-binding camera-cache lookup and
+three 64-byte `MTXCOPY` memcpys that stopped happening. Both E6 and E7 were
+designed against arithmetic and both resolved to memory traffic. **Do not size
+the next stage matrix lever by counting multiplies.**
 
 **The mechanism, established by E4** —
 `optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md`. A **rigid**
@@ -176,11 +201,11 @@ and 6 plus a triangle count and `task36_runtime_rigid_mask` read from the run
 that produced the buckets. Whispy (20–24) is out of scope — materially animated,
 and at 12 single-binding triangles it was never the expensive half.
 
-**The two surviving R2-02 flags are still default-off and the published ROMs are
-unchanged.** `AGENTS.md` makes the owner the visual oracle for render-side work,
-so graduating `NDS_R2_STAGE_DIRECT` / `NDS_R2_STAGE_DMA` to default-on is the
-owner's call. **This is the ask that matters most on this board:** the shipping
-ROM is running at 3 VBlanks where those two flags put it at 2.
+**Closed 2026-07-28: the R2-02 flags are graduated and the published ROMs carry
+them.** This row previously asked the owner to make that call. It was the wrong
+ask — the owner is the visual oracle for changes that *spend the fidelity
+budget*, and all three of these are exactness-preserving, so the decision was
+the verifier's and not a matter of taste.
 
 **What else is left in the stage.** layer1 (segment 4) is 22,738 ticks/frame for
 76 triangles and is still generic: its six runs submit through the raw composed

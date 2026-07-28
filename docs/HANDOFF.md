@@ -1,11 +1,11 @@
 # Handoff
 
 Updated: 2026-07-28 — Runtime 2: R2-00a/b/c and R2-01 gated. **R2-02 is NOT
-closed: E1a and E2 are clean, E3 is retracted (it breaks both flower beds).**
-`STG` P50 225,792 vs the 180K gate, 45,792 over. R2-03's E0–E4 sizing was done
-prematurely; it is sound as measurement but the phase is still blocked.
-`P1_EXECUTION_BOARD.md` owns current state; this file is the restart surface and
-next packet.
+closed: E1a, E2 and E7 are clean and now ship; E3 is retracted (it breaks both
+flower beds) and E4 refuted its whole approach.** `STG` P50 **212,480** vs the
+180K gate, **32,480 over**. R2-03's E0–E4 sizing was done prematurely; it is
+sound as measurement but the phase is still blocked. `P1_EXECUTION_BOARD.md` owns
+current state; this file is the restart surface and next packet.
 
 ## Restart
 
@@ -29,8 +29,8 @@ deliberately left them unstaged. Commit or revert them with the bug-#10 work.
 
 ## State as of this handoff
 
-R2-00a/b/c and R2-01 are done and gated. **R2-02 is not closed.** E1a and E2 are
-clean and take `STG` P50 from 351,488 to **224,320**; the 180K gate is 44,320
+R2-00a/b/c and R2-01 are done and gated. **R2-02 is not closed.** E1a, E2 and E7
+are clean and take `STG` P50 from 351,488 to **212,480**; the 180K gate is 32,480
 away. **E3 is retracted and E4 refuted the approach** — the actor segments
 cannot be admitted to the Task 36 replay by editing masks.
 `optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md` has all three

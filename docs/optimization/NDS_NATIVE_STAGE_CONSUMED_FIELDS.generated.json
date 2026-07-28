@@ -2696,6 +2696,10 @@
       "closure": "ndsRendererAdapterPrepareNativeStageMatrices",
       "fields": [
         {
+          "access": "workspace.binding_composed",
+          "classification": "live_camera_dependent"
+        },
+        {
           "access": "workspace.binding_dobjs",
           "classification": "immutable_generation"
         },

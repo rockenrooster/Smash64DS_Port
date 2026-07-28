@@ -583,6 +583,40 @@ prints on every run — while required-region detail moved 0.056pp and Boundary
 passed. Record the control arm's region table alongside the candidate's, in the
 report, for any change that touches stage geometry.
 
+## If a change is supposed to move fixed-point rounding, dump the fixed point and diff it (R2-02 E7, 2026-07-28)
+
+E7 was designed as an associativity hoist — `(A × B) × C` becomes `A × (B × C)`
+— and was written up as spending the Task 49 Tier-2 screen-pixel budget, because
+20.12 multiplication is not associative. The plan was a frame-locked crop against
+the control arm, per the rule above.
+
+**Dumping the matrices instead was cheaper, exact, and showed the premise was
+false.** One GDB script per arm printed
+`sNdsRendererAdapterNativeStageWorkspace.binding_composed` at five frames
+spanning the camera's range of motion: all 42 bindings bit-identical, at every
+frame. There was no delta to crop, because there was no second multiply to
+reassociate — `ndsRendererAdapterBuildCameraMatrices` already returns
+`projection = MtxMul(lookat, persp)` with `modelview_valid` FALSE for the battle
+camera, so the compose was `world × (lookat × persp)` all along.
+
+The rule: **when the hypothesis is about arithmetic, measure the arithmetic.** A
+screenshot answers "can I see a difference", which is the weaker question and the
+slower one. A dump of the actual fixed-point result answers "is there a
+difference", costs one GDB run per arm, and — as here — can turn a
+budget-spending KEEP into a provably bit-identical one. Reserve the crop for
+changes that really do produce different numbers.
+
+Corollary, and the reason this is a rule rather than a note: **a host model of
+the arithmetic is not evidence.** A Python replay of both orderings said 15
+bindings should differ by up to 1,775 LSB. The ROM said zero. The model was
+wrong about which operands the runtime actually uses, which is exactly the kind
+of thing a model gets wrong and a dump cannot.
+
+Second corollary: **fix the rationale, not just the code.** The flag comment and
+the Makefile block both asserted "two multiplies per binding" and "rounding order
+changes". Both were wrong in the safe direction, and both would have outlived the
+commit. A wrong reason in the tree is a future task's false premise.
+
 ## A saving that equals the cost of drawing something is not a saving (R2-02 E4, 2026-07-28)
 
 Two different mask edits, a fortnight of reasoning apart, both measured `STG`

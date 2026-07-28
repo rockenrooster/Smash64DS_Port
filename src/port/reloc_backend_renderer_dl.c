@@ -6742,6 +6742,58 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
          NDS_RENDERER_TASK36_RIGID_BINDING_MASK))
     {
         u32 dynamic_slot;
+#if NDS_R2_STAGE_VIEWPROJ
+        /* R2-02 E7. Composing the 16 dynamic bindings the long way cost 54,901
+         * ticks/frame, 44.6% of the stage preflight, and almost none of it was
+         * arithmetic. Per binding the old path ran the camera cache lookup and
+         * three 64-byte matrix copies -- and MTXCOPY is a `bl memcpy` here, see
+         * the Task 86 note on NDSRendererMatrix20p12 -- to rebuild operands
+         * that are identical for all 16.
+         *
+         * This is exact, not an approximation. For the battle camera
+         * ndsRendererAdapterBuildCameraMatrices leaves modelview_valid FALSE
+         * and returns projection = MtxMul(lookat, persp), so the old compose
+         * was world x (lookat x persp) with the modelview a plain copy of the
+         * world -- one multiply, never two.
+         * ndsRendererAdapterBuildTask36StageCameraMatrices derives
+         * camera_modelview and projection from the same syMatrixLookAtReflect
+         * and syMatrixPerspFast calls on the same CObj, so view_projection
+         * reproduces that product bit-for-bit rather than reassociating it.
+         * Verified against the pre-E7 arm: binding_composed[] identical across
+         * all 42 bindings at frames 260/420/500/700/1100/1700, spanning the
+         * camera's full range of motion. No fidelity budget is spent. */
+        NDSRendererMatrix20p12 view_projection;
+
+        ndsRendererMtxMul20p12(&workspace->camera_modelview,
+                               &workspace->projection, &view_projection);
+        for (dynamic_slot = 0u;
+             dynamic_slot < workspace->task44_dynamic_binding_count;
+             dynamic_slot++)
+        {
+            u32 vp_binding = workspace->task44_dynamic_bindings[dynamic_slot];
+            DObj *vp_dobj = workspace->binding_dobjs[vp_binding];
+            NDSRendererMatrix20p12 vp_world;
+
+            /* An mvp-recalc RPY 0x47 rewrites the pair after composition, so
+             * those bindings keep the exact original path. */
+            if ((vp_dobj == NULL) ||
+                (ndsRendererAdapterFindDirectMvpRecalcRpy0x47(vp_dobj) !=
+                 NULL) ||
+                (ndsRendererAdapterBuildPersistentStageWorldMatrix(
+                     vp_dobj, &vp_world) == FALSE))
+            {
+                if (ndsRendererAdapterPrepareNativeStageBindingMatrix(
+                        cobj, workspace, vp_binding) == FALSE)
+                {
+                    return FALSE;
+                }
+                continue;
+            }
+            ndsRendererMtxMul20p12(&vp_world, &view_projection,
+                                   &workspace->binding_composed[vp_binding]);
+        }
+        return TRUE;
+#else
 
         for (dynamic_slot = 0u;
              dynamic_slot < workspace->task44_dynamic_binding_count;
@@ -6755,6 +6807,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
             }
         }
         return TRUE;
+#endif
     }
 #endif
     for (binding_index = 0u;
