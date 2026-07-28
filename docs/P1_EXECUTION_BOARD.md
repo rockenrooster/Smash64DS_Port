@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-25 19:05 Central
+Updated: 2026-07-27 22:45 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
@@ -30,6 +30,38 @@ SHA-256 A9ED45BC5DEF9DE71E00850E83DEB34AE46F4CB9B2CE19113E0548273C56F574
 The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
+
+## Runtime 2 (2026-07-27)
+
+The owner approved `Smash64DS_Runtime2_SwitchPlan.md` and it is now the live
+renderer direction; `optimization/archive/NATIVE_RENDERER_PLAN.md` is history.
+R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
+
+| phase | state | evidence |
+|---|---|---|
+| R2-00a stall attributor | in progress | melonDS-Accurate fork, out of tree |
+| R2-00b re-baseline + budgets | **done** | `optimization/ClaudeOpus5_R200b_BaselineAndBudgets_20260727.md` |
+| R2-01 battle-path skeleton | in progress | `NDS_R2_PATH`, `src/nds/r2/` |
+| R2-02 Dream Land direct runtime | unowned | |
+| R2-03 fighter direct draw | unowned | |
+
+**R2-00b replaced the stale Task 65 baseline.** REAL WORK is **1,446,348**
+ticks/frame, not 1,527,277; the gap to the 1.12M gate is **326,348**, not
+407,277. Stall is 62.1% of work (memory 555,943, non-memory 342,494), so the
+architectural premise is unchanged — memory stall alone still exceeds the whole
+gap.
+
+It also corrected an attribution defect Task 65 shipped: `task65_subsystem_census.py`
+filed `src/port/reloc_backend_renderer_dl.c` under `PORT/reloc`, charging
+**147,777 ticks/frame of renderer adapter work to a bucket named after
+loading.** Corrected, **the renderer is 723,554 ticks/frame — 50.0% of the
+frame's work** — and all gameplay is 190,649 (13.2%). Any plan built on Task
+65's §2 table under-counted the renderer by that amount.
+
+Note for every future phase gate: the census attributes by where code lives and
+the tick-HUD buckets attribute by bracket. They are not interchangeable, and the
+shared kernels (616,701 ticks/frame) are what differ between them. State which
+view a gate quotes.
 
 ## Red Queue
 
