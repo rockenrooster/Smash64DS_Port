@@ -66,20 +66,26 @@ single highest-value decision waiting on this file.
 
 ## Next packet, in priority order
 
-0. **R2-03 E2 — `ndsFighterMarioFoxDLAllDrawForSlot`, 37,206 ticks/frame at
-   5.55 cyc/insn.** The generic DObj tree walk plus per-frame display-list
-   revalidation, per fighter — the highest stall ratio of any large function in
-   the frame, and the first deletion §7 names. `NDS_TASK91_DRAW_PHASE_CENSUS`
-   already splits it into `gNdsTask91WalkTicks` / `gNdsTask91ValidateTicks`;
-   size with that before writing.
+0. **R2-03 E3 — split `ndsFighterMarioFoxDLAllDrawForSlot`'s unattributed
+   ~24,000.** E2 measured the two phases §7 names first and they are only
+   13,670 ticks/frame of the function's 37,206: **walk 3,289, revalidation
+   10,381**, two independent windows agreeing to 0.5%, native-owner eligible on
+   3,493 of 3,553 calls. The larger half of that function is still unmeasured,
+   and E3's lesson was that the aggregate hides the answer. One more counter
+   pair in an instrument that already exists is the cheapest information left
+   in the fighter — do it before writing any cut.
+   Then, in order: the revalidation stamp (**~10,400** — falsify its inputs
+   first, `NDS_R2_STAGE_ACTORS_PROOF` is the pattern), the cached DObj
+   collection on the same stamp (**~3,300**), then the adapter matrix rebuild
+   (**56,879**), `PrepareProductionRun` 22,467 and
+   `BuildNativeMaterialSnapshot` 12,434.
+   `ClaudeOpus5_R203_E2_WalkAndValidateSizing_20260728.md`.
    **E1 refuted the bigger-looking candidate and it is closed.**
    `ndsRendererNativeShadeProductionActions` (48,422) is not a memo: its inputs
    changed on 1,796 of 1,835 frames and its outputs on exactly the same 1,796,
    so neither a plain nor a quantised key helps
    (`ClaudeOpus5_R203_E1_ShadeMemoRefuted_20260728.md`). At 2.44 cyc/insn it is
    compute-bound, so placement and traffic work will not touch it either.
-   Remaining after those two: the adapter matrix rebuild **56,879**, then
-   `PrepareProductionRun` 22,467 and `BuildNativeMaterialSnapshot` 12,434.
    Gate for the phase: pixel parity on the same pose (Task 49 GX differ +
    screenshot) and the provisional 250K combined-fighter budget.
    The two E3 habits that transfer: **price the work the fast path does not
@@ -168,6 +174,18 @@ single highest-value decision waiting on this file.
 - `NDS_R2_STAGE_ACTORS_PROOF=1` (lab, build with `NDS_R2_STAGE_ACTORS=0`) hashes
   the prepared data the four actor segments consume, once a frame, and counts
   the frames it changes on. Reuse it before widening the replay mask again.
+- `NDS_R2_FIGHTER_SHADE_PROOF=1` (lab) does the same for the fighter shade
+  loop, hashing inputs and outputs separately so a plain memo and a quantised
+  one are distinguishable. It has already refuted both; re-run it before anyone
+  proposes memoising that loop again.
+- **`scripts/census-fighter-draw-phases.ps1` silently measures two frames
+  whatever `-WindowFrames` says** (asked for 128, reported "frames 439 .. 441").
+  The cause is the standing rule *GDB `if` at top level resumes exactly once*.
+  Its numbers are a correct 2-frame delta, but that is a thin sample. Until it
+  is fixed, read `gNdsTask91*` the way R2-03 E2 did: they accumulate from boot,
+  so one `sample-tick-hud-buckets.ps1 -ExtraGlobals` stop at a late frame
+  divided by `gNdsTask91DrawCalls` gives a whole-match per-call figure with no
+  window logic to get wrong.
 - The stall attributor is installed repo-local at
   `emulators/melonds-attributor/melonDS.exe` (`D81FC0BF…`), **not** over
   `emulators/melonds/melonDS.exe` (`DE80E46B…`), so every prior measurement
