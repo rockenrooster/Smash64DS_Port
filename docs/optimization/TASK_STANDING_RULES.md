@@ -607,6 +607,26 @@ of a fail-closed guard disabling the optimisation. E4 arm B read `STG` 465,088
 against a 224,320 control and rendered perfectly, because one binding failing a
 rigid-constancy check drops the whole mask and invalidates the replay.
 
+## Read the subsystem check's counters before designing against the subsystem (R2-02 E4, 2026-07-28)
+
+`M3_NATIVE_STAGE_CHECK_OK` prints `cross_matrix_runs=5 cross_matrix_triangles=10
+cross_matrix_foreign_corners=15` on **every Boundary run**, and has for the whole
+campaign. Those ten triangles are all in the two flower beds, they are the only
+cross-matrix geometry on the stage, and they are the entire reason the flowers
+cannot enter the single-binding fast path and the entire reason they are
+expensive — a cross-matrix triangle loads a composed matrix once per vertex.
+
+R2-02 E3 and E4 spent three ROM builds, three ring dumps and two Boundary runs
+converging on that number from the other direction, while it scrolled past in the
+verifier output of each of those runs.
+
+**Before proposing a change to a subsystem, read the counters its own checker
+already prints, and reconcile your model against every one of them.** These lines
+look like boilerplate because they pass every time; they are a free structural
+census of exactly the thing you are about to modify. The corollary for authors:
+when a checker prints a counter, something once needed it — treat an unexplained
+non-zero as a fact your design has to account for, not as noise.
+
 ## Compare a span to a span, not to a census row (R2-03 E3, 2026-07-28)
 
 A symbol's row in the frame-work census is **self time**: every callee is

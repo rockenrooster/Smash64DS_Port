@@ -100,15 +100,24 @@
 /* Bindings 0-19 (layer0), 30-32 (layer2) and 39-41 (layer3).
  *
  * R2-02 E4 tried to widen this to the two flower segments (25-28, 33-38) on the
- * strength of their world matrices being constant. The runtime rigid-constancy
- * check accepted them -- task36_runtime_rigid_mask held the widened value -- and
- * STG fell to 173,120, under R2-02's 180,000 gate. The flower beds were gone.
- * ndsRendererNativeStageEmitNoZTriangle drops a triangle outright when
- * ndsRendererNativeStageTask36EnsureWorld fails for a rigid binding, so a
- * binding that is nominally rigid but cannot compose its world costs geometry,
- * not ticks. Do not widen this mask again without a differ that compares the
- * rigid-composed screen position of the *newly added* bindings against the CPU
- * oracle, and a crop of those segments against the control arm. */
+ * strength of their world matrices being constant. The worlds were fine -- the
+ * runtime rigid-constancy check accepted them and task36_runtime_rigid_mask held
+ * the widened value all run -- and STG fell to 173,120, under R2-02's 180,000
+ * gate. The flower beds were gone.
+ *
+ * The rigid emit path is single-binding by construction:
+ * ndsRendererNativeStageEmitNoZTriangle drops a triangle whose corners are not
+ * all bound to the run's own binding, before it ever reaches EnsureWorld. The
+ * flower beds are the only cross-matrix geometry on Dream Land -- 10 of their 15
+ * triangles, which is exactly the cross_matrix_triangles=10 that
+ * M3_NATIVE_STAGE_CHECK_OK prints on every Boundary run.
+ *
+ * So this mask cannot take a binding whose runs carry cross-matrix triangles,
+ * however constant its world is. De-cross them in the generator first (duplicate
+ * each foreign corner into the run's binding space at build time), gate that on
+ * the Task 49 Tier-2 differ, and crop the changed segments against the control
+ * arm. See docs/optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md
+ * section 8. */
 #define NDS_RENDERER_TASK36_RIGID_BINDING_MASK 0x00000381c00fffffULL
 #endif
 

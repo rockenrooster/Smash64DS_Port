@@ -81,10 +81,18 @@ camera. Hence the invariant, now written into both masks:
 > binding is in `NDS_RENDERER_TASK36_RIGID_BINDING_MASK`.
 
 E3 broke it by widening one mask. E4 arm C restored it by widening both — and
-lost the flower beds anyway, because
-`ndsRendererNativeStageEmitNoZTriangle` **drops the triangle** when
-`Task36EnsureWorld` fails for a rigid binding. A binding that is nominally rigid
-but cannot compose its world costs geometry, not ticks.
+lost the flower beds anyway, for an unrelated reason: **the rigid emit path is
+single-binding by construction.** `ndsRendererNativeStageEmitNoZTriangle` drops
+a triangle whose corners are not all bound to the run's own binding, and the two
+flower beds are the only cross-matrix geometry on Dream Land — 10 of their 15
+triangles. That is the `cross_matrix_triangles=10` that
+`M3_NATIVE_STAGE_CHECK_OK` prints on every Boundary run, and it had been on
+screen the whole time.
+
+It is also why the flowers are expensive: a cross-matrix triangle falls to the
+generic tail, which loads a composed matrix **once per vertex**. 15 flower
+triangles cost 35 matrix loads a frame; Whispy's 12 single-binding triangles cost
+12.
 
 Two hypotheses died cheaply on the host and should have died before E3 landed:
 every actor triangle carries coordinate shift 0 (so Task 51's missing shift
@@ -99,13 +107,17 @@ defaults and Boundary-green at **62.750%**, `stage_body` green 44.848% / detail
 an unmatched `glPopMatrix(1)`. Capture now records the run's actual `PUSH`/`POP`
 balance.
 
-**Next on this row — generator work, not a mask.** Emit a per-binding constant
-world for 25–28 and 33–38 in `binding_world` space from
-`scripts/generate_nds_native_stage.py`; gate it on a Task 49 Tier-2 differ over
-the **newly added bindings'** screen positions; only then widen both masks in one
-commit; verify with a frame-locked crop of those segments plus
-`task36_runtime_rigid_mask` read from the run that produced the buckets. Whispy
-(20–24) is out of scope — it is materially animated.
+**Next on this row — de-cross the flowers in the generator.** For each of the 15
+foreign corners emit a duplicate dense vertex pre-transformed into the run's
+binding space (`v' = W_run⁻¹ · W_foreign · v`, a compile-time transform because
+both worlds are constant). That is +15 dense vertices, no new runs or triangles,
+and it makes every flower triangle single-binding. Only then widen
+`NDS_RENDERER_TASK36_RIGID_BINDING_MASK` and `NDS_TASK36_REPLAY_SEGMENT_MASK`
+together; gate the transform on the Task 49 Tier-2 differ (the inverse-multiply
+is where fixed-point error enters); verify with a frame-locked crop of segments 3
+and 6 plus a triangle count and `task36_runtime_rigid_mask` read from the run
+that produced the buckets. Whispy (20–24) is out of scope — materially animated,
+and at 12 single-binding triangles it was never the expensive half.
 
 **The two surviving R2-02 flags are still default-off and the published ROMs are
 unchanged.** `AGENTS.md` makes the owner the visual oracle for render-side work,

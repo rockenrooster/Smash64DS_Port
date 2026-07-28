@@ -156,23 +156,60 @@ green 44.86% → 50.49%, detail 52.40% → 48.77% — 418 pixels of blossom turn
 grass. Required-region detail moved only 62.750% → 62.694%, which is again no
 help, for the same reason as E3.
 
-The mechanism is one line of the emit path.
-`ndsRendererNativeStageEmitNoZTriangle` **drops the triangle outright** when
-`ndsRendererNativeStageTask36EnsureWorld` fails for a rigid binding:
+The mechanism is in `ndsRendererNativeStageEmitNoZTriangle`, and it is **not**
+the `Task36EnsureWorld` failure this section first named — that check never
+runs, because the one before it fires first. The rigid branch drops a triangle
+outright when any corner is bound to a different binding than the run:
 
 ```c
-        run->binding_index, coordinate_shift) == FALSE)
-    {
-        gNdsRendererM3PostArmFailureCount++;
-        return 0u;
-    }
+        if (sNdsNativeStageVertices[dense_index].matrix_binding !=
+            run->binding_index)
+        {
+            gNdsRendererM3PostArmFailureCount++;
+            return 0u;
+        }
 ```
 
-So a binding that is nominally rigid but cannot compose its world costs
-**geometry**, not ticks — and −51,200 is the price of not drawing 15 triangles,
-which is the same thing E3 was really measuring. Two arms, two different mask
-edits, the same 51,200: that number is what the actor segments cost, and both
-attempts collected it by ceasing to draw them.
+**The rigid fast path is single-binding by construction, and the flower beds are
+the only cross-matrix geometry in Dream Land.** Counted straight out of the
+generated packet, and matching the `cross_matrix_runs=5
+cross_matrix_triangles=10 cross_matrix_foreign_corners=15` the Boundary stage
+check has been printing all along:
+
+```text
+segment          cross-matrix triangles   foreign corners
+layer0                    0 of 54                0
+whispy_eyes               0 of  4                0
+whispy_mouth              0 of  8                0
+flowers_back              4 of  6                6
+layer1                    0 of 76                0
+layer2                    0 of 17                0
+flowers_front             6 of  9                9
+layer3                    0 of 28                0
+```
+
+So arm C dropped 10 of the flowers' 15 triangles at that check, on the capture
+frame, and every replay frame reproduced the gap. −51,200 is the price of not
+drawing them, which is the same thing E3 was really measuring. Two arms, two
+different mask edits, the same 51,200.
+
+**This is also why the flowers are expensive in the first place.** A
+cross-matrix triangle falls through to the generic tail, which calls
+`ndsRendererNativeStageLoadNoZMatrix` **once per vertex** — a full CPU compose
+and a 16-word `glLoadMatrix4x4` for each of the three corners:
+
+```c
+        if (one_binding == FALSE)
+        {
+            ndsRendererNativeStageLoadNoZMatrix(
+                dense->matrix_binding, vertex_shift, projected_z);
+        }
+```
+
+15 flower triangles cost **35 matrix loads a frame** (10 × 3 + 5 × 1). Whispy's
+12 triangles, all single-binding, cost 12. Per triangle the flowers are 2.3× the
+matrix traffic of anything else on the stage, and that ratio — not the vertex
+count — is what the 45,349-ticks-for-27-triangles number was measuring.
 
 ## 7. What is kept, what is deleted
 
@@ -194,26 +231,46 @@ the control's numbers.
 
 ## 8. What the next attempt has to do
 
-Not a mask edit. The actor bindings need a genuine constant world matrix in the
-space `ndsRendererNativeStageTask36BuildWorld` expects, produced by the
-generator, and it has to be proven before any mask moves:
+Not a mask edit, and **not a world-matrix bake either** — that was this report's
+first answer and §6 corrects it. The flower bindings' worlds are already fine:
+the runtime rigid-constancy check accepted them in arm C and
+`task36_runtime_rigid_mask` held the widened value all run. What disqualifies
+them is the *topology*: 10 of their 15 triangles have corners in more than one
+binding, and no single-binding fast path can draw such a triangle.
 
-1. Emit a per-binding constant world for 25–28 and 33–38 from
-   `scripts/generate_nds_native_stage.py`, in `binding_world` space — not Task
-   51's `sNdsNativeStageBakedWorldMatrices`, whose consumer is compiled out and
-   whose correctness for these bindings is unestablished.
-2. Gate it on a differ that compares the **rigid-composed screen position of the
-   newly added bindings** against the CPU-composed oracle, Task 49 Tier-2
-   (≤ 1.0 screen-px). E4 arm C would have failed this instantly.
-3. Only then widen `NDS_RENDERER_TASK36_RIGID_BINDING_MASK`, and widen
-   `NDS_TASK36_REPLAY_SEGMENT_MASK` to match in the same commit.
-4. Verify with a frame-locked crop of *those segments* against the control arm,
-   plus `task36_runtime_rigid_mask` read from the same run that produced the
-   buckets.
+**De-cross the flower triangles in the generator.** For each foreign corner,
+emit a duplicate dense vertex whose position is pre-transformed into the run's
+binding space:
 
-Whispy (20–24) is out of scope for that work: it is materially animated. layer1
-(29) is a separate lever — its runs submit through the raw composed matrix and it
-is the largest single generic segment at 22,738 ticks/frame for 76 triangles.
+```text
+v' = W_run^-1 · W_foreign · v
+```
+
+Both worlds are constant, so this is a compile-time transform. It costs at most
+**15 new dense vertices** (312 → 327), adds no runs and no triangles, and leaves
+every corner of every flower triangle bound to its own run. Then, and only then:
+
+1. Widen `NDS_RENDERER_TASK36_RIGID_BINDING_MASK` to 25–28 and 33–38, and widen
+   `NDS_TASK36_REPLAY_SEGMENT_MASK` to `{0, 3, 5, 6, 7}` in the same commit.
+2. Gate the transform on the Task 49 Tier-2 differ (≤ 1.0 screen-px) over the
+   de-crossed vertices' screen positions against the CPU-composed oracle. The
+   inverse-multiply is where fixed-point error enters and it is the only thing
+   that can go wrong quietly.
+3. Verify with a frame-locked crop of segments 3 and 6 against the control arm,
+   plus `task36_runtime_rigid_mask` and a triangle count read from the same run
+   that produced the buckets. A cut that drops geometry reads as a saving.
+
+**Expected size.** The flowers pay 35 of the stage's matrix loads a frame; rigid
+plus replay takes that to roughly two world mults. Arm C measured −51,200 for
+removing them outright, and most of that is the matrix traffic rather than the
+vertex emission, so a correct version should recover the bulk of it — enough on
+its own for R2-02's remaining 44,320, though that is a prediction, not a
+measurement.
+
+Whispy (20–24) is out of scope: it is materially animated, and at 12
+single-binding triangles it was never the expensive half. layer1 (29) is a
+separate lever — its runs submit through the raw composed matrix and it is the
+largest single generic segment at 22,738 ticks/frame for 76 triangles.
 
 ## 9. Cost of the lesson
 
@@ -222,3 +279,11 @@ frame-locked crops to establish that a 15-triangle scenery cut needs generator
 work. The two host-side refutations in §2 cost ten minutes and no builds, and
 both should have been done before E3 landed — the shift census reads a checked-in
 generated file, and the Task 51 refutation is one `grep` of the Makefile.
+
+The cross-matrix census in §6 is the sharpest instance: it is nine lines over the
+same checked-in file, it names the exact 10 triangles, and **the answer was
+already on screen.** `M3_NATIVE_STAGE_CHECK_OK` prints `cross_matrix_runs=5
+cross_matrix_triangles=10 cross_matrix_foreign_corners=15` on every single
+Boundary run, and has for the whole campaign. Three arms were spent rediscovering
+a number the verifier had been reporting all along. When a subsystem check prints
+a counter, read it before designing against the subsystem.

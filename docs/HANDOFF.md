@@ -42,10 +42,16 @@ arms; the short version:
   pins the geometry to the capture frame's camera. **The replay segment mask must
   name exactly the segments whose bindings are all rigid.** E3 broke that.
 - Widening the rigid mask to match (E4 arm C) restored the invariant and lost the
-  flower beds anyway: `ndsRendererNativeStageEmitNoZTriangle` **drops the
-  triangle** when `Task36EnsureWorld` fails for a rigid binding. Both arms read
+  flower beds anyway, for an unrelated reason: **the rigid emit path is
+  single-binding by construction.** `ndsRendererNativeStageEmitNoZTriangle` drops
+  a triangle whose corners are not all bound to the run's own binding, and the
+  flower beds are the only cross-matrix geometry on Dream Land — 10 of their 15
+  triangles, which is the `cross_matrix_triangles=10` that
+  `M3_NATIVE_STAGE_CHECK_OK` prints on every Boundary run. Both arms read
   −51,200, which is what the flowers cost to *draw*, collected by not drawing
-  them.
+  them. It is also why they are expensive: a cross-matrix triangle loads a
+  composed matrix **once per vertex**, so 15 flower triangles cost 35 matrix
+  loads a frame against Whispy's 12 for 12 triangles.
 - Kept from the whole exercise: replay no longer asserts
   `task36_local_pushed = TRUE` for every run (each admitted actor segment was
   buying an unmatched `glPopMatrix(1)`); capture records the run's real
@@ -103,15 +109,19 @@ let the next mistake through too:
 ## Next packet, in priority order
 
 0. **R2-02 owns the queue until its gate is met, and the remaining work is in
-   the generator.** The 44,320 has to come from giving the actor bindings
-   (25–28, 33–38) a genuine constant world matrix in `binding_world` space,
-   emitted by `scripts/generate_nds_native_stage.py`, gated on a Task 49 Tier-2
-   differ over the **newly added bindings'** screen positions against the CPU
-   oracle — E4 arm C would have failed that instantly — and only then widening
-   `NDS_RENDERER_TASK36_RIGID_BINDING_MASK` and `NDS_TASK36_REPLAY_SEGMENT_MASK`
-   together in one commit. Whispy (20–24) is materially animated and out of
-   scope. The alternative route to the gate is layer1 (item 6, ~19,000) plus
-   `BeginRun`, which does not reach 44,320 on its own.
+   the generator: de-cross the flower triangles.** For each of the 15 foreign
+   corners, `scripts/generate_nds_native_stage.py` emits a duplicate dense vertex
+   pre-transformed into the run's binding space (`v' = W_run⁻¹ · W_foreign · v`,
+   compile-time because both worlds are constant). +15 dense vertices, no new
+   runs or triangles, every flower triangle single-binding. Then widen
+   `NDS_RENDERER_TASK36_RIGID_BINDING_MASK` (add 25–28, 33–38) and
+   `NDS_TASK36_REPLAY_SEGMENT_MASK` (to `{0,3,5,6,7}`) together in one commit.
+   Gate the transform on the Task 49 Tier-2 differ — the inverse-multiply is
+   where fixed-point error enters and it is the only part that can go wrong
+   quietly. Expect most of the 51,200 back, because the flowers' cost is matrix
+   loads and not vertices; that is a prediction, not a measurement. Whispy
+   (20–24) is materially animated and out of scope. The alternative route is
+   layer1 (item 6, ~19,000) plus `BeginRun`, which does not reach 44,320 alone.
 1. **R2-03 sizing is done but the phase is still blocked.** Everything below is
    measurement, and its *stage* share was taken with the E3 flag on, so it is a
    broken-render number: real work rises by about 51,200 to ~1,316,000 and the
