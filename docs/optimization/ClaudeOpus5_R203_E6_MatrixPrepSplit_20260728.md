@@ -118,6 +118,51 @@ Two constraints on any such builder:
   only the common ones must fall through to the existing path for the rest
   rather than approximate them.
 
+## 6a. E7 — half of those builds are redundant, and that cut needs no exactness argument
+
+§6's lever requires proving a fixed-point angle index lands on the same sin-table
+entry as the float one for every angle the match produces. That is a claim about
+poses and expensive to get wrong. Before making it, ask E5's cheaper question:
+**is this work redundant at all?**
+
+A fighter animation does not necessarily move every joint every frame. Any joint
+whose local matrix comes out identical to the last time it was built was rebuilt
+for nothing — and reusing it replays the exact bytes the current code produced,
+so there is no numerical equivalence question whatsoever.
+
+Probe: hash all sixteen matrix elements per `BuildDObjLocalMatrix` return, store
+per DObj, count agreement with the previous build.
+
+| | first attempt | after hash fix |
+|---|---|---|
+| hits/frame | 15.2 | **21.9** |
+| misses/frame | 15.2 | 23.8 |
+| evictions/frame | 16.9 | 2.0 |
+
+The first attempt keyed slots on `(ptr >> 4)`. DObjs come from a pool, so the low
+address bits are strided and 37% of calls evicted a live entry — which floors the
+hit rate the probe can report. Knuth multiplicative hashing on the pointer, taking
+high bits, drops eviction to 2.0/frame and the real rate appears.
+
+**~48% of local-matrix builds are redundant** (21.9 of 45.7 non-evicted).
+
+Worth roughly 48% of the clean-build 49,306 = **~23,700 ticks/frame**, 2.1% of
+the gate. Two design notes for whoever builds it:
+
+- **Key on the inputs, not the output.** Comparing the eight source floats
+  (`translate.vec.f.*`, `rotate.a`, `rotate.vec.f.*`, scale) is far cheaper than
+  building the matrix to discover it was unchanged. Keying on the output would
+  pay the 1,061 ticks before learning it was wasted.
+- **Size the table to the working set, not the address space.** 46.4 builds per
+  frame over two fighters means ~46 distinct DObjs; 64 entries of
+  {pointer, inputs, matrix} is about 6.4 KB, against ~50 KB for the 512-entry
+  probe table. The DObj world cache next door is per-frame and cannot be reused
+  for this — the whole point is to survive the frame boundary.
+
+This and §6 compose: the memo removes half the calls, and a fixed-point builder
+would make the surviving half cheaper. The memo is strictly the safer of the two
+and should land first.
+
 ## 7. Cross-check with the other buckets
 
 Same run, per presented frame: Total 502,869, OwnerPrep 128,066, MatrixPrep

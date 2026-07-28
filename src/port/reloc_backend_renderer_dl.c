@@ -1203,6 +1203,73 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
     return TRUE;
 }
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+/* E7. Before arguing about whether a fixed-point angle index can reproduce the
+ * float one bit-for-bit -- a claim about poses, and an expensive one to get
+ * wrong -- ask the cheaper question E5 asked: is this work redundant at all?
+ * 46.5 local matrices are built per frame, but a fighter animation does not
+ * necessarily move every joint every frame. Any joint whose local matrix comes
+ * out identical to last frame's was rebuilt for nothing, and a memo on that
+ * needs no numerical equivalence argument whatsoever.
+ *
+ * Direct-mapped on the DObj pointer, 256 entries. A collision evicts and
+ * reports a miss, so the hit rate is a lower bound on the real redundancy. */
+#define NDS_TASK91_LOCAL_MEMO_COUNT 512u
+#define NDS_TASK91_LOCAL_MEMO_MASK (NDS_TASK91_LOCAL_MEMO_COUNT - 1u)
+u32 gNdsTask91LocalMemoHit;
+u32 gNdsTask91LocalMemoMiss;
+u32 gNdsTask91LocalMemoFill;
+u32 gNdsTask91LocalMemoEvict;
+static const DObj *sNdsTask91LocalMemoKey[NDS_TASK91_LOCAL_MEMO_COUNT];
+static u32 sNdsTask91LocalMemoHash[NDS_TASK91_LOCAL_MEMO_COUNT];
+
+static void ndsRendererAdapterTask91LocalMemoProbe(
+    const DObj *dobj, const NDSRendererMatrix20p12 *out)
+{
+    u32 hash = 2166136261u;
+    u32 slot;
+    u32 row;
+    u32 col;
+
+    /* All sixteen, not the affine twelve: a kind that writes the fourth column
+     * differently would otherwise be invisible to this probe. */
+    for (row = 0u; row < 4u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            hash = (hash ^ (u32)out->m[row][col]) * 16777619u;
+        }
+    }
+    /* DObjs come from a pool, so the low address bits are strided and a plain
+     * shift aliases badly -- the first run of this probe evicted on 37% of
+     * calls, which floors the hit rate it can report. Knuth multiplicative,
+     * taking high bits, spreads a strided key. */
+    slot = (u32)((((uintptr_t)dobj) * 2654435761u) >> 13) &
+        NDS_TASK91_LOCAL_MEMO_MASK;
+    if (sNdsTask91LocalMemoKey[slot] == NULL)
+    {
+        sNdsTask91LocalMemoKey[slot] = dobj;
+        sNdsTask91LocalMemoHash[slot] = hash;
+        gNdsTask91LocalMemoFill++;
+    }
+    else if (sNdsTask91LocalMemoKey[slot] != dobj)
+    {
+        sNdsTask91LocalMemoKey[slot] = dobj;
+        sNdsTask91LocalMemoHash[slot] = hash;
+        gNdsTask91LocalMemoEvict++;
+    }
+    else if (sNdsTask91LocalMemoHash[slot] != hash)
+    {
+        sNdsTask91LocalMemoHash[slot] = hash;
+        gNdsTask91LocalMemoMiss++;
+    }
+    else
+    {
+        gNdsTask91LocalMemoHit++;
+    }
+}
+#endif
+
 static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
 {
@@ -1249,6 +1316,9 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
             ndsRendererAdapterMtxFromN64(&mtx, out);
         }
     }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    ndsRendererAdapterTask91LocalMemoProbe(dobj, out);
+#endif
     return TRUE;
 }
 
