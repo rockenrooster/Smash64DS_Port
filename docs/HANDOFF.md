@@ -52,13 +52,18 @@ are unchanged.
 
 ## Next packet, in priority order
 
-1. **Soft-float, 177,857 ticks/frame — the largest block in the frame.** It runs
-   at 1.19 cycles per instruction, so it is not stalled and there is nothing to
-   win by making it faster; `__aeabi_fadd` is already hand-written ITCM assembly
-   from Task 16. The only lever is **calling it less** — float→fixed at the call
-   sites in imported gameplay and animation (`gcPlayDObjAnimJoint` 34,148,
-   `battleship_ftAnimParseDObjFigatree` 16,744, `gmcollision.c`). Structural and
-   large; size it with E0 before scoping (`TASK_STANDING_RULES.md`, Task 96).
+1. **Soft-float — E0 is done, and it is two functions, not a programme.** See
+   `ClaudeOpus5_R203_E0_SoftFloatCallers_20260728.md`. It runs at 1.19 cycles
+   per instruction, so nothing is won by making it faster; the lever is calling
+   it less. Attributed to callers: **`gcPlayDObjAnimJoint` 40,211 ticks/frame**
+   (36,236 of it `__aeabi_fadd` — ~1,184 float adds/frame, the AObj joint
+   accumulator) plus 34,148 of its own self-time, and **`__ieee754_sqrtf` 14,258
+   at 223 ticks per call** on only 64 calls.
+   **Do `__ieee754_sqrtf` first** — small, isolated, a fixed-point sqrt behind
+   one flag, and it calibrates verifier tolerance before the animation
+   accumulator is touched. That one is a *gameplay* path: the accumulated value
+   becomes the pose and hitboxes derive from part positions, so it is
+   verifier-gated on the Task 37 state hash, not eyeballed.
 2. **R2-02 E2, matrix construction — re-size first.** E0 sized it at 55,077 from
    a bracket around one call. The symbol census says **156,627** across stage
    *and* fighter: `ndsRendererMtxMul20p12` 29,663, `LoadHardwareMatrixPair`
