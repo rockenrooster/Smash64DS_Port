@@ -23862,19 +23862,23 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             e15b_mark = cpuGetTiming();
             gNdsR2ExecEpochCalls++;
 #endif
+#if !NDS_R2_FIGHTER_STATESPAN_SKIP
             ndsRendererNativeApplyStateSpan(
                 epoch->before_state_first, epoch->before_state_count,
                 epoch->before_sync_count,
                 asset_base, stats, state);
+#endif
             if (epoch->material_slot != NDS_NATIVE_MATERIAL_NONE)
             {
                 ndsRendererNativeApplyMaterial(
                     &input->materials[epoch->material_slot], stats, state);
             }
+#if !NDS_R2_FIGHTER_STATESPAN_SKIP
             ndsRendererNativeApplyStateSpan(
                 epoch->after_state_first, epoch->after_state_count,
                 epoch->after_sync_count,
                 asset_base, stats, state);
+#endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
             {
                 u32 e15b_state_end = cpuGetTiming();

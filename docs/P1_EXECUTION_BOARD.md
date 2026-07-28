@@ -201,6 +201,30 @@ and normals must not be rotated by a projection. Same fix, wrong cause.
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E17_SplitMatrixLoad_20260728.md`.
 
+## R2-03 E19 — the state spans cannot be priced by skipping them (2026-07-28)
+
+**Method refuted, no number produced.** `NDS_R2_FIGHTER_STATESPAN_SKIP`, default
+0, must not be used to cost this phase.
+
+E18's pricing method was pointed at the next ranked item and reported **−251,520
+FTR P50** — five times the bracket, and fiction. The spans establish the texture,
+polygon-format and geometry-mode state the emit requires; without them every run
+is rejected before submitting. Hardware triangles went **320/306 per fighter to
+8/0**, so the delta is ~618 triangles a frame ceasing to exist.
+
+**E18 was re-checked against the same failure and holds:** its arm reads 320/306,
+identical to control, so the shade skip removed the colour computation and
+nothing else. **53,760 stands.**
+
+**What the spans still need.** The only figure remains E15's bracket, ~52,000,
+which carries that build's 10-20% inflation and is ranking-only. The right method
+is **R2-02 F's, not E18's**: measure how much of the replay is *redundant* — how
+many adjacent epochs re-apply state already current — which is the same question
+R2-02 F asked of the stage's spans, needs a counter rather than a deletion, and
+prices the achievable cut rather than the whole phase.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E19_StateSpanMethodRefuted_20260728.md`.
+
 ## R2-03 E18 — E16's ceiling is 53,760, not 90,295 (2026-07-28)
 
 **Correction to the number this board carried as the phase's largest

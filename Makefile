@@ -298,6 +298,11 @@ NDS_R2_FIGHTER_HW_MTX ?= 0
 # from a bracket that also contains the epoch preamble. Fighters draw with stale
 # colours -- lab only, never a playable configuration.
 NDS_R2_FIGHTER_SHADE_SKIP ?= 0
+# R2-03 E19. Same one-build pricing method as E18, applied to the epoch state
+# spans -- the next ranked item after the shade at ~52,000/frame. Skips the
+# recorded state-delta replay either side of the material. Lab only; the
+# fighters' render state goes wrong, which is the engagement proof.
+NDS_R2_FIGHTER_STATESPAN_SKIP ?= 0
 # R2-03 E13. Skips a fighter's draw outright, which is how the campaign prices a
 # whole fighter end to end: the phase census partitions the draw, this measures
 # what the frame costs without it. Bit 0 = Mario, bit 1 = Fox. Lab only; a ROM
@@ -1855,6 +1860,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_MTX_DIRECT $(NDS_R2_FIGHTER_MTX_DIRECT)'; \
 		echo '#define NDS_R2_FIGHTER_HW_MTX $(NDS_R2_FIGHTER_HW_MTX)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_SKIP $(NDS_R2_FIGHTER_SHADE_SKIP)'; \
+		echo '#define NDS_R2_FIGHTER_STATESPAN_SKIP $(NDS_R2_FIGHTER_STATESPAN_SKIP)'; \
 		echo '#define NDS_R2_DRAW_SUPPRESS_MASK $(NDS_R2_DRAW_SUPPRESS_MASK)'; \
 		echo '#define NDS_R2_FIGHTER_RUN_MEMO $(NDS_R2_FIGHTER_RUN_MEMO)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \

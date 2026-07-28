@@ -1018,3 +1018,30 @@ mistaken for.
 This is the mirror of E13's positive-control rule. That one covered a zero that
 might mean nothing measured; this covers a large number that means less than it
 says.
+
+### A skip arm prices a phase only if what remains still works (R2-03 E19, 2026-07-28)
+
+E18's one-build pricing method — delete the work a proposed cut would replace,
+measure the difference — worked cleanly on the fighter's shade loop and was
+pointed at the next ranked item, the epoch state spans. It reported **−251,520
+FTR P50**, roughly five times the bracket, which would have been the largest
+opportunity ever recorded in the phase.
+
+It was fiction. The spans establish the texture, polygon-format and geometry-mode
+state the emit requires. Without them every run is rejected before submitting, so
+the delta was ~618 triangles a frame ceasing to exist. Hardware triangle counts
+went from 320/306 per fighter to **8/0**.
+
+**Verify a skip arm with a structural counter proving the work you are NOT
+pricing still happened.** The tick delta cannot distinguish "this phase was
+expensive" from "this phase was load-bearing and I deleted the payload". Here the
+right counter was the emit's triangle count, which had to hold at its control
+rate.
+
+E18 was re-measured against the same check before its number was allowed to
+stand — 320/306, identical to control — which is why its 53,760 survives and
+E19's 251,520 does not.
+
+Corollary: **a skip arm is a dependency test as much as a measurement**, and it
+converts silently into one when the skipped work feeds the work being measured.
+When it does convert, the finding is the dependency, not a saving.
