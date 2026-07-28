@@ -66,21 +66,48 @@ single highest-value decision waiting on this file.
 
 ## Next packet, in priority order
 
-0. **R2-03 E4 — the owner-preparation span, 113,199 ticks/frame.** E3 bracketed
-   `ndsFighterMarioFoxDLAllDrawForSlot` inclusively and it is **494,863
-   ticks/frame**, not the 37,206 the symbol census reports (that is self time —
-   see the method note below). The split, over a full match at 1.94 calls/frame:
-   walk 3,138, reset 6,675, revalidation 9,916, **owner preparation 113,199**,
-   submit and tail 361,936.
-   **Owner preparation is 78% of the frame's remaining 144,844-tick gap and is
-   verbatim what §7 tells R2-03 to delete** — "no `PrepareProductionRun` policy
-   re-checks, no traversal-state/stats dependency, no per-frame texture identity
-   proof". Inside it: `BuildDObjLocalMatrix` 18,998, `BuildDObjWorldMatrix`
-   13,065, `PrepareInitialMatrices` 12,480, `BuildFighterTraRotRpyExact`
-   12,336, `BuildNativeMaterialSnapshot` 12,434, plus the matrix-kernel and
-   soft-float time they pull in. Falsify before building: hash each one's
-   inputs per frame and count the changes, `NDS_R2_STAGE_ACTORS_PROOF` style.
-   `ClaudeOpus5_R203_E3_FighterDrawSplit_20260728.md`.
+0. **The sizing is finished and the target is one function. Build, don't
+   measure.** `ndsFighterMarioFoxDLAllDrawForSlot` costs **497,231 ticks/frame
+   inclusive** (not the 37,206 the census reports — that is self time; see the
+   method note). Split over a full match, two independent builds agreeing to
+   0.6%:
+
+   ```text
+   walk                  3,138
+   reset                 6,675
+   revalidation          9,916
+   owner prep          113,855   =  matrix 91,338  +  material 21,504
+   submit and tail     361,936
+   total               497,231
+   ```
+
+   Against the frame's remaining gap of 144,844:
+
+   ```text
+   fighter MatrixPrep     91,338   63% of the gap
+   fighter MaterialPrep   21,504   15%
+   stage layer1           22,738   16%
+   ```
+
+   Three named mechanisms, 93% of the gap. Do them in this order:
+   1. **MaterialPrep falsifier, ~21,500.** Its inputs are the loaded asset and
+      the material state, *not* the pose, so unlike the matrix half it may be a
+      memo. Cheapest information left: one build, one run, the
+      `NDS_R2_STAGE_ACTORS_PROOF` pattern.
+   2. **MatrixPrep, 91,338 — the generated fixed-point joint schedule.** This is
+      R2-03 proper and the only remaining lever big enough to close the gate. It
+      is *not* a memo (the pose moves every frame); it is §7's "per-epoch
+      generated submit consuming only baked facts (… matrix binding …)". Note
+      that soft-float's 177,503 is largely these same ticks counted another way:
+      the source's joint transforms are float TRA/ROT/RPY and
+      `BuildFighterTraRotRpyExact` + `BuildDObjLocalMatrix` are the render-side
+      float→20.12 conversion feeding `__aeabi_fadd`'s 70,910. Gate as §7 says:
+      pixel parity on the same pose (Task 49 GX differ + screenshot), Boundary
+      green, provisional 250K.
+   3. **layer1**, 22,738 — R2-02's leftover, generator work (item 6 below).
+
+   `ClaudeOpus5_R203_E3_FighterDrawSplit_20260728.md`,
+   `ClaudeOpus5_R203_E4_MatrixPrepIsTheTarget_20260728.md`.
    **Demoted:** walk + reset + revalidation is 19,729 total, 4% of the function.
    E2 ranked the revalidation stamp first against a wrong denominator; it is
    still a real ~10,000 but it is a tidy-up, and the direct path may delete it

@@ -11505,6 +11505,10 @@ u32 gNdsTask91NativeEligible;
 u32 gNdsTask91TotalTicks;
 u32 gNdsTask91ResetTicks;
 u32 gNdsTask91OwnerPrepTicks;
+/* R2-03 E4. OwnerPrep's two halves, mirroring the profile-level-1 split the
+ * tick-HUD target cannot compile. */
+u32 gNdsTask91MatrixPrepTicks;
+u32 gNdsTask91MaterialPrepTicks;
 #endif
 
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
@@ -11865,6 +11869,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             u32 owner_matrix_start = cpuGetTiming();
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            /* R2-03 E4. The matrix/material split already existed at profile
+             * level 1, and the tick-HUD target overrides that to 0 -- the same
+             * reason Task 91 exists at all. Mirror it here so the 113,199-tick
+             * owner-preparation span E3 found can be split in the Boundary
+             * configuration. */
+            task91_mark = cpuGetTiming();
+#endif
             if (((native_owner_hierarchy_mode != FALSE) &&
                  (ndsRendererAdapterPrepareNativeOwnerHierarchy(
                     slot, fp, root, native_owner_matrix_bindings,
@@ -11897,6 +11909,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     nNDSTickHudNativeOwnerFallbackMatrices);
 #endif
             }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            gNdsTask91MatrixPrepTicks += cpuGetTiming() - task91_mark;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             {
                 u32 owner_matrix_ticks =
@@ -11912,6 +11927,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         {
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             u32 owner_material_start = cpuGetTiming();
+#endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            task91_mark = cpuGetTiming();
 #endif
             native_owner_material_saved_root_count = 0u;
             for (i = 0u; i < collection.selected_count; i++)
@@ -11953,6 +11971,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     native_owner_material_saved_root_count);
                 native_owner_material_saved_root_count = 0u;
             }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            gNdsTask91MaterialPrepTicks += cpuGetTiming() - task91_mark;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             {
                 u32 owner_material_ticks =

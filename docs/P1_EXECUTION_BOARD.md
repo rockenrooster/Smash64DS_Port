@@ -94,14 +94,21 @@ generator work worth ~19,000. Not needed for the gate.
 re-baselined on the post-R2-02 program: **REAL WORK 1,264,844 against the
 1,120,000 budget, gap 144,844** (it was 407,000 at Task 65).
 
-**The cut is the fighter's owner-preparation span: 113,199 ticks/frame, 78% of
-the gap.** `ndsFighterMarioFoxDLAllDrawForSlot` costs 494,863 ticks/frame
-inclusive; the split is walk 3,138, reset 6,675, revalidation 9,916, **owner
-preparation 113,199**, submit and tail 361,936. That span is the matrix and
-material preparation — `BuildDObjLocalMatrix`, `BuildDObjWorldMatrix`,
-`PrepareInitialMatrices`, `BuildFighterTraRotRpyExact`,
-`BuildNativeMaterialSnapshot` — and it is verbatim what §7 tells R2-03 to
-delete. `optimization/ClaudeOpus5_R203_E3_FighterDrawSplit_20260728.md`.
+**The sizing is finished and the target is one span: fighter matrix
+preparation, 91,338 ticks/frame — 63% of the gap.**
+`ndsFighterMarioFoxDLAllDrawForSlot` costs 497,231 ticks/frame inclusive (the
+census's 37,206 is self time); the split is walk 3,138, reset 6,675,
+revalidation 9,916, owner prep 113,855 (**matrix 91,338** + material 21,504),
+submit and tail 361,936. Two independent builds agree to 0.6%.
+
+Three named mechanisms cover 93% of the gap: fighter matrix prep 91,338,
+fighter material prep 21,504, stage layer1 22,738. The matrix half is not a
+memo — the pose moves every frame — it is §7's generated per-epoch submit
+consuming baked facts, and soft-float's 177,503 is largely the same ticks
+counted another way (the source's joint transforms are float; the render side
+converts them to 20.12 every frame). The material half *may* be a memo and
+deserves the E3 falsifier first, at one build for ~21,500.
+`optimization/ClaudeOpus5_R203_E4_MatrixPrepIsTheTarget_20260728.md`.
 
 Two candidates were closed on the way, both with evidence rather than opinion:
 the shade loop is **not** a memo (inputs and outputs both changed on 1,796 of
