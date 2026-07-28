@@ -1841,6 +1841,40 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixUncached(
 }
 #endif
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+/* R2-03 E6. MatrixPrep is 91,338 ticks/frame, four times MaterialPrep, and E5
+ * spent a whole cycle proving the smaller bucket's obvious lever banks nothing
+ * -- so split this one before touching it rather than after. PrepareNativeOwner
+ * Matrices is a per-frame camera fetch followed by, per selected binding, a
+ * DObj world-matrix build and one affine multiply. Those three have completely
+ * different fixes: a hoist, a cache, or nothing. Bindings and Calls normalise
+ * them, because a per-binding cost and a per-frame cost look identical inside a
+ * total.
+ *
+ * The first split put 82% in the world build at 2,799 ticks/binding against 184
+ * for the multiply it feeds. The DObj world cache is a linear-probed hash reset
+ * once a frame, so a lookup is cheap and the cost has to be in the miss path.
+ * The second group separates what a miss actually does -- walk the parent
+ * chain, build each local matrix, compose and store the prefix -- because only
+ * one of those is worth attacking and they are indistinguishable inside 2,799.
+ *
+ * Declared here because both consumers are defined later in this file, but the
+ * other Task 91 counters live near the draw entry point, which is later still.
+ */
+u32 gNdsTask91MtxCameraTicks;
+u32 gNdsTask91MtxWorldTicks;
+u32 gNdsTask91MtxMulTicks;
+u32 gNdsTask91MtxBindings;
+u32 gNdsTask91MtxCalls;
+u32 gNdsTask91MtxWorldEntryHit;
+u32 gNdsTask91MtxWorldAncestorHit;
+u32 gNdsTask91MtxWorldColdStart;
+u32 gNdsTask91MtxWorldLocalCalls;
+u32 gNdsTask91MtxWorldLocalTicks;
+u32 gNdsTask91MtxWorldComposeTicks;
+u32 gNdsTask91MtxWorldChainDepth;
+#endif
+
 static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
 {
@@ -1861,6 +1895,9 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     cached = ndsRendererAdapterFindDObjWorldMatrix(dobj);
     if (cached != NULL)
     {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        gNdsTask91MtxWorldEntryHit++;
+#endif
         *out = *cached;
         return TRUE;
     }
@@ -1872,6 +1909,9 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
         chain[depth++] = cursor;
         cursor = cursor->parent;
     }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsTask91MtxWorldChainDepth += depth;
+#endif
     if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
     {
         return FALSE;
@@ -1890,16 +1930,37 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
     if (i == depth)
     {
         ndsRendererAdapterMtxIdentity20p12(out);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        gNdsTask91MtxWorldColdStart++;
+#endif
     }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    else
+    {
+        gNdsTask91MtxWorldAncestorHit++;
+    }
+#endif
 #else
     ndsRendererAdapterMtxIdentity20p12(out);
     i = depth;
 #endif
     for (; i != 0u; i--)
     {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        u32 task91_local_mark = cpuGetTiming();
+        u32 task91_local_end;
+
+        gNdsTask91MtxWorldLocalCalls++;
+#endif
         if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u], &local) !=
             FALSE)
         {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            task91_local_end = cpuGetTiming();
+            gNdsTask91MtxWorldLocalTicks += task91_local_end -
+                task91_local_mark;
+            task91_local_mark = task91_local_end;
+#endif
             /* objdisplay.c:1183-1191 left-multiplies each child local matrix. */
             ndsRendererMtxMulAffine20p12(&local, out, out);
 #if NDS_RENDERER_HW_TRIANGLES
@@ -1907,6 +1968,10 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
              * pass. Cache each prefix for sibling/child draws, and reset at
              * the next presented frame so live fighter poses remain live. */
             ndsRendererAdapterStoreDObjWorldMatrix(chain[i - 1u], out);
+#endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            gNdsTask91MtxWorldComposeTicks += cpuGetTiming() -
+                task91_local_mark;
 #endif
         }
     }
@@ -2585,6 +2650,9 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     NDS_RENDERER_M2_DETAILED_LEDGER
     u32 m2_phase_start;
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    u32 task91_mtx_mark;
+#endif
 
     if ((bindings == NULL) || (projection_ptr == NULL) ||
         (modelview_ptrs == NULL) ||
@@ -2604,9 +2672,16 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_phase_start = cpuGetTiming();
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    task91_mtx_mark = cpuGetTiming();
+#endif
     ndsRendererAdapterGetFrameCameraMatrices(
         cobj, &camera_projection, &camera_projection_valid,
         &camera_modelview, &camera_modelview_valid);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsTask91MtxCameraTicks += cpuGetTiming() - task91_mtx_mark;
+    gNdsTask91MtxCalls++;
+#endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     if (m2_owner != NULL)
@@ -2633,6 +2708,10 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     {
         if (bindings[binding_index] != NULL)
         {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            task91_mtx_mark = cpuGetTiming();
+            gNdsTask91MtxBindings++;
+#endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
             if (ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
@@ -2645,6 +2724,14 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
             {
                 return FALSE;
             }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            {
+                u32 task91_world_end = cpuGetTiming();
+
+                gNdsTask91MtxWorldTicks += task91_world_end - task91_mtx_mark;
+                task91_mtx_mark = task91_world_end;
+            }
+#endif
             if (camera_modelview_valid != FALSE)
             {
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -2670,6 +2757,9 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
                 sNdsRendererAdapterNativeOwnerModelviews[binding_index] =
                     world;
             }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            gNdsTask91MtxMulTicks += cpuGetTiming() - task91_mtx_mark;
+#endif
             modelview_ptrs[binding_index] =
                 &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
         }
@@ -11562,6 +11652,9 @@ u32 gNdsTask91OwnerPrepTicks;
  * tick-HUD target cannot compile. */
 u32 gNdsTask91MatrixPrepTicks;
 u32 gNdsTask91MaterialPrepTicks;
+/* R2-03 E6's MatrixPrep sub-counters are declared above
+ * ndsRendererAdapterPrepareNativeOwnerMatrices, which is defined earlier in
+ * this file than this block. */
 #endif
 
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
