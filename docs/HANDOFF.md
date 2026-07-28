@@ -1,11 +1,10 @@
 # Handoff
 
-Updated: 2026-07-28 — Runtime 2: R2-00a/b/c and R2-01 gated. **R2-02 is NOT
-closed: E1a, E2 and E7 are clean and now ship; E3 is retracted (it breaks both
-flower beds) and E4 refuted its whole approach.** `STG` P50 **212,480** vs the
-180K gate, **32,480 over**. R2-03's E0–E4 sizing was done prematurely; it is
-sound as measurement but the phase is still blocked. `P1_EXECUTION_BOARD.md` owns
-current state; this file is the restart surface and next packet.
+Updated: 2026-07-28 — Runtime 2: R2-00a/b/c and R2-01 gated. **R2-02's stage
+budget is MET: `STG` P50 177,088 against 180,000.** E1a, E2, E7 and E8 are clean
+and all four ship by default; E3 is retracted (it breaks both flower beds) and E4
+refuted its whole approach. `P1_EXECUTION_BOARD.md` owns current state; this file
+is the restart surface and next packet.
 
 ## Restart
 
@@ -29,9 +28,22 @@ deliberately left them unstaged. Commit or revert them with the bug-#10 work.
 
 ## State as of this handoff
 
-R2-00a/b/c and R2-01 are done and gated. **R2-02 is not closed.** E1a, E2 and E7
-are clean and take `STG` P50 from 351,488 to **212,480**; the 180K gate is 32,480
-away. **E3 is retracted and E4 refuted the approach** — the actor segments
+R2-00a/b/c and R2-01 are done and gated. **R2-02's stage budget is met.** E1a,
+E2, E7 and E8 take `STG` P50 from 351,488 to **177,088** against the 180,000
+budget, and 2-VBlank frames from 13 to 198 of 565. All four are default-on in
+both the published and tick-HUD Makefile blocks.
+
+**E8 is the one to read first** (`ClaudeOpus5_R202_E8_PreflightElision_20260728.md`):
+for the five segments the Task 36 replay does not serve, the owner preflight
+produced a `preflight_stats` and traversal state that nothing reads once E1a's
+table is valid, and it is now skipped — −35,392 with the top screen
+pixel-identical. It also cost two harness defects that are now standing rules:
+a scripted capture photographed the wrong window (use `ShowWindow` +
+`HWND_TOPMOST`, and *look* at one image), and a presented-frame lock compares two
+different moments across builds of different speed (lock on
+`gSCManagerBattleState->time_remain` instead).
+
+**E3 is retracted and E4 refuted its approach** — the actor segments
 cannot be admitted to the Task 36 replay by editing masks.
 `optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md` has all three
 arms; the short version:
@@ -108,21 +120,21 @@ let the next mistake through too:
 
 ## Next packet, in priority order
 
-0. **R2-02 owns the queue until its gate is met. Start with the direct owned
-   path, not another memo.** The board carries the measured stage partition
-   (401,506 total at defaults) and the ranked line items. The headline: §7 asks
-   for *"a fully direct owned path ... the runtime shape is `DreamLand_Run17()`,
-   not discover/validate/rebuild/resolve/prepare/submit"*, segment 0 already has
-   it (`ndsRendererNativeStagePrepareGeneratedSegment0`), segments 1–7 do not,
-   and every cut this campaign has landed optimised the pipeline instead of
-   replacing it. Ranked: `prepare matrices` 54,242 (per-frame DObj parent-chain
-   walk for bindings whose worlds are provably constant), `apply state span`
-   30,117 (outside E1a's reuse guard; mutates the running `state`, so it cannot
-   be skipped per-run without proving the successor's incoming state),
-   `init stats + traversal` 16,793 (1,292-byte blanket clear ×5, §3.4-banned),
-   and 18,004 unattributed inside the owner span that nobody has bracketed.
-   Those total 101,152 against a 44,320 requirement, so **do not relax the 180K
-   budget** — §8's "no credible architectural lever left" does not apply.
+0. **R2-02's stage budget is met (177,088 vs 180,000); the stage no longer owns
+   the queue on its own account.** The board carries the partition re-measured
+   on the graduated program (242,574 total). If more stage time is wanted, the
+   one remaining large item is **`generic emit`, 67,126 ticks/frame** for the 21
+   runs and 103 triangles the Task 36 replay does not serve — 3,196 per run
+   against the replay's 883. E4 established it cannot be reached by widening the
+   replay masks. layer1 (segment 4) is 76 of those 103 triangles across 6 of the
+   21 runs, so the cost is per-run dominated and the 15 actor-segment runs are
+   the expensive half.
+
+   Note what E8 did *not* do: `apply state span` and `init stats + traversal`
+   are elided in the steady state, not deleted. The build frame still pays them,
+   and the generic emit path still reconstructs the same state at commit time.
+   §7's *"the runtime shape is `DreamLand_Run17()`"* is satisfied for preflight
+   and still open for commit.
 0a. **Secondary, and only once the above is sized: de-cross the flower
    triangles in the generator.** For each of the 15 foreign
    corners, `scripts/generate_nds_native_stage.py` emits a duplicate dense vertex
@@ -142,8 +154,8 @@ let the next mistake through too:
    places including a perturbation test, which is the remaining work. De-crossing
    alone measures **−4,224**, inside the noise floor — the saving only arrives
    with the mask move it unblocks. Whispy
-   (20–24) is materially animated and out of scope. The alternative route is
-   layer1 (item 6, ~19,000) plus `BeginRun`, which does not reach 44,320 alone.
+   (20–24) is materially animated and out of scope. This is now optional rather
+   than required: the stage budget is met without it.
 1. **R2-03 sizing is done but the phase is still blocked.** Everything below is
    measurement, and its *stage* share was taken with the E3 flag on, so it is a
    broken-render number: real work rises by about 51,200 to ~1,316,000 and the

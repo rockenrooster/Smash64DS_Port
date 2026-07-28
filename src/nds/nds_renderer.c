@@ -4142,6 +4142,10 @@ typedef struct NDSNativeStageOwnerExecution
     const void *r2_prepared_asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
     u64 r2_prepared_epoch_mask;
     u32 r2_prepared_valid;
+    /* R2-02 E8. The one member of `preflight_stats` that outlives the segment
+     * loop. Memoised with `epoch_mask` so eliding the loop body cannot depend
+     * on which segment happens to run last. */
+    u32 r2_prepared_sync_count;
 #endif
 } NDSNativeStageOwnerExecution;
 
@@ -4176,6 +4180,11 @@ static NDSNativeStageOwnerExecution sNdsNativeStageOwnerExecution;
  * mistake (Task 52 found the Task 36 replay structurally disabled). */
 volatile u32 gNdsR2StagePrepareReuseCount;
 volatile u32 gNdsR2StagePrepareBuildCount;
+#if NDS_R2_STAGE_PREFLIGHT && (NDS_TASK36_HW_COMPOSE == 2)
+/* R2-02 E8 engagement, for the same reason: five per frame is the elision
+ * working, zero is a flag that compiled but never fired. */
+volatile u32 gNdsR2StagePreflightElideCount;
+#endif
 #endif
 static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
     NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
@@ -21938,6 +21947,41 @@ s32 ndsRendererPrepareNativeStageOwner(
             continue;
         }
 #endif
+#if NDS_R2_STAGE_PREFLIGHT && (NDS_TASK36_HW_COMPOSE == 2) && \
+    NDS_R2_STAGE_DIRECT
+        /* R2-02 E8, and the switch plan's §7 instruction taken literally: "no
+         * generic preflight, no stats temporaries". For the five segments the
+         * Task 36 replay does not serve, this loop body has no consumer once
+         * E1a's prepared run table is valid.
+         *
+         * Every output is accounted for:
+         *   runs[]         -- E1a reuses it wholesale; PrepareRun is already
+         *                     skipped below on exactly this condition.
+         *   epoch_mask     -- restored from the same memo above.
+         *   preflight_stats/traversal -- ndsRendererTask36ReplayCapturePrepared
+         *                     Segment early-returns for an ineligible segment,
+         *                     the next segment reinitialises both, and
+         *                     `sNdsNativeStageOwnerExecution.traversal` is read
+         *                     nowhere outside this function (the commit path
+         *                     consumes runs[], not the traversal). The single
+         *                     member that escapes the loop is
+         *                     `sync_command_count`, memoised as
+         *                     r2_prepared_sync_count.
+         *
+         * Eligible segments are deliberately excluded rather than relying on
+         * the replay having hit: on a capture frame `frame_replay` is FALSE, so
+         * they must run the full body to produce the stats being captured.
+         *
+         * Cost removed, measured on the graduated program: ndsRendererInitStats
+         * plus ndsRendererInitTraversalState 13,565 ticks/frame over these five
+         * segments, and 21 run-level plus 16 binding-level state spans. */
+        if ((r2_reuse != 0u) &&
+            (ndsRendererTask36ReplaySegmentEligible(segment_index) == FALSE))
+        {
+            gNdsR2StagePreflightElideCount++;
+            continue;
+        }
+#endif
         ndsRendererInitStats(&sNdsNativeStageOwnerExecution.preflight_stats);
         sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
             segment->initial_geometry;
@@ -22253,8 +22297,16 @@ s32 ndsRendererPrepareNativeStageOwner(
     stats->vertex_count = NDS_NATIVE_STAGE_SOURCE_VERTEX_COUNT;
     stats->vertex_command_count = NDS_NATIVE_STAGE_VERTEX_COMMAND_COUNT;
     stats->triangle_command_count = NDS_NATIVE_STAGE_TRIANGLE_COMMAND_COUNT;
+#if NDS_R2_STAGE_DIRECT
+    /* R2-02 E8: taken from the memo when the loop body was elided, so the
+     * result does not depend on whether the last segment was replay-served. */
+    stats->sync_command_count = (r2_reuse != 0u) ?
+        sNdsNativeStageOwnerExecution.r2_prepared_sync_count :
+        sNdsNativeStageOwnerExecution.preflight_stats.sync_command_count;
+#else
     stats->sync_command_count =
         sNdsNativeStageOwnerExecution.preflight_stats.sync_command_count;
+#endif
     sNdsNativeStageOwnerExecution.stats = stats;
     sNdsNativeStageOwnerExecution.next_segment = 0u;
     sNdsNativeStageOwnerExecution.active = TRUE;
@@ -22278,6 +22330,8 @@ s32 ndsRendererPrepareNativeStageOwner(
            frame->asset_bases,
            sizeof(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases));
     sNdsNativeStageOwnerExecution.r2_prepared_epoch_mask = epoch_mask;
+    sNdsNativeStageOwnerExecution.r2_prepared_sync_count =
+        stats->sync_command_count;
     sNdsNativeStageOwnerExecution.r2_prepared_valid = 1u;
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2

@@ -42,32 +42,49 @@ R2 phases are rows here, measured under `TASK_STANDING_RULES.md`.
 | R2-00a stall attributor | **done, gate met** | `optimization/ClaudeOpus5_R200a_StallAttributor_20260727.md` |
 | R2-00b re-baseline + budgets | **done** | `optimization/ClaudeOpus5_R200b_BaselineAndBudgets_20260727.md` |
 | R2-01 battle-path skeleton | **done, gate met** | `NDS_R2_PATH`, `src/nds/r2/`; Boundary green |
-| R2-02 Dream Land direct runtime | **E1a/E2/E7 KEEP and shipping, phase gate NOT met** | `optimization/ClaudeOpus5_R202_E7_ViewProjectionHoist_20260728.md` |
+| R2-02 Dream Land direct runtime | **stage budget MET — 177,088 vs 180,000; E1a/E2/E7/E8 shipping** | `optimization/ClaudeOpus5_R202_E8_PreflightElision_20260728.md` |
 | R2-03 fighter direct draw | **unowned — not started** | |
 | (R1 harvest) hardware sqrt | done, KEEP | `optimization/ClaudeOpus5_R203_E1_HardwareSqrt_20260728.md` (filename mislabels it R2-03) |
 
-**R2-02's §7 gate is NOT met. E3 is retracted and E4 refuted the whole
-approach.** `STG` P50 stands at **212,480** after E1a, E2 and E7, **32,480 over**
-the provisional 180K budget. §3.1 and §7 forbid carrying a phase that misses its
-budget into the next one, so **R2-03 was started prematurely** and its queue
-below is sizing only, not licence to build. The two soft-float files named
-`R2-03` are Runtime 1 harvest, not that phase; they are corrected in place per
-the never-rename rule.
+**R2-02's stage budget is MET.** `STG` P50 is **177,088** against the 180,000
+provisional budget — 2,912 under — after E1a, E2, E7 and E8. E3 is retracted and
+E4 refuted its whole approach; neither contributed. The two soft-float files
+named `R2-03` are Runtime 1 harvest, not that phase; they are corrected in place
+per the never-rename rule.
 
 ```text
 STG P50   351,488  baseline
           256,704  after E1a  (-94,784)  prepare-run elision      -- clean
           224,320  after E2   (-30,912)  GXFIFO DMA rigid replay  -- clean
           212,480  after E7   (-11,840)  view-projection hoist    -- bit-exact
-          180,000  gate
+          177,088  after E8   (-35,392)  preflight elision        -- bit-exact
+          180,000  budget
           -------
-           32,480  still over
+           -2,912  UNDER
 
          (173,120  E3 and E4-C both  (-51,200)  BOTH REVERTED: that number is
                                                 the price of not drawing the
                                                 flowers, not of drawing them
                                                 faster)
 ```
+
+**E8 is the first arm that followed §7 rather than optimising around it.** For
+the five segments the Task 36 replay does not serve, the owner preflight cleared
+a 1,292-byte `NDSRendererStats`, initialised a traversal state, and replayed 21
+run-level and 16 binding-level state spans to produce a `preflight_stats` and a
+traversal state that **nothing reads** once E1a's prepared run table is valid:
+`CapturePreparedSegment` early-returns for an ineligible segment, and
+`sNdsNativeStageOwnerExecution.traversal` is referenced nowhere outside the
+function. The one member that escapes the loop, `sync_command_count`, is now
+memoised beside `epoch_mask`. Task 104 had written that sentence down already,
+one level lower and for three segments; it was true of the other five and of the
+whole loop body. Engagement reads exactly **5 elisions per frame**, and the Task
+36 replay stays READY at its full 3,916 words.
+
+Pacing: **2-VBlank frames 13 → 198 of 565**, `WAIT` P50 −202,368, `WORK` P95
+−77,504. The DS top screen is **pixel-identical** to the pre-E8 arm — 0 of
+121,600 pixels — at presented frame 500 and at the `time_remain` 1800
+simulation-clock lock, against a control arm proven reproducible run-to-run.
 
 **All three kept cuts now ship.** `NDS_R2_STAGE_DIRECT`, `NDS_R2_STAGE_DMA` and
 `NDS_R2_STAGE_VIEWPROJ` are default-on in the published
@@ -132,9 +149,37 @@ defaults and Boundary-green at **62.750%**, `stage_body` green 44.848% / detail
 an unmatched `glPopMatrix(1)`. Capture now records the run's actual `PUSH`/`POP`
 balance.
 
-**The stage partition, measured 2026-07-28** (`census-stage-run-phases.ps1`,
-frames 439–499, defaults build so `NDS_R2_STAGE_DIRECT`/`DMA` are off; total
-401,506). This is the list the remaining 44,320 has to come out of:
+**The stage partition, re-measured on the graduated program 2026-07-28**
+(`census-stage-run-phases.ps1`, frames 439–499, `build-r2-02-census-e7`, total
+242,574). This is what E8 was aimed from, and what the *next* stage arm must be
+aimed from — the majority is no longer preflight:
+
+```text
+prepare owner                 111,849   46.1%
+  prepare matrices             42,557          (54,901 before E7)
+  renderer prepare owner        49,840
+    apply state span             20,370   21 calls @   970   <- E8 elides
+    init stats + traversal       13,565    5 calls @ 2,713   <- E8 elides
+    unattributed                 13,721          (16 binding-level state spans)
+    prepare run                     995   21 calls @    47   (E1a: was 98,828)
+  validate task36 world          8,588
+  prepare materials              5,623
+display commit                130,219   53.7%
+  generic emit                   67,126   21 runs @ 3,196, 103 tris @ 652
+  replay                         29,124   33 runs @   883
+  loop overhead                  13,120   54 iterations
+  per-segment scaffolding        13,852    8 commits @ 1,732
+```
+
+**The next stage lever is `generic emit`, 67,126 ticks/frame** — the 21 runs and
+103 triangles the Task 36 replay does not serve, at 3,196 per run against the
+replay's 883 and 652 per triangle against ~294. E4 established it cannot be
+reached by widening the replay masks. layer1 (segment 4) is 76 of those 103
+triangles across only 6 of the 21 runs, so the cost is per-run dominated and the
+15 actor-segment runs are the expensive half.
+
+The older defaults-build partition below (total 401,506) is retained only as the
+pre-E1a reference; do not aim new work from it.
 
 ```text
 prepare owner (preflight)     238,609   59.4%

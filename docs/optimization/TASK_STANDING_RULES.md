@@ -583,6 +583,43 @@ prints on every run — while required-region detail moved 0.056pp and Boundary
 passed. Record the control arm's region table alongside the candidate's, in the
 report, for any change that touches stage geometry.
 
+## Lock a cross-build render comparison on the simulation clock, not the presented-frame counter (R2-02 E8, 2026-07-28)
+
+Two ROMs stopped at the same `gNdsBattlePlayablePacingPresentedFrames` are not
+at the same moment of the match. E8 and its control at presented frame 1100 read
+`gSCManagerBattleState->time_remain` **1792 and 1790** — two simulation ticks
+apart — and the resulting screenshots differed on 57% of the top screen. Nothing
+was wrong with either ROM: a faster build presents more frames per unit of
+simulation, so the presented-frame index drifts against the match clock, and the
+faster the candidate the worse the drift. The drift is the *point* of the
+optimization, so it grows exactly when the comparison matters most.
+
+**Break on `gSCManagerBattleState->time_remain` instead.** It decrements once per
+simulation tick, is identical across builds by construction, and both arms then
+land on the same fighter poses and the same camera. At that lock E8's top screen
+was pixel-identical to its control; at the presented-frame lock it looked like a
+catastrophic regression.
+
+Corollary: **measure the control arm against itself before believing any
+screenshot delta.** Two runs of the same ROM at presented frame 1100 differed by
+0 pixels, which is what established that the instrument was sound and the lock
+was the flaw. One extra run per investigation, and it is the difference between
+diagnosing the change and diagnosing the harness.
+
+## Capture the window, not the screen coordinates (R2-02 E8, 2026-07-28)
+
+`Graphics.CopyFromScreen` at a window's rectangle captures whatever is on top at
+those coordinates. `SetForegroundWindow` does not reliably raise a window when it
+is called by a background process, so a scripted capture can silently photograph
+an unrelated application. Two such captures were byte-identical, which read as
+"no visual delta" and nearly passed as evidence.
+
+`scripts/capture-melonds.ps1` already does the right thing and any new capture
+must copy it: `ShowWindow(handle, SW_RESTORE)` then `SetWindowPos(handle,
+HWND_TOPMOST, ...)` before reading pixels. **And look at one of the images
+before trusting a diff of them** — a wrong-window capture is obvious to the eye
+and invisible to a pixel count.
+
 ## If a change is supposed to move fixed-point rounding, dump the fixed point and diff it (R2-02 E7, 2026-07-28)
 
 E7 was designed as an associativity hoist — `(A × B) × C` becomes `A × (B × C)`

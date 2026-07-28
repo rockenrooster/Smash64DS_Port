@@ -238,6 +238,16 @@ NDS_R2_STAGE_ACTORS_PROOF ?= 0
 # binding_composed[] identical for all 42 bindings at frames
 # 260/420/500/700/1100/1700.
 NDS_R2_STAGE_VIEWPROJ ?= 0
+# R2-02 E8, and the switch plan's §7 read literally: "no generic preflight, no
+# stats temporaries". For the five stage segments the Task 36 replay does not
+# serve, the owner preflight clears a 1,292-byte NDSRendererStats, initialises a
+# traversal state, and replays 21 run-level and 16 binding-level state spans --
+# 13,565 ticks/frame for the clears alone and 20,370 for the run spans -- to
+# produce a preflight_stats and a traversal state that, once E1a's prepared run
+# table is valid, nothing reads. The single member that outlives the loop is
+# sync_command_count, which this memoises alongside epoch_mask.
+# Requires NDS_R2_STAGE_DIRECT (it is that memo's guard) and HW_COMPOSE 2.
+NDS_R2_STAGE_PREFLIGHT ?= 0
 # R2-03 E1 falsifier, lab only. Hashes the inputs and the outputs of the fighter
 # shade loop once a frame and counts the frames each changes on. 48,422
 # ticks/frame re-light 541 dense vertices; this says whether they need to.
@@ -458,6 +468,13 @@ override NDS_TASK44_STAGE_STEADY := 1
 override NDS_R2_STAGE_DIRECT := 1
 override NDS_R2_STAGE_DMA := 1
 override NDS_R2_STAGE_VIEWPROJ := 1
+# R2-02 E8, 2026-07-28. Elides the owner preflight for the five segments the
+# Task 36 replay does not serve, whose outputs nothing reads once E1a's table is
+# valid. STG P50 212,480 -> 177,088, under the 180,000 phase budget; 2-VBlank
+# frames 13 -> 198 of 565. Exact: the DS top screen is pixel-identical to the
+# pre-E8 arm at the simulation-clock lock, and the elision counter reads exactly
+# 5 per frame.
+override NDS_R2_STAGE_PREFLIGHT := 1
 # Task 37: seven hot leaves (memset, memcpy, memcmp, __ieee754_sqrtf and three
 # renderer/fighter helpers, 906 bytes) into ITCM free space. Named work P50
 # -59,328 ticks, 3-VBlank share 71.7% -> 76.0%, 5+ VBlank 5.2% -> 3.1%.
@@ -533,6 +550,9 @@ NDS_R2_STAGE_DMA := 1
 endif
 ifneq ($(origin NDS_R2_STAGE_VIEWPROJ),command line)
 NDS_R2_STAGE_VIEWPROJ := 1
+endif
+ifneq ($(origin NDS_R2_STAGE_PREFLIGHT),command line)
+NDS_R2_STAGE_PREFLIGHT := 1
 endif
 # Must track the published block above. These two targets exist to measure and
 # prove the shipping program, so any flag that is on there and off here makes
@@ -1755,6 +1775,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_STAGE_DMA $(NDS_R2_STAGE_DMA)'; \
 		echo '#define NDS_R2_STAGE_ACTORS_PROOF $(NDS_R2_STAGE_ACTORS_PROOF)'; \
 		echo '#define NDS_R2_STAGE_VIEWPROJ $(NDS_R2_STAGE_VIEWPROJ)'; \
+		echo '#define NDS_R2_STAGE_PREFLIGHT $(NDS_R2_STAGE_PREFLIGHT)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_PROOF $(NDS_R2_FIGHTER_SHADE_PROOF)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
@@ -2037,6 +2058,7 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_R2_FIXED_SQRT=$(NDS_R2_FIXED_SQRT)'
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DMA=$(NDS_R2_STAGE_DMA)'
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_VIEWPROJ=$(NDS_R2_STAGE_VIEWPROJ)'
+	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_PREFLIGHT=$(NDS_R2_STAGE_PREFLIGHT)'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_COMMON=$(strip $(CFLAGS))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_RENDERER=$(strip $(CFLAGS) $(if $(filter 163,$(NDS_DEV_SCENE_HARNESS_ID)),-marm))'
 	@printf '%s\n' 'BENCH_MAKE_CFLAGS_SCENE=$(strip $(CFLAGS))'
