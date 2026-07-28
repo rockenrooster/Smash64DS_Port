@@ -270,6 +270,21 @@ NDS_SCENE_MIP_CACHE_LAB ?= 0
 # never writes hierarchy_runs[], so that hook measured nothing. Read
 # gNdsR2RunCallCount first; zero means the instrument did not run.
 NDS_R2_FIGHTER_RUN_PROOF ?= 0
+# R2-03 E9. The fighter-parts matrix path converts float -> N64 16.16 -> DS
+# 20.12, and E8 established 97.5% of local-matrix builds take it. The
+# intermediate is a lossless round trip, so the direct conversion is bit-exact
+# by construction, not by tolerance.
+#   1 = direct conversion.
+#   2 = run both and compare, because "by construction" is the kind of claim
+#       E8 proved gets read wrong.
+# Promote 2 -> 1 only on a zero gNdsR2MtxDirectVerifyFail run.
+NDS_R2_FIGHTER_MTX_DIRECT ?= 0
+NDS_RENDER_ECONOMY ?= 0
+# Owner 5 is the only census-ranked Dream Land cut that passed the canonical
+# 500-pixel ratchet.  The enclosing economy flag remains off by default.
+NDS_RENDER_ECONOMY_OWNER_MASK ?= 32
+NDS_RENDERER_BENCHMARK_MODE ?= 0
+NDS_SCENE_MIP_CACHE_LAB ?= 0
 NDS_FAST_WALLPAPER_AFFINE ?= 0
 # Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
 # open/read/flush/play while preserving all BGM state/counters so the rest of
@@ -487,6 +502,14 @@ override NDS_R2_STAGE_VIEWPROJ := 1
 # pre-E8 arm at the simulation-clock lock, and the elision counter reads exactly
 # 5 per frame.
 override NDS_R2_STAGE_PREFLIGHT := 1
+# R2-03 E9: the fighter-parts matrix path converted float -> N64 16.16 -> DS
+# 20.12, and the intermediate was a lossless round trip -- COMBINE_INTEGRAL/
+# COMBINE_FRACTIONAL split exactly what MtxCellS16p16 recombines. Converting
+# straight to 20.12 is bit-exact by construction, not by tolerance. A/B on
+# identical source: MatrixPrep 122,765 -> 110,777, world build 105,425 ->
+# 93,830. Exact: 0 mismatches over 8,108 conversions against the two-step, and
+# 0 fallbacks to the source routine.
+override NDS_R2_FIGHTER_MTX_DIRECT := 1
 # Task 37: seven hot leaves (memset, memcpy, memcmp, __ieee754_sqrtf and three
 # renderer/fighter helpers, 906 bytes) into ITCM free space. Named work P50
 # -59,328 ticks, 3-VBlank share 71.7% -> 76.0%, 5+ VBlank 5.2% -> 3.1%.
@@ -565,6 +588,9 @@ NDS_R2_STAGE_VIEWPROJ := 1
 endif
 ifneq ($(origin NDS_R2_STAGE_PREFLIGHT),command line)
 NDS_R2_STAGE_PREFLIGHT := 1
+endif
+ifneq ($(origin NDS_R2_FIGHTER_MTX_DIRECT),command line)
+NDS_R2_FIGHTER_MTX_DIRECT := 1
 endif
 # Must track the published block above. These two targets exist to measure and
 # prove the shipping program, so any flag that is on there and off here makes
@@ -1791,6 +1817,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_SHADE_PROOF $(NDS_R2_FIGHTER_SHADE_PROOF)'; \
 		echo '#define NDS_RENDER_ECONOMY $(NDS_RENDER_ECONOMY)'; \
 		echo '#define NDS_RENDER_ECONOMY_OWNER_MASK $(NDS_RENDER_ECONOMY_OWNER_MASK)'; \
+		echo '#define NDS_R2_FIGHTER_RUN_PROOF $(NDS_R2_FIGHTER_RUN_PROOF)'; \
+		echo '#define NDS_R2_FIGHTER_MTX_DIRECT $(NDS_R2_FIGHTER_MTX_DIRECT)'; \
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \

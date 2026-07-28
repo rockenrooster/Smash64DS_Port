@@ -441,6 +441,63 @@ static inline sb32 ndsRendererAdapterFloatPow2ToS32(
     return TRUE;
 }
 
+#if NDS_R2_FIGHTER_MTX_DIRECT
+/* R2-03 E9. The fighter-parts path converts float -> N64 16.16 -> DS 20.12, and
+ * E8 established that 97.5% of local-matrix builds take it. The intermediate is
+ * a pure round trip: F2LFixedWExact packs each value into COMBINE_INTEGRAL /
+ * COMBINE_FRACTIONAL halves, and MtxCellS16p16 recombines exactly those halves,
+ * so recombine(split(x)) == x. The whole two-step therefore equals, per cell,
+ * RoundShiftS32(FloatPow2ToS32(v, 16), 4) -- and the cell mapping works out to
+ * the identity, with the w column zero except (3,3) = 1.0.
+ *
+ * Computing that directly is bit-exact by construction rather than by tolerance,
+ * so unlike E6's fixed-point angle lever this needs no fidelity budget. Level 2
+ * runs both and compares anyway, because "by construction" is exactly the kind
+ * of claim E8 proved I get wrong by reading. */
+volatile u32 gNdsR2MtxDirectCalls;
+volatile u32 gNdsR2MtxDirectFallback;
+volatile u32 gNdsR2MtxDirectVerifyFail;
+
+static s32 ndsRendererAdapterRoundShift20p12(s32 value)
+{
+    /* Mirrors nds_renderer.c's ndsRendererRoundShiftS32(value, 4), which is
+     * file-static there: round half away from zero, not an arithmetic shift. */
+    s64 wide = value;
+
+    if (wide < 0)
+    {
+        return (s32)(-(((-wide) + 8) >> 4));
+    }
+    return (s32)((wide + 8) >> 4);
+}
+
+static sb32 ndsRendererAdapterF2LDirect20p12(
+    const Mtx44f *src, NDSRendererMatrix20p12 *dst)
+{
+    u32 row;
+    u32 col;
+    s32 e;
+
+    for (row = 0u; row < 4u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            if (ndsRendererAdapterFloatPow2ToS32(
+                    (*src)[row][col], 16u, &e) == FALSE)
+            {
+                return FALSE;
+            }
+            dst->m[row][col] = ndsRendererAdapterRoundShift20p12(e);
+        }
+        dst->m[row][3] = 0;
+    }
+    /* F2LFixedWExact pairs src[3][2] with a literal 0x00010000, i.e. 1.0 in
+     * 16.16, which lands in cell (3,3). */
+    dst->m[3][3] = ndsRendererAdapterRoundShift20p12(0x00010000);
+    return TRUE;
+}
+#endif
+
 static sb32 ndsRendererAdapterF2LFixedWExact(
     const Mtx44f *src, Mtx *dst)
 {
@@ -847,6 +904,34 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
 
     if (parts->transform_update_mode != 0)
     {
+#if NDS_R2_FIGHTER_MTX_DIRECT
+        {
+            NDSRendererMatrix20p12 direct;
+
+            if (ndsRendererAdapterF2LDirect20p12(
+                    &parts->unk_dobjtrans_0x10, &direct) != FALSE)
+            {
+                gNdsR2MtxDirectCalls++;
+#if NDS_R2_FIGHTER_MTX_DIRECT >= 2
+                if (ndsRendererAdapterF2LFixedWExact(
+                        &parts->unk_dobjtrans_0x10, &mtx) == FALSE)
+                {
+                    syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, &mtx);
+                }
+                ndsRendererAdapterMtxFromN64(&mtx, out);
+                if (memcmp(out, &direct, sizeof(direct)) != 0)
+                {
+                    gNdsR2MtxDirectVerifyFail++;
+                }
+                return TRUE;
+#else
+                *out = direct;
+                return TRUE;
+#endif
+            }
+            gNdsR2MtxDirectFallback++;
+        }
+#endif
         /* BattleShip lbCommonFighterPartsFuncMatrix quantizes the complete
          * source float matrix through syMatrixF2LFixedW before the RSP sees
          * it. Preserve that 16.16 boundary, then convert to DS 20.12. */
