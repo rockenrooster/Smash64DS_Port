@@ -68,11 +68,29 @@ Profiling 517–521 against a matched control at 508–512, per frame, excluding
 
 `MISC` confirms the draw half independently: 47,424 -> 125,184–157,888.
 
-**Next, in order:** (a) name the object — `nds_task39_effect_census.c` already
-tracks live effects per frame and is the cheapest instrument; (b) attribute the
-283,072 with `scripts/census-softfloat-callers.ps1`; (c) only then choose a
-port-side fixed-point equivalent. Inspect BattleShip first — `decomp/` is
-read-only, which is not the same as algorithm-frozen.
+**The float is attributed, and it is NOT the float Task 92 closed.** Task 92 E0
+closed soft-float as a conversion target on a ~90-second average whose largest
+caller was `gcPlayDObjAnimJoint` at 54.2%. In this excursion **every caller it
+classified is flat** — `gcPlayDObjAnimJoint` +2,217/frame, the renderer float
+callers +20 to +131 — while a population that is *exactly zero in the control*
+appears with 62,830/frame of caller self time: `func_ovl2_800ED490` (a `Mtx44f`
+multiply, 27 mul + 21 add per call), `func_ovl2_800EDBA4` (walks a joint DObj to
+its root and back rebuilding world matrices), `gmCollisionSetInvertMatrix`,
+`gmCollisionTransformMatrixAll`, `gmCollisionTestRectangle`,
+`gmCollisionGetWorldPosition`. All of `decomp/.../gm/gmcollision.c`.
+
+**The excursion is hit detection with live hitboxes.** That also explains its
+other two signatures: the consecutive-frame runs are an attack's active frames,
+and `MISC` tripling is the hit effect drawing as its own owner. Task 92's verdict
+closed the class it measured; this caller set was not in it, so it is not
+evidence against acting here.
+
+**Next, and the order matters.** `func_ovl2_800EDBA4` already carries two memo
+flags (`parts->transform_update_mode`, `parts->unk_dobjtrans_0x5`). Measure how
+much of the walk is **redundant** first — that is the E5/E12 shape, bit-exact,
+and needs no contract discussion. Only if the walk is already minimal does this
+become a float→fixed question, which is a gameplay change requiring the Task 9
+state hash to be re-bounded and therefore the owner's decision.
 
 **Caveat now on record:** `_ntrcardRomReadSector` measured +95,357 on the
 excursion with the HUD drawn and −95,356 (entirely in the control) with it
