@@ -31,6 +31,73 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-04 E1 — animation cache BUILT, −53,696 WORK P95, BLOCKED on Boundary (2026-07-29)
+
+E0's plan built and behaving exactly as sized. `NDS_R2_ANIM_CACHE=1` keeps each
+animation's **byte-swapped, pre-fixup** payload keyed by `asset_id` and re-runs
+the fixups against the real destination, which preserves `lbRelocGetForceExternHeapFile`'s
+"force" semantic — pristine data restored — while removing the NitroFS walk and
+the cartridge read.
+
+Engagement, frames 801..928, matching E0's window exactly:
+
+| counter | value |
+|---|---:|
+| `gNdsR2AnimCacheHits` | **53** |
+| `gNdsR2AnimCacheMisses` | 29 |
+| `gNdsR2AnimCacheFills` | 29 |
+| `gNdsR2AnimCacheBytes` | **66,016** |
+| `gNdsR2AnimCacheRejects` | **0** |
+
+53 hits against E0's 53 predicted repeats and 29 fills against 29 distinct: every
+repeat served, nothing rejected, 66 KB resident.
+
+| bucket | control | E1 | delta |
+|---|---:|---:|---:|
+| **WORK P95** | 1,365,952 | **1,312,256** | **−53,696** |
+| WORK-H P95 | 1,364,992 | 1,311,360 | −53,632 |
+| **fallback WORK-H median** | 1,284,928 | 1,229,632 | **−55,296** |
+| clean WORK-H median | 1,013,376 | 1,011,712 | −1,664 |
+| WORK P50 | 1,019,776 | 1,017,728 | −2,048 |
+| VBI 2: / 3: | 793 / 128 | 801 / 121 | — |
+
+**The gain is entirely on the excursion frames** (−55,296) with clean frames
+essentially unmoved (−1,664). That is the shape R2-04's gate asks for, and P95 is
+the metric `PROJECT_GOAL.md` gates on.
+
+### BLOCKED: Boundary fails with the flag on
+
+**`battle_playable lower-screen rolling FPS counter did not sample actual
+presentation cadence.`** `FPS_HUD=290,13,15,17485504` — the harness recomputes
+288 from the HUD's own `frames`/`ticks` inputs and the HUD reports 290.
+
+Reproduced deliberately rather than assumed: **two runs with the flag on fail,
+one clean control run with it off passes** (`Boundary verification profile
+passed`). A third run, the control taken through the harness script directly
+rather than `verify-all.ps1`, failed on an unrelated blank-capture
+(`0/49152 dominant-green pixels`) and is a flake, not evidence — noted so the
+next reader does not count it as a second control.
+
+The likely mechanism is that the assert is an internal-consistency check between
+the HUD's rolling value and an instantaneous recomputation, and this cut makes
+the frame rate **non-stationary** — the first 29 loads are slow misses, then the
+match speeds up — so a rolling average legitimately disagrees with a spot
+recompute. That would make the assert an artifact rather than corruption. **It is
+not graduated on that theory.** The flag stays default 0 until someone shows
+which of the two is wrong; a verifier failure is a failure.
+
+### What to do next
+
+1. Decide whether the FPS-HUD assert is measuring harm or measuring a rate
+   change. Read `verify-battle-mariofox-gcrunall-loop-harness.ps1:3250` and check
+   whether `fpsHud[0]` and `fpsHud[2]/[3]` are sampled at the same instant. If
+   they are not, the assert cannot hold across any cadence change and it is the
+   defect.
+2. If the assert is sound, the fix is E0's other half: **preload the working set
+   at match start** so the rate never changes mid-match. That is what R2-04
+   actually specifies, it removes the misses entirely rather than 64.6% of them,
+   and it makes this failure mode impossible by construction.
+
 ## R2-04 E0 — the phase is SIZED and its gate is reachable (2026-07-29)
 
 R2-03's remaining lever is unattributed (E45/E46 left ~110 ticks per delta with

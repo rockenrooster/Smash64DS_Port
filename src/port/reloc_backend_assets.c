@@ -5508,6 +5508,90 @@ volatile u32 gNdsR204AnimForceLoadRepeat;
 static u32 sNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
 #endif
 
+#if NDS_R2_ANIM_CACHE
+/* R2-04 E1. Task 75's absorption: keep each fighter animation's payload resident
+ * so the frame that needs a move does not re-walk NitroFS and re-read the
+ * cartridge for it.
+ *
+ * Keyed by asset_id, not by destination heap. E0 measured the destination-keyed
+ * check (AnimForceResident) at 0 across two windows because the destination is
+ * caller-owned and reused, while 53 of 82 force-loads (64.6%) repeat an asset
+ * already loaded once. The match's working set is 29 distinct animations, so
+ * NDS_R2_ANIM_CACHE_ENTRIES only has to cover that, not the 301-ID space --
+ * which could not fit anyway against NDS_RELOC_LOADED_FILE_CAPACITY of 96.
+ *
+ * What is stored is the BYTE-SWAPPED, PRE-FIXUP image.
+ * ndsRelocApplyInternalPointerFixups writes absolute pointers derived from
+ * loaded->data, so a fixed-up image is position-dependent and must never be
+ * replayed into a different heap. A hit copies the swapped bytes and re-runs the
+ * fixups against the real destination, which is correct by construction and
+ * still removes the directory walk and the cartridge read -- the part Task 71
+ * profiled inside the frame.
+ *
+ * Every failure path degrades to the uncached load, so a full cache, a failed
+ * allocation or an unexpected size is a performance outcome and never a
+ * correctness one. */
+#define NDS_R2_ANIM_CACHE_ENTRIES 48u
+
+typedef struct NDSR2AnimCacheEntry {
+    u32 asset_id;
+    u32 size;
+    void *payload;
+    NDSRelocAssetHeader header;
+} NDSR2AnimCacheEntry;
+
+static NDSR2AnimCacheEntry sNdsR2AnimCache[NDS_R2_ANIM_CACHE_ENTRIES];
+static u32 sNdsR2AnimCacheCount;
+volatile u32 gNdsR2AnimCacheHits;
+volatile u32 gNdsR2AnimCacheMisses;
+volatile u32 gNdsR2AnimCacheFills;
+volatile u32 gNdsR2AnimCacheBytes;
+volatile u32 gNdsR2AnimCacheRejects;
+
+static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsR2AnimCacheCount; i++)
+    {
+        if (sNdsR2AnimCache[i].asset_id == asset_id)
+        {
+            return &sNdsR2AnimCache[i];
+        }
+    }
+    return NULL;
+}
+
+/* Called with the payload already byte-swapped and not yet fixed up. */
+static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
+                                const NDSRelocAssetHeader *header)
+{
+    NDSR2AnimCacheEntry *entry;
+    void *payload;
+
+    if ((data == NULL) || (size == 0u) || (header == NULL) ||
+        (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES))
+    {
+        gNdsR2AnimCacheRejects++;
+        return;
+    }
+    payload = syTaskmanMalloc(size, 0x10);
+    if (payload == NULL)
+    {
+        gNdsR2AnimCacheRejects++;
+        return;
+    }
+    memcpy(payload, data, size);
+    entry = &sNdsR2AnimCache[sNdsR2AnimCacheCount++];
+    entry->asset_id = asset_id;
+    entry->size = size;
+    entry->payload = payload;
+    entry->header = *header;
+    gNdsR2AnimCacheFills++;
+    gNdsR2AnimCacheBytes += size;
+}
+#endif
+
 static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                                                 void *heap)
 {
@@ -5581,6 +5665,35 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         }
     }
 #endif
+#if NDS_R2_ANIM_CACHE
+    /* R2-04 E1. A hit replaces the NitroFS walk, the cartridge read and the word
+     * byte-swap with one copy. The fixups below still run against this heap,
+     * because they write absolute pointers into it. */
+    {
+        const NDSR2AnimCacheEntry *cached = ndsR2AnimCacheFind(asset_id);
+
+        if (cached != NULL)
+        {
+            memcpy(heap, cached->payload, cached->size);
+            asset_size = cached->size;
+            header = cached->header;
+            ndsRelocRemoveFighterAObj16LoadedAliases(asset_id, heap);
+            loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
+            if ((loaded == NULL) ||
+                (ndsRelocFinalizeLoadedFile(loaded) == FALSE))
+            {
+                goto fail;
+            }
+            gNdsR2AnimCacheHits++;
+            ndsFighterManagerRecordExternToken(token, heap);
+            ndsRelocSetStatusBufferFile(token, heap);
+            ndsRelocSetStatusBufferFile(asset_id, heap);
+            ndsRelocSetForceStatusBufferFile(token, heap);
+            return heap;
+        }
+        gNdsR2AnimCacheMisses++;
+    }
+#endif
     /* One open for the size, the zero and the payload. Task 72 collapsed the
      * probe-then-load pair here; the sizing call above was the third walk of
      * the same directory for the same header, and this is the on-demand
@@ -5600,8 +5713,16 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     {
         goto fail;
     }
-    if ((ndsRelocApplyWordByteSwap(loaded) == FALSE) ||
-        (ndsRelocFinalizeLoadedFile(loaded) == FALSE))
+    if (ndsRelocApplyWordByteSwap(loaded) == FALSE)
+    {
+        goto fail;
+    }
+#if NDS_R2_ANIM_CACHE
+    /* Snapshot here: swapped, not yet fixed up. One instruction later the
+     * fixups make the image position-dependent and unusable as a template. */
+    ndsR2AnimCacheStore(asset_id, heap, (u32)asset_size, &header);
+#endif
+    if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
     {
         goto fail;
     }
