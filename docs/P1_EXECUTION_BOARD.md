@@ -32,6 +32,80 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E48 — E32's regression MEASURED after six wrong guesses (2026-07-29)
+
+**The flash is a raw vertex colour, and the native owner lights it.** Measured,
+not reasoned: `NDS_R2_FLASH_PROBE` counts which branch of the generic colour path
+draws each vertex, per presented frame, latched at one hitlag frame and one
+ordinary one.
+
+| slot | frame 911 (hitlag) | frame 904 (ordinary) |
+|---|---:|---:|
+| 0 material-only | 0 | 0 |
+| 1 no-vertex → `RGB15(31,31,31)` | 0 | 0 |
+| **2 resolved** | **273** | 0 |
+| 3 lit-shade recompute | 0 | 0 |
+| 4 total calls | **273** | **0** |
+| 5 last material colour | **0** | 0 |
+| 7 last flags | **2** | 0 |
+
+Flags `2` is `use_vertex_color = TRUE, use_material_color = FALSE`, and slot 3 is
+zero, so all 273 arrived through the `vertex_color_valid != FALSE` entry. The
+generic path therefore computes
+
+```text
+PackedResolvedColor(vertex_color, material = 0, use_material = FALSE)
+  -> RGB15(vertex_color >> 27, >> 19, >> 11)
+```
+
+— the vertex colour **raw**. No material, no shade, no combination.
+`ndsRendererHardwarePackedValidVertexColor` never calls `LitShadeColor` on that
+route: **a valid vertex colour suppresses lighting.** The native owner has no
+such rule. It decides `epoch_lit` from `geometry_mode & LIGHTING` alone and runs
+the hardware lighting engine, which is where the dark maroon comes from.
+
+The reference flash is **saturated white**, not the light grey this board and the
+E32 report both recorded — the source writes white vertex colours and the generic
+path emits them unchanged.
+
+`gNdsR2FlashSnapB` being **all zero** is a second result worth keeping: on
+ordinary frames this function is never called at all, because the fighter is on
+the native owner and the stage is on the Task 36 replay. 273 against 0 is
+independent confirmation that the fallback fires on hitlag frames and nowhere
+else.
+
+### Six hypotheses, six builds, six wrong
+
+E36 `color_modulate`; E41 the fold arithmetic, then E16's hardware lighting; E42
+`USE_VERTEX`; E47 the material derivation; and E48's own stated prediction, which
+was slot 1 (white) and was also wrong. Every one asked *how the material combines
+with the shade*. On these frames there is no material and no shade, so the
+question was mis-framed from the start, and no amount of source reading was going
+to correct it — only counting the branch did.
+
+**Standing consequence:** E45's rule ("prefer one direct bracket over any amount
+of algebra") was written for tick questions and never generalised. It applies to
+any question about which path the code takes. Recorded in
+`TASK_STANDING_RULES.md`.
+
+### The fix, and its real scope
+
+The native owner must reproduce the precedence: an epoch whose vertices carry
+valid vertex colours and no material emits those colours **unlit**. Under
+`NDS_R2_FIGHTER_HW_LIGHT` — `override`-forced to 1 on the hwtri targets — the
+per-vertex software colour loop is *compiled out*, not skipped, and E29 removed
+the `packed_color` field it wrote, so there is currently no path in the native
+owner that emits a vertex colour at all.
+
+Cheapest correct shape: mark such epochs, and in the emit write `GFX_COLOR` from
+the baked `sNdsNativeFighterDenseVertices[].rgba` with the polygon attribute's
+light mask cleared, instead of `GFX_NORMAL`. That is *less* work than lighting,
+not more — but it touches the ITCM-resident emit, which is the hottest code in
+the frame, so it is an implementation task rather than a one-line correction.
+
+`NDS_R2_MATERIAL_DYNAMIC` (E47) is refuted and must graduate or be deleted with
+this fix; it currently fixes nothing.
+
 ## R2-04 E4/E5 — GRADUATED, −132,352 WORK-H P95, Boundary green (2026-07-29)
 
 E3 said the whole 301-ID animation space does not fit the arena and that the

@@ -1148,6 +1148,12 @@ void ndsRendererHardwareResetSourceCaches(void);
 void ndsRendererHardwareDiscardTextureCache(void);
 s32 ndsRendererHardwarePrepareBattleStaticTextures(void);
 void ndsRendererHardwareArmBattleStaticTextures(void);
+/* R2-03 E48 lab probe. Latches the generic colour path's per-frame branch counts
+ * at two named frames and clears the running ones. Declared unconditionally so
+ * this header does not depend on the generated config defines being visible
+ * first; defined only under NDS_R2_FLASH_PROBE, and its one call site is guarded
+ * by the same flag. Delete with the experiment. */
+void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame);
 void ndsRendererHardwareDiscardBattleStaticTextures(void);
 void ndsRendererHardwareAbortBattleStaticTextures(void);
 s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,

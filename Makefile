@@ -199,6 +199,12 @@ NDS_R2_ANIM_CACHE ?= 0
 # dark maroon against the generic path's light grey (E32). Once per epoch,
 # 46.4/frame.
 NDS_R2_MATERIAL_DYNAMIC ?= 0
+# R2-03 E48 lab probe. Counts which branch of the generic colour path draws each
+# vertex, per presented frame, latched at one hitlag frame and one ordinary one.
+# Four hypotheses have been spent guessing at E32's regression (E36, E41, E42,
+# E47) and each cost a build; this measures the branch instead. Delete with the
+# experiment.
+NDS_R2_FLASH_PROBE ?= 0
 # R2-04 E2. Shadow copy of the FPS-HUD publish, from the same locals in the
 # same breath, to separate "something rewrites the primary afterwards" from
 # "the harness BUS_CLOCK constant is wrong". Lab probe.
@@ -2004,6 +2010,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
+		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \

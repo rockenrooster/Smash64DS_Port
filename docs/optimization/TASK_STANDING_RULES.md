@@ -1428,3 +1428,39 @@ So:
    pressure and two cartridge-contention stories were considered here; the
    `SeamMiss`/`ErrorStop`/`Overrun` triple settled it in one pass, and the
    AUDIO_BGM row was already printed in the failure output.
+
+### "Bracket it, don't reason about it" applies to control flow too (R2-03 E48, 2026-07-29)
+
+E45 wrote the rule for tick questions: prefer one direct bracket over any amount
+of algebra. It was never generalised, and R2-03 E32's visual regression then
+consumed **six** hypotheses over six builds, every one derived by careful source
+reading and every one wrong:
+
+| experiment | hypothesis | outcome |
+|---|---|---|
+| E36 | `color_modulate` affine lerp | refuted, 1,826 -> 1,827 px |
+| E41 | the shuffle fold's arithmetic | refuted by three-way capture |
+| E41 | E16's hardware lighting | refuted -- software shading moved *further* away |
+| E42 | `USE_VERTEX` policy bit | unreachable; all four policies set it |
+| E47 | baked vs derived material colour | refuted by capture |
+| E48 | the `RGB15(31,31,31)` white branch | refuted by its own probe |
+
+One probe counting which branch actually ran answered it in a single build:
+273 vertices through the resolved branch with `use_material_color = FALSE` and a
+zero material, versus 0 calls on the control frame. The flash is a raw vertex
+colour and the native owner lights it.
+
+So:
+
+1. **A "which path does this take" question is a measurement, not a reading.**
+   Source tells you which paths *exist*; only a counter tells you which one ran.
+   Reach for the counter first, exactly as with ticks.
+2. **Six plausible mechanisms is the tell.** When two hypotheses in a row are
+   refuted by capture, stop generating a third -- the question itself is probably
+   mis-framed. Here every hypothesis asked how the material combines with the
+   shade, and on those frames there was neither a material nor a shade.
+3. **State the prediction before reading the counter.** E48 did, and was wrong,
+   which is the cheapest possible way to find out that a mental model is broken.
+4. **A branch counter is cheap enough to be the first move.** Four increments and
+   a per-frame latch, one build, and it also priced the fallback (273 calls on a
+   hitlag frame against 0 on an ordinary one) as a free second result.

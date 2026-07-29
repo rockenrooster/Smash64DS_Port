@@ -4970,6 +4970,12 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
     }
 #endif
     NDS_TASK37_PROFILE_FRAME_TICK(gNdsBattlePlayablePacingPresentedFrames);
+#if NDS_R2_FLASH_PROBE
+    /* R2-03 E48. Latch and reset here, on the same per-iteration path the tick
+     * HUD samples from, so the branch counts are per presented frame and carry
+     * the same frame numbering the capture harness stops on. */
+    ndsRendererR2FlashProbeFrameEnd(gNdsBattlePlayablePacingPresentedFrames);
+#endif
     ndsBattlePlayableFrameCompleteMarker();
     NDS_FREEZE_DIAGNOSTICS_HEARTBEAT();
 }

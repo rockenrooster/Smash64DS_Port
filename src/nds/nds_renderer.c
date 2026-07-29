@@ -8326,6 +8326,63 @@ static inline u16 ndsRendererHardwareModulatePackedColor(
     return color;
 }
 
+#if NDS_R2_FLASH_PROBE
+/* R2-03 E48. Which branch of the generic colour path draws the hurt flash.
+ *
+ * Four hypotheses have been spent guessing at E32's regression -- E36
+ * (color_modulate), E41 (fold arithmetic, then E16's hardware lighting), E42
+ * (USE_VERTEX) and E47 (the material derivation) -- and each cost a build. The
+ * campaign's own standing rule is to bracket the thing rather than reason about
+ * it, so this records what the generic path actually does instead.
+ *
+ * Counters are per presented frame and latched at two named frames, because a
+ * cumulative total is dominated by stage geometry and says nothing about the
+ * fighter. Frame A is a hitlag frame and frame B an ordinary one; the branch
+ * that differs between the two snapshots is the flash. Same matched-control
+ * shape R2-03 E35 used to attribute the SRC excursion.
+ *
+ * Slots: 0 material-only (generic emits the material colour), 1 no-vertex
+ * (emits RGB15(31,31,31) -- pure white), 2 resolved (shade combined with
+ * material), 3 lit-shade recompute, 4 total calls, 5 last material colour,
+ * 6 last packed result, 7 last flags: bit0 use_material, bit1 use_vertex,
+ * bit2 vertex_color_valid. */
+#define NDS_R2_FLASH_SLOTS 8u
+volatile u32 gNdsR2FlashLive[NDS_R2_FLASH_SLOTS];
+volatile u32 gNdsR2FlashSnapA[NDS_R2_FLASH_SLOTS];
+volatile u32 gNdsR2FlashSnapB[NDS_R2_FLASH_SLOTS];
+/* Writable over GDB so a run can be re-aimed without a rebuild. */
+volatile u32 gNdsR2FlashFrameA = 911u;
+volatile u32 gNdsR2FlashFrameB = 904u;
+volatile u32 gNdsR2FlashLatchedA;
+volatile u32 gNdsR2FlashLatchedB;
+
+void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame)
+{
+    u32 i;
+
+    if (presented_frame == gNdsR2FlashFrameA)
+    {
+        for (i = 0u; i < NDS_R2_FLASH_SLOTS; i++)
+        {
+            gNdsR2FlashSnapA[i] = gNdsR2FlashLive[i];
+        }
+        gNdsR2FlashLatchedA++;
+    }
+    else if (presented_frame == gNdsR2FlashFrameB)
+    {
+        for (i = 0u; i < NDS_R2_FLASH_SLOTS; i++)
+        {
+            gNdsR2FlashSnapB[i] = gNdsR2FlashLive[i];
+        }
+        gNdsR2FlashLatchedB++;
+    }
+    for (i = 0u; i < NDS_R2_FLASH_SLOTS; i++)
+    {
+        gNdsR2FlashLive[i] = 0u;
+    }
+}
+#endif
+
 static inline u16 ndsRendererHardwarePackedResolvedColor(
     u32 color,
     u32 material_color,
@@ -8367,17 +8424,38 @@ static inline u16 ndsRendererHardwarePackedValidVertexColor(
 {
     if ((use_material_color != FALSE) && (use_vertex_color == FALSE))
     {
-        return ndsRendererHardwareModulatePackedColor(
+        u16 packed = ndsRendererHardwareModulatePackedColor(
             RGB15((u8)((material_color >> 27) & 0x1fu),
                   (u8)((material_color >> 19) & 0x1fu),
                   (u8)((material_color >> 11) & 0x1fu)),
             color_modulate);
+
+#if NDS_R2_FLASH_PROBE
+        gNdsR2FlashLive[0]++;
+        gNdsR2FlashLive[5] = material_color;
+        gNdsR2FlashLive[6] = packed;
+        gNdsR2FlashLive[7] = 1u;
+#endif
+        return packed;
     }
     if (use_vertex_color == FALSE)
     {
-        return ndsRendererHardwareModulatePackedColor(
+        u16 packed = ndsRendererHardwareModulatePackedColor(
             RGB15(31u, 31u, 31u), color_modulate);
+
+#if NDS_R2_FLASH_PROBE
+        gNdsR2FlashLive[1]++;
+        gNdsR2FlashLive[5] = material_color;
+        gNdsR2FlashLive[6] = packed;
+        gNdsR2FlashLive[7] = 0u;
+#endif
+        return packed;
     }
+#if NDS_R2_FLASH_PROBE
+    gNdsR2FlashLive[2]++;
+    gNdsR2FlashLive[5] = material_color;
+    gNdsR2FlashLive[7] = 2u | ((use_material_color != FALSE) ? 1u : 0u);
+#endif
     return ndsRendererHardwarePackedResolvedColor(
         vertex_color, material_color, use_material_color,
         color_modulate);
@@ -8395,6 +8473,9 @@ static u16 ndsRendererHardwarePackedVertexColor(
 {
     u32 color;
 
+#if NDS_R2_FLASH_PROBE
+    gNdsR2FlashLive[4]++;
+#endif
     if (vertex_color_valid != FALSE)
     {
         return ndsRendererHardwarePackedValidVertexColor(
@@ -8414,6 +8495,11 @@ static u16 ndsRendererHardwarePackedVertexColor(
             use_vertex_color, vertex_color, color_modulate);
     }
     color = ndsRendererHardwareLitShadeColor(stats, vtx, NULL);
+#if NDS_R2_FLASH_PROBE
+    gNdsR2FlashLive[3]++;
+    gNdsR2FlashLive[5] = material_color;
+    gNdsR2FlashLive[7] = 4u | ((use_material_color != FALSE) ? 1u : 0u);
+#endif
     return ndsRendererHardwarePackedResolvedColor(
         color, material_color, use_material_color, color_modulate);
 }
