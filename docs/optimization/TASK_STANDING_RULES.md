@@ -224,6 +224,33 @@ referencing them — 10,820 bytes stopped competing for a 4 KB data cache. Do no
 dismiss an out-of-bucket improvement as noise, and do not attribute it to the
 wrong mechanism: check whether the change altered the frame's memory footprint.
 
+### Report an untouched bucket to bound the noise (R2-03 E40, 2026-07-29)
+
+Every A/B on a placement change must name a bucket the change **cannot** affect
+and report its movement alongside the target.
+
+E40 moved the replay's state tables into DTCM and read `FTR` P50 −4,544 — a
+plausible modest KEEP. But `OTHR` P50 moved **+5,568** and `SRC` P95 **−3,584**
+in the same pair, and neither can depend on where the fighter's delta tables
+live. That is the build-placement noise *for the pair in hand*, and it swallowed
+the result.
+
+The 5,000–7,000 floor is a remembered constant from earlier tasks; an untouched
+bucket is a measurement of the comparison actually being made, and the sampler
+already collects it for free. Note the direction of the trap: this is the
+converse of "cache pressure is a whole-frame resource" above, so decide *before*
+reading the numbers which buckets the mechanism can plausibly reach, and treat
+movement outside that set as the noise estimate rather than as a bonus.
+
+### Size a placement move by accesses per frame, not by precedent (R2-03 E40)
+
+E29 won 26,816 moving 8,656 bytes touched **1,878 times a frame** in random
+order — data that could not fit a 4 KB dcache. E40 applied the same lever to
+1,036 bytes touched **182 times**, whose 840-byte hot table already fitted
+comfortably, and got nothing. Same mechanism, an order of magnitude less to win.
+Before proposing a placement move, state the access count per frame and the
+working-set size against cache capacity; "this worked last time" is not a sizing.
+
 ### `make` does not regenerate the generated includes (R2-03 E29, 2026-07-28)
 
 `build.ps1` runs the generators; `make` compiles whatever `.inc` is on disk. Any

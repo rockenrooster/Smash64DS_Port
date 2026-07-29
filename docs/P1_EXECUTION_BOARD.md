@@ -31,6 +31,51 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E40 — state tables to DTCM: BUILT, NULL, reverted (2026-07-29)
+
+E39 established the replay's cost is memory, not logic: 2.9 genuinely distinct
+writes per epoch at ~250 ticks each. E29 had won **26,816** by moving the fighter
+geometry tables into DTCM, so the same lever was applied to the replay's two
+tables — `sNdsNativeFighterStateDeltas` (840 B) and `sNdsNativeFighterStateSequence`
+(196 B), together ~1 KB against 3,432 free. Bit-exact by construction: same data,
+different address.
+
+Built, gated and measured. `check-task20-dtcm-layout.ps1` passes with all four
+fighter tables resident and `__irq_table` still 32-byte aligned at `0x02ff2600`.
+
+| bucket | Δ P50 | Δ P95 |
+|---|---:|---:|
+| `FTR` (the target) | −4,544 | −384 |
+| `WORK` | −3,776 | +1,280 |
+| **`OTHR`** (cannot be affected) | **+5,568** | −64 |
+| **`SRC`** (cannot be affected) | +128 | **−3,584** |
+
+**NULL, and the pair proves it on its own.** `OTHR` and `SRC` cannot depend on
+where the fighter's delta tables live, yet they moved ±3,500–5,568. That is the
+build-placement noise, measured *inside the same comparison*, and −3,776 is
+indistinguishable from it.
+
+**Reverted rather than kept, and the reason is DTCM scarcity, not process.**
+AGENTS.md says to keep every repeatable correctness-preserving gain, but
+"repeatable" is exactly what one pair inside its own noise cannot establish — and
+the 1,036 bytes are not free. E29 already recorded that
+`sNdsNativeFighterPackedCorners` needs 3,756 and "does not fit safely"; spending
+a quarter of the remaining headroom on an unmeasurable gain forecloses a better
+tenant.
+
+**Why it did not repeat E29's win:** E29 moved 8,656 bytes touched **1,878 times
+a frame** in random order, which could not fit the 4 KB dcache. E40 moves 1,036
+bytes touched **182 times** — and the 840-byte delta table already fitted
+comfortably. Same lever, an order of magnitude less to win. **Size a placement
+move by accesses per frame against cache capacity, not by "this worked before".**
+
+### Standing rule this earned
+
+**An A/B on a placement change must report an untouched bucket.** The 5,000–7,000
+floor is a remembered constant; `OTHR`/`SRC` are a *measured* bound for the exact
+pair in hand, and they cost nothing to read because the sampler already collects
+them. Had only `FTR` been reported, −4,544 would have looked like a modest KEEP.
+
 ## R2-03 E39 — operand elision BUILT and REFUTED on engagement (2026-07-29)
 
 Built the cheapest version of E26's idea and killed it with its own counter, for
