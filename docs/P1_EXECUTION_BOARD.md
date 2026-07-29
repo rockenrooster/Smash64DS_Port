@@ -32,6 +32,52 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-05 E0 — generator reproducibility gate PASSES; one generator defect found (2026-07-29)
+
+R2-03's two levers are both owner-blocked (E32 on the hurt flash, the cubic on
+the Task 9 hash), so the next switch-plan phase with an autonomously-settleable
+gate is **R2-05**: *"generators reproduce the `.inc` files byte-identically from a
+clean checkout."* That half now passes.
+
+Six generated artifacts exist. Four ship a `--check` mode; the other two were
+regenerated and byte-compared:
+
+| artifact | bytes | tracked | result |
+|---|---:|---|---|
+| `nds_native_fighter_owner.generated.inc` | 408,284 | no (gitignored) | **reproducible** |
+| `nds_native_stage_owner.generated.inc` | 75,388 | no | reproducible |
+| `task39_hit_sparks.generated.inc` | 141,031 | no | reproducible |
+| `battle_playable_static_textures.generated.inc` | 28,684 | no | reproducible |
+| `dreamland_ds_mesh.generated.inc` | 15,022 | **yes** | reproducible, current |
+| `task39_effect_census.generated.h` | 16,042 | **yes** | reproducible, current |
+
+The R2-05 artifact — the 408 KB fighter owner IR — was additionally generated
+twice under **different `PYTHONHASHSEED` values (1 and 12345)** and both runs are
+byte-identical to each other and to the working copy. Dict/set iteration order is
+the usual source of generator nondeterminism and it is excluded here.
+
+**A clean checkout can build**: four of the six are gitignored, but `build.ps1`
+(the clean-checkout entry point, not bare `make`) invokes each generator and then
+asserts its output exists via `$generatedOutputs`. Bare `make` assumes they have
+already been produced — worth knowing before diagnosing a missing-`.inc` failure.
+
+**Generator defect found — `generate_task39_effect_census.py` writes source line
+numbers into permanent dated evidence.** Its "ownership evidence" column embeds
+`src/port/reloc_backend_compat_shims.c:<line>`, so any unrelated edit to that
+file silently invalidates 60 rows of
+`artifacts/performance/2026-07-21_task39-visual-effects-census.md`, and
+re-running the generator rewrites a **dated** artifact with today's line numbers.
+Running it here shifted `7713 → 7774` and `12870 → 12963`. **Do not run it**; the
+committed copy is a 2026-07-21 snapshot and AGENTS.md makes `artifacts/performance`
+permanent evidence. Recorded in `KNOWN_ISSUES.md`. It is not in `build.ps1` or the
+Makefile, so nothing triggers it accidentally.
+
+The other half of R2-05's gate — *"zero fighter-specific runtime special cases"* —
+is not yet audited; a helper agent is currently editing
+`reloc_backend_mp_collision.c` for the open `docs/BUGS.md` gameplay defects, and
+that file carries the largest Mario-identifier count in the runtime, so the audit
+waits until the tree is quiet rather than racing it.
+
 ## R2-03 E61 — it is the CUBIC. Pose table refuted by size; two levers now close the gate (2026-07-29)
 
 Full report: `optimization/ClaudeOpus5_R203_E61_TheCubicIsTheLever_20260729.md`.

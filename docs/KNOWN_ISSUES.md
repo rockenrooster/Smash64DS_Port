@@ -178,3 +178,24 @@ real signal.
   offsets when expanded.
 - Broad stubs can hide missing behavior. Every retained stub needs a durable
   issue here or a runtime diagnostic.
+
+## `generate_task39_effect_census.py` rewrites dated evidence (R2-05 E0, 2026-07-29)
+
+**Do not run this generator.** It emits an "ownership evidence" column containing
+`src/port/reloc_backend_compat_shims.c:<line>` for 60 rows, so:
+
+1. Any unrelated edit to `reloc_backend_compat_shims.c` silently invalidates
+   every line number in `artifacts/performance/2026-07-21_task39-visual-effects-census.md`.
+   Running it on 2026-07-29 shifted `7713 → 7774` and `12870 → 12963`.
+2. That file is a **dated** artifact under `artifacts/performance`, which
+   `AGENTS.md` designates permanent evidence. Regenerating it overwrites a
+   2026-07-21 snapshot with today's source layout, i.e. it falsifies the date.
+
+It is wired into neither `build.ps1` nor the Makefile, so nothing runs it by
+accident — only a person re-running generators will trip it.
+
+**The durable fix, when this row is next touched:** a census that cites evidence
+should cite a *stable* locator — symbol name, or file plus symbol — not a line
+number. Line numbers are a property of the working tree at generation time and
+have no place in an artifact whose whole value is that it is dated. Until then,
+treat the committed copy as the record and leave it alone.
