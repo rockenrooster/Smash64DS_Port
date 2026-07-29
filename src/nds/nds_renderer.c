@@ -8366,6 +8366,24 @@ volatile u32 gNdsR2FlashSnapB[NDS_R2_FLASH_SLOTS];
 volatile u32 gNdsR2FlashVtxLive[NDS_R2_FLASH_VTX];
 volatile u32 gNdsR2FlashVtxA[NDS_R2_FLASH_VTX];
 volatile u32 gNdsR2FlashVtxB[NDS_R2_FLASH_VTX];
+/* R2-03 E58. The RAW decoded source colour for the same sampled vertices.
+ * gNdsR2FlashVtx* holds state->vertex_colors[], which is LitShade(source) --
+ * lighting sits between the flash and that value, and E50 mistook the lighting's
+ * per-vertex variation for the flash's. `vtx` at this call site is the decoded
+ * NDSRendererInputVertex, i.e. the source bytes the flash actually rewrites, so
+ * this array answers the question with no lighting in the way: is the flashed
+ * INPUT one constant? Recorded in the same branch at the same stride as the lit
+ * array, so index k names one vertex in both and they cannot desync. */
+volatile u32 gNdsR2FlashRawLive[NDS_R2_FLASH_VTX];
+volatile u32 gNdsR2FlashRawA[NDS_R2_FLASH_VTX];
+/* The recording branch lives in ndsRendererHardwarePackedValidVertexColor, which
+ * is `static inline` and does not take the input vertex. Rather than thread a
+ * probe-only parameter through four call sites, the caller that HAS the vertex
+ * parks it here immediately before delegating. The only other caller of that
+ * function is the native stage path, which E48 proved never reaches the
+ * recording branch (0 calls on an ordinary frame); it clears this anyway, so a
+ * stage contribution would read as 0 and be visible rather than silently stale. */
+volatile u32 gNdsR2FlashRawPending;
 /* Writable over GDB so a run can be re-aimed without a rebuild. E55 points B at
  * a SECOND hitlag frame, not at an ordinary one: the generic path has 0 calls on
  * an ordinary frame (E48), so an ordinary-frame snapshot is empty by
@@ -8388,6 +8406,7 @@ void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame)
         for (i = 0u; i < NDS_R2_FLASH_VTX; i++)
         {
             gNdsR2FlashVtxA[i] = gNdsR2FlashVtxLive[i];
+            gNdsR2FlashRawA[i] = gNdsR2FlashRawLive[i];
         }
         gNdsR2FlashLatchedA++;
     }
@@ -8410,6 +8429,7 @@ void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame)
     for (i = 0u; i < NDS_R2_FLASH_VTX; i++)
     {
         gNdsR2FlashVtxLive[i] = 0u;
+        gNdsR2FlashRawLive[i] = 0u;
     }
     /* Min starts at the top so the first sample always wins. */
     gNdsR2FlashLive[NDS_R2_FLASH_SLOT_MIN] = 0xffffffffu;
@@ -8541,6 +8561,7 @@ static inline u16 ndsRendererHardwarePackedValidVertexColor(
             if (slot < NDS_R2_FLASH_VTX)
             {
                 gNdsR2FlashVtxLive[slot] = vertex_color;
+                gNdsR2FlashRawLive[slot] = gNdsR2FlashRawPending;
             }
         }
     }
@@ -8564,6 +8585,9 @@ static u16 ndsRendererHardwarePackedVertexColor(
 
 #if NDS_R2_FLASH_PROBE
     gNdsR2FlashLive[4]++;
+    gNdsR2FlashRawPending = (vtx != NULL) ?
+        (((u32)vtx->r << 24) | ((u32)vtx->g << 16) |
+         ((u32)vtx->b << 8) | (u32)vtx->a) : 0u;
 #endif
     if (vertex_color_valid != FALSE)
     {
@@ -21772,6 +21796,9 @@ static s32 ndsRendererNativeStagePrepareRun(
         prepared_dense = &sNdsNativeStagePreparedDense[dense_index];
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         gNdsRendererM3Phase0PreparedDenseCount++;
+#endif
+#if NDS_R2_FLASH_PROBE
+        gNdsR2FlashRawPending = 0u;
 #endif
         prepared_dense->packed_color =
             ndsRendererHardwarePackedValidVertexColor(

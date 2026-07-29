@@ -1584,3 +1584,29 @@ correlated subset a population question is asking about. Cost of the fix: change
    concluded the flash was per-vertex; the flash is a constant and the lighting
    is what varies. When a probe reports "not uniform", ask which side of the
    transform it sampled.
+
+### Confirm what a field MEANS before modelling what changes it (R2-03 E58, 2026-07-29)
+
+Four experiments (E48, E49, E50, E55) modelled the hurt flash as something done
+to a vertex **colour**. There is no vertex colour on those runs. With `G_LIGHTING`
+set, F3DEX2 packs the **normal** into the vertex's RGB bytes, and
+`ndsRendererHardwareLitShadeColorPrepared` branches on exactly that at
+`nds_renderer.c:8246` — lighting off, the bytes are returned as a colour;
+lighting on, they drive a diffuse term and the emitted colour comes from
+`stats->light_color_1/2`.
+
+The tell was available from the first probe and went unread: **wildly different
+raw inputs produced identical outputs** — `(46,163,73)`, `(5,126,20)` and
+`(186,34,101)` all emitted `(76,76,76)`, the ambient-only floor. No per-vertex
+colour multiply collapses inputs like that. A dump of the *input* beside the
+*output*, which cost one build, would have caught it at E48.
+
+1. **When a probe reads a field, record what feeds it, not only what comes out.**
+   E48/E50/E55 all sampled the post-lighting value. One column of raw input
+   alongside would have refuted the colour model immediately.
+2. **Many-to-one is a type error, not noise.** If distinct inputs map to one
+   output, the transform is discarding information — find out which information
+   before naming the mechanism.
+3. **A union-typed field needs its discriminant checked first.** `r/g/b` meaning
+   colour-or-normal depending on `geometry_mode` is exactly the shape that
+   punishes reading the struct definition without reading its consumer.

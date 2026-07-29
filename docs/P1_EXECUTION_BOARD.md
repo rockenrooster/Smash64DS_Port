@@ -32,6 +32,68 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E58 — those bytes are a NORMAL, not a colour. E48's premise was wrong (2026-07-29)
+
+**Three experiments have now modelled the hurt flash as something happening to a
+vertex *colour*. There is no vertex colour on these runs.** E58 dumped the raw
+decoded `NDSRendererInputVertex` alongside the lit output for the same 24 stride
+samples on hitlag frame 911, and the pairing is impossible for any colour model:
+
+| raw source RGB | lit output |
+|---|---|
+| `(46,163,73)` | `(76,76,76)` |
+| `(5,126,20)` | `(76,76,76)` |
+| `(186,34,101)` | `(76,76,76)` |
+| `(198,152,45)` | `(36,15,17)` |
+| `(3,127,2)` | `(36,15,17)` |
+
+**Wildly different inputs collapse to identical outputs.** 24 distinct saturated
+raw values — `(199,174,177)`, `(142,6,201)`, `(222,37,139)` — and 8 distinct
+outputs. No per-vertex colour multiply can do that.
+
+`nds_renderer.c:8246` says why:
+
+```c
+if ((stats == NULL) ||
+    ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) == 0u))
+{
+    return ((u32)vtx->r << 24) | ((u32)vtx->g << 16) |
+        ((u32)vtx->b << 8) | (u32)vtx->a;   /* lighting OFF: bytes ARE a colour */
+}
+diffuse = light_1;   /* lighting ON: bytes are a NORMAL, and the colour comes */
+ambient = light_2;   /* from stats->light_color_1 / light_color_2 */
+```
+
+With `G_LIGHTING` set — which it is here — the RGB bytes are the **F3DEX2 packed
+normal**, and the emitted colour is built from the **light colours**, modulated
+by the normal's diffuse term. Everything observed follows:
+
+- the greys are white lights, and **76 is the ambient-only floor** that every
+  back-facing normal clamps to (which is why 10 of the first 24 were exactly 76);
+- the reds are runs whose `light_color_*` is red;
+- E50's "172/273 differ" is just 273 different normals.
+
+### What this retires, and what it opens
+
+- **E48's "the flash is a raw vertex colour"** — misread normal bytes as a colour.
+- **E55's "the flash replaces the colour"** (mine, below) — inherited that error.
+  0/541 baked vertices being achromatic while flashed ones are is real, but the
+  explanation is that one side is a *colour table* and the other is *lighting
+  output*, not that a flash whitened anything.
+- **E49's option 1, a per-epoch constant colour** — dead again, and this time for
+  a structural reason rather than a sampling one. There is no colour to inject.
+
+**The flash is a light-colour change.** `stats->light_color_1` /
+`light_color_2` are per-run material state, applied by the very state replay
+E26 wants to fold. That is the field to compare between a hitlag frame and an
+ordinary one, and against what the native owner's shade path
+(`ndsRendererNativeShadeProductionActions`, `ndsRendererR2MaterialColor15`)
+feeds its own lighting. E47 refuted *material colour* derivation — `light_color_*`
+is a different field and was never tested.
+
+**Do not model the flash as vertex data again.** Four experiments have now died
+on that premise (E48, E49, E50, E55).
+
 ## R2-03 E55 — the flash REPLACES the colour; E50's refutation was an inference error (2026-07-29)
 
 **E50 closed the cheapest fix for E32 on a wrong inference, and this reopens it.**
