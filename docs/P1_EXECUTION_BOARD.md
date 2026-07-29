@@ -32,6 +32,46 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E50 — the flash is NOT uniform; E32 is parked, SRC resumes (2026-07-29)
+
+E49 left one cheap option alive: if the flash were a single colour across the
+fighter, a per-epoch constant override would reproduce it without touching the
+baked table. Measured on hitlag frame 911, over the same 273 vertices:
+
+| slot | value | reading |
+|---|---:|---|
+| 8 min `vertex_color` | 604,967,423 | `0x240F11FF` — dark red-brown |
+| 9 max `vertex_color` | 4,294,967,295 | `0xFFFFFFFF` — white |
+| 10 first seen | 1,280,068,863 | `0x4C4C4CFF` — mid grey |
+| **11 differing from first** | **172 of 273** | **not uniform** |
+| B (ordinary frame) 2 / 11 | 0 / 0 | function never runs |
+
+**63% of the fighter's vertices carry a different colour from the first.** The
+constant-colour option is dead. Combined with E49's `static const` finding, every
+fix that keeps the native owner on hitlag frames now requires per-vertex runtime
+colour, which the generated table cannot supply by construction.
+
+Worth noting for whoever picks this up: the minimum vertex colour `0x240F11FF` is
+itself a dark red-brown, close to what the native owner's lit path produces. The
+"dark maroon" may be the lit result landing near the bottom of the same range
+rather than an unrelated wrong colour.
+
+### E32 is parked, deliberately
+
+Two options survive and **both need the owner**, because both trade appearance
+rather than correctness:
+
+1. Keep the generic fallback on flash frames only — E32 then covers the shuffle
+   but not the flash, surrendering most of its win.
+2. Approximate the flash by another mechanism (polygon alpha, a tint pass) —
+   a fidelity-budget call and a visual approval, not a pixel match.
+
+**Priority says stop here.** E32 is worth `WORK-H` P95 **−35,648** (1,232,640 →
+1,196,992, over-gate 18 → 14). Capping `SRC` to its median is worth **−170,112**
+(→ 1,062,528, over-gate 18 → **6**) and is the only lever measured to land the
+1,120,000 gate. Eight experiments have gone into a −35,648 defect while the
+gate-owning lever sat untouched. Returning to `SRC`.
+
 ## R2-03 E49 — DO NOT GRADUATE, and it proves the flash is structurally out of reach (2026-07-29)
 
 Built E48's fix: epochs the generic path would draw from a raw vertex colour drop

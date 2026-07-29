@@ -8345,8 +8345,17 @@ static inline u16 ndsRendererHardwareModulatePackedColor(
  * (emits RGB15(31,31,31) -- pure white), 2 resolved (shade combined with
  * material), 3 lit-shade recompute, 4 total calls, 5 last material colour,
  * 6 last packed result, 7 last flags: bit0 use_material, bit1 use_vertex,
- * bit2 vertex_color_valid. */
-#define NDS_R2_FLASH_SLOTS 8u
+ * bit2 vertex_color_valid.
+ *
+ * R2-03 E50 adds the uniformity question E49 left open. E49 proved the baked
+ * dense colours cannot carry the flash (they are `static const`), so the only
+ * cheap fix left is a per-epoch constant colour -- and that is viable only if
+ * the flash really is one colour across the fighter. Slots 8..11 answer it
+ * directly: 8 min vertex colour, 9 max, 10 the first one seen, 11 how many
+ * differed from the first. Slot 11 == 0 means uniform and the constant-colour
+ * fix is on; anything else and it is per-vertex and that option dies too. */
+#define NDS_R2_FLASH_SLOTS 12u
+#define NDS_R2_FLASH_SLOT_MIN 8u
 volatile u32 gNdsR2FlashLive[NDS_R2_FLASH_SLOTS];
 volatile u32 gNdsR2FlashSnapA[NDS_R2_FLASH_SLOTS];
 volatile u32 gNdsR2FlashSnapB[NDS_R2_FLASH_SLOTS];
@@ -8380,6 +8389,8 @@ void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame)
     {
         gNdsR2FlashLive[i] = 0u;
     }
+    /* Min starts at the top so the first sample always wins. */
+    gNdsR2FlashLive[NDS_R2_FLASH_SLOT_MIN] = 0xffffffffu;
 }
 #endif
 
@@ -8455,6 +8466,23 @@ static inline u16 ndsRendererHardwarePackedValidVertexColor(
     gNdsR2FlashLive[2]++;
     gNdsR2FlashLive[5] = material_color;
     gNdsR2FlashLive[7] = 2u | ((use_material_color != FALSE) ? 1u : 0u);
+    /* E50: is the flash one colour, or per vertex? */
+    if (vertex_color < gNdsR2FlashLive[NDS_R2_FLASH_SLOT_MIN])
+    {
+        gNdsR2FlashLive[NDS_R2_FLASH_SLOT_MIN] = vertex_color;
+    }
+    if (vertex_color > gNdsR2FlashLive[9])
+    {
+        gNdsR2FlashLive[9] = vertex_color;
+    }
+    if (gNdsR2FlashLive[2] == 1u)
+    {
+        gNdsR2FlashLive[10] = vertex_color;
+    }
+    else if (vertex_color != gNdsR2FlashLive[10])
+    {
+        gNdsR2FlashLive[11]++;
+    }
 #endif
     return ndsRendererHardwarePackedResolvedColor(
         vertex_color, material_color, use_material_color,
