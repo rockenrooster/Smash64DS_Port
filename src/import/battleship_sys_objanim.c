@@ -92,6 +92,11 @@
 volatile u32 gNdsR2CubicEvals;
 volatile u32 gNdsR2CubicSaturations;
 
+/* NDS_R2_CUBIC_FIXED_KERNEL_BEGIN — `scripts/check_r2_cubic_error_bound.py`
+ * extracts everything between this marker and the matching END and compiles it
+ * on the host against the decomp's own `gcGetInterpValueCubic`. Extraction
+ * rather than a copy so the bound can never be measured against stale code.
+ * Do not put anything between the markers that needs a DS header. */
 static inline u32 ndsR2FloatBits(f32 v)
 {
     u32 bits;
@@ -100,29 +105,46 @@ static inline u32 ndsR2FloatBits(f32 v)
     return bits;
 }
 
-/* f32 -> Q12, truncating toward zero. Hand-rolled rather than
+/* Two fixed-point scales, and the split is what makes the bound affordable.
+ *
+ * `NDS_R2_CUBIC_VF` (12) holds joint VALUES. Their own quantum lands straight in
+ * the result, so 1/4096 of a radian or a world unit is already far finer than
+ * anything gameplay can see.
+ *
+ * `NDS_R2_CUBIC_BF` (16) holds the four Hermite BASIS terms. Two of them carry a
+ * factor of `length`, so their quantum reaches the result multiplied by
+ * L*|rate| -- the curve's steepness in value units per t. At Q12 that amplifier
+ * put a 60-unit translation crossed in 13 frames 0.107 units off the float
+ * original, measured by `check_r2_cubic_error_bound.py`. Four more bits divide
+ * that by 16 and cost two 32x32->64 multiplies (SMULL, one instruction each). */
+#define NDS_R2_CUBIC_VF 12
+#define NDS_R2_CUBIC_BF 16
+#define NDS_R2_CUBIC_BONE (1 << NDS_R2_CUBIC_BF)
+
+/* f32 -> Q`bits`, rounding to nearest. Hand-rolled rather than
  * `(s32)(v * 4096.0f)` because that is two soft-float calls (~50 ticks) where
  * this is a dozen integer ops. Saturates instead of wrapping: a wrapped joint
- * angle would be a visible teleport, a saturated one is a clamp. */
-static inline s32 ndsR2F32ToQ12(f32 v)
+ * angle would be a visible teleport, a saturated one is a clamp. `bits` is
+ * always a literal at the call sites, so the shifts fold. */
+static inline s32 ndsR2F32ToFixed(f32 v, s32 bits)
 {
-    u32 bits = ndsR2FloatBits(v);
-    s32 exp = (s32)((bits >> 23) & 0xffu);
+    u32 bits_in = ndsR2FloatBits(v);
+    s32 exp = (s32)((bits_in >> 23) & 0xffu);
     s32 mant;
     s32 shift;
 
     if (exp == 0)
     {
-        return 0;   /* zero or subnormal: below Q12's resolution either way */
+        return 0;   /* zero or subnormal: below the resolution either way */
     }
     if (exp == 0xff)
     {
         gNdsR2CubicSaturations++;
-        return ((bits & 0x80000000u) != 0u) ? -0x7fffffff : 0x7fffffff;
+        return ((bits_in & 0x80000000u) != 0u) ? -0x7fffffff : 0x7fffffff;
     }
-    mant = (s32)((bits & 0x7fffffu) | 0x800000u);   /* 1.23 fixed */
-    /* value = mant * 2^(exp-127-23); Q12 wants that scaled by 2^12. */
-    shift = (exp - 127) - 23 + 12;
+    mant = (s32)((bits_in & 0x7fffffu) | 0x800000u);   /* 1.23 fixed */
+    /* value = mant * 2^(exp-127-23); the result wants that scaled by 2^bits. */
+    shift = (exp - 127) - 23 + bits;
     if (shift >= 0)
     {
         if (shift > 7)
@@ -135,61 +157,93 @@ static inline s32 ndsR2F32ToQ12(f32 v)
             mant <<= shift;
         }
     }
-    else if (shift < -31)
+    else if (shift < -24)
     {
-        mant = 0;
+        mant = 0;   /* rounds to zero: even the leading 1 bit falls off */
     }
     else
     {
-        mant >>= -shift;
+        /* Round to nearest rather than toward zero. Truncation here is a
+         * systematic pull toward zero on every one of the six conversions, and
+         * the bound measured its mean signed error at -9.1e-5 before this. */
+        mant = (mant + (1 << (-shift - 1))) >> -shift;
     }
-    return ((bits & 0x80000000u) != 0u) ? -mant : mant;
+    return ((bits_in & 0x80000000u) != 0u) ? -mant : mant;
 }
 
-/* Q12 -> f32. One `__aeabi_i2f` plus an exact exponent adjust; subtracting
- * 12 biased exponents is an exact divide by 4096, so no second multiply and no
- * extra rounding. */
-static inline f32 ndsR2Q12ToF32(s32 q)
+/* Q`bits` -> f32. One `__aeabi_i2f` plus an exact exponent adjust; subtracting
+ * `bits` biased exponents is an exact divide by 2^bits, so no second multiply
+ * and no extra rounding. */
+static inline f32 ndsR2FixedToF32(s32 q, s32 bits)
 {
     f32 f = (f32)q;
-    u32 bits = ndsR2FloatBits(f);
+    u32 raw = ndsR2FloatBits(f);
 
-    if ((bits & 0x7f800000u) != 0u)
+    if ((raw & 0x7f800000u) != 0u)
     {
-        bits -= (12u << 23);
+        raw -= ((u32)bits << 23);
     }
-    __builtin_memcpy(&f, &bits, sizeof(f));
+    __builtin_memcpy(&f, &raw, sizeof(f));
     return f;
 }
 
-static f32 ndsR2CubicValueFixed(const AObj *aobj)
+/* Compile this one function as ARM, not Thumb.
+ *
+ * The measurement that forced it: lifting the basis to Q16 needs 64-bit squares
+ * for t^2 and t^3, and this TU builds Thumb, which has no SMULL. GCC therefore
+ * emitted `bl __aeabi_lmul` -- eleven call sites in `gcPlayDObjAnimJoint`, eight
+ * of them on the executed path -- and the Q16 arm measured SRC P50 +17,728 /
+ * WORK-H P50 +25,472 against E64b. In ARM mode every one of those is a single
+ * SMULL/SMLAL, including the six E64b was already paying for. `noinline` keeps
+ * the six inlined float->fixed conversions to one copy instead of one per call
+ * site, which matters because this lands in `.text.hot`'s curated 8 KiB.
+ *
+ * `__arm__` guards the attribute so `check_r2_cubic_error_bound.py` can still
+ * compile the extracted kernel on the host. */
+#if defined(__arm__)
+#define NDS_R2_CUBIC_ATTR __attribute__((noinline, target("arm")))
+#else
+#define NDS_R2_CUBIC_ATTR
+#endif
+
+static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
 {
     /* The one unavoidable real multiply: `length` advances every tick, so `t`
      * cannot be carried across evaluations. */
-    s32 t = ndsR2F32ToQ12(aobj->length * aobj->length_invert);
-    s32 length_q = ndsR2F32ToQ12(aobj->length);
-    /* t is Q12 and normally in [0,1], so t*t peaks near 4096*4096 = 16.7M and
-     * every intermediate below stays inside s32 without a 64-bit step. */
-    s32 t2 = (t * t) >> 12;
-    s32 t3 = (t2 * t) >> 12;
-    s32 omt = 4096 - t;
-    s32 omt2 = (omt * omt) >> 12;
-    s32 h_vb = ((2 * t3) - (3 * t2)) + 4096;
+    s32 t = ndsR2F32ToFixed(aobj->length * aobj->length_invert, NDS_R2_CUBIC_BF);
+    s32 length_q = ndsR2F32ToFixed(aobj->length, NDS_R2_CUBIC_VF);
+    /* t is Q16 and normally in [0,1], so t*t reaches 2^32 and needs the 64-bit
+     * product. Every requantising shift rounds rather than truncates. */
+    s32 t2 = (s32)((((s64)t * t) + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF);
+    s32 t3 = (s32)((((s64)t2 * t) + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF);
+    /* (1-t)^2 == 1 - 2t + t^2 exactly, so reuse t2 instead of squaring (1-t).
+     * Cheaper by a multiply AND a shift, and it deletes that rounding step
+     * rather than merely rounding it -- which matters because near t=1 the
+     * square is small and a truncated one loses most of its significance. */
+    s32 omt2 = (t2 - (2 * t)) + NDS_R2_CUBIC_BONE;
+    s32 h_vb = ((2 * t3) - (3 * t2)) + NDS_R2_CUBIC_BONE;
     s32 h_vt = (3 * t2) - (2 * t3);
     /* These two carry a factor of `length`, which is unbounded, so they are the
-     * only places that need the wider intermediate. SMULL/SMLAL make a 32x32->64
-     * on ARM9 a single instruction; it is the 64-bit ADDS/ADCS chains that arm A
-     * paid for, and there are none left here. */
-    s32 h_rb = (s32)(((s64)length_q * omt2) >> 12);
-    s32 h_rt = (s32)(((s64)length_q * (t2 - t)) >> 12);
-    s64 acc = (s64)ndsR2F32ToQ12(aobj->value_base) * h_vb;
+     * only places that need a wider intermediate for range as well as rounding.
+     * Q12 value x Q16 basis, shifted by VF, is Q16 again. SMULL/SMLAL make a
+     * 32x32->64 on ARM9 a single instruction; it is the 64-bit ADDS/ADCS chains
+     * that arm A paid for, and there are none left here. */
+    s32 h_rb = (s32)((((s64)length_q * omt2) + (1 << (NDS_R2_CUBIC_VF - 1))) >>
+        NDS_R2_CUBIC_VF);
+    s32 h_rt = (s32)((((s64)length_q * (t2 - t)) +
+        (1 << (NDS_R2_CUBIC_VF - 1))) >> NDS_R2_CUBIC_VF);
+    /* Q12 x Q16 = Q28 in the accumulator, shifted back to Q12 at the end. */
+    s64 acc = (s64)ndsR2F32ToFixed(aobj->value_base, NDS_R2_CUBIC_VF) * h_vb;
 
     gNdsR2CubicEvals++;
-    acc += (s64)ndsR2F32ToQ12(aobj->value_target) * h_vt;
-    acc += (s64)ndsR2F32ToQ12(aobj->rate_base) * h_rb;
-    acc += (s64)ndsR2F32ToQ12(aobj->rate_target) * h_rt;
-    return ndsR2Q12ToF32((s32)(acc >> 12));
+    acc += (s64)ndsR2F32ToFixed(aobj->value_target, NDS_R2_CUBIC_VF) * h_vt;
+    acc += (s64)ndsR2F32ToFixed(aobj->rate_base, NDS_R2_CUBIC_VF) * h_rb;
+    acc += (s64)ndsR2F32ToFixed(aobj->rate_target, NDS_R2_CUBIC_VF) * h_rt;
+    return ndsR2FixedToF32(
+        (s32)((acc + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF),
+        NDS_R2_CUBIC_VF);
 }
+/* NDS_R2_CUBIC_FIXED_KERNEL_END */
 
 /* The original body, with the cubic branch replaced. Step and Linear are the
  * decomp's own expressions verbatim, so the 43.6% + 1.7% of nodes that take

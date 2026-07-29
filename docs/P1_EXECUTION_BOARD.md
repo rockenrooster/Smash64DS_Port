@@ -32,7 +32,148 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
-## R2-03 E64b GRADUATED — the cubic in fixed point, −26,944 P95 / −20,352 P50. Boundary green and the state hash did NOT move (2026-07-29)
+## R2-03 E65 — **WORK-H P95 1,113,984: the gate reading is MET**, and the fidelity fix is what found it (2026-07-29)
+
+The chase for accuracy is what exposed the cost. That order matters, because the
+cost was invisible from the source.
+
+`artifacts/performance/r203-e65-q16arm-128.json`,
+`...-r2.json`, `...-rows.csv`. 128-frame ring dump, same window and same
+Boundary config as E64b's base.
+
+| `WORK-H` | E64b base | **E65** | delta |
+|---|---:|---:|---:|
+| P50 | 996,736 | **982,848** | **−13,888** |
+| P90 | 1,098,496 | **1,070,592** | **−27,904** |
+| **P95** | 1,149,568 | **1,113,984** | **−35,584** |
+| P99 | 1,249,600 | 1,212,864 | −36,736 |
+| max | 1,521,472 | 1,493,952 | −27,520 |
+| over gate | 9/128 | **7/128** | −2 |
+| `SRC` P50 | 331,392 | **309,120** | −22,272 |
+| `SRC` P95 | 479,744 | **443,904** | −35,840 |
+
+**The whole distribution moved down, not just the P95 index** — which is the
+standard this board set for itself after the E32 top-14 mistake. VBlank histogram
+improved too: 4-interval frames 3 → 1.
+
+**Read the margin honestly. P95 is 6,016 under 1,120,000, and the build-placement
+noise floor is 5,000–7,000.** So this is *at* the gate, not comfortably inside it,
+and one unlucky relink could put it back over. It is a real reading of a real
+build, and it is the first time this campaign has produced one at or under budget;
+it is not yet headroom. `FTR` P95 also rose 4,992 — the cubic left `.text.hot`
+(see below), so the other members were re-addressed, exactly Task 94's mechanism.
+
+**Where the −35,584 came from, and it was not the arithmetic.** Lifting the basis
+to Q16 needs 64-bit squares. **This TU compiles `-mthumb`, and Thumb on ARMv5TE
+has no `SMULL`**, so GCC emitted `bl __aeabi_lmul` — eleven call sites in
+`gcPlayDObjAnimJoint`, eight on the executed path. The Q16-in-Thumb arm measured
+**WORK-H P95 +36,032 / P50 +25,472** against E64b: a regression, from a change
+that is pure precision at the C level.
+
+One `__attribute__((noinline, target("arm")))` on `ndsR2CubicValueFixed` turned
+those eight library calls into four `SMULL`/`SMLAL` — including the six **E64b was
+already paying for**. Measured effect of the attribute alone, same commit, same
+tree: **WORK-H P95 1,185,600 → 1,113,984, −71,616.** Side effects, both good:
+
+- Only two soft-float calls remain in the whole evaluation, and they are the two
+  that are irreducible — `__aeabi_fmul` for `length·length_invert` and
+  `__aeabi_i2f` for the result.
+- `gcPlayDObjAnimJoint` shrank 2,096 → 272 bytes and the cubic moved out to
+  ordinary `.text`, so **`.text.hot` dropped 6,072 → 4,248 bytes** — 1,824 bytes
+  returned to the curated 8 KiB working set.
+
+**`-marm` is NOT a general lever here, and the census says so.** Ranking every
+function in the ROM by 64-bit/divide helper call sites: `__aeabi_lmul` appears at
+only 37 sites ROM-wide, and the top holders are `ndsOpeningRoomRenderDLPreview`
+(33, not a battle path), libc `gmtime_r`/`mktime`/`strtol` (never called), and
+`ndsPlatformRenderDebugHud` (the instrument itself). The cubic was special because
+it was eight 64-bit multiplies on a path taken 148 times a frame. Of the 303
+integer-helper sites, 210 are `__divsi3`/`__udivsi3`/`idivmod` — **integer
+division, which ARM9 has no instruction for in either mode**, so ARM would not
+touch them. `nds_renderer.o` already carries `-marm` (Makefile:2298); do not
+follow this with a blanket sweep.
+
+Battle-path divide holders, if a later cycle wants them: `ftDisplayMainCalcFogColor`
+(9 `__divsi3`), `ftMainUpdateColAnim` (8), `syTaskmanRunTask` (6 `uidivmod`),
+`ifCommonPlayerDamageUpdateDigits` (6 int + 18 float).
+
+**Caveat on the base comparison.** The E64b base was measured at `063667a`;
+`b951270` has landed since, which un-stubs `efManagerQuakeMakeEffect` and so
+*adds* per-frame work. The E65 arms both carry it. The confound therefore runs
+against E65, making −35,584 a floor rather than a ceiling. The thumb→ARM
+−71,616 is confound-free: same commit, same tree, one attribute.
+
+### E65's other half — E64b's equivalence, SETTLED with a bound instead of a hash
+
+`scripts/check_r2_cubic_error_bound.py`. Evidence:
+`artifacts/performance/r203-e65-cubic-error-bound.json`.
+
+**The instrument `KNOWN_ISSUES.md` named for this was the wrong one, and that is
+a third instance of the same gate-design bug.** The Task 9 state hash is a
+bit-exactness hash. E64b is *authorized as non-bit-exact* — the code comment in
+`battleship_sys_objanim.c` says so in as many words. So the hash cannot pass; it
+can only ever report "differs", and that answer carries no information about
+whether gameplay moved. Two builds and two emulator runs would have bought a
+result that was knowable in advance.
+
+**The right instrument for a non-bit-exact change is an error bound.** This is
+it, and it needs no emulator, no ROM and no build: it extracts the shipped kernel
+from between the `NDS_R2_CUBIC_FIXED_KERNEL_BEGIN/END` markers, extracts
+`gcGetInterpValueCubic` from the decomp verbatim, compiles both on the host
+(IEEE-754 single, round-to-nearest, same as the N64 for this purpose), and sweeps
+the input domain. Extraction rather than a copy, so the bound can never be
+measured against stale code. Runs in about four seconds.
+
+**The first run was RED, and the mechanism is worth keeping.** The deviation
+scales with `L·|rate|` — the curve's own steepness in value units per `t` —
+because two of the four Hermite basis terms carry a factor of `length`, so a Q12
+basis quantum reaches the result multiplied by that. Measured:
+
+| domain | max &#124;error&#124; | rms | worst steepness |
+|---|---:|---:|---:|
+| rotation (radians, ≤2π) | 0.0130 | 0.0013 | 3.0 |
+| translation (world units, ≤60) | **0.1065** | 0.0074 | 104.0 |
+| conservative (±300, 4× chord rate) | 0.7615 | 0.0558 | 2240.0 |
+
+Identical arithmetic, and a translation track deviates 8× further than a rotation
+track purely because its steepness is 35× larger. **That is why the domain has to
+be stated rather than assumed** — quoting one number for "the cubic's error"
+would have been meaningless.
+
+**Three fixes, all cheap, all kept:**
+
+1. **Round instead of truncate**, at all six float→fixed conversions and every
+   requantising shift. One ADD each. Removed the bias (mean signed error
+   −9.1e-5 → +2e-6) and took the conservative worst case 0.998 → 0.762.
+2. **`(1−t)² = 1 − 2t + t²`**, reusing the already-rounded `t²`. Deletes a
+   multiply, a shift *and* a rounding step. It was the single worst term: at
+   t = 0.92 the truncated square held 24 Q12 counts, so its own quantum was 4% of
+   itself, and `h_rb` multiplied that by `length`.
+3. **Q16 for the basis, Q12 for the values.** The values' own quantum lands
+   straight in the result and 1/4096 of a radian is already invisible; the basis
+   quantum gets amplified, so it is the one that needed bits. Costs two
+   32×32→64 multiplies for `t²`/`t³` (SMULL, one instruction each).
+
+**After all three, every gated domain is green:**
+
+| domain | max &#124;error&#124; | before | rms |
+|---|---:|---:|---:|
+| rotation | **0.0028** rad (0.16°) | 0.0130 | 0.0005 |
+| translation | **0.0067** units | 0.1065 | 0.0007 |
+| conservative | 0.0432 | 0.7615 | 0.0031 |
+
+The gate is 0.02 world units / radians. Joint values reach gameplay only through
+`gmCollisionGetFighterPartsWorldPosition` (`gm/gmcollision.c:489`), which places
+hitboxes in world units; Dream Land fighter hitbox radii are single-digit units
+and the smallest gameplay-relevant separation is well above 0.1, so 0.0067 cannot
+flip a hit decision. **E64b's numerical equivalence is no longer unverified.**
+
+**Do not read this as a licence to skip in-situ checks generally.** A bound over a
+stated domain is the right answer for an arithmetic substitution whose inputs are
+enumerable. It would be the wrong answer for a change to control flow, lifetime,
+or ordering, where the failure is not a rounding error.
+
+## R2-03 E64b GRADUATED — the cubic in fixed point, −26,944 P95 / −20,352 P50. Boundary green; equivalence settled by E65 (2026-07-29)
 
 `NDS_R2_CUBIC_FIXED := 1`. Owner-authorized 2026-07-29 as a non-bit-exact
 change. **Boundary green with Fox CPU live.**
@@ -89,11 +230,11 @@ Q12 range allows, and hand-rolled float↔Q12 converters because
 `(s32)(v * 4096.0f)` is two soft-float calls where bit manipulation is a dozen
 integer ops. **Do not re-add the cache.**
 
-**Where the gate stands after E32 + E64b:** P95 **1,228,928 → 1,149,568**, a
-cumulative **−79,360**, over-gate **17/128 → 9/128**. Remaining gap to
-1,120,000: **29,568**. The animation path still holds ~120,000, so a second pass
-at it (the remaining conversions and the `.text.hot` size) is the obvious next
-target and needs no decision.
+**Where the gate stands after E32 + E64b + E65:** P95 **1,228,928 → 1,149,568 →
+1,113,984**, a cumulative **−114,944**, over-gate **17/128 → 9/128 → 7/128**. The
+1,120,000 gate reading is met, by 6,016 — inside the placement floor, so at the
+gate rather than through it. E65's entry above has the honest margin discussion;
+the second pass at the animation path it called for is what E65 was.
 
 ## R2-03 E32 GRADUATED — −52,416 WORK-H P95, 17/128 → 12/128 over gate (2026-07-29)
 
@@ -288,9 +429,35 @@ without hang, corruption, or nondeterminism; no arena/heap drift
 BattleShip's `syTaskmanRunTask` checks `LoadScene` immediately after `task_update`
 and never draws the terminal update, and the R2 loop has to reproduce that.
 
-E2 (in flight) samples 256 frames from 3300 onward, which crosses the 3600-tick
-one-minute boundary, to exercise exactly that branch. That is a *targeted probe of
-the riskiest region*, not a soak, and must not be recorded as one.
+### R2-06 E2 — the R2 path crosses the match boundary cleanly. Still not a soak
+
+**The tick sampler was the wrong instrument and cost two failed runs.** E2 first
+asked for 256 tick-HUD samples from frame 3300; a GDB stop per presented frame
+that deep exceeded the 900 s ceiling twice (once also losing the listener on a
+port collision). The question was never a percentile question — it was *does the
+terminal branch survive Time Up* — and a real-time capture answers it directly,
+with no GDB at all, in 90 s.
+
+`capture-melonds.ps1` on `builds/build-r2-06-path`, two shots:
+
+- `artifacts/visibility/2026-07-29_r206-e2-matchend-timeup.png` — TIME 00:06,
+  FPS 27.3, match live and both fighters in play.
+- `artifacts/visibility/2026-07-29_r206-e2-matchend-results.png` — **TIME 00:00,
+  FPS 29.9**, camera pulled back to the wide stage view, tick HUD still filling
+  its 128-entry ring, `cadenceViolations` clean, no hang and no corruption.
+
+So `ndsR2BattleRun`'s `terminal_update` branch handles the 3600-tick boundary and
+the loop keeps presenting through it. That is the switch's highest-risk code and
+it is now exercised.
+
+Note the numbers on those shots are the **two-CPU stress config** (`build-r2-06-path`
+carries `NDS_R2_BOTH_CPU`), so ALL 1,679,552 → 1,119,872 across the boundary is a
+stress-config reading. **Never quote it as the Boundary figure.**
+
+**This is still not a soak, and must not be recorded as one.** It is one match, one
+run, at real time; it asserts nothing about arena drift across repeated matches,
+nothing about rematch lifetime, and it read no `gNdsTaskmanArenaBytes`. The
+instrument gap above stands.
 
 ### R2-06 E1 — equivalence: every semantic and geometry counter is byte-identical
 

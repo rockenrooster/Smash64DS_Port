@@ -563,6 +563,43 @@ hypothesis: dividing a bucket by its item count gave ~1,832 ticks/triangle
 against a measured 194, wrong by 9.4x, because it charged fixed overhead to the
 per-item quantity. Do not size a per-item lever by dividing a bucket total.
 
+## The ROM is Thumb, so 64-bit arithmetic is a library call (R2-03 E65, 2026-07-29)
+
+`ARCH := -march=armv5te -mtune=arm946e-s -mthumb` (Makefile:1200) builds the whole
+ROM as Thumb, and **Thumb on ARMv5TE has no `SMULL`/`UMULL` and no long shifts.**
+Every `(s64)a * b` in a Thumb translation unit therefore becomes
+`bl __aeabi_lmul`. Nothing in the C source shows this.
+
+E65 lifted the animation cubic's basis from Q12 to Q16 for accuracy. That needs
+64-bit squares, GCC emitted eleven `__aeabi_lmul` sites in `gcPlayDObjAnimJoint`
+(eight on the executed path), and **a pure-precision change measured WORK-H P95
++36,032.** One `__attribute__((noinline, target("arm")))` on the evaluator turned
+those into four `SMULL`/`SMLAL` and the same arm measured **-71,616** against
+itself -- because it also removed the six the previous version was already paying.
+
+**The rule: before and after any change that touches 64-bit or fixed-point
+arithmetic on a hot path, count the helper calls in the built object.** It is one
+command and it needs no emulator run:
+
+```bash
+arm-none-eabi-objdump -d BUILD/x.elf | awk '/<fn>:/,/^$/' | grep -c __aeabi_lmul
+```
+
+**Targeted `-marm`, never a sweep.** Ranking every function in the ROM by helper
+call sites, `__aeabi_lmul` appears at only 37 sites, and the heaviest holders are
+not battle paths (`ndsOpeningRoomRenderDLPreview` 33, libc `gmtime_r`/`mktime`,
+`ndsPlatformRenderDebugHud`). The cubic qualified because it was eight 64-bit
+multiplies on a path taken 148 times a frame. Of 303 integer-helper sites, 210 are
+`__divsi3`/`__udivsi3`/`idivmod` -- **integer division, which ARM9 lacks in either
+mode**, so ARM buys nothing there. Thumb is also the *right* default on DS: main
+RAM is 16-bit, so denser code fetches faster. `nds_renderer.o` already carries
+`-marm` (Makefile:2298).
+
+Corollary, and E65 is the case for it: **an accuracy fix can find a performance
+win that a performance search would not.** The eight library calls had been on the
+hot path since E64b graduated and no profile had named them; what surfaced them was
+adding two more and watching the frame get worse.
+
 ## GDB `if` at top level resumes exactly once (Task 96, 2026-07-26)
 
 In a batch script, `if <cond> / continue / end` outside a `commands` block is

@@ -1,0 +1,59 @@
+[
+  {
+    "domain": "rotation",
+    "gated": 1,
+    "samples": 1689984,
+    "max_abs_error": 0.00284188986,
+    "rms_error": 0.000507417142,
+    "mean_signed_error": 1.35232073e-06,
+    "over_bound": 0,
+    "saturating_inputs": 0,
+    "worst_steepness": 3.04974413,
+    "worst_at": {
+      "length_invert": 0.0111111114,
+      "length": 43,
+      "value_base": 0.0500000007,
+      "value_target": -3.14159274,
+      "rate_base": 0.0709242821,
+      "rate_target": -0.0709242821
+    }
+  },
+  {
+    "domain": "translation",
+    "gated": 1,
+    "samples": 2300256,
+    "max_abs_error": 0.0067024231,
+    "rms_error": 0.000679254418,
+    "mean_signed_error": 1.94377991e-06,
+    "over_bound": 0,
+    "saturating_inputs": 0,
+    "worst_steepness": 173.333338,
+    "worst_at": {
+      "length_invert": 0.0111111114,
+      "length": 65,
+      "value_base": 60,
+      "value_target": -60,
+      "rate_base": -2.66666675,
+      "rate_target": -1.33333337
+    }
+  },
+  {
+    "domain": "conservative",
+    "gated": 0,
+    "samples": 1597400,
+    "max_abs_error": 0.0431976318,
+    "rms_error": 0.00307764502,
+    "mean_signed_error": 5.3407099e-06,
+    "over_bound": 1741,
+    "saturating_inputs": 0,
+    "worst_steepness": 2293.33344,
+    "worst_at": {
+      "length_invert": 0.0111111114,
+      "length": 86,
+      "value_base": 300,
+      "value_target": -300,
+      "rate_base": -26.6666679,
+      "rate_target": -26.6666679
+    }
+  }
+]

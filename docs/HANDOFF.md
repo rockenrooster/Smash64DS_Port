@@ -5,24 +5,28 @@ durable goes to its owning doc, not here: the board owns the queue and every
 result, `PERF_LEDGER.md` measurements, `KNOWN_ISSUES.md` durable gaps and
 harness traps, `optimization/TASK_STANDING_RULES.md` how a task is run.
 
-Runtime 2 phase status. **Both gate levers graduated 2026-07-29: E32 (-52,416
-P95) and E64b (-26,944). P95 1,228,928 -> 1,149,568, over-gate 17/128 -> 9/128,
-remaining gap 29,568.**
+Runtime 2 phase status. **Three gate levers graduated 2026-07-29: E32 (-52,416
+P95), E64b (-26,944) and E65 (-35,584).**
 
 | phase | state |
 |---|---|
 | R2-00a/b/c, R2-01, R2-02 | gated |
-| R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**; only the E32 flash residual is open (KNOWN_ISSUES) |
-| R2-04 | loading + rate clauses done (E5/E6/E57); budget clause improved by E64b, animation now ~120,000 vs the 100,000 provisional |
+| R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**; only the E32 flash residual is open (KNOWN_ISSUES) |
+| R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
-| R2-06/07/08 | not started; gated behind the above |
+| R2-06 | performance-neutral (E0) + equivalence (E1) + match-boundary probe (E2); **"soak clean" has no instrument** |
+| R2-07/08 | not started; R2-08 needs the owner's retail play test |
 
 ## Where the gate stands
 
-128-frame ring dump, frames 793..920, graduated build (`WORK-H`): P50
-**1,013,696**, P95 **1,228,928**, gate 1,120,000, **17/128 over**. **P50 is
-inside; only P95 misses, by 108,928.** Evidence
-`artifacts/performance/r203-e53-ctlb-128{.json,-rows.csv}`.
+128-frame ring dump, frames 795..922, `WORK-H`: P50 **982,848**, P95
+**1,113,984**, gate 1,120,000, **7/128 over**. Evidence
+`artifacts/performance/r203-e65-q16arm-128{.json,-r2.json,-rows.csv}`.
+
+**The gate reading is met, by 6,016 — inside the 5,000-7,000 placement floor.**
+Treat it as *at* the gate, not through it: this is the first at-budget reading the
+campaign has produced, and it is not yet headroom. It also has not been read on
+retail hardware (R2-08).
 
 ## What owns the miss
 
@@ -92,13 +96,10 @@ gap 108,928  −  E32 51,136  −  fixed-point cubic ~50,000  =  ~7,800 left
   packed **normals**, giving rainbow speckle and a *worse* diff (2,199 vs 1,551).
   **Needs the generator to bake the flash variant's vertex colours** as a second
   dense table. E63 sizes it.
-- **The cubic** — blocked on the Task 9 state hash. `PROJECT_GOAL.md` requires
-  mechanical equivalence and lists "fixed-point replacements" as allowed; the
-  hash asserts bit-exactness, which is stronger than the contract. The change is
-  confined to `gcGetInterpValueCubic` evaluating already-parsed track state, and
-  its only path to gameplay is `gmCollisionGetFighterPartsWorldPosition` (E57),
-  so the honest acceptance test is a hitbox-overlap differential over a full
-  match, not the hash.
+- **The cubic — no longer blocked.** The Task 9 state hash was the wrong
+  instrument (it asserts bit-exactness; the change is authorized non-bit-exact).
+  E65 settled it with `scripts/check_r2_cubic_error_bound.py`: worst deviation
+  0.0028 rad / 0.0067 world units, no emulator needed.
 
 **R2-03 E26 — demoted** to 23,844/frame over 136.8 deltas (needs both
 `NDS_TASK91_DRAW_PHASE_CENSUS=1` *and* `NDS_R2_SPAN_LEAN_TIMING=1`; the second
