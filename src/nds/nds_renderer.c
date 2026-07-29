@@ -1204,6 +1204,28 @@ static inline void ndsRendererHardwareWriteColorWord(u32 value)
 #endif
 }
 
+static inline void ndsRendererHardwareWriteNormalWord(u32 value)
+{
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)value;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(value);
+#else
+    GFX_NORMAL = value;
+#endif
+}
+
+static inline void ndsRendererHardwareWriteDiffuseAmbient(u32 value)
+{
+#if !NDS_RENDERER_HW_TRIANGLES
+    (void)value;
+#elif NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
+    ndsRendererBenchmarkSinkWord(value);
+#else
+    GFX_DIFFUSE_AMBIENT = value;
+#endif
+}
+
 static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
 {
 #if !NDS_RENDERER_HW_TRIANGLES
@@ -17065,6 +17087,233 @@ u32 gNdsR2ShadeVerticesLit;
 u32 gNdsR2ShadeVerticesCopied;
 u32 gNdsR2ShadeLutEpochs;
 u32 gNdsR2ShadeMaterialEpochs;
+/* R2-03 E16a. How often the light and material terms actually move. */
+u32 gNdsR2LightEpochs;
+u32 gNdsR2LightDirChanges;
+u32 gNdsR2LightColorChanges;
+u32 gNdsR2LightMaterialChanges;
+
+/* Deliberately outside .itcm.native_fighter and noinline: the shade function is
+ * ITCM-resident and full, and inlining this probe overflowed the region by 100
+ * bytes. A census arm must not change what fits in ITCM, or it measures a
+ * different build's cache behaviour than the one it is reasoning about.
+ *
+ * The question: GFX_LIGHT_VECTOR stores the vector transformed by the vector
+ * matrix at write time, so it can only be written while that matrix is identity
+ * -- once per root, before the root's modelview is loaded. That is legal only if
+ * the light direction is constant across the epochs of a root. The colours
+ * decide the same for GFX_LIGHT_COLOR, and the material terms decide whether
+ * GFX_DIFFUSE_AMBIENT has to be written per epoch. */
+static void __attribute__((noinline)) ndsRendererR2E16aLightCensus(
+    const NDSRendererStats *stats,
+    u32 material_color,
+    u32 color_modulate)
+{
+    static s32 last_dir[3];
+    static u32 last_color[2];
+    static u32 last_material[2];
+    static u8 last_valid;
+
+    gNdsR2LightEpochs++;
+    if (last_valid != 0u)
+    {
+        if ((stats->light_dir_x != last_dir[0]) ||
+            (stats->light_dir_y != last_dir[1]) ||
+            (stats->light_dir_z != last_dir[2]))
+        {
+            gNdsR2LightDirChanges++;
+        }
+        if ((stats->light_color_1 != last_color[0]) ||
+            (stats->light_color_2 != last_color[1]))
+        {
+            gNdsR2LightColorChanges++;
+        }
+        if ((material_color != last_material[0]) ||
+            (color_modulate != last_material[1]))
+        {
+            gNdsR2LightMaterialChanges++;
+        }
+    }
+    last_dir[0] = stats->light_dir_x;
+    last_dir[1] = stats->light_dir_y;
+    last_dir[2] = stats->light_dir_z;
+    last_color[0] = stats->light_color_1;
+    last_color[1] = stats->light_color_2;
+    last_material[0] = material_color;
+    last_material[1] = color_modulate;
+    last_valid = 1u;
+}
+#endif
+
+#if NDS_R2_FIGHTER_HW_LIGHT
+/* R2-03 E16. The fighter's per-vertex shade evaluates
+ *
+ *     colour = light_color_2 + (light_color_1 * dot(N, L)) / 127
+ *
+ * which is term for term what the DS geometry engine computes in hardware from
+ * GFX_NORMAL, and E14 measured that engine idle on every one of 946 fighter
+ * submissions. E1 refuted memoising the result because the light is transformed
+ * into each animating joint's local space every frame -- the exact problem the
+ * hardware solves for free.
+ *
+ * The mapping is exact rather than approximate. With the DS's row-vector
+ * convention a normal submitted under vector matrix V is dotted as N.V.L_stored,
+ * and the software computes N^T.M.L; with V = M (which E17's split load already
+ * establishes, mode 2 writing position *and* vector) and the light written while
+ * the vector matrix is identity, the two are the same product. So light 0's
+ * colour is white and the source's two light colours become the *material*
+ * diffuse and ambient, folded once per epoch with the material colour and the
+ * damage-flash modulate -- 46.4 register writes a frame instead of 484 vertex
+ * shades.
+ *
+ * E16a measured the terms that decide the placement: the light direction changes
+ * 0 times in 22,296 epochs, so GFX_LIGHT_VECTOR is written once per owner
+ * execute while the vector matrix is identity; the colours move on 32% of epochs
+ * and the material on 72%, so GFX_DIFFUSE_AMBIENT is per epoch. */
+static u32 sNdsNativeFighterDenseNormals[
+    sizeof(sNdsNativeFighterDenseVertices) /
+        sizeof(sNdsNativeFighterDenseVertices[0])];
+static u8 sNdsNativeFighterDenseNormalsBuilt;
+
+/* libnds's NORMAL_PACK does not mask its z argument -- it is
+ * `(x & 0x3FF) | ((y & 0x3FF) << 10) | (z << 20)` -- so a negative z sign-
+ * extends into bits 30 and 31. Those bits are unused in GFX_NORMAL but are the
+ * *light number* in GFX_LIGHT_VECTOR, so NORMAL_PACK(0, 0, -511) writes
+ * 0xE0100000: light 3, which POLY_FORMAT never enables. Light 0 kept its
+ * power-on zero vector, every dot product was zero, and the fighters rendered
+ * with ambient only. Mask all three components. */
+#define NDS_R2_NORMAL_PACK(x, y, z) \
+    ((((u32)(x)) & 0x3ffu) | \
+     (((((u32)(y)) & 0x3ffu)) << 10) | \
+     (((((u32)(z)) & 0x3ffu)) << 20))
+
+/* Source normals are s8 with 1.0 == 127; the DS normal is 10-bit signed with
+ * 1.0 == 0x1ff. Load time, so the exact scale costs nothing. */
+static s32 ndsRendererR2NormalComponent(s32 source)
+{
+    s32 scaled = (source * 0x1ff) / 127;
+
+    if (scaled > 511) { scaled = 511; }
+    if (scaled < -512) { scaled = -512; }
+    return scaled;
+}
+
+static void __attribute__((noinline)) ndsRendererR2BuildDenseNormals(void)
+{
+    u32 count = sizeof(sNdsNativeFighterDenseNormals) /
+        sizeof(sNdsNativeFighterDenseNormals[0]);
+    u32 index;
+
+    for (index = 0u; index < count; index++)
+    {
+        u32 rgba = sNdsNativeFighterDenseVertices[index].rgba;
+        s32 nx = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 24));
+        s32 ny = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 16));
+        s32 nz = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 8));
+
+        sNdsNativeFighterDenseNormals[index] =
+            NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
+    }
+    sNdsNativeFighterDenseNormalsBuilt = 1u;
+}
+
+/* One channel of the material term, reproducing the software path's arithmetic
+ * so the only intended difference is that the engine evaluates the dot product.
+ * `base` is the source light colour byte; `material` is the epoch's material
+ * byte when the policy uses one. */
+static inline u32 ndsRendererR2MaterialChannel(
+    u32 base, u32 material, u32 use_material)
+{
+    if (use_material != 0u)
+    {
+        return ndsRendererHardwareScaleMaterialChannel5(base, material);
+    }
+    return (base >> 3) & 0x1fu;
+}
+
+/* Cleared per owner execute; set once the light vector has been written. */
+static u8 sNdsR2LightVectorWritten;
+/* Engagement proof. The ambient-only bisect showed the material path working
+ * end to end while the diffuse term stayed zero, which leaves only the light
+ * vector -- and "the write never ran" and "the write ran and did not stick" are
+ * different bugs. */
+u32 gNdsR2LightVectorWrites;
+
+/* GFX_LIGHT_VECTOR stores the vector transformed by the vector matrix at write
+ * time, so it has to be written under an identity vector matrix. The owner
+ * preamble looked like the place for that -- it already loads identity before
+ * the first root -- but stats->light_dir_* is only populated by the epoch state
+ * deltas, so at preamble time it is still zero. A zero light vector makes every
+ * dot product zero, which is exactly the black-silhouette failure the first
+ * build showed and the diffuse-only diagnostic confirmed.
+ *
+ * So it is written here instead, the first time an epoch actually has a
+ * direction, bracketed by push/identity/pop so the root's matrices survive.
+ * E16a measured the direction changing 0 times in 22,296 epochs, so this runs
+ * once per execute and the bracket is not on any hot path.
+ *
+ * The vector is normalised because the hardware normalises nothing: the software
+ * path rescales the transformed light to length 127 before the dot, and the
+ * joint modelviews are rigid, so normalising before the transform is the same
+ * thing. It is negated because the hardware's diffuse term is max(0, -L.N)
+ * where the software clamps a positive L.N.
+ *
+ * Deliberately outside .itcm.native_fighter and noinline -- the shade function
+ * is ITCM-resident and full, and the region overflowed once already this task. */
+static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
+    const NDSRendererStats *stats)
+{
+    s32 x = stats->light_dir_x;
+    s32 y = stats->light_dir_y;
+    s32 z = stats->light_dir_z;
+    s64 length_squared = ((s64)x * x) + ((s64)y * y) + ((s64)z * z);
+    s32 nx = 0;
+    s32 ny = 0;
+    s32 nz = 0;
+
+    /* The DS hardware square-root and division units, not sqrtf. Partly because
+     * this runs twice a frame and they are free here, and partly because
+     * check-gbi-decode-fixtures asserts the renderer holds exactly one sqrtf
+     * site, isolated inside ndsRendererHardwarePrepareLitDirection -- a second
+     * one is how the software light normalization creeps back in. */
+    if (length_squared > 0)
+    {
+        u32 length = sqrt64(length_squared);
+
+        if (length != 0u)
+        {
+            nx = div64(-(s64)x * 511, (s32)length);
+            ny = div64(-(s64)y * 511, (s32)length);
+            nz = div64(-(s64)z * 511, (s32)length);
+        }
+    }
+
+    ndsRendererHardwareEndBatch();
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    GFX_LIGHT_VECTOR = NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
+    glPopMatrix(1);
+    gNdsR2LightVectorWrites++;
+    sNdsR2LightVectorWritten = 1u;
+}
+
+static u16 ndsRendererR2MaterialColor15(
+    u32 light_color, u32 material_color, u32 use_material, u32 color_modulate)
+{
+    u32 r = ndsRendererR2MaterialChannel(
+        (light_color >> 24) & 0xffu, (material_color >> 24) & 0xffu,
+        use_material);
+    u32 g = ndsRendererR2MaterialChannel(
+        (light_color >> 16) & 0xffu, (material_color >> 16) & 0xffu,
+        use_material);
+    u32 b = ndsRendererR2MaterialChannel(
+        (light_color >> 8) & 0xffu, (material_color >> 8) & 0xffu,
+        use_material);
+
+    return ndsRendererHardwareModulatePackedColor(
+        RGB15(r, g, b), color_modulate);
+}
 #endif
 
 static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
@@ -17084,6 +17333,9 @@ ndsRendererNativeShadeProductionActions(
         policy->vertex_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
     u32 material_color = (use_material != 0u) ? stats->prim_color : 0u;
     u32 action_offset;
+#if NDS_R2_FIGHTER_HW_LIGHT
+    u32 hardware_lit = FALSE;
+#endif
 
     if (epoch->action_count == 0u)
     {
@@ -17168,6 +17420,37 @@ ndsRendererNativeShadeProductionActions(
     }
     if (shade_lut != NULL) { gNdsR2ShadeLutEpochs++; }
     if (use_material != 0u) { gNdsR2ShadeMaterialEpochs++; }
+    ndsRendererR2E16aLightCensus(stats, material_color, state->color_modulate);
+#endif
+#if NDS_R2_FIGHTER_HW_LIGHT
+    /* R2-03 E16. The per-dense-vertex shading below becomes one register write:
+     * the engine evaluates the dot product per vertex from GFX_NORMAL.
+     *
+     * This sets a flag rather than returning, because the action walk below is
+     * not only shading -- it also advances stats->vertex_count and
+     * gNdsRendererProfileSourceVertexLoadCount. An earlier revision returned
+     * here and drew identical geometry while leaving that load count at zero,
+     * which the Boundary harness caught as the complete-stage owner having
+     * entered the generic transform path. Only the inner loop is skipped. */
+    if (prepared_direction != NULL)
+    {
+        u32 diffuse;
+        u32 ambient;
+
+        if (sNdsR2LightVectorWritten == 0u)
+        {
+            ndsRendererR2WriteLightVector(stats);
+        }
+        diffuse = ndsRendererR2MaterialColor15(
+            stats->light_color_1, material_color, use_material,
+            state->color_modulate);
+        ambient = ndsRendererR2MaterialColor15(
+            stats->light_color_2, material_color, use_material,
+            state->color_modulate);
+
+        ndsRendererHardwareWriteDiffuseAmbient(diffuse | (ambient << 16));
+        hardware_lit = TRUE;
+    }
 #endif
 #if NDS_R2_FIGHTER_SHADE_SKIP
     /* R2-03 E18. Prices E16's ceiling directly instead of inferring it from a
@@ -17202,6 +17485,12 @@ ndsRendererNativeShadeProductionActions(
                 sNdsRendererHardwareSourceVertexLoadCount += action->count;
             }
         }
+#if NDS_R2_FIGHTER_HW_LIGHT
+        if (hardware_lit != FALSE)
+        {
+            continue;
+        }
+#endif
         for (dense_offset = 0u;
              dense_offset < dense_count;
              dense_offset++)
@@ -17947,6 +18236,10 @@ ndsRendererNativePrepareProductionRun(
         state->texture_prepare_poly_alpha = 31u;
         state->texture_prepare_poly_fmt =
             expected_poly_cull | POLY_ALPHA(31u) |
+#if NDS_R2_FIGHTER_HW_LIGHT
+            /* R2-03 E16. Enables the one hardware light the fighter needs. */
+            POLY_FORMAT_LIGHT0 |
+#endif
             POLY_ID(stats->texture_combine_count &
                     NDS_RENDERER_POLY_ID_MASK);
         state->texture_prepare_scale_s = texture_scale_s;
@@ -18095,7 +18388,13 @@ ndsRendererNativeEmitProductionRawTexturedRun(
         const NDSNativePreparedDenseVertex *prepared =
             &sNdsNativeFighterPreparedDense[dense_id];
 
+#if NDS_R2_FIGHTER_HW_LIGHT
+        /* R2-03 E16. One FIFO word either way; the engine lights it. */
+        ndsRendererHardwareWriteNormalWord(
+            sNdsNativeFighterDenseNormals[dense_id]);
+#else
         ndsRendererHardwareWriteColorWord(prepared->packed_color);
+#endif
         ndsRendererHardwareWriteTexCoordWord(
             (u32)(u16)prepared->s |
             ((u32)(u16)prepared->t << 16));
@@ -18120,7 +18419,12 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
         const NDSNativePreparedDenseVertex *prepared =
             &sNdsNativeFighterPreparedDense[dense_id];
 
+#if NDS_R2_FIGHTER_HW_LIGHT
+        ndsRendererHardwareWriteNormalWord(
+            sNdsNativeFighterDenseNormals[dense_id]);
+#else
         ndsRendererHardwareWriteColorWord(prepared->packed_color);
+#endif
         ndsRendererHardwareWriteVertex16Words(
             prepared->gx_xy, prepared->gx_z);
     }
@@ -18166,7 +18470,12 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
             const NDSNativePreparedDenseVertex *prepared =
                 &sNdsNativeFighterPreparedDense[dense_id];
 
+#if NDS_R2_FIGHTER_HW_LIGHT
+            ndsRendererHardwareWriteNormalWord(
+                sNdsNativeFighterDenseNormals[dense_id]);
+#else
             ndsRendererHardwareWriteColorWord(prepared->packed_color);
+#endif
             if (textured != 0u)
             {
                 ndsRendererHardwareWriteTexCoordWord(
@@ -18222,7 +18531,12 @@ ndsRendererNativeEmitProductionCrossRun(
             glRestoreMatrix((int)palette_slot);
             active_palette_slot = palette_slot;
         }
+#if NDS_R2_FIGHTER_HW_LIGHT
+        ndsRendererHardwareWriteNormalWord(
+            sNdsNativeFighterDenseNormals[dense_id]);
+#else
         ndsRendererHardwareWriteColorWord(prepared->packed_color);
+#endif
         if (textured != 0u)
         {
             ndsRendererHardwareWriteTexCoordWord(
@@ -23942,6 +24256,24 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 
     ndsRendererInitTraversalState(
         state, NULL, stats, NULL, NULL, 0u);
+#if NDS_R2_FIGHTER_HW_LIGHT
+    /* R2-03 E16. Light 0's colour is white and the source's two light colours
+     * become the material's diffuse and ambient, so the engine evaluates
+     * exactly light_color_2 + light_color_1 * dot(N, L). The light vector
+     * itself cannot be written here -- stats->light_dir_* is only populated by
+     * the epoch state deltas -- so ndsRendererR2WriteLightVector does it on the
+     * first epoch of this execute that has a direction. */
+    if (sNdsNativeFighterDenseNormalsBuilt == 0u)
+    {
+        ndsRendererR2BuildDenseNormals();
+    }
+    sNdsR2LightVectorWritten = 0u;
+    /* The light colour does not depend on any matrix, so unlike the vector it
+     * belongs here rather than in the shade. Keeping them separate also stops
+     * one test from conflating "the colour never arrived" with "the dot product
+     * is zero". */
+    GFX_LIGHT_COLOR = (u32)RGB15(31, 31, 31);
+#endif
     for (root_index = 0u; root_index < root_count; root_index++)
     {
         const NDSNativeRoot *root = &roots[root_index];

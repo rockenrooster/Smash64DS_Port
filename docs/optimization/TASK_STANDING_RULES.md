@@ -1100,3 +1100,47 @@ Two further consequences worth keeping:
   standing rule to accumulate small correctness-preserving wins applies to wins
   that can be seen. Keeping this one would have added a hot-path `memcmp` and 64
   bytes of BSS for an unresolvable delta, which is exactly how E8 cost +16,301.
+
+### A vendor pack macro is not a contract; check what it leaves in the high bits (R2-03 E16, 2026-07-28)
+
+E16's hardware lighting drew the fighters as black silhouettes. The cause was
+libnds's `NORMAL_PACK`, which is
+`(x & 0x3FF) | ((y & 0x3FF) << 10) | (z << 20)` — **the z argument is not
+masked**, so a negative z sign-extends into bits 30 and 31. Harmless in
+`GFX_NORMAL`, where those bits are unused. Fatal in `GFX_LIGHT_VECTOR`, where
+they are the **light number**: every light vector went to light 3, which
+`POLY_FORMAT` never enables, so light 0 kept its power-on zero vector and every
+dot product was zero.
+
+The register that shares a packing helper with another register does not
+necessarily share its ignored bits. **When reusing a pack macro for a different
+destination, mask every field yourself.**
+
+The bisect that found it is the reusable part, and it is cheaper than reading
+hardware docs harder:
+
+1. Force the term you doubt to its maximum and everything else to zero.
+2. Force the *other* term to its maximum instead. Here ambient-only lit the
+   fighters brightly, which cleared the polygon format, the material register,
+   the light colour and the normal stream in one build and left exactly one
+   suspect.
+3. Then add an engagement counter that records the **word actually written**, not
+   just that the write happened. The count said 928 writes — correct — and the
+   word said `0xE0100000` where `0x20100000` was intended. The count alone would
+   have proved the code ran and left the bug invisible.
+
+**When a value is written to hardware and the result is wrong, log the value, not
+the fact of the write.**
+
+### Convert every emit path, not the one you were reading (R2-03 E16, 2026-07-28)
+
+The fighter has **four** production emit paths — `RawTextured`, `RawUntextured`,
+`PrimitiveGroups` and `CrossRun`. E16's first build changed the two Raw ones and
+left the other two writing `prepared->packed_color`, a field the new shade no
+longer updates, so those runs drew with whatever the previous frame left.
+
+This is E15's shape (instrumenting a path canonical mode 9 never takes) applied
+to editing rather than measuring, and it is the second time this split has caught
+someone out. **Before changing per-vertex emission, grep the field being replaced
+and confirm every writer is converted** — the count of call sites is the check,
+and it is one grep.

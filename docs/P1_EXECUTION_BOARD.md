@@ -201,6 +201,55 @@ and normals must not be rotated by a projection. Same fix, wrong cause.
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E17_SplitMatrixLoad_20260728.md`.
 
+## R2-03 E16 — hardware lighting BUILT, −35,072, awaiting visual approval (2026-07-28)
+
+The fighter's per-vertex software shade moves onto the DS geometry engine. Four
+parts: a load-time `GFX_NORMAL` table, one `GFX_DIFFUSE_AMBIENT` per epoch
+carrying the source light colours folded with the material and the damage flash,
+`GFX_NORMAL` instead of `GFX_COLOR` in the emit, and `POLY_FORMAT_LIGHT0`.
+Light 0 is white and the *source's* light colours are the material's diffuse and
+ambient, so the engine evaluates the source equation rather than an approximation.
+
+| bucket | A (E17 only) | B (E17+E16) | delta |
+|---|---:|---:|---:|
+| **FTR P50** | 489,536 | 454,464 | **−35,072** |
+| WORK P50 | 1,099,328 | 1,063,360 | −35,968 |
+| VBlank histogram | 2:381 3:171 4:11 5+:3 | **2:418 3:139 4:6 5+:3** | |
+
+**Geometry bit-identical**: P0 181,440 / P1 173,502 in both arms. Engagement:
+`gNdsR2LightVectorWrites = 1,114` (2/execute). Boundary green with the flag on;
+ITCM 31,744/32,768. `NDS_R2_FIGHTER_HW_LIGHT` defaults 0 and requires E17.
+
+**E16a**, which decided the design: the light direction changes **0 times in
+22,296 epochs**, so `GFX_LIGHT_VECTOR` — which stores the vector transformed by
+the vector matrix *at write time* — is written once per execute under an identity
+matrix. Colours move on 32% of epochs and material on 72%, and both fold into the
+single per-epoch `GFX_DIFFUSE_AMBIENT`.
+
+**Three bugs, all worth their rules.** (1) libnds's `NORMAL_PACK` does not mask
+its z argument, so a negative z sign-extends into bits 30-31 — the *light number*
+in `GFX_LIGHT_VECTOR`. Every light vector went to light 3, which `POLY_FORMAT`
+never enables, so light 0 kept a zero vector and the fighters rendered
+ambient-only. (2) Only two of the **four** production emit paths were converted;
+`PrimitiveGroups` and `CrossRun` kept writing a colour the shade no longer
+updates. (3) Returning early from the shade skipped the action walk that
+maintains `gNdsRendererProfileSourceVertexLoadCount`, which Boundary caught as
+the complete-stage owner entering the generic transform path — geometry was
+already identical, so only the harness saw it.
+
+**Harness gap recorded**: no frame-locked cross-build capture exists.
+`capture-melonds.ps1 -ExactFirstFrame` is gated to the Cut G GO-text window, and
+live captures drift because the faster arm reaches a later match clock at the
+same wall delay. Every rendering-side change from here needs one.
+
+E17+E16 together are −52,672, 21% of R2-03's 250,833 gap. **The phase does not
+close on them**, and what remains is not another cut of this kind: E22 showed the
+per-root matrix loads are all distinct, E21 showed the state replay is not
+redundant, and E18 capped the shade at 53,760 of which E16 takes 35,072. The rest
+needs a structural change to what the fighter draw *does*.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E16_HardwareLighting_20260728.md`.
+
 ## R2-03 E22/E23 — the last unpriced item resolves into E16 (2026-07-28)
 
 **E22 measurement stands. E23 implementation REVERTED — sub-floor.** The per-root
