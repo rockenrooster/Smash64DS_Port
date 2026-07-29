@@ -26,16 +26,12 @@ graduated E5. E32 is **parked** on a visual regression — not awaiting a yes/no
 ## What owns the miss
 
 E52 re-decomposed the excursion after E5 graduated: **E35's "25 of 26 over-gate
-frames are `SRC`" no longer holds** — that predated E5 removing the loading
-component. The over-gate frames now split in half: **`FTR` +140,988 (50%),
-`SRC` +135,360 (48%)**.
-
-E53 profiled excursion frames 910–913 against control 876–879. Work delta
-**+407,847 ticks/frame**, and **twelve symbols are exactly zero on control
-frames**, summing to **292,899** (`SubmitVertex` 96,238,
-`SubmitHardwareTriangle` 51,037, `ScanList` 50,913, …) — the **generic
-display-list interpreter**, a second renderer running. `FTR` agrees: P50
-388,224, P95 392,448, spread 1.01, **max 898,368**.
+frames are `SRC`" no longer holds** — it predated E5 removing the loading
+component. The over-gate frames split in half: **`FTR` +140,988 (50%), `SRC`
++135,360 (48%)**. E53 profiled frames 910–913 against control 876–879: work delta
+**+407,847/frame**, with **twelve symbols exactly zero on control frames**
+summing to **292,899** — the **generic display-list interpreter**, a second
+renderer running.
 
 ## E54: the fighter falls back, and E32 is worth −51,136
 
@@ -91,11 +87,10 @@ feeding it a per-epoch constant is exact, needs no per-vertex data, and **keeps
 E32's measured −51,136**.
 
 **E58 is the one build that decides it: record the epoch index alongside the
-colour.** The stride sample deliberately crosses epochs, so its two constant
-families (greys, and reds with `R > G ≈ B`) are expected rather than
-contradictory. If each epoch's samples are one value, build the override — and
-note it lands **pixel parity against Runtime 1**, which is R2-03's own stated
-gate, so it does **not** need the owner's subjective approval.
+colour.** The stride sample crosses epochs, so its two constant families (greys,
+and reds with `R > G ≈ B`) are expected, not contradictory. If each epoch's
+samples are one value, build the override — it lands **pixel parity against
+Runtime 1**, R2-03's own stated gate, so it needs no subjective approval.
 
 **R2-03 E26 — demoted.** Re-measured with
 `NDS_TASK91_DRAW_PHASE_CENSUS=1 NDS_R2_SPAN_LEAN_TIMING=1` (both flags — the
