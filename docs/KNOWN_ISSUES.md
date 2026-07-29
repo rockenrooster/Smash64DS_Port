@@ -299,3 +299,31 @@ an automatic revert.
    on a tick-HUD build with `NDS_TASK9_STATE_HASH=1`, because the recorder must be
    armed through `gNdsTask9StateHashArmed` and `sample-tick-hud-buckets.ps1` only
    *reads* globals. Arming it needs a GDB write the sampler does not do.
+
+## Two Runtime 2 gates name instruments that do not exist (R2-06, 2026-07-29)
+
+A pattern worth naming, because it cost real time twice in one session and both
+instances looked like passing verification until checked:
+
+**A gate whose instrument is absent or not compiled in gives no signal, yet reads
+like a pass.**
+
+1. **E64b / the Task 9 state hash.** `NDS_TASK9_STATE_HASH ?= 0` and no Boundary
+   verifier references it. I reported "the hash did not move" as evidence of
+   gameplay safety; it had never run. A nearby passing line about "Task 9 float
+   ITCM" (placement, not state) is what made it look covered.
+2. **R2-06 / "soak clean".** No soak harness exists —
+   `ls scripts/ | grep -iE 'soak|stability|long'` is empty and the only `soak`
+   string in the repo is the word in the switch plan's own gate text. The clause
+   cannot be satisfied or refuted today.
+
+**Rule for the next cycle: before citing a gate as evidence, confirm the
+instrument ran.** Check the flag in the emitted `nds_build_config.h`, or check
+that the symbol is present in the ELF (`nm | grep`), or read the counter and
+confirm it is non-zero. "No failure line appeared" is not evidence — that is the
+same trap as `Select-Object -First N` silently killing a build, already recorded
+above.
+
+Both instances are also *gate-design* bugs, not just reporting bugs: a phase gate
+should name a check that exists and is wired into a profile, or say explicitly
+that building the check is part of the phase.

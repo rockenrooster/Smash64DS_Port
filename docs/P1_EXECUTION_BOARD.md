@@ -266,6 +266,32 @@ proof ROM. **Equivalence — PASSES** (E1 below). *"Histogram materially better
 than the Runtime 1 A-side on the same commit"* — **NOT MET**, and amended in the
 plan. *"Soak clean"* — **still owed, the only open R2-06 item.**
 
+### R2-06's "soak clean" clause has NO INSTRUMENT
+
+There is **no soak harness in the repo.** `ls scripts/ | grep -iE 'soak|stability|long'`
+returns nothing, and the only `soak` string anywhere is the word in this plan's own
+gate text. So R2-06 cannot currently be closed as written — not because the path
+fails a soak, but because **nothing is able to run one.**
+
+This is the same failure class as E64b's state hash: *a gate that names an
+instrument which does not exist, or is not compiled in, reads as unmet forever and
+gives no signal either way.* Two of R2-06's three clauses turned out to have this
+shape once measured — the histogram clause measured the wrong thing, and the soak
+clause has nothing to measure with.
+
+**What a soak needs to assert here**, so whoever builds it does not have to
+re-derive it: sustained operation across a full match into Time Up and Results
+without hang, corruption, or nondeterminism; no arena/heap drift
+(`gNdsTaskmanArenaBytes` is the existing counter); no cadence violations or
+`slips`; and correct handling of `ndsR2BattleRun`'s `terminal_update` branch
+(`src/nds/r2/nds_r2_battle.c:103`), which is the switch's highest-risk code —
+BattleShip's `syTaskmanRunTask` checks `LoadScene` immediately after `task_update`
+and never draws the terminal update, and the R2 loop has to reproduce that.
+
+E2 (in flight) samples 256 frames from 3300 onward, which crosses the 3600-tick
+one-minute boundary, to exercise exactly that branch. That is a *targeted probe of
+the riskiest region*, not a soak, and must not be recorded as one.
+
 ### R2-06 E1 — equivalence: every semantic and geometry counter is byte-identical
 
 Free, from the two Boundary runs already on disk (no build, no emulator run).
