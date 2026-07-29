@@ -6,8 +6,16 @@ experiments; `KNOWN_ISSUES.md` durable gaps and harness traps;
 `optimization/TASK_STANDING_RULES.md` how a performance task is run. Anything
 durable goes there, not here.
 
-Runtime 2: R2-00a/b/c, R2-01, R2-02 gated. R2-03 shipped E12/E28/E29/E46. R2-04
-graduated E5. E32 is **parked** on a visual regression — not awaiting a yes/no.
+Runtime 2 phase status. **Every remaining P1 performance lever is behind an
+owner decision; there is no unblocked experiment left in R2-03/R2-04.**
+
+| phase | state |
+|---|---|
+| R2-00a/b/c, R2-01, R2-02 | gated |
+| R2-03 | shipped E12/E28/E29/E46; both remaining levers owner-blocked |
+| R2-04 | loading clause done (E5/E6), rate clause done as far as the contract permits (E57/E6); **budget clause 146,942 vs 100,000 needs the E61 decision** |
+| R2-05 | reproducibility half PASSES (E0); fighter-special-case audit not yet run |
+| R2-06/07/08 | not started; gated behind the above |
 
 ## Where the gate stands
 
@@ -135,13 +143,12 @@ git status --short
 ```
 
 **Do not rebuild `smash64ds.nds` for P1 work** (owner, 2026-07-28). **Do rebuild
-the tick-HUD ROM whenever the published one is** (owner, 2026-07-22) — same
-program plus the Task 41 timers, the instrument every measurement runs on; keep
-its Makefile block flag-identical.
-
-**Do not pass `-j` to `make`.** The Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)`
-from `nproc` (32 here); an explicit `-j` overrides and caps it. One build at a
-time regardless — generators write to shared paths outside `$(BUILD)`.
+the tick-HUD ROM whenever the published one is** (owner, 2026-07-22) — keep its
+Makefile block flag-identical. **Do not pass `-j` to `make`**; the Makefile sets
+`MAKEFLAGS += -j$(NDS_JOBS)` from `nproc` and an explicit `-j` overrides it. One
+build at a time regardless — generators write to shared paths outside `$(BUILD)`.
+A clean checkout must build through `build.ps1`, not bare `make`: four of the six
+generated `.inc` files are gitignored and only `build.ps1` regenerates them.
 
 Preserve canonical mode 163, renderer mode 9, mip 0, static texture residency,
 source countdown, Dream Land water at source frame 0, Task 16 `1/1/1`. Do not
