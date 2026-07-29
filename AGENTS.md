@@ -12,7 +12,7 @@ If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is 
 <!-- CODEGRAPH_END -->
 
 ## Mission
-
+@PROJECT_GOAL.md
 This repo recreates SSB64 on Nintendo DS, using BattleShip as the behavioral reference:
 
 ```text
@@ -125,7 +125,8 @@ or one good frame is not completion.
 Every new finding, mistake, or inefficiency must improve the next cycle. Fix
 its root cause and update the existing shared code, helper, checker, or owning
 doc that prevents recurrence. If that is not safe and in scope, record one
-concise actionable item in the owning doc; do not detour into unrelated cleanup.
+concise actionable item in the owning doc; do not detour into unrelated cleanup. 
+This applies to not just code and the project end goal, but every aspect of the project, like project hygiene and documentation.
 
 ## Current Boundary
 

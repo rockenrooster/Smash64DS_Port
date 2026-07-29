@@ -21,7 +21,22 @@ param(
     [ValidateRange(-1,1000000)][int]$ExactSecondFrame = -1,
     [ValidateRange(-1,1)][int]$FoxCpuMode = -1,
     [ValidateSet('','Fox','Mario','Natural')][string]$FighterAnimAudit = '',
-    [ValidateRange(0,218)][int]$FighterAnimStartMotion = 0
+    [ValidateRange(0,218)][int]$FighterAnimStartMotion = 0,
+    # BUGS.md #10. gmCameraGetAdjustAtAngle adds these two source globals into
+    # the camera pitch and yaw, and nothing rewrites them after camera init, so
+    # writing them mid-match orbits the real camera with no ROM change. This is
+    # how a bug that only shows from under a fighter becomes reachable from the
+    # automated capture instead of costing a manual play test per candidate fix.
+    # They only mean anything in the paused player-zoom camera, so pair them
+    # with -InGamePause.
+    [double]$PauseCameraPitch = 0.0,
+    [double]$PauseCameraYaw = 0.0,
+    # Presses START (the in-game pause), which switches the camera to
+    # player-zoom on the fighter. Sent as a real key to the emulator window,
+    # the same thing a player does -- synthesising it by calling
+    # gmCameraSetStatusPlayerZoom over GDB crashes the core.
+    [switch]$InGamePause,
+    [switch]$JumpBeforePause
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -48,6 +63,8 @@ $elfPath = $null
 $rendererSelectionEnabled = ($RendererFastRunMode -ge 0)
 $foxSelectionEnabled = ($FoxCpuMode -ge 0)
 $fighterAnimAuditEnabled = -not [string]::IsNullOrWhiteSpace($FighterAnimAudit)
+$pauseCameraEnabled =
+    (($PauseCameraPitch -ne 0.0) -or ($PauseCameraYaw -ne 0.0))
 $gdbSelectionEnabled = $rendererSelectionEnabled -or $foxSelectionEnabled
 $exactFrameCaptureEnabled =
     (($ExactFirstFrame -ge 0) -or ($ExactSecondFrame -ge 0))
@@ -69,7 +86,7 @@ if ($exactFrameCaptureEnabled) {
     }
 }
 $gdbControlEnabled = $gdbSelectionEnabled -or $exactFrameCaptureEnabled -or
-    $fighterAnimAuditEnabled
+    $fighterAnimAuditEnabled -or $pauseCameraEnabled
 if ($gdbControlEnabled) {
     if (-not (Test-Path -LiteralPath $gdbPath -PathType Leaf)) {
         throw "GDB executable not found: $gdbPath"
@@ -96,6 +113,11 @@ if (-not (Test-Path $melonDsPath)) {
 }
 if (-not (Test-Path $romPath)) {
     throw "ROM not found: $romPath. Run make first or pass -Build."
+}
+if ($pauseCameraEnabled -and $foxSelectionEnabled) {
+    # The melonDS GDB stub takes one connection. The Fox-mode write already
+    # spends it, and the later orbit write then attaches with no live target.
+    throw '-PauseCameraPitch/-PauseCameraYaw cannot be combined with -FoxCpuMode; the melonDS GDB stub allows a single session.'
 }
 if ($fighterAnimAuditEnabled) {
     if ($exactFrameCaptureEnabled -or $rendererSelectionEnabled -or
@@ -269,6 +291,65 @@ function Set-MelonDSCaptureRuntimeMode {
     }
     throw "Could not select capture runtime mode through GDB. Last output:`n$lastOutput"
 }
+function Set-MelonDSPauseCamera {
+    param(
+        [Parameter(Mandatory=$true)][string]$GdbPath,
+        [Parameter(Mandatory=$true)][string]$ElfPath,
+        [Parameter(Mandatory=$true)][int]$Port,
+        [Parameter(Mandatory=$true)][double]$Pitch,
+        [Parameter(Mandatory=$true)][double]$Yaw
+    )
+
+    $pitchText = $Pitch.ToString(
+        [System.Globalization.CultureInfo]::InvariantCulture)
+    $yawText = $Yaw.ToString(
+        [System.Globalization.CultureInfo]::InvariantCulture)
+    $lastOutput = ''
+    # One attempt, not a retry loop: a failed write here is a real fault worth
+    # seeing immediately, and retrying it twelve times spawns twelve GDB
+    # sessions and turns a 30-second capture into a multi-minute one.
+    for ($attempt = 1; $attempt -le 1; $attempt++) {
+        $gdbArgs = @('-q', '-batch', $ElfPath,
+                     '-ex', "target remote localhost:$Port",
+                     # Halt first. The melonDS stub cannot serve memory access
+                     # while the core is running -- reads come back "Cannot
+                     # access memory" with packet timeouts -- so stop on a
+                     # per-update function the way the Fox-mode write does.
+                     '-ex', 'tbreak ndsPlatformReadInput',
+                     '-ex', 'continue',
+                     # Cast through a typed pointer: these are plain BSS
+                     # symbols with no DWARF type, and an untyped `set
+                     # variable` on them silently does nothing and reads back
+                     # zero.
+                     '-ex', "set variable *(float *)&gGMCameraPauseCameraEyeY = $pitchText",
+                     '-ex', "set variable *(float *)&gGMCameraPauseCameraEyeX = $yawText",
+                     '-ex', 'printf "CAPTURE_PAUSE_CAM=%f,%f\n", *(float *)&gGMCameraPauseCameraEyeY, *(float *)&gGMCameraPauseCameraEyeX',
+                     # The in-game pause freezes the simulation, so this tick
+                     # identifies the frozen pose. Two builds only form a valid
+                     # A/B if they paused on the same one -- an unmatched pair
+                     # differs in most of the frame from sub-pixel camera drift
+                     # and drowns the change being measured.
+                     '-ex', 'printf "CAPTURE_PAUSE_TICK=%d\n", gSCManagerBattleState->time_passed',
+                     '-ex', 'detach', '-ex', 'quit')
+        $lastOutput = (& $GdbPath @gdbArgs 2>&1 | Out-String)
+        if (($LASTEXITCODE -eq 0) -and
+            $lastOutput.Contains('CAPTURE_PAUSE_CAM=') -and
+            -not $lastOutput.Contains('CAPTURE_PAUSE_CAM=0.000000,0.000000')) {
+            $line = ($lastOutput -split "`n" |
+                Where-Object { $_ -match 'CAPTURE_PAUSE_CAM=' } |
+                Select-Object -First 1).Trim()
+            Write-Output "Pause camera orbit applied: $line"
+            $tick = ($lastOutput -split "`n" |
+                Where-Object { $_ -match 'CAPTURE_PAUSE_TICK=' } |
+                Select-Object -First 1)
+            if ($null -ne $tick) { Write-Output $tick.Trim() }
+            return
+        }
+        Write-Output "PAUSE_CAM_ATTEMPT_${attempt}: $lastOutput"
+        Start-Sleep -Milliseconds 250
+    }
+    throw "Could not set the pause camera through GDB. Last output:`n$lastOutput"
+}
 $emulator = $null
 try {
     if (Test-Path $config) {
@@ -381,6 +462,31 @@ try {
         [void][Smash64DSWindowCapture]::SetForegroundWindow(
             $emulator.MainWindowHandle)
         Start-Sleep -Seconds $DelaySeconds
+        if ($InGamePause -or $JumpBeforePause) {
+            Add-Type -AssemblyName System.Windows.Forms
+            [void][Smash64DSWindowCapture]::SetForegroundWindow(
+                $emulator.MainWindowHandle)
+            Start-Sleep -Milliseconds 300
+            if ($JumpBeforePause) {
+                # Tap up to jump, then let him rise before freezing, so the
+                # platform is not between the camera and his underside.
+                [System.Windows.Forms.SendKeys]::SendWait('{UP}')
+                Start-Sleep -Milliseconds 260
+            }
+            if ($InGamePause) {
+                [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
+                Start-Sleep -Milliseconds 700
+            }
+        }
+        if (($PauseCameraPitch -ne 0.0) -or ($PauseCameraYaw -ne 0.0)) {
+            # Deliberately the only GDB session when orbiting: the melonDS stub
+            # is single-connection, so pass -FoxCpuMode -1 with this.
+            Wait-MelonDSGdbListener -Process $emulator -Port $GdbPort |
+                Out-Null
+            Set-MelonDSPauseCamera -GdbPath $gdbPath -ElfPath $elfPath `
+                -Port $GdbPort -Pitch $PauseCameraPitch -Yaw $PauseCameraYaw
+            Start-Sleep -Milliseconds 500
+        }
         $emulator.Refresh()
         Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
         Start-Sleep -Milliseconds 100

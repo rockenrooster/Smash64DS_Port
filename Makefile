@@ -132,6 +132,12 @@ NDS_TASK93_TEXKEY_CENSUS ?= 0
 # probe compared two separate captures and was judged on an image that did not
 # contain the bug; this exists so that mistake cannot repeat. Lab only.
 NDS_LAB_CULL_PROBE ?= 0
+# Which bits of the run index the tint probe shows. 0 = low three bits, 3 =
+# next three, so two captures name a run exactly out of the 67 there are.
+NDS_LAB_TINT_SHIFT ?= 0
+# Renders both sides of every polygon. Splits "the geometry never reached the
+# GX" from "the GX culled it", which no counter can tell apart.
+NDS_LAB_NO_CULL ?= 0
 # Task 91 E1 lab probe. Times the generic DObj tree walk and the native-owner
 # revalidation inside the fighter draw, on the tick-HUD ROM -- the split the M2
 # ledger measures but cannot report for the Boundary configuration.
@@ -1865,6 +1871,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \
 		echo '#define NDS_LAB_CULL_PROBE $(NDS_LAB_CULL_PROBE)'; \
+		echo '#define NDS_LAB_TINT_SHIFT $(NDS_LAB_TINT_SHIFT)'; \
+		echo '#define NDS_LAB_NO_CULL $(NDS_LAB_NO_CULL)'; \
 		echo '#define NDS_TASK91_DRAW_PHASE_CENSUS $(NDS_TASK91_DRAW_PHASE_CENSUS)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \

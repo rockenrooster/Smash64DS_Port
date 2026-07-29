@@ -18385,6 +18385,22 @@ ndsRendererNativePrepareProductionRun(
 }
 
 
+#if NDS_LAB_CULL_PROBE
+/* BUGS.md #10 probe. Paints each fighter run a distinct colour so a capture
+ * says which joint owns the pixels bordering the hole, and which joint is
+ * absent from it. Every earlier attempt guessed at that from the model data;
+ * this reads it off the screen. Lab only. */
+static u16 ndsRendererNativeLabRunTint(u32 run_index)
+{
+    static const u16 palette[8] = {
+        0x001fu, 0x03e0u, 0x7c00u, 0x03ffu,
+        0x7c1fu, 0x7fe0u, 0x421fu, 0x7fffu
+    };
+
+    return palette[(run_index >> NDS_LAB_TINT_SHIFT) & 7u];
+}
+#endif
+
 static void NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativeEmitProductionRawTexturedRun(
     u32 run_index,
@@ -18401,7 +18417,10 @@ ndsRendererNativeEmitProductionRawTexturedRun(
         const NDSNativePreparedDenseVertex *prepared =
             &sNdsNativeFighterPreparedDense[dense_id];
 
-#if NDS_R2_FIGHTER_HW_LIGHT
+#if NDS_LAB_CULL_PROBE
+        ndsRendererHardwareWriteColorWord(
+            ndsRendererNativeLabRunTint(run_index));
+#elif NDS_R2_FIGHTER_HW_LIGHT
         /* R2-03 E16. One FIFO word either way; the engine lights it. */
         ndsRendererHardwareWriteNormalWord(
             sNdsNativeFighterDenseNormals[dense_id]);
@@ -18432,7 +18451,10 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
         const NDSNativePreparedDenseVertex *prepared =
             &sNdsNativeFighterPreparedDense[dense_id];
 
-#if NDS_R2_FIGHTER_HW_LIGHT
+#if NDS_LAB_CULL_PROBE
+        ndsRendererHardwareWriteColorWord(
+            ndsRendererNativeLabRunTint(run_index));
+#elif NDS_R2_FIGHTER_HW_LIGHT
         ndsRendererHardwareWriteNormalWord(
             sNdsNativeFighterDenseNormals[dense_id]);
 #else
@@ -19895,13 +19917,29 @@ static inline void ndsRendererNativeBeginHierarchyBatch(
 {
     u32 texture_name = (prepared_run->textured != 0u) ?
         prepared_run->texture_name : 0u;
+#if NDS_LAB_NO_CULL
+    /* BUGS.md #10 probe, fighters only -- un-culling the stage as well blows
+     * past the polygon limits and hangs the ROM. If the geometry missing from
+     * Mario's underside comes back, it reached the GX and the cull sense is
+     * the defect. If it stays missing, the loss is upstream of the hardware.
+     *
+     * Mode 2 is the control surface this row's history says a cull probe must
+     * carry: it INVERTS the cull, so front faces vanish and Mario must render
+     * visibly inside-out. The 2026-07-27 "culling REFUTED" verdict was worthless
+     * precisely because its probe sat on a path fighters never take and looked
+     * exactly like a probe that never ran. Mode 2 cannot look like that. */
+    u32 poly_fmt =
+        (prepared_run->poly_fmt & ~(u32)POLY_CULL_NONE) |
+        ((NDS_LAB_NO_CULL == 2) ? (u32)POLY_CULL_FRONT : (u32)POLY_CULL_NONE);
+#else
+    u32 poly_fmt = prepared_run->poly_fmt;
+#endif
 
     if ((sNdsRendererHardwareTriangleBatchOpen != 0u) &&
         (sNdsRendererHardwareTriangleBatchTextured ==
          prepared_run->textured) &&
         (sNdsRendererHardwareTriangleBatchTextureName == texture_name) &&
-        (sNdsRendererHardwareTriangleBatchPolyFmt ==
-         prepared_run->poly_fmt) &&
+        (sNdsRendererHardwareTriangleBatchPolyFmt == poly_fmt) &&
         (sNdsRendererHardwareTriangleBatchMatrixMode ==
          NDS_RENDERER_HW_MATRIX_MODE_FIGHTER_HIERARCHY) &&
         (sNdsRendererHardwareTriangleBatchMatrixGeneration ==
