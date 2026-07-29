@@ -134,6 +134,13 @@ durable unresolved gaps.
   failures. Redirect harness output to a log and filter with `Select-String`.
 - **`sample-tick-hud-buckets.ps1 -FallbackCensus` needs Task 68's symbol even
   when the ring carries Task 75's counter** — build with *both* census flags.
+- **`NDS_R2_SPAN_LEAN_TIMING=1` alone does not give you the span brackets.** It
+  only compiles the per-delta census *out from inside* them (that is the whole
+  point — E43 found the brackets were pricing their own instrument). The
+  brackets and `gNdsR2Span{Before,After}{Ticks,Deltas}` themselves live under
+  `NDS_TASK91_DRAW_PHASE_CENSUS`, so a lean-timing run needs **both** flags or
+  the sampler dies with `No symbol "gNdsR2SpanBeforeTicks" in current context`
+  after the emulator has already reached the window.
   `-ExtraGlobals` is re-split on commas because `pwsh -File` passes the list as
   one literal string.
 - **`NDS_TASK37_PROFILE_PER_FRAME_REGION=1` exists** and gives per-frame regions

@@ -32,24 +32,20 @@ over-gate frames are `SRC`" no longer holds as written** — that predated E5
 removing the on-demand-loading component. The over-gate frames now split almost
 exactly in half: **`FTR` +140,988 (50%), `SRC` +135,360 (48%)**.
 
-E53 then profiled excursion frames 910–913 against control frames 876–879
-(`NDS_TASK37_PROFILE=1`, `NDS_TICK_HUD_DRAW=0`). Work delta **+407,847
-ticks/frame**, and twelve symbols are **exactly zero on the control frames**,
-summing to **292,899**: `ndsRendererHardwareSubmitVertex` (96,238),
-`ndsRendererSubmitHardwareTriangle` (51,037), `ndsRendererScanList` (50,913),
-`HardwareBeginTriangleBatch` (19,540), `DecodeInputVertex` (10,601), and seven
-more. That is the **generic display-list interpreter** — not more of the same
-work, a second renderer running. `FTR`'s own percentiles agree: P50 388,224,
-P95 392,448, spread 1.01, **max 898,368**.
+E53 profiled excursion frames 910–913 against control 876–879. Work delta
+**+407,847 ticks/frame**, and **twelve symbols are exactly zero on control
+frames**, summing to **292,899** (`SubmitVertex` 96,238,
+`SubmitHardwareTriangle` 51,037, `ScanList` 50,913, …) — the **generic
+display-list interpreter**, a second renderer running. `FTR` agrees: P50
+388,224, P95 392,448, spread 1.01, **max 898,368**.
 
 ## E54 settled what turns that path on: the fighter falls back
 
-`NDS_TASK68_FALLBACK_CENSUS=1` + `NDS_TASK91_DRAW_PHASE_CENSUS=1` over the same
-128 frames: **5 native-owner fallbacks, every one `shuffle_tics`, zero animation
-locks** (`gNdsR2FallbackAnimLocks = 0`). The clean build has **exactly 5 frames**
-with `FTR` > 500,000 — 909-913, consecutive, ~507,000 each over the 388,224
-median, all over gate. One hitlag burst. E35's "third owner" reading does not
-apply to it.
+`NDS_TASK68_FALLBACK_CENSUS=1` + `NDS_TASK91_DRAW_PHASE_CENSUS=1`, same 128
+frames: **5 native-owner fallbacks, every one `shuffle_tics`, zero animation
+locks**. The clean build has **exactly 5 frames** with `FTR` > 500,000 —
+909-913, consecutive, ~507,000 each over the median, all over gate. One hitlag
+burst; E35's "third owner" reading does not apply.
 
 Capping `FTR` at its median on those five frames projects **E32's value across
 the whole distribution**:
@@ -64,41 +60,54 @@ close it. It is the largest single lever left, and it is blocked on the hurt
 flash (E48/E49/E50), not on its value. The twelve frames that remain over gate
 are the `SRC` half below.
 
-**Do not re-measure the census build's tick numbers against a clean build.** The
-three census flags cost ~137,664 ticks/frame and shift the VBlank histogram
-2:726 → 2:314, so presented frame N is a different game tick in the two builds.
-Correlate through a build-internal column (`FTR`) instead, as above.
+**Never compare a census build's frame numbers to a clean build's.** The census
+flags cost ~137,664 ticks/frame and shift the histogram 2:726 → 2:314, so frame
+N is a different game tick in each. Correlate through a build-internal column.
 
 ## The `SRC` half is an owner decision, not an experiment
 
-Float→fixed on the collision path. `PROJECT_GOAL.md` permits it ("Mechanical
-equivalence is required. Bit-exact … is not") and ranks gameplay fidelity above
-stable 30 FPS, but `gmcollision.c` is verifier-gated by the Task 9 state hash and
-re-bounding a bit-exact gate is the owner's call.
+Float→fixed on the collision path. `PROJECT_GOAL.md` permits it and ranks
+gameplay fidelity above stable 30 FPS, but `gmcollision.c` is verifier-gated by
+the Task 9 state hash and re-bounding a bit-exact gate is the owner's call.
 
-Its cheap sub-levers are all refuted, so do not re-derive them:
-`func_ovl2_800ED490` runs 27.2 times a frame (no redundancy to memo); the cost is
-arithmetic at 38 cycles per soft-float add; and the float leaves are already
-lowered — `_arm_addsubsf3.o` and `_arm_muldivsf3.o` are ITCM-resident and
-`NDS_TASK16_FLOAT_ADDSUB=1` ships a hand-written integer replacement.
+Cheap sub-levers all refuted — do not re-derive: `func_ovl2_800ED490` runs 27.2
+times a frame (nothing to memo); the cost is arithmetic at 38 cycles per
+soft-float add; and the float leaves are already lowered (`_arm_addsubsf3.o`,
+`_arm_muldivsf3.o` ITCM-resident, `NDS_TASK16_FLOAT_ADDSUB=1`).
 
-## Best unowned bit-exact work
+## Best unowned work
 
-**R2-03 E26 — fold the before-span.** E38's brackets enclosed their own
-instrument; E43 rebuilt with `NDS_R2_SPAN_LEAN_TIMING=1` and the real figures are
-**before 26,944/frame over 134.5 deltas, after 13,703.7 over 47.9, replay
-40,648** — not 33,708 / 16,243 / 49,951, which appear throughout the E26 spec and
-are 20% high. Fold the before-span only: it is 66.3% of the cost and the half
-with no ordering problem.
+**R2-04 E57 — the visual pose is evaluated twice per presented frame.**
+`gcRunAll` runs exactly **2.0 times per presented frame** (60 Hz gameplay, 30 Hz
+presentation) and the animation evaluation sits inside it:
+`gcPlayDObjAnimJoint` 164 calls/frame for 34,022 ticks,
+`battleship_ftAnimParseDObjFigatree` 104 for 12,115, `ftParamUpdateAnimKeys` 4
+for 6,191 — **~52,000 ticks/frame, paid twice.** R2-04's charter is exactly this
+decoupling and only its *cache* half (E1/E5) has been built. Upper bound
+**~26,000 ticks/frame, flat**, so it moves P50 and P95 together.
 
-**E46 shipped after those numbers were taken** (delta path into ITCM, `FTR` P50
-−12,032), so **re-measure with `NDS_R2_SPAN_LEAN_TIMING=1` before sizing the
-fold** — the remainder is smaller than 26,944.
+**It gates on a source question, not a tick question.** Halving is free only if
+gameplay — hitbox placement, collision points, grab ranges — does not read the
+joint transforms the odd tick writes. If hitboxes come from `ftParam` tables
+keyed on animation frame, the visual pose is separable and this is a pure win; if
+they read the live joint matrices, skipping a tick is a *gameplay* change under
+`PROJECT_GOAL.md`'s sacrifice order. **Answer it from BattleShip source before
+writing code.**
+
+**R2-03 E26 — demoted, not refuted.** Re-measured on the current build with
+`NDS_TASK91_DRAW_PHASE_CENSUS=1 NDS_R2_SPAN_LEAN_TIMING=1` (both flags: the
+second only compiles the per-delta census out from inside the brackets, the
+first is what defines them): before-span **23,844/frame over 136.8 deltas =
+174.2 each**, after-span 13,719 over 49.2, replay **37,563**. E46's ITCM move
+took 3,100 off E43's 26,944. That puts it at the *bottom* of the switch plan's
+§3.9 "20–50K consider if simple and exact" band, and E26 is exact but not
+simple — generator change, per-epoch install path, and E34-b's carve-out that
+`prim_color`/`env_color` stay live. It also cannot recover the whole 23,844.
+Take it if it is the last thing standing; do not open it as the headline.
 
 Read `ClaudeOpus5_R203_E26_Spec_GeneratedEpochState_20260728.md` only alongside
-the board's E34/E34-b/E39/E43/E45 entries, which correct it in several places.
-E39 already refuted the operand-elision version (7.4% hit rate, ~3,700
-ticks/frame): **E26 must replace the dispatch, not deduplicate the writes.**
+the board's E34/E34-b/E39/E43/E45/E56 entries, which correct it. E39 refuted the
+operand-elision variant: **E26 must replace the dispatch, not the writes.**
 
 ## Refuted this cycle — do not re-derive
 
@@ -107,9 +116,9 @@ ticks/frame): **E26 must replace the dispatch, not deduplicate the writes.**
   `gNdsStageCollisionLoopYakumonoCount = 1` and 7 lines: the loop that reads as a
   64×4 worst case has a trip count of **one**.
 - **E53**, an 8-byte `{base,size}` mirror for `ndsRelocFindLoadedFileContaining`.
-  Correct by construction and still a regression — P95 **+11,584**, 92 of 128
-  frames worse, and `STG` (untouchable by this change) +1,600 on 99 of them. The
-  768 bytes of new BSS cost more than the scan saved.
+  Correct by construction and still a regression — P95 **+11,584**, 92/128 frames
+  worse, `STG` (untouchable by it) +1,600 on 99. The 768 bytes of new BSS cost
+  more than the scan saved, and the lookup is a *symptom* of the fallback anyway.
 
 ## Restart
 
@@ -140,5 +149,5 @@ residency, source countdown, Dream Land water frozen at source frame 0, and Task
 
 **Bug #10 is FIXED and folded into this branch** — `06992f10812` "Fix Mario
 pelvis texture clamp", cherry-picked from `2cbc6189d15` so authorship is
-preserved, with a host fixture, a structural pin, the `pause_under20` camera
-oracle, and the controller-playback DTCM move that oracle needs.
+preserved, with a host fixture, a structural pin, and the `pause_under20`
+camera oracle.

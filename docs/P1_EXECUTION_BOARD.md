@@ -32,6 +32,135 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E56 — E26 re-measured post-E46, and the plan's own policy demotes it (2026-07-29)
+
+`HANDOFF.md` has pointed every restart at E26 as "the best unowned work that
+needs no owner decision", sized 26,944 by E43. E46 shipped after that, so the
+number was re-taken on the current build with
+`NDS_TASK91_DRAW_PHASE_CENSUS=1 NDS_R2_SPAN_LEAN_TIMING=1`, 128 frames, 920
+presented:
+
+| | E43 (pre-E46) | **now (post-E46)** |
+|---|---:|---:|
+| before-span | 26,944.3 | **23,844** |
+| before deltas/frame | 134.5 | 136.8 |
+| **ticks per delta** | 200.3 | **174.2** |
+| after-span | 13,703.7 | 13,719 |
+| after deltas/frame | 47.9 | 49.2 |
+| **replay total** | 40,648 | **37,563** |
+
+Delta counts are within 2% across the two arms, so the arms do the same work and
+the −3,100 is E46's ITCM placement, as E46 claimed. **E26's target is 23,844, not
+26,944 and certainly not the 33,708 the spec still quotes.**
+
+### Why that demotes it
+
+The switch plan's §3.9 noise policy: *"<10K ignore unless free; 10–20K usually
+too small for architecture work; 20–50K consider if simple and exact; 50–100K
+valuable; 100K+ major target."*
+
+23,844 is at the **bottom** of the "consider if simple and exact" band, and E26
+is exact but **not simple** — it needs a generator change, a per-epoch install
+path, and E34-b's carve-out that `prim_color`/`env_color` and companions must be
+left live. It also does not recover the whole 23,844: it replaces ~3 dispatched
+writes per epoch with one bulk install, and the install is not free. E39 already
+refuted the cheap variant (operand elision, 7.4% hit rate, ~3,700).
+
+**E26 is not refuted — it is demoted.** Take it if the gate is close and it is the
+last thing standing; do not open it as the headline while a measured 51,136
+(E32) and a ~26,000 structural halving (E57 below) are unclaimed.
+
+## R2-04 E57 — the visual pose is evaluated TWICE per presented frame (2026-07-29)
+
+Exact call counts, free from the E53 control census (an entry PC retires once per
+call), over four settled frames:
+
+| symbol | calls/frame | ticks/frame |
+|---|---:|---:|
+| `gcRunAll` | **2.0** | 8,853 |
+| `gcPlayAnimAll` | 10.0 | 7,860 |
+| `gcPlayDObjAnimJoint` | **164.0** | **34,022** |
+| `battleship_ftAnimParseDObjFigatree` | 104.0 | 12,115 |
+| `ftParamUpdateAnimKeys` | 4.0 | 6,191 |
+
+`gcRunAll` at exactly 2.0 confirms the structure the plan assumes: **60 Hz
+gameplay, 30 Hz presentation, and the animation evaluation runs inside the
+gameplay tick** — so every number above is paid twice per presented frame.
+Animation evaluation totals **~52,000 ticks/frame**.
+
+R2-04's charter is exactly this: *"Generated visual-pose evaluation feeding the
+direct draw path, decoupled from the gameplay skeleton (§3.6): evaluated once per
+presented frame (30 Hz), not per gameplay tick. Do not assume full cubic pose
+evaluation must run twice per rendered frame because gameplay is 60 Hz."*
+R2-04 E1/E5 delivered the animation *cache*; the *rate decoupling* is untouched.
+
+**Upper bound ~26,000 ticks/frame, flat — it moves P50 and P95 equally**, which
+is worth more than E26 and is a phase deliverable rather than a micro-cut.
+
+### The one question that gates it, and it is a source question not a tick question
+
+§3.6 requires that the renderer never need `render skeleton == gameplay
+skeleton`. Today they are one representation. Halving the evaluation is only free
+if the *gameplay* half — hitbox placement, collision points, grab ranges — does
+not read the joint transforms `gcPlayDObjAnimJoint` writes on the odd tick. If
+hitboxes are placed from `ftParam` tables keyed on animation frame, the visual
+pose is separable and this is a pure win. If they are read off the live joint
+matrices, skipping a tick is a **gameplay change**, not a visual one, and it
+belongs under `PROJECT_GOAL.md`'s sacrifice order rather than in a free-win row.
+
+**Answer that from BattleShip source before writing any code** — `decomp/` is the
+specification for it, and this is precisely the "inspect the reference before
+changing gameplay behavior" rule. Do not probe it with ticks; the question is
+which data the mechanics read.
+
+## R2-03 E55 — E49's "structurally out of reach" is too strong (2026-07-29, unbuilt)
+
+E49 concluded that because `sNdsNativeFighterDenseVertices` is `static const`,
+**every** approach reading generated vertex data cannot show the flash, and
+retired the family. That conclusion is correct about the *baked table* and wrong
+about the *owner*, and the difference matters because E54 has now priced E32 at
+−51,136 P95 — the largest measured lever left.
+
+Where the generic path's colour actually comes from (`nds_renderer.c:6679`):
+
+```c
+ndsRendererDecodeInputVertex(input, src + (i * 16u));
+state->vertex_colors[index] = ndsRendererHardwareLitShadeColorPrepared(
+    stats, input, prepared_light_direction);
+```
+
+`state->vertex_colors[]` is **not a raw colour** — it is the lit shade of the
+*live* source vertex, decoded from `src`, the loaded asset's vertex bytes. The
+hurt flash rewrites those bytes. So the value E48 saw at
+`ndsRendererHardwarePackedResolvedColor` is `LitShade(live source vertex)`, and
+the native owner's disagreement is that it computes `LitShade(baked constant)`.
+
+**The owner is not barred from the flash; it is missing a transform.** Three
+routes, in increasing cost, and none of them is the retired "read the table"
+family:
+
+1. **The flash is a per-vertex transform of the base colour.** E50's own numbers
+   fit it: range `0x240F11FF`..`0xFFFFFFFF`, first `0x4C4C4CFF`, 172/273
+   differing — that is what a lerp toward white over differing base colours looks
+   like, not an arbitrary repaint. If `live = lerp(baked, white, t)` for one
+   per-frame `t`, the owner reproduces it exactly with one lerp per vertex and no
+   memory traffic, and E32's tick win survives intact.
+2. **Read the live source vertex.** Bake `dense_id -> (asset slot, byte offset)`
+   in the generator and have the emit decode the live 16 bytes on flash frames
+   only. Exact by construction — same bytes, same function — but it costs the
+   generic path's per-vertex work on exactly the frames E32 is trying to make
+   cheap, so it is close to E49's option 2 in a different dress.
+3. E49's option 3, approximate by another mechanism, unchanged.
+
+**Probe route 1 before building anything.** On a hitlag frame, record for the
+same `dense_id` both the baked `rgba` and the live `state->vertex_colors[]`, and
+test whether a single `t` reproduces every pair. That is one build and it either
+hands E32 back its −51,136 or eliminates the cheapest remaining route. The E48
+probe already latches per-vertex values on frame 911 and is the natural host.
+
+This defect has now cost eight experiments, six of them reasoned rather than
+measured. **Do not build route 1 without the pair dump.**
+
 ## R2-03 E54 — it IS the fighter falling back, and E32 is worth 51,136 (2026-07-29)
 
 E53 found 292,899 ticks/frame of generic display-list interpreter appearing from
