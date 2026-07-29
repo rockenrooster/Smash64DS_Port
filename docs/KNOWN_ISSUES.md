@@ -278,3 +278,24 @@ with the most hit decisions to flip.
 If the hashes differ, that is expected and authorized — the decision was taken
 knowingly. What is owed is the *magnitude and attribution* of the difference, not
 an automatic revert.
+
+**Two obstacles already hit, so the next attempt does not rediscover them.**
+
+1. **`verify-task16-combined-state-hash-ab.ps1` is stale.** It builds targets
+   `smash64ds-task16-combined-state-{control,candidate}` which **do not exist in
+   the Makefile**. Copy its *shape* (it drives
+   `verify-battle-mariofox-gcrunall-loop-harness.ps1` with `-Task9StateHashMode 1`
+   and `-Task9StateHashExportPath`), not its target names.
+2. **The owner harness rejects TICKHUD** — "GDB proof runs require full telemetry
+   and must not use TICKHUD" — so use `smash64ds-battle-playable-proof-hwtri`.
+   With that target it reached the match, emitted `TASK9_STATE_SUMMARY=4087,0,4096`
+   and 4,087 `TASK9_STATE=` rows, then threw on an **unrelated** gate:
+   *"Published ROM did not preserve the complete M4 residency lifecycle and zero
+   post-GO fence"*. The throw happens **before** the export path is written, and
+   the rows go to the console rather than the log, so nothing is persisted. Either
+   satisfy that M4 gate or capture the `TASK9_STATE=` lines from the harness's own
+   stdout.
+3. **The tick-HUD sampler cannot substitute.** `gNdsTask9StateHashCount` reads 0
+   on a tick-HUD build with `NDS_TASK9_STATE_HASH=1`, because the recorder must be
+   armed through `gNdsTask9StateHashArmed` and `sample-tick-hud-buckets.ps1` only
+   *reads* globals. Arming it needs a GDB write the sampler does not do.
