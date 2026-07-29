@@ -1144,3 +1144,26 @@ to editing rather than measuring, and it is the second time this split has caugh
 someone out. **Before changing per-vertex emission, grep the field being replaced
 and confirm every writer is converted** — the count of call sites is the check,
 and it is one grep.
+
+### Never `git checkout --` a file another agent is also editing (R2-03 E24, 2026-07-28)
+
+Reverting E24 with `git checkout -- src/nds/nds_renderer.c` restored the file to
+HEAD and silently destroyed a second agent's uncommitted `NDS_LAB_CULL_PROBE` /
+`NDS_LAB_NO_CULL` bug-#10 probes living in the same file. Eleven commits this
+cycle had carefully hunk-filtered around exactly that work; one destructive
+command undid what all of them protected.
+
+It was recoverable only because `New-Smash64DSSnapshot.ps1` had run 9 minutes
+earlier and snapshots the **working tree**, not HEAD — so
+`7z x <snapshot> src/nds/nds_renderer.c` plus a diff restored the four lost
+hunks exactly. That is luck, not a procedure.
+
+**To revert your own change in a shared dirty file, reverse your own edits** —
+`git apply -R` a patch of your hunks, or re-edit them out. `git checkout --`,
+`git restore` without `--staged`, and `git reset --hard` all discard everything
+uncommitted in their path, and the repo's own CLAUDE.md already forbids them
+without an explicit request. This is the concrete failure that rule exists for.
+
+If it happens anyway: the newest snapshot on the Desktop is the recovery source,
+and the diff against it should contain **only** the other agent's hunks — verify
+that before copying anything back.

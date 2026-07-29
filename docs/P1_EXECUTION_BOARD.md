@@ -201,7 +201,32 @@ and normals must not be rotated by a projection. Same fix, wrong cause.
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E17_SplitMatrixLoad_20260728.md`.
 
-## R2-03 E16 — hardware lighting BUILT, −35,072, awaiting visual approval (2026-07-28)
+## R2-03 E24 — the shade's action walk is not the shade's cost (2026-07-28)
+
+**NULL, reverted.** After E16 the shade's per-action loop is pure bookkeeping:
+`stats->vertex_count` (a max) and `gNdsRendererProfileSourceVertexLoadCount` (a
+sum), both pure functions of the static action table. E24 baked them per epoch
+at load and replaced the walk with two lookups — the switch plan's "consume
+baked facts" applied to its smallest piece.
+
+**+2,048 FTR P50**, inside the placement floor; triangle counts unchanged, so it
+worked and simply saved nothing. The census bracket for the shade reads 58,105,
+but that is `ApplyMaterial` plus instrument overhead, **not** the walk. E18's
+ranking-only caveat holds for the third time.
+
+Redirects R2-03's remaining work to where the census actually points:
+`SubmitPrepTicks` **42,281/frame** — `ndsRendererNativePrepareProductionRun`,
+which is precisely the plan's R2-03 bullet ("no PrepareProductionRun policy
+re-checks"). E5 already measured those facts at 1.9% churn and E12 memoised the
+texture half for −32,724; the rest is UV and policy.
+
+**Process failure recorded**: reverting E24 with `git checkout --` destroyed a
+second agent's uncommitted bug-#10 probes in the same file. Recovered from the
+21:23 snapshot, which archives the working tree. Rule added to
+`TASK_STANDING_RULES.md`; eleven commits of hunk-filtering were undone by one
+destructive command.
+
+## R2-03 E16 — hardware lighting GRADUATED, −35,072 (2026-07-28)
 
 The fighter's per-vertex software shade moves onto the DS geometry engine. Four
 parts: a load-time `GFX_NORMAL` table, one `GFX_DIFFUSE_AMBIENT` per epoch
