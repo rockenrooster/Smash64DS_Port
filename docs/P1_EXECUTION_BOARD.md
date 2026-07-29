@@ -31,6 +31,45 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E34 — E26's premise MEASURED: the epoch state is 99.5% static (2026-07-29)
+
+**E26 is viable, and this is the number it was missing.** Its §2a correction
+raised the live material as a per-epoch problem; the harder version is that
+`ndsRendererNativeApplyMaterial` writes the same `stats` fields, so contamination
+can propagate *forward* into later epochs through any field their before-span
+does not itself rewrite. If that happened often, the baked table would be a
+fiction. So it was measured before either design was built.
+
+`NDS_R2_FIGHTER_EPOCH_STATE_PROOF=1` hashes the state each epoch hands to its
+runs — the fields `PrepareProductionRun` and the shade read: `geometry_mode`,
+`othermode_h/l`, combine w0/w1, env/prim colour, texture flags/tile/on/scale,
+the two light colours, the light direction, and the **active** 20-word
+`NDSRendererTileState` — keyed by epoch index, counting frames whose value
+differs from the one already stored.
+
+| | frames 439..919 |
+|---|---:|
+| samples | 22,566 (47.0/frame) |
+| **changes** | **108 — 0.48%** |
+
+**The state is a function of the epoch index 99.5% of the time.** That is the
+same shape as E5's run facts (1.9% churn) and it says the fold is a table plus a
+small repair, not a table plus a fiction.
+
+**And the residue has an owner.** 108 changes over 480 frames is ~0.2/frame,
+which tracks the hitlag population E31/E32 mapped — Task 39's hurt flash writes
+`input->materials[]` live, and hitlag covers roughly 10 frames in 128. So the
+0.48% is very likely the flash colour, which is exactly the field E26 §2a already
+says must stay a runtime write ("bake the table and write colour per frame" —
+E1a's shape). Confirm that attribution by re-running the proof with `prim_color`
+and `env_color` dropped from the hash: if changes go to zero, the fold is clean
+and colour is the only runtime input.
+
+**Method note:** `gNdsR2EpochStateUnstableEpochs` reads 0 in this window because
+the census reports *deltas* and that counter saturates during the pre-439 warm-up.
+Its absolute value needs a single-stop read, not a windowed difference — do not
+read that 0 as "no epoch is unstable", which contradicts the 108.
+
 ## R2-03 E33 — the run prepare still has no hot spot, re-confirmed (2026-07-29)
 
 Per-run split on the current build (`NDS_R2_FIGHTER_RUN_PROOF=2`, frames

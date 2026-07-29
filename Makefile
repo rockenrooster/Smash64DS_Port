@@ -308,6 +308,13 @@ NDS_R2_FIGHTER_HW_MTX ?= 0
 # model is RGB15 throughout where the software path kept an RGB8 intermediate --
 # so it gates on a screenshot pair plus the owner's approval.
 NDS_R2_FIGHTER_HW_LIGHT ?= 0
+# R2-03 E34. Falsifier for E26. Hashes the complete renderer state each epoch
+# hands to its runs, per epoch index, and counts frames whose value differs from
+# the one already stored. E26's baked per-epoch state is only possible if that
+# hash is a function of the epoch index -- and ndsRendererNativeApplyMaterial
+# writes the same stats fields from a live input, so contamination can propagate
+# into later epochs. Lab only.
+NDS_R2_FIGHTER_EPOCH_STATE_PROOF ?= 0
 # R2-03 E32. Folds SSB64's hitlag shuffle into the fighter's world matrix
 # instead of switching the whole native owner off for the duration of every hit.
 # The source (ftdisplaymain.c:1205) is one PUSH + syMatrixTra(x, y, 0) + POP
@@ -1913,6 +1920,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_SOFT_LIGHT_KEEP $(NDS_R2_FIGHTER_SOFT_LIGHT_KEEP)'; \
 		echo '#define NDS_TICK_HUD_DRAW $(NDS_TICK_HUD_DRAW)'; \
 		echo '#define NDS_R2_FIGHTER_SHUFFLE_FOLD $(NDS_R2_FIGHTER_SHUFFLE_FOLD)'; \
+		echo '#define NDS_R2_FIGHTER_EPOCH_STATE_PROOF $(NDS_R2_FIGHTER_EPOCH_STATE_PROOF)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_SKIP $(NDS_R2_FIGHTER_SHADE_SKIP)'; \
 		echo '#define NDS_R2_FIGHTER_STATESPAN_SKIP $(NDS_R2_FIGHTER_STATESPAN_SKIP)'; \
 		echo '#define NDS_R2_DRAW_SUPPRESS_MASK $(NDS_R2_DRAW_SUPPRESS_MASK)'; \

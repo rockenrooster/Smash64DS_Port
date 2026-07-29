@@ -17376,6 +17376,94 @@ static u16 ndsRendererR2MaterialColor15(
 }
 #endif
 
+#if NDS_R2_FIGHTER_EPOCH_STATE_PROOF
+/* R2-03 E34. Decides whether E26's baked per-epoch state is even possible.
+ *
+ * E26 proposes replacing the 194.4 state-delta applications a frame with a
+ * table indexed by epoch. That is sound only if the state an epoch hands to its
+ * runs is a function of the epoch index. It may not be:
+ * ndsRendererNativeApplyMaterial writes prim/env/blend colour and texture state
+ * from `input->materials[]`, which is live, so a material applied in epoch N
+ * survives into epoch N+1's state through any field N+1's before-span does not
+ * itself rewrite. E26's §2a correction saw the material as a per-epoch problem;
+ * this is the harder version, where contamination propagates forward.
+ *
+ * `noinline` and deliberately outside .itcm.native_fighter: ITCM has ~1 KB free
+ * and E16 has already been caught overflowing it with an inline probe. */
+#define NDS_R2_EPOCH_STATE_MAX 64u
+#define NDS_R2_EPOCH_TILE_MASK 7u
+#define NDS_R2_EPOCH_HASH(hash, value) \
+    ((hash) = (((hash) ^ (u32)(value)) * 16777619u))
+static u32 sNdsR2EpochStateHash[NDS_R2_EPOCH_STATE_MAX];
+static u8 sNdsR2EpochStateSeen[NDS_R2_EPOCH_STATE_MAX];
+static u8 sNdsR2EpochStateEverChanged[NDS_R2_EPOCH_STATE_MAX];
+u32 gNdsR2EpochStateSamples;
+u32 gNdsR2EpochStateChanges;
+u32 gNdsR2EpochStateUnstableEpochs;
+
+static void __attribute__((noinline))
+ndsRendererR2EpochStateProof(u32 epoch_index, const NDSRendererStats *stats)
+{
+    u32 hash;
+
+    if (epoch_index >= NDS_R2_EPOCH_STATE_MAX)
+    {
+        return;
+    }
+    /* ndsRendererSemanticSourceStateHash is behind PROFILE_LEVEL >= 2 and the
+     * tick-HUD build is level 0, so hash the fields E26 would actually bake --
+     * the ones PrepareProductionRun and the shade read -- rather than the whole
+     * semantic state. Narrower is also the right question: a field nothing reads
+     * moving does not stop the fold. */
+    hash = 2166136261u;
+    NDS_R2_EPOCH_HASH(hash, stats->geometry_mode);
+    NDS_R2_EPOCH_HASH(hash, stats->othermode_h);
+    NDS_R2_EPOCH_HASH(hash, stats->othermode_l);
+    NDS_R2_EPOCH_HASH(hash, stats->texture_combine_w0);
+    NDS_R2_EPOCH_HASH(hash, stats->texture_combine_w1);
+    NDS_R2_EPOCH_HASH(hash, stats->env_color);
+    NDS_R2_EPOCH_HASH(hash, stats->prim_color);
+    NDS_R2_EPOCH_HASH(hash, stats->texture_state_flags);
+    NDS_R2_EPOCH_HASH(hash, stats->texture_tile);
+    NDS_R2_EPOCH_HASH(hash, stats->texture_on);
+    NDS_R2_EPOCH_HASH(hash, stats->texture_scale_s);
+    NDS_R2_EPOCH_HASH(hash, stats->texture_scale_t);
+    NDS_R2_EPOCH_HASH(hash, stats->light_color_1);
+    NDS_R2_EPOCH_HASH(hash, stats->light_color_2);
+    NDS_R2_EPOCH_HASH(hash, (u32)stats->light_dir_x);
+    NDS_R2_EPOCH_HASH(hash, (u32)stats->light_dir_y);
+    NDS_R2_EPOCH_HASH(hash, (u32)stats->light_dir_z);
+    {
+        const u32 *tile =
+            (const u32 *)&stats->texture_tiles[stats->texture_tile &
+                                               NDS_R2_EPOCH_TILE_MASK];
+        u32 w;
+
+        for (w = 0u; w < (sizeof(NDSRendererTileState) / sizeof(u32)); w++)
+        {
+            NDS_R2_EPOCH_HASH(hash, tile[w]);
+        }
+    }
+    gNdsR2EpochStateSamples++;
+    if (sNdsR2EpochStateSeen[epoch_index] == 0u)
+    {
+        sNdsR2EpochStateSeen[epoch_index] = 1u;
+        sNdsR2EpochStateHash[epoch_index] = hash;
+        return;
+    }
+    if (sNdsR2EpochStateHash[epoch_index] != hash)
+    {
+        gNdsR2EpochStateChanges++;
+        if (sNdsR2EpochStateEverChanged[epoch_index] == 0u)
+        {
+            sNdsR2EpochStateEverChanged[epoch_index] = 1u;
+            gNdsR2EpochStateUnstableEpochs++;
+        }
+        sNdsR2EpochStateHash[epoch_index] = hash;
+    }
+}
+#endif
+
 /* R2-03 E28. Once E16 moved the fighter's diffuse term onto the geometry
  * engine, the software light direction and the shade LUT became dead: both are
  * read only inside the per-dense-vertex loop that `hardware_lit` skips. The
@@ -24489,6 +24577,22 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                 gNdsR2ExecStateTicks += e15b_state_end - e15b_mark;
                 e15b_mark = e15b_state_end;
             }
+#endif
+#if NDS_R2_FIGHTER_EPOCH_STATE_PROOF
+            /* R2-03 E34. E26 wants to replace the state replay with a baked
+             * per-epoch snapshot, which is only sound if the state an epoch
+             * reaches is a function of the epoch index. It might not be:
+             * ndsRendererNativeApplyMaterial writes the same stats fields from a
+             * live input, so a material applied in epoch N can survive into
+             * epoch N+1's snapshot through any field N+1's before-span does not
+             * itself rewrite. That is a stronger objection than E26's own §2a
+             * correction raised, and it decides whether the fold is a table or a
+             * table plus a repair, so measure it before building either.
+             *
+             * Hashed AFTER the material and after-span, i.e. the complete state
+             * an epoch hands to its runs, per epoch index, counting frames whose
+             * value differs from the one already stored. */
+            ndsRendererR2EpochStateProof(epoch_index, stats);
 #endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
