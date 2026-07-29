@@ -32,6 +32,58 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E61 — it is the CUBIC. Pose table refuted by size; two levers now close the gate (2026-07-29)
+
+Full report: `optimization/ClaudeOpus5_R203_E61_TheCubicIsTheLever_20260729.md`.
+Census behind `NDS_R2_ANIM_CENSUS` (default 0), counting only via the Task 95
+interposition. Cross-checks Task 96 exactly: longest chain **9**, and
+96,308 calls ÷ 104.1 calls/frame = 925 frames against a run ending at 934.
+
+**1 — the kind mix.** Cubic **54.8%** (149.4/frame, ~14 float ops), Step 43.6%
+(118.7/frame, zero float), Linear 1.7%, Other 0. **The cubic is 99.6% of the
+animation's float**, and E60's 60,509 ticks/frame across 149.4 nodes is **405
+ticks per cubic evaluation** — 14 soft-float ops at ~29 each. This also rules out
+the layout reading Tasks 95/96 assumed: had the nodes been mostly Linear, 405
+ticks each would have been impossible.
+
+**2 — `anim_speed`.** `1.0` on 99.726% of calls, **`0.0` never**, `0.5` on
+0.274% (bits `0x3F000000`). Dyadic, so a half-frame index is still exact.
+
+**3 — discarded evaluations: zero.** `GOBJ_FLAG_NOANIM` skips = 0. No free win.
+
+**The load-time pose table is REFUTED — on memory, not correctness.** 272.7
+nodes/frame ÷ 2 anim ticks ≈ 68 per fighter = 273 bytes/pose; an 80-frame
+animation at half-frame resolution is 42.6 KB/fighter; the 63 animations
+reachable in a natural match (Task 40) are **2.62 MB resident** against 4 MB of
+main RAM the match already mostly occupies. Streaming on transition is 42.6 KB =
+7–11 ms on cart, most of a frame, on transitions that happen constantly. **Do
+not propose it again.**
+
+**What is left, priced.** No bit-exact option remains.
+
+| route | saves |
+|---|---:|
+| fixed-point cubic (14 ops @ ~5 ticks) | **50,051** |
+| float Horner after per-parse pre-expansion | 34,512 |
+| **fixed-point Horner** (6 ops @ ~4 ticks) | **56,774** |
+
+Pre-expansion is available because `length_invert`/`value_base`/`value_target`/
+`rate_base`/`rate_target` are constant between parse events, so the cubic is a
+fixed polynomial in `length`. Reassociation alone makes it inexact, so it buys
+nothing fixed-point does not.
+
+**These two levers close the gate:** 108,928 − 51,136 (E32) − ~50,000 (cubic) =
+**~7,800 remaining**. Each is blocked on a different owner decision — E32 on the
+hurt flash (now a fidelity-budget/visual-approval question, not a measurement:
+E48–E59 closed the mechanism line), and the cubic on the Task 9 state hash.
+`PROJECT_GOAL.md` requires mechanical equivalence and permits "fixed-point
+replacements"; the hash asserts bit-exactness, a stronger claim than the
+contract makes. The change is confined to `gcGetInterpValueCubic` evaluating
+already-parsed track state — not parsing, collision, physics or CPU logic — so
+the honest acceptance test is a hitbox-overlap differential over a full match
+(the only path to gameplay is `gmCollisionGetFighterPartsWorldPosition`, E57),
+not the hash.
+
 ## R2-03 E60 — ANIMATION owns the gate, not collision. Task 78 stopped it on a self-vs-inclusive error (2026-07-29)
 
 **The board's `SRC`-half claim is wrong and the animation lever must reopen.**

@@ -11,16 +11,9 @@ graduated E5. E32 is **parked** on a visual regression — not awaiting a yes/no
 
 ## Where the gate stands
 
-128-frame ring dump, frames 793..920, on the graduated build:
-
-| | `WORK-H` |
-|---|---:|
-| P50 | 1,013,696 |
-| **P95** | **1,228,928** |
-| gate | 1,120,000 |
-| over gate | **17 / 128** |
-
-**P50 is inside the gate; only P95 misses, by 108,928.** Evidence:
+128-frame ring dump, frames 793..920, graduated build (`WORK-H`): P50
+**1,013,696**, P95 **1,228,928**, gate 1,120,000, **17/128 over**. **P50 is
+inside; only P95 misses, by 108,928.** Evidence
 `artifacts/performance/r203-e53-ctlb-128{.json,-rows.csv}`.
 
 ## What owns the miss
@@ -28,10 +21,11 @@ graduated E5. E32 is **parked** on a visual regression — not awaiting a yes/no
 E52 re-decomposed the excursion after E5 graduated: **E35's "25 of 26 over-gate
 frames are `SRC`" no longer holds** — it predated E5 removing the loading
 component. The over-gate frames split in half: **`FTR` +140,988 (50%), `SRC`
-+135,360 (48%)**. E53 profiled frames 910–913 against control 876–879: work delta
-**+407,847/frame**, with **twelve symbols exactly zero on control frames**
-summing to **292,899** — the **generic display-list interpreter**, a second
-renderer running.
++135,360 (48%)**. E53 profiled frames 910–913 against control 876–879:
+**+420,227/frame**, of which **376,434 is 151 symbols exactly zero on control** —
+the generic display-list interpreter, a second renderer running. The rest is
+fixed-point *matrix* work; **`__aeabi_fadd` does not grow at all**, so float is a
+flat per-frame cost, which is why E60/E61's lever moves P50 and P95 together.
 
 ## E54: the fighter falls back, and E32 is worth −51,136
 
@@ -39,8 +33,7 @@ renderer running.
 frames: **5 native-owner fallbacks, every one `shuffle_tics`, zero animation
 locks**. The clean build has **exactly 5 frames** with `FTR` > 500,000 —
 909-913, consecutive, ~507,000 each over the median, all over gate. One hitlag
-burst; E35's "third owner" reading does not apply. Capping `FTR` at its median
-there projects E32 across the whole distribution:
+burst. Capping `FTR` at its median there projects E32 across the distribution:
 
 | | P50 | P95 | max | over gate |
 |---|---:|---:|---:|---:|
@@ -48,80 +41,87 @@ there projects E32 across the whole distribution:
 | **`FTR` capped** | 1,011,264 | **1,177,792** | 1,531,072 | **13/128** |
 
 **E32 is worth −51,136 P95 and four frames** — it halves the gap without closing
-it. Largest single lever left, blocked on the hurt flash, not on its value. The
-twelve frames still over gate are the `SRC` half.
+it. Blocked on the hurt flash, not on its value.
 
 **Never compare a census build's frame numbers to a clean build's.** The census
 flags cost ~137,664 ticks/frame and shift the histogram 2:726 → 2:314, so frame
 N is a different game tick in each. Correlate through a build-internal column.
 
-## The `SRC` half is an owner decision, not an experiment
+## The other half is ANIMATION, not collision (E60/E61 — this replaces the `SRC` row)
 
-Float→fixed on the collision path. `PROJECT_GOAL.md` permits it and ranks
-gameplay fidelity above stable 30 FPS, but `gmcollision.c` is verifier-gated by
-the Task 9 state hash and re-bounding a bit-exact gate is the owner's call.
+**The board carried "float→fixed on the collision path, `gmcollision.c`" for
+several cycles. It is wrong by ~20x and the row is deleted.** A leaf helper is
+charged to itself, never to its caller, so every float op the animation path
+executes was booked to `__aeabi_fadd`/`__aeabi_fmul` and read as a separate,
+larger family. Caller-attributed on the current build:
 
-Cheap sub-levers all refuted — do not re-derive: `func_ovl2_800ED490` runs 27.2
-times a frame (nothing to memo); the cost is arithmetic at 38 cycles per
-soft-float add; and the float leaves are already lowered (`_arm_addsubsf3.o`,
-`_arm_muldivsf3.o` ITCM-resident, `NDS_TASK16_FLOAT_ADDSUB=1`).
+| | self | via `fadd`/`fmul` | inclusive |
+|---|---:|---:|---:|
+| `gcPlayDObjAnimJoint` | 34,022 | 60,509 | **94,531** |
+| whole animation path | 76,047 | 70,895 | **146,942** |
 
-## Best unowned work: E59 — the flash is a LIGHT COLOUR, not vertex data
+**146,942 ticks/frame, 15.2% of WORK 969,487 — larger than the whole gap.** The
+entire collision family is **under 4,000**, below the placement noise floor. The
+renderer share is 15,709, inside §3.9's "too small for architecture work" band.
 
-**Four experiments modelled the flash as something done to a vertex colour. There
-is no vertex colour on those runs.** E58 dumped the raw decoded input vertex
-beside the lit output: 24 distinct saturated raw values collapse to 8 outputs,
-and `(46,163,73)`, `(5,126,20)`, `(186,34,101)` all emit `(76,76,76)`. No colour
-multiply does that.
+E61 then found **the cubic is 99.6% of that float**: 149.4 cubic nodes/frame at
+**405 ticks each** (14 soft-float ops), against 118.7 Step nodes at zero float
+and 4.5 Linear. `anim_speed` is `1.0` (99.7%) or `0.5` (0.3%), **never 0**;
+`GOBJ_FLAG_NOANIM` skips are **0**, so nothing is being computed and thrown away.
 
-`nds_renderer.c:8246`: with `G_LIGHTING` set the vertex RGB bytes are the
-**F3DEX2 packed normal**, and the emitted colour comes from
-`stats->light_color_1` (diffuse) and `light_color_2` (ambient). The greys are
-white lights, **76 is the ambient-only floor** back-facing normals clamp to, the
-reds are runs with a red light colour, and E50's "172/273 differ" is 273 normals.
+**Task 78 stopped the animation compiler on a self-vs-inclusive error** — it
+compared 82,807 *self* ticks to a 100,000 target while its own §4 listed
+`fadd`+`fmul` = 119,912 as a *separate* family. Corrected: 164,236, **1.64x its
+target, not 0.85x**. Tasks 95/96 stand but refute only the *layout* route; the
+arithmetic route has never been attempted.
 
-**So the flash is a light-colour change** — per-run material state applied by the
-same replay E26 folds. **E59 is the next build:** latch `light_color_1`,
-`light_color_2` and `geometry_mode` on hitlag frame 911 vs ordinary 904 for the
-generic path, and compare against what the owner's shade path
-(`ndsRendererNativeShadeProductionActions`, `ndsRendererR2MaterialColor15`) feeds
-its lighting. If they differ, that is E32's regression and the fix is to carry
-the same light state.
+**The pose table is REFUTED by size** (E61) — 2.62 MB resident against 4 MB of
+main RAM, or 42.6 KB/7–11 ms streamed per transition. Do not propose it again.
 
-E47 refuted *material* colour derivation; `light_color_*` is a different field
-and was never tested. **Do not model the flash as vertex data again** — E48, E49,
-E50 and E55 all died on that premise, and the board records why each did.
+## Two levers close the gate, each on a different owner decision
 
-**R2-03 E26 — demoted.** Re-measured with
-`NDS_TASK91_DRAW_PHASE_CENSUS=1 NDS_R2_SPAN_LEAN_TIMING=1` (both flags — the
-second only compiles the per-delta census out from inside the brackets, the
-first defines them): before-span **23,844/frame over 136.8 deltas = 174.2 each**,
-after 13,719 over 49.2, replay **37,563**. E46 took 3,100 off E43's 26,944. That
-is the *bottom* of the plan's §3.9 "20–50K consider if simple and exact" band and
-E26 is exact but not simple. Read its spec only alongside the board's
-E34/E34-b/E39/E43/E45/E56 entries. **E26 must replace the dispatch, not the
-writes** (E39).
+```
+gap 108,928  −  E32 51,136  −  fixed-point cubic ~50,000  =  ~7,800 left
+```
 
-**R2-04 E57 — REFUTED from source.** Animation evaluation (~52,000/frame) runs
-twice per presented frame, so halving it looked like ~26,000 free — but
-`gmCollisionGetFighterPartsWorldPosition` (`gm/gmcollision.c:489`) places every
-hitbox by **walking the live joint chain**, not from `ftParam` tables, so the odd
-tick's pose is load-bearing and halving it is a *gameplay* change. Corollary:
-the renderer is already at presentation rate (`DLAllDrawForSlot` 2.0 calls/frame,
-`AdapterBuildDObjLocalMatrix` 50.0), so **R2-04's rate-decoupling mandate is
-already satisfied on the renderer side.**
+- **E32** — blocked on the hurt flash. **That is now a fidelity-budget question
+  (the owner's visual approval), not a measurement**: E48–E59 spent six
+  experiments and closed the mechanism line. Not vertex colour, not material
+  colour, not light colour, not the fold arithmetic, not E16's hardware
+  lighting, not `color_modulate`.
+- **The cubic** — blocked on the Task 9 state hash. `PROJECT_GOAL.md` requires
+  mechanical equivalence and lists "fixed-point replacements" as allowed; the
+  hash asserts bit-exactness, which is stronger than the contract. The change is
+  confined to `gcGetInterpValueCubic` evaluating already-parsed track state, and
+  its only path to gameplay is `gmCollisionGetFighterPartsWorldPosition` (E57),
+  so the honest acceptance test is a hitbox-overlap differential over a full
+  match, not the hash.
+
+**R2-03 E26 — demoted** to 23,844/frame over 136.8 deltas (both
+`NDS_TASK91_DRAW_PHASE_CENSUS=1` *and* `NDS_R2_SPAN_LEAN_TIMING=1`; the second
+alone does not define the brackets). Bottom of §3.9's "20–50K if simple and
+exact" band, and E26 is exact but not simple. **It must replace the dispatch,
+not the writes** (E39); read its spec only with board entries
+E34/E34-b/E39/E43/E45/E56.
+
+**R2-04 E57 — REFUTED from source.** Halving the twice-per-frame animation
+evaluation looked like ~26,000 free, but `gmCollisionGetFighterPartsWorldPosition`
+(`gm/gmcollision.c:489`) places every hitbox by **walking the live joint chain**,
+so the odd tick's pose is load-bearing. Corollary: the renderer is already at
+presentation rate, so **R2-04's rate-decoupling mandate is already satisfied on
+the renderer side.**
 
 ## Refuted this cycle — do not re-derive
 
-- **E51**, a precomputed `line_id -> (group, kind)` table for the three scan
-  functions in `reloc_backend_mp_collision.c`. Dream Land reports
-  `gNdsStageCollisionLoopYakumonoCount = 1` and 7 lines: the loop that reads as a
-  64×4 worst case has a trip count of **one**.
+- **E51**, a `line_id -> (group, kind)` table for the three scans in
+  `reloc_backend_mp_collision.c`. `gNdsStageCollisionLoopYakumonoCount = 1`: the
+  loop that reads as a 64×4 worst case has a trip count of **one**.
 - **E53**, an 8-byte `{base,size}` mirror for `ndsRelocFindLoadedFileContaining`.
-  Exact by construction, still a regression — P95 **+11,584**, 92/128 worse,
-  `STG` (untouchable by it) +1,600 on 99. The lookup is a *symptom* of the
-  fallback anyway.
-- **The flash as vertex data** — E48/E49/E50/E55. It is a light colour; see above.
+  Exact by construction, still P95 **+11,584**, 92/128 worse, and `STG` — which
+  it cannot touch — moved +1,600 on 99.
+- **The flash as vertex data** — E48/E49/E50/E55/E58. See above.
+- **The animation pose table** — E61, 2.62 MB resident vs 4 MB RAM.
+- **Fixed-point collision** — E60, the whole family is under 4,000 ticks/frame.
 
 ## Restart
 

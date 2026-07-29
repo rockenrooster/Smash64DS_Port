@@ -12,6 +12,14 @@
 #define gcAddCObjCamAnimJoint ndsBaseGcAddCObjCamAnimJoint
 #define gcPlayMObjMatAnim ndsBaseGcPlayMObjMatAnim
 #define gcPlayAnimAll ndsBaseGcPlayAnimAll
+#if NDS_R2_ANIM_CENSUS
+/* R2-03 E61. Frees the name so the census below can count what the player is
+ * asked to evaluate, then delegate to the unchanged original. Task 95 proved
+ * this exact interposition end to end: the hot call is INTERNAL to objanim.c
+ * (inside gcPlayAnimAll), so renaming the definition renames that call with it
+ * and a port-side replacement is actually reached. */
+#define gcPlayDObjAnimJoint ndsBaseGcPlayDObjAnimJoint
+#endif
 
 #include "../../decomp/BattleShip-main/decomp/src/sys/objanim.c"
 
@@ -24,6 +32,107 @@
 #undef gcAddCObjCamAnimJoint
 #undef gcPlayMObjMatAnim
 #undef gcPlayAnimAll
+
+#if NDS_R2_ANIM_CENSUS
+#undef gcPlayDObjAnimJoint
+
+/* R2-03 E61. E60 priced this path at 146,942 ticks/frame inclusive -- larger
+ * than the whole gap to the gate -- and 280 ticks per AObj node, which is what
+ * a ~14-operation cubic costs in software float. Before any of that is
+ * rewritten, three integers decide WHICH rewrite:
+ *
+ *   1. the kind mix. Cubic is ~14 float ops, Linear is 2, Step is 0. If the
+ *      nodes are mostly Linear the arithmetic is not the target and E60's
+ *      per-node arithmetic reading is wrong.
+ *   2. anim_speed. `length` is a pure accumulator of it, so if it only ever
+ *      takes 0 or 1 the pose is a function of an INTEGER frame index and a
+ *      load-time table is bit-exact. Any other value and the index is
+ *      continuous and no table can be exact.
+ *   3. how many evaluations are discarded. The original computes `value`
+ *      before checking GOBJ_FLAG_NOANIM... it does not, but it DOES skip the
+ *      whole evaluation under that flag, so counting the skips separates
+ *      "poses computed" from "poses used".
+ *
+ * Counting only -- the real work is delegated unchanged, so this cannot change
+ * a value. Task 96 measured the chain (337.8 nodes/frame over 104.1 calls) with
+ * the same interposition and its numbers are the cross-check. */
+extern void ndsBaseGcPlayDObjAnimJoint(DObj *dobj);
+
+volatile u32 gNdsR2AnimCensusCalls;
+volatile u32 gNdsR2AnimCensusNodes;
+volatile u32 gNdsR2AnimCensusKindNone;
+volatile u32 gNdsR2AnimCensusKindLinear;
+volatile u32 gNdsR2AnimCensusKindCubic;
+volatile u32 gNdsR2AnimCensusKindStep;
+volatile u32 gNdsR2AnimCensusKindOther;
+volatile u32 gNdsR2AnimCensusSpeedOne;
+volatile u32 gNdsR2AnimCensusSpeedZero;
+volatile u32 gNdsR2AnimCensusSpeedOther;
+volatile u32 gNdsR2AnimCensusSpeedOtherBits;
+volatile u32 gNdsR2AnimCensusNoAnimSkips;
+volatile u32 gNdsR2AnimCensusAnimEnd;
+volatile u32 gNdsR2AnimCensusLongestChain;
+
+void gcPlayDObjAnimJoint(DObj *dobj)
+{
+    const AObj *aobj;
+    u32 chain = 0u;
+    f32 speed;
+    u32 speed_bits;
+    u32 noanim;
+
+    gNdsR2AnimCensusCalls++;
+    if (dobj->anim_wait != AOBJ_ANIM_NULL)
+    {
+        speed = dobj->anim_speed;
+        __builtin_memcpy(&speed_bits, &speed, sizeof(speed_bits));
+        if (speed_bits == 0x3f800000u)
+        {
+            gNdsR2AnimCensusSpeedOne++;
+        }
+        else if ((speed_bits & 0x7fffffffu) == 0u)
+        {
+            gNdsR2AnimCensusSpeedZero++;
+        }
+        else
+        {
+            gNdsR2AnimCensusSpeedOther++;
+            gNdsR2AnimCensusSpeedOtherBits = speed_bits;
+        }
+        if (dobj->anim_wait == AOBJ_ANIM_END)
+        {
+            gNdsR2AnimCensusAnimEnd++;
+        }
+        noanim = ((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) != 0) ? 1u : 0u;
+        for (aobj = dobj->aobj; aobj != NULL; aobj = aobj->next)
+        {
+            chain++;
+            if (aobj->kind == nGCAnimKindNone)
+            {
+                gNdsR2AnimCensusKindNone++;
+                continue;
+            }
+            gNdsR2AnimCensusNodes++;
+            if (noanim != 0u)
+            {
+                gNdsR2AnimCensusNoAnimSkips++;
+            }
+            switch (aobj->kind)
+            {
+            case nGCAnimKindLinear: gNdsR2AnimCensusKindLinear++; break;
+            case nGCAnimKindCubic:  gNdsR2AnimCensusKindCubic++;  break;
+            case nGCAnimKindStep:   gNdsR2AnimCensusKindStep++;   break;
+            default:                gNdsR2AnimCensusKindOther++;  break;
+            }
+        }
+        if (chain > gNdsR2AnimCensusLongestChain)
+        {
+            gNdsR2AnimCensusLongestChain = chain;
+        }
+    }
+    ndsBaseGcPlayDObjAnimJoint(dobj);
+}
+#endif
 
 #define NDS_AOBJ_EVENT32_NORMALIZED_MAX 1024u
 #define NDS_AOBJ_EVENT32_PLAN_MAX 128u

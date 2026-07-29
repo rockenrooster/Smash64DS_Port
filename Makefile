@@ -205,6 +205,13 @@ NDS_R2_MATERIAL_DYNAMIC ?= 0
 # E47) and each cost a build; this measures the branch instead. Delete with the
 # experiment.
 NDS_R2_FLASH_PROBE ?= 0
+# R2-03 E61. Counting-only interposition on gcPlayDObjAnimJoint (the Task 95
+# mechanism), reporting the AObj kind mix, the anim_speed value set and the
+# NOANIM skip count. E60 priced this path at 146,942 ticks/frame inclusive and
+# 280 ticks per node; these three integers decide whether the repair is a
+# load-time pose table (which needs an integral frame index), a fixed-point
+# cubic, or neither. Delete with the experiment.
+NDS_R2_ANIM_CENSUS ?= 0
 # R2-03 E49. Teaches the native fighter owner the precedence E48 measured: an
 # epoch whose vertices carry a valid vertex colour and no material is emitted
 # from that colour raw and is NOT lit. The generic path has always done this
@@ -2021,6 +2028,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
+		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \
 		echo '#define NDS_R2_UNLIT_VERTEX_EPOCH $(NDS_R2_UNLIT_VERTEX_EPOCH)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
