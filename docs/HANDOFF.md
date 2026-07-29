@@ -101,19 +101,17 @@ gap 108,928  −  E32 51,136  −  fixed-point cubic ~50,000  =  ~7,800 left
   so the honest acceptance test is a hitbox-overlap differential over a full
   match, not the hash.
 
-**R2-03 E26 — demoted** to 23,844/frame over 136.8 deltas (both
+**R2-03 E26 — demoted** to 23,844/frame over 136.8 deltas (needs both
 `NDS_TASK91_DRAW_PHASE_CENSUS=1` *and* `NDS_R2_SPAN_LEAN_TIMING=1`; the second
 alone does not define the brackets). Bottom of §3.9's "20–50K if simple and
-exact" band, and E26 is exact but not simple. **It must replace the dispatch,
-not the writes** (E39); read its spec only with board entries
-E34/E34-b/E39/E43/E45/E56.
+exact" band and E26 is not simple. **It must replace the dispatch, not the
+writes** (E39); read its spec only with board entries E34/E34-b/E39/E43/E45/E56.
 
-**R2-04 E57 — REFUTED from source.** Halving the twice-per-frame animation
-evaluation looked like ~26,000 free, but `gmCollisionGetFighterPartsWorldPosition`
-(`gm/gmcollision.c:489`) places every hitbox by **walking the live joint chain**,
-so the odd tick's pose is load-bearing. Corollary: the renderer is already at
-presentation rate, so **R2-04's rate-decoupling mandate is already satisfied on
-the renderer side.**
+**R2-04 E57 — REFUTED.** Halving the twice-per-frame animation evaluation looked
+like ~26,000 free, but `gmCollisionGetFighterPartsWorldPosition`
+(`gm/gmcollision.c:489`) places every hitbox by **walking the live joint chain**.
+With E6 this closes R2-04's rate clause: the visual side is already at 30 Hz and
+the rest is gameplay-required.
 
 ## Refuted this cycle — do not re-derive
 
