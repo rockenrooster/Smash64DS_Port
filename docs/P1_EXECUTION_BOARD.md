@@ -67,15 +67,31 @@ device reads and screenshots. (`sBattleTickHudRing` is now `volatile`: with
 nothing in the ROM reading it, `--gc-sections` deleted the array and the sampler
 failed. A measurement buffer whose only consumer is a debugger must say so.)
 
-**Highest-value unowned row: the FTR bursts.** `FTR` is bimodal — 401,856 median
-or ~900,000, nothing between — on frames **478–482 and 544–548**: two contiguous
-five-frame bursts 62 frames apart. A discrete event, twice, not a per-frame cost.
-Check in this order: a fighter dropping off the native owner path (the fallback
-and `SourceVertexLoadCount` counters are already ringable per frame); Task 39's
-hurt flash, whose live `input->materials[]` write invalidates the texture prepare
-and whose duration and 62-frame spacing both fit two hits; or a third owner being
-drawn. Window the existing phase census on 478–482. **Do not optimise the median
-fighter path for this — those frames are not running it.**
+**Highest-value unowned row: the FTR bursts — and they are a NATIVE-OWNER
+FALLBACK.** `FTR` is bimodal, 401,856 median or ~900,000 with nothing between, on
+frames **478–482 and 544–548**: two contiguous five-frame events 62 frames apart.
+Both probes are done and they agree:
+
+- **Geometry does not spike.** P0 triangles/frame: 468–473 **256.0**, 473–478
+  **384.0**, 478–483 (burst) **320.0**. The window *before* the burst draws more
+  than the burst does.
+- **The native execute gets cheaper.** Phase census over the burst: **38.2 epoch
+  calls instead of 58.8**, 49.0 submits instead of 80.4, and **178,800 ticks
+  instead of 286,988** — while whole-frame `FTR` doubles. Both bursts are
+  counter-identical (191 epochs, 245 submits over 5 frames): one event, twice.
+
+So the work **left the native path** and reappeared outside every bracket the
+census owns — the generic DObj/display-list interpreter. **Optimising the native
+fighter execute cannot touch these frames.**
+
+**Next step, exact and cheap:** build `NDS_TASK68_FALLBACK_CENSUS=1` and sample
+with `scripts/sample-tick-hud-buckets.ps1 -FallbackCensus`, which rings
+`gNdsTickHudNativeOwnerFallbackCount` and `...ByReason[]` per frame. The reason
+code names the eligibility test that fails on 478–482, and that test is the fix
+site. (Those symbols exist only under that flag — a plain tick-HUD build reports
+"No symbol gNdsTickHudNativeOwnerFallbackCount".) Likely causes to expect:
+Task 39's hurt flash writing `input->materials[]` live, a pose outside the
+generated owner's coverage, or an extra owner.
 
 `SRC` (21.4%) is Task 75 E0's known load population, sized at ~103,488, unchanged
 by Runtime 2.

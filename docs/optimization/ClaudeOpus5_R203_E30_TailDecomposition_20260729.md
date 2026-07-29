@@ -101,8 +101,47 @@ is not placement noise and not a per-frame cost — it is a discrete event, twic
 in the window, each lasting five frames, during which the fighter draw costs
 2.25x its median.
 
-This is the **largest single item in the tail** and it is unowned. Candidates, in
-the order they should be checked:
+**Measured, and it is a fallback.** Two probes, both on the burst windows against
+a control window of the same length:
+
+*Geometry does not spike.* `gNdsFighterDLAllDrawP0HardwareTriangleCount` per
+frame: 468–473 **256.0**, 473–478 **384.0**, 478–483 (burst) **320.0**, 483–488
+**320.0**. The window immediately *before* the burst draws more triangles per
+frame than the burst does. Triangle count and `FTR` ticks are uncorrelated.
+
+*The native execute gets **cheaper**.* Phase census, 5-frame windows:
+
+| phase, ticks/frame | 468 control | 478 burst | 544 burst |
+|---|---:|---:|---:|
+| Preflight | 4,134 | 2,534 | 2,534 |
+| Root | 55,091 | 33,510 | 33,498 |
+| State replay | 78,566 | 50,970 | 51,059 |
+| Shade | 27,840 | 17,882 | 18,086 |
+| Submit | 121,357 | 73,882 | 73,702 |
+| **sum** | **286,988** | **178,778** | **178,879** |
+| epoch calls | 58.8 | **38.2** | **38.2** |
+| submit calls | 80.4 | **49.0** | **49.0** |
+
+The native owner runs **38.2 epochs instead of 58.8** and spends **178,800
+instead of 286,988** ticks — while `FTR` for the whole frame *doubles*. The two
+bursts are counter-identical (191 epochs, 245 submits, 108 material
+invalidations over 5 frames): the same event, twice.
+
+**So the work left the native path.** Fewer epochs are drawn natively and the
+cost reappears outside every bracket the census owns — which is the generic
+DObj/display-list interpreter. This is a **native-owner fallback**, not a slow
+native path, and no amount of optimising the native execute will touch it.
+
+**Next step is exact and cheap:** build with `NDS_TASK68_FALLBACK_CENSUS=1` and
+sample with `scripts/sample-tick-hud-buckets.ps1 -FallbackCensus`, which rings
+`gNdsTickHudNativeOwnerFallbackCount` and
+`gNdsTickHudNativeOwnerFallbackByReason[]` per frame. The reason code names the
+eligibility test that fails on frames 478–482, and that test is the fix site.
+(The counters live under that flag only, which is why a plain tick-HUD build
+reports "No symbol gNdsTickHudNativeOwnerFallbackCount".)
+
+Candidates for what the reason will turn out to be, in the order they should be
+checked:
 
 - A fighter falling off the native owner path into the generic one for the
   duration of a state. `gNdsRendererProfileSourceVertexLoadCount` and the
