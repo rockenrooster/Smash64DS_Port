@@ -262,8 +262,39 @@ Two-CPU stress config both arms, same commit, 128 frames. R2-06 makes the
 nor saves anything.**
 
 **Gate status:** *"Boundary green"* — **PASSES**, engagement verified in the
-proof ROM. *"Histogram materially better than the Runtime 1 A-side on the same
-commit"* — **NOT MET**. *"Soak clean"* — not run.
+proof ROM. **Equivalence — PASSES** (E1 below). *"Histogram materially better
+than the Runtime 1 A-side on the same commit"* — **NOT MET**, and amended in the
+plan. *"Soak clean"* — **still owed, the only open R2-06 item.**
+
+### R2-06 E1 — equivalence: every semantic and geometry counter is byte-identical
+
+Free, from the two Boundary runs already on disk (no build, no emulator run).
+Both arms, same commit, canonical mode 163:
+
+| counter | Runtime 1 | Runtime 2 |
+|---|---|---|
+| `ftrContract` | `6784/6784/geom0x222005/cycle0x100000/rm0xc4112078/light424/424/bounds424/0` | **identical** |
+| `ftrTri` | `132712/p067840/p164872/own424` | **identical** |
+| `oracle` | `0/0/0` | **identical** |
+| `binds` | `54` | **identical** |
+| `combine` | `0/0/lit0/mat0/proj126` | **identical** |
+| `intrinsicM3` | `9/121/828` | **identical** |
+| `intrinsicM4` | `24/136192/hits646/fence0` | **identical** |
+| `aobj32` | `40/293/reuse8/fail0` | **identical** |
+| `water` | `2/0/1` | **identical** |
+
+**132,712 triangles, 424 fighter contracts, 6,784 contract checks, 646 matrix
+residency hits, and zero oracle mismatches — matching exactly.** This is not a
+full state hash, but it is a far broader instrument than the one E64b is waiting
+on, and it covers precisely what a loop-structure switch could plausibly break:
+draw ordering, contract counts, triangle emission, material/combine selection and
+matrix residency.
+
+**Harness trap worth keeping.** These counters are *not* in the `Tee-Object` logs
+— `Tee-Object` writes UTF-16, so GNU `grep` silently finds nothing in them. Read
+them with PowerShell `Select-String`, or from the persisted tool output. Separately:
+PowerShell variables are **case-insensitive**, so a `$t` scratch variable
+clobbers `$T`; that cost a wrong "file missing" here before it was spotted.
 
 **The gate clause needs reinterpretation, and that is the real finding.** It was
 written expecting the R2 path to carry the wins. It cannot: `ndsR2BattleRun`
