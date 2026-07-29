@@ -31,6 +31,46 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E32 — DO NOT GRADUATE: visual regression found, mechanism named (2026-07-29)
+
+**The visual gate was answered by measurement, and the answer is no.** Flag stays
+default 0. Details in `ClaudeOpus5_R203_E32_ShuffleFold_20260729.md`.
+
+Frame-locked captures of the same presented frames from both arms
+(`capture-melonds.ps1 -ExactFirstFrame N -ExactSecondFrame N+1 -FoxCpuMode 1
+-SoftwareRenderer`, each arm built to its own `NDS_OUTPUT_ROOT`):
+
+| frame | differing pixels | share |
+|---|---:|---:|
+| 480 / 481 (hitlag) | 1,826 / 1,536 | 0.661% / 0.556% |
+| 510 / 511 (control) | 188 / 188 | 0.068% |
+
+The control makes the comparison sound: on non-hitlag frames the arms are
+pixel-identical apart from the bottom-screen `FPS`/`UP` readout, which must
+differ because the arms run at different speeds. The `CUTG_EXACT` rows agree byte
+for byte at every frame, state hash included — E32 is render-side only.
+
+**On hitlag frames the struck fighter renders dark maroon instead of light grey**
+(`artifacts/visibility/e32-compare-480.png`, `e32-compare-481.png`). That is the
+hurt flash, not the shake: per E34, `prim_color`/`env_color` are the only
+per-epoch state that varies at runtime, and Task 39's hurt flash is what varies
+them. The reference arm falls back to the generic path during animlock (E31) and
+gets its flash handling; the candidate stays on the native owner and applies the
+material differently.
+
+**E32 is really two changes and only one was measured.** It was framed as folding
+the shuffle into the world matrix; its actual effect is *not falling back during
+animlock*, and the fallback was also hiding a material seam. Fix the native
+owner's hurt-flash colour to match the generic path, then re-run these four
+captures — the tick win (`FTR` P95 913,920 → 412,992) is real and worth returning
+for.
+
+**Harness note:** exact-frame capture is *not* gated to the Cut G window by frame
+number, only by its assertion set — the captures land, then the GO-text
+assertions throw. `capture-melonds.ps1` also passes its own `-FoxCpuMode -1`
+"unset" sentinel into a callee validating `0..1`, so **`-FoxCpuMode 1` must be
+passed explicitly** or the run dies after a full emulator boot.
+
 ## R2-03 E35 — the gate is owned by the SIMULATION, not the renderer (2026-07-29)
 
 **Highest-value row on the board, and it is no longer a fighter row.** Full

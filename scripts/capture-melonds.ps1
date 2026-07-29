@@ -84,6 +84,20 @@ if ($exactFrameCaptureEnabled) {
     if ($rendererSelectionEnabled) {
         throw '-RendererFastRunMode cannot be combined with exact Cut G capture.'
     }
+    # capture-cut-g-exact-frames.ps1 declares [ValidateRange(0,1)]$FoxCpuMode and
+    # then asserts it equals 1, but this script's own "unset" sentinel is -1 and
+    # it forwards that value unconditionally. So the default invocation used to
+    # boot the emulator, run to the requested frame, and only then die inside the
+    # callee's parameter binder with a range error naming a switch the caller
+    # never set. Normalise the sentinel here, and reject a deliberate 0 up front
+    # where the message can say why. R2-03 E32.
+    if ($FoxCpuMode -lt 0) {
+        $FoxCpuMode = 1
+        $foxSelectionEnabled = $true
+        $gdbSelectionEnabled = $true
+    } elseif ($FoxCpuMode -ne 1) {
+        throw 'Exact frame capture requires -FoxCpuMode 1 (the Boundary configuration).'
+    }
 }
 $gdbControlEnabled = $gdbSelectionEnabled -or $exactFrameCaptureEnabled -or
     $fighterAnimAuditEnabled -or $pauseCameraEnabled
