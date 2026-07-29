@@ -88,6 +88,33 @@ float→fixed decision.
 flash, not on its value.** The value is now measured rather than projected from
 the top of the distribution.
 
+### E53's lookup is a symptom of this, not a second problem
+
+`ndsRendererOwnerHashStablePointer` (`reloc_backend_renderer_dl.c:5040`) calls
+`ndsRelocFindLoadedFileContaining` on every display-list pointer it hashes, and
+that hash only runs when the generic path walks a display list. That is why the
+lookup goes 39 → 106.5 calls/frame and 1.49 → 16.87 entries deep on exactly the
+frames the fighter falls back: it is hashing a *wider set of loaded files*
+because it is walking lists the native owner never touches.
+
+**So E53's 34,644 is inside E32's ~507,000, not additive.** Fixing the fallback
+removes the lookup cost with it. Do not count them separately, and do not
+re-open the lookup as an independent target — E53 already measured that
+optimising it in place loses to its own placement cost.
+
+### A per-epoch fallback is not a small change
+
+E50 closed E32's fix family on the premise that the native owner must
+*reproduce* the hurt flash, and E54's "the flash frames are the fallback frames"
+suggests a cheaper option: let the owner handle the shuffle and drop only the
+flash *epoch* to the generic path, which would be pixel-identical and need no
+visual approval. It is not available cheaply. The owner executes a flat
+root → epoch → run walk over generated tables (`sNdsNativeFighterEpochs`,
+`NDSNativeEpoch` at `nds_renderer.c:3763`); the generic path carries its own
+`NDSRendererTraversalState` and display-list cursor. Interleaving them mid-draw
+means reconstructing the generic traversal state at the owner's current position.
+Recorded so the idea is not re-derived as though it were easy.
+
 ### Harness defect found and fixed
 
 `sample-tick-hud-buckets.ps1` summed the enum's last two entries into the
