@@ -86,17 +86,53 @@ recompute. That would make the assert an artifact rather than corruption. **It i
 not graduated on that theory.** The flag stays default 0 until someone shows
 which of the two is wrong; a verifier failure is a failure.
 
+### E2 — causation is firm and BOTH explanations are refuted
+
+**Causation, measured rather than assumed:** flag on **2 of 2 runs fail**; flag
+off **3 of 3 runs pass** (`Boundary verification profile passed`). The one control
+that failed differently — a blank capture, `0/49152 dominant-green pixels`, from
+running the harness script directly instead of through `verify-all.ps1` — is a
+flake and is **not** counted as a control.
+
+**Refuted #1 — "non-stationary rate".** `nds_platform.c:2236-2239` writes all four
+HUD fields adjacently from locals, and `fps_x10` is computed from exactly the
+`elapsed_frames`/`elapsed_ticks` published beside it. Only two writers exist (that
+group and the reset at :2145-2148, also a group). The harness reads all four in
+one GDB `printf` at a breakpoint, so the read is atomic too. The assert therefore
+holds across *any* cadence change, and a rolling-versus-spot mismatch cannot
+happen. This theory was wrong.
+
+**Refuted #2 — "the harness `BUS_CLOCK` constant is stale".** `NDS_R204_FPSHUD_SHADOW`
+publishes a shadow of the same locals in the same breath. Sampled state:
+
+| | primary | shadow |
+|---|---:|---:|
+| fps x10 | 265 | 265 |
+| frame window | 14 | 14 |
+| tick window | 17,721,728 | 17,721,728 |
+
+`gNdsR204FpsHudShadowBusClock = 33,513,982`, identical to the harness constant,
+and recomputing gives exactly 265. **The publish path is self-consistent and the
+constant is right.**
+
+So the observed `FPS_HUD=290,13,15,17485504` — where the recompute is 288 — is an
+**intermittent** state that the probe did not catch, and it is not explained by a
+wrong constant, a non-atomic publish, or a rate change.
+
 ### What to do next
 
-1. Decide whether the FPS-HUD assert is measuring harm or measuring a rate
-   change. Read `verify-battle-mariofox-gcrunall-loop-harness.ps1:3250` and check
-   whether `fpsHud[0]` and `fpsHud[2]/[3]` are sampled at the same instant. If
-   they are not, the assert cannot hold across any cadence change and it is the
-   defect.
-2. If the assert is sound, the fix is E0's other half: **preload the working set
-   at match start** so the rate never changes mid-match. That is what R2-04
-   actually specifies, it removes the misses entirely rather than 64.6% of them,
-   and it makes this failure mode impossible by construction.
+1. **Read the shadow where the verifier reads the primary.** The probe above ran
+   under `sample-tick-hud-buckets.ps1`, which stops at its own breakpoints and
+   sampled a healthy sample; the anomaly belongs to the verifier's stop. Add the
+   four shadow globals to the `FPS_HUD` printf at
+   `verify-battle-mariofox-gcrunall-loop-harness.ps1:2100` and re-run with the
+   flag on. If shadow and primary disagree *there*, something rewrites the
+   primary between publish and that stop, and the writer is the bug.
+2. **Independently, do E0's other half regardless: preload the working set at
+   match start.** It is what R2-04 actually specifies, it takes the removable
+   share from 64.6% to 100% rather than leaving 29 misses, and whatever this
+   assert is reacting to, a match whose animation set never loads mid-gameplay
+   cannot trigger it.
 
 ## R2-04 E0 — the phase is SIZED and its gate is reachable (2026-07-29)
 

@@ -93,6 +93,12 @@ static u32 sPerfLastLogicTickCount;
 static u32 sPerfLastDLPreviewDrawCount;
 static u32 sPerfLastPreviewCommitCount;
 #if NDS_BATTLE_FPS_HUD_ENABLED
+#if NDS_R204_FPSHUD_SHADOW
+volatile u32 gNdsR204FpsHudShadowX10;
+volatile u32 gNdsR204FpsHudShadowFrames;
+volatile u32 gNdsR204FpsHudShadowTicks;
+volatile u32 gNdsR204FpsHudShadowBusClock;
+#endif
 static u32 sBattleFpsHudSampleReady;
 static u32 sBattleFpsHudLastTick;
 static u32 sBattleFpsHudLastPresentedFrames;
@@ -2237,6 +2243,20 @@ static void ndsPlatformRenderBattleFpsHud(void)
     gNdsBattlePlayableHudFpsSampleCount++;
     gNdsBattlePlayableHudFpsFrameWindow = elapsed_frames;
     gNdsBattlePlayableHudFpsTickWindow = elapsed_ticks;
+#if NDS_R204_FPSHUD_SHADOW
+    /* R2-04 E2. The Boundary assert recomputes fps from the frame/tick window
+     * published beside it and found 290 against 15/17,485,504, which is 288.
+     * These four stores are adjacent and the values are locals, so the group
+     * cannot be internally inconsistent at this instant -- yet the harness reads
+     * one that is. This shadow is written in the same breath from the same
+     * locals. If the shadow stays self-consistent while the primary does not,
+     * something rewrites the primary after this point; if both disagree with the
+     * harness, its BUS_CLOCK constant is the wrong one. */
+    gNdsR204FpsHudShadowX10 = fps_x10;
+    gNdsR204FpsHudShadowFrames = elapsed_frames;
+    gNdsR204FpsHudShadowTicks = elapsed_ticks;
+    gNdsR204FpsHudShadowBusClock = (u32)BUS_CLOCK;
+#endif
     sBattleFpsHudLastTick = now_tick;
     sBattleFpsHudLastPresentedFrames = presented_frames;
     sBattleFpsHudLastLogicFrames = logic_frames;

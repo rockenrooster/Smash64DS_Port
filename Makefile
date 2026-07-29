@@ -164,6 +164,10 @@ NDS_R2_DELTA_PATH_ITCM ?= 0
 # repeating an asset already loaded, over a working set of 29 distinct
 # animations. Every failure path degrades to the uncached load.
 NDS_R2_ANIM_CACHE ?= 0
+# R2-04 E2. Shadow copy of the FPS-HUD publish, from the same locals in the
+# same breath, to separate "something rewrites the primary afterwards" from
+# "the harness BUS_CLOCK constant is wrong". Lab probe.
+NDS_R204_FPSHUD_SHADOW ?= 0
 # Task 103 lab probe (docs/optimization/RASTER_AXIS_CAMPAIGN.md fork B).
 # Task 99 left the stage bucket ~89% fixed and Task 100 refuted the last
 # proposed currency for it, so ~331,300 ticks/frame are still unattributed.
@@ -1946,6 +1950,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_SPAN_LEAN_TIMING $(NDS_R2_SPAN_LEAN_TIMING)'; \
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
+		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
