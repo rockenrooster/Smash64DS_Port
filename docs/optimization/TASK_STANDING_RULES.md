@@ -1070,3 +1070,33 @@ Third instance this cycle of a plausible headline surviving until one more
 counter was added, after E13's inert offscreen probe and E19's collapsed
 geometry. Each cost one build to catch and each would otherwise have been acted
 on.
+
+### A redundancy's share is not its cost (R2-03 E22/E23, 2026-07-28)
+
+E22 measured that **96.7% of the fighter's per-root matrix loads re-push an
+identical projection** — 29 of 30 a frame. E23 built the skip, proved it engaged
+on **93.8%** of loads with its own counters, and measured **−3,008 FTR P50**:
+0.27% of the frame, under the placement floor, and almost exactly the ~2,900 a
+first-principles count predicts. Reverted.
+
+The repeated work was GX FIFO traffic, and E14 had already established that this
+path never backpressures — the FIFO is empty at both ends of every submission.
+**FIFO writes are stores, and stores are cheap.** A 96.7% redundancy rate on
+cheap work is worth less than a 7% rate on expensive work.
+
+So a redundancy count is only half a proposal. **Before pricing a cut from a
+share, price one instance of the thing being repeated.** In this renderer, "how
+often" is a bad proxy for "how much" whenever the repeated work is FIFO traffic;
+it is a good proxy only for work that touches memory the CPU must wait on.
+
+Two further consequences worth keeping:
+
+- **Score each field a call writes, not the call.** E22's first pass compared
+  projection and modelview jointly and reported *zero* redundancy, because the
+  modelview genuinely changes every root. The 96.7% only appeared when the two
+  halves were scored separately. This is E21's rule one level down: a call that
+  writes several things needs one counter per thing.
+- **A gain the instrument cannot resolve from zero is not a gain to keep.** The
+  standing rule to accumulate small correctness-preserving wins applies to wins
+  that can be seen. Keeping this one would have added a hot-path `memcmp` and 64
+  bytes of BSS for an unresolvable delta, which is exactly how E8 cost +16,301.

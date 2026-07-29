@@ -9,7 +9,14 @@ param(
     [ValidateRange(1,1000000)][int]$StartFrame = 439,
     [ValidateRange(2,600)][int]$WindowFrames = 30,
     [ValidateRange(30,3600)][int]$TimeoutSeconds = 900,
-    [string]$JsonOut = ''
+    [string]$JsonOut = '',
+    [string[]]$Counters = @(
+        'gNdsTask91WalkTicks',
+        'gNdsTask91ValidateTicks',
+        'gNdsTask91DrawCalls',
+        'gNdsTask91NativeEligible'
+    ),
+    [string[]]$ExtraDefines = @()
 )
 
 # Task 91 E1. Times the two phases COMPILER_FIRST_ARCHITECTURE.md's Task 79
@@ -37,12 +44,10 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-battle-playable-tickhud-hwtri'
 
-$counters = @(
-    'gNdsTask91WalkTicks',
-    'gNdsTask91ValidateTicks',
-    'gNdsTask91DrawCalls',
-    'gNdsTask91NativeEligible'
-)
+# The counter set and the extra build defines are parameters (-Counters,
+# -ExtraDefines) because every experiment in this phase needs a different pair,
+# and hand-editing them here was the routine step before each run. The rest of
+# the script reads $counters, which is the same variable as $Counters.
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot `
@@ -79,7 +84,8 @@ try {
     if (-not $NoBuild) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-        make -C $root "TARGET=$target" "BUILD=$Build" NDS_TASK91_DRAW_PHASE_CENSUS=1 -j16
+        make -C $root "TARGET=$target" "BUILD=$Build" `
+            NDS_TASK91_DRAW_PHASE_CENSUS=1 @ExtraDefines -j16
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     foreach ($path in @($rom, $elf, $Gdb)) {
@@ -114,8 +120,17 @@ try {
         'break ndsBattlePlayableFrameCompleteMarker',
         'commands',
         'silent',
+        # Stop only at the two sample frames. Without the second clause the
+        # breakpoint stops on every frame after StartFrame, the script's single
+        # `continue` returns one frame later, and the window silently collapses
+        # to 2 frames however large -WindowFrames is.
         "if gNdsBattlePlayablePacingPresentedFrames < $StartFrame",
         'continue',
+        'end',
+        "if gNdsBattlePlayablePacingPresentedFrames > $StartFrame",
+        "if gNdsBattlePlayablePacingPresentedFrames < $endFrame",
+        'continue',
+        'end',
         'end',
         'end',
         'continue'

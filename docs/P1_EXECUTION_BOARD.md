@@ -201,6 +201,52 @@ and normals must not be rotated by a projection. Same fix, wrong cause.
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E17_SplitMatrixLoad_20260728.md`.
 
+## R2-03 E22/E23 — the last unpriced item resolves into E16 (2026-07-28)
+
+**E22 measurement stands. E23 implementation REVERTED — sub-floor.** The per-root
+matrix bracket was the phase's last unpriced item. It is now priced, and it is
+not where the money is.
+
+480 presented frames, `NDS_R2_FIGHTER_HW_MTX=1`, per frame:
+
+| counter | per frame | share |
+|---|---:|---:|
+| matrix loads performed | 30.0 | |
+| elided by the existing generation check | **0.0** | 0% |
+| **identical projection** | **29.0** | **96.7%** |
+| identical modelview | 0.0 (6 in 480 frames) | 0.04% |
+
+The modelview is genuinely per-root; the projection is per-frame camera data
+re-pushed 29 extra times. E23 skipped it, proved engagement from the same run
+(`Skipped=16,750 / Loaded=1,114`, 93.8%), and measured **−3,008 FTR P50 /
+−4,800 WORK P50** — under the 5,000–7,000 placement floor, and matching a
+first-principles estimate of ~2,900. Reverted rather than keep a hot-path
+`memcmp` and 64 bytes of BSS for a delta the instrument cannot resolve from zero.
+
+**The durable lesson: a redundancy's share is not its cost.** The repeated work
+is GX FIFO traffic, and E14 already proved this path never backpressures. FIFO
+writes are stores; stores are cheap. A 96.7% redundancy rate on cheap work is
+worth less than a 7% rate on expensive work. Price one instance before pricing a
+cut from a share.
+
+Also: E22's first pass compared projection and modelview *jointly* and reported
+**zero** redundancy. The 96.7% only appeared when the halves were scored
+separately — E21's rule one level down, so a call that writes several things
+needs one counter per thing.
+
+**Two things settled for free.** E17's candidate and control emit
+`P0HardwareTriangleCount = 136,640` over the same 480-frame window, identical to
+the digit — E17 changes no geometry at all, a stronger check than it shipped
+with. (E20/E21's "320/frame" was that quantity over a different window; over
+439..919 the rate is 284.7. The control must come from the same window.)
+
+**Queue after this: nothing is unpriced.** The per-root matrix load is ~6,000–
+8,000 in total; the balance of that bracket is
+`ndsRendererNativeApplyRootLightPreamble`, which is E16's territory. **E16 is the
+only cut left in the phase**, and E22 folded the last open item into it.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E22_E23_ProjectionReload_20260728.md`.
+
 ## R2-03 E21 — the state-delta guard is REFUTED (2026-07-28)
 
 **E20's cut does not exist. Do not build it.** The section below stands as the
@@ -237,6 +283,7 @@ each costing one build to catch.
 (35,000–50,000), E17 awaits visual approval, and the per-root matrix work
 (~40,000, inflated bracket) is the only unpriced item left worth measuring. E17
 already establishing E16's vector matrix now matters more, not less.
+*(E22 has since priced that item and folded it into E16.)*
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E21_StateGuardRefuted_20260728.md`.
 

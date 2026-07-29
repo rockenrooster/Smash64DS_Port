@@ -13256,6 +13256,24 @@ static void ndsRendererLoadHardwareRawComposedMatrix(
  * ndsRendererExecuteNativeFighterOwnerProduction lives in `.itcm.native_fighter`
  * and ITCM has no room -- inlining this overflowed the region by 72 bytes. It
  * runs once per root, so an out-of-line call costs nothing measurable. */
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+/* R2-03 E22. The per-root bracket is ~40,000/frame and E17 already took 17,600
+ * of it. What remains is ~28 matrix loads a frame, deduplicated by a generation
+ * counter. E21's rule applies directly: the generation is the TARGET identity,
+ * and the question is WRITE identity -- how many loads that the generation check
+ * lets through are re-loading a matrix the hardware already holds. Only that
+ * fraction is elidable by a content compare. */
+u32 gNdsR2MtxLoadCalls;
+u32 gNdsR2MtxLoadElidedByGeneration;
+u32 gNdsR2MtxLoadPerformed;
+u32 gNdsR2MtxLoadIdenticalContent;
+u32 gNdsR2MtxLoadIdenticalProjection;
+u32 gNdsR2MtxLoadIdenticalModelview;
+static NDSRendererMatrix20p12 sNdsR2MtxLastProjection;
+static NDSRendererMatrix20p12 sNdsR2MtxLastModelview;
+static u8 sNdsR2MtxLastValid;
+#endif
+
 static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *modelview,
@@ -13270,11 +13288,26 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
     {
         return;
     }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsR2MtxLoadCalls++;
+    /* Anyone else loading a matrix invalidates the content memo, or the compare
+     * below would report "same as my last load" while the hardware holds
+     * someone else's matrix. Conservative direction. */
+    if ((sNdsRendererHardwareMatrixLoaded == 0u) ||
+        (sNdsRendererHardwareMatrixMode !=
+         NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED))
+    {
+        sNdsR2MtxLastValid = 0u;
+    }
+#endif
     if ((sNdsRendererHardwareMatrixLoaded != 0u) &&
         (sNdsRendererHardwareMatrixMode ==
          NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED) &&
         (sNdsRendererHardwareMatrixGeneration == generation))
     {
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        gNdsR2MtxLoadElidedByGeneration++;
+#endif
         return;
     }
 
@@ -13285,12 +13318,35 @@ static void __attribute__((noinline)) ndsRendererLoadHardwareSplitMatrices(
             scaled_modelview.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
     }
 
-    ndsRendererHardwareEndBatch();
-    ndsRendererCopyMtx20p12ToM4x4(projection, &projection_hw);
-    ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    gNdsR2MtxLoadPerformed++;
+    if (sNdsR2MtxLastValid != 0u)
+    {
+        /* Scored separately: the loader writes two matrices per call and only
+         * the modelview is per-root. A joint compare reports "nothing is
+         * redundant" while the projection half may be redundant every time. */
+        u32 same_projection = (memcmp(&sNdsR2MtxLastProjection, projection,
+                                      sizeof(NDSRendererMatrix20p12)) == 0);
+        u32 same_modelview = (memcmp(&sNdsR2MtxLastModelview, &scaled_modelview,
+                                     sizeof(NDSRendererMatrix20p12)) == 0);
+        gNdsR2MtxLoadIdenticalProjection += same_projection;
+        gNdsR2MtxLoadIdenticalModelview += same_modelview;
+        gNdsR2MtxLoadIdenticalContent += (same_projection & same_modelview);
+    }
+    sNdsR2MtxLastProjection = *projection;
+    sNdsR2MtxLastModelview = scaled_modelview;
+    sNdsR2MtxLastValid = 1u;
+#endif
 
+    ndsRendererHardwareEndBatch();
+    /* R2-03 E23 tried skipping this half when unchanged -- E22 measured 29 of
+     * the 30 per-root loads a frame re-push an identical projection. Engaged on
+     * 93.8% of loads and worth -3,008 FTR P50, under the placement floor. The
+     * FIFO writes are simply cheap; see the E22/E23 write-up. Reverted. */
+    ndsRendererCopyMtx20p12ToM4x4(projection, &projection_hw);
     ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
     glLoadMatrix4x4(&projection_hw);
+    ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     glLoadMatrix4x4(&modelview_hw);
 
