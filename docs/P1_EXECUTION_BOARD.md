@@ -31,6 +31,52 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E46 — the delta path into ITCM: −3,128/frame, NOT graduated (2026-07-29)
+
+E45 left ~186 ticks per delta application unexplained after eliminating the tile
+republish (~23, E44), the invalidation macro (one store) and the span entry (~33,
+E45). The census ELF names the remaining candidate outright:
+
+| symbol | address | where |
+|---|---|---|
+| `ndsRendererNativeApplyStateDelta` | `0x01ff9934` | ITCM |
+| `ndsRendererNativeApplyStateSpan` | `0x02003a14` | main RAM |
+| `ndsRendererSyncTextureTile` | `0x02003ae8` | main RAM |
+| `ndsRendererRecordSetTile` | `0x0200d4e8` | main RAM |
+
+The switch was already ITCM-resident; the loop that calls it and every helper it
+dispatches to were not. So all 134.5 before-span applications a frame left
+zero-wait ITCM for icache-served main RAM and came back. `.itcm` had **2,912
+bytes free** and the whole path is ~1,088.
+
+`NDS_R2_DELTA_PATH_ITCM=1`, placement and nothing else:
+
+| arm | before-span | after-span | total |
+|---|---:|---:|---:|
+| lean baseline | 26,944.3 | 13,703.7 | 40,648.0 |
+| **delta path in ITCM** | **24,494.8** | **13,025.2** | **37,520.0** |
+| | −2,449.5 | −678.5 | **−3,128.0** |
+
+Delta counts identical across arms (134.5 / 47.9 / 46.4 epochs) — the same work,
+fetched faster. Per delta the two spans agree at **−18.2 and −14.2 ticks**, two
+independent populations, which is the cross-check that separates a real effect
+from layout luck on a change that is *itself* a relocation. `.itcm` goes 29,856 →
+30,872, **1,896 bytes still free**.
+
+**Not graduated, and the flag stays default 0.** −3,128 is below the 5,000–7,000
+whole-frame build-placement noise floor, so the bracket result does not by itself
+license a frame-level claim. **Owed before default-on: a `WORK` measurement
+showing the gain survives at frame level, and Boundary.** It is placement-only
+with no behaviour change, so neither is expected to be interesting — but that is
+the argument E40 also had, and E40 was null.
+
+**It does not explain the 186.** Instruction fetch is confirmed as a real
+component and it is ~16 ticks of ~186, under 10%. Four mechanisms are now
+measured and none is the driver: republish ~23, entry ~33, fetch ~16,
+invalidation ~1. Roughly 110 ticks per application remain unattributed, and that
+residue — not any of these — is what E26's fold has to be sized against. The next
+instrument is R2-00a's stall attributor rather than another guess.
+
 ## R2-03 E44/E45 — E26 re-scoped, and two wrong answers on the way (2026-07-29)
 
 With E43's corrected 26,944 in hand, the question was where inside the

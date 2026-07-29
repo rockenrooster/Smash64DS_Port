@@ -81,6 +81,27 @@ static NDSRendererProfileOwner sNdsRendererRuntimeOwner;
 #define NDS_TASK82_EVICTED_HOT_CODE NDS_RENDERER_HOT_CODE
 #endif
 
+/* R2-03 E46. ndsRendererNativeApplyStateDelta is already ITCM-resident, but the
+ * helpers its switch calls are not: in the census ELF the switch sits at
+ * 0x01ff9934 while ndsRendererRecordSetTile is at 0x0200d4e8 and
+ * ndsRendererNativeApplyStateSpan -- the loop itself -- at 0x02003a14. So every
+ * one of the before-span's 134.5 applications a frame leaves zero-wait ITCM for
+ * icache-served main RAM and comes back.
+ *
+ * E45 left ~186 ticks per application unexplained after ruling out the tile
+ * republish (~23 ticks, E44), the invalidation macro (one store) and the span
+ * entry (~33 ticks). Instruction fetch is what is left, and the repo emulator
+ * models icache, so it is measurable. The whole path is ~1,088 bytes against
+ * 2,912 free in .itcm.
+ *
+ * Placement and nothing else, in the spirit of Task 82 -- no behaviour changes,
+ * so a win is attributable to fetch and a null refutes the mechanism. */
+#if NDS_R2_DELTA_PATH_ITCM
+#define NDS_R2_DELTA_PATH_CODE NDS_TASK82_ITCM_CODE
+#else
+#define NDS_R2_DELTA_PATH_CODE
+#endif
+
 /* Profiles 0/1 publish the shipping contract through the compact frame
  * summary.  Profile 1 is the low-frequency O2 coarse build, so it must not
  * maintain the generic per-command proof ledger either.  Profile 2 retains
@@ -5466,8 +5487,8 @@ static void ndsRendererRecordCull(NDSRendererStats *stats, u32 w0, u32 w1)
 
 static void ndsRendererSyncTextureTile(NDSRendererStats *stats);
 
-static void ndsRendererRecordTextureState(NDSRendererStats *stats,
-                                          u32 w0, u32 w1)
+static void NDS_R2_DELTA_PATH_CODE
+ndsRendererRecordTextureState(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     if (stats == NULL)
     {
@@ -5521,7 +5542,8 @@ static u32 ndsRendererActiveTextureTile(const NDSRendererStats *stats)
     return NDS_RENDERER_RENDER_TILE;
 }
 
-static void ndsRendererSyncTextureTile(NDSRendererStats *stats)
+static void NDS_R2_DELTA_PATH_CODE
+ndsRendererSyncTextureTile(NDSRendererStats *stats)
 {
     u32 tile_index;
     const NDSRendererTileState *tile;
@@ -5565,8 +5587,8 @@ static void ndsRendererSyncTextureTile(NDSRendererStats *stats)
     stats->texture_render_tile_flags = flags;
 }
 
-static void ndsRendererRecordSetTile(NDSRendererStats *stats,
-                                     u32 w0, u32 w1)
+static void NDS_R2_DELTA_PATH_CODE
+ndsRendererRecordSetTile(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     u32 tile;
     u32 fmt;
@@ -5664,8 +5686,8 @@ static void ndsRendererCaptureTextureLoad(NDSRendererStats *stats)
                    (stats->texture_tiles[tile].set_seen != 0u)) ? TRUE : FALSE;
 }
 
-static void ndsRendererRecordLoadBlock(NDSRendererStats *stats,
-                                       u32 w0, u32 w1)
+static void NDS_R2_DELTA_PATH_CODE
+ndsRendererRecordLoadBlock(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     if (stats == NULL)
     {
@@ -5720,8 +5742,8 @@ static void ndsRendererRecordLoadTile(NDSRendererStats *stats,
     ndsRendererCaptureTextureLoad(stats);
 }
 
-static void ndsRendererRecordSetTileSize(NDSRendererStats *stats,
-                                         u32 w0, u32 w1)
+static void NDS_R2_DELTA_PATH_CODE
+ndsRendererRecordSetTileSize(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     u32 tile_index;
     u32 uls;
@@ -5762,8 +5784,8 @@ static void ndsRendererRecordSetTileSize(NDSRendererStats *stats,
     ndsRendererSyncTextureTile(stats);
 }
 
-static void ndsRendererRecordSetImage(NDSRendererStats *stats,
-                                      u32 w0, u32 w1)
+static void NDS_R2_DELTA_PATH_CODE
+ndsRendererRecordSetImage(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     if (stats == NULL)
     {
@@ -5777,7 +5799,8 @@ static void ndsRendererRecordSetImage(NDSRendererStats *stats,
     stats->texture_image = w1;
 }
 
-static void ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
+static void NDS_R2_DELTA_PATH_CODE
+ndsRendererRecordLoadTlut(NDSRendererStats *stats, u32 w1)
 {
     if (stats == NULL)
     {
@@ -5834,8 +5857,8 @@ static void ndsRendererProfileCombineMode(u32 w0, u32 w1)
 }
 #endif
 
-static void ndsRendererRecordSetCombine(NDSRendererStats *stats,
-                                        u32 w0, u32 w1)
+static void NDS_R2_DELTA_PATH_CODE
+ndsRendererRecordSetCombine(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     if (stats == NULL)
     {
@@ -16402,7 +16425,8 @@ static u32 sNdsR2DeltaLastFrame[70];
 #endif
 #endif
 
-static void ndsRendererNativeApplyStateSpan(
+static void NDS_R2_DELTA_PATH_CODE
+ndsRendererNativeApplyStateSpan(
     u16 first,
     u32 count,
     u32 sync_count,

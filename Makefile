@@ -151,6 +151,13 @@ NDS_TASK91_DRAW_PHASE_CENSUS ?= 0
 # out, so the bracket measures the replay's real work. E26 is sized against that
 # number, not against 33,708.
 NDS_R2_SPAN_LEAN_TIMING ?= 0
+# R2-03 E46. Places the whole fighter state-delta path in ITCM. The switch is
+# already there (0x01ff9934 in the census ELF); the span loop (0x02003a14) and
+# the Record* helpers it calls (0x0200d4e8) are not, so every one of the
+# before-span's 134.5 applications a frame leaves zero-wait ITCM for
+# icache-served main RAM. ~1,088 bytes against 2,912 free in .itcm. Placement
+# only -- no behaviour change, so a win is attributable to instruction fetch.
+NDS_R2_DELTA_PATH_ITCM ?= 0
 # Task 103 lab probe (docs/optimization/RASTER_AXIS_CAMPAIGN.md fork B).
 # Task 99 left the stage bucket ~89% fixed and Task 100 refuted the last
 # proposed currency for it, so ~331,300 ticks/frame are still unattributed.
@@ -1911,6 +1918,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_LAB_NO_CULL $(NDS_LAB_NO_CULL)'; \
 		echo '#define NDS_TASK91_DRAW_PHASE_CENSUS $(NDS_TASK91_DRAW_PHASE_CENSUS)'; \
 		echo '#define NDS_R2_SPAN_LEAN_TIMING $(NDS_R2_SPAN_LEAN_TIMING)'; \
+		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
