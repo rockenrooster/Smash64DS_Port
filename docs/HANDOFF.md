@@ -143,9 +143,8 @@ its Makefile block flag-identical.
 from `nproc` (32 here); an explicit `-j` overrides and caps it. One build at a
 time regardless — generators write to shared paths outside `$(BUILD)`.
 
-Preserve canonical mode 163, intrinsic renderer mode 9, mip 0, static texture
-residency, source countdown, Dream Land water frozen at source frame 0, and Task
-16 compare/i2f/addsub `1/1/1`. Do not edit `decomp/`. **Bug #10 is FIXED and
-folded in** — `06992f10812`, cherry-picked from `2cbc6189d15` to preserve
-authorship, with a host fixture, a structural pin, and the `pause_under20`
-camera oracle.
+Preserve canonical mode 163, renderer mode 9, mip 0, static texture residency,
+source countdown, Dream Land water at source frame 0, Task 16 `1/1/1`. Do not
+edit `decomp/`. **Bug #10 is FIXED and folded in** — `06992f10812`,
+cherry-picked from `2cbc6189d15` to preserve authorship, with a host fixture, a
+structural pin, and the `pause_under20` oracle.
