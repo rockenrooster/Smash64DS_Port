@@ -205,6 +205,16 @@ NDS_R2_MATERIAL_DYNAMIC ?= 0
 # E47) and each cost a build; this measures the branch instead. Delete with the
 # experiment.
 NDS_R2_FLASH_PROBE ?= 0
+# R2-03 E49. Teaches the native fighter owner the precedence E48 measured: an
+# epoch whose vertices carry a valid vertex colour and no material is emitted
+# from that colour raw and is NOT lit. The generic path has always done this
+# (ndsRendererHardwarePackedValidVertexColor never calls LitShadeColor on that
+# route); the owner decided epoch_lit from geometry_mode & LIGHTING alone and ran
+# the geometry engine's light, which is E32's dark-maroon hurt flash. Drops
+# POLY_FORMAT_LIGHT0 for such an epoch and writes GFX_COLOR from the baked dense
+# rgba instead of GFX_NORMAL at all four emit sites. Requires
+# NDS_R2_MATERIAL_DYNAMIC for the epoch predicate.
+NDS_R2_UNLIT_VERTEX_EPOCH ?= 0
 # R2-04 E2. Shadow copy of the FPS-HUD publish, from the same locals in the
 # same breath, to separate "something rewrites the primary afterwards" from
 # "the harness BUS_CLOCK constant is wrong". Lab probe.
@@ -2011,6 +2021,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
+		echo '#define NDS_R2_UNLIT_VERTEX_EPOCH $(NDS_R2_UNLIT_VERTEX_EPOCH)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \

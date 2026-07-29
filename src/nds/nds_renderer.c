@@ -17419,6 +17419,30 @@ static inline u32 ndsRendererR2MaterialChannel(
 
 /* Cleared per owner execute; set once the light vector has been written. */
 static u8 sNdsR2LightVectorWritten;
+
+#if NDS_R2_UNLIT_VERTEX_EPOCH
+/* R2-03 E49. Set per epoch by the shade pass, read by the run prepare and by the
+ * four emit loops -- all of which run after it for the same epoch.
+ *
+ * E48 measured the rule the native owner was missing: when the generic path sees
+ * a valid vertex colour and no material it emits that colour raw and never
+ * lights it (273 of 273 vertices on hitlag frame 911, material 0,
+ * use_material_color FALSE). The native owner decided `epoch_lit` from
+ * `geometry_mode & LIGHTING` alone and ran the geometry engine's light, which is
+ * E32's dark-maroon hurt flash. */
+static u8 sNdsR2EpochUnlitVertexColor;
+
+/* Byte-for-byte the expression ndsRendererHardwarePackedResolvedColor uses on
+ * its no-material route, so the two paths cannot drift. */
+static inline u16 ndsRendererR2DenseVertexColor15(u32 dense_id)
+{
+    u32 rgba = sNdsNativeFighterDenseVertices[dense_id].rgba;
+
+    return RGB15((u8)((rgba >> 27) & 0x1fu),
+                 (u8)((rgba >> 19) & 0x1fu),
+                 (u8)((rgba >> 11) & 0x1fu));
+}
+#endif
 /* Engagement proof. The ambient-only bisect showed the material path working
  * end to end while the diffuse term stayed zero, which leaves only the light
  * vector -- and "the write never ran" and "the write ran and did not stick" are
@@ -17668,6 +17692,13 @@ ndsRendererNativeShadeProductionActions(
 #if NDS_R2_MATERIAL_DYNAMIC
     (void)policy;
 #endif
+#if NDS_R2_UNLIT_VERTEX_EPOCH
+    /* R2-03 E49. Same two predicates the generic path keys on, evaluated once
+     * per epoch (46.4/frame) rather than per vertex. */
+    sNdsR2EpochUnlitVertexColor =
+        ((ndsRendererHardwareUseVertexColor(stats) != FALSE) &&
+         (ndsRendererHardwareUseMaterialColor(stats) == FALSE)) ? 1u : 0u;
+#endif
     if (epoch->action_count == 0u)
     {
         return TRUE;
@@ -17766,7 +17797,14 @@ ndsRendererNativeShadeProductionActions(
      * here and drew identical geometry while leaving that load count at zero,
      * which the Boundary harness caught as the complete-stage owner having
      * entered the generic transform path. Only the inner loop is skipped. */
-    if (epoch_lit != FALSE)
+    if ((epoch_lit != FALSE)
+#if NDS_R2_UNLIT_VERTEX_EPOCH
+        /* The polygon attribute drops POLY_FORMAT_LIGHT0 for this epoch, so the
+         * engine ignores diffuse/ambient -- writing them would be dead FIFO
+         * traffic, and the light vector write is a push/identity/pop bracket. */
+        && (sNdsR2EpochUnlitVertexColor == 0u)
+#endif
+        )
     {
         u32 diffuse;
         u32 ambient;
@@ -18577,8 +18615,16 @@ ndsRendererNativePrepareProductionRun(
         state->texture_prepare_poly_fmt =
             expected_poly_cull | POLY_ALPHA(31u) |
 #if NDS_R2_FIGHTER_HW_LIGHT
-            /* R2-03 E16. Enables the one hardware light the fighter needs. */
+            /* R2-03 E16. Enables the one hardware light the fighter needs.
+             * R2-03 E49: except on an epoch the generic path would draw from
+             * its raw vertex colour, where lighting is what produced E32's
+             * dark-maroon hurt flash. This is the only site in the renderer
+             * that sets a light bit. */
+#if NDS_R2_UNLIT_VERTEX_EPOCH
+            ((sNdsR2EpochUnlitVertexColor != 0u) ? 0u : POLY_FORMAT_LIGHT0) |
+#else
             POLY_FORMAT_LIGHT0 |
+#endif
 #endif
             POLY_ID(stats->texture_combine_count &
                     NDS_RENDERER_POLY_ID_MASK);
@@ -18748,7 +18794,16 @@ ndsRendererNativeEmitProductionRawTexturedRun(
         ndsRendererHardwareWriteColorWord(
             ndsRendererNativeLabRunTint(run_index));
 #elif NDS_R2_FIGHTER_HW_LIGHT
-        /* R2-03 E16. One FIFO word either way; the engine lights it. */
+        /* R2-03 E16. One FIFO word either way; the engine lights it.
+         * R2-03 E49: unless the epoch draws its raw vertex colour. */
+        #if NDS_R2_UNLIT_VERTEX_EPOCH
+        if (sNdsR2EpochUnlitVertexColor != 0u)
+        {
+            ndsRendererHardwareWriteColorWord(
+                ndsRendererR2DenseVertexColor15(dense_id));
+        }
+        else
+        #endif
         ndsRendererHardwareWriteNormalWord(
             sNdsNativeFighterDenseNormals[dense_id]);
 #else
@@ -18782,6 +18837,14 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
         ndsRendererHardwareWriteColorWord(
             ndsRendererNativeLabRunTint(run_index));
 #elif NDS_R2_FIGHTER_HW_LIGHT
+#if NDS_R2_UNLIT_VERTEX_EPOCH
+        if (sNdsR2EpochUnlitVertexColor != 0u)
+        {
+            ndsRendererHardwareWriteColorWord(
+                ndsRendererR2DenseVertexColor15(dense_id));
+        }
+        else
+#endif
         ndsRendererHardwareWriteNormalWord(
             sNdsNativeFighterDenseNormals[dense_id]);
 #else
@@ -18833,6 +18896,14 @@ ndsRendererNativeEmitProductionPrimitiveGroups(
                 &sNdsNativeFighterPreparedDense[dense_id];
 
 #if NDS_R2_FIGHTER_HW_LIGHT
+            #if NDS_R2_UNLIT_VERTEX_EPOCH
+            if (sNdsR2EpochUnlitVertexColor != 0u)
+            {
+                ndsRendererHardwareWriteColorWord(
+                    ndsRendererR2DenseVertexColor15(dense_id));
+            }
+            else
+            #endif
             ndsRendererHardwareWriteNormalWord(
                 sNdsNativeFighterDenseNormals[dense_id]);
 #else
@@ -18894,6 +18965,14 @@ ndsRendererNativeEmitProductionCrossRun(
             active_palette_slot = palette_slot;
         }
 #if NDS_R2_FIGHTER_HW_LIGHT
+        #if NDS_R2_UNLIT_VERTEX_EPOCH
+        if (sNdsR2EpochUnlitVertexColor != 0u)
+        {
+            ndsRendererHardwareWriteColorWord(
+                ndsRendererR2DenseVertexColor15(dense_id));
+        }
+        else
+        #endif
         ndsRendererHardwareWriteNormalWord(
             sNdsNativeFighterDenseNormals[dense_id]);
 #else

@@ -32,6 +32,56 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E49 — DO NOT GRADUATE, and it proves the flash is structurally out of reach (2026-07-29)
+
+Built E48's fix: epochs the generic path would draw from a raw vertex colour drop
+`POLY_FORMAT_LIGHT0` and emit `GFX_COLOR` from the baked dense `rgba` at all four
+emit sites. Flag `NDS_R2_UNLIT_VERTEX_EPOCH`, default 0 and staying there.
+
+Top-screen diff against the reference, E48's frame pairs:
+
+| frame | E47 arm | **E49 arm** | bounding box |
+|---|---:|---:|---|
+| 910 hitlag | 4,025 | **1,436** | x 147..223 y 142..197 |
+| 911 hitlag | 4,104 | **1,539** | x 146..223 y 138..201 |
+| 903 control | **0** | **780** | x 153..246 y 117..234 |
+| 904 control | **0** | **838** | x 153..245 y 118..223 |
+
+**Unlighting is directionally right**: the hitlag delta falls 64% and its bounding
+box collapses from the whole screen to the fighter's flash region. **But the
+control regressed from pixel-perfect to 780/838**, so the predicate also claims
+ordinary epochs, where the native owner's lit appearance is the accepted one and
+the generic path never runs to contradict it (E48: 0 calls on frame 904).
+
+### Why the hitlag delta stops at 1,436 instead of going to zero
+
+`src/nds/nds_native_fighter_owner.generated.inc` declares
+`static const NDSNativeDenseVertex n[541]` — **the dense vertex colours are
+compile-time constants.** The hurt flash is a *runtime* rewrite of the vertex
+colours the display list feeds `state->vertex_colors[]`. No emit sourced from the
+baked table can reproduce it, at any indentation. E49 therefore draws the fighter
+unlit in its *un-flashed* colours: right shape, wrong values.
+
+**This is the finding, and it retires a whole family of candidate fixes.** Every
+approach that reads the generated vertex data is structurally incapable of
+showing the flash. The remaining options are:
+
+1. **A per-epoch constant colour.** The reference flash is a uniform white
+   silhouette, so if it is genuinely uniform it needs one colour per epoch, not
+   per-vertex data — a runtime override the emit can apply without touching the
+   baked table. Cheapest, and the only one that keeps E32's tick win.
+2. **Keep the fallback for flash frames only.** E32 then covers the shuffle but
+   not the flash, and the `FTR` excursion survives on the frames where the flash
+   is live. Costs most of E32's −35,648.
+3. **Approximate the flash by another mechanism** (polygon alpha, a tint pass).
+   Gates on the fidelity budget and the owner's eye rather than on a pixel match.
+
+Option 1 is the one to price, and pricing it starts by measuring whether the
+flash colour is actually uniform across the fighter's vertices on a hitlag frame
+— which the E48 probe can answer by recording min/max of `vertex_color` instead
+of a branch count. Measure before building; this defect has now cost seven
+experiments, six of which were reasoned rather than measured.
+
 ## R2-03 E48 — E32's regression MEASURED after six wrong guesses (2026-07-29)
 
 **The flash is a raw vertex colour, and the native owner lights it.** Measured,
