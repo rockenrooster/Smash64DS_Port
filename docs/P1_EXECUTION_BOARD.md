@@ -31,6 +31,44 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E43 — the replay bracket was pricing its own instrument (2026-07-29)
+
+E38 sized E26's before-span at **33,708/frame** and that is the number the phase
+has been planning against. It is 20% wrong, and the reason was already written
+down in `docs/HANDOFF.md` as an unquantified caution: `ApplyStateDelta` opens
+with a per-delta census block — E20's identical-operand arrays and E25c's effect
+histogram — and `ndsRendererNativeApplyStateSpan`'s loop carries a second one,
+E20's frame-stamp check. Both sit **inside** E38's bracket and run 134.5 times a
+frame on the before-span alone.
+
+`NDS_R2_SPAN_LEAN_TIMING=1` keeps E38's brackets and compiles both per-delta
+blocks out. Same ROM target, same window (tick-HUD, frames 439..919):
+
+| arm | before-span | after-span | total replay |
+|---|---:|---:|---:|
+| census in bracket (E38) | 33,707.6 | 16,243.3 | 49,951 |
+| **census out of bracket** | **26,944.3** | **13,703.7** | **40,648** |
+| instrument | 6,763.3 | 2,539.6 | 9,303 |
+
+Delta counts are identical across arms (134.5 / 47.9 / 46.4 epochs), so the arms
+are doing the same work. The instrument prices out at **50.3 ticks/delta on the
+before-span and 53.0 on the after-span** — measured independently and agreeing to
+5%, which is the cross-check that this is the instrument and not a code-placement
+artefact.
+
+**Consequences.** E26's before-span target is **26,944, not 33,708**. The replay
+is **40,648, not 49,951**. The real per-delta cost is 200.3 (before) and 286.1
+(after), not 250.6 and 339.1. E26 is still the largest single mechanism left in
+R2-03 and still worth building — it is sized 20% smaller, not refuted.
+
+### Standing rule this earned
+
+A timing bracket must not enclose its own instrument. These two census blocks
+predate the brackets and were correct when they were only counting; E38 wrapped a
+timer around them without noticing. Any bracket around a per-item loop should be
+built with the per-item census compiled out, and if both are wanted they are two
+arms, not one build. Recorded in `docs/optimization/TASK_STANDING_RULES.md`.
+
 ## R2-03 E42 — E32's dark fighter is NOT `USE_VERTEX`: BUILT, REFUTED (2026-07-29)
 
 E41 left the E32 regression traced to the native owner's material-colour path and
@@ -214,11 +252,16 @@ frame):
 | after | 16,243.3 | 47.9 | 339.1 |
 | **total replay** | **49,951** | 182.4 | |
 
+> **Superseded in part by E43.** Every tick figure in this table is inflated by
+> the per-delta census sitting inside the bracket: the before-span is **26,944**,
+> the after-span **13,704**, the replay **40,648**. The *split* below — 67.5% /
+> 73.7% — survives, because both arms move together. Use 26,944 as E26's target.
+
 **The before-span is 67.5% of the cost and 73.7% of the deltas — and it is the
 half with no ordering problem.** So E26 reduces to: bake the resolved
 post-before-span state per epoch, install it, leave `ApplyMaterial` and the
-after-span exactly as they are. Target **33,708/frame** for a change with no
-material interaction to reason about.
+after-span exactly as they are. Target **26,944/frame** (E43-corrected) for a
+change with no material interaction to reason about.
 
 Install every field *except* `prim_color`/`env_color` and their companions: E34-b
 showed those are the only state that varies at runtime, so leaving whatever the

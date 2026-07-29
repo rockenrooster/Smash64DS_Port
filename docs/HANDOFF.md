@@ -182,9 +182,12 @@ short version is that the state replay (61,441) coupled to the run prepare
 (39,043) is still the largest single mechanism and is the switch plan's own
 R2-03 bullet, specified in
 `ClaudeOpus5_R203_E26_Spec_GeneratedEpochState_20260728.md` **with its §2a
-correction**. Two cautions before sizing it: the State bracket is inflated by a
-per-delta census block that sits inside it, and DTCM is now full at its safe
-margin, so that lever is harvested.
+correction**. Two cautions before sizing it. First, that inflation warning is now
+a measured number: **E43 priced the per-delta census at 6,763/frame on the
+before-span and 2,540 on the after-span**, so the replay is **40,648**, not
+49,951, and E26's before-span target is **26,944, not 33,708**. Build with
+`NDS_R2_SPAN_LEAN_TIMING=1` for any tick number out of these brackets. Second,
+DTCM is full at its safe margin, so that lever is harvested.
 
 Phases R2-04 through R2-08 are untouched — R2-08 is §6's switch itself, whose
 performance gate (P95 ≤ 1.12M) currently reads 1,381,120.

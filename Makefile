@@ -142,6 +142,15 @@ NDS_LAB_NO_CULL ?= 0
 # revalidation inside the fighter draw, on the tick-HUD ROM -- the split the M2
 # ledger measures but cannot report for the Boundary configuration.
 NDS_TASK91_DRAW_PHASE_CENSUS ?= 0
+# R2-03 E43. E38's before/after span split is bracketed around
+# ndsRendererNativeApplyStateSpan, but ndsRendererNativeApplyStateDelta opens
+# with a per-delta census block -- E20's identical-operand arrays plus E25c's
+# effect histogram -- that sits INSIDE that bracket and runs 134.5 times a frame
+# on the before-span alone. docs/HANDOFF.md already warned the State bracket is
+# inflated by it. This arm keeps E38's brackets and compiles the per-delta block
+# out, so the bracket measures the replay's real work. E26 is sized against that
+# number, not against 33,708.
+NDS_R2_SPAN_LEAN_TIMING ?= 0
 # Task 103 lab probe (docs/optimization/RASTER_AXIS_CAMPAIGN.md fork B).
 # Task 99 left the stage bucket ~89% fixed and Task 100 refuted the last
 # proposed currency for it, so ~331,300 ticks/frame are still unattributed.
@@ -1901,6 +1910,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_LAB_TINT_SHIFT $(NDS_LAB_TINT_SHIFT)'; \
 		echo '#define NDS_LAB_NO_CULL $(NDS_LAB_NO_CULL)'; \
 		echo '#define NDS_TASK91_DRAW_PHASE_CENSUS $(NDS_TASK91_DRAW_PHASE_CENSUS)'; \
+		echo '#define NDS_R2_SPAN_LEAN_TIMING $(NDS_R2_SPAN_LEAN_TIMING)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \

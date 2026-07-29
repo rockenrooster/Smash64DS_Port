@@ -1341,3 +1341,33 @@ for any memo or prepared value, count its invalidations per frame alongside its
 hit rate. A 99.5% hit rate on a value invalidated 194 times a frame is not a
 working memo — it is a memo being consulted after every invalidation, and the
 two numbers only reconcile when you look at both.
+
+### A timing bracket must not enclose its own instrument (R2-03 E43, 2026-07-29)
+
+E38 wrapped `cpuGetTiming()` around `ndsRendererNativeApplyStateSpan` and
+reported the before-span at 33,708 ticks/frame. That bracket also enclosed two
+per-delta census blocks — E20's identical-operand arrays and frame-stamp check,
+E25c's effect histogram — which ran 134.5 times a frame inside it. The real
+number is **26,944**; the instrument was **6,763**, a fifth of the headline.
+
+The blocks were not wrong. They were written to *count*, they were correct while
+counting, and a later experiment put a timer around them. Nobody adds an
+instrument inside a bracket on purpose; it happens when the bracket arrives
+second.
+
+So, before quoting any tick number out of a bracket around a per-item loop:
+
+1. **Compile the per-item census out and re-measure.** If both the histogram and
+   the ticks are wanted, that is two arms, not one build. Add the flag rather
+   than reasoning about the overhead — here it was ~50 ticks/delta, well above
+   the 5,000–7,000 build-placement noise floor once multiplied by 134.5.
+2. **Cross-check the instrument against a second population.** The before- and
+   after-spans priced it at 50.3 and 53.0 ticks/delta independently. Agreement
+   between two different delta counts is what distinguishes a real instrument
+   cost from a code-placement artefact.
+3. **When a bracket is added to existing code, audit what is already inside it**
+   — including inside the functions it calls, which is where both of these were.
+
+The same rule applies in reverse: a census added inside an existing bracket
+silently inflates every number that bracket has ever reported, including the
+ones already written into planning documents.

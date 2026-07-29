@@ -16217,6 +16217,14 @@ static s32 ndsRendererNativePrepareDirectRun(
     return ndsRendererFastRawStateEligible(state);
 }
 
+/* R2-03 E43. The per-delta census inside ndsRendererNativeApplyStateDelta sits
+ * inside E38's span bracket and runs 134.5 times a frame on the before-span
+ * alone, so the bracket prices the instrument as well as the replay. This arm
+ * keeps the brackets and drops the per-delta block, which is what E26 must be
+ * sized against. */
+#define NDS_R2_DELTA_CENSUS \
+    (NDS_TASK91_DRAW_PHASE_CENSUS && !NDS_R2_SPAN_LEAN_TIMING)
+
 #if NDS_TASK91_DRAW_PHASE_CENSUS
 /* R2-03 E20 falsifier state. Indexed by NDSNativeStateDelta::effect; 16 covers
  * the eleven cases the switch handles with room to spare. */
@@ -16270,7 +16278,7 @@ ndsRendererNativeApplyStateDelta(
     {
         return;
     }
-#if NDS_TASK91_DRAW_PHASE_CENSUS
+#if NDS_R2_DELTA_CENSUS
     /* R2-03 E20 falsifier. E20 counted applications that repeat a delta index
      * within a frame; that is an upper bound, because a repeat is only elidable
      * if it writes what is already there. Every case below writes stats purely
@@ -16389,7 +16397,9 @@ u32 gNdsR2SpanBeforeTicks;
 u32 gNdsR2SpanBeforeDeltas;
 u32 gNdsR2SpanAfterTicks;
 u32 gNdsR2SpanAfterDeltas;
+#if NDS_R2_DELTA_CENSUS
 static u32 sNdsR2DeltaLastFrame[70];
+#endif
 #endif
 
 static void ndsRendererNativeApplyStateSpan(
@@ -16419,7 +16429,7 @@ static void ndsRendererNativeApplyStateSpan(
     {
         u32 delta_index = sNdsNativeFighterStateSequence[first + i];
 
-#if NDS_TASK91_DRAW_PHASE_CENSUS
+#if NDS_R2_DELTA_CENSUS
         {
             /* +1 so an untouched entry (0) can never alias frame serial 0. */
             u32 stamp = sNdsRendererHardwareFrameSerial + 1u;
