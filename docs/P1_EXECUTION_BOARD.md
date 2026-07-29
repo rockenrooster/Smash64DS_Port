@@ -240,6 +240,44 @@ budget**. Rate cannot close that; only cheaper evaluation can, which is E61's
 cubic (~50,000). **R2-04 does not need another experiment — it needs the E61
 owner decision.**
 
+## R2-05 E1 — the fighter-special-case gate PASSES too; R2-05 is complete (2026-07-29)
+
+R2-05's second clause: *"Same generators, same direct path, **zero
+fighter-specific runtime special cases**. Any hand-patched Mario exception found
+here is a generator defect to fix."*
+
+**A raw `Mario` grep is the wrong instrument** and reads as a huge violation —
+701 hits in `reloc_backend_mp_collision.c` alone. Almost all of them are
+`ndsFighterMarioFox*`, which names a function serving **both** fighters.
+Separating `Mario(?!Fox)` from `(?<!Mario)Fox`:
+
+| file | Mario-only | Fox-only |
+|---|---:|---:|
+| `reloc_backend_assets.c` | 194 | 204 |
+| `reloc_backend_ftdata_symbols.c` | 175 | 187 |
+| `reloc_backend_fighter_model.c` | 49 | 49 |
+| `nds_renderer.c` | 31 | 27 |
+| `nds_audio_fgm.c` | 20 | 21 |
+
+**Symmetric everywhere on the draw and asset path** — these are per-fighter data
+tables, which is exactly the shape the plan asks for ("build tooling generic,
+runtime specialized"), not hand-patched exceptions.
+
+The asymmetries are all outside the gate's scope and all the same thing —
+**diagnostic counters carrying stale Mario-era names**: `taskman_seam.c` 63/15
+(`MarioTickCount`, `MarioDispatchCount`, `MarioNextSceneKind`…),
+`sprite_preview_backend.c` 18/0 (`MarioDrawVisibleSObjCount`…), `diagnostics.c`
+55/27. The one entry that looked like a real move-specific branch,
+`MarioTornado`, is `gNdsFighterInitP0PassiveMarioTornado` **and** `…P1…` — a
+symmetric per-player counter named for a Mario-only move, not Mario-only code.
+
+**R2-05 is therefore complete: reproducibility (E0) and no fighter special cases
+(E1).** Actionable hygiene item, not a gate failure: those Mario-era counter
+names in *shared* seams actively mislead — a `…MarioTickCount` in `taskman_seam.c`
+reads as fighter-specific behaviour where there is none, and it is what made this
+audit look alarming before it was measured. Rename to a neutral or per-slot form
+when those seams are next touched.
+
 ## R2-05 E0 — generator reproducibility gate PASSES; one generator defect found (2026-07-29)
 
 R2-03's two levers are both owner-blocked (E32 on the hurt flash, the cubic on

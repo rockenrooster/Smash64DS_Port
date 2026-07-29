@@ -5,15 +5,16 @@ durable goes to its owning doc, not here: the board owns the queue and every
 result, `PERF_LEDGER.md` measurements, `KNOWN_ISSUES.md` durable gaps and
 harness traps, `optimization/TASK_STANDING_RULES.md` how a task is run.
 
-Runtime 2 phase status. **Of the two levers that close the gate, E32 is ordinary
-engineering (a generator gap, E62) and only the cubic is an owner decision.**
+Runtime 2 phase status. **Both gate levers graduated 2026-07-29: E32 (-52,416
+P95) and E64b (-26,944). P95 1,228,928 -> 1,149,568, over-gate 17/128 -> 9/128,
+remaining gap 29,568.**
 
 | phase | state |
 |---|---|
 | R2-00a/b/c, R2-01, R2-02 | gated |
-| R2-03 | shipped E12/E28/E29/E46; E32 needs a generator change, the cubic needs a decision |
-| R2-04 | loading clause done (E5/E6), rate clause done as far as the contract permits (E57/E6); **budget clause 146,942 vs 100,000 needs the E61 decision** |
-| R2-05 | reproducibility half PASSES (E0); fighter-special-case audit not yet run |
+| R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**; only the E32 flash residual is open (KNOWN_ISSUES) |
+| R2-04 | loading + rate clauses done (E5/E6/E57); budget clause improved by E64b, animation now ~120,000 vs the 100,000 provisional |
+| R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
 | R2-06/07/08 | not started; gated behind the above |
 
 ## Where the gate stands
