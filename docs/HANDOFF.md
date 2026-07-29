@@ -37,16 +37,14 @@ frames**, summing to **292,899** (`SubmitVertex` 96,238,
 display-list interpreter**, a second renderer running. `FTR` agrees: P50
 388,224, P95 392,448, spread 1.01, **max 898,368**.
 
-## E54 settled what turns that path on: the fighter falls back
+## E54: the fighter falls back, and E32 is worth −51,136
 
 `NDS_TASK68_FALLBACK_CENSUS=1` + `NDS_TASK91_DRAW_PHASE_CENSUS=1`, same 128
 frames: **5 native-owner fallbacks, every one `shuffle_tics`, zero animation
 locks**. The clean build has **exactly 5 frames** with `FTR` > 500,000 —
 909-913, consecutive, ~507,000 each over the median, all over gate. One hitlag
-burst; E35's "third owner" reading does not apply.
-
-Capping `FTR` at its median on those five frames projects **E32's value across
-the whole distribution**:
+burst; E35's "third owner" reading does not apply. Capping `FTR` at its median
+there projects E32 across the whole distribution:
 
 | | P50 | P95 | max | over gate |
 |---|---:|---:|---:|---:|
@@ -73,42 +71,50 @@ times a frame (nothing to memo); the cost is arithmetic at 38 cycles per
 soft-float add; and the float leaves are already lowered (`_arm_addsubsf3.o`,
 `_arm_muldivsf3.o` ITCM-resident, `NDS_TASK16_FLOAT_ADDSUB=1`).
 
-## Best unowned work
+## Best unowned work: E58, and it can unblock E32
 
-**There is no large unowned lever left. That is the finding, not a gap in the
-search.** Both halves of the P95 miss are owner decisions, and the two candidates
-that looked ownerless this cycle were both closed by measurement:
+**E55 reopened the cheapest fix for E32, which E50 had closed on a bad
+inference.** E50 measured 172/273 vertices differing on a hitlag frame and
+concluded the flash was per-vertex; that sampled the **output** of lighting and
+inferred the **input**. Per-vertex dumps on two hitlag frames say otherwise:
 
-**R2-04 E57 — REFUTED as a free win, from source.** `gcRunAll` runs exactly
-2.0x per presented frame and animation evaluation sits inside it (~52,000
-ticks/frame paid twice), so halving it looked like ~26,000 flat. But
+- **A and B are elementwise identical** — the flash does not ramp within a burst.
+- **0 of 541 baked vertices are achromatic; 75% of flashed ones are**, greys
+  spanning 76..255 (a lighting term). A lerp preserves hue; only a **replacement**
+  removes chroma. So the flash replaces the source colour and the per-vertex
+  variation is lighting.
+
+That restores **E49's option 1 at per-epoch granularity** — its own words, *"one
+colour per epoch, not per-vertex data, a runtime override the emit can apply
+without touching the baked table."* The owner already computes lighting (E48), so
+feeding it a per-epoch constant is exact, needs no per-vertex data, and **keeps
+E32's measured −51,136**.
+
+**E58 is the one build that decides it: record the epoch index alongside the
+colour.** The stride sample deliberately crosses epochs, so its two constant
+families (greys, and reds with `R > G ≈ B`) are expected rather than
+contradictory. If each epoch's samples are one value, build the override — and
+note it lands **pixel parity against Runtime 1**, which is R2-03's own stated
+gate, so it does **not** need the owner's subjective approval.
+
+**R2-03 E26 — demoted.** Re-measured with
+`NDS_TASK91_DRAW_PHASE_CENSUS=1 NDS_R2_SPAN_LEAN_TIMING=1` (both flags — the
+second only compiles the per-delta census out from inside the brackets, the
+first defines them): before-span **23,844/frame over 136.8 deltas = 174.2 each**,
+after 13,719 over 49.2, replay **37,563**. E46 took 3,100 off E43's 26,944. That
+is the *bottom* of the plan's §3.9 "20–50K consider if simple and exact" band and
+E26 is exact but not simple. Read its spec only alongside the board's
+E34/E34-b/E39/E43/E45/E56 entries. **E26 must replace the dispatch, not the
+writes** (E39).
+
+**R2-04 E57 — REFUTED from source.** Animation evaluation (~52,000/frame) runs
+twice per presented frame, so halving it looked like ~26,000 free — but
 `gmCollisionGetFighterPartsWorldPosition` (`gm/gmcollision.c:489`) places every
-hitbox by **walking the live joint DObj chain and multiplying through each
-joint's transform** — not from `ftParam` tables keyed on animation frame. The odd
-tick's pose is load-bearing for hit detection, so evaluating once is a *gameplay*
-change under the sacrifice order, not a visual one.
-
-**The corollary is the useful part: the renderer is already at presentation
-rate.** `ndsFighterMarioFoxDLAllDrawForSlot` 2.0 calls/frame,
-`AdapterBuildDObjLocalMatrix` 50.0 (25 joints x 2 fighters),
-`ExecuteNativeFighterOwnerProduction` 2.0 — all once per *presented* frame.
-**R2-04's rate-decoupling mandate is already satisfied on the renderer side**;
-the 52,000 is gameplay-owned 60 Hz work in `SRC`. Do not re-open it as a
-renderer row.
-
-**R2-03 E26 — demoted, and now the largest unowned row by default.**
-Re-measured with `NDS_TASK91_DRAW_PHASE_CENSUS=1 NDS_R2_SPAN_LEAN_TIMING=1`
-(both flags — the second only compiles the per-delta census out from inside the
-brackets, the first defines them): before-span **23,844/frame over 136.8 deltas
-= 174.2 each**, after 13,719 over 49.2, replay **37,563**. E46 took 3,100 off
-E43's 26,944. That is the *bottom* of the plan's §3.9 "20–50K consider if simple
-and exact" band, and E26 is exact but not simple — generator change, per-epoch
-install, E34-b's carve-out keeping `prim_color`/`env_color` live — and it cannot
-recover the whole 23,844. It is now the best unowned work by elimination rather
-than by size.
-
-Read its spec only alongside the board's E34/E34-b/E39/E43/E45/E56 entries,
-which correct it. **E26 must replace the dispatch, not the writes** (E39).
+hitbox by **walking the live joint chain**, not from `ftParam` tables, so the odd
+tick's pose is load-bearing and halving it is a *gameplay* change. Corollary:
+the renderer is already at presentation rate (`DLAllDrawForSlot` 2.0 calls/frame,
+`AdapterBuildDObjLocalMatrix` 50.0), so **R2-04's rate-decoupling mandate is
+already satisfied on the renderer side.**
 
 ## Refuted this cycle — do not re-derive
 
@@ -117,9 +123,11 @@ which correct it. **E26 must replace the dispatch, not the writes** (E39).
   `gNdsStageCollisionLoopYakumonoCount = 1` and 7 lines: the loop that reads as a
   64×4 worst case has a trip count of **one**.
 - **E53**, an 8-byte `{base,size}` mirror for `ndsRelocFindLoadedFileContaining`.
-  Correct by construction and still a regression — P95 **+11,584**, 92/128 frames
-  worse, `STG` (untouchable by it) +1,600 on 99. The 768 bytes of new BSS cost
-  more than the scan saved, and the lookup is a *symptom* of the fallback anyway.
+  Exact by construction, still a regression — P95 **+11,584**, 92/128 worse,
+  `STG` (untouchable by it) +1,600 on 99. The lookup is a *symptom* of the
+  fallback anyway.
+- **E55 route 1**, a lerp-toward-white model of the flash. The flash replaces the
+  colour outright; it does not transform it.
 
 ## Restart
 
@@ -132,11 +140,10 @@ $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 git status --short
 ```
 
-**Do not rebuild `smash64ds.nds` for P1 work** (owner, 2026-07-28) — P1 touches
-only `smash64ds-battle-playable-hwtri`. **Do rebuild the tick-HUD ROM whenever
-the published one is** (owner, 2026-07-22): same program plus the Task 41 timers,
-and the instrument every measurement runs on — keep its Makefile block
-flag-identical.
+**Do not rebuild `smash64ds.nds` for P1 work** (owner, 2026-07-28). **Do rebuild
+the tick-HUD ROM whenever the published one is** (owner, 2026-07-22) — same
+program plus the Task 41 timers, the instrument every measurement runs on; keep
+its Makefile block flag-identical.
 
 **Do not pass `-j` to `make`.** The Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)`
 from `nproc` (32 here); an explicit `-j` overrides and caps it. One build at a
