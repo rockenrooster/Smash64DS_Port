@@ -308,6 +308,13 @@ NDS_R2_FIGHTER_HW_MTX ?= 0
 # model is RGB15 throughout where the software path kept an RGB8 intermediate --
 # so it gates on a screenshot pair plus the owner's approval.
 NDS_R2_FIGHTER_HW_LIGHT ?= 0
+# R2-03 E28 control arm. E16 left the software light preparation
+# (ndsRendererHardwarePrepareLitDirection's transform + sqrt + three divides,
+# and the shade LUT) running per lit epoch even though the hardware path skips
+# the only loop that reads them. E28 removes it; this restores it, so the cut
+# can be A/B'd against a control built from the same tree. Delete this flag with
+# the experiment.
+NDS_R2_FIGHTER_SOFT_LIGHT_KEEP ?= 0
 # R2-03 E18. Skips the fighter's per-vertex software lighting outright, so the
 # ceiling of E16's hardware-lighting cut can be measured rather than inferred
 # from a bracket that also contains the epoch preamble. Fighters draw with stale
@@ -1890,6 +1897,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_MTX_DIRECT $(NDS_R2_FIGHTER_MTX_DIRECT)'; \
 		echo '#define NDS_R2_FIGHTER_HW_MTX $(NDS_R2_FIGHTER_HW_MTX)'; \
 		echo '#define NDS_R2_FIGHTER_HW_LIGHT $(NDS_R2_FIGHTER_HW_LIGHT)'; \
+		echo '#define NDS_R2_FIGHTER_SOFT_LIGHT_KEEP $(NDS_R2_FIGHTER_SOFT_LIGHT_KEEP)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_SKIP $(NDS_R2_FIGHTER_SHADE_SKIP)'; \
 		echo '#define NDS_R2_FIGHTER_STATESPAN_SKIP $(NDS_R2_FIGHTER_STATESPAN_SKIP)'; \
 		echo '#define NDS_R2_DRAW_SUPPRESS_MASK $(NDS_R2_DRAW_SUPPRESS_MASK)'; \

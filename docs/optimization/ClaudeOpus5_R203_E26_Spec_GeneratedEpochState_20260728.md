@@ -72,6 +72,58 @@ Behind `NDS_R2_FIGHTER_EPOCH_STATE`, default 0.
   `ndsRendererNativeBeginDirectBatch`. Those two have live GX side effects and
   must still run.
 
+## 2a. CORRECTION — the epoch state is not purely static
+
+§2 as first written claimed the generator knows each epoch's final state at build
+time. **That is wrong**, and the error is load-bearing enough to have wasted a
+build. Reading the runtime epoch loop:
+
+```
+ApplyStateSpan(before_state_first, before_state_count)   <- static
+if (material_slot != NONE) ApplyMaterial(input->materials[slot])  <- RUNTIME INPUT
+ApplyStateSpan(after_state_first, after_state_count)     <- static
+shade
+runs
+```
+
+Two consequences:
+
+1. **The material is a per-frame input injected between the two spans.**
+   `input->materials[]` is live — Task 39's hurt flash writes colour — so the
+   fold cannot simply produce one resolved state per epoch. It must produce
+   **two** snapshots (post-before and post-after) plus a mask of which fields the
+   after-span writes, so the runtime can install snapshot A, apply the material,
+   then re-apply only the after-span's fields. Ordering is then exact.
+
+2. **`ndsRendererNativeApplyMaterial` invalidates the texture prepare too** — four
+   `NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE` sites in its body, one of them
+   beside `stats->prim_color = material->prim_w1`. E16's census measured
+   `gNdsR2ShadeMaterialEpochs` at **27.7/frame, 57% of epochs**. So baking the
+   deltas removes 127.3 invalidations a frame but leaves **27.7**, and
+   `PrepareProductionRun` still takes its full path on every epoch carrying a
+   material.
+
+**Revised expectation:** E26 removes the 194.4 delta applications and most of the
+invalidations, but not all of the 42,281 prepare cost. Size it as the replay
+(65,026) plus the share of prepare attributable to non-material epochs, not the
+full 107,307.
+
+### E27 falls out of this and is much smaller
+
+`prim_color` does not affect `poly_fmt`, the texture identity, or the UV scale /
+origin / offset — those depend on texture state, not the primitive colour. It is
+carried separately as `state->texture_prepare_material_color`. So the material's
+invalidation of the *whole* prepare is broader than the data requires.
+
+**Split the prepare's validity**: a material-only change should refresh
+`texture_prepare_material_color` and leave the texture/UV half valid. That is a
+narrow change to the invalidation macro plus one field, it needs no generator
+work, and it targets the 27.7 material invalidations that E26 cannot reach.
+
+Measure first, per the standing rules: count how many of the 46.4 full prepares a
+frame are triggered by a material application with no accompanying texture-state
+delta. If that number is large, E27 is a cheap cut and should land before E26.
+
 ## 3. Correctness gates, in order
 
 1. **Fold equivalence, offline.** Before any runtime change: have the generator

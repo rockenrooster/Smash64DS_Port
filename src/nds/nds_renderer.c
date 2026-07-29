@@ -16204,6 +16204,14 @@ u32 gNdsR2DeltaEffectCounts[16];
 u32 gNdsR2SpanIdenticalOperands;
 u32 gNdsR2SpanIdenticalGeometry;
 u32 gNdsR2SpanMaterialInvalidations;
+/* R2-03 E27 is REFUTED and its probe is gone. It counted material applications
+ * arriving with the texture prepare still valid -- the full re-prepares a split
+ * validity would avoid -- and measured 2.0/frame against 28.0 material
+ * applications: 26 of 28 invalidate a prepare the before-span deltas had already
+ * dirtied. ~1,800 ticks, below the noise floor. See
+ * docs/optimization/ClaudeOpus5_R203_E28_DeadSoftLight_20260728.md. The probe
+ * also read state.texture_prepare_valid here, which the M3 stage falsifier
+ * rejects as an unclassified read in this function. */
 static u32 sNdsR2DeltaLastW0[NDS_R2_DELTA_EFFECT_MAX];
 static u32 sNdsR2DeltaLastW1[NDS_R2_DELTA_EFFECT_MAX];
 static u8 sNdsR2DeltaLastValid[NDS_R2_DELTA_EFFECT_MAX];
@@ -17329,6 +17337,23 @@ static u16 ndsRendererR2MaterialColor15(
 }
 #endif
 
+/* R2-03 E28. Once E16 moved the fighter's diffuse term onto the geometry
+ * engine, the software light direction and the shade LUT became dead: both are
+ * read only inside the per-dense-vertex loop that `hardware_lit` skips. The
+ * exception is the M2 detailed ledger, which reads
+ * state->prepared_light_direction after the shade returns, so it keeps the
+ * software preparation.
+ *
+ * NDS_R2_FIGHTER_SHADE_PROOF hashes `prepared_direction`; with the skip active
+ * that field is NULL, so the proof is only comparable against another skipped
+ * build. It is a lab flag and never ships with this one. */
+#if NDS_R2_FIGHTER_HW_LIGHT && !NDS_RENDERER_M2_DETAILED_LEDGER && \
+    !NDS_R2_FIGHTER_SOFT_LIGHT_KEEP
+#define NDS_R2_SHADE_SKIP_SOFT_LIGHT 1
+#else
+#define NDS_R2_SHADE_SKIP_SOFT_LIGHT 0
+#endif
+
 static s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererNativeShadeProductionActions(
     const NDSNativeEpoch *epoch,
@@ -17346,6 +17371,9 @@ ndsRendererNativeShadeProductionActions(
         policy->vertex_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
     u32 material_color = (use_material != 0u) ? stats->prim_color : 0u;
     u32 action_offset;
+    /* Identical to `prepared_direction != NULL` in every build that prepares
+     * the direction, and still correct in the build that skips it. */
+    u32 epoch_lit = FALSE;
 #if NDS_R2_FIGHTER_HW_LIGHT
     u32 hardware_lit = FALSE;
 #endif
@@ -17358,6 +17386,8 @@ ndsRendererNativeShadeProductionActions(
     if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
         ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
     {
+        epoch_lit = TRUE;
+#if !NDS_R2_SHADE_SKIP_SOFT_LIGHT
         if (state->prepared_light_direction_valid == 0u)
         {
             ndsRendererHardwarePrepareLitDirection(
@@ -17387,6 +17417,7 @@ ndsRendererNativeShadeProductionActions(
                     stats->light_color_1, stats->light_color_2);
             }
         }
+#endif
     }
 
 #if NDS_R2_FIGHTER_SHADE_PROOF
@@ -17423,7 +17454,7 @@ ndsRendererNativeShadeProductionActions(
     }
 #endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
-    if (prepared_direction != NULL)
+    if (epoch_lit != FALSE)
     {
         gNdsR2ShadeLitEpochs++;
     }
@@ -17445,7 +17476,7 @@ ndsRendererNativeShadeProductionActions(
      * here and drew identical geometry while leaving that load count at zero,
      * which the Boundary harness caught as the complete-stage owner having
      * entered the generic transform path. Only the inner loop is skipped. */
-    if (prepared_direction != NULL)
+    if (epoch_lit != FALSE)
     {
         u32 diffuse;
         u32 ambient;

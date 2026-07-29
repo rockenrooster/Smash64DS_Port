@@ -31,6 +31,59 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E28 — E16's dead producers, −31,488 (2026-07-28)
+
+**KEEP.** E16 skipped the per-dense-vertex shading loop with a runtime flag but
+left the work that computes that loop's *inputs* running on every lit epoch:
+`ndsRendererHardwarePrepareLitDirection` (nine 32x32->64 multiplies, three
+64-bit squares, an `sqrtf`, three float divides) and
+`ndsRendererHardwareGetLightShadeLut`. Neither result has any other consumer in
+a shipping configuration.
+
+Paired 128-frame A/B, one tree, control = `NDS_R2_FIGHTER_SOFT_LIGHT_KEEP=1`:
+
+| bucket | better | worse | median delta |
+|---|---:|---:|---:|
+| **FTR** | **128/128** | **0** | **−31,488** |
+| WORK | 113 | 15 | −31,680 |
+
+WORK frames over the 1,120,000 gate: **52/128 -> 40/128**. VBlank histogram
+control 2:409 3:148 4:7 5+:2 max:18, candidate 2:438 3:117 4:9 5+:2 max:18 —
+29 frames moved from a 3-VBlank interval to a 2-VBlank interval.
+`gNdsFighterDLAllDrawP0/P1HardwareTriangleCount` identical in both arms
+(136,640 / 146,880 over 480 frames): geometry is bit-identical, as the mechanism
+requires — the removed values had no reader.
+
+**The lesson, and it is general.** A flag that skips a *consumer* does not skip
+its *producers*, and a single tick bracket around both cannot tell you which one
+you removed. E24 read this same function and concluded "the action walk isn't
+the cost" — correct, and it missed this because the dead work is in the preamble
+*above* the walk, inside the condition that decides whether the epoch is lit.
+**Price a skipped loop's inputs separately from the loop.**
+
+**Second lesson, methodological.** The sorted-percentile table read
+`WORK P95 +73,664` and every other number negative. That was an artifact: each
+column's P95 is a different frame, and the P95 frame is an excursion frame whose
+placement moves between arms (`WAIT` P95 fell by almost exactly the same amount,
+which is the tell). Both arms run the same deterministic ROM from the same start
+frame, so **frame N is the same game state in both — pair by frame number, not
+by sorted percentile.** The pairing is free and it is what turned an ambiguous
+result into 128/128.
+
+**E27 is REFUTED and its probe is removed.** `gNdsR2MaterialOnlyInvalidations`
+measured 2.0/frame against 28.0 material applications: 26 of 28 material
+invalidations of the texture prepare hit a prepare the before-span deltas had
+already dirtied. A split validity would reach ~1,800 ticks, below the noise
+floor. It stays a necessary *component* of E26, not a cut of its own. The probe
+also read `state.texture_prepare_valid` inside `ndsRendererNativeApplyMaterial`,
+which the M3 stage falsifier correctly rejects as an unclassified read — the
+standing "remove temporary probes" rule would have caught it before Boundary did.
+
+Graduated R2-03 total is now E17 17,600 + E16 35,072 + E28 31,488 = **84,160**
+of the 250,833 gap (34%).
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E28_DeadSoftLight_20260728.md`.
+
 ## Bug #10 — closed and folded in (2026-07-28)
 
 `06992f10812` "Fix Mario pelvis texture clamp", cherry-picked from `2cbc6189d15`
