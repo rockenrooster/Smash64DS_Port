@@ -6,6 +6,16 @@ $nativeStageChecker = Join-Path $PSScriptRoot 'check_nds_native_stage.py'
 if ($LASTEXITCODE -ne 0) {
     throw "Native-stage consumed-field/packet checker failed with exit code $LASTEXITCODE."
 }
+# R2-03 E65. The fixed-point cubic writes every animated joint value in the game
+# and is authorized as non-bit-exact, so no state hash can gate it -- the gate is
+# an error bound over the input domain. Wired in here rather than left as a
+# standalone script for exactly the reason E65 found three times in one session:
+# a check nothing runs reads like a pass. Host-only, no emulator, ~4 s.
+$cubicBoundChecker = Join-Path $PSScriptRoot 'check_r2_cubic_error_bound.py'
+& python -B $cubicBoundChecker
+if ($LASTEXITCODE -ne 0) {
+    throw "R2 fixed-point cubic error bound failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,

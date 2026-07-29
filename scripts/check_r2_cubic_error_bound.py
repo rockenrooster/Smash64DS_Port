@@ -323,7 +323,8 @@ def main() -> int:
             json.dump(report, handle, indent=2)
             handle.write("\n")
 
-    print("R2-03 E64b fixed-point cubic -- host error bound vs the decomp float")
+    print("R2-03 E64b/E65 fixed-point cubic -- host error bound vs the decomp "
+          "float")
     print("  gameplay bound %.4f world units / radians" % BOUND_ABS)
     print("")
     print("  %-13s %9s %10s %10s %10s %9s %s"

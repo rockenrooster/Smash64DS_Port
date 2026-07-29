@@ -3,9 +3,12 @@
 The single Runtime 2 document: charter, design rules, budgets, phase plan,
 and the definition of the switch.
 
-Status: **in execution.** R2-00a/b/c, R2-01 and R2-02 are gated; R2-03 shipped
-E12/E28/E29/E46; R2-04's loading and rate clauses are met. **Both remaining P1
-levers are now owner decisions, not experiments** — see §10. The board
+Status: **in execution.** R2-00a/b/c, R2-01, R2-02 gated; R2-05 complete;
+R2-03 shipped E12/E28/E29/E46/E32/E64b/E65; R2-04's clauses are met; R2-06 has
+Boundary green and equivalence, and its soak clause has no instrument (§7).
+**The P95 gate reading is met for the first time — 1,113,984 against 1,120,000
+(E65) — by 6,016, which is inside the 5,000–7,000 placement floor.** Read §7
+R2-07's revised budget note before spending any of that. The board
 (`docs/P1_EXECUTION_BOARD.md`) is the live queue; this file stays the charter and
 is not a status log.
 
@@ -399,6 +402,29 @@ warning and `NDS_R2_BOTH_CPU` in the Makefile.
   results flow. Cosmetic systems get explicit budgets so they cannot erase
   the headroom.
 - Gate: full demo loop (Mario CPU vs Fox CPU) within total budget; P95 still ≤ 1.12M.
+
+**As written this gate is unreachable today, and that is a sequencing fact rather
+than a failure (2026-07-29).** E65 put P95 at 1,113,984 — 6,016 under budget, and
+the build-placement noise floor alone is 5,000–7,000. There is no cosmetic budget
+to allocate: the particle work R2-07 names is a 2,961-line bytecode interpreter
+(`lb/lbparticle.c`) plus `ef/efparticle.c`, `ef/efdisplay.c`, a DS pack step and
+textured-quad draws, and *any* nonzero per-frame cost from it puts P95 over.
+
+So **R2-07 must be preceded by a headroom pass, not merely followed by one.** The
+honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
+
+1. **Buy headroom first.** `FTR` is 391,744 P50 against R2-03's 250,000 budget and
+   `SRC` is 309,120; both are above their phase budgets, so this is ordinary
+   remaining work rather than a new idea.
+2. **Run the cosmetic systems below simulation rate.** `PROJECT_GOAL.md` explicitly
+   allows particles at 15 Hz. A 15 Hz particle update is a quarter of the cost of a
+   60 Hz one and changes no gameplay.
+3. **Reduce visual fidelity** — sacrifice order puts visual fidelity above 30 FPS,
+   so if the real scripts cannot fit, a cheaper source-derived approximation is the
+   contract-compliant answer, with the visible delta recorded.
+
+Do **not** resolve it by widening the gate. The gate is the product contract, and
+1.12M is the number `PROJECT_GOAL.md` sets.
 
 ### R2-08 — The switch
 
