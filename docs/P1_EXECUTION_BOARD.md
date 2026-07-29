@@ -201,6 +201,41 @@ and normals must not be rotated by a projection. Same fix, wrong cause.
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E17_SplitMatrixLoad_20260728.md`.
 
+## R2-03 E25 — PrepareProductionRun has no hot spot (2026-07-28)
+
+Measurement, reusing E11's existing `NDS_R2_FIGHTER_RUN_PROOF=2` instrument.
+480 frames, 62.8 runs/frame, ranking only:
+
+| phase | ticks/frame | share |
+|---|---:|---:|
+| tail (field writes + batch begin) | 13,753 | 27.7% |
+| texture prepare | 13,076 | 26.3% |
+| UV | 12,206 | 24.6% |
+| entry validate | 8,761 | 17.6% |
+| texture reuse | 1,283 | 2.6% |
+
+**Four roughly equal quarters**, so no partial optimization reaches the 42,281.
+Each re-derives a fact E5 measured at **1.9% churn**: ~63 runs a frame each
+rebuild a description of themselves that changed for one run in fifty.
+
+That is exactly the switch plan's R2-03 bullet — *replace* PrepareProductionRun
+with a per-epoch submit consuming baked facts, rather than optimize inside it.
+E12 already proved the trade on the texture quarter alone (−32,724).
+
+**NEXT (unowned, sized, ready):** extend `sNdsR2RunTextureMemo` to carry
+`poly_fmt`, `scale_s/t`, `origin_s/t`, `offset`, `vertex_flags`, `textured`; on
+a hit skip the whole body down to the texture bind and
+`ndsRendererNativeBeginDirectBatch`. Hit rate is E5's 98.1%. The memo and its
+staleness protocol already exist and must not be weakened — the texture cache
+entry can rotate under a run, which `gNdsR2TexMemoStaleCount` catches.
+
+**ITCM is now full**: E16 left 1,024 bytes free (31,744/32,768), and the census
+and run-proof instruments together overflow it by 172. Measure with one at a
+time; anything new on that chain needs `noinline` outside
+`.itcm.native_fighter`.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E25_PrepareRunPartition_20260728.md`.
+
 ## R2-03 E24 — the shade's action walk is not the shade's cost (2026-07-28)
 
 **NULL, reverted.** After E16 the shade's per-action loop is pure bookkeeping:

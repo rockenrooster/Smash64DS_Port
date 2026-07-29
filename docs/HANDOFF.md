@@ -1,10 +1,22 @@
 # Handoff
 
-Updated: 2026-07-28 — Runtime 2: R2-00a/b/c and R2-01 gated. **R2-02's stage
-budget is MET: `STG` P50 177,088 against 180,000.** E1a, E2, E7 and E8 are clean
-and all four ship by default; E3 is retracted (it breaks both flower beds) and E4
-refuted its whole approach. `P1_EXECUTION_BOARD.md` owns current state; this file
-is the restart surface and next packet.
+Updated: 2026-07-28 — Runtime 2: R2-00a/b/c, R2-01 and R2-02 gated (stage budget
+MET, `STG` P50 177,088 against 180,000). **R2-03 is the open phase.** E17 (split
+matrix load, −17,600) and E16 (hardware lighting, −35,072) are graduated and ship
+in the published ROM; together −52,672, which is 21% of the phase's 250,833 gap.
+`FTR` P50 is now ~456,000 against a 250,000 budget, so the phase gate is still
+missed ~1.8x.
+
+**The next lever is decided and sized, not chosen: replace
+`ndsRendererNativePrepareProductionRun` with the per-run baked-fact memo.** E25
+partitioned it into four roughly equal quarters (42,281/frame total, no hot
+spot), all re-deriving facts E5 measured at 1.9% churn — which is the switch
+plan's own R2-03 bullet. See the E25 board row for the exact payload to add to
+`sNdsR2RunTextureMemo`. Note ITCM is now full (1,024 bytes free): the census and
+run-proof instruments can no longer coexist in one ROM.
+
+`P1_EXECUTION_BOARD.md` owns current state; this file is the restart surface and
+next packet.
 
 ## Restart
 
