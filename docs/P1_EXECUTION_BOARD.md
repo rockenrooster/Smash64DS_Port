@@ -222,12 +222,32 @@ That is exactly the switch plan's R2-03 bullet — *replace* PrepareProductionRu
 with a per-epoch submit consuming baked facts, rather than optimize inside it.
 E12 already proved the trade on the texture quarter alone (−32,724).
 
-**NEXT (unowned, sized, ready):** extend `sNdsR2RunTextureMemo` to carry
-`poly_fmt`, `scale_s/t`, `origin_s/t`, `offset`, `vertex_flags`, `textured`; on
-a hit skip the whole body down to the texture bind and
-`ndsRendererNativeBeginDirectBatch`. Hit rate is E5's 98.1%. The memo and its
-staleness protocol already exist and must not be weakened — the texture cache
-entry can rotate under a run, which `gNdsR2TexMemoStaleCount` catches.
+**The state replay and the prepare are one mechanism.** `TexPrepCount` is
+46.4/frame against 62.8 runs — the full prepare runs on 74% of them — while
+E12's texture memo hits 99.5% (`R2_TEXMEMO=1899,9,9,0,0`). The reconciliation is
+that `ndsRendererNativeApplyStateDelta` calls
+`NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE` on every OTHERMODE / COMBINE / TEXTURE
+/ GEOMETRY / IMAGE / TILE delta, and E20 counted **194.4 delta applications a
+frame**. The replay's job is to move state; moving state is what makes the
+prepare expensive.
+
+State replay 65,026 + prepare 42,281 = **107,307/frame, over half of what R2-03
+still owes, and they are the same problem.** This reframes the last four
+results: E20/E21 priced the delta *write* (cheap, ~280 ticks) when the cost is
+the invalidation it triggers; E23 and E24 each removed one side of a coupled
+pair and measured null. **Any cut that optimises one side while the other keeps
+re-dirtying the state will read as null** — which is exactly the pattern
+observed.
+
+**NEXT (unowned):** this is why the plan specifies a generated per-epoch submit
+with *no traversal-state dependency* rather than a faster prepare or a cheaper
+replay. The generator knows each epoch's final state at build time, so neither
+the replay nor the re-derivation needs to exist at runtime. Breaking the
+coupling cannot be done from either end alone, so the memo-only variant
+(extending `sNdsR2RunTextureMemo` with `poly_fmt`, `scale_s/t`, `origin_s/t`,
+`offset`, `vertex_flags`, `textured`) should be treated as a fallback, not the
+plan: with 194.4 invalidations a frame still landing, its hit rate would be the
+observed 26%, not E5's 98.1%.
 
 **ITCM is now full**: E16 left 1,024 bytes free (31,744/32,768), and the census
 and run-proof instruments together overflow it by 172. Measure with one at a

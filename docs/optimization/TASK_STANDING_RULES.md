@@ -1167,3 +1167,28 @@ without an explicit request. This is the concrete failure that rule exists for.
 If it happens anyway: the newest snapshot on the Desktop is the recovery source,
 and the diff against it should contain **only** the other agent's hunks — verify
 that before copying anything back.
+
+### When repeated cuts read null, look for the coupling (R2-03 E25, 2026-07-28)
+
+Four consecutive R2-03 experiments produced nothing: E20/E21's state-delta guard
+(refuted), E23's projection hoist (sub-floor), E24's baked action walk (null).
+Each was individually well-measured and individually correct.
+
+E25 found why. `ndsRendererNativeApplyStateDelta` invalidates the texture prepare
+on every OTHERMODE / COMBINE / TEXTURE / GEOMETRY / IMAGE / TILE delta — 194.4
+applications a frame — which forces the full `PrepareProductionRun` on 46.4 of
+62.8 runs even though the texture memo hits 99.5%. The state replay (65,026) and
+the prepare (42,281) are not two phases; they are one mechanism, one of which
+dirties what the other rebuilds.
+
+**A cut that optimises one side of a producer/invalidator pair reads as null,
+because the other side restores the work.** E21 priced the delta *write* and
+found it cheap — true, and beside the point: the write's cost is the
+invalidation it triggers downstream, which no counter on the write can see.
+
+So when two or three consecutive well-measured cuts in the same subsystem come
+back null, stop cutting and **look for what re-dirties the state**. Concretely:
+for any memo or prepared value, count its invalidations per frame alongside its
+hit rate. A 99.5% hit rate on a value invalidated 194 times a frame is not a
+working memo — it is a memo being consulted after every invalidation, and the
+two numbers only reconcile when you look at both.

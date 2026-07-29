@@ -63,6 +63,44 @@ hit rate; the memo already exists and already has a validity protocol.
 
 Expected: most of 42,281, less the bind and batch begin that must still run.
 
+## 3a. The two remaining phases are one problem, not two
+
+`gNdsR2RunTexPrepCount` is **46.4/frame against 62.8 runs** — the full prepare
+block runs on 74% of runs — while E12's texture memo reports a **99.5% hit rate**
+(`R2_TEXMEMO=1899,9,9,0,0`). Those only reconcile one way: the memo is being
+consulted constantly because something keeps clearing `texture_prepare_valid`.
+
+It is the state replay. `ndsRendererNativeApplyStateDelta` calls
+`NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE` on every `OTHERMODE`, `COMBINE`,
+`TEXTURE`, `GEOMETRY`, `IMAGE` and `TILE` delta, and E20 measured **194.4 delta
+applications a frame**. Each one forces the next run in that epoch to redo the
+prepare.
+
+So the two largest phases left in the fighter draw —
+
+| phase | ticks/frame |
+|---|---:|
+| state span replay | 65,026 |
+| PrepareProductionRun | 42,281 |
+| **combined** | **107,307** |
+
+— are **one coupled mechanism**: the replay's job is to move state, and moving
+state is what makes the prepare expensive. Together they are over half of what
+R2-03 still owes.
+
+This reframes three earlier results rather than contradicting them. E20/E21
+attacked the delta *write* and found it cheap (~280 ticks) — correct, but the
+write was never the expensive half; the invalidation it triggers is. E23 and E24
+each removed one side of a coupled pair and measured nothing. **Every cut that
+optimises one side while the other keeps re-dirtying the state will read as
+null**, which is precisely the pattern the last four experiments produced.
+
+It also explains why the switch plan specifies a *generated per-epoch submit with
+no traversal-state dependency* rather than a faster prepare or a cheaper replay:
+the generator knows each epoch's final state at build time, so neither the replay
+nor the re-derivation needs to exist. Breaking the coupling is the phase's
+remaining work, and it cannot be done from either end alone.
+
 ## 4. Two things to carry into that build
 
 - **ITCM is full.** E16 left 1,024 bytes free (31,744/32,768), and
