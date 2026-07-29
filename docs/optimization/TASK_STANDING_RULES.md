@@ -141,6 +141,21 @@ fast-path dropout" the board had recorded, and showed they do not co-occur.
 apart, is a state the code enters — not a distribution to optimise. Find the
 state.
 
+### Check whether the probe is inside the bracket (R2-03, 2026-07-29)
+
+A tick bracket that wraps a whole call is safe. A bracket that wraps a *loop
+body containing its own census block* measures the census too.
+`gNdsR2ExecStateTicks` wraps the state-span replay, and
+`ndsRendererNativeApplyStateDelta` carries a per-delta census block — three array
+reads, two compares, two array writes, 194.4 times a frame — **inside** it. So
+the 61,441 that bracket reports is inflated by roughly 6,000–10,000 that exists
+only in the census build.
+
+Before sizing a cut from a census number, ask where the probe sits relative to
+the bracket. This is the same failure as E30's HUD finding one level down: there
+the instrument was 30% of the frames that set the P95; here it is ~15% of the
+bracket a cut would be sized against.
+
 ### Never edit a build flag while a verifier is running (R2-03 E32, 2026-07-29)
 
 `make` re-reads the Makefile on every invocation and a verifier profile runs

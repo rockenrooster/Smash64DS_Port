@@ -104,6 +104,20 @@ R2-03 has graduated **111,232** of its 250,833 gap: E17 17,600, E16 35,072,
 E28 31,488, E29 26,816. All four are default-on in the published and tick-HUD
 Makefile blocks. E28 removed work E16 left with no reader; E29 moved the two hot
 fighter vertex tables into DTCM, which had 12,948 free bytes nobody had measured.
+E32 is built and Boundary-green but **not** graduated, pending your visual check.
+
+**R2-03 is not finished.** `FTR` P50 is 408,512 against its provisional 250,000
+budget. The board's "partition at HEAD" row has the current ranked list; the
+short version is that the state replay (61,441) coupled to the run prepare
+(39,043) is still the largest single mechanism and is the switch plan's own
+R2-03 bullet, specified in
+`ClaudeOpus5_R203_E26_Spec_GeneratedEpochState_20260728.md` **with its §2a
+correction**. Two cautions before sizing it: the State bracket is inflated by a
+per-delta census block that sits inside it, and DTCM is now full at its safe
+margin, so that lever is harvested.
+
+Phases R2-04 through R2-08 are untouched — R2-08 is §6's switch itself, whose
+performance gate (P95 ≤ 1.12M) currently reads 1,381,120.
 
 R2-00a/b/c and R2-01 are done and gated. **R2-02's stage budget is met.** E1a,
 E2, E7 and E8 take `STG` P50 from 351,488 to **177,088** against the 180,000

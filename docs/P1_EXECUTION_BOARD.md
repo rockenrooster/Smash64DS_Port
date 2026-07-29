@@ -31,6 +31,54 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 partition at HEAD, and where the phase stands (2026-07-29)
+
+Census build, all three cuts on, frames 439..919:
+
+| phase | ticks/frame | pre-E28 |
+|---|---:|---:|
+| Walk | 3,224 | — |
+| Validate | 10,148 | — |
+| Preflight | 3,224 | 3,272 |
+| **Root** | **44,502** | 44,785 |
+| **State replay** | **61,441** | 72,798 |
+| Shade | 22,579 | 57,715 |
+| **Submit** | **94,395** | 105,630 |
+| — of which Prep | 39,043 | 41,928 |
+| execute sum | 226,141 | 284,200 |
+
+**Caveat, in E30's family: the State bracket is instrument-inflated.**
+`ndsRendererNativeApplyStateDelta` carries a `NDS_TASK91_DRAW_PHASE_CENSUS` block
+that runs *per delta* — three array reads, two compares and two array writes
+against 194.4 deltas a frame — and it sits **inside** `gNdsR2ExecStateTicks`.
+Call it 6,000–10,000 of the 61,441. The other brackets wrap whole calls and are
+not exposed this way. Before sizing a state-replay cut, re-measure with the
+per-delta census block compiled out, or the cut will be sized against a number
+that includes the probe.
+
+**Ranked remaining, against R2-03's provisional 250,000 budget with FTR P50 at
+408,512:**
+
+1. **State replay 61,441 coupled to Prep 39,043 = ~100,500.** E25b showed these
+   are one mechanism: 194.4 deltas invalidate `texture_prepare_valid`, forcing
+   46.4 of 62.8 runs into the full prepare despite a 99.5% texture-memo hit rate.
+   E26's spec (`..._E26_Spec_GeneratedEpochState_20260728.md`, **including its
+   §2a correction** — two snapshots plus an after-span write mask, material stays
+   a runtime step) is the design. This is the switch plan's own R2-03 bullet.
+2. **Submit emit ~55,352** = 29.5 ticks/corner over 1,878 corners, after E29 put
+   both vertex tables in DTCM. High for four FIFO writes; unexamined.
+3. **Root 44,502** over 32 roots. `ndsRendererNativeApplyRootLightPreamble` is
+   not it — that is a handful of `stats` writes under `optimize("Os")`. The
+   remainder is `BindProductionRoot` + E17's split matrix load + `glStoreMatrix`,
+   and E22/E23 already priced the matrix load and refuted the projection hoist.
+
+**DTCM is now full at its safe margin.** Data tops out at `0x02ff2298` against
+the `0x02ff3000` ceiling — 3,432 bytes. `sNdsNativeFighterPackedCorners` (3,756)
+does **not** fit. It could be made to fit by raising the ceiling toward the
+measured boot-stack low-water at `0x02ff3340`, but that leaves under 500 bytes of
+margin and the table is read sequentially, where the data cache already does
+well. Not worth the stability risk — treat the DTCM lever as harvested.
+
 ## R2-03 E32 — the hitlag shuffle folded; FTR's tail is GONE (2026-07-29)
 
 **KEEP candidate, flag default 0, awaiting the owner's visual approval.**
