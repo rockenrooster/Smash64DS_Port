@@ -201,7 +201,49 @@ and normals must not be rotated by a projection. Same fix, wrong cause.
 
 Write-up: `docs/optimization/ClaudeOpus5_R203_E17_SplitMatrixLoad_20260728.md`.
 
+## R2-03 E21 — the state-delta guard is REFUTED (2026-07-28)
+
+**E20's cut does not exist. Do not build it.** The section below stands as the
+measurement it was; this is what its own falsifier returned.
+
+Every case in `ndsRendererNativeApplyStateDelta` writes `stats` purely from
+`delta->w0`/`w1`, so identical operands to the previous application of that
+effect means identical writes. Per-effect operand tracking, validity cleared on
+every material application (conservative direction):
+
+| counter | per frame | share |
+|---|---:|---:|
+| delta applications | 194.4 | |
+| within-frame index repeats (E20) | 124.8 | 64.2% |
+| **identical-operand applications** | **14.0** | **7.2% of applications, 11.2% of repeats** |
+| of those, GEOMETRY | 0 | |
+| material invalidations | 29.7 | |
+
+**Only 14 of 194.4 applications a frame re-write what is already there** —
+~3,920 ticks, below the 5,000–7,000 placement floor. The other ~110 "repeats"
+are the same knob set to *different* values, which is necessary work. A guard
+would pay a compare on all 194.4 to skip 14: **E8's shape**, which cost +16,301
+and was deleted.
+
+E19's structural check passes (P0 triangles 320/frame, control rate).
+
+**The durable lesson: count identity of the write, not identity of the target.**
+The two differ by 9x here, and the first produced a 35,000-tick opportunity that
+does not exist. Third time this cycle a plausible headline survived until one
+more counter was added — after E13's inert probe and E19's collapsed geometry —
+each costing one build to catch.
+
+**Queue after this:** E16 is again the only large cut identified in the phase
+(35,000–50,000), E17 awaits visual approval, and the per-root matrix work
+(~40,000, inflated bracket) is the only unpriced item left worth measuring. E17
+already establishing E16's vector matrix now matters more, not less.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E21_StateGuardRefuted_20260728.md`.
+
 ## R2-03 E20 — the state replay repeats itself 1.8x a frame (2026-07-28)
+
+**Superseded by E21 — the 64.2% is real but is not redundancy. Kept for the
+reasoning trail.**
 
 E19 refuted deletion as a pricing method, so this asks R2-02 F's question
 instead: not what the phase costs, but how much of it is **redundant**.
@@ -223,10 +265,8 @@ ticks/frame** at 280 ticks an application.
 E19's structural check applied — P0 triangles 320/frame, its control rate — so
 the arm measures what it claims.
 
-**Worth 25,000–30,000 realised**, since a value compare is not free. Smaller than
-E16's ceiling, larger than E17's shipped cut, and a far smaller change than
-either: a guard inside one function, no light-space reasoning, no load-time
-table, no emit change. **Best return-to-risk on the board.**
+~~**Worth 25,000–30,000 realised.** Best return-to-risk on the board.~~
+**Withdrawn by E21: the realised figure is ~3,920, below the placement floor.**
 
 **Falsifier before building, one build:** "applied twice in a frame" is not
 "the second was a no-op" — something between them may have changed that state. So

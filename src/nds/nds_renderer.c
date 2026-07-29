@@ -16117,6 +16117,18 @@ static s32 ndsRendererNativePrepareDirectRun(
     return ndsRendererFastRawStateEligible(state);
 }
 
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+/* R2-03 E20 falsifier state. Indexed by NDSNativeStateDelta::effect; 16 covers
+ * the eleven cases the switch handles with room to spare. */
+#define NDS_R2_DELTA_EFFECT_MAX 16u
+u32 gNdsR2SpanIdenticalOperands;
+u32 gNdsR2SpanIdenticalGeometry;
+u32 gNdsR2SpanMaterialInvalidations;
+static u32 sNdsR2DeltaLastW0[NDS_R2_DELTA_EFFECT_MAX];
+static u32 sNdsR2DeltaLastW1[NDS_R2_DELTA_EFFECT_MAX];
+static u8 sNdsR2DeltaLastValid[NDS_R2_DELTA_EFFECT_MAX];
+#endif
+
 static void __attribute__((noinline, optimize("Os")))
 ndsRendererNativeApplyRootLightPreamble(
     const NDSNativeRoot *root, NDSRendererStats *stats)
@@ -16148,6 +16160,36 @@ ndsRendererNativeApplyStateDelta(
     {
         return;
     }
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    /* R2-03 E20 falsifier. E20 counted applications that repeat a delta index
+     * within a frame; that is an upper bound, because a repeat is only elidable
+     * if it writes what is already there. Every case below writes stats purely
+     * from delta->w0/w1, so identical operands to the previous application of
+     * the same effect means identical writes -- with the one exception noted
+     * for GEOMETRY, whose result also depends on the prior geometry_mode.
+     *
+     * Validity is cleared whenever a material is applied, because materials
+     * write the same stats fields and would make a stale operand match unsafe.
+     * That makes this count conservative, which is the right direction. */
+    if ((u32)delta->effect < NDS_R2_DELTA_EFFECT_MAX)
+    {
+        u32 e = (u32)delta->effect;
+
+        if ((sNdsR2DeltaLastValid[e] != 0u) &&
+            (sNdsR2DeltaLastW0[e] == delta->w0) &&
+            (sNdsR2DeltaLastW1[e] == delta->w1))
+        {
+            gNdsR2SpanIdenticalOperands++;
+            if (delta->effect == NDS_NATIVE_STATE_GEOMETRY)
+            {
+                gNdsR2SpanIdenticalGeometry++;
+            }
+        }
+        sNdsR2DeltaLastW0[e] = delta->w0;
+        sNdsR2DeltaLastW1[e] = delta->w1;
+        sNdsR2DeltaLastValid[e] = 1u;
+    }
+#endif
     switch (delta->effect)
     {
     case NDS_NATIVE_STATE_OTHERMODE:
@@ -16286,6 +16328,17 @@ static void ndsRendererNativeApplyMaterial(
         return;
     }
     ndsRendererNativeSourceBoundary(state);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    {
+        u32 e;
+
+        gNdsR2SpanMaterialInvalidations++;
+        for (e = 0u; e < NDS_R2_DELTA_EFFECT_MAX; e++)
+        {
+            sNdsR2DeltaLastValid[e] = 0u;
+        }
+    }
+#endif
     effects = material->effects;
     /* Root DE call + generated segment-E table DE jump. The root command is
      * already included in the generated source count; only the table word

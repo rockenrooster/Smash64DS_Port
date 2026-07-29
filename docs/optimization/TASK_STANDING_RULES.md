@@ -1045,3 +1045,28 @@ E19's 251,520 does not.
 Corollary: **a skip arm is a dependency test as much as a measurement**, and it
 converts silently into one when the skipped work feeds the work being measured.
 When it does convert, the finding is the dependency, not a saving.
+
+### Count identity of the write, not identity of the target (R2-03 E21, 2026-07-28)
+
+E20 measured that 64.2% of the fighter's state-delta applications re-apply a
+delta index the frame had already applied, and put a ~35,000 tick/frame
+opportunity on the board off that number. E21 asked how many of those repeats
+write the *same operands*: **7.2% of applications, 11.2% of the repeats** —
+~3,920 ticks/frame, below the placement floor, against a guard that would pay a
+compare on all 194.4 applications to skip 14. Refuted, and it was E8's losing
+shape.
+
+A state machine that re-visits the same **knob** with **different values** is
+doing necessary work. Counting knob-visits measures the shape of a replay, not
+its waste. The two differed by a factor of nine here.
+
+**Whenever redundancy is the premise of a cut, the counter must compare the value
+written against the value already present** — not the address, index, slot, or
+identifier being written to. If that comparison is awkward to build, that
+difficulty is information: it usually means the "redundant" writes are not
+actually equal.
+
+Third instance this cycle of a plausible headline surviving until one more
+counter was added, after E13's inert offscreen probe and E19's collapsed
+geometry. Each cost one build to catch and each would otherwise have been acted
+on.
