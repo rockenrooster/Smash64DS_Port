@@ -172,20 +172,41 @@ no frame in 439..566 exercises it, so the change was **reverted rather than
 shipped unproven**. Confirm it on a frame with an active `config->color_modulate`
 before rebuilding it.
 
-### What remains to test, in order
+### What remains to test — and the source reading that already narrows it
 
-1. **Shuffle amplitude and sign.** `ndsRendererAdapterSetShuffleOffset` converts
-   `dFTDisplayMainShufflePositions` with `offset->x * 4096.0F`. If that scale or
-   sign is wrong the fighter is displaced, which would produce a large pixel
-   delta and a body part overlapping where the reference has background — a
-   better fit for a "dark mass appearing" than any shading difference. Test by
-   capturing the candidate with the fold's offset forced to zero: if the frame
-   then matches the reference's *unshuffled* pose exactly, the fold's arithmetic
-   is the whole story.
-2. **Native owner versus generic shading during animlock.** These are the only
-   frames where the two paths draw the same fighter, so E16's hardware-lighting
-   approximation has never been compared against the software shade on identical
-   input. That comparison is now available and cheap.
+**Candidate 1, the fold's arithmetic, now looks unlikely.** Read the source
+before testing it further:
+
+- `dFTDisplayMainShufflePositions` (`ftdisplaymain.c:38`) holds **±50 and ±100**
+  in the source's float world units, and E32 copies those values through
+  unchanged at `offset->x * 4096.0F`, which is the port's documented one-world-
+  unit-equals-4096 conversion. The magnitude is a direct copy, not a guess.
+- `ftdisplaymain.c:1205` applies it as `syMatrixAdvanceW` + `syMatrixTra` +
+  `gSPMatrix(..., G_MTX_PUSH | G_MTX_MUL | G_MTX_MODELVIEW)` at the top of the
+  fighter draw. Multiplying a translation into the modelview stack *between* the
+  view matrix and the model gives `view * T * model` — a translation along
+  **world** axes, which is exactly what adding into the world matrix's
+  translation row reproduces. The space matches.
+- Note there are **two** application sites: this one for the fighter body, and
+  `lbcommon.c:1629`, which adds the same offset into an *attach* DObj's matrix.
+  If E32's per-binding loop covers bindings the source shuffles at only one of
+  those sites, it over-applies. That is the one part of candidate 1 still worth
+  checking.
+
+**Candidate 2, E16's hardware lighting, is now the leading explanation.**
+Hitlag frames are the *only* frames where the native owner and the generic path
+draw the same fighter — everywhere else exactly one of them runs. So E16's
+hardware-lighting approximation has never been compared against the software
+shade on identical input, and E32 is what made that comparison happen. On this
+reading the regression belongs to E16, which was graduated on frames that could
+not expose it, and E32 merely revealed it.
+
+**Obstacle to testing candidate 2, found the hard way:** `NDS_R2_FIGHTER_HW_LIGHT`
+is `override`-forced to 1 for the hwtri targets (`Makefile:543` and `:657`), so a
+command-line `NDS_R2_FIGHTER_HW_LIGHT=0` is silently ignored — the build
+succeeds and the config header still reads 1. Testing the software shade against
+the same frames needs the `override` relaxed for a lab build, and **the config
+header must be checked after the build rather than the command line trusted.**
 
 `PROJECT_GOAL.md` requires the result stay "recognizable, readable during
 gameplay". A struck fighter turning dark maroon is a readability change on

@@ -77,14 +77,27 @@ correctly. The change was **reverted rather than shipped unproven**; the
 arithmetic still predicts a real defect wherever alpha is non-zero, but nothing
 in 439..566 exercises it.
 
-**Next two candidates, in order:** (1) the fold's amplitude/sign —
-`ndsRendererAdapterSetShuffleOffset` uses `offset->x * 4096.0F`, and a wrong
-scale displaces the fighter, which fits "a dark mass appears where the reference
-has background" better than any shading difference; test by forcing the fold's
-offset to zero. (2) native-owner versus generic shading during animlock — these
-are the only frames where both paths draw the same fighter, so E16's
-hardware-lighting approximation has never been compared against the software
-shade on identical input.
+**Source reading narrows the two remaining candidates to one.** The fold's
+arithmetic looks right: `dFTDisplayMainShufflePositions` holds ±50/±100 in source
+world units and E32 copies them through the port's documented 4096 conversion
+unchanged, and `ftdisplaymain.c:1205` applies them with
+`G_MTX_PUSH | G_MTX_MUL | G_MTX_MODELVIEW` between view and model — a world-axis
+translation, which is what adding into the world matrix's translation row
+reproduces. One part is still open: the source has **two** application sites
+(`ftdisplaymain.c:1205` for the body, `lbcommon.c:1629` for an *attach* DObj), so
+E32's per-binding loop may over-apply.
+
+**The leading explanation is now E16, not E32.** Hitlag frames are the only
+frames where the native owner and the generic path draw the same fighter, so
+E16's hardware lighting has never been compared against the software shade on
+identical input — E32 is merely what made that comparison happen. E16 was
+graduated on frames that could not expose it.
+
+**Obstacle, found the hard way:** `NDS_R2_FIGHTER_HW_LIGHT` is `override`-forced
+to 1 for the hwtri targets (`Makefile:543`, `:657`), so a command-line
+`NDS_R2_FIGHTER_HW_LIGHT=0` is **silently ignored** — the build succeeds and the
+config header still reads 1. Always check the built `nds_build_config.h` rather
+than trusting the command line.
 
 **Harness note:** exact-frame capture is *not* gated to the Cut G window by frame
 number, only by its assertion set — the captures land, then the GO-text
