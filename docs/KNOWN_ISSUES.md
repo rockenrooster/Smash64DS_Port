@@ -199,3 +199,44 @@ should cite a *stable* locator — symbol name, or file plus symbol — not a li
 number. Line numbers are a property of the working tree at generation time and
 have no place in an artifact whose whole value is that it is dated. Until then,
 treat the committed copy as the record and leave it alone.
+
+## The struck fighter does not flash white during hitlag (R2-03 E32/E62, 2026-07-29)
+
+**Accepted deliberately, owner-approved 2026-07-29, so E32's −51,136 WORK-H P95
+could ship.** Recorded here so it is not forgotten and so nobody "rediscovers"
+it as a new bug.
+
+**Symptom.** For the ~5 consecutive frames of a hitlag burst, the fighter being
+hit renders in its normal colours instead of flashing white. Nothing is corrupt
+or missing — it is the absence of a flash, not a wrong colour. Every frame that
+is not a flash frame is **pixel-identical** to the pre-E32 generic render
+(measured: frames 510/511, 0 differing pixels; 480/481 differ by 1.35%/1.10%,
+confined to the struck fighter). Evidence:
+`artifacts/visibility/e32-{off,on}-{480,481,510,511}.png`.
+
+**Root cause — a generator gap, not a runtime bug.** The hurt flash clears
+`G_LIGHTING` (`NDS_RENDERER_GEOM_LIGHTING`, `0x00020000`) for the struck fighter
+and draws its vertex colours raw. Under `NDS_R2_FIGHTER_HW_LIGHT` the native
+owner keeps `POLY_FORMAT_LIGHT0` set and emits `GFX_NORMAL` unconditionally, so
+the geometry engine lights the flashing fighter using stale diffuse/ambient from
+the previous epoch. **The owner has no flash-colour data to draw**:
+`sNdsNativeFighterDenseVertices[].rgba` holds the F3DEX2 **packed normal**, baked
+for the lit path.
+
+**Do NOT try to fix it by enabling `NDS_R2_UNLIT_VERTEX_EPOCH`.** E49 wrote that
+route and E62 built it: it drops `POLY_FORMAT_LIGHT0` and emits
+`ndsRendererR2DenseVertexColor15`, which reads that same normals table, so the
+fighter renders in **rainbow speckle** and the diff against the correct render
+gets *worse* — 2,199 px versus E32's 1,551. Picture:
+`artifacts/visibility/e62-on-480.png`.
+
+**The real fix (E63), when it is worth a session.** Bake the flash variant's
+vertex colours as a second dense table beside `sNdsNativeFighterDenseNormals`,
+and select per epoch on `geometry_mode & LIGHTING`. The runtime half already
+exists and is proven to reach all four emit loops; only the generator side and
+the table's size are open. Size the table before writing the generator.
+
+**Note for whoever reads the old entries:** E48 and E58 look contradictory and
+are not. The *live display-list* vertices on a flash epoch are colours (E48,
+273/273, material 0); the *baked dense* table is normals (E58). Different
+streams.

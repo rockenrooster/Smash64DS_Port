@@ -625,6 +625,19 @@ override NDS_R2_FIGHTER_HW_MTX := 1
 # bit-identical (181,440 P0 triangles either way). Requires HW_MTX above for the
 # vector matrix. Boundary green, owner-approved 2026-07-28.
 override NDS_R2_FIGHTER_HW_LIGHT := 1
+# R2-03 E32: the hitlag shuffle no longer knocks the native fighter owner off
+# its path, so the generic display-list interpreter stops running as a second
+# renderer for the 5 frames of a hitlag burst. -51,136 WORK-H P95, 17/128
+# over-gate frames -> 13/128.
+#
+# ACCEPTED WITH A KNOWN VISUAL RESIDUAL, owner-approved 2026-07-29: the struck
+# fighter does not flash white during those frames. E62 established this is a
+# generator gap, not a runtime bug -- the flash clears G_LIGHTING and draws
+# vertex colours raw, and the owner has no flash-colour data baked. Every
+# non-flash frame is pixel-identical to the generic path. Tracked in
+# KNOWN_ISSUES.md; do NOT enable NDS_R2_UNLIT_VERTEX_EPOCH as a fix, E62 proved
+# it emits packed normals and is visibly worse.
+override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
 # R2-03 E46: the fighter state-delta path into ITCM. The switch was already
 # resident; the span loop and every Record*/SyncTextureTile helper it dispatches
 # to were in main RAM, so all 134.5 before-span applications a frame left
@@ -758,6 +771,8 @@ override NDS_TASK36_HW_COMPOSE := 2
 # R2-03 E17/E16: match the published block. Any flag there is on this one too.
 override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_FIGHTER_HW_LIGHT := 1
+# R2-03 E32. See the published block for the accepted visual residual.
+override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
 # R2-03 E46: the fighter state-delta path into ITCM. The switch was already
 # resident; the span loop and every Record*/SyncTextureTile helper it dispatches
 # to were in main RAM, so all 134.5 before-span applications a frame left

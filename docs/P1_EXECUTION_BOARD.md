@@ -32,6 +32,45 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E32 GRADUATED — −52,416 WORK-H P95, 17/128 → 12/128 over gate (2026-07-29)
+
+`NDS_R2_FIGHTER_SHUFFLE_FOLD := 1` in both shipped Makefile blocks. The hitlag
+shuffle no longer knocks the native fighter owner off its path, so the generic
+display-list interpreter stops running as a second renderer for the ~5 frames of
+a hitlag burst.
+
+**Owner-approved 2026-07-29 with a known visual residual** (the struck fighter
+does not flash white). E62 established that is a generator gap, not a runtime
+bug, and every non-flash frame is pixel-identical. Tracked in `KNOWN_ISSUES.md`.
+
+128-frame ring dump, frames 794..921, same window as the control:
+
+| `WORK-H` | control | E32 | delta |
+|---|---:|---:|---:|
+| P50 | 1,013,952 | 1,017,344 | +3,392 |
+| **P95** | 1,228,928 | **1,176,512** | **−52,416** |
+| max | 2,040,896 | 1,536,832 | −504,064 |
+| **over gate** | **17/128** | **12/128** | **−5** |
+
+P50 +3,392 is inside the 5,000–7,000 placement floor. E54 projected −51,136 and
+13/128; delivered −52,416 and 12/128. **Boundary green.** Evidence:
+`artifacts/performance/r203-e32-graduated-clean-128{.json,-rows.csv}`.
+
+**Two process notes, both worth carrying forward.**
+
+1. **The first measurement was confounded and had to be discarded.** A helper
+   agent was editing `reloc_backend_mp_collision.c`,
+   `reloc_backend_compat_shims.c` and `nds_mp_floor_crossing.h` in the *same
+   worktree*; its edits (14:29–14:34) predate that build (14:45) and dump
+   (14:46). Re-measured with those changes stashed: P95 1,176,512 vs the
+   confounded 1,172,992, over-gate 12 vs 15. The confound did not change the
+   verdict, but it could have. **One worktree, one writer** — use
+   `isolation: "worktree"` for a concurrent implementer.
+2. **P95 is index-sensitive when the tail is sparse.** The harness uses
+   `floor((n-1)*0.95)`; `int(n*0.95)` is one position higher and reads 39,680
+   different on this distribution. Over-gate count and max are convention-free
+   and moved decisively (−5 frames, −504,064), which is why they lead here.
+
 ## R2-03 E62 — E32 is a GENERATOR gap, not a visual-approval call. E49's flag built and REFUTED with a picture (2026-07-29)
 
 **Correcting two things this board and `HANDOFF.md` have said, including my own
