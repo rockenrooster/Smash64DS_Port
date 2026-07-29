@@ -666,14 +666,28 @@ override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
 # as a non-bit-exact change. Step and Linear nodes keep the decomp's own
 # expressions, so 45.3% of AObj nodes stay bit-identical.
 #
-# CORRECTION, and read this before trusting the equivalence: an earlier version
-# of this comment claimed "the Task 9 state hash did NOT move". That was wrong.
-# `NDS_TASK9_STATE_HASH ?= 0` and NOTHING in verify-all.ps1 or the Boundary
-# harness references it, so the hash was never evaluated -- not unchanged,
-# UNMEASURED. The hash does cover AOBJ and DOBJ records, i.e. exactly the joint
-# values this changes, so it is the right instrument and it still owes an answer.
-# Boundary green remains real and covers a great deal, but it is not a
-# bit-equivalence result. Tracked in KNOWN_ISSUES.md.
+# EQUIVALENCE, settled by E65 -- and note the correction path, because two
+# earlier versions of this comment were wrong in opposite directions. The first
+# claimed "the Task 9 state hash did NOT move"; it had never run
+# (`NDS_TASK9_STATE_HASH ?= 0`, nothing in verify-all.ps1 references it). The
+# second called the hash "the right instrument"; it is not. The hash asserts
+# bit-exactness and this change is authorized NON-bit-exact, so it can only ever
+# report "differs", which says nothing about whether gameplay moved.
+#
+# The right instrument is an error bound, and it now runs on every profile:
+# scripts/check_r2_cubic_error_bound.py, wired into
+# check-gbi-decode-fixtures.ps1. It extracts this kernel from between the
+# NDS_R2_CUBIC_FIXED_KERNEL_BEGIN/END markers plus gcGetInterpValueCubic from the
+# decomp, compiles both on the host and sweeps. Worst deviation 0.0028 rad on
+# rotation tracks and 0.0067 world units on translation tracks, against a 0.02
+# gate set by hitbox scale. Joint values reach gameplay only through
+# gmCollisionGetFighterPartsWorldPosition, so that cannot flip a hit decision.
+#
+# E65 also lifted the basis to Q16 and moved the evaluator to ARM
+# (__attribute__((noinline, target("arm")))) because this TU builds -mthumb,
+# which has no SMULL: the 64-bit multiplies were eight `bl __aeabi_lmul` a call.
+# A FURTHER -35,584 P95 on top of the numbers above, so the totals here are the
+# E64b step alone. Do not remove that attribute.
 #
 # Arm A added a 256-entry conversion cache and REGRESSED (+21,632 P95) on 10 KB
 # of BSS plus a 1,824-byte .text.hot member. Do not re-add the cache; the
@@ -820,8 +834,8 @@ override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 # R2-03 E32. See the published block for the accepted visual residual.
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
-# R2-03 E64b. See the published block, including the correction about the state
-# hash never having been measured.
+# R2-03 E64b/E65. See the published block, including how the equivalence was
+# finally settled -- with a host error bound, not the state hash.
 ifneq ($(NDS_R2_LAB_CUBIC_OFF),1)
 override NDS_R2_CUBIC_FIXED := 1
 endif
