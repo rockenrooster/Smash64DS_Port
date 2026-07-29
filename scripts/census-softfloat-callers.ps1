@@ -28,6 +28,17 @@ param(
 # `break *<exact address>` from nm stops on the first instruction, where lr is
 # still the caller's return address. Task 85 proved this out.
 #
+# R2-03 E60 CORRECTS THE READING OF THIS CENSUS. The gameplay side is not
+# collision: `gcPlayDObjAnimJoint` alone is 58% of the class and the whole
+# collision family is under 4,000 ticks/frame. Animation inclusive is 146,942
+# ticks/frame, 15.2% of WORK, larger than the gap to the gate. Read the gate
+# column as "which contract governs a change", not as "this cannot be changed" --
+# PROJECT_GOAL.md requires mechanical equivalence, NOT bit-exactness, and lists
+# precomputed animation data and fixed-point replacement as allowed techniques.
+# The state-hash freeze is a verifier's assertion, not the product contract, and
+# a load-time pose table computed with the same float arithmetic is bit-exact
+# anyway. See docs/optimization/ClaudeOpus5_R203_E60_AnimationIsTheGate_20260729.md.
+#
 # The split that matters is gameplay versus renderer. Float in gmcollision, mp*,
 # ftMain* and ftComputer is frozen by the Task 9 state hash and by
 # PROJECT_GOAL.md's mechanical-equivalence contract, so it cannot be converted
@@ -258,9 +269,19 @@ try {
     $renderer = ($byGate | Where-Object { $_.Gate -like 'RENDERER*' } |
         Measure-Object -Property Count -Sum).Sum
     if ($null -eq $renderer) { $renderer = 0 }
-    Write-Host ("soft-float class is 191,810 ticks/frame (Task 81 partition).")
-    Write-Host ("renderer-side share: {0:P1} => ~{1:N0} ticks/frame eligible" -f `
-        ($renderer / $total), (191810 * $renderer / $total))
+    # R2-03 E60. This census measures SHARES; it cannot measure the class total,
+    # so the absolute scale has to come from a profile. It used to multiply by a
+    # hardcoded 191,810 from the Task 81 partition and present the product as a
+    # measurement -- by 2026-07-29 that constant was 84% high, because R2-04 E5
+    # and R2-03 E46 had graduated since and __aeabi_fadd + __aeabi_fmul had
+    # fallen to 104,222. Report the share and name the scale's provenance;
+    # multiply against a profile taken on the SAME build instead.
+    Write-Host ("renderer-side share: {0:P1} of the fadd/fmul class." -f `
+        ($renderer / $total))
+    Write-Host ("For absolute ticks multiply by __aeabi_fadd + __aeabi_fmul from")
+    Write-Host ("a profile of this build (run-task37-profile-census.ps1). It was")
+    Write-Host ("104,222 ticks/frame at R2-03 E60; do not reuse that figure after")
+    Write-Host ("anything graduates.")
     Write-Host ""
 
     if ($JsonOut) {
@@ -273,7 +294,9 @@ try {
             helpers = $Helpers
             entryAddresses = $entries
             samples = $total
-            softFloatTicksPerFrame = 191810
+            # Provenance, not a measurement -- see the Write-Host note above.
+            # A consumer must scale by a profile of the same build.
+            softFloatTicksPerFrameStaleTask81 = 191810
             rendererShare = ($renderer / $total)
             capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
             byGate = @($byGate)

@@ -32,6 +32,75 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E60 — ANIMATION owns the gate, not collision. Task 78 stopped it on a self-vs-inclusive error (2026-07-29)
+
+**The board's `SRC`-half claim is wrong and the animation lever must reopen.**
+Full report:
+`optimization/ClaudeOpus5_R203_E60_AnimationIsTheGate_20260729.md`. Zero builds
+were spent on the attribution — the E53 profiles were already on disk.
+
+Ordinary frames 876–879: total 1,120,324, idle 150,837, **WORK 969,487**.
+
+| | self | via `fadd`/`fmul` | inclusive |
+|---|---:|---:|---:|
+| `gcPlayDObjAnimJoint` | 34,022 | **60,509** | **94,531** |
+| `battleship_ftAnimParseDObjFigatree` | 12,115 | 5,703 | 17,818 |
+| `ndsBaseGcPlayMObjMatAnim` | 5,201 | 4,560 | 9,761 |
+| seven more animation symbols | 24,709 | 123 | 24,832 |
+| **animation total** | **76,047** | **70,895** | **146,942** |
+
+**146,942 ticks/frame, 15.2% of WORK — larger than the whole 108,928 gap.**
+
+**Collision is not the float cost.** Ranked by caller, the entire collision
+family (`ndsStageMPSegmentIntersection2D` 1,479, `ndsMPFloorSegmentCrosses‑
+DownwardKernel` 862, `gmCameraUpdateInterests` 708, `mpProcessUpdateMain` 678) is
+**under 4,000 ticks/frame** — below the build-placement noise floor. The `SRC`
+*bucket* attribution was right; reading it as `gmcollision.c` was a guess that
+no caller-level measurement ever supported. **Delete the "float→fixed on the
+collision path" row.** The renderer share is 15,709 (15.1%), inside switch plan
+§3.9's "10–20K usually too small" band, so it is not architecture work either.
+
+**Why every previous reading missed it: a leaf helper is charged to itself,
+never to its caller.** Task 78 §3 totalled animation at 82,807 *self* ticks and
+stopped against a 100,000 target; its own §4 listed `fadd`+`fmul` = 119,912 as a
+*separate* family. Applying E60's measured shares to Task 78's own numbers:
+82,807 + 67.9% × 119,912 = **164,236 — 1.64× its target, not 0.85×.** Both
+numbers were in that report, on facing pages, in different families.
+
+**Tasks 95 and 96 stand and do not block this.** They refuted the *layout*
+route (hoist works/frame regresses; 0 of 15,687 adjacent `AObj` pairs). The
+*arithmetic* route has never been attempted, because Task 92 §5 declared it
+frozen. That freeze is the **Task 9 state-hash verifier, not the product
+contract** — `PROJECT_GOAL.md` requires mechanical equivalence and explicitly
+lists "precomputed animation data", "quantized animation poses", "fixed-point
+replacements" and "reduced animation interpolation" as allowed. Task 77 E1 and
+E57 forbid computing a *different* pose; neither forbids computing the same pose
+more cheaply.
+
+**Also: float is a flat cost, not an excursion cost.** Ranking E53's
++420,227/frame excursion delta by symbol gives 376,434 across 151 symbols that
+are exactly zero on control (the E54 fallback, confirmed) and 173,981 across
+symbols on both — whose top is fixed-point *matrix* work (`LoadHardwareMatrixPair`
++10,185, `MtxMul20p12` +8,478, `BuildDObjLocalMatrix` +8,080). `__aeabi_fadd`
+does not appear in the growth list at all. **That is what makes animation the
+right target: it moves P50 and P95 one for one, where E32 touches five frames.**
+
+**E61 sizes the table before any code is written** — three integers: distinct
+(animation, frame) pairs reachable in Boundary; bytes per pose; and whether
+`anim_speed` ever leaves {0, 1}. If the pose is a pure function of (animation,
+frame) it is precomputable at load time *with the identical float arithmetic*,
+which is bit-exact by construction — the state hash never sees a different value
+and no owner decision is needed. Precedent for the fidelity required:
+`scripts/generate_pupupu_water_aot.py` already AOT-compiles the material
+animation script, rounding after every MIPS single-precision operation. If the
+table does not fit, the fallback is a per-fighter generated evaluator, not a
+smaller table.
+
+Harness fixed at its seam: `census-softfloat-callers.ps1` multiplied shares by a
+hardcoded `191,810` from the Task 81 partition and printed the product as a
+measurement; on the current build that constant is **84% high**. It now reports
+the share and names the scale's provenance.
+
 ## R2-03 E59 — the generic software lighting NEVER RAN. E58 is retracted, and the flash line is CLOSED (2026-07-29)
 
 **Six experiments have now been spent on the hurt-flash mechanism (E48, E49,
