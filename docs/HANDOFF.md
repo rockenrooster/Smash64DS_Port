@@ -7,13 +7,22 @@ in the published ROM; together −52,672, which is 21% of the phase's 250,833 ga
 `FTR` P50 is now ~456,000 against a 250,000 budget, so the phase gate is still
 missed ~1.8x.
 
-**The next lever is decided and sized, not chosen: replace
-`ndsRendererNativePrepareProductionRun` with the per-run baked-fact memo.** E25
-partitioned it into four roughly equal quarters (42,281/frame total, no hot
-spot), all re-deriving facts E5 measured at 1.9% churn — which is the switch
-plan's own R2-03 bullet. See the E25 board row for the exact payload to add to
-`sNdsR2RunTextureMemo`. Note ITCM is now full (1,024 bytes free): the census and
-run-proof instruments can no longer coexist in one ROM.
+**The next lever is decided, sized and specified — start here, no rediscovery
+needed:**
+`docs/optimization/ClaudeOpus5_R203_E26_Spec_GeneratedEpochState_20260728.md`.
+
+Generate the **resolved per-epoch state** in
+`scripts/generate_nds_native_owners.py` (a fold over the delta sequence it
+already walks) and install it directly, instead of replaying 194.4 deltas a
+frame whose 127.3 invalidations force 46.4 full prepares. E25b established the
+state replay (65,026) and `PrepareProductionRun` (42,281) are **one coupled
+mechanism**, which is why the four cuts before it read null; E25c ruled out the
+cheap per-run value key (70.2 of the invalidating deltas move the 20-word tile
+state). Target is the coupled 107,307/frame.
+
+ITCM is full (1,024 bytes free): put new code behind `noinline` outside
+`.itcm.native_fighter`, and note the census and run-proof instruments can no
+longer coexist in one ROM.
 
 `P1_EXECUTION_BOARD.md` owns current state; this file is the restart surface and
 next packet.
