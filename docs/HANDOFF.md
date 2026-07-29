@@ -22,15 +22,15 @@ regression — it is not awaiting a yes/no.
 | gate | 1,120,000 |
 | over gate | **17 / 128** |
 
-**P50 is inside the gate. Only P95 misses, by 108,928.** Evidence:
+**P50 is inside the gate; only P95 misses, by 108,928.** Evidence:
 `artifacts/performance/r203-e53-ctlb-128{.json,-rows.csv}`.
 
 ## What owns the miss
 
-E52 re-decomposed the excursion after E5 graduated, and **E35's "25 of 26
-over-gate frames are `SRC`" no longer holds as written** — that predated E5
-removing the on-demand-loading component. The over-gate frames now split almost
-exactly in half: **`FTR` +140,988 (50%), `SRC` +135,360 (48%)**.
+E52 re-decomposed the excursion after E5 graduated: **E35's "25 of 26 over-gate
+frames are `SRC`" no longer holds** — that predated E5 removing the loading
+component. The over-gate frames now split in half: **`FTR` +140,988 (50%),
+`SRC` +135,360 (48%)**.
 
 E53 profiled excursion frames 910–913 against control 876–879. Work delta
 **+407,847 ticks/frame**, and **twelve symbols are exactly zero on control
@@ -55,10 +55,10 @@ the whole distribution**:
 | as measured | 1,013,696 | 1,228,928 | 2,040,896 | 17/128 |
 | **`FTR` capped** | 1,011,264 | **1,177,792** | 1,531,072 | **13/128** |
 
-**E32 is worth −51,136 P95 and four frames.** It halves the gap and does not
-close it. It is the largest single lever left, and it is blocked on the hurt
-flash (E48/E49/E50), not on its value. The twelve frames that remain over gate
-are the `SRC` half below.
+**E32 is worth −51,136 P95 and four frames** — it halves the gap without
+closing it. Largest single lever left, blocked on the hurt flash (E48/E49/E50,
+and E55's correction), not on its value. The twelve frames still over gate are
+the `SRC` half.
 
 **Never compare a census build's frame numbers to a clean build's.** The census
 flags cost ~137,664 ticks/frame and shift the histogram 2:726 → 2:314, so frame
@@ -77,33 +77,37 @@ soft-float add; and the float leaves are already lowered (`_arm_addsubsf3.o`,
 
 ## Best unowned work
 
-**R2-04 E57 — the visual pose is evaluated twice per presented frame.**
-`gcRunAll` runs exactly **2.0 times per presented frame** (60 Hz gameplay, 30 Hz
-presentation) and the animation evaluation sits inside it:
-`gcPlayDObjAnimJoint` 164 calls/frame for 34,022 ticks,
-`battleship_ftAnimParseDObjFigatree` 104 for 12,115, `ftParamUpdateAnimKeys` 4
-for 6,191 — **~52,000 ticks/frame, paid twice.** R2-04's charter is exactly this
-decoupling and only its *cache* half (E1/E5) has been built. Upper bound
-**~26,000 ticks/frame, flat**, so it moves P50 and P95 together.
+**There is no large unowned lever left. That is the finding, not a gap in the
+search.** Both halves of the P95 miss are owner decisions, and the two candidates
+that looked ownerless this cycle were both closed by measurement:
 
-**It gates on a source question, not a tick question.** Halving is free only if
-gameplay — hitbox placement, collision points, grab ranges — does not read the
-joint transforms the odd tick writes. If hitboxes come from `ftParam` tables
-keyed on animation frame, the visual pose is separable and this is a pure win; if
-they read the live joint matrices, skipping a tick is a *gameplay* change under
-`PROJECT_GOAL.md`'s sacrifice order. **Answer it from BattleShip source before
-writing code.**
+**R2-04 E57 — REFUTED as a free win, from source.** `gcRunAll` runs exactly
+2.0x per presented frame and animation evaluation sits inside it (~52,000
+ticks/frame paid twice), so halving it looked like ~26,000 flat. But
+`gmCollisionGetFighterPartsWorldPosition` (`gm/gmcollision.c:489`) places every
+hitbox by **walking the live joint DObj chain and multiplying through each
+joint's transform** — not from `ftParam` tables keyed on animation frame. The odd
+tick's pose is load-bearing for hit detection, so evaluating once is a *gameplay*
+change under the sacrifice order, not a visual one.
 
-**R2-03 E26 — demoted, not refuted.** Re-measured on the current build with
-`NDS_TASK91_DRAW_PHASE_CENSUS=1 NDS_R2_SPAN_LEAN_TIMING=1` (both flags: the
-second only compiles the per-delta census out from inside the brackets, the
-first is what defines them): before-span **23,844/frame over 136.8 deltas =
-174.2 each**, after-span 13,719 over 49.2, replay **37,563**. E46's ITCM move
-took 3,100 off E43's 26,944. That puts it at the *bottom* of the switch plan's
-§3.9 "20–50K consider if simple and exact" band, and E26 is exact but not
-simple — generator change, per-epoch install path, and E34-b's carve-out that
-`prim_color`/`env_color` stay live. It also cannot recover the whole 23,844.
-Take it if it is the last thing standing; do not open it as the headline.
+**The corollary is the useful part: the renderer is already at presentation
+rate.** `ndsFighterMarioFoxDLAllDrawForSlot` 2.0 calls/frame,
+`AdapterBuildDObjLocalMatrix` 50.0 (25 joints x 2 fighters),
+`ExecuteNativeFighterOwnerProduction` 2.0 — all once per *presented* frame.
+**R2-04's rate-decoupling mandate is already satisfied on the renderer side**;
+the 52,000 is gameplay-owned 60 Hz work in `SRC`. Do not re-open it as a
+renderer row.
+
+**R2-03 E26 — demoted, and now the largest unowned row by default.**
+Re-measured with `NDS_TASK91_DRAW_PHASE_CENSUS=1 NDS_R2_SPAN_LEAN_TIMING=1`
+(both flags — the second only compiles the per-delta census out from inside the
+brackets, the first defines them): before-span **23,844/frame over 136.8 deltas
+= 174.2 each**, after 13,719 over 49.2, replay **37,563**. E46 took 3,100 off
+E43's 26,944. That is the *bottom* of the plan's §3.9 "20–50K consider if simple
+and exact" band, and E26 is exact but not simple — generator change, per-epoch
+install, E34-b's carve-out keeping `prim_color`/`env_color` live — and it cannot
+recover the whole 23,844. It is now the best unowned work by elimination rather
+than by size.
 
 Read `ClaudeOpus5_R203_E26_Spec_GeneratedEpochState_20260728.md` only alongside
 the board's E34/E34-b/E39/E43/E45/E56 entries, which correct it. E39 refuted the

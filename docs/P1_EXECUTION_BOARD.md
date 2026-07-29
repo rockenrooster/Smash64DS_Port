@@ -97,21 +97,51 @@ R2-04 E1/E5 delivered the animation *cache*; the *rate decoupling* is untouched.
 **Upper bound ~26,000 ticks/frame, flat — it moves P50 and P95 equally**, which
 is worth more than E26 and is a phase deliverable rather than a micro-cut.
 
-### The one question that gates it, and it is a source question not a tick question
+### ANSWERED from source, and it refutes the free-win reading
 
-§3.6 requires that the renderer never need `render skeleton == gameplay
-skeleton`. Today they are one representation. Halving the evaluation is only free
-if the *gameplay* half — hitbox placement, collision points, grab ranges — does
-not read the joint transforms `gcPlayDObjAnimJoint` writes on the odd tick. If
-hitboxes are placed from `ftParam` tables keyed on animation frame, the visual
-pose is separable and this is a pure win. If they are read off the live joint
-matrices, skipping a tick is a **gameplay change**, not a visual one, and it
-belongs under `PROJECT_GOAL.md`'s sacrifice order rather than in a free-win row.
+`gm/gmcollision.c:489`, `gmCollisionGetFighterPartsWorldPosition`, is how a
+hitbox becomes a world position:
 
-**Answer that from BattleShip source before writing any code** — `decomp/` is the
-specification for it, and this is precisely the "inspect the reference before
-changing gameplay behavior" rule. Do not probe it with ticks; the question is
-which data the mechanics read.
+```c
+while (main_dobj != DOBJ_PARENT_NULL) {
+    parts = ftGetParts(main_dobj);
+    if (parts->unk_dobjtrans_0x5 != 0) {
+        gmCollisionGetWorldPosition(parts->mtx_translate, vec);
+        return;
+    } else if (parts->transform_update_mode == 0) {
+        gmCollisionTransformMatrixAll(main_dobj, parts, parts->unk_dobjtrans_0x10);
+        parts->transform_update_mode = 1;
+    }
+    gmCollisionGetWorldPosition(parts->unk_dobjtrans_0x10, vec);
+    main_dobj = main_dobj->parent;
+}
+```
+
+**Hitboxes are placed by walking the live joint DObj chain and multiplying
+through each joint's transform.** They are not `ftParam` tables keyed on
+animation frame. So the odd tick's pose is load-bearing for hit detection:
+evaluating once instead of twice moves every hitbox to the previous tick's pose
+on odd frames. That is a **gameplay change** under `PROJECT_GOAL.md`'s sacrifice
+order (items 3 and 4), not a visual one — the same class of decision as E35's
+float→fixed, and not an unowned free win.
+
+### And the renderer side is already at presentation rate
+
+The corollary matters more than the refutation. §3.6's requirement is that the
+*renderer* not re-derive an expensive second representation per gameplay tick —
+and the same census says it does not:
+
+| symbol | calls/frame | |
+|---|---:|---|
+| `ndsFighterMarioFoxDLAllDrawForSlot` | 2.0 | once per fighter per **presented** frame |
+| `ndsRendererAdapterBuildDObjLocalMatrix` | 50.0 | 25 joints x 2 fighters, once per presented frame |
+| `ndsRendererExecuteNativeFighterOwnerProduction` | 2.0 | once per fighter per presented frame |
+
+**R2-04's rate-decoupling mandate is already satisfied on the renderer side.**
+The ~52,000 of animation evaluation is gameplay-owned 60 Hz work living in the
+`SRC` bucket, not renderer work in `FTR`. Anyone reading R2-04's charter as "we
+still owe a 30 Hz pose" should read this row first: what is left of that charter
+is the `SRC` owner decision, already stated.
 
 ## R2-03 E55 — E49's "structurally out of reach" is too strong (2026-07-29, unbuilt)
 
