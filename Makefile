@@ -662,16 +662,29 @@ override NDS_R2_FIGHTER_HW_LIGHT := 1
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
 # R2-03 E64b: the animation cubic Hermite in Q12 fixed point. -26,944 WORK-H
 # P95, -20,352 P50, SRC P50 -9,344, over-gate 12/128 -> 9/128, 135,871
-# evaluations with zero saturations. Owner-authorized 2026-07-29 as a
-# non-bit-exact change; the Task 9 state hash did NOT move, so nothing needed
-# re-bounding -- Q12 truncation never altered a hit decision across the
-# one-minute Boundary match. Step and Linear nodes keep the decomp's own
+# evaluations with zero saturations, Boundary green. Owner-authorized 2026-07-29
+# as a non-bit-exact change. Step and Linear nodes keep the decomp's own
 # expressions, so 45.3% of AObj nodes stay bit-identical.
+#
+# CORRECTION, and read this before trusting the equivalence: an earlier version
+# of this comment claimed "the Task 9 state hash did NOT move". That was wrong.
+# `NDS_TASK9_STATE_HASH ?= 0` and NOTHING in verify-all.ps1 or the Boundary
+# harness references it, so the hash was never evaluated -- not unchanged,
+# UNMEASURED. The hash does cover AOBJ and DOBJ records, i.e. exactly the joint
+# values this changes, so it is the right instrument and it still owes an answer.
+# Boundary green remains real and covers a great deal, but it is not a
+# bit-equivalence result. Tracked in KNOWN_ISSUES.md.
 #
 # Arm A added a 256-entry conversion cache and REGRESSED (+21,632 P95) on 10 KB
 # of BSS plus a 1,824-byte .text.hot member. Do not re-add the cache; the
 # reasoning is in battleship_sys_objanim.c.
+#
+# NDS_R2_LAB_CUBIC_OFF=1 is the escape hatch that makes this A/B-able at all:
+# `override` defeats a command-line 0, so without it the control arm silently
+# builds identical to the candidate and the comparison reads "no difference".
+ifneq ($(NDS_R2_LAB_CUBIC_OFF),1)
 override NDS_R2_CUBIC_FIXED := 1
+endif
 # R2-03 E46: the fighter state-delta path into ITCM. The switch was already
 # resident; the span loop and every Record*/SyncTextureTile helper it dispatches
 # to were in main RAM, so all 134.5 before-span applications a frame left
@@ -807,8 +820,11 @@ override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 # R2-03 E32. See the published block for the accepted visual residual.
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
-# R2-03 E64b. See the published block.
+# R2-03 E64b. See the published block, including the correction about the state
+# hash never having been measured.
+ifneq ($(NDS_R2_LAB_CUBIC_OFF),1)
 override NDS_R2_CUBIC_FIXED := 1
+endif
 # R2-03 E46: the fighter state-delta path into ITCM. The switch was already
 # resident; the span loop and every Record*/SyncTextureTile helper it dispatches
 # to were in main RAM, so all 134.5 before-span applications a frame left

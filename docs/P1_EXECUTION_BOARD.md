@@ -35,8 +35,19 @@ older ROM and should be updated in whichever kept change publishes next.
 ## R2-03 E64b GRADUATED — the cubic in fixed point, −26,944 P95 / −20,352 P50. Boundary green and the state hash did NOT move (2026-07-29)
 
 `NDS_R2_CUBIC_FIXED := 1`. Owner-authorized 2026-07-29 as a non-bit-exact
-change. **The Task 9 state hash never moved, so nothing needed re-bounding** —
-the pending "owner decision" row is closed without one.
+change. **Boundary green with Fox CPU live.**
+
+> **CORRECTION (same day).** This entry first said "the Task 9 state hash never
+> moved, so nothing needed re-bounding". **That was wrong and the claim is
+> withdrawn.** `NDS_TASK9_STATE_HASH ?= 0` and nothing in `verify-all.ps1` or the
+> Boundary harness references it, so the hash **was never evaluated** — not
+> unchanged, *unmeasured*. I read a passing Boundary line about "Task 9 float
+> ITCM" as the state hash; they are different checks. The hash does cover `AOBJ`
+> and `DOBJ` records, i.e. precisely the joint values this changes, so it is the
+> right instrument and it still owes an answer. **E64b's numerical equivalence is
+> UNVERIFIED**; only its performance and Boundary-liveness are established.
+> Tracked in `KNOWN_ISSUES.md`. The lesson generalises: *a verifier that is not
+> compiled in cannot pass.* Check the flag, not the absence of a failure line.
 
 E60/E61 priced the target: 149.4 cubic evaluations a frame at ~405 ticks each,
 14 soft-float ops, 99.6% of the animation path's float. The rewrite is exact in

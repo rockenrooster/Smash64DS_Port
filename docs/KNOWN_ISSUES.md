@@ -240,3 +240,41 @@ the table's size are open. Size the table before writing the generator.
 are not. The *live display-list* vertices on a flash epoch are colours (E48,
 273/273, material 0); the *baked dense* table is normals (E58). Different
 streams.
+
+## E64b's numerical equivalence is UNVERIFIED (R2-03, 2026-07-29)
+
+The fixed-point cubic (`NDS_R2_CUBIC_FIXED`) is graduated on **performance and
+Boundary-liveness only**. Its numerical equivalence to the float original has
+**not** been measured.
+
+**What happened.** I reported "the Task 9 state hash did not move" as evidence
+the change was gameplay-safe. It never ran. `NDS_TASK9_STATE_HASH ?= 0`, no
+verifier in the Boundary profile references it, and the passing line I misread
+("Task 9 float ITCM passed") is a different check — ITCM *placement*, not state.
+**A verifier that is not compiled in cannot pass.**
+
+**Why it matters.** The hash covers `NDS_TASK9_STATE_RECORD_AOBJ` and
+`..._DOBJ`, which is exactly the joint state the cubic writes. It is the correct
+instrument. Q12 has 1/4096 resolution, and joint values reach hitbox placement
+through `gmCollisionGetFighterPartsWorldPosition` (`gm/gmcollision.c:489`), so a
+flipped hit decision is the failure mode to look for.
+
+**What is established:** Boundary green with Fox CPU live (the harness default is
+`-FoxCpuMode 1`; the `fox=0` in the log is only the deterministic screenshot
+step), 135,871 evaluations with **zero Q12 saturations**, and zero saturations
+again under the two-CPU stress config across 133,889 evaluations — so the *range*
+is safe even under continuous attack. None of that is a bit-equivalence result.
+
+**How to settle it.** Build a control/candidate pair with
+`NDS_TASK9_STATE_HASH=1` and compare exported hashes, modelled on
+`scripts/verify-task16-combined-state-hash-ab.ps1` (which drives
+`verify-battle-mariofox-gcrunall-loop-harness.ps1` with `-Task9StateHashMode 1`
+and `-Task9StateHashExportPath`). **`NDS_R2_LAB_CUBIC_OFF=1` exists for exactly
+this** — `override` defeats a command-line `0`, so without it the control arm
+builds identical to the candidate and the comparison reads a false "no
+difference". Run it under `NDS_R2_BOTH_CPU=1` as well: that is the configuration
+with the most hit decisions to flip.
+
+If the hashes differ, that is expected and authorized — the decision was taken
+knowingly. What is owed is the *magnitude and attribution* of the difference, not
+an automatic revert.
