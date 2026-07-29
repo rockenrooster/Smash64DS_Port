@@ -1,10 +1,10 @@
 # Handoff
 
-Updated: 2026-07-29. **Restart surface only, capped at 150 lines.** The board
-owns the queue and every result; `PERF_LEDGER.md` measurements and rejected
-experiments; `KNOWN_ISSUES.md` durable gaps and harness traps;
-`optimization/TASK_STANDING_RULES.md` how a performance task is run. Anything
-durable goes there, not here.
+Updated: 2026-07-29. **Restart surface only, capped at 150 lines.** Anything
+durable goes to its owning doc, not here: the board owns the queue and every
+result, `PERF_LEDGER.md` measurements and rejected experiments,
+`KNOWN_ISSUES.md` durable gaps and harness traps,
+`optimization/TASK_STANDING_RULES.md` how a performance task is run.
 
 Runtime 2 phase status. **Every remaining P1 performance lever is behind an
 owner decision; there is no unblocked experiment left in R2-03/R2-04.**
@@ -123,9 +123,9 @@ the renderer side.**
 - **E53**, an 8-byte `{base,size}` mirror for `ndsRelocFindLoadedFileContaining`.
   Exact by construction, still P95 **+11,584**, 92/128 worse, and `STG` — which
   it cannot touch — moved +1,600 on 99.
-- **The flash as vertex data** — E48/E49/E50/E55/E58. See above.
-- **The animation pose table** — E61, 2.62 MB resident vs 4 MB RAM.
-- **Fixed-point collision** — E60, the whole family is under 4,000 ticks/frame.
+- **The flash as vertex data** (E48/E49/E50/E55/E58), **the animation pose
+  table** (E61, 2.62 MB resident vs 4 MB RAM), and **fixed-point collision**
+  (E60, the whole family is under 4,000 ticks/frame).
 
 ## Restart
 
