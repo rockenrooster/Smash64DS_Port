@@ -3,7 +3,11 @@
 The single Runtime 2 document: charter, design rules, budgets, phase plan,
 and the definition of the switch.
 
-Status: **proposed — awaiting owner approval before R2-00 starts.**
+Status: **in execution.** R2-00a/b/c, R2-01 and R2-02 are gated; R2-03 shipped
+E12/E28/E29/E46; R2-04's loading and rate clauses are met. **Both remaining P1
+levers are now owner decisions, not experiments** — see §10. The board
+(`docs/P1_EXECUTION_BOARD.md`) is the live queue; this file stays the charter and
+is not a status log.
 
 ---
 
@@ -428,6 +432,28 @@ Runtime 2 is the Nintendo DS engine.
 
 ## 10. Immediate next actions
 
-1. Owner approves this plan or edits budgets/order.
-2. Add R2-00 to the board and start it: re-baseline census + stall
-   attributor.
+Superseded as of 2026-07-29. The original two items (owner approves the plan;
+add R2-00 to the board and start it) are both done, along with R2-01 through
+R2-04's loading and rate clauses.
+
+**Autonomous execution has run out of unblocked P1 levers.** Both remaining ones
+are owner decisions, and each is now precisely priced rather than a hypothesis:
+
+1. **E32 — the fighter fallback, worth −51,136 P95 and four frames.** Blocked on
+   the hurt-flash visual regression. Six experiments (E48–E59) failed to find a
+   mechanism and that line is closed: it is not vertex colour, material colour,
+   light colour, the fold arithmetic, E16's hardware lighting, or
+   `color_modulate`. It is therefore a **fidelity-budget question** under §3.10
+   and `PROJECT_GOAL.md` — the owner's visual approval — not a measurement.
+2. **The fixed-point cubic — worth ~50,000 ticks/frame, on every frame.**
+   Blocked on the Task 9 state hash, which asserts bit-exactness where
+   `PROJECT_GOAL.md` requires only mechanical equivalence and explicitly permits
+   "fixed-point replacements". Confined to `gcGetInterpValueCubic` evaluating
+   already-parsed track state; its only path to gameplay is
+   `gmCollisionGetFighterPartsWorldPosition`, so the honest acceptance test is a
+   hitbox-overlap differential over a full match rather than the hash.
+
+`108,928 − 51,136 − ~50,000 ≈ 7,800`. **Those two together close the gate**;
+neither closes it alone. R2-05's generator-reproducibility gate already passes,
+and R2-06/07/08 are gated behind the budget being met, so there is no way to
+proceed on P1 performance without answering at least one of the two above.
