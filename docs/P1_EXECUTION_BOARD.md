@@ -240,6 +240,43 @@ budget**. Rate cannot close that; only cheaper evaluation can, which is E61's
 cubic (~50,000). **R2-04 does not need another experiment — it needs the E61
 owner decision.**
 
+## R2-06 E0 — the Runtime 2 battle path is PERFORMANCE-NEUTRAL, and Boundary is green through it (2026-07-29)
+
+First measurement of `NDS_R2_PATH=1` end to end. **Engagement verified before
+reading anything**: `ndsR2BattleRun` is present in the R2 ELF and absent from the
+control, and the two config dumps read `NDS_R2_PATH 1` and `0`.
+
+Two-CPU stress config both arms, same commit, 128 frames. R2-06 makes the
+**2-VBlank share** the headline metric:
+
+| | Runtime 1 (A) | Runtime 2 (B) | delta |
+|---|---:|---:|---:|
+| **2-VBlank** | **614 (66.7%)** | **609 (66.1%)** | **−5** |
+| 3-VBlank | 291 | 295 | +4 |
+| 4-VBlank | 15 | 15 | 0 |
+| 5+ | 1 | 2 | +1 |
+| `WORK-H` P50 | 1,130,112 | 1,131,008 | +896 |
+| `WORK-H` P95 | 1,497,664 | 1,510,208 | +12,544 |
+
+**Every delta is inside the 5,000–7,000 placement floor. The switch neither costs
+nor saves anything.**
+
+**Gate status:** *"Boundary green"* — **PASSES**, engagement verified in the
+proof ROM. *"Histogram materially better than the Runtime 1 A-side on the same
+commit"* — **NOT MET**. *"Soak clean"* — not run.
+
+**The gate clause needs reinterpretation, and that is the real finding.** It was
+written expecting the R2 path to carry the wins. It cannot: `ndsR2BattleRun`
+(`src/nds/r2/nds_r2_battle.c:57`) is the same loop shape as the Runtime 1 body it
+replaces — `updates_per_present` inner ticks, present, finish — and **everything
+that actually saves time is already enabled in both arms** (R2-02 stage direct,
+R2-03 fighter direct/E32/E64b, R2-04 loading and rate). The switch is an
+**architecture and correctness step, not a performance step**, and asking it to
+show a better histogram measures the wrong thing.
+
+So R2-06 should gate on *equivalence plus soak*, and the histogram comparison
+belongs on the phases that feed it. Recorded in the switch plan.
+
 ## R2-05 E1 — the fighter-special-case gate PASSES too; R2-05 is complete (2026-07-29)
 
 R2-05's second clause: *"Same generators, same direct path, **zero

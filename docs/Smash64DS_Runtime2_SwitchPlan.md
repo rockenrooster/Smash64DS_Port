@@ -370,8 +370,28 @@ Boundary figure.
   collision, damage, knockback, shields, CPU behavior, camera, 30 FPS
   presentation. Effects/audio still Runtime 1 machinery where needed.
 - First full-frame gate: the 2-VBlank share becomes the headline metric.
-- Gate: Boundary green; soak clean; histogram materially better than the
-  Runtime 1 A-side on the same commit.
+- Gate: Boundary green; soak clean; ~~histogram materially better than the
+  Runtime 1 A-side on the same commit~~.
+
+**Amended 2026-07-29 by R2-06 E0.** The struck clause is the wrong gate and was
+measured to be so. With engagement verified (`ndsR2BattleRun` present in one ELF
+and absent from the other, config dumps reading `NDS_R2_PATH` 1 and 0), the two
+arms are indistinguishable on the two-CPU stress config: 2-VBlank share 66.1% vs
+66.7%, `WORK-H` P50 +896, P95 +12,544 — all inside the 5,000–7,000 placement
+floor.
+
+That is not a defect. `ndsR2BattleRun` is deliberately the same loop shape as the
+Runtime 1 body it replaces, and every saving the campaign has produced (R2-02
+stage direct, R2-03 fighter direct plus E32/E64b, R2-04 loading and rate) is
+already enabled on *both* sides of the switch. **The switch is an architecture and
+correctness step; the performance belongs to the phases that feed it.** Requiring
+it to improve the histogram measures the wrong thing and would block a correct
+switch indefinitely.
+
+**R2-06 therefore gates on Boundary green (done) plus equivalence and a clean
+soak.** Report the histogram, but as evidence of *no regression*, not of a win.
+Also note the stress config is not the Boundary figure — see §7 R2-06's own
+warning and `NDS_R2_BOTH_CPU` in the Makefile.
 
 ### R2-07 — Effects, audio, HUD, match flow
 
