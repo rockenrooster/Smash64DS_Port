@@ -47,10 +47,9 @@ there projects E32 across the whole distribution:
 | as measured | 1,013,696 | 1,228,928 | 2,040,896 | 17/128 |
 | **`FTR` capped** | 1,011,264 | **1,177,792** | 1,531,072 | **13/128** |
 
-**E32 is worth −51,136 P95 and four frames** — it halves the gap without
-closing it. Largest single lever left, blocked on the hurt flash (E48/E49/E50,
-and E55's correction), not on its value. The twelve frames still over gate are
-the `SRC` half.
+**E32 is worth −51,136 P95 and four frames** — it halves the gap without closing
+it. Largest single lever left, blocked on the hurt flash, not on its value. The
+twelve frames still over gate are the `SRC` half.
 
 **Never compare a census build's frame numbers to a clean build's.** The census
 flags cost ~137,664 ticks/frame and shift the histogram 2:726 → 2:314, so frame
@@ -67,30 +66,31 @@ times a frame (nothing to memo); the cost is arithmetic at 38 cycles per
 soft-float add; and the float leaves are already lowered (`_arm_addsubsf3.o`,
 `_arm_muldivsf3.o` ITCM-resident, `NDS_TASK16_FLOAT_ADDSUB=1`).
 
-## Best unowned work: E58, and it can unblock E32
+## Best unowned work: E59 — the flash is a LIGHT COLOUR, not vertex data
 
-**E55 reopened the cheapest fix for E32, which E50 closed on a bad inference** —
-E50 measured 172/273 vertices differing and concluded the flash was per-vertex,
-but that sampled lighting's **output** and inferred its **input**. Two hitlag
-frames say otherwise:
+**Four experiments modelled the flash as something done to a vertex colour. There
+is no vertex colour on those runs.** E58 dumped the raw decoded input vertex
+beside the lit output: 24 distinct saturated raw values collapse to 8 outputs,
+and `(46,163,73)`, `(5,126,20)`, `(186,34,101)` all emit `(76,76,76)`. No colour
+multiply does that.
 
-- **A and B are elementwise identical** — the flash does not ramp within a burst.
-- **0 of 541 baked vertices are achromatic; 75% of flashed ones are**, greys
-  spanning 76..255 (a lighting term). A lerp preserves hue; only a **replacement**
-  removes chroma. So the flash replaces the source colour and the per-vertex
-  variation is lighting.
+`nds_renderer.c:8246`: with `G_LIGHTING` set the vertex RGB bytes are the
+**F3DEX2 packed normal**, and the emitted colour comes from
+`stats->light_color_1` (diffuse) and `light_color_2` (ambient). The greys are
+white lights, **76 is the ambient-only floor** back-facing normals clamp to, the
+reds are runs with a red light colour, and E50's "172/273 differ" is 273 normals.
 
-That restores **E49's option 1 at per-epoch granularity** — its own words, *"one
-colour per epoch, not per-vertex data, a runtime override the emit can apply
-without touching the baked table."* The owner already computes lighting (E48), so
-feeding it a per-epoch constant is exact, needs no per-vertex data, and **keeps
-E32's measured −51,136**.
+**So the flash is a light-colour change** — per-run material state applied by the
+same replay E26 folds. **E59 is the next build:** latch `light_color_1`,
+`light_color_2` and `geometry_mode` on hitlag frame 911 vs ordinary 904 for the
+generic path, and compare against what the owner's shade path
+(`ndsRendererNativeShadeProductionActions`, `ndsRendererR2MaterialColor15`) feeds
+its lighting. If they differ, that is E32's regression and the fix is to carry
+the same light state.
 
-**E58 is the one build that decides it: record the epoch index alongside the
-colour.** The stride sample crosses epochs, so its two constant families (greys,
-and reds with `R > G ≈ B`) are expected, not contradictory. If each epoch's
-samples are one value, build the override — it lands **pixel parity against
-Runtime 1**, R2-03's own stated gate, so it needs no subjective approval.
+E47 refuted *material* colour derivation; `light_color_*` is a different field
+and was never tested. **Do not model the flash as vertex data again** — E48, E49,
+E50 and E55 all died on that premise, and the board records why each did.
 
 **R2-03 E26 — demoted.** Re-measured with
 `NDS_TASK91_DRAW_PHASE_CENSUS=1 NDS_R2_SPAN_LEAN_TIMING=1` (both flags — the
@@ -121,7 +121,7 @@ already satisfied on the renderer side.**
   Exact by construction, still a regression — P95 **+11,584**, 92/128 worse,
   `STG` (untouchable by it) +1,600 on 99. The lookup is a *symptom* of the
   fallback anyway.
-- **E55 route 1**, a lerp model of the flash — it replaces, not transforms.
+- **The flash as vertex data** — E48/E49/E50/E55. It is a light colour; see above.
 
 ## Restart
 
