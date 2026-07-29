@@ -132,7 +132,49 @@ wrong constant, a non-atomic publish, or a rate change.
    match start.** It is what R2-04 actually specifies, it takes the removable
    share from 64.6% to 100% rather than leaving 29 misses, and whatever this
    assert is reacting to, a match whose animation set never loads mid-gameplay
-   cannot trigger it.
+   cannot trigger it. **Read E3 below first — the obvious form of it does not
+   fit.**
+
+## R2-04 E3 — "preload everything" does not fit, measured (2026-07-29)
+
+Before building the preload, the budget. The animation assets are individual
+files under `nitro:/reloc/reloc_animations/`
+(`nds_reloc_assets.c:130`/`:175` synthesise the paths), so their sizes are
+readable off disk without running anything:
+
+| set | files | bytes | avg |
+|---|---:|---:|---:|
+| `FTMarioAnim*` | 143 | 360,320 | 2,519 |
+| `FTFoxAnim*` | 158 | 367,744 | 2,327 |
+| **all** | **301** | **728,064 (711 KB)** | 2,419 |
+
+**711 KB is not affordable.** `MEMARENA` reports a ~1.35 MB taskman arena and
+`MEMRELOC` already accounts for 681,632 bytes of reloc data. Registering all 301
+would also overrun `NDS_RELOC_LOADED_FILE_CAPACITY` (96) three times over. So the
+literal reading of the phase bullet — *all* animation streams resident — is not
+available on this hardware budget, and anyone starting from that sentence will
+build something that cannot fit.
+
+The measured working set is **29 assets / 66,016 bytes**, which fits trivially.
+That gap is the whole design question, and it has two honest answers:
+
+1. **Generated warm list.** Emit the match's actual animation set as a table and
+   preload exactly it at `scVSBattleStartBattle` (`src/import/battleship_scvsbattle.c:133`,
+   beside `ndsRendererHardwarePrepareBattleStaticTextures` and
+   `ndsIFCommonNativeOamPrepareClouds` — the existing prepare-at-load seam, and
+   port-side so it is editable). `PROJECT_GOAL.md` explicitly endorses
+   compile-time asset conversion and heavy loading-time preparation. A miss still
+   falls back to the on-demand load, so an incomplete list is a performance
+   outcome, never a correctness one. Risk: the list is derived from observed play
+   and a gameplay change silently drops coverage, so it needs the E0 counters
+   kept as its regression check (`repeat/total` should stay at 100%).
+2. **Budget-bounded eager fill.** Keep the cache lazy but give it a byte budget
+   near 128–192 KB and let it hold whatever the match touches. That is what E1
+   already does, minus the match-start warm, and it is why E1 works at all.
+
+**Do not start by preloading the 301.** The cache's failure paths degrade safely,
+so trying it would not corrupt anything — it would just reject nearly everything
+and read as a null, and the reason would be this table.
 
 ## R2-04 E0 — the phase is SIZED and its gate is reachable (2026-07-29)
 
