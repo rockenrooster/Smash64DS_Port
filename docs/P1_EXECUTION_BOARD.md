@@ -31,6 +31,60 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E32 — the hitlag shuffle folded; FTR's tail is GONE (2026-07-29)
+
+**KEEP candidate, flag default 0, awaiting the owner's visual approval.**
+`NDS_R2_FIGHTER_SHUFFLE_FOLD`.
+
+The renderer was disabling the entire native fighter owner whenever
+`fp->shuffle_tics != 0` — i.e. giving up its fast path on **every hit**. A split
+counter attributed all 5 fallbacks in frames 460..500 to `shuffle_tics` and
+**zero** to `is_use_animlocks`.
+
+It never needed to. `ftdisplaymain.c:1205` is one `G_MTX_PUSH` +
+`syMatrixTra(x, y, 0)` + `gSPPopMatrix` around the whole fighter draw, and
+`lbcommon.c:1627` writes the identical effect as `f[3][0] += x; f[3][1] += y;` on
+the part's **world** matrix before the camera. `PrepareNativeOwnerMatrices`
+already builds exactly that matrix, so the offset goes in at the same point in
+the same space — **mechanically equivalent by construction, not an
+approximation.** `shuffle_tics` leaves the eligibility disjunction;
+`is_use_animlocks` stays (measured firing zero times).
+
+| | FTR P50 | FTR P95 | FTR max | frames > 600k | WORK P95 |
+|---|---:|---:|---:|---:|---:|
+| E30 | 404,672 | 913,920 | 918,976 | **11** | 1,467,840 |
+| **E32** | 408,512 | **412,992** | **414,656** | **0** | **1,381,120** |
+
+The bimodal distribution collapsed to flat. Frames over the 1,120,000 gate
+**35/128 -> 27/128**; VBlank `2:472 3:87 4:4 5+:2` -> **`2:489 3:72 4:4 5+:1`**.
+Engagement read from the same run: `gNdsR2ShuffleFoldedFrames = 20`, two fighters
+across ten burst frames. Ordinary frames pay `FTR` +3,456 median (the per-binding
+adds), at the noise floor and bought back many times over.
+
+**NOT verified: the visual gate.** A zero offset would flatten `FTR` identically
+by simply not shuffling, so "the burst disappeared" is *not* evidence the effect
+survived. Only a screenshot or play test confirms the fighter still shakes, by
+the right amount, and that electric hits shake horizontally. Build the same ROM
+with `NDS_R2_FIGHTER_SHUFFLE_FOLD=0` for the comparison arm — that arm is the
+generic path and is correct by construction. Flag stays default-0 until approved.
+
+**Boundary on the enabled arm is outstanding too, and that one is a process
+error.** The run was started with the flag's default temporarily flipped to 1 and
+the default was reverted to 0 while it was still building; `make` re-reads the
+Makefile per invocation and the profile runs several, so the result is not
+trustworthy either way. **Never edit a build flag while a verifier is running —
+the tree a verifier reads has to be still.** Re-run before graduating.
+
+The committed state is flag **default 0**: every hunk is inside
+`#if NDS_R2_FIGHTER_SHUFFLE_FOLD` and the eligibility condition falls through to
+its original `#else`, so the shipping configuration is unchanged by construction.
+
+**Gate now: WORK P95 1,381,120 = 1.23x, gap 261,120** (from 1.37x at the R2-08
+readiness table). Remaining tail is `SRC` asset loading (~103,488, Task 75 E0)
+plus `OTHR`/`MISC`.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E32_ShuffleFold_20260729.md`.
+
 ## R2-03 E30 — the median is inside the gate; the tail is three other things (2026-07-29)
 
 **The single most important row on this board.** E28+E29 took 58,304/frame out

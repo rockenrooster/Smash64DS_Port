@@ -2917,6 +2917,47 @@ static sb32 ndsRendererAdapterComposeNativeRootMatrix(
     return FALSE;
 }
 
+#if NDS_R2_FIGHTER_SHUFFLE_FOLD
+/* R2-03 E32. The hitlag shuffle used to switch the whole native fighter owner
+ * off (reloc_backend_renderer_dl.c's AnimLock fallback), dropping the fighter
+ * to the generic interpreter for every hit -- E31 measured that at 5 fallbacks
+ * over frames 460..500, one per burst frame, and the bursts are 41.9% of the
+ * P95 tail's excess.
+ *
+ * The source does not need any of that. ftdisplaymain.c:1205 is one
+ * G_MTX_PUSH plus syMatrixTra(x, y, 0) around the entire fighter draw and one
+ * gSPPopMatrix, and lbcommon.c:1627 expresses the identical effect for the
+ * attached-DObj path as `f[3][0] += x; f[3][1] += y;` on the part's *world*
+ * matrix, before the camera is applied. This is that second form: the offset
+ * lands on the world matrix in exactly the same space, so it is mechanically
+ * equivalent rather than an approximation.
+ *
+ * 20.12, because that is what NDSRendererMatrix20p12 holds. */
+extern Vec2f dFTDisplayMainShufflePositions[][4];
+static s32 sNdsR2ShuffleWorldX;
+static s32 sNdsR2ShuffleWorldY;
+u32 gNdsR2ShuffleFoldedFrames;
+
+static void ndsRendererAdapterSetShuffleOffset(const FTStruct *fp)
+{
+    sNdsR2ShuffleWorldX = 0;
+    sNdsR2ShuffleWorldY = 0;
+    if ((fp == NULL) || (fp->shuffle_tics == 0u))
+    {
+        return;
+    }
+    {
+        const Vec2f *offset =
+            &dFTDisplayMainShufflePositions[fp->is_shuffle_electric]
+                                           [fp->shuffle_frame_index];
+
+        sNdsR2ShuffleWorldX = (s32)(offset->x * 4096.0F);
+        sNdsR2ShuffleWorldY = (s32)(offset->y * 4096.0F);
+        gNdsR2ShuffleFoldedFrames++;
+    }
+}
+#endif
+
 static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     DObj *root,
     DObj *const *bindings,
@@ -3014,6 +3055,13 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
             {
                 return FALSE;
             }
+#if NDS_R2_FIGHTER_SHUFFLE_FOLD
+            /* R2-03 E32, and this is the whole cut: lbcommon.c:1627's
+             * `f[3][0] += x; f[3][1] += y;` on the world matrix, before the
+             * camera multiply below. Zero when the fighter is not in hitlag. */
+            world.m[3][0] += sNdsR2ShuffleWorldX;
+            world.m[3][1] += sNdsR2ShuffleWorldY;
+#endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
             {
                 u32 task91_world_end = cpuGetTiming();
@@ -11938,6 +11986,9 @@ u32 gNdsTask91WalkTicks;
 u32 gNdsTask91ValidateTicks;
 u32 gNdsTask91DrawCalls;
 u32 gNdsTask91NativeEligible;
+/* R2-03 E32. Splits the shared AnimLock fallback reason into its two causes. */
+u32 gNdsR2FallbackShuffleTics;
+u32 gNdsR2FallbackAnimLocks;
 /* R2-03 E3. E2 measured the walk and the revalidation at 3,289 + 10,381
  * ticks/frame against the 37,206 the symbol census charges to this function,
  * and the walk is a separate symbol -- so more than half of the function's own
@@ -12224,14 +12275,38 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     if ((native_owner_enabled != FALSE) &&
         ((native_owner_production_mode != FALSE) ||
          (native_owner_hierarchy_mode != FALSE)) &&
+#if NDS_R2_FIGHTER_SHUFFLE_FOLD
+        /* R2-03 E32. The shuffle is folded into the world matrix in
+         * ndsRendererAdapterPrepareNativeOwnerMatrices, so it no longer costs
+         * the fighter its native path. Animation locks still do -- E32's census
+         * measured 5 shuffle fallbacks and 0 animlock fallbacks over frames
+         * 460..500, so the remaining half of this condition is unexercised in
+         * the Boundary scene and stays conservative. */
+        (fp->is_use_animlocks != FALSE))
+#else
         ((fp->is_use_animlocks != FALSE) || (fp->shuffle_tics != 0u)))
+#endif
     {
         native_owner_enabled = FALSE;
 #if NDS_TICK_HUD
         NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
             nNDSTickHudNativeOwnerFallbackAnimLock);
 #endif
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+        /* R2-03 E32. The reason code above is shared by both halves of the
+         * disjunction, and they need different fixes: the hitlag shuffle is one
+         * whole-model translate the owner can absorb, animation locks are not.
+         * E31 measured 5 AnimLock fallbacks over frames 460..500 without being
+         * able to say which. */
+        if (fp->shuffle_tics != 0u) { gNdsR2FallbackShuffleTics++; }
+        if (fp->is_use_animlocks != FALSE) { gNdsR2FallbackAnimLocks++; }
+#endif
     }
+#endif
+#if NDS_R2_FIGHTER_SHUFFLE_FOLD
+    /* R2-03 E32. Latch this fighter's hitlag offset for the matrix prep below.
+     * Set unconditionally so it is cleared to zero on the ordinary frames. */
+    ndsRendererAdapterSetShuffleOffset(fp);
 #endif
     ndsRendererProfileSetOwner(owner_id);
     if (native_owner_enabled != FALSE)

@@ -84,16 +84,21 @@ Three things follow, and they change how the next cycle should be run:
    histogram `2:446 3:109` -> `2:472 3:87`.
 2. **Do not queue another median cut without a reason that survives E30.**
    E28+E29 removed 58,304/frame and P95 moved 28,224.
-3. **Start here: R2-03 E32.** The FTR bursts are diagnosed all the way to a fix
-   site. `reloc_backend_renderer_dl.c:12224` disables the native fighter owner
-   whenever `fp->is_use_animlocks` or `fp->shuffle_tics != 0`, dropping the whole
-   fighter to the generic interpreter — measured as 5 `AnimLock` fallbacks over
-   frames 460..500, one per burst frame, worth **41.9% of the P95 tail excess**.
-   BattleShip (`ftdisplaymain.c:1205`) shows the hitlag shuffle is one
-   `G_MTX_PUSH` + `syMatrixTra(x, y, 0)` around the whole fighter draw and one
-   `gSPPopMatrix`, from a constant table — no geometry, material or animation
-   change. Fold it into E17's per-root matrix load instead. Confirm first which
-   half of the disjunction fires (`AnimLock` is shared by both).
+3. **One thing needs you: E32's visual approval.** The FTR bursts were the
+   renderer disabling the whole native fighter owner whenever
+   `fp->shuffle_tics != 0` — giving up the fast path on every hit. E32 folds
+   SSB64's hitlag shuffle into the fighter's world matrix instead, exactly where
+   `lbcommon.c:1627` puts it, and **`FTR` P95 goes 913,920 -> 412,992 with the
+   bimodal tail gone entirely** (frames over the gate 35/128 -> 27/128).
+
+   `NDS_R2_FIGHTER_SHUFFLE_FOLD` is **default 0** and not in the published
+   blocks, because a zero offset would flatten `FTR` the same way by simply not
+   shuffling. The engagement counter proves the code ran
+   (`gNdsR2ShuffleFoldedFrames = 20`) but **only your eye confirms the fighter
+   still shakes on hit, by the right amount, and that electric hits shake
+   horizontally.** Build both arms of the same ROM with
+   `NDS_R2_FIGHTER_SHUFFLE_FOLD=1` and `=0` — the `=0` arm is the generic path
+   and is correct by construction.
 
 R2-03 has graduated **111,232** of its 250,833 gap: E17 17,600, E16 35,072,
 E28 31,488, E29 26,816. All four are default-on in the published and tick-HUD

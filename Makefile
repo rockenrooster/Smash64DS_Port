@@ -308,6 +308,14 @@ NDS_R2_FIGHTER_HW_MTX ?= 0
 # model is RGB15 throughout where the software path kept an RGB8 intermediate --
 # so it gates on a screenshot pair plus the owner's approval.
 NDS_R2_FIGHTER_HW_LIGHT ?= 0
+# R2-03 E32. Folds SSB64's hitlag shuffle into the fighter's world matrix
+# instead of switching the whole native owner off for the duration of every hit.
+# The source (ftdisplaymain.c:1205) is one PUSH + syMatrixTra(x, y, 0) + POP
+# around the entire fighter draw, and lbcommon.c:1627 expresses the same effect
+# as an add into the world matrix's translation row -- which is exactly where
+# this puts it, so it is mechanically equivalent rather than an approximation.
+# E31 measured the fallback it removes at 41.9% of the P95 tail's excess.
+NDS_R2_FIGHTER_SHUFFLE_FOLD ?= 0
 # R2-03 E30. Draws the tick HUD's percentile block on screen. The ring is
 # sampled either way, so a GDB-scripted measurement reads exactly the same data
 # with this off -- and off is the configuration that resembles the published
@@ -1904,6 +1912,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FIGHTER_HW_LIGHT $(NDS_R2_FIGHTER_HW_LIGHT)'; \
 		echo '#define NDS_R2_FIGHTER_SOFT_LIGHT_KEEP $(NDS_R2_FIGHTER_SOFT_LIGHT_KEEP)'; \
 		echo '#define NDS_TICK_HUD_DRAW $(NDS_TICK_HUD_DRAW)'; \
+		echo '#define NDS_R2_FIGHTER_SHUFFLE_FOLD $(NDS_R2_FIGHTER_SHUFFLE_FOLD)'; \
 		echo '#define NDS_R2_FIGHTER_SHADE_SKIP $(NDS_R2_FIGHTER_SHADE_SKIP)'; \
 		echo '#define NDS_R2_FIGHTER_STATESPAN_SKIP $(NDS_R2_FIGHTER_STATESPAN_SKIP)'; \
 		echo '#define NDS_R2_DRAW_SUPPRESS_MASK $(NDS_R2_DRAW_SUPPRESS_MASK)'; \
