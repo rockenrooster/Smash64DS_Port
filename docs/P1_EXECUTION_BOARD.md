@@ -31,6 +31,50 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E39 — operand elision BUILT and REFUTED on engagement (2026-07-29)
+
+Built the cheapest version of E26's idea and killed it with its own counter, for
+about one build's cost. **Reverted; do not rebuild it.**
+
+The elision is exact, by the argument E20 already wrote into
+`ndsRendererNativeApplyStateDelta`: every case writes `stats` purely from
+`w0`/`w1`, so identical operands to the previous application of the same effect
+mean identical writes — and if the state did not change, the texture prepare
+built from it is still valid, which kills the invalidation E25b identified as the
+real cost. GEOMETRY excluded (the one read-modify-write case, and eliding it
+would also skip `geometry_command_count`); validity cleared on every material
+application and per owner execute.
+
+**Engagement: 7,898 elided against 99,179 applied — 7.4%.** At E38's 251
+ticks/delta that is ~3,700 ticks/frame, *below* the 5,000–7,000 build-placement
+noise floor, so an A/B would have returned noise and a KEEP would have been
+unearned. The counter answered it without one.
+
+**The mechanism is structural, and it is worth carrying into E26.** The
+before-span averages only **2.9 deltas per epoch** (134.5 over 46.4), mostly of
+different effects, and `ApplyMaterial` resets any cross-epoch cache on 28 of
+those 46.4 epochs. There is almost nothing for an operand cache to hit. So the
+33,708 is **not** redundant work — it is ~3 genuinely distinct writes per epoch
+paying ~250 ticks each in dispatch, call and invalidation overhead. E26 must
+therefore replace the *dispatch*, not deduplicate the *writes*: one install per
+epoch instead of three calls.
+
+### Hazard found the hard way, and it is not specific to this cut
+
+The first build cached across owners and put **every frame in the 5+ VBlank
+bucket**. `ndsRendererNativeApplyStateDelta` is **shared** — the stage owner and
+the hierarchy modes reach it through their own spans — and the counter proved it
+immediately: **850 applications a frame against the fighter's 182.4**. Anything
+memoising in that function must be armed around the fighter production spans
+specifically, or it silently elides the stage's state writes against operands
+cached from the fighter. Confining it restored the histogram to 2:445 3:111 4:8
+5+:2, against the control's 2:442 3:115 4:6 5+:3.
+
+**Read that as a general rule: before memoising in a shared renderer helper,
+count its calls from the owner you think you are optimising.** A 4.7x
+discrepancy between "the deltas I sized" and "the deltas that arrive" is the
+whole bug, and one engagement counter exposes it.
+
 ## R2-03 E38 — E26 scoped: fold the BEFORE-span, and only that (2026-07-29)
 
 E26 is R2-03's own bullet in the switch plan ("per-epoch generated submit

@@ -58,6 +58,24 @@ The replay is **49,951/frame, not the 65,026** the E26 spec still quotes — E12
 E28 and E29 have shipped since. E33 re-confirmed `PrepareProductionRun` has no
 hot spot, so do not bundle it in.
 
+**E26 must replace the dispatch, not deduplicate the writes.** E39 built the
+operand-elision version and its own counter refuted it: 7.4% hit rate, ~3,700
+ticks/frame, below the noise floor. The before-span averages **2.9 deltas per
+epoch**, mostly of different effects, and `ApplyMaterial` resets any cross-epoch
+cache on 28 of 46.4 epochs — so the 33,708 is not redundant work, it is ~3
+distinct writes per epoch each paying ~250 ticks of dispatch, call and
+invalidation overhead. One install per epoch replacing three calls is the win;
+an operand cache is not.
+
+**Two hazards for anyone touching `ndsRendererNativeApplyStateDelta`:**
+- It is **shared**. The stage owner and hierarchy modes reach it through their own
+  spans — 850 applications a frame against the fighter's 182.4. E39's first build
+  cached across owners and put every frame in the 5+ VBlank bucket. Arm anything
+  new around the fighter production spans specifically.
+- The `Record*` helpers it dispatches to also maintain command counters, so
+  skipping a call is not free of semantic-gate consequences even when the state
+  writes are provably identical.
+
 ITCM is full (1,024 bytes free): put new code behind `noinline` outside
 `.itcm.native_fighter`, and note the census and run-proof instruments can no
 longer coexist in one ROM.
