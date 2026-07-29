@@ -32,6 +32,42 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-04 E6 ANSWERED — E5 paid down LOADING, not pose. R2-04's rate clause is done; its budget clause is E61 (2026-07-29)
+
+Answered from artifacts already on disk; no build. Closes the last pending R2-04
+row.
+
+**What E5's cache actually is.** `sNdsR2AnimCache` lives in
+`reloc_backend_assets.c:5565` and is filled by `ndsR2AnimCachePreloadStep`, pumped
+from `battleship_scvsbattle.c:204`. It caches **animation asset loads**, not pose
+evaluation. On the post-E5 ordinary-frame profile it costs **170 ticks/frame** and
+the loading class is down to `ndsRelocGetFileData` at 3,532.
+
+That is R2-04's *"Absorbs Task 75: all animation streams for the match prepared
+at load; no first-use loading during gameplay"* clause — **satisfied**. It also
+explains E52 independently: "E35's 25-of-26 `SRC` reading no longer holds, it
+predated E5 removing the loading component." And it explains E60: the soft-float
+caller distribution barely moved (57.17% → 58.06%) because **E5 never touched
+pose evaluation at all.**
+
+**R2-04's rate clause is also already satisfied, and cannot go further.** The
+phase says "evaluated once per presented frame (30 Hz), not per gameplay tick"
+and warns against assuming full cubic evaluation must run twice per rendered
+frame. E57 measured the renderer already at presentation rate
+(`DLAllDrawForSlot` 2.0 calls/frame, `AdapterBuildDObjLocalMatrix` 50.0), so the
+*visual* side is at 30 Hz today. The remaining 60 Hz evaluation is the
+**gameplay** skeleton, and E57 showed it is load-bearing:
+`gmCollisionGetFighterPartsWorldPosition` (`gm/gmcollision.c:489`) places every
+hitbox by walking the live joint chain. §3.6's split is therefore already
+implemented as far as the contract permits — halving the remaining half is a
+gameplay change, not a rate decoupling.
+
+**What is left of R2-04 is purely its budget clause**, and E60/E61 price it:
+pose evaluation is **146,942 ticks/frame against the provisional 100,000
+budget**. Rate cannot close that; only cheaper evaluation can, which is E61's
+cubic (~50,000). **R2-04 does not need another experiment — it needs the E61
+owner decision.**
+
 ## R2-05 E0 — generator reproducibility gate PASSES; one generator defect found (2026-07-29)
 
 R2-03's two levers are both owner-blocked (E32 on the hurt flash, the cubic on
