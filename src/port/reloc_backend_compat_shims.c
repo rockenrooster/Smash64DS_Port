@@ -12999,17 +12999,33 @@ void lbParticleEjectStructID(u16 generator_id, s32 index)
     gNdsPupupuGroundDeferredMask |= 1u << 1;
 }
 
-__attribute__((weak)) GObj *efManagerQuakeMakeEffect(s32 id)
+/* The source quake is the only driver of camera shake: efManagerQuakeProcUpdate
+ * feeds the effect's animated translate into gmCameraSetVelAt, which
+ * gmCameraApplyVel adds to the look-at.  Recording the request and returning
+ * NULL therefore silenced every shake in the game -- Whispy's wind rumble
+ * (grpupupu.c:313), the KO burst, and wall damage.  Run the original whenever
+ * the pieces it needs are compiled in: battleship_efmanager.c supplies the
+ * effect and battleship_gmcamera.c supplies gGMCameraGObj, which only
+ * NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE builds have. */
+#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
+GObj *ndsBaseEFManagerQuakeMakeEffect(s32 magnitude);
+#endif
+
+GObj *efManagerQuakeMakeEffect(s32 id)
 {
-    (void)id;
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopWallDamageActive != FALSE))
     {
         gNdsStageMPPassiveLoopWallDamageQuakeCount++;
     }
     gNdsPupupuUpdateQuakeCount++;
+#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
+    return ndsBaseEFManagerQuakeMakeEffect(id);
+#else
+    (void)id;
     gNdsPupupuGroundDeferredMask |= 1u << 2;
     return NULL;
+#endif
 }
 
 __attribute__((weak)) GObj *

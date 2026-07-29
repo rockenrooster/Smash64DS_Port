@@ -1,5 +1,30 @@
 AI Agent should mark fixed items with FIXED prefix
-
+-Camera shake during wind hazard not working. [FIXED - needs an eye check]
+  Root cause: efManagerQuakeMakeEffect was a weak stub that counted the request
+  and returned NULL (reloc_backend_compat_shims.c:12999). The source quake is the
+  ONLY driver of camera shake -- efManagerQuakeProcUpdate feeds the effect's
+  animated translate into gmCameraSetVelAt, which gmCameraApplyVel adds to the
+  look-at -- so returning NULL silenced every shake in the game, not just
+  Whispy's: the KO burst and wall damage too. It now calls the original whenever
+  the pieces it needs are compiled in (battleship_efmanager.c for the effect,
+  battleship_gmcamera.c for gGMCameraGObj, i.e.
+  NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE builds).
+  Verified: builds, Boundary green, and gNdsPupupuUpdateQuakeCount = 22 by frame
+  ~1208, so the path is live. NOT yet visually confirmed -- whether the shake
+  reads correctly is a presentation judgement and needs the owner's eye.
+-Touching the bottom underneath the stage causes the fighters to float until horizontal position is no longer touching the stage. fighters should continue to fall instead of freezing vertical position. [FIXED - needs a play check]
+  Root cause: the floor-crossing kernel accepted PROXIMITY as a collision
+  instead of requiring motion THROUGH the surface, so mpProcessRunCeilCollision-
+  AdjNew's `translate->y += dist` clamp re-fired every frame and pinned the
+  fighter to the line. ndsMPFloorSegmentCrossesDownwardKernel is now
+  ndsMPFCSegmentCrossesKernel with a `ud` selector (+1 floor / -1 ceiling),
+  folding the sign the way mpCollisionGetFCCommon does; the two source tilt
+  functions (mpCollisionCheckFloorSurfaceTilt / ...CeilSurfaceTilt) differ only
+  by that sign, and the source line loops fold the same sign into their
+  flat-segment gate (vtdist_y < vpdist_y for floors, > for ceilings).
+  Verified: builds, Boundary green. NOT yet confirmed by actually walking under
+  the stage in a live match -- that is the symptom's own test and it needs a
+  play check.
 -Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the
   push vector on the floor, so Whispy's gust had no effect at all. It now does

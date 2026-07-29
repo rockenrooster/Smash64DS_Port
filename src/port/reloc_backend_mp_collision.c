@@ -1749,21 +1749,24 @@ static sb32 ndsStageMPSegmentIntersection2D(const Vec3f *a0,
     return TRUE;
 }
 
-static sb32 ndsMPFloorSegmentCrossesDownward(const Vec3f *position,
-                                              const Vec3f *translate,
-                                              const Vec3f *v1,
-                                              const Vec3f *v2,
-                                              f32 *hit_x,
-                                              f32 *hit_y)
+/* ud: +1 floor (crossed downward), -1 ceiling (crossed upward). */
+static sb32 ndsMPFCSegmentCrosses(const Vec3f *position,
+                                  const Vec3f *translate,
+                                  const Vec3f *v1,
+                                  const Vec3f *v2,
+                                  s32 ud,
+                                  f32 *hit_x,
+                                  f32 *hit_y)
 {
     if ((position == NULL) || (translate == NULL) || (v1 == NULL) ||
         (v2 == NULL) || (hit_x == NULL) || (hit_y == NULL))
     {
         return FALSE;
     }
-    return (ndsMPFloorSegmentCrossesDownwardKernel(
+    return (ndsMPFCSegmentCrossesKernel(
         position->x, position->y, translate->x, translate->y,
-        v1->x, v1->y, v2->x, v2->y, hit_x, hit_y) != 0) ? TRUE : FALSE;
+        v1->x, v1->y, v2->x, v2->y, (int)ud, hit_x, hit_y) != 0) ?
+        TRUE : FALSE;
 }
 
 static sb32 ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
@@ -4231,8 +4234,8 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                     saw_flat_ascending_sweep = TRUE;
                 }
 
-                if (ndsMPFloorSegmentCrossesDownward(
-                        &sweep_position, &sweep_translate, &v1, &v2,
+                if (ndsMPFCSegmentCrosses(
+                        &sweep_position, &sweep_translate, &v1, &v2, +1,
                         &hit_x, &hit_y) == FALSE)
                 {
                     continue;
@@ -4459,6 +4462,13 @@ sb32 mpProcessRunFloorCollisionAdjNewNULL(MPCollData *coll_data)
 }
 #endif
 
+/* Mirror of ndsStageMPSweepFloorLoopSweep for nMPLineKindCeil, i.e. the source
+ * mpCollisionCheckCeilLineCollisionSame/Diff pair.  A ceiling only collides when
+ * the swept segment crosses it upward; an earlier revision accepted "the head is
+ * within 8 (or 128) units of the ceiling plane" instead, which re-fired on every
+ * frame the fighter spent under the stage and pinned him there because
+ * mpProcessRunCeilCollisionAdjNew clamps translate->y back to the line each time
+ * (BUGS.md: floating under the stage). */
 static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                                          Vec3f *translate,
                                          Vec3f *ga_last,
@@ -4469,9 +4479,12 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
     MPLineInfo *line_info;
+    MPVertexLinks *links;
+    MPVertexArray *ids;
+    MPVertexPosContainer *verts;
     u32 yakumono_count;
     u32 i;
-    f32 best_t = 3.402823466e+38F;
+    f32 best_dist = 3.402823466e+38F;
     s32 best_line = -1;
     u32 best_flags = 0u;
     Vec3f best_pos = { 0.0F, 0.0F, 0.0F };
@@ -4483,6 +4496,9 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
         return FALSE;
     }
     line_info = geometry->line_info;
+    links = geometry->vertex_links;
+    ids = geometry->vertex_id;
+    verts = geometry->vertex_data;
     yakumono_count = ndsMPGeometryYakumonoCount(geometry);
     if (yakumono_count > 64u)
     {
@@ -4517,7 +4533,11 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
             yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
         }
         if ((yakumono_dobj != NULL) &&
-            (yakumono_dobj->user_data.s < nMPYakumonoStatusOff) &&
+            (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
+        {
+            continue;
+        }
+        if ((yakumono_dobj != NULL) &&
             ((yakumono_dobj->anim_joint.event32 != NULL) ||
              (yakumono_dobj->user_data.s != nMPYakumonoStatusNone)))
         {
@@ -4533,25 +4553,17 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
         end = first + count;
         for (line_id = first; line_id < end; line_id++)
         {
-            Vec3f left;
-            Vec3f right;
-            Vec3f sweep_position;
-            Vec3f sweep_translate;
-            f32 t = 0.0F;
-            f32 u = 0.0F;
-            f32 hit_x = 0.0F;
-            f32 hit_y = 0.0F;
-            f32 ceil_y = 0.0F;
-            u32 flags = 0u;
-            sb32 hit = FALSE;
+            u32 vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
+            u32 vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
+            Vec3f sweep_position = *position;
+            Vec3f sweep_translate = *translate;
+            u32 j;
 
-            if (ndsMPFindLineEndpoints(line_id, &left, &right, &flags,
-                    NULL) == FALSE)
+            if ((vertex_count < 2u) || (vertex_count > 128u))
             {
+                gNdsStageCollisionLoopBadVertexCount++;
                 continue;
             }
-            sweep_position = *position;
-            sweep_translate = *translate;
             if (is_dynamic != FALSE)
             {
                 sweep_position.x = (position->x - vedge_x) + speed_x;
@@ -4559,46 +4571,39 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                 sweep_translate.x = translate->x - vedge_x;
                 sweep_translate.y = translate->y - vedge_y;
             }
-            gNdsStageMPCeilFloorLoopLineSweepVisitCount++;
-            if ((sweep_translate.x < left.x) || (sweep_translate.x > right.x))
+            for (j = 0u; j + 1u < vertex_count; j++)
             {
-                continue;
-            }
-            gNdsStageMPCeilFloorLoopLineSweepCandidateCount++;
-            if (ndsStageMPSegmentIntersection2D(&sweep_position,
-                    &sweep_translate, &left, &right, &t, &u, &hit_x,
-                    &hit_y) != FALSE)
-            {
-                hit = TRUE;
-            }
-            else if (mpCollisionGetFCCommonCeil(line_id, translate,
-                         &ceil_y, NULL, NULL) != FALSE)
-            {
-                f32 top_delta = ceil_y;
+                u32 v1_id = ndsMPVertexID(ids, vertex_first + j);
+                u32 v2_id = ndsMPVertexID(ids, vertex_first + j + 1u);
+                Vec3f v1 = { (f32)ndsMPVertexX(verts, v1_id),
+                             (f32)ndsMPVertexY(verts, v1_id), 0.0F };
+                Vec3f v2 = { (f32)ndsMPVertexX(verts, v2_id),
+                             (f32)ndsMPVertexY(verts, v2_id), 0.0F };
+                f32 hit_x;
+                f32 hit_y;
+                f32 hit_dist;
 
-                hit = (is_diff != FALSE) ?
-                    (((sweep_position.y <=
-                       (sweep_translate.y + top_delta)) &&
-                      (sweep_translate.y >=
-                       (sweep_translate.y + top_delta - 8.0F))) ? TRUE :
-                        FALSE) :
-                    ((fabsf(top_delta) <= 128.0F) ? TRUE : FALSE);
-                hit_x = sweep_translate.x;
-                hit_y = sweep_translate.y + top_delta;
-                t = 1.0F;
+                gNdsStageMPCeilFloorLoopLineSweepVisitCount++;
+                if (ndsMPFCSegmentCrosses(&sweep_position, &sweep_translate,
+                        &v1, &v2, -1, &hit_x, &hit_y) == FALSE)
+                {
+                    continue;
+                }
+                gNdsStageMPCeilFloorLoopLineSweepCandidateCount++;
+                hit_dist = fabsf(hit_y - (sweep_position.y - speed_y));
+                if (hit_dist >= best_dist)
+                {
+                    continue;
+                }
+                best_dist = hit_dist;
+                best_line = line_id;
+                best_flags = ndsMPVertexFlags(verts, v1_id);
+                best_pos.x = hit_x + vedge_x;
+                best_pos.y = hit_y + vedge_y;
+                best_pos.z = 0.0F;
+                ndsMPGetFCAngle(&best_angle, (s32)v1.x, (s32)v1.y,
+                                (s32)v2.x, (s32)v2.y, -1);
             }
-            if ((hit == FALSE) || (t >= best_t))
-            {
-                continue;
-            }
-            best_t = t;
-            best_line = line_id;
-            best_flags = flags;
-            best_pos.x = hit_x + vedge_x;
-            best_pos.y = hit_y + vedge_y;
-            best_pos.z = translate->z;
-            ndsMPGetFCAngle(&best_angle, (s32)left.x, (s32)left.y,
-                            (s32)right.x, (s32)right.y, -1);
         }
     }
     if (best_line < 0)

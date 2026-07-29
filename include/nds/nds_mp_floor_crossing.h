@@ -2,17 +2,30 @@
 #define SSB64_NDS_MP_FLOOR_CROSSING_H
 
 /*
- * O2R-safe scalar adapter for BattleShip's mpCollisionCheckFCSurfaceFlat and
- * mpCollisionCheckFloorSurfaceTilt policies.  The stored endpoint order is
- * preserved by callers so source vertex flags and normals retain provenance.
+ * O2R-safe scalar adapter for BattleShip's mpCollisionCheckFCSurfaceFlat plus
+ * mpCollisionCheckFloorSurfaceTilt / mpCollisionCheckCeilSurfaceTilt policies.
+ * The stored endpoint order is preserved by callers so source vertex flags and
+ * normals retain provenance.
+ *
+ * `ud` selects the surface the way mpCollisionGetFCCommon does: +1 = floor, so
+ * the segment must be crossed downward (previous point on or above the line,
+ * current point below it); -1 = ceiling, so it must be crossed upward.  The two
+ * source tilt functions differ only by that sign, and the source line loops fold
+ * the same sign into their flat-segment gate (`vtdist_y < vpdist_y` for floors,
+ * `vtdist_y > vpdist_y` for ceilings).  A collision therefore requires real
+ * motion through the surface: proximity alone must never report a hit, or the
+ * caller's `translate->y += dist` clamp re-fires every frame and pins the object
+ * to the line (BUGS.md: fighters floating under the stage).
  */
-static inline int ndsMPFloorSegmentCrossesDownwardKernel(
+static inline int ndsMPFCSegmentCrossesKernel(
     float position_x, float position_y,
     float translate_x, float translate_y,
     float v1_x, float v1_y, float v2_x, float v2_y,
+    int ud,
     float *hit_x, float *hit_y)
 {
     const float epsilon = 0.001F;
+    const float side = (float)ud;
     float sx;
     float sy;
     float min_x;
@@ -40,9 +53,9 @@ static inline int ndsMPFloorSegmentCrossesDownwardKernel(
         float delta_y;
         float x;
 
-        if ((translate_y >= position_y) ||
-            (position_y < (v1_y - epsilon)) ||
-            (translate_y >= v1_y))
+        if (((side * (position_y - translate_y)) <= 0.0F) ||
+            ((side * (position_y - v1_y)) < -epsilon) ||
+            ((side * (v1_y - translate_y)) <= 0.0F))
         {
             return 0;
         }
@@ -100,8 +113,8 @@ static inline int ndsMPFloorSegmentCrossesDownwardKernel(
             (sy * (translate_x - v1_x));
         orient = (sx > 0.0F) ? 1.0F : -1.0F;
         extent_epsilon = epsilon * (orient * sx);
-        prev_height_scaled = orient * raw_prev;
-        curr_height_scaled = orient * raw_curr;
+        prev_height_scaled = side * (orient * raw_prev);
+        curr_height_scaled = side * (orient * raw_curr);
         if (curr_height_scaled > -extent_epsilon)
         {
             return 0;
