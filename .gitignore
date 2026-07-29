@@ -2,6 +2,10 @@
 /build/
 /build-*/
 /builds/
+# A lab build that landed at the repo root instead of under builds/. 11 MB of
+# objects plus a copy of the gitignored /assets/ nitrofs tree, so it must not be
+# tracked; the standing rule is that all lab outputs stay in builds/.
+/nocull2/
 *.nds
 *.elf
 *.map
