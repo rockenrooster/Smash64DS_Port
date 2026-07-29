@@ -1371,3 +1371,28 @@ So, before quoting any tick number out of a bracket around a per-item loop:
 The same rule applies in reverse: a census added inside an existing bracket
 silently inflates every number that bracket has ever reported, including the
 ones already written into planning documents.
+
+### A two-equation fit over two populations is not a measurement (R2-03 E45, 2026-07-29)
+
+The before- and after-spans gave two (spans, deltas, ticks) triples, so
+`A*spans + B*deltas = ticks` solved exactly: 392.3 ticks fixed per span, 63.0 per
+delta, 68.5% of the before-span in per-span entry. It was wrong by 3x. Bracketing
+the entry directly measured ~33 ticks per call, not 392.
+
+Two equations in two unknowns has **zero degrees of freedom**. It always produces
+an answer, the answer always reproduces the inputs exactly, and no residual is
+left to reveal that the model is wrong. Here the model assumed one per-delta cost
+across both spans; the after-span's deltas are genuinely more expensive because
+`ApplyMaterial` runs between the spans and dirties what they touch, and the only
+free parameter that could absorb that difference was the "fixed" term.
+
+So:
+
+1. **Never size a cut from an exactly-determined fit.** Either add a third
+   population so there is a residual to check, or bracket the term directly.
+2. **Prefer one direct bracket over any amount of algebra**, and remember to net
+   off the bracket's own cost (E43) — here the raw 80.4 ticks/call was ~47 timer
+   read and ~33 real work.
+3. Watch for this after a null result. E44 came back negative, which invited a
+   story about where the cost "must" be instead; the fit was constructed to
+   support that story rather than to test it.

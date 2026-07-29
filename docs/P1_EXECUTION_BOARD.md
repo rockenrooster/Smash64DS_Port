@@ -31,6 +31,83 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E44/E45 — E26 re-scoped, and two wrong answers on the way (2026-07-29)
+
+With E43's corrected 26,944 in hand, the question was where inside the
+before-span it goes. Two candidates were built and measured; both are refuted,
+and the second refutes an arithmetic shortcut that would otherwise have
+mis-scoped E26 by 3x.
+
+### E44 — deferring the tile republish: BUILT, worse, reverted
+
+`ndsRendererSyncTextureTile` republishes 19 fields from the active tile and runs
+on every SETTILE/TEXTURE/SETTILESIZE. Statically that is **43 of the before-span's
+140 applications, spread over only 17 spans** — so 26 republishes are overwritten
+by a later one in the same span before anything reads them. Nothing inside a span
+reads what it publishes (the `Record*` writers read `texture_tiles[]` and the
+`texture_*` scalars, never `texture_render_tile_*`), and the texture prepare calls
+Sync again at `nds_renderer.c:12176` before it reads, so deferring to one call per
+span is exact.
+
+It engaged exactly as predicted — **68.2 deferred, 39.4 flushed, 28.8 republishes
+actually removed per frame** — and lost:
+
+| arm | before-span | after-span | total |
+|---|---:|---:|---:|
+| lean baseline | 26,944.3 | 13,703.7 | 40,648.0 |
+| + deferred Sync | 26,286.9 | 14,852.7 | 41,139.6 |
+
+Before −657.4, after **+1,149.0**, net **+491.6 worse**. Reverted.
+
+**The number worth keeping: `SyncTextureTile` costs ~23 ticks per call**
+(657.4/28.8). The republish is **3.7%** of the before-span. It is not the cost,
+and the two `stats` fields the deferral needed cost more in the after-span than
+they saved in the before-span.
+
+### E45 — the per-span entry is not the cost either, and the fit that said so was unsound
+
+E44's result was read as evidence that the cost is fixed per span rather than per
+delta, and a two-equation fit over the two spans
+(`A*spans + B*deltas = ticks`) solved to **A = 392.3 fixed, B = 63.0 per delta**,
+putting **68.5% of the before-span in per-span entry** and capping E26 at 8,478.
+The only substantial thing on entry is `ndsRendererNativeSourceBoundary`'s
+`ndsRendererHardwareEndBatch()`, so that was bracketed directly:
+
+- **78.3 boundary calls/frame** (the static estimate was 74.3 — the model's span
+  count was right)
+- 80.4 ticks per call *as measured*, but the bracket inflated the two span totals
+  by 7,426/frame across those calls, so ~47 of the 80.4 is the timer read itself
+- **real cost ~33 ticks/call, ~2,585/frame — 14% of the 18,466 the fit claimed**
+
+**The fit was unsound and this is the lesson.** Two equations in two unknowns has
+zero degrees of freedom: it always solves, and it cannot be checked. It forced a
+single per-delta coefficient onto two populations that genuinely differ — the
+after-span's deltas cost more because `ApplyMaterial` runs between the spans and
+dirties what they touch — and the only place that difference could go was the
+"fixed" term. E43 had just earned a rule about measuring instead of assuming; this
+is the same mistake wearing arithmetic.
+
+**Corrected picture of the before-span (26,944/frame, 134.5 deltas, ~47 spans):**
+entry ~1,900, **applications ~25,000, i.e. ~186 ticks per delta.** It is per-delta
+after all.
+
+### What this leaves E26
+
+E26's target is back to roughly the whole before-span, **~25,000/frame**, because
+the fold removes the applications themselves. What 186 ticks per delta *is* remains
+open — it is far more than the switch and stores account for, and the leading
+untested candidate is instruction-side: `ApplyStateDelta` lives in the fighter's
+code section while the `Record*` helpers are generic renderer code, so every
+application may cross into cold code. The repo emulator models icache, so this is
+measurable. **Measure that before building the fold** — and note ITCM has only
+1,024 bytes free, so if it is icache the repair is not simply "move it".
+
+Two facts already banked for the fold itself: **LOAD_BLOCK appears only twice in
+the entire before-span program**, so the `texture_loads[]` history ring — the
+hardest thing to reproduce in a bulk install — touches at most 2 of 47 spans and
+those two can keep the replay; and **COMBINE alone is 30.7% of applications**
+(43 of 140), which is 4 stores and a counter, the cheapest possible fold target.
+
 ## R2-03 E43 — the replay bracket was pricing its own instrument (2026-07-29)
 
 E38 sized E26's before-span at **33,708/frame** and that is the number the phase
