@@ -1,28 +1,69 @@
 # Handoff
 
-Updated: 2026-07-28 — Runtime 2: R2-00a/b/c, R2-01 and R2-02 gated (stage budget
-MET, `STG` P50 177,088 against 180,000). **R2-03 is the open phase.** E17 (split
-matrix load, −17,600) and E16 (hardware lighting, −35,072) are graduated and ship
-in the published ROM; together −52,672, which is 21% of the phase's 250,833 gap.
-`FTR` P50 is now ~456,000 against a 250,000 budget, so the phase gate is still
-missed ~1.8x.
+Updated: 2026-07-29 — Runtime 2: R2-00a/b/c, R2-01 and R2-02 gated. R2-03 has
+shipped E12, E28 and E29; E32 is built and awaiting the owner's visual approval.
 
-**The next lever is decided, sized and specified — start here, no rediscovery
-needed:**
-`docs/optimization/ClaudeOpus5_R203_E26_Spec_GeneratedEpochState_20260728.md`.
+## Read this first: the gate is no longer a fighter problem
 
-Generate the **resolved per-epoch state** in
-`scripts/generate_nds_native_owners.py` (a fold over the delta sequence it
-already walks) and install it directly, instead of replaying 194.4 deltas a
-frame whose 127.3 invalidations force 46.4 full prepares. E25b established the
-state replay (65,026) and `PrepareProductionRun` (42,281) are **one coupled
-mechanism**, which is why the four cuts before it read null; E25c ruled out the
-cheap per-run value key (70.2 of the invalidating deltas move the 20-word tile
-state). Target is the coupled 107,307/frame.
+**`WORK-H` P50 is 1,011,200 — inside the 1,120,000 gate.** Only P95 misses, and
+**E35 established that P95 is owned by the SSB64 simulation, not the renderer.**
+Full report: `docs/optimization/ClaudeOpus5_R203_E35_SrcExcursion_20260729.md`.
+
+Three things a restart must not re-derive:
+
+1. **E32 does not land the gate**, though it is still worth taking: applying its
+   measured `FTR` cap across all 128 frames takes 34/128 over-gate to 26/128 and
+   P95 to 1,377,408.
+2. **25 of those 26 frames are `SRC` excursions** — `scVSBattleFuncUpdate`, the
+   simulation. Profiling one (517–521 against a matched control at 508–512)
+   attributes it to `gm/gmcollision.c`: hit detection with live hitboxes, whose
+   entire caller set is *zero* on ordinary frames. None of the callers Task 92
+   classified move, so **Task 92's "soft-float is closed" verdict does not cover
+   this population.**
+3. **The exactness-preserving cut there is already refuted.** `func_ovl2_800ED490`
+   runs 27.2 times a frame; there is no redundancy to memo. The cost is
+   arithmetic at 38 cycles per soft-float add.
+
+**So the next lever is an owner decision, not an experiment:** float→fixed on the
+collision path. `PROJECT_GOAL.md` permits it ("Mechanical equivalence is
+required. Bit-exact ... is not") and ranks gameplay fidelity above stable 30 FPS,
+but `gmcollision.c` is verifier-gated by the Task 9 state hash and re-bounding a
+bit-exact gate is the owner's call. Sized: with E32, removing ~280,000 puts all
+but four of the 26 over-gate frames under the gate.
+
+## The best unowned work that needs no owner decision
+
+`docs/optimization/ClaudeOpus5_R203_E26_Spec_GeneratedEpochState_20260728.md`,
+**as corrected by E34/E34-b** — read those board entries before the spec, which
+is wrong in two places.
+
+Fold the two static state spans and install the resolved per-epoch state instead
+of replaying 194.4 deltas a frame. E34-b measured the per-epoch state as *exactly*
+a function of the epoch index apart from `prim_color`/`env_color`, so §2a's
+"two snapshots plus an after-span field mask" is unnecessary — one snapshot plus
+two colour writes reproduces it. **But keep `ApplyMaterial` live and unchanged:**
+materials are rebuilt from the live `MObj` every frame and their texture fields
+key off `mobj->texture_id_curr`, so a table baked from that measurement would
+render the wrong texture the first time a face animates. Target is the replay's
+65,026/frame; E33 re-confirmed `PrepareProductionRun` has no hot spot.
 
 ITCM is full (1,024 bytes free): put new code behind `noinline` outside
 `.itcm.native_fighter`, and note the census and run-proof instruments can no
 longer coexist in one ROM.
+
+## Harness notes that cost time to learn
+
+- **`Select-Object -First N` terminates the upstream pipeline.** It killed a
+  census run mid-flight and left a directory that looked like a failed build.
+  Filter harness output with `Select-String`, or redirect to a log.
+- **`sample-tick-hud-buckets.ps1 -FallbackCensus` needs Task 68's symbol even
+  when the ring carries Task 75's counter.** Build with *both* census flags.
+- **`NDS_TASK37_PROFILE_PER_FRAME_REGION=1` exists** and gives per-frame regions
+  in one run. Without it the profiler reports `regions=1` and per-frame
+  attribution needs two narrow-window builds.
+- **Never attribute cartridge activity to a frame across two differently-timed
+  builds.** `_ntrcardRomReadSector` moved entirely from the excursion to the
+  control when the HUD draw was compiled out, same deterministic frames.
 
 `P1_EXECUTION_BOARD.md` owns current state; this file is the restart surface and
 next packet.
