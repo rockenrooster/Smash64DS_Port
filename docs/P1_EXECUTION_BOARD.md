@@ -31,6 +31,45 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E33 — the run prepare still has no hot spot, re-confirmed (2026-07-29)
+
+Per-run split on the current build (`NDS_R2_FIGHTER_RUN_PROOF=2`, frames
+439..919), 62.8 runs a frame:
+
+| run phase | ticks/frame | share |
+|---|---:|---:|
+| Tail | 14,224 | 29% |
+| TexPrep | 12,506 | 26% |
+| UV | 11,705 | 24% |
+| Validate | 8,757 | 18% |
+| TexReuse | 1,216 | 3% |
+| sum | 48,408 | |
+
+`TexPrepCount` 47.0/frame against `TexReuseCount` 16.7 — the same 46.4-of-62.8
+full prepares E25b found, unchanged by E28/E29/E32 as expected (none of them
+touched the invalidation).
+
+**Nothing here is a cut.** Four phases between 18% and 29% is exactly E25's
+"PrepareProductionRun has no hot spot", now re-confirmed on a build three cuts
+newer. **Do not go hunting for one.** The cost is structural — it is the
+per-invalidation re-prepare — and E26's replacement is the answer, not a
+micro-optimisation of Tail or UV. E5 already refuted the UV loop specifically.
+
+**Two instrument defects found doing this, both of which waste a build:**
+
+- **At `NDS_R2_FIGHTER_RUN_PROOF=1` every one of these tick counters reads
+  exactly 0.** They need level 2. A run at level 1 reports a complete, plausible
+  all-zero table rather than failing.
+- **`gNdsR2RunCallCount` reads 0 at level 2 as well** — it belongs to the E5
+  falsifier, not to these brackets, and is not wired on the canonical production
+  path. Its own comment warns about precisely this ("hooked that table and
+  honestly reported zero calls"); it is still true. Do not use it as the liveness
+  denominator for the tick split — use `TexPrepCount + TexReuseCount`.
+
+Do **not** compare the 48,408 above against the census build's
+`gNdsR2SubmitPrepTicks` 39,043: different bracket boundaries **and** different
+binaries, which the standing rules forbid comparing.
+
 ## R2-03 partition at HEAD, and where the phase stands (2026-07-29)
 
 Census build, all three cuts on, frames 439..919:
