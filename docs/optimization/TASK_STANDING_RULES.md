@@ -1610,3 +1610,40 @@ colour multiply collapses inputs like that. A dump of the *input* beside the
 3. **A union-typed field needs its discriminant checked first.** `r/g/b` meaning
    colour-or-normal depending on `geometry_mode` is exactly the shape that
    punishes reading the struct definition without reading its consumer.
+
+### Never compare a SELF time to a subsystem target (R2-03 E60/E61, 2026-07-29)
+
+**Task 78 killed the animation compiler at 1.64x its target believing it was
+0.85x**, and the board then carried a wrong "the other half is fixed-point
+collision" row for several cycles. One mistake produced both: a per-PC profiler
+charges a leaf helper to itself and never to its caller, so every float
+operation the animation path executed was booked to `__aeabi_fadd` /
+`__aeabi_fmul` and read as a *separate, larger, unrelated* family.
+
+Task 78 §3 totalled animation at **82,807 self** ticks and compared that to a
+100,000 target. Task 78 §4, on the facing page, listed `fadd`+`fmul` at
+**119,912** and called it "1.45x the entire animation subsystem". They are the
+same subsystem. Corrected: 82,807 + 67.9% x 119,912 = **164,236**.
+
+On the current build the same correction gives `gcPlayDObjAnimJoint` 34,022 self
++ 60,509 helper = **94,531 inclusive**, and the whole animation path **146,942 —
+15.2% of WORK and larger than the entire gap to the gate**. The collision family
+the board had named instead totals **under 4,000**.
+
+1. **A target is an inclusive number, so measure inclusively before deciding.**
+   Self time answers "where is the instruction pointer"; a subsystem budget
+   answers "what does this cost me if it disappears". Those differ by exactly
+   the callee time, and for float-heavy code the callee time is the majority.
+2. **A shared leaf helper at the top of a profile is a signal to attribute, not
+   a target to attack.** `__aeabi_fadd` being #2 in the frame says nothing about
+   what to fix. `census-softfloat-callers.ps1` answers it in one 90 s run with
+   no build, by breaking on the helper's exact entry address and reading `lr`.
+3. **When a task STOPs on a magnitude, the stop is only as good as the
+   attribution under it.** Re-check that attribution whenever the instrument
+   that produced it is superseded — Task 92 built the caller census the day
+   after Task 78 stopped, and nobody re-opened Task 78.
+4. **Percentage shares survive rebuilds; absolute scales do not.** The same
+   census hardcoded `191,810 ticks/frame` from an older partition and printed
+   share x constant as a measurement; two graduations later that constant was
+   84% high. Multiply shares by a profile of the *same build*, or report the
+   share alone.
