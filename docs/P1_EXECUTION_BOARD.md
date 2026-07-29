@@ -32,6 +32,77 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E55 — the flash REPLACES the colour; E50's refutation was an inference error (2026-07-29)
+
+**E50 closed the cheapest fix for E32 on a wrong inference, and this reopens it.**
+E50 recorded that 172 of 273 vertices carry a different `vertex_color` on a
+hitlag frame and concluded "the flash is not uniform, so a per-epoch constant
+colour is dead". That measured the **output** of lighting and inferred the
+**input** was per-vertex. It is not.
+
+Per-vertex `vertex_color` in call order, latched on **two** hitlag frames (911
+and 912 — hitlag freezes the pose, so a second hitlag frame is the only valid
+pair; an ordinary frame has 0 calls by E48):
+
+Two samples were taken, and **the second corrects the first — record both.**
+
+| | first 24 calls | **every 11th of 273** |
+|---|---|---|
+| A vs B, elementwise | **identical** | — |
+| **pure grey (R==G==B)** | 24/24 = **100%** | **18/24 = 75%** |
+| distinct values | 8 greys, `4C4C4C`..`FFFFFF` | 18 greys + 4 reds |
+| **baked table, pure grey** | **0 of 541 = 0%** — `(49,87,177)`, `(210,92,74)`, `(102,76,255)`, … | |
+
+**The prefix was unrepresentative and a prefix sample said 100%.** The stride
+finds a second family, every member red-tinted with `R > G ≈ B`: `(36,15,17)`,
+`(82,28,24)`, `(140,102,102)`, `(255,236,236)`. `0x240F11FF` is E50's recorded
+minimum and appears **twice** in 24 stride samples, so it is a real repeated
+vertex, not an outlier.
+
+### What is established
+
+**The flash REPLACES the colour; it does not transform it.** A lerp toward white
+preserves hue, so a baked blue `(49,87,177)` would stay blue-ish. Not one of the
+541 baked vertices is achromatic and 75% of flashed ones are, with the greys
+spanning 76..255 — the range of a lighting term. So **E55's own route-1 lerp
+hypothesis is REFUTED**, and with it E50's inference that a per-vertex output
+implies a per-vertex input.
+
+**E49's option 1 is alive, at per-epoch granularity.** It said exactly: *"if it
+is genuinely uniform it needs **one colour per epoch**, not per-vertex data — a
+runtime override the emit can apply without touching the baked table."* Two
+constant families across 273 vertices spanning many epochs is what that looks
+like. The owner already computes lighting (E48), so feeding it a per-epoch
+constant instead of the baked colour is:
+
+- **no per-vertex data**, so E49's `static const` blocker does not apply;
+- **exact**, because it hands the same lighting the same input the source does;
+- **E32 keeps its measured −51,136** (E54) — emit cost unchanged.
+
+### The next probe, and it is one build
+
+**Record the epoch index alongside the colour.** The hypothesis is now "the
+flashed source colour is constant *within* an epoch", and the sample deliberately
+crosses epochs, so mixed families are expected rather than contradictory. If each
+epoch's samples are one value, the override is a per-epoch table and E32 is
+unblocked at pixel parity — which is R2-03's own stated gate and needs no
+subjective approval.
+
+Note the reds' channel ratios are **not** constant (`G/R` 0.34..0.93), so they
+are not one red material under one light. Two lights of different colour mixing
+per normal would do it, as would texel modulation on textured runs. The epoch
+index separates those.
+
+**Standing lesson, twice over:** *a per-vertex output does not imply a per-vertex
+input* (E50 sampled after lighting and attributed the variation to what precedes
+it) — and *sample a stride, never a prefix*. The prefix here was 100% grey and
+the population is 75%.
+
+**Standing lesson:** *a per-vertex output does not imply a per-vertex input.*
+E50 measured after a per-vertex transform (lighting) and attributed the variation
+to the thing before it. When a probe reports "not uniform", ask which side of the
+pipeline it sampled.
+
 ## R2-03 E56 — E26 re-measured post-E46, and the plan's own policy demotes it (2026-07-29)
 
 `HANDOFF.md` has pointed every restart at E26 as "the best unowned work that

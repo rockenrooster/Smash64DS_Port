@@ -1560,3 +1560,27 @@ VBlank boundary -- so "frame 910" is not the same work in both builds.
 - **A bucket the change cannot touch is the check.** If `STG` or `SRC` moves on a
   renderer-asset change, the comparison is measuring something other than the
   change. Compute one deliberately and look at it before reading the result.
+
+### Sample a stride, never a prefix (R2-03 E55, 2026-07-29)
+
+The first 24 of 273 flashed vertices were pure grey without exception, which read
+as a clean 100% result and was written up as one. Re-sampling every 11th call
+across the same 273 found **75%**, plus a whole second family of red-tinted
+values the prefix never touched — including the exact value E50 had recorded as
+the population minimum, appearing twice.
+
+A prefix is not a sample. It is whatever the iteration order happens to visit
+first, and in a renderer that is one run, one material, one epoch — precisely the
+correlated subset a population question is asking about. Cost of the fix: change
+`slot = call` to `if ((call % stride) == 0) slot = call / stride`. Two lines.
+
+1. **Any fixed-size probe over a variable-size population takes a stride.** Pick
+   the stride from the expected population size so the slots span it.
+2. **A suspiciously clean result is the trigger to re-sample, not to publish.**
+   100% and 0% are the two answers most likely to be an artefact of *where* you
+   looked.
+3. **Corollary from the same experiment: a per-vertex output does not imply a
+   per-vertex input.** E50 measured 172/273 values differing *after* lighting and
+   concluded the flash was per-vertex; the flash is a constant and the lighting
+   is what varies. When a probe reports "not uniform", ask which side of the
+   transform it sampled.

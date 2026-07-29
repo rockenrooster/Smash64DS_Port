@@ -8356,12 +8356,22 @@ static inline u16 ndsRendererHardwareModulatePackedColor(
  * fix is on; anything else and it is per-vertex and that option dies too. */
 #define NDS_R2_FLASH_SLOTS 12u
 #define NDS_R2_FLASH_SLOT_MIN 8u
+/* R2-03 E55: per-vertex samples in call order, for the two-hitlag-frame ratio
+ * test described at the record site. 24 is enough to separate "constant ratio"
+ * from "scattered" and small enough to read in one GDB stop. */
+#define NDS_R2_FLASH_VTX 24u
 volatile u32 gNdsR2FlashLive[NDS_R2_FLASH_SLOTS];
 volatile u32 gNdsR2FlashSnapA[NDS_R2_FLASH_SLOTS];
 volatile u32 gNdsR2FlashSnapB[NDS_R2_FLASH_SLOTS];
-/* Writable over GDB so a run can be re-aimed without a rebuild. */
+volatile u32 gNdsR2FlashVtxLive[NDS_R2_FLASH_VTX];
+volatile u32 gNdsR2FlashVtxA[NDS_R2_FLASH_VTX];
+volatile u32 gNdsR2FlashVtxB[NDS_R2_FLASH_VTX];
+/* Writable over GDB so a run can be re-aimed without a rebuild. E55 points B at
+ * a SECOND hitlag frame, not at an ordinary one: the generic path has 0 calls on
+ * an ordinary frame (E48), so an ordinary-frame snapshot is empty by
+ * construction and cannot serve as the pair. */
 volatile u32 gNdsR2FlashFrameA = 911u;
-volatile u32 gNdsR2FlashFrameB = 904u;
+volatile u32 gNdsR2FlashFrameB = 912u;
 volatile u32 gNdsR2FlashLatchedA;
 volatile u32 gNdsR2FlashLatchedB;
 
@@ -8375,6 +8385,10 @@ void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame)
         {
             gNdsR2FlashSnapA[i] = gNdsR2FlashLive[i];
         }
+        for (i = 0u; i < NDS_R2_FLASH_VTX; i++)
+        {
+            gNdsR2FlashVtxA[i] = gNdsR2FlashVtxLive[i];
+        }
         gNdsR2FlashLatchedA++;
     }
     else if (presented_frame == gNdsR2FlashFrameB)
@@ -8383,11 +8397,19 @@ void ndsRendererR2FlashProbeFrameEnd(u32 presented_frame)
         {
             gNdsR2FlashSnapB[i] = gNdsR2FlashLive[i];
         }
+        for (i = 0u; i < NDS_R2_FLASH_VTX; i++)
+        {
+            gNdsR2FlashVtxB[i] = gNdsR2FlashVtxLive[i];
+        }
         gNdsR2FlashLatchedB++;
     }
     for (i = 0u; i < NDS_R2_FLASH_SLOTS; i++)
     {
         gNdsR2FlashLive[i] = 0u;
+    }
+    for (i = 0u; i < NDS_R2_FLASH_VTX; i++)
+    {
+        gNdsR2FlashVtxLive[i] = 0u;
     }
     /* Min starts at the top so the first sample always wins. */
     gNdsR2FlashLive[NDS_R2_FLASH_SLOT_MIN] = 0xffffffffu;
@@ -8482,6 +8504,45 @@ static inline u16 ndsRendererHardwarePackedValidVertexColor(
     else if (vertex_color != gNdsR2FlashLive[10])
     {
         gNdsR2FlashLive[11]++;
+    }
+    /* R2-03 E55. Per-vertex pairs across TWO hitlag frames, in call order.
+     *
+     * E50 killed the constant-colour route by showing 172/273 vertices differ.
+     * What is still open is whether the flash is a one-parameter transform of
+     * the base colour -- `flashed = base + (255 - base) * t` -- because then the
+     * native owner reproduces it exactly from the baked table with one lerp and
+     * E32 keeps its measured -51,136 (E54).
+     *
+     * The test needs no baked-table mapping, and it works because HITLAG FREEZES
+     * THE POSE: frames 909..913 draw the same vertices with the same normals, so
+     * the per-vertex lighting factor is identical between them and cancels. If
+     * both frames are lerps of one base with t_A and t_B, then for every vertex
+     *
+     *     (255 - A_k) / (255 - B_k) = (1 - t_A) / (1 - t_B)
+     *
+     * a single constant. Constant across k confirms the route; scattered refutes
+     * it. If A_k == B_k for all k the flash does not ramp within the burst, which
+     * is a null result for this test and is worth knowing before spending more.
+     *
+     * Call order is deterministic for a frozen pose, so index k names the same
+     * vertex in both snapshots. */
+    {
+        /* Stride, not prefix. The first 24 of 273 were all pure grey, which is
+         * the whole finding -- so sampling the prefix again would only re-confirm
+         * the part already known. Every 11th call spreads the 24 slots across the
+         * entire vertex set and is what tests whether E50's non-grey minimum
+         * (0x240F11FF) is a real minority or came from elsewhere. */
+        u32 call = gNdsR2FlashLive[2] - 1u;
+
+        if ((call % 11u) == 0u)
+        {
+            u32 slot = call / 11u;
+
+            if (slot < NDS_R2_FLASH_VTX)
+            {
+                gNdsR2FlashVtxLive[slot] = vertex_color;
+            }
+        }
     }
 #endif
     return ndsRendererHardwarePackedResolvedColor(
