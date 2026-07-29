@@ -9,6 +9,15 @@ param(
     # Requires a ROM built NDS_TASK68_FALLBACK_CENSUS=1. Off by default because
     # that flag adds BSS and this ROM's pacing is cache-placement sensitive, so a
     # census build is not comparable to an ordinary tick-HUD baseline.
+    #
+    # R2-03 E35: NDS_TASK75_LOAD_CENSUS=1 alone is NOT enough. It re-points the
+    # shared per-frame ring at gNdsTask75AssetLoadCount, but this switch also
+    # reads gNdsTickHudNativeOwnerFallbackByReason[], which only Task 68 defines,
+    # so the run reaches its window and then dies in GDB with "No symbol ... in
+    # current context". Build with BOTH flags: Task 75 wins the #if that selects
+    # the ring source in nds_platform.c, and Task 68 supplies the symbol. Which
+    # counter a given dump holds is a property of the build -- the column is
+    # labelled "fallback" either way.
     [switch]$FallbackCensus,
     # Read the ROM's own 128-entry sample ring in a single stop instead of
     # stopping GDB once per presented frame. ndsPlatformTickHudSample already

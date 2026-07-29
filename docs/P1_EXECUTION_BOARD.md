@@ -31,6 +31,56 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E35 — the gate is owned by the SIMULATION, not the renderer (2026-07-29)
+
+**Highest-value row on the board, and it is no longer a fighter row.** Full
+report: `docs/optimization/ClaudeOpus5_R203_E35_SrcExcursion_20260729.md`.
+
+`WORK-H` P50 is **1,011,200**, inside the 1,120,000 gate. Only P95 misses, so the
+question is what an *expensive* frame runs. Three results, from a 128-frame ring
+dump (frames 439..566) carrying the Task 75 per-frame load counter, plus two
+`NDS_TICK_HUD_DRAW=0` per-PC census windows:
+
+**1. Loading was oversized by half.** Load-free P95 1,419,264 against 1,468,800
+over all frames, so eliminating on-demand loading is worth **~49,536**, not the
+~103,488 the board has carried since Task 75 E0. Still real, still not the gate.
+
+**2. E32 does not land the gate.** Applying its measured `FTR` cap frame by frame
+across all 128: 34/128 over gate -> **26/128**, P95 1,468,800 -> **1,377,408**.
+Reading only the worst fourteen frames suggested it might land the gate outright;
+it does not. **Rank the whole distribution, never the visible top of it** — a P95
+is a position in a sorted list, decided by the frames just below the ones that
+catch the eye.
+
+**3. 25 of the 26 remaining over-gate frames are `SRC` excursions**, 13 of them
+load-free and arriving in consecutive runs (452–453, 475–477, 517–521, 542–543).
+`SRC` is `scVSBattleFuncUpdate` x2 — the SSB64 simulation.
+
+Profiling 517–521 against a matched control at 508–512, per frame, excluding
+`armWaitForIrq` (a consequence: three VBlanks instead of two):
+
+| block | ticks/frame |
+|---|---:|
+| **softfloat** | **283,072** |
+| collision (`gmCollision*`, `ndsStageMP*Sweep*`) — four functions enter from zero | 75,088 |
+| a third owner drawing — all zero in control | 66,498 |
+| overlay 2 (`func_ovl2_800ED490`, `func_ovl2_800EDBA4`) — zero in control | 24,773 |
+
+`MISC` confirms the draw half independently: 47,424 -> 125,184–157,888.
+
+**Next, in order:** (a) name the object — `nds_task39_effect_census.c` already
+tracks live effects per frame and is the cheapest instrument; (b) attribute the
+283,072 with `scripts/census-softfloat-callers.ps1`; (c) only then choose a
+port-side fixed-point equivalent. Inspect BattleShip first — `decomp/` is
+read-only, which is not the same as algorithm-frozen.
+
+**Caveat now on record:** `_ntrcardRomReadSector` measured +95,357 on the
+excursion with the HUD drawn and −95,356 (entirely in the control) with it
+compiled out — same frames, same deterministic match. Cartridge reads complete
+against wall time, so **never attribute cartridge activity to a frame across two
+differently-timed builds.** The load *counter* is frame-stable because a finalize
+is a software event; the sector read is not.
+
 ## R2-03 E34 — E26's premise MEASURED: the epoch state is 99.5% static (2026-07-29)
 
 **E26 is viable, and this is the number it was missing.** Its §2a correction
