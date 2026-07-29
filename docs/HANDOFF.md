@@ -69,10 +69,10 @@ soft-float add; and the float leaves are already lowered (`_arm_addsubsf3.o`,
 
 ## Best unowned work: E58, and it can unblock E32
 
-**E55 reopened the cheapest fix for E32, which E50 had closed on a bad
-inference.** E50 measured 172/273 vertices differing on a hitlag frame and
-concluded the flash was per-vertex; that sampled the **output** of lighting and
-inferred the **input**. Per-vertex dumps on two hitlag frames say otherwise:
+**E55 reopened the cheapest fix for E32, which E50 closed on a bad inference** —
+E50 measured 172/273 vertices differing and concluded the flash was per-vertex,
+but that sampled lighting's **output** and inferred its **input**. Two hitlag
+frames say otherwise:
 
 - **A and B are elementwise identical** — the flash does not ramp within a burst.
 - **0 of 541 baked vertices are achromatic; 75% of flashed ones are**, greys
@@ -121,8 +121,7 @@ already satisfied on the renderer side.**
   Exact by construction, still a regression — P95 **+11,584**, 92/128 worse,
   `STG` (untouchable by it) +1,600 on 99. The lookup is a *symptom* of the
   fallback anyway.
-- **E55 route 1**, a lerp-toward-white model of the flash. The flash replaces the
-  colour outright; it does not transform it.
+- **E55 route 1**, a lerp model of the flash — it replaces, not transforms.
 
 ## Restart
 
