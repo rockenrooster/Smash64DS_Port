@@ -31,6 +31,59 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E30 — the median is inside the gate; the tail is three other things (2026-07-29)
+
+**The single most important row on this board.** E28+E29 took 58,304/frame out
+of the fighter. `WORK` P50 fell 1,071,488 -> **1,010,240, inside the 1,120,000
+gate**. `WORK` P95 went 1,496,064 -> 1,467,840 — **essentially not at all.**
+
+**The steady-state fighter cost and the P95 gate are now different problems.
+More median cuts will not close the gate.** Do not queue another median cut
+without a reason that survives this row.
+
+Decomposing the 8 worst `WORK` frames against the median frame — the actual
+frames, not independently-sorted columns — gives three causes that do not
+co-occur (3 frames HUD-only, 3 FTR-only, 2 both):
+
+| bucket | excess over median frame | share |
+|---|---:|---:|
+| **FTR** | 2,538,432 | **41.9%** |
+| **HUD** | 1,868,608 | **30.9%** |
+| **SRC** | 1,298,624 | **21.4%** |
+
+**HUD was the instrument, and it is now switchable off.** `HUD` is 960 at the
+median and **345,024** on 9 of 128 frames, periodic at 13.25 presented frames =
+0.494 s = `NDS_BATTLE_FPS_HUD_SAMPLE_TICKS` (`BUS_CLOCK / 2`). It is the tick
+HUD's own block: eleven 128-entry ring sorts and thirteen `vsnprintf`/`iprintf`
+console lines. **None of it exists in the published ROM**, and the GDB sampler
+reads `sBattleTickHudRing` directly and never reads `sBattleTickHudP50/P95`.
+`NDS_TICK_HUD_DRAW=0` removes it: `WORK` P95 **1,548,032 -> 1,467,840**, VBlank
+`2:446 3:109 4:9` -> **`2:472 3:87 4:4`**, frames over gate 39 -> 35.
+
+**Every measurement this campaign took on the tick-HUD ROM carried ~345,024
+ticks of instrument on ~7% of frames — exactly the frames the P95 gate is
+decided on.** Pass `NDS_TICK_HUD_DRAW=0` for measurement; default stays 1 for
+device reads and screenshots. (`sBattleTickHudRing` is now `volatile`: with
+nothing in the ROM reading it, `--gc-sections` deleted the array and the sampler
+failed. A measurement buffer whose only consumer is a debugger must say so.)
+
+**Highest-value unowned row: the FTR bursts.** `FTR` is bimodal — 401,856 median
+or ~900,000, nothing between — on frames **478–482 and 544–548**: two contiguous
+five-frame bursts 62 frames apart. A discrete event, twice, not a per-frame cost.
+Check in this order: a fighter dropping off the native owner path (the fallback
+and `SourceVertexLoadCount` counters are already ringable per frame); Task 39's
+hurt flash, whose live `input->materials[]` write invalidates the texture prepare
+and whose duration and 62-frame spacing both fit two hits; or a third owner being
+drawn. Window the existing phase census on 478–482. **Do not optimise the median
+fighter path for this — those frames are not running it.**
+
+`SRC` (21.4%) is Task 75 E0's known load population, sized at ~103,488, unchanged
+by Runtime 2.
+
+**Gate now: P50 passes; P95 1,467,840 = 1.31x, gap 347,840** (was 1.37x).
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E30_TailDecomposition_20260729.md`.
+
 ## R2-03 E29 — the fighter's hot tables move to DTCM, −26,816 (2026-07-28)
 
 **KEEP.** The emit reads `sNdsNativeFighterPreparedDense` (8,656 bytes) and

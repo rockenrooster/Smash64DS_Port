@@ -68,6 +68,33 @@ but they are the other agent's to drop, not mine.
 
 ## State as of this handoff
 
+**Read `docs/P1_EXECUTION_BOARD.md`'s R2-03 E30 row before doing anything with
+performance.** The fighter median is now inside the gate and the P95 is not, and
+they are different problems:
+
+| | P50 | P95 | gate |
+|---|---:|---:|---:|
+| `WORK`, `NDS_TICK_HUD_DRAW=0` | **1,010,240** | 1,467,840 | 1,120,000 |
+
+Three things follow, and they change how the next cycle should be run:
+
+1. **Measure with `NDS_TICK_HUD_DRAW=0`.** The tick HUD's own on-screen block
+   costs 345,024 ticks about twice a second and does not exist in the published
+   ROM. Turning it off moved `WORK` P95 1,548,032 -> 1,467,840 and the VBlank
+   histogram `2:446 3:109` -> `2:472 3:87`.
+2. **Do not queue another median cut without a reason that survives E30.**
+   E28+E29 removed 58,304/frame and P95 moved 28,224.
+3. **Highest-value unowned row is the FTR bursts** — `FTR` is bimodal, 401,856 or
+   ~900,000, on frames 478–482 and 544–548. Two contiguous five-frame events 62
+   frames apart, 41.9% of the tail's excess. Suspects and the instrument to use
+   are in the board row; start by asking whether those frames draw *more*
+   geometry or the *same* geometry more slowly.
+
+R2-03 has graduated **111,232** of its 250,833 gap: E17 17,600, E16 35,072,
+E28 31,488, E29 26,816. All four are default-on in the published and tick-HUD
+Makefile blocks. E28 removed work E16 left with no reader; E29 moved the two hot
+fighter vertex tables into DTCM, which had 12,948 free bytes nobody had measured.
+
 R2-00a/b/c and R2-01 are done and gated. **R2-02's stage budget is met.** E1a,
 E2, E7 and E8 take `STG` P50 from 351,488 to **177,088** against the 180,000
 budget, and 2-VBlank frames from 13 to 198 of 565. All four are default-on in

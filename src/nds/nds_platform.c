@@ -65,6 +65,17 @@ extern volatile u32 gNdsFrameCounter;
     (NDS_BATTLE_FPS_HUD_ENABLED && (NDS_RENDERER_PROFILE_LEVEL >= 1))
 #define NDS_BATTLE_TICK_HUD_ENABLED \
     (NDS_BATTLE_FPS_HUD_ENABLED && NDS_TICK_HUD)
+/* R2-03 E30. The tick HUD's on-screen block re-sorts eleven 128-entry rings and
+ * pushes thirteen vsnprintf/iprintf lines through the libnds text console about
+ * twice a second, and it measured 345,024 ticks each time against a 960-tick
+ * median -- 30% of the frame budget, landing on exactly the frames the P95 gate
+ * is decided on. None of it exists in the published ROM, and the GDB sampler
+ * reads sBattleTickHudRing directly and never touches sBattleTickHudP50/P95, so
+ * for a scripted measurement the whole block is instrument cost with no reader.
+ * Set NDS_TICK_HUD_DRAW=0 for a measurement run; leave it 1 to read the HUD on
+ * a device or in a screenshot. */
+#define NDS_BATTLE_TICK_HUD_DRAW_ENABLED \
+    (NDS_BATTLE_TICK_HUD_ENABLED && NDS_TICK_HUD_DRAW)
 #if !NDS_RENDERER_HW_TRIANGLES
 static u16 *sFramebuffer;
 static u16 *sFramebuffers[2];
@@ -1988,7 +1999,13 @@ static u32 sBattlePhaseHudAvgSampleCount;
  * what it replaces: nine iprintf calls per presented frame become nine per
  * refresh, so the HUD now perturbs the loop it measures far less. */
 #define NDS_TICK_HUD_WINDOW 128u
-static u32 sBattleTickHudRing[nNDSTickHudBucketCount][NDS_TICK_HUD_WINDOW];
+/* volatile: the GDB sampler reads this ring out of the ELF, and with
+ * NDS_TICK_HUD_DRAW=0 nothing in the ROM reads it, so dead-store elimination
+ * plus --gc-sections deleted the array outright and the sampler failed with
+ * "Attempt to take address of value not located in memory". A measurement
+ * buffer whose only consumer is a debugger has to say so. */
+static volatile u32
+    sBattleTickHudRing[nNDSTickHudBucketCount][NDS_TICK_HUD_WINDOW];
 static u32 sBattleTickHudScratch[NDS_TICK_HUD_WINDOW];
 static u32 sBattleTickHudRingHead;
 static u32 sBattleTickHudRingCount;
@@ -2330,7 +2347,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         (unsigned long)gNdsRendererM3PostArmFailureCount);
 #endif
 #endif
-#if NDS_BATTLE_TICK_HUD_ENABLED
+#if NDS_BATTLE_TICK_HUD_DRAW_ENABLED
     {
         u32 bucket;
         u32 count = sBattleTickHudRingCount;

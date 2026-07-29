@@ -122,6 +122,43 @@ differently. Task 79's stage bucket rose 6,880 on every frame — that was a
 128-entry table being shared by three owners instead of one, and reading it as
 noise would have shipped a real regression.
 
+### When the median falls and the P95 does not, stop cutting the median (R2-03 E30, 2026-07-29)
+
+They are different code paths and the gate is the tail. E28+E29 took 58,304
+ticks/frame out of the fighter draw; `WORK` P50 went 1,071,488 -> 1,010,240 and
+**P95 moved 1,496,064 -> 1,467,840**. Another median cut of the same size would
+have bought the gate nothing.
+
+Before proposing anything for a tail, **decompose the worst frames against the
+median frame, bucket by bucket** — the actual frames, differenced per bucket, not
+a table of independently-sorted percentiles. It costs one script over data
+already collected. Doing it separated three independent causes (a bimodal fighter
+burst, the measuring instrument, and asset loading) from the single "renderer
+fast-path dropout" the board had recorded, and showed they do not co-occur.
+
+**A bimodal bucket is an event, not a cost.** `FTR` reading either 401,856 or
+~900,000 with nothing in between, on two contiguous five-frame runs 62 frames
+apart, is a state the code enters — not a distribution to optimise. Find the
+state.
+
+### Measure with the instrument's own drawing off (R2-03 E30, 2026-07-29)
+
+The tick HUD's on-screen block costs **345,024 ticks** roughly twice a second —
+eleven 128-entry ring sorts and thirteen `vsnprintf`/`iprintf` console lines
+against a 960-tick median. It does not exist in the published ROM, and the GDB
+sampler reads `sBattleTickHudRing` directly and never reads the percentiles it
+computes. Every campaign measurement before this one carried it, on ~7% of
+frames, landing on exactly the frames the P95 gate is decided on.
+
+**Pass `NDS_TICK_HUD_DRAW=0` on measurement runs.** Leave the default 1 for a
+device read or a screenshot.
+
+Generally: before trusting a tail number, ask what the instrument costs on the
+frames that produce it. And note the trap — with nothing in the ROM reading the
+ring, dead-store elimination plus `--gc-sections` deleted the array and the
+sampler failed with "Attempt to take address of value not located in memory". **A
+measurement buffer whose only consumer is a debugger must be `volatile`.**
+
 ### Pair the arms by frame number, not by sorted percentile (R2-03 E28, 2026-07-28)
 
 Both arms run the same deterministic ROM from the same start frame, so frame N
