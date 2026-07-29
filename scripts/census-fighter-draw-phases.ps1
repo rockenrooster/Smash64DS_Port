@@ -175,6 +175,22 @@ try {
     if ($frames -le 0) {
         throw "Fighter draw-phase census window is $frames frames; the two stops did not advance."
     }
+    # The window must be the window that was asked for. GDB `if` at top level
+    # resumes exactly once, and when a stop is missed the script's own
+    # `continue` lands on some later frame and the run reports a perfectly
+    # plausible table over a window nobody requested -- twice in one session it
+    # silently collapsed a 5- and a 30-frame request to 1 frame, and the second
+    # time it produced a "no fallback occurred" reading from a window that did
+    # not contain the frames under investigation. A measurement that quietly
+    # answers a different question is worse than one that fails.
+    # The B stop legitimately lands one frame late, so only A is checked exactly.
+    if (([int]$samples['A'].frame -ne $StartFrame) -or
+        ($frames -lt $WindowFrames) -or ($frames -gt ($WindowFrames + 1))) {
+        throw ("Fighter draw-phase census asked for frames $StartFrame..$endFrame " +
+               "($WindowFrames frames) but stopped at $($samples['A'].frame)..$($samples['B'].frame) " +
+               "($frames frames). The counters would describe the wrong window; " +
+               "re-run, and prefer a window of 30+ frames -- small windows miss stops most often.")
+    }
     $delta = [ordered]@{}
     foreach ($c in $counters) {
         $delta[$c] = [int64]$samples['B'][$c] - [int64]$samples['A'][$c]

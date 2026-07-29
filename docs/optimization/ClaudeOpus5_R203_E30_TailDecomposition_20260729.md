@@ -127,18 +127,75 @@ instead of 286,988** ticks — while `FTR` for the whole frame *doubles*. The tw
 bursts are counter-identical (191 epochs, 245 submits, 108 material
 invalidations over 5 frames): the same event, twice.
 
-**So the work left the native path.** Fewer epochs are drawn natively and the
-cost reappears outside every bracket the census owns — which is the generic
-DObj/display-list interpreter. This is a **native-owner fallback**, not a slow
-native path, and no amount of optimising the native execute will touch it.
+**So the work left the native execute** — fewer epochs are drawn there and the
+cost reappears outside every bracket the phase census owns. `FTR` also brackets
+the DObj walk, the revalidation and the owner prep (E2/E3: 113,199/frame; E4:
+MatrixPrep 91,338/frame), so the excess is in one of those or in a fallback to
+the generic interpreter. **Optimising the native execute cannot touch these
+frames either way.**
 
-**Next step is exact and cheap:** build with `NDS_TASK68_FALLBACK_CENSUS=1` and
-sample with `scripts/sample-tick-hud-buckets.ps1 -FallbackCensus`, which rings
-`gNdsTickHudNativeOwnerFallbackCount` and
-`gNdsTickHudNativeOwnerFallbackByReason[]` per frame. The reason code names the
-eligibility test that fails on frames 478–482, and that test is the fix site.
-(The counters live under that flag only, which is why a plain tick-HUD build
-reports "No symbol gNdsTickHudNativeOwnerFallbackCount".)
+### ANSWERED: it is the hitlag shuffle disabling the native owner
+
+`NDS_TASK68_FALLBACK_CENSUS=1` over frames **460..500** (40 frames, containing the
+478–482 burst):
+
+| counter | value |
+|---|---:|
+| `gNdsTickHudNativeOwnerFallbackCount` | **5** |
+| reason [2] `AnimLock` | **5** |
+| every other reason | 0 |
+| `Calls` / `Eligible` (denominators) | 82 / 82 |
+
+**Five fallbacks, all `AnimLock`, one per burst frame.** The site is
+`reloc_backend_renderer_dl.c:12224`:
+
+```c
+if (native_owner_enabled && (production_mode || hierarchy_mode) &&
+    ((fp->is_use_animlocks != FALSE) || (fp->shuffle_tics != 0u)))
+{
+    native_owner_enabled = FALSE;      /* whole fighter -> generic path */
+}
+```
+
+`shuffle_tics` is SSB64's hitlag shuffle — `fttypes.h:1146` calls it the "Model
+shift timer", set in `ftparam.c:236` from `ftParamGetHitLag(...)` when the
+fighter is hit. Two hits about two seconds apart, each with roughly five
+presented frames of hitlag, is exactly the observed signature.
+
+**And the source says it is trivially absorbable.** `ftdisplaymain.c:1205`:
+
+```c
+if (fp->shuffle_tics != 0) {
+    syMatrixAdvanceW(m, gSYTaskmanGraphicsHeap);
+    syMatrixTra(m, shuffle.x, shuffle.y, 0.0F);
+    gSPMatrix(..., G_MTX_PUSH | G_MTX_MUL | G_MTX_MODELVIEW);
+}
+ftDisplayMainDrawAll(fighter_gobj);
+if (fp->shuffle_tics != 0) { gSPPopMatrix(..., G_MTX_MODELVIEW); }
+```
+
+**One PUSH, one whole-fighter translate by `(x, y, 0)` out of the small constant
+table `dFTDisplayMainShufflePositions[is_shuffle_electric][shuffle_frame_index]`,
+one POP.** It is not a per-joint effect and it does not change geometry,
+materials or animation — it shifts the entire model. `lbcommon.c:1627` does the
+same thing for the attached-DObj path by adding the offset into `f[3][0]` and
+`f[3][1]` of the local matrix.
+
+The native owner already loads a per-root matrix
+(`ndsRendererLoadHardwareSplitMatrices`, E17). **Folding the shuffle offset into
+that load — or pushing one translate before the owner's roots and popping after —
+reproduces the source exactly at essentially zero per-frame cost**, instead of
+disabling the native path for the whole fighter for the duration of every hit.
+
+Expected: removes ~500,000 excess ticks on the ~10 burst frames per 128, i.e.
+41.9% of the tail excess, and it is mechanically equivalent by construction
+rather than by approximation.
+
+**Caveat to check before implementing:** `is_use_animlocks` is the other half of
+the disjunction and is *not* covered by this. The census says all five fallbacks
+in this window are the same reason code, which is shared by both conditions, so
+confirm which of the two fired — split the counter or read `fp->shuffle_tics`
+directly on a burst frame — before assuming the shuffle is the whole story.
 
 Candidates for what the reason will turn out to be, in the order they should be
 checked:
@@ -173,6 +230,21 @@ sized at ~103,488. That analysis stands and is unchanged by Runtime 2.
 **P50 passes. P95 is 1.31x, a gap of 347,840** — against 1.37x at the R2-08
 readiness measurement. Of that gap the tail decomposition attributes ~42% to the
 FTR bursts and ~21% to `SRC`.
+
+## Harness defect fixed: the census window collapsed silently, twice
+
+`census-fighter-draw-phases.ps1` requested 5 frames from 478 and sampled
+483–484; it requested 30 frames from 470 and sampled 500–501. Both printed a
+complete, plausible counter table. The second one produced a **"no fallback
+occurred"** reading from a window that did not contain the frames under
+investigation, and that reading was briefly written down as a refutation.
+
+GDB `if` at top level resumes exactly once — already a standing rule from
+Task 96 — so when a stop is missed the script's own `continue` lands on a later
+frame and nothing notices. The script now throws unless the A stop is exactly
+`StartFrame` and the achieved window is `WindowFrames` or one more. **A
+measurement that quietly answers a different question is worse than one that
+fails.** Prefer 30+ frame windows; small ones miss stops most often.
 
 ## The rule this generalises to
 
