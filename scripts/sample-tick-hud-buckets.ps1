@@ -607,16 +607,30 @@ try {
         # calls and eligible lead the enum as denominators, so they are excluded
         # from the fallback total and reported as the rate's base instead --
         # summing them in would report 522 fallbacks out of 256 draws.
+        #
+        # R2-03 E54: the enum's LAST TWO entries are not fallback reasons either.
+        # Task 73's AnimForceLoad/AnimForceResident ride along on this counter
+        # bank because it already had plumbing, and summing them in reported
+        # "23 fell back" for a window whose real answer was 5 -- with animLoad's
+        # 18 dominating the breakdown and pointing the next reader at animation
+        # residency instead of at the hitlag shuffle that was actually firing.
+        # Report them, separately, as what they are.
         $fbDenominators = 2
+        $fbRideAlongs = 2
+        $fbReasonCount = $fallbackReasons.Count - $fbDenominators - $fbRideAlongs
         $fbCalls = [double]$fbWindow[0]
-        $fbReasonSum = (($fbWindow | Select-Object -Skip $fbDenominators |
-            Measure-Object -Sum).Sum)
+        $fbReasonSum = (($fbWindow | Select-Object -Skip $fbDenominators `
+            -First $fbReasonCount | Measure-Object -Sum).Sum)
         Write-Output (("native-owner: {0} draws over {1} frames, {2} eligible, " +
             "{3} fell back ({4:N1}%)  [{5}]") -f
             $fbWindow[0], $rows.Count, $fbWindow[1], $fbReasonSum,
             (100.0 * $fbReasonSum / [Math]::Max(1.0, $fbCalls)),
-            (($fbByReason | Select-Object -Skip $fbDenominators) -join ' '))
-        Write-Output ("  frames with a fallback: {0} of {1}" -f
+            (($fbByReason | Select-Object -Skip $fbDenominators `
+                -First $fbReasonCount) -join ' '))
+        Write-Output ("  Task 73 anim residency (NOT fallbacks): {0}" -f
+            (($fbByReason | Select-Object -Last $fbRideAlongs) -join ' '))
+        Write-Output (("  frames with a fallback: {0} of {1} " +
+            "(ring counts every reason including the ride-alongs)") -f
             $fbFrames.Count, $fbPerFrame.Count)
     } else {
         Write-Output (("native-owner fallback: {0} of {1} frames took one  [{2}]") -f

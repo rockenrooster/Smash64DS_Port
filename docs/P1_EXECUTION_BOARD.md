@@ -32,6 +32,76 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E54 — it IS the fighter falling back, and E32 is worth 51,136 (2026-07-29)
+
+E53 found 292,899 ticks/frame of generic display-list interpreter appearing from
+zero on excursion frames and named two candidate causes: the native fighter owner
+falling back (E31/E32), or a third owner drawing generically (E35's reading).
+**It is the fallback.**
+
+`NDS_TASK68_FALLBACK_CENSUS=1` plus `NDS_TASK91_DRAW_PHASE_CENSUS=1`, 128 frames:
+
+```
+native-owner: 256 draws, 256 eligible, animLock-reason fallbacks: 5
+gNdsR2FallbackShuffleTics = 25 (cumulative)   gNdsR2FallbackAnimLocks = 0
+```
+
+**Five fallbacks, every one of them `shuffle_tics`, zero animation locks.** The
+reason code is shared by both halves of the `is_use_animlocks || shuffle_tics`
+disjunction at `reloc_backend_renderer_dl.c:12275`; Task 91's split settles which.
+
+The census ROM is ~137,664 ticks/frame slower than the clean one and its VBlank
+histogram shifts 2:726→2:314, so **presented frame N is not the same game tick in
+both builds** and the fallback frame list cannot be mapped across. The clean
+build's own `FTR` column settles it without any alignment:
+
+| clean-build frames with `FTR` > 500,000 | `FTR` | excess over median | over gate |
+|---|---:|---:|:-:|
+| 909 | 898,048 | +509,824 | yes |
+| 910 | 896,448 | +508,224 | yes |
+| 911 | 898,368 | +510,144 | yes |
+| 912 | 895,616 | +507,392 | yes |
+| 913 | 886,848 | +498,624 | yes |
+
+**Exactly five frames, exactly five fallbacks, and they are consecutive** — one
+hitlag burst. 909–913 are also the frames E53 profiled. `FTR` median is 388,224,
+so a fallback costs **~507,000 ticks/frame**, of which E53 attributed 292,899 to
+twelve symbols that are zero when the native owner runs.
+
+### What E32 is worth, across the whole distribution
+
+Capping `FTR` at its median on those five frames (E35's projection method, but
+over all 128 frames — never the visible top):
+
+| | P50 | P95 | max | over gate |
+|---|---:|---:|---:|---:|
+| as measured | 1,013,696 | 1,228,928 | 2,040,896 | 17/128 |
+| **`FTR` capped** | 1,011,264 | **1,177,792** | 1,531,072 | **13/128** |
+
+**E32 is worth −51,136 P95 and four over-gate frames.** It halves the gap
+(108,928 → 57,792) and does not close it, which corroborates E35's verdict at a
+different measurement. The twelve frames that remain over gate — 795, 809, 842,
+843, 864, 869, 885, 890, 898, 899, 901, 907 — are the `SRC` half, the owner's
+float→fixed decision.
+
+**E32 is therefore the largest single lever left and it is blocked on the hurt
+flash, not on its value.** The value is now measured rather than projected from
+the top of the distribution.
+
+### Harness defect found and fixed
+
+`sample-tick-hud-buckets.ps1` summed the enum's last two entries into the
+fallback total. Task 73's `AnimForceLoad`/`AnimForceResident` ride along on that
+counter bank because it already had plumbing, and they are **not** native-owner
+reasons — the enum says so in a comment. The run above reported **"23 fell back
+(9.0%)" and "16 frames with a fallback"** for a window whose real answer is
+**5 and 5**, with `animLoad:18` dominating the breakdown and pointing squarely at
+animation residency instead of at the hitlag shuffle that was actually firing.
+The summary now excludes them and prints them separately as what they are.
+
+Evidence: `artifacts/performance/r203-e54-fallback-census-128{.json,-rows.csv}`
+and `-summary.txt` (which preserves the pre-fix wording).
+
 ## R2-03 E53 — the excursion is a RENDERING PATH SWITCHING ON (2026-07-29)
 
 **The most useful profile the phase has taken.** E52 said the P95 excursion is

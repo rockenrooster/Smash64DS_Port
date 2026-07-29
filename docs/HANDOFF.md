@@ -42,28 +42,32 @@ more. That is the **generic display-list interpreter** — not more of the same
 work, a second renderer running. `FTR`'s own percentiles agree: P50 388,224,
 P95 392,448, spread 1.01, **max 898,368**.
 
-## The single highest-value next step
+## E54 settled what turns that path on: the fighter falls back
 
-**Settle what turns that path on. One build.**
+`NDS_TASK68_FALLBACK_CENSUS=1` + `NDS_TASK91_DRAW_PHASE_CENSUS=1` over the same
+128 frames: **5 native-owner fallbacks, every one `shuffle_tics`, zero animation
+locks** (`gNdsR2FallbackAnimLocks = 0`). The clean build has **exactly 5 frames**
+with `FTR` > 500,000 — 909-913, consecutive, ~507,000 each over the 388,224
+median, all over gate. One hitlag burst. E35's "third owner" reading does not
+apply to it.
 
-`reloc_backend_renderer_dl.c:12275` disables the native fighter owner, per
-fighter, when `is_use_animlocks || shuffle_tics != 0`; E32's census counted 5
-shuffle fallbacks and 0 animlock fallbacks over frames 460..500, so on the
-shipped build the trigger would be **hitlag** and E32's fold is the repair. But
-E35 saw a smaller (66,498) version of the same symbol set and read it as **a
-third owner drawing** — an effect object, not the fighter falling back. Both
-stories predict generic-renderer symbols appearing from zero; they need
-different fixes.
+Capping `FTR` at its median on those five frames projects **E32's value across
+the whole distribution**:
 
-```powershell
-make TARGET=smash64ds-battle-playable-tickhud-hwtri BUILD=build-r2-e54 NDS_TASK68_FALLBACK_CENSUS=1 NDS_TASK75_LOAD_CENSUS=1
-```
+| | P50 | P95 | max | over gate |
+|---|---:|---:|---:|---:|
+| as measured | 1,013,696 | 1,228,928 | 2,040,896 | 17/128 |
+| **`FTR` capped** | 1,011,264 | **1,177,792** | 1,531,072 | **13/128** |
 
-then sample with `-FallbackCensus -RingDump` and correlate the per-frame
-fallback ring against the over-gate frames (809, 842, 843, 864, 869, 885, 890,
-898, 899, 901, 907, 909–913, 924, 926). `gNdsR2FallbackShuffleTics` and
-`gNdsR2FallbackAnimLocks` under `NDS_TASK91_DRAW_PHASE_CENSUS` split the
-disjunction if the ring says the fighter is falling back.
+**E32 is worth −51,136 P95 and four frames.** It halves the gap and does not
+close it. It is the largest single lever left, and it is blocked on the hurt
+flash (E48/E49/E50), not on its value. The twelve frames that remain over gate
+are the `SRC` half below.
+
+**Do not re-measure the census build's tick numbers against a clean build.** The
+three census flags cost ~137,664 ticks/frame and shift the VBlank histogram
+2:726 → 2:314, so presented frame N is a different game tick in the two builds.
+Correlate through a build-internal column (`FTR`) instead, as above.
 
 ## The `SRC` half is an owner decision, not an experiment
 
