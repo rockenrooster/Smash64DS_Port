@@ -139,9 +139,53 @@ colour-handling difference the fallback was hiding.
 
 **So E32 is really two changes and only one of them was measured.** It was framed
 as "fold the shuffle into the world matrix", but its actual effect is "stop
-falling back during animlock", and the fallback was also masking a material
-seam. Fix the native owner's hurt-flash colour to match the generic path, then
-re-run these four captures; the tick win is real and worth returning for.
+falling back during animlock" — and the frames where it stops falling back are
+the only frames the native owner has ever had to draw a struck fighter. The tick
+win is real and worth returning for once the rendering matches.
+
+### E36 — first hypothesis tested and REFUTED (do not retry it)
+
+The obvious mechanism was Task 39's damage flash. `ndsRendererHardwareModulatePackedColor`
+is an affine lerp `L(x) = x*k + c`, the geometry engine computes
+`ambient + diffuse * dot(N,L)`, and E16 writes `L()` into **both** registers, so
+
+    L(A) + L(D)*d  =  L(A + D*d) + c*d
+
+— the flash constant a second time, scaled by the dot product. Giving ambient the
+full lerp and diffuse only its scale makes the identity exact. That was built
+(`NDS_R2_FIGHTER_FLASH_AFFINE`) and captured.
+
+**It changed one pixel: 1,826 -> 1,827.** Two reasons, both worth recording so
+nobody spends this build again:
+
+1. `color_modulate`'s alpha is **zero** on these frames, so both modulate
+   variants are the identity. The damage flash is not what is happening at 480.
+2. The *material* path is not affine anyway — `ndsRendererR2MaterialChannel`
+   scales multiplicatively via `ndsRendererHardwareScaleMaterialChannel5`, and
+   multiplication distributes over `ambient + diffuse*dot` exactly. So
+   `stats->prim_color`, which E34 identified as the only per-epoch state that
+   varies at runtime, is carried correctly by E16.
+
+The derivation in (1) is still valid *as arithmetic* and predicts a real defect
+whenever `color_modulate`'s alpha is non-zero while the native owner draws — but
+no frame in 439..566 exercises it, so the change was **reverted rather than
+shipped unproven**. Confirm it on a frame with an active `config->color_modulate`
+before rebuilding it.
+
+### What remains to test, in order
+
+1. **Shuffle amplitude and sign.** `ndsRendererAdapterSetShuffleOffset` converts
+   `dFTDisplayMainShufflePositions` with `offset->x * 4096.0F`. If that scale or
+   sign is wrong the fighter is displaced, which would produce a large pixel
+   delta and a body part overlapping where the reference has background — a
+   better fit for a "dark mass appearing" than any shading difference. Test by
+   capturing the candidate with the fold's offset forced to zero: if the frame
+   then matches the reference's *unshuffled* pose exactly, the fold's arithmetic
+   is the whole story.
+2. **Native owner versus generic shading during animlock.** These are the only
+   frames where the two paths draw the same fighter, so E16's hardware-lighting
+   approximation has never been compared against the software shade on identical
+   input. That comparison is now available and cheap.
 
 `PROJECT_GOAL.md` requires the result stay "recognizable, readable during
 gameplay". A struck fighter turning dark maroon is a readability change on

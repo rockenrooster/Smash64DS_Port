@@ -65,11 +65,33 @@ owner's hurt-flash colour to match the generic path, then re-run these four
 captures — the tick win (`FTR` P95 913,920 → 412,992) is real and worth returning
 for.
 
+**E36, the first hypothesis, is REFUTED — do not retry it.** The damage flash
+looked like the mechanism: `ndsRendererHardwareModulatePackedColor` is an affine
+lerp `L(x)=x*k+c`, the engine computes `ambient + diffuse*dot`, and E16 writes
+`L()` into both registers, so `L(A)+L(D)*d = L(A+D*d) + c*d`. Built the exact
+correction (ambient full lerp, diffuse scale only) and captured: **1,826 -> 1,827
+pixels.** `color_modulate`'s alpha is zero on these frames, and the *material*
+path is multiplicative anyway (`ndsRendererHardwareScaleMaterialChannel5`), which
+distributes over `ambient + diffuse*dot` exactly — so `prim_color` is carried
+correctly. The change was **reverted rather than shipped unproven**; the
+arithmetic still predicts a real defect wherever alpha is non-zero, but nothing
+in 439..566 exercises it.
+
+**Next two candidates, in order:** (1) the fold's amplitude/sign —
+`ndsRendererAdapterSetShuffleOffset` uses `offset->x * 4096.0F`, and a wrong
+scale displaces the fighter, which fits "a dark mass appears where the reference
+has background" better than any shading difference; test by forcing the fold's
+offset to zero. (2) native-owner versus generic shading during animlock — these
+are the only frames where both paths draw the same fighter, so E16's
+hardware-lighting approximation has never been compared against the software
+shade on identical input.
+
 **Harness note:** exact-frame capture is *not* gated to the Cut G window by frame
 number, only by its assertion set — the captures land, then the GO-text
-assertions throw. `capture-melonds.ps1` also passes its own `-FoxCpuMode -1`
-"unset" sentinel into a callee validating `0..1`, so **`-FoxCpuMode 1` must be
-passed explicitly** or the run dies after a full emulator boot.
+assertions throw. `capture-melonds.ps1` also passed its own `-FoxCpuMode -1`
+"unset" sentinel into a callee validating `0..1`, so the default invocation died
+after a full emulator boot; **fixed in this commit** by normalising the sentinel
+up front.
 
 ## R2-03 E35 — the gate is owned by the SIMULATION, not the renderer (2026-07-29)
 
