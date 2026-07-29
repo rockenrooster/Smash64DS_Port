@@ -1396,3 +1396,35 @@ So:
 3. Watch for this after a null result. E44 came back negative, which invited a
    story about where the cost "must" be instead; the fit was constructed to
    support that story rather than to test it.
+
+### Prepare-at-load on a live scene seam is bounded by the BGM packet (R2-04 E5, 2026-07-29)
+
+`PROJECT_GOAL.md` says loading time is cheap and expensive work should move out
+of gameplay. That is true of a loading *screen*. It is not true of a seam where
+the music is already streaming.
+
+R2-04 E4 made the match's 41 animation streams resident in one call at
+`scVSBattleStartBattle` — the same seam as the other prepare-at-load work. It
+built, it engaged exactly as sized, it was worth `WORK-H` P95 −128,896, and
+Boundary refused it. The failing run's own telemetry named the mechanism:
+`gNdsAudioBgmSeamMissCount` 0 → 1, `ErrorStopCount` 0 → 1, `OverrunCount` 0 → 1,
+`gNdsAudioBgmPlaying` 1 → 0 with `StopCalls` still 0. Playback stopped without
+anyone stopping it.
+
+The stream is double-buffered at 8,196 bytes per packet against 44,100 bytes per
+second. That gives the main thread **~186 ms between buffer seams**, and miss one
+and BGM is dead for the rest of the match. 41 back-to-back NitroFS walks plus
+84 KB of cartridge reads do not fit in 186 ms.
+
+So:
+
+1. **Budget any blocking prepare-at-load against one BGM packet**, not against a
+   feeling that loading is free. If it can exceed that, step it: E5 does one
+   asset per `scVSBattleFuncUpdate` and the countdown absorbs the whole ramp.
+2. **A stepped frame that costs what the on-demand path already costs is
+   safe by construction** — that path runs mid-match today without missing a
+   seam. Reach for that comparison instead of guessing a budget.
+3. **Read the failing verifier's own counters before theorising.** Two heap-
+   pressure and two cartridge-contention stories were considered here; the
+   `SeamMiss`/`ErrorStop`/`Overrun` triple settled it in one pass, and the
+   AUDIO_BGM row was already printed in the failure output.

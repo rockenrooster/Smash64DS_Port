@@ -189,8 +189,31 @@ before-span and 2,540 on the after-span**, so the replay is **40,648**, not
 `NDS_R2_SPAN_LEAN_TIMING=1` for any tick number out of these brackets. Second,
 DTCM is full at its safe margin, so that lever is harvested.
 
-Phases R2-04 through R2-08 are untouched — R2-08 is §6's switch itself, whose
-performance gate (P95 ≤ 1.12M) currently reads 1,381,120.
+**R2-04's main lever is graduated.** `NDS_R2_ANIM_CACHE` is default-on in both
+Makefile blocks. It caches each fighter animation's byte-swapped pre-fixup
+payload by `asset_id` and makes the match's measured 41-asset working set
+(91,104 bytes) resident by stepping one asset per `scVSBattleFuncUpdate` during
+the countdown. Cache misses **29 → 2**, both pre-battle; no gameplay frame loads
+an animation. `WORK-H` P95 **1,364,992 → 1,232,640 (−132,352)**, Boundary green.
+
+Two things to know before touching it. First, **step it, never burst it** — the
+one-call version killed BGM by missing a buffer seam (standing rule in
+`TASK_STANDING_RULES.md`). Second, one Boundary result here is unexplained rather
+than fixed: the cache-only arm (E1) failed the lower-screen FPS-counter assert
+2/2, which requires the displayed x0.1 FPS to equal the value recomputed from
+the frame/tick window published beside it, and the observed triple (290, 15,
+17,485,504) is not producible by that formula for any integer frame count. There
+is exactly one writer of all four globals and they are stored adjacently from
+locals, so either the read straddles the stores or the harness's model of the
+formula is wrong. It stopped reproducing once the preload was stepped, so it is
+not blocking, but it has not been diagnosed. `NDS_R204_FPSHUD_SHADOW=1` publishes
+a second copy for exactly this; the unfinished step is adding those four globals
+to the `FPS_HUD` printf at
+`verify-battle-mariofox-gcrunall-loop-harness.ps1:2100`.
+
+Phases R2-05 through R2-08 are untouched — R2-08 is §6's switch itself, whose
+performance gate (P95 ≤ 1.12M) now reads **1,232,640** `WORK-H` (was 1,381,120):
+**112,640 over**, down from 261,120.
 
 R2-00a/b/c and R2-01 are done and gated. **R2-02's stage budget is met.** E1a,
 E2, E7 and E8 take `STG` P50 from 351,488 to **177,088** against the 180,000

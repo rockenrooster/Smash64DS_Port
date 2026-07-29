@@ -577,6 +577,15 @@ override NDS_R2_FIGHTER_HW_LIGHT := 1
 # texture prepare (46.4/frame) call the same helpers. +1,016 bytes of .itcm,
 # 1,896 still free.
 override NDS_R2_DELTA_PATH_ITCM := 1
+# R2-04 E1/E4/E5: fighter animation payload cache plus a stepped warm preload.
+# lbRelocGetForceExternHeapFile re-read an animation off the cartridge on every
+# call. The cache keys on asset_id and stores the byte-swapped pre-fixup image,
+# re-running fixups per destination so "force" still restores pristine data. The
+# warm list makes the match's 41 measured animations (91,104 bytes) resident one
+# per scene update across the countdown; loading all 41 in one call at
+# scVSBattleStartBattle misses a BGM buffer seam and kills the music for the
+# match. Misses 29 -> 2, WORK-H P95 1,364,992 -> 1,232,640.
+override NDS_R2_ANIM_CACHE := 1
 # Task 53: re-activate Task 36 rigid-stage replay. Relaxes the arena admission
 # guard (nds_renderer.c:4195/:4247) from the legacy exact-0x150000 check to
 # "admit any usable arena >= 0x130000" -- the robust downward-stepping allocator
@@ -701,6 +710,15 @@ override NDS_R2_FIGHTER_HW_LIGHT := 1
 # texture prepare (46.4/frame) call the same helpers. +1,016 bytes of .itcm,
 # 1,896 still free.
 override NDS_R2_DELTA_PATH_ITCM := 1
+# R2-04 E1/E4/E5: fighter animation payload cache plus a stepped warm preload.
+# lbRelocGetForceExternHeapFile re-read an animation off the cartridge on every
+# call. The cache keys on asset_id and stores the byte-swapped pre-fixup image,
+# re-running fixups per destination so "force" still restores pristine data. The
+# warm list makes the match's 41 measured animations (91,104 bytes) resident one
+# per scene update across the countdown; loading all 41 in one call at
+# scVSBattleStartBattle misses a BGM buffer seam and kills the music for the
+# match. Misses 29 -> 2, WORK-H P95 1,364,992 -> 1,232,640.
+override NDS_R2_ANIM_CACHE := 1
 # Task 53: matches the published block -- replay must be active here too or
 # every tick-HUD STG bucket reads a different binary than the shipping ROM.
 override NDS_TASK53_REPLAY_ARENA_FIX := 1

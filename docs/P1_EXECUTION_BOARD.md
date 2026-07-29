@@ -31,6 +31,96 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-04 E4/E5 — GRADUATED, −132,352 WORK-H P95, Boundary green (2026-07-29)
+
+E3 said the whole 301-ID animation space does not fit the arena and that the
+answer was to preload the set the match actually uses. E4 measured that set and
+E5 fixed how it is delivered.
+
+### E4 — the working set is 41 assets, 91,104 bytes
+
+`gNdsR204AnimSeen` dumped at frames 1801..1928: `Total=230, Distinct=41,
+Repeat=189` — **82.2%** repeats, up from 64.6% at frame 928, so the set is
+converged, not still growing. Decoding the bitmap gives 14 Mario and 27 Fox
+animations totalling **91,104 bytes: 12.5%** of the 728,064 the full space would
+need. That fits with room to spare.
+
+The list is in `sNdsR204AnimWarmList[]` and is derived from observed play, so
+`gNdsR204AnimForceLoadRepeat / Total` is its own regression check: if that ratio
+falls, the list has drifted from what the match uses. An asset missing from it is
+a performance outcome, never a correctness one — it simply takes the on-demand
+path it takes today.
+
+With the list resident: **`gNdsR2AnimCacheMisses` 29 → 2**, and both survivors
+are pre-battle loads that happen before the warm walk is armed. No gameplay
+frame loads an animation.
+
+### E5 — a prepare-at-load burst is bounded by the BGM packet, not by generosity
+
+E4 loaded all 41 in one call at `scVSBattleStartBattle`. Boundary refused the
+build, and the failing run's own audio telemetry named the mechanism:
+
+| field | control | E4 |
+|---|---:|---:|
+| `gNdsAudioBgmSeamMissCount` | 0 | **1** |
+| `gNdsAudioBgmErrorStopCount` | 0 | **1** |
+| `gNdsAudioBgmOverrunCount` | 0 | **1** |
+| `gNdsAudioBgmPlaying` | 1 | **0** |
+| `gNdsAudioBgmStopCalls` | 0 | 0 |
+
+Playback stopped without anyone calling stop. The stream is double-buffered at
+8,196 bytes per packet against 44,100 bytes per second, so the main thread owns a
+hard **~186 ms** budget between buffer seams; 41 back-to-back NitroFS walks plus
+84 KB of cartridge reads do not fit inside it, and missing one seam kills BGM for
+the rest of the match. Cache off passes 4/4, so this is causal, not a flake.
+
+E5 arms the walk at battle start and steps **one asset per
+`scVSBattleFuncUpdate`**. The countdown is far longer than the 41 frames this
+needs, and a stepped frame costs exactly what the on-demand path already costs
+when a fighter changes action — which demonstrably does not miss a seam.
+
+### Result, frames 802..929
+
+| bucket | control | E1 | E4 burst | **E5 stepped** |
+|---|---:|---:|---:|---:|
+| **WORK-H P95** | 1,364,992 | 1,311,360 | 1,236,096 | **1,232,640** |
+| delta vs control | — | −53,632 | −128,896 | **−132,352** |
+| `gNdsR2AnimCacheMisses` | — | 29 | 2 | 2 |
+| `gNdsR2AnimWarmLoaded` | — | — | 39 | 39 |
+
+E5 reproduces E4's gain (the 3,456 difference is inside the 5,000–7,000
+build-placement noise floor) and is **2.5× E1's**. Read `WORK-H`, not `WORK`:
+E5's raw `WORK` P95 is 1,363,840 because one frame in the window took a 333,760
+`HUD` excursion (`HUD` spread 325.94), and `WORK-H = WORK − HUD` is exactly the
+series that removes the instrument.
+
+Pacing cost of stepping is visible and confined to the ramp: VBI 3-intervals
+118 → 186 over the whole 929-frame run, ~41 of which are the stepped loads during
+the countdown. The burst arm paid the same work as one ~1-second stall instead.
+
+**Boundary passed** with `NDS_R2_ANIM_CACHE=1` in both the published and
+tick-HUD blocks, so the flag is graduated and default-on there. That also closes
+E1's separate block: the lower-screen FPS-counter assert that refused the
+cache-only arm 2/2 did not fire here. It is not explained, only no longer
+reproducing — see `HANDOFF.md` for the open question and the shadow probe built
+for it. The `Pupupu locked-30 presentation slipped` warning is pre-existing and
+appears in the control and in the failing E4 run alike.
+
+### Standing consequence
+
+Recorded in `TASK_STANDING_RULES.md`: **prepare-at-load work on a live scene seam
+is bounded by the BGM packet duration, not by loading-time generosity.** "Loading
+time is cheap" is true of a loading *screen*; it is not true of a seam where the
+music is already streaming. Anything longer than one packet has to be stepped.
+
+### Known gap, not reachable in this milestone
+
+The cache holds `syTaskmanMalloc` pointers and is never reset, so a second match
+in one boot would hand out pointers into a torn-down heap. The milestone boots
+directly into one match and has no rematch flow (`PROJECT_GOAL.md`, out of
+scope), so this is not reachable today. Whoever adds match restart owns clearing
+`sNdsR2AnimCacheCount` at the same seam that tears the arena down.
+
 ## R2-04 E1 — animation cache BUILT, −53,696 WORK P95, BLOCKED on Boundary (2026-07-29)
 
 E0's plan built and behaving exactly as sized. `NDS_R2_ANIM_CACHE=1` keeps each

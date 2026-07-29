@@ -12,6 +12,7 @@
 #include <mn/menu.h>
 #include <nds/nds_audio_assets.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
@@ -138,6 +139,14 @@ void scVSBattleStartBattle(void)
     ndsBaseSCVSBattleStartBattle();
     (void)ndsRendererHardwarePrepareBattleStaticTextures();
     (void)ndsIFCommonNativeOamPrepareClouds();
+#if NDS_R2_ANIM_CACHE
+    /* R2-04 E4/E5. Same prepare-at-load seam as the two above, but armed here
+     * and stepped from scVSBattleFuncUpdate: the match's animation streams
+     * become resident during the countdown so no gameplay frame pays a NitroFS
+     * walk and a cartridge read for a move. Doing all 41 here missed a BGM
+     * buffer seam and killed the music. */
+    ndsR2AnimCachePreloadMatch();
+#endif
 
     gNdsSCVSBattleOriginalGObjCount = (u32)gcGetGObjsActiveNum();
     gNdsSCVSBattleOriginalCameraCount = sGCCamerasActiveNum;
@@ -190,6 +199,10 @@ void scVSBattleStartBattle(void)
 void scVSBattleFuncUpdate(void)
 {
     ndsBaseSCVSBattleFuncUpdate();
+
+#if NDS_R2_ANIM_CACHE
+    ndsR2AnimCachePreloadStep();
+#endif
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
     if (ndsFighterMarioFoxNaturalMotionUpdateEnabled() != FALSE)

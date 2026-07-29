@@ -5505,7 +5505,10 @@ static void ndsRelocCopyLoadedFileToHeap(const NDSRelocLoadedFile *loaded,
 volatile u32 gNdsR204AnimForceLoadTotal;
 volatile u32 gNdsR204AnimForceLoadDistinct;
 volatile u32 gNdsR204AnimForceLoadRepeat;
-static u32 sNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
+/* Non-static so the sampler can read the set itself, not just its size: the
+ * warm list R2-04 needs is the ID set, and a count cannot be turned back into
+ * one. 301 bits, 10 words. */
+volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
 #endif
 
 #if NDS_R2_ANIM_CACHE
@@ -5531,7 +5534,26 @@ static u32 sNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * Every failure path degrades to the uncached load, so a full cache, a failed
  * allocation or an unexpected size is a performance outcome and never a
  * correctness one. */
-#define NDS_R2_ANIM_CACHE_ENTRIES 48u
+#define NDS_R2_ANIM_CACHE_ENTRIES 64u
+
+/* R2-04 E4. The match's animation working set, measured rather than guessed:
+ * gNdsR204AnimSeen dumped at frame 1928 (roughly two thirds through the 3,600
+ * tick match) after 230 force-loads, of which 189 (82.2%) were repeats of these
+ * 41 assets. 14 Mario, 27 Fox, 91,104 bytes -- 12.5% of the 728,064 the full
+ * 301-ID space would need, which E3 showed does not fit the arena.
+ *
+ * An asset missing from this list is a performance outcome, never a correctness
+ * one: it simply takes the on-demand path it takes today. The list is derived
+ * from observed play, so gNdsR204AnimForceLoadRepeat/Total is its regression
+ * check -- if that ratio falls, the list has drifted from what the match uses. */
+static const u16 sNdsR204AnimWarmList[] = {
+    0x1f3u, 0x201u, 0x206u, 0x20bu, 0x20fu, 0x216u, 0x218u, 0x219u,
+    0x21au, 0x21cu, 0x21fu, 0x220u, 0x221u, 0x222u,
+    0x282u, 0x283u, 0x284u, 0x28au, 0x28cu, 0x28du, 0x28eu, 0x28fu,
+    0x290u, 0x291u, 0x292u, 0x293u, 0x294u, 0x295u, 0x296u,
+    0x2fau, 0x2fbu, 0x2fcu, 0x2fdu, 0x2feu, 0x301u, 0x302u,
+    0x30bu, 0x30cu, 0x316u, 0x317u, 0x319u
+};
 
 typedef struct NDSR2AnimCacheEntry {
     u32 asset_id;
@@ -5589,6 +5611,111 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
     entry->header = *header;
     gNdsR2AnimCacheFills++;
     gNdsR2AnimCacheBytes += size;
+}
+
+volatile u32 gNdsR2AnimWarmLoaded;
+volatile u32 gNdsR2AnimWarmBytes;
+volatile u32 gNdsR2AnimWarmFailed;
+static u32 sNdsR204AnimWarmCursor;
+
+/* R2-04 E4. Task 75's absorption proper: make the match's animation streams
+ * resident so no gameplay frame pays a NitroFS walk and a cartridge read for a
+ * move.
+ *
+ * Deliberately does NOT go through ndsRelocRegisterLoadedFile. Registering 41
+ * assets that all live at one scratch address would consume half of
+ * NDS_RELOC_LOADED_FILE_CAPACITY (96) and leave every entry pointing at storage
+ * this function owns. Instead each asset gets its own buffer and the word swap is
+ * done here: ndsRelocApplyWordByteSwap is a plain big-endian-to-native pass over
+ * data_size, and its only side effects are counters for the N64 logo and the
+ * opening-room assets, neither of which a fighter animation can be. The cached
+ * image is therefore identical to the one the miss path snapshots.
+ *
+ * Every failure degrades to the on-demand load. */
+static void ndsR2AnimWarmLoadOne(u32 asset_id)
+{
+    NDSRelocAssetHeader header;
+    size_t alloc_size;
+    size_t loaded_size = 0u;
+    void *payload;
+    u32 words;
+    u32 w;
+
+    if (ndsR2AnimCacheFind(asset_id) != NULL)
+    {
+        return;
+    }
+    alloc_size = ndsRelocAssetAllocSize(asset_id);
+    if ((alloc_size == 0u) ||
+        (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES))
+    {
+        gNdsR2AnimWarmFailed++;
+        return;
+    }
+    payload = syTaskmanMalloc(alloc_size, 0x10);
+    if (payload == NULL)
+    {
+        gNdsR2AnimWarmFailed++;
+        return;
+    }
+    if (ndsRelocAssetLoadIntoZeroedHeap(asset_id, payload,
+                                        NDS_RELOC_ALIGN_BYTES,
+                                        &loaded_size, &header) == FALSE)
+    {
+        gNdsR2AnimWarmFailed++;
+        return;
+    }
+    words = (u32)(loaded_size / sizeof(u32));
+    for (w = 0u; w < words; w++)
+    {
+        void *word = (u8 *)payload + (w * sizeof(u32));
+
+        ndsRelocWriteNative32(word, ndsRelocReadBe32(word));
+    }
+    {
+        NDSR2AnimCacheEntry *entry = &sNdsR2AnimCache[sNdsR2AnimCacheCount++];
+
+        entry->asset_id = asset_id;
+        entry->size = (u32)loaded_size;
+        entry->payload = payload;
+        entry->header = header;
+    }
+    gNdsR2AnimWarmLoaded++;
+    gNdsR2AnimWarmBytes += (u32)loaded_size;
+    gNdsR2AnimCacheBytes += (u32)loaded_size;
+}
+
+/* R2-04 E5. Arms the warm walk; it does not load anything itself.
+ *
+ * E4 loaded all 41 in one call at this seam and Boundary refused the build on
+ * the BGM ADPCM smoke: SeamMissCount 0 -> 1, ErrorStopCount 0 -> 1,
+ * OverrunCount 0 -> 1, gNdsAudioBgmPlaying 1 -> 0 with StopCalls still 0. The
+ * stream is double-buffered at 8,196 bytes per packet against 44,100 bytes per
+ * second, so the main thread owns a hard ~186 ms budget between buffer seams,
+ * and 41 back-to-back NitroFS walks plus 84 KB of cartridge reads do not fit in
+ * it. Missing one seam kills BGM for the rest of the match.
+ *
+ * Standing consequence, recorded in TASK_STANDING_RULES: prepare-at-load work
+ * on this seam is bounded by the BGM packet duration, not by loading-time
+ * generosity. Anything longer has to be stepped. */
+void ndsR2AnimCachePreloadMatch(void)
+{
+    sNdsR204AnimWarmCursor = 0u;
+}
+
+/* R2-04 E5. One asset per scene update. The countdown alone is far longer than
+ * the 41 frames this needs, so the working set is resident before the first
+ * scored frame, and a stepped frame costs exactly what the on-demand path
+ * already costs when a fighter changes action -- which demonstrably does not
+ * miss a seam. */
+void ndsR2AnimCachePreloadStep(void)
+{
+    if (sNdsR204AnimWarmCursor >= (sizeof(sNdsR204AnimWarmList) /
+                                   sizeof(sNdsR204AnimWarmList[0])))
+    {
+        return;
+    }
+    ndsR2AnimWarmLoadOne(sNdsR204AnimWarmList[sNdsR204AnimWarmCursor++]);
 }
 #endif
 
@@ -5653,13 +5780,13 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             u32 word = anim_index >> 5;
             u32 mask = 1u << (anim_index & 31u);
 
-            if ((sNdsR204AnimSeen[word] & mask) != 0u)
+            if ((gNdsR204AnimSeen[word] & mask) != 0u)
             {
                 gNdsR204AnimForceLoadRepeat++;
             }
             else
             {
-                sNdsR204AnimSeen[word] |= mask;
+                gNdsR204AnimSeen[word] |= mask;
                 gNdsR204AnimForceLoadDistinct++;
             }
         }
