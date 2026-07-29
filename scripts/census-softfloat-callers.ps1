@@ -243,8 +243,14 @@ try {
     }
 
     $total = ($rows | Measure-Object -Property Count -Sum).Sum
+    # R2-03 E68. -Helpers is a parameter, so the class being attributed is
+    # whatever the caller asked for. Every heading and closing note used to say
+    # "soft-float" and "the fadd/fmul class" unconditionally, so an E68 run
+    # attributing memset/memcpy printed a report that named the wrong class in
+    # three places -- exactly the kind of label a later reader cites verbatim.
+    $classLabel = ($Helpers -join ' + ')
     Write-Host ""
-    Write-Host ("Task 92 E0 -- soft-float callers, $total samples from frame $StartFrame")
+    Write-Host ("Helper caller attribution [$classLabel] -- $total samples from frame $StartFrame")
     Write-Host ""
     Write-Host "  count    share  gate                          caller"
     Write-Host "-------  -------  ----------------------------  ------------------------------"
@@ -276,17 +282,19 @@ try {
     # and R2-03 E46 had graduated since and __aeabi_fadd + __aeabi_fmul had
     # fallen to 104,222. Report the share and name the scale's provenance;
     # multiply against a profile taken on the SAME build instead.
-    Write-Host ("renderer-side share: {0:P1} of the fadd/fmul class." -f `
+    Write-Host ("renderer-side share: {0:P1} of the $classLabel class." -f `
         ($renderer / $total))
-    Write-Host ("For absolute ticks multiply by __aeabi_fadd + __aeabi_fmul from")
-    Write-Host ("a profile of this build (run-task37-profile-census.ps1). It was")
-    Write-Host ("104,222 ticks/frame at R2-03 E60; do not reuse that figure after")
-    Write-Host ("anything graduates.")
+    Write-Host ("For absolute ticks multiply by $classLabel from a profile of")
+    Write-Host ("THIS build (run-task37-profile-census.ps1). Reference points, each")
+    Write-Host ("valid only for the build that measured it: fadd+fmul was 104,222")
+    Write-Host ("ticks/frame at R2-03 E60, and memset+memcpy 58,700 at E68. Do not")
+    Write-Host ("reuse either after anything graduates.")
     Write-Host ""
 
     if ($JsonOut) {
         $payload = [ordered]@{
-            task = 'Task 92 E0 - soft-float caller attribution'
+            task = "Helper caller attribution [$classLabel]"
+            helperClass = $classLabel
             target = $target
             rom = $rom
             romSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $rom).Hash
@@ -294,9 +302,12 @@ try {
             helpers = $Helpers
             entryAddresses = $entries
             samples = $total
-            # Provenance, not a measurement -- see the Write-Host note above.
-            # A consumer must scale by a profile of the same build.
-            softFloatTicksPerFrameStaleTask81 = 191810
+            # Deliberately NOT a class total. This census measures shares only,
+            # and the key that used to live here (a hardcoded 191,810 from the
+            # Task 81 partition) was 84% stale by the time anyone noticed. A
+            # consumer must scale by a profile of the same build; there is no
+            # number here to reuse by accident.
+            classTotalTicksPerFrame = $null
             rendererShare = ($renderer / $total)
             capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
             byGate = @($byGate)

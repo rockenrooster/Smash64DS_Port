@@ -32,6 +32,68 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E68 ANSWERED — `memset`/`memcpy` is 58,700 ticks/frame and it is the MATRIX path, not the fighter draw (2026-07-29)
+
+`artifacts/performance/r203-e68-memcall-callers.json`. One 90 s GDB run, no build.
+Task 37 census prices the class: **`memset` 30,520 ticks/frame (235 calls, 130
+each) + `memcpy` 28,180 (311 calls, 90 each) = 58,700**, the largest addressable
+class after soft float, and pure data movement — precisely what §9 of the switch
+plan says to avoid rather than optimise.
+
+**26,857 attributed samples, 91.7% renderer-side:**
+
+| caller (sites merged) | share | helper |
+|---|---:|---|
+| `ndsRendererAdapterBuildPersistentStageWorldMatrix` | 12.7% | memcpy |
+| `ndsRendererAdapterBuildNativeProductionInputs` | 11.5% | memset |
+| `ndsRendererAdapterBuildDObjLocalMatrix` | 9.6% | memcpy |
+| **`ndsRendererAdapterDObjWorldIndexHash`** | 9.0% | memcpy |
+| `ndsRendererAdapterBuildFighterPartsMtx` | 9.0% | memcpy |
+| `ndsRendererAdapterBuildNativeMaterialSnapshot` | 6.1% | memset |
+| `ndsRendererAdapterPrepareNativeOwnerMatrices` | 6.1% | memcpy |
+| `ndsFighterDisplayContractSelectDL` | 5.8% | memcpy |
+| `ndsRendererMtxIdentity20p12` + `...AdapterMtxIdentity20p12` | 7.0% | memset |
+| `ndsRendererLoadHardwareMatrices` | 2.8% | memset |
+| `ndsRendererAdapterCaptureStageWorldSourceKey` | 2.8% | memcpy |
+| `ndsMPCollisionEnsureLineGroups` | 2.7% | memset |
+| `battleship_ftAnimParseDObjFigatree` | 1.9% | memset |
+
+**The matrix family alone is ~48.5% — about 28,500 ticks/frame** moving 64-byte
+`NDS_RENDERER_MATRIX_20P12` structs (`s32 m[4][4]`) through library calls. GCC will
+not inline a 16-word copy at `-O2 -mthumb`, so every matrix copy is a real `bl`.
+
+**The static count pointed at the wrong function, and that is the transferable
+part.** Cross-referencing call *sites* against measured cycles ranked
+`ndsFighterMarioFoxDLAllDrawForSlot.constprop.0` first by a wide margin — 30 sites
+(23 `memset` + 7 `memcpy`) inside a function costing 37,544 ticks/frame in only two
+calls. **It does not appear in the dynamic attribution at all.** Its three `bzero`s
+sit behind `detailed_output = (pixels != NULL) || (no_oracle == FALSE)`, which is
+false in the Boundary configuration, so 23 of those sites never execute. Same
+lesson as "a declared bound is not a trip count": **a call site is not a call.**
+The comment at `reloc_backend_renderer_dl.c:12182` had flagged this as unknown —
+"memset is 38,393 ticks/frame across the whole program and nothing says how much of
+it is this". The answer is: none of it.
+
+**Two items look like outright waste rather than cost:**
+
+1. **`ndsRendererAdapterDObjWorldIndexHash` memcpys, 9.0%.** A hash function should
+   read its input, not copy it. ~5,300 ticks/frame if the copy is removable.
+2. **The two identity builders, 7.0%.** Both are `memset(out, 0, 64)` followed by
+   four diagonal stores — a library call plus a loop to write 12 zeros. Sixteen
+   direct stores is strictly less work.
+
+**Next (E69), and note the sizing rule it has to clear.** These are *work removal*,
+not placement, so E67's precedent applies rather than E66's: a shared inline
+16-word matrix copy/clear used at every one of those sites. Sized at ~14,000
+ticks/frame if half the class is call overhead. It touches several functions in a
+12,000-line file, so it is a real change rather than a one-liner — do not start it
+without the paired-by-frame comparison ready.
+
+Also fixed here: `census-softfloat-callers.ps1` printed "soft-float callers" and
+"the fadd/fmul class" unconditionally, so this run's own report named the wrong
+class in three places while measuring `memset`/`memcpy`. The labels now derive from
+`-Helpers`, and the JSON's stale-constant key is gone rather than merely renamed.
+
 ## R2-03 E67 GRADUATED — the port was doing DOUBLE-precision degrees→radians. P95 1,109,312, margin now 10,688 (2026-07-29)
 
 `artifacts/performance/r203-e67-floatdtor-128{.json,-rows.csv}`. One header line

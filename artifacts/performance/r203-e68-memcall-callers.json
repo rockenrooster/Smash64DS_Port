@@ -1,0 +1,511 @@
+{
+  "task": "Task 92 E0 - soft-float caller attribution",
+  "target": "smash64ds-battle-playable-tickhud-hwtri",
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-tick-hud-buckets\\smash64ds-battle-playable-tickhud-hwtri.nds",
+  "romSha256": "4A64D36B8926C7C57281E6DB710AEE478C37D8EC74CF1EBDAEC36E50ABE5FE7E",
+  "startFrame": 794,
+  "helpers": [
+    "memset",
+    "memcpy"
+  ],
+  "entryAddresses": {
+    "memcpy": "01ffecc8",
+    "memset": "01ffec3c"
+  },
+  "samples": 26857.0,
+  "softFloatTicksPerFrameStaleTask81": 191810,
+  "rendererShare": 0.9171165804073426,
+  "capturedUtc": "2026-07-29T23:44:33.2583489Z",
+  "byGate": [
+    {
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24631.0
+    },
+    {
+      "Gate": "UNRESOLVED",
+      "Count": 1588.0
+    },
+    {
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 638.0
+    }
+  ],
+  "rows": [
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterBuildDObjLocalMatrix",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2573
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterDObjWorldIndexHash",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2424
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterBuildFighterPartsMtx",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 1793
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 1650
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsFighterDisplayContractSelectDL",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 1550
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterPrepareNativeOwnerMatrices",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 1550
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterBuildNativeProductionInputs",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 1545
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterBuildNativeProductionInputs",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 1544
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterBuildPersistentStageWorldMatrix",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 1405
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterBuildPersistentStageWorldMatrix",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 1176
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterBuildPersistentStageWorldMatrix",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 817
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterMtxIdentity20p12",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 817
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererMtxIdentity20p12",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 762
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererLoadHardwareMatrices",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 762
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterBuildFighterPartsMtx",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 616
+    },
+    {
+      "Helper": "memset",
+      "Caller": "battleship_ftAnimParseDObjFigatree",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 503
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererCaptureTextureLoad",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 432
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererMtxLoadN64ToDS20p12",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 360
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsMPCollisionEnsureLineGroups",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 360
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsMPCollisionEnsureLineGroups",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 360
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterCaptureStageWorldSourceKey",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 149
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterCaptureStageWorldSourceKey",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 149
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterCaptureStageWorldSourceKey",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 149
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterCaptureStageWorldSourceKey",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 149
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterCaptureStageWorldSourceKey",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 149
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererMtxIdentity20p12",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 147
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsFighterDisplayContractSetLight",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 146
+    },
+    {
+      "Helper": "memset",
+      "Caller": "osContGetReadData",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 146
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsControllerMapButtons",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 146
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererNativeStageTask36BeginSegment",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 145
+    },
+    {
+      "Helper": "memset",
+      "Caller": "gcParseDObjAnimJoint",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 134
+    },
+    {
+      "Helper": "memset",
+      "Caller": "_vfiprintf_r",
+      "Source": "??",
+      "Gate": "UNRESOLVED",
+      "Count": 132
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererInitVertexCache",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 130
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererInitStats",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 130
+    },
+    {
+      "Helper": "memset",
+      "Caller": "syControllerUpdateDeviceIndexes",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 98
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterMtxIdentity20p12",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 97
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsFighterCollectAllDObjsWithDL",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 97
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "guMtxCatF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 97
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererAdapterPrepareNativeOwnerMatrices",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 97
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsFighterDisplayContractSetLight",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 97
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsFighterMarioFoxDLAllDrawForSlot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 97
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsFighterDisplayContractCapture",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 97
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsFighterDisplayContractCapture",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 97
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterGetFrameCameraMatrices",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 97
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 96
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 96
+    },
+    {
+      "Helper": "memset",
+      "Caller": "_svfprintf_r",
+      "Source": "??",
+      "Gate": "UNRESOLVED",
+      "Count": 70
+    },
+    {
+      "Helper": "memset",
+      "Caller": "__ssvfiscanf_r",
+      "Source": "??",
+      "Gate": "UNRESOLVED",
+      "Count": 66
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRendererTask36ReplayStartCapture",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 49
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterPrepareNativeStageOwner",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 49
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterPrepareNativeStageOwner",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 49
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterFindDObjWorldMatrix",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 49
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererMtxIdentity20p12",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 49
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererPrepareNativeStageOwner",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 49
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsDrawLayeredSObjFrame",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 49
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererProfileResetSubmitSummary",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 48
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsPlatformTickHudSort",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 44
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterSubmitStageDL",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 33
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterBeginStageTraversal",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 33
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsRendererAdapterBeginStageTraversal",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 33
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "_fread_r",
+      "Source": "??",
+      "Gate": "UNRESOLVED",
+      "Count": 7
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "_fread_r",
+      "Source": "??",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ndsRelocForceLoadFighterAObj16File",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 4
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "ifCommonTimerProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 3
+    },
+    {
+      "Helper": "memset",
+      "Caller": "ndsAudioFgmNextInstanceToken",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 1
+    },
+    {
+      "Helper": "memcpy",
+      "Caller": "osContGetQuery",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 1
+    },
+    {
+      "Helper": "memset",
+      "Caller": "gcParseMObjMatAnimJoint",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "memset",
+      "Caller": "_fseeko_r",
+      "Source": "??",
+      "Gate": "UNRESOLVED",
+      "Count": 1
+    }
+  ]
+}
