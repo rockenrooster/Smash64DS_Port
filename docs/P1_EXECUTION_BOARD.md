@@ -32,7 +32,69 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
-## R2-03 E58 — those bytes are a NORMAL, not a colour. E48's premise was wrong (2026-07-29)
+## R2-03 E59 — the generic software lighting NEVER RAN. E58 is retracted, and the flash line is CLOSED (2026-07-29)
+
+**Six experiments have now been spent on the hurt-flash mechanism (E48, E49,
+E50, E55, E58, E59) and the line is closed without a mechanism.** Read this
+entry before proposing a seventh.
+
+E59 latched, on hitlag frame 911 (A) and ordinary frame 904 (B), the resolved
+light pair inside the generic `ndsRendererHardwareLitShadeColorPrepared` and
+`stats->light_color_1/2/mask` + `geometry_mode` at the native owner's shade
+entry (`ndsRendererNativeShadeProductionActions`). E54 established that only one
+fighter falls back per hitlag frame, so 911 runs **both** paths at once and the
+two halves of the snapshot are a same-frame comparison.
+
+| slot | A (911, hitlag) | B (904, ordinary) |
+|---|---|---|
+| generic `light_1` | **0** | 0 |
+| generic `light_2` | **0** | 0 |
+| generic `light_color_mask` | **0** | 0 |
+| owner `light_color_1` | `0xFFFFFF00` | `0xFFFFFF00` |
+| owner `light_color_2` | `0x4C4C4C00` | `0x4C4C4C00` |
+| owner `light_color_mask` | 3 | 3 |
+| owner `geometry_mode` | `0x00220105` | `0x00220105` |
+| owner shade calls | 31 | 49 |
+
+**Two results, and they point the same way.**
+
+1. **The generic lit-shade path resolved light colours zero times on frame 911.**
+   This is not an epoch-sampling artifact — the slots are overwritten, so zero
+   means *never written*, and one execution would have stored `0xFFFFFF00`. The
+   function therefore either was never called or took its `stats == NULL ||
+   !(geometry_mode & G_LIGHTING)` early-out every time (`nds_renderer.c:8251`).
+   Either way **no software lighting produced E55's 273 samples.**
+2. **The owner's light state is byte-identical between a hitlag frame and an
+   ordinary one** — all four fields, on the last epoch of each frame. The flash
+   is not a light-colour change on the owner's side either.
+
+**Retract E58.** Its claim — that with `G_LIGHTING` set the vertex RGB bytes are
+an F3DEX2 packed normal and the emitted colour comes from `light_color_1/2` —
+required the lit path to be the one producing E55's samples. It was not running.
+E58's supporting observation ("24 distinct raw values collapse to 8 outputs")
+rests on `gNdsR2FlashRawPending`, a value parked by the *outer*
+`ndsRendererHardwarePackedVertexColor` and read by the *inner*
+`ndsRendererHardwarePackedValidVertexColor`; if the inner function has any
+caller that does not go through the outer one, the raw/output pairing is
+misaligned and the collapse is an artifact of the probe. That pairing was never
+verified. **The 76-grey is still real** — it is `light_color_2`'s
+`0x4C4C4C` ambient — but it is the owner's constant, present on ordinary frames
+too, so it is not the flash.
+
+**Why the line closes rather than continuing.** Even a perfect E32 leaves the
+gate missed: E54 projects P95 1,177,792 and 13/128 over gate, still **57,792
+above 1,120,000**. The flash is the blocker on a lever that cannot close the gap
+by itself, while the `SRC` half that *can* is untouched. Standing rule from the
+switch plan §3.9 applies to investigation budget as much as to ticks. **The next
+build goes at `SRC`** (E60), not at a seventh flash probe.
+
+Probe retained behind `NDS_R2_FLASH_PROBE` (default 0) with slots 12..19 so a
+future owner of E32 does not rebuild it. Do **not** re-derive: the flash is not
+vertex colour (E48/E49/E50/E55), not material colour (E47), not light colour
+(E59), not the fold arithmetic and not E16's hardware lighting (E41, three-way
+capture), not `color_modulate` (E36).
+
+## R2-03 E58 — RETRACTED by E59. Those bytes are a NORMAL, not a colour (2026-07-29)
 
 **Three experiments have now modelled the hurt flash as something happening to a
 vertex *colour*. There is no vertex colour on these runs.** E58 dumped the raw

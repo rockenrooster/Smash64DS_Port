@@ -8223,6 +8223,12 @@ static u32 ndsRendererHardwareLitDiffuseNumer(
     return ndsRendererHardwareDivideLitDotBy127((u32)dot);
 }
 
+#if NDS_R2_FLASH_PROBE
+/* R2-03 E59. The probe's storage is defined ~100 lines below, next to the rest
+ * of the flash slots; this shade function is the first user of it. */
+extern volatile u32 gNdsR2FlashLive[];
+#endif
+
 static u32 NDS_RENDERER_HOT_CODE
 ndsRendererHardwareLitShadeColorPrepared(
     NDSRendererStats *stats,
@@ -8255,6 +8261,16 @@ ndsRendererHardwareLitShadeColorPrepared(
     light_2 = ndsRendererHardwareLightColor(
         stats, NDS_RENDERER_LIGHT_COLOR_2_MASK, stats->light_color_2,
         NDS_RENDERER_LIGHT_COLOR_2_FALLBACK);
+#if NDS_R2_FLASH_PROBE
+    /* R2-03 E59. E58 established the emitted colour is built from these two, so
+     * "is the flash a light-colour change?" is answered by whether they move
+     * between a hitlag frame and an ordinary one. This is the GENERIC path's
+     * resolved pair, after the mask/fallback logic -- the value that actually
+     * produced the greys and reds E55 sampled. */
+    gNdsR2FlashLive[12] = light_1;
+    gNdsR2FlashLive[13] = light_2;
+    gNdsR2FlashLive[14] = stats->light_color_mask;
+#endif
     diffuse = light_1;
     ambient = light_2;
 
@@ -8354,7 +8370,7 @@ static inline u16 ndsRendererHardwareModulatePackedColor(
  * directly: 8 min vertex colour, 9 max, 10 the first one seen, 11 how many
  * differed from the first. Slot 11 == 0 means uniform and the constant-colour
  * fix is on; anything else and it is per-vertex and that option dies too. */
-#define NDS_R2_FLASH_SLOTS 12u
+#define NDS_R2_FLASH_SLOTS 20u
 #define NDS_R2_FLASH_SLOT_MIN 8u
 /* R2-03 E55: per-vertex samples in call order, for the two-hitlag-frame ratio
  * test described at the record site. 24 is enough to separate "constant ratio"
@@ -8384,12 +8400,20 @@ volatile u32 gNdsR2FlashRawA[NDS_R2_FLASH_VTX];
  * recording branch (0 calls on an ordinary frame); it clears this anyway, so a
  * stage contribution would read as 0 and be visible rather than silently stale. */
 volatile u32 gNdsR2FlashRawPending;
-/* Writable over GDB so a run can be re-aimed without a rebuild. E55 points B at
- * a SECOND hitlag frame, not at an ordinary one: the generic path has 0 calls on
- * an ordinary frame (E48), so an ordinary-frame snapshot is empty by
- * construction and cannot serve as the pair. */
+/* Writable over GDB so a run can be re-aimed without a rebuild. E55 pointed B at
+ * a SECOND hitlag frame because the slots it read (0..14) are generic-path only
+ * and the generic path has 0 calls on an ordinary frame (E48), so an
+ * ordinary-frame snapshot was empty by construction.
+ *
+ * E59 adds owner-side slots 15..19, which run on EVERY frame, so B goes back to
+ * an ordinary frame and each snapshot answers a different question:
+ *   A(12..14) vs A(15..17) -- do the two paths see different light state on the
+ *                             same frame? (E54: only one fighter falls back, so
+ *                             911 runs both paths at once.)
+ *   A(15..18) vs B(15..18) -- does the OWNER's own light state move during
+ *                             hitlag at all? B(12..14) is 0 by construction. */
 volatile u32 gNdsR2FlashFrameA = 911u;
-volatile u32 gNdsR2FlashFrameB = 912u;
+volatile u32 gNdsR2FlashFrameB = 904u;
 volatile u32 gNdsR2FlashLatchedA;
 volatile u32 gNdsR2FlashLatchedB;
 
@@ -17817,6 +17841,18 @@ ndsRendererNativeShadeProductionActions(
         return TRUE;
     }
     ndsRendererNativeSourceBoundary(state);
+#if NDS_R2_FLASH_PROBE
+    /* R2-03 E59, owner side. Same fields at the native owner's shade entry, so
+     * one frame's snapshot carries BOTH paths: E54 showed only one fighter falls
+     * back per hitlag frame, so on frame 911 the struck fighter runs generic
+     * while the other still runs the owner. Slots 12..14 vs 15..18 is therefore
+     * a same-frame comparison, not a cross-frame one. */
+    gNdsR2FlashLive[15] = stats->light_color_1;
+    gNdsR2FlashLive[16] = stats->light_color_2;
+    gNdsR2FlashLive[17] = stats->light_color_mask;
+    gNdsR2FlashLive[18] = stats->geometry_mode;
+    gNdsR2FlashLive[19]++;
+#endif
     if (((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u) &&
         ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u))
     {
