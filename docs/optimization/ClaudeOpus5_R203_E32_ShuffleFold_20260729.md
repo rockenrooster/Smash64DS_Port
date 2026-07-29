@@ -208,6 +208,42 @@ succeeds and the config header still reads 1. Testing the software shade against
 the same frames needs the `override` relaxed for a lab build, and **the config
 header must be checked after the build rather than the command line trusted.**
 
+### E41 — candidate 2 REFUTED, and the cause is now isolated
+
+The `override` was flipped for one diagnostic build and restored immediately
+(no lab selector added). Three arms, same presented frame 481, side by side in
+`artifacts/visibility/e41-three-way-481.png`:
+
+| arm | `HW_LIGHT` | fold | Fox renders | px vs reference |
+|---|---|---|---|---:|
+| reference | 1 | off (generic path) | **light grey, legible** | — |
+| candidate | 1 | on | **dark maroon** | 1,536 |
+| E41 | **0** | on | **dark maroon** | 3,027 |
+
+**Software shading did not restore it — it moved further away.** So E16's
+hardware lighting is not the cause, and neither is the fold's arithmetic: Fox is
+in the *same position* in all three, so nothing is displaced.
+
+**By elimination the cause is the native owner's handling of the material
+colour.** The supporting facts line up:
+
+- Control frames 510/511 are pixel-identical between arms, so the native owner
+  renders Fox correctly on ordinary frames.
+- The only thing hitlag adds is the hurt flash writing `input->materials[]` —
+  which is exactly the 108 runtime changes E34 measured, and E34-b proved
+  `prim_color`/`env_color` are the *only* per-epoch state that varies at runtime.
+- E36 already excluded `config->color_modulate` (its alpha is zero here), so the
+  flash arrives through `stats->prim_color`, not the modulate.
+
+The two implementations to diff are therefore
+`ndsRendererR2MaterialChannel` → `ndsRendererHardwareScaleMaterialChannel5`
+(native owner, a multiplicative scale folded into diffuse/ambient) against
+`ndsRendererHardwarePackedVertexColor` (generic path, which combines the material
+with the *vertex* colour and its validity mask). The generic path renders the
+flash as brightness; the native owner renders it as a dark tint. **That is the
+fix, and it is a rendering-correctness fix owed regardless of E32** — E32 only
+determines whether those frames are ever drawn by the native owner.
+
 `PROJECT_GOAL.md` requires the result stay "recognizable, readable during
 gameplay". A struck fighter turning dark maroon is a readability change on
 exactly the frames a player is reading most closely, so this is not a

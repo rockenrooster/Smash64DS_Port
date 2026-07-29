@@ -203,7 +203,34 @@ correctly. The change was **reverted rather than shipped unproven**; the
 arithmetic still predicts a real defect wherever alpha is non-zero, but nothing
 in 439..566 exercises it.
 
-**Source reading narrows the two remaining candidates to one.** The fold's
+**E41 ISOLATED THE CAUSE: the native owner's material-colour path.** Three arms
+of the same presented frame 481 (`artifacts/visibility/e41-three-way-481.png`),
+built by flipping the `HW_LIGHT` override for one diagnostic build and restoring
+it immediately:
+
+| arm | `HW_LIGHT` | fold | Fox renders | px vs reference |
+|---|---|---|---|---:|
+| reference | 1 | off (generic) | **light grey** | — |
+| candidate | 1 | on | **dark maroon** | 1,536 |
+| E41 | **0** | on | **dark maroon** | 3,027 |
+
+Software shading did not restore it, it moved *further* away — so E16's hardware
+lighting is refuted. Fox is in the same position in all three, so the fold's
+arithmetic is refuted too. What remains: control frames 510/511 are
+pixel-identical between arms, so the native owner draws Fox correctly on ordinary
+frames; the only thing hitlag adds is the hurt flash writing `input->materials[]`
+(E34's 108 runtime changes), and E36 already excluded `color_modulate`. So the
+flash arrives through `stats->prim_color` and the native owner tints with it
+where the generic path brightens.
+
+**The fix is to diff `ndsRendererR2MaterialChannel` →
+`ndsRendererHardwareScaleMaterialChannel5` (native, multiplicative into
+diffuse/ambient) against `ndsRendererHardwarePackedVertexColor` (generic,
+combines material with the vertex colour and its validity mask). This is a
+rendering-correctness fix owed regardless of E32** — E32 only decides whether
+those frames are ever drawn by the native owner.
+
+**Superseded below:** the source reading that pointed at E16. The fold's
 arithmetic looks right: `dFTDisplayMainShufflePositions` holds ±50/±100 in source
 world units and E32 copies them through the port's documented 4096 conversion
 unchanged, and `ftdisplaymain.c:1205` applies them with
