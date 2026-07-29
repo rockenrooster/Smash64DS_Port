@@ -114,6 +114,13 @@ into shared paths outside `$(BUILD)`, so concurrent builds corrupt each other's
 generated headers whatever `-j` says. `make NDS_JOBS=1` forces serial for
 bisecting a generator ordering bug.
 
+That applies to the harnesses too. Thirty-one `scripts/*.ps1` hardcoded `-j16`
+in their own `make` invocation, so on a 32-thread machine every scripted build
+ran at half speed *after* the Makefile change landed — the explicit flag wins.
+They no longer pass `-j` at all. The three that still expose a `-Jobs` parameter
+default it to `0`, meaning "let the Makefile decide", and append `-j` only when a
+caller deliberately overrides. **A new harness must not add one back.**
+
 Subagent switch: **ON**.
 
 * `OFF`: let already-running subagents finish, but do not spawn, follow up, or

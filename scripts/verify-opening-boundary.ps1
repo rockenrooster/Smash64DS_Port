@@ -13,7 +13,7 @@ if ($Build -and $NoBuild) {
 if ($Build) {
     if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
     if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-    & make -C (Resolve-Path (Join-Path $PSScriptRoot '..')).Path -j16
+    & make -C (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 & (Join-Path $PSScriptRoot 'sample-runtime-speed.ps1') `

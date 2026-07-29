@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [ValidateRange(1, 64)][int]$Jobs = 16,
+    # 0 = let the Makefile decide (NDS_JOBS, defaulting to every hardware
+    # thread). Only a deliberate override passes -j; see AGENTS.md.
+    [ValidateRange(0, 64)][int]$Jobs = 0,
     [string]$MakeCommand = 'make',
     [switch]$NoBuild,
     [string]$BuildDir = ''
@@ -222,16 +224,17 @@ if (-not $NoBuild) {
         $record.Target, $buildRelative, $makeOutputPath)
     Push-Location $root
     try {
-        & $MakeCommand @(
+        $makeArgs = @(
             "TARGET=$($record.Target)",
             "BUILD=$buildRelative",
             "NDS_OUTPUT_ROOT=$makeOutputPath",
             "NDS_DEV_SCENE_HARNESS=$($record.Harness)",
             'NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE=1',
             'NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE=0',
-            '-B',
-            "-j$Jobs"
-        ) 2>&1 | ForEach-Object { Write-Host "$_" }
+            '-B'
+        )
+        if ($Jobs -gt 0) { $makeArgs += "-j$Jobs" }
+        & $MakeCommand @makeArgs 2>&1 | ForEach-Object { Write-Host "$_" }
         $makeExit = $LASTEXITCODE
     } finally {
         Pop-Location

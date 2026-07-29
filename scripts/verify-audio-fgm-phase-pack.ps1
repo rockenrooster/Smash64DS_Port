@@ -45,8 +45,7 @@ if (-not $NoBuild) {
         NDS_DEBUG_HUD=0 `
         NDS_RENDERER_PROFILE_LEVEL=0 `
         NDS_SCENE_MIP_CACHE_LAB=0 `
-        NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS=0 `
-        -j16
+        NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS=0
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 foreach ($required in @($rom, $elf, $object, $buildConfig)) {

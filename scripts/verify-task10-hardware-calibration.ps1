@@ -35,7 +35,7 @@ try {
     if (-not $NoBuild) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-        make -C $root "TARGET=$target" "BUILD=$Build" -j16
+        make -C $root "TARGET=$target" "BUILD=$Build"
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     foreach ($path in @($rom, $elf, $Gdb)) {

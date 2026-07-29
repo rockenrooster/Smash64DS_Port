@@ -138,8 +138,7 @@ if (-not $NoBuild) {
         'NDS_HARNESS_FAST_LOGIC=0',
         'NDS_RENDERER_HW_TRIANGLES=1',
         'NDS_RENDERER_PROFILE_LEVEL=0',
-        'NDS_DEBUG_HUD=0',
-        '-j16'
+        'NDS_DEBUG_HUD=0'
     )
     & make @makeArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

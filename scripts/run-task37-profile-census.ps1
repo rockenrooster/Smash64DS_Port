@@ -70,7 +70,7 @@ try {
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
         make -C $root "TARGET=$target" "BUILD=$Build" `
             'NDS_TASK37_PROFILE=1' "NDS_TASK37_PROFILE_START=$StartFrame" `
-            "NDS_TASK37_PROFILE_FRAMES=$Frames" -j16
+            "NDS_TASK37_PROFILE_FRAMES=$Frames"
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     foreach ($path in @($rom, $elf)) {

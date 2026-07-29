@@ -1,5 +1,7 @@
 param(
-    [ValidateRange(1,64)][int]$Jobs = 16,
+    # 0 = let the Makefile decide (NDS_JOBS, defaulting to every hardware
+    # thread). Only a deliberate override passes -j; see AGENTS.md.
+    [ValidateRange(0,64)][int]$Jobs = 0,
     [string]$MakeCommand = 'make'
 )
 $ErrorActionPreference = 'Stop'
@@ -110,16 +112,17 @@ function Invoke-PrivateBuild {
         $Gate, $BuildName)
     Push-Location $root
     try {
-        & $MakeCommand @(
+        $makeArgs = @(
             "TARGET=$($HarnessRecord.Target)",
             "BUILD=$BuildName",
             "NDS_OUTPUT_ROOT=$makeBuildPath",
             "NDS_DEV_SCENE_HARNESS=$($HarnessRecord.Harness)",
             'NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE=0',
             "NDS_IMPORT_BATTLESHIP_MPPROCESS_PRIVATE=$Gate",
-            '-B',
-            "-j$Jobs"
-        ) 2>&1 | ForEach-Object { Write-Host "$_" }
+            '-B'
+        )
+        if ($Jobs -gt 0) { $makeArgs += "-j$Jobs" }
+        & $MakeCommand @makeArgs 2>&1 | ForEach-Object { Write-Host "$_" }
         $makeExit = $LASTEXITCODE
     } finally {
         Pop-Location

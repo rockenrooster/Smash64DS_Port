@@ -119,7 +119,7 @@ $originalConfig = $null
 if ($Build) {
     if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
     if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-    & make -C $root -j16
+    & make -C $root
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if (-not (Test-Path $melonDsPath)) {

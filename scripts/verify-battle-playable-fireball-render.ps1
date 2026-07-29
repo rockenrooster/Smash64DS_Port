@@ -162,8 +162,7 @@ if (-not $NoBuild) {
         NDS_HARNESS_FAST_LOGIC=0 `
         NDS_RENDERER_HW_TRIANGLES=1 `
         NDS_RENDERER_PROFILE_LEVEL=0 `
-        NDS_DEBUG_HUD=0 `
-        -j16
+        NDS_DEBUG_HUD=0
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if (-not (Test-Path $rom) -or -not (Test-Path $elf)) {

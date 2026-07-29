@@ -202,7 +202,7 @@ if ($hasVerifierPlumbing) {
         -Profile 'Latest' `
         -Reason 'Changed files do not match a narrower advisory route; use the maintained current profile as a conservative default.' `
         -Commands @(
-            'make -j16',
+            'make',
             '.\scripts\verify-current.ps1'
         )
 }

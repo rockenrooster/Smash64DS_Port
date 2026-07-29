@@ -24,14 +24,14 @@ $romPath = if ([System.IO.Path]::IsPathRooted($Rom)) {
 if ($Build) {
     if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
     if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-    & make -C $root -j16
+    & make -C $root
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 if (-not (Test-Path $noGbaPath)) {
     throw "no`$gba executable not found: $noGbaPath. Place NO`$GBA.EXE in emulators\nogba or pass -NoGba."
 }
 if (-not (Test-Path $romPath)) {
-    throw "ROM not found: $romPath. Run `make -j16` first or pass -Build."
+    throw "ROM not found: $romPath. Run `make` first or pass -Build."
 }
 if ([string]::IsNullOrWhiteSpace($Output)) {
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'

@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [switch]$NoBuild,
-    [ValidateRange(1, 64)][int]$Jobs = 16,
+    # 0 = let the Makefile decide (NDS_JOBS, defaulting to every hardware
+    # thread). Only a deliberate override passes -j; see AGENTS.md.
+    [ValidateRange(0, 64)][int]$Jobs = 0,
     [string]$Nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 )
 
@@ -55,10 +57,13 @@ foreach ($record in $builds) {
         [void](New-Item -ItemType Directory -Force -Path $logDir)
         $stdoutLog = Join-Path $logDir "$($record.Mode)-build.stdout.log"
         $stderrLog = Join-Path $logDir "$($record.Mode)-build.stderr.log"
-        $process = Start-Process -FilePath $make -ArgumentList @(
+        $makeArgs = @(
             '--no-print-directory', '-s', '-C', $root,
-            "TARGET=$($record.Target)", "BUILD=$($record.Build)", "-j$Jobs"
-        ) -WorkingDirectory $root -RedirectStandardOutput $stdoutLog `
+            "TARGET=$($record.Target)", "BUILD=$($record.Build)"
+        )
+        if ($Jobs -gt 0) { $makeArgs += "-j$Jobs" }
+        $process = Start-Process -FilePath $make -ArgumentList $makeArgs `
+            -WorkingDirectory $root -RedirectStandardOutput $stdoutLog `
             -RedirectStandardError $stderrLog -NoNewWindow -PassThru -Wait
         if ($process.ExitCode -ne 0) {
             $tail = @(

@@ -78,7 +78,7 @@ try {
     if (-not $NoBuild) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-        make -C $root "TARGET=$target" "BUILD=$Build" NDS_TASK93_TEXKEY_CENSUS=1 -j16
+        make -C $root "TARGET=$target" "BUILD=$Build" NDS_TASK93_TEXKEY_CENSUS=1
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     foreach ($path in @($rom, $elf, $Gdb)) {

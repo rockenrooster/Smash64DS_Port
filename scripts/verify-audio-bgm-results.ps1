@@ -67,8 +67,7 @@ if (-not $NoBuild) {
         'NDS_HARNESS_FAST_LOGIC=1' `
         'NDS_DEV_RESULTS_VISUAL_SMOKE=1' `
         'NDS_RENDERER_HW_TRIANGLES=1' `
-        'NDS_RENDERER_PROFILE_LEVEL=0' `
-        -j16
+        'NDS_RENDERER_PROFILE_LEVEL=0'
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 Assert-Result ((Test-Path -LiteralPath $rom) -and
