@@ -503,6 +503,11 @@ override NDS_TASK36_HW_COMPOSE := 2
 # both flag states, geometry proven identical (136,640 P0 triangles either way
 # over the same 480-frame window), owner-approved 2026-07-28.
 override NDS_R2_FIGHTER_HW_MTX := 1
+# R2-03 E16: the fighter's per-vertex lighting runs on the geometry engine
+# instead of the CPU. -35,072 FTR P50, VBlank histogram 2:381->2:418, geometry
+# bit-identical (181,440 P0 triangles either way). Requires HW_MTX above for the
+# vector matrix. Boundary green, owner-approved 2026-07-28.
+override NDS_R2_FIGHTER_HW_LIGHT := 1
 # Task 53: re-activate Task 36 rigid-stage replay. Relaxes the arena admission
 # guard (nds_renderer.c:4195/:4247) from the legacy exact-0x150000 check to
 # "admit any usable arena >= 0x130000" -- the robust downward-stepping allocator
@@ -614,8 +619,9 @@ endif
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
-# R2-03 E17: matches the published block. Any flag on that block is on this one.
+# R2-03 E17/E16: match the published block. Any flag there is on this one too.
 override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_HW_LIGHT := 1
 # Task 53: matches the published block -- replay must be active here too or
 # every tick-HUD STG bucket reads a different binary than the shipping ROM.
 override NDS_TASK53_REPLAY_ARENA_FIX := 1
