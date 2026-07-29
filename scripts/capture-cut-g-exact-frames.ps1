@@ -254,27 +254,48 @@ try {
             $row[5] -eq 0 -and $row[6] -eq 0) `
             "Exact frame $($expectedFrames[$i]) was not source GO with a running one-minute timer and unlocked fighters." `
             $gdbText
+        # Always true, GO presenting or not: the native OAM path owns the
+        # overlay, never falls back, and never converts or uploads at runtime.
         Assert-Condition (
-            $row[7] -eq 1 -and $row[8] -eq 2 -and $row[9] -eq 2 -and
-            $row[10] -eq 0 -and $row[11] -eq 13 -and
-            $row[12] -ne 0x49464f41 -and $row[13] -eq 23 -and
-            $row[14] -eq 0 -and $row[15] -eq 1 -and $row[16] -eq 0 -and
-            $row[17] -eq 0 -and $row[18] -eq 0 -and $row[19] -eq 32 -and
-            $row[20] -eq 1 -and $row[21] -eq 0 -and
-            $row[22] -eq 65536 -and $row[23] -eq 2 -and
-            $row[24] -eq 41728 -and $row[25] -eq 0 -and
+            $row[7] -eq 1 -and $row[10] -eq 0 -and $row[14] -eq 0 -and
+            $row[17] -eq 0 -and $row[18] -eq 0 -and
+            $row[20] -eq 1 -and $row[21] -eq 0 -and $row[25] -eq 0 -and
             $row[26] -gt 0 -and $row[27] -gt 0 -and
             $row[28] -gt 0 -and $row[29] -gt 0 -and
-            $row[30] -gt 0 -and $row[31] -gt 0 -and
-            $row[32] -eq 2) `
-            "Exact frame $($expectedFrames[$i]) lost native-OAM GO recognition, drawing, or no-conversion state." `
+            $row[30] -gt 0 -and $row[31] -gt 0) `
+            "Exact frame $($expectedFrames[$i]) lost native-OAM ownership, no-fallback, or no-conversion state." `
             $gdbText
+        # The rest is the GO overlay's own census and only means anything while
+        # it is presenting. R2-03 E42: these were asserted unconditionally, so
+        # every mid-match capture -- frame 480 is 568 source ticks in, long after
+        # GO has left the screen and the block has gone legitimately idle -- paid
+        # a full emulator boot and then threw. The screenshots are written before
+        # this point, which is why the failure produced usable PNGs and went
+        # unnoticed. The prepare-byte counts below are cumulative, so they are
+        # GO-phase constants too, not frame-independent ones.
+        if ($row[16] -eq 0) {
+            Assert-Condition (
+                $row[8] -eq 2 -and $row[9] -eq 2 -and $row[11] -eq 13 -and
+                $row[12] -ne 0x49464f41 -and $row[13] -eq 23 -and
+                $row[15] -eq 1 -and $row[19] -eq 32 -and
+                $row[22] -eq 65536 -and $row[23] -eq 2 -and
+                $row[24] -eq 41728 -and $row[32] -eq 2) `
+                "Exact frame $($expectedFrames[$i]) lost native-OAM GO recognition or drawing state." `
+                $gdbText
+        } else {
+            Assert-Condition (
+                $row[8] -eq 0 -and $row[9] -eq 0 -and $row[13] -eq 0 -and
+                $row[15] -eq 0 -and $row[32] -eq 0) `
+                "Exact frame $($expectedFrames[$i]) reported the GO overlay idle while still drawing it." `
+                $gdbText
+        }
     }
     # The GO SObjs animate position/scale/alpha, so adjacent source frames may
     # legitimately have different semantic hashes. Their exact recognized-call,
     # SObj, and OAM-object census must remain in the same GO presentation phase.
-    Assert-Condition ($rows[0][13] -eq $rows[1][13]) `
-        'Exact Cut G pair crossed an OAM-object-count transition.' `
+    Assert-Condition (
+        $rows[0][13] -eq $rows[1][13] -and $rows[0][16] -eq $rows[1][16]) `
+        'Exact Cut G pair crossed an OAM-object-count or GO idle transition.' `
         $gdbText
     Assert-Condition ((Test-Path -LiteralPath $outputPath -PathType Leaf) -and
         (Test-Path -LiteralPath $secondOutputPath -PathType Leaf)) `

@@ -31,6 +31,81 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E42 — E32's dark fighter is NOT `USE_VERTEX`: BUILT, REFUTED (2026-07-29)
+
+E41 left the E32 regression traced to the native owner's material-colour path and
+owed a diff of it against the generic path. That diff has a real finding in it:
+`ndsRendererHardwarePackedVertexColor` has a branch the native owner does not.
+With `USE_MATERIAL` set and `USE_VERTEX` **clear** the generic path applies no
+lighting at all and returns the material colour *alone* — it replaces the shade.
+`ndsRendererNativeShadeProductionActions` reads only `USE_MATERIAL` out of
+`policy->vertex_flags` and always multiplies the material *into* a lit shade, in
+both the E16 hardware fold and the software loop. A hurt-flash material on such a
+run would be tinted dark instead of replacing the body colour, which is exactly
+the reported symptom, and it explained E41's oddest result — the software arm
+being *further* from the reference rather than corroborating it.
+
+**It is unreachable.** `sNdsNativeFighterDirectPolicies[4]` in
+`src/nds/nds_native_fighter_owner.generated.inc:487` — every one of the four
+families sets `NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX`. The branch cannot execute
+for any fighter epoch, so it cannot be the divergence. Built and measured anyway
+rather than argued from the table, because the table is generated:
+
+| frame | E32 candidate vs reference | E42 candidate vs reference |
+|---|---:|---:|
+| 480 (hitlag) | 1,826 | **1,786** |
+| 481 (hitlag) | 1,536 | **1,496** |
+
+The 40-pixel move is not the fighter. E42-candidate against E32-candidate differs
+by **33 pixels in a 7x9 box at x 47..53, y 11..19** — the bottom-screen FPS
+readout, which differs between any two runs. Reverted; the file is byte-identical
+to HEAD. Do not re-derive this: **the flat-colour branch is dead code for the
+fighter and adding it back is speculative.**
+
+### What this leaves for whoever returns to E32
+
+Four candidate mechanisms have now been eliminated by implementation, not by
+argument: `color_modulate`'s affine lerp (E36), the fold's own arithmetic and
+hardware-vs-software lighting (E41), and `USE_VERTEX` (E42). What survives is the
+**lit-shade input itself**: the generic path takes an early exit on
+`vertex_color_valid` and uses a baked `vertex_color` *without lighting it*, where
+the native owner always re-lights `sNdsNativeFighterDenseVertices[].rgba`. That is
+the only remaining structural difference between the two colour paths. Measure it
+before building anything — dump both paths' inputs on frame 480 rather than
+reasoning about the arithmetic, which is how E36, E41 and E42 were each spent.
+
+### Harness defect this exposed
+
+`capture-cut-g-exact-frames.ps1:257` asserts GO!-overlay state — recognized
+calls, draw calls, SObj and OAM object counts, commit calls, `FrameIdle == 0` —
+on **every** exact-frame capture. At frame 480 the match is 568 source ticks in,
+the GO overlay is long gone, and the native OAM block is legitimately idle, so
+the assert throws for both arms. The screenshots are written first (the file-
+existence assert is *after* it at line 279), which is why E32 got its PNGs and
+this defect went unrecorded. Every future mid-match exact-frame capture pays a
+full emulator boot and then dies. **Fixed**: the always-true invariants (native
+OAM owns the overlay, no fallback, no hot convert, no runtime upload, prepare
+succeeded) are asserted every frame; the GO census is asserted only when
+`gNdsIFCommonNativeOamFrameIdle == 0`, and when idle the opposite is asserted —
+zero recognized/draw/commit/cloud-draw calls — so an overlay that goes idle while
+still drawing is still caught. The pair check now also rejects a pair straddling
+the idle transition. Verified both ways: frames 480/481, which threw before,
+capture clean, and probe frames 200/201 (`time_passed = 8`) take the presenting
+branch.
+
+**Still open, and it is not mine to re-pin.** The GO-presenting constants are
+themselves stale — at frame 200 this build reports 3 OAM objects against an
+expected 23, 608 prepare-palette bytes against 32, 3 cloud textures against 2,
+57,344 cloud-texture bytes against 65,536, and 10 cloud draws against 2. So this
+assert has not passed on *any* frame for some time, which also means
+`verify-battle-playable-realtime-harness.ps1:21`'s `FastCaptureFirstFrame = 438`
+has been dead. The constants postdate `4f4528f` (countdown GO and source-alpha
+flare fidelity) and `6da286e` (crisp IFCommon alpha coverage). Re-pinning them by
+observation would bless whatever the current state happens to be as correct,
+which is a countdown-GO fidelity judgement and belongs to that owner, not to a
+fighter-shade experiment. **Action for that owner: re-derive the GO census
+constants, or delete them if the invariants above are the real contract.**
+
 ## R2-03 E40 — state tables to DTCM: BUILT, NULL, reverted (2026-07-29)
 
 E39 established the replay's cost is memory, not logic: 2.9 genuinely distinct
