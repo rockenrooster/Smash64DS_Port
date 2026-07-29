@@ -61,12 +61,8 @@ N is a different game tick in each. Correlate through a build-internal column.
 several cycles. It is wrong by ~20x and the row is deleted.** A leaf helper is
 charged to itself, never to its caller, so every float op the animation path
 executes was booked to `__aeabi_fadd`/`__aeabi_fmul` and read as a separate,
-larger family. Caller-attributed on the current build:
-
-| | self | via `fadd`/`fmul` | inclusive |
-|---|---:|---:|---:|
-| `gcPlayDObjAnimJoint` | 34,022 | 60,509 | **94,531** |
-| whole animation path | 76,047 | 70,895 | **146,942** |
+larger family. Caller-attributed: `gcPlayDObjAnimJoint` **34,022 self + 60,509
+helper = 94,531**; the whole animation path **76,047 + 70,895 = 146,942**.
 
 **146,942 ticks/frame, 15.2% of WORK 969,487 — larger than the whole gap.** The
 entire collision family is **under 4,000**, below the placement noise floor. The
@@ -75,7 +71,7 @@ renderer share is 15,709, inside §3.9's "too small for architecture work" band.
 E61 then found **the cubic is 99.6% of that float**: 149.4 cubic nodes/frame at
 **405 ticks each** (14 soft-float ops), against 118.7 Step nodes at zero float
 and 4.5 Linear. `anim_speed` is `1.0` (99.7%) or `0.5` (0.3%), **never 0**;
-`GOBJ_FLAG_NOANIM` skips are **0**, so nothing is being computed and thrown away.
+`GOBJ_FLAG_NOANIM` skips are **0**, so nothing is computed and thrown away.
 
 **Task 78 stopped the animation compiler on a self-vs-inclusive error** — it
 compared 82,807 *self* ticks to a 100,000 target while its own §4 listed
