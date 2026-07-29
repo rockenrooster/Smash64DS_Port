@@ -1,15 +1,13 @@
 # Handoff
 
-Updated: 2026-07-29. **This file is the restart surface and nothing else, capped
-at 150 lines.** `P1_EXECUTION_BOARD.md` owns the queue and every experiment's
-result, `PERF_LEDGER.md` owns measurements and rejected experiments,
-`KNOWN_ISSUES.md` owns durable gaps and harness traps,
-`optimization/TASK_STANDING_RULES.md` owns how a performance task is run.
-Anything durable belongs in one of those, not here.
+Updated: 2026-07-29. **Restart surface only, capped at 150 lines.** The board
+owns the queue and every result; `PERF_LEDGER.md` measurements and rejected
+experiments; `KNOWN_ISSUES.md` durable gaps and harness traps;
+`optimization/TASK_STANDING_RULES.md` how a performance task is run. Anything
+durable goes there, not here.
 
-Runtime 2: R2-00a/b/c, R2-01 and R2-02 gated. R2-03 has shipped E12, E28, E29
-and E46. R2-04 has graduated E5. E32 is **parked** on an unresolved visual
-regression — it is not awaiting a yes/no.
+Runtime 2: R2-00a/b/c, R2-01, R2-02 gated. R2-03 shipped E12/E28/E29/E46. R2-04
+graduated E5. E32 is **parked** on a visual regression — not awaiting a yes/no.
 
 ## Where the gate stands
 
@@ -109,9 +107,8 @@ install, E34-b's carve-out keeping `prim_color`/`env_color` live — and it cann
 recover the whole 23,844. It is now the best unowned work by elimination rather
 than by size.
 
-Read `ClaudeOpus5_R203_E26_Spec_GeneratedEpochState_20260728.md` only alongside
-the board's E34/E34-b/E39/E43/E45/E56 entries, which correct it. E39 refuted the
-operand-elision variant: **E26 must replace the dispatch, not the writes.**
+Read its spec only alongside the board's E34/E34-b/E39/E43/E45/E56 entries,
+which correct it. **E26 must replace the dispatch, not the writes** (E39).
 
 ## Refuted this cycle — do not re-derive
 
@@ -135,23 +132,19 @@ $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 git status --short
 ```
 
-**Do not rebuild `smash64ds.nds` for P1 work** (the owner, 2026-07-28) — P1 is
-the battle vertical slice and `smash64ds-battle-playable-hwtri` is the only
-published ROM it touches. **Do rebuild the tick-HUD ROM whenever the published
-one is rebuilt** (the owner, 2026-07-22): it is the same program plus the Task 41
-timers and it is the instrument every measurement runs on, so keep its Makefile
-block flag-identical.
+**Do not rebuild `smash64ds.nds` for P1 work** (owner, 2026-07-28) — P1 touches
+only `smash64ds-battle-playable-hwtri`. **Do rebuild the tick-HUD ROM whenever
+the published one is** (owner, 2026-07-22): same program plus the Task 41 timers,
+and the instrument every measurement runs on — keep its Makefile block
+flag-identical.
 
 **Do not pass `-j` to `make`.** The Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)`
-from `nproc`; an explicit `-j` on the command line overrides it and caps the
-build. One build at a time regardless — the asset generators write into shared
-paths outside `$(BUILD)`.
+from `nproc` (32 here); an explicit `-j` overrides and caps it. One build at a
+time regardless — generators write to shared paths outside `$(BUILD)`.
 
 Preserve canonical mode 163, intrinsic renderer mode 9, mip 0, static texture
 residency, source countdown, Dream Land water frozen at source frame 0, and Task
-16 compare/i2f/addsub `1/1/1`. Do not edit `decomp/`.
-
-**Bug #10 is FIXED and folded into this branch** — `06992f10812` "Fix Mario
-pelvis texture clamp", cherry-picked from `2cbc6189d15` so authorship is
-preserved, with a host fixture, a structural pin, and the `pause_under20`
+16 compare/i2f/addsub `1/1/1`. Do not edit `decomp/`. **Bug #10 is FIXED and
+folded in** — `06992f10812`, cherry-picked from `2cbc6189d15` to preserve
+authorship, with a host fixture, a structural pin, and the `pause_under20`
 camera oracle.
