@@ -128,15 +128,50 @@ frames, and `MISC` tripling is the hit effect drawing as its own owner.
 **Task 92's closure is not evidence against acting here.** It closed the class it
 measured; this caller set was not in it.
 
-### The first experiment must be the exactness-preserving one
+### 4c. The exactness-preserving experiment is REFUTED before it was built
 
-`func_ovl2_800EDBA4` already carries two memo flags — `parts->transform_update_mode`
-and `parts->unk_dobjtrans_0x5` — and only rebuilds a joint's matrix when they are
-clear. Before proposing any float→fixed conversion, which is a gameplay change
-needing the Task 9 state hash re-bounded and therefore the owner's call, measure
-**how much of this walk is redundant**. That is the E5/E12 shape, it is bit-exact,
-and it needs no contract discussion. Only if the walk is already minimal does the
-question become numeric.
+The obvious first move was an E5/E12-shape redundancy memo: `func_ovl2_800EDBA4`
+carries two memo flags (`parts->transform_update_mode`, `parts->unk_dobjtrans_0x5`),
+cleared once a frame by `parts->unk_dobjtrans_word = 0` in `ftparam.c:2185`, so
+"how much of the walk repeats" looked like the bit-exact cut to price first.
+
+**It repeats almost not at all.** Exact call counts, taken for free from the
+profiler CSV — a function's entry PC retires exactly once per call, so no
+estimate of per-call cost is involved:
+
+| symbol | excursion calls/frame | control |
+|---|---:|---:|
+| `func_ovl2_800ED490` (the `Mtx44f` multiply) | **27.2** | 0 |
+| `gmCollisionGetWorldPosition` | 32.0 | 0 |
+| `gmCollisionTransformMatrixAll` | 22.6 | 0 |
+| `gmCollisionSetInvertMatrix` | 16.0 | 0 |
+| `gmCollisionTestRectangle` | 16.0 | 0 |
+| `func_ovl2_800EDBA4` | 16.0 | 0 |
+| `__aeabi_fadd` | 6,053 | 2,969 |
+| `__mulsf3` | 6,309 | 2,983 |
+
+**Twenty-seven matrix multiplies a frame is not a hot loop.** The within-frame
+memo already works — the flags do their job, and there is no second traversal to
+delete. A redundancy memo here cannot pay, and that is worth knowing before
+someone spends a build on it.
+
+**The cost is arithmetic, and the unit price is the finding.** 230,850 cycles
+over 6,053 `fadd` calls is **38 cycles per soft-float add**; `__mulsf3` is 27.
+The excursion adds ~6,410 float operations per frame and pays ~217,734 cycles for
+them, so the whole block reduces to: the DS has no FPU, these routines are dense
+float, and the only lever is executing fewer float operations.
+
+Baseline for scale: ordinary frames already run ~5,952 float ops (~182,000
+cycles); excursion frames run ~12,362 (~400,000).
+
+**So the honest verdict is that this is a float→fixed question and nothing else.**
+That is a gameplay change: `gmcollision.c` decides hit detection, so it is
+verifier-gated by the Task 9 state hash. `PROJECT_GOAL.md` permits it —
+"Mechanical equivalence is required. Bit-exact or numerically identical execution
+is not" — and the sacrifice order ranks gameplay fidelity **above** stable 30 FPS,
+meaning frame rate wins. But re-bounding a bit-exact verifier gate is the owner's
+decision, not one to take unsupervised. It is now sized, named, and ready for
+that decision.
 
 ## 5. A caveat worth keeping: cartridge reads are not frame-deterministic
 

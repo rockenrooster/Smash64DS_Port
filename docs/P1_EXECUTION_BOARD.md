@@ -85,12 +85,27 @@ and `MISC` tripling is the hit effect drawing as its own owner. Task 92's verdic
 closed the class it measured; this caller set was not in it, so it is not
 evidence against acting here.
 
-**Next, and the order matters.** `func_ovl2_800EDBA4` already carries two memo
-flags (`parts->transform_update_mode`, `parts->unk_dobjtrans_0x5`). Measure how
-much of the walk is **redundant** first — that is the E5/E12 shape, bit-exact,
-and needs no contract discussion. Only if the walk is already minimal does this
-become a float→fixed question, which is a gameplay change requiring the Task 9
-state hash to be re-bounded and therefore the owner's decision.
+**The exactness-preserving cut was priced and REFUTED before it was built.** The
+obvious first move was an E5/E12-shape redundancy memo — `func_ovl2_800EDBA4`
+carries two memo flags cleared once a frame by `parts->unk_dobjtrans_word = 0`
+(`ftparam.c:2185`). Exact call counts, free from the profiler CSV because a
+function's entry PC retires once per call, say there is nothing to memo:
+**`func_ovl2_800ED490` runs 27.2 times a frame**, `GetWorldPosition` 32,
+`TransformMatrixAll` 22.6, the rest 16 each. The within-frame memo already works.
+
+**The cost is arithmetic and the unit price is the finding:** 230,850 cycles over
+6,053 `fadd` calls is **38 cycles per soft-float add** (`__mulsf3` 27). The
+excursion adds ~6,410 float ops/frame for ~217,734 cycles. Ordinary frames
+already run ~5,952 ops (~182,000); excursion frames ~12,362 (~400,000).
+
+**OWNER DECISION, sized and ready.** The only lever is float→fixed on the
+collision path. `PROJECT_GOAL.md` permits it — "Mechanical equivalence is
+required. Bit-exact or numerically identical execution is not" — and its
+sacrifice order ranks gameplay fidelity *above* stable 30 FPS. But `gmcollision.c`
+decides hit detection and is verifier-gated by the Task 9 state hash, and
+re-bounding a bit-exact gate is not a call to take unsupervised. Combined with
+E32 this is roughly the whole remaining gap: the 26 projected over-gate frames
+span 1,152,192–1,614,080, and removing ~280,000 puts all but four under 1,120,000.
 
 **Caveat now on record:** `_ntrcardRomReadSector` measured +95,357 on the
 excursion with the HUD drawn and −95,356 (entirely in the control) with it
