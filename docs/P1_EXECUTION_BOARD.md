@@ -32,6 +32,76 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E62 — E32 is a GENERATOR gap, not a visual-approval call. E49's flag built and REFUTED with a picture (2026-07-29)
+
+**Correcting two things this board and `HANDOFF.md` have said, including my own
+E59 entry.** The first direct look at `artifacts/visibility/e32-*.png` — never
+done across E32 and E47–E59 — settles it.
+
+**1. The arms were read backwards.** The board records the owner drawing "dark
+maroon where the generic path draws light grey", implying corruption. Zoomed:
+
+- **`e32-off` (generic) = Mario washed out to near-white.** *That is the hurt
+  flash.* It is the correct render.
+- **`e32-on` (E32/native owner) = Mario in his normal red cap and blue
+  overalls.** Nothing is corrupt. **The owner simply never applies the flash.**
+
+**2. The regression is confined to flash frames.** Pixel diff over the top
+screen, both arms:
+
+| frame | differing pixels |
+|---|---:|
+| 480 (hitlag) | 1,551 (1.35%) |
+| 481 (hitlag) | 1,266 (1.10%) |
+| 510 | **0** |
+| 511 | **0** |
+
+**E32 is bit-identical everywhere except the flash.** That is a far narrower
+defect than "the owner renders the fighter wrong".
+
+**Mechanism, confirmed from E59's own numbers:** `NDS_RENDERER_GEOM_LIGHTING` is
+`0x00020000`. E59 recorded the owner's `geometry_mode = 0x00220105` — lighting
+**set** — while the generic path's lit function took its
+`!(geometry_mode & LIGHTING)` early-out, which is exactly why E59 saw zeros.
+Two different fighters, two different `stats`. **The flash clears `G_LIGHTING`
+for the struck fighter and draws its vertex colours raw.** Under
+`NDS_R2_FIGHTER_HW_LIGHT` the owner skips the diffuse/ambient write when
+`epoch_lit` is false but still emits `GFX_NORMAL` with `POLY_FORMAT_LIGHT0` set,
+so the hardware lights the flashing fighter with **stale** diffuse/ambient.
+
+**E62 built E49's existing fix and it is REFUTED.**
+`NDS_R2_UNLIT_VERTEX_EPOCH` (default 0, never enabled in any shipped block)
+already drops `POLY_FORMAT_LIGHT0` and emits
+`ndsRendererR2DenseVertexColor15(dense_id)` instead of the normal. Built with
+`NDS_R2_FIGHTER_SHUFFLE_FOLD=1 NDS_R2_UNLIT_VERTEX_EPOCH=1`:
+
+| | vs the correct generic render |
+|---|---:|
+| E32 alone | 1,551 px (1.35%) |
+| **E32 + unlit route (E62)** | **2,199 px (1.91%) — WORSE** |
+
+`artifacts/visibility/e62-on-480.png` shows why: Mario renders in **rainbow
+speckle**. `ndsRendererR2DenseVertexColor15` reads
+`sNdsNativeFighterDenseVertices[].rgba`, and **that baked table holds the F3DEX2
+packed normal**, not a colour. **E49's own stated objection — "a baked table
+cannot show the flash" — was right, and this is the picture proving it.**
+
+**E48 and E58 were each right about a different vertex stream, which is why
+they read as contradictory.** The *live* display-list vertices on a flash epoch
+are colours (E48, 273/273, material 0). The *baked dense* table is normals
+(E58). They are not the same data.
+
+**So E32 is not a fidelity-budget question and I was wrong to call it one.** The
+owner does not possess flash-colour data to draw. Closing it needs a
+**generator** change — bake the unlit flash variant's vertex colours as a second
+dense table beside `sNdsNativeFighterDenseNormals` — plus a per-epoch select on
+`geometry_mode & LIGHTING`. That is ordinary specialization work of exactly the
+kind `PROJECT_GOAL.md` prefers, and it needs no owner decision. **E63 should
+size that table** before writing the generator; the runtime half already exists
+and is proven to reach the emit path.
+
+Lab flags only; both default 0, nothing shipped.
+
 ## R2-04 E6 ANSWERED — E5 paid down LOADING, not pose. R2-04's rate clause is done; its budget clause is E61 (2026-07-29)
 
 Answered from artifacts already on disk; no build. Closes the last pending R2-04

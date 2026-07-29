@@ -5,13 +5,13 @@ durable goes to its owning doc, not here: the board owns the queue and every
 result, `PERF_LEDGER.md` measurements, `KNOWN_ISSUES.md` durable gaps and
 harness traps, `optimization/TASK_STANDING_RULES.md` how a task is run.
 
-Runtime 2 phase status. **Every remaining P1 performance lever is behind an
-owner decision; there is no unblocked experiment left in R2-03/R2-04.**
+Runtime 2 phase status. **Of the two levers that close the gate, E32 is ordinary
+engineering (a generator gap, E62) and only the cubic is an owner decision.**
 
 | phase | state |
 |---|---|
 | R2-00a/b/c, R2-01, R2-02 | gated |
-| R2-03 | shipped E12/E28/E29/E46; both remaining levers owner-blocked |
+| R2-03 | shipped E12/E28/E29/E46; E32 needs a generator change, the cubic needs a decision |
 | R2-04 | loading clause done (E5/E6), rate clause done as far as the contract permits (E57/E6); **budget clause 146,942 vs 100,000 needs the E61 decision** |
 | R2-05 | reproducibility half PASSES (E0); fighter-special-case audit not yet run |
 | R2-06/07/08 | not started; gated behind the above |
@@ -50,10 +50,6 @@ burst. Capping `FTR` at its median there projects E32 across the distribution:
 **E32 is worth −51,136 P95 and four frames** — it halves the gap without closing
 it. Blocked on the hurt flash, not on its value.
 
-**Never compare a census build's frame numbers to a clean build's.** The census
-flags cost ~137,664 ticks/frame and shift the histogram 2:726 → 2:314, so frame
-N is a different game tick in each. Correlate through a build-internal column.
-
 ## The other half is ANIMATION, not collision (E60/E61 — this replaces the `SRC` row)
 
 **The board carried "float→fixed on the collision path, `gmcollision.c`" for
@@ -68,30 +64,33 @@ entire collision family is **under 4,000**, below the placement noise floor. The
 renderer share is 15,709, inside §3.9's "too small for architecture work" band.
 
 E61 then found **the cubic is 99.6% of that float**: 149.4 cubic nodes/frame at
-**405 ticks each** (14 soft-float ops), against 118.7 Step nodes at zero float
-and 4.5 Linear. `anim_speed` is `1.0` (99.7%) or `0.5` (0.3%), **never 0**;
-`GOBJ_FLAG_NOANIM` skips are **0**, so nothing is computed and thrown away.
+**405 ticks each**, against 118.7 Step nodes at zero float and 4.5 Linear.
+`anim_speed` is `1.0`/`0.5`, **never 0**; `GOBJ_FLAG_NOANIM` skips are **0**.
 
 **Task 78 stopped the animation compiler on a self-vs-inclusive error** — it
 compared 82,807 *self* ticks to a 100,000 target while its own §4 listed
 `fadd`+`fmul` = 119,912 as a *separate* family. Corrected: 164,236, **1.64x its
-target, not 0.85x**. Tasks 95/96 stand but refute only the *layout* route; the
-arithmetic route has never been attempted.
+target, not 0.85x**. Tasks 95/96 refute only the *layout* route.
 
 **The pose table is REFUTED by size** (E61) — 2.62 MB resident against 4 MB of
 main RAM, or 42.6 KB/7–11 ms streamed per transition. Do not propose it again.
 
-## Two levers close the gate, each on a different owner decision
+## Two levers close the gate: one is engineering, one is a decision
 
 ```
 gap 108,928  −  E32 51,136  −  fixed-point cubic ~50,000  =  ~7,800 left
 ```
 
-- **E32** — blocked on the hurt flash. **That is now a fidelity-budget question
-  (the owner's visual approval), not a measurement**: E48–E59 spent six
-  experiments and closed the mechanism line. Not vertex colour, not material
-  colour, not light colour, not the fold arithmetic, not E16's hardware
-  lighting, not `color_modulate`.
+- **E32** — blocked on a **generator gap, not a decision** (E62; the earlier
+  "fidelity-budget / visual approval" framing here was wrong). The flash clears
+  `G_LIGHTING` and draws vertex colours raw; the owner keeps `POLY_FORMAT_LIGHT0`
+  and hardware-lights with stale diffuse/ambient, so it draws Mario *unflashed* —
+  not corrupt. E32 is pixel-identical to the generic path on every non-flash
+  frame (510/511: 0 px). E49's `NDS_R2_UNLIT_VERTEX_EPOCH` already implements the
+  runtime half but is **refuted**: it emits the baked dense `.rgba`, which holds
+  packed **normals**, giving rainbow speckle and a *worse* diff (2,199 vs 1,551).
+  **Needs the generator to bake the flash variant's vertex colours** as a second
+  dense table. E63 sizes it.
 - **The cubic** — blocked on the Task 9 state hash. `PROJECT_GOAL.md` requires
   mechanical equivalence and lists "fixed-point replacements" as allowed; the
   hash asserts bit-exactness, which is stronger than the contract. The change is
@@ -106,20 +105,19 @@ alone does not define the brackets). Bottom of §3.9's "20–50K if simple and
 exact" band and E26 is not simple. **It must replace the dispatch, not the
 writes** (E39); read its spec only with board entries E34/E34-b/E39/E43/E45/E56.
 
-**R2-04 E57 — REFUTED.** Halving the twice-per-frame animation evaluation looked
-like ~26,000 free, but `gmCollisionGetFighterPartsWorldPosition`
-(`gm/gmcollision.c:489`) places every hitbox by **walking the live joint chain**.
-With E6 this closes R2-04's rate clause: the visual side is already at 30 Hz and
-the rest is gameplay-required.
+**R2-04 E57 — REFUTED.** `gmCollisionGetFighterPartsWorldPosition`
+(`gm/gmcollision.c:489`) places every hitbox by **walking the live joint chain**,
+so halving the twice-per-frame evaluation is a gameplay change. With E6 this
+closes R2-04's rate clause.
 
 ## Refuted this cycle — do not re-derive
 
 - **E51**, a `line_id -> (group, kind)` table for the three scans in
-  `reloc_backend_mp_collision.c`. `gNdsStageCollisionLoopYakumonoCount = 1`: the
-  loop that reads as a 64×4 worst case has a trip count of **one**.
+  `reloc_backend_mp_collision.c`: `gNdsStageCollisionLoopYakumonoCount = 1`, so
+  the loop that reads as a 64×4 worst case has a trip count of **one**.
 - **E53**, an 8-byte `{base,size}` mirror for `ndsRelocFindLoadedFileContaining`.
-  Exact by construction, still P95 **+11,584**, 92/128 worse, and `STG` — which
-  it cannot touch — moved +1,600 on 99.
+  Exact, still P95 **+11,584** and 92/128 worse; `STG`, which it cannot touch,
+  moved +1,600 on 99.
 - **The flash as vertex data** (E48/E49/E50/E55/E58), **the animation pose
   table** (E61, 2.62 MB resident vs 4 MB RAM), and **fixed-point collision**
   (E60, the whole family is under 4,000 ticks/frame).

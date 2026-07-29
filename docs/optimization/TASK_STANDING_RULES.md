@@ -1647,3 +1647,15 @@ the board had named instead totals **under 4,000**.
    share x constant as a measurement; two graduations later that constant was
    84% high. Multiply shares by a profile of the *same build*, or report the
    share alone.
+
+### Never compare a census build's frame numbers to a clean build's (R2-03 E54)
+
+The Task 68/91 census flags cost ~137,664 ticks/frame and shift the VBlank
+histogram from 2:726 to 2:314. The presented-frame counter therefore advances at
+a different rate, so **frame N in a census run is a different game tick than
+frame N in a clean run** — "the excursion is at 909-913" does not transfer
+between them. Correlate through a build-internal column (a game tick, a match
+timer, an event counter), never through the frame index.
+
+Moved here from `HANDOFF.md`, which is a restart surface and not the owner of
+durable traps.
