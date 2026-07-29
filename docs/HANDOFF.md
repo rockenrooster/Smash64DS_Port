@@ -176,8 +176,8 @@ Makefile blocks. E28 removed work E16 left with no reader; E29 moved the two hot
 fighter vertex tables into DTCM, which had 12,948 free bytes nobody had measured.
 E32 is built and Boundary-green but **not** graduated, pending your visual check.
 
-**R2-03 is not finished.** `FTR` P50 is 408,512 against its provisional 250,000
-budget. The board's "partition at HEAD" row has the current ranked list; the
+**R2-03 is not finished.** `FTR` P50 is **392,640** after E46 (was 404,672 in the
+same window) against its provisional 250,000 budget. The board's "partition at HEAD" row has the current ranked list; the
 short version is that the state replay (61,441) coupled to the run prepare
 (39,043) is still the largest single mechanism and is the switch plan's own
 R2-03 bullet, specified in

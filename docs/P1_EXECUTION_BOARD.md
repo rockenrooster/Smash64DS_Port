@@ -31,7 +31,7 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
-## R2-03 E46 — the delta path into ITCM: −3,128/frame, NOT graduated (2026-07-29)
+## R2-03 E46 — the delta path into ITCM: GRADUATED, −12,416 WORK P50 (2026-07-29)
 
 E45 left ~186 ticks per delta application unexplained after eliminating the tile
 republish (~23, E44), the invalidation macro (one store) and the span entry (~33,
@@ -63,12 +63,39 @@ independent populations, which is the cross-check that separates a real effect
 from layout luck on a change that is *itself* a relocation. `.itcm` goes 29,856 →
 30,872, **1,896 bytes still free**.
 
-**Not graduated, and the flag stays default 0.** −3,128 is below the 5,000–7,000
-whole-frame build-placement noise floor, so the bracket result does not by itself
-license a frame-level claim. **Owed before default-on: a `WORK` measurement
-showing the gain survives at frame level, and Boundary.** It is placement-only
-with no behaviour change, so neither is expected to be interesting — but that is
-the argument E40 also had, and E40 was null.
+### Frame level: the bracket understated it 4x
+
+−3,128 is below the 5,000–7,000 whole-frame placement noise floor, so the bracket
+alone could not license a frame-level claim. The tick-HUD A/B over 128 frames
+(439..566, `NDS_TICK_HUD_DRAW=0`, both arms built from the same tree):
+
+| bucket | control | E46 | delta |
+|---|---:|---:|---:|
+| **FTR P50** | 404,672 | 392,640 | **−12,032** |
+| **WORK P50** | 1,010,240 | 997,824 | **−12,416** |
+| WORK-H P50 | 1,006,848 | 996,480 | −10,368 |
+| FTR P95 | 913,152 | 904,384 | −8,768 |
+| STG P50 *(untouched)* | 173,312 | 174,080 | +768 |
+| SRC P50 *(untouched)* | 327,360 | 326,144 | −1,216 |
+
+VBlank histogram `2:472 3:87 4:4 5+:2` → `2:476 3:85 4:3 5+:2`.
+
+**The gain is 4x the state-span bracket** because the bracket only ever saw the
+two spans. `ndsRendererNativeApplyMaterial` (27.7/frame) calls
+`RecordSetTile`/`RecordSetImage`/`RecordLoadTlut`/`RecordSetTileSize`, and the
+texture prepare calls `SyncTextureTile` once per run (46.4/frame) — all of them
+relocated too. Per E40's rule the untouched buckets bound the noise at ±1,200, and
+FTR moved 10x that.
+
+`ALL` P50 is unchanged at 1,119,808 in both arms. That is expected and is **not** a
+refutation: `ALL` is VBlank-quantized at 560,190/VBlank, and reading it as flat is
+what previously killed four good levers. `WAIT` rises by roughly what `WORK` sheds,
+which is what a still-VBlank-bound frame looks like when real work is removed.
+
+**GRADUATED.** `override NDS_R2_DELTA_PATH_ITCM := 1` in both the published and
+tick-HUD Makefile blocks; **Boundary green**. No visual approval is owed — unlike
+E16 and E32 this changes no arithmetic, only where the instructions live, so the
+output is identical by construction.
 
 **It does not explain the 186.** Instruction fetch is confirmed as a real
 component and it is ~16 ticks of ~186, under 10%. Four mechanisms are now

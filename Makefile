@@ -557,6 +557,16 @@ override NDS_R2_FIGHTER_HW_MTX := 1
 # bit-identical (181,440 P0 triangles either way). Requires HW_MTX above for the
 # vector matrix. Boundary green, owner-approved 2026-07-28.
 override NDS_R2_FIGHTER_HW_LIGHT := 1
+# R2-03 E46: the fighter state-delta path into ITCM. The switch was already
+# resident; the span loop and every Record*/SyncTextureTile helper it dispatches
+# to were in main RAM, so all 134.5 before-span applications a frame left
+# zero-wait ITCM for icache-served code. Placement only -- no behaviour change.
+# FTR P50 -12,032, WORK P50 -12,416 over the same 128-frame window, with the
+# untouched STG/SRC buckets moving +768/-1,216 to bound the noise. The gain is
+# 4x the state-span bracket's -3,128 because ApplyMaterial (27.7/frame) and the
+# texture prepare (46.4/frame) call the same helpers. +1,016 bytes of .itcm,
+# 1,896 still free.
+override NDS_R2_DELTA_PATH_ITCM := 1
 # Task 53: re-activate Task 36 rigid-stage replay. Relaxes the arena admission
 # guard (nds_renderer.c:4195/:4247) from the legacy exact-0x150000 check to
 # "admit any usable arena >= 0x130000" -- the robust downward-stepping allocator
@@ -671,6 +681,16 @@ override NDS_TASK36_HW_COMPOSE := 2
 # R2-03 E17/E16: match the published block. Any flag there is on this one too.
 override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_FIGHTER_HW_LIGHT := 1
+# R2-03 E46: the fighter state-delta path into ITCM. The switch was already
+# resident; the span loop and every Record*/SyncTextureTile helper it dispatches
+# to were in main RAM, so all 134.5 before-span applications a frame left
+# zero-wait ITCM for icache-served code. Placement only -- no behaviour change.
+# FTR P50 -12,032, WORK P50 -12,416 over the same 128-frame window, with the
+# untouched STG/SRC buckets moving +768/-1,216 to bound the noise. The gain is
+# 4x the state-span bracket's -3,128 because ApplyMaterial (27.7/frame) and the
+# texture prepare (46.4/frame) call the same helpers. +1,016 bytes of .itcm,
+# 1,896 still free.
+override NDS_R2_DELTA_PATH_ITCM := 1
 # Task 53: matches the published block -- replay must be active here too or
 # every tick-HUD STG bucket reads a different binary than the shipping ROM.
 override NDS_TASK53_REPLAY_ARENA_FIX := 1
