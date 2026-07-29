@@ -2150,9 +2150,10 @@ def build_fighter_primitive_streams(runs, packed_corners, run_first_corner,
 
 def emit_rows(
         type_name: str, name: str, rows: list[str],
-        const: bool = True) -> list[str]:
+        const: bool = True, attribute: str = "") -> list[str]:
     qualifier = "static const" if const else "static"
-    result = [f"{qualifier} {type_name} {name}[{len(rows)}] =", "{"]
+    suffix = f" {attribute}" if attribute else ""
+    result = [f"{qualifier} {type_name} {name}[{len(rows)}]{suffix} =", "{"]
     result.extend(f"    {row}," for row in rows)
     result.append("};")
     result.append("")
@@ -2591,11 +2592,23 @@ def generate(repo_root: Path | None = None) -> str:
     lines += ["#if NDS_RENDERER_PROFILE_LEVEL < 2", ""]
     lines += emit_rows(
         "NDSNativePreparedDenseVertex", "sNdsNativeFighterPreparedDense",
-        ["{{ 0x{:08x}u, 0u, 0x{:04x}u, 0u, 0, 0 }}".format(
+        # Designated initializers: R2-03 E29 drops shaded_rgba and packed_color
+        # from this struct under NDS_R2_FIGHTER_HW_LIGHT, and the generator does
+        # not see build flags. Naming the two fields that carry data keeps one
+        # generated table correct for both layouts; the rest zero-initialise.
+        ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u }}".format(
              *pack_fifo_vertex16(x, y, z, f"dense vertex {dense_id}"))
          for dense_id, (x, y, z, _s, _t, _binding, _cache_slot, _rgba)
          in enumerate(dense_vertices)],
         const=False,
+        # R2-03 E29. DTCM: single-cycle, uncached, and CPU-only. This table is
+        # randomly indexed by 1,878 corners a frame from the emit and rewritten
+        # by the UV prepare, against a 4 KB data cache it does not fit in.
+        # Audited for the check-task20-dtcm-layout.ps1 placement gate: written
+        # and read only by ARM9 code, never a DMA source or destination (the
+        # GXFIFO DMA is the stage replay's owner->words) and never touched by
+        # the ARM7 or IPC.
+        attribute='__attribute__((section(".dtcm.fighter")))',
     )
     lines += ["#endif", ""]
     lines += emit_rows(

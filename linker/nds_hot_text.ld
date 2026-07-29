@@ -129,6 +129,13 @@ SECTIONS {
 
 	/* DTCM section */
 	.dtcm : {
+		/* R2-03 E29's hot fighter vertex tables lead the section, then realign.
+		 * Their combined size is data-driven (541 dense vertices), so without
+		 * this ALIGN they push Calico's __irq_table off its 32-byte boundary
+		 * whenever the fighter geometry changes. Input sections bind to the
+		 * first matching rule, so the wildcard below does not re-match these. */
+		*(.dtcm.fighter)
+		. = ALIGN(32);
 		*(.dtcm .dtcm.*)
 		*.32.o (.data .data.* .gnu.linkonce.d.*)
 		*.32.o (.data1)
@@ -152,6 +159,17 @@ SECTIONS {
 	/* Information for DTCM BSS */
 	PROVIDE_HIDDEN( __dtcm_bss_start = ADDR(.dtcm.bss)                     );
 	PROVIDE_HIDDEN( __dtcm_bss_end   = ADDR(.dtcm.bss) + SIZEOF(.dtcm.bss) );
+
+	/* R2-03 E29. DTCM data grows up from 0x02ff0000 and the boot stack grows
+	 * down from __sp_usr = 0x02ff3e80; the region LENGTH covers both, so the
+	 * linker alone cannot catch a collision. Measured 2026-07-28 by dumping DTCM
+	 * at match frame 900: the boot stack's deepest reach is 0x02ff3340 (2,880
+	 * bytes below __sp_usr) and game code runs on a calico thread stack in main
+	 * RAM, never entering DTCM. 0x02ff3000 keeps 832 bytes of headroom under
+	 * that measured low-water mark. Raising this ceiling requires re-running the
+	 * measurement, not just moving the number. */
+	ASSERT( __dtcm_bss_end <= 0x02ff3000,
+		"Error: DTCM data reaches into the boot stack's measured low-water mark" )
 
 	/* ================= */
 	/*   Main RAM area   */

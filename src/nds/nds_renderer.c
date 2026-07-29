@@ -3707,12 +3707,25 @@ typedef struct NDSNativeDenseVertex
 } NDSNativeDenseVertex;
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
+/* R2-03 E29. Under NDS_R2_FIGHTER_HW_LIGHT the geometry engine lights the
+ * fighter: all four emit paths write GFX_NORMAL from
+ * sNdsNativeFighterDenseNormals and never read packed_color, and every epoch is
+ * lit (gNdsR2ShadeLitEpochs == gNdsR2ExecEpochCalls == 22,296 over 480 frames),
+ * so the per-dense-vertex loop that writes these two fields never runs. They are
+ * dead weight in the middle of the struct the hot emit loop reads, and this
+ * table is randomly indexed by 1,878 corners a frame against a 4 KB dcache --
+ * 16 bytes x 541 is 8,656, more than twice the cache. Dropping them takes the
+ * struct to 12 bytes and the table to 6,492. */
 typedef struct NDSNativePreparedDenseVertex
 {
     u32 gx_xy;
+#if !NDS_R2_FIGHTER_HW_LIGHT
     u32 shaded_rgba;
+#endif
     u16 gx_z;
+#if !NDS_R2_FIGHTER_HW_LIGHT
     u16 packed_color;
+#endif
     s16 s;
     s16 t;
 } NDSNativePreparedDenseVertex;
@@ -3768,8 +3781,17 @@ _Static_assert(sizeof(NDSNativeStateDelta) == 12u,
 _Static_assert(sizeof(NDSNativeDenseVertex) == 12u,
                "native dense vertex ABI must stay cache-line friendly");
 #if NDS_RENDERER_PROFILE_LEVEL < 2
+#if NDS_R2_FIGHTER_HW_LIGHT
+/* R2-03 E29. 16 bytes bought exactly two per 32-byte cache line and no
+ * straddling; 12 bytes buys a smaller table (6,492 against 8,656, both over the
+ * 4 KB dcache) at the cost of one access in three spanning two lines. Which wins
+ * is measured, not assumed -- see the E29 write-up. */
+_Static_assert(sizeof(NDSNativePreparedDenseVertex) == 12u,
+               "native prepared dense vertex ABI must stay compact");
+#else
 _Static_assert(sizeof(NDSNativePreparedDenseVertex) == 16u,
                "native prepared dense vertex ABI must stay power-of-two");
+#endif
 #endif
 _Static_assert(sizeof(NDSNativeRun) == 8u,
                "native run ABI must stay compact");
@@ -17068,10 +17090,21 @@ static void ndsRendererR2FighterShadeProofFrame(void)
               sizeof(sNdsNativeFighterPreparedDense[0]));
          i++)
     {
+        /* R2-03 E29 removed both fields under NDS_R2_FIGHTER_HW_LIGHT. The
+         * output hash covers what the per-vertex loop writes, and under that
+         * flag the loop is compiled out, so the hash falls back to the vertex
+         * words the emit does read. Only comparable within one build. */
+#if NDS_R2_FIGHTER_HW_LIGHT
+        NDS_R2_SHADE_HASH(output,
+                          sNdsNativeFighterPreparedDense[i].gx_xy);
+        NDS_R2_SHADE_HASH(output,
+                          sNdsNativeFighterPreparedDense[i].gx_z);
+#else
         NDS_R2_SHADE_HASH(output,
                           sNdsNativeFighterPreparedDense[i].shaded_rgba);
         NDS_R2_SHADE_HASH(output,
                           sNdsNativeFighterPreparedDense[i].packed_color);
+#endif
     }
     if (gNdsR2ShadeFrameCount != 0u)
     {
@@ -17191,9 +17224,15 @@ static void __attribute__((noinline)) ndsRendererR2E16aLightCensus(
  * 0 times in 22,296 epochs, so GFX_LIGHT_VECTOR is written once per owner
  * execute while the vector matrix is identity; the colours move on 32% of epochs
  * and the material on 72%, so GFX_DIFFUSE_AMBIENT is per epoch. */
+/* R2-03 E29. Beside sNdsNativeFighterPreparedDense in DTCM: the emit reads one
+ * word from each per corner, 1,878 times a frame, in the same random order, so
+ * the two tables thrash the same 4 KB data cache against each other. Built once
+ * at load by ARM9 code and read only by ARM9 code -- never a DMA endpoint, never
+ * touched by the ARM7 or IPC, per the check-task20-dtcm-layout.ps1 gate. */
 static u32 sNdsNativeFighterDenseNormals[
     sizeof(sNdsNativeFighterDenseVertices) /
-        sizeof(sNdsNativeFighterDenseVertices[0])];
+        sizeof(sNdsNativeFighterDenseVertices[0])]
+    __attribute__((section(".dtcm.fighter")));
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 
 /* libnds's NORMAL_PACK does not mask its z argument -- it is
@@ -17530,11 +17569,16 @@ ndsRendererNativeShadeProductionActions(
             }
         }
 #if NDS_R2_FIGHTER_HW_LIGHT
-        if (hardware_lit != FALSE)
-        {
-            continue;
-        }
-#endif
+        /* R2-03 E29. The loop below is compiled out, not merely skipped: under
+         * this flag the emit writes GFX_NORMAL unconditionally and never reads
+         * packed_color, so the loop's outputs have no consumer even on an unlit
+         * epoch, and E29 removes the two fields it writes from the struct. */
+        (void)hardware_lit;
+        (void)span;
+        (void)dense_first;
+        (void)dense_count;
+        (void)dense_offset;
+#else
         for (dense_offset = 0u;
              dense_offset < dense_count;
              dense_offset++)
@@ -17608,6 +17652,7 @@ ndsRendererNativeShadeProductionActions(
                         prepared->packed_color, state->color_modulate);
             }
         }
+#endif /* !NDS_R2_FIGHTER_HW_LIGHT */
     }
     return TRUE;
 }

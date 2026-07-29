@@ -126,13 +126,41 @@ foreach ($elfPath in $Elf) {
     }
     $playbackBytes = if ($applicationOwners.Count -eq 0) { 0 } else { 32 }
 
+    # R2-03 E29. The two hot fighter vertex tables. Both are randomly indexed by
+    # 1,878 corners a frame and did not fit the 4 KB data cache in main RAM.
+    # Audited for this gate's DMA/IPC/ARM7 requirement: both are written and read
+    # only by ARM9 code in the fighter draw, neither is ever a DMA source or
+    # destination (the renderer's only GXFIFO DMA is the stage replay's
+    # owner->words buffer in main RAM), and neither is visible to the ARM7 or
+    # IPC. They lead the section, so everything below shifts up by their size.
+    $fighterOwnerSizes = [ordered]@{
+        'sNdsNativeFighterDenseNormals'  = 2164
+        'sNdsNativeFighterPreparedDense' = 6492
+    }
+    $fighterOwners = @($owners | Where-Object {
+        $fighterOwnerSizes.Contains($_.Name)
+    })
+    if ($fighterOwners.Count -ne 0 -and
+        $fighterOwners.Count -ne $fighterOwnerSizes.Count) {
+        throw "Fighter DTCM owners must be present all-or-none in '$resolvedElf'."
+    }
+    $fighterBytes = 0
+    if ($fighterOwners.Count -ne 0) {
+        foreach ($size in $fighterOwnerSizes.Values) { $fighterBytes += $size }
+        # The linker realigns to 32 after .dtcm.fighter so that Calico's
+        # __irq_table keeps its 32-byte boundary no matter how the data-driven
+        # fighter table sizes come out.
+        $fighterBytes = [int](([math]::Ceiling($fighterBytes / 32.0)) * 32)
+    }
+    $dtcmBytes = $fighterBytes + $playbackBytes
+
     if ($dtcm.Address -ne $expectedBase -or
-        $dtcmBss.Address -ne ($expectedBase + $playbackBytes) -or
+        $dtcmBss.Address -ne ($expectedBase + $dtcmBytes) -or
         $dtcmStart -ne $expectedBase -or
-        $dtcm.Bytes -ne $playbackBytes -or
-        $dtcmEnd -ne ($expectedBase + $playbackBytes) -or
+        $dtcm.Bytes -ne $dtcmBytes -or
+        $dtcmEnd -ne ($expectedBase + $dtcmBytes) -or
         $dtcmBss.Bytes -ne 152 -or
-        $dtcmBssEnd -ne ($expectedBase + $playbackBytes + 152) -or
+        $dtcmBssEnd -ne ($expectedBase + $dtcmBytes + 152) -or
         $spUsr -ne ($expectedBase + 0x3e80) -or
         $spIrq -ne ($spUsr + 0x100) -or
         $spSvc -ne ($spIrq + 0x40) -or
@@ -143,34 +171,48 @@ foreach ($elfPath in $Elf) {
 
     $expectedOwners = @{
         '__irq_table' = [PSCustomObject]@{
-            Address = $expectedBase + $playbackBytes
+            Address = $expectedBase + $dtcmBytes
             Section = '.dtcm.bss'
             Bytes = 128
             Alignment = 32
         }
         '__sched_state' = [PSCustomObject]@{
-            Address = $expectedBase + $playbackBytes + 128
+            Address = $expectedBase + $dtcmBytes + 128
             Section = '.dtcm.bss'
             Bytes = 24
             Alignment = 32
         }
     }
+    if ($fighterBytes -ne 0) {
+        $fighterAddress = $expectedBase
+        foreach ($entry in $fighterOwnerSizes.GetEnumerator()) {
+            $expectedOwners[$entry.Key] = [PSCustomObject]@{
+                Address = $fighterAddress
+                Section = '.dtcm'
+                Bytes = $entry.Value
+                Alignment = 4
+            }
+            $fighterAddress += $entry.Value
+        }
+    }
     if ($playbackBytes -ne 0) {
+        # The fighter tables lead the section, so playback starts above them.
+        $playbackBase = $expectedBase + $fighterBytes
         $expectedOwners['sControllerPlaybackEnabled'] = [PSCustomObject]@{
-            Address = $expectedBase
+            Address = $playbackBase
             Section = '.dtcm'
             Bytes = 4
             Alignment = 4
         }
         $expectedOwners['sControllerPlaybackConnectedMask'] =
             [PSCustomObject]@{
-                Address = $expectedBase + 4
+                Address = $playbackBase + 4
                 Section = '.dtcm'
                 Bytes = 4
                 Alignment = 4
             }
         $expectedOwners['sControllerPlaybackPads'] = [PSCustomObject]@{
-            Address = $expectedBase + 8
+            Address = $playbackBase + 8
             Section = '.dtcm'
             Bytes = 24
             Alignment = 4

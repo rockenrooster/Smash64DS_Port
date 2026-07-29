@@ -122,6 +122,68 @@ differently. Task 79's stage bucket rose 6,880 on every frame — that was a
 128-entry table being shared by three owners instead of one, and reading it as
 noise would have shipped a real regression.
 
+### Pair the arms by frame number, not by sorted percentile (R2-03 E28, 2026-07-28)
+
+Both arms run the same deterministic ROM from the same start frame, so frame N
+is the **same game state** in both. Difference them frame by frame. The pairing
+is free and it is strictly more information than comparing the two columns'
+percentiles.
+
+Sorted percentiles across arms silently compare *different frames*. E28's table
+read `WORK P95 +73,664` with every other number negative, and the P95 frame was
+an excursion frame whose placement had moved; `WAIT` P95 fell by almost exactly
+the same amount, which is the tell — inside a VBlank-quantized frame the wall
+time is fixed, so `WORK` and `WAIT` trade against each other and neither is a
+cost signal alone. The paired view turned that ambiguity into `FTR` better on
+128/128 frames.
+
+Report `better/worse/median/worst-regression` per bucket. "128/128 better" and
+"113 better, 15 worse, median −31,680" say different things, and the second one
+tells you the 15 are the excursion tail rather than a real regression.
+
+### Price a skipped loop's inputs separately from the loop (R2-03 E28, 2026-07-28)
+
+A runtime flag that skips a **consumer** does not skip its **producers**, and one
+tick bracket around both cannot tell you which one a cut removed.
+
+E16 skipped the fighter's per-dense-vertex shading loop and was measured at
+−35,072. It left `ndsRendererHardwarePrepareLitDirection` (a matrix transform,
+an `sqrtf` and three divides) and `ndsRendererHardwareGetLightShadeLut` running
+on every lit epoch to compute that loop's inputs — 31,488 ticks/frame of work
+with no reader, for a whole cycle. E24 read the same function, priced the walk
+below, correctly concluded "the action walk isn't the cost", and missed it
+because the dead work sits in the preamble *above* the walk.
+
+When a cut lands, ask what now computes a value nothing reads.
+
+### Cache pressure is a whole-frame resource (R2-03 E29, 2026-07-28)
+
+A cut can show up in a bucket it never touched. E29 moved two fighter tables out
+of main RAM and `STG` improved by 1,280 on 108/128 frames despite the stage never
+referencing them — 10,820 bytes stopped competing for a 4 KB data cache. Do not
+dismiss an out-of-bucket improvement as noise, and do not attribute it to the
+wrong mechanism: check whether the change altered the frame's memory footprint.
+
+### `make` does not regenerate the generated includes (R2-03 E29, 2026-07-28)
+
+`build.ps1` runs the generators; `make` compiles whatever `.inc` is on disk. Any
+change to a **generated struct's layout** must regenerate before it is built or
+measured, or the new struct is filled from the old initializer list.
+
+E29 took `NDSNativePreparedDenseVertex` from six fields to four against a
+four-day-old include holding six positional initializers. GCC warned about excess
+elements, assigned `gx_z = 0` and `s = 0xfd40`, and the ROM built, ran, and
+produced a complete 128-frame A/B **with every Z coordinate zeroed**. Prefer
+designated initializers in generated tables so a field-count mismatch cannot
+silently misassign.
+
+### Filter build output for new warnings, not for expected ones
+
+The `Select-String` pattern that hid the above matched `error` and a fixed list
+of known warnings. `warning: excess elements in struct initializer` was neither,
+so it vanished. Grep out the warnings you have already accepted; never grep *in*
+only the ones you predicted.
+
 ## Fidelity doctrine (the owner, 2026-07-20)
 
 `PROJECT_GOAL.md` owns the fidelity contract. Gameplay/source behavior must be

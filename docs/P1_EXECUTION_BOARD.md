@@ -31,6 +31,67 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E29 — the fighter's hot tables move to DTCM, −26,816 (2026-07-28)
+
+**KEEP.** The emit reads `sNdsNativeFighterPreparedDense` (8,656 bytes) and
+`sNdsNativeFighterDenseNormals` (2,164) once per corner, 1,878 corners a frame,
+in packed-corner order — randomly. Both sat in main RAM behind the ARM9's **4 KB
+data cache**: a 2.7x overcommit, so essentially every corner missed. **DTCM —
+16 KB of single-cycle uncached CPU-local memory — held 184 bytes.**
+
+Paired 128-frame A/B against E28:
+
+| bucket | better | worse | median delta |
+|---|---:|---:|---:|
+| **FTR** | **128/128** | **0** | **−26,816** |
+| STG | 108 | 20 | −1,280 |
+| WORK | 120 | 8 | −28,096 |
+
+P0/P1 triangle counts identical (136,640 / 146,880). VBlank `2:438 3:117` ->
+`2:446 3:109`.
+
+**`STG` improved even though the stage never touches these tables.** Data-cache
+pressure is a whole-frame shared resource, so moving a table out of main RAM pays
+subsystems that never referenced it. Worth remembering when a cut's benefit shows
+up outside its own bucket.
+
+**Why the space was free, and why that needed measuring.** `__sp_usr` sits at the
+top of DTCM and the region length spans the space the stack grows down into, so
+the linker cannot catch a collision — a good reason the space had gone unused.
+Measured: at the frame marker `sp = 0x02296530`, main RAM. Game code runs on a
+Calico thread stack; only the *boot* stack enters DTCM, reaching `0x02ff3340`,
+2,880 bytes down. 12,948 contiguous bytes were untouched at frame 900.
+
+**Guard rails, because this fails silently.** Linker
+`ASSERT( __dtcm_bss_end <= 0x02ff3000 )` encodes the measurement; a new
+`.dtcm.fighter` section placed first and followed by `. = ALIGN(32)` keeps
+Calico's `__irq_table` on its boundary regardless of the data-driven table sizes
+(the Task 20 gate caught exactly that); and the Task 20 allow-list now carries
+both owners with the DMA/IPC/ARM7 audit recorded. `forbiddenDmaRefs=0`.
+
+**The struct shrink is bundled, not claimed.** Dropping `shaded_rgba` and
+`packed_color` (dead under `HW_LIGHT` — every epoch is lit, so the loop writing
+them never runs) takes the struct 16 -> 12 bytes. The `_Static_assert` demanding
+16 was **right on its own terms**: two per 32-byte line, no straddling. Measured
+alone in main RAM the shrink was a median −5,376 with a **mean of −1,122** — at
+the noise floor, the straddle penalty eating the win. In DTCM there are no cache
+lines, so 12 is strictly better and buys 2,164 bytes of margin under the boot
+stack. That is the only reason it ships.
+
+**Two process failures.** `make` does **not** regenerate the generated includes —
+`build.ps1` does. The first E29 build changed the struct to four fields against a
+four-day-old include holding six positional initializers; GCC warned, assigned
+`gx_z = 0`, and produced a complete A/B on a ROM with every Z coordinate zeroed.
+The generator now emits designated initializers so that mismatch cannot recur
+silently. And the build-output `Select-String` filter dropped the warning —
+**filter build output for new warnings, not for a fixed list of expected ones.**
+
+**Next, and now cheap:** 7,144 bytes of DTCM remain, 4,264 under the boot stack's
+low-water mark. `sNdsNativeFighterPackedCorners` (3,756) fits, though it is
+streamed rather than randomly indexed and should benefit less.
+
+Write-up: `docs/optimization/ClaudeOpus5_R203_E29_FighterTablesInDTCM_20260728.md`.
+
 ## R2-03 E28 — E16's dead producers, −31,488 (2026-07-28)
 
 **KEEP.** E16 skipped the per-dense-vertex shading loop with a runtime flag but
