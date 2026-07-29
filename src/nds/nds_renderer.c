@@ -17421,8 +17421,13 @@ ndsRendererR2EpochStateProof(u32 epoch_index, const NDSRendererStats *stats)
     NDS_R2_EPOCH_HASH(hash, stats->othermode_l);
     NDS_R2_EPOCH_HASH(hash, stats->texture_combine_w0);
     NDS_R2_EPOCH_HASH(hash, stats->texture_combine_w1);
+#if NDS_R2_FIGHTER_EPOCH_STATE_PROOF < 2
+    /* Level 2 drops the two colours the material writes live. If the change
+     * count goes to zero, they are the whole of the 0.48% and the fold is clean
+     * with colour as its only runtime input. */
     NDS_R2_EPOCH_HASH(hash, stats->env_color);
     NDS_R2_EPOCH_HASH(hash, stats->prim_color);
+#endif
     NDS_R2_EPOCH_HASH(hash, stats->texture_state_flags);
     NDS_R2_EPOCH_HASH(hash, stats->texture_tile);
     NDS_R2_EPOCH_HASH(hash, stats->texture_on);

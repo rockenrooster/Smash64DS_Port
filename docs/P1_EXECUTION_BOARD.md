@@ -70,6 +70,38 @@ the census reports *deltas* and that counter saturates during the pre-439 warm-u
 Its absolute value needs a single-stop read, not a windowed difference — do not
 read that 0 as "no epoch is unstable", which contradicts the 108.
 
+### E34-b — the attribution CONFIRMED, and the limit of what it licenses
+
+`NDS_R2_FIGHTER_EPOCH_STATE_PROOF=2` is the same hash with `prim_color` and
+`env_color` removed. Same window, same ROM shape:
+
+| | frames 439..919 |
+|---|---:|
+| samples | 22,296 (46.4/frame) |
+| **changes** | **0** |
+
+Level 1 is the positive control: the identical hash caught 108 changes, so it is
+demonstrably time-sensitive, and dropping exactly two fields took it to zero.
+**Apart from the two colours, the per-epoch state is exactly a function of the
+epoch index.** §2a's "two snapshots plus an after-span field mask" is therefore
+unnecessary — one snapshot per epoch plus two colour writes reproduces it.
+
+**But do not read this as a construction guarantee, and do not bake the material
+out.** `ndsRendererAdapterBuildNativeMaterial` rebuilds every material from the
+live `MObj` each frame (`src/port/reloc_backend_renderer_dl.c:7830`), and its
+texture-derived fields — palette image, TLUT, block image, tile sizes, texture
+state — are keyed off `mobj->texture_id_curr`/`texture_id_next`, which
+`ndsRendererAdapterSaveNativeMaterialTextureIds` exists specifically to
+save/restore. A texture animation moves them. This window contained none, which
+is why only colour varied; a window that contains one would show more, and a
+table baked from this measurement would render the wrong texture.
+
+**So E26's safe shape is: fold the two static spans, keep `ApplyMaterial` live
+and unchanged.** The measurement licenses removing the *replay*, not the
+material. Anything that also removes the material application must first prove,
+from the source rather than from a window, that no fighter material's texture
+identity moves during a match.
+
 ## R2-03 E33 — the run prepare still has no hot spot, re-confirmed (2026-07-29)
 
 Per-run split on the current build (`NDS_R2_FIGHTER_RUN_PROOF=2`, frames
