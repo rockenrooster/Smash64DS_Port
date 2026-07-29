@@ -119,6 +119,32 @@ durable unresolved gaps.
   beside another root build.
 - Scripted melonDS uses repo-local runners. Mutable TOML audits are repair-only;
   repeated GDB attach/detach can cause packet errors.
+- **`verify-task37-itcm-state-hash-ab.ps1` is RED and that is the known state,
+  not a new regression.** Task 45 dumped both builds' raw `FTStruct` bytes: all
+  215 differing words are main-RAM heap pointers offset by a constant `+0x180`,
+  because the image shrinks 384 bytes when Task 37's leaves leave `.main` and
+  every heap object below relocates. Zero gameplay values differ. The leak
+  mechanism was never root-caused (two hypotheses falsified), so the gate stays
+  red rather than being loosened; shipping anyway was the owner's decision on
+  that evidence, 2026-07-22. Do not "fix" it by relaxing the canonicalizer.
+- **`verify-dev-fast.ps1` is red on the `battle_playable` locked-30 pacing
+  contract.** Pre-existing emulator-fork artefact; see `PERF_LEDGER.md:14-22`.
+- **`Select-Object -First N` terminates the upstream pipeline.** It has killed a
+  build and a census mid-flight and left directories that looked like ordinary
+  failures. Redirect harness output to a log and filter with `Select-String`.
+- **`sample-tick-hud-buckets.ps1 -FallbackCensus` needs Task 68's symbol even
+  when the ring carries Task 75's counter** — build with *both* census flags.
+  `-ExtraGlobals` is re-split on commas because `pwsh -File` passes the list as
+  one literal string.
+- **`NDS_TASK37_PROFILE_PER_FRAME_REGION=1` exists** and gives per-frame regions
+  in one run; without it the profiler reports `regions=1` and per-frame
+  attribution needs two narrow-window builds.
+- **Never attribute cartridge activity to a frame across two differently-timed
+  builds.** `_ntrcardRomReadSector` moved entirely from the excursion to the
+  control when the HUD draw was compiled out, over the same deterministic frames.
+- **ITCM is effectively full** at 32,596 of a 32,736 cap, so any future placement
+  work must evict first. The Task 37 census identified ~5,040 bytes of
+  never-executed residents as where to look.
 
 ## Coverage Reductions
 

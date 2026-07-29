@@ -32,6 +32,120 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E53 — the excursion is a RENDERING PATH SWITCHING ON (2026-07-29)
+
+**The most useful profile the phase has taken.** E52 said the P95 excursion is
+half `FTR`, half `SRC`, and that the `FTR` half is a few frames at 2.3x rather
+than a drift. This profiles one of those runs against a matched control and says
+what the 2.3x is.
+
+Two `NDS_TASK37_PROFILE=1 NDS_TICK_HUD_DRAW=0` ROMs, four frames each:
+**excursion 910–913** (over gate in two independent 128-frame runs) against
+**control 876–879** (below median in both). Gross delta 420,227 ticks/frame;
+`armWaitForIrq` accounts for 12,380 of it, leaving **+407,847 of work**.
+
+Twelve symbols are **exactly zero on the control frames**:
+
+| symbol | excursion ticks/frame |
+|---|---:|
+| `ndsRendererHardwareSubmitVertex` | 96,238 |
+| `ndsRendererSubmitHardwareTriangle` | 51,037 |
+| `ndsRendererScanList` | 50,913 |
+| `ndsRendererHardwareBeginTriangleBatch` | 19,540 |
+| `ndsRendererAdapterPrepareInitialMatrices` | 12,217 |
+| `ndsRendererHardwarePackedVertexColor` | 11,642 |
+| `ndsRendererAdapterPrepareMaterialSegment` | 11,098 |
+| `ndsRendererDecodeInputVertex` | 10,601 |
+| `ndsRendererAcquireCurrentMatrixSnapshot` | 8,830 |
+| `ndsRendererInitTraversalState` | 7,852 |
+| `ndsRendererHardwareResolveOrBindTexture` | 6,680 |
+| `ndsTaskmanArenaBytes` | 6,251 |
+| **total** | **292,899** |
+
+That set is the **generic display-list interpreter**. It is not more of the same
+work — it is a second renderer running. 292,899 is 72% of the whole excursion and
+**12x anything else on this board's unowned queue.**
+
+### The likely cause is already written down, and must still be confirmed
+
+`reloc_backend_renderer_dl.c:12275` disables the native fighter owner, per
+fighter, when `is_use_animlocks || shuffle_tics != 0`. E32's census counted
+**5 shuffle fallbacks and 0 animlock fallbacks** over frames 460..500, so on the
+shipped build (`NDS_R2_FIGHTER_SHUFFLE_FOLD=0`) the trigger is **hitlag**, and
+E32's fold is precisely the repair — parked since E48/E49/E50 on the hurt-flash
+regression.
+
+**Do not act on that without the counter.** E35 saw a smaller (66,498) version of
+the same symbol set and read it as "a third owner drawing" — an extra effect
+object, not the fighter falling back. Both stories predict generic-renderer
+symbols appearing from zero and they need different fixes.
+`gNdsR2FallbackShuffleTics` and `gNdsR2FallbackAnimLocks` already exist behind
+`NDS_TASK91_DRAW_PHASE_CENSUS`; one build reading them on frames 910–913 settles
+it. **That is the highest-value unowned row on this board.**
+
+### Second finding: a 160-byte lookup at 34,644 ticks/frame
+
+`ndsRelocFindLoadedFileContaining` linearly scans `NDSRelocLoadedFile` records
+behind a one-entry MRU. The record is **304 bytes, 256 of them
+`extern_file_ids[64]`**, and the scan compares two fields — `data` and
+`data_size` — so every iteration strides 304 bytes to read 8.
+
+| | excursion | control |
+|---|---:|---:|
+| ticks/frame | **34,644** | 3,635 |
+| calls/frame | 106.5 | 39.0 |
+| **entries scanned per call** | **16.87** | **1.49** |
+| leading loop load | 9.35 cyc/insn | — |
+
+**The one-entry MRU thrashes.** On control frames it hits and the scan is 1.5
+deep; on excursion frames the call rate nearly triples *and* the depth goes 11x,
+so the cost goes 9.5x. Same mechanism as the finding above — the generic path
+touches a wider set of loaded files.
+
+### The mirror was built and is REFUTED
+
+`NDS_R2_RELOC_EXTENTS` gave the scan an 8-byte `{base,size}` mirror so the same
+17 entries walk 136 contiguous bytes instead of seventeen lines over 5 KB — same
+entries, same order, same predicate, same first match, kept in step at the three
+sites that can move it (register / reset / AObj16 compaction). Matched A/B: same
+source vintage, adjacent build directories, identical 128-frame window 793..920.
+
+| | control (`=0`) | candidate (`=1`) | delta |
+|---|---:|---:|---:|
+| `WORK-H` P50 | 1,013,696 | 1,018,240 | **+4,544** |
+| `WORK-H` P95 | 1,228,928 | 1,240,512 | **+11,584** |
+| frame-aligned median | — | — | **+4,352** |
+| frames worse / better | — | — | **92 / 36** |
+
+**`STG` moved +1,600 on 99 of 128 frames.** A reloc-lookup change cannot touch the
+stage bucket, so that is the 768 bytes of new BSS displacing other data — and it
+costs more than the mirror saves. `FTR` +3,544 on 119 of 128 says the same.
+Reverted; `reloc_backend_assets.c` and the Makefile are byte-identical to HEAD.
+
+**Why it lost even though the profile was right.** The 34,644 exists on ~14% of
+frames. On the other 86% the scan is 1.49 deep and the whole function costs
+3,635/frame — so there was at most 3,635 to win there, against a placement
+penalty that applies to *every* frame including the P95 ones.
+
+Evidence: `artifacts/task37-census/r203-e53-{excursion,control}/`,
+`artifacts/performance/r203-e53-{cand,ctlb}-128{.json,-rows.csv}`.
+
+### Two standing rules this earned
+
+1. **A fix aimed at the tail must not add cost to the body.** This build's
+   placement noise floor is 5,000–7,000 ticks, and that floor *is* the price of
+   adding data. 768 bytes of BSS is not free. Before optimising something that
+   only appears on N% of frames, multiply the win by N and compare it to the
+   noise floor — if it does not clear it, the experiment cannot be read even if
+   the mechanism is real.
+2. **Never frame-align two builds across an excursion.** The over-gate frames in
+   this A/B showed `WORK-H` −119,744 and `SRC` −78,724, which reads as a huge
+   win and is an artefact: `SRC` cannot be affected by this change, and the two
+   runs' excursions land on different frame indices because pacing diverges. On
+   flat frames frame-alignment is the sharpest instrument available; across an
+   excursion only the percentiles are valid. Both were computed here and only
+   one of them means anything.
+
 ## R2-03 E51 — the MP line scan is O(1) already: REFUTED (2026-07-29)
 
 E35 named a collision block worth 75,088 ticks/frame on `SRC` excursion frames.

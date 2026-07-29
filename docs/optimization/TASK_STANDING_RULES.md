@@ -1517,3 +1517,46 @@ So:
    wrong.** "This is O(n) and should be O(1)" justifies a redesign; it is
    falsifiable by a single integer, and that integer should be in hand before
    any of the redesign is written.
+
+### A tail fix must not add cost to the body (R2-03 E53, 2026-07-29)
+
+E53's profile was right about its target and the change still lost. A 160-byte
+lookup, `ndsRelocFindLoadedFileContaining`, was measured at 34,644 ticks/frame on
+excursion frames -- a linear scan 16.87 entries deep, striding 304-byte records
+to compare 8 bytes. The repair was an 8-byte `{base,size}` mirror: same entries,
+same order, same predicate, exact by construction. Matched A/B said **P95 +11,584
+and 92 of 128 frames worse**, and `STG` -- a bucket the change cannot touch --
+moved +1,600 on 99 of them. The 768 bytes of new BSS displaced other data and
+cost more than the scan saved.
+
+The arithmetic that would have predicted it, before the build:
+
+1. **Multiply the win by the fraction of frames it appears on, then compare that
+   to the placement noise floor.** 34,644 on 14% of frames is ~4,850 amortised,
+   against a floor of 5,000-7,000. It could never have been read as a win even if
+   it worked perfectly. On the other 86% of frames the same function costs 3,635
+   total, so there was nothing there to take.
+2. **The noise floor is not measurement error, it is the price of adding data.**
+   A change that adds BSS or moves code pays it. A change that only *removes*
+   work does not, which is why E29 (tables to DTCM) and E46 (code to ITCM) read
+   cleanly at similar magnitudes.
+3. **A P95 fix still pays its cost on the P50 frames.** Anything that helps only
+   the tail must be free on the body, or it must be big enough that the tail win
+   outruns the body loss across the whole distribution.
+
+### Never frame-align two builds across an excursion (R2-03 E53, 2026-07-29)
+
+The same A/B, restricted to its over-gate frames, reported `WORK-H` **-119,744**
+and `SRC` **-78,724**. Read alone that is a spectacular win. It is an artefact:
+`SRC` cannot be affected by a renderer-asset lookup, and the two runs' excursions
+land on different frame indices because pacing diverges once a frame crosses a
+VBlank boundary -- so "frame 910" is not the same work in both builds.
+
+- On **flat** frames, frame-alignment is the sharpest instrument available: it
+  cancels scene variation and turns a 5,000-tick effect into a clean 92-vs-36
+  sign test.
+- Across an **excursion**, only the percentiles are valid, because they compare
+  distributions rather than pairing frames that are no longer the same frame.
+- **A bucket the change cannot touch is the check.** If `STG` or `SRC` moves on a
+  renderer-asset change, the comparison is measuring something other than the
+  change. Compute one deliberately and look at it before reading the result.
