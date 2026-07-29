@@ -9,6 +9,17 @@ spent on the first half — the profiles were already on disk.
 one 90 s run on `build-r2-e60-softfloat` at `cde5a4e`),
 `artifacts/task92-softfloat-callers.json` (2026-07-27, for the delta).
 
+> **Caveat added 2026-07-29 by R2-03 E68b.** The caller census this section uses
+> (`census-softfloat-callers.ps1`) resolved function names with `addr2line` alone
+> until E68b, and DWARF still describes functions GCC inlined away — on E68's run
+> that misattributed **47.3%** of samples to names absent from the ELF. **The rows
+> in §2 below survive**, because every function named there is a real symbol in the
+> binary (`gcPlayDObjAnimJoint` is in `.text.hot`), and the *aggregate* comes from
+> the Task 37 profile rather than from this census. What is not safe to reuse is
+> any small row, the "six more" bucket, or a comparison against the 2026-07-27 run,
+> since either could contain an inlined name. The distribution is also stale on its
+> own terms: E64b/E65 removed the cubic's soft float entirely.
+
 ## 1. Two claims this overturns
 
 The board and `HANDOFF.md` have carried both of these for several cycles:

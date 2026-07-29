@@ -582,6 +582,30 @@ hypothesis: dividing a bucket by its item count gave ~1,832 ticks/triangle
 against a measured 194, wrong by 9.4x, because it charged fixed overhead to the
 per-item quantity. Do not size a per-item lever by dividing a bucket total.
 
+## `nm` names functions, `addr2line` names source paths (R2-03 E68, 2026-07-29)
+
+**`addr2line` reads DWARF, and DWARF still describes functions the compiler inlined
+and the linker removed.** Ask it for a function name and it will confidently return
+one that is not in the binary. This has now cost three separate censuses:
+
+| when | instrument | damage |
+|---|---|---|
+| 2026-07-27 | Task 37 census | 32% of PCs named a folded/removed symbol |
+| 2026-07-27 | Task 84 memcpy attribution | 82% of samples resolved into BSS data objects |
+| R2-03 E68 | `census-softfloat-callers.ps1` | **47.3% of samples charged to names absent from the ELF**, including a 9.0% row on a function containing no `memcpy` at all |
+
+**The rule:** bisect the address against the `nm -S` text symbol table for the
+NAME; keep `addr2line` only for the source PATH, which is what subsystem/gate
+classifiers key on. When no symbol owns the address, say so — an honest "unknown"
+beats a confident wrong answer, which is exactly what E68 published and had to
+withdraw.
+
+**And check the whole fleet, not the one instrument that bit you.** Both Python
+censuses (`task37_census.py`, `task65_subsystem_census.py`) already carried the
+override *with a comment explaining it*, and the PowerShell harness still did not,
+for two days, because nobody looked across languages. When a defect is found in one
+harness, grep every harness for the same call.
+
 ## Any `double` on this target is a defect until proven otherwise (R2-03 E67, 2026-07-29)
 
 The ARM9 has no FPU, and its double helpers are much worse than its float ones:

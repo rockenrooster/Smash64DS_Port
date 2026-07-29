@@ -32,67 +32,96 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
-## R2-03 E68 ANSWERED — `memset`/`memcpy` is 58,700 ticks/frame and it is the MATRIX path, not the fighter draw (2026-07-29)
+## R2-03 E68b ANSWERED — `memset`/`memcpy` is 58,700 ticks/frame; the top three callers are 53% of it. E68 withdrawn (2026-07-29)
 
-`artifacts/performance/r203-e68-memcall-callers.json`. One 90 s GDB run, no build.
-Task 37 census prices the class: **`memset` 30,520 ticks/frame (235 calls, 130
-each) + `memcpy` 28,180 (311 calls, 90 each) = 58,700**, the largest addressable
-class after soft float, and pure data movement — precisely what §9 of the switch
-plan says to avoid rather than optimise.
+`artifacts/performance/r203-e68b-memcall-callers-nm.json`. Two 90 s GDB runs, no
+build. Task 37 prices the class independently of this census: **`memset` 30,520
+ticks/frame (235 calls, 130 each) + `memcpy` 28,180 (311 calls, 90 each) =
+58,700**, the largest addressable class after soft float, and pure data movement —
+exactly what §9 of the switch plan says to avoid rather than optimise.
 
-**26,857 attributed samples, 91.7% renderer-side:**
+**25,648 attributed samples, 92.1% renderer-side, and 0% now charged to a name
+absent from the ELF:**
 
-| caller (sites merged) | share | helper |
-|---|---:|---|
-| `ndsRendererAdapterBuildPersistentStageWorldMatrix` | 12.7% | memcpy |
-| `ndsRendererAdapterBuildNativeProductionInputs` | 11.5% | memset |
-| `ndsRendererAdapterBuildDObjLocalMatrix` | 9.6% | memcpy |
-| **`ndsRendererAdapterDObjWorldIndexHash`** | 9.0% | memcpy |
-| `ndsRendererAdapterBuildFighterPartsMtx` | 9.0% | memcpy |
-| `ndsRendererAdapterBuildNativeMaterialSnapshot` | 6.1% | memset |
-| `ndsRendererAdapterPrepareNativeOwnerMatrices` | 6.1% | memcpy |
-| `ndsFighterDisplayContractSelectDL` | 5.8% | memcpy |
-| `ndsRendererMtxIdentity20p12` + `...AdapterMtxIdentity20p12` | 7.0% | memset |
-| `ndsRendererLoadHardwareMatrices` | 2.8% | memset |
-| `ndsRendererAdapterCaptureStageWorldSourceKey` | 2.8% | memcpy |
-| `ndsMPCollisionEnsureLineGroups` | 2.7% | memset |
-| `battleship_ftAnimParseDObjFigatree` | 1.9% | memset |
+| caller (sites merged) | share | memset | memcpy |
+|---|---:|---:|---:|
+| `ndsFighterMarioFoxDLAllDrawForSlot.constprop.0` | **18.8%** | 3,251 | 1,579 |
+| `ndsRendererAdapterBuildDObjLocalMatrix` | **18.6%** | — | 4,772 |
+| `ndsRendererAdapterBuildPersistentStageWorldMatrix` | **15.8%** | 785 | 3,262 |
+| `ndsRendererAdapterBuildDObjWorldMatrix` | 9.4% | — | 2,324 |
+| `ndsRendererAdapterBuildNativeMaterialSnapshot` | 6.2% | 1,582 | — |
+| `ndsFighterDisplayContractSelectDL` | 5.8% | — | 1,495 |
+| `ndsRendererLoadHardwareMatrices` | 5.7% | 1,464 | — |
+| `ndsRendererAdapterCaptureStageWorldSourceKey` | 2.7% | — | 690 |
+| `ndsMPCollisionEnsureLineGroups` | 2.6% | 676 | — |
+| `battleship_ftAnimParseDObjFigatree` | 1.8% | 451 | — |
 
-**The matrix family alone is ~48.5% — about 28,500 ticks/frame** moving 64-byte
-`NDS_RENDERER_MATRIX_20P12` structs (`s32 m[4][4]`) through library calls. GCC will
-not inline a 16-word copy at `-O2 -mthumb`, so every matrix copy is a real `bl`.
+**The top three are 53.2% of the class, about 31,200 ticks/frame.** The `memcpy`
+half is 64-byte `NDS_RENDERER_MATRIX_20P12` structs (`s32 m[4][4]`): GCC will not
+inline a 16-word copy at `-O2 -mthumb`, so even a plain `*dst = *src` struct
+assignment becomes a real `bl memcpy`.
 
-**The static count pointed at the wrong function, and that is the transferable
-part.** Cross-referencing call *sites* against measured cycles ranked
-`ndsFighterMarioFoxDLAllDrawForSlot.constprop.0` first by a wide margin — 30 sites
-(23 `memset` + 7 `memcpy`) inside a function costing 37,544 ticks/frame in only two
-calls. **It does not appear in the dynamic attribution at all.** Its three `bzero`s
-sit behind `detailed_output = (pixels != NULL) || (no_oracle == FALSE)`, which is
-false in the Boundary configuration, so 23 of those sites never execute. Same
-lesson as "a declared bound is not a trip count": **a call site is not a call.**
-The comment at `reloc_backend_renderer_dl.c:12182` had flagged this as unknown —
-"memset is 38,393 ticks/frame across the whole program and nothing says how much of
-it is this". The answer is: none of it.
+**Where the fighter draw's 3,251 memsets come from, and it is the most promising
+lever in the table.** `ndsFighterMarioFoxDLAllDrawForSlot` has 30 static
+`memset`/`memcpy` sites, but only three are the `bzero`s behind
+`detailed_output`, which is false in the Boundary configuration. The rest arrive
+through inlining, and two calls at `reloc_backend_renderer_dl.c:12217-12218` run
+**unconditionally**, twice a frame:
 
-**Two items look like outright waste rather than cost:**
+```c
+ndsRendererInitVertexCache(&persistent_renderer_vertices);
+ndsRendererInitStats(&persistent_stats);
+```
 
-1. **`ndsRendererAdapterDObjWorldIndexHash` memcpys, 9.0%.** A hash function should
-   read its input, not copy it. ~5,300 ticks/frame if the copy is removable.
-2. **The two identity builders, 7.0%.** Both are `memset(out, 0, 64)` followed by
-   four diagonal stores — a library call plus a loop to write 12 zeros. Sixteen
-   direct stores is strictly less work.
+The file's own comment calls that vertex cache "traversal-owned but too large for
+BattleShip's nested task stack" — i.e. it is big, it is cleared per fighter per
+frame, and E13 already established the shipping software-preview callback is null.
+**Price what the clear actually initialises before clearing all of it** (Task 104's
+emblem: a 1,292-byte clear plus copy transporting one live 4-byte field).
 
-**Next (E69), and note the sizing rule it has to clear.** These are *work removal*,
-not placement, so E67's precedent applies rather than E66's: a shared inline
-16-word matrix copy/clear used at every one of those sites. Sized at ~14,000
-ticks/frame if half the class is call overhead. It touches several functions in a
-12,000-line file, so it is a real change rather than a one-liner — do not start it
-without the paired-by-frame comparison ready.
+**E69, and note which sizing rule applies.** This is *work removal*, not placement,
+so E67's precedent governs rather than E66's. Two independent changes:
 
-Also fixed here: `census-softfloat-callers.ps1` printed "soft-float callers" and
-"the fadd/fmul class" unconditionally, so this run's own report named the wrong
-class in three places while measuring `memset`/`memcpy`. The labels now derive from
-`-Helpers`, and the JSON's stale-constant key is gone rather than merely renamed.
+1. A shared inline 16-word matrix copy/clear at every site that moves an
+   `NDS_RENDERER_MATRIX_20P12` — `BuildDObjLocalMatrix`,
+   `BuildPersistentStageWorldMatrix`, `BuildDObjWorldMatrix`, both
+   `MtxIdentity20p12` (`reloc_backend_renderer_dl.c:330`, `nds_renderer.c:5272`,
+   each `memset(out, 0, 64)` plus four diagonal stores — a library call and a loop
+   to write twelve zeros).
+2. Narrow or skip the unconditional vertex-cache/stats clear in the fighter draw.
+
+Sized together at ~14,000-20,000 ticks/frame if half the class is call overhead.
+It touches several functions in a 12,000-line file, so have the paired-by-frame
+comparison ready before starting.
+
+### E68 is WITHDRAWN, and the reason is a harness defect worth more than the result
+
+**E68's first run charged 47.3% of its samples to function names that are not in
+the binary,** because `census-softfloat-callers.ps1` resolved return addresses with
+`addr2line` alone and DWARF still describes functions GCC inlined away. Both
+published conclusions were artifacts:
+
+- *"`ndsRendererAdapterDObjWorldIndexHash` memcpys, 9.0% — a hash should read its
+  input, not copy it."* **Wrong.** That function is three shifts and a mask
+  (`reloc_backend_renderer_dl.c:1717`), contains no `memcpy`, and is not a symbol
+  at all. Its samples belong to `ndsRendererAdapterBuildDObjWorldMatrix`.
+- *"`ndsFighterMarioFoxDLAllDrawForSlot` does not appear in the dynamic
+  attribution at all — a call site is not a call."* **Wrong, and backwards.** It is
+  the single largest caller at 18.8%. The static site count had been pointing at
+  the right function; the measurement that appeared to refute it was the broken one.
+
+The fix: the `nm -S` text symbol table is now the authority for the name,
+`addr2line` keeps only the source path (which `Get-Gate` keys on, and which DWARF
+gets right even for inlined code), and the run prints its rename count — 25 of 65
+addresses on the re-run, 0% unresolved afterwards. **This is the third census to
+lose to the same call**, after Task 37 (32% of PCs renamed) and Task 84 (82% of
+samples resolved into BSS). Both Python censuses already carried the override *with
+a comment explaining it*; this PowerShell harness never got it, because nobody
+grepped across languages. `TASK_STANDING_RULES.md` now states the rule and the
+fleet-wide check.
+
+The class total (58,700, from the Task 37 profile) and the renderer-side split
+(gated by source path) were never affected.
 
 ## R2-03 E67 GRADUATED — the port was doing DOUBLE-precision degrees→radians. P95 1,109,312, margin now 10,688 (2026-07-29)
 

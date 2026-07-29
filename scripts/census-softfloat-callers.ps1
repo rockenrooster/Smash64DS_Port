@@ -218,14 +218,69 @@ try {
         Sort-Object -Unique)
     $stdin = ($unique | ForEach-Object { '0x{0:x8}' -f $_ }) -join "`n"
     $resolved = @($stdin | & $Addr2Line -f -e $elf)
+
+    # R2-03 E68. addr2line reads DWARF, and DWARF still describes functions the
+    # compiler INLINED and the linker removed, so on its own it names symbols
+    # that are not in the binary. E68's first run charged 47.3% of its samples to
+    # eleven such names -- including a 9.0% row on
+    # `ndsRendererAdapterDObjWorldIndexHash`, which contains no memcpy at all and
+    # is not a symbol: the real owner was a 64-byte struct assignment in its
+    # inlining parent. The published finding had to be withdrawn.
+    #
+    # The symbol table cannot make that mistake, so it is the authority for the
+    # NAME. addr2line stays the authority for the source path, which is what
+    # Get-Gate keys on. This is the same override `task65_subsystem_census.py`
+    # and `task37_census.py` already document; this script was the one harness
+    # that never got it. Names with no owning symbol are labelled `inlined@...`
+    # rather than silently keeping the DWARF name -- an honest "unknown" beats a
+    # confident wrong answer, which is the whole lesson.
+    $textSyms = @()
+    foreach ($line in $symbols) {
+        if ($line -match '^([0-9a-f]{8}) ([TtWw]) (\S+)$') {
+            $textSyms += [pscustomobject]@{
+                Start = [Convert]::ToUInt32($matches[1], 16)
+                Name  = $matches[3]
+            }
+        }
+    }
+    # Sizes are not in plain `nm` output, so bound each symbol by the next one.
+    $textSyms = @($textSyms | Sort-Object -Property Start)
+    $symStarts = @($textSyms | ForEach-Object { $_.Start })
+    function Resolve-SymbolOwner {
+        param([uint32]$Address)
+        $lo = 0
+        $hi = $symStarts.Count - 1
+        $found = -1
+        while ($lo -le $hi) {
+            $mid = [int](($lo + $hi) / 2)
+            if ($symStarts[$mid] -le $Address) { $found = $mid; $lo = $mid + 1 }
+            else { $hi = $mid - 1 }
+        }
+        if ($found -lt 0) { return $null }
+        return $textSyms[$found].Name
+    }
+
+    $renamed = 0
     $map = @{}
     for ($i = 0; $i -lt $unique.Count; $i++) {
         $fn = $resolved[2 * $i]
         $loc = $resolved[(2 * $i) + 1]
+        $dwarfName = if ($fn -and $fn -ne '??') { $fn } else {
+            ('pc_{0:x8}' -f $unique[$i]) }
+        $owner = Resolve-SymbolOwner -Address $unique[$i]
+        if ($owner -and ($owner -ne $dwarfName)) {
+            $renamed++
+            $dwarfName = "$owner"
+        }
         $map[$unique[$i]] = @{
-            fn = if ($fn -and $fn -ne '??') { $fn } else { ('pc_{0:x8}' -f $unique[$i]) }
+            fn = $dwarfName
             src = if ($loc) { ($loc -split ':')[0] } else { '??' }
         }
+    }
+    if ($renamed -gt 0) {
+        Write-Host ("note: $renamed of $($unique.Count) return addresses " +
+            "renamed from the symbol table (addr2line named an inlined or " +
+            "removed function)")
     }
 
     $rows = @()
