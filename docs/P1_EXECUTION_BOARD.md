@@ -31,6 +31,78 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-04 E0 — the phase is SIZED and its gate is reachable (2026-07-29)
+
+R2-03's remaining lever is unattributed (E45/E46 left ~110 ticks per delta with
+no owner), while **R2-04 is untouched and its gate is the one currently missed**:
+"SRC-class P95 excursions gone from the histogram", plus "absorbs Task 75: all
+animation streams for the match prepared at load; no first-use loading during
+gameplay". E35 already showed 25 of 26 over-gate frames are SRC excursions. This
+sizes the phase.
+
+### The excursions are animation loads, and they are separable
+
+Tick-HUD census with `NDS_TASK68_FALLBACK_CENSUS=1 NDS_TASK75_LOAD_CENSUS=1`,
+128 samples at two windows:
+
+| window | fallback frames | fallback WORK-H median | clean WORK-H median | clean P95 |
+|---|---:|---:|---:|---:|
+| 439..566 | 13 of 128 | 1,329,280 | 983,936 | 1,408,128 |
+| 801..928 | 17 of 128 | 1,284,928 | 1,013,376 | **1,117,248** |
+
+Fallback reasons in the second window: **`animLoad` 19, `animLock` 5, every other
+reason 0.** `animLoad` is `lbRelocGetForceExternHeapFile` re-reading a fighter
+animation off the cartridge inside the frame that needs the move — NitroFS open,
+cartridge read, word byte-swap, then internal/external pointer fixups, per call.
+
+**In the 801..928 window the clean P95 is 1,117,248, under the 1,120,000 gate.**
+So the phase's gate is not a distant target: it is what the histogram already
+reads once the animation loads are removed.
+
+### Why the existing counter said the opportunity was zero, and why that was wrong
+
+`animResident` reads **0** in both windows. That counter asks whether the
+*destination heap* already holds the asset, and the destination is caller-owned
+and reused, so it almost never does. It refutes a destination-side residency
+check — not the opportunity. The right question is how often the **same
+animation** is force-loaded more than once, which a 128-frame (~4 s) window
+cannot answer because Mario returns to Wait/Walk/Jump across the whole minute.
+
+New lab counters (bitmap over the 301 Mario+Fox animation IDs), cumulative to
+frame 928:
+
+| counter | value |
+|---|---:|
+| `gNdsR204AnimForceLoadTotal` | **82** |
+| `gNdsR204AnimForceLoadDistinct` | **29** |
+| `gNdsR204AnimForceLoadRepeat` | **53 (64.6%)** |
+
+**Two facts fall out, and they decide the implementation.**
+
+1. **64.6% of the cartridge reads are repeats.** An asset-keyed cache removes
+   them; the destination-keyed check that read 0 never could.
+2. **The match's animation working set is 29, not 301.** The whole ID space is
+   301 (`MARIO_ANIM_WAIT` 0x1f3..`MARIO_ANIM_FIRE_FLOWER_AIR` 0x281 = 143, plus
+   `FOX_ANIM_FIRST` 0x282..`FOX_ANIM_LAST` 0x31f = 158), and
+   `NDS_RELOC_LOADED_FILE_CAPACITY` is **96** — so preloading *everything* is
+   impossible and was the obvious wrong turn. Preloading the working set is not:
+   29 fits with room to spare, and it takes the removable share from 64.6% to
+   **100%**, which is literally R2-04's "prepared at load, no first-use loading
+   during gameplay".
+
+29 is measured to frame 928, roughly two thirds through the 3,600-tick match, so
+budget for growth — but the headroom against 96 is large enough that this is a
+sizing note, not a risk.
+
+### Implementation note for whoever builds it
+
+Cache the **byte-swapped, pre-fixup** payload. `ndsRelocApplyInternalPointerFixups`
+writes absolute pointers derived from `loaded->data`, so a fixed-up image is
+position-dependent and cannot be memcpy'd to a different heap. Copy the swapped
+image in, then re-run the fixups — that removes the NitroFS walk and the
+cartridge read, which is the part Task 71 profiled, and keeps pointer correctness
+by construction.
+
 ## R2-03 E46 — the delta path into ITCM: GRADUATED, −12,416 WORK P50 (2026-07-29)
 
 E45 left ~186 ticks per delta application unexplained after eliminating the tile

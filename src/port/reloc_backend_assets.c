@@ -5496,6 +5496,18 @@ static void ndsRelocCopyLoadedFileToHeap(const NDSRelocLoadedFile *loaded,
     }
 }
 
+#if NDS_TICK_HUD
+/* R2-04 E0. Sizes the animation-cache opportunity: see the block inside
+ * ndsRelocForceLoadFighterAObj16File for why AnimForceResident answering 0 does
+ * not settle it. */
+#define NDS_R204_ANIM_ID_SPAN \
+    ((NDS_RELOC_ASSET_FOX_ANIM_LAST - NDS_RELOC_ASSET_MARIO_ANIM_WAIT) + 1u)
+volatile u32 gNdsR204AnimForceLoadTotal;
+volatile u32 gNdsR204AnimForceLoadDistinct;
+volatile u32 gNdsR204AnimForceLoadRepeat;
+static u32 sNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
+#endif
+
 static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                                                 void *heap)
 {
@@ -5534,6 +5546,38 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         {
             NDS_TICK_HUD_NATIVE_OWNER_MARK(
                 nNDSTickHudNativeOwnerFallbackAnimForceResident);
+        }
+    }
+    /* R2-04 E0. AnimForceResident reads 0 because it asks whether the
+     * DESTINATION heap already holds the asset, and the destination is
+     * caller-owned and reused, so it almost never does. That refutes a
+     * destination-side residency check, not the whole opportunity: what decides
+     * whether an asset-keyed cache is worth building is how often the SAME
+     * animation is force-loaded more than once over a match. A 128-frame window
+     * is ~4 seconds and cannot show it; Mario returns to Wait/Walk/Jump for the
+     * whole minute.
+     *
+     * Bitmap over the 301 Mario+Fox animation IDs: total loads, distinct assets,
+     * repeats. repeats/total is exactly the fraction a cache would remove, and
+     * distinct sizes the cache. Lab counters, tick-HUD builds only. */
+    {
+        u32 anim_index = asset_id - NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
+
+        gNdsR204AnimForceLoadTotal++;
+        if (anim_index < NDS_R204_ANIM_ID_SPAN)
+        {
+            u32 word = anim_index >> 5;
+            u32 mask = 1u << (anim_index & 31u);
+
+            if ((sNdsR204AnimSeen[word] & mask) != 0u)
+            {
+                gNdsR204AnimForceLoadRepeat++;
+            }
+            else
+            {
+                sNdsR204AnimSeen[word] |= mask;
+                gNdsR204AnimForceLoadDistinct++;
+            }
         }
     }
 #endif
