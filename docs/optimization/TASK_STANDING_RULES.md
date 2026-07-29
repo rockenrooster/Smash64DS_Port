@@ -1464,3 +1464,56 @@ So:
 4. **A branch counter is cheap enough to be the first move.** Four increments and
    a per-frame latch, one build, and it also priced the fallback (273 calls on a
    hitlag frame against 0 on an ordinary one) as a free second result.
+
+### Cited evidence lives in `artifacts/performance`, not the session scratchpad (2026-07-29)
+
+`sample-tick-hud-buckets.ps1 -JsonOut` takes any path, and habit points it at the
+agent scratchpad. That is correct for the dozens of exploratory samples a phase
+throws away. It is wrong for the two or three that a graduated experiment or a
+standing conclusion then *cites*, and R2-03/R2-04 shipped both mistakes at once:
+R2-04 E5 graduated on a 128-frame sample, and R2-03 E35's whole gate analysis
+rests on a load-counter dump, and neither file existed anywhere but a temp
+directory that disappears with the session.
+
+So, when a run becomes evidence rather than exploration:
+
+1. **Copy it to `artifacts/performance` in the same turn you cite it**, named
+   `<phase>-<experiment>-<what>-<frames>.json`. AGENTS.md already calls that
+   directory permanent evidence; the gap was never the rule, it was the moment of
+   applying it.
+2. **A board entry that quotes a number owes a file that contains it.** If the
+   entry says P95 1,232,640, the reader must be able to re-derive 1,232,640
+   without rerunning the emulator.
+3. **Per-frame rows count as evidence too.** The percentile summary cannot answer
+   "which frames", and every excursion investigation has needed that second
+   question -- keep the `-RowsCsv` beside the JSON.
+
+### A loop's declared bound is not its trip count (R2-03 E51, 2026-07-29)
+
+E48 earned the rule that "which path does this take" is a measurement, not a
+reading. E51 is the same rule for "how many times does this run", and it cost a
+build to learn separately because the first rule was written about branches.
+
+`src/port/reloc_backend_mp_collision.c` has three functions that resolve a
+`line_id` by scanning `min(yakumono_count, 64)` groups x `nMPLineKindEnumCount`
+kinds. Read as source that is a 256-iteration worst case called from ~50 sites,
+several inside loops -- a textbook "compute once, not every frame" target, and
+the precomputed table was designed before it was measured. The probe reported
+`gNdsStageCollisionLoopYakumonoCount = 1`: the outer loop runs **once**, group
+iterations equal call count exactly, and the table would have replaced a
+one-iteration loop with an array index.
+
+So:
+
+1. **A clamp is evidence about the data's worst case, not its actual case.**
+   `if (n > 64) n = 64;` says someone feared 64. It says nothing about whether
+   the real value is 64 or 1, and defensive clamps survive long after the data
+   stops needing them.
+2. **Count the iterations in the same probe that times them.** `ticks` alone
+   cannot distinguish "called rarely, each call expensive" from "called often,
+   each call cheap", and those have opposite repairs. One counter per loop and
+   one per call makes the per-call cost fall out by division.
+3. **Structural claims are the cheapest to check and the most expensive to get
+   wrong.** "This is O(n) and should be O(1)" justifies a redesign; it is
+   falsifiable by a single integer, and that integer should be in hand before
+   any of the redesign is written.

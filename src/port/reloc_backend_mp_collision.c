@@ -347,6 +347,11 @@ static void ndsMPGetFCAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x,
     }
 }
 
+/* R2-03 E51 measured this scan and the table it suggested is REFUTED: Dream
+ * Land reports gNdsStageCollisionLoopYakumonoCount = 1 and 7 lines total, so the
+ * `i < yakumono_count` loop below has a trip count of ONE. Do not re-propose a
+ * precomputed line_id -> (group, kind) table; there is no O(n) here to remove.
+ * Board entry: docs/P1_EXECUTION_BOARD.md, R2-03 E51. */
 static s32 ndsMPGetLineKindForLineID(s32 line_id)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;

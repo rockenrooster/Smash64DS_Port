@@ -75,6 +75,19 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
+# `pwsh -File script.ps1 -ExtraGlobals a,b,c` hands the whole list over as ONE
+# literal string -- -File does no PowerShell parsing of argument values -- so
+# [string[]] coerces it to a single element containing commas. The generated GDB
+# printf then emits one %u for what GDB reads as three expressions and the run
+# dies with "Wrong number of arguments for specified format-string" after the
+# emulator has already reached the sample window. Re-split here so the direct
+# call and the -File call behave the same; a symbol name can never contain a
+# comma, so this is unambiguous.
+$ExtraGlobals = @($ExtraGlobals |
+    ForEach-Object { $_ -split ',' } |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne '' })
+
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-battle-playable-tickhud-hwtri'
 $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',

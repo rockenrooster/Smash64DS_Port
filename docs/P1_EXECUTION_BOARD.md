@@ -32,6 +32,105 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E51 — the MP line scan is O(1) already: REFUTED (2026-07-29)
+
+E35 named a collision block worth 75,088 ticks/frame on `SRC` excursion frames.
+Reading `src/port/reloc_backend_mp_collision.c` turned up what looked like the
+structural defect in it: **three** functions answer a question about a `line_id`
+the same way — `ndsMPGetLineKindForLineID` (kind), `ndsMPFindLineEndpoints`
+(endpoints), `ndsMPFindLineYakumonoID` (owning yakumono) — each scanning
+`i < yakumono_count` groups, capped at 64, by `nMPLineKindEnumCount` kinds, on
+every call, from roughly **fifty** call sites, several inside candidate loops.
+One precomputed `line_id -> (group, kind)` table built at the existing
+`ndsStageCollisionLoopPrepareRuntime` seam replaces all three, bit-exactly, and
+is textbook `PROJECT_GOAL.md` "compute once, not every frame".
+
+`NDS_R2_MP_PROBE=1` bracketed all three and counted group iterations. One
+128-frame run, frames 793..920, against the graduated R2-04 E5 build:
+
+| counter | value | per frame |
+|---|---:|---:|
+| `gNdsR2MPScanTicks` | 12,480,896 | 13,566 |
+| `gNdsR2MPScanGroups` | 45,214 | 49.1 |
+| `gNdsR2MPKindCalls` | 9,172 | 10.0 |
+| `gNdsR2MPEndpointCalls` | 18,366 | 20.0 |
+| `gNdsR2MPYakumonoCalls` | 17,676 | 19.2 |
+| **`gNdsStageCollisionLoopYakumonoCount`** | **1** | — |
+| **`gNdsStageCollisionLoopTotalLineCount`** | **7** | — |
+
+**9,172 + 18,366 + 17,676 = 45,214, which is `ScanGroups` exactly.** Every call
+scans one group, because Dream Land's collision geometry *has* one group and
+seven lines. The 64-group bound is a defensive clamp on data that never
+approaches it. There is no O(n) to remove; the table would replace a
+one-iteration loop with an array index.
+
+**Residual, for the record.** 12,480,896 / 45,214 = 276 ticks per call; net of
+E43's ~50-tick instrument, ~226. At 49.1 calls/frame the whole family costs
+**~11,300 ticks/frame**, about 1% of the frame — and the scan is not why. 226
+ticks for at most four range compares points at the bodies instead: every one of
+the three re-runs `ndsStageCollisionLoopGeometryReady()` (seven pointer tests) on
+entry, and the endpoint variant does six `ndsMPO2RReadU16Kernel` byte-swapped
+reads plus float conversions. Not worth pursuing at that size, but that is where
+it would be if someone ever needs the 11,300.
+
+**This also settles what E35's collision block is.** ~11,300/frame here against
+75,088/frame there means the block is `gmCollision*` matrix work, not MP line
+lookup — corroborating E35's softfloat headline rather than offering an
+alternative to it.
+
+Probe reverted; `src/port/reloc_backend_mp_collision.c` is HEAD plus a five-line
+comment recording the trip count so the table is not re-proposed. Evidence:
+`artifacts/performance/r203-e51-mpscan-refuted-{128.json,128-rows.csv,counters.txt}`.
+
+### Standing rule this earned
+
+**A loop's declared bound is not its trip count.** E48's rule said a "which path
+does this take" question is a measurement, not a reading; this is the same rule
+for "how many times does this run". `min(yakumono_count, 64) * 4` reads as a
+256-iteration worst case and is a 4-iteration actual one, and no amount of
+careful source reading would have said so — only the counter did. Recorded in
+`docs/optimization/TASK_STANDING_RULES.md`.
+
+## R2-03 E52 — post-E5 the excursion is HALF fighter, half simulation (2026-07-29)
+
+E35 concluded "25 of the 26 remaining over-gate frames are `SRC` excursions".
+That was measured before R2-04 E5 graduated, and E5 removed the on-demand-loading
+component E35 had sized at ~49,536. Re-decomposing on the graduated build changes
+the conclusion, so it is recorded rather than left to be re-derived.
+
+128-frame ring dump, frames 792..919, `WORK-H` P50 **1,015,872**, P95
+**1,232,640**, gate 1,120,000, **18/128 frames over**. The eighteen over-gate
+frames against the eighteen frames centred on the median:
+
+| bucket | median 18 | over-gate 18 | delta | share of excursion |
+|---|---:|---:|---:|---:|
+| **FTR** | 387,847 | 528,836 | **+140,988** | **50.0%** |
+| **SRC** | 339,378 | 474,738 | **+135,360** | **48.0%** |
+| MISC | 85,109 | 88,996 | +3,886 | 1.4% |
+| AUD | 1,276 | 5,138 | +3,861 | 1.4% |
+| BG | 4,011 | 4,025 | +14 | 0.0% |
+| STG | 181,461 | 179,029 | −2,432 | −0.9% |
+| `WORK-H` | 1,015,275 | 1,297,184 | +281,909 | 100% |
+
+Over-gate frames: 809, 842, 843, 864, 869, 885, 890, 898, 899, 901, 907, 909,
+910, 911, 912, 913, 924, 926.
+
+**`FTR` is flat and then spikes.** Its own percentiles on the same window are P50
+388,096, P95 392,192 — spread 1.01 — with **max 903,168**. So `FTR` does not
+drift upward on expensive frames; a handful of frames run it at 2.3x. Those are
+E31's AnimLock/hitlag frames where the native owner is disabled and the generic
+path runs the whole fighter, which is precisely what E32 fixes and E32 is parked
+on the visual regression (E48/E49/E50).
+
+**Consequence for the queue.** Both halves of the excursion are owner-gated:
+`FTR` behind E32's fidelity decision, `SRC` behind E35's float→fixed decision on
+`gmcollision.c`. The largest **bit-exact, ownerless** mechanism left is E26 —
+the before-span fold, sized 26,944/frame by E43 — and its prerequisite is still
+E45's open question: whether 186 ticks per delta is instruction-side. Measure
+that before building the fold.
+
+Evidence: `artifacts/performance/r204-e5-animcache-graduated-128{.json,-rows.csv}`.
+
 ## R2-03 E50 — the flash is NOT uniform; E32 is parked, SRC resumes (2026-07-29)
 
 E49 left one cheap option alive: if the flash were a single colour across the
