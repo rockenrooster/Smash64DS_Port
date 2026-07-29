@@ -101,6 +101,45 @@ the generator knows each epoch's final state at build time, so neither the repla
 nor the re-derivation needs to exist. Breaking the coupling is the phase's
 remaining work, and it cannot be done from either end alone.
 
+## 3b. E25c — the cheap variant is ruled out by the effect mix
+
+Before building a value-based validity key to replace the dirty flag, the
+question was which effects dominate the invalidations: a handful of scalars a
+run can compare cheaply, or the 20-word tile state, which it cannot.
+
+480 frames, per frame, by `NDS_NATIVE_STATE_*`:
+
+| effect | per frame | cheap to compare? |
+|---|---:|---|
+| COMBINE | 41.7 | yes (2 words) |
+| **TEXTURE** | **35.7** | **no — moves tile state** |
+| LIGHT_COLOR | 27.4 | (does not invalidate) |
+| **TILE** | **23.9** | **no** |
+| OTHERMODE | 13.4 | yes |
+| **IMAGE** | **10.6** | **no** |
+| PRIM | 6.7 | (does not invalidate) |
+| GEOMETRY | 2.0 | yes |
+| MATERIAL | 0.0 | |
+
+Invalidating total: **127.3/frame**. Of those, **70.2 move the tile state**
+against 57.1 cheap scalars.
+
+So a generation counter bumped by TEXTURE/IMAGE/TILE would bump 70 times a frame
+across 62.8 runs — more often than there are runs — and every run would miss.
+Hashing the tile state per run costs 20 loads against the 781 ticks a prepare
+costs, which is a worse ratio than E8's losing memo once the miss rate is
+included.
+
+**The memo variant is refuted, not merely deprioritised.** There is no cheap key
+for a value that is legitimately rewritten more often than it is read.
+
+That leaves exactly what the plan specifies. The replay writes constantly because
+that is what a replay does; the *post-replay state* is what the draw needs, and
+E5 measured that stable at 1.9% churn. Baking the resolved per-epoch state and
+installing it directly removes the 194.4 applications **and** the 127.3
+invalidations **and** the 46.4 re-prepares they force — the whole 107,307 — and
+nothing smaller does.
+
 ## 4. Two things to carry into that build
 
 - **ITCM is full.** E16 left 1,024 bytes free (31,744/32,768), and

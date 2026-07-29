@@ -16199,6 +16199,8 @@ static s32 ndsRendererNativePrepareDirectRun(
 /* R2-03 E20 falsifier state. Indexed by NDSNativeStateDelta::effect; 16 covers
  * the eleven cases the switch handles with room to spare. */
 #define NDS_R2_DELTA_EFFECT_MAX 16u
+/* R2-03 E25c. Indexed by NDS_NATIVE_STATE_*; 2..14 are the live effects. */
+u32 gNdsR2DeltaEffectCounts[16];
 u32 gNdsR2SpanIdenticalOperands;
 u32 gNdsR2SpanIdenticalGeometry;
 u32 gNdsR2SpanMaterialInvalidations;
@@ -16266,6 +16268,17 @@ ndsRendererNativeApplyStateDelta(
         sNdsR2DeltaLastW0[e] = delta->w0;
         sNdsR2DeltaLastW1[e] = delta->w1;
         sNdsR2DeltaLastValid[e] = 1u;
+    }
+    /* R2-03 E25c. E25b showed the replay's cost is the texture-prepare
+     * invalidation it triggers, not the write. Whether that can be replaced by
+     * a cheap value check depends on WHICH effects dominate: OTHERMODE,
+     * COMBINE, GEOMETRY and PRIM are a handful of scalars a run can compare,
+     * but TILE, IMAGE and TEXTURE move the 20-word tile state, which is too
+     * expensive to compare per run. This splits the 194.4 applications by
+     * effect so the validity key can be designed against the data. */
+    if (delta->effect < 16u)
+    {
+        gNdsR2DeltaEffectCounts[delta->effect]++;
     }
 #endif
     switch (delta->effect)

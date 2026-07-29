@@ -239,6 +239,15 @@ pair and measured null. **Any cut that optimises one side while the other keeps
 re-dirtying the state will read as null** — which is exactly the pattern
 observed.
 
+**E25c rules out the cheap fix.** Splitting the 194.4 applications by effect:
+COMBINE 41.7, TEXTURE 35.7, LIGHT_COLOR 27.4, TILE 23.9, OTHERMODE 13.4, IMAGE
+10.6, PRIM 6.7, GEOMETRY 2.0. Invalidating total **127.3/frame**, of which
+**70.2 move the 20-word tile state** against 57.1 cheap scalars. A generation
+counter would bump more often than there are runs (62.8), and hashing the tile
+per run is a worse ratio than E8's losing memo. **There is no cheap validity key
+for a value legitimately rewritten more often than it is read — the memo variant
+is refuted, not deprioritised.**
+
 **NEXT (unowned):** this is why the plan specifies a generated per-epoch submit
 with *no traversal-state dependency* rather than a faster prepare or a cheaper
 replay. The generator knows each epoch's final state at build time, so neither
