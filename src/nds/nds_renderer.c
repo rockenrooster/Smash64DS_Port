@@ -16383,6 +16383,12 @@ ndsRendererNativeApplyStateDelta(
 u32 gNdsR2SpanCalls;
 u32 gNdsR2SpanDeltasApplied;
 u32 gNdsR2SpanDeltaRepeats;
+/* R2-03 E38. Splits the replay across the material that sits between the two
+ * spans, which decides how much of E26 is worth building. */
+u32 gNdsR2SpanBeforeTicks;
+u32 gNdsR2SpanBeforeDeltas;
+u32 gNdsR2SpanAfterTicks;
+u32 gNdsR2SpanAfterDeltas;
 static u32 sNdsR2DeltaLastFrame[70];
 #endif
 
@@ -24559,10 +24565,27 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             gNdsR2ExecEpochCalls++;
 #endif
 #if !NDS_R2_FIGHTER_STATESPAN_SKIP
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            {
+                /* R2-03 E38. E26 folds the two STATIC spans and must keep
+                 * ApplyMaterial live (E34-b: materials are rebuilt from the live
+                 * MObj every frame). The material sits BETWEEN the spans, so a
+                 * fold of the before-span alone is straightforward while folding
+                 * the after-span means re-applying it over live material writes.
+                 * Which is worth building depends on how the replay's 65,026
+                 * splits across the two, and nothing has measured that -- E20
+                 * and E25 both counted the spans together. */
+                u32 t_span = cpuGetTiming();
+#endif
             ndsRendererNativeApplyStateSpan(
                 epoch->before_state_first, epoch->before_state_count,
                 epoch->before_sync_count,
                 asset_base, stats, state);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+                gNdsR2SpanBeforeTicks += cpuGetTiming() - t_span;
+                gNdsR2SpanBeforeDeltas += epoch->before_state_count;
+            }
+#endif
 #endif
             if (epoch->material_slot != NDS_NATIVE_MATERIAL_NONE)
             {
@@ -24570,10 +24593,19 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                     &input->materials[epoch->material_slot], stats, state);
             }
 #if !NDS_R2_FIGHTER_STATESPAN_SKIP
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+            {
+                u32 t_span = cpuGetTiming();
+#endif
             ndsRendererNativeApplyStateSpan(
                 epoch->after_state_first, epoch->after_state_count,
                 epoch->after_sync_count,
                 asset_base, stats, state);
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+                gNdsR2SpanAfterTicks += cpuGetTiming() - t_span;
+                gNdsR2SpanAfterDeltas += epoch->after_state_count;
+            }
+#endif
 #endif
 #if NDS_TASK91_DRAW_PHASE_CENSUS
             {

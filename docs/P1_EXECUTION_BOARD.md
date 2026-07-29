@@ -31,6 +31,43 @@ The worktree is dirty, so the local identity is informational only. It is not a
 release candidate until the relevant verifier passes and the public-build pin is
 updated in the same kept change.
 
+## R2-03 E38 — E26 scoped: fold the BEFORE-span, and only that (2026-07-29)
+
+E26 is R2-03's own bullet in the switch plan ("per-epoch generated submit
+consuming only baked facts — no `PrepareProductionRun` policy re-checks, no
+traversal-state/stats dependency"). E34-b settled that the material must stay
+live. What was never measured is how the replay splits **across** that material,
+which is what decides how much of E26 is tractable: the before-span is pure
+prologue, while folding the after-span means re-applying static writes *over*
+live material writes and getting the ordering exactly right.
+
+Timed separately (`NDS_TASK91_DRAW_PHASE_CENSUS`, frames 439..919, 46.4 epochs a
+frame):
+
+| span | ticks/frame | deltas/frame | ticks/delta |
+|---|---:|---:|---:|
+| **before** | **33,707.6** | 134.5 | 250.6 |
+| after | 16,243.3 | 47.9 | 339.1 |
+| **total replay** | **49,951** | 182.4 | |
+
+**The before-span is 67.5% of the cost and 73.7% of the deltas — and it is the
+half with no ordering problem.** So E26 reduces to: bake the resolved
+post-before-span state per epoch, install it, leave `ApplyMaterial` and the
+after-span exactly as they are. Target **33,708/frame** for a change with no
+material interaction to reason about.
+
+Install every field *except* `prim_color`/`env_color` and their companions: E34-b
+showed those are the only state that varies at runtime, so leaving whatever the
+live path put there is both correct and what keeps the material live.
+
+**Also note the replay is now 49,951, not the 65,026 E25b sized it at.** E12, E28
+and E29 have shipped since. Size E26 against 33,708, not against a share of
+65,026 — and re-measure before claiming a share of any older total.
+
+After-span deltas cost 339 ticks each against the before-span's 251, which is
+consistent with the material application between them dirtying what the
+after-span then re-touches.
+
 ## R2-03 E32 — DO NOT GRADUATE: visual regression found, mechanism named (2026-07-29)
 
 **The visual gate was answered by measurement, and the answer is no.** Flag stays

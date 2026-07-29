@@ -37,15 +37,26 @@ but four of the 26 over-gate frames under the gate.
 **as corrected by E34/E34-b** — read those board entries before the spec, which
 is wrong in two places.
 
-Fold the two static state spans and install the resolved per-epoch state instead
-of replaying 194.4 deltas a frame. E34-b measured the per-epoch state as *exactly*
-a function of the epoch index apart from `prim_color`/`env_color`, so §2a's
-"two snapshots plus an after-span field mask" is unnecessary — one snapshot plus
-two colour writes reproduces it. **But keep `ApplyMaterial` live and unchanged:**
-materials are rebuilt from the live `MObj` every frame and their texture fields
-key off `mobj->texture_id_curr`, so a table baked from that measurement would
-render the wrong texture the first time a face animates. Target is the replay's
-65,026/frame; E33 re-confirmed `PrepareProductionRun` has no hot spot.
+**Fold the BEFORE-span only.** E38 timed the replay across the material that sits
+between the two spans: before 33,707.6 ticks/frame over 134.5 deltas, after
+16,243.3 over 47.9. The before-span is 67.5% of the cost *and* the half with no
+ordering problem — it is pure prologue, whereas folding the after-span means
+re-applying static writes over live material writes. So bake the resolved
+post-before-span state per epoch, install it, and leave `ApplyMaterial` and the
+after-span exactly as they are. **Target 33,708/frame.**
+
+Install every field *except* `prim_color`/`env_color` and their companions.
+E34-b measured the per-epoch state as *exactly* a function of the epoch index
+apart from those two, so leaving whatever the live path put there is both correct
+and what keeps the material live — which it must stay: materials are rebuilt from
+the live `MObj` every frame and their texture fields key off
+`mobj->texture_id_curr`, so a table baked over them would render the wrong
+texture the first time a face animates. §2a's "two snapshots plus an after-span
+field mask" is unnecessary.
+
+The replay is **49,951/frame, not the 65,026** the E26 spec still quotes — E12,
+E28 and E29 have shipped since. E33 re-confirmed `PrepareProductionRun` has no
+hot spot, so do not bundle it in.
 
 ITCM is full (1,024 bytes free): put new code behind `noinline` outside
 `.itcm.native_fighter`, and note the census and run-proof instruments can no
