@@ -68,12 +68,12 @@ the right amount, and that electric hits shake horizontally. Build the same ROM
 with `NDS_R2_FIGHTER_SHUFFLE_FOLD=0` for the comparison arm — that arm is the
 generic path and is correct by construction. Flag stays default-0 until approved.
 
-**Boundary on the enabled arm is outstanding too, and that one is a process
-error.** The run was started with the flag's default temporarily flipped to 1 and
-the default was reverted to 0 while it was still building; `make` re-reads the
-Makefile per invocation and the profile runs several, so the result is not
-trustworthy either way. **Never edit a build flag while a verifier is running —
-the tree a verifier reads has to be still.** Re-run before graduating.
+**Boundary on the enabled arm: PASSED**, with the flag defaulted to 1 for the
+whole run and the default reverted after. A first attempt was discarded because I
+reverted the default *while that run was still building* — `make` re-reads the
+Makefile per invocation and the profile runs several, so its (passing) result was
+not trustworthy. **Never edit a build flag while a verifier is running; the tree
+a verifier reads has to be still.**
 
 The committed state is flag **default 0**: every hunk is inside
 `#if NDS_R2_FIGHTER_SHUFFLE_FOLD` and the eligibility condition falls through to

@@ -141,6 +141,14 @@ fast-path dropout" the board had recorded, and showed they do not co-occur.
 apart, is a state the code enters — not a distribution to optimise. Find the
 state.
 
+### Never edit a build flag while a verifier is running (R2-03 E32, 2026-07-29)
+
+`make` re-reads the Makefile on every invocation and a verifier profile runs
+several, so a flag flipped mid-run leaves the result unattributable to either
+value. E32's first Boundary run passed and had to be thrown away for exactly
+this. **The tree a verifier reads has to be still**: flip, run to completion,
+then revert.
+
 ### Measure with the instrument's own drawing off (R2-03 E30, 2026-07-29)
 
 The tick HUD's on-screen block costs **345,024 ticks** roughly twice a second —

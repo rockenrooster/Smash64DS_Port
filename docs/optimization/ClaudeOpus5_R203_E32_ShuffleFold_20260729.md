@@ -111,16 +111,17 @@ Specifically worth watching for:
 - electric hits shake horizontally rather than vertically
   (`is_shuffle_electric` selects the second table row).
 
-**Boundary on the enabled arm is also outstanding, and that is my error.** I
-started `verify-all.ps1 -Profile Boundary` with the flag's default temporarily
-flipped to 1, then reverted the default to 0 while that run was still building.
-`make` re-reads the Makefile per invocation and the profile runs several, so the
-run's flag state is not knowable and its result cannot be trusted either way.
+**Boundary on the enabled arm: PASSED.** `verify-all.ps1 -Profile Boundary` with
+`NDS_R2_FIGHTER_SHUFFLE_FOLD` defaulted to 1 for the duration of the run —
+"Boundary verification profile passed."
 
-Re-run it properly before graduating: flip the default, wait for the run to
-finish, then revert — or add the `override` to the published/tick-HUD blocks as
-part of the graduating change and run it there. **Never edit a build flag while a
-verifier is running**; the tree a verifier reads has to be still.
+A first attempt at this was thrown away, and the reason is worth keeping: I
+started that run with the default flipped to 1 and then reverted it to 0 while
+the run was still building. `make` re-reads the Makefile on every invocation and
+the profile runs several, so the flag state was not knowable and the (passing)
+result could not be trusted either way. **Never edit a build flag while a
+verifier is running — the tree a verifier reads has to be still.** The run above
+was left completely alone until it finished, and the default reverted after.
 
 The committed state has the flag **default 0**, where every hunk is inside
 `#if NDS_R2_FIGHTER_SHUFFLE_FOLD` and the eligibility condition falls through to
