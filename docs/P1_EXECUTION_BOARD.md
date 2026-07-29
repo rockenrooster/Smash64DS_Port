@@ -32,6 +32,58 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E64b GRADUATED — the cubic in fixed point, −26,944 P95 / −20,352 P50. Boundary green and the state hash did NOT move (2026-07-29)
+
+`NDS_R2_CUBIC_FIXED := 1`. Owner-authorized 2026-07-29 as a non-bit-exact
+change. **The Task 9 state hash never moved, so nothing needed re-bounding** —
+the pending "owner decision" row is closed without one.
+
+E60/E61 priced the target: 149.4 cubic evaluations a frame at ~405 ticks each,
+14 soft-float ops, 99.6% of the animation path's float. The rewrite is exact in
+real arithmetic — with `t = length·length_invert` the original's expression is
+the standard cubic Hermite:
+
+```
+value = vb·(2t³−3t²+1) + vt·(3t²−2t³) + rb·L·(1−t)² + rt·L·(t²−t)
+```
+
+so only the *rounding* changes: Q12 truncation instead of MIPS single precision.
+Step (43.6% of nodes) and Linear (1.7%) keep the decomp's own expressions and
+stay bit-identical.
+
+| `WORK-H` | E32 base | **E64b** | delta |
+|---|---:|---:|---:|
+| P50 | 1,017,344 | **996,992** | **−20,352** |
+| P95 | 1,176,512 | **1,149,568** | **−26,944** |
+| `SRC` P50 | 342,016 | 332,672 | −9,344 |
+| over gate | 12/128 | **9/128** | −3 |
+
+Engagement proof: **135,871 evaluations, 0 saturations**. P50 moving as far as
+P95 confirms E60's reading that float is a *flat* per-frame cost.
+
+**Arm A was a regression and the reason is worth keeping.** It added a
+256-entry cache of the Q12 conversions keyed on the source float bit patterns.
+The mechanism worked — 86.4% hit rate, zero saturations — and the frame still got
+worse: **P95 +21,632, `SRC` P50 +17,792, over-gate 16/128.** Two footprint
+causes, both already written down in this repo:
+
+- **10,240 bytes of new BSS.** "The noise floor is not measurement error, it is
+  the price of adding data", and that floor is 5,000–7,000.
+- **The `.text.hot` member grew 500 → 1,824 bytes.** Task 94's own comment in
+  `linker/nds_hot_text.ld` says that list is a curated 8 KiB working set and
+  perturbing one member re-addresses the other ten, which it measured at 6,144.
+
+Arm B spends nothing: no cache, no BSS, 32-bit intermediates wherever `t`'s
+Q12 range allows, and hand-rolled float↔Q12 converters because
+`(s32)(v * 4096.0f)` is two soft-float calls where bit manipulation is a dozen
+integer ops. **Do not re-add the cache.**
+
+**Where the gate stands after E32 + E64b:** P95 **1,228,928 → 1,149,568**, a
+cumulative **−79,360**, over-gate **17/128 → 9/128**. Remaining gap to
+1,120,000: **29,568**. The animation path still holds ~120,000, so a second pass
+at it (the remaining conversions and the `.text.hot` size) is the obvious next
+target and needs no decision.
+
 ## R2-03 E32 GRADUATED — −52,416 WORK-H P95, 17/128 → 12/128 over gate (2026-07-29)
 
 `NDS_R2_FIGHTER_SHUFFLE_FOLD := 1` in both shipped Makefile blocks. The hitlag

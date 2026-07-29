@@ -212,6 +212,28 @@ NDS_R2_FLASH_PROBE ?= 0
 # load-time pose table (which needs an integral frame index), a fixed-point
 # cubic, or neither. Delete with the experiment.
 NDS_R2_ANIM_CENSUS ?= 0
+# R2-03 E64. The cubic Hermite in gcPlayDObjAnimJoint evaluated in Q12 fixed
+# point instead of 14 soft-float operations. E60/E61 priced the cubic at 149.4
+# evaluations a frame x ~405 ticks = 60,509 ticks/frame, which is 99.6% of the
+# animation path's float. Step and Linear nodes keep the decomp's own
+# expressions, so 45.3% of nodes stay bit-identical.
+#
+# NOT bit-exact by design, and owner-authorized 2026-07-29 on that basis:
+# PROJECT_GOAL.md requires mechanical equivalence and lists "fixed-point
+# replacements" as allowed, while the Task 9 state hash asserts the stronger
+# bit-exact property. Expect that hash to move.
+NDS_R2_CUBIC_FIXED ?= 0
+# Switch plan R2-06 harness prerequisite, owner-requested 2026-07-29. Makes
+# player 0 a level-3 CPU as well, so both fighters attack continuously with no
+# recorded input stream. A deliberate STRESS case: it maximises the live hitbox
+# population that R2-03 E35 named as the owner of the SRC P95 excursion, which
+# also makes it the configuration that most exercises E64b's Q12 cubic (more hit
+# decisions to flip) and E32's hitlag fallback (more bursts).
+#
+# NEVER report a P95 from this build as the Boundary figure. The switch plan
+# defines the shipped Boundary as Mario human vs level-3 Fox CPU at mode 163 and
+# PROJECT_GOAL.md's gate as representative gameplay; this is harder than either.
+NDS_R2_BOTH_CPU ?= 0
 # R2-03 E49. Teaches the native fighter owner the precedence E48 measured: an
 # epoch whose vertices carry a valid vertex colour and no material is emitted
 # from that colour raw and is NOT lit. The generic path has always done this
@@ -638,6 +660,18 @@ override NDS_R2_FIGHTER_HW_LIGHT := 1
 # KNOWN_ISSUES.md; do NOT enable NDS_R2_UNLIT_VERTEX_EPOCH as a fix, E62 proved
 # it emits packed normals and is visibly worse.
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
+# R2-03 E64b: the animation cubic Hermite in Q12 fixed point. -26,944 WORK-H
+# P95, -20,352 P50, SRC P50 -9,344, over-gate 12/128 -> 9/128, 135,871
+# evaluations with zero saturations. Owner-authorized 2026-07-29 as a
+# non-bit-exact change; the Task 9 state hash did NOT move, so nothing needed
+# re-bounding -- Q12 truncation never altered a hit decision across the
+# one-minute Boundary match. Step and Linear nodes keep the decomp's own
+# expressions, so 45.3% of AObj nodes stay bit-identical.
+#
+# Arm A added a 256-entry conversion cache and REGRESSED (+21,632 P95) on 10 KB
+# of BSS plus a 1,824-byte .text.hot member. Do not re-add the cache; the
+# reasoning is in battleship_sys_objanim.c.
+override NDS_R2_CUBIC_FIXED := 1
 # R2-03 E46: the fighter state-delta path into ITCM. The switch was already
 # resident; the span loop and every Record*/SyncTextureTile helper it dispatches
 # to were in main RAM, so all 134.5 before-span applications a frame left
@@ -773,6 +807,8 @@ override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_FIGHTER_HW_LIGHT := 1
 # R2-03 E32. See the published block for the accepted visual residual.
 override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
+# R2-03 E64b. See the published block.
+override NDS_R2_CUBIC_FIXED := 1
 # R2-03 E46: the fighter state-delta path into ITCM. The switch was already
 # resident; the span loop and every Record*/SyncTextureTile helper it dispatches
 # to were in main RAM, so all 134.5 before-span applications a frame left
@@ -2044,6 +2080,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
 		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \
+		echo '#define NDS_R2_CUBIC_FIXED $(NDS_R2_CUBIC_FIXED)'; \
+		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_R2_UNLIT_VERTEX_EPOCH $(NDS_R2_UNLIT_VERTEX_EPOCH)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \

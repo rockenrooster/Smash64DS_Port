@@ -187,6 +187,25 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
     gSCManagerTransferBattleState.cp_count = 1;
     gSCManagerTransferBattleState.players[1].pkind = nFTPlayerKindCom;
     gSCManagerTransferBattleState.players[1].level = 3;
+#if NDS_R2_BOTH_CPU
+    /* Switch plan R2-06's harness prerequisite, owner-requested 2026-07-29.
+     * Mario becomes a level-3 CPU too, so both fighters attack continuously
+     * without a recorded input stream. That is what makes it useful: it
+     * maximises the live hitbox population, which R2-03 E35 measured as the
+     * owner of the SRC P95 excursion, so it is a deliberate STRESS case.
+     *
+     * The plan is explicit that this is a harness configuration and not a
+     * product change: "The shipped Boundary stays Mario human vs level-3 Fox CPU
+     * at mode 163, and PROJECT_GOAL.md's P95 gate is defined on *representative*
+     * gameplay -- so a P95 read off the stress config is a harder number than
+     * the milestone requires and must be reported as such, never swapped in
+     * silently for the Boundary figure." Honour that: never publish a number
+     * from this build as the Boundary P95. */
+    gSCManagerTransferBattleState.players[0].pkind = nFTPlayerKindCom;
+    gSCManagerTransferBattleState.players[0].level = 3;
+    gSCManagerTransferBattleState.pl_count = 0;
+    gSCManagerTransferBattleState.cp_count = 2;
+#endif
 #else
     gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_STOCK;
     gSCManagerTransferBattleState.time_limit = SCBATTLE_TIMELIMIT_INFINITE;

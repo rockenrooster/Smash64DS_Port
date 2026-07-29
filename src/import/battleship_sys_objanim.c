@@ -12,12 +12,11 @@
 #define gcAddCObjCamAnimJoint ndsBaseGcAddCObjCamAnimJoint
 #define gcPlayMObjMatAnim ndsBaseGcPlayMObjMatAnim
 #define gcPlayAnimAll ndsBaseGcPlayAnimAll
-#if NDS_R2_ANIM_CENSUS
-/* R2-03 E61. Frees the name so the census below can count what the player is
- * asked to evaluate, then delegate to the unchanged original. Task 95 proved
- * this exact interposition end to end: the hot call is INTERNAL to objanim.c
- * (inside gcPlayAnimAll), so renaming the definition renames that call with it
- * and a port-side replacement is actually reached. */
+#if NDS_R2_ANIM_CENSUS || NDS_R2_CUBIC_FIXED
+/* R2-03 E61/E64. Frees the name so the port-side player below is reached. Task
+ * 95 proved this exact interposition end to end: the hot call is INTERNAL to
+ * objanim.c (inside gcPlayAnimAll), so renaming the definition renames that
+ * call with it and a port-side replacement actually runs. */
 #define gcPlayDObjAnimJoint ndsBaseGcPlayDObjAnimJoint
 #endif
 
@@ -32,6 +31,245 @@
 #undef gcAddCObjCamAnimJoint
 #undef gcPlayMObjMatAnim
 #undef gcPlayAnimAll
+
+#if NDS_R2_CUBIC_FIXED
+#undef gcPlayDObjAnimJoint
+
+/* R2-03 E64 — the cubic in fixed point. Owner-authorized 2026-07-29.
+ *
+ * E60/E61 measured this: `gcPlayDObjAnimJoint` is 94,531 ticks/frame inclusive,
+ * 60,509 of it soft-float, and 99.6% of that float is the CUBIC branch — 149.4
+ * evaluations a frame at ~405 ticks each, which is 14 soft-float operations at
+ * ~29 ticks apiece. Step (43.6% of nodes) and Linear (1.7%) are left exactly as
+ * the original wrote them; they cost no float worth removing.
+ *
+ * The rewrite. With `t = length * length_invert` and `L = length`, the original
+ *
+ *     f16 = li², f12 = L², f18 = li·L², f14 = L·L²·li²,
+ *     f20 = 2·f14·li, f22 = 3·f12·f16, f24 = f14 - f18
+ *     value = vb·((f20-f22)+1) + vt·(f22-f20)
+ *           + rb·((f24-f18)+L) + rt·f24
+ *
+ * is, exactly in real arithmetic, the standard cubic Hermite:
+ *
+ *     f20 = 2t³            f22 = 3t²            f18 = L·t
+ *     f24 = L·t·(t-1)      (f24-f18)+L = L·(1-t)²
+ *     value = vb·(2t³-3t²+1) + vt·(3t²-2t³) + rb·L·(1-t)² + rt·L·(t²-t)
+ *
+ * so this is a change of *representation*, not of the curve. What differs from
+ * the original is rounding: Q12 truncation instead of MIPS single-precision at
+ * every step. `PROJECT_GOAL.md` requires mechanical equivalence and lists
+ * "fixed-point replacements" as an allowed technique; it does not require bit
+ * exactness. The Task 9 state hash asserts the stronger property and is expected
+ * to move — that is the authorized part of this change, not an accident.
+ *
+ * Why the cache is not optional. `value_base`/`value_target`/`rate_base`/
+ * `rate_target` are `f32` in the AObj, so converting them per evaluation costs
+ * four soft-float round trips and eats the entire win. They are constant between
+ * parse events, which are rare, so they are converted once and reused. The
+ * validity test is a compare of the five source float BIT PATTERNS — integer
+ * work, no float — which is exact and needs no cooperation from the parser.
+ * `length` does change every tick, so `t` still costs one real multiply. */
+
+/* E64 arm A had a 256-entry Q12 conversion cache keyed on the source float bit
+ * patterns. It WORKED -- 135,871 evaluations, 86.4% hit rate, zero saturations --
+ * and the frame got worse anyway: WORK-H P95 +21,632, SRC P50 +17,792. Two
+ * reasons, both about footprint rather than arithmetic, and both already written
+ * down in this repo:
+ *
+ *   - 10,240 bytes of new BSS. "The noise floor is not measurement error, it is
+ *     the price of adding data" -- and the floor here is 5,000-7,000.
+ *   - the `.text.hot` member grew from 500 bytes to 1,824. Task 94's comment in
+ *     `linker/nds_hot_text.ld` says that list is a curated 8 KiB working set and
+ *     that perturbing one member re-addresses the other ten, which it measured
+ *     at 6,144 WORK-H P50 on 122 of 128 frames.
+ *
+ * Arm B therefore spends nothing: no cache, no new BSS, 32-bit arithmetic
+ * wherever the range allows, and the four per-node conversions done inline. The
+ * hand-rolled converter is what makes that affordable -- `(s32)(v * 4096.0f)` is
+ * two soft-float calls where this is a dozen integer ops. */
+
+volatile u32 gNdsR2CubicEvals;
+volatile u32 gNdsR2CubicSaturations;
+
+static inline u32 ndsR2FloatBits(f32 v)
+{
+    u32 bits;
+
+    __builtin_memcpy(&bits, &v, sizeof(bits));
+    return bits;
+}
+
+/* f32 -> Q12, truncating toward zero. Hand-rolled rather than
+ * `(s32)(v * 4096.0f)` because that is two soft-float calls (~50 ticks) where
+ * this is a dozen integer ops. Saturates instead of wrapping: a wrapped joint
+ * angle would be a visible teleport, a saturated one is a clamp. */
+static inline s32 ndsR2F32ToQ12(f32 v)
+{
+    u32 bits = ndsR2FloatBits(v);
+    s32 exp = (s32)((bits >> 23) & 0xffu);
+    s32 mant;
+    s32 shift;
+
+    if (exp == 0)
+    {
+        return 0;   /* zero or subnormal: below Q12's resolution either way */
+    }
+    if (exp == 0xff)
+    {
+        gNdsR2CubicSaturations++;
+        return ((bits & 0x80000000u) != 0u) ? -0x7fffffff : 0x7fffffff;
+    }
+    mant = (s32)((bits & 0x7fffffu) | 0x800000u);   /* 1.23 fixed */
+    /* value = mant * 2^(exp-127-23); Q12 wants that scaled by 2^12. */
+    shift = (exp - 127) - 23 + 12;
+    if (shift >= 0)
+    {
+        if (shift > 7)
+        {
+            gNdsR2CubicSaturations++;
+            mant = 0x7fffffff;
+        }
+        else
+        {
+            mant <<= shift;
+        }
+    }
+    else if (shift < -31)
+    {
+        mant = 0;
+    }
+    else
+    {
+        mant >>= -shift;
+    }
+    return ((bits & 0x80000000u) != 0u) ? -mant : mant;
+}
+
+/* Q12 -> f32. One `__aeabi_i2f` plus an exact exponent adjust; subtracting
+ * 12 biased exponents is an exact divide by 4096, so no second multiply and no
+ * extra rounding. */
+static inline f32 ndsR2Q12ToF32(s32 q)
+{
+    f32 f = (f32)q;
+    u32 bits = ndsR2FloatBits(f);
+
+    if ((bits & 0x7f800000u) != 0u)
+    {
+        bits -= (12u << 23);
+    }
+    __builtin_memcpy(&f, &bits, sizeof(f));
+    return f;
+}
+
+static f32 ndsR2CubicValueFixed(const AObj *aobj)
+{
+    /* The one unavoidable real multiply: `length` advances every tick, so `t`
+     * cannot be carried across evaluations. */
+    s32 t = ndsR2F32ToQ12(aobj->length * aobj->length_invert);
+    s32 length_q = ndsR2F32ToQ12(aobj->length);
+    /* t is Q12 and normally in [0,1], so t*t peaks near 4096*4096 = 16.7M and
+     * every intermediate below stays inside s32 without a 64-bit step. */
+    s32 t2 = (t * t) >> 12;
+    s32 t3 = (t2 * t) >> 12;
+    s32 omt = 4096 - t;
+    s32 omt2 = (omt * omt) >> 12;
+    s32 h_vb = ((2 * t3) - (3 * t2)) + 4096;
+    s32 h_vt = (3 * t2) - (2 * t3);
+    /* These two carry a factor of `length`, which is unbounded, so they are the
+     * only places that need the wider intermediate. SMULL/SMLAL make a 32x32->64
+     * on ARM9 a single instruction; it is the 64-bit ADDS/ADCS chains that arm A
+     * paid for, and there are none left here. */
+    s32 h_rb = (s32)(((s64)length_q * omt2) >> 12);
+    s32 h_rt = (s32)(((s64)length_q * (t2 - t)) >> 12);
+    s64 acc = (s64)ndsR2F32ToQ12(aobj->value_base) * h_vb;
+
+    gNdsR2CubicEvals++;
+    acc += (s64)ndsR2F32ToQ12(aobj->value_target) * h_vt;
+    acc += (s64)ndsR2F32ToQ12(aobj->rate_base) * h_rb;
+    acc += (s64)ndsR2F32ToQ12(aobj->rate_target) * h_rt;
+    return ndsR2Q12ToF32((s32)(acc >> 12));
+}
+
+/* The original body, with the cubic branch replaced. Step and Linear are the
+ * decomp's own expressions verbatim, so the 43.6% + 1.7% of nodes that take
+ * them are bit-identical to before this change. */
+void gcPlayDObjAnimJoint(DObj *dobj)
+{
+    f32 value = 0.0f;
+    AObj *aobj;
+
+    if (dobj->anim_wait != AOBJ_ANIM_NULL)
+    {
+        aobj = dobj->aobj;
+
+        while (aobj != NULL)
+        {
+            if (aobj->kind != nGCAnimKindNone)
+            {
+                if (dobj->anim_wait != AOBJ_ANIM_END)
+                {
+                    aobj->length += dobj->anim_speed;
+                }
+                if (!(dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM))
+                {
+                    switch (aobj->kind)
+                    {
+                    case nGCAnimKindLinear:
+                        value = aobj->value_base +
+                            (aobj->length * aobj->rate_base);
+                        break;
+
+                    case nGCAnimKindCubic:
+                        value = ndsR2CubicValueFixed(aobj);
+                        break;
+
+                    case nGCAnimKindStep:
+                        value = (aobj->length_invert <= aobj->length) ?
+                            aobj->value_target : aobj->value_base;
+                        break;
+
+                    default:
+                        break;
+                    }
+                    switch (aobj->track)
+                    {
+                    case nGCAnimTrackRotX: dobj->rotate.vec.f.x = value; break;
+                    case nGCAnimTrackRotY: dobj->rotate.vec.f.y = value; break;
+                    case nGCAnimTrackRotZ: dobj->rotate.vec.f.z = value; break;
+
+                    case nGCAnimTrackTraI:
+                        if (value < 0.0F)
+                        {
+                            value = 0.0F;
+                        }
+                        else if (value > 1.0F)
+                        {
+                            value = 1.0F;
+                        }
+                        syInterpCubic(&dobj->translate.vec.f,
+                                      aobj->interpolate, value);
+                        break;
+
+                    case nGCAnimTrackTraX: dobj->translate.vec.f.x = value; break;
+                    case nGCAnimTrackTraY: dobj->translate.vec.f.y = value; break;
+                    case nGCAnimTrackTraZ: dobj->translate.vec.f.z = value; break;
+                    case nGCAnimTrackScaX: dobj->scale.vec.f.x = value; break;
+                    case nGCAnimTrackScaY: dobj->scale.vec.f.y = value; break;
+                    case nGCAnimTrackScaZ: dobj->scale.vec.f.z = value; break;
+                    default: break;
+                    }
+                }
+            }
+            aobj = aobj->next;
+        }
+        if (dobj->anim_wait == AOBJ_ANIM_END)
+        {
+            dobj->anim_wait = AOBJ_ANIM_NULL;
+        }
+    }
+}
+#endif
 
 #if NDS_R2_ANIM_CENSUS
 #undef gcPlayDObjAnimJoint
