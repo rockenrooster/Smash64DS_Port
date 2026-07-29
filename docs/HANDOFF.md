@@ -2,9 +2,8 @@
 
 Updated: 2026-07-29. **Restart surface only, capped at 150 lines.** Anything
 durable goes to its owning doc, not here: the board owns the queue and every
-result, `PERF_LEDGER.md` measurements and rejected experiments,
-`KNOWN_ISSUES.md` durable gaps and harness traps,
-`optimization/TASK_STANDING_RULES.md` how a performance task is run.
+result, `PERF_LEDGER.md` measurements, `KNOWN_ISSUES.md` durable gaps and
+harness traps, `optimization/TASK_STANDING_RULES.md` how a task is run.
 
 Runtime 2 phase status. **Every remaining P1 performance lever is behind an
 owner decision; there is no unblocked experiment left in R2-03/R2-04.**
