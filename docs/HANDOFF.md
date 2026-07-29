@@ -5,13 +5,13 @@ durable goes to its owning doc, not here: the board owns the queue and every
 result, `PERF_LEDGER.md` measurements, `KNOWN_ISSUES.md` durable gaps and
 harness traps, `optimization/TASK_STANDING_RULES.md` how a task is run.
 
-Runtime 2 phase status. **Three gate levers graduated 2026-07-29: E32 (-52,416
-P95), E64b (-26,944) and E65 (-35,584).**
+Runtime 2 phase status. **Four gate levers graduated 2026-07-29: E32 (-52,416
+P95), E64b (-26,944), E65 (-35,584) and E67 (-4,672 P95 / -8,192 P50).**
 
 | phase | state |
 |---|---|
 | R2-00a/b/c, R2-01, R2-02 | gated |
-| R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**; only the E32 flash residual is open (KNOWN_ISSUES) |
+| R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**; only the E32 flash residual is open (KNOWN_ISSUES) |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
 | R2-06 | performance-neutral (E0) + equivalence (E1) + match-boundary probe (E2); **"soak clean" has no instrument** |
@@ -19,14 +19,14 @@ P95), E64b (-26,944) and E65 (-35,584).**
 
 ## Where the gate stands
 
-128-frame ring dump, frames 795..922, `WORK-H`: P50 **982,848**, P95
-**1,113,984**, gate 1,120,000, **7/128 over**. Evidence
-`artifacts/performance/r203-e65-q16arm-128{.json,-r2.json,-rows.csv}`.
+128-frame ring dump, frames 795..922, `WORK-H`: P50 **974,656**, P95
+**1,109,312**, gate 1,120,000, **7/128 over**. Evidence
+`artifacts/performance/r203-e67-floatdtor-128{.json,-rows.csv}`.
 
-**The gate reading is met, by 6,016 — inside the 5,000-7,000 placement floor.**
-Treat it as *at* the gate, not through it: this is the first at-budget reading the
-campaign has produced, and it is not yet headroom. It also has not been read on
-retail hardware (R2-08).
+**The gate reading is met by 10,688, now ABOVE the 5,000-7,000 placement floor** —
+E65 landed it at 6,016, inside the floor; E67 doubled the margin, so it survives a
+relink. Two things it does not cover: retail hardware (R2-08), and R2-07's cosmetic
+systems, which have to fit inside that 10,688 (see the switch plan's R2-07 note).
 
 ## What owns the miss
 

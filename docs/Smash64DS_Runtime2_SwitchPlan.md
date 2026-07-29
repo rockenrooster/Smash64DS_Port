@@ -6,8 +6,8 @@ and the definition of the switch.
 Status: **in execution.** R2-00a/b/c, R2-01, R2-02 gated; R2-05 complete;
 R2-03 shipped E12/E28/E29/E46/E32/E64b/E65; R2-04's clauses are met; R2-06 has
 Boundary green and equivalence, and its soak clause has no instrument (§7).
-**The P95 gate reading is met for the first time — 1,113,984 against 1,120,000
-(E65) — by 6,016, which is inside the 5,000–7,000 placement floor.** Read §7
+**The P95 gate reading is met — 1,109,312 against 1,120,000 (E65 then E67), by
+10,688, which is finally above the 5,000–7,000 placement floor.** Read §7
 R2-07's revised budget note before spending any of that. The board
 (`docs/P1_EXECUTION_BOARD.md`) is the live queue; this file stays the charter and
 is not a status log.
@@ -404,11 +404,15 @@ warning and `NDS_R2_BOTH_CPU` in the Makefile.
 - Gate: full demo loop (Mario CPU vs Fox CPU) within total budget; P95 still ≤ 1.12M.
 
 **As written this gate is unreachable today, and that is a sequencing fact rather
-than a failure (2026-07-29).** E65 put P95 at 1,113,984 — 6,016 under budget, and
-the build-placement noise floor alone is 5,000–7,000. There is no cosmetic budget
-to allocate: the particle work R2-07 names is a 2,961-line bytecode interpreter
+than a failure (2026-07-29).** E65 then E67 put P95 at 1,109,312 — **10,688 under
+budget**, which is finally clear of the 5,000–7,000 placement floor but is still
+about one percent of a frame. There is effectively no cosmetic budget to allocate:
+the particle work R2-07 names is a 2,961-line bytecode interpreter
 (`lb/lbparticle.c`) plus `ef/efparticle.c`, `ef/efdisplay.c`, a DS pack step and
-textured-quad draws, and *any* nonzero per-frame cost from it puts P95 over.
+textured-quad draws. For scale: 10,688 ticks buys roughly **one** textured-quad
+bind (Task 98 measured ~1,621 ticks per texture bind regardless of size) plus a few
+hundred interpreter steps — for *all* effects on the frame, on the frames with the
+most effects. Nothing about that is a comfortable fit.
 
 So **R2-07 must be preceded by a headroom pass, not merely followed by one.** The
 honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
@@ -417,8 +421,18 @@ honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
    `SRC` is 309,120; both are above their phase budgets, so this is ordinary
    remaining work rather than a new idea.
 2. **Run the cosmetic systems below simulation rate.** `PROJECT_GOAL.md` explicitly
-   allows particles at 15 Hz. A 15 Hz particle update is a quarter of the cost of a
-   60 Hz one and changes no gameplay.
+   allows particles at 15 Hz. A 15 Hz particle update is a quarter of the *mean*
+   cost and changes no gameplay.
+
+   **But do not implement it as "every fourth frame, update everything."** The gate
+   is a P95, not a mean. Batching a quarter-rate system onto one frame in four
+   leaves three cheap frames and one frame carrying 4× the work — the mean falls
+   and **P95 rises**, which is the wrong direction against this contract. R2-03 E30
+   already recorded the general form of this ("when the median falls and the P95
+   does not, stop cutting the median"). Spread the work instead: update a quarter of
+   the generators every frame in round-robin so each generator still advances at
+   15 Hz while the per-frame cost stays flat. Same visual result, and it is the flat
+   profile that P95 rewards.
 3. **Reduce visual fidelity** — sacrifice order puts visual fidelity above 30 FPS,
    so if the real scripts cannot fit, a cheaper source-derived approximation is the
    contract-compliant answer, with the visible delta recorded.

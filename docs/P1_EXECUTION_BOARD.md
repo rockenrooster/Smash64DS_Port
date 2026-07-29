@@ -32,6 +32,100 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E67 GRADUATED — the port was doing DOUBLE-precision degrees→radians. P95 1,109,312, margin now 10,688 (2026-07-29)
+
+`artifacts/performance/r203-e67-floatdtor-128{.json,-rows.csv}`. One header line
+changed; `include/macros.h`.
+
+**This is a specification fix that happens to be faster, not a trade.** The port's
+degrees→radians macros read
+
+```c
+#define F_CST_DTOR32(x) ((f32)((x) * (M_PI / 180.0)))
+#define F_CLC_DTOR32(x) ((f32)(((x) * M_PI) / 180.0))
+```
+
+`M_PI` and `180.0` are both `double`, so the argument was **promoted** and every
+runtime call compiled to four library calls — `__aeabi_f2d`, `__aeabi_dmul`,
+`__aeabi_ddiv`, `__aeabi_d2f`. BattleShip's own `macros.h` writes these with
+`DTOR32` (a `float`) and `180.0F`. The port's versions now match it character for
+character, so **the folded constants are now BattleShip's values** where before
+they could differ by a ULP. The ARM9 has no FPU and its double helpers are far
+worse than its float ones: the Task 37 census measured `__aeabi_ddiv` at **349
+ticks per call** against `__aeabi_fdiv`'s 53.
+
+| `WORK-H` | E65 | **E67** | delta |
+|---|---:|---:|---:|
+| P50 | 982,848 | **974,656** | **−8,192** |
+| P75 | 1,006,208 | 1,000,512 | −5,696 |
+| P90 | 1,070,592 | 1,070,656 | +64 |
+| **P95** | 1,113,984 | **1,109,312** | **−4,672** |
+| P99 | 1,212,864 | 1,195,456 | −17,408 |
+| over gate | 7/128 | 7/128 | 0 |
+
+**Paired by frame, better on 91 of 128, median −6,976, mean −6,018** — and the
+prediction from the census was ~6,800, so this is one of the few levers this
+campaign has sized correctly before building it. Every bucket moved down a little
+(`FTR` −1,664, `STG` −1,472, `SRC` −3,520, `MISC` −640), which is what a macro used
+across gameplay, camera and effects should look like.
+
+**The margin is what matters here.** 1,120,000 − 1,109,312 = **10,688**, against
+E65's 6,016. The gate reading is now *above* the 5,000–7,000 placement floor rather
+than inside it, so it survives a relink. That, not the tick count, is E67's value.
+
+**How it was found, since the method transfers.** Not a profile — a static census
+of the disassembly for double-precision helper call sites, grouped by function.
+Sixteen functions used them and twelve shared one signature, `f2d → dmul → ddiv →
+d2f`, which is degrees-to-radians written with unsuffixed literals. **Any use of
+`double` on this target is a defect until proven otherwise**, and it is greppable
+from the ELF without an emulator run:
+
+```bash
+arm-none-eabi-objdump -d BUILD/x.elf | grep -cE "bl.*__aeabi_(d|f2d)"
+```
+
+Only ~14 calls a frame reach it, which is why no profile ever named it: the cost is
+in the per-call price, not the frequency. `_dtoa_r`/`_svfprintf_r` still reference
+the double helpers, so they stay linked; nothing else in the battle path does.
+
+Residual double users, all decomp source and all small: `ftComputerProcWalk` and
+`func_ovl3_8013877C` carry an `__adddf3`/`dsub` pair from an unsuffixed literal in
+their own bodies. Left alone — `decomp/` is read-only and the whole remaining
+double population is under 14 calls/frame.
+
+## R2-03 E66 REFUTED — the census ranks `.text.hot` candidates it cannot predict. Second wrong-sign estimator (2026-07-29)
+
+`artifacts/performance/r203-e66-cubic-hottext-128{.json,-rows.csv}`. Reverted;
+the linker comment now carries the result so it cannot be retried.
+
+E65 split `ndsR2CubicValueFixed` into its own ARM function, which shrank
+`gcPlayDObjAnimJoint` 2,096 → 272 bytes and left **3,944 bytes free** in
+`.text.hot`. The Task 37 census then ranked that same 2,032-byte callee the **#1
+unplaced candidate** for the space — 1,815,752 recoverable non-mem stall cycles,
+about **7,093 ticks/frame** — marked `fit`. It was admitted immediately after its
+only caller, which is the most favourable placement available.
+
+| `WORK-H` | E65 | E66 | delta |
+|---|---:|---:|---:|
+| P50 | 982,848 | 983,744 | +896 |
+| P75 | 1,006,208 | 1,009,088 | +2,880 |
+| P90 | 1,070,592 | 1,078,592 | +8,000 |
+| P95 | 1,113,984 | 1,138,432 | **+24,448** |
+| over gate | 7/128 | 8/128 | +1 |
+
+**Paired by frame number, E66 is worse on 103 of 128 with a +2,624 median.** That
+is a mechanism, not noise — a consistent small regression on nearly every frame,
+which is exactly the shape Task 94 recorded when it *removed* a member. Adding
+2,032 bytes re-addresses the other eleven and costs more than the placement gains.
+
+**The durable finding is about the instrument, not the cubic.** Task 94's comment
+already warned "do not size a placement move from a tier cyc/insn ratio — that
+estimator predicted −7,894 and got the sign wrong." E66 used a *different and much
+more specific* estimator — per-symbol recoverable non-mem stall for the exact
+candidate — and it got the sign wrong too, by a similar margin. **Sections C and D
+of the Task 37 census are a cost ranking, not a placement prediction.** `.text.hot`
+is now closed in both directions: nothing may be added and nothing removed.
+
 ## R2-03 E65 — **WORK-H P95 1,113,984: the gate reading is MET**, and the fidelity fix is what found it (2026-07-29)
 
 The chase for accuracy is what exposed the cost. That order matters, because the

@@ -184,7 +184,20 @@ SECTIONS {
 		 * this list is a curated 8 KiB working set and removing a member
 		 * re-addresses the other ten. Do not re-try it, and do not size a
 		 * placement move from a tier cyc/insn ratio -- that estimator predicted
-		 * -7,894 here and got the sign wrong. */
+		 * -7,894 here and got the sign wrong.
+		 *
+		 * R2-03 E66 tried the reverse and it REGRESSED TOO. E65 split
+		 * ndsR2CubicValueFixed out as its own ARM function, shrinking
+		 * gcPlayDObjAnimJoint 2,096 -> 272 bytes and leaving 3,944 free here; the
+		 * Task 37 census then ranked that 2,032-byte callee the #1 unplaced
+		 * candidate for the space, 1,815,752 recoverable non-mem stall cycles
+		 * (~7,093 ticks/frame). Admitting it, immediately after its only caller,
+		 * measured WORK-H P95 +24,448, P90 +8,000, over-gate 7 -> 8, and worse on
+		 * 103 of 128 frames paired by frame number with a +2,624 median. So a
+		 * SECOND independent estimator -- per-symbol recoverable stall, not the
+		 * tier ratio -- also got the sign wrong on this list. Treat sections C and
+		 * D of the Task 37 census as a cost ranking, never as a placement
+		 * prediction, and treat .text.hot as closed in both directions. */
 		*battleship_sys_objanim.o(.text.gcPlayDObjAnimJoint)
 		*battleship_sys_objman.o(.text.gcRunGObjProcess)
 		*battleship_sys_objman.o(.text.gcRunAll)

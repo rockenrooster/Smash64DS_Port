@@ -27,8 +27,27 @@
 #ifndef RTOD32
 #define RTOD32 ((float)(180.0 / 3.14159265358979323846))
 #endif
-#define F_CST_DTOR32(x) ((f32)((x) * (M_PI / 180.0)))
-#define F_CLC_DTOR32(x) ((f32)(((x) * M_PI) / 180.0))
+/* R2-03 E67. These MUST stay in single precision, and they were not.
+ *
+ * `M_PI` and `180.0` are both `double`, so `(x) * M_PI` promoted the argument and
+ * every call compiled to four library calls -- `__aeabi_f2d`, `__aeabi_dmul`,
+ * `__aeabi_ddiv`, `__aeabi_d2f`. The ARM9 has no FPU at all, and its double
+ * helpers are far worse than its float ones: the Task 37 census measured
+ * `__aeabi_ddiv` at 349 ticks per call against `__aeabi_fdiv`'s 53.
+ *
+ * This was a port-side transcription slip, not anything the source asked for.
+ * BattleShip's own `macros.h` writes these with `DTOR32` (a `float`) and
+ * `180.0F`, so the forms below are simultaneously faster AND closer to the
+ * specification. `DTOR32`/`RTOD32` above already cast to `float`, so their
+ * double arithmetic is constant-folded at compile time and costs nothing.
+ *
+ * Precision: the double route rounded once at the end; these round twice, at
+ * ~1e-7 relative each, on an angle in degrees. `PROJECT_GOAL.md` requires
+ * mechanical equivalence, not bit exactness, and this is orders of magnitude
+ * below the 0.0028 rad bound `check_r2_cubic_error_bound.py` already accepts for
+ * joint values. */
+#define F_CST_DTOR32(x) ((f32)((x) * DTOR32))
+#define F_CLC_DTOR32(x) ((f32)(((x) * PI32) / 180.0F))
 #define F_PCT_TO_DEC(x) ((f32)((x) * 0.01F))
 #define PHYSICAL_TO_ROM(x) ((uintptr_t)(x) + 0xB0000000u)
 #define UPDATE_INTERVAL 60

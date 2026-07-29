@@ -447,6 +447,7 @@ now exceeds the gain.**
 | 89 | refill `.text.hot.draw` | +11,648 |
 | 94 | admit a function to ITCM | `STG` +3,712 |
 | 95 | hoist animation invariants | `STG` +3,392 / +5,056 |
+| R2-03 E66 | admit a function to `.text.hot` | P95 +24,448, worse on 103/128 |
 
 The tell in 94 and 95 is identical and unambiguous: `STG` rose in an arm whose
 change the stage path never executes. Nothing moved except addresses.
@@ -461,6 +462,24 @@ to the gain, so such a change is a coin flip regardless of how sound its
 mechanism is. A lever is only worth pulling now if it changes enough at once
 that the working set itself shrinks -- a data-structure or representation
 rewrite, not a hoist, an inline, or a placement move.
+
+**R2-03 E66 adds the other direction, and a warning about the instrument.** E65
+freed 3,944 bytes of `.text.hot`, and the Task 37 census ranked
+`ndsR2CubicValueFixed` the #1 candidate for it -- 2,032 bytes carrying 1,815,752
+recoverable non-mem stall cycles, ~7,093 ticks/frame, marked `fit`. Admitted next
+to its only caller, it measured **P95 +24,448 and worse on 103 of 128 frames
+paired by frame, +2,624 median**.
+
+Task 94 had already recorded that the *tier cyc/insn ratio* estimator got this
+sign wrong. E66 used a far more specific one -- per-symbol recoverable stall for
+the exact candidate -- and it was wrong the same way. **Sections C and D of the
+Task 37 census are a cost ranking, not a placement prediction.** Read them to find
+what is expensive; do not read them as advice about where to put it. `.text.hot`
+is closed in both directions: nothing may be added and nothing removed.
+
+**But note what this does not close.** E65's own ARM-mode win was −71,616 on the
+same list, and it *shrank* `.text.hot` by 1,824 bytes as a side effect. Removing
+work still pays at this optimum. Only moving it has stopped paying.
 
 ## Size a rewrite before you scope it (Task 96, 2026-07-26)
 
@@ -562,6 +581,38 @@ inside one.** Task 99 also retires the estimator that produced its own
 hypothesis: dividing a bucket by its item count gave ~1,832 ticks/triangle
 against a measured 194, wrong by 9.4x, because it charged fixed overhead to the
 per-item quantity. Do not size a per-item lever by dividing a bucket total.
+
+## Any `double` on this target is a defect until proven otherwise (R2-03 E67, 2026-07-29)
+
+The ARM9 has no FPU, and its double helpers are much worse than its float ones:
+the Task 37 census measured `__aeabi_ddiv` at **349 ticks per call** against
+`__aeabi_fdiv`'s 53, and `__aeabi_dmul` at 81 against `__aeabi_fmul`'s 13. A single
+unsuffixed literal is enough to promote a whole expression.
+
+E67 found the port's degrees-to-radians macros written with `M_PI` and `180.0`
+instead of BattleShip's `PI32` and `180.0F`, so every call ran
+`f2d → dmul → ddiv → d2f`. Fixing it to the source's own form measured **−6,976
+median on 91 of 128 frames** and doubled the gate margin. **No profile would have
+found it**: only ~14 calls a frame reach those macros, so the cost lives entirely
+in the per-call price.
+
+**The audit is static, needs no emulator, and takes one command.** Group
+double-helper call sites by containing function in the disassembly:
+
+```bash
+arm-none-eabi-objdump -d BUILD/x.elf |
+  grep -E "^[0-9a-f]{8} <|bl.*__aeabi_(d|f2d|i2d|ui2d)"
+```
+
+Look for the `f2d → … → d2f` sandwich: that is float data being widened, computed
+on, and narrowed back, which is always avoidable. Then check whether the port's
+macro or constant diverges from the decomp's -- E67's did, so the fix was
+*simultaneously* faster and closer to the specification, which is the easiest
+possible KEEP to justify.
+
+Corollary for the ~20,000-tick rule above: it applies to *placement and hoisting*,
+not to removing library calls. E67 was worth 6,976 and it landed cleanly, because
+removing work does not perturb the layout the way moving work does.
 
 ## The ROM is Thumb, so 64-bit arithmetic is a library call (R2-03 E65, 2026-07-29)
 
