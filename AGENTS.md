@@ -106,6 +106,14 @@ Latest instead when normal/shared startup is affected. Do not stack DevFast,
 Boundary, and Latest when they cover the same runtime. The registry exposes
 only Latest and Boundary; the retired diagnostic fleet must not return.
 
+Builds parallelise themselves: the Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)`
+from `nproc`. Do not pass `-j` and do not clear or override `MAKEFLAGS` — a
+probe that exported `MAKEFLAGS=""` is part of why this went unnoticed for the
+whole campaign. Run one build at a time regardless: the asset generators write
+into shared paths outside `$(BUILD)`, so concurrent builds corrupt each other's
+generated headers whatever `-j` says. `make NDS_JOBS=1` forces serial for
+bisecting a generator ordering bug.
+
 Subagent switch: **ON**.
 
 * `OFF`: let already-running subagents finish, but do not spawn, follow up, or

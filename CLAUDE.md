@@ -43,3 +43,15 @@ These are about this tool, so they are not in `AGENTS.md`:
   noticed. `make` recipes spawn their own short-lived shells and are not
   controllable this way — run builds through the PowerShell tool rather than
   `Start-Process` so they inherit a hidden console.
+- **Builds are parallel by default; never pass `-j` and never clear
+  `MAKEFLAGS`.** The Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)` from `nproc`.
+  Until 2026-07-29 nothing anywhere set `-j`, so every build in the campaign ran
+  single-threaded — about thirteen minutes for a full tickhud rebuild on a
+  32-thread machine — and one probe made it worse by exporting `MAKEFLAGS=""`
+  before invoking `make`. Do not reintroduce either. One build at a time is
+  still correct: the asset generators write into shared paths such as
+  `include/nds/generated/`, outside `$(BUILD)`, so concurrent makes with
+  different flags corrupt each other regardless of `-j`. `make NDS_JOBS=1` is
+  the escape hatch if a generator's prerequisites ever turn out to be
+  under-declared — that failure races into a subtly wrong binary rather than an
+  error, so it would surface here as an unexplained measurement.

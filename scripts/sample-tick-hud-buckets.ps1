@@ -36,6 +36,14 @@ param(
     # fired/skipped counters and read them from the same run that produced the
     # buckets, not from a second run that may not have taken the same path.
     [string[]]$ExtraGlobals = @(),
+    # Per-frame rows as CSV, one line per presented sample. The percentile table
+    # answers "how big is P95"; it cannot answer "which frames are the P95", and
+    # every excursion investigation this campaign has run needed the second
+    # question first -- R2-03 E35 had to profile frames 517-521 against a matched
+    # control at 508-512, and identifying those five frames is what this writes
+    # out. The JSON only ever carried the summary, so that identification was
+    # being redone by hand each time.
+    [string]$RowsCsv = '',
     [ValidateRange(1,512)][int]$Samples = 32,
     [ValidateRange(1,1000000)][int]$StartFrame = 438,
     [ValidateRange(30,3600)][int]$TimeoutSeconds = 900,
@@ -369,6 +377,22 @@ try {
     }
     if ([uint64]$frames[0] -lt [uint64]$StartFrame) {
         throw "Tick-HUD sampling began at frame $($frames[0]), before $StartFrame."
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($RowsCsv)) {
+        $workCsvIndex = [array]::IndexOf($bucketNames, 'WORK') + 1
+        $hudCsvIndex = [array]::IndexOf($bucketNames, 'HUD') + 1
+        $csv = @(,('frame,' + ($bucketNames -join ',') + ',WORK-H'))
+        foreach ($row in $rows) {
+            $cells = @($row[0])
+            for ($b = 0; $b -lt $bucketNames.Count; $b++) {
+                $cells += $row[$b + 1]
+            }
+            $cells += ([uint64]$row[$workCsvIndex] - [uint64]$row[$hudCsvIndex])
+            $csv += ($cells -join ',')
+        }
+        Set-Content -LiteralPath $RowsCsv -Value $csv -Encoding ascii
+        Write-Host "Wrote $RowsCsv"
     }
 
     $stats = @(0..($bucketNames.Count - 1) | ForEach-Object {

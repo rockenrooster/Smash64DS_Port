@@ -12,6 +12,31 @@ NDS_NORMALIZE_DEVKIT_PATH = $(patsubst %/,%,$(patsubst c:/%,/c/%,$(patsubst C:/%
 override DEVKITPRO := $(call NDS_NORMALIZE_DEVKIT_PATH,$(DEVKITPRO))
 override DEVKITARM := $(call NDS_NORMALIZE_DEVKIT_PATH,$(DEVKITARM))
 
+# Build parallelism, set here rather than expected on the command line.
+#
+# GNU Make defaults to one job and nothing in this repo or in the environment
+# ever set -j, so every build in the campaign ran single-threaded -- roughly
+# thirteen minutes of wall clock for a full tickhud rebuild on a 32-thread
+# machine. A flag you have to remember is a flag that gets forgotten, and this
+# one was, for months. Setting it in the Makefile makes it apply to every
+# caller: the owner's builds, an agent's builds, and any harness that shells out
+# to `make` without knowing to ask.
+#
+# One build at a time is still the rule, and this does not change that. The
+# asset generators write into shared paths such as include/nds/generated/, which
+# live OUTSIDE $(BUILD), so two concurrent makes with different flags would
+# corrupt each other's generated headers no matter what -j is. This parallelises
+# within a build; nothing parallelises across builds.
+#
+# `make NDS_JOBS=1 ...` forces a serial build. Keep that escape hatch: an
+# under-declared prerequisite in a generator does not fail loudly under -j, it
+# races and yields a subtly wrong binary, and on this project that surfaces as
+# an unexplained measurement rather than an error. Serial is how you bisect it.
+NDS_JOBS ?= $(shell nproc 2>/dev/null || echo $(NUMBER_OF_PROCESSORS))
+ifneq ($(strip $(NDS_JOBS)),)
+MAKEFLAGS += -j$(strip $(NDS_JOBS))
+endif
+
 GAME_TITLE     := Smash 64 DS Port
 GAME_SUBTITLE1 := BattleShip architecture probe
 GAME_SUBTITLE2 := Built with devkitPro/libnds
@@ -164,6 +189,16 @@ NDS_R2_DELTA_PATH_ITCM ?= 0
 # repeating an asset already loaded, over a working set of 29 distinct
 # animations. Every failure path degrades to the uncached load.
 NDS_R2_ANIM_CACHE ?= 0
+# R2-03 E47. The native fighter owner derives its material colour and its
+# use-material predicate from `stats` per epoch, the way the generic path does,
+# instead of reading a baked policy flag and always taking prim_color. The
+# generic path picks env_color whenever the combiner outputs ENVIRONMENT and
+# returns 0 with no combiner at all, and its predicate is a function of the live
+# combiner -- so on hitlag frames, where Task 39's hurt flash is the only thing
+# that varies the epoch state (E34), the baked answer draws the struck fighter
+# dark maroon against the generic path's light grey (E32). Once per epoch,
+# 46.4/frame.
+NDS_R2_MATERIAL_DYNAMIC ?= 0
 # R2-04 E2. Shadow copy of the FPS-HUD publish, from the same locals in the
 # same breath, to separate "something rewrites the primary afterwards" from
 # "the harness BUS_CLOCK constant is wrong". Lab probe.
@@ -1968,6 +2003,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_SPAN_LEAN_TIMING $(NDS_R2_SPAN_LEAN_TIMING)'; \
 		echo '#define NDS_R2_DELTA_PATH_ITCM $(NDS_R2_DELTA_PATH_ITCM)'; \
 		echo '#define NDS_R2_ANIM_CACHE $(NDS_R2_ANIM_CACHE)'; \
+		echo '#define NDS_R2_MATERIAL_DYNAMIC $(NDS_R2_MATERIAL_DYNAMIC)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \

@@ -17539,9 +17539,38 @@ ndsRendererNativeShadeProductionActions(
             epoch_policy & NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK];
     const NDSRendererHardwareLightDirection *prepared_direction = NULL;
     const u32 *shade_lut = NULL;
+    /* R2-03 E47. The native owner baked both of these; the generic path derives
+     * both from `stats` per draw, and on hitlag frames they disagree.
+     *
+     * `ndsRendererHardwareColorSource` picks `env_color` whenever the combiner
+     * outputs ENVIRONMENT and `prim_color` only otherwise, and returns 0 when
+     * the epoch has no combiner at all. The native owner used `prim_color`
+     * unconditionally. `ndsRendererHardwareUseMaterialColor` is likewise a
+     * predicate over the live combiner -- for a lit-shade combine it reduces to
+     * `UsesLitPrimitiveModulate(stats)` -- while the policy flag is fixed at
+     * generation time.
+     *
+     * E34 measured `prim_color`/`env_color` as the only per-epoch state that
+     * varies at runtime, and Task 39's hurt flash is what varies them, so
+     * hitlag frames are exactly where a baked answer goes wrong: the struck
+     * fighter came out dark maroon where the generic path draws light grey
+     * (E32, `artifacts/visibility/e32-compare-480.png`). E41 had already
+     * excluded the fold arithmetic and E16's hardware lighting by three-way
+     * capture, and E36 excluded `color_modulate`.
+     *
+     * This runs once per epoch (46.4/frame), not per vertex, so deriving it is
+     * not on any hot path. A rendering-correctness fix owed regardless of E32 --
+     * E32 only decides whether these frames reach the native owner at all. */
+#if NDS_R2_MATERIAL_DYNAMIC
+    u32 use_material =
+        (ndsRendererHardwareUseMaterialColor(stats) != FALSE) ?
+            NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL : 0u;
+    u32 material_color = ndsRendererHardwareColorSource(stats);
+#else
     u32 use_material =
         policy->vertex_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
     u32 material_color = (use_material != 0u) ? stats->prim_color : 0u;
+#endif
     u32 action_offset;
     /* Identical to `prepared_direction != NULL` in every build that prepares
      * the direction, and still correct in the build that skips it. */
@@ -17550,6 +17579,9 @@ ndsRendererNativeShadeProductionActions(
     u32 hardware_lit = FALSE;
 #endif
 
+#if NDS_R2_MATERIAL_DYNAMIC
+    (void)policy;
+#endif
     if (epoch->action_count == 0u)
     {
         return TRUE;
