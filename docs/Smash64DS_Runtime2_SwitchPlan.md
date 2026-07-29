@@ -352,7 +352,17 @@ GAMEPLAY         -> stage collision unchanged (it is gameplay code)
 
 ### R2-06 — Full Runtime 2 battle
 
-- Mario vs Fox on Dream Land through `NDS_R2_PATH`: 60 Hz gameplay,
+**Mario CPU vs Fox CPU is a harness configuration, not a product change.** It
+exists so R2-06/R2-07 can be gated without a recorded input stream, and as a
+deliberate stress case: two CPUs attack continuously, which maximises the live
+hitbox population that R2-03 E35 measured as the owner of the `SRC` P95
+excursion. The shipped Boundary stays Mario human vs level-3 Fox CPU at mode
+`163`, and `PROJECT_GOAL.md`'s P95 gate is defined on *representative* gameplay —
+so a P95 read off the stress config is a harder number than the milestone
+requires and must be reported as such, never swapped in silently for the
+Boundary figure.
+
+- Mario CPU vs Fox CPU on Dream Land through `NDS_R2_PATH`: 60 Hz gameplay,
   collision, damage, knockback, shields, CPU behavior, camera, 30 FPS
   presentation. Effects/audio still Runtime 1 machinery where needed.
 - First full-frame gate: the 2-VBlank share becomes the headline metric.
@@ -364,7 +374,7 @@ GAMEPLAY         -> stage collision unchanged (it is gameplay code)
 - Ported particle banks (from the P1 row), SFX/voice/BGM, HUD, GAME SET →
   results flow. Cosmetic systems get explicit budgets so they cannot erase
   the headroom.
-- Gate: full demo loop within total budget; P95 still ≤ 1.12M.
+- Gate: full demo loop (Mario CPU vs Fox CPU) within total budget; P95 still ≤ 1.12M.
 
 ### R2-08 — The switch
 

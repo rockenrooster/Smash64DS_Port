@@ -19,17 +19,18 @@ smash64ds-battle-playable-hwtri.nds
 SHA-256 4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090
 ```
 
-Current local root artifact:
+Current local root artifact, rebuilt 2026-07-29 08:11 with R2-04 E4/E5
+(`NDS_R2_ANIM_CACHE`) resident:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-11,421,696 bytes
-SHA-256 A9ED45BC5DEF9DE71E00850E83DEB34AE46F4CB9B2CE19113E0548273C56F574
+11,507,712 bytes
+SHA-256 748764951CCCCBA36FA76D27BFCAF02DEDEB46A49C0631FEADC132FB511E5F87
 ```
 
-The worktree is dirty, so the local identity is informational only. It is not a
-release candidate until the relevant verifier passes and the public-build pin is
-updated in the same kept change.
+Boundary passed on this configuration and the worktree is clean at `9af1247`, so
+this is a release candidate; the public-build pin in `README.md` still names the
+older ROM and should be updated in whichever kept change publishes next.
 
 ## R2-04 E4/E5 — GRADUATED, −132,352 WORK-H P95, Boundary green (2026-07-29)
 
