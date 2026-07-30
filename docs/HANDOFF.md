@@ -104,9 +104,9 @@ not share one expensive runtime representation"*. **The 146,148-tick walk IS tha
 representation**, and giving the renderer its own pose is R2-04's own title (E6: E5 paid down
 loading, not pose). Collision is **hard-bounded at 15 joints** —
 `attack_colls[4]` + `damage_colls[11]` (`fighter.h:3141/3148`) — of ~25 live, and the parse/play walk
-is **unconditional**, so the remainder is recoverable. **E13 owes the ancestor-chain union**; start
-with the free half — `ndsFighterMarioFoxRecordDamageCollShell` already counts live hurtboxes and
-discards it (`reloc_backend_fighter_model.c:2513`). Collision itself is still under 4,000.
+is **unconditional**, so the remainder is recoverable. **E13 owes the ancestor-chain union.** Beware:
+the `gNdsFighterInit*DamageColl*` census **reads all zeros** (`r206-e13-hurtbox-128`) and
+`ndsResetStartupDiagnostics` has **zero callers** — that family is inert, fix before citing it.
 
 ## The one open fidelity item
 

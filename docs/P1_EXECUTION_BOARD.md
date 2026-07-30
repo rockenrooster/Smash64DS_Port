@@ -717,13 +717,27 @@ recoverable at all.
 
 **E13 step 1c — the two halves of that number have different costs, and one is nearly free.**
 
-- **Hurtboxes are static per fighter and already counted.** They come from
-  `fp->attr->damage_coll_descs[]`, applied once at init (`reloc_backend_fighter_model.c:2479-2495`
-  and `ftparam.c:700-717`), not from move scripts. And the port **already computes the live count**:
-  `ndsFighterMarioFoxRecordDamageCollShell` (`:2498`) loops all `FTDAMAGECOLL_NUM_MAX` descs at
-  `:2513-2519` accumulating `count`, then **throws it away** — it is used only as `count != 0u` to
-  set a mask bit at `:2521`. Publishing it as a `volatile u32` per player is a **one-line addition to
-  an existing recorder**, no new probe and no new walk. Do that first; it is the cheapest half.
+- **Hurtboxes are static per fighter, an instrument for them already exists, and IT REPORTS NOTHING.**
+  They come from `fp->attr->damage_coll_descs[]`, applied once at init
+  (`reloc_backend_fighter_model.c:2479-2495`, `ftparam.c:700-717`), not from move scripts.
+  `ndsFighterMarioFoxRecordDamageCollShell` (`:2498`) counts the live hurtboxes at `:2513-2519` and
+  publishes `gNdsFighterInitP0/P1DamageCollCount` (`:2574`/`:2586`) beside `...DamageCollJoint0`, the
+  first hurtbox's `joint_id`. **Measured, DLDI-on, ROM `6B1F787B`
+  (`artifacts/performance/r206-e13-hurtbox-128.json`): all five read ZERO** — both counts, both
+  `Joint0`s, and `gNdsFighterInitDamageCollMask`.
+  **That is not "no hurtboxes", it is "the recorder never wrote".** The tell is `Joint0`: its reset
+  value is `0xffffffffu` (`taskman_seam.c:1098-1099`), so a value of `0` means the reset never ran
+  *either* — everything is sitting at BSS zero. And `ndsResetStartupDiagnostics`, which contains that
+  reset (`taskman_seam.c:30`, declared `nds_startup.h:728`), has **zero callers anywhere in
+  `src/`** — dead code. So the whole fighter-init census family is inert in Boundary and **cannot
+  supply E13's hurtbox count until that is fixed.** Fix the recorder path before trusting any
+  `gNdsFighterInit*` value; several other results may cite these.
+  *(Two corrections, both mine, both caught before they were published as results: I first wrote that
+  the count was "thrown away and needs a one-line addition" — wrong, I had read only to `:2559` and
+  the assignment is at `:2574`. I then suspected all eight `reloc_backend_*.c` were compiled twice,
+  being both `#include`d into `reloc_backend.c` and listed in the Makefile — also wrong: the build
+  produces no standalone `reloc_backend_*.o` and the ELF has no duplicated FUNC symbols, so that
+  Makefile list is not a second compile rule.)*
 - **Hitboxes are dynamic and do need a probe.** `ftParamGetJointID` (`ftparam.c:534-541`) is a
   passthrough apart from `-2 → attr->joint_itemlight_id`, so script joint ids are *direct* indices
   into `fp->joints[]` with no small per-fighter table to enumerate. The ids therefore only exist
