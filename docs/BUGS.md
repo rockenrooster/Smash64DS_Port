@@ -129,6 +129,26 @@ These bugs should be fixed for P1 delivery.
       (I->M spans 12,448 bytes for a 17x57 two-bitmap sprite). Read the real
       `Sprite` records out of the loaded asset rather than guessing; a wrong
       format normalizes to corrupt pixels rather than to an error.
+  - Reading those formats was ATTEMPTED 2026-07-30 and is not as simple as it
+    looks. Recorded so the next attempt starts past the two dead ends:
+    * The method itself is sound. `soak-freeze-watch.ps1`'s field list takes
+      arbitrary GDB expressions, and
+      `((Sprite *)((char *)gGMCommonFiles[1] + 0xe4a8))->bmfmt` resolves --
+      the `Sprite` type is in the debug info, no new tooling needed.
+    * WRONG ROM, first attempt. On `smash64ds-results-lab-hwtri` every field
+      came back garbage (`nbitmaps` 8260, `height` -8062, `bmfmt` 60).
+      `gGMCommonFiles[1]` is not the IFCommonGameStatus asset on a
+      Results-only boot; the index is battle-context. Do not read these off
+      the Results lab ROM.
+    * WHOLE READ LOST, second attempt. On the battle tick-HUD ROM the run
+      produced no `CLEAN=` line at all -- one bad expression aborts the entire
+      printf, which that harness documents as deliberate ("one missing symbol
+      fails its whole command"). So a speculative typed read costs the run's
+      other sixty counters too.
+    * Next attempt: dump raw words (`x/8xw`) at the offsets instead of typed
+      field access, or read them in a dedicated one-shot GDB script rather
+      than inside the shared counter read, and confirm `gGMCommonFiles[1]` is
+      non-NULL before dereferencing it.
 -Results screen. VFX and SFX/BGM/FGM.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: the Results sequence queues PublicWin 621 at scene start,
