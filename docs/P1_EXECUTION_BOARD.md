@@ -19,18 +19,31 @@ smash64ds-battle-playable-hwtri.nds
 SHA-256 4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090
 ```
 
-Current local root artifact, rebuilt 2026-07-29 08:11 with R2-04 E4/E5
-(`NDS_R2_ANIM_CACHE`) resident:
+Current local root artifact, rebuilt 2026-07-29 19:11 with the day's five
+graduations resident — **E32, E64b, E65, E67, E69**:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-11,507,712 bytes
-SHA-256 748764951CCCCBA36FA76D27BFCAF02DEDEB46A49C0631FEADC132FB511E5F87
+11,511,808 bytes
+SHA-256 80CCD2EE0A2EA29FECE05384E9595BC3CB3CF23B09DE71FF9EA41D058B51104F
 ```
 
-Boundary passed on this configuration and the worktree is clean at `9af1247`, so
-this is a release candidate; the public-build pin in `README.md` still names the
-older ROM and should be updated in whichever kept change publishes next.
++4,096 bytes over the 08:11 ROM (11,507,712 /
+`748764951CCCCBA36FA76D27BFCAF02DEDEB46A49C0631FEADC132FB511E5F87`), which is
+E65's ARM-mode evaluator plus E69's sixteen inlined matrix moves. Boundary passed on
+this configuration.
+
+The tick-HUD instrument ROM was rebuilt with it, per the owner's 2026-07-22 rule
+that the two move together — 11,514,880 bytes,
+`E60467212F745086376B83A6108730BD357CAD48E3DC6BF4671BDA230A7B5DA6`, in both
+`builds/build/` and `builds/build-tick-hud-buckets/`. It has no root output; that
+target writes under `$(BUILD)` by design.
+
+**This is a release candidate, not a release.** `README.md`'s public-build pin and
+`build.ps1`'s `OUTPUT_SHA256` still name the audited published ROM, and they stay
+that way: publishing needs the owner's authorization for that specific push, so
+`build.ps1` will warn that the local build differs from the audited reference. That
+warning is expected here and is not a source regression.
 
 ## R2-03 E69 GRADUATED — the matrix copies were `bl memcpy`. P95 **1,096,768**, over gate 7/128 → 6/128, margin 23,232 (2026-07-29)
 
