@@ -1800,7 +1800,32 @@ entirely and work falls to 695,382 = **1.24 VBlanks**, which presents at 2 and m
 room to spare. Put the other way: reaching 1,120,380 needs **−662,215 off the fighters, a 61% cut**,
 and needs nothing at all from anything else on the screen.
 
-That is the whole R4c brief, and it is unusually clean: one owner, one number, and the
+**RETRACTED THE SAME DAY BY A PROBE.** The claim that removing the fighters lands 2 VBlanks was
+arithmetic on a bracket, and the bracket was not what I assumed it was. A build that skips
+`ndsRendererExecuteNativeFighterRootHardware` outright on the Results-only ROM measures, over 774
+frames:
+
+| | control | fighter draw skipped |
+| --- | ---: | ---: |
+| P50 / P95 | 5 VB — 2,800,950 | **3 VB — 1,680,570** |
+| 2-VBlank frames | 117 (36.0%) | 117 (15.1%) |
+| 3-VBlank frames | 0 | **650 (84.0%)** |
+| `FTR` bracket/frame | 1,087,212 | **426,274** |
+
+Two corrections, both against the paragraph above:
+
+1. **Removing the fighter draw does not reach the gate.** It is worth two whole VBlanks — 5 → 3,
+   −1,120,380 ticks, the largest single Results movement measured so far — and P95 still lands at
+   1,680,570, **1.5× over the 1.12M gate**. "−662,215 off the fighters and nothing else" was wrong.
+2. **`FTR` is not all draw: 39% of it survives skipping the hardware execute.** 426,274 ticks/frame
+   of fighter work is update/animation, which no draw-side lever can touch. It is still 68% of
+   non-wait work in the probe build, so fighters remain the top owner — but via two levers, not one.
+
+So R4c needs both halves of the fighter cost and likely more besides; no single measured lever closes
+Results, the same shape R2-06 E10 reached for the battle frame. Probe deleted after answering, per
+the no-permanent-probes rule.
+
+The original sizing's one durable part: the bimodality agrees independently — one owner and the
 already-measured bimodality agrees with it independently — the 36% of frames that already sit at 2
 VBlanks are exactly the ones before source tic 120, which is when the fighters are initialised
 (`mnvsresults.c:2799-2846`).
