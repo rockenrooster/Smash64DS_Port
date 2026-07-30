@@ -396,12 +396,14 @@ soak.** Report the histogram, but as evidence of *no regression*, not of a win.
 Also note the stress config is not the Boundary figure — see §7 R2-06's own
 warning and `NDS_R2_BOTH_CPU` in the Makefile.
 
-### R2-07 — Effects, audio, HUD, match flow
+### R2-07 — Effects, audio, HUD, match flow, and Bugs
 
+- Pressing start in Results screen should restart match (P1 specific)
 - Ported particle banks (from the P1 row), SFX/voice/BGM, HUD, GAME SET →
   results flow. Cosmetic systems get explicit budgets so they cannot erase
   the headroom.
-- Gate: full demo loop (Mario CPU vs Fox CPU) within total budget; P95 still ≤ 1.12M.
+- Bugs in BUGS.md all fixed.  
+- Gate: full demo loop (Mario CPU vs Fox CPU, 1 min and 5 mins match length) within total budget; P95 still ≤ 1.12M.
 
 **As written this gate is unreachable today, and that is a sequencing fact rather
 than a failure (2026-07-29).** E65, E67 and E69 put P95 at 1,096,768 — **23,232

@@ -1,45 +1,11 @@
-AI Agent should mark fixed items with FIXED prefix
+AI Agent should mark fixed items with FIXED prefix.
+These bugs should be fixed for P1 delivery.
 
--Sometimes hitting a shielded player causes a freeze.
-  Not a shield bug. The shield hit was one trigger of a general out-of-memory
-  hang, which is also the owner's "lots of freeze bugs that seem random".
-  Mechanism: `decomp/src/sys/malloc.c:30` answers a full arena with
-  `while (TRUE);`. On the N64 that was a developer assert beside a devkit
-  printf; here it is shipped code with nowhere to print, so heap exhaustion
-  presents as a total, silent, permanent hang -- interrupts still enabled and
-  still serviced, VBlanks still counting, the main loop simply never returning.
-  Confirmed by disassembly: the PC sits on `e7fe  b.n <self>`.
-  Ruled out by register reads rather than by argument: REG_IME=1, REG_IE has
-  VBlank, REG_IF=0 and the CPSR I-bit clear (not the interrupts-disabled
-  swiWaitForVBlank hang); GXSTAT not FIFO-stalled (not a geometry deadlock);
-  FGM enter count == return count (not the audio/IPC handshake).
-  Two instances captured 2026-07-29, both on gSYTaskmanGeneralHeap:
-  - Mid-match, and this is the one the owner hit. `ndsR2AnimCacheStore`
-    (reloc_backend_assets.c) asked syTaskmanMalloc for 3,472 bytes at 3.5
-    minutes of both-CPU play, from Mario's AttackAirD load via
-    ftMainSetStatus <- AttackAir interrupt <- DamageFall. A shield hit drives
-    rebound/damage-fall, which interrupts into a new status, which force-loads
-    an animation -- shield hits are simply a common way to reach an uncached
-    status, which is why it looked shield-specific and why it was "sometimes".
-    The cache bounded its ENTRY COUNT and never its BYTES, and never freed.
-    FIXED: the cache now owns a fixed 128 KiB static arena and bump-allocates
-    from it, so its exhaustion returns NULL through the `payload == NULL`
-    reject path that was already written and had been dead code, and the asset
-    takes the on-demand path it would have taken anyway.
-  - At battle start, `ftManagerSetupFilesMainKind(fkind=1)` loading Fox's
-    files: request 116,752 against 57,936 free in a 1,048,576-byte arena,
-    short by 58,816. Seen with `NDS_R2_ANIM_CACHE=0`, so it is independent of
-    the cache. OPEN, and specific to the `NDS_R2_BOTH_CPU=1` stress config so
-    far; the shipped ROM measured 1,286,144 bytes of arena and clears the same
-    load with ~178 KB spare.
-  Class-level, and it applies to every arena in the port: an overflow can no
-  longer be anonymous. `src/import/battleship_sys_malloc.c` wraps syMallocSet,
-  latches arena id / request / alignment / headroom / caller LR into
-  `gNdsSyMallocOverflow*`, and halts in the named `ndsSyMallocOverflowHalt`.
-  It still halts by design -- syTaskmanMalloc's decomp callers do not check for
-  NULL, so returning NULL globally would trade a hang for a wild write. An
-  optional allocation must ask `ndsSyMallocWouldFit` first. Most call sites
-  still commit blind; see docs/optimization/TASK_STANDING_RULES.md.
+-"Time Up" VFX and SFX after match countdown finished.
+-Results screen. VFX and SFX/BGM/FGM.
+-Crowd noise is missing from results and match gameplay.
+-Sudden Death has FPS, freezing, and animation issues. (you can get to sudden death by enabling CPU input (CPU vs CPU) after normal match end.)
+
 
 -Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the
