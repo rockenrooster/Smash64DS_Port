@@ -8,7 +8,12 @@ param(
     [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [switch]$NoBuild,
     [ValidateRange(2, 120)][int]$PollSeconds = 10,
-    [ValidateRange(1, 720)][int]$MinutesToRun = 20,
+    # Owner, 2026-07-29: *"for a soak 5 mins tops, because I don't think the
+    # results screen ever ends"*. A longer run does not buy more coverage while
+    # that is true -- the ROM reaches the results scene once and stays there, so
+    # minute six onward watches the same stuck scene as minute five. Raise this
+    # ceiling only once a match is known to hand back to another match.
+    [ValidateRange(1, 5)][int]$MinutesToRun = 5,
     # Consecutive identical frames needed to call it frozen. Two screens of a DS
     # game in motion never render byte-identically, but a legitimately static
     # moment does exist (a settled results screen, a pause), so require several.
@@ -119,14 +124,23 @@ try {
         }
         $previousHash = $hash
         if ($identical -ge ($IdenticalFramesToTrip - 1)) {
-            # An instrument that has never seen the picture MOVE has not observed
-            # a freeze; it has failed to capture. Distinguish the two, because a
-            # black or stale grab would otherwise report a freeze on every run
-            # and every one of those reports would be worthless.
+            # Never having seen the picture MOVE is either a broken capture or a
+            # ROM that died before it animated anything -- and since the hash went
+            # chrome-free the second is the common case, so decide it from pixels
+            # instead of assuming. A uniform grab is the instrument's fault; a
+            # detailed one that never changes is the ROM's.
             if ($distinct -le 1) {
-                $verdict = 'CAPTURE-STATIC'
-                $diagnosis = ('the window hash never changed at all, so the ' +
-                    'capture is suspect rather than the ROM')
+                $colors = Measure-MelonDSWindowDistinctColors -WindowHandle $window
+                if ($colors -le 2) {
+                    $verdict = 'CAPTURE-STATIC'
+                    $diagnosis = ("the guest area holds only $colors distinct " +
+                        'colour(s), so the capture is suspect rather than the ROM')
+                } else {
+                    $verdict = 'FROZEN-FROM-START'
+                    $diagnosis = ("the picture never changed once across " +
+                        "$($identical + 1) samples yet holds $colors distinct " +
+                        'colours, so the ROM drew a frame and then stopped')
+                }
             } else {
                 $verdict = 'FROZEN-PICTURE'
                 $diagnosis = ("{0} consecutive identical window hashes over {1}s, " +
@@ -178,17 +192,37 @@ try {
                     $samples += [pscustomobject]@{
                         counter = $cleanFields[$i]; value = [uint32]$values[$i] }
                 }
+                $presented = [uint32]$values[1]
                 $matches_run = [uint32]$values[3]
                 Write-Host ("  => {0} results-scene start(s), i.e. {0} completed match(es)" -f $matches_run)
-                if ($matches_run -le 1u) {
-                    Write-Host '  WARNING: at most one match completed. This run says' `
-                        'nothing about match teardown, rematch, or cross-match drift.'
+                # A run that never presented a battle frame has not been soaked;
+                # it has failed to boot, and calling that NO-FREEZE is exactly the
+                # false negative that cost this instrument two withdrawn verdicts.
+                if ($presented -eq 0u) {
+                    $verdict = 'NEVER-STARTED'
+                    $diagnosis = ('the ROM presented zero battle frames, so nothing ' +
+                        'was soaked -- the picture moved, but not because of gameplay')
+                    Write-Host "verdict CORRECTED to $verdict -- $diagnosis"
+                } elseif ($matches_run -ge 1u) {
+                    # Reaching Results is the natural END of a soak, not a bonus:
+                    # mnVSResultsCheckExit (decomp mnvsresults.c:266) returns TRUE
+                    # only on a START_BUTTON tap and has no timeout, and the DS
+                    # results loop (taskman_seam.c:6968) is bounded by updates only
+                    # when NDS_HARNESS_FAST_LOGIC != 0 -- which every shipped target
+                    # pins to 0. So an unattended ROM sits in Results forever, by
+                    # original design. No passive soak can ever see match two.
+                    Write-Host ("  battle completed and Results is up. A passive soak " +
+                        "CANNOT reach match {0}: Results exits on START only." -f `
+                        ($matches_run + 1u))
+                } else {
+                    Write-Host '  WARNING: no match completed. This run says nothing' `
+                        'about match teardown, rematch, or cross-match drift.'
                 }
             }
         }
     }
 
-    if ($verdict -in @('FROZEN-PICTURE', 'CAPTURE-STATIC')) {
+    if ($verdict -in @('FROZEN-PICTURE', 'FROZEN-FROM-START', 'CAPTURE-STATIC')) {
         [void](New-Item -ItemType Directory -Force -Path $logDir)
         $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
         $shot = Join-Path $logDir "$stamp-frozen.png"
@@ -203,6 +237,13 @@ try {
             'set pagination off', 'set confirm off', 'set remotetimeout 30',
             "target remote 127.0.0.1:$($context.GdbPort)",
             'printf "FREEZE-PC=%p\n", $pc',
+            # The whole freeze class is decomp malloc.c:30's `while (TRUE);`, which
+            # compiles to a single self-branch. One instruction at the PC therefore
+            # names the mechanism outright -- `b.n <self>` is a spin, anything else
+            # is not -- and it needs no second sample, which matters because the
+            # stub allows exactly one session and stops freeze the emulator, so
+            # elapsed guest time cannot be sampled twice from inside one attach.
+            'x/1i $pc',
             'backtrace 40',
             'info registers',
             'printf "REG_IME=%08x\n", *(unsigned int *)0x04000208',
@@ -214,18 +255,29 @@ try {
             ('printf "COUNTERS=%u,%u,%u,%u\n", sVBlankCount, ' +
              'gNdsBattlePlayablePacingPresentedFrames, dSYTaskmanUpdateCount, ' +
              'gNdsVSResultsTickCount'),
+            # Separate printf on purpose: one missing symbol fails its whole
+            # command, and COUNTERS must not be lost to an absent arena counter.
+            ('printf "ANIMARENA=%u,%u\n", gNdsR2AnimCacheArenaUsedBytes, ' +
+             'gNdsR2AnimCacheArenaOverflows'),
             'detach'))
         $gdbProcess = Start-Process -FilePath $Gdb `
             -ArgumentList @('-q', '-batch', '-x', $gdbScript, $elf) `
             -WorkingDirectory $root -RedirectStandardOutput $gdbOut `
             -RedirectStandardError $gdbErr -WindowStyle Hidden -PassThru
-        if (-not $gdbProcess.WaitForExit(120000)) {
+        $timedOut = -not $gdbProcess.WaitForExit(120000)
+        if ($timedOut) {
             Stop-Process -Id $gdbProcess.Id -Force
             Write-Host 'freeze capture attach TIMED OUT -- the stub could not halt the core.'
-        } else {
+        }
+        # Read what landed either way. A timeout still leaves the commands that
+        # completed before it on disk, and this is the only attach available, so
+        # discarding a partial capture discards the whole run's diagnosis.
+        if (Test-Path -LiteralPath $gdbOut) {
             $capture = Get-Content $gdbOut -Raw
-            Write-Host '--- freeze capture'
-            Write-Host $capture
+            if ($capture) {
+                Write-Host "--- freeze capture$(if ($timedOut) { ' (partial)' })"
+                Write-Host $capture
+            }
         }
         Set-Content -LiteralPath (Join-Path $logDir "$stamp-$verdict.txt") -Value (
             @("rom=$rom", "build=$Build", "verdict=$verdict",

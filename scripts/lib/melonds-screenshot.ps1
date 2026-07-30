@@ -13,8 +13,18 @@ public static class Smash64DSWindowCapture
         public int Right;
         public int Bottom;
     }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Point
+    {
+        public int X;
+        public int Y;
+    }
     [DllImport("user32.dll")]
     public static extern bool GetWindowRect(IntPtr window, out Rect rect);
+    [DllImport("user32.dll")]
+    public static extern bool GetClientRect(IntPtr window, out Rect rect);
+    [DllImport("user32.dll")]
+    public static extern bool ClientToScreen(IntPtr window, ref Point point);
     [DllImport("user32.dll")]
     public static extern bool ShowWindow(IntPtr window, int command);
     [DllImport("user32.dll")]
@@ -33,12 +43,33 @@ public static class Smash64DSWindowCapture
 # Grab the melonDS window into a Bitmap. CopyFromScreen is preferred because it
 # reproduces what the owner sees; PrintWindow is the fallback for a session with
 # no desktop surface. Callers own the returned bitmap.
+#
+# -ClientOnly excludes the window chrome. Use it for ANY measurement that asks
+# whether the GUEST changed, never the default full-window grab: see the trap
+# recorded above Get-MelonDSWindowFrameHash.
 function Get-MelonDSWindowBitmap {
-    param([Parameter(Mandatory=$true)][System.IntPtr]$WindowHandle)
+    param(
+        [Parameter(Mandatory=$true)][System.IntPtr]$WindowHandle,
+        [switch]$ClientOnly
+    )
 
     $rect = New-Object Smash64DSWindowCapture+Rect
-    if (-not [Smash64DSWindowCapture]::GetWindowRect($WindowHandle, [ref]$rect)) {
-        throw 'Could not read the melonDS window bounds.'
+    $origin = New-Object Smash64DSWindowCapture+Point
+    if ($ClientOnly) {
+        if (-not [Smash64DSWindowCapture]::GetClientRect($WindowHandle, [ref]$rect)) {
+            throw 'Could not read the melonDS client bounds.'
+        }
+        # GetClientRect is client-relative, so (0,0) needs mapping to the screen
+        # before CopyFromScreen can find it.
+        if (-not [Smash64DSWindowCapture]::ClientToScreen($WindowHandle, [ref]$origin)) {
+            throw 'Could not map the melonDS client origin to the screen.'
+        }
+    } else {
+        if (-not [Smash64DSWindowCapture]::GetWindowRect($WindowHandle, [ref]$rect)) {
+            throw 'Could not read the melonDS window bounds.'
+        }
+        $origin.X = $rect.Left
+        $origin.Y = $rect.Top
     }
     $width = $rect.Right - $rect.Left
     $height = $rect.Bottom - $rect.Top
@@ -49,13 +80,17 @@ function Get-MelonDSWindowBitmap {
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     try {
         try {
-            $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+            $graphics.CopyFromScreen($origin.X, $origin.Y, 0, 0, $bitmap.Size)
         } catch {
             $screenError = $_.Exception.Message
             $destination = $graphics.GetHdc()
             try {
+                # PW_RENDERFULLCONTENT, plus PW_CLIENTONLY when the caller asked
+                # for the client area, so the fallback crops the same region the
+                # primary path does.
+                $flags = if ($ClientOnly) { 3 } else { 2 }
                 if (-not [Smash64DSWindowCapture]::PrintWindow(
-                        $WindowHandle, $destination, 2)) {
+                        $WindowHandle, $destination, $flags)) {
                     throw "CopyFromScreen failed ($screenError) and PrintWindow failed."
                 }
             } finally {
@@ -71,16 +106,28 @@ function Get-MelonDSWindowBitmap {
     return $bitmap
 }
 
-# SHA-256 over the raw window pixels. Two identical hashes seconds apart mean
+# SHA-256 over the GUEST pixels only. Two identical hashes seconds apart mean
 # nothing on either DS screen changed, which is how a human sees a freeze -- and
 # it needs no GDB, which matters because melonDS's stub serves exactly ONE
 # session per emulation run (see KNOWN_ISSUES): a polled-GDB watchdog is not
 # buildable, and a breakpoint-driven one runs the ROM about twelve times slower
 # than real time and so changes the timing of anything race-shaped.
+#
+# -ClientOnly IS THE WHOLE POINT AND IS NOT OPTIONAL. This hashed GetWindowRect
+# until 2026-07-29, which includes the title bar, and melonDS renders its FPS
+# counter into the title ("[83/60] melonDS ..."). A completely hung ARM9 therefore
+# produced a different hash on every single poll, because the HOST kept counting
+# frames it was presenting from a dead guest. The detector reported "alive, 54
+# distinct frames" across ten minutes of a ROM frozen on its boot screen, and two
+# soak verdicts had to be withdrawn -- one of them a 150/150-distinct "clean"
+# result whose perfection was the tell, since a live game repeats a frame now and
+# then and a ticking counter never does. The window frame also let the desktop
+# bleed in at the edges. Never widen this back to the window rect: a liveness
+# metric must not be able to see anything the guest does not draw.
 function Get-MelonDSWindowFrameHash {
     param([Parameter(Mandatory=$true)][System.IntPtr]$WindowHandle)
 
-    $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle
+    $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle -ClientOnly
     try {
         $data = $bitmap.LockBits(
             (New-Object System.Drawing.Rectangle 0, 0, $bitmap.Width, $bitmap.Height),
@@ -99,6 +146,32 @@ function Get-MelonDSWindowFrameHash {
         } finally {
             $sha.Dispose()
         }
+    } finally {
+        $bitmap.Dispose()
+    }
+}
+
+# How many distinct colours a sparse grid over the guest screens sees. This is
+# the discriminator between "the capture is broken" and "the guest died before it
+# drew anything": a failed grab is uniform (all black, or one desktop colour),
+# while a ROM hung during boot still shows real boot pixels. Needed because the
+# chrome-free hash removed the spurious motion that used to make a dead-from-boot
+# ROM look alive, so "never moved" became a common and genuine verdict.
+function Measure-MelonDSWindowDistinctColors {
+    param(
+        [Parameter(Mandatory=$true)][System.IntPtr]$WindowHandle,
+        [int]$Step = 16
+    )
+
+    $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle -ClientOnly
+    try {
+        $seen = New-Object 'System.Collections.Generic.HashSet[int]'
+        for ($y = 0; $y -lt $bitmap.Height; $y += $Step) {
+            for ($x = 0; $x -lt $bitmap.Width; $x += $Step) {
+                [void]$seen.Add($bitmap.GetPixel($x, $y).ToArgb())
+            }
+        }
+        return $seen.Count
     } finally {
         $bitmap.Dispose()
     }

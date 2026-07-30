@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-29 20:20 Central
+Updated: 2026-07-29 21:20 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
@@ -114,13 +114,17 @@ stops borrowing `gSYTaskmanGeneralHeap`. Verified so far:
 
 - **Links.** `nm -S` puts `sNdsR2AnimCacheArena` at 0x20000 = 131,072 exactly, no
   BSS overflow.
-- **Soak.** Both-CPU ROM at HEAD, slot 4, past **6 minutes** with no identical-frame
-  run against a **210-second** pre-fix reproduction. (The pre-fix *single*-CPU
-  tick-HUD ROM also ran 24 minutes clean, which is the expected asymmetry: a
-  stationary Mario never triggers enough distinct animations.)
+- **Soak.** ~~Both-CPU ROM at HEAD past 6 minutes; pre-fix single-CPU tick-HUD 24
+  minutes clean.~~ **BOTH WITHDRAWN 2026-07-29** — the detector was hashing the
+  melonDS title bar, which carries the host FPS counter, so a hung ARM9 produced a
+  fresh hash every poll. See the instrument section below. The **210-second pre-fix
+  reproduction stands**: its capture shows `COUNTERS=2006,447,894`, i.e. real
+  gameplay progress before the hang.
 - **But the arena is not what saves battle start.** At `fkind=1` entry the cache
   holds `ArenaUsedBytes=1392`, `Fills=1`, `Overflows=0`. Its benefit is entirely
-  mid-match, which is exactly where the soak exercises it.
+  mid-match. Re-confirmed unattached on 2026-07-29 at `ANIMARENA=1392,0` — **zero
+  overflows**, so the arena is correctly sized for what it is asked to hold and is
+  provably not the battle-start site.
 
 **Second site, older than the fix and independent of it.**
 `ftManagerSetupFilesAllKind` at battle start, on `NDS_R2_BOTH_CPU=1`:
@@ -144,10 +148,36 @@ coarse list whose first entry is `0x100000`. Measured on this ROM:
 — exactly the number of steps from 0x150000 to 0x130000, i.e. the whole fine range
 failed and it **discarded 196,608 bytes in one step** against a shortfall of 58,816.
 The comment directly above that loop records that a *coarser* version of this same
-cliff was already fixed once for exactly this reason. Extending the fine decrement
-to 0x100000 is a one-line change and is authorized as a **bug fix, not a sizing
-decision**: it makes an existing search find what it already searches for, changes
-no declared budget, and its result is already published.
+cliff was already fixed once for exactly this reason.
+
+**MY AUTHORIZATION TO EXTEND THAT LOOP TO 0x100000 IS RETRACTED (2026-07-29).** It
+was wrong on the merits and the implementer was right to hold. `0x130000` is not an
+arbitrary floor: it is a **contract with the Task 36 replay admission guard**
+(`src/nds/nds_renderer.c:4362`, documented at `include/nds/nds_renderer.h:124-134`),
+which admits an arena only when `gNdsTaskmanArenaChosenSize >= 0x130000`. Every
+value the extension would newly land — 0x100001..0x12FFFF — is below that guard, so
+the change would convert a loud hang into a **silently disabled measured render
+path**. That is the exact trade this campaign forbids.
+
+The real defect is the two constants being written twice, in two files, with a
+contract between them and nothing tying them together. Sizes, against the
+1,245,184-byte (`0x130000`) admission floor:
+
+| build | arena | above floor | replay |
+|---|---:|---:|:--|
+| published | 1,286,144 (`0x13A000`) | +40,960 | admitted |
+| tick-HUD buckets | 1,277,952 (`0x138000`) | **+32,768** | admitted |
+| `build-r2-bothcpu` | ≤ 1,245,183, reads 1,048,576 | below | **silently off** |
+| documented tick-HUD | 1,359,872 (`0x14C000`) | +114,688 | — |
+
+So **no published or measured P95 was taken with replay off** — the measurement ROM
+clears the floor. But it clears it by 32,768 bytes, which is **eight fine-loop
+steps**: 32 KiB of further BSS growth in the tick-HUD build would cross the floor
+with no error, no log line, and a quietly different renderer. The actionable items
+are therefore (a) name the threshold once and share it between the search and the
+guard, (b) make a below-floor arena report itself instead of degrading silently, and
+(c) find why the arena is 81,920 bytes short of its documented `0x14C000` at all.
+Not (d) lower the floor.
 
 **The shipped ROM is not affected at battle start.** Its fine search succeeds and
 gives 1,286,144, against 990,640 used plus a 116,752 request = 1,107,392, leaving
@@ -156,23 +186,73 @@ he reported and what is now fixed — and the battle-start overflow is specific 
 stress config that is 192 KiB poorer. Worth fixing because that config is the soak
 vehicle, but it is not a shipped-ROM defect.
 
-**One thing is NOT settled and must not be written up as if it were.** Every
-battle-start number above came from a GDB-attached run, and the *unattached* soak
-has run the same ROM for minutes with a changing picture. Either battle start is
-nondeterministic at that ~58 KB margin, or attaching from boot perturbs the guest
-`calloc` and the probe's arena is smaller than the soak's. The decisive read is
-`gNdsTaskmanArenaChosenSize` unattached, on both the pre-fix and post-fix builds —
-the second also answers whether the arena's 128 KiB of BSS costs chosen heap size,
-since BSS is linked before that `calloc` runs and would then be competing with the
-heap it was meant to protect.
+**The GDB-attach confound is now SETTLED — there was none.** It was recorded here as
+open because every battle-start number came from an attached run while the
+*unattached* soak showed "a changing picture" for minutes, leaving a choice between
+nondeterminism at the ~58 KB margin and attach-perturbed `calloc`. **Neither: the
+changing picture was the host FPS counter in the window title.** With the
+chrome-free hash, the unattached both-CPU ROM at HEAD reports `FROZEN-FROM-START`
+inside 40 seconds, and its capture is the same site to the register —
+`ftManagerSetupFilesMainKind` ← `ftManagerSetupFilesAllKind(fkind=1)`, `r5 = 116752`
+requested against `r1 = 57936` free, `COUNTERS=849,0,0,0` (zero presented frames).
+Battle start is deterministic, attaching perturbs nothing, and the site reproduces
+3/3 unattached. Evidence
+`artifacts/verification/freeze-soak/2026-07-29_210752-FROZEN-FROM-START.txt`.
 
-Owned by the implementer agent. The fix must be port-side (`decomp/` is read-only,
-the `while (TRUE);` stays), must be priced first — how much of the exhaustion is the
-cache versus the underlying on-demand loads, because fixing only the cache when the
-loads also fill the heap postpones the hang instead of removing it — and must be
-verified by a clean soak an order of magnitude past the 3.5-minute failure point,
-not by a build that compiles. Do **not** interpose `syTaskmanMalloc` to return NULL
-globally: decomp callers do not all check, so that trades a hang for a null deref.
+`x/1i $pc` now prints `b.n <self>` at the top of every capture, which names this
+whole freeze class from one line without a backtrace.
+
+The remaining fix must be port-side (`decomp/` is read-only, the `while (TRUE);`
+stays) and must be priced first — how much of the exhaustion is the cache versus the
+underlying on-demand loads, because fixing only the cache when the loads also fill
+the heap postpones the hang instead of removing it. Do **not** interpose
+`syTaskmanMalloc` to return NULL globally: decomp callers do not all check, so that
+trades a hang for a null deref. And note what a soak can and cannot verify: a
+passive soak cannot reach a second match at all, because `mnVSResultsCheckExit`
+(decomp `mnvsresults.c:266`) exits on a `START_BUTTON` tap with **no timeout** and
+the DS results loop (`src/port/taskman_seam.c:6968`) is update-bounded only when
+`NDS_HARNESS_FAST_LOGIC != 0`, which every shipped target pins to `0`. Cross-match
+drift needs a synthesized START, not a longer run; the owner capped soaks at 5
+minutes on 2026-07-29 for that reason.
+
+## INSTRUMENT: the freeze detector was hashing the host's FPS counter (2026-07-29)
+
+**Two soak verdicts withdrawn, and the failure mode is worth more than either.**
+`Get-MelonDSWindowFrameHash` hashed `GetWindowRect`, which includes the window
+**title bar** — and melonDS renders its frame-rate readout there (`[83/60] melonDS
+1.0`). A completely hung ARM9 therefore produced a *different* hash on every poll,
+because the host kept counting frames it was presenting from a dead guest. The
+window frame also let the desktop bleed in at the edges. Withdrawn:
+
+- "both-CPU post-fix, clean past 592 s, 2.8x past the failure point" — that run was
+  hung at battle start the entire time, showing its boot screen.
+- "tick-HUD pre-fix, NO-FREEZE 25 min, **150/150 samples distinct**" — and that
+  perfect score was the tell. A live game repeats a frame now and then; a ticking
+  counter never does. 150 of 150 distinct is a property of the instrument, not the
+  ROM.
+
+Fixed in `scripts/lib/melonds-screenshot.ps1`: `Get-MelonDSWindowBitmap` gained
+`-ClientOnly` (`GetClientRect` + `ClientToScreen`, `PW_CLIENTONLY` on the
+`PrintWindow` fallback) and the hash now uses it unconditionally. Measured on the
+live emulator: window 616x955, client 600x916 — the 39-pixel title strip carrying
+the FPS digits is exactly what used to be in the hash. Three consequences were
+folded back into `scripts/soak-freeze-watch.ps1`:
+
+- `NEVER-STARTED` replaces `NO-FREEZE` when the end-of-run attach reads zero
+  presented battle frames. A run that never rendered gameplay was not soaked.
+- `FROZEN-FROM-START` replaces the old blanket `CAPTURE-STATIC` when the picture
+  never moved *and* `Measure-MelonDSWindowDistinctColors` finds more than two
+  colours in the guest area. Chrome-free, "never moved" usually means a dead ROM,
+  so the instrument must stop excusing it; a uniform grab is still `CAPTURE-STATIC`.
+- `x/1i $pc` leads the capture, and the arena counters print in their own `printf`
+  so one missing symbol cannot take `COUNTERS` down with it.
+
+**Validated against a known-hung ROM, which is the test the original never had.**
+`build-r2-bothcpu` cannot start a battle 3/3; the old detector called it "alive, 54
+distinct frames". The fixed detector returns `FROZEN-FROM-START` in under 40 s with
+`b.n <self>` at the PC and `COUNTERS=849,0,0,0`. A liveness metric that can see
+anything the guest does not draw is not a liveness metric — that is the rule this
+cost, and it is recorded in `optimization/TASK_STANDING_RULES.md`.
 
 ## HARNESS: DLDI was pinned by nothing, so automation never ran the owner's I/O configuration (2026-07-29)
 

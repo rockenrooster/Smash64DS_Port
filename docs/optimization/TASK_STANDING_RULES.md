@@ -1832,3 +1832,40 @@ configuration is not exercising the state that causes it. Reach for the stress
 configuration (`NDS_R2_BOTH_CPU=1`) and an unattended soak
 (`scripts/soak-freeze-watch.ps1`) *before* concluding that green gates mean a
 healthy runtime.
+
+### A liveness metric must not be able to see anything the guest does not draw (2026-07-29)
+
+The freeze detector added above was validated the same day it shipped and it was
+lying. `Get-MelonDSWindowFrameHash` hashed the whole window via `GetWindowRect`,
+and melonDS renders its frame-rate readout into the window **title bar**. So a
+hung ARM9 produced a fresh hash on every poll — the *host* kept presenting frames
+from a dead guest, and the detector read the host's counter as the guest's
+liveness. It reported "alive, 54 distinct frames" across ten minutes of a ROM
+frozen on its boot screen. Two soak verdicts had to be withdrawn, one of them a
+25-minute "clean" run that had already been written into two documents.
+
+1. **Measure the thing, not the frame around it.** The fix is one switch
+   (`-ClientOnly`: `GetClientRect` + `ClientToScreen`), and it was available from
+   the start. Window 616x955 versus client 600x916 — a 39-pixel strip of host
+   chrome was the whole defect. Before trusting any screen-derived signal, ask
+   which pixels belong to the subject and crop to exactly those.
+2. **A perfect score is a symptom.** 150 of 150 samples distinct read as a
+   flawless run; it was the tell. A real game repeats a frame occasionally, a
+   monotonic counter never does. When a metric returns an unblemished result,
+   check whether it is capable of returning a blemished one.
+3. **Every detector needs a true positive before its negatives count.** Nothing
+   proved this one could report a freeze — only that it had not. The validation
+   was free and already sitting in the tree: `build-r2-bothcpu` hangs at battle
+   start 3/3, so it is a permanent known-hung fixture. The fixed detector calls
+   it `FROZEN-FROM-START` in under 40 s. **Run a known-bad case through a new
+   checker before you publish a clean verdict from it.**
+4. **A negative result needs its own guard rail.** "No freeze" now requires
+   evidence that gameplay happened: the end-of-run attach reads
+   `gNdsBattlePlayablePacingPresentedFrames` and reports `NEVER-STARTED` at zero.
+   The old code would have called a ROM that never booted a clean soak.
+5. **Removing spurious signal can invert a guard.** The old `CAPTURE-STATIC`
+   branch assumed "the picture never moved" meant a broken grab, which was
+   reasonable while chrome guaranteed motion. Chrome-free, that verdict usually
+   means a dead ROM, so it now counts distinct colours to decide. Re-read the
+   guards downstream of a fixed measurement; their premises may have been the
+   defect.

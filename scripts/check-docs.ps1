@@ -1,6 +1,7 @@
 param(
     [int]$AgentsMaxLines = 150,
-    [int]$AgentsMaxSectionLines = 45
+    [int]$AgentsMaxSectionLines = 45,
+    [int]$HandoffMaxLines = 150
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -62,6 +63,20 @@ for ($i = 0; $i -le $agentsLines.Count; $i++) {
         }
         if ($next) { $heading = $Matches[1]; $start = $i }
     }
+}
+
+# AGENTS.md has said "HANDOFF.md should be 150 lines max" for many cycles with
+# nothing enforcing it, and on 2026-07-29 it was found at 177 -- discovered only
+# because `Get-Content | Measure-Object -Line` had reported a confident, wrong 148
+# and a manual recount disagreed. A cap that is documented but unmeasured is not a
+# cap. Count with .Count; Measure-Object -Line is not a line counter for an array
+# that is already split into lines.
+$handoffLines = @(Get-Content -LiteralPath (Join-Path $root 'docs/HANDOFF.md')).Count
+if ($handoffLines -gt $HandoffMaxLines) {
+    Fail-Docs ("docs/HANDOFF.md is too long: $handoffLines lines against a " +
+        "$HandoffMaxLines-line cap. It is the restart surface only -- move durable " +
+        'detail to its owning doc (the board owns results, PERF_LEDGER measurements, ' +
+        'KNOWN_ISSUES durable gaps, TASK_STANDING_RULES how a task is run).')
 }
 
 $index = Read-RepoText 'docs/README.md'
