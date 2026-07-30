@@ -35,21 +35,18 @@ pre-`3eb9ecdb` P95 as a lower bound.
 frames P50 **1,113,152**; **clean frames P50 974,080, P95 1,056,640 — inside the 1,120,000 gate by
 63,360**, 1 of 112 over. The +139,072 premium is entirely `SRC`. **The average frame is already
 145,920 under budget.** **E7 refuted both previously-named causes**; on over-gate frames `FTR` is
-**−1,312** / `STG` **−2,496**, so it is not a render problem, and **E32's parked flash residual no
-longer blocks a gate lever.**
+**−1,312** / `STG` **−2,496** — not a render problem — and **E32's flash residual no longer blocks a
+gate lever.**
 
 **Inside the relocation, do NOT attack the O(n²) scan** — only 17.3% of it (n is 25.4). The shape is the
 **payload walked TWICE** using pointer *differences* only, so hoisting to cache-store time is viable (E9).
-**E10 ANSWERED the frame-wide premium and there is NO single lever:** work premium **326,906/frame**
-spread over **513 symbols carrying 349,268 — fully attributed**, relocation 37.0%,
-`ftAnimParseDObjFigatree` 13.0%.
+**E10 ANSWERED the frame-wide premium and there is NO single lever:** **326,906/frame** spread over
+**513 symbols carrying 349,268 — fully attributed**, relocation 37.0%, `ftAnimParseDObjFigatree` 13.0%.
 
-**STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked.** E11 took E10's cleanest
-lever (`ndsRelocAssetIDForToken`, 630 calls on load frames, **0 on all 112 clean frames**), removed the
-work provably with **negative** bytes added, measured **31,808 (−7,667)** and the load-frame set
-**bit-identical** — yet **P95 +15,744, P99 +59,200, over-gate 9 → 11**, the two added frames being
-**load** frames. Two HEAD controls differ by P95 +5,376, so that is ~3× noise. **REVERTED.** Only a
-change clearing ~16,000 of tail movement, or one that **moves work off the frame**, counts.
+**STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked.** It removed real work
+(`ndsRelocAssetIDForToken`) with **negative** bytes added and a **bit-identical** load-frame set, yet
+**P95 +15,744, P99 +59,200, over-gate 9 → 11** — ~3× the +5,376 cross-build floor. **REVERTED.** Only
+a change clearing ~16,000 of tail movement, or one that **moves work off the frame**, counts.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
@@ -74,8 +71,8 @@ issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExi
 **39.975 → 7.025 VB/iter (1.50 → 8.43 FPS, 5.7×), Latest green.** Bit-exact cuts proven by
 `check_sprite_lerp_exact.py` — **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits `blx __udivsi3` for a
 CONSTANT divisor**, whole-repo hazard, `grep __udivsi3`); **R0d** inlined lerp; **R0e** 16-entry
-palette, ONE byte per PAIR of columns, 112 → 9 Thumb instr/px; **R2a** the glyph arm indexes that
-table, −200,133/frame, FPS flat (banked slack, rule 12). Details in PERF_LEDGER.
+palette, ONE byte per PAIR of columns, 112 → 9 Thumb instr/px; **R2a** glyphs index that table
+(−200,133/frame, FPS flat, banked slack per rule 12). Details in PERF_LEDGER.
 
 **R2b is the big one and it is DEFAULT-OFF awaiting the owner's eyes.** The owner named the lever
 (affine BGs), so R2 became the **hardware affine BG**, not the planned dirty-flag.
@@ -89,28 +86,27 @@ origin is not (0,0), and a faster candidate lands on a **different scene tick** 
 clock (both now standing rules). Results is now owned by the glyphs and the commit (`IA/8b 24x37` is
 85.1% of the remainder); idle was **830,260 = 1.48 VBlanks of slack**, which R2b's 3.1 exceeded.
 
-**R1 is ANSWERED and folded into R2 — the "~30 s dead air" is 6.10 s and is NOT a load.** The 30 s
-was captured before R0c at 39.975 VB/iter and never re-measured after the 3.9×. GAME SET → "FOX
-WINS" is **6.10 s control, 4.85 s with R2b**; the whole transition is 0.735 s (12%), of which the two
+**R1 is ANSWERED and folded into R2 — the "~30 s dead air" is 6.10 s and is NOT a load.** The 30 s was
+captured before R0c at 39.975 VB/iter and never re-measured after the 3.9×. GAME SET → "FOX WINS" is
+**6.10 s control, 4.85 s with R2b**; the transition is 0.735 s (12%), of which the two
 `ftManagerSetupFilesAllKind` calls are 0.334 s — **the fighter reload is 5.5% of the dead air, so do
-not build a residency system for it.** The player waits on the source's own schedule (wallpaper held
-to Results tic 80, panels to tic 120, `mnvsresults.c:2843-2844`) paid at the scene's per-frame cost,
-and the residue is near the floor a 30 Hz port must pay (~4 s). Both earlier framings — the loader,
-then the arena lifecycle — are refuted. Six permanent counters read by `soak-freeze-watch.ps1`.
+not build a residency system for it.** The player waits on the source's own schedule (wallpaper held to
+tic 80, panels to tic 120, `mnvsresults.c:2843-2844`) at the scene's per-frame cost; residue is near
+the ~4 s floor a 30 Hz port must pay. Both earlier framings — loader, then arena lifecycle — refuted.
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 
 **The animation body is CLOSED — three levers, three refutations, zero builds spent.** 146,148/frame,
 46,148 over §4's 100K, none reachable: **E13** pose-fewer-joints refuted (collision's ancestor closure
-is **f = 0.840** of live joints); **E14** reorder refuted at ~2,900 (**10-15 ticks/32-byte line
-fill**, no prefetcher; `AObj` 36 B, N 221 — both memos wrong); **E15** unbuilt, straddling the floor.
+is **f = 0.840** of live joints); **E14** reorder refuted at ~2,900 (**10-15 ticks/32-byte line fill**,
+no prefetcher; `AObj` 36 B, N 221 — both memos wrong); **E15** unbuilt, straddling the floor.
 `gNdsFighterInit*` is proof-build-only, **0 by construction — never cite it.**
 
 **Every named load-frame candidate is sized and none closes the 40,448.** Of the 139,072/load-frame
-premium: relocation 33,632, re-add 11,313, E9's payload walks 21,788 — **~94,127 (67.7%) has NO named
-owner**, and E17 killed E8's hypothesis (16 load frames, only 7 whole-GObj re-adds). **Second time a
-premium here refused to concentrate. Before a fourth bracket, ask whether R2-06 is the right phase** —
-two independent attributions both say spread, pointing at the switch plan's §3 structural change.
+premium: relocation 33,632, re-add 11,313, E9's walks 21,788 — **~94,127 (67.7%) has NO named owner**,
+and E17 killed E8's hypothesis (16 load frames, only 7 whole-GObj re-adds). **Second time a premium
+here refused to concentrate. Before a fourth bracket, ask whether R2-06 is the right phase** — two
+independent attributions say spread, pointing at the switch plan's §3 structural change.
 
 ## The one open fidelity item
 
@@ -135,6 +131,11 @@ is per-frame cost).
 
 Branch `codex/r2-runtime2`, not merged to master. Boundary `battle_playable_realtime`, mode `163`. Lab build dirs hold R2b/R1 ROMs; rebuild before citing a hash.
 
+**PARTICLE-BANK WIP IS ON TWO BRANCHES, NOT IN ANY WORKTREE** — `worktree-agent-a15dedc9b2cf19349`
+(generator + checker) and `worktree-agent-a8c9ad131bc0073b0` (`battleship_lbparticle.c`, runtime header,
+`gbi.h`/shim). **Unreviewed, unbuilt; start from these, do not rewrite** — BUGS.md's four VFX rows and
+the R2-07 gate need them. Cleanup detail in KNOWN_ISSUES.md.
+
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 .\scripts\verify-all.ps1 -Profile Boundary -List; git status --short
@@ -145,6 +146,4 @@ published one is** (owner, 2026-07-22), flag-identical. `-j`/`MAKEFLAGS` rules a
 `## Builds`. A clean checkout must build through `build.ps1`, not bare `make`: four of six generated
 `.inc` files are gitignored and only `build.ps1` regenerates them. Preserve canonical mode 163,
 renderer mode 9, mip 0, static textures, source countdown, Dream Land water at frame 0, Task 16
-`1/1/1`. Do not edit `decomp/`.
-**Bug #10 is FIXED and folded in** — `06992f10812` (from `2cbc6189d15`), host fixture + structural pin +
-`pause_under20` oracle.
+`1/1/1`. Do not edit `decomp/`. **Bug #10 is CLOSED** (owner, 2026-07-30) — see `PORTING.md`.

@@ -60,6 +60,31 @@ durable unresolved gaps.
   Remaining work is the runtime: `lb/lbparticle.c` (2,961 lines, the bytecode
   interpreter and generator model), `ef/efparticle.c` (113) and
   `ef/efdisplay.c` (107), plus a DS pack step and textured-quad draw.
+  **Partial work already exists on two branches — read it before rewriting
+  any of the above (2026-07-30).** Two `.claude/worktrees` agents held it
+  *uncommitted*, so a worktree cleanup would have destroyed the only copy; it
+  was committed first and the worktrees then removed, reclaiming 355 MB.
+  - `worktree-agent-a15dedc9b2cf19349` — the DS pack step:
+    `scripts/generate_nds_particle_banks.py` (1,310 lines),
+    `scripts/check-nds-particle-banks.ps1` (207),
+    `docs/optimization/NDS_PARTICLE_BANKS.generated.json` (1,082),
+    a generated header, and the Makefile wiring.
+  - `worktree-agent-a8c9ad131bc0073b0` — the runtime half:
+    `src/import/battleship_lbparticle.c` (677 lines),
+    `include/nds/nds_particle_runtime.h`, a placeholder TU, and edits to
+    `include/PR/gbi.h` and `src/port/reloc_backend_compat_shims.c` (the
+    `lbParticleMakeScriptID` stub at :12963).
+  Both commits are **unreviewed, unbuilt and unverified** — they were written
+  to preserve bytes, not to assert correctness. Two absolute-path symlink blobs
+  (`assets`, `src/nds/generated`, both reparse points into the main worktree)
+  were stripped from the second commit so the branch cannot poison another
+  checkout; those directories live in the main repo and were never at risk.
+  Three `%TEMP%/smash64ds-task16-*` worktrees were removed in the same pass:
+  Windows temp cleanup had already deleted every file, leaving only directory
+  skeletons and a 119-byte `.git` pointer, which is exactly why
+  `git worktree prune` never fired on them. `Smash64DS_Port-mario-bottom`
+  (393 MB, clean, Bug #10 now closed) remains and is removable — a worktree
+  removal does not delete its branch.
 - Fireball/weapon heavy wall/ceiling/edge collision and general common-effect
   texture-bank fidelity remain incomplete.
 - Items are disabled for P1; general item manager/runtime is P2.
