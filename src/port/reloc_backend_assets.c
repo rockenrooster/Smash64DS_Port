@@ -5580,40 +5580,45 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * against 58,024 free. The arena meant to stop a heap-exhaustion hang caused a
  * bigger one, two levels down, at a seam it never mentions.
  *
- * The budget is the fine search's headroom above its floor -- and it belongs to
- * the TIGHTEST configuration, not the shipped one. Second mistake here, for
- * exactly that reason: 32 KiB was sized against the shipped build's
- * 1,286,144 - 1,245,184 = 40,960, but the tick-HUD target starts from 1,277,952
- * and so has only **32,768**. This arena plus its counters is 32,800 bytes, which
- * overshot that by 32, and the both-CPU stress ROM -- the tick-HUD target plus a
- * flag that adds no measurable BSS of its own (measured: 1,742,216 against
- * 1,709,216, a delta that is this arena and nothing else) -- fell off the same
- * cliff again and could not start a battle. Thirty-two bytes.
+ * The static-BSS attempt was tried twice and failed twice, and BOTH failures were
+ * the same misunderstanding: this buffer is not free, and its budget belongs to
+ * the tightest configuration rather than the shipped one.
  *
- * 16 KiB therefore, leaving 16,384 of slack in the tightest build. That is a
- * CEILING shared with every future static allocation in this program, and it is
- * also what the Task 36 replay admission guard
- * (include/nds/nds_renderer.h:124-134) needs, so undershooting disables a
- * measured render path too. Overflow degrades to the uncached load, and the
- * SAFETY of this fix does not depend on the size at all -- even a zero-byte arena
- * would be safe, because the reject path is live.
+ *   - 128 KiB: shipped arena 1,286,144 -> 1,048,576 (all 33 fine steps failed),
+ *     battle start dead, 116,752 asked against 58,024 free. 131,072 was
+ *     affordable in ISOLATION -- 1,286,144 - 131,072 still clears the 1,107,392
+ *     battle start needs. The cliff, not the size, was fatal.
+ *   - 32 KiB: failed by THIRTY-TWO BYTES. Sized against the shipped build's
+ *     40,960 of headroom; the tick-HUD target starts from 1,277,952 and has only
+ *     32,768, and arena plus counters is 32,800. Measured BSS also cleared the
+ *     flag that had been blamed -- 1,742,216 against 1,709,416 is this arena and
+ *     nothing else, so NDS_R2_BOTH_CPU contributes none.
+ *   - 16 KiB fit, and then MEASURED THE COST OF FITTING: WORK-H P95 1,096,768 ->
+ *     1,204,352, +107,584, gate missed by 84,352, with Fills=2 against
+ *     Rejects=44 and 76 overflows in 128 frames. A cache that small is not a
+ *     cache, and a miss is not free: ndsRelocAssetLoadHeaderAndData does a real
+ *     fopen/fread/fclose through NitroFS, which on the owner's DLDI setup is SD
+ *     I/O inside a gameplay frame. P50 moved only +14,080 while P95 moved
+ *     +107,584 -- a tail-shaped regression, which is exactly what a handful of
+ *     frames doing file reads looks like.
  *
- * 16 KiB holds only ~4 of the 41 warm assets, so it does NOT solve the underlying
- * problem: 230 force-loads per match, 189 of them repeats, all allocating from a
- * bump heap nothing ever resets. The cache was an amplifier, not the cause. The
- * real fix is to reserve the working set (91,104 bytes) from the taskman arena
- * ONCE at battle start instead of from BSS -- that costs the arena nothing at
- * boot, so it cannot cross this cliff, and it still fits: 1,286,144 - 91,104
- * leaves 1,195,040 against the 1,107,392 battle start needs.
+ * So the arena comes from gSYTaskmanGeneralHeap instead, which is where a buffer
+ * sized by measured game data belongs. That costs the boot-time search NOTHING,
+ * so it cannot cross the 0x130000 cliff or trip the Task 36 replay admission
+ * guard (include/nds/nds_renderer.h:124-134) that shares that constant -- and
+ * 92,160 is affordable there in a way it never was in BSS. Reserved lazily on
+ * first store, so ftManagerSetupFilesAllKind has already taken the fighters'
+ * 116,752 bytes and this can never be the allocation that starves battle start.
  *
- * Before changing this number, re-measure gNdsTaskmanArenaChosenSize on the
- * TICK-HUD build, not the shipped one. If it is not >= 0x130000 with real room to
- * spare, the number below is already too big.
+ * Sized to the R2-04 E5 working set below: 41 warm assets = 91,104 bytes, rounded
+ * to 92,160. Overflow still degrades to the uncached load, and the SAFETY of this
+ * fix does not depend on the size at all -- even a zero-byte arena would be safe,
+ * because the reject path is live. Only the tick cost depends on it.
  *
  * Two general lessons, in TASK_STANDING_RULES: never call an allocator that
  * cannot fail from a code path that is allowed to fail, and never fix a heap
  * problem with a static buffer without pricing it against the heap. */
-#define NDS_R2_ANIM_CACHE_ARENA_BYTES 16384u
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES 92160u
 
 /* R2-04 E4. The match's animation working set, measured rather than guessed:
  * gNdsR204AnimSeen dumped at frame 1928 (roughly two thirds through the 3,600
@@ -5643,8 +5648,10 @@ typedef struct NDSR2AnimCacheEntry {
 
 static NDSR2AnimCacheEntry sNdsR2AnimCache[NDS_R2_ANIM_CACHE_ENTRIES];
 static u32 sNdsR2AnimCacheCount;
-static u8 sNdsR2AnimCacheArena[NDS_R2_ANIM_CACHE_ARENA_BYTES]
-    __attribute__((aligned(16)));
+/* Reserved from gSYTaskmanGeneralHeap, NOT static BSS -- see the header comment on
+ * NDS_R2_ANIM_CACHE_ARENA_BYTES for why BSS cannot afford this. */
+static u8 *sNdsR2AnimCacheArena;
+static u32 sNdsR2AnimCacheArenaBytes;
 static u32 sNdsR2AnimCacheArenaUsed;
 volatile u32 gNdsR2AnimCacheHits;
 volatile u32 gNdsR2AnimCacheMisses;
@@ -5656,15 +5663,111 @@ volatile u32 gNdsR2AnimCacheRejects;
  * shipped a flag that silently never fired. */
 volatile u32 gNdsR2AnimCacheArenaUsedBytes;
 volatile u32 gNdsR2AnimCacheArenaOverflows;
+volatile u32 gNdsR2AnimCacheArenaReservedBytes;
+volatile u32 gNdsR2AnimCacheArenaReserveCount;
+volatile u32 gNdsR2AnimCacheArenaReserveFailCount;
+volatile u32 gNdsR2AnimCacheArenaInvalidations;
+
+/* Take the arena from the heap it is protecting, once, and only out of what is
+ * genuinely spare.
+ *
+ * The reservation happens LAZILY, on the first store rather than at battle start,
+ * and that ordering is the safety property: by the time any animation wants to be
+ * cached, ftManagerSetupFilesAllKind has already taken its 116,752 bytes for the
+ * fighters. So this can never be the allocation that starves battle start -- the
+ * failure mode that a 128 KiB static array caused and that cost the owner a ROM
+ * that could not start a match.
+ *
+ * NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE is then the second half of that guarantee:
+ * syTaskmanMalloc is only called when the request AND that reserve both fit, so
+ * the cache declines rather than consuming the last of the heap. Declining is
+ * free -- it degrades to the on-demand load, which is what the port did before
+ * this cache existed. */
+#define NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE 32768u
+
+/* True while the reserved block is still ours. gSYTaskmanGeneralHeap is a bump
+ * region that syMallocReset rewinds to `start` on a scene load, which would leave
+ * every cached payload pointer dangling into memory the next scene is free to
+ * reuse -- the hazard the original static array avoided by construction and that
+ * moving to the heap reintroduces. Detect it instead of hooking scene load: after
+ * a rewind the heap cursor sits BELOW our block, so a block that still ends at or
+ * before `ptr` has not been reclaimed. Cheap, and it cannot miss a reset that some
+ * future code path performs without telling us. */
+static sb32 ndsR2AnimCacheArenaStillOwned(void)
+{
+    const u8 *cursor = (const u8 *)gSYTaskmanGeneralHeap.ptr;
+
+    return ((sNdsR2AnimCacheArena != NULL) &&
+            (sNdsR2AnimCacheArenaBytes != 0u) &&
+            (sNdsR2AnimCacheArena >= (const u8 *)gSYTaskmanGeneralHeap.start) &&
+            ((sNdsR2AnimCacheArena + sNdsR2AnimCacheArenaBytes) <= cursor))
+        ? TRUE : FALSE;
+}
+
+static void ndsR2AnimCacheArenaDropForReset(void)
+{
+    sNdsR2AnimCacheArena = NULL;
+    sNdsR2AnimCacheArenaBytes = 0u;
+    sNdsR2AnimCacheArenaUsed = 0u;
+    sNdsR2AnimCacheCount = 0u;
+    gNdsR2AnimCacheArenaUsedBytes = 0u;
+    gNdsR2AnimCacheArenaReservedBytes = 0u;
+    gNdsR2AnimCacheBytes = 0u;
+    gNdsR2AnimCacheArenaInvalidations++;
+}
+
+static sb32 ndsR2AnimCacheArenaEnsure(void)
+{
+    void *block;
+
+    if (ndsR2AnimCacheArenaStillOwned() != FALSE)
+    {
+        return TRUE;
+    }
+    if (sNdsR2AnimCacheArena != NULL)
+    {
+        /* Had a block, no longer owns it: the heap was rewound under us. Every
+         * cached pointer is stale, so drop the whole cache before re-reserving. */
+        ndsR2AnimCacheArenaDropForReset();
+    }
+    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                            (size_t)NDS_R2_ANIM_CACHE_ARENA_BYTES +
+                                NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
+                            NDS_RELOC_ALIGN_BYTES) == FALSE)
+    {
+        gNdsR2AnimCacheArenaReserveFailCount++;
+        return FALSE;
+    }
+    block = syTaskmanMalloc((size_t)NDS_R2_ANIM_CACHE_ARENA_BYTES,
+                            NDS_RELOC_ALIGN_BYTES);
+    if (block == NULL)
+    {
+        gNdsR2AnimCacheArenaReserveFailCount++;
+        return FALSE;
+    }
+    sNdsR2AnimCacheArena = block;
+    sNdsR2AnimCacheArenaBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
+    sNdsR2AnimCacheArenaUsed = 0u;
+    gNdsR2AnimCacheArenaReservedBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
+    gNdsR2AnimCacheArenaUsedBytes = 0u;
+    gNdsR2AnimCacheArenaReserveCount++;
+    return TRUE;
+}
 
 /* Bump allocation from the cache's own arena. Returns NULL on overflow, which is
  * the whole point: see the comment on NDS_R2_ANIM_CACHE_ARENA_BYTES. */
 static void *ndsR2AnimCacheArenaAlloc(u32 size)
 {
-    u32 aligned = (sNdsR2AnimCacheArenaUsed + 15u) & ~15u;
+    u32 aligned;
 
-    if ((size == 0u) || (aligned > NDS_R2_ANIM_CACHE_ARENA_BYTES) ||
-        (size > (NDS_R2_ANIM_CACHE_ARENA_BYTES - aligned)))
+    if (ndsR2AnimCacheArenaEnsure() == FALSE)
+    {
+        gNdsR2AnimCacheArenaOverflows++;
+        return NULL;
+    }
+    aligned = (sNdsR2AnimCacheArenaUsed + 15u) & ~15u;
+    if ((size == 0u) || (aligned > sNdsR2AnimCacheArenaBytes) ||
+        (size > (sNdsR2AnimCacheArenaBytes - aligned)))
     {
         gNdsR2AnimCacheArenaOverflows++;
         return NULL;
@@ -5681,7 +5784,7 @@ static void ndsR2AnimCacheArenaRelease(void *payload, u32 size)
 {
     u8 *bytes = payload;
 
-    if ((bytes != NULL) &&
+    if ((sNdsR2AnimCacheArena != NULL) && (bytes != NULL) &&
         ((bytes + size) == &sNdsR2AnimCacheArena[sNdsR2AnimCacheArenaUsed]))
     {
         sNdsR2AnimCacheArenaUsed = (u32)(bytes - sNdsR2AnimCacheArena);
@@ -5693,6 +5796,20 @@ static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
 {
     u32 i;
 
+    /* The ownership test belongs on the READ path too, not only where the arena is
+     * reserved. Every entry's payload points into the reserved block, so once the
+     * heap has been rewound a hit would hand back a pointer into memory the next
+     * scene is already reusing -- silent corruption, and strictly worse than the
+     * hang this whole change set exists to remove. A miss is free.
+     *
+     * Cheap by construction: two pointer compares against a bump cursor, and only
+     * when the cache is non-empty. */
+    if ((sNdsR2AnimCacheCount != 0u) &&
+        (ndsR2AnimCacheArenaStillOwned() == FALSE))
+    {
+        ndsR2AnimCacheArenaDropForReset();
+        return NULL;
+    }
     for (i = 0u; i < sNdsR2AnimCacheCount; i++)
     {
         if (sNdsR2AnimCache[i].asset_id == asset_id)

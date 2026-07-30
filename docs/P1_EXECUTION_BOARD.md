@@ -281,6 +281,65 @@ Owner also confirms **Sudden Death has its own issues**; a 2.5-minute soak enter
 commit. Not diagnosed, and NOT the allocator class — the PC was a working `cmp`,
 not a self-branch. Separate row.
 
+### R2-06 E3 — the arena moves to the HEAP. Cache proven effective, P95 −43,904, gate still 40,448 short (2026-07-29)
+
+The 16 KiB static arena was measured, not assumed, and it cost the gate: **WORK-H P95
+1,096,768 → 1,204,352, +107,584, gate missed by 84,352**, with `Fills=2` against
+`Rejects=44` and 76 overflows in 128 frames. A miss is not free —
+`ndsRelocAssetLoadHeaderAndData` (`nds_reloc_assets.c:601-634`) does a real
+`fopen`/`fread`/`fclose` through NitroFS, which on the owner's DLDI configuration is
+SD I/O inside a gameplay frame. P50 moved only +14,080 while P95 moved +107,584: a
+tail-shaped regression, exactly what a handful of frames doing file reads looks like.
+
+**Fixed by reserving the arena from `gSYTaskmanGeneralHeap` instead of BSS**, at the
+measured working-set size of 92,160 (41 warm assets = 91,104). Three properties make
+that safe where BSS was not:
+
+- **BSS cost is now +32 bytes**, three words, against 92,160 if it were static.
+  Measured: tick-HUD bss 1,709,448 versus a 1,709,416 no-arena baseline, and
+  `gNdsTaskmanArenaChosenSize` back to **1,273,856** — clear of the `0x130000` floor,
+  so the cliff and the Task 36 replay guard are both out of the picture.
+- **Reserved lazily on first store, not at battle start.** By then
+  `ftManagerSetupFilesAllKind` has already taken the fighters' 116,752 bytes, so this
+  can never be the allocation that starves battle start. A
+  `NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE = 32768` reserve means it declines rather than
+  consuming the last of the heap, and declining costs nothing — it degrades to the
+  on-demand load the port used before the cache existed.
+- **Heap rewind is detected, not hooked.** `syMallocReset` rewinds the bump cursor to
+  `start` on a scene load, which would leave every cached payload pointing into
+  memory the next scene reuses. `ndsR2AnimCacheArenaStillOwned` tests that the block
+  still ends at or before the cursor — two pointer compares — and it is on the
+  **read** path as well as the reserve path, because a hit on a stale entry is silent
+  corruption and strictly worse than the hang this change set removes.
+
+Cache now provably effective: `Rejects=0`, `ArenaOverflows=0`, `Hits` 35 → 79,
+`ReservedBytes=92,160`, `ReserveFailCount=0`, `Invalidations=0`. **WORK-H P95
+1,204,352 → 1,160,448, −43,904.** Evidence `artifacts/performance/r206-arena-heap-128{.json,-rows.csv}`.
+
+**Still 40,448 over the gate and 63,680 over the stored baseline, and the residual is
+NOT mostly new work.** Bucket P95 deltas against `r203-e69b-mtxcopy-128` (git
+`0b39c1a`):
+
+| bucket | Δ P50 | Δ P95 |
+|---|---:|---:|
+| `ALL` | −128 | **0** |
+| `WORK` | +10,816 | +13,440 |
+| `FTR` | +5,888 | +6,016 |
+| `SRC` | +3,072 | **+30,912** |
+| `WAIT` | −9,664 | **+63,488** |
+| `OTHR` | −10,112 | **+63,104** |
+
+`ALL` P95 is **identical** at 1,680,000, so presented pacing did not change and the
+VBlank histogram is still median-3. `FTR` +6,016 is at the 5,000-7,000 placement
+floor. `WAIT` and `OTHR` moved by nearly the same amount in the same direction, which
+is a redistribution rather than added cost — and WORK-H is the P95 of a per-frame
+*difference*, so it is not the difference of these P95s. **The one real regression to
+chase is `SRC` +30,912.** Prime suspect, unproven: the imported `syMallocSet` wrapper
+adds an out-of-line `ndsSyMallocWouldFit` call to **every** region's allocation, not
+just the taskman heap, and the graphics heap is allocated from per frame. Cheap test
+is to make that helper `static inline` and re-measure; do that before looking
+anywhere else.
+
 ## INSTRUMENT: the freeze detector was hashing the host's FPS counter (2026-07-29)
 
 **Two soak verdicts withdrawn, and the failure mode is worth more than either.**
