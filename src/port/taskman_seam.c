@@ -4353,8 +4353,20 @@ static void ndsBattlePlayableAdvanceRealtimeLogicClock(void)
     sySchedulerSetTicCount(sySchedulerGetTicCount() + 1u);
 }
 
+/* Defined next to the rest of the R2-07 R1 telemetry in
+ * `src/import/battleship_mnvsresults.c`, which is where the span is closed. */
+extern volatile u32 gNdsVSResultsTransitionStartTick;
+extern volatile u32 gNdsVSResultsTransitionTicks;
+
 static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
 {
+    /* R2-07 R1. Opens the Battle -> Results transition bracket that
+     * `ndsMNVSResultsRecordFrame` closes on its first tick. This is the last
+     * point the battle owns, so the span is exactly the dead air the owner sees
+     * with the final battle frame still on screen. Re-armed on every exit, so a
+     * later exit simply moves the start later, which is the wanted behaviour. */
+    gNdsVSResultsTransitionStartTick = cpuGetTiming();
+    gNdsVSResultsTransitionTicks = 0u;
     gNdsSCVSBattleLifecycleTaskmanExitCount++;
     gNdsSCVSBattleLifecycleTaskmanStatus = (u32)sSYTaskmanStatus;
     gNdsSCVSBattleLifecycleTimeLimit = gSCManagerBattleState->time_limit;

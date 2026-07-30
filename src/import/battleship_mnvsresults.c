@@ -11,6 +11,7 @@
 #include <mn/menu.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_profile.h>
+#include <nds/timers.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
 #include <sys/controller.h>
@@ -49,6 +50,34 @@ volatile u32 gNdsVSResultsFighterSubmitCount;
 volatile u32 gNdsVSResultsFighterPlace[2];
 volatile u32 gNdsVSResultsFighterStatus[2];
 volatile s32 gNdsVSResultsFighterMotion[2];
+/* R2-07 R1. The Battle -> Results hand-off is ~30 s of dead air with the last
+ * battle frame still on screen, and the board's first step is to split it rather
+ * than assume the loader owns it. These three price the scene's task-start:
+ * `FuncStart` is the whole of `mnVSResultsFuncStart`, `SetupFiles` is the fighter
+ * asset half inside it, and the difference is `lbRelocLoadFilesListed` plus scene
+ * construction. Ticks, not VBlanks, so nothing is floored (standing rule 11);
+ * `cpuGetTiming` is 32-bit at 33.514 MHz and wraps at ~128 s, comfortably clear
+ * of a 30 s span. Cost is four timer reads per Results entry. */
+volatile u32 gNdsVSResultsFuncStartTicks;
+volatile u32 gNdsVSResultsSetupFilesTicks;
+volatile u32 gNdsVSResultsSetupFilesCalls;
+/* ...and the enclosing span, because the first measurement refuted the framing.
+ * `FuncStart` came in at 21,851,904 ticks (0.65 s) against a hand-off the board
+ * had recorded as ~30 s, so the load is NOT where the dead air lives and a
+ * subtraction against `sVBlankCount` is too coarse to say where it is. These
+ * two bracket battle-taskman-exit to the first Results tick directly. Written
+ * once each per transition. */
+volatile u32 gNdsVSResultsTransitionStartTick;
+volatile u32 gNdsVSResultsTransitionTicks;
+/* Time to the reveal, which is what the owner actually perceives as dead air.
+ * The source holds the wallpaper until Results tic 80 and the result panels
+ * until tic 120 (mnvsresults.c:2843-2844), so the last battle frame stays on
+ * screen until this scene has rendered eighty of its own frames. That makes the
+ * "GAME SET dead air" a function of the scene's PER-FRAME cost, not of any load,
+ * and this pair measures it end to end from the first Results tick. */
+volatile u32 gNdsVSResultsFirstTickStamp;
+volatile u32 gNdsVSResultsToWallpaperTicks;
+volatile u32 gNdsVSResultsToResultsTicks;
 
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
@@ -68,20 +97,50 @@ void ndsBaseMNVSResultsStartScene(void);
 #undef scManagerFuncUpdate
 #undef ftManagerSetupFilesAllKind
 
+static void (*sNdsMNVSResultsFuncStart)(void);
+
+static void ndsMNVSResultsFuncStartTimed(void)
+{
+    u32 start = cpuGetTiming();
+
+    if (sNdsMNVSResultsFuncStart != NULL)
+    {
+        sNdsMNVSResultsFuncStart();
+    }
+    gNdsVSResultsFuncStartTicks = cpuGetTiming() - start;
+}
+
 void ndsMNVSResultsManagerFuncUpdate(SYTaskmanSetup *setup)
 {
     SYTaskmanSetup ds_setup = *setup;
 
     ds_setup.scene_setup.arena_start = ndsTaskmanArenaStart();
     ds_setup.scene_setup.arena_size = ndsTaskmanArenaSize();
+    /* R2-07 R1 measurement. The setup struct is already copied here, so the task
+     * start function can be timed by substitution -- no seam in `decomp/`, and
+     * the scene still runs the original. `mnVSResultsFuncStart` is where both
+     * halves of the hand-off live (mnvsresults.c:3336 loads the scene file list,
+     * :3343 loops the fighter kinds), so bracketing it bounds the whole load. */
+    sNdsMNVSResultsFuncStart = ds_setup.func_start;
+    ds_setup.func_start = ndsMNVSResultsFuncStartTimed;
+    gNdsVSResultsFuncStartTicks = 0u;
+    gNdsVSResultsSetupFilesTicks = 0u;
+    gNdsVSResultsSetupFilesCalls = 0u;
     scManagerFuncUpdate(&ds_setup);
 }
 
 void ndsMNVSResultsSetupFilesKind(s32 fkind)
 {
+    /* The source loops every playable kind (mnvsresults.c:3343); only the two
+     * fighters this milestone builds are wanted, which is already ten kinds of
+     * loading the port does not do. */
     if ((fkind == nFTKindMario) || (fkind == nFTKindFox))
     {
+        u32 start = cpuGetTiming();
+
         ftManagerSetupFilesAllKind(fkind);
+        gNdsVSResultsSetupFilesTicks += cpuGetTiming() - start;
+        gNdsVSResultsSetupFilesCalls++;
     }
 }
 
@@ -98,6 +157,32 @@ void ndsMNVSResultsRecordFrame(void)
      * and describe nothing about this scene. Costs one compare per Results
      * iteration in profile builds only. */
     NDS_TASK37_PROFILE_RESULTS_TICK(sMNVSResultsTotalTimeTics);
+
+    /* Close the transition bracket on the first tick only. The start stamp is
+     * taken at battle taskman exit, so this is the whole hand-off as the player
+     * experiences it: last battle frame on screen to first Results frame. */
+    if ((gNdsVSResultsTransitionTicks == 0u) &&
+        (gNdsVSResultsTransitionStartTick != 0u))
+    {
+        gNdsVSResultsTransitionTicks =
+            cpuGetTiming() - gNdsVSResultsTransitionStartTick;
+        gNdsVSResultsFirstTickStamp = cpuGetTiming();
+    }
+    if (gNdsVSResultsFirstTickStamp != 0u)
+    {
+        u32 elapsed = cpuGetTiming() - gNdsVSResultsFirstTickStamp;
+
+        if ((gNdsVSResultsToWallpaperTicks == 0u) &&
+            (sMNVSResultsTotalTimeTics >= sMNVSResultsDrawWallpaperTic))
+        {
+            gNdsVSResultsToWallpaperTicks = elapsed;
+        }
+        if ((gNdsVSResultsToResultsTicks == 0u) &&
+            (sMNVSResultsTotalTimeTics >= sMNVSResultsMakeResultsTic))
+        {
+            gNdsVSResultsToResultsTicks = elapsed;
+        }
+    }
 
     for (i = 0; i < ARRAY_COUNT(sMNVSResultsFiles); i++)
     {

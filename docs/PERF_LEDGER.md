@@ -6857,6 +6857,7 @@ E0); branch `codex/task56-fighter-stripify` (6 commits).
 | R0h | 2026-07-30 | per-PC profile: **R0f's split was quantisation; compositor is 61.9%** |
 | R2a | 2026-07-30 | IA/8b glyph lerp -> table lookup: **KEEP, -200,133 ticks/frame, FPS flat** |
 | R2b | 2026-07-30 | Results background -> hardware affine BG: **-1,736,589 ticks/frame, 5.85 -> 8.43 FPS, default-off pending visual approval** |
+| R1  | 2026-07-30 | GAME SET dead air measured: **6.10 s, not ~30 s; 12% is the transition, 5.5% the fighter reload. R1 collapses into R2** |
 
 **Verdict: KEEP all three cuts.** The Results screen is not the battle frame and
 carries no tick instrument, so cost is measured in **VBlanks**: GDB stops freeze
@@ -7000,6 +7001,20 @@ Latest green. **Not graduated** -- default-off pending the owner's visual approv
 per the render-fidelity doctrine. Artifacts
 `artifacts/performance/r207-r2b-{control,candidate}.json`. Results is now owned by the
 glyph blits and the two-layer commit: `IA/8b 24x37` alone is 85.1% of what remains.
+
+**R1 ANSWERED and folded into R2: the dead air is 6.10 s, not ~30 s, and it is not a load.** The
+30 s came from a capture taken before R0c at 39.975 VB/iter and was never re-measured after the
+3.9x. Battle taskman exit to "FOX WINS": **6.10 s control, 4.85 s with R2b (-20.5%)**. The whole
+transition is 0.735 s (12%); `mnVSResultsFuncStart` is 0.652 s of it and the two
+`ftManagerSetupFilesAllKind` calls 0.334 s -- so the **fighter reload is 5.5% of the dead air** and
+does not justify a residency system. What the player waits on is the source's own schedule: the
+wallpaper is held to Results tic 80 and the panels to tic 120 (`mnvsresults.c:2843-2844`), paid at
+the scene's per-frame cost. `ToWallpaperTicks` came back identical across the two arms (88,507,072
+vs 88,507,008, 64 ticks over 2.6 s) exactly as predicted, since nothing draws the wallpaper before
+tic 80 -- which both validates the bracket and localises all of R2b's win after it, where it cuts
+46.0% (4.08 -> 2.20 VBlanks/tic). Residue is near the floor: the source spends ~2 s of 60 Hz
+reaching tic 120, ~4 s at 30 Hz, against 4.85 s measured. Instrument is six permanent counters in
+`battleship_mnvsresults.c` read by `soak-freeze-watch.ps1`.
 
 **R0f's per-interval split is WITHDRAWN.** It reported the 153,600-byte staging
 clear at 0.000 VBlanks over 82 hits; it is 830,978 ticks/frame, i.e. 1.48 VBlanks

@@ -1741,6 +1741,46 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 R1 ANSWERED — the "30 s GAME SET dead air" is 6.10 s, it is NOT a load, and R1 collapses into R2 (2026-07-30)
+
+R1 was queued on the strength of a real-time capture that put the frozen last battle frame at
+t≈105 s and "FOX WINS" at t≈135 s. **That 30 s is stale by construction** — it was taken before
+R0c, when Results ran at 39.975 VB/iter, and R0c/R0d/R0e/R2a have since made the scene 3.9× faster
+without anyone re-measuring the hand-off. Measured now, end to end:
+
+| span | control | R2b affine | delta |
+|---|---|---|---|
+| battle taskman exit → 1st Results tick | 0.735 s | 0.735 s | — |
+| → wallpaper (source tic 80) | 2.641 s | 2.641 s | **0.000** |
+| → result panels (source tic 120) | 5.365 s | **4.112 s** | −1.253 s |
+| **GAME SET → "FOX WINS"** | **6.10 s** | **4.85 s** | **−20.5%** |
+
+**Both of R1's premises are refuted.** The original framing blamed the loader; the board's own
+correction blamed "the taskman arena lifecycle, not the loader". Neither is the lever:
+
+- The whole transition is **0.735 s = 12% of the dead air**. Of it, `mnVSResultsFuncStart` is
+  21,851,904 ticks (0.652 s, 88.7%) and the two `ftManagerSetupFilesAllKind` calls are 11,193,728
+  (0.334 s). **The fighter reload the owner suspected is 5.5% of the dead air** — a residency system
+  for it buys a third of a second, so do not build one for this reason.
+- The dead air is the scene's **own scheduled reveal, paid at the scene's per-frame cost**. The
+  source holds the wallpaper until Results tic 80 and the panels until tic 120
+  (`mnvsresults.c:2843-2844`), so the last battle frame stays on screen for eighty Results frames
+  whatever the loader does.
+
+**The instrument validates itself, which is why this is trusted.** `ToWallpaperTicks` came back
+*identical* on the two arms — 88,507,072 vs 88,507,008, 64 ticks apart over 2.6 s. That is the
+prediction, not a coincidence: nothing draws the wallpaper before tic 80, so R2b structurally cannot
+move that phase, and two different binaries agreeing to 1 part in 38,000 says the bracket is sound
+and the guest is deterministic. Every bit of R2b's win lands after tic 80, where it cuts **46.0%**
+(2,282,133 → 1,231,744 ticks per Results tic, 4.08 → 2.20 VBlanks).
+
+**Closing R1 into R2.** The residue is near the floor a mechanically-equivalent port must pay: the
+source itself spends ~2 s of 60 Hz time reaching tic 120, which a 30 Hz presentation doubles to ~4 s
+against the 4.85 s measured. Nothing here is worth a build on its own, and the one number that still
+moves it — per-frame Results cost — is exactly what R2 owns. Second independent reason to graduate
+R2b. Instrument is permanent: six counters in `battleship_mnvsresults.c`, read by
+`soak-freeze-watch.ps1`, four timer reads per Results entry.
+
 ### R2-07 R2b BUILT — the Results background moves to the hardware affine BG; the whole background layer disappears, −1,736,589 ticks/frame (2026-07-30)
 
 The owner asked the question that unblocked this: *"we already know affine backgrounds and native

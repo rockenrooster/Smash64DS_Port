@@ -236,7 +236,26 @@ try {
             'gNdsR2AnimCacheArenaOverflows',
             'gNdsR2AnimCacheFills',
             'gNdsR2AnimCacheHits',
-            'gNdsR2AnimCacheRejects')
+            'gNdsR2AnimCacheRejects',
+            # R2-07 R1. The Battle -> Results hand-off is the visible half of the
+            # owner's complaint -- ~30 s of dead air with the last battle frame
+            # still on screen -- and this soak already reaches Results exactly
+            # once, so it is the cheapest place to price it. FuncStart is the whole
+            # task-start; SetupFiles is the fighter-asset half inside it, so the
+            # difference is the scene's own file list plus construction.
+            # ...and the enclosing span, because FuncStart turned out to be only
+            # 21,851,904 ticks (0.65 s) of a hand-off recorded at ~30 s. Battle
+            # taskman exit to the first Results tick, so it is the dead air itself.
+            'gNdsVSResultsTransitionTicks',
+            'gNdsVSResultsFuncStartTicks',
+            'gNdsVSResultsSetupFilesTicks',
+            'gNdsVSResultsSetupFilesCalls',
+            # The reveal, which is the dead air as the player experiences it. The
+            # source holds the wallpaper to Results tic 80 and the panels to tic
+            # 120, so these are per-frame cost x 80 and x 120 -- divide by
+            # 33,514,000 for seconds.
+            'gNdsVSResultsToWallpaperTicks',
+            'gNdsVSResultsToResultsTicks')
         $format = (, '%u' * $cleanFields.Count) -join ','
         $progress = Invoke-SoakGdb -Tag 'clean' -TimeoutSeconds 90 -Commands @(
             "printf `"CLEAN=$format\n`", $($cleanFields -join ', ')")
