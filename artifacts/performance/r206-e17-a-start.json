@@ -1,0 +1,292 @@
+{
+  "target": "smash64ds-battle-playable-tickhud-hwtri",
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-e9-fixup\\smash64ds-battle-playable-tickhud-hwtri.nds",
+  "romSha256": "8711BF90887F864349040558A43E62B3E6D8C2ED23A3DEED3420809C9C227018",
+  "melonDS": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds\\melonDS.exe",
+  "melonDSSha256": "DE80E46BDCF1FD986162DE6AFFD9EE1148F8C40565DBAF667B9C2B3EF5475715",
+  "melonDSVersion": "1.0",
+  "gitShort": "e49b782af",
+  "gitDirtyPaths": 0,
+  "dldiEnabled": true,
+  "ringDump": false,
+  "samples": 8,
+  "startFrame": 789,
+  "endFrame": 796,
+  "buckets": [
+    {
+      "bucket": "ALL",
+      "mean": 1189720,
+      "p50": 1119680,
+      "p95": 1119872,
+      "min": 1119552,
+      "max": 1679808
+    },
+    {
+      "bucket": "FTR",
+      "mean": 390152,
+      "p50": 390208,
+      "p95": 390976,
+      "min": 388544,
+      "max": 391744
+    },
+    {
+      "bucket": "STG",
+      "mean": 180744,
+      "p50": 180416,
+      "p95": 181888,
+      "min": 179328,
+      "max": 182272
+    },
+    {
+      "bucket": "BG",
+      "mean": 4064,
+      "p50": 4032,
+      "p95": 4096,
+      "min": 3968,
+      "max": 4224
+    },
+    {
+      "bucket": "AUD",
+      "mean": 1176,
+      "p50": 1152,
+      "p95": 1216,
+      "min": 1152,
+      "max": 1216
+    },
+    {
+      "bucket": "HUD",
+      "mean": 52688,
+      "p50": 960,
+      "p95": 73472,
+      "min": 896,
+      "max": 342208
+    },
+    {
+      "bucket": "SRC",
+      "mean": 312688,
+      "p50": 295616,
+      "p95": 308096,
+      "min": 286208,
+      "max": 434048
+    },
+    {
+      "bucket": "MISC",
+      "mean": 95208,
+      "p50": 94720,
+      "p95": 95424,
+      "min": 93952,
+      "max": 98176
+    },
+    {
+      "bucket": "OTHR",
+      "mean": 193504,
+      "p50": 147008,
+      "p95": 156928,
+      "min": 86016,
+      "max": 573952
+    },
+    {
+      "bucket": "WAIT",
+      "mean": 177176,
+      "p50": 130624,
+      "p95": 140416,
+      "min": 69248,
+      "max": 557696
+    },
+    {
+      "bucket": "WORK",
+      "mean": 1011136,
+      "p50": 987520,
+      "p95": 1050624,
+      "min": 979264,
+      "max": 1122112
+    },
+    {
+      "bucket": "WORK-H",
+      "mean": 958448,
+      "p50": 982400,
+      "p95": 993152,
+      "min": 708416,
+      "max": 1048640
+    }
+  ],
+  "bucketNames": [
+    "ALL",
+    "FTR",
+    "STG",
+    "BG",
+    "AUD",
+    "HUD",
+    "SRC",
+    "MISC",
+    "OTHR",
+    "WAIT",
+    "WORK"
+  ],
+  "rows": [
+    [
+      789,
+      1119616,
+      391744,
+      181888,
+      4096,
+      1216,
+      960,
+      297920,
+      94528,
+      152192,
+      136256,
+      983360
+    ],
+    [
+      790,
+      1119680,
+      390528,
+      181504,
+      4032,
+      1152,
+      1024,
+      299008,
+      95296,
+      148544,
+      132160,
+      987520
+    ],
+    [
+      791,
+      1119744,
+      390720,
+      179328,
+      4032,
+      1152,
+      1024,
+      294272,
+      94400,
+      147008,
+      130624,
+      989120
+    ],
+    [
+      792,
+      1119680,
+      388544,
+      179712,
+      4096,
+      1152,
+      960,
+      295616,
+      93952,
+      156928,
+      140416,
+      979264
+    ],
+    [
+      793,
+      1119808,
+      390976,
+      180352,
+      3968,
+      1152,
+      960,
+      308096,
+      94720,
+      141696,
+      125504,
+      983040
+    ],
+    [
+      794,
+      1119552,
+      388608,
+      180416,
+      4224,
+      1216,
+      896,
+      434048,
+      95168,
+      141696,
+      125504,
+      994048
+    ],
+    [
+      795,
+      1679808,
+      389888,
+      180480,
+      4032,
+      1152,
+      73472,
+      286336,
+      98176,
+      573952,
+      557696,
+      1122112
+    ],
+    [
+      796,
+      1119872,
+      390208,
+      182272,
+      4032,
+      1216,
+      342208,
+      286208,
+      95424,
+      86016,
+      69248,
+      1050624
+    ]
+  ],
+  "meanAll": 1189720,
+  "meanNamed": 1036720.0,
+  "vbi2": 647,
+  "vbi3": 135,
+  "vbi4": 10,
+  "vbi5plus": 4,
+  "vbiMax": 20,
+  "vbiTotal": 796,
+  "cadenceViolations": 0,
+  "extras": [
+    {
+      "name": "gNdsR2AddAnimAllCalls",
+      "value": 18
+    },
+    {
+      "name": "gNdsR2AddAnimAllTicks",
+      "value": 320000
+    },
+    {
+      "name": "gNdsR2AddAnimAllMaxTicks",
+      "value": 54784
+    },
+    {
+      "name": "gNdsR2AddDObjAnimCalls",
+      "value": 1138
+    },
+    {
+      "name": "gNdsR2AddDObjAnimTicks",
+      "value": 579904
+    },
+    {
+      "name": "gNdsR2AddDObjNormalizeTicks",
+      "value": 198144
+    },
+    {
+      "name": "gNdsR2AddDObjBaseTicks",
+      "value": 254848
+    },
+    {
+      "name": "gNdsR2FixupAObj16Ticks",
+      "value": 1970496
+    },
+    {
+      "name": "gNdsR2FixupFinalizeCalls",
+      "value": 324
+    },
+    {
+      "name": "gNdsR2FixupFinalizeTicks",
+      "value": 24231616
+    }
+  ],
+  "capturedUtc": "2026-07-30T08:47:00.9818705Z"
+}

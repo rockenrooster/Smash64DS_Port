@@ -798,6 +798,58 @@ rather than stopping at "it walks the live joint chain":
   per-frame reset. The reset exists — it is the union store, not a per-byte assignment, which is why
   a grep for the field names missed it. Grep the union, not the member.)*
 
+### R2-06 E17 ANSWERED — the action-change re-add is 11,313/load frame, NOT the 78.5%. Two thirds of the premium has no named owner (2026-07-30)
+
+Measured on a `NDS_R2_RELOC_FIXUP_TIMING=1 NDS_R2_LOADFRAME_TIMING=1` build, ROM `8711BF90`, DLDI on,
+counters read at frames 797 and 925 and differenced (`artifacts/performance/r206-e17-a-start.json`,
+`r206-e17-b-end.json`).
+
+**The control validates the method before the result is read** — the reason both flags were on:
+`gNdsR2FixupFinalizeCalls` differences to **exactly 18**, E8's own call count, and the AObj16 share is
+**90.6%** (487,680 of 538,112) against E8's 88.4%. Totals run ~13% above E8's because this is a
+different, doubly-instrumented ROM; the *shares* and the call count reproduce, which is what the
+differencing had to establish.
+
+| in-window 797..925 | delta | per call | per load frame |
+|---|---:|---:|---:|
+| `gcAddAnimJointAll` — the action-change re-add | **7 calls**, 104,192 | 14,885 | — |
+| `gcAddDObjAnimJoint` | 320 calls, 169,472 | 530 | — |
+| ...normalize / base / residual | 57,728 / 76,544 / 35,200 | | |
+| **re-add family, double-counting removed** | **~181,000** | | **~11,313** |
+| whole in-frame relocation | 538,112 | 29,895 | ~33,632 |
+| **premium with NO named owner** | **~1,506,000** | | **~94,127 (67.7%)** |
+
+**The falsifier passed — the re-add does run, 7 times — and the lever failed anyway.** Registered
+threshold was R ≥ 640,000 to build, 256,000-640,000 to stack, below 256,000 to stop. **R ≈ 181,000**,
+so by the rule written before the data: *the re-add is not the story.* It is **10.4%** of the
+~1,747,000 non-relocation premium, and relocation plus re-add together explain only **32.3%** of the
+139,072/load-frame premium.
+
+*Double-counting note, because the raw numbers overstate it:* `gcAddAnimJointAll` calls
+`gcAddDObjAnimJoint` per joint, so its 104,192 already contains most of the 320 inner calls
+(7 calls x ~25 joints ≈ 175 of 320). Adding the two counters would have read ~274,000 and cleared the
+stacking threshold spuriously. The family total above adds `AddAnimAllTicks` to only the ~145 inner
+calls made outside it.
+
+**And this corrects E8's hypothesis, not just its size.** E8 wrote *"the load marker is largely a proxy
+for 'a fighter changed action this frame'"*. There are **16 load frames but only 7 whole-GObj re-adds**
+in the same window, so fewer than half the load frames carry one — the load marker and the
+action-change re-add **do not coincide**. `gNdsR2AddAnimAllMaxTicks` differences to **0**, so the
+expensive 54,784-tick call is pre-window and every in-window call is cheaper than average suggests.
+
+**Where this leaves R2-06: the load-frame premium is now measured to be spread, exactly as E10 found
+the frame-wide premium to be spread.** Two thirds of it — ~94,127/load frame — has no named owner
+after relocation and re-add are subtracted, and the three cheap named candidates are now all sized:
+relocation 33,632, re-add 11,313, O(n²) scan 17.3%-of-a-small-thing. **Per the registered rule the next
+step is to bracket the status transition and the hit/collision work** — but E10's independent
+full-attribution result predicts they will also be spread, so **whoever picks this up should first ask
+whether R2-06 is the right phase at all**, rather than adding a fourth bracket to a premium that has
+now twice refused to concentrate. The honest reading is that the gate needs a *structural* change of
+the kind the switch plan's §3 prescribes, not another lever inside the current structure.
+
+*Harness note: `-Samples 1` fails the sampler's own count check ("produced 12 of 1 samples") — it
+over-runs the stop loop. Use `-Samples 8` as the floor for a single-point counter read.*
+
 ### R2-06 E16 — E9 IS THE SMALL HALF. The load-frame premium is 78.5% ACTION CHANGE, and that has never been sized (2026-07-30)
 
 E15 closed the animation body, promoting E9 to the only live lever. **Re-reading E8's own numbers
