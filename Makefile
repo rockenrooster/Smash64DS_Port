@@ -484,9 +484,14 @@ NDS_FAST_WALLPAPER_AFFINE ?= 0
 # layer at 1,746,558 ticks/frame across four software stages -- blit, 153,600-byte
 # clear, 320x240 -> 256x192 downscale, 98,304-byte VRAM copy -- for a STATIC image.
 # The affine path decodes once into BG VRAM and then pushes four affine registers
-# per frame. Default off: it widens the decode cache that the battle wallpaper
-# depends on, so both arms get built and measured before it graduates.
-NDS_R2_RESULTS_AFFINE ?= 0
+# per frame. Both arms were built and measured before it graduated: 10 VBlanks ->
+# 7, 5,601,900 -> 3,921,330 ticks/frame on the phase-aligned histogram, and the
+# census row for the software wallpaper vanishes rather than shrinking -- the
+# layer is gone, not cheaper. Owner approved the matched-tic capture pair on
+# 2026-07-30 ("the affine one looks perfect"), so it is on by default:
+#   artifacts/visibility/2026-07-30_r207-r2b-results-control-software.png
+#   artifacts/visibility/2026-07-30_r207-r2b-results-candidate-affine.png
+NDS_R2_RESULTS_AFFINE ?= 1
 # Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
 # open/read/flush/play while preserving all BGM state/counters so the rest of
 # the system believes BGM is active. Never set in a published target.

@@ -66,7 +66,7 @@ configurations complete a full match clean.** Four detector defects fixed, two v
 hashed the window **title**, where melonDS renders its FPS counter). **Sudden Death has its own
 issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit` needs `START`.
 
-## OPEN P1: VS Results — R0..R2b CUT 82.4%; 3.94M ticks/frame vs 1.12M. R2b NEEDS VISUAL APPROVAL
+## OPEN P1: VS Results — R0..R2b CUT 82.4%; 3.94M ticks/frame vs 1.12M. R2b IS GRADUATED
 
 **39.975 → 7.025 VB/iter (1.50 → 8.43 FPS, 5.7×), Latest green.** Bit-exact cuts proven by
 `check_sprite_lerp_exact.py` — **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits `blx __udivsi3` for a
@@ -74,17 +74,21 @@ CONSTANT divisor**, whole-repo hazard, `grep __udivsi3`); **R0d** inlined lerp; 
 palette, ONE byte per PAIR of columns, 112 → 9 Thumb instr/px; **R2a** glyphs index that table
 (−200,133/frame, FPS flat, banked slack per rule 12). Details in PERF_LEDGER.
 
-**R2b is the big one and it is DEFAULT-OFF awaiting the owner's eyes.** The owner named the lever
+**R2b is the big one and it is now DEFAULT-ON.** The owner named the lever
 (affine BGs), so R2 became the **hardware affine BG**, not the planned dirty-flag.
 `NDS_R2_RESULTS_AFFINE=1`: **10.125 → 7.025 VB/iter, −1,736,589 ticks/frame** vs the 1,746,558 R0h
 sized for the whole background layer (**0.6%**), and the `I/4b 300x220` census row is **gone**.
 Confirmed quantum-free by `soak-freeze-watch.ps1` as a wall-clock race: `gNdsVSResultsTickCount`
 **500 → 780 (+56%)**, both arms NO-FREEZE, both `PacingPresentedFrames = 2043` (battle unperturbed).
-**To graduate: show the owner `artifacts/visibility/2026-07-30_r207-r2b-results-{control-software,candidate-affine}.png`,
-then flip the default.** Two traps already paid for: the mapper **letter-boxes** any wallpaper whose
-origin is not (0,0), and a faster candidate lands on a **different scene tick** at the same wall
-clock (both now standing rules). Results is now owned by the glyphs and the commit (`IA/8b 24x37` is
-85.1% of the remainder); idle was **830,260 = 1.48 VBlanks of slack**, which R2b's 3.1 exceeded.
+**Owner approved the matched-tic pair on sight (2026-07-30): `NDS_R2_RESULTS_AFFINE ?= 1`, and the
+checker now pins it default-ON.** It is inert wherever `NDS_FAST_WALLPAPER_AFFINE` is 0 (seed capture
+compiled out), which is every target except the differ. Two traps already paid for: the mapper
+**letter-boxes** any wallpaper whose origin is not (0,0), and a faster candidate lands on a
+**different scene tick** at the same wall clock (both now standing rules). Idle was **830,260 = 1.48
+VBlanks of slack**, which R2b's 3.1 exceeded. **RETRACTED: `IA/8b 24x37` is NOT 85.1% of the
+remainder** — that row is a next-hit interval spanning commit, fighters, camera/display and the
+platform wait, so it locates the unpartitioned tail and attributes nothing. The post-R2b owner is
+unmeasured; the census that settles it is the next step.
 
 **R1 is ANSWERED and folded into R2 — the "~30 s dead air" is 6.10 s and is NOT a load.** The 30 s was
 captured before R0c at 39.975 VB/iter and never re-measured after the 3.9×. GAME SET → "FOX WINS" is

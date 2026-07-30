@@ -1781,7 +1781,54 @@ moves it — per-frame Results cost — is exactly what R2 owns. Second independ
 R2b. Instrument is permanent: six counters in `battleship_mnvsresults.c`, read by
 `soak-freeze-watch.ps1`, four timer reads per Results entry.
 
-### R2-07 R2b BUILT — the Results background moves to the hardware affine BG; the whole background layer disappears, −1,736,589 ticks/frame (2026-07-30)
+### R2-07 R4a MEASURED — the first post-R2b Results profile: the software compositor STILL owns 41.03% of the frame, and idle is 25.82% (2026-07-30)
+
+The owner extended the 1.12M gate to the Results screen ("the same tick budget philosophy should
+apply to the results screen, 1.12M cap and work backwards"), and approved R2b on sight, which cleared
+Gate 0 of `docs/optimization/VS_RESULTS_30FPS_RESEARCH_20260730.md`. This is its Gate 1: the profile
+that did not exist. `run-task37-profile-census.ps1 -Scene Results -Frames 40`, Results tics 131..171,
+DLDI on, **0.00% unattributed**, 343 of 3,402 FUNC symbols hit. Evidence, config and ROM hash at
+`artifacts/task37-census/r207-r4-postr2b/`; flags verified in the generated header, not assumed —
+`NDS_FAST_WALLPAPER_AFFINE 1`, `NDS_R2_RESULTS_AFFINE 1`.
+
+| owner | ticks/frame | %tot |
+| --- | ---: | ---: |
+| `armWaitForIrq` | 2,024,737 | 25.82% — **idle, not work** |
+| `memset` | 985,377 | 12.56% |
+| `ndsPlatformCommitOriginalSpritePreviewLayer` | 975,856 | 12.44% |
+| `memcpy` | 669,786 | 8.54% |
+| `ndsDrawSObjIntoPreview` | 586,712 | 7.48% |
+| **software compositor subtotal** | **3,217,732** | **41.03%** |
+| `ndsRendererExecuteNativeFighterRootHardware` | 563,596 | 7.19% |
+| `ndsFighterMarioFox` DL family | 381,533 | 4.86% |
+
+**Read this as ownership inside this binary, never as absolute cost.** The window totals 7,842,772
+ticks/iteration against the phase-aligned histogram's 3,921,330, because a `NDS_TASK37_PROFILE=1`
+build is not the measured build — it carries per-frame region markers and a different ITCM pack. R0f
+already paid for treating one instrument's absolute row as another's; do not repeat it by subtracting
+across these two.
+
+**What it settles.** R2b deleted the background layer and the compositor is *still* the largest owner,
+so the foreground staging path — one 153,600-byte clear, the blits, the 320×240→256×192 downscale, one
+98,304-byte VRAM copy — is the Gate 2 target on measurement rather than on sizing. `memset` plus
+`memcpy` alone are **21.10%**: a fifth of the Results frame is buffer traffic for a screen the DS would
+show for nearly free on BG/OAM.
+
+**And the 25.82% idle is the number that decides how to judge the next cut.** Rule 12 again: 2,024,737
+ticks/frame of slack means any cut smaller than that lands as spin and the wall clock will not move.
+The compositor at 3,217,732 is the only measured block bigger than the slack, which is the second
+independent reason it is the right target — a fighter cut (7.19%) or a DL cut (4.86%) would be
+invisible to a cadence instrument no matter how real it is.
+
+**Open question this profile raises, for whoever takes R4b.** R0h measured two staging clears at
+830,978 ticks/frame combined; with the background layer gone, one clear should remain, yet `memset`
+reads 985,377. Profiling overhead explains some of it. It does not obviously explain all of it. Before
+building the hardware UI path, confirm with an in-build byte counter (`gNdsSObjForegroundStagingClearBytes`
+and its background twin already exist at `sprite_preview_backend.c:2558-2567`) that exactly one 320×240
+clear and one 98,304-byte copy happen per Results frame. If a background clear is still running under
+the affine path, that is a cheap fix R2b left on the table and it should be taken first.
+
+### R2-07 R2b GRADUATED — the Results background moves to the hardware affine BG; the whole background layer disappears, −1,736,589 ticks/frame (2026-07-30)
 
 The owner asked the question that unblocked this: *"we already know affine backgrounds and native
 stages work well, can we just apply that to the results screen?"* Yes. R2's original plan was a
@@ -1834,13 +1881,20 @@ Two process notes, both nearly expensive:
   but a different animation frame. Ruled out by capturing the control at a matched scene state — it
   is full-bleed both early and late. See standing rule 13.
 
-Status: **not graduated.** Default-off, Latest green, both checkers green, evidence at
+Status: **GRADUATED 2026-07-30.** The owner approved the matched-tic capture pair on sight — "the
+affine one looks perfect" — so `NDS_R2_RESULTS_AFFINE` is now `?= 1` and
+`check-gbi-decode-fixtures.ps1` pins it default-**on** instead of default-off. Evidence at
 `artifacts/visibility/2026-07-30_r207-r2b-results-{control-software,candidate-affine,letterbox-defect}.png`
-and `artifacts/performance/r207-r2b-{control,candidate}.json`. Needs the owner's visual approval on
-the control/candidate pair per the render-fidelity doctrine, then the flag flips on.
+and `artifacts/performance/r207-r2b-{control,candidate}.json`. Note the flag is inert wherever
+`NDS_FAST_WALLPAPER_AFFINE` is 0 — the seed capture is compiled out — which is why the differ target
+is unaffected; every published and lab target already forces that flag to 1.
 
-This is a correct prerequisite, **not** a route to 30 FPS on Results: 8.43 FPS still means the glyph
-blits and the two-layer commit now own the whole scene (`IA/8b 24x37` alone is 85.1% of what is left).
+This is a correct prerequisite, **not** a route to 30 FPS on Results. Retract the sentence this entry
+used to carry, that `IA/8b 24x37` owns 85.1% of the remainder: that row is a next-hit interval, so it
+spans the commit, the fighters, camera/display work and the platform wait as well as the glyph. It is
+a locator for the unpartitioned tail, never symbol attribution — the owner's research doc
+(`docs/optimization/VS_RESULTS_30FPS_RESEARCH_20260730.md`) makes the same correction, and the R2b
+JSON records `phases:false`. The real post-R2b owner is unknown until the census below lands.
 
 ### R2-07 R2a BUILT — the glyph lerp is gone and the VBlank census reads EXACTLY FLAT, because the loop has 1.48 VBlanks of idle slack (2026-07-30)
 
