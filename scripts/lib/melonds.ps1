@@ -349,6 +349,36 @@ function Set-MelonDSDldiProfile {
         -Key 'ReadOnly' -Value ($ReadOnly ? 'true' : 'false')
 }
 
+# Whether the config a run actually used has DLDI on. Returns $true/$false, or
+# $null when it cannot be determined -- which a caller should record as unknown
+# rather than guessing, because guessing is what made this necessary.
+#
+# DLDI IS A PERFORMANCE VARIABLE, not just an I/O setting. Measured 2026-07-29:
+# R2-03 E69's own commit reads WORK-H P95 1,096,768 with DLDI off and 1,126,464
+# with it on -- roughly 29,696 ticks, from identical source -- because DLDI
+# resolves nitro:/ through the SD-card driver rather than the card ROM interface
+# and so prices real I/O into the frame. It is also required for parity with
+# retail hardware, so the DLDI-on figure is the honest one. Nothing recorded this
+# in any performance artifact until it silently invalidated a cross-commit
+# comparison and cost a cycle, so every artifact writer should stamp it.
+function Get-MelonDSDldiEnabled {
+    param([string]$ConfigPath)
+
+    if ([string]::IsNullOrEmpty($ConfigPath) -or
+        -not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
+        return $null
+    }
+    $text = Get-Content -LiteralPath $ConfigPath -Raw
+    # Section-scoped on purpose: a bare `Enable = true` needle is satisfied by
+    # the unrelated [Instance0.Gdb] key, which is the same trap
+    # check-melonds-policy.ps1 already guards against.
+    $section = [regex]::Match($text, '(?ms)^\[DLDI\]\r?\n(.*?)(?=^\[|\z)')
+    if (-not $section.Success) {
+        return $false
+    }
+    return ($section.Groups[1].Value -match '(?m)^\s*Enable\s*=\s*true\s*$')
+}
+
 function Set-MelonDSManualProfile {
     param(
         [Parameter(Mandatory=$true)]

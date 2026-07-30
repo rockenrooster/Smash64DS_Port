@@ -514,6 +514,7 @@ try {
     })
 
     $melonVersion = (Get-Item -LiteralPath $context.MelonDSPath).VersionInfo.FileVersion
+    $dldiEnabled = Get-MelonDSDldiEnabled -ConfigPath $configState.Config
     $result = [PSCustomObject]@{
         target = $target
         rom = $rom
@@ -523,6 +524,21 @@ try {
             -Algorithm SHA256).Hash
         melonDSVersion = $melonVersion
         gitShort = (git -C $root rev-parse --short HEAD)
+        # gitShort stamps HEAD, which is NOT what was measured when the tree is
+        # dirty. R2-03 E69's artifact reads 0b39c1a -- the commit BEFORE the change
+        # it measured -- because the sources were still uncommitted, and a later
+        # session spent a cycle concluding "the baseline does not reproduce" from
+        # it. Record the tree state so a future reader can tell.
+        gitDirtyPaths = @(git -C $root status --porcelain).Count
+        # THE EMULATOR CONFIGURATION IS PART OF THE MEASUREMENT. DLDI on costs
+        # roughly 29,696 ticks of WORK-H P95 -- E69's own commit reads 1,096,768
+        # with it off and 1,126,464 with it on, identical source -- because DLDI
+        # resolves nitro:/ through the SD-card driver instead of the card ROM
+        # interface and so prices real I/O into the frame. It is also REQUIRED for
+        # retail parity, so the DLDI-on figure is the honest one. Nothing recorded
+        # it until 2026-07-29, which made every pre-3eb9ecdb baseline in the board
+        # silently optimistic and unusable for a cross-commit delta.
+        dldiEnabled = $dldiEnabled
         ringDump = [bool]$RingDump
         samples = $rows.Count
         startFrame = [uint64]$frames[0]
@@ -548,9 +564,14 @@ try {
         capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
     }
 
+    # DLDI and tree-dirtiness ride on the headline because both silently invalidate
+    # a cross-commit comparison, and both did: DLDI is worth ~29,696 WORK-H P95, and
+    # E69's artifact stamps the commit before the change it measured.
     Write-Output ("Tick-HUD buckets: target=$target samples=$($rows.Count) " +
         "frames=$($frames[0])..$($frames[-1]) melonDS=$melonVersion " +
-        "sha=$($result.melonDSSha256.Substring(0,16)) git=$($result.gitShort)")
+        "sha=$($result.melonDSSha256.Substring(0,16)) git=$($result.gitShort)" +
+        "$(if ($result.gitDirtyPaths -gt 0) { "+dirty($($result.gitDirtyPaths))" }) " +
+        "dldi=$(if ($null -eq $dldiEnabled) { 'unknown' } elseif ($dldiEnabled) { 'ON' } else { 'off' })")
     # P50/P95 lead because they are the decision basis in docs/VERIFYING.md and
     # they survive the spikes (a text redraw or a respawn) that make a mean of a
     # few hundred frames unrepresentative. spread = p95/p50 names exactly which

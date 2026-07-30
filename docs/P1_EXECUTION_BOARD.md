@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-29 22:05 Central
+Updated: 2026-07-29 23:15 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
@@ -369,6 +369,84 @@ Two things worth keeping from a null result:
 - **`SRC` +30,912 is still unexplained**, and it is measured against a different
   commit (`0b39c1a`), so cross-commit placement is not excluded for it the way it is
   for E4's within-commit comparison.
+
+### R2-06 E4b — DLDI-ON COSTS ~29,696 P95. Every earlier number is DLDI-off (2026-07-29)
+
+**Owner: *"turning on DLDI in melonDS caused the performance regression. DLDI is needed
+for parity with retail hardware."* That is the missing variable, and it settles this.**
+
+Rebuilt R2-03 E69 at its own commit `4916656d` and re-measured it. Evidence
+`artifacts/performance/r206-e69-recheck-128{.json,-rows.csv}`:
+
+| E69, same commit, same code | `WORK-H` P95 | vs 1,120,000 gate |
+|---|---:|---|
+| as published, DLDI **off** | **1,096,768** | 6/128 over, margin 23,232 |
+| rebuilt, DLDI **on** | **1,126,464** | **MISSED by 6,464** |
+
+**Identical source. The +29,696 is the emulator's I/O configuration, not the code.**
+DLDI changes how `nitro:/` is reached — NitroFS resolves through the SD-card driver
+instead of the card ROM interface — so it prices real I/O latency into the frame.
+
+**I got the cause wrong first and it is worth recording why.** I wrote this section up
+as "the E69 baseline does not reproduce", blaming an uncommitted working tree, because
+the sampler stamps `gitShort` from HEAD and that JSON reads `0b39c1a` (the commit
+before E69). The code reproduced perfectly. What changed underneath it was the harness:
+DLDI was forced on earlier the same day in `3eb9ecdb`, after every baseline in this
+board had been captured. **A cross-commit performance delta is meaningless unless the
+emulator configuration is identical, and nothing in the artifact recorded it.**
+
+**Consequence 1 — DLDI-on is now the honest figure and the gate was already missed.**
+The owner needs retail parity, so DLDI-off understates the real cost. E69 on its own
+commit is 1,126,464. **The "margin 23,232" this campaign carried for several cycles —
+and that R2-07's particle budget was sized against — was a DLDI-off artifact.** Every
+P95 in this board captured before `3eb9ecdb` is optimistic by roughly 29,696 and should
+be read as a lower bound, not a result.
+
+**Consequence 2 — `SRC +30,912` is withdrawn. It is 1,600 BETTER.** Comparing
+like-for-like (both DLDI-on):
+
+| bucket | E69 rebuilt | current `c7052883` | delta |
+|---|---:|---:|---:|
+| `ALL` | 1,680,000 | 1,680,000 | 0 |
+| `WORK-H` | 1,126,464 | 1,160,448 | **+33,984** |
+| `WORK` | 1,284,544 | 1,313,792 | +29,248 |
+| `OTHR` | 430,848 | 461,376 | **+30,528** |
+| `WAIT` | 413,952 | 445,120 | **+31,168** |
+| `SRC` | 472,832 | 471,232 | **−1,600** |
+| `FTR` | 391,552 | 392,896 | +1,344 |
+| `STG` | 180,544 | 180,672 | +128 |
+| `MISC` | 120,128 | 120,448 | +320 |
+
+So this session's real cost is **+33,984 WORK-H**, not +63,680, and it is **not in any
+named gameplay or render bucket** — `FTR`/`STG`/`SRC`/`MISC` are all within ~1,300.
+It is entirely `OTHR` +30,528 / `WAIT` +31,168.
+
+Both arms of that table are DLDI-on, so the +33,984 is real and is this session's. It
+sits in `OTHR` +30,528 / `WAIT` +31,168 with every named gameplay and render bucket
+inside ~1,300, which is the same signature DLDI itself has — unnamed remainder and wait
+bracket, not a subsystem. That is consistent with **more I/O**, and the anim-cache work
+is exactly what changed the I/O pattern: it reserves 92,160 bytes from
+`gSYTaskmanGeneralHeap` early and changes which animation loads hit the SD driver. Two
+candidates remain, both cheap to separate:
+
+1. **Residual cache misses that are now SD reads.** `Hits=79` over 128 frames with
+   `Rejects=0` says the cache serves what it holds, but not that it holds everything the
+   window asks for — a warm-list gap becomes a full `fopen`/`fread` through DLDI. Read
+   `gNdsR2AnimWarmFailed` and `gNdsR2AnimForceLoadTotal/Repeat` over the same window
+   before touching anything.
+2. **Heap layout.** The 92,160-byte reservation shifts every later allocation and
+   re-maps the match's working set across cache sets. Costs no instructions, lands in
+   the remainder. Separable by changing only the reservation size and re-measuring.
+
+**Two standing corrections to how this campaign records evidence, both machine-fixable:**
+
+- **An artifact must record the emulator configuration it was captured under.** DLDI is
+  the proof: a 29,696-tick swing with identical source, invisible in every JSON. The
+  sampler should stamp the DLDI setting (and anything else `Set-MelonDSAutomationProfile`
+  pins) beside the ROM hash.
+- **`gitShort` stamps HEAD, not the working tree.** E69's JSON names the commit before
+  the change it measures. Either stamp `git status --porcelain` alongside it or refuse to
+  write an artifact from a dirty tree.
 
 ### R2-06 E5 — the designed lever: split the render skeleton from the gameplay skeleton
 

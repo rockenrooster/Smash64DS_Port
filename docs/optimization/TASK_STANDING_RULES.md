@@ -1911,3 +1911,36 @@ off the heap and left battle start 58,024 bytes short of a 116,752-byte request.
    files. Lowering the floor to "fix" the shortfall would have disabled a measured
    render path in silence — a fix worse than the hang, and it was authorized before
    the coupling was noticed.
+
+### The emulator configuration is part of the measurement (2026-07-29)
+
+`[DLDI] Enable` is worth roughly **29,696 ticks of WORK-H P95**. R2-03 E69's own commit,
+identical source, reads **1,096,768** with DLDI off and **1,126,464** with it on — which
+is over the 1.12M gate. DLDI resolves `nitro:/` through the SD-card driver instead of the
+card ROM interface, so it prices real I/O into the frame, and **it is required for parity
+with retail hardware** (owner). The DLDI-on figure is therefore the honest one and every
+DLDI-off number in this campaign is a lower bound.
+
+Nothing in any performance artifact recorded it. So when DLDI was forced on mid-campaign,
+every prior baseline silently became incomparable, and the next cross-commit delta was
+read as a code regression that did not exist.
+
+1. **Stamp the configuration, not just the binary.** A ROM hash and a git short are not
+   enough to make two runs comparable. `sample-tick-hud-buckets.ps1` now records
+   `dldiEnabled` and puts `dldi=ON|off` on the headline; `Get-MelonDSDldiEnabled` in
+   `lib/melonds.ps1` is the shared reader. Anything else `Set-MelonDSAutomationProfile`
+   pins deserves the same treatment before it costs a second cycle.
+2. **`gitShort` stamps HEAD, not the working tree.** E69's artifact names `0b39c1a` — the
+   commit *before* the change it measured — because the sources were still uncommitted.
+   A later session rebuilt that commit, got a different number, and concluded "the
+   baseline does not reproduce"; the code reproduced perfectly. The sampler now also
+   records `gitDirtyPaths` and prints `+dirty(N)`.
+3. **A harness change invalidates baselines exactly as a code change does, and more
+   quietly.** Forcing DLDI on was correct — it closed a real gap between automation and
+   the owner's configuration. What was missing was re-baselining after it. **When a
+   harness setting that can affect timing changes, re-measure the current baseline in the
+   same commit before attributing anything to code.**
+4. **Suspect the environment when a delta lands only in the unnamed buckets.** DLDI's
+   +29,696 shows up in `OTHR` and `WAIT` with every named gameplay and render bucket
+   inside ~1,300. Real code regressions land in the subsystem that owns them; I/O and
+   configuration land in the remainder. That shape is a diagnostic, not noise.

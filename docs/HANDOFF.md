@@ -18,27 +18,26 @@ E64b (-26,944), E65 (-35,584), E67 (-4,672), E69 (-12,544). Cumulative P95
 | R2-06 | E0 + E1 + E2 done; soak clause has a validated instrument, one standing result |
 | R2-07/08 | not started; R2-08 needs the owner's retail play test |
 
-## Where the gate stands — MISSED by 40,448, and that is new (2026-07-29 22:4x)
+## Where the gate stands — MISSED, and EVERY earlier number is DLDI-off
 
-`WORK-H` P95 **1,160,448** against the 1,120,000 gate, 128-frame ring dump, frames
-796..923. Evidence `artifacts/performance/r206-arena-heap-128{.json,-rows.csv}`.
-The E69 graduation figure of **1,096,768** (`r203-e69b-mtxcopy-128`, git `0b39c1a`)
-still stands as a measurement — it is this tree that moved, not that number.
+**`WORK-H` P95 1,160,448** against the 1,120,000 gate, frames 796..923, evidence
+`artifacts/performance/r206-arena-heap-128{.json,-rows.csv}`.
 
-**Do not re-derive the cause; it is measured.** The freeze fix's static arena cost
-+107,584 by disabling the animation cache (`Fills=2`, `Rejects=44`, 76 overflows) and
-a miss is a NitroFS `fopen`/`fread` inside a gameplay frame. Moving the arena onto the
-taskman heap (E3, `e2352d62`) recovered **−43,904** and the cache is now provably
-effective (`Rejects=0`, `ArenaOverflows=0`, `Hits=79`).
+**DLDI-on costs ~29,696 P95, and DLDI is required for retail parity (owner), so it is
+the honest config.** R2-03 E69 rebuilt at its own commit `4916656d` with identical
+source measures **1,126,464** DLDI-on against the **1,096,768** it published DLDI-off
+(`r206-e69-recheck-128`). **So the gate was already missed by 6,464 before this session,
+the 23,232 margin was a DLDI-off artifact, and R2-07's particle budget was sized against
+it.** Read every pre-`3eb9ecdb` P95 in the board as a lower bound.
 
-**The residual 63,680 over baseline is mostly NOT new work.** `ALL` P95 is identical
-at 1,680,000, so presented pacing never changed; `WORK` P95 moved only +13,440; `FTR`
-+6,016 is at the placement floor; `WAIT` +63,488 against `OTHR` +63,104 is a
-redistribution. **The one real regression is `SRC` P95 +30,912.** Next action, cheap
-and unproven: the imported `syMallocSet` wrapper adds an out-of-line
-`ndsSyMallocWouldFit` call to **every** region's allocation, and the graphics heap is
-allocated from per frame — make that helper `static inline` and re-measure before
-looking anywhere else. Board §"R2-06 E3" has the full delta table.
+Like-for-like (both DLDI-on) this session costs **+33,984**, and **`SRC +30,912` is
+WITHDRAWN — `SRC` is 1,600 better.** The delta is `OTHR` +30,528 / `WAIT` +31,168 with
+every named gameplay and render bucket inside ~1,300, and `ALL` P95 unchanged at
+1,680,000. That is DLDI's own signature — I/O in the remainder, not a subsystem — so
+suspect residual animation loads reaching the SD driver, or the 92,160-byte reservation's
+effect on heap layout. E4 already refuted the `syMallocSet` wrapper's call overhead
+(byte-identical buckets across a different ROM). Board §"R2-06 E4b" has both and the
+method to separate them.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
