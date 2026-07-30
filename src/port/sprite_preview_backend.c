@@ -1840,6 +1840,14 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                 u32 pairs = src_draw_width >> 1;
                 u32 pair;
 
+                /* Two `strh`, deliberately, NOT one `str`. R0g folded the pair
+                 * into a single word store -- provably identical bytes, the base
+                 * is always 4-byte aligned here -- and measured **-0.06%**:
+                 * 3.9974 against 4.0000 VBlanks per wallpaper call. Halving the
+                 * count of main-RAM halfword stores changes nothing, so the
+                 * ~1.6M ticks this call costs beyond its instruction count are
+                 * NOT the store. Reverted because it was one more instruction per
+                 * pair and needed a runtime alignment gate to be safe. */
                 for (pair = 0u; pair < pairs; pair++)
                 {
                     u8 packed = src_i4[(row_base + (pair ^ byte_xor)) ^ 3u];

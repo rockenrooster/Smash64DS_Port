@@ -81,10 +81,11 @@ bit-exact by proof (`check_sprite_lerp_exact.py`): **R0c** `/255`→`(x*257+257)
 `blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`); **R0d** inlined the
 lerp; **R0e** 16-entry palette + ONE byte per PAIR of columns, 112 → 9 Thumb instr/px. **R0f `-Phases`
 split it:** commit **4.375 VB (43.1%)**, wallpaper **4.100 (40.4%)**, glyphs 1.675, **begin 0.000 — the
-153,600-byte clear is FREE, that hypothesis is dead.** Still unowned: **~1.6M INSIDE the wallpaper call**
-— 70 cycles/px for a 9-instruction body, while R0e removed instructions at 1.31 cycles each. The only
-per-pixel main-RAM write is one `strh`, so **R0g** folds the pair into one `str` (19 instr/pair vs 18 —
-a clean discriminator). Commit also holds the two 3D fighters (link 9 < 26); `-Phases` logs iterations.
+153,600-byte clear is FREE.** **R0g REVERTED −0.06%: the store is not it either** (one `str` for the
+pair changed 4.0000 → 3.9974 VB/call). Still unowned: **~1.6M INSIDE the wallpaper call** — 9
+instructions would need 7.8 cycles each. Not instructions, not stores. **NEXT = R0h, Task 37 per-PC at
+Results** (needs a second tick site keyed on `sMNVSResultsTotalTimeTics`; the battle one never fires
+there). Commit interval also holds the two 3D fighters (link 9 < 26) — `-Phases` splits it per frame.
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 

@@ -1741,6 +1741,41 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 R0g REVERTED — the store is NOT the residual (−0.06%), and the run that proved it also found a defect I had just introduced (2026-07-30)
+
+**Wallpaper cost per call: 4.0000 → 3.9974 VBlanks. −0.06%.** Folding the pair's two `strh` into one
+32-bit `str` halves the count of main-RAM halfword stores in the hot loop and **changes nothing**. So the
+~1.6M ticks/frame this call costs beyond its instruction count are **not the store**, and R0f's
+"the only per-pixel main-RAM write is one `strh`" reasoning, while true, was not the answer. Reverted:
+it was one more instruction per pair (19 vs 18) and needed a runtime alignment gate to be safe, so at
+equal measured cost the smaller code wins. The revert is **comment-only** against `55c8a2c` — the
+graduated R0e ROM is still the valid artifact and needs no rebuild.
+
+Both remaining models for the residual are now dead: **it is not instruction count** (R0e removed 103
+instructions/pixel at 1.31 cycles each; the surviving 9 instructions would have to cost 7.8 cycles each)
+and **it is not the store**. What is left inside that call is the source `ldrb`, the palette `ldrh`, and
+the per-row/per-strip prologues — none of which look like 1.6M either. **This is now the case Task 37
+exists for**, so R0d's queued idea comes back with a better justification than it had: the question is
+no longer "how many instructions" (objdump answered that) but "which address inside this function
+accumulates cycles", and the per-PC profiler is the only instrument that answers it. Queued as R0h,
+which needs the header extended with a Results-scene window (`NDS_TASK37_PROFILE` currently keys its
+markers off battle presented-frames; the Results loop never increments that counter, so it needs a
+second tick site keyed on `sMNVSResultsTotalTimeTics` and a flag to disable the battle one).
+
+**The defect: two GDB breakpoints at one address are not independent.** `-Phases` logged the iteration
+boundary with a second breakpoint on `ndsMNVSResultsRecordFrame`, where breakpoint 3 already sat as the
+window terminator. The logging breakpoint's `commands` block ends in `continue`, which **swallowed
+breakpoint 3's stop**, so the window never closed: the run went to its 1800 s timeout having covered
+**6,169 iterations instead of 40**, straight past the Results screen into sprite kinds no other arm has
+ever seen (`IA/8b 62x13`, `CI/4b 8x10`, `RGBA/16b 42x35`, 36,374 hits on `IA/8b 8x10`). The script's own
+comment above breakpoint 3 had already warned about exactly this — *"2 and 3 are at different addresses,
+so 2's `continue` cannot swallow 3's stop"* — and I broke the invariant it was documenting. Fixed by
+moving the frame boundary to `ndsPlatformReadInput`, which is once per frame at its own address.
+
+*The one thing the broken window bought:* the per-call wallpaper figure is window-independent (same
+sprite, same 66,000 pixels, same destination every call), so 6,169 samples at 3.9974 against 41 at
+4.0000 is a **stronger** wash verdict than the intended run would have given. That is luck, not method.
+
 ### R2-07 R0f MEASURED — the layer CLEAR is free, the layer COMMIT is 43.1%, and the wallpaper call still hides 1.6M (2026-07-30)
 
 `census-vsresults-blit.ps1 -Phases` on the R0e ROM (`33A9E063`), same window. 491 costed intervals,

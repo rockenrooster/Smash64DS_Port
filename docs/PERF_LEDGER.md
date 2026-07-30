@@ -6852,6 +6852,8 @@ E0); branch `codex/task56-fighter-stripify` (6 commits).
 | R0c | 2026-07-30 | `/255` -> reciprocal multiply, bit-exact |
 | R0d | 2026-07-30 | `always_inline` the prim/env lerp |
 | R0e | 2026-07-30 | specialized paired I4 wallpaper row + 16-entry palette, bit-exact |
+| R0f | 2026-07-30 | -Phases split: layer clear is free, layer commit is 43.1% |
+| R0g | 2026-07-30 | pair as one 32-bit store: **REVERT, -0.06%** |
 
 **Verdict: KEEP all three cuts.** The Results screen is not the battle frame and
 carries no tick instrument, so cost is measured in **VBlanks**: GDB stops freeze
@@ -6892,7 +6894,27 @@ LAST arm) and ~45 are the lerp, with nearly every loop-carried value spilled to 
 both blitter arms from the emitted code puts the I4 wallpaper at ~0.71M
 (66,000 px x 9 instructions) and the seven IA/8b glyphs at ~0.74M (6,882 px x
 ~90), so the pixel loops are ~1.5M of 5.74M and deleting them entirely would
-leave ~4.2M. No cause is claimed for that ~4.2M here: R0's
+leave ~4.2M.
+
+**R0f then measured the split** (`-Phases`, R0e ROM, same window): layer commit
+4.375 VB/iter (2,450,831 ticks, 43.1%), I4 wallpaper 4.100 (2,296,779, 40.4%),
+seven IA/8b glyphs 1.675 (938,318, 16.5%), **layer begin 0.000 -- the
+153,600-byte staging clear costs nothing at all**, 82 hits and zero VBlanks.
+`artifacts/performance/r207-r0f-phases.json`.
+
+**R0g REVERTED at -0.06%.** Folding the pair's two `strh` into one 32-bit `str`
+halves the hot loop's main-RAM store count and moved the wallpaper from 4.0000 to
+3.9974 VBlanks per call. So the ~1.6M ticks/frame that call costs beyond its
+instruction count are neither instructions (R0e removed 103/pixel at 1.31 cycles
+each; the surviving 9 would need 7.8 each) nor stores. Reverted for being one more
+instruction per pair plus a runtime alignment gate at equal measured cost; the
+revert is comment-only against 55c8a2c, so the graduated ROM stands.
+`artifacts/performance/r207-r0g-store32.json` -- note that run hit its 1800 s
+timeout and covered 6,169 iterations, not 40, because of the breakpoint defect in
+TASK_STANDING_RULES.md rule 9. Its per-call figure is still valid (the wallpaper
+does identical work every call) but its totals are not comparable.
+
+No cause is claimed for the residual: R0's
 own counters showed only 22 preview commits in 101 iterations with zero
 foreground commits, which rules out the simple "two full layer commits per frame"
 story, and the scene's two 3D fighter GObjs have never been priced. `-Phases` was

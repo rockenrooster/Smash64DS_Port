@@ -88,7 +88,8 @@ try {
     $breakSymbols = @('ndsMNVSResultsRecordFrame', 'ndsDrawSObjIntoPreview')
     if ($Phases) {
         $breakSymbols += @('ndsPlatformBeginOriginalSpritePreview',
-                           'ndsPlatformCommitOriginalSpritePreviewLayer')
+                           'ndsPlatformCommitOriginalSpritePreviewLayer',
+                           'ndsPlatformReadInput')
     }
     $nm = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
     if (Test-Path -LiteralPath $nm -PathType Leaf) {
@@ -164,16 +165,22 @@ try {
             'printf "PHASE=%u,commit\n", sVBlankCount',
             'continue',
             'end',
-            # A second, logging breakpoint at the same address as 3. GDB keeps
-            # them independent, so 3's ignore count still terminates the run.
-            # Without this the commit interval runs to the NEXT frame's layer
-            # begin and absorbs everything else the scene does -- including the
-            # two 3D fighter GObjs, which draw at display link 9, ahead of the
-            # wallpaper's link 26.
-            'break ndsMNVSResultsRecordFrame',
+            # The frame boundary, so the commit interval stops absorbing
+            # everything else the scene does -- including the two 3D fighter
+            # GObjs, which draw at display link 9, ahead of the wallpaper's 26.
+            #
+            # `ndsPlatformReadInput`, NOT a second breakpoint on
+            # `ndsMNVSResultsRecordFrame`. Two breakpoints at one address are not
+            # independent: this one's `continue` swallows breakpoint 3's stop, so
+            # the window never closes. R0g lost a run that way -- it ran to the
+            # 1800 s timeout, 6,169 iterations instead of 40, straight past the
+            # Results screen into sprites no other arm ever saw. Same trap the
+            # comment above breakpoint 3 already described, re-learned the hard
+            # way: every logging breakpoint must sit at its OWN address.
+            'break ndsPlatformReadInput',
             'commands',
             'silent',
-            'printf "PHASE=%u,iteration\n", sVBlankCount',
+            'printf "PHASE=%u,frame\n", sVBlankCount',
             'continue',
             'end'
         )

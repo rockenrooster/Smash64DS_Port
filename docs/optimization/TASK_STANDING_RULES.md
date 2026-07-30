@@ -2048,3 +2048,20 @@ P99 rose 59,200, and over-gate went 9 → 11** — the two added frames being lo
    to a branch, confirm from the owning source that the branch is taken** — for imported
    behaviour that means BattleShip, which `PROJECT_GOAL.md` already requires be read
    before guessing.
+9. **Every logging GDB breakpoint must sit at its OWN address, and a `commands` block
+   that ends in `continue` will swallow another breakpoint's stop.** R2-07 R0g added a
+   phase-logging breakpoint on `ndsMNVSResultsRecordFrame`, where the window
+   *terminator* already sat. Its `continue` consumed the terminator's stop, so the
+   window never closed: the run went to its 1800 s timeout having covered **6,169
+   iterations instead of 40**, straight past the scene under measurement and into
+   sprites no other arm had ever seen. The script it was added to *already carried a
+   comment explaining this* — "2 and 3 are at different addresses, so 2's `continue`
+   cannot swallow 3's stop" — which is the part worth remembering: **an invariant
+   documented in a comment is not enforced by anything.** When a harness comment states
+   why two things are arranged a certain way, adding a third thing means re-checking the
+   comment, not trusting it.
+
+   Prefer a distinct once-per-frame symbol (`ndsPlatformReadInput` here) over a second
+   breakpoint at a shared address. And note the shape of the failure: **exit code 0,
+   a full-looking table, and plausible numbers.** The only tell was the hit count. Read
+   the hit counts against the iteration count before reading any cost column.
