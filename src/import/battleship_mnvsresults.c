@@ -10,6 +10,7 @@
 #include <lb/transition.h>
 #include <mn/menu.h>
 #include <nds/nds_controller.h>
+#include <nds/nds_platform.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_profile.h>
 #include <nds/timers.h>
@@ -87,6 +88,44 @@ volatile u32 gNdsVSResultsInputPollCount;
 volatile u32 gNdsVSResultsInputSeenMask;
 volatile u32 gNdsVSResultsInputTapMask;
 volatile u32 gNdsVSResultsPadMask;
+
+/* R2-07. The presented-frame VBlank-interval histogram for THIS scene.
+ *
+ * Acceptance is defined on the 2/3/4/5+ interval histogram and the maximum
+ * interval, never on min FPS or a half-second average, and until now only the
+ * battle loop produced one -- the Results loop reaches `ndsPlatformEndFrame`
+ * with no interval recorder at all, so the scene's cadence could only be
+ * inferred from breakpoint censuses.
+ *
+ * This is an OBSERVATION, deliberately not a second scheduler. The battle
+ * histogram is welded to `ndsPlatformSchedulePresentAtVBlank` and its phase
+ * bookkeeping; reusing those globals here would corrupt the battle numbers with
+ * Results frames, and duplicating the scheduler is exactly the "competing
+ * pacing state" the R2-07 research plan forbids. All this does is difference the
+ * VBlank counter across consecutive Results iterations and bucket the result.
+ *
+ * Index n counts intervals of exactly n VBlanks; the last index is the
+ * n-or-more bin. Index 0/1 exist so a sub-2 reading has somewhere to land and
+ * shows up as the anomaly it would be rather than being folded into the 2
+ * bucket.
+ *
+ * SIXTEEN BINS, not the battle path's six. The owner set P95 as the acceptance
+ * metric for this scene, and a percentile cannot be read out of a distribution
+ * whose tail is a single catch-all: the first run of this instrument returned
+ * 117 intervals at 2 and 210 at "5+" with a max of 9, which pins P95 no more
+ * precisely than "somewhere in 5..9". The battle path can afford a 5+ bin
+ * because its scheduler holds it at 2 and anything above is an excursion to be
+ * counted, not measured. Results is nowhere near its gate yet, so its tail is
+ * the part that matters.
+ *
+ * NOTE the sample is taken once per Results iteration, which is the scene's own
+ * presented frame -- this loop has no separate logic/present split to confuse
+ * it, unlike the battle path. */
+#define NDS_VSRESULTS_INTERVAL_BUCKETS 16u
+volatile u32 gNdsVSResultsPresentIntervalBucket[NDS_VSRESULTS_INTERVAL_BUCKETS];
+volatile u32 gNdsVSResultsPresentIntervalMax;
+volatile u32 gNdsVSResultsPresentIntervalSamples;
+static u32 sNdsVSResultsLastPresentVBlank;
 
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
@@ -272,6 +311,30 @@ void ndsMNVSResultsRecordFrame(void)
      * and describe nothing about this scene. Costs one compare per Results
      * iteration in profile builds only. */
     NDS_TASK37_PROFILE_RESULTS_TICK(sMNVSResultsTotalTimeTics);
+
+    /* Sample this scene's presented-frame cadence. The first iteration only
+     * seeds the reference -- there is no previous frame to difference against,
+     * and counting that gap would report the whole scene-entry load as one
+     * enormous interval. */
+    {
+        u32 now = ndsPlatformVBlankCount();
+
+        if (sNdsVSResultsLastPresentVBlank != 0u)
+        {
+            u32 interval = now - sNdsVSResultsLastPresentVBlank;
+            u32 bucket = (interval < (NDS_VSRESULTS_INTERVAL_BUCKETS - 1u))
+                ? interval
+                : (NDS_VSRESULTS_INTERVAL_BUCKETS - 1u);
+
+            gNdsVSResultsPresentIntervalBucket[bucket]++;
+            gNdsVSResultsPresentIntervalSamples++;
+            if (interval > gNdsVSResultsPresentIntervalMax)
+            {
+                gNdsVSResultsPresentIntervalMax = interval;
+            }
+        }
+        sNdsVSResultsLastPresentVBlank = now;
+    }
 
     ndsMNVSResultsObserveInput();
 

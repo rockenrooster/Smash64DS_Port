@@ -4060,6 +4060,15 @@ extern volatile u32 gNdsSObjForegroundStagingClearBytes;
 extern volatile u32 gNdsSObjLayerMemoSkipCount;
 extern volatile u32 gNdsSObjLayerMemoRedrawCount;
 extern volatile u32 gNdsSObjLayerMemoOverflowCount;
+/* R2-07 VS Results presented-frame cadence. Index n counts intervals of exactly
+ * n VBlanks; index 15 is the 15-or-more bin. Sixteen bins because the owner set
+ * P95 as this scene's acceptance metric and a percentile cannot be read out of
+ * a distribution with a 5+ catch-all tail. Report P95 and the max, never a min
+ * FPS or a half-second average. Observation only; the battle scheduler owns
+ * pacing. */
+extern volatile u32 gNdsVSResultsPresentIntervalBucket[16];
+extern volatile u32 gNdsVSResultsPresentIntervalMax;
+extern volatile u32 gNdsVSResultsPresentIntervalSamples;
 extern volatile u32 gNdsRendererProfileFrameCount;
 extern volatile u32 gNdsRendererProfileLevel;
 extern volatile u32 gNdsRendererM2DetailedLedger;

@@ -382,6 +382,29 @@ try {
             'gNdsSObjLayerMemoSkipCount',
             'gNdsSObjLayerMemoRedrawCount',
             'gNdsSObjLayerMemoOverflowCount',
+            # R2-07 Results cadence. The owner's acceptance metric for this
+            # scene is P95 CPU TICKS (<= 1.12M), the same figure the battle is
+            # gated on. Ticks are recovered from the interval distribution:
+            # one VBlank is 560,190 ticks, so the P95 interval times that is
+            # the P95 frame cost.
+            #
+            # Indices are enumerated rather than printing the array by name --
+            # GDB prints a bare array symbol as a single scalar, which read as
+            # a meaningless 36,158,572 on the first run and would have been
+            # taken for data. Bins run to 15 (15+); 2..10 covers everything
+            # observed so far (max 9) and the 15+ bin catches a blow-up.
+            'gNdsVSResultsPresentIntervalBucket[2]',
+            'gNdsVSResultsPresentIntervalBucket[3]',
+            'gNdsVSResultsPresentIntervalBucket[4]',
+            'gNdsVSResultsPresentIntervalBucket[5]',
+            'gNdsVSResultsPresentIntervalBucket[6]',
+            'gNdsVSResultsPresentIntervalBucket[7]',
+            'gNdsVSResultsPresentIntervalBucket[8]',
+            'gNdsVSResultsPresentIntervalBucket[9]',
+            'gNdsVSResultsPresentIntervalBucket[10]',
+            'gNdsVSResultsPresentIntervalBucket[15]',
+            'gNdsVSResultsPresentIntervalMax',
+            'gNdsVSResultsPresentIntervalSamples',
             'gNdsSCVSBattleLifecycleArenaAdapterCount',
             'gNdsSCVSBattleOriginalGObjCount',
             'gNdsTaskmanMallocCount',
