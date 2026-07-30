@@ -18,14 +18,27 @@ E64b (-26,944), E65 (-35,584), E67 (-4,672), E69 (-12,544). Cumulative P95
 | R2-06 | E0 + E1 + E2 done; soak clause has a validated instrument, one standing result |
 | R2-07/08 | not started; R2-08 needs the owner's retail play test |
 
-## Where the gate stands
+## Where the gate stands — MISSED by 40,448, and that is new (2026-07-29 22:4x)
 
-128-frame ring dump, frames 795..922, `WORK-H`: P50 **966,848**, P95 **1,096,768**,
-gate 1,120,000, **6/128 over**. Evidence
-`artifacts/performance/r203-e69b-mtxcopy-128{.json,-rows.csv}`. **Margin 23,232 —
-three times the 5,000-7,000 placement floor**; E65 first landed it at 6,016 (inside
-the floor), E67 and E69 took it here, so it survives a relink. Not covered: retail
-hardware (R2-08), and R2-07's particle work must fit inside 23,232 (§7).
+`WORK-H` P95 **1,160,448** against the 1,120,000 gate, 128-frame ring dump, frames
+796..923. Evidence `artifacts/performance/r206-arena-heap-128{.json,-rows.csv}`.
+The E69 graduation figure of **1,096,768** (`r203-e69b-mtxcopy-128`, git `0b39c1a`)
+still stands as a measurement — it is this tree that moved, not that number.
+
+**Do not re-derive the cause; it is measured.** The freeze fix's static arena cost
++107,584 by disabling the animation cache (`Fills=2`, `Rejects=44`, 76 overflows) and
+a miss is a NitroFS `fopen`/`fread` inside a gameplay frame. Moving the arena onto the
+taskman heap (E3, `e2352d62`) recovered **−43,904** and the cache is now provably
+effective (`Rejects=0`, `ArenaOverflows=0`, `Hits=79`).
+
+**The residual 63,680 over baseline is mostly NOT new work.** `ALL` P95 is identical
+at 1,680,000, so presented pacing never changed; `WORK` P95 moved only +13,440; `FTR`
++6,016 is at the placement floor; `WAIT` +63,488 against `OTHR` +63,104 is a
+redistribution. **The one real regression is `SRC` P95 +30,912.** Next action, cheap
+and unproven: the imported `syMallocSet` wrapper adds an out-of-line
+`ndsSyMallocWouldFit` call to **every** region's allocation, and the graphics heap is
+allocated from per frame — make that helper `static inline` and re-measure before
+looking anywhere else. Board §"R2-06 E3" has the full delta table.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
@@ -34,48 +47,43 @@ shielded player causes a freeze"*. **One cause explains the class**, caught 3.5 
 into the both-CPU ROM: `artifacts/verification/freeze-soak/2026-07-29_202114-*`.
 
 `decomp/src/sys/malloc.c:30` is `while (TRUE);` — the BattleShip allocator **hangs
-instead of returning NULL** on exhaustion. `ndsR2AnimCacheStore`
-(`src/port/reloc_backend_assets.c:5588`) is a *speculative* cache that calls it
-from inside a gameplay frame, on the shared `gSYTaskmanGeneralHeap`, and never
-frees or evicts — its `payload == NULL` check is **dead code**. Trigger chain:
-damage-fall → aerial interrupt → `ftMainSetStatus(213)` → on-demand
-`FTMarioAnimAttackAirD` load → `syTaskmanMalloc(3472)` → spin.
-
-Registers refute the interrupts-disabled wait, a GX deadlock, an IPC wait and the
-audio/FGM hypothesis; `x/1i $pc` shows `b.n <self>` outright. Do NOT make
-`syTaskmanMalloc` return NULL globally; decomp callers do not all check.
+instead of returning NULL** on exhaustion, and `ndsR2AnimCacheStore` was a
+*speculative* cache calling it from inside a gameplay frame on the shared
+`gSYTaskmanGeneralHeap`, with its `payload == NULL` reject path therefore dead code.
+Trigger chain: damage-fall → aerial interrupt → `ftMainSetStatus(213)` → on-demand
+`FTMarioAnimAttackAirD` load → `syTaskmanMalloc(3472)` → spin. Registers refute the
+interrupts-disabled wait, a GX deadlock, an IPC wait and the audio/FGM hypothesis;
+`x/1i $pc` shows `b.n <self>`. Do NOT make `syTaskmanMalloc` return NULL globally;
+decomp callers do not all check.
 
 **The "second exhaustion site at battle start" was MY regression; there is one site,
-not two.** The static arena is BSS, and BSS competes with the runtime `calloc` that
+not two.** A static arena is BSS, and BSS competes with the runtime `calloc` that
 sizes the heap — crossing the `0x130000` search floor (`diagnostics.c:7403`) costs
 **196,608 bytes in one step**, so 128 KiB dropped the shipped arena 1,286,144 →
-1,048,576 and killed battle start. 32 KiB then failed **by 32 bytes**: the budget
-belongs to the *tightest* build (tick-HUD, 32,768 headroom), not the shipped one
-(40,960). **Now 16 KiB.** `NDS_R2_BOTH_CPU` adds no BSS of its own. **Do NOT lower
-that floor** — it is a contract with the Task 36 replay guard
-(`nds_renderer.h:124-134`); my earlier authorization is retracted.
+1,048,576 and killed battle start. 32 KiB then failed **by 32 bytes** (the budget
+belongs to the *tightest* build, not the shipped one), and 16 KiB fit but cost the
+gate. **The arena now lives on the taskman heap, 92,160 bytes, +32 bytes of BSS.**
+`NDS_R2_BOTH_CPU` adds no BSS of its own. **Do NOT lower that floor** — it is a
+contract with the Task 36 replay guard (`nds_renderer.h:124-134`); my earlier
+authorization is retracted.
 
-**Both configurations now complete a full match clean** —
-`gNdsSyMallocOverflowCount=0`, arenas 1,257,472 / 1,269,760 (above the floor, replay
-admitted), ~300 anim-cache overflows each rejecting safely where every one used to
-hang. **16 KiB is not a real cache** (2 fills vs 296 overflows); the named next step
-is to reserve the measured 91,104-byte working set from the **taskman arena** at
-battle start rather than BSS — costs the boot search nothing, and 1,286,144 − 91,104
-still clears the 1,107,392 battle start needs.
+**Both configurations complete a full match clean** —
+`gNdsSyMallocOverflowCount=0`, arenas above the floor with replay admitted, and every
+arena overflow rejects safely where each one used to hang.
 
 **Four detector defects fixed; two soak verdicts withdrawn.** It hashed the window
 **title**, where melonDS renders its FPS counter; `Invoke-SoakGdb` was called and
 never defined, so every `NO-FREEZE` was pixels-only; the 40 s trip threshold was
 shorter than the game's ~30 s scene-load dead air; and a static picture was called a
-hang without reading `x/1i $pc`. All fixed, command resolution now machine-checked in
-`check-melonds-policy.ps1`. Only the pre-fix both-CPU **FROZEN 210 s** stands.
-**Sudden Death has its own issues** (owner) — separate, not the allocator class.
+hang without reading `x/1i $pc`. All fixed, command resolution now machine-checked.
+Only the pre-fix both-CPU **FROZEN 210 s** stands. **Sudden Death has its own issues**
+(owner) — separate row, not the allocator class.
 
-**No passive soak can ever reach match two.** `mnVSResultsCheckExit` (decomp
-`mnvsresults.c:266`) exits on a `START_BUTTON` tap with no timeout, and the DS
-results loop (`taskman_seam.c:6968`) is update-bounded only when
-`NDS_HARNESS_FAST_LOGIC != 0`, which every shipped target pins to `0`. Cross-match
-drift needs a **synthesized START**; the owner capped soaks at 5 min for this.
+**No passive soak can reach match two.** `mnVSResultsCheckExit` (decomp
+`mnvsresults.c:266`) exits on a `START_BUTTON` tap with no timeout, and the results
+loop (`taskman_seam.c:6968`) is update-bounded only when `NDS_HARNESS_FAST_LOGIC != 0`,
+which every shipped target pins to `0`. Cross-match drift needs a **synthesized
+START**; soaks default to 2.5 min, ceiling 5.
 
 ## OPEN P1: the VS Results screen is 21.9M ticks/frame, 1.5 FPS
 
@@ -88,32 +96,27 @@ a Dream Land specialization. Board has the method and a third, wider candidate.
 
 ## The other half is ANIMATION, not collision (E60/E61 — replaces the `SRC` row)
 
-**The board carried "float→fixed on the collision path" for several cycles. It is
-wrong by ~20x and the row is deleted.** A leaf helper is charged to itself, never
-its caller, so animation float was booked to `__aeabi_fadd`/`__aeabi_fmul` and read
-as a separate, larger family. Caller-attributed, animation is **146,942/frame,
-15.2% of WORK 969,487**; collision is **under 4,000**, below the placement floor.
-
-E61 then found **the cubic is 99.6% of that float**: 149.4 cubic nodes/frame at
-**405 ticks each**, against 118.7 Step nodes at zero float and 4.5 Linear.
-`anim_speed` is `1.0`/`0.5`, **never 0**; `GOBJ_FLAG_NOANIM` skips are **0**. **Task
-78 stopped the animation compiler on a self-vs-inclusive error** — corrected 164,236,
-**1.64x its target, not 0.85x**. Tasks 95/96 refute only the *layout* route; the pose
-table is refuted by size. Do not propose either again.
+**"float→fixed on the collision path" was wrong by ~20x and that row is deleted.** A
+leaf helper is charged to itself, never its caller, so animation float was booked to
+`__aeabi_fadd`/`__aeabi_fmul` and read as a separate, larger family. Caller-attributed,
+animation is **146,942/frame, 15.2% of WORK 969,487**; collision is **under 4,000**.
+E61: **the cubic is 99.6% of that float** — 149.4 nodes/frame at **405 ticks each**.
+**Task 78 stopped the animation compiler on a self-vs-inclusive error** (corrected
+164,236, **1.64x its target, not 0.85x**). Tasks 95/96 refute only the *layout* route;
+the pose table is refuted by size. Do not propose either again.
 
 ## The one open fidelity item
 
 - **E32** — blocked on a **generator gap, not a decision** (E62). The flash clears
-  `G_LIGHTING` and draws vertex colours raw; the owner keeps `POLY_FORMAT_LIGHT0` and
-  hardware-lights with stale diffuse/ambient, so it draws Mario *unflashed* — not
-  corrupt, and pixel-identical on every non-flash frame (510/511: 0 px). E49's
-  runtime half is **refuted**: it emits the baked dense `.rgba`, which holds packed
-  **normals** — rainbow speckle, worse diff (2,199 vs 1,551). **Needs the generator
-  to bake the flash variant's vertex colours**; E63 sizes it at 2,164 bytes.
+  `G_LIGHTING` and draws vertex colours raw; the owner hardware-lights with stale
+  diffuse/ambient, so Mario draws *unflashed* — not corrupt, pixel-identical on every
+  non-flash frame (510/511: 0 px). E49's runtime half is **refuted** (it emits the
+  baked `.rgba`, which holds **normals** — speckle, worse diff 2,199 vs 1,551).
+  **Needs the generator to bake the flash variant's vertex colours**; E63: 2,164 bytes.
 
 **R2-03 E26 — demoted** to 23,844/frame (needs `NDS_TASK91_DRAW_PHASE_CENSUS=1` *and*
-`NDS_R2_SPAN_LEAN_TIMING=1`); bottom of §3.9's band. **Must replace the dispatch, not
-the writes** (E39); read its spec only with E34/E34-b/E39/E43/E45/E56.
+`NDS_R2_SPAN_LEAN_TIMING=1`). **Must replace the dispatch, not the writes** (E39);
+read its spec only with E34/E34-b/E39/E43/E45/E56.
 
 ## Refuted this cycle — do not re-derive
 
@@ -131,8 +134,7 @@ Branch `codex/r2-runtime2`, not merged to master. Boundary
 
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
-.\scripts\verify-all.ps1 -Profile Boundary -List
-git status --short
+.\scripts\verify-all.ps1 -Profile Boundary -List; git status --short
 ```
 
 **Do not rebuild `smash64ds.nds` for P1 work** (owner, 2026-07-28). **Do rebuild the
