@@ -45,6 +45,76 @@ that way: publishing needs the owner's authorization for that specific push, so
 `build.ps1` will warn that the local build differs from the audited reference. That
 warning is expected here and is not a source regression.
 
+## FREEZE CLASS ROOT-CAUSED — heap exhaustion spins in `syMallocSet`'s `while (TRUE);` (2026-07-29)
+
+The owner reported *"lots of freeze bugs that seem random"* plus *"sometimes hitting
+a shielded player causes a freeze"*. **One cause explains the class.** Caught by
+`scripts/soak-freeze-watch.ps1` on its first run, 3.5 minutes into the both-CPU
+ROM. Capture: `artifacts/verification/freeze-soak/2026-07-29_202114-FROZEN-PICTURE.txt`
+and `...-frozen.png`.
+
+```text
+#0  syMallocSet (bp=gSYTaskmanGeneralHeap, size=3472, alignment=16)
+        decomp/src/sys/malloc.c:30   ->   while (TRUE);
+#1  syTaskmanMalloc                  taskman.c:273
+#2  ndsR2AnimCacheStore (size=3472)  src/port/reloc_backend_assets.c:5600
+#3  ndsRelocForceLoadFighterAObj16File          ...:5850
+#4  lbRelocGetForceExternHeapFile (llFTMarioAnimAttackAirDFileID)
+#5  battleship_ftMainSetStatus (status_id=213, flags=8)
+#6  ftCommonAttackAirCheckInterruptCommon
+#7  ftCommonDamageFallProcInterrupt -> ftMainProcUpdateInterrupt -> gcRunAll
+```
+
+**`decomp/src/sys/malloc.c:30` is literally `while (TRUE);`.** The BattleShip
+allocator does not return NULL on exhaustion, it hangs — an N64 assert reached for
+real here. So *any* heap exhaustion in this port presents as a total freeze, with no
+error and no recovery.
+
+**The defect is port-side, at `src/port/reloc_backend_assets.c:5588`.**
+`ndsR2AnimCacheStore` is a *speculative* cache that carefully handles
+`payload == NULL` by bumping `gNdsR2AnimCacheRejects` and returning — and that NULL
+check is **dead code**, because `syTaskmanMalloc` cannot return NULL, it can only
+spin. An optional cache is calling a fail-by-hanging allocator on the shared
+`gSYTaskmanGeneralHeap`, from inside a gameplay frame, and it never frees or evicts:
+`sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES` bounds the entry COUNT and
+nothing bounds the BYTES.
+
+Why this is the class and not one instance:
+
+- **"random"** — it depends on which animations have been triggered, so it depends
+  on play. The heap fills gradually and the hang lands on whichever move needs a
+  not-yet-cached asset.
+- **"hitting a shielded player"** — a shield hit drives rebound/damage-fall, which
+  interrupts into a new status, which triggers an on-demand animation load, which
+  allocates. Shield hits are not special; they are a common route to an uncached
+  status.
+- **why no verifier caught it** — the scripted Boundary minute leaves Mario standing
+  still and never triggers enough distinct animations. Two CPUs attacking
+  continuously fill the heap in ~3 minutes. A separate `build-tick-hud-buckets`
+  probe then timed out after 900 s waiting for a function that ROM reaches in ~90 s
+  of guest time, which is very likely the same hang in the single-CPU config.
+
+Every alternative mechanism is ruled out by the same capture: `REG_IME=1`,
+`REG_IE=0x00070069`, `REG_IF=0` (interrupts enabled and serviced — not the
+interrupts-disabled VBlank wait), `GXSTAT=0x06009700` (no FIFO stall — not a
+geometry-engine deadlock), `IPCFIFOCNT=0x8505` (no IPC wait — **the audio/FGM
+hypothesis is refuted for this bug**, despite the freeze-diagnostics breadcrumb set
+being built around FGM enter/return). `COUNTERS=2006,447,894,0` — VBlanks 2,006
+against 447 presented frames: the IRQ path alive, the main loop dead.
+
+The frozen frame is worth looking at for one more reason: melonDS's title reads
+**`[114/60]`**. The emulator was running *faster* than real time while the game was
+dead, so no host-side FPS reading could ever have detected this. Only a guest
+counter or the picture can.
+
+Owned by the implementer agent. The fix must be port-side (`decomp/` is read-only,
+the `while (TRUE);` stays), must be priced first — how much of the exhaustion is the
+cache versus the underlying on-demand loads, because fixing only the cache when the
+loads also fill the heap postpones the hang instead of removing it — and must be
+verified by a clean soak an order of magnitude past the 3.5-minute failure point,
+not by a build that compiles. Do **not** interpose `syTaskmanMalloc` to return NULL
+globally: decomp callers do not all check, so that trades a hang for a null deref.
+
 ## HARNESS: DLDI was pinned by nothing, so automation never ran the owner's I/O configuration (2026-07-29)
 
 The owner reports many freeze bugs and adds: *"I can reproduce the bugs in melonDS

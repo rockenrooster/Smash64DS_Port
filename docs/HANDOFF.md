@@ -29,30 +29,33 @@ the gate at 6,016 (inside the floor); E67 and E69 took it here, so it survives a
 relink and finally leaves room for R2-07. Not covered: retail hardware (R2-08), and
 the particle work must fit inside 23,232 (switch plan §7 R2-07).
 
-## OPEN P1: random freezes, and the harness could not have seen them
+## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
-Owner, 2026-07-29: *"lots of freeze bugs that seem random"*, plus a new
-`docs/BUGS.md` row *"Sometimes hitting a shielded player causes a freeze"*, plus
-*"I can reproduce the bugs in melonDS with dldi checked."*
+Owner, 2026-07-29: *"lots of freeze bugs that seem random"* + *"sometimes hitting a
+shielded player causes a freeze"*. **One cause explains the class.** Caught by the
+new `scripts/soak-freeze-watch.ps1` on its FIRST run, 3.5 min into the both-CPU
+ROM. Capture in `artifacts/verification/freeze-soak/2026-07-29_202114-*`.
 
-**`[DLDI] Enable` was pinned by nothing.** The owner's emulator had it true; all
-nine runner slots and the attributor had it false, and neither profile function
-touched the section — so **no scripted verifier in this campaign ran the owner's
-I/O configuration**, which is a sufficient explanation for green gates beside
-random freezes. Now forced on in both canonical profiles, asserted per-section by
-`check-melonds-policy.ps1` (negative-tested four ways), applied to all eleven
-configs, slots sharing the one repo `dldi.bin` read-only. Slot 0 smoke-tested.
-DLDI is not cosmetic: it decides whether `nitro:/` is reached through the DLDI SD
-driver or the card interface, and this port resolves `nitro:/` **by string path at
-runtime** (a GDB attach caught `nitroromResolvePath` on `"FTMarioAnimWai"`).
+`decomp/src/sys/malloc.c:30` is `while (TRUE);` — the BattleShip allocator **hangs
+instead of returning NULL** on exhaustion. `ndsR2AnimCacheStore`
+(`src/port/reloc_backend_assets.c:5588`) is a *speculative* cache that calls it
+from inside a gameplay frame, on the shared `gSYTaskmanGeneralHeap`, and never
+frees or evicts — its `payload == NULL` check is **dead code**. Trigger chain:
+damage-fall → aerial interrupt → `ftMainSetStatus(213)` → on-demand
+`FTMarioAnimAttackAirD` load → `syTaskmanMalloc(3472)` → spin.
 
-Instruments: **`scripts/soak-freeze-watch.ps1`** (new — polls two guest counters
-that advance on different paths, so it separates a hung main loop from a dead IRQ
-path from a merely slow frame, and captures PC/backtrace/`REG_IME`/`IE`/`IF`/
-`GXSTAT`/IPC on the first occurrence; exits 2), and `NDS_FREEZE_DIAGNOSTICS`
-(`%-on-hwtri`), whose breadcrumbs include a dedicated **FGM enter/return pair with
-a channel field** — a prior investigator's fingerprint on the audio path.
-`NDS_R2_BOTH_CPU=1` makes Mario a level-3 CPU too: self-driving, hits both ways.
+`REG_IME=1`/`IE=0x70069`/`IF=0`, `GXSTAT=0x06009700`, `IPCFIFOCNT=0x8505` rule out
+the interrupts-disabled wait, a GX deadlock and an IPC wait — **the audio/FGM
+hypothesis is refuted.** melonDS read `[114/60]`, i.e. faster than real time with
+the game dead, so no host FPS reading could have caught it. Fix is port-side
+(`decomp/` read-only), must price cache-vs-load share first, and must be verified
+by a clean soak well past 3.5 min. Do NOT make `syTaskmanMalloc` return NULL
+globally — decomp callers do not all check. Board has the full entry.
+
+Also fixed: **`[DLDI] Enable` was pinned by nothing** (owner's emulator true, all
+nine slots false), so no scripted verifier ran the owner's I/O configuration. Now
+forced on in both profiles and asserted per-section. `NDS_R2_BOTH_CPU=1` makes
+Mario a level-3 CPU too — self-driving, hits both ways, fills the heap in minutes.
 
 ## OPEN P1: the VS Results screen is 21.9M ticks/frame, 1.5 FPS
 
