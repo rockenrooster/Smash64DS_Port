@@ -6854,6 +6854,7 @@ E0); branch `codex/task56-fighter-stripify` (6 commits).
 | R0e | 2026-07-30 | specialized paired I4 wallpaper row + 16-entry palette, bit-exact |
 | R0f | 2026-07-30 | -Phases split: layer clear is free, layer commit is 43.1% |
 | R0g | 2026-07-30 | pair as one 32-bit store: **REVERT, -0.06%** |
+| R0h | 2026-07-30 | per-PC profile: **R0f's split was quantisation; compositor is 61.9%** |
 
 **Verdict: KEEP all three cuts.** The Results screen is not the battle frame and
 carries no tick instrument, so cost is measured in **VBlanks**: GDB stops freeze
@@ -6914,13 +6915,35 @@ timeout and covered 6,169 iterations, not 40, because of the breakpoint defect i
 TASK_STANDING_RULES.md rule 9. Its per-call figure is still valid (the wallpaper
 does identical work every call) but its totals are not comparable.
 
-No cause is claimed for the residual: R0's
-own counters showed only 22 preview commits in 101 iterations with zero
-foreground commits, which rules out the simple "two full layer commits per frame"
-story, and the scene's two 3D fighter GObjs have never been priced. `-Phases` was
-added to the census (breakpoints on
-`ndsPlatformBeginOriginalSpritePreview`/`ndsPlatformCommitOriginalSpritePreviewLayer`,
-one ordered event stream) to measure it rather than argue it.
+**R0h ANSWERED it, and withdrew R0f's split.**
+`run-task37-profile-census.ps1 -Scene Results -Frames 40`, DLDI on, window tics
+131..171: 448,150,712 cycles / 40 = **5,601,884 ticks/frame**, agreeing with the
+VBlank census total to 2.4%, 0.00% unattributed, 397 of 3,390 FUNC symbols hit.
+
+| symbol | ticks/frame | %tot |
+|--------|-------------|------|
+| ndsDrawSObjIntoPreview | 1,103,616 | 19.70 |
+| ndsPlatformCommitOriginalSpritePreviewLayer | 974,382 | 17.39 |
+| memset (two 153,600 B staging clears) | 830,978 | 14.83 |
+| armWaitForIrq (idle spin, not work) | 830,260 | 14.82 |
+| memcpy (2 x 192 x 512 B into BG VRAM) | 557,126 | 9.95 |
+| ndsRendererExecuteNativeFighterRootHardware | 284,169 | 5.07 |
+| fighter DL family (3 symbols) | 229,178 | 4.09 |
+
+**The four compositor stages total 3,466,102 ticks/frame -- 61.9% of the scene --
+and each runs twice, once per layer, on content that does not change.** Queued as
+R2. Artifact `artifacts/task37-census-results/`.
+
+**R0f's per-interval split is WITHDRAWN.** It reported the 153,600-byte staging
+clear at 0.000 VBlanks over 82 hits; it is 830,978 ticks/frame, i.e. 1.48 VBlanks
+split across two 0.74-VBlank calls. `sVBlankCount` is an integer, so that
+instrument floors every interval and the remainder lands in a later one -- which is
+exactly the "~1.6M unexplained inside the wallpaper call" R0f published and R0g
+spent a build chasing. `--pc-detail` puts the blitter's pair loop at **1.72 cycles
+per instruction**; nothing was ever wrong with it. R0f's TOTALS and its
+multi-VBlank rows stand -- the wallpaper's 33.8 -> 16.45 -> 5.15 progression is real
+and the profiler confirms it. See TASK_STANDING_RULES.md rule 11; the caveat is now
+stated in `census-vsresults-blit.ps1` above the code that produces the rows.
 
 **Device A/B not scheduled** — Results is not a hardware-specific risk and the
 gate is not yet met, so it is not an acceptance measurement.

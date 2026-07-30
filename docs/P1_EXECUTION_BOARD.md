@@ -1741,6 +1741,53 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 R0h ANSWERED — there was never a residual; R0f's split was an instrument artifact, and the real owner is a four-stage software compositor (2026-07-30)
+
+`run-task37-profile-census.ps1 -Scene Results -Frames 40`, DLDI on, window Results tics 131..171.
+**448,150,712 cycles / 40 iterations = 5,601,884 ticks/frame**, against the VBlank census's 5,741,947 —
+the two instruments agree on the total to **2.4%**. They do not agree on anything else.
+
+| symbol | ticks/frame | %tot | what it is |
+| --- | --- | --- | --- |
+| `ndsDrawSObjIntoPreview` | **1,103,616** | 19.70% | stage 1: composite sprites into 320×240 staging |
+| `ndsPlatformCommitOriginalSpritePreviewLayer` | **974,382** | 17.39% | stage 3: in-place nearest 320×240 → 256×192 |
+| `memset` | **830,978** | 14.83% | stage 0: two 153,600-byte staging clears |
+| `armWaitForIrq` | 830,260 | 14.82% | **idle spin** — not work |
+| `memcpy` | **557,126** | 9.95% | stage 4: 2 × 192 × 512 B into BG VRAM |
+| `ndsRendererExecuteNativeFighterRootHardware` | 284,169 | 5.07% | the two 3D fighters |
+| fighter DL family (3 symbols) | 229,178 | 4.09% | |
+
+**The four compositor stages are 3,466,102 ticks/frame — 61.9% of the scene** — and every one of them
+runs **twice**, once per layer, on content that does not change: a static wallpaper and seven static
+glyphs. Only the fighters animate, and they are 3D on a different path. 397 of 3,390 FUNC symbols were
+hit and unattributed cycles are **0.00%**, so this is a complete partition, not a top-N view.
+
+**R0f was wrong about the clear, and the reason matters more than the error.** `-Phases` reported
+`(layer begin) = 0.000 VBlanks` over 82 hits, and I concluded the staging clear was free. It is
+830,978 ticks/frame — **1.48 VBlanks split across two sub-VBlank calls.** `sVBlankCount` is an integer,
+so every interval that instrument reports is **floored, and the remainder lands in a later interval**.
+Two 0.74-VBlank clears each read 0 and their cost was silently redistributed into the neighbouring row —
+the wallpaper blit's. **That is the entire "~1.6M unexplained inside the wallpaper call" that R0f
+published and R0g spent a build chasing.** The blitter's real cost is 1,103,616 ticks/frame for 72,882
+pixels across both arms, and `--pc-detail` puts its pair loop at **1.72 cycles per instruction** — the
+most ordinary number in this campaign. Nothing was ever wrong with it.
+
+**So R0g's revert stands but its premise was false**, and the honest ordering is: the store fold measured
+−0.06% because *the thing it was trying to explain did not exist*. R0e's 68.7% cut on the wallpaper is
+still real — the profiler confirms the 33.8 → 16.45 → 5.15 VBlank progression was measuring a genuine
+multi-VBlank interval, which is the resolution this instrument does have.
+
+**Rule added to the census script itself, not just a doc:** a VBlank-quantised instrument is sound for
+totals and for intervals of several VBlanks, and cannot attribute anything finer. R0f's table now
+carries that caveat above the code that produces it.
+
+**Queued as R2, and it is a structural change with a measured 3.47M-tick target:** the DS has hardware
+BG layers and 128 hardware sprites, and this scene uses neither — it software-composites, clears,
+downscales, and row-copies two full screens per frame for static content. The obvious cut is to stop
+redoing the background layer every frame; sizing which of the two layers owns how much of the 3.47M is
+the first step, and `--pc-detail` on `ndsPlatformCommitOriginalSpritePreviewLayer` plus the existing
+`gNdsSObj{Background,Foreground}StagingClearBytes` counters can answer it without a new instrument.
+
 ### R2-07 R0g REVERTED — the store is NOT the residual (−0.06%), and the run that proved it also found a defect I had just introduced (2026-07-30)
 
 **Wallpaper cost per call: 4.0000 → 3.9974 VBlanks. −0.06%.** Folding the pair's two `strh` into one

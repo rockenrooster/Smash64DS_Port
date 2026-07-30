@@ -2084,3 +2084,25 @@ P99 rose 59,200, and over-gate went 9 → 11** — the two added frames being lo
     error line: `Test-Path` the CSV or JSON the run was supposed to write, and check its
     hit or sample count against the window you asked for, before reading any number out
     of it.
+11. **A quantised instrument floors every interval and hides the remainder in a later
+    one. Never attribute below its quantum.** R2-07's VBlank-delta census reports guest
+    time as `sVBlankCount` differences, quantum **560,190 ticks**, integer. R0f read
+    `(layer begin) = 0.000` over 82 hits and published "the 153,600-byte staging clear is
+    FREE". R0h's per-PC profile then measured `memset` at **830,978 ticks/frame**, the
+    third largest item in the scene: 1.48 VBlanks split across two 0.74-VBlank calls,
+    each floored to zero, their cost redistributed into the neighbouring row. That
+    redistribution *was* the "~1.6M unexplained" residual R0f published and R0g spent a
+    whole build chasing. The thing being explained did not exist.
+
+    The instrument was not broken and its totals were never wrong -- it agreed with the
+    profiler on the frame total to 2.4%, and the wallpaper's 33.8 -> 16.45 -> 5.15 VBlank
+    progression across R0/R0d/R0e is real, because those are multi-VBlank intervals. What
+    was wrong was reading a **0** as a measurement instead of as "below resolution".
+
+    Two habits follow. **State the quantum next to the table**, in the script, not only in
+    a report — `census-vsresults-blit.ps1` now carries it above the code that produces the
+    rows. And **when a row reads 0 or 1 quantum, that row is not evidence**: either
+    aggregate until it is several quanta, or switch to an instrument without the quantum
+    (`run-task37-profile-census.ps1 -Scene Results`, and `--pc-detail SYMBOL` to go inside
+    one function). This is the same class of error as [ALL is a quantized gate], where
+    VBlank quantisation made four real levers read as flat.

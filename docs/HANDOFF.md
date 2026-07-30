@@ -79,13 +79,13 @@ needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
 **39.975 → 10.250 VB/iter (−16,651,648 ticks, 1.50 → 5.85 FPS, 3.9×), Latest green.** Three cuts, all
 bit-exact by proof (`check_sprite_lerp_exact.py`): **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits
 `blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`); **R0d** inlined the
-lerp; **R0e** 16-entry palette + ONE byte per PAIR of columns, 112 → 9 Thumb instr/px. **R0f `-Phases`
-split it:** commit **4.375 VB (43.1%)**, wallpaper **4.100 (40.4%)**, glyphs 1.675, **begin 0.000 — the
-153,600-byte clear is FREE.** **R0g REVERTED −0.06%: the store is not it either** (one `str` for the
-pair changed 4.0000 → 3.9974 VB/call). Still unowned: **~1.6M INSIDE the wallpaper call** — 9
-instructions would need 7.8 cycles each. Not instructions, not stores. **NEXT = R0h, Task 37 per-PC at
-Results** (needs a second tick site keyed on `sMNVSResultsTotalTimeTics`; the battle one never fires
-there). Commit interval also holds the two 3D fighters (link 9 < 26) — `-Phases` splits it per frame.
+lerp; **R0e** 16-entry palette + ONE byte per PAIR of columns, 112 → 9 Thumb instr/px. **R0f's `-Phases`
+split was an INSTRUMENT ARTIFACT; R0h's per-PC profile replaces it:** VBlank deltas are integers, quantum
+560,190, so sub-VBlank rows read 0 and their cost lands in a neighbour — the "1.6M unexplained" never
+existed, and the staging clear is not free. Per frame: **blit 1,103,616 (19.7%), commit/downscale 974,382
+(17.4%), `memset` clears 830,978 (14.8%), `memcpy`→VRAM 557,126 (10.0%)**; idle 830,260, fighters
+~513,000, blit loop 1.72 cyc/insn. **The four-stage software compositor is 3,466,102 = 61.9%, run TWICE
+per frame on STATIC content. NEXT = R2: stop recompositing it** (DS hardware BGs/128 sprites go unused).
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 

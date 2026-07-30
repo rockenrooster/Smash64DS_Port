@@ -37,6 +37,23 @@ param(
 # exactly the guest time the previous call consumed, independent of host speed.
 # That is the same property R0 used to turn phase boundaries into a timeline.
 #
+# READ THIS BEFORE TRUSTING A SMALL ROW. The quantum is one VBlank = 560,190
+# ticks, and sVBlankCount is an integer, so **every interval is floored and the
+# remainder lands in a later interval**. An interval whose true cost is under one
+# VBlank reports 0 and its cost is silently redistributed to its neighbours.
+# R2-07 R0f read `(layer begin) 0.000` off this table and concluded the
+# 153,600-byte staging clear was free; R0h's per-PC profile then measured `memset`
+# at 830,978 ticks/frame, the third largest item in the scene -- 1.48 VBlanks split
+# across two sub-VBlank calls, invisible here, and absorbed into the wallpaper
+# blit's row, which is where R0f's phantom "1.6M unexplained" came from.
+#
+# So: this instrument is sound for TOTALS and for intervals of several VBlanks
+# (the wallpaper's 33.8 -> 16.45 -> 5.15 progression across R0/R0d/R0e is real and
+# was confirmed by the profiler). It cannot attribute anything finer. For a split
+# at that resolution use `run-task37-profile-census.ps1 -Scene Results`, whose
+# per-PC data has no such quantum -- and whose `--pc-detail SYMBOL` goes inside a
+# single function.
+#
 # Reading sobj->sprite rather than the function's locals keeps this robust under
 # -Os: width/height/nbitmaps are copied into locals at :1536-1538, but the
 # struct fields they come from are live at function entry and cannot be

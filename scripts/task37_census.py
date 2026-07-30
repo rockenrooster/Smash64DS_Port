@@ -215,6 +215,38 @@ def attribute(
     return total_cycles, unmapped_cycles, rows
 
 
+def disassemble_range(
+    objdump: str, elf: Path, start: int, end: int
+) -> dict[int, tuple[str, str]]:
+    """pc -> (source line, mnemonic) over [start, end), from `objdump -d -l`.
+
+    Source attribution here is safe in a way plain addr2line is not: the range is
+    bounded by one symbol taken from the ELF symbol table, so an inlined callee's
+    line number is a fact about that address rather than a claim about which
+    function owns the cycles. addr2line's habit of naming deleted and inlined
+    functions is what made three earlier attributions wrong.
+    """
+    text = run_tool(
+        objdump, "-d", "-l", f"--start-address=0x{start:x}",
+        f"--stop-address=0x{end:x}", str(elf)
+    )
+    mapping: dict[int, tuple[str, str]] = {}
+    source = "?"
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.endswith(":") and (":" in stripped) and not stripped[:1].isdigit():
+            # "path/file.c:1234" or "func():" -- keep the file:line form only.
+            head = stripped[:-1]
+            if head.rsplit(":", 1)[-1].split(" ")[0].isdigit():
+                source = head.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+            continue
+        match = re.match(r"^\s*([0-9a-f]{6,8}):\s+\S+\s+(.*)$", line)
+        if match:
+            mnemonic = match.group(2).split("@")[0].strip()
+            mapping[int(match.group(1), 16)] = (source, mnemonic)
+    return mapping
+
+
 def split_regions(
     detail: dict, symbols: list[Symbol], marker: str
 ) -> tuple[list[int], list[int]]:
@@ -328,6 +360,20 @@ def main() -> int:
     parser.add_argument("--itcm-cap", type=int, default=32736)
     parser.add_argument("--json", type=Path)
     parser.add_argument(
+        "--pc-detail",
+        metavar="SYMBOL",
+        help="rank the individual program counters INSIDE one function by cycles, "
+        "joined to the source line and mnemonic from objdump. Answers 'which "
+        "instruction in this loop is expensive', which the per-symbol tables "
+        "cannot: R2-07 R0h needed it after objdump had already settled the "
+        "instruction COUNT (9 per pixel) and measurement still said 70 cycles.",
+    )
+    parser.add_argument(
+        "--objdump",
+        default="arm-none-eabi-objdump",
+        help="only used by --pc-detail",
+    )
+    parser.add_argument(
         "--split-by-symbol",
         metavar="SYMBOL",
         help="needs NDS_TASK37_PROFILE_PER_FRAME_REGION=1. Split the census "
@@ -377,6 +423,66 @@ def main() -> int:
         for name, size in sorted(section_sizes.items(), key=lambda kv: -kv[1])[:4]:
             if name not in PLACED_SECTIONS and name.startswith((".text", ".main", ".itcm")):
                 print(f"  {name:<16} {size:>9,}")
+
+        # ---- Optional: per-PC detail inside one function ----
+        if args.pc_detail:
+            target = next(
+                (s for s in symbols
+                 if s.name == args.pc_detail or args.pc_detail in s.aliases),
+                None,
+            )
+            if target is None:
+                raise RuntimeError(
+                    f"--pc-detail {args.pc_detail!r} is not a FUNC symbol in "
+                    f"{args.elf}. The census only sees symbols the ELF defines."
+                )
+            end = target.address + (target.size or 4)
+            listing = disassemble_range(args.objdump, args.elf, target.address, end)
+            pcs: list[tuple[int, int, int, str]] = []
+            with args.profile.open(newline="", encoding="utf-8") as stream:
+                folded: dict[int, list] = {}
+                for row in csv.DictReader(stream):
+                    pc = int(row["pc"], 16)
+                    if not (target.address <= pc < end):
+                        continue
+                    # Fold the per-frame regions back together: this table is
+                    # about WHERE in the function, not which frame.
+                    slot = folded.setdefault(pc, [0, 0, row["mode"]])
+                    slot[0] += int(row["total_cycles"])
+                    slot[1] += int(row["instructions"])
+                pcs = [(pc, v[0], v[1], v[2]) for pc, v in folded.items()]
+            pcs.sort(key=lambda r: -r[1])
+            counted = sum(r[1] for r in pcs)
+            print()
+            print(f"per-PC detail: {target.name} "
+                  f"[{target.address:#010x}, {end:#010x}) {target.size:,} bytes")
+            print(f"  {counted:,} cycles over {len(pcs):,} distinct PCs, "
+                  f"{100.0 * counted / total_cycles if total_cycles else 0:.2f}% "
+                  "of the window")
+            table = []
+            for pc, cycles, insns, mode in pcs[: args.top]:
+                source, mnemonic = listing.get(pc, ("?", "?"))
+                table.append([
+                    f"{pc:#010x}",
+                    f"{cycles:,}",
+                    f"{100.0 * cycles / counted:.1f}" if counted else "-",
+                    f"{insns:,}",
+                    f"{cycles / insns:.2f}" if insns else "-",
+                    mode,
+                    source,
+                    mnemonic,
+                ])
+            print()
+            print(format_table(
+                table,
+                ["pc", "cycles", "%fn", "insns", "cyc/insn", "mode", "source",
+                 "instruction"],
+                "rrrrrlll",
+            ))
+            print()
+            print("cyc/insn is the whole point: a row near 1.0 is doing work, a "
+                  "row far above it is waiting. Rank by cycles, then read the "
+                  "column that says which.")
 
         # ---- Table 0: is there a placement problem at all? ----
         # Placement can only ever recover non-memory stall cycles. If the tiers
