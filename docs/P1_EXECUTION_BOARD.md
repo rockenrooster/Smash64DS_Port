@@ -606,6 +606,56 @@ real mechanisms from the 495-symbol tail. It also refuses to run when the marker
 the ELF, because a partition keyed on an inlined or deleted name silently classifies every
 frame as a control frame — the `addr2line` trap in a new costume.
 
+### R2-06 E12 — the animation half is 59.4% STALL, and the one compute-bound symbol is the one already fixed (2026-07-30)
+
+E11 closed the load-frame route. This opens the body route, which is the one the E11 wall does not
+apply to: body cost is paid on **every** frame, so cutting it moves P50 and P95 together. Same
+evidence set, `artifacts/task37-census/r206-e10/census.json`, whole 128-frame window, DLDI on.
+
+| symbol | ticks/frame | insn/frame | cyc/insn | stall | tier |
+|---|---:|---:|---:|---:|---|
+| `ndsR2CubicValueFixed` | 48,623 | 28,048 | **1.73** | **42.3%** | `.main` |
+| `gcPlayDObjAnimJoint` | 40,973 | 14,018 | 2.92 | 65.8% | `.text.hot` |
+| `battleship_ftAnimParseDObjFigatree` | 32,614 | 10,419 | 3.13 | 68.1% | `.main` |
+| `ftParamUpdateAnimKeys` | 12,139 | 3,959 | 3.07 | 67.4% | `.main` |
+| `gcParseMObjMatAnimJoint` | 7,627 | 1,745 | 4.37 | 77.1% | `.main` |
+| `gcPlayMObjMatAnim` | 2,422 | 917 | 2.64 | 62.1% | `.main` |
+| `gcAddDObjAnimJoint` | 1,055 | 97 | 10.90 | 90.8% | `.main` |
+| `lbCommonAddFighterPartsFigatree` | 695 | 125 | 5.56 | 82.0% | `.main` |
+| **family** | **146,148** | **59,329** | **2.46** | **59.4%** | |
+
+**146,148/frame independently reproduces E60's caller-attributed 146,942** by a completely
+different instrument, which is the strongest confirmation that figure has had. **86,819 ticks per
+frame of it is stall** — the family executes 59,329 instructions and waits for 86,819 cycles.
+
+**The pattern across the whole campaign now has one explanation.** `ndsR2CubicValueFixed` is the
+only member near compute-bound at 1.73 cyc/insn, and it is exactly the one E64b/E65/E67/E69
+successfully optimized — fixed-point arithmetic wins on a compute-bound kernel. Everything that
+has been **refuted** removed instructions or added data and never improved locality: E6's memo
+(+7,168), E53's mirror (+11,584), E64 arm A's cache, E66's `.text.hot` (+24,448), E11's
+compare-chain hoist (+15,744). The tier table says why — `.main` runs at **3.52 cyc/insn: 43.5%
+memory stall, 28.0% non-mem stall, ~28% actual work**, and `gcPlayDObjAnimJoint` is **already
+resident in `.text.hot` and still 65.8% stall**, so its stall is *data*, not code. Placement
+cannot reach it and neither can instruction count.
+
+**Scale.** 86,819/frame of animation stall against a 40,448 gate gap. Recovering even half of it
+clears the gate from body cost alone, on every frame, with no exposure to the E11 wall.
+
+**Unpriced hypothesis — measure before believing it.** R2-06 E6 established (board §"E6") that the
+battle task passes `aobjs_num = 0`, so `sGCAnimHead` starts empty and `gcGetAObjSetNextAlloc`
+(`decomp/.../objman.c:602`) `malloc`s each of ~300 live 32-byte AObjs **individually**, and the
+per-frame walk follows their `next` pointers. That is a pointer chase over ~300 scattered heap
+blocks every frame, which is the shape that produces exactly this stall signature. E6 recorded
+"nothing can index them" as a *blocker*; read as a *diagnosis* it is the most likely cause, and
+the engine's own non-zero `aobjs_num` path allocates the set contiguously, so the fix may be
+mechanically equivalent by construction rather than an approximation.
+
+**Do not build this on the strength of the paragraph above.** Three of tonight's four refutations
+came from naming a mechanism out of source reading and pricing it afterwards. Price it first:
+count the distinct cache lines the per-frame AObj walk touches, and confirm the AObjs really are
+non-contiguous at runtime, before changing an allocator. The measurement is cheap; the change is
+not.
+
 ### R2-06 E11 REFUTED — the work really was removed, and P95 still got worse (2026-07-30)
 
 **Do not bring another small load-frame cut.** E10 named `ndsRelocAssetIDForToken` the cleanest

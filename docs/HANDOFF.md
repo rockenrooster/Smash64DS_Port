@@ -39,26 +39,21 @@ arithmetic. Durable: **`aobjs_num = 0` here**, so AObjs are malloc'd individuall
 (`reloc_backend_assets.c:3398`): **16 of 128, and 8 of the 9 over-gate frames are among
 them** (842, the exception, is adjacent to load frame 843). Load frames P50 **1,113,152**;
 **clean frames P50 974,080, P95 1,056,640 — inside the 1,120,000 gate by 63,360**, 1 of 112
-over. The +139,072 premium is entirely `SRC` (+139,328). Frame 909 is 1,617,152, the event
-E53 profiled. **The average frame is already 145,920 under budget; the milestone turns on
-the load frames.**
+over. The +139,072 premium is entirely `SRC` (+139,328); frame 909 is 1,617,152, the event E53
+profiled. **The average frame is already 145,920 under budget.**
 
-**E7 refuted both previously-named causes** (see "Refuted this cycle"), and on over-gate frames
-`FTR` is **−1,312** / `STG` **−2,496**: not a render problem. **E32's parked flash residual no
-longer blocks a gate lever.**
+**E7 refuted both previously-named causes** (see "Refuted this cycle"); on over-gate frames `FTR`
+is **−1,312** / `STG` **−2,496**, so it is not a render problem, and **E32's parked flash residual
+no longer blocks a gate lever.**
 
-**Inside the relocation, do NOT attack the O(n²) scan** — measured only 17.3% of it, because n
-is 25.4; naming it from reading the code was an inference the measurement refuted. The shape is
-the **payload walked TWICE**, all sub-passes using pointer *differences* only, so hoisting them
-to cache-store time IS viable — worth ~19,400/load frame (E9). **Bank it, not the gate**, and
-judge on load frames only: averaged it is 3,735/frame, under the noise floor.
+**Inside the relocation, do NOT attack the O(n²) scan** — only 17.3% of it (n is 25.4). The
+shape is the **payload walked TWICE** using pointer *differences* only, so hoisting it to
+cache-store time is viable — ~19,400/load frame (E9), judged on load frames only.
 
-**E10 ANSWERED the premium and there is NO single lever.** Per-frame profiler regions, split by
-a marker symbol the profile itself observed (16 load frames, same 16 E8 found, DLDI on): work
-premium **326,906/frame** after subtracting `armWaitForIrq` 247,439 (quantization slack, +4
-insns) and 45,917 of tick-HUD printf. **513 symbols carry 349,268 — fully attributed.**
-Relocation family 37.0%, `battleship_ftAnimParseDObjFigatree` 13.0% (but ~27,000 of it is body
-cost every frame), animation+cubic ~19%, `memcpy` 4.8%.
+**E10 ANSWERED the premium and there is NO single lever.** Profiler regions split by a marker the
+profile itself observed: work premium **326,906/frame** (after removing `armWaitForIrq` 247,439 of
+quantization slack and 45,917 of tick-HUD printf), spread over **513 symbols carrying 349,268 —
+fully attributed.** Relocation family 37.0%, `ftAnimParseDObjFigatree` 13.0%, animation ~19%.
 
 **STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked.** E11 took E10's
 cleanest lever (`ndsRelocAssetIDForToken`, 630 calls on load frames, **0 on all 112 clean
@@ -66,9 +61,8 @@ frames**), removed the work provably and with **negative** bytes added, and meas
 at **31,808 (−7,667, −5,103 insns)** with the load-frame set **bit-identical**. The gate still got
 worse: **P95 +15,744, P99 +59,200, over-gate 9 → 11**, and the two added frames were **load**
 frames 828/847. Two HEAD controls differ by only P95 +5,376, so that is ~3x noise. **REVERTED.**
-A ~8,000 load-frame saving cannot survive relinking here. What is left: one change big enough to
-clear ~16,000 of tail movement, or **move the work off the frame** (E9). Board §§"R2-06 E10
-second pass"/"E11"; guard at `reloc_backend_assets.c:1796`.
+A ~8,000 load-frame saving cannot survive relinking. What is left: one change big enough to clear
+~16,000 of tail movement, or **move work off the frame** (E9). Guard: `reloc_backend_assets.c:1796`.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
@@ -99,13 +93,19 @@ the native OAM path is gated to `nSCKindVSBattle` only, so Results software-blit
 layers per frame, and `taskman_seam.c:6950` has no pacing and no HUD. **Ungating the wallpaper
 cache is REFUTED** (R0a, a Dream Land specialization). Board has a third, wider candidate.
 
-## The other half is ANIMATION, not collision (E60/E61 — replaces the `SRC` row)
+## NEXT LEVER: the animation body is 146,148/frame and 59.4% of it is STALL (E12)
 
-**"float→fixed on the collision path" was wrong by ~20x; that row is deleted.** A leaf helper is
-charged to itself, not its caller, so animation float was booked to `__aeabi_fadd`/`__aeabi_fmul`.
-Caller-attributed, animation is **146,942/frame**, collision **under 4,000**, and the cubic is
-**99.6% of that float** (149.4 nodes @ **405 ticks**). Also refuted here: the *layout* route
-(Tasks 95/96) and Task 78's self-vs-inclusive animation-compiler error.
+A second instrument reproduces E60's 146,942 as **146,148/frame** and splits it: **59,329
+instructions against 86,819 ticks of STALL.** This is **body** cost on every frame, so it moves P50
+and P95 together and **the E11 wall does not apply** — 86,819 against a 40,448 gap.
+`ndsR2CubicValueFixed` (48,623, **1.73 cyc/insn**) is the only near-compute-bound member and is
+exactly the one E64b/E65/E67 won on; `gcPlayDObjAnimJoint` (40,973) is **already in `.text.hot` and
+still 65.8% stall**, so its stall is **data, not code**. `.main` overall: **3.52 cyc/insn, 43.5%
+mem stall, 28.0% non-mem, ~28% real work.** **Every refuted candidate removed instructions or added
+data; none improved locality** (E6, E53, E64-A, E66, E11). Board carries an unpriced hypothesis
+(`aobjs_num = 0` → ~300 AObjs malloc'd individually and pointer-chased per frame); **count the
+cache lines before touching the allocator.** Still standing from E60/E61: collision is under 4,000
+and the cubic is 99.6% of the animation float; the *layout* route (Tasks 95/96) is refuted.
 
 ## The one open fidelity item
 
