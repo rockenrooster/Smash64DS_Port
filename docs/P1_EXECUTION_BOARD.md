@@ -1724,6 +1724,17 @@ hand-off is dead air. A real-time capture put the frozen last battle frame on sc
 at t≈105 s and "FOX WINS" at t≈135 s. The scene load in between reloads both
 fighters' asset sets by string path through NitroFS.
 
+**Correction to that framing (2026-07-30, read-only).** The loader is not the thing
+to attack. BattleShip's `ftManagerSetupFilesAllKind`
+(`decomp/BattleShip-main/decomp/src/ft/ftmanager.c:352`) is **already guarded** by
+`if (*data->p_file_main == NULL)` — it reloads only because the battle teardown
+already freed the files out of the taskman arena. So the lever is the **arena
+lifecycle across the `nSCKindVSBattle` → `nSCKindVSResults` transition**, and the
+first step is a measurement, not a change: bracket the transition with the same
+`sVBlankCount` GDB technique `census-vsresults-blit.ps1` uses, around
+`ndsBaseMNVSResultsStartScene` / `ndsMNVSResultsSetupFilesKind` / the file loads, and
+find how much of the ~30 s is fighter assets versus everything else. Queued as R1.
+
 Next, in this order: attribute the 19.55M inside `scene_draw` before touching
 anything (the same loop that produced this table can bracket it), then decide
 between admitting the native OAM path to Results and reducing the two-layer 320×240

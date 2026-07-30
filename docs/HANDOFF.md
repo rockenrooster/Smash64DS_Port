@@ -76,16 +76,15 @@ needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
 
 ## OPEN P1: VS Results — R0c+R0d+R0e CUT 74.4%, bit-exact; 5.74M ticks/frame vs 1.12M
 
-**39.975 → 10.250 VBlanks/iter (−16,651,648 ticks, 1.50 → 5.85 FPS, 3.9×), Latest green.** Three cuts,
-all bit-exact by proof (`scripts/check_sprite_lerp_exact.py`): **R0c** `/255` → `(x*257+257)>>16`
-(**`-Os` emits `blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`); **R0d**
-`always_inline`d the lerp; **R0e** gave the I4 wallpaper a 16-entry palette and ONE source byte per
-PAIR of columns (`SP_TEXSHUF`'s `^8` cannot touch bit 0, so it is `^4` on the byte index) — 112 → 9
-Thumb instructions/px. **NEXT: both pixel loops together are only ~1.5M of the 5.74M** (I4 0.71M,
-IA/8b 0.74M) — deleting them both would still leave ~4.2M vs 1.12M, so **do not reopen them**. The
-other ~4.2M is **NOT measured**; do not name the layer boundary from source (R0 saw only 22 commits in
-101 iterations, zero foreground, and two 3D fighters are unpriced). Run
-`census-vsresults-blit.ps1 -Phases` FIRST; add the fighter draw next if the residual is still unowned.
+**39.975 → 10.250 VB/iter (−16,651,648 ticks, 1.50 → 5.85 FPS, 3.9×), Latest green.** Three cuts, all
+bit-exact by proof (`check_sprite_lerp_exact.py`): **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits
+`blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`); **R0d** inlined the
+lerp; **R0e** 16-entry palette + ONE byte per PAIR of columns, 112 → 9 Thumb instr/px. **R0f `-Phases`
+split it:** commit **4.375 VB (43.1%)**, wallpaper **4.100 (40.4%)**, glyphs 1.675, **begin 0.000 — the
+153,600-byte clear is FREE, that hypothesis is dead.** Still unowned: **~1.6M INSIDE the wallpaper call**
+— 70 cycles/px for a 9-instruction body, while R0e removed instructions at 1.31 cycles each. The only
+per-pixel main-RAM write is one `strh`, so **R0g** folds the pair into one `str` (19 instr/pair vs 18 —
+a clean discriminator). Commit also holds the two 3D fighters (link 9 < 26); `-Phases` logs iterations.
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 
