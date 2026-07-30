@@ -340,6 +340,60 @@ just the taskman heap, and the graphics heap is allocated from per frame. Cheap 
 is to make that helper `static inline` and re-measure; do that before looking
 anywhere else.
 
+### R2-06 E4 REFUTED — the fit check was already inlined; SRC +30,912 is not the wrapper (2026-07-29)
+
+E3 named the imported `syMallocSet` wrapper's out-of-line `ndsSyMallocWouldFit` call
+as the prime suspect for `SRC` P95 +30,912, on the reasoning that the wrapper covers
+**every** `SYMallocRegion` including the per-frame graphics heap. Tested by forcing
+the fit test inline at the call site. **Refuted, and cleanly:**
+
+| | ROM sha | `SRC` P95 | `WORK-H` P95 |
+|---|---|---:|---:|
+| out-of-line call | `8F0CDAAC…` | 471,232 | 1,160,448 |
+| forced inline | `EAEDFED0…` | **471,232** | **1,160,448** |
+
+**A different binary, and every one of the eleven sampled buckets byte-identical.**
+GCC had already inlined the call at the only hot site — a non-static function defined
+in the same translation unit still gets inlined at `-Os` while its standalone body is
+emitted for external callers — so there was never anything to win. The change was
+reverted (at equal cost, less code wins) and the refutation is recorded at the
+function so it is not re-proposed.
+
+Two things worth keeping from a null result:
+
+- **This harness reproduces bit-exactly when the sampled path is untouched.** Eleven
+  buckets identical to the tick across a genuine binary change is stronger determinism
+  than the campaign's 5,000-7,000 placement floor implies. That floor is about code
+  MOVING under the sampled path, not about run-to-run variance — so a delta measured
+  this way, on one commit, is real.
+- **`SRC` +30,912 is still unexplained**, and it is measured against a different
+  commit (`0b39c1a`), so cross-commit placement is not excluded for it the way it is
+  for E4's within-commit comparison.
+
+### R2-06 E5 — the designed lever: split the render skeleton from the gameplay skeleton
+
+The plan of record already prescribes this and the tree violates it. §3.5 budgets
+**"visual fighter pose 30 Hz"**; §3.6 is explicit: *"The renderer must never require
+render skeleton == gameplay skeleton… the renderer consumes a compact generated pose
+evaluated at presentation rate. They may share source data; they must not share one
+expensive runtime representation."*
+
+R2-04 E57 measured the violation: `gmCollisionGetFighterPartsWorldPosition`
+(`gm/gmcollision.c:489`) places every hitbox by walking the **live** joint chain, so
+dropping the whole chain to 30 Hz moves hitboxes and is a gameplay change. **E57
+refuted halving the SHARED chain — it did not refute splitting it**, which is the
+designed answer and is what §3.6 asks for.
+
+The prize is the right size. E60/E61: the animation path is **146,942 ticks/frame**,
+the cubic is **99.6%** of it, **149.4 cubic nodes/frame at 405 ticks each**, against a
+**40,448** shortfall. Evaluating the full visual skeleton at presentation rate while
+keeping only the hitbox-bearing joints at 60 Hz is worth far more than the gap.
+
+**Measure before building**, per §3.9: how many of those 149.4 nodes does gameplay
+actually read, and which? If hitboxes touch a small fixed subset, the split is cheap
+and the rest of the skeleton is free to run at 30 Hz. If they touch nearly all of it,
+this collapses back into E57 and must be recorded as such rather than forced.
+
 ## INSTRUMENT: the freeze detector was hashing the host's FPS counter (2026-07-29)
 
 **Two soak verdicts withdrawn, and the failure mode is worth more than either.**

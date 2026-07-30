@@ -45,6 +45,12 @@ volatile u32 gNdsSyMallocOverflowAlignment;
 volatile u32 gNdsSyMallocOverflowHeadroom;
 volatile u32 gNdsSyMallocOverflowCallerLR;
 
+/* R2-06 E4 REFUTED this function's call overhead as a cost, so it stays one plain
+ * out-of-line function. Forcing the fit test inline at syMallocSet's call site
+ * produced a DIFFERENT ROM (sha 8F0CDAAC -> EAEDFED0) whose every sampled tick
+ * bucket was byte-identical, SRC P95 471,232 either way -- GCC had already inlined
+ * the call at the only hot site, so there was nothing to win. Do not re-propose it;
+ * see docs/P1_EXECUTION_BOARD.md "R2-06 E4". */
 sb32 ndsSyMallocWouldFit(const SYMallocRegion *bp, size_t size, u32 alignment)
 {
     uintptr_t aligned;
