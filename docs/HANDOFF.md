@@ -10,7 +10,7 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
 | R2-06 | E0/E1/E2 + soak done; E4b/E6/E7/E11/**E13/E14/E15** refuted; **E8 finds the event, E10 + E17 both attribute it as SPREAD — no lever left inside the phase** |
-| R2-07/08 | not started; R2-08 needs the owner's retail play test |
+| R2-07 | **results-flow clause STARTED** — R0..R0h, Results 39.975 -> 10.250 VB/iter (3.9×), still 5.1× out; compositor owns 61.9%. Particle/audio/HUD clauses untouched. R2-08 needs the owner's retail play test |
 
 ## Where the gate stands — MISSED, and EVERY earlier number is DLDI-off
 

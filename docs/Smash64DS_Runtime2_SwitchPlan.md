@@ -517,3 +517,43 @@ are owner decisions, and each is now precisely priced rather than a hypothesis:
 neither closes it alone. R2-05's generator-reproducibility gate already passes,
 and R2-06/07/08 are gated behind the budget being met, so there is no way to
 proceed on P1 performance without answering at least one of the two above.
+
+**Superseded again, 2026-07-30. The last claim above was wrong twice over.**
+
+*First*, "R2-06/07/08 are gated behind the budget being met" is not what §7 says
+about R2-06, and §7's own 2026-07-29 amendment on the same day already contradicted
+it: R2-06 gates on **Boundary green plus equivalence plus a clean soak**, all three
+of which are now done, and its performance "belongs to the phases that feed it".
+R2-07 is therefore unblocked, and §10 saying otherwise stopped a real phase for a
+day. When two sections of this plan disagree, the phase list in §7 is the contract
+and §10 is a status note.
+
+*Second*, "autonomous execution has run out of unblocked P1 levers" was false, and
+the counter-example is large. **R2-07's own `GAME SET → results flow` clause had
+never been measured.** When it was (R0, 2026-07-29) the VS Results screen cost
+**22.4M ticks/frame at 1.50 FPS** — twenty times the gate, on a screen every match
+ends on, while the battle frame it had been compared against was within 6,464 of
+budget. Four experiments later it is **5.74M at 5.85 FPS, −74.4%**, all bit-exact by
+proof (`scripts/check_sprite_lerp_exact.py`), Latest green:
+
+| lever | mechanism | result |
+| --- | --- | --- |
+| R0c | `-Os` emits `blx __udivsi3` for a **constant** divisor | −43.6% |
+| R0d | `-Os` declines to inline a 118-byte leaf that pushes 8 registers | −1.0 VBlank |
+| R0e | 16-entry palette + one source byte per **pair** of columns, 112 → 9 Thumb instructions/pixel | −52.4% |
+| R0g | pair as one 32-bit store | **−0.06%, reverted** |
+| R0h | per-PC profile: the compositor is 61.9%, and R0f's split was VBlank quantisation | queued as R2 |
+
+**The transferable lesson is about §3.9's measurement discipline, not about the
+blitter.** Two of those wins were compiler behaviour invisible in the C, and one
+"finding" was an artifact of a quantised instrument that invented 1.6M ticks by
+flooring two sub-VBlank rows to zero. Standing rules 8–11 now carry all four.
+
+**So the honest §10, today:** the two owner decisions above are still the only
+levers on the *battle* frame, which is where the gate is missed by ~40,448 DLDI-on
+— and R2-06 E8 has since shown every over-gate frame is an **asset-load** frame,
+with clean-frame P95 at 1,056,640, *inside* budget. Meanwhile R2-07 has its own
+unblocked queue that does not touch either decision: the results compositor
+(3,466,102 ticks/frame, 61.9%, run twice per frame on static content), the ~30 s
+GAME SET dead air, and then the particle/audio/HUD clauses §7 R2-07 actually names.
+**Do not read a stale §10 as permission to stop.**
