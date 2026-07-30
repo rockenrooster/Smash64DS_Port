@@ -12820,6 +12820,7 @@ void scSubsysFighterSetStatus(GObj *fighter_gobj, s32 status_id)
 }
 #endif
 
+#if !NDS_R2_PARTICLE_RUNTIME
 void efParticleInitAll(void)
 {
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_EFFECTS;
@@ -12849,6 +12850,7 @@ s32 efParticleGetBankID(uintptr_t scripts_lo)
     (void)scripts_lo;
     return 0;
 }
+#endif /* !NDS_R2_PARTICLE_RUNTIME */
 
 void ftKirbyCopyLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
 {
@@ -12960,6 +12962,10 @@ GObj *ftShadowMakeShadow(GObj *fighter_gobj)
     return NULL;
 }
 
+/* Skipped-particle shims. NDS_R2_PARTICLE_RUNTIME=1 compiles the original
+ * lb/lbparticle.c in place (src/import/battleship_lbparticle.c), which owns
+ * every symbol below. */
+#if !NDS_R2_PARTICLE_RUNTIME
 LBParticle *lbParticleMakeScriptID(s32 bank_id, s32 script_id)
 {
     ndsTask39EffectCensusRecord(
@@ -12998,6 +13004,7 @@ void lbParticleEjectStructID(u16 generator_id, s32 index)
     (void)index;
     gNdsPupupuGroundDeferredMask |= 1u << 1;
 }
+#endif /* !NDS_R2_PARTICLE_RUNTIME */
 
 /* The source quake is the only driver of camera shake: efManagerQuakeProcUpdate
  * feeds the effect's animated translate into gmCameraSetVelAt, which
@@ -13050,6 +13057,7 @@ efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
     }
 }
 
+#if !NDS_R2_PARTICLE_RUNTIME
 LBGenerator *lbParticleMakeGenerator(s32 bank_id, s32 generator_id)
 {
     ndsTask39EffectCensusRecord(
@@ -13095,6 +13103,7 @@ void lbParticleDrawTextures(GObj *gobj)
 {
     (void)gobj;
 }
+#endif /* !NDS_R2_PARTICLE_RUNTIME */
 
 void mpCollisionInitGroundData(void)
 {

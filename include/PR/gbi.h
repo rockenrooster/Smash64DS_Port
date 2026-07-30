@@ -130,6 +130,12 @@ typedef union {
 #define G_CC_PRIMITIVE 0u
 #define G_CC_DECALRGBA 0u
 #define G_CC_BLENDPEDECALA 0u
+#define G_CC_MODULATEIA_PRIM 0u
+#define G_AC_DITHER 0u
+#define G_CD_MAGICSQ 0u
+#define G_AD_PATTERN 0u
+#define G_TT_NONE 0u
+#define G_TT_RGBA16 0u
 #define G_MTX_MODELVIEW 0x00u
 #define G_MTX_PROJECTION 0x01u
 #define G_MTX_MUL 0x00u
@@ -352,6 +358,54 @@ typedef union {
 #define gDPSetTileSize(pkt, tile, uls, ult, lrs, lrt) do { \
     NDS_GBI_ZERO_PACKET(pkt); \
     (void)(tile); (void)(uls); (void)(ult); (void)(lrs); (void)(lrt); \
+} while (0)
+
+#define gDPSetColorDither(pkt, mode) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(mode); \
+} while (0)
+
+#define gDPSetAlphaDither(pkt, mode) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(mode); \
+} while (0)
+
+#define gDPSetTextureLUT(pkt, type) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(type); \
+} while (0)
+
+#define gDPLoadTLUT_pal256(pkt, dram) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(dram); \
+} while (0)
+
+#define gDPSetPrimDepth(pkt, z, dz) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(z); (void)(dz); \
+} while (0)
+
+#define gDPLoadTextureBlock(pkt, timg, fmt, siz, width, height, pal, \
+                            cms, cmt, masks, maskt, shifts, shiftt) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(timg); (void)(fmt); (void)(siz); (void)(width); (void)(height); \
+    (void)(pal); (void)(cms); (void)(cmt); (void)(masks); (void)(maskt); \
+    (void)(shifts); (void)(shiftt); \
+} while (0)
+
+#define gDPLoadTextureBlock_4b(pkt, timg, fmt, width, height, pal, \
+                               cms, cmt, masks, maskt, shifts, shiftt) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(timg); (void)(fmt); (void)(width); (void)(height); (void)(pal); \
+    (void)(cms); (void)(cmt); (void)(masks); (void)(maskt); \
+    (void)(shifts); (void)(shiftt); \
+} while (0)
+
+#define gSPScisTextureRectangle(pkt, ulx, uly, lrx, lry, tile, s, t, \
+                                dsdx, dtdy) do { \
+    NDS_GBI_ZERO_PACKET(pkt); \
+    (void)(ulx); (void)(uly); (void)(lrx); (void)(lry); (void)(tile); \
+    (void)(s); (void)(t); (void)(dsdx); (void)(dtdy); \
 } while (0)
 
 #endif
