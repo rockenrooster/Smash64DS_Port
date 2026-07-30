@@ -45,6 +45,35 @@ that way: publishing needs the owner's authorization for that specific push, so
 `build.ps1` will warn that the local build differs from the audited reference. That
 warning is expected here and is not a source regression.
 
+## R2-03 E63 SIZED — a flash-colour table is 2,164 bytes of ROM, and the `.rgba` field is confirmed normals (2026-07-29)
+
+Static only; no build, no emulator. Two facts the next attempt should not re-derive.
+
+**1. `sNdsNativeFighterDenseVertices[].rgba` holds packed NORMALS, confirmed
+numerically.** E58/E59/E62 said so; here is the arithmetic, because the field name
+argues the opposite and that is how E48–E55 went wrong. First entry `0x3157b1ff` →
+`(0x31, 0x57, 0xb1)` as s8 is `(49, 87, −79)`, magnitude
+√(49²+87²+79²) = **127.6 ≈ 127** — a unit normal in F3DEX's s8 encoding, with the
+trailing `0xff` the alpha byte F3DEX keeps alongside. Every entry ends `ff`. So
+**E49's `NDS_R2_UNLIT_VERTEX_EPOCH` could never have worked**, and its rainbow
+speckle was normals interpreted as colour, exactly as E62 measured.
+
+**2. The table a fix needs is small.** 541 dense vertices × `u32` = **2,164 bytes**,
+and it is `static const`, so it lands in **ROM, not BSS**. That matters because the
+footprint trap that killed E64 arm A (10,240 bytes of BSS plus `.text.hot` growth)
+does not apply to a `const` table, and `PROJECT_GOAL.md` trades ROM for speed
+freely. Cost is not the obstacle here.
+
+**What is still unknown, and it decides between two very different fixes:** whether
+the flash is **one colour across the fighter** or per-vertex. If uniform, no table is
+needed at all — one `GFX_COLOR` per flash epoch plus clearing the lighting bit. If
+per-vertex, the 2,164-byte table is required. E48's probe slots 8..11 were built to
+answer precisely this (slot 11 == 0 means uniform), and they read zero because E59
+then proved the generic software lighting never runs — so the instrument is pointed
+at a path that does not execute. **E63 proper needs one probe on the path that does
+execute (`ndsRendererNativeShadeProductionActions`), not another generic-path
+sample.** Size the fix after that answer, not before.
+
 ## R2-03 E69 GRADUATED — the matrix copies were `bl memcpy`. P95 **1,096,768**, over gate 7/128 → 6/128, margin 23,232 (2026-07-29)
 
 `artifacts/performance/r203-e69{,b}-mtxcopy-128{.json,-rows.csv}`. Sixteen sites,
