@@ -2024,3 +2024,27 @@ P99 rose 59,200, and over-gate went 9 → 11** — the two added frames being lo
    Task 77 E1). The cycle before that was spent on the `gNdsFighterInit*` census, which
    is compile-time gated out of Boundary and structurally reads zero. **Grep `scripts/`
    for an existing census before building a probe or trusting a diagnostic global.**
+8. **When a tick count disagrees with your reading of the C, disassemble before you
+   instrument.** R2-07 R0d read the whole VS Results per-pixel loop body in source,
+   estimated ~40 cycles per pixel against a measured 272, wrote "I am short by roughly
+   3× and I do not know where it goes", and queued a Task 37 per-PC profile of the
+   Results scene — a run that has to emulate a full one-minute match before it reaches
+   the scene at all. `objdump -d -l` on the one function answered it in a single command,
+   with no emulator: **~112 Thumb instructions per pixel**, of which 16 are the seven-way
+   format chain and ~45 are the inlined lerp, and nearly every loop-carried value is a
+   `ldr [sp,#N]` because `-Os` spilled the body to a 272-byte frame. At ~2.4 cycles each
+   that is the whole 272.
+
+   The C is not the cost model. `-Os` Thumb register pressure, the load-use interlock,
+   and where the compiler chose to put each arm of a chain are invisible in source and
+   decisive in the count — the same blind spot that made `blx __udivsi3` for a *constant*
+   divisor (R0c) and `__aeabi_lmul` for `(s64)a*b` (Task 96) both read as free in source.
+   A per-PC profiler tells you which address is hot; a disassembly tells you *why*, and
+   only one of the two is free.
+
+   The same pass also corrected a *fact*, not just an estimate: R0d's draft asserted the
+   wallpaper was scaled, so it attributed cost to a rect-fill arm that never executes.
+   `mnVSResultsMakeWallpaper` never assigns `scalex`/`scaley`. **Before attributing cost
+   to a branch, confirm from the owning source that the branch is taken** — for imported
+   behaviour that means BattleShip, which `PROJECT_GOAL.md` already requires be read
+   before guessing.

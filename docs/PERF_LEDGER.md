@@ -6843,3 +6843,62 @@ VBlank: both 3:~580 / 4:~93 / 5+:15 / max:18.
 
 Full census: `docs/ClaudeOpus48_Task56_FighterNativeStrips_20260724.md` (from
 E0); branch `codex/task56-fighter-stripify` (6 commits).
+
+## R2-07 R0/R0c/R0d/R0e — VS Results screen (2026-07-30): KEEP, 3.9x
+
+| tag | date | subject |
+|-----|------|---------|
+| R0  | 2026-07-29 | VS Results measured for the first time: 39.975 VBlanks/iteration |
+| R0c | 2026-07-30 | `/255` -> reciprocal multiply, bit-exact |
+| R0d | 2026-07-30 | `always_inline` the prim/env lerp |
+| R0e | 2026-07-30 | specialized paired I4 wallpaper row + 16-entry palette, bit-exact |
+
+**Verdict: KEEP all three cuts.** The Results screen is not the battle frame and
+carries no tick instrument, so cost is measured in **VBlanks**: GDB stops freeze
+the emulator and `sVBlankCount` with it, so the delta between consecutive
+breakpoint hits is exactly the guest time the previous call consumed, independent
+of host speed. Instrument `scripts/census-vsresults-blit.ps1`, window
+`-SkipIterations 130 -Iterations 40` on all four arms.
+
+| arm | VB/iter | ticks/frame | FPS | wallpaper VB/iter | wallpaper share |
+|-----|---------|-------------|-----|-------------------|-----------------|
+| R0 baseline | 39.975 | 22,393,595 | 1.50 | 33.83 | 84.8% |
+| R0c | 22.550 | 12,632,284 | 2.66 | — | — |
+| R0d | 21.525 | 12,058,089 | 2.79 | 16.45 | 76.8% |
+| **R0e** | **10.250** | **5,741,947** | **5.85** | **5.15** | **50.7%** |
+
+Cumulative **−29.725 VBlanks/iteration (−16,651,648 ticks/frame, −74.4%)** at
+560,190 ticks/VBlank. Artifacts `artifacts/performance/r207-r0c-blit-split.json`
+(the R0 baseline split), `r207-r0c-div-candidate.json`, `r207-r0d-inline.json`,
+`r207-r0e-rowlut.json`.
+
+**All three are bit-exact by proof, not by screenshot**, in
+`scripts/check_sprite_lerp_exact.py` (wired into
+`scripts/check-gbi-decode-fixtures.ps1`): the `(x*257+257)>>16` identity
+exhaustively over its reachable range and over all 16.7M reachable
+(colour, env, intensity) triples, `nibble*255/15 == nibble*17`, and R0e's pair
+index algebra over every width 1..320 x both row parities.
+
+**Where the cost actually was, and how it was found.** `-Os` emits
+`blx __udivsi3` for a **compile-time constant** divisor (R0c) and declines to
+inline a 118-byte leaf that pushes eight registers (R0d). R0e's mechanism came
+from `objdump -d -l`, not from a profiler: the generic loop is **~112 Thumb
+instructions per pixel**, of which 16 are the seven-way format chain (I4 is the
+LAST arm) and ~45 are the lerp, with nearly every loop-carried value spilled to a
+272-byte frame. The specialized row is 18 instructions per PAIR of pixels. See
+`docs/optimization/TASK_STANDING_RULES.md` rule 8.
+
+**Still 5.13x over the 1.12M gate, and the residual is UNATTRIBUTED.** Sizing
+both blitter arms from the emitted code puts the I4 wallpaper at ~0.71M
+(66,000 px x 9 instructions) and the seven IA/8b glyphs at ~0.74M (6,882 px x
+~90), so the pixel loops are ~1.5M of 5.74M and deleting them entirely would
+leave ~4.2M. No cause is claimed for that ~4.2M here: R0's
+own counters showed only 22 preview commits in 101 iterations with zero
+foreground commits, which rules out the simple "two full layer commits per frame"
+story, and the scene's two 3D fighter GObjs have never been priced. `-Phases` was
+added to the census (breakpoints on
+`ndsPlatformBeginOriginalSpritePreview`/`ndsPlatformCommitOriginalSpritePreviewLayer`,
+one ordered event stream) to measure it rather than argue it.
+
+**Device A/B not scheduled** — Results is not a hardware-specific risk and the
+gate is not yet met, so it is not an acceptance measurement.

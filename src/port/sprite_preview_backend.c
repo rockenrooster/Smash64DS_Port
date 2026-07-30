@@ -1534,6 +1534,15 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
     u32 is_scaled;
     u32 scale_x_q16;
     u32 scale_y_q16;
+    /* R2-07 R0e. The VS Results wallpaper is I/4b, 300x220, drawn 1:1 at
+     * (10,10) into the 320x240 staging buffer under the prim/env combine, and
+     * it is 76.8% of the Results frame after R0c/R0d. Under that combine the
+     * output colour is a pure function of the 4-bit intensity, so sixteen
+     * values cover every pixel the generic loop can produce -- see
+     * check_sprite_lerp_exact.py. NULL means "no specialized row available",
+     * which is every other caller of this blitter. */
+    u16 fast_i4_palette[16];
+    const u16 *fast_i4 = NULL;
 
     if (sobj == NULL)
     {
@@ -1639,6 +1648,30 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         gNdsSObjWallpaperCacheFallbackCount++;
     }
 
+    /* Build the sixteen-entry palette once per call. Every condition here is
+     * loop-invariant, and the ones that are not -- the destination row and the
+     * horizontal extent -- are re-checked per strip and per row below, so the
+     * specialized row is only ever taken where it writes exactly the pixels the
+     * generic loop would have written, in the same order.
+     *
+     * `record_startup` has to be zero because the generic loop counts texshuf
+     * samples per pixel for the startup-logo diagnostic, and `is_scaled` has to
+     * be false because the scaled arm writes a rectangle per source pixel
+     * rather than one pixel. Neither holds for the Results wallpaper. */
+    if ((results_wallpaper_combine != 0u) && (record_startup == 0u) &&
+        (is_scaled == FALSE) && (sprite->bmfmt == G_IM_FMT_I) &&
+        (sprite->bmsiz == G_IM_SIZ_4b) && (origin_x >= 0))
+    {
+        u32 nibble;
+
+        for (nibble = 0u; nibble < 16u; nibble++)
+        {
+            fast_i4_palette[nibble] =
+                ndsSpriteLerpPrimEnv(sobj, (u8)(nibble * 17u));
+        }
+        fast_i4 = fast_i4_palette;
+    }
+
     for (bitmap_index = 0;
          (bitmap_index < bitmap_count) && (out_y < height);
          bitmap_index++)
@@ -1657,6 +1690,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         u32 bytes_per_pixel = 1u;
         u32 ci_palette_ready = 0;
         u32 ci_max_index = 0;
+        u32 fast_i4_row = 0u;
 
         if (src_draw_width == 0)
         {
@@ -1682,6 +1716,13 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         {
             src_draw_width = width;
         }
+        /* The generic loop skips any pixel whose destination column falls
+         * outside the preview. Requiring the whole strip to land inside it
+         * removes that per-pixel test without changing which pixels are
+         * written; a strip that does not fit takes the generic loop. */
+        fast_i4_row = ((fast_i4 != NULL) &&
+                       (((u32)origin_x + src_draw_width) <= preview_width)) ?
+            1u : 0u;
 
         if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
             (sprite->bmsiz == G_IM_SIZ_16b))
@@ -1773,6 +1814,53 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
             if ((dst_y_end <= 0) ||
                 (dst_y_start >= (s32)preview_height))
             {
+                continue;
+            }
+            if ((fast_i4_row != 0u) && (dst_y_start >= 0))
+            {
+                /* One destination row of the Results wallpaper. The generic
+                 * loop spends about 112 Thumb instructions per source pixel
+                 * here: sixteen of them walk the seven-way format chain, and
+                 * the prim/env lerp is another forty-five. This emits eighteen
+                 * per PAIR of pixels -- measured in the ELF, not estimated --
+                 * because a 4-bit row stores both nibbles of a pair in one byte
+                 * and the low nibble is always the odd column.
+                 *
+                 * That pairing survives SP_TEXSHUF: the odd-row swizzle is
+                 * `source_x ^= 8`, which cannot touch bit 0, so columns 2k and
+                 * 2k+1 still share a byte and still land hi-then-lo. It reduces
+                 * to `^ 4` on the byte index. The trailing `^ 3` is the same
+                 * word-order swizzle the generic arm applies. */
+                const u8 *src_i4 = (const u8 *)src;
+                size_t row_base = (size_t)row * src_row_bytes;
+                size_t byte_xor =
+                    ((is_texshuf != 0) && ((row & 1u) != 0)) ? 4u : 0u;
+                u16 *dst = &preview[((u32)dst_y_start * preview_pitch) +
+                                    (u32)origin_x];
+                u32 pairs = src_draw_width >> 1;
+                u32 pair;
+
+                for (pair = 0u; pair < pairs; pair++)
+                {
+                    u8 packed = src_i4[(row_base + (pair ^ byte_xor)) ^ 3u];
+
+                    dst[0] = fast_i4[packed >> 4];
+                    dst[1] = fast_i4[packed & 0x0fu];
+                    dst += 2;
+                }
+                if ((src_draw_width & 1u) != 0u)
+                {
+                    /* An odd width leaves one high nibble: the last column is
+                     * even, so `source_x & 1` is zero and `source_x >> 1` is
+                     * `pairs`. */
+                    u8 packed = src_i4[(row_base + (pairs ^ byte_xor)) ^ 3u];
+
+                    dst[0] = fast_i4[packed >> 4];
+                }
+                /* Every entry of the palette has bit 15 set, so the generic
+                 * loop's `color != 0` test never skips a pixel of this sprite
+                 * and every column counts. */
+                drawn_pixels += src_draw_width;
                 continue;
             }
             for (x = 0; x < src_draw_width; x++)

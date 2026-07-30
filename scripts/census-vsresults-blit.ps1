@@ -13,6 +13,13 @@ param(
     [ValidateRange(1,4000)][int]$SkipIterations = 130,
     [ValidateRange(1,400)][int]$Iterations = 40,
     [ValidateRange(60,3600)][int]$TimeoutSeconds = 1800,
+    # Also break on the staging-layer boundary, so the two-layer 320x240
+    # pipeline stops being charged to whichever blit happens to precede it.
+    # R0e made this necessary: once the wallpaper's pixel loop dropped to 9
+    # instructions per pixel, its interval was still 5.15 VBlanks, and the loop
+    # can only account for about a seventh of that. Off by default so a run
+    # stays comparable with the R0/R0c/R0d/R0e artifacts.
+    [switch]$Phases,
     [string]$JsonOut = ''
 )
 
@@ -114,7 +121,28 @@ try {
         'continue',
         'end',
         'break ndsMNVSResultsRecordFrame',
-        "ignore 3 $Iterations",
+        "ignore 3 $Iterations"
+    )
+    if ($Phases) {
+        # Breakpoints 4 and 5. They must be created before the `continue` that
+        # runs the window, and after breakpoint 3 so its ignore count still
+        # refers to the right number.
+        $gdbLines += @(
+            'break ndsPlatformBeginOriginalSpritePreview',
+            'commands',
+            'silent',
+            'printf "PHASE=%u,begin\n", sVBlankCount',
+            'continue',
+            'end',
+            'break ndsPlatformCommitOriginalSpritePreviewLayer',
+            'commands',
+            'silent',
+            'printf "PHASE=%u,commit\n", sVBlankCount',
+            'continue',
+            'end'
+        )
+    }
+    $gdbLines += @(
         'continue',
         'printf "WINDOWEND=%u\n", sVBlankCount',
         'detach'
@@ -136,8 +164,26 @@ try {
     }
 
     $lines = @(Get-Content $gdbOut -ErrorAction SilentlyContinue)
+    $fmtNames = @{ 0 = 'RGBA'; 1 = 'YUV'; 2 = 'CI'; 3 = 'IA'; 4 = 'I' }
+    $sizNames = @{ 0 = '4b'; 1 = '8b'; 2 = '16b'; 3 = '32b' }
+    # One ordered event stream, because GDB prints in hit order and an interval
+    # ends at the next hit of ANY breakpoint. Without -Phases there are no PHASE
+    # records and this reduces exactly to the original blit-to-blit deltas.
+    $events = @()
     $blits = @()
-    foreach ($line in ($lines | Where-Object { $_ -match '^BLIT=' })) {
+    foreach ($line in ($lines | Where-Object { $_ -match '^(BLIT|PHASE)=' })) {
+        if ($line -match '^PHASE=') {
+            $p = ($line -replace '^PHASE=', '') -split ','
+            if ($p.Count -lt 2) { continue }
+            $events += [PSCustomObject]@{
+                vblank = [uint32]$p[0]
+                label = "(layer $($p[1]))"
+                pixels = 0
+                blit = $null
+                vblanksCost = $null
+            }
+            continue
+        }
         $f = ($line -replace '^BLIT=', '') -split ','
         if ($f.Count -lt 7) { continue }
         # PSCustomObject, not [ordered]@{}: `Measure-Object -Property x` cannot
@@ -145,7 +191,7 @@ try {
         # summed to $null and every share printed 0.0% while the per-record data
         # was correct. vblanksCost is declared up front so the later assignment
         # lands on an existing property.
-        $blits += [PSCustomObject]@{
+        $blit = [PSCustomObject]@{
             vblank = [uint32]$f[0]
             bmfmt = [int]$f[1]
             bmsiz = [int]$f[2]
@@ -154,6 +200,17 @@ try {
             nbitmaps = [int]$f[5]
             attr = [int]$f[6]
             pixels = ([int]$f[3]) * ([int]$f[4])
+            vblanksCost = $null
+        }
+        $blits += $blit
+        $events += [PSCustomObject]@{
+            vblank = $blit.vblank
+            label = "{0}/{1} {2}x{3}" -f `
+                ($fmtNames[$blit.bmfmt] ?? $blit.bmfmt),
+                ($sizNames[$blit.bmsiz] ?? $blit.bmsiz),
+                $blit.width, $blit.height
+            pixels = $blit.pixels
+            blit = $blit
             vblanksCost = $null
         }
     }
@@ -166,53 +223,49 @@ try {
                (($lines | Select-Object -First 15) -join "`n"))
     }
 
-    # The VBlank delta to the NEXT hit is what the call at this hit cost. The
+    # The VBlank delta to the NEXT hit is what the work at this hit cost. The
     # last record has no successor, so it is reported but excluded from totals.
-    for ($i = 0; $i -lt $blits.Count - 1; $i++) {
-        $blits[$i].vblanksCost = [int]($blits[$i + 1].vblank - $blits[$i].vblank)
+    for ($i = 0; $i -lt $events.Count - 1; $i++) {
+        $cost = [int]($events[$i + 1].vblank - $events[$i].vblank)
+        $events[$i].vblanksCost = $cost
+        if ($null -ne $events[$i].blit) { $events[$i].blit.vblanksCost = $cost }
     }
-    $costed = @($blits | Where-Object { $null -ne $_.vblanksCost })
-
-    $fmtNames = @{ 0 = 'RGBA'; 1 = 'YUV'; 2 = 'CI'; 3 = 'IA'; 4 = 'I' }
-    $sizNames = @{ 0 = '4b'; 1 = '8b'; 2 = '16b'; 3 = '32b' }
-    $groups = $costed | Group-Object { "$($_.bmfmt)/$($_.bmsiz)/$($_.width)x$($_.height)" }
+    $costed = @($events | Where-Object { $null -ne $_.vblanksCost })
+    $groups = $costed | Group-Object -Property label
     $totalCost = ($costed | Measure-Object -Property vblanksCost -Sum).Sum
 
     Write-Host ""
-    Write-Host ("VS Results blit census -- {0} calls with a cost, {1} VBlanks total" -f `
+    Write-Host ("VS Results blit census -- {0} intervals with a cost, {1} VBlanks total" -f `
         $costed.Count, $totalCost)
     Write-Host ""
     Write-Host ("{0,-22} {1,6} {2,10} {3,9} {4,8} {5,7}" -f `
-        'fmt/siz  dimensions', 'calls', 'VBlanks', 'share', 'px/call', 'VB/call')
+        'fmt/siz  dimensions', 'hits', 'VBlanks', 'share', 'px/call', 'VB/call')
     Write-Host ('-' * 68)
     foreach ($g in ($groups | Sort-Object { -(($_.Group | Measure-Object -Property vblanksCost -Sum).Sum) })) {
         $sum = ($g.Group | Measure-Object -Property vblanksCost -Sum).Sum
-        $first = $g.Group[0]
-        $label = "{0}/{1} {2}x{3}" -f `
-            ($fmtNames[$first.bmfmt] ?? $first.bmfmt),
-            ($sizNames[$first.bmsiz] ?? $first.bmsiz),
-            $first.width, $first.height
         Write-Host ("{0,-22} {1,6} {2,10} {3,8:P1} {4,8} {5,7:N1}" -f `
-            $label, $g.Count, $sum,
+            $g.Name, $g.Count, $sum,
             ($(if ($totalCost -gt 0) { $sum / $totalCost } else { 0 })),
-            $first.pixels,
+            $g.Group[0].pixels,
             ($sum / $g.Count))
     }
     Write-Host ""
 
     if ($JsonOut) {
         $payload = [ordered]@{
-            task = 'R2-07 R0c - VS Results per-call blit split'
+            task = 'R2-07 - VS Results per-interval cost split'
             target = $target
             rom = $rom
             romSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $rom).Hash
             skipIterations = $SkipIterations
             iterations = $Iterations
+            phases = [bool]$Phases
             capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
             windowStart = (($lines | Where-Object { $_ -match '^WINDOWSTART=' }) -replace '\D', '')
             windowEnd = (($lines | Where-Object { $_ -match '^WINDOWEND=' }) -replace '\D', '')
             totalCostedVblanks = $totalCost
             blits = $blits
+            intervals = @($costed | Select-Object vblank, label, pixels, vblanksCost)
         }
         $jsonPath = if ([System.IO.Path]::IsPathRooted($JsonOut)) { $JsonOut }
                     else { Join-Path $root $JsonOut }

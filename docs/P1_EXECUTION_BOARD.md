@@ -1730,6 +1730,62 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 R0e BUILT — the Results wallpaper loses 68.7%; Results is 3.9× faster than R0 and the layer pipeline is now the owner (2026-07-30)
+
+**21.525 → 10.250 VBlanks/iteration, −11.275 (−6,316,143 ticks/frame, −52.4%).** Cumulative from R0:
+**39.975 → 10.250, −74.4%**, 22,393,595 → **5,741,947 ticks/frame**, 1.50 → **5.85 FPS, a 3.9×
+speedup.** ROM `33A9E063`, `artifacts/performance/r207-r0e-rowlut.json`, same window, instrument, and
+`-SkipIterations 130 -Iterations 40` as R0c/R0d — every row below is one measurement of the same forty
+iterations, so the arms are directly comparable:
+
+| arm | VB/iter | ticks/frame | FPS | wallpaper VB/iter | wallpaper share |
+| --- | --- | --- | --- | --- | --- |
+| R0 baseline | 39.975 | 22,393,595 | 1.50 | 33.83 | 84.8% |
+| R0c reciprocal multiply | 22.550 | 12,632,284 | 2.66 | — | — |
+| R0d `always_inline` lerp | 21.525 | 12,058,089 | 2.79 | 16.45 | 76.8% |
+| **R0e paired row + palette** | **10.250** | **5,741,947** | **5.85** | **5.15** | **50.7%** |
+
+**The change is a specialized row, and it is BIT-EXACT by proof rather than by screenshot.** Under the
+prim/env combine the output colour is a pure function of the 4-bit intensity, so sixteen values cover
+every pixel the generic loop can emit; the palette is built once per call from the same
+`ndsSpriteLerpPrimEnv` expression. The row then reads **one source byte per PAIR of destination
+columns**, because a 4-bit row packs both nibbles of a pair in one byte and the low nibble is always the
+odd column. That pairing survives `SP_TEXSHUF`: the odd-row swizzle is `source_x ^= 8`, which cannot
+touch bit 0, so it reduces to `^ 4` on the byte index. Both halves are checked by
+`scripts/check_sprite_lerp_exact.py` (already wired into `check-gbi-decode-fixtures.ps1`) — the index
+algebra exhaustively over **every width 1..320 × both row parities**, including the odd-width tail whose
+last column is even and therefore takes the HIGH nibble of byte `pairs`.
+
+**Emitted body is 18 Thumb instructions per 2 pixels, register-resident** (`2037ae0..2037b06`, one
+`ldrb`, two `ldrh`, two `strh`, one `ldr [sp]` per pair) against the generic loop's ~112 per pixel.
+Every other caller of this blitter is untouched: `fast_i4` is NULL unless
+`results_wallpaper_combine != 0 && record_startup == 0 && !is_scaled && bmfmt == I && bmsiz == 4b &&
+origin_x >= 0`, and the horizontal extent is re-checked per strip so the specialized row only ever runs
+where it writes exactly the pixels the generic loop would have.
+
+**R0e is also what makes the remaining cost legible, and it is NOT the pixel loops.** Sizing both
+arms from the emitted code at ~2.4 cycles/instruction: the I4 wallpaper is 66,000 px × 9 instructions
+≈ 0.71M ticks, and the seven IA/8b glyphs are 186 × 37 = **6,882 px** × ~90 ≈ 0.74M — together about
+**1.5M of the 5.74M**. Even deleting both loops outright would leave ~4.2M against a 1.12M gate. **So
+do not open the per-pixel loops again**
+(the IA/8b arm would take the same 16-entry palette — its colour is `lerp(sobj, (ia>>4)*17)`, a pure
+function of one nibble — but that is worth at most ~0.6M and should wait its turn).
+
+**Where the other ~4.2M goes is NOT yet measured, and I am deliberately not naming a cause.** The
+obvious suspect is the two-layer 320×240 software pipeline, but **R0's own numbers argue against the
+simple version of that story**: `gNdsOriginalSpritePreviewCommitCount` advanced only **22 in 101
+iterations**, with **zero foreground commits** in that window — so the commit path cannot be a
+per-frame cost, and the frame also draws two 3D fighter GObjs that nothing here has priced. Naming the
+layer boundary from source reading is the exact move that produced four refutations in R2-06 and two
+withdrawn claims in R0d.
+
+**The instrument now exists: `census-vsresults-blit.ps1 -Phases`** adds breakpoints on
+`ndsPlatformBeginOriginalSpritePreview` and `ndsPlatformCommitOriginalSpritePreviewLayer` and charges
+each interval to itself instead of to whichever blit precedes it — the analysis was rewritten around a
+single ordered event stream, so without the switch it still reduces exactly to the blit-to-blit deltas
+the R0/R0c/R0d/R0e artifacts were measured with. Run that first. If the residual is still unowned after
+it, the next boundary to add is the fighter draw, not another guess.
+
 ### R2-07 R0d BUILT — inlining the per-pixel lerp takes another VBlank; Results is now 46.2% cheaper than R0 (2026-07-30)
 
 **22.00 → 21.00 VBlanks/iteration, −1.00 (−560,190 ticks/frame).** Cumulative with R0c:
@@ -1758,33 +1814,40 @@ keeping straight:** that one is deliberately `noinline` to hold ONE copy of its 
 inside `.text.hot`'s curated 8 KiB. This blitter is not in `.text.hot`, so the constraint does not
 apply. Both comments now say so at their own site.
 
-**Remaining: ~11.76M ticks/frame against 1.12M, still 10.5× over — and MOST OF IT IS UNEXPLAINED.**
-The wallpaper is still 16.05 of 21.00 VBlanks, i.e. **~8.99M ticks for 66,000 source pixels ≈ 136
-ticks/pixel ≈ 272 ARM9 cycles.** Reading the whole loop body (`:1762-1981`), the visible per-pixel work
-does **not** account for that:
+**Remaining: ~11.76M ticks/frame against 1.12M, still 10.5× over.** The wallpaper is still 16.05 of
+21.00 VBlanks, i.e. **~8.99M ticks for 66,000 source pixels ≈ 136 ticks/pixel ≈ 272 ARM9 cycles.**
+R0d's first draft said the visible loop body explains only ~40 of those and that the residual was
+unattributed. **Both halves of that were wrong, and the way to find out was to stop reading C and
+disassemble the ELF** — `objdump -d -l` on `ndsDrawSObjIntoPreview`, whose path for one I4 pixel is:
 
-- the seven-way `sprite->bmfmt`/`bmsiz` chain, with I4 as the **last** arm so it pays all six failed
-  pairs — ~12 loads + 12 compares, but off the same cached `sprite` address every iteration;
-- the I4 unpack — one byte load amortised over 2 pixels, a shift, a mask, an XOR;
-- the now-inlined lerp — three channels of multiply-shift;
-- the write — `is_scaled` is true, so a nested `dst_y`/`dst_x` rect loop, but the wallpaper scales
-  300×220 → 320×240, so only ~1.16 destination pixels per source pixel, ~76,800 writes over a
-  153,600-byte staging buffer (~4,800 dirty lines).
+| segment | Thumb instructions | note |
+| --- | --- | --- |
+| loop tail, `dst_x_q16 += scale`, `dst_x_start` | ~14 | every loop-carried value is a `ldr [sp,#N]` |
+| seven-way format chain | **16** | `2037b44→2037a94→2037aa0→2037aa4→2037e90`, 3 taken branches |
+| I4 unpack | ~21 | texshuf test, `^3` swizzle, `ldrb`, nibble select |
+| inlined prim/env lerp | ~45 | 3 channels × (2 `ldrb`, 2 `muls`, add, `×257>>16`) + pack |
+| texshuf/`record_startup` tests, `color != 0`, bounds, `strh`, `drawn_pixels++` | ~16 | |
+| **total** | **~112** | ~28 of them memory accesses, ~6 taken branches |
 
-That totals on the order of 40 cycles/pixel, not 272. **I am short by roughly 3× and I do not know
-where it goes.** *Correcting my own note from R0d's first draft, which said "do not expect another
-arithmetic lever to matter here": that was a guess, and it would have steered the next session away
-from what may still be a large win.* The honest statement is that the **visible** arithmetic is
-exhausted and the residual is **unattributed**.
+At ~2.4 cycles per instruction — Thumb `-Os` with a load-use interlock on nearly every spill — that is
+~270 cycles. **The measurement was never mysterious: the cost IS instruction count, in a generic
+per-pixel loop, and the C hid it because `-Os` spills the entire loop body to a 272-byte frame.**
 
-**So the next step is to profile INSIDE the loop, not to guess a fourth time.** R2-06's four
-refutations all began as mechanisms named from source reading. The Task 37 per-PC profiler is the tool
-(`NDS_TASK37_PROFILE`, region-tagged), pointed at the Results scene instead of the battle frame; the
-address range `ndsDrawSObjIntoPreview` occupies is known and R0b already showed how to answer
-"where do cycles land" from a PC histogram alone. **Only after that:** R0a's I4-only dispatch
-specialization, then the structural answers — admitting the native OAM path to Results
+**Also correcting R0d's draft on a fact, not just an estimate: the wallpaper is NOT scaled.**
+`mnVSResultsMakeWallpaper` (BattleShip `mnvsresults.c:694`) sets only `pos = (10,10)` and the prim/env
+colours — it never touches `scalex`/`scaley` — so 300×220 lands 1:1 inside 320×240 with a 10-pixel
+border and `is_scaled` is FALSE. The rect-fill arm never runs. The census JSON also pins the rest of
+the shape: `nbitmaps = 9`, `attr = 0x240` = `SP_TEXSHUF | SP_OVERLAP`, and **no `SP_FASTCOPY`**.
+
+**Task 37 was therefore not needed, and the lesson is cheaper than the run would have been:** when a
+tick count disagrees with a reading of the C by ~3×, disassemble before instrumenting. The emitted code
+is free to look at, needs no emulator, and here it answered in one command what a per-PC profile of the
+Results scene would have cost a full match-length run to say. Recorded in
+`docs/optimization/TASK_STANDING_RULES.md`.
+
+The structural answers stay queued behind R0e — admitting the native OAM path to Results
 (`sprite_preview_backend.c:2410`) and/or killing the two-layer 320×240 pipeline with its 153,600-byte
-clear per layer, which remain the only candidates sized to a 10.5× overrun.
+clear per layer.
 
 ### R2-07 R0c BUILT — the Results frame is 43.6% cheaper, BIT-EXACT, and it was three library divisions per pixel (2026-07-30)
 
