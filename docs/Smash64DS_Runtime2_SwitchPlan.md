@@ -243,9 +243,6 @@ total                                      ~1.12M
 
 Sequencing against in-flight P1 work:
 
--FIXED **Bug #10 closes first.** Its root cause (DS facing/cull behavior on
-  sub-pixel generated triangles vs the N64 rasterizer) is a hardware fact the
-  R2 render generator must encode as data. It is one E0 build from a verdict.
 - **Particle banks** (P1 board row) land in Runtime 1; R2 Phase 7 consumes
   the ported banks as data. Porting them twice would be waste.
 - **Task 75** (preload fighter animations; owns the P95 tail) is absorbed
@@ -331,8 +328,11 @@ GAMEPLAY         -> stage collision unchanged (it is gameplay code)
   submit consuming only baked facts (`poly_fmt`, texture slot, palette,
   matrix binding, corner stream) — no `PrepareProductionRun` policy
   re-checks, no traversal-state/stats dependency, no per-frame texture
-  identity proof. Encode the bug #10 lesson (facing/cull exemptions for
-  sub-pixel geometry) in the generator as data, not runtime checks.
+  identity proof. Encode facing/cull exemptions for sub-pixel geometry in the
+  generator as data, not runtime checks — DS behaviour there does not match the
+  N64 rasteriser, which is a hardware fact and the durable lesson of a closed
+  bug (see `PORTING.md`), so the generator has to carry it whether or not any
+  bug row is open.
 - Mario first, fixed pose. Measure draw cost, GX words, stall share, bytes
   touched.
 - Gate: pixel parity against Runtime 1 on the same pose (Task 49 GX differ +

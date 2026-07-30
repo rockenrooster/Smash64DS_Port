@@ -21928,3 +21928,17 @@ ceiling 5.6%) — a follow-up could prototype it for the binding-3 run (66 verts
   is not meant to; it exists so R2-02 and R2-03 swap renderers under a stable
   roof. The default arm's link input set is unchanged, not merely equivalent:
   the new translation unit enters `CFILES` only when the flag is 1.
+- **Bug #10 is CLOSED, confirmed by the owner (2026-07-30):** *"BUG #10 is fixed
+  (mario's underside)."* Mario's underside rendered wrongly because DS
+  facing/cull behaviour on sub-pixel generated triangles does not match the N64
+  rasteriser — a hardware fact, not a port defect, so the fix is data rather
+  than a runtime check. Landed as `06992f10812` (from `2cbc6189d15`) with a host
+  fixture, a structural pin, and the `pause_under20` oracle; the camera is
+  reachable from automated capture via `-PauseCameraPitch`/`-PauseCameraYaw`
+  plus `-InGamePause`, because the defect only shows from beneath a fighter and
+  would otherwise cost a manual play test per candidate fix.
+  It had been the switch plan's "closes first" sequencing item and is now
+  removed from the plan at the owner's instruction. The lasting requirement
+  survives it: the R2 render generator must encode facing/cull exemptions for
+  sub-pixel geometry as baked data, which is why that clause stays in R2-03
+  after the bug row is gone.
