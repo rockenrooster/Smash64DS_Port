@@ -1,8 +1,13 @@
 [CmdletBinding()]
 param(
     [string]$Rom,
-    [ValidateRange(1, 256)]
-    [int]$Jobs = [Math]::Max(1, [Environment]::ProcessorCount),
+    # 0 means "let the Makefile decide", which is the correct default: the
+    # Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)` from nproc, and an explicit -j on
+    # the command line OVERRIDES that. Thirty-one scripts/*.ps1 harnesses were
+    # fixed for this in 2026-07 and build.ps1 -- the canonical clean-checkout
+    # build -- was missed. Pass a nonzero value only to deliberately override.
+    [ValidateRange(0, 256)]
+    [int]$Jobs = 0,
     [switch]$Clean,
     [string]$DecompPath
 )
@@ -567,8 +572,12 @@ function Main {
         Invoke-LoggedProcess 'clean-port-target' $make `
             @('TARGET=smash64ds-battle-playable-hwtri', 'clean') $RepoRoot $processEnvironment
     }
+    $makeArguments = @('TARGET=smash64ds-battle-playable-hwtri')
+    if ($Jobs -gt 0) {
+        $makeArguments += "-j$Jobs"
+    }
     Invoke-LoggedProcess 'build-port-target' $make `
-        @('TARGET=smash64ds-battle-playable-hwtri', "-j$Jobs") $RepoRoot $processEnvironment
+        $makeArguments $RepoRoot $processEnvironment
 
     Write-Step '7/7 Reporting ROM identity'
     $output = Join-Path $RepoRoot $pins.OUTPUT_NAME
