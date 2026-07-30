@@ -130,6 +130,33 @@ These bugs should be fixed for P1 delivery.
     reset/warm counters and DLDI reads, guest counter plus repeated-PC progress
     evidence, the 2/3/4/5+ VBlank histogram and max interval, and owner
     visual/listen acceptance. Status: OPEN.
+  - UPDATE 2026-07-30, and it widens the bug. The owning-seam call above was
+    right and is now FIXED (e72fad988): `scVSBattleStartSuddenDeath` had a
+    define/undef pair with no replacement function at all, so the decomp start
+    ran bare; it now has a wrapper and the adapter remaps `func_start` onto it.
+    `gNdsSCVSBattleSuddenDeathPrepareCount` proves which path ran.
+    But this is NOT Sudden-Death-specific. START-to-rematch (now working, same
+    commit) reproduces the identical symptom, so any SECOND entry into the battle
+    scene hits it. Measured on a rematch soak:
+      match 1  2043 presented frames  ~15 FPS   anim arena 3,728 bytes
+      match 2   423 presented frames  ~4.7 FPS  anim arena 87,824 bytes
+    Match two never reaches Results. THREE hypotheses refuted by that run, do not
+    retry them:
+    - Stale battle static textures. PrepareCount 2, ViolationCount 0.
+    - The anim cache handing back pointers into reused memory. `ndsR2AnimCacheFind`
+      already drops the cache on a rewound heap, on the READ path, precisely so a
+      hit cannot do that.
+    - "The general heap is never rewound on a second entry."
+      `gNdsSCVSBattleLifecycleArenaAdapterCount` reads 2, so the rematch re-entered
+      through the scene manager's dispatch loop (`scmanager.c:870` is a flat
+      `while (TRUE)` over `scene_curr`, not a one-shot), `scVSBattleStartScene` ran
+      twice, and `syTaskmanStartTask` rewound the heap both times.
+    What is left, and what the next arm must measure rather than assume: the same
+    rewind that makes match two safe also drops the animation cache, so match two
+    re-warms from NitroFS while gameplay is already scoring frames. Price match
+    two against match one with a census before changing anything -- the 4.7 FPS
+    has not yet been attributed to a bracket, and this entry has already cost
+    three plausible-but-wrong causes.
 
 
 -Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]
