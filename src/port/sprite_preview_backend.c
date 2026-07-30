@@ -378,6 +378,16 @@ typedef struct NDSSObjWallpaperDecodeCache
     u32 texshuf;
     u32 source_drawn_pixels;
     u32 opaque_pixels;
+    /* R2-07 R2b. Non-zero when the decode already applied the prim/env combine,
+     * so every consumer downstream may treat this cache as combine-free. The
+     * Dream Land battle wallpaper is RGBA/16b with no combine and leaves this
+     * zero; the VS Results wallpaper is I/4b under a combine whose output is a
+     * pure function of the 4-bit intensity (R0e), so sixteen palette entries
+     * bake it exactly. Threading one flag is what lets the Results wallpaper
+     * reach the affine BG path without teaching that path about combines --
+     * and keeping it a FLAG rather than an assumption is what stops a cache
+     * MISS from silently drawing the wallpaper uncombined. */
+    u32 combine_baked;
 } NDSSObjWallpaperDecodeCache;
 
 static NDSSObjWallpaperDecodeCache sNdsSObjWallpaperDecodeCache;
@@ -508,10 +518,15 @@ static s32 ndsSObjWallpaperCacheKeyMatches(
                                                                     FALSE;
 }
 
+/* `combine_palette` is NULL for the RGBA/16b battle wallpaper and sixteen baked
+ * entries for the I/4b Results wallpaper. It selects the decode, so the two
+ * formats share every other line of this function -- the strip walk, the overlap
+ * rule, the opacity census and the whole cache key. */
 static s32 ndsSObjBuildWallpaperDecodeCache(
     const NDSRelocLoadedFile *loaded, const Sprite *sprite,
     u16 *cache_pixels, u32 cache_pitch, u32 cache_height,
-    u32 platform_epoch, u32 layout_fingerprint)
+    u32 platform_epoch, u32 layout_fingerprint,
+    const u16 *combine_palette)
 {
     const Bitmap *bitmap = sprite->bitmap;
     u32 width = (u32)(u16)sprite->width;
@@ -547,6 +562,7 @@ static s32 ndsSObjBuildWallpaperDecodeCache(
         u32 src_height = (u32)(u16)current->actualHeight;
         u32 row_advance = (u32)(u16)sprite->bmheight;
         size_t src_bytes;
+        size_t src_row_bytes;
 
         if (src_draw_width == 0u)
         {
@@ -560,7 +576,10 @@ static s32 ndsSObjBuildWallpaperDecodeCache(
             continue;
         }
         if (src_draw_width > width) { src_draw_width = width; }
-        src_bytes = (size_t)src_width * src_height * sizeof(u16);
+        src_row_bytes = (combine_palette != NULL) ?
+            (((size_t)src_width + 1u) / 2u) :
+            ((size_t)src_width * sizeof(u16));
+        src_bytes = src_row_bytes * src_height;
         if (ndsRelocPointerRangeInLoadedFile(loaded, src, src_bytes) == FALSE)
         {
             return FALSE;
@@ -572,6 +591,39 @@ static s32 ndsSObjBuildWallpaperDecodeCache(
             u32 x;
             u16 *dst = &cache_pixels[(out_y + row) * cache_pitch];
 
+            if (combine_palette != NULL)
+            {
+                /* I/4b under a baked combine. Same index algebra as R0e's
+                 * specialized row -- one byte per PAIR of columns, `^ 4` on the
+                 * byte index for SP_TEXSHUF's odd rows, `^ 3` word swizzle --
+                 * and proven by `check_sprite_lerp_exact.py`. Every palette
+                 * entry has bit 15 set, so every pixel is opaque and the census
+                 * below reaches width*height, which is exactly the condition
+                 * `ndsSObjGetOpaqueWallpaperCache` requires before it will use a
+                 * destination-driven last-writer mapping. Runs ONCE per scene. */
+                const u8 *src_i4 = (const u8 *)src;
+                size_t row_base = (size_t)row * src_row_bytes;
+                size_t byte_xor = ((is_texshuf != 0u) && ((row & 1u) != 0u)) ?
+                    4u : 0u;
+                u32 pairs = src_draw_width >> 1;
+                u32 pair;
+
+                for (pair = 0u; pair < pairs; pair++)
+                {
+                    u8 packed = src_i4[(row_base + (pair ^ byte_xor)) ^ 3u];
+
+                    dst[pair * 2u] = combine_palette[packed >> 4];
+                    dst[(pair * 2u) + 1u] = combine_palette[packed & 0x0fu];
+                }
+                if ((src_draw_width & 1u) != 0u)
+                {
+                    u8 packed = src_i4[(row_base + (pairs ^ byte_xor)) ^ 3u];
+
+                    dst[src_draw_width - 1u] = combine_palette[packed >> 4];
+                }
+                drawn_pixels += src_draw_width;
+                continue;
+            }
             for (x = 0u; x < src_draw_width; x++)
             {
                 u16 color = ndsStartupLogoConvertRgba16(
@@ -620,6 +672,8 @@ static s32 ndsSObjBuildWallpaperDecodeCache(
     sNdsSObjWallpaperDecodeCache.texshuf = is_texshuf;
     sNdsSObjWallpaperDecodeCache.source_drawn_pixels = drawn_pixels;
     sNdsSObjWallpaperDecodeCache.opaque_pixels = opaque_pixels;
+    sNdsSObjWallpaperDecodeCache.combine_baked =
+        (combine_palette != NULL) ? 1u : 0u;
     gNdsSObjWallpaperCacheBuildCount++;
     gNdsSObjWallpaperCacheWidth = width;
     gNdsSObjWallpaperCacheHeight = height;
@@ -701,41 +755,104 @@ static s32 ndsSObjDrawOpaqueWallpaperCache(
     return TRUE;
 }
 
+/* Two wallpapers reach this cache, and they are told apart by format rather than
+ * by scene, so nothing here has to know which scene is running.
+ *
+ *   Dream Land battle: RGBA/16b, 44 bitmaps, bmheight 5, bmHreal 6, no combine.
+ *   VS Results:        I/4b, 9 bitmaps, under the prim/env combine, which the
+ *                      decode bakes into sixteen palette entries (R0e).
+ *
+ * Both are 300x220. Returning a palette pointer through `out_combine_palette` is
+ * how the caller learns which one it got; the storage is the caller's, so this
+ * function stays free of state. */
+static s32 ndsSObjWallpaperIsResultsShape(const Sprite *sprite)
+{
+#if NDS_R2_RESULTS_AFFINE
+    return ((sprite != NULL) && (sprite->bmfmt == G_IM_FMT_I) &&
+            (sprite->bmsiz == G_IM_SIZ_4b) &&
+            ((u32)(u16)sprite->nbitmaps == 9u) &&
+            ((u32)(u16)sprite->width == 300u) &&
+            ((u32)(u16)sprite->height == 220u)) ? TRUE : FALSE;
+#else
+    (void)sprite;
+    return FALSE;
+#endif
+}
+
+static s32 ndsSObjWallpaperCombinePaletteFor(
+    const SObj *sobj, const Sprite *sprite, u16 *storage)
+{
+    if ((sobj != NULL) && (ndsSObjWallpaperIsResultsShape(sprite) != FALSE))
+    {
+        u32 nibble;
+
+        for (nibble = 0u; nibble < 16u; nibble++)
+        {
+            storage[nibble] = ndsSpriteLerpPrimEnv(sobj, (u8)(nibble * 17u));
+        }
+        return TRUE;
+    }
+    (void)storage;
+    return FALSE;
+}
+
 static s32 ndsSObjGetOpaqueWallpaperCache(
     const NDSRelocLoadedFile *loaded, const Sprite *sprite,
     u32 scale_x_q16, u32 scale_y_q16, u32 scratch_pixels,
-    u16 **out_cache_pixels, u32 *out_cache_pitch)
+    u16 **out_cache_pixels, u32 *out_cache_pitch,
+    const u16 *combine_palette)
 {
     u16 *cache_pixels;
     u32 cache_pitch = 0u;
     u32 cache_height = 0u;
     u32 platform_epoch = 0u;
     u32 layout_fingerprint;
+    u32 shape_ok;
 
     if (out_cache_pixels != NULL) { *out_cache_pixels = NULL; }
     if (out_cache_pitch != NULL) { *out_cache_pitch = 0u; }
     cache_pixels = ndsPlatformGetOriginalSpriteDecodeCache(
         &cache_pitch, &cache_height, &platform_epoch);
     if ((cache_pixels == NULL) || (loaded == NULL) ||
-        (loaded->asset_id != NDS_RELOC_ASSET_STAGE_DREAM_LAND) ||
         ((u32)(u16)sprite->width != 300u) ||
-        ((u32)(u16)sprite->height != 220u) ||
-        ((u32)(u16)sprite->nbitmaps != 44u) ||
-        ((u32)(u16)sprite->bmheight != 5u) ||
-        ((u32)(u16)sprite->bmHreal != 6u) ||
-        (sprite->bmfmt != G_IM_FMT_RGBA) ||
-        (sprite->bmsiz != G_IM_SIZ_16b))
+        ((u32)(u16)sprite->height != 220u))
+    {
+        return FALSE;
+    }
+    if (combine_palette != NULL)
+    {
+        /* The Results wallpaper. Its asset is whatever mnVSResultsMakeWallpaper
+         * loaded, so the shape -- not an asset id -- is the contract. */
+        shape_ok = (((u32)(u16)sprite->nbitmaps == 9u) &&
+                    (sprite->bmfmt == G_IM_FMT_I) &&
+                    (sprite->bmsiz == G_IM_SIZ_4b)) ? 1u : 0u;
+    }
+    else
+    {
+        shape_ok = ((loaded->asset_id == NDS_RELOC_ASSET_STAGE_DREAM_LAND) &&
+                    ((u32)(u16)sprite->nbitmaps == 44u) &&
+                    ((u32)(u16)sprite->bmheight == 5u) &&
+                    ((u32)(u16)sprite->bmHreal == 6u) &&
+                    (sprite->bmfmt == G_IM_FMT_RGBA) &&
+                    (sprite->bmsiz == G_IM_SIZ_16b)) ? 1u : 0u;
+    }
+    if (shape_ok == 0u)
     {
         return FALSE;
     }
     layout_fingerprint = ndsSObjWallpaperLayoutFingerprint(
         loaded, sprite->bitmap, (u32)(u16)sprite->nbitmaps);
-    if (ndsSObjWallpaperCacheKeyMatches(
-            loaded, sprite, platform_epoch, layout_fingerprint) == FALSE)
+    /* A cache built for one of the two wallpapers must not be reused for the
+     * other, and the key alone cannot tell them apart on a scene where both
+     * shapes could hash the same -- so the bake flag is part of the match. */
+    if ((ndsSObjWallpaperCacheKeyMatches(
+             loaded, sprite, platform_epoch, layout_fingerprint) == FALSE) ||
+        (sNdsSObjWallpaperDecodeCache.combine_baked !=
+         ((combine_palette != NULL) ? 1u : 0u)))
     {
         if (ndsSObjBuildWallpaperDecodeCache(
                 loaded, sprite, cache_pixels, cache_pitch, cache_height,
-                platform_epoch, layout_fingerprint) == FALSE)
+                platform_epoch, layout_fingerprint, combine_palette) == FALSE)
         {
             sNdsSObjWallpaperDecodeCache.valid = FALSE;
             return FALSE;
@@ -773,6 +890,7 @@ static void ndsSObjWallpaperPublishDrawTicks(u32 draw_start)
 }
 
 static u32 ndsSObjDrawCachedWallpaper(
+    const SObj *sobj,
     const NDSRelocLoadedFile *loaded, const Sprite *sprite,
     u16 *preview, u32 preview_pitch, u32 preview_width, u32 preview_height,
     s32 origin_x, s32 origin_y, u32 scale_x_q16, u32 scale_y_q16)
@@ -781,10 +899,14 @@ static u32 ndsSObjDrawCachedWallpaper(
     u32 cache_pitch;
     u32 draw_start;
     u16 *source_x_map;
+    u16 combine_palette[16];
+    const u16 *palette =
+        (ndsSObjWallpaperCombinePaletteFor(sobj, sprite, combine_palette) !=
+         FALSE) ? combine_palette : NULL;
 
     if (ndsSObjGetOpaqueWallpaperCache(
             loaded, sprite, scale_x_q16, scale_y_q16, preview_width,
-            &cache_pixels, &cache_pitch) == FALSE)
+            &cache_pixels, &cache_pitch, palette) == FALSE)
     {
         return 0u;
     }
@@ -1362,11 +1484,27 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     u32 pixel_count;
     s32 origin_x;
     s32 origin_y;
+    u16 combine_palette[16];
+    const u16 *palette = NULL;
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
 #endif
 
     ndsPlatformFastWallpaperRecordSoftwareDraw();
+
+    /* A combining wallpaper used to be refused outright, because the prim/env
+     * lerp is per-pixel work that the opaque cache has no way to represent.
+     * It does now: the lerp only ever reads the source intensity, so for I/4b
+     * the whole combine collapses to sixteen colours that can be baked into
+     * the cache once. Admit `combine_mode != 0` exactly when that bake is
+     * available, and keep refusing every other combining shape. */
+    if ((sobj != NULL) && (combine_mode != 0u) &&
+        (ndsSObjWallpaperCombinePaletteFor(sobj, &sobj->sprite,
+                                           combine_palette) != FALSE))
+    {
+        palette = combine_palette;
+        combine_mode = 0u;
+    }
 
     if ((sobj == NULL) || (combine_mode != 0u))
     {
@@ -1423,7 +1561,7 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     if (ndsSObjGetOpaqueWallpaperCache(
             loaded, sprite, scale_x_q16, scale_y_q16,
             NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS,
-            &cache_pixels, &cache_pitch) == FALSE)
+            &cache_pixels, &cache_pitch, palette) == FALSE)
     {
 #if NDS_RENDERER_M3_PHASE0_PROFILE
         NDS_RENDERER_PHASE05_FINISH(
@@ -1435,6 +1573,27 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     draw_start = cpuGetTiming();
     origin_x = (s32)sobj->pos.x;
     origin_y = (s32)sobj->pos.y;
+    if (palette != NULL)
+    {
+        /* Full-bleed the Results wallpaper. `ndsSObjDrawOpaqueWallpaperFinal`
+         * maps each of the 256 overlay columns into the 320-wide preview space
+         * (`preview_x = 1.25x`) and drops any column falling outside
+         * [origin_x, origin_x + width*scale). Dream Land sits at (0,0) so it
+         * covers every column; the Results wallpaper sits at (10,10), which
+         * leaves preview_x < 10 and >= 310 unmapped -- measured as an 8-pixel
+         * backdrop frame on all four sides, since 10/1.25 = 8.
+         *
+         * That letter-box is what the mapper is specified to do, and it is not
+         * what the software compositor shows: it consumes the offset by
+         * cropping to the content, so the source covers the screen. Match that
+         * by mapping the whole preview onto the whole source -- origin 0, and a
+         * scale of preview/source per axis. Both land above 1<<16, which the
+         * cache's own last-writer precondition requires. */
+        origin_x = 0;
+        origin_y = 0;
+        scale_x_q16 = (320u << 16) / sNdsSObjWallpaperDecodeCache.width;
+        scale_y_q16 = (240u << 16) / sNdsSObjWallpaperDecodeCache.height;
+    }
     if (ndsSObjWallpaperFinalKeyMatches(
             loaded, overlay_epoch, origin_x, origin_y,
             scale_x_q16, scale_y_q16, combine_mode) != FALSE)
@@ -1645,7 +1804,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
     if (cache_wallpaper != 0u)
     {
         drawn_pixels = ndsSObjDrawCachedWallpaper(
-            loaded, sprite, preview, preview_pitch, preview_width,
+            sobj, loaded, sprite, preview, preview_pitch, preview_width,
             preview_height, origin_x, origin_y, scale_x_q16, scale_y_q16);
         if (drawn_pixels != 0u)
         {
@@ -2291,6 +2450,30 @@ static u32 ndsSObjFastWallpaperGetTransform(
     {
         return FALSE;
     }
+    if (ndsSObjWallpaperIsResultsShape(&wallpaper->sprite) != FALSE)
+    {
+        /* The Results seed is already fully mapped when it is drawn. Its 300x220
+         * source reaches the screen through `ndsSObjDrawCachedWallpaperFinal`'s
+         * destination-driven map, which walks the 256x192 destination and pulls
+         * the nearest source pixel -- so pos (10,10) and the 320x240 staging
+         * layer's 0.8 downscale are both consumed while producing the pixels.
+         * Handing the hardware the source transform on top of that applies it
+         * twice: measured as an 8-pixel backdrop frame on all four sides,
+         * 10 * 0.8, with the picture otherwise correct. The seed pixels ARE
+         * screen space, so the layer transform is identity.
+         *
+         * This has to be here rather than at the two call sites, because the
+         * per-frame `QueueTransform` retention test compares against the seed's
+         * transform. If they disagreed the layer would read as moved every
+         * frame and re-seed, which costs more than the software path it
+         * replaces -- the failure would look like "no win" rather than a
+         * visual bug. */
+        *origin_x = 0;
+        *origin_y = 0;
+        *scale_x_q16 = 1u << 16;
+        *scale_y_q16 = 1u << 16;
+        return TRUE;
+    }
     *origin_x = (s32)wallpaper->pos.x;
     *origin_y = (s32)wallpaper->pos.y;
     *scale_x_q16 = (u32)((scale_x * 65536.0F) + 0.5F);
@@ -2308,10 +2491,26 @@ static u32 ndsSObjFastWallpaperCaptureSeed(u32 combine_mode)
     u32 asset_identity;
     u32 draw_succeeded;
 
-    if ((sNdsFastWallpaperSeedSnapshotValid == FALSE) ||
-        (combine_mode != 0u))
+    if (sNdsFastWallpaperSeedSnapshotValid == FALSE)
     {
         return FALSE;
+    }
+    /* A combining wallpaper is admitted only when the combine can be baked
+     * into the cache's palette; `ndsSObjDrawCachedWallpaperFinal` decides that
+     * from the same snapshot and refuses everything else, so ask it here
+     * rather than duplicating the shape test. Refusing before `BeginSeed`
+     * keeps every other combining shape on exactly its old path. */
+    if (combine_mode != 0u)
+    {
+        u16 probe_palette[16];
+
+        if (ndsSObjWallpaperCombinePaletteFor(
+                &sNdsFastWallpaperSeedSnapshot,
+                &sNdsFastWallpaperSeedSnapshot.sprite,
+                probe_palette) == FALSE)
+        {
+            return FALSE;
+        }
     }
     asset_identity = (u32)(uintptr_t)
         sNdsFastWallpaperSeedSnapshot.sprite.bitmap;
@@ -2551,6 +2750,19 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
             ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
              (gobj->id == nGCCommonKindWallpaper) &&
              (wallpaper_combine == 0u)) ? TRUE : FALSE;
+#if NDS_R2_RESULTS_AFFINE
+        /* Results identifies its background by display link, not by `id`: the
+         * scene builds it through `mnVSResultsMakeWallpaper`, which never sets
+         * `nGCCommonKindWallpaper`. It also combines, so it is admitted here on
+         * the strength of the palette bake rather than `wallpaper_combine == 0`
+         * — the cache itself refuses any combining shape it cannot bake, and
+         * that refusal falls back to the generic blitter. */
+        if ((gSCManagerSceneData.scene_curr == nSCKindVSResults) &&
+            (gobj->dl_link_id == 26u))
+        {
+            cache_wallpaper = TRUE;
+        }
+#endif
     }
 
     if ((foreground != FALSE) && (sNdsSObjFrameForeground == FALSE))
@@ -2648,8 +2860,16 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 void ndsSObjPreviewBeginFrame(void)
 {
     ndsIFCommonNativeOamBeginFrame();
-    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+#if NDS_R2_RESULTS_AFFINE
+        && (gSCManagerSceneData.scene_curr != nSCKindVSResults)
+#endif
+        )
     {
+        /* Resetting per frame would re-seed the affine layer every frame and
+         * lose the whole point of owning it, so the two scenes that hold a
+         * retained wallpaper are exempt. Every other scene still starts from a
+         * clean layer, because it has no wallpaper to retain. */
         ndsPlatformFastWallpaperReset();
     }
     sNdsFastWallpaperSeedSnapshotValid = FALSE;

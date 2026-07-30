@@ -479,6 +479,14 @@ NDS_RENDER_ECONOMY_OWNER_MASK ?= 32
 NDS_RENDERER_BENCHMARK_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
 NDS_FAST_WALLPAPER_AFFINE ?= 0
+# R2-07 R2b. Admit the VS Results wallpaper to the same hardware-affine BG the
+# Dream Land battle wallpaper already uses. R0h measured the Results background
+# layer at 1,746,558 ticks/frame across four software stages -- blit, 153,600-byte
+# clear, 320x240 -> 256x192 downscale, 98,304-byte VRAM copy -- for a STATIC image.
+# The affine path decodes once into BG VRAM and then pushes four affine registers
+# per frame. Default off: it widens the decode cache that the battle wallpaper
+# depends on, so both arms get built and measured before it graduates.
+NDS_R2_RESULTS_AFFINE ?= 0
 # Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
 # open/read/flush/play while preserving all BGM state/counters so the rest of
 # the system believes BGM is active. Never set in a published target.
@@ -2168,6 +2176,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
 		echo '#define NDS_FAST_WALLPAPER_AFFINE $(NDS_FAST_WALLPAPER_AFFINE)'; \
+		echo '#define NDS_R2_RESULTS_AFFINE $(NDS_R2_RESULTS_AFFINE)'; \
 		echo '#define NDS_BGM_FALSIFIER_OFF $(NDS_BGM_FALSIFIER_OFF)'; \
 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \

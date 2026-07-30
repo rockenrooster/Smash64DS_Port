@@ -6856,6 +6856,7 @@ E0); branch `codex/task56-fighter-stripify` (6 commits).
 | R0g | 2026-07-30 | pair as one 32-bit store: **REVERT, -0.06%** |
 | R0h | 2026-07-30 | per-PC profile: **R0f's split was quantisation; compositor is 61.9%** |
 | R2a | 2026-07-30 | IA/8b glyph lerp -> table lookup: **KEEP, -200,133 ticks/frame, FPS flat** |
+| R2b | 2026-07-30 | Results background -> hardware affine BG: **-1,736,589 ticks/frame, 5.85 -> 8.43 FPS, default-off pending visual approval** |
 
 **Verdict: KEEP all three cuts.** The Results screen is not the battle frame and
 carries no tick instrument, so cost is measured in **VBlanks**: GDB stops freeze
@@ -6961,6 +6962,44 @@ past the ~14,000-tick floor. Kept per AGENTS.md's "keep every repeatable
 correctness-preserving gain and accumulate it toward the target" -- these ticks
 become FPS once R2 consumes the slack. Artifact
 `artifacts/task37-census/r207-r2a/`. See rule 12.
+
+**R2b consumed that slack, and the background layer is gone.** The owner pointed at
+the lever -- *"we already know affine backgrounds and native stages work well, can we
+just apply that to the results screen?"* -- so R2 became the hardware affine BG
+rather than the planned dirty-flag on the software compositor. Behind
+`NDS_R2_RESULTS_AFFINE ?= 0`; both arms built from identical source with the flag as
+the only difference.
+
+| arm | VB / 40 iters | VB/iter | ticks/frame | FPS | `I/4b 300x220` row |
+|--|--|--|--|--|--|
+| A control | 405 | 10.125 | 5,672,000 | 5.85 | 206 VB, 50.9% |
+| B candidate | 281 | 7.025 | 3,935,335 | **8.43** | **absent** |
+
+**-1,736,589 ticks/frame against the 1,746,558 R0h sized for the whole background
+layer -- 0.6%.** The census row vanishing is the direct proof: the wallpaper is not
+drawn in software at all any more, so blit, staging clear, downscale and VRAM copy all
+go together. Unlike R2a this is FPS, not banked slack, because it is 3.1 VBlanks --
+twice the idle reserve.
+
+Two things made it possible. The prim/env combine collapses to **sixteen palette
+entries** for I/4b (`ndsSpriteLerpPrimEnv` reads only the source intensity), which is
+what admits a *combining* wallpaper into a cache with no per-pixel representation; and
+the mapper had to be full-bled. `ndsSObjDrawOpaqueWallpaperFinal` maps overlay column
+x into 320-wide preview space as `preview_x = 1.25x` and drops anything outside
+`[origin_x, origin_x + width*scale)`. Dream Land is at (0,0); the Results wallpaper is
+at **(10,10)**, which blanked `x < 8` and `x > 247` -- a measured 8-pixel backdrop
+frame on all four sides, 10/1.25 = 8. Mapping the whole preview onto the whole source
+fixed it for free: 281 VBlanks before and after, because the extra seed pixels are
+written once per scene.
+
+Confirmed independently and quantum-free by `soak-freeze-watch.ps1` as a fixed
+wall-clock race: `gNdsVSResultsTickCount` 500 -> 780 (+56%), both arms NO-FREEZE, both
+`gNdsBattlePlayablePacingPresentedFrames = 2043` so the battle path is unperturbed.
+Latest green. **Not graduated** -- default-off pending the owner's visual approval on
+`artifacts/visibility/2026-07-30_r207-r2b-results-{control-software,candidate-affine}.png`
+per the render-fidelity doctrine. Artifacts
+`artifacts/performance/r207-r2b-{control,candidate}.json`. Results is now owned by the
+glyph blits and the two-layer commit: `IA/8b 24x37` alone is 85.1% of what remains.
 
 **R0f's per-interval split is WITHDRAWN.** It reported the 153,600-byte staging
 clear at 0.000 VBlanks over 82 hits; it is 830,978 ticks/frame, i.e. 1.48 VBlanks

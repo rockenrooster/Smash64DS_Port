@@ -243,7 +243,7 @@ total                                      ~1.12M
 
 Sequencing against in-flight P1 work:
 
-- **Bug #10 closes first.** Its root cause (DS facing/cull behavior on
+-FIXED **Bug #10 closes first.** Its root cause (DS facing/cull behavior on
   sub-pixel generated triangles vs the N64 rasterizer) is a hardware fact the
   R2 render generator must encode as data. It is one E0 build from a verdict.
 - **Particle banks** (P1 board row) land in Runtime 1; R2 Phase 7 consumes

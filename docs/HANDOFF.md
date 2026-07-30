@@ -10,7 +10,7 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
 | R2-06 | E0/E1/E2 + soak done; E4b/E6/E7/E11/**E13/E14/E15** refuted; **E8 finds the event, E10 + E17 both attribute it as SPREAD — no lever left inside the phase** |
-| R2-07 | **results-flow clause STARTED** — R0..R0h, Results 39.975 -> 10.250 VB/iter (3.9×), still 5.1× out; compositor owns 61.9%. Particle/audio/HUD clauses untouched. R2-08 needs the owner's retail play test |
+| R2-07 | **results-flow clause STARTED** — R0..R2b, Results 39.975 -> 7.025 VB/iter (5.7×), still 3.5× out; **R2b default-off pending visual approval**. Particle/audio/HUD clauses untouched. R2-08 needs the owner's retail play test |
 
 ## Where the gate stands — MISSED, and EVERY earlier number is DLDI-off
 
@@ -27,8 +27,7 @@ before this session, the 23,232 margin was a DLDI-off artifact, and R2-07's part
 was sized against it.** Read every pre-`3eb9ecdb` P95 as a lower bound.
 
 **Residual SD reads refuted without a build** (cache `Hits=79 Misses=2` of 81); `SRC +30,912` withdrawn.
-**Never compare an anim-cache pair frame-by-frame** — it shifts load timing, so runs diverge; order stats only.
-
+**Never compare an anim-cache pair frame-by-frame** — it shifts load timing; order stats only.
 ## OPEN P1: every over-gate frame is an ASSET-LOAD frame, and clean P95 MEETS THE GATE
 
 **E8.** The Task 75 ring marks the frames running `ndsRelocFinalizeLoadedFile`
@@ -64,52 +63,53 @@ on the shared `gSYTaskmanGeneralHeap`. Chain: damage-fall → aerial interrupt �
 `ftMainSetStatus(213)` → on-demand `FTMarioAnimAttackAirD` → `syTaskmanMalloc(3472)` → spin. **Do
 NOT make `syTaskmanMalloc` return NULL globally** — decomp callers do not all check.
 
-**One site, not two — the "second exhaustion at battle start" was MY regression.** A static arena
-is BSS, and BSS competes with the runtime `calloc` that sizes the heap: crossing the `0x130000`
-search floor (`diagnostics.c:7403`) costs **196,608 bytes in one step**. **The arena now lives on
-the taskman heap, 92,160 bytes, +32 bytes of BSS**, using 87,824. **Do NOT lower that floor** — it
-is a contract with the Task 36 replay guard (`nds_renderer.h:124-134`); my earlier authorization is
-retracted. **Both configurations complete a full match clean.** Four detector defects fixed, two
-verdicts withdrawn (it hashed the window **title**, where melonDS renders its FPS counter). **Sudden
-Death has its own issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit`
-needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
+**One site, not two — the "second exhaustion at battle start" was MY regression.** A static arena is
+BSS, and BSS competes with the runtime `calloc` that sizes the heap: crossing the `0x130000` search
+floor (`diagnostics.c:7403`) costs **196,608 bytes in one step**. **The arena now lives on the taskman
+heap, 92,160 bytes, +32 B of BSS**, using 87,824. **Do NOT lower that floor** — it is a contract with
+the Task 36 replay guard (`nds_renderer.h:124-134`); my earlier authorization is retracted. **Both
+configurations complete a full match clean.** Four detector defects fixed, two verdicts withdrawn (it
+hashed the window **title**, where melonDS renders its FPS counter). **Sudden Death has its own
+issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit` needs a
+`START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
 
-## OPEN P1: VS Results — R0c+R0d+R0e CUT 74.4%, bit-exact; 5.74M ticks/frame vs 1.12M
+## OPEN P1: VS Results — R0..R2b CUT 82.4%; 3.94M ticks/frame vs 1.12M. R2b NEEDS VISUAL APPROVAL
 
-**39.975 → 10.250 VB/iter (−16,651,648 ticks, 1.50 → 5.85 FPS, 3.9×), Latest green.** Three cuts, all
-bit-exact by proof (`check_sprite_lerp_exact.py`): **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits
-`blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`); **R0d** inlined the
-lerp; **R0e** 16-entry palette + ONE byte per PAIR of columns, 112 → 9 Thumb instr/px; **R2a** the IA/8b
-glyph arm indexes the same table, **−200,133 ticks/frame, FPS flat**. **R0f's `-Phases` split was an
-INSTRUMENT ARTIFACT; R0h's per-PC profile replaces it:** the "1.6M unexplained" never existed and the
-staging clear is not free. Per frame: **blit 903,483, commit/downscale 974,382, `memset` clears 830,978,
-`memcpy`→VRAM 557,126**; idle **830,260 = 1.48 VBlanks of SLACK, so nothing under ~830K can move FPS
-(rule 12 — R2a proved it: −200,133 work, +193,529 spin)**. **The four-stage compositor is ~3.27M = 58%,
-run TWICE per frame on STATIC content. NEXT = R2: stop recompositing it** (DS hardware BGs go unused).
+**39.975 → 7.025 VB/iter (1.50 → 8.43 FPS, 5.7×), Latest green.** Bit-exact cuts, proven by
+`check_sprite_lerp_exact.py`: **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits `blx __udivsi3` for a
+CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`); **R0d** inlined the lerp; **R0e** 16-entry
+palette, ONE byte per PAIR of columns, 112 → 9 Thumb instr/px; **R2a** the IA/8b glyph arm indexes
+that table, −200,133/frame, FPS flat (banked slack, rule 12).
+
+**R2b is the big one and it is DEFAULT-OFF awaiting the owner's eyes.** The owner named the lever
+(affine BGs), so R2 became the **hardware affine BG**, not the planned dirty-flag.
+`NDS_R2_RESULTS_AFFINE=1`: **10.125 → 7.025 VB/iter, −1,736,589 ticks/frame** vs the 1,746,558 R0h
+sized for the whole background layer (**0.6%**), and the `I/4b 300x220` census row is **gone**.
+Confirmed quantum-free by `soak-freeze-watch.ps1` as a wall-clock race: `gNdsVSResultsTickCount`
+**500 → 780 (+56%)**, both arms NO-FREEZE, both `PacingPresentedFrames = 2043` (battle unperturbed).
+**To graduate: show the owner `artifacts/visibility/2026-07-30_r207-r2b-results-{control-software,candidate-affine}.png`,
+then flip the default.** Two traps already paid for: the mapper **letter-boxes** any wallpaper whose
+origin is not (0,0), and a faster candidate lands on a **different scene tick** at the same wall
+clock (both now standing rules). **Results is now owned by the glyphs and the commit** (`IA/8b 24x37`
+alone is 85.1% of the remainder). R0f's `-Phases` split was an INSTRUMENT ARTIFACT, replaced by R0h's
+per-PC profile; idle was **830,260 = 1.48 VBlanks of slack**, which R2b's 3.1 VBlanks exceeded.
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 
 **The animation body is CLOSED — three levers, three refutations, zero builds spent.** 146,148/frame,
-86,819 stall, 46,148 over §4's 100K, none reachable here: **E13** pose-fewer-joints refuted, collision's
-ancestor closure is **f = 0.840** of live joints (8 render-only across both fighters; `cosmetic-only`
-EMPTY); **E14** reorder refuted at **~2,900** (Task 96: **10-15 ticks/32-byte line fill**, no prefetcher;
-`AObj` is **36 bytes**, N **221** — both memos wrong); **E15** shrink+Q12 unbuilt, ~16-22K straddling the
-floor, cubic emits **one `bl`** so its conversions are already inline. `gNdsFighterInit*` is
-proof-build-only, **0 by construction — never cite it**; census script reports the 60 Hz set.
+86,819 stall, 46,148 over §4's 100K, none reachable here: **E13** pose-fewer-joints refuted (collision's
+ancestor closure is **f = 0.840** of live joints, `cosmetic-only` EMPTY); **E14** reorder refuted at
+~2,900 (**10-15 ticks/32-byte line fill**, no prefetcher; `AObj` 36 B, N 221 — both memos wrong);
+**E15** unbuilt, ~16-22K straddling the floor. `gNdsFighterInit*` is proof-build-only, **0 by
+construction — never cite it**; the census script reports the 60 Hz set.
 
 **Every named load-frame candidate is sized and none closes the 40,448.** Of the 139,072/load-frame
-premium: **relocation 33,632**, **action-change re-add 11,313**, **E9's payload walks 21,788** (a subset
-of the relocation; P95 only reaches ~1,138,660, still 18,660 over, for a full offsets refactor).
-**~94,127/load frame (67.7%) has NO named owner.** E17 also killed E8's hypothesis: **16 load frames but
-only 7 whole-GObj re-adds**, so the load marker is *not* a proxy for "a fighter changed action". **Second
-time a premium here refused to concentrate** — E10 did the same frame-wide across 513 symbols. **Before a
-fourth bracket (status transition, hit/collision), ask whether R2-06 is the right phase: two independent
-attributions both say spread, which points at the switch plan's §3 structural change.**
-
-**Method trap:** `gNdsR2Fixup*`/`gNdsR2Add*` are **CUMULATIVE FROM BOOT — read twice and difference**. One
-read inverts it: `r206-e8-fixup-timing-128.json` shows sprites 88.1% where in-window it is 5.0% (one boot
-call is 21,353,728). `gcAddAnimJointAll` **contains** `gcAddDObjAnimJoint`, so summing them double-counts
-to ~274,000 and clears a threshold spuriously. `-Samples 1` fails the sampler's count check; 8 is the floor.
+premium: relocation 33,632, action-change re-add 11,313, E9's payload walks 21,788 (a relocation
+subset; a full offsets refactor still lands ~1,138,660, 18,660 over) — **~94,127 (67.7%) has NO named
+owner**, and E17 killed E8's hypothesis (16 load frames, only 7 whole-GObj re-adds, so the marker is
+*not* a proxy for "a fighter changed action"). **Second time a premium here refused to concentrate.**
+**Before a fourth bracket, ask whether R2-06 is the right phase** — two independent attributions both
+say spread, which points at the switch plan's §3 structural change. Derivations on the board.
 
 ## The one open fidelity item
 
@@ -127,9 +127,9 @@ has trip count **one**); **E53** `{base,size}` mirror (exact, still P95 **+11,58
 vertex data** (E48-E58); **the pose table** (E61, 2.62 MB resident vs 4 MB RAM); **`.text.hot`** (E66,
 +24,448); **R2-04 E57** hitboxes walk the live joint chain (`gmcollision.c:489`); **R2-06 E7** the
 fighter fallback (0/256) and Task 39 effects (4 sparks/924 frames); **R2-06 E6** the Horner fold
-(+7,168 P50, and E61 §5's other rows are suspect with it — a memo is a memory stream); **the
-Mario/Fox pointer arrays as index arithmetic** (E11, targets span 1.7 MB non-monotonically); and **an
-AObj pool** (E12, `syMallocSet` is a bump allocator, so they are already contiguous).
+(+7,168 P50, so E61 §5's other rows are suspect too — a memo is a memory stream); **the Mario/Fox
+pointer arrays as index arithmetic** (E11, targets span 1.7 MB non-monotonically); **an AObj pool**
+(E12, `syMallocSet` is a bump allocator); and **R2b's transform double-apply** (the mapper bakes it).
 
 ## Restart
 

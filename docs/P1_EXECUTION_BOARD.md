@@ -1741,6 +1741,67 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 R2b BUILT — the Results background moves to the hardware affine BG; the whole background layer disappears, −1,736,589 ticks/frame (2026-07-30)
+
+The owner asked the question that unblocked this: *"we already know affine backgrounds and native
+stages work well, can we just apply that to the results screen?"* Yes. R2's original plan was a
+dirty-flag on the software compositor; the affine BG deletes the layer instead of skipping it.
+
+Behind `NDS_R2_RESULTS_AFFINE ?= 0`. Both arms built from identical source, flag the only difference,
+`NDS_FAST_WALLPAPER_AFFINE=1` in both.
+
+| arm | VB / 40 iters | VB/iter | ticks/frame | Results FPS | `I/4b 300x220` census row |
+|---|---|---|---|---|---|
+| A control | 405 | 10.125 | 5,672,000 | 5.85 | 206 VB, 50.9% |
+| B candidate | **281** | **7.025** | **3,935,335** | **8.43** | **absent** |
+
+−3.1 VBlanks/iteration = **−1,736,589 ticks/frame**, against the 1,746,558 R0h sized for the whole
+background layer (blit 565,315 + clear 415,489 + downscale 487,191 + VRAM copy 278,563) — within
+**0.6%**. The layer is gone, not merely cheaper, and the census row vanishing is the direct proof: the
+wallpaper is no longer drawn in software at all.
+
+Confirmed on a second, independent, quantum-free instrument. `soak-freeze-watch.ps1` is a fixed
+wall-clock race, so it cannot be fooled by the VBlank flooring of standing rule 11: 2.5 minutes,
+`gNdsVSResultsTickCount` 500 → 780, **+56%**, both arms NO-FREEZE, both
+`gNdsBattlePlayablePacingPresentedFrames = 2043` — the battle path is provably unperturbed.
+
+What it took, and both parts were needed:
+
+1. The combine bakes. `ndsSpriteLerpPrimEnv` only ever reads the source intensity, so for I/4b the
+   whole prim/env combine collapses to **sixteen palette entries** baked into the decode cache once
+   per scene. That is what lets a *combining* wallpaper into a cache that had no way to represent
+   per-pixel work. Every entry has bit 15 set — proven at runtime, not assumed: the cache's
+   fully-opaque precondition is what admits the last-writer mapping, and the census row disappearing
+   means it passed.
+2. **Full-bleed the mapper.** `ndsSObjDrawOpaqueWallpaperFinal` maps each of the 256 overlay columns
+   into 320-wide preview space (`preview_x = 1.25x`) and drops any column outside
+   `[origin_x, origin_x + width*scale)`. Dream Land sits at (0,0) and covers everything; the Results
+   wallpaper sits at **(10,10)**, which left `preview_x < 10` and `>= 310` unmapped — an **8-pixel**
+   backdrop frame on all four sides, because 10/1.25 = 8. Fixed by mapping the whole preview onto the
+   whole source: origin 0, scale = preview/source per axis. Costs nothing — 281 VBlanks before and
+   after the fix, because the extra seed pixels are written once per scene.
+
+Two process notes, both nearly expensive:
+
+- My first fix went to `ndsSObjFastWallpaperGetTransform` on the theory that the *hardware* was
+  double-applying the offset. It changed nothing, because `ndsSObjDrawCachedWallpaperFinal` reads
+  `sobj->pos` directly at `sprite_preview_backend.c:1574` and bakes the offset into the seed pixels.
+  One build and one capture spent on a guess; the mapper's algebra was free to read and gave the
+  exact number. **Derive geometry from the mapper, not from measuring a screenshot.**
+- The control and candidate captures were taken at the same *wall clock* and therefore at different
+  *scene ticks*, because the candidate runs Results 44% faster. The candidate showed panels the
+  control had not revealed yet, which made a genuine 8-px regression look like it might be nothing
+  but a different animation frame. Ruled out by capturing the control at a matched scene state — it
+  is full-bleed both early and late. See standing rule 13.
+
+Status: **not graduated.** Default-off, Latest green, both checkers green, evidence at
+`artifacts/visibility/2026-07-30_r207-r2b-results-{control-software,candidate-affine,letterbox-defect}.png`
+and `artifacts/performance/r207-r2b-{control,candidate}.json`. Needs the owner's visual approval on
+the control/candidate pair per the render-fidelity doctrine, then the flag flips on.
+
+This is a correct prerequisite, **not** a route to 30 FPS on Results: 8.43 FPS still means the glyph
+blits and the two-layer commit now own the whole scene (`IA/8b 24x37` alone is 85.1% of what is left).
+
 ### R2-07 R2a BUILT — the glyph lerp is gone and the VBlank census reads EXACTLY FLAT, because the loop has 1.48 VBlanks of idle slack (2026-07-30)
 
 **Threshold pre-registered before the profile ran** (standing rule 7): KEEP if the per-PC profile puts

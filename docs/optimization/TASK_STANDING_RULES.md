@@ -2131,3 +2131,43 @@ P99 rose 59,200, and over-gate went 9 → 11** — the two added frames being lo
     function). Estimate the win *first*, then choose; running the cheap instrument on a
     change it structurally cannot measure costs a full run and returns a wrong verdict
     with a straight face.
+
+    **Third, there is a third instrument, and it is the cheapest of the three.**
+    `soak-freeze-watch.ps1` is a fixed wall-clock race, so counting scene ticks over an
+    identical run length is a throughput A/B with **no quantum at all** — nothing is
+    floored, nothing is redistributed, and idle slack shows up as fewer ticks rather
+    than as flatness. R2-07 R2b got `gNdsVSResultsTickCount` 500 → 780 (+56%) from it in
+    **three minutes**, versus twenty for the VBlank census, and the same run also proved
+    the battle path unperturbed (`gNdsBattlePlayablePacingPresentedFrames` 2043 in both
+    arms) and freeze-clean. Reach for it *before* the census when the question is "does
+    this do anything at all"; the census is for attributing the win to a call, not for
+    detecting one.
+
+## A faster candidate reaches a DIFFERENT scene tick at the same wall clock (2026-07-30, R2-07 R2b)
+
+A screenshot A/B taken at a fixed `-DelaySeconds` compares two different moments of the
+scene whenever the candidate changed the scene's speed. R2b made Results 44% faster, so at
+an identical 115 s the candidate had revealed the KOs/TKO/Pts/Place panels, the placement
+wreath and the player badges that the control had not reached yet. The two frames differed
+in about a dozen visible ways, exactly one of which was the actual regression.
+
+That cuts both ways and both are bad. A real defect can be dismissed as "just a different
+animation frame", and a real difference in *content* can be charged to the candidate when it
+is only the scene running ahead. R2b nearly went both ways in the same hour.
+
+**Match the scene STATE, not the wall clock.** Capture the control at a longer delay chosen
+so that the same panels/elements are on screen, and say in the write-up which visual
+milestone was used to pair them. If a defect is claimed, show it at *two* control states —
+R2b's 8-pixel frame was confirmed only once the control was demonstrated full-bleed both
+early (115 s) and late (180 s), which is what ruled out "the border appears later in the
+reveal". Frame-exact capture (`-ExactFirstFrame`) is not available on Results: the scene
+never increments `gNdsBattlePlayablePacingPresentedFrames`, so wall clock plus a named
+visual milestone is the whole toolkit.
+
+Related, from the same experiment: **derive geometry from the mapper's algebra, not by
+measuring pixels in a screenshot.** R2b's first fix went to
+`ndsSObjFastWallpaperGetTransform` on the theory that the hardware was double-applying the
+wallpaper offset. It changed nothing, because `ndsSObjDrawCachedWallpaperFinal` reads
+`sobj->pos` directly and bakes the offset into the seed pixels. Reading
+`ndsSObjDrawOpaqueWallpaperFinal` cost nothing and gave the exact answer — `preview_x =
+1.25x`, so `origin_x = 10` blanks `x < 8` — while the guess cost a full build and a capture.
