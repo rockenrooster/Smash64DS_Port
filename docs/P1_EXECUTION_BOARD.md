@@ -1746,10 +1746,34 @@ opening portraits, opening movie.
 applies here: 8.3 calls/frame against 19,413,481 ticks is 2.34M per call *on
 average*, and the split across those calls is unknown. One full-screen wallpaper
 plausibly dominates, in which case the I4 arm alone is the target and the other six
-format arms are noise. Bracket per call first. Also check before editing whether
-this function is live on the battle frame — the battle path prefers the OAM route and
-the Dream Land cache, but `gNdsSObjWallpaperCacheFallbackCount` proves the fallback
-exists, and the gate has only 23,232 ticks of margin.
+format arms are noise. Bracket per call first.
+
+**R0b — the battle-frame safety question is now ANSWERED, and the answer clears the change
+(2026-07-30).** R0a said to check whether `ndsDrawSObjIntoPreview` is live on the battle frame before
+editing it, because the gate had little margin. **It is not live — it executes zero instructions
+there**, so specializing it *cannot* regress the battle gate. Established without a build, at three
+levels of strength:
+
+- It is `static` (`sprite_preview_backend.c:1478`) and so absent from the E10 census's 846-symbol
+  table — but that table lists only *sampled* symbols out of the ELF's **12,828**, and 29 of the 846
+  read zero, so absence there is not by itself evidence.
+- `nm` confirms the symbol is genuinely **in** the census's own ELF, local, at `0x0203774c`
+  (`builds/build-task37-profile/…tickhud-hwtri.elf`) — so it was a candidate for sampling and was not
+  merged away.
+- **The raw 176 MB per-PC profile has ZERO rows in `[0x0203774c, 0x0203974c)`** — a generous 8 KiB
+  window covering the whole function — across all 128 frames. Not one instruction retired.
+
+So the battle path really does take the OAM route end to end: `ndsIFCommonNativeOamBeginFrame` 2,153,
+`ndsIFCommonNativeOamCommit` 394, `ndsPlatformFastWallpaperQueueTransform` 2,629,
+`grWallpaperCalcPersp` 2,057, `ndsDrawLayeredSObjFrame` 863 — **9,550 ticks/frame for the whole
+sprite/wallpaper family**, with the blitter itself never entered. *Parts* of
+`sprite_preview_backend.c` are live on the battle frame; the per-pixel blitter is not.
+**`gNdsSObjWallpaperCacheFallbackCount` does not contradict this** — it counts a different function
+(`ndsSObjDrawCachedWallpaper`'s probe), not this one.
+
+*Method worth reusing: "does this code run in configuration X" is answerable from a per-PC profile by
+address range alone, with no symbol table, no rebuild, and no reliance on a name — which sidesteps the
+recurring trap that `addr2line` and symbol tables name deleted and inlined functions.*
 
 ## R2-03 E63 SIZED — a flash-colour table is 2,164 bytes of ROM, and the `.rgba` field is confirmed normals (2026-07-29)
 
