@@ -62,13 +62,12 @@ A ~8,000 load-frame saving cannot survive relinking. What is left: one change bi
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
 Owner: *"lots of freeze bugs that seem random"* + *"sometimes hitting a shielded player causes a
-freeze"*. **One cause explains the class** (`artifacts/verification/freeze-soak/
-2026-07-29_202114-*`): `decomp/src/sys/malloc.c:30` is `while (TRUE);`, so the allocator **hangs
-instead of returning NULL** on exhaustion, and `ndsR2AnimCacheStore` was a *speculative* cache
-calling it from a gameplay frame on the shared `gSYTaskmanGeneralHeap`. Chain: damage-fall →
-aerial interrupt → `ftMainSetStatus(213)` → on-demand `FTMarioAnimAttackAirD` →
-`syTaskmanMalloc(3472)` → spin. **Do NOT make `syTaskmanMalloc` return NULL globally** — decomp
-callers do not all check.
+freeze"*. **One cause explains the class** (`artifacts/verification/freeze-soak/2026-07-29_202114-*`):
+`decomp/src/sys/malloc.c:30` is `while (TRUE);`, so the allocator **hangs instead of returning NULL**
+on exhaustion, and `ndsR2AnimCacheStore` was a *speculative* cache calling it from a gameplay frame
+on the shared `gSYTaskmanGeneralHeap`. Chain: damage-fall → aerial interrupt →
+`ftMainSetStatus(213)` → on-demand `FTMarioAnimAttackAirD` → `syTaskmanMalloc(3472)` → spin. **Do
+NOT make `syTaskmanMalloc` return NULL globally** — decomp callers do not all check.
 
 **One site, not two — the "second exhaustion at battle start" was MY regression.** A static arena
 is BSS, and BSS competes with the runtime `calloc` that sizes the heap: crossing the `0x130000`
@@ -76,9 +75,9 @@ search floor (`diagnostics.c:7403`) costs **196,608 bytes in one step**. **The a
 the taskman heap, 92,160 bytes, +32 bytes of BSS**, using 87,824. **Do NOT lower that floor** — it
 is a contract with the Task 36 replay guard (`nds_renderer.h:124-134`); my earlier authorization is
 retracted. **Both configurations complete a full match clean.** Four detector defects fixed, two
-verdicts withdrawn (it hashed the window **title**, where melonDS renders its FPS counter).
-**Sudden Death has its own issues** (owner). **No passive soak reaches match two** —
-`mnVSResultsCheckExit` needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
+verdicts withdrawn (it hashed the window **title**, where melonDS renders its FPS counter). **Sudden
+Death has its own issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit`
+needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
 
 ## OPEN P1: the VS Results screen is 21.9M ticks/frame, 1.5 FPS
 
@@ -89,22 +88,25 @@ cache is REFUTED** (R0a, a Dream Land specialization). Board has a third, wider 
 
 ## NEXT LEVER: the animation body is 146,148/frame and 59.4% of it is STALL (E12)
 
-A second instrument reproduces E60's 146,942 as **146,148/frame**: **59,329 instructions against
-86,819 ticks of STALL**, versus a 40,448 gate gap. This is **body** cost, so it moves P50 and P95
-together and **the E11 wall does not apply.** `ndsR2CubicValueFixed` (48,623, **1.73 cyc/insn**) is
-the only near-compute-bound member — and is exactly the one E64b/E65/E67 won on;
-`gcPlayDObjAnimJoint` (40,973) is **already in `.text.hot` and still 65.8% stall**, so its stall is
-**data, not code**. `.main` overall: **3.52 cyc/insn, 43.5% mem stall, ~28% real work.** **Every
-refuted candidate removed instructions or added data; none improved locality.**
+**146,148/frame** (reproducing E60's 146,942 by a second instrument): **59,329 instructions against
+86,819 of STALL**. **Switch plan §4 budgets animation at 100K, so it is 46,148 OVER — larger than the
+40,448 the gate is missed by** — one over-budget subsystem accounts for the whole miss, so no hunt for
+40,000 spread across the frame is needed. **Body** cost, so **the E11 wall does not apply.**
+`ndsR2CubicValueFixed` (48,623, **1.73 cyc/insn**) is the only near-compute-bound member and is the
+one E64b/E65/E67 won on; `gcPlayDObjAnimJoint` (40,973) is **already in `.text.hot` and still 65.8%
+stall** — **data, not code**. **Every refuted candidate removed instructions or added data; none
+improved locality** (see the refuted list).
 
-**Do NOT propose an AObj pool** — `syMallocSet` is a bump allocator, so they are already
-contiguous. 301x32 B = 9,632 B against a 4 KB dcache, and 86,819 stall implies order 139 KB touched
-per frame: the working set is the whole animation graph, 30x the cache. **The only lever with the
-right shape is touching fewer bytes.** The walk runs **twice per presented frame**
-(`UPDATES_PER_PRESENT = 2`) and PROJECT_GOAL permits 30 Hz poses — order **73,000** — **but E57 says
-hitboxes read the live joint chain, so halving it is a gameplay change** until the collision-read
-update is split from the render-only one. Board §"R2-06 E12" has the per-symbol table. Still
-standing: collision under 4,000, cubic is 99.6% of the animation float, *layout* route refuted.
+**E13 — the switch plan prescribes the fix and FORBIDS the shortcut.** Do **not** halve the shared
+walk: §3.5 says *"do not begin by compromising the simulation"*, keeping **gameplay 60 Hz / visual
+pose 30 Hz**; §3.6 mandates the split — the renderer gets *"a compact generated pose"* and *"they must
+not share one expensive runtime representation"*. **The 146,148-tick walk IS that forbidden shared
+representation**, and giving the renderer its own pose is R2-04's own title (E6: E5 paid down
+loading, not pose). Collision is **hard-bounded at 15 joints** —
+`attack_colls[4]` + `damage_colls[11]` (`fighter.h:3141/3148`) — of ~25 live, and the parse/play walk
+is **unconditional**, so the remainder is recoverable. **E13 owes the ancestor-chain union**; start
+with the free half — `ndsFighterMarioFoxRecordDamageCollShell` already counts live hurtboxes and
+discards it (`reloc_backend_fighter_model.c:2513`). Collision itself is still under 4,000.
 
 ## The one open fidelity item
 
@@ -120,15 +122,14 @@ standing: collision under 4,000, cubic is 99.6% of the animation float, *layout*
 
 ## Refuted this cycle — do not re-derive
 
-Each is refuted by measurement, not opinion. **E51** `line_id` table (`YakumonoCount = 1`, so a
-64x4-shaped loop has trip count **one**); **E53** `{base,size}` mirror (exact, still P95 **+11,584**);
-**the flash as vertex data** (E48-E58); **the pose table** (E61, 2.62 MB resident vs 4 MB RAM);
-**`.text.hot`** (E66, +24,448); **R2-04 E57** hitboxes walk the live joint chain
-(`gmcollision.c:489`); **R2-06 E7** the fighter fallback (0/256) and Task 39 effects (4
-sparks/924 frames); **R2-06 E6** the Horner fold (+7,168 P50, and E61 §5's other rows are suspect
-with it — a memo is a memory stream); **the Mario/Fox pointer arrays as index arithmetic** (E11,
-targets span 1.7 MB non-monotonically); and **an AObj pool** (E12, `syMallocSet` is a bump
-allocator, so they are already contiguous).
+All by measurement, not opinion. **E51** `line_id` table (`YakumonoCount = 1`, so a 64x4-shaped loop
+has trip count **one**); **E53** `{base,size}` mirror (exact, still P95 **+11,584**); **the flash as
+vertex data** (E48-E58); **the pose table** (E61, 2.62 MB resident vs 4 MB RAM); **`.text.hot`** (E66,
++24,448); **R2-04 E57** hitboxes walk the live joint chain (`gmcollision.c:489`); **R2-06 E7** the
+fighter fallback (0/256) and Task 39 effects (4 sparks/924 frames); **R2-06 E6** the Horner fold
+(+7,168 P50, and E61 §5's other rows are suspect with it — a memo is a memory stream); **the
+Mario/Fox pointer arrays as index arithmetic** (E11, targets span 1.7 MB non-monotonically); and **an
+AObj pool** (E12, `syMallocSet` is a bump allocator, so they are already contiguous).
 
 ## Restart
 
@@ -146,5 +147,4 @@ published one is** (owner, 2026-07-22), flag-identical. `-j`/`MAKEFLAGS` rules a
 generated `.inc` files are gitignored and only `build.ps1` regenerates them. Preserve canonical
 mode 163, renderer mode 9, mip 0, static texture residency, source countdown, Dream Land water at
 source frame 0, Task 16 `1/1/1`. Do not edit `decomp/`. **Bug #10 is FIXED and folded in** —
-`06992f10812`, cherry-picked from `2cbc6189d15`, with a host fixture, a structural pin and the
-`pause_under20` oracle.
+`06992f10812` (from `2cbc6189d15`), with a host fixture, a structural pin, and the `pause_under20` oracle.

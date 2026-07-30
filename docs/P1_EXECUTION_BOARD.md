@@ -628,6 +628,19 @@ evidence set, `artifacts/task37-census/r206-e10/census.json`, whole 128-frame wi
 different instrument, which is the strongest confirmation that figure has had. **86,819 ticks per
 frame of it is stall** — the family executes 59,329 instructions and waits for 86,819 cycles.
 
+**Against the switch plan's own frozen budget, this is the whole gate miss.** §4 allots **100K to
+"fighter visual pose / animation"** (and a separate 150K to "60 Hz gameplay core, two logical
+ticks"). Animation measures **146,148, i.e. 46,148 OVER budget — larger than the 40,448 the gate is
+missed by.** So the milestone does not need a hunt for 40,000 spread across the frame: **bringing
+one over-budget subsystem back to its declared number clears the gate with ~5,700 to spare.** That
+is §3.1 "design backwards from the budget" applied literally, and it is the first time this campaign
+has had a single subsystem that accounts for the entire miss.
+
+Note the budget lines also *require* the §3.6 split: 146,148 currently conflates the visual pose
+with the gameplay joint work that collision reads, and the plan charges those to two different
+lines. Attributing the gameplay share to the 150K gameplay-core line is part of the work, not an
+accounting trick — it is how the two budgets in §3.2 are supposed to be read.
+
 **The pattern across the whole campaign now has one explanation.** `ndsR2CubicValueFixed` is the
 only member near compute-bound at 1.73 cyc/insn, and it is exactly the one E64b/E65/E67/E69
 successfully optimized — fixed-point arithmetic wins on a compute-bound kernel. Everything that
@@ -677,10 +690,50 @@ skeleton — it is **the ancestor chains of whichever joints the live hitboxes n
 of the same helper are effects/items spawn positions (`ftparam.c:1795/1890`, `itmain.c:332/458`,
 `lbcommon.c:1469`), which are not gate-critical.
 
-**What E13 still owes before anything is built:** the count of distinct `joint_id` values Mario's
-and Fox's movesets actually use, and the union of their ancestor chains, as a fraction of the ~25
-joints per fighter. That is asset data, not source, so it needs either the moveset tables or a
-one-run probe — and per the rule above it must be counted, not estimated.
+**E13 step 1b — the collision joint set is HARD-BOUNDED at 15, by struct size.** `FTStruct` carries
+`FTAttackColl attack_colls[4]` and `FTDamageColl damage_colls[11]` (`include/ft/fighter.h:3141`,
+`:3148`), so **at most 15 joints per fighter can be collision-read at once**, against
+`nFTPartsJointNumMax = 37` slots and ~25 live (E10's 100.8 parse calls/frame over 2 fighters x 2
+logical updates). The hitbox four are live only while attacking; the hurtbox eleven persist. Joint
+ids reach the collision through the animation script, not a C table —
+`attack_coll->joint_id = ftParamGetJointID(fp, ftMotionEventCast(ms, FTMotionEventMakeAttack1)->joint_id)`
+(`ftmain.c:222`) — with the same shape for effects (`:426`), hit status (`:459`) and damage colls
+(`:477`).
+
+**The switch plan already prescribes the fix, and forbids the shortcut.** §3.5 is explicit: *"Do
+not begin by compromising the simulation: 30 Hz gameplay creates correctness risk across one-frame
+hitboxes, collision crossings, landing, shields, grabs, input timing, and CPU behavior."* Its rate
+table keeps **gameplay mechanics at 60 Hz** and puts **visual fighter pose at 30 Hz**. §3.6: *"The
+renderer must never require render skeleton == gameplay skeleton... the renderer consumes a compact
+generated pose evaluated at presentation rate. They may share source data; they must not share one
+expensive runtime representation."* **The 146,148-tick shared walk IS that forbidden single
+representation.** So E13 is not "halve the rate" — it is "give the renderer its own pose", which is
+R2-04's own title, and R2-04 E6 recorded that E5 paid down *loading* rather than pose.
+
+**What E13 still owes:** the union of the ancestor chains of the collision joints, as a fraction of
+the ~25 live. **Count it; do not estimate.** Note the parse/play walk is *unconditional* over every
+joint (`ftParamUpdateAnimKeys`'s `joint_limit` loop), which is what makes the render-only remainder
+recoverable at all.
+
+**E13 step 1c — the two halves of that number have different costs, and one is nearly free.**
+
+- **Hurtboxes are static per fighter and already counted.** They come from
+  `fp->attr->damage_coll_descs[]`, applied once at init (`reloc_backend_fighter_model.c:2479-2495`
+  and `ftparam.c:700-717`), not from move scripts. And the port **already computes the live count**:
+  `ndsFighterMarioFoxRecordDamageCollShell` (`:2498`) loops all `FTDAMAGECOLL_NUM_MAX` descs at
+  `:2513-2519` accumulating `count`, then **throws it away** — it is used only as `count != 0u` to
+  set a mask bit at `:2521`. Publishing it as a `volatile u32` per player is a **one-line addition to
+  an existing recorder**, no new probe and no new walk. Do that first; it is the cheapest half.
+- **Hitboxes are dynamic and do need a probe.** `ftParamGetJointID` (`ftparam.c:534-541`) is a
+  passthrough apart from `-2 → attr->joint_itemlight_id`, so script joint ids are *direct* indices
+  into `fp->joints[]` with no small per-fighter table to enumerate. The ids therefore only exist
+  inside the animation-script motion events, and the set actually exercised has to be logged from a
+  run.
+
+**Neither number is the ancestor-chain union yet** — both give the *leaf* joints. The union still
+needs the model's parent links, which the DObj tree carries at runtime. Expect the probe to walk
+`parent_gobj` from each leaf and OR the results into a 37-bit mask, which is also how it should be
+reported.
 
 **So the only lever with the right shape is touching fewer bytes per frame, not rearranging them.**
 `NDS_TASK106_UPDATES_PER_PRESENT = 2`, so this walk runs **twice per presented frame**;
