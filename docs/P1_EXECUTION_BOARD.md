@@ -1715,6 +1715,61 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 R0c BUILT — the Results frame is 43.6% cheaper, BIT-EXACT, and it was three library divisions per pixel (2026-07-30)
+
+**39.00 → 22.00 VBlanks per Results iteration, −17.00 (−43.6%).** At 560,190 ticks/VBlank that is
+**21,847,410 → 12,324,180, i.e. −9,523,230 ticks per frame**, and 1.53 → **2.72 FPS**. Measured by
+`scripts/census-vsresults-blit.ps1` (new), matched control and candidate over the same window
+(results tics 131..171, 41 iterations), ROMs `9B601111` → `DD9D59BE`, artifacts
+`r207-r0c-blit-split.json` and `r207-r0c-div-candidate.json`.
+
+**R0a's hypothesis was right and the per-call split proved it before anything was edited.** Eight
+blits per iteration: one **I/4b 300×220** wallpaper — 66,000 px, **90.6% of the pixels** — plus seven
+IA/8b text glyphs of 333–1,443 px. The wallpaper was **33.00 of the 39.00 VBlanks (84.8%)**, dead
+consistent across all 41 calls. **So the I4 arm alone was the target and the other six format arms
+were noise, exactly as R0a suspected.** *The window also independently reproduced R0's 39.0
+VBlanks/iteration to the second decimal, which validates the method before it is used for a delta.*
+
+**The cause was not the seven-way dispatch chain R0a expected. It was `/ 255u`.**
+`ndsSpriteLerpPrimEnv` runs once per blitted pixel and did three `/ 255u`, and **at `-Os` GCC does not
+turn a compile-time constant divisor into a reciprocal multiply — it emits `blx __udivsi3`,** because
+the call is smaller than the multiply-shift sequence. On a core with no divide instruction, at 66,000
+iterations, that size-for-speed trade is catastrophic. The fix is
+`NDS_SPRITE_DIV255(x) = (x * 257 + 257) >> 16`.
+
+**It is bit-exact, and the bound that makes it exact is the non-obvious part.** `intensity` and
+`inverse` are **complementary** (they sum to 255), so the numerator cannot reach 2·255² — its true
+maximum is **255² + 127 = 65,152**, inside the range where the identity holds. Above 65,535 it starts
+returning values one too high. `scripts/check_sprite_lerp_exact.py` proves all of it exhaustively —
+`div255` over every reachable numerator, the whole channel expression over all 16.7M
+(colour, env, intensity) triples, *and* that the failure cliff sits above the reachable range so the
+complementarity argument is load-bearing rather than incidental. **It fails if anyone widens
+`intensity` past `u8` or makes `inverse` independent of it.**
+
+**Verified in the ELF, not assumed:** `ndsSpriteLerpPrimEnv` went **118 → 100 bytes with
+`__udivsi3` ×3 → ×0**.
+
+**Two honest corrections to my own change, both smaller than the headline:**
+- **The `(nibble * 255u) / 15u → nibble * 17u` edits removed ZERO library calls.** 255/15 = 17 exactly
+  so they are bit-exact and the intent is now explicit, but GCC had already strength-reduced those —
+  the blitter's `__udivsi3` count is **2 before and 2 after**. The win is the lerp's three, not four.
+- **Those two remaining `__udivsi3` are not on this path at all.** Both are
+  `ndsSObjWallpaperLastSource` (`:619`) dividing by a runtime `scale_q16`, which is genuinely
+  irreducible — and it lives in the Dream Land wallpaper cache that R0a proved *rejects* the Results
+  wallpaper, so on Results they never execute.
+
+**Still 12.3M ticks/frame against a 1.12M budget, so R2-07's Results clause is not met** — this is one
+lever on an 11× overrun, not a fix. What it does establish is where the rest is: with three divisions
+per pixel gone the wallpaper is still 16.85 VBlanks/call, so **~9.4M ticks/frame is the remaining
+per-pixel work on 66,000 pixels** — the per-pixel `bl ndsSpriteLerpPrimEnv` call with its 8-register
+push/pop still stands (both call sites confirmed present at `2037d58`/`2037f08`), and R0a's dispatch
+hoist is still unbuilt. **Next: inline the lerp and specialize the I4 loop; the OAM-path and two-layer
+questions remain untouched and are still the structural answer.**
+
+*Generalises beyond this scene: `-Os` emitting `__udivsi3` for constant divisors is a whole-repo
+hazard, not a Results one. Any `/` by a constant inside a per-pixel, per-vertex or per-joint loop is
+suspect, and the check is one `objdump | grep __udivsi3` over the function.*
+
 ### R0a — one candidate REFUTED by reading, and a third that outranks both (2026-07-29)
 
 **"Also ungate the wallpaper cache for Results" is REFUTED, no build needed.** I had
@@ -1774,6 +1829,28 @@ sprite/wallpaper family**, with the blitter itself never entered. *Parts* of
 *Method worth reusing: "does this code run in configuration X" is answerable from a per-PC profile by
 address range alone, with no symbol table, no rebuild, and no reliance on a name — which sidesteps the
 recurring trap that `addr2line` and symbol tables name deleted and inlined functions.*
+
+**R0b also confirms R0a's CI-scan claim and sharpens it in two ways (read-only).** The scan is real:
+`:1682-1700` walks **every byte** of `src_bytes` to compute `ci_max_index`, and its *only* downstream
+consumer is the palette bounds check at `:1701-1706` and the single boolean `ci_palette_ready` it sets
+(`:1806`, `:1829`). **An O(src_bytes) scan that yields one bit, on immutable asset data.** Two
+corrections to how R0a scoped it:
+
+- **It is per-BITMAP, not per-frame.** `ci_max_index` is declared at `:1620`, *inside* the
+  `for (bitmap_index = 0; …)` loop opened at `:1603`, and zeroed each iteration — so a sprite with
+  `nbitmaps = n` pays *n* full scans per call per frame. For scale, the Dream Land wallpaper the cache
+  path recognises carries **44** bitmaps.
+- **But it is NOT on Results' dominant path.** The gate is `sprite->bmfmt == G_IM_FMT_CI`, and the
+  Results wallpaper reaches the blitter through the **I4** branch (R0a). So this cut cannot be part of
+  the Results fix — it pays in the CI scenes (title, opening portraits, and whichever Results sprites
+  are CI rather than I4). **Do not bundle it with the Results work and do not credit it against
+  R2-07's gate.**
+
+The fix shape follows `PROJECT_GOAL.md`'s "compute once, not every frame": the max index is a property
+of immutable asset bytes, so it belongs computed at load/relocation time and stored, not rederived per
+bitmap per frame. Do **not** instead validate against the format maximum (15 for 4b, 255 for 8b) — that
+is conservative in the wrong direction and would reject sprites whose palette is legitimately shorter
+than the format allows, which is a behaviour change rather than an optimisation.
 
 ## R2-03 E63 SIZED — a flash-colour table is 2,164 bytes of ROM, and the `.rgba` field is confirmed normals (2026-07-29)
 

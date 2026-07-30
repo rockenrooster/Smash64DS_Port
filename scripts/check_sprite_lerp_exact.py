@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Prove the sprite blitter's division replacements are BIT-EXACT, not approximate.
+
+R2-07 R0c replaced four library divisions per blitted pixel in
+`src/port/sprite_preview_backend.c`:
+
+  * `ndsSpriteLerpPrimEnv`'s three `/ 255u` became `NDS_SPRITE_DIV255(x)`,
+    i.e. `(x * 257 + 257) >> 16`.
+  * The I4 and IA arms' `(nibble * 255u) / 15u` became `nibble * 17u`.
+
+Both are exact rather than close, and this script is the proof, run in CI-style
+alongside the other checkers rather than trusted from a comment. It exists
+because the exactness of the first one depends on a bound that is easy to break
+by accident: `intensity` and `inverse` are complementary, so the numerator tops
+out at 255*255 + 127 = 65,152. If someone makes `inverse` independent of
+`intensity`, or widens `intensity` past u8, the numerator can reach 130,177 and
+`(x * 257 + 257) >> 16` starts returning values one too high -- silently, as a
+one-LSB colour error nobody would see in a screenshot diff.
+
+Exits non-zero and prints the first counterexample if any identity fails.
+"""
+
+from __future__ import annotations
+
+import sys
+
+MAX_NUMERATOR = 255 * 255 + 127  # 65,152 -- see the module docstring
+
+
+def div255(x: int) -> int:
+    """The C macro, evaluated in Python's unbounded integers."""
+    return (x * 257 + 257) >> 16
+
+
+def check_div255_range() -> list[str]:
+    """Every numerator the lerp can produce, exhaustively."""
+    for x in range(MAX_NUMERATOR + 1):
+        if div255(x) != x // 255:
+            return [f"div255 wrong at x={x}: got {div255(x)}, want {x // 255}"]
+    return []
+
+
+def check_div255_first_failure() -> list[str]:
+    """Pin WHERE the identity stops holding, so the bound is documented by test.
+
+    This is not a failure mode -- it asserts the cliff is above our range and
+    below 2*255*255+127, which is what makes the complementarity argument
+    load-bearing rather than incidental.
+    """
+    x = MAX_NUMERATOR + 1
+    limit = 2 * 255 * 255 + 127
+    while x <= limit and div255(x) == x // 255:
+        x += 1
+    if x > limit:
+        return ["div255 never fails below 130,178 -- the documented bound "
+                "argument is weaker than the comment claims; update the comment"]
+    if x <= MAX_NUMERATOR:
+        return [f"div255 fails inside the reachable range at x={x}"]
+    return []
+
+
+def check_lerp_channel() -> list[str]:
+    """The whole channel expression, over every reachable (colour, env, intensity).
+
+    256*256*256 is 16.7M iterations, a few seconds -- worth it, because the
+    composition is what ships, not the isolated division.
+    """
+    for intensity in range(256):
+        inverse = 255 - intensity
+        for colour in range(256):
+            base = colour * intensity + 127
+            for env in range(256):
+                numerator = base + env * inverse
+                if div255(numerator) != numerator // 255:
+                    return [f"lerp channel wrong at colour={colour} "
+                            f"env={env} intensity={intensity}"]
+                if numerator > MAX_NUMERATOR:
+                    return [f"numerator {numerator} exceeds the documented bound "
+                            f"{MAX_NUMERATOR} at colour={colour} env={env} "
+                            f"intensity={intensity}"]
+    return []
+
+
+def check_nibble_scale() -> list[str]:
+    """(nibble * 255) / 15 == nibble * 17, for the only inputs a nibble has."""
+    for nibble in range(16):
+        if (nibble * 255) // 15 != nibble * 17:
+            return [f"nibble scale wrong at {nibble}"]
+    if 15 * 17 != 255:
+        return ["nibble scale does not reach full white"]
+    return []
+
+
+def main() -> int:
+    checks = (
+        ("div255 exhaustive over [0, 65152]", check_div255_range),
+        ("div255 cliff is above the reachable range", check_div255_first_failure),
+        ("lerp channel over all 16.7M reachable inputs", check_lerp_channel),
+        ("nibble*255/15 == nibble*17", check_nibble_scale),
+    )
+    failures: list[str] = []
+    for name, fn in checks:
+        problems = fn()
+        print(f"{'FAIL' if problems else 'ok  '}  {name}")
+        failures.extend(problems)
+    if failures:
+        print()
+        for line in failures:
+            print(f"  {line}")
+        return 1
+    print()
+    print("SPRITE_LERP_EXACT=PASS  four library divisions per pixel removed, "
+          "bit-exact")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

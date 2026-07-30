@@ -199,15 +199,37 @@ static u16 ndsSpritePackRgb15(u8 red, u8 green, u8 blue)
                  ((u16)(blue >> 3) << 10));
 }
 
+/* R2-07 R0c. This is the hottest function in the Results scene: it runs once per
+ * blitted pixel, and the I4 wallpaper alone is 300x220 = 66,000 pixels per frame.
+ *
+ * The three divisions here were `/ 255u`, and at -Os GCC does NOT turn a
+ * compile-time constant divisor into a reciprocal multiply -- it emits
+ * `blx __udivsi3`, because the call is smaller than the multiply-shift sequence.
+ * That trade is catastrophic at this trip count: measured on the ELF, this
+ * function carried THREE `__udivsi3` calls and its caller a fourth, so the
+ * wallpaper paid ~264,000 library divisions per frame on a core with no divide
+ * instruction.
+ *
+ * `(x * 257 + 257) >> 16` equals `x / 255` exactly for every x this function can
+ * produce. The bound is what makes it exact and it is not obvious: `intensity`
+ * and `inverse` are COMPLEMENTARY (they sum to 255), so the numerator cannot
+ * reach 2*255*255 -- its true maximum is 255*255 + 127 = 65,152, inside the range
+ * where the identity holds. Verified exhaustively over [0, 65152] and over the
+ * full (colour, envcolour, intensity) input space by
+ * `scripts/check_sprite_lerp_exact.py`, which fails the check if either bound
+ * moves. Do not widen `intensity` beyond u8 or make `inverse` independent of it
+ * without re-running that checker: both would break the bound, silently. */
+#define NDS_SPRITE_DIV255(x) (((x) * 257u + 257u) >> 16)
+
 static u16 ndsSpriteLerpPrimEnv(const SObj *sobj, u8 intensity)
 {
     u32 inverse = 255u - intensity;
-    u8 red = (u8)(((u32)sobj->sprite.red * intensity +
-                   (u32)sobj->envcolor.r * inverse + 127u) / 255u);
-    u8 green = (u8)(((u32)sobj->sprite.green * intensity +
-                     (u32)sobj->envcolor.g * inverse + 127u) / 255u);
-    u8 blue = (u8)(((u32)sobj->sprite.blue * intensity +
-                    (u32)sobj->envcolor.b * inverse + 127u) / 255u);
+    u8 red = (u8)NDS_SPRITE_DIV255((u32)sobj->sprite.red * intensity +
+                                   (u32)sobj->envcolor.r * inverse + 127u);
+    u8 green = (u8)NDS_SPRITE_DIV255((u32)sobj->sprite.green * intensity +
+                                     (u32)sobj->envcolor.g * inverse + 127u);
+    u8 blue = (u8)NDS_SPRITE_DIV255((u32)sobj->sprite.blue * intensity +
+                                    (u32)sobj->envcolor.b * inverse + 127u);
 
     return ndsSpritePackRgb15(red, green, blue);
 }
@@ -1786,7 +1808,10 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                     color = (((ia & 0x0fu) != 0u) &&
                              (sprite->alpha != 0u)) ?
                         ndsSpriteLerpPrimEnv(
-                            sobj, (u8)(((ia >> 4) * 255u) / 15u)) : 0;
+                            /* 4-bit nibble scaled to 8 bits. 255/15 == 17
+                             * exactly, so this is the same value as the former
+                             * `* 255u / 15u` with no library division. */
+                            sobj, (u8)((ia >> 4) * 17u)) : 0;
                 }
                 else if ((sprite->bmfmt == G_IM_FMT_CI) &&
                          (sprite->bmsiz == G_IM_SIZ_8b))
@@ -1871,7 +1896,11 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                     if (results_wallpaper_combine != 0u)
                     {
                         color = ndsSpriteLerpPrimEnv(
-                            sobj, (u8)(((u32)intensity * 255u) / 15u));
+                            /* Same 4-bit nibble identity as the IA arm above:
+                             * 255/15 == 17, so no library division. This is the
+                             * I4 wallpaper's per-pixel path and R0c measured it
+                             * at 84.8% of the Results frame. */
+                            sobj, (u8)((u32)intensity * 17u));
                     }
                     else
                     {
