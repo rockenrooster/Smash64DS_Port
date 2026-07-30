@@ -12192,7 +12192,22 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     /* Reset opens here. The bzeros a few lines down land in the memset symbol,
      * not this function's, so the E0 census cannot see them from the top-45
      * table -- memset is 38,393 ticks/frame across the whole program and
-     * nothing says how much of it is this. */
+     * nothing says how much of it is this.
+     *
+     * ANSWERED 2026-07-30 (R2-07 R4c) by sampling $lr at a memset breakpoint on
+     * the Results lab, 80 dynamic hits: HALF of every memset call in the scene
+     * comes from this function, and another 18.8% from
+     * ndsRendererAdapterBuildNativeMaterialSnapshot -- so memset's 8.80% of the
+     * Results frame is ~69% fighter-draw work and is NOT a separate subsystem
+     * to attack. Within this function the three bzeros below are only 15% of
+     * its memset traffic; 70% is two call sites in
+     * ndsFighterDLDrawResetTransientRendererStats (:4748), which clears the
+     * per-list proof/counter prefix once per part list per fighter per frame.
+     * That reset runs only when `detailed_output` is set, i.e. when the oracle
+     * is on -- and the stage draw already turns the oracle OFF around its own
+     * draw (reloc_backend_movement.c:13559) while the fighter draw leaves it
+     * on. Static `bl memset` counts cannot show any of this: 96 functions call
+     * memset and the hot ones are not the ones with the most call sites. */
     task91_phase_start = cpuGetTiming();
 #endif
     states = sNdsFighterDLAllDrawStates;

@@ -1781,6 +1781,47 @@ moves it — per-frame Results cost — is exactly what R2 owns. Second independ
 R2b. Instrument is permanent: six counters in `battleship_mnvsresults.c`, read by
 `soak-freeze-watch.ps1`, four timer reads per Results entry.
 
+### R2-07 R4c RE-BASELINED on the ARM renderer — memset is fighter-draw work, not a subsystem; the fighter draw runs with the oracle ON while the stage runs with it OFF (2026-07-30)
+
+First valid Results attribution in the campaign: every earlier census profiled a Thumb renderer (see
+R4e). Re-censused on the `-marm` build, 60 frames, 201,664,950 cycles:
+
+| symbol | % | note |
+| --- | --- | --- |
+| `ndsRendererExecuteNativeFighterRootHardware` | 17.03% | largest single symbol |
+| `memset` | 8.80% | 140 bytes of code |
+| `armWaitForIrq` | 7.62% | idle, not work (was 18.85% pre-R4e) |
+| `memcpy` | 6.45% | |
+| `ndsFighterMarioFoxDLAllDrawForSlot` | 6.44% | |
+| `ndsFighterMarioFoxVisitDLDrawCommand` | 4.93% | |
+| `__aeabi_lmul` | **absent** | was 7.79%; R4e removed it |
+
+`memset` + `memcpy` = 15.25% looked like a second lever beside the fighter draw. **It is not.** A
+`$lr` sample at a `memset` breakpoint (80 dynamic hits on the Results lab) attributes **50.0% to
+`ndsFighterMarioFoxDLAllDrawForSlot` and 18.8% to `ndsRendererAdapterBuildNativeMaterialSnapshot`** —
+both inside the fighter draw. So ~69% of memset is already inside `FTR`, and the fighter draw owns
+the frame even more completely than the 85.2% bracket says.
+
+**Static call-site counts would have sent this the wrong way.** 96 functions contain a `bl memset`
+and the ranking by *static* site count is not the ranking by *executed* calls — `ndsAudioFgmDiagnosticsReset`
+has 10 sites and never runs here. Dynamic `$lr` sampling is the method; it also answered a question
+the source had been carrying unanswered since Task 91 (`reloc_backend_renderer_dl.c:12192`: "memset
+is 38,393 ticks/frame across the whole program and nothing says how much of it is this"), and that
+comment now records the answer.
+
+Inside the fighter draw the offsets localise further: the three `bzero`s in the reset block are only
+15% of its memset traffic, while **70% is two call sites in
+`ndsFighterDLDrawResetTransientRendererStats` (`:4748`)**, which clears the *per-list proof/counter
+prefix* once per part list, per fighter, per frame.
+
+**The lead for the next R4c experiment.** That reset runs only when `detailed_output` is set, which
+is driven by `sNdsRendererHardwareNoOracle`. The **stage** draw already brackets its own draw with
+`ndsRendererHardwareSetNoOracle(TRUE)`/`(FALSE)` (`reloc_backend_movement.c:13559`); the **fighter**
+draw does not, so fighters render through the oracle path and pay its per-list proof-counter clearing
+on every frame of the shipped ROM. Whether the fighter draw can take the same no-oracle path the
+stage already takes is the question — it is a behavioural change to the render path, so it needs its
+own A/B plus a matched-tic visual pair, not a fold into this entry.
+
 ### R2-07 R4e GRADUATED — the Results lab built its renderer `-mthumb` while every battle ROM built it `-marm`. −553,188/tic (−24.5%), pixel-identical (2026-07-30)
 
 **This is an instrument defect that was reported as an optimization, and the correction matters more
