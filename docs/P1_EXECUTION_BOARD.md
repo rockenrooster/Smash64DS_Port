@@ -577,6 +577,23 @@ holding the payload with its table in OFFSET form and its script region already 
 restored by memcpy plus the cheap internal fixups, removes ~72% of this function. That is a
 real refactor of the boundary computation to work in offsets, not a small edit.
 
+#### The instrument is proven inert, and ROM SHA is NOT an identity check here
+
+`NDS_R2_RELOC_FIXUP_TIMING` touches a shipped source file, so it was verified rather than
+assumed. With the flag off: **no `gNdsR2Fixup*` symbol survives in the ELF**, and BSS is
+1,709,448 — exactly the known pre-instrument value. Flag on costs +744 text / +640 BSS.
+
+Then the flag-off ROM was re-measured over the same window and reproduces
+`r206-head-control-128` in **all eleven buckets identically** — P50 976,064, P95 1,160,448,
+mean 994,146, min 893,056, max 1,641,792, VBI 771/138/11/4, named 1,002,569.
+
+**Three distinct ROM hashes — `8F0CDAAC`, `1C1136BA`, `D9CF3781` — measure bit-identically.**
+So this build system does not produce a reproducible ROM hash for identical source (a
+container/timestamp field moves), and **`romSha256` in an artifact must not be used to decide
+whether two runs are comparable.** Use the measurement, the ELF symbol table, or the section
+sizes. This is the fourth independent confirmation that the harness itself has zero
+run-to-run noise.
+
 #### The ceiling on all of it, and where the gate lever actually is
 
 **The entire in-frame relocation is 21.5% of the load-frame premium, so no sub-optimization
