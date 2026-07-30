@@ -807,6 +807,8 @@ NDS_HOT_TEXT_SPECS := $(PROJECT_ROOT)/linker/ds9_hot_text.specs
 NDS_HOT_TEXT_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_hot_text.ld
 NDS_TASK32_DRAW_HOT_FRAGMENT := $(PROJECT_ROOT)/$(BUILD)/nds_task32_draw_hot.inc
 NDS_TASK39_HIT_SPARKS_INC := $(PROJECT_ROOT)/src/nds/generated/task39_hit_sparks.generated.inc
+NDS_PARTICLE_BANKS_INC := $(PROJECT_ROOT)/src/nds/generated/nds_particle_banks.generated.inc
+NDS_PARTICLE_BANKS_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_particle_banks.generated.h
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -1744,13 +1746,28 @@ $(NDS_TASK39_HIT_SPARKS_INC): \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb
 	python "$(PROJECT_ROOT)/scripts/generate_task39_hit_sparks.py"
 
+# R2-07: the packed EFCommon particle bank. The reachable-script set is derived
+# from the P1 effect seams in generate_task39_effect_census.py plus the bank's
+# own spawn graph, so both scripts and efmanager.c are prerequisites. The header
+# and the JSON report are committed; the .inc is a build product under the
+# gitignored src/nds/generated, which is why the ELF depends on it.
+$(NDS_PARTICLE_BANKS_INC): \
+		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
+		$(PROJECT_ROOT)/scripts/generate_task39_effect_census.py \
+		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
+		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb \
+		$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c
+	python "$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py"
+
+$(NDS_PARTICLE_BANKS_HEADER): $(NDS_PARTICLE_BANKS_INC)
+
 prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
 $(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
-	$(NDS_TASK32_DRAW_HOT_FRAGMENT)
+	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC)
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
 NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
