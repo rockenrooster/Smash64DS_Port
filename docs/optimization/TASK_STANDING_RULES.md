@@ -1869,3 +1869,45 @@ frozen on its boot screen. Two soak verdicts had to be withdrawn, one of them a
    means a dead ROM, so it now counts distinct colours to decide. Re-read the
    guards downstream of a fixed measurement; their premises may have been the
    defect.
+
+### Never fix a heap problem with a static buffer without pricing it against the heap (2026-07-29)
+
+The rule above — a speculative cache gets its own declared arena — was right, and
+the arena it got broke the game worse than the bug it fixed. The owner found it
+immediately: *"it never gets to the battle."*
+
+`gSYTaskmanGeneralHeap` is not a fixed region. `src/port/diagnostics.c:7403` sizes
+it at boot by `calloc`-ing downward from `0x150000` in `0x1000` steps, **floored at
+`0x130000`**, then dropping to a coarse list starting at `0x100000`. Static BSS is
+linked before that `calloc` runs, so every byte of a new static buffer is a byte the
+arena does not get — and crossing that floor costs **196,608 bytes in one step**,
+not the `0x1000` the loop's shape implies. A 131,072-byte arena took 237,568 bytes
+off the heap and left battle start 58,024 bytes short of a 116,752-byte request.
+
+1. **A static buffer is not free, and it is not even linear.** 131,072 bytes was
+   affordable in isolation — 1,286,144 − 131,072 still clears the 1,107,392 battle
+   start needs. It was the *cliff* that made it fatal. Look for the quantisation in
+   any allocator you are about to take memory from, not just the total.
+2. **The budget belongs to the tightest configuration, not the shipped one.** The
+   second attempt, 32 KiB, was sized against the shipped build's 40,960 of headroom
+   and overshot the tick-HUD build's 32,768 **by thirty-two bytes**, taking the
+   stress ROM down again. Price a shared static allocation against the build with
+   the least room, and subtract the counters that come with it.
+3. **`nm -S` proving the buffer linked is not proof it is affordable.** The first
+   verification here was "`sNdsR2AnimCacheArena` is 0x20000, no BSS overflow", and
+   the comment justifying it claimed a link failure would be the loud, safe outcome.
+   BSS did not overflow a link; it silently shrank a runtime arena two subsystems
+   away. **The measurement that mattered was `gNdsTaskmanArenaChosenSize`**, and it
+   is now read on every soak, freeze or clean, with a warning below the floor.
+4. **Prefer the heap you are protecting.** The correct home for a 91,104-byte
+   working set is one reservation out of the taskman arena at battle start: it costs
+   the boot-time search nothing, so it cannot cross the cliff, and a single bounded
+   up-front reservation is exactly the property the unbounded per-frame allocation
+   lacked. Static storage was the wrong instinct for a cache whose size is set by
+   measured game data.
+5. **Two constants with a contract between them and nothing tying them together
+   will drift.** That `0x130000` floor is also the Task 36 replay admission
+   threshold (`include/nds/nds_renderer.h:124-134`), written independently in two
+   files. Lowering the floor to "fix" the shortfall would have disabled a measured
+   render path in silence — a fix worse than the hang, and it was authorized before
+   the coupling was noticed.

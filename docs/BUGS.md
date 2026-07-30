@@ -1,30 +1,46 @@
 AI Agent should mark fixed items with FIXED prefix
--Camera shake during wind hazard not working. [FIXED - needs an eye check]
-  Root cause: efManagerQuakeMakeEffect was a weak stub that counted the request
-  and returned NULL (reloc_backend_compat_shims.c:12999). The source quake is the
-  ONLY driver of camera shake -- efManagerQuakeProcUpdate feeds the effect's
-  animated translate into gmCameraSetVelAt, which gmCameraApplyVel adds to the
-  look-at -- so returning NULL silenced every shake in the game, not just
-  Whispy's: the KO burst and wall damage too. It now calls the original whenever
-  the pieces it needs are compiled in (battleship_efmanager.c for the effect,
-  battleship_gmcamera.c for gGMCameraGObj, i.e.
-  NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE builds).
-  Verified: builds, Boundary green, and gNdsPupupuUpdateQuakeCount = 22 by frame
-  ~1208, so the path is live. NOT yet visually confirmed -- whether the shake
-  reads correctly is a presentation judgement and needs the owner's eye.
--Touching the bottom underneath the stage causes the fighters to float until horizontal position is no longer touching the stage. fighters should continue to fall instead of freezing vertical position. [FIXED - needs a play check]
-  Root cause: the floor-crossing kernel accepted PROXIMITY as a collision
-  instead of requiring motion THROUGH the surface, so mpProcessRunCeilCollision-
-  AdjNew's `translate->y += dist` clamp re-fired every frame and pinned the
-  fighter to the line. ndsMPFloorSegmentCrossesDownwardKernel is now
-  ndsMPFCSegmentCrossesKernel with a `ud` selector (+1 floor / -1 ceiling),
-  folding the sign the way mpCollisionGetFCCommon does; the two source tilt
-  functions (mpCollisionCheckFloorSurfaceTilt / ...CeilSurfaceTilt) differ only
-  by that sign, and the source line loops fold the same sign into their
-  flat-segment gate (vtdist_y < vpdist_y for floors, > for ceilings).
-  Verified: builds, Boundary green. NOT yet confirmed by actually walking under
-  the stage in a live match -- that is the symptom's own test and it needs a
-  play check.
+
+-Sometimes hitting a shielded player causes a freeze.
+  Not a shield bug. The shield hit was one trigger of a general out-of-memory
+  hang, which is also the owner's "lots of freeze bugs that seem random".
+  Mechanism: `decomp/src/sys/malloc.c:30` answers a full arena with
+  `while (TRUE);`. On the N64 that was a developer assert beside a devkit
+  printf; here it is shipped code with nowhere to print, so heap exhaustion
+  presents as a total, silent, permanent hang -- interrupts still enabled and
+  still serviced, VBlanks still counting, the main loop simply never returning.
+  Confirmed by disassembly: the PC sits on `e7fe  b.n <self>`.
+  Ruled out by register reads rather than by argument: REG_IME=1, REG_IE has
+  VBlank, REG_IF=0 and the CPSR I-bit clear (not the interrupts-disabled
+  swiWaitForVBlank hang); GXSTAT not FIFO-stalled (not a geometry deadlock);
+  FGM enter count == return count (not the audio/IPC handshake).
+  Two instances captured 2026-07-29, both on gSYTaskmanGeneralHeap:
+  - Mid-match, and this is the one the owner hit. `ndsR2AnimCacheStore`
+    (reloc_backend_assets.c) asked syTaskmanMalloc for 3,472 bytes at 3.5
+    minutes of both-CPU play, from Mario's AttackAirD load via
+    ftMainSetStatus <- AttackAir interrupt <- DamageFall. A shield hit drives
+    rebound/damage-fall, which interrupts into a new status, which force-loads
+    an animation -- shield hits are simply a common way to reach an uncached
+    status, which is why it looked shield-specific and why it was "sometimes".
+    The cache bounded its ENTRY COUNT and never its BYTES, and never freed.
+    FIXED: the cache now owns a fixed 128 KiB static arena and bump-allocates
+    from it, so its exhaustion returns NULL through the `payload == NULL`
+    reject path that was already written and had been dead code, and the asset
+    takes the on-demand path it would have taken anyway.
+  - At battle start, `ftManagerSetupFilesMainKind(fkind=1)` loading Fox's
+    files: request 116,752 against 57,936 free in a 1,048,576-byte arena,
+    short by 58,816. Seen with `NDS_R2_ANIM_CACHE=0`, so it is independent of
+    the cache. OPEN, and specific to the `NDS_R2_BOTH_CPU=1` stress config so
+    far; the shipped ROM measured 1,286,144 bytes of arena and clears the same
+    load with ~178 KB spare.
+  Class-level, and it applies to every arena in the port: an overflow can no
+  longer be anonymous. `src/import/battleship_sys_malloc.c` wraps syMallocSet,
+  latches arena id / request / alignment / headroom / caller LR into
+  `gNdsSyMallocOverflow*`, and halts in the named `ndsSyMallocOverflowHalt`.
+  It still halts by design -- syTaskmanMalloc's decomp callers do not check for
+  NULL, so returning NULL globally would trade a hang for a wild write. An
+  optional allocation must ask `ndsSyMallocWouldFit` first. Most call sites
+  still commit blind; see docs/optimization/TASK_STANDING_RULES.md.
+
 -Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the
   push vector on the floor, so Whispy's gust had no effect at all. It now does

@@ -838,6 +838,24 @@ extern volatile u32 gNdsTaskmanCleanupResult;
 extern volatile u32 gNdsTaskmanCleanupQueuesEmpty;
 extern volatile u32 gNdsTaskmanCleanupMode;
 extern volatile u32 gNdsTaskmanReturnCount;
+/* Arena-overflow latch. decomp/src/sys/malloc.c turns a full arena into
+ * `while (TRUE);`, so an out-of-memory condition is a total silent hang rather
+ * than a NULL return. src/import/battleship_sys_malloc.c publishes these before
+ * halting in ndsSyMallocOverflowHalt so the next occurrence names its arena,
+ * its request and its caller from one attach. */
+extern volatile u32 gNdsSyMallocOverflowCount;
+extern volatile u32 gNdsSyMallocOverflowArenaID;
+extern volatile u32 gNdsSyMallocOverflowRequest;
+extern volatile u32 gNdsSyMallocOverflowAlignment;
+extern volatile u32 gNdsSyMallocOverflowHeadroom;
+extern volatile u32 gNdsSyMallocOverflowCallerLR;
+void ndsSyMallocOverflowHalt(void);
+/* Ask before committing. The only safe way for an optional allocation to use a
+ * fail-by-hanging allocator is not to call it when it would not fit. */
+struct SYMallocRegion;
+sb32 ndsSyMallocWouldFit(const struct SYMallocRegion *bp, size_t size,
+                         u32 alignment);
+
 extern volatile u32 gNdsMemoryLedgerResult;
 extern volatile u32 gNdsMemoryLedgerScene;
 extern volatile u32 gNdsMemoryLedgerGeneration;

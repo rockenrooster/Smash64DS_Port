@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-29 21:20 Central
+Updated: 2026-07-29 22:05 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
@@ -215,6 +215,72 @@ the DS results loop (`src/port/taskman_seam.c:6968`) is update-bounded only when
 drift needs a synthesized START, not a longer run; the owner capped soaks at 5
 minutes on 2026-07-29 for that reason.
 
+## THE 128 KiB ARENA WAS A REGRESSION — a static buffer priced against the wrong build (2026-07-29)
+
+The owner, on the first ROM built with the freeze fix: *"it never gets to the
+battle, fix it."* Correct, and it was mine. **A static BSS buffer added to fix a
+heap problem competes with the heap it was meant to protect**, and the
+arena-search cliff turns that competition into a catastrophe.
+
+`ndsTaskmanArenaBytes` (`diagnostics.c:7403`) picks the arena with a downward
+`calloc` search from `0x150000` in `0x1000` steps, floored at `0x130000`, then
+falls to a coarse list starting at `0x100000`. So **crossing that floor costs
+196,608 bytes in one step, not the 0x1000 the loop implies.** Measured on the
+shipped hwtri ROM:
+
+| arena bytes | `ChosenSize` | fails | battle start |
+|---:|---:|---:|:--|
+| none (pre-fix) | 1,286,144 | 0 | starts |
+| **131,072** | **1,048,576** | **33** | **HANGS** — 116,752 asked vs 58,024 free |
+| 32,768 | 1,269,760 | 26 | starts |
+| **16,384** (shipped) | **1,269,760** | 26 | starts |
+
+The cruelty is that 131,072 was *affordable*: 1,286,144 − 131,072 = 1,155,072,
+still above the 1,107,392 battle start needs. **The cliff, not the size, broke it.**
+
+**Then 32 KiB failed too, by 32 bytes, and that is the transferable lesson: the
+budget belongs to the TIGHTEST configuration, not the shipped one.** 32 KiB was
+sized against the shipped build's 1,286,144 − 1,245,184 = 40,960 of headroom. The
+tick-HUD target starts from 1,277,952 and has only **32,768**. Arena plus counters
+is 32,800. Measured BSS settles it — and incidentally exonerates the flag that had
+been blamed:
+
+| build | bss | vs tick-HUD baseline |
+|---|---:|---:|
+| tick-HUD, no arena | 1,709,416 | — |
+| both-CPU + 32 KiB arena | 1,742,216 | **+32,800 = the arena and nothing else** |
+| shipped + 16 KiB arena | 1,719,464 | +16,416 |
+
+So **`NDS_R2_BOTH_CPU` adds no measurable BSS**, and the both-CPU build's inability
+to start a battle — recorded above as a "second exhaustion site, older than the fix
+and independent of it" — was **this same regression**, not a pre-existing defect.
+That entry is corrected: there is one site, not two. It reproduced with
+`NDS_R2_ANIM_CACHE=0` because the arena is compiled in regardless of that flag.
+
+**First genuine clean stress result in the campaign**, both configurations, with a
+counter read that actually executed:
+
+| ROM | match | presented | `SyMallocOverflow` | arena | anim-cache overflows |
+|---|---|---:|---:|---:|---:|
+| both-CPU stress | **completed (Results=1)** | 2,043 | **0** | 1,257,472 | 302 rejected safely |
+| shipped hwtri | **completed (Results=1)** | 2,043 | **0** | 1,269,760 | 296 rejected safely |
+
+Both arenas clear the `0x130000` floor, so Task 36 replay is admitted in both. The
+302 overflows are the fix working: every one of them would have been a hang.
+
+**But 16 KiB does NOT solve the underlying problem, and the next step is named.**
+Two fills against 296 overflows means the cache is barely a cache. The measured
+working set is 41 assets / 91,104 bytes, and BSS cannot afford that at any point in
+this program. **Reserve it from the taskman arena once at battle start instead:**
+that costs the boot-time search nothing, so it cannot cross the cliff, and it still
+fits — 1,286,144 − 91,104 = 1,195,040 against the 1,107,392 battle start needs,
+leaving ~87 KB. That is the fix that makes the cache do its job.
+
+Owner also confirms **Sudden Death has its own issues**; a 2.5-minute soak entered
+`ndsBaseSCVSBattleStartSuddenDeath` and sat in the renderer's native stage display
+commit. Not diagnosed, and NOT the allocator class — the PC was a working `cmp`,
+not a self-branch. Separate row.
+
 ## INSTRUMENT: the freeze detector was hashing the host's FPS counter (2026-07-29)
 
 **Two soak verdicts withdrawn, and the failure mode is worth more than either.**
@@ -248,11 +314,39 @@ folded back into `scripts/soak-freeze-watch.ps1`:
   so one missing symbol cannot take `COUNTERS` down with it.
 
 **Validated against a known-hung ROM, which is the test the original never had.**
-`build-r2-bothcpu` cannot start a battle 3/3; the old detector called it "alive, 54
-distinct frames". The fixed detector returns `FROZEN-FROM-START` in under 40 s with
-`b.n <self>` at the PC and `COUNTERS=849,0,0,0`. A liveness metric that can see
+`build-r2-bothcpu` could not start a battle 3/3; the old detector called it "alive,
+54 distinct frames". The fixed detector returns `FROZEN-FROM-START` in under 40 s
+with `b.n <self>` at the PC and `COUNTERS=849,0,0,0`. A liveness metric that can see
 anything the guest does not draw is not a liveness metric — that is the rule this
 cost, and it is recorded in `optimization/TASK_STANDING_RULES.md`.
+
+**Three further defects in the same instrument, all the same shape: a verification
+step was added and never confirmed to run.**
+
+1. **`Invoke-SoakGdb` never existed.** The clean-run counter read called it from the
+   day it was written and nothing defined it, so **every `NO-FREEZE` this
+   instrument ever produced was pixels-only** — no match count, no arena size, no
+   overflow latch. The failure lands *after* the verdict prints, which is why it
+   was invisible. Now defined once and shared with the freeze path, which had been
+   duplicating the same launch inline. **Machine-checked:** `check-melonds-policy.ps1`
+   now AST-resolves every hyphenated command in every `scripts/*.ps1` against
+   cmdlets, the file's own functions, and its dot-sourced libraries. It found a
+   second live hit on its first run, negative-tests correctly, and treats a
+   dot-source through a variable as "accept everything" so it cannot cry wolf.
+2. **The trip threshold was shorter than the game's own dead air.** 4 samples ×
+   10 s = 40 s, against a scene hand-off this board measured at ~30 s of NitroFS
+   asset reloading with the last frame still on screen. A Sudden Death scene load
+   duly tripped as a freeze. Default is now 8 (80 s).
+3. **A static picture was being reported as a hang without checking.** The capture
+   already contained the discriminator — `x/1i $pc` — and nothing read it. Verdicts
+   now downgrade to `*-UNCONFIRMED` unless the PC disassembles to a branch to its
+   own address, which is exactly what `while (TRUE);` and `ndsSyMallocOverflowHalt`
+   compile to. A spin is now *confirmed* rather than assumed.
+
+The clean read also prints `gSCManagerTransferBattleState.time_limit` and warns when
+the soak outran the match, per the owner: *"if you want to run a longer soak for any
+reason, then you also need to change the match timer to match the soak time."*
+Default soak is 2.5 min (owner: *"5 mins is too long for the stress ROM"*), ceiling 5.
 
 ## HARNESS: DLDI was pinned by nothing, so automation never ran the owner's I/O configuration (2026-07-29)
 
@@ -385,6 +479,42 @@ anything (the same loop that produced this table can bracket it), then decide
 between admitting the native OAM path to Results and reducing the two-layer 320×240
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
+
+### R0a — one candidate REFUTED by reading, and a third that outranks both (2026-07-29)
+
+**"Also ungate the wallpaper cache for Results" is REFUTED, no build needed.** I had
+described the Results fix as a gating change on two flags — the OAM path at
+`sprite_preview_backend.c:2410` and `cache_wallpaper` at `:2391`. The second is
+wrong. `cache_wallpaper` feeds `ndsSObjDrawCachedWallpaper`, whose gate
+(`ndsSObjGetOpaqueWallpaperCache`, `:680`) is a **Dream Land specialization**: it
+requires `asset_id == NDS_RELOC_ASSET_STAGE_DREAM_LAND`, exactly 300×220, 44
+bitmaps, `bmheight 5`/`bmHreal 6`, `G_IM_FMT_RGBA`/`G_IM_SIZ_16b`, and a fully
+opaque source. The Results wallpaper is a different asset and reaches the blitter
+through the **I4** branch with `results_wallpaper_combine` set. Every one of those
+checks would reject it, so ungating `cache_wallpaper` on Results buys a failed probe
+and one `gNdsSObjWallpaperCacheFallbackCount++` per frame. Results needs its own
+path, not this one.
+
+**A third candidate, and it is cheaper and wider than either of the first two.**
+`ndsDrawSObjIntoPreview`'s innermost per-pixel loop (`:1739-1935`) re-evaluates a
+seven-way `sprite->bmfmt`/`bmsiz` dispatch chain **per pixel**, when the format is
+invariant for the whole sprite — the I4 wallpaper pays six failed comparisons on
+every one of its pixels before reaching its own branch. Separately, the `CI` arm
+(`:1676-1714`) walks all of `src_bytes` **every frame** purely to recompute
+`ci_max_index` for a palette-range validation, on immutable asset data. Hoisting the
+dispatch into a per-format specialized loop and lifting the palette validation out of
+the per-frame path are mechanical and behaviour-preserving, need no decision about
+OAM or layers, and pay back in every scene that uses this blitter — Results, title,
+opening portraits, opening movie.
+
+**Do not start there blind, though.** The same caution that applies to the first two
+applies here: 8.3 calls/frame against 19,413,481 ticks is 2.34M per call *on
+average*, and the split across those calls is unknown. One full-screen wallpaper
+plausibly dominates, in which case the I4 arm alone is the target and the other six
+format arms are noise. Bracket per call first. Also check before editing whether
+this function is live on the battle frame — the battle path prefers the OAM route and
+the Dream Land cache, but `gNdsSObjWallpaperCacheFallbackCount` proves the fallback
+exists, and the gate has only 23,232 ticks of margin.
 
 ## R2-03 E63 SIZED — a flash-colour table is 2,164 bytes of ROM, and the `.rgba` field is confirmed normals (2026-07-29)
 

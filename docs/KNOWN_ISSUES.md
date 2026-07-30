@@ -104,6 +104,20 @@ durable unresolved gaps.
 - N64 fixed framebuffer addresses and overlay assumptions are unsafe on DS.
 - Save/backup behavior remains stubbed; no persistent SRAM/flash behavior exists.
 - Overlay loading remains a compatibility no-op pending a measured DS memory plan.
+- An arena overflow is a hang, not a NULL. `decomp/src/sys/malloc.c:30` answers a
+  full arena with `while (TRUE);` — a developer assert on the N64, shipped code
+  here. `src/import/battleship_sys_malloc.c` now latches the arena id, request,
+  alignment, headroom and caller LR into `gNdsSyMallocOverflow*` and halts in the
+  named `ndsSyMallocOverflowHalt`, so an out-of-memory freeze is identified from
+  the PC alone. It still halts: `syTaskmanMalloc`'s decomp callers do not check
+  for NULL, so a global NULL return would trade a hang for a wild write. An
+  optional allocation must call `ndsSyMallocWouldFit` first and take its own
+  fallback. Most `syTaskmanMalloc` call sites still commit blind — see
+  `docs/optimization/TASK_STANDING_RULES.md` for the unguarded list.
+  Corollary for harnesses: the halt is an infinite loop, so a verifier that
+  waits on a marker will **time out** rather than fail. Read
+  `gNdsSyMallocOverflowCount` before reading any timeout on this build as a
+  functional failure; non-zero means out-of-memory, not a broken check.
 
 ## Tooling
 
@@ -325,6 +339,63 @@ confirm it is non-zero. "No failure line appeared" is not evidence — that is t
 same trap as `Select-Object -First N` silently killing a build, already recorded
 above.
 
+**But `nm | grep` proves presence, never absence.** 2026-07-29: I concluded the
+R2 animation cache was lab-only because `ndsR2AnimCacheStore` is missing from the
+shipped `smash64ds-battle-playable-hwtri.elf`. It is missing because it is
+`static` and was inlined; the code is in the ROM, and the cache was live in the
+build the owner plays. An absent symbol is not absent code. To decide whether a
+flag is on, read the `nds_build_config.h` emitted by *that build's* directory —
+match it by timestamp to the ROM — or disassemble the surviving caller and look
+for the call. Checking the wrong build tree's config is how this went wrong.
+
 Both instances are also *gate-design* bugs, not just reporting bugs: a phase gate
 should name a check that exists and is wired into a profile, or say explicitly
 that building the check is part of the phase.
+
+## The freeze watchdog cannot see a hang before the first presented frame (2026-07-29)
+
+`ndsFreezeDiagnosticsWatchdog` (`src/nds/nds_freeze_diagnostics.c`) refuses to arm
+until `gNdsFreezeDiagnosticsHeartbeat != 0`, and the heartbeat only advances in
+`ndsFreezeDiagnosticsHeartbeat()` on a completed presented frame. Anything that
+hangs during boot or scene load — which includes every arena overflow in
+`ftManagerSetupFilesAllKind`, i.e. fighter file loading at battle start — happens
+with the heartbeat still 0, so the watchdog never arms, never trips, and prints
+nothing. Measured: an ARM9 provably spinning at `syMallocSet`'s `while (TRUE);`
+for 7+ seconds with `WatchdogTripCount` 0 and `sNdsFreezeDiagnosticsWatchdogArmed`
+0. A silent watchdog in that window means nothing at all.
+
+Two consequences worth carrying forward:
+
+- Arm the observers **before** the first `continue`. A GDB script that installs
+  its stall/exception breakpoints after a `tbreak ifcommon.c:3175; continue` will
+  miss any trip that happens during the load, and the run then looks like a
+  timeout with no cause.
+- **Validate the negative first.** `gNdsFreezeDiagnosticsForceTrip = 1` makes the
+  watchdog fire on demand; do that once per session before treating "the watchdog
+  did not fire" as evidence. A watchdog that has never been made to fire is not
+  an instrument, and this one has a blind window wide enough to hide a whole class
+  of hang.
+
+## A window-pixel freeze detector must exclude the window chrome (2026-07-29)
+
+`scripts/lib/melonds-screenshot.ps1`'s `Get-MelonDSWindowBitmap` uses
+`GetWindowRect` + `CopyFromScreen`, so the hash covers the **title bar and the
+desktop behind the window**, not just the two DS screens. melonDS puts its frame
+rate in the title (`[83/60] melonDS 1.0`), so the hash changes every poll while
+the guest is completely dead.
+
+Measured cost: a `soak-freeze-watch.ps1` run reported "alive, 54 distinct frames"
+for ~10 minutes on a ROM that had frozen during its first battle load and was
+displaying the boot text screen the whole time. The guest counters in its own
+capture said so plainly — `sVBlankCount` 849 (~15 s of guest time), presented 0,
+taskman 0, results 0 — and were misread as post-scene-reset values. A conclusion
+of "clean, 2.8x past the failure point" had to be withdrawn.
+
+Rules: crop to the client area or to the two 256x192 screens
+(`Convert-MelonDSWindowTopToNativeBitmap` already knows the 8px frame and 56px
+title/menu offsets) before hashing; make a guest counter that only the main loop
+advances the primary liveness signal and the picture corroboration, not the
+reverse; and on a clean run spend the single GDB session reading
+`gNdsVSResultsStartCount` so "N minutes" becomes "N minutes across M matches". A
+soak is passive — it never restarts the match — so a changing picture can be the
+results screen, host chrome, or nothing at all.

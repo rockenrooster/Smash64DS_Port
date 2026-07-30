@@ -9,15 +9,25 @@ param(
     [switch]$NoBuild,
     [ValidateRange(2, 120)][int]$PollSeconds = 10,
     # Owner, 2026-07-29: *"for a soak 5 mins tops, because I don't think the
-    # results screen ever ends"*. A longer run does not buy more coverage while
-    # that is true -- the ROM reaches the results scene once and stays there, so
-    # minute six onward watches the same stuck scene as minute five. Raise this
-    # ceiling only once a match is known to hand back to another match.
-    [ValidateRange(1, 5)][int]$MinutesToRun = 5,
+    # results screen ever ends"*, then *"5 mins is too long for the stress ROM,
+    # should be like 2.5 min"*. Both hold: 5 is the ceiling, 2.5 is the default,
+    # and the default Build below IS the stress ROM. A longer run buys no coverage
+    # -- the ROM reaches Results once and stays there, because mnVSResultsCheckExit
+    # (decomp mnvsresults.c:266) exits on a START_BUTTON tap with no timeout. A
+    # measured both-CPU match completes well inside 2.5 minutes: one full match
+    # reported gNdsVSResultsStartCount=1 with 2,043 presented frames. Fractional
+    # on purpose -- this was [int] and could not express the owner's number.
+    [ValidateRange(0.5, 5.0)][double]$MinutesToRun = 2.5,
     # Consecutive identical frames needed to call it frozen. Two screens of a DS
-    # game in motion never render byte-identically, but a legitimately static
-    # moment does exist (a settled results screen, a pause), so require several.
-    [ValidateRange(2, 20)][int]$IdenticalFramesToTrip = 4,
+    # game in motion never render byte-identically, but legitimately static
+    # moments exist -- and the longest is much longer than it sounds. This port's
+    # scene transitions reload both fighters' asset sets by string path through
+    # NitroFS, and the board measured that hand-off as roughly THIRTY SECONDS of
+    # dead air with the last frame still on screen. At 4 samples x 10s the trip
+    # threshold was 40s, barely past it, and a Sudden Death scene load duly
+    # tripped as a freeze while the PC sat on a working `cmp` in the renderer.
+    # 8 puts the threshold at 80s, safely clear of the measured dead air.
+    [ValidateRange(2, 20)][int]$IdenticalFramesToTrip = 8,
     [string]$JsonOut = ''
 )
 
@@ -60,6 +70,47 @@ $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -E
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 $temp = Get-MelonDSVerifierTempDir -Root $root -RunnerSlot $RunnerSlot
 $logDir = Join-Path $root 'artifacts\verification\freeze-soak'
+
+# The one GDB attach this run gets, wherever it is spent. Both the freeze capture
+# and the clean-run counter read go through here.
+#
+# This function was CALLED before it existed. The clean-run read at the bottom of
+# the script referenced Invoke-SoakGdb from the day it was written and nothing
+# defined it, so every NO-FREEZE verdict this instrument has ever produced was
+# pixels-only -- no match count, no arena size, no overflow latch -- and the
+# failure was invisible because it lands after the verdict is already printed.
+# Third defect of that exact shape in one day: a verification step was added and
+# never confirmed to run. Returns the captured text, or $null if nothing landed;
+# a timeout still returns whatever GDB flushed, because this attach cannot be
+# retried (melonDS serves one stub session per emulation run).
+function Invoke-SoakGdb {
+    param(
+        [Parameter(Mandatory=$true)][string]$Tag,
+        [Parameter(Mandatory=$true)][string[]]$Commands,
+        [int]$TimeoutSeconds = 120
+    )
+
+    $script = Join-Path $temp "soak-$Tag.gdb"
+    $stdout = Join-Path $temp "soak-$Tag.out"
+    $stderr = Join-Path $temp "soak-$Tag.err"
+
+    Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
+    [System.IO.File]::WriteAllLines($script, @(
+        'set pagination off', 'set confirm off', 'set remotetimeout 30',
+        "target remote 127.0.0.1:$($context.GdbPort)") + $Commands + @('detach'))
+    $process = Start-Process -FilePath $Gdb `
+        -ArgumentList @('-q', '-batch', '-x', $script, $elf) `
+        -WorkingDirectory $root -RedirectStandardOutput $stdout `
+        -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        Stop-Process -Id $process.Id -Force
+        Write-Host "$Tag attach TIMED OUT -- the stub could not halt the core."
+    }
+    if (Test-Path -LiteralPath $stdout) {
+        return Get-Content -LiteralPath $stdout -Raw
+    }
+    return $null
+}
 
 $configState = $null
 $emulator = $null
@@ -172,6 +223,15 @@ try {
             'gNdsVSResultsStartCount',
             'gNdsVSResultsTickCount',
             'gNdsSyMallocOverflowCount',
+            # A clean run still has to prove it did not fall off the arena-search
+            # cliff: below 0x130000 = 1245184 the build has quietly lost ~237 KB
+            # of game heap AND the Task 36 replay path, and a soak that only
+            # watched pixels would call that healthy.
+            'gNdsTaskmanArenaChosenSize',
+            'gNdsTaskmanArenaAllocFailCount',
+            # Minutes, seeded to 1 at scene_harness.c:182. Read so the soak can
+            # say how much of its own runtime was actually gameplay.
+            'gSCManagerTransferBattleState.time_limit',
             'gNdsR2AnimCacheArenaUsedBytes',
             'gNdsR2AnimCacheArenaOverflows',
             'gNdsR2AnimCacheFills',
@@ -186,14 +246,43 @@ try {
             $match = [regex]::Match($progress, 'CLEAN=([0-9,]+)')
             if ($match.Success) {
                 $values = $match.Groups[1].Value -split ','
+                # Keyed by NAME, not position. Adding a counter to $cleanFields
+                # used to silently renumber every read below it; the arena pair
+                # was inserted after both indices in use purely by luck.
+                $counter = @{}
                 Write-Host 'progress over the run:'
                 for ($i = 0; $i -lt $cleanFields.Count; $i++) {
                     Write-Host ("    {0,-40} {1}" -f $cleanFields[$i], $values[$i])
+                    $counter[$cleanFields[$i]] = [uint32]$values[$i]
                     $samples += [pscustomobject]@{
                         counter = $cleanFields[$i]; value = [uint32]$values[$i] }
                 }
-                $presented = [uint32]$values[1]
-                $matches_run = [uint32]$values[3]
+                $presented = $counter['gNdsBattlePlayablePacingPresentedFrames']
+                $matches_run = $counter['gNdsVSResultsStartCount']
+                # Owner, 2026-07-29: *"if you want to run a longer soak for any
+                # reason, then you also need to change the match timer to match
+                # the soak time"*. Read from the ROM rather than assumed, so the
+                # two cannot drift: gSCManagerTransferBattleState.time_limit is in
+                # MINUTES (scene_harness.c:182 seeds 1). Past that the match is
+                # over and every remaining second watches a Results screen that
+                # never exits, so the extra time proves nothing about gameplay.
+                $matchMinutes = $counter['gSCManagerTransferBattleState.time_limit']
+                if (($matchMinutes -gt 0u) -and ($MinutesToRun -gt $matchMinutes)) {
+                    # -f binds TIGHTER than +, so a format applied after a
+                    # concatenation formats only the last fragment and leaves every
+                    # earlier {0} literal. Parenthesise the concatenation.
+                    Write-Host (("  NOTE: soaked {0} min against a {1}-minute match " +
+                        'timer, so only the first {1} min covered gameplay. Raise ' +
+                        'the match timer to soak longer.') -f $MinutesToRun, $matchMinutes)
+                }
+                $arena = $counter['gNdsTaskmanArenaChosenSize']
+                if ($arena -lt 1245184u) {
+                    Write-Host ((
+                        "  WARNING: taskman arena {0} is BELOW the 0x130000 floor " +
+                        "after {1} failed steps -- this build lost ~237 KB of game " +
+                        'heap and the Task 36 replay path. Check static BSS growth.'
+                        ) -f $arena, $counter['gNdsTaskmanArenaAllocFailCount'])
+                }
                 Write-Host ("  => {0} results-scene start(s), i.e. {0} completed match(es)" -f $matches_run)
                 # A run that never presented a battle frame has not been soaked;
                 # it has failed to boot, and calling that NO-FREEZE is exactly the
@@ -229,13 +318,7 @@ try {
         [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $shot)
         Write-Host "frozen frame saved to $shot"
 
-        $gdbScript = Join-Path $temp 'soak-freeze.gdb'
-        $gdbOut = Join-Path $temp 'soak-freeze.out'
-        $gdbErr = Join-Path $temp 'soak-freeze.err'
-        Remove-Item $gdbOut, $gdbErr -Force -ErrorAction SilentlyContinue
-        [System.IO.File]::WriteAllLines($gdbScript, @(
-            'set pagination off', 'set confirm off', 'set remotetimeout 30',
-            "target remote 127.0.0.1:$($context.GdbPort)",
+        $capture = Invoke-SoakGdb -Tag 'freeze' -TimeoutSeconds 120 -Commands @(
             'printf "FREEZE-PC=%p\n", $pc',
             # The whole freeze class is decomp malloc.c:30's `while (TRUE);`, which
             # compiles to a single self-branch. One instruction at the PC therefore
@@ -255,29 +338,54 @@ try {
             ('printf "COUNTERS=%u,%u,%u,%u\n", sVBlankCount, ' +
              'gNdsBattlePlayablePacingPresentedFrames, dSYTaskmanUpdateCount, ' +
              'gNdsVSResultsTickCount'),
-            # Separate printf on purpose: one missing symbol fails its whole
+            # Separate printfs on purpose: one missing symbol fails its whole
             # command, and COUNTERS must not be lost to an absent arena counter.
             ('printf "ANIMARENA=%u,%u\n", gNdsR2AnimCacheArenaUsedBytes, ' +
              'gNdsR2AnimCacheArenaOverflows'),
-            'detach'))
-        $gdbProcess = Start-Process -FilePath $Gdb `
-            -ArgumentList @('-q', '-batch', '-x', $gdbScript, $elf) `
-            -WorkingDirectory $root -RedirectStandardOutput $gdbOut `
-            -RedirectStandardError $gdbErr -WindowStyle Hidden -PassThru
-        $timedOut = -not $gdbProcess.WaitForExit(120000)
-        if ($timedOut) {
-            Stop-Process -Id $gdbProcess.Id -Force
-            Write-Host 'freeze capture attach TIMED OUT -- the stub could not halt the core.'
-        }
-        # Read what landed either way. A timeout still leaves the commands that
-        # completed before it on disk, and this is the only attach available, so
-        # discarding a partial capture discards the whole run's diagnosis.
-        if (Test-Path -LiteralPath $gdbOut) {
-            $capture = Get-Content $gdbOut -Raw
-            if ($capture) {
-                Write-Host "--- freeze capture$(if ($timedOut) { ' (partial)' })"
-                Write-Host $capture
+            # The taskman arena is chosen by a downward calloc search at boot, so
+            # ANY growth in static BSS can push it over the 0x130000 = 1245184
+            # cliff and cost ~237 KB in one step. A heap-exhaustion freeze is
+            # therefore not fully diagnosed without the size that was actually
+            # secured -- print it next to the request that failed.
+            ('printf "TASKARENA=%u,%u\n", gNdsTaskmanArenaChosenSize, ' +
+             'gNdsTaskmanArenaAllocFailCount'),
+            ('printf "MALLOCOVF=%u,id=%u,req=%u,head=%u,lr=%08x\n", ' +
+             'gNdsSyMallocOverflowCount, gNdsSyMallocOverflowArenaID, ' +
+             'gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, ' +
+             'gNdsSyMallocOverflowCallerLR'))
+        if ($capture) {
+            Write-Host '--- freeze capture'
+            Write-Host $capture
+            # A static picture is not proof of a hang, and the capture already
+            # holds the discriminator: `x/1i $pc` on a spin disassembles to a
+            # branch to its OWN address, which is what decomp malloc.c:30's
+            # `while (TRUE);` and ndsSyMallocOverflowHalt both compile to. Any
+            # other instruction means the ARM9 was executing real work when it was
+            # halted, and a long scene load looks exactly like a freeze from
+            # outside. Say which one was observed rather than assuming the worse.
+            $pcMatch = [regex]::Match($capture, 'FREEZE-PC=(0x[0-9a-fA-F]+)')
+            $spinning = $false
+            if ($pcMatch.Success) {
+                $pcText = $pcMatch.Groups[1].Value
+                $spinning = $capture -match
+                    ('=>\s*' + [regex]::Escape($pcText) + '[^\r\n]*\bb(?:\.n|\.w)?\s+' +
+                     [regex]::Escape($pcText) + '\b')
             }
+            if (-not $spinning) {
+                $verdict = "$verdict-UNCONFIRMED"
+                Write-Host ''
+                Write-Host ("verdict DOWNGRADED to $verdict -- the PC is not a " +
+                    'self-branch, so the core was executing when halted. This is a ' +
+                    'stall or a slow scene load, NOT the allocator spin class. ' +
+                    'Compare against the ~30s NitroFS scene-load dead air before ' +
+                    'treating it as a hang.')
+            } else {
+                Write-Host ''
+                Write-Host ('spin CONFIRMED: the PC branches to itself, which is ' +
+                    'the `while (TRUE);` allocator-exhaustion signature.')
+            }
+        } else {
+            Write-Host 'freeze capture produced nothing; the attach failed outright.'
         }
         Set-Content -LiteralPath (Join-Path $logDir "$stamp-$verdict.txt") -Value (
             @("rom=$rom", "build=$Build", "verdict=$verdict",

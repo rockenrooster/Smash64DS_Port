@@ -5563,15 +5563,57 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * declared arena, and overflowing it returns NULL through the existing reject
  * path, which is what that path was always for.
  *
- * Sized from the measured working set above: 41 warm assets = 91,104 bytes, so
- * 128 KiB leaves ~44% headroom for the on-demand tail (17.8% of force-loads were
- * not warm-list repeats) inside the 64-entry cap. Overflow degrades to the
- * uncached load. If this ever needs to grow, grow it deliberately -- a link
- * failure on BSS is a loud, safe failure, which the previous arrangement was not.
+ * SIZE IS BOUNDED BY THE TASKMAN ARENA SEARCH, NOT BY THE WORKING SET. This was
+ * first written at 128 KiB, sized from the 41 warm assets = 91,104 bytes above,
+ * with the note that "a link failure on BSS is a loud, safe failure". **That was
+ * wrong, and it shipped a ROM that could not start a battle.** BSS here does not
+ * overflow a link; it silently competes with the runtime `calloc` that sizes
+ * gSYTaskmanGeneralHeap. src/port/diagnostics.c:7403 searches downward from
+ * 0x150000 in 0x1000 steps but FLOORS AT 0x130000, then drops to a coarse list
+ * beginning at 0x100000 -- so crossing that floor costs 196,608 bytes in one
+ * step, not the 0x1000 the loop implies.
  *
- * The general lesson, in TASK_STANDING_RULES: never call an allocator that
- * cannot fail from a code path that is allowed to fail. */
-#define NDS_R2_ANIM_CACHE_ARENA_BYTES 131072u
+ * Measured, shipped hwtri ROM: without this arena the fine search secured
+ * 1,286,144 bytes. With 128 KiB of it, all 33 fine steps failed
+ * (TASKARENA=1048576,33) and battle start died in the exact way this comment was
+ * written to prevent -- ftManagerSetupFilesAllKind(fkind=1) asking 116,752
+ * against 58,024 free. The arena meant to stop a heap-exhaustion hang caused a
+ * bigger one, two levels down, at a seam it never mentions.
+ *
+ * The budget is the fine search's headroom above its floor -- and it belongs to
+ * the TIGHTEST configuration, not the shipped one. Second mistake here, for
+ * exactly that reason: 32 KiB was sized against the shipped build's
+ * 1,286,144 - 1,245,184 = 40,960, but the tick-HUD target starts from 1,277,952
+ * and so has only **32,768**. This arena plus its counters is 32,800 bytes, which
+ * overshot that by 32, and the both-CPU stress ROM -- the tick-HUD target plus a
+ * flag that adds no measurable BSS of its own (measured: 1,742,216 against
+ * 1,709,216, a delta that is this arena and nothing else) -- fell off the same
+ * cliff again and could not start a battle. Thirty-two bytes.
+ *
+ * 16 KiB therefore, leaving 16,384 of slack in the tightest build. That is a
+ * CEILING shared with every future static allocation in this program, and it is
+ * also what the Task 36 replay admission guard
+ * (include/nds/nds_renderer.h:124-134) needs, so undershooting disables a
+ * measured render path too. Overflow degrades to the uncached load, and the
+ * SAFETY of this fix does not depend on the size at all -- even a zero-byte arena
+ * would be safe, because the reject path is live.
+ *
+ * 16 KiB holds only ~4 of the 41 warm assets, so it does NOT solve the underlying
+ * problem: 230 force-loads per match, 189 of them repeats, all allocating from a
+ * bump heap nothing ever resets. The cache was an amplifier, not the cause. The
+ * real fix is to reserve the working set (91,104 bytes) from the taskman arena
+ * ONCE at battle start instead of from BSS -- that costs the arena nothing at
+ * boot, so it cannot cross this cliff, and it still fits: 1,286,144 - 91,104
+ * leaves 1,195,040 against the 1,107,392 battle start needs.
+ *
+ * Before changing this number, re-measure gNdsTaskmanArenaChosenSize on the
+ * TICK-HUD build, not the shipped one. If it is not >= 0x130000 with real room to
+ * spare, the number below is already too big.
+ *
+ * Two general lessons, in TASK_STANDING_RULES: never call an allocator that
+ * cannot fail from a code path that is allowed to fail, and never fix a heap
+ * problem with a static buffer without pricing it against the heap. */
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES 16384u
 
 /* R2-04 E4. The match's animation working set, measured rather than guessed:
  * gNdsR204AnimSeen dumped at frame 1928 (roughly two thirds through the 3,600

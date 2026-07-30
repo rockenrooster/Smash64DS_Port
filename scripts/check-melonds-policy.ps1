@@ -240,6 +240,75 @@ Assert-Policy ($unhidden.Count -eq 0) (
     'Start-Process without -WindowStyle Hidden steals the owner''s foreground: ' +
     ($unhidden -join ', '))
 
+# Every Verb-Noun command a harness invokes must actually resolve. PowerShell only
+# discovers a missing function when control reaches the call, and harness code puts
+# its verification steps LAST -- so soak-freeze-watch.ps1 called an
+# `Invoke-SoakGdb` that was never defined, and the failure landed after the verdict
+# had already been printed. Every NO-FREEZE that instrument produced was therefore
+# pixels-only, with no counter read at all, and nothing said so. Third defect of
+# that shape in one day: a verification step added and never confirmed to run.
+#
+# Resolution order is cmdlets/aliases, functions defined in the file, then
+# functions defined in any repo file it dot-sources. Only hyphenated names are
+# checked: bare words are native executables, and `make`/`gdb`/`python` resolve
+# from PATH at run time rather than from this process.
+$libraryFunctions = @{}
+foreach ($libFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
+        -Filter '*.ps1' -File -Recurse) {
+    $libTokens = $null
+    $libErrors = $null
+    $libAst = [System.Management.Automation.Language.Parser]::ParseFile(
+        $libFile.FullName, [ref]$libTokens, [ref]$libErrors)
+    $names = @($libAst.FindAll({ param($node)
+        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] },
+        $true) | ForEach-Object { $_.Name })
+    $libraryFunctions[$libFile.FullName.ToLowerInvariant()] = $names
+}
+$unresolvedCalls = @()
+foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
+        -Filter '*.ps1' -File -Recurse) {
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+        $scriptFile.FullName, [ref]$tokens, [ref]$parseErrors)
+    $visible = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase)
+    # The file's own functions, plus every repo .ps1 whose name appears in a
+    # dot-source line. Matching by file name rather than resolving the expression
+    # keeps this simple and errs toward accepting, which is correct for a lint
+    # whose whole purpose is to catch a name that resolves NOWHERE.
+    #
+    # A dot-source through a VARIABLE (`. $registryPath`, as clean-generated.ps1
+    # does) hides its target from that match, so such a file gets every repo
+    # function. Accepting too much only weakens this lint; rejecting a name that
+    # does resolve would make it a liability people switch off.
+    $opaqueDotSource = $ast.Extent.Text -match '(?m)^\s*\.\s+[$(]'
+    foreach ($entry in $libraryFunctions.GetEnumerator()) {
+        $leaf = [System.IO.Path]::GetFileName($entry.Key)
+        if ($opaqueDotSource -or
+            ($entry.Key -eq $scriptFile.FullName.ToLowerInvariant()) -or
+            ($ast.Extent.Text -match ('(?i)\.\s+[^\r\n]*' +
+                [regex]::Escape($leaf)))) {
+            foreach ($name in $entry.Value) { [void]$visible.Add($name) }
+        }
+    }
+    foreach ($command in $ast.FindAll({ param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] }, $true)) {
+        $name = $command.GetCommandName()
+        if ([string]::IsNullOrEmpty($name) -or ($name -notmatch '^[A-Za-z]+-[A-Za-z]')) {
+            continue
+        }
+        if ($visible.Contains($name)) { continue }
+        if (Get-Command -Name $name -ErrorAction SilentlyContinue) { continue }
+        $unresolvedCalls +=
+            "$($scriptFile.Name):$($command.Extent.StartLineNumber) $name"
+    }
+}
+Assert-Policy ($unresolvedCalls.Count -eq 0) (
+    'Harness calls a command that resolves nowhere -- it will fail only when ' +
+    'control reaches it, which for a verification step means after the verdict ' +
+    'is printed: ' + ($unresolvedCalls -join ', '))
+
 if ($AuditLocalConfigs -and -not $SkipLocalConfigs -and
     (Test-Path -LiteralPath (Join-Path $Root 'emulators') -PathType Container)) {
     & (Join-Path $PSScriptRoot 'Set-MelonDSWindowConfig.ps1') `
