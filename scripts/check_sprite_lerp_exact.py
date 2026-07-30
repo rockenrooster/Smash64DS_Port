@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Prove the sprite blitter's division replacements are BIT-EXACT, not approximate.
 
-R2-07 R0c replaced four library divisions per blitted pixel in
-`src/port/sprite_preview_backend.c`:
+R2-07 R0c changed four divisions per blitted pixel in
+`src/port/sprite_preview_backend.c`, three of which were real library calls:
 
   * `ndsSpriteLerpPrimEnv`'s three `/ 255u` became `NDS_SPRITE_DIV255(x)`,
-    i.e. `(x * 257 + 257) >> 16`.
-  * The I4 and IA arms' `(nibble * 255u) / 15u` became `nibble * 17u`.
+    i.e. `(x * 257 + 257) >> 16`. These WERE `blx __udivsi3` -- measured, and
+    gone: the function went 118 -> 100 bytes with `__udivsi3` x3 -> x0.
+  * The I4 and IA arms' `(nibble * 255u) / 15u` became `nibble * 17u`. Bit-exact
+    and the intent is now explicit, but this removed no library call: GCC had
+    already strength-reduced those.
 
 Both are exact rather than close, and this script is the proof, run in CI-style
 alongside the other checkers rather than trusted from a comment. It exists
@@ -109,7 +112,11 @@ def main() -> int:
             print(f"  {line}")
         return 1
     print()
-    print("SPRITE_LERP_EXACT=PASS  four library divisions per pixel removed, "
+    # Three, not four: the nibble substitutions below are bit-exact but removed no
+    # library call, because GCC had already strength-reduced `/ 15u`. Measured on
+    # the ELF -- the blitter's `__udivsi3` count is 2 before and 2 after, and both
+    # of those belong to a wallpaper-cache helper that this path never enters.
+    print("SPRITE_LERP_EXACT=PASS  three library divisions per pixel removed, "
           "bit-exact")
     return 0
 

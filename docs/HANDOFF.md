@@ -74,42 +74,41 @@ verdicts withdrawn (it hashed the window **title**, where melonDS renders its FP
 Death has its own issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit`
 needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
 
-## OPEN P1: the VS Results screen is 21.9M ticks/frame, 1.5 FPS
+## OPEN P1: VS Results — R0c CUT IT 43.6%, bit-exact; still 12.3M ticks/frame vs 1.12M
 
-R2-07's own gate, 19.5x the battle frame. **89.4% is `tfunc->scene_draw()` alone (19,550,631)**:
-the native OAM path is gated to `nSCKindVSBattle` only, so Results software-blits two 320x240
-layers per frame, and `taskman_seam.c:6950` has no pacing and no HUD. **Ungating the wallpaper
-cache is REFUTED** (R0a, a Dream Land specialization). Board has a third, wider candidate.
+**39.00 → 22.00 VBlanks/iter (−9,523,230 ticks, 1.53 → 2.72 FPS), Latest green.** Split per call first:
+8 blits = one **I/4b 300×220** wallpaper (66,000 px, **84.8% of cost**) + seven IA/8b glyphs. Cause was
+**not** the dispatch chain — `ndsSpriteLerpPrimEnv` ran three `/ 255u` per pixel and **`-Os` emits
+`blx __udivsi3` for a CONSTANT divisor** instead of a reciprocal multiply. Now `(x*257+257)>>16`,
+bit-exact (`check_sprite_lerp_exact.py`, wired into `check-gbi-decode-fixtures.ps1`; bound is
+`intensity`+`inverse`==255 ⇒ numerator ≤ 65,152). **Whole-repo hazard: any constant `/` in a per-pixel,
+per-vertex or per-joint loop — `objdump | grep __udivsi3`.** Remaining ~9.4M is still per-pixel: **inline
+the lerp** (`2037d58`/`2037f08`), then R0a's dispatch hoist (`cache_wallpaper` ungating stays REFUTED),
+then OAM path (`:2410`) / two-layer pipeline. Instrument: `scripts/census-vsresults-blit.ps1`.
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 
 **The animation body is CLOSED — three levers, three refutations, zero builds spent.** 146,148/frame,
-86,819 of stall, 46,148 over §4's 100K, none reachable at this granularity: **E13** pose-fewer-joints
-refuted, collision's ancestor closure is **f = 0.840** of live joints (only 8 render-only across both
-fighters; `cosmetic-only` is EMPTY); **E14** reorder refuted at **~2,900** (Task 96: **10-15 ticks per
-32-byte line fill**, no data prefetcher; `AObj` is **36 bytes**, N is **221** — both memos wrong);
-**E15** shrink+Q12 unbuilt at ~16-22K straddling the floor, the cubic emits **one `bl` total** so its six
-f32→fixed conversions are already inline. `scripts/census-fighter-gameplay-joints.ps1` reports the 60 Hz
-set; `gNdsFighterInit*` is proof-build-only, **0 by construction — never cite it**.
+86,819 stall, 46,148 over §4's 100K, none reachable here: **E13** pose-fewer-joints refuted, collision's
+ancestor closure is **f = 0.840** of live joints (8 render-only across both fighters; `cosmetic-only`
+EMPTY); **E14** reorder refuted at **~2,900** (Task 96: **10-15 ticks/32-byte line fill**, no prefetcher;
+`AObj` is **36 bytes**, N **221** — both memos wrong); **E15** shrink+Q12 unbuilt, ~16-22K straddling the
+floor, cubic emits **one `bl`** so its conversions are already inline. `gNdsFighterInit*` is
+proof-build-only, **0 by construction — never cite it**; census script reports the 60 Hz set.
 
-**Every named load-frame candidate is now sized, and none closes the 40,448.** Of the 139,072/load-frame
-premium (2,225,152 in-window over 16 frames): **relocation 33,632** (24.2%), **action-change re-add
-11,313** (8.1%), **E9's two payload walks 21,788** — a *subset* of the relocation, and P95 only reaches
-~1,138,660, still 18,660 over, for a full offsets refactor. **~94,127/load frame (67.7%) has NO named
-owner.** E17 killed E8's own hypothesis too: **16 load frames but only 7 whole-GObj re-adds**, so the
-load marker is *not* a proxy for "a fighter changed action". **That is the second time a premium here
-refused to concentrate** — E10 fully attributed the frame-wide premium across 513 symbols and found no
-single lever; E17 has now done the same to the load-frame premium. **Before adding a fourth bracket
-(status transition, hit/collision — the registered next step), ask whether R2-06 is the right phase:
-two independent attributions both say the cost is spread, which points at the switch plan's §3
-structural change, not another lever inside the current structure.**
+**Every named load-frame candidate is sized and none closes the 40,448.** Of the 139,072/load-frame
+premium: **relocation 33,632**, **action-change re-add 11,313**, **E9's payload walks 21,788** (a subset
+of the relocation; P95 only reaches ~1,138,660, still 18,660 over, for a full offsets refactor).
+**~94,127/load frame (67.7%) has NO named owner.** E17 also killed E8's hypothesis: **16 load frames but
+only 7 whole-GObj re-adds**, so the load marker is *not* a proxy for "a fighter changed action". **Second
+time a premium here refused to concentrate** — E10 did the same frame-wide across 513 symbols. **Before a
+fourth bracket (status transition, hit/collision), ask whether R2-06 is the right phase: two independent
+attributions both say spread, which points at the switch plan's §3 structural change.**
 
-**Method trap, cost a detour this cycle:** the `gNdsR2Fixup*`/`gNdsR2Add*` counters are **CUMULATIVE
-FROM BOOT — read twice and difference**, as E8 and E17 did. A single read inverts the answer:
-`r206-e8-fixup-timing-128.json` makes sprites look 88.1% when in-window it is 5.0%, because one boot
-call is 21,353,728 ticks. And `gcAddAnimJointAll` **contains** `gcAddDObjAnimJoint`, so adding those two
-counters double-counts to ~274,000 and clears a threshold spuriously. `-Samples 1` fails the sampler's
-own count check; 8 is the floor.
+**Method trap:** `gNdsR2Fixup*`/`gNdsR2Add*` are **CUMULATIVE FROM BOOT — read twice and difference**. One
+read inverts it: `r206-e8-fixup-timing-128.json` shows sprites 88.1% where in-window it is 5.0% (one boot
+call is 21,353,728). `gcAddAnimJointAll` **contains** `gcAddDObjAnimJoint`, so summing them double-counts
+to ~274,000 and clears a threshold spuriously. `-Samples 1` fails the sampler's count check; 8 is the floor.
 
 ## The one open fidelity item
 

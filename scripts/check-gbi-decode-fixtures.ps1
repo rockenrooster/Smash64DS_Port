@@ -16,6 +16,17 @@ $cubicBoundChecker = Join-Path $PSScriptRoot 'check_r2_cubic_error_bound.py'
 if ($LASTEXITCODE -ne 0) {
     throw "R2 fixed-point cubic error bound failed with exit code $LASTEXITCODE."
 }
+# R2-07 R0c. Same argument as the cubic above, and the opposite gate: the sprite
+# blitter's division replacements are BIT-EXACT, not bounded, so this asserts
+# equality rather than an error budget. It is wired in because the exactness rests
+# on a bound that is easy to break by accident -- `intensity` and `inverse` are
+# complementary, capping the numerator at 255*255+127 -- and the source comment
+# claiming "verified" is worth nothing if nothing re-verifies it. Host-only.
+$spriteLerpChecker = Join-Path $PSScriptRoot 'check_sprite_lerp_exact.py'
+& python -B $spriteLerpChecker
+if ($LASTEXITCODE -ne 0) {
+    throw "Sprite blitter division exactness failed with exit code $LASTEXITCODE."
+}
 function Assert-Equal {
     param(
         [object]$Actual,
