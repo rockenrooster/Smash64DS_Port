@@ -18,9 +18,8 @@ measurements, `KNOWN_ISSUES.md` durable gaps and harness traps,
 
 **`WORK-H` P95 1,160,448 / P50 976,064**, 8/128 over, frames 796..923, evidence
 `r206-head-control-128` — a rebuild from HEAD that reproduces `r206-arena-heap-128` in **all
-eleven buckets identically**, histogram and counters included. **This harness has zero
-run-to-run noise:** disagreement on a fixed configuration is the binary or the emulator
-settings, never scatter.
+eleven buckets identically**. **This harness has zero run-to-run noise:** disagreement on a
+fixed configuration is the binary or the emulator settings, never scatter.
 
 **DLDI-on costs ~29,696 P95 and is required for retail parity (owner), so it is the honest
 config.** E69 rebuilt at its own commit `4916656d`, identical source, reads **1,126,464**
@@ -28,64 +27,67 @@ DLDI-on vs the **1,096,768** it published DLDI-off. **The gate was already misse
 before this session, the 23,232 margin was a DLDI-off artifact, and R2-07's particle budget
 was sized against it.** Read every pre-`3eb9ecdb` P95 as a lower bound.
 
-**This session did NOT cost 33,984 — that was a P95 tail artifact and both follow-up
-candidates are closed.** Against the E69 rebuild: P25 +1,216, **P50 +4,352**, P75 +4,160,
-P90 +8,512, P95 +33,984 — and **frames over 1.12M went 9/128 → 8/128**, so by the gate's own
-criterion the current tree is marginally *better*. `SRC +30,912` stays withdrawn. Candidate
-1, residual SD reads, **refuted without a build**: `gNdsR2AnimWarmFailed=0`, cache `Hits=79
-Misses=2` of 81 force-loads, zero overflows — **two file loads reach the SD driver in the
-whole run.** Candidate 2, heap layout, is moot. **Never compare those two runs paired by
-frame** — the anim cache shifts load timing so they diverge in state (P10 −89,088 / P90
-+115,712); order statistics only. Board §"R2-06 E4b CORRECTION" has the table.
+**This session did NOT cost 33,984 — a P95 tail artifact; both candidates are closed.** Body
+inside the noise floor (P50 **+4,352**) and **frames over 1.12M went 9/128 → 8/128**, so by
+the gate's own criterion the tree is marginally *better*. `SRC +30,912` stays withdrawn.
+Residual SD reads **refuted without a build** (`WarmFailed=0`, cache `Hits=79 Misses=2` of
+81 — **two file loads reach the SD driver in the whole run**); heap layout moot. **Never
+compare those two runs paired by frame** — the anim cache shifts load timing so they diverge
+in state (P10 −89,088 / P90 +115,712); order statistics only.
 
 **R2-06 E6 REFUTED — E61 §5's −56,774 Horner route is not available and its other rows are
 now suspect.** Bounded green, measured **+7,168 P50 / 117 of 128 paired frames worse**: a
 memo is a memory stream, that table priced only arithmetic. Durable: **this configuration
 passes `aobjs_num = 0`**, so AObjs are malloc'd individually and nothing can index them.
 
-## OPEN P1: the excursion is `SRC`, and the two named causes are REFUTED (E7)
+## OPEN P1: every over-gate frame is an ASSET-LOAD frame, and clean P95 MEETS THE GATE
 
-The 8 over-gate frames are 809/842/843/869/890/898/909/924 — gaps 33/1/26/21/8/11/15, a
-condition firing on ~6% of frames. Clean vs over-gate medians: **`SRC` +242,688**, `MISC`
-+20,032, but **`FTR` −1,312 and `STG` −2,496** — the specialized draw owners are *cheaper*
-on the expensive frames. `SRC` (`gNdsTickHudSourceTicks`, the source update) is **~92% of
-the +233,472 WORK-H rise**; `OTHR`'s +341,920 is mostly the VBlank wait that `WORK-H`
-already subtracts. **The fighter fallback is refuted: 256 of 256 draws native, `animLock:0`,
-0 of 128 frames** — E32's shuffle fold closed E53's leading story, so **E32's parked flash
-residual no longer blocks a gate lever.** Effects refuted free: 4 hit sparks in 924 frames.
-Frame 809 is a separate audio cause (`AUD` 91,904 vs 1,280). **Next: attribute by BRACKET,
-not by symbol** — E53 profiled symbols with `NDS_TICK_HUD_DRAW=0` and could not separate
-draw from update. Do not re-run the fallback census.
+**E8.** The Task 75 census ring marks the frames running `ndsRelocFinalizeLoadedFile`
+(`reloc_backend_assets.c:3398`): **16 of 128, and 8 of the 9 over-gate frames are among
+them** (842, the exception, is adjacent to load frame 843). Load frames P50 **1,113,152**;
+**clean frames P50 974,080, P95 1,056,640 — inside the 1,120,000 gate by 63,360**, 1 of 112
+over. The +139,072 premium is entirely `SRC` (+139,328). Frame 909 is 1,617,152, the event
+E53 profiled. **The average frame is already 145,920 under budget; the milestone turns on
+the load frames.**
+
+**E7 refuted both previously-named causes.** Fighter fallback: **256 of 256 draws native,
+`animLock:0`, 0 of 128 frames** — E32's shuffle fold closed E53's leading story, so **E32's
+parked flash residual no longer blocks a gate lever.** Effects, free: 4 hit sparks in 924
+frames. On over-gate frames `FTR` is **−1,312** and `STG` **−2,496**: not a render problem.
+
+**The relocation is only 21.5% of the premium — do not over-claim it.** In-window (via new
+lab flag `NDS_R2_RELOC_FIXUP_TIMING=1`; counters are cumulative from boot, so difference
+across the window): 18 calls, 478,080 ticks, **`ndsRelocNormalizeFighterAObj16File` 422,848
+= 88.4%**. The other ~109,000/frame is the *cause* of the load — a fighter changing action.
+**The named lever is O(n²)** at `reloc_backend_assets.c:3050-3081`: for every pointer-table
+entry it rescans the whole table for the successor boundary. One pass replaces it, adding no
+BSS/heap/`.text.hot` and deleting code — the one shape that escapes E53's tail-fix rule.
+~26,000 on each of 16 frames, but **3,735/frame averaged is UNDER the noise floor: judge it
+on the load frames only.** Expect P95 ~1,135,000 — bank it, it is not the gate. Board
+§"R2-06 E8" has the per-pass table and why a post-fixup cache is NOT viable.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
 Owner: *"lots of freeze bugs that seem random"* + *"sometimes hitting a shielded player
-causes a freeze"*. **One cause explains the class**, caught 3.5 min into the both-CPU ROM
-(`artifacts/verification/freeze-soak/2026-07-29_202114-*`): `decomp/src/sys/malloc.c:30` is
-`while (TRUE);`, so the allocator **hangs instead of returning NULL** on exhaustion, and
-`ndsR2AnimCacheStore` was a *speculative* cache calling it from a gameplay frame on the
-shared `gSYTaskmanGeneralHeap`. Chain: damage-fall → aerial interrupt →
-`ftMainSetStatus(213)` → on-demand `FTMarioAnimAttackAirD` → `syTaskmanMalloc(3472)` → spin.
-Do NOT make `syTaskmanMalloc` return NULL globally; decomp callers do not all check.
+causes a freeze"*. **One cause explains the class** (`artifacts/verification/freeze-soak/
+2026-07-29_202114-*`): `decomp/src/sys/malloc.c:30` is `while (TRUE);`, so the allocator
+**hangs instead of returning NULL** on exhaustion, and `ndsR2AnimCacheStore` was a
+*speculative* cache calling it from a gameplay frame on the shared `gSYTaskmanGeneralHeap`.
+Chain: damage-fall → aerial interrupt → `ftMainSetStatus(213)` → on-demand
+`FTMarioAnimAttackAirD` → `syTaskmanMalloc(3472)` → spin. Do NOT make `syTaskmanMalloc`
+return NULL globally; decomp callers do not all check.
 
 **One site, not two — the "second exhaustion at battle start" was MY regression.** A static
 arena is BSS, and BSS competes with the runtime `calloc` that sizes the heap: crossing the
 `0x130000` search floor (`diagnostics.c:7403`) costs **196,608 bytes in one step**. **The
-arena now lives on the taskman heap, 92,160 bytes, +32 bytes of BSS**, using 87,824. **Do
-NOT lower that floor** — it is a contract with the Task 36 replay guard
+arena now lives on the taskman heap, 92,160 bytes, +32 bytes of BSS**, using 87,824. **Do NOT
+lower that floor** — it is a contract with the Task 36 replay guard
 (`nds_renderer.h:124-134`); my earlier authorization is retracted. **Both configurations
-complete a full match clean**: `gNdsSyMallocOverflowCount=0`, replay admitted, every arena
-overflow rejecting safely where each one used to hang.
-
-**Four detector defects fixed; two soak verdicts withdrawn** — it hashed the window
-**title**, where melonDS renders its FPS counter; `Invoke-SoakGdb` was called and never
-defined; the 40 s trip threshold was under the game's ~30 s scene-load dead air; and a
-static picture was called a hang without reading `x/1i $pc`. Only the pre-fix both-CPU
-**FROZEN 210 s** stands. **Sudden Death has its own issues** (owner) — separate row. **No
-passive soak reaches match two:** `mnVSResultsCheckExit` (`mnvsresults.c:266`) needs a
-`START_BUTTON` tap and the results loop (`taskman_seam.c:6968`) is update-bounded only under
-`NDS_HARNESS_FAST_LOGIC != 0`, pinned `0` everywhere shipped. Cross-match drift needs a
-**synthesized START**; soaks default to 2.5 min, ceiling 5.
+complete a full match clean.** Four detector defects fixed and two soak verdicts withdrawn
+(it hashed the window **title**, where melonDS renders its FPS counter; `Invoke-SoakGdb` was
+never defined; the 40 s threshold was under the ~30 s scene-load dead air). **Sudden Death has
+its own issues** (owner). **No passive soak reaches match two** —
+`mnVSResultsCheckExit` needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
 
 ## OPEN P1: the VS Results screen is 21.9M ticks/frame, 1.5 FPS
 
@@ -100,10 +102,11 @@ third, wider candidate.
 
 **"float→fixed on the collision path" was wrong by ~20x and that row is deleted.** A leaf
 helper is charged to itself, not its caller, so animation float was booked to
-`__aeabi_fadd`/`__aeabi_fmul`. Caller-attributed, animation is **146,942/frame, 15.2% of
-WORK 969,487**; collision is **under 4,000**; the cubic is **99.6% of that float** (E61:
-149.4 nodes at **405 ticks each**). **Task 78 stopped the animation compiler on a
-self-vs-inclusive error** (corrected 164,236, **1.64x its target, not 0.85x**).
+`__aeabi_fadd`/`__aeabi_fmul`. Caller-attributed, animation is **146,942/frame**; collision is
+**under 4,000**; the cubic is **99.6% of that float** (149.4 nodes at **405 ticks each**).
+**Task 78 stopped the animation compiler on a self-vs-inclusive error** (corrected 164,236,
+**1.64x its target, not 0.85x**). Refuted, do not re-propose: the *layout* route (95/96), the
+pose table (size), the Horner fold (E6).
 
 ## The one open fidelity item
 

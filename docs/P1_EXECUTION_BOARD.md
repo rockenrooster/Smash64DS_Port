@@ -486,6 +486,99 @@ Superseded text follows for provenance. The two candidates as first written:
   the change it measures. Either stamp `git status --porcelain` alongside it or refuse to
   write an artifact from a dirty tree.
 
+### R2-06 E8 — EVERY over-gate frame is an asset-load frame, and the clean-frame P95 MEETS THE GATE (2026-07-30)
+
+E7 narrowed the excursion to `SRC`. This names the event, and it is the most actionable
+result the phase has produced. `NDS_TASK75_LOAD_CENSUS=1` re-points the per-frame census
+ring at `gNdsTask75AssetLoadCount`, which is bumped inside
+**`ndsRelocFinalizeLoadedFile`** (`reloc_backend_assets.c:3398`) — so the ring marks exactly
+the frames that relocate an asset. Evidence
+`artifacts/performance/r206-e8-load-census-128{.json,-rows.csv}`.
+
+**16 of 128 frames take a load, and 8 of the 9 over-gate frames are among them.**
+
+| population | n | P50 | P90 | P95 | max |
+|---|---:|---:|---:|---:|---:|
+| load frames | 16 | 1,113,152 | 1,277,888 | 1,305,088 | 1,617,152 |
+| **clean frames** | **112** | **974,080** | **1,006,144** | **1,056,640** | 1,200,896 |
+| all frames | 128 | 978,752 | 1,073,216 | 1,161,152 | 1,617,152 |
+
+- **Clean-frame P95 is 1,056,640 — INSIDE the 1,120,000 gate by 63,360.**
+- **1 of 112** clean frames is over gate; **8 of 16** load frames are.
+- Load frames carry a median **+139,072 (1.14x)**, and `SRC` alone accounts for it:
+  `SRC` P50 444,544 on load frames against 305,216 clean, **+139,328**. That is E7's bracket
+  attribution confirmed to the tick.
+- Frame 909 is **1,617,152**, i.e. **+643,072** over the clean median. Same frame E53
+  profiled as 910–913.
+- The one exception is frame 842, adjacent to load frame 843.
+
+**So the milestone turns on getting the load's work out of the gameplay frame**, not on
+shaving the average frame — the average frame is already 145,920 under budget.
+
+#### The relocation is only 21.5% of it. Do not over-claim this.
+
+`NDS_R2_RELOC_FIXUP_TIMING=1` (new, lab default off) prices
+`ndsRelocFinalizeLoadedFile`'s five passes. The counters are cumulative from boot, so they
+were read twice and differenced — at window start and at window end — because the very
+first `ndsRelocNormalizeBattleInterfaceSprites` call is **21,353,728 ticks** on its own and
+would otherwise swamp everything. In-window, frames 797..924:
+
+| pass | ticks | share |
+|---|---:|---:|
+| `ndsRelocNormalizeFighterAObj16File` | **422,848** | **88.4%** |
+| `ndsRelocNormalizeBattleInterfaceSprites` | 24,000 | 5.0% |
+| `ndsRelocApplyInternalPointerFixups` | 16,320 | 3.4% |
+| `ndsRelocApplyExternalPointerFixups` | 2,560 | 0.5% |
+| `ndsRelocNormalizeFighterAttributesFile` | 1,472 | 0.3% |
+| register/alias residual | 10,880 | 2.3% |
+| **total, 18 calls** | **478,080** | 26,560/call |
+
+**478,080 is 21.5% of the 2,225,152 the 16 load frames carry in premium** — about 29,880
+per load frame against a 139,072 premium. The other ~109,000 per frame is the *cause* of the
+load, not the load: a fighter changing action, which also runs the status transition, the
+animation-script re-parse and the hit/collision work. **The load marker is largely a proxy
+for "a fighter changed action this frame."** Removing the whole relocation would clear
+perhaps 1–2 of the 8 over-gate frames, not all of them.
+
+Two independent corroborations that this is an event and not simulation volume: Task 106
+proved the `SRC` excursion **survives halving the update rate unchanged** (+518,016 vs
++522,720), and the anim cache is already at a 79/81 hit rate with `WarmFailed=0`, so this is
+not I/O.
+
+#### The named lever: `ndsRelocNormalizeFighterAObj16File` is O(n²), and the fix adds nothing
+
+At `reloc_backend_assets.c:3050-3081` the function walks the pointer table and, **for every
+entry, rescans the entire table** to find the next script boundary:
+
+```
+for (i = 0; (i * 4) < table_bytes; i++)            /* each script pointer   */
+    for (j = 0; (j * 4) < table_bytes; j++)        /* rescan ALL of them to */
+        if (next > value && next < script_end)     /* find min{next > value} */
+            script_end = next;
+```
+
+The inner loop computes the **successor in sorted order** — derivable in one pass, or free
+if the table is already ascending. That is a pure algorithmic fix in one function: **no new
+BSS, no new heap, no `.text.hot` member, and it deletes code rather than adding it**, which
+is the one shape that escapes E53's "a fix aimed at the tail must not add cost to the body"
+rule. It is 88.4% of the in-frame relocation, ~23,491 ticks per call, ~26,000 on each of the
+16 load frames.
+
+**Priced honestly before anyone builds it:** averaged over the window it is 3,735/frame,
+*under* the 5,000–7,000 placement noise floor, so **a P50 reading cannot resolve it.** It
+must be judged on the load frames specifically, and that is now legitimate because E6
+established this harness has **zero run-to-run noise** on a fixed configuration. Expected
+effect: P95 from 1,161,152 to roughly 1,135,000 — real, accumulating, **not sufficient
+alone.** Take it as a gain to bank, not as the gate.
+
+**What is NOT viable:** caching the post-fixup image. The pass reads values that
+`ndsRelocApplyInternalPointerFixups` has already made **absolute**, so the normalized image
+is address-dependent, and `AnimForceResident` reads 0 because the destination is a shared
+scratch heap that different animations rotate through (which is also why 52 of 81
+force-loads are repeats). A per-asset destination buffer would fix that by trading RAM for
+the pass, which `PROJECT_GOAL.md` ranks as a good trade — but it is a change of ownership in
+the fighter animation memory model and needs the owner, not an overnight edit.
+
 ### R2-06 E7 — the fighter fallback is REFUTED as the excursion cause. 0 of 256 draws fell back (2026-07-30)
 
 E53 named this **"the highest-value unowned row on this board"** and asked for exactly one

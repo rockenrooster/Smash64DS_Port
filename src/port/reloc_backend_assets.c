@@ -3381,8 +3381,50 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
     return TRUE;
 }
 
+#if NDS_R2_RELOC_FIXUP_TIMING
+/* R2-06 E8. This function is the whole reason the gate is missed, and the four
+ * passes below have never been priced separately.
+ *
+ * E8 attributed 8 of the 9 over-gate frames to frames on which this runs:
+ * `NDS_TASK75_MARK_ASSET_LOAD` fires here, the census ring flagged 16 of 128
+ * frames, and those frames carry `WORK-H` median 1,113,152 against 974,080 clean
+ * (+139,072), all of it in `SRC` (+139,328). Clean-frame P95 is 1,056,640 --
+ * INSIDE the 1,120,000 gate by 63,360 -- so the milestone turns on getting this
+ * out of the frame.
+ *
+ * The anim cache does not help: its own comment at the hit path says a hit
+ * "replaces the NitroFS walk, the cartridge read and the word byte-swap with one
+ * copy" and that "the fixups below still run against this heap, because they
+ * write absolute pointers into it". So all 16 of those frames are cache HITS that
+ * still relocate.
+ *
+ * Instrument only, default off, no behaviour change. Which of the four passes
+ * dominates decides the repair, and the two candidate repairs are very different
+ * amounts of work:
+ *   - cache the POST-fixup image, which needs the destination address to be
+ *     stable per asset (`AnimForceResident` reads 0, so today it is not: the
+ *     destination is a shared scratch heap that different animations rotate
+ *     through, which is also why 52 of 81 force-loads are repeats);
+ *   - or give each resident animation its own destination buffer, trading RAM
+ *     for the fixup pass, which PROJECT_GOAL explicitly ranks as a good trade.
+ * Do not pick one without this split. */
+volatile u32 gNdsR2FixupFinalizeCalls;
+volatile u32 gNdsR2FixupFinalizeTicks;
+volatile u32 gNdsR2FixupFinalizeMaxTicks;
+volatile u32 gNdsR2FixupInternalTicks;
+volatile u32 gNdsR2FixupAObj16Ticks;
+volatile u32 gNdsR2FixupAttributesTicks;
+volatile u32 gNdsR2FixupExternalTicks;
+volatile u32 gNdsR2FixupSpritesTicks;
+#endif
+
 static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
 {
+#if NDS_R2_RELOC_FIXUP_TIMING
+    u32 fixup_enter;
+    u32 fixup_phase;
+#endif
+
     if (loaded == NULL)
     {
         return FALSE;
@@ -3397,6 +3439,38 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
      * return above is the re-entrant case and must not be counted twice. */
     NDS_TASK75_MARK_ASSET_LOAD();
     loaded->fixups_applying = TRUE;
+#if NDS_R2_RELOC_FIXUP_TIMING
+    fixup_enter = cpuGetTiming();
+    fixup_phase = fixup_enter;
+    gNdsR2FixupFinalizeCalls++;
+    if (ndsRelocApplyInternalPointerFixups(loaded) == FALSE)
+    {
+        loaded->fixups_applying = FALSE;
+        return FALSE;
+    }
+    gNdsR2FixupInternalTicks += cpuGetTiming() - fixup_phase;
+    fixup_phase = cpuGetTiming();
+    if (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE)
+    {
+        loaded->fixups_applying = FALSE;
+        return FALSE;
+    }
+    gNdsR2FixupAObj16Ticks += cpuGetTiming() - fixup_phase;
+    fixup_phase = cpuGetTiming();
+    if (ndsRelocNormalizeFighterAttributesFile(loaded) == FALSE)
+    {
+        loaded->fixups_applying = FALSE;
+        return FALSE;
+    }
+    gNdsR2FixupAttributesTicks += cpuGetTiming() - fixup_phase;
+    fixup_phase = cpuGetTiming();
+    if (ndsRelocApplyExternalPointerFixups(loaded) == FALSE)
+    {
+        loaded->fixups_applying = FALSE;
+        return FALSE;
+    }
+    gNdsR2FixupExternalTicks += cpuGetTiming() - fixup_phase;
+#else
     if ((ndsRelocApplyInternalPointerFixups(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAttributesFile(loaded) == FALSE) ||
@@ -3405,12 +3479,29 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
         loaded->fixups_applying = FALSE;
         return FALSE;
     }
+#endif
     loaded->fixups_applying = FALSE;
 
+#if NDS_R2_RELOC_FIXUP_TIMING
+    fixup_phase = cpuGetTiming();
+#endif
     if (ndsRelocNormalizeBattleInterfaceSprites(loaded) == FALSE)
     {
         return FALSE;
     }
+#if NDS_R2_RELOC_FIXUP_TIMING
+    {
+        u32 total;
+
+        gNdsR2FixupSpritesTicks += cpuGetTiming() - fixup_phase;
+        total = cpuGetTiming() - fixup_enter;
+        gNdsR2FixupFinalizeTicks += total;
+        if (total > gNdsR2FixupFinalizeMaxTicks)
+        {
+            gNdsR2FixupFinalizeMaxTicks = total;
+        }
+    }
+#endif
 
     if (ndsPupupuStageAssetBit(loaded->asset_id) != 0u)
     {

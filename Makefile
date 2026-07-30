@@ -223,6 +223,16 @@ NDS_R2_ANIM_CENSUS ?= 0
 # replacements" as allowed, while the Task 9 state hash asserts the stronger
 # bit-exact property. Expect that hash to move.
 NDS_R2_CUBIC_FIXED ?= 0
+# R2-06 E8. Price ndsRelocFinalizeLoadedFile's five passes separately. E8 traced
+# 8 of the 9 over-gate frames to the 16 frames on which that function runs -- they
+# carry WORK-H median 1,113,152 against 974,080 clean, all of it in SRC, while the
+# clean-frame P95 of 1,056,640 is INSIDE the 1.12M gate by 63,360. So the milestone
+# turns on moving the relocation out of the gameplay frame, and which pass
+# dominates decides whether the repair is a post-fixup cache or one destination
+# buffer per resident animation. Instrument only, no behaviour change, lab default
+# off: it adds 8 words of BSS and this ROM's placement noise floor is 5,000-7,000,
+# so a run with it on is not comparable to an ordinary tick-HUD baseline.
+NDS_R2_RELOC_FIXUP_TIMING ?= 0
 # Switch plan R2-06 harness prerequisite, owner-requested 2026-07-29. Makes
 # player 0 a level-3 CPU as well, so both fighters attack continuously with no
 # recorded input stream. A deliberate STRESS case: it maximises the live hitbox
@@ -2111,6 +2121,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_FLASH_PROBE $(NDS_R2_FLASH_PROBE)'; \
 		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \
 		echo '#define NDS_R2_CUBIC_FIXED $(NDS_R2_CUBIC_FIXED)'; \
+		echo '#define NDS_R2_RELOC_FIXUP_TIMING $(NDS_R2_RELOC_FIXUP_TIMING)'; \
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_R2_UNLIT_VERTEX_EPOCH $(NDS_R2_UNLIT_VERTEX_EPOCH)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
