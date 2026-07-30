@@ -79,6 +79,30 @@ try {
         }
     }
 
+    # Fail before launching, not thirty minutes in. A `break` on a name GDB
+    # cannot resolve is a warning, not an error: the script would emulate the
+    # whole one-minute match, reach the Results scene, and then report "No BLIT
+    # records" as if the finding were about the runtime. Two full runs were lost
+    # to invented global names before `sample-tick-hud-buckets.ps1` got the same
+    # pre-flight; this is that check, applied to breakpoint symbols.
+    $breakSymbols = @('ndsMNVSResultsRecordFrame', 'ndsDrawSObjIntoPreview')
+    if ($Phases) {
+        $breakSymbols += @('ndsPlatformBeginOriginalSpritePreview',
+                           'ndsPlatformCommitOriginalSpritePreviewLayer')
+    }
+    $nm = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
+    if (Test-Path -LiteralPath $nm -PathType Leaf) {
+        $defined = [System.Collections.Generic.HashSet[string]]::new(
+            [string[]](& $nm --defined-only $elf |
+                ForEach-Object { ($_ -split '\s+')[-1] }))
+        $absent = @($breakSymbols | Where-Object { -not $defined.Contains($_) })
+        if ($absent.Count -ne 0) {
+            throw ("These breakpoint symbols are not in $elf, so the census " +
+                   "would run to completion and report nothing: " +
+                   ($absent -join ', '))
+        }
+    }
+
     $configState = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath -GdbPort $context.GdbPort `
         -Arm7Port $context.Arm7Port `
@@ -138,6 +162,18 @@ try {
             'commands',
             'silent',
             'printf "PHASE=%u,commit\n", sVBlankCount',
+            'continue',
+            'end',
+            # A second, logging breakpoint at the same address as 3. GDB keeps
+            # them independent, so 3's ignore count still terminates the run.
+            # Without this the commit interval runs to the NEXT frame's layer
+            # begin and absorbs everything else the scene does -- including the
+            # two 3D fighter GObjs, which draw at display link 9, ahead of the
+            # wallpaper's link 26.
+            'break ndsMNVSResultsRecordFrame',
+            'commands',
+            'silent',
+            'printf "PHASE=%u,iteration\n", sVBlankCount',
             'continue',
             'end'
         )

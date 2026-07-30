@@ -1730,6 +1730,45 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 R0f MEASURED — the layer CLEAR is free, the layer COMMIT is 43.1%, and the wallpaper call still hides 1.6M (2026-07-30)
+
+`census-vsresults-blit.ps1 -Phases` on the R0e ROM (`33A9E063`), same window. 491 costed intervals,
+406 VBlanks over 40 iterations = **10.15 VB/iteration**, agreeing with R0e's window figure of 10.250.
+
+| interval | hits | VB/iter | ticks/frame | share |
+| --- | --- | --- | --- | --- |
+| `(layer commit)` | 81 | **4.375** | 2,450,831 | **43.1%** |
+| I/4b 300×220 wallpaper | 41 | **4.100** | 2,296,779 | **40.4%** |
+| seven IA/8b glyphs | 287 | 1.675 | 938,318 | 16.5% |
+| `(layer begin)` | 82 | **0.000** | 0 | **0.0%** |
+
+**Two hypotheses died here, both of them mine.**
+
+1. **The 153,600-byte staging clear is NOT a cost.** `ndsPlatformBeginOriginalSpritePreview` was hit 82
+   times and accumulated **zero** VBlanks. It is `memset` per row over 240 rows and it is below the
+   measurement floor. Every earlier note that paired "commit plus the next Begin's clear" as the owner
+   was half wrong; only the commit costs anything. Delete the clear from the candidate list.
+2. **R0's "22 commits in 101 iterations, zero foreground" does not describe this window.** Here it is
+   **81 commits in 40 iterations** — two per iteration, both layers, every frame. Not a contradiction:
+   `sMNVSResultsDrawWallpaperTic` is 80, so R0's window straddled tics where the wallpaper GObj did not
+   exist yet. **A counter read at one point in a scene that builds up over 180 tics is not a property of
+   the scene.** That is why this run re-derived it inside the same window as the cost.
+
+**What is still unowned: ~1.6M ticks/frame INSIDE the wallpaper's own call.** 2,296,779 ticks for 66,000
+pixels is 34.8 ticks/pixel ≈ **70 ARM9 cycles**, against a loop body of **9 instructions**. R0e removed
+~103 instructions/pixel and 135 cycles/pixel — 1.31 cycles per instruction removed, which is sane — so
+the model is right about what was removed and wrong about what is left. Nine instructions cannot cost 70
+cycles. The only per-pixel main-RAM traffic left is **one halfword store**, so **R0g** folds the pair's
+two `strh` into one `str`: the base is always 4-byte aligned (`preview_pitch` 320, `origin_x` 10, so
+`(y·pitch + origin_x)·2 ≡ 0 mod 4` for every row) and each pair advances exactly 4 bytes, so the bytes
+written are identical. It emits **19 instructions per pair against R0e's 18**, which makes it a clean
+discriminator: instruction count predicts a small loss, store count predicts a large win.
+
+**Caveat on `(layer commit)`, stated before anyone builds against it:** that interval ends at the next
+layer *begin*, so it also contains the scene's two 3D fighter GObjs — they draw at display link 9, ahead
+of the wallpaper's link 26 — plus the scene update and present. `-Phases` now also logs the iteration
+boundary to split it. **Do not read 43.1% as the cost of committing a layer.**
+
 ### R2-07 R0e BUILT — the Results wallpaper loses 68.7%; Results is 3.9× faster than R0 and the layer pipeline is now the owner (2026-07-30)
 
 **21.525 → 10.250 VBlanks/iteration, −11.275 (−6,316,143 ticks/frame, −52.4%).** Cumulative from R0:
@@ -1758,6 +1797,7 @@ last column is even and therefore takes the HIGH nibble of byte `pairs`.
 
 **Emitted body is 18 Thumb instructions per 2 pixels, register-resident** (`2037ae0..2037b06`, one
 `ldrb`, two `ldrh`, two `strh`, one `ldr [sp]` per pair) against the generic loop's ~112 per pixel.
+`ndsDrawSObjIntoPreview` grows 3,796 → 4,152 bytes (**+356**) and the ROM is unchanged at 11,514,880.
 Every other caller of this blitter is untouched: `fast_i4` is NULL unless
 `results_wallpaper_combine != 0 && record_startup == 0 && !is_scaled && bmfmt == I && bmsiz == 4b &&
 origin_x >= 0`, and the horizontal extent is re-checked per strip so the specialized row only ever runs
