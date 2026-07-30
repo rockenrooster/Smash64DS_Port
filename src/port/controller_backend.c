@@ -63,6 +63,15 @@ static void ndsControllerMapPad(u32 keys, OSContPad *pad)
     if (keys & KEY_UP) pad->stick_y = 80;
 }
 
+/* The live keypad in source button terms, for scenes that need it without
+ * pulling libnds keypad headers into a decomp-heavy translation unit. Reads the
+ * LATCHED state -- `ndsPlatformReadInput` already calls `scanKeys()` once per
+ * frame, and a second scan would consume the edge that reader depends on. */
+u16 ndsControllerLiveButtons(void)
+{
+    return ndsControllerMapButtons(keysHeld());
+}
+
 int ndsControllerBackendSelfTest(void)
 {
     OSContPad pad;

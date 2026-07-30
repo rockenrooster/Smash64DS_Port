@@ -78,15 +78,27 @@ volatile u32 gNdsVSResultsTransitionTicks;
 volatile u32 gNdsVSResultsFirstTickStamp;
 volatile u32 gNdsVSResultsToWallpaperTicks;
 volatile u32 gNdsVSResultsToResultsTicks;
+/* Owner requirement, switch plan R2-07: "Pressing start in Results screen should
+ * restart match (P1 specific)". Counts the redirects so a soak can prove match
+ * two happened rather than inferring it from a screenshot. */
+volatile u32 gNdsVSResultsRematchCount;
+volatile u32 gNdsVSResultsInputPollCount;
+volatile u32 gNdsVSResultsInputSeenMask;
+volatile u32 gNdsVSResultsInputTapMask;
+volatile u32 gNdsVSResultsPadMask;
 
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
+extern void ndsDevSceneHarnessApply(void);
+extern u16 ndsControllerLiveButtons(void);
 
 void ndsMNVSResultsManagerFuncUpdate(SYTaskmanSetup *setup);
 void ndsMNVSResultsSetupFilesKind(s32 fkind);
+void ndsMNVSResultsSetLoadScene(void);
 
 #define mnVSResultsStartScene ndsBaseMNVSResultsStartScene
 #define scManagerFuncUpdate ndsMNVSResultsManagerFuncUpdate
+#define syTaskmanSetLoadScene ndsMNVSResultsSetLoadScene
 #define ftManagerSetupFilesAllKind ndsMNVSResultsSetupFilesKind
 
 void ndsBaseMNVSResultsStartScene(void);
@@ -96,6 +108,42 @@ void ndsBaseMNVSResultsStartScene(void);
 #undef mnVSResultsStartScene
 #undef scManagerFuncUpdate
 #undef ftManagerSetupFilesAllKind
+#undef syTaskmanSetLoadScene
+
+/* Owner requirement, switch plan R2-07: "Pressing start in Results screen should
+ * restart match (P1 specific)".
+ *
+ * `mnVSResultsFuncRun` polls `mnVSResultsCheckExit`, which returns TRUE on a
+ * START tap once `sMNVSResultsTotalTimeTics >= sMNVSResultsAllowExitWait` (410
+ * ticks for a normal result, 370 for a tie, 200 for No Contest -- mnvsresults.c
+ * :2820-2835), then picks a destination and calls `syTaskmanSetLoadScene`. Both
+ * of its destinations are menus this milestone does not have: `nSCKindPlayersVS`
+ * normally, or `nSCKindMessage` when an unlock fires. There is exactly ONE call
+ * site (mnvsresults.c:3316), so redefining the symbol over the included source
+ * is unambiguous, and it keeps `decomp/` read-only -- the same mechanism this
+ * translation unit already uses for `scManagerFuncUpdate` and
+ * `ftManagerSetupFilesAllKind`.
+ *
+ * Re-seeding through `ndsDevSceneHarnessApply` rather than hand-clearing state:
+ * it restores `dSCManagerDefaultBattleState` into `gSCManagerTransferBattleState`
+ * and re-declares the whole canonical configuration, so a rematch starts from
+ * byte-identical state to the boot match instead of from whatever the finished
+ * match left behind (damage, stocks, scores, time_remain). It writes only
+ * globals -- no allocation, no scene teardown -- so it is safe to re-run here.
+ * It seeds `dSCManagerDefaultSceneData`, not the live scene, which is why
+ * `gSCManagerSceneData` is set explicitly afterwards.
+ *
+ * `scene_prev` is `nSCKindMaps` to match what the harness declares for a fresh
+ * boot, not `nSCKindVSResults`: the battle path is entered exactly as it was for
+ * match one, so nothing downstream can distinguish a rematch from a cold start. */
+void ndsMNVSResultsSetLoadScene(void)
+{
+    ndsDevSceneHarnessApply();
+    gSCManagerSceneData.scene_prev = nSCKindMaps;
+    gSCManagerSceneData.scene_curr = nSCKindVSBattle;
+    gNdsVSResultsRematchCount++;
+    syTaskmanSetLoadScene();
+}
 
 static void (*sNdsMNVSResultsFuncStart)(void);
 
@@ -144,6 +192,46 @@ void ndsMNVSResultsSetupFilesKind(s32 fkind)
     }
 }
 
+/* The port never wires the real keypad into `gSYControllerDevices` for imported
+ * scenes: each menu synthesises the single button it needs -- `mnplayersvs.c:341`
+ * injects START, `mnmaps.c:256` injects A. Results was left with no injection at
+ * all, so `mnVSResultsCheckExit` (decomp mnvsresults.c:266) polled a permanently
+ * zero `button_tap` and the scene could never be left. Measured: a real 500 ms
+ * held START at Results tic ~1,000 left `gNdsVSResultsRematchCount` at 0 with the
+ * scene still ticking, which is what sent this hunt to the input layer rather
+ * than to the redirect.
+ *
+ * Publish the live pad instead of synthesising one, so the owner's START reaches
+ * the source's own exit test unmodified. Only device 0 is written -- claiming
+ * four controllers pressed START would satisfy the test by lying about hardware
+ * that is not there. `button_tap` is the rising edge, which is exactly what
+ * `mnVSResultsCheckExit` samples. */
+static void ndsMNVSResultsObserveInput(void)
+{
+    /* OBSERVE ONLY -- deliberately no writes to `gSYControllerDevices`.
+     *
+     * An earlier attempt published a synthetic pad from here and it could not
+     * work, for a reason worth keeping: `taskman_seam.c:6987-6995` runs
+     * `syControllerReadDeviceData` + `syControllerUpdateGlobalData` BEFORE
+     * `task_update` (which is `gcRunAll` -> `mnVSResultsFuncRun` ->
+     * `mnVSResultsCheckExit`), and calls this function AFTER it. So anything
+     * written here lands after the only reader has run and is overwritten by the
+     * source pipeline before the next one. The source's controller path already
+     * runs every update -- `NDS_HARNESS_FAST_LOGIC` is 0 in every configuration
+     * -- so the fix belongs in that path, not in a second one bolted alongside.
+     *
+     * These three masks are sticky (a held button is long gone by the time a
+     * soak reads globals) and split the failure three ways:
+     *   PadMask  0x1000, SeenMask 0        -> the source pipeline is not seeing
+     *                                         the keypad the port can already read
+     *   SeenMask 0x1000, TapMask  0        -> hold arrives, edge is lost
+     *   both 0x1000, RematchCount 0        -> the exit test itself is refusing */
+    gNdsVSResultsInputPollCount++;
+    gNdsVSResultsPadMask |= ndsControllerLiveButtons();
+    gNdsVSResultsInputSeenMask |= gSYControllerDevices[0].button_hold;
+    gNdsVSResultsInputTapMask |= gSYControllerDevices[0].button_tap;
+}
+
 void ndsMNVSResultsRecordFrame(void)
 {
     u32 file_count = 0;
@@ -157,6 +245,8 @@ void ndsMNVSResultsRecordFrame(void)
      * and describe nothing about this scene. Costs one compare per Results
      * iteration in profile builds only. */
     NDS_TASK37_PROFILE_RESULTS_TICK(sMNVSResultsTotalTimeTics);
+
+    ndsMNVSResultsObserveInput();
 
     /* Close the transition bracket on the first tick only. The start stamp is
      * taken at battle taskman exit, so this is the whole hand-off as the player

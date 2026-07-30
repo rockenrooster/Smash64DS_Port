@@ -28,6 +28,16 @@ param(
     # tripped as a freeze while the PC sat on a working `cmp` in the renderer.
     # 8 puts the threshold at 80s, safely clear of the measured dead air.
     [ValidateRange(2, 20)][int]$IdenticalFramesToTrip = 8,
+    # Seconds after launch to tap START once. 0 disables. Results exits only on
+    # START (mnVSResultsCheckExit, decomp mnvsresults.c:266) and only after
+    # sMNVSResultsAllowExitWait -- 410 Results tics for a normal result, which at
+    # the measured ~10.1 VBlanks/tic lands around 139 s from launch. Pick a value
+    # past that or the tap is swallowed and the run proves nothing.
+    [ValidateRange(0, 300)][int]$PressStartSeconds = 0,
+    # How many times to repeat that press, one per poll. See the comment at the
+    # press site: a single synthetic press wins the foreground race only about
+    # half the time.
+    [ValidateRange(1, 20)][int]$PressStartCount = 6,
     [string]$JsonOut = ''
 )
 
@@ -149,8 +159,41 @@ try {
     $previousHash = $null
     $identical = 0
     $distinct = 0
+    # Repeat the press. SetForegroundWindow is refused whenever another process
+    # owns the foreground, so a single synthetic press is unreliable: measured
+    # 2026-07-30, two identical runs gave gNdsVSResultsPadMask 0x1000 and then 0.
+    # Repeating on the poll cadence makes at least one land without needing the
+    # focus race to be won on the first try. A deterministic alternative exists
+    # (the controller playback path in `src/port/controller_backend.c`, already
+    # driven by verify-battle-mariofox-gcrunall-loop-harness.ps1) and is the
+    # right instrument if this ever needs to be exact rather than eventual.
+    $startPresses = 0
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds $PollSeconds
+        # R2-07: the Results screen exits on a START tap and nothing else, so a
+        # passive soak can never reach match two -- which is exactly the state the
+        # rematch redirect has to be tested in. One timed press turns this into a
+        # two-match soak. ENTER is melonDS's START; the window must be foregrounded
+        # first or SendKeys goes to whatever else has focus.
+        if (($PressStartSeconds -gt 0) -and ($startPresses -lt $PressStartCount) -and
+            ((Get-Date) -ge $started.AddSeconds($PressStartSeconds))) {
+            # HOLD the key, do not tap it. SendKeys presses and releases within
+            # milliseconds; the Results screen renders at roughly 6 FPS, so a tap
+            # that short almost never falls inside a guest input sample and
+            # `button_tap` never sees the edge. Measured: a SendKeys ENTER at
+            # t+151s left gNdsVSResultsRematchCount at 0 with Results still
+            # ticking. keybd_event with a real down/up pair spans several guest
+            # frames, which is what a player actually does.
+            [void][Smash64DSWindowCapture]::SetForegroundWindow($window)
+            Start-Sleep -Milliseconds 400
+            [Smash64DSWindowCapture]::keybd_event(0x0D, 0, 0, [UIntPtr]::Zero)
+            Start-Sleep -Milliseconds 500
+            [Smash64DSWindowCapture]::keybd_event(0x0D, 0, 2, [UIntPtr]::Zero)
+            $startPresses++
+            Write-Host ("  t+{0,5}s  held START (ENTER) 500 ms  [{1}/{2}]" -f
+                [int]((Get-Date) - $started).TotalSeconds, $startPresses,
+                $PressStartCount)
+        }
         $emulator.Refresh()
         if ($emulator.HasExited) {
             $verdict = 'EMULATOR-EXITED'
@@ -255,7 +298,18 @@ try {
             # 120, so these are per-frame cost x 80 and x 120 -- divide by
             # 33,514,000 for seconds.
             'gNdsVSResultsToWallpaperTicks',
-            'gNdsVSResultsToResultsTicks')
+            'gNdsVSResultsToResultsTicks',
+            # R2-07: START on Results restarts the match. Non-zero proves the
+            # redirect fired, which is the only way a soak reaches match two --
+            # a passive one still cannot, because nothing presses START.
+            'gNdsVSResultsRematchCount',
+            # Sticky input evidence. SeenMask 0 after a press means the key never
+            # reached the guest; SeenMask non-zero with TapMask 0 means the edge
+            # is wrong. START_BUTTON is 0x1000.
+            'gNdsVSResultsInputPollCount',
+            'gNdsVSResultsPadMask',
+            'gNdsVSResultsInputSeenMask',
+            'gNdsVSResultsInputTapMask')
         $format = (, '%u' * $cleanFields.Count) -join ','
         $progress = Invoke-SoakGdb -Tag 'clean' -TimeoutSeconds 90 -Commands @(
             "printf `"CLEAN=$format\n`", $($cleanFields -join ', ')")

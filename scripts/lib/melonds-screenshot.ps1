@@ -29,6 +29,14 @@ public static class Smash64DSWindowCapture
     public static extern bool ShowWindow(IntPtr window, int command);
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr window);
+    // Synthesises a HELD key, which SendKeys cannot do. A guest sampling input
+    // once per rendered frame needs the key down across at least one sample, and
+    // the Results screen renders at roughly 6 FPS -- so a SendKeys tap is very
+    // likely to fall entirely between two samples and never register as a
+    // button_tap edge. Measured exactly that on 2026-07-30.
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(
+        byte key, byte scan, uint flags, UIntPtr extra);
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool PrintWindow(
         IntPtr window, IntPtr destination, uint flags);

@@ -82,9 +82,11 @@ durable unresolved gaps.
   Three `%TEMP%/smash64ds-task16-*` worktrees were removed in the same pass:
   Windows temp cleanup had already deleted every file, leaving only directory
   skeletons and a 119-byte `.git` pointer, which is exactly why
-  `git worktree prune` never fired on them. `Smash64DS_Port-mario-bottom`
-  (393 MB, clean, Bug #10 now closed) remains and is removable — a worktree
-  removal does not delete its branch.
+  `git worktree prune` never fired on them. `Smash64DS_Port-mario-bottom` went
+  too on the owner's go-ahead once Bug #10 closed (393 MB, clean) — 748 MB
+  reclaimed in total, and the main worktree is now the only one. Branch
+  `codex/fix-mario-bottom-rendering` and commit `2cbc6189d` are untouched:
+  removing a worktree never deletes its branch, which is why this was safe.
 - Fireball/weapon heavy wall/ceiling/edge collision and general common-effect
   texture-bank fidelity remain incomplete.
 - Items are disabled for P1; general item manager/runtime is P2.
