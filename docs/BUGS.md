@@ -102,61 +102,78 @@ These bugs should be fixed for P1 delivery.
     event-to-ID-to-ARM7/channel traces, source timing/queue guards, and owner
     listen approval. A marker or packed cue alone is not completion. Status:
     OPEN.
--Sudden Death has FPS, freezing, and animation issues. (you can get to sudden death by enabling CPU input (CPU vs CPU) after normal match end.)
-  Research (2026-07-30, Sol Max Sudden Death/KO):
+-Sudden Death has FPS, freezing, and animation issues. (Enable Mario CPU input
+  for a CPU-vs-CPU tie and natural Sudden Death transition.)
+  Current diagnosis (2026-07-30):
   - Source contract: a tie starts a complete second battle scene with stock
     rules, 300% damage, no entry sequence, the Sudden Death interface,
     announcer cue 514, and GO
-    (`decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c`).
-  - Confirmed owning seam: `src/import/battleship_scvsbattle.c:60-110` renames
-    both source start functions, but the adapter redirects only base
-    `StartBattle` through the DS wrapper. `StartSuddenDeath` therefore bypasses
-    the wrapper that resets the R2 animation preload cursor
-    (`:134-149`); after match one, `ndsR2AnimCachePreloadStep` sees an exhausted
-    cursor and the second scene can fall back to on-demand NitroFS/DLDI loads.
-    This is a confirmed lifecycle defect and a plausible stall contributor,
-    not proof that it exclusively explains all low FPS/freezes. FGM 514 is
-    independently absent from `src/nds/nds_audio_fgm.c:182-252`.
-  - Do not merge two different captures into one diagnosis. The historical
-    freeze stopped in the allocator; the current capture had `MALLOCOVF=0` and
-    sampled finite native-stage/Sudden Death renderer work. A changing title
-    FPS or one PC sample is not guest-liveness or hard-deadlock proof.
-  - Proposed fix: redirect/wrap `StartSuddenDeath` at the same scene owner and
-    call the existing preload reset plus only already-proven idempotent scene
-    preparation. Add cue 514 to the existing FGM pack. If stalls remain,
-    profile the exact current ROM/ELF rather than optimizing from the old or
-    one-sample capture.
-  - Required proof: natural CPU tie, exact ROM/ELF identity, second-scene cache
-    reset/warm counters and DLDI reads, guest counter plus repeated-PC progress
-    evidence, the 2/3/4/5+ VBlank histogram and max interval, and owner
-    visual/listen acceptance. Status: OPEN.
-  - UPDATE 2026-07-30, and it widens the bug. The owning-seam call above was
-    right and is now FIXED (e72fad988): `scVSBattleStartSuddenDeath` had a
-    define/undef pair with no replacement function at all, so the decomp start
-    ran bare; it now has a wrapper and the adapter remaps `func_start` onto it.
-    `gNdsSCVSBattleSuddenDeathPrepareCount` proves which path ran.
-    But this is NOT Sudden-Death-specific. START-to-rematch (now working, same
-    commit) reproduces the identical symptom, so any SECOND entry into the battle
-    scene hits it. Measured on a rematch soak:
-      match 1  2043 presented frames  ~15 FPS   anim arena 3,728 bytes
-      match 2   423 presented frames  ~4.7 FPS  anim arena 87,824 bytes
-    Match two never reaches Results. THREE hypotheses refuted by that run, do not
-    retry them:
-    - Stale battle static textures. PrepareCount 2, ViolationCount 0.
-    - The anim cache handing back pointers into reused memory. `ndsR2AnimCacheFind`
-      already drops the cache on a rewound heap, on the READ path, precisely so a
-      hit cannot do that.
-    - "The general heap is never rewound on a second entry."
-      `gNdsSCVSBattleLifecycleArenaAdapterCount` reads 2, so the rematch re-entered
-      through the scene manager's dispatch loop (`scmanager.c:870` is a flat
-      `while (TRUE)` over `scene_curr`, not a one-shot), `scVSBattleStartScene` ran
-      twice, and `syTaskmanStartTask` rewound the heap both times.
-    What is left, and what the next arm must measure rather than assume: the same
-    rewind that makes match two safe also drops the animation cache, so match two
-    re-warms from NitroFS while gameplay is already scoring frames. Price match
-    two against match one with a census before changing anything -- the 4.7 FPS
-    has not yet been attributed to a bracket, and this entry has already cost
-    three plausible-but-wrong causes.
+    (`decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c:404-501`).
+  - FIXED IN SOURCE, not yet qualified or published: commit `e72fad988` adds the
+    missing `scVSBattleStartSuddenDeath` DS wrapper and remaps the second
+    `func_start` through it (`src/import/battleship_scvsbattle.c:93-116,
+    210-235`). It restores static battle textures, native OAM clouds, and the R2
+    warm-list cursor; `gNdsSCVSBattleSuddenDeathPrepareCount` proves that path.
+    The current root battle ROM predates the commit: it was built at 05:18 with
+    SHA-256 `5B6E82A8B8CA8D8AC903EBE30FFACF0F8E60BFD3A4A94C60A0C9182B3B1D0CCD`,
+    while `e72fad988` landed at 13:14. The latest linked both-CPU diagnostic ROM
+    found during this audit was also older (13:07). No examined runnable ROM
+    contains this source fix.
+  - The wrapper is only half the runtime fix. Every battle entry calls
+    `syTaskmanStartTask`, which reinitializes `gSYTaskmanGeneralHeap` over the
+    same arena (`decomp/BattleShip-main/decomp/src/sys/taskman.c:1240-1295`).
+    The R2 animation cache keeps its arena pointer and payload entries across
+    that rewind. `ndsR2AnimCacheArenaStillOwned` considers the old block valid
+    whenever its end is at or below the CURRENT heap cursor
+    (`src/port/reloc_backend_assets.c:5854-5871`). New-scene allocations can
+    advance the cursor past the reclaimed block before the first cache lookup,
+    so this test can false-positive and hand back pointers into reused memory.
+  - Correction to the earlier refutation: putting that predicate on the read
+    path does not prove stale hits impossible. Sudden Death's base start creates
+    fighters and selects Wait/Fall status before the wrapper returns
+    (`ftmanager.c:867-899` -> `mpcommon.c:870-879` -> `ftMainSetStatus`). That
+    path reaches `ndsR2AnimCacheFind` before the wrapper calls
+    `ndsR2AnimCachePreloadMatch`, and a hit copies the retained payload directly
+    into the fighter figatree heap
+    (`src/port/reloc_backend_assets.c:6200-6225`). The current preload function
+    only rewinds a warm-list cursor; it does not invalidate cache ownership.
+  - Runtime evidence matches that failure. The exact `cb62fa2` both-CPU capture
+    `artifacts/verification/freeze-soak/2026-07-30_125758-FROZEN-PICTURE.txt`
+    shows visibly corrupted Mario/scene geometry, then a confirmed self-branch
+    in `syTaskmanCheckBufferLengths` at BattleShip `taskman.c:338`: a display-list
+    buffer overflow. Counters were `ANIMARENA=87824,0`,
+    `TASKARENA=1273856,25`, and `MALLOCOVF=0`. This is not the historical
+    `syMallocSet` heap-exhaustion freeze and not the older finite renderer `cmp`
+    sample.
+  - START-to-rematch widens the bug to every SECOND battle entry. The measured
+    run had match 1 at 2,043 presented frames / ~15 FPS / 3,728 arena bytes and
+    match 2 at 423 frames / ~4.7 FPS / 87,824 arena bytes; match two never
+    reached Results. Static battle textures are refuted for that run
+    (`PrepareCount=2`, `ViolationCount=0`), and
+    `gNdsSCVSBattleLifecycleArenaAdapterCount=2` proves the second heap
+    initialization occurred. Those facts do not refute the cursor
+    false-positive above.
+  - The reproduction lane has an independent configuration bug.
+    `scripts/soak-freeze-watch.ps1:90-94` rebuilds the default
+    `build-r2-bothcpu` without passing `NDS_R2_BOTH_CPU=1`; its current generated
+    `nds_build_config.h` says `NDS_R2_BOTH_CPU 0`. A fresh soak may therefore
+    never create the CPU-vs-CPU tie or enter Sudden Death at all.
+  - FGM 514 remains absent from the DS FGM selector/pack. That explains the
+    missing announcer voice but cannot cause the render corruption or freeze.
+  - Proposed owning-seam fix: explicitly invalidate the R2 animation cache at
+    battle-scene entry BEFORE `scManagerFuncUpdate` / `syTaskmanStartTask` can
+    reuse its heap, then keep the new Sudden Death wrapper and stepped warm
+    preload. Do not enlarge the display-list buffer; its overflow is downstream
+    of corrupted second-entry state. Make the soak's both-CPU build flag
+    explicit and add cue 514 through the existing FGM path.
+  - Required proof: build a ROM that contains the current commit and explicit
+    both-CPU flag; reach a natural tie; prove one second-entry invalidation and
+    fresh 92,160-byte reservation before any cache hit, nonzero
+    `SuddenDeathPrepareCount`, no stale payload/read or DL overflow, and complete
+    the Sudden Death/rematch battle through Results. Report the 2/3/4/5+ VBlank
+    histogram and max interval, DLDI reads, exact ROM/ELF identity, and owner
+    visual/listen acceptance. Status: PARTLY FIXED IN SOURCE; CACHE LIFETIME,
+    ROM PUBLICATION, REPRODUCTION LANE, AND FGM 514 remain OPEN.
 
 
 -Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]

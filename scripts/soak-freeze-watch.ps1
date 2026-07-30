@@ -362,6 +362,19 @@ try {
             'gNdsSCVSBattleLifecycleArenaAdapterCount',
             'gNdsSCVSBattleOriginalGObjCount',
             'gNdsTaskmanMallocCount',
+            # Tick-HUD brackets, read while match two is running. The rematch
+            # slowdown is sustained (~3x) rather than a rare excursion, so one
+            # sample names the owning bracket against match one's known figures:
+            # FTR 392,896, SRC 471,232, STG 177,088. Attribute before cutting --
+            # this bug has already produced three plausible-but-wrong causes.
+            'gNdsTickHudFighterTicks',
+            'gNdsTickHudStageTicks',
+            'gNdsTickHudSourceTicks',
+            'gNdsTickHudForegroundTicks',
+            'gNdsTickHudBackgroundTicks',
+            'gNdsTickHudAudioTicks',
+            'gNdsTickHudFlushTicks',
+            'gNdsTickHudVBlankWaitTicks',
             # The source controller THREAD is live (syMainThread5 osStartThreads
             # syControllerThreadMain), and its read/publish use the raw decomp
             # symbols, so the port wrapper cannot see them. PollCount counts every

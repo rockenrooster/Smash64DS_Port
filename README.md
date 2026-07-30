@@ -1,5 +1,7 @@
 # Smash 64 DS Port
 
+![Mario vs. Fox on Dream Land — looping teaser](media/match-teaser.gif)
+
 This project combines the original game logic reconstructed by the
 [BattleShip](https://github.com/JRickey/BattleShip) project with a Nintendo DS
 backend. The result is a playable Nintendo DS port rather than a new Smash-style
@@ -31,6 +33,29 @@ The game timing is designed around two game updates per displayed frame, with a
 target of steady 30 fps. Stable 30 fps has not been reached: heavy combat
 currently runs at about 13.5–15 fps on a real Nintendo DS. Gameplay, audio, and
 visual work are still in progress.
+
+<details>
+<summary><b>▶ Watch a full one-minute match (Mario vs. Fox on Dream Land)</b></summary>
+
+<!-- MP4 PLACEHOLDER
+     GitHub does not render an inline <video> player from a repo-relative path,
+     and raw <video> tags are stripped from README markdown. To get the native
+     click-to-play player, do a one-time drag-and-drop upload in the web editor:
+
+       1. On github.com, open README.md and click the pencil (Edit) icon.
+       2. Drag  media/match-full.mp4  into the editor body.
+       3. GitHub uploads it (to its CDN) and inserts a link like:
+              https://github.com/user-attachments/assets/<hash>.mp4
+       4. Replace the whole HTML comment block below with that pasted link on
+          its own line; GitHub turns it into the inline player automatically.
+
+     The local file at media/match-full.mp4 stays as the source; you only need
+     to re-upload if the clip changes.
+-->
+https://github.com/rockenrooster/Smash64DS_Port/raw/master/media/match-full.mp4
+<!-- END MP4 PLACEHOLDER -->
+
+</details>
 
 ## Prerequisites
 
