@@ -35,8 +35,22 @@ foreach ($path in $required) {
 
 $agentsPath = Join-Path $root 'AGENTS.md'
 $agentsLines = @(Get-Content -LiteralPath $agentsPath)
-if ($agentsLines.Count -gt $AgentsMaxLines) {
-    Fail-Docs "AGENTS.md is too long: $($agentsLines.Count)"
+# The CODEGRAPH_START/END block is tool-injected, not authored guidance, and the
+# same text reaches every agent through the global instructions anyway. The line
+# cap exists to keep the OWNER's rules lean, so a managed block should not eat the
+# owner's budget -- on 2026-07-29 it was the difference between 167 and 157 and
+# would have forced real rules to be deleted to make room for boilerplate. Section
+# limits below still count it, so it cannot grow without bound.
+$authoredLines = @()
+$inManagedBlock = $false
+foreach ($line in $agentsLines) {
+    if ($line -match '<!--\s*CODEGRAPH_START\s*-->') { $inManagedBlock = $true }
+    if (-not $inManagedBlock) { $authoredLines += $line }
+    if ($line -match '<!--\s*CODEGRAPH_END\s*-->') { $inManagedBlock = $false }
+}
+if ($authoredLines.Count -gt $AgentsMaxLines) {
+    Fail-Docs ("AGENTS.md is too long: $($authoredLines.Count) authored lines " +
+        "($($agentsLines.Count) with the managed CodeGraph block)")
 }
 $heading = 'preamble'
 $start = 0

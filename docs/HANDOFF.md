@@ -15,19 +15,17 @@ P95 1,228,928 -> 1,096,768, over gate 17/128 -> 6/128.**
 | R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69**; only the E32 flash residual is open (KNOWN_ISSUES) |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
-| R2-06 | E0 + E1 + E2 done; the soak clause now HAS an instrument (`soak-freeze-watch.ps1`) and is unrun |
+| R2-06 | E0 + E1 + E2 done; soak clause has an instrument AND first results (see below) |
 | R2-07/08 | not started; R2-08 needs the owner's retail play test |
 
 ## Where the gate stands
 
 128-frame ring dump, frames 795..922, `WORK-H`: P50 **966,848**, P95
 **1,096,768**, gate 1,120,000, **6/128 over**. Evidence
-`artifacts/performance/r203-e69b-mtxcopy-128{.json,-rows.csv}`.
-
-**Margin 23,232 — three times the 5,000-7,000 placement floor.** E65 first landed
-the gate at 6,016 (inside the floor); E67 and E69 took it here, so it survives a
-relink and finally leaves room for R2-07. Not covered: retail hardware (R2-08), and
-the particle work must fit inside 23,232 (switch plan §7 R2-07).
+`artifacts/performance/r203-e69b-mtxcopy-128{.json,-rows.csv}`. **Margin 23,232 —
+three times the 5,000-7,000 placement floor**; E65 first landed it at 6,016 (inside
+the floor), E67 and E69 took it here, so it survives a relink. Not covered: retail
+hardware (R2-08), and R2-07's particle work must fit inside 23,232 (§7).
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
@@ -44,13 +42,26 @@ frees or evicts — its `payload == NULL` check is **dead code**. Trigger chain:
 damage-fall → aerial interrupt → `ftMainSetStatus(213)` → on-demand
 `FTMarioAnimAttackAirD` load → `syTaskmanMalloc(3472)` → spin.
 
-`REG_IME=1`/`IE=0x70069`/`IF=0`, `GXSTAT=0x06009700`, `IPCFIFOCNT=0x8505` rule out
+`IME=1`/`IE=0x70069`/`IF=0`, `GXSTAT=0x06009700`, `IPCFIFOCNT=0x8505` rule out
 the interrupts-disabled wait, a GX deadlock and an IPC wait — **the audio/FGM
-hypothesis is refuted.** melonDS read `[114/60]`, i.e. faster than real time with
-the game dead, so no host FPS reading could have caught it. Fix is port-side
-(`decomp/` read-only), must price cache-vs-load share first, and must be verified
-by a clean soak well past 3.5 min. Do NOT make `syTaskmanMalloc` return NULL
-globally — decomp callers do not all check. Board has the full entry.
+hypothesis is refuted.** melonDS read `[114/60]` — faster than real time with the
+game dead, so no host FPS reading could have caught it. Do NOT make
+`syTaskmanMalloc` return NULL globally; decomp callers do not all check. **A second
+site exists at battle start** (`ftManagerSetupFilesAllKind`, short by 58,816) with a
+192 KiB arena-search cliff under it at `diagnostics.c:7403` — board has both, plus
+the unresolved GDB-attach confound.
+
+**Fix committed `e686675b`** (128 KiB static arena; board has verification). First
+soak results, and they are R2-06's clause finally having numbers:
+
+| ROM | config | result |
+|---|---|---|
+| tick-HUD pre-fix | single CPU | **NO-FREEZE 25 min**, 150/150 samples distinct |
+| both-CPU pre-fix | two CPUs | **FROZEN 210 s** — this is what root-caused it |
+| both-CPU post-fix | two CPUs | clean past 6 min, agent owns the 45-min verdict |
+
+Still unasserted by any of those: arena drift across repeated matches and rematch
+lifetime. A single-match soak says nothing about either.
 
 Also fixed: **`[DLDI] Enable` was pinned by nothing** (owner's emulator true, all
 nine slots false), so no scripted verifier ran the owner's I/O configuration. Now
@@ -90,26 +101,22 @@ refute only the *layout* route. **The pose table is REFUTED by size** (E61) —
 
 ## The one open fidelity item
 
-- **E32** — blocked on a **generator gap, not a decision** (E62; the earlier
-  "fidelity-budget / visual approval" framing here was wrong). The flash clears
+- **E32** — blocked on a **generator gap, not a decision** (E62). The flash clears
   `G_LIGHTING` and draws vertex colours raw; the owner keeps `POLY_FORMAT_LIGHT0`
   and hardware-lights with stale diffuse/ambient, so it draws Mario *unflashed* —
-  not corrupt. E32 is pixel-identical to the generic path on every non-flash
-  frame (510/511: 0 px). E49's `NDS_R2_UNLIT_VERTEX_EPOCH` already implements the
-  runtime half but is **refuted**: it emits the baked dense `.rgba`, which holds
-  packed **normals**, giving rainbow speckle and a *worse* diff (2,199 vs 1,551).
-  **Needs the generator to bake the flash variant's vertex colours** as a second
-  dense table. E63 sizes it.
+  not corrupt, and pixel-identical on every non-flash frame (510/511: 0 px).
+  E49's `NDS_R2_UNLIT_VERTEX_EPOCH` is the runtime half and is **refuted**: it
+  emits the baked dense `.rgba`, which holds packed **normals** — rainbow speckle
+  and a *worse* diff (2,199 vs 1,551). **Needs the generator to bake the flash
+  variant's vertex colours** as a second dense table; E63 sizes it at 2,164 bytes.
 
 **R2-03 E26 — demoted** to 23,844/frame over 136.8 deltas (needs both
 `NDS_TASK91_DRAW_PHASE_CENSUS=1` *and* `NDS_R2_SPAN_LEAN_TIMING=1`); bottom of
 §3.9's band and not simple. **Must replace the dispatch, not the writes** (E39);
-read its spec only with E34/E34-b/E39/E43/E45/E56.
-
-**R2-04 E57 — REFUTED.** `gmCollisionGetFighterPartsWorldPosition`
-(`gm/gmcollision.c:489`) places every hitbox by **walking the live joint chain**,
-so halving the twice-per-frame evaluation is a gameplay change. With E6 this
-closes R2-04's rate clause.
+read its spec only with E34/E34-b/E39/E43/E45/E56. **R2-04 E57 — REFUTED**:
+`gmCollisionGetFighterPartsWorldPosition` (`gm/gmcollision.c:489`) places every
+hitbox by walking the live joint chain, so halving it is a gameplay change; with
+E6 that closes R2-04's rate clause.
 
 ## Refuted this cycle — do not re-derive
 

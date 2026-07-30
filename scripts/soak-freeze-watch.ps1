@@ -143,6 +143,51 @@ try {
     Write-Host ''
     Write-Host "verdict: $verdict$(if ($diagnosis) { " -- $diagnosis" })"
 
+    # A clean run leaves the one GDB session unspent, so spend it here. Without
+    # this, "N minutes with a changing picture" is all the soak can claim -- and
+    # that is much weaker than it sounds, because a ROM parked on the animating
+    # results screen also shows changing frames. gNdsVSResultsStartCount ticks
+    # once per results-scene start, so it is the match count, and it is the number
+    # that decides whether a soak exercised match teardown and rematch at all or
+    # simply watched one match's aftermath for twenty-five minutes.
+    if ($verdict -eq 'NO-FREEZE') {
+        $cleanFields = @(
+            'sVBlankCount',
+            'gNdsBattlePlayablePacingPresentedFrames',
+            'dSYTaskmanUpdateCount',
+            'gNdsVSResultsStartCount',
+            'gNdsVSResultsTickCount',
+            'gNdsSyMallocOverflowCount',
+            'gNdsR2AnimCacheArenaUsedBytes',
+            'gNdsR2AnimCacheArenaOverflows',
+            'gNdsR2AnimCacheFills',
+            'gNdsR2AnimCacheHits',
+            'gNdsR2AnimCacheRejects')
+        $format = (, '%u' * $cleanFields.Count) -join ','
+        $progress = Invoke-SoakGdb -Tag 'clean' -TimeoutSeconds 90 -Commands @(
+            "printf `"CLEAN=$format\n`", $($cleanFields -join ', ')")
+        if ($null -eq $progress) {
+            Write-Host 'end-of-run attach failed; match count unknown for this run.'
+        } else {
+            $match = [regex]::Match($progress, 'CLEAN=([0-9,]+)')
+            if ($match.Success) {
+                $values = $match.Groups[1].Value -split ','
+                Write-Host 'progress over the run:'
+                for ($i = 0; $i -lt $cleanFields.Count; $i++) {
+                    Write-Host ("    {0,-40} {1}" -f $cleanFields[$i], $values[$i])
+                    $samples += [pscustomobject]@{
+                        counter = $cleanFields[$i]; value = [uint32]$values[$i] }
+                }
+                $matches_run = [uint32]$values[3]
+                Write-Host ("  => {0} results-scene start(s), i.e. {0} completed match(es)" -f $matches_run)
+                if ($matches_run -le 1u) {
+                    Write-Host '  WARNING: at most one match completed. This run says' `
+                        'nothing about match teardown, rematch, or cross-match drift.'
+                }
+            }
+        }
+    }
+
     if ($verdict -in @('FROZEN-PICTURE', 'CAPTURE-STATIC')) {
         [void](New-Item -ItemType Directory -Force -Path $logDir)
         $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'

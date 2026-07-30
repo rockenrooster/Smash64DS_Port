@@ -13,13 +13,10 @@ If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is 
 
 ## Mission
 @PROJECT_GOAL.md
-This repo recreates SSB64 on Nintendo DS, using BattleShip as the behavioral reference:
-
-```text
-Original SSB64 behavior + fastest correct Nintendo DS implementation = Smash64DS
-```
-
-Preserve mechanically equivalent SSB64 behavior and feel; the DS implementation may differ radically from the original engine.
+This repo recreates SSB64 on Nintendo DS with BattleShip as the behavioral
+reference: **original SSB64 behavior + the fastest correct Nintendo DS
+implementation = Smash64DS**. Preserve mechanically equivalent SSB64 behavior and
+feel; the DS implementation may differ radically from the original engine.
 
 ## Hard Rules
 
@@ -91,14 +88,14 @@ highest-impact unowned red P1 row.
 Preserve a known-good checkpoint before risky changes. On regression, find the
 first bad change before layering fixes; trace shared dependencies before edits.
 
-For performance iteration, use one synchronized eight-frame A/B comparison on
-an identical ROM/configuration/window. Primary evidence is ticks, FPS, a dated
-screenshot, and automated screenshot analysis; semantic/state/geometry counters
-are cheap correctness guards. Stop on a decisive KEEP or REVERT. Run a third A
-only when A/B is noisy, near its gate, surprising, or internally inconsistent.
-Do not require routine A/B/A, 32-frame, or 128-frame promotion runs.
-Milestone tick targets are directional, not per-cut discard gates: keep every
-repeatable correctness-preserving gain and accumulate it toward the target.
+For performance iteration, use one synchronized eight-frame A/B comparison on an
+identical ROM/configuration/window. Primary evidence is ticks, FPS, a dated
+screenshot, and automated screenshot analysis; semantic/state/geometry counters are
+cheap correctness guards. Stop on a decisive KEEP or REVERT; run a third A only when
+A/B is noisy, near its gate, surprising, or internally inconsistent. Do not require
+routine A/B/A, 32-frame, or 128-frame promotion runs. Milestone tick targets are
+directional, not per-cut discard gates: keep every repeatable
+correctness-preserving gain and accumulate it toward the target.
 
 Use the smallest focused checker or benchmark while editing. Run one widest
 relevant verifier for a kept checkpoint: Boundary for battle-only work, or
@@ -106,27 +103,11 @@ Latest instead when normal/shared startup is affected. Do not stack DevFast,
 Boundary, and Latest when they cover the same runtime. The registry exposes
 only Latest and Boundary; the retired diagnostic fleet must not return.
 
-Builds parallelise themselves: the Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)`
-from `nproc`. Do not pass `-j` and do not clear or override `MAKEFLAGS` — a
-probe that exported `MAKEFLAGS=""` is part of why this went unnoticed for the
-whole campaign. Run one build at a time regardless: the asset generators write
-into shared paths outside `$(BUILD)`, so concurrent builds corrupt each other's
-generated headers whatever `-j` says. `make NDS_JOBS=1` forces serial for
-bisecting a generator ordering bug.
-
-That applies to the harnesses too. Thirty-one `scripts/*.ps1` hardcoded `-j16`
-in their own `make` invocation, so on a 32-thread machine every scripted build
-ran at half speed *after* the Makefile change landed — the explicit flag wins.
-They no longer pass `-j` at all. The three that still expose a `-Jobs` parameter
-default it to `0`, meaning "let the Makefile decide", and append `-j` only when a
-caller deliberately overrides. **A new harness must not add one back.**
-
 Subagent switch: **ON**.
 
 * `OFF`: let already-running subagents finish, but do not spawn, follow up, or
   reassign one until the user explicitly switches this back to `ON`.
 * `ON`: keep up to **2** long-lived helper agent/agents and assign tasks with appropriate effort (OPUS 5: max, xhigh, high). Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings.
-
 
 Prefer deletion, existing helpers, fixed DS hardware paths, and the fastest
 correct mechanically equivalent implementation. At equal cost, less code wins.
@@ -135,20 +116,31 @@ Do not add speculative abstractions, selectors, caches, or tooling.
 Milestones cover every requirement assigned by `PROJECT_GOAL.md`; compilation
 or one good frame is not completion.
 
+## Builds
+
+Builds parallelise themselves: the Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)` from
+`nproc`. **Never pass `-j`, and never clear or override `MAKEFLAGS`** — an explicit
+flag wins, which is how every scripted build once ran at half speed. Harnesses pass
+no `-j`; the three with a `-Jobs` parameter default it to `0` ("let the Makefile
+decide") and **a new harness must not add one back**. Run one build at a time
+regardless: the asset generators write into shared paths outside `$(BUILD)`, so
+concurrent builds corrupt each other's generated headers whatever `-j` says.
+`make NDS_JOBS=1` forces serial for bisecting a generator ordering bug.
+
 ## Continuous Improvement
 
-Every new finding, mistake, or inefficiency must improve the next cycle. Fix
-its root cause and update the existing shared code, helper, checker, or owning
-doc that prevents recurrence. If that is not safe and in scope, record one
-concise actionable item in the owning doc; do not detour into unrelated cleanup. 
-This applies to not just code and the project end goal, but every aspect of the project, like project hygiene and documentation.
+Every new finding, mistake, or inefficiency must improve the next cycle. Fix its
+root cause and update the existing shared code, helper, checker, or owning doc that
+prevents recurrence. If that is not safe and in scope, record one concise actionable
+item in the owning doc; do not detour into unrelated cleanup. This applies to every
+aspect of the project, not just code and the end goal — hygiene and docs included.
 
 ## Current Boundary
 
-Canonical Boundary is `battle_playable_realtime`, mode `163`: Mario human versus
-the imported level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick)
-Time mode. A diagnostic ROM may pause Fox decision/input only; proof runs
-and milestone acceptance enable it. Never launch the obsolete five-minute configuration.
+Canonical Boundary is `battle_playable_realtime`, mode `163`: Mario human versus the
+imported level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time
+mode. A diagnostic ROM may pause Fox decision/input only; proof runs and milestone
+acceptance enable it. Never launch the obsolete five-minute configuration.
 
 ## Documentation Ownership
 
