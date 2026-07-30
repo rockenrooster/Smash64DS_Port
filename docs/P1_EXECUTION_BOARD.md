@@ -107,6 +107,65 @@ The frozen frame is worth looking at for one more reason: melonDS's title reads
 dead, so no host-side FPS reading could ever have detected this. Only a guest
 counter or the picture can.
 
+### Addendum: the fix holds, and there is a SECOND exhaustion site with a 192 KiB cliff under it
+
+Fix committed `e686675b` — the animation cache takes a 128 KiB static arena and
+stops borrowing `gSYTaskmanGeneralHeap`. Verified so far:
+
+- **Links.** `nm -S` puts `sNdsR2AnimCacheArena` at 0x20000 = 131,072 exactly, no
+  BSS overflow.
+- **Soak.** Both-CPU ROM at HEAD, slot 4, past **6 minutes** with no identical-frame
+  run against a **210-second** pre-fix reproduction. (The pre-fix *single*-CPU
+  tick-HUD ROM also ran 24 minutes clean, which is the expected asymmetry: a
+  stationary Mario never triggers enough distinct animations.)
+- **But the arena is not what saves battle start.** At `fkind=1` entry the cache
+  holds `ArenaUsedBytes=1392`, `Fills=1`, `Overflows=0`. Its benefit is entirely
+  mid-match, which is exactly where the soak exercises it.
+
+**Second site, older than the fix and independent of it.**
+`ftManagerSetupFilesAllKind` at battle start, on `NDS_R2_BOTH_CPU=1`:
+
+| point | used | free |
+|---|---:|---:|
+| `fkind=0` (Mario) entry | 916,224 | 132,352 |
+| `fkind=1` (Fox) entry | 990,640 | 57,936 |
+
+Fox then requests **116,752** against **57,936** — short by **58,816**, on a
+1,048,576-byte heap. First captured on a build with `NDS_R2_ANIM_CACHE=0` and no
+arena at all, so it predates the fix. `NDS_FREEZE_DIAGNOSTICS` is excluded
+explicitly: FREEZE=1 and FREEZE=0 builds overflow identically at the same site, and
+the common factor is `NDS_R2_BOTH_CPU`.
+
+**Under it is a 192 KiB granularity cliff, and it is ours.**
+`src/port/diagnostics.c:7403` searches for the arena from `0x150000` downward in
+`0x1000` steps, but the loop floor is `0x130000`; on total failure it drops to a
+coarse list whose first entry is `0x100000`. Measured on this ROM:
+`gNdsTaskmanArenaChosenSize = 1048576` with `gNdsTaskmanArenaAllocFailCount = 33`
+— exactly the number of steps from 0x150000 to 0x130000, i.e. the whole fine range
+failed and it **discarded 196,608 bytes in one step** against a shortfall of 58,816.
+The comment directly above that loop records that a *coarser* version of this same
+cliff was already fixed once for exactly this reason. Extending the fine decrement
+to 0x100000 is a one-line change and is authorized as a **bug fix, not a sizing
+decision**: it makes an existing search find what it already searches for, changes
+no declared budget, and its result is already published.
+
+**The shipped ROM is not affected at battle start.** Its fine search succeeds and
+gives 1,286,144, against 990,640 used plus a 116,752 request = 1,107,392, leaving
+~178 KB. So the owner's freezes were the mid-match cache exhaustion — which is what
+he reported and what is now fixed — and the battle-start overflow is specific to a
+stress config that is 192 KiB poorer. Worth fixing because that config is the soak
+vehicle, but it is not a shipped-ROM defect.
+
+**One thing is NOT settled and must not be written up as if it were.** Every
+battle-start number above came from a GDB-attached run, and the *unattached* soak
+has run the same ROM for minutes with a changing picture. Either battle start is
+nondeterministic at that ~58 KB margin, or attaching from boot perturbs the guest
+`calloc` and the probe's arena is smaller than the soak's. The decisive read is
+`gNdsTaskmanArenaChosenSize` unattached, on both the pre-fix and post-fix builds —
+the second also answers whether the arena's 128 KiB of BSS costs chosen heap size,
+since BSS is linked before that `calloc` runs and would then be competing with the
+heap it was meant to protect.
+
 Owned by the implementer agent. The fix must be port-side (`decomp/` is read-only,
 the `while (TRUE);` stays), must be priced first — how much of the exhaustion is the
 cache versus the underlying on-demand loads, because fixing only the cache when the
