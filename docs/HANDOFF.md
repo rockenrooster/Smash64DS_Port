@@ -52,23 +52,23 @@ the load frames.**
 `FTR` is **−1,312** / `STG` **−2,496**: not a render problem. **E32's parked flash residual no
 longer blocks a gate lever.**
 
-**The relocation is 21.5% of the premium and that is the CEILING on fixing it.** In-window
-(`NDS_R2_RELOC_FIXUP_TIMING=1`; counters are cumulative from boot, so difference across the
-window): 18 calls, 478,080 ticks, **`ndsRelocNormalizeFighterAObj16File` = 88.4%**. Inside it:
-**per-script normalize 40.7%, lane swap 31.2%, O(n²) scan only 17.3%** — naming the O(n²) from
-reading the code was an inference the measurement refuted (n is 25.4). **The real shape is the
-payload walked TWICE**; all its sub-passes use only pointer *differences*, so hoisting them to
-cache-store time IS viable — worth ~19,400 of the 139,072 per load frame, P95 → ~1,142,000.
-**Bank it, not the gate**; judge on load frames only (averaged it is 3,735/frame, under the
-noise floor).
+**Inside the relocation, do NOT attack the O(n²) scan** — measured only 17.3% of it, because n
+is 25.4; naming it from reading the code was an inference the measurement refuted. The shape is
+the **payload walked TWICE**, all sub-passes using pointer *differences* only, so hoisting them
+to cache-store time IS viable — worth ~19,400/load frame (E9). **Bank it, not the gate**, and
+judge on load frames only: averaged it is 3,735/frame, under the noise floor.
 
-**E10: it is NOT the animation setup either.** Only **7 action changes** in 128 frames
-(`gcAddAnimJointAll`, 14,482 each = 101,376 = **4.6%**), and `gcAddDObjAnimJoint`'s 320 calls
-are ~1,501/frame of *body* cost, not premium. **26% attributed, 74% UNATTRIBUTED**, and frame
-909 is +650,000 alone. **Stop naming functions and sample:** `NDS_TASK37_PROFILE=1` with the
-window pinned to the load frames the Task 75 ring identifies (843, 869, 890, 898, 909, 924)
-against a matched clean control — E53 ran that instrument but chose its window by WORK-H and
-could not separate draw from update. Board §§"R2-06 E8"/"E10" have the tables.
+**E10 ANSWERED the premium and there is NO single lever.** Per-frame profiler regions, split by
+a marker symbol the profile itself observed (16 load frames, same 16 E8 found, DLDI on):
+work premium **326,906/frame** after subtracting `armWaitForIrq` 247,439 (quantization slack,
++4 insns) and 45,917 of tick-HUD printf. **513 symbols carry 349,268 — fully attributed.**
+Relocation family 37.0%, `battleship_ftAnimParseDObjFigatree` 13.0%, animation+cubic ~19%,
+`memcpy` 4.8%. **The cleanest lever is `ndsRelocAssetIDForToken`: 630 calls on the 16 load
+frames, 0 on all 112 clean frames, 1,003 cyc/550 insn each — it cannot regress a clean frame.**
+Task 71 under-priced it 4.2x because GCC inlined the Mario/Fox scans into `.part.0`.
+**Task 74's veto still binds its approach** (a 512-byte memo cost +11,584 P50 via layout):
+a retry must add **zero bytes** and cut the 39.4 calls/frame at the call sites.
+Board §"R2-06 E10 second pass" has the tables and the method note.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 

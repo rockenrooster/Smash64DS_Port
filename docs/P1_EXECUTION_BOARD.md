@@ -531,6 +531,81 @@ matched control drawn from the 112 clean frames. E53 ran that instrument but cho
 by WORK-H alone and could not separate draw from update; now the frames can be chosen by the
 load marker and the bracket ownership is known to be `SRC`.
 
+### R2-06 E10 second pass — the premium is now FULLY ATTRIBUTED, and it is the load pipeline entire (2026-07-30)
+
+Evidence `artifacts/task37-census/r206-e10/{census.txt,census.json,arm9-profile.regions.csv}`,
+DLDI **on**, window 796..923, `NDS_TASK37_PROFILE=1` with
+`NDS_TASK37_PROFILE_PER_FRAME_REGION=1`. The raw 169 MB per-PC CSV stays on disk uncommitted;
+`census.json` carries every row cited here.
+
+**The frames are partitioned by the profile itself, not by a previous run's ring.** A region is
+a load frame iff it executed `ndsRelocFinalizeLoadedFile`. That found **16 of 128** — the same
+16 E8 counted — and the region ids map to frames 809, 828, 843, 847, 863, 864, 869, 870, 885,
+890, 896, 897, 898, 907, 909, 924. Cross-check: E8's over-gate list was 809, 842, 843, 869,
+890, 898, 909, and every one of those except 842 is in this set, which E8 had already explained
+as *adjacent to* load frame 843. **Two independent instruments, one partition.** Region totals
+are also VBlank-quantized multiples of 560,190 (frame 909 = 8 VBlanks, the clean median = 4),
+which is the third confirmation that region r accumulates presented frame `START + r`.
+
+**Region cycles are `ALL`, so two subtractions come first.** The raw split reads 2,941,011 per
+load frame against 2,320,749 clean, a premium of **620,262** — but `armWaitForIrq` accounts for
+**247,439** of that on **+4 instructions**, which is quantization slack, not work; and the
+tick-HUD's own printf family (15 symbols, `_svfprintf_r` and friends) accounts for **45,917**,
+which is the `HUD` bucket `WORK-H` subtracts and is an instrument artifact — bigger numbers
+print more digits. **Work premium = 326,906/frame.**
+
+| mechanism | ticks/frame | share of the 326,906 |
+|---|---:|---:|
+| relocation family (17 symbols) | 121,012 | 37.0% |
+| — `ndsRelocFinalizeLoadedFile` | 54,168 | 16.6% |
+| — `ndsRelocAssetIDForToken.part.0` | 39,475 | 12.1% |
+| — the other 15 | 27,369 | 8.4% |
+| `battleship_ftAnimParseDObjFigatree` | 42,450 | 13.0% |
+| animation setup + cubic + float helpers | ~61,000 | ~19% |
+| `memcpy` (the cache-hit payload copy) | 15,670 | 4.8% |
+| `ftMainSetStatus` + fighter-part invalidation | ~25,400 | ~7.8% |
+| **all positive work rows, 513 symbols** | **349,268** | **107%** |
+
+**107% means attributed, not over-counted** — the negative rows make up the difference, and the
+answer to E10 is that **there is no 74% lever**. The premium is the on-demand asset-load
+pipeline as a whole, spread over hundreds of symbols. E10's first pass was not wrong about its
+two mechanisms; it was wrong to expect a third one of similar size to hold the rest.
+
+**Two of the three biggest contributors had never been named in this campaign**, and both were
+invisible to hand-placed brackets because nobody suspected them.
+
+**`ndsRelocAssetIDForToken` is the cleanest lever the phase has found.** Entry-PC counts:
+**630 calls across the 16 load frames and exactly 0 across all 112 clean frames**, at
+**1,003 cycles / 550 instructions per call**, 39.4 calls per load frame. It cannot regress a
+clean frame's work because it never runs on one. Note the correction it forces: Task 71 priced
+this chain at 9,306/load frame, but `ndsRelocMarioBattleAnimAssetIDForToken`,
+`ndsRelocFoxAnimAssetIDForToken` and `ndsRelocIsMarioFoxAnimID` are **not separate FUNC symbols
+in the ELF** — GCC inlined all three into `.part.0`, so Task 71 priced the compare chain and
+not the two linear array scans behind it. The real figure is **4.2x** its estimate.
+
+**Task 74's veto is still binding on its own approach.** The comment at
+`reloc_backend_assets.c:1796` records that a 512-byte direct-mapped memo measured **+11,584
+WORK-H P50** and moved `STG` by 8,128 — layout, not logic — and asks for an instrument
+resolving below ~8,000 ticks before re-attempting. That precondition is now met at ~1 tick
+resolution. What is *not* relicensed is adding data: the failure mode was 512 bytes of
+`.main.bss` shifting placement on all 128 frames to save on 16. **Any retry must add zero
+bytes** — the tokens are link-time constants, so 39.4 calls/frame resolving the same handful of
+tokens is the thing to attack, at the call sites, not with a table.
+
+**`battleship_ftAnimParseDObjFigatree` is a different and larger prize.** Unlike the token
+chain it runs on **every** frame: 100.8 calls/frame clean (27,308 ticks) against 142.2 on a
+load frame (69,758), 491 cycles per call. So ~27,000/frame is body cost that P50 pays too. It
+is not a load-frame fix and must not be judged as one.
+
+**Method note for the next task.** `scripts/run-task37-profile-census.ps1` now takes
+`-PerFrameRegion` (default on) and `-SplitBySymbol`, and stamps DLDI. The split partitions the
+census frames by a marker symbol *the profile itself observed* and ranks every symbol by
+per-frame delta, with the instruction delta beside it: **same instruction stream costing more
+is a cache effect, more instructions is real work.** That column is what separated the three
+real mechanisms from the 495-symbol tail. It also refuses to run when the marker is absent from
+the ELF, because a partition keyed on an inlined or deleted name silently classifies every
+frame as a control frame — the `addr2line` trap in a new costume.
+
 ### R2-06 E8 — EVERY over-gate frame is an asset-load frame, and the clean-frame P95 MEETS THE GATE (2026-07-30)
 
 E7 narrowed the excursion to `SRC`. This names the event, and it is the most actionable

@@ -167,8 +167,17 @@ def occupied_bytes(symbols: list[Symbol]) -> int:
     return total
 
 
-def attribute(symbols: list[Symbol], profile: Path) -> tuple[int, int, int]:
-    """Fold the per-PC CSV into the symbol list. Returns (cycles, unmapped, rows)."""
+def attribute(
+    symbols: list[Symbol], profile: Path, detail: dict | None = None
+) -> tuple[int, int, int]:
+    """Fold the per-PC CSV into the symbol list. Returns (cycles, unmapped, rows).
+
+    With NDS_TASK37_PROFILE_PER_FRAME_REGION=1 the emulator emits one row per
+    (region, pc) pair, so passing `detail` also builds
+    region -> symbol index -> [cycles, instructions, mem_cycles]. Window totals
+    can hide a cost that only appears on a handful of frames, and those frames
+    are where PROJECT_GOAL.md's P95 gate is decided.
+    """
     addresses = [symbol.address for symbol in symbols]
     total_cycles = 0
     unmapped_cycles = 0
@@ -190,12 +199,50 @@ def attribute(symbols: list[Symbol], profile: Path) -> tuple[int, int, int]:
             symbol.cycles += cycles
             symbol.instructions += instructions
             symbol.counted_pcs += 1
-            symbol.regions.add(int(row["region"]))
-            if is_memory_op(int(row["opcode"], 16), row["mode"] == "thumb"):
+            region = int(row["region"])
+            symbol.regions.add(region)
+            is_mem = is_memory_op(int(row["opcode"], 16), row["mode"] == "thumb")
+            if is_mem:
                 symbol.mem_cycles += cycles
                 symbol.mem_instructions += instructions
+            if detail is not None:
+                slot = detail.setdefault(region, {}).setdefault(index, [0, 0, 0])
+                slot[0] += cycles
+                slot[1] += instructions
+                if is_mem:
+                    slot[2] += cycles
 
     return total_cycles, unmapped_cycles, rows
+
+
+def split_regions(
+    detail: dict, symbols: list[Symbol], marker: str
+) -> tuple[list[int], list[int]]:
+    """Partition regions into (marker ran, marker did not).
+
+    The partition is defined by a symbol the profile itself observed, so the
+    populations and their control come from one run. Naming the frames from a
+    previous run's ring would reintroduce the cross-run assumption this split
+    exists to remove. Region 0 is "outside the census window" and is dropped.
+    """
+    wanted = {
+        index
+        for index, symbol in enumerate(symbols)
+        if symbol.name == marker or marker in symbol.aliases
+    }
+    if not wanted:
+        raise RuntimeError(
+            f"marker symbol {marker!r} is not a FUNC symbol in this ELF -- it was "
+            "inlined, renamed, or dropped, and a partition keyed on an absent "
+            "name silently classifies every frame as a control frame"
+        )
+    hot, control = [], []
+    for region, per_symbol in detail.items():
+        if region == 0:
+            continue
+        cost = sum(per_symbol.get(index, (0,))[0] for index in wanted)
+        (hot if cost else control).append(region)
+    return sorted(hot), sorted(control)
 
 
 def tier_of(symbol: Symbol) -> str:
@@ -280,6 +327,15 @@ def main() -> int:
     )
     parser.add_argument("--itcm-cap", type=int, default=32736)
     parser.add_argument("--json", type=Path)
+    parser.add_argument(
+        "--split-by-symbol",
+        metavar="SYMBOL",
+        help="needs NDS_TASK37_PROFILE_PER_FRAME_REGION=1. Split the census "
+        "frames into the ones that executed SYMBOL and the ones that did not, "
+        "and rank every symbol by the per-frame cycle difference between them. "
+        "Answers 'where does an expensive class of frame actually spend the "
+        "premium', which window totals cannot.",
+    )
     args = parser.parse_args()
 
     try:
@@ -288,7 +344,8 @@ def main() -> int:
         if not symbols:
             raise RuntimeError("no FUNC symbols found in the ELF")
 
-        total_cycles, unmapped_cycles, rows = attribute(symbols, args.profile)
+        detail: dict | None = {} if args.split_by_symbol else None
+        total_cycles, unmapped_cycles, rows = attribute(symbols, args.profile, detail)
         if not rows:
             raise RuntimeError(f"{args.profile} contained no rows")
 
@@ -389,6 +446,112 @@ def main() -> int:
                 "rrrrll",
             )
         )
+
+        # ---- Table E: per-frame split, when a marker symbol names the class ----
+        split_summary = None
+        if detail is not None:
+            hot, control = split_regions(detail, symbols, args.split_by_symbol)
+            if not hot or not control:
+                raise RuntimeError(
+                    f"{args.split_by_symbol} ran on {len(hot)} of "
+                    f"{len(hot) + len(control)} census regions -- a split needs "
+                    "both populations. If every region is on one side the build "
+                    "is missing NDS_TASK37_PROFILE_PER_FRAME_REGION=1, so the "
+                    "whole window collapsed into one region."
+                )
+
+            def totals(regions: list[int]) -> dict[int, list[int]]:
+                out: dict[int, list[int]] = {}
+                for region in regions:
+                    for index, (cyc, insn, mem) in detail[region].items():
+                        slot = out.setdefault(index, [0, 0, 0])
+                        slot[0] += cyc
+                        slot[1] += insn
+                        slot[2] += mem
+                return out
+
+            hot_totals, control_totals = totals(hot), totals(control)
+            hot_sum = sum(v[0] for v in hot_totals.values())
+            control_sum = sum(v[0] for v in control_totals.values())
+            hot_mean = hot_sum / len(hot)
+            control_mean = control_sum / len(control)
+            print()
+            print(
+                f"== E. per-frame split on {args.split_by_symbol}: "
+                f"{len(hot)} marked frames vs {len(control)} control =="
+            )
+            print(
+                f"   marked   {hot_sum:,} cycles, {hot_mean:,.0f}/frame\n"
+                f"   control  {control_sum:,} cycles, {control_mean:,.0f}/frame\n"
+                f"   premium  {hot_mean - control_mean:,.0f}/frame"
+            )
+            # The ROM sets region r at the end of iteration START+r-1, so region r
+            # accumulates iteration START+r. Print the ids raw: only the caller
+            # knows its own START, and inventing one here is how an off-by-one
+            # gets published as a frame number.
+            print(f"   marked frames (region ids, frame = START + id): "
+                  f"{', '.join(map(str, hot))}")
+            premium = hot_mean - control_mean
+            deltas = []
+            for index in set(hot_totals) | set(control_totals):
+                a = hot_totals.get(index, [0, 0, 0])
+                b = control_totals.get(index, [0, 0, 0])
+                delta = a[0] / len(hot) - b[0] / len(control)
+                mem_delta = a[2] / len(hot) - b[2] / len(control)
+                insn_delta = a[1] / len(hot) - b[1] / len(control)
+                deltas.append((delta, mem_delta, insn_delta, symbols[index]))
+            deltas.sort(key=lambda d: -d[0])
+            table = []
+            for delta, mem_delta, insn_delta, symbol in deltas[: args.top]:
+                if abs(delta) < 1.0:
+                    continue
+                table.append(
+                    [
+                        f"{delta:,.0f}",
+                        f"{100.0 * delta / premium:.1f}" if premium else "-",
+                        f"{mem_delta:,.0f}",
+                        f"{insn_delta:,.0f}",
+                        f"{delta / insn_delta:,.1f}" if insn_delta else "-",
+                        tier_of(symbol),
+                        symbol.label,
+                    ]
+                )
+            print()
+            print(
+                format_table(
+                    table,
+                    ["+cyc/frame", "%prem", "of it mem", "+insn", "cyc/insn",
+                     "tier", "symbol"],
+                    "rrrrrll",
+                )
+            )
+            named = sum(d[0] for d in deltas if d[0] > 0)
+            print()
+            print(
+                f"positive rows total {named:,.0f}/frame against a "
+                f"{premium:,.0f} premium; the same instruction stream costing "
+                "more is a cache effect, more instructions is real work"
+            )
+            split_summary = {
+                "marker": args.split_by_symbol,
+                "marked_regions": hot,
+                "marked_frames": len(hot),
+                "control_frames": len(control),
+                "marked_mean": hot_mean,
+                "control_mean": control_mean,
+                "premium_per_frame": premium,
+                "rows": [
+                    {
+                        "name": s.name,
+                        "tier": tier_of(s),
+                        "delta_cycles_per_frame": d,
+                        "delta_mem_cycles_per_frame": m,
+                        "delta_instructions_per_frame": i,
+                    }
+                    for d, m, i, s in deltas
+                    if abs(d) >= 1.0
+                ],
+            }
 
         # ---- Table B: ITCM rent ----
         residents = [s for s in symbols if s.section == ".itcm"]
@@ -535,6 +698,8 @@ def main() -> int:
                     if s.cycles or s.section in PLACED_SECTIONS
                 ],
             }
+            if split_summary is not None:
+                payload["split"] = split_summary
             args.json.write_text(json.dumps(payload, indent=1), encoding="utf-8")
             print(f"wrote {args.json}")
         return 0

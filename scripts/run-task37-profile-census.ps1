@@ -8,7 +8,16 @@ param(
     [ValidateRange(1,100000)][int]$Frames = 128,
     [ValidateRange(60,7200)][int]$TimeoutSeconds = 2700,
     [ValidateRange(1,500)][int]$Top = 40,
-    [string]$OutDir = ''
+    [string]$OutDir = '',
+    # Tag every census frame with its own profiler region. Costs one CP15 write
+    # per frame inside the window, in profile builds only, and is the difference
+    # between "this window costs N" and "the eight frames that miss the gate cost
+    # N". R2-03 E53 ran this instrument without it, had to choose its window by
+    # WORK-H, and could not separate draw cost from update cost as a result.
+    [bool]$PerFrameRegion = $true,
+    # Partition the census frames by whether they executed this symbol, and rank
+    # every symbol by the per-frame cycle difference. Requires -PerFrameRegion.
+    [string]$SplitBySymbol = ''
 )
 
 # Task 37 census driver.
@@ -70,7 +79,8 @@ try {
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
         make -C $root "TARGET=$target" "BUILD=$Build" `
             'NDS_TASK37_PROFILE=1' "NDS_TASK37_PROFILE_START=$StartFrame" `
-            "NDS_TASK37_PROFILE_FRAMES=$Frames"
+            "NDS_TASK37_PROFILE_FRAMES=$Frames" `
+            "NDS_TASK37_PROFILE_PER_FRAME_REGION=$([int]$PerFrameRegion)"
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     foreach ($path in @($rom, $elf)) {
@@ -89,6 +99,14 @@ try {
 
     $env:MELONDS_ARM9_PROFILE_CSV = $csv
     Write-Host "census window: frames $StartFrame..$($StartFrame + $Frames)"
+    # The ROM sets region r at the END of iteration StartFrame+r-1, so it is
+    # iteration StartFrame+r that accumulates into r. Region 0 is everything
+    # outside the window.
+    Write-Host "per-frame region: $PerFrameRegion (region r = presented frame $StartFrame + r)"
+    # DLDI is a performance variable worth ~29,696 WORK-H P95 and it is the
+    # retail-parity config, so stamp it rather than leaving a reader to assume.
+    $dldi = Get-MelonDSDldiEnabled -ConfigPath $configState.Config
+    Write-Host "dldi:          $(if ($null -eq $dldi) { 'unknown' } else { $dldi })"
     Write-Host "profiler csv:  $csv"
     $emulator = Start-Process -FilePath $context.MelonDSPath `
         -ArgumentList $rom `
@@ -143,8 +161,14 @@ $python = if ($env:SMASH64DS_PYTHON) { $env:SMASH64DS_PYTHON } else { 'python' }
 $devkitArm = if ($env:DEVKITARM) { $env:DEVKITARM } else { 'C:/devkitPro/devkitARM' }
 $readelf = Join-Path $devkitArm 'bin\arm-none-eabi-readelf.exe'
 if (-not (Test-Path -LiteralPath $readelf -PathType Leaf)) { $readelf = 'arm-none-eabi-readelf' }
-& $python (Join-Path $PSScriptRoot 'task37_census.py') $csv `
-    --elf $elf --readelf $readelf --top $Top --json $json |
+$censusArgs = @($csv, '--elf', $elf, '--readelf', $readelf, '--top', $Top, '--json', $json)
+if (-not [string]::IsNullOrWhiteSpace($SplitBySymbol)) {
+    if (-not $PerFrameRegion) {
+        throw '-SplitBySymbol needs -PerFrameRegion; without it the whole window is one region.'
+    }
+    $censusArgs += @('--split-by-symbol', $SplitBySymbol)
+}
+& $python (Join-Path $PSScriptRoot 'task37_census.py') @censusArgs |
     Tee-Object -FilePath $report
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host ''
