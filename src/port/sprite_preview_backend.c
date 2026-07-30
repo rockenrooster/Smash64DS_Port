@@ -206,9 +206,10 @@ static u16 ndsSpritePackRgb15(u8 red, u8 green, u8 blue)
  * compile-time constant divisor into a reciprocal multiply -- it emits
  * `blx __udivsi3`, because the call is smaller than the multiply-shift sequence.
  * That trade is catastrophic at this trip count: measured on the ELF, this
- * function carried THREE `__udivsi3` calls and its caller a fourth, so the
- * wallpaper paid ~264,000 library divisions per frame on a core with no divide
- * instruction.
+ * function carried THREE `__udivsi3` calls, so the wallpaper paid ~198,000 library
+ * divisions per frame on a core with no divide instruction. (The caller's
+ * `(nibble * 255u) / 15u` was NOT one of them -- GCC had already strength-reduced
+ * that, and it is now `* 17u` for clarity rather than for speed.)
  *
  * `(x * 257 + 257) >> 16` equals `x / 255` exactly for every x this function can
  * produce. The bound is what makes it exact and it is not obvious: `intensity`
@@ -221,7 +222,23 @@ static u16 ndsSpritePackRgb15(u8 red, u8 green, u8 blue)
  * without re-running that checker: both would break the bound, silently. */
 #define NDS_SPRITE_DIV255(x) (((x) * 257u + 257u) >> 16)
 
-static u16 ndsSpriteLerpPrimEnv(const SObj *sobj, u8 intensity)
+/* R2-07 R0d. `always_inline` because -Os would not: R0c's ELF still showed two real
+ * `bl` sites into a `.isra.0` clone, and the callee pushed and popped EIGHT registers
+ * (r4-r7 plus r8/r9/sl/lr) around what is now three multiply-shift channels. At 66,000
+ * calls per frame the prologue and epilogue cost more than the arithmetic they guard.
+ * Only two call sites exist, so the size cost is bounded at roughly one extra copy.
+ *
+ * The opposite of E65's choice on `ndsR2CubicValueFixed`, and for a reason worth
+ * keeping straight: that one is `noinline` to hold ONE copy of six inlined conversions
+ * inside `.text.hot`'s curated 8 KiB. This blitter is not in `.text.hot`, so that
+ * constraint does not apply here. */
+#if defined(__GNUC__)
+#define NDS_SPRITE_LERP_ATTR static inline __attribute__((always_inline))
+#else
+#define NDS_SPRITE_LERP_ATTR static inline
+#endif
+
+NDS_SPRITE_LERP_ATTR u16 ndsSpriteLerpPrimEnv(const SObj *sobj, u8 intensity)
 {
     u32 inverse = 255u - intensity;
     u8 red = (u8)NDS_SPRITE_DIV255((u32)sobj->sprite.red * intensity +

@@ -1729,6 +1729,41 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 R0d BUILT — inlining the per-pixel lerp takes another VBlank; Results is now 46.2% cheaper than R0 (2026-07-30)
+
+**22.00 → 21.00 VBlanks/iteration, −1.00 (−560,190 ticks/frame).** Cumulative with R0c:
+**39.00 → 21.00, −46.2%**, 21,847,410 → **11,763,990 ticks/frame**, 1.53 → **2.85 FPS**. ROM
+`3410D098`, `artifacts/performance/r207-r0d-inline.json`, same window and instrument as R0c.
+
+`ndsSpriteLerpPrimEnv` is now `static inline __attribute__((always_inline))`. **`-Os` would not inline
+it on its own** — R0c's ELF still had two real `bl` sites into a `.isra.0` clone, and the callee
+pushed and popped **eight** registers (r4-r7 plus r8/r9/sl/lr) around three multiply-shift channels.
+**Verified in the ELF: the symbol is GONE entirely and there are zero `bl` sites**, for +156 bytes on
+the blitter (3,640 → 3,796), about the one extra copy two call sites predict.
+
+**On whether −1.00 VBlank is real, because it sits exactly at this instrument's resolution:** the
+window went **902 → 861 VBlanks over 41 iterations** — a dead-consistent integer step, which
+quantisation noise would not produce (it would land on a fraction). The per-call figure moves
+sub-VBlank in agreement, **16.85 → 16.05 VB/call** on the wallpaper. Both support it; it is a small
+real win, not a rounding artifact, and it is reported as −4.5% rather than dressed up.
+
+*Kept rather than reverted on the E11 standard: the placement-floor argument that killed E11 and E15 is
+about **P95 on the battle gate**, where relinking moves the tail by more than a small saving. This is a
+different scene with no such tail (the Results loop is unpaced, and 41 of 41 iterations agree), and the
+change costs 156 bytes with no fidelity question at all — inlining is semantically inert.*
+
+**This is the opposite choice from E65's on `ndsR2CubicValueFixed`, and the distinction is worth
+keeping straight:** that one is deliberately `noinline` to hold ONE copy of its six inlined conversions
+inside `.text.hot`'s curated 8 KiB. This blitter is not in `.text.hot`, so the constraint does not
+apply. Both comments now say so at their own site.
+
+**Remaining: ~11.76M ticks/frame against 1.12M, still 10.5× over.** The wallpaper is still 16.05 of
+21.00 VBlanks, so the cost is *still* per-pixel over 66,000 pixels and the per-pixel arithmetic is now
+about as cheap as this structure allows. **What is left is structural, not arithmetic** — R0a's I4-only
+dispatch specialization, then admitting the native OAM path to Results
+(`sprite_preview_backend.c:2410`) and/or killing the two-layer 320×240 software pipeline with its
+153,600-byte clear per layer. **Do not expect another arithmetic lever to matter here.**
+
 ### R2-07 R0c BUILT — the Results frame is 43.6% cheaper, BIT-EXACT, and it was three library divisions per pixel (2026-07-30)
 
 **39.00 → 22.00 VBlanks per Results iteration, −17.00 (−43.6%).** At 560,190 ticks/VBlank that is
