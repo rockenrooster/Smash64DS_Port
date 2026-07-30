@@ -34,6 +34,20 @@ extern volatile s32 gNdsControllerPlaybackPad1StickX;
 extern volatile s32 gNdsControllerPlaybackPad0StickY;
 extern volatile s32 gNdsControllerPlaybackPad1StickY;
 
+/* Edge-publish interlock (src/import/battleship_sys_controller.c). Suppressed
+ * counts every second `syControllerUpdateGlobalData` of one read -- each of
+ * those used to overwrite a live `button_tap` with zero. EdgeSeenMask is the
+ * sticky OR of the computed rising edge, so a nonzero mask with a zero
+ * published tap localises the loss to the publish, not the sample. */
+extern volatile u32 gNdsControllerPublishCount;
+extern volatile u32 gNdsControllerPublishSuppressedCount;
+extern volatile u32 gNdsControllerReadCount;
+extern volatile u32 gNdsControllerEdgeSeenMask;
+extern volatile u32 gNdsControllerPublishedTapMask;
+extern volatile u32 gNdsControllerReadEdgeCount;
+extern volatile u32 gNdsControllerPublishTapNonzeroCount;
+void ndsControllerEdgeTelemetryReset(void);
+
 int ndsControllerBackendSelfTest(void);
 void ndsControllerPlaybackReset(void);
 void ndsControllerPlaybackSetEnabled(sb32 is_enabled);

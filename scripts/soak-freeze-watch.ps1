@@ -78,6 +78,26 @@ $context = Initialize-MelonDSVerifierContext `
     -NoBuild:$NoBuild
 $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
+
+# This script exposed a -NoBuild switch and never built anything: the switch only
+# sets SMASH64DS_VERIFY_NO_BUILD, which OTHER verifiers read. So a soak silently
+# ran whatever ROM happened to be on disk. Measured 2026-07-30: a source fix went
+# in, `make` succeeded for the default target, the soak was started without
+# -NoBuild, and it soaked a tickhud ROM from the previous evening -- a stale
+# result that reads exactly like a real one, because a stale ROM boots and its
+# picture moves. Only the missing counter symbols gave it away. Build here, like
+# every census harness does, so the switch means what its name says.
+if (-not $NoBuild) {
+    if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
+    if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
+    make -C $root "TARGET=$Target" "BUILD=$Build"
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+foreach ($path in @($rom, $elf)) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Required soak file is missing: $path"
+    }
+}
 $temp = Get-MelonDSVerifierTempDir -Root $root -RunnerSlot $RunnerSlot
 $logDir = Join-Path $root 'artifacts\verification\freeze-soak'
 
@@ -310,7 +330,35 @@ try {
             'gNdsVSResultsPadMask',
             'gNdsVSResultsInputSeenMask',
             'gNdsVSResultsInputTapMask',
-            'gNdsVSResultsTapRepairCount')
+            # The publish interlock. Suppressed counts the second
+            # syControllerUpdateGlobalData of a single read -- each of those used
+            # to overwrite a live button_tap with zero. EdgeSeenMask non-zero
+            # with PublishedTapMask zero would mean the edge is computed and then
+            # lost after the publish, which is a different defect again.
+            # All seven are reset on the first Results tick, so they are Results
+            # only and divide by gNdsVSResultsTickCount. Run-global versions of
+            # these lied once already: a soak presses START on a wall-clock
+            # schedule, so early presses land during the battle.
+            'gNdsControllerReadCount',
+            'gNdsControllerReadEdgeCount',
+            'gNdsControllerPublishCount',
+            'gNdsControllerPublishSuppressedCount',
+            'gNdsControllerPublishTapNonzeroCount',
+            'gNdsControllerEdgeSeenMask',
+            'gNdsControllerPublishedTapMask',
+            # The exit gate itself, read from the scene's own statics rather than
+            # inferred from the taskman tick count -- those are two different
+            # clocks and only this one gates mnVSResultsCheckExit. TotalTimeTics
+            # below AllowExitWait means START is being ignored for a reason that
+            # has nothing to do with the input pipeline.
+            'sMNVSResultsTotalTimeTics',
+            'sMNVSResultsAllowExitWait',
+            # The only port writers to gSYControllerDevices[].button_tap outside
+            # the publish. Nonzero on Results would make one of them the third
+            # writer; zero rules the whole fighter-script family out.
+            'gNdsFighterProcessLoopControllerBridgeCount',
+            'gNdsFighterProcessLoopP0InputApplyCount',
+            'gNdsFighterSchedulerLoopP0InputApplyCount')
         $format = (, '%u' * $cleanFields.Count) -join ','
         $progress = Invoke-SoakGdb -Tag 'clean' -TimeoutSeconds 90 -Commands @(
             "printf `"CLEAN=$format\n`", $($cleanFields -join ', ')")
@@ -318,7 +366,20 @@ try {
             Write-Host 'end-of-run attach failed; match count unknown for this run.'
         } else {
             $match = [regex]::Match($progress, 'CLEAN=([0-9,]+)')
-            if ($match.Success) {
+            if (-not $match.Success) {
+                # GDB's printf is all-or-nothing: one unresolvable name aborts the
+                # whole statement, so every counter is lost together. That used to
+                # be SILENT -- this branch did not exist -- and a soak whose ROM
+                # predated a new counter reported nothing but the pixel verdict,
+                # which is indistinguishable from a soak that simply had nothing
+                # to say. Echo what GDB actually replied; the "No symbol ... in
+                # current context" line names the offending counter directly.
+                Write-Host 'end-of-run counter read produced no CLEAN= line. GDB said:'
+                foreach ($line in ($progress -split "`r?`n" |
+                    Where-Object { $_.Trim() -ne '' } | Select-Object -Last 12)) {
+                    Write-Host "    $line"
+                }
+            } else {
                 $values = $match.Groups[1].Value -split ','
                 # Keyed by NAME, not position. Adding a counter to $cleanFields
                 # used to silently renumber every read below it; the arena pair

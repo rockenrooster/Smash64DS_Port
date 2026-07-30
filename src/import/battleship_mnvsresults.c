@@ -9,6 +9,7 @@
 #include <if/interface.h>
 #include <lb/transition.h>
 #include <mn/menu.h>
+#include <nds/nds_controller.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_profile.h>
 #include <nds/timers.h>
@@ -86,9 +87,6 @@ volatile u32 gNdsVSResultsInputPollCount;
 volatile u32 gNdsVSResultsInputSeenMask;
 volatile u32 gNdsVSResultsInputTapMask;
 volatile u32 gNdsVSResultsPadMask;
-/* Incremented by `ndsVSResultsRepairButtonTap` in the taskman seam, which is the
- * only place a repaired edge can be written early enough to be read. */
-volatile u32 gNdsVSResultsTapRepairCount;
 
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
@@ -260,6 +258,10 @@ void ndsMNVSResultsRecordFrame(void)
         gNdsVSResultsTransitionTicks =
             cpuGetTiming() - gNdsVSResultsTransitionStartTick;
         gNdsVSResultsFirstTickStamp = cpuGetTiming();
+        /* Scope the controller edge counters to this scene. A soak presses START
+         * on a wall-clock schedule, so some presses land while the battle is
+         * still running and a run-global mask reports those as success. */
+        ndsControllerEdgeTelemetryReset();
     }
     if (gNdsVSResultsFirstTickStamp != 0u)
     {

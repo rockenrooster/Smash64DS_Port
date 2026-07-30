@@ -4357,65 +4357,21 @@ static void ndsBattlePlayableAdvanceRealtimeLogicClock(void)
  * `src/import/battleship_mnvsresults.c`, which is where the span is closed. */
 extern volatile u32 gNdsVSResultsTransitionStartTick;
 extern volatile u32 gNdsVSResultsTransitionTicks;
-extern volatile u32 gNdsVSResultsTapRepairCount;
-extern u16 ndsControllerLiveButtons(void);
 
 /* Whether this seam runs the source controller read/update pair itself.
  *
  * Kept at 1, which is the long-standing behaviour. Setting it to 0 was tried as
- * a candidate fix for the dead-button_tap defect and REFUTED, so do not retry it
- * without new evidence: with the pair removed the battle still completed
- * normally (`gNdsBattlePlayablePacingPresentedFrames` 2043), `button_hold` still
- * arrived as 0x1000, and `button_tap` was still 0x0000. That run is what proved
- * each scene's own controller function (`dMNVSResultsTaskmanSetup` names
- * `syControllerFuncRead`) is a live second pipeline, and that the tap is zeroed
- * by a single pass rather than by the two passes racing. */
+ * a candidate fix for the dead-button_tap defect and REFUTED: with the pair
+ * removed the battle still completed normally
+ * (`gNdsBattlePlayablePacingPresentedFrames` 2043), `button_hold` still arrived
+ * as 0x1000, and `button_tap` was still 0x0000. That is explained now -- this
+ * pair was never the only one, so removing it left the surviving pairs still
+ * double-publishing. The defect is fixed at its owner in
+ * `src/import/battleship_sys_controller.c`; this flag is back to being an
+ * ordinary configuration switch and is not a lever on tap delivery. */
 #ifndef NDS_SEAM_CONTROLLER_PAIR
 #define NDS_SEAM_CONTROLLER_PAIR 1
 #endif
-
-/* R2-07. `gSYControllerDevices[0].button_tap` never carries a rising edge for
- * real input: measured on Results with a genuine 500 ms held START, repeated
- * eight times, `button_hold` reads 0x1000 and `button_tap` reads 0x0000 for the
- * entire scene. `mnVSResultsCheckExit` (decomp sys/controller.c:266) tests only
- * the tap, so the screen cannot be left by pressing START -- and every imported
- * menu scene works around the same hole with a hardcoded synthetic tap
- * (`mnplayersvs.c:341` injects START, `mnmaps.c:256` injects A).
- *
- * The edge itself is not missing from the hardware: computing it directly from
- * the port's own keypad mapping yields 0x1000, so it is lost somewhere between
- * `osContGetReadData` and the descriptor accumulator rather than at the pad.
- * Until that is traced, repair the edge here -- immediately after the source's
- * own read/update pair and BEFORE `task_update`, which is the only ordering a
- * consumer can observe (writing it from `ndsMNVSResultsRecordFrame` cannot work:
- * that runs after `task_update`, so it lands after the only reader).
- *
- * Scoped to Results so the battle path cannot be perturbed, and it ORs rather
- * than assigns, so a genuine tap arriving through the source path is preserved
- * rather than overwritten. Remove this once the pipeline defect is fixed at its
- * own seam; it is a bridge, not the destination. */
-static u16 sNdsVSResultsTapPrevButton;
-
-static void ndsVSResultsRepairButtonTap(void)
-{
-    u16 button;
-    u16 previous;
-
-    if (gSCManagerSceneData.scene_curr != nSCKindVSResults)
-    {
-        sNdsVSResultsTapPrevButton = 0u;
-        return;
-    }
-    button = ndsControllerLiveButtons();
-    previous = sNdsVSResultsTapPrevButton;
-    sNdsVSResultsTapPrevButton = button;
-    if ((button & ~previous) != 0u)
-    {
-        gSYControllerDevices[0].button_tap |= (u16)(button & ~previous);
-        gSYControllerDevices[0].button_hold |= button;
-        gNdsVSResultsTapRepairCount++;
-    }
-}
 
 static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
 {
@@ -7048,7 +7004,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 syControllerReadDeviceData();
                 syControllerUpdateGlobalData();
 #endif
-                ndsVSResultsRepairButtonTap();
             }
             tfunc->task_update(tfunc);
             ndsAudioBackendUpdate();
