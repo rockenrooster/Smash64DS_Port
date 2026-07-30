@@ -2002,3 +2002,25 @@ P99 rose 59,200, and over-gate went 9 → 11** — the two added frames being lo
    cross-build P95 delta under ~5,400 is unreadable. **Always run the matched control**;
    E11's first comparison used a committed control two commits old and read +21,120
    where the matched control read +15,744.
+7. **Pre-register the sizing threshold before the measurement, and cancel the follow-up
+   probes a settled threshold makes moot.** R2-06 E13 wrote down "f ≤ 0.45 build /
+   0.45–0.70 stack only / f > 0.70 do not build" *before* the joint census ran, then
+   measured f = 0.840 and stopped — one run, no build, no revert. Contrast E11, which
+   chose what counted as success after its number arrived and spent a full build plus a
+   matched control to reach a conclusion its own bracket could not support. A threshold
+   picked afterwards is not a threshold, it is a rationalization.
+
+   The same discipline retires work: E13 had a second probe queued for the dynamic
+   hitbox joints, and the census made it unnecessary because those ids can only *raise*
+   f, so the measured value was a floor and the verdict could not flip. **Before running
+   a follow-up, ask which decision its result would change.** If none, delete the queue
+   item and say why — that is a result, not an omission.
+
+   Corollary on where a number comes from: prefer a quantity the runtime already
+   maintains over one a probe reconstructs. E13's trip count was
+   `fp->nds_common_joint_count` (`reloc_backend_compat_shims.c:1535`) and its hurtbox
+   set was `fp->attr->damage_coll_descs[]` — both already live, and both reachable from
+   an instrument that already existed (`scripts/census-fighter-gameplay-joints.ps1`,
+   Task 77 E1). The cycle before that was spent on the `gNdsFighterInit*` census, which
+   is compile-time gated out of Boundary and structurally reads zero. **Grep `scripts/`
+   for an existing census before building a probe or trusting a diagnostic global.**

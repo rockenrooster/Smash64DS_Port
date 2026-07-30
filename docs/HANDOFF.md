@@ -104,18 +104,18 @@ not share one expensive runtime representation"*. **The 146,148-tick walk IS tha
 representation**, and giving the renderer its own pose is R2-04's own title (E6: E5 paid down
 loading, not pose). Collision is **hard-bounded at 15 joints** —
 `attack_colls[4]` + `damage_colls[11]` (`fighter.h:3141/3148`) — of ~25 live, and the parse/play walk
-is **unconditional**, so the remainder is recoverable. **E13 owes the ancestor-chain union.** Beware:
-the `gNdsFighterInit*DamageColl*` census **reads all zeros** (`r206-e13-hurtbox-128`) and
-`ndsResetStartupDiagnostics` has **zero callers** — that family is inert, fix before citing it.
+is **unconditional**, so the remainder is recoverable. **Collision needs only the joints' LOCAL TRS** — it
+builds its own matrices lazily, memoised per frame, on just the chains it touches (`gmcollision.c:29`, `:489`),
+so the render matrix build is 30 Hz-able. `gNdsFighterInit*` is proof-build-only (0 by construction here, never
+cite it); `scripts/census-fighter-gameplay-joints.ps1` is the instrument, and it now reports the 60 Hz set.
 
 ## The one open fidelity item
 
-- **E32** — blocked on a **generator gap, not a decision** (E62), and E7 showed it no longer blocks
-  a gate lever. The flash clears `G_LIGHTING` and draws vertex colours raw; the owner
-  hardware-lights with stale diffuse/ambient, so Mario draws *unflashed* — not corrupt,
-  pixel-identical on every non-flash frame (510/511: 0 px). E49's runtime half is **refuted** (it
-  emits the baked `.rgba`, which holds **normals** — speckle, worse diff 2,199 vs 1,551).
-  **Needs the generator to bake the flash variant's vertex colours**; E63: 2,164 bytes.
+- **E32** — blocked on a **generator gap, not a decision** (E62), and E7 showed it no longer blocks a gate
+  lever. The flash clears `G_LIGHTING` and draws vertex colours raw; the owner hardware-lights with stale
+  diffuse/ambient, so Mario draws *unflashed* — not corrupt, pixel-identical on every non-flash frame
+  (510/511: 0 px). E49's runtime half is **refuted** (it emits the baked `.rgba`, which holds **normals** —
+  speckle, worse 2,199 vs 1,551). **Needs the generator to bake the flash variant's colours**; E63: 2,164 B.
 - **R2-03 E26 — demoted** to 23,844/frame (needs `NDS_TASK91_DRAW_PHASE_CENSUS=1` *and*
   `NDS_R2_SPAN_LEAN_TIMING=1`). **Replace the dispatch, not the writes** (E39); read its spec only
   with E34/E34-b/E39/E43/E45/E56.

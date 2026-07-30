@@ -729,9 +729,30 @@ recoverable at all.
   value is `0xffffffffu` (`taskman_seam.c:1098-1099`), so a value of `0` means the reset never ran
   *either* — everything is sitting at BSS zero. And `ndsResetStartupDiagnostics`, which contains that
   reset (`taskman_seam.c:30`, declared `nds_startup.h:728`), has **zero callers anywhere in
-  `src/`** — dead code. So the whole fighter-init census family is inert in Boundary and **cannot
-  supply E13's hurtbox count until that is fixed.** Fix the recorder path before trusting any
-  `gNdsFighterInit*` value; several other results may cite these.
+  `src/`** — dead code.
+
+  **WHY it never wrote, run down to the mechanism: the family is COMPILE-TIME gated out of
+  Boundary, and it is not a defect to fix.** The recorder is reached only through
+  `ndsFighterMarioFoxInitStateFromOriginalOrder` (`reloc_backend_diagnostic_recorders.c:18194`,
+  called once at `:18518`) behind *two* nested predicates, `ndsFighterMarioFoxStructProofEnabled()`
+  and `ndsFighterMarioFoxInitProofEnabled()`, and both are `#if` chains over
+  `NDS_DEV_SCENE_HARNESS` (`reloc_backend_fighter_model.c:601`, `:634`) naming only the retired
+  `*_MARIOFOX_STRUCT` / `_INIT` / `_WAIT` / `_DL_*` harness modes. Boundary is none of them, so the
+  call is compiled out. Confirmed empirically rather than by source reading: `gNdsFighterMarioFoxInitCount`
+  reads **0** on a Boundary run (`artifacts/performance/r206-e13-initcount.json`), and it is
+  incremented unconditionally at `:18351` immediately before the recorder, so a zero there proves the
+  enclosing function never ran.
+  **Therefore: never cite a `gNdsFighterInit*` value from a Boundary run — it is structurally 0, not
+  measured — and do not "wire it up".** AGENTS.md forbids exactly that direction ("Do not add
+  proof-only branch reruns"; "New harness modes are only for scene-level capabilities"), and these
+  predicates are themselves *runtime* `if`s in live gameplay code
+  (`reloc_backend_compat_shims.c:936`, `:955`, `:1230`, `:1807`, `:1858`…) that the
+  "graduate imported subsystems live" rule wants migrated or deleted.
+  **The right instrument already existed:** `scripts/census-fighter-gameplay-joints.ps1` (Task 77 E1)
+  reads `fp->attr->damage_coll_descs[]`, the foot/item joints and the `animlock`/`setup_parts` masks
+  straight off the live `FTStruct` over GDB, touching none of the proof globals. *Lesson: grep
+  `scripts/` for an existing census before chasing a diagnostic global — this cost a run and two
+  wrong inferences.*
   *(Two corrections, both mine, both caught before they were published as results: I first wrote that
   the count was "thrown away and needs a one-line addition" — wrong, I had read only to `:2559` and
   the assignment is at `:2574`. I then suspected all eight `reloc_backend_*.c` were compiled twice,
@@ -745,9 +766,130 @@ recoverable at all.
   run.
 
 **Neither number is the ancestor-chain union yet** — both give the *leaf* joints. The union still
-needs the model's parent links, which the DObj tree carries at runtime. Expect the probe to walk
-`parent_gobj` from each leaf and OR the results into a 37-bit mask, which is also how it should be
-reported.
+needs the model's parent links, which the DObj tree carries at runtime. `census-fighter-gameplay-joints.ps1`
+now emits them (`FTPAR=` records, one per joint slot 4..36 per fighter) and closes the leaf set under
+parenthood host-side, reporting `60Hz SET` / `30Hz OK` counts and the max chain depth.
+**`DOBJ_PARENT_NULL` is `((DObj*)1)`, not NULL** (`decomp/src/sys/objtypes.h:32`) — a `parent != 0`
+test walks into address 1, and every chain walk in this repo must test against 1.
+
+**E13 step 1d — THE 60 Hz OBLIGATION IS *LOCAL TRS ONLY*, AND COLLISION ALREADY MEMOISES ITS OWN
+CHAINS PER FRAME. This is what makes §3.6's split cheap.** Read the collision path to the bottom
+rather than stopping at "it walks the live joint chain":
+
+- `gmCollisionTransformMatrixAll(dobj, parts, mtx)` (`decomp/src/gm/gmcollision.c:29-74`) reads
+  **`dobj->translate.vec.f`, `dobj->rotate.vec.f`, `dobj->scale.vec.f`** and builds the rotation
+  matrix itself out of `lbCommonSin`/`lbCommonCos`. **It consumes the joint's LOCAL TRS. It does not
+  read one matrix the render pose walk produces.**
+- The read path `gmCollisionGetFighterPartsWorldPosition` (`:489-517`) walks
+  `main_dobj = main_dobj->parent` and **early-exits at the first ancestor whose
+  `unk_dobjtrans_0x5 != 0`** — i.e. one already resolved to world this frame — composing the rest on
+  demand and setting `transform_update_mode = 1` per joint so a second hitbox on the same chain pays
+  nothing. The setup walk `func_ovl2_800EDBA4` (`:330-395`) bounds chain depth structurally with
+  `DObj *setup_dobj[18]`.
+- **Both flags are per-frame, and this is the proof the earlier withdrawal lacked.**
+  `unk_dobjtrans_0x5`/`0x6` are `u8` members of a union with `s32 unk_dobjtrans_word`
+  (`decomp/src/ft/fttypes.h:657-668`), and `ftParamsUpdateFighterPartsTransformAll` (`ftparam.c:2161`,
+  the `:2181` reset) walks the whole tree storing `parts->unk_dobjtrans_word = 0` and
+  `transform_update_mode 1 → 0`. It is called every frame from `ftMainProcPhysicsMap`
+  (`ftmain.c:1847`) immediately *before* the per-hitbox reads at `:1882`/`:1907`. **The port
+  implements the same invalidation** (`reloc_backend_compat_shims.c:1485-1500`).
+  *(This supersedes the withdrawn "already lazily cached" claim, which named the wrong field: I cited
+  `unk_dobjtrans_0x5/0x6`'s one-time init at `ftmanager.c:263-265` and withdrew for lack of a
+  per-frame reset. The reset exists — it is the union store, not a per-byte assignment, which is why
+  a grep for the field names missed it. Grep the union, not the member.)*
+
+**E13 ANSWERED — THE REPRESENTATION SPLIT IS REFUTED BY ITS OWN SIZING. Mario and Fox are ~84%
+collision-load-bearing, so there is no render-only remainder to move to 30 Hz (2026-07-30).**
+
+Measured, `scripts/census-fighter-gameplay-joints.ps1` extended to close the leaf set under
+parenthood, one stop at frame 439, `artifacts/performance/r206-e13-joint-census.json`:
+
+| fighter | live joints | 60 Hz closure | **f** | render-only | max chain depth |
+|---|---|---|---|---|---|
+| Mario (slot 0) | 24 | 21 | **0.875** | **3** — joints 10, 22, 27 | 4 |
+| Fox (slot 1) | 26 | 21 | **0.808** | **5** — joints 10, 22, 27, 28, 29 | 3 |
+| combined | 50 | 42 | **0.840** | 8 | — |
+
+**f = 0.840 against a pre-registered cutoff of 0.70, so: DO NOT BUILD.** The ceiling is
+`(1 − 0.840) × 73,074 = ` **~11,692/frame**, roughly half the >20,000 P95 placement floor — E11's
+situation exactly, a provable saving P95 cannot show. And 11,692 is an *upper* bound:
+`ndsR2CubicValueFixed`'s cost follows animated *tracks* rather than joints, and
+`ftParamUpdateAnimKeys`'s own 12,139 is loop overhead that a shorter loop still pays.
+
+**Why f is so high — this is the durable fact, not the arithmetic.** The skeleton is dense with
+collision. Hurtboxes alone are **11 joints** (`damage_colls[11]`, and both fighters populate
+essentially all of it: Fox 5 6 8 9 12 14 15 19 20 24 25, Mario the same less one `-1`), `animlock`
+adds **6 more** (7 13 18 21 23 26) which are code-placed and so load-bearing by construction, and the
+closure over parents — only 3-4 deep — fills in the intermediates. **The effect joints (9 12 15 20 25)
+are a strict subset of the hurtbox set: `cosmetic-only` is EMPTY for both fighters.** What is left over
+is 8 joints across two skeletons, all extremities.
+
+**The hitbox half is no longer needed, and that is what makes this final rather than provisional.**
+E13 step 1c planned a probe to log the `attack_colls[4]` joint ids out of the motion events. It is
+moot: those four ids either name joints already inside the closure (**f unchanged**) or name one of
+the eight leftovers (**f rises**). **f can only increase**, so 0.840 is a floor and the verdict cannot
+flip. The planned probe is cancelled rather than left open — a queue item that cannot change a
+decision is not a queue item.
+
+Two reads that could have looked like defects and are not: Mario's gameplay set names joint **28** and
+Fox's names **30**, neither of which is live in its own model (Mario's live slots are exactly 4..27,
+Fox's 4..29) — those are `attr` item-joint ids for joints the model never instantiates, correctly
+skipped by the closure's live guard, and costing nothing in the loop either (`joint == NULL` →
+`continue`). And both fighters' closures are the *same* 21 slots, which is not a copy-paste artifact:
+they share the common skeleton layout from `nFTPartsJointCommonStart`.
+
+**So §3.6's split is sound as a principle and simply has no purchase on these two fighters** — which
+is a fact about Mario and Fox, not a defect in the plan, and it will differ per fighter. The animation
+over-budget therefore **cannot** be paid by posing fewer joints. It has to be paid by making the
+per-joint work cheaper, which returns the phase to E12's standing hypothesis: **86,819/frame of the
+146,148 is stall, and the unpriced suspect is the ~300 individually-`malloc`'d 32-byte AObjs walked by
+pointer chase every frame** (R2-06 E6: the battle task passes `aobjs_num = 0`). E12 already forbade
+building on that before counting the distinct cache lines it touches. **That count is now the phase's
+next step**, and unlike E9 it is body cost, so the E11 wall does not apply to it.
+
+*Kept for the record because pre-registration is what made this cheap:*
+
+**E13 step 2 — the sizing rule, PRE-REGISTERED before the census number is known.** Written down
+first on purpose: E11 was decided after its number arrived, and a threshold chosen afterwards is not
+a threshold. The loop to split is `ftParamUpdateAnimKeys` (`reloc_backend_compat_shims.c:1553`),
+whose trip count is already a per-fighter runtime value — `ndsFTStructJointLoopLimit` returns
+`nFTPartsJointCommonStart + fp->nds_common_joint_count` (`:1535`), so "~25 live" is readable, not
+estimated. `NDS_TASK106_UPDATES_PER_PRESENT = 2`, and only the *second* logical tick can be reduced
+(the presented one must pose everything), so with **f = |60 Hz set| / |live|**:
+
+> **saving ≈ (1 − f) × 146,148 / 2 = (1 − f) × 73,074 per presented frame**
+
+- **f ≤ 0.45 → ≥ 40,190: clears the 40,448 gap on this lever alone. BUILD.**
+- **0.45 < f ≤ 0.70 → 21,922-40,190:** beats the >20,000 P95 placement floor, but not the gap alone.
+  Build only as part of a stack, and say so when reporting it.
+- **f > 0.70 → < 21,922: AT OR INSIDE the P95 floor. DO NOT BUILD this lever** — that is E11's
+  situation exactly (a real, provable saving that P95 cannot show), and the answer there is to record
+  the number and stop.
+
+Two honest deductions from that ceiling, both of which only lower it: the cosmetic MObj inner loop
+(`:1610-1616`) is **10,049/frame** of the 146,148 (E12: `gcParseMObjMatAnimJoint` 7,627 +
+`gcPlayMObjMatAnim` 2,422) and is render-only *unconditionally*, so it is a component of this split
+and **not a standalone cut** — halved it is ~5,025, a quarter of the P95 floor. And the three symbols
+worth having are `ndsR2CubicValueFixed` 48,623 + `gcPlayDObjAnimJoint` 40,973 +
+`battleship_ftAnimParseDObjFigatree` 32,614 = **122,210 of 146,148**, so the lever is real only if the
+*parse* can be skipped too, not just the play.
+
+**Which forces one design constraint: do not implement this by skipping a tick.** The parse advances
+each joint's animation cursor, so a skipped joint silently falls a tick behind and its pose lands on
+the wrong absolute animation frame — a drift, not a rate reduction, and it would show as jitter that
+looks like a different bug. The 30 Hz joints must be **advanced by two and evaluated once**.
+
+**Consequence for E13, and it is the design:** the 60 Hz path owes collision only *"`translate` /
+`rotate` / `scale` are current on the ancestor closure of the live collision joints"*. Composition to
+world is already lazy, already memoised, already restricted to the chains actually touched, and
+already priced inside gameplay — not inside the 146,148. So the animation walk's **only** 60 Hz
+obligation is writing local TRS for that closure; evaluating the remaining joints, and the entire
+render-side matrix build, is render-only and may run at presentation rate. That is precisely §3.6's
+*"may share source data; must not share one expensive runtime representation"*, and it means the
+split does **not** need a duplicated skeleton — it needs the *unconditional* joint loop in
+`ftParamUpdateAnimKeys` to become two loops over a precomputed 37-bit mask. **Size it with the
+census before building it** — three of the last four source-derived mechanisms in this phase were
+refuted by their own measurement.
 
 **So the only lever with the right shape is touching fewer bytes per frame, not rearranging them.**
 `NDS_TASK106_UPDATES_PER_PRESENT = 2`, so this walk runs **twice per presented frame**;

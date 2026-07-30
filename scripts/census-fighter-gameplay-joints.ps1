@@ -116,6 +116,43 @@ function New-FighterReadCommands {
     )
 }
 
+function New-JointParentCommands {
+    param([int]$Slot)
+
+    # R2-06 E13. The gameplay-joint sets above are LEAVES. Collision does not
+    # read a leaf in isolation: gmCollisionGetFighterPartsWorldPosition
+    # (decomp gmcollision.c:489) walks `main_dobj = main_dobj->parent` and
+    # composes each ancestor's local TRS, so a hitbox on one joint pins that
+    # joint's whole ancestor chain at 60 Hz. Sizing the 60 Hz set therefore
+    # needs the parent links, and they exist only in the live DObj tree.
+    #
+    # DOBJ_PARENT_NULL is ((DObj*)1), NOT NULL (decomp sys/objtypes.h:32), so
+    # the root test is `parent != 1` and a `parent != 0` test would walk into
+    # address 1. Every deref is nested rather than relying on && short-circuit:
+    # a faulting read inside -batch kills the run and reads as a harness bug.
+    $lines = @()
+    for ($i = $jointCommonStart; $i -lt $jointNumMax; $i++) {
+        $lines += @(
+            "set `$jt = `$ftst->joints[$i]",
+            'set $pid = -1',
+            'set $have = 0',
+            'if $jt != 0',
+            'set $have = 1',
+            'if $jt->parent != 1',
+            'if $jt->parent != 0',
+            'set $pp = (FTParts *)$jt->parent->user_data.p',
+            'if $pp != 0',
+            'set $pid = $pp->joint_id',
+            'end',
+            'end',
+            'end',
+            'end',
+            ("printf `"FTPAR=$Slot,$i,%d,%d\n`", `$have, `$pid")
+        )
+    }
+    @('if ($ftst != 0) && ($ftst->attr != 0)') + $lines + @('end')
+}
+
 try {
     if (-not $NoBuild) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
@@ -159,8 +196,9 @@ try {
         'end',
         'end',
         'continue'
-    ) + (New-FighterReadCommands -Slot 0) +
-        (New-FighterReadCommands -Slot 1) + @('detach')
+    ) + (New-FighterReadCommands -Slot 0) + (New-JointParentCommands -Slot 0) +
+        (New-FighterReadCommands -Slot 1) + (New-JointParentCommands -Slot 1) +
+        @('detach')
 
     [System.IO.File]::WriteAllLines($gdbScript,
         @($gdbLines | Where-Object { -not [string]::IsNullOrEmpty($_) }))
@@ -238,9 +276,60 @@ try {
             if ($v -ge 0 -and -not $gameplay.Contains($v)) { [void]$cosmeticOnly.Add($v) }
         }
 
+        # R2-06 E13: close the leaf set under parenthood. A hitbox/hurtbox on a
+        # joint forces that joint's whole ancestor chain to be current at 60 Hz,
+        # so |ancestorUnion| -- not |gameplay| -- is the size of the set a split
+        # representation must keep at simulation rate.
+        # String keys: ConvertTo-Json cannot serialize an int-keyed dictionary.
+        $parentOf = [ordered]@{}
+        $liveJoints = [System.Collections.Generic.SortedSet[int]]::new()
+        foreach ($line in ($lines | Where-Object { $_ -match "^FTPAR=$slot," })) {
+            $p = ($line -replace '^FTPAR=', '') -split ','
+            $idx = [int]$p[1]
+            if ([int]$p[2] -ne 0) { [void]$liveJoints.Add($idx) }
+            $parentOf["$idx"] = [int]$p[3]
+        }
+        if ($liveJoints.Count -eq 0) {
+            throw "Fighter slot $slot reported no live joints; the FTPAR reads failed."
+        }
+
+        $ancestorUnion = [System.Collections.Generic.SortedSet[int]]::new()
+        $chainDepths = @{}
+        foreach ($leaf in $gameplay) {
+            if (-not $liveJoints.Contains($leaf)) { continue }
+            $node = $leaf
+            $depth = 0
+            # Cap at jointNumMax: the decomp's own walk buffer is DObj[18]
+            # (gmcollision.c:337), so a longer chain means a malformed tree
+            # rather than a deep skeleton, and must not spin here.
+            while (($node -ge 0) -and ($depth -le $jointNumMax)) {
+                if ($ancestorUnion.Contains($node)) { break }
+                [void]$ancestorUnion.Add($node)
+                $node = if ($parentOf.Contains("$node")) { $parentOf["$node"] } else { -1 }
+                $depth++
+            }
+            if ($depth -gt $jointNumMax) {
+                throw "Ancestor walk from joint $leaf (slot $slot) exceeded $jointNumMax hops."
+            }
+            $chainDepths[$leaf] = $depth
+        }
+        $renderOnly = @($liveJoints | Where-Object { -not $ancestorUnion.Contains($_) })
+        # The closure runs past nFTPartsJointCommonStart into the root DObj chain
+        # (joint_id 0), which is not one of the joints[] slots this loop splits.
+        # The 60 Hz FRACTION must therefore be taken over slots only, or it reads
+        # high against a denominator that excludes the root.
+        $unionSlots = @($ancestorUnion | Where-Object { $_ -ge $jointCommonStart })
+
         $fighters += [ordered]@{
             slot = $slot
             fkind = [int]$j[1]
+            liveJoints = @($liveJoints)
+            parentOf = $parentOf
+            ancestorUnionJoints = @($ancestorUnion)
+            ancestorUnionSlots = $unionSlots
+            sixtyHzFraction = [math]::Round($unionSlots.Count / $liveJoints.Count, 4)
+            renderOnlyJoints = $renderOnly
+            maxChainDepth = (@(0) + @($chainDepths.Values) | Measure-Object -Maximum).Maximum
             animlockWords = $animlock
             setupPartsWords = $setupParts
             animlockJoints = @($locked)
@@ -270,6 +359,14 @@ try {
         Write-Host ("       present   {0} joints; unclassified {1}: {2}" -f `
             $f.presentJoints.Count, $f.unclassifiedPresentJoints.Count,
             (($f.unclassifiedPresentJoints) -join ' '))
+        Write-Host ("       live      {0} joints (joints[] non-NULL)" -f $f.liveJoints.Count)
+        Write-Host ("       60Hz SET  {0} of {1} live slots (f={2:P1}), max chain depth {3}: {4}" -f `
+            $f.ancestorUnionSlots.Count, $f.liveJoints.Count, $f.sixtyHzFraction,
+            $f.maxChainDepth, (($f.ancestorUnionSlots) -join ' '))
+        Write-Host ("       closure   {0} incl. root chain: {1}" -f `
+            $f.ancestorUnionJoints.Count, (($f.ancestorUnionJoints) -join ' '))
+        Write-Host ("       30Hz OK   {0} render-only joints: {1}" -f `
+            $f.renderOnlyJoints.Count, (($f.renderOnlyJoints) -join ' '))
     }
     Write-Host ""
 
