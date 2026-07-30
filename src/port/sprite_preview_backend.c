@@ -1534,15 +1534,21 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
     u32 is_scaled;
     u32 scale_x_q16;
     u32 scale_y_q16;
-    /* R2-07 R0e. The VS Results wallpaper is I/4b, 300x220, drawn 1:1 at
-     * (10,10) into the 320x240 staging buffer under the prim/env combine, and
-     * it is 76.8% of the Results frame after R0c/R0d. Under that combine the
-     * output colour is a pure function of the 4-bit intensity, so sixteen
-     * values cover every pixel the generic loop can produce -- see
-     * check_sprite_lerp_exact.py. NULL means "no specialized row available",
-     * which is every other caller of this blitter. */
-    u16 fast_i4_palette[16];
-    const u16 *fast_i4 = NULL;
+    /* R2-07 R0e/R2a. `ndsSpriteLerpPrimEnv` is always called with a 4-bit
+     * nibble scaled by 17, from two arms of the pixel loop: the I/4b wallpaper
+     * under the prim/env combine, and every IA/8b sprite. Its output therefore
+     * has sixteen possible values per sobj, and the sobj's prim/env colours are
+     * fixed for the whole call -- so one table built once replaces ~45 Thumb
+     * instructions per pixel. Proven in check_sprite_lerp_exact.py.
+     *
+     * NULL means neither arm can use it, which is every other caller of this
+     * blitter. The table deliberately does NOT fold in `sprite->alpha`: the IA
+     * arm tests it and the I4 combine arm does not, so folding it would change
+     * the wallpaper when alpha is zero. */
+    u16 fast_lerp_palette[16];
+    const u16 *fast_lerp = NULL;
+    /* The I/4b paired row is legal on top of the table, under more conditions. */
+    u32 fast_i4_specialized = 0u;
 
     if (sobj == NULL)
     {
@@ -1648,28 +1654,37 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         gNdsSObjWallpaperCacheFallbackCount++;
     }
 
-    /* Build the sixteen-entry palette once per call. Every condition here is
-     * loop-invariant, and the ones that are not -- the destination row and the
-     * horizontal extent -- are re-checked per strip and per row below, so the
-     * specialized row is only ever taken where it writes exactly the pixels the
-     * generic loop would have written, in the same order.
+    /* Build the sixteen-entry table once per call, for either arm that lerps.
      *
-     * `record_startup` has to be zero because the generic loop counts texshuf
-     * samples per pixel for the startup-logo diagnostic, and `is_scaled` has to
-     * be false because the scaled arm writes a rectangle per source pixel
-     * rather than one pixel. Neither holds for the Results wallpaper. */
-    if ((results_wallpaper_combine != 0u) && (record_startup == 0u) &&
-        (is_scaled == FALSE) && (sprite->bmfmt == G_IM_FMT_I) &&
-        (sprite->bmsiz == G_IM_SIZ_4b) && (origin_x >= 0))
+     * The I/4b paired row needs more than the table: `is_scaled` false, because
+     * the scaled arm writes a rectangle per source pixel rather than one pixel,
+     * and a non-negative origin. The IA/8b sprites in this scene ARE scaled --
+     * `mnVSResultsMakeWallpaper`'s text helper sets `scalex` and clears
+     * `SP_FASTCOPY` outright (BattleShip `mnvsresults.c:1204`) -- so they keep
+     * the generic loop and only swap the lerp for a lookup. That is why the row
+     * flag carries its own format test rather than reusing `fast_lerp != NULL`.
+     *
+     * The table's condition is exactly "one of the two lerping arms can run", so
+     * both may index it without a null test. `record_startup` is deliberately NOT
+     * part of it -- building sixteen entries costs a startup-logo call nothing,
+     * and keeping it out is what makes the table unconditionally available. It
+     * gates the specialized ROW instead, which skips the per-pixel texshuf
+     * sample counter the startup-logo diagnostic needs. */
+    if (((sprite->bmfmt == G_IM_FMT_I) && (sprite->bmsiz == G_IM_SIZ_4b) &&
+         (results_wallpaper_combine != 0u)) ||
+        ((sprite->bmfmt == G_IM_FMT_IA) && (sprite->bmsiz == G_IM_SIZ_8b)))
     {
         u32 nibble;
 
         for (nibble = 0u; nibble < 16u; nibble++)
         {
-            fast_i4_palette[nibble] =
+            fast_lerp_palette[nibble] =
                 ndsSpriteLerpPrimEnv(sobj, (u8)(nibble * 17u));
         }
-        fast_i4 = fast_i4_palette;
+        fast_lerp = fast_lerp_palette;
+        fast_i4_specialized =
+            ((sprite->bmfmt == G_IM_FMT_I) && (record_startup == 0u) &&
+             (is_scaled == FALSE) && (origin_x >= 0)) ? 1u : 0u;
     }
 
     for (bitmap_index = 0;
@@ -1720,7 +1735,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
          * outside the preview. Requiring the whole strip to land inside it
          * removes that per-pixel test without changing which pixels are
          * written; a strip that does not fit takes the generic loop. */
-        fast_i4_row = ((fast_i4 != NULL) &&
+        fast_i4_row = ((fast_i4_specialized != 0u) &&
                        (((u32)origin_x + src_draw_width) <= preview_width)) ?
             1u : 0u;
 
@@ -1852,8 +1867,8 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                 {
                     u8 packed = src_i4[(row_base + (pair ^ byte_xor)) ^ 3u];
 
-                    dst[0] = fast_i4[packed >> 4];
-                    dst[1] = fast_i4[packed & 0x0fu];
+                    dst[0] = fast_lerp[packed >> 4];
+                    dst[1] = fast_lerp[packed & 0x0fu];
                     dst += 2;
                 }
                 if ((src_draw_width & 1u) != 0u)
@@ -1863,7 +1878,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                      * `pairs`. */
                     u8 packed = src_i4[(row_base + (pairs ^ byte_xor)) ^ 3u];
 
-                    dst[0] = fast_i4[packed >> 4];
+                    dst[0] = fast_lerp[packed >> 4];
                 }
                 /* Every entry of the palette has bit 15 set, so the generic
                  * loop's `color != 0` test never skips a pixel of this sprite
@@ -1918,13 +1933,16 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                     }
                     source_index = ((size_t)row * src_row_bytes) + source_x;
                     ia = src_ia[source_index ^ 3u];
+                    /* R2a. The table holds `lerp(sobj, n * 17)` for all sixteen
+                     * nibbles, so this is the same value the call produced --
+                     * 255/15 == 17 exactly, no library division either way. The
+                     * alpha test stays HERE rather than folded into the table,
+                     * because the I4 combine arm below does not apply it.
+                     * Measured owner: these glyphs were 78.2 ticks/pixel against
+                     * the specialized wallpaper row's 8.6. */
                     color = (((ia & 0x0fu) != 0u) &&
                              (sprite->alpha != 0u)) ?
-                        ndsSpriteLerpPrimEnv(
-                            /* 4-bit nibble scaled to 8 bits. 255/15 == 17
-                             * exactly, so this is the same value as the former
-                             * `* 255u / 15u` with no library division. */
-                            sobj, (u8)((ia >> 4) * 17u)) : 0;
+                        fast_lerp[ia >> 4] : 0;
                 }
                 else if ((sprite->bmfmt == G_IM_FMT_CI) &&
                          (sprite->bmsiz == G_IM_SIZ_8b))
@@ -2008,12 +2026,12 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                         (u8)(packed >> 4) : (u8)(packed & 0x0fu);
                     if (results_wallpaper_combine != 0u)
                     {
-                        color = ndsSpriteLerpPrimEnv(
-                            /* Same 4-bit nibble identity as the IA arm above:
-                             * 255/15 == 17, so no library division. This is the
-                             * I4 wallpaper's per-pixel path and R0c measured it
-                             * at 84.8% of the Results frame. */
-                            sobj, (u8)((u32)intensity * 17u));
+                        /* Same table as the IA arm, and no alpha test here --
+                         * this arm never had one. Reached only when the paired
+                         * row above declined the strip (scaled, hanging off the
+                         * preview, or a startup-logo call); the table's build
+                         * condition is this branch's condition, so no null test. */
+                        color = fast_lerp[intensity & 0x0fu];
                     }
                     else
                     {

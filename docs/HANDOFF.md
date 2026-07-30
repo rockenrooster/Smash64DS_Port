@@ -79,13 +79,13 @@ needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
 **39.975 → 10.250 VB/iter (−16,651,648 ticks, 1.50 → 5.85 FPS, 3.9×), Latest green.** Three cuts, all
 bit-exact by proof (`check_sprite_lerp_exact.py`): **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits
 `blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`); **R0d** inlined the
-lerp; **R0e** 16-entry palette + ONE byte per PAIR of columns, 112 → 9 Thumb instr/px. **R0f's `-Phases`
-split was an INSTRUMENT ARTIFACT; R0h's per-PC profile replaces it:** VBlank deltas are integers, quantum
-560,190, so sub-VBlank rows read 0 and their cost lands in a neighbour — the "1.6M unexplained" never
-existed, and the staging clear is not free. Per frame: **blit 1,103,616 (19.7%), commit/downscale 974,382
-(17.4%), `memset` clears 830,978 (14.8%), `memcpy`→VRAM 557,126 (10.0%)**; idle 830,260, fighters
-~513,000, blit loop 1.72 cyc/insn. **The four-stage software compositor is 3,466,102 = 61.9%, run TWICE
-per frame on STATIC content. NEXT = R2: stop recompositing it** (DS hardware BGs/128 sprites go unused).
+lerp; **R0e** 16-entry palette + ONE byte per PAIR of columns, 112 → 9 Thumb instr/px; **R2a** the IA/8b
+glyph arm indexes the same table, **−200,133 ticks/frame, FPS flat**. **R0f's `-Phases` split was an
+INSTRUMENT ARTIFACT; R0h's per-PC profile replaces it:** the "1.6M unexplained" never existed and the
+staging clear is not free. Per frame: **blit 903,483, commit/downscale 974,382, `memset` clears 830,978,
+`memcpy`→VRAM 557,126**; idle **830,260 = 1.48 VBlanks of SLACK, so nothing under ~830K can move FPS
+(rule 12 — R2a proved it: −200,133 work, +193,529 spin)**. **The four-stage compositor is ~3.27M = 58%,
+run TWICE per frame on STATIC content. NEXT = R2: stop recompositing it** (DS hardware BGs go unused).
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 

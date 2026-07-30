@@ -1770,8 +1770,57 @@ instrument from the size of the expected win.
 `PROJECT_GOAL.md` and AGENTS.md both settle the disposition in advance of the number: milestone tick
 targets are "directional, not per-cut discard gates", and the instruction is to "keep every repeatable
 correctness-preserving gain and accumulate it toward the target". A flat wall clock is not evidence a
-lever is worthless. Per-PC profile of the R2a build in flight to arbitrate against the pre-registered
-threshold.
+lever is worthless.
+
+**ARBITRATED: KEEP, −200,133 ticks/frame off the blitter, double the pre-registered threshold.** Same
+profiler, same window, `artifacts/task37-census/r207-r2a/`:
+
+| | R0e | R2a | delta/frame |
+| --- | --- | --- | --- |
+| `ndsDrawSObjIntoPreview` | 88,289,261 | 72,278,619 | **−200,133 ticks (−18.1%)** |
+| `armWaitForIrq` (idle spin) | 66,420,781 | 81,903,105 | **+193,529 ticks** |
+| total cycles | 448,150,712 | 448,150,320 | **−392 (flat)** |
+| instructions | 148,358,461 | 136,768,388 | **−289,752** |
+
+**The two middle rows are the whole story: −200,133 of work out, +193,529 of spin in, matching to 3%.**
+That is rule 12 demonstrated rather than argued — the reclaimed time is *visible*, sitting in the idle
+counter, and the wall clock is flat because the loop had nowhere else to put it. Nothing else regressed
+past the ~14,000-tick floor; the worst mover was `ndsRendererExecuteNativeFighterRootHardware` at +2,753.
+Only one inlined `ndsSpriteLerpPrimEnv` copy survives in the whole blitter (the table build), verified by
+counting `muls` against source lines.
+
+**The banked total on this scene is now real work removed, not FPS.** Blitter 1,103,616 → 903,483
+ticks/frame. Results FPS is unchanged at 5.85 and will stay there until a cut exceeds the ~830K slack —
+which is precisely what R2 (the compositor, 3,466,102) is sized to do, and why R2a is worth keeping *now*
+rather than after it: with the slack consumed by a big structural cut, these 200,133 ticks become FPS.
+
+Latest on the final source (fallback and per-pixel null test removed) before the source commits.
+
+**R2 sized from the same artifact, and the answer is uncomfortable — say it before building anything.**
+Both compositor stages run once per layer, so splitting them by layer is arithmetic on known geometry
+(2 × 153,600-byte clears, 2 × 49,152-pixel downscales, 2 × 98,304-byte VRAM copies) plus the measured
+per-arm blit split:
+
+| layer | blit | clear | downscale | VRAM copy | total/frame |
+| --- | --- | --- | --- | --- | --- |
+| background (wallpaper, link 26) — **static** | 565,315 | 415,489 | 487,191 | 278,563 | **1,746,558** |
+| foreground (glyphs + tints, links 29/34/35) | 338,167 | 415,489 | 487,191 | 278,563 | **1,519,410** |
+
+Only the background is static: the tints **fade**, decrementing alpha every frame, and they are
+foreground. So a dirty-flag skip is worth **1,746,558 ticks/frame** and is pixel-identical when correct —
+the overlay is single-buffered and `nds_platform.c:781-783` already documents relying on its contents
+persisting. With 830,260 of slack to absorb first, the frame drops by ~916,300 ticks = **1.64 VBlanks:
+10.25 → ~8.6 VB/iter, 5.85 → ~7.0 FPS.**
+
+**That does not approach the gate, and no arrangement of these four stages does.** 2 VBlanks means
+removing ~4.6M of 5.6M, i.e. the entire software compositor *and* most of the fighter draw. The Results
+screen is a static wallpaper, seven static glyphs, two fading tints and two 3D fighters — content the DS
+would show for nearly free on hardware BG layers and OAM, which this scene does not use at all. So the
+honest statement is that **R2's dirty-flag is a correct prerequisite worth 1.75M, not a route to 30 FPS
+on this screen**, and reaching the gate here is a presentation-architecture decision (hardware BG + OAM
+for `nSCKindVSResults`, the ungated half of `sprite_preview_backend.c:2456-2458`) whose scope the owner
+should see before it is started. Do not begin the architecture change on the strength of this note; do
+begin the dirty-flag, which is needed either way.
 
 ### R2-07 R0h ANSWERED — there was never a residual; R0f's split was an instrument artifact, and the real owner is a four-stage software compositor (2026-07-30)
 

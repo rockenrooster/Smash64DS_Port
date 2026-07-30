@@ -6855,6 +6855,7 @@ E0); branch `codex/task56-fighter-stripify` (6 commits).
 | R0f | 2026-07-30 | -Phases split: layer clear is free, layer commit is 43.1% |
 | R0g | 2026-07-30 | pair as one 32-bit store: **REVERT, -0.06%** |
 | R0h | 2026-07-30 | per-PC profile: **R0f's split was quantisation; compositor is 61.9%** |
+| R2a | 2026-07-30 | IA/8b glyph lerp -> table lookup: **KEEP, -200,133 ticks/frame, FPS flat** |
 
 **Verdict: KEEP all three cuts.** The Results screen is not the battle frame and
 carries no tick instrument, so cost is measured in **VBlanks**: GDB stops freeze
@@ -6933,6 +6934,33 @@ VBlank census total to 2.4%, 0.00% unattributed, 397 of 3,390 FUNC symbols hit.
 **The four compositor stages total 3,466,102 ticks/frame -- 61.9% of the scene --
 and each runs twice, once per layer, on content that does not change.** Queued as
 R2. Artifact `artifacts/task37-census-results/`.
+
+**R2a KEEP at -200,133 ticks/frame, with FPS flat -- and that combination is the
+result, not a contradiction.** The seven IA/8b glyphs were 538,300 ticks/frame for
+6,882 pixels (78.2 ticks/px against the specialized wallpaper row's 8.6), because
+BattleShip's text helper sets `scalex` and clears SP_FASTCOPY (mnvsresults.c:1204)
+so they take the rect-fill arm AND ran the per-pixel lerp. R2a swaps the lerp for
+the sixteen-entry table R0e already builds -- same expression, same value, alpha
+test left where it was.
+
+The VBlank census returned 410 VBlanks against 410, exactly flat. The per-PC
+profiler on the same window explains it completely:
+
+| | R0e | R2a | delta/frame |
+|--|------|------|-------------|
+| ndsDrawSObjIntoPreview | 88,289,261 | 72,278,619 | **-200,133 ticks** |
+| armWaitForIrq (idle) | 66,420,781 | 81,903,105 | **+193,529 ticks** |
+| total cycles | 448,150,712 | 448,150,320 | -392 (flat) |
+| instructions | 148,358,461 | 136,768,388 | -289,752 |
+
+**Work out and spin in, matching to 3%.** The Results loop idles ~1.48 VBlanks per
+frame, so nothing under ~830K ticks can move its wall clock; the reclaimed time is
+visible sitting in the idle counter. Threshold was pre-registered at >=100,000
+before the profile ran (TASK_STANDING_RULES.md rule 7), and nothing else regressed
+past the ~14,000-tick floor. Kept per AGENTS.md's "keep every repeatable
+correctness-preserving gain and accumulate it toward the target" -- these ticks
+become FPS once R2 consumes the slack. Artifact
+`artifacts/task37-census/r207-r2a/`. See rule 12.
 
 **R0f's per-interval split is WITHDRAWN.** It reported the 153,600-byte staging
 clear at 0.000 VBlanks over 82 hits; it is 830,978 ticks/frame, i.e. 1.48 VBlanks
