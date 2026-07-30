@@ -74,7 +74,7 @@ try {
         -WorkingDirectory $root `
         -RedirectStandardOutput $gdbOut `
         -RedirectStandardError $gdbErr `
-        -Wait -PassThru
+        -Wait -WindowStyle Hidden -PassThru
     if ($gdbProcess.ExitCode -ne 0) {
         throw "Task 10 GDB run failed: $(Get-Content $gdbErr -Raw)"
     }

@@ -391,7 +391,7 @@ function Invoke-IFCommonRun {
             -ArgumentList "`"$rom`"" `
             -WorkingDirectory (Split-Path -Parent $context.MelonDSPath) `
             -RedirectStandardOutput $melonStdout `
-            -RedirectStandardError $melonStderr -PassThru
+            -RedirectStandardError $melonStderr -WindowStyle Hidden -PassThru
         Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort |
             Out-Null
         $windowDeadline = (Get-Date).AddSeconds(15)

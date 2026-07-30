@@ -679,7 +679,7 @@ function Invoke-CameraCase {
             -WorkingDirectory $melonDsDir `
             -RedirectStandardOutput $emuStdout `
             -RedirectStandardError $emuStderr `
-            -PassThru
+            -WindowStyle Hidden -PassThru
         Wait-MelonDSGdbListener -Process $emulator `
             -Port $verifierContext.GdbPort | Out-Null
         $gdbProcess = Start-Process -FilePath $Gdb `

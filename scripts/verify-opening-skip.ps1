@@ -45,7 +45,7 @@ function Invoke-Arm9Gdb {
         -WorkingDirectory $root `
         -RedirectStandardOutput $stdoutPath `
         -RedirectStandardError $stderrPath `
-        -PassThru
+        -WindowStyle Hidden -PassThru
     if (-not $process.WaitForExit($TimeoutMilliseconds)) {
         $process.Kill()
         $process.WaitForExit()

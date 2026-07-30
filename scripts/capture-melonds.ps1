@@ -422,7 +422,7 @@ try {
         }
     }
     $emulator = Start-Process -FilePath $melonDsPath -ArgumentList "`"$romPath`"" `
-        -WorkingDirectory $melonDsDir -PassThru
+        -WorkingDirectory $melonDsDir -WindowStyle Hidden -PassThru
     $deadline = (Get-Date).AddSeconds([Math]::Max($DelaySeconds, 2) + 10)
     do {
         Start-Sleep -Milliseconds 250

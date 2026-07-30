@@ -40,8 +40,14 @@ These are about this tool, so they are not in `AGENTS.md`:
   Without it each launch throws a console window into the owner's foreground and
   steals focus, and a long measurement session launches dozens. The melonDS
   launches already had it; the `gdb` launches did not, which is how this was
-  noticed. `make` recipes spawn their own short-lived shells and are not
-  controllable this way — run builds through the PowerShell tool rather than
+  noticed — and a 2026-07-29 AST sweep found nineteen still unhidden, because
+  the rule was only ever applied by hand. `scripts/check-melonds-policy.ps1` now
+  parses every `scripts/*.ps1` and fails on any unhidden `Start-Process`, so do
+  not re-audit this by hand. `-NoNewWindow` is the accepted alternative (it is
+  mutually exclusive with `-WindowStyle`); `debug-melonds.ps1` and
+  `debug-nogba.ps1` are allowlisted because the owner drives them interactively.
+  `make` recipes spawn their own short-lived shells and are not controllable
+  this way — run builds through the PowerShell tool rather than
   `Start-Process` so they inherit a hidden console.
 - **Builds are parallel by default; never pass `-j` and never clear
   `MAKEFLAGS`.** The Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)` from `nproc`.

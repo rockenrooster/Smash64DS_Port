@@ -160,6 +160,46 @@ foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
         "Hard-coded external melonDS executable found: $($scriptFile.Name)"
 }
 
+# Every scripted launch must stay off the owner's desktop. Without
+# -WindowStyle Hidden each Start-Process throws a console or emulator window
+# into the foreground and steals focus, and a measurement session launches
+# dozens. CLAUDE.md has carried this rule since the gdb launches were caught
+# doing it, and on 2026-07-29 an AST sweep still found 19 unhidden sites --
+# every melonDS launch had been fixed by hand and every gdb launch had not.
+# Enforce it here so a new harness cannot reintroduce one.
+#
+# -NoNewWindow is the accepted alternative: it reuses the current console
+# (and is mutually exclusive with -WindowStyle, so requiring both is not
+# possible). A splatted invocation is accepted when its script sets
+# WindowStyle somewhere, which is how the -Visible switch is implemented.
+$visibleByDesign = @('debug-melonds.ps1', 'debug-nogba.ps1')
+$unhidden = @()
+foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
+        -Filter '*.ps1' -File -Recurse) {
+    if ($visibleByDesign -contains $scriptFile.Name) { continue }
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+        $scriptFile.FullName, [ref]$tokens, [ref]$parseErrors)
+    Assert-Policy (($null -eq $parseErrors) -or ($parseErrors.Count -eq 0)) `
+        ("Harness script does not parse: $($scriptFile.Name): " +
+         "$(if ($parseErrors) { $parseErrors[0].Message })")
+    $scriptText = $ast.Extent.Text
+    foreach ($command in $ast.FindAll({ param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] }, $true)) {
+        if ($command.GetCommandName() -ne 'Start-Process') { continue }
+        $commandText = $command.Extent.Text
+        if ($commandText -match '-WindowStyle\s+Hidden') { continue }
+        if ($commandText -match '-NoNewWindow') { continue }
+        if (($commandText -match '^Start-Process\s+@') -and
+            ($scriptText -match 'WindowStyle')) { continue }
+        $unhidden += "$($scriptFile.Name):$($command.Extent.StartLineNumber)"
+    }
+}
+Assert-Policy ($unhidden.Count -eq 0) (
+    'Start-Process without -WindowStyle Hidden steals the owner''s foreground: ' +
+    ($unhidden -join ', '))
+
 if ($AuditLocalConfigs -and -not $SkipLocalConfigs -and
     (Test-Path -LiteralPath (Join-Path $Root 'emulators') -PathType Container)) {
     & (Join-Path $PSScriptRoot 'Set-MelonDSWindowConfig.ps1') `

@@ -47,7 +47,7 @@ try {
 
     $emulator = Start-Process -FilePath $melonDsPath `
         -ArgumentList "`"$romPath`"" -WorkingDirectory $melonDsDir `
-        -PassThru
+        -WindowStyle Hidden -PassThru
     Wait-MelonDSGdbListener -Process $emulator -Port $GdbPort | Out-Null
 
     $screenshotPath = $null

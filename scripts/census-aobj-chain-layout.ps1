@@ -140,7 +140,7 @@ try {
         -WorkingDirectory $root `
         -RedirectStandardOutput $gdbOut `
         -RedirectStandardError $gdbErr `
-        -PassThru
+        -WindowStyle Hidden -PassThru
     if (-not $gdbProcess.WaitForExit($TimeoutSeconds * 1000)) {
         Stop-Process -Id $gdbProcess.Id -Force
         throw "AObj census exceeded ${TimeoutSeconds}s."

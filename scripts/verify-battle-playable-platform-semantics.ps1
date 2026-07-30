@@ -313,7 +313,7 @@ try {
         -WorkingDirectory $melonDsDir `
         -RedirectStandardOutput $stdout `
         -RedirectStandardError $stderr `
-        -PassThru
+        -WindowStyle Hidden -PassThru
     Wait-MelonDSGdbListener `
         -Process $emulator `
         -Port $verifierContext.GdbPort | Out-Null

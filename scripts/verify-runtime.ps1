@@ -629,7 +629,7 @@ try {
         -RedirectStandardOutput $gdbStdoutPath `
         -RedirectStandardError $gdbStderrPath `
         -Wait `
-        -PassThru
+        -WindowStyle Hidden -PassThru
     $gdbproc.WaitForExit()
     $gdbStdout =
         if (Test-Path $gdbStdoutPath) { Get-Content $gdbStdoutPath -Raw }

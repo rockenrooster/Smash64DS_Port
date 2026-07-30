@@ -186,7 +186,7 @@ try {
         -WorkingDirectory $root `
         -RedirectStandardOutput $gdbOut `
         -RedirectStandardError $gdbErr `
-        -PassThru
+        -WindowStyle Hidden -PassThru
     # The helper breakpoints never stop firing, so the run is bounded by wall
     # clock and the samples are whatever contiguous window that yields. A
     # contiguous window starting at a settled battle frame is unbiased for the

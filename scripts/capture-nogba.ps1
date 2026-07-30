@@ -191,7 +191,7 @@ $emulator = $null
 try {
     $argsList = @("`"$romPath`"") + $EmulatorArgs
     $emulator = Start-Process -FilePath $noGbaPath -ArgumentList $argsList `
-        -WorkingDirectory $noGbaDir -PassThru
+        -WorkingDirectory $noGbaDir -WindowStyle Hidden -PassThru
     $deadline = (Get-Date).AddSeconds([Math]::Max($DelaySeconds, 2) + 10)
     $windows = @()
     do {
