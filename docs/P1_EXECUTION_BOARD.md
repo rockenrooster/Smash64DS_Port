@@ -667,6 +667,21 @@ mem-stall also counts write-buffer drains and uncached accesses, so treat it as 
 **The working set is the whole animation graph** — DObj joints, MObjs, script payloads, matrices —
 not one array, and it is more than 30x the dcache.
 
+**E13 step 1 — the collision dependency is now exact, and it is per-hitbox, not per-joint.** A
+hitbox resolves its joint once, at `ftmain.c:223`,
+`attack_coll->joint = fp->joints[attack_coll->joint_id]`, and the per-frame read is
+`gmCollisionGetFighterPartsWorldPosition(attack_coll->joint, &attack_coll->pos_curr)`
+(`ftmain.c:1882` and `:1907`, once per live hitbox per state). That function walks **up the parent
+chain** and consumes `parts->mtx_translate`, so what collision needs at 60 Hz is not the whole
+skeleton — it is **the ancestor chains of whichever joints the live hitboxes name**. Other callers
+of the same helper are effects/items spawn positions (`ftparam.c:1795/1890`, `itmain.c:332/458`,
+`lbcommon.c:1469`), which are not gate-critical.
+
+**What E13 still owes before anything is built:** the count of distinct `joint_id` values Mario's
+and Fox's movesets actually use, and the union of their ancestor chains, as a fraction of the ~25
+joints per fighter. That is asset data, not source, so it needs either the moveset tables or a
+one-run probe — and per the rule above it must be counted, not estimated.
+
 **So the only lever with the right shape is touching fewer bytes per frame, not rearranging them.**
 `NDS_TASK106_UPDATES_PER_PRESENT = 2`, so this walk runs **twice per presented frame**;
 `PROJECT_GOAL.md` explicitly permits "skeletal poses to update at 30 Hz" and "reduced animation
