@@ -1781,6 +1781,41 @@ moves it — per-frame Results cost — is exactly what R2 owns. Second independ
 R2b. Instrument is permanent: six counters in `battleship_mnvsresults.c`, read by
 `soak-freeze-watch.ps1`, four timer reads per Results entry.
 
+### R2-07 R4c SIZED from the real ROM — the Results fighters ARE the gate: 61.0% of non-wait work, and dropping them lands 2 VBlanks (2026-07-30)
+
+No build needed for this one. `smash64ds-results-lab-hwtri` runs **only** Results, so its
+cumulative tick-HUD buckets are Results-scoped by construction — the first Results cost numbers in
+this campaign that are neither census-inflated nor mixed with battle frames. 326 Results frames,
+measured mode 5 VBlanks = 2,800,950 ticks:
+
+| bucket | ticks/frame | % of frame |
+| --- | ---: | ---: |
+| `FTR` fighters | **1,087,212** | 38.8% |
+| `WAIT` VBlank wait | 1,018,354 | 36.4% — idle, not work |
+| `BG` background | 12,354 | 0.4% — R2b did its job |
+| unbracketed remainder | 682,968 | 24.4% |
+
+**Non-wait work is 1,782,595/frame and the fighters are 1,087,212 of it — 61.0%.** Drop them
+entirely and work falls to 695,382 = **1.24 VBlanks**, which presents at 2 and meets the gate with
+room to spare. Put the other way: reaching 1,120,380 needs **−662,215 off the fighters, a 61% cut**,
+and needs nothing at all from anything else on the screen.
+
+That is the whole R4c brief, and it is unusually clean: one owner, one number, and the
+already-measured bimodality agrees with it independently — the 36% of frames that already sit at 2
+VBlanks are exactly the ones before source tic 120, which is when the fighters are initialised
+(`mnvsresults.c:2799-2846`).
+
+**Why a 61% cut is plausible here and would not be mid-match.** On Results the fighters are not
+being played: they hold a win/lose pose and fade in at alpha `0x16` per tic. `PROJECT_GOAL.md`
+explicitly permits reduced animation update rates and 30 Hz skeletal poses, and the switch plan's
+own headroom options list running cosmetic systems below simulation rate. The pose is nearly static,
+so a Results-only specialisation or a reduced pose rate is in scope where it would be unacceptable
+during gameplay.
+
+**Heed the switch plan's warning when building it:** do *not* implement a reduced rate as "every Nth
+frame, update everything". The gate is a P95, and batching the skipped work onto one frame in N
+converts a mean win into a P95 spike. Spread or memoise instead.
+
 ### R2-07 R4a MEASURED — the first post-R2b Results profile: the software compositor STILL owns 41.03% of the frame, and idle is 25.82% (2026-07-30)
 
 The owner extended the 1.12M gate to the Results screen ("the same tick budget philosophy should
