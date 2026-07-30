@@ -106,6 +106,29 @@ These bugs should be fixed for P1 delivery.
     letters for the source 90-tick lifetime, prove cue 527 reaches ARM7/a
     channel, retain a synchronized screenshot, and obtain owner visual/listen
     approval plus Boundary verification. Status: OPEN.
+  - Verified 2026-07-30, so the next attempt does not re-derive it:
+    * The letters are `llIFCommonGameStatusBlueLetter{T,I,M,E,U,P}Sprite` from
+      `gGMCommonFiles[1]` (`ifcommon.c:143-151, 2244-2252`), which IS
+      `NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS` -- the same asset the countdown
+      and GO descriptors already use, so no new asset is involved.
+    * All six offsets are ALREADY declared in `include/reloc_data.h:274-281`
+      and match this row's research exactly (T 0xe4a8, I 0xf740, M 0x127e0,
+      E 0x144e0, P 0x18fe8, U 0x16eb8). Nothing needs adding there.
+    * `sobj->sprite.attr = SP_TEXSHUF | SP_TRANSPARENT` for all of them
+      (`ifcommon.c:1974`), set by the shared `ifCommonAnnounceSetAttr`.
+    * BONUS, and it changes the sizing of the Results row below: GAME SET draws
+      from the SAME blue-letter set (`dIFCommonAnnounceGameSetSpriteData`,
+      `ifcommon.c:155+`, letters G/A/M/E/S/...), and A 0x1de68, G 0x20788 and
+      S 0x1b5f8 are declared alongside. M and E are shared with TIME UP, so
+      normalizing this family serves both announcements. Do them together.
+    * STILL MISSING and the actual blocker: the `bmfmt`/`bmsiz`/bitmap-count
+      fields for each descriptor in `sNdsBattleInterfaceSpriteDescs`
+      (`src/port/reloc_backend_assets.c:841+`). This row's widths, heights and
+      bitmap counts are recorded but not the format, and it CANNOT be inferred
+      from the offset deltas -- the letters are not contiguous in the asset
+      (I->M spans 12,448 bytes for a 17x57 two-bitmap sprite). Read the real
+      `Sprite` records out of the loaded asset rather than guessing; a wrong
+      format normalizes to corrupt pixels rather than to an error.
 -Results screen. VFX and SFX/BGM/FGM.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: the Results sequence queues PublicWin 621 at scene start,
