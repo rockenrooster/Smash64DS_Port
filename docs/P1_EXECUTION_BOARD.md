@@ -486,6 +486,51 @@ Superseded text follows for provenance. The two candidates as first written:
   the change it measures. Either stamp `git status --porcelain` alongside it or refuse to
   write an artifact from a dirty tree.
 
+### R2-06 E10 first pass — the animation setup is NOT it either. 74% of the premium is still unattributed (2026-07-30)
+
+E8 said the relocation is 21.5% of the load-frame premium and the other ~78% is "the action
+change". This prices the action change's two obvious costs, and **they are not it.**
+`NDS_R2_LOADFRAME_TIMING=1` (new, lab default off) brackets the two already-interposed
+animation-add wrappers; counters differenced across frames 797..924. Evidence
+`artifacts/performance/r206-e10-loadframe-128{.json,-rows.csv}`.
+
+| | calls | ticks | per call |
+|---|---:|---:|---:|
+| `gcAddAnimJointAll` — **the action changes** | **7** | **101,376** | **14,482** |
+| `gcAddDObjAnimJoint` | 320 | 192,128 | 600 |
+| — O2R script normalize | | 72,000 (37.5%) | |
+| — decomp setup | | 76,288 (39.7%) | |
+| — bracket + admit residual | | 43,840 (22.8%) | |
+
+**Only 7 action changes happen in 128 frames**, against 16 load frames — so a load is not
+one-to-one with an action change, and 9 of the 16 load frames have no animation setup at all.
+
+| mechanism | ticks | share of the 2,225,152 premium |
+|---|---:|---:|
+| relocation (E8) | 478,080 | 21.5% |
+| action-change animation setup | 101,376 | 4.6% |
+| **attributed** | **579,456** | **26.0%** |
+| **UNATTRIBUTED** | **1,645,696** | **74.0%** |
+
+**`gcAddDObjAnimJoint` is body cost, not premium.** 2.5 calls/frame at 600 ticks is ~1,501
+ticks on *every* frame, so it does not belong in the premium column at all — counting it there
+would have inflated the attribution to 31% on a quantity that is flat across load and clean
+frames alike. Worth stating because it is the same self-vs-premium confusion Task 78 made in
+the other direction.
+
+**Frame 909 settles it independently.** It is 1,629,568, roughly +650,000 over the clean
+median. Seven action changes averaging 14,482 cannot produce that on one frame, and neither
+can 18 relocations averaging 26,560.
+
+**Stop naming functions and sample.** Three mechanisms have now been priced by hand-placed
+brackets — fighter fallback (0), effects (4 sparks), relocation (21.5%), animation setup
+(4.6%) — and the majority of the premium is in none of them. The next instrument must be a
+**sampling profiler with its window pinned to the load frames**, i.e. `NDS_TASK37_PROFILE=1`
+over frames the Task 75 ring has already identified (843, 869, 890, 898, 909, 924), against a
+matched control drawn from the 112 clean frames. E53 ran that instrument but chose its window
+by WORK-H alone and could not separate draw from update; now the frames can be chosen by the
+load marker and the bracket ownership is known to be `SRC`.
+
 ### R2-06 E8 — EVERY over-gate frame is an asset-load frame, and the clean-frame P95 MEETS THE GATE (2026-07-30)
 
 E7 narrowed the excursion to `SRC`. This names the event, and it is the most actionable

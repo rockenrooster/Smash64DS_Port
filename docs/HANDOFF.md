@@ -1,9 +1,7 @@
 # Handoff
 
-Updated: 2026-07-29. **Restart surface only, capped at 150 lines.** Anything durable
-goes to its owning doc: the board owns the queue and every result, `PERF_LEDGER.md`
-measurements, `KNOWN_ISSUES.md` durable gaps and harness traps,
-`optimization/TASK_STANDING_RULES.md` how a task is run.
+Updated: 2026-07-30. **Restart surface only, capped at 150 lines** — durable detail goes to its
+owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_STANDING_RULES.md`).
 
 | phase | state |
 |---|---|
@@ -50,24 +48,27 @@ over. The +139,072 premium is entirely `SRC` (+139,328). Frame 909 is 1,617,152,
 E53 profiled. **The average frame is already 145,920 under budget; the milestone turns on
 the load frames.**
 
-**E7 refuted both previously-named causes.** Fighter fallback: **256 of 256 draws native,
-`animLock:0`, 0 of 128 frames** — E32's shuffle fold closed E53's leading story, so **E32's
-parked flash residual no longer blocks a gate lever.** Effects, free: 4 hit sparks in 924
-frames. On over-gate frames `FTR` is **−1,312** and `STG` **−2,496**: not a render problem.
+**E7 refuted both previously-named causes** (see "Refuted this cycle"), and on over-gate frames
+`FTR` is **−1,312** / `STG` **−2,496**: not a render problem. **E32's parked flash residual no
+longer blocks a gate lever.**
 
-**The relocation is only 21.5% of the premium, and that is the CEILING on fixing it.**
-In-window (lab flag `NDS_R2_RELOC_FIXUP_TIMING=1`; counters are cumulative from boot, so
-difference across the window): 18 calls, 478,080 ticks,
-**`ndsRelocNormalizeFighterAObj16File` = 88.4%**. Inside it: **per-script normalize 40.7%,
-lane swap 31.2%, O(n²) scan only 17.3%** — naming the O(n²) from reading the code was an
-inference the measurement refuted (n is 25.4, so n² is 647 iterations @ 7.2 ticks). **The
-real shape is the payload walked TWICE**, u32 pairs then u16 words, = 71.9% of the
-function. All three sub-passes use only pointer *differences*, so hoisting them to
-cache-store time IS viable — a refactor to offset-form boundaries, worth ~19,400 of the
-139,072 per load frame, P95 → ~1,142,000. **Bank it, it is not the gate**; judge on load
-frames only (averaged it is 3,735/frame, under the noise floor). **The other ~78% is the
-action change itself** — status transition, script re-parse, hit work. **That is where the
-next investigation goes.** Board §"R2-06 E8" has both tables.
+**The relocation is 21.5% of the premium and that is the CEILING on fixing it.** In-window
+(`NDS_R2_RELOC_FIXUP_TIMING=1`; counters are cumulative from boot, so difference across the
+window): 18 calls, 478,080 ticks, **`ndsRelocNormalizeFighterAObj16File` = 88.4%**. Inside it:
+**per-script normalize 40.7%, lane swap 31.2%, O(n²) scan only 17.3%** — naming the O(n²) from
+reading the code was an inference the measurement refuted (n is 25.4). **The real shape is the
+payload walked TWICE**; all its sub-passes use only pointer *differences*, so hoisting them to
+cache-store time IS viable — worth ~19,400 of the 139,072 per load frame, P95 → ~1,142,000.
+**Bank it, not the gate**; judge on load frames only (averaged it is 3,735/frame, under the
+noise floor).
+
+**E10: it is NOT the animation setup either.** Only **7 action changes** in 128 frames
+(`gcAddAnimJointAll`, 14,482 each = 101,376 = **4.6%**), and `gcAddDObjAnimJoint`'s 320 calls
+are ~1,501/frame of *body* cost, not premium. **26% attributed, 74% UNATTRIBUTED**, and frame
+909 is +650,000 alone. **Stop naming functions and sample:** `NDS_TASK37_PROFILE=1` with the
+window pinned to the load frames the Task 75 ring identifies (843, 869, 890, 898, 909, 924)
+against a matched clean control — E53 ran that instrument but chose its window by WORK-H and
+could not separate draw from update. Board §§"R2-06 E8"/"E10" have the tables.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
@@ -86,18 +87,17 @@ arena is BSS, and BSS competes with the runtime `calloc` that sizes the heap: cr
 arena now lives on the taskman heap, 92,160 bytes, +32 bytes of BSS**, using 87,824. **Do NOT
 lower that floor** — it is a contract with the Task 36 replay guard
 (`nds_renderer.h:124-134`); my earlier authorization is retracted. **Both configurations
-complete a full match clean.** Four detector defects fixed and two soak verdicts withdrawn
-(it hashed the window **title**, where melonDS renders its FPS counter; `Invoke-SoakGdb` was
-never defined; the 40 s threshold was under the ~30 s scene-load dead air). **Sudden Death has
-its own issues** (owner). **No passive soak reaches match two** —
-`mnVSResultsCheckExit` needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
+complete a full match clean.** Four detector defects fixed, two verdicts withdrawn (it hashed
+the window **title**, where melonDS renders its FPS counter). **Sudden Death has its own
+issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit` needs a
+`START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
 
 ## OPEN P1: the VS Results screen is 21.9M ticks/frame, 1.5 FPS
 
 R2-07's own gate, 19.5x the battle frame. **89.4% is `tfunc->scene_draw()` alone (19,550,631)**:
 the native OAM path is gated to `nSCKindVSBattle` only, so Results software-blits two 320x240
 layers per frame, and `taskman_seam.c:6950` has no pacing and no HUD. **Ungating the wallpaper
-cache is REFUTED** (R0a) — a Dream Land specialization. Board has the method and a third, wider candidate.
+cache is REFUTED** (R0a) — a Dream Land specialization. Board has a third, wider candidate.
 
 ## The other half is ANIMATION, not collision (E60/E61 — replaces the `SRC` row)
 
@@ -136,7 +136,7 @@ Branch `codex/r2-runtime2`, not merged to master. Boundary `battle_playable_real
 
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
-.\scriptserify-all.ps1 -Profile Boundary -List; git status --short
+.\scripts\verify-all.ps1 -Profile Boundary -List; git status --short
 ```
 
 **Do not rebuild `smash64ds.nds` for P1 work** (owner, 2026-07-28). **Do rebuild the tick-HUD

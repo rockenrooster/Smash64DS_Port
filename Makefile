@@ -233,6 +233,12 @@ NDS_R2_CUBIC_FIXED ?= 0
 # off: it adds 8 words of BSS and this ROM's placement noise floor is 5,000-7,000,
 # so a run with it on is not comparable to an ordinary tick-HUD baseline.
 NDS_R2_RELOC_FIXUP_TIMING ?= 0
+# R2-06 E10. Price the ACTION CHANGE, which E8 showed is ~78% of the load-frame
+# premium -- the relocation is only 21.5%, so the gate lever is here rather than in
+# the reloc path. Brackets the two already-interposed animation-add wrappers
+# (gcAddDObjAnimJoint, gcAddAnimJointAll), splitting the O2R script normalization
+# from the decomp's own setup. Instrument only, lab default off.
+NDS_R2_LOADFRAME_TIMING ?= 0
 # Switch plan R2-06 harness prerequisite, owner-requested 2026-07-29. Makes
 # player 0 a level-3 CPU as well, so both fighters attack continuously with no
 # recorded input stream. A deliberate STRESS case: it maximises the live hitbox
@@ -2122,6 +2128,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_ANIM_CENSUS $(NDS_R2_ANIM_CENSUS)'; \
 		echo '#define NDS_R2_CUBIC_FIXED $(NDS_R2_CUBIC_FIXED)'; \
 		echo '#define NDS_R2_RELOC_FIXUP_TIMING $(NDS_R2_RELOC_FIXUP_TIMING)'; \
+		echo '#define NDS_R2_LOADFRAME_TIMING $(NDS_R2_LOADFRAME_TIMING)'; \
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_R2_UNLIT_VERTEX_EPOCH $(NDS_R2_UNLIT_VERTEX_EPOCH)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \

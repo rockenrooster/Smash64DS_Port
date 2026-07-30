@@ -1088,9 +1088,58 @@ static sb32 ndsAObjEvent32NormalizeMObjTable(
     return TRUE;
 }
 
+#if NDS_R2_LOADFRAME_TIMING
+/* R2-06 E10. E8 attributed 8 of the 9 over-gate frames to the 16 frames that load a
+ * fighter animation, showed the +139,072 premium is entirely `SRC` (the source
+ * update), and showed the in-frame relocation is only 21.5% of it. The other ~78% is
+ * the ACTION CHANGE that causes the load, and its two obvious costs are the O2R
+ * script normalization and the decomp's own animation setup -- both of which happen
+ * to run inside these two already-interposed wrappers, so pricing them needs no new
+ * seam. Lab only, default off; `Max` is per-call, not per-frame. */
+volatile u32 gNdsR2AddDObjAnimCalls;
+volatile u32 gNdsR2AddDObjAnimTicks;
+volatile u32 gNdsR2AddDObjAnimMaxTicks;
+volatile u32 gNdsR2AddDObjNormalizeTicks;
+volatile u32 gNdsR2AddDObjBaseTicks;
+volatile u32 gNdsR2AddAnimAllCalls;
+volatile u32 gNdsR2AddAnimAllTicks;
+volatile u32 gNdsR2AddAnimAllMaxTicks;
+/* This TU pulls in no DS headers -- the decomp objanim.c includes only <sys/obj.h>
+ * -- so declare the one libnds function the brackets need rather than dragging
+ * nds/timers.h through the whole translation unit. */
+u32 cpuGetTiming(void);
+#endif
+
 void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
                         f32 anim_frame)
 {
+#if NDS_R2_LOADFRAME_TIMING
+    u32 enter = cpuGetTiming();
+    u32 phase = enter;
+    sb32 admit;
+
+    gNdsR2AddDObjAnimCalls++;
+    admit = ((anim_joint == NULL) ||
+             (ndsRelocPointerIsFighterAObj16(anim_joint) != FALSE) ||
+             (ndsAObjEvent32NormalizeScript(
+                  anim_joint, nNDSAObjEvent32OwnerDObj) != FALSE)) ? TRUE : FALSE;
+    gNdsR2AddDObjNormalizeTicks += cpuGetTiming() - phase;
+    if (admit != FALSE)
+    {
+        phase = cpuGetTiming();
+        ndsBaseGcAddDObjAnimJoint(dobj, anim_joint, anim_frame);
+        gNdsR2AddDObjBaseTicks += cpuGetTiming() - phase;
+    }
+    {
+        u32 total = cpuGetTiming() - enter;
+
+        gNdsR2AddDObjAnimTicks += total;
+        if (total > gNdsR2AddDObjAnimMaxTicks)
+        {
+            gNdsR2AddDObjAnimMaxTicks = total;
+        }
+    }
+#else
     if ((anim_joint == NULL) ||
         (ndsRelocPointerIsFighterAObj16(anim_joint) != FALSE) ||
         (ndsAObjEvent32NormalizeScript(
@@ -1098,6 +1147,7 @@ void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
     {
         ndsBaseGcAddDObjAnimJoint(dobj, anim_joint, anim_frame);
     }
+#endif
 }
 
 void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
@@ -1113,11 +1163,30 @@ void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
 void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
                        f32 anim_frame)
 {
+#if NDS_R2_LOADFRAME_TIMING
+    /* The whole-GObj variant, which is what a fighter action change goes through:
+     * it walks the DObj tree and re-adds every joint's animation. If the action
+     * change is the excursion, this is where it should show. */
+    u32 enter = cpuGetTiming();
+
+    gNdsR2AddAnimAllCalls++;
+#endif
     if ((gobj != NULL) &&
         (ndsAObjEvent32NormalizeDObjTable(gobj, anim_joints) != FALSE))
     {
         ndsBaseGcAddAnimJointAll(gobj, anim_joints, anim_frame);
     }
+#if NDS_R2_LOADFRAME_TIMING
+    {
+        u32 total = cpuGetTiming() - enter;
+
+        gNdsR2AddAnimAllTicks += total;
+        if (total > gNdsR2AddAnimAllMaxTicks)
+        {
+            gNdsR2AddAnimAllMaxTicks = total;
+        }
+    }
+#endif
 }
 
 void gcAddMatAnimJointAll(GObj *gobj, AObjEvent32 ***p_matanim_joints,
