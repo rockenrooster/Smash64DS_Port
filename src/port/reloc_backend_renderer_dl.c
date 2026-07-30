@@ -330,18 +330,15 @@ static sb32 ndsRendererAdapterRangeIsEmptySegmentEDL(const Gfx *dl,
 static void ndsRendererAdapterMtxIdentity20p12(
     NDSRendererMatrix20p12 *out)
 {
-    u32 i;
-
     if (out == NULL)
     {
         return;
     }
 
-    memset(out, 0, sizeof(*out));
-    for (i = 0; i < 4u; i++)
-    {
-        out->m[i][i] = 1 << NDS_RENDERER_ADAPTER_MTX_FRAC_BITS;
-    }
+    /* R2-03 E69. Was `memset(out, 0, 64)` plus a four-iteration diagonal loop --
+     * a library call and a loop to write twelve zeros. */
+    ndsRendererMatrixIdentity20p12(
+        out, 1 << NDS_RENDERER_ADAPTER_MTX_FRAC_BITS);
 }
 
 static void ndsRendererAdapterMulInto(NDSRendererMatrix20p12 *target,
@@ -359,7 +356,11 @@ static void ndsRendererAdapterMulInto(NDSRendererMatrix20p12 *target,
     }
     else
     {
-        *target = *incoming;
+        /* R2-03 E69. `*target = *incoming` is 64 bytes and GCC answers it with
+         * `bl memcpy`; this function is inlined into
+         * ndsRendererAdapterBuildDObjLocalMatrix, which E68b measured as 18.6%
+         * of the whole memset/memcpy class. Task 86's helper already exists. */
+        ndsRendererMatrixCopy20p12(target, incoming);
         *valid = TRUE;
     }
 }
@@ -379,7 +380,7 @@ static void ndsRendererAdapterMulBefore(NDSRendererMatrix20p12 *target,
     }
     else
     {
-        *target = *incoming;
+        ndsRendererMatrixCopy20p12(target, incoming);
         *valid = TRUE;
     }
 }
@@ -1832,7 +1833,11 @@ static void ndsRendererAdapterStoreDObjWorldMatrix(
     cache_index = sNdsRendererAdapterDObjWorldCacheCount++;
     entry = &sNdsRendererAdapterDObjWorldCache[cache_index];
     entry->dobj = dobj;
-    entry->world = *world;
+    /* R2-03 E69. 64-byte struct assignment -> `bl memcpy`; this function is
+     * inlined into ndsRendererAdapterBuildDObjWorldMatrix, which E68b measured
+     * at 9.4% of the memset/memcpy class. E68's first run misattributed these
+     * very samples to the hash below, which copies nothing. */
+    ndsRendererMatrixCopy20p12(&entry->world, world);
     slot = ndsRendererAdapterDObjWorldIndexHash(dobj);
     for (probe = 0u;
          probe < NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT;
@@ -2188,7 +2193,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrix(
 #if NDS_TASK91_DRAW_PHASE_CENSUS
         gNdsTask91MtxWorldEntryHit++;
 #endif
-        *out = *cached;
+        ndsRendererMatrixCopy20p12(out, cached);
         return TRUE;
     }
 #endif
@@ -2292,7 +2297,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
     cached = ndsRendererAdapterFindDObjWorldMatrix(dobj);
     if (cached != NULL)
     {
-        *out = *cached;
+        ndsRendererMatrixCopy20p12(out, cached);
         owner->m2_world_matrix_cache_hit_count++;
         owner->m2_hash_parent_lookup_ticks +=
             cpuGetTiming() - phase_start;
@@ -2378,7 +2383,8 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
     entry = ndsRendererAdapterFindStageWorldEntry(dobj);
     if ((entry != NULL) && (entry->validated_frame == frame))
     {
-        *out = *ndsRendererAdapterStageWorldEntryMatrix(entry);
+        ndsRendererMatrixCopy20p12(
+            out, ndsRendererAdapterStageWorldEntryMatrix(entry));
         return TRUE;
     }
     while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
@@ -2416,7 +2422,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
         }
         if (entry->validated_frame == frame)
         {
-            parent_world = *ndsRendererAdapterStageWorldEntryMatrix(entry);
+            ndsRendererMatrixCopy20p12(
+                &parent_world,
+                ndsRendererAdapterStageWorldEntryMatrix(entry));
             parent_generation = entry->generation;
             continue;
         }
@@ -2464,7 +2472,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
             }
         }
         entry->validated_frame = frame;
-        parent_world = *ndsRendererAdapterStageWorldEntryMatrix(entry);
+        ndsRendererMatrixCopy20p12(
+                &parent_world,
+                ndsRendererAdapterStageWorldEntryMatrix(entry));
         parent_generation = entry->generation;
     }
     *out = parent_world;
@@ -2906,12 +2916,12 @@ static sb32 ndsRendererAdapterComposeNativeRootMatrix(
     }
     if (modelview != NULL)
     {
-        *out = *modelview;
+        ndsRendererMatrixCopy20p12(out, modelview);
         return TRUE;
     }
     if (projection != NULL)
     {
-        *out = *projection;
+        ndsRendererMatrixCopy20p12(out, projection);
         return TRUE;
     }
     return FALSE;
@@ -7103,7 +7113,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     }
     if (binding_index == 0u)
     {
-        workspace->projection = *projection_ptr;
+        ndsRendererMatrixCopy20p12(&workspace->projection, projection_ptr);
     }
     return TRUE;
 }

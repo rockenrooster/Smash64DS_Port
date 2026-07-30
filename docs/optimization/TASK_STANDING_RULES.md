@@ -481,6 +481,22 @@ is closed in both directions: nothing may be added and nothing removed.
 same list, and it *shrank* `.text.hot` by 1,824 bytes as a side effect. Removing
 work still pays at this optimum. Only moving it has stopped paying.
 
+**A helper that exists is not a helper that is used (R2-03 E69, 2026-07-29).**
+`ndsRendererMatrixCopy20p12` had been in `nds_renderer.h` since Task 86, with a
+comment explaining that `*dst = *src` on a 64-byte matrix compiles to `bl memcpy`
+and measuring what that costs. **It had two call sites**, and every other matrix
+move in the adapter was still a plain struct assignment — including all four of
+E68b's top `memcpy` callers. Routing sixteen sites through it was worth **P95
+−12,544, better on 94 of 128 frames paired, median −7,232**, with no new state and
+no flag.
+
+So when a past task builds a helper for a systemic defect, **grep for the defect,
+not for the helper.** `grep -c ndsRendererMatrixCopy20p12` says two and looks
+finished; a regex for `^\s*\*?\w[\w.\[\]->]*\s*=\s*\*\w` across the same files found
+thirty-odd struct assignments still doing it the slow way. Adding the helper is the
+easy half; the migration is the half that pays, and it is the half that gets
+dropped.
+
 ## Size a rewrite before you scope it (Task 96, 2026-07-26)
 
 Task 95's conclusion -- pull the animation lever wholesale, not one slice at a

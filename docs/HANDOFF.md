@@ -5,13 +5,14 @@ durable goes to its owning doc, not here: the board owns the queue and every
 result, `PERF_LEDGER.md` measurements, `KNOWN_ISSUES.md` durable gaps and
 harness traps, `optimization/TASK_STANDING_RULES.md` how a task is run.
 
-Runtime 2 phase status. **Four gate levers graduated 2026-07-29: E32 (-52,416
-P95), E64b (-26,944), E65 (-35,584) and E67 (-4,672 P95 / -8,192 P50).**
+Runtime 2 phase status. **Five gate levers graduated 2026-07-29: E32 (-52,416
+P95), E64b (-26,944), E65 (-35,584), E67 (-4,672) and E69 (-12,544). Cumulative
+P95 1,228,928 -> 1,096,768, over gate 17/128 -> 6/128.**
 
 | phase | state |
 |---|---|
 | R2-00a/b/c, R2-01, R2-02 | gated |
-| R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**; only the E32 flash residual is open (KNOWN_ISSUES) |
+| R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69**; only the E32 flash residual is open (KNOWN_ISSUES) |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
 | R2-06 | performance-neutral (E0) + equivalence (E1) + match-boundary probe (E2); **"soak clean" has no instrument** |
@@ -19,14 +20,14 @@ P95), E64b (-26,944), E65 (-35,584) and E67 (-4,672 P95 / -8,192 P50).**
 
 ## Where the gate stands
 
-128-frame ring dump, frames 795..922, `WORK-H`: P50 **974,656**, P95
-**1,109,312**, gate 1,120,000, **7/128 over**. Evidence
-`artifacts/performance/r203-e67-floatdtor-128{.json,-rows.csv}`.
+128-frame ring dump, frames 795..922, `WORK-H`: P50 **966,848**, P95
+**1,096,768**, gate 1,120,000, **6/128 over**. Evidence
+`artifacts/performance/r203-e69b-mtxcopy-128{.json,-rows.csv}`.
 
-**The gate reading is met by 10,688, now ABOVE the 5,000-7,000 placement floor** —
-E65 landed it at 6,016, inside the floor; E67 doubled the margin, so it survives a
-relink. Two things it does not cover: retail hardware (R2-08), and R2-07's cosmetic
-systems, which have to fit inside that 10,688 (see the switch plan's R2-07 note).
+**Margin 23,232 — three times the 5,000-7,000 placement floor.** E65 first landed
+the gate at 6,016 (inside the floor); E67 and E69 took it here, so it survives a
+relink and finally leaves room for R2-07. Not covered: retail hardware (R2-08), and
+the particle work must fit inside 23,232 (switch plan §7 R2-07).
 
 ## What owns the miss
 
@@ -80,11 +81,7 @@ target, not 0.85x**. Tasks 95/96 refute only the *layout* route.
 **The pose table is REFUTED by size** (E61) — 2.62 MB resident against 4 MB of
 main RAM, or 42.6 KB/7–11 ms streamed per transition. Do not propose it again.
 
-## Two levers close the gate: one is engineering, one is a decision
-
-```
-gap 108,928  −  E32 51,136  −  fixed-point cubic ~50,000  =  ~7,800 left
-```
+## The one open fidelity item
 
 - **E32** — blocked on a **generator gap, not a decision** (E62; the earlier
   "fidelity-budget / visual approval" framing here was wrong). The flash clears
@@ -96,10 +93,6 @@ gap 108,928  −  E32 51,136  −  fixed-point cubic ~50,000  =  ~7,800 left
   packed **normals**, giving rainbow speckle and a *worse* diff (2,199 vs 1,551).
   **Needs the generator to bake the flash variant's vertex colours** as a second
   dense table. E63 sizes it.
-- **The cubic — no longer blocked.** The Task 9 state hash was the wrong
-  instrument (it asserts bit-exactness; the change is authorized non-bit-exact).
-  E65 settled it with `scripts/check_r2_cubic_error_bound.py`: worst deviation
-  0.0028 rad / 0.0067 world units, no emulator needed.
 
 **R2-03 E26 — demoted** to 23,844/frame over 136.8 deltas (needs both
 `NDS_TASK91_DRAW_PHASE_CENSUS=1` *and* `NDS_R2_SPAN_LEAN_TIMING=1`; the second

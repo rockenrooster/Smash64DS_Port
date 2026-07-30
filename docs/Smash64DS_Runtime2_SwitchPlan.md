@@ -6,8 +6,8 @@ and the definition of the switch.
 Status: **in execution.** R2-00a/b/c, R2-01, R2-02 gated; R2-05 complete;
 R2-03 shipped E12/E28/E29/E46/E32/E64b/E65; R2-04's clauses are met; R2-06 has
 Boundary green and equivalence, and its soak clause has no instrument (§7).
-**The P95 gate reading is met — 1,109,312 against 1,120,000 (E65 then E67), by
-10,688, which is finally above the 5,000–7,000 placement floor.** Read §7
+**The P95 gate reading is met — 1,096,768 against 1,120,000 (E65, E67, E69), by
+23,232, three times the 5,000–7,000 placement floor.** Read §7
 R2-07's revised budget note before spending any of that. The board
 (`docs/P1_EXECUTION_BOARD.md`) is the live queue; this file stays the charter and
 is not a status log.
@@ -404,15 +404,15 @@ warning and `NDS_R2_BOTH_CPU` in the Makefile.
 - Gate: full demo loop (Mario CPU vs Fox CPU) within total budget; P95 still ≤ 1.12M.
 
 **As written this gate is unreachable today, and that is a sequencing fact rather
-than a failure (2026-07-29).** E65 then E67 put P95 at 1,109,312 — **10,688 under
-budget**, which is finally clear of the 5,000–7,000 placement floor but is still
-about one percent of a frame. There is effectively no cosmetic budget to allocate:
-the particle work R2-07 names is a 2,961-line bytecode interpreter
+than a failure (2026-07-29).** E65, E67 and E69 put P95 at 1,096,768 — **23,232
+under budget**, three times the 5,000–7,000 placement floor, but still about two
+percent of a frame. The cosmetic budget is real now rather than nil, and it is
+small: the particle work R2-07 names is a 2,961-line bytecode interpreter
 (`lb/lbparticle.c`) plus `ef/efparticle.c`, `ef/efdisplay.c`, a DS pack step and
-textured-quad draws. For scale: 10,688 ticks buys roughly **one** textured-quad
-bind (Task 98 measured ~1,621 ticks per texture bind regardless of size) plus a few
-hundred interpreter steps — for *all* effects on the frame, on the frames with the
-most effects. Nothing about that is a comfortable fit.
+textured-quad draws. For scale, 23,232 ticks buys roughly **fourteen** textured-quad
+binds (Task 98 measured ~1,621 ticks per texture bind regardless of size) plus a few
+thousand interpreter steps — for *all* effects on the frame, on the frames that
+carry the most effects. Workable, not comfortable.
 
 So **R2-07 must be preceded by a headroom pass, not merely followed by one.** The
 honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:

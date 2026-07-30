@@ -32,6 +32,58 @@ Boundary passed on this configuration and the worktree is clean at `9af1247`, so
 this is a release candidate; the public-build pin in `README.md` still names the
 older ROM and should be updated in whichever kept change publishes next.
 
+## R2-03 E69 GRADUATED — the matrix copies were `bl memcpy`. P95 **1,096,768**, over gate 7/128 → 6/128, margin 23,232 (2026-07-29)
+
+`artifacts/performance/r203-e69{,b}-mtxcopy-128{.json,-rows.csv}`. Sixteen sites,
+no new state, no flag.
+
+**E68b said the class was matrix moves, and Task 86 had already built the fix.**
+`ndsRendererMatrixCopy20p12` has been in `nds_renderer.h` since Task 86 — sixteen
+explicit element assignments, with a comment explaining that `*dst = *src` on a
+64-byte matrix becomes `bl memcpy` because GCC will not open-code sixteen words it
+cannot prove aligned. **It had two call sites.** Every other matrix move in the
+adapter was still a plain struct assignment, including all four of E68b's top
+`memcpy` callers.
+
+E69 routes them through it, and adds the clear half —
+`ndsRendererMatrixIdentity20p12(dst, one)` — because both identity builders were
+`memset(out, 0, 64)` plus a four-iteration diagonal loop, i.e. a library call and a
+loop to write twelve zeros. `one` is a parameter only because the adapter and the
+renderer use different macro names for the same fixed-point scale.
+
+| `WORK-H` | E67 | arm 1 (13 sites) | **arm 2 (+3 stage)** | delta vs E67 |
+|---|---:|---:|---:|---:|
+| P50 | 974,656 | 967,488 | **966,848** | **−7,808** |
+| P75 | 1,000,512 | 994,816 | 994,304 | −6,208 |
+| P90 | 1,070,656 | 1,061,120 | 1,060,160 | −10,496 |
+| **P95** | 1,109,312 | 1,101,760 | **1,096,768** | **−12,544** |
+| P99 | 1,195,456 | 1,200,576 | 1,194,816 | −640 |
+| max | 1,493,632 | 1,484,992 | 1,485,184 | −8,448 |
+| **over gate** | 7/128 | 7/128 | **6/128** | **−1** |
+| `FTR` P50 | 390,080 | 384,512 | 384,256 | −5,824 |
+
+**Paired by frame, better on 94 of 128, median −7,232.** The win lands in `FTR`,
+which is where `BuildDObjLocalMatrix` and `BuildDObjWorldMatrix` run — the
+mechanism and the bucket agree, which is the check E66 failed.
+
+**Engagement is structural rather than a counter:** `objdump` shows
+`ndsRendererAdapterBuildDObjWorldMatrix` at **zero** `memset`/`memcpy` calls (it was
+E68b's 9.4% row), `BuildDObjLocalMatrix` 3, `BuildPersistentStageWorldMatrix` 5 → 2.
+Arm 2's three extra conversions were worth a −1,088 median on 85/128 on their own,
+so the remaining sites are still worth something but individually below the floor.
+
+**Where the gate stands after E32 + E64b + E65 + E67 + E69:** P95 **1,228,928 →
+1,096,768**, cumulative **−132,160**, over gate **17/128 → 6/128**. Margin to
+1,120,000 is **23,232** — three times the placement noise floor, and the first
+figure in this campaign that leaves room for R2-07 to spend.
+
+**What is left of this lever.** 402 static `memset`/`memcpy` sites remain
+program-wide. `nds_renderer.c` still has ~12 matrix struct assignments
+(`*hardware = *composed`, `state->modelview = *input->modelview_matrix`, …) and
+E68b put `ndsRendererLoadHardwareMatrices` at 5.7% and `MtxLoadN64ToDS20p12` at
+1.3%. That file builds `-marm`, where GCC has more registers for LDM/STM and may
+already be inlining, so **re-measure before assuming the same win applies there.**
+
 ## R2-03 E68b ANSWERED — `memset`/`memcpy` is 58,700 ticks/frame; the top three callers are 53% of it. E68 withdrawn (2026-07-29)
 
 `artifacts/performance/r203-e68b-memcall-callers-nm.json`. Two 90 s GDB runs, no

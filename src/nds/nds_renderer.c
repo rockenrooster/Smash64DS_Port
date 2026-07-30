@@ -5271,18 +5271,14 @@ void ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
 
 static void ndsRendererMtxIdentity20p12(NDSRendererMatrix20p12 *out)
 {
-    u32 i;
-
     if (out == NULL)
     {
         return;
     }
 
-    memset(out, 0, sizeof(*out));
-    for (i = 0; i < 4u; i++)
-    {
-        out->m[i][i] = 1 << NDS_RENDERER_DS_MTX_FRAC_BITS;
-    }
+    /* R2-03 E69. See the header helper: memset plus a diagonal loop was a
+     * library call to write twelve zeros. */
+    ndsRendererMatrixIdentity20p12(out, 1 << NDS_RENDERER_DS_MTX_FRAC_BITS);
 }
 
 #if NDS_RENDERER_HW_TRIANGLES

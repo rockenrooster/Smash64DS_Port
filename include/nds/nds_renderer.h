@@ -365,6 +365,37 @@ static inline void ndsRendererMatrixCopy20p12(
     dst->m[3][3] = src->m[3][3];
 }
 
+/* R2-03 E69. The clear half of the same problem. `memset(out, 0, 64)` followed by
+ * four diagonal stores is a library call plus a loop, to write twelve zeros;
+ * `ndsRendererAdapterMtxIdentity20p12` and `ndsRendererMtxIdentity20p12` were both
+ * written that way and E68b found them in the memset attribution. Straight-line
+ * for the same reason the copy above is: a zeroing loop gets rewritten back into
+ * `memset` by -ftree-loop-distribute-patterns.
+ *
+ * `one` is the caller's fixed-point scale, because the adapter and the renderer
+ * disagree on the macro name for it (NDS_RENDERER_ADAPTER_MTX_FRAC_BITS vs
+ * NDS_RENDERER_DS_MTX_FRAC_BITS) while agreeing on the value. */
+static inline void ndsRendererMatrixIdentity20p12(
+    NDSRendererMatrix20p12 *dst, s32 one)
+{
+    dst->m[0][0] = one;
+    dst->m[0][1] = 0;
+    dst->m[0][2] = 0;
+    dst->m[0][3] = 0;
+    dst->m[1][0] = 0;
+    dst->m[1][1] = one;
+    dst->m[1][2] = 0;
+    dst->m[1][3] = 0;
+    dst->m[2][0] = 0;
+    dst->m[2][1] = 0;
+    dst->m[2][2] = one;
+    dst->m[2][3] = 0;
+    dst->m[3][0] = 0;
+    dst->m[3][1] = 0;
+    dst->m[3][2] = 0;
+    dst->m[3][3] = one;
+}
+
 typedef struct NDSRendererMatrixSnapshot
 {
     NDSRendererMatrix20p12 matrix;
