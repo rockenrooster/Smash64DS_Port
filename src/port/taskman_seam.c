@@ -7046,6 +7046,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     dSYTaskmanFrameCount++;
                 }
                 ndsSObjPreviewEndFrame();
+                /* Same position the battle present gives it (see :4810). A
+                 * scene that drives its own presentation has to draw the HUD
+                 * itself; until R4d the only thing drawing it here was the
+                 * redundant main-loop present, so removing that present would
+                 * otherwise take the HUD with it. */
+                ndsPlatformRenderDebugHud();
                 ndsPlatformEndFrame();
             }
         }

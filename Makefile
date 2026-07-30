@@ -505,6 +505,23 @@ NDS_R2_RESULTS_AFFINE ?= 1
 # artifacts/task37-census/r207-r4b-memo-on/ and
 # artifacts/visibility/2026-07-30_r207-r4b-results-tic160-{control,candidate}.png
 NDS_R2_RESULTS_LAYER_MEMO ?= 1
+# R2-07 R4d. Suppress the fallback main-loop present (main.c) on iterations where
+# a scene loop already presented. Measured 2026-07-30: VS Results runs 2.00
+# ndsPlatformEndFrame calls per source tic -- one from the scene loop
+# (taskman_seam.c:7049) that submits and flushes the frame, and one from the
+# main loop that submits nothing, so its flush is skipped but its unconditional
+# swiWaitForVBlank is not. The battle path runs 1.00 per logical frame, so this
+# is Results-only and every battle P95 in the campaign is unaffected.
+#
+# GRADUATED 2026-07-30. Matched-source A/B on smash64ds-results-lab-hwtri:
+# -560,190 ticks per source tic (-19.9%), 5.03 -> 4.03 VBlanks, which is exactly
+# one VBlank and exactly one swiWaitForVBlank. Fighter draw is unchanged
+# (1,709,228 -> 1,710,498, +0.07%) and GX submits/flushes stay at 1.00 per tic,
+# so nothing that renders was touched. The guest picture is PIXEL-IDENTICAL:
+# 240,000 guest-viewport pixels at Results tic 160, 0 differing, max channel
+# delta 0. Evidence at artifacts/performance/r4d-main-present-guard-{off,on}
+# -20260730.json and artifacts/visibility/2026-07-30_r207-r4d-results-tic160-*.png
+NDS_R2_MAIN_PRESENT_GUARD ?= 1
 # Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
 # open/read/flush/play while preserving all BGM state/counters so the rest of
 # the system believes BGM is active. Never set in a published target.
@@ -2213,6 +2230,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FAST_WALLPAPER_AFFINE $(NDS_FAST_WALLPAPER_AFFINE)'; \
 		echo '#define NDS_R2_RESULTS_AFFINE $(NDS_R2_RESULTS_AFFINE)'; \
 		echo '#define NDS_R2_RESULTS_LAYER_MEMO $(NDS_R2_RESULTS_LAYER_MEMO)'; \
+		echo '#define NDS_R2_MAIN_PRESENT_GUARD $(NDS_R2_MAIN_PRESENT_GUARD)'; \
 		echo '#define NDS_BGM_FALSIFIER_OFF $(NDS_BGM_FALSIFIER_OFF)'; \
 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \

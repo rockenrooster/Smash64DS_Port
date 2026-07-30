@@ -72,8 +72,9 @@ try {
         -MelonDSPath $context.MelonDSPath -GdbPort $context.GdbPort `
         -Arm7Port $context.Arm7Port `
         -Persistent:([bool]$context.PersistentConfig) -MuteAudio
-    # Visible by design: the window IS the instrument. A hidden melonDS has no
-    # MainWindowHandle and therefore no pixels to capture.
+    # WindowStyle: visible-by-design -- the window IS the instrument here. A
+    # hidden melonDS has no MainWindowHandle, so the capture below would throw
+    # (or, worse, write a blank surface) while the emulation ran perfectly.
     $emulator = Start-Process -FilePath $context.MelonDSPath -ArgumentList $rom `
         -WorkingDirectory (Split-Path -Parent $context.MelonDSPath) `
         -RedirectStandardOutput (Join-Path $temp 'capture-results.melonds.out') `

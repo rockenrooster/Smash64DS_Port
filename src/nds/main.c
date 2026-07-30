@@ -47,9 +47,16 @@ int main(void)
 
     while (1)
     {
+#if NDS_R2_MAIN_PRESENT_GUARD
+        u32 presented_before;
+#endif
+
         ndsPlatformReadInput();
 
         ndsOsPostVBlank();
+#if NDS_R2_MAIN_PRESENT_GUARD
+        presented_before = ndsPlatformTicks();
+#endif
         ndsOsRunThreads();
         ndsVideoBootstrapUpdate();
         if (gNdsControllerPollCount != 0 &&
@@ -57,10 +64,25 @@ int main(void)
             syControllerUpdateGlobalData();
         }
         portProbeUpdate();
-        ndsPlatformBeginFrame();
-        portProbeRender();
-        ndsPlatformRenderDebugHud();
-        ndsPlatformEndFrame();
+        /* Only present if the scene loop resumed above did not. A scene that
+         * drives its own presentation has already submitted, flushed and waited
+         * for VBlank inside its own ndsPlatformEndFrame; repeating it here draws
+         * nothing (no geometry is submitted, so the flush is skipped) and still
+         * pays one unconditional swiWaitForVBlank.
+         *
+         * Measured 2026-07-30 on smash64ds-results-lab-hwtri: VS Results ran
+         * 2.00 presents per source tic against the battle path's 1.00, with GX
+         * submits and flushes both at 1.00 -- so exactly half the presents
+         * rendered nothing and existed only to burn a VBlank. */
+#if NDS_R2_MAIN_PRESENT_GUARD
+        if (ndsPlatformTicks() == presented_before)
+#endif
+        {
+            ndsPlatformBeginFrame();
+            portProbeRender();
+            ndsPlatformRenderDebugHud();
+            ndsPlatformEndFrame();
+        }
         gNdsFrameCounter++;
     }
 }

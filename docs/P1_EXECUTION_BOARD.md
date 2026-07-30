@@ -1781,7 +1781,67 @@ moves it — per-frame Results cost — is exactly what R2 owns. Second independ
 R2b. Instrument is permanent: six counters in `battleship_mnvsresults.c`, read by
 `soak-freeze-watch.ps1`, four timer reads per Results entry.
 
+### R2-07 R4d GRADUATED — Results presented every frame TWICE; the second present rendered nothing and only burned a VBlank. −560,190/frame (−19.9%), pixel-identical (2026-07-30)
+
+Chasing R4c's "second waiter" found it, and it was not a waiter at all — it was a whole second
+present. **VS Results ran 2.00 `ndsPlatformEndFrame` calls per source tic. The battle path runs
+1.00.** Half of every Results frame was a present that submitted no geometry, so its `glFlush` was
+skipped, but the `swiWaitForVBlank` inside `ndsPlatformEndFrame` is not conditional and ran anyway.
+
+Attribution, all from one two-stop census over 80 source tics (`census-results-frame-cost.ps1`):
+
+| counter | per source tic | reading |
+| --- | --- | --- |
+| `task_update` / `scene_draw` | 1.00 / 1.01 | the scene updates and draws once, as designed |
+| GX submits / flushes | 1.00 / 1.00 | **only one present renders anything** |
+| `sTicks` (presents) | 2.00 | but two presents happen |
+| `gNdsFrameCounter` | 1.00 | and the surplus one is `main.c:63` |
+
+The mechanism is the coroutine seam. Threads are coroutines (`portCoroutineResume`/`Yield`,
+`libultra_os.c`), the scene loop is resumed from `ndsOsRunThreads()` at `main.c:53`, and when it
+yields, `main.c` falls straight through to its own `BeginFrame`/`RenderDebugHud`/`EndFrame` — a
+fallback present meant for when *nothing else* is driving the display, firing once per scene
+iteration on top of the scene's own present.
+
+Fix (`NDS_R2_MAIN_PRESENT_GUARD`, `main.c`): sample `ndsPlatformTicks()` before `ndsOsRunThreads()`
+and present only if it did not advance. Self-correcting — during boot and loading, when no scene
+loop presents, the fallback still runs exactly as before. The generic scene loop also picked up the
+`ndsPlatformRenderDebugHud()` call the battle present already had (`taskman_seam.c:4810`), so a
+scene that drives its own presentation draws its own HUD instead of relying on a present being
+removed.
+
+Matched-source A/B, both arms rebuilt from identical source with only the flag differing:
+
+| | guard off | guard on | Δ |
+| --- | --- | --- | --- |
+| presents / source tic | 2.00 | 1.00 | −1 |
+| VBlanks / source tic | 5.03 | 4.03 | **−1.00** |
+| ticks / source tic | 2,814,955 | 2,254,765 | **−560,190 (−19.9%)** |
+| `WAIT` / source tic | 977,046 | 417,410 | −559,636 |
+| `FTR` / source tic | 1,709,228 | 1,710,498 | +0.07% (noise) |
+| GX submits, flushes | 1.00 | 1.00 | unchanged |
+
+The saving is **exactly one VBlank** and the removed cost is **entirely wait** — real work is
+untouched to within noise, which is what a redundant present should look like when it is removed.
+Guest picture **PIXEL-IDENTICAL**: 240,000 guest-viewport pixels at Results tic 160, 0 differing,
+max channel delta 0.
+
+Against the 1.12M gate Results is now **2,254,765 = 2.01× over**, down from 2.51×, and `FTR` at
+1,710,498 is 75.9% of the frame — so R4c's fighter question is now the whole remaining problem
+rather than one of two.
+
+**Tooling lesson, and it invalidates the shape of earlier comparisons.** The first diff of this pair
+reported 74 differing pixels at max channel delta 243 and read as a regression. Every one of them was
+melonDS's **title bar**: `[77/60] melonDS` versus `[61/60] melonDS` — the emulator's host-speed
+readout, which changes precisely *because* the candidate is faster. Comparing the full window makes
+every genuine speedup look like a visual regression, and the bigger the win the worse it reads.
+`scripts/compare-capture-pair.ps1` (new, shared — R2b, R4b and R4d had each done this by hand) now
+crops to the 400x600 guest viewport by default and needs `-IncludeWindowChrome` to do otherwise.
+
 ### R2-07 R4c SIZED from the real ROM — the Results fighters ARE the gate: 61.0% of non-wait work, and dropping them lands 2 VBlanks (2026-07-30)
+
+> **Per-frame figures below are per PRESENT and Results ran two presents per source tic — see the
+> retraction note at the end of this entry, and R4d above.**
 
 No build needed for this one. `smash64ds-results-lab-hwtri` runs **only** Results, so its
 cumulative tick-HUD buckets are Results-scoped by construction — the first Results cost numbers in
@@ -1849,6 +1909,19 @@ survives the cut.
 VBlanks, which is *more* than one unconditional call accounts for. Something waits a second time —
 likely the source`s own VI retrace path. Find it before designing around the tax, because if the
 second waiter is removable it is worth more than any fighter lever on the table.
+
+> **ANSWERED AND PARTLY RETRACTED BY R4d (below), same day.** The second waiter was real and *was*
+> removable — it was a second `ndsPlatformEndFrame`, from the fallback main loop. Two corrections to
+> the paragraphs above. **(1) The per-frame figures in the table are wrong by 2×.** They divide
+> free-running accumulators by source tics, but Results ran **2.00 presents per source tic**, and
+> these buckets are zeroed only in the battle presentation loop (`taskman_seam.c:5077`, `:7769`),
+> which this scene never reaches — so they are per-*present*, not per-tic. The impossible 1.8-VBlank
+> "single" wait was that error announcing itself: one `swiWaitForVBlank` cannot exceed one VBlank, and
+> 1.747 / 2 = 0.87 is legal. **(2) The tax is one VBlank per logical frame, not per present, and after
+> R4d it is paid once instead of twice.** The "real work budget is 560,190" conclusion still holds for
+> the *post*-R4d single present; it was never the whole story, because the frame was paying it twice.
+> Method fix, now in `scripts/census-results-frame-cost.ps1`: **difference two stops** and divide by
+> presented frames (`sTicks`), never read an accumulator once and divide by a scene clock.
 
 **A POSE MEMO IS RULED OUT — owner, from the running game, 2026-07-30: "they do animate in the
 results screen."** Worth recording because the source reads the other way at a glance and would have

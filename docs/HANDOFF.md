@@ -66,7 +66,7 @@ configurations complete a full match clean.** Four detector defects fixed, two v
 hashed the window **title**, where melonDS renders its FPS counter). **Sudden Death has its own
 issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit` needs `START`.
 
-## OPEN P1: VS Results — R0..R2b CUT 82.4%; 3.94M ticks/frame vs 1.12M. R2b IS GRADUATED
+## OPEN P1: VS Results — 2,254,765 ticks per source tic vs the 1.12M gate (2.01× over). FIGHTER DRAW IS 75.9% AND IS THE WHOLE REMAINING PROBLEM
 
 **39.975 → 7.025 VB/iter (1.50 → 8.43 FPS, 5.7×), Latest green.** Bit-exact cuts proven by
 `check_sprite_lerp_exact.py` — **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits `blx __udivsi3` for a
@@ -87,8 +87,22 @@ compiled out), which is every target except the differ. Two traps already paid f
 **different scene tick** at the same wall clock (both now standing rules). Idle was **830,260 = 1.48
 VBlanks of slack**, which R2b's 3.1 exceeded. **RETRACTED: `IA/8b 24x37` is NOT 85.1% of the
 remainder** — that row is a next-hit interval spanning commit, fighters, camera/display and the
-platform wait, so it locates the unpartitioned tail and attributes nothing. The post-R2b owner is
-unmeasured; the census that settles it is the next step.
+platform wait, so it locates the unpartitioned tail and attributes nothing.
+
+**R4b and R4d are GRADUATED and the post-R2b owner is now measured.** **R4b** foreground layer memo
+(`NDS_R2_RESULTS_LAYER_MEMO`) −28.6%, pixel-identical. **R4d** (`NDS_R2_MAIN_PRESENT_GUARD`) found
+Results running **2.00 presents per source tic against battle's 1.00** — the surplus one is the
+fallback present at `main.c:63`, reached because the scene loop is a coroutine resumed from
+`ndsOsRunThreads()` and `main` falls through to its own present when the loop yields. It submitted
+nothing, so its `glFlush` was skipped, but `ndsPlatformEndFrame`'s `swiWaitForVBlank` is
+unconditional. Guarding it is **−560,190/tic (−19.9%), exactly one VBlank**, work unchanged, guest
+picture pixel-identical. Remaining: `FTR` **1,710,498/tic = 75.9%** — R4c's fighter question, now the
+only one left. **Measure Results with `scripts/census-results-frame-cost.ps1`**: the tick-HUD buckets
+are zeroed only in the battle loop, so on Results they free-run and must be **differenced across two
+stops and divided by `sTicks`**, never read once and divided by a scene clock. **Compare captures
+with `scripts/compare-capture-pair.ps1`** — it crops to the guest viewport, because melonDS's title
+bar carries a host-FPS readout that changes whenever a candidate is faster and otherwise reads as a
+visual regression.
 
 **R1 is ANSWERED and folded into R2 — the "~30 s dead air" is 6.10 s and is NOT a load.** The 30 s was
 captured before R0c at 39.975 VB/iter and never re-measured after the 3.9×. GAME SET → "FOX WINS" is
