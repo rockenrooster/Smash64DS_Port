@@ -1825,6 +1825,31 @@ So R4c needs both halves of the fighter cost and likely more besides; no single 
 Results, the same shape R2-06 E10 reached for the battle frame. Probe deleted after answering, per
 the no-permanent-probes rule.
 
+**THE REAL WORK BUDGET FOR THE 1.12M GATE IS ABOUT 560,190, NOT 1,120,380 — Results pays an
+unconditional whole-VBlank tax per iteration.** This is why every sizing in this entry kept coming out
+optimistic, including the probe`s.
+
+`ndsPlatformWaitForScheduledVBlank` (`nds_platform.c:3046`) is a **do-while**: it calls
+`swiWaitForVBlank()` at least once unconditionally, and only keeps waiting while
+`sEarliestPresentVBlank` is set and unreached. That target is set in exactly one place,
+`ndsPlatformSchedulePresentAtVBlank`, called from exactly one site — `taskman_seam.c:4903`, the
+**battle** present path. **Results never schedules a present**, so on this scene the condition is
+always false and the loop burns one whole VBlank every iteration no matter how little work it did.
+
+The 1.12M gate is two VBlanks. One of them is spent waiting by construction. So Results has to fit
+*all* of its work inside a **single** VBlank period, 560,190 ticks — half the budget the headline
+figure implies. Against that, current non-wait work of 1,782,595 is 3.2× over, not 1.6×.
+
+It also explains the shape of everything measured here: the 36% of frames already at exactly 2
+VBlanks are the near-zero-work frames before source tic 120 (one VBlank of work-span plus the
+mandatory wait), and removing the entire fighter draw moved 5 → 3 rather than to 2 because the tax
+survives the cut.
+
+**Not fully explained, and the next thing to chase:** measured `WAIT` is 1,018,354/frame ≈ 1.8
+VBlanks, which is *more* than one unconditional call accounts for. Something waits a second time —
+likely the source`s own VI retrace path. Find it before designing around the tax, because if the
+second waiter is removable it is worth more than any fighter lever on the table.
+
 **A POSE MEMO IS RULED OUT — owner, from the running game, 2026-07-30: "they do animate in the
 results screen."** Worth recording because the source reads the other way at a glance and would have
 cost a build. `mnVSResultsFuncRun` (`mnvsresults.c:3227+`) does nothing per tick after
