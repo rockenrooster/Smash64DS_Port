@@ -33,6 +33,18 @@ param(
     # sMNVSResultsAllowExitWait -- 410 Results tics for a normal result, which at
     # the measured ~10.1 VBlanks/tic lands around 139 s from launch. Pick a value
     # past that or the tap is swallowed and the run proves nothing.
+    #
+    # KEEP REMATCH/SUDDEN-DEATH RUNS SHORT. Owner, 2026-07-30: these loops "go on
+    # far longer than they need to". Measured timings for the canonical config:
+    # Results is reachable around t+170 s, and the rematch fires on the first
+    # press that wins the foreground race. Everything after roughly 30 s of match
+    # two is repetition -- the corruption is visible immediately and the counters
+    # are already latched. So the useful shape is
+    #   -MinutesToRun 3.5 -PressStartSeconds 165 -PressStartCount 2
+    # which is the floor: ~170 s is the match itself (one game minute runs ~136 s
+    # of wall clock at the measured rate) and cannot be cut without changing the
+    # match timer. Do not default to 5 minutes for these; 5 is the ceiling for a
+    # freeze soak, not the setting for an input experiment.
     [ValidateRange(0, 300)][int]$PressStartSeconds = 0,
     # How many times to repeat that press, one per poll. See the comment at the
     # press site: a single synthetic press wins the foreground race only about
@@ -407,8 +419,20 @@ try {
             'gNdsFighterProcessLoopP0InputApplyCount',
             'gNdsFighterSchedulerLoopP0InputApplyCount')
         $format = (, '%u' * $cleanFields.Count) -join ','
+        # The ROM's own per-iteration sample ring, read in the SAME single stop.
+        # A point read of gNdsTickHud*Ticks is ONE frame -- those globals are
+        # zeroed at the top of every presentation-loop iteration
+        # (taskman_seam.c:5077, :7769) -- and reading a distribution from one
+        # sample has now cost this campaign three withdrawn conclusions. The ring
+        # holds the last NDS_TICK_HUD_WINDOW presented iterations, so after a
+        # rematch its contents are match-TWO frames, which is exactly the
+        # population in question. Bucket 1 is Fighters, 2 is Stage.
         $progress = Invoke-SoakGdb -Tag 'clean' -TimeoutSeconds 90 -Commands @(
-            "printf `"CLEAN=$format\n`", $($cleanFields -join ', ')")
+            "printf `"CLEAN=$format\n`", $($cleanFields -join ', ')",
+            'printf "RINGHEAD=%u,%u\n", sBattleTickHudRingHead, sBattleTickHudRingCount',
+            'echo RINGFIGHTERS=\n',
+            'output sBattleTickHudRing[1]',
+            'echo \n')
         if ($null -eq $progress) {
             Write-Host 'end-of-run attach failed; match count unknown for this run.'
         } else {
@@ -422,6 +446,7 @@ try {
                 # to say. Echo what GDB actually replied; the "No symbol ... in
                 # current context" line names the offending counter directly.
                 Write-Host 'end-of-run counter read produced no CLEAN= line. GDB said:'
+                # (ring output, if any, is echoed below with the rest of the reply)
                 foreach ($line in ($progress -split "`r?`n" |
                     Where-Object { $_.Trim() -ne '' } | Select-Object -Last 12)) {
                     Write-Host "    $line"
