@@ -1787,3 +1787,48 @@ timer, an event counter), never through the frame index.
 
 Moved here from `HANDOFF.md`, which is a restart surface and not the owner of
 durable traps.
+
+### Never call an allocator that cannot fail from a path that is allowed to fail (2026-07-29)
+
+`syMallocSet` (`decomp/src/sys/malloc.c:30`) does **not** return NULL when its
+region overflows. It executes `while (TRUE);`. Every `syTaskmanMalloc` in this
+port inherits that: the call either succeeds or hangs the console. There is no
+failure return to check, so a `if (p == NULL)` after it is dead code that reads
+like a safety net.
+
+That is how the owner's "lots of freeze bugs that seem random" happened.
+`ndsR2AnimCacheStore` was a *speculative* cache — its own comment promised that
+"a full cache, a failed allocation or an unexpected size is a performance outcome
+and never a correctness one" — allocating from the shared `gSYTaskmanGeneralHeap`
+inside a gameplay frame, with its entry count bounded and its bytes unbounded, and
+no eviction. `gSYTaskmanGeneralHeap` is a bump region that, unlike the graphics
+heap, **nothing ever resets**, so every byte was gone for the rest of the run. It
+filled, and the next animation load spun forever. Two CPU fighters reach it in
+about three minutes; a scripted Boundary minute with a stationary Mario never
+does, which is why every gate stayed green.
+
+Three durable consequences:
+
+1. **A speculative cache owns its own arena.** Fixed size, declared budget, bump
+   allocated, overflow returns NULL through the reject path the code already has.
+   Then the reject path is live code and the budget is a link-time fact. Never
+   borrow the game's heap for optional data.
+2. **The guard already existed and was not applied uniformly.** Both renderer
+   world-matrix caches (`reloc_backend_renderer_dl.c:1755`, `:1899`) compute the
+   aligned fit against `gSYTaskmanGeneralHeap.ptr`/`.end` and bail *before*
+   calling `syTaskmanMalloc`. So the hazard was understood; one site missed it.
+   When you find a guard like that, grep for the **hazard**, not for the guard —
+   the same lesson E69 recorded for helpers.
+3. **Latent class, not yet closed.** Several port-side `syTaskmanMalloc` callers
+   still have no fit check: `reloc_backend_assets.c:3277` and `:6020`,
+   `reloc_backend_compat_shims.c:759` and `:13123`, four in
+   `reloc_backend_mp_collision.c`, `battleship_efmanager.c:418`,
+   `battleship_mnplayersvs.c:214`, and the `reloc_data.h:711` macro. Any of them
+   can hang if something upstream exhausts the heap. Moving the anim cache out
+   gave the heap ~128 KiB back rather than making these safe.
+
+**Test for the class:** a freeze that only a human ever sees means the automated
+configuration is not exercising the state that causes it. Reach for the stress
+configuration (`NDS_R2_BOTH_CPU=1`) and an unattended soak
+(`scripts/soak-freeze-watch.ps1`) *before* concluding that green gates mean a
+healthy runtime.

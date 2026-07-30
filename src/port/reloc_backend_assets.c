@@ -5536,6 +5536,43 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * correctness one. */
 #define NDS_R2_ANIM_CACHE_ENTRIES 64u
 
+/* THIS CACHE MUST NEVER CALL syTaskmanMalloc, AND THAT IS NOT A STYLE RULE.
+ *
+ * 2026-07-29: the owner's "lots of freeze bugs that seem random" was this. A soak
+ * caught it 3.5 minutes into a two-CPU match with the backtrace
+ *
+ *   syMallocSet (gSYTaskmanGeneralHeap, 3472, 16)  decomp/src/sys/malloc.c:30
+ *     <- syTaskmanMalloc <- ndsR2AnimCacheStore <- ndsRelocForceLoadFighterAObj16File
+ *     <- lbRelocGetForceExternHeapFile (llFTMarioAnimAttackAirDFileID)
+ *     <- ftMainSetStatus (status_id=213) <- ftCommonAttackAirCheckInterruptCommon
+ *
+ * and malloc.c:30 is `while (TRUE);`. The source allocator does NOT return NULL
+ * when its region overflows -- it spins forever. So the `payload == NULL` reject
+ * paths below, which were written to make a full cache a performance outcome
+ * rather than a correctness one, were DEAD CODE: the allocation could not fail,
+ * it could only hang the console.
+ *
+ * Two properties of gSYTaskmanGeneralHeap make that inevitable rather than
+ * unlucky. It is a bump region (SYMallocRegion: start/ptr/end) with no free, and
+ * unlike the graphics heap nothing ever calls syMallocReset on it -- so every
+ * byte this cache took was gone for the rest of the run, and the cache has no
+ * eviction and bounds its ENTRY COUNT while leaving its BYTES unbounded. It also
+ * meant the cached payload pointers would have dangled through any future reset.
+ *
+ * The fix is to stop borrowing the game's heap. A speculative cache gets its own
+ * declared arena, and overflowing it returns NULL through the existing reject
+ * path, which is what that path was always for.
+ *
+ * Sized from the measured working set above: 41 warm assets = 91,104 bytes, so
+ * 128 KiB leaves ~44% headroom for the on-demand tail (17.8% of force-loads were
+ * not warm-list repeats) inside the 64-entry cap. Overflow degrades to the
+ * uncached load. If this ever needs to grow, grow it deliberately -- a link
+ * failure on BSS is a loud, safe failure, which the previous arrangement was not.
+ *
+ * The general lesson, in TASK_STANDING_RULES: never call an allocator that
+ * cannot fail from a code path that is allowed to fail. */
+#define NDS_R2_ANIM_CACHE_ARENA_BYTES 131072u
+
 /* R2-04 E4. The match's animation working set, measured rather than guessed:
  * gNdsR204AnimSeen dumped at frame 1928 (roughly two thirds through the 3,600
  * tick match) after 230 force-loads, of which 189 (82.2%) were repeats of these
@@ -5564,11 +5601,51 @@ typedef struct NDSR2AnimCacheEntry {
 
 static NDSR2AnimCacheEntry sNdsR2AnimCache[NDS_R2_ANIM_CACHE_ENTRIES];
 static u32 sNdsR2AnimCacheCount;
+static u8 sNdsR2AnimCacheArena[NDS_R2_ANIM_CACHE_ARENA_BYTES]
+    __attribute__((aligned(16)));
+static u32 sNdsR2AnimCacheArenaUsed;
 volatile u32 gNdsR2AnimCacheHits;
 volatile u32 gNdsR2AnimCacheMisses;
 volatile u32 gNdsR2AnimCacheFills;
 volatile u32 gNdsR2AnimCacheBytes;
 volatile u32 gNdsR2AnimCacheRejects;
+/* Engagement proof. An arena that never fills and an arena that overflows every
+ * frame are indistinguishable from the reject count alone, and this campaign has
+ * shipped a flag that silently never fired. */
+volatile u32 gNdsR2AnimCacheArenaUsedBytes;
+volatile u32 gNdsR2AnimCacheArenaOverflows;
+
+/* Bump allocation from the cache's own arena. Returns NULL on overflow, which is
+ * the whole point: see the comment on NDS_R2_ANIM_CACHE_ARENA_BYTES. */
+static void *ndsR2AnimCacheArenaAlloc(u32 size)
+{
+    u32 aligned = (sNdsR2AnimCacheArenaUsed + 15u) & ~15u;
+
+    if ((size == 0u) || (aligned > NDS_R2_ANIM_CACHE_ARENA_BYTES) ||
+        (size > (NDS_R2_ANIM_CACHE_ARENA_BYTES - aligned)))
+    {
+        gNdsR2AnimCacheArenaOverflows++;
+        return NULL;
+    }
+    sNdsR2AnimCacheArenaUsed = aligned + size;
+    gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
+    return &sNdsR2AnimCacheArena[aligned];
+}
+
+/* Give back the most recent allocation. Only valid for the immediately preceding
+ * alloc with nothing in between, which is exactly the shape of the warm loader's
+ * failure path -- it used to leak the buffer it had just taken. */
+static void ndsR2AnimCacheArenaRelease(void *payload, u32 size)
+{
+    u8 *bytes = payload;
+
+    if ((bytes != NULL) &&
+        ((bytes + size) == &sNdsR2AnimCacheArena[sNdsR2AnimCacheArenaUsed]))
+    {
+        sNdsR2AnimCacheArenaUsed = (u32)(bytes - sNdsR2AnimCacheArena);
+        gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
+    }
+}
 
 static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
 {
@@ -5597,7 +5674,7 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
         gNdsR2AnimCacheRejects++;
         return;
     }
-    payload = syTaskmanMalloc(size, 0x10);
+    payload = ndsR2AnimCacheArenaAlloc(size);
     if (payload == NULL)
     {
         gNdsR2AnimCacheRejects++;
@@ -5652,7 +5729,7 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         gNdsR2AnimWarmFailed++;
         return;
     }
-    payload = syTaskmanMalloc(alloc_size, 0x10);
+    payload = ndsR2AnimCacheArenaAlloc((u32)alloc_size);
     if (payload == NULL)
     {
         gNdsR2AnimWarmFailed++;
@@ -5662,6 +5739,9 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
                                         NDS_RELOC_ALIGN_BYTES,
                                         &loaded_size, &header) == FALSE)
     {
+        /* Used to return here having already taken the buffer, so a failed warm
+         * load permanently consumed arena for nothing. */
+        ndsR2AnimCacheArenaRelease(payload, (u32)alloc_size);
         gNdsR2AnimWarmFailed++;
         return;
     }
