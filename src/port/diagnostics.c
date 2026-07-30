@@ -374,6 +374,9 @@ volatile u32 gNdsSCVSBattleOriginalUpdateResult;
 volatile u32 gNdsSCVSBattleOriginalUpdateCount;
 volatile u32 gNdsSCVSBattleLifecycleResult;
 volatile u32 gNdsSCVSBattleLifecycleArenaAdapterCount;
+/* Non-zero proves Sudden Death ran the port's battle preparation rather than the
+ * decomp start bare, which it did for the whole campaign before 2026-07-30. */
+volatile u32 gNdsSCVSBattleSuddenDeathPrepareCount;
 volatile u32 gNdsSCVSBattleLifecycleTaskmanExitCount;
 volatile u32 gNdsSCVSBattleLifecycleTaskmanStatus;
 volatile u32 gNdsSCVSBattleLifecycleTimeLimit;

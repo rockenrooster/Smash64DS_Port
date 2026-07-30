@@ -1478,6 +1478,7 @@ extern volatile u32 gNdsSCVSBattleOriginalUpdateResult;
 extern volatile u32 gNdsSCVSBattleOriginalUpdateCount;
 extern volatile u32 gNdsSCVSBattleLifecycleResult;
 extern volatile u32 gNdsSCVSBattleLifecycleArenaAdapterCount;
+extern volatile u32 gNdsSCVSBattleSuddenDeathPrepareCount;
 extern volatile u32 gNdsSCVSBattleLifecycleTaskmanExitCount;
 extern volatile u32 gNdsSCVSBattleLifecycleTaskmanStatus;
 extern volatile u32 gNdsSCVSBattleLifecycleTimeLimit;

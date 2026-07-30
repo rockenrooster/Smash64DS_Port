@@ -89,6 +89,10 @@ GObj *ndsSCVSBattleFTManagerMakeFighter(FTDesc *desc);
 #undef ftManagerMakeFighter
 #endif
 
+/* Defined below, next to `scVSBattleStartBattle`. Declared here because the
+ * adapter remaps `func_start` onto it and runs first in this file. */
+void scVSBattleStartSuddenDeath(void);
+
 void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup)
 {
     SYTaskmanSetup ds_setup = *setup;
@@ -102,6 +106,13 @@ void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup)
     if (ds_setup.func_start == ndsBaseSCVSBattleStartBattle)
     {
         ds_setup.func_start = scVSBattleStartBattle;
+    }
+    /* Same remap for the other entry into this scene. Without it Sudden Death
+     * kept the decomp start even once a wrapper existed, so the setup table and
+     * this adapter have to agree. */
+    if (ds_setup.func_start == ndsBaseSCVSBattleStartSuddenDeath)
+    {
+        ds_setup.func_start = scVSBattleStartSuddenDeath;
     }
     gNdsSCVSBattleLifecycleArenaAdapterCount++;
     scManagerFuncUpdate(&ds_setup);
@@ -194,6 +205,33 @@ void scVSBattleStartBattle(void)
 
     gNdsSCVSBattleOriginalSetupResult =
         NDS_SCVSBATTLE_ORIGINAL_SETUP_PASS;
+}
+
+/* Sudden Death is a SECOND entry into the battle scene, and until now it was the
+ * only one with no port wrapper at all: the `scVSBattleStartSuddenDeath`
+ * define/undef pair existed above, but nothing replaced the symbol, so the
+ * decomp's own start ran bare. Every piece of DS-side battle preparation that
+ * `scVSBattleStartBattle` performs was therefore skipped -- the hardware static
+ * textures, the native OAM cloud textures, and the animation-cache warm cursor.
+ * A Sudden Death drawn against textures the scene load already tore down is the
+ * corruption the owner reported, and `ndsSCVSBattleManagerFuncUpdate` below
+ * compounded it by remapping `func_start` for the battle case only.
+ *
+ * The three prepares are safe to repeat: the texture prepare early-returns while
+ * `sNdsRendererBattleStaticTexturePrepared` holds (and
+ * `ndsRendererHardwareDiscardTextureCache` clears it when the cache is actually
+ * dropped, counting a violation if it was still armed), the cloud prepare
+ * early-returns once its texture names are non-zero, and the anim-cache preload
+ * only rewinds a cursor. So this is the same call sequence, not a second one. */
+void scVSBattleStartSuddenDeath(void)
+{
+    ndsBaseSCVSBattleStartSuddenDeath();
+    (void)ndsRendererHardwarePrepareBattleStaticTextures();
+    (void)ndsIFCommonNativeOamPrepareClouds();
+#if NDS_R2_ANIM_CACHE
+    ndsR2AnimCachePreloadMatch();
+#endif
+    gNdsSCVSBattleSuddenDeathPrepareCount++;
 }
 
 void scVSBattleFuncUpdate(void)

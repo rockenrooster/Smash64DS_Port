@@ -346,6 +346,32 @@ try {
             'gNdsControllerPublishTapNonzeroCount',
             'gNdsControllerEdgeSeenMask',
             'gNdsControllerPublishedTapMask',
+            # Second-entry preparation. A rematch and a Sudden Death are both
+            # re-entries into the battle scene, and both were drawing against
+            # resources the scene load had torn down. PrepareCount must rise once
+            # per battle entry; a non-zero ViolationCount means the texture cache
+            # was discarded while still marked prepared.
+            'gNdsRendererBattleStaticTexturePrepareCount',
+            'gNdsRendererBattleStaticTextureViolationCount',
+            'gNdsSCVSBattleSuddenDeathPrepareCount',
+            # The source controller THREAD is live (syMainThread5 osStartThreads
+            # syControllerThreadMain), and its read/publish use the raw decomp
+            # symbols, so the port wrapper cannot see them. PollCount counts every
+            # osContGetReadData including the thread's, so PollCount well above
+            # ReadCount is the second pipeline. WaitUpdate non-NULL means the
+            # thread's unguarded publish branch (controller.c:484) is reachable.
+            'gNdsControllerPollCount',
+            'sSYControllerWaitUpdate',
+            # The gcRunAll bracket. gcRunAll IS the Results task_update, so it is
+            # the span between the publish (leaves button_tap holding START) and
+            # mnVSResultsCheckExit inside it (reads zero). EntryTapMask zero means
+            # the tap is already gone before task_update begins and the publish
+            # value never reached this side; Alive>0 with Lost==Alive means it is
+            # destroyed inside.
+            'gNdsGcRunAllEntryTapMask',
+            'gNdsGcRunAllExitTapMask',
+            'gNdsGcRunAllTapAliveCount',
+            'gNdsGcRunAllTapLostCount',
             # The exit gate itself, read from the scene's own statics rather than
             # inferred from the taskman tick count -- those are two different
             # clocks and only this one gates mnVSResultsCheckExit. TotalTimeTics

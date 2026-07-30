@@ -4360,17 +4360,37 @@ extern volatile u32 gNdsVSResultsTransitionTicks;
 
 /* Whether this seam runs the source controller read/update pair itself.
  *
- * Kept at 1, which is the long-standing behaviour. Setting it to 0 was tried as
- * a candidate fix for the dead-button_tap defect and REFUTED: with the pair
- * removed the battle still completed normally
- * (`gNdsBattlePlayablePacingPresentedFrames` 2043), `button_hold` still arrived
- * as 0x1000, and `button_tap` was still 0x0000. That is explained now -- this
- * pair was never the only one, so removing it left the surviving pairs still
- * double-publishing. The defect is fixed at its owner in
- * `src/import/battleship_sys_controller.c`; this flag is back to being an
- * ordinary configuration switch and is not a lever on tap delivery. */
+ * NOW 0, and the earlier REFUTATION of this flag is WITHDRAWN. That test ran
+ * before the publish interlock existed, so with this pair removed the surviving
+ * double publishes still zeroed the tap and a working arm read as a dead one.
+ *
+ * What settled it was reading the linked binary instead of the sources.
+ * `syMainThread5` builds and starts `syControllerThreadMain` through
+ * `osCreateThread`/`osStartThread`, and `syControllerFuncRead` sits in roughly
+ * ten taskman setup tables -- every scene's `func_controller`, Results included.
+ * Both are reached ONLY through function pointers, never a direct call, so a
+ * source grep reports them dead while the binary shows them live. Believing the
+ * grep is what made every writer of `gSYControllerDevices` look innocent.
+ *
+ * With this pair at 1 the port and the source both drive the pipeline, and the
+ * source always publishes last:
+ *   1. seam reads     -- the rising edge lands in `unk04`
+ *   2. seam publishes -- `button_tap` = 0x1000, `unk04` drained to 0
+ *   3. `task_update` calls `func_controller` -> `syControllerFuncRead`, whose
+ *      UPDATE event finds `sSYControllerIsUpdateData` already FALSE and parks
+ *      itself in `sSYControllerWaitUpdate`
+ *   4. on retrace the thread reaches controller.c:484, `else
+ *      syControllerUpdateGlobalData();` -- raw and unconditional -- republishing
+ *      `button_tap` = `unk04` = 0 while `button_hold` = `unk00` keeps 0x1000
+ * Hence a tap that died with the hold intact, and an `InputSeenMask` of exactly
+ * 0x1000 and never garbage: nothing was corrupting memory, a legitimate publish
+ * was draining an empty accumulator. The interlock in
+ * `src/import/battleship_sys_controller.c` cannot reach step 4 -- it renames the
+ * decomp symbol at include time, so it guards the port's nine direct callers but
+ * not the decomp's own three internal call sites. Stop competing instead: let
+ * the source read and publish once per frame, as it does on the original. */
 #ifndef NDS_SEAM_CONTROLLER_PAIR
-#define NDS_SEAM_CONTROLLER_PAIR 1
+#define NDS_SEAM_CONTROLLER_PAIR 0
 #endif
 
 static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
