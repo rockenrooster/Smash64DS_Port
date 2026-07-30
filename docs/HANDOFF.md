@@ -9,7 +9,7 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69** — five gate levers, 1,228,928 -> 1,096,768, but all DLDI-off and so lower bounds; only the E32 flash residual is open (KNOWN_ISSUES) and it no longer blocks a lever |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
-| R2-06 | E0/E1/E2 + soak done; E4b/E6/E7/E11 refuted; **E8 finds the event, E10 attributes it fully, E12 names the next lever** |
+| R2-06 | E0/E1/E2 + soak done; E4b/E6/E7/E11/**E13/E14/E15** refuted; **E8 finds the event, E10 + E17 both attribute it as SPREAD — no lever left inside the phase** |
 | R2-07/08 | not started; R2-08 needs the owner's retail play test |
 
 ## Where the gate stands — MISSED, and EVERY earlier number is DLDI-off
@@ -26,9 +26,8 @@ DLDI-on vs the **1,096,768** it published DLDI-off. **The gate was already misse
 before this session, the 23,232 margin was a DLDI-off artifact, and R2-07's particle budget
 was sized against it.** Read every pre-`3eb9ecdb` P95 as a lower bound.
 
-**The 33,984 was a P95 tail artifact; both candidates closed, `SRC +30,912` withdrawn.** Residual
-SD reads refuted without a build (cache `Hits=79 Misses=2` of 81). **Never compare an anim-cache
-pair frame-by-frame** — it shifts load timing, so runs diverge in state; order statistics only.
+**Residual SD reads refuted without a build** (cache `Hits=79 Misses=2` of 81); `SRC +30,912` withdrawn.
+**Never compare an anim-cache pair frame-by-frame** — it shifts load timing, so runs diverge; order stats only.
 
 ## OPEN P1: every over-gate frame is an ASSET-LOAD frame, and clean P95 MEETS THE GATE
 
@@ -41,23 +40,19 @@ is entirely `SRC`; frame 909 is 1,617,152, the event E53 profiled. **The average
 over-gate frames `FTR` is **−1,312** / `STG` **−2,496**, so it is not a render problem, and **E32's
 parked flash residual no longer blocks a gate lever.**
 
-**Inside the relocation, do NOT attack the O(n²) scan** — only 17.3% of it (n is 25.4). The
-shape is the **payload walked TWICE** using pointer *differences* only, so hoisting it to
-cache-store time is viable — ~19,400/load frame (E9), judged on load frames only.
+**Inside the relocation, do NOT attack the O(n²) scan** — only 17.3% of it (n is 25.4). The shape is the
+**payload walked TWICE** using pointer *differences* only, so hoisting to cache-store time is viable (E9).
+**E10 ANSWERED the frame-wide premium and there is NO single lever.** Work premium **326,906/frame**
+(after removing `armWaitForIrq` 247,439 of quantization slack and 45,917 of tick-HUD printf), spread over
+**513 symbols carrying 349,268 — fully attributed.** Relocation 37.0%, `ftAnimParseDObjFigatree` 13.0%.
 
-**E10 ANSWERED the premium and there is NO single lever.** Profiler regions split by a marker the
-profile itself observed: work premium **326,906/frame** (after removing `armWaitForIrq` 247,439 of
-quantization slack and 45,917 of tick-HUD printf), spread over **513 symbols carrying 349,268 —
-fully attributed.** Relocation family 37.0%, `ftAnimParseDObjFigatree` 13.0%, animation ~19%.
-
-**STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked.** E11 took E10's
-cleanest lever (`ndsRelocAssetIDForToken`, 630 calls on load frames, **0 on all 112 clean
-frames**), removed the work provably and with **negative** bytes added, and measured the function
-at **31,808 (−7,667, −5,103 insns)** with the load-frame set **bit-identical**. The gate still got
-worse: **P95 +15,744, P99 +59,200, over-gate 9 → 11**, and the two added frames were **load**
-frames 828/847. Two HEAD controls differ by only P95 +5,376, so that is ~3x noise. **REVERTED.**
-A ~8,000 load-frame saving cannot survive relinking. What is left: one change big enough to clear
-~16,000 of tail movement, or **move work off the frame** (E9). Guard: `reloc_backend_assets.c:1796`.
+**STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked.** E11 took E10's cleanest
+lever (`ndsRelocAssetIDForToken`, 630 calls on load frames, **0 on all 112 clean frames**), removed the
+work provably with **negative** bytes added, measured it at **31,808 (−7,667, −5,103 insns)** and the
+load-frame set **bit-identical** — yet **P95 +15,744, P99 +59,200, over-gate 9 → 11**, the two added
+frames being **load** frames 828/847. Two HEAD controls differ by P95 +5,376, so that is ~3x noise.
+**REVERTED.** A ~8,000 load-frame saving cannot survive relinking; only a change clearing ~16,000 of tail
+movement, or one that **moves work off the frame**, counts. Guard: `reloc_backend_assets.c:1796`.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
@@ -86,7 +81,7 @@ the native OAM path is gated to `nSCKindVSBattle` only, so Results software-blit
 layers per frame, and `taskman_seam.c:6950` has no pacing and no HUD. **Ungating the wallpaper
 cache is REFUTED** (R0a, a Dream Land specialization). Board has a third, wider candidate.
 
-## NEXT LEVER: E17, the ACTION CHANGE — 78.5% of the load-frame premium, never bracketed
+## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 
 **The animation body is CLOSED — three levers, three refutations, zero builds spent.** 146,148/frame,
 86,819 of stall, 46,148 over §4's 100K, none reachable at this granularity: **E13** pose-fewer-joints
@@ -97,28 +92,33 @@ fighters; `cosmetic-only` is EMPTY); **E14** reorder refuted at **~2,900** (Task
 f32→fixed conversions are already inline. `scripts/census-fighter-gameplay-joints.ps1` reports the 60 Hz
 set; `gNdsFighterInit*` is proof-build-only, **0 by construction — never cite it**.
 
-**E17 is the only lever with room to close 40,448 outright.** E8's premium is 139,072/load frame over
-16 frames; the **whole** in-frame relocation is just **21.5%** of it, so **~109,000/frame (78.5%,
-~1.75M in-window) is the action change** — status transition + animation-script re-parse +
-hit/collision — and is unmeasured. *Different* cost from the walk above: that one **plays** cached
-AObjs, this one **rebuilds** them. **Collect the existing instrument, do not write a probe:**
-`NDS_R2_LOADFRAME_TIMING` already brackets `gcAddAnimJointAll`
-(`battleship_sys_objanim.c:1163`, *"what a fighter action change goes through"*) and
-`gcAddDObjAnimJoint` (`:1113`). **These counters are CUMULATIVE FROM BOOT — read twice and difference,
-as E8 did.** A single read inverts the answer: `r206-e8-fixup-timing-128.json` makes sprites look 88.1%
-when in-window it is 5.0%, because one boot call is 21,353,728 ticks. **E9 is DEMOTED** — ~21,788/load
-frame moves P95 only to ~1,138,660, still 18,660 over, for a full offsets refactor; keep it to stack.
+**Every named load-frame candidate is now sized, and none closes the 40,448.** Of the 139,072/load-frame
+premium (2,225,152 in-window over 16 frames): **relocation 33,632** (24.2%), **action-change re-add
+11,313** (8.1%), **E9's two payload walks 21,788** — a *subset* of the relocation, and P95 only reaches
+~1,138,660, still 18,660 over, for a full offsets refactor. **~94,127/load frame (67.7%) has NO named
+owner.** E17 killed E8's own hypothesis too: **16 load frames but only 7 whole-GObj re-adds**, so the
+load marker is *not* a proxy for "a fighter changed action". **That is the second time a premium here
+refused to concentrate** — E10 fully attributed the frame-wide premium across 513 symbols and found no
+single lever; E17 has now done the same to the load-frame premium. **Before adding a fourth bracket
+(status transition, hit/collision — the registered next step), ask whether R2-06 is the right phase:
+two independent attributions both say the cost is spread, which points at the switch plan's §3
+structural change, not another lever inside the current structure.**
+
+**Method trap, cost a detour this cycle:** the `gNdsR2Fixup*`/`gNdsR2Add*` counters are **CUMULATIVE
+FROM BOOT — read twice and difference**, as E8 and E17 did. A single read inverts the answer:
+`r206-e8-fixup-timing-128.json` makes sprites look 88.1% when in-window it is 5.0%, because one boot
+call is 21,353,728 ticks. And `gcAddAnimJointAll` **contains** `gcAddDObjAnimJoint`, so adding those two
+counters double-counts to ~274,000 and clears a threshold spuriously. `-Samples 1` fails the sampler's
+own count check; 8 is the floor.
 
 ## The one open fidelity item
 
 - **E32** — blocked on a **generator gap, not a decision** (E62), and E7 showed it no longer blocks a gate
   lever. The flash clears `G_LIGHTING` and draws vertex colours raw; the owner hardware-lights with stale
-  diffuse/ambient, so Mario draws *unflashed* — not corrupt, pixel-identical on every non-flash frame
-  (510/511: 0 px). E49's runtime half is **refuted** (it emits the baked `.rgba`, which holds **normals** —
-  speckle, worse 2,199 vs 1,551). **Needs the generator to bake the flash variant's colours**; E63: 2,164 B.
-- **R2-03 E26 — demoted** to 23,844/frame (needs `NDS_TASK91_DRAW_PHASE_CENSUS=1` *and*
-  `NDS_R2_SPAN_LEAN_TIMING=1`). **Replace the dispatch, not the writes** (E39); read its spec only
-  with E34/E34-b/E39/E43/E45/E56.
+  diffuse/ambient, so Mario draws *unflashed* — not corrupt, pixel-identical on non-flash frames (510/511:
+  0 px). E49's runtime half **refuted** (emits the baked `.rgba`, which holds **normals** — speckle, 2,199 vs
+  1,551). **Needs the generator to bake the flash variant's colours**; E63: 2,164 B.
+- **R2-03 E26 — demoted** to 23,844/frame; **replace the dispatch, not the writes** (E39). Spec in board.
 
 ## Refuted this cycle — do not re-derive
 
@@ -141,10 +141,10 @@ $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 .\scripts\verify-all.ps1 -Profile Boundary -List; git status --short
 ```
 
-**Do not rebuild `smash64ds.nds`** (owner, 2026-07-28); **do rebuild the tick-HUD ROM whenever the
-published one is** (owner, 2026-07-22), flag-identical. `-j`/`MAKEFLAGS` rules are in AGENTS.md
-`## Builds`. A clean checkout must build through `build.ps1`, not bare `make`: four of six
-generated `.inc` files are gitignored and only `build.ps1` regenerates them. Preserve canonical
-mode 163, renderer mode 9, mip 0, static texture residency, source countdown, Dream Land water at
-source frame 0, Task 16 `1/1/1`. Do not edit `decomp/`. **Bug #10 is FIXED and folded in** —
-`06992f10812` (from `2cbc6189d15`), with a host fixture, a structural pin, and the `pause_under20` oracle.
+**Do not rebuild `smash64ds.nds`** (owner, 2026-07-28); **do rebuild the tick-HUD ROM whenever the published
+one is** (owner, 2026-07-22), flag-identical. `-j`/`MAKEFLAGS` rules are in AGENTS.md `## Builds`. A clean
+checkout must build through `build.ps1`, not bare `make`: four of six generated `.inc` files are gitignored
+and only `build.ps1` regenerates them. Preserve canonical mode 163, renderer mode 9, mip 0, static texture
+residency, source countdown, Dream Land water at source frame 0, Task 16 `1/1/1`. Do not edit `decomp/`.
+**Bug #10 is FIXED and folded in** — `06992f10812` (from `2cbc6189d15`), host fixture + structural pin +
+`pause_under20` oracle.
