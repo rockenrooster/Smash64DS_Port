@@ -650,11 +650,31 @@ blocks every frame, which is the shape that produces exactly this stall signatur
 the engine's own non-zero `aobjs_num` path allocates the set contiguously, so the fix may be
 mechanically equivalent by construction rather than an approximation.
 
-**Do not build this on the strength of the paragraph above.** Three of tonight's four refutations
-came from naming a mechanism out of source reading and pricing it afterwards. Price it first:
-count the distinct cache lines the per-frame AObj walk touches, and confirm the AObjs really are
-non-contiguous at runtime, before changing an allocator. The measurement is cheap; the change is
-not.
+**That hypothesis is REFUTED, by the check it asked for, before any build was spent.**
+`syMallocSet` (`decomp/BattleShip-main/decomp/src/sys/malloc.c:12`) is a **pure bump allocator** —
+`bp->ptr = aligned + size`, no free list, no reuse — so a burst of `syTaskmanMalloc(32)` calls
+returns **contiguous** blocks. `gcAddAnimJointAll` allocates a fighter's AObj set in one call, and
+E10 counted only 7 such calls in 128 frames, so there is little to interleave between them. **The
+AObjs are already contiguous and there is no scatter to fix.** "Nothing can index them" (E6) is
+true of the *code*, not of the *addresses*. Do not propose an AObj pool.
+
+**What the arithmetic actually says.** 301 AObjs x 32 bytes = **9,632 bytes**, and the ARM9 dcache
+is **4 KB**. A contiguous walk that long **evicts itself every pass**, so contiguity buys the line
+fills being sequential and buys nothing else — the set cannot be resident. And 9,632 bytes is far
+too small to explain 86,819 stall cycles: at a generous ~20 cycles per 32-byte EWRAM line fill,
+86,819 implies **~4,300 line fills, order 139 KB touched per frame** (assumption stated because
+mem-stall also counts write-buffer drains and uncached accesses, so treat it as an upper bound).
+**The working set is the whole animation graph** — DObj joints, MObjs, script payloads, matrices —
+not one array, and it is more than 30x the dcache.
+
+**So the only lever with the right shape is touching fewer bytes per frame, not rearranging them.**
+`NDS_TASK106_UPDATES_PER_PRESENT = 2`, so this walk runs **twice per presented frame**;
+`PROJECT_GOAL.md` explicitly permits "skeletal poses to update at 30 Hz" and "reduced animation
+update rates", and halving the rate is worth order **73,000/frame** against a 40,448 gap. **But it
+is not free and must not be filed as a visual-only change:** R2-04 E57 established that hitboxes
+walk the **live joint chain** (`gmcollision.c:489`), so halving the pose rate halves the hitbox
+update rate, which is gameplay. Any such task has to separate the joint update that collision
+reads from the one only the renderer reads, and price the split before assuming it exists.
 
 ### R2-06 E11 REFUTED — the work really was removed, and P95 still got worse (2026-07-30)
 
