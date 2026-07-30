@@ -354,6 +354,14 @@ try {
             'gNdsRendererBattleStaticTexturePrepareCount',
             'gNdsRendererBattleStaticTextureViolationCount',
             'gNdsSCVSBattleSuddenDeathPrepareCount',
+            # Did the rematch actually re-enter the battle scene through the
+            # scene manager's dispatch loop? AdapterCount rises once per
+            # scManagerFuncUpdate, so 2 means scVSBattleStartScene ran twice and
+            # syTaskmanStartTask rewound the general heap for match two. GObjCount
+            # and MallocCount separate "rewound and refilled" from "piled on top".
+            'gNdsSCVSBattleLifecycleArenaAdapterCount',
+            'gNdsSCVSBattleOriginalGObjCount',
+            'gNdsTaskmanMallocCount',
             # The source controller THREAD is live (syMainThread5 osStartThreads
             # syControllerThreadMain), and its read/publish use the raw decomp
             # symbols, so the port wrapper cannot see them. PollCount counts every
