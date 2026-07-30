@@ -1781,6 +1781,61 @@ moves it — per-frame Results cost — is exactly what R2 owns. Second independ
 R2b. Instrument is permanent: six counters in `battleship_mnvsresults.c`, read by
 `soak-freeze-watch.ps1`, four timer reads per Results entry.
 
+### R2-07 R4e GRADUATED — the Results lab built its renderer `-mthumb` while every battle ROM built it `-marm`. −553,188/tic (−24.5%), pixel-identical (2026-07-30)
+
+**This is an instrument defect that was reported as an optimization, and the correction matters more
+than the number.** Chasing R4c's fighter cost, the Results census put `__aeabi_lmul` — the 64-bit
+multiply helper — at **20,935,676 cycles, 7.79% of the frame**, third behind the idle spin and the
+fighter root, out of **86 bytes** of code. `objdump` put 31 of its 79 call sites in five functions
+that all disassembled to **Thumb with zero SMULL between them**.
+
+ARMv5TE Thumb has no `SMULL`. It has no 32×32→64 multiply at all, so every `(s64)a * b` in a Thumb
+function is a `bl __aeabi_lmul` regardless of how the operands are typed. The 20.12 fixed-point
+matrix and vertex math is exactly that shape, per vertex.
+
+The cause was one line:
+
+```make
+ifeq ($(NDS_DEV_SCENE_HARNESS_ID),163)     # battle only
+nds_renderer.o: CFLAGS += -marm
+endif
+```
+
+`results_playable` is harness **164**. It was added to the tick-HUD Makefile block under a comment
+promising it "must differ from the tick-HUD ROM in the scene it boots and in **NOTHING** else" — and
+this rule, keyed on the harness ID rather than on the target, silently broke that promise. So
+**every Results number in this campaign — R0c, R0d, R0e, R2a, R2b, R4b, R4d — was measured on a
+Thumb-compiled renderer while battle measured an ARM-compiled one.** Those deltas remain valid
+against each other (all arms shared the defect); their absolute cost was inflated.
+
+The fix keys on the latency surfaces (`NDS_ARM_RENDERER_HARNESS_IDS := 163 164`) rather than on one
+ID, so the next latency ROM cannot inherit the same trap.
+
+| | Thumb (before) | ARM (after) | Δ |
+| --- | --- | --- | --- |
+| VBlanks / source tic | 4.03 | 3.04 | −0.99 |
+| ticks / source tic | 2,254,765 | 1,701,577 | **−553,188 (−24.5%)** |
+| `FTR` / source tic | 1,710,498 | 1,449,776 | −260,722 (−15.2%) |
+| vs the 1.12M gate | 2.01× | **1.52×** | |
+
+Guest picture **PIXEL-IDENTICAL** against HEAD: 240,000 guest-viewport pixels at Results tic 160,
+0 differing, max channel delta 0.
+
+**One approach was built and withdrawn.** Before finding the Makefile line, the same win was chased
+with `__attribute__((target("arm")))` on the five hot functions behind an `NDS_R2_ARM_MULTIPLY` flag.
+It worked — 3.11 VBlanks, 1,743,591 — but it is a hand-rolled partial duplicate of a compile flag the
+target should already have had, covering five functions instead of the translation unit, and it
+measured **42,014 ticks worse** than fixing the flag. Flag, macro and all eight attribute sites were
+deleted. What survives from it is one line of C: `ndsRendererTransformVertex20p12` declared its `x`,
+`y`, `z` as `s64` when the source fields are `s16` and the matrix is `s32`, so every product fit in
+47 bits and never needed the 64×64 path; they are `s32` now, same value, and the ARM codegen is one
+`SMULL` instead of a widened sequence.
+
+**The battle path was measured and is unaffected** — it already had `-marm`. Both battle arms
+produced a **byte-identical loadable ARM9 image** and identical 128-sample percentiles, which is how
+the flag was found to be inert there: the tick-HUD sampler reported the same `sha` twice, and the
+`.o` files differed while `objcopy -O binary` output did not. No battle P95 in the campaign moves.
+
 ### R2-07 R4d GRADUATED — Results presented every frame TWICE; the second present rendered nothing and only burned a VBlank. −560,190/frame (−19.9%), pixel-identical (2026-07-30)
 
 Chasing R4c's "second waiter" found it, and it was not a waiter at all — it was a whole second

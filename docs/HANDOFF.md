@@ -66,7 +66,7 @@ configurations complete a full match clean.** Four detector defects fixed, two v
 hashed the window **title**, where melonDS renders its FPS counter). **Sudden Death has its own
 issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit` needs `START`.
 
-## OPEN P1: VS Results — 2,254,765 ticks per source tic vs the 1.12M gate (2.01× over). FIGHTER DRAW IS 75.9% AND IS THE WHOLE REMAINING PROBLEM
+## OPEN P1: VS Results — 1,701,577 ticks per source tic vs the 1.12M gate (1.52× over). FIGHTER DRAW IS 85.2% AND IS THE WHOLE REMAINING PROBLEM
 
 **39.975 → 7.025 VB/iter (1.50 → 8.43 FPS, 5.7×), Latest green.** Bit-exact cuts proven by
 `check_sprite_lerp_exact.py` — **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits `blx __udivsi3` for a
@@ -96,8 +96,14 @@ fallback present at `main.c:63`, reached because the scene loop is a coroutine r
 `ndsOsRunThreads()` and `main` falls through to its own present when the loop yields. It submitted
 nothing, so its `glFlush` was skipped, but `ndsPlatformEndFrame`'s `swiWaitForVBlank` is
 unconditional. Guarding it is **−560,190/tic (−19.9%), exactly one VBlank**, work unchanged, guest
-picture pixel-identical. Remaining: `FTR` **1,710,498/tic = 75.9%** — R4c's fighter question, now the
-only one left. **Measure Results with `scripts/census-results-frame-cost.ps1`**: the tick-HUD buckets
+picture pixel-identical. **R4e**: the Results lab built `nds_renderer.o` **`-mthumb`** while every
+battle ROM built it **`-marm`**, because the `-marm` rule keyed on harness ID 163 and the Results lab
+is 164 — so all its 20.12 multiplies were `bl __aeabi_lmul` (7.79% of the frame, in 86 bytes).
+**Every pre-R4e Results number in this campaign was measured on a Thumb renderer**; the deltas hold
+against each other, the absolute costs were inflated. Fixed by keying on the latency surfaces
+(`NDS_ARM_RENDERER_HARNESS_IDS`): −553,188/tic (−24.5%), pixel-identical, and battle is provably
+unaffected (byte-identical loadable image, identical 128-sample percentiles). Remaining: `FTR`
+**1,449,776/tic = 85.2%** — R4c's fighter question, now the only one left. **Measure Results with `scripts/census-results-frame-cost.ps1`**: the tick-HUD buckets
 are zeroed only in the battle loop, so on Results they free-run and must be **differenced across two
 stops and divided by `sTicks`**, never read once and divided by a scene clock. **Compare captures
 with `scripts/compare-capture-pair.ps1`** — it crops to the guest viewport, because melonDS's title

@@ -5123,9 +5123,13 @@ void ndsRendererTransformVertex20p12(const NDSRendererMatrix20p12 *mtx,
                                      const NDSRendererInputVertex *vtx,
                                      NDSRendererClipVertex20p12 *out)
 {
-    s64 x;
-    s64 y;
-    s64 z;
+    /* s32, not s64. The source fields are s16 and the matrix is s32, so every
+     * product here fits in 47 bits and SMULL computes it exactly; widening both
+     * operands first only forced the full 64x64 helper. Same value, one
+     * instruction instead of a call -- twelve times per vertex. */
+    s32 x;
+    s32 y;
+    s32 z;
 
     if ((mtx == NULL) || (vtx == NULL) || (out == NULL))
     {

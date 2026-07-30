@@ -2393,9 +2393,24 @@ endif
 ifneq ($(strip $(NDS_MPPROCESS_STRICT_OFILES)),)
 $(NDS_MPPROCESS_STRICT_OFILES): CFLAGS += -Werror=implicit-function-declaration -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=return-type
 endif
-# The measured mode-163 renderer is cache-resident on retail hardware and
-# wins in ARM state despite melonDS's main-RAM fetch model.
-ifeq ($(NDS_DEV_SCENE_HARNESS_ID),163)
+# The measured renderer is cache-resident on retail hardware and wins in ARM
+# state despite melonDS's main-RAM fetch model.
+#
+# Keyed on the LATENCY SURFACES, not on harness 163 alone. Until 2026-07-30 this
+# read `ifeq ($(NDS_DEV_SCENE_HARNESS_ID),163)`, so `results_playable` (164) --
+# added specifically so R2-07's Results numbers would be comparable with the
+# battle ones -- built this TU `-mthumb` while every battle ROM built it `-marm`.
+# ARMv5TE Thumb has no SMULL, so all the 20.12 fixed-point matrix and vertex
+# math became `bl __aeabi_lmul`: the Results census put that helper at 7.79% of
+# the frame, third behind the idle spin and the fighter root, out of 86 bytes.
+# Restoring the flag is worth -511,174 ticks per Results source tic (-22.7%).
+#
+# The harness block near line 884 states that `results_playable` must differ
+# from the tick-HUD ROM "in the scene it boots and in NOTHING else"; keying a
+# codegen flag on the harness ID silently broke that promise, so any new latency
+# surface belongs in this list rather than in a new ID comparison.
+NDS_ARM_RENDERER_HARNESS_IDS := 163 164
+ifneq ($(filter $(NDS_DEV_SCENE_HARNESS_ID),$(NDS_ARM_RENDERER_HARNESS_IDS)),)
 nds_renderer.o: CFLAGS += -marm
 endif
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
