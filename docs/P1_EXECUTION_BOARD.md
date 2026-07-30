@@ -1741,6 +1741,38 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 R2a BUILT — the glyph lerp is gone and the VBlank census reads EXACTLY FLAT, because the loop has 1.48 VBlanks of idle slack (2026-07-30)
+
+**Threshold pre-registered before the profile ran** (standing rule 7): KEEP if the per-PC profile puts
+`ndsDrawSObjIntoPreview` down **≥100,000 ticks/frame** with no other symbol up by more than the
+~14,000-tick floor; REVERT below that, or if total cycles rise. The lerp family measures 182,901
+ticks/frame in `ndsSpriteLerpPrimEnv`'s own source lines alone, so a real removal must clear 100,000
+comfortably — the threshold is deliberately generous against my own estimate.
+
+**The change.** R0h's per-PC data priced the seven IA/8b glyphs at **538,300 ticks/frame for 6,882
+pixels — 78.2 ticks/pixel against the specialized wallpaper row's 8.6.** They are expensive for two
+reasons, and BattleShip settles both: `mnvsresults.c:1204` sets `scalex` and clears `SP_FASTCOPY`
+outright, so they take the **rect-fill** arm, *and* they run the per-pixel `ndsSpriteLerpPrimEnv`. R2a
+takes only the second: the sixteen-entry table R0e already builds is exactly `lerp(sobj, n*17)`, which is
+what the IA arm asks for, so the call becomes a lookup inside the unchanged generic loop. The alpha test
+stays where it was rather than being folded into the table, because the I4 combine arm has no alpha test
+and folding would change the wallpaper when alpha is zero. Table gate widened to either format; the
+paired row keeps its own format test so an IA sprite cannot fall into it.
+
+**The census says 410 VBlanks against 410 — identical windows, zero change.** That is not resolution:
+the window is a 40-frame aggregate resolving ~14,000 ticks, and the predicted saving was ~227,000.
+**The cause is idle slack.** R0h measured `armWaitForIrq` at **830,260 ticks/frame, 14.82%** — the
+Results loop already waits ~1.48 VBlanks every frame, so work removed below that threshold becomes spin
+and the wall clock cannot move. Rule 11's 560,190-tick quantum was the smaller of the two problems and
+this is now **rule 12**: measure the slack before trusting a wall-clock instrument, and pick the
+instrument from the size of the expected win.
+
+`PROJECT_GOAL.md` and AGENTS.md both settle the disposition in advance of the number: milestone tick
+targets are "directional, not per-cut discard gates", and the instruction is to "keep every repeatable
+correctness-preserving gain and accumulate it toward the target". A flat wall clock is not evidence a
+lever is worthless. Per-PC profile of the R2a build in flight to arbitrate against the pre-registered
+threshold.
+
 ### R2-07 R0h ANSWERED — there was never a residual; R0f's split was an instrument artifact, and the real owner is a four-stage software compositor (2026-07-30)
 
 `run-task37-profile-census.ps1 -Scene Results -Frames 40`, DLDI on, window Results tics 131..171.

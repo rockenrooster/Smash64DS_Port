@@ -1,0 +1,5587 @@
+{
+  "task": "R2-07 - VS Results per-interval cost split",
+  "target": "smash64ds-battle-playable-tickhud-hwtri",
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-r2a-ialut\\smash64ds-battle-playable-tickhud-hwtri.nds",
+  "romSha256": "E29BE95A0D8510B8A872B136E965D241A70CD1C855E3ABC482AF1E9918647C1B",
+  "skipIterations": 130,
+  "iterations": 40,
+  "phases": false,
+  "capturedUtc": "2026-07-30T12:10:56.0259131Z",
+  "windowStart": "5832",
+  "windowEnd": "6242",
+  "totalCostedVblanks": 406.0,
+  "blits": [
+    {
+      "vblank": 5832,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5837,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5838,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5842,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5847,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5848,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5852,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5857,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5858,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5862,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5867,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5868,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5872,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5877,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5878,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5882,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5887,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5888,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5892,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5897,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5898,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5902,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5907,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5908,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5912,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5917,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5918,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5922,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5927,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5928,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5932,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5937,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5938,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5942,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5947,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5948,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5952,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5957,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5958,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5962,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5967,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5968,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5972,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5977,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5978,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5982,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5987,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5987,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5987,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5987,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5988,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5988,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5988,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5992,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5997,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5998,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6002,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6007,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6008,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6012,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6017,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6018,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6022,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6027,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6028,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6032,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6037,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6038,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6042,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6047,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6048,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6052,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6057,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6058,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6062,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6067,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6068,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6072,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6077,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6078,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6082,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6087,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6088,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6092,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6097,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6098,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6102,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6107,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6108,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6112,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6117,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6118,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6122,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6127,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6128,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6132,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 6
+    },
+    {
+      "vblank": 6138,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6138,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6138,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6138,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6139,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6139,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6139,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 3
+    },
+    {
+      "vblank": 6142,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6147,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6148,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6152,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6157,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6158,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6162,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6167,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6168,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6172,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6177,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6178,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6182,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6187,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6188,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6192,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6197,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6198,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6202,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6207,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6208,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6212,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6217,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6218,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6222,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6227,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6228,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6232,
+      "bmfmt": 4,
+      "bmsiz": 0,
+      "width": 300,
+      "height": 220,
+      "nbitmaps": 9,
+      "attr": 576,
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6237,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 20,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6238,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 34,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6238,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 31,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6238,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 39,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6238,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 9,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6238,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 29,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6238,
+      "bmfmt": 3,
+      "bmsiz": 1,
+      "width": 24,
+      "height": 37,
+      "nbitmaps": 1,
+      "attr": 513,
+      "pixels": 888,
+      "vblanksCost": null
+    }
+  ],
+  "intervals": [
+    {
+      "vblank": 5832,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5837,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5838,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5838,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5842,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5847,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5848,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5848,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5852,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5857,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5858,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5858,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5862,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5867,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5868,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5868,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5872,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5877,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5878,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5878,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5882,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5887,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5888,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5888,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5892,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5897,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5898,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5898,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5902,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5907,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5907,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5908,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5912,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5917,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5918,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5918,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5922,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5927,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5928,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5928,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5932,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5937,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5938,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5938,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5942,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5947,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5948,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5948,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5952,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5957,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5958,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5958,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5962,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5967,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5967,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5968,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5972,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5977,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5978,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5978,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5982,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5987,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5987,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5987,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5987,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5988,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5988,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5988,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 5992,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 5997,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 5997,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 5998,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6002,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6007,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6008,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6008,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6012,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6017,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6018,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6018,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6022,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6027,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6027,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6028,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6032,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6037,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6038,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6038,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6042,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6047,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6048,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6048,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6052,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6057,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6057,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6058,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6062,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6067,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6068,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6068,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6072,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6077,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6078,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6078,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6082,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6087,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6087,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6088,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6092,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6097,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6098,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6098,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6102,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6107,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6108,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6108,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6112,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6117,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6117,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6118,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6122,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6127,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6128,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6128,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6132,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 6
+    },
+    {
+      "vblank": 6138,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6138,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6138,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6138,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6139,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6139,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6139,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 3
+    },
+    {
+      "vblank": 6142,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6147,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6147,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6148,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6152,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6157,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6158,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6158,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6162,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6167,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6168,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6168,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6172,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6177,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6178,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6178,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6182,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6187,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6188,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6188,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6192,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6197,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6198,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6198,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6202,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6207,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6208,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6208,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6212,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6217,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6218,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6218,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6222,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6227,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6228,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6228,
+      "label": "IA/8b 24x37",
+      "pixels": 888,
+      "vblanksCost": 4
+    },
+    {
+      "vblank": 6232,
+      "label": "I/4b 300x220",
+      "pixels": 66000,
+      "vblanksCost": 5
+    },
+    {
+      "vblank": 6237,
+      "label": "IA/8b 20x37",
+      "pixels": 740,
+      "vblanksCost": 1
+    },
+    {
+      "vblank": 6238,
+      "label": "IA/8b 34x37",
+      "pixels": 1258,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6238,
+      "label": "IA/8b 31x37",
+      "pixels": 1147,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6238,
+      "label": "IA/8b 39x37",
+      "pixels": 1443,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6238,
+      "label": "IA/8b 9x37",
+      "pixels": 333,
+      "vblanksCost": 0
+    },
+    {
+      "vblank": 6238,
+      "label": "IA/8b 29x37",
+      "pixels": 1073,
+      "vblanksCost": 0
+    }
+  ]
+}

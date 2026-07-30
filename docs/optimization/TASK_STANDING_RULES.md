@@ -2106,3 +2106,28 @@ P99 rose 59,200, and over-gate went 9 → 11** — the two added frames being lo
     (`run-task37-profile-census.ps1 -Scene Results`, and `--pc-detail SYMBOL` to go inside
     one function). This is the same class of error as [ALL is a quantized gate], where
     VBlank quantisation made four real levers read as flat.
+12. **Before trusting a wall-clock instrument, measure the IDLE SLACK it is hiding
+    behind. Rule 11's quantum is the smaller of the two problems.** R2-07's VBlank
+    census reads guest wall time, and the VS Results loop spins in `armWaitForIrq` for
+    **830,260 ticks/frame — 14.82% of the frame, ~1.48 VBlanks.** So any saving under
+    ~830K ticks becomes idle spin and the census reads **exactly flat**, not merely
+    below resolution. R2a removed a measured ~227,000 ticks/frame of per-pixel lerp
+    from the IA/8b glyph arm and the census returned 410 VBlanks against 410 — a
+    40-frame aggregate that resolves ~14,000 ticks, so this was not a rounding
+    artifact. The work was gone and the clock did not move.
+
+    Two consequences. **First, `PROJECT_GOAL.md` and AGENTS.md both settle the
+    disposition and it is KEEP, not revert:** "keep every repeatable
+    correctness-preserving gain and accumulate it toward the target", and milestone
+    tick targets are "directional, not per-cut discard gates". A wall-clock instrument
+    reading flat is not evidence a lever is worthless — it is evidence the instrument
+    cannot see it. This is the same failure that killed four good levers behind
+    "ALL flat" (Tasks 53/55/56/63); do not re-earn it a fifth time.
+
+    **Second, pick the instrument from the size of the expected win.** Under ~830K on
+    the Results frame, or under one VBlank anywhere the loop has slack, the VBlank
+    census cannot arbitrate and only the per-PC profiler can
+    (`run-task37-profile-census.ps1 -Scene Results`, `--pc-detail SYMBOL` inside one
+    function). Estimate the win *first*, then choose; running the cheap instrument on a
+    change it structurally cannot measure costs a full run and returns a wrong verdict
+    with a straight face.
