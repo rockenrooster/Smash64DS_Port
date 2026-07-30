@@ -3000,11 +3000,27 @@ static void ndsRelocNormalizeAObj16Script(u16 *script, u32 word_count)
     }
 }
 
+#if NDS_R2_RELOC_FIXUP_TIMING
+/* R2-06 E9 sizing. Ticks split three ways inside this function, plus the shapes
+ * that predict them: table_bytes drives the O(n^2) scan, data_size drives the
+ * lane swap, and ScriptWords drives the per-script normalize. */
+volatile u32 gNdsR2FixupAObj16SwapTicks;
+volatile u32 gNdsR2FixupAObj16SuccessorTicks;
+volatile u32 gNdsR2FixupAObj16NormalizeTicks;
+volatile u32 gNdsR2FixupAObj16TableBytes;
+volatile u32 gNdsR2FixupAObj16DataBytes;
+volatile u32 gNdsR2FixupAObj16Scripts;
+volatile u32 gNdsR2FixupAObj16ScriptWords;
+#endif
+
 static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
 {
     uintptr_t base;
     uintptr_t table_bytes;
     u32 i;
+#if NDS_R2_RELOC_FIXUP_TIMING
+    u32 fixup_sub;
+#endif
 
     if ((loaded == NULL) || (loaded->data == NULL) ||
         (ndsRelocIsFighterAObj16Asset(loaded->asset_id) == FALSE))
@@ -3037,6 +3053,18 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
         return FALSE;
     }
 
+#if NDS_R2_RELOC_FIXUP_TIMING
+    /* R2-06 E8/E9. This function is 88.4% of the in-frame relocation, and it has
+     * THREE candidate costs that had never been separated: the lane swap over the
+     * whole payload, the O(n^2) successor scan, and the per-script normalize
+     * (which walks the payload a second time). Splitting them is what decides
+     * which loop E9 should attack -- naming the O(n^2) from reading the code was
+     * an inference, and 23,491 ticks/call is far more than a table of a few tens
+     * of entries can spend on compares. */
+    gNdsR2FixupAObj16TableBytes += (u32)table_bytes;
+    gNdsR2FixupAObj16DataBytes += (u32)loaded->data_size;
+    fixup_sub = cpuGetTiming();
+#endif
     for (i = (u32)table_bytes; (i + sizeof(u32)) <= loaded->data_size;
          i += sizeof(u32))
     {
@@ -3046,6 +3074,9 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
         ndsRelocWriteNative16((u8 *)loaded->data + i, second);
         ndsRelocWriteNative16((u8 *)loaded->data + i + sizeof(u16), first);
     }
+#if NDS_R2_RELOC_FIXUP_TIMING
+    gNdsR2FixupAObj16SwapTicks += cpuGetTiming() - fixup_sub;
+#endif
 
     for (i = 0; (i * sizeof(u32)) < table_bytes; i++)
     {
@@ -3061,6 +3092,10 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
             u32 j;
             u32 word_count;
 
+#if NDS_R2_RELOC_FIXUP_TIMING
+            gNdsR2FixupAObj16Scripts++;
+            fixup_sub = cpuGetTiming();
+#endif
             for (j = 0; (j * sizeof(u32)) < table_bytes; j++)
             {
                 uintptr_t next =
@@ -3073,10 +3108,18 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
                 }
             }
             word_count = (u32)((script_end - value) / sizeof(u16));
+#if NDS_R2_RELOC_FIXUP_TIMING
+            gNdsR2FixupAObj16SuccessorTicks += cpuGetTiming() - fixup_sub;
+            gNdsR2FixupAObj16ScriptWords += word_count;
+            fixup_sub = cpuGetTiming();
+#endif
 
             ndsRelocNormalizeAObj16Script((u16 *)((u8 *)loaded->data +
                                                   script_offset),
                                           word_count);
+#if NDS_R2_RELOC_FIXUP_TIMING
+            gNdsR2FixupAObj16NormalizeTicks += cpuGetTiming() - fixup_sub;
+#endif
         }
     }
 

@@ -545,39 +545,52 @@ proved the `SRC` excursion **survives halving the update rate unchanged** (+518,
 +522,720), and the anim cache is already at a 79/81 hit rate with `WarmFailed=0`, so this is
 not I/O.
 
-#### The named lever: `ndsRelocNormalizeFighterAObj16File` is O(n²), and the fix adds nothing
+#### Inside the normalizer: the O(n^2) is NOT the cost. It is the payload, walked twice.
 
-At `reloc_backend_assets.c:3050-3081` the function walks the pointer table and, **for every
-entry, rescans the entire table** to find the next script boundary:
+**I first named the O(n^2) successor scan at `reloc_backend_assets.c:3050-3081` as the lever
+from reading the code. That was an inference, and the measurement refutes it.** Three brackets
+inside the function, differenced across the same window (18 calls, 484,480 ticks,
+26,916/call):
 
-```
-for (i = 0; (i * 4) < table_bytes; i++)            /* each script pointer   */
-    for (j = 0; (j * 4) < table_bytes; j++)        /* rescan ALL of them to */
-        if (next > value && next < script_end)     /* find min{next > value} */
-            script_end = next;
-```
+| sub-pass | ticks | share | shape |
+|---|---:|---:|---|
+| per-script normalize (`ndsRelocNormalizeAObj16Script`) | **197,248** | **40.7%** | 936 u16 words/call @ 11.7 ticks |
+| lane swap over the payload | **151,360** | **31.2%** | 468 u32 pairs/call @ 18.0 ticks |
+| O(n^2) successor scan | 83,584 | 17.3% | 647 inner iterations/call @ 7.2 ticks |
+| unbracketed residual | 52,288 | 10.8% | — |
 
-The inner loop computes the **successor in sorted order** — derivable in one pass, or free
-if the table is already ascending. That is a pure algorithmic fix in one function: **no new
-BSS, no new heap, no `.text.hot` member, and it deletes code rather than adding it**, which
-is the one shape that escapes E53's "a fix aimed at the tail must not add cost to the body"
-rule. It is 88.4% of the in-frame relocation, ~23,491 ticks per call, ~26,000 on each of the
-16 load frames.
+**The O(n^2) is real but small, because n is only 25.4.** `table_bytes`/call is 102 bytes, so
+the table holds ~25 entries and n^2 is 647 iterations at 7.2 ticks each — exactly what a
+compare loop should cost. Scaling was the wrong worry.
 
-**Priced honestly before anyone builds it:** averaged over the window it is 3,735/frame,
-*under* the 5,000–7,000 placement noise floor, so **a P50 reading cannot resolve it.** It
-must be judged on the load frames specifically, and that is now legitimate because E6
-established this harness has **zero run-to-run noise** on a fixed configuration. Expected
-effect: P95 from 1,161,152 to roughly 1,135,000 — real, accumulating, **not sufficient
-alone.** Take it as a gain to bank, not as the gate.
+**The actual shape is that the payload is walked TWICE.** `data_size`/call is 1,972 bytes; the
+lane swap walks the whole script region as u32 pairs, then the per-script normalize walks the
+same 936 words again as u16 (17.8 scripts/call x 52.6 words). Together **71.9% of the
+function** — 348,608 of the 478,080 in-frame relocation.
 
-**What is NOT viable:** caching the post-fixup image. The pass reads values that
-`ndsRelocApplyInternalPointerFixups` has already made **absolute**, so the normalized image
-is address-dependent, and `AnimForceResident` reads 0 because the destination is a shared
-scratch heap that different animations rotate through (which is also why 52 of 81
-force-loads are repeats). A per-asset destination buffer would fix that by trading RAM for
-the pass, which `PROJECT_GOAL.md` ranks as a good trade — but it is a change of ownership in
-the fighter animation memory model and needs the owner, not an overnight edit.
+**And hoisting them out of the frame IS viable, which corrects the other half of what this
+row first said.** All three sub-passes use only pointer *differences* (`script_end - value`,
+`value - base`), so their output is a pure function of the file bytes. What is
+address-dependent is only that they *read* the absolute pointers
+`ndsRelocApplyInternalPointerFixups` wrote — and that pass is 3.4% of the total. So a cache
+holding the payload with its table in OFFSET form and its script region already normalized,
+restored by memcpy plus the cheap internal fixups, removes ~72% of this function. That is a
+real refactor of the boundary computation to work in offsets, not a small edit.
+
+#### The ceiling on all of it, and where the gate lever actually is
+
+**The entire in-frame relocation is 21.5% of the load-frame premium, so no sub-optimization
+of it can be worth more than that.** Best case is ~19,400 of the 139,072 per load frame,
+moving P95 from 1,161,152 to roughly 1,142,000. Worth banking under the operating model's
+"keep every repeatable correctness-preserving gain" — **not the gate.**
+
+Averaged over the window the whole relocation is 3,735/frame, *under* the 5,000-7,000
+placement noise floor, so any version of this must be judged **on the load frames only** —
+legitimate now that E6 established this harness has zero run-to-run noise.
+
+**The remaining ~78% of the premium is the action change itself** — the status transition, the
+animation-script re-parse and the hit/collision work that make the fighter need a new
+animation in the first place. **That is where the next investigation goes, not here.**
 
 ### R2-06 E7 — the fighter fallback is REFUTED as the excursion cause. 0 of 256 draws fell back (2026-07-30)
 
