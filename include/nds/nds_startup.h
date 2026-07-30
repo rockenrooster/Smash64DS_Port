@@ -4053,6 +4053,13 @@ extern volatile u32 gNdsSObjWallpaperFinalKeyChangeCount;
 extern volatile u32 gNdsSObjWallpaperFinalPixelWriteCount;
 extern volatile u32 gNdsSObjBackgroundStagingClearBytes;
 extern volatile u32 gNdsSObjForegroundStagingClearBytes;
+/* R2-07 R4b foreground layer memo. Skip+Redraw sum to the foreground layers a
+ * run built; Overflow counts frames that exceeded the defer buffer and fell
+ * back to immediate drawing. A healthy settled Results scene is nearly all
+ * Skip; any Overflow at all means the buffer is undersized for the scene. */
+extern volatile u32 gNdsSObjLayerMemoSkipCount;
+extern volatile u32 gNdsSObjLayerMemoRedrawCount;
+extern volatile u32 gNdsSObjLayerMemoOverflowCount;
 extern volatile u32 gNdsRendererProfileFrameCount;
 extern volatile u32 gNdsRendererProfileLevel;
 extern volatile u32 gNdsRendererM2DetailedLedger;

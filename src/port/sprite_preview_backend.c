@@ -2382,6 +2382,93 @@ static u32 sNdsSObjOverlayForegroundPopulated;
 static SObj sNdsFastWallpaperSeedSnapshot;
 static u32 sNdsFastWallpaperSeedSnapshotValid;
 
+#if NDS_R2_RESULTS_LAYER_MEMO
+/* R2-07 R4b. Skip the whole foreground layer -- staging clear, every blit, the
+ * 320x240 -> 256x192 downscale and the 98,304-byte VRAM copy -- on any frame
+ * whose foreground draw set is byte-identical to the one already sitting in BG
+ * VRAM. Two censuses put those four stages at 41.03% (full-match ROM) and
+ * 44.38% (results-lab ROM) of the Results frame, and the overlay is
+ * single-buffered, so its contents persist by design -- `nds_platform.c:781-783`
+ * already documents relying on that.
+ *
+ * WHY THE DRAWS ARE DEFERRED RATHER THAN GATED IN PLACE. Draws stream one GObj
+ * at a time, and the very first one begins (and therefore clears) the staging
+ * layer. A test placed at the draw site could only ever save the blits, never
+ * the clear/downscale/copy that are three quarters of the cost. Buffering the
+ * layer's draws and deciding once at commit is what makes all four stages
+ * skippable. The list is consumed inside the same `gcDrawAll` pass that filled
+ * it, so no SObj can change between record and replay.
+ *
+ * WHY THE FINGERPRINT IS A RAW BYTE HASH AND NOT A FIELD LIST. Enumerating the
+ * blitter's inputs by hand -- attr, bmfmt, bmsiz, alpha, width/height, bmheight,
+ * scalex/scaley, red/green/blue, nbitmaps, bitmap, plus pos, envcolor and the
+ * cmt/cms/maskt/masks/lrs/lrt wrap state -- is exactly the kind of list that
+ * goes stale the first time a field is added and then fails as a stale-pixel
+ * bug rather than a build error. `SObj` places all of it contiguously from
+ * `sprite` to the end of the struct; the only members before it are the alloc
+ * and linked-list pointers, which cannot affect a pixel. So hash that whole
+ * span. It over-covers (`user_data` is in it) and over-covering costs a
+ * needless redraw, never a stale frame.
+ *
+ * WHAT IT DELIBERATELY DOES NOT COVER: the pixels behind `sprite.bitmap`. A
+ * mutated bitmap under an unchanged pointer would be missed. Sprite bitmaps are
+ * immutable loaded assets in this engine, and the affine wallpaper cache
+ * already rests on the same assumption. If that ever stops being true, this
+ * memo has to key on content, not on the pointer. */
+#define NDS_SOBJ_LAYER_MEMO_MAX 48u
+
+typedef struct NDSSObjLayerMemoDraw {
+    SObj *sobj;
+    s32 origin_x;
+    s32 origin_y;
+    u32 combine;
+    u32 cache_wallpaper;
+} NDSSObjLayerMemoDraw;
+
+static NDSSObjLayerMemoDraw sNdsSObjLayerMemoDraws[NDS_SOBJ_LAYER_MEMO_MAX];
+static u32 sNdsSObjLayerMemoCount;
+static u32 sNdsSObjLayerMemoOverflowed;
+static u32 sNdsSObjLayerMemoFingerprint;
+static u32 sNdsSObjLayerMemoResidentFingerprint;
+static u32 sNdsSObjLayerMemoResidentValid;
+
+volatile u32 gNdsSObjLayerMemoSkipCount;
+volatile u32 gNdsSObjLayerMemoRedrawCount;
+volatile u32 gNdsSObjLayerMemoOverflowCount;
+
+static u32 ndsSObjLayerMemoMix(u32 hash, u32 value)
+{
+    hash ^= value;
+    hash *= 16777619u;
+    return hash;
+}
+
+static u32 ndsSObjLayerMemoHashDraw(u32 hash, const NDSSObjLayerMemoDraw *draw)
+{
+    const u8 *bytes = (const u8 *)draw->sobj;
+    u32 offset = (u32)offsetof(SObj, sprite);
+    u32 size = (u32)sizeof(SObj);
+
+    hash = ndsSObjLayerMemoMix(hash, (u32)draw->origin_x);
+    hash = ndsSObjLayerMemoMix(hash, (u32)draw->origin_y);
+    hash = ndsSObjLayerMemoMix(hash, draw->combine);
+    hash = ndsSObjLayerMemoMix(hash, draw->cache_wallpaper);
+    for (; offset < size; offset++)
+    {
+        hash = ndsSObjLayerMemoMix(hash, (u32)bytes[offset]);
+    }
+    return hash;
+}
+
+/* The resident image is only trustworthy while nothing else owns BG VRAM.
+ * Called on scene change and whenever the layer is torn down. */
+void ndsSObjLayerMemoInvalidate(void)
+{
+    sNdsSObjLayerMemoResidentValid = FALSE;
+    sNdsSObjLayerMemoResidentFingerprint = 0u;
+}
+#endif
+
 void ndsSObjFastWallpaperOfferSeed(const SObj *seed)
 {
 #if NDS_FAST_WALLPAPER_AFFINE
@@ -2607,8 +2694,88 @@ static void ndsSObjPreviewFlushPendingWallpaperToStaging(void)
 #endif
 }
 
+#if NDS_R2_RESULTS_LAYER_MEMO
+/* Replay the buffered foreground draws into a freshly begun staging layer.
+ * Shared by the overflow escape hatch and the ordinary redraw, so the two can
+ * never disagree about ordering. */
+static void ndsSObjLayerMemoFlushBufferedDraws(void)
+{
+    u32 i;
+
+    if (sNdsSObjLayerMemoCount == 0u)
+    {
+        return;
+    }
+    if (sNdsSObjFramePendingWallpaper != NULL)
+    {
+        ndsSObjPreviewFlushPendingWallpaperToStaging();
+    }
+    ndsSObjPreviewBeginStagingLayer();
+    for (i = 0; i < sNdsSObjLayerMemoCount; i++)
+    {
+        const NDSSObjLayerMemoDraw *draw = &sNdsSObjLayerMemoDraws[i];
+
+        if (ndsDrawSObjIntoPreview(
+                draw->sobj, 0u, sNdsSObjFramePreview,
+                sNdsSObjFramePreviewPitch, 320u, 240u,
+                draw->origin_x, draw->origin_y,
+                draw->combine, draw->cache_wallpaper) != FALSE)
+        {
+            sNdsSObjFramePreviewDrawCount++;
+        }
+    }
+    sNdsSObjLayerMemoCount = 0u;
+}
+
+/* Decide the buffered foreground layer: skip it when the resident BG VRAM image
+ * already came from a byte-identical draw set, otherwise replay and re-commit.
+ * Returns TRUE when the layer was skipped entirely. */
+static u32 ndsSObjLayerMemoResolve(void)
+{
+    if (sNdsSObjLayerMemoCount == 0u)
+    {
+        return FALSE;
+    }
+    if ((sNdsSObjLayerMemoResidentValid != FALSE) &&
+        (sNdsSObjLayerMemoResidentFingerprint == sNdsSObjLayerMemoFingerprint))
+    {
+        /* The pending wallpaper still has to be resolved even though nothing
+         * is drawn: the affine path consumes it, and leaving it set would make
+         * the next frame believe a background draw is outstanding. */
+        sNdsSObjLayerMemoCount = 0u;
+        gNdsSObjLayerMemoSkipCount++;
+        return TRUE;
+    }
+    ndsSObjLayerMemoFlushBufferedDraws();
+    sNdsSObjLayerMemoResidentFingerprint = sNdsSObjLayerMemoFingerprint;
+    sNdsSObjLayerMemoResidentValid = TRUE;
+    gNdsSObjLayerMemoRedrawCount++;
+    return FALSE;
+}
+#endif
+
 static void ndsSObjPreviewCommitLayer(void)
 {
+#if NDS_R2_RESULTS_LAYER_MEMO
+    if (ndsSObjLayerMemoResolve() != FALSE)
+    {
+        /* Skipped. Drop the frame's layer state without clearing, blitting,
+         * downscaling or copying; BG VRAM already holds this exact image. */
+        sNdsSObjFramePendingWallpaper = NULL;
+        sNdsSObjFramePendingWallpaperCombine = 0u;
+        sNdsSObjFramePreview = NULL;
+        sNdsSObjFramePreviewPitch = 0u;
+        sNdsSObjFramePreviewDrawCount = 0u;
+        if (sNdsSObjFrameForeground != FALSE)
+        {
+            /* The overlay is still populated -- by last frame's identical
+             * commit -- so `ndsSObjPreviewEndFrame` must not clear BG3. */
+            sNdsSObjFrameForegroundCommitted = TRUE;
+            sNdsSObjOverlayForegroundPopulated = TRUE;
+        }
+        return;
+    }
+#endif
     if (sNdsSObjFramePendingWallpaper != NULL)
     {
         s32 final_wallpaper = FALSE;
@@ -2826,6 +2993,42 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
                     sobj = sobj->next;
                     continue;
                 }
+#if NDS_R2_RESULTS_LAYER_MEMO
+                /* Record instead of draw while the foreground layer is being
+                 * built. Only the foreground defers: the background is either
+                 * the affine wallpaper (which never stages at all) or a
+                 * fallback that must reach the buffer immediately, and buffering
+                 * it would reorder it behind the foreground it sits under. */
+                if ((foreground != FALSE) &&
+                    (sNdsSObjLayerMemoOverflowed == FALSE))
+                {
+                    if (sNdsSObjLayerMemoCount < NDS_SOBJ_LAYER_MEMO_MAX)
+                    {
+                        NDSSObjLayerMemoDraw *draw =
+                            &sNdsSObjLayerMemoDraws[sNdsSObjLayerMemoCount];
+
+                        draw->sobj = sobj;
+                        draw->origin_x = (s32)sobj->pos.x;
+                        draw->origin_y = (s32)sobj->pos.y;
+                        draw->combine = wallpaper_combine;
+                        draw->cache_wallpaper = cache_wallpaper;
+                        sNdsSObjLayerMemoFingerprint =
+                            ndsSObjLayerMemoHashDraw(
+                                sNdsSObjLayerMemoFingerprint, draw);
+                        sNdsSObjLayerMemoCount++;
+                        sobj = sobj->next;
+                        continue;
+                    }
+                    /* More foreground SObjs than the buffer holds. Fall through
+                     * to the immediate path and disable the memo for this
+                     * frame rather than dropping a draw -- but the already
+                     * buffered ones have to be flushed first or they would be
+                     * painted after the ones that overflowed. */
+                    sNdsSObjLayerMemoOverflowed = TRUE;
+                    gNdsSObjLayerMemoOverflowCount++;
+                    ndsSObjLayerMemoFlushBufferedDraws();
+                }
+#endif
                 if (sNdsSObjFramePendingWallpaper != NULL)
                 {
                     ndsSObjPreviewFlushPendingWallpaperToStaging();
@@ -2859,6 +3062,22 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 
 void ndsSObjPreviewBeginFrame(void)
 {
+#if NDS_R2_RESULTS_LAYER_MEMO
+    static u32 sLastSceneCurr = 0xFFFFFFFFu;
+
+    /* A scene change hands BG VRAM to someone else, so the resident image stops
+     * describing what is on screen. Invalidate before anything can be skipped
+     * against it -- this is the same class of miss as the boot-scoped OAM
+     * texture-name cache that guarded scene-scoped VRAM. */
+    if (sLastSceneCurr != (u32)gSCManagerSceneData.scene_curr)
+    {
+        sLastSceneCurr = (u32)gSCManagerSceneData.scene_curr;
+        ndsSObjLayerMemoInvalidate();
+    }
+    sNdsSObjLayerMemoCount = 0u;
+    sNdsSObjLayerMemoOverflowed = FALSE;
+    sNdsSObjLayerMemoFingerprint = 2166136261u;
+#endif
     ndsIFCommonNativeOamBeginFrame();
     if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle)
 #if NDS_R2_RESULTS_AFFINE

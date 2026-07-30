@@ -492,6 +492,12 @@ NDS_FAST_WALLPAPER_AFFINE ?= 0
 #   artifacts/visibility/2026-07-30_r207-r2b-results-control-software.png
 #   artifacts/visibility/2026-07-30_r207-r2b-results-candidate-affine.png
 NDS_R2_RESULTS_AFFINE ?= 1
+# R2-07 R4b. Skip the whole foreground software compositor -- staging clear,
+# blits, 320x240 -> 256x192 downscale, 98,304-byte VRAM copy -- on frames whose
+# foreground draw set is byte-identical to the image already resident in BG
+# VRAM. Two independent censuses put those four stages at 41.03%/44.38% of the
+# Results frame. Default off until it is measured and its fidelity approved.
+NDS_R2_RESULTS_LAYER_MEMO ?= 0
 # Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
 # open/read/flush/play while preserving all BGM state/counters so the rest of
 # the system believes BGM is active. Never set in a published target.
@@ -2199,6 +2205,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
 		echo '#define NDS_FAST_WALLPAPER_AFFINE $(NDS_FAST_WALLPAPER_AFFINE)'; \
 		echo '#define NDS_R2_RESULTS_AFFINE $(NDS_R2_RESULTS_AFFINE)'; \
+		echo '#define NDS_R2_RESULTS_LAYER_MEMO $(NDS_R2_RESULTS_LAYER_MEMO)'; \
 		echo '#define NDS_BGM_FALSIFIER_OFF $(NDS_BGM_FALSIFIER_OFF)'; \
 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \

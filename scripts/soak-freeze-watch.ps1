@@ -376,6 +376,12 @@ try {
             # Non-zero proves the native OAM path's retained texture names were
             # dropped with the VRAM behind them. Must rise once per scene change.
             'gNdsIFCommonNativeOamTextureDiscardCount',
+            # R2-07 R4b. Skip+Redraw = foreground layers built; a settled
+            # Results scene should be nearly all Skip. Any Overflow means the
+            # defer buffer is undersized and the memo silently disabled itself.
+            'gNdsSObjLayerMemoSkipCount',
+            'gNdsSObjLayerMemoRedrawCount',
+            'gNdsSObjLayerMemoOverflowCount',
             'gNdsSCVSBattleLifecycleArenaAdapterCount',
             'gNdsSCVSBattleOriginalGObjCount',
             'gNdsTaskmanMallocCount',

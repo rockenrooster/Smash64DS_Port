@@ -1,0 +1,156 @@
+profile      D:\Stuff\DevFolder\Smash64DS_Port\artifacts\task37-census\arm9-profile.csv
+elf          D:\Stuff\DevFolder\Smash64DS_Port\builds\build-t37-r4b-on\smash64ds-results-lab-hwtri.elf
+pc rows      799,079
+cycles       224,079,480
+unattributed 2,793 (0.00% -- BIOS, ITCM stubs, data)
+symbols hit  334 of 3,356 FUNC symbols
+
+section sizes
+  .itcm               29,864
+  .text.hot            4,204  free 3,988 of cap 8,192
+  .text.hot.draw       1,472  free 6,720 of cap 8,192
+  .main.bss        1,699,728
+
+== 0. stall accounting by tier (placement can only touch non-mem stall) ==
+   excluding idle spin: armWaitForIrq
+tier                 cycles       insns  cyc/insn  nonmem stall     %   mem stall     %
+--------------  -----------  ----------  --------  ------------  ----  ----------  ----
+.itcm            39,281,530  12,775,243      3.07     2,750,223   7.0  23,756,064  60.5
+.text.hot           818,849     274,760      2.98       172,628  21.1     371,461  45.4
+.text.hot.draw    4,162,431   2,450,986      1.70       690,002  16.6   1,021,443  24.5
+.main           100,352,482  35,139,805      2.86    27,412,222  27.3  37,800,455  37.7
+
+== A. top 10 symbols by measured cycles ==
+    cycles   %tot  bytes     cyc/byte  tier   symbol
+----------  -----  -----  -----------  -----  ----------------------------------------------
+79,461,395  35.46      8  9,932,674.4  .itcm  armWaitForIrq
+23,316,327  10.41  5,692      4,096.3  .main  ndsRendererExecuteNativeFighterRootHardware
+13,946,936   6.22     86    162,173.7  .main  __aeabi_lmul (+1 alias)
+12,920,641   5.77    140     92,290.3  .itcm  memset
+12,494,362   5.58    170     73,496.2  .itcm  memcpy
+ 8,119,696   3.62  8,756        927.3  .main  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+ 6,526,718   2.91    448     14,568.6  .main  ndsFighterMarioFoxVisitDLDrawCommand
+ 3,714,855   1.66  1,292      2,875.3  .main  ndsRendererNativePrepareDirectRun
+ 3,108,692   1.39  2,260      1,375.5  .main  ndsRendererFastPrepareRawSlots
+ 2,901,398   1.29    288     10,074.3  .itcm  ndsRendererMtxMul20p12
+
+== B. .itcm rent: 83 residents covering 29,790 of 29,864 section bytes (74 unnamed); 37 never executed (21,012 B idle) ==
+   cyc/byte      cycles  bytes      insns  symbol
+-----------  ----------  -----  ---------  ----------------------------------------------------------
+9,932,674.4  79,461,395      8        303  armWaitForIrq
+   92,290.3  12,920,641    140  2,368,214  memset
+   73,496.2  12,494,362    170  2,706,477  memcpy
+   10,074.3   2,901,398    288  1,922,299  ndsRendererMtxMul20p12
+    6,512.3     377,715     58     51,440  ndsFTParamsInvalidateFighterParts
+    5,968.1     214,850     36    184,725  __aeabi_fcmpeq
+    5,588.8     391,213     70    196,200  memcmp
+    5,520.8     794,989    144    277,683  ndsRendererNativeApplyStateSpan
+    4,441.8   1,341,430    302    483,923  ndsRendererSyncTextureTile
+    2,576.9     608,158    236    474,293  __ieee754_sqrtf
+    2,446.7   1,027,620    420    232,802  ndsRendererNativeApplyStateDelta
+    1,794.9     717,976    400    610,446  __aeabi_fadd
+    1,604.1     564,637    352    514,769  __aeabi_fdiv (+1 alias)
+    1,447.8     590,710    408    528,044  __aeabi_fmul (+1 alias)
+    1,332.0       5,328      4      5,328  __aeabi_fsub
+    1,325.7     100,753     76      4,832  armCopyMem32
+    1,089.6     100,244     92     80,498  __aeabi_f2iz (+1 alias)
+    1,089.3     154,679    142     92,920  ndsRendererRecordTextureState
+    1,037.1      53,930     52     49,803  __aeabi_fcmple
+    1,028.6   2,670,328  2,596  1,204,481  ndsRendererHardwareSubmitVertex
+      960.4      96,040    100     72,360  ndsRendererHardwarePolyFmt
+      921.4     158,480    172    134,996  __aeabi_l2f (+1 alias)
+      853.2      44,366     52     38,597  __aeabi_fcmplt
+      827.7      43,040     52     38,480  __aeabi_fcmpgt
+      826.5     241,325    292     89,960  ndsRendererHardwareGetLightShadeLut
+      767.5      70,614     92     52,124  __aeabi_i2f
+      681.1      61,298     90     16,200  ndsRendererRecordLoadBlock
+      639.3     217,356    340    163,761  ndsRendererRecordSetTile
+      620.6     134,046    216     98,480  ndsRendererMtxLoadN64ToDS20p12
+      450.0      12,600     28      9,800  __aeabi_fcmpun
+      404.3      11,320     28      4,124  armDCacheFlush
+      403.1      11,288     28      4,120  armDCacheInvalidate
+      220.6      37,940    172     30,960  ndsRendererRecordSetTileSize
+      151.1      32,030    212      5,188  threadBlock
+      138.8      31,653    228      9,676  __arm_excpt_irq
+      136.4       9,000     66      5,760  ndsRendererHardwareTextureSourceBytes
+       69.0       3,036     44      1,104  armContextSave
+       50.1       6,212    124      3,036  threadSwitchTo
+       25.7       6,160    240      4,320  threadUnblockAllByMask
+       20.0         640     32        480  __floatsisf (+1 alias)
+        8.6         276     32         92  armContextLoad
+        8.0         320     40        160  __aeabi_ui2f (+1 alias)
+        6.2         520     84        440  __aeabi_f2uiz (+1 alias)
+        5.5       1,156    212        548  threadUnblockOneByValue
+        3.3          40     12         12  armDrainWriteBuffer
+        0.0      19,813      0      1,288  armContextLoadFromSvc
+        0.0           0    444          0  __addsf3 (+1 alias)
+        0.0           0     24          0  __aeabi_cfcmpeq (+1 alias)
+        0.0           0     40          0  __aeabi_cfrcmple
+        0.0           0     52          0  __aeabi_fcmpge
+        0.0           0    456          0  __aeabi_frsub
+        0.0           0    188          0  __aeabi_ul2f (+1 alias)
+        0.0           0     12          0  __arm_excpt_dabt
+        0.0           0      4          0  __arm_excpt_pabt
+        0.0           0      4          0  __arm_excpt_rst
+        0.0           0     12          0  __arm_excpt_und
+        0.0           0    100          0  __cmpsf2 (+2 alias)
+        0.0           0     48          0  __excpt_entry
+        0.0           0    116          0  __gesf2 (+1 alias)
+        0.0           0    108          0  __lesf2 (+1 alias)
+        0.0           0      8          0  __ndsRendererHardwareClipVertexNdcDepth_from_arm
+        0.0           0      8          0  __ndsRendererHardwareClipVertex_from_arm
+        0.0           0     24          0  __nds_task16_libgcc_fcmpge_golden
+        0.0           0     24          0  __nds_task16_libgcc_fcmpgt_golden
+        0.0           0     24          0  __nds_task16_libgcc_fcmple_golden
+        0.0           0     24          0  __nds_task16_libgcc_fcmplt_golden
+        0.0           0     56          0  __nds_task16_libgcc_fcmpun_golden (+1 alias)
+        0.0           0    448          0  __nds_task16_libgcc_fsub_golden (+1 alias)
+        0.0           0     24          0  __nds_task9_libgcc_fcmpeq_golden
+        0.0           0     40          0  armDCacheFlushAll
+        0.0           0     12          0  armICacheInvalidateAll
+        0.0           0  3,528          0  ndsRendererExecuteNativeFighterOwnerProduction
+        0.0           0    460          0  ndsRendererHardwareLitShadeColorPrepared
+        0.0           0    544          0  ndsRendererNativeEmitDenseRawRun
+        0.0           0    628          0  ndsRendererNativeEmitProductionCrossRun.constprop.0
+        0.0           0    376          0  ndsRendererNativeEmitProductionRawTexturedRun
+        0.0           0    188          0  ndsRendererNativeEmitProductionRawUntexturedRun
+        0.0           0  2,708          0  ndsRendererNativePrepareProductionRun
+        0.0           0    536          0  ndsRendererNativeShadeProductionActions.constprop.0.isra.0
+        0.0           0  7,144          0  ndsRendererScanList
+        0.0           0  2,892          0  ndsRendererSubmitHardwareTriangle
+        0.0           0    520          0  ndsRendererTask36ReplayRun
+        0.0           0    312          0  threadUnblockAllByValue
+
+== C. unplaced candidates for 3,988 free .text.hot bytes, ranked by recoverable (non-mem) stall ==
+pack  nonmem stall      cycles  bytes  cyc/insn  stall/byte  symbol
+----  ------------  ----------  -----  --------  ----------  ----------------------------------------------
+-        5,575,181  23,316,327  5,692      2.61       979.5  ndsRendererExecuteNativeFighterRootHardware
+fit      4,247,398  13,946,936     86      1.82    49,388.3  __aeabi_lmul (+1 alias)
+-        2,303,570   8,119,696  8,756      6.73       263.1  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0
+fit      1,403,719   3,714,855  1,292      4.19     1,086.5  ndsRendererNativePrepareDirectRun
+fit      1,177,707   3,108,692  2,260      2.65       521.1  ndsRendererFastPrepareRawSlots
+-        1,109,360   6,526,718    448      2.52     2,476.2  ndsFighterMarioFoxVisitDLDrawCommand
+-        1,088,067   1,873,359  7,196      7.26       151.2  ndsRendererHardwareResolveOrBindTexture
+-          616,232   1,089,485    428      4.21     1,439.8  ndsRendererHardwarePrepareLitDirection
+-          494,679   1,555,438  1,324      4.48       373.6  ndsRendererHardwareBeginTriangleBatch
+fit        455,323   1,904,362    272      3.85     1,674.0  ndsRendererAcquireCurrentMatrixSnapshot
+
+greedy pack claims 3,910 of 3,988 free bytes and reaches 7,284,147 non-mem stall cycles (3.25% of measured)
+
+== D. ITCM admissions by non-mem stall per byte (2,872 B free now, +21,012 B recoverable by eviction) ==
+slot  stall/byte  nonmem stall  bytes  cyc/insn  tier   symbol
+----  ----------  ------------  -----  --------  -----  ---------------------------------------
+free      49,388     4,247,398     86      1.82  .main  __aeabi_lmul (+1 alias)
+free       3,183       292,799     92      1.89  .main  ndsRendererRecordTransformedTriangle
+free       2,588       393,393    152      1.64  .main  ndsFighterDLDrawAppendTriangle.isra.0
+free       2,476     1,109,360    448      2.52  .main  ndsFighterMarioFoxVisitDLDrawCommand
+free       2,437       292,443    120      1.58  .main  ndsRendererDecodeInputVertex.part.0
+free       2,224       169,002     76      9.26  .main  ndsRendererHardwareColorSource
+free       2,007       176,621     88      5.83  .main  ndsRendererHardwareUseMaterialColor
+free       1,686       155,080     92      6.76  .main  ndsRendererHardwareUseVertexColor
+free       1,674       455,323    272      3.85  .main  ndsRendererAcquireCurrentMatrixSnapshot
+free       1,440       616,232    428      4.21  .main  ndsRendererHardwarePrepareLitDirection
+
+zero-eviction pack: 1,854 B, 7,907,651 non-mem stall cycles in reach
+with eviction:      1,854 B, 7,907,651 non-mem stall cycles in reach
+wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\task37-census\census.json
