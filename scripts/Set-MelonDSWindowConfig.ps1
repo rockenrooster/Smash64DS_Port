@@ -80,6 +80,17 @@ foreach ($rootInput in $rootInputs) {
             $arm7Port = Get-MelonDSRunnerPort -RunnerSlot $slot -Cpu ARM7
             $after = Set-MelonDSAutomationProfile -Text $before `
                 -GdbPort $arm9Port -Arm7Port $arm7Port -MuteAudio
+        } elseif ($relative -ieq 'melonds-attributor\melonDS.toml') {
+            # R2-00a's stall attributor. It is a different melonDS build kept
+            # repo-local so past measurements stay comparable, and nothing in the
+            # repo assigns it ports or a renderer -- so normalize only what is
+            # genuinely canonical for it (the window, and DLDI on with its own
+            # local image) rather than inventing a full profile and silently
+            # changing a measurement instrument. Until 2026-07-29 it was
+            # unclassified, which made this whole normalizer throw on every run.
+            $kind = 'attributor'
+            $after = Set-MelonDSWindowProfile -Text $before
+            $after = Set-MelonDSDldiProfile -Text $after -ImagePath 'dldi.bin'
         } else {
             throw "Unclassified melonDS.toml under repo emulators: $relative"
         }

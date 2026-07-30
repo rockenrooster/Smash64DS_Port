@@ -6,6 +6,16 @@ $script:MelonDSCanonicalWindowWidth = 416
 $script:MelonDSCanonicalWindowHeight = 664
 $script:MelonDSCanonicalGeometry =
     'AdnQywADAAAAAAAgAAAAGAAAAa8AAAKnAAAAIAAAADcAAAGvAAACpwAAAAAAAAAACgAAAAAgAAAANwAAAa8AAAKn'
+# This library is dot-sourced, so $PSScriptRoot here is scripts\lib. Resolve the
+# repo root once: Get-ProjectRoot takes a -ScriptRoot from its caller and is not
+# usable from inside the library itself.
+$script:MelonDSRepoRoot = [System.IO.Path]::GetFullPath(
+    (Join-Path $PSScriptRoot '..\..'))
+# The single repo-owned DLDI SD image. Runner slots have no dldi.bin of their
+# own, so every profile points at this one absolute path.
+$script:MelonDSCanonicalDldiImage =
+    ([System.IO.Path]::GetFullPath((Join-Path $script:MelonDSRepoRoot `
+        'emulators\melonds\dldi.bin'))) -replace '\\', '/'
 
 function Get-ProjectRoot {
     param([string]$ScriptRoot)
@@ -302,6 +312,43 @@ function Set-MelonDSTomlRootValue {
     return $root + $Text.Substring($rootLength)
 }
 
+# The owner reproduces the freeze bugs in melonDS "with DLDI checked", and on
+# 2026-07-29 an audit found the setting was pinned by nothing: the manual
+# emulator had [DLDI] Enable = true while all nine runner slots had it false, so
+# every scripted verifier in this campaign ran a different I/O configuration than
+# the owner plays. DLDI changes how NitroFS is reached -- on a real flashcart the
+# card interface belongs to the cart, so calico resolves nitro:/ by reading the
+# .nds image back off the SD card through the DLDI driver instead of through the
+# card ROM interface. That is the configuration the published ROM actually runs
+# in, and it is now pinned ON for BOTH profiles so manual and automated runs
+# exercise the same path.
+#
+# ImagePath is forced to the one repo-owned image because the runner slots have
+# no dldi.bin of their own and a relative path would resolve, per slot, to a file
+# that does not exist. The automation profile also forces ReadOnly: up to nine
+# runners share that single image concurrently and a writable share corrupts it.
+function Set-MelonDSDldiProfile {
+    param(
+        [Parameter(Mandatory=$true)]
+        [AllowEmptyString()]
+        [string]$Text,
+        [switch]$ReadOnly,
+        # The stall attributor ships its own dldi.bin and its whole value is
+        # being byte-comparable to past measurements, so it keeps its local
+        # image instead of being repointed at the shared one.
+        [string]$ImagePath = $script:MelonDSCanonicalDldiImage
+    )
+
+    $Text = Set-MelonDSTomlValue -Text $Text -Section 'DLDI' `
+        -Key 'Enable' -Value 'true'
+    $Text = Set-MelonDSTomlValue -Text $Text -Section 'DLDI' `
+        -Key 'ImagePath' -Value "`"$ImagePath`""
+    $Text = Set-MelonDSTomlValue -Text $Text -Section 'DLDI' `
+        -Key 'FolderSync' -Value 'false'
+    return Set-MelonDSTomlValue -Text $Text -Section 'DLDI' `
+        -Key 'ReadOnly' -Value ($ReadOnly ? 'true' : 'false')
+}
+
 function Set-MelonDSManualProfile {
     param(
         [Parameter(Mandatory=$true)]
@@ -310,6 +357,7 @@ function Set-MelonDSManualProfile {
     )
 
     $Text = Set-MelonDSWindowProfile -Text $Text
+    $Text = Set-MelonDSDldiProfile -Text $Text
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'PauseLostFocus' -Value 'false'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'TargetFPS' -Value '60.0'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'LimitFPS' -Value 'true'
@@ -342,6 +390,7 @@ function Set-MelonDSAutomationProfile {
     )
 
     $Text = Set-MelonDSWindowProfile -Text $Text
+    $Text = Set-MelonDSDldiProfile -Text $Text -ReadOnly
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'PauseLostFocus' -Value 'false'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'TargetFPS' -Value '60.0'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'LimitFPS' -Value 'false'

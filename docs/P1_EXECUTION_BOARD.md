@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-27 22:45 Central
+Updated: 2026-07-29 20:20 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
@@ -44,6 +44,138 @@ target writes under `$(BUILD)` by design.
 that way: publishing needs the owner's authorization for that specific push, so
 `build.ps1` will warn that the local build differs from the audited reference. That
 warning is expected here and is not a source regression.
+
+## HARNESS: DLDI was pinned by nothing, so automation never ran the owner's I/O configuration (2026-07-29)
+
+The owner reports many freeze bugs and adds: *"I can reproduce the bugs in melonDS
+with dldi checked."* That points at a configuration nothing in this repo controlled.
+
+`[DLDI] Enable` was set in eleven `melonDS.toml` files and normalized by none of
+them. Measured state before the fix:
+
+```text
+emulators/melonds/melonDS.toml           Enable = true      <- what the owner plays
+emulators/melonds-attributor/...         Enable = false
+emulators/melonds-runners/slot0..slot8   Enable = false     <- every scripted run
+```
+
+Neither `Set-MelonDSManualProfile` nor `Set-MelonDSAutomationProfile` touched the
+section, so the split was invisible and permanent. **Every sharded verifier run in
+this campaign used different I/O than the owner's play session**, which is a
+sufficient explanation for "Boundary green on every graduation" coexisting with
+"lots of random freezes": no automated run was in a position to see them.
+
+Why it matters mechanically, not just procedurally: DLDI changes how `nitro:/` is
+reached. On a flashcart the card interface belongs to the cart, so calico resolves
+NitroFS by reading the `.nds` image back off the SD card through the DLDI driver
+rather than through the card ROM interface. That is the path the published ROM runs
+on real hardware, and the port reads `nitro:/` **by string path at runtime** — a GDB
+attach during the results-screen probe caught the PC inside
+`nitroromResolvePath` resolving `"FTMarioAnimWai"`. So the freeze class and the
+DLDI setting plausibly share a mechanism, and the DLDI-off default hid it.
+
+Fixed at the seam: a new `Set-MelonDSDldiProfile` is applied by both canonical
+profiles, `check-melonds-policy.ps1` asserts the `[DLDI]` block per section (a bare
+`Enable = true` needle would be satisfied by the unrelated `[Instance0.Gdb]` key),
+and `Set-MelonDSWindowConfig.ps1` normalizes all eleven configs. `ImagePath` is
+forced to the one repo-owned `emulators/melonds/dldi.bin` because the runner slots
+have no image of their own and a relative path resolved, per slot, to a file that
+does not exist; the automation profile additionally forces `ReadOnly = true`
+because up to nine runners share that single image concurrently.
+
+The assertion is negative-tested against each way it could be wrong: DLDI off, a
+relative image path, a writable shared automation image, and a config whose only
+`Enable = true` is GDB's — all four are rejected, and both real profiles are
+accepted.
+
+Two further items this exposed, both fixed here:
+
+- `Set-MelonDSWindowConfig.ps1` **threw on every invocation** — R2-00a added
+  `emulators/melonds-attributor/` and the normalizer's classifier had no branch for
+  it, so the one tool that applies canonical configs to disk had been dead since.
+  It now classifies the attributor and normalizes only the window and DLDI for it,
+  keeping its local `dldi.bin`, because nothing in the repo assigns that build
+  ports or a renderer and inventing them would silently change a measurement
+  instrument.
+- Nineteen `Start-Process` sites in `scripts/` still lacked `-WindowStyle Hidden`
+  despite the CLAUDE.md rule; every melonDS launch had been fixed by hand and
+  almost every `gdb` launch had not. Also fixed and also now machine-checked.
+  See commit 69c11bb.
+
+**Standing consequence: a setting that changes reproduction must be pinned by a
+profile and asserted by a checker, not left to whatever is on disk.** Three of
+today's four harness defects were the same shape — a rule applied by readers
+instead of by code.
+
+## R2-07 R0 MEASURED — the VS Results screen is 21.9M ticks per frame, 1.5 FPS (2026-07-29)
+
+The owner: *"the results screen runs at less than 1 fps."* Confirmed, and the number
+is far worse than the battle frame this campaign has spent weeks on. R2-07's clause
+names the "GAME SET → results flow" and holds it to the same P95 ≤ 1.12M; nothing
+had ever measured it.
+
+Method, zero builds. The Results loop is the branch at `src/port/taskman_seam.c:6950`
+and it carries no instrument: no `ndsPlatformBeginFrame`, no debug HUD, no VBlank
+pacing, and it never increments `gNdsBattlePlayablePacingPresentedFrames` — which is
+why the on-screen FPS reads `0.0` and the tick HUD reads `n:0` on that screen, and
+why photographing the HUD there yields nothing. GDB stops freeze the emulator, so
+`sVBlankCount` does not advance while stopped: a line breakpoint at each phase
+boundary turns the loop into an exact VBlank timeline, and one breakpoint on
+`ndsMNVSResultsRecordFrame` with an `ignore` count prices whole iterations. Both
+are host-speed independent.
+
+Cost is not flat across the scene — it climbs steeply as the wallpaper, fighters and
+text come in, so where the window sits changes the answer by a factor of twenty:
+
+| window | iterations | VBlanks/iter | ticks/iter | guest FPS |
+| --- | --- | --- | --- | --- |
+| results tics 1–15 | 15 | 2.0 | 1,120,380 | 30.0 |
+| results tics 1–101 | 101 | 8.5 | 4,781,028 | 7.0 |
+| results tics 131–181 | 50 | **39.0** | **21,858,614** | **1.5** |
+
+Partition of the expensive window (50 iterations, 1,951 VBlanks; label order
+verified as a consistent rotation, so `-Os` did not reorder the body and charging
+each interval to the boundary that opened it is valid):
+
+| phase | ticks/iter | share |
+| --- | --- | --- |
+| `tfunc->scene_draw()` | **19,550,631** | **89.4%** |
+| `ndsSObjPreviewEndFrame` (commit) | 1,187,603 | 5.4% |
+| `tfunc->task_update()` | 1,120,380 | 5.1% |
+| input, audio, record, heapReset, endFrame | 0 each | 0.0% |
+
+**The scene draw is 17.5× the entire frame budget by itself.** Not the sprite
+commit, and not the source update — both of those are about one frame's budget each,
+which is roughly what the battle path spends on comparable work.
+
+Two structural reasons already visible in the source, neither yet measured
+individually:
+
+1. **The native OAM path is gated to the battle scene.** In
+   `src/port/sprite_preview_backend.c:2410`, `ndsIFCommonNativeOamDrawGObj` is only
+   attempted when `scene_curr == nSCKindVSBattle`. On Results every sprite instead
+   goes through the software blitter `ndsDrawSObjIntoPreview` into a 320×240
+   staging buffer, which is then nearest-downscaled to 256×192 in place and
+   row-copied into BG VRAM. The DS has hardware sprites; this scene does not use
+   them.
+2. **Two full layers per frame.** `ndsDrawLayeredSObjFrame` splits Results by
+   `dl_link_id != 26`, and each layer opens with
+   `ndsPlatformBeginOriginalSpritePreview(320, 240, …)` — a 153,600-byte clear.
+   Measured: `gNdsOriginalSpritePreviewCommitCount` advanced 22 in 101 iterations
+   with `gNdsOriginalSpriteBg2CopyBytes` +2,162,688 = 22 × 98,304, i.e. exactly one
+   full 256×192 background commit per commit and no foreground commits at all in
+   that window.
+
+Also worth recording, because it is the *visible* half of the owner's complaint: the
+hand-off is dead air. A real-time capture put the frozen last battle frame on screen
+at t≈105 s and "FOX WINS" at t≈135 s. The scene load in between reloads both
+fighters' asset sets by string path through NitroFS.
+
+Next, in this order: attribute the 19.55M inside `scene_draw` before touching
+anything (the same loop that produced this table can bracket it), then decide
+between admitting the native OAM path to Results and reducing the two-layer 320×240
+software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
+not a cause.
 
 ## R2-03 E63 SIZED — a flash-colour table is 2,164 bytes of ROM, and the `.rgba` field is confirmed normals (2026-07-29)
 

@@ -52,6 +52,32 @@ foreach ($needle in @(
         "Manual melonDS profile is missing: $needle"
 }
 
+# DLDI must be ON in both profiles and must point at the one repo-owned image.
+# It was pinned by nothing until 2026-07-29: the manual emulator had it true and
+# all nine runner slots had it false, so no scripted verifier ran the I/O
+# configuration the owner plays in -- which is a plausible reason the freeze
+# reports never reproduced under automation. Asserted per-section, because a bare
+# 'Enable = true' needle would be satisfied by the unrelated [Instance0.Gdb] key.
+$dldiImage = ([System.IO.Path]::GetFullPath((Join-Path $Root `
+    'emulators\melonds\dldi.bin'))) -replace '\\', '/'
+foreach ($profile in @(
+    @{ Name = 'manual'; Text = $manual; ReadOnly = 'false' },
+    @{ Name = 'automation'
+       Text = (Set-MelonDSAutomationProfile -Text '' -GdbPort 4463 `
+                   -Arm7Port 4464 -MuteAudio)
+       ReadOnly = 'true' }
+)) {
+    $dldi = [regex]::Match($profile.Text,
+        '(?ms)^\[DLDI\]\r?\n(.*?)(?=^\[|\z)')
+    Assert-Policy $dldi.Success `
+        "melonDS $($profile.Name) profile has no [DLDI] section."
+    foreach ($needle in @('Enable = true', "ImagePath = `"$dldiImage`"",
+        'FolderSync = false', "ReadOnly = $($profile.ReadOnly)")) {
+        Assert-Policy $dldi.Groups[1].Value.Contains($needle) `
+            "melonDS $($profile.Name) [DLDI] is missing: $needle"
+    }
+}
+
 $automation = Set-MelonDSAutomationProfile -Text '' `
     -GdbPort 4463 -Arm7Port 4464 -MuteAudio
 foreach ($needle in @(
