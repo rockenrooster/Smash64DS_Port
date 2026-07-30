@@ -486,6 +486,77 @@ Superseded text follows for provenance. The two candidates as first written:
   the change it measures. Either stamp `git status --porcelain` alongside it or refuse to
   write an artifact from a dirty tree.
 
+### R2-06 E7 — the fighter fallback is REFUTED as the excursion cause. 0 of 256 draws fell back (2026-07-30)
+
+E53 named this **"the highest-value unowned row on this board"** and asked for exactly one
+build: read the fallback counters on the excursion frames. Done, and the answer closes the
+row. `NDS_TASK68_FALLBACK_CENSUS=1`, same 128-frame window,
+`artifacts/performance/r206-e7-fallback-census-128{.json,-rows.csv}`:
+
+```
+native-owner: 256 draws over 128 frames, 256 eligible, 0 fell back (0.0%)
+  [animLock:0 selected:0 displayList:0 materialCount:0 validate:0 matrices:0
+   materialPrep:0 inputs:0 contract:0 postGx:0 begin:0]
+frames with a fallback: 0 of 128
+```
+
+**Two fighters x 128 frames = 256 draws, every one eligible, every one native, at every one
+of the eleven rejection points.** So E53's leading story — the fighter abandoning the native
+owner for the generic interpreter — **cannot be the excursion on the shipped build.** E32's
+shuffle fold closed it, precisely as E53 predicted it would: with
+`NDS_R2_FIGHTER_SHUFFLE_FOLD=1` the condition at `reloc_backend_renderer_dl.c:12295`
+narrows to `is_use_animlocks` alone, and animlocks never fire in this scene (E31/E32 both
+measured 0; this measures 0 over a fourth window).
+
+**Consequence for the queue: E32's parked flash residual is no longer blocking a gate
+lever.** The lever it was blocking has already been delivered.
+
+**Effects are refuted too, and that cost no build** — Task 39's counters are already in the
+shipped tick-HUD ROM. Over the whole run: `HitSparkSpawnCount=4`, `HitSparkDrawCount=0`,
+`ShieldDrawCount=0`, `FlashDrawCount=20`, `ArenaRejectCount=0`, `ObjVramBytes=22,528`.
+**Four hit sparks in 924 frames cannot produce 8 over-gate frames in 128.** (Its tick
+brackets all read 0, so Task 39 timing is gated elsewhere — a separate, minor instrument
+gap, not a result.)
+
+#### What the excursion actually is: `SRC`, and the draw brackets are FLAT
+
+The 8 over-gate frames in `r206-head-control-128` are 809, 842, 843, 869, 890, 898, 909,
+924 — gaps 33/1/26/21/8/11/15, so a recurring condition firing on ~6% of frames, not one
+event. Median clean frame against median over-gate frame:
+
+| bucket | clean median | over-gate median | delta |
+|---|---:|---:|---:|
+| `FTR` | 390,208 | 388,896 | **−1,312** |
+| `STG` | 176,736 | 174,240 | **−2,496** |
+| `SRC` | 307,328 | 550,016 | **+242,688** |
+| `MISC` | 47,200 | 67,232 | +20,032 |
+| `AUD` | 1,280 | 1,568 | +288 |
+| `OTHR` | 161,088 | 503,008 | +341,920 |
+| **`WORK-H`** | **974,848** | **1,208,320** | **+233,472** |
+
+`SRC` is `gNdsTickHudSourceTicks` (`taskman_seam.c:4937`) — its own bracket, the source
+update, **not a draw bucket**. `OTHR` is `ALL − named` and Task 66's own comment says it is
+mostly the VBlank wait, which `WORK-H` already subtracts, so its +341,920 is quantisation
+and idle rather than work. Netting the real buckets: +242,688 +20,032 −1,312 −2,496 +288
+= **+259,200 against a WORK-H rise of +233,472. `SRC` alone is ~92% of the excursion.**
+
+**The specialized draw owners are not involved at all** — `FTR` and `STG` are *lower* on the
+expensive frames. That re-confirms E35's original "`SRC` owns the gate, 25 of 26 over-gate
+frames" on the current build, and it **qualifies how E53's symbol profile must be read**:
+E53 ran `NDS_TASK37_PROFILE=1 NDS_TICK_HUD_DRAW=0`, so its symbol attribution could not
+separate draw from update, and it charged 292,899 ticks of renderer symbols to the
+excursion under the heading "a second renderer running". Those symbols are real, but the
+bracket that owns the time is the source update. Frame 909 here (`WORK-H` 1,641,792, `SRC`
+920,000) is the same event as E53's 910–913, so the two profiles are of one thing.
+
+**Next step, and it is a profile not a build-and-hope.** Attribute by BRACKET, not by
+symbol: the question is what the source update does on ~6% of frames that it does not do
+otherwise. Frame 809 is a separate cause and should be excluded from the pool — its `AUD`
+is 91,904 against a clean median of 1,280 (71x) while its `SRC` is the *lowest* of the
+eight, so it is an audio event, not the `SRC` condition. Do **not** re-run the fallback
+census; it is answered. Do **not** re-profile by symbol alone; E53 already did and the
+bracket ownership is what was missing.
+
 ### R2-06 E6 REFUTED — the Horner fold, and why E61 §5's −56,774 was never available (2026-07-29)
 
 E61 §5 tabled three routes for the cubic and E64b took only the first. The third,
