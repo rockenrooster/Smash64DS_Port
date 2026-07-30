@@ -480,9 +480,20 @@ function Main {
             @('-S', $battleRoot, '-B', $cmakeBuild, '-A', 'x64',
               '-DSSB64_VERSION=us', "-DPython3_EXECUTABLE=$($python.Path)") $battleRoot `
             $hostToolEnvironment
+        # `-Jobs 0` means "let the build tool decide", which is why the make path
+        # below guards with `if ($Jobs -gt 0)`. This call did not, so it passed
+        # `cmake --build --parallel 0` -- which cmake rejects with a usage dump and
+        # exit 1. Since 0 is the DEFAULT, `.\build.ps1 -Rom <rom>` could not
+        # complete at all without also passing -Jobs; the failure looked like a
+        # broken asset extractor rather than a bad argument. Omit the flag entirely
+        # so cmake applies its own default, matching the make path's semantics.
+        $extractArguments = @('--build', $cmakeBuild, '--config', 'Release',
+                              '--target', 'ExtractAssets')
+        if ($Jobs -gt 0) {
+            $extractArguments += @('--parallel', [string]$Jobs)
+        }
         Invoke-LoggedProcess 'build-BattleShip-ExtractAssets' $cmake `
-            @('--build', $cmakeBuild, '--config', 'Release', '--target', 'ExtractAssets',
-              '--parallel', [string]$Jobs) $battleRoot $hostToolEnvironment
+            $extractArguments $battleRoot $hostToolEnvironment
     } finally {
         foreach ($row in $protectedRows) {
             Copy-Item -LiteralPath (Join-Path $sourceBackup $row.Relative) `

@@ -19,19 +19,33 @@ smash64ds-battle-playable-hwtri.nds
 SHA-256 4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090
 ```
 
-Current local root artifact, rebuilt 2026-07-29 19:11 with the day's five
-graduations resident — **E32, E64b, E65, E67, E69**:
+Current local root artifact, rebuilt 2026-07-30 04:46 through `build.ps1` with
+**R2-07 R0c** resident on top of E32/E64b/E65/E67/E69:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
-11,511,808 bytes
-SHA-256 80CCD2EE0A2EA29FECE05384E9595BC3CB3CF23B09DE71FF9EA41D058B51104F
+11,512,832 bytes
+SHA-256 152253A82E14FA4A5F4DF51F8341BCB2A1CEEB6F080F68F1EE08D1130F7A21B1
 ```
 
-+4,096 bytes over the 08:11 ROM (11,507,712 /
-`748764951CCCCBA36FA76D27BFCAF02DEDEB46A49C0631FEADC132FB511E5F87`), which is
-E65's ARM-mode evaluator plus E69's sixteen inlined matrix moves. Boundary passed on
-this configuration.
++1,024 bytes over the 2026-07-29 19:11 ROM (11,511,808 /
+`80CCD2EE0A2EA29FECE05384E9595BC3CB3CF23B09DE71FF9EA41D058B51104F`), which is R0c's
+reciprocal-multiply sequences net of the 18 bytes `ndsSpriteLerpPrimEnv` lost.
+**Latest** passed on this configuration (R0c touches the startup-logo blitter path, so
+Boundary alone would not have covered it). The matching flag-identical tick-HUD
+instrument is `builds/build-tick-hud-buckets/` — refreshed with this ROM, per the
+owner's 2026-07-22 rule that the two move together; `builds/build-r0c-div/` is the same
+source and is what R0c's own A/B was measured on. Both are **11,514,880 bytes** but hash
+differently (`5DD5CE98` vs `DD9D59BE`) — that is the already-documented
+non-reproducible-ROM-hash property of this build system, **not** a source discrepancy.
+
+**`build.ps1` could not run with its own defaults until this build, and that is worth
+knowing before anyone else tries to publish.** `-Jobs` defaults to `0`, meaning "let the
+build tool decide" — the `make` path guards that with `if ($Jobs -gt 0)`, but the
+BattleShip asset-extractor call passed `cmake --build --parallel 0` unconditionally.
+cmake rejects it with a **usage dump and exit 1**, so `.\build.ps1 -Rom <rom>` failed in
+`build-BattleShip-ExtractAssets` and read like a broken extractor rather than a bad
+argument. Fixed by omitting the flag when `$Jobs -le 0`, matching the make path.
 
 The tick-HUD instrument ROM was rebuilt with it, per the owner's 2026-07-22 rule
 that the two move together — 11,514,880 bytes,
