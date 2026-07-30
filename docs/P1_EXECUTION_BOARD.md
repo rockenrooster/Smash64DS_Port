@@ -798,6 +798,52 @@ rather than stopping at "it walks the live joint chain":
   per-frame reset. The reset exists — it is the union store, not a per-byte assignment, which is why
   a grep for the field names missed it. Grep the union, not the member.)*
 
+### R2-06 E15 — DO NOT BUILD. Both arms are sub-floor, and the disassembly refuted my own estimate 4x (2026-07-30)
+
+E14 left one candidate: shrink `AObj` so the pool leaves the dcache, plus store the four
+segment-constant values as Q12 so the cubic stops converting them. **Sized before building, and it
+does not clear the floor. Neither arm does, and jointly they only straddle it.**
+
+**Arm A — remove four of the cubic's six f32→fixed conversions. REFUTED, and my estimate was wrong by
+about 4x.** Only `t` (`aobj->length * aobj->length_invert`) and `length_q` (`aobj->length`) depend on
+the advancing `length`; `value_base`, `value_target`, `rate_base` and `rate_target` are constant for
+the segment (`battleship_sys_objanim.c:213-241`), so storing them Q12 would delete four conversions.
+I priced those at ~20 ticks each on the assumption they compile to `__aeabi_fmul` + `__aeabi_f2iz`.
+**They do not.** Disassembling the kernel at HEAD finds **exactly one `bl` in the whole function —
+`__aeabi_fmul`, the one genuine float x float at `:213` — and zero `__aeabi_f2iz`.** GCC emits the
+scale-by-power-of-two as an exponent adjust and the cast as an inline shift sequence, which
+`target("arm")` makes cheap. So the conversions are already close to free.
+Corrected: the kernel is 2,032 bytes = **508 static ARM instructions** but executes only
+**116 per call** (28,048 insn/frame ÷ 242 calls), so four inline conversions are on the order of
+**~4,000-10,000 ticks/frame**, not the ~15,000-19,000 I had. *The frame-wide `__aeabi_f2iz` total —
+2,173 instructions/frame, far too few for 1,452 conversions — was the tell, and one objdump settled
+it before a build.*
+
+**Arm B — pool to DTCM. Sub-floor AND blocked on fit.** 221 nodes swept twice per presented frame
+over ~249 lines is ~498 fills plus ~498 write-backs (it is read-modify-write); at Task 96's measured
+10-15 ticks per line that is **~12,450 ticks/frame**, below the 20,000 floor on its own. And at 20
+bytes/node the pool is 4,420 bytes against the **4,264** E29 left below the boot stack's low-water
+mark — it does not fit without also reaching ≤19 bytes/node.
+
+**Verdict: ~16,000-22,000 jointly, straddling the floor, in exchange for a change that touches the
+struct layout, the allocator, the linker placement, the cubic kernel, and the Step/Linear paths that
+are currently bit-identical to the decomp** (43.6% + 1.7% of nodes — E64b/E65's equivalence bound
+covers the cubic only, so those would need their own re-validation). **E11's lesson is that only a
+change big enough to clear the floor decisively is worth building; straddling is not decisive.
+E15 is closed unbuilt.**
+
+**Which exhausts the animation body at this granularity — three levers, three refutations, no builds
+spent: E13 (pose fewer joints, f=0.840), E14 (reorder/flatten, ~2,900), E15 (shrink + Q12,
+~16,000-22,000 straddling).** The 146,148 is 59.4% stall, but the stall is spread thin enough that no
+single sub-lever inside it clears the placement floor. **So stop drilling into animation and go back to
+the frame:** E8 already established that **clean-frame P95 is 1,056,640 — inside the gate by 63,360 —
+and every over-gate frame is one of the 16 asset-load frames.** The gate is a load-frame problem, E11
+closed "remove a little load-frame work", and the surviving category is the one E11 named explicitly:
+**move the work off the frame — E9, ~19,400/load frame**, which is ~139,072 of premium concentrated in
+12.5% of frames, so a shift of the whole load-frame population moves P95 by nearly its full amount
+rather than a diluted one. That is the next build, and it must clear the ~16,000 tail-movement wall to
+count.
+
 ### R2-06 E14 — the AObj walk is READ-MODIFY-WRITE over a working set 2.7x the dcache, and E29's lever does not fit (2026-07-30)
 
 E13 closed the "pose fewer joints" route, so the animation over-budget has to be paid per joint.
