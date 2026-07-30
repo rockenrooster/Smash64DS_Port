@@ -66,7 +66,15 @@ public static class Smash64DSWindowCapture
 function Get-MelonDSWindowBitmap {
     param(
         [Parameter(Mandatory=$true)][System.IntPtr]$WindowHandle,
-        [switch]$ClientOnly
+        [switch]$ClientOnly,
+        # Ask the window to render ITSELF instead of copying the desktop region
+        # it occupies. Immune to occlusion and to whatever else the operator has
+        # on screen, so it needs no foreground raise -- which is the only way to
+        # capture evidence reliably on a machine somebody is using, and the only
+        # way that cannot accidentally photograph their desktop. Not the default
+        # because a GPU-composited window can answer PrintWindow with a blank
+        # surface; callers using this must check the result is not uniform.
+        [switch]$PreferPrintWindow
     )
 
     $rect = New-Object Smash64DSWindowCapture+Rect
@@ -117,6 +125,19 @@ function Get-MelonDSWindowBitmap {
             # that the raise was granted, then refuse to write if it was not.
             # `capture-results-tic.ps1` does exactly that; copy it, do not
             # reinvent it.
+            if ($PreferPrintWindow) {
+                $destination = $graphics.GetHdc()
+                try {
+                    $flags = if ($ClientOnly) { 3 } else { 2 }
+                    if (-not [Smash64DSWindowCapture]::PrintWindow(
+                            $WindowHandle, $destination, $flags)) {
+                        throw 'PrintWindow refused the window.'
+                    }
+                } finally {
+                    $graphics.ReleaseHdc($destination)
+                }
+                return $bitmap
+            }
             $graphics.CopyFromScreen($origin.X, $origin.Y, 0, 0, $bitmap.Size)
         } catch {
             $screenError = $_.Exception.Message
@@ -217,10 +238,15 @@ function Measure-MelonDSWindowDistinctColors {
 function Save-MelonDSWindowCapture {
     param(
         [Parameter(Mandatory=$true)][System.IntPtr]$WindowHandle,
-        [Parameter(Mandatory=$true)][string]$Path
+        [Parameter(Mandatory=$true)][string]$Path,
+        # See Get-MelonDSWindowBitmap. Evidence captures should pass this: it
+        # reads the window rather than the desktop, so no foreground raise is
+        # needed and an occluding window cannot be photographed by mistake.
+        [switch]$PreferPrintWindow
     )
 
-    $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle
+    $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle `
+        -PreferPrintWindow:$PreferPrintWindow
     try {
         $bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
         return "$($bitmap.Width)x$($bitmap.Height)"

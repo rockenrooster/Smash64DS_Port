@@ -150,32 +150,47 @@ try {
     # bringing the window forward cannot advance the emulation, so the picture
     # still belongs to the requested tic. The settle delay is for the compositor
     # to finish raising the window, not for the guest.
-    [void][Smash64DSWindowCapture]::SetForegroundWindow($window)
-    Start-Sleep -Milliseconds 400
-
-    # VERIFY the raise actually happened, and refuse to write a file if it did
-    # not. Windows denies SetForegroundWindow to a process that does not already
-    # own the foreground, so on a machine somebody is USING, the call returns and
-    # melonDS stays buried. Measured 2026-07-30, twice: this script wrote two
-    # pairs of screenshots of the owner's browser. They diffed at 67.7% and read
-    # exactly like a catastrophic visual regression in the change under test.
+    # READ THE WINDOW, NOT THE DESKTOP. The default capture path calls
+    # CopyFromScreen, which copies whatever pixels occupy the window's screen
+    # rectangle and does not throw when something is stacked on top. Measured
+    # 2026-07-30, twice: this script wrote two "matched-tic" pairs that were
+    # actually screenshots of the owner's browser, because Windows had refused
+    # to raise melonDS. They diffed at 67.7% of pixels with a max channel delta
+    # of 255 and read exactly like a catastrophic visual regression in the
+    # change under test. Nothing flagged it; only opening the image did.
     #
-    # A capture harness that silently substitutes the wrong window is worse than
-    # one that fails, because its output is indistinguishable from evidence.
-    # Throw instead, and say what to do about it.
-    $foreground = [Smash64DSWindowCapture]::GetForegroundWindow()
-    if ($foreground -ne $window) {
-        throw ("melonDS could not be raised to the foreground (owner window " +
-               "$foreground holds it), so the desktop region behind it is NOT " +
-               "the emulator. Refusing to write $Output. Windows only grants " +
-               "SetForegroundWindow to the process that already owns the " +
-               "foreground -- run this with the desktop idle, or capture from " +
-               "the guest instead of the screen.")
-    }
-
+    # PrintWindow asks the window to render itself, so occlusion is irrelevant,
+    # no foreground raise is needed, and this cannot photograph the operator's
+    # desktop by mistake. That last property is the important one: a capture
+    # harness must never be able to write somebody's screen into artifacts/.
     [void](New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Output))
-    [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $Output)
-    Write-Host "captured Results tic $reached -> $Output"
+    [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $Output `
+        -PreferPrintWindow)
+
+    # PrintWindow's failure mode is a blank surface on GPU-composited windows,
+    # not an error, so prove the file has a picture in it before calling it
+    # evidence. Measured from the FILE, not from a second window read: the
+    # helper's sampler takes its own CopyFromScreen bitmap, which would put the
+    # desktop back into the one check meant to catch a bad capture.
+    $written = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Output).Path)
+    try {
+        $seen = New-Object 'System.Collections.Generic.HashSet[int]'
+        for ($y = 0; $y -lt $written.Height; $y += 16) {
+            for ($x = 0; $x -lt $written.Width; $x += 16) {
+                [void]$seen.Add($written.GetPixel($x, $y).ToArgb())
+            }
+        }
+        $colors = $seen.Count
+    } finally {
+        $written.Dispose()
+    }
+    if ($colors -lt 8) {
+        Remove-Item -LiteralPath $Output -Force -ErrorAction SilentlyContinue
+        throw ("PrintWindow returned a near-uniform surface ($colors distinct " +
+               "colours), which means it captured nothing. Deleted $Output " +
+               "rather than leave a blank file that looks like a result.")
+    }
+    Write-Host "captured Results tic $reached ($colors distinct colours) -> $Output"
 
     if (-not $gdbProcess.HasExited) { Stop-Process -Id $gdbProcess.Id -Force }
 }
