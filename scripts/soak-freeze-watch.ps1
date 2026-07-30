@@ -309,7 +309,8 @@ try {
             'gNdsVSResultsInputPollCount',
             'gNdsVSResultsPadMask',
             'gNdsVSResultsInputSeenMask',
-            'gNdsVSResultsInputTapMask')
+            'gNdsVSResultsInputTapMask',
+            'gNdsVSResultsTapRepairCount')
         $format = (, '%u' * $cleanFields.Count) -join ','
         $progress = Invoke-SoakGdb -Tag 'clean' -TimeoutSeconds 90 -Commands @(
             "printf `"CLEAN=$format\n`", $($cleanFields -join ', ')")

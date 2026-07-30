@@ -1,6 +1,45 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
 
+-Button TAPS never register for real input. Pressing START on the Results screen
+  does nothing, and the same hole is why every imported menu scene fakes its
+  button instead of reading one. Found 2026-07-30 while implementing the
+  owner's "START on Results restarts the match" requirement.
+  Measured on the Results screen with a genuine 500 ms held START, repeated 8x:
+    gNdsVSResultsPadMask       0x1000  the DS keypad has START
+    gNdsVSResultsInputSeenMask 0x1000  gSYControllerDevices[0].button_hold has it
+    gNdsVSResultsInputTapMask  0x0000  button_tap is NEVER set
+    gNdsVSResultsRematchCount  0       so mnVSResultsCheckExit cannot fire
+  The hold arrives and the rising edge does not. `mnVSResultsCheckExit`
+  (decomp sys/controller.c:266) tests only `button_tap`, so the screen cannot be
+  left by pressing START. `mnplayersvs.c:341` injecting START and
+  `mnmaps.c:256` injecting A are almost certainly workarounds for this, not
+  design -- which means fixing this may let those be deleted.
+  Localised to inside `task_update`: writing a genuine START edge into
+  `gSYControllerDevices[0].button_tap` immediately BEFORE `task_update`
+  (`ndsVSResultsRepairButtonTap`, fired 7 times) leaves it reading 0x0000 one
+  call later in `ndsMNVSResultsRecordFrame`, with only `task_update` between the
+  two. A single pass through the pipeline zeroes it.
+  TWO HYPOTHESES REFUTED, do not retry without new evidence:
+  - The unpaired `syControllerUpdateGlobalData()` in `src/nds/main.c:55-57` is a
+    real smell (consumer half of a pair, and it CLEARS the tap accumulator) but
+    removing it changed nothing at all, so that loop is almost certainly dead --
+    `syMainLoop()` does not appear to return.
+  - The taskman seam running its own read/update pair
+    (`taskman_seam.c:6988-6989`) duplicating each scene's own `func_controller`
+    (`dMNVSResultsTaskmanSetup` names `syControllerFuncRead`). Removing the
+    seam's pair changed nothing either: battle still completed with
+    PacingPresentedFrames 2043 and button_hold still arrived, so the scene's own
+    function is a live pipeline and the tap dies within ONE pass, not from two
+    racing. Guarded by `NDS_SEAM_CONTROLLER_PAIR`, restored to 1.
+  Next probe: `unk02 = (button ^ unk00) & button` in `syControllerReadDeviceData`
+  (controller.c:131) can only be zero if `unk00` already equals the current
+  button when the read runs. Instrument the port's `osContGetReadData`
+  (`src/port/controller_backend.c`) to record whether the delivered
+  `OSContPad.button` ever differs between consecutive reads -- if it never does,
+  a latch upstream is advancing the state before the source sees the transition.
+  Status: OPEN. Blocks the START-to-rematch requirement, whose redirect is
+  already written and correct (`ndsMNVSResultsSetLoadScene`).
 -"Time Up" VFX and SFX after match countdown finished.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `ifcommon.c` creates six blue mixed-width letter sprites

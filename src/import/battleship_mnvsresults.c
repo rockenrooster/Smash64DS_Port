@@ -86,6 +86,9 @@ volatile u32 gNdsVSResultsInputPollCount;
 volatile u32 gNdsVSResultsInputSeenMask;
 volatile u32 gNdsVSResultsInputTapMask;
 volatile u32 gNdsVSResultsPadMask;
+/* Incremented by `ndsVSResultsRepairButtonTap` in the taskman seam, which is the
+ * only place a repaired edge can be written early enough to be read. */
+volatile u32 gNdsVSResultsTapRepairCount;
 
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
