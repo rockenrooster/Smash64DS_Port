@@ -2055,9 +2055,52 @@ static void ndsRelocPrepareSceneCache(void)
     u32 evicted_bytes = 0u;
     u32 i;
 
+    /* Scene KIND is not scene INSTANCE, and this guard used to conflate them.
+     *
+     * Everything below is the port's only invalidation for a scene change: it
+     * evicts the resident reloc files, discards the battle texture keys that
+     * hold native pointers INTO those files, and bumps sNdsRelocSceneGeneration
+     * -- which becomes each asset's owner_generation, which is where
+     * topology_generation comes from, which is the only thing that resets the
+     * Task 36 replay. Skipping it leaves every generation-keyed cache believing
+     * data is live after the taskman heap has been rewound under it.
+     *
+     * Skipping on an equal kind is right for a repeated call WITHIN a scene and
+     * wrong for a RE-ENTRY into the same kind. Sudden Death is exactly that --
+     * nSCKindVSBattle to nSCKindVSBattle -- so it evicted nothing, discarded no
+     * texture keys, and never advanced the generation. The owner's screenshot of
+     * that state is duplicated fighter sprites at wrong positions over corrupt
+     * stage geometry, drawn at a healthy 28.9 FPS with FTR 385,728: not a cost
+     * defect, stale bindings replayed against reused memory.
+     *
+     * So also treat the resident set as stale when it no longer lives inside the
+     * live taskman heap. A scene load rewinds that heap, so any file whose data
+     * now sits at or above the bump cursor belongs to the previous instance
+     * whatever the kind says. This is the same ownership test
+     * ndsR2AnimCacheArenaStillOwned already uses for the animation arena, which
+     * is why that cache survived this bug and these did not. */
     if (sNdsRelocOwnerScene == scene)
     {
-        return;
+        const u8 *heap_start = (const u8 *)gSYTaskmanGeneralHeap.start;
+        const u8 *heap_cursor = (const u8 *)gSYTaskmanGeneralHeap.ptr;
+        sb32 resident_is_stale = FALSE;
+
+        for (i = 0; i < sNdsRelocLoadedFileCount; i++)
+        {
+            const u8 *data = (const u8 *)sNdsRelocLoadedFiles[i].data;
+
+            if ((data != NULL) &&
+                ((data < heap_start) || (data >= heap_cursor)))
+            {
+                resident_is_stale = TRUE;
+                break;
+            }
+        }
+        if (resident_is_stale == FALSE)
+        {
+            return;
+        }
+        gNdsRelocSceneReentryEvictCount++;
     }
 
     for (i = 0; i < sNdsRelocLoadedFileCount; i++)

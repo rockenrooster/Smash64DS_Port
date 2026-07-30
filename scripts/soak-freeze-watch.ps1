@@ -371,6 +371,8 @@ try {
             # scManagerFuncUpdate, so 2 means scVSBattleStartScene ran twice and
             # syTaskmanStartTask rewound the general heap for match two. GObjCount
             # and MallocCount separate "rewound and refilled" from "piled on top".
+            # Non-zero proves a same-kind scene re-entry was caught as stale.
+            'gNdsRelocSceneReentryEvictCount',
             'gNdsSCVSBattleLifecycleArenaAdapterCount',
             'gNdsSCVSBattleOriginalGObjCount',
             'gNdsTaskmanMallocCount',

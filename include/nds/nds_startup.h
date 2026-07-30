@@ -859,6 +859,7 @@ sb32 ndsSyMallocWouldFit(const struct SYMallocRegion *bp, size_t size,
 extern volatile u32 gNdsMemoryLedgerResult;
 extern volatile u32 gNdsMemoryLedgerScene;
 extern volatile u32 gNdsMemoryLedgerGeneration;
+extern volatile u32 gNdsRelocSceneReentryEvictCount;
 extern volatile u32 gNdsMemoryLedgerArenaCapacity;
 extern volatile u32 gNdsMemoryLedgerArenaUsed;
 extern volatile u32 gNdsMemoryLedgerArenaHighWater;

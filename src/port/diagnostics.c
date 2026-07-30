@@ -82,6 +82,10 @@ volatile u32 gNdsTaskmanReturnCount;
 volatile u32 gNdsMemoryLedgerResult;
 volatile u32 gNdsMemoryLedgerScene;
 volatile u32 gNdsMemoryLedgerGeneration;
+/* Non-zero proves a same-kind scene RE-ENTRY was detected as stale and evicted.
+ * Sudden Death (VSBattle -> VSBattle) hit the kind-equal early return and kept
+ * match one's reloc files, texture keys and generation. */
+volatile u32 gNdsRelocSceneReentryEvictCount;
 volatile u32 gNdsMemoryLedgerArenaCapacity;
 volatile u32 gNdsMemoryLedgerArenaUsed;
 volatile u32 gNdsMemoryLedgerArenaHighWater;
