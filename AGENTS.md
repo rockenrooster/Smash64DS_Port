@@ -140,7 +140,7 @@ aspect of the project, not just code and the end goal — hygiene and docs inclu
 Canonical Boundary is `battle_playable_realtime`, mode `163`: Mario human versus the
 imported level-3 Fox CPU on Dream Land, items off, one-minute (`3600` tick) Time
 mode. A diagnostic ROM may pause Fox decision/input only; proof runs and milestone
-acceptance enable it. Never launch the obsolete five-minute configuration.
+acceptance enable it. Never launch the obsolete five-minute configuration, except for specific instruction to do so.
 
 ## Documentation Ownership
 
