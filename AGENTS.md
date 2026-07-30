@@ -26,7 +26,7 @@ Preserve mechanically equivalent SSB64 behavior and feel; the DS implementation 
 - Treat `decomp/` as read-only reference source. Never edit it.
 - Inspect relevant BattleShip source before changing gameplay or renderer behavior.
 - Inspect `decomp/sm64-nds` and `decomp/sm64ds-decomp` before substantial DS
-  renderer, memory, asset, hardware, or backend architecture changes.
+  renderer, memory, asset, hardware, or backend architecture changes, or when stuck on an issue.
 - Reuse original code when competitive. Generated, precomputed, manually
   rewritten, and fighter/stage/move-specific DS implementations are encouraged
   when they are faster and mechanically equivalent.
@@ -125,7 +125,7 @@ Subagent switch: **ON**.
 
 * `OFF`: let already-running subagents finish, but do not spawn, follow up, or
   reassign one until the user explicitly switches this back to `ON`.
-* `ON`: keep up to **1** long-lived helper agent and assign tasks with appropriate effort (OPUS 5: max, xhigh, high). Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings.
+* `ON`: keep up to **2** long-lived helper agent/agents and assign tasks with appropriate effort (OPUS 5: max, xhigh, high). Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings.
 
 
 Prefer deletion, existing helpers, fixed DS hardware paths, and the fastest
@@ -154,7 +154,8 @@ and milestone acceptance enable it. Never launch the obsolete five-minute config
 
 `PROJECT_GOAL.md` owns the product contract; `docs/README.md` owns other roles.
 Do not duplicate current truth. `PORTING.md` is append-only; screenshots stay in `artifacts/visibility`.
-Keep documentation current and lean except for append only docs.
+Keep documentation current and LEAN except for append only docs.
+`.\docs\HANDOFF.md` should be 150 lines max.
 
 ## Editing
 

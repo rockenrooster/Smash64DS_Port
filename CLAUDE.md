@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Context limit: you have unlimited context
-
+Subagents switch = see AGENTS.md
 @AGENTS.md
 READ AGENTS.md
 ## Where the rest of the truth lives
