@@ -29,6 +29,14 @@ public static class Smash64DSWindowCapture
     public static extern bool ShowWindow(IntPtr window, int command);
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr window);
+    // Windows grants SetForegroundWindow only to the process that already owns
+    // the foreground, so on a machine somebody is USING it silently does
+    // nothing. Callers that capture pixels as EVIDENCE must read this back and
+    // refuse to write a file when the raise was denied -- see the
+    // CopyFromScreen note in Get-MelonDSWindowBitmap for what happens if they
+    // do not.
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
     // Synthesises a HELD key, which SendKeys cannot do. A guest sampling input
     // once per rendered frame needs the key down across at least one sample, and
     // the Results screen renders at roughly 6 FPS -- so a SendKeys tap is very
@@ -88,6 +96,27 @@ function Get-MelonDSWindowBitmap {
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     try {
         try {
+            # CAUTION -- THIS READS THE DESKTOP, NOT THE WINDOW. CopyFromScreen
+            # copies whatever pixels currently occupy that screen rectangle, so
+            # anything stacked over melonDS is what lands in the bitmap. It does
+            # NOT throw when the window is occluded, which is why the PrintWindow
+            # fallback below never rescues that case -- the fallback only covers
+            # CopyFromScreen erroring outright.
+            #
+            # Measured 2026-07-30: a new capture harness took two "matched-tic"
+            # screenshots of the owner's BROWSER while melonDS sat behind it. The
+            # pair diffed at 67.7% of pixels with a max channel delta of 255 and
+            # read exactly like a catastrophic visual regression in the change
+            # under test. Nothing in the pipeline flagged it; only looking at the
+            # image did.
+            #
+            # Liveness hashing tolerates this (a stable occluder just reads as a
+            # frozen picture, which is already the failure verdict). EVIDENCE
+            # capture does not. Any caller writing a file for the owner to judge
+            # must first raise the window AND verify with GetForegroundWindow
+            # that the raise was granted, then refuse to write if it was not.
+            # `capture-results-tic.ps1` does exactly that; copy it, do not
+            # reinvent it.
             $graphics.CopyFromScreen($origin.X, $origin.Y, 0, 0, $bitmap.Size)
         } catch {
             $screenError = $_.Exception.Message
