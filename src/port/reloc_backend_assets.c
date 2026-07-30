@@ -2115,6 +2115,15 @@ static void ndsRelocPrepareSceneCache(void)
         /* Texture keys hold native pointers into the scene-owned reloc files.
          * Drop every battle entry before those files become stale. */
         ndsRendererHardwareDiscardBattleStaticTextures();
+        /* And the native OAM path's retained texture NAMES, which point at the
+         * VRAM the line above just released. They were cleared only by
+         * ndsIFCommonNativeOamInit, which runs once at boot, so after a scene
+         * reload ndsIFCommonNativeOamPrepareClouds saw them non-zero and
+         * early-returned TRUE without re-uploading -- leaving the sprite path
+         * emitting handles into reused VRAM. Same shape as the
+         * sNdsRendererBattleStaticTexturePrepared latch, which already had its
+         * invalidation wired; this one did not. */
+        ndsIFCommonNativeOamDiscardTextures();
 #endif
         ndsRelocResetLoadedFiles();
     }

@@ -300,6 +300,15 @@ static void ndsPlatformVBlankInterrupt(void)
     sVBlankCount++;
 }
 
+/* An ARM9 self-restart lived here briefly, as the cheap way past the rematch's
+ * second-entry geometry corruption. It is deleted rather than left default-off
+ * because it does not work and a dead selector is worse than none. The full
+ * measurement and the three toolchain reasons are recorded at the one place a
+ * reader would look for them, `ndsMNVSResultsSetLoadScene` in
+ * `src/import/battleship_mnvsresults.c`. Short version: calico links no
+ * `svcSoftReset`, bare BIOS `swi #0` is measurably a no-op here, and
+ * `crt0Startup` needs three loader-supplied arguments that no longer exist. */
+
 void ndsPlatformInit(void)
 {
     /* Calico's system tick owns timers 2/3. Initialize it before original

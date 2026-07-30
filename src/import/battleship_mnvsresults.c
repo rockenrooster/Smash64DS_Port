@@ -136,7 +136,33 @@ void ndsBaseMNVSResultsStartScene(void);
  *
  * `scene_prev` is `nSCKindMaps` to match what the harness declares for a fresh
  * boot, not `nSCKindVSResults`: the battle path is entered exactly as it was for
- * match one, so nothing downstream can distinguish a rematch from a cold start. */
+ * match one, so nothing downstream can distinguish a rematch from a cold start.
+ *
+ * REBOOT ALTERNATIVE TRIED AND MEASURED DEAD (2026-07-30). The owner asked for
+ * the cheap way out of the second-entry geometry corruption: "can't you just
+ * reload the game itself for now?" It is the right instinct -- this ROM boots
+ * straight into the canonical match, so a cold restart IS the rematch, correct
+ * by construction. It does not work on this toolchain, and the reason is
+ * specific rather than a tuning problem:
+ *
+ *   - libnds' `swiSoftReset` does not exist under calico. Calico declares
+ *     `svcSoftReset` but links no ARM9 implementation, and its header cannot be
+ *     included alongside libnds' `<nds/bios.h>` (three redefinitions).
+ *   - Issuing BIOS SWI 0x00 by hand builds and runs, and does nothing. Measured:
+ *     a 3.5-minute soak pressing START on Results left `gNdsVSResultsRematchCount`
+ *     at 1. A real ARM9 restart re-zeroes .bss, so that counter would read 0.
+ *     The program fell through into the guard spin instead, display already off.
+ *     (The soak's NO-FREEZE verdict was not evidence of survival -- only ~4 of
+ *     the 8 identical-frame polls it needs fit between the press and the end of
+ *     the run.)
+ *   - Calico's real ARM9 entry is `crt0Startup(r0, r1, r2)`: it copies 40 bytes
+ *     from r0 and branches on r1. Those are loader-supplied boot arguments,
+ *     gone by the time Results runs, so it cannot simply be called.
+ *
+ * Reviving this needs the boot arguments captured at first entry, which is a
+ * crt0 change, not a scene change. Until then the redirect stays: visually
+ * wrong on the second entry, but it restarts the match and it runs at 28.9 FPS.
+ * Do not retry bare `swi #0` -- it is measured, not suspected. */
 void ndsMNVSResultsSetLoadScene(void)
 {
     ndsDevSceneHarnessApply();

@@ -373,6 +373,9 @@ try {
             # and MallocCount separate "rewound and refilled" from "piled on top".
             # Non-zero proves a same-kind scene re-entry was caught as stale.
             'gNdsRelocSceneReentryEvictCount',
+            # Non-zero proves the native OAM path's retained texture names were
+            # dropped with the VRAM behind them. Must rise once per scene change.
+            'gNdsIFCommonNativeOamTextureDiscardCount',
             'gNdsSCVSBattleLifecycleArenaAdapterCount',
             'gNdsSCVSBattleOriginalGObjCount',
             'gNdsTaskmanMallocCount',

@@ -352,6 +352,7 @@ volatile u32 gNdsIFCommonNativeOamPrepareCloudFailureStage;
 volatile u32 gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[
     NDS_IFCOMMON_OVERLAY_SPEC_COUNT];
 volatile u32 gNdsIFCommonNativeOamHotConvertCount;
+volatile u32 gNdsIFCommonNativeOamTextureDiscardCount;
 volatile u32 gNdsIFCommonNativeOamRuntimeUploadBytes;
 volatile u32 gNdsIFCommonNativeOamFrameBeginTicks;
 volatile u32 gNdsIFCommonNativeOamFrameTicks;
@@ -1885,6 +1886,33 @@ static s32 ndsTask39PrepareHitSparks(u32 *vram_cursor)
     (void)vram_cursor;
 #endif
     return TRUE;
+}
+
+/* Drop the retained texture NAMES when the VRAM behind them is dropped.
+ *
+ * These names were cleared in exactly one place -- ndsIFCommonNativeOamInit,
+ * which runs once at boot (nds_platform.c:328) -- while the allocations they
+ * refer to are released on every scene change, by the
+ * ndsRendererHardwareDiscardBattleStaticTextures call inside the scene-cache
+ * eviction (reloc_backend_assets.c). A boot-scoped cache guarding a
+ * scene-scoped resource.
+ *
+ * The consequence is silent and specific: ndsIFCommonNativeOamPrepareClouds
+ * early-returns TRUE as soon as both cloud names and the traffic name are
+ * non-zero, so after a scene reload it re-uploads NOTHING and the OAM path
+ * keeps emitting handles into VRAM that has since been reused. Sprites drawn
+ * from freed texture names is what the owner's rematch screenshot shows.
+ *
+ * This is the same shape as sNdsRendererBattleStaticTexturePrepared, which is
+ * already cleared by ndsRendererHardwareDiscardTextureCache -- that latch
+ * survived the bug because someone wired its invalidation; this one was
+ * missed. */
+void ndsIFCommonNativeOamDiscardTextures(void)
+{
+    memset(sNdsIFCommonCloudTextureNames, 0,
+           sizeof(sNdsIFCommonCloudTextureNames));
+    sNdsIFCommonTrafficTextureName = 0u;
+    gNdsIFCommonNativeOamTextureDiscardCount++;
 }
 
 void ndsIFCommonNativeOamInit(void)
