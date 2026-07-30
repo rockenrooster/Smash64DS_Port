@@ -32,4 +32,6 @@ if (-not (Test-Path $romPath)) {
 Write-Output 'Launching no$gba for interactive DS hardware/debugger inspection.'
 Write-Output 'Use this for VRAM/OAM/register/timing inspection; melonDS remains the automated GDB verifier.'
 $argsList = @("`"$romPath`"") + $EmulatorArgs
+# WindowStyle: visible-by-design -- the owner drives this launcher
+# interactively, so its window must appear.
 Start-Process -FilePath $noGbaPath -ArgumentList $argsList -WorkingDirectory $noGbaDir

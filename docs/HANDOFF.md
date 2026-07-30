@@ -1,9 +1,9 @@
 # Handoff
 
 Updated: 2026-07-29. **Restart surface only, capped at 150 lines.** Anything
-durable goes to its owning doc, not here: the board owns the queue and every
-result, `PERF_LEDGER.md` measurements, `KNOWN_ISSUES.md` durable gaps and
-harness traps, `optimization/TASK_STANDING_RULES.md` how a task is run.
+durable goes to its owning doc: the board owns the queue and every result,
+`PERF_LEDGER.md` measurements, `KNOWN_ISSUES.md` durable gaps and harness traps,
+`optimization/TASK_STANDING_RULES.md` how a task is run.
 
 Runtime 2 phase status. **Five gate levers graduated 2026-07-29: E32 (-52,416
 P95), E64b (-26,944), E65 (-35,584), E67 (-4,672) and E69 (-12,544). Cumulative
@@ -15,7 +15,7 @@ P95 1,228,928 -> 1,096,768, over gate 17/128 -> 6/128.**
 | R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69**; only the E32 flash residual is open (KNOWN_ISSUES) |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
-| R2-06 | performance-neutral (E0) + equivalence (E1) + match-boundary probe (E2); **"soak clean" has no instrument** |
+| R2-06 | E0 + E1 + E2 done; the soak clause now HAS an instrument (`soak-freeze-watch.ps1`) and is unrun |
 | R2-07/08 | not started; R2-08 needs the owner's retail play test |
 
 ## Where the gate stands
@@ -29,32 +29,42 @@ the gate at 6,016 (inside the floor); E67 and E69 took it here, so it survives a
 relink and finally leaves room for R2-07. Not covered: retail hardware (R2-08), and
 the particle work must fit inside 23,232 (switch plan §7 R2-07).
 
-## What owns the miss
+## OPEN P1: random freezes, and the harness could not have seen them
 
-E52 re-decomposed the excursion after E5 graduated: **E35's "25 of 26 over-gate
-frames are `SRC`" no longer holds** — it predated E5 removing the loading
-component. The over-gate frames split in half: **`FTR` +140,988 (50%), `SRC`
-+135,360 (48%)**. E53 profiled frames 910–913 against control 876–879:
-**+420,227/frame**, of which **376,434 is 151 symbols exactly zero on control** —
-the generic display-list interpreter, a second renderer running. The rest is
-fixed-point *matrix* work; **`__aeabi_fadd` does not grow at all**, so float is a
-flat per-frame cost, which is why E60/E61's lever moves P50 and P95 together.
+Owner, 2026-07-29: *"lots of freeze bugs that seem random"*, plus a new
+`docs/BUGS.md` row *"Sometimes hitting a shielded player causes a freeze"*, plus
+*"I can reproduce the bugs in melonDS with dldi checked."*
 
-## E54: the fighter falls back, and E32 is worth −51,136
+**`[DLDI] Enable` was pinned by nothing.** The owner's emulator had it true; all
+nine runner slots and the attributor had it false, and neither profile function
+touched the section — so **no scripted verifier in this campaign ran the owner's
+I/O configuration**, which is a sufficient explanation for green gates beside
+random freezes. Now forced on in both canonical profiles, asserted per-section by
+`check-melonds-policy.ps1` (negative-tested four ways), applied to all eleven
+configs, slots sharing the one repo `dldi.bin` read-only. Slot 0 smoke-tested.
+DLDI is not cosmetic: it decides whether `nitro:/` is reached through the DLDI SD
+driver or the card interface, and this port resolves `nitro:/` **by string path at
+runtime** (a GDB attach caught `nitroromResolvePath` on `"FTMarioAnimWai"`).
 
-`NDS_TASK68_FALLBACK_CENSUS=1` + `NDS_TASK91_DRAW_PHASE_CENSUS=1`, same 128
-frames: **5 native-owner fallbacks, every one `shuffle_tics`, zero animation
-locks**. The clean build has **exactly 5 frames** with `FTR` > 500,000 —
-909-913, consecutive, ~507,000 each over the median, all over gate. One hitlag
-burst. Capping `FTR` at its median there projects E32 across the distribution:
+Instruments: **`scripts/soak-freeze-watch.ps1`** (new — polls two guest counters
+that advance on different paths, so it separates a hung main loop from a dead IRQ
+path from a merely slow frame, and captures PC/backtrace/`REG_IME`/`IE`/`IF`/
+`GXSTAT`/IPC on the first occurrence; exits 2), and `NDS_FREEZE_DIAGNOSTICS`
+(`%-on-hwtri`), whose breadcrumbs include a dedicated **FGM enter/return pair with
+a channel field** — a prior investigator's fingerprint on the audio path.
+`NDS_R2_BOTH_CPU=1` makes Mario a level-3 CPU too: self-driving, hits both ways.
 
-| | P50 | P95 | max | over gate |
-|---|---:|---:|---:|---:|
-| as measured | 1,013,696 | 1,228,928 | 2,040,896 | 17/128 |
-| **`FTR` capped** | 1,011,264 | **1,177,792** | 1,531,072 | **13/128** |
+## OPEN P1: the VS Results screen is 21.9M ticks/frame, 1.5 FPS
 
-**E32 is worth −51,136 P95 and four frames** — it halves the gap without closing
-it. Blocked on the hurt flash, not on its value.
+R2-07's own gate, never measured until now, and 19.5× the battle frame this
+campaign has spent weeks on. **89.4% is `tfunc->scene_draw()` alone (19,550,631);
+the commit and the source update are ~1.1M each.** Board has the method (a VBlank
+timeline over GDB, zero builds) and the two structural suspects: the native OAM
+path is gated to `nSCKindVSBattle` only, and Results software-blits two 320×240
+layers per frame. The loop at `src/port/taskman_seam.c:6950` carries **no
+instrument** — no pacing, no HUD, and it never advances
+`gNdsBattlePlayablePacingPresentedFrames`, which is why the on-screen FPS reads
+`0.0` there.
 
 ## The other half is ANIMATION, not collision (E60/E61 — this replaces the `SRC` row)
 
@@ -95,10 +105,9 @@ main RAM, or 42.6 KB/7–11 ms streamed per transition. Do not propose it again.
   dense table. E63 sizes it.
 
 **R2-03 E26 — demoted** to 23,844/frame over 136.8 deltas (needs both
-`NDS_TASK91_DRAW_PHASE_CENSUS=1` *and* `NDS_R2_SPAN_LEAN_TIMING=1`; the second
-alone does not define the brackets). Bottom of §3.9's "20–50K if simple and
-exact" band and E26 is not simple. **It must replace the dispatch, not the
-writes** (E39); read its spec only with board entries E34/E34-b/E39/E43/E45/E56.
+`NDS_TASK91_DRAW_PHASE_CENSUS=1` *and* `NDS_R2_SPAN_LEAN_TIMING=1`); bottom of
+§3.9's band and not simple. **Must replace the dispatch, not the writes** (E39);
+read its spec only with E34/E34-b/E39/E43/E45/E56.
 
 **R2-04 E57 — REFUTED.** `gmCollisionGetFighterPartsWorldPosition`
 (`gm/gmcollision.c:489`) places every hitbox by **walking the live joint chain**,
@@ -107,15 +116,14 @@ closes R2-04's rate clause.
 
 ## Refuted this cycle — do not re-derive
 
-- **E51**, a `line_id -> (group, kind)` table for the three scans in
-  `reloc_backend_mp_collision.c`: `gNdsStageCollisionLoopYakumonoCount = 1`, so
-  the loop that reads as a 64×4 worst case has a trip count of **one**.
-- **E53**, an 8-byte `{base,size}` mirror for `ndsRelocFindLoadedFileContaining`.
-  Exact, still P95 **+11,584** and 92/128 worse; `STG`, which it cannot touch,
-  moved +1,600 on 99.
-- **The flash as vertex data** (E48/E49/E50/E55/E58), **the animation pose
-  table** (E61, 2.62 MB resident vs 4 MB RAM), and **fixed-point collision**
-  (E60, the whole family is under 4,000 ticks/frame).
+- **E51**, a `line_id -> (group, kind)` table for `reloc_backend_mp_collision.c`'s
+  three scans: `gNdsStageCollisionLoopYakumonoCount = 1`, so the loop that reads as
+  a 64×4 worst case has a trip count of **one**.
+- **E53**, an 8-byte `{base,size}` mirror for `ndsRelocFindLoadedFileContaining`:
+  exact, still P95 **+11,584** and 92/128 worse.
+- **The flash as vertex data** (E48/E49/E50/E55/E58), **the animation pose table**
+  (E61, 2.62 MB resident vs 4 MB RAM), **fixed-point collision** (E60, under 4,000
+  ticks/frame), and **`.text.hot` placement** (E66, P95 +24,448).
 
 ## Restart
 

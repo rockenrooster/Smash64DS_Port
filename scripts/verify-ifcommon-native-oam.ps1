@@ -387,11 +387,15 @@ function Invoke-IFCommonRun {
     $emulator = $null
     $gdbProcess = $null
     try {
+        $emulator = # WindowStyle: visible-by-design -- this harness screenshots the
+        $emulator = # emulator window, and a hidden window has neither a MainWindowHandle
+        $emulator = # nor desktop pixels to grab (measured 2026-07-29: hiding it returns
+        $emulator = # IntPtr.Zero and the capture dies).
         $emulator = Start-Process -FilePath $context.MelonDSPath `
             -ArgumentList "`"$rom`"" `
             -WorkingDirectory (Split-Path -Parent $context.MelonDSPath) `
             -RedirectStandardOutput $melonStdout `
-            -RedirectStandardError $melonStderr -WindowStyle Hidden -PassThru
+            -RedirectStandardError $melonStderr -PassThru
         Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort |
             Out-Null
         $windowDeadline = (Get-Date).AddSeconds(15)

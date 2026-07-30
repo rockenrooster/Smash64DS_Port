@@ -190,8 +190,12 @@ function Save-WindowCapture {
 $emulator = $null
 try {
     $argsList = @("`"$romPath`"") + $EmulatorArgs
+    $emulator = # WindowStyle: visible-by-design -- this harness screenshots the
+    $emulator = # emulator window, and a hidden window has neither a MainWindowHandle
+    $emulator = # nor desktop pixels to grab (measured 2026-07-29: hiding it returns
+    $emulator = # IntPtr.Zero and the capture dies).
     $emulator = Start-Process -FilePath $noGbaPath -ArgumentList $argsList `
-        -WorkingDirectory $noGbaDir -WindowStyle Hidden -PassThru
+        -WorkingDirectory $noGbaDir -PassThru
     $deadline = (Get-Date).AddSeconds([Math]::Max($DelaySeconds, 2) + 10)
     $windows = @()
     do {

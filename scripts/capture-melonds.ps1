@@ -421,8 +421,12 @@ try {
             Set-Content $config -Value $visibleConfig -NoNewline
         }
     }
+    $emulator = # WindowStyle: visible-by-design -- this harness screenshots the
+    $emulator = # emulator window, and a hidden window has neither a MainWindowHandle
+    $emulator = # nor desktop pixels to grab (measured 2026-07-29: hiding it returns
+    $emulator = # IntPtr.Zero and the capture dies).
     $emulator = Start-Process -FilePath $melonDsPath -ArgumentList "`"$romPath`"" `
-        -WorkingDirectory $melonDsDir -WindowStyle Hidden -PassThru
+        -WorkingDirectory $melonDsDir -PassThru
     $deadline = (Get-Date).AddSeconds([Math]::Max($DelaySeconds, 2) + 10)
     do {
         Start-Sleep -Milliseconds 250

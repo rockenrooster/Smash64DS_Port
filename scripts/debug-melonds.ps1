@@ -39,4 +39,6 @@ Write-Output 'Top rail: self-test, boot chain, startup func, taskman, Opening Ro
 Write-Output 'Previews: native-size original N64Logo sprite plus bounded Opening Room DObj DL slice.'
 Write-Output 'Moving top-screen markers are disabled; detailed live values stay on the bottom screen and verifier.'
 Write-Output 'Bottom text redraws only when diagnostics change, so steady-state captures stay stable.'
+# WindowStyle: visible-by-design -- the owner drives this launcher
+# interactively, so its window must appear.
 Start-Process -FilePath $melonDsPath -ArgumentList "`"$romPath`"" -WorkingDirectory $melonDsDir

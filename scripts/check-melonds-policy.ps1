@@ -198,11 +198,18 @@ foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
 # (and is mutually exclusive with -WindowStyle, so requiring both is not
 # possible). A splatted invocation is accepted when its script sets
 # WindowStyle somewhere, which is how the -Visible switch is implemented.
-$visibleByDesign = @('debug-melonds.ps1', 'debug-nogba.ps1')
+#
+# Some launches must stay VISIBLE, and the exemption is per-call-site rather
+# than per-file: a `# WindowStyle: visible-by-design` comment within the eight
+# lines above the call. Blanket-hiding every site is what made this necessary --
+# hiding the melonDS launch in a screenshot harness leaves MainWindowHandle at
+# IntPtr.Zero, so the emulator runs fine and the capture silently dies. The
+# marker sits at the call so the next person to sweep this rule reads the reason
+# before overriding it, instead of rediscovering it from a black PNG.
+$visibleMarker = 'WindowStyle: visible-by-design'
 $unhidden = @()
 foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
         -Filter '*.ps1' -File -Recurse) {
-    if ($visibleByDesign -contains $scriptFile.Name) { continue }
     $tokens = $null
     $parseErrors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseFile(
@@ -211,6 +218,7 @@ foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
         ("Harness script does not parse: $($scriptFile.Name): " +
          "$(if ($parseErrors) { $parseErrors[0].Message })")
     $scriptText = $ast.Extent.Text
+    $scriptLines = $scriptText -split "\r?\n"
     foreach ($command in $ast.FindAll({ param($node)
             $node -is [System.Management.Automation.Language.CommandAst] }, $true)) {
         if ($command.GetCommandName() -ne 'Start-Process') { continue }
@@ -219,6 +227,12 @@ foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
         if ($commandText -match '-NoNewWindow') { continue }
         if (($commandText -match '^Start-Process\s+@') -and
             ($scriptText -match 'WindowStyle')) { continue }
+        $first = [Math]::Max(0, $command.Extent.StartLineNumber - 9)
+        $last = [Math]::Max(0, $command.Extent.StartLineNumber - 2)
+        $preceding = if ($last -ge $first) {
+            ($scriptLines[$first..$last] -join "`n")
+        } else { '' }
+        if ($preceding.Contains($visibleMarker)) { continue }
         $unhidden += "$($scriptFile.Name):$($command.Extent.StartLineNumber)"
     }
 }

@@ -308,12 +308,16 @@ try {
         -GdbPort $verifierContext.GdbPort `
         -Persistent:([bool]$verifierContext.PersistentConfig)
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
+    $emulator = # WindowStyle: visible-by-design -- this harness screenshots the
+    $emulator = # emulator window, and a hidden window has neither a MainWindowHandle
+    $emulator = # nor desktop pixels to grab (measured 2026-07-29: hiding it returns
+    $emulator = # IntPtr.Zero and the capture dies).
     $emulator = Start-Process -FilePath $melonDsPath `
         -ArgumentList $rom `
         -WorkingDirectory $melonDsDir `
         -RedirectStandardOutput $stdout `
         -RedirectStandardError $stderr `
-        -WindowStyle Hidden -PassThru
+        -PassThru
     Wait-MelonDSGdbListener `
         -Process $emulator `
         -Port $verifierContext.GdbPort | Out-Null

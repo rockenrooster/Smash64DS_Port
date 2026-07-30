@@ -674,12 +674,16 @@ function Invoke-CameraCase {
     $gdbProcess = $null
     $gdbText = ''
     try {
+        $emulator = # WindowStyle: visible-by-design -- this harness screenshots the
+        $emulator = # emulator window, and a hidden window has neither a MainWindowHandle
+        $emulator = # nor desktop pixels to grab (measured 2026-07-29: hiding it returns
+        $emulator = # IntPtr.Zero and the capture dies).
         $emulator = Start-Process -FilePath $melonDsPath `
             -ArgumentList $rom `
             -WorkingDirectory $melonDsDir `
             -RedirectStandardOutput $emuStdout `
             -RedirectStandardError $emuStderr `
-            -WindowStyle Hidden -PassThru
+            -PassThru
         Wait-MelonDSGdbListener -Process $emulator `
             -Port $verifierContext.GdbPort | Out-Null
         $gdbProcess = Start-Process -FilePath $Gdb `
