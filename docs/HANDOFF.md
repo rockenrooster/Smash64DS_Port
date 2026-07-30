@@ -73,26 +73,20 @@ instrument** — no pacing, no HUD, and it never advances
 
 **The board carried "float→fixed on the collision path, `gmcollision.c`" for
 several cycles. It is wrong by ~20x and the row is deleted.** A leaf helper is
-charged to itself, never to its caller, so every float op the animation path
-executes was booked to `__aeabi_fadd`/`__aeabi_fmul` and read as a separate,
-larger family. Caller-attributed: `gcPlayDObjAnimJoint` **34,022 self + 60,509
-helper = 94,531**; the whole animation path **76,047 + 70,895 = 146,942**.
-
-**146,942 ticks/frame, 15.2% of WORK 969,487 — larger than the whole gap.** The
-entire collision family is **under 4,000**, below the placement noise floor. The
-renderer share is 15,709, inside §3.9's "too small for architecture work" band.
+charged to itself, never to its caller, so every float op the animation path ran
+was booked to `__aeabi_fadd`/`__aeabi_fmul` and read as a separate, larger family.
+Caller-attributed, the whole animation path is **146,942 ticks/frame, 15.2% of
+WORK 969,487 — larger than the whole gap**; the entire collision family is **under
+4,000**, below the placement floor, and the renderer share 15,709.
 
 E61 then found **the cubic is 99.6% of that float**: 149.4 cubic nodes/frame at
 **405 ticks each**, against 118.7 Step nodes at zero float and 4.5 Linear.
 `anim_speed` is `1.0`/`0.5`, **never 0**; `GOBJ_FLAG_NOANIM` skips are **0**.
-
-**Task 78 stopped the animation compiler on a self-vs-inclusive error** — it
-compared 82,807 *self* ticks to a 100,000 target while its own §4 listed
-`fadd`+`fmul` = 119,912 as a *separate* family. Corrected: 164,236, **1.64x its
-target, not 0.85x**. Tasks 95/96 refute only the *layout* route.
-
-**The pose table is REFUTED by size** (E61) — 2.62 MB resident against 4 MB of
-main RAM, or 42.6 KB/7–11 ms streamed per transition. Do not propose it again.
+**Task 78 stopped the animation compiler on a self-vs-inclusive error** (82,807
+self against a 100,000 target while its own §4 listed `fadd`+`fmul` = 119,912
+separately); corrected 164,236, **1.64x its target, not 0.85x**. Tasks 95/96
+refute only the *layout* route. **The pose table is REFUTED by size** (E61) —
+2.62 MB resident against 4 MB of main RAM. Do not propose it again.
 
 ## The one open fidelity item
 
