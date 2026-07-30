@@ -1,7 +1,25 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
--Pressing START on the Results screen does not restart the P1 match.
-  Research (2026-07-30):
+-FIXED Pressing START on the Results screen does not restart the P1 match.
+  Fixed 2026-07-30, exactly as this row prescribed: the manual
+  `syControllerReadDeviceData(); syControllerUpdateGlobalData();` pair was
+  removed from the Results branch of `src/port/taskman_seam.c`
+  (`NDS_SEAM_CONTROLLER_PAIR` -> 0), `ndsPlatformReadInput()` kept, and the
+  original `syTaskmanCommonTaskUpdate -> syControllerFuncRead` path left to
+  sample and publish once. Nothing synthesises START and
+  `mnVSResultsCheckExit` is untouched.
+  A second defect had to be fixed first for that to work: the port bypassed the
+  source's once-per-read publish interlock from nine call sites, so
+  `sSYControllerIsUpdateData` was never consulted and 1,388 dead second-publishes
+  ran per Results screen, zeroing `button_tap`. Restored in
+  `src/import/battleship_sys_controller.c`.
+  Proof obtained on the canonical mode-163 ROM: `InputTapMask & 0x1000`,
+  `RematchCount == 1`, and the restarted match reaches gameplay at 28.9 FPS.
+  One held press does not fire twice.
+  NOT COVERED BY THIS ROW, tracked below: the restarted match is drawn wrong.
+  The input path and the redirect are correct; what follows them is a separate
+  second-scene-entry defect.
+  Original research (2026-07-30):
   - Source contract: after the normal-result wait reaches 410 Results ticks,
     `mnVSResultsCheckExit` accepts only a `START_BUTTON` rising edge from
     `gSYControllerDevices[].button_tap`. The existing
@@ -33,6 +51,39 @@ These bugs should be fixed for P1 delivery.
     countdown/GO. Complete the second match without hang/corruption, confirm one
     held press does not trigger twice, run Boundary, then remove the temporary
     `gcRunAll`/controller telemetry. Status: FIX IDENTIFIED, NOT YET QUALIFIED.
+-The rematched match is drawn wrong: duplicated fighters over corrupted stage
+  and background geometry. Split out of the START row above 2026-07-30, because
+  that row's input fix is done and this is a different defect.
+  Symptom: START on Results restarts the match, and the second match runs at a
+  healthy 28.9 FPS with FTR 385,728 -- so this is VISUAL, not performance. Do
+  not re-open it as a slow/re-warm problem; that line is measured dead.
+  Shape: it is not rematch-specific. It is any SECOND entry into a scene, which
+  is why Sudden Death shows the same thing (`scVSBattleStartSuddenDeath`
+  re-enters nSCKindVSBattle on the same scene kind).
+  Refuted, with counters, so nobody repeats them: heap not rewound
+  (`AdapterCount` 2 proves it is); recursion through `scVSBattleStartScene`
+  (`scmanager.c:870` is a flat loop); same-kind reloc cache staleness
+  (`gNdsRelocSceneReentryEvictCount` stayed 0 -- rematch is VSResults->VSBattle,
+  different kinds, so the old kind-only guard already evicted); and three
+  earlier hypotheses withdrawn in e46340eda for comparing per-frame tick-HUD
+  brackets against a run average.
+  Landed and verified to fire, but NOT shown to fix the picture:
+  `ndsIFCommonNativeOamDiscardTextures()`. `ndsIFCommonNativeOamInit()` runs once
+  at boot and was the only thing clearing `sNdsIFCommonCloudTextureNames[]` /
+  `sNdsIFCommonTrafficTextureName`, while
+  `ndsRendererHardwareDiscardBattleStaticTextures()` runs on every scene change
+  and drops the VRAM behind them, so `ndsIFCommonNativeOamPrepareClouds()`
+  early-returned on stale names and never re-uploaded.
+  `gNdsIFCommonNativeOamTextureDiscardCount` reads 1. Same class as the prepare
+  latch beside it; look for further boot-scoped state guarding scene-scoped
+  resources.
+  Do NOT retry the reboot workaround. Restarting the ARM9 instead of
+  re-entering the scene was implemented and measured dead: calico links no
+  `svcSoftReset`, bare BIOS `swi #0` is a no-op here (a soak left
+  `gNdsVSResultsRematchCount` at 1, which a real .bss re-zero would have
+  cleared), and `crt0Startup` needs three loader-supplied arguments that no
+  longer exist by Results time. Reviving it is a crt0 change, not a scene one.
+  Status: OPEN.
 -"Time Up" VFX and SFX after match countdown finished.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `ifcommon.c` creates six blue mixed-width letter sprites
