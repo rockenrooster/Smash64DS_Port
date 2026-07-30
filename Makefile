@@ -496,8 +496,15 @@ NDS_R2_RESULTS_AFFINE ?= 1
 # blits, 320x240 -> 256x192 downscale, 98,304-byte VRAM copy -- on frames whose
 # foreground draw set is byte-identical to the image already resident in BG
 # VRAM. Two independent censuses put those four stages at 41.03%/44.38% of the
-# Results frame. Default off until it is measured and its fidelity approved.
-NDS_R2_RESULTS_LAYER_MEMO ?= 0
+# Results frame.
+#
+# GRADUATED 2026-07-30. Measured -2,245,333 ticks/frame (-28.6%), work -44.3%,
+# instructions -49.9%, and the output is PIXEL-IDENTICAL: 253,344 guest pixels
+# compared at Results tic 160 on a matched-source-tic pair, 0 differing, max
+# channel delta 0, while skipping 97.7% of foreground layers. Evidence at
+# artifacts/task37-census/r207-r4b-memo-on/ and
+# artifacts/visibility/2026-07-30_r207-r4b-results-tic160-{control,candidate}.png
+NDS_R2_RESULTS_LAYER_MEMO ?= 1
 # Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
 # open/read/flush/play while preserving all BGM state/counters so the rest of
 # the system believes BGM is active. Never set in a published target.
