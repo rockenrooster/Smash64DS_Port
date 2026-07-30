@@ -606,6 +606,56 @@ real mechanisms from the 495-symbol tail. It also refuses to run when the marker
 the ELF, because a partition keyed on an inlined or deleted name silently classifies every
 frame as a control frame — the `addr2line` trap in a new costume.
 
+### R2-06 E11 REFUTED — the work really was removed, and P95 still got worse (2026-07-30)
+
+**Do not bring another small load-frame cut.** E10 named `ndsRelocAssetIDForToken` the cleanest
+lever in the phase: 630 calls on the 16 load frames, **zero on all 112 clean frames**, so a fix
+could not regress a clean frame's *work* by construction. E11 built the fix, proved it removed
+the work, and it lost the gate anyway. That is the result worth keeping.
+
+**The change.** Hoist the `ndsRelocIsMarioFoxAnimID` range check above the two inlined pointer
+scans, and delete the five `MARIO_ANIM_WAIT`/`WALK1..3`/`WALK_END` compares it subsumes.
+Provably identical, not merely faster: the range is `[0x1f3, 0x31f]`; every compare that returns
+something other than its own argument tests either a file-id global's link-time address
+(≥ `0x02000000`) or one of `0x58` / `0x5f` / a bank id (all ≤ `0x13b`), so none can match a token
+in the range; every remaining compare it could reach has the form `if (token == X) return X;`.
+**Negative bytes added** — the Task 74 veto on adding data was respected, not worked around.
+
+**It did what it claimed.** Function `39,475 → 31,808` per load frame (**−7,667**, **−5,103
+instructions**), and the equivalence guard passed exactly: the 16 marked load-frame regions were
+**bit-identical** between arms, so the same files loaded on the same frames.
+
+**And the gate got worse.** Against a matched control rebuilt from HEAD in the same harness
+(`r206-e11-control-128` vs `r206-e11-tokenfirst-128`, DLDI on, ring dump, 128 samples):
+
+| | P10 | P50 | P90 | **P95** | P99 | over 1.12M | mean |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| matched control | 919,744 | 976,704 | 1,080,064 | **1,179,520** | 1,233,792 | **9** | 995,922 |
+| candidate | 917,824 | 973,824 | 1,068,864 | **1,195,264** | 1,292,992 | **11** | 993,011 |
+| delta | −1,920 | −2,880 | −11,200 | **+15,744** | +59,200 | **+2** | −2,911 |
+
+**Two HEAD controls disagree with each other by P95 +5,376 and ±1 over-gate frame**
+(`r206-head-control-128` vs `r206-e11-control-128`, identical source, different ROM hash — the
+build is not reproducible, already recorded at §"R2-06 E8"). So +15,744 is about 3x the observed
+noise, not noise. The window also shifted 797..924 → 798..925 → 799..926 across the three arms,
+which is **harness variance, not the change** — worth knowing before anyone reads a frame number
+as fixed. The candidate's over-gate set is the control's nine shifted +1 **plus 829 and 848**,
+and regions 32 and 51 say both of those are **load frames**: the change pushed two more load
+frames over the gate while making the function cheaper.
+
+**The lesson is about size.** A load-frame-only saving of ~8,000 ticks **cannot be banked through
+P95 on this ROM**, because relinking moves the tail by more than the saving. This is Task 74's
+outcome reached by a different route, and it is now much better evidenced: Task 74 could argue
+its 512 bytes of `.main.bss` were the cause, while E11 added negative bytes and lost the same
+way. Combined with E10 (no single large lever; the premium is 513 symbols), the queue's shape
+changes: **stop accumulating small load-frame cuts.** What remains viable is (a) one change large
+enough to clear ~16,000 of tail movement, or (b) **moving the work off the gameplay frame**,
+which is E9's hoist — it changes *when* the work happens rather than where the code sits, and is
+therefore the only remaining candidate that is not fighting the linker.
+
+The guard is recorded at `reloc_backend_assets.c:1796` beside Task 74's, because that comment is
+what stopped E11 from re-attempting the memo and is where the next attempt will look.
+
 ### R2-06 E8 — EVERY over-gate frame is an asset-load frame, and the clean-frame P95 MEETS THE GATE (2026-07-30)
 
 E7 narrowed the excursion to `SRC`. This names the event, and it is the most actionable

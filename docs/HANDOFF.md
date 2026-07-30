@@ -25,18 +25,13 @@ DLDI-on vs the **1,096,768** it published DLDI-off. **The gate was already misse
 before this session, the 23,232 margin was a DLDI-off artifact, and R2-07's particle budget
 was sized against it.** Read every pre-`3eb9ecdb` P95 as a lower bound.
 
-**This session did NOT cost 33,984 — a P95 tail artifact; both candidates are closed.** Body
-inside the noise floor (P50 **+4,352**) and **frames over 1.12M went 9/128 → 8/128**, so by
-the gate's own criterion the tree is marginally *better*. `SRC +30,912` stays withdrawn.
-Residual SD reads **refuted without a build** (`WarmFailed=0`, cache `Hits=79 Misses=2` of
-81 — **two file loads reach the SD driver in the whole run**); heap layout moot. **Never
-compare those two runs paired by frame** — the anim cache shifts load timing so they diverge
-in state (P10 −89,088 / P90 +115,712); order statistics only.
+**The 33,984 was a P95 tail artifact; both candidates closed, `SRC +30,912` withdrawn.** Residual
+SD reads refuted without a build (cache `Hits=79 Misses=2` of 81). **Never compare an anim-cache
+pair frame-by-frame** — it shifts load timing, so runs diverge in state; order statistics only.
 
-**R2-06 E6 REFUTED — E61 §5's −56,774 Horner route is unavailable and its other rows are now
-suspect.** Bounded green, measured **+7,168 P50 / 117 of 128 paired frames worse**: a memo is a
-memory stream, that table priced only arithmetic. Durable: **`aobjs_num = 0` here**, so AObjs
-are malloc'd individually and nothing can index them.
+**E6 REFUTED — E61 §5's −56,774 Horner route is unavailable, its other rows suspect.** Measured
+**+7,168 P50 / 117 of 128 paired frames worse**: a memo is a memory stream, that table priced only
+arithmetic. Durable: **`aobjs_num = 0` here**, so AObjs are malloc'd individually, unindexable.
 
 ## OPEN P1: every over-gate frame is an ASSET-LOAD frame, and clean P95 MEETS THE GATE
 
@@ -59,16 +54,21 @@ to cache-store time IS viable — worth ~19,400/load frame (E9). **Bank it, not 
 judge on load frames only: averaged it is 3,735/frame, under the noise floor.
 
 **E10 ANSWERED the premium and there is NO single lever.** Per-frame profiler regions, split by
-a marker symbol the profile itself observed (16 load frames, same 16 E8 found, DLDI on):
-work premium **326,906/frame** after subtracting `armWaitForIrq` 247,439 (quantization slack,
-+4 insns) and 45,917 of tick-HUD printf. **513 symbols carry 349,268 — fully attributed.**
-Relocation family 37.0%, `battleship_ftAnimParseDObjFigatree` 13.0%, animation+cubic ~19%,
-`memcpy` 4.8%. **The cleanest lever is `ndsRelocAssetIDForToken`: 630 calls on the 16 load
-frames, 0 on all 112 clean frames, 1,003 cyc/550 insn each — it cannot regress a clean frame.**
-Task 71 under-priced it 4.2x because GCC inlined the Mario/Fox scans into `.part.0`.
-**Task 74's veto still binds its approach** (a 512-byte memo cost +11,584 P50 via layout):
-a retry must add **zero bytes** and cut the 39.4 calls/frame at the call sites.
-Board §"R2-06 E10 second pass" has the tables and the method note.
+a marker symbol the profile itself observed (16 load frames, same 16 E8 found, DLDI on): work
+premium **326,906/frame** after subtracting `armWaitForIrq` 247,439 (quantization slack, +4
+insns) and 45,917 of tick-HUD printf. **513 symbols carry 349,268 — fully attributed.**
+Relocation family 37.0%, `battleship_ftAnimParseDObjFigatree` 13.0% (but ~27,000 of it is body
+cost every frame), animation+cubic ~19%, `memcpy` 4.8%.
+
+**STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked.** E11 took E10's
+cleanest lever (`ndsRelocAssetIDForToken`, 630 calls on load frames, **0 on all 112 clean
+frames**), removed the work provably and with **negative** bytes added, and measured the function
+at **31,808 (−7,667, −5,103 insns)** with the load-frame set **bit-identical**. The gate still got
+worse: **P95 +15,744, P99 +59,200, over-gate 9 → 11**, and the two added frames were **load**
+frames 828/847. Two HEAD controls differ by only P95 +5,376, so that is ~3x noise. **REVERTED.**
+A ~8,000 load-frame saving cannot survive relinking here. What is left: one change big enough to
+clear ~16,000 of tail movement, or **move the work off the frame** (E9). Board §§"R2-06 E10
+second pass"/"E11"; guard at `reloc_backend_assets.c:1796`.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
@@ -97,16 +97,15 @@ issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExi
 R2-07's own gate, 19.5x the battle frame. **89.4% is `tfunc->scene_draw()` alone (19,550,631)**:
 the native OAM path is gated to `nSCKindVSBattle` only, so Results software-blits two 320x240
 layers per frame, and `taskman_seam.c:6950` has no pacing and no HUD. **Ungating the wallpaper
-cache is REFUTED** (R0a) — a Dream Land specialization. Board has a third, wider candidate.
+cache is REFUTED** (R0a, a Dream Land specialization). Board has a third, wider candidate.
 
 ## The other half is ANIMATION, not collision (E60/E61 — replaces the `SRC` row)
 
-**"float→fixed on the collision path" was wrong by ~20x and that row is deleted.** A leaf
-helper is charged to itself, not its caller, so animation float was booked to
-`__aeabi_fadd`/`__aeabi_fmul`. Caller-attributed, animation is **146,942/frame**, collision is
-**under 4,000**, and the cubic is **99.6% of that float** (149.4 nodes @ **405 ticks**).
-Refuted, do not re-propose: the *layout* route (Tasks 95/96), the pose table (size), the
-Horner fold (E6), and Task 78's self-vs-inclusive animation-compiler error.
+**"float→fixed on the collision path" was wrong by ~20x; that row is deleted.** A leaf helper is
+charged to itself, not its caller, so animation float was booked to `__aeabi_fadd`/`__aeabi_fmul`.
+Caller-attributed, animation is **146,942/frame**, collision **under 4,000**, and the cubic is
+**99.6% of that float** (149.4 nodes @ **405 ticks**). Also refuted here: the *layout* route
+(Tasks 95/96) and Task 78's self-vs-inclusive animation-compiler error.
 
 ## The one open fidelity item
 
@@ -122,17 +121,18 @@ Horner fold (E6), and Task 78's self-vs-inclusive animation-compiler error.
 
 ## Refuted this cycle — do not re-derive
 
-**E51** `line_id` table (`YakumonoCount = 1`, so a 64x4-shaped loop has a trip count of
-**one**); **E53** `{base,size}` mirror (exact, still P95 **+11,584**); **the flash as vertex
-data** (E48-E58); **the pose table** (E61, 2.62 MB resident vs 4 MB RAM); **fixed-point
-collision** (E60, under 4,000/frame); **`.text.hot`** (E66, +24,448); **R2-04 E57** — hitboxes
-walk the live joint chain (`gmcollision.c:489`); **R2-06 E6** the Horner fold (+7,168 P50);
-**R2-06 E7** the fighter fallback (0/256) and Task 39 effects (4 sparks/924 frames).
+Each is refuted by measurement, not opinion. **E51** `line_id` table (`YakumonoCount = 1`, so a
+64x4-shaped loop has trip count **one**); **E53** `{base,size}` mirror (exact, still P95
+**+11,584**); **the flash as vertex data** (E48-E58); **the pose table** (E61, 2.62 MB resident vs
+4 MB RAM); **`.text.hot`** (E66, +24,448); **R2-04 E57** hitboxes walk the live joint chain
+(`gmcollision.c:489`); **R2-06 E7** the fighter fallback (0/256) and Task 39 effects (4
+sparks/924 frames); and **the Mario/Fox pointer arrays as index arithmetic** (E11 — their targets
+span 1.7 MB non-monotonically).
 
 ## Restart
 
 Branch `codex/r2-runtime2`, not merged to master. Boundary `battle_playable_realtime`, mode
-`163`. Tick-HUD ROM current at HEAD (`1C1136BA`).
+`163`. Tick-HUD build dir now holds an E11 ROM; rebuild before citing a hash.
 
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'

@@ -1975,3 +1975,30 @@ BSS alone.
    identically, including the VBlank histogram and the evaluation counter. When two runs
    disagree on a fixed configuration, the cause is the binary or the emulator settings —
    never scatter.
+
+## A win on the changed frames is not a win on the gate (2026-07-30, R2-06 E11)
+
+E10's instrument resolved one function to ~1 tick and proved it ran **only** on the 16
+load frames and **never** on the 112 clean ones — so a fix could not regress a clean
+frame's work by construction. E11 built that fix, adding **negative** bytes, and
+measured exactly what it promised: the function fell **39,475 → 31,808** per load frame,
+**−5,103 instructions**, load-frame set bit-identical. **WORK-H P95 still rose 15,744,
+P99 rose 59,200, and over-gate went 9 → 11** — the two added frames being load frames
+828 and 847, i.e. the very frames it was meant to help.
+
+5. **Size the candidate against the tail movement, not against its own bracket.** On
+   this ROM a load-frame-only saving of ~8,000 ticks cannot be banked through P95,
+   because relinking moves the tail by more than the saving. Either remove enough work
+   in one change to clear ~16,000, or move the work off the gameplay frame so the fix
+   changes *when* it runs instead of where the code sits. Small accumulating cuts on a
+   12.5%-of-frames event are not a strategy here, and Task 74 reached the same wall from
+   the other side — it could blame its 512 bytes of `.main.bss`, and E11 cannot.
+6. **Quantify the cross-build floor before reading a cross-build delta.** Rule 4 stands
+   — the harness does not scatter — but *identical source is not an identical binary*:
+   this build system does not produce a reproducible ROM hash. Two HEAD controls
+   (`r206-head-control-128` sha `1C1136BA`, `r206-e11-control-128` sha `C0CAAE38`)
+   differ by **P95 +5,376 and ±1 over-gate frame**, and their ring windows landed on
+   797..924 and 798..925. So a frame number is not fixed across runs, and any
+   cross-build P95 delta under ~5,400 is unreadable. **Always run the matched control**;
+   E11's first comparison used a committed control two commits old and read +21,120
+   where the matched control read +15,744.

@@ -1806,7 +1806,39 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
  * compares against link-time immediates are branch-predictable and already
  * resident; three lookup arrays in .main.bss are not.
  *
- * Do not re-attempt without an instrument that resolves below ~8,000 ticks. */
+ * Do not re-attempt without an instrument that resolves below ~8,000 ticks.
+ *
+ * R2-06 E10 built that instrument -- per-frame profiler regions split by a
+ * marker symbol, ~1 tick resolution -- and R2-06 E11 then used it to REFUTE the
+ * whole line, including a fix that added no data at all. What it measured here:
+ *
+ *   - 630 calls on the 16 load frames of window 796..923, ZERO on all 112 clean
+ *     frames, 39,475 ticks per load frame, 1,003 cycles / 550 instructions each.
+ *   - Task 71's 9,306 was 4.2x low, because ndsRelocMarioBattleAnimAssetIDForToken,
+ *     ndsRelocFoxAnimAssetIDForToken and ndsRelocIsMarioFoxAnimID all inline into
+ *     this function; it priced the compare chain and not the scans behind it.
+ *   - The chain is NOT the cost. 74.3% of calls resolve inside it. The two
+ *     inlined pointer scans are 51.6% of the function on 14.3% of calls, because
+ *     a full miss walks all 143 + 158 entries. So hoisting the scans, the
+ *     obvious-looking fix, would have made 74.3% of calls pay 301 iterations.
+ *   - The Mario/Fox pointer arrays cannot become index arithmetic: their targets
+ *     span 1.7 MB non-monotonically (density 0.0%).
+ *
+ * E11 hoisted the ndsRelocIsMarioFoxAnimID range check above both scans and
+ * deleted the five dead WAIT/WALK compares it subsumed -- provably identical,
+ * NEGATIVE bytes added, and it worked: the function fell to 31,808 (-7,667,
+ * -5,103 instructions) with the load-frame set bit-identical. It still lost.
+ * Against a matched control (r206-e11-{control,tokenfirst}-128) the body improved
+ * at every percentile below P90 and the tail did not: WORK-H P95 +15,744, P99
+ * +59,200, over-gate 9 -> 11, and the two added frames were load frames 828 and
+ * 847. Control-to-control noise on this ROM is P95 +5,376 and +/-1 over-gate.
+ *
+ * The lesson is about size, not about this function: a load-frame-only saving of
+ * ~8,000 ticks cannot be banked through P95 here, because relinking moves the
+ * tail by more than the saving. Do not bring another small load-frame cut. Either
+ * remove this work in one change large enough to clear ~16,000 of tail movement,
+ * or move it off the gameplay frame entirely, which changes WHEN the work happens
+ * instead of shuffling where the code sits. */
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
     if (token == ndsRelocFileID(&llN64LogoFileID)) return NDS_RELOC_ASSET_N64_LOGO;
