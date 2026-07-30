@@ -86,28 +86,28 @@ the native OAM path is gated to `nSCKindVSBattle` only, so Results software-blit
 layers per frame, and `taskman_seam.c:6950` has no pacing and no HUD. **Ungating the wallpaper
 cache is REFUTED** (R0a, a Dream Land specialization). Board has a third, wider candidate.
 
-## NEXT LEVER: the animation body is 146,148/frame and 59.4% of it is STALL (E12)
+## NEXT LEVER: E17, the ACTION CHANGE — 78.5% of the load-frame premium, never bracketed
 
-**146,148/frame** (reproducing E60's 146,942 by a second instrument): **59,329 instructions against
-86,819 of STALL**. **Switch plan §4 budgets animation at 100K, so it is 46,148 OVER — larger than the
-40,448 the gate is missed by** — one over-budget subsystem accounts for the whole miss, so no hunt for
-40,000 spread across the frame is needed. **Body** cost, so **the E11 wall does not apply.**
-`ndsR2CubicValueFixed` (48,623, **1.73 cyc/insn**) is the only near-compute-bound member and is the
-one E64b/E65/E67 won on; `gcPlayDObjAnimJoint` (40,973) is **already in `.text.hot` and still 65.8%
-stall** — **data, not code**. **Every refuted candidate removed instructions or added data; none
-improved locality** (see the refuted list).
+**The animation body is CLOSED — three levers, three refutations, zero builds spent.** 146,148/frame,
+86,819 of stall, 46,148 over §4's 100K, none reachable at this granularity: **E13** pose-fewer-joints
+refuted, collision's ancestor closure is **f = 0.840** of live joints (only 8 render-only across both
+fighters; `cosmetic-only` is EMPTY); **E14** reorder refuted at **~2,900** (Task 96: **10-15 ticks per
+32-byte line fill**, no data prefetcher; `AObj` is **36 bytes**, N is **221** — both memos wrong);
+**E15** shrink+Q12 unbuilt at ~16-22K straddling the floor, the cubic emits **one `bl` total** so its six
+f32→fixed conversions are already inline. `scripts/census-fighter-gameplay-joints.ps1` reports the 60 Hz
+set; `gNdsFighterInit*` is proof-build-only, **0 by construction — never cite it**.
 
-**E13 — the switch plan prescribes the fix and FORBIDS the shortcut.** Do **not** halve the shared
-walk: §3.5 says *"do not begin by compromising the simulation"*, keeping **gameplay 60 Hz / visual
-pose 30 Hz**; §3.6 mandates the split — the renderer gets *"a compact generated pose"* and *"they must
-not share one expensive runtime representation"*. **The 146,148-tick walk IS that forbidden shared
-representation**, and giving the renderer its own pose is R2-04's own title (E6: E5 paid down
-loading, not pose). Collision is **hard-bounded at 15 joints** —
-`attack_colls[4]` + `damage_colls[11]` (`fighter.h:3141/3148`) — of ~25 live, and the parse/play walk
-is **unconditional**, so the remainder is recoverable. **Collision needs only the joints' LOCAL TRS** — it
-builds its own matrices lazily, memoised per frame, on just the chains it touches (`gmcollision.c:29`, `:489`),
-so the render matrix build is 30 Hz-able. `gNdsFighterInit*` is proof-build-only (0 by construction here, never
-cite it); `scripts/census-fighter-gameplay-joints.ps1` is the instrument, and it now reports the 60 Hz set.
+**E17 is the only lever with room to close 40,448 outright.** E8's premium is 139,072/load frame over
+16 frames; the **whole** in-frame relocation is just **21.5%** of it, so **~109,000/frame (78.5%,
+~1.75M in-window) is the action change** — status transition + animation-script re-parse +
+hit/collision — and is unmeasured. *Different* cost from the walk above: that one **plays** cached
+AObjs, this one **rebuilds** them. **Collect the existing instrument, do not write a probe:**
+`NDS_R2_LOADFRAME_TIMING` already brackets `gcAddAnimJointAll`
+(`battleship_sys_objanim.c:1163`, *"what a fighter action change goes through"*) and
+`gcAddDObjAnimJoint` (`:1113`). **These counters are CUMULATIVE FROM BOOT — read twice and difference,
+as E8 did.** A single read inverts the answer: `r206-e8-fixup-timing-128.json` makes sprites look 88.1%
+when in-window it is 5.0%, because one boot call is 21,353,728 ticks. **E9 is DEMOTED** — ~21,788/load
+frame moves P95 only to ~1,138,660, still 18,660 over, for a full offsets refactor; keep it to stack.
 
 ## The one open fidelity item
 
