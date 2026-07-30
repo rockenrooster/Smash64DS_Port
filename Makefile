@@ -844,16 +844,26 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_TASK39_FX_SHIELD := 1
 endif
-ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-battle-playable-proof-hwtri),)
+ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-battle-playable-proof-hwtri smash64ds-results-lab-hwtri),)
 # Profile-0 shipping path plus either the lightweight Task 41 timers or the
 # full diagnostic publications required by GDB proof runs.
+#
+# smash64ds-results-lab-hwtri rides this block deliberately: R2-07's Results
+# numbers have to be comparable with the battle ones, so it must differ from
+# the tick-HUD ROM in the scene it boots and in NOTHING else. Adding it to the
+# filter rather than cloning the block is what guarantees that -- a copied
+# block would drift the moment either half was edited.
+ifeq ($(TARGET),smash64ds-results-lab-hwtri)
+override NDS_DEV_SCENE_HARNESS := results_playable
+else
 override NDS_DEV_SCENE_HARNESS := battle_playable_realtime
+endif
 override NDS_DEV_LIVE_INPUT_PREVIEW := 1
 override NDS_HARNESS_FAST_LOGIC := 0
 override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 0
-ifeq ($(TARGET),smash64ds-battle-playable-tickhud-hwtri)
+ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-results-lab-hwtri),)
 override NDS_SHIP_TELEMETRY := 0
 override NDS_TICK_HUD := 1
 else
@@ -1270,8 +1280,15 @@ else ifeq ($(NDS_DEV_SCENE_HARNESS),battle_playable_match_lifecycle)
 NDS_DEV_SCENE_HARNESS_ID := 163
 # The fast-logic timer/Results diagnostic is a reserve proof, not a benchmark.
 CFLAGS += -Os
+else ifeq ($(NDS_DEV_SCENE_HARNESS),results_playable)
+NDS_DEV_SCENE_HARNESS_ID := 164
+# Boots straight into VS Results with a finished match seeded, so R2-07 work
+# can profile and A/B the scene without emulating the whole minute first. It is
+# a latency surface for the same reason battle_playable_realtime is: the numbers
+# taken here are per-frame Results cost, so it must not be size-optimized.
+CFLAGS += -O2
 else
-$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal or a harness name from scripts/lib/harness-registry.ps1)
+$(error Unknown NDS_DEV_SCENE_HARNESS "$(NDS_DEV_SCENE_HARNESS)"; use normal, a verifier harness name from scripts/lib/harness-registry.ps1, or a lab-only harness named in this block such as results_playable)
 endif
 
 # Profile 2 is an exact semantic oracle rather than a latency benchmark.  Its

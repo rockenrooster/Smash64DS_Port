@@ -218,6 +218,61 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
 }
 
+/* Seed the transfer state as if the canonical one-minute Time match had just
+ * ended with Mario ahead, so VS Results can be entered directly from boot.
+ *
+ * Results is a pure consumer of this struct: `mnvsresults.c` reads pkind/fkind
+ * for presence and models, costume/shade/team for colour, score and falls for
+ * the KO and fall rows, the damage and KO totals for the backup records, and
+ * `time_passed`/`gkind` for the record update -- and nothing else. There is no
+ * live battle GObj to fake, which is what makes booting the scene legitimate
+ * instead of a mock.
+ *
+ * The numbers are one consistent match, not placeholders, because the source
+ * derives visible content from them: Mario takes 3 KOs to Fox's 1 and falls
+ * once to Fox's three, so `mnVSResultsGetBestMan` ranks Mario first and the
+ * winner text reads MARIO WINS. `total_kos_players` has to agree with `score`
+ * and `falls` or the rankings and the per-fighter records disagree with the
+ * rows drawn beside them. `time_passed` is the full 3,600-tick minute: Results
+ * divides it by UPDATE_INTERVAL into `time_used`.
+ *
+ * A Fox-win arm is deliberately not a second harness mode -- swap the two
+ * players' figures here when the fidelity matrix needs it. The research doc
+ * requires both arms proven before acceptance, and one mode with edited
+ * constants beats two modes that can drift apart. */
+static void ndsSceneHarnessSeedResultsPlayableDefaults(void)
+{
+    struct SCPlayerData *mario;
+    struct SCPlayerData *fox;
+
+    ndsSceneHarnessSeedBattlePlayableDefaults();
+
+    gSCManagerTransferBattleState.time_passed = 3600;
+
+    mario = &gSCManagerTransferBattleState.players[0];
+    fox = &gSCManagerTransferBattleState.players[1];
+
+    mario->place = 0;
+    mario->score = 3;
+    mario->falls = 1;
+    mario->total_kos_players[1] = 3;
+    mario->total_damage_given = 412;
+    mario->total_damage_all = 168;
+    mario->total_damage_players[1] = 168;
+    mario->total_selfdestructs = 0;
+
+    fox->place = 1;
+    fox->score = 1;
+    fox->falls = 3;
+    fox->total_kos_players[0] = 1;
+    fox->total_damage_given = 168;
+    fox->total_damage_all = 412;
+    fox->total_damage_players[0] = 412;
+    fox->total_selfdestructs = 0;
+
+    dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
+}
+
 void ndsDevSceneHarnessApply(void)
 {
     gNdsSceneHarnessMode = (u32)NDS_DEV_SCENE_HARNESS;
@@ -518,6 +573,15 @@ void ndsDevSceneHarnessApply(void)
     case NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_LIVE_PREVIEW:
         ndsSceneHarnessSetDefaultScene(nSCKindVSBattle, nSCKindMaps);
         ndsSceneHarnessSeedBattlePupupuStageDefaults();
+        gNdsSceneHarnessResult = NDS_SCENE_HARNESS_PASS;
+        return;
+
+    /* `scene_prev` is VSBattle, not Maps: Results is reached from a match, and
+     * the source branches on where it came from. Boot lands in the scene the
+     * player would have reached, on the same source timeline from tic 0. */
+    case NDS_DEV_SCENE_HARNESS_RESULTS_PLAYABLE:
+        ndsSceneHarnessSetDefaultScene(nSCKindVSResults, nSCKindVSBattle);
+        ndsSceneHarnessSeedResultsPlayableDefaults();
         gNdsSceneHarnessResult = NDS_SCENE_HARNESS_PASS;
         return;
 

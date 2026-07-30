@@ -166,6 +166,16 @@
 #define NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE 163u
 #define NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_REALTIME 163u
 #define NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_MATCH_LIFECYCLE 163u
+/* Boot straight into VS Results with a finished match already in the transfer
+ * state. Owner-requested 2026-07-30 to make the R2-07 Results work iterable:
+ * every Results measurement before this had to emulate the whole one-minute
+ * match first, so one profile cost tens of minutes and one A/B cost an hour.
+ * Results reads only plain data out of `gSCManagerTransferBattleState` --
+ * pkind/fkind/costume/shade/team/score/falls/damage totals/time_passed/gkind
+ * -- and never touches a live battle GObj, which is why seeding it is sound
+ * rather than a trick. NOT a benchmark surface for the milestone: the Boundary
+ * P95 is still defined on mode 163. */
+#define NDS_DEV_SCENE_HARNESS_RESULTS_PLAYABLE 164u
 
 #define NDS_SCENE_HARNESS_NONE 0u
 #define NDS_SCENE_HARNESS_PASS 0x4841524Eu

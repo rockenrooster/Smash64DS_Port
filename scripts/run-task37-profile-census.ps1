@@ -25,7 +25,15 @@ param(
     # nothing about Results. Results runs must emulate the entire one-minute
     # match before the window opens, so give them a long -TimeoutSeconds.
     [ValidateSet('Battle','Results')]
-    [string]$Scene = 'Battle'
+    [string]$Scene = 'Battle',
+    # Which ROM the window is measured on. The default is the tick-HUD battle
+    # ROM every census before 2026-07-30 used. `smash64ds-results-lab-hwtri`
+    # boots straight into VS Results with a finished match seeded, which is the
+    # difference between a Results profile costing twenty minutes of emulated
+    # match and costing seconds. It rides the same Makefile block as the
+    # tick-HUD ROM and differs only in the scene it boots, so numbers from the
+    # two remain comparable.
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri'
 )
 
 # Task 37 census driver.
@@ -47,7 +55,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$target = 'smash64ds-battle-playable-tickhud-hwtri'
+$target = $Target
 $isResults = ($Scene -eq 'Results')
 # Battle frame 438 is deep into a settled match; Results tic 131 is where R0
 # measured the scene's cost plateau. Only override a default the caller left alone.
