@@ -10,6 +10,7 @@
 #include <lb/transition.h>
 #include <mn/menu.h>
 #include <nds/nds_startup.h>
+#include <nds/nds_task37_profile.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
 #include <sys/controller.h>
@@ -89,6 +90,14 @@ void ndsMNVSResultsRecordFrame(void)
     u32 file_count = 0;
     u32 fighter_count = 0;
     u32 i;
+
+    /* R2-07 R0h. The profiler's window is driven from here in
+     * NDS_TASK37_PROFILE_RESULTS builds and compiles to nothing everywhere else.
+     * The battle site keys off presented frames, which this loop never
+     * increments, so a battle-keyed window would open and dump during the match
+     * and describe nothing about this scene. Costs one compare per Results
+     * iteration in profile builds only. */
+    NDS_TASK37_PROFILE_RESULTS_TICK(sMNVSResultsTotalTimeTics);
 
     for (i = 0; i < ARRAY_COUNT(sMNVSResultsFiles); i++)
     {

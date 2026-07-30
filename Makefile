@@ -542,6 +542,11 @@ NDS_TASK37_PROFILE_FRAMES ?= 128
 # "over-counts on clean frames, under-counts on the tail", and the tail is what
 # the P95 gate is decided on.
 NDS_TASK37_PROFILE_PER_FRAME_REGION ?= 0
+# Drive the profiler window from the VS Results loop instead of the battle loop.
+# The battle site keys off presented frames and the Results loop never increments
+# that counter, so a battle-keyed window opens and dumps during the match and says
+# nothing about Results. Exactly one of the two tick sites is live.
+NDS_TASK37_PROFILE_RESULTS ?= 0
 # Task 37 placement repack: admit the measured non-memory-stall toppers into the
 # 1,060 free ITCM bytes. Placement only -- no ISA switch, no optimization change,
 # no eviction of any current resident.
@@ -2112,6 +2117,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK37_PROFILE_START $(NDS_TASK37_PROFILE_START)u'; \
 		echo '#define NDS_TASK37_PROFILE_FRAMES $(NDS_TASK37_PROFILE_FRAMES)u'; \
 		echo '#define NDS_TASK37_PROFILE_PER_FRAME_REGION $(NDS_TASK37_PROFILE_PER_FRAME_REGION)'; \
+		echo '#define NDS_TASK37_PROFILE_RESULTS $(NDS_TASK37_PROFILE_RESULTS)'; \
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \

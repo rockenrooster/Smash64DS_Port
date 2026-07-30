@@ -17,7 +17,15 @@ param(
     [bool]$PerFrameRegion = $true,
     # Partition the census frames by whether they executed this symbol, and rank
     # every symbol by the per-frame cycle difference. Requires -PerFrameRegion.
-    [string]$SplitBySymbol = ''
+    [string]$SplitBySymbol = '',
+    # Which loop drives the window. `Battle` counts presented frames, the
+    # campaign default. `Results` counts sMNVSResultsTotalTimeTics instead,
+    # because the VS Results loop never increments the presented-frame counter --
+    # a battle-keyed window would open and dump during the match and describe
+    # nothing about Results. Results runs must emulate the entire one-minute
+    # match before the window opens, so give them a long -TimeoutSeconds.
+    [ValidateSet('Battle','Results')]
+    [string]$Scene = 'Battle'
 )
 
 # Task 37 census driver.
@@ -40,6 +48,15 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-battle-playable-tickhud-hwtri'
+$isResults = ($Scene -eq 'Results')
+# Battle frame 438 is deep into a settled match; Results tic 131 is where R0
+# measured the scene's cost plateau. Only override a default the caller left alone.
+if ($isResults -and (-not $PSBoundParameters.ContainsKey('StartFrame'))) {
+    $StartFrame = 131
+}
+if ($isResults -and (-not $PSBoundParameters.ContainsKey('Build'))) {
+    $Build = 'build-task37-profile-results'
+}
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS $MelonDS -RunnerSlot $RunnerSlot -NoBuild:$NoBuild
@@ -80,7 +97,8 @@ try {
         make -C $root "TARGET=$target" "BUILD=$Build" `
             'NDS_TASK37_PROFILE=1' "NDS_TASK37_PROFILE_START=$StartFrame" `
             "NDS_TASK37_PROFILE_FRAMES=$Frames" `
-            "NDS_TASK37_PROFILE_PER_FRAME_REGION=$([int]$PerFrameRegion)"
+            "NDS_TASK37_PROFILE_PER_FRAME_REGION=$([int]$PerFrameRegion)" `
+            "NDS_TASK37_PROFILE_RESULTS=$([int]$isResults)"
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     foreach ($path in @($rom, $elf)) {
@@ -98,6 +116,7 @@ try {
         -Persistent:([bool]$context.PersistentConfig) -MuteAudio
 
     $env:MELONDS_ARM9_PROFILE_CSV = $csv
+    Write-Host "scene:         $Scene$(if ($isResults) { ' (window counts Results tics, not presented frames)' })"
     Write-Host "census window: frames $StartFrame..$($StartFrame + $Frames)"
     # The ROM sets region r at the END of iteration StartFrame+r-1, so it is
     # iteration StartFrame+r that accumulates into r. Region 0 is everything

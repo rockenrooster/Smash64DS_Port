@@ -2065,3 +2065,22 @@ P99 rose 59,200, and over-gate went 9 → 11** — the two added frames being lo
    breakpoint at a shared address. And note the shape of the failure: **exit code 0,
    a full-looking table, and plausible numbers.** The only tell was the hit count. Read
    the hit counts against the iteration count before reading any cost column.
+10. **Never pipe a harness invocation through `Select-Object -First/-Last`. Redirect
+    with `*> $log` and grep the file.** `Select-Object -First N` terminates its upstream
+    pipeline, which kills the harness mid-flight *and reports exit code 0*. R2-07 R0h
+    lost a build-plus-run that way: the filter matched 80 compiler-warning lines, closed
+    the pipeline during the build, and left an empty `-OutDir` that read like an ordinary
+    census failure.
+
+    This was **already** written down — `docs/KNOWN_ISSUES.md` has carried "it has killed
+    a build and a census mid-flight" since 2026-07-29, with the fix stated. It is here now
+    because KNOWN_ISSUES is a symptom list you consult when something looks wrong, and
+    this failure does not look wrong: it looks like success. A rule about how to *invoke*
+    a measurement belongs in the document about how to *run* one.
+
+    The general form, which rule 9 shares: **the harness is not the only thing that can
+    destroy a run — the way you invoke it can too, and both of this session's losses were
+    invocation-side, not harness-side.** So verify the artifact, never the absence of an
+    error line: `Test-Path` the CSV or JSON the run was supposed to write, and check its
+    hit or sample count against the window you asked for, before reading any number out
+    of it.
