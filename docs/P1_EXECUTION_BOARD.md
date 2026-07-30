@@ -421,22 +421,60 @@ So this session's real cost is **+33,984 WORK-H**, not +63,680, and it is **not 
 named gameplay or render bucket** — `FTR`/`STG`/`SRC`/`MISC` are all within ~1,300.
 It is entirely `OTHR` +30,528 / `WAIT` +31,168.
 
-Both arms of that table are DLDI-on, so the +33,984 is real and is this session's. It
-sits in `OTHR` +30,528 / `WAIT` +31,168 with every named gameplay and render bucket
-inside ~1,300, which is the same signature DLDI itself has — unnamed remainder and wait
-bracket, not a subsystem. That is consistent with **more I/O**, and the anim-cache work
-is exactly what changed the I/O pattern: it reserves 92,160 bytes from
-`gSYTaskmanGeneralHeap` early and changes which animation loads hit the SD driver. Two
-candidates remain, both cheap to separate:
+#### CORRECTION (2026-07-29, same day) — the +33,984 is a P95 tail artifact. The body is +4,352 and the over-gate count IMPROVED
 
-1. **Residual cache misses that are now SD reads.** `Hits=79` over 128 frames with
-   `Rejects=0` says the cache serves what it holds, but not that it holds everything the
-   window asks for — a warm-list gap becomes a full `fopen`/`fread` through DLDI. Read
-   `gNdsR2AnimWarmFailed` and `gNdsR2AnimForceLoadTotal/Repeat` over the same window
-   before touching anything.
-2. **Heap layout.** The 92,160-byte reservation shifts every later allocation and
-   re-maps the match's working set across cache sets. Costs no instructions, lands in
-   the remainder. Separable by changing only the reservation size and re-measuring.
+Both candidates below were closed without a build, and the answer is that there was much
+less to explain than the P95 pair implied. **`P95` is a position in a sorted list**, and
+reading only that position mis-stated this by a factor of eight.
+
+| percentile | E69 rebuilt | current HEAD | delta |
+|---|---:|---:|---:|
+| P25 | 938,944 | 940,160 | +1,216 |
+| P50 | 971,712 | 976,064 | **+4,352** |
+| P75 | 996,928 | 1,001,088 | +4,160 |
+| P90 | 1,068,288 | 1,076,800 | +8,512 |
+| P95 | 1,126,464 | 1,160,448 | +33,984 |
+| **frames over 1,120,000** | **9/128** | **8/128** | **−1** |
+
+**The body cost is inside the noise floor, and by the gate's own criterion — how many
+frames exceed 1.12M — the current tree is marginally BETTER than the E69 baseline.** The
++33,984 is one or two expensive frames' position in the sorted tail; with 128 samples P95
+is index 120, so a single excursion appearing there moves it by tens of thousands. This is
+the same lesson E6 taught with two ROMs of identical arithmetic differing 23,040 at P95.
+
+**Do not compare these two runs frame-by-frame.** Paired by index they read "worse on 86
+of 128" with P10 **−89,088** and P90 **+115,712** — a ±100,000 spread, because the
+anim-cache changes *when* loads complete and the two runs are in different game states at
+the same frame index. Order statistics are comparable across these ROMs; paired frames
+are not. (E6's paired comparison WAS valid: those two ROMs ran the same simulation.)
+
+**Candidate 1, residual SD reads: REFUTED, no build spent.** All counters are plain
+globals, so one run on the HEAD ROM answered it. Over the whole run to frame 924:
+`gNdsR2AnimWarmFailed=0` (39 assets, 84,096 bytes, warm list complete),
+`gNdsR204AnimForceLoadTotal=81 / Distinct=29 / Repeat=52` (unchanged from Task 73's
+82/29/53), `gNdsR2AnimCacheHits=79`, **`Misses=2`**, `Fills=2`, `Rejects=0`,
+`ArenaOverflows=0`, arena used 87,824 of 92,160. **The cache serves 79 of 81 force-loads;
+exactly two file loads reach the SD driver in the entire run.** Two `fopen`/`fread` cycles
+cannot set a P95 — they land on two frames out of 128.
+
+**Candidate 2, heap layout: no longer worth a build.** It was the explanation for a
+33,984-tick body cost that does not exist. The arena also cannot usefully shrink — it uses
+87,824 of its 92,160 — so the experiment would trade a real freeze guard for a
+noise-floor measurement.
+
+**What this leaves.** The gate is still missed: **P95 1,160,448 against 1,120,000, 8 of
+128 frames over.** But this session did not cost it 33,984, and the campaign's remaining
+gap is the same tail R2-03 E35 already named — `SRC` P95 471,232 against P50 308,992
+(spread 1.53) and `OTHR` P95 461,376 against P50 162,496 (spread 2.84). **The body is
+already close; the work left is the excursion, not the average frame.**
+
+Superseded text follows for provenance. The two candidates as first written:
+
+1. **Residual cache misses that are now SD reads** — a warm-list gap becomes a full
+   `fopen`/`fread` through DLDI. *Refuted above: warm failures 0, misses 2.*
+2. **Heap layout** — the 92,160-byte reservation shifts every later allocation and
+   re-maps the working set across cache sets. *Moot above: there is no body cost to
+   explain, and the arena cannot shrink.*
 
 **Two standing corrections to how this campaign records evidence, both machine-fixable:**
 
