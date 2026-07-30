@@ -798,6 +798,57 @@ rather than stopping at "it walks the live joint chain":
   per-frame reset. The reset exists — it is the union store, not a per-byte assignment, which is why
   a grep for the field names missed it. Grep the union, not the member.)*
 
+### R2-06 E16 — E9 IS THE SMALL HALF. The load-frame premium is 78.5% ACTION CHANGE, and that has never been sized (2026-07-30)
+
+E15 closed the animation body, promoting E9 to the only live lever. **Re-reading E8's own numbers
+before building it says E9 cannot clear the gate and is not the biggest thing on the load frame.**
+No new measurement — this is arithmetic on the table at `#### The relocation is only 21.5% of it`
+above, which had already differenced the cumulative counters across the window.
+
+| | in-window ticks | per load frame | share of premium |
+|---|---:|---:|---:|
+| load-frame premium, 16 frames | 2,225,152 | 139,072 | 100% |
+| **whole** in-frame relocation, 18 calls | 478,080 | ~29,880 | **21.5%** |
+| ...of which E9's two payload walks (71.9%) | 348,608 | **~21,788** | **15.7%** |
+| **everything else — the action change** | **~1,747,000** | **~109,000** | **78.5%** |
+
+**So E9's ceiling is ~21,788 per load frame, not the ~19,400-of-a-bigger-thing it reads as in the
+queue.** Sized against P95: the gate is missed by 40,448, P95 is the 122nd of 128 sorted frames and
+sits inside the load-frame population, so dropping every load frame by 21,788 moves P95 by about
+that much — **1,160,448 → ~1,138,660, still 18,660 over.** It clears the ~16,000 tail-movement wall
+and the ~5,400 cross-build floor, so it would be *measurable*, but it does not close the gate, and
+E8 said as much already: *"Removing the whole relocation would clear perhaps 1-2 of the 8 over-gate
+frames, not all of them."* Against that it is **"a real refactor of the boundary computation to work
+in offsets"** (line 1169). **A marginal, non-closing win for a large refactor is the wrong next
+build.**
+
+**The unattacked 78.5% is the actual target, and E8 already named its mechanism:** *"The other
+~109,000 per frame is the cause of the load, not the load: a fighter changing action, which also runs
+the status transition, the animation-script re-parse and the hit/collision work. The load marker is
+largely a proxy for 'a fighter changed action this frame.'"* **~109,000 per load frame, 1.75M
+in-window, and it has never been bracketed as its own event.** E10's independent attribution
+corroborates that it is real and reachable: `ftAnimParseDObjFigatree` at **13.0%** of the premium is
+exactly the animation-script re-parse this describes, and it is a *different* cost from the
+steady-state animation walk E13/E14/E15 just closed — that walk *plays* cached AObjs, this one
+*rebuilds* them on an action change.
+
+**Next experiment (E17): bracket the action change.** Put timing around the status transition, the
+`gcAddAnimJointAll` re-add path (`battleship_sys_objanim.c:1163`, already flagged as *"the whole-GObj
+variant, which is what a fighter action change goes through: it walks the DObj tree and re-adds every
+joint's animation"* with `gNdsR2AddAnimAllCalls`/`Ticks` counters that exist and are uncollected), and
+the hit/collision work, differenced across the window exactly as E8 did the relocation. **The
+instrument is already in the source under `NDS_R2_LOADFRAME_TIMING` — collect it before writing any
+new probe.** Register the threshold first: this is 78.5% of a 139,072 premium, so unlike every lever
+since E10 it has room to clear 40,448 outright.
+
+*Process note, second occurrence this cycle: the answer was already in the board and I went to the
+code and an artifact first. The `r206-e8-fixup-timing-128.json` artifact is the **cumulative-from-boot**
+read whose single 21,353,728-tick boot sprites call swamps everything — read alone it says sprites is
+88.1% and AObj16 8.9%, the exact inverse of the in-window truth. I briefly took that as a
+documentation defect in `reloc_backend_assets.c:3089`. It is not; the comment is right and the board
+had already differenced the two reads. **Read the board section for a task before instrumenting it,
+and never quote a cumulative counter as a per-window figure.***
+
 ### R2-06 E15 — DO NOT BUILD. Both arms are sub-floor, and the disassembly refuted my own estimate 4x (2026-07-30)
 
 E14 left one candidate: shrink `AObj` so the pool leaves the dcache, plus store the four
