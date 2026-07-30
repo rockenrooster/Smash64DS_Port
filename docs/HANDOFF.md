@@ -74,17 +74,17 @@ verdicts withdrawn (it hashed the window **title**, where melonDS renders its FP
 Death has its own issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit`
 needs a `START_BUTTON` tap; soaks default 2.5 min, ceiling 5.
 
-## OPEN P1: VS Results — R0c CUT IT 43.6%, bit-exact; still 12.3M ticks/frame vs 1.12M
+## OPEN P1: VS Results — R0c+R0d CUT 46.2%, bit-exact; still 11.8M ticks/frame vs 1.12M
 
-**39.00 → 22.00 VBlanks/iter (−9,523,230 ticks, 1.53 → 2.72 FPS), Latest green.** Split per call first:
-8 blits = one **I/4b 300×220** wallpaper (66,000 px, **84.8% of cost**) + seven IA/8b glyphs. Cause was
-**not** the dispatch chain — `ndsSpriteLerpPrimEnv` ran three `/ 255u` per pixel and **`-Os` emits
-`blx __udivsi3` for a CONSTANT divisor** instead of a reciprocal multiply. Now `(x*257+257)>>16`,
-bit-exact (`check_sprite_lerp_exact.py`, wired into `check-gbi-decode-fixtures.ps1`; bound is
-`intensity`+`inverse`==255 ⇒ numerator ≤ 65,152). **Whole-repo hazard: any constant `/` in a per-pixel,
-per-vertex or per-joint loop — `objdump | grep __udivsi3`.** Remaining ~9.4M is still per-pixel: **inline
-the lerp** (`2037d58`/`2037f08`), then R0a's dispatch hoist (`cache_wallpaper` ungating stays REFUTED),
-then OAM path (`:2410`) / two-layer pipeline. Instrument: `scripts/census-vsresults-blit.ps1`.
+**39.00 → 21.00 VBlanks/iter (−10,083,420 ticks, 1.53 → 2.85 FPS), Latest green.** 8 blits = one **I/4b**
+**300×220** wallpaper (66,000 px, **84.8%**) + seven IA/8b glyphs; the dispatch chain was **not** the
+cause. `ndsSpriteLerpPrimEnv` ran three `/ 255u`/px and **`-Os` emits `blx __udivsi3` for a CONSTANT
+divisor**: R0c = `(x*257+257)>>16` (bit-exact, `check_sprite_lerp_exact.py` in
+`check-gbi-decode-fixtures.ps1`), R0d `always_inline`d both lerps. **Whole-repo hazard: any constant
+`/` in a per-pixel/vertex/joint loop — `objdump | grep __udivsi3`.** **NEXT: PROFILE INSIDE THE LOOP**
+(`NDS_TASK37_PROFILE` aimed at Results): the wallpaper is still ~136 ticks/px ≈ 272 cycles, loop body
+explains ~40. Do not guess a fourth mechanism — three of four source-read guesses here were wrong. Then
+I4-only dispatch, then OAM path (`:2410`) / two-layer pipeline. Instrument: `census-vsresults-blit.ps1`.
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 

@@ -19,25 +19,26 @@ smash64ds-battle-playable-hwtri.nds
 SHA-256 4D795B4E83B335598B20A3B5953FDB1821797CC5E0A825FA96A0643ABBA4A090
 ```
 
-Current local root artifact, rebuilt 2026-07-30 04:46 through `build.ps1` with
-**R2-07 R0c** resident on top of E32/E64b/E65/E67/E69:
+Current local root artifact, rebuilt 2026-07-30 05:18 through `build.ps1` with
+**R2-07 R0c+R0d** resident on top of E32/E64b/E65/E67/E69:
 
 ```text
 smash64ds-battle-playable-hwtri.nds
 11,512,832 bytes
-SHA-256 152253A82E14FA4A5F4DF51F8341BCB2A1CEEB6F080F68F1EE08D1130F7A21B1
+SHA-256 5B6E82A8B8CA8D8AC903EBE30FFACF0F8E60BFD3A4A94C60A0C9182B3B1D0CCD
 ```
 
-+1,024 bytes over the 2026-07-29 19:11 ROM (11,511,808 /
-`80CCD2EE0A2EA29FECE05384E9595BC3CB3CF23B09DE71FF9EA41D058B51104F`), which is R0c's
-reciprocal-multiply sequences net of the 18 bytes `ndsSpriteLerpPrimEnv` lost.
-**Latest** passed on this configuration (R0c touches the startup-logo blitter path, so
-Boundary alone would not have covered it). The matching flag-identical tick-HUD
-instrument is `builds/build-tick-hud-buckets/` — refreshed with this ROM, per the
-owner's 2026-07-22 rule that the two move together; `builds/build-r0c-div/` is the same
-source and is what R0c's own A/B was measured on. Both are **11,514,880 bytes** but hash
-differently (`5DD5CE98` vs `DD9D59BE`) — that is the already-documented
-non-reproducible-ROM-hash property of this build system, **not** a source discrepancy.
+Same **11,512,832** bytes as the 04:46 R0c-only ROM but a different hash
+(`152253A8…`) — R0d's two `always_inline`s are a wash on size, and this build system has
+no reproducible ROM hash anyway (documented below). +1,024 bytes over the 2026-07-29
+19:11 ROM (11,511,808 / `80CCD2EE…`), which is R0c's reciprocal-multiply sequences net of
+the 18 bytes `ndsSpriteLerpPrimEnv` lost. **Latest** passed on both configurations (R0c/d
+touch the startup-logo blitter path, so Boundary alone would not have covered them). The
+matching flag-identical tick-HUD instrument is `builds/build-tick-hud-buckets/`
+(**11,514,880** / `63B14923…`) — refreshed with this ROM, per the owner's 2026-07-22 rule
+that the two move together; `builds/build-r0c-div/` and `builds/build-r0d-inline/` are the
+two A/B arms. All three tick-HUD ROMs are 11,514,880 bytes and hash differently, which is
+the already-documented non-reproducible-ROM-hash property, **not** a source discrepancy.
 
 **`build.ps1` could not run with its own defaults until this build, and that is worth
 knowing before anyone else tries to publish.** `-Jobs` defaults to `0`, meaning "let the
@@ -1757,12 +1758,33 @@ keeping straight:** that one is deliberately `noinline` to hold ONE copy of its 
 inside `.text.hot`'s curated 8 KiB. This blitter is not in `.text.hot`, so the constraint does not
 apply. Both comments now say so at their own site.
 
-**Remaining: ~11.76M ticks/frame against 1.12M, still 10.5× over.** The wallpaper is still 16.05 of
-21.00 VBlanks, so the cost is *still* per-pixel over 66,000 pixels and the per-pixel arithmetic is now
-about as cheap as this structure allows. **What is left is structural, not arithmetic** — R0a's I4-only
-dispatch specialization, then admitting the native OAM path to Results
-(`sprite_preview_backend.c:2410`) and/or killing the two-layer 320×240 software pipeline with its
-153,600-byte clear per layer. **Do not expect another arithmetic lever to matter here.**
+**Remaining: ~11.76M ticks/frame against 1.12M, still 10.5× over — and MOST OF IT IS UNEXPLAINED.**
+The wallpaper is still 16.05 of 21.00 VBlanks, i.e. **~8.99M ticks for 66,000 source pixels ≈ 136
+ticks/pixel ≈ 272 ARM9 cycles.** Reading the whole loop body (`:1762-1981`), the visible per-pixel work
+does **not** account for that:
+
+- the seven-way `sprite->bmfmt`/`bmsiz` chain, with I4 as the **last** arm so it pays all six failed
+  pairs — ~12 loads + 12 compares, but off the same cached `sprite` address every iteration;
+- the I4 unpack — one byte load amortised over 2 pixels, a shift, a mask, an XOR;
+- the now-inlined lerp — three channels of multiply-shift;
+- the write — `is_scaled` is true, so a nested `dst_y`/`dst_x` rect loop, but the wallpaper scales
+  300×220 → 320×240, so only ~1.16 destination pixels per source pixel, ~76,800 writes over a
+  153,600-byte staging buffer (~4,800 dirty lines).
+
+That totals on the order of 40 cycles/pixel, not 272. **I am short by roughly 3× and I do not know
+where it goes.** *Correcting my own note from R0d's first draft, which said "do not expect another
+arithmetic lever to matter here": that was a guess, and it would have steered the next session away
+from what may still be a large win.* The honest statement is that the **visible** arithmetic is
+exhausted and the residual is **unattributed**.
+
+**So the next step is to profile INSIDE the loop, not to guess a fourth time.** R2-06's four
+refutations all began as mechanisms named from source reading. The Task 37 per-PC profiler is the tool
+(`NDS_TASK37_PROFILE`, region-tagged), pointed at the Results scene instead of the battle frame; the
+address range `ndsDrawSObjIntoPreview` occupies is known and R0b already showed how to answer
+"where do cycles land" from a PC histogram alone. **Only after that:** R0a's I4-only dispatch
+specialization, then the structural answers — admitting the native OAM path to Results
+(`sprite_preview_backend.c:2410`) and/or killing the two-layer 320×240 pipeline with its 153,600-byte
+clear per layer, which remain the only candidates sized to a 10.5× overrun.
 
 ### R2-07 R0c BUILT — the Results frame is 43.6% cheaper, BIT-EXACT, and it was three library divisions per pixel (2026-07-30)
 
