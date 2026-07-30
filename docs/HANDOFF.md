@@ -6,8 +6,8 @@ durable goes to its owning doc: the board owns the queue and every result,
 `optimization/TASK_STANDING_RULES.md` how a task is run.
 
 Runtime 2 phase status. **Five gate levers graduated 2026-07-29: E32 (-52,416 P95),
-E64b (-26,944), E65 (-35,584), E67 (-4,672), E69 (-12,544). Cumulative P95
-1,228,928 -> 1,096,768, over gate 17/128 -> 6/128.**
+E64b (-26,944), E65 (-35,584), E67 (-4,672), E69 (-12,544) — cumulative 1,228,928 ->
+1,096,768, but all DLDI-off and so lower bounds; see the gate section.**
 
 | phase | state |
 |---|---|
@@ -20,24 +20,31 @@ E64b (-26,944), E65 (-35,584), E67 (-4,672), E69 (-12,544). Cumulative P95
 
 ## Where the gate stands — MISSED, and EVERY earlier number is DLDI-off
 
-**`WORK-H` P95 1,160,448** against the 1,120,000 gate, frames 796..923, evidence
-`artifacts/performance/r206-arena-heap-128{.json,-rows.csv}`.
+**`WORK-H` P95 1,160,448 / P50 976,064**, 8/128 over, frames 796..923, evidence
+`r206-head-control-128` — a rebuild from HEAD that reproduces `r206-arena-heap-128` in
+**all eleven buckets identically**, VBlank histogram and counters included. **This
+harness has zero run-to-run noise:** disagreement on a fixed configuration is the
+binary or the emulator settings, never scatter.
 
-**DLDI-on costs ~29,696 P95, and DLDI is required for retail parity (owner), so it is
-the honest config.** R2-03 E69 rebuilt at its own commit `4916656d` with identical
-source measures **1,126,464** DLDI-on against the **1,096,768** it published DLDI-off
-(`r206-e69-recheck-128`). **So the gate was already missed by 6,464 before this session,
-the 23,232 margin was a DLDI-off artifact, and R2-07's particle budget was sized against
-it.** Read every pre-`3eb9ecdb` P95 in the board as a lower bound.
+**DLDI-on costs ~29,696 P95 and is required for retail parity (owner), so it is the
+honest config.** E69 rebuilt at its own commit `4916656d`, identical source, reads
+**1,126,464** DLDI-on vs the **1,096,768** it published DLDI-off (`r206-e69-recheck-128`).
+**The gate was already missed by 6,464 before this session, the 23,232 margin was a
+DLDI-off artifact, and R2-07's particle budget was sized against it.** Read every
+pre-`3eb9ecdb` P95 as a lower bound.
 
-Like-for-like (both DLDI-on) this session costs **+33,984**, and **`SRC +30,912` is
-WITHDRAWN — `SRC` is 1,600 better.** The delta is `OTHR` +30,528 / `WAIT` +31,168 with
-every named gameplay and render bucket inside ~1,300, and `ALL` P95 unchanged at
-1,680,000. That is DLDI's own signature — I/O in the remainder, not a subsystem — so
-suspect residual animation loads reaching the SD driver, or the 92,160-byte reservation's
-effect on heap layout. E4 already refuted the `syMallocSet` wrapper's call overhead
-(byte-identical buckets across a different ROM). Board §"R2-06 E4b" has both and the
-method to separate them.
+Like-for-like this session costs **+33,984** and **`SRC +30,912` is WITHDRAWN — `SRC`
+is 1,600 better.** It is all `OTHR` +30,528 / `WAIT` +31,168 with every named bucket
+inside ~1,300 — DLDI's own signature, I/O in the remainder. Suspect residual animation
+loads reaching the SD driver, or the 92,160-byte reservation's heap layout; board
+§"R2-06 E4b" has the method. E4 already refuted the `syMallocSet` call overhead.
+
+**R2-06 E6 REFUTED — E61 §5's −56,774 Horner route is not available, and its other rows
+are now suspect.** Bounded green, measured **+7,168 P50 / 117 of 128 paired frames
+worse**: a memo is a memory stream and that table priced only arithmetic. Two durable
+facts: **this configuration passes `aobjs_num = 0`** (AObjs are malloc'd individually, so
+nothing can index them), and two ROMs with identical arithmetic differed **23,040 at
+P95** on layout alone — **judge at P50 and on paired frames.** Board has the full price.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
@@ -64,9 +71,7 @@ belongs to the *tightest* build, not the shipped one), and 16 KiB fit but cost t
 gate. **The arena now lives on the taskman heap, 92,160 bytes, +32 bytes of BSS.**
 `NDS_R2_BOTH_CPU` adds no BSS of its own. **Do NOT lower that floor** — it is a
 contract with the Task 36 replay guard (`nds_renderer.h:124-134`); my earlier
-authorization is retracted.
-
-**Both configurations complete a full match clean** —
+authorization is retracted. **Both configurations complete a full match clean**:
 `gNdsSyMallocOverflowCount=0`, arenas above the floor with replay admitted, and every
 arena overflow rejects safely where each one used to hang.
 
@@ -76,13 +81,11 @@ never defined, so every `NO-FREEZE` was pixels-only; the 40 s trip threshold was
 shorter than the game's ~30 s scene-load dead air; and a static picture was called a
 hang without reading `x/1i $pc`. All fixed, command resolution now machine-checked.
 Only the pre-fix both-CPU **FROZEN 210 s** stands. **Sudden Death has its own issues**
-(owner) — separate row, not the allocator class.
-
-**No passive soak can reach match two.** `mnVSResultsCheckExit` (decomp
-`mnvsresults.c:266`) exits on a `START_BUTTON` tap with no timeout, and the results
-loop (`taskman_seam.c:6968`) is update-bounded only when `NDS_HARNESS_FAST_LOGIC != 0`,
-which every shipped target pins to `0`. Cross-match drift needs a **synthesized
-START**; soaks default to 2.5 min, ceiling 5.
+(owner) — separate row, not the allocator class. **No passive soak reaches match two:**
+`mnVSResultsCheckExit` (decomp `mnvsresults.c:266`) exits on a `START_BUTTON` tap with
+no timeout, and the results loop (`taskman_seam.c:6968`) is update-bounded only under
+`NDS_HARNESS_FAST_LOGIC != 0`, which every shipped target pins to `0`. Cross-match
+drift needs a **synthesized START**; soaks default to 2.5 min, ceiling 5.
 
 ## OPEN P1: the VS Results screen is 21.9M ticks/frame, 1.5 FPS
 
@@ -101,8 +104,8 @@ leaf helper is charged to itself, never its caller, so animation float was booke
 animation is **146,942/frame, 15.2% of WORK 969,487**; collision is **under 4,000**.
 E61: **the cubic is 99.6% of that float** — 149.4 nodes/frame at **405 ticks each**.
 **Task 78 stopped the animation compiler on a self-vs-inclusive error** (corrected
-164,236, **1.64x its target, not 0.85x**). Tasks 95/96 refute only the *layout* route;
-the pose table is refuted by size. Do not propose either again.
+164,236, **1.64x its target, not 0.85x**). Refuted and not to be re-proposed: the
+*layout* route (Tasks 95/96), the pose table (size), and now the Horner fold (E6).
 
 ## The one open fidelity item
 
@@ -112,10 +115,9 @@ the pose table is refuted by size. Do not propose either again.
   non-flash frame (510/511: 0 px). E49's runtime half is **refuted** (it emits the
   baked `.rgba`, which holds **normals** — speckle, worse diff 2,199 vs 1,551).
   **Needs the generator to bake the flash variant's vertex colours**; E63: 2,164 bytes.
-
-**R2-03 E26 — demoted** to 23,844/frame (needs `NDS_TASK91_DRAW_PHASE_CENSUS=1` *and*
-`NDS_R2_SPAN_LEAN_TIMING=1`). **Must replace the dispatch, not the writes** (E39);
-read its spec only with E34/E34-b/E39/E43/E45/E56.
+- **R2-03 E26 — demoted** to 23,844/frame (needs `NDS_TASK91_DRAW_PHASE_CENSUS=1` *and*
+  `NDS_R2_SPAN_LEAN_TIMING=1`). **Must replace the dispatch, not the writes** (E39);
+  read its spec only with E34/E34-b/E39/E43/E45/E56.
 
 ## Refuted this cycle — do not re-derive
 
@@ -129,7 +131,7 @@ read its spec only with E34/E34-b/E39/E43/E45/E56.
 ## Restart
 
 Branch `codex/r2-runtime2`, not merged to master. Boundary
-`battle_playable_realtime`, mode `163`.
+`battle_playable_realtime`, mode `163`. Tick-HUD ROM is current at HEAD (`1C1136BA`).
 
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
@@ -140,10 +142,8 @@ $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 tick-HUD ROM whenever the published one is** (owner, 2026-07-22) — keep its Makefile
 block flag-identical. `-j`/`MAKEFLAGS` rules live in AGENTS.md `## Builds`. A clean
 checkout must build through `build.ps1`, not bare `make`: four of the six generated
-`.inc` files are gitignored and only `build.ps1` regenerates them.
-
-Preserve canonical mode 163, renderer mode 9, mip 0, static texture residency, source
-countdown, Dream Land water at source frame 0, Task 16 `1/1/1`. Do not edit
-`decomp/`. **Bug #10 is FIXED and folded in** — `06992f10812`, cherry-picked from
-`2cbc6189d15` to preserve authorship, with a host fixture, a structural pin, and the
-`pause_under20` oracle.
+`.inc` files are gitignored and only `build.ps1` regenerates them. Preserve canonical
+mode 163, renderer mode 9, mip 0, static texture residency, source countdown, Dream
+Land water at source frame 0, Task 16 `1/1/1`. Do not edit `decomp/`. **Bug #10 is
+FIXED and folded in** — `06992f10812`, cherry-picked from `2cbc6189d15` to preserve
+authorship, with a host fixture, a structural pin, and the `pause_under20` oracle.

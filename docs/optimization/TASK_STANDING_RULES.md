@@ -1944,3 +1944,34 @@ read as a code regression that did not exist.
    +29,696 shows up in `OTHR` and `WAIT` with every named gameplay and render bucket
    inside ~1,300. Real code regressions land in the subsystem that owns them; I/O and
    configuration land in the remainder. That shape is a diagnostic, not noise.
+
+### A memo is a memory stream, not just an op count (2026-07-29)
+
+R2-06 E6 was refuted after two ROMs, and the estimate that sent it there is still on
+the board: E61 §5's route table priced "fixed-point Horner, 6 ops @ ~4 ticks" at
+**−56,774 ticks/frame**. The arithmetic in that table is right. What it left out is
+that folding a per-segment constant means *storing* it, and on ARM9 the storage is
+priced in cache lines and stack traffic, not in multiplies.
+
+Measured, not modelled: materialising six coefficients cost **~107 ticks/node** — a
+`noinline` call, a 48-byte stack struct written then read back, four range clamps —
+against the **~58** the expansion removed. And caching that fold to avoid the 107 adds
+one extra 48-byte line to a walk that already misses, so the cached arm prices at
+about **−1,500/frame**. Every version of the idea lands at or under the noise floor.
+This is also the more likely reason E64 arm A regressed at an 86.4% hit rate than its
+BSS alone.
+
+1. **Before proposing a memo, price its traffic against its arithmetic.** Entries
+   touched per frame x line size, versus ticks saved per hit x hit rate. If the answer
+   is inside the noise floor, the experiment is already answered.
+2. **A route table that counts operations is a cost ranking, not a saving estimate** —
+   the same standing caution the Task 37 census carries for placement. Treat E61 §5's
+   remaining rows the same way.
+3. **Judge a change at P50 and on paired frames.** The two E6 ROMs executed identical
+   arithmetic and differed **23,040 at P95** while agreeing to ~1,500 at P50, purely on
+   code layout. A P95-only reading would have graduated the worse ROM.
+4. **The harness itself has no noise, so do not blame it.** A control rebuilt from HEAD
+   into a different ROM hash reproduced `r206-arena-heap-128` in all eleven buckets
+   identically, including the VBlank histogram and the evaluation counter. When two runs
+   disagree on a fixed configuration, the cause is the binary or the emulator settings —
+   never scatter.

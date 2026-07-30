@@ -448,6 +448,107 @@ candidates remain, both cheap to separate:
   the change it measures. Either stamp `git status --porcelain` alongside it or refuse to
   write an artifact from a dirty tree.
 
+### R2-06 E6 REFUTED — the Horner fold, and why E61 §5's −56,774 was never available (2026-07-29)
+
+E61 §5 tabled three routes for the cubic and E64b took only the first. The third,
+**"fixed-point Horner, 6 ops @ ~4 ticks → 3,735/frame, saves 56,774"**, was the
+largest number left on the board. It was built, measured twice, and **REFUTED. Do
+not re-propose it.** The arithmetic is right; the estimate priced operations and
+ignored that the folded coefficients have to live somewhere.
+
+**The expansion is correct and the numerics are fine.** With `u = length`,
+`t = u·li`, the Hermite form collects into two polynomials whose coefficients are
+integer combinations of the four values — no divide, nothing that needs `u`:
+
+```
+P(t) = c0 + c2·t² + c3·t³      c0 = vb   c2 = 3(vt−vb)   c3 = 2(vb−vt)
+Q(t) = d0 + d1·t  + d2·t²      d0 = rb   d1 = −(2rb+rt)  d2 = rb+rt
+value = P(t) + u·Q(t)
+```
+
+`check_r2_cubic_error_bound.py` on the shipped composition: **rotation 0.002979,
+translation 0.005524** against the 0.02 gate, zero saturations — i.e. *better than
+the shipped Hermite kernel on translation* (0.0067). Two numerical traps were found
+and fixed inside the bound harness, before any ROM was built:
+
+- **P and Q cannot share a width.** Both in Q12 Horner deviated **0.0718** world
+  units. `Q` is multiplied by `u` up to 85, so one Q12 quantum of `Q` reaches the
+  result as 85/4096 = 0.021 — over the gate by itself. `Q` has to accumulate in Q28
+  with no intermediate rounding, which is what the Hermite kernel was really buying
+  by keeping `h_rb`/`h_rt` in Q16 and summing into an `s64`.
+- **`length_invert` needs its own scale.** Quantising `li` to Q16 before multiplying
+  by `u` amplifies its quantum ~90x: 2.2e-4 of `t`, which against a 120-unit swing
+  is 0.040 off. That is the one thing the `length * length_invert` **soft-float**
+  multiply was buying — an f32 24-bit mantissa, quantised to `t` only once. Q24 for
+  `li` recovers it. **This is why the fmul was not free to delete.**
+
+**Both arms measured WORSE. Two ROMs, 128 frames each, frames 796..923, DLDI-on:**
+
+| arm | P50 | P95 | over-gate |
+|---|---:|---:|---:|
+| control `407d9195` (Hermite), `r206-arena-heap-128` | 976,064 | 1,160,448 | 8/128 |
+| **control re-built at HEAD**, `r206-head-control-128` | **976,064** | **1,160,448** | **8/128** |
+| E6, fold materialised per node | 984,768 | 1,143,680 | — |
+| E6, same but cache code deleted, `r206-e6-horner-128` | 983,232 | 1,166,720 | 10/128 |
+
+Paired by frame index, the last arm is **worse on 117 of 128 frames, median +7,360**.
+
+**The control replicate is the load-bearing row.** Rebuilt from HEAD into a third
+distinct ROM (`1C1136BA` vs the control's `8F0CDAAC`) and re-measured, it reproduces
+the control in **every one of the eleven buckets** — P50, P95, mean, min, max, the
+VBlank histogram, `gNdsR2CubicEvals` — not approximately, identically. So this
+harness has **no run-to-run noise at all** on a fixed configuration, and the E6
+numbers above are the change, not scatter. It also retires any suspicion that E4b's
++33,984 was measurement scatter.
+
+Which makes the *other* comparison the interesting one. **The two E6 ROMs execute
+IDENTICAL arithmetic** — the cache never bound, see below — and they differ by
+**23,040 at P95** while agreeing to ~1,500 at P50. With harness noise at zero, that
+entire spread is **code layout**, and it is the third independent time this ROM has
+shown 6,000–24,000 of P95 sensitivity to where a function lands (Task 94 −6,144,
+E66 +24,448, this). **A cubic-sized change must be judged at P50 and on paired
+frames; P95 on this ROM cannot resolve anything under ~20,000.** The middle row's
+apparent −16,768 P95 is exactly that trap, and it is what a P95-only reading would
+have graduated.
+
+**Why it costs.** Anchored on the measurement rather than an op count: the
+universal-fold arm is +49.5 ticks/node over Hermite, and Hermite ≈ the Horner
+evaluator + one `__aeabi_fmul` + one SMULL, so **materialising six coefficients
+costs ~107 ticks/node** — a `noinline` call, a 48-byte stack struct written and read
+back, and four range clamps. The expansion removes an fmul and one multiply (~58
+ticks) and pays 107 to do it. It does **not** remove conversions: five move into the
+fold and one stays in the evaluator, so the count is six either way.
+
+**The cache is the only thing that would pay, and it has no index here.** Built it:
+a coefficient table on the taskman heap indexed by the AObj's slot in the pool
+`gcSetupObjman` is handed, with a five-word exact validity compare — deliberately
+neither of E64 arm A's two costs (no BSS; and `.text.hot` names only
+`gcPlayDObjAnimJoint`, which stayed **272 bytes**, unchanged from E65). It never
+engaged, and the engagement counters are what caught it: `CoefBytes=0`, `Folds=0`,
+`Hits=0`, `BindFails=0`. Probed the statics directly — `sNdsR2CubicCoefPool` a real
+address, **`sNdsR2CubicCoefPoolNum = 0`**.
+
+**This configuration's task setup passes `aobjs_num = 0`.** `sGCAnimHead` starts
+empty and `gcGetAObjSetNextAlloc` (`objman.c:602`) mallocs each of the ~300 live
+AObjs **individually** at 32 bytes. There is no array to index. That is a durable
+fact about this ROM and it refutes every AObj-indexed scheme, not just this one.
+
+The two remaining routes were priced, not tried, and both land at the noise floor:
+
+1. **Pointer hash** — arm A's shape, with its conflict misses, and arm A regressed
+   +21,632 at an 86.4% hit rate.
+2. **Pre-seed the pool** at `gcSetupObjman` so an index exists. Costs 61 KB of heap
+   and moves every later allocation — the same heap-layout perturbation R2-06 E4b
+   has open as a suspected 33,984. And it still would not pay: a cached node pays
+   the 5-word compare + 15% of a 107-tick fold + one extra 48-byte coefficient cache
+   line (~48 ticks) against the 58 it removes. **≈ −1,500/frame.**
+
+**The general correction, and it applies to the rest of E61 §5's table:** that table
+prices arithmetic operations. A memo is also a *memory stream*. Here the stream costs
+what the arithmetic saves, and it is the more likely reason arm A regressed at an
+86.4% hit rate than the BSS alone. Kernel diff and bound JSON were kept out of tree;
+the bound result is reproducible from this description in one host run.
+
 ### R2-06 E5 — the designed lever: split the render skeleton from the gameplay skeleton
 
 The plan of record already prescribes this and the tree violates it. §3.5 budgets
