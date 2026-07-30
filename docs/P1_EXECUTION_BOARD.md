@@ -1825,6 +1825,26 @@ So R4c needs both halves of the fighter cost and likely more besides; no single 
 Results, the same shape R2-06 E10 reached for the battle frame. Probe deleted after answering, per
 the no-permanent-probes rule.
 
+**A POSE MEMO IS RULED OUT — owner, from the running game, 2026-07-30: "they do animate in the
+results screen."** Worth recording because the source reads the other way at a glance and would have
+cost a build. `mnVSResultsFuncRun` (`mnvsresults.c:3227+`) does nothing per tick after
+`mnVSResultsInitFightersAllTic` except ramp `sMNVSResultsCharacterAlpha` by `0x16` until it saturates
+(~12 tics) and push it through `scSubsysFighterSetLightParams` — no animation advance anywhere in the
+Results run function. That reads as "posed once, then static", which would have made the whole
+fighter pose memoisable exactly like R4b's layer.
+
+It is wrong. `mnVSResultsInitFighter` ends in `mnVSResultsSetFighterStatus`
+(`mnvsresults.c:892-920`), which calls `scSubsysFighterSetStatus` with the kind's **win or lose
+status** — a normal fighter status whose animation is then advanced by the fighter system itself, not
+by the Results scene. So the Results run function's silence means the animation is driven from
+elsewhere, not that there is none. `gcPlayDObjAnimJoint` appearing in the census was the hint and it
+was not followed up.
+
+R4c is therefore a **rate** problem, not a memo problem: `PROJECT_GOAL.md` permits reduced animation
+update rates and 30 Hz skeletal poses, which is the lever that survives. Note the Results loop
+already presents at ~5 VBlanks, so check what the animation actually advances per presented frame
+before assuming a halved rate is free — the mismatch may be smaller than it looks.
+
 The original sizing's one durable part: the bimodality agrees independently — one owner and the
 already-measured bimodality agrees with it independently — the 36% of frames that already sit at 2
 VBlanks are exactly the ones before source tic 120, which is when the fighters are initialised
