@@ -841,6 +841,23 @@ instrument is already in the source under `NDS_R2_LOADFRAME_TIMING` — collect 
 new probe.** Register the threshold first: this is 78.5% of a 139,072 premium, so unlike every lever
 since E10 it has room to clear 40,448 outright.
 
+**E17's plan and threshold, registered before the data exists (rule 7).** The instrument covers only
+**one of the three** components E8 named — `NDS_R2_LOADFRAME_TIMING` brackets the animation **re-add**
+(`gNdsR2AddAnimAllCalls`/`Ticks`/`MaxTicks`, `gNdsR2AddDObjAnimCalls`/`Ticks`/`MaxTicks`/
+`NormalizeTicks`/`BaseTicks` — all eight in `battleship_sys_objanim.c:1099-1106`), not the status
+transition and not the hit/collision work. Measure the instrumented third first and only bracket the
+rest if it fails to account for the ~109,000; that avoids writing probes for costs that turn out small.
+
+> **Falsifier, checked first:** if `gNdsR2AddAnimAllCalls` differences to ~0 across the window, the
+> re-add is not on the load frames at all and the "action change" attribution is wrong — say so and
+> re-derive rather than bracketing further.
+> **Then:** let `R` = in-window re-add ticks. **R ≥ 640,000** (~40,000/load frame) makes this a
+> gate-closing lever on its own and it goes to a build. **R in 256,000-640,000** (16,000-40,000/frame)
+> is a stacking win — pair it with E9's ~21,788 rather than shipping alone. **R < 256,000** and the
+> re-add is not the story: bracket the status transition and the hit/collision work before proposing
+> anything, because then ~109,000 is genuinely spread and E10's "no single lever" applies to the load
+> frame too.
+
 *Process note, second occurrence this cycle: the answer was already in the board and I went to the
 code and an artifact first. The `r206-e8-fixup-timing-128.json` artifact is the **cumulative-from-boot**
 read whose single 21,353,728-tick boot sprites call swamps everything — read alone it says sprites is
