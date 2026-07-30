@@ -129,6 +129,26 @@ try {
         }
     }
 
+    # Validate -ExtraGlobals against the ELF symbol table BEFORE launching
+    # anything. A misspelled name is only caught by GDB, which happens after
+    # melonDS has booted and run to the sample window -- so a typo costs a full
+    # measurement run to discover. It cost two in one session before this check
+    # existed. nm reads the same ELF GDB will, so agreement is guaranteed.
+    if ($ExtraGlobals.Count -ne 0) {
+        $nm = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
+        if (Test-Path -LiteralPath $nm -PathType Leaf) {
+            $symbols = [System.Collections.Generic.HashSet[string]]::new(
+                [string[]](& $nm --defined-only $elf |
+                    ForEach-Object { ($_ -split '\s+')[-1] }))
+            $missing = @($ExtraGlobals | Where-Object { -not $symbols.Contains($_) })
+            if ($missing.Count -ne 0) {
+                throw ("-ExtraGlobals names not defined in $([System.IO.Path]::GetFileName($elf)): " +
+                    "$($missing -join ', '). A name that exists but is never written reads 0, " +
+                    "which is a real measurement; a name that does not exist is a typo.")
+            }
+        }
+    }
+
     $configState = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath -GdbPort $context.GdbPort `
         -Arm7Port $context.Arm7Port `

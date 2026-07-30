@@ -798,6 +798,87 @@ rather than stopping at "it walks the live joint chain":
   per-frame reset. The reset exists — it is the union store, not a per-byte assignment, which is why
   a grep for the field names missed it. Grep the union, not the member.)*
 
+### R2-06 E14 — the AObj walk is READ-MODIFY-WRITE over a working set 2.7x the dcache, and E29's lever does not fit (2026-07-30)
+
+E13 closed the "pose fewer joints" route, so the animation over-budget has to be paid per joint.
+E12 left one unpriced suspect: the per-frame AObj pointer chase. **Source-side facts first, because
+three of them change what the experiment can be. All read-only, no build.**
+
+- **`AObj` is 36 bytes, not the 32 the E12/E6 memo assumed** — `next` 4, `track`+`kind` 2 padded to
+  4, seven `f32` 28, `interpolate` 4 (`decomp/src/sys/objtypes.h:124-136`; the port defines no
+  override, so this is the struct that runs). **36 > 32 means every node straddles at least two
+  32-byte lines**, and `gcGetAObjSetNextAlloc` requests alignment `0x4`
+  (`decomp/src/sys/objman.c:608`), so nothing forces line alignment either.
+- **The walk touches the WHOLE struct, so hot/cold splitting is not available.**
+  `gcPlayDObjAnimJoint` (`src/import/battleship_sys_objanim.c:251-325`) reads `kind`@4, `track`@5,
+  `length`@12, `value_base`@16, `value_target`@20, `rate_base`@24, `rate_target`@28,
+  `length_invert`@8, `interpolate`@32 and `next`@0 — every offset in the object.
+- **And it WRITES: `aobj->length += dobj->anim_speed` (`:266`) every node, every frame.** So this is
+  a read-modify-write sweep, dirtying every line it touches and paying write-back on eviction — not
+  the read-only chase the hypothesis described. It also pulls in `dobj->rotate/translate/scale` and
+  `dobj->parent_gobj->flags` per node, so the DObjs are in the working set too.
+
+**N IS 221, MEASURED — not the "~300" the memos carried.** `sGCAnimsActiveNum` read on a settled
+Boundary frame, DLDI on, ROM `6B1F787B` (`artifacts/performance/r206-e15-aobjcount.json`); the XObj
+pool alongside it is 133. Every figure below uses 221.
+
+**The cache arithmetic, on this repo's own measured geometry (4 KB dcache, 32-byte lines — R2-03
+E29).** 221 nodes x 36 bytes = **7,956 bytes = ~249 distinct lines against a 128-line cache**, so the
+pool is **1.94x the dcache** and cannot be made to fit — no reordering will change that. Ordering only
+decides *reuse*: in address order one line serves ~0.9 nodes and the sweep costs ~249 misses; in
+scrambled order each node misses separately, ~442. **~193 misses is the whole prize**, and only if
+traversal order differs from address order today.
+
+**It probably does, and for a specific reason: `syMallocSet` is a bump allocator, but AObjs are
+recycled through a LIFO free list.** `gcGetAObjSetNextAlloc` pops `sGCAnimHead` and
+`gcSetAObjPrevAlloc` pushes back (`objman.c:602-622`, `objhelper`/`objman.h:64`), so the first
+allocation burst is contiguous and every subsequent free/realloc cycle scrambles list order against
+address order. **This is also why E12's "AObj pool" refutation was right but incomplete** — the
+bump allocator does make them contiguous, and contiguity was never the problem; *traversal order* is.
+
+**E29's exact lever does not fit, and that is the binding constraint.** E29 won 26,816 by moving
+10,820 bytes of randomly-indexed fighter tables into DTCM, which has no cache lines at all — the same
+size and the same shape as this pool. But it also recorded what it left: **7,144 DTCM bytes remain
+between the tables and `__sp_usr`, only 4,264 of them below the boot stack's measured low-water mark**
+(`docs/optimization/ClaudeOpus5_R203_E29_FighterTablesInDTCM_20260728.md:125-129`). ~10,800 bytes do
+not fit in either figure. **Do not propose moving the AObj pool to DTCM without shrinking it first.**
+
+**THE REORDER LEVER IS REFUTED WITHOUT A RUN, ON A PRECEDENT THIS CAMPAIGN ALREADY PAID FOR.**
+Task 96 measured exactly this class — a scattered per-frame linked chain, flattening as the lever, the
+same ~20,000 bar — and established the two constants that decide it
+(`docs/optimization/archive/ClaudeOpus5_Task96_TheChainIsNotTheCost_20260726.md:43-68`):
+
+- **A 32-byte line fill from DS main RAM is ~20-30 ARM9 cycles = 10-15 ticks**, not the 30-60 that
+  doc had carried as a deliberate worst case.
+- **The ARM946E-S has no hardware data prefetcher**, so a flat array is not prefetchable where a chain
+  is not — the *entire* benefit of flattening is the line-count difference, with nothing behind it.
+
+Task 96's own case was **more** favourable than this one — 259.7 lines saved per frame, against a
+structure re-walked 104 times over 338 nodes — and its honest ceiling was **~2,600-3,900 ticks/frame**,
+so it stopped. Here the reorder prize is bounded by the node count: at most **193 x 15 ≈ 2,900
+ticks/frame**, or ~5,800 charging the dirty write-back at full price. **Both are far below the 20,000
+P95 placement floor, so E14's reorder/flatten arm is dead and its run is cancelled** — per rule 7, a
+measurement that cannot change the decision is not worth taking. *This should not have needed
+re-deriving; Task 96 is the same lever on the same hardware and was one grep away.*
+
+**What survives is a different lever with a different mechanism, and N = 221 makes it land.** Shrinking
+`AObj` from 36 bytes to ~20 — fixed-point for the seven `f32`s, which E64b/E65 already established as
+equivalent to within 0.0028 rad / 0.0067 units, and which `gcPlayDObjAnimJoint` already converts to
+fixed *internally* at `battleship_sys_objanim.c:240-244`, so storing fixed **removes** conversions
+rather than adding them — does not win by line count. It wins by taking the pool from 7,956 bytes to
+**4,420**, into DTCM, where there are no cache lines at all and where E29's identically-shaped
+10,820-byte move was worth **26,816**. The read-modify-write matters here too: DTCM removes the
+write-back traffic, not just the fills.
+
+**But the fit is MARGINAL and that is the first thing E15 must settle.** E29 left 7,144 DTCM bytes, of
+which only **4,264 are below the boot stack's measured low-water mark** — and 4,420 exceeds that by
+156 bytes. So either E15 lands in the 2,880 bytes the stack has been *seen* to use, which needs its own
+justification, or the struct has to reach **≤19 bytes/node**. One clean route to that exists and is
+worth more than the bytes: **N = 221 < 256, so the free-list/chain `next` can be a `u8` index into a
+fixed pool array instead of a 4-byte pointer** — which drops 3 bytes AND deletes the pointer chase
+outright, converting the walk to an indexed sweep. Do not treat that as a bonus; it is the part of the
+change that makes the rest safe to size.
+
 **E13 ANSWERED — THE REPRESENTATION SPLIT IS REFUTED BY ITS OWN SIZING. Mario and Fox are ~84%
 collision-load-bearing, so there is no render-only remainder to move to 30 Hz (2026-07-30).**
 
