@@ -1825,15 +1825,48 @@ decomp** (gmcollision 14, lbcommon 10, ftmain 6, the rest 1-2 each);
 `unk_dobjtrans_0x10`/`0x9C` add 30, also concentrated in gmcollision. Port side
 is ~66, in four files. **~110 sites total** — a bounded change, not a rewrite.
 
-**4. The fixed-point version ALREADY EXISTS, in the renderer.**
-`ndsRendererAdapterBuildDObjLocalMatrix` (`reloc_backend_renderer_dl.c:1516`)
-builds each joint's local transform straight into `NDSRendererMatrix20p12` and
-**never reads `parts->mtx_translate`** — it derives from the DObj's transform
-components, the same source collision walks. So the port already computes
-fighter joint transforms in 20.12 every frame, with proven helpers
-(`ndsRendererMtxMulAffine20p12`), while collision computes the same shapes again
-in soft-float. L7 should reuse that machinery rather than invent a second
-fixed-point layer.
+**4. A fixed-point COMPOSE already exists in the renderer — but not a fixed-point
+leaf build, and it is only 4× not 10×.** `ndsRendererAdapterBuildDObjLocalMatrix`
+(`reloc_backend_renderer_dl.c:1516`) produces `NDSRendererMatrix20p12` and
+**never reads `parts->mtx_translate`**, so the port does derive joint transforms
+in 20.12. But its *leaf* is `syMatrixTraRotRpyRSca` — **float**, measured at
+**1,408.5 self cycles/call** — and only the composition
+(`ndsRendererMtxMulAffine20p12`) is fixed point. **Reusable machinery is the
+compose, not the whole build.** Measured per-call, same run, same frames:
+
+| | self cyc/call | calls/frame | self cyc/frame |
+|---|---:|---:|---:|
+| `func_ovl2_800ED490` (float 4×3 compose) | 533.7 | 40.0 | 21,348 |
+| `gmCollisionSetInvertMatrix` (float 3×3 inverse) | 479.0 | 34.0 | 16,286 |
+| `ndsRendererMtxMulAffine20p12` (**20.12** compose) | 670.8 | 55.0 | 36,894 |
+| `syMatrixTraRotRpyRSca` (float leaf) | 1,408.5 | 5.0 | 7,042 |
+
+Self time understates the float rows: they push their arithmetic into
+`__aeabi_fadd`/`__mulsf3`, the fixed-point row does not. At the run's own
+marginal price (337,927 delta cycles / ~7,557 delta calls = **44.7 cycles per
+float call**), `800ED490`'s 63 float ops × 40 calls cost **112,644/frame** on
+top of its self time, and `SetInvertMatrix`'s 58 × 34 cost **88,148**. So float
+compose ≈ **2,652 cycles/call** against the existing fixed-point compose at
+**670.8 — 4.0×, not the ~10× a naive cycles-per-op model gives.**
+
+**Sized honestly, L7 lands ON the line, not past it.** Compose + inverse
+together are **238,426/frame (46.7% of the premium)**; converting both saves
+~**187,794**. The overshoot is **295,376**, so that is **64% — NOT ENOUGH.** The
+other ~3,065 extra float calls (`TransformMatrixAll`, `TestRectangle`,
+`GetWorldPosition`, `SetMatrixNcs` with its `lbCommonSin`/`Cos`) are worth
+~137,000 more, and only converting **all** of it reaches ~290,000 against a
+295,376 overshoot. **Do not scope L7 as "the two hot functions" and expect the
+gate** — that was my first plan and the measurement kills it.
+
+**5. L8 falls out: the 20.12 compose itself is ~3× off its own floor.**
+`ndsRendererMtxMulAffine20p12` is ARM (0x02002e44, even), 616 bytes, 155
+instructions, 7 `smull`, **zero `__aeabi_lmul`** — so it is not the Thumb trap.
+But it executes **379 instructions per call at 2.2 cycles/insn**, against
+~100-130 for a fully-unrolled 4×3 affine with SMULL/SMLAL. It is loop-based
+where it could be straight-line. **The renderer already pays 36,894/frame for
+it today**, so that win is collectable on its own — and it raises L7's ceiling
+from "on the line" to "past it", which is the difference between a lever that
+closes the gate and one that does not.
 
 **What is NOT yet established, and must be L7's first step rather than its
 assumption:** that the two are the same quantity. The renderer composes toward
