@@ -30,7 +30,18 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-import generate_task39_effect_census as census
+# The census generator moved to scripts/2d_vfx/ in the 2026-07-30 area-folder
+# reorganisation, which landed after this branch was cut, so a bare import finds
+# nothing and the checker fails with ModuleNotFoundError rather than with
+# anything about particle banks. Resolve it by location instead of relying on
+# the caller's working directory -- check-nds-particle-banks.ps1 invokes this
+# from the repo root, and a future reshuffle should break the path here loudly
+# rather than change which module gets imported.
+_CENSUS_DIR = Path(__file__).resolve().parent / "2d_vfx"
+if str(_CENSUS_DIR) not in sys.path:
+    sys.path.insert(0, str(_CENSUS_DIR))
+
+import generate_task39_effect_census as census  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parents[1]
