@@ -1865,19 +1865,33 @@ over-gate 28   ∩ fallback 0
 refutation is corroborated rather than overturned.** The −0.385 has another
 owner.
 
-*One check before this is quoted as final:* a counter that is defined but never
-written also reads 0. The symbol is present in the ELF
-(`0227fc60 gNdsTickHudNativeOwnerFallbackCount`) and the build carries
-`NDS_TASK68_FALLBACK_CENSUS=1`, and this harness's own guard philosophy is that
-a defined-but-unwritten symbol reading 0 *is* a real measurement. To close it
-completely, read the census's `calls` sub-reason — non-zero `calls` with zero
-fallbacks proves the census is live and the answer genuine. The reason list is
-already in the script (`$fallbackReasons`); only `fbTotal` reaches the CSV.
+**LIVENESS CONFIRMED — the zero is real.** The harness already prints the
+per-reason breakdown; it just does not reach the CSV:
+```
+native-owner fallback: 0 of 127 frames took one
+[calls:1132 eligible:1132 animLock:0 selected:0 displayList:0 materialCount:0
+ validate:0 matrices:0 materialPrep:0 inputs:0 contract:0 postGx:0 begin:0
+ animLoad:43 animResident:2]
+```
+`calls:1132` with `eligible:1132` proves the census is live and every call was
+eligible, so **fighter fallback is refuted outright, not by a dead counter.**
+Every genuine fallback reason — `animLock` included, which was the E31
+mechanism — is exactly 0.
 
-**So L4 leaves the −0.385 unexplained and the burst shape is the next thread**
-— 10 of 27 gaps of exactly 1, `SRC` spanning 258,240…746,624. Whatever it is,
-it is not loading (L2), not the render buckets (L3), and not fighter fallback
-(L4).
+**AND IT HANDS OVER THE NEXT LEAD FOR FREE: `animLoad:43`.** The two ride-along
+counters are the only non-zero entries: **`animLoad` 43** and `animResident` 2.
+Against Task 75's **15** asset loads over the same window, `animLoad` counts
+something ~3x more frequent and is a *different* population from the one L2
+measured — so "24 of 28 over-gate frames do no asset load" does **not** mean
+those frames do no animation loading. **L5: give `animLoad` a per-frame column
+and intersect it with the 28, exactly as L2 did.** 43 events over 128 frames,
+arriving in bursts, is the right order of magnitude for the burst shape L4
+measured, and R2-04 §3.8's clause is about first-use loading of *any* kind.
+
+**Standing after L1–L4:** the excursion is not Task 75 asset loading (L2), not
+the render buckets (L3), and not fighter fallback (L4, twice, now with liveness
+proof). The `SRC`↔`FTR` −0.385 and the burst shape remain unexplained, and
+`animLoad` is the first candidate that matches both.
 
 ### R2-07 L2 — ANSWERED, and it CONTRADICTS E8: only 4 of 28 over-gate frames load (2026-07-31)
 
