@@ -1793,6 +1793,47 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 clause 2 — BOTH particle branches merged and BUILDING (2026-07-31)
+
+**The particle-bank work compiles for the first time since it was written.**
+Generator branch (2,710 insertions) and runtime branch (**151 files, 46,023
+insertions**) both merged onto `codex/r2-runtime2`;
+`smash64ds-battle-playable-tickhud-hwtri` builds clean with the bank linked.
+
+**It was never broken — it was stale against a directory move.** The
+2026-07-30 area-folder reorganisation broke this branch **twice, in two
+languages**, and both failures were invisible until something ran the
+generator, which is exactly why it sat "unreviewed, unbuilt":
+
+| where | symptom | truth |
+|---|---|---|
+| `generate_nds_particle_banks.py` | checker said *"pack differs from its BattleShip sources"* | `ModuleNotFoundError` — the checker turns any non-zero exit into that message |
+| `Makefile` `.inc` rule | `No rule to make target …generate_task39_effect_census.py` | prerequisite still pointed at the pre-reorg path |
+
+Both now resolve by location (`scripts/2d_vfx/`), so a future reshuffle breaks
+loudly instead of importing something else.
+
+**Verified, not just built.** The pack reproduces byte-identically from the
+BattleShip sources — the R2-05 E0 bar for a generator:
+
+```
+NDS_PARTICLE_BANKS=PASS  55/119 reachable efcommon scripts, 23/47 textures
+136,248 B N64 texture -> 82,752 B DS
+95,043 B linked (93,760 payload + 1,283 index) of 210,320 B arena headroom
+115,277 B spare · 6 bit-exact CI4 textures · linear texel order pinned · .inc built
+source=0xa2a1e85f  table=0x8db9d3bd
+```
+
+Docs check and tick-HUD parity also green, so the instrumented ROM is still the
+shipping program.
+
+**NOT yet done, and none of it should be assumed from "it builds":** no A/B
+against the pre-merge control, no Boundary run, no visual check, and **the
+particle cost is not yet priced against the cosmetic budget** — which is the
+whole reason §5 gives cosmetic systems explicit budgets. `115,277 B` of arena
+spare answers the *memory* question only. The eight open VFX rows in `BUGS.md`
+stay open until the effects are seen on screen.
+
 ### R2-07 COMPLETION SEQUENCE — the phase is mostly CONTENT, not performance (2026-07-31)
 
 Read back from the SwitchPlan's own clause list rather than from the board's
