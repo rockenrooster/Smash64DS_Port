@@ -340,7 +340,44 @@ These bugs should be fixed for P1 delivery.
     `SD-LEDGER-M1BASE-TOTAL=0`. Measuring that was the difference between a
     proof and a coincidence, and the same care is owed to any other counter read
     at two points.
-  - **Persistent-BSS audit (item 4) -- one real gap, four already correct.**
+  - **REMATCH SECOND ENTRY REPRODUCED WITH A MATCHED SCREENSHOT PAIR
+    (2026-07-31), and the fixes so far do NOT close it.** Two soak runs on the
+    same ROM, same build, same configuration, differing only in when START was
+    pressed. Both frames carry the tick HUD, so the picture and the counters
+    come from the same instant.
+    - `artifacts/visibility/2026-07-31_second-entry-A-match1-clean.png` --
+      match one. `STG` **171,328**, `ALL` **1,119,808**, 29.9 FPS, coherent
+      Dream Land.
+    - `artifacts/visibility/2026-07-31_second-entry-B-rematch-corrupt.png` --
+      match two, reached through the Results START redirect. `STG` **378,880**,
+      `ALL` **1,679,936**, 20.0 FPS, stage geometry visibly scrambled.
+    `STG` is **2.21x** across the pair, which is the signature already recorded
+    below (173,568 -> 383,296) and means this needs no screenshot to detect.
+    **What match two gets RIGHT**, so these are not the defect: "GO!" is
+    reached, `TIME 01:00` is fresh, both fighters exist, and `P1 [MARIO] DMG 0%
+    STOCK x1` / `CPU L3 [FOX] DMG 0% STOCK x1` are correct. The heap generation
+    and OAM discard fixes both engaged on this run
+    (`gNdsIFCommonNativeOamTextureDiscardCount=2`,
+    `gNdsRelocSceneReentryEvictCount=1`,
+    `gNdsRendererBattleStaticTexturePrepareCount=2` with **0** violations).
+    So the stale-texture-name class is fixed and is NOT what this frame shows.
+  - **A second, SEPARATE failure on that run: the ARM9 took an ABORT.**
+    `cpsr=0x400000b7` -> mode 0x17, ABORT. `pc=0x2000e1e` executing `movs r0,r0`
+    with a garbage backtrace (`#1 0x00000e9a`), so control reached a near-null
+    address. `MALLOCOVF=0`, so this is NOT the arena-overflow class and not the
+    `while (TRUE);` spin class -- the soak's own PC check correctly downgraded
+    it. The last valid user-mode link register is
+    `lr_usr=0x208d319 = ifCommonBattlePauseMakeInterface+68`, which the
+    disassembly puts as the return address of the `bl gcAddGObjDisplay` at
+    `0x208d314`. START had been pressed four times, so a press after the rematch
+    landed inside match two and opened the pause interface.
+    **NOT YET ESTABLISHED, do not repeat it as fact:** that this is
+    second-entry-specific. The match-one arm (one press at t+45 s) came back
+    NO-FREEZE, but its final frame shows `TIME 00:34` and `DMG 41%` -- the clock
+    advanced, so that press did not demonstrably build the pause interface at
+    all. The discriminator has to prove the match-one pause interface was
+    CONSTRUCTED before its clean result means anything. Until then this is one
+    observation, not an attribution.
     Every file-scope static holding a taskman-heap pointer or a VRAM handle was
     enumerated and each of the five named categories was checked for whether it
     is scene-scoped AND stale. Nothing was blanket-reset.

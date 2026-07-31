@@ -319,8 +319,13 @@ try {
                 }
             } else {
                 $verdict = 'FROZEN-PICTURE'
-                $diagnosis = ("{0} consecutive identical window hashes over {1}s, " +
-                    "after {2} distinct frames" -f ($identical + 1),
+                # Parenthesise the WHOLE concatenation before -f. Without the
+                # outer parens the operator binds to the last string literal
+                # only, so {0} and {1} reach the artifact as literal braces --
+                # which is exactly what 2026-07-31_012201 recorded. Third
+                # recurrence of this precedence bug in this campaign.
+                $diagnosis = (("{0} consecutive identical window hashes over " +
+                    "{1}s, after {2} distinct frames") -f ($identical + 1),
                     (($identical + 1) * $PollSeconds), $distinct)
             }
             break
@@ -614,6 +619,19 @@ try {
         }
     }
 
+    # Capture on the way out REGARDLESS of verdict. NO-FREEZE proves the picture
+    # MOVES; it says nothing about whether the picture is CORRECT, and the
+    # second-entry defects this soak is aimed at -- stale textures, a corrupt
+    # stage, duplicated fighters -- all animate happily. A rematch soak that
+    # ends clean and leaves no image cannot answer the question that was asked
+    # of it, which is exactly what happened on the 2026-07-31 rematch run.
+    if ($verdict -notin @('FROZEN-PICTURE', 'FROZEN-FROM-START', 'CAPTURE-STATIC')) {
+        [void](New-Item -ItemType Directory -Force -Path $logDir)
+        $cleanStamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
+        $cleanShot = Join-Path $logDir "$cleanStamp-$verdict.png"
+        [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $cleanShot)
+        Write-Host "final frame saved to $cleanShot"
+    }
     if ($verdict -in @('FROZEN-PICTURE', 'FROZEN-FROM-START', 'CAPTURE-STATIC')) {
         [void](New-Item -ItemType Directory -Force -Path $logDir)
         $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
