@@ -51,18 +51,25 @@ announcements now reach their trigger, so the cue is all that is missing.
 primitives. **BOTH PARTICLE BRANCHES ARE MERGED AND IN THE TREE — do not look for
 worktrees**: generator + `nds_particle_banks.generated.{inc,h}` (byte-reproducing, 55/119 scripts, 23/47
 textures, 82,752 B DS), `nds_particle_banks.c`, `battleship_lbparticle.c`, all in `CFILES`.
-**`NDS_R2_PARTICLE_RUNTIME=1` NOW BUILDS** (725 mirrored enumerators, one guard — board has it).
-**But it FREEZES AT BOOT on a RAM law nothing had written down: `.text` costs taskman arena
-one-for-one.** +24,024 `.text` / +384 `.bss` → the boot `calloc` search secures **24,576 fewer bytes**
-(26 → 32 steps), landing **on the `0x130000` floor**; the scene then asks 4,896 B (grpupupu bank) against
-4,032 B headroom. Deficit ≈ 29 KB and **"115,277 B of spare" is REFUTED** — spare was never the
-constraint, arena *sizing* is (`freeze-soak/2026-07-31_161212-FROZEN-PICTURE.txt`).
-**Lever with an existing implementation to copy:** the 82,752 B of packed particle textures are linked
-into `.text`; the 136 KB battle static pack instead lives in a NitroFS payload read at match load and
-uploaded straight to VRAM. Route the particle textures the same way. Second cut: trim the linked script
-set (55 linked, P1 reaches ~26). Only then price it against the **clean-frame** margin (P50 974,080 /
-P95 1,056,640), round-robin a quarter of the generators per frame rather than batching. **The DS quad
-draw path is still unbuilt** — `gNdsParticleDrawSeamCount` is the "effects ran, nothing drew" signal.
+**`NDS_R2_PARTICLE_RUNTIME=1` BUILDS AND NOW BOOTS INTO THE BATTLE** — Dream Land renders with both
+fighters and a live HUD at TIME 01:00 before it dies. The boot arena freeze is FIXED, and the fix was
+**not** the lever the board named: `--gc-sections` had already discarded the 82,752 B of particle
+textures (nothing references them), so moving them freed zero. **Check the `.map` before believing a size
+claim about linked data nothing reads.** They went to NitroFS anyway — they become live the moment the
+quad path references them, and there is no image room for them then. The lever that worked was
+`sNdsTask39HitSparkPixels`, 22,528 B of `.rodata` read once into OBJ VRAM: arena
+**1,245,184 → 1,269,760** (control 1,269,760 → 1,290,240), `MALLOCOVF=0`, Boundary green.
+**Next blocker, sized to the byte and NOT an allocator overflow:** `ifCommonSetMaxNumGObj`
+(`ifcommon.c:3156`) latches the GObj pool at the active count once the general heap has <25 KiB free. It
+latched at **45/45** with **1,040 B free**; `ifCommonCountdownMakeInterface` asked for the 46th and wrote
+through the NULL (`str r0,[r5,#132]`, the inlined `ifSetSObj`). Do not add a NULL check — the seam is the
+heap. Levers, all measured: `efParticleInitAll` pools **28,320 B** (112x96 + 24x92 + 80x192, and
+`StructsMax` was **0** — untouched); the bank arena copy **10,912 B** (only needed because the normalizer
+byte-swaps in place — do it in the generator); float `printf` locale tables **~24,375 B**. Any two clear
+it. **Break on `__excpt_entry`, not the frozen PC** — calico's handler double-faults and destroys the
+context. Only then price it against the **clean-frame** margin (P50 974,080 / P95 1,056,640), round-robin
+a quarter of the generators per frame rather than batching. **The DS quad draw path is still unbuilt** —
+`gNdsParticleDrawSeamCount` is the "effects ran, nothing drew" signal.
 
 ## SUCCESSIVE MATCHES: FIXED — four defects, one law (write-up in `docs/PORTING.md` + board row)
 

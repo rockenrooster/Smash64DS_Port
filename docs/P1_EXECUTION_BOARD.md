@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-07-31 16:15 Central
+Updated: 2026-07-31 19:05 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
@@ -63,17 +63,71 @@ made) against 4,032 spare ≈ 29 KB**, and **the "115,277 B of arena spare answe
 the memory question" line is REFUTED**: the spare was never the binding
 constraint, the arena *sizing* is.
 
-**The lever is the 82,752 B of packed DS textures currently linked into `.text`,
-and the repo already has the right seam for it.** The battle static texture pack
-is 136 KB and does not sit in the image at all — it is a NitroFS payload read at
-match load and uploaded straight to texture VRAM
-(`NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_PAYLOAD_PATH`,
-`ndsRendererHardwarePrepareBattleStaticTextures`). Route the particle bank's
-textures the same way and the image shrinks by more than the whole deficit,
-without spending arena — §3.8's "preload everything the known configuration
-implies" with an existing implementation. Trimming the reachable script set (55
-linked, P1 reaches ~26) is the cheaper second cut. Do **not** answer it by
-lowering the arena floor.
+### The named lever was REFUTED, the real one was 22,528 B away, and the arena freeze is FIXED (2026-07-31 evening)
+
+**"The lever is the 82,752 B of packed DS textures currently linked into
+`.text`" was wrong — they were never in `.text`.** `-fdata-sections` plus
+`--gc-sections` had already discarded `gNdsParticleTextureData` (`0x14100`) and
+`gNdsParticlePaletteData` (`0x2a0`); both sit under **Discarded input sections**
+in `build-particles-on/.map`, because nothing references them until the quad
+path exists. Moving them would have freed exactly zero. The pack's real image
+cost is **12,148** (script bank 10,912 + texture rows 752 + offsets 476 + two
+scalars), and the runtime's total is **24,728** with the interpreter's 12,540.
+Check the map before believing a size claim about linked data nothing reads.
+
+They were moved anyway, to `nitro:/particles/efcommon_particle_textures.ds.bin`
+— not for size but because they become live the instant the quad path
+references them, and at that point there is no image room and no cheap way
+back. `check-nds-particle-banks.ps1` now fails if either array reappears as a
+declaration.
+
+**The lever that worked is `sNdsTask39HitSparkPixels`:** 22,528 B, the largest
+single `.rodata` object in the image, DMA'd into OBJ VRAM once at prepare time
+and never read again — and the generator was already writing byte-identical
+content to `assets/effects/task39_hit_sparks.rgb5a1.bin`. Streamed back one
+512-byte cell at a time with explicit `u32` stores (DMA cannot source from DTCM
+where the stack lives; VRAM rejects 8-bit writes).
+
+| taskman arena | before | after | delta |
+|---|---|---|---|
+| control, particles off | 1,269,760 | **1,290,240** | +20,480 |
+| particles on | 1,245,184 | **1,269,760** | +24,576 |
+
+`MALLOCOVF=0`. Particles-on now boots, loads the bank (`LoadResult=1`, 55
+packed, 0 rejected), and **renders Dream Land with both fighters and a live HUD
+at TIME 01:00** before dying at match start. Control soak NO-FREEZE through a
+full match to Results; Boundary green.
+
+### The next blocker, sized to the byte: the ORIGINAL'S OWN 25 KiB GObj latch
+
+`ifCommonSetMaxNumGObj` (`ifcommon.c:3156`) freezes the GObj pool at the current
+active count as soon as the general heap drops below **25 KiB free**. It fired
+at 45. `ifCommonCountdownMakeInterface` then asked for the 46th, got NULL, and
+the inlined `ifSetSObj` at `ifcommon.c:2222` wrote through it.
+
+Read at `__excpt_entry`, before calico's handler double-faults (which is what
+made the first capture unreadable — always break there, not on the frozen PC):
+
+```
+LR_ABT=0208cd14   -> str r0, [r5, #132], r5 = interface_gobj = NULL
+COMMONS active=45 max=45
+HEAP start=0x22b4870 ptr=0x23ea460 end=0x23ea870 free=1040
+ARENA=1269760 steps=26   MALLOCS=843   BANKBYTES=10912 packed=55
+```
+
+**1,040 bytes free.** Not an allocator overflow — a heap that is full. Do not
+add a NULL check; the owning seam is the heap. Three levers, each measured:
+
+| lever | bytes | cost |
+|---|---|---|
+| `efParticleInitAll` pools: 112x96 + 24x92 + 80x192 (`efparticle.c:28`) | **28,320** | must be re-sized by measured high-water, and `StructsMax` was **0** at the crash — nothing had used them |
+| bank arena copy (`memcpy` at `battleship_lbparticle.c:499`) | **10,912** | exists only because `ndsParticleNormalizeHeader` byte-swaps in place; normalize in the generator and point at `.rodata` |
+| float `printf`: `.rodata.categories` 14,328 + `libc_a-svfprintf` 10,047 | **~24,375** | every diagnostic format string has to become integer-only |
+
+Any two clear the latch. Trimming the reachable script set (55 packed, P1 seams
+= 13 that reach the bank) cuts the linked bank **and** its arena copy, so it is
+worth more than its 10,912 suggests. Do **not** answer it by lowering the arena
+floor.
 
 ## R2-07 SUCCESSIVE MATCHES — CLOSED. Four battle entries, zero freezes (2026-07-31)
 
