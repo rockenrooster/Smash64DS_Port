@@ -46,14 +46,40 @@ These bugs should be fixed for P1 delivery.
   exceptions, and every known sprite fits `12 * nbitmaps + 24` exactly (1->36,
   2->48, 3->60, 4->72, 5->84, 6->96), so the formula replaces the table and the
   nine new entries need no special-casing.
-  **STILL OWED before this closes: the letters on screen, and Results reached
-  after a Sudden Death KO.** A 90 s Sudden Death watch did not land inside the
-  90-tick announcement window, and a frame that misses the window proves nothing.
-  Results appearing after Sudden Death is the easier signal to catch and is the
-  same chain; `gNdsVSResultsStartCount` rising after an SD KO is the check. For
-  the letters specifically, break on `ifCommonAnnounceGameSetMakeInterface`, step
-  a few presented frames, then capture. Construction is not compositing -- that is
-  the standing lesson from the texture rows.
+  **PROVEN, with the event-driven capture built for it**
+  (`-CaptureAnnounce` / `-CaptureGameSet`, which break on the announcement's own
+  constructor and then step presented frames -- a wall-clock watch cannot catch a
+  90-tick window, and two watches at 90 s and 180 s both missed it):
+  - **TIME UP RENDERS** -- `2026-07-31_165338-timeup-frame20.png`, the full blue
+    mixed-width "TIME UP" across the stage at `TIME 00:00`. That is the
+    sprite-descriptor half proven on screen, and it settles the compositor
+    question for both announcements: they share `ifCommonAnnounceSetAttr`, the
+    same asset and the same letter set. TIME UP is the deterministic one because
+    this lane shortens the clock, so the timer always expires.
+  - **The GAME SET trigger is proven live**: the breakpoint fires on every run
+    with backtrace `#0 ifCommonAnnounceGameSetMakeInterface`,
+    `#1 ifCommonAnnounceEndMessage` -- which under the source's control flow can
+    only be reached by `sIFCommonBattlePlace` decrementing to exactly 0. Before
+    the fix that call site was unreachable.
+  **NEWLY EXPOSED AND STILL OPEN: constructing GAME SET then CRASHES.** Every run
+  stops there and never presents another frame -- `tbreak ndsPlatformEndFrame`
+  after the constructor never returns. Stepping 200,000 instructions past it puts
+  the PC at **`0x02000f6a` (`movs r0, r0`, i.e. not code) with caller frame
+  `0x00000e9a`** -- the same jump-into-low-memory signature as the Results
+  second-entry abort fixed earlier today (`0x02000b92`, frame `0x00000e9a`). So
+  the fix advanced this row from "never announces" to "announces, then dies before
+  the next frame", and THAT is what leaves the match sitting there with no
+  Results.
+  Already ruled out: the two interface procs `ifCommonBattleSetInterface` installs
+  are valid code addresses (`update=0x208b0a1, set=0x208a5c9`), so the crash is
+  not a call through those. TIME UP does NOT crash, so the shared announce and
+  composite machinery is not the carrier either -- whatever it is, it is specific
+  to the GAME SET/end-message path.
+  **Next step, and it has a strong prior:** `sIFCommonBattlePlace` was itself an
+  `ifcommon.c` static that nothing initialised per scene. Audit the rest of that
+  file's statics the same way -- the end-message path is the one that reads them,
+  and Sudden Death is a second scene entry, which is the exact shape of every
+  other defect closed today (SwitchPlan 3.12).
 -No "Time Up" VFX and SFX after match countdown finished.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `ifcommon.c` creates six blue mixed-width letter sprites

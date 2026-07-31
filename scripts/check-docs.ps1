@@ -1,7 +1,8 @@
 param(
     [int]$AgentsMaxLines = 150,
     [int]$AgentsMaxSectionLines = 45,
-    [int]$HandoffMaxLines = 150
+    # Raised from 150 to 200 by the owner, 2026-07-31.
+    [int]$HandoffMaxLines = 200
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path

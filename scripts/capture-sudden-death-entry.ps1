@@ -50,6 +50,15 @@ param(
     # Frame boundaries, not an `ignore` count: gdb stops once per ignored hit,
     # which is what makes -MatchedCapture blow its cap.
     [ValidateRange(0, 600)][int]$SDFrames = 0,
+    # Break on the TIME UP announcement's constructor, step this many presented
+    # frames, then shoot. 0 disables. See the stage for why this is TIME UP and
+    # not GAME SET, and why a wall-clock watch cannot photograph either.
+    # ~20 puts the shot well inside the announcement's 90-tick lifetime.
+    [ValidateRange(0, 90)][int]$CaptureAnnounce = 0,
+    # Same, for GAME SET after a Sudden Death KO. Separate switch because that KO
+    # is not deterministic; an armed-but-unhit run reports "no KO" honestly.
+    # Reaching this breakpoint at all proves sIFCommonBattlePlace was initialised.
+    [ValidateRange(0, 90)][int]$CaptureGameSet = 0,
     # Control arm for the scene-owned texture-VRAM reset, which ships default-on.
     # This switch turns it OFF at battle start to give the same-binary control.
     # Same reasoning as the route override: separately linked arms have confused
@@ -481,7 +490,33 @@ try {
         'printf "SD-M1CAM-DONE=1\n"',
         'printf "SD-REMAIN-BEFORE=%u\n", gSCManagerBattleState->time_remain',
         "set variable gSCManagerBattleState->time_remain = $RemainTics",
-        'printf "SD-REMAIN-AFTER=%u\n", gSCManagerBattleState->time_remain',
+        'printf "SD-REMAIN-AFTER=%u\n", gSCManagerBattleState->time_remain'
+    ) + $(if ($CaptureAnnounce -gt 0) { @(
+        # -CaptureAnnounce: photograph the TIME UP announcement, which is the
+        # only way to tell "the source announced and the compositor dropped it"
+        # from "the announcement is on screen". A wall-clock watch CANNOT do it:
+        # the letters live for 90 ticks (~1.5 s) and two 90 s/180 s Sudden Death
+        # watches both missed the window entirely.
+        #
+        # TIME UP rather than GAME SET on purpose. This lane shortens match one's
+        # clock, so the timer expiry is DETERMINISTIC -- it happens every run at a
+        # known point -- whereas GAME SET needs a last-stock KO that the level-3
+        # CPU may or may not land (one run stalemated at 312% vs 300% for 180 s).
+        # Both announcements are built by the same ifCommonAnnounceSetAttr path
+        # out of the same blue-letter set in the same asset, so TIME UP rendering
+        # proves the sprite-descriptor half for both.
+        'tbreak ifCommonAnnounceTimeUpMakeInterface',
+        'continue',
+        'printf "SD-STAGE=timeup-hit\n"',
+        'printf "SD-TIMEUP-PLACE=%d\n", sIFCommonBattlePlace'
+    ) + $(1..$CaptureAnnounce | ForEach-Object { @(
+        # Frame boundaries, so the shot lands on a completed frame with the
+        # letters composited rather than mid-draw.
+        'tbreak ndsPlatformEndFrame',
+        'continue'
+    ) }) + @(
+        'printf "SD-STAGE=shot-timeup\n"'
+    ) } else { @() }) + @(
 
         # Stage 3: the match is over and the source is deciding. These four numbers
         # ARE the proof that the tie is genuine: all zero means neither fighter
@@ -768,6 +803,49 @@ try {
         'printf "SD-F-FALLBACK=%u\n", gNdsRendererM3PreflightFallbackCount',
         'printf "SD-F-ATTEMPT=%u\n", gNdsRendererM3PreflightAttemptCount',
         'printf "SD-FRAMESTEP-DONE=1\n"'
+    ) } else { @() }) + $(if ($CaptureGameSet -gt 0) { @(
+        # The GAME SET half of the same question, and the reason it is a separate
+        # switch: TIME UP is deterministic in this lane (the clock is shortened,
+        # so the timer always expires) while GAME SET needs a last-stock KO that
+        # the level-3 CPU may not land -- a 180 s watch once stalemated at 312%
+        # vs 300%. A breakpoint costs nothing while it waits, so an armed-but-not
+        # -hit run is an honest "no KO this run" rather than a missed window.
+        #
+        # This is also the end-to-end check on the placement fix: reaching this
+        # breakpoint AT ALL means sIFCommonBattlePlace was initialised and
+        # decremented to exactly 0, because that test is the only VS caller.
+        'printf "SD-GAMESET-ARMED=1\n"',
+        'tbreak ifCommonAnnounceGameSetMakeInterface',
+        'continue',
+        'printf "SD-STAGE=gameset-hit\n"',
+        'printf "SD-GAMESET-PLACE=%d,status=%u\n", sIFCommonBattlePlace, gSCManagerBattleState->game_status',
+        # WHO CALLED IT, and WHERE IT GOES NEXT. Measured 2026-07-31: this
+        # breakpoint fires on every run, and the very next `tbreak
+        # ndsPlatformEndFrame; continue` never returns -- so the game constructs
+        # GAME SET and then never presents another frame, which is the owner's
+        # "no results after winning sudden death". The backtrace names the
+        # trigger path; the stepi walks past the constructor so the PC below is
+        # where it actually ends up rather than where it was called from. If that
+        # PC is a branch to itself this is one of BattleShip's eleven
+        # `while (TRUE);` give-ups and `x/1i` says which.
+        'backtrace 8',
+        # The two function pointers ifCommonBattleSetInterface just installed
+        # (ifcommon.c:3270-3283), read BEFORE stepping. The crash below is a jump
+        # into low memory, which is what calling through a bad proc pointer looks
+        # like, so print the candidates rather than inferring them from the
+        # wreckage -- the reject-handler lesson from the texture rows.
+        'printf "SD-GAMESET-PROCS=update=%p,set=%p\n", sIFCommonBattleInterfaceProcUpdate, sIFCommonBattleInterfaceProcSet',
+        'info symbol sIFCommonBattleInterfaceProcUpdate',
+        'info symbol sIFCommonBattleInterfaceProcSet',
+        'stepi 200000',
+        'printf "SD-GAMESET-PC=%p\n", $pc',
+        'x/1i $pc',
+        'backtrace 6'
+    ) + $(1..$CaptureGameSet | ForEach-Object { @(
+        'tbreak ndsPlatformEndFrame',
+        'continue'
+    ) }) + @(
+        'printf "SD-STAGE=shot-gameset\n"'
     ) } else { @() }) + @(
         'printf "SD-DONE=1\n"',
         # IS THE CAMERA CAPTURE CALLED AT ALL ON THE SECOND ENTRY?
@@ -1065,6 +1143,27 @@ try {
                         [void](Save-MelonDSWindowCapture -WindowHandle $window `
                             -Path $script:Entry1Shot -PreferPrintWindow)
                         Write-Host "  entry one -> $script:Entry1Shot"
+                    }
+                    # -CaptureAnnounce: N presented frames after the TIME UP
+                    # interface was constructed, core halted at a frame
+                    # boundary. This is the picture that decides whether the
+                    # announcement composites; the counters only prove it was
+                    # built.
+                    if (($stage -eq 'shot-timeup') -and
+                        ($window -ne [IntPtr]::Zero)) {
+                        $script:TimeUpShot = Join-Path $logDir `
+                            "$stamp-timeup-frame$CaptureAnnounce.png"
+                        [void](Save-MelonDSWindowCapture -WindowHandle $window `
+                            -Path $script:TimeUpShot -PreferPrintWindow)
+                        Write-Host "  TIME UP frame $CaptureAnnounce -> $script:TimeUpShot"
+                    }
+                    if (($stage -eq 'shot-gameset') -and
+                        ($window -ne [IntPtr]::Zero)) {
+                        $script:GameSetShot = Join-Path $logDir `
+                            "$stamp-gameset-frame$CaptureGameSet.png"
+                        [void](Save-MelonDSWindowCapture -WindowHandle $window `
+                            -Path $script:GameSetShot -PreferPrintWindow)
+                        Write-Host "  GAME SET frame $CaptureGameSet -> $script:GameSetShot"
                     }
                     # -SDFrames: N presented frames into Sudden Death, core
                     # halted at the boundary. This is the frame-matched arm

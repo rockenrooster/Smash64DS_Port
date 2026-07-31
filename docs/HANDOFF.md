@@ -1,16 +1,16 @@
 # Handoff
 
-Updated: 2026-07-31 (evening). **Restart surface only, capped at 150 lines** — durable detail goes to its
+Updated: 2026-07-31 (evening). **Restart surface only, capped at 200 lines** — durable detail goes to its
 owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_STANDING_RULES.md`;
 `docs/PORTING.md` for closed root causes).
 
 | phase | state |
 |---|---|
-| R2-00a/b/c, R2-01, R2-02 | gated |
-| R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69** — 1,228,928 -> 1,096,768, but DLDI-off and so lower bounds; only the E32 flash residual is open (KNOWN_ISSUES) and it blocks no lever |
-| R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65. R2-05 **COMPLETE** |
+| R2-00a/b/c, R2-01, R2-02, R2-05 | gated / complete |
+| R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69** — 1,228,928 -> 1,096,768, DLDI-off so lower bounds; only the E32 flash residual is open (KNOWN_ISSUES) and it blocks no lever |
+| R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-06 | closed — no lever left inside the phase; L6 found the one outside it |
-| R2-07 | results flow **MEETS ITS GATE** (581,197 ticks/tic = 0.52x). **Successive matches now work: four battle entries, zero freezes (2026-07-31, owner-confirmed).** Particle/audio/HUD clauses untouched — they are now the whole of `BUGS.md`. **L7 (float collision) is the gate lever.** R2-08 needs the owner's retail play test |
+| R2-07 | results flow **MEETS ITS GATE** (0.52x). **Successive matches work: four battle entries, zero freezes, owner-confirmed.** Particle/VFX/audio clauses are now the whole of `BUGS.md`. **L7 is the gate lever.** R2-08 needs the owner's retail play test |
 
 ## OPEN P1 #1 — the gate. `WORK-H` P95 is over 1,120,000 and L7 is the lever
 
@@ -40,55 +40,57 @@ cluster (~110 sites) or replace the entry points wholesale. **L8 REFUTED UNBUILT
 
 ## OPEN P1 #2 — `BUGS.md` is now entirely particles, VFX and audio cues, and ALL of it is P1
 
-The owner rewrote the phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and are
-required to be fixed for P1."** Nine rows, and seven are one blocker: **the particle scripts do not run**,
-so every effect draws as one of four untextured 16-vertex primitives. **BOTH PARTICLE BRANCHES ARE MERGED
-AND IN THE TREE — do not go looking for worktrees**: `scripts/generate_nds_particle_banks.py` +
-`src/nds/generated/nds_particle_banks.generated.{inc,h}` (byte-reproducing: 55/119 reachable scripts,
-23/47 textures, 82,752 B DS, 95,043 B linked), `src/nds/nds_particle_banks.c`,
-`src/import/battleship_lbparticle.c`, all in `CFILES`.
-**`NDS_R2_PARTICLE_RUNTIME=1` NOW BUILDS** — the 790-error wall was 725 enumerators the port's
-`include/ft/fighter.h` and the decomp's `ft/ftdef.h` both declare, in nineteen blocks, all with identical
-values; `SSB64_NDS_FTDEF_MIRROR` brackets all nineteen and only the seam TU defines it (details on the
-board). **But it FREEZES AT BOOT and the reason is a RAM law nothing had written down: `.text` growth
-costs taskman arena one-for-one.** The runtime adds **+24,024 `.text`** and only +384 `.bss`, and the
-boot-time downward `calloc` search that sizes the arena therefore secures **24,576 fewer bytes** (26 → 32
-steps), landing **exactly on the `0x130000` floor** that must not be lowered. Then the scene asks for
-**4,896 B** (Dream Land's grpupupu bank, which the stub never allocated) against **4,032 B** of headroom
-and `syMallocSet` spins. Deficit ≈ **29 KB**; the **"115,277 B of arena spare" line is REFUTED** — spare
-was never the constraint, arena *sizing* is
-(`artifacts/verification/freeze-soak/2026-07-31_161212-FROZEN-PICTURE.txt`).
-**Lever, with an existing implementation to copy:** the 82,752 B of packed DS particle textures are
-linked into `.text`; the battle static pack is 136 KB and lives in a **NitroFS payload** read at match
-load and uploaded straight to VRAM (`ndsRendererHardwarePrepareBattleStaticTextures`). Route the particle
-textures the same way — the image shrinks by more than the deficit and no arena is spent. Second cut: trim
-the linked script set (55 linked, P1 reaches ~26). Only then price it: a 128-frame A/B with the runtime ON
-against a matched control, judged against the **clean-frame** margin (P50 974,080 / P95 1,056,640) — the
-merge measured byte-identical only because the runtime was off. Round-robin a quarter of the generators
-per frame rather than batching quarter-rate work onto one frame in four (that lowers the mean and raises
-P95). The flag also arms the `leaves_xf`/`dust_xf` per-scene null that is inert today, and **the DS quad
+Owner's phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and are required to be fixed
+for P1."** Most rows are one blocker: **the particle scripts do not run**, so every effect draws as one of
+four untextured primitives. **BOTH PARTICLE BRANCHES ARE MERGED AND IN THE TREE — do not look for
+worktrees**: generator + `nds_particle_banks.generated.{inc,h}` (byte-reproducing, 55/119 scripts, 23/47
+textures, 82,752 B DS), `nds_particle_banks.c`, `battleship_lbparticle.c`, all in `CFILES`.
+**`NDS_R2_PARTICLE_RUNTIME=1` NOW BUILDS** (725 mirrored enumerators, one guard — board has it).
+**But it FREEZES AT BOOT on a RAM law nothing had written down: `.text` costs taskman arena
+one-for-one.** +24,024 `.text` / +384 `.bss` → the boot `calloc` search secures **24,576 fewer bytes**
+(26 → 32 steps), landing **on the `0x130000` floor**; the scene then asks 4,896 B (grpupupu bank) against
+4,032 B headroom. Deficit ≈ 29 KB and **"115,277 B of spare" is REFUTED** — spare was never the
+constraint, arena *sizing* is (`freeze-soak/2026-07-31_161212-FROZEN-PICTURE.txt`).
+**Lever with an existing implementation to copy:** the 82,752 B of packed particle textures are linked
+into `.text`; the 136 KB battle static pack instead lives in a NitroFS payload read at match load and
+uploaded straight to VRAM. Route the particle textures the same way. Second cut: trim the linked script
+set (55 linked, P1 reaches ~26). Only then price it against the **clean-frame** margin (P50 974,080 /
+P95 1,056,640), round-robin a quarter of the generators per frame rather than batching. **The DS quad
 draw path is still unbuilt** — `gNdsParticleDrawSeamCount` is the "effects ran, nothing drew" signal.
 
-## SUCCESSIVE MATCHES: FIXED — four defects, one law (full write-up in `docs/PORTING.md`, board row)
+## SUCCESSIVE MATCHES: FIXED — four defects, one law (write-up in `docs/PORTING.md` + board row)
 
-**Every one was state that outlived a scene boundary the taskman arena rewinds** — prepared-run cache
-keyed on a config pointer; texture VRAM with no owner; the source display-list heads never rewound in the
-battle loop (48 bytes past a 60 KiB buffer → BattleShip's own `while (TRUE);` ~8 s into match two);
-`sMNVSResultsFighterGObjs` trusted across a Results re-entry (ARM9 data abort at match two's GAME SET).
-Evidence: SD lane three consecutive bit-identical runs (`STG` 169,536, 28.0 FPS, pond textured); the
-**same-binary control arm `-NoTexVramReset` still reproduces it** (BuildCount 92, `STG` 3,148,992, 4.2
-FPS, white pond); rematch lane four entries / three Results / NO-FREEZE, owner-confirmed.
-**Boundary AND Latest both green on the kept commit `0e5e8a3`.**
-Guards: `gNdsRendererSceneTextureVramResetCount` must read **one per battle entry**;
-`gNdsR2StagePrepareBuildCount` two per entry with ReuseCount rising.
-**Still owed: the owner's eye check on a natural tie + rematch.** New owner row on the same flow: **no
-GAME SET after winning Sudden Death** (`BUGS.md`) — same scene-flow surface, use the SD lane for it.
+**Every one was state that outlived a scene boundary the arena rewinds** — prepared-run cache keyed on a
+config pointer; texture VRAM with no owner; the source DL heads never rewound in the battle loop (48 bytes
+past a 60 KiB buffer → `while (TRUE);` ~8 s into match two); `sMNVSResultsFighterGObjs` trusted across a
+Results re-entry (ARM9 data abort at match two's GAME SET).
+Evidence: SD lane three bit-identical runs (`STG` 169,536, 28.0 FPS, pond textured); the **same-binary
+control arm `-NoTexVramReset` still reproduces it** (BuildCount 92, `STG` 3,148,992, 4.2 FPS, white pond);
+rematch lane four entries / three Results / NO-FREEZE, owner-confirmed. **Boundary AND Latest green on
+`0e5e8a3`.** Guards: `gNdsRendererSceneTextureVramResetCount` one per battle entry;
+`gNdsR2StagePrepareBuildCount` two per entry with ReuseCount rising. **Owed: the owner's eye check.**
+
+## ANNOUNCEMENTS: TIME UP renders; GAME SET now fires and then CRASHES
+
+`sIFCommonBattlePlace` was never initialised (nothing called the source's `ifCommonBattleInitPlacement`),
+so `--place == 0` could never be true: **no VS match had ever announced GAME SET**, which also withheld
+`game_status = Set` and therefore Results. Both battle entries call it now, and the nine blue letters got
+the sprite descriptors they never had (read off `assets/us/relocData/82.vpk0.bin` on the host; the two
+earlier gdb attempts were unnecessary). **TIME UP is PROVEN on screen** —
+`sudden-death/2026-07-31_165338-timeup-frame20.png`, via the new `-CaptureAnnounce`/`-CaptureGameSet`
+switches that break on the constructor then step frames (a wall-clock watch cannot catch 90 ticks; two
+missed it). **OPEN:** the GAME SET constructor is reached every run (backtrace proves the trigger) and the
+game then never presents another frame — PC `0x02000f6a`, caller frame `0x00000e9a`, the same
+jump-into-low-memory shape as the Results second-entry abort. Installed procs are valid and TIME UP does
+not crash, so it is specific to the end-message path. **Strong prior: another `ifcommon.c` static nothing
+initialises per scene** — that is exactly what `sIFCommonBattlePlace` was.
 
 ## Freeze classes — TWO, with different fixes. Never say "the allocator" without the counter
 
-`sys/malloc.c:30` is `while (TRUE);` (heap exhaustion, `MALLOCOVF` names it); `sys/taskman.c:338`/`:344`
-are two more (a DL buffer past its end, and the graphics heap — `DLBUF0..3`/`GFXHEAP` name those). The
-soak prints all of them. **Do NOT make `syTaskmanMalloc` return NULL globally** — callers do not check.
+`sys/malloc.c:30` is `while (TRUE);` (heap exhaustion, `MALLOCOVF`); `sys/taskman.c:338`/`:344` are two
+more (a DL buffer past its end, and the graphics heap — `DLBUF0..3`/`GFXHEAP`). The soak prints all of
+them. A third shape is not a spin at all: a jump into low memory (`0x00000e9a` as caller frame), seen
+twice today. **Do NOT make `syTaskmanMalloc` return NULL globally** — callers do not check.
 **Image size competes with the arena**: the boot `calloc` search steps down 4,096 at a time from
 `0x150000` to a `0x130000` FLOOR that is a contract with the Task 36 replay guard
 (`nds_renderer.h:124-134`) — **do not lower it**; `.text` costs arena as surely as `.bss` (see the
@@ -102,9 +104,11 @@ or 32 with particles on) — not failed match allocations. It nearly bought a re
 - **gdb aborts a command file on the first missing symbol, silently** — reads as an emulator hang. Both
   `capture-sudden-death-entry.ps1` and `soak-freeze-watch.ps1` now ask `nm` and strip every read the ELF
   does not define (the soak puts ~80 counters in ONE printf, so one absent symbol cost all of them).
-- **A run that ends at the moment under investigation proves nothing.** Two rematch soaks read
-  NO-FREEZE with the GAME SET zoom as their final frame; the 5-minute cap was terminating the emulator
-  at match two's hand-off. Ceiling is 7 minutes now; `-PressStartEverySeconds` drives successive entries.
+- **A run that ends at the moment under investigation proves nothing**, and neither does a wall-clock
+  watch aimed at a short window. Two rematch soaks read NO-FREEZE with the GAME SET zoom as their final
+  frame (5-minute cap ended the emulator at match two's hand-off — ceiling is 7 minutes now,
+  `-PressStartEverySeconds` drives successive entries); two Sudden Death watches missed the 90-tick
+  announcement window entirely. Break on the event and step frames instead (`-CaptureAnnounce`).
 - **Identical source is not an identical binary**: two HEAD controls differed by P95 +5,376, ±1
   over-gate frame. Always run the matched control. **DLDI-on costs ~29,696 P95 and is the honest config.**
 - **Never compare an anim-cache pair frame-by-frame** — it shifts load timing; order stats only.
@@ -112,22 +116,21 @@ or 32 with particles on) — not failed match allocations. It nearly bought a re
 - **`-Os` emits `blx __udivsi3` for a CONSTANT divisor**; `sinf`/`cosf` drag in `__ieee754_rem_pio2f` —
   SSB64 uses a table (L9), never reach for libm. **A lab ROM can differ in CODEGEN**: the `-marm` rule
   keys on harness ID, so add new lab IDs to `NDS_ARM_RENDERER_HARNESS_IDS`.
-- **Compare captures with `scripts/compare-capture-pair.ps1`** — it crops past melonDS's host-FPS title
-  bar, which otherwise reads as a visual regression whenever a candidate is faster.
-- **`addr2line` names deleted AND inlined functions**; **read the HUD before the picture** (`TIME`/`DMG`
-  say which match a capture belongs to); **`-MatchedCapture` is broken** (own BUGS row).
-- **`scripts/check-decomp-header-mirror.py` is RED on two constants** (`FTSTAT_OPENING1_START`,
-  `nSYAudioBGMExplain`) — pre-existing, decomp is the specification, and both edits change shipping TUs
-  so they want their own Latest run. Not caused by the enum-mirror guard.
+- **Compare captures with `scripts/compare-capture-pair.ps1`** (it crops past melonDS's title bar);
+  **`addr2line` names deleted AND inlined functions**; **read the HUD before the picture**;
+  **`-MatchedCapture` is broken** (own BUGS row); **`check-decomp-header-mirror.py` is RED on two
+  pre-existing constants** — decomp is the specification and both edits want their own Latest run.
 
 ## Refuted — do not re-derive (all by measurement; derivations on the board)
 
-**E51** `line_id`; **E53** `{base,size}` mirror; **the flash as vertex data** (E48-E58); **the pose
-table** (E61); **`.text.hot`** (E66); **E57** hitboxes walk the live joint chain; **R2-06 E7** fighter
-fallback + Task 39; **R2-06 E6** the Horner fold; **pointer arrays as index arithmetic** (E11); **an AObj
-pool** (E12); **R2b's transform double-apply**; **R1's loader AND arena framings**; **the OOM spin and
-the DL-buffer overflow as the *Sudden Death* freeze** (they are the *rematch* freezes); **L8's unroll**;
-**the atlas allocation-order theory**; **"115,277 B of arena spare" as the particle memory answer**.
+**E51** `line_id`; **E53** `{base,size}` mirror; **the flash as vertex data** (E48-E58); **the pose table**
+(E61); **`.text.hot`** (E66); **E57** hitboxes walk the live joint chain; **R2-06 E7** fighter fallback +
+Task 39; **R2-06 E6** the Horner fold; **pointer arrays as index arithmetic** (E11); **an AObj pool**
+(E12); **R2b's transform double-apply**; **R1's loader AND arena framings**; **the OOM spin and the
+DL-buffer overflow as the *Sudden Death* freeze** (they are the *rematch* freezes); **L8's unroll**; **the
+atlas allocation-order theory**; **"115,277 B of arena spare" as the particle memory answer**; **wrapping
+a decomp function to count its INTERNAL callers** (the rename bypasses the wrapper; `--gc-sections` then
+deletes it — read the source's state instead).
 **STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked**: real work removed,
 negative bytes added, bit-identical load-frame set, yet P95 +15,744. Only a change clearing ~16,000, or
 one that moves work off the frame, counts.
@@ -145,6 +148,7 @@ $env:DEVKITPRO = 'C:/devkitPro'; $env:DEVKITARM = 'C:/devkitPro/devkitARM'
 published one is** (owner, 2026-07-22), flag-identical. `-j`/`MAKEFLAGS` rules are in AGENTS.md
 `## Builds`. A clean checkout must build through `build.ps1`, not bare `make`: four of six generated
 `.inc` files are gitignored. Preserve canonical mode 163, renderer mode 9, mip 0, static textures,
-source countdown, Dream Land water at frame 0, Task 16 `1/1/1`. Do not edit `decomp/`.
-Successive-match runs: `soak-freeze-watch.ps1 -MinutesToRun 7 -PressStartSeconds 165 -PressStartCount 2
--PressStartEverySeconds 145 -PollSeconds 5 -IdenticalFramesToTrip 12`.
+source countdown, Dream Land water at frame 0, Task 16 `1/1/1`. Do not edit `decomp/`. Successive
+matches: `soak-freeze-watch.ps1 -MinutesToRun 7 -PressStartSeconds 165 -PressStartCount 2
+-PressStartEverySeconds 145 -PollSeconds 5 -IdenticalFramesToTrip 12`; announcements:
+`capture-sudden-death-entry.ps1 -CaptureAnnounce 20` (TIME UP) / `-CaptureGameSet 2`.

@@ -147,7 +147,7 @@ acceptance enable it. Never launch the obsolete five-minute configuration, excep
 `PROJECT_GOAL.md` owns the product contract; `docs/README.md` owns other roles.
 Do not duplicate current truth. `PORTING.md` is append-only; screenshots stay in `artifacts/visibility`.
 Keep documentation current and LEAN except for append only docs.
-`.\docs\HANDOFF.md` should be 150 lines max.
+`.\docs\HANDOFF.md` should be 200 lines max (owner, 2026-07-31; was 150).
 
 ## Editing
 
