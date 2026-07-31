@@ -1793,6 +1793,32 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 L6 — the census top-symbol table is WHOLE-RUN, not window-scoped (2026-07-31)
+
+Both arms ran: over-gate `517..521` (`artifacts/task37-census/r207-L6-over/`)
+and matched clean `508..512` (`.../r207-L6-clean/`).
+
+**The two top-symbol tables are BYTE-IDENTICAL** — same 3,515,373 for
+`armWaitForIrq`, same 904,521 `__aeabi_fadd`, same 655,764 `__aeabi_fmul`, same
+everything, to the cycle. Two different frame windows cannot produce identical
+per-symbol totals, so **`census.txt`'s table A is not scoped to `-StartFrame`
+/`-Frames` at all** — it aggregates the whole emulation, and both runs boot and
+play the same way. The windowed data is the **regions** output
+(`arm9-profile.regions.csv`, `regions=6`, "region r = presented frame 517 + r"),
+which is what `-PerFrameRegion` produces.
+
+**What this stopped.** Arm A alone reads `__aeabi_fadd` + `__aeabi_fmul` =
+1,560,285 cycles = **9.95% of total**, the largest non-idle consumer, and it
+would have been natural to publish that as the over-gate burst's composition.
+It is not: it is 9.95% of the *whole run*, identical on clean frames, and says
+nothing about the excursion. **Soft-float is NOT implicated by this data.**
+
+**So L6 is not yet answered, and the method note is the deliverable.** To
+compare windows, diff the per-region rows, not table A. Anyone re-running this
+should first confirm the two arms differ *somewhere* before interpreting
+anything — identical output across deliberately different inputs is the
+signature of an instrument that is not reading what its parameters claim.
+
 ### R2-07 L3 — the excursion is SIZED: +272,576 `WORK-H`, all of it `SRC`/`OTHR`, render flat (2026-07-31)
 
 Straight from `artifacts/performance/r207-L1-rows.csv` — the pacing-comparable
