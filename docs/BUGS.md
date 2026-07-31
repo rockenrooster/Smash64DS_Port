@@ -340,8 +340,9 @@ These bugs should be fixed for P1 delivery.
     `SD-LEDGER-M1BASE-TOTAL=0`. Measuring that was the difference between a
     proof and a coincidence, and the same care is owed to any other counter read
     at two points.
-  - **ROOT CAUSE: the battle camera's `camera_mask` is ZERO on the second entry
-    (2026-07-31, log `2026-07-31_022942`).** `gGMCameraGObj` is at the same
+  - **STRONGEST LEAD (heading corrected from "ROOT CAUSE" — see the correction
+    below): the battle camera's `camera_mask` leftover is ZERO on the second
+    entry (2026-07-31, log `2026-07-31_022942`).** `gGMCameraGObj` is at the same
     address on both entries; 16 words dumped at the matched stop, and in the
     first 64 bytes **exactly one word differs — +0x30, `camera_mask`**:
     ```
@@ -354,23 +355,33 @@ These bugs should be fixed for P1 delivery.
     +0x0F is **3 = CObj**, i.e. this really is the camera. `camera_tag` is
     **identical** on both entries, which is why every tag-based hypothesis
     measured clean.
-    **The chain is now complete, and every link but the last is measured:**
+    **CORRECTION, same day, before this was acted on: `camera_mask` is
+    TRANSIENT, so the chain I first wrote overstated the evidence.**
+    `gm/gmcamera.c:1057-1091` assigns it immediately before each
+    `gcCaptureCameraGObj` call and overwrites it for the next pass:
+    ```c
+    camera_gobj->camera_mask = COBJ_MASK_DLLINK(2) | COBJ_MASK_DLLINK(1);
+    gcCaptureCameraGObj(camera_gobj, ...);            /* pass 1 */
+    camera_gobj->camera_mask = COBJ_MASK_DLLINK(4);
+    gcCaptureCameraGObj(camera_gobj, ...);            /* pass 2 */   ...
     ```
-    camera_mask == 0
-      -> gcCaptureCameraGObj's `while (camera_mask != 0)` never iterates
-      -> NOTHING is captured, so :4392 never runs for any GObj
-      -> the five stage GObjs keep objman.c:1892's seed, frame_draw_last = 0xFF
-      -> objdisplay.c:1161's `!= (u8)dSYTaskmanFrameCount` (counter 0 all match)
-         is TRUE for the whole stage -> proc_diff instead of proc_same
-    ```
-    That accounts for every measurement in this row at once: the stage GObjs
-    all intact and byte-identical apart from `frame_draw_last`; the stage direct
-    path fully engaged (Build 2 / Reuse 2240 / Elide 11200); geometry scrambled
-    rather than missing; and `STG` 2.21x rather than 0x or 1x.
-    **Still not measured:** that `proc_diff` is what the screen shows. The fix
-    belongs at whatever leaves `camera_mask` zero on a scene re-entry — find
-    that seam before changing anything, and do not paper over it by forcing the
-    mask at the capture site.
+    It is an argument passed through the struct, not a configuration. A read at
+    `scVSBattleFuncUpdate` — outside that function — samples whatever the LAST
+    pass left behind. So "the mask is zero, therefore nothing is captured" does
+    **not** follow from this measurement, and that wording is withdrawn.
+    **What the measurement does support, and it is still the strongest lead in
+    this row:** at a matched stop the leftover is `0x00180000` on entry one and
+    `0` on entry two, and that is the *only* difference in the camera's first
+    64 bytes. **Zero matches no completed assignment** — every one of the five
+    in `gmcamera.c` sets at least one bit — so entry two's camera draw either
+    never ran, or did not complete its pass sequence. Both readings still land
+    on the same suspect: the camera draw path on re-entry.
+    **Next, and this is what the transient nature demands: sample `camera_mask`
+    INSIDE the draw, at the `gcCaptureCameraGObj` call sites**, not after it.
+    A breakpoint there on both entries gives the value actually in force during
+    capture, plus whether the call happens at all — which is the question.
+    Until that runs, do not state a cause, and do not force the mask at the
+    capture site: that would hide whichever of the two readings is true.
   - **Superseded candidate note, kept for the reasoning: `frame_draw_last` is
     `0xFF` on every live stage GObj on the second entry (2026-07-31).** Log
     `2026-07-31_020601`. Eight words read from each of the five unreplayed
