@@ -193,6 +193,19 @@ try {
         "ignore `$bpnum $MatchedCameraCalls",
         'continue',
         'printf "SD-MATCH1-DIST=%f\n", gGMCameraStruct.target_dist',
+        # STG partition, arm A. Needs NDS_TASK103_STAGE_RUN_PHASE=1; the four
+        # phases already exist behind that flag and sum to the STG bucket, so
+        # diffing arm A against arm B says WHICH phase doubles rather than that
+        # the bucket did.
+        'printf "SD-M1-STG=%u\n", gNdsTickHudStageTicks',
+        'printf "SD-M1-PREPARE=%u\n", gNdsTask103PrepareTicks',
+        'printf "SD-M1-PREPARE-N=%u\n", gNdsTask103PrepareCount',
+        'printf "SD-M1-TRAVERSAL=%u\n", gNdsTask103TraversalTicks',
+        'printf "SD-M1-TRAVERSAL-N=%u\n", gNdsTask103TraversalCount',
+        'printf "SD-M1-DISPLAY=%u\n", gNdsTask103DisplayTicks',
+        'printf "SD-M1-DISPLAY-N=%u\n", gNdsTask103DisplayCount',
+        'printf "SD-M1-FINISH=%u\n", gNdsTask103FinishTicks',
+        'printf "SD-M1-FINISH-N=%u\n", gNdsTask103FinishCount',
         'printf "SD-STAGE=shot-match1\n"',
         # Drop it so the drive to Sudden Death is not stopped 60 times a second.
         'delete $bpnum'
@@ -369,6 +382,17 @@ try {
         "ignore `$bpnum $MatchedCameraCalls",
         'continue',
         'printf "SD-SD-DIST=%f\n", gGMCameraStruct.target_dist',
+        # STG partition, arm B. Cumulative counters, so subtract arm A's values
+        # offline: the difference is what Sudden Death's stage draw spent.
+        'printf "SD-SD-STG=%u\n", gNdsTickHudStageTicks',
+        'printf "SD-SD-PREPARE=%u\n", gNdsTask103PrepareTicks',
+        'printf "SD-SD-PREPARE-N=%u\n", gNdsTask103PrepareCount',
+        'printf "SD-SD-TRAVERSAL=%u\n", gNdsTask103TraversalTicks',
+        'printf "SD-SD-TRAVERSAL-N=%u\n", gNdsTask103TraversalCount',
+        'printf "SD-SD-DISPLAY=%u\n", gNdsTask103DisplayTicks',
+        'printf "SD-SD-DISPLAY-N=%u\n", gNdsTask103DisplayCount',
+        'printf "SD-SD-FINISH=%u\n", gNdsTask103FinishTicks',
+        'printf "SD-SD-FINISH-N=%u\n", gNdsTask103FinishCount',
         'printf "SD-STAGE=shot-sd\n"',
         'printf "SD-MATCHED-DONE=1\n"',
         'detach',

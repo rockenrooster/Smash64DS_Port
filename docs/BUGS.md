@@ -378,11 +378,60 @@ These bugs should be fixed for P1 delivery.
     not merely drawing wrong, it is doing more than twice the work to do it --
     so whatever it is, it is visible in the stage bucket and does not need a
     screenshot to detect. Use that as the regression signal.
-    **Next: partition that STG doubling.** The stage draw is where the defect
-    lives; the material bindings and topology rebuild are already measured clean
-    on the second entry, so look at what the segment commit emits -- extra
-    segments, a re-run epoch, or a display list executed against the wrong
-    asset base.
+    **Partitioning that STG doubling is IN PROGRESS, and the instrument has a
+    trap worth recording first.** The four phases already exist behind
+    `NDS_TASK103_STAGE_RUN_PHASE` (Prepare / Traversal / Display / Finish) and
+    sum to the STG bucket, so no new code is needed -- but **do NOT read
+    `gNdsTickHudStageTicks` itself at a breakpoint.** It is zeroed every frame
+    by the battle presentation loop, so a mid-frame stop reads a partial frame;
+    the first attempt printed `0` for it and the number means nothing. The
+    Task 103 counters are cumulative and are the ones to diff. Same shape as the
+    Results buckets free-running (see HANDOFF): know whether a counter is
+    per-frame or cumulative before quoting it.
+    Arm A (match 1, 120 camera-proc calls) reads, per call:
+    Prepare **77,378** (120 calls), Traversal **330,360** (8), Display
+    **5,213** (3,288), Finish **504** (119). Arm B did not complete -- a
+    Task 103 build is slow enough that 240 gdb-evaluated breakpoint stops
+    exceed the 180 s cap, so re-run with `-MatchedCameraCalls 120`, which is
+    still past convergence.
+    **The arm-A numbers already name the likely culprit, so state the prediction
+    before running arm B rather than after.** Traversal costs **330,360 ticks
+    per call** -- on its own that is ~1.9x an entire match-1 stage frame
+    (STG 173,568) -- and match 1 takes it only **8 times across 120 frames**,
+    about once every fifteen. Display, by contrast, is 5,213 x 3,288 calls, and
+    Prepare 77,378 x 120 (once per frame). So the STG doubling does not need a
+    new phase or a costlier one: **a Traversal that fires on frames where match 1
+    skips it accounts for the whole 173,568 -> 383,296 by count alone.**
+    Falsifiable prediction for arm B: its Traversal COUNT per frame is higher
+    than one-in-fifteen, while Display and Prepare per-call costs are
+    unchanged. If instead Display's count jumps, the extra work is extra
+    segments committed and the traversal reading is a coincidence. Either way
+    the diff decides it; do not adopt the prediction until it is run.
+    Traversal lives in `ndsStageGCDrawAllLoopRecordDObjDraw`
+    (`reloc_backend_movement.c:13299`), gated per classified stage GObj by
+    `sNdsStageGCDrawAllLoopHardwareSubmitActive`, and **8 is not an arbitrary
+    number: it is the segment count.** `ndsRendererAdapterNativeStageSegmentGObj`
+    enumerates exactly eight segments (cases 0..7). So match 1 traverses each
+    segment ONCE and the Task 36 replay serves every frame after that -- which
+    is the R2-02 architecture working as designed, and why Traversal is 8 calls
+    in 120 frames rather than 8 per frame.
+    **That sharpens the hypothesis into something structural:** if the second
+    entry does not re-establish the replay, the stage falls back to full
+    traversal, and 8 x 330,360 per frame instead of once is far more than enough
+    to explain STG 173,568 -> 383,296. It would also explain the corruption
+    rather than merely the cost, because the fallback draws by a different route
+    than the replay it is standing in for.
+    There is a direct connection to the scene-cache fix landed earlier in this
+    row: the board records `topology_generation` -- which comes from
+    `owner_generation`, which comes from `sNdsRelocSceneGeneration` -- as **the
+    only thing that resets the Task 36 replay**. That generation now advances
+    correctly on a second entry (2/2, where the old cursor test caught 0/2), so
+    the replay IS being reset where before it silently was not. **The open
+    question is whether anything REBUILDS it afterwards**, or whether the second
+    entry simply runs un-replayed from then on. Check
+    `gNdsTask103TraversalCount` per frame in arm B first; if it is 8 per frame
+    rather than 8 per entry, that is the answer and the fix belongs at whatever
+    should re-arm the replay after a generation bump.
 
     **(Withdrawn, kept for the record) THE CAMERA CONVERGES NORMALLY.** `gmCameraDefaultFuncCamera` runs in Sudden Death, and
     `target_dist` reads **10000.0 on the first frame and 3996.67 after 120 proc
