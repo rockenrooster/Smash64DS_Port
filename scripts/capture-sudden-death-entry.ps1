@@ -395,7 +395,7 @@ try {
         'tbreak ndsPlatformEndFrame',
         'continue',
         'printf "SD-M1CAM-ARMED=1\n"'
-    ) + $(1..8 | ForEach-Object { @(
+    ) + $(1..1 | ForEach-Object { @(
         # CONTROL ARM for the entry-two enumeration. Entry two showed the camera
         # draw running its multi-pass sequence with the 3rd and 4th passes
         # carrying mask 0 -- and three of the five stage GObjs sit on
@@ -646,7 +646,7 @@ try {
         'x/4wx gGRCommonStruct.pupupu.map_gobj[3]',
         'x/4wx gGRCommonLayerGObjs[1]',
         'printf "SD-LATE-END\n"'
-    ) + $(1..8 | ForEach-Object { @(
+    ) + $(1..1 | ForEach-Object { @(
         # ENUMERATE the capture calls rather than sampling one. The first call
         # after the stop turned out to be a camera with mask 0 AND tag 0 that is
         # not gGMCameraGObj -- one sample of one camera says nothing about which

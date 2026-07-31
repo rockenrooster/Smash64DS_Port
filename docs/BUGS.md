@@ -466,13 +466,33 @@ These bugs should be fixed for P1 delivery.
     first draw" and needs no defect to explain it. **Every downstream claim
     built on it — the `proc_diff`/`proc_same` split as the cause of the
     scrambled stage and of `STG` 2.21x — is suspended, not merely qualified.**
-    **The confirming run did not complete** (the `SD-LATE-*` block, which lets
-    three frames present and re-reads the same five GObjs, did not emit). Do
-    that first: if the five turn `0x00` after a few presented frames, this whole
-    line is closed as a measurement error and the stage corruption is still
-    unexplained. Note what stays true regardless — the corruption itself is real
-    and reproduced (`STG` 171,328 -> 378,880, matched screenshots) — only the
-    `frame_draw_last` explanation is in doubt.
+  - **CLOSED — CONFIRMED MEASUREMENT ERROR (2026-07-31, log
+    `2026-07-31_030*`).** The `SD-LATE-*` block ran. Same five GObjs, same run,
+    second entry:
+    ```
+    at `running`, before any SD frame presented:
+      0x01ff0401  0x01ff0401  0x01ff0401  0x01ff1001  0x01ff0602   -> 0xFF
+    after 3 presented frames:
+      0x01000401  0x01000401  0x01000401  0x01001001  0x01000602   -> 0x00
+    ```
+    The five stage GObjs **are** captured and written on the second entry and
+    reach exactly entry one's values. `0xFF` was the creation seed, observed
+    before the first draw, nothing more. **The whole `frame_draw_last` line —
+    and the `proc_diff`/`proc_same` chain built on it — is WRONG and is
+    retracted in full.** It cost several cycles because the downstream reasoning
+    was allowed to accumulate before the sample timing was questioned; the
+    standing rule (match the confounds FIRST) was applied late.
+    **What this leaves, and it is worth having:** at a comparable sample point
+    the five stage GObjs are byte-identical between entries across the entire
+    header, `frame_draw_last` included. Combined with the phase-aligned camera
+    enumeration (identical) and the engaged direct path (Build 2 / Reuse 2240 /
+    Elide 11200), **the GObj/capture layer is exonerated.** The corruption is
+    downstream of the object graph — in the geometry, material or matrix data
+    the direct path consumes — not in the objects or in which of them get
+    drawn. That is where the next cycle should start, and it should start with
+    a comparison taken at equal frame counts on both sides.
+    The corruption itself remains real and reproduced: `STG` 171,328 ->
+    378,880, `ALL` 1,119,808 -> 1,679,936, matched screenshots.
   - **Superseded candidate note, kept for the reasoning: `frame_draw_last` is
     `0xFF` on every live stage GObj on the second entry (2026-07-31).** Log
     `2026-07-31_020601`. Eight words read from each of the five unreplayed
