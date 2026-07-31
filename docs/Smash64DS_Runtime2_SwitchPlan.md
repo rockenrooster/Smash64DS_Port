@@ -10,13 +10,28 @@ and equivalence. **R2-07 is the live phase.** The board
 and is not a status log.
 
 **The battle-frame P95 gate, read in the canonical DLDI-on configuration
-(§3.9), is NOT yet met — over by ~40,448.** The DLDI-off reading is 1,096,768,
-inside the gate by 23,232, but DLDI-off is the optimistic configuration and is
-not the acceptance number. R2-06 E8 localized the entire remainder: **every
-over-gate frame is an asset-load frame; clean-frame P95 is 1,056,640, ~63K
-inside budget.** So R2-04's "no first-use loading during gameplay" clause
-(§3.8) is not yet met in the honest configuration, and finishing it is the
-remaining battle-frame work — not further shaving of clean frames.
+(§3.9), is NOT yet met.** Latest matched measurement (2026-07-31, after L9 and
+L10): **`WORK-H` P95 1,232,448 against 1,120,000, 89 of 567 frames at three
+VBlanks.**
+
+**E8's localization is WITHDRAWN — it was a run total, and a per-frame read does
+not support it.** This header said "every over-gate frame is an asset-load
+frame", and directed the remaining battle work at R2-04's §3.8 loading clause on
+that basis. Both halves are now refuted by measurement:
+
+- **R2-07 L2**, per-frame `gNdsTask75AssetLoadCount` inside one build: loads
+  intersect over-gate frames on **5 of 28** (4 of 28 against L1's list). **24 of
+  28 over-gate frames do no asset load at all.**
+- **R2-07 L6**, in-run over-gate/clean split: the over-gate frame is a
+  **hit-detection** frame. It runs `gmCollisionSetInvertMatrix` 34 times against
+  **zero** on a clean frame, **66.2% of its +510,390-cycle premium is
+  soft-float**, and the relocation walker is **0.5%**.
+
+So finishing §3.8 remains correct for its own reason — first-use loading during
+gameplay is a correctness clause — but **it is not the gate's answer, and must
+not be budgeted as one.** The gate's remaining work is the float collision body
+(board: R2-07 L7). Clean-frame P95 of 1,056,640 still stands and is still ~63K
+inside budget.
 
 ---
 
@@ -434,10 +449,13 @@ wrong thing and would block a correct switch indefinitely.
   standing "never launch the five-minute configuration" rule in `AGENTS.md`;
   it applies to this gate only, not to routine iteration.
 
-**Budget reality (updated 2026-07-30).** The cosmetic budget is the measured
+**Budget reality (updated 2026-07-31).** The cosmetic budget is the measured
 margin, and in the canonical DLDI-on configuration that margin is currently
-**negative**: the battle frame is over the gate by ~40,448, owned entirely by
-asset-load frames (see Status). Clean frames sit ~63K under gate. So the
+**negative**: `WORK-H` P95 1,232,448 against 1,120,000, so **over by 112,448**
+with 89 of 567 frames at three VBlanks. **It is NOT "owned entirely by
+asset-load frames"** — that reading came from a run total and L2/L6 refuted it
+(see Status); the over-gate frame is a hit-detection frame and the lever is
+R2-07 L7. Clean frames still sit ~63K under gate. So the
 particle work — a 2,961-line bytecode interpreter (`lb/lbparticle.c`) plus
 `ef/efparticle.c`, `ef/efdisplay.c`, a DS pack step and textured-quad draws —
 must be priced against the clean-frame margin, and the load-elimination work
@@ -448,9 +466,14 @@ frames that carry the most effects. Workable, not comfortable.
 
 The honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
 
-1. **Buy headroom first.** Eliminate in-match asset loads — the entire
-   over-gate population — then `FTR` (391,744 P50 vs its 250K line) and `SRC`
-   (309,120) as ordinary remaining phase work.
+1. **Buy headroom first.** ~~Eliminate in-match asset loads — the entire
+   over-gate population~~ — **corrected 2026-07-31: loads are ~18% of it, not
+   all of it.** The over-gate population is **hit-detection frames**, 66.2% of
+   whose premium is soft-float (L6), so the headroom is bought in `SRC`:
+   **L9 (SSB64's sine table, −37,248 P95) and L10 (the hardware square root,
+   −12,160 P95 and 3-VBlank 97 → 89) are banked**, and **L7 (fixed-point
+   `gm/gmcollision.c`, ~238,000 cycles/frame) is the remaining one.** `FTR`
+   (391,744 P50 vs its 250K line) stays ordinary phase work.
 2. **Run the cosmetic systems below simulation rate.** `PROJECT_GOAL.md`
    explicitly allows particles at 15 Hz — a quarter of the *mean* cost with
    no gameplay change. **But never as "every fourth frame, update
