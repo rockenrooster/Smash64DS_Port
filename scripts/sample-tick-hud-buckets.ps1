@@ -43,6 +43,13 @@ param(
     # symbol and then rejects it in its own guard below, which reads as "the
     # counter was deleted" rather than "the flag was never passed".
     [string[]]$MakeFlags = @(),
+    # Continue when duplicate presented-frame ids are all REAL second iterations
+    # of the 60 Hz loop rather than stale reads. Needed for slower builds (a
+    # census ROM) whose pacing puts both iterations in separate samples. The
+    # rows it then writes are for the per-frame SET only, never for P50/P95 --
+    # the warning says so too. A stale read still fails hard and this switch
+    # cannot suppress it.
+    [switch]$AllowRepeatedFrames,
     # Per-frame rows as CSV, one line per presented sample. The percentile table
     # answers "how big is P95"; it cannot answer "which frames are the P95", and
     # every excursion investigation this campaign has run needed the second
@@ -425,11 +432,33 @@ try {
                 $(if ($prev -eq $cur) { 'IDENTICAL (stale read)' }
                   else { 'DIFFERS (real second iteration)' })
         })
-        throw ("Tick-HUD samples repeated a presented frame " +
-            "($($dupIndex.Count) of $($rows.Count)):`n$($frames -join ',')`n" +
-            "columns: frame,$($bucketNames -join ',')" +
-            "$(if ($fallbackFields) { ',fbTotal' })`n" +
-            ($detail -join "`n"))
+        # A STALE READ IS ALWAYS FATAL; a real second iteration need not be.
+        # The two are distinguished right above by payload equality, and they
+        # mean opposite things: identical payload is the instrument misreading
+        # the same frame twice (a defect in the measurement, never acceptable),
+        # while a differing payload is the 60 Hz loop genuinely iterating twice
+        # inside one presented frame. A slower build -- a census ROM, say --
+        # shifts pacing enough for both iterations to land in separate samples,
+        # which is why the board says a census build is "not pacing-comparable"
+        # and is to be read for the load-frame SET only. Refusing to write the
+        # rows in that case throws away the very data the run was for.
+        $anyIdentical = @($dupIndex | Where-Object {
+            ($rows[$_] -join ',') -eq ($rows[$_ - 1] -join ',') }).Count -gt 0
+        if ($AllowRepeatedFrames -and (-not $anyIdentical)) {
+            Write-Warning ("Tick-HUD samples repeated a presented frame " +
+                "($($dupIndex.Count) of $($rows.Count)), every duplicate a REAL " +
+                'second iteration. Continuing because -AllowRepeatedFrames was ' +
+                'given. These rows are NOT pacing-comparable: use them for the ' +
+                'per-frame SET (which frames did what), never for P50/P95.')
+        } else {
+            throw ("Tick-HUD samples repeated a presented frame " +
+                "($($dupIndex.Count) of $($rows.Count)):`n$($frames -join ',')`n" +
+                "columns: frame,$($bucketNames -join ',')" +
+                "$(if ($fallbackFields) { ',fbTotal' })`n" +
+                ($detail -join "`n") +
+                "$(if ($anyIdentical) { "`nAt least one duplicate is IDENTICAL " +
+                    '(stale read) -- -AllowRepeatedFrames will NOT suppress that.' })")
+        }
     }
     if ([uint64]$frames[0] -lt [uint64]$StartFrame) {
         throw "Tick-HUD sampling began at frame $($frames[0]), before $StartFrame."

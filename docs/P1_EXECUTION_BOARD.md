@@ -1793,6 +1793,48 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 L2 — BLOCKED by an instrument limitation, and three harnesses fixed on the way (2026-07-31)
+
+L2 is specified above as "take it with the `NDS_TASK75_LOAD_CENSUS=1` +
+`NDS_TASK68_FALLBACK_CENSUS=1` build so `gNdsTask75AssetLoadCount` exists …
+and intersect it with this frame list". **That intersection cannot be produced
+by the current instrument.**
+
+**`-ExtraGlobals` is a RUN TOTAL, not a per-frame column.**
+`sample-tick-hud-buckets.ps1:570-581` matches **one** `TICKEXTRA=` line from the
+whole gdb output at the end of the run; the per-sample printf
+(`$sampleFields`, :216) carries only `gNdsTickHudBuckets[]` plus the fallback
+fields. So `-ExtraGlobals gNdsTask75AssetLoadCount` answers "how many asset
+loads did this run do", never "which frames did them", and `-RowsCsv` writes
+`frame,<buckets>,WORK-H` with no extra column (verified: the L2 CSV header has
+none). **The fix is to sample the named globals in the per-frame printf** — a
+`-PerFrameGlobals` that appends to `$sampleFields` and to the CSV header —
+rather than reading them once at the end. Until that exists, L2's intersection
+is not obtainable and no amount of re-running helps.
+
+**Three harnesses carried the same dropped-build-flag defect and are now fixed.**
+Each rebuilds the ROM on every run and each omitted flags its own instructions
+require, so a run silently measured a build without the thing it asked for:
+`capture-sudden-death-entry.ps1` and `soak-freeze-watch.ps1` (both now take
+`-SecondEntryDiag`, put it on the make line, and verify it in the generated
+config header) and `sample-tick-hud-buckets.ps1` (now takes a generic
+`-MakeFlags` pass-through, so the next flag needs no edit). The last of these
+documented the census requirement **in its own header, twice**, and still never
+passed it.
+
+**`-AllowRepeatedFrames` added, and deliberately narrow.** The census ROM is
+slow enough that both iterations of the 60 Hz loop land in separate samples, so
+the duplicate-frame guard fired on 22 of 128 rows. The guard already
+distinguishes the two causes by payload equality: identical = a stale read (an
+instrument defect), differing = a real second iteration. The switch downgrades
+**only** the second case, still fails hard on a stale read, and warns that the
+rows are set-only and never pacing-comparable.
+
+**Do not quote this build's pacing.** It shows 28 of 128 frames at `ALL`
+≈1,680,000 — exactly 3 VBlanks — against 2 VBlanks on clean frames. That is the
+census instrumentation's own cost, which is precisely why the L2 instruction
+says to read this build for the load-frame SET only.
+
 ### R2-07 L1 — every over-gate frame is an `SRC` frame, 19 of 128, and the harness is frame-reproducible (2026-07-30)
 
 Per-frame rows from the same configuration as L0
