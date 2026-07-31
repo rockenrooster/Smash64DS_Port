@@ -850,6 +850,16 @@ extern volatile u32 gNdsSyMallocOverflowAlignment;
 extern volatile u32 gNdsSyMallocOverflowHeadroom;
 extern volatile u32 gNdsSyMallocOverflowCallerLR;
 void ndsSyMallocOverflowHalt(void);
+/* Bumped every time gSYTaskmanGeneralHeap's cursor is moved backwards, by the
+ * syMallocInit/syMallocReset wrappers in battleship_sys_malloc.c. Anything
+ * holding a pointer into that heap across a scene boundary must record this
+ * value when it takes the pointer and re-check it before every use: a pointer
+ * from an older generation is dead even though it still lies inside the region
+ * and still passes any range test. Replaces the animation cache's old
+ * cursor-position heuristic, which false-positived precisely on second scene
+ * entry (Sudden Death, rematch) once the new scene's allocations had pushed the
+ * cursor back past the stale block. */
+extern volatile u32 gNdsTaskmanHeapGeneration;
 /* Ask before committing. The only safe way for an optional allocation to use a
  * fail-by-hanging allocator is not to call it when it would not fit. */
 struct SYMallocRegion;

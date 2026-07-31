@@ -33,10 +33,62 @@
 #include <PR/ultratypes.h>
 
 #define syMallocSet battleship_syMallocSet
+#define syMallocInit battleship_syMallocInit
+#define syMallocReset battleship_syMallocReset
 #include "../../decomp/BattleShip-main/decomp/src/sys/malloc.c"
+#undef syMallocReset
+#undef syMallocInit
 #undef syMallocSet
 
 void *battleship_syMallocSet(SYMallocRegion *bp, size_t size, u32 alignment);
+void battleship_syMallocInit(SYMallocRegion *bp, u32 id, void *start,
+                             size_t size);
+void battleship_syMallocReset(SYMallocRegion *bp);
+
+/* The general heap, by identity. Declared here rather than pulled in from
+ * include/sys/taskman.h because this TU deliberately uses the decomp malloc.h
+ * definition of SYMallocRegion -- see the note above the includes. */
+extern SYMallocRegion gSYTaskmanGeneralHeap;
+
+/* THE TASKMAN-HEAP GENERATION, and the contract that replaces a guess.
+ *
+ * gSYTaskmanGeneralHeap is a bump region. Every battle entry rewinds it --
+ * syTaskmanStartTask calls syTaskmanInitGeneralHeap before allocating anything
+ * for the new scene (decomp taskman.c:1244) -- and any pointer taken from it
+ * before that rewind is dead afterwards, even though it still points inside the
+ * region and still passes every range test.
+ *
+ * The animation cache used to INFER that from the cursor: "our block ends at or
+ * before ptr, so it has not been reclaimed". That is a heuristic and it
+ * false-positives exactly when it matters. A second scene entry rewinds the
+ * heap and then allocates; once the new scene's allocations push the cursor
+ * past the old block, the test passes again and the cache hands back pointers
+ * into memory the new scene already owns.
+ *
+ * A counter cannot be fooled that way. Bumping it here -- at the only two
+ * primitives that can move `ptr` backwards, keyed on the region's identity --
+ * makes ownership a fact rather than an inference, and it keeps the property
+ * the old comment was right to want: it cannot miss a rewind performed by some
+ * future code path, because every such path goes through one of these two. */
+volatile u32 gNdsTaskmanHeapGeneration;
+
+void syMallocInit(SYMallocRegion *bp, u32 id, void *start, size_t size)
+{
+    battleship_syMallocInit(bp, id, start, size);
+    if (bp == &gSYTaskmanGeneralHeap)
+    {
+        gNdsTaskmanHeapGeneration++;
+    }
+}
+
+void syMallocReset(SYMallocRegion *bp)
+{
+    battleship_syMallocReset(bp);
+    if (bp == &gSYTaskmanGeneralHeap)
+    {
+        gNdsTaskmanHeapGeneration++;
+    }
+}
 
 volatile u32 gNdsSyMallocOverflowCount;
 volatile u32 gNdsSyMallocOverflowArenaID;

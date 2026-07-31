@@ -5871,11 +5871,21 @@ static u32 sNdsR2AnimCacheCount;
 static u8 *sNdsR2AnimCacheArena;
 static u32 sNdsR2AnimCacheArenaBytes;
 static u32 sNdsR2AnimCacheArenaUsed;
+/* The taskman-heap generation this block was reserved under. Ownership is this
+ * value matching gNdsTaskmanHeapGeneration; see ndsR2AnimCacheArenaStillOwned. */
+static u32 sNdsR2AnimCacheArenaGeneration;
 volatile u32 gNdsR2AnimCacheHits;
 volatile u32 gNdsR2AnimCacheMisses;
 volatile u32 gNdsR2AnimCacheFills;
 volatile u32 gNdsR2AnimCacheBytes;
 volatile u32 gNdsR2AnimCacheRejects;
+/* The two ways ownership can fail, kept apart on purpose. A generation mismatch
+ * is the ORDINARY second-entry case and should read non-zero on any run that
+ * reaches Sudden Death or a rematch -- a zero there means the contract never
+ * engaged and the run proves nothing. A range fault is not ordinary: it means
+ * the block left the live region without a scene rewind. */
+volatile u32 gNdsR2AnimCacheArenaGenerationMismatches;
+volatile u32 gNdsR2AnimCacheArenaRangeFaults;
 /* Engagement proof. An arena that never fills and an arena that overflows every
  * frame are indistinguishable from the reject count alone, and this campaign has
  * shipped a flag that silently never fired. */
@@ -5903,23 +5913,48 @@ volatile u32 gNdsR2AnimCacheArenaInvalidations;
  * this cache existed. */
 #define NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE 32768u
 
-/* True while the reserved block is still ours. gSYTaskmanGeneralHeap is a bump
- * region that syMallocReset rewinds to `start` on a scene load, which would leave
- * every cached payload pointer dangling into memory the next scene is free to
- * reuse -- the hazard the original static array avoided by construction and that
- * moving to the heap reintroduces. Detect it instead of hooking scene load: after
- * a rewind the heap cursor sits BELOW our block, so a block that still ends at or
- * before `ptr` has not been reclaimed. Cheap, and it cannot miss a reset that some
- * future code path performs without telling us. */
+/* True while the reserved block is still ours, decided by the heap GENERATION
+ * and not by where the cursor happens to sit.
+ *
+ * gSYTaskmanGeneralHeap is a bump region that every scene entry rewinds. This
+ * used to infer ownership from the cursor -- "our block ends at or before
+ * `ptr`, so it has not been reclaimed" -- which is a heuristic, and it
+ * false-positives exactly on the path that matters. A second entry into the
+ * battle scene (Sudden Death, or START-rematch) rewinds the heap and then
+ * allocates; as soon as the new scene's own allocations push the cursor back
+ * past our stale block, the test starts passing again and every cached payload
+ * pointer is handed out pointing into memory the new scene already owns. That
+ * is silent corruption, and strictly worse than the hang the cache was moved to
+ * the heap to avoid.
+ *
+ * `gNdsTaskmanHeapGeneration` cannot be fooled that way: it is bumped at the
+ * two primitives that move the cursor backwards, so a mismatch is proof the
+ * block is dead no matter where the cursor is now. The range test is retained
+ * BELOW it as a secondary corruption check -- if the block ever falls outside
+ * the live region while the generation still matches, something other than a
+ * scene rewind has moved it, and that is worth failing on too. */
 static sb32 ndsR2AnimCacheArenaStillOwned(void)
 {
     const u8 *cursor = (const u8 *)gSYTaskmanGeneralHeap.ptr;
 
-    return ((sNdsR2AnimCacheArena != NULL) &&
-            (sNdsR2AnimCacheArenaBytes != 0u) &&
-            (sNdsR2AnimCacheArena >= (const u8 *)gSYTaskmanGeneralHeap.start) &&
-            ((sNdsR2AnimCacheArena + sNdsR2AnimCacheArenaBytes) <= cursor))
-        ? TRUE : FALSE;
+    if ((sNdsR2AnimCacheArena == NULL) || (sNdsR2AnimCacheArenaBytes == 0u))
+    {
+        return FALSE;
+    }
+    if (sNdsR2AnimCacheArenaGeneration != gNdsTaskmanHeapGeneration)
+    {
+        gNdsR2AnimCacheArenaGenerationMismatches++;
+        return FALSE;
+    }
+    if ((sNdsR2AnimCacheArena < (const u8 *)gSYTaskmanGeneralHeap.start) ||
+        ((sNdsR2AnimCacheArena + sNdsR2AnimCacheArenaBytes) > cursor))
+    {
+        /* Same generation but out of range: not a scene rewind. Fail closed and
+         * count it separately so the two causes are never conflated. */
+        gNdsR2AnimCacheArenaRangeFaults++;
+        return FALSE;
+    }
+    return TRUE;
 }
 
 static void ndsR2AnimCacheArenaDropForReset(void)
@@ -5927,11 +5962,28 @@ static void ndsR2AnimCacheArenaDropForReset(void)
     sNdsR2AnimCacheArena = NULL;
     sNdsR2AnimCacheArenaBytes = 0u;
     sNdsR2AnimCacheArenaUsed = 0u;
+    sNdsR2AnimCacheArenaGeneration = 0u;
+    /* Drops every entry, which is what makes the payload pointers unreachable.
+     * The entries are the only holders of those pointers. */
     sNdsR2AnimCacheCount = 0u;
     gNdsR2AnimCacheArenaUsedBytes = 0u;
     gNdsR2AnimCacheArenaReservedBytes = 0u;
     gNdsR2AnimCacheBytes = 0u;
     gNdsR2AnimCacheArenaInvalidations++;
+}
+
+/* Invalidate before ANY use, not only on the lookup path. Called at the top of
+ * every cache entry point: a stale generation must never survive into a find, a
+ * store or a preload step, and the preload path in particular used to touch the
+ * cursor and the warm list without consulting ownership at all. Cheap -- one
+ * compare when the cache is empty, which is the state this leaves it in. */
+static void ndsR2AnimCacheValidateGeneration(void)
+{
+    if ((sNdsR2AnimCacheArena != NULL) &&
+        (ndsR2AnimCacheArenaStillOwned() == FALSE))
+    {
+        ndsR2AnimCacheArenaDropForReset();
+    }
 }
 
 static sb32 ndsR2AnimCacheArenaEnsure(void)
@@ -5966,6 +6018,11 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     sNdsR2AnimCacheArena = block;
     sNdsR2AnimCacheArenaBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
     sNdsR2AnimCacheArenaUsed = 0u;
+    /* Stamp the generation the block was taken under. Must be read AFTER the
+     * allocation: syTaskmanMalloc cannot rewind the heap, so this is the same
+     * value either way, but taking it here keeps the store adjacent to the
+     * pointer it qualifies. */
+    sNdsR2AnimCacheArenaGeneration = gNdsTaskmanHeapGeneration;
     gNdsR2AnimCacheArenaReservedBytes = NDS_R2_ANIM_CACHE_ARENA_BYTES;
     gNdsR2AnimCacheArenaUsedBytes = 0u;
     gNdsR2AnimCacheArenaReserveCount++;
@@ -6022,10 +6079,9 @@ static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
      *
      * Cheap by construction: two pointer compares against a bump cursor, and only
      * when the cache is non-empty. */
-    if ((sNdsR2AnimCacheCount != 0u) &&
-        (ndsR2AnimCacheArenaStillOwned() == FALSE))
+    ndsR2AnimCacheValidateGeneration();
+    if (sNdsR2AnimCacheCount == 0u)
     {
-        ndsR2AnimCacheArenaDropForReset();
         return NULL;
     }
     for (i = 0u; i < sNdsR2AnimCacheCount; i++)
@@ -6157,6 +6213,12 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
  * generosity. Anything longer has to be stepped. */
 void ndsR2AnimCachePreloadMatch(void)
 {
+    /* Arm the walk AND settle ownership first. This is the second-entry seam:
+     * Sudden Death and the rematch both call it after the heap has been rewound
+     * under a cache still holding last match's entries, and it previously only
+     * touched the cursor -- so the stale entries survived into the new match and
+     * the first find could hand back a pointer into reused memory. */
+    ndsR2AnimCacheValidateGeneration();
     sNdsR204AnimWarmCursor = 0u;
 }
 
@@ -6167,6 +6229,7 @@ void ndsR2AnimCachePreloadMatch(void)
  * miss a seam. */
 void ndsR2AnimCachePreloadStep(void)
 {
+    ndsR2AnimCacheValidateGeneration();
     if (sNdsR204AnimWarmCursor >= (sizeof(sNdsR204AnimWarmList) /
                                    sizeof(sNdsR204AnimWarmList[0])))
     {

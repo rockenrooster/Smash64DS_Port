@@ -224,6 +224,15 @@ try {
         'printf "SD-HEAP-USED-RUN=%u\n", (unsigned)((char *)gSYTaskmanGeneralHeap.ptr - (char *)gSYTaskmanGeneralHeap.start)',
         'printf "SD-HEAP-FREE-RUN=%u\n", (unsigned)((char *)gSYTaskmanGeneralHeap.end - (char *)gSYTaskmanGeneralHeap.ptr)',
         'printf "SD-ARENA-FAIL-RUN=%u\n", gNdsTaskmanArenaAllocFailCount',
+        # The heap-generation contract, proven engaged rather than assumed. A
+        # second scene entry MUST have bumped the generation and MUST have made
+        # the cache notice; a zero mismatch count here means the contract never
+        # fired and the run proves nothing about it.
+        'printf "SD-HEAP-GEN=%u\n", gNdsTaskmanHeapGeneration',
+        'printf "SD-CACHE-GEN-MISMATCH=%u\n", gNdsR2AnimCacheArenaGenerationMismatches',
+        'printf "SD-CACHE-RANGE-FAULT=%u\n", gNdsR2AnimCacheArenaRangeFaults',
+        'printf "SD-CACHE-INVALIDATIONS=%u\n", gNdsR2AnimCacheArenaInvalidations',
+        'printf "SD-CACHE-RESERVES=%u\n", gNdsR2AnimCacheArenaReserveCount',
         'printf "SD-DONE=1\n"'
     ) + $(if ($DiagnoseHang) { @(
         # Spend the session on the hang instead of the watch. melonDS's stub
