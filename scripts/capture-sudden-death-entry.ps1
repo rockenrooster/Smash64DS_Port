@@ -248,26 +248,35 @@ try {
         'tbreak ndsPlatformEndFrame',
         'continue',
         'printf "SD-PRESENT-2=%u\n", gNdsFrameCounter',
-        # The first two presents only prove the scene is alive at the instant
-        # Sudden Death starts, and the picture watch shows the stall setting in
-        # within about five seconds. So walk forward: each stage skips a decade
-        # more presents, and the LAST marker that prints is how far the guest
-        # got. `ignore` counts down on a live breakpoint, so this costs one
-        # breakpoint and no async.
-        'break ndsPlatformEndFrame',
-        'ignore 3 30',
+        # CATCH THE GIVE-UP DIRECTLY. BattleShip does not fail an overflow, it
+        # STOPS: eleven sites across sys/taskman.c and sys/malloc.c end in
+        # `while (TRUE);`, which is why every one of these bugs presents as a
+        # frozen picture rather than a crash. Every one of the eleven is
+        # immediately preceded by a syDebugPrintf naming the overflow, and the
+        # port links a real (empty) syDebugPrintf at boot_stubs.c:91 -- so ONE
+        # breakpoint there catches whichever assert fired, and its format string
+        # says which. Far better than guessing a site: this cannot miss one.
+        'break syDebugPrintf',
+        # Is the material walk a runaway? A whole healthy frame builds a few
+        # dozen of these. If 20,000 of them go by while NOT ONE frame presents,
+        # the walk is not progressing -- and one interrupt sample landing here
+        # becomes a loop rather than a coincidence.
+        'break ndsRendererAdapterBuildNativeMaterialSnapshot',
+        # `$bpnum`, never a literal. This said `ignore 4` and breakpoint 4 was an
+        # already-deleted temporary from the drive stages, so the ignore silently
+        # did nothing -- the run still produced a usable answer only by luck.
+        # Breakpoint numbers here depend on how many stages ran before this one.
+        'ignore $bpnum 20000',
         'continue',
-        'printf "SD-PRESENT-3=%u\n", gNdsFrameCounter',
-        'ignore 3 200',
-        'continue',
-        'printf "SD-PRESENT-4=%u\n", gNdsFrameCounter',
-        'ignore 3 600',
-        'continue',
-        'printf "SD-PRESENT-5=%u\n", gNdsFrameCounter',
-        # Reached only if the guest presented ~830 frames of Sudden Death. Then
-        # the CPU is entirely healthy and the frozen picture is a scene that
-        # renders the same thing every frame.
-        'printf "SD-DIAG=presenting\n"',
+        'printf "SD-STOPPED=1\n"',
+        # r0, not `format`: syDebugPrintf's body is empty so -O2 keeps nothing in
+        # the frame, but AAPCS still has the pointer in r0 at entry. Prints
+        # garbage harmlessly if the material breakpoint is what stopped us --
+        # `info breakpoints` below says which, by hit count.
+        'printf "SD-ABORT-MSG=%s\n", (char *)$r0',
+        'printf "SD-STOP-FRAME=%u\n", gNdsFrameCounter',
+        'info breakpoints',
+        'backtrace 12',
         'printf "SD-DIAG=end\n"',
         'quit'
     ) } else { @(

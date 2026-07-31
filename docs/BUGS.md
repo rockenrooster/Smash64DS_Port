@@ -304,6 +304,61 @@ These bugs should be fixed for P1 delivery.
     (`reloc_backend_renderer_dl.c`, via inlined `ndsRendererAdapterMaterialFlags`)
     -- one sample, not yet proof of a loop. Evidence:
     `artifacts/verification/sudden-death/2026-07-30_21*`.
+  - **BOTH KNOWN FREEZE MECHANISMS ARE REFUTED FOR THIS FREEZE.** BattleShip
+    never fails an overflow, it STOPS: eleven `while (TRUE);` sites across
+    `sys/taskman.c` and `sys/malloc.c`, which is why this bug class always
+    presents as a frozen picture rather than a crash. Every one of the eleven is
+    immediately preceded by a `syDebugPrintf`, and the port links a real (empty)
+    one at `boot_stubs.c:91`. A breakpoint there is therefore a total detector
+    for "the game gave up". **It never fires.** So this is neither the historical
+    `syMallocSet` heap-exhaustion spin nor the `syTaskmanCheckBufferLengths`
+    display-list overflow recorded earlier in this row. The CPU is live and
+    executing ordinary code that never completes a frame.
+  - **DEFECT FOUND BY INSPECTION, and it is on the sampled path:**
+    `ndsRendererAdapterPrepareNativeMaterials`
+    (`src/port/reloc_backend_renderer_dl.c:7825`) walks `dobj->mobj` TWICE. Pass
+    one (`:7841`) counts and is bounded -- it returns FALSE once `count >
+    capacity`. **Pass two (`:7850`) has no bound and no capacity check at all**,
+    and writes `materials[count]` with `count` free-running. `capacity` here is
+    `NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX`, which is **4**. Pass one's bound
+    only protects pass two if the list is identical across both walks -- and pass
+    two MUTATES every node as it goes, because it calls
+    `ndsRendererAdapterBuildNativeMaterial`, which is the
+    `advance_texture_ids = TRUE` wrapper that writes `mobj->texture_id_curr` and
+    `->texture_id_next` (`:6669-6673`). A list that becomes cyclic or is
+    corrupted mid-walk runs away and overruns a four-element array. That matches
+    the interrupt sample's arguments exactly (`advance_texture_ids=1`,
+    `out_curr=NULL` -- the signature of the `:7852` call site, NOT the stage path
+    at `:7412`, which passes FALSE and non-NULL), and it explains why a
+    breakpoint on the out-of-line `...BuildNativeMaterialSnapshot` never fires
+    during the stall: at -O2 the copy executing inside that loop is inlined.
+    This is an unbounded write loop into a 4-entry array and is worth fixing on
+    its own merits, whether or not it proves to be the whole freeze.
+  - **PLAN (2026-07-30), in order, each step falsifiable on its own:**
+    1. **Bound pass two.** Carry the same `count > capacity` guard into the
+       second walk and return FALSE on breach. Cheap, obviously correct, and it
+       converts a runaway memory-corrupting loop into a clean FALSE -- which the
+       caller already handles as "fall back to the generic path". Re-run the lane:
+       if the freeze becomes a visible fallback instead of a stopped picture, the
+       loop is confirmed AND the corruption is contained. This does not by itself
+       explain WHY the list goes bad; it stops the damage and makes the cause
+       observable.
+    2. **Find who corrupts the list.** The standing suspect is already in this
+       row: `ndsR2AnimCacheArenaStillOwned` (`reloc_backend_assets.c:5854-5871`)
+       can false-positive after `syTaskmanStartTask` rewinds
+       `gSYTaskmanGeneralHeap` over the same arena, handing back payload pointers
+       into reused memory on a SECOND scene entry -- which is exactly what Sudden
+       Death is. Test it directly rather than by inference: invalidate the R2
+       animation cache at battle-scene entry, before `scManagerFuncUpdate` can
+       reuse the heap, and re-run the lane.
+    3. **Explain the 119 KB.** Sudden Death's setup takes ~119 KB more arena than
+       match one for the same stage and fighters, leaving 42,992 free. Even if
+       steps 1-2 clear the freeze, that gap is unexplained and is the margin the
+       next mid-match allocation spends. Census the second setup pass against the
+       first rather than guessing.
+    Do NOT enlarge any buffer or arena to make this go away: every overflow site
+    here is a symptom of corrupted second-entry state, and a bigger buffer only
+    moves the freeze later into the match.
   - Also seen in that run, unrelated to Sudden Death and unowned:
     `gNdsR2AnimCacheArenaOverflows 109` with `gNdsR2AnimCacheRejects 109`, and
     `gNdsTaskmanArenaAllocFailCount 26`.
