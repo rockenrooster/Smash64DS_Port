@@ -50,6 +50,16 @@ param(
     # the warning says so too. A stale read still fails hard and this switch
     # cannot suppress it.
     [switch]$AllowRepeatedFrames,
+    # Globals sampled ONCE PER PRESENTED FRAME, alongside the buckets, and
+    # written as extra -RowsCsv columns.
+    #
+    # This is not a variant of -ExtraGlobals, it is the thing -ExtraGlobals is
+    # repeatedly mistaken for. -ExtraGlobals reads its names ONE TIME at the end
+    # of the run, so it answers "how many did this run do"; it cannot answer
+    # "which frames did them". R2-07 L2 needs the second question -- intersect
+    # the asset-load frames with the over-gate frames -- and was blocked on
+    # exactly that (board, 2026-07-31). Anything per-frame belongs here.
+    [string[]]$PerFrameGlobals = @(),
     # Per-frame rows as CSV, one line per presented sample. The percentile table
     # answers "how big is P95"; it cannot answer "which frames are the P95", and
     # every excursion investigation this campaign has run needed the second
@@ -105,6 +115,10 @@ $ExtraGlobals = @($ExtraGlobals |
 # above: `-MakeFlags A=1,B=1` arrives as ONE string, which make would take as a
 # single malformed variable rather than two.
 $MakeFlags = @($MakeFlags |
+    ForEach-Object { $_ -split ',' } |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne '' })
+$PerFrameGlobals = @($PerFrameGlobals |
     ForEach-Object { $_ -split ',' } |
     ForEach-Object { $_.Trim() } |
     Where-Object { $_ -ne '' })
@@ -164,17 +178,23 @@ try {
     # melonDS has booted and run to the sample window -- so a typo costs a full
     # measurement run to discover. It cost two in one session before this check
     # existed. nm reads the same ELF GDB will, so agreement is guaranteed.
-    if ($ExtraGlobals.Count -ne 0) {
+    # -PerFrameGlobals gets the identical guard, for the identical reason.
+    if (($ExtraGlobals.Count + $PerFrameGlobals.Count) -ne 0) {
         $nm = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
         if (Test-Path -LiteralPath $nm -PathType Leaf) {
             $symbols = [System.Collections.Generic.HashSet[string]]::new(
                 [string[]](& $nm --defined-only $elf |
                     ForEach-Object { ($_ -split '\s+')[-1] }))
-            $missing = @($ExtraGlobals | Where-Object { -not $symbols.Contains($_) })
-            if ($missing.Count -ne 0) {
-                throw ("-ExtraGlobals names not defined in $([System.IO.Path]::GetFileName($elf)): " +
-                    "$($missing -join ', '). A name that exists but is never written reads 0, " +
-                    "which is a real measurement; a name that does not exist is a typo.")
+            foreach ($pair in @(
+                @{ n = '-ExtraGlobals';    v = $ExtraGlobals },
+                @{ n = '-PerFrameGlobals'; v = $PerFrameGlobals })) {
+                $missing = @($pair.v | Where-Object { -not $symbols.Contains($_) })
+                if ($missing.Count -ne 0) {
+                    throw ("$($pair.n) names not defined in $([System.IO.Path]::GetFileName($elf)): " +
+                        "$($missing -join ', '). A name that exists but is never written reads 0, " +
+                        "which is a real measurement; a name that does not exist is a typo. " +
+                        'If the name lives behind a census flag, pass it with -MakeFlags.')
+                }
             }
         }
     }
@@ -213,13 +233,18 @@ try {
     # breakdown is a run-level question, so it is read once at the end instead.
     $fallbackFields = if ($FallbackCensus -and (-not $RingDump)) {
         @('gNdsTickHudNativeOwnerFallbackCount') } else { @() }
+    # Per-frame globals ride the SAME printf as the buckets, which is the whole
+    # point: one read per presented frame, at the frame's own sample point, so
+    # the value is attributable to that frame.
     $sampleFields = ((0..($bucketNames.Count - 1) |
-        ForEach-Object { "gNdsTickHudBuckets[$_]" }) + $fallbackFields) -join ', '
+        ForEach-Object { "gNdsTickHudBuckets[$_]" }) + $fallbackFields +
+        $PerFrameGlobals) -join ', '
     $extraLine = if ($ExtraGlobals.Count -ne 0) {
         "printf `"TICKEXTRA=$((, '%u' * $ExtraGlobals.Count) -join ',')\n`", " +
             ($ExtraGlobals -join ', ')
     } else { $null }
-    $sampleColumnCount = $bucketNames.Count + $fallbackFields.Count
+    $sampleColumnCount = $bucketNames.Count + $fallbackFields.Count +
+        $PerFrameGlobals.Count
     $tickHudFormat = (, '%u' * ($sampleColumnCount + 1)) -join ','
     $ringPath = Join-Path $temp 'tick-hud-ring.bin'
     $fbRingPath = Join-Path $temp 'tick-hud-fallback-ring.bin'
@@ -467,13 +492,22 @@ try {
     if (-not [string]::IsNullOrWhiteSpace($RowsCsv)) {
         $workCsvIndex = [array]::IndexOf($bucketNames, 'WORK') + 1
         $hudCsvIndex = [array]::IndexOf($bucketNames, 'HUD') + 1
-        $csv = @(,('frame,' + ($bucketNames -join ',') + ',WORK-H'))
+        # Per-frame globals become trailing columns, named after the symbol so a
+        # reader never has to guess which is which. They sit after WORK-H so the
+        # existing column order -- which other tooling and every prior rows CSV
+        # depend on -- is unchanged.
+        $csv = @(,('frame,' + ($bucketNames -join ',') + ',WORK-H' +
+            $(if ($PerFrameGlobals.Count) { ',' + ($PerFrameGlobals -join ',') })))
+        $perFrameBase = $bucketNames.Count + $fallbackFields.Count + 1
         foreach ($row in $rows) {
             $cells = @($row[0])
             for ($b = 0; $b -lt $bucketNames.Count; $b++) {
                 $cells += $row[$b + 1]
             }
             $cells += ([uint64]$row[$workCsvIndex] - [uint64]$row[$hudCsvIndex])
+            for ($g = 0; $g -lt $PerFrameGlobals.Count; $g++) {
+                $cells += $row[$perFrameBase + $g]
+            }
             $csv += ($cells -join ',')
         }
         Set-Content -LiteralPath $RowsCsv -Value $csv -Encoding ascii

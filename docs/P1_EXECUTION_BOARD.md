@@ -1793,14 +1793,49 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
-### R2-07 L2 — BLOCKED by an instrument limitation, and three harnesses fixed on the way (2026-07-31)
+### R2-07 L2 — ANSWERED, and it CONTRADICTS E8: only 4 of 28 over-gate frames load (2026-07-31)
 
-L2 is specified above as "take it with the `NDS_TASK75_LOAD_CENSUS=1` +
-`NDS_TASK68_FALLBACK_CENSUS=1` build so `gNdsTask75AssetLoadCount` exists …
-and intersect it with this frame list". **That intersection cannot be produced
-by the current instrument.**
+Instrument built (`-PerFrameGlobals`, below), then run.
+`artifacts/performance/r207-L2-rows.csv` now carries
+`gNdsTask75AssetLoadCount` as a per-frame column.
 
-**`-ExtraGlobals` is a RUN TOTAL, not a per-frame column.**
+```
+L2 load frames (13)   444,449,464,468,477,494,498,504,531,535,543,565
+L1 over-gate (28)     446,449,452,453,456,459,464,469,473,475,476,477,478,486,
+                      495,500,515,517,518,519,520,521,528,536,542,543,544,556
+intersection           4 of 28  ->  449,464,477,543
+```
+
+**R2-06 E8's claim — "every over-gate frame is an asset-load frame", carried
+into `HANDOFF.md` and the SwitchPlan status as "the entire over-gate
+population" — does not survive a per-frame read. 24 of 28 over-gate frames do
+no asset load at all.** Total loads across the 128-frame window: 15.
+
+**The comparability assumption, stated because the whole result rests on it.**
+The two arms are different builds (L1 normal, L2 census), so this intersection
+is only valid if a `frame` id names the same game moment in both. It should:
+the ids are presented-frame counter values, the Boundary config takes no human
+input, and the sim advances a fixed two iterations per presented frame — so
+identical state at identical ids, whatever the wall-clock rate. **If that is
+wrong, this result is wrong**, and the way to settle it is one census build
+carrying both the load column and a pacing-comparable arm, not more analysis.
+E8's own 9-over-gate baseline is also a different (older) build from L1's 28.
+
+**What it changes.** "Buy headroom by eliminating in-match loads" was sized
+against the belief that loads own the whole over-gate population. If loads own
+4 of 28, eliminating them cannot close the gate on its own, and the remaining
+24 need their own attribution — which is where L1 already pointed: **every
+over-gate frame is an `SRC` frame.** Load elimination stays worth doing for
+§3.8 (it is a correctness clause, not only a performance one), but it must not
+be budgeted as the gate's answer.
+
+### R2-07 L2 instrument — `-PerFrameGlobals`, and three harnesses fixed on the way (2026-07-31)
+
+**`-ExtraGlobals` was a RUN TOTAL, not a per-frame column — this is what
+blocked L2, and it is now fixed.** `-PerFrameGlobals` samples the named globals
+in the **per-frame** printf beside the buckets and writes them as trailing
+`-RowsCsv` columns named after the symbol. Use it for anything per-frame;
+`-ExtraGlobals` remains correct only for run totals. The original defect:
 `sample-tick-hud-buckets.ps1:570-581` matches **one** `TICKEXTRA=` line from the
 whole gdb output at the end of the run; the per-sample printf
 (`$sampleFields`, :216) carries only `gNdsTickHudBuckets[]` plus the fallback
