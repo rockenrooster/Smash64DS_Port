@@ -588,6 +588,12 @@ NDS_FIGHTER_ANIM_CYCLER_KIND ?= -1
 NDS_TASK39_FX_SPRITES ?= 0
 NDS_TASK39_FX_FLASH ?= 0
 NDS_TASK39_FX_SHIELD ?= 0
+# R2-07: compile the original particle bytecode interpreter (lb/lbparticle.c,
+# ef/efparticle.c) in place and let the real efcommon scripts run instead of the
+# recoloured 16-vertex stand-ins. Default off and not set in either shipped
+# block: the DS textured-quad draw path is a separate step, so at 1 the scripts
+# execute and nothing new is drawn yet.
+NDS_R2_PARTICLE_RUNTIME ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -1573,6 +1579,15 @@ endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER),1)
 CFILES += battleship_efmanager.c
 endif
+ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
+ifneq ($(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER),1)
+$(error NDS_R2_PARTICLE_RUNTIME=1 requires NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER=1: ef/efdisplay.c owns the efcommon bank request)
+endif
+# nds_particle_banks_placeholder.c holds weak, empty definitions of the asset
+# pack's contract symbols so the interpreter links before the generator step
+# lands. Delete it with the same commit that adds the generated data.
+CFILES += battleship_lbparticle.c nds_particle_banks_placeholder.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR),1)
 CFILES += battleship_fox_reflector.c
 endif
@@ -2297,6 +2312,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_TASK39_FX_SHIELD $(NDS_TASK39_FX_SHIELD)'; \
+		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
 		echo '#define NDS_TASK10_GIT_SHORT "$(NDS_TASK10_GIT_SHORT)"'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
