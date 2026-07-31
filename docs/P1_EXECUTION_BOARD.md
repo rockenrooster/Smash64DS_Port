@@ -1812,6 +1812,17 @@ predated the arena's move onto the taskman heap and has been carried forward as
 if it were current. The cache is serving the match. Whatever still loads
 mid-match is a different asset class, so do not re-open the cache as the lever.
 
+**R2-04's animation clause is MET, and the source says so structurally.**
+`sNdsR204AnimWarmList` (`reloc_backend_assets.c:5851`) holds **exactly 41
+entries** — the same 41-asset / 91,104-byte working set the board measured — and
+`ndsR2AnimCachePreloadStep` walks it one asset per scene update, finishing
+inside the countdown, long before the window sampled here. The run confirms it
+from the other side: **2 fills across 128 frames**, so only two assets outside
+the warm list were touched mid-match. Two fills cannot explain nineteen
+over-gate frames. **The in-match loads are therefore NOT animation streams**,
+which is what makes §3.8's remaining question a different one: what else is
+first-used mid-match?
+
 **Where the excursion is, with `HUD` correctly discarded as the instrument.**
 The two buckets the campaign has spent itself on are flat and at their
 established values -- `FTR` P50 389,888 / P95 392,896, spread **1.01**; `STG`
