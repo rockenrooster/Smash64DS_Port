@@ -348,10 +348,24 @@ These bugs should be fixed for P1 delivery.
        workaround at the wrong seam -- it only fires when the list changed
        between the two walks, which is itself the defect.
        **It stops the damage; it does not explain why the list goes bad.** Steps
-       2 and 3 stay open, and so do two Sudden Death defects this run made
-       visible now that the picture moves: the camera holds a wide shot with
-       neither fighter framed, and P1's stock reads `--` while the CPU's reads
-       `x1`. Those are this row's "animation issues", separate from the freeze.
+       2 and 3 stay open.
+       **And with it in, Sudden Death genuinely RUNS.** Measured the same way:
+       `gSCManagerBattleState->game_status` is `nSCBattleGameStatusWait` (0) at
+       entry, as `ifCommonSuddenDeathMakeInterface` leaves it, and reads
+       `nSCBattleGameStatusGo` (1) 240 presents later at frame 553, with
+       `time_remain` re-armed to 3600. So `ifCommonSuddenDeathThread` -- which
+       sleeps 90 tics and then calls `ifCommonAnnounceGoSetStatus` -- resumes
+       correctly across the coroutine seam, the announce fires, and the second
+       match starts. The freeze was the whole blocker, not a symptom of a
+       deeper stall.
+       Still to look at, and NOT yet diagnosed: the end-of-watch capture
+       (`artifacts/verification/sudden-death/2026-07-30_214748-sudden-death-watch.png`)
+       shows the stage from a wide angle with neither fighter visible, and P1's
+       stock reads `--` while the CPU's reads `x1`. One screenshot is not a
+       diagnosis -- the run reaches Go, so the match is live behind it. Check
+       whether that is a camera-tracking defect, a fighter-draw fallback taken
+       because the new guard now returns FALSE for a corrupt DObj, or simply the
+       frame the capture happened to land on.
     2. **Find who corrupts the list.** The standing suspect is already in this
        row: `ndsR2AnimCacheArenaStillOwned` (`reloc_backend_assets.c:5854-5871`)
        can false-positive after `syTaskmanStartTask` rewinds
