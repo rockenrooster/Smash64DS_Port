@@ -417,8 +417,20 @@ These bugs should be fixed for P1 delivery.
     but the per-segment traversal that produces the draw data is not re-run, so
     freshly rebuilt bindings are being replayed against capture data belonging
     to the previous scene instance. Rebuilt pointers, stale geometry.
+    **The scene-cache fix did NOT cause this, and the timeline settles it.**
+    The obvious worry is that making the eviction actually fire (2/2, commit
+    `368a037d4e` at 23:30) freed the reloc files the one-time traversal capture
+    points into, so evicting is what broke the replay. It is not: the corrupt
+    Sudden Death capture `2026-07-30_230425-sudden-death-watch.png` was written
+    at **23:06**, and the owner's report came before that. The defect predates
+    the fix. Keep the fix.
     **Where to fix:** whatever should re-arm the segment traversal after a
-    scene generation bump. Note the connection to the scene-cache fix in this
+    scene generation bump. Note `ndsStageGCDrawAllLoopNativeStageArmed` is
+    re-evaluated every frame from `ndsRendererAdapterPrepareNativeStageOwner`
+    (Prepare ran 333 times, once per frame), so the OWNER is re-armed fine --
+    it is specifically the one-time per-segment traversal capture that is not
+    re-run, and `ndsRendererAdapterCommitNativeStageDisplay` then serves every
+    frame from it. Note the connection to the scene-cache fix in this
     row -- `topology_generation` now advances correctly on the second entry
     (2/2), so the replay is being invalidated; nothing appears to rebuild it.
 
