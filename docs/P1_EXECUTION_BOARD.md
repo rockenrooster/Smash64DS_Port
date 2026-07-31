@@ -1824,17 +1824,39 @@ being a matched pair, and their errors no longer cancel in the transformed
 point. **Both halves must share intermediate precision** — a rule that is
 invisible until something measures the composed result rather than the cells.
 
-**Current state, and it is RED.** Against the 0.0200 world-unit bound borrowed
-from E64b/E65: **compose 0.0226, invert 0.3706** (means 0.0044 / 0.0371, 400,000
-cases each). Not fit to wire in. **The residual is dominated by quantising the
-INPUT matrices to 1/4096, not by the arithmetic in the kernel**, so adding
-fractional bits here alone will not move it — the fix is carrying the joint
-chain in fixed point end to end, which is L7's real shape. The open question for
-whoever takes it: is 0.37 units immaterial against real hurtbox dimensions and
-real joint scales? It is ~1-2% of a hurtbox, which is **not** obviously safe, and
-guessing at it is exactly what the bound exists to prevent.
+**Current state, and it is RED.** Splitting by scale domain the way E65 splits
+by rate — because a bound without its domain is not a bound — gives:
 
-**Do not add this checker to a verifier profile while it is red.**
+| scale domain | compose max | invert max | gate |
+|---|---:|---:|---|
+| near-unit 0.90–1.10 | 0.017817 | **0.126987** | **RED** |
+| moderate 0.50–1.50 | 0.020182 | 0.133385 | (reported) |
+| conservative 0.25–2.00 | 0.020594 | 0.400510 | (reported) |
+
+**This refutes my own framing of the amplifier.** I wrote that 1/det was the
+steepness term, by analogy with E65's L·|rate|. It is not the main one: at
+near-unit scale, where 1/det ≈ 1, the inverse is still **0.127 — six times the
+bound**. Scale only takes it from 0.127 to 0.40.
+
+**The real amplifier is the world translation.** The inverse carries a point of
+magnitude ~400 (a fighter's world position on Dream Land) through a matrix whose
+cells are quantised to 1/4096, so relative error ~1.2e-4 × 400 ≈ 0.05 per term.
+Compose is nearly domain-independent (0.0178 → 0.0206) for the same reason: its
+error is input quantisation, not arithmetic. **20.12 is simply not enough
+precision for collision at this world scale, and no amount of care inside the
+kernel changes that.**
+
+**Which names the fix, and it is a restructure, not more bits.** Compute
+`local = R⁻¹·(p − t)` instead of `R⁻¹·p + t'`. Algebraically identical, but the
+subtraction happens at full input precision and the rotated quantity is then
+±20 rather than ±400 — the error should fall by the ratio of those magnitudes.
+That is also how the source's own hit test is shaped, since `gmCollisionTestRectangle`
+subtracts `offset` right after transforming. **Do that before adding fractional
+bits.**
+
+**Do not add this checker to a verifier profile while it is red**, and do not
+gate a wider scale domain until `scripts/census-fighter-gameplay-joints.ps1`
+says which one SSB64 actually visits.
 
 ### R2-07 L11 NULL — no libm trig left on the battle path after L9 (2026-07-31)
 
