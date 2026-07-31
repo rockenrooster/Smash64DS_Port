@@ -309,10 +309,18 @@ These bugs should be fixed for P1 delivery.
     `sys/taskman.c` and `sys/malloc.c`, which is why this bug class always
     presents as a frozen picture rather than a crash. Every one of the eleven is
     immediately preceded by a `syDebugPrintf`, and the port links a real (empty)
-    one at `boot_stubs.c:91`. A breakpoint there is therefore a total detector
-    for "the game gave up". **It never fires.** So this is neither the historical
-    `syMallocSet` heap-exhaustion spin nor the `syTaskmanCheckBufferLengths`
-    display-list overflow recorded earlier in this row. The CPU is live and
+    one at `boot_stubs.c:91`. **It never fires**, which rules out the
+    `syTaskmanCheckBufferLengths` display-list overflow and the other nine
+    taskman give-up sites.
+    **CORRECTION: `syDebugPrintf` is NOT a total detector for this class.** The
+    port replaced malloc's overflow arm with `ndsSyMallocOverflowHalt()`
+    (`battleship_sys_malloc.c:99`), which prints nothing and spins in its own
+    named symbol -- deliberately, so the PC identifies it. Heap exhaustion is
+    therefore detected by `gNdsSyMallocOverflowCount` or a breakpoint on that
+    halt, never by the printf. The conclusion that this freeze is not the
+    `syMallocSet` spin still holds -- the arena had 42,992 bytes free and the
+    range/generation counters are clean -- but it rests on those, not on the
+    printf being silent. The CPU is live and
     executing ordinary code that never completes a frame.
   - **DEFECT FOUND BY INSPECTION, and it is on the sampled path:**
     `ndsRendererAdapterPrepareNativeMaterials`
@@ -335,7 +343,41 @@ These bugs should be fixed for P1 delivery.
     This is an unbounded write loop into a 4-entry array and is worth fixing on
     its own merits, whether or not it proves to be the whole freeze.
   - **PLAN (2026-07-30), in order, each step falsifiable on its own:**
-    1. **Bound pass two. DONE 2026-07-30 -- THE FREEZE IS FIXED.** The write walk
+    0. **CORRECTION 2026-07-30, later the same day: the claim below that the
+       bound FIXED the freeze is WITHDRAWN, and the MObj-corruption hypothesis
+       is REFUTED.** Two measurements, both on the owner-requested second-entry
+       diagnostics:
+       - **The guard never fires.** `gNdsR2MaterialWalkBoundHits` is **0** on
+         every run, including runs that reach Sudden Death. A same-binary A/B --
+         `gNdsR2MaterialWalkBoundEnabled` cleared from the debugger, so code
+         layout, inlining and the ROM are identical between arms -- gives
+         **9 distinct frames of 9 samples in BOTH arms**. Guard on and guard off
+         are indistinguishable. Whatever stopped the freeze, it was not this
+         branch executing.
+       - **The chain is never invalid.** The validator ran **91,482** probes
+         across a full run including Sudden Death and found **zero**: no
+         overlong chain, no cycle, nothing outside the taskman arena, at either
+         probe point. The chains are **one node long** against a capacity of
+         four, which is also why the guard cannot fire.
+       So the freeze did stop when the guard commit landed, and the guard is not
+       the reason. The remaining explanation is that adding it moved code --
+       this campaign has repeatedly measured placement changing results on its
+       own (E11 removed real work and P95 still rose 15,744). **That makes the
+       Sudden Death freeze a LATENT, layout-sensitive fault that has been
+       displaced, not repaired**, and it says the real cause is still live and
+       will move again on the next unrelated edit.
+       **Keep the guard** -- an unbounded write into a four-entry array is a
+       defect whether or not it is this one, and it costs one compare on a
+       one-node list. But do not carry it as the fix.
+       **Next, and it is a reproduction problem before it is a diagnosis one:**
+       revert the guard in a scratch build and confirm the freeze returns with
+       chains still clean. If it does, the fault is elsewhere and triggered by
+       placement; the instruments to reach for are the ones that survive a
+       layout change -- `gNdsSyMallocOverflowCount` /
+       `ndsSyMallocOverflowHalt` (NOT `syDebugPrintf`; see the corrected note
+       above), stack headroom, and the taskman DL buffers.
+    1. **Bound pass two. DONE 2026-07-30 -- ~~THE FREEZE IS FIXED~~ SEE THE
+       CORRECTION ABOVE.** The write walk
        now returns FALSE once `count >= capacity`, handing the caller its
        existing generic fallback instead of running off a four-entry array.
        Measured on the lane, same ROM configuration, 60-second picture watch:

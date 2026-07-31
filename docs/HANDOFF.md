@@ -65,15 +65,15 @@ the Task 36 replay guard (`nds_renderer.h:124-134`); my earlier authorization is
 configurations complete a full match clean.** **No passive soak reaches match two** —
 `mnVSResultsCheckExit` needs `START`.
 
-**Sudden Death: REPRODUCIBLE in ~90 s, and its freeze is FIXED** —
-`scripts/capture-sudden-death-entry.ps1`, no harness mode (a mode would have to fork source control
-flow; withdrawn). A match nobody scores in IS a 0-0 tie, so it runs mode 163 with Fox **live** and
-shortens `time_remain`. **Never pause the Fox CPU to force a tie** — that flag also freezes the tic
-source, so the clock never expires. The freeze was an unbounded WRITE walk past a bounded counting
-walk (`reloc_backend_renderer_dl.c:7850`, 4-entry array); bounding it took 1 distinct frame per 60 s
-to 12, Latest green. **A `syDebugPrintf` breakpoint is a total detector for this bug class** — all
-eleven `while (TRUE);` give-up sites print first. Open items in BUGS.md. **The R2 anim cache is
-CLEAN** (Rejects 0, Overflows 0) — the 109/109 reading was stale; see board R2-07 L0.
+**Sudden Death: REPRODUCIBLE in ~90 s** — `scripts/capture-sudden-death-entry.ps1`, no harness mode.
+A match nobody scores in IS a 0-0 tie, so it runs mode 163 with Fox **live** and shortens
+`time_remain`. **Never pause the Fox CPU to force a tie** — that flag also freezes the tic source.
+**The freeze is DISPLACED, NOT FIXED.** The material-walk guard never fires (`BOUND-HITS` 0) and a
+same-binary A/B is identical, so code placement moved it; it is latent and will move again. The MObj
+chain is never corrupt either (91,482 probes, 0 invalid). Keep the guard regardless — an unbounded
+write into a 4-entry array is a defect on its own. **`syDebugPrintf` covers only the ten `taskman.c`
+give-up sites**; malloc's arm is `ndsSyMallocOverflowHalt`, which prints nothing. **The anim cache is
+CLEAN** (109/109 was stale); taskman-heap GENERATION now owns its lifetime. Open items in BUGS.md.
 
 ## VS Results is CLOSED — 581,197 ticks/tic vs 1.12M (0.52×), from 2,814,955
 

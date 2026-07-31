@@ -18,6 +18,15 @@ param(
     # Keep gdb attached past the Sudden Death entry, let the core run, then
     # interrupt it and report where it stopped. Mutually exclusive with the
     # picture watch by construction -- one stub session per emulation run.
+    # Clear gNdsR2MaterialWalkBoundEnabled at battle start, restoring the
+    # pre-guard unbounded material write walk in the SAME binary. The only way
+    # to attribute the Sudden Death freeze to the guard rather than to the code
+    # placement that adding the guard caused -- two builds cannot separate those.
+    [switch]$DisableWalkBound,
+    # Equalise score/falls at the source's own tie check. NOT the default: the
+    # natural 0-0 tie is the honest reproduction. Needed only when heavy
+    # instrumentation slows the build enough to change the match outcome.
+    [switch]$ForceTie,
     [switch]$DiagnoseHang,
     [ValidateRange(5, 300)][int]$HangSettleSeconds = 45,
     # Owner, 2026-07-30: "420 seconds is way too long, should be 180 secs max."
@@ -164,7 +173,13 @@ try {
         # Stage 1: the match scene is up.
         'tbreak scVSBattleStartBattle',
         'continue',
-        'printf "SD-STAGE=battle-start\n"',
+        'printf "SD-STAGE=battle-start\n"'
+    ) + $(if ($DisableWalkBound) { @(
+        'set variable gNdsR2MaterialWalkBoundEnabled = 0',
+        'printf "SD-WALK-BOUND-ENABLED=%u\n", gNdsR2MaterialWalkBoundEnabled'
+    ) } else { @(
+        'printf "SD-WALK-BOUND-ENABLED=%u\n", gNdsR2MaterialWalkBoundEnabled'
+    ) }) + @(
 
         # Stage 2: past GO, with the countdown live. The condition matters --
         # `ifCommonTimerFuncRun` is a per-frame GObj proc that also runs BEFORE the
@@ -189,7 +204,25 @@ try {
         'printf "SD-P1-SCORE=%d\n", gSCManagerBattleState->players[1].score',
         'printf "SD-P1-FALLS=%d\n", gSCManagerBattleState->players[1].falls',
         'printf "SD-RULES=%u\n", gSCManagerBattleState->game_rules',
-        'printf "SD-IS-RESET=%u\n", gSCManagerSceneData.is_reset',
+        'printf "SD-IS-RESET=%u\n", gSCManagerSceneData.is_reset'
+    ) + $(if ($ForceTie) { @(
+        # LAST RESORT, and only for instrumented A/B runs. The natural 0-0 tie is
+        # the honest reproduction and is what the default does -- but it depends
+        # on neither fighter scoring in the shortened match, and heavy
+        # instrumentation breaks that: a NDS_R2_SECOND_ENTRY_DIAG build runs the
+        # chain validator ~14,000 times per run, and the board records that input
+        # sampling PHASE depends on execution speed, so a slow build diverges and
+        # the CPU lands KOs it does not land otherwise (measured 2026-07-30: Fox
+        # 2-0 where the same seed gives 0-0 uninstrumented).
+        # Equalising the inputs to the source's own tie test is not faking Sudden
+        # Death -- the scene setup and everything after it runs unmodified -- but
+        # it IS a seeded tie, so any run using this must say so.
+        'set variable gSCManagerBattleState->players[0].score = 0',
+        'set variable gSCManagerBattleState->players[0].falls = 0',
+        'set variable gSCManagerBattleState->players[1].score = 0',
+        'set variable gSCManagerBattleState->players[1].falls = 0',
+        'printf "SD-TIE-FORCED=1\n"'
+    ) } else { @() }) + @(
 
         # Stage 4: entry. Breaking on the PORT wrapper, not the decomp one, is
         # deliberate -- the wrapper calls `ndsBaseSCVSBattleStartSuddenDeath()` and
@@ -233,6 +266,23 @@ try {
         'printf "SD-CACHE-RANGE-FAULT=%u\n", gNdsR2AnimCacheArenaRangeFaults',
         'printf "SD-CACHE-INVALIDATIONS=%u\n", gNdsR2AnimCacheArenaInvalidations',
         'printf "SD-CACHE-RESERVES=%u\n", gNdsR2AnimCacheArenaReserveCount',
+        # Second-entry chain validator. Only present in a
+        # NDS_R2_SECOND_ENTRY_DIAG=1 build, so these are attempted separately
+        # from the counters above -- one bad expression aborts a whole printf,
+        # and on an ordinary ROM every one of these is an unknown symbol.
+        'printf "SD-WALK-BOUND-HITS=%u\n", gNdsR2MaterialWalkBoundHits',
+        'printf "SD-CHAIN-PROBES=%u\n", gNdsR2ChainProbeCount',
+        'printf "SD-CHAIN-INVALID=%u\n", gNdsR2ChainProbeInvalidCount',
+        'printf "SD-CHAIN-FIRSTBAD-PASS=%u\n", gNdsR2ChainProbeFirstBadPass',
+        'printf "SD-CHAIN-FIRSTBAD-STATUS=%u\n", gNdsR2ChainProbeFirstBad.status',
+        'printf "SD-CHAIN-FIRSTBAD-NODES=%u\n", gNdsR2ChainProbeFirstBad.nodes',
+        'printf "SD-CHAIN-FIRSTBAD-ADDR=%#x\n", gNdsR2ChainProbeFirstBad.first_bad',
+        'printf "SD-CHAIN-FIRSTBAD-DOBJ=%#x\n", gNdsR2ChainProbeFirstBad.dobj',
+        'printf "SD-CHAIN-FIRSTBAD-GEN=%u\n", gNdsR2ChainProbeFirstBad.generation',
+        'printf "SD-CHAIN-P1-STATUS=%u\n", gNdsR2ChainProbePass1.status',
+        'printf "SD-CHAIN-P1-NODES=%u\n", gNdsR2ChainProbePass1.nodes',
+        'printf "SD-CHAIN-P2-STATUS=%u\n", gNdsR2ChainProbePass2.status',
+        'printf "SD-CHAIN-P2-NODES=%u\n", gNdsR2ChainProbePass2.nodes',
         'printf "SD-DONE=1\n"'
     ) + $(if ($DiagnoseHang) { @(
         # Spend the session on the hang instead of the watch. melonDS's stub
