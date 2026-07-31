@@ -1793,6 +1793,44 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 L10 KEEP — the hardware square root was BUILT AND OFF; 3-VBlank frames 97 → 89 (2026-07-31)
+
+**`NDS_R2_FIXED_SQRT` has been `?= 0` since R2-03 E1 built it.** E1 measured
+`sqrtf` 15,760 → 9,720 ticks/frame (**−6,040**), bit-exact, Boundary green — and
+then left the flag off, because its 8-frame A/B read "flat on every bucket" and
+the saving sat inside the placement floor. Nothing refuted it; it just never
+graduated. `git log -S` finds one commit and no reversal.
+
+**L6 changes the reading.** `__ieee754_sqrtf` runs **87 times on an over-gate
+frame against 26 on a clean one (3.34×)**, for a **26,007-cycle delta** — 5.1% of
+the over-gate premium. So the saving concentrates on exactly the frames that miss,
+which makes it a P95 lever, not the mean-only lever E1's flat A/B implied. **A
+lever measured as flat on a mean can still be a gate lever; ask where its work
+sits before shelving it.**
+
+`scripts/check-r2-fixed-sqrt.ps1` re-run before flipping: **12,807,569 inputs,
+8,775,610 handled by the hardware path, 4,031,959 declined to newlib, 0
+mismatches.** Bit-exact, so no equivalence bound is owed and the state hash must
+not move — Boundary green confirms it did not.
+
+**A/B against L9 as the matched control**, same session, harness and window
+(`artifacts/performance/r207-L10-sqrt-128*`):
+
+| | L9 (control) | L10 | delta |
+|---|---:|---:|---:|
+| **`WORK-H` P95** | 1,244,608 | **1,232,448** | **−12,160** |
+| `WORK-H` P50 | 914,880 | 921,920 | +7,040 |
+| `WORK-H` max | 1,512,320 | **1,375,104** | **−137,216** |
+| `SRC` P95 | 531,648 | 522,368 | −9,280 |
+| **3-VBlank frames** | 97/567 | **89/567** | **−8** |
+| 2-VBlank frames | 456 | 465 | +9 |
+
+**The histogram is the headline, per AGENTS.md** — eight frames moved from three
+VBlanks to two, which is perceived pacing, and the worst frame fell 137,216.
+P95 −12,160 is 2.3× the ±5,376 floor. **P50 +7,040 is against a bit-exact
+change, so it is placement, not work** — the honest reading of a mean that moves
+the wrong way when the arithmetic is provably identical.
+
 ### R2-07 L9 KEEP — SSB64's own sine table, −37,248 `WORK-H` P95, matched control (2026-07-31)
 
 **The port had `f32 lbCommonSin(f32 a) { return sinf(a); }`.** SSB64 does not

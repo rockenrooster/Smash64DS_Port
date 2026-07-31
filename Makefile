@@ -346,7 +346,16 @@ NDS_R2_STAGE_DIRECT ?= 0
 # and 14,258 ticks/frame. Bit-exact by construction, so the Task 37 state hash
 # must not move -- sqrtf is on the gameplay path and a last-bit difference is a
 # pose difference.
-NDS_R2_FIXED_SQRT ?= 0
+#
+# R2-07 L10 turned it ON. E1 measured -6,040 ticks/frame, bit-exact, Boundary
+# green, and then left the flag at 0 -- it read as a mean-only lever because the
+# 8-frame A/B was flat inside the placement floor. L6's over-gate split says
+# otherwise: __ieee754_sqrtf runs 87 times on an over-gate frame against 26 on a
+# clean one (3.34x) for a 26,007-cycle delta, so the saving concentrates on
+# exactly the frames that miss the gate. That makes it a P95 lever, and P95 is
+# what the gate is. scripts/check-r2-fixed-sqrt.ps1: 12,807,569 inputs,
+# 8,775,610 handled, 0 mismatches.
+NDS_R2_FIXED_SQRT ?= 1
 # R2-02 E2. Pushes the Task 36 rigid-replay command stream to the GX with GXFIFO
 # DMA instead of a CPU store loop. ~4,200 words/frame at Task 103's measured
 # 9.51 ticks/word; the point is the ~16 KB/frame of cache-line fills that stop
