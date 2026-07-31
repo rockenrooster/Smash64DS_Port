@@ -1,6 +1,13 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
--Still get intermittent freezes when attacking (maybe collision/animation/heap related? see screenshot "C:\Users\Tyler\Pictures\Screenshots\Screenshot 2026-07-31 173851.png").
+-Still get intermittent freezes when attacking (maybe collision/animation/heap
+  related?). Owner evidence:
+  `artifacts/visibility/2026-07-31_attack-freeze-owner-302caae.png` -- build
+  `302caae`, TIME 00:37, both fighters 12%/1 stock, Mario inside a shield
+  bubble. The HUD is the useful part: `ALL 1119872` current against `1680320`
+  max, `WORK 1034496 / 1497856` over n:128, VBlank histogram `2:690 3:163 4:33
+  5+:4` with `max:19`. So the stall is four 5+-VBlank frames and one 19-VBlank
+  frame in a 128-frame window -- an event, not a slow body.
 -Sometimes Mario's fireballs don't spawn.
 -FIXED (2026-07-31, owner-confirmed: "i saw the GAME SET text" / "works well")
   No "Game set" VFX and SFX and results after winning sudden death
