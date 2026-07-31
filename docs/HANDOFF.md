@@ -10,7 +10,7 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
 | R2-06 | E0/E1/E2 + soak done; E4b/E6/E7/E11/**E13/E14/E15** refuted; **E8 finds the event, E10 + E17 both attribute it as SPREAD — no lever left inside the phase** |
-| R2-07 | **results-flow clause STARTED** — R0..R2b, Results 39.975 -> 7.025 VB/iter (5.7×), still 3.5× out; **R2b default-off pending visual approval**. Particle/audio/HUD clauses untouched. R2-08 needs the owner's retail play test |
+| R2-07 | **results-flow clause MEETS ITS GATE** — R0..R4e, Results 39.975 -> 1.04 VBlanks/tic, 581,197 ticks = **0.52× of 1.12M**; R2b and R4c both owner-approved and default-on. Particle/audio/HUD clauses untouched; **Sudden Death is now in P1 and has no deterministic entry** (needs a seeded harness mode). R2-08 needs the owner's retail play test |
 
 ## Where the gate stands — MISSED, and EVERY earlier number is DLDI-off
 
@@ -66,28 +66,9 @@ configurations complete a full match clean.** Four detector defects fixed, two v
 hashed the window **title**, where melonDS renders its FPS counter). **Sudden Death has its own
 issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit` needs `START`.
 
-## OPEN P1: VS Results — 1,701,577 ticks per source tic vs the 1.12M gate (1.52× over). FIGHTER DRAW IS 85.2% AND IS THE WHOLE REMAINING PROBLEM
+## VS Results MEETS THE GATE — 581,197 ticks per source tic vs 1.12M (0.52×), down from 2,814,955 this morning
 
-**39.975 → 7.025 VB/iter (1.50 → 8.43 FPS, 5.7×), Latest green.** Bit-exact cuts proven by
-`check_sprite_lerp_exact.py` — **R0c** `/255`→`(x*257+257)>>16` (**`-Os` emits `blx __udivsi3` for a
-CONSTANT divisor**, whole-repo hazard, `grep __udivsi3`); **R0d** inlined lerp; **R0e** 16-entry
-palette, ONE byte per PAIR of columns, 112 → 9 Thumb instr/px; **R2a** glyphs index that table
-(−200,133/frame, FPS flat, banked slack per rule 12). Details in PERF_LEDGER.
-
-**R2b is the big one and it is now DEFAULT-ON.** The owner named the lever
-(affine BGs), so R2 became the **hardware affine BG**, not the planned dirty-flag.
-`NDS_R2_RESULTS_AFFINE=1`: **10.125 → 7.025 VB/iter, −1,736,589 ticks/frame** vs the 1,746,558 R0h
-sized for the whole background layer (**0.6%**), and the `I/4b 300x220` census row is **gone**.
-Confirmed quantum-free by `soak-freeze-watch.ps1` as a wall-clock race: `gNdsVSResultsTickCount`
-**500 → 780 (+56%)**, both arms NO-FREEZE, both `PacingPresentedFrames = 2043` (battle unperturbed).
-**Owner approved the matched-tic pair on sight (2026-07-30): `NDS_R2_RESULTS_AFFINE ?= 1`, and the
-checker now pins it default-ON.** It is inert wherever `NDS_FAST_WALLPAPER_AFFINE` is 0 (seed capture
-compiled out), which is every target except the differ. Two traps already paid for: the mapper
-**letter-boxes** any wallpaper whose origin is not (0,0), and a faster candidate lands on a
-**different scene tick** at the same wall clock (both now standing rules). Idle was **830,260 = 1.48
-VBlanks of slack**, which R2b's 3.1 exceeded. **RETRACTED: `IA/8b 24x37` is NOT 85.1% of the
-remainder** — that row is a next-hit interval spanning commit, fighters, camera/display and the
-platform wait, so it locates the unpartitioned tail and attributes nothing.
+**R0c/R0d/R0e/R2a are shipped and bit-exact** by `check_sprite_lerp_exact.py` — `/255`→`(x*257+257)>>16` (**`-Os` emits `blx __udivsi3` for a CONSTANT divisor**, whole-repo hazard, `grep __udivsi3`), inlined lerp, 16-entry palette with ONE byte per PAIR of columns (112 → 9 Thumb instr/px), glyphs indexing that table. **R2b** is the hardware affine BG the owner named, −1,736,589/frame, approved on sight and default-on. Two standing traps it paid for: the mapper **letter-boxes** any wallpaper whose origin is not (0,0), and a faster candidate lands on a **different scene tick** at the same wall clock. Full detail in the board and PERF_LEDGER.
 
 **R4b and R4d are GRADUATED and the post-R2b owner is now measured.** **R4b** foreground layer memo
 (`NDS_R2_RESULTS_LAYER_MEMO`) −28.6%, pixel-identical. **R4d** (`NDS_R2_MAIN_PRESENT_GUARD`) found
@@ -103,7 +84,12 @@ is 164 — so all its 20.12 multiplies were `bl __aeabi_lmul` (7.79% of the fram
 against each other, the absolute costs were inflated. Fixed by keying on the latency surfaces
 (`NDS_ARM_RENDERER_HARNESS_IDS`): −553,188/tic (−24.5%), pixel-identical, and battle is provably
 unaffected (byte-identical loadable image, identical 128-sample percentiles). Remaining: `FTR`
-**1,449,776/tic = 85.2%** — R4c's fighter question, now the only one left. **Measure Results with `scripts/census-results-frame-cost.ps1`**: the tick-HUD buckets
+**R4c GRADUATED** (owner approved the look): `no_oracle` selects the RENDERER, and Results was on
+the generic DL interpreter while the match uses the native owner — four times the cost. Bracketing
+the Results submit puts it on the match's renderer: **3.04 → 1.04 VBlanks, 1,701,577 → 581,197
+(−65.9%), 0.52× of the gate**. It saves/restores rather than clearing, so it is a no-op on the
+battle path — verified, not assumed: clean 128-sample matched window, `ALL` p95 1,680,064 →
+1,120,384, `FTR` p95 390,208 → 391,040. **Results is no longer the P1 performance problem.** **Measure Results with `scripts/census-results-frame-cost.ps1`**: the tick-HUD buckets
 are zeroed only in the battle loop, so on Results they free-run and must be **differenced across two
 stops and divided by `sTicks`**, never read once and divided by a scene clock. **Compare captures
 with `scripts/compare-capture-pair.ps1`** — it crops to the guest viewport, because melonDS's title

@@ -522,12 +522,28 @@ NDS_R2_RESULTS_LAYER_MEMO ?= 1
 # delta 0. Evidence at artifacts/performance/r4d-main-present-guard-{off,on}
 # -20260730.json and artifacts/visibility/2026-07-30_r207-r4d-results-tic160-*.png
 NDS_R2_MAIN_PRESENT_GUARD ?= 1
-# R2-07 R4c. Give the fighter draw the same no-oracle bracket the stage draw
-# already has (reloc_backend_movement.c:13559). The oracle path clears a
-# per-list proof/counter prefix once per part list per fighter per frame --
-# 70% of the fighter draw's memset traffic, and memset is 8.80% of the
-# Results frame. Off by default until the A/B and the matched-tic pair land.
-NDS_R2_FIGHTER_NO_ORACLE ?= 0
+# R2-07 R4c. Select the NATIVE FIGHTER OWNER on the Results path, the renderer
+# the match already uses. `no_oracle` is not a proof switch: it is what
+# reloc_backend_renderer_dl.c:12603 tests to enter the native owner, so it picks
+# the renderer (R4g). The battle present brackets its whole draw
+# (reloc_backend_movement.c:13724/:13810), which is why the match gets the
+# native owner -- while VS Results reached the same submit with no bracket on
+# its path and got the generic DL interpreter at four times the cost.
+#
+# GRADUATED 2026-07-30, owner approved the fighter look on sight ("use the
+# native renderer, it's already been approved"). Measured on the Results lab,
+# matched source: 3.04 -> 1.04 VBlanks per source tic, 1,701,577 -> 581,197
+# ticks, -1,120,380 (-65.9%), which takes Results from 1.52x OVER the 1.12M gate
+# to 0.52x -- inside it. Fighter draw 1,449,776 -> 364,784.
+#
+# Battle is unaffected and that is measured, not assumed: the bracket saves and
+# restores rather than clearing, so it is a no-op wherever the flag is already
+# set, which is the whole battle path. Clean matched-window 128-sample A/B at
+# -StartFrame 600: ALL p95 1,680,064 -> 1,120,384, WORK p95 1,197,760 ->
+# 1,106,112, FTR p95 390,208 -> 391,040 (noise). Evidence in
+# artifacts/performance/r4c-fighter-no-oracle-on-20260730.json and
+# artifacts/visibility/2026-07-30_r207-r4c-*.png.
+NDS_R2_FIGHTER_NO_ORACLE ?= 1
 # Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
 # open/read/flush/play while preserving all BGM state/counters so the rest of
 # the system believes BGM is active. Never set in a published target.

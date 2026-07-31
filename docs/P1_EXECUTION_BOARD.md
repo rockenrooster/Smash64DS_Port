@@ -1781,7 +1781,16 @@ moves it — per-frame Results cost — is exactly what R2 owns. Second independ
 R2b. Instrument is permanent: six counters in `battleship_mnvsresults.c`, read by
 `soak-freeze-watch.ps1`, four timer reads per Results entry.
 
-### R2-07 R4c BUILT, DEFAULT-OFF — the no-oracle bracket is worth −65.4% and it costs the fighters their shading. HYPOTHESIS REFUTED (2026-07-30)
+### R2-07 R4c GRADUATED — Results was on the WRONG RENDERER. Native owner on Results: −1,120,380/tic (−65.9%), 1.52x over the gate → 0.52x INSIDE it (2026-07-30)
+
+**Owner approved the fighter look on sight, 2026-07-30: *"use the native renderer, it's already been approved"*.**
+The entry below is kept in the order it was learned, because the verdict inverted twice and the
+reasoning is the point: it was first read as a fidelity trade, then as a bookkeeping win, and it was
+actually a renderer-selection bug. Final numbers: **3.04 → 1.04 VBlanks per source tic, 1,701,577 →
+581,197 ticks**, fighter draw 1,449,776 → 364,784, battle unregressed on a clean matched-window
+128-sample A/B (`ALL` p95 1,680,064 → 1,120,384; `FTR` p95 390,208 → 391,040, noise).
+
+#### How it was originally written up (superseded above, retained for the reasoning)
 
 `NDS_R2_FIGHTER_NO_ORACLE=1` gives the fighter draw the same
 `ndsRendererHardwareSetNoOracle(TRUE)`/`(FALSE)` bracket the stage draw has always had. Measured on
