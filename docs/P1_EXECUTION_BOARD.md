@@ -1813,11 +1813,30 @@ would have been natural to publish that as the over-gate burst's composition.
 It is not: it is 9.95% of the *whole run*, identical on clean frames, and says
 nothing about the excursion. **Soft-float is NOT implicated by this data.**
 
-**So L6 is not yet answered, and the method note is the deliverable.** To
-compare windows, diff the per-region rows, not table A. Anyone re-running this
-should first confirm the two arms differ *somewhere* before interpreting
-anything — identical output across deliberately different inputs is the
-signature of an instrument that is not reading what its parameters claim.
+**WORSE: the REGIONS are identical too, so `-StartFrame` has no effect at all.**
+Diffing `arm9-profile.regions.csv` between the arms — the windowed output, the
+thing table A is not — gives byte-identical rows:
+```
+region,instructions,total_cycles,average_cycles,min_cycles,max_cycles
+3,1033629,3361840,3.252,0,804589      <- same in BOTH arms
+1,1013328,3361628,3.317,0,876971
+2,1063950,3360836,3.159,0,728825
+4,1004643,3360756,3.345,0,890109
+5, 684898,2240600,3.271,0,214849
+0,      6,     52,8.667,1,    23
+```
+Two arms nine frames apart cannot produce identical instruction counts. And the
+sizes are wrong for the claim: **3,361,840 cycles is exactly 6.0 VBlanks**, not
+a presented frame at 2–3, so a "region" here is not the presented frame the
+banner advertises ("region r = presented frame 517 + r").
+
+**L6 IS BLOCKED ON THE INSTRUMENT, not on analysis.** `run-task37-profile-census.ps1`
+accepts `-StartFrame`/`-Frames`, prints a census window banner, and then
+measures the same thing regardless. Until frame windowing demonstrably works —
+proven by two deliberately different windows producing *different* numbers —
+this harness cannot compare an over-gate frame against a clean one, and no
+result taken from it about a specific frame range should be believed.
+**First fix the windowing, then re-run; do not analyse these two censuses.**
 
 ### R2-07 L3 — the excursion is SIZED: +272,576 `WORK-H`, all of it `SRC`/`OTHR`, render flat (2026-07-31)
 
