@@ -394,8 +394,45 @@ These bugs should be fixed for P1 delivery.
     Task 103 build is slow enough that 240 gdb-evaluated breakpoint stops
     exceed the 180 s cap, so re-run with `-MatchedCameraCalls 120`, which is
     still past convergence.
-    **The arm-A numbers already name the likely culprit, so state the prediction
-    before running arm B rather than after.** Traversal costs **330,360 ticks
+    **ARM B RAN, AND IT REFUTES THE PREDICTION BELOW WHILE ANSWERING THE
+    QUESTION: SUDDEN DEATH NEVER RE-TRAVERSES THE STAGE.**
+
+        phase       arm A (match 1)        arm B (after SD)       delta
+        Traversal   2,642,880 /  8 calls   2,642,880 /  8 calls   0 / 0
+        Prepare     3,088,064 / 30         28,247,680 / 333       303 frames
+        Display     4,347,264 / 783        50,712,896 / 9,232     8,449 calls
+        Finish         17,280 / 29            166,272 / 332
+
+    **`gNdsTask103TraversalCount` is 8 at both stops.** The counter is cumulative
+    from boot, so that single fact is airtight regardless of window: across the
+    remainder of match 1, the scene transition, and the whole of Sudden Death,
+    the eight stage segments are **never traversed again**. I predicted the
+    opposite -- more traversals per frame -- and it is zero. Display runs at a
+    normal rate throughout (26.1/frame in arm A, 27.9/frame in the delta) and
+    its per-call cost is unchanged (5,552 vs 5,487), so the extra work is not a
+    costlier or more frequent commit.
+    **So the second entry draws the stage from match 1's captured traversal.**
+    That fits the corruption better than any cost story: the topology IS rebuilt
+    on the second entry (`gNdsR2StageTopologyRebuildCount` 2, measured earlier),
+    but the per-segment traversal that produces the draw data is not re-run, so
+    freshly rebuilt bindings are being replayed against capture data belonging
+    to the previous scene instance. Rebuilt pointers, stale geometry.
+    **Where to fix:** whatever should re-arm the segment traversal after a
+    scene generation bump. Note the connection to the scene-cache fix in this
+    row -- `topology_generation` now advances correctly on the second entry
+    (2/2), so the replay is being invalidated; nothing appears to rebuild it.
+
+    **METHOD FLAW in the numbers above, stated so nobody over-reads them.** The
+    Task 103 counters are cumulative from boot and arm A is snapshotted early in
+    match 1, so the B-A delta spans the rest of match 1, GAME SET and the
+    transition as well as Sudden Death. **Only the Traversal result is clean**,
+    because an unchanged cumulative count cannot hide activity anywhere in that
+    span. Prepare and Display deltas are NOT attributable to Sudden Death alone
+    and must not be quoted as such. Fix the harness before using them: take a
+    third snapshot at the `running` stage so the Sudden-Death-only delta is
+    (shot-sd - running).
+
+    **(Refuted) the arm-A numbers already name the likely culprit:** Traversal costs **330,360 ticks
     per call** -- on its own that is ~1.9x an entire match-1 stage frame
     (STG 173,568) -- and match 1 takes it only **8 times across 120 frames**,
     about once every fifteen. Display, by contrast, is 5,213 x 3,288 calls, and

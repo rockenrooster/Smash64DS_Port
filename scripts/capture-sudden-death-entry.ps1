@@ -38,7 +38,12 @@ param(
     # same stage, further away". Six mechanisms measured clean while I compared
     # unmatched frames; this is the comparison that should have come first.
     [switch]$MatchedCapture,
-    [ValidateRange(120, 3600)][int]$MatchedCameraCalls = 240,
+    # 60 is already past convergence and is the practical setting: the easing
+    # removes 7.5% of the remaining gap per call, so 0.925^60 leaves under 1% of
+    # the 10000->3937 gap, about 3990. Higher values cost real time because gdb
+    # stops once per IGNORED hit -- 240 blew the 180 s cap on a Task 103 build,
+    # and so did 120.
+    [ValidateRange(30, 3600)][int]$MatchedCameraCalls = 60,
     [switch]$DiagnoseHang,
     [ValidateRange(5, 300)][int]$HangSettleSeconds = 45,
     # Owner, 2026-07-30: "420 seconds is way too long, should be 180 secs max."
