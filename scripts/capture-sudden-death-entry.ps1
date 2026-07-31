@@ -246,6 +246,19 @@ try {
         'printf "SD-M1-W2000=%#x\n", sNdsRendererTask36ReplayOwner.words[2000]',
         'printf "SD-M1-W3000=%#x\n", sNdsRendererTask36ReplayOwner.words[3000]',
         'printf "SD-M1-W3915=%#x\n", sNdsRendererTask36ReplayOwner.words[3915]',
+        # THE FIVE UNREPLAYED SEGMENTS, BY NAME. captured_segment_mask 0xa1 is
+        # bits 0,5,7, and ndsRendererAdapterNativeStageSegmentGObj maps those to
+        # gGRCommonLayerGObjs[0]/[2]/[3]. The unreplayed remainder -- 1,2,3,6 --
+        # is pupupu.map_gobj[0..3], the Dream Land map objects, plus
+        # gGRCommonLayerGObjs[1] at 4. That is precisely the geometry that looks
+        # wrong in the matched pair, so print the GObj pointers on both sides: a
+        # changed pointer set is a rebuilt stage, an unchanged one is reuse.
+        'printf "SD-M1-MAP0=%#x\n", gGRCommonStruct.pupupu.map_gobj[0]',
+        'printf "SD-M1-MAP1=%#x\n", gGRCommonStruct.pupupu.map_gobj[1]',
+        'printf "SD-M1-MAP2=%#x\n", gGRCommonStruct.pupupu.map_gobj[2]',
+        'printf "SD-M1-MAP3=%#x\n", gGRCommonStruct.pupupu.map_gobj[3]',
+        'printf "SD-M1-LAYER1=%#x\n", gGRCommonLayerGObjs[1]',
+        'printf "SD-M1-LAYER0=%#x\n", gGRCommonLayerGObjs[0]',
         'printf "SD-STAGE=shot-match1\n"',
         # Drop it so the drive to Sudden Death is not stopped 60 times a second.
         'delete $bpnum'
@@ -447,6 +460,12 @@ try {
         'printf "SD-SD-W2000=%#x\n", sNdsRendererTask36ReplayOwner.words[2000]',
         'printf "SD-SD-W3000=%#x\n", sNdsRendererTask36ReplayOwner.words[3000]',
         'printf "SD-SD-W3915=%#x\n", sNdsRendererTask36ReplayOwner.words[3915]',
+        'printf "SD-SD-MAP0=%#x\n", gGRCommonStruct.pupupu.map_gobj[0]',
+        'printf "SD-SD-MAP1=%#x\n", gGRCommonStruct.pupupu.map_gobj[1]',
+        'printf "SD-SD-MAP2=%#x\n", gGRCommonStruct.pupupu.map_gobj[2]',
+        'printf "SD-SD-MAP3=%#x\n", gGRCommonStruct.pupupu.map_gobj[3]',
+        'printf "SD-SD-LAYER1=%#x\n", gGRCommonLayerGObjs[1]',
+        'printf "SD-SD-LAYER0=%#x\n", gGRCommonLayerGObjs[0]',
         'printf "SD-STAGE=shot-sd\n"',
         'printf "SD-MATCHED-DONE=1\n"',
         'detach',

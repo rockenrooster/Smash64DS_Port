@@ -468,6 +468,24 @@ These bugs should be fixed for P1 delivery.
     at both stops and compare, which is the one comparison that can distinguish
     "same size, same content" from "same size, different content".
 
+    **The five unreplayed segments have names, and a pointer probe on them is a
+    NULL RESULT -- with a lesson attached.** `ndsRendererAdapterNativeStageSegmentGObj`
+    maps the mask: replayed 0/5/7 are `gGRCommonLayerGObjs[0]/[2]/[3]`, and the
+    unreplayed 1/2/3/6 are `gGRCommonStruct.pupupu.map_gobj[0..3]` -- **the Dream
+    Land map objects** -- plus `gGRCommonLayerGObjs[1]` at 4. That is exactly the
+    geometry that looks wrong, which is a satisfying alignment.
+    Probing those GObj pointers on both sides returns them **identical**
+    (MAP0 0x2369a10, MAP1 0x2369dd8, MAP2 0x236a410, MAP3 0x236aa70,
+    LAYER0 0x23677a8, LAYER1 0x2368c58).
+    **That proves nothing, and must not be read as reuse.** The taskman heap is
+    a bump allocator that the scene entry rewinds, so the same allocation
+    sequence necessarily lands at the same addresses -- a freshly rebuilt stage
+    and a stale one are pointer-identical by construction. **Standing
+    consequence: on this heap, pointer identity is never evidence of object
+    identity across a scene boundary.** Any "is it stale?" test built on
+    comparing addresses is answering a different question; use the heap
+    generation (which is why that contract exists) or compare contents.
+
     **Honest current state.** The stage geometry is corrupt on the second entry
     and the fighter is not -- that much is proven by the matched pair and is not
     in question. Everything measured so far is clean or accounted for: static
