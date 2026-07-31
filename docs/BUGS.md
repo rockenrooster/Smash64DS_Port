@@ -291,12 +291,81 @@ These bugs should be fixed for P1 delivery.
     (`battleship_ifcommon.c:95-134`), so the clock never runs out and no tie is
     ever evaluated.
   - **MEASURED at the reproduction (2026-07-30), and the heap is implicated.**
-    The arena IS rewound for Sudden Death -- heap used at entry is **272 bytes**
-    of 1,269,760. But its setup pass then consumes **1,226,768 bytes and leaves
-    only 42,992 free**, against the ~1,107,392 a normal battle start needs: about
-    **119 KB MORE than match one, for the same stage and fighters**. That is the
-    number to explain. `gNdsTaskmanArenaAllocFailCount` reads 26 on both sides of
+    The arena IS rewound for Sudden Death. Its setup pass consumes **1,226,768
+    bytes and leaves only 42,992 free**.
+    `gNdsTaskmanArenaAllocFailCount` reads 26 on both sides of
     the setup, so those failures belong to match one, not to Sudden Death.
+  - **THE "119 KB MORE THAN MATCH ONE" CLAIM IS WITHDRAWN (2026-07-31).** It was
+    `1,226,768 - 1,107,392`, and those are not the same quantity. 1,226,768 is a
+    measured high-water on this build; 1,107,392 came from the arena-SIZING work
+    on the board (`P1_EXECUTION_BOARD.md:198`), where it is "990,640 used plus a
+    116,752 request" -- a peak-demand figure, computed for a stress config that
+    that same paragraph describes as **192 KiB poorer**. A measured high-water
+    minus a derived peak demand from a different configuration is not a delta.
+  - **What the allocation ledger actually measured** (item 3, per-caller by
+    caller LR, `NDS_R2_SECOND_ENTRY_DIAG=1`, run `2026-07-31_010341`). Both
+    entries start their setup from the **identical rewound baseline of 319,968
+    bytes** -- measured directly at `scVSBattleStartBattle` and at
+    `scVSBattleStartSuddenDeath`, not inferred. From there:
+    - match one, setup plus a full minute of runtime: **925,816 B** -> 1,245,784
+    - Sudden Death setup: **906,568 B** -> 1,226,768
+    So Sudden Death's arena footprint is **19,248 bytes LOWER** than match one's,
+    and there is no excess to explain. Per caller it is stronger than that: 31
+    callers, overflow 0, no new caller sites, and 22 of them allocate a
+    byte-identical amount on both entries. The remaining rows differ only by
+    match one's *runtime* allocations, which Sudden Death has not made yet.
+  - **METHOD, and it cost two runs.** `capture-sudden-death-entry.ps1` rebuilds
+    the ROM on every invocation, and its build line did not pass
+    `NDS_R2_SECOND_ENTRY_DIAG=1`. So a hand-built diag ELF was silently
+    overwritten by the next run, the ledger symbols stopped existing, and the
+    gdb script kept reading them. **A gdb command file aborts on the first
+    command that errors -- silently, leaving a bare `(gdb) ` prompt** -- so one
+    dead symbol destroyed every proof after it and two consecutive runs reached
+    `battle-start` and printed nothing. It reads exactly like an emulator hang.
+    Fixed at the seam: the harness now takes `-SecondEntryDiag`, puts the flag on
+    the make line, verifies it in the generated config header the same way
+    `NDS_R2_BOTH_CPU` is verified, and **strips every diag-only read from the
+    script when the flag is off**, so a printf can never outlive its symbol.
+    If a lane ever prints nothing after an early stage, check the ELF exports
+    before suspecting the emulator: `arm-none-eabi-nm <elf> | grep <symbol>`.
+  - **The ledger's blind spot is now measured, not assumed.** taskman.c's
+    intra-TU `syTaskmanMalloc` calls bypass the wrapper. Heap consumed across the
+    Sudden Death setup is `1,226,768 - 319,968 = 906,800`; the ledger saw
+    906,568. The gap is **232 bytes**, so the wrapper sees essentially
+    everything, and the delta above is safe to quote. Do not quote the ledger as
+    an absolute total regardless -- see `battleship_sys_taskman.c`.
+  - **`M1BASE` also killed a cumulative-window trap before it published.** The
+    ledger is cumulative from boot, so "every caller exactly doubled" only means
+    `sd = boot + m1`, which equals `m1` alone if boot is zero. It is:
+    `SD-LEDGER-M1BASE-TOTAL=0`. Measuring that was the difference between a
+    proof and a coincidence, and the same care is owed to any other counter read
+    at two points.
+  - **Persistent-BSS audit (item 4) -- one real gap, four already correct.**
+    Every file-scope static holding a taskman-heap pointer or a VRAM handle was
+    enumerated and each of the five named categories was checked for whether it
+    is scene-scoped AND stale. Nothing was blanket-reset.
+    - animation cache (`sNdsR2AnimCacheArena`): WAS stale, fixed by the heap
+      GENERATION contract (item 1). Engaged on the run above:
+      `SD-HEAP-GEN=2`, `SD-CACHE-GEN-MISMATCH=1`.
+    - native OAM texture names (`sNdsIFCommonCloudTextureNames`,
+      `sNdsIFCommonTrafficTextureName`): WAS stale -- cleared only in
+      `ndsIFCommonNativeOamInit`, which runs once at boot, while the VRAM behind
+      them is released on every scene change. Fixed by
+      `ndsIFCommonNativeOamDiscardTextures`, wired into the scene-cache eviction
+      (`reloc_backend_assets.c:2162`). `sNdsTask39HitSparkGfx` is a raw
+      `SPRITE_GFX + cursor` pointer with the same boot-only clear, but it is
+      re-assigned by `ndsTask39PrepareHitSparks` (`nds_ifcommon_oam.c:2031`),
+      which sits INSIDE the function the cloud-name early-return guards -- so
+      zeroing the names re-runs it. Covered transitively; a separate reset would
+      be exactly the blanket reset to avoid.
+    - static-texture latch (`sNdsRendererBattleStaticTexturePrepared` / `Armed`):
+      already correct, cleared by `ndsRendererHardwareDiscardBattleStaticTextures`
+      (`nds_renderer.c:10640`).
+    - prepared-owner state (`sNdsNativeStageValidationCache`): already correct,
+      keyed on `topology_generation` + `topology_stamp` (`nds_renderer.c:21509`),
+      so it self-invalidates.
+    - renderer caches (`sNdsRendererTask36ReplayOwner`): already correct, reset
+      by `ndsRendererTask36ReplayReset` on the same generation/stamp mismatch.
     The stall itself: Sudden Death presents exactly **two** frames
     (`gNdsFrameCounter` 311 -> 312) and then presents no more, so the picture
     freezes with a live CPU. An async interrupt during the stall landed in

@@ -44,6 +44,13 @@ param(
     # stops once per IGNORED hit -- 240 blew the 180 s cap on a Task 103 build,
     # and so did 120.
     [ValidateRange(30, 3600)][int]$MatchedCameraCalls = 60,
+    # Build with NDS_R2_SECOND_ENTRY_DIAG=1 and read the second-entry
+    # instruments: the per-caller allocation ledger and the MObj chain probe.
+    # REQUIRED for any of the SD-LEDGER-* or SD-CHAIN-* output -- without it
+    # those symbols do not exist and the reads are stripped from the script
+    # rather than left to abort it. Costs a full rebuild and a slower ROM, which
+    # is why it is not the default.
+    [switch]$SecondEntryDiag,
     [switch]$DiagnoseHang,
     [ValidateRange(5, 300)][int]$HangSettleSeconds = 45,
     # Owner, 2026-07-30: "420 seconds is way too long, should be 180 secs max."
@@ -123,7 +130,15 @@ if (-not $NoBuild) {
     # canonical Boundary configuration produces -- Mario human and idle versus the
     # level-3 Fox CPU. A both-CPU build fights, scores, and ends decisively, which
     # is precisely the run that already failed to reach Sudden Death.
-    make -C $root "TARGET=$Target" "BUILD=$Build" 'NDS_R2_BOTH_CPU=0'
+    # The diag flag MUST be part of the build line, not left to the build
+    # directory's previous contents. This harness rebuilds on every run, so a
+    # hand-built NDS_R2_SECOND_ENTRY_DIAG=1 ELF is silently overwritten by the
+    # next invocation -- which is exactly what happened on 2026-07-31: the
+    # allocation ledger vanished from build-sd-stg mid-investigation and two
+    # runs died at the first stage.
+    $makeArgs = @("TARGET=$Target", "BUILD=$Build", 'NDS_R2_BOTH_CPU=0')
+    if ($SecondEntryDiag) { $makeArgs += 'NDS_R2_SECOND_ENTRY_DIAG=1' }
+    make -C $root @makeArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 # Trust the generated header, not the build directory's name. soak-freeze-watch
@@ -137,6 +152,23 @@ if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
         throw ('This ROM is NDS_R2_BOTH_CPU=1. Two level-3 CPUs fight to a ' +
                'decisive result, so the 0-0 tie this harness depends on cannot ' +
                'occur. Rebuild without -NoBuild.')
+    }
+    # Same rule for the diag flag, and for the same reason: the header is the
+    # only thing that knows what this ELF actually exports. Asking for the
+    # instruments and silently getting a build without them is how a run prints
+    # nothing and looks like an emulator problem.
+    $diagSeen = [regex]::Match(
+        (Get-Content -LiteralPath $configHeader -Raw),
+        '(?m)^#define\s+NDS_R2_SECOND_ENTRY_DIAG\s+(\d+)')
+    $diagOn = ($diagSeen.Success -and ([int]$diagSeen.Groups[1].Value -ne 0))
+    if ($SecondEntryDiag -and (-not $diagOn)) {
+        throw ('-SecondEntryDiag was requested but ' + $Build +
+               ' is built with NDS_R2_SECOND_ENTRY_DIAG=0, so the allocation ' +
+               'ledger and chain probe do not exist. Re-run without -NoBuild.')
+    }
+    if ((-not $SecondEntryDiag) -and $diagOn) {
+        Write-Host ('  note: ' + $Build + ' carries the second-entry diag; ' +
+                    'pass -SecondEntryDiag to read it.')
     }
 }
 foreach ($path in @($rom, $elf)) {
@@ -188,14 +220,34 @@ try {
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
     # One printf per value. A single bad expression aborts the whole printf
     # statement, and losing four proofs to one typo has happened here before.
-    [System.IO.File]::WriteAllLines($script, @(
+    $gdbLines = @(
         'set pagination off', 'set confirm off', 'set remotetimeout 60',
         "target remote 127.0.0.1:$($context.GdbPort)",
 
         # Stage 1: the match scene is up.
         'tbreak scVSBattleStartBattle',
         'continue',
-        'printf "SD-STAGE=battle-start\n"'
+        'printf "SD-STAGE=battle-start\n"',
+        # ITEM 3 baseline. scVSBattleStartBattle is the exact structural analogue
+        # of scVSBattleStartSuddenDeath, and this tbreak lands on entry, so match
+        # 1's setup has not allocated yet. Paired with the `timer-live` dump below
+        # this measures match 1's setup the same way the ENTRY/RUN pair measures
+        # Sudden Death's -- with the same instrument, so the two are comparable.
+        # Without it the match-1 side has to be back-computed from the Sudden
+        # Death numbers, which assumes the ledger saw every allocation and so
+        # cannot be used to test that assumption.
+        # Ordered by value, because a gdb command file ABORTS the whole remaining
+        # script on the first command that errors and drops to a bare prompt with
+        # no diagnostic -- the same silent failure `dump binary memory` had here.
+        # TOTAL alone decides the question, so it goes first and the bulk array
+        # read goes last, where losing it costs only detail.
+        'printf "SD-HEAP-USED-M1BASE=%u\n", (unsigned)((char *)gSYTaskmanGeneralHeap.ptr - (char *)gSYTaskmanGeneralHeap.start)',
+        'printf "SD-LEDGER-M1BASE-TOTAL=%u\n", gNdsAllocLedgerTotalBytes',
+        'printf "SD-LEDGER-M1BASE-USED=%u\n", gNdsAllocLedgerUsed',
+        'printf "SD-LEDGER-M1BASE-OVERFLOW=%u\n", gNdsAllocLedgerOverflow',
+        'printf "SD-LEDGER-M1BASE-BEGIN\n"',
+        'print gNdsAllocLedger',
+        'printf "SD-LEDGER-M1BASE-END\n"'
     ) + $(if ($MatchedCapture) { @(
         # Arm A: match 1, N camera-proc calls in. Same clock as arm B below, so
         # both shots are taken at the same converged camera distance.
@@ -344,6 +396,17 @@ try {
         'printf "SD-HEAP-USED-ENTRY=%u\n", (unsigned)((char *)gSYTaskmanGeneralHeap.ptr - (char *)gSYTaskmanGeneralHeap.start)',
         'printf "SD-HEAP-FREE-ENTRY=%u\n", (unsigned)((char *)gSYTaskmanGeneralHeap.end - (char *)gSYTaskmanGeneralHeap.ptr)',
         'printf "SD-ARENA-FAIL-ENTRY=%u\n", gNdsTaskmanArenaAllocFailCount',
+        # ITEM 3: the allocation ledger, snapshotted BEFORE Sudden Death's setup
+        # runs. Paired with the identical dump at the `running` stage, the
+        # per-caller delta between them IS the Sudden Death setup, which is what
+        # has to explain the ~119 KB it takes over match 1. One `print` emits the
+        # whole table.
+        'printf "SD-LEDGER-ENTRY-USED=%u\n", gNdsAllocLedgerUsed',
+        'printf "SD-LEDGER-ENTRY-TOTAL=%u\n", gNdsAllocLedgerTotalBytes',
+        'printf "SD-LEDGER-ENTRY-OVERFLOW=%u\n", gNdsAllocLedgerOverflow',
+        'printf "SD-LEDGER-ENTRY-BEGIN\n"',
+        'print gNdsAllocLedger',
+        'printf "SD-LEDGER-ENTRY-END\n"',
 
         # Stage 5: did setup finish, and does the Sudden Death match then run? If
         # the reported stall is real, one of these two never prints and the last
@@ -357,6 +420,13 @@ try {
         'printf "SD-HEAP-USED-RUN=%u\n", (unsigned)((char *)gSYTaskmanGeneralHeap.ptr - (char *)gSYTaskmanGeneralHeap.start)',
         'printf "SD-HEAP-FREE-RUN=%u\n", (unsigned)((char *)gSYTaskmanGeneralHeap.end - (char *)gSYTaskmanGeneralHeap.ptr)',
         'printf "SD-ARENA-FAIL-RUN=%u\n", gNdsTaskmanArenaAllocFailCount',
+        # ITEM 3, other side of the bracket: after Sudden Death's setup pass.
+        'printf "SD-LEDGER-RUN-USED=%u\n", gNdsAllocLedgerUsed',
+        'printf "SD-LEDGER-RUN-TOTAL=%u\n", gNdsAllocLedgerTotalBytes',
+        'printf "SD-LEDGER-RUN-OVERFLOW=%u\n", gNdsAllocLedgerOverflow',
+        'printf "SD-LEDGER-RUN-BEGIN\n"',
+        'print gNdsAllocLedger',
+        'printf "SD-LEDGER-RUN-END\n"',
         # The heap-generation contract, proven engaged rather than assumed. A
         # second scene entry MUST have bumped the generation and MUST have made
         # the cache notice; a zero mismatch count here means the contract never
@@ -555,7 +625,26 @@ try {
         # manufacture one.
         'detach',
         'quit'
-    ) }))
+    ) })
+    # A gdb command file ABORTS on the first command that errors, silently,
+    # leaving a bare `(gdb) ` prompt and no diagnostic -- so ONE printf naming a
+    # symbol this build does not export destroys every proof after it. That is
+    # measured, not theoretical: on 2026-07-31 the ledger reads survived in the
+    # script after the build stopped defining them, and two consecutive runs
+    # reached `battle-start` and printed nothing further.
+    #
+    # Emitting the reads only when their defining flag is on makes the two
+    # impossible to separate. Keep this filter keyed to the SYMBOLS, not the
+    # markers, so a new diag read cannot be added without being covered.
+    if (-not $SecondEntryDiag) {
+        $gdbLines = $gdbLines | Where-Object {
+            # Symbols first. The bare SD-LEDGER-*-BEGIN/END markers name no
+            # symbol, so they would survive and frame an empty block that reads
+            # like a zero result rather than an absent one.
+            $_ -notmatch 'gNdsAllocLedger|gNdsR2ChainProbe|gNdsR2Stage(SteadyAdmit|TopologyRebuild|MaterialReject)|SD-LEDGER-|SD-CHAIN-'
+        }
+    }
+    [System.IO.File]::WriteAllLines($script, $gdbLines)
     $gdbProcess = Start-Process -FilePath $Gdb `
         -ArgumentList @('-q', '-x', $script, $elf) `
         -WorkingDirectory $root -RedirectStandardOutput $stdout `
