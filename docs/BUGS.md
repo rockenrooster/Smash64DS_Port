@@ -247,11 +247,17 @@ These bugs should be fixed for P1 delivery.
     `gNdsSCVSBattleLifecycleArenaAdapterCount=2` proves the second heap
     initialization occurred. Those facts do not refute the cursor
     false-positive above.
-  - The reproduction lane has an independent configuration bug.
-    `scripts/soak-freeze-watch.ps1:90-94` rebuilds the default
-    `build-r2-bothcpu` without passing `NDS_R2_BOTH_CPU=1`; its current generated
-    `nds_build_config.h` says `NDS_R2_BOTH_CPU 0`. A fresh soak may therefore
-    never create the CPU-vs-CPU tie or enter Sudden Death at all.
+  - The reproduction lane had an independent configuration bug, now FIXED
+    (2026-07-30). `scripts/soak-freeze-watch.ps1` rebuilt the default
+    `build-r2-bothcpu` without passing `NDS_R2_BOTH_CPU=1`, and the Makefile
+    default is 0, so the directory said both-CPU while its generated
+    `nds_build_config.h` said `NDS_R2_BOTH_CPU 0`. Every soak run that way had a
+    human player on P1, never created the CPU-vs-CPU tie, and therefore never
+    entered Sudden Death -- while looking exactly like a clean run. The script
+    now takes `-BothCpu` (default ON, matching the default build), passes it to
+    `make`, and then READS THE GENERATED HEADER BACK and throws if the ROM is not
+    the configuration that was asked for. Naming a build directory after a flag
+    is not the same as setting it, and only the header knows which happened.
   - FGM 514 remains absent from the DS FGM selector/pack. That explains the
     missing announcer voice but cannot cause the render corruption or freeze.
   - Proposed owning-seam fix: explicitly invalidate the R2 animation cache at

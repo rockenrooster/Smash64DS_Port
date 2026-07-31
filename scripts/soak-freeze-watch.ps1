@@ -7,6 +7,15 @@ param(
     [string]$Build = 'build-r2-bothcpu',
     [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [switch]$NoBuild,
+    # NDS_R2_BOTH_CPU, passed to make explicitly. Defaults ON because the default
+    # -Build IS the both-CPU stress ROM, and because the flag defaults to 0 in the
+    # Makefile: until 2026-07-30 this script built `build-r2-bothcpu` WITHOUT
+    # passing it, so the directory said both-CPU and the generated
+    # nds_build_config.h said `NDS_R2_BOTH_CPU 0`. A soak run that way has a human
+    # player on P1, never produces the CPU-vs-CPU tie, and therefore never enters
+    # Sudden Death at all -- which is the only thing this ROM exists to reproduce
+    # (docs/BUGS.md, Sudden Death row). Set -BothCpu:$false for a single-CPU soak.
+    [bool]$BothCpu = $true,
     [ValidateRange(2, 120)][int]$PollSeconds = 10,
     # Owner, 2026-07-29: *"for a soak 5 mins tops, because I don't think the
     # results screen ever ends"*, then *"5 mins is too long for the stress ROM,
@@ -102,8 +111,24 @@ $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -E
 if (-not $NoBuild) {
     if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
     if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-    make -C $root "TARGET=$Target" "BUILD=$Build"
+    make -C $root "TARGET=$Target" "BUILD=$Build" `
+        "NDS_R2_BOTH_CPU=$([int][bool]$BothCpu)"
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+# Prove the ROM is the configuration that was asked for, rather than trusting the
+# build directory's name. The generated header is the only thing that knows.
+$configHeader = Join-Path $root "$Build\nds_build_config.h"
+if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
+    $wantBothCpu = [int][bool]$BothCpu
+    $seen = [regex]::Match(
+        (Get-Content -LiteralPath $configHeader -Raw),
+        '(?m)^#define\s+NDS_R2_BOTH_CPU\s+(\d+)')
+    if ($seen.Success -and ([int]$seen.Groups[1].Value -ne $wantBothCpu)) {
+        throw ("Soak ROM is NDS_R2_BOTH_CPU=$($seen.Groups[1].Value) but " +
+               "-BothCpu asked for $wantBothCpu. A both-CPU soak that is not " +
+               'both-CPU never creates the tie and never reaches Sudden Death, ' +
+               'and it looks exactly like a clean run. Rebuild without -NoBuild.')
+    }
 }
 foreach ($path in @($rom, $elf)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
