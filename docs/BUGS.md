@@ -1606,3 +1606,41 @@ These bugs should be fixed for P1 delivery.
   neither Boundary's battle nor Latest's startup, so nothing in the standing
   verifier set would have caught this -- the Sudden Death lane has to be part of
   qualifying any change to shared math or shared RAM.
+
+-Second-entry stage corruption: E0 (collision Yakumono storage lifetime) is
+  REFUTED, and the pre-registered particle hazard beside it is CONFIRMED latent.
+  Both from an owner-supplied diagnosis, 2026-07-31, tested before any run.
+  E0's hypothesis was that `mpCollisionInitGroundData` clears
+  `gMPCollisionYakumonoDObjs` and `gMPCollisionSpeeds` where BattleShip allocates
+  them fresh per scene, so entry two would memset through pointers belonging to
+  the previous taskman generation and corrupt reclaimed memory. It came with its
+  own kill-switch -- "if both pointers are permanent storage outside the taskman
+  heap, KILL this hypothesis" -- and that is what happened, in three commands and
+  no emulator run:
+    `gMPCollisionYakumonoDObjs = &sNdsMPCollisionYakumonoDObjs` (diagnostics.c:7033)
+    `gMPCollisionSpeeds        =  sNdsMPCollisionSpeeds`        (diagnostics.c:7035)
+    `nm -S`: `sNdsMPCollisionYakumonoDObjs` 0x100 B `.bss`,
+             `sNdsMPCollisionSpeeds`        0x300 B `.bss`
+  The port deliberately replaced the per-scene allocation with permanent static
+  arrays, which is *why* the init clears rather than allocates. The memsets at
+  `reloc_backend_compat_shims.c:13164-13168` write into permanent `.bss`. No
+  cross-generation pointer, no stale dereference. Do not re-open without
+  contradicting evidence.
+  CONFIRMED and pre-registered, same class, different lifetime:
+  `gGRCommonStruct.pupupu.leaves_xf` and `.dust_xf` are assigned at
+  `grpupupu.c:246`/`:506`, are never nulled between scenes, and are dereferenced
+  on the next teardown (`:333-335`, `:533-535`) as
+  `lbParticleEjectStructID(...->generator_id, 1)`. They are inert ONLY because
+  `NDS_R2_PARTICLE_RUNTIME=0` makes the constructor a stub that returns NULL, so
+  the `!= NULL` guard skips. **They arm themselves the moment the particle
+  runtime is enabled** -- i.e. the first thing clause 2 does. Null both on stage
+  init as part of turning the runtime on, not afterwards as a bug fix.
+  Surviving and unaddressed from the same diagnosis, in its own priority order:
+  the STG cost roughly doubling on entry two (171,328 -> 378,880 vs a measured
+  first-entry P95 of 178,560); a same-binary per-segment renderer selector
+  (replay / R2 live / generic) as the decisive falsifier instead of separately
+  linked ROMs; and the source -> matrices -> prepared runs -> GX words hash
+  ladder to find the FIRST differing representation rather than the one where it
+  becomes visible. The Task 36 replay mask 0xA1 protects segments 0/5/7 and the
+  visibly broken ones are 1/2/3/4/6, which is consistent with live-path payload
+  rather than a wholesale asset or camera failure.
