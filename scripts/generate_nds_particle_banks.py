@@ -57,6 +57,26 @@ TEXTURE_BANK = ("efcommon_particle_txb",
 DEFAULT_HEADER = Path("include/nds/generated/nds_particle_banks.generated.h")
 DEFAULT_INC = Path("src/nds/generated/nds_particle_banks.generated.inc")
 DEFAULT_REPORT = Path("docs/optimization/NDS_PARTICLE_BANKS.generated.json")
+DEFAULT_TEXTURE_ASSET = Path("assets/particles/efcommon_particle_textures.ds.bin")
+
+# Texels and palettes ship as a NitroFS payload rather than as linked .rodata.
+# This is not a size preference; it is the only place they fit. Linked const
+# data comes out of the same 4 MB the boot-time taskman arena search is trying
+# to claim (src/port/diagnostics.c searches down from 0x150000 in 0x1000 steps
+# and FLOORS at 0x130000), so 82,848 bytes of .rodata costs the arena 82,848
+# bytes one-for-one. With the pack linked whole, that search bottomed out at
+# the floor and the first battle allocation -- 4,896 bytes against 4,032 free --
+# hung the ROM in syTaskmanMalloc's `while (TRUE);`. ROM is the cheap resource
+# here (PROJECT_GOAL "ROM and RAM Philosophy"), main RAM is not.
+#
+# The script bank and the index tables stay linked: the interpreter walks the
+# bytecode every frame and indexes the tables by SOURCE id, so paging those
+# would put file I/O in a gameplay frame for 12,195 bytes of nothing.
+#
+# Layout is the raw texture block followed by the palette block, matching the
+# offsets already in gNdsParticleTextures: data_offset is a byte offset from 0
+# and palette_offset is a u16 ENTRY index from NDS_PARTICLE_PALETTE_ASSET_OFFSET.
+TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
 
 # The port's efcommon bank handle. Only calls whose bank argument names it can
 # reach this bank; the per-fighter and per-stage banks are separate handles.
@@ -1030,22 +1050,27 @@ def build_pack(repo_root: Path) -> dict:
                                if row["packed"])
     source_texture_bytes = sum(row["source_bytes"] for row in report_rows
                                if row["packed"])
-    # The linked cost, matching `arm-none-eabi-size -A` on the compiled pack:
-    # payload plus the index tables plus the two exported scalars. The pack is
-    # const .rodata inside the ARM9 binary rather than scene-arena allocation,
-    # but both come out of the same 4 MB, so it is charged against the measured
-    # arena headroom.
-    payload_bytes = (len(script_payload) + len(texture_data)
-                     + 2 * len(palette_data))
+    # The whole pack, and then the half of it that actually competes with the
+    # taskman arena. Only linked_bytes is charged against the measured arena
+    # headroom -- texture_asset is a NitroFS payload and costs ROM, not RAM
+    # (see TEXTURE_ASSET_NITRO_PATH for why that distinction decides whether
+    # the ROM boots at all).
+    texture_asset = (bytes(texture_data)
+                     + b"".join(struct.pack("<H", entry)
+                                for entry in palette_data))
+    payload_bytes = len(script_payload) + len(texture_asset)
+    # Matches `arm-none-eabi-size -A` on the compiled pack: index tables plus
+    # the two exported scalars.
     table_bytes_resident = (4 * len(scripts)          # script offsets
                             + 16 * len(textures)      # texture rows
                             + len(textures)           # frame counts
                             + 8)                      # exported scalars
-    resident = payload_bytes + table_bytes_resident
+    linked = len(script_payload) + table_bytes_resident
     return {
         "scripts": scripts, "textures": textures, "reach": reach,
         "script_payload": script_payload, "rows": rows,
         "texture_data": bytes(texture_data), "palette_data": palette_data,
+        "texture_asset": texture_asset,
         "offsets": offsets, "report_rows": report_rows,
         "source_checksum": source_checksum, "table_checksum": table_checksum,
         "packed_texture_ids": wanted,
@@ -1053,7 +1078,9 @@ def build_pack(repo_root: Path) -> dict:
         "source_texture_bytes": source_texture_bytes,
         "payload_bytes": payload_bytes,
         "table_bytes": table_bytes_resident,
-        "resident_bytes": resident,
+        "pack_bytes": payload_bytes + table_bytes_resident,
+        "asset_bytes": len(texture_asset),
+        "linked_bytes": linked,
     }
 
 
@@ -1064,13 +1091,6 @@ def _hex_rows(data: bytes, per_row: int = 16) -> str:
     return "\n".join(
         "    " + ", ".join(f"0x{byte:02x}" for byte in data[index:index + per_row]) + ","
         for index in range(0, len(data), per_row)
-    )
-
-
-def _u16_rows(values: list[int], per_row: int = 8) -> str:
-    return "\n".join(
-        "    " + ", ".join(f"0x{value:04x}" for value in values[index:index + per_row]) + ","
-        for index in range(0, len(values), per_row)
     )
 
 
@@ -1096,15 +1116,23 @@ def render_header(pack: dict) -> str:
  * gNdsParticleTextures is indexed by SOURCE texture id, so
  * gNdsParticleTextures[script->texture_id] needs no remapping. An unpacked row
  * carries ds_format NDS_PARTICLE_FORMAT_NONE and sentinel offsets.
- *   data_offset    -- byte offset into gNdsParticleTextureData of frame 0;
- *                     frames are contiguous, stride width*height*bits/8.
- *   palette_offset -- ENTRY index into gNdsParticlePaletteData.
+ *   data_offset    -- byte offset into the texel block of frame 0; frames are
+ *                     contiguous, stride width*height*bits/8.
+ *   palette_offset -- ENTRY index into the palette block.
  *   palette_entries-- entries owned by this texture. For PAL4/PAL16/PAL256
  *                     entry 0 is the transparent slot, so the runtime sets the
  *                     colour-0-transparent bit unconditionally; A3I5/A5I3 use
  *                     every entry as a colour and carry alpha in the texel.
  * Each palette starts on an {DS_PALETTE_ALIGN_ENTRIES}-entry boundary so the DS palette base
  * register can address it, and each image block is {DS_TEXTURE_DATA_ALIGN}-byte aligned.
+ *
+ * BOTH BLOCKS LIVE IN NDS_PARTICLE_TEXTURE_ASSET_PATH, NOT IN THE ARM9 IMAGE.
+ * Texels start at 0 and the palette at NDS_PARTICLE_PALETTE_ASSET_OFFSET, so a
+ * loader reads the file once and hands glTexImage2D/glColorTableEXT slices of
+ * it. Linking them instead costs the boot-time taskman arena search the same
+ * {pack["asset_bytes"]} bytes one-for-one and hangs the ROM before the first
+ * battle allocation -- the reason for the split is in the generator, above
+ * TEXTURE_ASSET_NITRO_PATH. Do not "simplify" this back into an array.
  */
 
 #define NDS_PARTICLE_SCRIPT_COUNT {len(scripts)}u
@@ -1118,8 +1146,16 @@ def render_header(pack: dict) -> str:
 #define NDS_PARTICLE_TEXTURE_UNPACKED 0x{SENTINEL_U32:08x}u
 #define NDS_PARTICLE_TEXTURE_DATA_BYTES {len(pack["texture_data"])}u
 #define NDS_PARTICLE_PALETTE_ENTRIES {len(pack["palette_data"])}u
-/* Linked .rodata cost: payload {pack["payload_bytes"]} + index tables {pack["table_bytes"]}. */
-#define NDS_PARTICLE_RESIDENT_BYTES {pack["resident_bytes"]}u
+
+/* The NitroFS texel/palette payload. */
+#define NDS_PARTICLE_TEXTURE_ASSET_PATH "{TEXTURE_ASSET_NITRO_PATH}"
+#define NDS_PARTICLE_TEXTURE_ASSET_BYTES {pack["asset_bytes"]}u
+#define NDS_PARTICLE_PALETTE_ASSET_OFFSET {len(pack["texture_data"])}u
+
+/* .rodata in the ARM9 image, and therefore charged against the arena search:
+ * script bank {len(pack["script_payload"])} + index tables {pack["table_bytes"]}. The other
+ * {pack["asset_bytes"]} bytes of the {pack["pack_bytes"]}-byte pack are in the file above. */
+#define NDS_PARTICLE_LINKED_BYTES {pack["linked_bytes"]}u
 
 /* DS TEXIMAGE_PARAM texture-format field values. */
 #define NDS_PARTICLE_FORMAT_NONE {DS_NONE}u
@@ -1148,8 +1184,6 @@ extern const u32 gNdsParticleScriptBankBytes;
 extern const u32 gNdsParticleScriptOffsets[NDS_PARTICLE_SCRIPT_COUNT];
 extern const NDSParticleTexture gNdsParticleTextures[NDS_PARTICLE_TEXTURE_COUNT];
 extern const u32 gNdsParticleTextureCount;
-extern const u8 gNdsParticleTextureData[NDS_PARTICLE_TEXTURE_DATA_BYTES];
-extern const u16 gNdsParticlePaletteData[NDS_PARTICLE_PALETTE_ENTRIES];
 /* NDSParticleTexture has no frame count; animation needs one. */
 extern const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT];
 
@@ -1198,15 +1232,10 @@ const u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES]
 {_hex_rows(pack["script_payload"])}
 }};
 
-const u8 gNdsParticleTextureData[NDS_PARTICLE_TEXTURE_DATA_BYTES]
-    __attribute__((aligned(4))) = {{
-{_hex_rows(pack["texture_data"])}
-}};
-
-const u16 gNdsParticlePaletteData[NDS_PARTICLE_PALETTE_ENTRIES]
-    __attribute__((aligned(4))) = {{
-{_u16_rows(pack["palette_data"])}
-}};
+/* The {pack["asset_bytes"]}-byte texel and palette blocks are NOT here. They ship as
+ * NDS_PARTICLE_TEXTURE_ASSET_PATH because linked .rodata is taken out of the
+ * boot-time taskman arena search one-for-one, and this pack is large enough to
+ * push that search past its 0x130000 floor. */
 """
 
 
@@ -1247,10 +1276,12 @@ def render_report(pack: dict) -> dict:
             "script_bank_bytes": len(pack["script_payload"]),
             "payload_bytes": pack["payload_bytes"],
             "index_table_bytes": pack["table_bytes"],
-            "resident_bytes": pack["resident_bytes"],
+            "pack_bytes": pack["pack_bytes"],
+            "asset_bytes": pack["asset_bytes"],
+            "linked_bytes": pack["linked_bytes"],
             "arena_headroom_bytes": ESTIMATE["arena_headroom_bytes"],
             "spare_bytes": (ESTIMATE["arena_headroom_bytes"]
-                            - pack["resident_bytes"]),
+                            - pack["linked_bytes"]),
             "estimate_2026_07_27_bytes": estimate_total,
             "estimate_2026_07_27_scripts": ESTIMATE["scripts"],
             "estimate_2026_07_27_textures": ESTIMATE["textures"],
@@ -1270,14 +1301,17 @@ def main() -> int:
     parser.add_argument("--out-header", type=Path, default=DEFAULT_HEADER)
     parser.add_argument("--out-inc", type=Path, default=DEFAULT_INC)
     parser.add_argument("--out-json", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument("--out-texture-asset", type=Path,
+                        default=DEFAULT_TEXTURE_ASSET)
     parser.add_argument("--check", action="store_true",
                         help="rebuild in memory and compare existing outputs")
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
     outputs = []
-    for path in (args.out_header, args.out_inc, args.out_json):
+    for path in (args.out_header, args.out_inc, args.out_json,
+                 args.out_texture_asset):
         outputs.append(path if path.is_absolute() else repo_root / path)
-    header_path, inc_path, json_path = outputs
+    header_path, inc_path, json_path, asset_path = outputs
 
     pack = build_pack(repo_root)
     header = render_header(pack).encode("ascii")
@@ -1287,20 +1321,24 @@ def main() -> int:
 
     if args.check:
         # The header and the report are committed, so they must always match.
-        # The .inc is a build product under the gitignored src/nds/generated/,
-        # so absence means "not built yet" rather than "drifted".
+        # The .inc is a build product under the gitignored src/nds/generated/
+        # and the texture payload one under the gitignored assets/, so absence
+        # means "not built yet" rather than "drifted".
         stale = [str(path) for path, wanted
                  in ((header_path, header), (json_path, report))
                  if not path.is_file() or path.read_bytes() != wanted]
-        if inc_path.is_file() and inc_path.read_bytes() != inc:
-            stale.append(str(inc_path))
+        for path, wanted in ((inc_path, inc),
+                             (asset_path, pack["texture_asset"])):
+            if path.is_file() and path.read_bytes() != wanted:
+                stale.append(str(path))
         if stale:
             print("stale particle bank pack: " + ", ".join(stale),
                   file=sys.stderr)
             return 1
     else:
         for path, wanted in ((header_path, header), (inc_path, inc),
-                             (json_path, report)):
+                             (json_path, report),
+                             (asset_path, pack["texture_asset"])):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(wanted)
 
@@ -1309,9 +1347,11 @@ def main() -> int:
           f"textures={len(pack['packed_texture_ids'])}/{len(pack['textures'])} "
           f"tex_n64={pack['source_texture_bytes']} "
           f"tex_ds={pack['packed_texture_bytes']} "
-          f"resident={pack['resident_bytes']} "
+          f"pack={pack['pack_bytes']} "
+          f"linked={pack['linked_bytes']} "
+          f"asset={pack['asset_bytes']} "
           f"headroom={ESTIMATE['arena_headroom_bytes']} "
-          f"spare={ESTIMATE['arena_headroom_bytes'] - pack['resident_bytes']} "
+          f"spare={ESTIMATE['arena_headroom_bytes'] - pack['linked_bytes']} "
           f"source=0x{pack['source_checksum']:08x} "
           f"table=0x{pack['table_checksum']:08x}")
     return 0

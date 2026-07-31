@@ -6,6 +6,7 @@ $generator = Join-Path $PSScriptRoot 'generate_nds_particle_banks.py'
 $reportPath = Join-Path $root 'docs/optimization/NDS_PARTICLE_BANKS.generated.json'
 $headerPath = Join-Path $root 'include/nds/generated/nds_particle_banks.generated.h'
 $incPath = Join-Path $root 'src/nds/generated/nds_particle_banks.generated.inc'
+$assetPath = Join-Path $root 'assets/particles/efcommon_particle_textures.ds.bin'
 
 if ($null -eq (Get-Command $Python -ErrorAction SilentlyContinue)) {
     throw "Python command not found: $Python"
@@ -78,15 +79,28 @@ if (([int64]$report.bytes.script_bank_bytes -ne 10912) -or
     ([int64]$report.bytes.ds_palette_bytes -ne 672) -or
     ([int64]$report.bytes.payload_bytes -ne 93760) -or
     ([int64]$report.bytes.index_table_bytes -ne 1283) -or
-    ([int64]$report.bytes.resident_bytes -ne 95043) -or
+    ([int64]$report.bytes.pack_bytes -ne 95043) -or
+    ([int64]$report.bytes.asset_bytes -ne 82848) -or
+    ([int64]$report.bytes.linked_bytes -ne 12195) -or
     ([int64]$report.bytes.arena_headroom_bytes -ne 210320) -or
-    ([int64]$report.bytes.spare_bytes -ne 115277)) {
-    throw ('Particle bank footprint changed: resident ' +
-        "$([int64]$report.bytes.resident_bytes), spare " +
+    ([int64]$report.bytes.spare_bytes -ne 198125)) {
+    throw ('Particle bank footprint changed: pack ' +
+        "$([int64]$report.bytes.pack_bytes), linked " +
+        "$([int64]$report.bytes.linked_bytes), asset " +
+        "$([int64]$report.bytes.asset_bytes), spare " +
         "$([int64]$report.bytes.spare_bytes).")
 }
-if ([int64]$report.bytes.resident_bytes -ge [int64]$report.bytes.arena_headroom_bytes) {
+# Only the LINKED half competes with the boot-time taskman arena search. The
+# whole pack did, until 2026-07-31: at 95,043 bytes the fine search bottomed out
+# at its 0x130000 floor and the first battle allocation (4,896 asked, 4,032
+# free) hung the ROM in syTaskmanMalloc. Charging the NitroFS payload here again
+# would re-arm exactly that failure.
+if ([int64]$report.bytes.linked_bytes -ge [int64]$report.bytes.arena_headroom_bytes) {
     throw 'Particle bank pack no longer fits measured arena headroom.'
+}
+if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
+    [int64]$report.bytes.pack_bytes) {
+    throw 'Particle bank linked + asset bytes do not account for the pack.'
 }
 if ($report.checksums.source_sha256_lo -ne '0xa2a1e85f') {
     throw "efcommon source identity changed: $($report.checksums.source_sha256_lo)"
@@ -148,7 +162,10 @@ foreach ($token in @(
     '#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 23u',
     '#define NDS_PARTICLE_TEXTURE_DATA_BYTES 82176u',
     '#define NDS_PARTICLE_PALETTE_ENTRIES 336u',
-    '#define NDS_PARTICLE_RESIDENT_BYTES 95043u',
+    '#define NDS_PARTICLE_TEXTURE_ASSET_PATH "nitro:/particles/efcommon_particle_textures.ds.bin"',
+    '#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 82848u',
+    '#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 82176u',
+    '#define NDS_PARTICLE_LINKED_BYTES 12195u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
     '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x8db9d3bdu',
     'extern const u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES];',
@@ -156,12 +173,18 @@ foreach ($token in @(
     'extern const u32 gNdsParticleScriptOffsets[NDS_PARTICLE_SCRIPT_COUNT];',
     'extern const NDSParticleTexture gNdsParticleTextures[NDS_PARTICLE_TEXTURE_COUNT];',
     'extern const u32 gNdsParticleTextureCount;',
-    'extern const u8 gNdsParticleTextureData[NDS_PARTICLE_TEXTURE_DATA_BYTES];',
-    'extern const u16 gNdsParticlePaletteData[NDS_PARTICLE_PALETTE_ENTRIES];',
     'extern const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT];',
     'BIG-ENDIAN N64 data')) {
     if (-not $header.Contains($token)) {
         throw "Generated particle bank header lost: $token"
+    }
+}
+# The texels must not come back into the image under any name. A declaration is
+# how that regression would start.
+foreach ($banned in @('gNdsParticleTextureData', 'gNdsParticlePaletteData')) {
+    if ($header.Contains("$banned[")) {
+        throw ("Generated particle bank header re-declares $banned as an " +
+            'array; the texel/palette blocks ship as NitroFS payload.')
     }
 }
 
@@ -198,10 +221,29 @@ if (Test-Path -LiteralPath $incPath) {
         throw ("Texture table holds $unpacked sentinel rows, expected " +
             "$(47 - 23).")
     }
+    foreach ($banned in @('gNdsParticleTextureData', 'gNdsParticlePaletteData')) {
+        if ($inc.Contains("$banned[")) {
+            throw ("Generated particle bank .inc defines $banned; the texel " +
+                'and palette blocks ship as NitroFS payload, and linking them ' +
+                'takes their 82848 bytes straight out of the taskman arena.')
+        }
+    }
     $incState = 'built'
 }
 
+# assets/ is gitignored, so the payload only exists once the generator has run.
+# When it does, its size is the contract the offset tables were written against.
+$assetState = 'not built'
+if (Test-Path -LiteralPath $assetPath) {
+    $assetBytes = (Get-Item -LiteralPath $assetPath).Length
+    if ($assetBytes -ne 82848) {
+        throw "Particle texture payload is $assetBytes bytes, expected 82848."
+    }
+    $assetState = 'built'
+}
+
 Write-Output (('Particle bank pack passed: 55/119 reachable efcommon scripts, ' +
-    '23/47 textures, 136248 B N64 texture -> 82752 B DS, 95043 B linked ' +
-    '(93760 payload + 1283 index) of 210320 B arena headroom (115277 B ' +
-    "spare), 6 bit-exact CI4 textures, linear texel order pinned, .inc $incState."))
+    '23/47 textures, 136248 B N64 texture -> 82752 B DS, 12195 B linked ' +
+    '(10912 script bank + 1283 index) of 210320 B arena headroom (198125 B ' +
+    'spare) plus 82848 B NitroFS payload, 6 bit-exact CI4 textures, linear ' +
+    "texel order pinned, .inc $incState, payload $assetState."))

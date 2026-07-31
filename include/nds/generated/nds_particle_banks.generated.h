@@ -18,15 +18,23 @@
  * gNdsParticleTextures is indexed by SOURCE texture id, so
  * gNdsParticleTextures[script->texture_id] needs no remapping. An unpacked row
  * carries ds_format NDS_PARTICLE_FORMAT_NONE and sentinel offsets.
- *   data_offset    -- byte offset into gNdsParticleTextureData of frame 0;
- *                     frames are contiguous, stride width*height*bits/8.
- *   palette_offset -- ENTRY index into gNdsParticlePaletteData.
+ *   data_offset    -- byte offset into the texel block of frame 0; frames are
+ *                     contiguous, stride width*height*bits/8.
+ *   palette_offset -- ENTRY index into the palette block.
  *   palette_entries-- entries owned by this texture. For PAL4/PAL16/PAL256
  *                     entry 0 is the transparent slot, so the runtime sets the
  *                     colour-0-transparent bit unconditionally; A3I5/A5I3 use
  *                     every entry as a colour and carry alpha in the texel.
  * Each palette starts on an 8-entry boundary so the DS palette base
  * register can address it, and each image block is 4-byte aligned.
+ *
+ * BOTH BLOCKS LIVE IN NDS_PARTICLE_TEXTURE_ASSET_PATH, NOT IN THE ARM9 IMAGE.
+ * Texels start at 0 and the palette at NDS_PARTICLE_PALETTE_ASSET_OFFSET, so a
+ * loader reads the file once and hands glTexImage2D/glColorTableEXT slices of
+ * it. Linking them instead costs the boot-time taskman arena search the same
+ * 82848 bytes one-for-one and hangs the ROM before the first
+ * battle allocation -- the reason for the split is in the generator, above
+ * TEXTURE_ASSET_NITRO_PATH. Do not "simplify" this back into an array.
  */
 
 #define NDS_PARTICLE_SCRIPT_COUNT 119u
@@ -40,8 +48,16 @@
 #define NDS_PARTICLE_TEXTURE_UNPACKED 0xffffffffu
 #define NDS_PARTICLE_TEXTURE_DATA_BYTES 82176u
 #define NDS_PARTICLE_PALETTE_ENTRIES 336u
-/* Linked .rodata cost: payload 93760 + index tables 1283. */
-#define NDS_PARTICLE_RESIDENT_BYTES 95043u
+
+/* The NitroFS texel/palette payload. */
+#define NDS_PARTICLE_TEXTURE_ASSET_PATH "nitro:/particles/efcommon_particle_textures.ds.bin"
+#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 82848u
+#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 82176u
+
+/* .rodata in the ARM9 image, and therefore charged against the arena search:
+ * script bank 10912 + index tables 1283. The other
+ * 82848 bytes of the 95043-byte pack are in the file above. */
+#define NDS_PARTICLE_LINKED_BYTES 12195u
 
 /* DS TEXIMAGE_PARAM texture-format field values. */
 #define NDS_PARTICLE_FORMAT_NONE 0u
@@ -70,8 +86,6 @@ extern const u32 gNdsParticleScriptBankBytes;
 extern const u32 gNdsParticleScriptOffsets[NDS_PARTICLE_SCRIPT_COUNT];
 extern const NDSParticleTexture gNdsParticleTextures[NDS_PARTICLE_TEXTURE_COUNT];
 extern const u32 gNdsParticleTextureCount;
-extern const u8 gNdsParticleTextureData[NDS_PARTICLE_TEXTURE_DATA_BYTES];
-extern const u16 gNdsParticlePaletteData[NDS_PARTICLE_PALETTE_ENTRIES];
 /* NDSParticleTexture has no frame count; animation needs one. */
 extern const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT];
 

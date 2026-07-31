@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <nds/arm9/sprite.h>
@@ -1859,12 +1860,30 @@ void ndsTask39EffectsUpdate(void)
 #endif
 }
 
+/* Stream the hit-spark sheet from NitroFS straight into OBJ VRAM.
+ *
+ * It used to be a linked 22,528-byte array DMA'd in one shot. That array was
+ * five whole steps of the boot-time taskman arena search (4,096 each), spent on
+ * bytes that are read exactly once and then live in VRAM for the rest of the
+ * run -- and it is what left NDS_R2_PARTICLE_RUNTIME=1 with no arena to boot
+ * into. The generator was already writing the identical payload to
+ * assets/effects/, so this reads that instead.
+ *
+ * One frame cell at a time, through a stack buffer, with explicit 32-bit
+ * stores. Two DS-specific reasons, both of which have bitten this project:
+ * DMA cannot source from DTCM, where libnds puts the stack, so dmaCopyWords
+ * from a local is silently wrong; and VRAM rejects 8-bit writes, so a memcpy
+ * whose tail degrades to byte stores would corrupt the sheet rather than fail.
+ * A u32 loop is immune to both. 44 cells at load time costs nothing. */
 static s32 ndsTask39PrepareHitSparks(u32 *vram_cursor)
 {
 #if NDS_TASK39_FX_SPRITES
-    u32 bytes = sizeof(sNdsTask39HitSparkPixels);
+    u32 bytes = NDS_TASK39_HIT_SPARK_ASSET_BYTES;
+    u32 cell[NDS_TASK39_HIT_SPARK_CELL_BYTES / sizeof(u32)];
+    FILE *file;
+    u32 offset;
 
-    _Static_assert(sizeof(sNdsTask39HitSparkPixels) ==
+    _Static_assert(NDS_TASK39_HIT_SPARK_ASSET_BYTES ==
                        NDS_TASK39_HIT_SPARK_CELL_BYTES *
                            NDS_TASK39_HIT_SPARK_FRAME_COUNT,
                    "Task 39 hit-spark payload size drifted");
@@ -1875,10 +1894,33 @@ static s32 ndsTask39PrepareHitSparks(u32 *vram_cursor)
     {
         return FALSE;
     }
+    file = fopen(NDS_TASK39_HIT_SPARK_ASSET_PATH, "rb");
+    if (file == NULL)
+    {
+        gNdsTask39FxObjVramBytes = 0u;
+        return FALSE;
+    }
     sNdsTask39HitSparkGfx =
         (u16 *)((u8 *)SPRITE_GFX + *vram_cursor);
-    dmaCopyWords(0, sNdsTask39HitSparkPixels,
-                 sNdsTask39HitSparkGfx, bytes);
+    for (offset = 0u; offset < bytes;
+         offset += NDS_TASK39_HIT_SPARK_CELL_BYTES)
+    {
+        u32 *dst = (u32 *)(void *)((u8 *)sNdsTask39HitSparkGfx + offset);
+        u32 word;
+
+        if (fread(cell, 1u, sizeof(cell), file) != sizeof(cell))
+        {
+            fclose(file);
+            sNdsTask39HitSparkGfx = NULL;
+            gNdsTask39FxObjVramBytes = 0u;
+            return FALSE;
+        }
+        for (word = 0u; word < (u32)(sizeof(cell) / sizeof(cell[0])); word++)
+        {
+            dst[word] = cell[word];
+        }
+    }
+    fclose(file);
     *vram_cursor += bytes;
     gNdsTask39FxObjVramBytes = bytes;
     gNdsTask39FxObjVramRemaining =

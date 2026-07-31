@@ -1,6 +1,7 @@
 {
   "bytes": {
     "arena_headroom_bytes": 210320,
+    "asset_bytes": 82848,
     "ds_palette_bytes": 672,
     "ds_texture_bytes": 82752,
     "ds_texture_data_bytes": 82176,
@@ -8,11 +9,12 @@
     "estimate_2026_07_27_scripts": 26,
     "estimate_2026_07_27_textures": 18,
     "index_table_bytes": 1283,
+    "linked_bytes": 12195,
+    "pack_bytes": 95043,
     "payload_bytes": 93760,
-    "resident_bytes": 95043,
     "script_bank_bytes": 10912,
     "source_texture_bytes": 136248,
-    "spare_bytes": 115277
+    "spare_bytes": 198125
   },
   "checksums": {
     "source_sha256_lo": "0xa2a1e85f",

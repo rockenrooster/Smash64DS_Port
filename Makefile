@@ -1389,8 +1389,10 @@ NDS_HOT_TEXT_SPECS := $(PROJECT_ROOT)/linker/ds9_hot_text.specs
 NDS_HOT_TEXT_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_hot_text.ld
 NDS_TASK32_DRAW_HOT_FRAGMENT := $(PROJECT_ROOT)/$(BUILD)/nds_task32_draw_hot.inc
 NDS_TASK39_HIT_SPARKS_INC := $(PROJECT_ROOT)/src/nds/generated/task39_hit_sparks.generated.inc
+NDS_TASK39_HIT_SPARKS_ASSET := $(PROJECT_ROOT)/assets/effects/task39_hit_sparks.rgb5a1.bin
 NDS_PARTICLE_BANKS_INC := $(PROJECT_ROOT)/src/nds/generated/nds_particle_banks.generated.inc
 NDS_PARTICLE_BANKS_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_particle_banks.generated.h
+NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_textures.ds.bin
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -2162,6 +2164,23 @@ NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES := \
 endif
 endif
 
+# The efcommon texel/palette payload only ships with the interpreter that reads
+# it; without the runtime it is 82,848 bytes of ROM nothing opens.
+export NDS_NITROFS_PARTICLE_FILES :=
+ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
+NDS_NITROFS_PARTICLE_FILES := \
+	$(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin
+endif
+
+# The Task 39 hit-spark sheet. Unlike the payload above this one has a live
+# reader (ndsTask39PrepareHitSparks), so the ROM does not boot correctly
+# without it whenever the sprite lane is on.
+export NDS_NITROFS_EFFECT_FILES :=
+ifeq ($(NDS_TASK39_FX_SPRITES),1)
+NDS_NITROFS_EFFECT_FILES := \
+	$(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin
+endif
+
 .PHONY: all clean clean-generated distclean run $(BUILD) prune-obsolete-audio
 
 all: $(BUILD)
@@ -2395,18 +2414,30 @@ $(NDS_TASK32_DRAW_HOT_FRAGMENT): FORCE
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
 
-$(NDS_TASK39_HIT_SPARKS_INC): \
+# The .inc carries only the sheet's path, size and hash; the 22,528 bytes
+# themselves are the NitroFS payload, produced by the same invocation.
+$(NDS_TASK39_HIT_SPARKS_INC) $(NDS_TASK39_HIT_SPARKS_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_hit_sparks.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb
 	python "$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_hit_sparks.py"
+
+$(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin: $(NDS_TASK39_HIT_SPARKS_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
 
 # R2-07: the packed EFCommon particle bank. The reachable-script set is derived
 # from the P1 effect seams in generate_task39_effect_census.py plus the bank's
 # own spawn graph, so both scripts and efmanager.c are prerequisites. The header
 # and the JSON report are committed; the .inc is a build product under the
 # gitignored src/nds/generated, which is why the ELF depends on it.
-$(NDS_PARTICLE_BANKS_INC): \
+#
+# One generator invocation produces the .inc AND the texel/palette payload, so
+# they are a grouped target (`&:`) rather than two rules that would each run it.
+# The payload is not linked -- see the header comment: .rodata is taken out of
+# the boot-time taskman arena one-for-one and this pack is big enough to push
+# that search past its floor.
+$(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
 		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_effect_census.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
@@ -2416,10 +2447,14 @@ $(NDS_PARTICLE_BANKS_INC): \
 
 $(NDS_PARTICLE_BANKS_HEADER): $(NDS_PARTICLE_BANKS_INC)
 
+$(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin: $(NDS_PARTICLE_TEXTURE_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
 prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
-$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES)
+$(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC)
