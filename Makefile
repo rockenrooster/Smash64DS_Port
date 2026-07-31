@@ -2498,6 +2498,22 @@ NDS_ARM_RENDERER_HARNESS_IDS := 163 164
 ifneq ($(filter $(NDS_DEV_SCENE_HARNESS_ID),$(NDS_ARM_RENDERER_HARNESS_IDS)),)
 nds_renderer.o: CFLAGS += -marm
 endif
+
+# R2-07 L7a REFUTED 2026-07-31, do not re-propose. Building
+# battleship_gmcollision.o -marm -- the same move that was worth -511,174 ticks
+# per Results tic for nds_renderer.o just above -- measured WORK-H P95
+# 1,147,200 -> 1,144,896, i.e. -2,304, inside the +/-5,376 cross-build floor and
+# far under E11's ~16,000 bar. SRC, the bucket it was aimed at, went the wrong
+# way by the same 2,304. Noise.
+#
+# The reason it does not transfer: the renderer's win was SMULL, which ARMv5TE
+# Thumb lacks, so every 20.12 multiply became `bl __aeabi_lmul` in the CALLER.
+# gmcollision.c has no doubles and no unsuffixed literals, so its float work is
+# genuine f32 helper calls -- and those helpers are libgcc code whose own mode
+# the caller's flag does not change. -marm can only buy the call sites, and
+# there is not enough there to clear the floor. The soft-float cost L6 measured
+# has to be removed by not doing the float arithmetic (L7), not by recompiling
+# it.
 scene_backend.o: $(SCENE_BACKEND_SLICES) $(NDS_SCENE_HARNESS_CONFIG)
 scene_harness.o battleship_grinishie_scale.o: $(NDS_SCENE_HARNESS_CONFIG)
 nds_ifcommon_oam.o: $(NDS_TASK39_HIT_SPARKS_INC)
