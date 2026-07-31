@@ -73,6 +73,35 @@ $rom = Resolve-Smash64DSBuildOutput `
 $elf = Resolve-Smash64DSBuildOutput `
     -Root $root -Target $target -Build $Build -Extension '.elf'
 
+# FAIL IN A SECOND, NOT IN 45 MINUTES. Without NDS_TASK37_PROFILE=1 the ROM
+# never dumps, so the run below waits out its whole -TimeoutSeconds (2700 by
+# default) before the throw at :171 says which flag was missing. The generated
+# header knows immediately, and it is the same "trust the header, not the build
+# directory's name" rule the other harnesses already apply. Measured
+# 2026-07-31: pointing this script at a census build cost a full 45-minute
+# timeout to learn a one-line fact.
+#
+# FAIL CLOSED. An ABSENT header means the flag cannot be confirmed, and for a
+# 45-minute run "cannot confirm" must not mean "proceed" -- the first version of
+# this guard wrapped the check in `if (Test-Path ...)` and skipped silently on
+# exactly the build that needed it. Confirmed present-and-set, or throw.
+$profileConfigHeader = Join-Path $root "$Build\nds_build_config.h"
+$profileSeen = if (Test-Path -LiteralPath $profileConfigHeader -PathType Leaf) {
+    [regex]::Match((Get-Content -LiteralPath $profileConfigHeader -Raw),
+        '(?m)^#define\s+NDS_TASK37_PROFILE\s+(\d+)')
+} else { $null }
+if (-not ($profileSeen -and $profileSeen.Success -and
+          ([int]$profileSeen.Groups[1].Value -ne 0))) {
+    throw ("$Build cannot be confirmed as NDS_TASK37_PROFILE=1 " +
+           $(if ($null -eq $profileSeen) {
+                 "(no nds_build_config.h in that build)" }
+             else { "(the header says 0 or omits it)" }) +
+           ", so the ROM would never dump a census and this run would wait out " +
+           "its entire timeout ($TimeoutSeconds s) before saying so. Use the " +
+           'default -Build build-task37-profile, or drop -NoBuild so this ' +
+           'script builds a profile ROM.')
+}
+
 if ([string]::IsNullOrWhiteSpace($OutDir)) {
     $OutDir = Join-Path $root 'artifacts\task37-census'
 }
