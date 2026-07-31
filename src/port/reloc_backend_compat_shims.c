@@ -12393,14 +12393,51 @@ Vec3f *lbCommonReflect2D(Vec3f *a, Vec3f *b)
     return a;
 }
 
+/* R2-07 L9. These were `return sinf(angle);` / `return cosf(angle);`, which is
+ * both slower and LESS faithful than the source: SSB64 does not call a libm
+ * sine at all, it indexes a 1024-entry quarter-turn table (`lb/lbcommon.c`,
+ * 0x800C7840). Gameplay reads those exact quantised numbers, so the table is
+ * the reference behaviour and libm was the approximation.
+ *
+ * The port never compiled `lbcommon.c`, so the table had nothing to link
+ * against; `src/port/lbcommon_sin_table.c` carries it, extracted verbatim.
+ *
+ * Cost, measured on the R2-07 L6 census (`artifacts/task37-census/r207-L6-*`):
+ * the libm path is ~237 cycles/call, and an over-gate frame makes ~197 calls
+ * for ~46,772 cycles of trig -- `__ieee754_rem_pio2f` argument reduction plus
+ * `__kernel_sinf`/`__kernel_cosf`, none of which a 4096-step table needs. The
+ * table form is one multiply, one float-to-int, three masks and a load.
+ *
+ * Index is in 4096ths of a turn (651.8986206 = 4096 / 2pi). Bit 0x400 mirrors
+ * the quarter into the second one, bit 0x800 negates for the lower half; cosine
+ * is the same table read a quarter turn ahead. */
 f32 lbCommonSin(f32 angle)
 {
-    return sinf(angle);
+    u16 index = ((s32)(angle * 651.8986206F)) & 0xFFF;
+    f32 sin;
+
+    if (index & 0x400)
+    {
+        sin = dLBCommonSinLookup[0x3FF - (index & 0x3FF)];
+    }
+    else sin = dLBCommonSinLookup[index & 0x3FF];
+
+    return (index & 0x800) ? -sin : sin;
 }
 
 f32 lbCommonCos(f32 angle)
 {
-    return cosf(angle);
+    u16 index =
+        ((s32)((angle + F_CST_DTOR32(90.0F)) * 651.8986206F)) & 0xFFF;
+    f32 cos;
+
+    if (index & 0x400)
+    {
+        cos = dLBCommonSinLookup[0x3FF - (index & 0x3FF)];
+    }
+    else cos = dLBCommonSinLookup[index & 0x3FF];
+
+    return (index & 0x800) ? -cos : cos;
 }
 
 static void ndsStageMPDownWaitLoopApplyRollTransN(GObj *fighter_gobj,

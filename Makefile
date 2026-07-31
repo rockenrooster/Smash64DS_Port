@@ -1450,6 +1450,7 @@ CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_task39_effect_census.c nd
 	battleship_sys_video.c battleship_sys_malloc.c \
 	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c \
 	battleship_sys_sintable.c battleship_sys_matrix.c \
+	lbcommon_sin_table.c \
 	battleship_libultra_gu_normalize.c battleship_libultra_gu_mtxcatf.c \
 	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c utils.c vector.c \
 	battleship_scsubsyscontroller.c \
