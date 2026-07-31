@@ -1793,6 +1793,49 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 L7a — kernel written, falsifier RED, nothing wired in (2026-07-31)
+
+**`include/nds/nds_r2_collision_mtx.h`** is the 20.12 replacement for
+`func_ovl2_800ED490` and `gmCollisionSetInvertMatrix`, and
+**`scripts/check-r2-collision-mtx.c`** is its host falsifier — the kernel lives
+in a header for the same reason `nds_r2_sqrtf.h` does, so the checker exercises
+the shipping code rather than a transcription of it. **Nothing calls the kernel.
+This was deliberate: collision decides hits, so the arithmetic gets proven
+before the call path is touched, and the seam problem (L7 SCOPED) makes wiring
+the harder half anyway.**
+
+**The falsifier earned its keep immediately, twice:**
+
+| revision | invert max, world units |
+|---|---:|
+| first draft | **124.58** |
+| reciprocal scaled at 2^36 not 2^24 | 0.4514 |
+| 24-bit cofactors in the 3×3 only | 3.6967 |
+| 24-bit cofactors in **both halves** | **0.3706** |
+
+The first was a 2^12 scaling error: `det` is itself 20.12, so `1/det` at 24
+fractional bits needs a 2^36 numerator, and the 2^24 form made the final shift
+discard all twelve fractional bits — every inverse came back rounded to whole
+world units. **None of that reached a ROM, a build or a measurement.**
+
+The third row is the useful surprise: raising precision in the 3×3 block alone
+made the result **eight times worse**. The rotation and the translation stop
+being a matched pair, and their errors no longer cancel in the transformed
+point. **Both halves must share intermediate precision** — a rule that is
+invisible until something measures the composed result rather than the cells.
+
+**Current state, and it is RED.** Against the 0.0200 world-unit bound borrowed
+from E64b/E65: **compose 0.0226, invert 0.3706** (means 0.0044 / 0.0371, 400,000
+cases each). Not fit to wire in. **The residual is dominated by quantising the
+INPUT matrices to 1/4096, not by the arithmetic in the kernel**, so adding
+fractional bits here alone will not move it — the fix is carrying the joint
+chain in fixed point end to end, which is L7's real shape. The open question for
+whoever takes it: is 0.37 units immaterial against real hurtbox dimensions and
+real joint scales? It is ~1-2% of a hurtbox, which is **not** obviously safe, and
+guessing at it is exactly what the bound exists to prevent.
+
+**Do not add this checker to a verifier profile while it is red.**
+
 ### R2-07 L11 NULL — no libm trig left on the battle path after L9 (2026-07-31)
 
 Swept for more of L9's shape (a port stub standing in for cheaper source code)
