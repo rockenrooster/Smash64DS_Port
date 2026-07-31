@@ -1793,50 +1793,75 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
-### R2-07 L6 — the census top-symbol table is WHOLE-RUN, not window-scoped (2026-07-31)
+### R2-07 L6 ANSWERED — the excursion is FLOAT COLLISION, and it is a lever (2026-07-31)
 
-Both arms ran: over-gate `517..521` (`artifacts/task37-census/r207-L6-over/`)
-and matched clean `508..512` (`.../r207-L6-clean/`).
+**The over-gate frame is a hit-detection frame, and 66.2% of what makes it
+expensive is soft-float.** Evidence `artifacts/task37-census/r207-L6-over/`
+(window 517..521, 4 over-gate + 1 clean) and `.../r207-L6-clean/` (508..512, all
+clean). Both windows agree; the headline comes from the **in-run** split, so it
+carries none of the ±5,376 cross-build floor.
 
-**The two top-symbol tables are BYTE-IDENTICAL** — same 3,515,373 for
-`armWaitForIrq`, same 904,521 `__aeabi_fadd`, same 655,764 `__aeabi_fmul`, same
-everything, to the cycle. Two different frame windows cannot produce identical
-per-symbol totals, so **`census.txt`'s table A is not scoped to `-StartFrame`
-/`-Frames` at all** — it aggregates the whole emulation, and both runs boot and
-play the same way. The windowed data is the **regions** output
-(`arm9-profile.regions.csv`, `regions=6`, "region r = presented frame 517 + r"),
-which is what `-PerFrameRegion` produces.
+| per presented frame, ARM9 cycles | over-gate ×4 | control ×1 | delta |
+|---|---:|---:|---:|
+| total (VBlank-quantized) | 3,360,589 | 2,240,196 | +1,120,393 |
+| **work** (total − `armWaitForIrq`) | **2,536,136** | **2,025,745** | **+510,390** |
+| idle | 825,130 | 214,855 | +610,274 |
+| **soft-float** | **520,017** | **182,090** | **+337,927** |
 
-**What this stopped.** Arm A alone reads `__aeabi_fadd` + `__aeabi_fmul` =
-1,560,285 cycles = **9.95% of total**, the largest non-idle consumer, and it
-would have been natural to publish that as the over-gate burst's composition.
-It is not: it is 9.95% of the *whole run*, identical on clean frames, and says
-nothing about the excursion. **Soft-float is NOT implicated by this data.**
+The idle row is pacing arithmetic, not a cause: a frame occupies 3 VBlanks
+instead of 2, so its slack grows by `1 VBlank − Δwork`. **The gate is 2,240,760
+cycles, so an over-gate frame overshoots by only 295,376 (147,688 ticks) — and
+the soft-float delta alone is 337,927, which is LARGER than the overshoot.**
 
-**WORSE: the REGIONS are identical too, so `-StartFrame` has no effect at all.**
-Diffing `arm9-profile.regions.csv` between the arms — the windowed output, the
-thing table A is not — gives byte-identical rows:
-```
-region,instructions,total_cycles,average_cycles,min_cycles,max_cycles
-3,1033629,3361840,3.252,0,804589      <- same in BOTH arms
-1,1013328,3361628,3.317,0,876971
-2,1063950,3360836,3.159,0,728825
-4,1004643,3360756,3.345,0,890109
-5, 684898,2240600,3.271,0,214849
-0,      6,     52,8.667,1,    23
-```
-Two arms nine frames apart cannot produce identical instruction counts. And the
-sizes are wrong for the claim: **3,361,840 cycles is exactly 6.0 VBlanks**, not
-a presented frame at 2–3, so a "region" here is not the presented frame the
-banner advertises ("region r = presented frame 517 + r").
+**Composition of the +510,390 work premium** (`census-over-gate-split.txt`,
+`--split-over-gate`): `__aeabi_fadd` 27.4%, `__mulsf3` 22.5%, `__ieee754_sqrtf`
+5.1%, `__divsf3` 2.2%, trig 5.9% → **soft-float 66.2%**. Named callers with
+extra self time are all collision: `func_ovl2_800ED490` 4.2%,
+`gmCollisionSetInvertMatrix` 3.2%, `gmCollisionTransformMatrixAll` 2.3%,
+`gmCollisionTestRectangle` 2.1%, `gmCollisionGetWorldPosition` 1.4%,
+`func_ovl2_800EDBA4` 1.7% — `gm/gmcollision.c`, the hitbox/hurtbox tests and the
+lazy joint-world-matrix walk.
 
-**L6 IS BLOCKED ON THE INSTRUMENT, not on analysis.** `run-task37-profile-census.ps1`
-accepts `-StartFrame`/`-Frames`, prints a census window banner, and then
-measures the same thing regardless. Until frame windowing demonstrably works —
-proven by two deliberately different windows producing *different* numbers —
-this harness cannot compare an over-gate frame against a clean one, and no
-result taken from it about a specific frame range should be believed.
-**First fix the windowing, then re-run; do not analyse these two censuses.**
+**Entry-PC call counts make it binary, 10 frames, two independent runs:**
+
+| per frame | 518 | 519 | 520 | 521 | 522 | 509 | 510 | 511 | 512 | 513 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `gmCollisionSetInvertMatrix` | 34 | 34 | 34 | 34 | **0** | 0 | 0 | 0 | 0 | 0 |
+| `func_ovl2_800ED490` | 40 | 40 | 40 | 40 | **0** | 0 | 0 | 0 | 0 | 0 |
+| `__aeabi_fadd` | 5,329 | 5,562 | 5,321 | 5,245 | 1,953 | 1,681 | 1,719 | 1,513 | 1,483 | 1,491 |
+| `__aeabi_fmul` | 5,608 | 5,793 | 5,624 | 5,551 | 1,559 | 1,550 | 1,553 | 1,415 | 1,398 | 1,399 |
+
+Zero overlap, and the counts are *constant* at 34/40 — a fixed-size workload
+switched on by state, not a variable search. Float calls rise 2.75×/3.62× in
+lockstep: ~7,557 extra float ops per frame, ~222 per collision test, which is
+the size of a 4×4 inverse plus transform.
+
+**Two things this refutes.** `ndsRendererAdapterBuildDObjLocalMatrix` is
+**1.06×** (55 vs 52 calls) — **render and animation are FLAT across the
+excursion**, confirming L3/E7 from an independent instrument.
+`ndsRelocFindLoadedFileContaining` is **0.5%** of the premium — **these frames
+do no meaningful asset loading**, which is L2's "24 of 28 do no load" reached a
+second way.
+
+**L7 is therefore named: fixed-point collision math.** The float here is
+decomp-sourced but not frozen — a port-side DS equivalent is explicitly wanted.
+Removable cost is high: the deltas price `__aeabi_fadd` at **41.0 cycles/call**
+and `__mulsf3` at **28.1**, against ~4–6 for an inline 20.12 `SMULL`. Needs an
+E64b/E65-style equivalence bound, because collision decides hits and a boundary
+case can flip a result that damage and knockback then amplify.
+
+**The instrument defect that nearly buried this.** Arm B was first run with
+`-NoBuild`, so it measured arm A's ROM and produced a **byte-identical 7.4 MB
+CSV**; the "identical censuses" were one census labelled twice, not a windowing
+failure — `-StartFrame` works, but only through a rebuild, since the window is a
+compile-time constant. Re-running arm A reproduced `cycles=15685712` exactly,
+which is what proved melonDS deterministic and the duplication explained.
+`run-task37-profile-census.ps1` now reads `builds/$Build/nds_build_config.h` and
+refuses to measure a ROM whose baked window differs from the one asked for. From
+arm A alone the natural publication was "soft-float is 9.95%, the largest
+non-idle consumer" — true of the whole run, and **wrong by 6.7× about the
+excursion in the other direction**. The control arm is what turned a
+whole-run percentage into a per-frame cause.
 
 ### R2-07 L3 — the excursion is SIZED: +272,576 `WORK-H`, all of it `SRC`/`OTHR`, render flat (2026-07-31)
 

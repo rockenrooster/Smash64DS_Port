@@ -10,7 +10,7 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-05 | **COMPLETE** — reproducibility (E0) and zero fighter special cases (E1) |
 | R2-06 | E0/E1/E2 + soak done; E4b/E6/E7/E11/**E13/E14/E15** refuted; **E8 finds the event, E10 + E17 both attribute it as SPREAD — no lever left inside the phase** |
-| R2-07 | **results-flow clause MEETS ITS GATE** — R0..R4e, Results 39.975 -> 1.04 VBlanks/tic, 581,197 ticks = **0.52× of 1.12M**; R2b and R4c both owner-approved and default-on. Particle/audio/HUD clauses untouched; **Sudden Death is now in P1 and has no deterministic entry** (needs a seeded harness mode). R2-08 needs the owner's retail play test |
+| R2-07 | **results-flow clause MEETS ITS GATE** — R0..R4e, Results 39.975 -> 1.04 VBlanks/tic, 581,197 ticks = **0.52× of 1.12M**; R2b and R4c owner-approved and default-on. Particle/audio/HUD clauses untouched. **L6 names the gate lever: float collision (L7).** R2-08 needs the owner's retail play test |
 
 ## Where the gate stands — MISSED, and EVERY earlier number is DLDI-off
 
@@ -23,30 +23,39 @@ frame**. That is the floor for any cross-build delta; always run the matched con
 E69 rebuilt at its own commit `4916656d`, identical source, reads **1,126,464** DLDI-on vs the
 **1,096,768** it published DLDI-off. **The gate was already missed by 6,464 before this session, the
 23,232 margin was a DLDI-off artifact, and R2-07's particle budget was sized against it.** Read every
-pre-`3eb9ecdb` P95 as a lower bound.
+pre-`3eb9ecdb` P95 as a lower bound. **Never compare an anim-cache pair frame-by-frame** — it shifts
+load timing; order stats only.
 
-**Never compare an anim-cache pair frame-by-frame** — it shifts load timing; order stats only.
+## OPEN P1: the over-gate frame is FLOAT COLLISION — L6 names the lever
 
-## OPEN P1: loads own only ~18% of over-gate frames — E8's headline is CONTRADICTED
+**L6, 2026-07-31, in-run over-gate/clean split (`--split-over-gate`), no cross-build assumption.** An
+over-gate frame does **+510,390 cycles of work** (2,536,136 vs 2,025,745) and overshoots the 2,240,760
+gate by only **295,376 (147,688 ticks)**; **soft-float is +337,927 = 66.2% of the premium, LARGER than
+the overshoot.** Entry-PC counts are binary over 10 frames/2 runs: `gmCollisionSetInvertMatrix` **34 on
+every over frame, 0 on every clean one**, `func_ovl2_800ED490` 40/0, `fadd` 2.75x, `fmul` 3.62x.
+`ndsRendererAdapterBuildDObjLocalMatrix` is **1.06x — render and animation are FLAT**; the reloc walker
+is 0.5%, so **these are not load frames**. **L7 = fixed-point `gm/gmcollision.c`** (41.0 cyc/call
+`fadd`, 28.1 `__mulsf3` vs ~4-6 for 20.12 `SMULL`); needs an E64b-style equivalence bound, collision
+decides hits. **The census window is a COMPILE-TIME constant, so `-NoBuild` measures the LAST build's
+window** — arm B did that and returned a byte-identical 7.4 MB CSV, one census labelled twice; the
+harness now verifies `builds/$Build/nds_build_config.h` and refuses otherwise. Arm A alone would have
+published "soft-float 9.95%", true of the whole run and 6.7x wrong about the excursion. **Always
+confirm two deliberately different inputs give different outputs.**
 
-**L2, 2026-07-31, per-frame `gNdsTask75AssetLoadCount` (`-PerFrameGlobals`, new).** Loads ∩ over-gate
-**inside one build** (no cross-build assumption): **5 of 28**; against L1's over-gate list, **4 of 28**.
-So **24 of 28 over-gate frames do no asset load** — E8's headline came from a run total and does not
-survive a per-frame read. **Load elimination cannot close the gate alone**; keep it for R2-04 §3.8
-(correctness) but never budget it as the gate's answer. The other 24 are `SRC` frames per L1.
-
-**E8's surviving numbers.** Load frames P50 **1,113,152**; **clean frames P50 974,080, P95 1,056,640 —
-inside the 1,120,000 gate by 63,360**; premium entirely `SRC`; average frame 145,920 under budget.
-**E7 refuted both previously-named causes** (`FTR` **−1,312** / `STG` **−2,496** — not a render problem).
+**L2 stands and is corroborated: loads own only ~18% of over-gate frames — E8's headline is
+CONTRADICTED.** Per-frame `gNdsTask75AssetLoadCount` (`-PerFrameGlobals`), inside one build: **5 of
+28** (**4 of 28** against L1's list). Keep load elimination for R2-04 §3.8 (correctness), never as the
+gate's answer. **E8's surviving numbers:** load frames P50 **1,113,152**; **clean frames P50 974,080,
+P95 1,056,640 — inside the gate by 63,360**; average frame 145,920 under budget. **E7 refuted both
+previously-named causes** (`FTR` −1,312 / `STG` −2,496 — not a render problem).
 
 **Do NOT attack the relocation's O(n²) scan** — only 17.3% of it (n is 25.4); the payload is walked
 TWICE by pointer *differences*, so hoisting to cache-store time is the viable shape (E9). **E10: no
 single lever** — **326,906/frame** over **513 symbols**, relocation 37.0%, `ftAnimParseDObjFigatree` 13.0%.
-
-**STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked.** It removed real work
-with **negative** bytes added and a **bit-identical** load-frame set, yet **P95 +15,744, P99 +59,200,
-over-gate 9 → 11** — ~3× the +5,376 cross-build floor. **REVERTED.** Only a change clearing ~16,000 of
-tail movement, or one that **moves work off the frame**, counts.
+**STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked**: real work removed,
+**negative** bytes added, **bit-identical** load-frame set, yet **P95 +15,744, P99 +59,200, over-gate
+9 → 11** — ~3× the +5,376 floor. **REVERTED.** Only a change clearing ~16,000 of tail movement, or one
+that **moves work off the frame**, counts.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
@@ -54,25 +63,25 @@ Owner: *"lots of freeze bugs that seem random"*. **One cause explains the class*
 (`artifacts/verification/freeze-soak/2026-07-29_202114-*`): `decomp/src/sys/malloc.c:30` is
 `while (TRUE);`, so the allocator **hangs instead of returning NULL** on exhaustion, and
 `ndsR2AnimCacheStore` was a *speculative* cache calling it from a gameplay frame on the shared
-`gSYTaskmanGeneralHeap`. **Do NOT make `syTaskmanMalloc` return NULL globally** — decomp callers do
-not all check.
+`gSYTaskmanGeneralHeap`. **Do NOT make `syTaskmanMalloc` return NULL globally** — callers don't check.
 
 **One site, not two — the "second exhaustion at battle start" was MY regression.** A static arena is
 BSS, and BSS competes with the runtime `calloc` that sizes the heap: crossing the `0x130000` search
 floor (`diagnostics.c:7403`) costs **196,608 bytes in one step**. **The arena now lives on the taskman
-heap, 92,160 bytes, +32 B of BSS**, using 87,824. **Do NOT lower that floor** — it is a contract with
-the Task 36 replay guard (`nds_renderer.h:124-134`); my earlier authorization is retracted. **Both
-configurations complete a full match clean.** **No passive soak reaches match two** —
-`mnVSResultsCheckExit` needs `START`.
+heap, 92,160 bytes, +32 B of BSS**, using 87,824. **Do NOT lower that floor** — a contract with the
+Task 36 replay guard (`nds_renderer.h:124-134`); my earlier authorization is retracted. **Both
+configurations complete a full match clean; no passive soak reaches match two** (`mnVSResultsCheckExit`
+needs `START`).
 
 **SECOND ENTRY REPRODUCED, matched pair (2026-07-31)** —
 `artifacts/visibility/2026-07-31_second-entry-{A-match1-clean,B-rematch-corrupt}.png`: same
 ROM/config, `STG` **171,328 -> 378,880 (2.21x)**, `ALL` 1,119,808 -> 1,679,936. Match two is otherwise
 CORRECT (GO!, fresh `TIME 01:00`, both fighters, both stock displays) and the texture-name fixes
 ENGAGED with **0** violations — **stale texture names are FIXED; stage corruption is the open root
-cause.** **The ~119 KB "SD setup excess" is WITHDRAWN** — a measured high-water minus a derived peak
-demand from a 192 KiB-poorer config. Both entries start from an identical baseline **319,968**; match
-one 925,816, SD setup **906,568**, so SD is **19,248 LOWER**. **Sudden Death reproduces in ~90 s**
+cause**, and the GObj/capture layer is EXONERATED, so it is downstream in geometry/material/matrix
+data. **The ~119 KB "SD setup excess" is WITHDRAWN** — a measured high-water minus a derived peak
+demand from a 192 KiB-poorer config; SD setup is in fact **19,248 LOWER** than match one (906,568 vs
+925,816 from an identical 319,968 baseline). **Sudden Death reproduces in ~90 s**
 (`capture-sudden-death-entry.ps1`); **never pause the Fox CPU to force a tie** — it freezes the tic
 source. Freeze DISPLACED not fixed (`BOUND-HITS` 0); keep the guard. MObj chains never invalid.
 **`syDebugPrintf` covers only the ten `taskman.c` give-up sites.** **Diag lanes rebuild the ROM and
@@ -83,9 +92,8 @@ which reads as an emulator hang — pass `-SecondEntryDiag`.** Open items in BUG
 
 R0c/R0d/R0e/R2a/R4b/R4d/R4e/R4c all graduated, all Latest-green; per-lever detail in the board and
 PERF_LEDGER. **Results is no longer the P1 performance problem, and R1's "~30 s dead air" is 6.10 s
-and is NOT a load** — the fighter reload is 5.5% of it, so do not build a residency system.
-
-Standing traps it paid for, all still live:
+and is NOT a load** — the fighter reload is 5.5% of it, so do not build a residency system. Standing
+traps it paid for, all still live:
 
 - **`-Os` emits `blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`.
 - **A lab ROM can differ from battle in CODEGEN.** The `-marm` rule keyed on harness ID 163, so the
@@ -93,30 +101,24 @@ Standing traps it paid for, all still live:
   every pre-R4e Results absolute was inflated. Now `NDS_ARM_RENDERER_HARNESS_IDS` — add new lab IDs.
 - **Measure Results with `scripts/census-results-frame-cost.ps1`**: tick-HUD buckets are zeroed only in
   the battle loop, so on Results they free-run — **difference two stops and divide by `sTicks`**.
-- **Compare captures with `scripts/compare-capture-pair.ps1`** — it crops to the guest viewport,
-  because melonDS's title bar carries a host-FPS readout that changes whenever a candidate is faster
-  and otherwise reads as a visual regression.
-- The wallpaper mapper **letter-boxes** any non-(0,0) origin, and a faster candidate lands on a
-  **different scene tick** at the same wall clock.
+- **Compare captures with `scripts/compare-capture-pair.ps1`** — it crops to the guest viewport, past
+  melonDS's host-FPS title bar, which otherwise reads as a visual regression whenever a candidate is
+  faster. The wallpaper mapper **letter-boxes** any non-(0,0) origin, and a faster candidate lands on
+  a **different scene tick** at the same wall clock.
 
-## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
+## R2-06 IS CLOSED — no lever left inside the phase; L6 found the one outside it
 
-**The animation body is CLOSED — three levers, three refutations, zero builds spent.** 146,148/frame,
-46,148 over §4's 100K: **E13** refuted (collision's ancestor closure is **f = 0.840** of live joints);
-**E14** reorder refuted at ~2,900 (**10-15 ticks/32-byte line fill**, no prefetcher; both memos wrong);
-**E15** unbuilt, straddling the floor. `gNdsFighterInit*` is proof-build-only, **0 — never cite it.**
+**The animation body is CLOSED — three levers, three refutations, zero builds spent** (E13 f = 0.840;
+E14 ~2,900, **10-15 ticks/32-byte line fill**, no prefetcher; E15 straddles the floor).
+`gNdsFighterInit*` is proof-build-only, **0 — never cite it.** **Every named load-frame candidate is
+sized and none closes the 40,448**: of 139,072/load-frame, ~94,127 (67.7%) has no named owner. Anim
+cache CLEAN, `FTR`/`STG` flat (L0), so the excursion is `SRC` — which L6 has now resolved.
+**Never target `HUD`** — it contains `ndsPlatformRenderDebugHud`, the tick HUD's own render; that is
+why `WORK-H` subtracts it per sample.
 
-**Every named load-frame candidate is sized and none closes the 40,448.** Of the 139,072/load-frame
-premium: relocation 33,632, re-add 11,313, E9's walks 21,788 — **~94,127 (67.7%) has NO named owner**,
-and E17 killed E8's hypothesis. **R2-07 L0 subtracted a candidate: the anim cache is CLEAN (Rejects
-0, Overflows 0) and `FTR`/`STG` are flat (1.01/1.04), so the excursion is `SRC`/`MISC`/`OTHR` as E35
-said.** **Never target `HUD`** — it contains `ndsPlatformRenderDebugHud`, the tick HUD's own render;
-that is why `WORK-H` subtracts it per sample. L1 is next (board).
-
-## The one open fidelity item
-
-- **E32** — a **generator gap, not a decision** (E62); no longer blocks a gate lever (E7). Mario draws
-  *unflashed*, pixel-identical on non-flash frames. **Generator must bake the flash colours** (E63: 2,164 B).
+**The one open fidelity item: E32** — a **generator gap, not a decision** (E62); no longer blocks a
+gate lever (E7). Mario draws *unflashed*, pixel-identical on non-flash frames. **Generator must bake
+the flash colours** (E63: 2,164 B).
 
 ## Refuted this cycle — do not re-derive
 
@@ -125,13 +127,11 @@ flash as vertex data** (E48-E58); **the pose table** (E61); **`.text.hot`** (E66
 walk the live joint chain; **R2-06 E7** fighter fallback + Task 39; **R2-06 E6** the Horner fold (so
 E61 §5's other rows are suspect — **a memo is a memory stream**); **pointer arrays as index
 arithmetic** (E11); **an AObj pool** (E12); **R2b's transform double-apply**; **R1's loader AND arena
-framings**; **the OOM spin and the DL-buffer overflow as the Sudden Death freeze** (none of the
-eleven give-up sites fired).
+framings**; **the OOM spin and the DL-buffer overflow as the Sudden Death freeze**.
 
 ## Restart
 
 Branch `codex/r2-runtime2`, not merged to master. Boundary `battle_playable_realtime`, mode `163`. Lab build dirs hold R2b/R1 ROMs; rebuild before citing a hash.
-
 **PARTICLE-BANK WIP IS ON TWO BRANCHES, NOT IN ANY WORKTREE** — `worktree-agent-a15dedc9b2cf19349`
 (generator + checker) and `worktree-agent-a8c9ad131bc0073b0` (`battleship_lbparticle.c`, runtime header,
 `gbi.h`/shim). **Unreviewed, unbuilt; start from these, do not rewrite** — BUGS.md's four VFX rows and

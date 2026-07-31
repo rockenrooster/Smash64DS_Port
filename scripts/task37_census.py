@@ -247,6 +247,30 @@ def disassemble_range(
     return mapping
 
 
+# PROJECT_GOAL.md budgets 1.12M ARM9 *ticks* per presented frame. The profiler
+# counts ARM9 *cycles*, which run at twice the tick clock, so the gate is
+# 2,240,760 cycles -- and because presentation is VBlank-quantized, a frame lands
+# either on 2 VBlanks (2,240,760, inside) or on 3 (3,361,140, over). Nothing
+# lands between, so this threshold is a definition rather than a tuned knob.
+GATE_CYCLES = 2_240_760
+
+
+def split_regions_over_gate(detail: dict) -> tuple[list[int], list[int]]:
+    """Partition census regions into (over the gate, inside it) by their own cost.
+
+    Both populations come from one run, on one ROM, with one cache history, so
+    the comparison carries none of the cross-build floor that makes two separate
+    censuses incomparable. Region 0 is "outside the census window" and is dropped.
+    """
+    over, clean = [], []
+    for region, per_symbol in detail.items():
+        if region == 0:
+            continue
+        total = sum(v[0] for v in per_symbol.values())
+        (over if total > GATE_CYCLES else clean).append(region)
+    return sorted(over), sorted(clean)
+
+
 def split_regions(
     detail: dict, symbols: list[Symbol], marker: str
 ) -> tuple[list[int], list[int]]:
@@ -382,7 +406,19 @@ def main() -> int:
         "Answers 'where does an expensive class of frame actually spend the "
         "premium', which window totals cannot.",
     )
+    parser.add_argument(
+        "--split-over-gate",
+        action="store_true",
+        help="needs NDS_TASK37_PROFILE_PER_FRAME_REGION=1. Same table as "
+        "--split-by-symbol, but the partition is the gate itself: frames costing "
+        "more than 2 VBlanks against frames costing 2. Use it when no symbol is "
+        "known to name the expensive class -- which is the usual case, because "
+        "naming one is what the table is for.",
+    )
     args = parser.parse_args()
+    if args.split_over_gate and args.split_by_symbol:
+        parser.error("--split-over-gate and --split-by-symbol are two partitions "
+                     "of the same frames; pass one")
 
     try:
         sections = parse_sections(run_tool(args.readelf, "-SW", str(args.elf)))
@@ -390,7 +426,8 @@ def main() -> int:
         if not symbols:
             raise RuntimeError("no FUNC symbols found in the ELF")
 
-        detail: dict | None = {} if args.split_by_symbol else None
+        detail: dict | None = (
+            {} if (args.split_by_symbol or args.split_over_gate) else None)
         total_cycles, unmapped_cycles, rows = attribute(symbols, args.profile, detail)
         if not rows:
             raise RuntimeError(f"{args.profile} contained no rows")
@@ -556,14 +593,21 @@ def main() -> int:
         # ---- Table E: per-frame split, when a marker symbol names the class ----
         split_summary = None
         if detail is not None:
-            hot, control = split_regions(detail, symbols, args.split_by_symbol)
+            if args.split_over_gate:
+                label = f"over the gate ({GATE_CYCLES:,} cycles)"
+                hot, control = split_regions_over_gate(detail)
+            else:
+                label = args.split_by_symbol
+                hot, control = split_regions(detail, symbols, args.split_by_symbol)
             if not hot or not control:
                 raise RuntimeError(
-                    f"{args.split_by_symbol} ran on {len(hot)} of "
+                    f"{label} selected {len(hot)} of "
                     f"{len(hot) + len(control)} census regions -- a split needs "
                     "both populations. If every region is on one side the build "
                     "is missing NDS_TASK37_PROFILE_PER_FRAME_REGION=1, so the "
-                    "whole window collapsed into one region."
+                    "whole window collapsed into one region; if the regions are "
+                    "there, this window simply holds one kind of frame -- widen "
+                    "it or move it until it straddles the class you want."
                 )
 
             def totals(regions: list[int]) -> dict[int, list[int]]:
@@ -583,7 +627,7 @@ def main() -> int:
             control_mean = control_sum / len(control)
             print()
             print(
-                f"== E. per-frame split on {args.split_by_symbol}: "
+                f"== E. per-frame split on {label}: "
                 f"{len(hot)} marked frames vs {len(control)} control =="
             )
             print(
@@ -639,7 +683,7 @@ def main() -> int:
                 "more is a cache effect, more instructions is real work"
             )
             split_summary = {
-                "marker": args.split_by_symbol,
+                "marker": label,
                 "marked_regions": hot,
                 "marked_frames": len(hot),
                 "control_frames": len(control),

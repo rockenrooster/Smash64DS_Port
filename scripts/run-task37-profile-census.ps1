@@ -73,26 +73,58 @@ $rom = Resolve-Smash64DSBuildOutput `
 $elf = Resolve-Smash64DSBuildOutput `
     -Root $root -Target $target -Build $Build -Extension '.elf'
 
-# A config-header precheck for NDS_TASK37_PROFILE was added here on 2026-07-31
-# and REMOVED the same day. Recording why, because the motivating cost is real
-# and someone will want to try again.
+# The census window is a COMPILE-TIME constant baked into the ROM, not a runtime
+# argument, so -StartFrame/-Frames only reach the emulator through a rebuild.
+# `-NoBuild` therefore silently measures whatever window the previous build
+# baked, while the banner still prints the window that was ASKED for. The build
+# directory's generated config header is what the ROM actually contains;
+# Assert-Task37CensusWindow compares the two and is called after the build step.
 #
-# The cost: point this script at a non-profile build and the ROM never dumps, so
-# it waits out the whole -TimeoutSeconds (2700 by default) before the throw at
-# the census wait names the missing flag. Losing 45 minutes to a one-line fact
-# is worth preventing.
+# That failure is not hypothetical. R2-07 L6 ran an over-gate arm (517..521) and
+# then a clean arm (508..512) six minutes later with -NoBuild, and got a
+# BYTE-IDENTICAL 7.4 MB profiler CSV -- same instructions, same cycles, same
+# per-region rows. melonDS is deterministic, so identical output means the same
+# ROM ran the same window twice; the second census was the first one relabelled,
+# and it nearly got published as an over-gate-vs-clean composition.
 #
-# Why the header cannot prevent it: `build-task37-profile` builds and profiles
-# CORRECTLY with no `nds_build_config.h` present at all -- verified, arm A of
-# R2-07 L6 produced a full census from exactly that state. An absent header
-# therefore does not imply an absent flag here, and the guard rejected the runs
-# it existed to protect (three revisions, each failing a different legitimate
-# case: fail-open on a missing header, then fail-closed ahead of the build step,
-# then fail-closed on -NoBuild against a build that was in fact fine).
-#
-# If you retry: key on something authoritative for THIS build -- a profile-only
-# ELF symbol read with nm, the way the other harnesses validate -ExtraGlobals --
-# not on a header this build layout does not emit.
+# An earlier version of this check looked for the header at $root/$Build and
+# concluded the layout "does not emit one" -- it does, at builds/$Build. That
+# path indirection is exactly what Resolve-Smash64DSBuildPath exists for.
+function Assert-Task37CensusWindow {
+    param(
+        [Parameter(Mandatory=$true)][string]$BuildDir,
+        [Parameter(Mandatory=$true)][hashtable]$Want
+    )
+    $header = Join-Path $BuildDir 'nds_build_config.h'
+    if (-not (Test-Path -LiteralPath $header -PathType Leaf)) {
+        throw ("No generated config header at $header, so the census window " +
+            'baked into the ROM cannot be verified. Re-run without -NoBuild.')
+    }
+    $baked = @{}
+    foreach ($line in (Get-Content -LiteralPath $header)) {
+        if ($line -match '^\s*#define\s+(NDS_TASK37_PROFILE\w*)\s+(\d+)u?\s*$') {
+            $baked[$Matches[1]] = [int]$Matches[2]
+        }
+    }
+    $wrong = @($Want.Keys | Sort-Object |
+        Where-Object { $baked[$_] -ne $Want[$_] } |
+        ForEach-Object { "$_ is $($baked[$_]), asked for $($Want[$_])" })
+    if ($wrong.Count -gt 0) {
+        throw ("The ROM in $BuildDir was not built for this census: " +
+            ($wrong -join '; ') + '. Re-run without -NoBuild, or point -Build ' +
+            'at the build carrying the window you want. Measuring anyway would ' +
+            'produce a census labelled with a window it did not measure.')
+    }
+    Write-Host "window verified against $header"
+}
+$buildDir = Resolve-Smash64DSBuildPath -Root $root -Build $Build
+$censusWindow = @{
+    NDS_TASK37_PROFILE                  = 1
+    NDS_TASK37_PROFILE_START            = $StartFrame
+    NDS_TASK37_PROFILE_FRAMES           = $Frames
+    NDS_TASK37_PROFILE_PER_FRAME_REGION = [int]$PerFrameRegion
+    NDS_TASK37_PROFILE_RESULTS          = [int]$isResults
+}
 
 if ([string]::IsNullOrWhiteSpace($OutDir)) {
     $OutDir = Join-Path $root 'artifacts\task37-census'
@@ -135,6 +167,7 @@ try {
             throw "Required census input is missing: $path"
         }
     }
+    Assert-Task37CensusWindow -BuildDir $buildDir -Want $censusWindow
 
     Remove-Item $csv, $meta, $regions, $emulatorOut, $emulatorErr `
         -Force -ErrorAction SilentlyContinue
