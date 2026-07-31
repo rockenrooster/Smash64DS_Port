@@ -1878,20 +1878,38 @@ eligible, so **fighter fallback is refuted outright, not by a dead counter.**
 Every genuine fallback reason — `animLock` included, which was the E31
 mechanism — is exactly 0.
 
-**AND IT HANDS OVER THE NEXT LEAD FOR FREE: `animLoad:43`.** The two ride-along
-counters are the only non-zero entries: **`animLoad` 43** and `animResident` 2.
-Against Task 75's **15** asset loads over the same window, `animLoad` counts
-something ~3x more frequent and is a *different* population from the one L2
-measured — so "24 of 28 over-gate frames do no asset load" does **not** mean
-those frames do no animation loading. **L5: give `animLoad` a per-frame column
-and intersect it with the 28, exactly as L2 did.** 43 events over 128 frames,
-arriving in bursts, is the right order of magnitude for the burst shape L4
-measured, and R2-04 §3.8's clause is about first-use loading of *any* kind.
+**It also produced a lead, `animLoad:43` — and L5 KILLED IT. The "different
+population" reading was mine and it was WRONG.** Per-frame
+(`gNdsTickHudNativeOwnerFallbackByReason[13]`, `r207-L5-rows.csv`):
+```
+animLoad frames  12    total 15
+over-gate        28
+BOTH              5  ->  444,449,464,477,543
+```
+**Identical to L2's Task-75 intersection** — same 12 frames, same total of 15,
+same five frames. `animLoad` and `gNdsTask75AssetLoadCount` count the **same
+population**, not different ones. The `43` in the census summary is a
+differently-bracketed window (it spans the seeding presents), and comparing it
+against a per-frame delta of 15 is what produced the false lead. **Compare
+like-bracketed numbers, or do not compare them.**
 
-**Standing after L1–L4:** the excursion is not Task 75 asset loading (L2), not
-the render buckets (L3), and not fighter fallback (L4, twice, now with liveness
-proof). The `SRC`↔`FTR` −0.385 and the burst shape remain unexplained, and
-`animLoad` is the first candidate that matches both.
+**Standing after L1–L5.** The excursion is **not** asset loading of any counted
+kind — Task 75 and `animLoad` are the same 12 frames (L2, L5) — **not** the
+render buckets (L3, `FTR` negative and `STG` under 1K), and **not** fighter
+fallback (L4, refuted twice, now with `calls:1132`/`eligible:1132` liveness
+proof). **23 of 28 over-gate frames carry no counted load, no fallback, and no
+render excursion**, yet each is ~76,420 over the gate inside a 272,576
+`WORK-H` excursion.
+
+**Every named candidate is now exhausted, so L6 must widen rather than guess.**
+The remaining facts to design against: the cost lives in `SRC`/`OTHR` (which
+overlap, do not sum them); it arrives in **bursts** (10 of 27 gaps are 1); it
+has a **wide spread** (`SRC` 258,240…746,624); and it correlates **negatively**
+with `FTR` (−0.385) without being fallback. A per-frame counter census will not
+find it — there is no counter left to read. **Profile the `SRC` bracket itself
+on a named over-gate frame against a matched clean one** (R2-03 E35's method:
+it profiled 517-521 against 508-512), which is what identifies work that no
+existing counter brackets.
 
 ### R2-07 L2 — ANSWERED, and it CONTRADICTS E8: only 4 of 28 over-gate frames load (2026-07-31)
 

@@ -188,7 +188,14 @@ try {
             foreach ($pair in @(
                 @{ n = '-ExtraGlobals';    v = $ExtraGlobals },
                 @{ n = '-PerFrameGlobals'; v = $PerFrameGlobals })) {
-                $missing = @($pair.v | Where-Object { -not $symbols.Contains($_) })
+                # Validate the BASE identifier so an array element is readable:
+                # `gNdsTickHudNativeOwnerFallbackByReason[13]` is a legal GDB
+                # expression but never a symbol name, and R2-07 L5 needs exactly
+                # that (animLoad is index 13 of the fallback reason array).
+                # A typo in the base is still caught, which is what the guard is
+                # for; a bad subscript is a GDB error, not a silent zero.
+                $missing = @($pair.v | Where-Object {
+                    -not $symbols.Contains(($_ -replace '\[.*$', '')) })
                 if ($missing.Count -ne 0) {
                     throw ("$($pair.n) names not defined in $([System.IO.Path]::GetFileName($elf)): " +
                         "$($missing -join ', '). A name that exists but is never written reads 0, " +
