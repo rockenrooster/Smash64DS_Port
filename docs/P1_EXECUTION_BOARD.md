@@ -1883,6 +1883,34 @@ the proof/counter prefix inside the oracle path, rather than the path being take
 > the Results backdrop), so it needs designing rather than eyeballing. Until then R4c stays `?= 0`
 > and the owner's look at the zoom pair is the fastest route.
 
+> **R4h RAN, and it found a defect in R4c before it found anything about the pixels.**
+>
+> The experiment: `NDS_R4H_BATTLE_GENERIC_FIGHTERS` (lab only) drops **only** the fighters back to the
+> generic interpreter inside an otherwise identical battle frame, stage bracket intact, so scene,
+> camera and lighting environment are held constant and the renderer is the sole variable — the
+> confound the Results pair could not escape. Exact-frame capture at battle frame 400, both arms:
+> **2,765 of 240,000 guest pixels differ (1.15%), max channel delta 251**, localised to the fighters
+> and the damage HUD. The two renderers do produce visibly different fighters in the same scene, and
+> the shipped battle build is the native-owner arm by construction. So R4c makes Results agree with
+> the match rather than disagree with it.
+>
+> **The defect.** `ndsFighterDisplayContractSubmit` is reached from
+> `ndsFighterDisplayContractSubmitStageFighters` **inside** the battle bracket, and R4c's first
+> implementation ended with `ndsRendererHardwareSetNoOracle(FALSE)`. In a match that would have
+> cleared the stage's own setting for everything drawn after the first fighter — silently dropping
+> the rest of the stage present off the native owner. It now saves and restores, which makes the
+> bracket a no-op wherever the flag is already set, i.e. on the whole battle path. Re-measured after
+> the fix: Results **581,197/tic, 1.04 VBlanks, 0.52× — inside the gate**, so the correctness fix cost
+> nothing. Battle `FTR` p50 388,736 → 389,056 and p95 392,064 → 392,576, unchanged within noise,
+> which is the signal that the no-op holds.
+>
+> **Still not graduated, and now for a smaller reason.** That battle run carried an outlier — `ALL`
+> max 5,874,240 against the control's 2,240,576, `SRC` max 4.49M — which moves `WORK` p95 and makes
+> the run unusable as a clean battle result even though the bucket the change touches is flat. Two
+> things remain: one clean battle re-run, and the owner's read on which fighter look is intended. The
+> second is no longer "accept a regression?" but "Results and the match disagree; the match's look is
+> the one the campaign shipped — align them?"
+
 Evidence: `artifacts/performance/r4c-fighter-no-oracle-on-20260730.json`,
 `artifacts/visibility/2026-07-30_r207-r4c-results-tic160-candidate.png`,
 `artifacts/visibility/2026-07-30_r207-r4c-diff.png`, and the fighter zoom pair

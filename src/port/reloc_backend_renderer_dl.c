@@ -13305,6 +13305,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     u32 submitted_before;
     u32 triangles_before;
     u32 triangles_after;
+#if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    u32 saved_no_oracle;
+#endif
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     u32 owner_start;
     NDSRendererProfileOwner owner_id;
@@ -13377,20 +13380,26 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         gNdsFighterDLAllDrawP0HardwareTriangleCount +
         gNdsFighterDLAllDrawP1HardwareTriangleCount;
     sNdsFighterDisplayContractPlayback = TRUE;
-    /* R2-07 R4c. The same bracket the stage draw has carried since it was
-     * written (reloc_backend_movement.c:13559). Without it the fighter draw
-     * renders through the oracle path, whose per-list reset clears a
-     * proof/counter prefix once per part list per fighter per frame -- 70% of
-     * this function's memset traffic, and memset is 8.80% of the Results frame.
-     * Only this call site is bracketed: the display-callback site below passes
-     * sNdsFighterDLAllDrawPixels, which is the software preview itself and
-     * forces the detailed path whatever the oracle flag says. */
+    /* R2-07 R4c. Select the native fighter owner here as well. `no_oracle` is
+     * not a proof switch: reloc_backend_renderer_dl.c:12603 enters the native
+     * owner only when it is set, so this chooses the renderer (R4g). The battle
+     * present already sets it around its whole draw
+     * (reloc_backend_movement.c:13724/:13810), which is why the match gets the
+     * native owner and VS Results -- reaching this function through the scene
+     * draw with no bracket on the path -- gets the generic DL interpreter.
+     *
+     * SAVE AND RESTORE, do not set FALSE. This function is also called from
+     * ndsFighterDisplayContractSubmitStageFighters INSIDE the battle bracket,
+     * so ending with FALSE would clear the stage's own setting for everything
+     * drawn after the first fighter. Restoring makes the bracket a no-op
+     * wherever it is already set, which is exactly the battle path. */
 #if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    saved_no_oracle = ndsRendererHardwareNoOracleEnabled();
     ndsRendererHardwareSetNoOracle(TRUE);
 #endif
     ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp, NULL, 0u);
 #if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
-    ndsRendererHardwareSetNoOracle(FALSE);
+    ndsRendererHardwareSetNoOracle(saved_no_oracle);
 #endif
     sNdsFighterDisplayContractPlayback = FALSE;
     if (gNdsFighterMarioFoxDLAllDrawCount != submitted_before)

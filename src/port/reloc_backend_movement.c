@@ -13805,7 +13805,20 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 #endif
         sNdsStageGCDrawAllLoopNativeStageArmed = FALSE;
     }
+    /* R2-07 R4h, lab only. Drop the fighters -- and ONLY the fighters -- back to
+     * the generic DL interpreter inside an otherwise identical battle frame.
+     * The stage keeps its no-oracle bracket, so scene, camera and lighting
+     * environment are held constant and the sole variable is which renderer
+     * draws the fighters. That is what makes this comparable with the Results
+     * pair, where the two renderers could not be separated from two different
+     * backdrops. Never set in a published target. */
+#if NDS_R4H_BATTLE_GENERIC_FIGHTERS && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsRendererHardwareSetNoOracle(FALSE);
+#endif
     ndsFighterDisplayContractSubmitStageFighters();
+#if NDS_R4H_BATTLE_GENERIC_FIGHTERS && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsRendererHardwareSetNoOracle(TRUE);
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareSetNoOracle(FALSE);
 #endif
