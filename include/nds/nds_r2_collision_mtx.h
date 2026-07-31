@@ -22,15 +22,30 @@
  * and its internal call sites together, so these two functions cannot simply be
  * swapped underneath their callers (board, R2-07 L7 SCOPED).
  *
- * CURRENT STATE: the falsifier is RED. Against the 0.0200 world-unit bound
- * borrowed from E64b/E65, compose reaches 0.0226 and invert 0.3706. Do not wire
- * this in until that is resolved -- either by showing 0.37 units is immaterial
- * against real hurtbox dimensions and real joint scales (it is ~1-2% of a
- * hurtbox, which is not obviously safe), or by widening the representation.
- * The residual is dominated by quantising the INPUT matrices to 1/4096, not by
- * the arithmetic here, so more fractional bits in this kernel alone will not
- * move it; the fix would be carrying the joint chain in fixed point end to end,
- * which is L7's real shape anyway.
+ * CURRENT STATE: the gated domain is GREEN, measured 2026-07-31 against the
+ * 0.0200 world-unit bound borrowed from E64b/E65. Same binary, same RNG stream,
+ * only the kernel swapped:
+ *
+ *   near-unit (0.90-1.10, gated)   invert max 0.126987 -> 0.016609   GREEN
+ *   moderate  (0.50-1.50, report)             0.133385 -> 0.051753
+ *   conservative (0.25-2.00, rep.)            0.400510 -> 0.427738
+ *   compose   (near-unit, gated)              0.017817 -> 0.017817   unchanged
+ *
+ * The win is entirely the (p - t) restructure below; compose is byte-identical
+ * because it was not touched, which is the control that says so. Note the
+ * conservative domain got marginally WORSE -- at extreme scale spread the
+ * translation was never the dominant term, so removing it buys nothing there.
+ * That domain is reported, not gated, and which one SSB64 actually visits is
+ * still unmeasured (scripts/census-fighter-gameplay-joints.ps1).
+ *
+ * Green on the bound is not clearance to wire this in. It still has to be
+ * measured against real hurtbox dimensions and real joint scales, and the
+ * `#define` include seam renames a decomp definition and its internal call sites
+ * together, so these functions cannot simply be swapped underneath their callers.
+ *
+ * Earlier revisions of this comment quoted 0.0226 compose and 0.3706 invert.
+ * Both were stale -- re-measured on the matched control they are 0.017817 and
+ * 0.126987, and 0.3706 was closer to the conservative domain than the gated one.
  *
  * Format. 20.12 signed fixed point, matching the renderer's
  * NDSRendererMatrix20p12 so the two representations can eventually meet:

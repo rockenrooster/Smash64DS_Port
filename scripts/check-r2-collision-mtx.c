@@ -132,6 +132,40 @@ static double Cell(const NDSR2CollisionMtx *m, int r, int c)
     return (double)m->m[r][c] / NDS_R2_COLLISION_MTX_ONE;
 }
 
+static int32_t ToFixedScalar(double v)
+{
+    double s = v * NDS_R2_COLLISION_MTX_ONE;
+    return (int32_t)(s < 0.0 ? s - 0.5 : s + 0.5);
+}
+
+/* The world-to-local path as the runtime would actually run it: quantise the
+ * query point to 20.12 (the caller holds a Vec3f, so that conversion is real
+ * cost and belongs inside the measurement), carry it through the frame, and
+ * compare against the float inverse applied to the unquantised point. */
+static double FrameError(Mtx44f finv, const NDSR2CollisionMtx *frame,
+                         double px, double py, double pz)
+{
+    int32_t p[3];
+    int32_t local[3];
+    double worst = 0.0;
+
+    p[0] = ToFixedScalar(px);
+    p[1] = ToFixedScalar(py);
+    p[2] = ToFixedScalar(pz);
+    ndsR2CollisionWorldToLocal(local, frame, p);
+
+    for (int c = 0; c < 3; c++)
+    {
+        double fv = (double)finv[0][c] * px + (double)finv[1][c] * py +
+                    (double)finv[2][c] * pz + (double)finv[3][c];
+        double xv = (double)local[c] / NDS_R2_COLLISION_MTX_ONE;
+        double d = fabs(fv - xv);
+
+        if (d > worst) { worst = d; }
+    }
+    return worst;
+}
+
 /* Error in world units: transform the same point by both matrices. This is the
  * quantity collision reads, so it is the quantity the bound is stated in. */
 static double PointError(Mtx44f f, const NDSR2CollisionMtx *x,
@@ -210,9 +244,9 @@ static int Sweep(const char *name, double scale_lo, double scale_hi, int gated,
 
         {
             Mtx44f finv;
-            NDSR2CollisionMtx xinv;
+            NDSR2CollisionMtx xframe;
             int fok = FloatInvert(finv, a);
-            int xok = ndsR2CollisionInvert(&xinv, &xa);
+            int xok = ndsR2CollisionInvertFrame(&xframe, &xa);
 
             if (!fok || !xok) { singular++; }
             else
@@ -220,7 +254,7 @@ static int Sweep(const char *name, double scale_lo, double scale_hi, int gated,
                 /* The inverse carries a WORLD point into joint-local space, so
                  * the sample point is a world position near the joint, not a
                  * local offset. */
-                double e = PointError(finv, &xinv,
+                double e = FrameError(finv, &xframe,
                                       (double)a[3][0] + Rand(-20, 20),
                                       (double)a[3][1] + Rand(-20, 20),
                                       (double)a[3][2] + Rand(-20, 20));
