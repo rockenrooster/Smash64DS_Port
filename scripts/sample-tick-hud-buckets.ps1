@@ -36,6 +36,13 @@ param(
     # fired/skipped counters and read them from the same run that produced the
     # buckets, not from a second run that may not have taken the same path.
     [string[]]$ExtraGlobals = @(),
+    # Extra `make` variables for the build, e.g.
+    # -MakeFlags NDS_TASK75_LOAD_CENSUS=1,NDS_TASK68_FALLBACK_CENSUS=1.
+    # -ExtraGlobals names that only exist behind a census flag REQUIRE the
+    # matching flag here: without it this script rebuilds the ROM without the
+    # symbol and then rejects it in its own guard below, which reads as "the
+    # counter was deleted" rather than "the flag was never passed".
+    [string[]]$MakeFlags = @(),
     # Per-frame rows as CSV, one line per presented sample. The percentile table
     # answers "how big is P95"; it cannot answer "which frames are the P95", and
     # every excursion investigation this campaign has run needed the second
@@ -87,6 +94,13 @@ $ExtraGlobals = @($ExtraGlobals |
     ForEach-Object { $_ -split ',' } |
     ForEach-Object { $_.Trim() } |
     Where-Object { $_ -ne '' })
+# Same normalisation for -MakeFlags, and for the same reason as the comment
+# above: `-MakeFlags A=1,B=1` arrives as ONE string, which make would take as a
+# single malformed variable rather than two.
+$MakeFlags = @($MakeFlags |
+    ForEach-Object { $_ -split ',' } |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne '' })
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-battle-playable-tickhud-hwtri'
@@ -120,7 +134,16 @@ try {
     if (-not $NoBuild) {
         if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
         if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-        make -C $root "TARGET=$target" "BUILD=$Build"
+        # Census flags must reach `make`. This script's own header documents
+        # that -ExtraGlobals reads such as gNdsTask75AssetLoadCount need
+        # NDS_TASK75_LOAD_CENSUS=1 (and NDS_TASK68_FALLBACK_CENSUS=1), but the
+        # build line never passed them -- so a run that asked for those globals
+        # rebuilt the ROM WITHOUT them and then failed its own symbol guard.
+        # Third harness in this campaign with the same defect (2026-07-31);
+        # capture-sudden-death-entry.ps1 and soak-freeze-watch.ps1 were the
+        # other two. Generic pass-through here so the next flag needs no edit.
+        $makeArgs = @("TARGET=$target", "BUILD=$Build") + $MakeFlags
+        make -C $root @makeArgs
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     foreach ($path in @($rom, $elf, $Gdb)) {
