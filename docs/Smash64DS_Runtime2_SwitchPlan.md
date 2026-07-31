@@ -4,13 +4,19 @@ The single Runtime 2 document: charter, design rules, budgets, phase plan,
 and the definition of the switch.
 
 Status: **in execution.** R2-00a/b/c, R2-01, R2-02 gated; R2-05 complete;
-R2-03 shipped E12/E28/E29/E46/E32/E64b/E65; R2-04's clauses are met; R2-06 has
-Boundary green and equivalence, and its soak clause has no instrument (§7).
-**The P95 gate reading is met — 1,096,768 against 1,120,000 (E65, E67, E69), by
-23,232, three times the 5,000–7,000 placement floor.** Read §7
-R2-07's revised budget note before spending any of that. The board
-(`docs/P1_EXECUTION_BOARD.md`) is the live queue; this file stays the charter and
-is not a status log.
+R2-03 shipped E12/E28/E29/E46/E32/E64b/E65/E67/E69; R2-06 has Boundary green
+and equivalence. **R2-07 is the live phase.** The board
+(`docs/P1_EXECUTION_BOARD.md`) is the live queue; this file stays the charter
+and is not a status log.
+
+**The battle-frame P95 gate, read in the canonical DLDI-on configuration
+(§3.9), is NOT yet met — over by ~40,448.** The DLDI-off reading is 1,096,768,
+inside the gate by 23,232, but DLDI-off is the optimistic configuration and is
+not the acceptance number. R2-06 E8 localized the entire remainder: **every
+over-gate frame is an asset-load frame; clean-frame P95 is 1,056,640, ~63K
+inside budget.** So R2-04's "no first-use loading during gameplay" clause
+(§3.8) is not yet met in the honest configuration, and finishing it is the
+remaining battle-frame work — not further shaving of clean frames.
 
 ---
 
@@ -180,6 +186,11 @@ noisy, near a gate, or surprising. Noise policy: <10K ignore unless free;
 exact; 50–100K valuable; 100K+ major target. Do not accept a subsystem on P50
 if it creates P95 spikes.
 
+All gate readings are taken **DLDI-on** — the owner's I/O configuration,
+pinned in the harness 2026-07-29. DLDI-off is optimistic by roughly 30K P95;
+report it only as a secondary, clearly labelled number, never as the gate
+figure.
+
 ### 3.10 Fidelity floor
 
 Keep the approved full-3D Dream Land presentation and SSB64 visual identity.
@@ -187,6 +198,16 @@ Runtime 2 reduces runtime overhead, not stage content; Runtime 1 already
 proved large visual reductions were poor trades. The render fidelity doctrine
 applies: screenshot diffs plus the owner's visual approval, with the owner as
 the visual oracle.
+
+### 3.11 No gameplay-time heap allocation
+
+`syMallocSet` spins forever (`while (TRUE);`) on exhaustion — the BattleShip
+allocator cannot fail, only freeze, so any mid-match leak presents as a random
+total freeze (the 2026-07-29 freeze class, root-caused on the board).
+Therefore: no allocation from the shared heap during gameplay frames. Any
+mid-match cache gets a fixed arena, sized and allocated at match load, with an
+explicit overflow/eviction policy exercised in a soak. This binds the
+particle-bank port and every remaining R2-07 subsystem.
 
 ---
 
@@ -200,8 +221,8 @@ move the histogram from 3-VBlank frames to 2-VBlank frames
 2 VBlanks = 1,120,380 ticks = the P95 gate (PROJECT_GOAL: P95 <= 1.12M)
 ```
 
-Provisional per-subsystem targets (frozen at R2-00 after a fresh census; each
-also receives a traffic budget from the stall attributor's baseline):
+The original provisional targets are retained for history; **this table is no
+longer the allocation authority** — see the note below it:
 
 ```text
 60 Hz gameplay core, two logical ticks       150K
@@ -216,6 +237,20 @@ headroom                                     160K
                                             -----
 total                                      ~1.12M
 ```
+
+**Budget authority today (2026-07-30).** Measured reality replaced the table:
+`FTR` runs ~391,744 P50 against its 250K line and `SRC` ~309,120. Allocate
+from these instead:
+
+- **Battle frame:** the gate itself — DLDI-on P95 ≤ 1.12M, with the remaining
+  gap owned entirely by asset-load frames (see Status). Clean frames are ~63K
+  under gate.
+- **Cosmetic systems (R2-07):** the measured margin, not the table — on the
+  frames that carry the most effects, roughly 23K DLDI-off and negative
+  DLDI-on until the load work lands. For scale, 23K buys ~fourteen
+  textured-quad binds (Task 98: ~1,621 ticks/bind) plus a few thousand
+  interpreter steps. The table's 80K "effects + audio" line is fiction; do
+  not allocate from it.
 
 ---
 
@@ -268,9 +303,9 @@ Switch acceptance (all required):
 1. Boundary verifier green on the Runtime 2 battle path.
 2. Visual gate: synchronized screenshot diffs within the reported fidelity
    budget plus the owner's visual approval.
-3. Performance gate: P95 ≤ 1.12M ticks/presented frame on the accuracy
-   melonDS fork; device A/B reported as the 2/3/4/5+ VBlank histogram with
-   max interval.
+3. Performance gate: P95 ≤ 1.12M ticks/presented frame, **DLDI-on**, on the
+   accuracy melonDS fork; device A/B reported as the 2/3/4/5+ VBlank
+   histogram with max interval.
 4. Stability: full 3600-tick soak with zero flashes, corruption, hangs, or
    unexplained state differences.
 5. Owner play test on retail hardware, recorded (ROM hash, hardware,
@@ -367,80 +402,71 @@ excursion. The shipped Boundary stays Mario human vs level-3 Fox CPU at mode
 `163`, and `PROJECT_GOAL.md`'s P95 gate is defined on *representative* gameplay —
 so a P95 read off the stress config is a harder number than the milestone
 requires and must be reported as such, never swapped in silently for the
-Boundary figure.
+Boundary figure (`NDS_R2_BOTH_CPU` in the Makefile).
 
 - Mario CPU vs Fox CPU on Dream Land through `NDS_R2_PATH`: 60 Hz gameplay,
   collision, damage, knockback, shields, CPU behavior, camera, 30 FPS
   presentation. Effects/audio still Runtime 1 machinery where needed.
-- First full-frame gate: the 2-VBlank share becomes the headline metric.
-- Gate: Boundary green; soak clean; ~~histogram materially better than the
-  Runtime 1 A-side on the same commit~~.
+- Gate: Boundary green, equivalence between the two arms, and a clean soak.
+  Report the 2/3/4/5+ VBlank histogram as evidence of *no regression*, not of
+  a win.
 
-**Amended 2026-07-29 by R2-06 E0.** The struck clause is the wrong gate and was
-measured to be so. With engagement verified (`ndsR2BattleRun` present in one ELF
-and absent from the other, config dumps reading `NDS_R2_PATH` 1 and 0), the two
-arms are indistinguishable on the two-CPU stress config: 2-VBlank share 66.1% vs
-66.7%, `WORK-H` P50 +896, P95 +12,544 — all inside the 5,000–7,000 placement
-floor.
-
-That is not a defect. `ndsR2BattleRun` is deliberately the same loop shape as the
-Runtime 1 body it replaces, and every saving the campaign has produced (R2-02
-stage direct, R2-03 fighter direct plus E32/E64b, R2-04 loading and rate) is
-already enabled on *both* sides of the switch. **The switch is an architecture and
-correctness step; the performance belongs to the phases that feed it.** Requiring
-it to improve the histogram measures the wrong thing and would block a correct
-switch indefinitely.
-
-**R2-06 therefore gates on Boundary green (done) plus equivalence and a clean
-soak.** Report the histogram, but as evidence of *no regression*, not of a win.
-Also note the stress config is not the Boundary figure — see §7 R2-06's own
-warning and `NDS_R2_BOTH_CPU` in the Makefile.
+**The switch is an architecture and correctness step; the performance belongs
+to the phases that feed it.** Measured 2026-07-29 (R2-06 E0), with engagement
+verified in both ELFs: the two arms are indistinguishable on the stress config
+because every saving the campaign produced is enabled on *both* sides of the
+switch. Requiring the switch itself to improve the histogram measures the
+wrong thing and would block a correct switch indefinitely.
 
 ### R2-07 — Effects, audio, HUD, match flow, and Bugs
 
-- Pressing start in Results screen should restart match (P1 specific)
+- START on the Results screen restarts the match (P1-specific; row closed in
+  `BUGS.md` — keep it closed).
 - Ported particle banks (from the P1 row), SFX/voice/BGM, HUD, GAME SET →
   results flow. Cosmetic systems get explicit budgets so they cannot erase
   the headroom.
-- Bugs in BUGS.md all fixed.  
-- Gate: full demo loop (Mario CPU vs Fox CPU, 1 min and 5 mins match length) within total budget; P95 still ≤ 1.12M.
+- **All P1-scoped rows in `BUGS.md` fixed.** Rows BUGS.md itself defers to P2
+  (burst fidelity, the textured-particle half, and similar) record debt; they
+  do not gate this phase or the switch.  
+- Gate: full demo loop (Mario CPU vs Fox CPU, 1-minute and 5-minute match
+  lengths) within total budget; battle P95 still ≤ 1.12M DLDI-on. The
+  5-minute run is an **owner-instructed acceptance exception** to the
+  standing "never launch the five-minute configuration" rule in `AGENTS.md`;
+  it applies to this gate only, not to routine iteration.
 
-**As written this gate is unreachable today, and that is a sequencing fact rather
-than a failure (2026-07-29).** E65, E67 and E69 put P95 at 1,096,768 — **23,232
-under budget**, three times the 5,000–7,000 placement floor, but still about two
-percent of a frame. The cosmetic budget is real now rather than nil, and it is
-small: the particle work R2-07 names is a 2,961-line bytecode interpreter
-(`lb/lbparticle.c`) plus `ef/efparticle.c`, `ef/efdisplay.c`, a DS pack step and
-textured-quad draws. For scale, 23,232 ticks buys roughly **fourteen** textured-quad
-binds (Task 98 measured ~1,621 ticks per texture bind regardless of size) plus a few
-thousand interpreter steps — for *all* effects on the frame, on the frames that
-carry the most effects. Workable, not comfortable.
+**Budget reality (updated 2026-07-30).** The cosmetic budget is the measured
+margin, and in the canonical DLDI-on configuration that margin is currently
+**negative**: the battle frame is over the gate by ~40,448, owned entirely by
+asset-load frames (see Status). Clean frames sit ~63K under gate. So the
+particle work — a 2,961-line bytecode interpreter (`lb/lbparticle.c`) plus
+`ef/efparticle.c`, `ef/efdisplay.c`, a DS pack step and textured-quad draws —
+must be priced against the clean-frame margin, and the load-elimination work
+that finishes R2-04's clause must land before or beside it. For scale, ~23K
+of margin buys roughly fourteen textured-quad binds (Task 98: ~1,621
+ticks/bind) plus a few thousand interpreter steps, for *all* effects on the
+frames that carry the most effects. Workable, not comfortable.
 
-So **R2-07 must be preceded by a headroom pass, not merely followed by one.** The
-honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
+The honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
 
-1. **Buy headroom first.** `FTR` is 391,744 P50 against R2-03's 250,000 budget and
-   `SRC` is 309,120; both are above their phase budgets, so this is ordinary
-   remaining work rather than a new idea.
-2. **Run the cosmetic systems below simulation rate.** `PROJECT_GOAL.md` explicitly
-   allows particles at 15 Hz. A 15 Hz particle update is a quarter of the *mean*
-   cost and changes no gameplay.
+1. **Buy headroom first.** Eliminate in-match asset loads — the entire
+   over-gate population — then `FTR` (391,744 P50 vs its 250K line) and `SRC`
+   (309,120) as ordinary remaining phase work.
+2. **Run the cosmetic systems below simulation rate.** `PROJECT_GOAL.md`
+   explicitly allows particles at 15 Hz — a quarter of the *mean* cost with
+   no gameplay change. **But never as "every fourth frame, update
+   everything":** the gate is a P95, and batching quarter-rate work onto one
+   frame in four lowers the mean while **raising P95** (R2-03 E30 recorded
+   the general form: when the median falls and the P95 does not, stop cutting
+   the median). Round-robin a quarter of the generators per frame so each
+   still advances at 15 Hz while per-frame cost stays flat — the flat profile
+   is what P95 rewards.
+3. **Reduce visual fidelity** — the sacrifice order puts visual fidelity
+   above 30 FPS, so if the real scripts cannot fit, a cheaper source-derived
+   approximation with the visible delta recorded is the contract-compliant
+   answer.
 
-   **But do not implement it as "every fourth frame, update everything."** The gate
-   is a P95, not a mean. Batching a quarter-rate system onto one frame in four
-   leaves three cheap frames and one frame carrying 4× the work — the mean falls
-   and **P95 rises**, which is the wrong direction against this contract. R2-03 E30
-   already recorded the general form of this ("when the median falls and the P95
-   does not, stop cutting the median"). Spread the work instead: update a quarter of
-   the generators every frame in round-robin so each generator still advances at
-   15 Hz while the per-frame cost stays flat. Same visual result, and it is the flat
-   profile that P95 rewards.
-3. **Reduce visual fidelity** — sacrifice order puts visual fidelity above 30 FPS,
-   so if the real scripts cannot fit, a cheaper source-derived approximation is the
-   contract-compliant answer, with the visible delta recorded.
-
-Do **not** resolve it by widening the gate. The gate is the product contract, and
-1.12M is the number `PROJECT_GOAL.md` sets.
+Do **not** resolve any of it by widening the gate. The gate is the product
+contract, and 1.12M is the number `PROJECT_GOAL.md` sets.
 
 ### R2-08 — The switch
 
@@ -492,70 +518,25 @@ Runtime 2 is the Nintendo DS engine.
 
 ---
 
-## 10. Immediate next actions
+## 10. Owner decisions and the queue
 
-Superseded as of 2026-07-29. The original two items (owner approves the plan;
-add R2-00 to the board and start it) are both done, along with R2-01 through
-R2-04's loading and rate clauses.
+The board (`docs/P1_EXECUTION_BOARD.md`) is the **only** queue. This section
+is not a status log; it holds only decisions that are the owner's to make,
+plus pointers to where everything else lives. When this section and §7
+disagree, §7 is the contract — a stale entry here already stopped a live
+phase for a day (2026-07-29). Measurements and history belong on the board
+and in `PORTING.md`, never here.
 
-**Autonomous execution has run out of unblocked P1 levers.** Both remaining ones
-are owner decisions, and each is now precisely priced rather than a hypothesis:
+**Open owner decisions: none.** The two formerly listed here are resolved and
+shipped: the hurt-flash blocker turned out to be a generator gap, not a
+visual-approval call (E62), and E32 graduated at −52,416 P95; the fixed-point
+cubic graduated as E64b (−26,944 P95) with equivalence settled by E65,
+retiring the Task 9 bit-exactness question for that path. Their full history
+lives on the board.
 
-1. **E32 — the fighter fallback, worth −51,136 P95 and four frames.** Blocked on
-   the hurt-flash visual regression. Six experiments (E48–E59) failed to find a
-   mechanism and that line is closed: it is not vertex colour, material colour,
-   light colour, the fold arithmetic, E16's hardware lighting, or
-   `color_modulate`. It is therefore a **fidelity-budget question** under §3.10
-   and `PROJECT_GOAL.md` — the owner's visual approval — not a measurement.
-2. **The fixed-point cubic — worth ~50,000 ticks/frame, on every frame.**
-   Blocked on the Task 9 state hash, which asserts bit-exactness where
-   `PROJECT_GOAL.md` requires only mechanical equivalence and explicitly permits
-   "fixed-point replacements". Confined to `gcGetInterpValueCubic` evaluating
-   already-parsed track state; its only path to gameplay is
-   `gmCollisionGetFighterPartsWorldPosition`, so the honest acceptance test is a
-   hitbox-overlap differential over a full match rather than the hash.
-
-`108,928 − 51,136 − ~50,000 ≈ 7,800`. **Those two together close the gate**;
-neither closes it alone. R2-05's generator-reproducibility gate already passes,
-and R2-06/07/08 are gated behind the budget being met, so there is no way to
-proceed on P1 performance without answering at least one of the two above.
-
-**Superseded again, 2026-07-30. The last claim above was wrong twice over.**
-
-*First*, "R2-06/07/08 are gated behind the budget being met" is not what §7 says
-about R2-06, and §7's own 2026-07-29 amendment on the same day already contradicted
-it: R2-06 gates on **Boundary green plus equivalence plus a clean soak**, all three
-of which are now done, and its performance "belongs to the phases that feed it".
-R2-07 is therefore unblocked, and §10 saying otherwise stopped a real phase for a
-day. When two sections of this plan disagree, the phase list in §7 is the contract
-and §10 is a status note.
-
-*Second*, "autonomous execution has run out of unblocked P1 levers" was false, and
-the counter-example is large. **R2-07's own `GAME SET → results flow` clause had
-never been measured.** When it was (R0, 2026-07-29) the VS Results screen cost
-**22.4M ticks/frame at 1.50 FPS** — twenty times the gate, on a screen every match
-ends on, while the battle frame it had been compared against was within 6,464 of
-budget. Four experiments later it is **5.74M at 5.85 FPS, −74.4%**, all bit-exact by
-proof (`scripts/check_sprite_lerp_exact.py`), Latest green:
-
-| lever | mechanism | result |
-| --- | --- | --- |
-| R0c | `-Os` emits `blx __udivsi3` for a **constant** divisor | −43.6% |
-| R0d | `-Os` declines to inline a 118-byte leaf that pushes 8 registers | −1.0 VBlank |
-| R0e | 16-entry palette + one source byte per **pair** of columns, 112 → 9 Thumb instructions/pixel | −52.4% |
-| R0g | pair as one 32-bit store | **−0.06%, reverted** |
-| R0h | per-PC profile: the compositor is 61.9%, and R0f's split was VBlank quantisation | queued as R2 |
-
-**The transferable lesson is about §3.9's measurement discipline, not about the
-blitter.** Two of those wins were compiler behaviour invisible in the C, and one
-"finding" was an artifact of a quantised instrument that invented 1.6M ticks by
-flooring two sub-VBlank rows to zero. Standing rules 8–11 now carry all four.
-
-**So the honest §10, today:** the two owner decisions above are still the only
-levers on the *battle* frame, which is where the gate is missed by ~40,448 DLDI-on
-— and R2-06 E8 has since shown every over-gate frame is an **asset-load** frame,
-with clean-frame P95 at 1,056,640, *inside* budget. Meanwhile R2-07 has its own
-unblocked queue that does not touch either decision: the results compositor
-(3,466,102 ticks/frame, 61.9%, run twice per frame on static content), the ~30 s
-GAME SET dead air, and then the particle/audio/HUD clauses §7 R2-07 actually names.
-**Do not read a stale §10 as permission to stop.**
+Durable lessons from the superseded versions of this section were promoted
+into the charter instead of being left as status: the DLDI-on canonical
+configuration (§3.9), the no-gameplay-time-allocation rule (§3.11), and the
+2026-07-30 measurement-discipline findings (compiler behaviour invisible in
+the C; quantised instruments inventing ticks), which the board's standing
+rules 8–11 carry.

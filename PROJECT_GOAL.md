@@ -285,7 +285,7 @@ Before changing gameplay behavior, exhaust cheaper ways of reproducing equivalen
 
 # Current Milestone
 
-The immediate target is a complete vertical slice:
+The immediate target is a complete vertical slice (P1):
 
 # Mario vs. Level-3 CPU Fox
 
@@ -294,6 +294,10 @@ The immediate target is a complete vertical slice:
 # One-minute timed match
 
 # Items Off
+
+# Results
+
+# Sudden Death
 
 The ROM may boot directly into the match.
 
@@ -417,7 +421,9 @@ and maintains a stable perceived 30 FPS.
 
 Rare overruns are acceptable.
 
-The current approximately 2.8M-tick / 15-FPS implementation is therefore an intermediate implementation, not an acceptable endpoint.
+The stability requirement applies to every screen in the milestone, not only the battle: GAME SET, the Results screen, and Sudden Death must hold their presented cadence without perceptible hitching. The tick budget is per presented frame **at that screen's cadence** — a screen presented at 60 Hz budgets approximately 560K ARM9 ticks per presented frame; one presented at 30 Hz budgets approximately 1.12M.
+
+Any implementation that exceeds the gate is an intermediate implementation, not an acceptable endpoint.
 
 ---
 
@@ -438,7 +444,7 @@ The current milestone does not require:
 * intro
 * credits
 * save data
-* rematch flow
+* full rematch flow (character/stage re-select; START-restart from the Results screen **is** in scope)
 * exact graphical fidelity
 * native 60 FPS rendering
 * generic interpreter compatibility
