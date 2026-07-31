@@ -1529,3 +1529,65 @@ These bugs should be fixed for P1 delivery.
   Cheaper interim guard, also not done: have `verify-runtime.ps1` refuse to run
   when the ROM at the root does not match the configuration the profile expects,
   rather than testing whatever is present.
+
+-`capture-sudden-death-entry.ps1 -MatchedCapture` never reaches Sudden Death.
+  Found 2026-07-31. The run stops at stage `battle-start` and throws "Never
+  entered Sudden Death (last stage: 'battle-start')", with "gdb did not detach
+  cleanly; the core may still be halted" first -- so the matched-capture
+  breakpoints appear to leave the core halted through the tie check rather than
+  letting the match reach it. `-NoBuild -MatchedCapture -WatchSeconds 0`
+  reproduces it; the same invocation without `-MatchedCapture` enters normally.
+  This matters more than a broken switch usually would, because that switch is
+  the only instrument that compares the FIRST and SECOND scene entry at the same
+  camera state, inside one run. Its own docstring says so: "the only way to tell
+  a genuine rendering difference from 'the same stage, further away' ... this is
+  the comparison that should have come first." Without it, every second-entry
+  picture claim rests on two frames captured at different game states, which is
+  exactly how the earlier "six mechanisms measured clean" pass went wrong.
+  Do not compare a second-entry screenshot against an artifact from a different
+  day as a substitute. The 2026-07-31 02:58 and 03:03 watch captures predate the
+  L9 sine-table and L10 hardware-sqrt changes, which alter CPU Fox's evolution,
+  so the fighters are at different damage and the match is at a different point
+  60s in. They are not a control for anything downstream of those commits.
+
+-REGRESSION, mine, 2026-07-31: Sudden Death now FREEZES at the "SUDDEN DEATH"
+  banner, and L9's sine table is the 4,096 bytes that tipped it.
+  The owner spotted it from the screenshots -- the banner staying up across a 60s
+  and a 110s watch is the freeze, not a capture-timing artifact. I had the tell
+  and misread it: both watches returned frames with IDENTICAL tick counters
+  (ALL 1679872/2800960, VBI 2:16), which is what a frozen core looks like, and I
+  wrote it off as "the capture point is fixed".
+  Measured, matched arms, same binary except the named change:
+                              heap free (run)   arena fails   reached
+    pre-L9/L10 (02:58, 03:03)      42,992           26        DMG 312%, past banner
+    today, latch fix               38,896           27        FROZEN at banner
+    today, latch fix REVERTED      38,896           27        FROZEN at banner
+  So the freeze is NOT the second-entry latch fix -- the control freezes
+  identically, and the latch fix moves neither heap nor failure count. It is
+  the pair of commits from this morning: L9 `2a53c061cd1` (06:01) and L10
+  `f878e8bbc74` (06:32), both of which were qualified on Boundary only.
+  The 4,096 is exact, not approximate. `arm-none-eabi-nm` on the tickhud ELF:
+  `020c5238 00001000 T dLBCommonSinLookup` -- 0x1000 bytes, in main RAM, which
+  is precisely the 42,992 -> 38,896 delta. L9 added a 1024-entry f32 table to a
+  scene that was already running on ~43 KB free with 26 failing allocations; it
+  took 4,096 of that and bought a 27th failure.
+  What this says about the real defect: 26 arena failures BEFORE L9 means Sudden
+  Death was already allocating past the end of its heap and surviving on luck.
+  L9 is the trigger, not the disease. Reverting it unfreezes the symptom and
+  leaves a scene that is still one allocation from the edge.
+  Options, in the order they should be considered:
+  - Fix the heap. Sudden Death re-enters nSCKindVSBattle on the same scene kind
+    and reaches 1,226,768 used against 1,265,664; find what it is holding that a
+    first entry is not. This is the actual bug.
+  - Shrink the table. 1024 f32 is a quarter-wave at f32; s16 Q15 halves it to
+    2,048 and the precision cost is measurable against the E64b/E65 bound.
+  - Revert L9. Cheapest, and it gives back part of the WORK P95 chain
+    (1,281,856 -> 1,244,608 -> 1,232,448) that L9 and L10 earned together.
+  NOT yet done: none of the three. The attribution is measured; the choice is
+  the owner's because it trades a P95 win against a freeze.
+  Process note, because this is the second time today: L9 and L10 changed shared
+  math and were verified on Boundary, which is battle-only. AGENTS.md already
+  says to use Latest "when normal/shared startup is affected". Sudden Death is
+  neither Boundary's battle nor Latest's startup, so nothing in the standing
+  verifier set would have caught this -- the Sudden Death lane has to be part of
+  qualifying any change to shared math or shared RAM.
