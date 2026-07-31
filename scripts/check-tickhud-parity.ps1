@@ -83,6 +83,20 @@ foreach ($key in $keys) {
     $drift.Add(('      tick HUD  {0} = {1}' -f $TickHud, $t))
 }
 
+# An allowlist entry says "these two are ALLOWED to differ", which on its own is
+# also satisfied by their being identical -- and a tick-HUD ROM reporting
+# TICK_HUD=0 would sail through a check that only hunts for unexpected
+# differences, while every bucket it produced came from a ROM with no timers in
+# it. So require each allowlisted key to actually differ.
+foreach ($key in $allowed.Keys) {
+    $p = if ($publishedFlags.Contains($key)) { $publishedFlags[$key] } else { '<absent>' }
+    $t = if ($tickHudFlags.Contains($key)) { $tickHudFlags[$key] } else { '<absent>' }
+    if ($p -cne $t) { continue }
+    $drift.Add(('  {0}' -f $key))
+    $drift.Add(('      identical ({0}) but this key is {1}, so it MUST differ' -f
+        $p, $allowed[$key]))
+}
+
 if ($drift.Count -gt 0) {
     Write-Output 'Tick-HUD parity FAILED. These flags differ:'
     $drift | ForEach-Object { Write-Output $_ }
