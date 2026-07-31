@@ -405,6 +405,29 @@ These bugs should be fixed for P1 delivery.
     and why the second entry never does.** Note the decomp's `- 1` seed assumes
     a counter that advances; in a port where it never does, `0xFF` is
     permanently "different frame" and only a real generic-path draw corrects it.
+  - **`frame_draw_last` is the ONLY difference in the whole GObj header
+    (2026-07-31, log `2026-07-31_021739`).** 24 words dumped from each of the
+    five segments on both entries at the matched stop — 480 bytes compared —
+    and the diff is **5 words out of 120, every one of them +0x0C**:
+    ```
+    gobj 0..4   +0x0C   entry1 = 0x01xx0401 ...   entry2 = 0x01ff0401 ...
+    differing words: 5
+    ```
+    Byte-identical across entries: `link_next`/`link_prev`, `link_priority`,
+    `func_run`, `gobjproc_head`/`tail`, `dl_link_next`/`dl_link_prev`,
+    `dl_link_priority`, `proc_display`, **`camera_mask` (+0x30)** and
+    **`camera_tag` (+0x38)**.
+    **That kills the obvious next hypothesis before it was written.**
+    `gcCaptureTaggedGObjs` (`objdisplay.c:3168`) is the only writer of
+    `frame_draw_last`, and it admits a GObj on two tests: `!(flags &
+    GOBJ_FLAG_HIDDEN)` and a `camera_tag` match against the camera GObj. The
+    tag on the stage side is **identical on both entries**, and so is the
+    GObj's position in the `dl_link` chain the walk follows — so a stage-side
+    tag mismatch is refuted. What remains is (a) the camera GObj's own
+    `camera_tag`, (b) `flags & GOBJ_FLAG_HIDDEN`, which lies past +0x5F and was
+    NOT covered by this dump, or (c) `gcCaptureTaggedGObjs` not running over
+    this `link_id` at all on the second entry. Measure those three; do not
+    assume among them.
   - **The five unreplayed segments are all PRESENT on both entries
     (2026-07-31).** Read at two known-good stops in the Sudden Death lane,
     `timer-live` (entry one) and `running` (entry two), log
