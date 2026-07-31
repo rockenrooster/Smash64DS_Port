@@ -294,6 +294,8 @@ try {
         'printf "SD-RELOC-EVICT=%u\n", gNdsRelocSceneReentryEvictCount',
         'printf "SD-RELOC-EVICT-GEN=%u\n", gNdsRelocSceneReentryGenerationEvictCount',
         'printf "SD-RELOC-EVICT-RANGE=%u\n", gNdsRelocSceneReentryRangeEvictCount',
+        'printf "SD-STAGE-STEADY-ADMIT=%u\n", gNdsR2StageSteadyAdmitCount',
+        'printf "SD-STAGE-REBUILD=%u\n", gNdsR2StageTopologyRebuildCount',
         'printf "SD-WALK-BOUND-HITS=%u\n", gNdsR2MaterialWalkBoundHits',
         'printf "SD-CHAIN-PROBES=%u\n", gNdsR2ChainProbeCount',
         'printf "SD-CHAIN-INVALID=%u\n", gNdsR2ChainProbeInvalidCount',

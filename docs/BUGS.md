@@ -333,7 +333,40 @@ These bugs should be fixed for P1 delivery.
       confirmed instance of exactly the persistent-state class item 4 names.
     - The MObj chain is clean throughout (91,482 probes, 0 invalid), so this is
       not list corruption either.
-    **Next suspect, unmeasured:** the native stage owner's prepared workspace.
+    **The stale-workspace suspect is REFUTED too (2026-07-30).**
+    `gNdsR2StageTopologyRebuildCount` reads **2** across a run that reaches
+    Sudden Death -- one full rebuild per scene entry -- against
+    `gNdsR2StageSteadyAdmitCount` 301 for the ordinary in-match frames. So
+    `binding_dobjs[]` is **freshly collected from the live tree on the second
+    entry**, not re-admitted from match 1. The Task 44 steady path
+    (`reloc_backend_renderer_dl.c:7520`), which reuses the whole workspace on
+    nothing but `sNdsRelocStageAssetMutation`, was the obvious hazard and it is
+    not firing across the boundary.
+    **So the mis-binding is in the CONTENT of a fresh rebuild, not in stale
+    state.** `ndsRendererAdapterCollectNativeStageTopology` fills
+    `binding_dobjs[]` in whatever order the live DObj tree presents, and
+    `ndsRendererAdapterPrepareNativeStageMaterials` then indexes it by the fixed
+    constants `{20, 22, 31, 32}`. If Sudden Death builds that tree in a
+    different ORDER -- genuinely different, not stale -- the fresh collection
+    still hands each index another object's material. That is now the leading
+    hypothesis and it is falsifiable: dump `binding_dobjs[]` on both entries and
+    compare the DObj identities at those four indices.
+    Four hypotheses are eliminated by measurement so far: static textures
+    (2 prepares, 0 violations), MObj chain corruption (91,482 probes, 0 invalid),
+    scene-cache eviction (now 2/2 and the symptom is unchanged), and stale
+    workspace admission (2 rebuilds).
+
+    **The freeze is INTERMITTENT, not gone.** An unchanged ROM that had given
+    6/6 distinct frames froze on a later run of the same lane -- 1 distinct
+    frame in 6 samples over 30 s, 245 distinct colours so the capture was live
+    -- and then ran clean again. That is direct evidence the fault is racy
+    rather than deterministic, and it weakens the earlier "the guard displaced
+    it" reasoning as well: the pre-guard runs that froze four times in a row may
+    have been an unlucky streak. Treat any single freeze-free Sudden Death run
+    as uninformative; this needs repetition counts, not one observation.
+
+    **Superseded suspect (kept for the record):** the native stage owner's
+    prepared workspace.
     `ndsRendererAdapterPrepareNativeStageMaterials`
     (`reloc_backend_renderer_dl.c:7398`) indexes `workspace->binding_dobjs[]` by
     FIXED indices `{20, 22, 31, 32}` with fixed expected flags. If the DObj tree

@@ -73,6 +73,17 @@ static const Gfx sNdsRendererAdapterEmptySegmentEDL[1] = {
     { { NDS_FIGHTER_DL_OP_ENDDL << 24, 0u } }
 };
 
+#if NDS_R2_SECOND_ENTRY_DIAG
+/* Native stage owner admission split. Declared up here, ahead of every use:
+ * this file is #included into scene_backend.c, so a definition placed next to
+ * the function it serves lands AFTER the earlier consumers and does not
+ * compile. A second scene entry MUST show the rebuild count advance; a run
+ * where only the steady-admit count moves across the entry is one where last
+ * match's binding_dobjs[] were re-admitted wholesale. */
+volatile u32 gNdsR2StageSteadyAdmitCount;
+volatile u32 gNdsR2StageTopologyRebuildCount;
+#endif
+
 static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
 {
 #if NDS_TASK39_FX_FLASH
@@ -7527,6 +7538,15 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
         topology_generation = workspace->topology_generation;
         topology_stamp = workspace->topology_stamp;
         topology_cached = TRUE;
+#if NDS_R2_SECOND_ENTRY_DIAG
+        /* The fast path that reuses binding_dobjs[] wholesale. It consults
+         * neither owner_generation nor the heap generation -- only
+         * sNdsRelocStageAssetMutation -- so if that fails to move on a second
+         * scene entry, last match's DObj pointers are re-admitted intact. The
+         * existing counters here are PROFILE_LEVEL==1 only, which the tick-HUD
+         * build is not, so this bug class was invisible to every run. */
+        gNdsR2StageSteadyAdmitCount++;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
         gNdsRendererTask44SteadyAdmitCount++;
 #endif
@@ -7575,6 +7595,11 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     }
     if (topology_cached == FALSE)
     {
+#if NDS_R2_SECOND_ENTRY_DIAG
+        /* A full rebuild: binding_dobjs[] is re-collected from the live tree.
+         * This is what MUST happen on a second scene entry. */
+        gNdsR2StageTopologyRebuildCount++;
+#endif
         bzero(workspace, sizeof(*workspace));
         for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
         {
