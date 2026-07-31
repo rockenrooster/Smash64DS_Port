@@ -85,12 +85,20 @@ $elf = Resolve-Smash64DSBuildOutput `
 # 45-minute run "cannot confirm" must not mean "proceed" -- the first version of
 # this guard wrapped the check in `if (Test-Path ...)` and skipped silently on
 # exactly the build that needed it. Confirmed present-and-set, or throw.
+#
+# SCOPE: only when we are TRUSTING an existing build. This guard sits ahead of
+# the build step, so demanding a header unconditionally rejects a fresh
+# directory the script was about to populate -- which it did on the first
+# attempt. With -NoBuild an absent header is fatal (nothing will create it);
+# without it, the build supplies the header and the ROM.
 $profileConfigHeader = Join-Path $root "$Build\nds_build_config.h"
-$profileSeen = if (Test-Path -LiteralPath $profileConfigHeader -PathType Leaf) {
+$profileHeaderExists = Test-Path -LiteralPath $profileConfigHeader -PathType Leaf
+$profileSeen = if ($profileHeaderExists) {
     [regex]::Match((Get-Content -LiteralPath $profileConfigHeader -Raw),
         '(?m)^#define\s+NDS_TASK37_PROFILE\s+(\d+)')
 } else { $null }
-if (-not ($profileSeen -and $profileSeen.Success -and
+if (($NoBuild -or $profileHeaderExists) -and
+    -not ($profileSeen -and $profileSeen.Success -and
           ([int]$profileSeen.Groups[1].Value -ne 0))) {
     throw ("$Build cannot be confirmed as NDS_TASK37_PROFILE=1 " +
            $(if ($null -eq $profileSeen) {
