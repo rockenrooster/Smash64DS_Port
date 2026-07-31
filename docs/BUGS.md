@@ -446,6 +446,33 @@ These bugs should be fixed for P1 delivery.
     Note also that backtrace frame `#2` named a data symbol
     (`gGMCameraPauseCameraEyeY`), so treat anything past `#1` as unreliable —
     the usual addr2line hazard.
+  - **PROVISIONALLY WITHDRAWN — the `frame_draw_last` difference is most likely
+    MY SAMPLING ARTIFACT, not a defect (2026-07-31).** Two measured facts kill
+    the interpretation, not the observation:
+    1. **The bit-4 pass RUNS on the second entry.** A conditional break
+       (`camera_mask & 0x10`) hits with
+       `SD-BIT4-HIT=0x2367020,0x10,0xffffffff` — `gGMCameraGObj`, the exact
+       `COBJ_MASK_DLLINK(4)` mask, matching tag. `dl_link_id` 4 is where three
+       of the five stage GObjs live, so the pass that touches them executes with
+       every gate input correct.
+    2. **The two arms were sampled at incomparable points in the scene's life.**
+       `frame_draw_last` is seeded `0xFF` at creation (`objman.c:1892`,
+       `counter - 1` with the counter 0) and only becomes `0x00` once a capture
+       has run. The entry-one read was taken after roughly a minute of drawing;
+       the entry-two read is at `running`, the **first `scVSBattleFuncUpdate` of
+       Sudden Death, before a single Sudden Death frame has been presented.**
+       A perfectly healthy second entry reads `0xFF` there.
+    So "0x00 vs 0xFF" is consistent with "sampled after N draws vs before the
+    first draw" and needs no defect to explain it. **Every downstream claim
+    built on it — the `proc_diff`/`proc_same` split as the cause of the
+    scrambled stage and of `STG` 2.21x — is suspended, not merely qualified.**
+    **The confirming run did not complete** (the `SD-LATE-*` block, which lets
+    three frames present and re-reads the same five GObjs, did not emit). Do
+    that first: if the five turn `0x00` after a few presented frames, this whole
+    line is closed as a measurement error and the stage corruption is still
+    unexplained. Note what stays true regardless — the corruption itself is real
+    and reproduced (`STG` 171,328 -> 378,880, matched screenshots) — only the
+    `frame_draw_last` explanation is in doubt.
   - **Superseded candidate note, kept for the reasoning: `frame_draw_last` is
     `0xFF` on every live stage GObj on the second entry (2026-07-31).** Log
     `2026-07-31_020601`. Eight words read from each of the five unreplayed

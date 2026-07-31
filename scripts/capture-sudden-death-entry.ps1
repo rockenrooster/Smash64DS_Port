@@ -610,7 +610,42 @@ try {
         # Same phase anchor on the second entry -- see the entry-one block.
         'tbreak ndsPlatformEndFrame',
         'continue',
-        'printf "SD-CAMCALL-ARMED=1\n"'
+        'printf "SD-CAMCALL-ARMED=1\n"',
+        # GO STRAIGHT TO THE PASS THAT MATTERS. Eight blind samples never
+        # contained mask bit 4, and dl_link_id 4 is where three of the five
+        # stage GObjs live -- so the enumeration could not have answered the
+        # question no matter how the numbers came out. A condition on the mask
+        # finds that pass however deep it is, in one stop instead of dozens.
+        #
+        # Placed LAST, so a miss costs nothing and IS the result: entry one must
+        # have such a pass (its frame_draw_last reads 0x00, which only the
+        # capture writes), so ARMED without BIT4 means the second entry never
+        # runs the pass that touches these GObjs.
+        'tbreak gcCaptureCameraGObj if (camera_gobj->camera_mask & 0x10) != 0',
+        'continue',
+        'printf "SD-BIT4-HIT=%#x,%#llx,%#x\n", camera_gobj, camera_gobj->camera_mask, camera_gobj->camera_tag',
+        'printf "SD-BIT4-LINK0=%#x\n", gGCCommonDLLinks[4]',
+        # SELF-CHECK ON MY OWN SAMPLE TIMING, and it may invalidate this entire
+        # row. `running` is the FIRST scVSBattleFuncUpdate of Sudden Death --
+        # before a single Sudden Death frame has been drawn -- while the entry-
+        # one read was taken after ~a minute of drawing. frame_draw_last is
+        # seeded 0xFF at creation and only becomes 0x00 once a capture has run,
+        # so "0x00 vs 0xFF" may be nothing but "after N draws vs before the
+        # first draw". The bit-4 pass demonstrably RUNS here with the correct
+        # mask and tag, which makes that reading more likely than a defect.
+        # Let three frames present, then re-read the same five GObjs. If they
+        # turn 0x00, the difference is a sampling artifact and this row's
+        # central finding is withdrawn.
+        'tbreak ndsPlatformEndFrame', 'continue',
+        'tbreak ndsPlatformEndFrame', 'continue',
+        'tbreak ndsPlatformEndFrame', 'continue',
+        'printf "SD-LATE-BEGIN\n"',
+        'x/4wx gGRCommonStruct.pupupu.map_gobj[0]',
+        'x/4wx gGRCommonStruct.pupupu.map_gobj[1]',
+        'x/4wx gGRCommonStruct.pupupu.map_gobj[2]',
+        'x/4wx gGRCommonStruct.pupupu.map_gobj[3]',
+        'x/4wx gGRCommonLayerGObjs[1]',
+        'printf "SD-LATE-END\n"'
     ) + $(1..8 | ForEach-Object { @(
         # ENUMERATE the capture calls rather than sampling one. The first call
         # after the stop turned out to be a camera with mask 0 AND tag 0 that is
