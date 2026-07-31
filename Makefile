@@ -2389,7 +2389,7 @@ $(NDS_TASK39_HIT_SPARKS_INC): \
 # gitignored src/nds/generated, which is why the ELF depends on it.
 $(NDS_PARTICLE_BANKS_INC): \
 		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
-		$(PROJECT_ROOT)/scripts/generate_task39_effect_census.py \
+		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_effect_census.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb \
 		$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c
