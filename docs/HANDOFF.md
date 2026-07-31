@@ -17,8 +17,7 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 **`WORK-H` P95 ~1,160,448-1,179,520 / P50 ~976,000**, 8-9/128 over, evidence `r206-head-control-128`
 and `r206-e11-control-128`. **The harness does not scatter, but identical source is not an identical
 binary** — no reproducible ROM hash, and those two HEAD controls differ by **P95 +5,376, ±1 over-gate
-frame, a 1-frame window shift**. That is the floor for any cross-build delta; always run the matched
-control (E11).
+frame**. That is the floor for any cross-build delta; always run the matched control (E11).
 
 **DLDI-on costs ~29,696 P95 and is required for retail parity (owner), so it is the honest config.**
 E69 rebuilt at its own commit `4916656d`, identical source, reads **1,126,464** DLDI-on vs the
@@ -28,25 +27,26 @@ pre-`3eb9ecdb` P95 as a lower bound.
 
 **Never compare an anim-cache pair frame-by-frame** — it shifts load timing; order stats only.
 
-## OPEN P1: every over-gate frame is an ASSET-LOAD frame, and clean P95 MEETS THE GATE
+## OPEN P1: loads own only ~18% of over-gate frames — E8's headline is CONTRADICTED
 
-**E8.** The Task 75 ring marks the frames running `ndsRelocFinalizeLoadedFile`
-(`reloc_backend_assets.c:3398`): **16 of 128, and 8 of the 9 over-gate frames are among them.** Load
-frames P50 **1,113,152**; **clean frames P50 974,080, P95 1,056,640 — inside the 1,120,000 gate by
-63,360**, 1 of 112 over. The +139,072 premium is entirely `SRC`. **The average frame is already
-145,920 under budget.** **E7 refuted both previously-named causes**; on over-gate frames `FTR` is
-**−1,312** / `STG` **−2,496** — not a render problem — and **E32's flash residual no longer blocks a
-gate lever.**
+**L2, 2026-07-31, per-frame `gNdsTask75AssetLoadCount` (`-PerFrameGlobals`, new).** Loads ∩ over-gate
+**inside one build** (no cross-build assumption): **5 of 28**; against L1's over-gate list, **4 of 28**.
+So **24 of 28 over-gate frames do no asset load** — E8's headline came from a run total and does not
+survive a per-frame read. **Load elimination cannot close the gate alone**; keep it for R2-04 §3.8
+(correctness) but never budget it as the gate's answer. The other 24 are `SRC` frames per L1.
 
-**Inside the relocation, do NOT attack the O(n²) scan** — only 17.3% of it (n is 25.4). The shape is the
-**payload walked TWICE** using pointer *differences* only, so hoisting to cache-store time is viable (E9).
-**E10 ANSWERED the frame-wide premium and there is NO single lever:** **326,906/frame** spread over
-**513 symbols carrying 349,268 — fully attributed**, relocation 37.0%, `ftAnimParseDObjFigatree` 13.0%.
+**E8's surviving numbers.** Load frames P50 **1,113,152**; **clean frames P50 974,080, P95 1,056,640 —
+inside the 1,120,000 gate by 63,360**; premium entirely `SRC`; average frame 145,920 under budget.
+**E7 refuted both previously-named causes** (`FTR` **−1,312** / `STG` **−2,496** — not a render problem).
+
+**Do NOT attack the relocation's O(n²) scan** — only 17.3% of it (n is 25.4); the payload is walked
+TWICE by pointer *differences*, so hoisting to cache-store time is the viable shape (E9). **E10: no
+single lever** — **326,906/frame** over **513 symbols**, relocation 37.0%, `ftAnimParseDObjFigatree` 13.0%.
 
 **STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked.** It removed real work
-(`ndsRelocAssetIDForToken`) with **negative** bytes added and a **bit-identical** load-frame set, yet
-**P95 +15,744, P99 +59,200, over-gate 9 → 11** — ~3× the +5,376 cross-build floor. **REVERTED.** Only
-a change clearing ~16,000 of tail movement, or one that **moves work off the frame**, counts.
+with **negative** bytes added and a **bit-identical** load-frame set, yet **P95 +15,744, P99 +59,200,
+over-gate 9 → 11** — ~3× the +5,376 cross-build floor. **REVERTED.** Only a change clearing ~16,000 of
+tail movement, or one that **moves work off the frame**, counts.
 
 ## OPEN P1: the freeze class is ROOT-CAUSED — heap OOM spins in the allocator
 
