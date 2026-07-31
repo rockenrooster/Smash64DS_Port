@@ -1793,6 +1793,32 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 L11 NULL — no libm trig left on the battle path after L9 (2026-07-31)
+
+Swept for more of L9's shape (a port stub standing in for cheaper source code)
+before spending a build. **Nothing left worth taking**, and the sweep is recorded
+so it is not repeated:
+
+- **No other port function is a bare libm wrapper.** An AST-shaped scan of
+  `src/port` and `src/nds` for `f32 X(...) { return <libm>(...); }` returns
+  `lbCommonSin`/`Cos` only — the two L9 already fixed.
+- **16 direct `sinf`/`cosf` call sites remain**, but 11 are in
+  `opening_movie_backend.c` (not the battle scene) and the rest are one-shot
+  (`atan2f` on stick range, a `cosf` in an angle compare). None is per-joint.
+- **`__sinf`/`__cosf` (`n64_stubs.c:13`) are libm-backed and produce ZERO rows in
+  the post-L9 census** — their callers are `efmanager`/`lbparticle`, which do not
+  run in this scene. **Do not "fix" them**: on N64 `__sinf` is libultra's
+  polynomial, a *different* function from `lbCommonSin`'s 4096-step table, and
+  `syMatrix*` calls the former while gameplay calls the latter. Substituting one
+  for the other would change results with no source mandate — and it would buy
+  nothing here anyway.
+- **The trig kernels are gone.** `__kernel_sinf`, `__kernel_cosf` and
+  `__ieee754_rem_pio2f` no longer appear in the census top table at all, which
+  is L9's engagement confirmed a second way, from the symbol side.
+
+**So the trig seam is closed and the remaining float is the collision matrix
+body — L7, and it needs the entry-point rewrite, not another stub swap.**
+
 ### R2-07 L10 KEEP — the hardware square root was BUILT AND OFF; 3-VBlank frames 97 → 89 (2026-07-31)
 
 **`NDS_R2_FIXED_SQRT` has been `?= 0` since R2-03 E1 built it.** E1 measured
