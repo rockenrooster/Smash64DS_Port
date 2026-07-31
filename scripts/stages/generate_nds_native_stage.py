@@ -510,6 +510,7 @@ SOURCE_CLOSURE_POLICIES = (
                 binding.first_run binding.run_count
                 frame.asset_bases frame.binding_display_lists frame.binding_world
                 frame.dobjs frame.rigid_binding_mask
+                frame.topology_generation frame.topology_stamp
                 segment.binding_count segment.first_binding
                 segment.initial_geometry
                 """,

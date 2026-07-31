@@ -1177,6 +1177,15 @@ void ndsRendererProfileCensusNativeFighterSchedule(
 #endif
 void ndsRendererHardwareResetSourceCaches(void);
 void ndsRendererHardwareDiscardTextureCache(void);
+/* Scene-owned texture-VRAM lifecycle (R2-07 E3/E4 root cause; see the comment on
+ * the definition). Every entry into the battle scene resets libnds's texture and
+ * palette allocators, so entry N allocates identically to entry 1. The caller
+ * releases its own software texture owners first -- glResetTextures invalidates
+ * every name. `Enable` is a runtime control arm for same-binary A/B, default on;
+ * `Count` is the permanent regression guard (one per battle-scene entry). */
+void ndsRendererHardwareResetSceneTextureVram(void);
+extern volatile u32 gNdsRendererSceneTextureVramResetEnable;
+extern volatile u32 gNdsRendererSceneTextureVramResetCount;
 s32 ndsRendererHardwarePrepareBattleStaticTextures(void);
 void ndsRendererHardwareArmBattleStaticTextures(void);
 /* R2-03 E48 lab probe. Latches the generic colour path's per-frame branch counts

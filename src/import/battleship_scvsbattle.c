@@ -142,14 +142,32 @@ static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
 }
 #endif
 
+/* The DS-side texture preparation every entry into `nSCKindVSBattle` performs,
+ * in one place so that entry one, a START rematch, and Sudden Death cannot drift
+ * apart -- which is exactly how the second-entry corruption happened: the calls
+ * matched and their effects did not.
+ *
+ * Order is load-bearing. The atlas release has to precede the allocator reset
+ * (`glResetTextures` invalidates every texture name, so a software owner still
+ * holding one must let go first), and the reset has to precede both prepares so
+ * they upload into an empty pool. Cost is one atlas rebuild per entry at
+ * scene-entry time, which is the cheap side of the load/gameplay trade this
+ * project always takes. */
+static void ndsSCVSBattleBeginSceneTextures(void)
+{
+    ndsIFCommonNativeOamReleaseCloudTextures();
+    ndsRendererHardwareResetSceneTextureVram();
+    (void)ndsRendererHardwarePrepareBattleStaticTextures();
+    (void)ndsIFCommonNativeOamPrepareClouds();
+}
+
 void scVSBattleStartBattle(void)
 {
     gNdsSCVSBattleOriginalFuncStartResult =
         NDS_SCVSBATTLE_ORIGINAL_FUNC_START_PASS;
 
     ndsBaseSCVSBattleStartBattle();
-    (void)ndsRendererHardwarePrepareBattleStaticTextures();
-    (void)ndsIFCommonNativeOamPrepareClouds();
+    ndsSCVSBattleBeginSceneTextures();
 #if NDS_R2_ANIM_CACHE
     /* R2-04 E4/E5. Same prepare-at-load seam as the two above, but armed here
      * and stepped from scVSBattleFuncUpdate: the match's animation streams
@@ -236,15 +254,15 @@ void scVSBattleStartBattle(void)
  * entire native stage owner. The stage then draws from whatever the fallback
  * has, which is what looked like corrupt geometry.
  *
- * Releasing the atlases first makes entry two allocate in entry one's order.
- * It costs one atlas rebuild per Sudden Death entry, at scene-entry time, which
- * is the cheap side of the load/gameplay trade this project always takes. */
+ * R2-07 E3/E4 CLOSED it one level down: releasing the atlases only reproduces
+ * entry one's allocation ORDER, and reproducing a layout is not owning one. The
+ * scene now resets the texture allocator itself
+ * (`ndsSCVSBattleBeginSceneTextures` above), so this entry and every other start
+ * from an empty pool. */
 void scVSBattleStartSuddenDeath(void)
 {
     ndsBaseSCVSBattleStartSuddenDeath();
-    ndsIFCommonNativeOamReleaseCloudTextures();
-    (void)ndsRendererHardwarePrepareBattleStaticTextures();
-    (void)ndsIFCommonNativeOamPrepareClouds();
+    ndsSCVSBattleBeginSceneTextures();
 #if NDS_R2_ANIM_CACHE
     ndsR2AnimCachePreloadMatch();
 #endif

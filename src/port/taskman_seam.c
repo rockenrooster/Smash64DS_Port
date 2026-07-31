@@ -4783,6 +4783,35 @@ static void ndsBattlePlayablePresentFrame(void)
     phase_start = cpuGetTiming();
 #endif
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_DRAW_START);
+    /* REWIND THE SOURCE DISPLAY-LIST HEADS FOR THIS FRAME. This is a freeze fix,
+     * not hygiene, and it is the source's own per-frame reset -- taskman.c
+     * :1093-1100 runs it before every scene draw, and the Results loop below
+     * (:7040) already does. The battle loop never did, so `gSYTaskmanDLHeads`
+     * advanced monotonically for the whole session while `sSYTaskmanDLBuffers`
+     * stayed 60 KiB, and BattleShip catches that itself:
+     * `syTaskmanCheckBufferLengths` (decomp sys/taskman.c:329) ends in
+     * `while (TRUE);`, so the overrun presents as a total freeze with a moving
+     * picture one moment and a dead one the next.
+     *
+     * Measured 2026-07-31, reproduced twice on a START rematch and confirmed by
+     * the owner ("froze at 52 secs left again on the 2nd match"): PC spinning at
+     * taskman.c:338, kind 0, `used=61488` against `len=61440` -- 48 bytes over,
+     * with head 0 running into buffer 1's allocation, `MALLOCOVF=0` and the
+     * graphics heap at `used=0`. One match's emission very nearly fits, which is
+     * exactly why match one always survived and match two died a few seconds in.
+     *
+     * `ndsFighterDisplayContractCapture` (reloc_backend_renderer_dl.c:10998)
+     * already knew: it saves the heads AND the graphics-heap pointer around each
+     * fighter's source draw and restores them after. That fixed the fighter path
+     * locally and left every other source draw -- stage, sprites, camera,
+     * effects -- accumulating.
+     *
+     * The graphics heap deliberately does NOT get a reset here: it measured
+     * `used=0` at the freeze, so nothing accumulates in it (the fighter contract
+     * owns its only consumer and rewinds it itself), and rewinding an arena the
+     * port may hold pointers into would be new risk bought for no measured
+     * need. Add it only if a capture ever shows taskman.c:344 instead of :338. */
+    func_80004AB0();
     ndsPlatformBeginFrame();
     ndsSObjPreviewBeginFrame();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1

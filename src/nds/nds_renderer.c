@@ -2151,7 +2151,17 @@ volatile u32 gNdsRendererTask36RendererRejectReason;
 volatile u32 gNdsRendererTask36PrepareRunRejectReason;
 #endif
 #if NDS_R2_STAGE_ROUTE_PROBE
-/* Cache census at the first texture rejection. See ndsRendererHardwareRejectTexture. */
+/* R2-07 E3's allocator map and refused-request stash are DELETED, not disabled.
+ * They answered their question -- the refusal was neither space, fragmentation,
+ * slots nor binding, and a full `glResetTextures()` at scene entry fixes it --
+ * and that answer is written up in `docs/BUGS.md` with the numbers. What ships
+ * instead is the fix plus two permanent counters
+ * (`gNdsRendererSceneTextureVramResetCount` / `...Enable`). Keeping the
+ * instrument would have cost a `glGlob` read inside
+ * `ndsRendererHardwareResolveOrBindTexture` that the native-stage field
+ * certificate correctly refuses to classify.
+ *
+ * Cache census at the first texture rejection. See ndsRendererHardwareRejectTexture. */
 volatile u32 gNdsR2TexRejectCensusValid;
 volatile u32 gNdsR2TexRejectCensusFree;
 volatile u32 gNdsR2TexRejectCensusLive;
@@ -9510,10 +9520,18 @@ ndsRendererHardwareReleaseTexture(
     ndsRendererHardwareTextureLookupRemove(entry);
 #endif
     ndsRendererHardwareEndBatch();
-    if (sNdsRendererHardwareBoundTextureName == (u32)entry->name)
-    {
-        sNdsRendererHardwareBoundTextureName = 0u;
-    }
+    /* Unconditional. This is hygiene, NOT the second-entry texture failure --
+     * making it unconditional was tried against that failure and changed
+     * nothing, so do not cite it as the cause.
+     *
+     * It is still correct on its own terms: the cache holds a NAME, libnds
+     * recycles names through its dealloc pool once deleted (measured
+     * deallocTexSize 0 on a first entry, 19 on a second), and any delete can
+     * move libnds's own active texture. Clearing only on a match can therefore
+     * leave the skip armed for a number that now belongs to a different
+     * texture -- the same shape as the prepared-run cache and the
+     * sNdsIFCommonPreparedFile latch. Cost is one redundant bind per release. */
+    sNdsRendererHardwareBoundTextureName = 0u;
     if (sNdsRendererHardwareActiveTextureEntry == entry)
     {
         sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -9630,6 +9648,65 @@ void ndsRendererHardwareDiscardTextureCache(void)
     ndsRendererHardwareResetSourceCaches();
 #endif
     sNdsRendererBattleStaticTextureArmed = FALSE;
+}
+
+/* Texture VRAM is a SCENE-owned resource, and this is the one call that says so.
+ *
+ * R2-07 E3/E4 root-caused the second-entry stage corruption here: libnds
+ * allocates texture VRAM inside `glTexImage2D`, nothing in the port owned the
+ * lifetime of that allocator across a scene boundary, and a second entry into
+ * `nSCKindVSBattle` (Sudden Death, or a START rematch) therefore rebuilt its 24
+ * pinned statics into a pool whose occupancy and free-list shape were inherited
+ * from the match that had just ended. Measured consequence: `glTexImage2D`
+ * refused a 4,096-byte upload with 268,800 contiguous free bytes reported, which
+ * failed `PrepareRun` for run 42, rejected the whole native stage owner, and
+ * dropped the stage onto the generic renderer every frame -- correct geometry,
+ * untextured pond, `STG` 2.76M, 4.2 FPS.
+ *
+ * Two lesser owners had the same shape and are also settled by resetting rather
+ * than by hand: `ndsIFCommonNativeOamDiscardTextures` zeroes the four atlas
+ * NAMES without deleting them (so their blocks would leak one entry at a time),
+ * and the earlier fix that released the atlases to restore entry one's
+ * allocation ORDER only reproduced a layout instead of guaranteeing one.
+ *
+ * So every entry into the battle scene now starts from an empty allocator, which
+ * makes entry N byte-for-byte allocation-equivalent to entry 1 by construction
+ * instead of by argument. The caller must release its own software owners first
+ * (`ndsIFCommonNativeOamReleaseCloudTextures`) -- `glResetTextures` invalidates
+ * every name, so anything still holding one has to have let go.
+ *
+ * Cost is scene-entry only: one cache teardown plus the re-upload the static and
+ * atlas prepares were already doing. It buys the standing law this campaign paid
+ * for twice: a resource that survives a scene boundary must be re-derived from
+ * something the boundary actually moves, never from pointers, names, sizes, or
+ * an allocation order a rewound allocator happens to reproduce. */
+volatile u32 gNdsRendererSceneTextureVramResetEnable = 1u;
+volatile u32 gNdsRendererSceneTextureVramResetCount;
+
+void ndsRendererHardwareResetSceneTextureVram(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    /* Runtime, not a build flag: the control arm has to be the same binary.
+     * This ROM's pacing is cache-placement sensitive and separately linked arms
+     * have already confused two comparisons on this row. */
+    if (gNdsRendererSceneTextureVramResetEnable == 0u)
+    {
+        return;
+    }
+    /* DiscardTextureCache ends the batch, deletes every cache name and the
+     * no-texture name, and clears the lookup, refresh queue and active
+     * binding. glResetTextures then drops libnds's own texture and palette
+     * metadata and rebuilds both block allocators. */
+    ndsRendererHardwareDiscardTextureCache();
+    glResetTextures();
+    /* Software state that would otherwise reference names glResetTextures has
+     * just invalidated. */
+    sNdsNativeStageOwnerExecution.r2_prepared_valid = 0u;
+#if NDS_TASK36_HW_COMPOSE == 2
+    ndsRendererTask36ReplayReset();
+#endif
+    gNdsRendererSceneTextureVramResetCount++;
+#endif
 }
 
 s32 ndsRendererHardwareUploadSceneMipCache(const u16 *mip0,

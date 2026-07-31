@@ -26,7 +26,17 @@ param(
     # measured both-CPU match completes well inside 2.5 minutes: one full match
     # reported gNdsVSResultsStartCount=1 with 2,043 presented frames. Fractional
     # on purpose -- this was [int] and could not express the owner's number.
-    [ValidateRange(0.5, 5.0)][double]$MinutesToRun = 2.5,
+    # The 5.0 ceiling was raised to 7.0 on 2026-07-31 for one measured reason, and
+    # the default stays 2.5. A rematch run has to observe TWO full matches plus the
+    # second GAME SET hand-off: match one ends around t+170 s, the START tap lands
+    # at t+167 s, and one game minute is ~136 s of wall clock, so match two's
+    # match-end transition falls at roughly t+300 s -- exactly where the old cap
+    # terminated the emulator. That produced two "NO-FREEZE" verdicts whose final
+    # frame was the GAME SET zoom with the tick HUD already blanked, i.e. the run
+    # ended AT the moment under investigation, which is not evidence either way
+    # (the owner reported a freeze there both times). Keep runs short by default;
+    # spend the extra two minutes only when the question is past match two.
+    [ValidateRange(0.5, 7.0)][double]$MinutesToRun = 2.5,
     # Consecutive identical frames needed to call it frozen. Two screens of a DS
     # game in motion never render byte-identically, but legitimately static
     # moments exist -- and the longest is much longer than it sounds. This port's
@@ -59,6 +69,11 @@ param(
     # press site: a single synthetic press wins the foreground race only about
     # half the time.
     [ValidateRange(1, 20)][int]$PressStartCount = 6,
+    # Re-arm the press burst every N seconds so one run drives SUCCESSIVE
+    # rematches (owner's P1 standard: infinite rematches, no freeze). 0 keeps the
+    # single-window behaviour. ~150 for the one-minute config -- see the press
+    # site for why this is a cadence rather than a Results detection.
+    [ValidateRange(0, 600)][int]$PressStartEverySeconds = 0,
     # Build with NDS_R2_SECOND_ENTRY_DIAG=1 so the per-caller allocation ledger
     # and the MObj chain probe exist. Required before the reported-globals list
     # below can name any gNdsAllocLedger* or gNdsR2ChainProbe* symbol: without
@@ -250,6 +265,8 @@ try {
     # driven by verify-battle-mariofox-gcrunall-loop-harness.ps1) and is the
     # right instrument if this ever needs to be exact rather than eventual.
     $startPresses = 0
+    $pressWindow = 1
+    $lastPressAt = $started
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds $PollSeconds
         # R2-07: the Results screen exits on a START tap and nothing else, so a
@@ -257,6 +274,20 @@ try {
         # rematch redirect has to be tested in. One timed press turns this into a
         # two-match soak. ENTER is melonDS's START; the window must be foregrounded
         # first or SendKeys goes to whatever else has focus.
+        # A second (third, Nth) press window. The owner's P1 standard is *infinite*
+        # rematches without a freeze, so one press proving one rematch is not the
+        # test -- and the initial burst cannot reach Results #2, which lands about
+        # a match length later. -PressStartEverySeconds re-arms the burst on that
+        # cadence, so one run walks several match entries. It is a CADENCE, not a
+        # detection: a press that lands mid-match is either swallowed or pauses,
+        # so pick the interval from the measured match length (~150 s for the
+        # one-minute config, match end to match end) rather than something small.
+        if (($PressStartEverySeconds -gt 0) -and
+            ($startPresses -ge $PressStartCount) -and
+            ((Get-Date) -ge $lastPressAt.AddSeconds($PressStartEverySeconds))) {
+            $startPresses = 0
+            $pressWindow++
+        }
         if (($PressStartSeconds -gt 0) -and ($startPresses -lt $PressStartCount) -and
             ((Get-Date) -ge $started.AddSeconds($PressStartSeconds))) {
             # HOLD the key, do not tap it. SendKeys presses and releases within
@@ -272,9 +303,10 @@ try {
             Start-Sleep -Milliseconds 500
             [Smash64DSWindowCapture]::keybd_event(0x0D, 0, 2, [UIntPtr]::Zero)
             $startPresses++
-            Write-Host ("  t+{0,5}s  held START (ENTER) 500 ms  [{1}/{2}]" -f
+            $lastPressAt = Get-Date
+            Write-Host ("  t+{0,5}s  held START (ENTER) 500 ms  [{1}/{2}] window {3}" -f
                 [int]((Get-Date) - $started).TotalSeconds, $startPresses,
-                $PressStartCount)
+                $PressStartCount, $pressWindow)
         }
         $emulator.Refresh()
         if ($emulator.HasExited) {
@@ -421,6 +453,13 @@ try {
             'gNdsRendererBattleStaticTexturePrepareCount',
             'gNdsRendererBattleStaticTextureViolationCount',
             'gNdsSCVSBattleSuddenDeathPrepareCount',
+            # The scene-owned texture-VRAM reset, which is the second-entry
+            # corruption's fix and therefore the cheapest regression guard the
+            # rematch lane has: it must read exactly one per battle-scene entry
+            # (2 after one rematch, 3 after two). A frozen count means a new
+            # entry path reached the scene without the reset and the stage is
+            # about to be drawn against the previous match's allocator state.
+            'gNdsRendererSceneTextureVramResetCount',
             # Did the rematch actually re-enter the battle scene through the
             # scene manager's dispatch loop? AdapterCount rises once per
             # scManagerFuncUpdate, so 2 means scVSBattleStartScene ran twice and
@@ -687,7 +726,47 @@ try {
             ('printf "MALLOCOVF=%u,id=%u,req=%u,head=%u,lr=%08x\n", ' +
              'gNdsSyMallocOverflowCount, gNdsSyMallocOverflowArenaID, ' +
              'gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, ' +
-             'gNdsSyMallocOverflowCallerLR'))
+             'gNdsSyMallocOverflowCallerLR'),
+            # THE OTHER GIVE-UP SPIN, and the reason the allocator counters alone
+            # are not a diagnosis. `syTaskmanCheckBufferLengths` (decomp
+            # sys/taskman.c:329) has two `while (TRUE);` branches of its own: line
+            # 338 for a display-list buffer past its end, line 344 for the
+            # graphics heap. Reproduced 2026-07-31 on a rematch with MALLOCOVF=0,
+            # so a run that stops there and reads only the malloc counters looks
+            # like "a spin with no cause". Print the four DL buffers and the
+            # graphics heap: head - start is the volume emitted, length is the
+            # capacity, and whichever kind has head > start+length is the one
+            # that gave up. One printf per kind so an absent symbol cannot take
+            # the rest with it.
+            ('printf "DLBUF0=start=%p,len=%u,head=%p,used=%d\n", ' +
+             'sSYTaskmanDLBuffers[gSYTaskmanTaskID][0].start, ' +
+             'sSYTaskmanDLBuffers[gSYTaskmanTaskID][0].length, ' +
+             'gSYTaskmanDLHeads[0], ' +
+             '(char *)gSYTaskmanDLHeads[0] - ' +
+             '(char *)sSYTaskmanDLBuffers[gSYTaskmanTaskID][0].start'),
+            ('printf "DLBUF1=start=%p,len=%u,head=%p,used=%d\n", ' +
+             'sSYTaskmanDLBuffers[gSYTaskmanTaskID][1].start, ' +
+             'sSYTaskmanDLBuffers[gSYTaskmanTaskID][1].length, ' +
+             'gSYTaskmanDLHeads[1], ' +
+             '(char *)gSYTaskmanDLHeads[1] - ' +
+             '(char *)sSYTaskmanDLBuffers[gSYTaskmanTaskID][1].start'),
+            ('printf "DLBUF2=start=%p,len=%u,head=%p,used=%d\n", ' +
+             'sSYTaskmanDLBuffers[gSYTaskmanTaskID][2].start, ' +
+             'sSYTaskmanDLBuffers[gSYTaskmanTaskID][2].length, ' +
+             'gSYTaskmanDLHeads[2], ' +
+             '(char *)gSYTaskmanDLHeads[2] - ' +
+             '(char *)sSYTaskmanDLBuffers[gSYTaskmanTaskID][2].start'),
+            ('printf "DLBUF3=start=%p,len=%u,head=%p,used=%d\n", ' +
+             'sSYTaskmanDLBuffers[gSYTaskmanTaskID][3].start, ' +
+             'sSYTaskmanDLBuffers[gSYTaskmanTaskID][3].length, ' +
+             'gSYTaskmanDLHeads[3], ' +
+             '(char *)gSYTaskmanDLHeads[3] - ' +
+             '(char *)sSYTaskmanDLBuffers[gSYTaskmanTaskID][3].start'),
+            'printf "DLTASK=%d\n", gSYTaskmanTaskID',
+            ('printf "GFXHEAP=start=%p,ptr=%p,end=%p,used=%d\n", ' +
+             'gSYTaskmanGraphicsHeap.start, gSYTaskmanGraphicsHeap.ptr, ' +
+             'gSYTaskmanGraphicsHeap.end, (char *)gSYTaskmanGraphicsHeap.ptr - ' +
+             '(char *)gSYTaskmanGraphicsHeap.start'))
         if ($capture) {
             Write-Host '--- freeze capture'
             Write-Host $capture
@@ -717,7 +796,14 @@ try {
             } else {
                 Write-Host ''
                 Write-Host ('spin CONFIRMED: the PC branches to itself, which is ' +
-                    'the `while (TRUE);` allocator-exhaustion signature.')
+                    'the `while (TRUE);` give-up signature. WHICH give-up is a ' +
+                    'separate question -- BattleShip has eleven, across sys/malloc.c ' +
+                    'AND sys/taskman.c, and they have different fixes. Read the ' +
+                    'source line gdb printed above the PC: malloc.c:30 is heap ' +
+                    'exhaustion (MALLOCOVF names it), taskman.c:338 is a ' +
+                    'display-list buffer past its end (DLBUF0..3 name it), ' +
+                    'taskman.c:344 is the graphics heap (GFXHEAP). Do not report ' +
+                    'this as "the allocator" without the matching counter.')
             }
         } else {
             Write-Host 'freeze capture produced nothing; the attach failed outright.'

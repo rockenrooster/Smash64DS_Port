@@ -453,6 +453,37 @@ void mnVSResultsStartScene(void)
            sizeof(gNdsVSResultsFighterStatus));
     memset((void *)gNdsVSResultsFighterMotion, 0,
            sizeof(gNdsVSResultsFighterMotion));
+    /* AND THE ONE NON-TELEMETRY LINE: drop the previous entry's fighter GObjs.
+     *
+     * This is the second-entry crash the owner reported as "2nd match froze at
+     * 00:00, no results screen" (2026-07-31). `sMNVSResultsFighterGObjs` is
+     * populated by `ftManagerMakeFighter` during the scene (decomp
+     * mnvsresults.c:991) and is never cleared at teardown, while the taskman
+     * arena IS rewound between scenes -- so on a second entry it holds four
+     * pointers into memory the new scene has already re-allocated. The source
+     * survives that because every one of its own reads is gated on
+     * `sMNVSResultsIsPresent` (mnvsresults.c:1870, 2788), not on the pointer
+     * being non-NULL. `ndsMNVSResultsRecordFrame` above gates on `!= NULL`, so on
+     * the second entry's FIRST tick it called `ftGetStruct` on a dead GObj and
+     * handed the result to `gcMoveGObjDL`, which walked a corrupt display list.
+     *
+     * Captured shape: ARM9 in ABORT mode (`cpsr 0x400000b7`) with
+     * `lr_abt = 0xe9b` -- a wild branch to low memory -- and `lr_usr` at
+     * `ftParamMoveDLLink+18`, which is exactly the return address of that
+     * `gcMoveGObjDL` call. `gNdsVSResultsTickCount` still 0 because the crash
+     * beat the write at the end of the same function.
+     *
+     * Clearing here is safe and source-faithful: this runs before
+     * `mnVSResultsFuncStart`, and the source recreates every fighter it wants.
+     * `sMNVSResultsFiles` deliberately stays untouched -- it is reloaded in
+     * func_start (mnvsresults.c:3336) before any tick, and it is only ever
+     * NULL-tested here, never dereferenced.
+     *
+     * Third instance of one law, after the prepared-run cache and the
+     * display-list heads: state that outlives a scene boundary must be
+     * re-derived from something the boundary moves, never trusted because it
+     * still looks like a pointer. */
+    memset(sMNVSResultsFighterGObjs, 0, sizeof(sMNVSResultsFighterGObjs));
     gNdsVSResultsStartCount++;
     ndsBaseMNVSResultsStartScene();
 }

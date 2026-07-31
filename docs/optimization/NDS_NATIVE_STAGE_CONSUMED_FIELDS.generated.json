@@ -1024,6 +1024,14 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "frame.topology_generation",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.topology_stamp",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "segment.binding_count",
           "classification": "immutable_generation"
         },

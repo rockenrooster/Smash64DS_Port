@@ -1,8 +1,43 @@
 # P1 Execution Board
 
-Updated: 2026-07-29 23:15 Central
+Updated: 2026-07-31 (evening)
 
 Boundary: `battle_playable_realtime`, mode `163`
+
+## R2-07 SUCCESSIVE MATCHES — CLOSED. Four battle entries, zero freezes (2026-07-31)
+
+The owner's P1 bar, now written into `PROJECT_GOAL.md`: *"pressing start at
+results screen restarts the P1 match, up to infinite successive matches"*.
+Four defects stood in the way and **all four were state that outlived a scene
+boundary the taskman arena rewinds** — the law is now `SwitchPlan §3.12` and the
+full write-up is in `docs/PORTING.md`. In the order they were found:
+
+| # | carrier | symptom | fix |
+|---|---|---|---|
+| 1 | stage prepared-run cache keyed on config POINTER + asset bases | second entry drew match one's stage | key adds `topology_generation` + `topology_stamp` |
+| 2 | texture VRAM had no owner across the boundary | `glTexImage2D` refused 4,096 B against 268,800 free; run 42 failed `PrepareRun`; generic fallback, white pond, `STG` 2.76M, 4.2 FPS | `ndsRendererHardwareResetSceneTextureVram` at every battle entry |
+| 3 | `gSYTaskmanDLHeads` never rewound in the battle loop | `used=61488` vs `len=61440` — **48 bytes** — `syTaskmanCheckBufferLengths` `while(TRUE);` froze match two ~8 s in | source's own `func_80004AB0()` once per presented frame |
+| 4 | `sMNVSResultsFighterGObjs` trusted across a Results re-entry | dead GObj into `gcMoveGObjDL`; ARM9 ABORT mode, `lr_usr` at `ftParamMoveDLLink+18`; no Results screen at match two's GAME SET | cleared in `mnVSResultsStartScene` |
+
+Evidence, all in-repo: SD lane **three consecutive bit-identical runs**
+(`r2_prepared_valid` 1, BuildCount 4, ReuseCount 391 rising, key 2/`0xaaa3106e`
+→ 3/`0x48ea3cde`, `STG` **169,536**, 28.0 FPS, pond textured —
+`artifacts/verification/sudden-death/2026-07-31_14{2938,3102,3140}`); the
+**same-binary control arm** `-NoTexVramReset` still reproduces the defect
+(BuildCount **92**, ReuseCount frozen 303, `STG` **3,148,992**, 4.2 FPS, white
+pond — `_143234`), which is what makes #2 attributable rather than coincident;
+rematch lane **four battle entries / three Results screens / NO-FREEZE**, reset
+count 4, prepare count 4, violations 0, `STG` 169,408, owner-confirmed
+(`artifacts/verification/freeze-soak/2026-07-31_151642-NO-FREEZE.png`).
+
+Permanent guards, no probes: `gNdsRendererSceneTextureVramResetCount` must read
+one per battle entry, `gNdsR2StagePrepareBuildCount` two per entry with
+ReuseCount rising. The `NDS_R2_STAGE_ROUTE_PROBE` census and refused-request
+stash are **deleted** — they answered their question and one of their `glGlob`
+reads was rightly refused by the native-stage field certificate.
+
+**Owed on this row:** one Latest run and the owner's eye check on a natural tie
+plus a rematch. Not owed: any further mechanism hunting.
 
 This is the only dynamic P1 queue. `PROJECT_GOAL.md` owns the milestone and
 fidelity contract. `HANDOFF.md` owns restart commands, `KNOWN_ISSUES.md` owns

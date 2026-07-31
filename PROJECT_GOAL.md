@@ -341,6 +341,7 @@ Mario and Fox must have their complete original movesets and applicable gameplay
 * ties
 * sudden death
 * results screen
+* pressing start at results screen restarts the P1 match, up to infinite successive matches
 
 Fox must use behavior equivalent to the original Level-3 CPU.
 

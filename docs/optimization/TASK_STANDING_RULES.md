@@ -346,8 +346,6 @@ report; silent or agent-chosen exclusions are a failed task. Capacity budgets
 - Master must remain stranger-buildable at every merge: publish identity pins
   (README expected SHA-256, DECOMP_PIN outputs) travel in the same branch as
   any change to the published ROM.
-- **NEVER push.** Master is the public GitHub repository; `git push` is the owner's
-  explicit, per-event call. No agent runs push, ever.
 
 ## Device-test economy (the owner, 2026-07-20)
 

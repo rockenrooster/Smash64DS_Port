@@ -224,6 +224,36 @@ mid-match cache gets a fixed arena, sized and allocated at match load, with an
 explicit overflow/eviction policy exercised in a soak. This binds the
 particle-bank port and every remaining R2-07 subsystem.
 
+### 3.12 Anything that survives a scene boundary is re-derived, never trusted
+
+The sibling of §3.11, and the most expensive law this campaign has paid for —
+**five incidents, five subsystems, one mistake.** The taskman arena is rewound
+on every scene entry, so a bump allocator hands the next scene the *same
+addresses*. Therefore a pointer, a name, a size, an allocation order, or a
+buffer cursor that outlives a scene boundary is not evidence of anything, and
+code that trusts one is broken whether or not it currently misbehaves:
+
+```text
+key on something the boundary MOVES     heap generation, topology generation/stamp
+re-derive what the boundary INVALIDATES texture names, GObj pointers, DL cursors
+own the resource's LIFETIME explicitly  reset it at entry; do not reproduce a layout
+```
+
+The incidents, all closed, all in `docs/PORTING.md`: the animation cache keyed on
+a rewound pointer (freeze); the stage prepared-run cache keyed on the config
+pointer (second-entry corruption); texture VRAM with no owner (the same
+corruption, one layer down — and note that *reproducing entry one's allocation
+order* was not sufficient, only resetting the allocator was); the source
+display-list heads never rewound in the battle loop (freeze ~8 s into match
+two); and `sMNVSResultsFighterGObjs` trusted across a Results re-entry (ARM9
+data abort at match two's GAME SET). A guard that reads
+`prepared && prepared_file == file_data` *looks* self-invalidating, which is
+exactly why three of these survived review.
+
+Corollary for instruments: a counter that is identical before and after the
+window cannot be evidence about the window, and a counter whose writer is
+compiled out reads 0 — which is indistinguishable from clean.
+
 ---
 
 ## 4. Frame budget
@@ -440,9 +470,7 @@ wrong thing and would block a correct switch indefinitely.
 - Ported particle banks (from the P1 row), SFX/voice/BGM, HUD, GAME SET →
   results flow. Cosmetic systems get explicit budgets so they cannot erase
   the headroom.
-- **All P1-scoped rows in `BUGS.md` fixed.** Rows BUGS.md itself defers to P2
-  (burst fidelity, the textured-particle half, and similar) record debt; they
-  do not gate this phase or the switch.  
+- **All rows in `BUGS.md` fixed.** this is a P1 Bugs list and are required to be fixed for P1.
 - Gate: full demo loop (Mario CPU vs Fox CPU, 1-minute and 5-minute match
   lengths) within total budget; battle P95 still ≤ 1.12M DLDI-on. The
   5-minute run is an **owner-instructed acceptance exception** to the
@@ -513,8 +541,10 @@ The honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
    above 30 FPS, so if the real scripts cannot fit, a cheaper source-derived
    approximation with the visible delta recorded is the contract-compliant
    answer.
-4. **Mario CPU vs Fox CPU on Dream Land, Full Match (including Sudden Death)** - 
+4. **Mario CPU vs Fox CPU on Dream Land, Full Match (including testing Sudden Death via force switch)** - 
    match stress test gameplay start to finish must not exceed 1.12M P95 (minus loading states)
+   pressing start at results screen restarts the P1 match, up to infinite successive matches.
+
 
 Do **not** resolve any of it by widening the gate. The gate is the product
 contract, and 1.12M is the number `PROJECT_GOAL.md` sets.

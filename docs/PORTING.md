@@ -21942,3 +21942,67 @@ ceiling 5.6%) — a follow-up could prototype it for the binding-3 run (66 verts
   survives it: the R2 render generator must encode facing/cull exemptions for
   sub-pixel geometry as baked data, which is why that clause stays in R2-03
   after the bug row is gone.
+
+- **Three freezes and one corruption on successive matches, all one law
+  (2026-07-31).** The owner's P1 bar is *infinite* successive matches
+  (`PROJECT_GOAL.md`: "pressing start at results screen restarts the P1 match, up
+  to infinite successive matches"). Four defects stood between the port and that,
+  and every one was **state that outlived a scene boundary the taskman arena
+  rewinds** — different subsystems, identical mistake:
+  1. **Stage prepared-run cache** keyed on the config POINTER plus asset bases,
+     both of which a rewound bump allocator reproduces exactly. Now keyed on
+     `topology_generation` + `topology_stamp` as well, the pair the Task 36
+     replay owner already used, so the two caches invalidate together.
+  2. **Texture VRAM had no owner at all.** libnds allocates inside
+     `glTexImage2D`, so entry two rebuilt its 24 pinned statics into a pool whose
+     occupancy came from the match that just ended; `glTexImage2D` then refused a
+     4,096-byte upload with 268,800 contiguous bytes free, which failed
+     `PrepareRun` for run 42 and dropped the whole stage onto the generic
+     renderer — correct geometry, white pond, `STG` 2.76M, 4.2 FPS.
+     `ndsRendererHardwareResetSceneTextureVram` now resets the allocator at every
+     battle entry, so entry N is allocation-equivalent to entry 1 by
+     construction. Same-binary control arm (`-NoTexVramReset`) still reproduces
+     the defect exactly, which is what makes the fix attributable.
+  3. **Source display-list heads were never rewound in the battle loop.** The
+     Results loop called the source's own per-frame reset (`func_80004AB0`,
+     decomp taskman.c:1093-1100); the battle loop never did, so
+     `gSYTaskmanDLHeads[0]` advanced monotonically for the whole session against
+     a fixed 60 KiB buffer. BattleShip catches that itself and *stops*
+     (`syTaskmanCheckBufferLengths`, `while (TRUE);`), so it presented as a total
+     freeze — measured at `used=61488` against `len=61440`, **48 bytes over**,
+     which is why one match always survived and match two died ~8 s in.
+     `ndsFighterDisplayContractCapture` had already discovered this and solved it
+     for the fighter path alone by saving and restoring the heads around each
+     source draw; the fix is to do what the source does, once per presented frame.
+  4. **`sMNVSResultsFighterGObjs` trusted across a Results re-entry.** The source
+     gates every read of that array on `sMNVSResultsIsPresent`; the port's
+     telemetry gated on `!= NULL`, so the second entry's first tick called
+     `ftGetStruct` on a dead GObj and handed it to `gcMoveGObjDL`. Captured as
+     ARM9 in ABORT mode (`cpsr 0x400000b7`, `lr_abt 0xe9b` — a wild branch) with
+     `lr_usr` at `ftParamMoveDLLink+18`, the exact return address of that call.
+     Cleared at scene start now.
+  Result: **four battle entries in one run, zero freezes, stage correct on the
+  fourth**, owner-confirmed. Two counters guard it
+  (`gNdsRendererSceneTextureVramResetCount`, one per battle entry, and the
+  existing `gNdsR2StagePrepare{Build,Reuse}Count`).
+  **Durable lessons, each of which cost a day or a withdrawn claim:**
+  * A spin at a `while (TRUE);` is not automatically the allocator. BattleShip has
+    eleven of them across `sys/malloc.c` and `sys/taskman.c` with different
+    fixes; the freeze harness now prints the DL buffers and the graphics heap
+    beside the malloc counters, and says so in its verdict text.
+  * `gNdsTaskmanArenaAllocFailCount` counts steps of the boot-time downward
+    calloc search that *sizes* the arena. It reads 26 before, during and after
+    the window, so it is a boot constant — it nearly bought a revert of a
+    −49,408 P95 chain as if it were 26 failed match allocations.
+  * A counter whose writer is compiled out reads 0, which is indistinguishable
+    from clean. `gNdsRendererProfileTextureRejectReasonMask` has no writer at
+    profile level 0, and a shipping-build 0 must never be quoted as a texture
+    path that worked. `capture-sudden-death-entry.ps1` now strips every read
+    whose symbol the ELF does not define, by asking `nm` — the standing
+    "check `nm` first" rule enforced instead of remembered, because a
+    hand-maintained deny list is exactly what was missing when a gdb script
+    aborted silently and read as an emulator hang.
+  * A harness whose run ends at the moment under investigation proves nothing.
+    Two rematch soaks returned NO-FREEZE with a final frame showing the GAME SET
+    zoom and a blanked tick HUD — the 5-minute cap terminated the emulator at
+    match two's hand-off. The ceiling is 7 minutes now, for that measured reason.

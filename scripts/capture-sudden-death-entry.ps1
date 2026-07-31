@@ -50,6 +50,11 @@ param(
     # Frame boundaries, not an `ignore` count: gdb stops once per ignored hit,
     # which is what makes -MatchedCapture blow its cap.
     [ValidateRange(0, 600)][int]$SDFrames = 0,
+    # Control arm for the scene-owned texture-VRAM reset, which ships default-on.
+    # This switch turns it OFF at battle start to give the same-binary control.
+    # Same reasoning as the route override: separately linked arms have confused
+    # two earlier comparisons on this cache-placement-sensitive ROM.
+    [switch]$NoTexVramReset,
     # Equalise score/falls at the source's own tie check. NOT the default: the
     # natural 0-0 tie is the honest reproduction. Needed only when heavy
     # instrumentation slows the build enough to change the match outcome.
@@ -363,6 +368,9 @@ try {
         "set variable gNdsRendererTask36RouteForceGenericMask = $([Math]::Max($StageRouteGenericMask, 0))",
         'set variable gNdsRendererTask36RouteOverrideEnable = 1',
         'printf "SD-ROUTE-OVERRIDE=%u,replay=%#x,generic=%#x\n", gNdsRendererTask36RouteOverrideEnable, gNdsRendererTask36RouteForceReplayMask, gNdsRendererTask36RouteForceGenericMask'
+    ) } else { @() }) + $(if ($NoTexVramReset) { @(
+        'set variable gNdsRendererSceneTextureVramResetEnable = 0',
+        'printf "SD-TEXVRAM-RESET-ENABLE=%u\n", gNdsRendererSceneTextureVramResetEnable'
     ) } else { @() }) + @(
 
         # Stage 2: past GO, with the countdown live. The condition matters --
@@ -722,11 +730,24 @@ try {
         # 5 BAD_SOURCE_RANGE, 6 BAD_SOURCE_BYTES, 7 BAD_SOURCE_PTR, 8 BAD_TLUT,
         # 9 BAD_TLUT_PTR, 10 ALLOC, 11 GENTEX, 12 TEXIMAGE. Cumulative across
         # the run, so read it against the entry-one value below, not alone.
+        # THE WORD EXISTS IN EVERY BUILD BUT ITS WRITER DOES NOT: it is written
+        # only at NDS_RENDERER_PROFILE_LEVEL >= 2 or with the route probe on
+        # (nds_renderer.c:11760). The tick-HUD lane is level 0, so a plain
+        # shipping build reads 0 because nothing ever set it -- that is
+        # UNINSTRUMENTED, not clean, and must never be quoted as evidence of a
+        # texture path that succeeded. Build with the probe to read it for real.
         'printf "SD-F-TEXREJECT=%#x\n", gNdsRendererProfileTextureRejectReasonMask',
         # Did the second-entry cloud-atlas release actually run? Identical
         # numbers across two arms are far more often an arm that did not take
         # than an arm that did nothing.
         'printf "SD-F-CENSUS=free=%u,live=%u,pinned=%u,thisframe=%u,evictable=%u\n", gNdsR2TexRejectCensusFree, gNdsR2TexRejectCensusLive, gNdsR2TexRejectCensusPinned, gNdsR2TexRejectCensusThisFrame, gNdsR2TexRejectCensusEvictable',
+        # The scene-owned texture-VRAM reset: MUST read one per battle-scene
+        # entry (2 after a Sudden Death run). It is the fix for the second-entry
+        # stage corruption, so a frozen count is the regression. `enable` is the
+        # same-binary control arm -- `-NoTexVramReset` writes 0 and the defect
+        # comes straight back (BUGS.md has the matched pair). E3's allocator map
+        # and refused-request stash are deleted; their conclusion is in BUGS.md.
+        'printf "SD-VRAM-RESET=enable=%u,count=%u\n", gNdsRendererSceneTextureVramResetEnable, gNdsRendererSceneTextureVramResetCount',
         'printf "SD-F-CLOUD-RELEASE=%u\n", gNdsIFCommonNativeOamCloudReleaseCount',
         'printf "SD-F-CLOUD-COUNT=%u\n", gNdsIFCommonNativeOamPrepareCloudTextureCount',
         'printf "SD-F-FALLBACK=%u\n", gNdsRendererM3PreflightFallbackCount',
@@ -942,6 +963,40 @@ try {
             # symbol, so they would survive and frame an empty block that reads
             # like a zero result rather than an absent one.
             $_ -notmatch 'gNdsAllocLedger|gNdsR2ChainProbe|gNdsR2Stage(SteadyAdmit|TopologyRebuild|MaterialReject)|SD-LEDGER-|SD-CHAIN-'
+        }
+    }
+    # AND THE GENERAL CASE, because the filter above only covers the one flag
+    # somebody remembered. Every read this script performs names a project global
+    # (`gFoo`/`sFoo`), so ask the ELF which of those it actually defines and drop
+    # the lines naming the rest. A per-flag deny list has to be extended by hand
+    # every time instrumentation is gated or retired -- and when it is not, the
+    # symptom is a silent gdb abort that reads as an emulator hang, which has now
+    # cost this campaign days twice. This is the standing "check `nm` first" rule,
+    # enforced instead of remembered.
+    $nm = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
+    if (Test-Path -LiteralPath $nm -PathType Leaf) {
+        $defined = @{}
+        foreach ($entry in (& $nm --defined-only $elf)) {
+            $fields = ($entry -split '\s+')
+            if ($fields.Count -ge 3) { $defined[$fields[2]] = $true }
+        }
+        if ($defined.Count -gt 0) {
+            $absent = [System.Collections.Generic.SortedSet[string]]::new()
+            $gdbLines = @($gdbLines | Where-Object {
+                $keep = $true
+                foreach ($match in [regex]::Matches($_, '\b[gs]Nds[A-Za-z0-9_]*')) {
+                    if (-not $defined.ContainsKey($match.Value)) {
+                        [void]$absent.Add($match.Value)
+                        $keep = $false
+                    }
+                }
+                $keep
+            })
+            if ($absent.Count -gt 0) {
+                Write-Host ('  note: dropped reads for ' + $absent.Count +
+                            ' symbol(s) this build does not define: ' +
+                            (($absent) -join ', '))
+            }
         }
     }
     [System.IO.File]::WriteAllLines($script, $gdbLines)
