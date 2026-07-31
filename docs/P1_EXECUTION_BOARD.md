@@ -1811,15 +1811,24 @@ into `HANDOFF.md` and the SwitchPlan status as "the entire over-gate
 population" — does not survive a per-frame read. 24 of 28 over-gate frames do
 no asset load at all.** Total loads across the 128-frame window: 15.
 
-**The comparability assumption, stated because the whole result rests on it.**
-The two arms are different builds (L1 normal, L2 census), so this intersection
-is only valid if a `frame` id names the same game moment in both. It should:
-the ids are presented-frame counter values, the Boundary config takes no human
-input, and the sim advances a fixed two iterations per presented frame — so
-identical state at identical ids, whatever the wall-clock rate. **If that is
-wrong, this result is wrong**, and the way to settle it is one census build
-carrying both the load column and a pacing-comparable arm, not more analysis.
-E8's own 9-over-gate baseline is also a different (older) build from L1's 28.
+**The comparability assumption is NOT load-bearing — corroborated within one
+build.** The intersection above pairs two builds (L1 normal, L2 census), which
+is only valid if a `frame` id names the same game moment in both. That
+assumption can be removed entirely: the census arm's own rows carry the load
+column *and* its own `ALL`, so intersect them with each other.
+
+| reading | over-gate frames that load | assumption |
+|---|---|---|
+| cross-build (L2 loads × L1 over-gate) | 4 of 28 | frame ids comparable |
+| **within-build (census arm alone)** | **5 of 28** | **none** |
+
+Same answer either way, and the assumption-free reading is the stronger of the
+two: **loads own 18% of the over-gate population, not all of it.** (The census
+arm's over-gate set is inflated by its own instrumentation, so its 28 is not
+the shipped count — but the *ratio* is computed inside one arm and is unaffected
+by that.) E8's own 9-over-gate baseline is also a different, older build than
+L1's 28, which is a further reason its "every over-gate frame" never
+generalised.
 
 **What it changes.** "Buy headroom by eliminating in-match loads" was sized
 against the belief that loads own the whole over-gate population. If loads own
