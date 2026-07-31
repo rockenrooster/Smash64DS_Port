@@ -220,6 +220,14 @@ try {
         'printf "SD-M1-T36-STATE=%u\n", sNdsRendererTask36ReplayOwner.state',
         'printf "SD-M1-T36-GEN=%u\n", sNdsRendererTask36ReplayOwner.topology_generation',
         'printf "SD-M1-T36-STAMP=%#x\n", sNdsRendererTask36ReplayOwner.topology_stamp',
+        # THE PAYLOAD, not the identity. Every identifying field matched across
+        # the two entries while the pixels differ, so the answer has to be in
+        # what was captured. word_count is the size of the recorded command
+        # stream, captured_segment_mask says WHICH of the eight segments got
+        # captured, and capture_fault is non-zero if a capture aborted.
+        'printf "SD-M1-T36-WORDS=%u\n", sNdsRendererTask36ReplayOwner.word_count',
+        'printf "SD-M1-T36-SEGMASK=%#x\n", sNdsRendererTask36ReplayOwner.captured_segment_mask',
+        'printf "SD-M1-T36-FAULT=%u\n", sNdsRendererTask36ReplayOwner.capture_fault',
         'printf "SD-STAGE=shot-match1\n"',
         # Drop it so the drive to Sudden Death is not stopped 60 times a second.
         'delete $bpnum'
@@ -410,6 +418,9 @@ try {
         'printf "SD-SD-T36-STATE=%u\n", sNdsRendererTask36ReplayOwner.state',
         'printf "SD-SD-T36-GEN=%u\n", sNdsRendererTask36ReplayOwner.topology_generation',
         'printf "SD-SD-T36-STAMP=%#x\n", sNdsRendererTask36ReplayOwner.topology_stamp',
+        'printf "SD-SD-T36-WORDS=%u\n", sNdsRendererTask36ReplayOwner.word_count',
+        'printf "SD-SD-T36-SEGMASK=%#x\n", sNdsRendererTask36ReplayOwner.captured_segment_mask',
+        'printf "SD-SD-T36-FAULT=%u\n", sNdsRendererTask36ReplayOwner.capture_fault',
         'printf "SD-STAGE=shot-sd\n"',
         'printf "SD-MATCHED-DONE=1\n"',
         'detach',

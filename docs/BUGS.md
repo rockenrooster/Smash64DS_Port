@@ -432,6 +432,27 @@ These bugs should be fixed for P1 delivery.
     The standing correction in this row stands and is now doubly earned: state
     the mechanism a counter actually brackets before inferring from it.
 
+    **PAYLOAD COMPARED, and the replay is indistinguishable between entries.**
+    Following the row's own instruction to compare data rather than guess again:
+
+        field                    match 1     Sudden Death
+        word_count               3916        3916
+        captured_segment_mask    0xa1        0xa1
+        capture_fault            0           0
+
+    Same recorded stream size, same segments captured, no capture faults. Equal
+    `word_count` is not proof of equal CONTENT -- state that plainly rather than
+    overclaim -- but same size, same segment set and no fault is every field the
+    owner exposes, and all of them match.
+    **`0xa1` is segments 0, 5 and 7 -- three of eight.** So the Task 36 replay
+    only ever covers three segments and the other five are drawn by the ordinary
+    path every frame, on both entries. The replayed third is identical; the
+    difference therefore has to live in the five that are NOT replayed, or in
+    the content of those 3916 words. That is a real narrowing and it is where a
+    payload/word-level diff should be pointed next -- dump `owner->words[0..3916]`
+    at both stops and compare, which is the one comparison that can distinguish
+    "same size, same content" from "same size, different content".
+
     **Honest current state.** The stage geometry is corrupt on the second entry
     and the fighter is not -- that much is proven by the matched pair and is not
     in question. Everything measured so far is clean or accounted for: static
