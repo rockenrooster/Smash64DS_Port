@@ -340,6 +340,23 @@ These bugs should be fixed for P1 delivery.
     `SD-LEDGER-M1BASE-TOTAL=0`. Measuring that was the difference between a
     proof and a coincidence, and the same care is owed to any other counter read
     at two points.
+  - **The five unreplayed segments are all PRESENT on both entries
+    (2026-07-31).** Read at two known-good stops in the Sudden Death lane,
+    `timer-live` (entry one) and `running` (entry two), log
+    `2026-07-31_015935`:
+    ```
+    entry 1  map_gobj = 0x2369410, 0x23697d8, 0x2369e10, 0x236a470  layer1 = 0x2368658
+    entry 2  map_gobj = 0x2369410, 0x23697d8, 0x2369e10, 0x236a470  layer1 = 0x2368658
+    ```
+    **Read this correctly.** The identical ADDRESSES prove nothing — the taskman
+    heap is a bump allocator rewound between scenes, so the same allocation
+    order necessarily yields the same addresses. What the reading does establish
+    is the **null/non-null pattern**: all five segments exist on entry two, none
+    is missing and none has been replaced by NULL. So the corruption is not a
+    lost or unbuilt segment; it is in the DATA those five reach. The next probe
+    must dereference — DObj chain, vertex pointers, matrices — and compare
+    CONTENT. Deref commands belong at the `running` stage only: it is last, so a
+    faulting one cannot abort the command file before the rest is read.
   - **MECHANISM 10 ELIMINATED — the stage direct path does NOT drop out on the
     second entry (2026-07-31).** A third explanation for the 2.21x was that the
     stage's direct path stops engaging on re-entry and the generic renderer

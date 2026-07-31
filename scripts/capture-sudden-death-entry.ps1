@@ -329,6 +329,18 @@ try {
         'tbreak ifCommonTimerFuncRun if sIFCommonTimerIsStarted != 0',
         'continue',
         'printf "SD-STAGE=timer-live\n"',
+        # THE FIVE UNREPLAYED SEGMENTS, entry one. captured_segment_mask 0xa1
+        # replays segments 0/5/7; 1/2/3/6 are drawn LIVE every frame from these
+        # GObjs, and R2-07's stage corruption has been narrowed to them --
+        # the direct path IS engaged (Build 2 / Reuse 2240 / Elide 11200), so
+        # the defect is in the DATA this walk reaches.
+        # POINTERS ONLY here. Pointer VALUES prove nothing on a rewound bump
+        # allocator (same allocation order gives the same addresses), but the
+        # null/non-null PATTERN does, and a printf of a pointer cannot fault.
+        # Dereferences are confined to the `running` stage, which is last, so a
+        # bad one cannot abort the command file before anything else is read.
+        'printf "SD-M1-MAPGOBJ=%#x,%#x,%#x,%#x\n", gGRCommonStruct.pupupu.map_gobj[0], gGRCommonStruct.pupupu.map_gobj[1], gGRCommonStruct.pupupu.map_gobj[2], gGRCommonStruct.pupupu.map_gobj[3]',
+        'printf "SD-M1-LAYER1=%#x\n", gGRCommonLayerGObjs[1]',
         'printf "SD-REMAIN-BEFORE=%u\n", gSCManagerBattleState->time_remain',
         "set variable gSCManagerBattleState->time_remain = $RemainTics",
         'printf "SD-REMAIN-AFTER=%u\n", gSCManagerBattleState->time_remain',
@@ -414,6 +426,10 @@ try {
         'tbreak battleship_scvsbattle.c:scVSBattleFuncUpdate',
         'continue',
         'printf "SD-STAGE=running\n"',
+        # The same five segments on the SECOND entry. Compare the null/non-null
+        # pattern against SD-M1-* above, not the addresses.
+        'printf "SD-SD-MAPGOBJ=%#x,%#x,%#x,%#x\n", gGRCommonStruct.pupupu.map_gobj[0], gGRCommonStruct.pupupu.map_gobj[1], gGRCommonStruct.pupupu.map_gobj[2], gGRCommonStruct.pupupu.map_gobj[3]',
+        'printf "SD-SD-LAYER1=%#x\n", gGRCommonLayerGObjs[1]',
         'printf "SD-PREPARE-COUNT=%u\n", gNdsSCVSBattleSuddenDeathPrepareCount',
         # The other side of the bracket. If the second setup pass ate most of the
         # remaining arena, this is where it shows.
