@@ -30,6 +30,15 @@ param(
     # Break on the default camera proc once Sudden Death is live, to settle
     # whether the convergence that eases target_dist runs there at all.
     [switch]$ProbeCamera,
+    # Capture BOTH entries at the same camera state: N calls of the default
+    # camera proc after each scene starts. The camera eases from its creation
+    # value of 10000 to about 3937 within ~120 calls, so a shot taken at the
+    # same call count on both sides is taken at the same converged distance --
+    # which is the only way to tell a genuine rendering difference from "the
+    # same stage, further away". Six mechanisms measured clean while I compared
+    # unmatched frames; this is the comparison that should have come first.
+    [switch]$MatchedCapture,
+    [ValidateRange(120, 3600)][int]$MatchedCameraCalls = 240,
     [switch]$DiagnoseHang,
     [ValidateRange(5, 300)][int]$HangSettleSeconds = 45,
     # Owner, 2026-07-30: "420 seconds is way too long, should be 180 secs max."
@@ -177,7 +186,17 @@ try {
         'tbreak scVSBattleStartBattle',
         'continue',
         'printf "SD-STAGE=battle-start\n"'
-    ) + $(if ($DisableWalkBound) { @(
+    ) + $(if ($MatchedCapture) { @(
+        # Arm A: match 1, N camera-proc calls in. Same clock as arm B below, so
+        # both shots are taken at the same converged camera distance.
+        'break gmCameraDefaultFuncCamera',
+        "ignore `$bpnum $MatchedCameraCalls",
+        'continue',
+        'printf "SD-MATCH1-DIST=%f\n", gGMCameraStruct.target_dist',
+        'printf "SD-STAGE=shot-match1\n"',
+        # Drop it so the drive to Sudden Death is not stopped 60 times a second.
+        'delete $bpnum'
+    ) } else { @() }) + $(if ($DisableWalkBound) { @(
         'set variable gNdsR2MaterialWalkBoundEnabled = 0',
         'printf "SD-WALK-BOUND-ENABLED=%u\n", gNdsR2MaterialWalkBoundEnabled'
     ) } else { @(
@@ -344,7 +363,17 @@ try {
         'printf "SD-CHAIN-P2-STATUS=%u\n", gNdsR2ChainProbePass2.status',
         'printf "SD-CHAIN-P2-NODES=%u\n", gNdsR2ChainProbePass2.nodes',
         'printf "SD-DONE=1\n"'
-    ) + $(if ($ProbeCamera) { @(
+    ) + $(if ($MatchedCapture) { @(
+        # Arm B: Sudden Death, the SAME N camera-proc calls in.
+        'break gmCameraDefaultFuncCamera',
+        "ignore `$bpnum $MatchedCameraCalls",
+        'continue',
+        'printf "SD-SD-DIST=%f\n", gGMCameraStruct.target_dist',
+        'printf "SD-STAGE=shot-sd\n"',
+        'printf "SD-MATCHED-DONE=1\n"',
+        'detach',
+        'quit'
+    ) } elseif ($ProbeCamera) { @(
         # Does the default camera proc -- the only thing that eases target_dist
         # toward the fighters (decomp gmcamera.c:624 -> :638) -- run at all once
         # Sudden Death is live? target_dist sits on its creation value of exactly
@@ -457,11 +486,32 @@ try {
                             -Path $Screenshot -PreferPrintWindow)
                         Write-Host "  captured -> $Screenshot"
                     }
+                    # The matched pair. Both shots are taken with the core
+                    # halted at the same camera-proc call count, so the camera
+                    # distance is the same in each and any surviving difference
+                    # is the scene itself.
+                    if (($stage -eq 'shot-match1') -and
+                        ($window -ne [IntPtr]::Zero)) {
+                        $script:MatchedShotA = Join-Path $logDir `
+                            "$stamp-matched-match1.png"
+                        [void](Save-MelonDSWindowCapture -WindowHandle $window `
+                            -Path $script:MatchedShotA -PreferPrintWindow)
+                        Write-Host "  matched arm A -> $script:MatchedShotA"
+                    }
+                    if (($stage -eq 'shot-sd') -and
+                        ($window -ne [IntPtr]::Zero)) {
+                        $script:MatchedShotB = Join-Path $logDir `
+                            "$stamp-matched-suddendeath.png"
+                        [void](Save-MelonDSWindowCapture -WindowHandle $window `
+                            -Path $script:MatchedShotB -PreferPrintWindow)
+                        Write-Host "  matched arm B -> $script:MatchedShotB"
+                    }
                 }
             }
             # In diagnose mode the run is not over at SD-DONE -- that is where
             # the interesting half starts.
             $finished = $(if ($DiagnoseHang) { 'SD-DIAG=end' }
+                          elseif ($MatchedCapture) { 'SD-MATCHED-DONE=1' }
                           elseif ($ProbeCamera) { 'SD-CAM-PROC-DONE=1' }
                           else { 'SD-DONE=1' })
             if ($text -match $finished) { break }

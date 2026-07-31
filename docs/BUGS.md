@@ -356,8 +356,35 @@ These bugs should be fixed for P1 delivery.
     stage material binding -- while the picture is still visibly different. That
     weight of negative evidence argues the original framing is wrong: **this may
     not be a texture defect at all.**
-    **WITHDRAWN, one commit later, by my own follow-up: THE CAMERA CONVERGES
-    NORMALLY.** `gmCameraDefaultFuncCamera` runs in Sudden Death, and
+    **THE MATCHED PAIR SETTLES IT: THE STAGE GEOMETRY IS CORRUPT ON THE SECOND
+    ENTRY, AND THE FIGHTER IS NOT.** `-MatchedCapture` shoots both entries at
+    the same camera-proc call count, so both are taken at a converged and
+    comparable distance -- `target_dist` **3996.20** in match 1 against
+    **3703.11** in Sudden Death -- which removes the "same stage, further away"
+    confound that wasted two hypotheses. Evidence pair:
+    `2026-07-30_235643-matched-match1.png` /
+    `2026-07-30_235643-matched-suddendeath.png`.
+    - Match 1: Dream Land clean. Bark trunks, wooden platforms, grass, flowers,
+      Mario correct.
+    - Sudden Death: stage geometry **corrupt** -- floating green slabs where
+      platforms belong, a melted green mass at top left, multicoloured noise
+      bands, untextured white quads. **Mario renders correctly in the same
+      frame.**
+    So the corruption is **stage-only, with the fighter path intact**, which is
+    also why every fighter-side hypothesis measured clean. The owner's original
+    report was right and my "it's the camera" detour was not.
+    **It has a quantitative signature too:** `STG` **173,568 -> 383,296** (2.2x)
+    and `ALL` 1,119,808 -> 1,679,936 across the matched pair. The stage owner is
+    not merely drawing wrong, it is doing more than twice the work to do it --
+    so whatever it is, it is visible in the stage bucket and does not need a
+    screenshot to detect. Use that as the regression signal.
+    **Next: partition that STG doubling.** The stage draw is where the defect
+    lives; the material bindings and topology rebuild are already measured clean
+    on the second entry, so look at what the segment commit emits -- extra
+    segments, a re-run epoch, or a display list executed against the wrong
+    asset base.
+
+    **(Withdrawn, kept for the record) THE CAMERA CONVERGES NORMALLY.** `gmCameraDefaultFuncCamera` runs in Sudden Death, and
     `target_dist` reads **10000.0 on the first frame and 3996.67 after 120 proc
     calls** -- essentially match 1's 3937.42. The easing moves 7.5% of the
     remaining gap per call, so two seconds of proc closes it. The "10000.0
