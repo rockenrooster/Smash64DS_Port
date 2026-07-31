@@ -47,6 +47,13 @@ typedef struct FTSprites {
     Sprite *emblem;
 } FTSprites;
 
+/* enum FTKind is also defined by decomp/.../ft/ftdef.h. A translation unit that
+ * reaches both -- src/import/battleship_lbparticle.c is the first one that
+ * does -- gets a redeclaration error, so it takes the decomp definition and
+ * defines this guard first, exactly as it already does for LBTransform and as
+ * MPObjectColl below does for the same reason. */
+#ifndef SSB64_NDS_FTKIND_DECLARED
+#define SSB64_NDS_FTKIND_DECLARED
 typedef enum FTKind {
     nFTKindPlayableStart,
     nFTKindMario = nFTKindPlayableStart,
@@ -82,6 +89,7 @@ typedef enum FTKind {
     nFTKindEnumCount,
     nFTKindNull
 } FTKind;
+#endif /* SSB64_NDS_FTKIND_DECLARED */
 
 typedef enum FTPlayerKind {
     nFTPlayerKindMan,

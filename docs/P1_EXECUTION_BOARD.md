@@ -1917,11 +1917,23 @@ stands first, which makes it a root cause. **`enum FTKind` is defined in BOTH
 
 **It is the same collision class the seam already solves twice** —
 `SSB64_NDS_LBTRANSFORM_DECLARED` at the top of this file, and
-`SSB64_NDS_MPOBJECTCOLL_DECLARED` at `include/ft/fighter.h:237`. So the fix is
-the established pattern: guard the port copy of `FTKind` and define the macro in
-this seam before the decomp path is reached. **That is a two-file change to a
-widely-included header, so it wants a build to verify and should not be started
-without room for one.**
+`SSB64_NDS_MPOBJECTCOLL_DECLARED` at `include/ft/fighter.h:237`. **FIXED that
+way** — `SSB64_NDS_FTKIND_DECLARED` guards the port copy, the seam defines it
+and takes the decomp's. **824 → 790, and no new errors anywhere else**, which is
+the check a change to a header ~100 TUs include actually needs.
+
+**The remaining pattern is now visible, and it changes the approach.** Next up
+is `include/ft/fighter.h:94` **`redeclaration of 'enum FTPlayerKind'`** — the
+same duplication, the next type down. This is a *series*, not a one-off: the
+port's `fighter.h` and the decomp's `ft/ftdef.h` overlap across many
+declarations, and guarding them one at a time costs a full build each.
+
+**Prefer a block-level answer over N single guards.** Either one guard around
+the whole overlapping region of `fighter.h`, or stop this TU reaching the port
+copy at all — it arrives indirectly through `nds/nds_startup.h`, which is the
+same header already caught declaring `sb32` it does not own. Fixing
+`nds_startup.h`'s dependencies would likely resolve both, and is the seam-level
+fix rather than the symptom-level one.
 
 **Working method for this file, which has never been compiled and so surfaces
 one seam at a time:** fix the first error, rebuild, re-read the first error.

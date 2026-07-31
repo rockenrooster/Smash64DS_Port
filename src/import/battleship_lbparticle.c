@@ -40,6 +40,11 @@
  * exactly this case; without it the two definitions collide. */
 #define SSB64_NDS_LBTRANSFORM_DECLARED
 
+/* Same reason, same pattern: decomp/.../ft/ftdef.h defines enum FTKind and so
+ * does include/ft/fighter.h, and this is the first translation unit to reach
+ * both. Take the decomp one. */
+#define SSB64_NDS_FTKIND_DECLARED
+
 /* lb/library.h comes FIRST, ahead of the nds/ headers, and the order is load
  * bearing: nds_startup.h:866 declares ndsSyMallocWouldFit returning `sb32` but
  * does not itself guarantee that type. Every other translation unit in the
