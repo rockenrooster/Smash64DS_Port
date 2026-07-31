@@ -1928,12 +1928,19 @@ same duplication, the next type down. This is a *series*, not a one-off: the
 port's `fighter.h` and the decomp's `ft/ftdef.h` overlap across many
 declarations, and guarding them one at a time costs a full build each.
 
-**Prefer a block-level answer over N single guards.** Either one guard around
-the whole overlapping region of `fighter.h`, or stop this TU reaching the port
-copy at all — it arrives indirectly through `nds/nds_startup.h`, which is the
-same header already caught declaring `sb32` it does not own. Fixing
-`nds_startup.h`'s dependencies would likely resolve both, and is the seam-level
-fix rather than the symptom-level one.
+**Prefer a block-level answer over N single guards** — one guard around the
+whole overlapping region of `fighter.h`, rather than one per type.
+
+**Correction to the commit that recorded this:** I wrote that the port
+`fighter.h` "arrives indirectly through `nds/nds_startup.h`" and that fixing
+that header's dependencies "would likely resolve both". **Wrong** —
+`nds_startup.h` includes only `<stddef.h>` and `<PR/ultratypes.h>` and pulls no
+fighter header at all. Both copies arrive through the decomp/port header webs
+(`lb/library.h`, `sc/scene.h`, `sys/taskman.h`), so **the two problems are
+unrelated and `nds_startup.h` is not the shared seam.** Its own `sb32` defect is
+real and still worth fixing, but it will not touch the enum series. Establish
+which header actually pulls each copy before choosing where the block guard
+goes.
 
 **Working method for this file, which has never been compiled and so surfaces
 one seam at a time:** fix the first error, rebuild, re-read the first error.
