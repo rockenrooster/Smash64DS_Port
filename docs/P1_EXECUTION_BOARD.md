@@ -2066,9 +2066,32 @@ kernel's proven bound.
 `src/port/reloc_backend_fighter_model.c` owns
 `sNdsFighterPartsPool[GMCOMMON_PLAYERS_MAX][...]` (`:20`, bzero'd `:1463`,
 populated `:1670`), writes `mtx_translate` and `unk_dobjtrans_0x9C`, and sets
-all three latches to 1 — i.e. "already prepared, do not recompute". **Confirm
-whether `ftGetParts` resolves to that pool before designing further**; if it
-does, L7 is a fill in an existing owner rather than a new one.
+all three latches to 1 — i.e. "already prepared, do not recompute".
+
+**CONFIRMED: `ftGetParts` does resolve to that pool.** It is only
+`(FTParts *)(dobj)->user_data.p` (`include/ft/fighter.h:440`), and
+`reloc_backend_fighter_model.c:1715` sets `dobj->user_data.p = parts` with
+`parts = &sNdsFighterPartsPool[slot][joint_id]` (`:1670`), inside
+`ndsFighterPartsSyncDObj`. **So the port already owns the structure collision
+reads, and L7 is a fill inside an existing owner — not a new owner, and not the
+`gmCollisionCheck*` surface.** That is a much smaller change than the paragraph
+above proposed.
+
+**Open, and the next hop: what re-drives the prepare per frame?**
+`ndsFighterPartsSyncDObj` is called from `ndsFighterStructPopulateJointsRecurse`
+(`:2043`) and once for the root (`:2084`) — a joint-**population** pass, i.e.
+setup, not per-frame. Nothing in the decomp or the port clears
+`unk_dobjtrans_0x5/0x6/0x7` after creation (`ft/ftmanager.c:264-265` is the only
+clear). Yet L6 measured `gmCollisionSetInvertMatrix` running 34× on an over-gate
+frame, so the float prepare *is* re-running. Both cannot be true as stated.
+
+Resolve that before writing any fill. The candidate is
+`transform_update_mode`: `func_ovl2_800EDBA4` (`gmcollision.c:340-372`) walks
+parent-ward and breaks on the first part whose `0x5` is set, and at the root it
+re-runs `gmCollisionTransformMatrixAll` only when `transform_update_mode == 0`.
+Find who zeroes `transform_update_mode` (or the latches) each frame — that call
+site is where the fixed-point fill belongs, because it is the point the float
+path is about to be re-entered.
 
 **Do NOT re-propose sourcing collision's joints from the renderer's 20.12
 pipeline.** R2-04 E57 already refuted it: hitboxes walk the *live* joint chain
