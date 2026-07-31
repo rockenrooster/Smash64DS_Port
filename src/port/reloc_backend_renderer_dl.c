@@ -7822,6 +7822,104 @@ void ndsRendererAdapterFinishNativeStageOwner(void)
 }
 #endif
 
+#if NDS_R2_SECOND_ENTRY_DIAG
+/* Second-entry chain validator. Default OFF (Makefile NDS_R2_SECOND_ENTRY_DIAG).
+ *
+ * The material write walk was running off the end of a four-entry array, which
+ * means the MObj chain it walks stops being what pass one measured. Bounding
+ * the walk contained the damage; it did not say WHEN the list goes bad. This
+ * answers that directly instead of inferring it from the overflow site: the
+ * chain is recorded twice per DObj -- once before the counting pass, once
+ * immediately before the writing pass -- so a list that is sound at the first
+ * probe and broken at the second localises the corruption to the counting pass
+ * itself, and one broken at both puts it upstream of this function entirely. */
+#define NDS_R2_CHAIN_PROBE_MAX 64u
+
+enum {
+    NDS_R2_CHAIN_OK = 0u,
+    NDS_R2_CHAIN_OVERLONG = 1u,   /* more nodes than any real DObj has */
+    NDS_R2_CHAIN_CYCLE = 2u,      /* next pointer revisits a seen node */
+    NDS_R2_CHAIN_OUT_OF_ARENA = 3u/* node or next outside the taskman arena */
+};
+
+typedef struct NDSR2ChainProbe {
+    u32 status;
+    u32 nodes;        /* nodes walked before terminating or failing */
+    u32 first_bad;    /* address of the offending node, 0 when clean */
+    u32 dobj;         /* which DObj owned the chain */
+    u32 generation;   /* taskman-heap generation at probe time */
+} NDSR2ChainProbe;
+
+volatile NDSR2ChainProbe gNdsR2ChainProbePass1;
+volatile NDSR2ChainProbe gNdsR2ChainProbePass2;
+/* Latched at the FIRST failure of the run and never overwritten, so a later
+ * clean frame cannot erase the evidence. */
+volatile NDSR2ChainProbe gNdsR2ChainProbeFirstBad;
+volatile u32 gNdsR2ChainProbeFirstBadPass;
+volatile u32 gNdsR2ChainProbeInvalidCount;
+volatile u32 gNdsR2ChainProbeCount;
+
+static void ndsR2ChainProbe(DObj *dobj, volatile NDSR2ChainProbe *out, u32 pass)
+{
+    const MObj *seen[NDS_R2_CHAIN_PROBE_MAX];
+    const MObj *mobj;
+    u32 count = 0u;
+    u32 status = NDS_R2_CHAIN_OK;
+    u32 first_bad = 0u;
+
+    gNdsR2ChainProbeCount++;
+    for (mobj = (dobj != NULL) ? dobj->mobj : NULL; mobj != NULL;
+         mobj = mobj->next)
+    {
+        u32 i;
+
+        if (ndsFighterDLScanRangeInTaskmanArena(mobj, sizeof(*mobj)) == FALSE)
+        {
+            status = NDS_R2_CHAIN_OUT_OF_ARENA;
+            first_bad = (u32)(uintptr_t)mobj;
+            break;
+        }
+        /* O(n^2) against a 64 bound is 4,096 compares worst case, and this is a
+         * default-off diagnostic -- a hash would be more code for no answer. */
+        for (i = 0u; i < count; i++)
+        {
+            if (seen[i] == mobj)
+            {
+                status = NDS_R2_CHAIN_CYCLE;
+                first_bad = (u32)(uintptr_t)mobj;
+                break;
+            }
+        }
+        if (status != NDS_R2_CHAIN_OK)
+        {
+            break;
+        }
+        if (count >= NDS_R2_CHAIN_PROBE_MAX)
+        {
+            status = NDS_R2_CHAIN_OVERLONG;
+            first_bad = (u32)(uintptr_t)mobj;
+            break;
+        }
+        seen[count++] = mobj;
+    }
+    out->status = status;
+    out->nodes = count;
+    out->first_bad = first_bad;
+    out->dobj = (u32)(uintptr_t)dobj;
+    out->generation = gNdsTaskmanHeapGeneration;
+
+    if (status != NDS_R2_CHAIN_OK)
+    {
+        gNdsR2ChainProbeInvalidCount++;
+        if (gNdsR2ChainProbeFirstBadPass == 0u)
+        {
+            gNdsR2ChainProbeFirstBadPass = pass;
+            gNdsR2ChainProbeFirstBad = *out;
+        }
+    }
+}
+#endif
+
 static sb32 ndsRendererAdapterPrepareNativeMaterials(
     DObj *dobj, NDSRendererNativeMaterial *materials,
     u32 capacity, u32 *out_count)
@@ -7838,6 +7936,9 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
     {
         return TRUE;
     }
+#if NDS_R2_SECOND_ENTRY_DIAG
+    ndsR2ChainProbe(dobj, &gNdsR2ChainProbePass1, 1u);
+#endif
     for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
     {
         count++;
@@ -7846,6 +7947,12 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
             return FALSE;
         }
     }
+#if NDS_R2_SECOND_ENTRY_DIAG
+    /* Immediately before the write walk, so the pair brackets exactly the
+     * counting pass. If pass 1 is clean and pass 2 is not, the counting pass is
+     * where the list dies. */
+    ndsR2ChainProbe(dobj, &gNdsR2ChainProbePass2, 2u);
+#endif
     count = 0u;
     for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
     {

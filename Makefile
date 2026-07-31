@@ -316,6 +316,14 @@ NDS_TASK106_UPDATES_PER_PRESENT ?= 2
 # update rate unchanged, so the tail is loading, not simulation.
 # Sample with -FallbackCensus -RingDump; lab only, default 0.
 NDS_TASK75_LOAD_CENSUS ?= 0
+# Second-entry (Sudden Death / rematch) MObj chain validator. Records the
+# fighter material chain before the counting pass and again immediately before
+# the writing pass, so "when does the list first become invalid" is measured
+# rather than inferred from wherever the overflow happened to surface. Bounded
+# node count, cycle detection, arena containment, owning DObj, and the taskman
+# heap generation at probe time. Lab only, default 0: it walks every chain twice
+# per DObj per frame and keeps a 64-entry seen list on the stack.
+NDS_R2_SECOND_ENTRY_DIAG ?= 0
 # Runtime 2 (docs/Smash64DS_Runtime2_SwitchPlan.md). The whole family defaults
 # to 0 and the published ROMs stay pure Runtime 1 until the switch (plan S5).
 #
@@ -2224,6 +2232,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK104_STAGE_STATS_ELISION $(NDS_TASK104_STAGE_STATS_ELISION)'; \
 		echo '#define NDS_TASK106_UPDATES_PER_PRESENT $(NDS_TASK106_UPDATES_PER_PRESENT)u'; \
 		echo '#define NDS_TASK75_LOAD_CENSUS $(NDS_TASK75_LOAD_CENSUS)'; \
+		echo '#define NDS_R2_SECOND_ENTRY_DIAG $(NDS_R2_SECOND_ENTRY_DIAG)'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
 		echo '#define NDS_R2_FIXED_SQRT $(NDS_R2_FIXED_SQRT)'; \
