@@ -1741,6 +1741,51 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### R2-07 L0 — the anim cache is CLEAN, so it is not the in-match load; and `HUD` has a 338x spread nobody has priced (2026-07-30)
+
+Opening the load-elimination lane the switch plan names as R2-07's option 1 ("buy
+headroom first"), which is also red-queue item 1 and the unmet half of R2-04's
+clause: *all animation streams for the match prepared at load; no first-use
+loading during gameplay* (§3.8). One census run, DLDI-on, 128 samples via
+`sample-tick-hud-buckets.ps1 -RingDump`, frames 439..566, at `1b34621667`.
+Evidence `artifacts/performance/r207-L0-cache-census.json`.
+
+**The R2 animation cache is healthy and is NOT the source.**
+`gNdsR2AnimCacheRejects=0`, `gNdsR2AnimCacheArenaOverflows=0`, 42 hits against 2
+misses and 2 fills, arena 87,824 used of 92,160 reserved. **This retires the
+standing unowned observation `ArenaOverflows 109 / Rejects 109`** — that reading
+predated the arena's move onto the taskman heap and has been carried forward as
+if it were current. The cache is serving the match. Whatever still loads
+mid-match is a different asset class, so do not re-open the cache as the lever.
+
+**Where the excursion actually is.** The two buckets the campaign has spent
+itself on are flat and at their established values -- `FTR` P50 389,888 / P95
+392,896, spread **1.01**; `STG` 169,920 / 177,216, spread **1.04** against
+R2-02's 177,088. The spread is entirely elsewhere: `SRC` 284,864 / 564,032
+(1.98), `OTHR` 226,112 / 470,464 (2.08), `MISC` 46,912 / 159,360 (3.40), `AUD`
+mean 7,762 against a max of 127,296 -- and
+
+**`HUD` P50 1,024, P95 346,816, max 411,648: a spread of 338.69.** The median
+HUD frame costs a thousand ticks and a rare one costs four hundred thousand.
+That is the exact shape §3.8 bans ("usually cheap, occasionally catastrophic")
+and it appears in no prior entry on this board. It is a bigger single-bucket
+excursion than `SRC`'s and it has never been attributed.
+
+**Next (L1): attribute the `HUD` excursion before anything else in this lane.**
+Which frames carry it, and what does the HUD do on them that it does not do on
+the other 127? Use `-RowsCsv` to identify the frames rather than re-deriving
+them by hand. Note the E11 rule while reading any delta from here: the
+cross-build floor is P95 +/-5,376 and small load-frame cuts cannot be banked --
+only work that leaves the frame counts.
+
+**Do not read this run's `WORK-H` P95 (1,273,024) as a regression or a new
+baseline.** It is a different 128-frame window than the board's earlier readings
+and no matched control was run beside it. What it does license is the
+composition above, because `FTR` and `STG` land on their known values in the
+same run -- and those are the only two buckets the day's renderer change
+(`reloc_backend_renderer_dl.c:7850`, the Sudden Death material-walk bound) can
+touch, so that change is not implicated in the spread.
+
 ### R2-07 R1 ANSWERED — the "30 s GAME SET dead air" is 6.10 s, it is NOT a load, and R1 collapses into R2 (2026-07-30)
 
 R1 was queued on the strength of a real-time capture that put the frozen last battle frame at

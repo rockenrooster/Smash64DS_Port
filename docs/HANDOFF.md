@@ -62,9 +62,18 @@ BSS, and BSS competes with the runtime `calloc` that sizes the heap: crossing th
 floor (`diagnostics.c:7403`) costs **196,608 bytes in one step**. **The arena now lives on the taskman
 heap, 92,160 bytes, +32 B of BSS**, using 87,824. **Do NOT lower that floor** — it is a contract with
 the Task 36 replay guard (`nds_renderer.h:124-134`); my earlier authorization is retracted. **Both
-configurations complete a full match clean.** Four detector defects fixed, two verdicts withdrawn (it
-hashed the window **title**, where melonDS renders its FPS counter). **Sudden Death has its own
-issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit` needs `START`.
+configurations complete a full match clean.** **No passive soak reaches match two** —
+`mnVSResultsCheckExit` needs `START`.
+
+**Sudden Death: REPRODUCIBLE in ~90 s, and its freeze is FIXED** —
+`scripts/capture-sudden-death-entry.ps1`, no harness mode (a mode would have to fork source control
+flow; withdrawn). A match nobody scores in IS a 0-0 tie, so it runs mode 163 with Fox **live** and
+shortens `time_remain`. **Never pause the Fox CPU to force a tie** — that flag also freezes the tic
+source, so the clock never expires. The freeze was an unbounded WRITE walk past a bounded counting
+walk (`reloc_backend_renderer_dl.c:7850`, 4-entry array); bounding it took 1 distinct frame per 60 s
+to 12, Latest green. **A `syDebugPrintf` breakpoint is a total detector for this bug class** — all
+eleven `while (TRUE);` give-up sites print first. Open items in BUGS.md. **The R2 anim cache is
+CLEAN** (Rejects 0, Overflows 0) — the 109/109 reading was stale; see board R2-07 L0.
 
 ## VS Results is CLOSED — 581,197 ticks/tic vs 1.12M (0.52×), from 2,814,955
 
@@ -98,28 +107,26 @@ no prefetcher; `AObj` 36 B, N 221 — both memos wrong); **E15** unbuilt, stradd
 
 **Every named load-frame candidate is sized and none closes the 40,448.** Of the 139,072/load-frame
 premium: relocation 33,632, re-add 11,313, E9's walks 21,788 — **~94,127 (67.7%) has NO named owner**,
-and E17 killed E8's hypothesis (16 load frames, only 7 whole-GObj re-adds). **Second time a premium
-here refused to concentrate. Before a fourth bracket, ask whether R2-06 is the right phase** — two
-independent attributions say spread, pointing at the switch plan's §3 structural change.
+and E17 killed E8's hypothesis (16 load frames, only 7 whole-GObj re-adds). Two independent
+attributions say spread. **R2-07 L0 moved this on: the anim cache is clean, and the unattributed
+spread shows up as `HUD` P50 1,024 / P95 346,816 — a 338x bucket nobody has priced. Attribute that
+next (board R2-07 L0/L1), not a fourth bracket here.**
 
 ## The one open fidelity item
 
-- **E32** — blocked on a **generator gap, not a decision** (E62), and E7 showed it no longer blocks a gate
-  lever. The flash clears `G_LIGHTING` and draws vertex colours raw; the owner hardware-lights with stale
-  diffuse/ambient, so Mario draws *unflashed* — not corrupt, pixel-identical on non-flash frames. E49's
-  runtime half **refuted** (the baked `.rgba` holds **normals** — speckle). **Needs the generator to
-  bake the flash variant's colours**; E63: 2,164 B.
+- **E32** — a **generator gap, not a decision** (E62), and E7 showed it no longer blocks a gate lever.
+  Mario draws *unflashed* — not corrupt, pixel-identical on non-flash frames. **Needs the generator to
+  bake the flash variant's colours** (E63: 2,164 B). Derivation on the board.
 
 ## Refuted this cycle — do not re-derive
 
-All by measurement, not opinion; derivations on the board. **E51** `line_id` table (`YakumonoCount =
-1`); **E53** `{base,size}` mirror (P95 **+11,584**); **the flash as vertex data** (E48-E58); **the pose
-table** (E61, 2.62 MB vs 4 MB RAM); **`.text.hot`** (E66, +24,448); **R2-04 E57** hitboxes walk the
-live joint chain; **R2-06 E7** fighter fallback (0/256) and Task 39 effects; **R2-06 E6** the Horner
-fold (+7,168 P50, so E61 §5's other rows are suspect — a memo is a memory stream); **Mario/Fox pointer
-arrays as index arithmetic** (E11); **an AObj pool** (E12, `syMallocSet` already bumps); **R2b's
-transform double-apply** (the mapper bakes it); and **R1's loader AND arena framings** (the dead air
-is per-frame cost).
+All by measurement; derivations on the board. **E51** `line_id` table; **E53** `{base,size}` mirror;
+**the flash as vertex data** (E48-E58); **the pose table** (E61); **`.text.hot`** (E66); **R2-04 E57**
+hitboxes walk the live joint chain; **R2-06 E7** fighter fallback and Task 39 effects; **R2-06 E6**
+the Horner fold (so E61 §5's other rows are suspect — a memo is a memory stream); **pointer arrays as
+index arithmetic** (E11); **an AObj pool** (E12); **R2b's transform double-apply**; **R1's loader AND
+arena framings**; and **the `syMallocSet` OOM spin and the DL-buffer overflow as the Sudden Death
+freeze** (a `syDebugPrintf` breakpoint catches all eleven give-up sites; none fired).
 
 ## Restart
 
