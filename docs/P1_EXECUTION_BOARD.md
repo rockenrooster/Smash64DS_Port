@@ -1996,6 +1996,47 @@ L7 → R2-08 (flip the Boundary, rebuild the published ROMs, owner retail test).
 **Performance is one of four clauses and is the only one with momentum; the
 other three are where the phase actually is.**
 
+### R2-07 H1 — where the static RAM went, and why the SD margin is thin (2026-07-31)
+
+Sudden Death survives on 42,992 bytes free, and the taskman arena is sized by a
+boot loop that steps **down 0x1000 per failed `calloc`** — so every byte of
+static RAM comes straight out of the game's heap, and the next 4 KB anyone adds
+re-freezes SD exactly as L9's sine table did. `nm -S --size-sort` on the tickhud
+ELF, largest `.bss`/`.data` first:
+
+| bytes | symbol |
+|---|---|
+| 441,600 | `gSYFramebufferSets` |
+| 204,800 | `sNdsAudioFgmCache` |
+| 185,696 | `sNdsRelocSceneFileBuffer` |
+| **153,600** | **`sOriginalSpritePreview`** |
+| **153,600** | **`sOriginalSpriteDisplayPreview`** |
+| 140,800 | `gSYZBuffer` |
+| 32,768 | `sNdsRendererHardwareTextureScratch` |
+| 30,688 | `sNdsRendererTask36ReplayOwner` |
+| 29,184 | `sNdsRelocLoadedFiles` |
+| 27,136 | `sNdsFighterDLAllDrawStates` |
+| 13,824 | `sOriginalDLPreview` |
+
+**The two preview buffers are 307,200 bytes — 7× the entire SD margin — and
+they are declared ungated** (`nds_platform.c:114` and `:196`, no `#if`), while
+the functions that DRAW them, `ndsPlatformDrawOriginalSpritePreview` and
+`ndsPlatformDrawOriginalDLPreview`, sit inside `#if !NDS_RENDERER_HW_TRIANGLES`
+— compiled out of every battle ROM, which builds `NDS_RENDERER_HW_TRIANGLES 1`.
+
+**They are NOT trivially dead, so do not just delete them.** Checked before
+claiming it: the write at `:482` is outside any `!HW_TRIANGLES` guard, and `:511`
+is a live getter returning `sOriginalSpriteDisplayPreview`. So in a
+hardware-triangle build the buffers are still populated and still handed out —
+they are drawn nowhere, which is a different thing from unused.
+
+Next step is a liveness audit, not a deletion: find every reader of both buffers
+that survives `NDS_RENDERER_HW_TRIANGLES=1`, and establish whether the getter's
+callers are diagnostic (verifier/preview) or on the shipping path. If they are
+diagnostic, gating both buffers on `!NDS_RENDERER_HW_TRIANGLES` returns 307,200
+bytes to the arena — 75 pages of arena sizing loop, against an SD margin that is
+currently one page.
+
 ### R2-07 L7 — kernel GREEN, seam FOUND at the entry surface (2026-07-31, later)
 
 Supersedes the RED status below on both counts.
