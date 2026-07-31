@@ -1827,12 +1827,27 @@ source=0xa2a1e85f  table=0x8db9d3bd
 Docs check and tick-HUD parity also green, so the instrumented ROM is still the
 shipping program.
 
-**NOT yet done, and none of it should be assumed from "it builds":** no A/B
-against the pre-merge control, no Boundary run, no visual check, and **the
-particle cost is not yet priced against the cosmetic budget** — which is the
-whole reason §5 gives cosmetic systems explicit budgets. `115,277 B` of arena
-spare answers the *memory* question only. The eight open VFX rows in `BUGS.md`
-stay open until the effects are seen on screen.
+**A/B RUN, AND THE MERGE IS INERT.** 128-frame sample against
+`r207-L10-sqrt-128`, the pre-merge control from the same session and harness
+(`artifacts/performance/r207-particles-128*`): **every bucket byte-identical** —
+`WORK-H` P95 1,232,448, P50 921,920, VBI `2:465 3:89 4:9 5+:4 max:19`,
+named 978,456.
+
+By this session's own rule, identical arms mean the input did not take effect,
+so I checked the built config instead of publishing a "costs nothing" result:
+**`NDS_R2_PARTICLE_RUNTIME 0`** (`Makefile:596`). The runtime is default-off,
+the linked bank never executes, and **zero cost is the correct reading — of a
+subsystem that is not running.** It is not evidence the particles are
+affordable.
+
+**So clause 2 is merged, buildable, byte-reproducing and priced at nothing
+because it is switched off.** The pricing experiment is `NDS_R2_PARTICLE_RUNTIME=1`
+plus a re-sample against this same control, and it is a real one: `lb/lbparticle.c`
+is a 2,961-line bytecode interpreter against a cosmetic budget of roughly 23K
+ticks (~fourteen textured-quad binds at Task 98's 1,621/bind). **Still not done:**
+that measurement, a Boundary run with the runtime on, a visual check, and the
+eight open VFX rows, which stay open until the effects are on screen. The
+`115,277 B` of arena spare answers the *memory* question only.
 
 ### R2-07 COMPLETION SEQUENCE — the phase is mostly CONTENT, not performance (2026-07-31)
 
