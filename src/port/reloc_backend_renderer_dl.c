@@ -7849,6 +7849,24 @@ static sb32 ndsRendererAdapterPrepareNativeMaterials(
     count = 0u;
     for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
     {
+        /* Bound the WRITE walk too, not just the counting one above. The count
+         * pass only constrains this pass if the list is identical across both,
+         * and it is not: ndsRendererAdapterBuildNativeMaterial is the
+         * advance_texture_ids=TRUE wrapper, so this loop writes
+         * mobj->texture_id_curr/next into every node as it walks. A list that
+         * turns cyclic or is corrupted mid-walk ran `materials[count]` off the
+         * end of a `capacity`-entry array -- capacity is 4 -- with no check at
+         * all. Returning FALSE hands the caller its existing generic fallback
+         * instead of corrupting whatever follows the array.
+         *
+         * Found while reproducing the Sudden Death freeze (docs/BUGS.md): the
+         * scene presents two frames and then none, with no overflow assert
+         * firing anywhere, and an interrupt landing inside this loop's inlined
+         * material build. */
+        if (count >= capacity)
+        {
+            return FALSE;
+        }
         if (ndsRendererAdapterBuildNativeMaterial(
                 mobj, &materials[count]) == FALSE)
         {

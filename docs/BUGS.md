@@ -335,14 +335,23 @@ These bugs should be fixed for P1 delivery.
     This is an unbounded write loop into a 4-entry array and is worth fixing on
     its own merits, whether or not it proves to be the whole freeze.
   - **PLAN (2026-07-30), in order, each step falsifiable on its own:**
-    1. **Bound pass two.** Carry the same `count > capacity` guard into the
-       second walk and return FALSE on breach. Cheap, obviously correct, and it
-       converts a runaway memory-corrupting loop into a clean FALSE -- which the
-       caller already handles as "fall back to the generic path". Re-run the lane:
-       if the freeze becomes a visible fallback instead of a stopped picture, the
-       loop is confirmed AND the corruption is contained. This does not by itself
-       explain WHY the list goes bad; it stops the damage and makes the cause
-       observable.
+    1. **Bound pass two. DONE 2026-07-30 -- THE FREEZE IS FIXED.** The write walk
+       now returns FALSE once `count >= capacity`, handing the caller its
+       existing generic fallback instead of running off a four-entry array.
+       Measured on the lane, same ROM configuration, 60-second picture watch:
+       **before 12 samples / 1 distinct frame (frozen); after 12 samples / 12
+       distinct frames**, with the tick-HUD VBlank histogram accumulating again.
+       `verify-all -Profile Latest` passes, `battle_playable_realtime` included.
+       The guard is a pure safety net and cannot alter a healthy frame: pass one
+       already rejects any list longer than `capacity`, so for a well-formed list
+       the new test is never reached. That is also why this is a fix and not a
+       workaround at the wrong seam -- it only fires when the list changed
+       between the two walks, which is itself the defect.
+       **It stops the damage; it does not explain why the list goes bad.** Steps
+       2 and 3 stay open, and so do two Sudden Death defects this run made
+       visible now that the picture moves: the camera holds a wide shot with
+       neither fighter framed, and P1's stock reads `--` while the CPU's reads
+       `x1`. Those are this row's "animation issues", separate from the freeze.
     2. **Find who corrupts the list.** The standing suspect is already in this
        row: `ndsR2AnimCacheArenaStillOwned` (`reloc_backend_assets.c:5854-5871`)
        can false-positive after `syTaskmanStartTask` rewinds
