@@ -34,9 +34,13 @@ gate by only **295,376 (147,688 ticks)**; **soft-float is +337,927 = 66.2% of th
 the overshoot.** Entry-PC counts are binary over 10 frames/2 runs: `gmCollisionSetInvertMatrix` **34 on
 every over frame, 0 on every clean one**, `func_ovl2_800ED490` 40/0, `fadd` 2.75x, `fmul` 3.62x.
 `ndsRendererAdapterBuildDObjLocalMatrix` is **1.06x — render and animation are FLAT**; the reloc walker
-is 0.5%, so **these are not load frames**. **L7 = fixed-point `gm/gmcollision.c`** (41.0 cyc/call
-`fadd`, 28.1 `__mulsf3` vs ~4-6 for 20.12 `SMULL`); needs an E64b-style equivalence bound, collision
-decides hits. **The census window is a COMPILE-TIME constant, so `-NoBuild` measures the LAST build's
+is 0.5%, so **these are not load frames**. **L7 = fixed-point `gm/gmcollision.c`, and it must be ALL of
+it**: measured, the float compose is 2,652 cyc/call vs the existing 20.12 one at 670.8 (**4.0x, not the
+10x an ops model gives**), so compose+inverse alone save ~187,794 of a **295,376** overshoot — 64%, not
+enough. Needs an E64b-style equivalence bound; collision decides hits. **L8 (unroll that compose) is
+REFUTED UNBUILT** at ~12,000/frame, under E11's ~16,000 bar — its inner products are already unrolled
+and 14 of 20 instructions per cell are the s64 round-and-clamp, not bit-exact to change, so it folds
+into L7. **The census window is a COMPILE-TIME constant, so `-NoBuild` measures the LAST build's
 window** — arm B did that and returned a byte-identical 7.4 MB CSV, one census labelled twice; the
 harness now verifies `builds/$Build/nds_build_config.h` and refuses otherwise. Arm A alone would have
 published "soft-float 9.95%", true of the whole run and 6.7x wrong about the excursion. **Always
@@ -48,7 +52,6 @@ CONTRADICTED.** Per-frame `gNdsTask75AssetLoadCount` (`-PerFrameGlobals`), insid
 gate's answer. **E8's surviving numbers:** load frames P50 **1,113,152**; **clean frames P50 974,080,
 P95 1,056,640 — inside the gate by 63,360**; average frame 145,920 under budget. **E7 refuted both
 previously-named causes** (`FTR` −1,312 / `STG` −2,496 — not a render problem).
-
 **Do NOT attack the relocation's O(n²) scan** — only 17.3% of it (n is 25.4); the payload is walked
 TWICE by pointer *differences*, so hoisting to cache-store time is the viable shape (E9). **E10: no
 single lever** — **326,906/frame** over **513 symbols**, relocation 37.0%, `ftAnimParseDObjFigatree` 13.0%.
@@ -64,7 +67,6 @@ Owner: *"lots of freeze bugs that seem random"*. **One cause explains the class*
 `while (TRUE);`, so the allocator **hangs instead of returning NULL** on exhaustion, and
 `ndsR2AnimCacheStore` was a *speculative* cache calling it from a gameplay frame on the shared
 `gSYTaskmanGeneralHeap`. **Do NOT make `syTaskmanMalloc` return NULL globally** — callers don't check.
-
 **One site, not two — the "second exhaustion at battle start" was MY regression.** A static arena is
 BSS, and BSS competes with the runtime `calloc` that sizes the heap: crossing the `0x130000` search
 floor (`diagnostics.c:7403`) costs **196,608 bytes in one step**. **The arena now lives on the taskman
@@ -84,9 +86,9 @@ demand from a 192 KiB-poorer config; SD setup is in fact **19,248 LOWER** than m
 925,816 from an identical 319,968 baseline). **Sudden Death reproduces in ~90 s**
 (`capture-sudden-death-entry.ps1`); **never pause the Fox CPU to force a tie** — it freezes the tic
 source. Freeze DISPLACED not fixed (`BOUND-HITS` 0); keep the guard. MObj chains never invalid.
-**`syDebugPrintf` covers only the ten `taskman.c` give-up sites.** **Diag lanes rebuild the ROM and
-used to DROP `NDS_R2_SECOND_ENTRY_DIAG`; gdb aborts a command file on a missing symbol SILENTLY,
-which reads as an emulator hang — pass `-SecondEntryDiag`.** Open items in BUGS.md.
+**`syDebugPrintf` covers only the ten `taskman.c` give-up sites. Diag lanes rebuild the ROM and used
+to DROP `NDS_R2_SECOND_ENTRY_DIAG`; gdb aborts a command file on a missing symbol SILENTLY, which
+reads as an emulator hang — pass `-SecondEntryDiag`.** Open items in BUGS.md.
 
 ## VS Results is CLOSED — 581,197 ticks/tic vs 1.12M (0.52×), from 2,814,955
 
@@ -94,7 +96,6 @@ R0c/R0d/R0e/R2a/R4b/R4d/R4e/R4c all graduated, all Latest-green; per-lever detai
 PERF_LEDGER. **Results is no longer the P1 performance problem, and R1's "~30 s dead air" is 6.10 s
 and is NOT a load** — the fighter reload is 5.5% of it, so do not build a residency system. Standing
 traps it paid for, all still live:
-
 - **`-Os` emits `blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`.
 - **A lab ROM can differ from battle in CODEGEN.** The `-marm` rule keyed on harness ID 163, so the
   Results lab (164) built `nds_renderer.o` `-mthumb` and every 20.12 multiply was `bl __aeabi_lmul`;
@@ -112,10 +113,9 @@ traps it paid for, all still live:
 E14 ~2,900, **10-15 ticks/32-byte line fill**, no prefetcher; E15 straddles the floor).
 `gNdsFighterInit*` is proof-build-only, **0 — never cite it.** **Every named load-frame candidate is
 sized and none closes the 40,448**: of 139,072/load-frame, ~94,127 (67.7%) has no named owner. Anim
-cache CLEAN, `FTR`/`STG` flat (L0), so the excursion is `SRC` — which L6 has now resolved.
-**Never target `HUD`** — it contains `ndsPlatformRenderDebugHud`, the tick HUD's own render; that is
-why `WORK-H` subtracts it per sample.
-
+cache CLEAN, `FTR`/`STG` flat (L0), so the excursion is `SRC` — which L6 has now resolved. **Never
+target `HUD`** — it holds `ndsPlatformRenderDebugHud`, the tick HUD's own render, which is why
+`WORK-H` subtracts it per sample.
 **The one open fidelity item: E32** — a **generator gap, not a decision** (E62); no longer blocks a
 gate lever (E7). Mario draws *unflashed*, pixel-identical on non-flash frames. **Generator must bake
 the flash colours** (E63: 2,164 B).
