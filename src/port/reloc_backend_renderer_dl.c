@@ -82,6 +82,17 @@ static const Gfx sNdsRendererAdapterEmptySegmentEDL[1] = {
  * match's binding_dobjs[] were re-admitted wholesale. */
 volatile u32 gNdsR2StageSteadyAdmitCount;
 volatile u32 gNdsR2StageTopologyRebuildCount;
+/* First stage-material rejection of the run, latched. RejectIndex stays at
+ * 0xFFFFFFFF while nothing has been rejected, so "no rejection" is
+ * distinguishable from "rejected binding 0". */
+volatile u32 gNdsR2StageMaterialRejectCount;
+volatile u32 gNdsR2StageMaterialRejectIndex = 0xFFFFFFFFu;
+volatile u32 gNdsR2StageMaterialRejectBinding;
+volatile u32 gNdsR2StageMaterialRejectDObj;
+volatile u32 gNdsR2StageMaterialRejectMObj;
+volatile u32 gNdsR2StageMaterialRejectFlagsWant;
+volatile u32 gNdsR2StageMaterialRejectFlagsGot;
+volatile u32 gNdsR2StageMaterialRejectHeapGen;
 #endif
 
 static u32 ndsRendererAdapterFighterColorModulate(const FTStruct *fp)
@@ -7425,6 +7436,31 @@ static sb32 ndsRendererAdapterPrepareNativeStageMaterials(
                  &workspace->material_curr[i],
                  &workspace->material_next[i]) == FALSE))
         {
+#if NDS_R2_SECOND_ENTRY_DIAG
+            /* THIS is the question, not "are the pointers stale". The four
+             * bindings are addressed by the fixed constants {20,22,31,32} and
+             * each is checked against a fixed expected material flag word. If
+             * the second entry builds the DObj tree in a different ORDER, the
+             * indices resolve to other objects, the flag word does not match,
+             * and this returns FALSE -- which rejects the whole native stage
+             * owner and drops the stage onto the generic path. That would show
+             * up as "the stage is drawn wrong" without a single stale pointer
+             * anywhere, which is exactly the state four other hypotheses have
+             * now failed to explain. Latch the FIRST failure only. */
+            gNdsR2StageMaterialRejectCount++;
+            if (gNdsR2StageMaterialRejectIndex == 0xFFFFFFFFu)
+            {
+                gNdsR2StageMaterialRejectIndex = i;
+                gNdsR2StageMaterialRejectBinding = bindings[i];
+                gNdsR2StageMaterialRejectDObj =
+                    (u32)(uintptr_t)workspace->binding_dobjs[bindings[i]];
+                gNdsR2StageMaterialRejectMObj = (u32)(uintptr_t)mobj;
+                gNdsR2StageMaterialRejectFlagsWant = flags[i];
+                gNdsR2StageMaterialRejectFlagsGot =
+                    ndsRendererAdapterMaterialFlags(mobj);
+                gNdsR2StageMaterialRejectHeapGen = gNdsTaskmanHeapGeneration;
+            }
+#endif
             return FALSE;
         }
         workspace->material_mobjs[i] = mobj;

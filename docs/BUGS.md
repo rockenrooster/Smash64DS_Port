@@ -342,8 +342,31 @@ These bugs should be fixed for P1 delivery.
     (`reloc_backend_renderer_dl.c:7520`), which reuses the whole workspace on
     nothing but `sNdsRelocStageAssetMutation`, was the obvious hazard and it is
     not firing across the boundary.
-    **So the mis-binding is in the CONTENT of a fresh rebuild, not in stale
-    state.** `ndsRendererAdapterCollectNativeStageTopology` fills
+    **AND THE BINDINGS ARE CORRECT TOO -- fifth refutation, and it re-frames
+    the symptom.** `gNdsR2StageMaterialRejectCount` is **0** and its latched
+    index stays at its "never rejected" sentinel across a run that reaches
+    Sudden Death. `ndsRendererAdapterPrepareNativeStageMaterials` checks each of
+    the four fixed bindings against a fixed expected material flag word and
+    returns FALSE on any mismatch; it never does. So on the second entry the
+    indices `{20,22,31,32}` resolve to objects whose materials match exactly
+    what the first entry saw. The tree-order hypothesis below is refuted with
+    the rest.
+    **Five mechanisms are now eliminated by measurement** -- static textures,
+    MObj chain corruption, scene-cache eviction, stale workspace admission, and
+    stage material binding -- while the picture is still visibly different. That
+    weight of negative evidence argues the original framing is wrong: **this may
+    not be a texture defect at all.**
+    Re-read the pair with that in mind. The Sudden Death frame is shot from much
+    FURTHER OUT and higher than the match-1 frame; the whole stage is small and
+    centred, and no fighter is visible. Geometry seen from an unfamiliar
+    distance and angle is exactly what would read as "wrong textures" while
+    every binding check passes. `FTR` is 232,896 in Sudden Death against 394,816
+    in match 1 -- fighters are still being drawn, at 59% of the cost, not
+    absent. **So the next target is the CAMERA, not the material path:** why is
+    the Sudden Death view wide and untracked, and is the fighter draw reduced
+    because the camera never converges on them? Do not spend another experiment
+    on textures until that is answered.
+    **(Superseded) the mis-binding is in the CONTENT of a fresh rebuild:** `ndsRendererAdapterCollectNativeStageTopology` fills
     `binding_dobjs[]` in whatever order the live DObj tree presents, and
     `ndsRendererAdapterPrepareNativeStageMaterials` then indexes it by the fixed
     constants `{20, 22, 31, 32}`. If Sudden Death builds that tree in a
