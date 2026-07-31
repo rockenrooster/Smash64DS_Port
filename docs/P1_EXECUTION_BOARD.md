@@ -1825,6 +1825,9 @@ gone; a 4096-step table needs none of them.
 **−37,248 is 6.9× the ±5,376 cross-build floor, and 90% of it is `SRC`** — the
 bucket L6 named. First cut landed against the L6 population; it does not close
 the gate (1,244,608 vs 1,120,000, still 124,608 over) but it is real and banked.
+**Boundary GREEN** — which matters more than usual here, because trig values
+change and therefore trajectories do. The gate that could have caught a fidelity
+problem is the one that passed.
 
 **The verdict was nearly published backwards.** Against the standing
 1,160,448–1,179,520 baseline, L9's 1,244,608 reads as a large regression — and
