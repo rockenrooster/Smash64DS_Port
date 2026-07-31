@@ -356,6 +356,34 @@ These bugs should be fixed for P1 delivery.
     stage material binding -- while the picture is still visibly different. That
     weight of negative evidence argues the original framing is wrong: **this may
     not be a texture defect at all.**
+    **ANSWERED: IT IS THE CAMERA, AND IT NEVER CONVERGES.** Measured on both
+    sides of the boundary in one run:
+
+        match 1        target_dist 3937.42   status 0  fovy 38  vp 300x220
+        Sudden Death   target_dist 10000.00  status 0  fovy 38  vp 300x220
+
+    Everything matches except the distance, and Sudden Death's is **exactly**
+    `10000.0` -- the literal `gGMCameraStruct.target_dist = 10000.0F` that
+    `gmCameraMakeDefaultCamera` writes at creation
+    (`decomp/.../gm/gmcamera.c:1157`). The battle camera eases that value toward
+    a computed distance every frame (`:593-601`), which is how match 1 reaches
+    3937. **In Sudden Death it holds the creation value, so the convergence
+    never runs at all** -- not "converges to the wrong place", never runs.
+    The stage is therefore drawn from **2.54x** the intended distance. That is
+    the whole visible defect: the "wrong textures" are Dream Land's own geometry
+    seen from far enough out to be unrecognisable, which is why five separate
+    texture and binding hypotheses all measured clean. The status word is 0
+    (`nGMCameraStatusDefault`) on BOTH sides, so the mode is not the difference
+    and the camera object does exist.
+    **Next: why the per-frame convergence does not execute for the second
+    entry.** `scVSBattleStartSuddenDeath` calls `gmCameraMakeBattleCamera` just
+    as `scVSBattleStartBattle` does, so the object is created; the question is
+    whether its proc is scheduled and whether the fighter list it reads is
+    populated at that moment. `FTR` 232,896 against match 1's 394,816 says the
+    fighters are drawn but at 59% of the cost, which is consistent with a camera
+    that never converges on them.
+
+    **(Superseded reasoning, kept because it is how the camera was found.)**
     Re-read the pair with that in mind. The Sudden Death frame is shot from much
     FURTHER OUT and higher than the match-1 frame; the whole stage is small and
     centred, and no fighter is visible. Geometry seen from an unfamiliar

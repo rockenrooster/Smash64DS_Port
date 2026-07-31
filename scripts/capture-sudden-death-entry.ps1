@@ -241,6 +241,18 @@ try {
         # wpManagerAllocWeapons, efManagerInitEffects, every camera) against the
         # SAME arena that match one is already holding. These two readings bracket
         # exactly that second pass.
+        # CAMERA AT THE END OF MATCH 1. Five texture/binding hypotheses came back
+        # clean while the picture stayed different, and the Sudden Death frame is
+        # shot from much further out -- so capture the camera on BOTH sides of the
+        # boundary and let the numbers say whether the view actually changed.
+        'printf "SD-CAM1-STATUS=%d\n", gGMCameraStruct.status_curr',
+        'printf "SD-CAM1-STATUS-DEF=%d\n", gGMCameraStruct.status_default',
+        'printf "SD-CAM1-DIST=%f\n", gGMCameraStruct.target_dist',
+        'printf "SD-CAM1-FOVY=%f\n", gGMCameraStruct.fovy',
+        'printf "SD-CAM1-PZOOM-DIST=%f\n", gGMCameraStruct.pzoom_dist',
+        'printf "SD-CAM1-PFOLLOW-DIST=%f\n", gGMCameraStruct.pfollow_dist',
+        'printf "SD-CAM1-VPW=%d\n", gGMCameraStruct.viewport_width',
+        'printf "SD-CAM1-VPH=%d\n", gGMCameraStruct.viewport_height',
         'printf "SD-HEAP-USED-ENTRY=%u\n", (unsigned)((char *)gSYTaskmanGeneralHeap.ptr - (char *)gSYTaskmanGeneralHeap.start)',
         'printf "SD-HEAP-FREE-ENTRY=%u\n", (unsigned)((char *)gSYTaskmanGeneralHeap.end - (char *)gSYTaskmanGeneralHeap.ptr)',
         'printf "SD-ARENA-FAIL-ENTRY=%u\n", gNdsTaskmanArenaAllocFailCount',
@@ -294,6 +306,17 @@ try {
         'printf "SD-RELOC-EVICT=%u\n", gNdsRelocSceneReentryEvictCount',
         'printf "SD-RELOC-EVICT-GEN=%u\n", gNdsRelocSceneReentryGenerationEvictCount',
         'printf "SD-RELOC-EVICT-RANGE=%u\n", gNdsRelocSceneReentryRangeEvictCount',
+        # ...and the same camera fields once Sudden Death is running. A large
+        # target_dist here against match 1's, or a status that never leaves the
+        # default, is the wide untracked view the capture shows.
+        'printf "SD-CAM2-STATUS=%d\n", gGMCameraStruct.status_curr',
+        'printf "SD-CAM2-STATUS-DEF=%d\n", gGMCameraStruct.status_default',
+        'printf "SD-CAM2-DIST=%f\n", gGMCameraStruct.target_dist',
+        'printf "SD-CAM2-FOVY=%f\n", gGMCameraStruct.fovy',
+        'printf "SD-CAM2-PZOOM-DIST=%f\n", gGMCameraStruct.pzoom_dist',
+        'printf "SD-CAM2-PFOLLOW-DIST=%f\n", gGMCameraStruct.pfollow_dist',
+        'printf "SD-CAM2-VPW=%d\n", gGMCameraStruct.viewport_width',
+        'printf "SD-CAM2-VPH=%d\n", gGMCameraStruct.viewport_height',
         'printf "SD-STAGE-STEADY-ADMIT=%u\n", gNdsR2StageSteadyAdmitCount',
         'printf "SD-STAGE-REBUILD=%u\n", gNdsR2StageTopologyRebuildCount',
         'printf "SD-STAGE-MATREJECT=%u\n", gNdsR2StageMaterialRejectCount',
