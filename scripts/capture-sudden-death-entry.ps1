@@ -819,15 +819,9 @@ try {
         'continue',
         'printf "SD-STAGE=gameset-hit\n"',
         'printf "SD-GAMESET-PLACE=%d,status=%u\n", sIFCommonBattlePlace, gSCManagerBattleState->game_status',
-        # WHO CALLED IT, and WHERE IT GOES NEXT. Measured 2026-07-31: this
-        # breakpoint fires on every run, and the very next `tbreak
-        # ndsPlatformEndFrame; continue` never returns -- so the game constructs
-        # GAME SET and then never presents another frame, which is the owner's
-        # "no results after winning sudden death". The backtrace names the
-        # trigger path; the stepi walks past the constructor so the PC below is
-        # where it actually ends up rather than where it was called from. If that
-        # PC is a branch to itself this is one of BattleShip's eleven
-        # `while (TRUE);` give-ups and `x/1i` says which.
+        # WHO CALLED IT. Reaching this at all means sIFCommonBattlePlace was
+        # initialised and decremented to exactly 0, because that test is the only
+        # VS caller of ifCommonAnnounceEndMessage.
         'backtrace 8',
         # The two function pointers ifCommonBattleSetInterface just installed
         # (ifcommon.c:3270-3283), read BEFORE stepping. The crash below is a jump
@@ -835,12 +829,26 @@ try {
         # like, so print the candidates rather than inferring them from the
         # wreckage -- the reject-handler lesson from the texture rows.
         'printf "SD-GAMESET-PROCS=update=%p,set=%p\n", sIFCommonBattleInterfaceProcUpdate, sIFCommonBattleInterfaceProcSet',
+        # The two GObjs ifCommonBattleInterfaceProcUpdate dereferences
+        # UNCONDITIONALLY (ifcommon.c:2624-2625 -> :2609-2613, which does
+        # `interface_gobj->flags &= ...` with no NULL check). On N64 the particle
+        # system is always live so they always exist; on this port they are
+        # NDS_WEAK globals that only efparticle.c assigns, and that file is
+        # compiled only with NDS_R2_PARTICLE_RUNTIME=1. The port's own particle
+        # stubs NULL-check them (battle_playable_compat_stubs.c:263); the decomp
+        # path does not. NULL here means the crash below is a write through a
+        # null GObj, and TIME UP survives because it installs the BONUS update
+        # proc, which does not touch them.
+        'printf "SD-GAMESET-EFGOBJ=structs=%p,generators=%p\n", gEFParticleStructsGObj, gEFParticleGeneratorsGObj',
         'info symbol sIFCommonBattleInterfaceProcUpdate',
-        'info symbol sIFCommonBattleInterfaceProcSet',
-        'stepi 200000',
-        'printf "SD-GAMESET-PC=%p\n", $pc',
-        'x/1i $pc',
-        'backtrace 6'
+        'info symbol sIFCommonBattleInterfaceProcSet'
+        # The `stepi 200000` that found the crash is deliberately GONE. It cost
+        # almost nothing while the game was dying -- the CPU reached garbage
+        # immediately -- but single-stepping 200,000 instructions of LIVE code
+        # over the remote protocol is far slower than the run's whole budget, so
+        # the moment the crash was fixed the diagnostic became the thing stopping
+        # the picture. A probe that only terminates while the bug is present is
+        # not one to leave in.
     ) + $(1..$CaptureGameSet | ForEach-Object { @(
         'tbreak ndsPlatformEndFrame',
         'continue'

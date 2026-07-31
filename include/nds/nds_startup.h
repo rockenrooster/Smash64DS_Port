@@ -1491,6 +1491,7 @@ extern volatile u32 gNdsSCVSBattleLifecycleResult;
 extern volatile u32 gNdsSCVSBattleLifecycleArenaAdapterCount;
 extern volatile u32 gNdsSCVSBattleSuddenDeathPrepareCount;
 extern volatile u32 gNdsSCVSBattlePlacementInitCount;
+void ndsEFParticleEnsureGObjPlaceholders(void);
 extern volatile u32 gNdsSCVSBattleLifecycleTaskmanExitCount;
 extern volatile u32 gNdsSCVSBattleLifecycleTaskmanStatus;
 extern volatile u32 gNdsSCVSBattleLifecycleTimeLimit;

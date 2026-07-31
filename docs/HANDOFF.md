@@ -70,20 +70,23 @@ rematch lane four entries / three Results / NO-FREEZE, owner-confirmed. **Bounda
 `0e5e8a3`.** Guards: `gNdsRendererSceneTextureVramResetCount` one per battle entry;
 `gNdsR2StagePrepareBuildCount` two per entry with ReuseCount rising. **Owed: the owner's eye check.**
 
-## ANNOUNCEMENTS: TIME UP renders; GAME SET now fires and then CRASHES
+## ANNOUNCEMENTS: TIME UP and GAME SET both work — three defects in series (owner-confirmed)
 
-`sIFCommonBattlePlace` was never initialised (nothing called the source's `ifCommonBattleInitPlacement`),
-so `--place == 0` could never be true: **no VS match had ever announced GAME SET**, which also withheld
-`game_status = Set` and therefore Results. Both battle entries call it now, and the nine blue letters got
-the sprite descriptors they never had (read off `assets/us/relocData/82.vpk0.bin` on the host; the two
-earlier gdb attempts were unnecessary). **TIME UP is PROVEN on screen** —
-`sudden-death/2026-07-31_165338-timeup-frame20.png`, via the new `-CaptureAnnounce`/`-CaptureGameSet`
-switches that break on the constructor then step frames (a wall-clock watch cannot catch 90 ticks; two
-missed it). **OPEN:** the GAME SET constructor is reached every run (backtrace proves the trigger) and the
-game then never presents another frame — PC `0x02000f6a`, caller frame `0x00000e9a`, the same
-jump-into-low-memory shape as the Results second-entry abort. Installed procs are valid and TIME UP does
-not crash, so it is specific to the end-message path. **Strong prior: another `ifcommon.c` static nothing
-initialises per scene** — that is exactly what `sIFCommonBattlePlace` was.
+Each one hid the next, which is why the row read as "nothing happens". (1) `sIFCommonBattlePlace` was
+never initialised — nothing called the source's `ifCommonBattleInitPlacement` — so `--place == 0` could
+never be true and **no VS match had ever announced GAME SET**, which also withheld `game_status = Set`
+and therefore Results. (2) The nine blue letters had no sprite descriptors, so they kept the blanket
+endian pass's swapped fields (read off `assets/us/relocData/82.vpk0.bin` on the host; the two earlier gdb
+attempts were unnecessary). (3) The update proc that announcement installs dereferences
+`gEFParticleStructsGObj`/`gEFParticleGeneratorsGObj` with **no NULL check** (`ifcommon.c:2609`), and both
+are NULL while the particle runtime is off — a write through address 0, which crashed the game the moment
+(1) let the announcement run. TIME UP was spared only because it installs the BONUS update proc.
+Fixed with a zeroed placeholder (`ndsEFParticleEnsureGObjPlaceholders`, scoped to the runtime being off).
+**Proof:** `sudden-death/2026-07-31_165338-timeup-frame20.png` (TIME UP on screen) and the owner watching
+a live run reach GAME SET and Results. The `-CaptureAnnounce`/`-CaptureGameSet` switches break on the
+announcement's own constructor and then step frames — a wall-clock watch cannot catch a 90-tick window
+and two missed it. **A halted-core screenshot can show a stale buffer**: the GAME SET stills looked empty
+while the owner saw the text live, so trust the live watch for announcement pictures.
 
 ## Freeze classes — TWO, with different fixes. Never say "the allocator" without the counter
 

@@ -1,8 +1,36 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
--Still get intermittent freezes when attacking (maybe collision/animation/heap related?).
+-Still get intermittent freezes when attacking (maybe collision/animation/heap related? see screenshot "C:\Users\Tyler\Pictures\Screenshots\Screenshot 2026-07-31 173851.png").
 -Sometimes Mario's fireballs don't spawn.
--No "Game set" VFX and SFX and results after winning sudden death
+-FIXED (2026-07-31, owner-confirmed: "i saw the GAME SET text" / "works well")
+  No "Game set" VFX and SFX and results after winning sudden death
+  **THREE defects in series, all measured, all fixed. The short version:**
+  (1) `sIFCommonBattlePlace` was never initialised, so the announcement could
+  never trigger; (2) the nine blue letters had no sprite descriptors, so they
+  could not be composited; (3) the update proc the announcement installs
+  dereferences two NULL particle GObjs, which crashed the game the moment (1) let
+  it run. Each one alone hides the next, which is why the row read as a single
+  "nothing happens".
+  **(3) is the one that also explains "and results":** `ifCommonBattleInterfaceProcUpdate`
+  (`ifcommon.c:2617`) hands `gEFParticleStructsGObj`/`gEFParticleGeneratorsGObj`
+  to `ifCommonBattleInterfaceResumeGObj` (`:2609`), which does
+  `interface_gobj->flags &= ~GOBJ_FLAG_NORUN` with **no NULL check** -- fine on
+  N64 where the particle system is always live, fatal here where those globals
+  are `NDS_WEAK` and only `efparticle.c` assigns them (compiled only at
+  `NDS_R2_PARTICLE_RUNTIME=1`). Measured at the GAME SET stop:
+  `SD-GAMESET-EFGOBJ=structs=(nil),generators=(nil)`, and stepping past the
+  constructor put the PC at `0x02000f6a` with caller frame `0x00000e9a` -- a
+  write through address 0. The first line of that helper survives a NULL
+  (`objhelper.c:176` substitutes `gGCCurrentCommon`); the second does not.
+  TIME UP was unaffected because it installs the BONUS update proc, which does
+  not touch them -- which is exactly why TIME UP rendered while GAME SET killed
+  the game. **FIXED** with a zeroed placeholder GObj behind
+  `ndsEFParticleEnsureGObjPlaceholders` (`battle_playable_compat_stubs.c`, scoped
+  to the runtime being off so it can never shadow a real particle GObj).
+  Evidence: before, every run stopped at the constructor and never presented
+  another frame; after, `shot-gameset` is reached with the game still running at
+  29.9 FPS, and the owner watched a live run reach GAME SET and Results.
+  **Full derivation of (1) and (2) below.**
   **ROOT-CAUSED 2026-07-31. One cause explains BOTH halves of this row -- the
   missing announcement AND the missing Results -- and it is not
   Sudden-Death-specific: no VS match of any length has ever announced GAME SET.**
@@ -61,25 +89,22 @@ These bugs should be fixed for P1 delivery.
     `#1 ifCommonAnnounceEndMessage` -- which under the source's control flow can
     only be reached by `sIFCommonBattlePlace` decrementing to exactly 0. Before
     the fix that call site was unreachable.
-  **NEWLY EXPOSED AND STILL OPEN: constructing GAME SET then CRASHES.** Every run
-  stops there and never presents another frame -- `tbreak ndsPlatformEndFrame`
-  after the constructor never returns. Stepping 200,000 instructions past it puts
-  the PC at **`0x02000f6a` (`movs r0, r0`, i.e. not code) with caller frame
-  `0x00000e9a`** -- the same jump-into-low-memory signature as the Results
-  second-entry abort fixed earlier today (`0x02000b92`, frame `0x00000e9a`). So
-  the fix advanced this row from "never announces" to "announces, then dies before
-  the next frame", and THAT is what leaves the match sitting there with no
-  Results.
-  Already ruled out: the two interface procs `ifCommonBattleSetInterface` installs
-  are valid code addresses (`update=0x208b0a1, set=0x208a5c9`), so the crash is
-  not a call through those. TIME UP does NOT crash, so the shared announce and
-  composite machinery is not the carrier either -- whatever it is, it is specific
-  to the GAME SET/end-message path.
-  **Next step, and it has a strong prior:** `sIFCommonBattlePlace` was itself an
-  `ifcommon.c` static that nothing initialised per scene. Audit the rest of that
-  file's statics the same way -- the end-message path is the one that reads them,
-  and Sudden Death is a second scene entry, which is the exact shape of every
-  other defect closed today (SwitchPlan 3.12).
+  **How defect (3) was found, kept because the method transfers:** with (1) and
+  (2) fixed, every run stopped at the constructor and never presented another
+  frame -- `tbreak ndsPlatformEndFrame` after it never returned. Stepping 200,000
+  instructions put the PC at `0x02000f6a` (`movs r0, r0`, i.e. not code) with
+  caller frame `0x00000e9a`, the same jump-into-low-memory shape as the Results
+  second-entry abort fixed the same day. The interface procs were ruled out first
+  by reading them (`update=0x208b0a1, set=0x208a5c9`, both valid code), and TIME
+  UP not crashing ruled out the shared announce/composite machinery -- which left
+  the one thing the two update procs do differently, and that pointed straight at
+  the particle GObjs.
+  **And a probe lesson: the `stepi 200000` that found it had to be REMOVED to see
+  the fix.** Single-stepping 200,000 instructions costs almost nothing while the
+  game is dying (it reaches garbage immediately) and far more than the run's whole
+  budget once the code is live -- so the diagnostic itself became the thing
+  preventing the picture. A probe that only terminates while the bug is present is
+  not one to leave in.
 -No "Time Up" VFX and SFX after match countdown finished.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `ifcommon.c` creates six blue mixed-width letter sprites

@@ -258,6 +258,59 @@ NDS_WEAK LBParticle *efManagerBattleScoreMakeEffect(Vec3f *pos, s32 score)
 NDS_WEAK GObj *gEFParticleStructsGObj;
 NDS_WEAK GObj *gEFParticleGeneratorsGObj;
 
+#if !NDS_R2_PARTICLE_RUNTIME
+/* These two are NULL for the whole match while the particle runtime is off --
+ * only `ef/efparticle.c` assigns them, and that file is compiled only at
+ * NDS_R2_PARTICLE_RUNTIME=1. The stubs above defend themselves against that, and
+ * for a long time nothing else read them, so it looked settled.
+ *
+ * IT IS NOT. `ifCommonBattleInterfaceProcUpdate` (decomp ifcommon.c:2617) hands
+ * both straight to `ifCommonBattleInterfaceResumeGObj` (:2609), which does
+ *
+ *     gcResumeGObjProcessAll(interface_gobj);
+ *     interface_gobj->flags &= ~GOBJ_FLAG_NORUN;
+ *
+ * with NO null check -- on N64 the particle system is always live, so the
+ * question never arises. The first line survives a NULL (objhelper.c:176
+ * substitutes `gGCCurrentCommon`, which is wrong but harmless); the SECOND is a
+ * read-modify-write through address 0.
+ *
+ * That proc is installed by `ifCommonAnnounceEndMessage`, i.e. by GAME SET, and
+ * measured 2026-07-31 it is exactly the owner's "no results after winning sudden
+ * death": the announcement constructs, this proc runs, the game never presents
+ * another frame, and stepping past it lands the PC at 0x02000f6a with caller
+ * frame 0x00000e9a. Read at that stop:
+ * `SD-GAMESET-EFGOBJ=structs=(nil),generators=(nil)`. TIME UP is unaffected
+ * because it installs the BONUS update proc, which does not touch these.
+ *
+ * A zeroed placeholder satisfies the source's assumption at zero cost: its
+ * `gobjproc_head` is NULL so the resume walk does nothing, and the flags write
+ * lands on the placeholder. It is deliberately NOT linked into any GObj list --
+ * nothing should ever find it by traversal, only through these two globals.
+ * Scoped to the runtime being off so it can never shadow a real particle GObj. */
+static GObj sNdsEFParticleGObjPlaceholder;
+volatile u32 gNdsEFParticleGObjPlaceholderCount;
+
+void ndsEFParticleEnsureGObjPlaceholders(void)
+{
+    if (gEFParticleStructsGObj == NULL)
+    {
+        gEFParticleStructsGObj = &sNdsEFParticleGObjPlaceholder;
+        gNdsEFParticleGObjPlaceholderCount++;
+    }
+    if (gEFParticleGeneratorsGObj == NULL)
+    {
+        gEFParticleGeneratorsGObj = &sNdsEFParticleGObjPlaceholder;
+        gNdsEFParticleGObjPlaceholderCount++;
+    }
+}
+#else
+void ndsEFParticleEnsureGObjPlaceholders(void)
+{
+    /* The real GObjs exist; a placeholder here could only shadow them. */
+}
+#endif
+
 NDS_WEAK void efParticleGObjSetSkipAll(void)
 {
     if (gEFParticleStructsGObj != NULL) {
