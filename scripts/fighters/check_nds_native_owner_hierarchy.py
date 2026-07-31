@@ -8,6 +8,16 @@ import json
 from pathlib import Path
 import re
 
+import sys as _sys
+from pathlib import Path as _Path
+
+_scripts_root = _Path(__file__).resolve().parent
+while _scripts_root.name != "scripts":
+    _scripts_root = _scripts_root.parent
+if str(_scripts_root) not in _sys.path:
+    _sys.path.insert(0, str(_scripts_root))
+import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
+
 import check_nds_native_owner_packet as packet
 import generate_nds_native_owners as native
 
@@ -525,18 +535,18 @@ def main() -> int:
     parser.add_argument(
         "--source-root",
         type=Path,
-        default=Path(__file__).resolve().parents[1],
+        default=_paths.REPO_ROOT,
     )
     parser.add_argument(
         "--generated",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "src" / "nds" /
+        default=_paths.REPO_ROOT / "src" / "nds" /
         "nds_native_fighter_owner.generated.inc",
     )
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path(__file__).resolve().parents[1]
+        default=_paths.REPO_ROOT
         / native.DEFAULT_CONSUMED_FIELDS_OUTPUT,
     )
     args = parser.parse_args()

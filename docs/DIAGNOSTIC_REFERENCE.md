@@ -923,7 +923,7 @@ Opening movie / Opening Portraits:
   fast-logic frames; the verifier breaks only after the published scene
   boundary so teardown is sampled deterministically. The streamed rate stays within
   `42100..46100` B/s around the PCM16 mono `44100` B/s target from
-  `scripts/render-audio-bgm-pupupu.py`, with safe opposite-half writes and zero
+  `scripts/sfx/bgm/render-audio-bgm-pupupu.py`, with safe opposite-half writes and zero
   unsafe write attempts. Realtime smoke uses the same timer-derived byte-rate
   guard; whole-track wrap is supported and is only expected when a run outlasts
   the 65.5-second rendered track.

@@ -543,21 +543,21 @@ function Main {
         @(22, 'assets\audio\bgm_results_pcm16.raw')
     )) {
         Invoke-Python $python "render-bgm-$($bgm[0])" `
-            @((Join-Path $RepoRoot 'scripts\render-audio-bgm-pupupu.py'),
+            @((Join-Path $RepoRoot 'scripts\sfx\bgm\render-audio-bgm-pupupu.py'),
               '--repo', $RepoRoot, '--sequence-index', [string]$bgm[0],
               '--output', $bgm[1]) $RepoRoot
     }
     Invoke-Python $python 'render-fgm-phase-pack' `
-        @((Join-Path $RepoRoot 'scripts\render-audio-fgm-phase-pack.py'),
+        @((Join-Path $RepoRoot 'scripts\sfx\render-audio-fgm-phase-pack.py'),
           '--repo-root', $RepoRoot) $RepoRoot
     Invoke-Python $python 'generate-static-textures' `
         @((Join-Path $RepoRoot 'scripts\generate_battle_playable_static_textures.py'),
           '--repo-root', $RepoRoot) $RepoRoot
     Invoke-Python $python 'generate-native-stage' `
-        @((Join-Path $RepoRoot 'scripts\generate_nds_native_stage.py'),
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
           '--repo-root', $RepoRoot) $RepoRoot
     Invoke-Python $python 'generate-native-fighters' `
-        @((Join-Path $RepoRoot 'scripts\generate_nds_native_owners.py'),
+        @((Join-Path $RepoRoot 'scripts\fighters\generate_nds_native_owners.py'),
           '--source-root', $RepoRoot) $RepoRoot
     $generatedOutputs = @(
         'assets\audio\bgm_pupupu_pcm16.raw', 'assets\audio\bgm_pupupu_pcm16.json',

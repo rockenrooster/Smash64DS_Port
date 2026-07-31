@@ -53,6 +53,8 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+import _paths  # noqa: F401,E402  -- moved area modules stay importable
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 INC = REPO_ROOT / "src" / "nds" / "nds_native_fighter_owner.generated.inc"

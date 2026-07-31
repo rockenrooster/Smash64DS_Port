@@ -19,6 +19,7 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`.
 | `DIAGNOSTIC_REFERENCE.md` | Marker definitions and manual diagnostics |
 | `PORTING.md` | Append-only chronological history |
 | `../PROJECT_GOAL.md` | Authoritative product, fidelity, milestone, and definition-of-done contract |
+| `../scripts/README.md` | scripts/ directory layout, area-folder workflow, and Python path convention |
 | `DECOMP_MAP.md` | Read-only upstream map |
 | `FTSTRUCT_PARITY.md` | BattleShip/DS fighter ABI parity |
 | `AUDIO_BACKEND_SCOUT.md` | Dated audio reference |

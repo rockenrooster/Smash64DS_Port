@@ -25,7 +25,7 @@ This keeps the VSBattle memory reserve intact.
 ## Landed Slice 2
 
 `NDS_IMPORT_BATTLESHIP_AUDIO_BGM` now defaults on for one track:
-Dream Land/Pupupu (`nSYAudioBGMPupupu`). `scripts/render-audio-bgm-pupupu.py`
+Dream Land/Pupupu (`nSYAudioBGMPupupu`). `scripts/sfx/bgm/render-audio-bgm-pupupu.py`
 derives `assets/audio/bgm_pupupu_pcm16.raw` from original O2R
 `S1_music_sbk` sequence 0 plus `B1_sounds1_ctl/tbl`, using the read-only
 BattleShip CSEQ, CTL, and VADPCM tools. The output is PCM16LE mono at 22050 Hz,

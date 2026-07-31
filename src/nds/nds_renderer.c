@@ -23433,7 +23433,7 @@ volatile u32 gNdsDreamLandCardCullSkippedTris;
 #if NDS_DREAMLAND_DS_MESH
 /* Task 62: generated Dream Land DS-native static 3D mesh. Draws the exact
  * source-world geometry with source material attributes from the baked blob
- * (scripts/generate_dreamland_ds_mesh.py), replacing the four static segments.
+ * (scripts/stages/dreamland/generate_dreamland_ds_mesh.py), replacing the four static segments.
  * Default-off keeps the shipping path byte-identical. */
 
 /* Task 62 engagement counters (shared HUD row). Gated only by the feature

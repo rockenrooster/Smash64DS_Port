@@ -168,7 +168,7 @@ Assert-Policy ($fastRawBenchmark -match
     'Fast-raw benchmark no longer preserves runner-slot GDB port isolation.'
 
 $launchScripts = @(Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
-    -Filter '*.ps1' -File | Where-Object {
+    -Filter '*.ps1' -File -Recurse | Where-Object {
         (Get-Content -LiteralPath $_.FullName -Raw).Contains('Start-Process') -and
         (Get-Content -LiteralPath $_.FullName -Raw).Contains('melonDsPath')
     })
@@ -180,7 +180,7 @@ foreach ($scriptFile in $launchScripts) {
 }
 $absoluteLiteral = [regex]'(?i)[A-Z]:\\[^\r\n''"]*melonDS\.exe'
 foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
-        -Filter '*.ps1' -File) {
+        -Filter '*.ps1' -File -Recurse) {
     $text = Get-Content -LiteralPath $scriptFile.FullName -Raw
     Assert-Policy (-not $absoluteLiteral.IsMatch($text)) `
         "Hard-coded external melonDS executable found: $($scriptFile.Name)"

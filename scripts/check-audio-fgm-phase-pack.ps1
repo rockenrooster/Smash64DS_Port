@@ -2,7 +2,7 @@ param([string]$Python = 'python')
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$generator = Join-Path $PSScriptRoot 'render-audio-fgm-phase-pack.py'
+$generator = Join-Path $PSScriptRoot 'sfx\render-audio-fgm-phase-pack.py'
 $verifierPath = Join-Path $PSScriptRoot 'verify-audio-fgm-phase-pack.ps1'
 $metadataPath = Join-Path $root 'assets/audio/fgm_phase_pack_ima.json'
 $headerPath = Join-Path $root 'include/nds/nds_audio_fgm.h'

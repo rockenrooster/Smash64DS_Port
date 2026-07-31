@@ -1,7 +1,7 @@
 ﻿param()
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$nativeStageChecker = Join-Path $PSScriptRoot 'check_nds_native_stage.py'
+$nativeStageChecker = Join-Path $PSScriptRoot 'stages\check_nds_native_stage.py'
 & python -B $nativeStageChecker
 if ($LASTEXITCODE -ne 0) {
     throw "Native-stage consumed-field/packet checker failed with exit code $LASTEXITCODE."
@@ -1125,7 +1125,7 @@ $nativeStagePrepareRun = [regex]::Match(
 ).Value
 $rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
 $taskmanSeam = Get-Content (Join-Path $root 'src/port/taskman_seam.c') -Raw
-$nativeOwnerGenerator = Get-Content (Join-Path $root 'scripts/generate_nds_native_owners.py') -Raw
+$nativeOwnerGenerator = Get-Content (Join-Path $root 'scripts/fighters/generate_nds_native_owners.py') -Raw
 $nativeOwnerGenerated = Get-Content (Join-Path $root 'src/nds/nds_native_fighter_owner.generated.inc') -Raw
 $relocAssets = Get-Content (Join-Path $root 'src/port/reloc_backend_assets.c') -Raw
 $titleBackend = Get-Content (Join-Path $root 'src/port/title_backend.c') -Raw

@@ -15,6 +15,16 @@ import json
 import struct
 from pathlib import Path
 
+import sys as _sys
+from pathlib import Path as _Path
+
+_scripts_root = _Path(__file__).resolve().parent
+while _scripts_root.name != "scripts":
+    _scripts_root = _scripts_root.parent
+if str(_scripts_root) not in _sys.path:
+    _sys.path.insert(0, str(_scripts_root))
+import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
+
 import generate_nds_native_stage as stage_manifest
 
 
@@ -675,7 +685,7 @@ def build_source_export(repo_root: Path) -> dict[str, bytes]:
 def decode_export(repo_root: Path | None = None) -> dict[str, bytes]:
     """Compatibility entry point for the existing generator checkers."""
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parents[1]
+        repo_root = _paths.REPO_ROOT
     return build_source_export(Path(repo_root).resolve())
 
 
@@ -1227,7 +1237,7 @@ def decode_joint_topology(
 def build_dense_geometry(
         vertex, triangles, runs, epochs, owners, repo_root: Path | None = None):
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parents[1]
+        repo_root = _paths.REPO_ROOT
     repo_root = Path(repo_root).resolve()
     payloads = {
         owner_name: load_o2r_payload(repo_root, owner_name)
@@ -2449,7 +2459,7 @@ def render_generated_mario_program(program: dict[str, object]) -> list[str]:
 
 def generate(repo_root: Path | None = None) -> str:
     if repo_root is None:
-        repo_root = Path(__file__).resolve().parents[1]
+        repo_root = _paths.REPO_ROOT
     repo_root = Path(repo_root).resolve()
     context = build_owner_source_context(repo_root)
     state = context["state"]
@@ -3133,17 +3143,17 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--output", type=Path,
-        default=Path(__file__).resolve().parents[1]
+        default=_paths.REPO_ROOT
         / "src" / "nds" / "nds_native_fighter_owner.generated.inc",
     )
     parser.add_argument(
         "--source-root", type=Path,
-        default=Path(__file__).resolve().parents[1],
+        default=_paths.REPO_ROOT,
         help="repo root containing the read-only BattleShip O2R inputs",
     )
     parser.add_argument(
         "--manifest-output", type=Path,
-        default=Path(__file__).resolve().parents[1]
+        default=_paths.REPO_ROOT
         / DEFAULT_CONSUMED_FIELDS_OUTPUT,
     )
     parser.add_argument("--check", action="store_true")

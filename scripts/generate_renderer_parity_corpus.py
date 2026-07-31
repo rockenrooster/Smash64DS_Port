@@ -22,6 +22,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import _paths  # noqa: F401,E402  -- moved area modules stay importable
+
 import generate_nds_native_owners as native
 
 

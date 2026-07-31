@@ -4,7 +4,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$checker = Join-Path $PSScriptRoot 'check_pupupu_water_aot.py'
+$checker = Join-Path $PSScriptRoot 'stages\dreamland\check_pupupu_water_aot.py'
 
 if (-not (Test-Path -LiteralPath $checker -PathType Leaf)) {
     throw "Pupupu water AOT checker not found: $checker"

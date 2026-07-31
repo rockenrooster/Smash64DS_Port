@@ -16,6 +16,16 @@ import math
 import struct
 import sys
 from pathlib import Path
+import sys as _sys
+from pathlib import Path as _Path
+
+_scripts_root = _Path(__file__).resolve().parent
+while _scripts_root.name != "scripts":
+    _scripts_root = _scripts_root.parent
+if str(_scripts_root) not in _sys.path:
+    _sys.path.insert(0, str(_scripts_root))
+import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
+
 
 
 SEQ_INDEX_PUPUPU = 0
@@ -426,7 +436,7 @@ def build_ima_packets(pcm: bytes, loop_start_byte: int,
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--repo", type=Path, default=_paths.REPO_ROOT)
     parser.add_argument("--sequence-index", type=int, default=SEQ_INDEX_PUPUPU)
     parser.add_argument(
         "--output",

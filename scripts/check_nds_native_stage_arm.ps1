@@ -17,8 +17,8 @@ function Assert-Condition {
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $generatedRelative = 'src/nds/nds_native_stage_owner.generated.inc'
 $generated = Join-Path $repoRoot $generatedRelative
-$generator = Join-Path $PSScriptRoot 'generate_nds_native_stage.py'
-$hostChecker = Join-Path $PSScriptRoot 'check_nds_native_stage.py'
+$generator = Join-Path $PSScriptRoot 'stages\generate_nds_native_stage.py'
+$hostChecker = Join-Path $PSScriptRoot 'stages\check_nds_native_stage.py'
 $armSize = Join-Path (Split-Path -Parent $ArmCC) 'arm-none-eabi-size.exe'
 $armNm = Join-Path (Split-Path -Parent $ArmCC) 'arm-none-eabi-nm.exe'
 

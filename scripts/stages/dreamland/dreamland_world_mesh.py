@@ -66,13 +66,23 @@ from typing import Any, Sequence
 # matrix is already baked by the generator; the point-transform is implemented
 # inline below (native_matrix_math only covers matrix-matrix compose, not
 # matrix-vector, so we replicate ndsRendererTransformVertex20p12 directly).
+import sys as _sys
+from pathlib import Path as _Path
+
+_scripts_root = _Path(__file__).resolve().parent
+while _scripts_root.name != "scripts":
+    _scripts_root = _scripts_root.parent
+if str(_scripts_root) not in _sys.path:
+    _sys.path.insert(0, str(_scripts_root))
+import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
+
 import generate_nds_native_stage as stage_gen
 
 # s20.12 range, matching ndsRendererClampS64ToS32.
 S32_MIN = -(1 << 31)
 S32_MAX = (1 << 31) - 1
 
-SCRIPTS_DIR = Path(__file__).resolve().parent
+SCRIPTS_DIR = _paths.SCRIPTS_ROOT
 REPO_ROOT_DEFAULT = SCRIPTS_DIR.parent
 GENERATED_DIR = REPO_ROOT_DEFAULT / "scripts" / "generated"
 DEFAULT_OUTPUT = GENERATED_DIR / "dreamland_world_mesh.json"

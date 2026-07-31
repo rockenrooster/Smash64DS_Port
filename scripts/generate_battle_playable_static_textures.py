@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Sequence
 
+import _paths  # noqa: F401,E402  -- moved area modules stay importable
+
 import generate_battle_playable_texture_census as census
 import generate_pupupu_water_aot as water
 

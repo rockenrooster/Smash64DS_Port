@@ -42,8 +42,9 @@ These are about this tool, so they are not in `AGENTS.md`:
   launches already had it; the `gdb` launches did not, which is how this was
   noticed — and a 2026-07-29 AST sweep found nineteen still unhidden, because
   the rule was only ever applied by hand. `scripts/check-melonds-policy.ps1` now
-  parses every `scripts/*.ps1` and fails on any unhidden `Start-Process`, so do
-  not re-audit this by hand. `-NoNewWindow` is the accepted alternative (it is
+  parses every `.ps1` under `scripts/` — recursively, since the 2026-07-30
+  area-folder reorganisation (`scripts/README.md`) — and fails on any unhidden
+  `Start-Process`, so do not re-audit this by hand. `-NoNewWindow` is the accepted alternative (it is
   mutually exclusive with `-WindowStyle`); `debug-melonds.ps1` and
   `debug-nogba.ps1` are allowlisted because the owner drives them interactively.
   `make` recipes spawn their own short-lived shells and are not controllable

@@ -2340,10 +2340,10 @@ $(NDS_TASK32_DRAW_HOT_FRAGMENT): FORCE
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
 
 $(NDS_TASK39_HIT_SPARKS_INC): \
-		$(PROJECT_ROOT)/scripts/generate_task39_hit_sparks.py \
+		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_hit_sparks.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb
-	python "$(PROJECT_ROOT)/scripts/generate_task39_hit_sparks.py"
+	python "$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_hit_sparks.py"
 
 prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))

@@ -20,7 +20,7 @@ function Invoke-Checked {
 }
 
 $sourceRootPath = (Resolve-Path $SourceRoot).Path
-$ownerGenerator = Join-Path $PSScriptRoot 'generate_nds_native_owners.py'
+$ownerGenerator = Join-Path $PSScriptRoot 'fighters\generate_nds_native_owners.py'
 $corpusGenerator = Join-Path $PSScriptRoot 'generate_renderer_parity_corpus.py'
 $microbench = Join-Path $PSScriptRoot 'renderer_parity_microbench.c'
 

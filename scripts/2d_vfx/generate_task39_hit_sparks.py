@@ -8,9 +8,19 @@ import struct
 from pathlib import Path
 
 from PIL import Image
+import sys as _sys
+from pathlib import Path as _Path
+
+_scripts_root = _Path(__file__).resolve().parent
+while _scripts_root.name != "scripts":
+    _scripts_root = _scripts_root.parent
+if str(_scripts_root) not in _sys.path:
+    _sys.path.insert(0, str(_scripts_root))
+import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+
+ROOT = _paths.REPO_ROOT
 SCB = ROOT / "decomp/BattleShip-main/BattleShip_o2r/particles/efcommon_particle_scb"
 TXB = ROOT / "decomp/BattleShip-main/BattleShip_o2r/particles/efcommon_particle_txb"
 SCB_SHA256 = "4c639924f0c1ce6e4b3d0c5b3d6b49605d237ff7b79816ddd26ff8631ab0eb1d"

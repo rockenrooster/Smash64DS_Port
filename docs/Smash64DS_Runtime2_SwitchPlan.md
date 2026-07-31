@@ -54,8 +54,8 @@ contains its embryo, proven and shipping:
 
 | Runtime 2 concept | Already in the tree |
 |---|---|
-| fighter compiler | `scripts/generate_nds_native_owners.py` → `src/nds/nds_native_fighter_owner.generated.inc` (dense vertices, baked positions, runs, epochs, per-epoch material/cull policy, FIFO plans — Mario and Fox) |
-| stage compiler | `scripts/generate_nds_native_stage.py` → `src/nds/nds_native_stage_owner.generated.inc`; `scripts/generate_dreamland_ds_mesh.py` → `src/nds/dreamland_ds_mesh.generated.inc` |
+| fighter compiler | `scripts/fighters/generate_nds_native_owners.py` → `src/nds/nds_native_fighter_owner.generated.inc` (dense vertices, baked positions, runs, epochs, per-epoch material/cull policy, FIFO plans — Mario and Fox) |
+| stage compiler | `scripts/stages/generate_nds_native_stage.py` → `src/nds/nds_native_stage_owner.generated.inc`; `scripts/stages/dreamland/generate_dreamland_ds_mesh.py` → `src/nds/dreamland_ds_mesh.generated.inc` |
 | static-stage direct replay | Task 36/53 rigid capture/replay, shipped default-on (STG −33%) |
 | prepared per-run state | `NDSNativeHierarchyPreparedRun` with baked `poly_fmt`/texture bindings |
 | measurement suite | tick-HUD ROM, WORK-H buckets, ring dump, Task 49 GX differ, screenshot analysis |

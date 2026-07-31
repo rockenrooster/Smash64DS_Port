@@ -45,10 +45,20 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Sequence
 
+import sys as _sys
+from pathlib import Path as _Path
+
+_scripts_root = _Path(__file__).resolve().parent
+while _scripts_root.name != "scripts":
+    _scripts_root = _scripts_root.parent
+if str(_scripts_root) not in _sys.path:
+    _sys.path.insert(0, str(_scripts_root))
+import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
+
 import dreamland_simplifier as simplifier
 import task56_fighter_topology_census as t56
 
-SCRIPTS_DIR = Path(__file__).resolve().parent
+SCRIPTS_DIR = _paths.SCRIPTS_ROOT
 REPO_ROOT = SCRIPTS_DIR.parent
 GENERATED_DIR = SCRIPTS_DIR / "generated"
 CANDIDATES_DIR = GENERATED_DIR / "candidates"

@@ -6,9 +6,19 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+import sys as _sys
+from pathlib import Path as _Path
+
+_scripts_root = _Path(__file__).resolve().parent
+while _scripts_root.name != "scripts":
+    _scripts_root = _scripts_root.parent
+if str(_scripts_root) not in _sys.path:
+    _sys.path.insert(0, str(_scripts_root))
+import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+
+ROOT = _paths.REPO_ROOT
 MANAGER_H = ROOT / "decomp/BattleShip-main/decomp/src/ef/efmanager.h"
 MANAGER_C = ROOT / "decomp/BattleShip-main/decomp/src/ef/efmanager.c"
 PARTICLE_H = ROOT / "decomp/BattleShip-main/decomp/src/ef/efparticle.h"

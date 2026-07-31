@@ -60,8 +60,8 @@ function Get-ArmInstructionCount {
 }
 
 $sourceRootPath = (Resolve-Path $SourceRoot).Path
-$generator = Join-Path $PSScriptRoot 'generate_pupupu_water_rgb256_microbench.py'
-$microbench = Join-Path $PSScriptRoot 'pupupu_water_rgb256_microbench.c'
+$generator = Join-Path $PSScriptRoot 'stages\dreamland\generate_pupupu_water_rgb256_microbench.py'
+$microbench = Join-Path $PSScriptRoot 'stages\dreamland\pupupu_water_rgb256_microbench.c'
 $fixturePath = Join-Path $PSScriptRoot 'fixtures\pupupu_water_rgb256_expected.json'
 
 foreach ($required in @($generator, $microbench, $fixturePath)) {

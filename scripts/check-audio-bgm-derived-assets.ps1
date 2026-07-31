@@ -70,7 +70,7 @@ foreach ($track in $tracks) {
     }
     $expectedSource = "BattleShip_o2r/audio/S1_music_sbk sequence $($track.Sequence) + B1_sounds1_ctl/tbl"
     if ($metadata.source -ne $expectedSource -or
-        $metadata.tool -ne 'scripts/render-audio-bgm-pupupu.py') {
+        $metadata.tool -ne 'scripts/sfx/bgm/render-audio-bgm-pupupu.py') {
         throw "$($track.Name) source/tool provenance changed."
     }
 
