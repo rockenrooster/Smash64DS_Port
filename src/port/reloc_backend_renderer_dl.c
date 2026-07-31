@@ -13365,7 +13365,21 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         gNdsFighterDLAllDrawP0HardwareTriangleCount +
         gNdsFighterDLAllDrawP1HardwareTriangleCount;
     sNdsFighterDisplayContractPlayback = TRUE;
+    /* R2-07 R4c. The same bracket the stage draw has carried since it was
+     * written (reloc_backend_movement.c:13559). Without it the fighter draw
+     * renders through the oracle path, whose per-list reset clears a
+     * proof/counter prefix once per part list per fighter per frame -- 70% of
+     * this function's memset traffic, and memset is 8.80% of the Results frame.
+     * Only this call site is bracketed: the display-callback site below passes
+     * sNdsFighterDLAllDrawPixels, which is the software preview itself and
+     * forces the detailed path whatever the oracle flag says. */
+#if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsRendererHardwareSetNoOracle(TRUE);
+#endif
     ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp, NULL, 0u);
+#if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsRendererHardwareSetNoOracle(FALSE);
+#endif
     sNdsFighterDisplayContractPlayback = FALSE;
     if (gNdsFighterMarioFoxDLAllDrawCount != submitted_before)
     {

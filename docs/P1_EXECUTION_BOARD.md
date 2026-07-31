@@ -1781,6 +1781,51 @@ moves it — per-frame Results cost — is exactly what R2 owns. Second independ
 R2b. Instrument is permanent: six counters in `battleship_mnvsresults.c`, read by
 `soak-freeze-watch.ps1`, four timer reads per Results entry.
 
+### R2-07 R4c BUILT, DEFAULT-OFF — the no-oracle bracket is worth −65.4% and it costs the fighters their shading. HYPOTHESIS REFUTED (2026-07-30)
+
+`NDS_R2_FIGHTER_NO_ORACLE=1` gives the fighter draw the same
+`ndsRendererHardwareSetNoOracle(TRUE)`/`(FALSE)` bracket the stage draw has always had. Measured on
+the Results lab, matched source, only the flag differing:
+
+| | oracle on | oracle off | Δ |
+| --- | --- | --- | --- |
+| VBlanks / source tic | 3.04 | **1.05** | −1.99 |
+| ticks / source tic | 1,701,577 | **588,200** | **−1,113,377 (−65.4%)** |
+| `FTR` / source tic | 1,449,776 | 363,899 | −1,085,877 (−74.9%) |
+| vs the 1.12M gate | 1.52× over | **0.53× — inside** | |
+
+That is the whole gate and more, in one bracket. **It is also a visual regression, so it does not
+graduate.** Matched-tic pair at Results tic 160: **8,107 of 240,000 guest pixels differ (3.38%), max
+channel delta 247, and the diff mask is *exactly the two fighters*** — background, floor, wallpaper
+and the WINS text are untouched. Both fighters still render with all their geometry; what they lose
+is **shading**. Mario's facial and overall shading flattens and Fox washes out — the characters go
+flat-lit, and they are the focal point of the screen.
+
+**The hypothesis this entry was built on is refuted.** R4c's re-baseline reasoned that the oracle
+path was proof/counter bookkeeping, because the per-list reset it gates clears a prefix the source
+calls "exclusively per-list proof/counter output". It is not bookkeeping: the oracle path also
+carries the fighter **lighting/material derivation**, which is why
+`ndsRendererAdapterBuildNativeMaterialSnapshot` was 18.8% of the memset callers and
+`ndsRendererHardwarePrepareLitDirection` sat beside it. The proof-counter clearing rides along with
+real rendering work; it cannot be removed by switching the path off.
+
+**Why this is not simply taken anyway.** `PROJECT_GOAL.md`'s sacrifice order does rank visual
+fidelity below stable 30 FPS, so a flat-lit fighter is contract-*permissible* if nothing cheaper
+exists. But the rendering-side rule gates on "a reported fidelity budget plus the owner's visual
+approval", and this is a large, character-level delta on the screen the owner has just added to the
+P1 milestone. It also lands on the **shared** fighter draw, so it would flatten fighters in the match
+as well, where R2-03/R2-06 spent the whole campaign keeping them lit. Flag stays `?= 0`.
+
+The useful residue is a **priced ceiling**: everything the oracle path costs the fighter draw is
+1,085,877/tic, and any cheaper way of keeping the lighting while dropping the proof work is bounded
+above by that. The next question is whether the lighting/material derivation can be separated from
+the proof/counter prefix inside the oracle path, rather than the path being taken or left whole.
+
+Evidence: `artifacts/performance/r4c-fighter-no-oracle-on-20260730.json`,
+`artifacts/visibility/2026-07-30_r207-r4c-results-tic160-candidate.png`,
+`artifacts/visibility/2026-07-30_r207-r4c-diff.png`, and the fighter zoom pair
+`2026-07-30_r207-r4c-fighters-{r4e,r4c}.png`.
+
 ### R2-07 R4c RE-BASELINED on the ARM renderer — memset is fighter-draw work, not a subsystem; the fighter draw runs with the oracle ON while the stage runs with it OFF (2026-07-30)
 
 First valid Results attribution in the campaign: every earlier census profiled a Thumb renderer (see

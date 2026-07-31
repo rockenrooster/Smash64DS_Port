@@ -522,6 +522,12 @@ NDS_R2_RESULTS_LAYER_MEMO ?= 1
 # delta 0. Evidence at artifacts/performance/r4d-main-present-guard-{off,on}
 # -20260730.json and artifacts/visibility/2026-07-30_r207-r4d-results-tic160-*.png
 NDS_R2_MAIN_PRESENT_GUARD ?= 1
+# R2-07 R4c. Give the fighter draw the same no-oracle bracket the stage draw
+# already has (reloc_backend_movement.c:13559). The oracle path clears a
+# per-list proof/counter prefix once per part list per fighter per frame --
+# 70% of the fighter draw's memset traffic, and memset is 8.80% of the
+# Results frame. Off by default until the A/B and the matched-tic pair land.
+NDS_R2_FIGHTER_NO_ORACLE ?= 0
 # Lab-only BGM falsifier for the 5-VBlank dip investigation. Skips BGM
 # open/read/flush/play while preserving all BGM state/counters so the rest of
 # the system believes BGM is active. Never set in a published target.
@@ -2231,6 +2237,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_RESULTS_AFFINE $(NDS_R2_RESULTS_AFFINE)'; \
 		echo '#define NDS_R2_RESULTS_LAYER_MEMO $(NDS_R2_RESULTS_LAYER_MEMO)'; \
 		echo '#define NDS_R2_MAIN_PRESENT_GUARD $(NDS_R2_MAIN_PRESENT_GUARD)'; \
+		echo '#define NDS_R2_FIGHTER_NO_ORACLE $(NDS_R2_FIGHTER_NO_ORACLE)'; \
 		echo '#define NDS_BGM_FALSIFIER_OFF $(NDS_BGM_FALSIFIER_OFF)'; \
 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \
