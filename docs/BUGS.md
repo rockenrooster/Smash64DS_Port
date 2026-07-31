@@ -268,26 +268,42 @@ These bugs should be fixed for P1 delivery.
     cannot force a tie**, so Sudden Death has no deterministic entry today and
     every "Sudden Death soak" before this one was doubly incapable of reaching
     it.
-  - Owning-seam next step, and it mirrors what already worked for Results: give
-    Sudden Death a **seeded harness mode**, the way
-    `ndsSceneHarnessSeedResultsPlayableDefaults` seeds a finished match for
-    `results_playable` (mode 164). A `sudden_death_playable` mode that seeds the
-    tie and boots straight into the second battle scene turns a non-deterministic
-    multi-minute wait into a seconds-long iteration, which is exactly what made
-    the Results work tractable. Until that exists, the FPS/freeze/animation
-    symptoms in this row cannot be reproduced on demand. **And the seeded mode is not
-    a copy of the Results one**: Results is its own scene kind
-    (`nSCKindVSResults`), so `results_playable` can simply boot into it. Sudden
-    Death is NOT a distinct scene kind -- it is `nSCKindVSBattle` re-entered with
-    `dSCVSBattleTaskmanSetup.func_start` remapped to `scVSBattleStartSuddenDeath`
-    (`scvsbattle.c:540-546`), decided at match END by
-    `scVSBattleSetScoreCheckSuddenDeath` (`:228`), which requires
-    `SCBATTLE_GAMERULE_TIME` and compares `tko = score - falls` between players.
-    So a `sudden_death_playable` mode has to boot into VSBattle with the sudden
-    death setup already applied, not boot into a "Sudden Death scene"; seeding a
-    tied `SCPlayerData` alone does nothing at boot, because nothing evaluates the
-    tie until a match ends. Getting that wrong yields a scene that looks like
-    Sudden Death and is really just a second battle.
+  - **REPRODUCED ON DEMAND, 2026-07-30, and the seeded-mode plan below was
+    WITHDRAWN as the wrong shape.** `scripts/capture-sudden-death-entry.ps1`
+    reaches Sudden Death every run in about ninety seconds, with **no harness
+    mode, no new flag and no source change**. Sudden Death is not a distinct
+    scene kind: `scVSBattleStartScene` (`scvsbattle.c:513`) runs the match to
+    completion in a BLOCKING `scManagerFuncUpdate`, asks
+    `scVSBattleSetScoreCheckSuddenDeath` (`:228`), and only on TRUE calls
+    `scManagerFuncUpdate` a second time with `func_start` remapped. A mode that
+    "boots into Sudden Death" would therefore have to fork that control-flow
+    function to skip the first match -- and then the thing being reproduced is
+    the fork, not the bug.
+    What the lane does instead: the decision is `tko = score - falls`, so **a
+    match in which nobody scores is a 0-0 tie**, the most ordinary tie the game
+    has. The lane runs the canonical mode-163 match with the Fox CPU LIVE, drives
+    no input, and writes `gSCManagerBattleState->time_remain` once mid-match to
+    end it in two seconds -- too short for either fighter to score. The source
+    then declares its own tie. Scores are never touched; every run so far reports
+    `0-0 vs 0-0`. Do NOT try to guarantee the tie by pausing the Fox CPU:
+    `gNdsBattlePlayableFoxCpuEnabled = 0` is a fast-iteration switch that also
+    holds `sIFCommonTimerIsStarted = FALSE` and freezes the tic source
+    (`battleship_ifcommon.c:95-134`), so the clock never runs out and no tie is
+    ever evaluated.
+  - **MEASURED at the reproduction (2026-07-30), and the heap is implicated.**
+    The arena IS rewound for Sudden Death -- heap used at entry is **272 bytes**
+    of 1,269,760. But its setup pass then consumes **1,226,768 bytes and leaves
+    only 42,992 free**, against the ~1,107,392 a normal battle start needs: about
+    **119 KB MORE than match one, for the same stage and fighters**. That is the
+    number to explain. `gNdsTaskmanArenaAllocFailCount` reads 26 on both sides of
+    the setup, so those failures belong to match one, not to Sudden Death.
+    The stall itself: Sudden Death presents exactly **two** frames
+    (`gNdsFrameCounter` 311 -> 312) and then presents no more, so the picture
+    freezes with a live CPU. An async interrupt during the stall landed in
+    `ndsRendererAdapterBuildNativeMaterialSnapshot`
+    (`reloc_backend_renderer_dl.c`, via inlined `ndsRendererAdapterMaterialFlags`)
+    -- one sample, not yet proof of a loop. Evidence:
+    `artifacts/verification/sudden-death/2026-07-30_21*`.
   - Also seen in that run, unrelated to Sudden Death and unowned:
     `gNdsR2AnimCacheArenaOverflows 109` with `gNdsR2AnimCacheRejects 109`, and
     `gNdsTaskmanArenaAllocFailCount 26`.

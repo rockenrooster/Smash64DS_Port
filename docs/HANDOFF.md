@@ -66,43 +66,27 @@ configurations complete a full match clean.** Four detector defects fixed, two v
 hashed the window **title**, where melonDS renders its FPS counter). **Sudden Death has its own
 issues** (owner). **No passive soak reaches match two** — `mnVSResultsCheckExit` needs `START`.
 
-## VS Results MEETS THE GATE — 581,197 ticks per source tic vs 1.12M (0.52×), down from 2,814,955 this morning
+## VS Results is CLOSED — 581,197 ticks/tic vs 1.12M (0.52×), from 2,814,955
 
-**R0c/R0d/R0e/R2a are shipped and bit-exact** by `check_sprite_lerp_exact.py` — `/255`→`(x*257+257)>>16` (**`-Os` emits `blx __udivsi3` for a CONSTANT divisor**, whole-repo hazard, `grep __udivsi3`), inlined lerp, 16-entry palette with ONE byte per PAIR of columns (112 → 9 Thumb instr/px), glyphs indexing that table. **R2b** is the hardware affine BG the owner named, −1,736,589/frame, approved on sight and default-on. Two standing traps it paid for: the mapper **letter-boxes** any wallpaper whose origin is not (0,0), and a faster candidate lands on a **different scene tick** at the same wall clock. Full detail in the board and PERF_LEDGER.
+R0c/R0d/R0e/R2a/R4b/R4d/R4e/R4c all graduated, all Latest-green; per-lever detail in the board and
+PERF_LEDGER. **Results is no longer the P1 performance problem, and R1's "~30 s dead air" is 6.10 s
+and is NOT a load** — the fighter reload is 5.5% of it, so do not build a residency system.
 
-**R4b and R4d are GRADUATED and the post-R2b owner is now measured.** **R4b** foreground layer memo
-(`NDS_R2_RESULTS_LAYER_MEMO`) −28.6%, pixel-identical. **R4d** (`NDS_R2_MAIN_PRESENT_GUARD`) found
-Results running **2.00 presents per source tic against battle's 1.00** — the surplus one is the
-fallback present at `main.c:63`, reached because the scene loop is a coroutine resumed from
-`ndsOsRunThreads()` and `main` falls through to its own present when the loop yields. It submitted
-nothing, so its `glFlush` was skipped, but `ndsPlatformEndFrame`'s `swiWaitForVBlank` is
-unconditional. Guarding it is **−560,190/tic (−19.9%), exactly one VBlank**, work unchanged, guest
-picture pixel-identical. **R4e**: the Results lab built `nds_renderer.o` **`-mthumb`** while every
-battle ROM built it **`-marm`**, because the `-marm` rule keyed on harness ID 163 and the Results lab
-is 164 — so all its 20.12 multiplies were `bl __aeabi_lmul` (7.79% of the frame, in 86 bytes).
-**Every pre-R4e Results number in this campaign was measured on a Thumb renderer**; the deltas hold
-against each other, the absolute costs were inflated. Fixed by keying on the latency surfaces
-(`NDS_ARM_RENDERER_HARNESS_IDS`): −553,188/tic (−24.5%), pixel-identical, and battle is provably
-unaffected (byte-identical loadable image, identical 128-sample percentiles). Remaining: `FTR`
-**R4c GRADUATED** (owner approved the look): `no_oracle` selects the RENDERER, and Results was on
-the generic DL interpreter while the match uses the native owner — four times the cost. Bracketing
-the Results submit puts it on the match's renderer: **3.04 → 1.04 VBlanks, 1,701,577 → 581,197
-(−65.9%), 0.52× of the gate**. It saves/restores rather than clearing, so it is a no-op on the
-battle path — verified, not assumed: clean 128-sample matched window, `ALL` p95 1,680,064 →
-1,120,384, `FTR` p95 390,208 → 391,040. **Results is no longer the P1 performance problem.** **Measure Results with `scripts/census-results-frame-cost.ps1`**: the tick-HUD buckets
-are zeroed only in the battle loop, so on Results they free-run and must be **differenced across two
-stops and divided by `sTicks`**, never read once and divided by a scene clock. **Compare captures
-with `scripts/compare-capture-pair.ps1`** — it crops to the guest viewport, because melonDS's title
-bar carries a host-FPS readout that changes whenever a candidate is faster and otherwise reads as a
-visual regression.
+Standing traps it paid for, all still live:
 
-**R1 is ANSWERED and folded into R2 — the "~30 s dead air" is 6.10 s and is NOT a load.** The 30 s was
-captured before R0c at 39.975 VB/iter and never re-measured after the 3.9×. GAME SET → "FOX WINS" is
-**6.10 s control, 4.85 s with R2b**; the transition is 0.735 s (12%), of which the two
-`ftManagerSetupFilesAllKind` calls are 0.334 s — **the fighter reload is 5.5% of the dead air, so do
-not build a residency system for it.** The player waits on the source's own schedule (wallpaper held to
-tic 80, panels to tic 120, `mnvsresults.c:2843-2844`) at the scene's per-frame cost; residue is near
-the ~4 s floor a 30 Hz port must pay. Both earlier framings — loader, then arena lifecycle — refuted.
+- **`-Os` emits `blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`.
+- **A lab ROM can differ from battle in CODEGEN.** The `-marm` rule keyed on harness ID 163, so the
+  Results lab (164) built `nds_renderer.o` `-mthumb` and every 20.12 multiply was `bl __aeabi_lmul`.
+  Every pre-R4e Results absolute was inflated. Keyed on `NDS_ARM_RENDERER_HARNESS_IDS` now — put a
+  new latency-surface harness ID in that list.
+- **Measure Results with `scripts/census-results-frame-cost.ps1`**: the tick-HUD buckets are zeroed
+  only in the battle loop, so on Results they free-run and must be **differenced across two stops and
+  divided by `sTicks`**, never read once and divided by a scene clock.
+- **Compare captures with `scripts/compare-capture-pair.ps1`** — it crops to the guest viewport,
+  because melonDS's title bar carries a host-FPS readout that changes whenever a candidate is faster
+  and otherwise reads as a visual regression.
+- The wallpaper mapper **letter-boxes** any origin that is not (0,0), and a faster candidate lands on
+  a **different scene tick** at the same wall clock.
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 
