@@ -490,6 +490,30 @@ void grCommonSetupInitAll(void)
         (gMPCollisionGroundData != NULL) &&
         (gNdsSCVSBattleStageGroundDataReady != 0u))
     {
+        /* Scene-scoped particle transforms, cleared per entry.
+         *
+         * grPupupuInitAll (grpupupu.c:663) initialises map_head, all four
+         * map_gobj slots, every scalar status/wait field and particle_bank_id --
+         * but NOT leaves_xf or dust_xf. Those are assigned at grpupupu.c:246
+         * and :506 and read back by grPupupuWhispyUpdateBlow (:333) and
+         * grPupupuFlowersFrontLoopEnd (:533), which guard on `!= NULL` and then
+         * dereference `->generator_id`. Both are per-frame update functions, so
+         * a second entry reads them DURING the match, not at teardown.
+         *
+         * On the DS the whole stage is linked permanently rather than living in
+         * an overlay, so a field the original could leave alone between scenes
+         * now survives into the next one -- pointing into a taskman heap that
+         * has since been rewound. Nulling here is before ndsBaseGRCommonSetupInitAll
+         * builds the ground, so it is ahead of every reader.
+         *
+         * Inert today only because NDS_R2_PARTICLE_RUNTIME=0 makes the
+         * constructor a stub returning NULL, so the guard skips and nothing is
+         * dereferenced. It arms itself the moment that flag goes to 1, which is
+         * the first thing R2-07 clause 2 does -- so this is a precondition of
+         * that work, not a bug to find after it. */
+        gGRCommonStruct.pupupu.leaves_xf = NULL;
+        gGRCommonStruct.pupupu.dust_xf = NULL;
+
         ndsGRPupupuRecordBefore();
         ndsBaseGRCommonSetupInitAll();
         ndsGRPupupuFreezeSourceInitialWater();
