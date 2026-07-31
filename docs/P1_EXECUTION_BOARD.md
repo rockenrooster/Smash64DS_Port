@@ -1741,7 +1741,61 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
-### R2-07 L0 — the anim cache is CLEAN, so it is not the in-match load; and `HUD` has a 338x spread nobody has priced (2026-07-30)
+### R2-07 L1 — every over-gate frame is an `SRC` frame, 19 of 128, and the harness is frame-reproducible (2026-07-30)
+
+Per-frame rows from the same configuration as L0
+(`artifacts/performance/r207-L1-rows.csv`, `-RowsCsv`), DLDI-on, frames
+439..566.
+
+**19 of 128 frames exceed the 1,120,000 gate on `WORK-H`, and all 19 carry a
+raised `SRC`.** `SRC` median is 284,864; the *smallest* over-gate frame still
+reads 489,536, or **1.72x the median**, and the largest reads 746,624 at frame
+517. There is no over-gate frame with an ordinary `SRC`. That reproduces E8's
+finding on the current build and sharpens it into a usable predicate: **in this
+window, `SRC` above roughly 487,000 is necessary for a frame to miss the gate.**
+
+They arrive in bursts -- 449/452/453, 464, 469, 475-478, 495, 517-521, 536,
+542-544 -- which is the load-event shape, not a per-frame cost. Frame 517 is the
+same frame E35 had to profile by hand.
+
+**`OTHR` moves INVERSELY and is not a second owner.** The worst frames have the
+*lowest* `OTHR` (234,880 at frame 517) and the marginal ones the highest
+(570,432 at 469), because `OTHR` is the residual `ALL` minus the named buckets.
+Do not read it as an independent excursion.
+
+**`HUD` spikes on different frames than `SRC` does** (74,880/345,280 on 542/544
+while 517 and 475 sit at 960), which is the second, independent confirmation
+that the `HUD` bucket is the instrument and unrelated to the gate.
+
+**The harness is frame-reproducible within a build.** L0 and L1 were separate
+emulation runs of the same ROM and returned identical `named=998,520` and an
+identical VBlank histogram. So a per-frame comparison against a matched control
+is legitimate *within* a build -- the E11 +/-5,376 floor is a CROSS-build
+property, not run-to-run scatter.
+
+**Next (L2): name what `SRC` is doing on those 19 frames.** The `SRC` bracket is
+`gNdsTickHudSourceTicks` -- the source-side update -- so this is the §3.8
+question stated precisely: which first-use load, discovery, relocation or
+rebuild fires on frames 449/475/517/542 and not on the other 109. Take it with
+the `NDS_TASK75_LOAD_CENSUS=1` + `NDS_TASK68_FALLBACK_CENSUS=1` build so
+`gNdsTask75AssetLoadCount` exists, read that build for the load-frame SET only
+(it is not pacing-comparable), and intersect it with this frame list.
+
+### R2-07 L0 — the anim cache is CLEAN, so it is not the in-match load (2026-07-30)
+
+> **CORRECTION, same session.** This entry originally also claimed `HUD`'s
+> 338x spread was an unpriced excursion and made it the L1 target. **That was
+> wrong and is withdrawn.** `HUD` = `gNdsTickHudForegroundTicks +
+> gNdsRendererProfileHudTicks`, and the second term brackets
+> `ndsPlatformRenderDebugHud()` (`taskman_seam.c:4813`) — **the tick HUD's own
+> console render, i.e. the instrument.** It is already known and already
+> handled: `sample-tick-hud-buckets.ps1:446-454` documents the >300x spread in
+> its own comment and subtracts it **per sample** to form `WORK-H`, "since the
+> published profile-0 ROM carries no tick HUD at all". That is exactly why this
+> campaign headlines `WORK-H` and not `WORK`. Chasing it would have optimised
+> the meter. **Third recurrence of R2-03 E43's "the bracket priced its own
+> instrument".** Before naming any bucket as a target, check what its writers
+> bracket.
 
 Opening the load-elimination lane the switch plan names as R2-07's option 1 ("buy
 headroom first"), which is also red-queue item 1 and the unmet half of R2-04's
@@ -1758,25 +1812,27 @@ predated the arena's move onto the taskman heap and has been carried forward as
 if it were current. The cache is serving the match. Whatever still loads
 mid-match is a different asset class, so do not re-open the cache as the lever.
 
-**Where the excursion actually is.** The two buckets the campaign has spent
-itself on are flat and at their established values -- `FTR` P50 389,888 / P95
-392,896, spread **1.01**; `STG` 169,920 / 177,216, spread **1.04** against
-R2-02's 177,088. The spread is entirely elsewhere: `SRC` 284,864 / 564,032
-(1.98), `OTHR` 226,112 / 470,464 (2.08), `MISC` 46,912 / 159,360 (3.40), `AUD`
-mean 7,762 against a max of 127,296 -- and
+**Where the excursion is, with `HUD` correctly discarded as the instrument.**
+The two buckets the campaign has spent itself on are flat and at their
+established values -- `FTR` P50 389,888 / P95 392,896, spread **1.01**; `STG`
+169,920 / 177,216, spread **1.04** against R2-02's 177,088. The real spread is
+`SRC` 284,864 / 564,032 (**1.98**), `OTHR` 226,112 / 470,464 (2.08), `MISC`
+46,912 / 159,360 (3.40), and `AUD` mean 7,762 against a max of 127,296. That
+agrees with the board's standing account (E35: `SRC` owns the gate; E8: the
+premium is entirely `SRC`) rather than adding a new owner to it -- so L0's
+contribution to this lane is a **subtraction**: the anim cache is out, and
+`FTR`/`STG` are confirmed not to be carrying the excursion.
 
-**`HUD` P50 1,024, P95 346,816, max 411,648: a spread of 338.69.** The median
-HUD frame costs a thousand ticks and a rare one costs four hundred thousand.
-That is the exact shape §3.8 bans ("usually cheap, occasionally catastrophic")
-and it appears in no prior entry on this board. It is a bigger single-bucket
-excursion than `SRC`'s and it has never been attributed.
-
-**Next (L1): attribute the `HUD` excursion before anything else in this lane.**
-Which frames carry it, and what does the HUD do on them that it does not do on
-the other 127? Use `-RowsCsv` to identify the frames rather than re-deriving
-them by hand. Note the E11 rule while reading any delta from here: the
-cross-build floor is P95 +/-5,376 and small load-frame cuts cannot be banked --
-only work that leaves the frame counts.
+**Next (L1): the load-frame population itself, in `SRC`.** That needs the
+`NDS_TASK75_LOAD_CENSUS=1` + `NDS_TASK68_FALLBACK_CENSUS=1` build so
+`gNdsTask75AssetLoadCount` exists and the per-frame ring points at it; the
+ordinary tick-HUD build does not define that symbol, and `-ExtraGlobals`
+correctly refused it here. Read that build for the load-frame set only, never
+for pacing -- the script warns it is not pacing-comparable to a baseline. Then
+ask the §3.8 question: what is still first-used mid-match now that animation
+streams are cached clean? Note the E11 rule for any delta from here: the
+cross-build floor is P95 +/-5,376, small load-frame cuts cannot be banked, and
+only work that LEAVES the frame counts.
 
 **Do not read this run's `WORK-H` P95 (1,273,024) as a regression or a new
 baseline.** It is a different 128-frame window than the board's earlier readings

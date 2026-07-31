@@ -107,10 +107,10 @@ no prefetcher; `AObj` 36 B, N 221 — both memos wrong); **E15** unbuilt, stradd
 
 **Every named load-frame candidate is sized and none closes the 40,448.** Of the 139,072/load-frame
 premium: relocation 33,632, re-add 11,313, E9's walks 21,788 — **~94,127 (67.7%) has NO named owner**,
-and E17 killed E8's hypothesis (16 load frames, only 7 whole-GObj re-adds). Two independent
-attributions say spread. **R2-07 L0 moved this on: the anim cache is clean, and the unattributed
-spread shows up as `HUD` P50 1,024 / P95 346,816 — a 338x bucket nobody has priced. Attribute that
-next (board R2-07 L0/L1), not a fourth bracket here.**
+and E17 killed E8's hypothesis. **R2-07 L0 subtracted a candidate: the anim cache is CLEAN (Rejects
+0, Overflows 0) and `FTR`/`STG` are flat (1.01/1.04), so the excursion is `SRC`/`MISC`/`OTHR` as E35
+said.** **Never target `HUD`** — it contains `ndsPlatformRenderDebugHud`, the tick HUD's own render;
+that is why `WORK-H` subtracts it per sample. L1 is next (board).
 
 ## The one open fidelity item
 
