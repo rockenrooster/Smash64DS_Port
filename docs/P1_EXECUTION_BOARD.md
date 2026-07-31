@@ -1824,11 +1824,35 @@ inside a total excursion of 272,576 above the clean median. `SRC` on those
 frames spans **258,240 … 746,624** (P50 516,224), so they are not one uniform
 event and a single fixed cost will not explain them.
 
-**Next (L4): name what `SRC` does on the 24 over-gate frames that DO NOT load.**
-L2 removed asset loading as the explanation for 24 of 28; L1 named the bucket;
-L3 sizes it and clears the render buckets. What remains is the contents of the
-`SRC` bracket itself on those frames — and per L3 it must be something with a
-wide per-frame spread, not a constant.
+**L4 is constrained before a single profiler run, from the same rows.**
+
+*Shape:* the 28 over-gate frames come in **short adjacent runs** — 10 of the 27
+inter-frame gaps are exactly 1 — while recurring across the whole 439..566
+window (median gap 3, max 15). **Bursts, not a steady state.** A per-frame
+constant is ruled out twice over: by L3's 258,240…746,624 spread and by this.
+
+*Correlation with the other buckets, all 128 frames:*
+```
+SRC vs ALL   +0.723      SRC vs MISC  +0.402
+SRC vs FTR   -0.385      SRC vs OTHR  +0.395
+SRC vs STG   +0.238      SRC vs WAIT  +0.395
+SRC vs BG/AUD/HUD ~0     (independent, as expected)
+```
+`ALL` at +0.723 re-confirms `SRC` drives the frame. **The lead is `FTR` at
+−0.385: when `SRC` is high, fighter work is LOWER.** Work moving *out* of the
+`FTR` bracket while the frame gets more expensive is the signature of the
+fighter falling off its native owner onto a path counted elsewhere — and R2-03
+**E31 recorded exactly that mechanism** (the hitlag/`AnimLock` shuffle disables
+the native owner, "5/5 burst frames"), which also matches the burst shape here.
+
+**Do not treat that as settled — R2-06 E7 REFUTED fighter fallback as the
+cause**, on the older 9-over-gate baseline. So L4 is a direct per-frame test,
+not an argument: `NDS_TASK68_FALLBACK_CENSUS=1` is already in the L2 census
+build, and the harness carries `$fallbackFields`; read the fallback count as a
+**`-PerFrameGlobals` column** and intersect it with the over-gate frames exactly
+as L2 did for loads. If fallback frames ⊇ the 24, E7's refutation was a
+baseline artifact; if not, the −0.385 has another owner and the burst shape is
+the next thread.
 
 ### R2-07 L2 — ANSWERED, and it CONTRADICTS E8: only 4 of 28 over-gate frames load (2026-07-31)
 
