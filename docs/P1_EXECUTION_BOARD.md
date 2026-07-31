@@ -1821,6 +1821,33 @@ The useful residue is a **priced ceiling**: everything the oracle path costs the
 above by that. The next question is whether the lighting/material derivation can be separated from
 the proof/counter prefix inside the oracle path, rather than the path being taken or left whole.
 
+> **R4f ASKED AND REFUTED WITHOUT A BUILD, same day — and it corrects the sizing above.** Two
+> findings, both from reading rather than running.
+>
+> **(1) The prefix is not exclusively proof output, so it cannot simply not be cleared.**
+> `ndsFighterDLDrawResetTransientRendererStats` (`:4748`) says "The prefix is exclusively per-list
+> proof/counter output. The renderer state begins at `othermode_h`." It is not.
+> `hardware_texture_format`, `hardware_texture_width` and `hardware_texture_height` all sit *before*
+> `othermode_h` and are all **read for decisions**, not merely published: the texture memo compares
+> `memo->format != stats->hardware_texture_format` (`nds_renderer.c:18545`) and two sites build masks
+> with `1u << stats->hardware_texture_format` (`reloc_backend_renderer_dl.c:8597`, `:11825`).
+> Skipping the `bzero` would leak the previous part list's texture format/size and corrupt the R2-03
+> E12 texture memo's hit/miss. The comment is wrong and is the kind of wrong that costs a build; it
+> is corrected in place.
+>
+> **(2) The proof clearing was never the money, so R4c's win was not what this entry assumed.** The
+> cleared prefix is ~75 `u32` — about 300 bytes per part list. Priced through the census: `memset` is
+> 8.80% of the frame, half of it is the fighter draw, and 70% of *that* is these two call sites — so
+> the whole prefix clear is **~3.1% of the frame, on the order of 52,000 ticks/tic**. Against R4c's
+> measured 1,085,877 that is under 5%. **The overwhelming majority of what the no-oracle bracket
+> removed is the lighting/material derivation itself — real rendering work that produces the shading
+> the pixels lost — not bookkeeping.**
+>
+> So the honest statement of the remaining problem is not "proof work is hiding in the fighter draw".
+> It is: **the fighters' lighting and material derivation costs ~1.0M ticks per Results tic, and
+> switching it off is so far the only measured way to get inside the gate.** Removing the proof
+> clearing is worth ~52,000 and does not change that. R4f is closed; do not spend a build on it.
+
 Evidence: `artifacts/performance/r4c-fighter-no-oracle-on-20260730.json`,
 `artifacts/visibility/2026-07-30_r207-r4c-results-tic160-candidate.png`,
 `artifacts/visibility/2026-07-30_r207-r4c-diff.png`, and the fighter zoom pair

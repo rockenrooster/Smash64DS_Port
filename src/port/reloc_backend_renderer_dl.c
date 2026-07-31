@@ -4740,10 +4740,22 @@ static void ndsFighterDLDrawResetTransientRendererStats(
         return;
     }
 
-    /* The prefix is exclusively per-list proof/counter output. The renderer
-     * state begins at othermode_h and remains live across BattleShip's stage
-     * heads and fighter-part lists. A few diagnostics are interleaved with
-     * that state for the profile-2 ABI and are reset explicitly. */
+    /* The prefix is MOSTLY per-list proof/counter output. The renderer state
+     * begins at othermode_h and remains live across BattleShip's stage heads
+     * and fighter-part lists. A few diagnostics are interleaved with that state
+     * for the profile-2 ABI and are reset explicitly.
+     *
+     * CORRECTED 2026-07-30 (R2-07 R4f): this comment used to say "exclusively",
+     * and that is wrong in a way that invites deleting the bzero. Three fields
+     * before othermode_h are read for DECISIONS, not just published --
+     * hardware_texture_format, hardware_texture_width, hardware_texture_height.
+     * The R2-03 E12 texture memo compares `memo->format !=
+     * stats->hardware_texture_format` (nds_renderer.c:18545), and two sites
+     * build masks with `1u << stats->hardware_texture_format` (:8597, :11825).
+     * Dropping this clear would leak the previous part list's texture format
+     * and size into those decisions. Priced before anyone tries: the prefix is
+     * ~75 u32, and the clear is ~3.1% of the Results frame (~52,000 ticks/tic),
+     * so it is not worth the risk even if it were safe. */
     bzero(stats, offsetof(NDSRendererStats, othermode_h));
     stats->first_cull_w0 = 0u;
     stats->first_cull_w1 = 0u;
