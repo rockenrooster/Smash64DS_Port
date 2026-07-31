@@ -41,8 +41,14 @@ cluster (~110 sites) or replace the entry points wholesale. **L8 REFUTED UNBUILT
 ## OPEN P1 #2 — `BUGS.md` is now entirely particles, VFX and audio cues, and ALL of it is P1
 
 Owner's phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and are required to be fixed
-for P1."** Most rows are one blocker: **the particle scripts do not run**, so every effect draws as one of
-four untextured primitives. **BOTH PARTICLE BRANCHES ARE MERGED AND IN THE TREE — do not look for
+for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the random freezes**. The rows split
+in two. **SFX = an extraction job per cue, not a config edit**: the allowlist in `nds_audio_fgm.c` is
+trivial, but `scripts/sfx/render-audio-fgm-phase-pack.py`'s 59 selectors are hand-authored source-derived
+UCD constants (articulation, sound, wave_base, …) and it has **no per-cue derivation mode** — budget each
+cue accordingly and use `smash64ds-audio-qualification`. TIME UP is 527, GAME SET 488, and both
+announcements now reach their trigger, so the cue is all that is missing.
+**VFX = one blocker: the particle scripts do not run**, so every effect draws as one of four untextured
+primitives. **BOTH PARTICLE BRANCHES ARE MERGED AND IN THE TREE — do not look for
 worktrees**: generator + `nds_particle_banks.generated.{inc,h}` (byte-reproducing, 55/119 scripts, 23/47
 textures, 82,752 B DS), `nds_particle_banks.c`, `battleship_lbparticle.c`, all in `CFILES`.
 **`NDS_R2_PARTICLE_RUNTIME=1` NOW BUILDS** (725 mirrored enumerators, one guard — board has it).

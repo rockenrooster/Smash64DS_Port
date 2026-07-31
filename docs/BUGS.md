@@ -105,7 +105,31 @@ These bugs should be fixed for P1 delivery.
   budget once the code is live -- so the diagnostic itself became the thing
   preventing the picture. A probe that only terminates while the bug is present is
   not one to leave in.
--No "Time Up" VFX and SFX after match countdown finished.
+-VFX FIXED (2026-07-31) / SFX open: No "Time Up" VFX and SFX after match countdown
+  finished.
+  **The VFX half is DONE and photographed**:
+  `artifacts/verification/sudden-death/2026-07-31_165338-timeup-frame20.png` shows
+  the full blue mixed-width "TIME UP" across the stage at `TIME 00:00`. Cause was
+  the sprite-descriptor manifest stopping after countdown/GO; all nine letters are
+  in now with values read off the extracted asset on the host. Full derivation in
+  the GAME SET row above -- the two rows share the letters, the asset and the fix.
+  Capture it with `capture-sudden-death-entry.ps1 -CaptureAnnounce 20`, which
+  breaks on `ifCommonAnnounceTimeUpMakeInterface` and then steps frames; the SD
+  lane shortens the clock so the expiry is deterministic. Do NOT try to catch it
+  with a wall-clock watch (90-tick window; two watches missed it entirely).
+  **SFX half: what adding cue 527 actually costs, measured 2026-07-31 so the next
+  attempt does not start by guessing.** `nds_audio_fgm.c`'s `IDIsIncluded`
+  allowlist is the easy part. The hard part is
+  `scripts/sfx/render-audio-fgm-phase-pack.py`: its 59 selectors are
+  HAND-AUTHORED source-derived constants -- `articulation`, `sound`, `pitch_code`,
+  `duration_ticks`, `ucd_volume`, `articulation_pitch_cents`, `wave_base`,
+  `wave_length`, `expected_retained_samples` -- and the script has **no per-cue
+  derivation mode** (its only CLI flags are `--repo-root`, `--out-bin`,
+  `--out-json`, `--check`). So a new cue is an extraction job against the source
+  audio tables, not a config edit; budget it as one and use the
+  `smash64ds-audio-qualification` skill. `nSYAudioVoiceAnnounceTimeUp` is 527 and
+  `nSYAudioVoiceAnnounceGameSet` is 488 (`include/gm/gmsound.h:165,144`); both
+  announcements now reach their trigger, so the cue is the only thing missing.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `ifcommon.c` creates six blue mixed-width letter sprites
     for `TIME UP`, keeps them for 90 ticks, and queues announcer FGM 527
