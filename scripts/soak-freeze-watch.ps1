@@ -59,6 +59,12 @@ param(
     # press site: a single synthetic press wins the foreground race only about
     # half the time.
     [ValidateRange(1, 20)][int]$PressStartCount = 6,
+    # Build with NDS_R2_SECOND_ENTRY_DIAG=1 so the per-caller allocation ledger
+    # and the MObj chain probe exist. Required before the reported-globals list
+    # below can name any gNdsAllocLedger* or gNdsR2ChainProbe* symbol: without
+    # it they are absent, and an absent symbol reads as a deleted counter rather
+    # than a flag that was never passed.
+    [switch]$SecondEntryDiag,
     [string]$JsonOut = ''
 )
 
@@ -111,8 +117,14 @@ $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -E
 if (-not $NoBuild) {
     if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
     if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
-    make -C $root "TARGET=$Target" "BUILD=$Build" `
-        "NDS_R2_BOTH_CPU=$([int][bool]$BothCpu)"
+    # Every flag the run depends on goes on the make line. A flag left off is a
+    # flag the rebuild silently clears: capture-sudden-death-entry.ps1 had this
+    # exact bug on 2026-07-31 and overwrote a hand-built diag ELF, which cost two
+    # runs that printed nothing and read like an emulator hang.
+    $makeArgs = @("TARGET=$Target", "BUILD=$Build",
+                  "NDS_R2_BOTH_CPU=$([int][bool]$BothCpu)")
+    if ($SecondEntryDiag) { $makeArgs += 'NDS_R2_SECOND_ENTRY_DIAG=1' }
+    make -C $root @makeArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 # Prove the ROM is the configuration that was asked for, rather than trusting the
@@ -128,6 +140,19 @@ if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
                "-BothCpu asked for $wantBothCpu. A both-CPU soak that is not " +
                'both-CPU never creates the tie and never reaches Sudden Death, ' +
                'and it looks exactly like a clean run. Rebuild without -NoBuild.')
+    }
+    # Same rule for the second-entry instruments. Asking for them and silently
+    # getting a build without them turns every ledger/chain global into a
+    # missing symbol, which reads as "the counter is gone" rather than "the flag
+    # was never passed".
+    $diagSeen = [regex]::Match(
+        (Get-Content -LiteralPath $configHeader -Raw),
+        '(?m)^#define\s+NDS_R2_SECOND_ENTRY_DIAG\s+(\d+)')
+    if ($SecondEntryDiag -and
+        (-not ($diagSeen.Success -and ([int]$diagSeen.Groups[1].Value -ne 0)))) {
+        throw ('-SecondEntryDiag was requested but ' + $Build + ' is built ' +
+               'with NDS_R2_SECOND_ENTRY_DIAG=0, so the allocation ledger and ' +
+               'chain probe do not exist. Rebuild without -NoBuild.')
     }
 }
 foreach ($path in @($rom, $elf)) {
@@ -477,6 +502,18 @@ try {
             'gNdsFighterProcessLoopControllerBridgeCount',
             'gNdsFighterProcessLoopP0InputApplyCount',
             'gNdsFighterSchedulerLoopP0InputApplyCount')
+        # Second-entry allocation ledger, only when the build defines it. This is
+        # the rematch arm of the item 3 question the Sudden Death lane already
+        # answered: that lane measured 925,816 B for match one and 906,568 B for
+        # the Sudden Death setup from an identical rewound baseline of 319,968.
+        # A rematch total read here is the third figure. Appending is safe
+        # because the reads are keyed by NAME, not position -- see below.
+        if ($SecondEntryDiag) {
+            $cleanFields += @(
+                'gNdsAllocLedgerTotalBytes',
+                'gNdsAllocLedgerUsed',
+                'gNdsAllocLedgerOverflow')
+        }
         $format = (, '%u' * $cleanFields.Count) -join ','
         # The ROM's own per-iteration sample ring, read in the SAME single stop.
         # A point read of gNdsTickHud*Ticks is ONE frame -- those globals are

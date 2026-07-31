@@ -1741,6 +1741,58 @@ between admitting the native OAM path to Results and reducing the two-layer 320�
 software pipeline. Do not pre-commit to a fix; 89.4% in one phase is a partition,
 not a cause.
 
+### Second-entry item 3 ANSWERED — the "119 KB" was never a delta; item 4 audit closed (2026-07-31)
+
+Run `artifacts/verification/sudden-death/2026-07-31_010341-sudden-death-entry.log`,
+`build-sd-stg` with `NDS_R2_SECOND_ENTRY_DIAG=1`.
+
+**The premise is withdrawn.** `~119 KB` was `1,226,768 − 1,107,392`. Those are
+different quantities: the first is a measured high-water on this build, the
+second is a derived "990,640 used plus a 116,752 request" peak demand from the
+arena-sizing work above (line 198 of this file), computed for a stress config
+that the same paragraph calls **192 KiB poorer**.
+
+**Measured with the per-caller ledger instead.** Both entries begin their setup
+from an **identical rewound baseline of 319,968 bytes** — read directly at
+`scVSBattleStartBattle` and at `scVSBattleStartSuddenDeath`, not inferred.
+
+| | allocated | high-water |
+|---|---|---|
+| match one, setup + a full minute of runtime | 925,816 | 1,245,784 |
+| Sudden Death setup | 906,568 | 1,226,768 |
+
+Sudden Death's footprint is **19,248 bytes LOWER**. 31 callers, overflow 0, no
+new call sites, 22 of them byte-identical across both entries. Rematch is the
+one remaining total; `soak-freeze-watch.ps1 -SecondEntryDiag` now reports it.
+
+**Two things had to be measured before that could be said.** The ledger is
+cumulative from boot, so "every caller exactly doubled" only proves
+`sd = boot + m1` — equal to `m1` alone **iff** boot is zero. It is:
+`SD-LEDGER-M1BASE-TOTAL=0`. And the wrapper's intra-TU blind spot is
+`906,800 − 906,568 = 232` bytes, so the delta is safe to quote. Without those
+two reads this was a coincidence wearing a proof's clothes.
+
+**Item 4, persistent BSS holding taskman-heap pointers or VRAM handles: one
+real gap, four already correct, nothing blanket-reset.** The animation cache
+was stale and is fixed by the heap generation (engaged here: `SD-HEAP-GEN=2`,
+`SD-CACHE-GEN-MISMATCH=1`). The native OAM texture names were stale — cleared
+only at boot while their VRAM is released every scene change — and are fixed by
+`ndsIFCommonNativeOamDiscardTextures` in the scene-cache eviction. The
+static-texture latch, the stage validation cache and the T36 replay owner were
+already discard- or generation-guarded. Detail in `docs/BUGS.md`.
+
+**Harness defect fixed at its seam, in both lanes.** These scripts rebuild the
+ROM every run and their build lines did not carry
+`NDS_R2_SECOND_ENTRY_DIAG=1`, so a hand-built diag ELF was silently overwritten
+and the gdb script kept reading symbols that no longer existed. **A gdb command
+file aborts on the first erroring command, silently, leaving a bare prompt** —
+two runs reached `battle-start` and printed nothing, which reads exactly like an
+emulator hang. `capture-sudden-death-entry.ps1` and `soak-freeze-watch.ps1` now
+both take `-SecondEntryDiag`, put the flag on the make line, verify it in the
+generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
+strips every diag-only read when the flag is off. If a lane prints nothing after
+an early stage, check the ELF exports before suspecting the emulator.
+
 ### R2-07 L1 — every over-gate frame is an `SRC` frame, 19 of 128, and the harness is frame-reproducible (2026-07-30)
 
 Per-frame rows from the same configuration as L0
