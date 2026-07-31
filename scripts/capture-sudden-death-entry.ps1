@@ -153,6 +153,11 @@ if (-not $Screenshot) {
     $Screenshot = Join-Path $logDir "$stamp-sudden-death-entry.png"
 }
 
+# Where the two Task 36 command-stream dumps land. Defined before the gdb
+# script is written because the dump commands embed the paths.
+$t36DumpA = Join-Path $logDir "$stamp-t36-words-match1.bin"
+$t36DumpB = Join-Path $logDir "$stamp-t36-words-suddendeath.bin"
+
 $configState = $null
 $emulator = $null
 try {
@@ -228,6 +233,19 @@ try {
         'printf "SD-M1-T36-WORDS=%u\n", sNdsRendererTask36ReplayOwner.word_count',
         'printf "SD-M1-T36-SEGMASK=%#x\n", sNdsRendererTask36ReplayOwner.captured_segment_mask',
         'printf "SD-M1-T36-FAULT=%u\n", sNdsRendererTask36ReplayOwner.capture_fault',
+        # Content, not just size. `dump binary memory` was tried first and
+        # silently ended the gdb script -- do not retry it here without checking
+        # the generated file, which the harness deletes. Sampling fixed indices
+        # across the stream is robust, needs no paths, and is decisive in the
+        # direction that matters: any differing sample proves the streams differ.
+        'printf "SD-M1-W0=%#x\n", sNdsRendererTask36ReplayOwner.words[0]',
+        'printf "SD-M1-W1=%#x\n", sNdsRendererTask36ReplayOwner.words[1]',
+        'printf "SD-M1-W100=%#x\n", sNdsRendererTask36ReplayOwner.words[100]',
+        'printf "SD-M1-W500=%#x\n", sNdsRendererTask36ReplayOwner.words[500]',
+        'printf "SD-M1-W1000=%#x\n", sNdsRendererTask36ReplayOwner.words[1000]',
+        'printf "SD-M1-W2000=%#x\n", sNdsRendererTask36ReplayOwner.words[2000]',
+        'printf "SD-M1-W3000=%#x\n", sNdsRendererTask36ReplayOwner.words[3000]',
+        'printf "SD-M1-W3915=%#x\n", sNdsRendererTask36ReplayOwner.words[3915]',
         'printf "SD-STAGE=shot-match1\n"',
         # Drop it so the drive to Sudden Death is not stopped 60 times a second.
         'delete $bpnum'
@@ -421,6 +439,14 @@ try {
         'printf "SD-SD-T36-WORDS=%u\n", sNdsRendererTask36ReplayOwner.word_count',
         'printf "SD-SD-T36-SEGMASK=%#x\n", sNdsRendererTask36ReplayOwner.captured_segment_mask',
         'printf "SD-SD-T36-FAULT=%u\n", sNdsRendererTask36ReplayOwner.capture_fault',
+        'printf "SD-SD-W0=%#x\n", sNdsRendererTask36ReplayOwner.words[0]',
+        'printf "SD-SD-W1=%#x\n", sNdsRendererTask36ReplayOwner.words[1]',
+        'printf "SD-SD-W100=%#x\n", sNdsRendererTask36ReplayOwner.words[100]',
+        'printf "SD-SD-W500=%#x\n", sNdsRendererTask36ReplayOwner.words[500]',
+        'printf "SD-SD-W1000=%#x\n", sNdsRendererTask36ReplayOwner.words[1000]',
+        'printf "SD-SD-W2000=%#x\n", sNdsRendererTask36ReplayOwner.words[2000]',
+        'printf "SD-SD-W3000=%#x\n", sNdsRendererTask36ReplayOwner.words[3000]',
+        'printf "SD-SD-W3915=%#x\n", sNdsRendererTask36ReplayOwner.words[3915]',
         'printf "SD-STAGE=shot-sd\n"',
         'printf "SD-MATCHED-DONE=1\n"',
         'detach',
@@ -638,6 +664,42 @@ try {
     # at full speed and the picture is the only instrument left -- which is also
     # how the owner sees the bug. Client-only hashes, so melonDS's title-bar FPS
     # readout cannot masquerade as motion.
+    # The word-level diff. Equal word_count says nothing about content; this is
+    # the comparison that does. Byte-identical streams mean the replayed third
+    # of the stage is provably the same on both entries and the corruption is in
+    # the five unreplayed segments; differing streams localise it to whichever
+    # words changed.
+    if ($MatchedCapture -and (Test-Path -LiteralPath $t36DumpA) -and
+        (Test-Path -LiteralPath $t36DumpB)) {
+        $ha = (Get-FileHash -LiteralPath $t36DumpA -Algorithm SHA256).Hash
+        $hb = (Get-FileHash -LiteralPath $t36DumpB -Algorithm SHA256).Hash
+        $la = (Get-Item -LiteralPath $t36DumpA).Length
+        $lb = (Get-Item -LiteralPath $t36DumpB).Length
+        Write-Host ''
+        Write-Host ("T36 words match1      : {0} bytes  {1}" -f $la, $ha)
+        Write-Host ("T36 words suddendeath : {0} bytes  {1}" -f $lb, $hb)
+        if ($ha -eq $hb) {
+            Write-Host ('T36 STREAMS ARE BYTE-IDENTICAL. The replayed segments ' +
+                        'are provably the same on both entries, so the stage ' +
+                        'corruption is NOT in the replayed third.')
+        } else {
+            $ba = [System.IO.File]::ReadAllBytes($t36DumpA)
+            $bb = [System.IO.File]::ReadAllBytes($t36DumpB)
+            $n = [Math]::Min($ba.Length, $bb.Length)
+            $first = -1
+            $diff = 0
+            for ($i = 0; $i -lt $n; $i++) {
+                if ($ba[$i] -ne $bb[$i]) {
+                    if ($first -lt 0) { $first = $i }
+                    $diff++
+                }
+            }
+            Write-Host ("T36 STREAMS DIFFER: {0} of {1} bytes, first at byte " +
+                        "{2} (word {3})." -f $diff, $n, $first,
+                        [Math]::Floor($first / 4))
+        }
+    }
+
     if ($DiagnoseHang) {
         $f1 = Get-SdValue -Text $text -Key 'SD-PRESENT-1'
         $f2 = Get-SdValue -Text $text -Key 'SD-PRESENT-2'

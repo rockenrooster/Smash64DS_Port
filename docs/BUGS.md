@@ -444,6 +444,21 @@ These bugs should be fixed for P1 delivery.
     `word_count` is not proof of equal CONTENT -- state that plainly rather than
     overclaim -- but same size, same segment set and no fault is every field the
     owner exposes, and all of them match.
+    **Word CONTENT sampled, and it matches too.** Eight fixed indices across the
+    3916-word stream, read at both stops:
+
+        index      0            1     100   500      1000         2000  3000  3915
+        match 1    0x40181110   0x2   0     0x2217   0x18111210   0     0     0xd10
+        sudden     0x40181110   0x2   0     0x2217   0x18111210   0     0     0xd10
+
+    Identical at every index, including the first and last live words. Honest
+    limits: this is 8 samples of 3916, and three of them (100, 2000, 3000) are
+    zero and therefore weak evidence. Five non-trivial words plus equal size,
+    equal segment mask and zero capture fault is strong but not proof of a
+    byte-identical stream. A full dump would settle it -- note that
+    `dump binary memory` was tried and silently terminated the gdb script, so
+    whoever retries it must check the generated script rather than assume the
+    command took.
     **`0xa1` is segments 0, 5 and 7 -- three of eight.** So the Task 36 replay
     only ever covers three segments and the other five are drawn by the ordinary
     path every frame, on both entries. The replayed third is identical; the
