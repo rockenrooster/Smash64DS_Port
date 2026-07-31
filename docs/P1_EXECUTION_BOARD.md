@@ -1866,9 +1866,28 @@ The `fighter.h` / `lbcommon.h` redeclaration noise in the same log is include-or
 fallout from that TU and should be re-read after the symbol drift is fixed, not
 chased first.
 
-**So the fix is to reconcile the placeholder with the current generated names —
-one file, named symbols — and it is the next action on clause 2.** Do not
-re-derive the failure; it is above. **Still not done after that:** the pricing
+**FIXED, exactly as the code itself prescribed.** `nds_particle_banks_placeholder.c`
+opens with *"delete this file once it is in the build"* and `Makefile:1588` said
+*"Delete it with the same commit that adds the generated data."* The generated
+data is in the build, so the file is deleted and dropped from `CFILES`. **All
+placeholder-drift errors are gone.**
+
+**The remaining failure is a DIFFERENT class, and separating them was the
+point.** 826 errors, all in the `battleship_lbparticle.c` translation unit, and
+they are missing declarations rather than conflicts:
+
+- `battleship_lbparticle.c:69` — **`ndsBaseLbParticleMakeGenerator` implicitly
+  declared** ("did you mean `lbParticleMakeGenerator`?"). The import seam's
+  `#define` rename has no matching port-side definition.
+- `lbparticle.c:1620/1640` — **`guMtxCatF`, `guMtxIdentF` implicitly declared**:
+  the libultra matrix helpers the particle code needs are not reachable from
+  this TU.
+- `nds_startup.h:866` `sb32`, `lbcommon.h:43` `alSoundEffect`, then the whole
+  `fighter.h` enum re-declaring — **include-order cascade**, secondary. Fix the
+  two above first and re-read the log; do not chase 800 enum redeclarations.
+
+**So clause 2's remaining work is the import seam for one file**, not the merge
+and not the generated data. **Still not done after that:** the pricing
 measurement, a Boundary run with the runtime on, a visual check, and the eight
 open VFX rows, which stay open until the effects are on screen. The `115,277 B`
 of arena spare answers the *memory* question only.

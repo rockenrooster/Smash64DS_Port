@@ -1583,10 +1583,14 @@ ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 ifneq ($(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER),1)
 $(error NDS_R2_PARTICLE_RUNTIME=1 requires NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER=1: ef/efdisplay.c owns the efcommon bank request)
 endif
-# nds_particle_banks_placeholder.c holds weak, empty definitions of the asset
-# pack's contract symbols so the interpreter links before the generator step
-# lands. Delete it with the same commit that adds the generated data.
-CFILES += battleship_lbparticle.c nds_particle_banks_placeholder.c
+# The generated pack is in the build now (src/nds/generated/
+# nds_particle_banks.generated.inc, verified byte-reproducing by
+# check-nds-particle-banks.ps1), so nds_particle_banks_placeholder.c is gone --
+# both it and this line said to delete it with the commit that lands the
+# generated data, and that commit is this one. Its weak empty definitions had
+# also drifted: it spelled the count NDS_PARTICLE_SCRIPT_IDS and the sentinel
+# NDS_PARTICLE_UNPACKED_OFFSET, neither of which the current generator emits.
+CFILES += battleship_lbparticle.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR),1)
 CFILES += battleship_fox_reflector.c
