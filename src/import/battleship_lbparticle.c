@@ -68,7 +68,26 @@
 #include <nds/nds_startup.h>
 #include <nds/generated/nds_particle_banks.generated.h>
 
-#include <sc/scene.h>
+/* The DECOMP sc/scene.h, by path, not the port's <sc/scene.h>. INCLUDES puts
+ * include/ ahead of the decomp tree, so the angled form silently selects
+ * include/sc/scene.h -- which pulls in include/ft/fighter.h, the port's
+ * compatibility mirror of ft/ftdef.h and gm/gmdef.h. This translation unit
+ * compiles decomp sources in place and already holds the real ftdef.h and
+ * gmdef.h via lb/library.h, so the mirror arrives second and re-declares 763
+ * enumerators and 62 macros it has no business owning here. Values agree
+ * exactly (scripts/check-decomp-header-mirror.py proves it), so this is a
+ * duplicate-declaration problem only, and the fix is to stop asking a
+ * decomp-source translation unit for a port compatibility header. */
+/* union GMStatFlags, which sc/sctypes.h:52 embeds by value. sctypes.h expects
+ * it from <gm/generic.h>, but include/gm/generic.h shadows the decomp one and
+ * does not carry it, so the field lands as an incomplete type. */
+#include "../../decomp/BattleShip-main/decomp/src/gm/gmtypes.h"
+#include "../../decomp/BattleShip-main/decomp/src/sc/scene.h"
+/* nGRKindPupupu, for the Dream Land test in ndsParticleSceneIsBattle. Same
+ * reason as sc/scene.h above: by path, because include/gr/ground.h shadows the
+ * decomp gr headers. */
+#include "../../decomp/BattleShip-main/decomp/src/gr/grdef.h"
+#include <PR/gu.h>
 #include <sys/dma.h>
 #include <sys/debug.h>
 #include <sys/taskman.h>
@@ -90,6 +109,13 @@
 #define lbParticleMakeCommon ndsBaseLbParticleMakeCommon
 #define lbParticleMakePosVel ndsBaseLbParticleMakePosVel
 #define lbParticleMakeGenerator ndsBaseLbParticleMakeGenerator
+
+/* lbparticle.c calls lbParticleMakeGenerator (from efParticleMakeGenerator's
+ * neighbourhood) before defining it at line 2617, and the interposition renames
+ * the call site and the definition together -- so the call gets an implicit
+ * `int()` that then conflicts with the real `LBGenerator *(s32, s32)`. The
+ * source's own header declares the unrenamed name, which no longer matches. */
+LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
 
 #include "../../decomp/BattleShip-main/decomp/src/lb/lbparticle.c"
 #include "../../decomp/BattleShip-main/decomp/src/ef/efparticle.c"
@@ -395,11 +421,11 @@ static u32 ndsParticleNextOffset(u32 offset, u32 bank_bytes)
     u32 limit = bank_bytes;
     u32 id;
 
-    for (id = 0u; id < NDS_PARTICLE_SCRIPT_IDS; id++)
+    for (id = 0u; id < NDS_PARTICLE_SCRIPT_COUNT; id++)
     {
         u32 candidate = gNdsParticleScriptOffsets[id];
 
-        if ((candidate != NDS_PARTICLE_UNPACKED_OFFSET) &&
+        if ((candidate != NDS_PARTICLE_SCRIPT_UNREACHABLE) &&
             (candidate > offset) && (candidate < limit))
         {
             limit = candidate;
@@ -419,7 +445,7 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
     gNdsParticleBankBytes = bank_bytes;
     gNdsParticleBankTextures = gNdsParticleTextureCount;
 
-    scripts = syTaskmanMalloc(sizeof(*scripts) * NDS_PARTICLE_SCRIPT_IDS, 0x4);
+    scripts = syTaskmanMalloc(sizeof(*scripts) * NDS_PARTICLE_SCRIPT_COUNT, 0x4);
     textures = syTaskmanMalloc(sizeof(*textures) * NDS_PARTICLE_TEXTURE_IDS,
                                0x4);
     if ((scripts == NULL) || (textures == NULL))
@@ -452,7 +478,7 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
         textures[id] = (LBTexture *)entry;
     }
 
-    for (id = 0u; id < NDS_PARTICLE_SCRIPT_IDS; id++)
+    for (id = 0u; id < NDS_PARTICLE_SCRIPT_COUNT; id++)
     {
         scripts[id] = (LBScript *)&sNdsParticleInertScript;
     }
@@ -469,7 +495,7 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
         memcpy(bank, gNdsParticleScriptBank, bank_bytes);
     }
 
-    for (id = 0u; id < NDS_PARTICLE_SCRIPT_IDS; id++)
+    for (id = 0u; id < NDS_PARTICLE_SCRIPT_COUNT; id++)
     {
         u32 offset = gNdsParticleScriptOffsets[id];
         u32 limit;
@@ -477,7 +503,7 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
         u32 operands = 0u;
         u8 *header;
 
-        if (offset == NDS_PARTICLE_UNPACKED_OFFSET)
+        if (offset == NDS_PARTICLE_SCRIPT_UNREACHABLE)
         {
             gNdsParticleBankScriptsUnpacked++;
             continue;
@@ -516,7 +542,7 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
         gNdsParticleBankFloatOperands += operands;
     }
 
-    sLBParticleScriptBanksNum[bank_id] = NDS_PARTICLE_SCRIPT_IDS;
+    sLBParticleScriptBanksNum[bank_id] = NDS_PARTICLE_SCRIPT_COUNT;
     sLBParticleTextureBanksNum[bank_id] = NDS_PARTICLE_TEXTURE_IDS;
     sLBParticleScriptBanks[bank_id] = scripts;
     sLBParticleTextureBanks[bank_id] = textures;

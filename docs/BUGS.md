@@ -1417,3 +1417,41 @@ These bugs should be fixed for P1 delivery.
     Mario and Fox KOs, source-referenced visual A/B and owner approval, and
     pacing/memory cleanup guards. Status: PARTLY FIXED; source-faithful KO burst
     remains OPEN.
+
+-The port's compatibility headers disagree with the decomp source about two
+  constants, so the same name compiles to a different number depending on which
+  header a translation unit reaches first.
+  Found 2026-07-31 by `scripts/check-decomp-header-mirror.py`, which was written
+  while fixing the particle-runtime build and is the permanent guard for this
+  class. Run it with `--list-mirrors` to see the 28 mirror pairs it covers.
+  Why the collision exists at all: `INCLUDES := include $(BATTLESHIP_DECOMP)/src`
+  puts the port's `include/` first, and the decomp headers include their own
+  siblings with angle brackets (`#include <gm/generic.h>`), so for the 43 header
+  names present in both trees the port copy wins the race inside decomp
+  translation units too. Most of those port headers are deliberate DS
+  replacements and must keep winning; the two below are not, they are mirrors
+  that drifted.
+  - `FTSTAT_OPENING1_START`: `include/ft/fighter.h:1107` says `0xE0000`,
+    `decomp/.../ft/ftdef.h:20` says `0x1000F`. It is the threshold in
+    `ft/ftmain.c:4554`, which classifies a fighter status id as opening-1,
+    opening-2 or chardata and then indexes `D_ovl1_80390D20[fp->fkind]` at
+    `status_id - FTSTAT_OPENING1_START`. Every id between `0x1000F` and
+    `0xE0000` takes the wrong branch and subtracts the wrong base.
+    `ft/ftmain.c` is compiled into the ROM via `src/import/battleship_ftmain.c`.
+  - `nSYAudioBGMExplain`: `include/sys/audio.h:15` says `0`,
+    `decomp/.../gm/gmsound.h:30` says `34`. The same header also declares
+    `nSYAudioFGMTitlePressStart`/`OpeningBatM`/`PublicPrologue` as `0`/`1`/`2`
+    where gmsound.h has `157`/`152`/`150` (the checker cannot fold gmsound.h's
+    FGM block yet, so it reports only the BGM one; all four were confirmed by
+    reading both headers). These are audio ids: the wrong value plays the wrong
+    cue, or cue 0. `mn/mncommon/mntitle.c` and `mn/mnplayers/mnplayersvs.c` are
+    both compiled into the ROM and both name these constants.
+  Neither constant is referenced anywhere under `src/`, so nothing the port
+  itself wrote depends on the wrong value; the exposure is entirely through the
+  decomp sources compiled in place.
+  Fix at the owning seam: the decomp value is the specification, so the port
+  copies adopt it -- these are transcription errors in a compatibility header,
+  not DS-specific choices. Deliberately NOT folded into the particle-runtime
+  change that found them, because both edits alter the behaviour of already
+  shipping translation units and need their own Latest verifier run. Required
+  proof: `scripts/check-decomp-header-mirror.py` exits 0, and Latest is green.

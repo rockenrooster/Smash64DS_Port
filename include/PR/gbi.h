@@ -122,6 +122,9 @@ typedef union {
 #define G_TP_PERSP 0u
 #define G_TP_NONE 0u
 #define G_ZS_PIXEL 0u
+/* gDPSetDepthSource discards its argument, so like every other mode bit in this
+ * header this carries no value -- it exists so the source compiles. */
+#define G_ZS_PRIM 0u
 #define G_TX_WRAP 0u
 #define G_TX_MIRROR 0u
 #define G_TX_NOLOD 0u

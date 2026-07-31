@@ -1590,6 +1590,13 @@ endif
 # generated data, and that commit is this one. Its weak empty definitions had
 # also drifted: it spelled the count NDS_PARTICLE_SCRIPT_IDS and the sentinel
 # NDS_PARTICLE_UNPACKED_OFFSET, neither of which the current generator emits.
+# nds_particle_banks.c is that replacement -- the .inc is data with no
+# translation unit of its own, so without it the link fails on
+# gNdsParticleScriptBank and friends.
+CFILES += nds_particle_banks.c
+# guMtxIdentF, called by lbParticleGetPosVelDObj. Nothing else in the build
+# defines it, so it is scoped to the flag that needs it.
+CFILES += battleship_libultra_gu_mtxutil.c
 CFILES += battleship_lbparticle.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR),1)
