@@ -1,6 +1,7 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
 -Sometimes Mario's fireballs don't spawn
+-No "Game set" VFX and SFX and results after winning sudden death
 -No "Time Up" VFX and SFX after match countdown finished.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `ifcommon.c` creates six blue mixed-width letter sprites

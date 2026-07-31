@@ -40,10 +40,14 @@
  * exactly this case; without it the two definitions collide. */
 #define SSB64_NDS_LBTRANSFORM_DECLARED
 
-/* Same reason, same pattern: decomp/.../ft/ftdef.h defines enum FTKind and so
- * does include/ft/fighter.h, and this is the first translation unit to reach
- * both. Take the decomp one. */
-#define SSB64_NDS_FTKIND_DECLARED
+/* Same reason, same pattern, but nineteen blocks wide rather than one type:
+ * decomp/.../ft/ftdef.h and include/ft/fighter.h both declare 725 enumerators
+ * (FTKind, FTPlayerKind, the anonymous status/motion/joint blocks, FTMotionEvent)
+ * with identical values, and this is the first translation unit to reach both --
+ * it compiles decomp sources in place while the decomp header web reaches the
+ * port mirror through shadowed names it cannot be redirected away from. Take the
+ * decomp copies; the port mirror stands down wherever it is reached from. */
+#define SSB64_NDS_FTDEF_MIRROR
 
 /* lb/library.h comes FIRST, ahead of the nds/ headers, and the order is load
  * bearing: nds_startup.h:866 declares ndsSyMallocWouldFit returning `sb32` but

@@ -47,13 +47,29 @@ typedef struct FTSprites {
     Sprite *emblem;
 } FTSprites;
 
-/* enum FTKind is also defined by decomp/.../ft/ftdef.h. A translation unit that
- * reaches both -- src/import/battleship_lbparticle.c is the first one that
- * does -- gets a redeclaration error, so it takes the decomp definition and
- * defines this guard first, exactly as it already does for LBTransform and as
- * MPObjectColl below does for the same reason. */
-#ifndef SSB64_NDS_FTKIND_DECLARED
-#define SSB64_NDS_FTKIND_DECLARED
+/* SSB64_NDS_FTDEF_MIRROR brackets every declaration in this header that mirrors
+ * `decomp/.../ft/ftdef.h` -- NINETEEN blocks carrying 725 enumerators, from here
+ * down to FTMotionEvent. A translation unit that reaches both headers gets a
+ * redeclaration for each one; `src/import/battleship_lbparticle.c` is the first
+ * that does, because it compiles decomp sources in place (so it holds the real
+ * ftdef.h) while the decomp header web reaches this port mirror through the
+ * shadowed names `ft/fttypes.h`, `sc/scene.h`, `it/item.h` and `wp/weapon.h`.
+ * Angle-bracket includes inside decomp cannot be redirected per-file, so the
+ * mirror has to be able to stand down instead.
+ *
+ * Verified before this guard was added: all 725 shared enumerators hold
+ * IDENTICAL values in both headers, so taking the decomp copy is a mechanical
+ * no-op (`scripts/check-decomp-header-mirror.py` is the standing guard for the
+ * value half, and it has caught real drift twice -- see BUGS.md).
+ *
+ * The guard deliberately does NOT define itself: it brackets nineteen separate
+ * regions, and a self-defining guard would silently drop eighteen of them. Only
+ * the seam translation unit defines it, which is why every other TU in the build
+ * is byte-unchanged. Same pattern as SSB64_NDS_LBTRANSFORM_DECLARED
+ * (`include/gr/ground.h`) and SSB64_NDS_MPOBJECTCOLL_DECLARED below, and it
+ * replaces the single-type SSB64_NDS_FTKIND_DECLARED that only covered FTKind.
+ * Prefer extending this guard over adding a twentieth macro. */
+#ifndef SSB64_NDS_FTDEF_MIRROR
 typedef enum FTKind {
     nFTKindPlayableStart,
     nFTKindMario = nFTKindPlayableStart,
@@ -89,8 +105,9 @@ typedef enum FTKind {
     nFTKindEnumCount,
     nFTKindNull
 } FTKind;
-#endif /* SSB64_NDS_FTKIND_DECLARED */
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 typedef enum FTPlayerKind {
     nFTPlayerKindMan,
     nFTPlayerKindCom,
@@ -99,6 +116,7 @@ typedef enum FTPlayerKind {
     nFTPlayerKindKey,
     nFTPlayerKindGameKey
 } FTPlayerKind;
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
 typedef struct FTFileSize {
     size_t main;
@@ -106,11 +124,13 @@ typedef struct FTFileSize {
     size_t submotion_largest_anim;
 } FTFileSize;
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 typedef enum FTKeyEventKind {
     nFTKeyEventEnd,
     nFTKeyEventButton,
     nFTKeyEventStick
 } FTKeyEventKind;
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
 #ifndef I_CONTROLLER_RANGE_MAX
 #define I_CONTROLLER_RANGE_MAX 80
@@ -142,6 +162,7 @@ typedef enum FTKeyEventKind {
 #define LBBACKUP_CHARACTER_MASK_STARTER \
     (LBBACKUP_CHARACTER_MASK_ALL & ~LBBACKUP_CHARACTER_MASK_UNLOCK)
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTDemoStatusNull = 0x10000,
     nFTDemoStatusWin1,
@@ -160,20 +181,30 @@ enum {
     nFTDemoStatusIntroR,
     nFTDemoStatusSpecialStart
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTPartsDetailNone = 0,
     nFTPartsDetailStart = 1,
     nFTPartsDetailHigh = nFTPartsDetailStart,
     nFTPartsDetailLow = 2
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTPartsJointTopN = 0,
     nFTPartsJointTransN = 1,
     nFTPartsJointXRotN = 2,
     nFTPartsJointYRotN = 3,
-    nFTPartsJointCommonStart = 4,
+    nFTPartsJointCommonStart = 4
+};
+#endif /* SSB64_NDS_FTDEF_MIRROR */
+
+/* Port-only: decomp's FTPartsJointLabels stops at CommonStart, so this one
+ * stays outside the guard -- FTPARTS_JOINT_NUM_MAX below is defined from it. */
+enum {
     nFTPartsJointNumMax = 37
 };
 
@@ -378,11 +409,13 @@ typedef enum GMHitType {
     nGMHitTypeReflect
 } GMHitType;
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 typedef enum FTSpecialCollKind {
     nFTSpecialCollKindFoxReflector,
     nFTSpecialCollKindNessAbsorb,
     nFTSpecialCollKindNessReflector
 } FTSpecialCollKind;
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
 typedef struct FTSpecialColl {
     s32 kind;
@@ -634,6 +667,7 @@ typedef struct GMColEventSetLight {
     s32 light2 : 13;
 } GMColEventSetLight;
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTCommonMotionNull = -1,
     nFTCommonMotionEntryNull = 0,
@@ -753,7 +787,9 @@ enum {
     nFTCommonMotionLandingAirNull,
     nFTCommonMotionSpecialStart = 195
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTCommonMotionFallSpecial = 51,
     nFTCommonMotionLandingFallSpecial = 52,
@@ -840,7 +876,9 @@ enum {
     nFTCommonMotionAttackHi4,
     nFTCommonMotionAttackLw4
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTCommonStatusDeadDown,
     nFTCommonStatusDeadLeftRight,
@@ -1086,7 +1124,9 @@ enum {
     nFTCommonStatusLandingAirEnd = nFTCommonStatusLandingAirNull,
     nFTCommonStatusSpecialStart = 220,
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTItemSwingKindSword = 0,
     nFTItemSwingKindBat,
@@ -1094,7 +1134,9 @@ enum {
     nFTItemSwingKindStarRod,
     nFTItemSwingKindEnumCount
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTItemSwingTypeAttack1 = 0,
     nFTItemSwingTypeAttack3 = 1,
@@ -1102,6 +1144,7 @@ enum {
     nFTItemSwingTypeAttackDash = 3,
     nFTItemSwingTypeEnumCount
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
 #define FTSTAT_CHARDATA_START 0x20000
 #define FTSTAT_OPENING1_START 0xE0000
@@ -1145,6 +1188,7 @@ enum {
 #define FTCOMMON_ESCAPE_STICK_RANGE_MIN 56
 #define FTCOMMON_ESCAPE_BUFFER_TICS_MAX 4
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTMotionAttackIDNone,
     nFTMotionAttackIDBaseStart,
@@ -1210,7 +1254,9 @@ enum {
     nFTMotionAttackIDNull,
     nFTMotionAttackIDEnumCount
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTStatusAttackIDNone,
     nFTStatusAttackIDAttackStart,
@@ -1281,6 +1327,7 @@ enum {
     nFTStatusAttackIDNull,
     nFTStatusAttackIDEnumCount
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
 enum {
     nFTMarioMotionAttack13 = nFTCommonMotionSpecialStart,
@@ -1564,6 +1611,7 @@ enum {
     nGMHitEnvironmentTaruCann = 3
 };
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTCameraModeDefault = 0,
     nFTCameraModeGhost = 1,
@@ -1571,17 +1619,21 @@ enum {
     nFTCameraModeEntry = 3,
     nFTCameraModeExplain = 4
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTSlopeContourLFoot = 0,
     nFTSlopeContourRFoot = 1,
     nFTSlopeContourFull = 2
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
 #define FTSLOPECONTOUR_FLAG_LFOOT (1u << nFTSlopeContourLFoot)
 #define FTSLOPECONTOUR_FLAG_RFOOT (1u << nFTSlopeContourRFoot)
 #define FTSLOPECONTOUR_FLAG_FULL (1u << nFTSlopeContourFull)
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTHitLogObjectNone = 0,
     nFTHitLogObjectFighter = 1,
@@ -1589,7 +1641,9 @@ enum {
     nFTHitLogObjectItem = 3,
     nFTHitLogObjectGround = 4
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 enum {
     nFTDamageKindDefault = 0,
     nFTDamageKindStatus = 1,
@@ -1597,6 +1651,7 @@ enum {
     nFTDamageKindCatch = 3,
     nFTDamageKindNone = 4
 };
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
 enum {
     nFTCommonCliffKindClimbQuick = 0,
@@ -1622,6 +1677,7 @@ typedef struct FTStatusDesc {
     void (*proc_map)(GObj *);
 } FTStatusDesc;
 
+#ifndef SSB64_NDS_FTDEF_MIRROR
 typedef enum FTMotionEvent {
     nFTMotionEventEnd,
     nFTMotionEventSyncWait,
@@ -1676,6 +1732,7 @@ typedef enum FTMotionEvent {
     nFTMotionEventStopRumble,
     nFTMotionEventSetAfterImage
 } FTMotionEvent;
+#endif /* SSB64_NDS_FTDEF_MIRROR */
 
 #define FTANIM_FLAG_TRANSN_JOINT 0x80000000u
 #define FTANIM_FLAG_XROTN_JOINT 0x40000000u

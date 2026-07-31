@@ -1,8 +1,79 @@
 # P1 Execution Board
 
-Updated: 2026-07-31 (evening)
+Updated: 2026-07-31 16:15 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
+
+## R2-07 clause 2 — `NDS_R2_PARTICLE_RUNTIME=1` BUILDS, and its first boot names the real constraint: `.text` COSTS ARENA (2026-07-31)
+
+**The build seam is closed.** The 790-error wall was one thing: the port's
+`include/ft/fighter.h` and the decomp's `ft/ftdef.h` both declare **725
+enumerators**, and `battleship_lbparticle.c` is the only TU that reaches both —
+it compiles decomp sources in place while the decomp header web reaches the port
+mirror through the shadowed names `ft/fttypes.h`, `sc/scene.h`, `it/item.h`,
+`wp/weapon.h`. Angle-bracket includes inside decomp cannot be redirected
+per-file, so the mirror had to be able to stand down.
+
+Measured before writing the guard, which is what made it safe: **all 725 shared
+enumerators hold IDENTICAL values**, and the port header declares them in
+**nineteen** blocks (FTKind, FTPlayerKind, FTKeyEventKind, FTSpecialCollKind,
+FTMotionEvent and fourteen anonymous status/motion/joint blocks). So
+`SSB64_NDS_FTDEF_MIRROR` brackets all nineteen — **one macro, not nineteen** —
+and it deliberately does not define itself, because a self-defining guard would
+have silently dropped eighteen of them. Verified both directions textually before
+building: guard off, the enumerator set is byte-identical to before (916); guard
+on, 191 port-only enumerators remain and **zero** duplicate `ftdef.h`. The
+default build never defines it (the TU is inside the flag's `ifeq`), so every
+other translation unit is untouched. `nFTPartsJointNumMax` is the one port-only
+enumerator inside a mirrored block and is split out — `FTPARTS_JOINT_NUM_MAX` is
+defined from it.
+
+**The board's earlier advice was half right.** "Prefer a block-level answer over
+N single guards" — yes, one macro. But the premise that this is "a *series*, the
+next type down, guarding them one at a time costs a full build each" was wrong:
+the tag overlap is five names, the enumerator overlap is 725, and **nothing about
+it needed to be discovered one build at a time.** Two greps and a value
+comparison sized the whole thing before a single compile.
+
+**AND THE FIRST BOOT FAILS — heap exhaustion, and the mechanism is not what the
+memory budget said.** `soak-freeze-watch.ps1` on `build-particles-on`
+(`artifacts/verification/freeze-soak/2026-07-31_161212-FROZEN-PICTURE.txt`):
+spinning in `ndsSyMallocOverflowHalt` from `syTaskmanMalloc`, request **4,896
+bytes** — exactly Dream Land's grpupupu bank — against **4,032 bytes of
+headroom**.
+
+| | runtime OFF | runtime ON | delta |
+|---|---|---|---|
+| `.text` | 886,840 | 910,864 | **+24,024** |
+| `.data` | 135,152 | 135,240 | +88 |
+| `.bss` | 1,710,696 | 1,711,080 | **+384** |
+| taskman arena secured | 1,269,760 (`0x136000`) | **1,245,184 (`0x130000`)** | **−24,576** |
+| arena search steps | 26 | **32** | +6 × 4,096 |
+
+**`.text` growth costs taskman arena one-for-one, and that is not written down
+anywhere.** The standing note says BSS competes with the runtime `calloc` that
+sizes the heap; this build adds almost no BSS and still loses 24,576 bytes of
+arena, because the whole image lives in main RAM and the downward search starts
+above it. The arena landed **exactly on the `0x130000` floor** — the floor that
+is a contract with the Task 36 replay guard and must not be lowered — so there is
+no search headroom left at all.
+
+So the deficit is **~24,576 (arena) + 4,896 (a bank allocation the stub never
+made) against 4,032 spare ≈ 29 KB**, and **the "115,277 B of arena spare answers
+the memory question" line is REFUTED**: the spare was never the binding
+constraint, the arena *sizing* is.
+
+**The lever is the 82,752 B of packed DS textures currently linked into `.text`,
+and the repo already has the right seam for it.** The battle static texture pack
+is 136 KB and does not sit in the image at all — it is a NitroFS payload read at
+match load and uploaded straight to texture VRAM
+(`NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_PAYLOAD_PATH`,
+`ndsRendererHardwarePrepareBattleStaticTextures`). Route the particle bank's
+textures the same way and the image shrinks by more than the whole deficit,
+without spending arena — §3.8's "preload everything the known configuration
+implies" with an existing implementation. Trimming the reachable script set (55
+linked, P1 reaches ~26) is the cheaper second cut. Do **not** answer it by
+lowering the arena floor.
 
 ## R2-07 SUCCESSIVE MATCHES — CLOSED. Four battle entries, zero freezes (2026-07-31)
 

@@ -483,6 +483,27 @@ try {
             'gNdsR2StagePrepareReuseCount',
             'gNdsR2StagePrepareBuildCount',
             'gNdsR2StagePreflightElideCount',
+            # R2-07 clause 2, present only with NDS_R2_PARTICLE_RUNTIME=1 (the
+            # nm filter below drops them otherwise). Load result and reject count
+            # say the bank is sound; Live/Max are the pool high-water, which is
+            # the no-gameplay-allocation contract (SwitchPlan 3.11) made visible;
+            # DrawSeamCount is "the interpreter reached the draw seam this frame"
+            # and stays non-zero even while the DS quad path is unbuilt, so it is
+            # the difference between "no effects ran" and "effects ran, nothing
+            # drew".
+            'gNdsParticleBankLoadResult',
+            'gNdsParticleBankScriptsUnpacked',
+            'gNdsParticleBankScriptsRejected',
+            'gNdsParticleScriptStartCount',
+            'gNdsParticleGeneratorStartCount',
+            'gNdsParticleRejectCount',
+            'gNdsParticleDrawSeamCount',
+            'gNdsParticleStructsLive',
+            'gNdsParticleStructsMax',
+            'gNdsParticleGeneratorsLive',
+            'gNdsParticleGeneratorsMax',
+            'gNdsParticleTransformsMax',
+            'gNdsParticleRootSpawnCount',
             'gNdsRendererTask36ReplayArenaStaleCount',
             # R2-07 R4b. Skip+Redraw = foreground layers built; a settled
             # Results scene should be nearly all Skip. Any Overflow means the
@@ -571,6 +592,32 @@ try {
                 'gNdsAllocLedgerTotalBytes',
                 'gNdsAllocLedgerUsed',
                 'gNdsAllocLedgerOverflow')
+        }
+        # DROP THE FIELDS THIS ELF DOES NOT DEFINE, by asking `nm`. Every field
+        # above goes into ONE printf, and gdb fails the whole command on the first
+        # unknown symbol -- so a single flag-scoped counter (the particle block, the
+        # ledger) silently costs all ~80 readings, which is exactly how a run once
+        # printed nothing and read as an emulator hang. A per-flag `if` covers only
+        # the flags somebody remembered; this covers all of them, and says what it
+        # dropped so an absent counter cannot be mistaken for a zero one.
+        $nmTool = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
+        if (Test-Path -LiteralPath $nmTool -PathType Leaf) {
+            $definedSyms = @{}
+            foreach ($entry in (& $nmTool --defined-only $elf)) {
+                $parts = ($entry -split '\s+')
+                if ($parts.Count -ge 3) { $definedSyms[$parts[2]] = $true }
+            }
+            if ($definedSyms.Count -gt 0) {
+                $dropped = @($cleanFields | Where-Object {
+                    $base = ($_ -split '[\.\[]')[0]
+                    ($base -match '^[gs]Nds') -and (-not $definedSyms.ContainsKey($base))
+                })
+                if ($dropped.Count -gt 0) {
+                    $cleanFields = @($cleanFields | Where-Object { $dropped -notcontains $_ })
+                    Write-Host ('  note: this ROM does not define ' + $dropped.Count +
+                                ' counter(s); dropped ' + ($dropped -join ', '))
+                }
+            }
         }
         $format = (, '%u' * $cleanFields.Count) -join ','
         # The ROM's own per-iteration sample ring, read in the SAME single stop.
