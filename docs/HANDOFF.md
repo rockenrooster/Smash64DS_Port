@@ -65,15 +65,19 @@ the Task 36 replay guard (`nds_renderer.h:124-134`); my earlier authorization is
 configurations complete a full match clean.** **No passive soak reaches match two** —
 `mnVSResultsCheckExit` needs `START`.
 
-**Sudden Death: REPRODUCIBLE in ~90 s** — `scripts/capture-sudden-death-entry.ps1`, no harness mode.
-A match nobody scores in IS a 0-0 tie, so it runs mode 163 with Fox **live** and shortens
-`time_remain`. **Never pause the Fox CPU to force a tie** — that flag also freezes the tic source.
-**The freeze is DISPLACED, NOT FIXED.** The material-walk guard never fires (`BOUND-HITS` 0) and a
-same-binary A/B is identical, so code placement moved it; it is latent and will move again. The MObj
-chain is never corrupt either (91,482 probes, 0 invalid). Keep the guard regardless — an unbounded
-write into a 4-entry array is a defect on its own. **`syDebugPrintf` covers only the ten `taskman.c`
-give-up sites**; malloc's arm is `ndsSyMallocOverflowHalt`, which prints nothing. **The anim cache is
-CLEAN** (109/109 was stale); taskman-heap GENERATION now owns its lifetime. Open items in BUGS.md.
+**SECOND ENTRY REPRODUCED, matched pair (2026-07-31)** —
+`artifacts/visibility/2026-07-31_second-entry-{A-match1-clean,B-rematch-corrupt}.png`: same
+ROM/config, `STG` **171,328 -> 378,880 (2.21x)**, `ALL` 1,119,808 -> 1,679,936. Match two is otherwise
+CORRECT (GO!, fresh `TIME 01:00`, both fighters, both stock displays) and the texture-name fixes
+ENGAGED with **0** violations — **stale texture names are FIXED; stage corruption is the open root
+cause.** **The ~119 KB "SD setup excess" is WITHDRAWN** — a measured high-water minus a derived peak
+demand from a 192 KiB-poorer config. Both entries start from an identical baseline **319,968**; match
+one 925,816, SD setup **906,568**, so SD is **19,248 LOWER**. **Sudden Death reproduces in ~90 s**
+(`capture-sudden-death-entry.ps1`); **never pause the Fox CPU to force a tie** — it freezes the tic
+source. Freeze DISPLACED not fixed (`BOUND-HITS` 0); keep the guard. MObj chains never invalid.
+**`syDebugPrintf` covers only the ten `taskman.c` give-up sites.** **Diag lanes rebuild the ROM and
+used to DROP `NDS_R2_SECOND_ENTRY_DIAG`; gdb aborts a command file on a missing symbol SILENTLY,
+which reads as an emulator hang — pass `-SecondEntryDiag`.** Open items in BUGS.md.
 
 ## VS Results is CLOSED — 581,197 ticks/tic vs 1.12M (0.52×), from 2,814,955
 
@@ -85,25 +89,22 @@ Standing traps it paid for, all still live:
 
 - **`-Os` emits `blx __udivsi3` for a CONSTANT divisor** — whole-repo hazard, `grep __udivsi3`.
 - **A lab ROM can differ from battle in CODEGEN.** The `-marm` rule keyed on harness ID 163, so the
-  Results lab (164) built `nds_renderer.o` `-mthumb` and every 20.12 multiply was `bl __aeabi_lmul`.
-  Every pre-R4e Results absolute was inflated. Keyed on `NDS_ARM_RENDERER_HARNESS_IDS` now — put a
-  new latency-surface harness ID in that list.
-- **Measure Results with `scripts/census-results-frame-cost.ps1`**: the tick-HUD buckets are zeroed
-  only in the battle loop, so on Results they free-run and must be **differenced across two stops and
-  divided by `sTicks`**, never read once and divided by a scene clock.
+  Results lab (164) built `nds_renderer.o` `-mthumb` and every 20.12 multiply was `bl __aeabi_lmul`;
+  every pre-R4e Results absolute was inflated. Now `NDS_ARM_RENDERER_HARNESS_IDS` — add new lab IDs.
+- **Measure Results with `scripts/census-results-frame-cost.ps1`**: tick-HUD buckets are zeroed only in
+  the battle loop, so on Results they free-run — **difference two stops and divide by `sTicks`**.
 - **Compare captures with `scripts/compare-capture-pair.ps1`** — it crops to the guest viewport,
   because melonDS's title bar carries a host-FPS readout that changes whenever a candidate is faster
   and otherwise reads as a visual regression.
-- The wallpaper mapper **letter-boxes** any origin that is not (0,0), and a faster candidate lands on
-  a **different scene tick** at the same wall clock.
+- The wallpaper mapper **letter-boxes** any non-(0,0) origin, and a faster candidate lands on a
+  **different scene tick** at the same wall clock.
 
 ## NO LEVER LEFT INSIDE R2-06 — the premium has now refused to concentrate TWICE
 
 **The animation body is CLOSED — three levers, three refutations, zero builds spent.** 146,148/frame,
-46,148 over §4's 100K, none reachable: **E13** pose-fewer-joints refuted (collision's ancestor closure
-is **f = 0.840** of live joints); **E14** reorder refuted at ~2,900 (**10-15 ticks/32-byte line fill**,
-no prefetcher; `AObj` 36 B, N 221 — both memos wrong); **E15** unbuilt, straddling the floor.
-`gNdsFighterInit*` is proof-build-only, **0 by construction — never cite it.**
+46,148 over §4's 100K: **E13** refuted (collision's ancestor closure is **f = 0.840** of live joints);
+**E14** reorder refuted at ~2,900 (**10-15 ticks/32-byte line fill**, no prefetcher; both memos wrong);
+**E15** unbuilt, straddling the floor. `gNdsFighterInit*` is proof-build-only, **0 — never cite it.**
 
 **Every named load-frame candidate is sized and none closes the 40,448.** Of the 139,072/load-frame
 premium: relocation 33,632, re-add 11,313, E9's walks 21,788 — **~94,127 (67.7%) has NO named owner**,
@@ -114,19 +115,18 @@ that is why `WORK-H` subtracts it per sample. L1 is next (board).
 
 ## The one open fidelity item
 
-- **E32** — a **generator gap, not a decision** (E62), and E7 showed it no longer blocks a gate lever.
-  Mario draws *unflashed* — not corrupt, pixel-identical on non-flash frames. **Needs the generator to
-  bake the flash variant's colours** (E63: 2,164 B). Derivation on the board.
+- **E32** — a **generator gap, not a decision** (E62); no longer blocks a gate lever (E7). Mario draws
+  *unflashed*, pixel-identical on non-flash frames. **Generator must bake the flash colours** (E63: 2,164 B).
 
 ## Refuted this cycle — do not re-derive
 
-All by measurement; derivations on the board. **E51** `line_id` table; **E53** `{base,size}` mirror;
-**the flash as vertex data** (E48-E58); **the pose table** (E61); **`.text.hot`** (E66); **R2-04 E57**
-hitboxes walk the live joint chain; **R2-06 E7** fighter fallback and Task 39 effects; **R2-06 E6**
-the Horner fold (so E61 §5's other rows are suspect — a memo is a memory stream); **pointer arrays as
-index arithmetic** (E11); **an AObj pool** (E12); **R2b's transform double-apply**; **R1's loader AND
-arena framings**; and **the `syMallocSet` OOM spin and the DL-buffer overflow as the Sudden Death
-freeze** (a `syDebugPrintf` breakpoint catches all eleven give-up sites; none fired).
+All by measurement, derivations on the board: **E51** `line_id`; **E53** `{base,size}` mirror; **the
+flash as vertex data** (E48-E58); **the pose table** (E61); **`.text.hot`** (E66); **E57** hitboxes
+walk the live joint chain; **R2-06 E7** fighter fallback + Task 39; **R2-06 E6** the Horner fold (so
+E61 §5's other rows are suspect — **a memo is a memory stream**); **pointer arrays as index
+arithmetic** (E11); **an AObj pool** (E12); **R2b's transform double-apply**; **R1's loader AND arena
+framings**; **the OOM spin and the DL-buffer overflow as the Sudden Death freeze** (none of the
+eleven give-up sites fired).
 
 ## Restart
 
