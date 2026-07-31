@@ -73,42 +73,26 @@ $rom = Resolve-Smash64DSBuildOutput `
 $elf = Resolve-Smash64DSBuildOutput `
     -Root $root -Target $target -Build $Build -Extension '.elf'
 
-# FAIL IN A SECOND, NOT IN 45 MINUTES. Without NDS_TASK37_PROFILE=1 the ROM
-# never dumps, so the run below waits out its whole -TimeoutSeconds (2700 by
-# default) before the throw at :171 says which flag was missing. The generated
-# header knows immediately, and it is the same "trust the header, not the build
-# directory's name" rule the other harnesses already apply. Measured
-# 2026-07-31: pointing this script at a census build cost a full 45-minute
-# timeout to learn a one-line fact.
+# A config-header precheck for NDS_TASK37_PROFILE was added here on 2026-07-31
+# and REMOVED the same day. Recording why, because the motivating cost is real
+# and someone will want to try again.
 #
-# FAIL CLOSED. An ABSENT header means the flag cannot be confirmed, and for a
-# 45-minute run "cannot confirm" must not mean "proceed" -- the first version of
-# this guard wrapped the check in `if (Test-Path ...)` and skipped silently on
-# exactly the build that needed it. Confirmed present-and-set, or throw.
+# The cost: point this script at a non-profile build and the ROM never dumps, so
+# it waits out the whole -TimeoutSeconds (2700 by default) before the throw at
+# the census wait names the missing flag. Losing 45 minutes to a one-line fact
+# is worth preventing.
 #
-# SCOPE: only when we are TRUSTING an existing build. This guard sits ahead of
-# the build step, so demanding a header unconditionally rejects a fresh
-# directory the script was about to populate -- which it did on the first
-# attempt. With -NoBuild an absent header is fatal (nothing will create it);
-# without it, the build supplies the header and the ROM.
-$profileConfigHeader = Join-Path $root "$Build\nds_build_config.h"
-$profileHeaderExists = Test-Path -LiteralPath $profileConfigHeader -PathType Leaf
-$profileSeen = if ($profileHeaderExists) {
-    [regex]::Match((Get-Content -LiteralPath $profileConfigHeader -Raw),
-        '(?m)^#define\s+NDS_TASK37_PROFILE\s+(\d+)')
-} else { $null }
-if (($NoBuild -or $profileHeaderExists) -and
-    -not ($profileSeen -and $profileSeen.Success -and
-          ([int]$profileSeen.Groups[1].Value -ne 0))) {
-    throw ("$Build cannot be confirmed as NDS_TASK37_PROFILE=1 " +
-           $(if ($null -eq $profileSeen) {
-                 "(no nds_build_config.h in that build)" }
-             else { "(the header says 0 or omits it)" }) +
-           ", so the ROM would never dump a census and this run would wait out " +
-           "its entire timeout ($TimeoutSeconds s) before saying so. Use the " +
-           'default -Build build-task37-profile, or drop -NoBuild so this ' +
-           'script builds a profile ROM.')
-}
+# Why the header cannot prevent it: `build-task37-profile` builds and profiles
+# CORRECTLY with no `nds_build_config.h` present at all -- verified, arm A of
+# R2-07 L6 produced a full census from exactly that state. An absent header
+# therefore does not imply an absent flag here, and the guard rejected the runs
+# it existed to protect (three revisions, each failing a different legitimate
+# case: fail-open on a missing header, then fail-closed ahead of the build step,
+# then fail-closed on -NoBuild against a build that was in fact fine).
+#
+# If you retry: key on something authoritative for THIS build -- a profile-only
+# ELF symbol read with nm, the way the other harnesses validate -ExtraGlobals --
+# not on a header this build layout does not emit.
 
 if ([string]::IsNullOrWhiteSpace($OutDir)) {
     $OutDir = Join-Path $root 'artifacts\task37-census'
