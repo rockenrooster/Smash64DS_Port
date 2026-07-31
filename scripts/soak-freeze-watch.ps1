@@ -431,6 +431,20 @@ try {
             # Non-zero proves the native OAM path's retained texture names were
             # dropped with the VRAM behind them. Must rise once per scene change.
             'gNdsIFCommonNativeOamTextureDiscardCount',
+            # STAGE FAST-PATH ENGAGEMENT, and the reason it is read on a rematch
+            # soak specifically. `STG` is 2.21x on the second entry, and one
+            # explanation is that the stage's direct path stops engaging there
+            # and the generic renderer takes over -- which would raise the cost
+            # AND change what is drawn, unlike a clean double-draw. These are the
+            # counters R2-02 E1a added for exactly this question; their own
+            # comment records that Task 52 once found the Task 36 replay
+            # structurally disabled and silently indistinguishable from a null
+            # result. Reuse should dominate Build; Build climbing across the
+            # second entry is the fast path dropping out.
+            'gNdsR2StagePrepareReuseCount',
+            'gNdsR2StagePrepareBuildCount',
+            'gNdsR2StagePreflightElideCount',
+            'gNdsRendererTask36ReplayArenaStaleCount',
             # R2-07 R4b. Skip+Redraw = foreground layers built; a settled
             # Results scene should be nearly all Skip. Any Overflow means the
             # defer buffer is undersized and the memo silently disabled itself.

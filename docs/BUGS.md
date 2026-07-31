@@ -340,6 +340,26 @@ These bugs should be fixed for P1 delivery.
     `SD-LEDGER-M1BASE-TOTAL=0`. Measuring that was the difference between a
     proof and a coincidence, and the same care is owed to any other counter read
     at two points.
+  - **MECHANISM 10 ELIMINATED — the stage direct path does NOT drop out on the
+    second entry (2026-07-31).** A third explanation for the 2.21x was that the
+    stage's direct path stops engaging on re-entry and the generic renderer
+    takes over, which would raise cost AND change what is drawn. **Refuted by
+    measurement, no build spent**, on a rematch soak whose match two was
+    confirmed corrupt in the same run (`STG` **378,880**, `ALL` 1,679,936,
+    `artifacts/verification/freeze-soak/2026-07-31_015424-NO-FREEZE.png` — the
+    signature reproduces to the same tick bucket as the earlier pair):
+    - `gNdsR2StagePrepareBuildCount` **2** — exactly one build per scene entry
+    - `gNdsR2StagePrepareReuseCount` **2240** — reuse dominates 1120:1
+    - `gNdsR2StagePreflightElideCount` **11200** — exactly 5x reuse, which
+      R2-02 E8's own comment defines as the elision working ("five per frame is
+      the elision working, zero is a flag that compiled but never fired")
+    - `gNdsRendererTask36ReplayArenaStaleCount` **2242** — read its definition
+      before alarm: it counts frames the RELAXED guard admits that the legacy
+      STRICT guard would have blocked, i.e. "proof that the fix is doing its
+      job" (`nds_renderer.c:4461`). ~Once per frame is the DESIGNED healthy
+      value, not an anomaly.
+    So the fast path is fully engaged while the stage renders wrong. The defect
+    is inside the direct path's data, not in whether that path runs.
   - **NEXT HYPOTHESIS, and the probe that did NOT settle it (2026-07-31).**
     `STG` is **2.21x**, and a doubling has two very different explanations: the
     stage SUBMITTED TWICE (duplicate GObjs surviving teardown, which would also
