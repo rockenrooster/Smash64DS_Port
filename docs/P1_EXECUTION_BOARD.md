@@ -1844,10 +1844,34 @@ affordable.
 because it is switched off.** The pricing experiment is `NDS_R2_PARTICLE_RUNTIME=1`
 plus a re-sample against this same control, and it is a real one: `lb/lbparticle.c`
 is a 2,961-line bytecode interpreter against a cosmetic budget of roughly 23K
-ticks (~fourteen textured-quad binds at Task 98's 1,621/bind). **Still not done:**
-that measurement, a Boundary run with the runtime on, a visual check, and the
-eight open VFX rows, which stay open until the effects are on screen. The
-`115,277 B` of arena spare answers the *memory* question only.
+ticks (~fourteen textured-quad binds at Task 98's 1,621/bind).
+
+**`NDS_R2_PARTICLE_RUNTIME=1` DOES NOT BUILD, and the cause is localized.** Ran
+it; the failure is **symbol drift between the runtime branch's placeholder and
+the generator branch's header**, which is precisely the seam two independently
+developed branches would break and precisely what "unreviewed, unbuilt" was
+hiding:
+
+- `src/nds/nds_particle_banks_placeholder.c:24` — **conflicting types for
+  `gNdsParticleScriptBank`**: the placeholder declares `const u8[1]` while the
+  generated `.inc` defines the real array. Same for `gNdsParticleTextures`
+  (`:36`, `const NDSParticleTexture[1]`). The placeholder is meant to stand in
+  when the runtime is off; with it on, both definitions are live.
+- `:28` **`NDS_PARTICLE_SCRIPT_IDS` undeclared** — generator emits
+  `NDS_PARTICLE_SCRIPT_COUNT`. `:14` **`NDS_PARTICLE_UNPACKED_OFFSET`
+  undeclared** — generator emits `NDS_PARTICLE_UNPACKED_56`. **The placeholder
+  was written against an older generator contract.**
+
+The `fighter.h` / `lbcommon.h` redeclaration noise in the same log is include-order
+fallout from that TU and should be re-read after the symbol drift is fixed, not
+chased first.
+
+**So the fix is to reconcile the placeholder with the current generated names —
+one file, named symbols — and it is the next action on clause 2.** Do not
+re-derive the failure; it is above. **Still not done after that:** the pricing
+measurement, a Boundary run with the runtime on, a visual check, and the eight
+open VFX rows, which stay open until the effects are on screen. The `115,277 B`
+of arena spare answers the *memory* question only.
 
 ### R2-07 COMPLETION SEQUENCE — the phase is mostly CONTENT, not performance (2026-07-31)
 
