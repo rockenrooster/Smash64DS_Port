@@ -373,6 +373,14 @@ try {
         'tbreak battleship_scvsbattle.c:scVSBattleFuncUpdate',
         'continue',
         'printf "SD-M1B-CONTENT-BEGIN\n"',
+        # THE CAMERA SIDE. gcCaptureCameraGObj walks a dl-link list only where
+        # the CAMERA's camera_mask has that bit set, and the five stage segments
+        # sit on dl_link_id 4, 4, 4, 0x10 and 6. Every stage-side input to the
+        # gate is already measured identical, so this is where the difference
+        # has to be if the walk is what differs. camera_mask is +0x30 (u64),
+        # camera_tag +0x38 -- both inside 16 words.
+        'printf "SD-M1B-CAM=%#x\n", gGMCameraGObj',
+        'x/16wx gGMCameraGObj',
         'x/40wx gGRCommonStruct.pupupu.map_gobj[0]',
         'x/40wx gGRCommonStruct.pupupu.map_gobj[1]',
         'x/40wx gGRCommonStruct.pupupu.map_gobj[2]',
@@ -473,6 +481,9 @@ try {
         'printf "SD-SD-LAYER1=%#x\n", gGRCommonLayerGObjs[1]',
         # Same words, entry two. Diff these blocks against SD-M1-CONTENT-*.
         'printf "SD-SD-CONTENT-BEGIN\n"',
+        # Same camera, second entry.
+        'printf "SD-SD-CAM=%#x\n", gGMCameraGObj',
+        'x/16wx gGMCameraGObj',
         'x/40wx gGRCommonStruct.pupupu.map_gobj[0]',
         'x/40wx gGRCommonStruct.pupupu.map_gobj[1]',
         'x/40wx gGRCommonStruct.pupupu.map_gobj[2]',

@@ -340,8 +340,39 @@ These bugs should be fixed for P1 delivery.
     `SD-LEDGER-M1BASE-TOTAL=0`. Measuring that was the difference between a
     proof and a coincidence, and the same care is owed to any other counter read
     at two points.
-  - **ROOT-CAUSE CANDIDATE, first hard one: `frame_draw_last` is `0xFF` on
-    every live stage GObj on the second entry (2026-07-31).** Log
+  - **ROOT CAUSE: the battle camera's `camera_mask` is ZERO on the second entry
+    (2026-07-31, log `2026-07-31_022942`).** `gGMCameraGObj` is at the same
+    address on both entries; 16 words dumped at the matched stop, and in the
+    first 64 bytes **exactly one word differs — +0x30, `camera_mask`**:
+    ```
+    entry 1   0x30: 0x00180000  0x00000000  0xffffffff  0x00000000
+    entry 2   0x30: 0x00000000  0x00000000  0xffffffff  0x00000000
+                    camera_mask lo/hi        camera_tag  pad
+    ```
+    The offsets check themselves: `camera_tag` reads `0xFFFFFFFF`, matching
+    `objtypes.h:213`'s own "Usually 0xFFFFFFFF" comment, and `obj_kind` at
+    +0x0F is **3 = CObj**, i.e. this really is the camera. `camera_tag` is
+    **identical** on both entries, which is why every tag-based hypothesis
+    measured clean.
+    **The chain is now complete, and every link but the last is measured:**
+    ```
+    camera_mask == 0
+      -> gcCaptureCameraGObj's `while (camera_mask != 0)` never iterates
+      -> NOTHING is captured, so :4392 never runs for any GObj
+      -> the five stage GObjs keep objman.c:1892's seed, frame_draw_last = 0xFF
+      -> objdisplay.c:1161's `!= (u8)dSYTaskmanFrameCount` (counter 0 all match)
+         is TRUE for the whole stage -> proc_diff instead of proc_same
+    ```
+    That accounts for every measurement in this row at once: the stage GObjs
+    all intact and byte-identical apart from `frame_draw_last`; the stage direct
+    path fully engaged (Build 2 / Reuse 2240 / Elide 11200); geometry scrambled
+    rather than missing; and `STG` 2.21x rather than 0x or 1x.
+    **Still not measured:** that `proc_diff` is what the screen shows. The fix
+    belongs at whatever leaves `camera_mask` zero on a scene re-entry — find
+    that seam before changing anything, and do not paper over it by forcing the
+    mask at the capture site.
+  - **Superseded candidate note, kept for the reasoning: `frame_draw_last` is
+    `0xFF` on every live stage GObj on the second entry (2026-07-31).** Log
     `2026-07-31_020601`. Eight words read from each of the five unreplayed
     segments at the **same** stop on both entries (`scVSBattleFuncUpdate`):
     ```
