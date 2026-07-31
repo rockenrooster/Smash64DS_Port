@@ -54,6 +54,30 @@ These bugs should be fixed for P1 delivery.
 -The rematched match is drawn wrong: duplicated fighters over corrupted stage
   and background geometry. Split out of the START row above 2026-07-30, because
   that row's input fix is done and this is a different defect.
+  **REFRAMED 2026-07-31: it is NOT a second-ENTRY defect. It is progressive.**
+  Both captures below are from ONE run,
+  `artifacts/verification/sudden-death/2026-07-31_103514-*`:
+  - `-entry.png`, taken at the second entry: Dream Land is CORRECT. Green tree,
+    wooden platforms, right sky, water, flowers, Mario.
+  - `-watch.png`, 60s later in the same match: rainbow background, white
+    platforms, washed-out tree.
+  The scene loads clean and degrades during play. That is why none of the
+  entry-time work below changed the picture, and it retires the whole
+  "second entry loads the wrong textures" hypothesis class — including the
+  reason this row is titled the way it is. Sudden Death is simply the cheapest
+  reproduction, not the cause; expect the same degradation in a long first
+  match, and CHECK THAT FIRST, because if it reproduces there the word
+  "rematched" comes out of this row entirely.
+  Where to look now: things that change texture state *over time* rather than at
+  load. `sNdsRendererHardwareTextureCache` (14,016 B) with its round-robin
+  `sNdsRendererHardwareTextureCacheNext` eviction, the R2-03 E12 texture memo,
+  and VRAM cursor wraparound in the OBJ/texture allocators. A cache that evicts
+  a live entry and hands its VRAM to a new upload produces exactly this: correct
+  at load, wrong once enough distinct textures have cycled through.
+  NOT the cause, measured this session: the L9 sine table (corruption is present
+  with and without it), and the boot-scoped prepare latches
+  (`ndsIFCommonNativeOamDiscardTextures` fires, `SD-OAM-PREPARE-COUNT` 1 -> 2,
+  picture unchanged).
   Symptom: START on Results restarts the match, and the second match runs at a
   healthy 28.9 FPS with FTR 385,728 -- so this is VISUAL, not performance. Do
   not re-open it as a slow/re-warm problem; that line is measured dead.
