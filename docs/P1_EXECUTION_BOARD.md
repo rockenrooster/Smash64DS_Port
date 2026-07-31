@@ -1848,6 +1848,41 @@ the proof/counter prefix inside the oracle path, rather than the path being take
 > switching it off is so far the only measured way to get inside the gate.** Removing the proof
 > clearing is worth ~52,000 and does not change that. R4f is closed; do not spend a build on it.
 
+> **R4c's VERDICT IS INVERTED by R4g's first reading, same day. `no_oracle` is not a proof switch —
+> it selects the RENDERER, and the two scenes are on different ones.**
+>
+> `reloc_backend_renderer_dl.c:12603` enters the **native fighter owner** only when
+> `(detailed_output == FALSE) && (no_oracle != FALSE)`. So the flag chooses between the generic DL
+> interpreter and the specialised native owner that R2-03 spent the campaign building — which is why
+> switching it moved 74.9% of `FTR` and changed the lighting (E48: "flash is a raw vertex colour,
+> **native owner lights it**"; E59: "generic lighting never ran").
+>
+> Where the bracket actually sits, in `reloc_backend_movement.c`:
+>
+> | site | enclosing function | bracketed? |
+> | --- | --- | --- |
+> | `:13597` | `ndsSceneMipCachePresentFrame` | yes (`:13591`/`:13599`) |
+> | `:13669` | `ndsStageGCDrawAllLoopSubmitHardwareFrame` | **no** |
+> | `:13808` | `ndsStageGCDrawAllLoopPresentHardwareFrame` | yes (`:13724`/`:13810`) |
+>
+> The canonical battle present is `taskman_seam.c:4796` →
+> `ndsFighterMarioFoxStageGCDrawAllLoopPresentHardwareFrame` → `:13808`, **inside** the bracket.
+> **Battle already draws its fighters with the native owner.** VS Results reaches
+> `ndsFighterDisplayContractSubmit` through the scene draw with no bracket anywhere on the path, so
+> it draws the same fighters with the **generic interpreter plus oracle** — four times the cost, and
+> lit by a different code path.
+>
+> So R4c is not "trade fighter shading for frame rate". It is **"put Results on the same renderer the
+> match already uses"**, and the shading delta is Results and battle having disagreed all along. That
+> reverses the burden of proof: the question is no longer whether to accept a regression, but which
+> of the two looks is intended — and battle's is the one the campaign optimised, verified and shipped.
+>
+> **Not yet graduated, because the claim is one step short.** The path evidence is code-read, not
+> pixels: nothing here has yet put a native-owner Results fighter beside a native-owner battle
+> fighter and shown they agree. That comparison is confounded by scene lighting (Dream Land versus
+> the Results backdrop), so it needs designing rather than eyeballing. Until then R4c stays `?= 0`
+> and the owner's look at the zoom pair is the fastest route.
+
 Evidence: `artifacts/performance/r4c-fighter-no-oracle-on-20260730.json`,
 `artifacts/visibility/2026-07-30_r207-r4c-results-tic160-candidate.png`,
 `artifacts/visibility/2026-07-30_r207-r4c-diff.png`, and the fighter zoom pair
