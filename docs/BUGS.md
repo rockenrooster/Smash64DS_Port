@@ -77,6 +77,39 @@ These bugs should be fixed for P1 delivery.
   `gNdsIFCommonNativeOamTextureDiscardCount` reads 1. Same class as the prepare
   latch beside it; look for further boot-scoped state guarding scene-scoped
   resources.
+  That search was run 2026-07-31 and found two more, both now cleared in
+  `ndsIFCommonNativeOamDiscardTextures()` alongside the texture names. NOT yet
+  shown to fix the picture -- the line above is the standing warning that firing
+  is not fixing -- but both are defects on their own terms:
+  - `sNdsIFCommonPrepared` / `sNdsIFCommonPreparedFile`. The guard reads
+    `prepared && prepared_file == file_data`, which LOOKS self-invalidating and
+    is why it was passed over: a different asset pointer re-prepares. But
+    pointer identity is not identity across a rewound allocator. The reloc heap
+    is rewound between scenes -- `AdapterCount` 2, recorded above, is the proof
+    -- so the second entry loads the same asset into the same slot, gets the
+    same address, matches the guard, and returns TRUE without re-preparing,
+    after the cloud and traffic atlases it claims are resident have already been
+    released. Clearing it on scene change makes the cache scene-scoped, which is
+    the scope it always needed; inside a scene the pointer compare is still
+    sound because addresses are stable there.
+  - `sNdsTask39HitSparkGfx` and `sNdsTask39HitSparks[]`. Not a texture name at
+    all -- a raw VRAM address, `(u8 *)SPRITE_GFX + vram_cursor`, handed out by
+    the same OBJ VRAM packing that a re-prepare redoes from scratch. Both draw
+    sites (`nds_ifcommon_oam.c:1741`, `:2228`) guard on `!= NULL` only, so a
+    stale pointer is indistinguishable from a live one and the sparks keep
+    sampling whatever now occupies that offset.
+  Falsifiable prediction for the next second-entry run, so this does not get
+  called fixed on a look: `gNdsIFCommonNativeOamPrepareCount` increments only on
+  the prepare MISS path, so before this change it reads 1 after two entries and
+  after it should read 2. If it still reads 1, the latch is not the path being
+  taken and this should be withdrawn rather than argued.
+  Checked and NOT changed: `sNdsRendererSceneMipTextureNames` is the same shape
+  and is not cleared by `ndsRendererHardwareDiscardTextureCache`, but its whole
+  owner is behind `NDS_SCENE_MIP_CACHE_LAB`, which is 0 in the shipping build.
+  Dead code there; do not "fix" it. `sNdsRendererBattleStaticTexturePrepared`,
+  `sNdsRendererHardwareBoundTextureName` and the triangle-batch name are all
+  already cleared by that discard, which the scene path reaches through
+  `ndsRendererHardwareDiscardBattleStaticTextures`.
   Do NOT retry the reboot workaround. Restarting the ARM9 instead of
   re-entering the scene was implemented and measured dead: calico links no
   `svcSoftReset`, bare BIOS `swi #0` is a no-op here (a soak left

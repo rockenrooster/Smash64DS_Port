@@ -1912,6 +1912,33 @@ void ndsIFCommonNativeOamDiscardTextures(void)
     memset(sNdsIFCommonCloudTextureNames, 0,
            sizeof(sNdsIFCommonCloudTextureNames));
     sNdsIFCommonTrafficTextureName = 0u;
+
+    /* The prepare latch, for the same reason and one level up. Its guard reads
+     * `sNdsIFCommonPrepared && sNdsIFCommonPreparedFile == file_data`, which
+     * LOOKS self-invalidating -- it compares the asset pointer, so a different
+     * file re-prepares -- and that is exactly why it survived review. Pointer
+     * identity is not identity across a rewound allocator: the reloc heap is
+     * rewound between scenes (docs/BUGS.md records AdapterCount 2 as the proof),
+     * so the second entry loads the same asset into the same slot, gets the same
+     * address, matches the guard and returns TRUE without re-preparing -- after
+     * ndsRendererHardwareDiscardBattleStaticTextures has already released the
+     * cloud and traffic atlases this latch claims are resident.
+     *
+     * Clearing it here makes the cache scene-scoped, which is the scope it
+     * always needed; within a scene the pointer compare is still valid because
+     * addresses are stable there. */
+    sNdsIFCommonPrepared = FALSE;
+    sNdsIFCommonPreparedFile = NULL;
+    sNdsIFCommonPreparedFileSize = 0u;
+
+    /* And the Task 39 hit-spark sheet, which is not a texture name at all but a
+     * raw VRAM address -- (u8 *)SPRITE_GFX + vram_cursor, handed out by the same
+     * OBJ VRAM packing the prepare above redoes from scratch. Both draw sites
+     * guard on `!= NULL` only, so a stale pointer is indistinguishable from a
+     * live one and the sparks keep sampling whatever now occupies that offset. */
+    memset(sNdsTask39HitSparks, 0, sizeof(sNdsTask39HitSparks));
+    sNdsTask39HitSparkGfx = NULL;
+
     gNdsIFCommonNativeOamTextureDiscardCount++;
 }
 
