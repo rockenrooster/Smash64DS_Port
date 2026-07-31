@@ -228,6 +228,15 @@ try {
         'tbreak scVSBattleStartBattle',
         'continue',
         'printf "SD-STAGE=battle-start\n"',
+        # THE COUNTER THAT SEEDS frame_draw_last. objman.c:1892 initialises it to
+        # `dSYTaskmanFrameCount - 1`, and the measured second-entry value 0xFF is
+        # that expression with the counter at 0, against 0x00 for a counter at 1.
+        # Read at each setup entry, this says whether the two scene entries build
+        # their stage GObjs at a different point in the taskman frame cycle --
+        # which is the difference the arithmetic predicts, and predicting is not
+        # measuring.
+        'printf "SD-M1-FRAMECOUNT=%u\n", dSYTaskmanFrameCount',
+        'printf "SD-M1-UPDATECOUNT=%u\n", dSYTaskmanUpdateCount',
         # ITEM 3 baseline. scVSBattleStartBattle is the exact structural analogue
         # of scVSBattleStartSuddenDeath, and this tbreak lands on entry, so match
         # 1's setup has not allocated yet. Paired with the `timer-live` dump below
@@ -412,6 +421,9 @@ try {
         'tbreak scVSBattleStartSuddenDeath',
         'continue',
         'printf "SD-STAGE=entered\n"',
+        # Same counter at the second entry's setup. Compare against SD-M1-*.
+        'printf "SD-SD-FRAMECOUNT=%u\n", dSYTaskmanFrameCount',
+        'printf "SD-SD-UPDATECOUNT=%u\n", dSYTaskmanUpdateCount',
         'printf "SD-PREPARE-COUNT-AT-ENTRY=%u\n", gNdsSCVSBattleSuddenDeathPrepareCount',
         'printf "SD-ADAPTER-COUNT=%u\n", gNdsSCVSBattleLifecycleArenaAdapterCount',
         # HEAP, MEASURED ON BOTH SIDES OF THE SETUP. Owner: past Sudden Death

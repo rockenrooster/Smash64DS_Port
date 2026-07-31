@@ -376,15 +376,35 @@ These bugs should be fixed for P1 delivery.
     mechanism that can produce both wrong transforms and a different cost. That
     makes it a credible owner of "scrambled stage" *and* of `STG` 2.21x, which
     no previous candidate managed to explain together.
-    **Two things follow, and only the first is measured.** (a) The sampled value
-    survives as its CREATION value, so these five GObjs are not going through
-    the `:3188` writer at all — the DS native/replay path draws them and does
-    not update the field. (b) `0x00` vs `0xFF` is exactly `dSYTaskmanFrameCount
-    - 1` evaluated with the counter at **1** versus at **0**, which would mean
-    the taskman frame counter is at a different phase when the stage GObjs are
-    created on a re-entry. **(b) is arithmetic, not evidence.** Next measurement,
-    and it is cheap: read `dSYTaskmanFrameCount` at stage-GObj creation on both
-    entries and see whether it is 1 then 0. Do not write the cause until it is.
+    **MEASURED, and it refuted my own arithmetic (log `2026-07-31_021151`).**
+    The prediction was that the counter would read **1** at the first setup and
+    **0** at the second. It reads **0 at BOTH** (`dSYTaskmanUpdateCount` 0 at
+    both as well). So the "different phase at creation" story is **WRONG** and
+    is withdrawn. What the same reading establishes instead is stronger:
+    - `0 - 1 = 0xFF`, so **both** entries create these GObjs with `0xFF`. Entry
+      one's `0x00` is therefore NOT the creation value — it is written later, by
+      the per-draw writer at `objdisplay.c:3188` (`frame_draw_last =
+      dSYTaskmanFrameCount`, with the counter 0). My earlier note that these
+      GObjs "never reach `:3188`" was right for entry two and **wrong for entry
+      one**; corrected here.
+    - The counter reads 0 at `battle-start` and **still 0 at `entered`**, an
+      entire match later. The port increments `dSYTaskmanFrameCount` at four
+      sites in `taskman_seam.c` and never resets it, so those sites do not run
+      in the battle loop: **the counter is 0 throughout battle gameplay.**
+    **The comparison therefore collapses to `frame_draw_last != 0`**, and the
+    two entries land on opposite sides of it:
+    ```
+    entry 1  field 0x00  ==  counter 0   ->  proc_same
+    entry 2  field 0xFF  !=  counter 0   ->  proc_diff
+    ```
+    That is a complete mechanism from the measured field value to a different
+    matrix procedure for the whole stage, and it is consistent with every
+    measurement in this row. **Still not measured:** that `proc_diff` is what
+    the screen shows. The open question is now narrow and concrete — **what runs
+    on the first entry that drives these five GObjs through `objdisplay.c:3188`,
+    and why the second entry never does.** Note the decomp's `- 1` seed assumes
+    a counter that advances; in a port where it never does, `0xFF` is
+    permanently "different frame" and only a real generic-path draw corrects it.
   - **The five unreplayed segments are all PRESENT on both entries
     (2026-07-31).** Read at two known-good stops in the Sudden Death lane,
     `timer-live` (entry one) and `running` (entry two), log
