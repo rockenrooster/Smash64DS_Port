@@ -1633,8 +1633,17 @@ These bugs should be fixed for P1 delivery.
   `lbParticleEjectStructID(...->generator_id, 1)`. They are inert ONLY because
   `NDS_R2_PARTICLE_RUNTIME=0` makes the constructor a stub that returns NULL, so
   the `!= NULL` guard skips. **They arm themselves the moment the particle
-  runtime is enabled** -- i.e. the first thing clause 2 does. Null both on stage
-  init as part of turning the runtime on, not afterwards as a bug fix.
+  runtime is enabled** -- i.e. the first thing clause 2 does.
+  FIXED 2026-07-31 (`battleship_grpupupu_ground.c:514-515`, both nulled in
+  `grCommonSetupInitAll` ahead of `ndsBaseGRCommonSetupInitAll`).
+  **CLASSIFICATION, because Boundary green must not be miscounted as
+  qualification: this is a LATENT particle-runtime lifetime fix and it CANNOT
+  explain the current second-entry stage corruption.** With the runtime off the
+  pointers stay NULL and the stale branch is never entered, so a
+  particles-disabled Boundary run proves no-regression only -- it does not
+  exercise the defect being fixed. Qualifying it needs a particle-enabled
+  second-entry run, or a generation assertion at the consumers. Do not cite this
+  fix as progress on the corruption row.
   Surviving and unaddressed from the same diagnosis, in its own priority order:
   the STG cost roughly doubling on entry two (171,328 -> 378,880 vs a measured
   first-entry P95 of 178,560); a same-binary per-segment renderer selector

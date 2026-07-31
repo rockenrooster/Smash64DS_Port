@@ -2118,7 +2118,35 @@ reads, and L7 is a fill inside an existing owner — not a new owner, and not th
 `gmCollisionCheck*` surface.** That is a much smaller change than the paragraph
 above proposed.
 
-**Open, and the next hop: what re-drives the prepare per frame?**
+**RESOLVED 2026-07-31: the three latches are a union with a word, and the port
+already owns the clear.** `FTParts` (`include/ft/fighter.h:409`) declares
+
+```c
+union {
+    struct { u8 unk_dobjtrans_0x4, _0x5, _0x6, _0x7; };
+    s32 unk_dobjtrans_word;
+};
+```
+
+so `parts->unk_dobjtrans_word = 0` clears **all three prepare latches in one
+store**. That is what `ndsFTParamsInvalidateFighterParts`
+(`src/port/reloc_backend_compat_shims.c:1462`) does as it walks the joint tree,
+reached per frame through `ftParamsUpdateFighterPartsTransform` whenever a
+joint's transform changes — and the decomp does the same at `ft/ftparam.c:2183`,
+`:2302`, `:2411`.
+
+All three observations reconcile with no contradiction: the port sets the latches
+at init (one-shot), the word-clear knocks them down per frame when joints move,
+and `func_ovl2_800EDE00` therefore re-runs `gmCollisionSetInvertMatrix` — 34× on
+a hit-detection frame, 0× on a clean one, exactly as L6 measured.
+
+**So L7's hook is `ndsFTParamsInvalidateFighterParts`.** It is port-owned, it is
+per-frame, and it is the precise moment the float path is about to be re-entered
+— which is where the fixed-point fill belongs. Note it clears the word *without*
+dereferencing anything, so the fill must come after, at the point of first use,
+not inside the invalidation walk.
+
+**Superseded — this was the open question, kept for the reasoning:**
 `ndsFighterPartsSyncDObj` is called from `ndsFighterStructPopulateJointsRecurse`
 (`:2043`) and once for the root (`:2084`) — a joint-**population** pass, i.e.
 setup, not per-frame. Nothing in the decomp or the port clears
