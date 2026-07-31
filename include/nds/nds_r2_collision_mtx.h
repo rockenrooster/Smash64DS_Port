@@ -137,8 +137,22 @@ static inline void ndsR2CollisionCompose(NDSR2CollisionMtx *dst,
  * reciprocal is formed at 24 fractional bits and applied as a 20.12 multiply --
  * carrying the extra bits through the divide is what keeps a scale near 1 from
  * losing its low bits twice. */
-static inline int ndsR2CollisionInvert(NDSR2CollisionMtx *dst,
-                                       const NDSR2CollisionMtx *src)
+/* Rows 0-2 of the inverse -- R^-1 alone -- with row 3 carrying the FORWARD
+ * translation t verbatim, copied not computed.
+ *
+ * This is not a matrix and must not be used as one. It is the descriptor
+ * ndsR2CollisionWorldToLocal consumes, and the split is the whole point: the
+ * inverse's translation row is -t.R^-1, and t is a world coordinate in the
+ * hundreds while R^-1 has entries around 1/scale, so forming that product in
+ * 20.12 commits a large intermediate's rounding error to storage, where nothing
+ * later cancels it. Subtracting t from the query point first keeps every
+ * quantity small: p - t is a few units by construction (the point being tested
+ * is near the joint), so it is exact to the quantum, and the single multiply by
+ * R^-1 that follows is the only rounding in the path.
+ *
+ * Returns 0 and leaves dst untouched when src is singular. */
+static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
+                                            const NDSR2CollisionMtx *src)
 {
     const unsigned int shift = NDS_R2_COLLISION_MTX_FRAC_BITS;
     int64_t c[3][3];
@@ -217,35 +231,43 @@ static inline int ndsR2CollisionInvert(NDSR2CollisionMtx *dst,
         }
     }
 
-    /* Translation row: the source forms it from the ORIGINAL translation and
-     * the un-negated cofactors, then negates two of the three results, then
-     * scales the whole matrix. Same order here. */
-    for (col = 0u; col < 3u; col++)
-    {
-        /* Same 24-bit cofactors the 3x3 block above uses. Sharing the
-         * intermediate precision is not an optimisation, it is required:
-         * rounding the two halves differently measured WORSE than rounding
-         * both coarsely (max 3.70 vs 0.45 world units), because the rotation
-         * and the translation stop being a matched pair and their errors no
-         * longer cancel in the transformed point. */
-        int64_t sum = (int64_t)src->m[3][0] * c[0][col] -
-                      (int64_t)src->m[3][1] * c[1][col] +
-                      (int64_t)src->m[3][2] * c[2][col];
-
-        /* sum is 36 fractional bits and can reach ~2^48; recip reaches ~2^30,
-         * so it has to come down before the multiply or the product leaves
-         * int64. Down to 12 first, then the multiply lands back at 12. */
-        sum = ndsR2CollisionRoundShift(sum, shift * 2u);
-        if (col != 1u)
-        {
-            sum = -sum;
-        }
-        out.m[3][col] = ndsR2CollisionClamp(
-            ndsR2CollisionRoundShift(sum * recip, shift * 2u));
-    }
+    /* The forward translation, copied. No arithmetic means no error. */
+    out.m[3][0] = src->m[3][0];
+    out.m[3][1] = src->m[3][1];
+    out.m[3][2] = src->m[3][2];
 
     *dst = out;
     return 1;
+}
+
+/* local = (p - t) . R^-1, the only thing gmcollision.c ever does with the
+ * inverse: gmCollisionGetWorldPosition and gmCollisionTestRectangle both just
+ * carry a world point into the joint's frame. `frame` comes from
+ * ndsR2CollisionInvertFrame.
+ *
+ * Row/column convention is the source's throughout: forward is
+ * world[c] = sum_k local[k]*M[k][c] + M[3][c], so the inverse contracts over
+ * the same index. */
+static inline void ndsR2CollisionWorldToLocal(int32_t out[3],
+                                              const NDSR2CollisionMtx *frame,
+                                              const int32_t p[3])
+{
+    /* Exact: both operands are 20.12 and the difference of two nearby world
+     * points cannot overflow the range that held either of them. */
+    const int32_t d0 = p[0] - frame->m[3][0];
+    const int32_t d1 = p[1] - frame->m[3][1];
+    const int32_t d2 = p[2] - frame->m[3][2];
+    unsigned int col;
+
+    for (col = 0u; col < 3u; col++)
+    {
+        int64_t sum = (int64_t)d0 * frame->m[0][col] +
+                      (int64_t)d1 * frame->m[1][col] +
+                      (int64_t)d2 * frame->m[2][col];
+
+        out[col] = ndsR2CollisionClamp(
+            ndsR2CollisionRoundShift(sum, NDS_R2_COLLISION_MTX_FRAC_BITS));
+    }
 }
 
 #endif /* NDS_R2_COLLISION_MTX_H */

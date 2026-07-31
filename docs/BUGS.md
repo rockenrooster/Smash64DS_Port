@@ -1455,3 +1455,44 @@ These bugs should be fixed for P1 delivery.
   change that found them, because both edits alter the behaviour of already
   shipping translation units and need their own Latest verifier run. Required
   proof: `scripts/check-decomp-header-mirror.py` exits 0, and Latest is green.
+
+-A lab build silently publishes itself over the user ROM, and the runtime
+  verifier then tests the lab artifact instead of the build it just made.
+  Found 2026-07-31 while verifying the particle-runtime work. It cost an hour and
+  produced a false regression report, so the mechanism is written out in full.
+  Mechanism: `Makefile:55` decides publication from the TARGET name alone --
+  `override NDS_PUBLISH_USER_ROM := $(if $(filter $(TARGET),$(NDS_PUBLISHED_TARGETS)),1,0)`
+  -- and `TARGET` defaults to `smash64ds`, which is a published target. So
+  `make BUILD=build-particles-on NDS_R2_PARTICLE_RUNTIME=1` sets
+  NDS_OUTPUT_ROOT to the project root and writes the lab ROM over
+  `smash64ds.nds`. The existing guard at `Makefile:57` only catches a
+  non-published TARGET name; it cannot see a published name paired with a lab
+  BUILD directory. This directly violates AGENTS.md's "all lab outputs stay in
+  `builds/`".
+  Consequence: `scripts/verify-runtime.ps1:23` reads `$root/smash64ds.nds`
+  unconditionally, so the next verifier run tests whatever the last lab build
+  left there. The observed symptom was Latest failing on
+  `TITLE_LOGO_FIRE=0x544c4643,0x1f,3,...` against an expected `0x3f,1` -- the
+  logo-fire boundary reporting a GObj delta of 3 where 1 is correct. That is not
+  a defect: with NDS_R2_PARTICLE_RUNTIME=1 the real `efParticleInitAll` /
+  `efParticleGetLoadBankID` run instead of the shims in
+  `src/port/reloc_backend_compat_shims.c:12861`, and they create GObjs the shims
+  do not. The check is written for the runtime being OFF.
+  Attribution evidence, since the first two readings pointed the wrong way:
+  - The default ROM is byte-reproducible -- two `-B` builds of identical source
+    both give sha256 305ac5b9..., so a hash difference is real signal.
+  - HEAD and HEAD~1 both produce 305ac5b9..., i.e. the particle commit's three
+    header edits do not change the default ROM at all.
+  - The failing ROM was 2c80bb26..., 11,280,384 bytes; the default ROM is
+    11,255,808. The 24,576-byte excess is the particle interpreter and bank.
+  - The rebuilt default ROM passes runtime verification.
+  Fix at the owning seam: publication should require a published TARGET *and*
+  the canonical `BUILD=build`; any other build directory is a lab build and must
+  write into `builds/$(BUILD)`. NOT done here: many harnesses pass `BUILD=$Build`
+  with the default TARGET, so both the erroring form and the silent-reroute form
+  change behaviour across the harness fleet, and the reroute is the worse of the
+  two because a harness that then reads the root ROM would get a stale file
+  rather than an error. That survey wants its own change.
+  Cheaper interim guard, also not done: have `verify-runtime.ps1` refuse to run
+  when the ROM at the root does not match the configuration the profile expects,
+  rather than testing whatever is present.

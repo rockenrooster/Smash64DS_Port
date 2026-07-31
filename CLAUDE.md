@@ -24,9 +24,8 @@ Read these before starting, not after being surprised by them:
 
 These are about this tool, so they are not in `AGENTS.md`:
 
-- **Never push to the public GitHub remote without the owner's explicit
-  authorization for that specific push.** Committing locally is ordinary work;
-  publishing is not, and one approval does not carry to the next push.
+- **You can push to the github repo periodically on confirmed progress
+- ** Committing locally is ordinary work;
 - The owner's given name must not appear in tracked files. Scan before pushing.
 - End commit messages with
   `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.

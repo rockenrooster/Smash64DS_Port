@@ -487,6 +487,8 @@ The honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
    above 30 FPS, so if the real scripts cannot fit, a cheaper source-derived
    approximation with the visible delta recorded is the contract-compliant
    answer.
+4. **Mario CPU vs Fox CPU on Dream Land, Full Match (including Sudden Death)** - 
+   match stress test gameplay start to finish must not exceed 1.12M P95 (minus loading states)
 
 Do **not** resolve any of it by widening the gate. The gate is the product
 contract, and 1.12M is the number `PROJECT_GOAL.md` sets.
