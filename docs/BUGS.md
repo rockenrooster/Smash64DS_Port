@@ -356,8 +356,27 @@ These bugs should be fixed for P1 delivery.
     stage material binding -- while the picture is still visibly different. That
     weight of negative evidence argues the original framing is wrong: **this may
     not be a texture defect at all.**
-    **ANSWERED: IT IS THE CAMERA, AND IT NEVER CONVERGES.** Measured on both
-    sides of the boundary in one run:
+    **WITHDRAWN, one commit later, by my own follow-up: THE CAMERA CONVERGES
+    NORMALLY.** `gmCameraDefaultFuncCamera` runs in Sudden Death, and
+    `target_dist` reads **10000.0 on the first frame and 3996.67 after 120 proc
+    calls** -- essentially match 1's 3937.42. The easing moves 7.5% of the
+    remaining gap per call, so two seconds of proc closes it. The "10000.0
+    exactly" below was sampled at the `running` stage, which is Sudden Death's
+    FIRST frame, before any easing had happened. It was the creation value
+    because nothing had converged *yet*, not because nothing ever would.
+    That is the second wrong causal claim on this symptom in a row -- first
+    textures, then the camera -- both from over-reading a single measurement.
+    **Standing correction for this row: stop proposing causes from the
+    screenshots.** The visible difference is real and reproducible; every
+    mechanism measured so far is clean. What it needs is a properly MATCHED
+    comparison -- same converged camera distance and same scene tick on both
+    entries, the way `compare-capture-pair.ps1` matches Results arms -- not
+    another hypothesis. The watch captures are taken 30-45 s in, long after
+    convergence, so whatever they show is not a camera-distance artifact either.
+
+    **(Withdrawn reasoning below, kept because it is how the camera was
+    measured and because the 10000.0/3937.42 pair is still a useful fact.)**
+    Measured on both sides of the boundary in one run:
 
         match 1        target_dist 3937.42   status 0  fovy 38  vp 300x220
         Sudden Death   target_dist 10000.00  status 0  fovy 38  vp 300x220

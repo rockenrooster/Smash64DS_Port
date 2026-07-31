@@ -27,6 +27,9 @@ param(
     # natural 0-0 tie is the honest reproduction. Needed only when heavy
     # instrumentation slows the build enough to change the match outcome.
     [switch]$ForceTie,
+    # Break on the default camera proc once Sudden Death is live, to settle
+    # whether the convergence that eases target_dist runs there at all.
+    [switch]$ProbeCamera,
     [switch]$DiagnoseHang,
     [ValidateRange(5, 300)][int]$HangSettleSeconds = 45,
     # Owner, 2026-07-30: "420 seconds is way too long, should be 180 secs max."
@@ -341,7 +344,33 @@ try {
         'printf "SD-CHAIN-P2-STATUS=%u\n", gNdsR2ChainProbePass2.status',
         'printf "SD-CHAIN-P2-NODES=%u\n", gNdsR2ChainProbePass2.nodes',
         'printf "SD-DONE=1\n"'
-    ) + $(if ($DiagnoseHang) { @(
+    ) + $(if ($ProbeCamera) { @(
+        # Does the default camera proc -- the only thing that eases target_dist
+        # toward the fighters (decomp gmcamera.c:624 -> :638) -- run at all once
+        # Sudden Death is live? target_dist sits on its creation value of exactly
+        # 10000.0 there against match 1's converged 3937.42, and the port's
+        # gmCameraMakeBattleCamera is a compat shim that installs NO proc, so the
+        # question is which path drives it in match 1 and whether that path
+        # survives the second entry. A breakpoint answers it without guessing.
+        'break gmCameraDefaultFuncCamera',
+        'continue',
+        'printf "SD-CAM-PROC-RAN=1\n"',
+        # Entry value, i.e. BEFORE this call converges anything. Reading only
+        # this was the flaw in the first version of the probe: at a
+        # function-entry breakpoint target_dist is necessarily the pre-call
+        # value, so "still 10000" proved nothing.
+        'printf "SD-CAM-PROC-DIST-FIRST=%f\n", gGMCameraStruct.target_dist',
+        # 120 more calls -- two seconds of proc at 60 Hz. The easing moves 7.5%
+        # of the remaining gap per call, so a converging camera is within a
+        # fraction of a unit of its target long before this; anything still
+        # sitting on 10000.0 here is not converging at all.
+        'ignore $bpnum 120',
+        'continue',
+        'printf "SD-CAM-PROC-DIST-AFTER120=%f\n", gGMCameraStruct.target_dist',
+        'printf "SD-CAM-PROC-DONE=1\n"',
+        'detach',
+        'quit'
+    ) } elseif ($DiagnoseHang) { @(
         # Spend the session on the hang instead of the watch. melonDS's stub
         # serves ONE session per emulation run, so these two uses are mutually
         # exclusive: -DiagnoseHang keeps the core attached and probes it; the
@@ -432,7 +461,9 @@ try {
             }
             # In diagnose mode the run is not over at SD-DONE -- that is where
             # the interesting half starts.
-            $finished = $(if ($DiagnoseHang) { 'SD-DIAG=end' } else { 'SD-DONE=1' })
+            $finished = $(if ($DiagnoseHang) { 'SD-DIAG=end' }
+                          elseif ($ProbeCamera) { 'SD-CAM-PROC-DONE=1' }
+                          else { 'SD-DONE=1' })
             if ($text -match $finished) { break }
         }
         if ($gdbProcess.HasExited) { break }
