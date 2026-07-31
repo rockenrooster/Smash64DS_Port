@@ -1857,6 +1857,20 @@ P95 −12,160 is 2.3× the ±5,376 floor. **P50 +7,040 is against a bit-exact
 change, so it is placement, not work** — the honest reading of a mean that moves
 the wrong way when the arithmetic is provably identical.
 
+**Do not try to make it faster; it is at its safe floor.** E1 noted the residual
+is libnds's `sqrt64` polling (`write / poll-busy / write / poll-busy / read`),
+which invites two "obvious" follow-ups, and both are closed:
+
+- **Use the 32-bit unit instead.** Cannot: `nds_r2_sqrtf.h:69` scales to
+  `mantissa << (odd + 23)` with a 24-bit mantissa, so `scaled` is always in
+  [2^46, 2^48). The 64-bit unit is the only one that can serve it.
+- **Replace the poll with a fixed cycle wait.** This is a *hardware-timing*
+  assumption, and the campaign has no retail-hardware loop to validate it — a
+  delay that is long enough under the accurate melonDS and short on a real DS
+  reads back an incomplete root and silently corrupts a gameplay value.
+  AGENTS.md reserves hardware tests for exactly this, so it stays unbuilt until
+  there is a device to prove it on.
+
 ### R2-07 L9 KEEP — SSB64's own sine table, −37,248 `WORK-H` P95, matched control (2026-07-31)
 
 **The port had `f32 lbCommonSin(f32 a) { return sinf(a); }`.** SSB64 does not
