@@ -1910,6 +1910,29 @@ the proof/counter prefix inside the oracle path, rather than the path being take
 > things remain: one clean battle re-run, and the owner's read on which fighter look is intended. The
 > second is no longer "accept a regression?" but "Results and the match disagree; the match's look is
 > the one the campaign shipped — align them?"
+>
+> **The clean battle re-run is DONE and R4c is safe.** Both arms re-sampled at `-StartFrame 600`, 128
+> samples, same window, so the earlier outlier is out of the comparison:
+>
+> | bucket p95 | control | R4c on |
+> | --- | --- | --- |
+> | `ALL` | 1,680,064 | **1,120,384** |
+> | `WORK` | 1,197,760 | **1,106,112** |
+> | `WORK-H` | 1,071,488 | 1,070,848 |
+> | `FTR` | 390,208 | 391,040 |
+>
+> Every named bucket is flat within noise and `WORK` p95 falls 91,648 — the battle path is not
+> regressed, which is what the save/restore no-op predicted. `FTR` moving +832 is the direct
+> confirmation that battle fighters were already on the native owner and this changes nothing for
+> them. The R4h lab probe has been deleted from `reloc_backend_movement.c` and the Makefile per the
+> no-permanent-probes rule; its findings are recorded here and the flag it proved out stays.
+>
+> **R4c is now one line from graduation and everything measurable about it is green.** What is left is
+> not a measurement: `AGENTS.md` gates rendering-side changes on "synchronized screenshot diffs plus
+> **the owner's visual approval**", and this changes how the fighters look on a milestone screen. The
+> diffs are reported, the pairs are in `artifacts/visibility`, and the question to answer is which of
+> the two fighter looks is intended. On yes: set `NDS_R2_FIGHTER_NO_ORACLE ?= 1`, run Latest, and
+> Results lands at **581,197/tic — 0.52× of the gate**, from 2,814,955 this morning.
 
 Evidence: `artifacts/performance/r4c-fighter-no-oracle-on-20260730.json`,
 `artifacts/visibility/2026-07-30_r207-r4c-results-tic160-candidate.png`,
