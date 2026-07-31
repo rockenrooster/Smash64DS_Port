@@ -1,0 +1,1082 @@
+{
+  "bytes": {
+    "arena_headroom_bytes": 210320,
+    "ds_palette_bytes": 672,
+    "ds_texture_bytes": 82752,
+    "ds_texture_data_bytes": 82176,
+    "estimate_2026_07_27_bytes": 129768,
+    "estimate_2026_07_27_scripts": 26,
+    "estimate_2026_07_27_textures": 18,
+    "index_table_bytes": 1283,
+    "payload_bytes": 93760,
+    "resident_bytes": 95043,
+    "script_bank_bytes": 10912,
+    "source_texture_bytes": 136248,
+    "spare_bytes": 115277
+  },
+  "checksums": {
+    "source_sha256_lo": "0xa2a1e85f",
+    "table_sha256_lo": "0x8db9d3bd"
+  },
+  "reach": {
+    "p1_seams": [
+      "efManagerCatchSwirlMakeEffect",
+      "efManagerDamageCoinMakeEffect",
+      "efManagerDamageElectricMakeEffect",
+      "efManagerDamageFireMakeEffect",
+      "efManagerDamageNormalHeavyMakeEffect",
+      "efManagerDamageNormalLightMakeEffect",
+      "efManagerDamageSlashMakeEffect",
+      "efManagerDamageSpawnMDustRandomMakeEffect",
+      "efManagerDamageSpawnOrbsRandomMakeEffect",
+      "efManagerDamageSpawnSparksRandomMakeEffect",
+      "efManagerDeadExplodeMakeEffect",
+      "efManagerDustExpandSmallMakeEffect",
+      "efManagerFireGrindMakeEffect",
+      "efManagerFlashMiddleMakeEffect",
+      "efManagerFoxReflectorMakeEffect",
+      "efManagerImpactWaveMakeEffect",
+      "efManagerRebirthHaloMakeEffect",
+      "efManagerSetOffMakeEffect",
+      "efManagerShieldMakeEffect",
+      "efManagerSparkleWhiteDeadMakeEffect",
+      "efManagerSparkleWhiteMakeEffect",
+      "efManagerSparkleWhiteScaleMakeEffect"
+    ],
+    "p1_seams_without_bank_scripts": [
+      "efManagerCatchSwirlMakeEffect",
+      "efManagerDamageSlashMakeEffect",
+      "efManagerDamageSpawnMDustRandomMakeEffect",
+      "efManagerDamageSpawnOrbsRandomMakeEffect",
+      "efManagerDamageSpawnSparksRandomMakeEffect",
+      "efManagerFoxReflectorMakeEffect",
+      "efManagerImpactWaveMakeEffect",
+      "efManagerRebirthHaloMakeEffect",
+      "efManagerShieldMakeEffect"
+    ],
+    "packed_textures": [
+      2,
+      5,
+      10,
+      11,
+      13,
+      14,
+      15,
+      18,
+      19,
+      20,
+      21,
+      24,
+      25,
+      28,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      40,
+      41,
+      45
+    ],
+    "reachable_scripts": [
+      5,
+      8,
+      9,
+      10,
+      11,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      85,
+      86,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      100,
+      101,
+      113,
+      114,
+      115
+    ],
+    "seam_helpers": {
+      "efManagerCatchSwirlMakeEffect": [
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageCoinMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageElectricMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageFireMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageNormalHeavyMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageNormalLightMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageSlashMakeEffect": [
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageSpawnMDustRandomMakeEffect": [
+        "efGetStruct",
+        "efManagerDamageSpawnMDustMakeEffect",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageSpawnOrbsRandomMakeEffect": [
+        "efGetStruct",
+        "efManagerDamageSpawnOrbsMakeEffect",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageSpawnSparksRandomMakeEffect": [
+        "efGetStruct",
+        "efManagerDamageSpawnSparksMakeEffect",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDeadExplodeMakeEffect": [
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDustExpandSmallMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerFoxReflectorMakeEffect": [
+        "efGetStruct",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerImpactWaveMakeEffect": [
+        "efGetStruct",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerRebirthHaloMakeEffect": [
+        "efGetStruct",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerSetOffMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerShieldMakeEffect": [
+        "efGetStruct",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectForce",
+        "efManagerSetPrevStructAlloc"
+      ]
+    },
+    "seed_scripts": {
+      "100": [
+        "efManagerDamageNormalHeavyMakeEffect"
+      ],
+      "101": [
+        "efManagerSetOffMakeEffect"
+      ],
+      "11": [
+        "efManagerFireGrindMakeEffect"
+      ],
+      "115": [
+        "efManagerSparkleWhiteMakeEffect"
+      ],
+      "42": [
+        "efManagerDeadExplodeMakeEffect"
+      ],
+      "43": [
+        "efManagerDeadExplodeMakeEffect"
+      ],
+      "44": [
+        "efManagerDeadExplodeMakeEffect"
+      ],
+      "45": [
+        "efManagerDeadExplodeMakeEffect"
+      ],
+      "5": [
+        "efManagerFlashMiddleMakeEffect"
+      ],
+      "60": [
+        "efManagerDeadExplodeMakeEffect"
+      ],
+      "61": [
+        "efManagerDeadExplodeMakeEffect"
+      ],
+      "62": [
+        "efManagerDeadExplodeMakeEffect"
+      ],
+      "63": [
+        "efManagerDeadExplodeMakeEffect"
+      ],
+      "73": [
+        "efManagerDamageNormalLightMakeEffect"
+      ],
+      "74": [
+        "efManagerDamageNormalLightMakeEffect"
+      ],
+      "75": [
+        "efManagerDamageNormalLightMakeEffect"
+      ],
+      "76": [
+        "efManagerDamageNormalLightMakeEffect"
+      ],
+      "77": [
+        "efManagerDamageFireMakeEffect"
+      ],
+      "83": [
+        "efManagerDamageElectricMakeEffect"
+      ],
+      "85": [
+        "efManagerDustExpandSmallMakeEffect"
+      ],
+      "86": [
+        "efManagerDustExpandSmallMakeEffect"
+      ],
+      "91": [
+        "efManagerSparkleWhiteScaleMakeEffect"
+      ],
+      "92": [
+        "efManagerSparkleWhiteDeadMakeEffect"
+      ],
+      "96": [
+        "efManagerDamageCoinMakeEffect"
+      ]
+    },
+    "spawn_edges": {
+      "11": [
+        8,
+        9,
+        10
+      ],
+      "42": [
+        46,
+        47,
+        48,
+        49,
+        50,
+        54
+      ],
+      "43": [
+        46,
+        47,
+        48,
+        49,
+        52,
+        54
+      ],
+      "44": [
+        46,
+        47,
+        48,
+        49,
+        53,
+        54
+      ],
+      "45": [
+        46,
+        47,
+        48,
+        49,
+        51,
+        54
+      ],
+      "60": [
+        47,
+        48,
+        49,
+        54,
+        55,
+        56
+      ],
+      "61": [
+        47,
+        48,
+        49,
+        54,
+        55,
+        58
+      ],
+      "62": [
+        47,
+        48,
+        49,
+        54,
+        55,
+        57
+      ],
+      "63": [
+        47,
+        48,
+        49,
+        54,
+        55,
+        59
+      ],
+      "73": [
+        69,
+        113,
+        114
+      ],
+      "74": [
+        70,
+        113,
+        114
+      ],
+      "75": [
+        71,
+        113,
+        114
+      ],
+      "76": [
+        72,
+        113,
+        114
+      ],
+      "83": [
+        78,
+        79,
+        80,
+        81,
+        82
+      ],
+      "96": [
+        93,
+        94,
+        95
+      ]
+    }
+  },
+  "source": {
+    "script_bank": "efcommon_particle_scb",
+    "script_bank_bytes": 10912,
+    "script_bank_sha256": "4c639924f0c1ce6e4b3d0c5b3d6b49605d237ff7b79816ddd26ff8631ab0eb1d",
+    "script_count": 119,
+    "texture_bank": "efcommon_particle_txb",
+    "texture_bank_sha256": "8bffc07309693cb79b29f4e4d1faf3fd29cb42a115ccb4ae143d9308480bc860",
+    "texture_count": 47
+  },
+  "textures": [
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 1,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 544,
+      "source_format": "I4",
+      "texture": 0,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 1,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 544,
+      "source_format": "I4",
+      "texture": 1,
+      "width": 32
+    },
+    {
+      "ds_bytes": 784,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
+      "frames": 3,
+      "height": 16,
+      "max_error": 14.9333,
+      "mean_error": 1.4096,
+      "packed": true,
+      "source_bytes": 424,
+      "source_format": "I4",
+      "source_graded_alpha": true,
+      "texture": 2,
+      "width": 16
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 1,
+      "height": 16,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 160,
+      "source_format": "I4",
+      "texture": 3,
+      "width": 16
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 1,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 544,
+      "source_format": "I4",
+      "texture": 4,
+      "width": 32
+    },
+    {
+      "ds_bytes": 774,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 3,
+      "frames": 3,
+      "height": 16,
+      "max_error": 2.949,
+      "mean_error": 0.087,
+      "packed": true,
+      "source_bytes": 424,
+      "source_format": "I4",
+      "source_graded_alpha": true,
+      "texture": 5,
+      "width": 16
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 0,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 24,
+      "source_format": "IA4",
+      "texture": 6,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 2,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 1056,
+      "source_format": "I4",
+      "texture": 7,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 1,
+      "height": 16,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 160,
+      "source_format": "I4",
+      "texture": 8,
+      "width": 16
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 1,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 288,
+      "source_format": "IA4",
+      "texture": 9,
+      "width": 16
+    },
+    {
+      "ds_bytes": 3104,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 16,
+      "frames": 3,
+      "height": 32,
+      "max_error": 17.0,
+      "mean_error": 0.8266,
+      "packed": true,
+      "source_bytes": 3112,
+      "source_format": "IA8",
+      "source_graded_alpha": true,
+      "texture": 10,
+      "width": 32
+    },
+    {
+      "ds_bytes": 1040,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
+      "frames": 1,
+      "height": 32,
+      "max_error": 11.0,
+      "mean_error": 0.5113,
+      "packed": true,
+      "source_bytes": 1056,
+      "source_format": "IA8",
+      "source_graded_alpha": true,
+      "texture": 11,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 6,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 12336,
+      "source_format": "RGBA16",
+      "texture": 12,
+      "width": 32
+    },
+    {
+      "ds_bytes": 514,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 1,
+      "frames": 2,
+      "height": 16,
+      "max_error": 4.0,
+      "mean_error": 1.0,
+      "packed": true,
+      "source_bytes": 544,
+      "source_format": "IA8",
+      "source_graded_alpha": true,
+      "texture": 13,
+      "width": 16
+    },
+    {
+      "ds_bytes": 3088,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
+      "frames": 3,
+      "height": 32,
+      "max_error": 17.2078,
+      "mean_error": 2.9111,
+      "packed": true,
+      "source_bytes": 3112,
+      "source_format": "IA8",
+      "source_graded_alpha": true,
+      "texture": 14,
+      "width": 32
+    },
+    {
+      "ds_bytes": 2050,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 1,
+      "frames": 8,
+      "height": 16,
+      "max_error": 5.0,
+      "mean_error": 1.1372,
+      "packed": true,
+      "source_bytes": 4152,
+      "source_format": "IA16",
+      "source_graded_alpha": true,
+      "texture": 15,
+      "width": 16
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 7,
+      "height": 64,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 28728,
+      "source_format": "IA8",
+      "texture": 16,
+      "width": 64
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 10,
+      "height": 64,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 41024,
+      "source_format": "IA8",
+      "texture": 17,
+      "width": 64
+    },
+    {
+      "ds_bytes": 3088,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
+      "frames": 3,
+      "height": 32,
+      "max_error": 19.6,
+      "mean_error": 0.3307,
+      "packed": true,
+      "source_bytes": 3112,
+      "source_format": "IA8",
+      "source_graded_alpha": true,
+      "texture": 18,
+      "width": 32
+    },
+    {
+      "ds_bytes": 1056,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 16,
+      "frames": 1,
+      "height": 32,
+      "max_error": 17.0,
+      "mean_error": 3.0795,
+      "packed": true,
+      "source_bytes": 1056,
+      "source_format": "IA8",
+      "source_graded_alpha": true,
+      "texture": 19,
+      "width": 32
+    },
+    {
+      "ds_bytes": 3088,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
+      "frames": 3,
+      "height": 32,
+      "max_error": 17.2078,
+      "mean_error": 2.9111,
+      "packed": true,
+      "source_bytes": 3112,
+      "source_format": "IA8",
+      "source_graded_alpha": true,
+      "texture": 20,
+      "width": 32
+    },
+    {
+      "ds_bytes": 1040,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
+      "frames": 1,
+      "height": 32,
+      "max_error": 11.0,
+      "mean_error": 0.5113,
+      "packed": true,
+      "source_bytes": 1056,
+      "source_format": "IA8",
+      "source_graded_alpha": true,
+      "texture": 21,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 2,
+      "height": 16,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 288,
+      "source_format": "IA4",
+      "texture": 22,
+      "width": 16
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 4,
+      "height": 48,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 9256,
+      "source_format": "IA8",
+      "texture": 23,
+      "width": 48
+    },
+    {
+      "ds_bytes": 1026,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 1,
+      "frames": 1,
+      "height": 32,
+      "max_error": 1.0,
+      "mean_error": 0.3623,
+      "packed": true,
+      "source_bytes": 2080,
+      "source_format": "IA16",
+      "source_graded_alpha": true,
+      "texture": 24,
+      "width": 32
+    },
+    {
+      "ds_bytes": 1952,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 16,
+      "frames": 15,
+      "height": 16,
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
+      "source_bytes": 2544,
+      "source_format": "CI4",
+      "source_graded_alpha": false,
+      "texture": 25,
+      "width": 16
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 3,
+      "height": 16,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 528,
+      "source_format": "CI4",
+      "texture": 26,
+      "width": 16
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 1,
+      "height": 8,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 128,
+      "source_format": "CI4",
+      "texture": 27,
+      "width": 16
+    },
+    {
+      "ds_bytes": 20496,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
+      "frames": 20,
+      "height": 32,
+      "max_error": 14.149,
+      "mean_error": 0.6879,
+      "packed": true,
+      "source_bytes": 10344,
+      "source_format": "I4",
+      "source_graded_alpha": true,
+      "texture": 28,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 10,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 41024,
+      "source_format": "RGBA32",
+      "texture": 29,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 10,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 20544,
+      "source_format": "IA16",
+      "texture": 30,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 3,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 1680,
+      "source_format": "CI4",
+      "texture": 31,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 2,
+      "height": 16,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 1128,
+      "source_format": "CI4",
+      "texture": 32,
+      "width": 64
+    },
+    {
+      "ds_bytes": 4638,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 15,
+      "frames": 9,
+      "height": 32,
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
+      "source_bytes": 4992,
+      "source_format": "CI4",
+      "source_graded_alpha": false,
+      "texture": 33,
+      "width": 32
+    },
+    {
+      "ds_bytes": 4124,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 14,
+      "frames": 8,
+      "height": 32,
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
+      "source_bytes": 4440,
+      "source_format": "CI4",
+      "source_graded_alpha": false,
+      "texture": 34,
+      "width": 32
+    },
+    {
+      "ds_bytes": 4124,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 14,
+      "frames": 8,
+      "height": 32,
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
+      "source_bytes": 4440,
+      "source_format": "CI4",
+      "source_graded_alpha": false,
+      "texture": 35,
+      "width": 32
+    },
+    {
+      "ds_bytes": 4124,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 14,
+      "frames": 8,
+      "height": 32,
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
+      "source_bytes": 4440,
+      "source_format": "CI4",
+      "source_graded_alpha": false,
+      "texture": 36,
+      "width": 32
+    },
+    {
+      "ds_bytes": 146,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 9,
+      "frames": 1,
+      "height": 16,
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
+      "source_bytes": 192,
+      "source_format": "CI4",
+      "source_graded_alpha": false,
+      "texture": 37,
+      "width": 16
+    },
+    {
+      "ds_bytes": 814,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 23,
+      "frames": 3,
+      "height": 16,
+      "max_error": 15.7098,
+      "mean_error": 0.9279,
+      "packed": true,
+      "source_bytes": 1576,
+      "source_format": "IA16",
+      "source_graded_alpha": true,
+      "texture": 38,
+      "width": 16
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 1,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 544,
+      "source_format": "I4",
+      "texture": 39,
+      "width": 32
+    },
+    {
+      "ds_bytes": 9280,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 32,
+      "frames": 9,
+      "height": 32,
+      "max_error": 31.5333,
+      "mean_error": 1.5354,
+      "packed": true,
+      "source_bytes": 36928,
+      "source_format": "RGBA32",
+      "source_graded_alpha": true,
+      "texture": 40,
+      "width": 32
+    },
+    {
+      "ds_bytes": 3122,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 25,
+      "frames": 3,
+      "height": 32,
+      "max_error": 16.0941,
+      "mean_error": 1.4352,
+      "packed": true,
+      "source_bytes": 6184,
+      "source_format": "IA16",
+      "source_graded_alpha": true,
+      "texture": 41,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 4,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 4136,
+      "source_format": "IA8",
+      "texture": 42,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 1,
+      "height": 32,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 1056,
+      "source_format": "IA8",
+      "texture": 43,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 2,
+      "height": 16,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 544,
+      "source_format": "I8",
+      "texture": 44,
+      "width": 16
+    },
+    {
+      "ds_bytes": 9280,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 32,
+      "frames": 9,
+      "height": 32,
+      "max_error": 36.0,
+      "mean_error": 6.1712,
+      "packed": true,
+      "source_bytes": 36928,
+      "source_format": "RGBA32",
+      "source_graded_alpha": true,
+      "texture": 45,
+      "width": 32
+    },
+    {
+      "ds_bytes": 0,
+      "ds_format": "NONE",
+      "frames": 3,
+      "height": 64,
+      "packed": false,
+      "reason": "not reachable from a P1 effect seam",
+      "source_bytes": 12328,
+      "source_format": "IA8",
+      "texture": 46,
+      "width": 64
+    }
+  ]
+}
