@@ -2124,6 +2124,41 @@ volatile u32 gNdsRendererFastTriangleCount;
 volatile u32 gNdsRendererFastOwnerTriangleCount[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 volatile u32 gNdsRendererFastFallbackCount[3];
+/* R2-07 E2. The two reject-reason encodings already name every way the stage
+ * owner can refuse -- for the owner: 1/2 early bails, 100 the generated segment
+ * 0, 200+run an ApplyStateSpan refusal, 300+run a PrepareRun refusal,
+ * 400+binding, 3/4 the post-loop checks; and inside PrepareRun a further 1..6.
+ * Both were gated on NDS_RENDERER_PROFILE_LEVEL == 1 and the tick-HUD lane is
+ * level 0, so every writer compiled out and --gc-sections dropped the words
+ * entirely (absent from the ELF, which is why the first read printed nothing).
+ *
+ * Let the route probe enable just this encoding rather than raising the profile
+ * level, which would compile in a great deal of unrelated instrumentation and
+ * change what is being measured. Defined HERE, above both writers:
+ * ndsRendererNativeStagePrepareRun precedes the owner by ~2,000 lines, and an
+ * undefined macro in #if evaluates to 0 silently -- those seven sites would
+ * have compiled out with no diagnostic. */
+#define NDS_TASK36_REJECT_TRACE \
+    (NDS_TASK36_HW_COMPOSE && \
+     ((NDS_RENDERER_PROFILE_LEVEL == 1) || NDS_R2_STAGE_ROUTE_PROBE))
+
+#if NDS_R2_STAGE_ROUTE_PROBE && (NDS_RENDERER_PROFILE_LEVEL != 1) && \
+    NDS_TASK36_HW_COMPOSE
+/* The words themselves. Their normal declarations sit inside the level-1
+ * counter block below; declaring just these two keeps the probe from dragging
+ * in the whole block. */
+volatile u32 gNdsRendererTask36RendererRejectReason;
+volatile u32 gNdsRendererTask36PrepareRunRejectReason;
+#endif
+#if NDS_R2_STAGE_ROUTE_PROBE
+/* Cache census at the first texture rejection. See ndsRendererHardwareRejectTexture. */
+volatile u32 gNdsR2TexRejectCensusValid;
+volatile u32 gNdsR2TexRejectCensusFree;
+volatile u32 gNdsR2TexRejectCensusLive;
+volatile u32 gNdsR2TexRejectCensusPinned;
+volatile u32 gNdsR2TexRejectCensusThisFrame;
+volatile u32 gNdsR2TexRejectCensusEvictable;
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
 volatile u32 gNdsRendererM3PreflightAttemptCount;
 volatile u32 gNdsRendererM3PreflightSuccessCount;
@@ -4201,10 +4236,28 @@ typedef struct NDSNativeStageOwnerExecution
      * commit path depends on.
      *
      * Keyed on the frame config and asset bases so a scene reload cannot reuse
-     * a table built against different assets, even though the topology
-     * validation and Task 44's generation compare should both reject first. */
+     * a table built against different assets -- and, since R2-07 E2, on the
+     * topology generation and stamp as well.
+     *
+     * The original key assumed "the topology validation and Task 44's
+     * generation compare should both reject first". Neither did. Re-entering
+     * the SAME stage keeps the config POINTER and every asset base identical
+     * (the bump allocator hands back the same addresses in the same order), so
+     * the key could not see a scene boundary at all: E2 measured
+     * PrepareBuildCount frozen at 2 across the Sudden Death entry while
+     * PrepareReuseCount ran 195 -> 303, i.e. the second scene drew its stage
+     * from run data prepared for the first. That is the whole second-entry
+     * corruption -- the routing arms agree, replay correct / reuse corrupt /
+     * rebuild-from-source correct.
+     *
+     * topology_generation + topology_stamp are the pair the Task 36 replay
+     * owner already keys on, and that owner resets correctly across the entry;
+     * reusing them here makes the two caches invalidate together rather than
+     * leaving this one keyed on quantities a re-entry cannot move. */
     const NDSRendererConfig *r2_prepared_config;
     const void *r2_prepared_asset_bases[NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT];
+    u32 r2_prepared_topology_generation;
+    u32 r2_prepared_topology_stamp;
     u64 r2_prepared_epoch_mask;
     u32 r2_prepared_valid;
     /* R2-02 E8. The one member of `preflight_stats` that outlives the segment
@@ -4368,12 +4421,173 @@ volatile u32 gNdsRendererTask36CaptureOutcome;
     NDS_TASK36_REPLAY_ARENA_STRICT_LEGACY_BLOCKED()
 #endif
 
+#if NDS_R2_STAGE_ROUTE_PROBE
+/* R2-07 E2 -- route each stage segment independently, in ONE binary.
+ *
+ * The second-entry stage corruption has a structural clue nothing else
+ * explains: Task 36 replays segments 0/5/7 and those look right, while the live
+ * path owns 1/2/3/4/6 and those are wrong. That argues against every wholesale
+ * story (asset, camera, projection, every texture) and for something in the live
+ * payload -- but only if the route can actually be moved and the move observed.
+ *
+ * Separately linked A/B ROMs cannot answer it: this ROM's pacing is
+ * cache-placement sensitive, which is already recorded as having confused two
+ * earlier comparisons. Hence a runtime override rather than a build flag.
+ *
+ * `Enable` off means the compile-time mask decides, so the probe build behaves
+ * exactly like the shipping one until gdb writes the variables.
+ *
+ * There are THREE routes here, not two, and the first draft of this probe could
+ * only express two -- which would have made the experiment unfalsifiable. A
+ * segment's preparation can:
+ *
+ *   REPLAY  -- ReplayUsePreparedSegment hits and the segment is skipped on the
+ *              prepare side entirely; commit replays its captured GX stream.
+ *   R2_LIVE -- R2-02 E8's elision: skip the preflight body and reuse the
+ *              memoised prepared-run table built on an earlier frame.
+ *   GENERIC -- run the full preflight body and PrepareRun, rebuilding the run
+ *              table from source data. This is exactly what every segment does
+ *              on the first frame after a config change (r2_reuse == 0), so it
+ *              is a route the shipping binary already takes, not a new one.
+ *
+ * A single replay mask collapses R2_LIVE and GENERIC: with it, "not replay"
+ * always meant "reuse the memo", and the arm that reruns preparation from
+ * source could not be requested at all. Hence force_replay + force_generic,
+ * with anything in neither mask taking R2_LIVE.
+ *
+ * The observed masks exist because a picture change is not evidence the
+ * intended path ran -- set the override wrong and you get a different picture
+ * for the wrong reason. A bit appears in a bucket only when that route was
+ * actually taken for that segment. They are masks, not counters, because this
+ * gate is queried several times per segment per frame and a count would measure
+ * query traffic.
+ *
+ * Mixed catches the failure those three masks would otherwise hide: the gate is
+ * queried from the prepare side and again from the commit side, so a segment
+ * that took REPLAY during preparation and R2_LIVE at commit would show up in
+ * both buckets and read as "engaged" in each. A bit in Mixed means that segment
+ * disagreed with itself within one frame and its arm is void.
+ *
+ * Observed masks are per frame, snapshotted into Last* by BeginFrame. Masks
+ * accumulated from boot would let match one contaminate the second-entry
+ * evidence, and a gdb read landing mid-frame would show a partial one; the
+ * Last* triple is always exactly one completed frame. */
+#define NDS_TASK36_ROUTE_REPLAY 0u
+#define NDS_TASK36_ROUTE_R2_LIVE 1u
+#define NDS_TASK36_ROUTE_GENERIC 2u
+
+volatile u32 gNdsRendererTask36RouteOverrideEnable;
+volatile u32 gNdsRendererTask36RouteForceReplayMask;
+volatile u32 gNdsRendererTask36RouteForceGenericMask;
+volatile u32 gNdsRendererTask36RouteObservedReplayMask;
+volatile u32 gNdsRendererTask36RouteObservedLiveMask;
+volatile u32 gNdsRendererTask36RouteObservedGenericMask;
+volatile u32 gNdsRendererTask36RouteObservedMixedMask;
+volatile u32 gNdsRendererTask36RouteLastReplayMask;
+volatile u32 gNdsRendererTask36RouteLastLiveMask;
+volatile u32 gNdsRendererTask36RouteLastGenericMask;
+volatile u32 gNdsRendererTask36RouteLastMixedMask;
+volatile u32 gNdsRendererTask36RouteFrameCount;
+
+static u32 ndsRendererTask36SegmentRoute(u32 segment_index)
+{
+    const u32 bit = 1u << segment_index;
+    u32 route;
+    u32 others;
+
+    if (gNdsRendererTask36RouteOverrideEnable != 0u)
+    {
+        if ((gNdsRendererTask36RouteForceGenericMask & bit) != 0u)
+        {
+            route = NDS_TASK36_ROUTE_GENERIC;
+        }
+        else if ((gNdsRendererTask36RouteForceReplayMask & bit) != 0u)
+        {
+            route = NDS_TASK36_ROUTE_REPLAY;
+        }
+        else
+        {
+            route = NDS_TASK36_ROUTE_R2_LIVE;
+        }
+    }
+    else
+    {
+        route = (((u32)NDS_TASK36_REPLAY_SEGMENT_MASK & bit) != 0u) ?
+            NDS_TASK36_ROUTE_REPLAY : NDS_TASK36_ROUTE_R2_LIVE;
+    }
+    if (route == NDS_TASK36_ROUTE_REPLAY)
+    {
+        others = gNdsRendererTask36RouteObservedLiveMask |
+                 gNdsRendererTask36RouteObservedGenericMask;
+        gNdsRendererTask36RouteObservedReplayMask |= bit;
+    }
+    else if (route == NDS_TASK36_ROUTE_GENERIC)
+    {
+        others = gNdsRendererTask36RouteObservedReplayMask |
+                 gNdsRendererTask36RouteObservedLiveMask;
+        gNdsRendererTask36RouteObservedGenericMask |= bit;
+    }
+    else
+    {
+        others = gNdsRendererTask36RouteObservedReplayMask |
+                 gNdsRendererTask36RouteObservedGenericMask;
+        gNdsRendererTask36RouteObservedLiveMask |= bit;
+    }
+    if ((others & bit) != 0u)
+    {
+        gNdsRendererTask36RouteObservedMixedMask |= bit;
+    }
+    return route;
+}
+
+static void ndsRendererTask36RouteBeginFrame(void)
+{
+    gNdsRendererTask36RouteLastReplayMask =
+        gNdsRendererTask36RouteObservedReplayMask;
+    gNdsRendererTask36RouteLastLiveMask =
+        gNdsRendererTask36RouteObservedLiveMask;
+    gNdsRendererTask36RouteLastGenericMask =
+        gNdsRendererTask36RouteObservedGenericMask;
+    gNdsRendererTask36RouteLastMixedMask =
+        gNdsRendererTask36RouteObservedMixedMask;
+    gNdsRendererTask36RouteObservedReplayMask = 0u;
+    gNdsRendererTask36RouteObservedLiveMask = 0u;
+    gNdsRendererTask36RouteObservedGenericMask = 0u;
+    gNdsRendererTask36RouteObservedMixedMask = 0u;
+    gNdsRendererTask36RouteFrameCount++;
+}
+
+static s32 ndsRendererTask36ReplaySegmentEligible(u32 segment_index)
+{
+    if (segment_index >= NDS_NATIVE_STAGE_SEGMENT_COUNT)
+    {
+        return FALSE;
+    }
+    return (ndsRendererTask36SegmentRoute(segment_index) ==
+            NDS_TASK36_ROUTE_REPLAY) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererTask36SegmentForcedGeneric(u32 segment_index)
+{
+    if (segment_index >= NDS_NATIVE_STAGE_SEGMENT_COUNT)
+    {
+        return FALSE;
+    }
+    return (ndsRendererTask36SegmentRoute(segment_index) ==
+            NDS_TASK36_ROUTE_GENERIC) ? TRUE : FALSE;
+}
+#else
 static s32 ndsRendererTask36ReplaySegmentEligible(u32 segment_index)
 {
     return ((segment_index < NDS_NATIVE_STAGE_SEGMENT_COUNT) &&
             ((NDS_TASK36_REPLAY_SEGMENT_MASK &
               (1u << segment_index)) != 0u)) ? TRUE : FALSE;
 }
+/* Macros, not empty statics: without the probe nothing else references these
+ * and a static definition would be an unused-function diagnostic. */
+#define ndsRendererTask36RouteBeginFrame() ((void)0)
+#define ndsRendererTask36SegmentForcedGeneric(seg) (((void)(seg)), FALSE)
+#endif
 
 static void ndsRendererTask36ReplayReset(void)
 {
@@ -4419,6 +4633,9 @@ static void ndsRendererTask36ReplayBeginFrame(
     NDSRendererTask36ReplayOwner *owner =
         &sNdsRendererTask36ReplayOwner;
 
+    /* First statement in the frame: every later route query in this frame lands
+     * in the freshly cleared observed masks. */
+    ndsRendererTask36RouteBeginFrame();
 #if NDS_RENDERER_PROFILE_LEVEL == 1
     gNdsRendererTask36ReplaySegmentCount = 0u;
     gNdsRendererTask36ReplayRunCount = 0u;
@@ -11342,6 +11559,54 @@ static void ndsRendererHardwareRejectTexture(NDSRendererStats *stats,
     ndsRendererProfileTextureFormat(
         &gNdsRendererProfileTextureRejectFormatMask, format, size);
     gNdsRendererProfileTextureRejectReasonMask |= reason;
+#elif NDS_R2_STAGE_ROUTE_PROBE
+    /* R2-07 E2. The reason mask is the last link in the chain the probe is
+     * following: owner reject 342 -> PrepareRun reason 2 -> this resolve
+     * refusing. The mask word is already in the ELF; only its writer was gated
+     * on profile level 2, which also drags in the oracle comparisons. Take the
+     * mask alone. */
+    gNdsRendererProfileTextureRejectReasonMask |= reason;
+    /* TEXIMAGE means the eviction retry loop ran out of things to evict, and
+     * that has two very different causes with two different fixes: texture VRAM
+     * genuinely full (bytes), or every cache slot pinned/touched-this-frame so
+     * nothing MAY be evicted (slots). Census the cache at the first rejection
+     * -- first only, because later ones happen after the loop has already
+     * released entries and would describe the aftermath. */
+    if (gNdsR2TexRejectCensusValid == 0u)
+    {
+        u32 census_index;
+
+        gNdsR2TexRejectCensusValid = 1u;
+        for (census_index = 0u;
+             census_index < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT;
+             census_index++)
+        {
+            const NDSRendererHardwareTextureCacheEntry *census_entry =
+                &sNdsRendererHardwareTextureCache[census_index];
+
+            if (census_entry->name == 0)
+            {
+                gNdsR2TexRejectCensusFree++;
+                continue;
+            }
+            gNdsR2TexRejectCensusLive++;
+            if (census_entry->pinned != 0u)
+            {
+                gNdsR2TexRejectCensusPinned++;
+            }
+            else if (census_entry->last_used_frame ==
+                     (sNdsRendererHardwareFrameSerial + 1u))
+            {
+                gNdsR2TexRejectCensusThisFrame++;
+            }
+            else
+            {
+                gNdsR2TexRejectCensusEvictable++;
+            }
+        }
+    }
+    (void)format;
+    (void)size;
 #else
     (void)format;
     (void)size;
@@ -21701,7 +21966,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     u32 task103_run_entry;
     u32 task103_run_mark;
 #endif
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
     gNdsRendererTask36PrepareRunRejectReason = 0u;
 #endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -21718,7 +21983,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     policy = &sNdsNativeStageStatePolicies[run->state_policy];
     if (ndsRendererNativeStagePolicyMatches(policy, stats) == FALSE)
     {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 1u;
 #endif
         return FALSE;
@@ -21737,7 +22002,7 @@ static s32 ndsRendererNativeStagePrepareRun(
         (ndsRendererHardwareResolveStageSourceFrameTexture(
              stats, frame->config, state, &resolved) == FALSE))
     {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 2u;
 #endif
         return FALSE;
@@ -21790,7 +22055,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     if ((first_visit_offset > first_visit_end) ||
         (first_visit_end > NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT))
     {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 3u;
 #endif
         return FALSE;
@@ -21823,7 +22088,7 @@ static s32 ndsRendererNativeStagePrepareRun(
 
         if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
         {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
             gNdsRendererTask36PrepareRunRejectReason = 4u;
 #endif
             return FALSE;
@@ -21883,7 +22148,7 @@ static s32 ndsRendererNativeStagePrepareRun(
 #endif
             if (clip.w == 0)
             {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
                 gNdsRendererTask36PrepareRunRejectReason = 5u;
 #endif
                 return FALSE;
@@ -21929,7 +22194,7 @@ static s32 ndsRendererNativeStagePrepareRun(
 #endif
     if (alpha == UINT_MAX)
     {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 6u;
 #endif
         return FALSE;
@@ -23660,6 +23925,17 @@ static void ndsRendererR2ActorPreparedProof(void)
 }
 #endif
 
+/* The forced-generic route only exists where the Task 36 replay owner does; the
+ * r2_reuse gates below are compiled on NDS_R2_STAGE_DIRECT alone, which is a
+ * wider condition, so they need a definition in both cases. */
+#if NDS_TASK36_HW_COMPOSE == 2
+#define NDS_TASK36_FORCED_GENERIC(seg) \
+    (ndsRendererTask36SegmentForcedGeneric(seg) != FALSE)
+#else
+#define NDS_TASK36_FORCED_GENERIC(seg) (((void)(seg)), 0)
+#endif
+
+
 s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats)
@@ -23677,6 +23953,10 @@ s32 ndsRendererPrepareNativeStageOwner(
      * it after the loop. */
     u32 r2_reuse =
         ((sNdsNativeStageOwnerExecution.r2_prepared_valid != 0u) &&
+         (sNdsNativeStageOwnerExecution.r2_prepared_topology_generation ==
+          frame->topology_generation) &&
+         (sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp ==
+          frame->topology_stamp) &&
          (sNdsNativeStageOwnerExecution.r2_prepared_config == frame->config) &&
          (memcmp(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases,
                  frame->asset_bases,
@@ -23693,7 +23973,7 @@ s32 ndsRendererPrepareNativeStageOwner(
         gNdsR2StagePrepareBuildCount++;
     }
 #endif
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
     u32 task36_reject_reason = 1u;
 
     gNdsRendererTask36RendererRejectReason = 0u;
@@ -23787,7 +24067,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     task103_own_mark = cpuGetTiming();
     gNdsTask103OwnValidateTicks += task103_own_mark - task103_own_entry;
 #endif
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
     task36_reject_reason = 2u;
 #endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -23814,6 +24094,13 @@ s32 ndsRendererPrepareNativeStageOwner(
         const NDSNativeStageSegment *segment =
             &sNdsNativeStageSegments[segment_index];
         u32 binding_offset;
+#if NDS_R2_STAGE_DIRECT
+        /* R2-07 E2. Queried once per segment rather than once per run: the
+         * route is constant across the segment and each query records an
+         * observation, so per-run calls would only add noise. */
+        const s32 segment_forced_generic =
+            NDS_TASK36_FORCED_GENERIC(segment_index) ? TRUE : FALSE;
+#endif
 
 #if NDS_TASK103_STAGE_RUN_PHASE
         task103_own_mark = cpuGetTiming();
@@ -23864,7 +24151,7 @@ s32 ndsRendererPrepareNativeStageOwner(
          * Cost removed, measured on the graduated program: ndsRendererInitStats
          * plus ndsRendererInitTraversalState 13,565 ticks/frame over these five
          * segments, and 21 run-level plus 16 binding-level state spans. */
-        if ((r2_reuse != 0u) &&
+        if ((r2_reuse != 0u) && (segment_forced_generic == FALSE) &&
             (ndsRendererTask36ReplaySegmentEligible(segment_index) == FALSE))
         {
             gNdsR2StagePreflightElideCount++;
@@ -23911,7 +24198,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     &sNdsNativeStageOwnerExecution.preflight_stats,
                     state, &epoch_mask) == FALSE)
             {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
                 task36_reject_reason = 100u;
 #endif
                 goto done;
@@ -23948,7 +24235,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                          &sNdsNativeStageOwnerExecution.preflight_stats,
                          state) == FALSE)
                 {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
                     task36_reject_reason = 200u + run_index;
 #endif
                     goto done;
@@ -23960,7 +24247,8 @@ s32 ndsRendererPrepareNativeStageOwner(
                     u32 prepare_run_start = ndsRendererM3Phase0Tick();
                     s32 prepare_run_result =
 #if NDS_R2_STAGE_DIRECT
-                        (r2_reuse != 0u) ? TRUE :
+                        ((r2_reuse != 0u) &&
+                         (segment_forced_generic == FALSE)) ? TRUE :
 #endif
                         ndsRendererNativeStagePrepareRun(
                         run_index, frame,
@@ -23980,7 +24268,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     }
                     if (prepare_run_result == FALSE)
                     {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
                         task36_reject_reason = 300u + run_index;
 #endif
                         goto done;
@@ -23993,14 +24281,14 @@ s32 ndsRendererPrepareNativeStageOwner(
                 task103_own_mark = cpuGetTiming();
 #endif
 #if NDS_R2_STAGE_DIRECT
-                if (r2_reuse == 0u)
+                if ((r2_reuse == 0u) || (segment_forced_generic != FALSE))
 #endif
                 if (ndsRendererNativeStagePrepareRun(
                         run_index, frame,
                         &sNdsNativeStageOwnerExecution.preflight_stats,
                         state, &epoch_mask) == FALSE)
                 {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
                     task36_reject_reason = 300u + run_index;
 #endif
                     goto done;
@@ -24017,7 +24305,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     frame, &sNdsNativeStageOwnerExecution.preflight_stats,
                     state) == FALSE)
             {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
                 task36_reject_reason = 400u + binding_index;
 #endif
                 goto done;
@@ -24122,7 +24410,7 @@ s32 ndsRendererPrepareNativeStageOwner(
             epoch_mask);
 #endif
     }
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
     task36_reject_reason = 3u;
 #endif
     if ((epoch_mask != (((u64)1u <<
@@ -24138,7 +24426,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     {
         goto done;
     }
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
     task36_reject_reason = 4u;
 #endif
 
@@ -24215,6 +24503,10 @@ s32 ndsRendererPrepareNativeStageOwner(
     /* The table is only publishable as reusable once the whole owner prepare
      * has accepted -- a run that rejected mid-loop leaves runs[] torn. */
     sNdsNativeStageOwnerExecution.r2_prepared_config = frame->config;
+    sNdsNativeStageOwnerExecution.r2_prepared_topology_generation =
+        frame->topology_generation;
+    sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp =
+        frame->topology_stamp;
     memcpy(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases,
            frame->asset_bases,
            sizeof(sNdsNativeStageOwnerExecution.r2_prepared_asset_bases));
@@ -24241,7 +24533,7 @@ done:
             ndsRendererTask36ReplayFinishFrame();
         }
 #endif
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+#if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36RendererRejectReason = task36_reject_reason;
 #endif
         sNdsNativeStageOwnerExecution.stats = NULL;

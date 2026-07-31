@@ -23,6 +23,33 @@ param(
     # to attribute the Sudden Death freeze to the guard rather than to the code
     # placement that adding the guard caused -- two builds cannot separate those.
     [switch]$DisableWalkBound,
+    # R2-07 E2. Route each stage segment at battle start, in the SAME binary, so
+    # the second-entry corruption can be attributed to a route. Needs a ROM built
+    # NDS_R2_STAGE_ROUTE_PROBE=1. There are THREE routes, and the arms need all
+    # three: a segment in neither mask takes R2 live (reuse the memoised prepared
+    # runs), which is NOT the same as GENERIC (rebuild them from source).
+    #
+    #   control    -Replay 0xA1 -Generic 0x00   0/5/7 replay, 1/2/3/4/6 R2 live
+    #   candidate  -Replay 0xA1 -Generic 0x5E   0/5/7 replay, 1/2/3/4/6 generic
+    #   reverse    -Replay 0x00 -Generic 0x00   every segment R2 live
+    #
+    # -1 on BOTH leaves the compile-time mask alone. Passing either one arms the
+    # override, so the other defaults to 0 rather than to the compile-time split.
+    # The run reports which route each segment ACTUALLY took, because setting a
+    # mask wrong also changes the picture and that must not read as a result.
+    [ValidateRange(-1, 255)][int]$StageRouteReplayMask = -1,
+    [ValidateRange(-1, 255)][int]$StageRouteGenericMask = -1,
+    # Step exactly N presented frames past the Sudden Death entry, then shoot and
+    # read the counters at that stop. Everything this bug has compared so far was
+    # taken at whatever moment a wall-clock watch happened to land on, and the
+    # arms do not run at the same speed -- the forced-generic route renders at
+    # ~8 FPS against the control's ~30, so equal wall time is a different game
+    # frame. It also fixes a worse problem: the SD entry breakpoint fires BEFORE
+    # the second scene's first stage prepare, so every counter read there
+    # describes the scene that is ending, not the one being judged.
+    # Frame boundaries, not an `ignore` count: gdb stops once per ignored hit,
+    # which is what makes -MatchedCapture blow its cap.
+    [ValidateRange(0, 600)][int]$SDFrames = 0,
     # Equalise score/falls at the source's own tie check. NOT the default: the
     # natural 0-0 tie is the honest reproduction. Needed only when heavy
     # instrumentation slows the build enough to change the match outcome.
@@ -328,7 +355,15 @@ try {
         'printf "SD-WALK-BOUND-ENABLED=%u\n", gNdsR2MaterialWalkBoundEnabled'
     ) } else { @(
         'printf "SD-WALK-BOUND-ENABLED=%u\n", gNdsR2MaterialWalkBoundEnabled'
-    ) }) + @(
+    ) }) + $(if (($StageRouteReplayMask -ge 0) -or ($StageRouteGenericMask -ge 0)) { @(
+        # The observed masks need no clearing here: the renderer rotates them
+        # into Last* once per frame, so a read is always exactly one completed
+        # frame and match one cannot contaminate match two.
+        "set variable gNdsRendererTask36RouteForceReplayMask = $([Math]::Max($StageRouteReplayMask, 0))",
+        "set variable gNdsRendererTask36RouteForceGenericMask = $([Math]::Max($StageRouteGenericMask, 0))",
+        'set variable gNdsRendererTask36RouteOverrideEnable = 1',
+        'printf "SD-ROUTE-OVERRIDE=%u,replay=%#x,generic=%#x\n", gNdsRendererTask36RouteOverrideEnable, gNdsRendererTask36RouteForceReplayMask, gNdsRendererTask36RouteForceGenericMask'
+    ) } else { @() }) + @(
 
         # Stage 2: past GO, with the countdown live. The condition matters --
         # `ifCommonTimerFuncRun` is a per-frame GObj proc that also runs BEFORE the
@@ -394,7 +429,35 @@ try {
         # sample N the Nth capture of a frame on BOTH arms.
         'tbreak ndsPlatformEndFrame',
         'continue',
-        'printf "SD-M1CAM-ARMED=1\n"'
+        'printf "SD-M1CAM-ARMED=1\n"',
+        # ENTRY-ONE PICTURE, free. R2-07 E2 needs to prove a route renders the
+        # FIRST entry correctly before that route can falsify anything about the
+        # second, and this stop is already exactly where such a shot belongs:
+        # the core is halted at a frame boundary, so the window holds one
+        # complete match-1 frame. It is NOT the -MatchedCapture pair -- that
+        # instrument matches camera DISTANCE and is separately broken
+        # (docs/BUGS.md). This answers the weaker question the routing arms
+        # actually ask: is entry one intact under this route. Its own stage name,
+        # so it cannot collide with -MatchedCapture's arm A.
+        'printf "SD-STAGE=shot-entry1\n"',
+        # Entry-one side of the memo readout below. The pair is what carries the
+        # meaning: a VALID that is already 1 here and still 1 at entry two, with
+        # BUILD unchanged between the two reads, is a memo that outlived the
+        # scene it was built for.
+        'printf "SD-M1-R2-PREPARED-VALID=%u\n", sNdsNativeStageOwnerExecution.r2_prepared_valid',
+        'printf "SD-M1-R2-PREPARED-CONFIG=%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_config',
+        'printf "SD-M1-R2-BUILD=%u\n", gNdsR2StagePrepareBuildCount',
+        'printf "SD-M1-R2-REUSE=%u\n", gNdsR2StagePrepareReuseCount',
+        # WHICH quantities actually move across a scene entry. R2-07 E2 keyed
+        # the memo on topology_generation+stamp because the Task 36 replay owner
+        # keys on them and its picture is correct -- and the rebuild still did
+        # not happen, so that inference was wrong. Print the keys rather than
+        # reason about them: anything equal at both stops cannot invalidate.
+        'printf "SD-M1-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_topology_generation, sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp',
+        'printf "SD-M1-T36-KEY=%u,%#x,state=%u\n", sNdsRendererTask36ReplayOwner.topology_generation, sNdsRendererTask36ReplayOwner.topology_stamp, sNdsRendererTask36ReplayOwner.state',
+        # Entry-one baseline for the texture reject mask: it is cumulative, so
+        # only the bits that are NEW at entry two belong to the second entry.
+        'printf "SD-M1-TEXREJECT=%#x\n", gNdsRendererProfileTextureRejectReasonMask'
     ) + $(1..1 | ForEach-Object { @(
         # CONTROL ARM for the entry-two enumeration. Entry two showed the camera
         # draw running its multi-pass sequence with the 3rd and 4th passes
@@ -552,6 +615,35 @@ try {
         'printf "SD-TEX-TEARDOWNS=%u\n", gNdsRendererBattleStaticTextureTeardownCount',
         'printf "SD-TEX-FAILS=%u\n", gNdsRendererBattleStaticTexturePrepareFailCount',
         'printf "SD-OAM-PREPARE-COUNT=%u\n", gNdsIFCommonNativeOamPrepareCount',
+        # R2-07 E2. Which route each segment ACTUALLY took on this entry, not
+        # which one was requested. The Last* triple is one whole completed frame.
+        # Printed unconditionally: on a probe ROM with no override these show the
+        # compile-time split (replay 0xa1, live 0x5e, generic 0x0) and are the
+        # control reading; on a non-probe ROM the symbols are absent and gdb
+        # skips the line. MIXED must be 0 -- a bit there means that segment took
+        # different routes at prepare and at commit, so its arm is void.
+        'printf "SD-ROUTE-TAKEN=replay=%#x,live=%#x,generic=%#x,mixed=%#x,frames=%u\n", gNdsRendererTask36RouteLastReplayMask, gNdsRendererTask36RouteLastLiveMask, gNdsRendererTask36RouteLastGenericMask, gNdsRendererTask36RouteLastMixedMask, gNdsRendererTask36RouteFrameCount',
+        # R2-07 E2 outcome. The three routing arms all fit ONE story: replay is
+        # correct, R2 live (reuse the memoised prepared runs) is corrupt, and
+        # rebuilding those same segments from source is correct. That names the
+        # memo, so read it. VALID surviving the scene teardown with BUILD not
+        # advancing on this entry means entry two is drawing stage geometry
+        # prepared for entry one -- the reuse test is
+        # r2_prepared_config == frame->config plus an asset_bases memcmp
+        # (nds_renderer.c), neither of which need change across a re-entry.
+        'printf "SD-R2-PREPARED-VALID=%u\n", sNdsNativeStageOwnerExecution.r2_prepared_valid',
+        'printf "SD-R2-PREPARED-CONFIG=%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_config',
+        'printf "SD-R2-BUILD=%u\n", gNdsR2StagePrepareBuildCount',
+        'printf "SD-R2-REUSE=%u\n", gNdsR2StagePrepareReuseCount',
+        'printf "SD-R2-ELIDE=%u\n", gNdsR2StagePreflightElideCount',
+        'printf "SD-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_topology_generation, sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp',
+        # THE THIRD SAMPLE OF A CUMULATIVE MASK. SD-M1-TEXREJECT is read just
+        # after GO and SD-F-TEXREJECT 90 frames into Sudden Death; without a
+        # reading at the END of match one there is no way to tell a
+        # second-entry defect from "match one also exhausts texture VRAM,
+        # later than the first sample". This stop is GAME SET.
+        'printf "SD-ENDM1-TEXREJECT=%#x\n", gNdsRendererProfileTextureRejectReasonMask',
+        'printf "SD-T36-KEY=%u,%#x,state=%u\n", sNdsRendererTask36ReplayOwner.topology_generation, sNdsRendererTask36ReplayOwner.topology_stamp, sNdsRendererTask36ReplayOwner.state',
         'printf "SD-OAM-CLOUD-COUNT=%u\n", gNdsIFCommonNativeOamPrepareCloudTextureCount',
         'printf "SD-OAM-FAILS=%u\n", gNdsIFCommonNativeOamPrepareFailCount',
         # Scene-cache re-entry eviction, split by cause. GEN non-zero means the
@@ -594,7 +686,53 @@ try {
         'printf "SD-CHAIN-P1-STATUS=%u\n", gNdsR2ChainProbePass1.status',
         'printf "SD-CHAIN-P1-NODES=%u\n", gNdsR2ChainProbePass1.nodes',
         'printf "SD-CHAIN-P2-STATUS=%u\n", gNdsR2ChainProbePass2.status',
-        'printf "SD-CHAIN-P2-NODES=%u\n", gNdsR2ChainProbePass2.nodes',
+        'printf "SD-CHAIN-P2-NODES=%u\n", gNdsR2ChainProbePass2.nodes'
+    ) + $(if ($SDFrames -gt 0) { @(
+        # -SDFrames, and it has to sit BEFORE SD-DONE=1: the PowerShell reader
+        # breaks its loop on that marker, so a stage marker emitted after it is
+        # never seen and its screenshot is never taken. gdb keeps executing --
+        # which is why the camera enumeration below still works -- but nothing
+        # downstream can produce a picture.
+        'printf "SD-FRAMESTEP-BEGIN=1\n"'
+    ) + $(1..$SDFrames | ForEach-Object { @(
+        'tbreak ndsPlatformEndFrame',
+        'continue'
+    ) }) + @(
+        # SAME FRAME for the picture and the numbers. The core is halted at a
+        # frame boundary, so the window holds one complete Sudden Death frame and
+        # the counters below describe exactly that frame's preparation.
+        'printf "SD-STAGE=shot-sd2\n"',
+        'printf "SD-F-R2-PREPARED-VALID=%u\n", sNdsNativeStageOwnerExecution.r2_prepared_valid',
+        'printf "SD-F-R2-BUILD=%u\n", gNdsR2StagePrepareBuildCount',
+        'printf "SD-F-R2-REUSE=%u\n", gNdsR2StagePrepareReuseCount',
+        'printf "SD-F-R2-ELIDE=%u\n", gNdsR2StagePreflightElideCount',
+        'printf "SD-F-R2-TOPGEN=%u,%#x\n", sNdsNativeStageOwnerExecution.r2_prepared_topology_generation, sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp',
+        'printf "SD-F-T36-KEY=%u,%#x,state=%u\n", sNdsRendererTask36ReplayOwner.topology_generation, sNdsRendererTask36ReplayOwner.topology_stamp, sNdsRendererTask36ReplayOwner.state',
+        'printf "SD-F-ROUTE=replay=%#x,live=%#x,generic=%#x,mixed=%#x,frames=%u\n", gNdsRendererTask36RouteLastReplayMask, gNdsRendererTask36RouteLastLiveMask, gNdsRendererTask36RouteLastGenericMask, gNdsRendererTask36RouteLastMixedMask, gNdsRendererTask36RouteFrameCount',
+        # WHY the rebuild rejected. task36_reject_reason is already encoded for
+        # exactly this: 1/2 are the early bails, 100 the generated segment 0,
+        # 200+run an ApplyStateSpan failure, 300+run a PrepareRun failure. With
+        # the memo correctly refusing a stale table the second entry now REBUILDS
+        # every frame and every rebuild rejects, so the fallback renderer draws
+        # it -- correct picture, 4x the cost. This says which run refuses.
+        'printf "SD-F-REJECT=%u\n", gNdsRendererTask36RendererRejectReason',
+        'printf "SD-F-REJECT-RUN=%u\n", gNdsRendererTask36PrepareRunRejectReason',
+        # Bit set, from nds_renderer.c:1410 -- 0 MISSING_STATE, 1 BAD_CI_SIZE,
+        # 2 UNSUPPORTED_FORMAT, 3 BAD_DIMENSIONS, 4 BAD_UPLOAD_SIZE,
+        # 5 BAD_SOURCE_RANGE, 6 BAD_SOURCE_BYTES, 7 BAD_SOURCE_PTR, 8 BAD_TLUT,
+        # 9 BAD_TLUT_PTR, 10 ALLOC, 11 GENTEX, 12 TEXIMAGE. Cumulative across
+        # the run, so read it against the entry-one value below, not alone.
+        'printf "SD-F-TEXREJECT=%#x\n", gNdsRendererProfileTextureRejectReasonMask',
+        # Did the second-entry cloud-atlas release actually run? Identical
+        # numbers across two arms are far more often an arm that did not take
+        # than an arm that did nothing.
+        'printf "SD-F-CENSUS=free=%u,live=%u,pinned=%u,thisframe=%u,evictable=%u\n", gNdsR2TexRejectCensusFree, gNdsR2TexRejectCensusLive, gNdsR2TexRejectCensusPinned, gNdsR2TexRejectCensusThisFrame, gNdsR2TexRejectCensusEvictable',
+        'printf "SD-F-CLOUD-RELEASE=%u\n", gNdsIFCommonNativeOamCloudReleaseCount',
+        'printf "SD-F-CLOUD-COUNT=%u\n", gNdsIFCommonNativeOamPrepareCloudTextureCount',
+        'printf "SD-F-FALLBACK=%u\n", gNdsRendererM3PreflightFallbackCount',
+        'printf "SD-F-ATTEMPT=%u\n", gNdsRendererM3PreflightAttemptCount',
+        'printf "SD-FRAMESTEP-DONE=1\n"'
+    ) } else { @() }) + @(
         'printf "SD-DONE=1\n"',
         # IS THE CAMERA CAPTURE CALLED AT ALL ON THE SECOND ENTRY?
         # Entry one demonstrably calls it -- its frame_draw_last reads 0x00,
@@ -845,6 +983,29 @@ try {
                         [void](Save-MelonDSWindowCapture -WindowHandle $window `
                             -Path $script:MatchedShotA -PreferPrintWindow)
                         Write-Host "  matched arm A -> $script:MatchedShotA"
+                    }
+                    # Entry one, every run, halted at a frame boundary. Not the
+                    # matched-distance pair above -- this one exists so a
+                    # routing arm can be shown to render the FIRST entry before
+                    # its second-entry picture is allowed to mean anything.
+                    if (($stage -eq 'shot-entry1') -and
+                        ($window -ne [IntPtr]::Zero)) {
+                        $script:Entry1Shot = Join-Path $logDir `
+                            "$stamp-entry1.png"
+                        [void](Save-MelonDSWindowCapture -WindowHandle $window `
+                            -Path $script:Entry1Shot -PreferPrintWindow)
+                        Write-Host "  entry one -> $script:Entry1Shot"
+                    }
+                    # -SDFrames: N presented frames into Sudden Death, core
+                    # halted at the boundary. This is the frame-matched arm
+                    # comparison; wall-clock watch pictures are not.
+                    if (($stage -eq 'shot-sd2') -and
+                        ($window -ne [IntPtr]::Zero)) {
+                        $script:SDFrameShot = Join-Path $logDir `
+                            "$stamp-sd-frame$SDFrames.png"
+                        [void](Save-MelonDSWindowCapture -WindowHandle $window `
+                            -Path $script:SDFrameShot -PreferPrintWindow)
+                        Write-Host "  SD frame $SDFrames -> $script:SDFrameShot"
                     }
                     if (($stage -eq 'shot-sd') -and
                         ($window -ne [IntPtr]::Zero)) {

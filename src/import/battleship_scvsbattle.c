@@ -222,10 +222,27 @@ void scVSBattleStartBattle(void)
  * `ndsRendererHardwareDiscardTextureCache` clears it when the cache is actually
  * dropped, counting a violation if it was still armed), the cloud prepare
  * early-returns once its texture names are non-zero, and the anim-cache preload
- * only rewinds a cursor. So this is the same call sequence, not a second one. */
+ * only rewinds a cursor. So this is the same call sequence, not a second one.
+ *
+ * R2-07 E2 CORRECTION: "the same call sequence" was true of the calls and false
+ * of their effect, and that gap is the second-entry corruption. The cloud
+ * prepare's early return is exactly the problem -- those three atlas textures
+ * are the only ones that survive `ndsRendererHardwareDiscardTextureCache`, so
+ * the static prepare below frees and re-uploads its 24 pinned textures AROUND
+ * atlas blocks that entry one placed after them. libnds allocates texture VRAM
+ * inside glTexImage2D, so the same bytes in a different order leave the dynamic
+ * stage textures unable to fit: entry one's texture-reject mask is 0, entry
+ * two's is 0x1000 (TEXIMAGE), which fails PrepareRun for run 42 and rejects the
+ * entire native stage owner. The stage then draws from whatever the fallback
+ * has, which is what looked like corrupt geometry.
+ *
+ * Releasing the atlases first makes entry two allocate in entry one's order.
+ * It costs one atlas rebuild per Sudden Death entry, at scene-entry time, which
+ * is the cheap side of the load/gameplay trade this project always takes. */
 void scVSBattleStartSuddenDeath(void)
 {
     ndsBaseSCVSBattleStartSuddenDeath();
+    ndsIFCommonNativeOamReleaseCloudTextures();
     (void)ndsRendererHardwarePrepareBattleStaticTextures();
     (void)ndsIFCommonNativeOamPrepareClouds();
 #if NDS_R2_ANIM_CACHE

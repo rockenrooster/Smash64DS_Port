@@ -77,6 +77,14 @@ NDS_TASK34_STAGE_STREAM_CENSUS ?= 0
 # diffing. Lab-only; built via command line, never in a shipping target.
 NDS_TASK49_GX_DIFFER ?= 0
 NDS_TASK36_HW_COMPOSE ?= 0
+# R2-07 E2. Route each stage segment to Task 36 replay or the live path at
+# RUNTIME, in one binary, so the second-entry corruption can be attributed to a
+# route rather than to a rebuild. Default 0 keeps the shipping build byte-clean;
+# at 1 the gate reads four volatiles that gdb sets, and reports which route each
+# segment actually took so a picture change is checkable rather than assumed.
+# Separately linked A/B ROMs are the wrong instrument here -- this ROM's pacing
+# is cache-placement sensitive and that has already confused two comparisons.
+NDS_R2_STAGE_ROUTE_PROBE ?= 0
 
 # Task 53: default-off re-activation guard for the Task 36 rigid-stage
 # replay path. The robust downward-stepping arena allocator at
@@ -2218,6 +2226,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK34_STAGE_STREAM_CENSUS $(NDS_TASK34_STAGE_STREAM_CENSUS)'; \
 		echo '#define NDS_TASK49_GX_DIFFER $(NDS_TASK49_GX_DIFFER)'; \
 		echo '#define NDS_TASK36_HW_COMPOSE $(NDS_TASK36_HW_COMPOSE)'; \
+		echo '#define NDS_R2_STAGE_ROUTE_PROBE $(NDS_R2_STAGE_ROUTE_PROBE)'; \
 		echo '#define NDS_TASK51_STAGE_NATIVE $(NDS_TASK51_STAGE_NATIVE)'; \
 		echo '#define NDS_DREAMLAND_DS_MESH $(NDS_DREAMLAND_DS_MESH)'; \
 		echo '#define NDS_DREAMLAND_CARD_CULL $(NDS_DREAMLAND_CARD_CULL)'; \

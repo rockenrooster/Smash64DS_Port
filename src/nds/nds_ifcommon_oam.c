@@ -353,6 +353,7 @@ volatile u32 gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[
     NDS_IFCOMMON_OVERLAY_SPEC_COUNT];
 volatile u32 gNdsIFCommonNativeOamHotConvertCount;
 volatile u32 gNdsIFCommonNativeOamTextureDiscardCount;
+volatile u32 gNdsIFCommonNativeOamCloudReleaseCount;
 volatile u32 gNdsIFCommonNativeOamRuntimeUploadBytes;
 volatile u32 gNdsIFCommonNativeOamFrameBeginTicks;
 volatile u32 gNdsIFCommonNativeOamFrameTicks;
@@ -1940,6 +1941,35 @@ void ndsIFCommonNativeOamDiscardTextures(void)
     sNdsTask39HitSparkGfx = NULL;
 
     gNdsIFCommonNativeOamTextureDiscardCount++;
+}
+
+/* R2-07 E2. The cloud and traffic atlases ONLY -- not the prepare latch, and
+ * not the hit-spark OBJ VRAM. ndsIFCommonNativeOamDiscardTextures above is the
+ * scene-teardown form and clears everything; this is the re-entry form, and the
+ * difference matters because ndsIFCommonNativeOamPrepareClouds needs
+ * sNdsIFCommonPrepared and sNdsIFCommonPreparedFile to still hold in order to
+ * rebuild the atlases from the asset it already has.
+ *
+ * Why a second entry needs it: texture VRAM is allocated by libnds inside
+ * glTexImage2D, and these three names are the only textures that survive
+ * ndsRendererHardwareDiscardTextureCache -- PrepareClouds early-returns while
+ * all three are non-zero. So entry one allocates statics first and atlases
+ * after, while entry two frees and re-uploads the 24 statics AROUND atlas
+ * blocks already sitting in the middle of the pool. Same bytes, different
+ * layout, and the dynamic stage textures that fit on entry one no longer fit:
+ * measured as TEXREJECT bit 12 (TEXIMAGE) on the second entry against a mask of
+ * 0 on the first, which fails PrepareRun for run 42 and rejects the whole
+ * native stage owner.
+ *
+ * Releasing them here restores entry one's allocation ORDER, which is what the
+ * allocator actually depends on. */
+void ndsIFCommonNativeOamReleaseCloudTextures(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsIFCommonReleaseCloudAtlases();
+    ndsIFCommonReleaseTrafficAtlas();
+    gNdsIFCommonNativeOamCloudReleaseCount++;
+#endif
 }
 
 void ndsIFCommonNativeOamInit(void)

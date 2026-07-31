@@ -17,6 +17,11 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
                                            size_t file_size);
 s32 ndsIFCommonNativeOamPrepareClouds(void);
 void ndsIFCommonNativeOamDiscardTextures(void);
+/* Re-entry form: the cloud/traffic atlases only, keeping the prepare latch so
+ * ndsIFCommonNativeOamPrepareClouds rebuilds them immediately. See the comment
+ * at its definition for why a second battle entry needs the allocation order
+ * restored rather than just the bytes freed. */
+void ndsIFCommonNativeOamReleaseCloudTextures(void);
 void ndsIFCommonNativeOamBeginFrame(void);
 s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj);
 void ndsIFCommonNativeOamCommit(void);
@@ -47,6 +52,7 @@ extern volatile u32 gNdsIFCommonNativeOamPrepareCloudFailureStage;
 extern volatile u32 gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[16];
 extern volatile u32 gNdsIFCommonNativeOamHotConvertCount;
 extern volatile u32 gNdsIFCommonNativeOamTextureDiscardCount;
+extern volatile u32 gNdsIFCommonNativeOamCloudReleaseCount;
 extern volatile u32 gNdsIFCommonNativeOamRuntimeUploadBytes;
 extern volatile u32 gNdsIFCommonNativeOamFrameBeginTicks;
 extern volatile u32 gNdsIFCommonNativeOamFrameTicks;

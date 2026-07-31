@@ -65,6 +65,71 @@ These bugs should be fixed for P1 delivery.
   picture: `TIME` and `DMG` say which match a capture belongs to.
   What those two captures actually show, which is the original claim: match 1
   renders Dream Land correctly, the second entry does not.
+
+  **2026-07-31 — ROOT CAUSE FOUND, mechanism proven end to end, one blocker
+  left.** R2-07 E2 ran the three-route probe and then followed the failure down.
+  The chain, each link measured rather than inferred:
+
+  1. **Route arms (E1).** Same binary, gdb-written per-segment routing, with
+     observed masks so a picture change is not mistaken for the intended path
+     running, plus a mixed-route assertion (`mixed=0` on every arm — no segment
+     took different routes at prepare and commit).
+     - control `replay=0xa1,live=0x5e` — Sudden Death **corrupt**
+       (`2026-07-31_115635-sudden-death-watch.png`, TIME 01:00 / DMG 300%).
+     - candidate `replay=0xa1,generic=0x5e` (live segments rebuilt from source)
+       — Sudden Death **correct** (`2026-07-31_115419-...-watch.png`).
+     - reverse `replay=0,live=0xff` — **worse**, whole stage a white blowout
+       (`2026-07-31_115755-...-watch.png`). Taking 0/5/7 off replay corrupts
+       them too, so the segment split was never about the segments.
+  2. **The prepared-run cache was stale across the entry.** `PrepareBuildCount`
+     frozen at 2 while `PrepareReuseCount` ran 195 → 303: the second scene drew
+     its stage from run data prepared for the first. Keyed on config pointer +
+     asset bases, both of which a rewound bump allocator reproduces exactly.
+     Fixed by adding `topology_generation` + `topology_stamp` to the key — the
+     pair the Task 36 replay owner already uses. **Verified firing**: BuildCount
+     2 → 92 over 90 Sudden Death frames, `r2_prepared_valid` 0.
+  3. **With the memo refusing correctly, the rebuild REJECTS every frame.**
+     Owner reject `342` = `300 + run_index 42`; inside `PrepareRun`, reason `2`
+     = `ndsRendererHardwareResolveStageSourceFrameTexture` returning FALSE;
+     texture reject mask bit 12 = `TEXREJECT_TEXIMAGE`, i.e. `glTexImage2D`
+     failed and the eviction retry loop gave up.
+  4. **It is texture VRAM bytes, not cache slots.** Census at the first
+     rejection: `free=20, live=28, pinned=24, thisframe=4, evictable=0` against
+     a 48-entry cache. Twenty slots are empty; nothing may be evicted because
+     the 24 static battle textures are pinned and the other four were touched
+     this frame.
+  5. **It is genuinely second-entry-only.** The reject mask is cumulative, so it
+     was sampled three times in one run: `0` after GO, `0` at GAME SET (match
+     one never rejects a texture in its full minute), `0x1000` ninety frames
+     into Sudden Death.
+
+  Net effect today: the second entry **renders correctly** — trunk, canopy,
+  platforms, flowers, background, both fighters
+  (`2026-07-31_125604-sd-frame90.png`) — because the owner falls back to the
+  generic renderer, and the single texture that failed is the pond, which draws
+  untextured white. That is one failed upload producing exactly one wrong
+  surface, which is the chain confirming itself. The cost is the blocker:
+  **4.2 FPS, WORK 5.17M, STG 2.76M**, because the stage rebuilds from source
+  every frame and rejects every frame, so it never publishes and never reuses.
+  E2's other two predictions therefore still FAIL: BuildCount is not one per
+  scene entry, and STG has not returned to ~171–174K.
+
+  **REFUTED along the way, do not retry:** the atlas allocation-order theory.
+  The cloud/traffic atlases are the only textures that survive
+  `ndsRendererHardwareDiscardTextureCache`, so entry two re-uploads its 24
+  statics around blocks entry one placed after them. Releasing them first so
+  entry two allocates in entry one's order (`ndsIFCommonNativeOamReleaseCloud
+  Textures`, kept — it is correct scene-scoping regardless) changed **nothing**:
+  `CLOUD-RELEASE=1`, `CLOUD-COUNT=3`, and TEXIMAGE still fires with identical
+  numbers. Verified the arm took before concluding it did nothing — identical
+  numbers across arms are far more often an arm that did not run.
+  Also ruled out: the scene mip cache (`NDS_SCENE_MIP_CACHE_LAB` is 0 in this
+  build).
+
+  **Open question, and the whole remaining blocker:** what occupies texture VRAM
+  on the second entry that entry one's first full pass did not have to work
+  around. Both entries start their first pass with a discarded cache plus the
+  same 24 pinned statics, yet entry one fits and entry two does not.
   NOT the cause, measured this session: the L9 sine table (corruption is present
   with and without it), and the boot-scoped prepare latches
   (`ndsIFCommonNativeOamDiscardTextures` fires, `SD-OAM-PREPARE-COUNT` 1 -> 2,
