@@ -1793,6 +1793,49 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 COMPLETION SEQUENCE — the phase is mostly CONTENT, not performance (2026-07-31)
+
+Read back from the SwitchPlan's own clause list rather than from the board's
+momentum, because the two had drifted apart. **R2-07 has four clauses and I have
+been working only the fourth.**
+
+| # | clause | state |
+|---|---|---|
+| 1 | START on Results restarts the match | **CLOSED** (BUGS.md row 1) |
+| 2 | particle banks, SFX/voice/BGM, HUD, GAME SET → results flow, with budgets | **OPEN — untouched this session** |
+| 3 | **all P1-scoped rows in `BUGS.md` fixed** | **OPEN — 9 of 10 rows** |
+| 4 | gate: demo loop in budget, battle P95 ≤ 1.12M DLDI-on | OPEN, 1,232,448 (L9+L10 banked, L7 remaining) |
+
+**`BUGS.md` P1 rows, actual status.** One `FIXED`, one part-fixed, eight open —
+and **seven of the ten are VFX/SFX**, which is clause 2 wearing clause 3's
+clothes:
+
+`FIXED` START-restart · **OPEN** rematch drawn wrong (duplicated fighters over
+corrupted stage) · **OPEN** "Time Up" VFX+SFX · **OPEN** Results VFX+SFX/BGM/FGM
+· **OPEN** crowd noise · **OPEN** Sudden Death FPS/freeze/animation · *part*
+wind hazard (gameplay+SFX fixed, **VFX open**) · **OPEN** wrong VFX (foot dust,
+fireball hit, Fox down-B, hard landing) · **OPEN** upward-KO VFX+SFX never play
+· **OPEN** KO VFX wrong.
+
+**The particle-bank branches are INTACT — verified, not assumed.** Both carry
+real work and neither is checked out anywhere:
+
+- `worktree-agent-a15dedc9b2cf19349` — the **generator**: 1,310-line
+  `generate_nds_particle_banks.py`, a 207-line checker, the generated JSON and
+  header. 2,710 insertions over 9 files.
+- `worktree-agent-a8c9ad131bc0073b0` — the **runtime**: 151 files,
+  **46,023 insertions**, including the renderer and taskman seams.
+
+**So the next action is content, not another tick.** Start from those branches —
+the handoff's "do not rewrite" still holds, and 46,023 insertions is not
+something to re-derive. Six of the eight open VFX rows need them.
+
+**Sequence:** clause 2 (particle banks off the two branches, then SFX/BGM rows)
+→ clause 3's non-VFX remainder (rematch corruption, Sudden Death) → clause 4's
+L7 → R2-08 (flip the Boundary, rebuild the published ROMs, owner retail test).
+**Performance is one of four clauses and is the only one with momentum; the
+other three are where the phase actually is.**
+
 ### R2-07 L7a — kernel written, falsifier RED, nothing wired in (2026-07-31)
 
 **`include/nds/nds_r2_collision_mtx.h`** is the 20.12 replacement for
