@@ -1793,6 +1793,62 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 L7 SCOPED — collision recomputes in float what the renderer already has in 20.12 (2026-07-31)
+
+Source reading only, no build spent. Four findings, in the order they change the
+plan:
+
+**1. The redundant-inversion hypothesis is REFUTED.** 34 inversions per frame
+looked like missing memoization. It is not: `FTParts` already carries three
+lazy latches — `transform_update_mode` (local valid), `unk_dobjtrans_0x5` (world
+valid), `unk_dobjtrans_0x7` (inverse valid) — and `func_ovl2_800EDE00`
+(`gmcollision.c:461-473`) skips the inverse whenever `0x7` is set. The latches
+are cleared once per frame, so **34 is 34 distinct joints genuinely needing an
+inverse**, not one joint inverted 34 times. There is no hoist to take, and the
+algorithm is already the cheap general one — a 3×3 cofactor inverse, not a
+solve. **The lever is the arithmetic type, exactly as L6 said, and nothing
+cheaper sits in front of it.**
+
+**2. A PARTIAL conversion is penalised at the boundary.** The obvious small
+first cut — convert only `func_ovl2_800ED490` and `gmCollisionSetInvertMatrix`,
+the two hottest — leaves them reading and writing `Mtx44f`. That is 12 elements
+in and 12 out per call across 74 calls = ~1,776 conversions/frame at ~20-30
+cycles, **~44,000/frame of pure boundary tax against a modelled ~163,000 win**.
+Sizing the two functions from L6's own per-call prices (`fadd` 41.0,
+`__mulsf3` 28.1): `800ED490` is 36 mul + 27 add × 40 calls ≈ 84,744/frame,
+`SetInvertMatrix` ≈ 63,070/frame, plus 37,634 of measured self time.
+**So L7 is a subsystem conversion or it is nothing** — the unit is the joint
+transform representation, not a function.
+
+**3. That unit is SMALL.** `mtx_translate` has **44 references in the entire
+decomp** (gmcollision 14, lbcommon 10, ftmain 6, the rest 1-2 each);
+`unk_dobjtrans_0x10`/`0x9C` add 30, also concentrated in gmcollision. Port side
+is ~66, in four files. **~110 sites total** — a bounded change, not a rewrite.
+
+**4. The fixed-point version ALREADY EXISTS, in the renderer.**
+`ndsRendererAdapterBuildDObjLocalMatrix` (`reloc_backend_renderer_dl.c:1516`)
+builds each joint's local transform straight into `NDSRendererMatrix20p12` and
+**never reads `parts->mtx_translate`** — it derives from the DObj's transform
+components, the same source collision walks. So the port already computes
+fighter joint transforms in 20.12 every frame, with proven helpers
+(`ndsRendererMtxMulAffine20p12`), while collision computes the same shapes again
+in soft-float. L7 should reuse that machinery rather than invent a second
+fixed-point layer.
+
+**What is NOT yet established, and must be L7's first step rather than its
+assumption:** that the two are the same quantity. The renderer composes toward
+a camera-relative MVP and collision needs world; the renderer runs at the 30 Hz
+present while collision runs at the 60 Hz sim (`SRC` accumulates twice per
+presented frame); the populations differ (55 renderer calls vs 40 compositions +
+34 inversions). Verify the local-matrix equality on real joints before any
+sharing is designed — a shared cache built on an unverified equality is the
+Task 36 replay mistake again.
+
+**Equivalence bound is mandatory** (E64b/E65 precedent). Collision decides hits;
+a boundary flip is amplified by damage, knockback, and hitstun. 20.12 gives
+1/4096 resolution against world coordinates in the hundreds, so the bound should
+be stated in world units and hit/no-hit outcome counts, not in ULPs.
+
 ### R2-07 L6 ANSWERED — the excursion is FLOAT COLLISION, and it is a lever (2026-07-31)
 
 **The over-gate frame is a hit-detection frame, and 66.2% of what makes it
