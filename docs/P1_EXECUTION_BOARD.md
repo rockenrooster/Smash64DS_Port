@@ -1883,8 +1883,25 @@ they are missing declarations rather than conflicts:
   the libultra matrix helpers the particle code needs are not reachable from
   this TU.
 - `nds_startup.h:866` `sb32`, `lbcommon.h:43` `alSoundEffect`, then the whole
-  `fighter.h` enum re-declaring — **include-order cascade**, secondary. Fix the
-  two above first and re-read the log; do not chase 800 enum redeclarations.
+  `fighter.h` enum re-declaring — **include-order cascade**, secondary.
+
+**CORRECTION — I had the priority backwards, and the build says so.** I fixed
+the two implicit declarations first (prototypes for the renamed constructors,
+plus `<PR/gu.h>` for `guMtxCatF`/`guMtxIdentF`) and the count went **826 → 836**.
+**Reverted.** The implicit declarations are themselves cascade.
+
+**The root cause is the FIRST error: `nds_startup.h:866` uses `sb32` in a
+prototype, and `sb32` is not defined at that point in this translation unit.**
+`battleship_lbparticle.c:36-40` includes `nds_scene_harness_config.h`,
+`nds_particle_runtime.h` and `nds_startup.h` **before** `lb/library.h` — so it
+is the one TU that reaches `nds_startup.h` with no decomp type header ahead of
+it. Every other TU gets the base types first by accident of include order.
+Nothing caught it because this file has never been compiled.
+
+**Fix the include order (or make `nds_startup.h` self-sufficient in its own
+types, which is the better seam) and re-read the log from the top.** Do not
+start from the implicit declarations again — that experiment is done and it is
+recorded here so the next session does not repeat it.
 
 **So clause 2's remaining work is the import seam for one file**, not the merge
 and not the generated data. **Still not done after that:** the pricing
