@@ -1964,7 +1964,7 @@ been working only the fourth.**
 | 1 | START on Results restarts the match | **CLOSED** (BUGS.md row 1) |
 | 2 | particle banks, SFX/voice/BGM, HUD, GAME SET → results flow, with budgets | **OPEN — untouched this session** |
 | 3 | **all P1-scoped rows in `BUGS.md` fixed** | **OPEN — 9 of 10 rows** |
-| 4 | gate: demo loop in budget, battle P95 ≤ 1.12M DLDI-on | OPEN, 1,232,448 (L9+L10 banked, L7 remaining) |
+| 4 | gate: demo loop in budget, battle P95 ≤ 1.12M DLDI-on | OPEN, **1,147,200** — over by 27,200 (was 112,448); L9+L10+L9b banked, L7 remaining |
 
 **`BUGS.md` P1 rows, actual status.** One `FIXED`, one part-fixed, eight open —
 and **seven of the ten are VFX/SFX**, which is clause 2 wearing clause 3's
@@ -1995,6 +1995,64 @@ something to re-derive. Six of the eight open VFX rows need them.
 L7 → R2-08 (flip the Boundary, rebuild the published ROMs, owner retail test).
 **Performance is one of four clauses and is the only one with momentum; the
 other three are where the phase actually is.**
+
+### R2-07 L7 — kernel GREEN, seam FOUND at the entry surface (2026-07-31, later)
+
+Supersedes the RED status below on both counts.
+
+**Kernel GREEN.** The `(p - t).R^-1` restructure stopped storing `-t.R^-1`, which
+was the amplifier: `t` is a world coordinate in the hundreds and `R^-1` has
+entries around `1/scale`, so forming that product in 20.12 commits a large
+intermediate's rounding error to storage where nothing later cancels it. Matched
+control, same binary and RNG stream, only the kernel swapped:
+
+| domain | before | after |
+|---|---|---|
+| near-unit (0.90–1.10, **gated**) | 0.126987 | **0.016609** |
+| moderate (0.50–1.50, reported) | 0.133385 | 0.051753 |
+| conservative (0.25–2.00, reported) | 0.400510 | 0.427738 |
+| compose (near-unit, gated) | 0.017817 | 0.017817 |
+
+Compose being byte-identical is the control that says the win is the invert path
+and nothing else. Two things that control caught: the figures the header had been
+carrying (0.0226 / 0.3706) were stale from an older revision, and the
+conservative domain got marginally **worse** — at extreme scale spread the
+translation was never the dominant term, so removing it buys nothing there.
+
+**Seam FOUND, and the blocker below was diagnosed at the wrong altitude.** A
+`#define` rename moves a definition and its call sites *together*, so it can add
+a differently-named copy but can never intercept a call made inside the same
+file. All four leaves — `gmCollisionSetInvertMatrix`, `func_ovl2_800ED490`,
+`func_ovl2_800EDE00`, `func_ovl2_800EDE5C` — are called only from within
+`gmcollision.c`. But **every one of the ~20 `gmCollisionCheck*` entry points is
+called from outside**, as are `func_ovl2_800EDBA4` (5 files),
+`func_ovl2_800EE018` (3), `func_ovl2_800EDA0C` (2). L7 is not blocked.
+
+**Do not interpose `func_ovl2_800EDBA4` alone** even though it is the cheapest
+hook: its internal callers `func_ovl2_800EDE00`/`800EDE5C` *are* the
+hit-detection path, so they would keep the float version while external callers
+took fixed point — two writers of `mtx_translate` with different rounding.
+
+Shape: a native owner over the whole `gmCollisionCheck*` surface behind
+`NDS_R2_COLLISION_NATIVE`, decomp retained as oracle, matching R2-03's fighter
+renderer. Nothing exists to extend — `reloc_backend_mp_collision.c` is MAP
+collision (stage geometry), not GM hit detection, and there is no `NDS_R2`
+collision flag family yet.
+
+What makes the restructured kernel legal, verified by reading every consumer
+rather than assuming: `unk_dobjtrans_0x9C` is produced once at
+`gmcollision.c:465` and consumed **only as a point transform** — `:537` via
+`gmCollisionGetWorldPosition`, and `:1396/:1441/:1515/:1549/:1574/:1740/:1774/:1799`
+via `gmCollisionTestRectangle`. It is never composed, never re-inverted, never
+stored onward.
+
+**L7a REFUTED (the `-marm` one), do not retry.** Building
+`battleship_gmcollision.o -marm` — the move worth −511,174 ticks/tic for
+`nds_renderer.o` — measured WORK-H P95 1,147,200 → 1,144,896, i.e. **−2,304**,
+inside the ±5,376 cross-build floor, and `SRC` moved the wrong way by the same
+amount. The renderer's win was SMULL, which ARMv5TE Thumb lacks; `gmcollision.c`
+has no doubles and no unsuffixed literals, so its float work is f32 helper calls
+whose libgcc mode the caller's flag does not change.
 
 ### R2-07 L7a — kernel written, falsifier RED, nothing wired in (2026-07-31)
 
