@@ -2046,6 +2046,35 @@ rather than assuming: `unk_dobjtrans_0x9C` is produced once at
 via `gmCollisionTestRectangle`. It is never composed, never re-inverted, never
 stored onward.
 
+**The hook is probably the latch, not an interposition.** `func_ovl2_800EDE00`
+and `func_ovl2_800EDE5C` are *lazy*: each early-returns when its latch is
+already set —
+
+```c
+if (parts->unk_dobjtrans_0x7 == 0) { ...float work...; parts->unk_dobjtrans_0x7 = 1; }
+```
+
+— and those latches are cleared **only at part creation**
+(`ft/ftmanager.c:264-265`), never per frame by the decomp. So a port-side pass
+that fills `unk_dobjtrans_0x9C` in fixed point and sets the latch *before* the
+decomp's prepare runs makes the float work skip itself, with **every hit-test
+decision left in decomp code**. That is a far smaller change than owning the
+~20 `gmCollisionCheck*` functions, and it cannot alter hit results beyond the
+kernel's proven bound.
+
+**And the port already does exactly this shape.**
+`src/port/reloc_backend_fighter_model.c` owns
+`sNdsFighterPartsPool[GMCOMMON_PLAYERS_MAX][...]` (`:20`, bzero'd `:1463`,
+populated `:1670`), writes `mtx_translate` and `unk_dobjtrans_0x9C`, and sets
+all three latches to 1 — i.e. "already prepared, do not recompute". **Confirm
+whether `ftGetParts` resolves to that pool before designing further**; if it
+does, L7 is a fill in an existing owner rather than a new one.
+
+**Do NOT re-propose sourcing collision's joints from the renderer's 20.12
+pipeline.** R2-04 E57 already refuted it: hitboxes walk the *live* joint chain
+(`gmcollision.c:489`), and the renderer runs at presentation rate, not the 60 Hz
+gameplay rate.
+
 **L7a REFUTED (the `-marm` one), do not retry.** Building
 `battleship_gmcollision.o -marm` — the move worth −511,174 ticks/tic for
 `nds_renderer.o` — measured WORK-H P95 1,147,200 → 1,144,896, i.e. **−2,304**,
