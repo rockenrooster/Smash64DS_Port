@@ -219,6 +219,48 @@ function Invoke-SoakGdb {
     return $null
 }
 
+# DROP THE FIELDS THIS ELF DOES NOT DEFINE, by asking `nm`. The clean-run read
+# puts every field into ONE printf, and gdb fails the whole command on the first
+# unknown symbol -- so a single flag-scoped counter (the particle block, the
+# ledger) silently costs all ~80 readings, which is exactly how a run once
+# printed nothing and read as an emulator hang. A per-flag `if` covers only the
+# flags somebody remembered; this covers all of them, and says what it dropped
+# so an absent counter cannot be mistaken for a zero one.
+#
+# Shared with the freeze capture since 2026-07-31, which is when the particle
+# counters were added there too. It was inline in the clean-run path before
+# that, which is the reason the freeze path had none.
+$script:SoakDefinedSyms = $null
+function Select-SoakSymbols {
+    param(
+        [Parameter(Mandatory=$true, Position=0)][AllowEmptyCollection()][string[]]$Fields,
+        [switch]$Announce
+    )
+
+    if ($null -eq $script:SoakDefinedSyms) {
+        $script:SoakDefinedSyms = @{}
+        $nmTool = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
+        if (Test-Path -LiteralPath $nmTool -PathType Leaf) {
+            foreach ($entry in (& $nmTool --defined-only $elf)) {
+                $parts = ($entry -split '\s+')
+                if ($parts.Count -ge 3) { $script:SoakDefinedSyms[$parts[2]] = $true }
+            }
+        }
+    }
+    if ($script:SoakDefinedSyms.Count -eq 0) {
+        return $Fields
+    }
+    $dropped = @($Fields | Where-Object {
+        $base = ($_ -split '[\.\[]')[0]
+        ($base -match '^[gs]Nds') -and (-not $script:SoakDefinedSyms.ContainsKey($base))
+    })
+    if (($dropped.Count -gt 0) -and $Announce) {
+        Write-Host ('  note: this ROM does not define ' + $dropped.Count +
+                    ' counter(s); dropped ' + ($dropped -join ', '))
+    }
+    return @($Fields | Where-Object { $dropped -notcontains $_ })
+}
+
 $configState = $null
 $emulator = $null
 $samples = @()
@@ -604,32 +646,7 @@ try {
                 'gNdsAllocLedgerUsed',
                 'gNdsAllocLedgerOverflow')
         }
-        # DROP THE FIELDS THIS ELF DOES NOT DEFINE, by asking `nm`. Every field
-        # above goes into ONE printf, and gdb fails the whole command on the first
-        # unknown symbol -- so a single flag-scoped counter (the particle block, the
-        # ledger) silently costs all ~80 readings, which is exactly how a run once
-        # printed nothing and read as an emulator hang. A per-flag `if` covers only
-        # the flags somebody remembered; this covers all of them, and says what it
-        # dropped so an absent counter cannot be mistaken for a zero one.
-        $nmTool = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
-        if (Test-Path -LiteralPath $nmTool -PathType Leaf) {
-            $definedSyms = @{}
-            foreach ($entry in (& $nmTool --defined-only $elf)) {
-                $parts = ($entry -split '\s+')
-                if ($parts.Count -ge 3) { $definedSyms[$parts[2]] = $true }
-            }
-            if ($definedSyms.Count -gt 0) {
-                $dropped = @($cleanFields | Where-Object {
-                    $base = ($_ -split '[\.\[]')[0]
-                    ($base -match '^[gs]Nds') -and (-not $definedSyms.ContainsKey($base))
-                })
-                if ($dropped.Count -gt 0) {
-                    $cleanFields = @($cleanFields | Where-Object { $dropped -notcontains $_ })
-                    Write-Host ('  note: this ROM does not define ' + $dropped.Count +
-                                ' counter(s); dropped ' + ($dropped -join ', '))
-                }
-            }
-        }
+        $cleanFields = Select-SoakSymbols $cleanFields -Announce
         $format = (, '%u' * $cleanFields.Count) -join ','
         # The ROM's own per-iteration sample ring, read in the SAME single stop.
         # A point read of gNdsTickHud*Ticks is ONE frame -- those globals are
@@ -750,7 +767,7 @@ try {
         [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $shot)
         Write-Host "frozen frame saved to $shot"
 
-        $capture = Invoke-SoakGdb -Tag 'freeze' -TimeoutSeconds 120 -Commands @(
+        $capture = Invoke-SoakGdb -Tag 'freeze' -TimeoutSeconds 120 -Commands (@(
             'printf "FREEZE-PC=%p\n", $pc',
             # The whole freeze class is decomp malloc.c:30's `while (TRUE);`, which
             # compiles to a single self-branch. One instruction at the PC therefore
@@ -824,7 +841,25 @@ try {
             ('printf "GFXHEAP=start=%p,ptr=%p,end=%p,used=%d\n", ' +
              'gSYTaskmanGraphicsHeap.start, gSYTaskmanGraphicsHeap.ptr, ' +
              'gSYTaskmanGraphicsHeap.end, (char *)gSYTaskmanGraphicsHeap.ptr - ' +
-             '(char *)gSYTaskmanGraphicsHeap.start'))
+             '(char *)gSYTaskmanGraphicsHeap.start')
+            # The particle counters belong on the FREEZE path too, not only on
+            # the clean-run path they were added to. 2026-07-31: the arena fix
+            # let NDS_R2_PARTICLE_RUNTIME=1 reach the battle and then abort near
+            # ifCommonTrafficMakeSObj, and the one question that capture could
+            # not answer was whether the bank had loaded at all -- because these
+            # are read only when the run does NOT freeze, which is exactly the
+            # run that does not need them. Guarded by the same nm filter, so a
+            # ROM without the runtime prints nothing extra.
+            ) + @(Select-SoakSymbols @(
+                'gNdsParticleBankLoadResult',
+                'gNdsParticleBankScriptsUnpacked',
+                'gNdsParticleBankScriptsRejected',
+                'gNdsParticleScriptStartCount',
+                'gNdsParticleRejectCount',
+                'gNdsParticleStructsLive',
+                'gNdsParticleStructsMax',
+                'gNdsParticleDrawSeamCount') | ForEach-Object {
+                    "printf `"$_=%u\n`", $_" }))
         if ($capture) {
             Write-Host '--- freeze capture'
             Write-Host $capture
