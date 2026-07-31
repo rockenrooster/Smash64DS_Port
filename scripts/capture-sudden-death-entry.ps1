@@ -387,6 +387,13 @@ try {
         'x/40wx gGRCommonStruct.pupupu.map_gobj[3]',
         'x/40wx gGRCommonLayerGObjs[1]',
         'printf "SD-M1B-CONTENT-END\n"',
+        # PHASE ANCHOR. The previous pair started each arm wherever its first
+        # breakpoint happened to land, so the Nth sample meant different passes
+        # on the two sides and the comparison could not separate "different
+        # mask" from "different phase". Stopping at a frame boundary first makes
+        # sample N the Nth capture of a frame on BOTH arms.
+        'tbreak ndsPlatformEndFrame',
+        'continue',
         'printf "SD-M1CAM-ARMED=1\n"'
     ) + $(1..8 | ForEach-Object { @(
         # CONTROL ARM for the entry-two enumeration. Entry two showed the camera
@@ -600,6 +607,9 @@ try {
         # blocks here until the harness timeout, so everything above is already
         # printed and nothing is lost. ARMED without HIT is therefore itself the
         # result: the capture never runs on the second entry.
+        # Same phase anchor on the second entry -- see the entry-one block.
+        'tbreak ndsPlatformEndFrame',
+        'continue',
         'printf "SD-CAMCALL-ARMED=1\n"'
     ) + $(1..8 | ForEach-Object { @(
         # ENUMERATE the capture calls rather than sampling one. The first call

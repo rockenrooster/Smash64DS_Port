@@ -417,12 +417,32 @@ These bugs should be fixed for P1 delivery.
     guess, entry two **does** contain a `0x10` pass (bit 4 — the link carrying
     three of the five stage GObjs), which is precisely the pass the previous
     note predicted would be missing. **That prediction is refuted.**
-    **Next: align the windows before comparing them.** Anchor both arms to the
-    same point in the frame — break at the top of the camera draw, or at
-    `ndsPlatformEndFrame` and then count forward — so the Nth sample means the
-    Nth pass on both sides. An unaligned sequence comparison cannot distinguish
-    "different masks" from "different phase", and this row has already retired
-    three causes built on exactly that error.
+  - **ALIGNED, AND THE CAMERA LEAD IS DEAD (2026-07-31, log
+    `2026-07-31_025047`).** Both arms anchored at `ndsPlatformEndFrame` first,
+    so sample N is the Nth capture of a frame on both sides. The sequences are
+    then **byte-for-byte identical**:
+    ```
+    entry 1  0x2335490,0,0 | 0x2366df0,0x1 | 0x2367020,0x180000 | 0x180000
+             | 0x1ec0 | 0x1ec0 | 0x1ec0 | 0x70000
+    entry 2  (identical, all eight)
+    ```
+    Same cameras, same masks, same tags. **The zero-mask passes in the previous
+    run were a phase artifact, not a defect** — which is exactly what the
+    alignment was there to test. Every camera-side hypothesis in this row is now
+    refuted: the capture runs, with the same objects and the same masks, on both
+    entries.
+    **And the same reading exposes what the window does NOT cover.** Decoding
+    the masks: `0x1ec0` is bits 6,7,9,10,11,12; `0x70000` is bits 16,17,18;
+    `0x180000` is bits 19,20. **Bit 4 appears in none of them** — and
+    `dl_link_id` 4 is where three of the five stage GObjs live. Those three are
+    therefore not captured by any of the eight sampled passes on *either* arm,
+    yet entry one's copies read `frame_draw_last` `0x00`, so the write must
+    happen in a pass beyond the eighth. **Eight samples is less than one
+    frame's worth of captures.**
+    **Next: widen the window until a bit-4 pass appears**, then compare that
+    pass between entries. Until the sampled range contains the pass that
+    actually touches these GObjs, no comparison of this sequence can say
+    anything about them.
     Note also that backtrace frame `#2` named a data symbol
     (`gGMCameraPauseCameraEyeY`), so treat anything past `#1` as unreliable —
     the usual addr2line hazard.
