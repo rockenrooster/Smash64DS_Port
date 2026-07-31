@@ -340,6 +340,21 @@ These bugs should be fixed for P1 delivery.
     `SD-LEDGER-M1BASE-TOTAL=0`. Measuring that was the difference between a
     proof and a coincidence, and the same care is owed to any other counter read
     at two points.
+  - **NEXT HYPOTHESIS, and the probe that did NOT settle it (2026-07-31).**
+    `STG` is **2.21x**, and a doubling has two very different explanations: the
+    stage SUBMITTED TWICE (duplicate GObjs surviving teardown, which would also
+    explain overlapping scrambled geometry) versus the same geometry drawn with
+    wrong bindings. Nine binding-side mechanisms already measured clean, so
+    duplication is the better-supported reading and is what to test first.
+    **Attempted and REMOVED:** reading the geometry engine's own population
+    registers (`0x04000604` polygon, `0x04000606` vertex) in the matched-capture
+    arms. Both read **0** — at the camera-proc stop AND at `ndsPlatformEndFrame`
+    — alongside `STG=0`, so neither point samples a frame whose geometry is
+    still resident (presumably cleared by the buffer swap). Removed rather than
+    left in as an unverified diagnostic. **A working version needs a stop proven
+    to be inside a drawn frame before the swap; validate it by first getting a
+    NON-zero `STG` there**, since `STG` failed together with the registers and
+    is the cheaper canary.
   - **REMATCH SECOND ENTRY REPRODUCED WITH A MATCHED SCREENSHOT PAIR
     (2026-07-31), and the fixes so far do NOT close it.** Two soak runs on the
     same ROM, same build, same configuration, differing only in when START was
