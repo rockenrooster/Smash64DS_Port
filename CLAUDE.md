@@ -31,6 +31,18 @@ These are about this tool, so they are not in `AGENTS.md`:
   `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
 - `.codegraph/` exists here, so the CodeGraph section of `AGENTS.md` applies:
   reach for `codegraph_explore` before grep or Read.
+- **Fifteen `smash64ds-*` skills own the DS subsystems.** The canonical text is
+  `.agents/skills/<name>/SKILL.md` (harness-neutral, with its `references/` and
+  `agents/openai.yaml`); `.claude/skills/<name>/SKILL.md` is a one-paragraph
+  bridge that points at it. Edit the canonical file, never the bridge, and never
+  fork a Claude-specific copy. `smash64ds-route-ds-subsystems` is the entry
+  point when a task spans subsystems or a performance report needs triage.
+  `python scripts/validate-smash64ds-skills.py` checks that every canonical
+  skill has a matching bridge; nothing runs it automatically, so run it after
+  adding or renaming one. Both trees are tracked — `.gitignore` excludes the
+  *contents* of `/.agents/` and `/.claude/` precisely so `skills/` can be
+  re-included, because a gitignored skill set silently disappears in a fresh
+  clone and in every worktree.
 - Prefer the Bash tool for POSIX scripts and PowerShell for the `scripts/*.ps1`
   harnesses. Editing a `.ps1` with Python heredocs or `\n` escapes has corrupted
   these files more than once — CRLF plus PowerShell quoting do not survive it.

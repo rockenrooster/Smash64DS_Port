@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit DS Subsystem Change"
+  short_description: "Review a low-level DS patch for correctness, performance evidence, and project fit."
+  default_prompt: "Use $smash64ds-audit-ds-subsystem-change for this Smash64DS_Port task."

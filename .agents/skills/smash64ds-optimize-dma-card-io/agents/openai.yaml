@@ -1,0 +1,4 @@
+interface:
+  display_name: "Optimize DMA and Card I/O"
+  short_description: "Optimize DS transfers, cache coherency, NitroFS reads, streaming, and load spikes."
+  default_prompt: "Use $smash64ds-optimize-dma-card-io for this Smash64DS_Port task."

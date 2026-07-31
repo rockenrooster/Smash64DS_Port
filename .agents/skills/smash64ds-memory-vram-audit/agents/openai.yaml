@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit Memory and VRAM"
+  short_description: "Audit a measured memory/VRAM/transfer blocker with byte, lifetime, and bank evidence."
+  default_prompt: "Use $smash64ds-memory-vram-audit on this memory problem."
