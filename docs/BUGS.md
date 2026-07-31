@@ -258,6 +258,27 @@ These bugs should be fixed for P1 delivery.
     `make`, and then READS THE GENERATED HEADER BACK and throws if the ROM is not
     the configuration that was asked for. Naming a build directory after a flag
     is not the same as setting it, and only the header knows which happened.
+  - RUN 2026-07-30 with the fix, and it changes what is blocking. The soak built
+    both-CPU (header readback passed), published no controller input at all
+    (`gNdsControllerReadCount 0`, `gNdsControllerPublishSuppressedCount 1516`),
+    ran a full CPU-vs-CPU minute, and reached Results --
+    `gNdsVSResultsStartCount 1`. But `gNdsSCVSBattleSuddenDeathPrepareCount`
+    is still **0**: the match ended DECISIVELY, so there was no tie and no Sudden
+    Death. The flag fix was necessary and is not sufficient. **A passive soak
+    cannot force a tie**, so Sudden Death has no deterministic entry today and
+    every "Sudden Death soak" before this one was doubly incapable of reaching
+    it.
+  - Owning-seam next step, and it mirrors what already worked for Results: give
+    Sudden Death a **seeded harness mode**, the way
+    `ndsSceneHarnessSeedResultsPlayableDefaults` seeds a finished match for
+    `results_playable` (mode 164). A `sudden_death_playable` mode that seeds the
+    tie and boots straight into the second battle scene turns a non-deterministic
+    multi-minute wait into a seconds-long iteration, which is exactly what made
+    the Results work tractable. Until that exists, the FPS/freeze/animation
+    symptoms in this row cannot be reproduced on demand.
+  - Also seen in that run, unrelated to Sudden Death and unowned:
+    `gNdsR2AnimCacheArenaOverflows 109` with `gNdsR2AnimCacheRejects 109`, and
+    `gNdsTaskmanArenaAllocFailCount 26`.
   - FGM 514 remains absent from the DS FGM selector/pack. That explains the
     missing announcer voice but cannot cause the render corruption or freeze.
   - Proposed owning-seam fix: explicitly invalidate the R2 animation cache at
