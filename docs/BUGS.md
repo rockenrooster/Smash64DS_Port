@@ -275,7 +275,19 @@ These bugs should be fixed for P1 delivery.
     tie and boots straight into the second battle scene turns a non-deterministic
     multi-minute wait into a seconds-long iteration, which is exactly what made
     the Results work tractable. Until that exists, the FPS/freeze/animation
-    symptoms in this row cannot be reproduced on demand.
+    symptoms in this row cannot be reproduced on demand. **And the seeded mode is not
+    a copy of the Results one**: Results is its own scene kind
+    (`nSCKindVSResults`), so `results_playable` can simply boot into it. Sudden
+    Death is NOT a distinct scene kind -- it is `nSCKindVSBattle` re-entered with
+    `dSCVSBattleTaskmanSetup.func_start` remapped to `scVSBattleStartSuddenDeath`
+    (`scvsbattle.c:540-546`), decided at match END by
+    `scVSBattleSetScoreCheckSuddenDeath` (`:228`), which requires
+    `SCBATTLE_GAMERULE_TIME` and compares `tko = score - falls` between players.
+    So a `sudden_death_playable` mode has to boot into VSBattle with the sudden
+    death setup already applied, not boot into a "Sudden Death scene"; seeding a
+    tied `SCPlayerData` alone does nothing at boot, because nothing evaluates the
+    tie until a match ends. Getting that wrong yields a scene that looks like
+    Sudden Death and is really just a second battle.
   - Also seen in that run, unrelated to Sudden Death and unowned:
     `gNdsR2AnimCacheArenaOverflows 109` with `gNdsR2AnimCacheRejects 109`, and
     `gNdsTaskmanArenaAllocFailCount 26`.
