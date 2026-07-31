@@ -449,13 +449,39 @@ wrong thing and would block a correct switch indefinitely.
   standing "never launch the five-minute configuration" rule in `AGENTS.md`;
   it applies to this gate only, not to routine iteration.
 
-**Budget reality (updated 2026-07-31).** The cosmetic budget is the measured
-margin, and in the canonical DLDI-on configuration that margin is currently
-**negative**: `WORK-H` P95 1,232,448 against 1,120,000, so **over by 112,448**
-with 89 of 567 frames at three VBlanks. **It is NOT "owned entirely by
-asset-load frames"** — that reading came from a run total and L2/L6 refuted it
-(see Status); the over-gate frame is a hit-detection frame and the lever is
-R2-07 L7. Clean frames still sit ~63K under gate. So the
+**Budget reality (re-measured 2026-07-31, after L9/L10/L9b).** The cosmetic
+budget is the measured margin, and in the canonical DLDI-on configuration that
+margin is still **negative** — but by far less than the figure this paragraph
+used to carry:
+
+| | previous | now (`git=cc5bc2ff967`, `dldi=ON`) |
+|---|---|---|
+| `WORK-H` P95 | 1,232,448 | **1,147,200** |
+| over 1,120,000 by | 112,448 | **27,200** |
+| VBlank intervals | 89 of 567 at three | 2:382 3:76 4:9 5+:4, max 20, 471 total, slips=0 |
+
+L9 (SSB64's sine table), L10 (the hardware square root) and L9b (deleting the
+duplicate sine table L9 had added) together took **−85,248**, which is 76% of
+the old gap. **Re-measure before pricing anything against this number**; three
+changes landed between the two readings and the older one is quoted all over
+this file's history.
+
+**The over-gate population is NOT "owned entirely by asset-load frames"** —
+that reading came from a run total and L2/L6 refuted it (see Status); the
+over-gate frame is a hit-detection frame and the lever is R2-07 L7. The same
+census says so directly: `SRC` runs P50 268,608 against P95 521,280, a 1.94
+spread and a 252,672 excursion above its own median, while `FTR` sits at 1.01
+and `STG` at 1.05. That excursion is the shape of the over-gate frame, and it is
+where L7 applies.
+
+L7's kernel is now **GREEN** on its falsifier (2026-07-31: 0.016609 against the
+0.0200 bound, from 0.126987, via the `(p - t).R^-1` restructure that stops
+storing `-t.R^-1`). At ~238,000 cycles/frame it is worth roughly 119,000 ticks
+against a 27,200 gap, so **L7 alone should close it with room** — but it is not
+wired in, and wiring is the hard half: the kernel no longer produces a matrix,
+so `unk_dobjtrans_0x9C` and every consumer of it have to change together.
+
+Clean frames still sit under gate. So the
 particle work — a 2,961-line bytecode interpreter (`lb/lbparticle.c`) plus
 `ef/efparticle.c`, `ef/efdisplay.c`, a DS pack step and textured-quad draws —
 must be priced against the clean-frame margin, and the load-elimination work
