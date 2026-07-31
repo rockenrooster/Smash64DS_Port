@@ -287,6 +287,13 @@ try {
         'printf "SD-OAM-PREPARE-COUNT=%u\n", gNdsIFCommonNativeOamPrepareCount',
         'printf "SD-OAM-CLOUD-COUNT=%u\n", gNdsIFCommonNativeOamPrepareCloudTextureCount',
         'printf "SD-OAM-FAILS=%u\n", gNdsIFCommonNativeOamPrepareFailCount',
+        # Scene-cache re-entry eviction, split by cause. GEN non-zero means the
+        # heap-generation contract caught the re-entry that the cursor test was
+        # missing; RANGE non-zero would mean a file left the live region without
+        # a rewind.
+        'printf "SD-RELOC-EVICT=%u\n", gNdsRelocSceneReentryEvictCount',
+        'printf "SD-RELOC-EVICT-GEN=%u\n", gNdsRelocSceneReentryGenerationEvictCount',
+        'printf "SD-RELOC-EVICT-RANGE=%u\n", gNdsRelocSceneReentryRangeEvictCount',
         'printf "SD-WALK-BOUND-HITS=%u\n", gNdsR2MaterialWalkBoundHits',
         'printf "SD-CHAIN-PROBES=%u\n", gNdsR2ChainProbeCount',
         'printf "SD-CHAIN-INVALID=%u\n", gNdsR2ChainProbeInvalidCount',

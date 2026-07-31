@@ -620,6 +620,14 @@ static NDSRelocNormalizedMObjSub
 static u32 sNdsRelocNormalizedMObjSubCount;
 static u32 sNdsRelocOwnerScene = NDS_RELOC_ASSET_INVALID;
 static u32 sNdsRelocSceneGeneration;
+/* The taskman-heap generation the resident reloc set was established under.
+ * Ownership authority for the scene cache; see ndsRelocPrepareSceneCache. */
+static u32 sNdsRelocResidentHeapGeneration;
+/* Split so the two eviction causes are never conflated. The generation count
+ * should be non-zero on any run that re-enters a scene (Sudden Death,
+ * rematch); a zero there means this contract never engaged. */
+volatile u32 gNdsRelocSceneReentryGenerationEvictCount;
+volatile u32 gNdsRelocSceneReentryRangeEvictCount;
 static LBFileNode *sNdsRelocStatusBuffer;
 static s32 sNdsRelocStatusBufferCount;
 static s32 sNdsRelocStatusBufferMax;
@@ -2085,15 +2093,43 @@ static void ndsRelocPrepareSceneCache(void)
         const u8 *heap_cursor = (const u8 *)gSYTaskmanGeneralHeap.ptr;
         sb32 resident_is_stale = FALSE;
 
-        for (i = 0; i < sNdsRelocLoadedFileCount; i++)
+        /* THE HEAP GENERATION IS THE AUTHORITY, not the cursor.
+         *
+         * The cursor test below was this guard's original re-entry fix, and it
+         * is unsound for the same reason it was unsound in the animation cache:
+         * a rewind does not move our data, it moves the CURSOR, and the new
+         * scene's own allocations push that cursor straight back past the stale
+         * files. Every one of them is then inside [start, cursor) again, the
+         * scan finds nothing, and this function early-returns having evicted
+         * nothing, discarded no texture keys or OAM names, and never advanced
+         * sNdsRelocSceneGeneration. Whether it fires is a race between when
+         * this runs and how much the new scene has allocated -- which is why
+         * the symptom is intermittent and why it presents as wrong textures on
+         * a second entry rather than as a crash.
+         *
+         * gNdsTaskmanHeapGeneration cannot be raced: it is bumped at the two
+         * primitives that rewind the heap, before any new-scene allocation. */
+        if (sNdsRelocResidentHeapGeneration != gNdsTaskmanHeapGeneration)
         {
-            const u8 *data = (const u8 *)sNdsRelocLoadedFiles[i].data;
-
-            if ((data != NULL) &&
-                ((data < heap_start) || (data >= heap_cursor)))
+            resident_is_stale = TRUE;
+            gNdsRelocSceneReentryGenerationEvictCount++;
+        }
+        else
+        {
+            /* Kept as a SECONDARY corruption check: same generation but a file
+             * outside the live region means something other than a scene
+             * rewind moved it, and that is worth evicting on too. */
+            for (i = 0; i < sNdsRelocLoadedFileCount; i++)
             {
-                resident_is_stale = TRUE;
-                break;
+                const u8 *data = (const u8 *)sNdsRelocLoadedFiles[i].data;
+
+                if ((data != NULL) &&
+                    ((data < heap_start) || (data >= heap_cursor)))
+                {
+                    resident_is_stale = TRUE;
+                    gNdsRelocSceneReentryRangeEvictCount++;
+                    break;
+                }
             }
         }
         if (resident_is_stale == FALSE)
@@ -2131,6 +2167,9 @@ static void ndsRelocPrepareSceneCache(void)
     sNdsRelocForceStatusBufferCount = 0;
 
     sNdsRelocOwnerScene = scene;
+    /* Stamp the heap generation this resident set belongs to. Read here, after
+     * the eviction above, because this is the point the set becomes current. */
+    sNdsRelocResidentHeapGeneration = gNdsTaskmanHeapGeneration;
     sNdsRelocSceneGeneration++;
 #if NDS_TASK44_STAGE_STEADY
     /* Seam 3: a scene change with nothing resident skips the reset above, so
