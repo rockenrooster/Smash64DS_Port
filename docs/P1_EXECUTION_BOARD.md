@@ -1898,10 +1898,21 @@ is the one TU that reaches `nds_startup.h` with no decomp type header ahead of
 it. Every other TU gets the base types first by accident of include order.
 Nothing caught it because this file has never been compiled.
 
-**Fix the include order (or make `nds_startup.h` self-sufficient in its own
-types, which is the better seam) and re-read the log from the top.** Do not
-start from the implicit declarations again — that experiment is done and it is
-recorded here so the next session does not repeat it.
+**FIXED.** `lb/library.h` now precedes the `nds/` headers in
+`battleship_lbparticle.c`, and **the `sb32` error is gone** (826 → 825, and it
+is no longer first). Fixed in the file being brought into the build rather than
+in `nds_startup.h`; **the better seam is still for `nds_startup.h` to include
+its own types**, and it stays a trap for the next TU that includes it early.
+
+**Next root error, same method — read the FIRST one:**
+`decomp/.../lb/lbcommon.h:43` **`unknown type name 'alSoundEffect'`** — a
+libultra audio type the TU does not reach. The `fighter.h` enum re-declarations
+after it are still cascade and still should not be chased.
+
+**Working method for this file, which has never been compiled and so surfaces
+one seam at a time:** fix the first error, rebuild, re-read the first error.
+Three root causes down (reorg import path, reorg `.inc` prerequisite,
+placeholder drift, `sb32` order — four), each invisible until something ran it.
 
 **So clause 2's remaining work is the import seam for one file**, not the merge
 and not the generated data. **Still not done after that:** the pricing

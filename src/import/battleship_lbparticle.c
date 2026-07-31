@@ -35,16 +35,29 @@
  */
 #include "nds_scene_harness_config.h"
 
-#include <nds/nds_particle_runtime.h>
-#include <nds/nds_startup.h>
-#include <nds/generated/nds_particle_banks.generated.h>
-
 /* Take the original lb/lbtypes.h definition of LBTransform in this translation
  * unit. include/gr/ground.h carries a byte-identical copy behind this guard for
  * exactly this case; without it the two definitions collide. */
 #define SSB64_NDS_LBTRANSFORM_DECLARED
 
+/* lb/library.h comes FIRST, ahead of the nds/ headers, and the order is load
+ * bearing: nds_startup.h:866 declares ndsSyMallocWouldFit returning `sb32` but
+ * does not itself guarantee that type. Every other translation unit in the
+ * build happens to reach a decomp type header before it, so the omission never
+ * showed; this file is the one that did not, and the result was 826 errors led
+ * by "unknown type name 'sb32'" with the rest -- alSoundEffect, the whole
+ * fighter.h enum re-declaring, implicit guMtxCatF -- cascading from it.
+ *
+ * Fixing it here rather than in nds_startup.h keeps the change to the file that
+ * is being brought into the build. The better seam is for nds_startup.h to
+ * include its own types, and it stays a trap for the next TU that includes it
+ * early until it does. */
 #include <lb/library.h>
+
+#include <nds/nds_particle_runtime.h>
+#include <nds/nds_startup.h>
+#include <nds/generated/nds_particle_banks.generated.h>
+
 #include <sc/scene.h>
 #include <sys/dma.h>
 #include <sys/debug.h>
