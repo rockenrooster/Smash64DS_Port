@@ -1793,6 +1793,46 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 L9 KEEP — SSB64's own sine table, −37,248 `WORK-H` P95, matched control (2026-07-31)
+
+**The port had `f32 lbCommonSin(f32 a) { return sinf(a); }`.** SSB64 does not
+call a libm sine: `lb/lbcommon.c` (0x800C7840) indexes a 1024-entry quarter-turn
+table, and gameplay reads those exact quantised numbers. **The stub was both
+slower and the approximation** — the table is the reference behaviour, so this is
+a fidelity fix that happens to be faster, not a trade. The port never compiled
+`lbcommon.c`, so the table had nothing to link; `src/port/lbcommon_sin_table.c`
+carries it, extracted verbatim (1024 entries, each within 2e-6 of
+sin(n·2π/4096), first 0.0, last 1.0).
+
+**Direct proof it engaged**, L6 census window, same instrument, per over-gate
+frame: **trig 46,772 → 12,600 cycles (−34,172) with sin/cos calls 197 → 196.**
+The call count holding while cost falls 3.7× is the proof — this is per-call
+price. `__ieee754_rem_pio2f` argument reduction and `__kernel_sinf`/`_cosf` are
+gone; a 4096-step table needs none of them.
+
+**Matched control, same session, same harness, same 128-frame window**
+(`artifacts/performance/r207-L9-{control,sintable}-128*`):
+
+| bucket | control | L9 | delta |
+|---|---:|---:|---:|
+| **`WORK-H` P95** | **1,281,856** | **1,244,608** | **−37,248** |
+| `WORK-H` P50 | 933,056 | 914,880 | −18,176 |
+| **`SRC` P95** | 565,312 | 531,648 | **−33,664** |
+| `SRC` P50 | 287,872 | 279,360 | −8,512 |
+| `FTR` P50 | 388,736 | 381,376 | −7,360 |
+| 3-VBlank frames | 99/567 | 97/567 | −2 |
+
+**−37,248 is 6.9× the ±5,376 cross-build floor, and 90% of it is `SRC`** — the
+bucket L6 named. First cut landed against the L6 population; it does not close
+the gate (1,244,608 vs 1,120,000, still 124,608 over) but it is real and banked.
+
+**The verdict was nearly published backwards.** Against the standing
+1,160,448–1,179,520 baseline, L9's 1,244,608 reads as a large regression — and
+the honest reading is that **the standing baseline is stale**: the matched
+control at HEAD is 1,281,856, so the branch drifted up ~100K since it was taken.
+Without the control this session, L9 would have been reverted as a regression
+when it is a 37,248 improvement. **Re-baseline before citing that range again.**
+
 ### R2-07 L7 SCOPED — collision recomputes in float what the renderer already has in 20.12 (2026-07-31)
 
 Source reading only, no build spent. Four findings, in the order they change the
