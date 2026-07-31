@@ -270,6 +270,23 @@ try {
         # NDS_R2_SECOND_ENTRY_DIAG=1 build, so these are attempted separately
         # from the counters above -- one bad expression aborts a whole printf,
         # and on an ordinary ROM every one of these is an unknown symbol.
+        # TEXTURE STATE ACROSS THE SECOND ENTRY. The owner reports Sudden Death
+        # "assigns the wrong textures to each character/element/object", and the
+        # same-run pair confirms it: match 1 renders Dream Land correctly, the
+        # Sudden Death frame 45 s later has the tree trunk wearing foliage and
+        # the side platforms wearing an ornate frame. Prepare early-returns while
+        # sNdsRendererBattleStaticTexturePrepared is set, and nothing clears it
+        # between the two matches -- Discard runs only after the whole scene
+        # (battleship_scvsbattle.c:301, after the blocking base start). A
+        # PrepareCount of 1 here means Sudden Death reused match 1's cache.
+        'printf "SD-TEX-PREPARE-COUNT=%u\n", gNdsRendererBattleStaticTexturePrepareCount',
+        'printf "SD-TEX-PREPARED-COUNT=%u\n", gNdsRendererBattleStaticTexturePreparedCount',
+        'printf "SD-TEX-VIOLATIONS=%u\n", gNdsRendererBattleStaticTextureViolationCount',
+        'printf "SD-TEX-TEARDOWNS=%u\n", gNdsRendererBattleStaticTextureTeardownCount',
+        'printf "SD-TEX-FAILS=%u\n", gNdsRendererBattleStaticTexturePrepareFailCount',
+        'printf "SD-OAM-PREPARE-COUNT=%u\n", gNdsIFCommonNativeOamPrepareCount',
+        'printf "SD-OAM-CLOUD-COUNT=%u\n", gNdsIFCommonNativeOamPrepareCloudTextureCount',
+        'printf "SD-OAM-FAILS=%u\n", gNdsIFCommonNativeOamPrepareFailCount',
         'printf "SD-WALK-BOUND-HITS=%u\n", gNdsR2MaterialWalkBoundHits',
         'printf "SD-CHAIN-PROBES=%u\n", gNdsR2ChainProbeCount',
         'printf "SD-CHAIN-INVALID=%u\n", gNdsR2ChainProbeInvalidCount',

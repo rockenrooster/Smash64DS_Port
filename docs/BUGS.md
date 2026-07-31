@@ -304,6 +304,46 @@ These bugs should be fixed for P1 delivery.
     (`reloc_backend_renderer_dl.c`, via inlined `ndsRendererAdapterMaterialFlags`)
     -- one sample, not yet proof of a loop. Evidence:
     `artifacts/verification/sudden-death/2026-07-30_21*`.
+  - **CONFIRMED 2026-07-30 (owner): Sudden Death ASSIGNS THE WRONG TEXTURES,
+    and it is a SECOND-ENTRY defect.** Owner: *"it kinda looks to me that it
+    assigns the wrong textures to each character/element/object."* Verified with
+    a same-run pair, so nothing about build, config or seed differs between the
+    two frames:
+    - `2026-07-30_230425-sudden-death-entry.png` — the last frame of **match 1**:
+      Dream Land correct. Bark-textured Whispy trunk, three wooden platforms,
+      both fighters visible and correctly textured.
+    - `2026-07-30_230425-sudden-death-watch.png` — **Sudden Death**, 45 s later,
+      same run: the trunk is a green blocky column wearing a foliage/grass
+      texture, both side platforms wear an ornate gold frame texture that
+      belongs to neither, and no fighter is visible.
+    The bindings are **shifted between objects** rather than the atlas being
+    corrupt — which is a different failure from a bad texture cache and points
+    at whatever maps object to material on a re-entered scene.
+    **Measured, and it narrows the field:**
+    - **Static battle textures are HEALTHY on the second entry.**
+      `PrepareCount=2` (so Sudden Death re-prepared rather than early-returning),
+      `PreparedCount=24`, `ViolationCount=0`, `PrepareFailCount=0`. The
+      early-return on `sNdsRendererBattleStaticTexturePrepared` was the obvious
+      suspect -- `Discard` only runs after the whole scene
+      (`battleship_scvsbattle.c:301`, past the blocking base start) -- and the
+      counters refute it.
+    - **The native OAM prepare DOES early-return**: `PrepareCount=1` across both
+      entries, cloud textures 2, fails 0. That path is sprites (HUD, clouds),
+      not stage geometry, so it does not explain the stage bindings, but it is a
+      confirmed instance of exactly the persistent-state class item 4 names.
+    - The MObj chain is clean throughout (91,482 probes, 0 invalid), so this is
+      not list corruption either.
+    **Next suspect, unmeasured:** the native stage owner's prepared workspace.
+    `ndsRendererAdapterPrepareNativeStageMaterials`
+    (`reloc_backend_renderer_dl.c:7398`) indexes `workspace->binding_dobjs[]` by
+    FIXED indices `{20, 22, 31, 32}` with fixed expected flags. If the DObj tree
+    is rebuilt in a different order on a second entry, those indices no longer
+    name the same objects and each one gets another's material -- which is
+    precisely the observed symptom. There is a stamp guard at `:6995` that
+    rejects a workspace whose `binding_dobjs[i]->dv` no longer matches its
+    recorded display list; find out whether it fires on the second entry, and if
+    it does not, why the indices still resolve.
+
   - **BOTH KNOWN FREEZE MECHANISMS ARE REFUTED FOR THIS FREEZE.** BattleShip
     never fails an overflow, it STOPS: eleven `while (TRUE);` sites across
     `sys/taskman.c` and `sys/malloc.c`, which is why this bug class always
