@@ -1858,15 +1858,31 @@ other ~3,065 extra float calls (`TransformMatrixAll`, `TestRectangle`,
 295,376 overshoot. **Do not scope L7 as "the two hot functions" and expect the
 gate** — that was my first plan and the measurement kills it.
 
-**5. L8 falls out: the 20.12 compose itself is ~3× off its own floor.**
+**5. L8 (unroll the 20.12 compose) is REFUTED UNBUILT, by its own arithmetic.**
 `ndsRendererMtxMulAffine20p12` is ARM (0x02002e44, even), 616 bytes, 155
-instructions, 7 `smull`, **zero `__aeabi_lmul`** — so it is not the Thumb trap.
-But it executes **379 instructions per call at 2.2 cycles/insn**, against
-~100-130 for a fully-unrolled 4×3 affine with SMULL/SMLAL. It is loop-based
-where it could be straight-line. **The renderer already pays 36,894/frame for
-it today**, so that win is collectable on its own — and it raises L7's ceiling
-from "on the line" to "past it", which is the difference between a lever that
-closes the gate and one that does not.
+instructions, 7 `smull`, **zero `__aeabi_lmul`** — not the Thumb trap. It
+executes **379 instructions/call at 2.2 cycles/insn** and the renderer pays
+**36,894/frame** for it, so "unroll it" looked collectable. It is not:
+
+- The inner products are **already unrolled** (`nds_renderer.c:5221-5223`, three
+  explicit terms). Only the 3×3 row/col loops remain, so unrolling buys loop
+  overhead and nothing else.
+- Per cell the work is 3 `SMLAL` + `ndsRendererRoundShiftS64` +
+  `ndsRendererClampS64ToS32` + a store ≈ 20 instructions; 12 cells + loads is
+  ~280 against the measured 379. **The whole prize is ~99 instructions × 2.2 =
+  ~218 cycles/call, 55 calls = ~12,000/frame** — under E11's own ~16,000 bar,
+  before charging the icache cost of the added bytes, which is exactly how E11
+  went +15,744 while removing real work.
+
+**The collectable cost in that function is the per-cell s64 round-and-clamp, not
+the loop.** `ndsRendererRoundShiftS64` (`:4983`) is round-half-away-from-zero
+via negate/add/shift/negate, and `ndsRendererClampS64ToS32` (`:4951`) adds two
+64-bit compares — together ~14 of the ~20 instructions per cell. `SMULL`'s own
+64-bit result could be shifted down in two instructions
+(`mov lo,lsr#12` + `orr hi,lsl#20`) instead, but that changes the rounding and
+the saturation, so it is **not bit-exact and needs an equivalence bound**.
+**Fold it into L7**, which is establishing one anyway, rather than spending a
+separate build on the sub-threshold half.
 
 **What is NOT yet established, and must be L7's first step rather than its
 assumption:** that the two are the same quantity. The renderer composes toward
