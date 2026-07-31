@@ -1793,6 +1793,43 @@ generated config header the way `NDS_R2_BOTH_CPU` is verified, and the former
 strips every diag-only read when the flag is off. If a lane prints nothing after
 an early stage, check the ELF exports before suspecting the emulator.
 
+### R2-07 L3 — the excursion is SIZED: +272,576 `WORK-H`, all of it `SRC`/`OTHR`, render flat (2026-07-31)
+
+Straight from `artifacts/performance/r207-L1-rows.csv` — the pacing-comparable
+arm — split into its 28 over-gate and 100 clean frames. No new run.
+
+| bucket | clean P50 | over-gate P50 | delta |
+|---|---|---|---|
+| `SRC` | 280,768 | 516,224 | **+235,456** |
+| `OTHR` | 209,152 | 442,048 | **+232,896** |
+| `MISC` | 46,784 | 81,408 | +34,624 |
+| `FTR` | 390,016 | 388,672 | **−1,344** |
+| `STG` | 169,856 | 170,752 | **+896** |
+| **`WORK-H`** | **924,224** | **1,196,800** | **+272,576** |
+
+**The render side is exonerated quantitatively, not by argument.** `FTR` is
+*negative* on over-gate frames and `STG` moves under 1K — both inside noise. So
+no amount of fighter or stage work closes this; E7 said so and this is the
+per-frame confirmation at 28 frames rather than 9.
+
+**`SRC` and `OTHR` are not additive — they overlap.** Their deltas are within
+2,560 of each other (+235,456 vs +232,896), and their sum (468,352) far exceeds
+the `WORK-H` delta (272,576), so `OTHR` is largely the same work `SRC` brackets
+rather than a second population. **Do not add them when sizing a lever.**
+
+**The target, stated as a number.** `ALL` is VBlank-quantised: over-gate frames
+sit at 3 VBlanks (~1,679,xxx), clean at 2 (~1,119,xxx). The median over-gate
+frame carries **1,196,800 `WORK-H` against the 1,120,380 gate — ~76,420 over**,
+inside a total excursion of 272,576 above the clean median. `SRC` on those
+frames spans **258,240 … 746,624** (P50 516,224), so they are not one uniform
+event and a single fixed cost will not explain them.
+
+**Next (L4): name what `SRC` does on the 24 over-gate frames that DO NOT load.**
+L2 removed asset loading as the explanation for 24 of 28; L1 named the bucket;
+L3 sizes it and clears the render buckets. What remains is the contents of the
+`SRC` bracket itself on those frames — and per L3 it must be something with a
+wide per-frame spread, not a constant.
+
 ### R2-07 L2 — ANSWERED, and it CONTRADICTS E8: only 4 of 28 over-gate frames load (2026-07-31)
 
 Instrument built (`-PerFrameGlobals`, below), then run.
