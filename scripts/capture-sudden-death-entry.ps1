@@ -211,6 +211,15 @@ try {
         'printf "SD-M1-DISPLAY-N=%u\n", gNdsTask103DisplayCount',
         'printf "SD-M1-FINISH=%u\n", gNdsTask103FinishTicks',
         'printf "SD-M1-FINISH-N=%u\n", gNdsTask103FinishCount',
+        # Task 36 replay owner. It resets when topology_generation or
+        # topology_stamp differ (nds_renderer.c:4429), and topology_generation
+        # comes from owner_generation, which now advances correctly on a second
+        # entry. If it resets and the stage still never re-traverses, the
+        # re-capture does not route through the traversal callback -- which is a
+        # different fix from "the generation never moved".
+        'printf "SD-M1-T36-STATE=%u\n", sNdsRendererTask36ReplayOwner.state',
+        'printf "SD-M1-T36-GEN=%u\n", sNdsRendererTask36ReplayOwner.topology_generation',
+        'printf "SD-M1-T36-STAMP=%#x\n", sNdsRendererTask36ReplayOwner.topology_stamp',
         'printf "SD-STAGE=shot-match1\n"',
         # Drop it so the drive to Sudden Death is not stopped 60 times a second.
         'delete $bpnum'
@@ -398,6 +407,9 @@ try {
         'printf "SD-SD-DISPLAY-N=%u\n", gNdsTask103DisplayCount',
         'printf "SD-SD-FINISH=%u\n", gNdsTask103FinishTicks',
         'printf "SD-SD-FINISH-N=%u\n", gNdsTask103FinishCount',
+        'printf "SD-SD-T36-STATE=%u\n", sNdsRendererTask36ReplayOwner.state',
+        'printf "SD-SD-T36-GEN=%u\n", sNdsRendererTask36ReplayOwner.topology_generation',
+        'printf "SD-SD-T36-STAMP=%#x\n", sNdsRendererTask36ReplayOwner.topology_stamp',
         'printf "SD-STAGE=shot-sd\n"',
         'printf "SD-MATCHED-DONE=1\n"',
         'detach',

@@ -411,7 +411,40 @@ These bugs should be fixed for P1 delivery.
     normal rate throughout (26.1/frame in arm A, 27.9/frame in the delta) and
     its per-call cost is unchanged (5,552 vs 5,487), so the extra work is not a
     costlier or more frequent commit.
-    **So the second entry draws the stage from match 1's captured traversal.**
+    **WITHDRAWN, same session: the "draws from match 1's capture" inference is
+    REFUTED by the Task 36 owner state.** Measured at both matched stops:
+
+        match 1        state 2 (READY)  topology_generation 2  stamp 0xe3202299
+        Sudden Death   state 2 (READY)  topology_generation 3  stamp 0x73745b9a
+
+    `ndsRendererTask36ReplayReset` memsets the owner to `UNSEEDED` (0), and the
+    only route from there to `READY` (2) is through `CAPTURING` (1). So on the
+    second entry the replay **reset, re-captured, and re-keyed** to a new
+    generation and a new stamp. It is not serving match 1's geometry.
+    The Traversal count of 8/8 is still a true fact, but it does not mean what I
+    said it meant: the Task 103 Traversal bracket wraps
+    `Begin/EndStageTraversal` in the DObj-draw callback, which is **not** the
+    replay's capture mechanism -- the replay records inside command execution
+    (`NDS_TASK36_REPLAY_RECORD`). An unchanged traversal count therefore says
+    nothing about whether the replay re-captured.
+    **That is the THIRD causal claim withdrawn on this symptom** (textures, the
+    camera, and now the stale replay), each from reading one counter as a cause.
+    The standing correction in this row stands and is now doubly earned: state
+    the mechanism a counter actually brackets before inferring from it.
+
+    **Honest current state.** The stage geometry is corrupt on the second entry
+    and the fighter is not -- that much is proven by the matched pair and is not
+    in question. Everything measured so far is clean or accounted for: static
+    textures, MObj chains, scene-cache eviction (now firing 2/2), stale
+    workspace admission, stage material bindings, camera convergence, and the
+    Task 36 replay identity. **The cause is not yet known**, and the next step
+    should be a data comparison rather than another mechanism guess -- diff the
+    captured replay payload or the emitted segment commands between the two
+    entries, since the pixels differ while every piece of identifying state
+    matches.
+
+    **(Withdrawn) the second entry draws the stage from match 1's captured
+    traversal:**
     That fits the corruption better than any cost story: the topology IS rebuilt
     on the second entry (`gNdsR2StageTopologyRebuildCount` 2, measured earlier),
     but the per-segment traversal that produces the draw data is not re-run, so
