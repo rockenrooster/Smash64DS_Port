@@ -435,12 +435,35 @@ These bugs should be fixed for P1 delivery.
     differently on the second entry.
     **Consequence, and it is the useful one: every field the capture gate reads
     on the stage side is byte-identical, so the difference is not in these
-    GObjs at all — it is on the CALLER side.** `gcCaptureTaggedGObjs` tests
-    only `flags & GOBJ_FLAG_HIDDEN` (identical) and a `camera_tag` match
-    against the camera GObj (stage side identical), and walks `dl_link_next`
-    (identical). Two candidates remain, both about the caller: **(a)** the
-    camera GObj's own `camera_tag`, or **(b)** the walk not being invoked for
-    this `link_id` at all on the second entry. Measure both; do not choose.
+    GObjs at all — it is on the CALLER side.**
+  - **CORRECTION — the writer named above is the DECOMP's, and the port never
+    calls it.** `gcCaptureTaggedGObjs` has **zero callers in `src/`**. The port
+    supplies its own `gcCaptureCameraGObj`
+    (`src/port/opening_movie_backend.c:4343`, declared for the battle path at
+    `src/import/battleship_gmcamera.c:41`), and **its `:4392` is the only writer
+    of `frame_draw_last` anywhere in `src/`**. Earlier text in this row calling
+    `objdisplay.c:3188` "the only writer" is wrong for this port and is
+    corrected here. The mechanism is unaffected — a capture walk still writes
+    the field, and `objdisplay.c:1161` still selects `proc_diff`/`proc_same`
+    from it — but the gate to examine is the port's, which is NOT the same as
+    the decomp's:
+    ```c
+    camera_mask = camera_gobj->camera_mask;     /* selects WHICH lists to walk */
+    while (camera_mask != 0) {
+        if (camera_mask & 1u) {
+            for (gobj in gGCCommonDLLinks[link_id])
+                if (!(flags & HIDDEN) && proc_display != NULL && tag_matches)
+                    ... gobj->frame_draw_last = dSYTaskmanFrameCount;
+    ```
+    It adds a `proc_display != NULL` test (measured identical, non-null) and,
+    decisively, an **outer loop over the CAMERA's `camera_mask`**: a list is
+    walked only where that mask has a bit set. The five segments' `dl_link_id`
+    values, decoded from the same dumps, are **4, 4, 4, 0x10, 6**.
+    **So the sharpened candidate is the camera GObj's `camera_mask`, not its
+    `camera_tag`.** If the battle camera's mask lacks those bits on the second
+    entry, these five are never visited, `frame_draw_last` keeps its `0xFF`
+    seed, and every measurement in this row follows. Measure the camera GObj's
+    `camera_mask` and `camera_tag` on both entries before asserting it.
   - **The five unreplayed segments are all PRESENT on both entries
     (2026-07-31).** Read at two known-good stops in the Sudden Death lane,
     `timer-live` (entry one) and `running` (entry two), log
