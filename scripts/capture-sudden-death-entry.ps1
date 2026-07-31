@@ -748,6 +748,21 @@ try {
         # comes straight back (BUGS.md has the matched pair). E3's allocator map
         # and refused-request stash are deleted; their conclusion is in BUGS.md.
         'printf "SD-VRAM-RESET=enable=%u,count=%u\n", gNdsRendererSceneTextureVramResetEnable, gNdsRendererSceneTextureVramResetCount',
+        # THE ANNOUNCEMENT DISCRIMINATOR, read from the source's own state rather
+        # than from a wrapper. Owner rows: no GAME SET after winning Sudden Death,
+        # no TIME UP after the countdown. `sIFCommonBattlePlace` counts teams still
+        # to be placed and reaching 0 is what calls ifCommonAnnounceEndMessage
+        # (ifcommon.c:2737-2740); `game_status` becomes nSCBattleGameStatusSet (4)
+        # inside the interface proc that announcement installs. So:
+        #   place 0 and status Set  -> the source DID announce; the compositor owns
+        #                              the missing letters.
+        #   place > 0               -> the trigger never fired; the sprite manifest
+        #                              is not the place to look.
+        # Wrapping the announce functions CANNOT answer this -- the calls are
+        # internal to ifcommon.c, so a #define rename bypasses the wrapper and
+        # --gc-sections deletes it (measured; see the note in
+        # src/import/battleship_ifcommon.c).
+        'printf "SD-ANNOUNCE=place=%d,status=%u\n", sIFCommonBattlePlace, gSCManagerBattleState->game_status',
         'printf "SD-F-CLOUD-RELEASE=%u\n", gNdsIFCommonNativeOamCloudReleaseCount',
         'printf "SD-F-CLOUD-COUNT=%u\n", gNdsIFCommonNativeOamPrepareCloudTextureCount',
         'printf "SD-F-FALLBACK=%u\n", gNdsRendererM3PreflightFallbackCount',

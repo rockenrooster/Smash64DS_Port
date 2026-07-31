@@ -381,6 +381,11 @@ volatile u32 gNdsSCVSBattleLifecycleArenaAdapterCount;
 /* Non-zero proves Sudden Death ran the port's battle preparation rather than the
  * decomp start bare, which it did for the whole campaign before 2026-07-30. */
 volatile u32 gNdsSCVSBattleSuddenDeathPrepareCount;
+/* One per battle-scene entry, and the regression guard for the GAME SET
+ * announcement: `sIFCommonBattlePlace` is a scene-lifetime static that must be
+ * re-derived at every entry (see battleship_scvsbattle.c). A frozen count means
+ * a new entry path reached the scene without it and no match end will announce. */
+volatile u32 gNdsSCVSBattlePlacementInitCount;
 volatile u32 gNdsSCVSBattleLifecycleTaskmanExitCount;
 volatile u32 gNdsSCVSBattleLifecycleTaskmanStatus;
 volatile u32 gNdsSCVSBattleLifecycleTimeLimit;

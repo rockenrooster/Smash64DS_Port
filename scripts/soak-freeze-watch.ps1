@@ -460,6 +460,17 @@ try {
             # entry path reached the scene without the reset and the stage is
             # about to be drawn against the previous match's allocator state.
             'gNdsRendererSceneTextureVramResetCount',
+            # The GAME SET announcement, end to end, with no new code needed.
+            # PlacementInitCount must read one per battle entry: it calls the
+            # source's own ifCommonBattleInitPlacement, which sets
+            # sIFCommonBattlePlace = teams - 1. Nothing called it before
+            # 2026-07-31, so the counter sat at its .bss zero and the match-end
+            # test `--sIFCommonBattlePlace == 0` (ifcommon.c:2735-2740) could
+            # never fire -- which is why no VS match of any length has ever
+            # announced GAME SET. After a decisive match sIFCommonBattlePlace
+            # should read 0: that IS the announcement having been triggered.
+            'gNdsSCVSBattlePlacementInitCount',
+            'sIFCommonBattlePlace',
             # Did the rematch actually re-enter the battle scene through the
             # scene manager's dispatch loop? AdapterCount rises once per
             # scManagerFuncUpdate, so 2 means scVSBattleStartScene ran twice and

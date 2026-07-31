@@ -855,6 +855,45 @@ static const NDSRelocSpriteNormalizeDesc
       G_IM_FMT_RGBA, G_IM_SIZ_32b },
     { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0xc370u, 24u, 73u, 2u,
       G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* The blue mixed-width announcement letters, which is why neither GAME SET
+     * nor TIME UP has ever appeared: the normalization manifest stopped after
+     * countdown/GO, so their headers kept the blanket endian pass's swapped
+     * width/height and bmfmt/bmsiz and the compositor could not draw them.
+     * `dIFCommonAnnounceGameSetSpriteData` (decomp ifcommon.c:154) spells GAME
+     * SET from G/A/M/E/S and `...TimeUp...` (:2244) spells TIME UP from
+     * T/I/M/E/U/P -- M and E are shared, so nine descriptors serve both
+     * announcements, which is why they land together.
+     *
+     * Every field here was READ OUT OF THE ASSET, not inferred: the extracted
+     * relocData file `assets/us/relocData/82.vpk0.bin` is the same bytes the ROM
+     * loads, so `struct sprite` (include/PR/sp.h, big-endian, natural alignment)
+     * can be parsed on the host. Two earlier attempts did this through gdb on a
+     * running ROM and lost both runs -- one to a Results-only boot where
+     * `gGMCommonFiles[1]` is a different asset, one to a single bad expression
+     * aborting the whole printf -- and neither was necessary. The parser was
+     * validated by reproducing all five manifest entries that already work
+     * (62x73/5, 70x74/6, 24x73/2 RGBA 32b; 8x53/1 IA 8b; 15x15/1 I 4b) exactly,
+     * and T/I/M/E/U/P match the widths BUGS.md had already recorded by hand.
+     * All nine are RGBA/32b with attr 0x240 (SP_TEXSHUF | SP_TRANSPARENT), the
+     * same shape as the countdown entries above. */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0xe4a8u, 36u, 56u, 3u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },  /* T */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0xf740u, 17u, 57u, 2u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },  /* I */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x127e0u, 50u, 56u, 4u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },  /* M, shared by both announcements */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x144e0u, 32u, 56u, 2u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },  /* E, shared by both announcements */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x16eb8u, 41u, 58u, 3u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },  /* U */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x18fe8u, 36u, 56u, 3u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },  /* P */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x1b5f8u, 39u, 58u, 3u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },  /* S */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x1de68u, 43u, 56u, 3u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },  /* A */
+    { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x20788u, 41u, 57u, 3u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },  /* G */
     { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x20990u, 8u, 53u, 1u,
       G_IM_FMT_IA, G_IM_SIZ_8b },
     { NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, 0x21760u, 97u, 33u, 1u,
@@ -3872,22 +3911,18 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
         }
 
         sprite = (Sprite *)((u8 *)loaded->data + desc->offset);
-        display_list_words = 36u;
-        if ((desc->asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS) &&
-            (desc->offset == 0x4d78u))
-        {
-            display_list_words = 84u;
-        }
-        else if ((desc->asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS) &&
-                 (desc->offset == 0xa730u))
-        {
-            display_list_words = 96u;
-        }
-        else if ((desc->asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS) &&
-                 (desc->offset == 0xc370u))
-        {
-            display_list_words = 48u;
-        }
+        /* libultra generates one sprite's display list as a fixed 24-word frame
+         * plus 12 words per bitmap, so `ndisplist` is DERIVABLE and does not need
+         * a per-offset table. This used to be `36` with three hardcoded
+         * exceptions (84 for 0x4d78, 96 for 0xa730, 48 for 0xc370); read out of
+         * the extracted asset, all six known sprites fit `12n + 24` exactly --
+         * 1 bitmap 36, 2 -> 48, 3 -> 60, 4 -> 72, 5 -> 84, 6 -> 96. Keeping the
+         * table would have meant a fourth, fifth and sixth exception for the
+         * GAME SET / TIME UP letters below, each of which is a 2-, 3- or
+         * 4-bitmap sprite. The check this feeds is still fail-closed: a sprite
+         * whose raw `ndisplist` disagrees with the formula is refused, not
+         * normalized. */
+        display_list_words = (12u * desc->bitmap_count) + 24u;
         if (((u32)(u16)sprite->width == desc->width) &&
             ((u32)(u16)sprite->height == desc->height) &&
             ((u32)(u16)sprite->nbitmaps == desc->bitmap_count) &&

@@ -1,7 +1,59 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
--Sometimes Mario's fireballs don't spawn
+-Still get intermittent freezes when attacking (maybe collision/animation/heap related?).
+-Sometimes Mario's fireballs don't spawn.
 -No "Game set" VFX and SFX and results after winning sudden death
+  **ROOT-CAUSED 2026-07-31. One cause explains BOTH halves of this row -- the
+  missing announcement AND the missing Results -- and it is not
+  Sudden-Death-specific: no VS match of any length has ever announced GAME SET.**
+  The VS route runs through `sIFCommonBattlePlace`: when a team loses its last
+  stock, `ifcommon.c:2735-2740` decrements it and calls
+  `ifCommonAnnounceEndMessage()` **only if the result is exactly 0**. That call is
+  the only VS path to `ifCommonAnnounceGameSetMakeInterface`, *and* it is what
+  installs the interface proc that sets `game_status` to
+  `nSCBattleGameStatusSet` -- which is what ends the match and hands off to
+  Results. So one dead test costs the letters, the voice cue and the scene exit
+  together, which is exactly the trio the owner reported.
+  The counter is initialised by the source's own `ifCommonBattleInitPlacement`
+  (`ifcommon.c:2558`, `sIFCommonBattlePlace = teams - 1`) and **nothing in this
+  tree ever called it** -- the port header declared it and no `.c` used it; the
+  original's caller is one of the unmatched interface routines. So it sat at its
+  `.bss` zero, the first elimination took it to `-1`, and `== 0` could never be
+  true. Measured before changing anything: a Sudden Death run read
+  `SD-ANNOUNCE=place=0` at frame 40, i.e. already zero *before any death*.
+  **FIXED**: both battle entries call it now (`battleship_scvsbattle.c`,
+  `ndsSCVSBattleBeginScenePlacement`, guarded by
+  `gNdsSCVSBattlePlacementInitCount`), which also re-derives it per entry -- it is
+  a scene-lifetime static the arena rewind does not touch, so Sudden Death would
+  otherwise inherit match one's decremented value (SwitchPlan 3.12 again).
+  Verified: the same read is `place=1` on a Sudden Death entry, so the first
+  elimination lands on exactly 0. This also restores real values to
+  `players[].place`, which the Results screen reads.
+  **SECOND HALF, independently necessary: the letters had no sprite descriptors.**
+  `sNdsBattleInterfaceSpriteDescs` stopped after countdown/GO, so the nine blue
+  mixed-width letters (G/A/M/E/S for GAME SET, T/I/M/E/U/P for TIME UP; M and E
+  shared) kept the blanket endian pass's swapped `width`/`height` and
+  `bmfmt`/`bmsiz` and could not be composited. All nine are in now, **read off the
+  host** rather than guessed: `assets/us/relocData/82.vpk0.bin` parsed as
+  `struct sprite` gives T 36x56/3, I 17x57/2, M 50x56/4, E 32x56/2, U 41x58/3,
+  P 36x56/3, S 39x58/3, A 43x56/3, G 41x57/3 -- all RGBA/32b, attr 0x240. The
+  parser was validated by reproducing all five already-working manifest entries
+  exactly, and T/I/M/E/U/P match the widths the row below recorded by hand.
+  **Both earlier gdb attempts at these formats were unnecessary** (one died on a
+  Results-only boot where `gGMCommonFiles[1]` is a different asset, one on a
+  single bad expression aborting the whole printf) -- the bytes were on disk.
+  Folded in: `display_list_words` was `36` plus three hardcoded per-offset
+  exceptions, and every known sprite fits `12 * nbitmaps + 24` exactly (1->36,
+  2->48, 3->60, 4->72, 5->84, 6->96), so the formula replaces the table and the
+  nine new entries need no special-casing.
+  **STILL OWED before this closes: the letters on screen, and Results reached
+  after a Sudden Death KO.** A 90 s Sudden Death watch did not land inside the
+  90-tick announcement window, and a frame that misses the window proves nothing.
+  Results appearing after Sudden Death is the easier signal to catch and is the
+  same chain; `gNdsVSResultsStartCount` rising after an SD KO is the check. For
+  the letters specifically, break on `ifCommonAnnounceGameSetMakeInterface`, step
+  a few presented frames, then capture. Construction is not compositing -- that is
+  the standing lesson from the texture rows.
 -No "Time Up" VFX and SFX after match countdown finished.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `ifcommon.c` creates six blue mixed-width letter sprites

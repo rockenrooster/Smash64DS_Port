@@ -161,6 +161,36 @@ static void ndsSCVSBattleBeginSceneTextures(void)
     (void)ndsIFCommonNativeOamPrepareClouds();
 }
 
+/* GAME SET never appeared -- owner, 2026-07-31: "No 'Game set' after winning
+ * sudden death" -- and the cause is that this port never called the source's own
+ * placement initializer.
+ *
+ * `ifCommonBattleInitPlacement` (decomp ifcommon.c:2558) counts the live teams
+ * and sets `sIFCommonBattlePlace = teams - 1`. The announcement is driven by that
+ * counter: when a team loses its last stock, `ifcommon.c:2735-2740` does
+ * `sIFCommonBattlePlace--` and calls `ifCommonAnnounceEndMessage()` -- which is
+ * the only VS path to `ifCommonAnnounceGameSetMakeInterface` -- **only if the
+ * result is exactly 0**. Nothing in this tree called the initializer (the
+ * original's caller is in one of the unmatched interface routines), so the
+ * counter sat at its `.bss` zero, the first elimination took it to -1, and the
+ * `== 0` test could never be true. Measured before changing anything: a Sudden
+ * Death run read `SD-ANNOUNCE=place=0` at frame 40, before any death.
+ *
+ * That makes this a NORMAL-match defect too, not a Sudden-Death one: no VS match
+ * of any length has ever announced GAME SET. It is called from both battle
+ * entries for that reason, after `ndsBase...Start*` has populated
+ * `gSCManagerBattleState->players[]`, which is what the initializer reads.
+ *
+ * Re-initialising per entry is also required rather than incidental: the counter
+ * is a scene-lifetime static that the taskman arena rewind does not touch, so a
+ * Sudden Death or rematch entry would otherwise inherit the previous match's
+ * decremented value -- the same law as SwitchPlan 3.12. */
+static void ndsSCVSBattleBeginScenePlacement(void)
+{
+    ifCommonBattleInitPlacement();
+    gNdsSCVSBattlePlacementInitCount++;
+}
+
 void scVSBattleStartBattle(void)
 {
     gNdsSCVSBattleOriginalFuncStartResult =
@@ -168,6 +198,7 @@ void scVSBattleStartBattle(void)
 
     ndsBaseSCVSBattleStartBattle();
     ndsSCVSBattleBeginSceneTextures();
+    ndsSCVSBattleBeginScenePlacement();
 #if NDS_R2_ANIM_CACHE
     /* R2-04 E4/E5. Same prepare-at-load seam as the two above, but armed here
      * and stepped from scVSBattleFuncUpdate: the match's animation streams
@@ -263,6 +294,7 @@ void scVSBattleStartSuddenDeath(void)
 {
     ndsBaseSCVSBattleStartSuddenDeath();
     ndsSCVSBattleBeginSceneTextures();
+    ndsSCVSBattleBeginScenePlacement();
 #if NDS_R2_ANIM_CACHE
     ndsR2AnimCachePreloadMatch();
 #endif

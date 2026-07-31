@@ -82,6 +82,23 @@ static sb32 ndsIFCommonFastIterationIsEnabled(void);
 static u32 ndsIFCommonGetTicCount(void);
 static void ndsIFCommonSetTicCount(u32 tics);
 
+/* NOT INSTRUMENTED HERE, and the reason is worth keeping: the announcement
+ * question ("does the source announce GAME SET / TIME UP and the port fail to
+ * draw, or does the source never announce?") CANNOT be answered by wrapping
+ * these three functions at this seam. A `#define` rename renames the decomp's
+ * DEFINITION and its internal call sites together, and every call that matters
+ * here is internal to `ifcommon.c` (`sIFCommonBattlePlace` reaching 0 calls
+ * `ifCommonAnnounceEndMessage`, which calls the GameSet constructor). So the
+ * wrappers end up with no callers, `--gc-sections` drops them, and their
+ * counters vanish from the ELF -- measured 2026-07-31: `nm` had no
+ * `gNdsIFCommonAnnounceGameSetCount` at all while the EndMessage counter
+ * survived only because `ftcommondead.c` and `sc1pgame.c` call that name from
+ * OTHER translation units. This is the same seam limitation the L7/L9 rows
+ * record; it is a property of the technique, not a mistake to retry.
+ *
+ * Read the source's own state instead -- `sIFCommonBattlePlace` and
+ * `gSCManagerBattleState->game_status` -- which is what the harnesses now do. */
+
 #define ifCommonEntryAllMakeInterface ndsIFCommonEntryAllMakeInterfaceOriginal
 #define ifCommonBattleUpdateInterfaceAll ndsIFCommonBattleUpdateInterfaceAllOriginal
 #define sySchedulerGetTicCount ndsIFCommonGetTicCount
