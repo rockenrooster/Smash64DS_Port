@@ -423,11 +423,24 @@ These bugs should be fixed for P1 delivery.
     GOBJ_FLAG_HIDDEN)` and a `camera_tag` match against the camera GObj. The
     tag on the stage side is **identical on both entries**, and so is the
     GObj's position in the `dl_link` chain the walk follows — so a stage-side
-    tag mismatch is refuted. What remains is (a) the camera GObj's own
-    `camera_tag`, (b) `flags & GOBJ_FLAG_HIDDEN`, which lies past +0x5F and was
-    NOT covered by this dump, or (c) `gcCaptureTaggedGObjs` not running over
-    this `link_id` at all on the second entry. Measure those three; do not
-    assume among them.
+    tag mismatch is refuted.
+  - **`flags & GOBJ_FLAG_HIDDEN` REFUTED too — the whole 160-byte header is
+    identical except +0x0C (2026-07-31, log `2026-07-31_022304`).** Widened to
+    40 words per GObj, **800 bytes compared**, and the diff is still **5 words
+    of 200, all +0x0C**. Coverage was verified rather than assumed:
+    `GObjScript` is 8 bytes (`objtypes.h:182`), which pins the tail of the
+    struct as `buffer_mask` 0x40, `gobjscripts[5]` 0x48-0x6F,
+    `gobjscripts_num` 0x70, `obj` 0x74, `anim_frame` 0x78, **`flags` 0x7C** —
+    inside a dump reaching 0x9F. So the "skip rendering" flag is **not** set
+    differently on the second entry.
+    **Consequence, and it is the useful one: every field the capture gate reads
+    on the stage side is byte-identical, so the difference is not in these
+    GObjs at all — it is on the CALLER side.** `gcCaptureTaggedGObjs` tests
+    only `flags & GOBJ_FLAG_HIDDEN` (identical) and a `camera_tag` match
+    against the camera GObj (stage side identical), and walks `dl_link_next`
+    (identical). Two candidates remain, both about the caller: **(a)** the
+    camera GObj's own `camera_tag`, or **(b)** the walk not being invoked for
+    this `link_id` at all on the second entry. Measure both; do not choose.
   - **The five unreplayed segments are all PRESENT on both entries
     (2026-07-31).** Read at two known-good stops in the Sudden Death lane,
     `timer-live` (entry one) and `running` (entry two), log
