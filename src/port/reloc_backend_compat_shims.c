@@ -12411,31 +12411,42 @@ Vec3f *lbCommonReflect2D(Vec3f *a, Vec3f *b)
  * Index is in 4096ths of a turn (651.8986206 = 4096 / 2pi). Bit 0x400 mirrors
  * the quarter into the second one, bit 0x800 negates for the lower half; cosine
  * is the same table read a quarter turn ahead. */
+/* Read gSYSinTable, which is already resident, rather than a second table.
+ *
+ * L9 brought in dLBCommonSinLookup -- lbcommon.c's own 1024-entry f32 quarter
+ * wave -- and that cost 4,096 bytes of main RAM. The taskman arena is sized by
+ * a boot-time loop that steps DOWN 0x1000 per failed calloc, so 4,096 bytes of
+ * new static RAM is exactly one step: the arena shrank by a page, Sudden Death
+ * lost the free space it was already running on, and it froze at the banner.
+ * docs/BUGS.md carries the measurement (42,992 -> 38,896 free, 26 -> 27 steps).
+ *
+ * gSYSinTable is sys/sintable.c's 2048-entry u16 half wave, and it is the SAME
+ * function at the SAME resolution -- both index by angle * 2048/PI masked to
+ * 0xFFF, both take the sign from bit 0x800, and both carry the source's own
+ * one-sample stretch (the table spans 0..PI inclusive over 2048 samples, worth
+ * about 0.0016 against a true sine; that is SSB64's sine and reproducing it is
+ * the point). Only the storage differs: quarter wave in f32 against half wave
+ * in Q15.
+ *
+ * scripts/check-lbcommon-sin-table-dedup.py compares them exhaustively over all
+ * 4096 indices, not a sample: they agree to 0.00003070, one Q15 quantum, which
+ * is 91x inside the 0.0028 bound E64b/E65 established. The index arithmetic
+ * below is unchanged from lbcommon.c:321 and :340 -- including cos adding 90
+ * degrees to the ANGLE before the multiply, which is not the same as adding
+ * 0x400 to the index after it. */
 f32 lbCommonSin(f32 angle)
 {
-    u16 index = ((s32)(angle * 651.8986206F)) & 0xFFF;
-    f32 sin;
-
-    if (index & 0x400)
-    {
-        sin = dLBCommonSinLookup[0x3FF - (index & 0x3FF)];
-    }
-    else sin = dLBCommonSinLookup[index & 0x3FF];
+    s32 index = ((s32)(angle * 651.8986206F)) & 0xFFF;
+    f32 sin = (f32)gSYSinTable[index & SINTABLE_MASK_ID] * (1.0F / 32768.0F);
 
     return (index & 0x800) ? -sin : sin;
 }
 
 f32 lbCommonCos(f32 angle)
 {
-    u16 index =
+    s32 index =
         ((s32)((angle + F_CST_DTOR32(90.0F)) * 651.8986206F)) & 0xFFF;
-    f32 cos;
-
-    if (index & 0x400)
-    {
-        cos = dLBCommonSinLookup[0x3FF - (index & 0x3FF)];
-    }
-    else cos = dLBCommonSinLookup[index & 0x3FF];
+    f32 cos = (f32)gSYSinTable[index & SINTABLE_MASK_ID] * (1.0F / 32768.0F);
 
     return (index & 0x800) ? -cos : cos;
 }

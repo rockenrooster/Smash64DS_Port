@@ -4190,11 +4190,6 @@ s32 efParticleGetLoadBankID(uintptr_t script_lo, uintptr_t script_hi,
 #define F_CST_DTOR32(x) ((f32)((x) * 0.01745329251994329577))
 #endif
 
-/* SSB64's quarter-turn sine table (`lb/lbcommon.c`, 0x800D4CA0). The port does
- * not compile `lbcommon.c`, so `src/port/lbcommon_sin_table.c` carries the
- * extracted table and `lbCommonSin`/`lbCommonCos` index it -- see R2-07 L9. */
-extern const f32 dLBCommonSinLookup[1024];
-
 #ifndef F_CLC_RTOD32
 #define F_CLC_RTOD32(x) ((f32)(((x) / 3.14159265358979323846F) * 180.0F))
 #endif

@@ -88,6 +88,15 @@
 #ifndef COMBINE_FRACTIONAL
 #define COMBINE_FRACTIONAL(a, b) (((a) << 16) | ((b) & 0xffff))
 #endif
+/* Both macros below expand to ARRAY_COUNT(gSYSinTable), so every translation
+ * unit that uses one needs the table in scope. It was declared only in the
+ * decomp's sys/matrix.h, so a port unit reaching for SINTABLE_RAD_TO_ID got
+ * "gSYSinTable undeclared" from inside a macro -- which points at the use site,
+ * not at the missing declaration. Declaring it here, beside the macros that
+ * name it, is the seam. Definition is sys/sintable.c, compiled as
+ * battleship_sys_sintable.c: 2048 u16 samples of a half wave in Q15. */
+extern u16 gSYSinTable[0x800];
+
 #ifndef SINTABLE_RAD_TO_ID
 #define SINTABLE_RAD_TO_ID(x) \
     ((s32)((x) * ((f32)ARRAY_COUNT(gSYSinTable) / PI32)))
