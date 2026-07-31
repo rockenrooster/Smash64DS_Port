@@ -397,13 +397,35 @@ These bugs should be fixed for P1 delivery.
        object from the one making this call, so the `0x00180000` vs `0`
        leftover comparison does not describe this capture. Do not carry that
        comparison forward as if it did.
-    **Next:** sample *every* `gcCaptureCameraGObj` call across one frame on both
-    entries — `camera_gobj`, `camera_mask`, `camera_tag`, caller — and find
-    which camera covers the stage's `dl_link_id`s (4, 4, 4, 0x10, 6). The
-    question is whether THAT camera's mask differs between entries, and one
-    sample of one camera cannot answer it. Note also that frame `#2` of the
-    backtrace names a data symbol (`gGMCameraPauseCameraEyeY`), so treat
-    anything past `#1` as unreliable — the usual addr2line hazard.
+  - **PAIRED ENUMERATION RAN — and it is INCONCLUSIVE. Do not build on it
+    (2026-07-31, log `2026-07-31_024*`).** Eight consecutive
+    `gcCaptureCameraGObj` calls captured on each entry. Both arms open
+    identically (`0x2335490` mask 0 tag 0, then `0x2366df0` mask 0x1), then for
+    `gGMCameraGObj` (`0x2367020`):
+    ```
+    entry 1   0x180000  0x180000  0x1ec0  0x1ec0  0x1ec0  0x70000
+    entry 2   0         0         0x10    0x1ec0  0xe000  0xe000
+    ```
+    `0xe000` and `0x70000` match `gmcamera.c`'s `COBJ_MASK_DLLINK(15|14|13)` and
+    `(18|17|16)` exactly, so this really is the multi-pass draw.
+    **What it shows:** entry two runs capture passes with **mask 0** — which
+    capture nothing — and entry one's window contains none.
+    **Why that is not yet a finding, and this is the important part:** the two
+    eight-sample windows are **not phase-aligned** within the per-frame pass
+    cycle. Each starts wherever the first breakpoint landed, so entry one may
+    well have zero-mask passes just outside its window. Worse for the earlier
+    guess, entry two **does** contain a `0x10` pass (bit 4 — the link carrying
+    three of the five stage GObjs), which is precisely the pass the previous
+    note predicted would be missing. **That prediction is refuted.**
+    **Next: align the windows before comparing them.** Anchor both arms to the
+    same point in the frame — break at the top of the camera draw, or at
+    `ndsPlatformEndFrame` and then count forward — so the Nth sample means the
+    Nth pass on both sides. An unaligned sequence comparison cannot distinguish
+    "different masks" from "different phase", and this row has already retired
+    three causes built on exactly that error.
+    Note also that backtrace frame `#2` named a data symbol
+    (`gGMCameraPauseCameraEyeY`), so treat anything past `#1` as unreliable —
+    the usual addr2line hazard.
   - **Superseded candidate note, kept for the reasoning: `frame_draw_last` is
     `0xFF` on every live stage GObj on the second entry (2026-07-31).** Log
     `2026-07-31_020601`. Eight words read from each of the five unreplayed

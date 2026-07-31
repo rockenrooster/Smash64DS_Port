@@ -387,6 +387,20 @@ try {
         'x/40wx gGRCommonStruct.pupupu.map_gobj[3]',
         'x/40wx gGRCommonLayerGObjs[1]',
         'printf "SD-M1B-CONTENT-END\n"',
+        'printf "SD-M1CAM-ARMED=1\n"'
+    ) + $(1..8 | ForEach-Object { @(
+        # CONTROL ARM for the entry-two enumeration. Entry two showed the camera
+        # draw running its multi-pass sequence with the 3rd and 4th passes
+        # carrying mask 0 -- and three of the five stage GObjs sit on
+        # dl_link_id 4, i.e. bit 4, i.e. exactly the pass that should carry
+        # COBJ_MASK_DLLINK(4) = 0x10. That is only a finding if entry ONE
+        # carries non-zero masks in those same slots. Without this arm it is one
+        # unmatched observation, which is how three causes in this row died.
+        'tbreak gcCaptureCameraGObj',
+        'continue',
+        ('printf "SD-M1CAM-{0}=%#x,%#llx,%#x\n", camera_gobj, camera_gobj->camera_mask, camera_gobj->camera_tag' -f $_)
+    ) }) + @(
+        'printf "SD-M1CAM-DONE=1\n"',
         'printf "SD-REMAIN-BEFORE=%u\n", gSCManagerBattleState->time_remain',
         "set variable gSCManagerBattleState->time_remain = $RemainTics",
         'printf "SD-REMAIN-AFTER=%u\n", gSCManagerBattleState->time_remain',
@@ -586,13 +600,22 @@ try {
         # blocks here until the harness timeout, so everything above is already
         # printed and nothing is lost. ARMED without HIT is therefore itself the
         # result: the capture never runs on the second entry.
-        'printf "SD-CAMCALL-ARMED=1\n"',
+        'printf "SD-CAMCALL-ARMED=1\n"'
+    ) + $(1..8 | ForEach-Object { @(
+        # ENUMERATE the capture calls rather than sampling one. The first call
+        # after the stop turned out to be a camera with mask 0 AND tag 0 that is
+        # not gGMCameraGObj -- one sample of one camera says nothing about which
+        # camera covers the stage's dl_link_ids (4, 4, 4, 0x10, 6). Eight
+        # consecutive tbreaks walk a frame's worth of calls.
+        #
+        # Explicit tbreaks, not a `commands ... end` auto-continue block: the
+        # command-file dialect is where this harness has already lost two runs,
+        # and a flat sequence cannot misparse. Cost is bounded and known.
         'tbreak gcCaptureCameraGObj',
         'continue',
-        'printf "SD-CAMCALL-HIT=1\n"',
-        'printf "SD-CAMCALL-MASK=%#llx\n", camera_gobj->camera_mask',
-        'printf "SD-CAMCALL-TAG=%#x\n", camera_gobj->camera_tag',
-        'bt 3'
+        ('printf "SD-CAMCALL-{0}=%#x,%#llx,%#x\n", camera_gobj, camera_gobj->camera_mask, camera_gobj->camera_tag' -f $_)
+    ) }) + @(
+        'printf "SD-CAMCALL-DONE=1\n"'
     ) + $(if ($MatchedCapture) { @(
         # Arm B: Sudden Death, the SAME N camera-proc calls in.
         'break gmCameraDefaultFuncCamera',
