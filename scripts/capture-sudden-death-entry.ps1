@@ -341,6 +341,35 @@ try {
         # bad one cannot abort the command file before anything else is read.
         'printf "SD-M1-MAPGOBJ=%#x,%#x,%#x,%#x\n", gGRCommonStruct.pupupu.map_gobj[0], gGRCommonStruct.pupupu.map_gobj[1], gGRCommonStruct.pupupu.map_gobj[2], gGRCommonStruct.pupupu.map_gobj[3]',
         'printf "SD-M1-LAYER1=%#x\n", gGRCommonLayerGObjs[1]',
+        # CONTENT, entry one. `x` rather than a typed dereference on purpose: it
+        # needs no debug info for the GObj type and cannot fail on an address
+        # already proven non-null by the printfs above, so it will not abort the
+        # command file. Raw words are exactly what the comparison needs -- the
+        # addresses are known to match across entries (bump allocator), so only
+        # the CONTENT can distinguish them.
+        'printf "SD-M1-CONTENT-BEGIN\n"',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[0]',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[1]',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[2]',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[3]',
+        'x/8wx gGRCommonLayerGObjs[1]',
+        'printf "SD-M1-CONTENT-END\n"',
+        # MATCHED STOP. The block above is read at ifCommonTimerFuncRun while the
+        # entry-two block is read at scVSBattleFuncUpdate, and GObj+0x0E is
+        # `frame_draw_last` -- a field that legitimately varies WITHIN a frame.
+        # Comparing the two unmatched stops would attribute a sampling-point
+        # difference to the scene entry, which is the confound that has already
+        # cost this bug three withdrawn causes. Re-read at the SAME function the
+        # entry-two block uses, so the only remaining difference is the entry.
+        'tbreak battleship_scvsbattle.c:scVSBattleFuncUpdate',
+        'continue',
+        'printf "SD-M1B-CONTENT-BEGIN\n"',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[0]',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[1]',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[2]',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[3]',
+        'x/8wx gGRCommonLayerGObjs[1]',
+        'printf "SD-M1B-CONTENT-END\n"',
         'printf "SD-REMAIN-BEFORE=%u\n", gSCManagerBattleState->time_remain',
         "set variable gSCManagerBattleState->time_remain = $RemainTics",
         'printf "SD-REMAIN-AFTER=%u\n", gSCManagerBattleState->time_remain',
@@ -430,6 +459,14 @@ try {
         # pattern against SD-M1-* above, not the addresses.
         'printf "SD-SD-MAPGOBJ=%#x,%#x,%#x,%#x\n", gGRCommonStruct.pupupu.map_gobj[0], gGRCommonStruct.pupupu.map_gobj[1], gGRCommonStruct.pupupu.map_gobj[2], gGRCommonStruct.pupupu.map_gobj[3]',
         'printf "SD-SD-LAYER1=%#x\n", gGRCommonLayerGObjs[1]',
+        # Same words, entry two. Diff these blocks against SD-M1-CONTENT-*.
+        'printf "SD-SD-CONTENT-BEGIN\n"',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[0]',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[1]',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[2]',
+        'x/8wx gGRCommonStruct.pupupu.map_gobj[3]',
+        'x/8wx gGRCommonLayerGObjs[1]',
+        'printf "SD-SD-CONTENT-END\n"',
         'printf "SD-PREPARE-COUNT=%u\n", gNdsSCVSBattleSuddenDeathPrepareCount',
         # The other side of the bracket. If the second setup pass ate most of the
         # remaining arena, this is where it shows.

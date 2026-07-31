@@ -340,6 +340,51 @@ These bugs should be fixed for P1 delivery.
     `SD-LEDGER-M1BASE-TOTAL=0`. Measuring that was the difference between a
     proof and a coincidence, and the same care is owed to any other counter read
     at two points.
+  - **ROOT-CAUSE CANDIDATE, first hard one: `frame_draw_last` is `0xFF` on
+    every live stage GObj on the second entry (2026-07-31).** Log
+    `2026-07-31_020601`. Eight words read from each of the five unreplayed
+    segments at the **same** stop on both entries (`scVSBattleFuncUpdate`):
+    ```
+    entry 1   0x01000401 0x01000401 0x01000401 0x01001001 0x01000602
+    entry 2   0x01ff0401 0x01ff0401 0x01ff0401 0x01ff1001 0x01ff0602
+    ```
+    `struct GObj` (`decomp/src/sys/objtypes.h:188`) puts four `u8` at +0x0C:
+    `link_id`, `dl_link_id`, `frame_draw_last` ("Last frame drawn?"),
+    `obj_kind`. Decoding little-endian, `link_id`, `dl_link_id` and `obj_kind`
+    are **identical** on both entries, as are both link pointers and both
+    trailing pointers. The single differing field, on **all five** segments, is
+    **`frame_draw_last`: `0x00` -> `0xFF`**.
+    **The sampling confound was killed before this was written.** The first read
+    took entry one at `ifCommonTimerFuncRun` and entry two at
+    `scVSBattleFuncUpdate`; `frame_draw_last` legitimately varies *within* a
+    frame, so that pair could not distinguish a scene-entry difference from a
+    stop-point difference. Re-read at the same function, the difference stands.
+    **What is NOT yet established:** the causal chain from `0xFF` to the visible
+    corruption and to `STG` 2.21x. `0xFF` is a plausible unset/-1 sentinel and
+    the field gates per-frame draw admission, so a stale one could plausibly
+    admit or reject segments wrongly — but that is a hypothesis, not a
+    measurement, and this bug has already retired three causes that were written
+    the moment they looked obvious.
+  - **The field's own code, from `decomp/` (read-only reference).**
+    - init, `sys/objman.c:1892` in the display-add path:
+      `gobj->frame_draw_last = dSYTaskmanFrameCount - 1;`
+    - per-draw write, `sys/objdisplay.c:3188`:
+      `current_gobj->frame_draw_last = dSYTaskmanFrameCount;`
+    - reads, `sys/objdisplay.c:403`, `:452`, and — the important one — `:1161`:
+      `proc = (frame_draw_last != (u8)dSYTaskmanFrameCount) ? proc_diff : proc_same;`
+    So the field **selects between two different matrix procedures**, which is a
+    mechanism that can produce both wrong transforms and a different cost. That
+    makes it a credible owner of "scrambled stage" *and* of `STG` 2.21x, which
+    no previous candidate managed to explain together.
+    **Two things follow, and only the first is measured.** (a) The sampled value
+    survives as its CREATION value, so these five GObjs are not going through
+    the `:3188` writer at all — the DS native/replay path draws them and does
+    not update the field. (b) `0x00` vs `0xFF` is exactly `dSYTaskmanFrameCount
+    - 1` evaluated with the counter at **1** versus at **0**, which would mean
+    the taskman frame counter is at a different phase when the stage GObjs are
+    created on a re-entry. **(b) is arithmetic, not evidence.** Next measurement,
+    and it is cheap: read `dSYTaskmanFrameCount` at stage-GObj creation on both
+    entries and see whether it is 1 then 0. Do not write the cause until it is.
   - **The five unreplayed segments are all PRESENT on both entries
     (2026-07-31).** Read at two known-good stops in the Sudden Death lane,
     `timer-live` (entry one) and `running` (entry two), log
