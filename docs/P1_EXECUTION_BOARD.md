@@ -1846,13 +1846,38 @@ fighter falling off its native owner onto a path counted elsewhere — and R2-03
 the native owner, "5/5 burst frames"), which also matches the burst shape here.
 
 **Do not treat that as settled — R2-06 E7 REFUTED fighter fallback as the
-cause**, on the older 9-over-gate baseline. So L4 is a direct per-frame test,
-not an argument: `NDS_TASK68_FALLBACK_CENSUS=1` is already in the L2 census
-build, and the harness carries `$fallbackFields`; read the fallback count as a
-**`-PerFrameGlobals` column** and intersect it with the over-gate frames exactly
-as L2 did for loads. If fallback frames ⊇ the 24, E7's refutation was a
-baseline artifact; if not, the −0.385 has another owner and the burst shape is
-the next thread.
+cause**, on the older 9-over-gate baseline. So L4 was run as a direct per-frame
+test, not an argument.
+
+**L4 RESULT: fighter fallback is REFUTED again, at 28 frames this time.**
+`-FallbackCensus` samples `gNdsTickHudNativeOwnerFallbackCount` per frame, and
+it was being **collected and then dropped at CSV-write time** — the same shape
+as `-ExtraGlobals`, now fixed (`fbTotal` column). With it wired
+(`artifacts/performance/r207-L4-rows.csv`, `build-l2-census`):
+
+```
+fallback frames  0        total fallbacks over 128 frames  0
+over-gate 28   ∩ fallback 0
+```
+
+**The native fighter owner never falls back on any frame in the window**, so the
+`SRC`↔`FTR` −0.385 is not the E31 hitlag/`AnimLock` mechanism, and **E7's
+refutation is corroborated rather than overturned.** The −0.385 has another
+owner.
+
+*One check before this is quoted as final:* a counter that is defined but never
+written also reads 0. The symbol is present in the ELF
+(`0227fc60 gNdsTickHudNativeOwnerFallbackCount`) and the build carries
+`NDS_TASK68_FALLBACK_CENSUS=1`, and this harness's own guard philosophy is that
+a defined-but-unwritten symbol reading 0 *is* a real measurement. To close it
+completely, read the census's `calls` sub-reason — non-zero `calls` with zero
+fallbacks proves the census is live and the answer genuine. The reason list is
+already in the script (`$fallbackReasons`); only `fbTotal` reaches the CSV.
+
+**So L4 leaves the −0.385 unexplained and the burst shape is the next thread**
+— 10 of 27 gaps of exactly 1, `SRC` spanning 258,240…746,624. Whatever it is,
+it is not loading (L2), not the render buckets (L3), and not fighter fallback
+(L4).
 
 ### R2-07 L2 — ANSWERED, and it CONTRADICTS E8: only 4 of 28 over-gate frames load (2026-07-31)
 

@@ -496,8 +496,14 @@ try {
         # reader never has to guess which is which. They sit after WORK-H so the
         # existing column order -- which other tooling and every prior rows CSV
         # depend on -- is unchanged.
+        # -FallbackCensus was ALREADY sampled per frame (it rides $sampleFields
+        # with the buckets) and was then dropped at write time -- the same shape
+        # as -ExtraGlobals, data collected and discarded. R2-07 L4 needs exactly
+        # this column: which frames fell off the native fighter owner.
         $csv = @(,('frame,' + ($bucketNames -join ',') + ',WORK-H' +
+            $(if ($fallbackFields.Count) { ',fbTotal' }) +
             $(if ($PerFrameGlobals.Count) { ',' + ($PerFrameGlobals -join ',') })))
+        $fallbackBase = $bucketNames.Count + 1
         $perFrameBase = $bucketNames.Count + $fallbackFields.Count + 1
         foreach ($row in $rows) {
             $cells = @($row[0])
@@ -505,6 +511,9 @@ try {
                 $cells += $row[$b + 1]
             }
             $cells += ([uint64]$row[$workCsvIndex] - [uint64]$row[$hudCsvIndex])
+            for ($fb = 0; $fb -lt $fallbackFields.Count; $fb++) {
+                $cells += $row[$fallbackBase + $fb]
+            }
             for ($g = 0; $g -lt $PerFrameGlobals.Count; $g++) {
                 $cells += $row[$perFrameBase + $g]
             }
