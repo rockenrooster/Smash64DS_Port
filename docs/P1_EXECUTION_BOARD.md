@@ -1904,10 +1904,24 @@ is no longer first). Fixed in the file being brought into the build rather than
 in `nds_startup.h`; **the better seam is still for `nds_startup.h` to include
 its own types**, and it stays a trap for the next TU that includes it early.
 
-**Next root error, same method — read the FIRST one:**
-`decomp/.../lb/lbcommon.h:43` **`unknown type name 'alSoundEffect'`** — a
-libultra audio type the TU does not reach. The `fighter.h` enum re-declarations
-after it are still cascade and still should not be chased.
+**Then `alSoundEffect` — FIXED** (`825 → 824`). Same shape one level down:
+`lb/lbcommon.h:43` declares an `alSoundEffect *` field without the type, and
+`include/sys/audio.h:31` is where the typedef lives. Added ahead of
+`lb/library.h`.
+
+**Next root error, and it is NOT cascade after all:**
+`include/ft/fighter.h:50` **`redeclaration of 'enum FTKind'`**. I had filed the
+`fighter.h` enums as fallout twice; now that the two errors above are gone it
+stands first, which makes it a root cause. **`enum FTKind` is defined in BOTH
+`include/ft/fighter.h` and `decomp/.../ft/ftdef.h`**, and this TU reaches both.
+
+**It is the same collision class the seam already solves twice** —
+`SSB64_NDS_LBTRANSFORM_DECLARED` at the top of this file, and
+`SSB64_NDS_MPOBJECTCOLL_DECLARED` at `include/ft/fighter.h:237`. So the fix is
+the established pattern: guard the port copy of `FTKind` and define the macro in
+this seam before the decomp path is reached. **That is a two-file change to a
+widely-included header, so it wants a build to verify and should not be started
+without room for one.**
 
 **Working method for this file, which has never been compiled and so surfaces
 one seam at a time:** fix the first error, rebuild, re-read the first error.

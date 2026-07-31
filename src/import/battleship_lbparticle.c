@@ -51,7 +51,12 @@
  * Fixing it here rather than in nds_startup.h keeps the change to the file that
  * is being brought into the build. The better seam is for nds_startup.h to
  * include its own types, and it stays a trap for the next TU that includes it
- * early until it does. */
+ * early until it does.
+ *
+ * sys/audio.h is the same shape one level down: lb/lbcommon.h:43 declares an
+ * `alSoundEffect *` field without declaring the type, and sys/audio.h:31 is
+ * where that typedef lives. */
+#include <sys/audio.h>
 #include <lb/library.h>
 
 #include <nds/nds_particle_runtime.h>
