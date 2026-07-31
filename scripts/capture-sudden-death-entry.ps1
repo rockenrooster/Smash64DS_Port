@@ -574,7 +574,25 @@ try {
         'printf "SD-CHAIN-P1-NODES=%u\n", gNdsR2ChainProbePass1.nodes',
         'printf "SD-CHAIN-P2-STATUS=%u\n", gNdsR2ChainProbePass2.status',
         'printf "SD-CHAIN-P2-NODES=%u\n", gNdsR2ChainProbePass2.nodes',
-        'printf "SD-DONE=1\n"'
+        'printf "SD-DONE=1\n"',
+        # IS THE CAMERA CAPTURE CALLED AT ALL ON THE SECOND ENTRY?
+        # Entry one demonstrably calls it -- its frame_draw_last reads 0x00,
+        # which only opening_movie_backend.c:4392 writes -- so only entry two is
+        # in question. camera_mask is TRANSIENT (gmcamera.c reassigns it before
+        # every call), so it can only be read INSIDE the call; a value sampled
+        # afterwards is a leftover, which is the error this replaces.
+        #
+        # LAST IN THE BLOCK ON PURPOSE. If the breakpoint is never hit the run
+        # blocks here until the harness timeout, so everything above is already
+        # printed and nothing is lost. ARMED without HIT is therefore itself the
+        # result: the capture never runs on the second entry.
+        'printf "SD-CAMCALL-ARMED=1\n"',
+        'tbreak gcCaptureCameraGObj',
+        'continue',
+        'printf "SD-CAMCALL-HIT=1\n"',
+        'printf "SD-CAMCALL-MASK=%#llx\n", camera_gobj->camera_mask',
+        'printf "SD-CAMCALL-TAG=%#x\n", camera_gobj->camera_tag',
+        'bt 3'
     ) + $(if ($MatchedCapture) { @(
         # Arm B: Sudden Death, the SAME N camera-proc calls in.
         'break gmCameraDefaultFuncCamera',

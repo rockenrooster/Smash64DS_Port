@@ -376,12 +376,34 @@ These bugs should be fixed for P1 delivery.
     in `gmcamera.c` sets at least one bit — so entry two's camera draw either
     never ran, or did not complete its pass sequence. Both readings still land
     on the same suspect: the camera draw path on re-entry.
-    **Next, and this is what the transient nature demands: sample `camera_mask`
-    INSIDE the draw, at the `gcCaptureCameraGObj` call sites**, not after it.
-    A breakpoint there on both entries gives the value actually in force during
-    capture, plus whether the call happens at all — which is the question.
-    Until that runs, do not state a cause, and do not force the mask at the
-    capture site: that would hide whichever of the two readings is true.
+  - **RAN IT (log `2026-07-31_023812`) — "the camera draw never runs on the
+    second entry" is REFUTED, and the sampled camera was the WRONG OBJECT.**
+    A `tbreak gcCaptureCameraGObj` placed last in the entry-two block:
+    ```
+    SD-CAMCALL-HIT=1
+    SD-CAMCALL-MASK=0   SD-CAMCALL-TAG=0
+    #0 gcCaptureCameraGObj (camera_gobj=0x2335490, is_tag_mask_or_id=0)
+    #1 0x02051b78 in func_80017DBC
+    ```
+    Three things follow, and the third matters most.
+    1. The capture **is** invoked on the second entry. The "never ran" half of
+       the previous note is dead.
+    2. This invocation passes a camera with **`camera_mask` 0 and `camera_tag`
+       0**, so this particular call captures nothing. Whether that is normal for
+       some camera or is the defect cannot be said from ONE sample — several
+       cameras exist and this is merely the first call after the stop.
+    3. **`camera_gobj` here is `0x2335490`, which is NOT `gGMCameraGObj`
+       (`0x2367020`).** Every camera measurement above was taken on a different
+       object from the one making this call, so the `0x00180000` vs `0`
+       leftover comparison does not describe this capture. Do not carry that
+       comparison forward as if it did.
+    **Next:** sample *every* `gcCaptureCameraGObj` call across one frame on both
+    entries — `camera_gobj`, `camera_mask`, `camera_tag`, caller — and find
+    which camera covers the stage's `dl_link_id`s (4, 4, 4, 0x10, 6). The
+    question is whether THAT camera's mask differs between entries, and one
+    sample of one camera cannot answer it. Note also that frame `#2` of the
+    backtrace names a data symbol (`gGMCameraPauseCameraEyeY`), so treat
+    anything past `#1` as unreliable — the usual addr2line hazard.
   - **Superseded candidate note, kept for the reasoning: `frame_draw_last` is
     `0xFF` on every live stage GObj on the second entry (2026-07-31).** Log
     `2026-07-31_020601`. Eight words read from each of the five unreplayed
