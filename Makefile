@@ -134,6 +134,14 @@ NDS_TASK53_REPLAY_ARENA_FIX ?= 0
 # this flag to 1 elides them at capture so owner->words[] is 20.6% smaller
 # and bit-identical render (lossless). Default 0 keeps the published ROM
 # byte-identical; the published/tick-HUD blocks do NOT override it.
+#
+# CLOSED, do not reopen as a gate lever (PERF_LEDGER, "Task 55 ... STOP"). It is
+# lossless in the replay buffer and it still fails twice: STG -4,224 against
+# OTHR +7,616, because a COLOR/TEX_COORD write updates a state register and does
+# not trigger a vertex transform -- the stage floor is the 606 VERTEX16
+# transforms and nothing else -- and the owner's visual A/B found surfaces
+# PULSATING IN COLOR at 1. The surviving finding is the one Task 56 acts on:
+# only fewer VERTEX16 commands move that floor.
 NDS_TASK55_STAGE_GEOM ?= 0
 # Task 56: fighter DS-native primitive streams. Compiles the immutable Mario/Fox
 # topology offline into GL_TRIANGLE_STRIP / GL_QUAD primitive descriptors (one
@@ -644,13 +652,6 @@ NDS_TASK39_FX_SHIELD ?= 0
 # taskman arena one for one here. Read `general heap free bytes` and
 # sGCCommonsMaxNum on any soak after adding image.
 NDS_R2_PARTICLE_RUNTIME ?= 1
-# R2-07 L7 step one. Read-only oracle: re-does the collision joint inverse in
-# 20.12 alongside the decomp's float one and records the deviation on the joints
-# a real match inverts. Decides nothing and changes nothing -- it exists because
-# nds_r2_collision_mtx.h is green on a SYNTHETIC 0.90-1.10 scale sweep and
-# 20x over the bound on the 0.25-2.00 one, and which of those SSB64 visits has
-# never been read off the running game. Off in both shipped blocks; it is a
-# measurement, and it comes out with the commit that wires L7 in or drops it.
 # R2-07 particle DRAW. At 1 the atlas is bound and camera-facing quads are
 # emitted, which is what makes the real efcommon scripts visible instead of the
 # recoloured 16-vertex stand-ins six BUGS.md VFX rows describe.
@@ -669,6 +670,21 @@ NDS_R2_PARTICLE_RUNTIME ?= 1
 # starving the stage's texture resolve -- fixed by the 8,192-byte sheet, which
 # is a measured hard bound, not a budget (generate_nds_particle_banks.py).
 NDS_R2_PARTICLE_DRAW ?= 1
+# R2-07 L7 step one. Read-only oracle: re-does the collision joint inverse in
+# 20.12 alongside the decomp's float one and records the deviation on the joints
+# a real match inverts. Decides nothing and changes nothing.
+#
+# ITS QUESTION IS ANSWERED -- DO NOT RE-RUN IT. This comment used to say the
+# live scale domain "has never been read off the running game"; it was read on
+# 2026-07-31 and the result is recorded in include/nds/nds_r2_collision_mtx.h:
+# 460 samples, joint scale 1.1138-1.1199, deviation 2/5/21 in 1/4096 world units
+# at the 1/4/16-unit probes against a bound of 82, zero over bound, zero
+# singular. Building it again on 2026-08-01 on the strength of that stale
+# sentence ABORTED the ROM at the GO countdown -- GENERALFREE 20,272 against the
+# 25,600 GObj latch, COMMONSMAX 45, MALLOCOVF 0 -- because its .text alone is
+# more taskman arena than the tree has spare. That is the standing lesson: the
+# shipping tree has roughly five kilobytes of arena margin, and a measurement
+# has to be sized against it like any other code.
 NDS_R2_COLLISION_L7_ORACLE ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires

@@ -36,8 +36,85 @@ cosmetic systems.
 **The tail owner is unchanged and it is still `SRC`.** FTR's spread is 1.01 and
 STG's is 1.05 — both are flat floors, and neither is where a P95 lever lives.
 `SRC` runs a 1.90 spread and a **+252,480 excursion above its own median**,
-which is twice the whole gap. The named lever for exactly that excursion is
-R2-07 L7, and its blocking question is now being measured (below).
+which is twice the whole gap.
+
+### The over-gate population, per frame — TWO owners, and the second one is new
+
+The gate is a rank, so the useful comparator is the over-gate COUNT, not the
+percentile: **18 of 128 frames exceed 1,120,000**, and P95 ≤ 1.12M needs that at
+six or fewer. The 7th-highest frame is 1,263,808, so the tail has to come down
+143,808 — or twelve frames have to leave the set.
+
+Ranked from the run's own CSV, against the clean set's medians
+(`FTR` 377,088 · `STG` 175,488 · `SRC` 276,032 · `MISC` 54,400):
+
+| frame | WORK-H | FTR | STG | SRC | MISC |
+|---|---|---|---|---|---|
+| 475 | 1,492,928 | 375,552 | 175,680 | **658,944** | **131,776** |
+| 517 | 1,431,872 | 372,672 | 184,128 | **714,560** | **135,552** |
+| 495 | 1,411,200 | 376,896 | 175,936 | **533,760** | **173,888** |
+| 544 | 1,375,104 | 377,600 | 175,616 | **629,824** | **165,952** |
+| 542 | 1,353,536 | 370,432 | 176,192 | **649,600** | **131,840** |
+| 478 | 1,330,368 | 380,096 | 185,024 | **571,136** | **167,808** |
+| 519 | 1,263,808 | 374,592 | 186,368 | **507,712** | **170,752** |
+
+**`FTR` and `STG` are flat on the worst frames — `FTR` is 1,536 BELOW its clean
+median on the worst frame of the run.** The whole excursion is `SRC` (+250K to
++440K) and `MISC` (+77K to +120K), and they co-occur.
+
+**`MISC` is not miscellaneous, and this is the new finding.** It is
+`DrawTicks − (FTR + STG + BG + HUD)` plus the GX flush
+(`taskman_seam.c:5008-5026`) — i.e. **everything drawn that is not a fighter,
+the stage, the background or the HUD**: weapon DObjs, effect DObjs, particles.
+Its clean value is ~54,000 and it steps to ~131,000 or ~170,000, two discrete
+levels. That is the transient-combat-object draw path, and it is exactly the
+generic `ndsRendererScanList` / `ExecuteDisplayListWithVertexCache` route that
+Runtime 2 exists to delete — measured on an over-gate frame rather than assumed.
+
+Counterfactuals from the same CSV, to size each owner honestly:
+
+- return `MISC` to its clean median on all 13 elevated frames → over-gate
+  **18 → 12**, P95 ≈ 1,216,960. **Not sufficient alone.**
+- return `SRC` to its clean median → over-gate **18 → 1**. **`SRC` is the gate.**
+
+So the order is: `SRC` first and `MISC` second, and `FTR`/`STG` are not on the
+critical path for the gate at all however large they look in the P50.
+
+## THE ARENA LATCH IS THE TREE'S REAL BUDGET LINE, and it is ~5 KB away (2026-08-01)
+
+Third occurrence of the same failure, and the first one that was *provoked* on
+purpose rather than stumbled into. `NDS_R2_COLLISION_L7_ORACLE=1` is a
+read-only instrument that decides nothing — and building it aborts the ROM at
+the GO countdown:
+
+```text
+lr_usr        ifCommonTrafficMakeSObj+68      the countdown storing through NULL
+GENERALHEAP   free=20272                      threshold is 25,600
+COMMONSMAX    45   COMMONSACTIVE 45            the cap FIRED, and it is sticky
+MALLOCOVF     0                                the allocator is HEALTHY
+```
+
+So the instrument's own `.text` cost 5,328 bytes more arena than the tree has.
+`ifCommonSetMaxNumGObj` caps the GObj pool when the general heap drops under
+25 KiB, `gcMakeGObj` then returns NULL, and the countdown stores through it —
+exactly the class `PORTING.md` recorded on 2026-08-01, reached this time by
+adding a *diagnostic*.
+
+**The durable form: `.text` costs taskman arena one-for-one, and the shipping
+tree now has roughly five kilobytes of margin before the latch fires.** That is
+the binding constraint on every remaining R2-07 item that adds code —
+`NDS_IMPORT_BATTLESHIP_FT_PUBLIC` (still default 0 for this reason), a wider
+particle texture set, and any lever that adds a fast path beside a slow one.
+It is also why `soak-freeze-watch.ps1` reports `GENERALFREE`: read it before
+adding code, not after the countdown dies.
+
+**Do not re-run this oracle to answer L7.** Its answer already exists and is
+recorded in `include/nds/nds_r2_collision_mtx.h` — 460 live samples on
+2026-07-31, joint scale 1.1138–1.1199, deviation 2/5/21 in 1/4096 units at the
+1/4/16-unit probes against a bound of 82, zero over-bound, zero singular. The
+`Makefile` comment that still said the domain "has never been read off the
+running game" is what sent this run; it is stale by a day and is corrected in
+the same change as this row.
 
 ## R2-07 clause 2 — the particle INTERPRETER is clean; the DRAW is a texture-VRAM ORDERING bug (2026-08-01)
 

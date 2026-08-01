@@ -10,27 +10,32 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69** — 1,228,928 -> 1,096,768, DLDI-off so lower bounds; only the E32 flash residual is open (KNOWN_ISSUES) and it blocks no lever |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-06 | closed — no lever left inside the phase; L6 found the one outside it |
-| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **The particle interpreter AND the quad draw are both DEFAULT ON and measured clean** — NO-FREEZE, stage builds 2, GObj cap never fired, 114,523 quads and zero missed, `FPS 29.0`, `VBI 2:962 3:167 4:13 5+:4`. Crowd actor + 13 crowd/Results/miss-ring cues implemented. **Owed: the owner's eye on the particles.** **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
+| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **The particle interpreter AND the quad draw are both DEFAULT ON and measured clean** — NO-FREEZE, stage builds 2, GObj cap never fired, 114,523 quads and zero missed, `VBI 2:962 3:167 4:13 5+:4`. Crowd actor + 14 crowd/Results/miss-ring cues implemented. **Owed: the owner's eye on the particles.** **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
 
-## OPEN P1 #1 — the gate. Over by 88,960, and **there is no named lever**
+## OPEN P1 #1 — the gate. Over by 120,128, and **there is no named lever**
 
-**Measured at HEAD (`800a934`, DLDI-on): `WORK-H` P95 1,208,960, mean 973,484.** Two control runs came
-back **bit-identical in every bucket**, so this harness has no run-to-run noise and the number is a
-number, not a range. VBlank 2:461 3:91 4:10 5+:4, max 19, slips 0.
+**The full-content baseline (`85e43f4`, DLDI-on, both particle flags at their new default 1):
+`WORK-H` P50 926,336, P95 1,240,128, max 1,492,928**, VBlank 2:453 3:98 4:11 5+:4, max 19, slips 0
+(`artifacts/performance/r207-baseline-particles-on-128.json`). Particles cost ~31,000 of it against
+the particles-off 1,208,960, and that older number **must not be optimized against any more**.
+The harness itself is deterministic — two control runs once came back bit-identical in every bucket —
+so a cross-BUILD delta is signal.
 
-**The 1,147,200 / "over by 27,200" this file used to carry has no artifact behind it.** Every
-128-sample run in `artifacts/performance` was read end to end: L9 control `2a53c061cd1` 1,281,856,
-L10 `b06f16567dc` 1,232,448, HEAD 1,208,960. HEAD is 23,488 **better** than the last attested figure.
-The real gap is **88,960**. (`r207-particles-128.json` reports P95 and mean identical to
-`r207-L10-sqrt` to the digit under a different sha — same binary or same run relabelled, not an
-independent point.)
+**The gate is a RANK, so the comparator is the over-gate COUNT: 18 of 128 frames exceed 1.12M** and
+P95 ≤ 1.12M needs six or fewer. Ranked per frame, `FTR` and `STG` are **flat on the worst frames**
+(`FTR` is 1,536 *below* its clean median on the worst frame of the run); the excursion is `SRC`
+(+250K…+440K) and `MISC` (+77K…+120K), co-occurring. Counterfactuals from the same CSV: `SRC` back to
+its clean median → over-gate 18 → **1**; `MISC` back to its → 18 → **12**. **`SRC` is the gate,
+`MISC` is second, and `FTR`/`STG` are not on the critical path however large their P50 looks.**
+**`MISC` is not miscellaneous** — it is `DrawTicks − (FTR+STG+BG+HUD)` plus the flush
+(`taskman_seam.c:5008`), i.e. the transient weapon/effect/particle DObj draw, which is still the
+generic `ndsRendererScanList` route. Full per-frame table on the board.
 
-**L7 IS REFUTED. Do not re-attempt it as "convert `gmCollisionSetInvertMatrix`".** It was wired,
-measured and reverted (board: *R2-07 L7 WIRED, MEASURED, REVERTED*). The kernel won **534 cycles/frame**
-in `SRC` and lost **6,481** in `FTR`+`STG`, which contain no collision code, and the loss scaled with the
-code rather than the work: 2,332 bytes of ARM text cost +4,264 `FTR` mean, 1,840 cost +3,434 — **1.85
-cycles/frame per byte, twice**. Engagement was proven (691 fills, 0 declines), so this is a real result
-and not a wiring failure.
+**L7 IS REFUTED. Do not re-attempt it as "convert `gmCollisionSetInvertMatrix`".** Wired, measured and
+reverted (board: *R2-07 L7 WIRED, MEASURED, REVERTED*): the kernel won **534 cycles/frame** in `SRC` and
+lost **6,481** in `FTR`+`STG`, which contain no collision code, and the loss scaled with the code rather
+than the work — **1.85 cycles/frame per byte, measured twice**. Engagement was proven (691 fills,
+0 declines), so this is a real result and not a wiring failure.
 
 Three findings that constrain whatever comes next. **(1) Hot ARM text costs ~1.85 cycles/frame of `FTR`
 mean per byte** — a lever must beat its own size. **(2) Soft float here is cheap**: 61 `__aeabi_*` calls
@@ -40,23 +45,20 @@ became 36 SMULLs, a hardware divide and 24 bit-twiddled conversions for **99 cyc
 
 So the next lever must **delete work, not relocate it**. If collision is tried again it has to be the
 whole subsystem — `func_ovl2_800ED490` is the bigger half (228 instructions, 63 soft-float calls,
-40x/frame, no divide and no cofactors) — with the decomp versions dropped rather than bypassed. There is
-also a cheaper inverse on the measured domain: the joint matrix is a rotation scaled per row and the live
-oracle measured all three scales as one value 1.114–1.120, so `R^-1[c][r] = M[r][c] / s_r^2` is three
-reciprocals and nine multiplies, with `vec_scale` already computed. Needs an orthogonality guard.
-**Kept:** `include/nds/nds_r2_collision_mtx.h` (0.000283 worst on the gated domain against 0.0200 — 68x,
-and it beats the frame form everywhere because it reads the rotation block at 6.26 rather than 20.12) and
-`scripts/check-r2-collision-mtx.ps1`, which did not exist despite the header claiming it for a week, and
-which immediately caught a 160-world-unit overflow.
+40x/frame, no divide and no cofactors) — with the decomp versions dropped rather than bypassed. A cheaper
+inverse exists on the measured domain: the joint matrix is a rotation scaled per row and all three scales
+measure as one value 1.114–1.120, so `R^-1[c][r] = M[r][c] / s_r^2` is three reciprocals and nine
+multiplies, with `vec_scale` already computed. Needs an orthogonality guard. **Kept:**
+`include/nds/nds_r2_collision_mtx.h` and `scripts/check-r2-collision-mtx.ps1`.
 
-**The L7 oracle outlived the lever.** `NDS_R2_COLLISION_L7_ORACLE=1` (read-only, default off, 460 samples,
-one natural match) measured **joint scale 1.1138–1.1199 — a single scale spanning 0.006**, which is what
-makes the row-scaled-rotation inverse worth trying and says the 0.25–2.00 sweep is not a domain SSB64
-visits. Two traps from building it: `sNdsFighterPartsPool` **is not linked in the shipping-shaped build**
-(0 bytes, 33,152 the instant anything references it — fill it and you fill an array nothing populates),
-and 33,152 bytes is **eight arena steps**, so the first draft dropped the battle under the 25 KiB GObj
-latch *by adding an instrument*. Walk the live DObj tree instead (+2,260 bytes), and **run `mapdiff` on
-any new lab flag before running the ROM**.
+**The L7 oracle outlived the lever, and its answer is already recorded** in `nds_r2_collision_mtx.h`
+(460 samples, one natural match): **joint scale 1.1138–1.1199, a single scale spanning 0.006**, which is
+what makes the row-scaled-rotation inverse worth trying. **Do not re-run it** — rebuilding it on
+2026-08-01 aborted the ROM at the GO countdown (`GENERALFREE 20272` against the 25,600 latch,
+`COMMONSMAX 45`, `MALLOCOVF 0`), because its `.text` alone is more arena than the tree has spare.
+**The shipping tree has roughly five kilobytes of arena margin**, and that is the budget line for every
+remaining item that adds code. Read `GENERALFREE` from a soak before adding any; run `mapdiff` on a new
+lab flag before running the ROM.
 
 ## OPEN P1 #2 — `BUGS.md` is now entirely particles, VFX and audio cues, and ALL of it is P1
 
@@ -68,9 +70,12 @@ straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, and now also `source_pcm_s
 hashes and `render_program_sha256` — the three that used to be obtainable only by pasting a placeholder
 and reading the generator's error. 56 → **77 cues**: seven announcer lines, 621 PublicWin (626's AOT
 loop-and-ramp render unchanged — a hardware repeat cannot serve either, their articulation ramps volume
-*across* the loop), the eleven the crowd actor reaches, plus 96 and 153. **"Eight of the twelve crowd
-cues are LOOPED" was wrong** — `--derive` says none of the eleven loops. Only 85 still misses
-(~90,510 Hz, the `source_rate_above_u16` blocker).
+*across* the loop), the eleven the crowd actor reaches, plus 96, 153 and 85. **"Eight of the twelve crowd
+cues are LOOPED" was wrong** — `--derive` says none of the eleven loops. **85's `source_rate_above_u16`
+was never a hardware limit**: 90,510 Hz is fine for the channel timer and too big only for the `u16` in
+*our* pack entry, so it renders full-program AOT at 32,000 like 189/190/219 already did. Its articulation
+spawns a `target 28` modulator, which the decomp's field notes call cross-mod ANOTHER voice — 85 has no
+forks, so it is skipped before evaluation (and only when a cue has no forks).
 **The crowd TRIGGER side is implemented**: `ft/ftpublic.c` compiled in place
 (`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`, default 0) — its whole external surface already existed, so the
 thresholds/cooldowns/repeats are the source's by construction. Owed: a build and an ear check.
@@ -78,34 +83,30 @@ thresholds/cooldowns/repeats are the source's by construction. Owed: a build and
 **VFX — the interpreter is PROVEN CLEAN and the DRAW now WORKS.** Four tick-HUD ROMs differing only in
 the particle flags, one soak each. Control and `RUNTIME=1` are indistinguishable (NO-FREEZE, Violation 0,
 stage builds 2), and `RUNTIME=1` runs 14 scripts / 138,274 visible particles inside its fixed pools.
-`DRAW=1` with the 32 KB atlas emitted 90,165 quads, zero misses, NO-FREEZE — and put **196 of 566 frames
-at five or more VBlanks** against 4, while `WORK-H` P95 came back *better* than its control. Read the
-histogram; a P95 alone calls that a win because the 128-sample window sits in a quiet stretch.
+`DRAW=1` with the 32 KB atlas put **196 of 566 frames at five or more VBlanks** against 4 while `WORK-H`
+P95 came back *better* than its control — read the histogram, not the P95 alone.
 
-**Attributed end to end, all counted:** atlas resident →
+**Attributed, all counted:** atlas resident →
 `ndsRendererHardwareResolveStageSourceFrameTexture` fails ~1 frame in 10 (reject **site 2, 196 times**,
 mask **4096 = TEXIMAGE**, census **Free 7 / Live 41 / Pinned 25 / ThisFrame 16 / Evictable 0**) →
 `PrepareRun` FALSE → owner rejects → `r2_prepared_valid = 0` → 197 rebuilds, each drawing that frame
-generically. Every other key component and refusal site reads 0; the control runs the same working set
-with 24 pinned and never rejects, so the difference is one pinned entry and the VRAM block behind it.
+generically. The control runs the same working set with 24 pinned and never rejects.
 **FIXED by one generator constant — the sheet is 64x64 = 8,192 B.** Every symptom returns to the
 control's own numbers: `StagePrepareBuildCount` **2**, reuse **2,041**, reject site 2 **1**, mask **0**,
 VBlank **451/102/9/4** against the control's 457/96/9/4. Quads emitted went UP to **117,937 with zero
 misses** because the stage stopped falling back. **So the draw costs ~10,100 ticks (`MISC` P50) and five
 extra three-VBlank frames, and nothing else.**
 **8,192 is a measured HARD BOUND, not a budget:** 16,384 rejected exactly as 32,768 did, so more coverage
-cannot come from a bigger sheet — it needs a second small atlas, a smaller per-texture format, or the
-atlas owning its own VRAM. Six of 31 textures is the open risk for the remaining VFX rows (Whispy
-leaves/dust, Results confetti, KO burst), and `gNdsParticleQuadMissCount` is what will name it per effect.
+needs a second small atlas, a smaller per-texture format, or the atlas owning its own VRAM. Six of 31
+textures is the open risk for the remaining VFX rows; `gNdsParticleQuadMissCount` names it per effect,
+and Dream Land's Pupupu bank still registers EMPTY.
 
-**Two earlier `DRAW=1` failures are closed:** the GO-countdown abort (`ifCommonSetMaxNumGObj` caps the
-GObj pool under 25 KiB free and the countdown dereferences the NULL — the runtime alone leaves **1,176
-bytes** of margin, `PORTING.md`, second occurrence), and a `glEnd()` that wedged the geometry engine.
-**Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
-freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;
-**`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads like the allocator's `while
-(TRUE);`; and **a latch is not a counter** — `gNdsRendererTask36*RejectReason` both read 0 on the run
-that rebuilt 197 times. Counting versions found it in one soak.
+**Two earlier `DRAW=1` failures are closed:** the GO-countdown abort (the 25 KiB GObj latch above), and a
+`glEnd()` that wedged the geometry engine. **Traps:** `--gc-sections` had already discarded the particle
+textures, so the board's named arena lever freed zero — **check the `.map` before believing a size claim
+about linked data nothing reads**; **`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads
+like the allocator's `while (TRUE);`; and **a latch is not a counter** —
+`gNdsRendererTask36*RejectReason` both read 0 on the run that rebuilt 197 times.
 
 ## SUCCESSIVE MATCHES and the ANNOUNCEMENTS: both FIXED (full write-ups in `docs/PORTING.md` + board)
 
@@ -154,15 +155,14 @@ or 32 with particles on) — not failed match allocations. It nearly bought a re
 - **Identical source is not an identical binary** — always run the matched control. But the harness itself
   is deterministic: two control runs on the same ROM came back **bit-identical in every bucket**, so a
   cross-BUILD delta is real signal, not noise. **DLDI-on costs ~29,696 P95 and is the honest config.**
-- **Never compare an anim-cache pair frame-by-frame** — it shifts load timing; order stats only.
-- **The census window is a COMPILE-TIME constant**, so `-NoBuild` measures the last build's window.
+- **Never compare an anim-cache pair frame-by-frame** (order stats only); **the census window is a COMPILE-TIME constant**, so `-NoBuild` measures the last build's window.
 - **`-Os` emits `blx __udivsi3` for a CONSTANT divisor**; `sinf`/`cosf` drag in `__ieee754_rem_pio2f` —
   SSB64 uses a table (L9), never reach for libm. **A lab ROM can differ in CODEGEN**: the `-marm` rule
   keys on harness ID, so add new lab IDs to `NDS_ARM_RENDERER_HARNESS_IDS`.
 - **Compare captures with `scripts/compare-capture-pair.ps1`** (it crops past melonDS's title bar);
   **`addr2line` names deleted AND inlined functions**; **read the HUD before the picture**;
   **`-MatchedCapture` is broken** (own BUGS row); **`check-decomp-header-mirror.py` is RED on two
-  pre-existing constants** — decomp is the specification and both edits want their own Latest run.
+  pre-existing constants** (`FTSTAT_OPENING1_START`, `nSYAudioBGMExplain`) — not caused by new work.
 
 ## Refuted — do not re-derive (all by measurement; derivations on the board)
 

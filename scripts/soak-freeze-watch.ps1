@@ -693,6 +693,20 @@ try {
             'gNdsFighterProjectileProofSpawnCallCount',
             'gNdsFighterProjectileProofSpawnSuccessCount',
             'gNdsFighterProjectileProofWeaponCountMax',
+            # BUGS.md crowd row, present only at
+            # NDS_IMPORT_BATTLESHIP_FT_PUBLIC=1. "The crowd is silent" has three
+            # distinct causes and the FGM backend's UnsupportedCallCount
+            # separates only the last: the actor never ran (ActorMakeCount 0),
+            # it ran and never decided (ProcUpdate > 0 with PlayCommon 0), or it
+            # decided and the pack refused (PlayCommon > 0 with the id on the
+            # miss ring). LastCommonFGM/LastCallFGM name which cue it picked.
+            'gNdsFtPublicActorMakeCount',
+            'gNdsFtPublicProcUpdateCount',
+            'gNdsFtPublicCommonCheckCount',
+            'gNdsFtPublicPlayCommonCount',
+            'gNdsFtPublicLastCommonFGM',
+            'gNdsFtPublicCallStartCount',
+            'gNdsFtPublicLastCallFGM',
             # R2-07 L7 step one, present only at NDS_R2_COLLISION_L7_ORACLE=1.
             # MaxDevQ12[0..2] are the answer, in 1/4096 world units at probe
             # offsets of 1/4/16 units; the gate is 82 (0.0200 world units).

@@ -11,9 +11,21 @@ and equivalence. **R2-07 is the live phase.** The board
 and is not a status log.
 
 **The battle-frame P95 gate, read in the canonical DLDI-on configuration
-(§3.9), is NOT yet met.** Latest matched measurement (2026-07-31, after L9 and
-L10): **`WORK-H` P95 1,232,448 against 1,120,000, 89 of 567 frames at three
-VBlanks.**
+(§3.9), is NOT yet met.** Latest matched measurement (2026-08-01, and the first
+one taken with the particle runtime and quad draw ON, which is now the shipping
+configuration): **`WORK-H` P95 1,240,128 against 1,120,000 — 18 of 128 frames
+over gate, VBlank 2:453 3:98 4:11 5+:4**
+(`artifacts/performance/r207-baseline-particles-on-128.json`). Every earlier
+figure on this page is particles-off and must not be optimized against.
+
+**The over-gate frames have two owners and neither is a renderer floor.**
+`FTR` and `STG` are flat on them — `FTR` is *below* its clean median on the
+worst frame of the run — while `SRC` runs +250K to +440K and `MISC` +77K to
++120K. Returning `SRC` alone to its clean median takes the over-gate set from
+18 frames to 1; returning `MISC` alone takes it to 12. So `SRC` is the gate and
+`MISC` — which is *everything drawn that is not fighter, stage, background or
+HUD*, i.e. the transient weapon/effect/particle DObj path — is second. The
+per-frame table is on the board.
 
 **E8's localization is WITHDRAWN — it was a run total, and a per-frame read does
 not support it.** This header said "every over-gate frame is an asset-load
