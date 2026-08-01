@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-31 (evening). **Restart surface only, capped at 200 lines** — durable detail goes to its
+Updated: 2026-08-01. **Restart surface only, capped at 200 lines** — durable detail goes to its
 owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_STANDING_RULES.md`;
 `docs/PORTING.md` for closed root causes).
 
@@ -10,49 +10,53 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69** — 1,228,928 -> 1,096,768, DLDI-off so lower bounds; only the E32 flash residual is open (KNOWN_ISSUES) and it blocks no lever |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-06 | closed — no lever left inside the phase; L6 found the one outside it |
-| R2-07 | results flow **MEETS ITS GATE** (0.52x). **Successive matches work: four battle entries, zero freezes, owner-confirmed.** Particle/VFX/audio clauses are now the whole of `BUGS.md`. **L7 is the gate lever.** R2-08 needs the owner's retail play test |
+| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **The particle interpreter RUNS** (10 script starts, NO-FREEZE, full match) and its draw payload is built; the quad DRAW is the remaining half and six `BUGS.md` VFX rows wait on it. **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
 
-## OPEN P1 #1 — the gate. `WORK-H` P95 is over 1,120,000 and L7 is the lever
+## OPEN P1 #1 — the gate. Over by 88,960, and **there is no named lever**
 
-**Last matched reading (2026-07-31, `git=cc5bc2ff967`, DLDI-on): P95 1,147,200, over by 27,200**, VBlank
-2:382 3:76 4:9 5+:4, max 20, slips 0. L9 (SSB64's 1024-entry sine table), L10 (`NDS_R2_FIXED_SQRT` on)
-and L9b (deleting L9's duplicate table) took **−85,248** together = 76% of the old gap.
-**This reading predates today's three freeze fixes — re-baseline before pricing anything against it.**
-The per-frame `func_80004AB0()` added to the battle present loop is ~8 stores plus one scene-light
-emission, well under E11's ±5,376 cross-build floor, but it has not been measured.
+**Measured at HEAD (`800a934`, DLDI-on): `WORK-H` P95 1,208,960, mean 973,484.** Two control runs came
+back **bit-identical in every bucket**, so this harness has no run-to-run noise and the number is a
+number, not a range. VBlank 2:461 3:91 4:10 5+:4, max 19, slips 0.
 
-**L6 named the lever and it is not loading.** An over-gate frame does **+510,390 cycles**, overshoots by
-only 295,376 (147,688 ticks), and **66.2% of that premium is soft-float**: `gmCollisionSetInvertMatrix`
-runs **34 times on every over frame, 0 on every clean one**, while
-`ndsRendererAdapterBuildDObjLocalMatrix` is 1.06x — **render and animation are FLAT**, the relocation
-walker 0.5%. **L2 stands: asset loads own only ~18% of over-gate frames** (5 of 28) — keep load
-elimination for R2-04 §3.8 as correctness, never as the gate's answer.
+**The 1,147,200 / "over by 27,200" this file used to carry has no artifact behind it.** Every
+128-sample run in `artifacts/performance` was read end to end: L9 control `2a53c061cd1` 1,281,856,
+L10 `b06f16567dc` 1,232,448, HEAD 1,208,960. HEAD is 23,488 **better** than the last attested figure.
+The real gap is **88,960**. (`r207-particles-128.json` reports P95 and mean identical to
+`r207-L10-sqrt` to the digit under a different sha — same binary or same run relabelled, not an
+independent point.)
 
-**L7 = fixed-point `gm/gmcollision.c`, and it must be ALL of it.** Kernel **GREEN on its falsifier**
-(0.016609 vs the 0.0200 bound, from 0.126987, via the `(p - t).R^-1` restructure that stops storing
-`-t.R^-1`); ~238,000 cycles/frame ≈ 119,000 ticks against a 27,200 gap. Wiring is the hard half: the
-kernel no longer produces a matrix, so `unk_dobjtrans_0x9C` and every consumer change together, and
-compose+inverse alone save only ~187,794 of it (float compose 2,652 cyc/call vs 670.8 for the existing
-20.12 one — **4.0x, not the 10x an ops model gives**). Needs an E64b-style equivalence bound; collision
-decides hits. **The `#define` seam CANNOT reach it** — it renames the decomp definition and its internal
-call sites together (why L9 worked and `func_ovl2_800ED490` will not); convert the `FTParts` matrix
-cluster (~110 sites) or replace the entry points wholesale. **L8 REFUTED UNBUILT**, folds into L7.
+**L7 IS REFUTED. Do not re-attempt it as "convert `gmCollisionSetInvertMatrix`".** It was wired,
+measured and reverted (board: *R2-07 L7 WIRED, MEASURED, REVERTED*). The kernel won **534 cycles/frame**
+in `SRC` and lost **6,481** in `FTR`+`STG`, which contain no collision code, and the loss scaled with the
+code rather than the work: 2,332 bytes of ARM text cost +4,264 `FTR` mean, 1,840 cost +3,434 — **1.85
+cycles/frame per byte, twice**. Engagement was proven (691 fills, 0 declines), so this is a real result
+and not a wiring failure.
 
-## R2-07 L7 — arithmetic CLEARED on the real domain; only the wiring is left (2026-07-31)
+Three findings that constrain whatever comes next. **(1) Hot ARM text costs ~1.85 cycles/frame of `FTR`
+mean per byte** — a lever must beat its own size. **(2) Soft float here is cheap**: 61 `__aeabi_*` calls
+became 36 SMULLs, a hardware divide and 24 bit-twiddled conversions for **99 cycles per call**, not the
+~800 assumed; "66.2% of the premium is soft-float" says where cycles ARE, not that fixed point is cheaper.
+**(3) Wrapping is additive, only replacing is subtractive** — the float version stayed linked throughout.
 
-The SwitchPlan's named next action for R2-07, and its blocker was never the code. Measured with
-`NDS_R2_COLLISION_L7_ORACLE=1` (read-only, default off, 460 samples over one natural mode-163 match):
-**real joint scale 1.1138–1.1199 — a single scale spanning 0.006** — and deviation **0.00049 / 0.00122 /
-0.00513** world units at probe offsets of 1/4/16 against the **0.0200** bound, **0 over-bound, 0 singular**.
-So the 0.25–2.00 sweep that reads 0.427738 is not a domain SSB64 visits, the gated 0.90–1.10 sweep is
-centred slightly low (move it to 1.11–1.12), and the synthetic figure is **pessimistic** by 3×.
-**Two traps recorded so the next cycle does not hit them.** The board's named hook,
-`sNdsFighterPartsPool`, **is not linked in the shipping-shaped build** — 0 bytes in `build-tickhud`,
-33,152 the instant anything references it, because `ndsFighterPartsSyncDObj` is eliminated there too. Fill
-it and you fill an array nothing populates. And 33,152 bytes is **eight arena steps**: the first oracle
-draft dropped the battle under the same 25 KiB GObj latch the particle runtime hits, *by adding an
-instrument*. Walk `gGCCommonLinks[nGCCommonLinkIDFighter]` → `gcGetTreeDObjNext` → `ftGetParts` (+2,260
-bytes) and **run `mapdiff` on any new lab flag before running the ROM**.
+So the next lever must **delete work, not relocate it**. If collision is tried again it has to be the
+whole subsystem — `func_ovl2_800ED490` is the bigger half (228 instructions, 63 soft-float calls,
+40x/frame, no divide and no cofactors) — with the decomp versions dropped rather than bypassed. There is
+also a cheaper inverse on the measured domain: the joint matrix is a rotation scaled per row and the live
+oracle measured all three scales as one value 1.114–1.120, so `R^-1[c][r] = M[r][c] / s_r^2` is three
+reciprocals and nine multiplies, with `vec_scale` already computed. Needs an orthogonality guard.
+**Kept:** `include/nds/nds_r2_collision_mtx.h` (0.000283 worst on the gated domain against 0.0200 — 68x,
+and it beats the frame form everywhere because it reads the rotation block at 6.26 rather than 20.12) and
+`scripts/check-r2-collision-mtx.ps1`, which did not exist despite the header claiming it for a week, and
+which immediately caught a 160-world-unit overflow.
+
+**The L7 oracle outlived the lever.** `NDS_R2_COLLISION_L7_ORACLE=1` (read-only, default off, 460 samples,
+one natural match) measured **joint scale 1.1138–1.1199 — a single scale spanning 0.006**, which is what
+makes the row-scaled-rotation inverse worth trying and says the 0.25–2.00 sweep is not a domain SSB64
+visits. Two traps from building it: `sNdsFighterPartsPool` **is not linked in the shipping-shaped build**
+(0 bytes, 33,152 the instant anything references it — fill it and you fill an array nothing populates),
+and 33,152 bytes is **eight arena steps**, so the first draft dropped the battle under the 25 KiB GObj
+latch *by adding an instrument*. Walk the live DObj tree instead (+2,260 bytes), and **run `mapdiff` on
+any new lab flag before running the ROM**.
 
 ## OPEN P1 #2 — `BUGS.md` is now entirely particles, VFX and audio cues, and ALL of it is P1
 
@@ -60,38 +64,34 @@ Owner's phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and
 for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the random freezes**. The rows split
 in two. **SFX: the announcer is DONE and the generator DOES have a per-cue derivation mode** — the earlier
 "extraction job per cue" estimate was wrong. `render-audio-fgm-phase-pack.py --derive <ids>` prints every
-selector field straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`; the walk was already in `build_pack`'s
-attack lane and only lacked a flag. Seven lines packed (527 TIME UP, 488 GAME SET, 534 winner-is, 499
-Mario, 486 Fox, 472/471 five/four), 56 → 63 cues, `MAX_PACK_BYTES` 512 → 768 KiB (a ROM budget on a
-streamed NitroFS payload; the real bound is now `MAX_CUE_IMA_BYTES`). **Proof is the natural-match miss
-ring, which the soak now prints by ID**: `96,85,153,472,471,621` → `96,85,153,621`, `PlayFailCount` 0,
-NO-FREEZE to Results, Boundary + Latest green. **Every one of the four survivors is a LOOPED cue** and
-needs FGM 285's `source_loop_ds_hardware` treatment; 96 `GroundGrind2` additionally has no `pitch` op, so
-`validate_articulation` rejects it as written. The crowd row is separately blocked on the TRIGGER side —
-`ftPublicMakeActor` only marks bits, so packing its cues today would be dead ROM.
-**VFX = one blocker: the particle scripts do not run**, so every effect draws as one of four untextured
-primitives. **BOTH PARTICLE BRANCHES ARE MERGED AND IN THE TREE — do not look for
-worktrees**: generator + `nds_particle_banks.generated.{inc,h}` (byte-reproducing, 55/119 scripts, 23/47
-textures, 82,752 B DS), `nds_particle_banks.c`, `battleship_lbparticle.c`, all in `CFILES`.
-**`NDS_R2_PARTICLE_RUNTIME=1` BUILDS AND NOW BOOTS INTO THE BATTLE** — Dream Land renders with both
-fighters and a live HUD at TIME 01:00 before it dies. The boot arena freeze is FIXED, and the fix was
-**not** the lever the board named: `--gc-sections` had already discarded the 82,752 B of particle
-textures (nothing references them), so moving them freed zero. **Check the `.map` before believing a size
-claim about linked data nothing reads.** They went to NitroFS anyway — they become live the moment the
-quad path references them, and there is no image room for them then. The lever that worked was
-`sNdsTask39HitSparkPixels`, 22,528 B of `.rodata` read once into OBJ VRAM: arena
-**1,245,184 → 1,269,760** (control 1,269,760 → 1,290,240), `MALLOCOVF=0`, Boundary green.
-**Next blocker, sized to the byte and NOT an allocator overflow:** `ifCommonSetMaxNumGObj`
-(`ifcommon.c:3156`) latches the GObj pool at the active count once the general heap has <25 KiB free. It
-latched at **45/45** with **1,040 B free**; `ifCommonCountdownMakeInterface` asked for the 46th and wrote
-through the NULL (`str r0,[r5,#132]`, the inlined `ifSetSObj`). Do not add a NULL check — the seam is the
-heap. Levers, all measured: `efParticleInitAll` pools **28,320 B** (112x96 + 24x92 + 80x192, and
-`StructsMax` was **0** — untouched); the bank arena copy **10,912 B** (only needed because the normalizer
-byte-swaps in place — do it in the generator); float `printf` locale tables **~24,375 B**. Any two clear
-it. **Break on `__excpt_entry`, not the frozen PC** — calico's handler double-faults and destroys the
-context. Only then price it against the **clean-frame** margin (P50 974,080 / P95 1,056,640), round-robin
-a quarter of the generators per frame rather than batching. **The DS quad draw path is still unbuilt** —
-`gNdsParticleDrawSeamCount` is the "effects ran, nothing drew" signal.
+selector field straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`. Seven lines packed (527 TIME UP, 488
+GAME SET, 534 winner-is, 499 Mario, 486 Fox, 472/471 five/four), 56 → 63 cues. **Proof is the
+natural-match miss ring, which the soak prints by ID**: `96,85,153,472,471,621` → `96,85,153,621`,
+`PlayFailCount` 0, NO-FREEZE to Results, Boundary + Latest green. **Every one of the four survivors is a
+LOOPED cue** and needs FGM 285's `source_loop_ds_hardware` treatment; 96 `GroundGrind2` additionally has no
+`pitch` op, so `validate_articulation` rejects it as written. The crowd row is separately blocked on the
+TRIGGER side — `ftPublicMakeActor` only marks bits, so packing its cues today would be dead ROM.
+**VFX: THE PARTICLE INTERPRETER NOW RUNS.** `NDS_R2_PARTICLE_RUNTIME=1` completes a full both-CPU match to
+Results, NO-FREEZE, `MALLOCOVF=0`, `ScriptStartCount` 10. Three memory levers got it there (float printf
+out of the image, pools 112/24/80 -> 64/12/12 sized from the high-water counters, bank normalized in place
+instead of a 10,912 B arena copy) against `ifCommonSetMaxNumGObj`'s 25 KiB latch. The scripts were silent
+for a separate reason: the pack's reachable set was seeded from `census.SUBSTITUTES`, which is what Task 39
+**replaces** with sprites -- near the complement of what still needs a script. The runtime reject ring named
+it (Fox blaster glow x8, Results confetti x2, both marked UNREACHABLE by the generator). 22 -> 41 seams,
+55 -> 87 scripts, and it cost **no arena**: the bytecode bank ships whole, reachability is only the offset
+table.
+**What is left is the DRAW.** `gNdsParticleDrawSeamCount` runs 19,696 times a match and draws nothing. The
+payload for it is built -- `efcommon_particle_quads.rgb5a1.bin`, 22 of 31 textures in 63,744 B of a 65,536
+budget -- because the renderer's texture cache uploads GL_RGBA and has no palette slot. **The VRAM problem
+is not real**: the draw seam's census says a live match draws textures **22 and 27 and nothing else**,
+1,280 bytes, and never more than **41 quads in a frame**. Binds are per texture, so that is two binds a
+frame however the quad count moves -- far under the SwitchPlan's "~23K buys fourteen binds" estimate.
+Remaining: upload the sheet into pinned GL textures at battle prepare, and emit camera-facing quads
+through the existing hardware batch. Nine big multi-frame textures are excluded by name in the report; the
+honest fix for those is halving 64x64x10, not raising the budget. **Traps:** `--gc-sections` had already
+discarded the particle textures, so the board's named arena lever freed zero — **check the `.map` before
+believing a size claim about linked data nothing reads**; and **break on `__excpt_entry`, not the frozen
+PC**, because calico's handler double-faults and destroys the context.
 
 ## SUCCESSIVE MATCHES: FIXED — four defects, one law (write-up in `docs/PORTING.md` + board row)
 
@@ -111,17 +111,19 @@ Each one hid the next, which is why the row read as "nothing happens". (1) `sIFC
 never initialised — nothing called the source's `ifCommonBattleInitPlacement` — so `--place == 0` could
 never be true and **no VS match had ever announced GAME SET**, which also withheld `game_status = Set`
 and therefore Results. (2) The nine blue letters had no sprite descriptors, so they kept the blanket
-endian pass's swapped fields (read off `assets/us/relocData/82.vpk0.bin` on the host; the two earlier gdb
-attempts were unnecessary). (3) The update proc that announcement installs dereferences
-`gEFParticleStructsGObj`/`gEFParticleGeneratorsGObj` with **no NULL check** (`ifcommon.c:2609`), and both
-are NULL while the particle runtime is off — a write through address 0, which crashed the game the moment
-(1) let the announcement run. TIME UP was spared only because it installs the BONUS update proc.
-Fixed with a zeroed placeholder (`ndsEFParticleEnsureGObjPlaceholders`, scoped to the runtime being off).
-**Proof:** `sudden-death/2026-07-31_165338-timeup-frame20.png` (TIME UP on screen) and the owner watching
-a live run reach GAME SET and Results. The `-CaptureAnnounce`/`-CaptureGameSet` switches break on the
-announcement's own constructor and then step frames — a wall-clock watch cannot catch a 90-tick window
-and two missed it. **A halted-core screenshot can show a stale buffer**: the GAME SET stills looked empty
-while the owner saw the text live, so trust the live watch for announcement pictures.
+endian pass's swapped fields (read off `assets/us/relocData/82.vpk0.bin` on the host). (3) The update proc
+that announcement installs dereferences `gEFParticleStructsGObj`/`gEFParticleGeneratorsGObj` with **no
+NULL check** (`ifcommon.c:2609`), and both are NULL while the particle runtime is off — a write through
+address 0, which crashed the game the moment (1) let the announcement run. TIME UP was spared only because
+it installs the BONUS update proc. Fixed with a zeroed placeholder
+(`ndsEFParticleEnsureGObjPlaceholders`, scoped to the runtime being off).
+**Proof:** `sudden-death/2026-07-31_165338-timeup-frame20.png` and the owner watching a live run reach
+GAME SET and Results. `-CaptureAnnounce`/`-CaptureGameSet` break on the announcement's own constructor and
+step frames — a wall-clock watch cannot catch a 90-tick window, and two missed it. **A halted-core
+screenshot can show a stale buffer**, so trust the live watch for announcement pictures.
+**GAME SET's pitch (2026-08-01):** the pack takes a cue's rate from `notes[0]`, and pitch code 0 is a
+REST. FGM 488 is the only P1 cue opening with one, so it played 13 semitones low. Guard is external —
+the derivation had the same bug the pack self-checks against — and rejects any entry under 12,000 Hz.
 
 ## Freeze classes — TWO, with different fixes. Never say "the allocator" without the counter
 
@@ -144,11 +146,11 @@ or 32 with particles on) — not failed match allocations. It nearly bought a re
   does not define (the soak puts ~80 counters in ONE printf, so one absent symbol cost all of them).
 - **A run that ends at the moment under investigation proves nothing**, and neither does a wall-clock
   watch aimed at a short window. Two rematch soaks read NO-FREEZE with the GAME SET zoom as their final
-  frame (5-minute cap ended the emulator at match two's hand-off — ceiling is 7 minutes now,
-  `-PressStartEverySeconds` drives successive entries); two Sudden Death watches missed the 90-tick
-  announcement window entirely. Break on the event and step frames instead (`-CaptureAnnounce`).
-- **Identical source is not an identical binary**: two HEAD controls differed by P95 +5,376, ±1
-  over-gate frame. Always run the matched control. **DLDI-on costs ~29,696 P95 and is the honest config.**
+  frame (ceiling is 7 minutes now, `-PressStartEverySeconds` drives successive entries); two Sudden Death
+  watches missed the 90-tick window. Break on the event and step frames (`-CaptureAnnounce`).
+- **Identical source is not an identical binary** — always run the matched control. But the harness itself
+  is deterministic: two control runs on the same ROM came back **bit-identical in every bucket**, so a
+  cross-BUILD delta is real signal, not noise. **DLDI-on costs ~29,696 P95 and is the honest config.**
 - **Never compare an anim-cache pair frame-by-frame** — it shifts load timing; order stats only.
 - **The census window is a COMPILE-TIME constant**, so `-NoBuild` measures the last build's window.
 - **`-Os` emits `blx __udivsi3` for a CONSTANT divisor**; `sinf`/`cosf` drag in `__ieee754_rem_pio2f` —
@@ -168,7 +170,10 @@ Task 39; **R2-06 E6** the Horner fold; **pointer arrays as index arithmetic** (E
 DL-buffer overflow as the *Sudden Death* freeze** (they are the *rematch* freezes); **L8's unroll**; **the
 atlas allocation-order theory**; **"115,277 B of arena spare" as the particle memory answer**; **wrapping
 a decomp function to count its INTERNAL callers** (the rename bypasses the wrapper; `--gc-sections` then
-deletes it — read the source's state instead).
+deletes it — read the source's state instead); **L7 as "convert `gmCollisionSetInvertMatrix`"** (wired,
+measured, reverted: +6,481 cycles/frame of placement against a 534 win); **`census.SUBSTITUTES` as the
+particle seam list** (it is the set Task 39 REPLACES); **the particle VRAM budget as a blocker** (a live
+match draws two textures and 1,280 bytes).
 **STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked**: real work removed,
 negative bytes added, bit-identical load-frame set, yet P95 +15,744. Only a change clearing ~16,000, or
 one that moves work off the frame, counts.
