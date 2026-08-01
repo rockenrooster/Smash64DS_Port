@@ -165,6 +165,21 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerEggBreakMakeEffect ndsBaseEFManagerEggBreakMakeEffect
 #define efManagerFoxReflectorMakeEffect ndsBaseEFManagerFoxReflectorMakeEffect
 
+/* Shrink the effect-instance pool AT ITS ALLOCATION rather than truncating the
+ * free list afterwards. efManagerInitEffects does one
+ * syTaskmanMalloc(sizeof(EFStruct) * EFFECT_ALLOC_NUM) out of
+ * gSYTaskmanGeneralHeap, and that heap is bump-allocated -- so a truncated list
+ * bounds concurrency but hands nothing back, and the 26 unreachable entries go
+ * on costing the match their full size. Redefining the count here makes the
+ * source allocate exactly what the port will use, which is general heap
+ * returned to the margin that ifCommonSetMaxNumGObj watches at 25,600.
+ *
+ * The list truncation in ndsEFManagerBoundEffectPool stays as the belt: it
+ * no-ops when this define has already taken effect, and still bounds the pool
+ * if a future include order stops it from applying. */
+#undef EFFECT_ALLOC_NUM
+#define EFFECT_ALLOC_NUM NDS_R2_EFFECT_POOL
+
 #include "../../decomp/BattleShip-main/decomp/src/ef/efmanager.c"
 
 #undef efManagerInitEffects
@@ -1219,6 +1234,29 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
     u32 drop = 0u;
 
     gNdsKOBurstAttemptCount++;
+#if !NDS_R2_KO_BURST_PARTICLE
+    /* THE KO BURST IS OFF BY DEFAULT, and this is the only configuration
+     * measured NO-FREEZE: two KOs, a completed match, Results reached, heap
+     * low-water 29,328. Every configuration that spawns any part of the burst
+     * dies on the FIRST KO at presented frame 609.
+     *
+     * The narrowing, all on the published configuration:
+     *   burst + tree      FROZEN at 609   att=1 ok=1 drop=000 stage=6
+     *   burst, no tree    FROZEN at 609   att=1 ok=1 drop=400 stage=6
+     *   no burst          NO-FREEZE       att=2      drop=200, match completes
+     * with MALLOCOVF=0, the GObj cap unfired and 32,196 bytes free in the
+     * frozen case -- so this is not allocation, and it is not the DObj tree.
+     * What is left is the particle call itself, and the one thing that makes
+     * it unlike every effect that works is the generator link:
+     * lbParticleMakeScriptID(bank | LBPARTICLE_MASK_GENLINK(1), ...). Every
+     * healthy effect in this port uses GENLINK(0). That is the next thing to
+     * look at, not the heap.
+     *
+     * ftCommonDeadUpStar still plays efManagerSparkleWhiteDeadMakeEffect, which
+     * is particle-only on link 0 and works, so a KO is not silent. */
+    gNdsKOBurstDropMask |= NDS_KO_BURST_DROP_SUPPRESSED;
+    return NULL;
+#endif
     gNdsKOBurstStage = NDS_KO_BURST_STAGE_ENTER;
 
     gNdsKOBurstStage = NDS_KO_BURST_STAGE_PARTICLE;
@@ -1248,6 +1286,36 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
     }
     else { drop |= NDS_KO_BURST_DROP_PARTICLE; }
 
+#if !NDS_R2_KO_BURST_TREE
+    /* THE KO BURST SHIPS PARTICLE-ONLY. Everything above -- the generator
+     * script and its transform -- is the visible explosion, drawn through the
+     * textured-quad path that is already proven. What follows is the animated
+     * DObj tree, and it is the freeze the owner reported on 2026-08-01.
+     *
+     * Isolated by A/B on the published configuration: burst on, the game dies
+     * on the FIRST KO at presented frame 609; burst suppressed, two KOs and a
+     * completed match reaching Results, NO-FREEZE, heap low-water 29,328.
+     * The tree is not what breaks -- it builds correctly and reports
+     * att=1 ok=1 drop=000 stage=6 with MALLOCOVF=0 and the GObj cap unfired.
+     * It dies one frame LATER, in the update: efManagerFuncRun installs
+     * efManagerNoStructProcUpdate (this desc has no EFFECT_FLAG_USERDATA, so
+     * ep is NULL and the have-struct updater is correctly not used), which
+     * calls gcPlayAnimAll every frame. gcPlayAnimAll is NULL-safe at the top,
+     * so the fault is inside the anim-joint walk over o_anim_joint /
+     * o_matanim_joint -- an animation-data problem, not an allocation one. The
+     * abort context proves the shape: a data abort taken in System mode, after
+     * which calico schedules the idle thread and every capture reads as a bare
+     * armWaitForIrq with zeroed registers.
+     *
+     * PROJECT_GOAL ranks visual fidelity below stability, and a sprite-based
+     * approximation is explicitly allowed, so the tree waits for the animation
+     * defect rather than the KO waiting for the tree. Set NDS_R2_KO_BURST_TREE=1
+     * to work on it; that configuration currently freezes. */
+    gNdsKOBurstDropMask |= NDS_KO_BURST_DROP_TREE_OFF;
+    gNdsKOBurstStage = NDS_KO_BURST_STAGE_DONE;
+    gNdsKOBurstCompleteCount++;
+    return NULL;
+#endif
     gNdsKOBurstStage = NDS_KO_BURST_STAGE_MATANIM;
     /* Reassigned per KO from an address-valued table, so it needs resolving
      * every time -- the once-per-scene sweep in efManagerInitEffects cannot

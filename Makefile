@@ -1400,6 +1400,21 @@ NDS_R2_EFFECT_POOL ?= 12
 # ordinary bound check in ftcommondead.c, so the burst, scoring and respawn all
 # run for real. NEVER ship this: these are the gameplay blast zones.
 NDS_R2_KO_STRESS ?= 0
+# Build the KO burst's animated DObj tree. DEFAULT 0 -- the burst ships
+# particle-only -- because this configuration FREEZES on the first KO. The tree
+# itself builds correctly (att=1 ok=1 drop=000 stage=6, MALLOCOVF=0, GObj cap
+# unfired); it faults one frame later inside gcPlayAnimAll's anim-joint walk,
+# so the open defect is the effect ANIMATION data, not allocation. See the
+# block comment in src/import/battleship_efmanager.c. Owner report,
+# 2026-08-01: "the KO burst freezes the game".
+NDS_R2_KO_BURST_TREE ?= 0
+# Spawn the KO burst's particle at all. DEFAULT 0, which switches
+# efManagerDeadExplodeMakeEffect off entirely and is the ONLY configuration
+# measured NO-FREEZE (two KOs, completed match, Results reached). Anything that
+# spawns any part of the burst dies on the first KO at presented frame 609 with
+# a healthy heap, so the open defect is the particle path -- specifically its
+# LBPARTICLE_MASK_GENLINK(1) generator link, unique among this port's effects.
+NDS_R2_KO_BURST_PARTICLE ?= 0
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_BGM := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_FGM := 1
@@ -2528,6 +2543,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_SOURCE_EFFECTS_FULL $(NDS_R2_SOURCE_EFFECTS_FULL)'; \
 		echo '#define NDS_R2_EFFECT_POOL $(NDS_R2_EFFECT_POOL)'; \
 		echo '#define NDS_R2_KO_STRESS $(NDS_R2_KO_STRESS)'; \
+		echo '#define NDS_R2_KO_BURST_TREE $(NDS_R2_KO_BURST_TREE)'; \
+		echo '#define NDS_R2_KO_BURST_PARTICLE $(NDS_R2_KO_BURST_PARTICLE)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)'; \

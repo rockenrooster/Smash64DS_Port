@@ -1,6 +1,45 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
+-respawn floating platform isn't visible when respawning.
+-Stray VFX are getting played across the stage when attacks are landed.
 -the rolling dodge sound (escape?) sounds off, maybe too loud???
+-PARTLY FIXED (2026-08-01) the KO burst freezes the game.
+  **Two root causes fixed, one still open, and the burst ships OFF until it is.**
+  1. FIXED -- EFDesc file offsets were symbol ADDRESSES. On N64
+     `llEFCommonEffects2DeadExplodeDefaultDObjDesc` and ~180 siblings are
+     absolute linker symbols, so `&llFoo` IS the offset and
+     efManagerMakeEffect's raw `addr + o_dobjsetup` is correct. This port
+     supplies them as `static uintptr_t llFoo = 0x4F08u`, so `&llFoo` is a RAM
+     address; all 182 references are &-prefixed, so nothing read the value and
+     nothing caught it. `0x023xxxxx + 0x021xxxxx` lands outside the DS's 4 MB
+     and gcSetupCustomDObjs walked it as a DObjDesc tree, allocating a 136-byte
+     DObj per bogus node until syMallocSet gave up. Captured: `MALLOCOVF=1
+     req=136 head=112`, `dobjdesc=0x446da28`, under
+     `efManagerMakeEffect(dEFManagerDeadExplodeEffectDesc)` from
+     `ftCommonDeadLeftSetStatus`. NOTE: this also retires the "a source effect
+     costs ~5 DObjs" figure -- that was a runaway walk, not a cost.
+  2. FIXED -- `lbRelocGetFileSize` reports `sizeof(Sprite)` for an ALREADY
+     LOADED file, because ndsRelocExternTreeAllocSize returns 0 once an asset
+     has a status node. Reading its 68 as "the effect assets are missing" was
+     wrong: EFCommonEffects1/2/3 are packed and load at 52,736 / 28,352 /
+     13,616 bytes. Use `ndsRelocGetLoadedFileSize` for a live file.
+  3. OPEN -- the burst still freezes, and it is NOT allocation. A/B on the
+     published configuration, all with `MALLOCOVF=0`, the GObj cap unfired and
+     32,196 bytes free in the frozen case:
+       burst + DObj tree  FROZEN at presented frame 609  att=1 ok=1 drop=000
+       burst, no tree     FROZEN at presented frame 609  att=1 ok=1 drop=400
+       burst off          NO-FREEZE, two KOs, match completes, Results reached
+     So neither the tree nor the heap. What is left is the particle call, whose
+     one peculiarity is its generator link:
+     `lbParticleMakeScriptID(bank | LBPARTICLE_MASK_GENLINK(1), ...)` -- every
+     healthy effect in this port uses GENLINK(0). START THERE.
+     The fault is a data abort taken in System mode (`spsr_abt` low bits 0x1f,
+     and it VARIES between runs so it is live, not stale boot state); calico
+     then schedules the idle thread, which is why every capture reads as a bare
+     `armWaitForIrq` with zeroed registers and no guest frame.
+  `NDS_R2_KO_BURST_PARTICLE=1` re-enables the particle, `NDS_R2_KO_BURST_TREE=1`
+  the tree; both currently freeze. `efManagerSparkleWhiteDeadMakeEffect` is
+  particle-only on link 0, works, and still plays, so a KO is not silent.
 -Still get intermittent freezes when attacking (maybe collision/animation/heap
   related?).
   **A LIKELY OWNER was removed on 2026-08-01, and the owner's play test is the

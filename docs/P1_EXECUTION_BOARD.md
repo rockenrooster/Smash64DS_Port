@@ -1,8 +1,82 @@
 # P1 Execution Board
 
-Updated: 2026-08-01 04:20 Central
+Updated: 2026-08-01 14:45 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
+
+## EVERY EFFECT DESC WAS HOLDING A SYMBOL ADDRESS WHERE AN OFFSET BELONGED (2026-08-01)
+
+The owner reported "the KO burst freezes the game". Two root causes fell out,
+and the first one invalidates a figure this campaign has been budgeting against.
+
+**The N64 absolute-symbol seam.** `llEFCommonEffects2DeadExplodeDefaultDObjDesc`
+and ~180 siblings are absolute linker symbols on N64: the symbol's ADDRESS is
+the byte offset, so every decomp EFDesc initialiser writes `&llFoo` and
+`efManagerMakeEffect`'s raw `addr + effect_desc->o_dobjsetup` is correct. This
+port supplies them from a generated header as `static uintptr_t llFoo = 0x4F08u`,
+so `&llFoo` is a RAM address. All 182 references in `efmanager.c` are
+&-prefixed, so nothing ever read the value and nothing caught it. The port's
+reloc design normally absorbs this -- a symbol address is a token and
+`ndsRelocGetFileData` translates it -- but this one seam does raw arithmetic.
+
+The failure is a hang, not a wrong picture: `0x023xxxxx + 0x021xxxxx` is outside
+the DS's 4 MB, and `gcSetupCustomDObjs` walks it as a DObjDesc tree allocating a
+136-byte DObj per bogus node until `syMallocSet` gives up. Captured verbatim:
+`MALLOCOVF=1 req=136 head=112`, `dobjdesc=0x446da28`.
+
+**Retract the "a source effect costs ~5 DObjs" figure.** The +196 DObjs measured
+when eleven seams were routed was this runaway walk, not the cost of an effect.
+Every "source effects are too expensive for the heap" conclusion built on it --
+including the reasoning that motivated a bounded fixed-pool effect runtime --
+rests on a measurement of a bug. Re-price before planning against it.
+
+**`lbRelocGetFileSize` cannot size a loaded file.** It returns `sizeof(Sprite)`
+once an asset has a status node, because it sizes an allocation not yet made.
+Reading its 68 as "EFCommonEffects1/2/3 are not in the ROM" was wrong -- they are
+packed and load at 52,736 / 28,352 / 13,616 bytes. `ndsRelocGetLoadedFileSize`
+is the correct query and now exists.
+
+**Still open, and it is not allocation.** With both fixed the burst builds
+correctly (`att=1 ok=1 drop=000 stage=6`) and the game still dies on the first
+KO. A/B on the published configuration, every arm with `MALLOCOVF=0`, the GObj
+cap unfired and 32,196 bytes free in the frozen case:
+
+| KO burst | verdict | evidence |
+|---|---|---|
+| with DObj tree | FROZEN, presented frame 609 | `att=1 ok=1 drop=000` |
+| particle only | FROZEN, presented frame 609 | `att=1 ok=1 drop=400` |
+| off | NO-FREEZE, 2 KOs, Results reached | `drop=200`, heap min 29,328 |
+
+Neither the tree nor the heap. What remains is the particle call, and its one
+peculiarity is the generator link:
+`lbParticleMakeScriptID(bank | LBPARTICLE_MASK_GENLINK(1), ...)` where every
+healthy effect in this port uses `GENLINK(0)`. Start there. The fault is a data
+abort taken in System mode -- `spsr_abt` varies run to run, so it is live rather
+than stale boot state -- after which calico schedules the idle thread, which is
+why every capture reads as a bare `armWaitForIrq` with zeroed registers and no
+guest frame at all. Ships off via `NDS_R2_KO_BURST_PARTICLE=0`.
+
+**Three harness defects fixed on the way, each of which cost real time today:**
+- `Get-MelonDSWindowFrameHash` used `CopyFromScreen`, which reads the DESKTOP. A
+  browser over melonDS made all eight polls hash the browser and the run
+  reported `FROZEN-FROM-START` against a ROM that had presented 1,721 frames. The
+  standing comment claiming liveness hashing tolerates occlusion is withdrawn: it
+  does not degrade a verdict, it fabricates one -- and it wrote a photograph of
+  the owner's desktop into `artifacts/`. A VBlanks-per-presented-frame
+  contradiction check now flags the same class independently.
+- A frozen run never reaches the end-of-run globals, so the KO and EFDesc
+  counters print in the FREEZE capture too. Two builds were spent iterating
+  blind before that.
+- An erroring `-ex` ABORTS THE REST OF THE GDB BATCH. Probes added for symbols
+  that only exist under `NDS_TASK20_STACK_PROFILE=1` silently truncated the very
+  capture meant to settle the question. Only add a capture command whose symbol
+  exists in every build this script can be pointed at.
+
+`NDS_R2_KO_STRESS` halves Dream Land's side blast zones because the canonical
+one-minute match yields no KO at all -- `gNdsKOBurstAttemptCount == 0` over both
+a 2.5- and a 4.5-minute both-CPU run, which is why this report went untested for
+so long. Quartering all four bounds instead put the top blast zone inside the
+stage's jump arc and manufactured its own GObj-cap failure; sides only, halved.
 
 ## THE PARTICLE DRAW WAS 98% MISSING AND NOTHING SAID SO (2026-08-01)
 

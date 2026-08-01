@@ -1064,6 +1064,31 @@ try {
             # elapsed guest time cannot be sampled twice from inside one attach.
             'x/1i $pc',
             'backtrace 40',
+            # WHAT THE GAME LOOP WAS RUNNING, which the backtrace often cannot
+            # say. When the ARM9's game thread dies or blocks, calico schedules
+            # the idle thread, so the capture comes back as a bare armWaitForIrq
+            # with every register zeroed and no frame from the guest at all --
+            # three captures in a row on 2026-08-01. gcRunAll (objman.c:2202)
+            # publishes gGCCurrentCommon and gGCCurrentProcess as it walks, and
+            # they are NOT cleared on the way out, so they name the last GObj
+            # and the last process callback the loop entered. gdb symbolises the
+            # function pointers, which is the whole point. Separate commands so
+            # a NULL deref on one cannot take the others with it.
+            # NOTE, 2026-08-01: an erroring -ex ABORTS THE REST OF THE BATCH.
+            # A block of gNdsTask20CoroutineCensus* probes was added here
+            # unconditionally, and against any ROM built without
+            # NDS_TASK20_STACK_PROFILE=1 the very next capture stopped dead
+            # after the backtrace -- losing COUNTERS, MALLOCOVF, KOBURST and
+            # every heap number on the run that was meant to settle the
+            # question. Nothing in the output said so; the file was just short.
+            # Only add a command here if the symbol exists in EVERY build this
+            # script can be pointed at. (The probes themselves are gone: they
+            # refuted the stack-overflow theory -- ovf=0, high-water 268 of
+            # 16,384 -- and are not worth this hazard to keep.)
+            'p gGCCurrentCommon',
+            'p *gGCCurrentCommon',
+            'p gGCCurrentProcess',
+            'p *gGCCurrentProcess',
             'info registers',
             'printf "REG_IME=%08x\n", *(unsigned int *)0x04000208',
             'printf "REG_IE=%08x\n", *(unsigned int *)0x04000210',

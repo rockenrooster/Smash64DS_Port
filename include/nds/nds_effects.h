@@ -100,6 +100,8 @@ extern volatile u32 gNdsKOBurstDropMask;
 #define NDS_KO_BURST_DROP_SIBLING      (1u << 6) /* child->sib_next->sib_next */
 #define NDS_KO_BURST_DROP_SIBLING_MOBJ (1u << 7)
 #define NDS_KO_BURST_DROP_CHILD_MOBJ   (1u << 8)
+#define NDS_KO_BURST_DROP_SUPPRESSED   (1u << 9)  /* whole burst, A/B only */
+#define NDS_KO_BURST_DROP_TREE_OFF     (1u << 10) /* particle-only, shipping */
 
 extern volatile u32 gNdsVisualEffectCreateCount;
 extern volatile u32 gNdsVisualEffectDestroyCount;
