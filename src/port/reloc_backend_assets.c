@@ -6726,6 +6726,26 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
     return (heap != NULL) ? (size_t)(heap_ptr - heap_start) : 0;
 }
 
+/* Byte span of an ALREADY-LOADED reloc file, or 0 if it is not resident.
+ *
+ * lbRelocGetFileSize cannot answer this and must not be used for it. It sizes
+ * an allocation that has yet to be made, so ndsRelocExternTreeAllocSize
+ * deliberately returns 0 once the asset has a status node -- a resident file
+ * needs no further heap -- and lbRelocGetFileSize then falls back to
+ * sizeof(Sprite). Asking it about a loaded file therefore reports 68 bytes for
+ * a file that is resident and perfectly intact, which on 2026-08-01 read as
+ * "EFCommonEffects1/2/3 are not in the ROM" when all three were loaded and
+ * EFCommonEffects2 was 28,432 bytes on disk. Anything bounds-checking an
+ * offset against a live file wants this function. */
+size_t ndsRelocGetLoadedFileSize(const void *file_id)
+{
+    u32 token = ndsRelocFileID(file_id);
+    u32 asset_id = ndsRelocAssetIDForToken(token);
+    NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+
+    return (loaded != NULL) ? (size_t)loaded->data_size : 0u;
+}
+
 void *ndsRelocGetFileData(void *file, const void *symbol)
 {
     NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileByData(file);

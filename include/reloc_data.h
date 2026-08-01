@@ -695,6 +695,10 @@ void *lbRelocGetStatusBufferFile(const void *file_id);
 size_t lbRelocGetAllocSize(u32 *ids, u32 len);
 size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap);
 void *ndsRelocGetFileData(void *file, const void *symbol);
+/* Span of an already-loaded reloc file, 0 if not resident. NOT
+ * lbRelocGetFileSize, which answers sizeof(Sprite) for a resident file -- see
+ * the definition in src/port/reloc_backend_assets.c. */
+size_t ndsRelocGetLoadedFileSize(const void *file_id);
 
 #define lbRelocGetFileData(type, file, symbol) \
     ((type)ndsRelocGetFileData((file), (symbol)))

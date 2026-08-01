@@ -933,23 +933,23 @@ static intptr_t ndsEFManagerResolveOffset(intptr_t value)
     return value;
 }
 
-/* Byte span of the file a desc offsets into, or 0 when this port has no way to
- * know. Only the three EF common files are knowable from the desc alone --
- * file_head is a pointer to the slot, not a file id -- and they are the ones
+/* Byte span of the LOADED file a desc offsets into, or 0 when this port has no
+ * way to know. Only the three EF common files are knowable from the desc alone
+ * -- file_head is a pointer to the slot, not a file id -- and they are the ones
  * that matter here. */
 static size_t ndsEFManagerFileSpan(void **file_head)
 {
     if (file_head == &gEFManagerFiles[0])
     {
-        return lbRelocGetFileSize(&llEFCommonEffects1FileID);
+        return ndsRelocGetLoadedFileSize(&llEFCommonEffects1FileID);
     }
     if (file_head == &gEFManagerFiles[1])
     {
-        return lbRelocGetFileSize(&llEFCommonEffects2FileID);
+        return ndsRelocGetLoadedFileSize(&llEFCommonEffects2FileID);
     }
     if (file_head == &gEFManagerFiles[2])
     {
-        return lbRelocGetFileSize(&llEFCommonEffects3FileID);
+        return ndsRelocGetLoadedFileSize(&llEFCommonEffects3FileID);
     }
     return 0u;
 }
@@ -1041,12 +1041,15 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 
 static void ndsEFManagerResolveAllDescOffsets(void)
 {
-    /* Recorded so a soak can tell "the effect is disabled because its asset is
-     * missing" from "the resolver is broken". sizeof(Sprite) here means the
-     * asset is absent and lbRelocGetFileSize fell back. */
-    gNdsEFDescEffectsSpan[0] = (u32)lbRelocGetFileSize(&llEFCommonEffects1FileID);
-    gNdsEFDescEffectsSpan[1] = (u32)lbRelocGetFileSize(&llEFCommonEffects2FileID);
-    gNdsEFDescEffectsSpan[2] = (u32)lbRelocGetFileSize(&llEFCommonEffects3FileID);
+    /* Recorded so a soak can tell "the effect is disabled because its file
+     * cannot back it" from "the resolver is broken". These are the LOADED
+     * spans: 0 means not resident. Do not switch this to lbRelocGetFileSize --
+     * it answers sizeof(Sprite) for a resident file, and reading its 68 as
+     * "the effect assets are missing" cost a wrong conclusion on 2026-08-01
+     * when all three were loaded and EFCommonEffects2 was 28,432 bytes. */
+    gNdsEFDescEffectsSpan[0] = (u32)ndsRelocGetLoadedFileSize(&llEFCommonEffects1FileID);
+    gNdsEFDescEffectsSpan[1] = (u32)ndsRelocGetLoadedFileSize(&llEFCommonEffects2FileID);
+    gNdsEFDescEffectsSpan[2] = (u32)ndsRelocGetLoadedFileSize(&llEFCommonEffects3FileID);
 
 #define NDS_EF_RESOLVE_ONE(name) ndsEFManagerResolveDescOffsets(&name);
     NDS_EF_MANAGER_DESCS(NDS_EF_RESOLVE_ONE)
