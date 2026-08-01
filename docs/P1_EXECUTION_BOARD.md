@@ -98,6 +98,53 @@ Same test applies to every remaining renderer-side idea in
 the stage-native flags. They are architecture work with real value for the
 four-fighter future, and **none of them is the gate**.
 
+## THE OVER-GATE PREMIUM IS DIFFUSE — measured, not inferred (2026-08-01)
+
+`run-task37-profile-census.ps1 -SplitOverGate`, the partition the harness had
+never exposed. **71 marked frames against 57 control, premium 474,032
+cycles/frame**, ranked per symbol. Grouped:
+
+| group | cycles/frame | of premium | of the real-work premium |
+|---|---:|---:|---:|
+| **idle** (`armWaitForIrq`) | 210,427 | **44.4%** | — |
+| **tick-HUD console** | 64,100 | 13.5% | **24.3%** |
+| soft float (`__aeabi_f*`, `sqrtf`, the div helpers) | 51,843 | 10.9% | 19.7% |
+| asset load / reloc / FAT | 23,666 | 5.0% | 9.0% |
+| animation (`ftAnimParse`, `gcPlayDObjAnim`, cubic) | 15,610 | 3.3% | 5.9% |
+| **collision** | **13,944** | **2.9%** | **5.3%** |
+| unattributed tail | ~94,442 | 19.9% | 35.8% |
+
+**Two things this settles, and both contradict what the board has been acting on.**
+
+**1. L6's "the over-gate frame is a hit-detection frame and 66.2% of its premium
+is soft-float" does not survive on the current tree.** Collision is **2.9%** of
+the premium. `func_ovl2_800ED490` is 3,790 cycles/frame and
+`gmCollisionSetInvertMatrix` 2,710 — together less than `memcpy`. That
+retrospectively explains the L7 result: the conversion won 534 cycles/frame
+because 534 cycles/frame is the size of the thing it converted. **The estimate
+was wrong, not the implementation.** Every "L7 should close the gap" figure on
+this board descends from that misattribution.
+
+**2. 44.4% of the premium is IDLE, which is the partition measuring the
+quantum.** A frame that misses the gate costs an extra VBlank, and most of that
+extra VBlank is `swiWaitForIrq`. So the raw premium overstates the recoverable
+work by nearly half, and the honest denominator is the ~263,605 cycles/frame of
+real work — of which **the largest single block is the tick HUD's own console**,
+which the shipped profile-0 ROM does not run.
+
+**So there is no lever, and that is now a measurement rather than an absence of
+ideas.** After idle and the instrument, nothing exceeds 20% and the tail is a
+third. This is the shape `PROJECT_GOAL.md` §"Sacrifice Order" and the
+SwitchPlan's own "honest options" list were written for: the remaining moves are
+cosmetic rate reduction, visual fidelity, and a **compensated 30 Hz simulation**
+— and the plan reserves that last call for the owner in as many words
+("substantially the same gameplay experience"). The uncompensated ceiling was
+already measured at −119,744 P95 against a 120,128 gap.
+
+**Do not run another point optimization against clause 4 without first
+re-reading this table.** Five of the campaign's levers were picked from the L6
+attribution that this refutes.
+
 ## CHECKPOINT — Latest green, both published ROMs rebuilt on the 83-cue pack (2026-08-01 05:10)
 
 `verify-all.ps1 -Profile Latest` **passed**. Both published ROMs rebuilt from
