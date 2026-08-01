@@ -15690,6 +15690,17 @@ ndsRendererSubmitHardwareTriangle(
 /* Shared scene code owns teardown calls even in the software build.  Keep the
  * hardware-only texture API link-complete without allocating GX state. */
 volatile u32 gNdsRendererBattleStaticTextureEnabled = 0u;
+/* Same reason, and the reason this block exists at all: scVSBattleStartBattle
+ * calls the scene texture-VRAM reset unconditionally, so the software build
+ * needs the symbol. The counters stay real so a soak against either build reads
+ * the same field rather than dropping it. */
+volatile u32 gNdsRendererSceneTextureVramResetEnable = 1u;
+volatile u32 gNdsRendererSceneTextureVramResetCount;
+
+void ndsRendererHardwareResetSceneTextureVram(void)
+{
+    gNdsRendererSceneTextureVramResetCount++;
+}
 
 s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
 {
