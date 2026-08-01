@@ -10,7 +10,7 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69** — 1,228,928 -> 1,096,768, DLDI-off so lower bounds; only the E32 flash residual is open (KNOWN_ISSUES) and it blocks no lever |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-06 | closed — no lever left inside the phase; L6 found the one outside it |
-| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **The particle interpreter is PROVEN CLEAN on the tick-HUD target** (NO-FREEZE, Violation 0, stage builds 2, 14 scripts, 138,274 visible particles, pools 41/64 and 8/12); the quad DRAW is the remaining half and six `BUGS.md` VFX rows wait on it. Crowd actor + 12 crowd/Results cues implemented. **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
+| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **The particle interpreter AND the quad draw are both DEFAULT ON and measured clean** — NO-FREEZE, stage builds 2, GObj cap never fired, 114,523 quads and zero missed, `FPS 29.0`, `VBI 2:962 3:167 4:13 5+:4`. Crowd actor + 13 crowd/Results/miss-ring cues implemented. **Owed: the owner's eye on the particles.** **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
 
 ## OPEN P1 #1 — the gate. Over by 88,960, and **there is no named lever**
 

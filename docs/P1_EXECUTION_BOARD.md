@@ -188,6 +188,22 @@ for the remaining `BUGS.md` VFX rows (Whispy leaves/dust, Results confetti, the
 KO burst) — and `gNdsParticleQuadMissCount` is what will say so, per effect,
 rather than a silent gap.
 
+### BOTH FLAGS DEFAULT 1 (2026-08-01)
+
+`NDS_R2_PARTICLE_RUNTIME` and `NDS_R2_PARTICLE_DRAW` are on by default. A build
+with no flag overrides soaks NO-FREEZE with `StagePrepareBuildCount` **2**,
+reuse **2,041**, `sGCCommonsMaxNum` **-1** (the GObj cap never fired),
+**114,523 quads emitted and zero missed**. Live HUD on that ROM:
+`FPS 29.0`, `ALL 1,119,744`, `FTR 377,088`, `STG 175,168`, `MISC 54,656`,
+`WORK 964,800 / 1,259,136` over n:128, `VBI 2:962 3:167 4:13 5+:4 max:19` —
+screenshot `artifacts/visibility/2026-08-01_particle-draw-default-on.png`.
+
+**Owed: the owner's eye.** The render-fidelity doctrine makes the owner the
+visual oracle, and this is the first build where the real efcommon scripts draw
+textured rather than as recoloured 16-vertex stand-ins. The pacing and
+correctness evidence is above; what nobody has judged yet is whether the
+particles LOOK right.
+
 Until then `NDS_R2_PARTICLE_DRAW` stays 0: the draw is correct (90,165 quads,
 zero atlas misses, NO-FREEZE, pools 41/48 and 8/10) and unshippable.
 

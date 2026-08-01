@@ -629,10 +629,21 @@ NDS_TASK39_FX_FLASH ?= 0
 NDS_TASK39_FX_SHIELD ?= 0
 # R2-07: compile the original particle bytecode interpreter (lb/lbparticle.c,
 # ef/efparticle.c) in place and let the real efcommon scripts run instead of the
-# recoloured 16-vertex stand-ins. Default off and not set in either shipped
-# block: the DS textured-quad draw path is a separate step, so at 1 the scripts
-# execute and nothing new is drawn yet.
-NDS_R2_PARTICLE_RUNTIME ?= 0
+# recoloured 16-vertex stand-ins.
+#
+# DEFAULT 1 as of 2026-08-01. Measured on three tick-HUD ROMs differing only in
+# these flags: this one is INDISTINGUISHABLE from the control -- NO-FREEZE, a
+# full match to Results, ViolationCount 0, StagePrepareBuildCount 2 -- while
+# running 14 scripts and 138,274 visible particles inside its fixed pools
+# (41/48 structs, 8/10 generators). SwitchPlan 3.11's no-gameplay-allocation
+# clause is satisfied by measurement rather than by argument.
+#
+# IT IS 1,176 BYTES FROM A HARD FAILURE and that is not a figure of speech:
+# ifCommonSetMaxNumGObj caps the GObj pool when the general heap drops under
+# 25 KiB free and the GO countdown then dereferences a NULL, and .text costs
+# taskman arena one for one here. Read `general heap free bytes` and
+# sGCCommonsMaxNum on any soak after adding image.
+NDS_R2_PARTICLE_RUNTIME ?= 1
 # R2-07 L7 step one. Read-only oracle: re-does the collision joint inverse in
 # 20.12 alongside the decomp's float one and records the deviation on the joints
 # a real match inverts. Decides nothing and changes nothing -- it exists because
@@ -640,20 +651,24 @@ NDS_R2_PARTICLE_RUNTIME ?= 0
 # 20x over the bound on the 0.25-2.00 one, and which of those SSB64 visits has
 # never been read off the running game. Off in both shipped blocks; it is a
 # measurement, and it comes out with the commit that wires L7 in or drops it.
-# R2-07 particle DRAW, separate from the runtime flag above because the
-# interpreter is proven and the draw is not. At 1 the atlas is bound and
-# camera-facing quads are emitted.
+# R2-07 particle DRAW. At 1 the atlas is bound and camera-facing quads are
+# emitted, which is what makes the real efcommon scripts visible instead of the
+# recoloured 16-vertex stand-ins six BUGS.md VFX rows describe.
 #
-# Two defects are closed and recorded at their seams rather than here: the
-# first build wedged the geometry engine (GXSTAT=0e008900) on a `glEnd()` the
-# stream must not carry -- check-gbi-decode-fixtures.ps1 pins that count at 1 --
-# and the second aborted at the GO countdown because the atlas took the largest
-# free texture-VRAM run before the interface asked for one
-# (ndsSCVSBattleBeginSceneTextures). Still 0 by default until a tick-HUD A/B
-# prices the draw against the P95 gate; NDS_R2_PARTICLE_RUNTIME=1 alone is
-# measured clean (NO-FREEZE, ViolationCount 0, stage builds 2, 14 scripts,
-# 138,274 visible particles, pools 41/64 and 8/12).
-NDS_R2_PARTICLE_DRAW ?= 0
+# DEFAULT 1 as of 2026-08-01, on a measured A/B: 117,937 quads emitted with
+# ZERO atlas misses, NO-FREEZE, and the stage fast path fully engaged
+# (StagePrepareBuildCount 2, reuse 2,041 -- the control's own numbers). Cost is
+# about 10,100 ticks (MISC P50 45,120 -> 55,232) and five extra three-VBlank
+# frames; the five-plus population is unchanged at 4 of 566.
+#
+# Three defects are closed and recorded at their seams rather than here: a
+# `glEnd()` that wedged the geometry engine (GXSTAT=0e008900 --
+# check-gbi-decode-fixtures.ps1 pins that count at 1); a GO-countdown abort
+# that was ifCommonSetMaxNumGObj capping the GObj pool under 25 KiB free
+# (PORTING.md); and 196 five-VBlank frames caused by a 32,768-byte atlas
+# starving the stage's texture resolve -- fixed by the 8,192-byte sheet, which
+# is a measured hard bound, not a budget (generate_nds_particle_banks.py).
+NDS_R2_PARTICLE_DRAW ?= 1
 NDS_R2_COLLISION_L7_ORACLE ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
