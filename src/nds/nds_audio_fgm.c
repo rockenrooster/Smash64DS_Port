@@ -290,9 +290,13 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     /* The two loudest survivors of the natural-match miss ring: the ground
      * grind a match requests six times a minute, and the altitude warning --
      * the second cue in the pack to ship as a DS hardware repeat, because its
-     * 300-tick schedule outlives its 0.757 s sample. */
+     * 300-tick schedule outlives its 0.757 s sample. And the third, whose
+     * first note asks for 90,510 Hz -- past the u16 `frequency` field above,
+     * so it renders its whole note schedule AOT and stores 32,000 like every
+     * other full-program cue. */
     case nSYAudioFGMGroundGrind2:
     case nSYAudioFGMAltitudeWarn:
+    case nSYAudioFGMUnkGrind4:
         return TRUE;
     default:
         return FALSE;

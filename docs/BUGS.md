@@ -121,11 +121,10 @@ These bugs should be fixed for P1 delivery.
     listen approval. A marker or packed cue alone is not completion. Status:
     OPEN.
 
--Three cues a natural match still asks for and does not get (2026-08-01 miss
-  ring, control soak): 96 `GroundGrind2` x6, 85 x2, 153 `AltitudeWarn` x2.
-  Not a row of their own before now because nothing had read the ring on a
-  clean run.
-  **96 and 153 are FIXED (2026-08-01); needs an ear check.**
+-FIXED (2026-08-01, needs an ear check) Three cues a natural match still asked
+  for and did not get (2026-08-01 miss ring, control soak): 96 `GroundGrind2`
+  x6, 85 x2, 153 `AltitudeWarn` x2. Not a row of their own before now because
+  nothing had read the ring on a clean run. All three are packed.
   - **96** had no `pitch` op, so `articulation_pitch_cents` derived as `None`
     and `validate_articulation` rejected it. No pitch op means zero cents;
     the validator says so now. It is NOT a looped cue in practice -- its
@@ -137,11 +136,26 @@ These bugs should be fixed for P1 delivery.
     spec now (five numbers; four are the same for every cue on the path), so
     the "machinery that needs generalising" this row kept describing was a
     dict. PNT 1 word, LEN 396, SNR 32.9 dB, pinned in the checker like 285.
-  - **85 `UnkGrind4` remains OPEN**: it derives a playback rate of ~90,510 Hz
-    (pitch code 20 at +1100 cents), which is the `source_rate_above_u16`
-    blocker the excluded set already names. It needs a decision about how the
-    DS should represent a rate above the register's range, not a
-    transcription.
+  - **85 `UnkGrind4` is FIXED too (2026-08-01); needs an ear check.** The row
+    used to say it "needs a decision about how the DS should represent a rate
+    above the register's range". There was no such decision to make: the
+    register is fine. 32000 * 2^(1800/1200) = 90,510 Hz is past the `u16
+    frequency` field of the PACK ENTRY (`nds_audio_fgm.c:46`), and the DS
+    channel timer reaches roughly a megahertz. `source_rate_above_u16` is a
+    statement about one field of ours.
+    189, 190 and 219 carry the same blocker and were already answered: render
+    the whole source program AOT at `FGM_OUTPUT_RATE` and bake the note
+    schedule into the samples, so the entry stores 32,000. 85 has exactly that
+    shape -- three notes, no forks -- so it joined `FULL_PROGRAM_AOT_IDS` and
+    needed no new machinery. 2,576 samples, 1,292 IMA bytes, SNR 25.07 dB.
+    One real gap did have to be closed: its articulation spawns modulator 24,
+    `shape 7` (`ramp_down_oneshot`) on `target 28`. The renderer raised on
+    both. Per the decomp's own field notes
+    (`decomp/tools/extract_fgm.py`), target 24+ is **cross-mod another
+    voice** -- and 85 has no fork voices, so it has no destination at all.
+    Cross-voice targets are now skipped *before* evaluation, which is why the
+    shape never has to be interpreted, and only for a cue with no forks; with
+    forks it stays a hard error, because there the modulation is real.
 
 -Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the

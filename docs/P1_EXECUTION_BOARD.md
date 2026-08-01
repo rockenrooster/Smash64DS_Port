@@ -1,8 +1,43 @@
 # P1 Execution Board
 
-Updated: 2026-08-01 02:10 Central
+Updated: 2026-08-01 04:20 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
+
+## THE FULL-CONTENT BASELINE — WORK-H P95 1,240,128, gap 120,128 (2026-08-01)
+
+Every prior gate figure on this board was measured with the particles off. That
+number cannot be optimized against any more, and the switch plan's own R2-07
+review says so ("the current 1,208,960 baseline is particles-off; do not
+optimize against it after enabling particles"). This is the replacement, taken
+on the committed tree with both particle flags at their new default 1.
+
+`artifacts/performance/r207-baseline-particles-on-128.json`, `git=85e43f4`,
+`dldi=ON`, 128 settled frames (439..566), one stop via `-RingDump`:
+
+| bucket | P50 | P95 | max |
+|---|---|---|---|
+| **WORK-H** | **926,336** | **1,240,128** | 1,492,928 |
+| FTR | 376,896 | 380,800 | 382,016 |
+| STG | 175,552 | 183,936 | 186,368 |
+| SRC | **281,280** | **533,760** | 714,560 |
+| MISC | 54,464 | 167,808 | 176,768 |
+| BG | 3,840 | 3,968 | 4,096 |
+| AUD | 2,432 | 3,648 | 128,384 |
+
+VBlank intervals `2:453 3:98 4:11 5+:4`, max interval 19, 566 intervals total,
+**cadence violations 0**.
+
+**Gap to the gate: 120,128.** Particles cost about 31,000 of it (1,208,960 →
+1,240,128), which is the honest price of six admitted textures drawing real
+efcommon scripts, and it is *inside* the range the switch plan predicted for
+cosmetic systems.
+
+**The tail owner is unchanged and it is still `SRC`.** FTR's spread is 1.01 and
+STG's is 1.05 — both are flat floors, and neither is where a P95 lever lives.
+`SRC` runs a 1.90 spread and a **+252,480 excursion above its own median**,
+which is twice the whole gap. The named lever for exactly that excursion is
+R2-07 L7, and its blocking question is now being measured (below).
 
 ## R2-07 clause 2 — the particle INTERPRETER is clean; the DRAW is a texture-VRAM ORDERING bug (2026-08-01)
 

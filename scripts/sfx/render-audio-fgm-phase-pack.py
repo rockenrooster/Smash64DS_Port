@@ -118,13 +118,18 @@ FULL_COVERAGE_IDS = (
     # Fox/Mario chants, three gasps, cheer, amazed, gasp-clap, three damage
     # reactions.
     605, 609, 615, 616, 617, 618, 619, 620, 622, 623, 625,
-    # The miss ring's loudest survivor, and the altitude warning.
-    96, 153,
+    # The miss ring's loudest survivor, the altitude warning, and the grind --
+    # all three cues a natural match asked for and did not get on 2026-08-01.
+    96, 153, 85,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
     375, 429, 431, 435, 440, 19, 41, 42, 43, 185, 186, 187, 189, 190,
     217, 218, 219, 216, 28, 2, 0, 188,
+    # 85's first note asks for 90,510 Hz, past the pack entry's u16 frequency
+    # field -- the same `source_rate_above_u16` blocker 189/190/219 carry, and
+    # the same answer: bake the note schedule into the samples and store 32,000.
+    85,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
@@ -1594,6 +1599,55 @@ SELECTED = (
             "1157bb10b51cd2ff8e356bb88f6b03aba6857e6ef067134cee1d6abe5f308a30",
         "articulation_program_sha256":
             "318f72b9338b63745e96aedc4562d2629d38bf5dd7599567ca1d5e16fec963d5",
+        "fidelity_debt": (),
+    },
+    # 85 UnkGrind4, the last of the three cues the miss ring caught, and the one
+    # BUGS.md said "needs a decision about how the DS should represent a rate
+    # above the register's range". It does not: the register is fine.
+    #
+    # Three notes at pitch codes 20/24/12 under an articulation at +1100 cents,
+    # so the first note asks for 32000 * 2^((1100 + 700)/1200) = 90,510 Hz. That
+    # is past 0xFFFF, which is the width of `u16 frequency` in the PACK ENTRY
+    # (nds_audio_fgm.c:46) -- not a DS limit. The channel timer reaches roughly
+    # a megahertz; the field is ours. So `source_rate_above_u16` is a statement
+    # about one entry field, and widening it would move a 32-byte layout that
+    # three static asserts and a checker pin, for one cue.
+    #
+    # 189, 190 and 219 carry the same blocker and are already answered: render
+    # the whole source program AOT at FGM_OUTPUT_RATE and bake the pitch
+    # schedule into the samples. The entry then stores 32,000 like every other
+    # AOT cue and the note sequence is inside the PCM. 85 has exactly that shape
+    # -- a bounded three-note schedule, no forks -- so it joins
+    # FULL_PROGRAM_AOT_IDS and needs no new machinery. 14 ticks is 2,576 samples
+    # at 184/tick, i.e. about 1.3 KB of IMA.
+    {
+        "id": 85,
+        "name": "nSYAudioFGMUnkGrind4",
+        "kind": "motion",
+        "articulation": 172,
+        "sound": 5,
+        "notes": ((20, 7, 4), (24, 7, 4), (12, 7, 6)),
+        "duration_ticks": 14,
+        "ucd_volume": 250,
+        "articulation_pitch_cents": 1100,
+        "loop": True,
+        "wave_base": 45608,
+        "wave_length": 21880,
+        "loop_start": 89,
+        "loop_end": 38880,
+        # Unused on this path and deliberately not a real figure: the full
+        # program render walks the note schedule and never trims a source
+        # prefix, so nothing reads it. Same 1 the auto-derived attack selectors
+        # carry for the same reason (see the FULL_COVERAGE_IDS loop). A real
+        # sample count here would be a fixture nothing checks.
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "dd8ae3a7e2bb5ab9c5ee7dbd470ec9d3405093639dc15da4bfde509004901b81",
+        "render_program_sha256":
+            "dd8ae3a7e2bb5ab9c5ee7dbd470ec9d3405093639dc15da4bfde509004901b81",
+        "articulation_program_sha256":
+            "e4b6796c4107d12978ed8cad07addb9864720420c84a12ecda8a794daf7cffd6",
         "fidelity_debt": (),
     },
 )
@@ -3252,7 +3306,9 @@ def _fgm_modulator_value(state: dict, sine_table: list[int]) -> float:
 
 def articulation_program_states(program: list[list], modulators: dict,
                                 sine_table: list[int],
-                                tick_count: int) -> list[dict]:
+                                tick_count: int,
+                                cross_voice_mod_is_inert: bool = False
+                                ) -> list[dict]:
     pc = 0
     loop_pc = 0
     next_tick = 0
@@ -3304,8 +3360,27 @@ def articulation_program_states(program: list[list], modulators: dict,
                 break
         for slot in sorted(active_modulators):
             modulator = active_modulators[slot]["modulator"]
-            value = _fgm_modulator_value(active_modulators[slot], sine_table)
             target = int(modulator["target"])
+            # `target` 24+ is "cross-mod ANOTHER voice" -- the field notes in
+            # decomp/tools/extract_fgm.py say so, and 0..9 scratch / 10-15
+            # vol/pitch/pan / 16..23 self-mod are the ones that reach the voice
+            # being rendered here. A cross-voice modulator has no destination in
+            # a single-voice render, so evaluating it would be inventing an
+            # effect rather than reproducing one. Skipped BEFORE evaluation, so
+            # its shape never has to be interpreted either -- FGM 85's is
+            # shape 7 (ramp_down_oneshot), which _fgm_modulator_value does not
+            # implement and now does not need to.
+            #
+            # Only inert when the cue has no fork voices. With forks "another
+            # voice" exists and dropping the modulation would be a real fidelity
+            # loss, so that case stays a hard error. No cue packed before 85
+            # reaches this branch at all.
+            if target >= 24:
+                if not cross_voice_mod_is_inert:
+                    raise ValueError(
+                        f"cross-voice FGM modulator target {target} with forks")
+                continue
+            value = _fgm_modulator_value(active_modulators[slot], sine_table)
             if target == 10:
                 volume = int(min(127.0, max(0.0, value)))
             elif target == 11:
@@ -3398,7 +3473,8 @@ def render_fgm_program_voice_aot(program_id: int, ucd: dict,
     notes, forks = fgm_program_notes(audit["ucd_program"])
     tick_count = max(note["end_tick"] for note in notes)
     articulation_states = articulation_program_states(
-        audit["articulation_program"], modulators, sine_table, tick_count)
+        audit["articulation_program"], modulators, sine_table, tick_count,
+        cross_voice_mod_is_inert=not forks)
     loop = audit["source_loop"]
     output = []
     source_phase = 0.0

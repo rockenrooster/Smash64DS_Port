@@ -34,9 +34,10 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # The reactive crowd: Fox/Mario chants, GaspL/M/S, Cheer, Amazed,
     # GaspClap, DamageL/M/S -- the eleven ft/ftpublic.c reaches in a P1 match.
     605, 609, 615, 616, 617, 618, 619, 620, 622, 623, 625,
-    # The miss ring's two loudest survivors: the ground grind and the altitude
-    # warning, the second DS hardware loop in the pack.
-    96, 153)
+    # The miss ring's three survivors: the ground grind, the altitude warning
+    # (the pack's second DS hardware loop), and UnkGrind4 -- whose first note
+    # asks for 90,510 Hz and therefore renders full-program AOT at 32,000.
+    96, 153, 85)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -44,15 +45,15 @@ if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
 if (([int]$metadata.format_version -ne 4) -or
     ([int]$metadata.entry_bytes -ne 32) -or
     ([int]$metadata.envelope_point_bytes -ne 4) -or
-    ([int64]$metadata.resident_bytes -ne 680712) -or
+    ([int64]$metadata.resident_bytes -ne 682036) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines for no runtime
     # reason; the bound that is real is the 53,248-byte cache-slot gate below.
     ([int64]$metadata.pack_limit_bytes -ne 786432) -or
-    ($metadata.mapping_sha256_lo -ne '0x839032c3') -or
+    ($metadata.mapping_sha256_lo -ne '0x9e0ff1f8') -or
     ($metadata.pack_sha256 -ne
-        '39d59d6d3ce1ee20b1d295fb6b6e561d83e6a9c411b840f364a32597ad5319ca')) {
+        '96ac86a2dad764c216ef93924496545fe2f251d6416a9e10128d4044b36bc79f')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -137,6 +138,21 @@ if (($fgm153.ds_loop_strategy -ne 'source_loop_ds_hardware') -or
     ($oracle153.ds_repeat_oracle_wrong_len_detected -ne $true)) {
     throw 'FGM 153 lost its DS hardware altitude-warning loop.'
 }
+# 85 UnkGrind4 is the pack's answer to `source_rate_above_u16`, and the answer
+# is "do not store that rate at all". Its first note asks for 90,510 Hz --
+# 32,000 * 2^(1800/1200) -- against a u16 `frequency` field, so it renders its
+# whole three-note schedule AOT and the entry stores FGM_OUTPUT_RATE. Pin both
+# halves: a regression that reverted the AOT strategy would store a truncated
+# rate and the cue would play at some unrelated pitch rather than fail.
+$fgm85 = $metadata.entries | Where-Object { [int]$_.id -eq 85 }
+if (([int]$fgm85.ds_frequency_hz -ne 32000) -or
+    ([int]$fgm85.net_pitch_cents -ne 1800) -or
+    ($fgm85.ds_loop_strategy -ne 'source_program_aot') -or
+    ([int]$fgm85.ds_loop_flag -ne 0) -or
+    ([int]$fgm85.acoustic_oracle.aot_output_frequency_hz -ne 32000) -or
+    ([int]$fgm85.acoustic_oracle.aot_output_samples -ne 2576)) {
+    throw 'FGM 85 no longer renders its above-u16 note schedule AOT.'
+}
 $fgm218 = $metadata.entries | Where-Object { [int]$_.id -eq 218 }
 if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
     ([int]$metadata.attack_activation_qualification.fgm_218_feasibility.source_effective_fx_mix -ne 25)) {
@@ -145,9 +161,9 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 77u',
-    '#define NDS_AUDIO_FGM_PACK_BYTES 680712u',
-    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x839032c3u',
+    '#define NDS_AUDIO_FGM_ENTRY_COUNT 78u',
+    '#define NDS_AUDIO_FGM_PACK_BYTES 682036u',
+    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x9e0ff1f8u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }
@@ -175,7 +191,7 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     if (-not $runtime.Contains($token)) { throw "Runtime cache lost: $token" }
 }
 
-Write-Output (('Audio FGM full coverage passed: 77 IDs, 0 exclusions, ' +
-    '680712-byte pack, 204800-byte cache, seven fused fork repairs, ' +
+Write-Output (('Audio FGM full coverage passed: 78 IDs, 0 exclusions, ' +
+    '682036-byte pack, 204800-byte cache, seven fused fork repairs, ' +
     'FGM 285 wind on a proven DS hardware loop, seven announcer lines, ' +
     'PublicWin 621 on PublicExcited''s AOT loop-and-ramp render.'))
