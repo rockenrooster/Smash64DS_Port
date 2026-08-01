@@ -168,7 +168,9 @@ foreach ($token in @(
     '#define NDS_PARTICLE_LINKED_BYTES 12195u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
     '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x8db9d3bdu',
-    'extern const u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES];',
+    # NOT const, deliberately: the loader byte-swaps the bank in place instead
+    # of spending 10,912 bytes of taskman arena on a writable copy.
+    'extern u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES];',
     'extern const u32 gNdsParticleScriptBankBytes;',
     'extern const u32 gNdsParticleScriptOffsets[NDS_PARTICLE_SCRIPT_COUNT];',
     'extern const NDSParticleTexture gNdsParticleTextures[NDS_PARTICLE_TEXTURE_COUNT];',

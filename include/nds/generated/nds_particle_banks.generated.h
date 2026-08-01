@@ -81,7 +81,13 @@ typedef struct NDSParticleTexture
     u32 palette_offset;
 } NDSParticleTexture;
 
-extern const u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES];
+/* NOT const: ndsParticleLoadEFCommonBank byte-swaps this bank to
+ * little-endian IN PLACE, once, and points scripts[] straight at it. The
+ * alternative was a syTaskmanMalloc + memcpy of the whole thing, which spent
+ * 10,912 bytes of taskman arena to obtain somewhere writable -- on a target
+ * where that is three arena steps and the battle boots or does not by about
+ * that margin. Same image bytes either way; .data instead of .rodata. */
+extern u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES];
 extern const u32 gNdsParticleScriptBankBytes;
 extern const u32 gNdsParticleScriptOffsets[NDS_PARTICLE_SCRIPT_COUNT];
 extern const NDSParticleTexture gNdsParticleTextures[NDS_PARTICLE_TEXTURE_COUNT];

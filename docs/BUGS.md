@@ -1,5 +1,6 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
+-SFX for "GAME SET" sounds really low pitched, not correct sounding.
 -Still get intermittent freezes when attacking (maybe collision/animation/heap
   related?). Owner evidence:
   `artifacts/visibility/2026-07-31_attack-freeze-owner-302caae.png` -- build

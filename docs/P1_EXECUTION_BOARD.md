@@ -2197,6 +2197,55 @@ diagnostic, gating both buffers on `!NDS_RENDERER_HW_TRIANGLES` returns 307,200
 bytes to the arena — 75 pages of arena sizing loop, against an SD margin that is
 currently one page.
 
+### R2-07 clause 2 — THE PARTICLE RUNTIME RUNS A FULL MATCH. The memory blocker is closed (2026-07-31, night)
+
+`NDS_R2_PARTICLE_RUNTIME=1`: **NO-FREEZE, full one-minute match to Results,
+`MALLOCOVF=0`**, on both the human-vs-CPU and the both-CPU stress config. Bank
+loads (`LoadResult=1`, 55 packed, 0 rejected), draw seam runs 20,578 times.
+
+Three levers closed the 25,600-byte gap, and the general heap tracks them:
+
+| | free heap at the latch |
+|---|---|
+| start of day | **1,040** |
+| + float printf out of the image (+3 arena steps) | — |
+| + pools sized for P1 instead of the whole game | **14,756** |
+| + bank normalized in place instead of copied | **boots** |
+
+- **Pools.** `efParticleInitAll` reserved 112/24/80 = 28,320 bytes of arena for
+  four players, items and every stage's hazards. P1 is two fighters on one
+  stage; 40/10/24 now, and `StructsMax` is still **0**, so even that is loose.
+  The interposition is safe because `efParticleInitAll` has no caller inside
+  `efparticle.c` or `lbparticle.c` — the `#define` moves the definition without
+  taking a call site with it.
+- **Bank copy.** `syTaskmanMalloc(10,912) + memcpy` existed only to obtain
+  somewhere writable to byte-swap into. Dropping `const` from
+  `gNdsParticleScriptBank` gives that for nothing — same image bytes, `.data`
+  instead of `.rodata`. One-shot latch, because an in-place swap run twice
+  swaps back and the bank outlives the scene (§3.12).
+
+**NEXT DEFECT, LOCALIZED: the efcommon pack registers in a bank slot the seams
+do not ask for.** `ScriptStartCount` is **0** on both configs — including the
+both-CPU stress run where FGM play calls rose 104 → 187, so fights and hits are
+definitely happening. The new reject ring names every refusal, and **not one is
+the efcommon bank**:
+
+| bank | script | reason | count |
+|---|---|---|---|
+| 1 | 98 | unreachable in pack (fail-closed, working) | 8 |
+| 0 | 0 | script id out of range | 2 |
+| 0 | 1 | script id out of range | 2 |
+| 0 | 112 | unreachable — the Results confetti the generator excludes | 2 |
+
+Reason 2 on bank 0 means `sLBParticleScriptBanksNum[0] == 0`, i.e. **bank 0 is
+empty**, so the pack did not register there. Find which slot
+`ndsParticleLoadEFCommonBank` actually filled and which id the seams pass; that
+mismatch is the whole of "the scripts do not run". Script 112 is a separate,
+known gap — `docs/BUGS.md` already records that the generator excludes it.
+
+Also seen on the stress config and not chased: `gNdsR2AnimCacheRejects` 109 with
+`ArenaOverflows` 109, against 0 on the passive run.
+
 ### R2-07 arena — three steps bought, from a float formatter nothing ever called (2026-07-31, evening)
 
 The arena is R2-07's critical path: it blocks `NDS_R2_PARTICLE_RUNTIME=1`, and on

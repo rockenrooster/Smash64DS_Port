@@ -557,6 +557,23 @@ try {
             'gNdsParticleGeneratorsMax',
             'gNdsParticleTransformsMax',
             'gNdsParticleRootSpawnCount',
+            # WHICH script was refused. Reason 4 means the pack marked the id
+            # unreachable and failed closed -- a hole in the reachability
+            # derivation, not a runtime bug. 1/2/3 mean the bank itself is
+            # wrong. The bare count cannot tell those apart.
+            'gNdsParticleRejectRingCount',
+            'gNdsParticleRejectRingScripts[0]', 'gNdsParticleRejectRingBanks[0]',
+            'gNdsParticleRejectRingReasons[0]', 'gNdsParticleRejectRingCounts[0]',
+            'gNdsParticleRejectRingScripts[1]', 'gNdsParticleRejectRingBanks[1]',
+            'gNdsParticleRejectRingReasons[1]', 'gNdsParticleRejectRingCounts[1]',
+            'gNdsParticleRejectRingScripts[2]', 'gNdsParticleRejectRingBanks[2]',
+            'gNdsParticleRejectRingReasons[2]', 'gNdsParticleRejectRingCounts[2]',
+            'gNdsParticleRejectRingScripts[3]', 'gNdsParticleRejectRingBanks[3]',
+            'gNdsParticleRejectRingReasons[3]', 'gNdsParticleRejectRingCounts[3]',
+            'gNdsParticleRejectRingScripts[4]', 'gNdsParticleRejectRingBanks[4]',
+            'gNdsParticleRejectRingReasons[4]', 'gNdsParticleRejectRingCounts[4]',
+            'gNdsParticleRejectRingScripts[5]', 'gNdsParticleRejectRingBanks[5]',
+            'gNdsParticleRejectRingReasons[5]', 'gNdsParticleRejectRingCounts[5]',
             'gNdsRendererTask36ReplayArenaStaleCount',
             # R2-07 L7 step one, present only at NDS_R2_COLLISION_L7_ORACLE=1.
             # MaxDevQ12[0..2] are the answer, in 1/4096 world units at probe

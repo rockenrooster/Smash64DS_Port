@@ -108,6 +108,13 @@
 /* Interposed: the N64 rectangle emitter is not the DS draw path. */
 #define lbParticleDrawTextures ndsBaseLbParticleDrawTextures
 
+/* Interposed: the source pool sizes are for the whole N64 game, and P1 is two
+ * fighters on one stage with items off. See NDS_R2_PARTICLE_POOL_* below.
+ * Safe to rename here because efParticleInitAll has NO caller inside
+ * efparticle.c or lbparticle.c -- every call is from another TU, so the
+ * `#define` moves the definition without taking a call site with it. */
+#define efParticleInitAll ndsBaseEFParticleInitAll
+
 /* Interposed: every external constructor validates its script id first. */
 #define lbParticleMakeScriptID ndsBaseLbParticleMakeScriptID
 #define lbParticleMakeCommon ndsBaseLbParticleMakeCommon
@@ -125,11 +132,52 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
 #include "../../decomp/BattleShip-main/decomp/src/ef/efparticle.c"
 
 #undef efParticleGetLoadBankID
+#undef efParticleInitAll
 #undef lbParticleDrawTextures
 #undef lbParticleMakeScriptID
 #undef lbParticleMakeCommon
 #undef lbParticleMakePosVel
 #undef lbParticleMakeGenerator
+
+/* THE POOLS, SIZED FOR P1 INSTEAD OF FOR THE WHOLE GAME.
+ *
+ * efparticle.c:28 reserves 112 structs, 24 generators and 80 transforms, and
+ * sizeof is 96 / 92 / 192, so the source figure is 28,320 bytes of taskman
+ * arena claimed up front. That is not a size nicety here: linked and arena
+ * bytes compete, and with the source sizes the battle dies before it starts --
+ * the general heap reaches 1,040 bytes free, ifCommonSetMaxNumGObj
+ * (ifcommon.c:3156) latches the GObj pool at the count it happens to be at
+ * (45), and ifCommonCountdownMakeInterface then dereferences the NULL its 46th
+ * request returns. Measured at the crash: StructsMax 0. Not one of the 112 had
+ * been used.
+ *
+ * The N64 numbers cover four players, items, and every stage's hazards
+ * simultaneously. P1 is Mario vs one Fox on Dream Land with items off, which is
+ * a fraction of the live effect population, and PROJECT_GOAL is explicit that
+ * content may be specialized to the configuration.
+ *
+ * SIZED TO BE MEASURED, NOT GUESSED AT. These are a starting point chosen to
+ * fit, and the runtime already carries the instrument that grades them:
+ * gNdsParticleStructsMax / GeneratorsMax / TransformsMax are the high-water
+ * marks and gNdsParticleRejectCount is non-zero the moment a pool runs dry. Run
+ * a full match, read those four, and set each pool to its high-water plus
+ * headroom. A reject is a missing effect, so the counter must stay at zero --
+ * do not lower a pool below its measured mark to save arena. */
+#define NDS_R2_PARTICLE_POOL_STRUCTS 40
+#define NDS_R2_PARTICLE_POOL_GENERATORS 10
+#define NDS_R2_PARTICLE_POOL_TRANSFORMS 24
+
+void efParticleInitAll(void)
+{
+    gEFParticleStructsGObj =
+        lbParticleAllocStructs(NDS_R2_PARTICLE_POOL_STRUCTS);
+    gEFParticleGeneratorsGObj =
+        lbParticleAllocGenerators(NDS_R2_PARTICLE_POOL_GENERATORS);
+
+    lbParticleAllocTransforms(NDS_R2_PARTICLE_POOL_TRANSFORMS,
+                              sizeof(LBTransform));
+    sEFParticleBanksNum = 0;
+}
 
 /* efdisplay.c passes the address of this marker as the efcommon script bank.
  * It is defined in src/import/battleship_efmanager.c; comparing against it is
@@ -234,10 +282,17 @@ static void ndsParticleSwap32(u8 *at)
 
 /* LBScript's fixed 0x30-byte prefix: four u16 then eleven 4-byte words
  * (lbtypes.h:79-93). */
-static void ndsParticleNormalizeHeader(u8 *header)
+/* `swap` is FALSE on a re-entry, where the bank is normalized already and the
+ * walk is only rebuilding the per-scene tables. Swapping twice would swap back;
+ * see the one-shot latch in ndsParticleLoadEFCommonBank. */
+static void ndsParticleNormalizeHeader(u8 *header, sb32 swap)
 {
     u32 i;
 
+    if (swap == FALSE)
+    {
+        return;
+    }
     for (i = 0u; i < 4u; i++)
     {
         ndsParticleSwap16(&header[i * 2u]);
@@ -253,7 +308,8 @@ static void ndsParticleNormalizeHeader(u8 *header)
  * past its limit or carries an opcode the interpreter has no case for, so a
  * malformed script is rejected rather than executed. */
 static sb32 ndsParticleNormalizeBytecode(u8 *bytecode, u32 limit,
-                                         u32 *commands, u32 *operands)
+                                         u32 *commands, u32 *operands,
+                                         sb32 swap)
 {
     u32 csr = 0u;
 
@@ -404,7 +460,10 @@ static sb32 ndsParticleNormalizeBytecode(u8 *bytecode, u32 limit,
             {
                 return FALSE;
             }
-            ndsParticleSwap32(&bytecode[csr]);
+            if (swap != FALSE)
+            {
+                ndsParticleSwap32(&bytecode[csr]);
+            }
             csr += 4u;
             (*operands)++;
         }
@@ -487,16 +546,41 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
         scripts[id] = (LBScript *)&sNdsParticleInertScript;
     }
 
+    /* NORMALIZE THE LINKED BANK IN PLACE. There used to be a
+     * syTaskmanMalloc(bank_bytes) plus a memcpy here, and the copy cost 10,912
+     * bytes of taskman arena for a second image of bytes that were already in
+     * RAM -- the linked array is main RAM like everything else on this machine,
+     * so the only thing the copy bought was somewhere writable to byte-swap
+     * into. Making gNdsParticleScriptBank non-const buys that for nothing, and
+     * 10,912 is most of what stood between this runtime and booting: the
+     * general heap reached 25,600 free with it and 14,756 without.
+     *
+     * ONE-SHOT, and that is not optional. The normalizer swaps big-endian
+     * fields to little in place, so running it twice swaps them back. The old
+     * copy was implicitly one-shot because each scene entry got a fresh buffer;
+     * an in-place pass over storage that outlives the scene is not
+     * (SwitchPlan 3.12 -- anything surviving a scene boundary is re-derived,
+     * never trusted). The latch is file-static and never cleared, because the
+     * bank is linked data whose normalized form is correct for every entry. */
+    static sb32 sNdsParticleBankNormalized = FALSE;
+    sb32 swap;
+
     bank = NULL;
+    swap = FALSE;
     if (bank_bytes >= sizeof(LBScriptHeader))
     {
-        bank = syTaskmanMalloc(bank_bytes, 0x8);
-        if (bank == NULL)
-        {
-            gNdsParticleBankLoadResult = NDS_PARTICLE_LOAD_REJECT;
-            return FALSE;
-        }
-        memcpy(bank, gNdsParticleScriptBank, bank_bytes);
+        bank = gNdsParticleScriptBank;
+        swap = (sNdsParticleBankNormalized == FALSE) ? TRUE : FALSE;
+        sNdsParticleBankNormalized = TRUE;
+        /* Re-entry still walks every script: the arena rewind took the previous
+         * entry's scripts[] table with it, so the table is rebuilt even though
+         * the bytes behind it are already little-endian. Reset the running
+         * totals so they describe this pass rather than accumulating. */
+        gNdsParticleBankScriptsPacked = 0u;
+        gNdsParticleBankScriptsUnpacked = 0u;
+        gNdsParticleBankScriptsRejected = 0u;
+        gNdsParticleBankCommands = 0u;
+        gNdsParticleBankFloatOperands = 0u;
     }
 
     for (id = 0u; id < NDS_PARTICLE_SCRIPT_COUNT; id++)
@@ -526,11 +610,11 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
             continue;
         }
         header = &bank[offset];
-        ndsParticleNormalizeHeader(header);
+        ndsParticleNormalizeHeader(header, swap);
         if (ndsParticleNormalizeBytecode(
                 header + sizeof(LBScriptHeader),
                 limit - offset - (u32)sizeof(LBScriptHeader),
-                &commands, &operands) == FALSE)
+                &commands, &operands, swap) == FALSE)
         {
             gNdsParticleBankScriptsRejected++;
             continue;
@@ -618,6 +702,47 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
     return bank_id;
 }
 
+/* WHICH script was refused, not just how many. gNdsParticleRejectCount alone
+ * cannot tell "the pack's reachable set is missing a script a real match asks
+ * for" from "an unreachable id was correctly failed closed", and those have
+ * opposite fixes -- the first is a hole in the derivation, the second is the
+ * design working. Same shape as the FGM miss ring, and added for the same
+ * reason: the first run with the runtime alive reported 18 rejects and zero
+ * script starts, and the count said nothing about why. Reason codes:
+ *   1 bank id out of range      3 bank never registered
+ *   2 script id out of range    4 id is UNREACHABLE in the pack (fail-closed) */
+#define NDS_PARTICLE_REJECT_RING_CAPACITY 12u
+volatile u32 gNdsParticleRejectRingCount;
+volatile u16 gNdsParticleRejectRingScripts[NDS_PARTICLE_REJECT_RING_CAPACITY];
+volatile u8 gNdsParticleRejectRingBanks[NDS_PARTICLE_REJECT_RING_CAPACITY];
+volatile u8 gNdsParticleRejectRingReasons[NDS_PARTICLE_REJECT_RING_CAPACITY];
+volatile u16 gNdsParticleRejectRingCounts[NDS_PARTICLE_REJECT_RING_CAPACITY];
+
+static void ndsParticleRecordReject(s32 bank_id, s32 script_id, u32 reason)
+{
+    u32 i;
+
+    for (i = 0u; i < gNdsParticleRejectRingCount; i++)
+    {
+        if ((gNdsParticleRejectRingScripts[i] == (u16)script_id) &&
+            (gNdsParticleRejectRingBanks[i] == (u8)bank_id))
+        {
+            gNdsParticleRejectRingCounts[i]++;
+            return;
+        }
+    }
+    if (gNdsParticleRejectRingCount >= NDS_PARTICLE_REJECT_RING_CAPACITY)
+    {
+        return;
+    }
+    i = gNdsParticleRejectRingCount;
+    gNdsParticleRejectRingScripts[i] = (u16)script_id;
+    gNdsParticleRejectRingBanks[i] = (u8)bank_id;
+    gNdsParticleRejectRingReasons[i] = (u8)reason;
+    gNdsParticleRejectRingCounts[i] = 1u;
+    gNdsParticleRejectRingCount++;
+}
+
 /* TRUE when this bank/script pair resolves to a real packed script. The source
  * range test is repeated here on purpose: it has to run before the constructor,
  * because the constructor's own miss path reads through the bank array. */
@@ -625,16 +750,28 @@ static sb32 ndsParticleScriptIsPacked(s32 bank_id, s32 script_id)
 {
     s32 id = bank_id & 7;
 
-    if ((id >= LBPARTICLE_BANKS_NUM_MAX) || (script_id < 0) ||
-        (script_id >= sLBParticleScriptBanksNum[id]) ||
-        (sLBParticleScriptBanks[id] == NULL))
+    if (id >= LBPARTICLE_BANKS_NUM_MAX)
     {
+        ndsParticleRecordReject(bank_id, script_id, 1u);
         return FALSE;
     }
-    return (sLBParticleScriptBanks[id][script_id] !=
-            (LBScript *)&sNdsParticleInertScript)
-               ? TRUE
-               : FALSE;
+    if ((script_id < 0) || (script_id >= sLBParticleScriptBanksNum[id]))
+    {
+        ndsParticleRecordReject(bank_id, script_id, 2u);
+        return FALSE;
+    }
+    if (sLBParticleScriptBanks[id] == NULL)
+    {
+        ndsParticleRecordReject(bank_id, script_id, 3u);
+        return FALSE;
+    }
+    if (sLBParticleScriptBanks[id][script_id] ==
+        (LBScript *)&sNdsParticleInertScript)
+    {
+        ndsParticleRecordReject(bank_id, script_id, 4u);
+        return FALSE;
+    }
+    return TRUE;
 }
 
 LBParticle *lbParticleMakeScriptID(s32 bank_id, s32 script_id)
