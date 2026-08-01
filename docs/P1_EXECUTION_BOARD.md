@@ -80,6 +80,30 @@ Counterfactuals from the same CSV, to size each owner honestly:
 So the order is: `SRC` first and `MISC` second, and `FTR`/`STG` are not on the
 critical path for the gate at all however large they look in the P50.
 
+## R2-08 — the switch, reduced to a checklist (2026-08-01)
+
+Written down now so the switch is a mechanical step when its one open
+acceptance clause closes, rather than a re-derivation. §6 of the SwitchPlan
+lists five acceptance items; four are reachable today.
+
+| # | clause | state | what closes it |
+|---|---|---|---|
+| 1 | Boundary green on the Runtime 2 battle path | **reachable** | `NDS_R2_PATH := 1` in the published *and* tick-HUD blocks, then `verify-all -Profile Latest`. R2-06 E0 already ran Boundary green through `NDS_R2_PATH=1` with engagement verified in both ELFs (`ndsR2BattleRun` present/absent) |
+| 2 | visual gate: synchronized diffs + the owner's approval | **partly** | the diffs are cheap; the owner's eye is owed on the particle draw either way |
+| 3 | **P95 ≤ 1.12M DLDI-on** | **OPEN — the only real blocker** | see the baseline row above |
+| 4 | full 3600-tick soak, zero flashes/corruption/hangs | **reachable** | `soak-freeze-watch.ps1` exists now; R2-06's "no soak instrument" note is stale |
+| 5 | owner retail play test | **owner's** | explicitly outside the autonomous goal |
+
+Two mechanical details that must not be rediscovered: the tick-HUD block has to
+take `NDS_R2_PATH` too or every bucket after the switch reads a different binary
+than the shipping ROM (the standing rule at `Makefile:1089`), and the switch
+commit is also the one that updates the public-build pin. Runtime 1 stays behind
+its flag as the oracle until the migration is declared mature.
+
+**R2-06 E0 measured the switch itself as performance-neutral** (every bucket
+inside the 5,000–7,000 placement floor), so flipping it neither helps nor hurts
+clause 3. Do not wait for the switch to move the histogram; it will not.
+
 ## THE ARENA LATCH IS THE TREE'S REAL BUDGET LINE, and it is ~5 KB away (2026-08-01)
 
 Third occurrence of the same failure, and the first one that was *provoked* on
