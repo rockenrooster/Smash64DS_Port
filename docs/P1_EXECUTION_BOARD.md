@@ -125,13 +125,25 @@ particle atlas takes 32,768 B of texture VRAM
   -> 196 of 566 frames present at five or more VBlanks
 ```
 
-**The fix is sized by the same run's own census.** `gNdsParticleTextureUseMask`
-reads `0x08400000` — a live match draws **three** source textures, ids 22, 23
-and 26. The atlas is built from the static reachability set (16 of 31,
-25,344 texel bytes in a 128x128 RGB555+A1 sheet, 32,768 B of VRAM) for a
-working set of three. Admit by the MEASURED set instead, and/or drop to A3I5
-(8 bpp, 16,384 B + a 32-entry palette in slot F/G). Either way the target is a
-sheet the stage's resolve can live beside.
+**VRAM CAPACITY IS REFUTED — halving the sheet moved the rejections by ZERO.**
+`gNdsParticleTextureUseMask` reads `0x08400000`, which is bits **22 and 27**
+(not 22/23/26 — read it as bits), so a live match draws two source textures
+against the sixteen the static reachability set admits. A 128x64 sheet freed
+**16,384 bytes** of texture VRAM and kept both, and the run came back
+**196 rejections and 197 rebuilds, to the digit, identical**. So
+`ResolveStageSourceFrameTexture` is not failing for want of bytes, and the
+coverage cut (9 of 31 textures) bought nothing and is reverted rather than
+kept. What survived the experiment is `QUAD_MEASURED_LIVE`: admitting the
+measured set first is correct at any sheet size and is free.
+
+**So the next question is what that resolve actually consults.** It is not
+capacity, not entries (48 slots, 28 in use), not the reuse key, and not any
+other refusal site. Candidates the atlas prepare touches and the resolve might
+read: the zeroed `entry->key` / `key_generation` / `key_hash`, the lookup
+removal, or the `sNdsRendererHardwareActiveTextureEntry = NULL` the quad pass
+leaves behind while the hardware is still bound to the atlas. Read
+`ndsRendererHardwareResolveStageSourceFrameTexture` against the atlas prepare
+before proposing anything else.
 
 Until then `NDS_R2_PARTICLE_DRAW` stays 0: the draw is correct (90,165 quads,
 zero atlas misses, NO-FREEZE, pools 41/48 and 8/10) and unshippable.

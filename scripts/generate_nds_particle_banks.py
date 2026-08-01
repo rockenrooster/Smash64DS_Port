@@ -81,7 +81,34 @@ TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
 # The DS draw path's own payload: ONE RGB555+A1 atlas. See build_quad_sheet for
 # why the texels are encoded twice and why these dimensions.
 QUAD_ATLAS_WIDTH = 128
+# 128 -> 64 on 2026-08-01, and the reason is measured rather than aesthetic.
+# At 128x128 the sheet is 32,768 bytes of texture VRAM, and with it resident
+# `ndsRendererHardwareResolveStageSourceFrameTexture` fails about one frame in
+# ten: reject site 2, 196 times in a 566-frame match, each one rejecting the
+# native stage owner and dropping that frame onto the generic renderer at five
+# or more VBlanks. The draw's own tick cost is only ~10,000, so this was the
+# whole of its pacing damage.
+#
+# HALVING IT WAS TRIED AND REFUTED, 2026-08-01. `gNdsParticleTextureUseMask`
+# reads 0x08400000 -- bits 22 and 27, so a live match draws TWO source textures
+# against the sixteen the static reachability set admits -- and 128x64 kept
+# both while freeing 16,384 bytes of texture VRAM. The rejections did not move
+# at all: 196 at site 2 and 197 rebuilds, to the digit, on both sheets. So the
+# stage's resolve is not failing for want of VRAM, and the coverage reduction
+# bought nothing; it is reverted rather than kept, because 9 of 31 textures
+# instead of 16 is a real loss for the BUGS.md VFX rows that still need one.
+#
+# What survives the experiment is QUAD_MEASURED_LIVE below: admitting the
+# measured set first is correct whatever the sheet size, and it is free.
 QUAD_ATLAS_HEIGHT = 128
+# Admitted before anything else. These are the textures a natural single-CPU
+# Mario-vs-Fox match was OBSERVED drawing, so they must survive admission
+# whatever the packer does with the rest. Regrade this from the use mask after
+# any change that adds effects -- an entry here that a match never draws is
+# wasted sheet, and one missing from it becomes a QuadMiss. Read the mask as
+# BITS, not as a hex digit pattern: 0x08400000 is 22 and 27, and reading it as
+# 22/23/26 sent one round of this at textures the pack does not even carry.
+QUAD_MEASURED_LIVE = frozenset((22, 27))
 QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT * 2
 DEFAULT_QUAD_ASSET = Path("assets/particles/efcommon_particle_quads.rgb5a1.bin")
 QUAD_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"
@@ -1093,7 +1120,12 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             "bytes": texture["width"] * texture["height"] *
                      texture["frames"] * 2,
         })
-    candidates.sort(key=lambda row: (row["bytes"], row["texture"]))
+    # Measured-live first, then ascending size. Admission is greedy and the
+    # sheet is now half what it was, so "smallest first" alone would fill it
+    # with whatever happens to be small and let a texture a match actually
+    # draws fall off the end.
+    candidates.sort(key=lambda row: (row["texture"] not in QUAD_MEASURED_LIVE,
+                                     row["bytes"], row["texture"]))
 
     def cells_for(rows):
         cells = []

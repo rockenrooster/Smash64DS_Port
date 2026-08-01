@@ -121,13 +121,21 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
     throw 'Particle bank linked + asset bytes do not account for the pack.'
 }
 # The DRAW path's payload, which is a different question from the pack above:
-# these bytes go into texture VRAM, not into NitroFS-and-forget. VRAM_A+B are
-# 262,144 and the battle's pinned static set takes 136,192, so 119,872 is what
-# exists; the whole reachable set as RGB555+A1 would be 311,552. Admission is
-# smallest-first inside a 65,536 budget, which is fifty times the 1,280 bytes a
-# real match was measured needing (textures 22 and 27) and still leaves 56,128
-# bytes of VRAM unclaimed. A texture that is not admitted draws NOTHING -- it
-# never draws something else -- so the excluded list is reported by name.
+# these bytes go into texture VRAM, not into NitroFS-and-forget.
+#
+# HALVING IT WAS TRIED AND REFUTED, 2026-08-01. With the 32,768-byte sheet
+# resident, ndsRendererHardwareResolveStageSourceFrameTexture fails about one
+# frame in ten -- reject site 2, 196 times in a 566-frame match -- each failure
+# rejecting the native stage owner and dropping that frame onto the generic
+# renderer at five or more VBlanks. 128x64 freed 16,384 bytes of texture VRAM
+# and kept both textures a live match was measured drawing, and the rejections
+# did not move AT ALL: 196 and 197, to the digit, on both sheets. So the
+# stage's resolve is not failing for want of VRAM, and the coverage reduction
+# (9 of 31 textures instead of 16) bought nothing and was reverted.
+#
+# A texture that is not admitted draws NOTHING -- it never draws something
+# else -- and raises gNdsParticleQuadMissCount, so the excluded list is
+# reported by name and a coverage loss is a number rather than a silent gap.
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 128) -or
     ([int64]$report.quads.atlas_bytes -ne 32768) -or
@@ -332,4 +340,4 @@ Write-Output (('Particle bank pack passed: 87/119 reachable efcommon scripts, ' 
     '(10912 script bank + 1283 index) of 210320 B arena headroom (198125 B ' +
     'spare) plus 137152 B NitroFS payload, 7 bit-exact CI4 textures, linear ' +
     "texel order pinned, .inc $incState, payload $assetState, " +
-    "quad atlas 128x128, 16/31 textures in 31 frames at 77.3%% $quadState."))
+    "quad atlas 128x128, 16/31 textures in 31 frames $quadState."))
