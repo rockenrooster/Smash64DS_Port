@@ -9700,8 +9700,13 @@ void ndsRendererHardwareResetSceneTextureVram(void)
     ndsRendererHardwareDiscardTextureCache();
     glResetTextures();
     /* Software state that would otherwise reference names glResetTextures has
-     * just invalidated. */
+     * just invalidated. The prepared-run cache only exists at
+     * NDS_R2_STAGE_DIRECT; this function is scoped to NDS_RENDERER_HW_TRIANGLES,
+     * which is the weaker condition, and the audio-FGM harness is a config that
+     * has the second without the first. */
+#if NDS_R2_STAGE_DIRECT
     sNdsNativeStageOwnerExecution.r2_prepared_valid = 0u;
+#endif
 #if NDS_TASK36_HW_COMPOSE == 2
     ndsRendererTask36ReplayReset();
 #endif

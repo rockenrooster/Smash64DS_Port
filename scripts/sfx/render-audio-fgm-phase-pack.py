@@ -37,8 +37,20 @@ PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
-MAX_PACK_BYTES = 512 * 1024
+# A ROM budget on a NitroFS payload, and nothing else -- the runtime never holds
+# the pack. nds_audio_fgm.c reads a 1,808-byte header into .bss and streams each
+# cue into the fixed 200 KiB slot cache below, so pack growth costs ROM, which
+# PROJECT_GOAL says to spend. 512 KiB stopped the five P1 announcer lines
+# (TIME UP, GAME SET, winner-is, Mario, Fox) at 526,928 bytes with no runtime
+# reason, so it is 768 KiB now.
+#
+# THE CONSTRAINT THAT IS REAL is the largest cache slot: a cue whose IMA body
+# does not fit one can never be played, and until 2026-07-31 nothing checked it
+# -- the pack cap was standing in for a bound it does not actually express.
+# MAX_CUE_IMA_BYTES does now.
+MAX_PACK_BYTES = 768 * 1024
 RUNTIME_CACHE_BYTES = (52 * 1024) + (3 * 28 * 1024) + (4 * 16 * 1024)
+MAX_CUE_IMA_BYTES = 52 * 1024
 MAX_RESIDENT_BYTES = 128 * 1024  # historical Phase-C comparison only
 PUBLIC_EXCITED_ID = 626
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
@@ -83,6 +95,11 @@ FULL_COVERAGE_IDS = (
     # BUGS.md #4/#6/#8.  Appended rather than interleaved so the existing
     # entries keep their pack order; the mapping hash changes either way.
     436, 432, 362, 433, 360, 12, 285,
+    # The announcer lines a P1 match reaches but could not play: TIME UP and
+    # GAME SET at match end, then the Results sequence -- "this game's winner
+    # is", then the winner's name, then the two countdown numbers above three.
+    # Appended for the same reason.
+    527, 488, 534, 499, 486, 472, 471,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -324,6 +341,130 @@ SELECTED = (
         "loop_start": 0,
         "loop_end": 0,
         "expected_retained_samples": 13801,
+    },
+    # The five announcer lines the P1 match still played silently. Every field
+    # below came out of `--derive`, not out of a guess: the countdown four above
+    # were hand-authored and that is why this row read as "an extraction job per
+    # cue". They are the same shape -- one articulation, one trigger, one note,
+    # no forks, no loop -- and they continue the same articulation/sound/wave
+    # runs (334/211 -> 336/213 -> 337/214 -> 338/215).
+    {
+        "id": 527,
+        "name": "nSYAudioVoiceAnnounceTimeUp",
+        "articulation": 336,
+        "sound": 213,
+        "pitch_code": 13,
+        "duration_ticks": 150,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1794968,
+        "wave_length": 9532,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 13801,
+    },
+    {
+        # Two notes, not one: a 60-tick rest at pitch 0 before the line, which
+        # is why this cannot use the pitch_code/duration_ticks shorthand.
+        "id": 488,
+        "name": "nSYAudioVoiceAnnounceGameSet",
+        "articulation": 337,
+        "sound": 214,
+        "notes": ((0, 7, 60), (13, 7, 150)),
+        "duration_ticks": 210,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1804504,
+        "wave_length": 9054,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 16096,
+    },
+    {
+        "id": 534,
+        "name": "nSYAudioVoiceAnnounceWinnerIs",
+        "articulation": 338,
+        "sound": 215,
+        "pitch_code": 13,
+        "duration_ticks": 350,
+        "ucd_volume": 245,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1813560,
+        "wave_length": 14482,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 25744,
+    },
+    {
+        "id": 499,
+        "name": "nSYAudioVoiceAnnounceMario",
+        "articulation": 309,
+        "sound": 186,
+        "pitch_code": 13,
+        "duration_ticks": 150,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1526488,
+        "wave_length": 7264,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 12912,
+    },
+    {
+        "id": 486,
+        "name": "nSYAudioVoiceAnnounceFox",
+        "articulation": 312,
+        "sound": 189,
+        "pitch_code": 13,
+        "duration_ticks": 150,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -620,
+        "loop": False,
+        "wave_base": 1552392,
+        "wave_length": 13824,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 19294,
+    },
+    # And the two the miss ring caught only after the five above stopped
+    # appearing in it: the countdown announces FIVE and FOUR before the three
+    # that were already packed. Nobody had noticed, because until the ring
+    # printed ids rather than a count there was nothing to notice.
+    {
+        "id": 472,
+        "name": "nSYAudioVoiceAnnounceFive",
+        "articulation": 329,
+        "sound": 206,
+        "pitch_code": 13,
+        "duration_ticks": 90,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1746032,
+        "wave_length": 6256,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 8281,
+    },
+    {
+        "id": 471,
+        "name": "nSYAudioVoiceAnnounceFour",
+        "articulation": 330,
+        "sound": 207,
+        "pitch_code": 13,
+        "duration_ticks": 90,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1752288,
+        "wave_length": 5590,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 8281,
     },
     {
         "id": 74,
@@ -4375,6 +4516,13 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         raise ValueError(
             f"FGM pack exceeds {MAX_PACK_BYTES // 1024} KiB: "
             f"{len(pack)} bytes")
+    oversized = [(record["id"], len(record["ima"])) for record in records
+                 if len(record["ima"]) > MAX_CUE_IMA_BYTES]
+    if oversized:
+        raise ValueError(
+            "FGM cue body exceeds the largest runtime cache slot "
+            f"({MAX_CUE_IMA_BYTES} bytes), so it can never be played: "
+            + ", ".join(f"{cue_id}={size}" for cue_id, size in oversized))
     fgm218_feasibility = build_fgm218_feasibility(
         repo_root, attack_actions, attack_cues, attack_fx, len(pack))
 
@@ -4488,10 +4636,94 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
     return pack, metadata
 
 
+def derive_selectors(repo_root: Path, fgm_ids: list[int]) -> list[dict]:
+    """Print the source-derived descriptor for arbitrary FGM ids.
+
+    Every SELECTED entry is hand-authored, which read as "this generator has no
+    per-cue derivation mode" and made each new cue look like a research project.
+    It is not: the attack lane in build_pack already walks
+
+        fgm_ucd[id] -> set_articulation -> fgm_tbl[art] -> trigger -> sound id
+        -> instrument.soundArray_offs -> B1_sounds2_ctl -> wavetable -> loop
+
+    and that walk produces exactly the fields a SELECTED entry declares. This
+    exposes it for any id, so authoring a cue means reading numbers out of the
+    source tables rather than guessing them and waiting for validate_ucd to say
+    no. Nothing here writes an output: the numbers still have to be pasted into
+    SELECTED deliberately, where the sha256 pins catch an upstream layout change.
+    """
+    tools_dir = repo_root / "decomp/BattleShip-main/decomp/tools"
+    extract_fgm = load_module(tools_dir / "extract_fgm.py", "extract_fgm")
+    decode_ctl = load_module(tools_dir / "decode_ctl.py", "decode_ctl")
+    audio_dir = repo_root / "decomp/BattleShip-main/BattleShip_o2r/audio"
+
+    raw = {name: read_o2r_payload(audio_dir / name)[1]
+           for name in ("fgm_tbl", "fgm_ucd", "B1_sounds2_ctl")}
+    ucd = extract_fgm.decode_fgm_ucd(raw["fgm_ucd"])
+    articulations = extract_fgm.decode_fgm_tbl(raw["fgm_tbl"])
+    ctl_structs = decode_ctl.walk(raw["B1_sounds2_ctl"])
+    ctl_by_offset = {entry["offset"]: entry for entry in ctl_structs}
+    bank = [entry for entry in ctl_structs if entry["kind"] == "ALBank"][0]
+    instrument = ctl_by_offset[bank["instArray_offs"][0]]
+
+    declared = {int(selector["id"])
+                for selector in (*SELECTED, *EXCLUDED_SOURCE_CUES)}
+    derived = []
+    for fgm_id in fgm_ids:
+        entry = ucd["entries"].get(fgm_id) if isinstance(
+            ucd["entries"], dict) else (
+                ucd["entries"][fgm_id] if fgm_id < len(ucd["entries"]) else None)
+        if entry is None:
+            derived.append({"id": fgm_id, "error": "no UCD entry"})
+            continue
+        program = entry["program"]
+        row: dict = {
+            "id": fgm_id,
+            "already_declared": fgm_id in declared,
+            "root_program_sha256": json_sha256(program),
+            "root_ops": sorted({op[0] for op in program}),
+        }
+        try:
+            articulation_id = first_program_arg(program, "set_articulation")
+            art_program = articulations["entries"][articulation_id]["program"]
+            sound_id = first_program_arg(art_program, "trigger")
+            sound = ctl_by_offset[instrument["soundArray_offs"][sound_id]]
+            wave = ctl_by_offset[sound["wavetable_off"]]
+            loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+            notes = tuple(tuple(int(v) for v in op[1:])
+                          for op in program if op[0] == "note")
+            volumes = [int(op[1]) for op in program if op[0] == "set_volume"]
+            pitches = [int(op[1]) for op in art_program if op[0] == "pitch"]
+            row.update({
+                "articulation": articulation_id,
+                "sound": sound_id,
+                "notes": notes,
+                "duration_ticks": sum(note[2] for note in notes),
+                "ucd_volume": volumes[0] if volumes else None,
+                "articulation_pitch_cents": pitches[0] if pitches else None,
+                "loop": loop is not None,
+                "wave_base": wave["base"],
+                "wave_length": wave["length"],
+                "loop_start": loop["start"] if loop else 0,
+                "loop_end": loop["end"] if loop else 0,
+                "fork_voices": tuple(int(op[1]) for op in program
+                                     if op[0] == "fork_voice"),
+                "articulation_ops": sorted({op[0] for op in art_program}),
+                "articulation_program_sha256": json_sha256(art_program),
+            })
+        except (KeyError, IndexError, ValueError) as error:
+            row["error"] = f"{type(error).__name__}: {error}"
+        derived.append(row)
+    return derived
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", type=Path,
                         default=_paths.REPO_ROOT)
+    parser.add_argument("--derive", metavar="IDS",
+                        help="comma-separated FGM ids: print their "
+                             "source-derived selector fields and exit")
     parser.add_argument("--out-bin", type=Path,
                         default=Path("assets/audio/fgm_phase_pack_ima.bin"))
     parser.add_argument("--out-json", type=Path,
@@ -4500,6 +4732,12 @@ def main() -> int:
                         help="rebuild in memory and compare existing outputs")
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
+    if args.derive:
+        ids = [int(token, 0) for token in args.derive.replace(" ", "").split(",")
+               if token]
+        print(json.dumps(derive_selectors(repo_root, ids), indent=2,
+                         default=list))
+        return 0
     out_bin = args.out_bin
     out_json = args.out_json
     if not out_bin.is_absolute():

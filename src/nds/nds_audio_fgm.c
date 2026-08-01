@@ -145,9 +145,9 @@ static u32 sNdsAudioFgmArm7AckSequence;
 #endif
 static u16 sNdsAudioFgmInstanceToken;
 
-/* 16-byte header + 56 * 32-byte entries. The header/entry sizes are the
+/* 16-byte header + 63 * 32-byte entries. The header/entry sizes are the
  * layout; the entry count is data, so this moves whenever a cue is added. */
-_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 1808u,
+_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 2032u,
                "FGM pack header layout changed");
 _Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (200u * 1024u),
                "FGM cache budget changed");
@@ -245,6 +245,21 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceMarioJumpAerial:
     /* BUGS.md #3: Whispy's wind gust, requested by the Pupupu ground loop. */
     case nSYAudioFGMPupupuWhispyWind:
+    /* The announcer. Every one of these is already requested by live P1 code
+     * and was failing closed for want of a pack entry, which is why the match
+     * ended in silence: ifCommonAnnounceTimeUpMakeInterface plays 527, the
+     * GAME SET path plays 488, and the Results scene plays "this game's winner
+     * is" followed by the winner's own name. */
+    case nSYAudioVoiceAnnounceTimeUp:
+    case nSYAudioVoiceAnnounceGameSet:
+    case nSYAudioVoiceAnnounceWinnerIs:
+    case nSYAudioVoiceAnnounceMario:
+    case nSYAudioVoiceAnnounceFox:
+    /* And the two the miss ring surfaced only once the five above stopped
+     * filling it: the countdown announces FIVE and FOUR before the THREE that
+     * was already here. */
+    case nSYAudioVoiceAnnounceFive:
+    case nSYAudioVoiceAnnounceFour:
         return TRUE;
     default:
         return FALSE;

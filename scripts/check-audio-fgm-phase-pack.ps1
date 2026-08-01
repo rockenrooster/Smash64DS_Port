@@ -25,7 +25,10 @@ $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
 $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     370,289,300,303,154,77,215,40,38,37,34,32,31,375,429,431,435,440,
     19,41,42,43,185,186,187,189,190,217,218,219,216,28,2,0,188,
-    436,432,362,433,360,12,285)
+    436,432,362,433,360,12,285,
+    # The announcer: TIME UP, GAME SET, "this game's winner is", and the two
+    # fighter names the Results scene reads out.
+    527,488,534,499,486,472,471)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -33,12 +36,15 @@ if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
 if (([int]$metadata.format_version -ne 4) -or
     ([int]$metadata.entry_bytes -ne 32) -or
     ([int]$metadata.envelope_point_bytes -ne 4) -or
-    ([int64]$metadata.resident_bytes -ne 482804) -or
+    ([int64]$metadata.resident_bytes -ne 535280) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
-    ([int64]$metadata.pack_limit_bytes -ne 524288) -or
-    ($metadata.mapping_sha256_lo -ne '0xbc85ec48') -or
+    # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
+    # holds the pack. 512 KiB blocked the five announcer lines for no runtime
+    # reason; the bound that is real is the 53,248-byte cache-slot gate below.
+    ([int64]$metadata.pack_limit_bytes -ne 786432) -or
+    ($metadata.mapping_sha256_lo -ne '0x3097cf44') -or
     ($metadata.pack_sha256 -ne
-        '48060cc96bb89f0c9073e84ebfae83eea48cba0c35de917f002efdeae49daa6a')) {
+        '3b899230914dcba79c3332f2c7a01ee190e1eabc44d62a97202673db268c7037')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -91,11 +97,22 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 56u',
-    '#define NDS_AUDIO_FGM_PACK_BYTES 482804u',
-    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xbc85ec48u',
+    '#define NDS_AUDIO_FGM_ENTRY_COUNT 63u',
+    '#define NDS_AUDIO_FGM_PACK_BYTES 535280u',
+    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x3097cf44u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
+}
+# A packed cue the allowlist never admits is dead ROM, and an admitted cue with
+# no pack entry fails closed and is silent -- both were live defects. Keep the
+# two lists in step for the announcer set at least.
+foreach ($voice in @('nSYAudioVoiceAnnounceTimeUp', 'nSYAudioVoiceAnnounceGameSet',
+    'nSYAudioVoiceAnnounceWinnerIs', 'nSYAudioVoiceAnnounceMario',
+    'nSYAudioVoiceAnnounceFox', 'nSYAudioVoiceAnnounceFive',
+    'nSYAudioVoiceAnnounceFour')) {
+    if (-not $runtime.Contains("case ${voice}:")) {
+        throw "Runtime allowlist does not admit the packed cue $voice."
+    }
 }
 foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     'sNdsAudioFgmCacheSlots[cache_slot].references++',
@@ -103,6 +120,6 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     if (-not $runtime.Contains($token)) { throw "Runtime cache lost: $token" }
 }
 
-Write-Output (('Audio FGM full coverage passed: 56 IDs, 0 exclusions, ' +
-    '482804-byte pack, 204800-byte cache, seven fused fork repairs, ' +
-    'FGM 285 wind on a proven DS hardware loop.'))
+Write-Output (('Audio FGM full coverage passed: 63 IDs, 0 exclusions, ' +
+    '535280-byte pack, 204800-byte cache, seven fused fork repairs, ' +
+    'FGM 285 wind on a proven DS hardware loop, seven announcer lines.'))

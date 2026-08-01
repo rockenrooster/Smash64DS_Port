@@ -558,6 +558,32 @@ try {
             'gNdsParticleTransformsMax',
             'gNdsParticleRootSpawnCount',
             'gNdsRendererTask36ReplayArenaStaleCount',
+            # THE FGM ALLOWLIST, made visible on any natural run. A cue the game
+            # asks for and the pack does not carry fails closed and is silent,
+            # which is how five announcer lines went missing without a single
+            # error: UnsupportedCallCount rises and nothing else does. Supported
+            # vs Unsupported is the whole "is this cue packed yet" question, and
+            # PlayFail separates "packed but the mixer refused" from it.
+            'gNdsAudioFgmLoaded',
+            'gNdsAudioFgmSupportedCount',
+            'gNdsAudioFgmPlayCalls',
+            'gNdsAudioFgmSupportedPlayCount',
+            'gNdsAudioFgmUnsupportedCallCount',
+            'gNdsAudioFgmPlayFailCount',
+            'gNdsAudioFgmMissRingCount',
+            # WHICH cue was refused, not just how many. The count alone cannot
+            # tell "the announcer is still missing" from "an unrelated menu cue
+            # was asked for once", and that is the difference between a row
+            # being closed and looking closed. Ring capacity is 16; the first
+            # eight cover every count observed (max 6).
+            'gNdsAudioFgmMissRingIDs[0]', 'gNdsAudioFgmMissRingCounts[0]',
+            'gNdsAudioFgmMissRingIDs[1]', 'gNdsAudioFgmMissRingCounts[1]',
+            'gNdsAudioFgmMissRingIDs[2]', 'gNdsAudioFgmMissRingCounts[2]',
+            'gNdsAudioFgmMissRingIDs[3]', 'gNdsAudioFgmMissRingCounts[3]',
+            'gNdsAudioFgmMissRingIDs[4]', 'gNdsAudioFgmMissRingCounts[4]',
+            'gNdsAudioFgmMissRingIDs[5]', 'gNdsAudioFgmMissRingCounts[5]',
+            'gNdsAudioFgmMissRingIDs[6]', 'gNdsAudioFgmMissRingCounts[6]',
+            'gNdsAudioFgmMissRingIDs[7]', 'gNdsAudioFgmMissRingCounts[7]',
             # R2-07 R4b. Skip+Redraw = foreground layers built; a settled
             # Results scene should be nearly all Skip. Any Overflow means the
             # defer buffer is undersized and the memo silently disabled itself.
