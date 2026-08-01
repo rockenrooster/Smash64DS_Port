@@ -112,8 +112,25 @@ These bugs should be fixed for P1 delivery.
   budget once the code is live -- so the diagnostic itself became the thing
   preventing the picture. A probe that only terminates while the bug is present is
   not one to leave in.
--VFX FIXED (2026-07-31) / SFX open: No "Time Up" VFX and SFX after match countdown
+-FIXED (2026-07-31, both halves): No "Time Up" VFX and SFX after match countdown
   finished.
+  **SFX DONE.** FGM 527 `nSYAudioVoiceAnnounceTimeUp` is packed and admitted, and
+  so are the other six announcer lines the same match asks for: 488 GAME SET, 534
+  "this game's winner is", 499 MARIO, 486 FOX, and 472/471 FIVE/FOUR. Measured on
+  the natural mode-163 match, three runs: `SupportedCount` 56 -> 61 -> 63,
+  `SupportedPlayCount` 91 -> 93 of 104 calls, `PlayFailCount` 0, and the miss ring
+  went `96,85,153,472,471,621` -> `96,85,153,621`. NO-FREEZE through a full match
+  to Results, Boundary green.
+  **The note below said this generator has "no per-cue derivation mode". It
+  does** -- the attack lane already walked
+  `fgm_ucd[id] -> set_articulation -> fgm_tbl[art] -> trigger -> soundArray_offs
+  -> B1_sounds2_ctl -> wavetable -> loop`, which yields exactly the fields a
+  selector declares; it was only never exposed. `--derive <ids>` exposes it, and
+  authoring a cue is now minutes, not a research project. **The remaining four
+  refusals are all LOOPED cues** -- 96 GroundGrind2, 85 UnkGrind4, 153
+  AltitudeWarn, 621 PublicWin -- which need the DS hardware-loop machinery FGM
+  285 already has. That is the next SFX increment, and it is enumerated by
+  measurement rather than guessed.
   **The VFX half is DONE and photographed**:
   `artifacts/verification/sudden-death/2026-07-31_165338-timeup-frame20.png` shows
   the full blue mixed-width "TIME UP" across the stage at `TIME 00:00`. Cause was
@@ -124,19 +141,13 @@ These bugs should be fixed for P1 delivery.
   breaks on `ifCommonAnnounceTimeUpMakeInterface` and then steps frames; the SD
   lane shortens the clock so the expiry is deterministic. Do NOT try to catch it
   with a wall-clock watch (90-tick window; two watches missed it entirely).
-  **SFX half: what adding cue 527 actually costs, measured 2026-07-31 so the next
-  attempt does not start by guessing.** `nds_audio_fgm.c`'s `IDIsIncluded`
-  allowlist is the easy part. The hard part is
-  `scripts/sfx/render-audio-fgm-phase-pack.py`: its 59 selectors are
-  HAND-AUTHORED source-derived constants -- `articulation`, `sound`, `pitch_code`,
-  `duration_ticks`, `ucd_volume`, `articulation_pitch_cents`, `wave_base`,
-  `wave_length`, `expected_retained_samples` -- and the script has **no per-cue
-  derivation mode** (its only CLI flags are `--repo-root`, `--out-bin`,
-  `--out-json`, `--check`). So a new cue is an extraction job against the source
-  audio tables, not a config edit; budget it as one and use the
-  `smash64ds-audio-qualification` skill. `nSYAudioVoiceAnnounceTimeUp` is 527 and
-  `nSYAudioVoiceAnnounceGameSet` is 488 (`include/gm/gmsound.h:165,144`); both
-  announcements now reach their trigger, so the cue is the only thing missing.
+  **(Superseded by the SFX paragraph above; kept because the estimate it records
+  was wrong in an instructive way.)** This row previously read: the selectors are
+  hand-authored source-derived constants and the script has "no per-cue
+  derivation mode", so a new cue is an extraction job -- budget it as one. The
+  first half was true and the conclusion did not follow. The derivation existed
+  in `build_pack`'s attack lane the whole time; nobody had looked for it because
+  the absence of a CLI flag was read as the absence of the capability.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `ifcommon.c` creates six blue mixed-width letter sprites
     for `TIME UP`, keeps them for 90 ticks, and queues announcer FGM 527
@@ -201,7 +212,17 @@ These bugs should be fixed for P1 delivery.
       field access, or read them in a dedicated one-shot GDB script rather
       than inside the shared counter read, and confirm `gGMCommonFiles[1]` is
       non-NULL before dereferencing it.
--Results screen. VFX and SFX/BGM/FGM.
+-Results screen. VFX and SFX/BGM/FGM.  [three of the four FGM cues PACKED
+  2026-07-31; VFX and 621 remain]
+  **534 WinnerIs, 499 Mario and 486 Fox are packed and admitted** -- derived with
+  `render-audio-fgm-phase-pack.py --derive 534,499,486` and proven by their
+  disappearance from the natural-match miss ring (see the TIME UP row). **621
+  PublicWin is NOT**, and the reason is specific rather than "not done yet": it
+  is a LOOPED cue on the same wave as the already-packed 626, and 626 ships
+  through the bespoke `render_public_excited` path keyed on `PUBLIC_EXCITED_ID`
+  with its own hardware-loop constants. A second looped cue on that wave needs
+  that machinery generalised, or FGM 285's `source_loop_ds_hardware` strategy
+  applied to it. That is the whole remaining FGM work on this row.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: the Results sequence queues PublicWin 621 at scene start,
     WinnerIs 534 at tick 81, Mario 499 or Fox 486 at tick 210, and
@@ -229,6 +250,16 @@ These bugs should be fixed for P1 delivery.
     owner visual/listen approval, and pacing after the missing content is live.
     Status: OPEN.
 -Crowd noise is missing from results and match gameplay.
+  **All twelve reachable crowd cues now DERIVE cleanly** (2026-07-31,
+  `render-audio-fgm-phase-pack.py --derive 605,609,615..625`), which removes the
+  extraction unknown from this row and leaves two real obstacles. **(1) Eight of
+  the twelve are LOOPED or FORKED**: 605/609/615 and 621/624 are loops on
+  mid-wave loop points, and 616/618/619/620/623 carry fork voices (650, 627, 676,
+  684, 625). 96 `GroundGrind2` -- which a live match already requests six times
+  per minute -- has no `pitch` op at all, so `validate_articulation` rejects it as
+  written. **(2) The trigger side is still absent** and that is the larger half:
+  see the root cause below. Packing a cue nothing requests would be dead ROM, so
+  the actor comes first.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `decomp/BattleShip-main/decomp/src/ft/ftpublic.c` owns the
     crowd actor, thresholds, cooldowns, repeat limits, and event queue. The
