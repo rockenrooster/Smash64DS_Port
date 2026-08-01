@@ -1384,6 +1384,22 @@ NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 0
 # on this freeze. Raise this only with a soak whose
 # gNdsTaskmanGeneralHeapFreeMin stays above 25,600.
 NDS_R2_SOURCE_EFFECTS_FULL ?= 0
+# Effect-instance pool depth (source EFFECT_ALLOC_NUM is 38). Bounding it bounds
+# the DObj peak, which is what gcGetDObjSetNextAlloc grows out of the general
+# heap and never gives back -- see include/nds/nds_effects.h for the full
+# argument and for why the source's own five-free reserve keeps the forced KO
+# burst spawnable. Depth minus four is the concurrent cosmetic-effect budget, so
+# read gNdsEffectPoolFreeMin from a soak before changing it: pinned at 4 means
+# saturated and refusing, well above 4 means the depth is bigger than the game
+# needs. DIAGNOSTIC ONLY, not a shipped default change.
+NDS_R2_EFFECT_POOL ?= 12
+# Pull Dream Land's blast zones to a quarter so a passive both-CPU soak produces
+# KOs. Needed because the canonical one-minute match never yields one: measured
+# gNdsKOBurstAttemptCount == 0 over both a 2.5-minute and a 4.5-minute run on
+# 2026-08-01, which left "the KO burst freezes the game" untestable. Drives the
+# ordinary bound check in ftcommondead.c, so the burst, scoring and respawn all
+# run for real. NEVER ship this: these are the gameplay blast zones.
+NDS_R2_KO_STRESS ?= 0
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_BGM := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_FGM := 1
@@ -2510,6 +2526,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR $(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FT_PUBLIC $(NDS_IMPORT_BATTLESHIP_FT_PUBLIC)'; \
 		echo '#define NDS_R2_SOURCE_EFFECTS_FULL $(NDS_R2_SOURCE_EFFECTS_FULL)'; \
+		echo '#define NDS_R2_EFFECT_POOL $(NDS_R2_EFFECT_POOL)'; \
+		echo '#define NDS_R2_KO_STRESS $(NDS_R2_KO_STRESS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)'; \

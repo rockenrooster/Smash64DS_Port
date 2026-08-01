@@ -2711,6 +2711,16 @@ volatile u32 gNdsWeaponPoolEntries;
 /* Starts at all-ones so the first presented frame sets a real low-water. */
 volatile u32 gNdsTaskmanGeneralHeapFreeMin = 0xffffffffu;
 volatile u32 gNdsGCDrawsActiveMax;
+volatile u32 gNdsEffectPoolDepth;
+/* Same convention as the heap low-water above. */
+volatile u32 gNdsEffectPoolFreeMin = 0xffffffffu;
+volatile u32 gNdsEFDescResolveCount;
+volatile u32 gNdsEFDescDisabledCount;
+volatile u32 gNdsEFDescEffectsSpan[3];
+volatile u32 gNdsKOBurstStage;
+volatile u32 gNdsKOBurstAttemptCount;
+volatile u32 gNdsKOBurstCompleteCount;
+volatile u32 gNdsKOBurstDropMask;
 volatile u32 gNdsFighterProjectileProofKindMask;
 volatile u32 gNdsFighterProjectileProofAttackStateMask;
 volatile u32 gNdsFighterProjectileProofDamageMax;

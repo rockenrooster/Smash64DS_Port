@@ -721,6 +721,28 @@ try {
             # see it.
             'gNdsTaskmanGeneralHeapFreeMin',
             'gNdsGCDrawsActiveMax',
+            # NDS_R2_EFFECT_POOL, installed depth and battle low-water. Pinned
+            # at 4 means cosmetic effects are being refused (the source's own
+            # five-free cut) and the depth is too small; 0 means the forced
+            # reserve the KO burst relies on is being consumed too.
+            'gNdsEffectPoolDepth',
+            'gNdsEffectPoolFreeMin',
+            # The KO burst. Attempt == Complete means the DObj tree the source
+            # walks unguarded came back whole every time; a non-zero drop mask
+            # names the missing link (NDS_KO_BURST_DROP_* in nds_effects.h) and
+            # is the difference between a skipped cosmetic and the null
+            # dereference the owner reported as a freeze on 2026-08-01.
+            # Non-zero proves the EFDesc offset resolver ran. Zero with source
+            # effects live means descs are still holding symbol ADDRESSES, and
+            # the next DObj-tree effect will walk garbage until the heap dies.
+            'gNdsEFDescResolveCount',
+            'gNdsEFDescDisabledCount',
+            'gNdsEFDescEffectsSpan[0]',
+            'gNdsEFDescEffectsSpan[1]',
+            'gNdsEFDescEffectsSpan[2]',
+            'gNdsKOBurstAttemptCount',
+            'gNdsKOBurstCompleteCount',
+            'gNdsKOBurstDropMask',
             # LIVE DObjs beside the high-water. gcGetDObjSetNextAlloc grows the
             # pool out of the general heap and never shrinks it, so peak is what
             # costs -- but peak only means "simultaneous" if ejected DObjs go
@@ -1017,14 +1039,19 @@ try {
         [void](New-Item -ItemType Directory -Force -Path $logDir)
         $cleanStamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
         $cleanShot = Join-Path $logDir "$cleanStamp-$verdict.png"
-        [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $cleanShot)
+        # -PreferPrintWindow on BOTH capture sites: this is an unattended soak on
+        # a machine the owner is using, so a foreground raise is not available
+        # and CopyFromScreen would photograph whatever is stacked over melonDS.
+        [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $cleanShot `
+            -PreferPrintWindow)
         Write-Host "final frame saved to $cleanShot"
     }
     if ($verdict -in @('FROZEN-PICTURE', 'FROZEN-FROM-START', 'CAPTURE-STATIC')) {
         [void](New-Item -ItemType Directory -Force -Path $logDir)
         $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
         $shot = Join-Path $logDir "$stamp-frozen.png"
-        [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $shot)
+        [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $shot `
+            -PreferPrintWindow)
         Write-Host "frozen frame saved to $shot"
 
         $capture = Invoke-SoakGdb -Tag 'freeze' -TimeoutSeconds 120 -Commands (@(
@@ -1062,6 +1089,24 @@ try {
              'gNdsSyMallocOverflowCount, gNdsSyMallocOverflowArenaID, ' +
              'gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, ' +
              'gNdsSyMallocOverflowCallerLR'),
+            # The KO burst, which is a repeat freeze site (owner, 2026-08-01) and
+            # so belongs in the FREEZE capture rather than only in the
+            # end-of-run globals -- a frozen run never reaches those, which cost
+            # two builds' worth of blind iteration. STAGE is the breadcrumb: it
+            # is the last checkpoint the burst reached, so it names the step that
+            # faulted without a usable backtrace. See NDS_KO_BURST_STAGE_* in
+            # include/nds/nds_effects.h.
+            ('printf "KOBURST=att=%u,ok=%u,drop=%03x,stage=%u\n", ' +
+             'gNdsKOBurstAttemptCount, gNdsKOBurstCompleteCount, ' +
+             'gNdsKOBurstDropMask, gNdsKOBurstStage'),
+            # EFDesc offset resolution. RESOLVE>0 proves the resolver ran;
+            # DISABLED counts descs neutralised for want of a backing asset; the
+            # three spans are EFCommonEffects1/2/3, where a span of sizeof(Sprite)
+            # means the asset is absent entirely.
+            ('printf "EFDESC=resolved=%u,disabled=%u,span=%u/%u/%u\n", ' +
+             'gNdsEFDescResolveCount, gNdsEFDescDisabledCount, ' +
+             'gNdsEFDescEffectsSpan[0], gNdsEFDescEffectsSpan[1], ' +
+             'gNdsEFDescEffectsSpan[2]'),
             # THE OTHER GIVE-UP SPIN, and the reason the allocator counters alone
             # are not a diagnosis. `syTaskmanCheckBufferLengths` (decomp
             # sys/taskman.c:329) has two `while (TRUE);` branches of its own: line
@@ -1170,6 +1215,48 @@ try {
                 $spinning = $capture -match
                     ('=>\s*' + [regex]::Escape($pcText) + '[^\r\n]*\bb(?:\.n|\.w)?\s+' +
                      [regex]::Escape($pcText) + '\b')
+            }
+            # SECOND WITNESS, independent of the pixels: the guest's own
+            # presented-frame counter. A picture that never changed means the
+            # ARM9 stopped presenting, so a large presented count over the same
+            # window is a flat contradiction and the CAPTURE is the suspect, not
+            # the ROM. Added 2026-08-01 after a soak hashed the owner's browser
+            # for eighty seconds and reported FROZEN-FROM-START against a ROM
+            # that had presented 1,721 frames -- the number was right there in
+            # the same capture, unread. The pixel path was fixed at its root
+            # (Get-MelonDSWindowFrameHash now reads the window, not the screen);
+            # this stays as the check that does not depend on that being true.
+            # VBlanks per presented frame, NOT presented-frames-per-second. The
+            # rate form was tried first and immediately produced a false alarm:
+            # a ROM that ran healthily for 35s and then died had 418 frames over
+            # 110s, which is 3.8/s and trips any "still drawing" threshold, even
+            # though it had genuinely stopped. The ratio does not have that
+            # blind spot, because sVBlankCount keeps climbing after the ARM9
+            # stops presenting. Healthy is 2-6 VBlanks per presented frame --
+            # the project's own pacing histogram; the browser-occluder run read
+            # 5035/1721 = 2.9 while a dead ROM read 81510/418 = 195.
+            $countersMatch = [regex]::Match($capture, 'COUNTERS=(\d+),(\d+),')
+            if ($countersMatch.Success) {
+                $vblanks = [int]$countersMatch.Groups[1].Value
+                $presented = [int]$countersMatch.Groups[2].Value
+                $frozenSeconds = ($identical + 1) * $PollSeconds
+                if (($verdict -like 'FROZEN*') -and ($presented -gt 0)) {
+                    $perFrame = [math]::Round($vblanks / $presented, 1)
+                    if ($perFrame -le 8) {
+                        $verdict = "$verdict-PRESENTING"
+                        Write-Host ''
+                        Write-Host ("CONTRADICTION -- verdict marked $verdict. " +
+                            "The picture was called frozen for ${frozenSeconds}s, " +
+                            "but the guest presented $presented frames across " +
+                            "$vblanks VBlanks -- $perFrame VBlanks per frame, " +
+                            'which is a normally paced ROM, not a stopped one. ' +
+                            'Suspect the CAPTURE before the ROM: check the saved ' +
+                            'PNG actually shows melonDS and not a window stacked ' +
+                            'over it, and note that an attached GDB halts a ' +
+                            'RUNNING core at an arbitrary PC -- that backtrace is ' +
+                            'not evidence of a hang.')
+                    }
+                }
             }
             if (-not $spinning) {
                 $verdict = "$verdict-UNCONFIRMED"

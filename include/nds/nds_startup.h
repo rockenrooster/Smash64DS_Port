@@ -3906,6 +3906,8 @@ extern volatile u32 gNdsGCDrawsActiveMax;
 #ifndef NDS_R2_WEAPON_POOL
 #define NDS_R2_WEAPON_POOL 12
 #endif
+/* The effect-instance pool is the same kind of DS pool-size override; it lives
+ * in include/nds/nds_effects.h, beside the effect counters it is measured with. */
 extern volatile u32 gNdsFighterProjectileProofKindMask;
 extern volatile u32 gNdsFighterProjectileProofAttackStateMask;
 extern volatile u32 gNdsFighterProjectileProofDamageMax;

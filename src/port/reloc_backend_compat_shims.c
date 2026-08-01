@@ -13214,6 +13214,33 @@ void mpCollisionInitGroundData(void)
             gMPCollisionBGMDefault = ground_data->bgm_id;
             gMPCollisionBGMCurrent = ground_data->bgm_id;
 
+#if NDS_R2_KO_STRESS
+            /* Pull Dream Land's blast zones in so a passive both-CPU soak
+             * actually produces KOs. It otherwise does not: two level-3 CPUs
+             * over the canonical one-minute timer never launch each other far
+             * enough, and 2026-08-01 measured gNdsKOBurstAttemptCount == 0
+             * across both a 2.5-minute and a 4.5-minute run -- the extra two
+             * minutes were entirely the Results screen. That left the owner's
+             * "the KO burst freezes the game" untestable, which is the one
+             * report the KO instrumentation exists to answer.
+             *
+             * This drives the REAL path -- ftCommonDeadDownSetStatus and its
+             * left/right siblings are reached from the ordinary bound check in
+             * ftcommondead.c:588+ -- so scoring, respawn and the burst itself
+             * all run as they do in a genuine KO. Diagnostic ROMs only; the
+             * shipped configurations must keep the source's bounds, because
+             * these ARE the gameplay blast zones. */
+            /* s16, signed outward from the stage. SIDES ONLY, and halved rather
+             * than quartered: the first attempt scaled all four bounds to a
+             * quarter, which put the TOP blast zone inside the stage's own
+             * jump arc. Fighters then died on contact, respawned into the same
+             * condition, and the run consumed the GObj pool to its
+             * ifCommonSetMaxNumGObj cap (COMMONSMAX=47/ACTIVE=47) -- a failure
+             * manufactured entirely by the diagnostic. Halved side bounds
+             * produce ordinary left/right KOs from real knockback. */
+            ground_data->map_bound_left  = (s16)(ground_data->map_bound_left / 2);
+            ground_data->map_bound_right = (s16)(ground_data->map_bound_right / 2);
+#endif
             gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
             gNdsSCVSBattleStageGKind = nGRKindPupupu;
             gNdsSCVSBattleStageGroundDataReady = 1;

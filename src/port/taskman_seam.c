@@ -4220,6 +4220,10 @@ extern void ndsMNVSModeRunStartTransitionProbe(void);
 extern void ndsMNPlayersVSRunReadyTransitionProbe(void);
 extern void ndsMNMapsRunSelectVSBattleProbe(void);
 extern void scVSBattleFuncUpdate(void);
+/* Effect-instance pool free count (efmanager.c:1720), sampled per presented
+ * frame for the NDS_R2_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
+extern s32 sEFManagerStructsFreeNum;
+extern volatile u32 gNdsEffectPoolFreeMin;
 extern void ndsFighterMarioFoxRunImmediateProofChain(void);
 extern void ndsFighterMarioFoxSchedulerLoopPrepare(void);
 extern void ndsFighterMarioFoxControllerLoopPrepare(void);
@@ -4902,6 +4906,16 @@ static void ndsBattlePlayablePresentFrame(void)
     if ((u32)sGCDrawsActiveNum > gNdsGCDrawsActiveMax)
     {
         gNdsGCDrawsActiveMax = (u32)sGCDrawsActiveNum;
+    }
+    /* Saturation of the NDS_R2_EFFECT_POOL bound. This is what sizes the pool
+     * from measurement instead of a guess: the depth is right when the
+     * low-water sits just above the source's 5-free refusal cut during heavy
+     * combat, because that is the smallest pool that never refuses a cosmetic
+     * effect the player would have seen. */
+    if ((sEFManagerStructsFreeNum >= 0) &&
+        ((u32)sEFManagerStructsFreeNum < gNdsEffectPoolFreeMin))
+    {
+        gNdsEffectPoolFreeMin = (u32)sEFManagerStructsFreeNum;
     }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     NDS_RENDERER_PHASE05_FINISH(

@@ -884,6 +884,205 @@ void ndsEFManagerStopAttachedVisualEffects(GObj *fighter_gobj)
     }
 }
 
+/* ------------------------------------------------------------------------
+ * EFDesc FILE-OFFSET RESOLUTION
+ *
+ * The root cause of the owner's 2026-08-01 "the KO burst freezes the game",
+ * and -- because it is systemic -- of the heap exhaustion that has been read
+ * as "source effects are too expensive" for this whole campaign.
+ *
+ * On N64, llEFCommonEffects2DeadExplodeDefaultDObjDesc and its ~180 siblings
+ * are ABSOLUTE linker symbols: the symbol's ADDRESS *is* the byte offset into
+ * the effect file, so `&llFoo` evaluates to something like 0x4F08 and
+ * efManagerMakeEffect's raw `addr + effect_desc->o_dobjsetup` arithmetic is
+ * correct. This port supplies them from a generated header as
+ * `static uintptr_t llFoo = 0x4F08u`, so `&llFoo` is the VARIABLE'S ADDRESS in
+ * main RAM, not 0x4F08 -- and every EFDesc initialiser in the decomp is written
+ * `&llFoo`. All 182 references in efmanager.c are &-prefixed; none reads the
+ * value, so nothing else caught it.
+ *
+ * The port's reloc design normally absorbs exactly this: a symbol's address is
+ * a lookup TOKEN and ndsRelocGetFileData translates it. efManagerMakeEffect
+ * does not go through that translation -- it adds the field to the file base
+ * directly -- so this one seam kept the N64 assumption.
+ *
+ * The failure is not a wrong picture, it is a hang. `addr + &llFoo` is roughly
+ * 0x023xxxxx + 0x021xxxxx = 0x044xxxxx, far outside the DS's 4 MB, and
+ * gcSetupCustomDObjs then walks that as a DObjDesc tree and allocates a
+ * 136-byte DObj per bogus node until syMallocSet gives up in its `for (;;)`.
+ * Captured verbatim: MALLOCOVF=1 req=136 head=112, gcSetupCustomDObjs with
+ * dobjdesc=0x446da28, under efManagerMakeEffect(dEFManagerDeadExplodeEffectDesc)
+ * from ftCommonDeadLeftSetStatus. Note what this means for the earlier
+ * measurement that priced a source effect at "~5 DObjs": that was never the
+ * cost of the effect, it was a runaway walk over garbage.
+ *
+ * Recovering the offset is one dereference, because the generated symbol still
+ * HOLDS it. The guard makes that idempotent, which matters: efManagerInitEffects
+ * runs once per scene, and two of these descs have their offsets reassigned at
+ * runtime from address-valued tables. */
+static intptr_t ndsEFManagerResolveOffset(intptr_t value)
+{
+    /* File offsets are small (the largest in the generated header is ~0xD000);
+     * anything at or above 0x01000000 is a RAM address, i.e. still unresolved.
+     * Zero is meaningful -- efManagerMakeEffect tests it -- and passes through. */
+    if ((uintptr_t)value >= 0x01000000u)
+    {
+        gNdsEFDescResolveCount++;
+        return (intptr_t) * (uintptr_t *)value;
+    }
+    return value;
+}
+
+/* Byte span of the file a desc offsets into, or 0 when this port has no way to
+ * know. Only the three EF common files are knowable from the desc alone --
+ * file_head is a pointer to the slot, not a file id -- and they are the ones
+ * that matter here. */
+static size_t ndsEFManagerFileSpan(void **file_head)
+{
+    if (file_head == &gEFManagerFiles[0])
+    {
+        return lbRelocGetFileSize(&llEFCommonEffects1FileID);
+    }
+    if (file_head == &gEFManagerFiles[1])
+    {
+        return lbRelocGetFileSize(&llEFCommonEffects2FileID);
+    }
+    if (file_head == &gEFManagerFiles[2])
+    {
+        return lbRelocGetFileSize(&llEFCommonEffects3FileID);
+    }
+    return 0u;
+}
+
+/* Resolving the offsets is necessary but not sufficient: a correct offset into
+ * a file this port never shipped is still a walk over unrelated heap.
+ * lbRelocGetExternHeapFile returns the raw uninitialised malloc when an asset
+ * is absent, and lbRelocGetFileSize then answers sizeof(Sprite), so the base
+ * pointer looks perfectly valid and `base + 0x4F08` lands twenty kilobytes past
+ * it -- which is the CPU abort that replaced the malloc spin once the offsets
+ * were fixed.
+ *
+ * Neutralising the desc uses a door the source already opens: efManagerMakeEffect
+ * returns the bare GObj as soon as proc_display is NULL, before it touches
+ * file_head at all. So a desc whose file cannot back it produces an effect GObj
+ * with no DObj tree -- nothing drawn, nothing walked -- and the guarded
+ * accessors downstream see a NULL DObjGetStruct and return cleanly. */
+static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
+{
+    size_t span;
+
+    desc->o_dobjsetup     = ndsEFManagerResolveOffset(desc->o_dobjsetup);
+    desc->o_mobjsub       = ndsEFManagerResolveOffset(desc->o_mobjsub);
+    desc->o_anim_joint    = ndsEFManagerResolveOffset(desc->o_anim_joint);
+    desc->o_matanim_joint = ndsEFManagerResolveOffset(desc->o_matanim_joint);
+
+    if (desc->proc_display == NULL) { return; }
+
+    span = ndsEFManagerFileSpan(desc->file_head);
+    if (span == 0u) { return; }          /* not knowable: leave it alone */
+
+    if ((*desc->file_head == NULL) ||
+        ((size_t)desc->o_dobjsetup >= span) ||
+        ((size_t)desc->o_mobjsub >= span) ||
+        ((size_t)desc->o_anim_joint >= span) ||
+        ((size_t)desc->o_matanim_joint >= span))
+    {
+        desc->proc_display = NULL;
+        gNdsEFDescDisabledCount++;
+    }
+}
+
+/* The EFDescs reachable in the P1 milestone -- Mario, Fox and the shared
+ * combat effects. Listed rather than swept, because they are separate globals
+ * with no guaranteed layout, and because a desc left out is a heap-exhaustion
+ * hang rather than a missing effect: too severe to leave to a pattern match.
+ *
+ * Deliberately NOT the full set of fifty, and split by NDS_R2_SOURCE_EFFECTS_FULL.
+ * Naming a desc here KEEPS IT LINKED, and this list is charged in boot arena,
+ * measured twice on 2026-08-01:
+ *
+ *   all 50 descs   arena 1,265,664  battle heap low-water 21,784  (cap latched at 47)
+ *   16 descs       arena 1,269,760  battle heap low-water 23,720  (still under)
+ *   2 descs        arena 1,273,856  battle heap low-water 26,876  (clear)
+ *
+ * The latch is ifCommonSetMaxNumGObj at 25,600 free, so the first two both
+ * capped the GObj pool for the whole match -- a correctness fix that shrinks
+ * the arena is a regression with extra steps. Only DeadExplode and RebirthHalo
+ * can spawn with the flag off (every other DObj-tree maker is behind it and
+ * --gc-sections drops the maker and its desc together), so only those two are
+ * unconditional. The rest come back exactly when their makers do.
+ *
+ * dEFManagerMBallThrown/CaptureKirbyStar/LoseKirbyStar are excluded for a
+ * second reason: their file_head is &gITManagerCommonData, which this ROM does
+ * not link, so naming them is a link error rather than a fix. */
+#if NDS_R2_SOURCE_EFFECTS_FULL
+#define NDS_EF_MANAGER_DESCS_FULL(X) \
+    X(dEFManagerDamageSlashEffectDesc) \
+    X(dEFManagerShockSmallEffectDesc) \
+    X(dEFManagerDamageFlyOrbsEffectDesc) \
+    X(dEFManagerDamageSpawnOrbsEffectDesc) \
+    X(dEFManagerImpactWaveEffectDesc) \
+    X(dEFManagerDamageFlySparksEffectDesc) \
+    X(dEFManagerDamageSpawnSparksEffectDesc) \
+    X(dEFManagerDamageFlyMDustEffectDesc) \
+    X(dEFManagerDamageSpawnMDustEffectDesc) \
+    X(dEFManagerFireSparkEffectDesc) \
+    X(dEFManagerShieldEffectDesc) \
+    X(dEFManagerCatchSwirlEffectDesc) \
+    X(dEFManagerReflectBreakEffectDesc)
+#else
+#define NDS_EF_MANAGER_DESCS_FULL(X)
+#endif
+
+#define NDS_EF_MANAGER_DESCS(X) \
+    X(dEFManagerDeadExplodeEffectDesc) \
+    X(dEFManagerRebirthHaloEffectDesc) \
+    NDS_EF_MANAGER_DESCS_FULL(X)
+
+static void ndsEFManagerResolveAllDescOffsets(void)
+{
+    /* Recorded so a soak can tell "the effect is disabled because its asset is
+     * missing" from "the resolver is broken". sizeof(Sprite) here means the
+     * asset is absent and lbRelocGetFileSize fell back. */
+    gNdsEFDescEffectsSpan[0] = (u32)lbRelocGetFileSize(&llEFCommonEffects1FileID);
+    gNdsEFDescEffectsSpan[1] = (u32)lbRelocGetFileSize(&llEFCommonEffects2FileID);
+    gNdsEFDescEffectsSpan[2] = (u32)lbRelocGetFileSize(&llEFCommonEffects3FileID);
+
+#define NDS_EF_RESOLVE_ONE(name) ndsEFManagerResolveDescOffsets(&name);
+    NDS_EF_MANAGER_DESCS(NDS_EF_RESOLVE_ONE)
+#undef NDS_EF_RESOLVE_ONE
+}
+
+/* Install NDS_R2_EFFECT_POOL as the effect-instance pool depth by truncating
+ * the free list the source just built. See include/nds/nds_startup.h for why
+ * bounding this bounds the DObj peak, and why refusal is source behaviour
+ * rather than a dropped effect.
+ *
+ * Truncation, not a smaller syTaskmanMalloc: the block is one allocation of
+ * EFFECT_ALLOC_NUM entries from a bump allocator, so shortening it would not
+ * return anything, and the entries past the cut are simply never reachable.
+ * Nothing outside efmanager.c indexes the array -- every user goes through the
+ * head push/pop pair -- so the unreachable tail is inert. */
+static void ndsEFManagerBoundEffectPool(void)
+{
+    EFStruct *ep = sEFManagerStructsAllocFree;
+    s32 depth = 1;
+
+    if ((ep == NULL) || (NDS_R2_EFFECT_POOL >= EFFECT_ALLOC_NUM))
+    {
+        gNdsEffectPoolDepth = (u32)sEFManagerStructsFreeNum;
+        return;
+    }
+    while ((depth < NDS_R2_EFFECT_POOL) && (ep->next != NULL))
+    {
+        ep = ep->next;
+        depth++;
+    }
+    ep->next = NULL;
+    sEFManagerStructsFreeNum = depth;
+    gNdsEffectPoolDepth = (u32)depth;
+}
+
 void efManagerInitEffects(void)
 {
     ndsTask39EffectCensusReset();
@@ -895,6 +1094,8 @@ void efManagerInitEffects(void)
     gNdsVisualEffectKindMask = 0u;
     gNdsVisualEffectTemplateBytes = 0u;
     ndsBaseEFManagerInitEffects();
+    ndsEFManagerResolveAllDescOffsets();
+    ndsEFManagerBoundEffectPool();
     ndsEFManagerInitVisualTemplates();
 }
 
@@ -974,9 +1175,141 @@ LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos, f32 scale)
  * generator with its own orientation, DObj/material animation and player
  * colours; the substitute discarded `player` entirely and scaled one red ring
  * by `type`. */
+/* The KO burst, reimplemented here rather than forwarded, because the source
+ * body walks its own DObj tree with no NULL guard anywhere:
+ *
+ *     dobj        = DObjGetStruct(effect_gobj);
+ *     dobj->translate.vec.f = *pos;
+ *     child_dobj  = dobj->child;
+ *     sibling_dobj = dobj->child->sib_next->sib_next;
+ *     sibling_dobj->mobj->sub.envcolor... ;
+ *     child_dobj->mobj->sub.envcolor... ;
+ *
+ * That is five unchecked dereferences behind a tree the caller does not build
+ * and cannot inspect, and efManagerMakeEffect has three separate ways to hand
+ * back something shorter than it assumes: it returns the bare GObj early when
+ * proc_display is NULL (no DObj at all, so DObjGetStruct is NULL and the very
+ * next line faults), it builds the tree from *effect_desc->file_head so a
+ * bank that did not load yields an empty or garbage tree, and every
+ * gcAddChildForDObj/gcAddDObjForGObj inside it draws from the same
+ * gcGetDObjSetNextAlloc pool that runs out under heap pressure. On N64 that
+ * pool never ran out during a KO, so the missing guards never showed; here the
+ * KO burst is a forced allocation -- efManagerMakeEffectForce bypasses the
+ * five-entry reserve precisely so a KO always spawns -- which means it is the
+ * one effect guaranteed to be built at the worst moment. Owner report,
+ * 2026-08-01: "the KO burst freezes the game".
+ *
+ * Behaviour is identical to the source whenever the tree is complete, which is
+ * the normal case. When it is not, the burst is skipped and
+ * gNdsKOBurstDropMask names the link that was missing, so an incomplete tree
+ * is a diagnosable missing cosmetic instead of a hang. */
 GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
 {
-    return ndsBaseEFManagerDeadExplodeMakeEffect(pos, player, type);
+    GObj *effect_gobj;
+    LBParticle *pc;
+    LBTransform *xf;
+    DObj *dobj;
+    DObj *child_dobj;
+    DObj *sibling_dobj;
+    u8 index = (u8)(((type % 2) * GMCOMMON_PLAYERS_MAX) + player);
+
+    u32 drop = 0u;
+
+    gNdsKOBurstAttemptCount++;
+    gNdsKOBurstStage = NDS_KO_BURST_STAGE_ENTER;
+
+    gNdsKOBurstStage = NDS_KO_BURST_STAGE_PARTICLE;
+    pc = lbParticleMakeScriptID(gEFManagerParticleBankID | LBPARTICLE_MASK_GENLINK(1),
+                                dEFManagerDeadExplodeGenID[index]);
+    if (pc != NULL)
+    {
+        xf = lbParticleAddTransformForStruct(pc, nLBTransformStatusReady);
+
+        if (xf != NULL)
+        {
+            LBParticleProcessStruct(pc);
+
+            if (xf->users_num == 0)
+            {
+                gNdsKOBurstDropMask |= NDS_KO_BURST_DROP_XF_UNUSED;
+                return NULL;
+            }
+            xf->translate = *pos;
+            xf->rotate.z = F_CLC_DTOR32(dEFManagerDeadExplodeRotateD[type]);
+        }
+        else
+        {
+            drop |= NDS_KO_BURST_DROP_XF;
+            lbParticleEjectStruct(pc);
+        }
+    }
+    else { drop |= NDS_KO_BURST_DROP_PARTICLE; }
+
+    gNdsKOBurstStage = NDS_KO_BURST_STAGE_MATANIM;
+    /* Reassigned per KO from an address-valued table, so it needs resolving
+     * every time -- the once-per-scene sweep in efManagerInitEffects cannot
+     * hold this field. */
+    dEFManagerDeadExplodeEffectDesc.o_matanim_joint = ndsEFManagerResolveOffset(
+        dEFManagerDeadExplodeMatAnimJoints[player]);
+
+    gNdsKOBurstStage = NDS_KO_BURST_STAGE_MAKEFORCE;
+    effect_gobj = efManagerMakeEffectForce(&dEFManagerDeadExplodeEffectDesc);
+
+    if (effect_gobj == NULL)
+    {
+        gNdsKOBurstDropMask |= (drop | NDS_KO_BURST_DROP_GOBJ);
+        return NULL;
+    }
+    gNdsKOBurstStage = NDS_KO_BURST_STAGE_TREE;
+    /* Every link the source assumes, checked once. A short tree leaves the GObj
+     * alive and harmless -- it simply has nothing to colour. */
+    dobj = DObjGetStruct(effect_gobj);
+    if (dobj == NULL)
+    {
+        gNdsKOBurstDropMask |= (drop | NDS_KO_BURST_DROP_ROOT_DOBJ);
+        return effect_gobj;
+    }
+    dobj->translate.vec.f = *pos;
+    dobj->rotate.vec.f.z = F_CLC_DTOR32(dEFManagerDeadExplodeRotateD[type]);
+
+    child_dobj = dobj->child;
+    if (child_dobj == NULL)
+    {
+        gNdsKOBurstDropMask |= (drop | NDS_KO_BURST_DROP_CHILD);
+        return effect_gobj;
+    }
+    sibling_dobj = child_dobj->sib_next;
+    sibling_dobj = (sibling_dobj != NULL) ? sibling_dobj->sib_next : NULL;
+    if (sibling_dobj == NULL)
+    {
+        drop |= NDS_KO_BURST_DROP_SIBLING;
+    }
+    else if (sibling_dobj->mobj == NULL)
+    {
+        drop |= NDS_KO_BURST_DROP_SIBLING_MOBJ;
+    }
+    else
+    {
+        sibling_dobj->mobj->sub.envcolor.s.r = dEFManagerDeadExplodeEnvColorSiblingR[player];
+        sibling_dobj->mobj->sub.envcolor.s.g = dEFManagerDeadExplodeEnvColorSiblingG[player];
+        sibling_dobj->mobj->sub.envcolor.s.b = dEFManagerDeadExplodeEnvColorSiblingB[player];
+        sibling_dobj->mobj->sub.flags |= MOBJ_FLAG_ENVCOLOR;
+    }
+    if (child_dobj->mobj == NULL)
+    {
+        drop |= NDS_KO_BURST_DROP_CHILD_MOBJ;
+    }
+    else
+    {
+        child_dobj->mobj->sub.envcolor.s.r = dEFManagerDeadExplodeEnvColorChildR[player];
+        child_dobj->mobj->sub.envcolor.s.g = dEFManagerDeadExplodeEnvColorChildG[player];
+        child_dobj->mobj->sub.envcolor.s.b = dEFManagerDeadExplodeEnvColorChildB[player];
+        child_dobj->mobj->sub.flags |= MOBJ_FLAG_ENVCOLOR;
+    }
+    gNdsKOBurstStage = NDS_KO_BURST_STAGE_DONE;
+    if (drop == 0u) { gNdsKOBurstCompleteCount++; }
+    gNdsKOBurstDropMask |= drop;
+    return effect_gobj;
 }
 
 GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 scale)

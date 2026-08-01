@@ -118,9 +118,16 @@ function Get-MelonDSWindowBitmap {
             # under test. Nothing in the pipeline flagged it; only looking at the
             # image did.
             #
-            # Liveness hashing tolerates this (a stable occluder just reads as a
-            # frozen picture, which is already the failure verdict). EVIDENCE
-            # capture does not. Any caller writing a file for the owner to judge
+            # This was once qualified with "liveness hashing tolerates it, since
+            # a stable occluder just reads as a frozen picture, which is already
+            # the failure verdict". WRONG, and withdrawn 2026-08-01: a stable
+            # occluder does not degrade a liveness verdict, it manufactures a
+            # freeze that never happened. See Get-MelonDSWindowFrameHash, which
+            # now passes -PreferPrintWindow for exactly that reason. Treat every
+            # CopyFromScreen caller as suspect, not just the ones writing files.
+            #
+            # EVIDENCE capture is the stricter case still. Any caller writing a
+            # file for the owner to judge
             # must first raise the window AND verify with GetForegroundWindow
             # that the raise was granted, then refuse to write if it was not.
             # `capture-results-tic.ps1` does exactly that; copy it, do not
@@ -182,10 +189,23 @@ function Get-MelonDSWindowBitmap {
 # then and a ticking counter never does. The window frame also let the desktop
 # bleed in at the edges. Never widen this back to the window rect: a liveness
 # metric must not be able to see anything the guest does not draw.
+#
+# -PreferPrintWindow IS ALSO NOT OPTIONAL, for the same class of reason. The
+# comment in Get-MelonDSWindowBitmap used to argue that liveness hashing could
+# safely keep CopyFromScreen because "a stable occluder just reads as a frozen
+# picture, which is already the failure verdict". That is wrong, and 2026-08-01
+# is the proof: the owner had a browser over melonDS, all eight polls hashed the
+# BROWSER, and the run reported FROZEN-FROM-START against a ROM that was running
+# perfectly -- 1,721 presented frames and a healthy heap in the same capture.
+# An occluder does not degrade the verdict conservatively, it FABRICATES one,
+# and the attached GDB stack then invites a hunt for a hang at whatever PC a
+# running ROM happened to be interrupted at. It also wrote a photograph of the
+# owner's desktop into artifacts/. Read the window, never the screen.
 function Get-MelonDSWindowFrameHash {
     param([Parameter(Mandatory=$true)][System.IntPtr]$WindowHandle)
 
-    $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle -ClientOnly
+    $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle -ClientOnly `
+        -PreferPrintWindow
     try {
         $data = $bitmap.LockBits(
             (New-Object System.Drawing.Rectangle 0, 0, $bitmap.Width, $bitmap.Height),
@@ -221,7 +241,11 @@ function Measure-MelonDSWindowDistinctColors {
         [int]$Step = 16
     )
 
-    $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle -ClientOnly
+    # Same window-not-screen rule as the hash it discriminates for: if this read
+    # the desktop it would count the OCCLUDER's colours and cheerfully confirm
+    # "20 distinct colours, so the ROM drew a frame and then stopped".
+    $bitmap = Get-MelonDSWindowBitmap -WindowHandle $WindowHandle -ClientOnly `
+        -PreferPrintWindow
     try {
         $seen = New-Object 'System.Collections.Generic.HashSet[int]'
         for ($y = 0; $y -lt $bitmap.Height; $y += $Step) {
