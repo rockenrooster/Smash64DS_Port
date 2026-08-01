@@ -39,8 +39,7 @@ than the work — **1.85 cycles/frame per byte, measured twice**. Engagement was
 
 Three findings that constrain whatever comes next. **(1) Hot ARM text costs ~1.85 cycles/frame of `FTR`
 mean per byte** — a lever must beat its own size. **(2) Soft float here is cheap**: 61 `__aeabi_*` calls
-became 36 SMULLs, a hardware divide and 24 bit-twiddled conversions for **99 cycles per call**, not the
-~800 assumed; "66.2% of the premium is soft-float" says where cycles ARE, not that fixed point is cheaper.
+became 36 SMULLs, a hardware divide and 24 conversions for **99 cycles per call**, not the ~800 assumed.
 **(3) Wrapping is additive, only replacing is subtractive** — the float version stayed linked throughout.
 
 So the next lever must **delete work, not relocate it**. If collision is tried again it has to be the
@@ -52,13 +51,12 @@ multiplies, with `vec_scale` already computed. Needs an orthogonality guard. **K
 `include/nds/nds_r2_collision_mtx.h` and `scripts/check-r2-collision-mtx.ps1`.
 
 **The L7 oracle outlived the lever, and its answer is already recorded** in `nds_r2_collision_mtx.h`
-(460 samples, one natural match): **joint scale 1.1138–1.1199, a single scale spanning 0.006**, which is
-what makes the row-scaled-rotation inverse worth trying. **Do not re-run it** — rebuilding it on
-2026-08-01 aborted the ROM at the GO countdown (`GENERALFREE 20272` against the 25,600 latch,
-`COMMONSMAX 45`, `MALLOCOVF 0`), because its `.text` alone is more arena than the tree has spare.
-**The shipping tree has roughly five kilobytes of arena margin**, and that is the budget line for every
-remaining item that adds code. Read `GENERALFREE` from a soak before adding any; run `mapdiff` on a new
-lab flag before running the ROM.
+(460 samples): **joint scale 1.1138–1.1199, a single scale spanning 0.006**, which is what makes the
+row-scaled inverse worth trying. **Do not re-run it** — rebuilding it aborted the ROM at the GO countdown
+(`GENERALFREE 20272` against the 25,600 latch, `MALLOCOVF 0`), because its `.text` alone is more arena
+than the tree has spare. **The shipping tree has roughly five kilobytes of arena margin**, and that is
+the budget line for every remaining item that adds code. Read `GENERALFREE` from a soak before adding
+any; run `mapdiff` on a new lab flag before running the ROM.
 
 ## OPEN P1 #2 — `BUGS.md` is now entirely particles, VFX and audio cues, and ALL of it is P1
 
@@ -66,47 +64,50 @@ Owner's phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and
 for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the random freezes**.
 
 **SFX is essentially done.** `render-audio-fgm-phase-pack.py --derive <ids>` prints every selector field
-straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, and now also `source_pcm_samples`, the fork program
-hashes and `render_program_sha256` — the three that used to be obtainable only by pasting a placeholder
-and reading the generator's error. 56 → **77 cues**: seven announcer lines, 621 PublicWin (626's AOT
-loop-and-ramp render unchanged — a hardware repeat cannot serve either, their articulation ramps volume
-*across* the loop), the eleven the crowd actor reaches, plus 96, 153 and 85. **"Eight of the twelve crowd
-cues are LOOPED" was wrong** — `--derive` says none of the eleven loops. **85's `source_rate_above_u16`
-was never a hardware limit**: 90,510 Hz is fine for the channel timer and too big only for the `u16` in
-*our* pack entry, so it renders full-program AOT at 32,000 like 189/190/219 already did. Its articulation
-spawns a `target 28` modulator, which the decomp's field notes call cross-mod ANOTHER voice — 85 has no
-forks, so it is skipped before evaluation (and only when a cue has no forks).
-**The crowd TRIGGER side is implemented**: `ft/ftpublic.c` compiled in place
-(`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`, default 0) — its whole external surface already existed, so the
-thresholds/cooldowns/repeats are the source's by construction. Owed: a build and an ear check.
+straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, so authoring a cue is transcription. 56 → **83
+cues**: seven announcer lines, 621 PublicWin, the eleven the crowd actor reaches, 96/153/85, and the five
+**only a BOTH-CPU match reaches** — 11 Escape, 13/14 GuardOn/Off, 278 GamePause, 369 FoxOttotto. Every
+earlier miss-ring read was single-CPU, where Mario stands still: nobody dodges, shields or teeters.
+**85's `source_rate_above_u16` was never a hardware limit** — 90,510 Hz is fine for the channel timer and
+too big only for the `u16` in *our* pack entry, so it renders full-program AOT at 32,000. Two modulator
+findings, both from the decomp's own source: **target 24+ is cross-mod ANOTHER voice** (skipped before
+evaluation, and only for a fork-free cue), and **shapes 6/7 are 2/3 with the phase CLAMPED at the period
+rather than wrapped** (`n_env.c:4158`/`:4172`). Shapes 4/5/8 call `randFloat*` and stay unsupported.
+**The crowd TRIGGER side BUILDS AND RUNS** — `ft/ftpublic.c` compiled in place
+(`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`), first ever build of that flag, 2026-08-01, NO-FREEZE to Results.
+"Its whole external surface already existed" was half wrong: five declarations plus
+`dFTCommonDataPublicFighterCallFGMs` (`ftcommondata.c` is not compiled here) had to be supplied.
+**Still default 0 for a hard reason: it leaves the general heap at 17,316 and the GObj cap FIRES at 48.**
+Arena, not the cue set, is what closes this row. **Five of its seven counters CANNOT fire** — the
+`#define` seam renames intra-TU references, so the actor registers the inner proc and the
+counter-carrying wrappers are gc'd. Read the source's own statics (`sFTPublicCallCount`,
+`sFTPublicCommonOrder`) instead; this is the recorded "wrapping a decomp function to count its INTERNAL
+callers" refutation, hit again.
 
 **VFX — the interpreter is PROVEN CLEAN and the DRAW now WORKS.** Four tick-HUD ROMs differing only in
-the particle flags, one soak each. Control and `RUNTIME=1` are indistinguishable (NO-FREEZE, Violation 0,
-stage builds 2), and `RUNTIME=1` runs 14 scripts / 138,274 visible particles inside its fixed pools.
-`DRAW=1` with the 32 KB atlas put **196 of 566 frames at five or more VBlanks** against 4 while `WORK-H`
-P95 came back *better* than its control — read the histogram, not the P95 alone.
+the particle flags, one soak each; control and `RUNTIME=1` are indistinguishable. `DRAW=1` with the 32 KB
+atlas put **196 of 566 frames at five or more VBlanks** against 4 while `WORK-H` P95 came back *better*
+than its control — read the histogram, not the P95 alone.
 
 **Attributed, all counted:** atlas resident →
 `ndsRendererHardwareResolveStageSourceFrameTexture` fails ~1 frame in 10 (reject **site 2, 196 times**,
 mask **4096 = TEXIMAGE**, census **Free 7 / Live 41 / Pinned 25 / ThisFrame 16 / Evictable 0**) →
-`PrepareRun` FALSE → owner rejects → `r2_prepared_valid = 0` → 197 rebuilds, each drawing that frame
-generically. The control runs the same working set with 24 pinned and never rejects.
-**FIXED by one generator constant — the sheet is 64x64 = 8,192 B.** Every symptom returns to the
-control's own numbers: `StagePrepareBuildCount` **2**, reuse **2,041**, reject site 2 **1**, mask **0**,
-VBlank **451/102/9/4** against the control's 457/96/9/4. Quads emitted went UP to **117,937 with zero
-misses** because the stage stopped falling back. **So the draw costs ~10,100 ticks (`MISC` P50) and five
-extra three-VBlank frames, and nothing else.**
-**8,192 is a measured HARD BOUND, not a budget:** 16,384 rejected exactly as 32,768 did, so more coverage
-needs a second small atlas, a smaller per-texture format, or the atlas owning its own VRAM. Six of 31
-textures is the open risk for the remaining VFX rows; `gNdsParticleQuadMissCount` names it per effect,
-and Dream Land's Pupupu bank still registers EMPTY.
+`PrepareRun` FALSE → owner rejects → 197 rebuilds, each drawing that frame generically.
+**FIXED by one generator constant — the sheet is 64x64 = 8,192 B**, and every symptom returns to the
+control's own numbers (`StagePrepareBuildCount` 2, reuse 2,041, reject site 2 **1**, mask 0). **The draw
+costs ~10,100 ticks (`MISC` P50) and five extra three-VBlank frames, and nothing else.**
+**8,192 is a measured HARD BOUND, not a budget** (16,384 rejected exactly as 32,768 did) — **but
+coverage is NOT the open risk.** A full both-CPU match to Results emits **144,592 quads with
+`QuadMissCount` 0**, and `gNdsParticleTextureUseMask` is still `0x08400000`: **two textures**. What IS
+open is scripts that never run — `gNdsParticleRejectRing` names script **0** and script **1** at
+**reason 2** on bank 0, i.e. Whispy's leaves and dust against the EMPTY Pupupu bank. Nothing to do with
+VRAM. **Fireball row reproduced**: `SpawnCall 15` vs `SpawnSuccess 14`, `WeaponCountMax 1`.
 
-**Two earlier `DRAW=1` failures are closed:** the GO-countdown abort (the 25 KiB GObj latch above), and a
-`glEnd()` that wedged the geometry engine. **Traps:** `--gc-sections` had already discarded the particle
-textures, so the board's named arena lever freed zero — **check the `.map` before believing a size claim
-about linked data nothing reads**; **`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads
-like the allocator's `while (TRUE);`; and **a latch is not a counter** —
-`gNdsRendererTask36*RejectReason` both read 0 on the run that rebuilt 197 times.
+**Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
+freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;
+**`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads like the allocator's
+`while (TRUE);`; and **a latch is not a counter** — `gNdsRendererTask36*RejectReason` both read 0 on the
+run that rebuilt 197 times.
 
 ## SUCCESSIVE MATCHES and the ANNOUNCEMENTS: both FIXED (full write-ups in `docs/PORTING.md` + board)
 
@@ -114,17 +115,15 @@ like the allocator's `while (TRUE);`; and **a latch is not a counter** —
 rewinds — prepared-run cache keyed on a config pointer; texture VRAM with no owner; the source DL heads
 never rewound (48 bytes past a 60 KiB buffer → `while (TRUE);` ~8 s into match two); and
 `sMNVSResultsFighterGObjs` trusted across a Results re-entry (data abort at match two's GAME SET). Four
-entries, three Results, NO-FREEZE, owner-confirmed; **Boundary AND Latest green on `0e5e8a3`.** Guards:
-`gNdsRendererSceneTextureVramResetCount` one per battle entry, `gNdsR2StagePrepareBuildCount` two.
+entries, three Results, NO-FREEZE, owner-confirmed; **Boundary AND Latest green on `0e5e8a3`.**
 **Owed: the owner's eye check.**
 
 **TIME UP and GAME SET** were three defects in series, each hiding the next: `sIFCommonBattlePlace` was
 never initialised so **no VS match had ever announced GAME SET** (which also withheld Results); the nine
 blue letters had no sprite descriptors; and the announcement's update proc dereferences
-`gEFParticleStructsGObj` with no NULL check (`ifcommon.c:2609`), so fixing the first crashed the game
-until a zeroed placeholder landed. **A halted-core screenshot can show a stale buffer** — trust the live
-watch, and break on the constructor (`-CaptureAnnounce`), because a wall-clock watch cannot catch a
-90-tick window and two missed it.
+`gEFParticleStructsGObj` with no NULL check (`ifcommon.c:2609`). **A halted-core screenshot can show a
+stale buffer** — trust the live watch and break on the constructor (`-CaptureAnnounce`); a wall-clock
+watch cannot catch a 90-tick window and two missed it.
 **GAME SET's pitch (2026-08-01):** the pack took a cue's rate from `notes[0]` and pitch code 0 is a REST,
 so FGM 488 played thirteen semitones low. The guard has to be external — the derivation had the same bug
 the pack self-checks against — and now rejects any entry under 12,000 Hz.

@@ -54,12 +54,11 @@ typedef enum gmFGMID
     nSYAudioFGMFoxLanding = 74,
     nSYAudioFGMMarioLanding = 77,
     nSYAudioFGMNessLanding = 78,
-    /* Core P1 gameplay cues a BOTH-CPU stress match asks for and a single-CPU
-     * one never reached: the dodge, the shield going up and down, the pause. */
+    /* The dodge. GuardOn/GuardOff (13/14) and GamePause (278) were already
+     * declared above and below; only this one was missing. All four are core
+     * P1 cues a BOTH-CPU stress match asks for and a single-CPU one never
+     * reaches -- nobody dodges or shields when Mario stands still. */
     nSYAudioFGMEscape = 11,
-    nSYAudioFGMGuardOn = 13,
-    nSYAudioFGMGuardOff = 14,
-    nSYAudioFGMGamePause = 278,
     nSYAudioFGMUnkGrind4 = 85,
     nSYAudioFGMGroundGrind2 = 96,
     nSYAudioFGMGroundGrind3 = 98,
