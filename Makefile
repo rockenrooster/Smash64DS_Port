@@ -1370,6 +1370,15 @@ override NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI := 1
 # this on when the low-water clears 25,600 with margin; that is roughly 2,100
 # more bytes, and NDS_R2_WEAPON_POOL is where the last 14,080 came from.
 NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 0
+# Route the remaining seventeen efManager*MakeEffect seams to their source
+# implementations instead of the untextured primitive stand-ins. Default 0 on a
+# MEASURED result, not caution: with all twenty routed the ROM froze in battle
+# setup with MALLOCOVF=1 (req 136, head 24) at
+# syTaskmanLoadScene -> scVSBattleStartBattle. The KO group (DeadExplode,
+# SparkleWhiteDead, RebirthHalo) is unconditional because it is the smallest
+# group and the furthest-from-source substitute. Raise this only with a soak
+# whose gNdsTaskmanGeneralHeapFreeMin stays above 25,600.
+NDS_R2_SOURCE_EFFECTS_FULL ?= 0
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_BGM := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_FGM := 1
@@ -2495,6 +2504,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER $(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR $(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FT_PUBLIC $(NDS_IMPORT_BATTLESHIP_FT_PUBLIC)'; \
+		echo '#define NDS_R2_SOURCE_EFFECTS_FULL $(NDS_R2_SOURCE_EFFECTS_FULL)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)'; \

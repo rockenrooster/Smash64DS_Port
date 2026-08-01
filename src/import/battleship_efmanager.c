@@ -903,3 +903,167 @@ GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
     return ndsEFManagerMakeVisualEffect(nNDSVisualEffectReflector, NULL,
                                         1.6F, 1, fighter_gobj);
 }
+
+/* ------------------------------------------------------------------------
+ * SOURCE EFFECTS, not stand-ins.
+ *
+ * Every function below is a one-line forward to the decomp implementation that
+ * this file already compiles as ndsBaseEFManager*. They exist because the port
+ * shipped WEAK substitutes for all of them (reloc_backend_compat_shims.c,
+ * battle_playable_compat_stubs.c) that build a 16-vertex untextured primitive
+ * -- dust, star, ring or disc -- recoloured per effect. Thirteen effect kinds
+ * shared four shapes, so a Coin looked like a Sparkle and a KO burst was a red
+ * ring.
+ *
+ * Those substitutes existed for one reason: lbParticleMakeScriptID was a stub
+ * and the particle bank was not resident, so the real scripts could not draw.
+ * Both of those are false as of 2026-08-01 -- the imported interpreter owns the
+ * constructor, the common and Dream Land banks are packed, and a five-minute
+ * both-CPU soak drew 347,100 textured quads with zero atlas misses. The
+ * stand-ins are now the only thing standing between the source scripts and the
+ * screen, which is exactly what OPTIMIZATION_IDEAS.md means by "they are
+ * stand-ins that should be deleted when the real particle scripts become
+ * visible".
+ *
+ * A strong definition here overrides the weak one at link time, so this is a
+ * deletion of the substitute rather than a second effect architecture.
+ *
+ * THE RISK IS COVERAGE, AND IT IS INSTRUMENTED. A particle whose texture is not
+ * in the 8,192-byte atlas draws NOTHING rather than something wrong, so routing
+ * an effect whose texture was never admitted trades a wrong-coloured shape for
+ * an absent one. gNdsParticleQuadMissMask names the source ids that missed and
+ * gNdsParticleQuadMissFrameMask the frames, so the admitted set is regraded
+ * from a measured run rather than guessed. Read those two after any change
+ * here. */
+
+/*
+ * MEASURED 2026-08-01: ROUTING ALL TWENTY AT ONCE DOES NOT FIT.
+ * The first attempt forwarded every seam below and the ROM froze during battle
+ * SETUP, not gameplay: `MALLOCOVF=1, id=65536, req=136, head=24` with the stack
+ * at syTaskmanLoadScene -> scVSBattleStartBattle -> syTaskmanMalloc. Referencing
+ * the ndsBase* bodies stops --gc-sections discarding them, and their effect
+ * descriptors pull in per-effect asset/DObj setup that the substitutes never
+ * paid for. gSYTaskmanGeneralHeap had 26,876 bytes of battle-time headroom
+ * before this change and 24 after.
+ *
+ * So the set is graduated in measured groups rather than wholesale, smallest
+ * blast radius first, with gNdsTaskmanGeneralHeapFreeMin read after each. The
+ * KO group is first because it is what the owner named and because the
+ * substitute for it was the furthest from source -- it discarded the `player`
+ * argument entirely. Move a group above the #if only with a soak that keeps the
+ * low-water above the 25,600 ifCommonSetMaxNumGObj latch.
+ *
+ */
+
+#if NDS_R2_SOURCE_EFFECTS_FULL
+LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,
+                                                 s32 size, sb32 is_static)
+{
+    return ndsBaseEFManagerDamageNormalLightMakeEffect(pos, player, size,
+                                                       is_static);
+}
+
+LBParticle *efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player,
+                                                 s32 size)
+{
+    return ndsBaseEFManagerDamageNormalHeavyMakeEffect(pos, player, size);
+}
+
+LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size)
+{
+    return ndsBaseEFManagerDamageFireMakeEffect(pos, size);
+}
+
+LBParticle *efManagerDamageElectricMakeEffect(Vec3f *pos, s32 size)
+{
+    return ndsBaseEFManagerDamageElectricMakeEffect(pos, size);
+}
+
+LBParticle *efManagerDamageCoinMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerDamageCoinMakeEffect(pos);
+}
+
+GObj *efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
+{
+    return ndsBaseEFManagerDamageSlashMakeEffect(pos, size, rotate);
+}
+
+LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index)
+{
+    return ndsBaseEFManagerDustExpandSmallMakeEffect(pos, f_index);
+}
+
+LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerFireGrindMakeEffect(pos);
+}
+
+LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerSparkleWhiteMakeEffect(pos);
+}
+
+LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
+{
+    return ndsBaseEFManagerSparkleWhiteScaleMakeEffect(pos, scale);
+}
+
+#endif /* NDS_R2_SOURCE_EFFECTS_FULL */
+
+/* The star KO. Source spawns efcommon script 0x5C directly. */
+LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos, f32 scale)
+{
+    return ndsBaseEFManagerSparkleWhiteDeadMakeEffect(pos, scale);
+}
+
+/* The KO burst. Source selects a player- and type-specific DeathExplode
+ * generator with its own orientation, DObj/material animation and player
+ * colours; the substitute discarded `player` entirely and scaled one red ring
+ * by `type`. */
+GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
+{
+    return ndsBaseEFManagerDeadExplodeMakeEffect(pos, player, type);
+}
+
+GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 scale)
+{
+    return ndsBaseEFManagerRebirthHaloMakeEffect(fighter_gobj, scale);
+}
+
+#if NDS_R2_SOURCE_EFFECTS_FULL
+GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
+{
+    return ndsBaseEFManagerImpactWaveMakeEffect(pos, index, rotate);
+}
+
+GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerCatchSwirlMakeEffect(pos);
+}
+
+LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerFlashMiddleMakeEffect(pos);
+}
+
+LBParticle *efManagerSetOffMakeEffect(Vec3f *pos, s32 size)
+{
+    return ndsBaseEFManagerSetOffMakeEffect(pos, size);
+}
+
+GObj *efManagerDamageSpawnOrbsRandomMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerDamageSpawnOrbsRandomMakeEffect(pos);
+}
+
+GObj *efManagerDamageSpawnSparksRandomMakeEffect(Vec3f *pos, s32 lr)
+{
+    return ndsBaseEFManagerDamageSpawnSparksRandomMakeEffect(pos, lr);
+}
+
+GObj *efManagerDamageSpawnMDustRandomMakeEffect(Vec3f *pos, s32 lr)
+{
+    return ndsBaseEFManagerDamageSpawnMDustRandomMakeEffect(pos, lr);
+}
+#endif /* NDS_R2_SOURCE_EFFECTS_FULL */
