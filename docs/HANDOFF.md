@@ -23,10 +23,9 @@ so a cross-BUILD delta is signal.
 
 **The gate is a RANK, so the comparator is the over-gate COUNT: 18 of 128 frames exceed 1.12M** and
 P95 ≤ 1.12M needs six or fewer. Ranked per frame, `FTR` and `STG` are **flat on the worst frames**
-(`FTR` is 1,536 *below* its clean median on the worst frame of the run); the excursion is `SRC`
-(+250K…+440K) and `MISC` (+77K…+120K), co-occurring. Counterfactuals from the same CSV: `SRC` back to
-its clean median → over-gate 18 → **1**; `MISC` back to its → 18 → **12**. **`SRC` is the gate,
-`MISC` is second, and `FTR`/`STG` are not on the critical path however large their P50 looks.**
+(`FTR` is 1,536 *below* its clean median on the worst frame); the excursion is `SRC` (+250K…+440K) and
+`MISC` (+77K…+120K), co-occurring. Counterfactuals: `SRC` back to its clean median → 18 → **1**; `MISC`
+→ 18 → **12**. **`SRC` is the gate, `MISC` second, `FTR`/`STG` not on the critical path.**
 **`MISC` is not miscellaneous** — it is `DrawTicks − (FTR+STG+BG+HUD)` plus the flush
 (`taskman_seam.c:5008`), i.e. the transient weapon/effect/particle DObj draw, which is still the
 generic `ndsRendererScanList` route. Full per-frame table on the board.
@@ -44,10 +43,10 @@ became 36 SMULLs, a hardware divide and 24 conversions for **99 cycles per call*
 
 So the next lever must **delete work, not relocate it**. If collision is tried again it has to be the
 whole subsystem — `func_ovl2_800ED490` is the bigger half (228 instructions, 63 soft-float calls,
-40x/frame, no divide and no cofactors) — with the decomp versions dropped rather than bypassed. A cheaper
-inverse exists on the measured domain: the joint matrix is a rotation scaled per row and all three scales
-measure as one value 1.114–1.120, so `R^-1[c][r] = M[r][c] / s_r^2` is three reciprocals and nine
-multiplies, with `vec_scale` already computed. Needs an orthogonality guard. **Kept:**
+40x/frame) — with the decomp versions dropped rather than bypassed. A cheaper inverse exists on the
+measured domain: the joint matrix is a rotation scaled per row, all three scales measure as one value
+1.114–1.120, so `R^-1[c][r] = M[r][c] / s_r^2` is three reciprocals and nine multiplies with `vec_scale`
+already computed. Needs an orthogonality guard. **Kept:**
 `include/nds/nds_r2_collision_mtx.h` and `scripts/check-r2-collision-mtx.ps1`.
 
 **The L7 oracle outlived the lever, and its answer is already recorded** in `nds_r2_collision_mtx.h`
@@ -119,17 +118,16 @@ rebuilt 197 times); and **an allocator index something else can reset is not an 
 **Successive matches** were four defects with one law: state that outlived a scene boundary the arena
 rewinds — prepared-run cache keyed on a config pointer; texture VRAM with no owner; the source DL heads
 never rewound (48 B past a 60 KiB buffer → `while (TRUE);` ~8 s into match two); `sMNVSResultsFighterGObjs`
-trusted across a Results re-entry. Four entries, three Results, NO-FREEZE, owner-confirmed; **Boundary AND
-Latest green on `0e5e8a3`.** **Owed: the owner's eye check.**
+trusted across a Results re-entry. Four entries, three Results, NO-FREEZE, owner-confirmed. **Owed: the
+owner's eye check.**
 
 **TIME UP and GAME SET** were three defects in series, each hiding the next: `sIFCommonBattlePlace` never
 initialised so **no VS match had ever announced GAME SET** (which also withheld Results); the nine blue
-letters had no sprite descriptors; and the announcement's update proc dereferences
-`gEFParticleStructsGObj` with no NULL check (`ifcommon.c:2609`). **A halted-core screenshot can show a
-stale buffer** — break on the constructor (`-CaptureAnnounce`).
-**GAME SET's pitch (2026-08-01):** the pack took a cue's rate from `notes[0]` and pitch code 0 is a REST,
-so FGM 488 played thirteen semitones low. The guard has to be external — the derivation had the same bug
-the pack self-checks against — and now rejects any entry under 12,000 Hz.
+letters had no sprite descriptors; the update proc dereferences `gEFParticleStructsGObj` with no NULL
+check (`ifcommon.c:2609`). **A halted-core screenshot can show a stale buffer** — break on the
+constructor (`-CaptureAnnounce`). **GAME SET's pitch:** the pack took a cue's rate from `notes[0]` and
+pitch code 0 is a REST, so 488 played thirteen semitones low; the guard is external now and rejects any
+entry under 12,000 Hz.
 
 ## Freeze classes — TWO, with different fixes. Never say "the allocator" without the counter
 
@@ -146,6 +144,12 @@ particles on) — not failed match allocations. It nearly bought a revert of a �
 
 ## Measurement traps that cost days — all now instrumented rather than remembered
 
+- **Adjacent stores are NOT an atomic publish.** The FPS-HUD assertion sat on the board as "intermittent
+  and unexplained" from R2-04 E2 until it went deterministic (`FPS_HUD=299,14,15,17421760` twice): four
+  volatile stores, VBlank IRQ between them, halted reader sees half of two samples. `REG_IME = 0` around
+  the group; two failures, then Boundary green. And **never run
+  `verify-battle-mariofox-gcrunall-loop-harness.ps1` directly** — with `-NoBuild` it hangs (40 min,
+  0.64 s CPU, no emulator, no timeout). Go through `verify-all.ps1`.
 - **A counter with no writer reads 0, which looks clean.** `gNdsRendererProfileTextureRejectReasonMask`
   is written only at profile level ≥2 or with the route probe; a shipping-build 0 is uninstrumented.
 - **gdb aborts a command file on the first missing symbol, silently** — reads as an emulator hang. Both
@@ -154,16 +158,10 @@ particles on) — not failed match allocations. It nearly bought a revert of a �
 - **A run that ends at the moment under investigation proves nothing.** Two rematch soaks read NO-FREEZE
   with the GAME SET zoom as their final frame (ceiling 7 min, `-PressStartEverySeconds` drives successive
   entries). Break on the event and step frames (`-CaptureAnnounce`).
-- **Identical source is not an identical binary** — always run the matched control. But the harness itself
-  is deterministic: two control runs on the same ROM came back **bit-identical in every bucket**, so a
-  cross-BUILD delta is real signal, not noise. **DLDI-on costs ~29,696 P95 and is the honest config.**
-- **Never compare an anim-cache pair frame-by-frame** (order stats only); **the census window is a COMPILE-TIME constant**, so `-NoBuild` measures the last build's window.
-- **`-Os` emits `blx __udivsi3` for a CONSTANT divisor**; `sinf`/`cosf` drag in `__ieee754_rem_pio2f` —
-  SSB64 uses a table (L9), never reach for libm. **A lab ROM can differ in CODEGEN**: the `-marm` rule
-  keys on harness ID, so add new lab IDs to `NDS_ARM_RENDERER_HARNESS_IDS`.
-- **Compare captures with `scripts/compare-capture-pair.ps1`**; **`addr2line` names deleted AND inlined
-  functions**; **read the HUD before the picture**; **`-MatchedCapture` is broken** (own BUGS row);
-  **`check-decomp-header-mirror.py` is RED on two pre-existing constants** — not caused by new work.
+- **Identical source is not an identical binary** — run the matched control. But the harness is deterministic: two control runs on one ROM came back **bit-identical in every bucket**, so a cross-BUILD delta is real signal. **DLDI-on costs ~29,696 P95 and is the honest config.**
+- **Never compare an anim-cache pair frame-by-frame** (order stats only); **the census window is COMPILE-TIME**, so `-NoBuild` measures the last build's window.
+- **`-Os` emits `blx __udivsi3` for a CONSTANT divisor**; `sinf`/`cosf` drag in `__ieee754_rem_pio2f` — SSB64 uses a table (L9), never reach for libm. **A lab ROM can differ in CODEGEN**: the `-marm` rule keys on harness ID, so add new lab IDs to `NDS_ARM_RENDERER_HARNESS_IDS`.
+- **Compare captures with `scripts/compare-capture-pair.ps1`**; **`addr2line` names deleted AND inlined functions**; **read the HUD before the picture**; **`-MatchedCapture` is broken** (own BUGS row); **`check-decomp-header-mirror.py` is RED on two pre-existing constants** — not caused by new work.
 
 ## Refuted — do not re-derive (all by measurement; derivations on the board)
 
