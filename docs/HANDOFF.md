@@ -42,11 +42,17 @@ cluster (~110 sites) or replace the entry points wholesale. **L8 REFUTED UNBUILT
 
 Owner's phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and are required to be fixed
 for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the random freezes**. The rows split
-in two. **SFX = an extraction job per cue, not a config edit**: the allowlist in `nds_audio_fgm.c` is
-trivial, but `scripts/sfx/render-audio-fgm-phase-pack.py`'s 59 selectors are hand-authored source-derived
-UCD constants (articulation, sound, wave_base, …) and it has **no per-cue derivation mode** — budget each
-cue accordingly and use `smash64ds-audio-qualification`. TIME UP is 527, GAME SET 488, and both
-announcements now reach their trigger, so the cue is all that is missing.
+in two. **SFX: the announcer is DONE and the generator DOES have a per-cue derivation mode** — the earlier
+"extraction job per cue" estimate was wrong. `render-audio-fgm-phase-pack.py --derive <ids>` prints every
+selector field straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`; the walk was already in `build_pack`'s
+attack lane and only lacked a flag. Seven lines packed (527 TIME UP, 488 GAME SET, 534 winner-is, 499
+Mario, 486 Fox, 472/471 five/four), 56 → 63 cues, `MAX_PACK_BYTES` 512 → 768 KiB (a ROM budget on a
+streamed NitroFS payload; the real bound is now `MAX_CUE_IMA_BYTES`). **Proof is the natural-match miss
+ring, which the soak now prints by ID**: `96,85,153,472,471,621` → `96,85,153,621`, `PlayFailCount` 0,
+NO-FREEZE to Results, Boundary + Latest green. **Every one of the four survivors is a LOOPED cue** and
+needs FGM 285's `source_loop_ds_hardware` treatment; 96 `GroundGrind2` additionally has no `pitch` op, so
+`validate_articulation` rejects it as written. The crowd row is separately blocked on the TRIGGER side —
+`ftPublicMakeActor` only marks bits, so packing its cues today would be dead ROM.
 **VFX = one blocker: the particle scripts do not run**, so every effect draws as one of four untextured
 primitives. **BOTH PARTICLE BRANCHES ARE MERGED AND IN THE TREE — do not look for
 worktrees**: generator + `nds_particle_banks.generated.{inc,h}` (byte-reproducing, 55/119 scripts, 23/47
