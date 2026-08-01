@@ -79,28 +79,31 @@ DEFAULT_TEXTURE_ASSET = Path("assets/particles/efcommon_particle_textures.ds.bin
 TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
 
 # The DS draw path's own payload: ONE RGB555+A1 atlas. See build_quad_sheet for
-# why the texels are encoded twice and why these dimensions.
-QUAD_ATLAS_WIDTH = 128
-# 128 -> 64 on 2026-08-01, and the reason is measured rather than aesthetic.
-# At 128x128 the sheet is 32,768 bytes of texture VRAM, and with it resident
-# `ndsRendererHardwareResolveStageSourceFrameTexture` fails about one frame in
-# ten: reject site 2, 196 times in a 566-frame match, each one rejecting the
-# native stage owner and dropping that frame onto the generic renderer at five
-# or more VBlanks. The draw's own tick cost is only ~10,000, so this was the
-# whole of its pacing damage.
+# why the texels are encoded twice.
 #
-# HALVING IT WAS TRIED AND REFUTED, 2026-08-01. `gNdsParticleTextureUseMask`
-# reads 0x08400000 -- bits 22 and 27, so a live match draws TWO source textures
-# against the sixteen the static reachability set admits -- and 128x64 kept
-# both while freeing 16,384 bytes of texture VRAM. The rejections did not move
-# at all: 196 at site 2 and 197 rebuilds, to the digit, on both sheets. So the
-# stage's resolve is not failing for want of VRAM, and the coverage reduction
-# bought nothing; it is reverted rather than kept, because 9 of 31 textures
-# instead of 16 is a real loss for the BUGS.md VFX rows that still need one.
+# 128x128 -> 64x64 on 2026-08-01, and 8,192 bytes is a MEASURED HARD BOUND
+# rather than a budget. With a 32,768-byte sheet resident,
+# `ndsRendererHardwareResolveStageSourceFrameTexture` failed about one frame in
+# ten -- reject site 2, 196 times in a 566-frame match, mask 4096 (TEXIMAGE),
+# with the cache census at the first rejection reading Free 7 / Live 41 /
+# Pinned 25 / ThisFrame 16 / Evictable 0. Each failure rejected the native
+# stage owner and dropped that frame onto the generic renderer at five or more
+# VBlanks: 196 of 566.
 #
-# What survives the experiment is QUAD_MEASURED_LIVE below: admitting the
-# measured set first is correct whatever the sheet size, and it is free.
-QUAD_ATLAS_HEIGHT = 128
+# It is NOT the byte count, and that had to be measured rather than assumed:
+# 128x64 freed 16,384 bytes, kept both textures a live match draws, and
+# rejected identically -- 196 and 197, to the digit. 64x64 fixes it completely.
+# So what matters is where a 16-to-32 KB block lands in libnds's per-bank
+# splitting, in the same allocator that has already refused a 4,096-byte upload
+# with 268,800 bytes free (PORTING.md). At 64x64 the run comes back to the
+# CONTROL's own numbers: StagePrepareBuildCount 2, Reuse 2,041, five-VBlank
+# frames 4, and 117,937 quads emitted with ZERO misses.
+#
+# More coverage therefore cannot come from a bigger sheet. It has to come from
+# a second small atlas, a smaller per-texture format, or giving the atlas its
+# own VRAM instead of the texture cache's.
+QUAD_ATLAS_WIDTH = 64
+QUAD_ATLAS_HEIGHT = 64
 # Admitted before anything else. These are the textures a natural single-CPU
 # Mario-vs-Fox match was OBSERVED drawing, so they must survive admission
 # whatever the packer does with the rest. Regrade this from the use mask after

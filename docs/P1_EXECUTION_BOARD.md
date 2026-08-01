@@ -157,14 +157,36 @@ sheet's byte count — it is where a 16-32 KB block lands in libnds's per-bank
 splitting. The same allocator has already refused a 4,096-byte upload with
 268,800 free (`PORTING.md`).
 
-**Two candidates, both cheap, neither guessed:**
-1. **Shrink to a small size class.** The measured live set is two textures
-   (22 at 16x16x2 frames, 27 at 16x8), so 64x64 RGB555+A1 = **8,192 bytes**
-   holds it with room. If a small block stops splitting the run, that is the
-   answer and it costs one generator constant.
-2. **Move the atlas out of the shared pool.** It is one pinned resident with a
-   fixed size and a scene lifetime — exactly the thing that should own its own
-   VRAM rather than compete for the cache's.
+### FIXED — 64x64 (8,192 B). Stage builds 197 → 2, five-VBlank frames 196 → 4
+
+One generator constant. The sheet is 8,192 bytes now and every symptom is gone,
+to the control's own numbers:
+
+| | control | draw 128x128 | draw 128x64 | **draw 64x64** |
+|---|---|---|---|---|
+| atlas bytes | — | 32,768 | 16,384 | **8,192** |
+| `StagePrepareBuildCount` | 2 | 197 | 197 | **2** |
+| `StagePrepareReuseCount` | 2,041 | 1,846 | 1,846 | **2,041** |
+| `StageRejectCounts[2]` | — | 196 | 196 | **1** |
+| `TextureRejectReasonMask` | — | 4096 | — | **0** |
+| VBlank 2/3/4/5+ | 457/96/9/**4** | 287/81/2/**196** | — | 451/102/9/**4** |
+| `WORK-H` P50 / P95 | 923,840 / 1,294,976 | 926,784 / 1,221,760 | — | 939,200 / 1,250,688 |
+| `MISC` P50 | 45,120 | 54,656 | — | 55,232 |
+| quads emitted / missed | — | 90,165 / 0 | 90,014 / 0 | **117,937 / 0** |
+
+**So the particle draw costs ~10,100 ticks and five extra three-VBlank frames,
+and nothing else.** The 5+ population is back to the control's 4. Quads emitted
+went UP because the stage stopped falling back, and `QuadMissCount` is still 0 —
+the six admitted textures (0, 3, 9, 22, 27, 37) cover everything this match
+draws.
+
+**8,192 bytes is now a MEASURED HARD BOUND, not a budget.** 16,384 rejected
+exactly as 32,768 did, so more coverage cannot come from a bigger sheet; it has
+to come from a second small atlas, a smaller per-texture format, or giving the
+atlas its own VRAM instead of the cache's. Six of 31 textures is the open risk
+for the remaining `BUGS.md` VFX rows (Whispy leaves/dust, Results confetti, the
+KO burst) — and `gNdsParticleQuadMissCount` is what will say so, per effect,
+rather than a silent gap.
 
 Until then `NDS_R2_PARTICLE_DRAW` stays 0: the draw is correct (90,165 quads,
 zero atlas misses, NO-FREEZE, pools 41/48 and 8/10) and unshippable.

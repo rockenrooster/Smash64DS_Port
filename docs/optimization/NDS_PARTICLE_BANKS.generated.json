@@ -23,28 +23,88 @@
   "quads": {
     "admitted": [
       0,
-      2,
       3,
-      4,
-      5,
       9,
-      11,
-      13,
-      15,
-      19,
-      21,
       22,
-      24,
       27,
-      37,
-      38
+      37
     ],
-    "atlas_bytes": 32768,
-    "atlas_height": 128,
-    "atlas_width": 128,
-    "budget_bytes": 32768,
-    "bytes": 25344,
+    "atlas_bytes": 8192,
+    "atlas_height": 64,
+    "atlas_width": 64,
+    "budget_bytes": 8192,
+    "bytes": 5376,
     "excluded": [
+      {
+        "bytes": 1024,
+        "frames": 2,
+        "height": 16,
+        "texture": 13,
+        "width": 16
+      },
+      {
+        "bytes": 1536,
+        "frames": 3,
+        "height": 16,
+        "texture": 2,
+        "width": 16
+      },
+      {
+        "bytes": 1536,
+        "frames": 3,
+        "height": 16,
+        "texture": 5,
+        "width": 16
+      },
+      {
+        "bytes": 1536,
+        "frames": 3,
+        "height": 16,
+        "texture": 38,
+        "width": 16
+      },
+      {
+        "bytes": 2048,
+        "frames": 1,
+        "height": 32,
+        "texture": 4,
+        "width": 32
+      },
+      {
+        "bytes": 2048,
+        "frames": 1,
+        "height": 32,
+        "texture": 11,
+        "width": 32
+      },
+      {
+        "bytes": 2048,
+        "frames": 1,
+        "height": 32,
+        "texture": 19,
+        "width": 32
+      },
+      {
+        "bytes": 2048,
+        "frames": 1,
+        "height": 32,
+        "texture": 21,
+        "width": 32
+      },
+      {
+        "bytes": 2048,
+        "frames": 1,
+        "height": 32,
+        "texture": 24,
+        "width": 32
+      },
+      {
+        "bytes": 4096,
+        "frames": 8,
+        "height": 16,
+        "texture": 15,
+        "width": 16
+      },
       {
         "bytes": 6144,
         "frames": 3,
@@ -151,7 +211,7 @@
         "width": 64
       }
     ],
-    "frame_count": 31
+    "frame_count": 7
   },
   "reach": {
     "p1_seams": [

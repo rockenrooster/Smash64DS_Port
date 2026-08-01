@@ -66,11 +66,11 @@
  *
  * ONE ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
  * not bytes: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 31 individual frames. An atlas spends one name -- and one
+ * admitted set is 7 individual frames. An atlas spends one name -- and one
  * BIND for every particle in the frame, whatever textures they came from, so
  * the triangle batch never breaks on a texture change.
  *
- * 128x128 follows from that: DS dimensions are powers of two, this is
+ * 64x64 follows from that: DS dimensions are powers of two, this is
  * 16 bits a texel, and VRAM_A+B have 119,872 free after the static set, so
  * 256x256 does not fit and this is the largest that does. Admission is by
  * ascending texture size, keeping each candidate only while the whole set
@@ -82,12 +82,12 @@
  * match reached, and the excluded list is in the generated JSON report by name
  * so growing the atlas is an informed decision rather than a hopeful one. */
 #define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"
-#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 128u
-#define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 128u
-#define NDS_PARTICLE_QUAD_ASSET_BYTES 32768u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 25344u
-#define NDS_PARTICLE_QUAD_COUNT 16u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 31u
+#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 64u
+#define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u
+#define NDS_PARTICLE_QUAD_ASSET_BYTES 8192u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 5376u
+#define NDS_PARTICLE_QUAD_COUNT 6u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 7u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing

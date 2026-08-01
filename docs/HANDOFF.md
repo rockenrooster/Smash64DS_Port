@@ -65,47 +65,47 @@ for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the rando
 
 **SFX is essentially done.** `render-audio-fgm-phase-pack.py --derive <ids>` prints every selector field
 straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, and now also `source_pcm_samples`, the fork program
-hashes and `render_program_sha256` — the three fields that used to be obtainable only by pasting a
-placeholder and reading the generator's error. 56 → **75 cues**: seven announcer lines, then 621 PublicWin
-(second cue on 626's wave, so 626's AOT loop-and-ramp render unchanged — a hardware repeat can never serve
-either, because their articulation ramps volume *across* the loop) and the eleven the crowd actor reaches.
-**"Eight of the twelve crowd cues are LOOPED" was wrong** — `--derive` says none of the eleven loops.
-Three cues still miss on a natural run and each has a named obstacle (`BUGS.md`): 96 has no `pitch` op,
-153 `AltitudeWarn` needs 285's hardware repeat, 85 derives ~90,510 Hz.
+hashes and `render_program_sha256` — the three that used to be obtainable only by pasting a placeholder
+and reading the generator's error. 56 → **77 cues**: seven announcer lines, 621 PublicWin (626's AOT
+loop-and-ramp render unchanged — a hardware repeat cannot serve either, their articulation ramps volume
+*across* the loop), the eleven the crowd actor reaches, plus 96 and 153. **"Eight of the twelve crowd
+cues are LOOPED" was wrong** — `--derive` says none of the eleven loops. Only 85 still misses
+(~90,510 Hz, the `source_rate_above_u16` blocker).
 **The crowd TRIGGER side is implemented**: `ft/ftpublic.c` compiled in place
 (`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`, default 0) — its whole external surface already existed, so the
 thresholds/cooldowns/repeats are the source's by construction. Owed: a build and an ear check.
 
-**VFX — the interpreter is PROVEN CLEAN; the DRAW draws correctly and cannot ship yet.** Three tick-HUD
-ROMs differing only in the particle flags, one soak each. Control and `RUNTIME=1` are indistinguishable
-(NO-FREEZE, Violation 0, stage builds 2), and `RUNTIME=1` runs 14 scripts / 138,274 visible particles
-inside its fixed pools. `DRAW=1` emits **90,165 quads with zero atlas misses**, NO-FREEZE, full match.
-**Its tick cost is only ~10,000 (`MISC` 45,120 → 54,656 P50) and `WORK-H` P95 is 1,221,760 — better than
-the control it was built from. The pacing is destroyed anyway: 196 of 566 frames at five or more VBlanks
-against 4.** Read the histogram; a P95 alone calls this a win because the 128-sample window sits in a
-quiet stretch.
+**VFX — the interpreter is PROVEN CLEAN and the DRAW now WORKS.** Four tick-HUD ROMs differing only in
+the particle flags, one soak each. Control and `RUNTIME=1` are indistinguishable (NO-FREEZE, Violation 0,
+stage builds 2), and `RUNTIME=1` runs 14 scripts / 138,274 visible particles inside its fixed pools.
+`DRAW=1` with the 32 KB atlas emitted 90,165 quads, zero misses, NO-FREEZE — and put **196 of 566 frames
+at five or more VBlanks** against 4, while `WORK-H` P95 came back *better* than its control. Read the
+histogram; a P95 alone calls that a win because the 128-sample window sits in a quiet stretch.
 
-**Fully attributed, end to end, all counted:** atlas resident →
+**Attributed end to end, all counted:** atlas resident →
 `ndsRendererHardwareResolveStageSourceFrameTexture` fails ~1 frame in 10 (reject **site 2, 196 times**,
-mask **4096 = TEXIMAGE**) → `PrepareRun` FALSE → owner rejects → `r2_prepared_valid = 0` → 197 rebuilds,
-each drawing that frame generically. Every other key component and refusal site reads 0. The cache census
-at the first rejection says why nothing can be freed: **Free 7, Live 41, Pinned 25, ThisFrame 16,
-Evictable 0** — the control runs the same working set with 24 pinned and never rejects, so the whole
-difference is **one pinned entry and the VRAM block behind it**.
-**It is not the sheet's byte count**: 128x64 (−16,384 B, both measured-live textures kept) rejected
-*identically*, 196/197 to the digit. It is where a 16–32 KB block lands in libnds's per-bank splitting.
-Next: 64x64 = **8,192 B** holds the measured set (22 at 16x16x2, 27 at 16x8); otherwise give the atlas its
-own VRAM instead of the cache's.
+mask **4096 = TEXIMAGE**, census **Free 7 / Live 41 / Pinned 25 / ThisFrame 16 / Evictable 0**) →
+`PrepareRun` FALSE → owner rejects → `r2_prepared_valid = 0` → 197 rebuilds, each drawing that frame
+generically. Every other key component and refusal site reads 0; the control runs the same working set
+with 24 pinned and never rejects, so the difference is one pinned entry and the VRAM block behind it.
+**FIXED by one generator constant — the sheet is 64x64 = 8,192 B.** Every symptom returns to the
+control's own numbers: `StagePrepareBuildCount` **2**, reuse **2,041**, reject site 2 **1**, mask **0**,
+VBlank **451/102/9/4** against the control's 457/96/9/4. Quads emitted went UP to **117,937 with zero
+misses** because the stage stopped falling back. **So the draw costs ~10,100 ticks (`MISC` P50) and five
+extra three-VBlank frames, and nothing else.**
+**8,192 is a measured HARD BOUND, not a budget:** 16,384 rejected exactly as 32,768 did, so more coverage
+cannot come from a bigger sheet — it needs a second small atlas, a smaller per-texture format, or the
+atlas owning its own VRAM. Six of 31 textures is the open risk for the remaining VFX rows (Whispy
+leaves/dust, Results confetti, KO burst), and `gNdsParticleQuadMissCount` is what will name it per effect.
 
-**Two earlier `DRAW=1` failures are closed.** It aborted at the GO countdown because
-`ifCommonSetMaxNumGObj` caps the GObj pool under 25 KiB free and the countdown dereferences the NULL —
-the runtime alone leaves **1,176 bytes** of margin (`PORTING.md`, second occurrence); and its first build
-wedged the geometry engine on a `glEnd()` the stream must not carry.
+**Two earlier `DRAW=1` failures are closed:** the GO-countdown abort (`ifCommonSetMaxNumGObj` caps the
+GObj pool under 25 KiB free and the countdown dereferences the NULL — the runtime alone leaves **1,176
+bytes** of margin, `PORTING.md`, second occurrence), and a `glEnd()` that wedged the geometry engine.
 **Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
 freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;
-**`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads exactly like the allocator's
-`while (TRUE);`; and **a latch is not a counter** — `gNdsRendererTask36*RejectReason` are reset per
-prepare and both read 0 on the run that rebuilt 197 times. Counting versions found it in one soak.
+**`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads like the allocator's `while
+(TRUE);`; and **a latch is not a counter** — `gNdsRendererTask36*RejectReason` both read 0 on the run
+that rebuilt 197 times. Counting versions found it in one soak.
 
 ## SUCCESSIVE MATCHES and the ANNOUNCEMENTS: both FIXED (full write-ups in `docs/PORTING.md` + board)
 
