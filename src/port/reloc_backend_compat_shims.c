@@ -6549,6 +6549,14 @@ void ndsFighterDashRunRecordPublicCheck(GObj *fighter_gobj, f32 knockback,
     }
 }
 
+/* Declared unconditionally, defined either here or in battleship_ftpublic.c.
+ * `ft/fighter.h` declares ftPublicMakeActor and not this one, so at
+ * NDS_IMPORT_BATTLESHIP_FT_PUBLIC=1 the definition below disappears and the
+ * call at ndsFTCommonDamageSetPublic has no prototype in scope -- which is a
+ * hard error, and the reason the flag had never been compiled. */
+void ftPublicCommonCheck(GObj *fighter_gobj, f32 knockback,
+                         sb32 is_force_curr_knockback);
+
 #if !NDS_IMPORT_BATTLESHIP_FT_PUBLIC
 void ftPublicCommonCheck(GObj *fighter_gobj, f32 knockback,
                          sb32 is_force_curr_knockback)

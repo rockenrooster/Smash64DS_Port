@@ -22056,3 +22056,72 @@ battle before it started; that one was read as an allocator failure too.
   bound at battle scene start pre-empts the heuristic entirely, which is what
   SwitchPlan 3.11 asks for — a fixed bound sized at load with an explicit
   policy, rather than one that falls out of allocation order.
+
+## 2026-08-01 — `source_rate_above_u16` was a field of ours, and the arena latch fired a third time
+
+Two closures from the same afternoon that look unrelated and share a shape:
+**a limit written down in one place was read as a limit of the machine.**
+
+### FGM 85 needed no decision about the DS sound register
+
+`BUGS.md` had carried, for a day, that 85 `UnkGrind4` "needs a decision about
+how the DS should represent a rate above the register's range". There was no
+such decision to make. Its first note asks for
+`32000 * 2^((1100 + 700)/1200)` = **90,510 Hz**, and the DS channel timer
+reaches roughly a megahertz — what cannot hold 90,510 is the `u16 frequency`
+field of *our own* 32-byte pack entry (`nds_audio_fgm.c:46`). Three cues
+already carried the same `source_rate_above_u16` blocker (189, 190, 219) and
+had already been answered: render the whole source program AOT at
+`FGM_OUTPUT_RATE` so the note schedule lives in the samples and the entry
+stores 32,000. 85 is that shape exactly — three notes, no forks — so it joined
+`FULL_PROGRAM_AOT_IDS` and brought no machinery with it. 2,576 samples, 1,292
+IMA bytes, SNR 25.07 dB.
+
+One real gap had to close first, and it is the reusable part. 85's articulation
+spawns modulator 24, **shape 7 (`ramp_down_oneshot`) on target 28**, and the
+renderer raised on both. The decomp's own field notes
+(`decomp/BattleShip-main/decomp/tools/extract_fgm.py`) say target 24+ is
+**cross-mod ANOTHER voice** — 0..9 scratch, 10-15 vol/pitch/pan, 16..23
+self-mod are the ones that reach the voice being rendered. A cross-voice
+modulator has no destination in a single-voice render, so evaluating it would
+be *inventing* an effect rather than reproducing one. It is skipped before
+evaluation now, which is why its shape never has to be interpreted either — and
+only when the cue has no fork voices, because with forks "another voice" exists
+and dropping the modulation would be real fidelity loss. No cue packed before
+85 reaches that branch.
+
+**Durable lesson:** when a source value will not fit, check which side of the
+seam the width belongs to before designing around it. Two of the three
+`source_rate_above_u16` cues had been sitting behind a blocker named after the
+hardware and enforced by a struct field.
+
+### The GObj latch fired a third time, and this time a *measurement* caused it
+
+`NDS_R2_COLLISION_L7_ORACLE=1` is a read-only oracle that decides nothing and
+changes nothing. Building it aborted the ROM at the GO countdown:
+
+```text
+lr_usr        ifCommonTrafficMakeSObj+68     the countdown storing through NULL
+GENERALHEAP   free=20272                     threshold is 25,600
+COMMONSMAX    45   COMMONSACTIVE 45           the cap FIRED, and it is sticky
+MALLOCOVF     0                               the allocator is HEALTHY
+```
+
+Same mechanism as the two occurrences above — `ifCommonSetMaxNumGObj` caps the
+pool under 25 KiB free, `gcMakeGObj` returns NULL, the countdown dereferences it
+— reached this time by adding an *instrument* rather than a feature. The
+instrument's own `.text` is 5,328 bytes more arena than the tree has spare.
+
+It was also unnecessary: the oracle's answer was measured on 2026-07-31 and is
+recorded in `include/nds/nds_r2_collision_mtx.h` (460 samples, joint scale
+1.1138–1.1199, deviation 2/5/21 in 1/4096 world units against a bound of 82,
+zero over bound, zero singular). The `Makefile` comment beside the flag still
+said the domain "has never been read off the running game", and that stale
+sentence is what spent the run. Both that comment and Task 55's now carry their
+own closure.
+
+**Durable lesson, and it is the sharper form of the one above:** the shipping
+tree has roughly **five kilobytes** of taskman arena margin, so a measurement
+has to be sized against the budget like any other code. Read `GENERALFREE` from
+a soak before adding any, and run `mapdiff` on a new lab flag before running the
+ROM.

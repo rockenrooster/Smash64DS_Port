@@ -179,8 +179,25 @@ typedef enum gmVoiceID
      * the two chants ft/ftpublic.c picks from
      * dFTCommonDataPublicFighterCallFGMs, and the nine reactions
      * ftPublicDecideCall / DecideCommon / PlayCliffReact choose between. */
+    /* The full per-fighter chant block, because
+     * dFTCommonDataPublicFighterCallFGMs indexes it by fkind and the crowd
+     * actor reads that table whole. Only Mario and Fox are reachable in P1 and
+     * only those two are packed; the other ten resolve to a cue the pack does
+     * not carry, which fails closed and is silent. Values are the decomp's
+     * (gm/gmsound.h 0x25B..0x266) and check-decomp-header-mirror.py guards
+     * them. */
+    nSYAudioVoicePublicDonkey = 603,
+    nSYAudioVoicePublicCaptain = 604,
     nSYAudioVoicePublicFox = 605,
+    nSYAudioVoicePublicKirby = 606,
+    nSYAudioVoicePublicLink = 607,
+    nSYAudioVoicePublicLuigi = 608,
     nSYAudioVoicePublicMario = 609,
+    nSYAudioVoicePublicNess = 610,
+    nSYAudioVoicePublicPikachu = 611,
+    nSYAudioVoicePublicPurin = 612,
+    nSYAudioVoicePublicSamus = 613,
+    nSYAudioVoicePublicYoshi = 614,
     nSYAudioVoicePublicGaspL = 615,
     nSYAudioVoicePublicGaspM = 616,
     nSYAudioVoicePublicGaspS = 617,
