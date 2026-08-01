@@ -2255,10 +2255,40 @@ static void ndsPlatformRenderBattleFpsHud(void)
     updates_x10 = (elapsed_logic_frames == 0u) ? 0u :
         (u32)((((u64)elapsed_logic_frames * BUS_CLOCK * 10u) +
                (elapsed_ticks / 2u)) / elapsed_ticks);
-    gNdsBattlePlayableHudFpsX10 = fps_x10;
-    gNdsBattlePlayableHudFpsSampleCount++;
-    gNdsBattlePlayableHudFpsFrameWindow = elapsed_frames;
-    gNdsBattlePlayableHudFpsTickWindow = elapsed_ticks;
+    /* PUBLISHED UNDER A CRITICAL SECTION, and the reason is a two-year-old
+     * verifier failure rather than caution.
+     *
+     * `battle_playable lower-screen rolling FPS counter did not sample actual
+     * presentation cadence` asserts that fps_x10 equals a recompute from the
+     * two windows published beside it. R2-04 E2 refuted the two obvious
+     * explanations -- a stale harness BUS_CLOCK (the shadow proves the constant
+     * is 33,513,982 on both sides) and a non-stationary frame rate (these four
+     * values come from the same locals in the same breath, so a rolling-versus-
+     * spot mismatch cannot arise) -- and left it recorded as intermittent and
+     * unexplained. E2's own wording is where the gap is: "the four fields are
+     * written adjacently ... the harness reads all four in one GDB printf at a
+     * breakpoint, so the read is atomic too". The READ is atomic. The WRITE is
+     * four separate volatile stores, and the VBlank IRQ can land between any
+     * two of them -- so a harness stop taken from inside that IRQ observes a
+     * group that is half this sample and half the last one.
+     *
+     * 2026-08-01 made it reproducible instead of intermittent:
+     * `FPS_HUD=299,14,15,17421760` twice, byte-identical. 299 requires a tick
+     * window in (16,785,300, 16,841,196]; 17,421,760 is published beside it.
+     * That gap is about one sample window, which is precisely a torn group and
+     * not a wrong constant or a changed cadence.
+     *
+     * Two register writes once per ~0.5 s window. */
+    {
+        unsigned int ime = REG_IME;
+
+        REG_IME = 0u;
+        gNdsBattlePlayableHudFpsX10 = fps_x10;
+        gNdsBattlePlayableHudFpsSampleCount++;
+        gNdsBattlePlayableHudFpsFrameWindow = elapsed_frames;
+        gNdsBattlePlayableHudFpsTickWindow = elapsed_ticks;
+        REG_IME = ime;
+    }
 #if NDS_R204_FPSHUD_SHADOW
     /* R2-04 E2. The Boundary assert recomputes fps from the frame/tick window
      * published beside it and found 290 against 15/17,485,504, which is 288.

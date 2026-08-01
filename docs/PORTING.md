@@ -22238,3 +22238,51 @@ the first time in the campaign, which named three more cues (18 `LightSwingLw1`,
 514 `AnnounceSuddenDeath`, 365 `FoxSelected`). Each fix uncovering the next
 layer is the expected shape of a coverage ring, not evidence the previous pass
 was careless.
+
+## 2026-08-01 — The FPS-HUD assertion was a torn write, and E2 had already written the answer
+
+`battle_playable lower-screen rolling FPS counter did not sample actual
+presentation cadence` sat on the board from R2-04 E2 as *intermittent and
+unexplained*. E2 measured and refuted both candidate causes — a stale harness
+`BUS_CLOCK` (a shadow probe proved both sides use 33,513,982) and a
+non-stationary frame rate (the displayed value is computed from the two windows
+published beside it, so a rolling-versus-spot mismatch cannot arise).
+
+It came back deterministic: `FPS_HUD=299,14,15,17421760`, byte-identical across
+a `Latest` run and a `Boundary` run.
+
+E2's refutation contains the gap in its own sentence:
+
+> the four fields are written adjacently … the harness reads all four in one GDB
+> printf at a breakpoint, so the read is atomic too
+
+The read is atomic. **The write is four separate volatile stores**, and the
+VBlank IRQ can land between any two of them — so a harness stop taken from
+inside that IRQ observes a group that is half this sample and half the last one.
+
+The arithmetic admits nothing else. For the published `frames = 15`, a displayed
+299 requires a tick window in **(16,785,300, 16,841,196]**; the window published
+beside it is **17,421,760**. That difference is about one sample window, which
+is the signature of a torn group rather than a wrong constant or a changed
+cadence.
+
+Fixed by publishing the group under `REG_IME = 0` — the same idiom
+`nds_r2_sqrtf.c` already uses to keep the hardware divider safe from an ISR.
+Two register writes once per ~0.5 s window. Two failures, then
+`Boundary verification profile passed.`
+
+**Durable lesson: adjacent stores are not an atomic publish on a machine with
+interrupts.** "These lines are next to each other in the source" is an argument
+about the compiler, not about the CPU. Any counter group that a halted-core
+reader has to see consistently must be made uninterruptible, not merely written
+close together — and when a verifier assertion says two published numbers
+disagree, check whether they could have come from different moments before
+concluding the assertion is wrong.
+
+A second, smaller rule from the same investigation: **never invoke
+`verify-battle-mariofox-gcrunall-loop-harness.ps1` directly.** E2 already noted
+that a control run taken that way had to be discarded as a flake. Run directly
+with `-NoBuild` it does something worse — it hangs: forty minutes, 0.64 seconds
+of CPU, no `melonDS` process, a zero-byte log, and no timeout. `verify-all.ps1`
+establishes the runner slot and environment the harness does not establish for
+itself. Always go through the profile.

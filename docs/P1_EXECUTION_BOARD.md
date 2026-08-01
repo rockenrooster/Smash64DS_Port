@@ -97,6 +97,47 @@ until ~2,100 more bytes are found. **`NDS_R2_WEAPON_POOL` is where the last
 14,080 came from; the item pool is not a candidate — the port's
 `itManagerInitItems` is already a no-op stub, so items cost nothing today.**
 
+## THE FPS-HUD ASSERTION WAS A TORN WRITE, AND IT IS FIXED (2026-08-01)
+
+`battle_playable lower-screen rolling FPS counter did not sample actual
+presentation cadence` has been on this board since R2-04 E2 as *intermittent and
+unexplained*, with a stale harness `BUS_CLOCK` and a non-stationary frame rate
+both measured and refuted. It came back on 2026-08-01 — and this time it was
+**deterministic**: `FPS_HUD=299,14,15,17421760` twice, byte-identical, once
+inside `verify-all -Profile Latest` and once inside `-Profile Boundary`.
+
+E2's refutation contains the answer in its own wording: *"the four fields are
+written adjacently ... the harness reads all four in one GDB printf at a
+breakpoint, so the read is atomic too."* **The read is atomic. The write is
+not.** It is four separate volatile stores, and the VBlank IRQ can land between
+any two of them, so a harness stop taken from inside that IRQ observes a group
+that is half this sample and half the last one.
+
+The arithmetic says exactly that and nothing else: 299 requires a tick window in
+**(16,785,300, 16,841,196]**, while **17,421,760** is published beside it. The
+gap is about one sample window — a torn group, not a wrong constant (the shadow
+already proved both sides use 33,513,982) and not a cadence change (fps_x10 is
+computed from the two values published with it).
+
+Fixed by publishing the group under `REG_IME = 0`, the same idiom
+`nds_r2_sqrtf.c` uses for the hardware divider. Two register writes once per
+~0.5 s window. **Two failures, then `Boundary verification profile passed.`**
+
+Durable form: *adjacent stores are not an atomic publish on a machine with
+interrupts.* Any counter group a halted-core reader has to see consistently
+needs the group made uninterruptible, not merely written close together.
+
+### Do not invoke `verify-battle-mariofox-gcrunall-loop-harness.ps1` directly
+
+Second sighting, 2026-08-01, and now with a mechanism. E2 already recorded that a
+control run "taken through the harness script directly rather than
+`verify-all.ps1`" failed on an unrelated blank capture and had to be discarded.
+Run directly with `-NoBuild` it does something worse: it **hangs**. Forty minutes
+with **0.64 seconds of CPU**, no `melonDS` process, and a zero-byte log — it
+never started the emulator and never timed out. Killed by hand.
+`verify-all.ps1` sets up whatever it needs (runner slot, ports, environment);
+the harness does not do it for itself. Always go through the profile.
+
 ## THE FULL-CONTENT BASELINE — WORK-H P95 1,240,128, gap 120,128 (2026-08-01)
 
 Every prior gate figure on this board was measured with the particles off. That
@@ -320,8 +361,8 @@ lists five acceptance items; four are reachable today.
 |---|---|---|---|
 | 1 | Boundary green on the Runtime 2 battle path | **reachable** | `NDS_R2_PATH := 1` in the published *and* tick-HUD blocks, then `verify-all -Profile Latest`. R2-06 E0 already ran Boundary green through `NDS_R2_PATH=1` with engagement verified in both ELFs (`ndsR2BattleRun` present/absent) |
 | 2 | visual gate: synchronized diffs + the owner's approval | **partly** | the diffs are cheap; the owner's eye is owed on the particle draw either way |
-| 3 | **P95 ≤ 1.12M DLDI-on** | **OPEN — the only real blocker** | see the baseline row above |
-| 4 | full 3600-tick soak, zero flashes/corruption/hangs | **reachable** | `soak-freeze-watch.ps1` exists now; R2-06's "no soak instrument" note is stale |
+| 3 | **P95 ≤ 1.12M DLDI-on** | **OPEN — the only real blocker, and its baseline is now STALE** | every P95 in this campaign was measured with the GObj pool capped for the whole match (`GENERALFREE` 14,796 against the 25,600 latch). The cap is gone, so objects the old builds were refused now get created and the number can only have moved **up**. Re-measure 128 frames before pricing anything. The lever after that is the SwitchPlan's §R2-07 option list, and its only move with the measured size is **option 4, which is the owner's call in writing** |
+| 4 | full 3600-tick soak, zero flashes/corruption/hangs | **DONE for the pre-switch tree (2026-08-01)** | eight both-CPU soaks on the fixed build, all NO-FREEZE, longest seven minutes: a full match, GAME SET, **Sudden Death** and Results with 560,419 textured quads at **zero atlas misses**, an **empty FGM miss ring**, and every fireball spawning. Re-run once after the flip |
 | 5 | owner retail play test | **owner's** | explicitly outside the autonomous goal |
 
 Two mechanical details that must not be rediscovered: the tick-HUD block has to
