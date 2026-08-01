@@ -2145,6 +2145,17 @@ volatile u32 gNdsRendererFastFallbackCount[3];
     (NDS_TASK36_HW_COMPOSE && \
      ((NDS_RENDERER_PROFILE_LEVEL == 1) || NDS_R2_STAGE_ROUTE_PROBE))
 
+/* Counting form of the reject latch, live only with the route probe. The latch
+ * is reset per prepare and therefore cannot answer "how many, and which"; this
+ * can. Compiles to nothing at profile level 1 alone, so the level-1 counter
+ * block keeps its existing cost. */
+#if NDS_R2_STAGE_ROUTE_PROBE
+extern volatile u32 gNdsR2StageRejectCounts[7];
+#define NDS_R2_STAGE_REJECT_COUNT(reason) (gNdsR2StageRejectCounts[reason]++)
+#else
+#define NDS_R2_STAGE_REJECT_COUNT(reason) ((void)0)
+#endif
+
 #if NDS_R2_STAGE_ROUTE_PROBE && (NDS_RENDERER_PROFILE_LEVEL != 1) && \
     NDS_TASK36_HW_COMPOSE
 /* The words themselves. Their normal declarations sit inside the level-1
@@ -4343,6 +4354,25 @@ static NDSNativeStageOwnerExecution sNdsNativeStageOwnerExecution;
  * mistake (Task 52 found the Task 36 replay structurally disabled). */
 volatile u32 gNdsR2StagePrepareReuseCount;
 volatile u32 gNdsR2StagePrepareBuildCount;
+#if NDS_R2_STAGE_ROUTE_PROBE
+/* Which of the five reuse-key components missed, COUNTED rather than latched.
+ * See the write site in ndsRendererPrepareNativeStageOwner. Measured
+ * 2026-08-01 with NDS_R2_PARTICLE_DRAW=1: Invalid 197, every other 0 -- so the
+ * topology, config and asset bases never move and all 197 rebuilds are the
+ * PREVIOUS frame's owner having rejected. Which is what the six counters below
+ * then have to name. */
+volatile u32 gNdsR2StageKeyMissInvalid;
+volatile u32 gNdsR2StageKeyMissGeneration;
+volatile u32 gNdsR2StageKeyMissStamp;
+volatile u32 gNdsR2StageKeyMissConfig;
+volatile u32 gNdsR2StageKeyMissAssets;
+/* One per PrepareRun refusal site, indexed by the same reason code the latch
+ * carries. The LATCH is reset at the top of every prepare, so an end-of-run
+ * read reports the last frame -- both reason words read 0 on a run whose
+ * battle rebuilt 197 times, which is the "a counter identical before and after
+ * the window is not evidence about the window" rule in its purest form. */
+volatile u32 gNdsR2StageRejectCounts[7];
+#endif
 #if NDS_R2_STAGE_PREFLIGHT && (NDS_TASK36_HW_COMPOSE == 2)
 /* R2-02 E8 engagement, for the same reason: five per frame is the elision
  * working, zero is a flag that compiled but never fired. */
@@ -22397,6 +22427,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     {
 #if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 1u;
+        NDS_R2_STAGE_REJECT_COUNT(1);
 #endif
         return FALSE;
     }
@@ -22416,6 +22447,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     {
 #if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 2u;
+        NDS_R2_STAGE_REJECT_COUNT(2);
 #endif
         return FALSE;
     }
@@ -22469,6 +22501,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     {
 #if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 3u;
+        NDS_R2_STAGE_REJECT_COUNT(3);
 #endif
         return FALSE;
     }
@@ -22502,6 +22535,7 @@ static s32 ndsRendererNativeStagePrepareRun(
         {
 #if NDS_TASK36_REJECT_TRACE
             gNdsRendererTask36PrepareRunRejectReason = 4u;
+            NDS_R2_STAGE_REJECT_COUNT(4);
 #endif
             return FALSE;
         }
@@ -22562,6 +22596,7 @@ static s32 ndsRendererNativeStagePrepareRun(
             {
 #if NDS_TASK36_REJECT_TRACE
                 gNdsRendererTask36PrepareRunRejectReason = 5u;
+                NDS_R2_STAGE_REJECT_COUNT(5);
 #endif
                 return FALSE;
             }
@@ -22608,6 +22643,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     {
 #if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 6u;
+        NDS_R2_STAGE_REJECT_COUNT(6);
 #endif
         return FALSE;
     }
@@ -24383,6 +24419,38 @@ s32 ndsRendererPrepareNativeStageOwner(
     else
     {
         gNdsR2StagePrepareBuildCount++;
+#if NDS_R2_STAGE_ROUTE_PROBE
+        /* WHICH of the five key components missed. BuildCount alone cannot
+         * separate "the previous frame's owner rejected and zeroed valid" from
+         * "the topology moved" from "an asset base changed", and the two
+         * existing reject-reason words are LATCHES reset at the top of every
+         * prepare -- read at end of run they say only what the last frame did,
+         * which was a Results frame reporting 0/0 while the battle had rebuilt
+         * 197 times. These count. */
+        if (sNdsNativeStageOwnerExecution.r2_prepared_valid == 0u)
+        {
+            gNdsR2StageKeyMissInvalid++;
+        }
+        else if (sNdsNativeStageOwnerExecution.r2_prepared_topology_generation !=
+                 frame->topology_generation)
+        {
+            gNdsR2StageKeyMissGeneration++;
+        }
+        else if (sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp !=
+                 frame->topology_stamp)
+        {
+            gNdsR2StageKeyMissStamp++;
+        }
+        else if (sNdsNativeStageOwnerExecution.r2_prepared_config !=
+                 frame->config)
+        {
+            gNdsR2StageKeyMissConfig++;
+        }
+        else
+        {
+            gNdsR2StageKeyMissAssets++;
+        }
+#endif
     }
 #endif
 #if NDS_TASK36_REJECT_TRACE

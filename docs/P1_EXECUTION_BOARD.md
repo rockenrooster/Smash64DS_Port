@@ -99,12 +99,42 @@ steep enough that one frame is tens of thousands of ticks. **Quote the
 over-gate COUNT for this population, not P95** — the standing
 rank-the-whole-distribution rule, in its sharpest form yet.
 
-**Next:** name the rejection. `NDS_R2_STAGE_ROUTE_PROBE=1` turns on
-`NDS_TASK36_REJECT_TRACE` without profile level 1, so
-`gNdsRendererTask36RendererRejectReason` and `...PrepareRunRejectReason` say
-which of the seven sites refuses. Until that lands, `NDS_R2_PARTICLE_DRAW`
-stays 0 — the draw is correct (90,165 quads, 0 misses, NO-FREEZE, pools 41/48
-and 8/10) and unshippable.
+### NAMED — reason 2, 196 times: the stage's source texture will not resolve
+
+Two instrument rounds, because the first one measured nothing. The existing
+`gNdsRendererTask36*RejectReason` words are **latches reset at the top of every
+prepare**, so an end-of-run read describes the last frame — both returned 0 on a
+run whose battle had rebuilt 197 times. Counting versions
+(`NDS_R2_STAGE_ROUTE_PROBE=1`) answer it:
+
+```
+gNdsR2StageKeyMissInvalid    197   Generation 0  Stamp 0  Config 0  Assets 0
+gNdsR2StageRejectCounts[2]   196   [1] [3] [4] [5] [6] all 0
+```
+
+So the topology, config and asset bases never move: **every rebuild is the
+previous frame's owner having rejected**, and every rejection is site 2 —
+`ndsRendererHardwareResolveStageSourceFrameTexture` returning FALSE
+(`nds_renderer.c:22413`). The chain is complete and measured end to end:
+
+```
+particle atlas takes 32,768 B of texture VRAM
+  -> the stage's source texture stops resolving, ~1 frame in 10
+  -> PrepareRun FALSE -> native stage owner rejects -> r2_prepared_valid = 0
+  -> next frame rebuilds (197) and draws through the GENERIC renderer
+  -> 196 of 566 frames present at five or more VBlanks
+```
+
+**The fix is sized by the same run's own census.** `gNdsParticleTextureUseMask`
+reads `0x08400000` — a live match draws **three** source textures, ids 22, 23
+and 26. The atlas is built from the static reachability set (16 of 31,
+25,344 texel bytes in a 128x128 RGB555+A1 sheet, 32,768 B of VRAM) for a
+working set of three. Admit by the MEASURED set instead, and/or drop to A3I5
+(8 bpp, 16,384 B + a 32-entry palette in slot F/G). Either way the target is a
+sheet the stage's resolve can live beside.
+
+Until then `NDS_R2_PARTICLE_DRAW` stays 0: the draw is correct (90,165 quads,
+zero atlas misses, NO-FREEZE, pools 41/48 and 8/10) and unshippable.
 
 ## R2-07 clause 2 — `NDS_R2_PARTICLE_RUNTIME=1` BUILDS, and its first boot names the real constraint: `.text` COSTS ARENA (2026-07-31)
 

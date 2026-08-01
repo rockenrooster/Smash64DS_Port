@@ -76,52 +76,54 @@ Three cues still miss on a natural run and each has a named obstacle (`BUGS.md`)
 (`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`, default 0) — its whole external surface already existed, so the
 thresholds/cooldowns/repeats are the source's by construction. Owed: a build and an ear check.
 
-**VFX — the interpreter is PROVEN, the DRAW is the whole remaining half.** Three tick-HUD ROMs differing
-only in the particle flags, one soak each: control and `RUNTIME=1` are indistinguishable (NO-FREEZE,
-Violation 0, stage builds 2), and `RUNTIME=1` runs 14 scripts / 138,274 visible particles inside its fixed
-pools (41/64, 8/12). **`DRAW=1` aborted at the GO countdown**, and it was **texture VRAM, not ownership**:
-262,144 total, 136,192 static, 57,344 for the interface's three A3I5 atlases, 32,768 for this one — spare
-capacity but no spare *contiguous* 32,768 run once the atlas takes it first. Fixed by preparing the atlas
-**after** the interface, so the interface gets first refusal and the cosmetic atlas fails closed.
-The payload is `efcommon_particle_quads.rgb5a1.bin`, one 128x128 RGB555+A1 atlas, 16 of 31 textures.
-Owed: the DLDI-on `WORK-H` A/B that prices the draw against the gate.
+**VFX — the interpreter is PROVEN CLEAN; the DRAW draws correctly and cannot ship yet.** Three tick-HUD
+ROMs differing only in the particle flags, one soak each. Control and `RUNTIME=1` are indistinguishable
+(NO-FREEZE, Violation 0, stage builds 2), and `RUNTIME=1` runs 14 scripts / 138,274 visible particles
+inside its fixed pools. `DRAW=1` emits **90,165 quads with zero atlas misses**, NO-FREEZE, full match.
+**Its tick cost is only ~10,000 (`MISC` 45,120 → 54,656 P50) and `WORK-H` P95 is 1,221,760 — better than
+the control it was built from. The pacing is destroyed anyway: 196 of 566 frames at five or more VBlanks
+against 4.** Read the histogram; a P95 alone calls this a win because the 128-sample window sits in a
+quiet stretch.
+
+**Fully attributed, both ends measured:** the atlas takes 32,768 B of texture VRAM →
+`ndsRendererHardwareResolveStageSourceFrameTexture` fails about one frame in ten (reject **site 2, 196
+times**) → `PrepareRun` FALSE → the native stage owner rejects → `r2_prepared_valid = 0` → 197 rebuilds,
+each drawing that frame through the generic renderer. Every other key component and refusal site is 0.
+**The fix is sized by the same run:** `gNdsParticleTextureUseMask` = `0x08400000`, so a live match draws
+**three** source textures (22/23/26) while the atlas is built for the 16-texture static reachability set.
+Admit by the measured set, and/or A3I5 at 8 bpp (16,384 B + a 32-entry palette).
+
+**Two earlier `DRAW=1` failures are closed and are worth not repeating.** It aborted at the GO countdown
+because `ifCommonSetMaxNumGObj` caps the GObj pool under 25 KiB free and the countdown dereferences the
+NULL — the runtime alone leaves **1,176 bytes** of margin (`PORTING.md`, second occurrence). And its first
+build wedged the geometry engine on a `glEnd()` the stream must not carry.
 **Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
-freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;
-**`glEnd()` desynchronises the stream** (`check-gbi-decode-fixtures.ps1` pins the count at 1); and
+freed zero — **check the `.map` before believing a size claim about linked data nothing reads**; and
 **`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads exactly like the allocator's
 `while (TRUE);` — the soak separates the two verdicts now.
+**A latch is not a counter.** `gNdsRendererTask36*RejectReason` are reset per prepare, so both read 0 on
+the run that rebuilt 197 times; the counting versions found it in one soak.
 
-## SUCCESSIVE MATCHES: FIXED — four defects, one law (write-up in `docs/PORTING.md` + board row)
+## SUCCESSIVE MATCHES and the ANNOUNCEMENTS: both FIXED (full write-ups in `docs/PORTING.md` + board)
 
-**Every one was state that outlived a scene boundary the arena rewinds** — prepared-run cache keyed on a
-config pointer; texture VRAM with no owner; the source DL heads never rewound in the battle loop (48 bytes
-past a 60 KiB buffer → `while (TRUE);` ~8 s into match two); `sMNVSResultsFighterGObjs` trusted across a
-Results re-entry (ARM9 data abort at match two's GAME SET).
-Evidence: SD lane three bit-identical runs (`STG` 169,536, 28.0 FPS, pond textured); the **same-binary
-control arm `-NoTexVramReset` still reproduces it** (BuildCount 92, `STG` 3,148,992, 4.2 FPS, white pond);
-rematch lane four entries / three Results / NO-FREEZE, owner-confirmed. **Boundary AND Latest green on
-`0e5e8a3`.** Guards: `gNdsRendererSceneTextureVramResetCount` one per battle entry;
-`gNdsR2StagePrepareBuildCount` two per entry with ReuseCount rising. **Owed: the owner's eye check.**
+**Successive matches** were four defects with one law: state that outlived a scene boundary the arena
+rewinds — prepared-run cache keyed on a config pointer; texture VRAM with no owner; the source DL heads
+never rewound (48 bytes past a 60 KiB buffer → `while (TRUE);` ~8 s into match two); and
+`sMNVSResultsFighterGObjs` trusted across a Results re-entry (data abort at match two's GAME SET). Four
+entries, three Results, NO-FREEZE, owner-confirmed; **Boundary AND Latest green on `0e5e8a3`.** Guards:
+`gNdsRendererSceneTextureVramResetCount` one per battle entry, `gNdsR2StagePrepareBuildCount` two.
+**Owed: the owner's eye check.**
 
-## ANNOUNCEMENTS: TIME UP and GAME SET both work — three defects in series (owner-confirmed)
-
-Each one hid the next, which is why the row read as "nothing happens". (1) `sIFCommonBattlePlace` was
-never initialised — nothing called the source's `ifCommonBattleInitPlacement` — so `--place == 0` could
-never be true and **no VS match had ever announced GAME SET**, which also withheld `game_status = Set`
-and therefore Results. (2) The nine blue letters had no sprite descriptors, so they kept the blanket
-endian pass's swapped fields (read off `assets/us/relocData/82.vpk0.bin` on the host). (3) The update proc
-that announcement installs dereferences `gEFParticleStructsGObj`/`gEFParticleGeneratorsGObj` with **no
-NULL check** (`ifcommon.c:2609`), and both are NULL while the particle runtime is off — a write through
-address 0, which crashed the game the moment (1) let the announcement run. TIME UP was spared only because
-it installs the BONUS update proc. Fixed with a zeroed placeholder
-(`ndsEFParticleEnsureGObjPlaceholders`, scoped to the runtime being off).
-**Proof:** `sudden-death/2026-07-31_165338-timeup-frame20.png` and the owner watching a live run reach
-GAME SET and Results. `-CaptureAnnounce`/`-CaptureGameSet` break on the announcement's own constructor and
-step frames — a wall-clock watch cannot catch a 90-tick window, and two missed it. **A halted-core
-screenshot can show a stale buffer**, so trust the live watch for announcement pictures.
-**GAME SET's pitch (2026-08-01):** the pack takes a cue's rate from `notes[0]`, and pitch code 0 is a
-REST. FGM 488 is the only P1 cue opening with one, so it played 13 semitones low. Guard is external —
-the derivation had the same bug the pack self-checks against — and rejects any entry under 12,000 Hz.
+**TIME UP and GAME SET** were three defects in series, each hiding the next: `sIFCommonBattlePlace` was
+never initialised so **no VS match had ever announced GAME SET** (which also withheld Results); the nine
+blue letters had no sprite descriptors; and the announcement's update proc dereferences
+`gEFParticleStructsGObj` with no NULL check (`ifcommon.c:2609`), so fixing the first crashed the game
+until a zeroed placeholder landed. **A halted-core screenshot can show a stale buffer** — trust the live
+watch, and break on the constructor (`-CaptureAnnounce`), because a wall-clock watch cannot catch a
+90-tick window and two missed it.
+**GAME SET's pitch (2026-08-01):** the pack took a cue's rate from `notes[0]` and pitch code 0 is a REST,
+so FGM 488 played thirteen semitones low. The guard has to be external — the derivation had the same bug
+the pack self-checks against — and now rejects any entry under 12,000 Hz.
 
 ## Freeze classes — TWO, with different fixes. Never say "the allocator" without the counter
 

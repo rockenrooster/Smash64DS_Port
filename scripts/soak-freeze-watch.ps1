@@ -649,8 +649,26 @@ try {
             # NDS_R2_PARTICLE_DRAW=1 turns StagePrepareBuildCount 2 -> 197 and
             # puts 196 of 566 frames at five or more VBlanks, one per rejection,
             # while its own tick cost is only ~10,000 in MISC.
+            # These two are LATCHES, reset at the top of every prepare, so an
+            # end-of-run read describes the last frame only -- both read 0 on a
+            # run whose battle rebuilt 197 times. Kept because they name the
+            # site when a stop lands inside the window; the counters below are
+            # what answer "why 197".
             'gNdsRendererTask36RendererRejectReason',
             'gNdsRendererTask36PrepareRunRejectReason',
+            'gNdsR2StageKeyMissInvalid',
+            'gNdsR2StageKeyMissGeneration',
+            'gNdsR2StageKeyMissStamp',
+            'gNdsR2StageKeyMissConfig',
+            'gNdsR2StageKeyMissAssets',
+            # 1 policy mismatch, 2 stage source texture unresolved, 3 visit
+            # range, 4 dense vertex index, 5 degenerate clip w, 6 alpha unset.
+            'gNdsR2StageRejectCounts[1]',
+            'gNdsR2StageRejectCounts[2]',
+            'gNdsR2StageRejectCounts[3]',
+            'gNdsR2StageRejectCounts[4]',
+            'gNdsR2StageRejectCounts[5]',
+            'gNdsR2StageRejectCounts[6]',
             # BUGS.md: "sometimes Mario's fireballs don't spawn". These two make
             # the report falsifiable without a new probe -- the import already
             # counts both sides of the call (battleship_mario_fireball.c).
