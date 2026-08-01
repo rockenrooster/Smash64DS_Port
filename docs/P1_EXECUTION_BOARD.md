@@ -2124,7 +2124,7 @@ been working only the fourth.**
 | 1 | START on Results restarts the match | **CLOSED** (BUGS.md row 1) |
 | 2 | particle banks, SFX/voice/BGM, HUD, GAME SET → results flow, with budgets | **OPEN — untouched this session** |
 | 3 | **all P1-scoped rows in `BUGS.md` fixed** | **OPEN — 9 of 10 rows** |
-| 4 | gate: demo loop in budget, battle P95 ≤ 1.12M DLDI-on | OPEN, **1,147,200** — over by 27,200 (was 112,448); L9+L10+L9b banked, L7 remaining |
+| 4 | gate: demo loop in budget, battle P95 ≤ 1.12M DLDI-on | OPEN, **1,208,960** at HEAD (deterministic harness, two identical control runs); L9+L10+L9b banked, **L7 wired, measured and REVERTED** — no lever named |
 
 **`BUGS.md` P1 rows, actual status.** One `FIXED`, one part-fixed, eight open —
 and **seven of the ten are VFX/SFX**, which is clause 2 wearing clause 3's
@@ -2151,10 +2151,19 @@ the handoff's "do not rewrite" still holds, and 46,023 insertions is not
 something to re-derive. Six of the eight open VFX rows need them.
 
 **Sequence:** clause 2 (particle banks off the two branches, then SFX/BGM rows)
-→ clause 3's non-VFX remainder (rematch corruption, Sudden Death) → clause 4's
-L7 → R2-08 (flip the Boundary, rebuild the published ROMs, owner retail test).
+→ clause 3's non-VFX remainder (rematch corruption, Sudden Death) → clause 4
+→ R2-08 (flip the Boundary, rebuild the published ROMs, owner retail test).
 **Performance is one of four clauses and is the only one with momentum; the
 other three are where the phase actually is.**
+
+**Clause 4 no longer has a named lever.** L7 was the last one and it is refuted
+(see the L7 REVERTED row). Its measurement also moved the baseline: the gate
+figure is **1,208,960**, not the 1,147,200 this file quoted from
+`git=cc5bc2ff967`, so the gap is **88,960**, not 27,200. Before naming another
+lever, read the two general findings the L7 measurement produced — hot ARM text
+costs ~1.85 cycles/frame of FTR mean per byte, and replacing soft float with
+fixed point was worth 99 cycles per call, not the 800 the estimate assumed.
+Both say the same thing: **the next lever must delete work, not relocate it.**
 
 ### R2-07 H1 — where the static RAM went, and why the SD margin is thin (2026-07-31)
 
@@ -2272,6 +2281,95 @@ cannot come back; the HUD already shows how to print "24.1" without one.
 `libc_a-categories.o` (14,420) is still linked, now pulled by
 `libc_a-iswspace_l.o` rather than by the formatter. That chain is inside libc and
 was not chased; it is the remaining ~3 steps of the original estimate.
+
+### R2-07 L7 — WIRED, MEASURED, REVERTED. The kernel wins 534 and the code size costs 6,481 (2026-07-31, night)
+
+Supersedes every "L7 should close the gap" estimate below. **Do not re-attempt
+L7 as "convert gmCollisionSetInvertMatrix"; that experiment is finished.**
+
+The wiring works and the arithmetic is right. Neither was the problem.
+
+**Hook.** `gmCollisionSetInvertMatrix` cannot be intercepted — a `#define`
+rename moves a decomp definition and its call sites together, and its only
+caller (`func_ovl2_800EDE00`) is in the same file, as are that function's nine
+callers. The first externally-visible ring is the eight `gmCollisionCheck*`
+entry points plus `func_ovl2_800EE018`. Wrapping those and filling
+`unk_dobjtrans_0x9C` before delegating makes the decomp's float prepare
+early-return on its own latch — same joints, same order, no speculative work,
+every hit-test decision still in decomp code. **Engagement proven:**
+`FillCount=691` over 128 frames, `DeclineCount=0`, `SkipCount=41`.
+
+**Arithmetic.** A full-matrix form was needed (the frame form is not a matrix,
+so it cannot be wired without rewriting every consumer). First draft measured
+0.132935 — straight back to the frame's old RED — because **the amplifier is the
+INPUT quantisation, not the output rounding**: 20.12 puts 2^-13 in every
+rotation cell, the cofactors carry it into R^-1, and t multiplies it by 400.
+Reading the rotation block at **6.26** instead fixes it outright, and the result
+beats the frame on every domain, including the one the frame loses:
+
+| domain | frame max | matrix max |
+|---|---|---|
+| near-unit 0.90–1.10 (gated) | 0.014758 | **0.000283** |
+| moderate 0.50–1.50 | 0.069663 | **0.000488** |
+| conservative 0.25–2.00 | 0.367933 | **0.000900** |
+
+`scripts/check-r2-collision-mtx.ps1` is new and registered — the harness the
+header had been claiming for a week did not exist, which is how its quoted
+figures went stale by a revision. It also caught a real overflow the eye did
+not: at det < 1/32 the Q26 reciprocal leaves int32 and the conservative sweep
+read **160.755318 world units** until the determinant guard was added.
+
+**And it is still a REVERT, on a deterministic harness.** Two control runs came
+back **bit-identical in every bucket**, so nothing below is noise:
+
+| | control | cand1 Q30/ldivmod | cand2 Q26/hwdiv |
+|---|---|---|---|
+| `WORK-H` P95 | 1,208,960 | 1,259,328 | **1,300,928** |
+| `WORK-H` mean | 973,484 | 985,180 | **979,635** |
+| `SRC` mean | 316,298 | 317,158 | **315,764** |
+| `FTR` mean | 382,862 | 387,126 | **386,296** |
+| `STG` mean | 172,997 | 177,942 | **176,044** |
+
+**The kernel wins 534 cycles/frame in its own bucket and loses 6,481 in two
+buckets that contain no collision code at all.** That is placement cost, and the
+proof it is placement is that it scales with the code, not with the work: cand1
+added 2,332 bytes of ARM text for +4,264 FTR mean, cand2 added 1,840 for +3,434.
+**1.83 and 1.87 cycles of FTR mean per byte** — the same constant twice.
+
+Three things this settles, all of them general:
+
+1. **Hot ARM text costs ~1.85 cycles/frame of FTR mean per byte on this ROM.**
+   Any lever that adds code must beat its own size at that rate before its own
+   saving counts. This is the measured form of the standing "tail fix must not
+   add to the body" rule, and it is the first time the campaign has a number.
+2. **Soft float here is far cheaper than the campaign assumed.** 61 `__aeabi_*`
+   calls were replaced by 36 SMULLs, a hardware divide and 24 bit-twiddled
+   conversions, and the whole substitution was worth **99 cycles per call**
+   (534/frame over 5.4 fills). "66.2% of the premium is soft-float" is a true
+   statement about where cycles are; it is not a promise that fixed point is
+   cheaper. Price the replacement, never the target.
+3. **Wrapping is additive; only replacing is subtractive.** The float
+   `gmCollisionSetInvertMatrix` (295 Thumb instructions, ~590 bytes) stayed
+   linked the whole time. A conversion that deletes what it replaces starts
+   6,481 cycles/frame ahead of one that sits beside it.
+
+What survives: `include/nds/nds_r2_collision_mtx.h` (kernel, graded),
+`scripts/check-r2-collision-mtx.ps1` (harness, registered), and the hook
+recipe above. What is gone: the wiring and its `NDS_R2_COLLISION_L7` flag.
+
+**If collision is attempted again it must be the whole subsystem, not one leaf.**
+`func_ovl2_800ED490` is the bigger half — 228 instructions and **63** soft-float
+calls against the invert's 61, run 40×/frame against 34 — and it is a plain 3×4
+compose with no divide and no cofactors, so its fixed-point form is far leaner
+than the inverse's. Converting compose **and** invert together, with the decomp
+versions dropped rather than bypassed, is the only shape where the arithmetic
+win can exceed the placement cost. There is also a cheaper inverse available on
+the measured domain: the joint matrix is a rotation scaled per row, and the live
+oracle measured all three scales as a single value 1.114–1.120, so
+`R^-1[c][r] = M[r][c] / s_r^2` — three reciprocals and nine multiplies instead
+of nine cofactors, a determinant and nine multiplies — with `vec_scale` already
+computed by `func_ovl2_800EDE5C`. It needs an orthogonality guard, because a
+composition of non-uniformly scaled rotations shears.
 
 ### R2-07 L7 — the arithmetic is CLEARED on the real domain, and the named hook does not exist (2026-07-31, evening)
 

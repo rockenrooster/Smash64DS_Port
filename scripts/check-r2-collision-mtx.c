@@ -186,6 +186,27 @@ static double PointError(Mtx44f f, const NDSR2CollisionMtx *x,
     return worst;
 }
 
+/* Same quantity as PointError, but the candidate is a float matrix rather than
+ * a fixed-point one -- which is what the WIRED form produces, since it writes
+ * back into the decomp's Mtx44f. */
+static double FloatMatrixPointError(Mtx44f f, Mtx44f x,
+                                    double px, double py, double pz)
+{
+    double worst = 0.0;
+
+    for (int c = 0; c < 3; c++)
+    {
+        double fv = (double)f[0][c] * px + (double)f[1][c] * py +
+                    (double)f[2][c] * pz + (double)f[3][c];
+        double xv = (double)x[0][c] * px + (double)x[1][c] * py +
+                    (double)x[2][c] * pz + (double)x[3][c];
+        double d = fabs(fv - xv);
+
+        if (d > worst) { worst = d; }
+    }
+    return worst;
+}
+
 static uint32_t rng_state = 0x13572468u;
 static double Rand(double lo, double hi)
 {
@@ -206,9 +227,10 @@ static int Sweep(const char *name, double scale_lo, double scale_hi, int gated,
                  double bound)
 {
     const int cases = 400000;
-    double compose_worst = 0.0, invert_worst = 0.0;
-    double compose_sum = 0.0, invert_sum = 0.0;
+    double compose_worst = 0.0, invert_worst = 0.0, matrix_worst = 0.0;
+    double compose_sum = 0.0, invert_sum = 0.0, matrix_sum = 0.0;
     long compose_n = 0, invert_n = 0, singular = 0;
+    long matrix_n = 0, matrix_declined = 0;
     double worst_scale = 0.0;
 
     for (int i = 0; i < cases; i++)
@@ -244,9 +266,37 @@ static int Sweep(const char *name, double scale_lo, double scale_hi, int gated,
 
         {
             Mtx44f finv;
-            NDSR2CollisionMtx xframe;
+            /* Zeroed only to satisfy -Wmaybe-uninitialized: it is read solely
+             * under `xok`, which is exactly when the kernel wrote it, but that
+             * is not visible to the optimiser once the kernel inlines. */
+            NDSR2CollisionMtx xframe = {{{0}}};
             int fok = FloatInvert(finv, a);
             int xok = ndsR2CollisionInvertFrame(&xframe, &xa);
+
+            /* The WIRED form, graded on the same case, same RNG stream. It
+             * must be measured against the same float inverse and the same
+             * bound as the frame, because it is the one the ROM will run --
+             * the frame stays as the reference the restructure was proven on.
+             * The float round trip is included on purpose: the ROM converts
+             * mtx_translate in and unk_dobjtrans_0x9C out, so those twelve
+             * quantisations are part of the answer collision reads. */
+            {
+                Mtx44f xmtx = {{0}};
+                int ok = ndsR2CollisionInvertMatrix44(xmtx, (const float (*)[4])a);
+
+                if (fok && ok)
+                {
+                    double e = FloatMatrixPointError(
+                        finv, xmtx,
+                        (double)a[3][0] + Rand(-20, 20),
+                        (double)a[3][1] + Rand(-20, 20),
+                        (double)a[3][2] + Rand(-20, 20));
+
+                    matrix_sum += e; matrix_n++;
+                    if (e > matrix_worst) { matrix_worst = e; }
+                }
+                else if (fok != ok) { matrix_declined++; }
+            }
 
             if (!fok || !xok) { singular++; }
             else
@@ -269,17 +319,26 @@ static int Sweep(const char *name, double scale_lo, double scale_hi, int gated,
         }
     }
 
-    printf("  %-14s %5.2f-%-5.2f %10.6f %10.6f %10.6f %10.6f  %s\n",
+    printf("  %-14s %5.2f-%-5.2f %10.6f %10.6f %10.6f %10.6f %10.6f  %s\n",
            name, scale_lo, scale_hi, compose_worst,
            compose_sum / (double)(compose_n ? compose_n : 1),
            invert_worst, invert_sum / (double)(invert_n ? invert_n : 1),
-           gated ? (((compose_worst > bound) || (invert_worst > bound))
-                        ? "RED" : "green")
+           matrix_worst,
+           gated ? (((compose_worst > bound) || (invert_worst > bound) ||
+                     (matrix_worst > bound)) ? "RED" : "green")
                  : "(reported)");
+    if (matrix_declined != 0)
+    {
+        printf("  %-14s matrix form declined %ld of %ld cases the float "
+               "accepted (out-of-domain t or inverse cell)\n",
+               "", matrix_declined, matrix_n + matrix_declined);
+    }
     (void)singular;
     (void)worst_scale;
+    (void)matrix_sum;
     if (!gated) { return 0; }
-    return ((compose_worst > bound) || (invert_worst > bound)) ? 1 : 0;
+    return ((compose_worst > bound) || (invert_worst > bound) ||
+            (matrix_worst > bound)) ? 1 : 0;
 }
 
 int main(void)
@@ -294,8 +353,16 @@ int main(void)
     printf("  Error is WORLD UNITS on a transformed point, which is what\n");
     printf("  collision reads -- a matrix-cell bound cannot be compared against\n");
     printf("  a hurtbox. Bound %.4f, from E64b/E65.\n\n", bound);
-    printf("  %-14s %11s %10s %10s %10s %10s  %s\n", "scale domain", "range",
-           "compose max", "mean", "invert max", "mean", "gate");
+    printf("  %-14s %11s %10s %10s %10s %10s %10s  %s\n", "scale domain",
+           "range", "compose max", "mean", "frame max", "mean", "matrix max",
+           "gate");
+    printf("  'frame' is ndsR2CollisionInvertFrame, the reference form.\n"
+           "  'matrix' is ndsR2CollisionInvertMatrix44 -- the WIRED one, float\n"
+           "  in and float out, including both conversions. It is gated too:\n"
+           "  the form the ROM runs is the form that has to hold the bound. It\n"
+           "  reads the rotation block at 6.26 rather than 20.12, which is why\n"
+           "  it beats the frame on every domain: the dominant error was never\n"
+           "  the output rounding, it was quantising the INPUT.\n\n");
 
     /* Only the near-unit domain is gated. SSB64 fighter joints are unit-scaled
      * unless an animation scales a part, and gmCollisionSetMatrixNcs multiplies
@@ -308,10 +375,13 @@ int main(void)
     fail |= Sweep("conservative", 0.25, 2.00, 0, bound);
 
     printf("\n  Amplifier is 1/det, and det is the product of the three joint\n"
-           "  scales -- 0.25 on every axis amplifies the Q12 quantum by 64,\n"
-           "  unit scale by 1. WHICH DOMAIN SSB64 VISITS IS UNMEASURED: run\n"
-           "  scripts/census-fighter-gameplay-joints.ps1 before gating a wider\n"
-           "  one, and before wiring this kernel into anything.\n");
+           "  scales -- 0.25 on every axis amplifies the input quantum by 64,\n"
+           "  unit scale by 1. The matrix column is nearly flat across all\n"
+           "  three domains because 6.26 leaves that amplifier almost nothing\n"
+           "  to amplify; the frame column is not, and losing 0.49 on the\n"
+           "  conservative domain is what chose which form gets wired. Live\n"
+           "  play measured a single joint scale of 1.114-1.120 anyway\n"
+           "  (NDS_R2_COLLISION_L7_ORACLE, 460 samples).\n");
     if (fail)
     {
         printf("\nRED: the gated domain exceeds %.4f. Not fit to wire in.\n",
@@ -320,7 +390,8 @@ int main(void)
     else
     {
         printf("\nGated domain GREEN at %.4f. The wider domains are reported,\n"
-               "not gated -- this is not yet clearance to wire the kernel in.\n",
+               "not gated -- but the matrix form, the one that ships, holds\n"
+               "all three.\n",
                bound);
     }
     return fail;

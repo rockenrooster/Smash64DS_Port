@@ -21,6 +21,7 @@ if ($List) {
         [PSCustomObject]@{ Step = 'MP topology fixtures'; Script = 'check-mp-topology-fixtures.ps1' },
         [PSCustomObject]@{ Step = 'GBI fixtures'; Script = 'check-gbi-decode-fixtures.ps1' },
         [PSCustomObject]@{ Step = 'Fighter matrix angle index'; Script = 'check-fighter-matrix-angle-index.ps1' },
+        [PSCustomObject]@{ Step = 'R2 collision matrix kernel'; Script = 'check-r2-collision-mtx.ps1' },
         [PSCustomObject]@{ Step = 'FT hit-status fixtures'; Script = 'check-ft-hitstatus-fixtures.ps1' },
         [PSCustomObject]@{ Step = 'Audio ID fixtures'; Script = 'check-audio-id-fixtures.ps1' },
         [PSCustomObject]@{ Step = 'Derived BGM assets'; Script = 'check-audio-bgm-derived-assets.ps1' },
@@ -63,6 +64,7 @@ Invoke-DevFastStep -Script 'check-mp-floor-crossing-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-mp-topology-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-gbi-decode-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-fighter-matrix-angle-index.ps1'
+Invoke-DevFastStep -Script 'check-r2-collision-mtx.ps1'
 Invoke-DevFastStep -Script 'check-ft-hitstatus-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-audio-id-fixtures.ps1'
 Invoke-DevFastStep -Script 'check-audio-bgm-derived-assets.ps1'

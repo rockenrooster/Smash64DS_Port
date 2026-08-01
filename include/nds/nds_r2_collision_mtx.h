@@ -14,29 +14,35 @@
  * compares it against the decomp's float original. A falsifier that can pass
  * while the ROM differs is not a falsifier.
  *
- * NOTHING CALLS THIS YET, AND IT IS NOT YET FIT TO. Collision decides hits, and
- * a wrong answer here is a hit that lands or does not, amplified by damage,
- * knockback and hitstun. The arithmetic gets proven against a bound first;
- * wiring it into gmcollision.c's entry points is a separate, later step -- and
- * a harder one, because the `#define` include seam renames a decomp definition
- * and its internal call sites together, so these two functions cannot simply be
- * swapped underneath their callers (board, R2-07 L7 SCOPED).
+ * NOTHING CALLS THIS, AND THAT IS A MEASURED DECISION, not an unfinished one.
+ * ndsR2CollisionInvertMatrix44 WAS wired into the eight gmCollisionCheck* entry
+ * points on 2026-07-31 and reverted the same night: on a deterministic harness
+ * (two control runs bit-identical in every bucket) it won 534 cycles/frame in
+ * the SRC bucket and lost 6,481 in FTR and STG, which contain no collision code
+ * at all. The loss scales with the code and not with the work -- 2,332 bytes of
+ * ARM text cost +4,264 FTR mean, 1,840 bytes cost +3,434, i.e. 1.85
+ * cycles/frame per byte both times. See the board, "R2-07 L7 WIRED, MEASURED,
+ * REVERTED", before wiring any of this again: the conclusion there is that a
+ * fixed-point collision path only pays if it converts the compose as well and
+ * DELETES the float versions rather than sitting beside them.
  *
- * CURRENT STATE: the gated domain is GREEN, measured 2026-07-31 against the
- * 0.0200 world-unit bound borrowed from E64b/E65. Same binary, same RNG stream,
- * only the kernel swapped:
+ * Kept because the arithmetic is proven and the next attempt starts from it.
  *
- *   near-unit (0.90-1.10, gated)   invert max 0.126987 -> 0.016609   GREEN
- *   moderate  (0.50-1.50, report)             0.133385 -> 0.051753
- *   conservative (0.25-2.00, rep.)            0.400510 -> 0.427738
- *   compose   (near-unit, gated)              0.017817 -> 0.017817   unchanged
+ * CURRENT STATE, from scripts/check-r2-collision-mtx.ps1 (bound 0.0200 world
+ * units, borrowed from E64b/E65; same binary and RNG stream across arms):
  *
- * The win is entirely the (p - t) restructure below; compose is byte-identical
- * because it was not touched, which is the control that says so. Note the
- * conservative domain got marginally WORSE -- at extreme scale spread the
- * translation was never the dominant term, so removing it buys nothing there.
- * That domain is reported, not gated, and which one SSB64 actually visits is
- * still unmeasured (scripts/census-fighter-gameplay-joints.ps1).
+ *   domain                       compose    frame    matrix
+ *   near-unit 0.90-1.10 (gated)  0.018184  0.014758  0.000283   GREEN
+ *   moderate  0.50-1.50          0.019064  0.069663  0.000488
+ *   conservative 0.25-2.00       0.024414  0.367933  0.000900
+ *
+ * 'frame' is ndsR2CollisionInvertFrame, which reads the whole matrix at 20.12
+ * and dodges the translation amplifier by never forming -t.R^-1. 'matrix' is
+ * ndsR2CollisionInvertMatrix44, which forms it and beats the frame everywhere
+ * anyway, because it reads the ROTATION BLOCK AT 6.26. That is the whole
+ * lesson of this file: the dominant error was never the output rounding, it was
+ * quantising the input, and rows 0-2 of a joint matrix span +/-scale so they
+ * never needed twenty integer bits.
  *
  * MEASURED ON THE RUNNING GAME 2026-07-31, which is what that clearance was
  * waiting on (NDS_R2_COLLISION_L7_ORACLE, 460 samples over a natural mode-163
@@ -57,16 +63,20 @@
  * about 4x the bound at the furthest probe rather than the 1.2x the falsifier
  * implies. The arithmetic is cleared.
  *
- * What is NOT cleared is the wiring, and it is a different problem: the
- * `#define` include seam renames a decomp definition and its internal call
- * sites together, so these functions cannot be swapped underneath their
- * callers. The hook is the invert latch (board, R2-07 L7) -- and note the board
- * names sNdsFighterPartsPool as the place to fill it, which the linker map
- * refutes: that pool is not linked in the shipping-shaped build at all.
+ * THE HOOK, since it was built and proven and should not be re-derived.
+ * gmCollisionSetInvertMatrix cannot be intercepted: the `#define` include seam
+ * renames a decomp definition and its internal call sites together, and its
+ * only caller (func_ovl2_800EDE00) is in the same file, as are that function's
+ * nine callers. The first externally-visible ring is the eight
+ * gmCollisionCheck* entry points plus func_ovl2_800EE018. Wrapping those and
+ * filling unk_dobjtrans_0x9C before delegating makes the decomp's float prepare
+ * early-return on its own unk_dobjtrans_0x7 latch -- same joints, same order,
+ * no speculative work, every hit-test decision still in decomp code. Measured
+ * engagement over 128 frames: 691 fills, 0 declines, 41 already-prepared.
  *
- * Earlier revisions of this comment quoted 0.0226 compose and 0.3706 invert.
- * Both were stale -- re-measured on the matched control they are 0.017817 and
- * 0.126987, and 0.3706 was closer to the conservative domain than the gated one.
+ * Earlier revisions of this comment quoted 0.0226 compose and 0.3706 invert,
+ * both stale by a revision, because the harness this file names did not exist
+ * and the numbers were pasted in by hand. It exists now and dev-fast runs it.
  *
  * Format. 20.12 signed fixed point, matching the renderer's
  * NDSRendererMatrix20p12 so the two representations can eventually meet:
@@ -273,6 +283,351 @@ static inline int ndsR2CollisionInvertFrame(NDSR2CollisionMtx *dst,
     out.m[3][2] = src->m[3][2];
 
     *dst = out;
+    return 1;
+}
+
+/* ------------------------------------------------------------------------
+ * The wired form: a FULL inverse matrix, in the layout the decomp's consumers
+ * already read.
+ *
+ * ndsR2CollisionInvertFrame above is the better representation and it is what
+ * the falsifier graded, but it cannot be wired without rewriting every consumer
+ * of unk_dobjtrans_0x9C, because the frame is not a matrix. This one produces
+ * the matrix, so gmCollisionGetWorldPosition and gmCollisionTestRectangle keep
+ * working untouched -- collision decisions stay entirely in decomp code.
+ *
+ * THE AMPLIFIER IS THE INPUT, NOT THE OUTPUT. The frame form exists because
+ * the inverse's translation row is -t.R^-1, and t is a world coordinate in the
+ * hundreds, so it multiplies R^-1's error by ~400. The first attempt at this
+ * matrix form assumed the fix was to keep R^-1 unrounded until after that
+ * multiply; the falsifier measured 0.132935 anyway, right back at the frame's
+ * old 0.126987. Carrying more bits forward cannot help, because the error is
+ * already committed at the INPUT: quantising the rotation block to 20.12 puts
+ * 2^-13 into every cell, the cofactors carry it into R^-1, and t multiplies it
+ * by 400. The information was gone before the first multiply.
+ *
+ * So the rotation block is read at 6.26 instead. Rows 0-2 of a joint matrix are
+ * a rotation scaled per row -- the measured live domain is a single scale of
+ * 1.114-1.120 -- so two integer bits are ample and the other twenty-four buy
+ * precision: 2^-27 * 400 is 3e-6 against the 0.0200 bound. Row 3 stays 20.12
+ * because it holds world coordinates in the hundreds and needs the range. The
+ * two rows of the same matrix are therefore in DIFFERENT formats on purpose; a
+ * joint whose rotation block exceeds +/-32 is declined, not clamped.
+ *
+ * Scale chain, since every one of these is a place a shift can be wrong by
+ * twelve bits and still look plausible (the frame form lost 124 world units to
+ * exactly that):
+ *
+ *   rows 0-2 in        Q26          cofactor = product of two    -> Q52
+ *   cofactor rounded   Q26          determinant = m * c          -> Q52 -> Q26
+ *   recip = 2^56 / D                                             -> Q30
+ *   cofactor rounded   Q30, times recip                          -> Q60 -> Q30
+ *   stored rows 0-2    Q30 >> 18                                 -> Q12
+ *   row 3   = -sum t(Q12) * inv(Q30)                             -> Q42 -> Q12
+ */
+#define NDS_R2_COLLISION_MTX_ROT_BITS 26
+#define NDS_R2_COLLISION_MTX_INV_BITS 26
+
+/* EVERY INTERMEDIATE FITS IN INT32, AND THAT IS THE PERFORMANCE DESIGN, not a
+ * neatness one. The first wired revision carried the inverse at Q30, which does
+ * not fit, so `cofactor * recip` and `t * inv` became 64x64 multiplies -- three
+ * MULs and two adds each instead of one SMULL -- and the whole function came
+ * out at 583 ARM instructions and measured +50,368 WORK-H P95, i.e. DEARER than
+ * the 295-instruction soft-float original it replaces. Q26 keeps both operands
+ * inside int32 so each product is a single SMULL, and it costs nothing that
+ * matters: 2^-27 against a 0.0200 bound.
+ *
+ * Same reasoning for the shifts. The internal reductions truncate rather than
+ * round-half-away-from-zero, because a rounded 64-bit shift is a compare, a
+ * branch, a 64-bit negate, a 64-bit add and a 64-bit shift -- about ten
+ * instructions, and there are two dozen of them. Truncation biases by half a
+ * quantum of 2^-27; the falsifier grades the result either way. */
+
+/* Signed truncating division. The port overrides this with the DS hardware
+ * divider (64/32 -> 32, ~36 cycles) because libgcc's __aeabi_ldivmod is a
+ * bit-by-bit loop -- and one of those per call is a large fraction of the
+ * budget this kernel exists to save. Both truncate toward zero, so the host
+ * falsifier grading the C form grades the same arithmetic. */
+#ifndef NDS_R2_COLLISION_DIV64
+#define NDS_R2_COLLISION_DIV64(numerator, denominator) \
+    ((int32_t)((numerator) / (int64_t)(denominator)))
+#endif
+
+/* Round-half-away-from-zero float -> 20.12, by exponent arithmetic on the IEEE
+ * bits rather than `(int)(v * 4096 + 0.5f)`.
+ *
+ * This is not micro-optimisation for its own sake: the whole point of the
+ * kernel is that a soft-float multiply costs ~64 cycles here (L6: 238,426
+ * cycles over 74 calls), and the naive conversion spends two of them per cell.
+ * Twelve cells in and twelve out would be ~3,000 cycles of conversion against
+ * a ~3,200-cycle call -- it would hand back the entire win. The integer form is
+ * ~15 instructions.
+ *
+ * Zero, denormals and anything below half a quantum return 0. Values past the
+ * 20.12 range saturate, which is the same fail-safe ndsR2CollisionClamp uses;
+ * SSB64 joint matrices do not reach it (rows 0-2 are ~scale, row 3 is world
+ * coordinates in the hundreds). */
+#define NDS_R2_COLLISION_F32_OVERFLOW INT32_MIN
+
+static inline int32_t ndsR2CollisionF32ToFixed(float value,
+                                               unsigned int frac_bits)
+{
+    uint32_t bits;
+    int32_t exponent;
+    uint32_t mantissa;
+    int32_t shift;
+    uint32_t magnitude;
+
+    __builtin_memcpy(&bits, &value, sizeof(bits));
+    exponent = (int32_t)((bits >> 23) & 0xFFu);
+    if (exponent == 0)
+    {
+        return 0; /* zero or denormal: below the quantum either way */
+    }
+    if (exponent == 0xFF)
+    {
+        return NDS_R2_COLLISION_F32_OVERFLOW; /* inf or NaN */
+    }
+    mantissa = (bits & 0x7FFFFFu) | 0x800000u;
+
+    /* value = mantissa * 2^(exponent - 127 - 23), so the fixed magnitude is
+     * mantissa >> (23 + 127 - frac_bits - exponent). */
+    shift = (int32_t)(23u + 127u - frac_bits) - exponent;
+    if (shift >= 25)
+    {
+        return 0; /* strictly under half a quantum */
+    }
+    if (shift <= 0)
+    {
+        /* mantissa occupies 24 bits, so a left shift past 7 leaves the
+         * signed 32-bit range. Report it rather than wrap: the caller
+         * declines the joint and the decomp's float path takes it. */
+        if (shift <= -7)
+        {
+            return NDS_R2_COLLISION_F32_OVERFLOW;
+        }
+        magnitude = mantissa << (unsigned int)(-shift);
+    }
+    else
+    {
+        magnitude = (mantissa + (1u << (unsigned int)(shift - 1))) >>
+                    (unsigned int)shift;
+    }
+    if (magnitude > 0x7FFFFFFFu)
+    {
+        return NDS_R2_COLLISION_F32_OVERFLOW;
+    }
+    return (bits & 0x80000000u) ? -(int32_t)magnitude : (int32_t)magnitude;
+}
+
+static inline int32_t ndsR2CollisionF32ToQ12(float value)
+{
+    return ndsR2CollisionF32ToFixed(value, NDS_R2_COLLISION_MTX_FRAC_BITS);
+}
+
+/* Fixed -> float at any fraction width, round-to-nearest-even. CLZ is a single
+ * ARMv5TE instruction, so this is a handful of integer ops against ~80 cycles
+ * for __aeabi_i2f plus __aeabi_fmul.
+ *
+ * The fraction width is a parameter and not fixed at 12 for a precision
+ * reason, not a tidiness one: the destination is a float, whose 24-bit mantissa
+ * resolves an inverse cell to 2^-24, and rounding to 20.12 on the way out would
+ * throw away eleven of those bits. The consumer multiplies each cell by a world
+ * coordinate of ~400, so 2^-13 there costs 0.05 world units -- two and a half
+ * times the whole bound, from the STORE alone. Rows 0-2 are therefore converted
+ * from the Q30 intermediate and never pass through Q12. */
+static inline float ndsR2CollisionFixedToF32(int64_t value,
+                                             unsigned int frac_bits)
+{
+    uint32_t sign;
+    uint64_t magnitude;
+    int32_t exponent;
+    uint32_t mantissa;
+    uint32_t bits;
+    float out;
+
+    if (value == 0)
+    {
+        return 0.0f;
+    }
+    sign = (value < 0) ? 0x80000000u : 0u;
+    magnitude = (value < 0) ? (uint64_t)(-value) : (uint64_t)value;
+
+    exponent = 63 - (int32_t)__builtin_clzll(magnitude);
+    if (exponent > 23)
+    {
+        unsigned int drop = (unsigned int)(exponent - 23);
+        uint64_t half = (uint64_t)1 << (drop - 1u);
+        uint64_t remainder = magnitude & ((half << 1) - (uint64_t)1);
+        uint32_t rounded = (uint32_t)(magnitude >> drop);
+
+        if ((remainder > half) || ((remainder == half) && (rounded & 1u)))
+        {
+            rounded++;
+            if (rounded == (1u << 24))
+            {
+                rounded >>= 1;
+                exponent++;
+            }
+        }
+        mantissa = rounded & 0x7FFFFFu;
+    }
+    else
+    {
+        mantissa = (uint32_t)(magnitude << (unsigned int)(23 - exponent)) &
+                   0x7FFFFFu;
+    }
+    bits = sign |
+           ((uint32_t)(exponent - (int32_t)frac_bits + 127) << 23) | mantissa;
+    __builtin_memcpy(&out, &bits, sizeof(out));
+    return out;
+}
+
+static inline float ndsR2CollisionQ12ToF32(int32_t q)
+{
+    return ndsR2CollisionFixedToF32((int64_t)q, NDS_R2_COLLISION_MTX_FRAC_BITS);
+}
+
+/* The fixed-point replacement for gmCollisionSetInvertMatrix, float in and
+ * float out so that every consumer of unk_dobjtrans_0x9C is untouched. Only
+ * columns 0-2 are written, matching the source, which leaves column 3 alone.
+ *
+ * Returns 0 and writes nothing when the source is singular or outside the
+ * declared domain; the caller then lets the decomp's float path have the joint.
+ * The decomp spins forever on a singular matrix, and reproducing that would be
+ * reproducing a defect. */
+static inline int ndsR2CollisionInvertMatrix44(float dst[4][4],
+                                               const float src[4][4])
+{
+    const unsigned int rot_bits = NDS_R2_COLLISION_MTX_ROT_BITS;
+    const unsigned int inv_bits = NDS_R2_COLLISION_MTX_INV_BITS;
+    const unsigned int frac_bits = NDS_R2_COLLISION_MTX_FRAC_BITS;
+    int32_t r[3][3];
+    int32_t t[3];
+    int32_t c[3][3];
+    int32_t inv[3][3];
+    int64_t row3[3];
+    int32_t det;
+    int32_t recip;
+    unsigned int row;
+    unsigned int col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            r[row][col] = ndsR2CollisionF32ToFixed(src[row][col], rot_bits);
+            if (r[row][col] == NDS_R2_COLLISION_F32_OVERFLOW)
+            {
+                return 0; /* rotation cell past +/-32 */
+            }
+        }
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        t[col] = ndsR2CollisionF32ToFixed(src[3][col], frac_bits);
+        /* Row 3 forms t * inv at Q30 and int64 must hold it: |t_raw| < 2^24
+         * is |t| < 4096 world units, comfortably past any SSB64 blast zone. */
+        if ((t[col] == NDS_R2_COLLISION_F32_OVERFLOW) ||
+            (t[col] >= (int32_t)(1 << 24)) || (t[col] <= -(int32_t)(1 << 24)))
+        {
+            return 0;
+        }
+    }
+
+    /* Cofactors, in the source's sign convention: it builds them all positive
+     * and negates six entries afterwards, which is the same matrix. Q26 times
+     * Q26 is Q52, reduced straight back to Q26 so the next stage is another
+     * SMULL rather than a 64-bit multiply. Each product is one SMULL and each
+     * reduction one arithmetic shift pair. */
+#define NDS_R2_COFACTOR(ar, ac, br, bc, cr, cc, dr, dc)                      \
+    (int32_t)((((int64_t)r[ar][ac] * r[br][bc]) -                            \
+               ((int64_t)r[cr][cc] * r[dr][dc])) >> rot_bits)
+
+    c[0][0] = NDS_R2_COFACTOR(1, 1, 2, 2, 1, 2, 2, 1);
+    c[1][0] = NDS_R2_COFACTOR(1, 0, 2, 2, 1, 2, 2, 0);
+    c[2][0] = NDS_R2_COFACTOR(1, 0, 2, 1, 1, 1, 2, 0);
+
+    c[0][1] = NDS_R2_COFACTOR(0, 1, 2, 2, 0, 2, 2, 1);
+    c[1][1] = NDS_R2_COFACTOR(0, 0, 2, 2, 0, 2, 2, 0);
+    c[2][1] = NDS_R2_COFACTOR(0, 0, 2, 1, 0, 1, 2, 0);
+
+    c[0][2] = NDS_R2_COFACTOR(0, 1, 1, 2, 0, 2, 1, 1);
+    c[1][2] = NDS_R2_COFACTOR(0, 0, 1, 2, 0, 2, 1, 0);
+    c[2][2] = NDS_R2_COFACTOR(0, 0, 1, 1, 0, 1, 1, 0);
+#undef NDS_R2_COFACTOR
+
+    /* det = m00*c00 - m01*c10 + m02*c20, Q26 by Q26 reduced to Q26. */
+    det = (int32_t)((((int64_t)r[0][0] * c[0][0]) -
+                     ((int64_t)r[0][1] * c[1][0]) +
+                     ((int64_t)r[0][2] * c[2][0])) >> rot_bits);
+    /* det is Q26, so 2^52 / det_raw is (1/det) at Q26 -- which leaves int32
+     * once |det_raw| drops below 2^21, i.e. a determinant under 1/32. That is
+     * not theoretical: the conservative 0.25-2.00 sweep hit it and the
+     * falsifier reported 160.755318 world units before this test existed,
+     * because the DS hardware divider returns a truncated 32-bit result and
+     * has no way to say "did not fit". Live play measures det near 1.4 (three
+     * scales of ~1.117), so the declined region is nowhere SSB64 goes, and a
+     * declined joint takes the decomp's float path, which has no range limit. */
+    if ((det < (int32_t)(1 << 21)) && (det > -(int32_t)(1 << 21)))
+    {
+        return 0;
+    }
+    recip = NDS_R2_COLLISION_DIV64((int64_t)1 << (rot_bits + inv_bits), det);
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            int32_t cell = c[row][col];
+            int64_t scaled;
+
+            if (((row == 1u) && (col == 0u)) ||
+                ((row == 0u) && (col == 1u)) ||
+                ((row == 2u) && (col == 1u)) ||
+                ((row == 1u) && (col == 2u)))
+            {
+                cell = -cell;
+            }
+            scaled = ((int64_t)cell * recip) >> inv_bits;
+            /* |inv| < 2^30 at Q26 is an inverse cell under 16, i.e. a joint
+             * scale above 1/16. Beyond it the row-3 product and the int32 cell
+             * both stop being safe, and the joint goes back to the float
+             * path -- which has no range limit at all. */
+            if ((scaled >= ((int64_t)1 << 30)) ||
+                (scaled <= -((int64_t)1 << 30)))
+            {
+                return 0;
+            }
+            inv[row][col] = (int32_t)scaled;
+        }
+    }
+
+    /* Row 3 is -t . R^-1, kept at its native Q38 rather than reduced, because
+     * the float conversion takes an arbitrary fraction width anyway and the
+     * reduction would be three more shifts for nothing. Deriving it from the
+     * inverse rather than transcribing the source's sign gymnastics is the
+     * same matrix by construction: forward is world = local.R + t, so
+     * local = (world - t).R^-1 and the constant term is -t.R^-1. */
+    for (col = 0u; col < 3u; col++)
+    {
+        row3[col] = -((int64_t)t[0] * inv[0][col] +
+                      (int64_t)t[1] * inv[1][col] +
+                      (int64_t)t[2] * inv[2][col]);
+    }
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            dst[row][col] = ndsR2CollisionFixedToF32(inv[row][col], inv_bits);
+        }
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        dst[3][col] = ndsR2CollisionFixedToF32(row3[col],
+                                               frac_bits + inv_bits);
+    }
     return 1;
 }
 
