@@ -37,8 +37,41 @@ atlas binding. And the freeze diagnosis "heap exhaustion" was wrong: the PC was
 parked in `__excpt_entry`, whose self-branch looks exactly like the allocator's
 `while (TRUE);`. `soak-freeze-watch.ps1` now separates the two verdicts.
 
+### The DRAW abort is the GObj LATCH, and the margin is 1,176 bytes
+
+Not VRAM, not ownership. `ifCommonSetMaxNumGObj` (`ifcommon.c:3156`) caps the
+GObj pool at whatever is active when the general heap drops under 25 KiB free;
+past the cap `gcMakeGObj` returns NULL and the countdown's
+`ifCommonTrafficMakeSObj` stores through it. Captured directly:
+
+```
+GENERALHEAP free=23032   COMMONSMAX=45   COMMONSACTIVE=45   SPRITESACTIVE=27
+```
+
+`COMMONSMAX` is `-1` until the cap fires, so 45 IS the fault. Deficit **2,568
+bytes** against the draw's **+3,008 `.text`** (853K → 866K → 869K across the
+three builds). Full write-up in `docs/PORTING.md`; **this is the second
+occurrence** — the first was the source-sized particle pools.
+
+**The number that matters is not 2,568, it is 1,176**: that is all the margin
+`NDS_R2_PARTICLE_RUNTIME=1` alone leaves over the threshold. Any feature adding
+more than ~1 KB of image trips this, silently, as a countdown crash with a clean
+allocator. The soak reports `general heap free bytes` on every run now and warns
+under 29,600.
+
+Pools regraded to their measured high-water (41/8/2 → 48/10/6) returns 2,872
+bytes, which clears it by 304 — enough to measure, not enough to build on. **The
+standing fix is structural:** `ifCommonSetMaxNumGObj` is a no-op once
+`gcGetMaxNumGObj() != -1`, so an explicit P1 GObj bound set at battle scene
+start pre-empts the heuristic entirely. That needs one number first — the
+natural `sGCCommonsActiveNum` high-water from an uncapped run, which the clean
+counter list now reports.
+
 **Owed:** the DLDI-on `WORK-H` A/B that prices the draw against the gate. The
-three ROMs above exist; nothing has been measured for ticks yet.
+three ROMs above exist; nothing has been measured for ticks yet. Note that
+**the 1,208,960 baseline excludes the particle workload entirely** — the
+attested control had `NDS_R2_PARTICLE_RUNTIME=0` — so the gate position has to
+be re-established with the interpreter live before any lever is priced.
 
 ## R2-07 clause 2 — `NDS_R2_PARTICLE_RUNTIME=1` BUILDS, and its first boot names the real constraint: `.text` COSTS ARENA (2026-07-31)
 

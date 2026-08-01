@@ -572,6 +572,17 @@ try {
             'gNdsR2StagePrepareReuseCount',
             'gNdsR2StagePrepareBuildCount',
             'gNdsR2StagePreflightElideCount',
+            # THE CLIFF, on every run rather than only on the one that fell off
+            # it. ifCommonSetMaxNumGObj caps the GObj pool the moment the
+            # general heap drops under 25,600 bytes free, and past that cap the
+            # GO countdown dereferences a NULL. Measured 2026-08-01: the
+            # particle runtime alone leaves 26,776 free -- 1,176 bytes of
+            # margin -- and adding the quad draw's 3,008 bytes of .text took it
+            # to 23,032 and killed the battle. COMMONSMAX is -1 while the cap
+            # has never fired; any other value means it HAS, and the run after
+            # it is living on borrowed GObjs. Read the margin, not the verdict.
+            'sGCCommonsMaxNum',
+            'sGCCommonsActiveNum',
             # R2-07 clause 2, present only with NDS_R2_PARTICLE_RUNTIME=1 (the
             # nm filter below drops them otherwise). Load result and reject count
             # say the bank is sound; Live/Max are the pool high-water, which is
@@ -781,6 +792,12 @@ try {
         # population in question. Bucket 1 is Fighters, 2 is Stage.
         $progress = Invoke-SoakGdb -Tag 'clean' -TimeoutSeconds 90 -Commands @(
             "printf `"CLEAN=$format\n`", $($cleanFields -join ', ')",
+            # The GObj-latch margin, as a number rather than as a verdict. Under
+            # 25,600 the pool is capped and the GO countdown dies; see the
+            # sGCCommonsMaxNum comment in $cleanFields.
+            ('printf "GENERALFREE=%d\n", ' +
+             '(char *)gSYTaskmanGeneralHeap.end - ' +
+             '(char *)gSYTaskmanGeneralHeap.ptr'),
             'printf "RINGHEAD=%u,%u\n", sBattleTickHudRingHead, sBattleTickHudRingCount',
             'echo RINGFIGHTERS=\n',
             'output sBattleTickHudRing[1]',
@@ -833,6 +850,29 @@ try {
                     Write-Host (("  NOTE: soaked {0} min against a {1}-minute match " +
                         'timer, so only the first {1} min covered gameplay. Raise ' +
                         'the match timer to soak longer.') -f $MinutesToRun, $matchMinutes)
+                }
+                # The GObj-latch margin, reported on every run whether or not it
+                # was crossed. 25,600 is ifCommonSetMaxNumGObj's threshold; past
+                # it the pool is capped at whatever is active and the GO
+                # countdown dereferences a NULL. The particle runtime alone
+                # leaves 1,176 bytes of margin, so this is not a theoretical
+                # bound -- it is the next feature's budget.
+                $freeMatch = [regex]::Match($progress, 'GENERALFREE=(-?\d+)')
+                if ($freeMatch.Success) {
+                    $free = [int]$freeMatch.Groups[1].Value
+                    Write-Host ("    {0,-40} {1} (GObj latch fires under 25600)" -f
+                        'general heap free bytes', $free)
+                    $samples += [pscustomobject]@{
+                        counter = 'generalHeapFreeBytes'; value = $free }
+                    if ($free -lt 25600) {
+                        Write-Host ('  WARNING: the GObj pool cap HAS fired. Every ' +
+                            'GObj past the cap is NULL and the GO countdown ' +
+                            'dereferences one. Free arena bytes or this build ' +
+                            'cannot start a battle.')
+                    } elseif ($free -lt 29600) {
+                        Write-Host ("  NOTE: only $($free - 25600) bytes of GObj-latch " +
+                            'margin. The next feature that adds .text trips it.')
+                    }
                 }
                 $arena = $counter['gNdsTaskmanArenaChosenSize']
                 if ($arena -lt 1245184u) {

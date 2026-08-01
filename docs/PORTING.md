@@ -22006,3 +22006,53 @@ ceiling 5.6%) — a follow-up could prototype it for the binding-3 run (66 verts
     Two rematch soaks returned NO-FREEZE with a final frame showing the GAME SET
     zoom and a blanked tick HUD — the 5-minute cap terminated the emulator at
     match two's hand-off. The ceiling is 7 minutes now, for that measured reason.
+
+## 2026-08-01 — the GO countdown's NULL GObj, and why it looks like a heap crash
+
+**Symptom.** A data abort at the GO countdown, `lr_usr` at
+`ifCommonTrafficMakeSObj+68`, the PC parked in calico's `__excpt_entry`.
+`MALLOCOVF=0`, `TASKARENA` above its floor, `DLBUF0..3` and `GFXHEAP` all
+healthy. Every allocator instrument this project owns says nothing is wrong.
+
+**Cause.** `ifCommonSetMaxNumGObj` (decomp `if/ifcommon.c:3156`) caps the GObj
+pool at whatever count is active the moment the general heap drops under
+25 KiB free:
+
+```c
+if ((gcGetMaxNumGObj() == -1) && (free_space < 25 * 1024))
+    gcSetMaxNumGObj(gcGetGObjsActiveNum());
+```
+
+Past that cap `gcMakeGObj` returns NULL, and the countdown's
+`ifCommonTrafficMakeSObj` stores through it without checking. So the crash is
+**one allocation past a cap that a healthy allocator applied on purpose**,
+which is why every heap counter reads clean.
+
+**Measured, with `NDS_R2_PARTICLE_DRAW=1` on the tick-HUD target:**
+`GENERALHEAP free=23032`, `COMMONSMAX=45`, `COMMONSACTIVE=45`,
+`SPRITESACTIVE=27`. The deficit was **2,568 bytes** against the quad draw's
+**+3,008 of `.text`** (and +736 `.bss`) over the same build with the draw off.
+
+**This is the second time.** The first was the particle pools at their source
+sizes (112/24/80 = 28,320 bytes), which left 1,040 bytes free and killed the
+battle before it started; that one was read as an allocator failure too.
+
+**Durable lessons:**
+* **`__excpt_entry`'s park is a self-branch, exactly like `while (TRUE);`.**
+  A CPU abort and the allocator's give-up loop are indistinguishable by PC
+  shape alone. `soak-freeze-watch.ps1` separates them by verdict now
+  (`-ABORT` suffix) and says outright that the allocator counters are not the
+  cause in that case.
+* **`.text` costs taskman arena one for one**, so a feature's image cost and
+  its runtime memory cost are the same number here. 3,008 bytes of new code
+  was enough to take a working battle to a dead one.
+* **The margin is the measurement, not the verdict.** The particle runtime
+  alone leaves **1,176 bytes** over the 25,600 threshold — a passing run that
+  is one small feature away from this abort. The soak prints
+  `general heap free bytes` on every run now and warns under 29,600.
+* **A source safety valve sized for the N64 heap is a defect on DS.** The
+  standing fix is not to keep scavenging kilobytes: `ifCommonSetMaxNumGObj`
+  does nothing once `gcGetMaxNumGObj() != -1`, so setting an explicit P1 GObj
+  bound at battle scene start pre-empts the heuristic entirely, which is what
+  SwitchPlan 3.11 asks for — a fixed bound sized at load with an explicit
+  policy, rather than one that falls out of allocation order.

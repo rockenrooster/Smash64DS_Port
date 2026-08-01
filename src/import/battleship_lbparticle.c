@@ -170,10 +170,30 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
  * rebalance below is close to free: 64*96 + 12*92 + 12*192 = 9,552 bytes
  * against the old 9,368, +184 for 60% more structs and six times the measured
  * transform mark. Grade these again after any change that adds effects; a
- * saturated pool is a silently missing effect, not an error. */
-#define NDS_R2_PARTICLE_POOL_STRUCTS 64
-#define NDS_R2_PARTICLE_POOL_GENERATORS 12
-#define NDS_R2_PARTICLE_POOL_TRANSFORMS 12
+ * saturated pool is a silently missing effect, not an error.
+ *
+ * REGRADED 2026-08-01 against a single-CPU tick-HUD match with the corrected
+ * seam list: StructsMax 41 of 64, GeneratorsMax 8 of 12, TransformsMax 2 of
+ * 12. And regrading was not optional -- these bytes are the ONLY slack between
+ * this build and a hard failure. `ifCommonSetMaxNumGObj` (ifcommon.c:3156)
+ * caps the GObj pool at whatever is active when the general heap drops under
+ * 25 KiB free, and past that cap `ifCommonCountdownMakeInterface` dereferences
+ * a NULL. Measured with NDS_R2_PARTICLE_DRAW=1: free 23,032, COMMONSMAX
+ * latched at 45, data abort in ifCommonTrafficMakeSObj at the GO countdown --
+ * a healthy allocator (MALLOCOVF=0) and a dead game. The deficit was 2,568
+ * bytes against DRAW's +3,008 of .text.
+ *
+ * 48/10/6 keeps 17% headroom on structs, 25% on generators and 3x on
+ * transforms, and returns 2,872 bytes: (64-48)*96 + (12-10)*92 + (12-6)*192.
+ * Overflow is fail-closed and counted (gNdsParticleRejectCount), so a pool
+ * that turns out to be tight reports itself instead of aborting.
+ *
+ * THE MARGIN IS THE THING TO WATCH, not these three numbers. The soak prints
+ * GENERALHEAP free on every run now; anything under ~4 KB of headroom over
+ * 25,600 means the next feature trips the same cliff. */
+#define NDS_R2_PARTICLE_POOL_STRUCTS 48
+#define NDS_R2_PARTICLE_POOL_GENERATORS 10
+#define NDS_R2_PARTICLE_POOL_TRANSFORMS 6
 
 void efParticleInitAll(void)
 {
