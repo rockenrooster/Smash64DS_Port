@@ -3479,13 +3479,15 @@ static void ndsRendererHardwareRecordBattleStaticTextureHit(
      * is exactly where it should be. Exempted by identity rather than by
      * loosening the test, so a genuinely unowned binding still trips it.
      *
-     * DOES NOT YET WORK, recorded so it is not rediscovered: a clean
-     * single-match soak on a confirmed-correct ROM still reports
-     * ViolationCount 1 and stage rebuilds 197. The earlier reading of 0 and 2
-     * came from a run that had tripped a START into a rematch and is not
-     * comparable -- a different scene count, not a fix. So the binding that
-     * trips this is not the atlas, or not only the atlas, and this exemption
-     * is aimed at the wrong entry. Both are behind NDS_R2_PARTICLE_DRAW. */
+     * The ViolationCount 1 / stage-rebuilds-197 pair this was first aimed at
+     * was NOT an ownership question -- it was texture VRAM, and this exemption
+     * could never have fixed it. Attributed 2026-08-01 by three tick-HUD ROMs
+     * differing only in the particle flags: control and RUNTIME=1 both report
+     * 0 and 2, DRAW=1 reports 1 and 197 and aborts at the GO countdown. The
+     * prepare ORDER in ndsSCVSBattleBeginSceneTextures is where that is fixed.
+     * This stays because it is independently correct: the atlas is a pinned
+     * resident with no static record, which is exactly what the test asks
+     * about. */
     if ((entry->pinned != 0u) && (entry->static_record_plus1 == 0u) &&
         (sNdsRendererParticleAtlasPrepared != 0u) &&
         (entry->name == sNdsRendererParticleAtlasName))

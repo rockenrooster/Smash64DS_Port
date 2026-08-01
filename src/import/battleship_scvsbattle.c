@@ -163,16 +163,32 @@ static void ndsSCVSBattleBeginSceneTextures(void)
 #endif
     ndsRendererHardwareResetSceneTextureVram();
     (void)ndsRendererHardwarePrepareBattleStaticTextures();
+    (void)ndsIFCommonNativeOamPrepareClouds();
 #if NDS_R2_PARTICLE_DRAW
-    /* After the static set so the atlas lands above its VRAM span. That is not
-     * yet enough: with this live the run reports
-     * gNdsRendererBattleStaticTextureViolationCount 1 and stage rebuilds
-     * 2 -> 197, so the atlas is disturbing static-texture ownership even though
-     * the upload itself succeeds (AtlasBytes 32,768, FailCount 0). Behind
-     * NDS_R2_PARTICLE_DRAW with the emit until that is understood. */
+    /* LAST, and the order is the fix rather than a preference.
+     *
+     * Measured 2026-08-01 on three tick-HUD ROMs that differ only in these
+     * flags. Control and NDS_R2_PARTICLE_RUNTIME=1 both run a clean match with
+     * ViolationCount 0 and StagePrepareBuildCount 2. Adding
+     * NDS_R2_PARTICLE_DRAW=1 -- with the atlas prepared HERE, between the
+     * static set and the interface -- aborts at the GO countdown
+     * (ifCommonTrafficMakeSObj, MALLOCOVF=0, so not the heap) and, on the runs
+     * that got past it, reported ViolationCount 1 with stage rebuilds 197.
+     *
+     * Raw capacity was never short: 262,144 texture VRAM, 136,192 static,
+     * 57,344 for the interface's three A3I5 atlases (256x128 + 128x128 +
+     * 128x64), 32,768 for this one, ~30 KB spare. What is short is a
+     * CONTIGUOUS 32,768 run -- libnds splits blocks per bank, and this
+     * allocator has already refused a 4,096-byte upload with 268,800 free
+     * (PORTING.md, the second-entry corruption). Taking the largest free run
+     * before the interface asks for one is what breaks it.
+     *
+     * So the interface gets first refusal and the cosmetic atlas fails closed:
+     * AtlasFailCount rises, ndsRendererHardwareParticleAtlasName returns 0, and
+     * the quad emit draws nothing. A silent loss of effects beats an abort at
+     * the countdown. Still after the static set, so it stays above that span. */
     (void)ndsRendererHardwarePrepareParticleAtlas();
 #endif
-    (void)ndsIFCommonNativeOamPrepareClouds();
 }
 
 /* GAME SET never appeared -- owner, 2026-07-31: "No 'Game set' after winning

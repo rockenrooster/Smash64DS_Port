@@ -10,7 +10,7 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69** — 1,228,928 -> 1,096,768, DLDI-off so lower bounds; only the E32 flash residual is open (KNOWN_ISSUES) and it blocks no lever |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-06 | closed — no lever left inside the phase; L6 found the one outside it |
-| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **The particle interpreter RUNS** (10 script starts, NO-FREEZE, full match) and its draw payload is built; the quad DRAW is the remaining half and six `BUGS.md` VFX rows wait on it. **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
+| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **The particle interpreter is PROVEN CLEAN on the tick-HUD target** (NO-FREEZE, Violation 0, stage builds 2, 14 scripts, 138,274 visible particles, pools 41/64 and 8/12); the quad DRAW is the remaining half and six `BUGS.md` VFX rows wait on it. Crowd actor + 12 crowd/Results cues implemented. **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
 
 ## OPEN P1 #1 — the gate. Over by 88,960, and **there is no named lever**
 
@@ -61,37 +61,35 @@ any new lab flag before running the ROM**.
 ## OPEN P1 #2 — `BUGS.md` is now entirely particles, VFX and audio cues, and ALL of it is P1
 
 Owner's phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and are required to be fixed
-for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the random freezes**. The rows split
-in two. **SFX: the announcer is DONE and the generator DOES have a per-cue derivation mode** — the earlier
-"extraction job per cue" estimate was wrong. `render-audio-fgm-phase-pack.py --derive <ids>` prints every
-selector field straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`. Seven lines packed (527 TIME UP, 488
-GAME SET, 534 winner-is, 499 Mario, 486 Fox, 472/471 five/four), 56 → 63 cues. **Proof is the
-natural-match miss ring, which the soak prints by ID**: `96,85,153,472,471,621` → `96,85,153,621`,
-`PlayFailCount` 0, NO-FREEZE to Results, Boundary + Latest green. **Every one of the four survivors is a
-LOOPED cue** and needs FGM 285's `source_loop_ds_hardware` treatment; 96 `GroundGrind2` additionally has no
-`pitch` op, so `validate_articulation` rejects it as written. The crowd row is separately blocked on the
-TRIGGER side — `ftPublicMakeActor` only marks bits, so packing its cues today would be dead ROM.
-**VFX: THE PARTICLE INTERPRETER NOW RUNS.** `NDS_R2_PARTICLE_RUNTIME=1` completes a full both-CPU match to
-Results, NO-FREEZE, `MALLOCOVF=0`, `ScriptStartCount` 10. Three memory levers got it there (float printf
-out of the image, pools 112/24/80 -> 64/12/12 sized from the high-water counters, bank normalized in place
-instead of a 10,912 B arena copy) against `ifCommonSetMaxNumGObj`'s 25 KiB latch. The scripts were silent
-for a separate reason: the pack's reachable set was seeded from `census.SUBSTITUTES`, which is what Task 39
-**replaces** with sprites -- near the complement of what still needs a script. The runtime reject ring named
-it (Fox blaster glow x8, Results confetti x2, both marked UNREACHABLE by the generator). 22 -> 41 seams,
-55 -> 87 scripts, and it cost **no arena**: the bytecode bank ships whole, reachability is only the offset
-table.
-**What is left is the DRAW.** `gNdsParticleDrawSeamCount` runs 19,696 times a match and draws nothing. The
-payload for it is built -- `efcommon_particle_quads.rgb5a1.bin`, 22 of 31 textures in 63,744 B of a 65,536
-budget -- because the renderer's texture cache uploads GL_RGBA and has no palette slot. **The VRAM problem
-is not real**: the draw seam's census says a live match draws textures **22 and 27 and nothing else**,
-1,280 bytes, and never more than **41 quads in a frame**. Binds are per texture, so that is two binds a
-frame however the quad count moves -- far under the SwitchPlan's "~23K buys fourteen binds" estimate.
-Remaining: upload the sheet into pinned GL textures at battle prepare, and emit camera-facing quads
-through the existing hardware batch. Nine big multi-frame textures are excluded by name in the report; the
-honest fix for those is halving 64x64x10, not raising the budget. **Traps:** `--gc-sections` had already
-discarded the particle textures, so the board's named arena lever freed zero — **check the `.map` before
-believing a size claim about linked data nothing reads**; and **break on `__excpt_entry`, not the frozen
-PC**, because calico's handler double-faults and destroys the context.
+for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the random freezes**.
+
+**SFX is essentially done.** `render-audio-fgm-phase-pack.py --derive <ids>` prints every selector field
+straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, and now also `source_pcm_samples`, the fork program
+hashes and `render_program_sha256` — the three fields that used to be obtainable only by pasting a
+placeholder and reading the generator's error. 56 → **75 cues**: seven announcer lines, then 621 PublicWin
+(second cue on 626's wave, so 626's AOT loop-and-ramp render unchanged — a hardware repeat can never serve
+either, because their articulation ramps volume *across* the loop) and the eleven the crowd actor reaches.
+**"Eight of the twelve crowd cues are LOOPED" was wrong** — `--derive` says none of the eleven loops.
+Three cues still miss on a natural run and each has a named obstacle (`BUGS.md`): 96 has no `pitch` op,
+153 `AltitudeWarn` needs 285's hardware repeat, 85 derives ~90,510 Hz.
+**The crowd TRIGGER side is implemented**: `ft/ftpublic.c` compiled in place
+(`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`, default 0) — its whole external surface already existed, so the
+thresholds/cooldowns/repeats are the source's by construction. Owed: a build and an ear check.
+
+**VFX — the interpreter is PROVEN, the DRAW is the whole remaining half.** Three tick-HUD ROMs differing
+only in the particle flags, one soak each: control and `RUNTIME=1` are indistinguishable (NO-FREEZE,
+Violation 0, stage builds 2), and `RUNTIME=1` runs 14 scripts / 138,274 visible particles inside its fixed
+pools (41/64, 8/12). **`DRAW=1` aborted at the GO countdown**, and it was **texture VRAM, not ownership**:
+262,144 total, 136,192 static, 57,344 for the interface's three A3I5 atlases, 32,768 for this one — spare
+capacity but no spare *contiguous* 32,768 run once the atlas takes it first. Fixed by preparing the atlas
+**after** the interface, so the interface gets first refusal and the cosmetic atlas fails closed.
+The payload is `efcommon_particle_quads.rgb5a1.bin`, one 128x128 RGB555+A1 atlas, 16 of 31 textures.
+Owed: the DLDI-on `WORK-H` A/B that prices the draw against the gate.
+**Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
+freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;
+**`glEnd()` desynchronises the stream** (`check-gbi-decode-fixtures.ps1` pins the count at 1); and
+**`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads exactly like the allocator's
+`while (TRUE);` — the soak separates the two verdicts now.
 
 ## SUCCESSIVE MATCHES: FIXED — four defects, one law (write-up in `docs/PORTING.md` + board row)
 

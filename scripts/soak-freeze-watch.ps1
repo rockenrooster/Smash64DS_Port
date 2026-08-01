@@ -961,6 +961,24 @@ try {
              '(char *)gSYTaskmanDLHeads[3] - ' +
              '(char *)sSYTaskmanDLBuffers[gSYTaskmanTaskID][3].start'),
             'printf "DLTASK=%d\n", gSYTaskmanTaskID',
+            # THE GOBJ LATCH, and it is a different failure from every spin
+            # above. ifCommonSetMaxNumGObj (decomp ifcommon.c:3156) caps the
+            # GObj pool at whatever count is active the moment the general heap
+            # drops below 25 KiB free. Past that cap gcMakeGObj returns NULL and
+            # ifCommonCountdownMakeInterface dereferences it -- a DATA ABORT at
+            # the GO countdown with a perfectly healthy allocator, which is
+            # exactly what MALLOCOVF=0 plus a park in __excpt_entry looks like.
+            # It has bitten this port twice (the source-sized particle pools,
+            # then NDS_R2_PARTICLE_DRAW's .text). GENERALFREE is the number that
+            # decides whether a candidate fix has to find bytes or change the
+            # threshold; COMMONSMAX is -1 while the cap has never fired.
+            ('printf "GENERALHEAP=start=%p,ptr=%p,end=%p,free=%d\n", ' +
+             'gSYTaskmanGeneralHeap.start, gSYTaskmanGeneralHeap.ptr, ' +
+             'gSYTaskmanGeneralHeap.end, (char *)gSYTaskmanGeneralHeap.end - ' +
+             '(char *)gSYTaskmanGeneralHeap.ptr'),
+            'printf "COMMONSMAX=%d\n", sGCCommonsMaxNum',
+            'printf "COMMONSACTIVE=%u\n", sGCCommonsActiveNum',
+            'printf "SPRITESACTIVE=%u\n", sGCSpritesActiveNum',
             ('printf "GFXHEAP=start=%p,ptr=%p,end=%p,used=%d\n", ' +
              'gSYTaskmanGraphicsHeap.start, gSYTaskmanGraphicsHeap.ptr, ' +
              'gSYTaskmanGraphicsHeap.end, (char *)gSYTaskmanGraphicsHeap.ptr - ' +
@@ -981,7 +999,22 @@ try {
                 'gNdsParticleRejectCount',
                 'gNdsParticleStructsLive',
                 'gNdsParticleStructsMax',
-                'gNdsParticleDrawSeamCount') | ForEach-Object {
+                'gNdsParticleDrawSeamCount',
+                # THE TEXTURE SIDE, and why it is on the freeze path. The
+                # particle atlas is 32,768 bytes of the 119,872 free after the
+                # battle's pinned static set, and the interface's own OAM
+                # atlases are prepared from the same pool. A 2026-08-01 abort at
+                # the GO countdown -- ifCommonTrafficMakeSObj, MALLOCOVF=0, so
+                # not the heap -- appeared only with NDS_R2_PARTICLE_DRAW=1, and
+                # the capture could not say whether the atlas had taken VRAM the
+                # interface then could not get, because none of these were read.
+                'gNdsRendererParticleAtlasPrepareCount',
+                'gNdsRendererParticleAtlasFailCount',
+                'gNdsRendererParticleAtlasBytes',
+                'gNdsRendererBattleStaticTexturePrepareCount',
+                'gNdsRendererBattleStaticTextureViolationCount',
+                'gNdsRendererSceneTextureVramResetCount',
+                'gNdsIFCommonNativeOamTextureDiscardCount') | ForEach-Object {
                     "printf `"$_=%u\n`", $_" }))
         if ($capture) {
             Write-Host '--- freeze capture'

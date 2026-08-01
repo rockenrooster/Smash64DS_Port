@@ -23,6 +23,15 @@ These bugs should be fixed for P1 delivery.
   5+:4` with `max:19`. So the stall is four 5+-VBlank frames and one 19-VBlank
   frame in a 128-frame window -- an event, not a slow body.
 -Sometimes Mario's fireballs don't spawn.
+  Narrowed 2026-08-01, and the weapon make is NOT the owner. The import already
+  counts both sides of the call (`battleship_mario_fireball.c`), and a clean
+  one-match soak reports `SpawnCallCount 9` against `SpawnSuccessCount 9`:
+  every request the special-N state machine made produced a weapon. So this is
+  upstream of the make -- the input or the status transition not reaching
+  `wpMarioFireballMakeWeapon` at all -- or downstream of it, a weapon that
+  exists and is not drawn. Both counters are on the soak's reported list now,
+  so the next owner-observed miss can be attributed from the run that produced
+  it rather than reproduced first.
 
 -Results screen. VFX and SFX/BGM/FGM.  [ALL FOUR FGM cues PACKED 2026-08-01;
   VFX remains]
@@ -72,16 +81,26 @@ These bugs should be fixed for P1 delivery.
     owner visual/listen approval, and pacing after the missing content is live.
     Status: OPEN.
 -Crowd noise is missing from results and match gameplay.
-  **All twelve reachable crowd cues now DERIVE cleanly** (2026-07-31,
-  `render-audio-fgm-phase-pack.py --derive 605,609,615..625`), which removes the
-  extraction unknown from this row and leaves two real obstacles. **(1) Eight of
-  the twelve are LOOPED or FORKED**: 605/609/615 and 621/624 are loops on
-  mid-wave loop points, and 616/618/619/620/623 carry fork voices (650, 627, 676,
-  684, 625). 96 `GroundGrind2` -- which a live match already requests six times
-  per minute -- has no `pitch` op at all, so `validate_articulation` rejects it as
-  written. **(2) The trigger side is still absent** and that is the larger half:
-  see the root cause below. Packing a cue nothing requests would be dead ROM, so
-  the actor comes first.
+  **BOTH HALVES IMPLEMENTED 2026-08-01; needs an ear check.**
+  *Trigger side:* `ft/ftpublic.c` is compiled in place
+  (`src/import/battleship_ftpublic.c`, `NDS_IMPORT_BATTLESHIP_FT_PUBLIC`), so
+  the thresholds, cooldowns, repeat limits and defeated-voice queue are the
+  source's rather than a translation. Its whole external surface already
+  existed -- `func_800269C0_275C0`/`func_80026738_27338` are the DS FGM
+  backend's play/stop, `ftParamGetPlayerNumGObj` is ported. Default 0 until a
+  natural match proves the reactions reach the speaker: it costs `.text`, and
+  `.text` costs taskman arena one for one here.
+  *Cue side:* the eleven a P1 Mario-vs-Fox match reaches are packed -- chants
+  605 Fox / 609 Mario, reactions 615/616/617 Gasp L/M/S, 618 Cheer, 619 Amazed,
+  620 GaspClap, 622/623/625 Damage L/M/S. 624 NoContest is unreachable in a
+  two-fighter timed match. Pack 535,280 -> 672,528 B, 63 -> 75 entries.
+  **The earlier "eight of the twelve are LOOPED or FORKED" was half wrong**:
+  `--derive` reports `loop: False` for all eleven, so no loop machinery was
+  needed at all. Five do carry fork voices (650, 627, 676, 684, 625) and those
+  are omitted with the debt recorded, exactly as the shipping punch/kick cues
+  do. 96 `GroundGrind2` is still out -- it has no `pitch` op, so
+  `articulation_pitch_cents` derives as `None` -- and it is not a crowd cue;
+  it belongs with 85 and 153 `AltitudeWarn` on the miss ring, below.
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: `decomp/BattleShip-main/decomp/src/ft/ftpublic.c` owns the
     crowd actor, thresholds, cooldowns, repeat limits, and event queue. The
@@ -101,6 +120,28 @@ These bugs should be fixed for P1 delivery.
     event-to-ID-to-ARM7/channel traces, source timing/queue guards, and owner
     listen approval. A marker or packed cue alone is not completion. Status:
     OPEN.
+
+-Three cues a natural match still asks for and does not get (2026-08-01 miss
+  ring, control soak): 96 `GroundGrind2` x6, 85 x2, 153 `AltitudeWarn` x2.
+  Not a row of their own before now because nothing had read the ring on a
+  clean run.
+  **96 and 153 are FIXED (2026-08-01); needs an ear check.**
+  - **96** had no `pitch` op, so `articulation_pitch_cents` derived as `None`
+    and `validate_articulation` rejected it. No pitch op means zero cents;
+    the validator says so now. It is NOT a looped cue in practice -- its
+    schedule (55 ticks, 0.316 s) runs out before its 13,040-sample wave
+    (0.457 s at 28,509 Hz), so a one-shot plays the whole audible cue.
+  - **153** did need the loop -- 300 ticks is 1.725 s against a wave that
+    plays out in 0.757 s -- and it is the pack's SECOND DS hardware repeat.
+    Whispy's `WHISPY_WIND_*` module constants are a per-cue `hardware_loop`
+    spec now (five numbers; four are the same for every cue on the path), so
+    the "machinery that needs generalising" this row kept describing was a
+    dict. PNT 1 word, LEN 396, SNR 32.9 dB, pinned in the checker like 285.
+  - **85 `UnkGrind4` remains OPEN**: it derives a playback rate of ~90,510 Hz
+    (pitch code 20 at +1100 cents), which is the `source_rate_above_u16`
+    blocker the excluded set already names. It needs a decision about how the
+    DS should represent a rate above the register's range, not a
+    transcription.
 
 -Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the

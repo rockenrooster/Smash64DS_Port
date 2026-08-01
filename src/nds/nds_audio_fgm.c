@@ -287,6 +287,12 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoicePublicDamageL:
     case nSYAudioVoicePublicDamageM:
     case nSYAudioVoicePublicDamageS:
+    /* The two loudest survivors of the natural-match miss ring: the ground
+     * grind a match requests six times a minute, and the altitude warning --
+     * the second cue in the pack to ship as a DS hardware repeat, because its
+     * 300-tick schedule outlives its 0.757 s sample. */
+    case nSYAudioFGMGroundGrind2:
+    case nSYAudioFGMAltitudeWarn:
         return TRUE;
     default:
         return FALSE;

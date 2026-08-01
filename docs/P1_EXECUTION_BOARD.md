@@ -1,8 +1,44 @@
 # P1 Execution Board
 
-Updated: 2026-07-31 19:05 Central
+Updated: 2026-08-01 02:10 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
+
+## R2-07 clause 2 — the particle INTERPRETER is clean; the DRAW is a texture-VRAM ORDERING bug (2026-08-01)
+
+Three tick-HUD ROMs, identical but for the particle flags, one 2.5-minute
+single-CPU soak each. This is the A/B that should have been run before any of
+the ownership theorising:
+
+| build | verdict | Violation | StageBuild | evidence |
+|---|---|---|---|---|
+| `build-tickhud-control` (no flags) | NO-FREEZE, 1 match | 0 | 2 | reuse 2041 |
+| `build-tickhud-particles-runtime` (`RUNTIME=1`) | NO-FREEZE, 1 match | **0** | **2** | 14 scripts, 138,274 visible particles, structs 41/64, generators 8/12, 4 rejects |
+| `build-tickhud-particles-draw` (`+DRAW=1`) | **ABORT at the GO countdown** | 1 | 197 | `ifCommonTrafficMakeSObj`, `MALLOCOVF=0` |
+
+**So the 2,961-line interpreter costs nothing in correctness terms and lives
+inside its fixed arena — §3.11 satisfied, measured.** Every symptom the board
+had been chasing belongs to the DRAW flag alone.
+
+**And it is not ownership, it is a contiguous VRAM run.** Raw capacity was never
+short: 262,144 texture VRAM, 136,192 static, 57,344 for the interface's three
+A3I5 atlases (256x128 + 128x128 + 128x64), 32,768 for the particle atlas, ~30 KB
+spare. What is short is a *contiguous* 32,768 — libnds splits blocks per bank,
+and this allocator has already refused a 4,096-byte upload with 268,800 free
+(`PORTING.md`, second-entry corruption). Preparing the atlas between the static
+set and the interface took the largest free run before the interface asked for
+one. It is prepared **last** now, so the interface gets first refusal and the
+cosmetic atlas fails closed.
+
+**Two retractions.** The ownership exemption in
+`ndsRendererHardwareRecordBattleStaticTextureHit` could never have fixed
+ViolationCount 1 — that count is the stage's texture upload failing, not the
+atlas binding. And the freeze diagnosis "heap exhaustion" was wrong: the PC was
+parked in `__excpt_entry`, whose self-branch looks exactly like the allocator's
+`while (TRUE);`. `soak-freeze-watch.ps1` now separates the two verdicts.
+
+**Owed:** the DLDI-on `WORK-H` A/B that prices the draw against the gate. The
+three ROMs above exist; nothing has been measured for ticks yet.
 
 ## R2-07 clause 2 — `NDS_R2_PARTICLE_RUNTIME=1` BUILDS, and its first boot names the real constraint: `.text` COSTS ARENA (2026-07-31)
 

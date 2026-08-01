@@ -118,6 +118,8 @@ FULL_COVERAGE_IDS = (
     # Fox/Mario chants, three gasps, cheer, amazed, gasp-clap, three damage
     # reactions.
     605, 609, 615, 616, 617, 618, 619, 620, 622, 623, 625,
+    # The miss ring's loudest survivor, and the altitude warning.
+    96, 153,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -1139,6 +1141,13 @@ SELECTED = (
         "loop_start": 48,
         "loop_end": 13348,
         "expected_retained_samples": 13360,
+        "hardware_loop": {
+            "alignment_tail_samples": WHISPY_WIND_ALIGNMENT_TAIL_SAMPLES,
+            "loop_point_words": WHISPY_WIND_LOOP_POINT_WORDS,
+            "guard_nibbles": WHISPY_WIND_GUARD_NIBBLES,
+            "ima_predictor": WHISPY_WIND_IMA_PREDICTOR,
+            "ima_index": WHISPY_WIND_IMA_INDEX,
+        },
         "root_fork_programs": (),
         "root_program_sha256":
             "dbcc2506dda733515bcb1857723b257b8289c34044682ee0f4ccbc8a300a43d6",
@@ -1510,6 +1519,82 @@ SELECTED = (
             "81f29b206773f85fce23a2160a170220ac48c60d3b7fcb13a146f661f23bba87",
         "fidelity_debt": ("ucd_pitch_automation",
                           "untrimmed_shared_source_reuse"),
+    },
+    # The natural-match miss ring's loudest survivor: a live match asks for 96
+    # six times a minute. It was not "a looped cue needing 285's treatment" --
+    # its source loop is 10739..13001 of 13040 samples, and the note schedule
+    # (55 ticks = 0.316 s) runs OUT before the sample does (13,040 at ~28,509 Hz
+    # = 0.457 s), so a one-shot plays the whole audible cue. The actual blocker
+    # was that its articulation has no `pitch` op at all, which
+    # validate_articulation required; zero cents is what "no pitch op" means.
+    {
+        "id": 96,
+        "name": "nSYAudioFGMGroundGrind2",
+        "kind": "motion",
+        "articulation": 76,
+        "sound": 36,
+        "notes": ((11, 7, 20), (11, 7, 35)),
+        "duration_ticks": 55,
+        "ucd_volume": 135,
+        "articulation_pitch_cents": 0,
+        "loop": True,
+        "wave_base": 290880,
+        "wave_length": 7336,
+        "loop_start": 10739,
+        "loop_end": 13001,
+        "retain_full_source": True,
+        "expected_retained_samples": 13040,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "5164f802cb2f0ebe19aa473a6728ac5192879905394584c0d0375c7f01b2dd32",
+        "render_program_sha256":
+            "5164f802cb2f0ebe19aa473a6728ac5192879905394584c0d0375c7f01b2dd32",
+        "articulation_program_sha256":
+            "2776aba8ac785095e1304a4aa18f95ef50bf299b19a612649be6b1d4a2aeebaf",
+        "fidelity_debt": ("source_loop_not_reproduced",
+                          "untrimmed_shared_source_reuse"),
+    },
+    # 153 AltitudeWarn, the second DS hardware loop, and the reason the WHISPY_*
+    # constants became a per-cue spec. It is Whispy's exact shape: the note
+    # schedule (300 ticks = 1.725 s) OUTLIVES the sample (22,208 at ~29,344 Hz =
+    # 0.757 s), so a one-shot cuts the warning off two thirds of the way
+    # through. The source loop is 18880..22044 = 3,164 samples; four samples of
+    # the source's own tail take it to 3,168 = 396 whole words after a one-word
+    # PNT, which is the same alignment-debt trade 285 makes and for the same
+    # reason -- real audio beats synthetic guard nibbles.
+    {
+        "id": 153,
+        "name": "nSYAudioFGMAltitudeWarn",
+        "kind": "motion",
+        "articulation": 150,
+        "sound": 34,
+        "notes": ((6, 7, 100), (6, 7, 100), (6, 7, 100)),
+        "duration_ticks": 300,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": 550,
+        "loop": True,
+        "wave_base": 273040,
+        "wave_length": 12492,
+        "loop_start": 18880,
+        "loop_end": 22044,
+        "expected_retained_samples": 22208,
+        "hardware_loop": {
+            "alignment_tail_samples": 4,
+            "loop_point_words": 1,
+            "guard_nibbles": (),
+            # Read off the source by the generator's own seed check; a wrong
+            # value fails with the measured pair rather than shipping silently.
+            "ima_predictor": 5401,
+            "ima_index": 43,
+        },
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "1157bb10b51cd2ff8e356bb88f6b03aba6857e6ef067134cee1d6abe5f308a30",
+        "render_program_sha256":
+            "1157bb10b51cd2ff8e356bb88f6b03aba6857e6ef067134cee1d6abe5f308a30",
+        "articulation_program_sha256":
+            "318f72b9338b63745e96aedc4562d2629d38bf5dd7599567ca1d5e16fec963d5",
+        "fidelity_debt": (),
     },
 )
 
@@ -2218,8 +2303,13 @@ def validate_articulation(program: list[list], selector: dict) -> None:
         raise ValueError(
             f"FGM {selector['id']} trigger changed: {triggers}")
     pitches = [int(row[1]) for row in program if row[0] == "pitch"]
-    if (not pitches or
-            pitches[0] != selector["articulation_pitch_cents"]):
+    # An articulation with NO `pitch` op applies no pitch offset, which is zero
+    # cents -- not a malformed program. This used to require at least one, and
+    # 96 GroundGrind2 (which a live match asks for six times a minute) has none,
+    # so it was rejected as written and stayed silent. `--derive` reports its
+    # articulation_pitch_cents as null for the same reason; declare 0.
+    effective_pitch = pitches[0] if pitches else 0
+    if effective_pitch != selector["articulation_pitch_cents"]:
         raise ValueError(f"FGM {selector['id']} pitch changed: {pitches}")
     if expected_hash is None:
         unsupported = {row[0] for row in program} - {
@@ -3455,9 +3545,21 @@ def render_source_loop(pcm: list[int], loop_start: int, loop_end: int,
     return rendered
 
 
+def hardware_loop_spec(selector: dict) -> dict:
+    """Per-cue DS hardware-repeat constants.
+
+    These were WHISPY_WIND_* module constants while 285 was the only hardware
+    loop, which is why BUGS.md kept describing a second one as "machinery that
+    needs generalising". It is five numbers per cue, and four of the five are
+    the same for every cue on this path.
+    """
+    return selector["hardware_loop"]
+
+
 def render_hardware_loop(pcm: list[int],
                          selector: dict) -> tuple[list[int], int, int]:
     """Slice the source loop into a word-aligned DS PNT/LEN loop body."""
+    spec = hardware_loop_spec(selector)
     loop_start = selector["loop_start"]
     loop_end = selector["loop_end"]
     if not (0 < loop_start < loop_end <= len(pcm)):
@@ -3465,7 +3567,7 @@ def render_hardware_loop(pcm: list[int],
     if len(pcm) != selector["expected_retained_samples"]:
         raise ValueError(
             f"FGM {selector['id']} retained-sample proof changed: {len(pcm)}")
-    body = list(pcm[loop_start:loop_end + WHISPY_WIND_ALIGNMENT_TAIL_SAMPLES])
+    body = list(pcm[loop_start:loop_end + spec["alignment_tail_samples"]])
     # One DS word holds eight nibbles, and LEN counts whole words after PNT.
     if len(body) & 7:
         raise ValueError(
@@ -3474,8 +3576,8 @@ def render_hardware_loop(pcm: list[int],
     # decoder is predicting from is the one immediately before loop_start.
     predictor = int(pcm[loop_start - 1])
     index = initial_ima_index([predictor, body[0]])
-    if (predictor != WHISPY_WIND_IMA_PREDICTOR or
-            index != WHISPY_WIND_IMA_INDEX):
+    if (predictor != spec["ima_predictor"] or
+            index != spec["ima_index"]):
         raise ValueError(
             f"FGM {selector['id']} loop IMA seed changed: "
             f"predictor={predictor} index={index}")
@@ -4705,13 +4807,13 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "old_hardware_loop_decoded_clipped_sample_count": sum(
                     abs(value) >= 32767 for value in old_loop_decoded),
             })
-        elif selector["id"] == WHISPY_WIND_ID:
+        elif "hardware_loop" in selector:
             runtime_pcm, loop_predictor, loop_index = render_hardware_loop(
                 pcm, selector)
             acoustic_oracle = {}
             loop_strategy = "source_loop_ds_hardware"
             flags = 1
-            loop_point_words = WHISPY_WIND_LOOP_POINT_WORDS
+            loop_point_words = selector["hardware_loop"]["loop_point_words"]
             packed_envelope = envelope[1:]
             volume = envelope[0]["ds_volume"]
             trim = {
@@ -4762,18 +4864,18 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             packed_envelope = envelope[1:]
             volume = envelope[0]["ds_volume"]
             old_loop_ima = b""
-        if selector["id"] == WHISPY_WIND_ID:
+        if "hardware_loop" in selector:
             # A looped entry cannot spend its first sample on the IMA header:
             # the header is outside PNT, so a sample parked there would play
             # once and never repeat.  Every sample is a nibble instead, seeded
             # from the state the DS latches at PNT.
+            guard_nibbles = tuple(selector["hardware_loop"]["guard_nibbles"])
             ima = ima_encode_loop_body(runtime_pcm, loop_predictor, loop_index,
-                                       WHISPY_WIND_GUARD_NIBBLES)
+                                       guard_nibbles)
             decoded_ima = ima_decode_nibbles(
                 ima, len(runtime_pcm), loop_point_words * 4)
             acoustic_oracle.update(ima_repeat_oracle(
-                ima, loop_point_words, len(runtime_pcm),
-                WHISPY_WIND_GUARD_NIBBLES))
+                ima, loop_point_words, len(runtime_pcm), guard_nibbles))
         else:
             ima = ima_encode(runtime_pcm)
             decoded_ima = ima_decode(ima, len(runtime_pcm))
@@ -4878,16 +4980,16 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "ds_ima_header_predictor": struct.unpack_from("<h", ima, 0)[0],
             "ds_ima_header_index": ima[2],
             "ds_ima_loop_body_nibbles": (
-                len(runtime_pcm) if selector["id"] == WHISPY_WIND_ID else 0),
+                len(runtime_pcm) if "hardware_loop" in selector else 0),
             "ds_ima_guard_nibbles": (
-                list(WHISPY_WIND_GUARD_NIBBLES)
-                if selector["id"] == WHISPY_WIND_ID else []),
+                list(selector["hardware_loop"]["guard_nibbles"])
+                if "hardware_loop" in selector else []),
             "ds_initial_prefix_samples_dropped": (
                 selector["loop_start"]
-                if selector["id"] == WHISPY_WIND_ID else 0),
+                if "hardware_loop" in selector else 0),
             "ds_trailing_samples_dropped": (
                 len(pcm) - selector["loop_start"] - len(runtime_pcm)
-                if selector["id"] == WHISPY_WIND_ID else 0),
+                if "hardware_loop" in selector else 0),
             "ds_sample_count": len(runtime_pcm),
             "net_pitch_cents": net_pitch_cents,
             "ds_frequency_hz": frequency,

@@ -33,7 +33,10 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     621,
     # The reactive crowd: Fox/Mario chants, GaspL/M/S, Cheer, Amazed,
     # GaspClap, DamageL/M/S -- the eleven ft/ftpublic.c reaches in a P1 match.
-    605, 609, 615, 616, 617, 618, 619, 620, 622, 623, 625)
+    605, 609, 615, 616, 617, 618, 619, 620, 622, 623, 625,
+    # The miss ring's two loudest survivors: the ground grind and the altitude
+    # warning, the second DS hardware loop in the pack.
+    96, 153)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -41,15 +44,15 @@ if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
 if (([int]$metadata.format_version -ne 4) -or
     ([int]$metadata.entry_bytes -ne 32) -or
     ([int]$metadata.envelope_point_bytes -ne 4) -or
-    ([int64]$metadata.resident_bytes -ne 672528) -or
+    ([int64]$metadata.resident_bytes -ne 680712) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines for no runtime
     # reason; the bound that is real is the 53,248-byte cache-slot gate below.
     ([int64]$metadata.pack_limit_bytes -ne 786432) -or
-    ($metadata.mapping_sha256_lo -ne '0xc99abd91') -or
+    ($metadata.mapping_sha256_lo -ne '0x839032c3') -or
     ($metadata.pack_sha256 -ne
-        '54114b37297463bc2bf31ba48331aad6ce3400fe4e568417527508ffd5f759ad')) {
+        '39d59d6d3ce1ee20b1d295fb6b6e561d83e6a9c411b840f364a32597ad5319ca')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -89,10 +92,11 @@ foreach ($id in @(154,40,38,37,34,32,31)) {
         throw "FGM $id did not ship its fused source fork."
     }
 }
-# BUGS.md #3.  Whispy's gust is the only DS hardware loop in the pack, and it
-# is the whole reason the hazard sounds for its full 470 ticks instead of
-# puffing once.  Losing the loop flag was the original defect, so pin the flag,
-# the PNT/LEN geometry, and the three DS repeat proofs together.
+# BUGS.md #3.  Whispy's gust was the FIRST DS hardware loop in the pack (153
+# AltitudeWarn is the second, pinned below), and it is the whole reason the
+# hazard sounds for its full 470 ticks instead of puffing once.  Losing the
+# loop flag was the original defect, so pin the flag, the PNT/LEN geometry,
+# and the three DS repeat proofs together.
 $fgm285 = $metadata.entries | Where-Object { [int]$_.id -eq 285 }
 $oracle285 = $fgm285.acoustic_oracle
 if (($fgm285.ds_loop_strategy -ne 'source_loop_ds_hardware') -or
@@ -110,6 +114,29 @@ if (($fgm285.ds_loop_strategy -ne 'source_loop_ds_hardware') -or
     ($oracle285.ds_repeat_oracle_wrong_len_detected -ne $true)) {
     throw 'FGM 285 lost its proven DS hardware wind loop.'
 }
+# 153 AltitudeWarn, the second hardware loop and the cue that turned the
+# WHISPY_* module constants into a per-cue spec. Its schedule (300 ticks,
+# 1.725 s) outlives its sample (22,208 at 29,344 Hz, 0.757 s), so losing the
+# loop flag here cuts the warning off two thirds of the way through -- exactly
+# 285's failure, on a cue the owner would hear every time a fighter drops
+# below the stage.
+$fgm153 = $metadata.entries | Where-Object { [int]$_.id -eq 153 }
+$oracle153 = $fgm153.acoustic_oracle
+if (($fgm153.ds_loop_strategy -ne 'source_loop_ds_hardware') -or
+    ([int]$fgm153.ds_loop_flag -ne 1) -or
+    ([int]$fgm153.ds_loop_point_words -ne 1) -or
+    ([int]$fgm153.ds_loop_length_words -ne 396) -or
+    ([int]$fgm153.ds_ima_loop_body_nibbles -ne 3168) -or
+    (@($fgm153.ds_ima_guard_nibbles).Count -ne 0) -or
+    ([int]$fgm153.ds_ima_header_predictor -ne 5401) -or
+    ([int]$fgm153.ds_ima_header_index -ne 43) -or
+    ($oracle153.ds_repeat_oracle_model -ne
+        'header_once_pnt_latch_len_restore') -or
+    ($oracle153.ds_repeat_oracle_missing_restore_detected -ne $true) -or
+    ($oracle153.ds_repeat_oracle_wrong_pnt_detected -ne $true) -or
+    ($oracle153.ds_repeat_oracle_wrong_len_detected -ne $true)) {
+    throw 'FGM 153 lost its DS hardware altitude-warning loop.'
+}
 $fgm218 = $metadata.entries | Where-Object { [int]$_.id -eq 218 }
 if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
     ([int]$metadata.attack_activation_qualification.fgm_218_feasibility.source_effective_fx_mix -ne 25)) {
@@ -118,9 +145,9 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 75u',
-    '#define NDS_AUDIO_FGM_PACK_BYTES 672528u',
-    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xc99abd91u',
+    '#define NDS_AUDIO_FGM_ENTRY_COUNT 77u',
+    '#define NDS_AUDIO_FGM_PACK_BYTES 680712u',
+    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x839032c3u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }
@@ -136,7 +163,8 @@ foreach ($voice in @('nSYAudioVoiceAnnounceTimeUp', 'nSYAudioVoiceAnnounceGameSe
     'nSYAudioVoicePublicGaspS', 'nSYAudioVoicePublicCheer',
     'nSYAudioVoicePublicAmazed', 'nSYAudioVoicePublicGaspClap',
     'nSYAudioVoicePublicDamageL', 'nSYAudioVoicePublicDamageM',
-    'nSYAudioVoicePublicDamageS')) {
+    'nSYAudioVoicePublicDamageS', 'nSYAudioFGMGroundGrind2',
+    'nSYAudioFGMAltitudeWarn')) {
     if (-not $runtime.Contains("case ${voice}:")) {
         throw "Runtime allowlist does not admit the packed cue $voice."
     }
@@ -147,7 +175,7 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     if (-not $runtime.Contains($token)) { throw "Runtime cache lost: $token" }
 }
 
-Write-Output (('Audio FGM full coverage passed: 75 IDs, 0 exclusions, ' +
-    '672528-byte pack, 204800-byte cache, seven fused fork repairs, ' +
+Write-Output (('Audio FGM full coverage passed: 77 IDs, 0 exclusions, ' +
+    '680712-byte pack, 204800-byte cache, seven fused fork repairs, ' +
     'FGM 285 wind on a proven DS hardware loop, seven announcer lines, ' +
     'PublicWin 621 on PublicExcited''s AOT loop-and-ramp render.'))

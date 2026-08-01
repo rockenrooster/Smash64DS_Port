@@ -54,6 +54,7 @@ typedef enum gmFGMID
     nSYAudioFGMFoxLanding = 74,
     nSYAudioFGMMarioLanding = 77,
     nSYAudioFGMNessLanding = 78,
+    nSYAudioFGMGroundGrind2 = 96,
     nSYAudioFGMGroundGrind3 = 98,
     nSYAudioFGMNessJump = 100,
     nSYAudioFGMMarioDash = 121,

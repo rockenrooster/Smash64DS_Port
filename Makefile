@@ -642,10 +642,17 @@ NDS_R2_PARTICLE_RUNTIME ?= 0
 # measurement, and it comes out with the commit that wires L7 in or drops it.
 # R2-07 particle DRAW, separate from the runtime flag above because the
 # interpreter is proven and the draw is not. At 1 the atlas is bound and
-# camera-facing quads are emitted; the first build of it wedged the geometry
-# engine (GXSTAT=0e008900, geometry-busy-forever, PC parked in armWaitForIrq),
-# so it stays off until that is understood. NDS_R2_PARTICLE_RUNTIME=1 alone
-# keeps its measured NO-FREEZE full match.
+# camera-facing quads are emitted.
+#
+# Two defects are closed and recorded at their seams rather than here: the
+# first build wedged the geometry engine (GXSTAT=0e008900) on a `glEnd()` the
+# stream must not carry -- check-gbi-decode-fixtures.ps1 pins that count at 1 --
+# and the second aborted at the GO countdown because the atlas took the largest
+# free texture-VRAM run before the interface asked for one
+# (ndsSCVSBattleBeginSceneTextures). Still 0 by default until a tick-HUD A/B
+# prices the draw against the P95 gate; NDS_R2_PARTICLE_RUNTIME=1 alone is
+# measured clean (NO-FREEZE, ViolationCount 0, stage builds 2, 14 scripts,
+# 138,274 visible particles, pools 41/64 and 8/12).
 NDS_R2_PARTICLE_DRAW ?= 0
 NDS_R2_COLLISION_L7_ORACLE ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
