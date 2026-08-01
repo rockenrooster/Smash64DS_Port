@@ -38,6 +38,22 @@ decides hits. **The `#define` seam CANNOT reach it** — it renames the decomp d
 call sites together (why L9 worked and `func_ovl2_800ED490` will not); convert the `FTParts` matrix
 cluster (~110 sites) or replace the entry points wholesale. **L8 REFUTED UNBUILT**, folds into L7.
 
+## R2-07 L7 — arithmetic CLEARED on the real domain; only the wiring is left (2026-07-31)
+
+The SwitchPlan's named next action for R2-07, and its blocker was never the code. Measured with
+`NDS_R2_COLLISION_L7_ORACLE=1` (read-only, default off, 460 samples over one natural mode-163 match):
+**real joint scale 1.1138–1.1199 — a single scale spanning 0.006** — and deviation **0.00049 / 0.00122 /
+0.00513** world units at probe offsets of 1/4/16 against the **0.0200** bound, **0 over-bound, 0 singular**.
+So the 0.25–2.00 sweep that reads 0.427738 is not a domain SSB64 visits, the gated 0.90–1.10 sweep is
+centred slightly low (move it to 1.11–1.12), and the synthetic figure is **pessimistic** by 3×.
+**Two traps recorded so the next cycle does not hit them.** The board's named hook,
+`sNdsFighterPartsPool`, **is not linked in the shipping-shaped build** — 0 bytes in `build-tickhud`,
+33,152 the instant anything references it, because `ndsFighterPartsSyncDObj` is eliminated there too. Fill
+it and you fill an array nothing populates. And 33,152 bytes is **eight arena steps**: the first oracle
+draft dropped the battle under the same 25 KiB GObj latch the particle runtime hits, *by adding an
+instrument*. Walk `gGCCommonLinks[nGCCommonLinkIDFighter]` → `gcGetTreeDObjNext` → `ftGetParts` (+2,260
+bytes) and **run `mapdiff` on any new lab flag before running the ROM**.
+
 ## OPEN P1 #2 — `BUGS.md` is now entirely particles, VFX and audio cues, and ALL of it is P1
 
 Owner's phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and are required to be fixed
