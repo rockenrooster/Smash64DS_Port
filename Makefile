@@ -54,6 +54,37 @@ endif
 NDS_PUBLISHED_TARGETS := smash64ds smash64ds-battle-playable-hwtri
 override NDS_PUBLISH_USER_ROM := $(if $(filter $(TARGET),$(NDS_PUBLISHED_TARGETS)),1,0)
 NDS_OUTPUT_ROOT ?= $(if $(filter 1,$(NDS_PUBLISH_USER_ROM)),$(PROJECT_ROOT),$(PROJECT_ROOT)/$(BUILD))
+# A PUBLISHED TARGET NAME PUBLISHES, whatever BUILD says. That is intended --
+# the lab and the published ROM must be the same program -- but it means a lab
+# build with flags on leaves ITS ROM at the path the owner double-clicks, and
+# the only symptom is a game that behaves nothing like the published one. It
+# has cost a real "P95 regressed hard before GO" report (2026-08-01: the root
+# held an 11,755,520-byte both-CPU particle-draw build instead of the
+# 11,557,888-byte published one). Say so at build time; rebuild the plain
+# target afterwards.
+ifeq ($(NDS_PUBLISH_USER_ROM),1)
+ifneq ($(BUILD),build)
+$(info NOTE: BUILD=$(BUILD) is writing the PUBLISHED ROM $(TARGET).nds into the project root.)
+$(info       Run `make TARGET=$(TARGET)` with no overrides afterwards, or the root ROM stays this lab build.)
+# AND THE .elf/.nds PAIR AT THAT PATH IS SHARED BETWEEN BUILD DIRECTORIES, which
+# is the sharper edge: make only tracks each directory's own objects, so after a
+# published build overwrites the pair, re-running the LAB build is a NO-OP -- its
+# objects are still up to date relative to files that are no longer its output.
+# The harnesses then read whichever pair was written last, silently. Measured:
+# a soak reported "this ROM does not define 64 counter(s)" for the very build
+# that defines them.
+#
+# FORCING THE RECIPE HERE DOES NOT WORK, and both shapes were tried. A force on
+# the .nds alone relinks the ROM from the STALE .elf (a ROM that is neither
+# build); a force on the .elf pulls the link into the top-level make, which does
+# not have the sub-make's working directory and dies with "cannot open linker
+# script file nds_task32_draw_hot.inc". The fix belongs in the harness -- resolve
+# a per-build .elf -- not at this seam.
+#
+# Until then: run a lab build IMMEDIATELY before its measurement, and if a
+# published build has intervened, `rm` the root .elf/.nds pair first.
+endif
+endif
 ifeq ($(NDS_PUBLISH_USER_ROM),0)
 ifeq ($(abspath $(NDS_OUTPUT_ROOT)),$(abspath $(PROJECT_ROOT)))
 $(error Non-published target "$(TARGET)" may not write into the project root)

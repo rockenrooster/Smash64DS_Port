@@ -1,5 +1,10 @@
 param(
-    [int]$AgentsMaxLines = 150,
+    # 150 -> 160 (owner, 2026-08-01), for the owner's own addition to the
+    # efficiency guidance -- prefer larger slices of work, do not soak 120 s for
+    # a 60 s match, do not spend a ROM build on a change that does not need one.
+    # Raised rather than trimmed: the cap exists to stop AGENTS.md accumulating
+    # derived detail, not to bound what the owner puts in it.
+    [int]$AgentsMaxLines = 160,
     [int]$AgentsMaxSectionLines = 45,
     # Raised from 150 to 200 by the owner, 2026-07-31.
     [int]$HandoffMaxLines = 200

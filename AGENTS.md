@@ -128,12 +128,17 @@ concurrent builds corrupt each other's generated headers whatever `-j` says.
 `make NDS_JOBS=1` forces serial for bisecting a generator ordering bug.
 
 ## Continuous Improvement
-
+I hate wasting time.
 Every new finding, mistake, or inefficiency must improve the next cycle. Fix its
 root cause and update the existing shared code, helper, checker, or owning doc that
 prevents recurrence. If that is not safe and in scope, record one concise actionable
 item in the owning doc; do not detour into unrelated cleanup. This applies to every
-aspect of the project, not just code and the end goal — hygiene and docs included.
+aspect of the project, not just code and the end goal — hygiene and docs included. 
+An efficient project workflow gets the goal done faster with less wasted effort, time, and tokens.
+Prefer larger slices of work.
+Examples of inefficiencies:
+-Don't wait 120 seconds for a 60 second match timer.
+-Don't build a ROM just to test the smallest code changes (unless its for fixing bugs).
 
 ## Current Boundary
 
