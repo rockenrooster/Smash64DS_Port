@@ -121,6 +121,9 @@ FULL_COVERAGE_IDS = (
     # The miss ring's loudest survivor, the altitude warning, and the grind --
     # all three cues a natural match asked for and did not get on 2026-08-01.
     96, 153, 85,
+    # And the five only a BOTH-CPU stress match reaches: dodge, shield on/off,
+    # pause, and Fox's ledge teeter.
+    11, 13, 14, 278, 369,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -130,6 +133,9 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # field -- the same `source_rate_above_u16` blocker 189/190/219 carry, and
     # the same answer: bake the note schedule into the samples and store 32,000.
     85,
+    # Escape, GuardOn, GuardOff, GamePause, FoxOttotto. All five carry multi-note
+    # schedules with no forks, which is exactly what this render is for.
+    11, 13, 14, 278, 369,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
@@ -1648,6 +1654,137 @@ SELECTED = (
             "dd8ae3a7e2bb5ab9c5ee7dbd470ec9d3405093639dc15da4bfde509004901b81",
         "articulation_program_sha256":
             "e4b6796c4107d12978ed8cad07addb9864720420c84a12ecda8a794daf7cffd6",
+        "fidelity_debt": (),
+    },
+    # The five a BOTH-CPU stress match asks for that a single-CPU one never
+    # reached, caught on the 2026-08-01 crowd-actor soak's miss ring: Escape x3,
+    # GuardOn x2, GuardOff, GamePause and Fox's ledge teeter. Every one is core
+    # P1 -- dodging, shielding, pausing, and the voice Fox makes on a ledge --
+    # and every one is bounded with no fork voices, so all five take the same
+    # full-program AOT render 85 does and need no new machinery.
+    {
+        "id": 11,
+        "name": "nSYAudioFGMEscape",
+        "kind": "motion",
+        "articulation": 54,
+        "sound": 5,
+        "notes": ((12, 7, 30), (13, 7, 40), (12, 7, 20)),
+        "duration_ticks": 90,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -100,
+        "loop": True,
+        "wave_base": 45608,
+        "wave_length": 21880,
+        "loop_start": 89,
+        "loop_end": 38880,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "b4c2cc3fc96b9ff5a632db8e4113429a389b28d025afba9ceb379c327d434fe5",
+        "render_program_sha256":
+            "b4c2cc3fc96b9ff5a632db8e4113429a389b28d025afba9ceb379c327d434fe5",
+        "articulation_program_sha256":
+            "ef251b927a0ce7c98e1e450689e38b024c43e8e261f83d76ba7b46aea4a39479",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 13,
+        "name": "nSYAudioFGMGuardOn",
+        "kind": "motion",
+        "articulation": 176,
+        "sound": 72,
+        "notes": ((18, 7, 3), (6, 7, 2), (25, 7, 3), (11, 7, 3), (23, 7, 5)),
+        "duration_ticks": 16,
+        "ucd_volume": 180,
+        "articulation_pitch_cents": -50,
+        "loop": False,
+        "wave_base": 694184,
+        "wave_length": 9820,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "49955ac7eb03e5460f9eeaa46777d71cd64afde745527f88d188b0c605a8ca9b",
+        "render_program_sha256":
+            "49955ac7eb03e5460f9eeaa46777d71cd64afde745527f88d188b0c605a8ca9b",
+        "articulation_program_sha256":
+            "a25919a3f06f4109d0788f13a8164eedef404320c5f1d68974b6fa303d19755f",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 14,
+        "name": "nSYAudioFGMGuardOff",
+        "kind": "motion",
+        "articulation": 177,
+        "sound": 72,
+        "notes": ((8, 7, 6), (6, 7, 5)),
+        "duration_ticks": 11,
+        "ucd_volume": 220,
+        "articulation_pitch_cents": -1199,
+        "loop": False,
+        "wave_base": 694184,
+        "wave_length": 9820,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "c5b218838808504400292a22724a45d608defbeebd3efb65d06b1bd875db1423",
+        "render_program_sha256":
+            "c5b218838808504400292a22724a45d608defbeebd3efb65d06b1bd875db1423",
+        "articulation_program_sha256":
+            "cd4f49149e6cf37bf4f85dd0cdb2fa346893852bb0078cce2f8b957825a490c4",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 278,
+        "name": "nSYAudioFGMGamePause",
+        "kind": "motion",
+        "articulation": 17,
+        "sound": 10,
+        "notes": ((0, 7, 1), (1, 7, 7), (8, 7, 6), (24, 7, 7), (12, 7, 20)),
+        "duration_ticks": 41,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "895a7c6ab79cdd58f0c1239771e510384113e83ff4b8f09dc8028373bc043760",
+        "render_program_sha256":
+            "895a7c6ab79cdd58f0c1239771e510384113e83ff4b8f09dc8028373bc043760",
+        "articulation_program_sha256":
+            "f014df4f7f920736f102d2844f1a79c4d86896f0e5d9b6ba7fb786c1765a3f0a",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 369,
+        "name": "nSYAudioVoiceFoxOttotto",
+        "kind": "voice",
+        "articulation": 227,
+        "sound": 108,
+        "notes": ((13, 7, 20), (13, 7, 25)),
+        "duration_ticks": 45,
+        "ucd_volume": 200,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 922072,
+        "wave_length": 2116,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "936d76e4c3a6aefa7d96fe841e0022ea92cce2d9f61a4123ba72327b04751a68",
+        "render_program_sha256":
+            "936d76e4c3a6aefa7d96fe841e0022ea92cce2d9f61a4123ba72327b04751a68",
+        "articulation_program_sha256":
+            "eff2f55d748352dca4be41a0377216dba9f6ab9a65b68438f09913a514f3a8e3",
         "fidelity_debt": (),
     },
 )
@@ -3280,11 +3417,29 @@ def _fgm_relative_pitch(value: int, current: int) -> int:
 
 
 def _fgm_modulator_value(state: dict, sine_table: list[int]) -> float:
+    """One LFO tick, transcribed from the engine's own switch.
+
+    `decomp/BattleShip-main/decomp/src/libultra/n_audio/n_env.c:4090-4200`,
+    whose fields map to this dict as `_0x8` period, `_0xC` amplitude, `_0x10`
+    offset, `_0x14` phase.
+
+    Shapes 4, 5 and 8 are the sample-and-hold / random-lerp family and call
+    `randFloat1`/`randFloat2`; they are not reproducible offline and stay
+    unsupported. Everything else is deterministic.
+    """
     modulator = state["modulator"]
     shape = int(modulator["shape"])
     period = f32(modulator["period"])
     phase = f32(state["phase"] + f32(1.0))
-    if period < phase:
+    # The one-shot ramps CLAMP where the periodic shapes WRAP -- n_env.c:4158
+    # and :4172 both assign `phase = period` past the end rather than
+    # subtracting it, which is the entire difference between shape 6 and
+    # shape 2, and between shape 7 and shape 3. Their value expressions are
+    # identical to the periodic pair's.
+    if shape in (6, 7):
+        if period < phase:
+            phase = period
+    elif period < phase:
         phase = f32(phase - period)
     state["phase"] = phase
     amplitude = f32(modulator["amplitude"])
@@ -3297,9 +3452,9 @@ def _fgm_modulator_value(state: dict, sine_table: list[int]) -> float:
         return f32(f32(angle * amplitude) + offset)
     if shape == 1:
         return amplitude if f32(period / f32(2.0)) < phase else offset
-    if shape == 2:
+    if shape in (2, 6):
         return f32(f32(amplitude * phase) / period + offset)
-    if shape == 3:
+    if shape in (3, 7):
         return f32(f32(amplitude * f32(period - phase)) / period + offset)
     raise ValueError(f"unsupported deterministic FGM modulator shape {shape}")
 

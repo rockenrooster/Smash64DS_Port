@@ -297,6 +297,14 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMGroundGrind2:
     case nSYAudioFGMAltitudeWarn:
     case nSYAudioFGMUnkGrind4:
+    /* The five only a BOTH-CPU stress match reaches, all core P1 gameplay:
+     * the dodge, the shield going up and down, the pause, and the noise Fox
+     * makes teetering on a ledge. Same full-program AOT render as 85. */
+    case nSYAudioFGMEscape:
+    case nSYAudioFGMGuardOn:
+    case nSYAudioFGMGuardOff:
+    case nSYAudioFGMGamePause:
+    case nSYAudioVoiceFoxOttotto:
         return TRUE;
     default:
         return FALSE;

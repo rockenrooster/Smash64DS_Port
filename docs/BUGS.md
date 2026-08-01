@@ -177,6 +177,28 @@ These bugs should be fixed for P1 delivery.
     shape never has to be interpreted, and only for a cue with no forks; with
     forks it stays a hard error, because there the modulation is real.
 
+-FIXED (2026-08-01, needs an ear check) Five more cues, and these are the ones
+  a player would notice first: **11 `Escape`** (the dodge) x3, **13 `GuardOn`**
+  x2 and **14 `GuardOff`** (the shield going up and down), **278 `GamePause`**,
+  and **369 `FoxOttotto`** (the noise Fox makes teetering on a ledge). All five
+  were silent.
+  They were invisible until now because **every previous miss-ring read was on a
+  SINGLE-CPU soak**, where Mario stands still: nobody dodges, nobody shields,
+  nobody teeters. The first both-CPU stress soak (2026-08-01, crowd-actor ROM,
+  full match to Results) reported them immediately -- 198 FGM play calls, 190
+  supported, 8 unsupported, and those 8 are exactly these five ids.
+  All five are bounded multi-note schedules with no fork voices, so all five
+  take the same full-program AOT render 85 does. Pack 682,036 -> 700,892 B,
+  78 -> 83 entries.
+  One piece of machinery was genuinely missing and is now source-transcribed:
+  **modulator shapes 6 and 7** (`ramp_up_oneshot` / `ramp_down_oneshot`), which
+  FGM 11's articulation spawns. They are shapes 2 and 3 with the phase CLAMPED
+  at the period instead of wrapped -- `n_env.c:4158` and `:4172` both assign
+  `phase = period` past the end rather than subtracting it, and the value
+  expressions are identical to the periodic pair's. Shapes 4, 5 and 8 remain
+  unsupported on purpose: they call `randFloat1`/`randFloat2` and are not
+  reproducible offline.
+
 -Wind hazard not working, (SFX, VFX, gameplay effects)  [gameplay+SFX FIXED]
   Gameplay FIXED: ftParamSetVelPush was a counter-only stub that dropped the
   push vector on the floor, so Whispy's gust had no effect at all. It now does

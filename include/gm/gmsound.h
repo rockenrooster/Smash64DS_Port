@@ -54,6 +54,12 @@ typedef enum gmFGMID
     nSYAudioFGMFoxLanding = 74,
     nSYAudioFGMMarioLanding = 77,
     nSYAudioFGMNessLanding = 78,
+    /* Core P1 gameplay cues a BOTH-CPU stress match asks for and a single-CPU
+     * one never reached: the dodge, the shield going up and down, the pause. */
+    nSYAudioFGMEscape = 11,
+    nSYAudioFGMGuardOn = 13,
+    nSYAudioFGMGuardOff = 14,
+    nSYAudioFGMGamePause = 278,
     nSYAudioFGMUnkGrind4 = 85,
     nSYAudioFGMGroundGrind2 = 96,
     nSYAudioFGMGroundGrind3 = 98,
@@ -114,6 +120,8 @@ typedef enum gmVoiceID
     nSYAudioVoiceFoxJumpAerial = 363,
     nSYAudioVoiceFoxEscape = 364,
     nSYAudioVoiceFoxSelected = 365,
+    /* The teeter on a ledge edge. */
+    nSYAudioVoiceFoxOttotto = 369,
     nSYAudioVoiceFoxWin = 368,
     nSYAudioVoiceFoxDead = 370,
     nSYAudioVoiceFoxSmash1 = 372,
