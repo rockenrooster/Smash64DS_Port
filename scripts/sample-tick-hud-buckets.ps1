@@ -122,6 +122,19 @@ $PerFrameGlobals = @($PerFrameGlobals |
     ForEach-Object { $_ -split ',' } |
     ForEach-Object { $_.Trim() } |
     Where-Object { $_ -ne '' })
+# -RingDump reads ONE ring of bucket words out of the ROM at a single stop
+# ($ringBytes = bucketNames * 128 * 4). Per-frame globals are not in that ring
+# -- they ride the per-frame printf, which -RingDump does not execute -- so the
+# combination writes a rows CSV whose extra columns are all EMPTY, and exits 0.
+# That happened on 2026-08-01 and cost a full 128-frame run plus the rebuild
+# that preceded it; the artifact looked completely normal until the columns were
+# read. Refuse it instead of producing a plausible empty result.
+if ($RingDump -and ($PerFrameGlobals.Count -ne 0)) {
+    throw ('-PerFrameGlobals cannot be combined with -RingDump: the ring holds ' +
+        'bucket words only, so every requested column would be written empty. ' +
+        'Drop -RingDump to take one stop per frame (raise -TimeoutSeconds; 128 ' +
+        'stops does not fit the 900 s default).')
+}
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $target = 'smash64ds-battle-playable-tickhud-hwtri'
@@ -194,8 +207,16 @@ try {
                 # that (animLoad is index 13 of the fallback reason array).
                 # A typo in the base is still caught, which is what the guard is
                 # for; a bad subscript is a GDB error, not a silent zero.
+                #
+                # STRUCT MEMBERS TOO, for the identical reason and because the
+                # subscript case alone was not enough: the collision diagnostics
+                # are one struct (`gNdsCollisionRuntimeDiagnostics`) with ~30
+                # fields, so every per-frame collision read is `base.field`,
+                # which is a legal GDB expression and never a symbol name. On
+                # 2026-08-01 that rejected a whole 128-frame attribution run
+                # after its ROM had already been built. Strip both suffixes.
                 $missing = @($pair.v | Where-Object {
-                    -not $symbols.Contains(($_ -replace '\[.*$', '')) })
+                    -not $symbols.Contains(($_ -replace '[\[.].*$', '')) })
                 if ($missing.Count -ne 0) {
                     throw ("$($pair.n) names not defined in $([System.IO.Path]::GetFileName($elf)): " +
                         "$($missing -join ', '). A name that exists but is never written reads 0, " +

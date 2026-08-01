@@ -1,3 +1,55 @@
+> **CORRECTIONS, 2026-08-01.** Both reviews below are kept verbatim as dated
+> reviews. Four of their statements have since been measured false, and a reader
+> who acts on them will waste a build:
+>
+> 1. **Review 1's hierarchy table ranks "L7 complete fixed-point collision --
+>    very high confidence, gate-closing".** That leaf conversion was wired,
+>    measured and reverted: +534 cycles/frame won in `SRC`, 6,481 lost in
+>    `FTR`+`STG`. Review 2 already says so; Review 1 was never updated.
+> 2. **Both baselines (1,208,960 / 88,960 gap) are stale twice over** -- taken
+>    particles-off AND with `ifCommonSetMaxNumGObj` holding the GObj pool capped
+>    for the whole match. The live figure is **WORK-H P95 1,257,280, gap
+>    137,280** (`artifacts/performance/r207-baseline-2026-08-01-nocap-128.json`).
+> 3. **Review 2's "Do not reopen" list contains a false entry:** *"Particle VRAM
+>    as the blocker; actual natural use was two textures/1,280 bytes."* That was
+>    read off a SINGLE-CPU mask. The both-CPU mask is `0x08400007` -- five
+>    textures -- and atlas admission had genuinely evicted a live one, costing
+>    **127,989 misses in one match**. Coverage is now measured clean (zero misses
+>    over 560,419 quads), but the entry as written says do not look at the thing
+>    that was broken.
+> 4. **Review 2's Phase 0 and Phase 1 are DONE** (2026-08-01): the particle draw
+>    seam, atlas, Dream Land's bank, and the full-content baseline. Start at the
+>    Phase 1 attribution lane, whose first result is below.
+>
+> **Phase 1 attribution lane, first run** (`r207-attrib-2026-08-01-128.csv`, 127
+> frames, per-frame stops, 19 over-gate / 108 clean):
+>
+> | per-frame counter | clean mean | over mean | % frames nonzero (clean/over) | r vs WORK-H |
+> |---|---:|---:|---|---:|
+> | particle quads emitted | 0.01 | 0.21 | 0.9% / 15.8% | +0.327 |
+> | particle structs live | 0.01 | 0.21 | 0.9% / 21.1% | +0.366 |
+> | weapon DObj submits | 0.18 | 0.32 | 17.6% / 31.6% | +0.234 |
+> | asset loads | 0.13 | 0.11 | 11.1% / 10.5% | -0.039 |
+>
+> - **Asset loads are refuted as the tail owner for the third time**, now by
+>   occurrence rate rather than by a run total: they are *slightly less* common on
+>   over-gate frames, and P95 across no-load frames alone is 1,309,248.
+> - **Particles and weapon draws are genuine MARKERS** -- the owner's intuition
+>   that fireballs and VFX coincide with bad frames is directionally right, and
+>   they carry the only positive correlations in the set. But **0.21 quads per
+>   frame cannot be 229,280 ticks of `SRC`**. They mark the frame; they are not
+>   its cost. This is the doc's own "correlation is not attribution", confirmed.
+> - **The L6-versus-census contradiction is NOT settled by this run.** L6 called
+>   the over-gate frame a hit-detection frame with 66.2% soft float; the
+>   2026-08-01 symbol census put collision at 2.9%. The only collision counters
+>   that exist are `gNdsCollisionRuntimeDiagnostics.default_fighter_calls` and
+>   `.default_weapon_calls`, which are the **map**-collision diagnostics, and both
+>   read zero on over-gate frames. The hit-detection path has no counter at all.
+>   Adding one is the next step, and every Phase 4 recommendation depends on it.
+> - **Window caveat:** frames 439-567 are a quiet stretch -- a whole match emits
+>   110,976 quads, this window a handful. A second lane over a combat-dense window
+>   is needed before pricing particle work.
+
 ## Review 1
 Several meaningful levers remain, including one already measured large enough to close the current gate.
 
