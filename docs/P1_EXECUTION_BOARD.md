@@ -198,6 +198,12 @@ reuse **2,041**, `sGCCommonsMaxNum` **-1** (the GObj cap never fired),
 `WORK 964,800 / 1,259,136` over n:128, `VBI 2:962 3:167 4:13 5+:4 max:19` —
 screenshot `artifacts/visibility/2026-08-01_particle-draw-default-on.png`.
 
+**Latest verification profile PASSES with both flags on**, and both published
+ROMs are rebuilt from it: `smash64ds-battle-playable-hwtri.nds` (11,876,352 B)
+with its flag-identical tick-HUD sibling (11,878,400 B, parity 55 flags /
+2 allowlisted / 0 drift). `smash64ds.nds` is untouched per the owner's standing
+instruction.
+
 **Owed: the owner's eye.** The render-fidelity doctrine makes the owner the
 visual oracle, and this is the first build where the real efcommon scripts draw
 textured rather than as recoloured 16-vertex stand-ins. The pacing and
