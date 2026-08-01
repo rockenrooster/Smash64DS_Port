@@ -32,6 +32,12 @@ These bugs should be fixed for P1 delivery.
   exists and is not drawn. Both counters are on the soak's reported list now,
   so the next owner-observed miss can be attributed from the run that produced
   it rather than reproduced first.
+  The downstream half is now measurable too: `gNdsWeaponRendererSubmitCount`,
+  `...VisibleDrawCount`, `...RejectedDrawCount` and the fireball-specific
+  `gNdsWeaponRendererFireballSubmitCount` / `...FireballVisibleDrawCount` are
+  unconditional counters in the shipping build
+  (`reloc_backend_movement.c:12925`), so "a weapon exists and is not drawn"
+  separates from "a weapon was never made" without a new probe.
 
 -Results screen. VFX and SFX/BGM/FGM.  [ALL FOUR FGM cues PACKED 2026-08-01;
   VFX remains]
@@ -198,8 +204,18 @@ These bugs should be fixed for P1 delivery.
   check-audio-fgm-phase-pack.ps1 pins the flag, the PNT/LEN geometry and the
   three proofs so the loop cannot be dropped again silently.
   Latest profile green. Needs an ear check.
-  VFX still open: the same particle-bank gap as the other VFX rows below --
-  lbParticleMakeScriptID is a skipped stub.
+  VFX still open, but the stub it used to name is GONE. `NDS_R2_PARTICLE_RUNTIME`
+  and `NDS_R2_PARTICLE_DRAW` both default 1 as of 2026-08-01, so the real
+  `lbParticleMakeScriptID` from `lb/lbparticle.c` is live and textured quads are
+  emitted. What remains for *this* row specifically is that Dream Land's Pupupu
+  bank -- Whispy's leaves (script 0) and dust (script 1) -- still registers
+  EMPTY: `ndsParticleLoadEFCommonBank` covers only the common bank and every
+  other bank takes `ndsParticleRegisterEmptyBank`
+  (`battleship_lbparticle.c:705-725`), so a Pupupu script request fails closed
+  with reject reason 3 or 4. It needs the pack step extended to the grpupupu
+  bank and its texture closure admitted to the atlas -- and the atlas is at a
+  measured hard bound of 8,192 bytes, so admitting more needs a second sheet or
+  a smaller per-texture format, not a bigger sheet.
   Research (2026-07-30, Sol Max wind/particles):
   - Source contract: Whispy uses Dream Land's separate Pupupu particle bank,
     with script 0 for leaves and script 1 for dust
@@ -226,6 +242,17 @@ These bugs should be fixed for P1 delivery.
     FIXED; SFX implementation landed but acoustic acceptance is OPEN; VFX OPEN.
 
 -Correct VFX isn't played for various things (running foot dust VFX, fireball hit VFX, fox down B, shield, hard landing vfx, etc)
+  **The root cause below is HALF CLOSED as of 2026-08-01.** The original
+  particle scripts DO run now and they ARE textured: `NDS_R2_PARTICLE_RUNTIME`
+  and `NDS_R2_PARTICLE_DRAW` both default 1, the imported `lb/lbparticle.c` owns
+  `lbParticleMakeScriptID`, the common EF bank is resident, and a soak measured
+  117,937 textured quads emitted with zero atlas misses. What is NOT closed is
+  COVERAGE: the quad atlas admits **six of 31 textures** (source ids 0, 3, 9, 22,
+  27, 37 -- 7 frames, 5,376 texel bytes) because 8,192 bytes is a measured hard
+  VRAM bound, and a particle whose texture is absent draws nothing rather than
+  drawing wrong. `gNdsParticleQuadMissCount` is what names the gap per effect,
+  and it is on the soak's reported list. The original text of this row follows,
+  and its first two sentences are now historical:
   Root cause, measured: every named effect does spawn -- the verifier reports
   178/178 Mario/Fox motion calls with bounded DS presentation -- but the
   original particle scripts never run. lbParticleMakeScriptID is a stub
@@ -315,6 +342,11 @@ These bugs should be fixed for P1 delivery.
     listen/visual approval. Status: OPEN.
     
 -KO VFX wrong.
+  (2026-08-01: the "particle script is not resident" half of this row now
+  depends only on atlas COVERAGE -- see the VFX row above. The interpreter runs
+  and draws textured; six of 31 textures are admitted, and the KO burst's own
+  texture is one of the ones a soak's `gNdsParticleTextureUseMask` /
+  `gNdsParticleQuadMissCount` pair will settle.)
   Partly FIXED. nNDSVisualEffectDeath and nNDSVisualEffectRebirth shared one
   template, a red->white ring, so the KO burst and the respawn flash were the
   same effect. Rebirth now has its own white/cyan ring and Death keeps the red
