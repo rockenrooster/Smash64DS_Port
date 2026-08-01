@@ -20,6 +20,99 @@
     "source_sha256_lo": "0xa2a1e85f",
     "table_sha256_lo": "0x1973edec"
   },
+  "quads": {
+    "admitted": [
+      0,
+      2,
+      3,
+      4,
+      5,
+      9,
+      10,
+      11,
+      13,
+      14,
+      15,
+      18,
+      19,
+      20,
+      21,
+      22,
+      24,
+      25,
+      27,
+      37,
+      38,
+      41
+    ],
+    "budget_bytes": 65536,
+    "bytes": 63744,
+    "excluded": [
+      {
+        "bytes": 16384,
+        "frames": 8,
+        "height": 32,
+        "texture": 34,
+        "width": 32
+      },
+      {
+        "bytes": 16384,
+        "frames": 8,
+        "height": 32,
+        "texture": 35,
+        "width": 32
+      },
+      {
+        "bytes": 16384,
+        "frames": 8,
+        "height": 32,
+        "texture": 36,
+        "width": 32
+      },
+      {
+        "bytes": 18432,
+        "frames": 9,
+        "height": 32,
+        "texture": 33,
+        "width": 32
+      },
+      {
+        "bytes": 18432,
+        "frames": 9,
+        "height": 32,
+        "texture": 40,
+        "width": 32
+      },
+      {
+        "bytes": 18432,
+        "frames": 9,
+        "height": 32,
+        "texture": 45,
+        "width": 32
+      },
+      {
+        "bytes": 20480,
+        "frames": 10,
+        "height": 32,
+        "texture": 29,
+        "width": 32
+      },
+      {
+        "bytes": 40960,
+        "frames": 20,
+        "height": 32,
+        "texture": 28,
+        "width": 32
+      },
+      {
+        "bytes": 81920,
+        "frames": 10,
+        "height": 64,
+        "texture": 17,
+        "width": 64
+      }
+    ]
+  },
   "reach": {
     "p1_seams": [
       "efManagerCatchSwirlMakeEffect",

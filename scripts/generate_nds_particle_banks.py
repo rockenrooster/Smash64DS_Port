@@ -78,6 +78,14 @@ DEFAULT_TEXTURE_ASSET = Path("assets/particles/efcommon_particle_textures.ds.bin
 # and palette_offset is a u16 ENTRY index from NDS_PARTICLE_PALETTE_ASSET_OFFSET.
 TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
 
+# The DS draw path's own payload, RGB555+A1. See build_quad_sheet for why the
+# texels are encoded twice and why the budget exists. 64 KiB against 119,872
+# free in VRAM_A+B after the battle's pinned static set, and against a measured
+# need of 1,280 bytes -- generous without claiming the whole space.
+QUAD_SHEET_BUDGET_BYTES = 64 * 1024
+DEFAULT_QUAD_ASSET = Path("assets/particles/efcommon_particle_quads.rgb5a1.bin")
+QUAD_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"
+
 # The port's efcommon bank handle. Only calls whose bank argument names it can
 # reach this bank; the per-fighter and per-stage banks are separate handles.
 EFCOMMON_BANK_TOKEN = "gEFManagerParticleBankID"
@@ -1003,6 +1011,86 @@ def measure_error(source: list[list[tuple[int, int, int, int]]],
 # --------------------------------------------------------------------------
 # pack
 # --------------------------------------------------------------------------
+def build_quad_sheet(textures: list[dict], report_rows: list[dict],
+                     frames_by_texture: dict[int, list[list]]) -> dict:
+    """The DS draw path's payload: the packed textures re-encoded as RGB555+A1.
+
+    A SECOND encoding of the same texels, on purpose. The pack above chooses a
+    format per texture by measured error and gets the whole reachable set into
+    137,152 bytes, which is right for a payload that only has to exist -- but
+    those formats are paletted (PAL4/PAL16/PAL256) or alpha-indexed
+    (A3I5/A5I3), and the renderer's texture cache uploads GL_RGBA and has no
+    palette slot in its key. Teaching it palettes to save bytes we are not
+    short of would be the expensive way round.
+
+    RGB555+A1 costs 16 bits a texel, so the whole reachable set would be
+    311,552 bytes against 119,872 free in VRAM_A+B after the battle's pinned
+    static set. Hence the budget and the admission order -- smallest first,
+    which maximises how many effects have a texture rather than which ones.
+    Both textures a real match was measured drawing (22 and 27) are among the
+    smallest, so the measured need of 1,280 bytes is met roughly fifty times
+    over inside the budget.
+
+    Excluded textures are NAMED in the report rather than silently dropped: the
+    runtime fails closed on a missing texture, so a BUGS.md row that needs one
+    of the big multi-frame animations back reads the exclusion list, and the
+    honest answer for those is halving 64x64x10 rather than raising the budget.
+    """
+    rows = []
+    for report in report_rows:
+        if not report["packed"]:
+            continue
+        texture_id = report["texture"]
+        texture = textures[texture_id]
+        rows.append({
+            "texture": texture_id,
+            "width": texture["width"],
+            "height": texture["height"],
+            "frames": texture["frames"],
+            "bytes": texture["width"] * texture["height"] *
+                     texture["frames"] * 2,
+        })
+    rows.sort(key=lambda row: (row["bytes"], row["texture"]))
+
+    admitted = []
+    excluded = []
+    used = 0
+    for row in rows:
+        if used + row["bytes"] <= QUAD_SHEET_BUDGET_BYTES:
+            row["offset"] = used
+            used += row["bytes"]
+            admitted.append(row)
+        else:
+            excluded.append(row)
+    admitted.sort(key=lambda row: row["texture"])
+
+    payload = bytearray(used)
+    for row in admitted:
+        cursor = row["offset"]
+        for frame in frames_by_texture[row["texture"]]:
+            for red, green, blue, alpha in frame:
+                value = ((quantise_channel_5bit(red) >> 3) |
+                         ((quantise_channel_5bit(green) >> 3) << 5) |
+                         ((quantise_channel_5bit(blue) >> 3) << 10))
+                if alpha >= 128:
+                    value |= 0x8000
+                else:
+                    value = 0
+                struct.pack_into("<H", payload, cursor, value)
+                cursor += 2
+        if cursor != row["offset"] + row["bytes"]:
+            raise SystemExit(
+                f"quad sheet texture {row['texture']} wrote "
+                f"{cursor - row['offset']} of {row['bytes']} bytes")
+    return {
+        "payload": bytes(payload),
+        "admitted": admitted,
+        "excluded": excluded,
+        "bytes": used,
+        "budget_bytes": QUAD_SHEET_BUDGET_BYTES,
+    }
+
+
 def build_pack(repo_root: Path) -> dict:
     script_payload = load_o2r_blob(repo_root, *SCRIPT_BANK)
     texture_payload = load_o2r_blob(repo_root, *TEXTURE_BANK)
@@ -1019,6 +1107,7 @@ def build_pack(repo_root: Path) -> dict:
 
     texture_data = bytearray()
     palette_data: list[int] = []
+    frames_by_texture: dict[int, list[list]] = {}
     rows = []
     report_rows = []
     for texture in textures:
@@ -1042,6 +1131,7 @@ def build_pack(repo_root: Path) -> dict:
             continue
         frames = [decode_texture_frame(texture_payload, texture, frame)
                   for frame in range(texture["frames"])]
+        frames_by_texture[texture["id"]] = frames
         graded = not {pixel[3] for frame in frames
                       for pixel in frame} <= {0, 255}
         _bits, ds_format, palette, mean_error, max_error, image_bytes = \
@@ -1143,7 +1233,9 @@ def build_pack(repo_root: Path) -> dict:
                             + len(textures)           # frame counts
                             + 8)                      # exported scalars
     linked = len(script_payload) + table_bytes_resident
+    quads = build_quad_sheet(textures, report_rows, frames_by_texture)
     return {
+        "quads": quads,
         "scripts": scripts, "textures": textures, "reach": reach,
         "script_payload": script_payload, "rows": rows,
         "texture_data": bytes(texture_data), "palette_data": palette_data,
@@ -1234,6 +1326,35 @@ def render_header(pack: dict) -> str:
  * {pack["asset_bytes"]} bytes of the {pack["pack_bytes"]}-byte pack are in the file above. */
 #define NDS_PARTICLE_LINKED_BYTES {pack["linked_bytes"]}u
 
+/* THE DRAW PATH'S PAYLOAD, and a second encoding of the same texels. The pack
+ * above chooses a DS format per texture by measured error; those formats are
+ * paletted or alpha-indexed, and the renderer's texture cache uploads GL_RGBA
+ * with no palette slot in its key. RGB555+A1 costs 16 bits a texel, so the
+ * whole reachable set would be 311,552 bytes against 119,872 free in VRAM_A+B
+ * after the battle's pinned static set -- hence a budget, and admission
+ * smallest-first, which maximises how many effects have a texture at all.
+ *
+ * A texture the runtime asks for and does not find here draws nothing; it does
+ * not draw something else. gNdsParticleTextureUseMask says which ones a real
+ * match reached, and the excluded list is in the generated JSON report by name
+ * so raising the budget is an informed decision rather than a hopeful one. */
+#define NDS_PARTICLE_QUAD_ASSET_PATH "{QUAD_ASSET_NITRO_PATH}"
+#define NDS_PARTICLE_QUAD_ASSET_BYTES {pack["quads"]["bytes"]}u
+#define NDS_PARTICLE_QUAD_BUDGET_BYTES {pack["quads"]["budget_bytes"]}u
+#define NDS_PARTICLE_QUAD_COUNT {len(pack["quads"]["admitted"])}u
+
+typedef struct NDSParticleQuadTexture
+{{
+    u16 texture_id;   /* SOURCE texture id, so the runtime indexes by pc->texture_id */
+    u16 width;
+    u16 height;
+    u16 frames;
+    u32 offset;       /* byte offset into the RGB555+A1 payload, frame 0 */
+}} NDSParticleQuadTexture;
+
+extern const NDSParticleQuadTexture
+    gNdsParticleQuadTextures[NDS_PARTICLE_QUAD_COUNT];
+
 /* DS TEXIMAGE_PARAM texture-format field values. */
 #define NDS_PARTICLE_FORMAT_NONE {DS_NONE}u
 #define NDS_PARTICLE_FORMAT_A3I5 {DS_A3I5}u
@@ -1290,6 +1411,11 @@ def render_inc(pack: dict) -> str:
                            pack["rows"][index:index + 12]) + ","
         for index in range(0, len(pack["rows"]), 12)
     )
+    quad_rows = "\n".join(
+        f"    {{ {row['texture']:3d}, {row['width']:3d}, {row['height']:3d}, "
+        f"{row['frames']:3d}, {row['offset']:6d}u }},"
+        for row in pack["quads"]["admitted"]
+    )
     return f"""/* Generated by scripts/generate_nds_particle_banks.py. */
 /* efcommon source SHA256-lo 0x{pack["source_checksum"]:08x}, table 0x{pack["table_checksum"]:08x}. */
 
@@ -1308,6 +1434,13 @@ const NDSParticleTexture gNdsParticleTextures[NDS_PARTICLE_TEXTURE_COUNT] = {{
 
 const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT] = {{
 {frame_rows}
+}};
+
+/* Ordered by SOURCE texture id so a lookup is a scan of at most
+ * NDS_PARTICLE_QUAD_COUNT rows; the admission that built it was by size. */
+const NDSParticleQuadTexture
+    gNdsParticleQuadTextures[NDS_PARTICLE_QUAD_COUNT] = {{
+{quad_rows}
 }};
 
 u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES]
@@ -1369,6 +1502,20 @@ def render_report(pack: dict) -> dict:
             "estimate_2026_07_27_scripts": ESTIMATE["scripts"],
             "estimate_2026_07_27_textures": ESTIMATE["textures"],
         },
+        # The draw path's own payload. `quad_excluded` is the point of this
+        # block: a texture that is not here draws nothing, so a BUGS.md row
+        # that needs one back reads this list rather than guessing at the
+        # budget. The honest fix for the big entries is halving 64x64x10, not
+        # raising 65,536.
+        "quads": {
+            "budget_bytes": pack["quads"]["budget_bytes"],
+            "bytes": pack["quads"]["bytes"],
+            "admitted": [row["texture"] for row in pack["quads"]["admitted"]],
+            "excluded": [{"texture": row["texture"], "bytes": row["bytes"],
+                          "width": row["width"], "height": row["height"],
+                          "frames": row["frames"]}
+                         for row in pack["quads"]["excluded"]],
+        },
         "checksums": {
             "source_sha256_lo": f"0x{pack['source_checksum']:08x}",
             "table_sha256_lo": f"0x{pack['table_checksum']:08x}",
@@ -1386,15 +1533,17 @@ def main() -> int:
     parser.add_argument("--out-json", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--out-texture-asset", type=Path,
                         default=DEFAULT_TEXTURE_ASSET)
+    parser.add_argument("--out-quad-asset", type=Path,
+                        default=DEFAULT_QUAD_ASSET)
     parser.add_argument("--check", action="store_true",
                         help="rebuild in memory and compare existing outputs")
     args = parser.parse_args()
     repo_root = args.repo_root.resolve()
     outputs = []
     for path in (args.out_header, args.out_inc, args.out_json,
-                 args.out_texture_asset):
+                 args.out_texture_asset, args.out_quad_asset):
         outputs.append(path if path.is_absolute() else repo_root / path)
-    header_path, inc_path, json_path, asset_path = outputs
+    header_path, inc_path, json_path, asset_path, quad_path = outputs
 
     pack = build_pack(repo_root)
     header = render_header(pack).encode("ascii")
@@ -1411,7 +1560,8 @@ def main() -> int:
                  in ((header_path, header), (json_path, report))
                  if not path.is_file() or path.read_bytes() != wanted]
         for path, wanted in ((inc_path, inc),
-                             (asset_path, pack["texture_asset"])):
+                             (asset_path, pack["texture_asset"]),
+                             (quad_path, pack["quads"]["payload"])):
             if path.is_file() and path.read_bytes() != wanted:
                 stale.append(str(path))
         if stale:
@@ -1421,7 +1571,8 @@ def main() -> int:
     else:
         for path, wanted in ((header_path, header), (inc_path, inc),
                              (json_path, report),
-                             (asset_path, pack["texture_asset"])):
+                             (asset_path, pack["texture_asset"]),
+                             (quad_path, pack["quads"]["payload"])):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(wanted)
 
@@ -1433,6 +1584,9 @@ def main() -> int:
           f"pack={pack['pack_bytes']} "
           f"linked={pack['linked_bytes']} "
           f"asset={pack['asset_bytes']} "
+          f"quads={len(pack['quads']['admitted'])}/"
+          f"{len(pack['quads']['admitted']) + len(pack['quads']['excluded'])}"
+          f"@{pack['quads']['bytes']}B "
           f"headroom={ESTIMATE['arena_headroom_bytes']} "
           f"spare={ESTIMATE['arena_headroom_bytes'] - pack['linked_bytes']} "
           f"source=0x{pack['source_checksum']:08x} "

@@ -120,6 +120,33 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
     [int64]$report.bytes.pack_bytes) {
     throw 'Particle bank linked + asset bytes do not account for the pack.'
 }
+# The DRAW path's payload, which is a different question from the pack above:
+# these bytes go into texture VRAM, not into NitroFS-and-forget. VRAM_A+B are
+# 262,144 and the battle's pinned static set takes 136,192, so 119,872 is what
+# exists; the whole reachable set as RGB555+A1 would be 311,552. Admission is
+# smallest-first inside a 65,536 budget, which is fifty times the 1,280 bytes a
+# real match was measured needing (textures 22 and 27) and still leaves 56,128
+# bytes of VRAM unclaimed. A texture that is not admitted draws NOTHING -- it
+# never draws something else -- so the excluded list is reported by name.
+if (([int64]$report.quads.budget_bytes -ne 65536) -or
+    ([int64]$report.quads.bytes -ne 63744) -or
+    (@($report.quads.admitted).Count -ne 22) -or
+    (@($report.quads.excluded).Count -ne 9)) {
+    throw ('Particle quad sheet changed: ' +
+        "$([int64]$report.quads.bytes) B, " +
+        "$(@($report.quads.admitted).Count) admitted, " +
+        "$(@($report.quads.excluded).Count) excluded.")
+}
+if ([int64]$report.quads.bytes -gt [int64]$report.quads.budget_bytes) {
+    throw 'Particle quad sheet exceeded its own budget.'
+}
+# The two a live match actually drew. If admission order ever drops one of
+# these the effects stop appearing and nothing else would say so.
+foreach ($id in @(22, 27)) {
+    if (@($report.quads.admitted) -notcontains $id) {
+        throw "Particle quad sheet dropped measured texture $id."
+    }
+}
 if ($report.checksums.source_sha256_lo -ne '0xa2a1e85f') {
     throw "efcommon source identity changed: $($report.checksums.source_sha256_lo)"
 }
@@ -203,6 +230,10 @@ foreach ($token in @(
     '#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 137152u',
     '#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 136256u',
     '#define NDS_PARTICLE_LINKED_BYTES 12195u',
+    '#define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"',
+    '#define NDS_PARTICLE_QUAD_ASSET_BYTES 63744u',
+    '#define NDS_PARTICLE_QUAD_BUDGET_BYTES 65536u',
+    '#define NDS_PARTICLE_QUAD_COUNT 22u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
     '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x1973edecu',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
@@ -275,7 +306,16 @@ if (Test-Path -LiteralPath $incPath) {
 $assetState = 'not built'
 if (Test-Path -LiteralPath $assetPath) {
     $assetBytes = (Get-Item -LiteralPath $assetPath).Length
-    if ($assetBytes -ne 137152) {
+    $quadPath = Join-Path $root 'assets/particles/efcommon_particle_quads.rgb5a1.bin'
+$quadState = 'not built'
+if (Test-Path -LiteralPath $quadPath) {
+    $quadBytes = (Get-Item -LiteralPath $quadPath).Length
+    if ($quadBytes -ne 63744) {
+        throw "Particle quad payload is $quadBytes bytes, expected 63744."
+    }
+    $quadState = 'built'
+}
+if ($assetBytes -ne 137152) {
         throw "Particle texture payload is $assetBytes bytes, expected 137152."
     }
     $assetState = 'built'
@@ -285,4 +325,5 @@ Write-Output (('Particle bank pack passed: 87/119 reachable efcommon scripts, ' 
     '31/47 textures, 220248 B N64 texture -> 137040 B DS, 12195 B linked ' +
     '(10912 script bank + 1283 index) of 210320 B arena headroom (198125 B ' +
     'spare) plus 137152 B NitroFS payload, 7 bit-exact CI4 textures, linear ' +
-    "texel order pinned, .inc $incState, payload $assetState."))
+    "texel order pinned, .inc $incState, payload $assetState, " +
+    "quads 22/31 at 63744 B of 65536 $quadState."))

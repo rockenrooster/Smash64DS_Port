@@ -1401,6 +1401,11 @@ NDS_TASK39_HIT_SPARKS_ASSET := $(PROJECT_ROOT)/assets/effects/task39_hit_sparks.
 NDS_PARTICLE_BANKS_INC := $(PROJECT_ROOT)/src/nds/generated/nds_particle_banks.generated.inc
 NDS_PARTICLE_BANKS_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_particle_banks.generated.h
 NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_textures.ds.bin
+# The draw path's own payload: the admitted textures as RGB555+A1, which is the
+# format the renderer's texture cache uploads. Separate from the file above
+# because that one is per-texture DS formats with palettes and the cache has no
+# palette slot in its key.
+NDS_PARTICLE_QUAD_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_quads.rgb5a1.bin
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -2172,12 +2177,16 @@ NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES := \
 endif
 endif
 
-# The efcommon texel/palette payload only ships with the interpreter that reads
-# it; without the runtime it is 82,848 bytes of ROM nothing opens.
+# The efcommon payloads only ship with the interpreter that reads them; without
+# the runtime they are 200,896 bytes of ROM nothing opens. Two files, two
+# encodings of the same texels: the .ds.bin is per-texture DS formats with
+# palettes (the pack), the .rgb5a1.bin is the 22 admitted textures as RGB555+A1
+# (the draw path, which uploads through a texture cache with no palette slot).
 export NDS_NITROFS_PARTICLE_FILES :=
 ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 NDS_NITROFS_PARTICLE_FILES := \
-	$(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin
+	$(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin \
+	$(NITROFS_DIR)/particles/efcommon_particle_quads.rgb5a1.bin
 endif
 
 # The Task 39 hit-spark sheet. Unlike the payload above this one has a live
@@ -2446,7 +2455,7 @@ $(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin: $(NDS_TASK39_HIT_SPARKS_ASS
 # The payload is not linked -- see the header comment: .rodata is taken out of
 # the boot-time taskman arena one-for-one and this pack is big enough to push
 # that search past its floor.
-$(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) &: \
+$(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
 		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_effect_census.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
@@ -2457,6 +2466,10 @@ $(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) &: \
 $(NDS_PARTICLE_BANKS_HEADER): $(NDS_PARTICLE_BANKS_INC)
 
 $(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin: $(NDS_PARTICLE_TEXTURE_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/particles/efcommon_particle_quads.rgb5a1.bin: $(NDS_PARTICLE_QUAD_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 

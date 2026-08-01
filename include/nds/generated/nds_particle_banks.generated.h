@@ -59,6 +59,35 @@
  * 137152 bytes of the 149347-byte pack are in the file above. */
 #define NDS_PARTICLE_LINKED_BYTES 12195u
 
+/* THE DRAW PATH'S PAYLOAD, and a second encoding of the same texels. The pack
+ * above chooses a DS format per texture by measured error; those formats are
+ * paletted or alpha-indexed, and the renderer's texture cache uploads GL_RGBA
+ * with no palette slot in its key. RGB555+A1 costs 16 bits a texel, so the
+ * whole reachable set would be 311,552 bytes against 119,872 free in VRAM_A+B
+ * after the battle's pinned static set -- hence a budget, and admission
+ * smallest-first, which maximises how many effects have a texture at all.
+ *
+ * A texture the runtime asks for and does not find here draws nothing; it does
+ * not draw something else. gNdsParticleTextureUseMask says which ones a real
+ * match reached, and the excluded list is in the generated JSON report by name
+ * so raising the budget is an informed decision rather than a hopeful one. */
+#define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"
+#define NDS_PARTICLE_QUAD_ASSET_BYTES 63744u
+#define NDS_PARTICLE_QUAD_BUDGET_BYTES 65536u
+#define NDS_PARTICLE_QUAD_COUNT 22u
+
+typedef struct NDSParticleQuadTexture
+{
+    u16 texture_id;   /* SOURCE texture id, so the runtime indexes by pc->texture_id */
+    u16 width;
+    u16 height;
+    u16 frames;
+    u32 offset;       /* byte offset into the RGB555+A1 payload, frame 0 */
+} NDSParticleQuadTexture;
+
+extern const NDSParticleQuadTexture
+    gNdsParticleQuadTextures[NDS_PARTICLE_QUAD_COUNT];
+
 /* DS TEXIMAGE_PARAM texture-format field values. */
 #define NDS_PARTICLE_FORMAT_NONE 0u
 #define NDS_PARTICLE_FORMAT_A3I5 1u
