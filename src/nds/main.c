@@ -31,7 +31,7 @@ int main(void)
     os_test = ndsOsSelfTest();
     iprintf("OS queues/threads: %s", os_test == 0 ? "PASS\n" : "FAIL ");
     if (os_test != 0) iprintf("%d\n", os_test);
-    snprintf(debug_message, sizeof(debug_message),
+    sniprintf(debug_message, sizeof(debug_message),
              "SSB64DS: OS SELFTEST %s (%d)\n",
              os_test == 0 ? "PASS" : "FAIL", os_test);
     nocashMessage(debug_message);

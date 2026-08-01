@@ -2197,6 +2197,33 @@ diagnostic, gating both buffers on `!NDS_RENDERER_HW_TRIANGLES` returns 307,200
 bytes to the arena — 75 pages of arena sizing loop, against an SD margin that is
 currently one page.
 
+### R2-07 arena — three steps bought, from a float formatter nothing ever called (2026-07-31, evening)
+
+The arena is R2-07's critical path: it blocks `NDS_R2_PARTICLE_RUNTIME=1`, and on
+2026-07-31 it blocked a 2 KB *instrument*. The board listed float `printf` as a
+~24,375-byte lever. It is real and it is now banked.
+
+newlib picks its formatter by **symbol, not by format string**. Seven call sites
+— six `"%s"`/`"%lu"` path builders in `nds_reloc_assets.c` and the tick-HUD line
+printer, whose **73 call sites contain no `%f` at all** — used `snprintf` /
+`vsnprintf`, which links `_svfprintf_r` (10,047), `_dtoa_r` (4,608) and `__mprec`
+(2,480). Switching to `sniprintf` / `vsniprintf` drops all three:
+
+| | before | after |
+|---|---|---|
+| float formatter linked | 17,135 B | **0** |
+| taskman arena (tickhud) | 1,290,240 | **1,302,528** |
+| arena search failures | 21 | **18** |
+
+**+12,288 = three arena steps, in every configuration**, NO-FREEZE through a full
+match to Results, `MALLOCOVF=0`, Boundary and Latest green.
+`scripts/check-printf-integer-only.ps1` bans the float-capable spellings so it
+cannot come back; the HUD already shows how to print "24.1" without one.
+
+`libc_a-categories.o` (14,420) is still linked, now pulled by
+`libc_a-iswspace_l.o` rather than by the formatter. That chain is inside libc and
+was not chased; it is the remaining ~3 steps of the original estimate.
+
 ### R2-07 L7 — the arithmetic is CLEARED on the real domain, and the named hook does not exist (2026-07-31, evening)
 
 The SwitchPlan's own next action. The kernel was green on a *synthetic* sweep and

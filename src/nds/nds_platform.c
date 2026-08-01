@@ -1979,13 +1979,20 @@ static void ndsPlatformDrawOriginalDLPreview(void)
 }
 #endif
 
+/* vsniprintf, NOT vsnprintf. All 73 call sites format integers and strings --
+ * the HUD's "FPS 24.1" is already assembled from integer tenths, and there is
+ * not one %f/%g/%e among them -- but newlib picks the formatter from the symbol,
+ * not from the format string, so the float one was being linked for nothing.
+ * See the comment in nds_reloc_assets.c: it costs 31,555 bytes of image, which
+ * is seven taskman arena steps on a target where eight decide whether the
+ * battle boots at all. */
 static void ndsPlatformPrintDebugLine(u32 row, const char *format, ...)
 {
     char line[32];
     va_list args;
 
     va_start(args, format);
-    vsnprintf(line, sizeof(line), format, args);
+    vsniprintf(line, sizeof(line), format, args);
     va_end(args);
 
     line[sizeof(line) - 1] = '\0';

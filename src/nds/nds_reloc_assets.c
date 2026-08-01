@@ -5,6 +5,20 @@
 
 #include <nds/nds_reloc_assets.h>
 
+/* sniprintf, NOT snprintf, in this file and in main.c -- the only two places the
+ * port formats a string. newlib's snprintf drags in the whole floating-point
+ * formatter: _svfprintf_r (10,047) pulls _dtoa_r (4,608), __mprec (2,480) and
+ * __global_locale, and that last one pulls the 14,420-byte locale category
+ * table. Six call sites, every one of them "%s" and "%lu", were paying 31,555
+ * bytes of image for a conversion none of them asks for.
+ *
+ * That is not a size nicety on this target. Linked bytes come out of the
+ * boot-time taskman arena one-for-one, so 31,555 is SEVEN arena steps of
+ * 4,096 -- and the arena is tight enough (2026-07-31) that eight steps is the
+ * difference between the battle running and dying under ifCommonSetMaxNumGObj's
+ * 25 KiB latch. check-nds-printf-integer-only.ps1 keeps it from coming back;
+ * any new format that genuinely needs %f has to justify 31 KB first. */
+
 #define NDS_O2R_RESOURCE_HEADER_SIZE 0x40
 #define NDS_O2R_MAGIC_OFFSET 0x04
 #define NDS_O2R_MAGIC "OLER"
@@ -144,21 +158,21 @@ static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
     index = asset_id - NDS_RELOC_MARIO_ANIM_FIRST;
     if (index == 0u)
     {
-        written = snprintf(path, sizeof(path), "%sFTMarioAnimWait", prefix);
+        written = sniprintf(path, sizeof(path), "%sFTMarioAnimWait", prefix);
     }
     else if (index == 44u)
     {
-        written = snprintf(path, sizeof(path),
+        written = sniprintf(path, sizeof(path),
                            "%sFTMarioAnimDownBounceD", prefix);
     }
     else if (index == 46u)
     {
-        written = snprintf(path, sizeof(path),
+        written = sniprintf(path, sizeof(path),
                            "%sFTMarioAnimDownStandD", prefix);
     }
     else
     {
-        written = snprintf(path, sizeof(path), "%sFTMarioAnim%03lu", prefix,
+        written = sniprintf(path, sizeof(path), "%sFTMarioAnim%03lu", prefix,
                            (unsigned long)index);
     }
     if ((written < 0) || ((size_t)written >= sizeof(path)))
@@ -184,7 +198,7 @@ static const NDSRelocAssetEntry *ndsRelocAssetFoxAnimEntry(u32 asset_id)
         return NULL;
     }
 
-    written = snprintf(path, sizeof(path),
+    written = sniprintf(path, sizeof(path),
                        "nitro:/reloc/reloc_animations/FTFoxAnim%03lu",
                        (unsigned long)(asset_id - NDS_RELOC_FOX_ANIM_FIRST));
     if ((written < 0) || ((size_t)written >= sizeof(path)))
