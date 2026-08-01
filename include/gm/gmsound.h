@@ -171,9 +171,25 @@ typedef enum gmVoiceID
     nSYAudioVoiceYoshiAppeal = 583,
     nSYAudioVoiceYoshiSmash1 = 584,
     nSYAudioVoiceYoshiSmash2 = 585,
+    /* The crowd. Values are the decomp's own run (gm/gmsound.h:700-726):
+     * Captain 604 .. Yoshi 614 are the per-fighter chants, then the reactions.
+     * Only the eleven a P1 Mario-vs-Fox match can reach are declared here --
+     * the two chants ft/ftpublic.c picks from
+     * dFTCommonDataPublicFighterCallFGMs, and the nine reactions
+     * ftPublicDecideCall / DecideCommon / PlayCliffReact choose between. */
+    nSYAudioVoicePublicFox = 605,
+    nSYAudioVoicePublicMario = 609,
+    nSYAudioVoicePublicGaspL = 615,
+    nSYAudioVoicePublicGaspM = 616,
+    nSYAudioVoicePublicGaspS = 617,
     nSYAudioVoicePublicCheer = 618,
+    nSYAudioVoicePublicAmazed = 619,
+    nSYAudioVoicePublicGaspClap = 620,
     nSYAudioVoicePublicWin = 621,
+    nSYAudioVoicePublicDamageL = 622,
+    nSYAudioVoicePublicDamageM = 623,
     nSYAudioVoicePublicNoContest = 624,
+    nSYAudioVoicePublicDamageS = 625,
     nSYAudioVoicePublicExcited = 626,
     nSYAudioFGMVoiceEnd = 0x2B7
 } gmVoiceID;

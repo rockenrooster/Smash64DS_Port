@@ -80,6 +80,17 @@ param(
     # it they are absent, and an absent symbol reads as a deleted counter rather
     # than a flag that was never passed.
     [switch]$SecondEntryDiag,
+    # Any other `NAME=VALUE` make flags this soak's build needs, e.g.
+    # `-MakeFlags NDS_R2_PARTICLE_RUNTIME=1,NDS_R2_PARTICLE_DRAW=1`.
+    #
+    # This exists because -BothCpu and -SecondEntryDiag were the only two flags
+    # this script forwarded, and a flag it does not forward is a flag the rebuild
+    # SILENTLY CLEARS: every NDS_* knob is `?=` in the Makefile, so an omitted
+    # flag reverts to 0 and the ROM the soak measures is not the ROM the
+    # directory name promises. Each entry is verified against the generated
+    # nds_build_config.h below, so asking for a flag the build did not take is an
+    # error rather than a null result.
+    [string[]]$MakeFlags = @(),
     [string]$JsonOut = ''
 )
 
@@ -139,6 +150,7 @@ if (-not $NoBuild) {
     $makeArgs = @("TARGET=$Target", "BUILD=$Build",
                   "NDS_R2_BOTH_CPU=$([int][bool]$BothCpu)")
     if ($SecondEntryDiag) { $makeArgs += 'NDS_R2_SECOND_ENTRY_DIAG=1' }
+    $makeArgs += $MakeFlags
     make -C $root @makeArgs
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
@@ -168,6 +180,30 @@ if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
         throw ('-SecondEntryDiag was requested but ' + $Build + ' is built ' +
                'with NDS_R2_SECOND_ENTRY_DIAG=0, so the allocation ledger and ' +
                'chain probe do not exist. Rebuild without -NoBuild.')
+    }
+    # And the same rule, generalised, for every -MakeFlags entry. -NoBuild runs
+    # are checked too: the header describes whatever ROM is actually on disk, so
+    # this is exactly the case where soaking the wrong build is easiest.
+    $configText = Get-Content -LiteralPath $configHeader -Raw
+    foreach ($flag in $MakeFlags) {
+        $pair = [regex]::Match($flag, '^\s*([A-Za-z_][A-Za-z0-9_]*)=(.*)$')
+        if (-not $pair.Success) {
+            throw "-MakeFlags entry '$flag' is not NAME=VALUE."
+        }
+        $name = $pair.Groups[1].Value
+        $want = $pair.Groups[2].Value.Trim()
+        $got = [regex]::Match(
+            $configText, ('(?m)^#define\s+' + [regex]::Escape($name) + '\s+(.+?)\s*$'))
+        if (-not $got.Success) {
+            throw ("-MakeFlags asked for $flag but $Build\nds_build_config.h " +
+                   "does not define $name at all. Either the flag name is wrong " +
+                   'or it is not one the config header records.')
+        }
+        if ($got.Groups[1].Value.Trim() -ne $want) {
+            throw ("-MakeFlags asked for $flag but $Build is built with " +
+                   "$name $($got.Groups[1].Value.Trim()). Soaking it would " +
+                   'measure a different ROM than the one requested.')
+        }
     }
 }
 foreach ($path in @($rom, $elf)) {
@@ -595,6 +631,16 @@ try {
             'gNdsParticleRejectRingScripts[5]', 'gNdsParticleRejectRingBanks[5]',
             'gNdsParticleRejectRingReasons[5]', 'gNdsParticleRejectRingCounts[5]',
             'gNdsRendererTask36ReplayArenaStaleCount',
+            # BUGS.md: "sometimes Mario's fireballs don't spawn". These two make
+            # the report falsifiable without a new probe -- the import already
+            # counts both sides of the call (battleship_mario_fireball.c).
+            # SpawnCall == SpawnSuccess means every request produced a weapon and
+            # the bug is upstream in the special-N state machine or the input;
+            # SpawnCall > SpawnSuccess means the source's own make refused, which
+            # is a weapon-pool or per-owner-limit question instead.
+            'gNdsFighterProjectileProofSpawnCallCount',
+            'gNdsFighterProjectileProofSpawnSuccessCount',
+            'gNdsFighterProjectileProofWeaponCountMax',
             # R2-07 L7 step one, present only at NDS_R2_COLLISION_L7_ORACLE=1.
             # MaxDevQ12[0..2] are the answer, in 1/4096 world units at probe
             # offsets of 1/4/16 units; the gate is 82 (0.0200 world units).
@@ -963,6 +1009,23 @@ try {
                     'stall or a slow scene load, NOT the allocator spin class. ' +
                     'Compare against the ~30s NitroFS scene-load dead air before ' +
                     'treating it as a hang.')
+            } elseif ($capture -match '__excpt_entry') {
+                # A self-branch inside calico's exception handler is NOT the
+                # game giving up -- it is the CPU having already aborted, and
+                # the handler parking. Reported as the allocator class once
+                # (2026-08-01, a countdown-time data abort with MALLOCOVF=0),
+                # which sent the first ten minutes of the diagnosis at the heap.
+                # The registers say which: cpsr mode 0x17/0x97 is ABT, lr_usr is
+                # the faulting caller, and r0/r3 usually still hold the pointer
+                # that was dereferenced.
+                Write-Host ''
+                $verdict = "$verdict-ABORT"
+                Write-Host ('CPU EXCEPTION, not a give-up loop: the PC is parked ' +
+                    'in __excpt_entry, so the ARM9 took a data/prefetch abort and ' +
+                    'calico halted there. MALLOCOVF/DLBUF/GFXHEAP describe a ' +
+                    'HEALTHY allocator in this case and must not be read as the ' +
+                    'cause. Read `lr_usr` for the faulting function and r0-r3 for ' +
+                    'the bad pointer; cpsr low bits 0x17 = data abort.')
             } else {
                 Write-Host ''
                 Write-Host ('spin CONFIRMED: the PC branches to itself, which is ' +

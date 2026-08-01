@@ -24,17 +24,27 @@ These bugs should be fixed for P1 delivery.
   frame in a 128-frame window -- an event, not a slow body.
 -Sometimes Mario's fireballs don't spawn.
 
--Results screen. VFX and SFX/BGM/FGM.  [three of the four FGM cues PACKED
-  2026-07-31; VFX and 621 remain]
-  **534 WinnerIs, 499 Mario and 486 Fox are packed and admitted** -- derived with
+-Results screen. VFX and SFX/BGM/FGM.  [ALL FOUR FGM cues PACKED 2026-08-01;
+  VFX remains]
+  **534 WinnerIs, 499 Mario and 486 Fox** were packed 2026-07-31 -- derived with
   `render-audio-fgm-phase-pack.py --derive 534,499,486` and proven by their
-  disappearance from the natural-match miss ring (see the TIME UP row). **621
-  PublicWin is NOT**, and the reason is specific rather than "not done yet": it
-  is a LOOPED cue on the same wave as the already-packed 626, and 626 ships
-  through the bespoke `render_public_excited` path keyed on `PUBLIC_EXCITED_ID`
-  with its own hardware-loop constants. A second looped cue on that wave needs
-  that machinery generalised, or FGM 285's `source_loop_ds_hardware` strategy
-  applied to it. That is the whole remaining FGM work on this row.
+  disappearance from the natural-match miss ring (see the TIME UP row).
+  **621 PublicWin is now packed too** (2026-08-01), and the machinery it was
+  said to need turned out to be one line. It is the second cue on 626's wave
+  (both articulation 460 / sound 320 / wave 2966600+15876, both looping
+  1..28215), differing only in note (9 vs 12), duration (950 vs 1200 ticks) and
+  UCD volume (190 vs 223) -- so it takes 626's AOT loop-then-quadratic-ramp
+  render unchanged. FGM 285's hardware-repeat strategy would NOT have worked for
+  either: articulation 460 ramps volume across the loop, and a hardware repeat
+  reproduces every cycle bit-identically by construction, which is exactly why
+  it cannot ramp. The only 626-shaped thing in the renderer was a pinned sample
+  count, now derived from the note's own duration (`looped_fanfare_sample_count`,
+  which reproduces 626's 104,204 exactly and gives 621 69,369) and still pinned.
+  Pack 535,280 -> 570,000 B, 63 -> 64 entries, cap 786,432.
+  One real defect fell out: the `missing_preroll` negative control was unclamped
+  while the render clamps, so 621's lower hardware gain overflowed int16 and
+  crashed the generator. Clamped now -- it was also a WEAKER control unclamped,
+  differing from the render in two ways instead of one. **Needs an ear check.**
   Research (2026-07-30, Sol Max match-end/audio):
   - Source contract: the Results sequence queues PublicWin 621 at scene start,
     WinnerIs 534 at tick 81, Mario 499 or Fox 486 at tick 210, and

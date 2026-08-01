@@ -28,7 +28,12 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     436,432,362,433,360,12,285,
     # The announcer: TIME UP, GAME SET, "this game's winner is", and the two
     # fighter names the Results scene reads out.
-    527,488,534,499,486,472,471)
+    527,488,534,499,486,472,471,
+    # And the crowd's win roar at Results scene start.
+    621,
+    # The reactive crowd: Fox/Mario chants, GaspL/M/S, Cheer, Amazed,
+    # GaspClap, DamageL/M/S -- the eleven ft/ftpublic.c reaches in a P1 match.
+    605, 609, 615, 616, 617, 618, 619, 620, 622, 623, 625)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -36,15 +41,15 @@ if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
 if (([int]$metadata.format_version -ne 4) -or
     ([int]$metadata.entry_bytes -ne 32) -or
     ([int]$metadata.envelope_point_bytes -ne 4) -or
-    ([int64]$metadata.resident_bytes -ne 535280) -or
+    ([int64]$metadata.resident_bytes -ne 672528) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines for no runtime
     # reason; the bound that is real is the 53,248-byte cache-slot gate below.
     ([int64]$metadata.pack_limit_bytes -ne 786432) -or
-    ($metadata.mapping_sha256_lo -ne '0x3097cf44') -or
+    ($metadata.mapping_sha256_lo -ne '0xc99abd91') -or
     ($metadata.pack_sha256 -ne
-        'c4b9fac5626ece86209c3fbfeab038f8845ad3faf52ac8f635a041de09728626')) {
+        '54114b37297463bc2bf31ba48331aad6ce3400fe4e568417527508ffd5f759ad')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -113,9 +118,9 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 63u',
-    '#define NDS_AUDIO_FGM_PACK_BYTES 535280u',
-    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x3097cf44u',
+    '#define NDS_AUDIO_FGM_ENTRY_COUNT 75u',
+    '#define NDS_AUDIO_FGM_PACK_BYTES 672528u',
+    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xc99abd91u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }
@@ -125,7 +130,13 @@ foreach ($token in @(
 foreach ($voice in @('nSYAudioVoiceAnnounceTimeUp', 'nSYAudioVoiceAnnounceGameSet',
     'nSYAudioVoiceAnnounceWinnerIs', 'nSYAudioVoiceAnnounceMario',
     'nSYAudioVoiceAnnounceFox', 'nSYAudioVoiceAnnounceFive',
-    'nSYAudioVoiceAnnounceFour')) {
+    'nSYAudioVoiceAnnounceFour', 'nSYAudioVoicePublicWin',
+    'nSYAudioVoicePublicFox', 'nSYAudioVoicePublicMario',
+    'nSYAudioVoicePublicGaspL', 'nSYAudioVoicePublicGaspM',
+    'nSYAudioVoicePublicGaspS', 'nSYAudioVoicePublicCheer',
+    'nSYAudioVoicePublicAmazed', 'nSYAudioVoicePublicGaspClap',
+    'nSYAudioVoicePublicDamageL', 'nSYAudioVoicePublicDamageM',
+    'nSYAudioVoicePublicDamageS')) {
     if (-not $runtime.Contains("case ${voice}:")) {
         throw "Runtime allowlist does not admit the packed cue $voice."
     }
@@ -136,6 +147,7 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     if (-not $runtime.Contains($token)) { throw "Runtime cache lost: $token" }
 }
 
-Write-Output (('Audio FGM full coverage passed: 63 IDs, 0 exclusions, ' +
-    '535280-byte pack, 204800-byte cache, seven fused fork repairs, ' +
-    'FGM 285 wind on a proven DS hardware loop, seven announcer lines.'))
+Write-Output (('Audio FGM full coverage passed: 75 IDs, 0 exclusions, ' +
+    '672528-byte pack, 204800-byte cache, seven fused fork repairs, ' +
+    'FGM 285 wind on a proven DS hardware loop, seven announcer lines, ' +
+    'PublicWin 621 on PublicExcited''s AOT loop-and-ramp render.'))

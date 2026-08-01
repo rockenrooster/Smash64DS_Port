@@ -145,9 +145,18 @@ static u32 sNdsAudioFgmArm7AckSequence;
 #endif
 static u16 sNdsAudioFgmInstanceToken;
 
-/* 16-byte header + 63 * 32-byte entries. The header/entry sizes are the
- * layout; the entry count is data, so this moves whenever a cue is added. */
-_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET == 2032u,
+/* 16-byte header + N * 32-byte entries. The header and entry SIZES are the
+ * layout and are what this pins; the entry count is data. It used to pin the
+ * product against the literal 2032, so adding one cue failed the build with
+ * "FGM pack header layout changed" -- a true statement about nothing that had
+ * changed. Assert the relation instead: a real layout move still trips it,
+ * a new cue does not. */
+_Static_assert(NDS_AUDIO_FGM_PACK_HEADER_BYTES == 16u,
+               "FGM pack header layout changed");
+_Static_assert(NDS_AUDIO_FGM_PACK_ENTRY_BYTES == 32u,
+               "FGM pack entry layout changed");
+_Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET ==
+                   (16u + (NDS_AUDIO_FGM_ENTRY_COUNT * 32u)),
                "FGM pack header layout changed");
 _Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (200u * 1024u),
                "FGM cache budget changed");
@@ -260,6 +269,24 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
      * was already here. */
     case nSYAudioVoiceAnnounceFive:
     case nSYAudioVoiceAnnounceFour:
+    /* The crowd's win roar, queued at Results scene start 81 ticks ahead of
+     * "this game's winner is". Second cue on PublicExcited's wave. */
+    case nSYAudioVoicePublicWin:
+    /* BUGS.md crowd row. Every one of these is requested by ft/ftpublic.c --
+     * the chant for whichever fighter is being called, and the reaction its
+     * knockback thresholds select. Silent until now because the actor was a
+     * stub AND the pack had no entries; both halves land together. */
+    case nSYAudioVoicePublicFox:
+    case nSYAudioVoicePublicMario:
+    case nSYAudioVoicePublicGaspL:
+    case nSYAudioVoicePublicGaspM:
+    case nSYAudioVoicePublicGaspS:
+    case nSYAudioVoicePublicCheer:
+    case nSYAudioVoicePublicAmazed:
+    case nSYAudioVoicePublicGaspClap:
+    case nSYAudioVoicePublicDamageL:
+    case nSYAudioVoicePublicDamageM:
+    case nSYAudioVoicePublicDamageS:
         return TRUE;
     default:
         return FALSE;

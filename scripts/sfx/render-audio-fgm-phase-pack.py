@@ -53,7 +53,19 @@ RUNTIME_CACHE_BYTES = (52 * 1024) + (3 * 28 * 1024) + (4 * 16 * 1024)
 MAX_CUE_IMA_BYTES = 52 * 1024
 MAX_RESIDENT_BYTES = 128 * 1024  # historical Phase-C comparison only
 PUBLIC_EXCITED_ID = 626
+# 621 PublicWin is the SECOND cue on this wave, and it is the reason the
+# renderer below stopped being keyed on 626's id. Both are articulation 460 /
+# sound 320 / wave 2966600+15876 with the same `loop_start=1, loop_end=28215`;
+# they differ only in note (12 vs 9), duration (1200 vs 950 ticks) and UCD
+# volume. So the AOT loop-then-quadratic-ramp render is the SAME law, and the
+# only 626-shaped thing in it was the pinned sample count -- now read off the
+# selector. A DS hardware repeat cannot serve either of them: the articulation
+# feeds a volume ramp across the loop, which is exactly what a hardware repeat
+# reproduces bit-identically and therefore cannot ramp.
+PUBLIC_WIN_ID = 621
+LOOPED_FANFARE_AOT_IDS = frozenset((PUBLIC_EXCITED_ID, PUBLIC_WIN_ID))
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
+PUBLIC_WIN_SAMPLE_COUNT = 69369
 PUBLIC_EXCITED_RAMP_SAMPLES = 184
 PUBLIC_EXCITED_MIXER_MINIMUM = 1
 PUBLIC_EXCITED_IMA_PREDICTOR = -4553
@@ -100,6 +112,12 @@ FULL_COVERAGE_IDS = (
     # is", then the winner's name, then the two countdown numbers above three.
     # Appended for the same reason.
     527, 488, 534, 499, 486, 472, 471,
+    # And the crowd's win roar that opens the Results sequence.
+    621,
+    # BUGS.md crowd row: the eleven cues ft/ftpublic.c reaches in a P1 match --
+    # Fox/Mario chants, three gasps, cheer, amazed, gasp-clap, three damage
+    # reactions.
+    605, 609, 615, 616, 617, 618, 619, 620, 622, 623, 625,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -1130,6 +1148,369 @@ SELECTED = (
             "e68756e5a496a341437e5d376744e9982f8d0bea7ffab502c1b17b1c002fd90c",
         "fidelity_debt": (),
     },
+    # BUGS.md Results row, the last FGM on it.  621 PublicWin is the crowd's
+    # win roar, queued at Results scene start (mnvsresults.c) 81 ticks before
+    # "this game's winner is".  It is the second cue on 626's wave and takes
+    # 626's render law unchanged -- see LOOPED_FANFARE_AOT_IDS.  Appended, so
+    # the existing pack order is untouched.
+    {
+        "id": 621,
+        "name": "nSYAudioVoicePublicWin",
+        "kind": "results",
+        "articulation": 460,
+        "sound": 320,
+        "pitch_code": 9,
+        "duration_ticks": 950,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": -1200,
+        "loop": True,
+        "wave_base": 2966600,
+        "wave_length": 15876,
+        "loop_start": 1,
+        "loop_end": 28215,
+        "expected_retained_samples": PUBLIC_WIN_SAMPLE_COUNT,
+    },
+    # BUGS.md crowd row.  The eleven cues a P1 Mario-vs-Fox match can actually
+    # reach, all of them requested by ft/ftpublic.c once the actor is imported
+    # (NDS_IMPORT_BATTLESHIP_FT_PUBLIC): the two chants
+    # dFTCommonDataPublicFighterCallFGMs picks for Mario (609) and Fox (605),
+    # and the nine reactions ftPublicDecideCall/DecideCommon/PlayCliffReact
+    # choose between.  624 NoContest is deliberately absent -- nothing in a
+    # two-fighter timed match reaches it.
+    #
+    # Every field came out of `--derive`, including the three that used to be
+    # unobtainable without running the generator and reading its error
+    # (source_pcm_samples, the fork program hashes, render_program_sha256).
+    #
+    # SHAPE, and why it is not the AOT path: these are one-shot crowd noises
+    # with a two-to-four note schedule and, on five of them, one fork voice.
+    # Rendering the schedule AOT at 32 kHz would cost ~212 KB for cues whose
+    # audible content is a crowd; retaining the source wavetable and playing it
+    # at the first note's rate is what the already-shipping punch/kick cues do
+    # (40/38/37), for the same reason, and it is the trade PROJECT_GOAL's
+    # sacrifice order names first.  The debt is recorded per entry.
+    #
+    # 616/618/620/622/625 share wave 298216+25200 and 617/623 share
+    # 323416+18792, which is why retain_full_source is on all of them: a shared
+    # wave cannot be trimmed to one cue's schedule.
+    {
+        "id": 605,
+        "name": "nSYAudioVoicePublicFox",
+        "kind": "crowd",
+        "articulation": 122,
+        "sound": 53,
+        "pitch_code": 13,
+        "duration_ticks": 320,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1190,
+        "loop": False,
+        "wave_base": 460432,
+        "wave_length": 17820,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 31680,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "60cadbe007e6410eaa6fc470f1e3f3cc22b84b1b18c615fb08d528216ef915d9",
+        "render_program_sha256":
+            "60cadbe007e6410eaa6fc470f1e3f3cc22b84b1b18c615fb08d528216ef915d9",
+        "articulation_program_sha256":
+            "6c3344f1fed0f3caf4942824e428e01afef7a7c285a810d94fa884213f396ddf",
+        "fidelity_debt": ("untrimmed_shared_source_reuse",),
+    },
+    {
+        "id": 609,
+        "name": "nSYAudioVoicePublicMario",
+        "kind": "crowd",
+        "articulation": 126,
+        "sound": 57,
+        "pitch_code": 13,
+        "duration_ticks": 320,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1190,
+        "loop": False,
+        "wave_base": 533080,
+        "wave_length": 19216,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 34160,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "c0a8858b35f1271e067f31d5050bfe0a755a08ca2e91ce9ec4d0b3defa627360",
+        "render_program_sha256":
+            "c0a8858b35f1271e067f31d5050bfe0a755a08ca2e91ce9ec4d0b3defa627360",
+        "articulation_program_sha256":
+            "6eeeeeaefb1399d9f88250fd74fa1ae1121c5f7ca850319b777df58100051e09",
+        "fidelity_debt": ("untrimmed_shared_source_reuse",),
+    },
+    {
+        "id": 615,
+        "name": "nSYAudioVoicePublicGaspL",
+        "kind": "crowd",
+        "articulation": 461,
+        "sound": 321,
+        "notes": ((13, 7, 50), (12, 7, 260)),
+        "duration_ticks": 310,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 2982480,
+        "wave_length": 16272,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 28928,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "18cf80735120d4c33787f5f2826b92666e2e40295442210d70594aa21d24abe1",
+        "render_program_sha256":
+            "18cf80735120d4c33787f5f2826b92666e2e40295442210d70594aa21d24abe1",
+        "articulation_program_sha256":
+            "84245c84db4272b08f9d0072687d1a0c6b821f478766b2eb47db832591889e6c",
+        "fidelity_debt": ("ucd_pitch_automation",
+                          "untrimmed_shared_source_reuse"),
+    },
+    {
+        "id": 616,
+        "name": "nSYAudioVoicePublicGaspM",
+        "kind": "crowd",
+        "articulation": 149,
+        "sound": 37,
+        "notes": ((5, 7, 100), (5, 7, 100), (5, 7, 30)),
+        "duration_ticks": 230,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 298216,
+        "wave_length": 25200,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 44800,
+        "root_fork_programs": (650,),
+        "omitted_fork_programs": (650,),
+        "root_program_sha256":
+            "4bc9881e6f0ac7b9ebf19aa4c295525e4d54522d0a7365b16bd560bda865773f",
+        "render_program_sha256":
+            "4bc9881e6f0ac7b9ebf19aa4c295525e4d54522d0a7365b16bd560bda865773f",
+        "omitted_fork_program_sha256": (
+            "e69459c34c2e09b772f1fb729223a1e67413e4082ba3a9c1e78d3924a8630793",
+        ),
+        "articulation_program_sha256":
+            "ca91273f625d186e74e838e0dfebf55c132f046d6def24db6a3be61d3f678db5",
+        "fidelity_debt": ("untrimmed_shared_source_reuse",
+                          "omitted_fork_voice_650"),
+    },
+    {
+        "id": 617,
+        "name": "nSYAudioVoicePublicGaspS",
+        "kind": "crowd",
+        "articulation": 104,
+        "sound": 38,
+        "notes": ((6, 7, 70), (6, 7, 180)),
+        "duration_ticks": 250,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 323416,
+        "wave_length": 18792,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 33408,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "8e459d0d33afe2e9ca543572496b90124a3da49ac9e111bc36fb12ebf8f2a31e",
+        "render_program_sha256":
+            "8e459d0d33afe2e9ca543572496b90124a3da49ac9e111bc36fb12ebf8f2a31e",
+        "articulation_program_sha256":
+            "bb4edab4e82d0ffa6a07ea66c83810937e06326a07be08d738cfe798b9d92e41",
+        "fidelity_debt": ("untrimmed_shared_source_reuse",),
+    },
+    {
+        "id": 618,
+        "name": "nSYAudioVoicePublicCheer",
+        "kind": "crowd",
+        "articulation": 77,
+        "sound": 37,
+        "notes": ((8, 7, 80), (7, 7, 100), (7, 7, 200)),
+        "duration_ticks": 380,
+        "ucd_volume": 210,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 298216,
+        "wave_length": 25200,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 44800,
+        "root_fork_programs": (627,),
+        "omitted_fork_programs": (627,),
+        "root_program_sha256":
+            "eee2a02d366581e090c6e234c1cd0626aeeef831e1364639f4a11c9297a23a1d",
+        "render_program_sha256":
+            "eee2a02d366581e090c6e234c1cd0626aeeef831e1364639f4a11c9297a23a1d",
+        "omitted_fork_program_sha256": (
+            "a877ebac0b95ed5bfb48a99e1fe4815dad053c2ab8bb17cea87e33cecdef7a18",
+        ),
+        "articulation_program_sha256":
+            "b8711b929c3d4e402ebdd8c9793f234e550d7c495ce5e9d7354abb0a15e65d2b",
+        "fidelity_debt": ("ucd_pitch_automation",
+                          "untrimmed_shared_source_reuse",
+                          "omitted_fork_voice_627"),
+    },
+    {
+        "id": 619,
+        "name": "nSYAudioVoicePublicAmazed",
+        "kind": "crowd",
+        "articulation": 56,
+        "sound": 24,
+        "notes": ((5, 7, 80), (5, 7, 180)),
+        "duration_ticks": 260,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 200920,
+        "wave_length": 17568,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 31232,
+        "root_fork_programs": (676,),
+        "omitted_fork_programs": (676,),
+        "root_program_sha256":
+            "243ec30c1eb99f73fe48ab83f6fef50f0145e30e0ed9b639b837638da82ff7a2",
+        "render_program_sha256":
+            "243ec30c1eb99f73fe48ab83f6fef50f0145e30e0ed9b639b837638da82ff7a2",
+        "omitted_fork_program_sha256": (
+            "3017848166a868da1b818559d84704073db02999cf20bd5d37f77477bfa9d516",
+        ),
+        "articulation_program_sha256":
+            "516d2cd41e614d0cadcf3d2c0810767972ac3bf1c59b436cf96d8abb1805baf0",
+        "fidelity_debt": ("untrimmed_shared_source_reuse",
+                          "omitted_fork_voice_676"),
+    },
+    {
+        "id": 620,
+        "name": "nSYAudioVoicePublicGaspClap",
+        "kind": "crowd",
+        "articulation": 79,
+        "sound": 37,
+        "notes": ((10, 7, 25), (9, 7, 25), (8, 7, 25), (8, 7, 100)),
+        "duration_ticks": 175,
+        "ucd_volume": 190,
+        "articulation_pitch_cents": 1199,
+        "loop": False,
+        "wave_base": 298216,
+        "wave_length": 25200,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 44800,
+        "root_fork_programs": (684,),
+        "omitted_fork_programs": (684,),
+        "root_program_sha256":
+            "213d86b3fc77049de55891d21d575c826ed348329b69464fe315f105eed7e22c",
+        "render_program_sha256":
+            "213d86b3fc77049de55891d21d575c826ed348329b69464fe315f105eed7e22c",
+        "omitted_fork_program_sha256": (
+            "0eeeeb6e17b17ad91e2fb64c40427f7384e1a0ba895e3a9ce31f604414addaeb",
+        ),
+        "articulation_program_sha256":
+            "81f29b206773f85fce23a2160a170220ac48c60d3b7fcb13a146f661f23bba87",
+        "fidelity_debt": ("ucd_pitch_automation",
+                          "untrimmed_shared_source_reuse",
+                          "omitted_fork_voice_684"),
+    },
+    {
+        "id": 622,
+        "name": "nSYAudioVoicePublicDamageL",
+        "kind": "crowd",
+        "articulation": 77,
+        "sound": 37,
+        "notes": ((7, 7, 80), (7, 7, 100), (7, 7, 200)),
+        "duration_ticks": 380,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 298216,
+        "wave_length": 25200,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 44800,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "cba3ab56d54c335b9f6855e719fac3979d611e159f1c788eb29a7a25d65cef77",
+        "render_program_sha256":
+            "cba3ab56d54c335b9f6855e719fac3979d611e159f1c788eb29a7a25d65cef77",
+        "articulation_program_sha256":
+            "b8711b929c3d4e402ebdd8c9793f234e550d7c495ce5e9d7354abb0a15e65d2b",
+        "fidelity_debt": ("untrimmed_shared_source_reuse",),
+    },
+    {
+        "id": 623,
+        "name": "nSYAudioVoicePublicDamageM",
+        "kind": "crowd",
+        "articulation": 78,
+        "sound": 38,
+        "notes": ((13, 7, 30), (13, 7, 120)),
+        "duration_ticks": 150,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": -200,
+        "loop": False,
+        "wave_base": 323416,
+        "wave_length": 18792,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 33408,
+        "root_fork_programs": (625,),
+        "omitted_fork_programs": (625,),
+        "root_program_sha256":
+            "381531d5d0af5aec2e45e7661841b479ee56e5883a00eb55d58cfca8a018b2d6",
+        "render_program_sha256":
+            "381531d5d0af5aec2e45e7661841b479ee56e5883a00eb55d58cfca8a018b2d6",
+        # 625 is itself a packed cue below, so this fork is "omitted" only in
+        # the sense that 623 does not render it into its own sample -- the
+        # sound exists and the runtime can play it.
+        "omitted_fork_program_sha256": (
+            "59f94288d1b698bf4af564d8332c8fb0ca781266e30268db88890dd35f1fce9b",
+        ),
+        "articulation_program_sha256":
+            "13c25afbef0268d2db7052a9090baef23b9b9ca76200a447044e1d5d30bd10b9",
+        "fidelity_debt": ("untrimmed_shared_source_reuse",
+                          "omitted_fork_voice_625"),
+    },
+    {
+        "id": 625,
+        "name": "nSYAudioVoicePublicDamageS",
+        "kind": "crowd",
+        "articulation": 79,
+        "sound": 37,
+        "notes": ((9, 7, 25), (10, 7, 25), (9, 7, 25), (8, 7, 100)),
+        "duration_ticks": 175,
+        "ucd_volume": 160,
+        "articulation_pitch_cents": 1199,
+        "loop": False,
+        "wave_base": 298216,
+        "wave_length": 25200,
+        "loop_start": 0,
+        "loop_end": 0,
+        "retain_full_source": True,
+        "expected_retained_samples": 44800,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "59f94288d1b698bf4af564d8332c8fb0ca781266e30268db88890dd35f1fce9b",
+        "render_program_sha256":
+            "59f94288d1b698bf4af564d8332c8fb0ca781266e30268db88890dd35f1fce9b",
+        "articulation_program_sha256":
+            "81f29b206773f85fce23a2160a170220ac48c60d3b7fcb13a146f661f23bba87",
+        "fidelity_debt": ("ucd_pitch_automation",
+                          "untrimmed_shared_source_reuse"),
+    },
 )
 
 # These source cues are deliberately audited but not packed.  Each retunes an
@@ -1848,8 +2229,19 @@ def validate_articulation(program: list[list], selector: dict) -> None:
             raise ValueError(
                 f"FGM {selector['id']} articulation gained unsupported ops: "
                 f"{sorted(unsupported)}")
-    if not program or program[-1][0] != "end":
+    if not program:
         raise ValueError(f"FGM {selector['id']} articulation has no end")
+    if program[-1][0] != "end":
+        # An articulation may terminate by looping instead of ending: crowd
+        # cues 616 GaspM and 617 GaspS close with `jump_loop` back to their own
+        # `mark_loop`, so their automation repeats until the note schedule runs
+        # out. That is a terminator, not a truncated program, and the pinned
+        # hash above already fixes the exact bytes. A bare `jump_loop` with no
+        # `mark_loop` still fails: that would be a program that fell off its
+        # end.
+        if (program[-1][0] != "jump_loop" or
+                not any(row[0] == "mark_loop" for row in program)):
+            raise ValueError(f"FGM {selector['id']} articulation has no end")
 
 
 def fgm_voice_source_audit(program_id: int, ucd: dict,
@@ -3163,15 +3555,32 @@ def trim_proof(selector: dict, program: list[list], pcm: list[int],
     }
 
 
+def looped_fanfare_sample_count(selector: dict, frequency: int) -> int:
+    """How long the source plays this cue, in DS samples at its own rate.
+
+    The AOT render length was a pinned magic number while 626 was the only cue
+    on this path, so nothing said where it came from and a second cue had no
+    way to obtain one. It is just the note's duration in source ticks converted
+    to samples, ceiling: 1200 ticks x 5750 us x 15102 Hz reproduces 626's
+    104,204 exactly. The selector still pins the result -- a derivation that
+    silently changes length is as bad as a wrong constant -- but the pin is now
+    checked against the source rather than trusted.
+    """
+    numerator = (selector["duration_ticks"] * FGM_TIMER_MICROSECONDS *
+                 frequency)
+    return (numerator + 999999) // 1000000
+
+
 def public_excited_source_indices(selector: dict) -> list[int]:
     loop_start = selector["loop_start"]
     loop_end = selector["loop_end"]
     loop_length = loop_end - loop_start
     if loop_start != 1 or loop_length <= 0:
         raise ValueError("PublicExcited source loop contract changed")
+    sample_count = selector["expected_retained_samples"]
     indices = [0]
-    while len(indices) < PUBLIC_EXCITED_SAMPLE_COUNT:
-        remaining = PUBLIC_EXCITED_SAMPLE_COUNT - len(indices)
+    while len(indices) < sample_count:
+        remaining = sample_count - len(indices)
         indices.extend(range(loop_start, loop_start + min(loop_length,
                                                           remaining)))
     return indices
@@ -3202,6 +3611,12 @@ def public_excited_gain_fraction(sample_index: int, frequency: int,
 def render_public_excited(pcm: list[int], selector: dict,
                           frequency: int,
                           envelope: list[dict]) -> tuple[list[int], dict]:
+    derived_samples = looped_fanfare_sample_count(selector, frequency)
+    if derived_samples != selector["expected_retained_samples"]:
+        raise ValueError(
+            f"FGM {selector['id']} looped-fanfare length moved: source says "
+            f"{derived_samples}, selector pins "
+            f"{selector['expected_retained_samples']}")
     indices = public_excited_source_indices(selector)
     maximum_target = max(point["source_quadratic_target"]
                          for point in envelope)
@@ -3239,15 +3654,22 @@ def render_public_excited(pcm: list[int], selector: dict,
     missing_preroll_indices = [
         selector["loop_start"] +
         (index % (selector["loop_end"] - selector["loop_start"]))
-        for index in range(PUBLIC_EXCITED_SAMPLE_COUNT)
+        for index in range(selector["expected_retained_samples"])
     ]
     missing_preroll = []
     for sample_index, source_index in enumerate(missing_preroll_indices):
         gain_numerator, gain_denominator = public_excited_gain_fraction(
             sample_index, frequency, envelope)
-        missing_preroll.append(round_div_signed(
+        # Clamped exactly like `rendered` above. It was not, and 626 never
+        # noticed because its higher UCD volume resolves a higher constant
+        # hardware gain and therefore a smaller software multiplier; 621's 190
+        # overflows int16 and the control crashed on `struct.pack`. Leaving it
+        # unclamped also made this a WEAKER control -- it would have differed
+        # from the render in two ways, the missing pre-roll and the saturation,
+        # so "they differ" would not have isolated the pre-roll.
+        missing_preroll.append(max(-32768, min(32767, round_div_signed(
             int(pcm[source_index]) * gain_numerator * 127,
-            gain_denominator * 32767 * hardware_volume))
+            gain_denominator * 32767 * hardware_volume))))
 
     command_points = []
     previous_target = PUBLIC_EXCITED_MIXER_MINIMUM
@@ -4253,7 +4675,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "source_root_duration_ticks": root_duration_ticks,
             }
             old_loop_ima = b""
-        elif selector["id"] == PUBLIC_EXCITED_ID:
+        elif selector["id"] in LOOPED_FANFARE_AOT_IDS:
             runtime_pcm, acoustic_oracle = render_public_excited(
                 pcm, selector, frequency, envelope)
             loop_strategy = "finite_source_loop_aot"
@@ -4358,7 +4780,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         metrics = audio_metrics(runtime_pcm, decoded_ima)
         if metrics["decoded_peak"] == 0 or metrics["decoded_rms"] <= 0:
             raise ValueError(f"FGM {selector['id']} decoded to silence")
-        if selector["id"] == PUBLIC_EXCITED_ID:
+        if selector["id"] in LOOPED_FANFARE_AOT_IDS:
             boundary_starts = acoustic_oracle[
                 "source_former_loop_boundary_starts"]
             boundary_deltas = [
@@ -4682,10 +5104,12 @@ def derive_selectors(repo_root: Path, fgm_ids: list[int]) -> list[dict]:
     tools_dir = repo_root / "decomp/BattleShip-main/decomp/tools"
     extract_fgm = load_module(tools_dir / "extract_fgm.py", "extract_fgm")
     decode_ctl = load_module(tools_dir / "decode_ctl.py", "decode_ctl")
+    audio_codec = load_module(tools_dir / "audio_codec.py", "audio_codec")
     audio_dir = repo_root / "decomp/BattleShip-main/BattleShip_o2r/audio"
 
     raw = {name: read_o2r_payload(audio_dir / name)[1]
-           for name in ("fgm_tbl", "fgm_ucd", "B1_sounds2_ctl")}
+           for name in ("fgm_tbl", "fgm_ucd", "B1_sounds2_ctl",
+                        "B1_sounds2_tbl")}
     ucd = extract_fgm.decode_fgm_ucd(raw["fgm_ucd"])
     articulations = extract_fgm.decode_fgm_tbl(raw["fgm_tbl"])
     ctl_structs = decode_ctl.walk(raw["B1_sounds2_ctl"])
@@ -4738,6 +5162,22 @@ def derive_selectors(repo_root: Path, fgm_ids: list[int]) -> list[dict]:
                 "articulation_ops": sorted({op[0] for op in art_program}),
                 "articulation_program_sha256": json_sha256(art_program),
             })
+            # The three fields a SELECTED entry still could not be authored
+            # from: the decoded sample count (which `retain_full_source`
+            # declares as expected_retained_samples), and the program hashes
+            # for the root's fork voices. Without these, adding a forked cue
+            # meant pasting a placeholder, running the generator, and reading
+            # the correct value out of its error -- once per field, per cue.
+            book = ctl_by_offset[wave["book_off"]]
+            vadpcm = raw["B1_sounds2_tbl"][
+                wave["base"]:wave["base"] + wave["length"]]
+            row["source_pcm_samples"] = len(audio_codec.adpcm_decode(
+                vadpcm, book["entries"], book["order"],
+                book["npredictors"]))
+            row["fork_program_sha256"] = tuple(
+                json_sha256(ucd["entries"][fork]["program"])
+                for fork in row["fork_voices"])
+            row["render_program_sha256"] = row["root_program_sha256"]
         except (KeyError, IndexError, ValueError) as error:
             row["error"] = f"{type(error).__name__}: {error}"
         derived.append(row)

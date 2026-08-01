@@ -1302,6 +1302,12 @@ override NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR := 1
 override NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI := 1
 override NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW := 1
 override NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI := 1
+# BUGS.md crowd row: compile ft/ftpublic.c in place so the audience actor,
+# its thresholds, cooldowns, repeat limits and defeated-voice queue are the
+# source's rather than a translation. Default 0 until a natural match proves
+# the reactions fire and reach the speaker -- it costs .text, and .text costs
+# taskman arena one-for-one on this platform.
+NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 0
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_BGM := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_FGM := 1
@@ -1661,6 +1667,9 @@ CFILES += battleship_lbparticle.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR),1)
 CFILES += battleship_fox_reflector.c
+endif
+ifeq ($(NDS_IMPORT_BATTLESHIP_FT_PUBLIC),1)
+CFILES += battleship_ftpublic.c
 endif
 ifneq ($(filter 1,$(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI) $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)),)
 CFILES += battleship_ftcommon_fallspecial.c
@@ -2423,6 +2432,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_BLASTER $(NDS_IMPORT_BATTLESHIP_FOX_BLASTER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER $(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR $(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR)'; \
+		echo '#define NDS_IMPORT_BATTLESHIP_FT_PUBLIC $(NDS_IMPORT_BATTLESHIP_FT_PUBLIC)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)'; \

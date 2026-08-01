@@ -6527,12 +6527,14 @@ static void ndsFTCommonDamageSetDustEffectInterval(FTStruct *fp)
     }
 }
 
-void ftPublicCommonCheck(GObj *fighter_gobj, f32 knockback,
-                         sb32 is_force_curr_knockback)
+/* The dash-run damage proof, split out of the crowd stub that used to be the
+ * only body of ftPublicCommonCheck. It records; it never decided anything. The
+ * real actor (battleship_ftpublic.c) calls this and then the source check, so
+ * importing the crowd cannot silently retire a proof. */
+void ndsFighterDashRunRecordPublicCheck(GObj *fighter_gobj, f32 knockback,
+                                        sb32 is_force_curr_knockback)
 {
     (void)fighter_gobj;
-    (void)knockback;
-    (void)is_force_curr_knockback;
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
     {
@@ -6546,6 +6548,15 @@ void ftPublicCommonCheck(GObj *fighter_gobj, f32 knockback,
         }
     }
 }
+
+#if !NDS_IMPORT_BATTLESHIP_FT_PUBLIC
+void ftPublicCommonCheck(GObj *fighter_gobj, f32 knockback,
+                         sb32 is_force_curr_knockback)
+{
+    ndsFighterDashRunRecordPublicCheck(fighter_gobj, knockback,
+                                       is_force_curr_knockback);
+}
+#endif
 
 GObj *ftParamGetPlayerNumGObj(s32 player_num)
 {
@@ -12813,11 +12824,13 @@ void lbCommonSetSpriteScissor(s32 xmin, s32 xmax, s32 ymin, s32 ymax)
     (void)ymax;
 }
 
+#if !NDS_IMPORT_BATTLESHIP_FT_PUBLIC
 void ftPublicMakeActor(void)
 {
     gNdsSCVSBattleCompatManagerMask |= 1u << 4;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
 }
+#endif
 
 void ftParamInitGame(void)
 {
