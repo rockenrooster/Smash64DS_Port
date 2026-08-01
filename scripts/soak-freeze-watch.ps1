@@ -721,6 +721,13 @@ try {
             # see it.
             'gNdsTaskmanGeneralHeapFreeMin',
             'gNdsGCDrawsActiveMax',
+            # LIVE DObjs beside the high-water. gcGetDObjSetNextAlloc grows the
+            # pool out of the general heap and never shrinks it, so peak is what
+            # costs -- but peak only means "simultaneous" if ejected DObjs go
+            # back on sGCDrawHead. If live tracks max at END of run, where
+            # almost no effect is on screen, they are LEAKING and the fix is one
+            # missing free rather than a bounded-pool rewrite.
+            'sGCDrawsActiveNum',
             # BUGS.md crowd row, present only at
             # NDS_IMPORT_BATTLESHIP_FT_PUBLIC=1. "The crowd is silent" has three
             # distinct causes and the FGM backend's UnsupportedCallCount

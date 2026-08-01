@@ -185,6 +185,24 @@ the DL buffers -- 163,840 B, the largest fixed allocation -- are **not slack**:
 `DLBUF0` was measured at `used=61488` against `len=61440`, i.e. overflowing, on
 the 2026-07-31 rematch freeze. Do not re-propose either.
 
+**Not a leak, and the exchange rate is now known.** `gNdsGCDrawsActiveMax` 129
+against a live `sGCDrawsActiveNum` of **54** at end of run: ejected DObjs do go
+back on `sGCDrawHead`, so 129 is a real simultaneous peak and there is no
+missing free. The source effect pool is already bounded -- `EFFECT_ALLOC_NUM`
+is **38** -- and the +196 DObjs measured when eleven more effects were routed is
+38 x ~5.2, i.e. **~5 DObjs per concurrent effect, about 707 bytes each**. The
+1,276-byte margin therefore buys roughly **two** concurrent source effects.
+Truncating the effect pool trades effect count for heap at that rate and cannot
+produce a playable set.
+
+**Two classification errors were made getting here; both are recorded so the
+next reader does not repeat them.** (1) The first freeze stack was read as
+battle setup from its bottom frames; it was mid-match on a KO. (2) Eleven seams
+were classified "particle-only, no DObj tree" because they do not call
+`efManagerMakeEffect` -- but they call `gcMakeGObjSPAfter` and allocate anyway.
+Checking for the absence of one call is not verifying the absence of
+allocation. Routing them froze the ROM identically, heap 26,876 -> 200.
+
 **The architectural answer is the one OPTIMIZATION_IDEAS already names:** a
 fixed-pool native effect runtime, 24-32 bytes per instance with fixed pools
 (16 hit / 8 dust / 4 attached / 4 death), replacing per-effect GObj+DObj+XObj

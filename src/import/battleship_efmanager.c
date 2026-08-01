@@ -963,61 +963,6 @@ GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
  *
  */
 
-#if NDS_R2_SOURCE_EFFECTS_FULL
-LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,
-                                                 s32 size, sb32 is_static)
-{
-    return ndsBaseEFManagerDamageNormalLightMakeEffect(pos, player, size,
-                                                       is_static);
-}
-
-LBParticle *efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player,
-                                                 s32 size)
-{
-    return ndsBaseEFManagerDamageNormalHeavyMakeEffect(pos, player, size);
-}
-
-LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size)
-{
-    return ndsBaseEFManagerDamageFireMakeEffect(pos, size);
-}
-
-LBParticle *efManagerDamageElectricMakeEffect(Vec3f *pos, s32 size)
-{
-    return ndsBaseEFManagerDamageElectricMakeEffect(pos, size);
-}
-
-LBParticle *efManagerDamageCoinMakeEffect(Vec3f *pos)
-{
-    return ndsBaseEFManagerDamageCoinMakeEffect(pos);
-}
-
-GObj *efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
-{
-    return ndsBaseEFManagerDamageSlashMakeEffect(pos, size, rotate);
-}
-
-LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index)
-{
-    return ndsBaseEFManagerDustExpandSmallMakeEffect(pos, f_index);
-}
-
-LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
-{
-    return ndsBaseEFManagerFireGrindMakeEffect(pos);
-}
-
-LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos)
-{
-    return ndsBaseEFManagerSparkleWhiteMakeEffect(pos);
-}
-
-LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
-{
-    return ndsBaseEFManagerSparkleWhiteScaleMakeEffect(pos, scale);
-}
-
-#endif /* NDS_R2_SOURCE_EFFECTS_FULL */
 
 /* The star KO. Source spawns efcommon script 0x5C directly. */
 LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos, f32 scale)
@@ -1039,37 +984,96 @@ GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 scale)
     return ndsBaseEFManagerRebirthHaloMakeEffect(fighter_gobj, scale);
 }
 
+/* THE "PARTICLE-ONLY" SPLIT WAS WRONG, and this is the correction.
+ *
+ * These eleven do not call efManagerMakeEffect, so they were classified as
+ * building no DObj tree and therefore free of the DObj budget. That checked for
+ * the absence of ONE call, not for the absence of allocation:
+ * efManagerDamageNormalLightMakeEffect and its siblings call gcMakeGObjSPAfter
+ * and make their own GObj, and a GObj pulls DObjs. Routing them froze the ROM
+ * in the same place as routing all twenty -- DeadExplode's 136-byte DObj -- with
+ * gSYTaskmanGeneralHeap down to 200 bytes from 26,876.
+ *
+ * The honest model is that EVERY source effect allocates, gcGetDObjSetNextAlloc
+ * grows the DObj pool out of the general heap with no ceiling, and the margin
+ * to the ifCommonSetMaxNumGObj latch is nine DObjs. No meaningful group fits
+ * behind that. The fix is the bounded fixed-pool effect runtime, not a better
+ * subset. */
 #if NDS_R2_SOURCE_EFFECTS_FULL
-GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
+LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,
+                                                 s32 size, sb32 is_static)
 {
-    return ndsBaseEFManagerImpactWaveMakeEffect(pos, index, rotate);
+    return ndsBaseEFManagerDamageNormalLightMakeEffect(pos, player, size,
+                                                       is_static);
 }
-
-GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos)
+LBParticle *efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player,
+                                                 s32 size)
 {
-    return ndsBaseEFManagerCatchSwirlMakeEffect(pos);
+    return ndsBaseEFManagerDamageNormalHeavyMakeEffect(pos, player, size);
 }
-
+LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size)
+{
+    return ndsBaseEFManagerDamageFireMakeEffect(pos, size);
+}
+LBParticle *efManagerDamageElectricMakeEffect(Vec3f *pos, s32 size)
+{
+    return ndsBaseEFManagerDamageElectricMakeEffect(pos, size);
+}
+LBParticle *efManagerDamageCoinMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerDamageCoinMakeEffect(pos);
+}
+LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index)
+{
+    return ndsBaseEFManagerDustExpandSmallMakeEffect(pos, f_index);
+}
+LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerFireGrindMakeEffect(pos);
+}
+LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerSparkleWhiteMakeEffect(pos);
+}
+LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
+{
+    return ndsBaseEFManagerSparkleWhiteScaleMakeEffect(pos, scale);
+}
 LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos)
 {
     return ndsBaseEFManagerFlashMiddleMakeEffect(pos);
 }
-
 LBParticle *efManagerSetOffMakeEffect(Vec3f *pos, s32 size)
 {
     return ndsBaseEFManagerSetOffMakeEffect(pos, size);
 }
+#endif /* NDS_R2_SOURCE_EFFECTS_FULL */
 
+/* DObj TREE, therefore priced against the nine-DObj margin. All six take
+ * efManagerMakeEffectNoForce, so the EFStruct pool bounds them -- but the bound
+ * is (pool depth x DObjs per tree), which is what exhausted the heap when all
+ * twenty were routed at once. Graduate these as their own measured group. */
+#if NDS_R2_SOURCE_EFFECTS_FULL
+GObj *efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
+{
+    return ndsBaseEFManagerDamageSlashMakeEffect(pos, size, rotate);
+}
+GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
+{
+    return ndsBaseEFManagerImpactWaveMakeEffect(pos, index, rotate);
+}
+GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerCatchSwirlMakeEffect(pos);
+}
 GObj *efManagerDamageSpawnOrbsRandomMakeEffect(Vec3f *pos)
 {
     return ndsBaseEFManagerDamageSpawnOrbsRandomMakeEffect(pos);
 }
-
 GObj *efManagerDamageSpawnSparksRandomMakeEffect(Vec3f *pos, s32 lr)
 {
     return ndsBaseEFManagerDamageSpawnSparksRandomMakeEffect(pos, lr);
 }
-
 GObj *efManagerDamageSpawnMDustRandomMakeEffect(Vec3f *pos, s32 lr)
 {
     return ndsBaseEFManagerDamageSpawnMDustRandomMakeEffect(pos, lr);
