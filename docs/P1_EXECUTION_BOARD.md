@@ -98,6 +98,23 @@ Same test applies to every remaining renderer-side idea in
 the stage-native flags. They are architecture work with real value for the
 four-fighter future, and **none of them is the gate**.
 
+## CHECKPOINT — Latest green, both published ROMs rebuilt on the 83-cue pack (2026-08-01 05:10)
+
+`verify-all.ps1 -Profile Latest` **passed**. Both published ROMs rebuilt from
+that tree because the FGM pack changed under them:
+`smash64ds-battle-playable-hwtri.nds` **11,896,832 B** with its flag-identical
+tick-HUD sibling **11,898,880 B** — `check-published-roms.ps1` passed,
+`check-tickhud-parity.ps1` reports **55 make flags compared, 2 allowlisted
+differences, 0 drift**. `smash64ds.nds` untouched per the owner's standing
+instruction. The +20,480 bytes are almost entirely the pack (682,036 → 700,892),
+which is NitroFS card data and therefore costs no taskman arena.
+
+Note the ordering trap this pass hit: the FGM checker validates the *pack*, not
+the *header*, so three duplicate enum constants (`GuardOn`, `GuardOff`,
+`GamePause` already existed in two other blocks of `gmsound.h`) passed every
+audio check and were caught only by the Latest profile's compile. **A new cue's
+enum needs a build, not just `check-audio-fgm-phase-pack.ps1`.**
+
 ## ONE BOTH-CPU SOAK SETTLED SIX ROWS, and three of them the wrong way (2026-08-01)
 
 `soak-freeze-watch.ps1 -Build build-ftpublic -MakeFlags
