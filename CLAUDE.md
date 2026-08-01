@@ -31,11 +31,14 @@ These are about this tool, so they are not in `AGENTS.md`:
   `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
 - `.codegraph/` exists here, so the CodeGraph section of `AGENTS.md` applies:
   reach for `codegraph_explore` before grep or Read.
-- **Fifteen `smash64ds-*` skills own the DS subsystems.** The canonical text is
+- **Thirteen project-local skills own Nintendo DS work.** Eleven generic
+  `nds-*` skills cover routing, measurement, subsystems, and review;
+  `smash64ds-project-context` loads current repository constraints; and
+  `n64-to-nds-asset-conversion` owns source-asset conversion. The canonical text is
   `.agents/skills/<name>/SKILL.md` (harness-neutral, with its `references/` and
   `agents/openai.yaml`); `.claude/skills/<name>/SKILL.md` is a one-paragraph
   bridge that points at it. Edit the canonical file, never the bridge, and never
-  fork a Claude-specific copy. `smash64ds-route-ds-subsystems` is the entry
+  fork a Claude-specific copy. `nds-port-and-optimize` is the entry
   point when a task spans subsystems or a performance report needs triage.
   `python scripts/validate-smash64ds-skills.py` checks that every canonical
   skill has a matching bridge; nothing runs it automatically, so run it after

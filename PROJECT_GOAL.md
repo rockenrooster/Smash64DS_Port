@@ -270,7 +270,10 @@ When the Nintendo DS cannot afford everything, compromise in this order:
 
 Stable 30 FPS is the most protected requirement.
 
-Before changing gameplay behavior, exhaust cheaper ways of reproducing equivalent results through:
+Feel free to test any of the top 3 but only after you completely exhaust cheaper ways of reproducing equivalent results.
+Permanent implementation REQUIRES owner approval.
+
+Before changing gameplay behavior, completely exhaust cheaper ways of reproducing equivalent results through:
 
 * specialization
 * approximation
@@ -280,6 +283,8 @@ Before changing gameplay behavior, exhaust cheaper ways of reproducing equivalen
 * event-driven updates
 * simplified representations
 * DS-specific implementations
+
+
 
 ---
 

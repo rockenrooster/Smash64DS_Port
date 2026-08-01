@@ -1,19 +1,6 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
-
--FIXED (2026-08-01, needs an ear check) SFX for "GAME SET" sounds really low
-  pitched. Thirteen semitones low: the pack plays one sample at one rate, and
-  the generator took `notes[0]` for that rate. Pitch code 0 is a REST, and FGM
-  488 is the only P1 cue whose program opens with one -- `((0,7,60),(13,7,150))`,
-  a 60-tick rest then the line -- so it rendered at 7,565 Hz where every other
-  announcer line renders at 16,000. Now takes the first SOUNDING note; the
-  sample count is unchanged (the trim was already bounded by the source PCM), so
-  only the frequency field moves. Nothing caught it because the pack self-checks
-  against its own derivation and the derivation had the same bug, so the new
-  guard is external: `check-audio-fgm-phase-pack.ps1` rejects any entry under
-  12,000 Hz, between the 7,565 a rest produces and the 15,102 lowest real one.
-  Left alone deliberately: the rest still counts toward `duration_ticks`, so the
-  line starts one second earlier than the source. Timing, not pitch, unreported.
+-the rolling dodge sound (escape?) sounds off, maybe too loud???
 -Still get intermittent freezes when attacking (maybe collision/animation/heap
   related?).
   **A LIKELY OWNER was removed on 2026-08-01, and the owner's play test is the
@@ -41,49 +28,6 @@ These bugs should be fixed for P1 delivery.
   max, `WORK 1034496 / 1497856` over n:128, VBlank histogram `2:690 3:163 4:33
   5+:4` with `max:19`. So the stall is four 5+-VBlank frames and one 19-VBlank
   frame in a 128-frame window -- an event, not a slow body.
--FIXED (2026-08-01) Sometimes Mario's fireballs don't spawn.
-  **The fix is the weapon pool, and it is a memory fix, not a weapon fix.**
-  `sizeof(WPStruct)` is **704 bytes** and the source allocates
-  `WEAPON_ALLOC_MAX = 32` of them from `gSYTaskmanGeneralHeap` at battle start:
-  **22,528 bytes** for a pool whose measured high-water in a P1 match is **one**.
-  Sampled at the refusal, the heap had **14,796 bytes free** against the
-  25,600-byte `ifCommonSetMaxNumGObj` threshold -- so the GObj cap was latched
-  for the whole match and `gcMakeGObjSPAfter` refused. `NDS_R2_WEAPON_POOL = 12`
-  returns 14,080 bytes, puts free space near 28,876, and the latch never fires.
-  The next soak: **`SpawnCall 16 / SpawnSuccess 16`, `SpawnFailGObj 0`,
-  `SpawnFailPool 0`** -- and that livelier match went to Sudden Death, which no
-  previous soak had reached.
-  The guard itself is untouched: if a later frame does drop under 25,600 the cap
-  still fires, and pool exhaustion is a separate counted, fail-closed path.
-  Reproducing the N64's low-memory latch here does not preserve SSB64 behaviour,
-  it destroys it -- on the N64 the heap had the headroom and the fireball
-  spawned.
-  How it was attributed (2026-08-01): the single-CPU soak that said
-  `SpawnCall 9 / SpawnSuccess 9` was a match where Mario stands still. The first
-  both-CPU soak reports **`SpawnCall 11 / SpawnSuccess 7`** -- four requests the
-  special-N state machine made produced no weapon -- and the two new reason
-  counters name which of `wpManagerMakeWeapon`'s two NULL returns fired:
-  **`SpawnFailGObj 4`, `SpawnFailPool 0`.** So the 32-entry `WPStruct` free list
-  is not the constraint; `gcMakeGObjSPAfter` refused, which is the GObj pool.
-  `gcGetGObjSetNextAlloc` (objman.c:398) returns NULL only when
-  `sGCCommonsMaxNum != -1` and the pool is at its cap -- the
-  `ifCommonSetMaxNumGObj` latch that fires when `gSYTaskmanGeneralHeap` drops
-  under 25,600 B free. It reads -1 at END of run, which is the Results scene,
-  so the cap is not sticky across the scene change and the end-of-run read
-  cannot see it; the value AT the failure is what the next probe records.
-  That puts this row on the same root cause as the L7 oracle abort and the
-  crowd actor's default-off: **the taskman arena margin**, currently
-  `ArenaChosenSize 1273856` (0x137000) against a 0x130000 floor.
-  `WeaponCountMax` was a fixed 1 -- it latched on the first weapon and never
-  moved, so reading it as a pool limit proved nothing. It is now
-  `WEAPON_ALLOC_MAX` minus the measured free-list depth, sampled at every make.
-  The downstream half is now measurable too: `gNdsWeaponRendererSubmitCount`,
-  `...VisibleDrawCount`, `...RejectedDrawCount` and the fireball-specific
-  `gNdsWeaponRendererFireballSubmitCount` / `...FireballVisibleDrawCount` are
-  unconditional counters in the shipping build
-  (`reloc_backend_movement.c:12925`), so "a weapon exists and is not drawn"
-  separates from "a weapon was never made" without a new probe.
-
 -Results screen. VFX and SFX/BGM/FGM.  [ALL FOUR FGM cues PACKED 2026-08-01;
   VFX remains]
   **534 WinnerIs, 499 Mario and 486 Fox** were packed 2026-07-31 -- derived with
@@ -237,7 +181,7 @@ These bugs should be fixed for P1 delivery.
     shape never has to be interpreted, and only for a cue with no forks; with
     forks it stays a hard error, because there the modulation is real.
 
--FIXED (2026-08-01, needs an ear check) Five more cues, and these are the ones
+-FIXED (2026-08-01, needs an ear check. the dodge sounds off, maybe too loud???) Five more cues, and these are the ones
   a player would notice first: **11 `Escape`** (the dodge) x3, **13 `GuardOn`**
   x2 and **14 `GuardOff`** (the shield going up and down), **278 `GamePause`**,
   and **369 `FoxOttotto`** (the noise Fox makes teetering on a ledge). All five
