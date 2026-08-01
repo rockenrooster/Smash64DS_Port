@@ -80,6 +80,24 @@ Counterfactuals from the same CSV, to size each owner honestly:
 So the order is: `SRC` first and `MISC` second, and `FTR`/`STG` are not on the
 critical path for the gate at all however large they look in the P50.
 
+**This retires an entire class of candidate, and Task 56 is the first casualty.**
+`NDS_TASK56_FIGHTER_PRIMITIVES=2` compiles the fighter topology into strips —
+47% fewer `VERTEX16` submissions, exactly the quantity Tasks 53/55 proved is the
+only thing that moves the geometry floor — and it is still not a gate lever,
+because it touches `FTR` and `FTR` is flat where the gate is decided. A matched
+A/B was built and started on 2026-08-01 (control
+`artifacts/performance/r207-t56-control-128.json`: `WORK-H` P95 1,249,600, 19 of
+128 over gate, `FTR` P50 383,040) and **abandoned on that reasoning rather than
+on a result** — its arm exceeded the sampler's 900 s ceiling twice, and the
+expected value of a third attempt is a couple of frames at best against a lever
+whose sign was already measured negative (`PERF_LEDGER`, *Task 56 … KILL*:
+`FTR` +5,824, +1.0%). Recorded in the Makefile beside the flag.
+
+Same test applies to every remaining renderer-side idea in
+`optimization/OPTIMIZATION_IDEAS.md`: the fighter packet/DMA path, profile-0,
+the stage-native flags. They are architecture work with real value for the
+four-fighter future, and **none of them is the gate**.
+
 ## R2-08 — the switch, reduced to a checklist (2026-08-01)
 
 Written down now so the switch is a mechanical step when its one open

@@ -154,6 +154,16 @@ NDS_TASK55_STAGE_GEOM ?= 0
 #   2 = within-run opaque-run topology reorder strips (E0: 47.0%)
 # Topology is compiled host-side (no runtime strip finding). Default 0 keeps the
 # published ROM byte-identical; the published/tick-HUD blocks do NOT override it.
+#
+# NOT A GATE LEVER, and this is a structural statement rather than another
+# measurement. 2026-08-01 ranked the over-gate population per frame: on the
+# frames that miss the gate `FTR` is FLAT -- 1,536 ticks BELOW its clean median
+# on the worst frame of the run -- while `SRC` runs +250K to +440K and `MISC`
+# +77K to +120K. A lever that touches only `FTR` therefore cannot change the
+# over-gate COUNT by more than a couple of frames whatever its sign, and its
+# sign was already measured negative once (PERF_LEDGER, "Task 56 ... KILL":
+# FTR +5,824, +1.0%, against a 47% vertex-submission cut). A 2026-08-01 re-test
+# was started and abandoned for that reason, not because it failed.
 NDS_TASK56_FIGHTER_PRIMITIVES ?= 0
 # Task 51 native stage path. When on, the STAGE owner emits the 42 baked
 # constant world matrices via MTX_MULT4x3 under a once-loaded view (instead of
