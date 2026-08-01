@@ -98,6 +98,61 @@ Same test applies to every remaining renderer-side idea in
 the stage-native flags. They are architecture work with real value for the
 four-fighter future, and **none of them is the gate**.
 
+## ONE BOTH-CPU SOAK SETTLED SIX ROWS, and three of them the wrong way (2026-08-01)
+
+`soak-freeze-watch.ps1 -Build build-ftpublic -MakeFlags
+NDS_IMPORT_BATTLESHIP_FT_PUBLIC=1 -MinutesToRun 3.5`, first ever build of that
+flag. **Verdict NO-FREEZE**, 2,100 presented frames, one completed match into
+Results. What it settled, in order of how much it changes:
+
+**1. `NDS_IMPORT_BATTLESHIP_FT_PUBLIC=1` BUILDS, LINKS AND RUNS.** It never had.
+The compile seam cost five declarations and one data table — see the commit and
+`PORTING.md`. `gNdsFtPublicActorMakeCount 2`, `CommonCheckCount 30`: the actor
+is created and the source's check runs.
+
+**2. But it puts the arena UNDER the GObj latch.** `general heap free 17,316`
+and the soak's own warning fired: *the GObj pool cap FIRED at 48*. It did not
+crash — 48 was enough this time — but the flag cannot be defaulted on as it
+stands. **Arena is now the binding constraint on closing the crowd row**, not
+the cue set and not the actor.
+
+**3. Five of the seven crowd counters CANNOT FIRE, and that is structural.**
+`ProcUpdateCount`, `PlayCommonCount`, `LastCommonFGM`, `CallStartCount` and
+`LastCallFGM` are absent from the ELF entirely — the soak's symbol guard dropped
+them. The `#define` seam renames a decomp definition *and its intra-TU
+references together*, so `ftPublicMakeActor` registers the **inner**
+`battleship_ftPublicProcUpdate` and the wrapper that carries the counter is
+unreferenced, then garbage-collected. Only `CommonCheck` survives because its
+caller is outside the file. **This is the already-recorded "wrapping a decomp
+function to count its INTERNAL callers" refutation, hit again by someone who
+had read it.** Instrument the source's own statics — `sFTPublicCallCount`,
+`sFTPublicCommonOrder`, `sFTPublicCallOrder`, `sFTPublicCommonALSound` — which
+exist because the code writes them.
+
+**4. The particle atlas coverage worry is NOT REAL on this match.**
+`gNdsParticleQuadEmitCount 144,592`, `EmitMax 41` per frame, and
+**`QuadMissCount 0`** across a full both-CPU match including Results. The six
+admitted textures cover everything drawn. `gNdsParticleTextureUseMask` is still
+`0x08400000` — **bits 22 and 27, two textures**. So "six of 31 admitted" is not
+the open risk the VFX rows call it; the open risk is the *scripts that never
+run at all*.
+
+**5. Whispy's leaves and dust are refused, confirmed by id.**
+`gNdsParticleRejectRing`: script **0** and script **1**, bank 0, **reason 2**
+(script id out of range), twice each. Reason 2 on an empty bank is exactly the
+Pupupu registration gap — `ndsParticleLoadEFCommonBank` covers the common bank
+and every other bank takes `ndsParticleRegisterEmptyBank`. Nothing to do with
+VRAM or the atlas.
+
+**6. The fireball row REPRODUCED.** `SpawnCallCount 15` against
+`SpawnSuccessCount 14` — **one request in fifteen produced no weapon**, on a run
+that also reports `WeaponCountMax 1`. So at most one fireball is ever live, and
+the refusal is the source's own concurrency limit meeting a second request.
+That is a much narrower question than "sometimes they don't spawn".
+
+Two more worth carrying: `gNdsR2AnimCacheArenaOverflows 109` on a single match,
+and `gNdsRendererTask36ReplayArenaStaleCount 4,144`.
+
 ## R2-08 — the switch, reduced to a checklist (2026-08-01)
 
 Written down now so the switch is a mechanical step when its one open
