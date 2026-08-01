@@ -91,11 +91,25 @@ These bugs should be fixed for P1 delivery.
   *Trigger side:* `ft/ftpublic.c` is compiled in place
   (`src/import/battleship_ftpublic.c`, `NDS_IMPORT_BATTLESHIP_FT_PUBLIC`), so
   the thresholds, cooldowns, repeat limits and defeated-voice queue are the
-  source's rather than a translation. Its whole external surface already
-  existed -- `func_800269C0_275C0`/`func_80026738_27338` are the DS FGM
-  backend's play/stop, `ftParamGetPlayerNumGObj` is ported. Default 0 until a
-  natural match proves the reactions reach the speaker: it costs `.text`, and
-  `.text` costs taskman arena one for one here.
+  source's rather than a translation. **It COMPILES AND LINKS as of 2026-08-01;
+  before that the flag had never been built, and the claim below that "its whole
+  external surface already existed" was half wrong.** The functions exist, but
+  not under the declarations the decomp TU expects, and one dependency did not
+  exist at all:
+  `func_800269C0_275C0` is declared `void *` by `sys/audio.h:71` and
+  `alSoundEffect *` by `ftpublic.c:4` (a hard conflict, resolved by renaming --
+  which moves the declaration and every call site together, the one case where
+  the `#define` seam's usual limitation is what is wanted); `U16_MAX`,
+  `DObjGetStruct` and `ftParamGetPlayerNumGObj` had no port declaration; and
+  `ftPublicCommonCheck` lost its prototype the moment its port definition
+  compiled out, which broke its own caller. The real dependency was
+  **`dFTCommonDataPublicFighterCallFGMs`** -- `ft/ftcommondata.c` is not
+  compiled here and `nm` finds no such symbol -- now transcribed entry for entry
+  beside the import, with the ten missing `nSYAudioVoicePublic*` constants added
+  to `gmsound.h` at the decomp's values.
+  Still default 0 until a natural match proves the reactions reach the speaker:
+  it costs `.text`, and `.text` costs taskman arena one for one here, with only
+  about five kilobytes of margin before the GObj latch fires.
   *Cue side:* the eleven a P1 Mario-vs-Fox match reaches are packed -- chants
   605 Fox / 609 Mario, reactions 615/616/617 Gasp L/M/S, 618 Cheer, 619 Amazed,
   620 GaspClap, 622/623/625 Damage L/M/S. 624 NoContest is unreachable in a
