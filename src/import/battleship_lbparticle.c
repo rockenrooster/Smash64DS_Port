@@ -156,16 +156,23 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
  * a fraction of the live effect population, and PROJECT_GOAL is explicit that
  * content may be specialized to the configuration.
  *
- * SIZED TO BE MEASURED, NOT GUESSED AT. These are a starting point chosen to
- * fit, and the runtime already carries the instrument that grades them:
- * gNdsParticleStructsMax / GeneratorsMax / TransformsMax are the high-water
- * marks and gNdsParticleRejectCount is non-zero the moment a pool runs dry. Run
- * a full match, read those four, and set each pool to its high-water plus
- * headroom. A reject is a missing effect, so the counter must stay at zero --
- * do not lower a pool below its measured mark to save arena. */
-#define NDS_R2_PARTICLE_POOL_STRUCTS 40
-#define NDS_R2_PARTICLE_POOL_GENERATORS 10
-#define NDS_R2_PARTICLE_POOL_TRANSFORMS 24
+ * SIZED TO BE MEASURED, NOT GUESSED AT. The first sizing (40/10/24) was a
+ * starting point chosen to fit while zero scripts were actually running, and
+ * the high-water counters graded it the moment they did. A both-CPU match with
+ * the corrected P1 seam list reported:
+ *
+ *   StructsMax     40 of 40   SATURATED -- every further spawn was dropped
+ *   GeneratorsMax   8 of 10   1.25x, tight
+ *   TransformsMax   2 of 24   12x, and a transform is 192 B, the dearest unit
+ *
+ * so the arena was being spent almost entirely on the pool nothing used. The
+ * rebalance below is close to free: 64*96 + 12*92 + 12*192 = 9,552 bytes
+ * against the old 9,368, +184 for 60% more structs and six times the measured
+ * transform mark. Grade these again after any change that adds effects; a
+ * saturated pool is a silently missing effect, not an error. */
+#define NDS_R2_PARTICLE_POOL_STRUCTS 64
+#define NDS_R2_PARTICLE_POOL_GENERATORS 12
+#define NDS_R2_PARTICLE_POOL_TRANSFORMS 12
 
 void efParticleInitAll(void)
 {

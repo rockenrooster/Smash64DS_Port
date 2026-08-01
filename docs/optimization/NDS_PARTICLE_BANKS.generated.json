@@ -1,76 +1,111 @@
 {
   "bytes": {
     "arena_headroom_bytes": 210320,
-    "asset_bytes": 82848,
-    "ds_palette_bytes": 672,
-    "ds_texture_bytes": 82752,
-    "ds_texture_data_bytes": 82176,
+    "asset_bytes": 137152,
+    "ds_palette_bytes": 896,
+    "ds_texture_bytes": 137040,
+    "ds_texture_data_bytes": 136256,
     "estimate_2026_07_27_bytes": 129768,
     "estimate_2026_07_27_scripts": 26,
     "estimate_2026_07_27_textures": 18,
     "index_table_bytes": 1283,
     "linked_bytes": 12195,
-    "pack_bytes": 95043,
-    "payload_bytes": 93760,
+    "pack_bytes": 149347,
+    "payload_bytes": 148064,
     "script_bank_bytes": 10912,
-    "source_texture_bytes": 136248,
+    "source_texture_bytes": 220248,
     "spare_bytes": 198125
   },
   "checksums": {
     "source_sha256_lo": "0xa2a1e85f",
-    "table_sha256_lo": "0x8db9d3bd"
+    "table_sha256_lo": "0x1973edec"
   },
   "reach": {
     "p1_seams": [
       "efManagerCatchSwirlMakeEffect",
+      "efManagerConfettiMakeEffect",
       "efManagerDamageCoinMakeEffect",
       "efManagerDamageElectricMakeEffect",
       "efManagerDamageFireMakeEffect",
       "efManagerDamageNormalHeavyMakeEffect",
       "efManagerDamageNormalLightMakeEffect",
       "efManagerDamageSlashMakeEffect",
+      "efManagerDamageSpawnMDustMakeEffect",
       "efManagerDamageSpawnMDustRandomMakeEffect",
+      "efManagerDamageSpawnOrbsMakeEffect",
       "efManagerDamageSpawnOrbsRandomMakeEffect",
+      "efManagerDamageSpawnSparksMakeEffect",
       "efManagerDamageSpawnSparksRandomMakeEffect",
       "efManagerDeadExplodeMakeEffect",
+      "efManagerDustDashMakeEffect",
+      "efManagerDustExpandLargeMakeEffect",
       "efManagerDustExpandSmallMakeEffect",
       "efManagerFireGrindMakeEffect",
+      "efManagerFireSparkMakeEffect",
+      "efManagerFlashLargeMakeEffect",
       "efManagerFlashMiddleMakeEffect",
+      "efManagerFlashSmallMakeEffect",
+      "efManagerFoxBlasterGlowMakeEffect",
+      "efManagerFoxEntryArwingMakeEffect",
       "efManagerFoxReflectorMakeEffect",
+      "efManagerFuraSparkleMakeEffect",
+      "efManagerImpactAirWaveMakeEffect",
       "efManagerImpactWaveMakeEffect",
+      "efManagerMarioEntryDokanMakeEffect",
       "efManagerRebirthHaloMakeEffect",
+      "efManagerReflectBreakMakeEffect",
       "efManagerSetOffMakeEffect",
+      "efManagerShieldBreakMakeEffect",
       "efManagerShieldMakeEffect",
       "efManagerSparkleWhiteDeadMakeEffect",
       "efManagerSparkleWhiteMakeEffect",
-      "efManagerSparkleWhiteScaleMakeEffect"
+      "efManagerSparkleWhiteMultiExplodeMakeEffect",
+      "efManagerSparkleWhiteMultiMakeEffect",
+      "efManagerSparkleWhiteScaleMakeEffect",
+      "efManagerStarSplashMakeEffect"
     ],
     "p1_seams_without_bank_scripts": [
       "efManagerCatchSwirlMakeEffect",
       "efManagerDamageSlashMakeEffect",
+      "efManagerDamageSpawnMDustMakeEffect",
       "efManagerDamageSpawnMDustRandomMakeEffect",
+      "efManagerDamageSpawnOrbsMakeEffect",
       "efManagerDamageSpawnOrbsRandomMakeEffect",
+      "efManagerDamageSpawnSparksMakeEffect",
       "efManagerDamageSpawnSparksRandomMakeEffect",
+      "efManagerFireSparkMakeEffect",
+      "efManagerFoxEntryArwingMakeEffect",
       "efManagerFoxReflectorMakeEffect",
+      "efManagerImpactAirWaveMakeEffect",
       "efManagerImpactWaveMakeEffect",
+      "efManagerMarioEntryDokanMakeEffect",
       "efManagerRebirthHaloMakeEffect",
+      "efManagerReflectBreakMakeEffect",
       "efManagerShieldMakeEffect"
     ],
     "packed_textures": [
+      0,
       2,
+      3,
+      4,
       5,
+      9,
       10,
       11,
       13,
       14,
       15,
+      17,
       18,
       19,
       20,
       21,
+      22,
       24,
       25,
+      27,
       28,
+      29,
       33,
       34,
       35,
@@ -82,11 +117,35 @@
       45
     ],
     "reachable_scripts": [
+      0,
+      1,
+      2,
+      3,
+      4,
       5,
+      6,
       8,
       9,
       10,
       11,
+      16,
+      17,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
       42,
       43,
       44,
@@ -126,14 +185,22 @@
       83,
       85,
       86,
+      87,
+      90,
       91,
       92,
       93,
       94,
       95,
       96,
+      98,
       100,
       101,
+      108,
+      109,
+      110,
+      111,
+      112,
       113,
       114,
       115
@@ -186,6 +253,13 @@
         "efManagerMakeEffectNoForce",
         "efManagerSetPrevStructAlloc"
       ],
+      "efManagerDamageSpawnMDustMakeEffect": [
+        "efGetStruct",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
       "efManagerDamageSpawnMDustRandomMakeEffect": [
         "efGetStruct",
         "efManagerDamageSpawnMDustMakeEffect",
@@ -194,9 +268,23 @@
         "efManagerMakeEffectNoForce",
         "efManagerSetPrevStructAlloc"
       ],
+      "efManagerDamageSpawnOrbsMakeEffect": [
+        "efGetStruct",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
       "efManagerDamageSpawnOrbsRandomMakeEffect": [
         "efGetStruct",
         "efManagerDamageSpawnOrbsMakeEffect",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDamageSpawnSparksMakeEffect": [
+        "efGetStruct",
         "efManagerGetNextStructAlloc",
         "efManagerMakeEffect",
         "efManagerMakeEffectNoForce",
@@ -223,6 +311,20 @@
         "efManagerGetNextStructAlloc",
         "efManagerSetPrevStructAlloc"
       ],
+      "efManagerFireSparkMakeEffect": [
+        "efGetStruct",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerFoxEntryArwingMakeEffect": [
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc",
+        "efManagerSortZNeg"
+      ],
       "efManagerFoxReflectorMakeEffect": [
         "efGetStruct",
         "efManagerGetNextStructAlloc",
@@ -230,8 +332,22 @@
         "efManagerMakeEffectForce",
         "efManagerSetPrevStructAlloc"
       ],
+      "efManagerImpactAirWaveMakeEffect": [
+        "efGetStruct",
+        "efManagerGetNextStructAlloc",
+        "efManagerImpactWaveMakeEffect",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
       "efManagerImpactWaveMakeEffect": [
         "efGetStruct",
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerMarioEntryDokanMakeEffect": [
         "efManagerGetNextStructAlloc",
         "efManagerMakeEffect",
         "efManagerMakeEffectNoForce",
@@ -242,6 +358,12 @@
         "efManagerGetNextStructAlloc",
         "efManagerMakeEffect",
         "efManagerMakeEffectForce",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerReflectBreakMakeEffect": [
+        "efManagerGetNextStructAlloc",
+        "efManagerMakeEffect",
+        "efManagerMakeEffectNoForce",
         "efManagerSetPrevStructAlloc"
       ],
       "efManagerSetOffMakeEffect": [
@@ -260,6 +382,9 @@
       ]
     },
     "seed_scripts": {
+      "0": [
+        "efManagerFuraSparkleMakeEffect"
+      ],
       "100": [
         "efManagerDamageNormalHeavyMakeEffect"
       ],
@@ -269,8 +394,29 @@
       "11": [
         "efManagerFireGrindMakeEffect"
       ],
+      "112": [
+        "efManagerConfettiMakeEffect"
+      ],
       "115": [
         "efManagerSparkleWhiteMakeEffect"
+      ],
+      "16": [
+        "efManagerStarSplashMakeEffect"
+      ],
+      "17": [
+        "efManagerStarSplashMakeEffect"
+      ],
+      "26": [
+        "efManagerSparkleWhiteMultiMakeEffect"
+      ],
+      "3": [
+        "efManagerShieldBreakMakeEffect"
+      ],
+      "34": [
+        "efManagerSparkleWhiteMultiExplodeMakeEffect"
+      ],
+      "4": [
+        "efManagerFlashSmallMakeEffect"
       ],
       "42": [
         "efManagerDeadExplodeMakeEffect"
@@ -286,6 +432,9 @@
       ],
       "5": [
         "efManagerFlashMiddleMakeEffect"
+      ],
+      "6": [
+        "efManagerFlashLargeMakeEffect"
       ],
       "60": [
         "efManagerDeadExplodeMakeEffect"
@@ -323,6 +472,12 @@
       "86": [
         "efManagerDustExpandSmallMakeEffect"
       ],
+      "87": [
+        "efManagerDustExpandLargeMakeEffect"
+      ],
+      "90": [
+        "efManagerDustDashMakeEffect"
+      ],
       "91": [
         "efManagerSparkleWhiteScaleMakeEffect"
       ],
@@ -331,6 +486,9 @@
       ],
       "96": [
         "efManagerDamageCoinMakeEffect"
+      ],
+      "98": [
+        "efManagerFoxBlasterGlowMakeEffect"
       ]
     },
     "spawn_edges": {
@@ -338,6 +496,34 @@
         8,
         9,
         10
+      ],
+      "112": [
+        108,
+        109,
+        110,
+        111
+      ],
+      "26": [
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25
+      ],
+      "3": [
+        1,
+        2
+      ],
+      "34": [
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33
       ],
       "42": [
         46,
@@ -448,14 +634,17 @@
   },
   "textures": [
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 1054,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 15,
       "frames": 1,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 15.8667,
+      "mean_error": 0.9997,
+      "packed": true,
       "source_bytes": 544,
       "source_format": "I4",
+      "source_graded_alpha": true,
       "texture": 0,
       "width": 32
     },
@@ -487,26 +676,32 @@
       "width": 16
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 272,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
       "frames": 1,
       "height": 16,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 14.149,
+      "mean_error": 2.0673,
+      "packed": true,
       "source_bytes": 160,
       "source_format": "I4",
+      "source_graded_alpha": true,
       "texture": 3,
       "width": 16
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 1054,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 15,
       "frames": 1,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 15.8667,
+      "mean_error": 1.1856,
+      "packed": true,
       "source_bytes": 544,
       "source_format": "I4",
+      "source_graded_alpha": true,
       "texture": 4,
       "width": 32
     },
@@ -562,14 +757,17 @@
       "width": 16
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 270,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 7,
       "frames": 1,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 4.0,
+      "mean_error": 0.6934,
+      "packed": true,
       "source_bytes": 288,
       "source_format": "IA4",
+      "source_graded_alpha": false,
       "texture": 9,
       "width": 16
     },
@@ -673,14 +871,17 @@
       "width": 64
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 40976,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 8,
       "frames": 10,
       "height": 64,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 9.0,
+      "mean_error": 0.7328,
+      "packed": true,
       "source_bytes": 41024,
       "source_format": "IA8",
+      "source_graded_alpha": true,
       "texture": 17,
       "width": 64
     },
@@ -745,14 +946,17 @@
       "width": 32
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 266,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 5,
       "frames": 2,
       "height": 16,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 4.0,
+      "mean_error": 1.0059,
+      "packed": true,
       "source_bytes": 288,
       "source_format": "IA4",
+      "source_graded_alpha": false,
       "texture": 22,
       "width": 16
     },
@@ -811,14 +1015,17 @@
       "width": 16
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 92,
+      "ds_format": "PAL16",
+      "ds_palette_entries": 14,
       "frames": 1,
       "height": 8,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
       "source_bytes": 128,
       "source_format": "CI4",
+      "source_graded_alpha": false,
       "texture": 27,
       "width": 16
     },
@@ -838,14 +1045,17 @@
       "width": 32
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 10304,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 32,
       "frames": 10,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 46.0,
+      "mean_error": 8.0687,
+      "packed": true,
       "source_bytes": 41024,
       "source_format": "RGBA32",
+      "source_graded_alpha": true,
       "texture": 29,
       "width": 32
     },

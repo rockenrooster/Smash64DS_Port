@@ -99,6 +99,66 @@ SCRIPT_CONSTRUCTORS = {
 # through SUBSTITUTES, so name it here to keep the two lists equivalent.
 P1_EXTRA_SEAMS = frozenset(("efManagerShieldMakeEffect",))
 
+# THE SUBSTITUTE LIST IS NOT THE SEAM LIST. This derivation used to seed from
+# census.SUBSTITUTES alone, which is the set of effects Task 39 REPLACES with
+# 2D sprites -- close to the exact complement of the set that still needs a
+# packed script. The runtime settled it: the first full match with the
+# interpreter alive started zero scripts, and the reject ring
+# (gNdsParticleRejectRing*) named four (bank, script) pairs, of which two were
+# efcommon ids marked UNREACHABLE by this very file:
+#
+#   bank 1 script 0x62 x8  efManagerFoxBlasterGlowMakeEffect  (Fox neutral-B)
+#   bank 0 script 0x70 x2  efManagerConfettiMakeEffect        (Results)
+#
+# -- while not one substituted script was ever asked for, because the sprite
+# path takes those calls before they reach the constructor.
+#
+# So the seed is now "the efmanager seams a Mario-vs-Fox Dream Land items-off
+# match can reach", listed explicitly. Membership is decided by the P1
+# configuration, not by taste:
+#   * fighter-agnostic combat, movement, shield, grab, KO and respawn effects
+#     are in -- either fighter can produce them;
+#   * Mario-specific and Fox-specific effects are in;
+#   * every other fighter's effects are out (no Kirby, Ness, Link, Pikachu,
+#     Yoshi, Samus, DK, Captain Falcon, Jigglypuff, Master Ball);
+#   * item effects are out (items off);
+#   * water ripples are out (Dream Land has no water).
+# Keeping the substitutes as well costs nothing measurable and keeps the pack
+# correct if a substitute is ever switched back to its original route.
+P1_PARTICLE_SEAMS = frozenset((
+    # movement
+    "efManagerDustExpandLargeMakeEffect",
+    "efManagerDustExpandSmallMakeEffect",
+    "efManagerDustDashMakeEffect",
+    # hit reactions and debris
+    "efManagerDamageSpawnOrbsMakeEffect",
+    "efManagerDamageSpawnSparksMakeEffect",
+    "efManagerDamageSpawnMDustMakeEffect",
+    "efManagerImpactWaveMakeEffect",
+    "efManagerImpactAirWaveMakeEffect",
+    "efManagerSetOffMakeEffect",
+    "efManagerFireSparkMakeEffect",
+    # sparkles and flashes
+    "efManagerSparkleWhiteMultiMakeEffect",
+    "efManagerSparkleWhiteMultiExplodeMakeEffect",
+    "efManagerFlashSmallMakeEffect",
+    "efManagerFlashLargeMakeEffect",
+    "efManagerFuraSparkleMakeEffect",
+    # defence and grabs
+    "efManagerShieldBreakMakeEffect",
+    "efManagerCatchSwirlMakeEffect",
+    "efManagerReflectBreakMakeEffect",
+    # KO, star KO and respawn
+    "efManagerStarSplashMakeEffect",
+    # fighter-specific: Fox
+    "efManagerFoxBlasterGlowMakeEffect",
+    "efManagerFoxEntryArwingMakeEffect",
+    # fighter-specific: Mario
+    "efManagerMarioEntryDokanMakeEffect",
+    # match flow
+    "efManagerConfettiMakeEffect",
+))
+
 O2R_BLOB_MAGIC = b"BLBO"
 O2R_BLOB_SIZE_OFFSET = 0x40
 O2R_BLOB_DATA_OFFSET = 0x44
@@ -613,7 +673,7 @@ def derive_reachable_scripts(repo_root: Path, scripts: list[dict]) -> dict:
         (repo_root / EFMANAGER).read_text(encoding="utf-8", errors="replace")
     )
     arrays = byte_arrays(text)
-    seams = sorted((census.SUBSTITUTES | P1_EXTRA_SEAMS)
+    seams = sorted((census.SUBSTITUTES | P1_EXTRA_SEAMS | P1_PARTICLE_SEAMS)
                    - census.SKIPPED_OVERRIDES)
     seeds: dict[int, list[str]] = {}
     helpers: dict[str, list[str]] = {}
@@ -800,13 +860,30 @@ def choose_ds_format(texture: dict,
     stencil. Within the surviving candidates the smallest image wins, and
     measured premultiplied error breaks ties -- which is what puts the
     RGBA32 explosion frames in A3I5 rather than the 48-bytes-cheaper A5I3.
+
+    A palette format whose capacity is smaller than the source's own colour
+    count is refused outright, for the same reason graded alpha refuses the
+    palette formats: it is a resolution loss, not a rounding error. Without
+    that test the "no candidate is exact, so take the cheapest" fallback picks
+    the WORST survivor -- when the P1 seam list grew on 2026-07-31 it put two
+    six- and four-grey IA4 sources (textures 9 and 22) into three-colour PAL4
+    at max error 28, where one step up to PAL16 costs 128 bytes each of NitroFS
+    payload and lands on 4, the irreducible BGR555 rounding floor.
     """
     alphas = {pixel[3] for frame in frames for pixel in frame}
     graded = not alphas <= {0, 255}
     candidates = DS_ALPHA_FORMATS if graded else \
         (DS_PAL4, DS_PAL16, DS_PAL256, DS_DIRECT16)
+    # Counted after 5-bit quantisation: two source colours that land on the same
+    # BGR555 entry are merged by the hardware's colour depth, not by the format
+    # choice, and charging that to the palette would over-promote every texture.
+    needed = len({tuple(quantise_channel_5bit(channel) for channel in pixel[:3])
+                  for frame in frames for pixel in frame if pixel[3]})
     results = []
     for ds_format in candidates:
+        if ds_format in DS_PALETTE_FORMATS and \
+                DS_FORMAT_CAPS[ds_format][0] < needed:
+            continue
         evaluated = evaluate_format(frames, ds_format)
         if evaluated is None:
             continue

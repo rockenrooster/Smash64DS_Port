@@ -32,31 +32,31 @@
  * Texels start at 0 and the palette at NDS_PARTICLE_PALETTE_ASSET_OFFSET, so a
  * loader reads the file once and hands glTexImage2D/glColorTableEXT slices of
  * it. Linking them instead costs the boot-time taskman arena search the same
- * 82848 bytes one-for-one and hangs the ROM before the first
+ * 137152 bytes one-for-one and hangs the ROM before the first
  * battle allocation -- the reason for the split is in the generator, above
  * TEXTURE_ASSET_NITRO_PATH. Do not "simplify" this back into an array.
  */
 
 #define NDS_PARTICLE_SCRIPT_COUNT 119u
-#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 55u
+#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 87u
 #define NDS_PARTICLE_SCRIPT_UNREACHABLE 0xffffffffu
 #define NDS_PARTICLE_SCRIPT_HEADER_BYTES 0x30u
 #define NDS_PARTICLE_SCRIPT_BANK_BYTES 10912u
 
 #define NDS_PARTICLE_TEXTURE_COUNT 47u
-#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 23u
+#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 31u
 #define NDS_PARTICLE_TEXTURE_UNPACKED 0xffffffffu
-#define NDS_PARTICLE_TEXTURE_DATA_BYTES 82176u
-#define NDS_PARTICLE_PALETTE_ENTRIES 336u
+#define NDS_PARTICLE_TEXTURE_DATA_BYTES 136256u
+#define NDS_PARTICLE_PALETTE_ENTRIES 448u
 
 /* The NitroFS texel/palette payload. */
 #define NDS_PARTICLE_TEXTURE_ASSET_PATH "nitro:/particles/efcommon_particle_textures.ds.bin"
-#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 82848u
-#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 82176u
+#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 137152u
+#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 136256u
 
 /* .rodata in the ARM9 image, and therefore charged against the arena search:
  * script bank 10912 + index tables 1283. The other
- * 82848 bytes of the 95043-byte pack are in the file above. */
+ * 137152 bytes of the 149347-byte pack are in the file above. */
 #define NDS_PARTICLE_LINKED_BYTES 12195u
 
 /* DS TEXIMAGE_PARAM texture-format field values. */
@@ -69,7 +69,7 @@
 #define NDS_PARTICLE_FORMAT_DIRECT16 7u
 
 #define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu
-#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x8db9d3bdu
+#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x1973edecu
 
 typedef struct NDSParticleTexture
 {

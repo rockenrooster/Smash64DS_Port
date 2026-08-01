@@ -27,5 +27,5 @@ _Static_assert(NDS_PARTICLE_SCRIPT_REACHABLE_COUNT <= NDS_PARTICLE_SCRIPT_COUNT,
  * generator recomputes them, so a silent asset swap changes the build. */
 _Static_assert(NDS_PARTICLE_BANKS_SOURCE_CHECKSUM == 0xa2a1e85fu,
                "efcommon source bank checksum changed");
-_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x8db9d3bdu,
+_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x1973edecu,
                "efcommon packed table checksum changed");
