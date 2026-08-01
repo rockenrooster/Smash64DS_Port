@@ -1,0 +1,4 @@
+interface:
+  display_name: "Load Smash64DS Project Context"
+  short_description: "Load current Smash64DS project constraints"
+  default_prompt: "Use $smash64ds-project-context before applying generic Nintendo DS skills in Smash64DS_Port."

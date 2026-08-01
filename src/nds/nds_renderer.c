@@ -3453,6 +3453,13 @@ static u32 sNdsRendererHardwareFrameSerial;
 static const NDSRendererHardwareTextureCacheEntry
     *sNdsRendererHardwareActiveTextureEntry;
 
+#if NDS_R2_PARTICLE_RUNTIME
+/* Declared here rather than beside the atlas prepare because the static-texture
+ * ownership guard below runs long before it and has to recognise the atlas. */
+static int sNdsRendererParticleAtlasName;
+static u32 sNdsRendererParticleAtlasPrepared;
+#endif
+
 static void ndsRendererHardwareRecordBattleStaticTextureHit(
     const NDSRendererHardwareTextureCacheEntry *entry)
 {
@@ -3463,6 +3470,21 @@ static void ndsRendererHardwareRecordBattleStaticTextureHit(
     {
         return;
     }
+#if NDS_R2_PARTICLE_RUNTIME
+    /* The particle atlas is a legitimate second owner of battle texture VRAM,
+     * not a leak. This guard predates it and asks "is every texture bound
+     * during an armed battle a pinned STATIC RECORD" -- true while the static
+     * set was the only pinned resident, and false the moment the particle
+     * draw binds its atlas, which reported ViolationCount 1 for a texture that
+     * is exactly where it should be. Exempted by identity rather than by
+     * loosening the test, so a genuinely unowned binding still trips it. */
+    if ((entry->pinned != 0u) && (entry->static_record_plus1 == 0u) &&
+        (sNdsRendererParticleAtlasPrepared != 0u) &&
+        (entry->name == sNdsRendererParticleAtlasName))
+    {
+        return;
+    }
+#endif
     if ((entry->pinned == 0u) || (entry->static_record_plus1 == 0u) ||
         (entry->static_record_plus1 > 32u))
     {
@@ -10939,8 +10961,6 @@ fail:
  * Pinned like the static set, so the cache's LRU cannot evict it mid-match. It
  * is allocated AFTER them and therefore lands above their VRAM span, which is
  * why this does not disturb the static set's first/end address assertions. */
-static int sNdsRendererParticleAtlasName;
-static u32 sNdsRendererParticleAtlasPrepared;
 volatile u32 gNdsRendererParticleAtlasPrepareCount;
 volatile u32 gNdsRendererParticleAtlasFailCount;
 volatile u32 gNdsRendererParticleAtlasBytes;
@@ -11161,7 +11181,11 @@ void ndsRendererEndParticleQuads(void)
          * reuse check cannot match stale state. */
         sNdsRendererParticleQuadOpen = FALSE;
         ndsRendererHardwareEndBatch();
-        sNdsRendererHardwareBoundTextureName = 0u;
+        /* The bound-texture name is LEFT ALONE. Clearing it here forced the
+         * next binder to re-issue every frame, and the stage's prepared-run
+         * reuse rides on that state: rebuilds went 2 -> 197 a match purely
+         * from this line. The tracker already knows the atlas is bound, and
+         * the next real bind compares against it correctly. */
         sNdsRendererHardwareActiveTextureEntry = NULL;
     }
 }

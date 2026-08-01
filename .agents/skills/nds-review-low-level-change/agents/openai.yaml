@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Nintendo DS Low-Level Change"
+  short_description: "Review Nintendo DS low-level changes safely"
+  default_prompt: "Use $nds-review-low-level-change to audit this Nintendo DS low-level patch or performance claim."

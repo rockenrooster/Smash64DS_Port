@@ -1,0 +1,4 @@
+interface:
+  display_name: "Port and Optimize for Nintendo DS"
+  short_description: "Route measured Nintendo DS porting work"
+  default_prompt: "Use $nds-port-and-optimize to port and optimize this code for Nintendo DS."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Optimize Nintendo DS ARM9"
+  short_description: "Optimize measured ARM9 CPU hot paths"
+  default_prompt: "Use $nds-optimize-arm9 to optimize this measured Nintendo DS ARM9 hot path."

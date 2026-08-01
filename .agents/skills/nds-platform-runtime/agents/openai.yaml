@@ -1,0 +1,4 @@
+interface:
+  display_name: "Harden Nintendo DS Platform Runtime"
+  short_description: "Harden Nintendo DS platform and interrupt code"
+  default_prompt: "Use $nds-platform-runtime to debug or implement this Nintendo DS platform runtime path."

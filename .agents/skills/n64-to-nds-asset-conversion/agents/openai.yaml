@@ -1,0 +1,4 @@
+interface:
+  display_name: "Convert N64 Assets for Nintendo DS"
+  short_description: "Convert N64 texture assets for Nintendo DS"
+  default_prompt: "Use $n64-to-nds-asset-conversion to decode this N64 asset and bake a Nintendo DS-native result."
