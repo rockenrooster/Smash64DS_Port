@@ -2157,9 +2157,26 @@ something to re-derive. Six of the eight open VFX rows need them.
 other three are where the phase actually is.**
 
 **Clause 4 no longer has a named lever.** L7 was the last one and it is refuted
-(see the L7 REVERTED row). Its measurement also moved the baseline: the gate
-figure is **1,208,960**, not the 1,147,200 this file quoted from
-`git=cc5bc2ff967`, so the gap is **88,960**, not 27,200. Before naming another
+(see the L7 REVERTED row). Its measurement also corrected the baseline, in both
+directions at once:
+
+| | `WORK-H` P95 | mean | artifact |
+|---|---|---|---|
+| L9 control `2a53c061cd1` | 1,281,856 | 989,892 | `r207-L9-control-128.json` |
+| L10 `b06f16567dc` | 1,232,448 | 966,759 | `r207-L10-sqrt-128.json` |
+| **HEAD `800a934`** | **1,208,960** | 973,484 | `r207-L7-control-128.json` + `-control2-` |
+| this file's old claim | 1,147,200 | — | **none — no artifact exists** |
+
+So HEAD is **23,488 better** than the last attested figure, not worse; the
+27,200 gap was never measured. The real gap is **88,960**, and the two HEAD runs
+are bit-identical, so it is a number to work against rather than re-derive.
+Two things to note while reading the table: `r207-particles-128.json`
+(`1294a388175`) reports P95 **and** mean identical to `r207-L10-sqrt`
+(`b06f16567dc`) to the digit, which on a deterministic harness means either the
+same binary or the same run relabelled — do not cite it as an independent point.
+And P95 fell 23,488 while the mean ROSE 6,725, so HEAD is not uniformly faster.
+
+Before naming another
 lever, read the two general findings the L7 measurement produced — hot ARM text
 costs ~1.85 cycles/frame of FTR mean per byte, and replacing soft float with
 fixed point was worth 99 cycles per call, not the 800 the estimate assumed.
