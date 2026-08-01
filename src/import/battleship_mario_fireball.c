@@ -161,13 +161,13 @@ static void ndsMarioFireballSampleWeaponPool(void)
     u32 free_depth = 0u;
     u32 live;
 
-    while ((node != NULL) && (free_depth <= WEAPON_ALLOC_MAX))
+    while ((node != NULL) && (free_depth <= NDS_R2_WEAPON_POOL))
     {
         free_depth++;
         node = node->next;
     }
-    live = (free_depth <= WEAPON_ALLOC_MAX) ?
-        ((u32)WEAPON_ALLOC_MAX - free_depth) : 0u;
+    live = (free_depth <= NDS_R2_WEAPON_POOL) ?
+        ((u32)NDS_R2_WEAPON_POOL - free_depth) : 0u;
     if (live > gNdsFighterProjectileProofWeaponCountMax)
     {
         gNdsFighterProjectileProofWeaponCountMax = live;

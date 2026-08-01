@@ -43,7 +43,10 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     11, 13, 14, 278, 369,
     # And the last two the ring named on the soak after those five landed:
     # the zoom pulse and Fox's win voice at Results.
-    271, 368)
+    271, 368,
+    # And three from the run in which every fireball spawned and the match went
+    # to SUDDEN DEATH: a light swing, the Sudden Death call, Fox's select voice.
+    18, 365, 514)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -51,15 +54,15 @@ if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
 if (([int]$metadata.format_version -ne 4) -or
     ([int]$metadata.entry_bytes -ne 32) -or
     ([int]$metadata.envelope_point_bytes -ne 4) -or
-    ([int64]$metadata.resident_bytes -ne 707300) -or
+    ([int64]$metadata.resident_bytes -ne 725900) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines for no runtime
     # reason; the bound that is real is the 53,248-byte cache-slot gate below.
     ([int64]$metadata.pack_limit_bytes -ne 786432) -or
-    ($metadata.mapping_sha256_lo -ne '0xd2ba229f') -or
+    ($metadata.mapping_sha256_lo -ne '0x984c7da6') -or
     ($metadata.pack_sha256 -ne
-        '296e671e7d57e12f386098eb41e94b33d602741d0db9073f3a161b12d3049762')) {
+        '81b94d1f3178b6b57d998fb7d01fe1316e20ac46ce22ccb82800c6b02d26cb75')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -167,9 +170,9 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_ENTRY_COUNT 85u',
-    '#define NDS_AUDIO_FGM_PACK_BYTES 707300u',
-    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xd2ba229fu',
+    '#define NDS_AUDIO_FGM_ENTRY_COUNT 88u',
+    '#define NDS_AUDIO_FGM_PACK_BYTES 725900u',
+    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x984c7da6u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }
@@ -187,7 +190,8 @@ foreach ($voice in @('nSYAudioVoiceAnnounceTimeUp', 'nSYAudioVoiceAnnounceGameSe
     'nSYAudioVoicePublicDamageL', 'nSYAudioVoicePublicDamageM',
     'nSYAudioVoicePublicDamageS', 'nSYAudioFGMGroundGrind2',
     'nSYAudioFGMAltitudeWarn', 'nSYAudioFGMMagnify',
-    'nSYAudioVoiceFoxWin')) {
+    'nSYAudioVoiceFoxWin',
+    'nSYAudioVoiceAnnounceSuddenDeath')) {
     if (-not $runtime.Contains("case ${voice}:")) {
         throw "Runtime allowlist does not admit the packed cue $voice."
     }
@@ -198,7 +202,7 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     if (-not $runtime.Contains($token)) { throw "Runtime cache lost: $token" }
 }
 
-Write-Output (('Audio FGM full coverage passed: 85 IDs, 0 exclusions, ' +
-    '707300-byte pack, 204800-byte cache, seven fused fork repairs, ' +
+Write-Output (('Audio FGM full coverage passed: 88 IDs, 0 exclusions, ' +
+    '725900-byte pack, 204800-byte cache, seven fused fork repairs, ' +
     'FGM 285 wind on a proven DS hardware loop, seven announcer lines, ' +
     'PublicWin 621 on PublicExcited''s AOT loop-and-ramp render.'))

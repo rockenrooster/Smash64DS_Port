@@ -3893,6 +3893,17 @@ extern volatile u32 gNdsFighterProjectileProofSpawnFailGObjMax;
 extern volatile u32 gNdsFighterProjectileProofSpawnFailGObjActive;
 extern volatile u32 gNdsFighterProjectileProofSpawnFailHeapFree;
 extern volatile u32 gNdsWeaponStructBytes;
+extern volatile u32 gNdsWeaponPoolEntries;
+/* Battle-time low-water of gSYTaskmanGeneralHeap. Under 25,600 means
+ * ifCommonSetMaxNumGObj has capped the GObj pool for the rest of the match. */
+extern volatile u32 gNdsTaskmanGeneralHeapFreeMin;
+/* DS weapon-pool size, replacing the source's WEAPON_ALLOC_MAX 32. See the
+ * measurement in src/import/battleship_wpmanager_core.c: 32 * 704 bytes held
+ * gSYTaskmanGeneralHeap under the ifCommonSetMaxNumGObj threshold for the whole
+ * match, which capped the GObj pool and refused four of eleven fireballs. */
+#ifndef NDS_R2_WEAPON_POOL
+#define NDS_R2_WEAPON_POOL 12
+#endif
 extern volatile u32 gNdsFighterProjectileProofKindMask;
 extern volatile u32 gNdsFighterProjectileProofAttackStateMask;
 extern volatile u32 gNdsFighterProjectileProofDamageMax;

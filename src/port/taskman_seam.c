@@ -4875,6 +4875,22 @@ static void ndsBattlePlayablePresentFrame(void)
 #endif
     gNdsFrameCounter++;
     gNdsBattlePlayablePacingPresentedFrames++;
+    /* The battle-time low-water of the taskman general heap, which is the
+     * number every memory decision on this target turns on:
+     * ifCommonSetMaxNumGObj caps the GObj pool the instant it drops under
+     * 25,600 and never lifts the cap, and until 2026-08-01 nothing sampled it
+     * during a match -- the soak's end-of-run read is the Results scene, where
+     * the heap has already been rewound. Two subtractions per presented
+     * frame. */
+    {
+        u32 free_now = (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+                             (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+
+        if (free_now < gNdsTaskmanGeneralHeapFreeMin)
+        {
+            gNdsTaskmanGeneralHeapFreeMin = free_now;
+        }
+    }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     NDS_RENDERER_PHASE05_FINISH(
         gNdsRendererPhase05PresentTailTicks, phase05_start);

@@ -309,6 +309,11 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
      * voice at Results. */
     case nSYAudioFGMMagnify:
     case nSYAudioVoiceFoxWin:
+    /* And three the ring only reached once every fireball spawned and the
+     * match went to Sudden Death. */
+    case nSYAudioFGMLightSwingLw1:
+    case nSYAudioVoiceFoxSelected:
+    case nSYAudioVoiceAnnounceSuddenDeath:
         return TRUE;
     default:
         return FALSE;

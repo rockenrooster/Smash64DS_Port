@@ -127,6 +127,10 @@ FULL_COVERAGE_IDS = (
     # The last two the ring named once those five stopped appearing in it: the
     # zoom pulse and Fox's win voice.
     271, 368,
+    # And three from the first run in which every fireball spawned and the match
+    # reached SUDDEN DEATH: a light swing, the Sudden Death announcement, and
+    # Fox's selection voice.
+    18, 365, 514,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -142,6 +146,8 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # Magnify: five blips and five rests. The rest ticks matter to the timing,
     # which is the whole reason a schedule gets baked rather than approximated.
     271,
+    # LightSwingLw1 and FoxSelected: two and three notes, no forks.
+    18, 365,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
@@ -1844,6 +1850,76 @@ SELECTED = (
         # does -- 90 ticks against 3,648 samples at half rate -- so the trim is
         # the wave itself and a one-shot plays every audible sample of it.
         "expected_retained_samples": 3648,
+    },
+    # And three more, from the first run in which every fireball spawned and the
+    # match went to SUDDEN DEATH: a light swing, the Sudden Death announcement,
+    # and Fox's selection voice. The ring only names what the run reached, so
+    # fixing the GObj cap uncovered a livelier match than any previous soak.
+    {
+        "id": 18,
+        "name": "nSYAudioFGMLightSwingLw1",
+        "kind": "attack",
+        "articulation": 135,
+        "sound": 18,
+        "notes": ((15, 7, 30), (10, 7, 30)),
+        "duration_ticks": 60,
+        "ucd_volume": 155,
+        "articulation_pitch_cents": -300,
+        "loop": False,
+        "wave_base": 187792,
+        "wave_length": 3672,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "91ce235de708540d681e44239bf28e64d315b6cee4a5b3c5690f540b3056cbde",
+        "render_program_sha256":
+            "91ce235de708540d681e44239bf28e64d315b6cee4a5b3c5690f540b3056cbde",
+        "articulation_program_sha256":
+            "d6388c2fb81e17372954b210419bc26cf2b47fbe0cee47bfd6c851bc68ba078c",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 365,
+        "name": "nSYAudioVoiceFoxSelected",
+        "kind": "voice",
+        "articulation": 229,
+        "sound": 110,
+        "notes": ((13, 7, 30), (13, 7, 30), (13, 7, 6)),
+        "duration_ticks": 66,
+        "ucd_volume": 170,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 930064,
+        "wave_length": 2052,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "cbeda4b6abca1579f6b645cc08f6c0d7795684fdae7a65bfc031a041c84bf954",
+        "render_program_sha256":
+            "cbeda4b6abca1579f6b645cc08f6c0d7795684fdae7a65bfc031a041c84bf954",
+        "articulation_program_sha256":
+            "470c9ce22de750baf54a0ff54f913c1ac54b8767fa82719ca2bd3fa70c5a804c",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 514,
+        "name": "nSYAudioVoiceAnnounceSuddenDeath",
+        "articulation": 335,
+        "sound": 212,
+        "pitch_code": 13,
+        "duration_ticks": 150,
+        "ucd_volume": 230,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 1785680,
+        "wave_length": 9288,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 13801,
     },
 )
 

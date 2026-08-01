@@ -59,6 +59,8 @@ typedef enum gmFGMID
      * P1 cues a BOTH-CPU stress match asks for and a single-CPU one never
      * reaches -- nobody dodges or shields when Mario stands still. */
     nSYAudioFGMEscape = 11,
+    /* The light swing, reached only once every fireball spawned. */
+    nSYAudioFGMLightSwingLw1 = 18,
     nSYAudioFGMUnkGrind4 = 85,
     nSYAudioFGMGroundGrind2 = 96,
     nSYAudioFGMGroundGrind3 = 98,

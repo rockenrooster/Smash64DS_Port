@@ -1352,9 +1352,23 @@ override NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW := 1
 override NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI := 1
 # BUGS.md crowd row: compile ft/ftpublic.c in place so the audience actor,
 # its thresholds, cooldowns, repeat limits and defeated-voice queue are the
-# source's rather than a translation. Default 0 until a natural match proves
-# the reactions fire and reach the speaker -- it costs .text, and .text costs
-# taskman arena one-for-one on this platform.
+# source's rather than a translation.
+#
+# STILL DEFAULT 0, and 2026-08-01 measured the price instead of estimating it.
+# Its .text costs taskman arena one-for-one, and the number that matters is
+# gNdsTaskmanGeneralHeapFreeMin -- the battle-time low-water of
+# gSYTaskmanGeneralHeap, sampled every presented frame. Under 25,600
+# ifCommonSetMaxNumGObj caps the GObj pool for the rest of the match, which is
+# the latch that was silently deleting four of Mario's eleven fireballs.
+# Measured on the same tree, one build apart: OFF the low-water is 26,876 --
+# 1,276 clear of the threshold, so the shipping configuration no longer latches
+# at all. ON it is 23,544, so the actor costs 3,332 bytes and lands 2,056 UNDER:
+# NO-FREEZE, 560,419 quads with zero misses, miss ring empty, no spawn refused,
+# but the cap did latch and only happened to latch late enough to be harmless.
+# PROJECT_GOAL.md ranks audio fidelity FIRST in the sacrifice order and gameplay
+# fidelity above it, so when the two compete for heap the crowd yields. Turn
+# this on when the low-water clears 25,600 with margin; that is roughly 2,100
+# more bytes, and NDS_R2_WEAPON_POOL is where the last 14,080 came from.
 NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 0
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_BGM := 1

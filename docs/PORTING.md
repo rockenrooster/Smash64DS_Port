@@ -22193,3 +22193,48 @@ Both were caught in the same pass and both had been read as evidence:
   bank, and it cost two builds of guessing. It now carries a source-id mask, a
   frame mask, and the stride count — three u32s that named the defect in one
   run.
+
+## 2026-08-01 — 704 bytes times thirty-two, and why Mario's fireballs stopped
+
+`WEAPON_ALLOC_MAX` is 32 and `sizeof(WPStruct)` is **704**, so
+`wpManagerAllocWeapons` spends **22,528 bytes** of `gSYTaskmanGeneralHeap` at
+every battle start. The measured high-water of that pool in a P1 match is
+**one**.
+
+That mattered because of a latch nobody had connected to it.
+`ifCommonSetMaxNumGObj` (`ifcommon.c:3156`) caps the GObj pool at whatever
+happens to be alive the instant free space drops under 25 KiB:
+
+```c
+if ((gcGetMaxNumGObj() == -1) && (free_space < 25 * 1024))
+    gcSetMaxNumGObj(gcGetGObjsActiveNum());
+```
+
+Sampled at the moment a fireball was refused, `gSYTaskmanGeneralHeap` had
+**14,796 bytes free** — under the threshold for the whole match — with
+`sGCCommonsMaxNum 47` and 47 GObjs active. So `gcMakeGObjSPAfter` returned NULL
+and four of eleven fireballs never existed. `NDS_R2_WEAPON_POOL = 12` returns
+14,080 bytes, free space lands near 28,876, and the next soak reported
+`SpawnCall 16 / SpawnSuccess 16` with both failure counters zero.
+
+Three things worth keeping:
+
+- **Reproducing an N64 low-memory guard does not preserve N64 behaviour.** On
+  the N64 the heap had the headroom and the fireball spawned; here the same code
+  silently deletes a move. Mechanical equivalence is about what the player sees.
+- **The end-of-run read cannot see this.** `sGCCommonsMaxNum` is `-1` when the
+  soak reads it, because that read happens on the Results screen — the cap is
+  not sticky across the scene change, whatever the soak script's comment said.
+  Sample the value at the refusal.
+- **A pool sized for the full game is not free in the vertical slice.** 22,528
+  bytes for at most one live weapon is three of the boot arena search's
+  4,096-byte steps, spent on content P1 does not have. The arena margin that
+  aborted the L7 oracle and keeps the crowd actor default-off is the same
+  budget; this is the first payment against it.
+
+And a workflow note: the FGM miss ring only ever names what the run *reached*.
+Fixing the fireballs produced a livelier match, which reached Sudden Death for
+the first time in the campaign, which named three more cues (18 `LightSwingLw1`,
+514 `AnnounceSuddenDeath`, 365 `FoxSelected`). Each fix uncovering the next
+layer is the expected shape of a coverage ring, not evidence the previous pass
+was careless.

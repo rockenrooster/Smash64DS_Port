@@ -15,15 +15,50 @@ These bugs should be fixed for P1 delivery.
   Left alone deliberately: the rest still counts toward `duration_ticks`, so the
   line starts one second earlier than the source. Timing, not pitch, unreported.
 -Still get intermittent freezes when attacking (maybe collision/animation/heap
-  related?). Owner evidence:
+  related?).
+  **A LIKELY OWNER was removed on 2026-08-01, and the owner's play test is the
+  test.** "Heap related" was the right instinct. Until that date
+  `gSYTaskmanGeneralHeap` sat at **14,796 bytes free** for the whole match --
+  under the 25,600 at which `ifCommonSetMaxNumGObj` caps the GObj pool -- so
+  `gcMakeGObj` returned NULL for the rest of every match once the pool reached
+  its latched size. That was measured refusing four of Mario's eleven fireballs,
+  and `wpManagerMakeWeapon` happens to CHECK for NULL. Callers that do not check
+  abort instead: the recorded signature for this exact latch is
+  `ifCommonTrafficMakeSObj+68` storing through a NULL GObj with a healthy
+  allocator (`MALLOCOVF 0`, PORTING.md 2026-08-01). Attacks are what spawn
+  transient GObjs -- effects, weapons, hit sparks -- which is why the symptom
+  would present as "freezes when attacking" rather than at random.
+  `NDS_R2_WEAPON_POOL = 12` returns 14,080 bytes and the latch stops firing;
+  `gNdsTaskmanGeneralHeapFreeMin` is now sampled every presented frame so a
+  regression is a number rather than a repro.
+  Not claimed FIXED: no run in the campaign ever reproduced the freeze, so
+  nothing here can be shown to have been the cause. Seven soaks since, including
+  a five-minute both-CPU run through Sudden Death, are all NO-FREEZE.
+  Owner evidence:
   `artifacts/visibility/2026-07-31_attack-freeze-owner-302caae.png` -- build
   `302caae`, TIME 00:37, both fighters 12%/1 stock, Mario inside a shield
   bubble. The HUD is the useful part: `ALL 1119872` current against `1680320`
   max, `WORK 1034496 / 1497856` over n:128, VBlank histogram `2:690 3:163 4:33
   5+:4` with `max:19`. So the stall is four 5+-VBlank frames and one 19-VBlank
   frame in a 128-frame window -- an event, not a slow body.
--Sometimes Mario's fireballs don't spawn.
-  **REPRODUCED AND ATTRIBUTED 2026-08-01.** The single-CPU soak that said
+-FIXED (2026-08-01) Sometimes Mario's fireballs don't spawn.
+  **The fix is the weapon pool, and it is a memory fix, not a weapon fix.**
+  `sizeof(WPStruct)` is **704 bytes** and the source allocates
+  `WEAPON_ALLOC_MAX = 32` of them from `gSYTaskmanGeneralHeap` at battle start:
+  **22,528 bytes** for a pool whose measured high-water in a P1 match is **one**.
+  Sampled at the refusal, the heap had **14,796 bytes free** against the
+  25,600-byte `ifCommonSetMaxNumGObj` threshold -- so the GObj cap was latched
+  for the whole match and `gcMakeGObjSPAfter` refused. `NDS_R2_WEAPON_POOL = 12`
+  returns 14,080 bytes, puts free space near 28,876, and the latch never fires.
+  The next soak: **`SpawnCall 16 / SpawnSuccess 16`, `SpawnFailGObj 0`,
+  `SpawnFailPool 0`** -- and that livelier match went to Sudden Death, which no
+  previous soak had reached.
+  The guard itself is untouched: if a later frame does drop under 25,600 the cap
+  still fires, and pool exhaustion is a separate counted, fail-closed path.
+  Reproducing the N64's low-memory latch here does not preserve SSB64 behaviour,
+  it destroys it -- on the N64 the heap had the headroom and the fireball
+  spawned.
+  How it was attributed (2026-08-01): the single-CPU soak that said
   `SpawnCall 9 / SpawnSuccess 9` was a match where Mario stands still. The first
   both-CPU soak reports **`SpawnCall 11 / SpawnSuccess 7`** -- four requests the
   special-N state machine made produced no weapon -- and the two new reason
@@ -117,9 +152,24 @@ These bugs should be fixed for P1 delivery.
   compiled here and `nm` finds no such symbol -- now transcribed entry for entry
   beside the import, with the ten missing `nSYAudioVoicePublic*` constants added
   to `gmsound.h` at the decomp's values.
-  Still default 0 until a natural match proves the reactions reach the speaker:
-  it costs `.text`, and `.text` costs taskman arena one for one here, with only
-  about five kilobytes of margin before the GObj latch fires.
+  **It RUNS: a seven-minute both-CPU soak with the flag on reported
+  `gNdsFtPublicActorMakeCount 2` and `gNdsFtPublicCommonCheckCount 36`,
+  NO-FREEZE, 560,419 textured quads with zero atlas misses and an empty FGM miss
+  ring.** (Five of its seven counters cannot fire at all -- the `#define` seam
+  renames intra-TU references -- so those two are the whole observation surface.)
+  **Still default 0, and now for a MEASURED reason rather than an estimated
+  one.** `gNdsTaskmanGeneralHeapFreeMin` -- the battle-time low-water of
+  `gSYTaskmanGeneralHeap`, sampled every presented frame -- read **23,544** on
+  that run and **26,876** on the same tree one build apart with the flag off.
+  So the actor costs **3,332 bytes** and lands **2,056 under the 25,600** at
+  which `ifCommonSetMaxNumGObj` caps the GObj pool for the rest of the match,
+  while the shipping configuration clears it by 1,276 and never latches. That is
+  the latch that was deleting four of Mario's eleven fireballs; with the actor on
+  it happened to latch late enough to refuse nothing, which is luck, not
+  headroom.
+  `PROJECT_GOAL.md` ranks audio fidelity first in the sacrifice order and
+  gameplay fidelity above it, so when the two compete for heap the crowd yields.
+  Turn it on when the low-water clears 25,600 with margin.
   *Cue side:* the eleven a P1 Mario-vs-Fox match reaches are packed -- chants
   605 Fox / 609 Mario, reactions 615/616/617 Gasp L/M/S, 618 Cheer, 619 Amazed,
   620 GaspClap, 622/623/625 Damage L/M/S. 624 NoContest is unreachable in a
@@ -207,7 +257,12 @@ These bugs should be fixed for P1 delivery.
   fork-free schedule, so it takes the same AOT render. FoxWin is one 90-tick
   note whose wave plays out well inside the schedule, so it takes the ordinary
   announcer path 472/471 use and retains all 3,648 source samples.
-  Pack 700,892 -> 707,300 B, 83 -> 85 entries.
+  **And three more after the weapon-pool fix**, because the first match in which
+  every fireball spawned was also the first to reach Sudden Death: **18
+  `LightSwingLw1`**, **514 `AnnounceSuddenDeath`** and **365 `FoxSelected`**.
+  The ring only ever names what the run reached, so each fix uncovers the layer
+  under it -- that is the shape of this row, not a sign it was done badly.
+  Pack 700,892 -> 725,900 B, 83 -> 88 entries.
   One piece of machinery was genuinely missing and is now source-transcribed:
   **modulator shapes 6 and 7** (`ramp_up_oneshot` / `ramp_down_oneshot`), which
   FGM 11's articulation spawns. They are shapes 2 and 3 with the phase CLAMPED
@@ -326,17 +381,23 @@ These bugs should be fixed for P1 delivery.
     FIXED; SFX implementation landed but acoustic acceptance is OPEN; VFX OPEN.
 
 -Correct VFX isn't played for various things (running foot dust VFX, fireball hit VFX, fox down B, shield, hard landing vfx, etc)
-  **The root cause below is HALF CLOSED as of 2026-08-01.** The original
-  particle scripts DO run now and they ARE textured: `NDS_R2_PARTICLE_RUNTIME`
-  and `NDS_R2_PARTICLE_DRAW` both default 1, the imported `lb/lbparticle.c` owns
-  `lbParticleMakeScriptID`, the common EF bank is resident, and a soak measured
-  117,937 textured quads emitted with zero atlas misses. What is NOT closed is
-  COVERAGE: the quad atlas admits **six of 31 textures** (source ids 0, 3, 9, 22,
-  27, 37 -- 7 frames, 5,376 texel bytes) because 8,192 bytes is a measured hard
-  VRAM bound, and a particle whose texture is absent draws nothing rather than
-  drawing wrong. `gNdsParticleQuadMissCount` is what names the gap per effect,
-  and it is on the soak's reported list. The original text of this row follows,
-  and its first two sentences are now historical:
+  **The root cause below is CLOSED as of 2026-08-01, and COVERAGE is closed with
+  it -- what remains is the owner's eye.** The original particle scripts run and
+  they are textured: `NDS_R2_PARTICLE_RUNTIME` and `NDS_R2_PARTICLE_DRAW` both
+  default 1, the imported `lb/lbparticle.c` owns `lbParticleMakeScriptID`, and
+  both the common EF bank and Dream Land's are resident.
+  Coverage was the open question and it is now answered by measurement rather
+  than by counting admitted textures. A five-minute both-CPU soak that ran a
+  full match, GAME SET, **Sudden Death** and Results emitted **347,100 textured
+  quads with `gNdsParticleQuadMissCount` 0**. A particle whose texture is absent
+  draws nothing and raises that counter, so zero over 347,100 means every effect
+  the milestone actually reaches found its texture -- including the KO burst and
+  the Results sequence, which is what the two rows below were waiting on.
+  The admitted set is `{0, 2, 22, 27, 64, 65, 66}` in 6,400 of the 8,192 bytes
+  that are a measured hard VRAM bound. It is small because it is the MEASURED
+  live set, not because coverage was traded away.
+  The original text of this row follows, and its first two sentences are now
+  historical:
   Root cause, measured: every named effect does spawn -- the verifier reports
   178/178 Mario/Fox motion calls with bounded DS presentation -- but the
   original particle scripts never run. lbParticleMakeScriptID is a stub
@@ -398,13 +459,15 @@ These bugs should be fixed for P1 delivery.
     explicitly documented primitive-category separations.
 
 -Upwards KO boundary:  VFX and SFX never play for fighters
-  SFX implementation landed; natural qualification remains OPEN. The star-KO
-  path asks for nSYAudioFGMDeadUpStar (12) and the per-fighter deadup_sfx (Fox
-  360 / Mario 433); all three are now packed and allowlisted.
-  VFX half: same root cause as the VFX row above. efManagerSparkleWhiteDead
-  spawns nNDSVisualEffectSparkle at scale 5.0 and efManagerDeadExplode spawns
-  nNDSVisualEffectDeath, so something does draw -- a white star and a red ring.
-  The original star-KO is a textured particle script that is not resident.
+  **SFX qualified 2026-08-01**: the star-KO path asks for nSYAudioFGMDeadUpStar
+  (12) and the per-fighter deadup_sfx (Fox 360 / Mario 433), all three packed
+  and allowlisted, and a five-minute both-CPU soak through a full match, GAME
+  SET, Sudden Death and Results reported **282 FGM play calls with 0
+  unsupported and an EMPTY miss ring**. Nothing the milestone asks for is
+  missing from the pack any more; what is left is the owner's ear.
+  VFX half: same root cause as the VFX row above, and it measured clean too --
+  **347,100 textured quads, zero atlas misses** on that same run, so the star-KO
+  script's texture is resident. What is left is the owner's eye.
   Research (2026-07-30, Sol Max Sudden Death/KO):
   - Source contract: crossing the top boundary has a 1-in-6 falling-KO branch
     and otherwise enters the 180-tick star-KO sequence. The star branch plays
@@ -426,11 +489,12 @@ These bugs should be fixed for P1 delivery.
     listen/visual approval. Status: OPEN.
     
 -KO VFX wrong.
-  (2026-08-01: the "particle script is not resident" half of this row now
-  depends only on atlas COVERAGE -- see the VFX row above. The interpreter runs
-  and draws textured; six of 31 textures are admitted, and the KO burst's own
-  texture is one of the ones a soak's `gNdsParticleTextureUseMask` /
-  `gNdsParticleQuadMissCount` pair will settle.)
+  (2026-08-01, SETTLED and now an eye check: the "particle script is not
+  resident" half of this row depended on atlas COVERAGE, and coverage measured
+  clean. A five-minute both-CPU soak through a full match, GAME SET, Sudden
+  Death and Results drew **347,100 textured quads with zero atlas misses**, so
+  the KO burst's own texture is in the sheet -- a missing one would have been
+  counted by name. What is left is whether the result LOOKS right.)
   Partly FIXED. nNDSVisualEffectDeath and nNDSVisualEffectRebirth shared one
   template, a red->white ring, so the KO burst and the respawn flash were the
   same effect. Rebirth now has its own white/cyan ring and Death keeps the red

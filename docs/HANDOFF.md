@@ -102,8 +102,11 @@ resets `sEFParticleBanksNum`, so `EFCommonID` and `PupupuID` both read **0** and
 took Dream Land's stride — key on `sEFParticleScriptBanks[slot]`, never a latched id. And
 `QUAD_MEASURED_LIVE` was graded from a **single-CPU** mask; both-CPU is `0x08400007`. Admitted
 `{0, 2, 22, 27, 64, 65, 66}`, 6,400 B, cells capped 16×16, **109,560 of 111,644 drawn**.
-**Audio closed**: 194/194, **miss ring 0**, 85 cues. **Fireball attributed**: `SpawnFailGObj 4 /
-SpawnFailPool 0` — the GObj cap, i.e. the arena margin, not the weapon pool.
+**Audio: 88 cues.** **Fireball FIXED, and it is a MEMORY fix**: 704-byte `WPStruct` × 32 = 22,528 B for
+a pool whose P1 high-water is **one**, holding `GENERALFREE` at 14,796 under the 25,600
+`ifCommonSetMaxNumGObj` threshold all match — cap latched at 47, four of eleven spawns refused.
+`NDS_R2_WEAPON_POOL = 12` returns **14,080 B** → `SpawnCall 16 / SpawnSuccess 16`, both fail counters 0,
+and that match reached **Sudden Death**, a first. **The arena margin is payable.**
 
 **Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
 freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;
@@ -115,17 +118,15 @@ rebuilt 197 times); and **an allocator index something else can reset is not an 
 
 **Successive matches** were four defects with one law: state that outlived a scene boundary the arena
 rewinds — prepared-run cache keyed on a config pointer; texture VRAM with no owner; the source DL heads
-never rewound (48 bytes past a 60 KiB buffer → `while (TRUE);` ~8 s into match two); and
-`sMNVSResultsFighterGObjs` trusted across a Results re-entry (data abort at match two's GAME SET). Four
-entries, three Results, NO-FREEZE, owner-confirmed; **Boundary AND Latest green on `0e5e8a3`.**
-**Owed: the owner's eye check.**
+never rewound (48 B past a 60 KiB buffer → `while (TRUE);` ~8 s into match two); `sMNVSResultsFighterGObjs`
+trusted across a Results re-entry. Four entries, three Results, NO-FREEZE, owner-confirmed; **Boundary AND
+Latest green on `0e5e8a3`.** **Owed: the owner's eye check.**
 
-**TIME UP and GAME SET** were three defects in series, each hiding the next: `sIFCommonBattlePlace` was
-never initialised so **no VS match had ever announced GAME SET** (which also withheld Results); the nine
-blue letters had no sprite descriptors; and the announcement's update proc dereferences
+**TIME UP and GAME SET** were three defects in series, each hiding the next: `sIFCommonBattlePlace` never
+initialised so **no VS match had ever announced GAME SET** (which also withheld Results); the nine blue
+letters had no sprite descriptors; and the announcement's update proc dereferences
 `gEFParticleStructsGObj` with no NULL check (`ifcommon.c:2609`). **A halted-core screenshot can show a
-stale buffer** — trust the live watch and break on the constructor (`-CaptureAnnounce`); a wall-clock
-watch cannot catch a 90-tick window and two missed it.
+stale buffer** — break on the constructor (`-CaptureAnnounce`).
 **GAME SET's pitch (2026-08-01):** the pack took a cue's rate from `notes[0]` and pitch code 0 is a REST,
 so FGM 488 played thirteen semitones low. The guard has to be external — the derivation had the same bug
 the pack self-checks against — and now rejects any entry under 12,000 Hz.
@@ -138,9 +139,10 @@ them. A third shape is not a spin at all: a jump into low memory (`0x00000e9a` a
 twice today. **Do NOT make `syTaskmanMalloc` return NULL globally** — callers do not check.
 **Image size competes with the arena**: the boot `calloc` search steps down 4,096 at a time from
 `0x150000` to a `0x130000` FLOOR that is a contract with the Task 36 replay guard
-(`nds_renderer.h:124-134`) — **do not lower it**; `.text` costs arena as surely as `.bss` (see the
-particle row). **`gNdsTaskmanArenaAllocFailCount` is that search's step count, a BOOT CONSTANT** (26,
-or 32 with particles on) — not failed match allocations. It nearly bought a revert of a −49,408 P95 chain.
+(`nds_renderer.h:124-134`) — **do not lower it**; `.text` costs arena as surely as `.bss`.
+**`gNdsTaskmanArenaAllocFailCount` is that search's step count, a BOOT CONSTANT** (26, or 32 with
+particles on) — not failed match allocations. It nearly bought a revert of a −49,408 P95 chain.
+**Oversized source pools are the payable half** — the weapon pool alone returned 14,080 B.
 
 ## Measurement traps that cost days — all now instrumented rather than remembered
 
@@ -149,10 +151,9 @@ or 32 with particles on) — not failed match allocations. It nearly bought a re
 - **gdb aborts a command file on the first missing symbol, silently** — reads as an emulator hang. Both
   `capture-sudden-death-entry.ps1` and `soak-freeze-watch.ps1` now ask `nm` and strip every read the ELF
   does not define (the soak puts ~80 counters in ONE printf, so one absent symbol cost all of them).
-- **A run that ends at the moment under investigation proves nothing**, and neither does a wall-clock
-  watch aimed at a short window. Two rematch soaks read NO-FREEZE with the GAME SET zoom as their final
-  frame (ceiling is 7 minutes now, `-PressStartEverySeconds` drives successive entries); two Sudden Death
-  watches missed the 90-tick window. Break on the event and step frames (`-CaptureAnnounce`).
+- **A run that ends at the moment under investigation proves nothing.** Two rematch soaks read NO-FREEZE
+  with the GAME SET zoom as their final frame (ceiling 7 min, `-PressStartEverySeconds` drives successive
+  entries). Break on the event and step frames (`-CaptureAnnounce`).
 - **Identical source is not an identical binary** — always run the matched control. But the harness itself
   is deterministic: two control runs on the same ROM came back **bit-identical in every bucket**, so a
   cross-BUILD delta is real signal, not noise. **DLDI-on costs ~29,696 P95 and is the honest config.**
@@ -160,10 +161,9 @@ or 32 with particles on) — not failed match allocations. It nearly bought a re
 - **`-Os` emits `blx __udivsi3` for a CONSTANT divisor**; `sinf`/`cosf` drag in `__ieee754_rem_pio2f` —
   SSB64 uses a table (L9), never reach for libm. **A lab ROM can differ in CODEGEN**: the `-marm` rule
   keys on harness ID, so add new lab IDs to `NDS_ARM_RENDERER_HARNESS_IDS`.
-- **Compare captures with `scripts/compare-capture-pair.ps1`** (it crops past melonDS's title bar);
-  **`addr2line` names deleted AND inlined functions**; **read the HUD before the picture**;
-  **`-MatchedCapture` is broken** (own BUGS row); **`check-decomp-header-mirror.py` is RED on two
-  pre-existing constants** (`FTSTAT_OPENING1_START`, `nSYAudioBGMExplain`) — not caused by new work.
+- **Compare captures with `scripts/compare-capture-pair.ps1`**; **`addr2line` names deleted AND inlined
+  functions**; **read the HUD before the picture**; **`-MatchedCapture` is broken** (own BUGS row);
+  **`check-decomp-header-mirror.py` is RED on two pre-existing constants** — not caused by new work.
 
 ## Refuted — do not re-derive (all by measurement; derivations on the board)
 
@@ -176,8 +176,7 @@ atlas allocation-order theory**; **"115,277 B of arena spare" as the particle me
 a decomp function to count its INTERNAL callers** (the rename bypasses the wrapper; `--gc-sections` then
 deletes it — read the source's state instead); **L7 as "convert `gmCollisionSetInvertMatrix`"** (wired,
 measured, reverted: +6,481 cycles/frame of placement against a 534 win); **`census.SUBSTITUTES` as the
-particle seam list** (it is the set Task 39 REPLACES); **the particle VRAM budget as a blocker** (a live
-match draws two textures and 1,280 bytes).
+particle seam list**; **"a live match draws two textures"** (that was a SINGLE-CPU mask; both-CPU is five).
 **STOP ACCUMULATING SMALL LOAD-FRAME CUTS — E11 proves they cannot be banked**: real work removed,
 negative bytes added, bit-identical load-frame set, yet P95 +15,744. Only a change clearing ~16,000, or
 one that moves work off the frame, counts.

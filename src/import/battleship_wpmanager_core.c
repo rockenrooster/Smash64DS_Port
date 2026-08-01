@@ -235,10 +235,55 @@ void mpCommonRunWeaponCollisionDefault(
 
 #undef NDS_WPMANAGER_BRIDGE
 
+/* The weapon pool is allocated ONCE per battle from gSYTaskmanGeneralHeap, and
+ * on this target its size decides whether Mario's fireballs spawn at all.
+ *
+ * Measured 2026-08-01, sampled at the moment a fireball was refused:
+ * gSYTaskmanGeneralHeap had 14,796 bytes free, sizeof(WPStruct) is 704, and
+ * ifCommonSetMaxNumGObj (ifcommon.c:3156) latches gcSetMaxNumGObj to whatever
+ * happens to be alive the instant free space drops under 25 KiB. It had --
+ * sGCCommonsMaxNum 47 with 47 active -- so gcMakeGObjSPAfter refused four of
+ * eleven spawn requests (SpawnFailGObj 4, SpawnFailPool 0).
+ *
+ * That latch is an N64 low-memory guard, and reproducing it here does not
+ * preserve SSB64's behaviour, it destroys it: on the N64 the heap had the
+ * headroom and the fireball spawned. 32 * 704 = 22,528 bytes for a pool whose
+ * measured high-water in a P1 match is ONE. Twelve returns 14,080 bytes and
+ * puts free space at ~28,876 -- clear of the threshold, so the latch never
+ * fires -- while still being twelve times the measured peak.
+ *
+ * The guard itself is untouched: if some later frame does drop under 25 KiB the
+ * cap still fires. And if twelve is ever too few, wpManagerGetNextStructAlloc
+ * returns NULL, which is counted separately as SpawnFailPool and fails closed.
+ * Do not "fix" a pool exhaustion by raising this without re-reading HeapFree. */
+#define wpManagerAllocWeapons ndsBaseWpManagerAllocWeapons
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmanager.c"
+#undef wpManagerAllocWeapons
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmain.c"
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmap.c"
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpprocess.c"
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpdisplay.c"
+
+void wpManagerAllocWeapons(void)
+{
+    WPStruct *wp;
+    s32 i;
+
+    sWPManagerStructsAllocFree = wp =
+        syTaskmanMalloc(sizeof(WPStruct) * NDS_R2_WEAPON_POOL, 0x8);
+
+    for (i = 0; i < (NDS_R2_WEAPON_POOL - 1); i++)
+    {
+        wp[i].next = &wp[i + 1];
+    }
+    if (wp != NULL)
+    {
+        wp[i].next = NULL;
+    }
+    sWPManagerGroupID = 1;
+    sWPManagerDisplayMode = nDBDisplayModeMaster;
+    gNdsWeaponPoolEntries = NDS_R2_WEAPON_POOL;
+    gNdsWeaponStructBytes = (u32)sizeof(WPStruct);
+}
 
 #endif

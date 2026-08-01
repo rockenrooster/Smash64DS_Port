@@ -715,6 +715,11 @@ try {
             'gNdsFighterProjectileProofSpawnFailGObjActive',
             'gNdsFighterProjectileProofSpawnFailHeapFree',
             'gNdsWeaponStructBytes',
+            'gNdsWeaponPoolEntries',
+            # Under 25,600 means the GObj cap latched during THIS match. The
+            # end-of-run GENERALFREE below reads the Results scene and cannot
+            # see it.
+            'gNdsTaskmanGeneralHeapFreeMin',
             # BUGS.md crowd row, present only at
             # NDS_IMPORT_BATTLESHIP_FT_PUBLIC=1. "The crowd is silent" has three
             # distinct causes and the FGM backend's UnsupportedCallCount

@@ -40,13 +40,62 @@ Admitted set is `{0, 2, 22, 27, 64, 65, 66}`, 6,400 of 8,192 bytes.
 named; pack 700,892 → 707,300 B, 83 → 85 entries. Acoustic acceptance is still
 the owner's ear.
 
-**Mario's missing fireballs are the GObj cap, not the weapon pool.**
+**Mario's missing fireballs were the GObj cap, and the fix is 14,080 bytes.**
 `SpawnCall 11 / SpawnSuccess 7` with `SpawnFailGObj 4 / SpawnFailPool 0`, so
-`gcMakeGObjSPAfter` refused four times. `gcGetGObjSetNextAlloc` refuses only at
-the `ifCommonSetMaxNumGObj` cap, which is the arena-margin latch — the same root
-cause as the L7 oracle abort and the crowd actor's default-off. It reads `-1` at
-end of run because that read is the Results scene; the value AT the refusal is
-sampled now.
+`gcMakeGObjSPAfter` refused four times. Sampled at the refusal:
+`sGCCommonsMaxNum 47` with 47 active and **`HeapFree 14,796`** against the
+25,600 `ifCommonSetMaxNumGObj` threshold — the cap was latched for the whole
+match. `sizeof(WPStruct)` is **704**, so `WEAPON_ALLOC_MAX = 32` spends
+**22,528 bytes** on a pool whose measured high-water is **one**.
+`NDS_R2_WEAPON_POOL = 12` returns 14,080 and the latch stops firing:
+**`SpawnCall 16 / SpawnSuccess 16`, both fail counters 0.**
+
+**This is the arena-margin constraint, paid down for the first time.** The same
+latch is what aborted the L7 oracle ROM and what keeps the crowd actor default
+off at `GENERALFREE 17,316`. 14,080 bytes is roughly three of the boot search's
+4,096-byte steps, and it came from a pool the P1 milestone cannot use.
+
+**Sudden Death entered on the fixed build** (`SuddenDeathPrepareCount 1`,
+NO-FREEZE to Results) — the first soak in the campaign to reach it naturally,
+because a match where every fireball spawns is a match that can tie.
+
+### Five-minute stress soak on the fixed build — clean
+
+`build-pupupu`, both-CPU, `-MinutesToRun 5.0 -PressStartEverySeconds 175`:
+
+| | |
+|---|---|
+| verdict | **NO-FREEZE** |
+| quads emitted / missed | **347,100 / 0** |
+| fireballs | `SpawnCall 16 / SpawnSuccess 16`, both fail counters **0** |
+| FGM | 282 play calls, **0 unsupported**, miss ring **0** |
+| Sudden Death | `SuddenDeathPrepareCount 1` |
+| GObj cap | `sGCCommonsMaxNum` −1 |
+
+`RematchCount 0` — the START taps landed during Sudden Death rather than at
+Results, so the rematch clause is still carried by the owner-confirmed
+2026-07-31 lane (four battle entries, three Results screens) and wants one more
+run on this content.
+
+### The crowd actor RUNS, and the number that decides it is now measured
+
+A seven-minute both-CPU soak with `NDS_IMPORT_BATTLESHIP_FT_PUBLIC=1`:
+NO-FREEZE, `gNdsFtPublicActorMakeCount 2`, `CommonCheckCount 36`, **560,419
+quads with zero misses**, FGM miss ring empty, no spawn refused.
+
+It stays **default 0** anyway, and for the first time that is a measurement.
+`gNdsTaskmanGeneralHeapFreeMin` — the battle-time low-water, sampled every
+presented frame, because the soak's end-of-run `GENERALFREE` reads the Results
+scene and cannot see a battle-time dip — read **23,544** with the actor on and
+**26,876** with it off, one build apart on the same tree. The actor costs
+**3,332 bytes**; the shipping configuration clears the 25,600
+`ifCommonSetMaxNumGObj` threshold by **1,276** and no longer latches at all,
+while the actor lands **2,056 under**. With it on the cap did latch — it simply
+latched late enough to refuse nothing. `PROJECT_GOAL.md` ranks audio fidelity
+first in the sacrifice order and gameplay fidelity above it, so the crowd yields
+until ~2,100 more bytes are found. **`NDS_R2_WEAPON_POOL` is where the last
+14,080 came from; the item pool is not a candidate — the port's
+`itManagerInitItems` is already a no-op stub, so items cost nothing today.**
 
 ## THE FULL-CONTENT BASELINE — WORK-H P95 1,240,128, gap 120,128 (2026-08-01)
 
