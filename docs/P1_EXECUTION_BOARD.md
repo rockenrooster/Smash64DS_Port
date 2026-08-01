@@ -138,7 +138,42 @@ never started the emulator and never timed out. Killed by hand.
 `verify-all.ps1` sets up whatever it needs (runner slot, ports, environment);
 the harness does not do it for itself. Always go through the profile.
 
-## THE FULL-CONTENT BASELINE — WORK-H P95 1,240,128, gap 120,128 (2026-08-01)
+## THE UNCAPPED BASELINE — WORK-H P95 1,257,280, gap 137,280 (2026-08-01, LATEST)
+
+`artifacts/performance/r207-baseline-2026-08-01-nocap-128.json`, `git=2236532`,
+`dldi=ON`, 128 settled frames (440..567), one stop via `-RingDump`. **This
+supersedes the 1,240,128 row below**, which was taken with
+`ifCommonSetMaxNumGObj` holding the GObj pool capped for the entire match.
+
+| bucket | P50 | P95 | prior P95 | Δ P95 |
+|---|---|---|---|---|
+| **WORK-H** | 924,928 | **1,257,280** | 1,240,128 | **+17,152** |
+| FTR | 377,408 | 380,672 | 380,800 | −128 |
+| STG | 174,208 | 180,864 | 183,936 | −3,072 |
+| SRC | 279,744 | **549,056** | 533,760 | +15,296 |
+| MISC | 54,400 | 170,304 | 167,808 | +2,496 |
+| BG | 3,904 | 4,032 | 3,968 | +64 |
+| AUD | 2,240 | 3,456 | 3,648 | −192 |
+
+`VBI 2:457 3:93 4:13 5+:4`, max interval 19, 567 intervals, **slips 0** — the
+histogram is flat against the prior run (3-VBlank frames actually fell 98 → 93).
+
+**The +17,152 is not a regression; it is content that did not previously
+exist.** The cap was refusing four of every eleven fireball spawn requests, and
+Dream Land's particle bank drew nothing at all. Objects that now exist have to
+be simulated and drawn, and the whole increase lands in `SRC` (+15,296) and
+`MISC` (+2,496) — exactly the two buckets that own transient combat objects,
+and exactly where the cap was deleting them. The cross-build placement floor is
+±5,376, so +17,152 is real signal at 3.2× the floor.
+
+**Gap to the gate: 137,280.** The owners are unchanged: `SRC` spread 1.96 with a
++269,312 excursion above its own median, `MISC` 3.13, while `FTR` is 1.01 and
+`STG` 1.04. There is still no named lever of this size that is not the owner's
+call — see the SwitchPlan §R2-07 option list, whose option 4 is explicitly *"the
+OWNER'S CALL, in writing"* and is the only one measured large enough to close
+this alone (`NDS_TASK106_UPDATES_PER_PRESENT=1` ceilings at −119,744).
+
+## THE SUPERSEDED FULL-CONTENT BASELINE — WORK-H P95 1,240,128 (2026-08-01)
 
 Every prior gate figure on this board was measured with the particles off. That
 number cannot be optimized against any more, and the switch plan's own R2-07

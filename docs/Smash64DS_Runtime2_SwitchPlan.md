@@ -11,12 +11,29 @@ and equivalence. **R2-07 is the live phase.** The board
 and is not a status log.
 
 **The battle-frame P95 gate, read in the canonical DLDI-on configuration
-(§3.9), is NOT yet met.** Latest matched measurement (2026-08-01, and the first
-one taken with the particle runtime and quad draw ON, which is now the shipping
-configuration): **`WORK-H` P95 1,240,128 against 1,120,000 — 18 of 128 frames
-over gate, VBlank 2:453 3:98 4:11 5+:4**
+(§3.9), is NOT yet met.** Last matched measurement (2026-08-01, the first taken
+with the particle runtime and quad draw ON): **`WORK-H` P95 1,240,128 against
+1,120,000 — 18 of 128 frames over gate, VBlank 2:453 3:98 4:11 5+:4**
 (`artifacts/performance/r207-baseline-particles-on-128.json`). Every earlier
 figure on this page is particles-off and must not be optimized against.
+
+**RE-MEASURED, and the number moved up as predicted (2026-08-01, later the same
+day): `WORK-H` P95 1,257,280, gap 137,280, `VBI 2:457 3:93 4:13 5+:4` max 19,
+slips 0** (`artifacts/performance/r207-baseline-2026-08-01-nocap-128.json`,
+`git=2236532`, `dldi=ON`, 128 frames). +17,152 against the row above, all of it
+in `SRC` (+15,296) and `MISC` (+2,496), which is 3.2x the +-5,376 cross-build
+placement floor. **It is not a regression; it is content that did not previously
+exist** -- four of every eleven fireballs and Dream Land's entire particle bank.
+**Why it moved.** Every P95 in this campaign, including the one above, was
+measured on a build where `ifCommonSetMaxNumGObj` had capped the GObj pool for
+the whole match: `gSYTaskmanGeneralHeap` sat at **14,796 bytes free** against
+the 25,600 threshold, so `gcMakeGObj` refused for the rest of every match once
+the pool reached its latched size — measured deleting four of Mario's eleven
+fireballs. `NDS_R2_WEAPON_POOL` returned 14,080 bytes from a pool whose P1
+high-water is one weapon, the low-water is **26,876** now, and the cap no longer
+fires. Transient objects the old builds were silently refused now get created.
+Same rule as the particles-off figures: do not optimize against a baseline
+taken under a different content set.
 
 **The over-gate frames have two owners and neither is a renderer floor.**
 `FTR` and `STG` are flat on them — `FTR` is *below* its clean median on the

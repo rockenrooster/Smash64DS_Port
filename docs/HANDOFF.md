@@ -10,16 +10,16 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69** — 1,228,928 -> 1,096,768, DLDI-off so lower bounds; only the E32 flash residual is open (KNOWN_ISSUES) and it blocks no lever |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-06 | closed — no lever left inside the phase; L6 found the one outside it |
-| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **Particle interpreter, quad draw and Dream Land's own bank all DEFAULT ON and measured** — NO-FREEZE, stage builds 2, 109,560 of 111,644 particles drawn, reject ring empty. **Audio closed: 194/194, miss ring 0, 85 cues.** **Owed: the owner's eye and ear.** **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
+| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **Particle interpreter, quad draw and Dream Land's own bank all DEFAULT ON and measured** — NO-FREEZE, stage builds 2, 110,976 of 110,976 particles drawn, reject ring empty. **Audio closed: 282/282, miss ring 0, 88 cues.** **Owed: the owner's eye and ear.** **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
 
-## OPEN P1 #1 — the gate. Over by 120,128, and **there is no named lever**
+## OPEN P1 #1 — the gate. Over by 137,280, and **there is no named lever**
 
-**The full-content baseline (`85e43f4`, DLDI-on, both particle flags at their new default 1):
-`WORK-H` P50 926,336, P95 1,240,128, max 1,492,928**, VBlank 2:453 3:98 4:11 5+:4, max 19, slips 0
-(`artifacts/performance/r207-baseline-particles-on-128.json`). Particles cost ~31,000 of it against
-the particles-off 1,208,960, and that older number **must not be optimized against any more**.
-The harness itself is deterministic — two control runs once came back bit-identical in every bucket —
-so a cross-BUILD delta is signal.
+**Uncapped baseline (`2236532`, DLDI-on, particles on, GObj cap gone): `WORK-H` P50 924,928,
+P95 1,257,280**, `VBI 2:457 3:93 4:13 5+:4`, max 19, slips 0
+(`artifacts/performance/r207-baseline-2026-08-01-nocap-128.json`). **+17,152 on the previous
+1,240,128, all of it `SRC` +15,296 and `MISC` +2,496 — and it is CONTENT, not regression**: the
+cap was refusing four of every eleven fireballs and Dream Land's bank drew nothing. Every figure
+before this one was measured with the pool capped; do not optimize against them.
 
 **The gate is a RANK, so the comparator is the over-gate COUNT: 18 of 128 frames exceed 1.12M** and
 P95 ≤ 1.12M needs six or fewer. Ranked per frame, `FTR` and `STG` are **flat on the worst frames**
@@ -62,12 +62,13 @@ any; run `mapdiff` on a new lab flag before running the ROM.
 Owner's phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and are required to be fixed
 for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the random freezes**.
 
-**SFX IS DONE for a both-CPU match: 194 play calls, 194 supported, MISS RING 0.**
+**SFX IS DONE for a both-CPU match: 282 play calls, 282 supported, MISS RING 0.**
 `render-audio-fgm-phase-pack.py --derive <ids>` prints every selector field straight from
-`fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, so authoring a cue is transcription. 56 → **85 cues**: seven
+`fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, so authoring a cue is transcription. 56 → **88 cues**: seven
 announcer lines, 621 PublicWin, the eleven the crowd actor reaches, 96/153/85, the five **only a
 BOTH-CPU match reaches** (11 Escape, 13/14 GuardOn/Off, 278 GamePause, 369 FoxOttotto), and finally
-271 Magnify + 368 FoxWin. Every earlier miss-ring read was single-CPU, where Mario stands still.
+271 Magnify + 368 FoxWin, then 18 LightSwingLw1 + 514 AnnounceSuddenDeath + 365 FoxSelected once every
+fireball spawned and the match reached Sudden Death. Each fix uncovers the layer under it.
 **85's `source_rate_above_u16` was never a hardware limit** — 90,510 Hz is fine for the channel timer and
 too big only for the `u16` in *our* pack entry, so it renders full-program AOT at 32,000. Two modulator
 findings, both from the decomp's own source: **target 24+ is cross-mod ANOTHER voice** (skipped before
@@ -77,9 +78,10 @@ rather than wrapped** (`n_env.c:4158`/`:4172`). Shapes 4/5/8 call `randFloat*` a
 (`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`), first ever build of that flag, 2026-08-01, NO-FREEZE to Results.
 "Its whole external surface already existed" was half wrong: five declarations plus
 `dFTCommonDataPublicFighterCallFGMs` (`ftcommondata.c` is not compiled here) had to be supplied.
-**Still default 0 for a hard reason: it leaves the general heap at 17,316 and the GObj cap FIRES at 48.**
-Arena, not the cue set, is what closes this row — and the same latch is why four of eleven fireballs
-never spawn. **Five of its seven counters CANNOT fire**: the `#define` seam renames intra-TU references,
+**It RUNS** (`ActorMakeCount 2`, `CommonCheckCount 36`, seven-minute soak NO-FREEZE) and is **still
+default 0 on a MEASURED margin**: `gNdsTaskmanGeneralHeapFreeMin` is 26,876 without it and 23,544 with,
+so it costs 3,332 B and lands 2,056 under the 25,600 latch. Audio yields to gameplay per the sacrifice
+order. **Five of its seven counters CANNOT fire**: the `#define` seam renames intra-TU references,
 so the actor registers the inner proc and the counter-carrying wrappers are gc'd. Read the source's own
 statics instead; the "wrap a decomp function to count its INTERNAL callers" refutation, hit again.
 
