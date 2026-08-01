@@ -31,6 +31,27 @@ extern volatile u32 gNdsParticleGeneratorStartCount;
 extern volatile u32 gNdsParticleRejectCount;
 extern volatile u32 gNdsParticleDrawSeamCount;    /* draw path still gated off */
 
+/* WHICH textures a P1 match actually draws, as opposed to which ones the
+ * generator's static reachability admits.
+ *
+ * This is a VRAM budget question with a hard edge. The battle's static texture
+ * set already pins 136,192 bytes at the base of VRAM_A, and VRAM_A+B together
+ * are 262,144, so a particle set has 119,872 bytes to live in. The generator's
+ * reachable set is 31 textures and 137,152 bytes -- 17,280 over, before the
+ * draw path exists to be measured. Guessing which to drop would be guessing;
+ * the reachable set is a static over-approximation over 87 scripts and the
+ * first live run started ten of them.
+ *
+ * So the draw seam counts. One bit per SOURCE texture id (efcommon has 47) plus
+ * a per-id frame high-water, because a ten-frame animation costs ten times a
+ * still and the frame count is the first thing worth trimming. Read after a
+ * full match; the answer is the upload set. */
+#define NDS_PARTICLE_TEXTURE_USE_IDS 47u
+extern volatile u32 gNdsParticleTextureUseMask[2];
+extern volatile u8 gNdsParticleTextureFrameMax[NDS_PARTICLE_TEXTURE_USE_IDS];
+extern volatile u32 gNdsParticleDrawVisibleCount;  /* particles past the clip  */
+extern volatile u32 gNdsParticleDrawVisibleMax;    /* worst single frame       */
+
 /* Mirrors of the interpreter's own live/highwater tallies, published so a run
  * can read them without a symbol lookup into the imported translation unit. */
 extern volatile u32 gNdsParticleStructsLive;

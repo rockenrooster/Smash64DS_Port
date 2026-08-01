@@ -863,12 +863,62 @@ void ndsParticleRuntimePublishTallies(void)
     gNdsParticleRootSpawnCount = dLBParticleCurrentGeneratorID;
 }
 
-/* The DS textured-quad path is the next gated step. Until then this is the
- * observation point for "the interpreter reached the draw seam this frame",
- * and it draws nothing. */
+/* The DS textured-quad path is the next gated step. Until then this walks the
+ * exact lists the source draw walks and records what it WOULD have drawn.
+ *
+ * Not a placeholder that gets thrown away: the walk, the camera-mask test and
+ * the `size != 0` test are the first three things the real path has to do, and
+ * the census it produces is what decides the upload set. The source's draw
+ * (lb/lbparticle.c:1448) starts identically -- iterate the sixteen
+ * sLBParticleStructsAllocLinks chains, take the ones the GObj's camera_mask
+ * selects, skip zero-size particles -- and then projects and emits a texture
+ * rectangle. Everything up to the projection is here. */
+volatile u32 gNdsParticleTextureUseMask[2];
+volatile u8 gNdsParticleTextureFrameMax[NDS_PARTICLE_TEXTURE_USE_IDS];
+volatile u32 gNdsParticleDrawVisibleCount;
+volatile u32 gNdsParticleDrawVisibleMax;
+
 void lbParticleDrawTextures(GObj *gobj)
 {
-    (void)gobj;
+    u32 visible = 0u;
+    u32 link;
+
     gNdsParticleDrawSeamCount++;
+
+    for (link = 0u; link < ARRAY_COUNT(sLBParticleStructsAllocLinks); link++)
+    {
+        LBParticle *pc;
+
+        if ((gobj->camera_mask & (1 << link)) == 0)
+        {
+            continue;
+        }
+        for (pc = sLBParticleStructsAllocLinks[link]; pc != NULL; pc = pc->next)
+        {
+            u32 id;
+
+            if (pc->size == 0.0F)
+            {
+                continue;
+            }
+            visible++;
+            id = pc->texture_id;
+            if (id >= NDS_PARTICLE_TEXTURE_USE_IDS)
+            {
+                continue;
+            }
+            gNdsParticleTextureUseMask[id >> 5] |= 1u << (id & 31u);
+            /* frame_id + 1, so "never drawn" and "drew frame 0" differ. */
+            if ((u32)pc->frame_id + 1u > gNdsParticleTextureFrameMax[id])
+            {
+                gNdsParticleTextureFrameMax[id] = (u8)(pc->frame_id + 1u);
+            }
+        }
+    }
+    gNdsParticleDrawVisibleCount += visible;
+    if (visible > gNdsParticleDrawVisibleMax)
+    {
+        gNdsParticleDrawVisibleMax = visible;
+    }
     ndsParticleRuntimePublishTallies();
 }

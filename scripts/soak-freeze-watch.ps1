@@ -557,6 +557,16 @@ try {
             'gNdsParticleGeneratorsMax',
             'gNdsParticleTransformsMax',
             'gNdsParticleRootSpawnCount',
+            # WHICH textures a real match draws, and how many quads a frame has
+            # to carry. Both are VRAM/budget inputs the static reachability
+            # cannot answer: the generator admits 31 textures and 137,152 bytes
+            # against 119,872 free after the battle's pinned static set, so the
+            # upload list has to come off a measurement rather than off the
+            # over-approximation. The mask is one bit per SOURCE texture id.
+            'gNdsParticleTextureUseMask[0]',
+            'gNdsParticleTextureUseMask[1]',
+            'gNdsParticleDrawVisibleCount',
+            'gNdsParticleDrawVisibleMax',
             # WHICH script was refused. Reason 4 means the pack marked the id
             # unreachable and failed closed -- a hole in the reachability
             # derivation, not a runtime bug. 1/2/3 mean the bank itself is
