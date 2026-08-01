@@ -67,11 +67,44 @@ start pre-empts the heuristic entirely. That needs one number first — the
 natural `sGCCommonsActiveNum` high-water from an uncapped run, which the clean
 counter list now reports.
 
-**Owed:** the DLDI-on `WORK-H` A/B that prices the draw against the gate. The
-three ROMs above exist; nothing has been measured for ticks yet. Note that
-**the 1,208,960 baseline excludes the particle workload entirely** — the
-attested control had `NDS_R2_PARTICLE_RUNTIME=0` — so the gate position has to
-be re-established with the interpreter live before any lever is priced.
+### MEASURED — the draw's cost is NOT in the tick budget, it is 196 five-VBlank frames
+
+All DLDI-on, 128 samples, same emulator sha, same tool, same session.
+
+| | `l7-control` (git 800a934) | `tickhud-control` (HEAD) | `+PARTICLE_DRAW=1` |
+|---|---|---|---|
+| `WORK-H` P50 | 921,664 | 923,840 | 926,784 |
+| `WORK-H` P95 | **1,208,960** | **1,294,976** | **1,221,760** |
+| `FTR` P50 | 382,976 | 385,344 | 379,136 |
+| `SRC` P95 | 523,008 | 546,112 | 522,176 |
+| `MISC` P50 / P95 | 44,672 / 155,456 | 45,120 / 156,544 | **54,656 / 166,720** |
+| VBlank 2/3/4/5+ | 461/91/10/4 | 457/96/9/4 | **287/81/2/196** |
+
+**Read the histogram, not the P95.** The draw's own tick cost is the `MISC`
+line — about **+10,000** — and `WORK-H` P95 is *better* than the control it was
+built from. The pacing is destroyed anyway: **196 of 566 frames present at five
+or more VBlanks**, against 4 in both controls. 196 ≈ the 197
+`gNdsR2StagePrepareBuildCount` rebuilds the same run reports, so it is one
+five-VBlank frame per stage-owner rejection. The 128-sample window sits in a
+quiet stretch (`ALL` max 1,683,008 = three VBlanks), which is exactly why a P95
+alone would have called this a win.
+
+**Two control readings, and the P95 between them is not signal.**
+`build-l7-control` re-measured with the current tool returns 1,208,960 and mean
+973,484 to the digit, so the harness is deterministic and the attested figure
+stands. Against it the current tree reads +86,016 P95 — from **+16 bytes of
+`.text` and +64 of `.bss`**. At 1.85 cycles/byte that is 148 cycles, so the
+86,016 is rank movement, not work: 17 → 18 frames of 128 over gate, on a tail
+steep enough that one frame is tens of thousands of ticks. **Quote the
+over-gate COUNT for this population, not P95** — the standing
+rank-the-whole-distribution rule, in its sharpest form yet.
+
+**Next:** name the rejection. `NDS_R2_STAGE_ROUTE_PROBE=1` turns on
+`NDS_TASK36_REJECT_TRACE` without profile level 1, so
+`gNdsRendererTask36RendererRejectReason` and `...PrepareRunRejectReason` say
+which of the seven sites refuses. Until that lands, `NDS_R2_PARTICLE_DRAW`
+stays 0 — the draw is correct (90,165 quads, 0 misses, NO-FREEZE, pools 41/48
+and 8/10) and unshippable.
 
 ## R2-07 clause 2 — `NDS_R2_PARTICLE_RUNTIME=1` BUILDS, and its first boot names the real constraint: `.text` COSTS ARENA (2026-07-31)
 

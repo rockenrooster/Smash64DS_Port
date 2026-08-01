@@ -642,6 +642,15 @@ try {
             'gNdsParticleRejectRingScripts[5]', 'gNdsParticleRejectRingBanks[5]',
             'gNdsParticleRejectRingReasons[5]', 'gNdsParticleRejectRingCounts[5]',
             'gNdsRendererTask36ReplayArenaStaleCount',
+            # WHY the native stage owner refused. Present at
+            # NDS_R2_STAGE_ROUTE_PROBE=1 (or profile level 1), which is the only
+            # way to tell a topology change from a texture-upload failure from a
+            # binding rejection -- seven sites set these. Needed because
+            # NDS_R2_PARTICLE_DRAW=1 turns StagePrepareBuildCount 2 -> 197 and
+            # puts 196 of 566 frames at five or more VBlanks, one per rejection,
+            # while its own tick cost is only ~10,000 in MISC.
+            'gNdsRendererTask36RendererRejectReason',
+            'gNdsRendererTask36PrepareRunRejectReason',
             # BUGS.md: "sometimes Mario's fireballs don't spawn". These two make
             # the report falsifiable without a new probe -- the import already
             # counts both sides of the call (battleship_mario_fireball.c).
@@ -851,28 +860,35 @@ try {
                         'timer, so only the first {1} min covered gameplay. Raise ' +
                         'the match timer to soak longer.') -f $MinutesToRun, $matchMinutes)
                 }
-                # The GObj-latch margin, reported on every run whether or not it
-                # was crossed. 25,600 is ifCommonSetMaxNumGObj's threshold; past
-                # it the pool is capped at whatever is active and the GO
-                # countdown dereferences a NULL. The particle runtime alone
-                # leaves 1,176 bytes of margin, so this is not a theoretical
-                # bound -- it is the next feature's budget.
+                # The GObj-latch margin. CAVEAT, measured the first time this
+                # printed: the clean read happens at END of run, which is the
+                # RESULTS scene, and the heap is per-scene -- a battle that
+                # aborted at 23,032 free reports 318,924 here. So this number is
+                # informative, not the guard. The GUARD is sGCCommonsMaxNum
+                # above: it is -1 until ifCommonSetMaxNumGObj caps the pool and
+                # sticky afterwards, so any other value means the cap fired
+                # during THIS run whatever the heap says now. Read them
+                # together; the freeze capture prints the battle-time free bytes
+                # for the run that actually fell over.
                 $freeMatch = [regex]::Match($progress, 'GENERALFREE=(-?\d+)')
                 if ($freeMatch.Success) {
                     $free = [int]$freeMatch.Groups[1].Value
-                    Write-Host ("    {0,-40} {1} (GObj latch fires under 25600)" -f
+                    Write-Host ("    {0,-40} {1} (end-of-run scene, not battle)" -f
                         'general heap free bytes', $free)
                     $samples += [pscustomobject]@{
                         counter = 'generalHeapFreeBytes'; value = $free }
-                    if ($free -lt 25600) {
-                        Write-Host ('  WARNING: the GObj pool cap HAS fired. Every ' +
-                            'GObj past the cap is NULL and the GO countdown ' +
-                            'dereferences one. Free arena bytes or this build ' +
-                            'cannot start a battle.')
-                    } elseif ($free -lt 29600) {
-                        Write-Host ("  NOTE: only $($free - 25600) bytes of GObj-latch " +
-                            'margin. The next feature that adds .text trips it.')
-                    }
+                }
+                # THE ACTUAL GUARD. -1 means ifCommonSetMaxNumGObj never capped
+                # the GObj pool; it is sticky, so any other value means the cap
+                # fired at some point in this run and every GObj request past it
+                # returned NULL. The GO countdown does not check.
+                $commonsMax = $counter['sGCCommonsMaxNum']
+                if (($null -ne $commonsMax) -and ($commonsMax -ne 4294967295u)) {
+                    Write-Host (('  WARNING: the GObj pool cap FIRED at {0}. ' +
+                        'ifCommonSetMaxNumGObj saw the general heap under 25,600 ' +
+                        'bytes free; past that cap gcMakeGObj returns NULL and the ' +
+                        'GO countdown dereferences one. Free arena bytes -- .text ' +
+                        'costs arena one for one here.') -f $commonsMax)
                 }
                 $arena = $counter['gNdsTaskmanArenaChosenSize']
                 if ($arena -lt 1245184u) {
