@@ -3897,6 +3897,8 @@ extern volatile u32 gNdsWeaponPoolEntries;
 /* Battle-time low-water of gSYTaskmanGeneralHeap. Under 25,600 means
  * ifCommonSetMaxNumGObj has capped the GObj pool for the rest of the match. */
 extern volatile u32 gNdsTaskmanGeneralHeapFreeMin;
+/* Peak live DObjs. x136 bytes is heap the match never gives back. */
+extern volatile u32 gNdsGCDrawsActiveMax;
 /* DS weapon-pool size, replacing the source's WEAPON_ALLOC_MAX 32. See the
  * measurement in src/import/battleship_wpmanager_core.c: 32 * 704 bytes held
  * gSYTaskmanGeneralHeap under the ifCommonSetMaxNumGObj threshold for the whole

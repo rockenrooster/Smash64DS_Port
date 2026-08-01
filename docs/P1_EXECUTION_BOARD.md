@@ -138,6 +138,69 @@ never started the emulator and never timed out. Killed by hand.
 `verify-all.ps1` sets up whatever it needs (runner slot, ports, environment);
 the harness does not do it for itself. Always go through the profile.
 
+## THE VFX BUDGET IS NINE DOBJS, AND THAT IS NOW ARITHMETIC (2026-08-01)
+
+The owner reports the KO burst, Fox's Reflector and "other VFX" still wrong.
+Root cause found: the port ships **weak** substitutes for twenty
+`efManager*MakeEffect` seams, each building one of four untextured 16-vertex
+primitives recoloured per effect -- thirteen effect kinds sharing four shapes.
+They existed only because `lbParticleMakeScriptID` was a stub and no bank was
+resident, and both stopped being true earlier today. The decomp bodies are
+already compiled as `ndsBaseEFManager*` and spawn the real scripts.
+
+**The KO group graduated** (DeadExplode, SparkleWhiteDead, RebirthHalo):
+NO-FREEZE, low-water 26,876 unchanged to the byte, cap never fired,
+`QuadMissCount` 0, particle scripts started 10 -> 16.
+
+**All twenty did not fit, and the mechanism is DObj pool growth.** The ROM froze
+mid-match on a down-KO: `MALLOCOVF=1, req=136, head=24`, stack
+`gcGetDObjSetNextAlloc <- gcAddDObjForGObj <- gcSetupCustomDObjs <-
+efManagerMakeEffect(dEFManagerDeadExplodeEffectDesc) <-
+ftCommonDeadDownSetStatus`. `gcGetDObjSetNextAlloc` (objman.c:692) grows the
+DObj pool out of `gSYTaskmanGeneralHeap` 136 bytes at a time and, unlike GObjs
+which `ifCommonSetMaxNumGObj` caps, **has no ceiling** -- so a DObj peak is heap
+claimed for the rest of the match. A source effect's price is its peak
+simultaneous DObj count.
+
+*(An earlier reading of that stack said "battle setup", from frames #25-#26
+being `syTaskmanLoadScene`/`syTaskmanStartTask`. Those are the task that was
+started; #24 `syTaskmanRunTask` is the running task. Read the middle of a stack
+before naming its phase.)*
+
+**The budget, measured** (`gNdsGCDrawsActiveMax`, new):
+
+| | |
+|---|---|
+| DObj peak with the KO group | **129** (17,544 B) |
+| heap low-water | 26,876 |
+| `ifCommonSetMaxNumGObj` latch | 25,600 |
+| **margin** | **1,276 B = 9 DObjs** |
+
+Seventeen source effect trees do not fit in nine DObjs, so the rest are behind
+`NDS_R2_SOURCE_EFFECTS_FULL` (default 0) until heap is found.
+
+**Two candidate heap sources are already closed by evidence.** The substitute
+templates are 14 x 16 vertices, roughly 5 KB total even if all were deleted. And
+the DL buffers -- 163,840 B, the largest fixed allocation -- are **not slack**:
+`DLBUF0` was measured at `used=61488` against `len=61440`, i.e. overflowing, on
+the 2026-07-31 rematch freeze. Do not re-propose either.
+
+**The architectural answer is the one OPTIMIZATION_IDEAS already names:** a
+fixed-pool native effect runtime, 24-32 bytes per instance with fixed pools
+(16 hit / 8 dust / 4 attached / 4 death), replacing per-effect GObj+DObj+XObj
+allocation entirely. That is what makes source-faithful VFX affordable; routing
+them one at a time onto the source's allocator cannot.
+
+**Fox's Reflector is not blocked by this and is not a particle.**
+`dEFManagerFoxReflectorEffectDesc` names `&gFTDataFoxSpecial2` with
+`llFoxSpecial2ReflectorDObjDesc` and `llFoxSpecial2ReflectorStartAnimJoint` --
+an animated four-status DObj tree. Every other P1 effect descriptor points at
+`gEFManagerFiles[0..2]` or `gFTManagerCommonFile`, which are resident; the
+Reflector is the only one naming a fighter-specific file. Whether
+`gFTDataFoxSpecial2` is bound during a match is the open question: it is
+declared in `ftdata_file_slots.h`, `FoxSpecial2` is a real NitroFS reloc asset
+(id `0x15a`) with loader machinery, but nothing in `src` references the slot.
+
 ## CHECKPOINT 2026-08-01 — both profiles green, published ROM rebuilt
 
 - **`Boundary verification profile passed.`** and **`Latest verification profile

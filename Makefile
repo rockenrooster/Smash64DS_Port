@@ -1372,12 +1372,17 @@ override NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI := 1
 NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 0
 # Route the remaining seventeen efManager*MakeEffect seams to their source
 # implementations instead of the untextured primitive stand-ins. Default 0 on a
-# MEASURED result, not caution: with all twenty routed the ROM froze in battle
-# setup with MALLOCOVF=1 (req 136, head 24) at
-# syTaskmanLoadScene -> scVSBattleStartBattle. The KO group (DeadExplode,
-# SparkleWhiteDead, RebirthHalo) is unconditional because it is the smallest
-# group and the furthest-from-source substitute. Raise this only with a soak
-# whose gNdsTaskmanGeneralHeapFreeMin stays above 25,600.
+# MEASURED result, not caution: with all twenty routed the ROM froze MID-MATCH
+# on a KO with MALLOCOVF=1 (req 136, head 24). The failing allocation is a
+# 136-byte DObj from gcGetDObjSetNextAlloc, inside
+# efManagerMakeEffect(dEFManagerDeadExplodeEffectDesc) reached from
+# ftCommonDeadDownSetStatus -- so the cost is source effects building real DObj
+# trees out of gSYTaskmanGeneralHeap during play, not setup-time asset loading.
+# The seventeen drained the heap and the KO burst's own DObj was the straw.
+# The KO group (DeadExplode, SparkleWhiteDead, RebirthHalo) is unconditional on
+# the strength of its OWN soak -- NO-FREEZE, low-water 26,876 unchanged -- not
+# on this freeze. Raise this only with a soak whose
+# gNdsTaskmanGeneralHeapFreeMin stays above 25,600.
 NDS_R2_SOURCE_EFFECTS_FULL ?= 0
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_BGM := 1

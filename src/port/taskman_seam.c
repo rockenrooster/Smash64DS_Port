@@ -4891,6 +4891,18 @@ static void ndsBattlePlayablePresentFrame(void)
             gNdsTaskmanGeneralHeapFreeMin = free_now;
         }
     }
+    /* The DObj high-water, which is the other half of the same budget and had
+     * no instrument until 2026-08-01. gcGetDObjSetNextAlloc (objman.c:692)
+     * grows the pool out of gSYTaskmanGeneralHeap 136 bytes at a time and --
+     * unlike GObjs, which ifCommonSetMaxNumGObj caps -- has NO ceiling, so a
+     * DObj peak is heap claimed for the rest of the match. Routing an effect to
+     * its source implementation trades a shared template for a real DObj tree,
+     * and this is what prices that trade: peak x 136 bytes against the margin
+     * between the low-water above and the 25,600 latch. */
+    if ((u32)sGCDrawsActiveNum > gNdsGCDrawsActiveMax)
+    {
+        gNdsGCDrawsActiveMax = (u32)sGCDrawsActiveNum;
+    }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     NDS_RENDERER_PHASE05_FINISH(
         gNdsRendererPhase05PresentTailTicks, phase05_start);

@@ -720,6 +720,7 @@ try {
             # end-of-run GENERALFREE below reads the Results scene and cannot
             # see it.
             'gNdsTaskmanGeneralHeapFreeMin',
+            'gNdsGCDrawsActiveMax',
             # BUGS.md crowd row, present only at
             # NDS_IMPORT_BATTLESHIP_FT_PUBLIC=1. "The crowd is silent" has three
             # distinct causes and the FGM backend's UnsupportedCallCount

@@ -2710,6 +2710,7 @@ volatile u32 gNdsWeaponStructBytes;
 volatile u32 gNdsWeaponPoolEntries;
 /* Starts at all-ones so the first presented frame sets a real low-water. */
 volatile u32 gNdsTaskmanGeneralHeapFreeMin = 0xffffffffu;
+volatile u32 gNdsGCDrawsActiveMax;
 volatile u32 gNdsFighterProjectileProofKindMask;
 volatile u32 gNdsFighterProjectileProofAttackStateMask;
 volatile u32 gNdsFighterProjectileProofDamageMax;

@@ -938,13 +938,21 @@ GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
 
 /*
  * MEASURED 2026-08-01: ROUTING ALL TWENTY AT ONCE DOES NOT FIT.
- * The first attempt forwarded every seam below and the ROM froze during battle
- * SETUP, not gameplay: `MALLOCOVF=1, id=65536, req=136, head=24` with the stack
- * at syTaskmanLoadScene -> scVSBattleStartBattle -> syTaskmanMalloc. Referencing
- * the ndsBase* bodies stops --gc-sections discarding them, and their effect
- * descriptors pull in per-effect asset/DObj setup that the substitutes never
- * paid for. gSYTaskmanGeneralHeap had 26,876 bytes of battle-time headroom
- * before this change and 24 after.
+ * The first attempt forwarded every seam below and the ROM froze MID-MATCH on a
+ * KO: `MALLOCOVF=1, id=65536, req=136, head=24`. The stack names the mechanism
+ * exactly -- gcGetDObjSetNextAlloc (objman.c:692) <- gcAddDObjForGObj <-
+ * gcSetupCustomDObjs <- efManagerMakeEffect(dEFManagerDeadExplodeEffectDesc) <-
+ * ftCommonDeadDownSetStatus. The failing allocation is a 136-byte DObj, so the
+ * cost is source effects building REAL DObj TREES out of gSYTaskmanGeneralHeap
+ * while the match runs, where the stand-ins reused a handful of fixed
+ * templates. The seventeen drained the heap and the KO burst's own DObj was the
+ * straw. gSYTaskmanGeneralHeap had 26,876 bytes of battle-time headroom before
+ * and 24 at the halt.
+ *
+ * (An earlier reading of this stack said "battle setup", from frames #25-#26
+ * being syTaskmanLoadScene/syTaskmanStartTask. Those are the task that was
+ * started, not a load in progress; #24 syTaskmanRunTask is the running task.
+ * Read the middle of a stack before naming its phase.)
  *
  * So the set is graduated in measured groups rather than wholesale, smallest
  * blast radius first, with gNdsTaskmanGeneralHeapFreeMin read after each. The
