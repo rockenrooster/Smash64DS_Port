@@ -1,8 +1,9 @@
 # Handoff
 
-Updated: 2026-08-01. **Restart surface only, capped at 200 lines** — durable detail goes to its
-owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_STANDING_RULES.md`;
-`docs/PORTING.md` for closed root causes).
+Updated: 2026-08-01, `9c30484`. **Boundary AND Latest both green; published battle ROM rebuilt
+(11,922,432 B); tick-HUD parity 0 drift; `smash64ds.nds` untouched per the owner.**
+**Restart surface only, capped at 200 lines** — durable detail goes to its owning doc (board: queue +
+results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_STANDING_RULES.md`; `PORTING.md` for root causes).
 
 | phase | state |
 |---|---|
@@ -52,10 +53,9 @@ already computed. Needs an orthogonality guard. **Kept:**
 **The L7 oracle outlived the lever, and its answer is already recorded** in `nds_r2_collision_mtx.h`
 (460 samples): **joint scale 1.1138–1.1199, a single scale spanning 0.006**, which is what makes the
 row-scaled inverse worth trying. **Do not re-run it** — rebuilding it aborted the ROM at the GO countdown
-(`GENERALFREE 20272` against the 25,600 latch, `MALLOCOVF 0`), because its `.text` alone is more arena
-than the tree has spare. **The shipping tree has roughly five kilobytes of arena margin**, and that is
-the budget line for every remaining item that adds code. Read `GENERALFREE` from a soak before adding
-any; run `mapdiff` on a new lab flag before running the ROM.
+(`GENERALFREE 20272` against the 25,600 latch, `MALLOCOVF 0`): its `.text` alone is more arena than the
+tree has spare. **Arena margin is the budget line for anything that adds code** — read
+`gNdsTaskmanGeneralHeapFreeMin` (26,876 today, latch at 25,600) before adding any.
 
 ## OPEN P1 #2 — `BUGS.md` is now entirely particles, VFX and audio cues, and ALL of it is P1
 

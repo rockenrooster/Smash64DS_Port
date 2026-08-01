@@ -138,6 +138,19 @@ never started the emulator and never timed out. Killed by hand.
 `verify-all.ps1` sets up whatever it needs (runner slot, ports, environment);
 the harness does not do it for itself. Always go through the profile.
 
+## CHECKPOINT 2026-08-01 — both profiles green, published ROM rebuilt
+
+- **`Boundary verification profile passed.`** and **`Latest verification profile
+  passed.`** on `9c30484`.
+- `smash64ds-battle-playable-hwtri.nds` rebuilt (11,922,432 B, +25,600 on the
+  05:07 build — the 88-cue pack and the new code). **`smash64ds.nds` deliberately
+  untouched** (owner, 2026-07-28).
+- **`Tick-HUD parity passed: 55 make flags compared, 2 allowlisted differences,
+  0 drift.`** The measurement ROM in `build-tick-hud-buckets` is the same code as
+  the published one, so the baseline below is a reading of what ships.
+- Eight both-CPU soaks, all NO-FREEZE, longest seven minutes through a full
+  match, GAME SET, **Sudden Death** and Results.
+
 ## THE UNCAPPED BASELINE — WORK-H P95 1,257,280, gap 137,280 (2026-08-01, LATEST)
 
 `artifacts/performance/r207-baseline-2026-08-01-nocap-128.json`, `git=2236532`,
