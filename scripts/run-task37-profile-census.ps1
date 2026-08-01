@@ -18,6 +18,14 @@ param(
     # Partition the census frames by whether they executed this symbol, and rank
     # every symbol by the per-frame cycle difference. Requires -PerFrameRegion.
     [string]$SplitBySymbol = '',
+    # The same table partitioned by the GATE instead of by a symbol: frames
+    # costing more than two VBlanks against frames costing two.
+    # task37_census.py has carried `--split-over-gate` since it was written and
+    # this harness never exposed it, so every over-gate investigation had to
+    # guess a symbol that names the expensive class -- which is the thing the
+    # table exists to find. Use this when no symbol is known, which is the usual
+    # case. Mutually exclusive with -SplitBySymbol; both need -PerFrameRegion.
+    [switch]$SplitOverGate,
     # Which loop drives the window. `Battle` counts presented frames, the
     # campaign default. `Results` counts sMNVSResultsTotalTimeTics instead,
     # because the VS Results loop never increments the presented-frame counter --
@@ -243,11 +251,20 @@ $devkitArm = if ($env:DEVKITARM) { $env:DEVKITARM } else { 'C:/devkitPro/devkitA
 $readelf = Join-Path $devkitArm 'bin\arm-none-eabi-readelf.exe'
 if (-not (Test-Path -LiteralPath $readelf -PathType Leaf)) { $readelf = 'arm-none-eabi-readelf' }
 $censusArgs = @($csv, '--elf', $elf, '--readelf', $readelf, '--top', $Top, '--json', $json)
+if ((-not [string]::IsNullOrWhiteSpace($SplitBySymbol)) -and $SplitOverGate) {
+    throw '-SplitBySymbol and -SplitOverGate are two partitions of the same frames; pass one.'
+}
 if (-not [string]::IsNullOrWhiteSpace($SplitBySymbol)) {
     if (-not $PerFrameRegion) {
         throw '-SplitBySymbol needs -PerFrameRegion; without it the whole window is one region.'
     }
     $censusArgs += @('--split-by-symbol', $SplitBySymbol)
+}
+if ($SplitOverGate) {
+    if (-not $PerFrameRegion) {
+        throw '-SplitOverGate needs -PerFrameRegion; without it the whole window is one region.'
+    }
+    $censusArgs += @('--split-over-gate')
 }
 & $python (Join-Path $PSScriptRoot 'task37_census.py') @censusArgs |
     Tee-Object -FilePath $report
