@@ -1,6 +1,19 @@
 AI Agent should mark fixed items with FIXED prefix.
 These bugs should be fixed for P1 delivery.
--SFX for "GAME SET" sounds really low pitched, not correct sounding.
+
+-FIXED (2026-08-01, needs an ear check) SFX for "GAME SET" sounds really low
+  pitched. Thirteen semitones low: the pack plays one sample at one rate, and
+  the generator took `notes[0]` for that rate. Pitch code 0 is a REST, and FGM
+  488 is the only P1 cue whose program opens with one -- `((0,7,60),(13,7,150))`,
+  a 60-tick rest then the line -- so it rendered at 7,565 Hz where every other
+  announcer line renders at 16,000. Now takes the first SOUNDING note; the
+  sample count is unchanged (the trim was already bounded by the source PCM), so
+  only the frequency field moves. Nothing caught it because the pack self-checks
+  against its own derivation and the derivation had the same bug, so the new
+  guard is external: `check-audio-fgm-phase-pack.ps1` rejects any entry under
+  12,000 Hz, between the 7,565 a rest produces and the 15,102 lowest real one.
+  Left alone deliberately: the rest still counts toward `duration_ticks`, so the
+  line starts one second earlier than the source. Timing, not pitch, unreported.
 -Still get intermittent freezes when attacking (maybe collision/animation/heap
   related?). Owner evidence:
   `artifacts/visibility/2026-07-31_attack-freeze-owner-302caae.png` -- build
@@ -10,209 +23,7 @@ These bugs should be fixed for P1 delivery.
   5+:4` with `max:19`. So the stall is four 5+-VBlank frames and one 19-VBlank
   frame in a 128-frame window -- an event, not a slow body.
 -Sometimes Mario's fireballs don't spawn.
--FIXED (2026-07-31, owner-confirmed: "i saw the GAME SET text" / "works well")
-  No "Game set" VFX and SFX and results after winning sudden death
-  **THREE defects in series, all measured, all fixed. The short version:**
-  (1) `sIFCommonBattlePlace` was never initialised, so the announcement could
-  never trigger; (2) the nine blue letters had no sprite descriptors, so they
-  could not be composited; (3) the update proc the announcement installs
-  dereferences two NULL particle GObjs, which crashed the game the moment (1) let
-  it run. Each one alone hides the next, which is why the row read as a single
-  "nothing happens".
-  **(3) is the one that also explains "and results":** `ifCommonBattleInterfaceProcUpdate`
-  (`ifcommon.c:2617`) hands `gEFParticleStructsGObj`/`gEFParticleGeneratorsGObj`
-  to `ifCommonBattleInterfaceResumeGObj` (`:2609`), which does
-  `interface_gobj->flags &= ~GOBJ_FLAG_NORUN` with **no NULL check** -- fine on
-  N64 where the particle system is always live, fatal here where those globals
-  are `NDS_WEAK` and only `efparticle.c` assigns them (compiled only at
-  `NDS_R2_PARTICLE_RUNTIME=1`). Measured at the GAME SET stop:
-  `SD-GAMESET-EFGOBJ=structs=(nil),generators=(nil)`, and stepping past the
-  constructor put the PC at `0x02000f6a` with caller frame `0x00000e9a` -- a
-  write through address 0. The first line of that helper survives a NULL
-  (`objhelper.c:176` substitutes `gGCCurrentCommon`); the second does not.
-  TIME UP was unaffected because it installs the BONUS update proc, which does
-  not touch them -- which is exactly why TIME UP rendered while GAME SET killed
-  the game. **FIXED** with a zeroed placeholder GObj behind
-  `ndsEFParticleEnsureGObjPlaceholders` (`battle_playable_compat_stubs.c`, scoped
-  to the runtime being off so it can never shadow a real particle GObj).
-  Evidence: before, every run stopped at the constructor and never presented
-  another frame; after, `shot-gameset` is reached with the game still running at
-  29.9 FPS, and the owner watched a live run reach GAME SET and Results.
-  **Full derivation of (1) and (2) below.**
-  **ROOT-CAUSED 2026-07-31. One cause explains BOTH halves of this row -- the
-  missing announcement AND the missing Results -- and it is not
-  Sudden-Death-specific: no VS match of any length has ever announced GAME SET.**
-  The VS route runs through `sIFCommonBattlePlace`: when a team loses its last
-  stock, `ifcommon.c:2735-2740` decrements it and calls
-  `ifCommonAnnounceEndMessage()` **only if the result is exactly 0**. That call is
-  the only VS path to `ifCommonAnnounceGameSetMakeInterface`, *and* it is what
-  installs the interface proc that sets `game_status` to
-  `nSCBattleGameStatusSet` -- which is what ends the match and hands off to
-  Results. So one dead test costs the letters, the voice cue and the scene exit
-  together, which is exactly the trio the owner reported.
-  The counter is initialised by the source's own `ifCommonBattleInitPlacement`
-  (`ifcommon.c:2558`, `sIFCommonBattlePlace = teams - 1`) and **nothing in this
-  tree ever called it** -- the port header declared it and no `.c` used it; the
-  original's caller is one of the unmatched interface routines. So it sat at its
-  `.bss` zero, the first elimination took it to `-1`, and `== 0` could never be
-  true. Measured before changing anything: a Sudden Death run read
-  `SD-ANNOUNCE=place=0` at frame 40, i.e. already zero *before any death*.
-  **FIXED**: both battle entries call it now (`battleship_scvsbattle.c`,
-  `ndsSCVSBattleBeginScenePlacement`, guarded by
-  `gNdsSCVSBattlePlacementInitCount`), which also re-derives it per entry -- it is
-  a scene-lifetime static the arena rewind does not touch, so Sudden Death would
-  otherwise inherit match one's decremented value (SwitchPlan 3.12 again).
-  Verified: the same read is `place=1` on a Sudden Death entry, so the first
-  elimination lands on exactly 0. This also restores real values to
-  `players[].place`, which the Results screen reads.
-  **SECOND HALF, independently necessary: the letters had no sprite descriptors.**
-  `sNdsBattleInterfaceSpriteDescs` stopped after countdown/GO, so the nine blue
-  mixed-width letters (G/A/M/E/S for GAME SET, T/I/M/E/U/P for TIME UP; M and E
-  shared) kept the blanket endian pass's swapped `width`/`height` and
-  `bmfmt`/`bmsiz` and could not be composited. All nine are in now, **read off the
-  host** rather than guessed: `assets/us/relocData/82.vpk0.bin` parsed as
-  `struct sprite` gives T 36x56/3, I 17x57/2, M 50x56/4, E 32x56/2, U 41x58/3,
-  P 36x56/3, S 39x58/3, A 43x56/3, G 41x57/3 -- all RGBA/32b, attr 0x240. The
-  parser was validated by reproducing all five already-working manifest entries
-  exactly, and T/I/M/E/U/P match the widths the row below recorded by hand.
-  **Both earlier gdb attempts at these formats were unnecessary** (one died on a
-  Results-only boot where `gGMCommonFiles[1]` is a different asset, one on a
-  single bad expression aborting the whole printf) -- the bytes were on disk.
-  Folded in: `display_list_words` was `36` plus three hardcoded per-offset
-  exceptions, and every known sprite fits `12 * nbitmaps + 24` exactly (1->36,
-  2->48, 3->60, 4->72, 5->84, 6->96), so the formula replaces the table and the
-  nine new entries need no special-casing.
-  **PROVEN, with the event-driven capture built for it**
-  (`-CaptureAnnounce` / `-CaptureGameSet`, which break on the announcement's own
-  constructor and then step presented frames -- a wall-clock watch cannot catch a
-  90-tick window, and two watches at 90 s and 180 s both missed it):
-  - **TIME UP RENDERS** -- `2026-07-31_165338-timeup-frame20.png`, the full blue
-    mixed-width "TIME UP" across the stage at `TIME 00:00`. That is the
-    sprite-descriptor half proven on screen, and it settles the compositor
-    question for both announcements: they share `ifCommonAnnounceSetAttr`, the
-    same asset and the same letter set. TIME UP is the deterministic one because
-    this lane shortens the clock, so the timer always expires.
-  - **The GAME SET trigger is proven live**: the breakpoint fires on every run
-    with backtrace `#0 ifCommonAnnounceGameSetMakeInterface`,
-    `#1 ifCommonAnnounceEndMessage` -- which under the source's control flow can
-    only be reached by `sIFCommonBattlePlace` decrementing to exactly 0. Before
-    the fix that call site was unreachable.
-  **How defect (3) was found, kept because the method transfers:** with (1) and
-  (2) fixed, every run stopped at the constructor and never presented another
-  frame -- `tbreak ndsPlatformEndFrame` after it never returned. Stepping 200,000
-  instructions put the PC at `0x02000f6a` (`movs r0, r0`, i.e. not code) with
-  caller frame `0x00000e9a`, the same jump-into-low-memory shape as the Results
-  second-entry abort fixed the same day. The interface procs were ruled out first
-  by reading them (`update=0x208b0a1, set=0x208a5c9`, both valid code), and TIME
-  UP not crashing ruled out the shared announce/composite machinery -- which left
-  the one thing the two update procs do differently, and that pointed straight at
-  the particle GObjs.
-  **And a probe lesson: the `stepi 200000` that found it had to be REMOVED to see
-  the fix.** Single-stepping 200,000 instructions costs almost nothing while the
-  game is dying (it reaches garbage immediately) and far more than the run's whole
-  budget once the code is live -- so the diagnostic itself became the thing
-  preventing the picture. A probe that only terminates while the bug is present is
-  not one to leave in.
--FIXED (2026-07-31, both halves): No "Time Up" VFX and SFX after match countdown
-  finished.
-  **SFX DONE.** FGM 527 `nSYAudioVoiceAnnounceTimeUp` is packed and admitted, and
-  so are the other six announcer lines the same match asks for: 488 GAME SET, 534
-  "this game's winner is", 499 MARIO, 486 FOX, and 472/471 FIVE/FOUR. Measured on
-  the natural mode-163 match, three runs: `SupportedCount` 56 -> 61 -> 63,
-  `SupportedPlayCount` 91 -> 93 of 104 calls, `PlayFailCount` 0, and the miss ring
-  went `96,85,153,472,471,621` -> `96,85,153,621`. NO-FREEZE through a full match
-  to Results, Boundary green.
-  **The note below said this generator has "no per-cue derivation mode". It
-  does** -- the attack lane already walked
-  `fgm_ucd[id] -> set_articulation -> fgm_tbl[art] -> trigger -> soundArray_offs
-  -> B1_sounds2_ctl -> wavetable -> loop`, which yields exactly the fields a
-  selector declares; it was only never exposed. `--derive <ids>` exposes it, and
-  authoring a cue is now minutes, not a research project. **The remaining four
-  refusals are all LOOPED cues** -- 96 GroundGrind2, 85 UnkGrind4, 153
-  AltitudeWarn, 621 PublicWin -- which need the DS hardware-loop machinery FGM
-  285 already has. That is the next SFX increment, and it is enumerated by
-  measurement rather than guessed.
-  **The VFX half is DONE and photographed**:
-  `artifacts/verification/sudden-death/2026-07-31_165338-timeup-frame20.png` shows
-  the full blue mixed-width "TIME UP" across the stage at `TIME 00:00`. Cause was
-  the sprite-descriptor manifest stopping after countdown/GO; all nine letters are
-  in now with values read off the extracted asset on the host. Full derivation in
-  the GAME SET row above -- the two rows share the letters, the asset and the fix.
-  Capture it with `capture-sudden-death-entry.ps1 -CaptureAnnounce 20`, which
-  breaks on `ifCommonAnnounceTimeUpMakeInterface` and then steps frames; the SD
-  lane shortens the clock so the expiry is deterministic. Do NOT try to catch it
-  with a wall-clock watch (90-tick window; two watches missed it entirely).
-  **(Superseded by the SFX paragraph above; kept because the estimate it records
-  was wrong in an instructive way.)** This row previously read: the selectors are
-  hand-authored source-derived constants and the script has "no per-cue
-  derivation mode", so a new cue is an extraction job -- budget it as one. The
-  first half was true and the conclusion did not follow. The derivation existed
-  in `build_pack`'s attack lane the whole time; nobody had looked for it because
-  the absence of a CLI flag was read as the absence of the capability.
-  Research (2026-07-30, Sol Max match-end/audio):
-  - Source contract: `ifcommon.c` creates six blue mixed-width letter sprites
-    for `TIME UP`, keeps them for 90 ticks, and queues announcer FGM 527
-    (`decomp/BattleShip-main/decomp/src/if/ifcommon.c:1965-1979,
-    2244-2252,3262-3285`).
-  - Root cause: the live non-HUD SObj compositor is already the right path, but
-    its mixed-width normalization manifest
-    (`src/port/reloc_backend_assets.c:836-873`) stops after countdown/GO and
-    omits all six Time Up images. The source offsets and shapes are T
-    `0xE4A8` 36x56/3 bitmaps, I `0xF740` 17x57/2, M `0x127E0` 50x56/4, E
-    `0x144E0` 32x56/2, U `0x16EB8` 41x58/3, and P `0x18FE8` 36x56/3.
-    FGM 527 is also absent from the selector/allowlist in
-    `src/nds/nds_audio_fgm.c:182-252`.
-  - Proposed fix: add those six exact descriptors to the existing manifest and
-    pin them in `scripts/check_ifcommon_hybrid_oam.py`; add source cue 527 to
-    the existing FGM selector, pack, allowlist, and checker. No new renderer or
-    audio path is needed.
-  - Required proof: let canonical mode 163 expire naturally; show all six
-    letters for the source 90-tick lifetime, prove cue 527 reaches ARM7/a
-    channel, retain a synchronized screenshot, and obtain owner visual/listen
-    approval plus Boundary verification. Status: OPEN.
-  - Verified 2026-07-30, so the next attempt does not re-derive it:
-    * The letters are `llIFCommonGameStatusBlueLetter{T,I,M,E,U,P}Sprite` from
-      `gGMCommonFiles[1]` (`ifcommon.c:143-151, 2244-2252`), which IS
-      `NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS` -- the same asset the countdown
-      and GO descriptors already use, so no new asset is involved.
-    * All six offsets are ALREADY declared in `include/reloc_data.h:274-281`
-      and match this row's research exactly (T 0xe4a8, I 0xf740, M 0x127e0,
-      E 0x144e0, P 0x18fe8, U 0x16eb8). Nothing needs adding there.
-    * `sobj->sprite.attr = SP_TEXSHUF | SP_TRANSPARENT` for all of them
-      (`ifcommon.c:1974`), set by the shared `ifCommonAnnounceSetAttr`.
-    * BONUS, and it changes the sizing of the Results row below: GAME SET draws
-      from the SAME blue-letter set (`dIFCommonAnnounceGameSetSpriteData`,
-      `ifcommon.c:155+`, letters G/A/M/E/S/...), and A 0x1de68, G 0x20788 and
-      S 0x1b5f8 are declared alongside. M and E are shared with TIME UP, so
-      normalizing this family serves both announcements. Do them together.
-    * STILL MISSING and the actual blocker: the `bmfmt`/`bmsiz`/bitmap-count
-      fields for each descriptor in `sNdsBattleInterfaceSpriteDescs`
-      (`src/port/reloc_backend_assets.c:841+`). This row's widths, heights and
-      bitmap counts are recorded but not the format, and it CANNOT be inferred
-      from the offset deltas -- the letters are not contiguous in the asset
-      (I->M spans 12,448 bytes for a 17x57 two-bitmap sprite). Read the real
-      `Sprite` records out of the loaded asset rather than guessing; a wrong
-      format normalizes to corrupt pixels rather than to an error.
-  - Reading those formats was ATTEMPTED 2026-07-30 and is not as simple as it
-    looks. Recorded so the next attempt starts past the two dead ends:
-    * The method itself is sound. `soak-freeze-watch.ps1`'s field list takes
-      arbitrary GDB expressions, and
-      `((Sprite *)((char *)gGMCommonFiles[1] + 0xe4a8))->bmfmt` resolves --
-      the `Sprite` type is in the debug info, no new tooling needed.
-    * WRONG ROM, first attempt. On `smash64ds-results-lab-hwtri` every field
-      came back garbage (`nbitmaps` 8260, `height` -8062, `bmfmt` 60).
-      `gGMCommonFiles[1]` is not the IFCommonGameStatus asset on a
-      Results-only boot; the index is battle-context. Do not read these off
-      the Results lab ROM.
-    * WHOLE READ LOST, second attempt. On the battle tick-HUD ROM the run
-      produced no `CLEAN=` line at all -- one bad expression aborts the entire
-      printf, which that harness documents as deliberate ("one missing symbol
-      fails its whole command"). So a speculative typed read costs the run's
-      other sixty counters too.
-    * Next attempt: dump raw words (`x/8xw`) at the offsets instead of typed
-      field access, or read them in a dedicated one-shot GDB script rather
-      than inside the shared counter read, and confirm `gGMCommonFiles[1]` is
-      non-NULL before dereferencing it.
+
 -Results screen. VFX and SFX/BGM/FGM.  [three of the four FGM cues PACKED
   2026-07-31; VFX and 621 remain]
   **534 WinnerIs, 499 Mario and 486 Fox are packed and admitted** -- derived with
@@ -349,7 +160,7 @@ These bugs should be fixed for P1 delivery.
     A/B with the 2/3/4/5+ VBlank histogram and max interval. Status: gameplay
     FIXED; SFX implementation landed but acoustic acceptance is OPEN; VFX OPEN.
 
--some VFX are wrong/don't look right, running foot dust VFX, fireball hit VFX, fox down B, hard landing vfx
+-Correct VFX isn't played for various things (running foot dust VFX, fireball hit VFX, fox down B, shield, hard landing vfx, etc)
   Root cause, measured: every named effect does spawn -- the verifier reports
   178/178 Mario/Fox motion calls with bounded DS presentation -- but the
   original particle scripts never run. lbParticleMakeScriptID is a stub
@@ -437,6 +248,7 @@ These bugs should be fixed for P1 delivery.
   - Required proof: natural Mario and Fox star KOs plus the 1-in-6 falling
     branch, with trigger-to-speaker and trigger-to-pixel evidence and owner
     listen/visual approval. Status: OPEN.
+    
 -KO VFX wrong.
   Partly FIXED. nNDSVisualEffectDeath and nNDSVisualEffectRebirth shared one
   template, a red->white ring, so the KO burst and the respawn flash were the

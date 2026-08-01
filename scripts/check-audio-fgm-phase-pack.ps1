@@ -44,7 +44,7 @@ if (([int]$metadata.format_version -ne 4) -or
     ([int64]$metadata.pack_limit_bytes -ne 786432) -or
     ($metadata.mapping_sha256_lo -ne '0x3097cf44') -or
     ($metadata.pack_sha256 -ne
-        '3b899230914dcba79c3332f2c7a01ee190e1eabc44d62a97202673db268c7037')) {
+        'c4b9fac5626ece86209c3fbfeab038f8845ad3faf52ac8f635a041de09728626')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -58,6 +58,22 @@ foreach ($entry in $metadata.entries) {
         ([int64]$entry.ima_adpcm_bytes -gt 53248) -or
         ([int]$entry.packed_envelope_count -gt 32)) {
         throw "FGM $($entry.id) failed its acoustic/cache gate."
+    }
+    # A REST MUST NEVER SET THE PLAYBACK RATE. The DS pack plays one sample at
+    # one rate, so the rate comes from a cue's first note -- and pitch code 0 is
+    # a rest, not a note. FGM 488 GAME SET is the one P1 cue whose program opens
+    # with one (a 60-tick rest, then the line at code 13), and it shipped at
+    # 7,565 Hz against every other announcer line's 16,000: thirteen semitones
+    # low, which is the owner's "sounds really low pitched" row in BUGS.md.
+    #
+    # Nothing caught it because the pack self-checks against its own derivation
+    # and the derivation had the same bug, so the guard has to be an external
+    # bound. A rest at the announcer articulation lands on 7,565; the lowest
+    # legitimately packed rate in this set is 15,102 (FGM 285, 626). 12,000 sits
+    # between them with room on both sides.
+    if ([int]$entry.ds_frequency_hz -lt 12000) {
+        throw ("FGM $($entry.id) plays at $($entry.ds_frequency_hz) Hz, below " +
+            'the 12,000 floor -- a rest pitch code most likely set the rate.')
     }
 }
 foreach ($id in @(154,40,38,37,34,32,31)) {

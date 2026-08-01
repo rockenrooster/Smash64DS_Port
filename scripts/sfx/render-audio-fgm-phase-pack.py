@@ -3016,6 +3016,35 @@ def round_div_signed(numerator: int, denominator: int) -> int:
     return (numerator + denominator // 2) // denominator
 
 
+def first_sounding_pitch_code(selector: dict) -> int:
+    """The pitch the cue is actually VOICED at, skipping a leading rest.
+
+    Pitch code 0 is a rest. The DS pack plays one sample at one rate, so the
+    rate has to come from the first entry that makes a sound -- and taking
+    `notes[0]` unconditionally does not, whenever a program opens with silence.
+
+    Exactly one P1 cue does: FGM 488 GAME SET, whose program is a 60-tick rest
+    at pitch 0 followed by the line at pitch 13, and whose own selector comment
+    has said so since it was authored. Every other announcer line is a single
+    note 13, so GAME SET shipped 1,300 cents -- thirteen semitones -- below the
+    rest of them, which is the owner's "sounds really low pitched, not correct
+    sounding" in BUGS.md. Nothing detected it because the pack self-checks
+    against its own derivation and the derivation had the same bug.
+
+    Note that the rest also still counts toward duration_ticks, so the line
+    starts 60 ticks (one second) earlier on DS than in the source. That is a
+    separate, unreported difference and is left alone deliberately: it is a
+    timing question, the owner reported pitch, and fixing it means either
+    padding the sample with a second of silence or delaying the play call.
+    """
+    if "notes" not in selector:
+        return selector["pitch_code"]
+    for pitch_code, _duration_code, _duration_ticks in selector["notes"]:
+        if pitch_code != 0:
+            return pitch_code
+    return selector["notes"][0][0]
+
+
 def note_frequency_hz(articulation_pitch_cents: int,
                       pitch_code: int) -> int:
     note_pitch_cents = pitch_code * 100 - 1300
@@ -4193,9 +4222,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             raise ValueError(f"FGM {selector['id']} invalid VADPCM extent")
         pcm = audio_codec.adpcm_decode(vadpcm, book["entries"],
                                        book["order"], book["npredictors"])
-        first_pitch_code = (selector["notes"][0][0]
-                            if "notes" in selector
-                            else selector["pitch_code"])
+        first_pitch_code = first_sounding_pitch_code(selector)
         note_pitch_cents = first_pitch_code * 100 - 1300
         net_pitch_cents = (selector["articulation_pitch_cents"] +
                            note_pitch_cents)
