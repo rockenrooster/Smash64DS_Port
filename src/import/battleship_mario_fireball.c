@@ -9,6 +9,7 @@
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
+#include <sys/taskman.h>
 #include <wp/weapon.h>
 
 #ifndef DObjGetStruct
@@ -131,9 +132,45 @@ static void ndsMarioFireballRecordCreatedWeapon(GObj *weapon_gobj)
     {
         gNdsFighterProjectileProofLifetimeMax = (u32)wp->lifetime;
     }
-    if (gNdsFighterProjectileProofWeaponCountMax == 0u)
+}
+
+/* wpmanager.c's free list, and it is an ordinary global rather than a static,
+ * so the exact reason a make failed is readable from here without touching the
+ * decomp TU. wpManagerMakeWeapon has exactly two NULL returns: the struct pool
+ * is empty (head stays NULL), or gcMakeGObjSPAfter refused and the struct was
+ * pushed back (head is non-NULL). Sampled AFTER the call, that is a decision,
+ * not a heuristic. */
+extern WPStruct *sWPManagerStructsAllocFree;
+
+/* objman.c's GObj pool state. gcGetGObjSetNextAlloc (objman.c:398) refuses only
+ * when sGCCommonsMaxNum is not -1 and the pool is at that cap, which is the
+ * ifCommonSetMaxNumGObj latch. Reading it at END of run reads the Results
+ * scene, where it is -1 again; reading it AT the refusal is the evidence. */
+extern s16 sGCCommonsMaxNum;
+extern s32 sGCCommonsActiveNum;
+
+/* Weapons alive, exactly: WEAPON_ALLOC_MAX minus the free-list depth. The
+ * counter this replaces was a fixed 1 -- it latched on the first weapon and
+ * never moved -- so a 2026-08-01 soak reading `WeaponCountMax 1` alongside
+ * `SpawnCall 11 / SpawnSuccess 7` looked like a one-at-a-time pool limit and
+ * was not evidence of anything. Walking <=32 nodes eleven times a match is
+ * free. */
+static void ndsMarioFireballSampleWeaponPool(void)
+{
+    const WPStruct *node = sWPManagerStructsAllocFree;
+    u32 free_depth = 0u;
+    u32 live;
+
+    while ((node != NULL) && (free_depth <= WEAPON_ALLOC_MAX))
     {
-        gNdsFighterProjectileProofWeaponCountMax = 1u;
+        free_depth++;
+        node = node->next;
+    }
+    live = (free_depth <= WEAPON_ALLOC_MAX) ?
+        ((u32)WEAPON_ALLOC_MAX - free_depth) : 0u;
+    if (live > gNdsFighterProjectileProofWeaponCountMax)
+    {
+        gNdsFighterProjectileProofWeaponCountMax = live;
     }
 }
 
@@ -157,6 +194,27 @@ GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index)
         gNdsFighterProjectileProofSpawnSuccessCount++;
         ndsMarioFireballRecordCreatedWeapon(weapon_gobj);
     }
+    else if (sWPManagerStructsAllocFree != NULL)
+    {
+        gNdsFighterProjectileProofSpawnFailGObjCount++;
+        gNdsFighterProjectileProofSpawnFailGObjMax =
+            (u32)(u16)sGCCommonsMaxNum;
+        gNdsFighterProjectileProofSpawnFailGObjActive =
+            (u32)sGCCommonsActiveNum;
+        /* The number the cap is actually about. ifCommonSetMaxNumGObj latches
+         * when this drops under 25,600, so this says how far the battle is
+         * from never latching -- i.e. how many bytes a pool trim has to
+         * return before the fireball stops being refused. */
+        gNdsFighterProjectileProofSpawnFailHeapFree =
+            (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+                  (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+        gNdsWeaponStructBytes = (u32)sizeof(WPStruct);
+    }
+    else
+    {
+        gNdsFighterProjectileProofSpawnFailPoolCount++;
+    }
+    ndsMarioFireballSampleWeaponPool();
     return weapon_gobj;
 }
 

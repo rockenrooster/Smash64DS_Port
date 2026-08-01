@@ -23,15 +23,25 @@ These bugs should be fixed for P1 delivery.
   5+:4` with `max:19`. So the stall is four 5+-VBlank frames and one 19-VBlank
   frame in a 128-frame window -- an event, not a slow body.
 -Sometimes Mario's fireballs don't spawn.
-  Narrowed 2026-08-01, and the weapon make is NOT the owner. The import already
-  counts both sides of the call (`battleship_mario_fireball.c`), and a clean
-  one-match soak reports `SpawnCallCount 9` against `SpawnSuccessCount 9`:
-  every request the special-N state machine made produced a weapon. So this is
-  upstream of the make -- the input or the status transition not reaching
-  `wpMarioFireballMakeWeapon` at all -- or downstream of it, a weapon that
-  exists and is not drawn. Both counters are on the soak's reported list now,
-  so the next owner-observed miss can be attributed from the run that produced
-  it rather than reproduced first.
+  **REPRODUCED AND ATTRIBUTED 2026-08-01.** The single-CPU soak that said
+  `SpawnCall 9 / SpawnSuccess 9` was a match where Mario stands still. The first
+  both-CPU soak reports **`SpawnCall 11 / SpawnSuccess 7`** -- four requests the
+  special-N state machine made produced no weapon -- and the two new reason
+  counters name which of `wpManagerMakeWeapon`'s two NULL returns fired:
+  **`SpawnFailGObj 4`, `SpawnFailPool 0`.** So the 32-entry `WPStruct` free list
+  is not the constraint; `gcMakeGObjSPAfter` refused, which is the GObj pool.
+  `gcGetGObjSetNextAlloc` (objman.c:398) returns NULL only when
+  `sGCCommonsMaxNum != -1` and the pool is at its cap -- the
+  `ifCommonSetMaxNumGObj` latch that fires when `gSYTaskmanGeneralHeap` drops
+  under 25,600 B free. It reads -1 at END of run, which is the Results scene,
+  so the cap is not sticky across the scene change and the end-of-run read
+  cannot see it; the value AT the failure is what the next probe records.
+  That puts this row on the same root cause as the L7 oracle abort and the
+  crowd actor's default-off: **the taskman arena margin**, currently
+  `ArenaChosenSize 1273856` (0x137000) against a 0x130000 floor.
+  `WeaponCountMax` was a fixed 1 -- it latched on the first weapon and never
+  moved, so reading it as a pool limit proved nothing. It is now
+  `WEAPON_ALLOC_MAX` minus the measured free-list depth, sampled at every make.
   The downstream half is now measurable too: `gNdsWeaponRendererSubmitCount`,
   `...VisibleDrawCount`, `...RejectedDrawCount` and the fireball-specific
   `gNdsWeaponRendererFireballSubmitCount` / `...FireballVisibleDrawCount` are
@@ -190,6 +200,14 @@ These bugs should be fixed for P1 delivery.
   All five are bounded multi-note schedules with no fork voices, so all five
   take the same full-program AOT render 85 does. Pack 682,036 -> 700,892 B,
   78 -> 83 entries.
+  **And two more after those five (2026-08-01, same day, next soak): 271
+  `Magnify` x4 and 368 `FoxWin` x1.** The ring only names what the run reached,
+  so each fix uncovers the next layer; these two are the layer under the five.
+  Magnify is the zoom pulse -- five 16-pitch blips separated by rests, a bounded
+  fork-free schedule, so it takes the same AOT render. FoxWin is one 90-tick
+  note whose wave plays out well inside the schedule, so it takes the ordinary
+  announcer path 472/471 use and retains all 3,648 source samples.
+  Pack 700,892 -> 707,300 B, 83 -> 85 entries.
   One piece of machinery was genuinely missing and is now source-transcribed:
   **modulator shapes 6 and 7** (`ramp_up_oneshot` / `ramp_down_oneshot`), which
   FGM 11's articulation spawns. They are shapes 2 and 3 with the phase CLAMPED
@@ -240,18 +258,48 @@ These bugs should be fixed for P1 delivery.
   check-audio-fgm-phase-pack.ps1 pins the flag, the PNT/LEN geometry and the
   three proofs so the loop cannot be dropped again silently.
   Latest profile green. Needs an ear check.
-  VFX still open, but the stub it used to name is GONE. `NDS_R2_PARTICLE_RUNTIME`
-  and `NDS_R2_PARTICLE_DRAW` both default 1 as of 2026-08-01, so the real
-  `lbParticleMakeScriptID` from `lb/lbparticle.c` is live and textured quads are
-  emitted. What remains for *this* row specifically is that Dream Land's Pupupu
-  bank -- Whispy's leaves (script 0) and dust (script 1) -- still registers
-  EMPTY: `ndsParticleLoadEFCommonBank` covers only the common bank and every
-  other bank takes `ndsParticleRegisterEmptyBank`
-  (`battleship_lbparticle.c:705-725`), so a Pupupu script request fails closed
-  with reject reason 3 or 4. It needs the pack step extended to the grpupupu
-  bank and its texture closure admitted to the atlas -- and the atlas is at a
-  measured hard bound of 8,192 bytes, so admitting more needs a second sheet or
-  a smaller per-texture format, not a bigger sheet.
+  VFX IMPLEMENTED 2026-08-01; needs the owner's eye. The stub this row used to
+  name is gone (`NDS_R2_PARTICLE_RUNTIME`/`NDS_R2_PARTICLE_DRAW` both default 1,
+  so the real `lbParticleMakeScriptID` is live and textured quads are emitted),
+  and the gap that remained after that -- Dream Land's own bank registering
+  EMPTY -- is closed too.
+  It was measured before it was fixed: the both-CPU soak's reject ring caught
+  **script 0 and script 1, bank 0, reason 2, twice each**, which is
+  `grPupupuWhispyLeavesMakeEffect` and `grPupupuWhispyDustMakeEffect` failing
+  closed before the atlas was ever consulted. `ndsParticleLoadEFCommonBank`
+  covered only the common bank and every other bank took
+  `ndsParticleRegisterEmptyBank`.
+  `grpupupu_particle_scb/txb` are now packed alongside the common bank:
+  **416 bytes of bytecode over five scripts, three textures**, carried far more
+  cheaply than the common bank because it needs no NitroFS texel payload at all
+  -- the draw path reads the atlas. Scripts 0 and 1 both draw texture 2 (16x16,
+  four frames, 1,024 texels), and the sheet had 1,408 free, so Whispy's leaves
+  and dust landed **without touching the 8,192-byte hard bound**.
+  Three things had to be got right, and the first two attempts got two of them
+  wrong in ways only a soak could show.
+  Quad rows are keyed at `NDS_PARTICLE_QUAD_PUPUPU_STRIDE + id` because texture
+  2 means a different image in each bank. **The key is the slot's registered
+  script pointer, NOT a latched bank id.** The first version compared
+  `pc->bank_id & 7` against `gNdsParticleBankPupupuID`, and the soak reported
+  BOTH `gNdsParticleBankEFCommonID` and `gNdsParticleBankPupupuID` as **0** --
+  `efParticleInitAll` resets `sEFParticleBanksNum`, so two bank loads either
+  side of one reset are handed the same slot. That strided **128,278 of 128,298
+  common particles** into Dream Land's key space: 126,621 misses against 1,677
+  quads, and those 1,677 were efcommon texture 2 drawing Whispy's leaves.
+  `sEFParticleScriptBanks[slot]` holds the pointer the slot was registered with,
+  so comparing it is an identity test that cannot collide.
+  Only the textures scripts 0/1 reference are marked measured-live: the first
+  attempt made all three live, and the two that scripts 3 and 4 draw took the
+  space before the four-frame sheet the wind actually uses -- the exact failure
+  the `QUAD_MEASURED_LIVE` comment warns about, reproduced in one commit.
+  And `QUAD_MEASURED_LIVE` itself was **wrong and had to be regraded**. It read
+  `(22, 27)` because that was a SINGLE-CPU mask, and a single-CPU match is Mario
+  standing still. The both-CPU mask is `0x08400007` -- bits 0, 1, 2, 22, 27 --
+  so admitting Dream Land's sheet had evicted texture 0, which carries most of
+  what a moving match draws. Texture 0 only fits at all because atlas cells are
+  now capped at 16x16 (`QUAD_CELL_MAX`, box-averaged): at its source 32x32 the
+  shelf packer gives it a row of its own and wastes half of it. Texture 1 is in
+  the mask but has no image in the pack (width 0), so it fails closed forever.
   Research (2026-07-30, Sol Max wind/particles):
   - Source contract: Whispy uses Dream Land's separate Pupupu particle bank,
     with script 0 for leaves and script 1 for dust

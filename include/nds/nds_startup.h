@@ -3885,6 +3885,14 @@ extern volatile u32 gNdsFighterProjectileProofMapDestroyCount;
 extern volatile u32 gNdsFighterProjectileProofHitDestroyCount;
 extern volatile u32 gNdsFighterProjectileProofWeaponFrames;
 extern volatile u32 gNdsFighterProjectileProofWeaponCountMax;
+/* Which of wpManagerMakeWeapon's two NULL returns fired. */
+extern volatile u32 gNdsFighterProjectileProofSpawnFailGObjCount;
+extern volatile u32 gNdsFighterProjectileProofSpawnFailPoolCount;
+/* sGCCommonsMaxNum / sGCCommonsActiveNum sampled AT the refusal. */
+extern volatile u32 gNdsFighterProjectileProofSpawnFailGObjMax;
+extern volatile u32 gNdsFighterProjectileProofSpawnFailGObjActive;
+extern volatile u32 gNdsFighterProjectileProofSpawnFailHeapFree;
+extern volatile u32 gNdsWeaponStructBytes;
 extern volatile u32 gNdsFighterProjectileProofKindMask;
 extern volatile u32 gNdsFighterProjectileProofAttackStateMask;
 extern volatile u32 gNdsFighterProjectileProofDamageMax;

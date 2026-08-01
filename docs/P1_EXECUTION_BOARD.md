@@ -4,6 +4,50 @@ Updated: 2026-08-01 04:20 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
+## THE PARTICLE DRAW WAS 98% MISSING AND NOTHING SAID SO (2026-08-01)
+
+Dream Land's bank landed, and landing it broke the common bank's draw. Four
+both-CPU soaks on `build-pupupu`, each one a counter the previous run did not
+have:
+
+| run | emitted | missed | what it proved |
+|---|---|---|---|
+| 1 | 2,725 | 127,989 | the regression exists |
+| 2 | 1,677 | 128,295 | re-admitting texture 0 did **not** fix it |
+| 3 | 1,677 | 126,621 | `EFCommonID 0` **and** `PupupuID 0`; stride 128,278 |
+| 4 | **109,560** | **2,084** | pointer-identity key; misses are Dream Land's 0/1 |
+
+Two independent defects, and each masked the other:
+
+- **`efParticleInitAll` resets `sEFParticleBanksNum`.** `InitAllCount 2`,
+  `BankRegisterCount 3` — three bank loads across two resets, so two banks were
+  handed slot 0 and every common particle took Dream Land's atlas stride. The
+  key is `sEFParticleScriptBanks[slot]` now, which is the pointer the slot was
+  registered with and cannot collide.
+- **`QUAD_MEASURED_LIVE` was graded from a SINGLE-CPU mask.** Both-CPU is
+  `0x08400007` — ids 0, 1, 2, 22, 27, not the `(22, 27)` on record. Texture 0
+  fits only because atlas cells are capped at 16×16 now (`QUAD_CELL_MAX`,
+  box-averaged); at 32×32 the shelf packer gives it a row of its own and wastes
+  half of it. Then run 4's own numbers regraded the Dream Land half: 3,741
+  strided draws with 2,084 misses at pre-stride 0 and 1, so all three of its
+  textures are live, not just the sheet its two named scripts reference.
+
+Admitted set is `{0, 2, 22, 27, 64, 65, 66}`, 6,400 of 8,192 bytes.
+
+**Audio is CLOSED for a both-CPU match.** The same run: `FgmPlayCalls 194`,
+`SupportedPlayCount 194`, `UnsupportedCallCount 0`, `PlayFailCount 0`,
+**`MissRingCount 0`**. 271 `Magnify` and 368 `FoxWin` were the last two the ring
+named; pack 700,892 → 707,300 B, 83 → 85 entries. Acoustic acceptance is still
+the owner's ear.
+
+**Mario's missing fireballs are the GObj cap, not the weapon pool.**
+`SpawnCall 11 / SpawnSuccess 7` with `SpawnFailGObj 4 / SpawnFailPool 0`, so
+`gcMakeGObjSPAfter` refused four times. `gcGetGObjSetNextAlloc` refuses only at
+the `ifCommonSetMaxNumGObj` cap, which is the arena-margin latch — the same root
+cause as the L7 oracle abort and the crowd actor's default-off. It reads `-1` at
+end of run because that read is the Results scene; the value AT the refusal is
+sampled now.
+
 ## THE FULL-CONTENT BASELINE — WORK-H P95 1,240,128, gap 120,128 (2026-08-01)
 
 Every prior gate figure on this board was measured with the particles off. That

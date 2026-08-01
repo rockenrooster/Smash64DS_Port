@@ -10,7 +10,7 @@ owning doc (board: queue + results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_S
 | R2-03 | shipped E12/E28/E29/E46/**E32**/**E64b**/**E65**/**E67**/**E69** — 1,228,928 -> 1,096,768, DLDI-off so lower bounds; only the E32 flash residual is open (KNOWN_ISSUES) and it blocks no lever |
 | R2-04 | loading + rate clauses done (E5/E6/E57); budget clause closed by E64b+E65 |
 | R2-06 | closed — no lever left inside the phase; L6 found the one outside it |
-| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **The particle interpreter AND the quad draw are both DEFAULT ON and measured clean** — NO-FREEZE, stage builds 2, GObj cap never fired, 114,523 quads and zero missed, `VBI 2:962 3:167 4:13 5+:4`. Crowd actor + 14 crowd/Results/miss-ring cues implemented. **Owed: the owner's eye on the particles.** **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
+| R2-07 | results flow **MEETS ITS GATE** (0.52x). Successive matches work. **Particle interpreter, quad draw and Dream Land's own bank all DEFAULT ON and measured** — NO-FREEZE, stage builds 2, 109,560 of 111,644 particles drawn, reject ring empty. **Audio closed: 194/194, miss ring 0, 85 cues.** **Owed: the owner's eye and ear.** **L7 refuted — the gate has no named lever.** R2-08 needs the owner's retail play test |
 
 ## OPEN P1 #1 — the gate. Over by 120,128, and **there is no named lever**
 
@@ -63,11 +63,12 @@ any; run `mapdiff` on a new lab flag before running the ROM.
 Owner's phase clause: **"All rows in `BUGS.md` fixed. this is a P1 Bugs list and are required to be fixed
 for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the random freezes**.
 
-**SFX is essentially done.** `render-audio-fgm-phase-pack.py --derive <ids>` prints every selector field
-straight from `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, so authoring a cue is transcription. 56 → **83
-cues**: seven announcer lines, 621 PublicWin, the eleven the crowd actor reaches, 96/153/85, and the five
-**only a BOTH-CPU match reaches** — 11 Escape, 13/14 GuardOn/Off, 278 GamePause, 369 FoxOttotto. Every
-earlier miss-ring read was single-CPU, where Mario stands still: nobody dodges, shields or teeters.
+**SFX IS DONE for a both-CPU match: 194 play calls, 194 supported, MISS RING 0.**
+`render-audio-fgm-phase-pack.py --derive <ids>` prints every selector field straight from
+`fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, so authoring a cue is transcription. 56 → **85 cues**: seven
+announcer lines, 621 PublicWin, the eleven the crowd actor reaches, 96/153/85, the five **only a
+BOTH-CPU match reaches** (11 Escape, 13/14 GuardOn/Off, 278 GamePause, 369 FoxOttotto), and finally
+271 Magnify + 368 FoxWin. Every earlier miss-ring read was single-CPU, where Mario stands still.
 **85's `source_rate_above_u16` was never a hardware limit** — 90,510 Hz is fine for the channel timer and
 too big only for the `u16` in *our* pack entry, so it renders full-program AOT at 32,000. Two modulator
 findings, both from the decomp's own source: **target 24+ is cross-mod ANOTHER voice** (skipped before
@@ -78,11 +79,10 @@ rather than wrapped** (`n_env.c:4158`/`:4172`). Shapes 4/5/8 call `randFloat*` a
 "Its whole external surface already existed" was half wrong: five declarations plus
 `dFTCommonDataPublicFighterCallFGMs` (`ftcommondata.c` is not compiled here) had to be supplied.
 **Still default 0 for a hard reason: it leaves the general heap at 17,316 and the GObj cap FIRES at 48.**
-Arena, not the cue set, is what closes this row. **Five of its seven counters CANNOT fire** — the
-`#define` seam renames intra-TU references, so the actor registers the inner proc and the
-counter-carrying wrappers are gc'd. Read the source's own statics (`sFTPublicCallCount`,
-`sFTPublicCommonOrder`) instead; this is the recorded "wrapping a decomp function to count its INTERNAL
-callers" refutation, hit again.
+Arena, not the cue set, is what closes this row — and the same latch is why four of eleven fireballs
+never spawn. **Five of its seven counters CANNOT fire**: the `#define` seam renames intra-TU references,
+so the actor registers the inner proc and the counter-carrying wrappers are gc'd. Read the source's own
+statics instead; the "wrap a decomp function to count its INTERNAL callers" refutation, hit again.
 
 **VFX — the interpreter is PROVEN CLEAN and the DRAW now WORKS.** Four tick-HUD ROMs differing only in
 the particle flags, one soak each; control and `RUNTIME=1` are indistinguishable. `DRAW=1` with the 32 KB
@@ -91,23 +91,25 @@ than its control — read the histogram, not the P95 alone.
 
 **Attributed, all counted:** atlas resident →
 `ndsRendererHardwareResolveStageSourceFrameTexture` fails ~1 frame in 10 (reject **site 2, 196 times**,
-mask **4096 = TEXIMAGE**, census **Free 7 / Live 41 / Pinned 25 / ThisFrame 16 / Evictable 0**) →
-`PrepareRun` FALSE → owner rejects → 197 rebuilds, each drawing that frame generically.
-**FIXED by one generator constant — the sheet is 64x64 = 8,192 B**, and every symptom returns to the
-control's own numbers (`StagePrepareBuildCount` 2, reuse 2,041, reject site 2 **1**, mask 0). **The draw
-costs ~10,100 ticks (`MISC` P50) and five extra three-VBlank frames, and nothing else.**
-**8,192 is a measured HARD BOUND, not a budget** (16,384 rejected exactly as 32,768 did) — **but
-coverage is NOT the open risk.** A full both-CPU match to Results emits **144,592 quads with
-`QuadMissCount` 0**, and `gNdsParticleTextureUseMask` is still `0x08400000`: **two textures**. What IS
-open is scripts that never run — `gNdsParticleRejectRing` names script **0** and script **1** at
-**reason 2** on bank 0, i.e. Whispy's leaves and dust against the EMPTY Pupupu bank. Nothing to do with
-VRAM. **Fireball row reproduced**: `SpawnCall 15` vs `SpawnSuccess 14`, `WeaponCountMax 1`.
+mask **4096 = TEXIMAGE**) → `PrepareRun` FALSE → owner rejects → 197 rebuilds, each frame generic.
+**FIXED by one generator constant — the sheet is 64x64 = 8,192 B**, every symptom back to control
+(`StagePrepareBuildCount` 2, reuse 2,041, reject site 2 **1**). **The draw costs ~10,100 ticks
+(`MISC` P50) and five extra three-VBlank frames, and nothing else.**
+**8,192 is a measured HARD BOUND, not a budget** (16,384 rejected exactly as 32,768 did).
+**Dream Land's bank is packed and drawing (2026-08-01)** — reject ring empty, 3,741 strided draws —
+and landing it broke the common draw twice over (board has the four-soak table). `efParticleInitAll`
+resets `sEFParticleBanksNum`, so `EFCommonID` and `PupupuID` both read **0** and every common particle
+took Dream Land's stride — key on `sEFParticleScriptBanks[slot]`, never a latched id. And
+`QUAD_MEASURED_LIVE` was graded from a **single-CPU** mask; both-CPU is `0x08400007`. Admitted
+`{0, 2, 22, 27, 64, 65, 66}`, 6,400 B, cells capped 16×16, **109,560 of 111,644 drawn**.
+**Audio closed**: 194/194, **miss ring 0**, 85 cues. **Fireball attributed**: `SpawnFailGObj 4 /
+SpawnFailPool 0` — the GObj cap, i.e. the arena margin, not the weapon pool.
 
 **Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
 freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;
 **`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads like the allocator's
-`while (TRUE);`; and **a latch is not a counter** — `gNdsRendererTask36*RejectReason` both read 0 on the
-run that rebuilt 197 times.
+`while (TRUE);`; **a latch is not a counter** (`gNdsRendererTask36*RejectReason` read 0 on the run that
+rebuilt 197 times); and **an allocator index something else can reset is not an identity.**
 
 ## SUCCESSIVE MATCHES and the ANNOUNCEMENTS: both FIXED (full write-ups in `docs/PORTING.md` + board)
 

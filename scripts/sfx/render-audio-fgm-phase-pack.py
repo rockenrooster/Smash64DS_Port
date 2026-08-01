@@ -124,6 +124,9 @@ FULL_COVERAGE_IDS = (
     # And the five only a BOTH-CPU stress match reaches: dodge, shield on/off,
     # pause, and Fox's ledge teeter.
     11, 13, 14, 278, 369,
+    # The last two the ring named once those five stopped appearing in it: the
+    # zoom pulse and Fox's win voice.
+    271, 368,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -136,6 +139,9 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # Escape, GuardOn, GuardOff, GamePause, FoxOttotto. All five carry multi-note
     # schedules with no forks, which is exactly what this render is for.
     11, 13, 14, 278, 369,
+    # Magnify: five blips and five rests. The rest ticks matter to the timing,
+    # which is the whole reason a schedule gets baked rather than approximated.
+    271,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
@@ -1786,6 +1792,58 @@ SELECTED = (
         "articulation_program_sha256":
             "eff2f55d748352dca4be41a0377216dba9f6ab9a65b68438f09913a514f3a8e3",
         "fidelity_debt": (),
+    },
+    # And the last two the miss ring named, on the soak that followed those
+    # five: Magnify x4 and Fox's win voice x1. Magnify is the zoom pulse -- five
+    # 16-pitch blips separated by rests, which is precisely a bounded fork-free
+    # schedule and so takes the same AOT render. FoxWin is a single 90-tick note
+    # and takes the ordinary announcer path 472/471 use.
+    {
+        "id": 271,
+        "name": "nSYAudioFGMMagnify",
+        "kind": "interface",
+        "articulation": 17,
+        "sound": 10,
+        "notes": ((16, 7, 2), (0, 7, 7), (16, 7, 3), (0, 7, 7),
+                  (16, 7, 3), (0, 7, 7), (16, 7, 3), (0, 7, 7),
+                  (16, 7, 3), (0, 7, 7)),
+        "duration_ticks": 49,
+        "ucd_volume": 150,
+        "articulation_pitch_cents": 550,
+        "loop": False,
+        "wave_base": 119296,
+        "wave_length": 1548,
+        "loop_start": 0,
+        "loop_end": 0,
+        "expected_retained_samples": 1,
+        "root_fork_programs": (),
+        "root_program_sha256":
+            "988f8ab18eda014485ebf60c6a0182cb9739e96412e39b21933c2104c392828b",
+        "render_program_sha256":
+            "988f8ab18eda014485ebf60c6a0182cb9739e96412e39b21933c2104c392828b",
+        "articulation_program_sha256":
+            "f014df4f7f920736f102d2844f1a79c4d86896f0e5d9b6ba7fb786c1765a3f0a",
+        "fidelity_debt": (),
+    },
+    {
+        "id": 368,
+        "name": "nSYAudioVoiceFoxWin",
+        "kind": "voice",
+        "articulation": 234,
+        "sound": 110,
+        "pitch_code": 13,
+        "duration_ticks": 90,
+        "ucd_volume": 240,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "wave_base": 930064,
+        "wave_length": 2052,
+        "loop_start": 0,
+        "loop_end": 0,
+        # The whole source wave. The schedule reaches further than the wave
+        # does -- 90 ticks against 3,648 samples at half rate -- so the trim is
+        # the wave itself and a one-shot plays every audible sample of it.
+        "expected_retained_samples": 3648,
     },
 )
 

@@ -621,6 +621,13 @@ try {
             'gNdsParticleQuadEmitCount',
             'gNdsParticleQuadEmitMax',
             'gNdsParticleQuadMissCount',
+            'gNdsParticleQuadMissMask[0]',
+            'gNdsParticleQuadMissMask[1]',
+            'gNdsParticleQuadMissFrameMask',
+            'gNdsParticleQuadStrideCount',
+            'gNdsParticleBankEFCommonID',
+            'gNdsParticleInitAllCount',
+            'gNdsParticleBankRegisterCount',
             'gNdsRendererParticleAtlasPrepareCount',
             'gNdsRendererParticleAtlasFailCount',
             'gNdsRendererParticleAtlasBytes',
@@ -641,6 +648,12 @@ try {
             'gNdsParticleRejectRingReasons[4]', 'gNdsParticleRejectRingCounts[4]',
             'gNdsParticleRejectRingScripts[5]', 'gNdsParticleRejectRingBanks[5]',
             'gNdsParticleRejectRingReasons[5]', 'gNdsParticleRejectRingCounts[5]',
+            # Dream Land's own bank. PupupuID 255 means it never registered;
+            # ScriptsPacked 0 means it registered and normalized nothing, which
+            # puts Whispy's leaves and dust straight back on the reject ring at
+            # reason 2. Both were the state of the world until 2026-08-01.
+            'gNdsParticleBankPupupuID',
+            'gNdsParticlePupupuScriptsPacked',
             'gNdsRendererTask36ReplayArenaStaleCount',
             # WHY the native stage owner refused. Present at
             # NDS_R2_STAGE_ROUTE_PROBE=1 (or profile level 1), which is the only
@@ -693,6 +706,15 @@ try {
             'gNdsFighterProjectileProofSpawnCallCount',
             'gNdsFighterProjectileProofSpawnSuccessCount',
             'gNdsFighterProjectileProofWeaponCountMax',
+            # WHICH NULL wpManagerMakeWeapon returned. GObj != 0 means
+            # gcMakeGObjSPAfter refused; Pool != 0 means the 32-entry WPStruct
+            # free list was empty. SpawnCall - SpawnSuccess is their sum.
+            'gNdsFighterProjectileProofSpawnFailGObjCount',
+            'gNdsFighterProjectileProofSpawnFailPoolCount',
+            'gNdsFighterProjectileProofSpawnFailGObjMax',
+            'gNdsFighterProjectileProofSpawnFailGObjActive',
+            'gNdsFighterProjectileProofSpawnFailHeapFree',
+            'gNdsWeaponStructBytes',
             # BUGS.md crowd row, present only at
             # NDS_IMPORT_BATTLESHIP_FT_PUBLIC=1. "The crowd is silent" has three
             # distinct causes and the FGM backend's UnsupportedCallCount

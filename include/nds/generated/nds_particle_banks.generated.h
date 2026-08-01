@@ -66,7 +66,7 @@
  *
  * ONE ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
  * not bytes: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 7 individual frames. An atlas spends one name -- and one
+ * admitted set is 13 individual frames. An atlas spends one name -- and one
  * BIND for every particle in the frame, whatever textures they came from, so
  * the triangle batch never breaks on a texture change.
  *
@@ -85,9 +85,9 @@
 #define NDS_PARTICLE_QUAD_ATLAS_WIDTH 64u
 #define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u
 #define NDS_PARTICLE_QUAD_ASSET_BYTES 8192u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 5376u
-#define NDS_PARTICLE_QUAD_COUNT 6u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 7u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 6400u
+#define NDS_PARTICLE_QUAD_COUNT 7u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 13u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
@@ -140,5 +140,35 @@ extern const NDSParticleTexture gNdsParticleTextures[NDS_PARTICLE_TEXTURE_COUNT]
 extern const u32 gNdsParticleTextureCount;
 /* NDSParticleTexture has no frame count; animation needs one. */
 extern const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT];
+
+/* ------------------------------------------------------------------------
+ * Dream Land's own bank. Whispy's leaves (script 0) and dust (script 1) live
+ * here, and until 2026-08-01 every non-common bank registered EMPTY, so both
+ * failed closed at reject reason 2 before the atlas was consulted.
+ *
+ * Carried far more cheaply than the common bank: 416 bytes of bytecode and a
+ * width/height pair per texture, with no NitroFS texel payload at all. The
+ * common bank ships one because its pack "only has to exist"; the DRAW path
+ * reads the quad atlas, and these textures are in it.
+ *
+ * Quad rows for this bank are emitted at NDS_PARTICLE_QUAD_PUPUPU_STRIDE +
+ * texture id, because texture 2 names a different image in each bank and one
+ * frame table has to answer both. */
+#define NDS_PUPUPU_SCRIPT_COUNT 5u
+#define NDS_PUPUPU_SCRIPT_BANK_BYTES 416u
+#define NDS_PUPUPU_TEXTURE_COUNT 3u
+#define NDS_PARTICLE_QUAD_PUPUPU_STRIDE 64u
+
+typedef struct NDSPupupuTexture
+{
+    u8 width;
+    u8 height;
+    u8 frames;
+} NDSPupupuTexture;
+
+extern u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES];
+extern const u32 gNdsPupupuScriptBankBytes;
+extern const u32 gNdsPupupuScriptOffsets[NDS_PUPUPU_SCRIPT_COUNT];
+extern const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT];
 
 #endif

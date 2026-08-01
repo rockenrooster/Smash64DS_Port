@@ -305,6 +305,10 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMGuardOff:
     case nSYAudioFGMGamePause:
     case nSYAudioVoiceFoxOttotto:
+    /* And the last two the miss ring named: the zoom pulse and Fox's win
+     * voice at Results. */
+    case nSYAudioFGMMagnify:
+    case nSYAudioVoiceFoxWin:
         return TRUE;
     default:
         return FALSE;

@@ -136,13 +136,38 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # A texture that is not admitted draws NOTHING -- it never draws something
 # else -- and raises gNdsParticleQuadMissCount, so the excluded list is
 # reported by name and a coverage loss is a number rather than a silent gap.
+#
+# 2026-08-01, second change: Dream Land's bank joined the sheet. Its texture 2
+# -- 16x16 with four frames, the one grPupupuWhispyLeavesMakeEffect and
+# grPupupuWhispyDustMakeEffect both draw -- is admitted at
+# NDS_PARTICLE_QUAD_PUPUPU_STRIDE + 2 = 66, because texture 2 names a different
+# image in each bank.
+#
+# 2026-08-01, third change, and it is a REGRESSION FIX. Admitting 66 evicted
+# common textures 0 and 9, on the reasoning that "a measured match has never
+# drawn them (the use mask has only ever reported 22 and 27)". That reasoning
+# was reading a SINGLE-CPU mask, where Mario stands still. The first both-CPU
+# soak on that atlas reported the mask as 0x08400007 -- bits 0, 1, 2, 22, 27 --
+# and 127,989 QuadMisses against 2,725 emitted quads: texture 0 carries almost
+# every particle a moving match draws. QUAD_MEASURED_LIVE is regraded to
+# (0, 1, 2, 22, 27), and texture 0 only fits because atlas cells are now capped
+# at 16x16 (QUAD_CELL_MAX): at its source 32x32 it takes a shelf of its own and
+# wastes half of it, which is what pushed it off the sheet. Texture 1 is in the
+# mask but has no image in the pack at all (width 0), so it can never be
+# admitted and fails closed.
+#
+# 2026-08-01, fourth change: with the bank drawing correctly for the first time,
+# a soak reported 3,741 strided draws of which 2,084 missed at pre-stride ids 0
+# and 1 -- Dream Land draws ALL THREE of its textures, not only the sheet its
+# two named scripts reference. All three are admitted now (64/65/66); it cost
+# common textures 3 and 9, neither of which any measured match has drawn.
 if (([int64]$report.quads.atlas_width -ne 64) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.atlas_bytes -ne 8192) -or
-    ([int64]$report.quads.bytes -ne 5376) -or
-    ([int64]$report.quads.frame_count -ne 7) -or
-    (@($report.quads.admitted).Count -ne 6) -or
-    (@($report.quads.excluded).Count -ne 25)) {
+    ([int64]$report.quads.bytes -ne 6400) -or
+    ([int64]$report.quads.frame_count -ne 13) -or
+    (@($report.quads.admitted).Count -ne 7) -or
+    (@($report.quads.excluded).Count -ne 27)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.bytes) B, " +
         "$(@($report.quads.admitted).Count) admitted, " +
@@ -151,9 +176,11 @@ if (([int64]$report.quads.atlas_width -ne 64) -or
 if ([int64]$report.quads.bytes -gt [int64]$report.quads.atlas_bytes) {
     throw 'Particle quad atlas holds more texels than it has.'
 }
-# The two a live match actually drew. If admission order ever drops one of
-# these the effects stop appearing and nothing else would say so.
-foreach ($id in @(22, 27)) {
+# Every common texture a both-CPU match was measured drawing and the pack can
+# supply (1 has no image), plus Dream Land's leaf/dust sheet. If admission order
+# ever drops one the effects stop appearing and nothing else would say so --
+# which is exactly what happened on 2026-08-01 with texture 0.
+foreach ($id in @(0, 2, 22, 27, 64, 65, 66)) {
     if (@($report.quads.admitted) -notcontains $id) {
         throw "Particle quad sheet dropped measured texture $id."
     }
@@ -245,9 +272,9 @@ foreach ($token in @(
     '#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 64u',
     '#define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u',
     '#define NDS_PARTICLE_QUAD_ASSET_BYTES 8192u',
-    '#define NDS_PARTICLE_QUAD_TEXEL_BYTES 5376u',
-    '#define NDS_PARTICLE_QUAD_COUNT 6u',
-    '#define NDS_PARTICLE_QUAD_FRAME_COUNT 7u',
+    '#define NDS_PARTICLE_QUAD_TEXEL_BYTES 6400u',
+    '#define NDS_PARTICLE_QUAD_COUNT 7u',
+    '#define NDS_PARTICLE_QUAD_FRAME_COUNT 13u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
     '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x1973edecu',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
@@ -340,4 +367,4 @@ Write-Output (('Particle bank pack passed: 87/119 reachable efcommon scripts, ' 
     '(10912 script bank + 1283 index) of 210320 B arena headroom (198125 B ' +
     'spare) plus 137152 B NitroFS payload, 7 bit-exact CI4 textures, linear ' +
     "texel order pinned, .inc $incState, payload $assetState, " +
-    "quad atlas 64x64, 6/31 textures in 7 frames $quadState."))
+    "quad atlas 64x64, 7/34 textures in 13 frames $quadState."))

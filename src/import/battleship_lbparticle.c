@@ -205,12 +205,20 @@ void efParticleInitAll(void)
     lbParticleAllocTransforms(NDS_R2_PARTICLE_POOL_TRANSFORMS,
                               sizeof(LBTransform));
     sEFParticleBanksNum = 0;
+    /* Every call here restarts bank numbering, so two loads on either side of
+     * one reset share a slot. That is how efcommon and Dream Land both reported
+     * bank 0 on 2026-08-01. Counted rather than assumed. */
+    gNdsParticleInitAllCount++;
 }
 
 /* efdisplay.c passes the address of this marker as the efcommon script bank.
  * It is defined in src/import/battleship_efmanager.c; comparing against it is
  * an exact identity test, not a heuristic. */
 extern uintptr_t lEFCommonParticleScriptBankLo;
+
+/* Dream Land's own bank marker. Declared in include/reloc_data.h and defined in
+ * src/port/diagnostics.c as intptr_t; only its address is ever used. */
+extern intptr_t lGRPupupuParticleScriptBankLo;
 
 /* efcommon's texture ids run 0..46 (PARTICLE_BANK_DISCOVERIES.md). */
 #define NDS_PARTICLE_TEXTURE_IDS 47
@@ -229,6 +237,13 @@ volatile u32 gNdsParticleBankFloatOperands;
 volatile u32 gNdsParticleBankTextures;
 volatile u32 gNdsParticleBankEFCommonID;
 volatile u32 gNdsParticleBankOtherID;
+/* 0xff until Dream Land registers, so a particle from any other bank can never
+ * match it and pick up the Pupupu atlas stride. Bank ids are small and 0 is a
+ * legal one, which is why this is not zero-initialised. */
+volatile u32 gNdsParticleBankPupupuID = 0xffu;
+/* How many of Dream Land's five scripts survived normalization. 0 means the
+ * bank registered empty and Whispy is back to silent leaves. */
+volatile u32 gNdsParticlePupupuScriptsPacked;
 
 volatile u32 gNdsParticleScriptStartCount;
 volatile u32 gNdsParticleGeneratorStartCount;
@@ -669,6 +684,99 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
     return TRUE;
 }
 
+/* Dream Land's bank. Same shape as the common loader above and deliberately a
+ * separate function rather than a parameterised one: the two differ in the
+ * symbols they read and in nothing else, and folding them would put a pointer
+ * indirection on a path that runs once per scene entry to save twenty lines.
+ *
+ * BUGS.md wind row: without this, `grPupupuWhispyLeavesMakeEffect` (script 0)
+ * and `grPupupuWhispyDustMakeEffect` (script 1) hit `ndsParticleRegisterEmptyBank`
+ * and failed closed at reject reason 2 -- measured, twice each, on the
+ * 2026-08-01 both-CPU soak's reject ring. */
+static sb32 ndsParticleLoadPupupuBank(s32 bank_id)
+{
+    static sb32 sNdsPupupuBankNormalized = FALSE;
+    u32 bank_bytes = gNdsPupupuScriptBankBytes;
+    LBScript **scripts;
+    LBTexture **textures;
+    sb32 swap;
+    u32 id;
+    u32 packed = 0u;
+
+    scripts = syTaskmanMalloc(sizeof(*scripts) * NDS_PUPUPU_SCRIPT_COUNT, 0x4);
+    textures = syTaskmanMalloc(sizeof(*textures) * NDS_PUPUPU_TEXTURE_COUNT,
+                               0x4);
+    if ((scripts == NULL) || (textures == NULL))
+    {
+        return FALSE;
+    }
+
+    for (id = 0u; id < NDS_PUPUPU_TEXTURE_COUNT; id++)
+    {
+        NDSParticleInertTexture *entry = syTaskmanMalloc(sizeof(*entry), 0x4);
+
+        if (entry == NULL)
+        {
+            return FALSE;
+        }
+        *entry = sNdsParticleInertTexture;
+        entry->header.width = (s32)gNdsPupupuTextures[id].width;
+        entry->header.height = (s32)gNdsPupupuTextures[id].height;
+        textures[id] = (LBTexture *)entry;
+    }
+
+    /* One-shot for the same reason the common bank's latch is: the normalizer
+     * swaps in place over linked storage that outlives the scene, so a second
+     * pass would swap it back. */
+    swap = (sNdsPupupuBankNormalized == FALSE) ? TRUE : FALSE;
+    sNdsPupupuBankNormalized = TRUE;
+
+    for (id = 0u; id < NDS_PUPUPU_SCRIPT_COUNT; id++)
+    {
+        u32 offset = gNdsPupupuScriptOffsets[id];
+        u32 limit;
+        u32 commands = 0u;
+        u32 operands = 0u;
+        u8 *header;
+
+        scripts[id] = (LBScript *)&sNdsParticleInertScript;
+        if (((offset & 3u) != 0u) || (offset > bank_bytes) ||
+            ((bank_bytes - offset) < sizeof(LBScriptHeader)))
+        {
+            continue;
+        }
+        limit = (id + 1u < NDS_PUPUPU_SCRIPT_COUNT)
+                    ? gNdsPupupuScriptOffsets[id + 1u]
+                    : bank_bytes;
+        if (limit < (offset + (u32)sizeof(LBScriptHeader)))
+        {
+            continue;
+        }
+        header = &gNdsPupupuScriptBank[offset];
+        ndsParticleNormalizeHeader(header, swap);
+        if (ndsParticleNormalizeBytecode(
+                header + sizeof(LBScriptHeader),
+                limit - offset - (u32)sizeof(LBScriptHeader),
+                &commands, &operands, swap) == FALSE)
+        {
+            continue;
+        }
+        if (((LBScript *)header)->texture_id >= NDS_PUPUPU_TEXTURE_COUNT)
+        {
+            continue;
+        }
+        scripts[id] = (LBScript *)header;
+        packed++;
+    }
+
+    sLBParticleScriptBanksNum[bank_id] = NDS_PUPUPU_SCRIPT_COUNT;
+    sLBParticleTextureBanksNum[bank_id] = NDS_PUPUPU_TEXTURE_COUNT;
+    sLBParticleScriptBanks[bank_id] = scripts;
+    sLBParticleTextureBanks[bank_id] = textures;
+    gNdsParticlePupupuScriptsPacked = packed;
+    return (packed != 0u) ? TRUE : FALSE;
+}
+
 /* Registers a bank with no scripts at all. Every lookup against it fails the
  * source's own `script_id >= sLBParticleScriptBanksNum[id]` test, so an
  * unpacked bank can never resolve into another bank's scripts. */
@@ -710,6 +818,24 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         }
         gNdsParticleBankEFCommonID = (u32)bank_id;
     }
+    else if (scripts_lo == (uintptr_t)&lGRPupupuParticleScriptBankLo)
+    {
+        /* Dream Land's. Registered by symbol rather than by scene, because the
+         * scene test below fires for ANY non-common bank in a Pupupu battle and
+         * would happily hand this loader someone else's script ids. */
+        if (ndsParticleLoadPupupuBank(bank_id) == FALSE)
+        {
+            ndsParticleRegisterEmptyBank(bank_id);
+        }
+        else
+        {
+            gNdsParticleBankPupupuID = (u32)bank_id;
+        }
+        gNdsParticleBankOtherID = (u32)bank_id;
+        gNdsPupupuGroundDeferredMask |= 1u << 1;
+        gNdsPupupuGroundSetupMask |= 1u << 9;
+        gNdsPupupuGroundParticleBankID = (u32)bank_id;
+    }
     else
     {
         ndsParticleRegisterEmptyBank(bank_id);
@@ -726,6 +852,7 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
 
     sEFParticleScriptBanks[bank_id] = scripts_lo;
     sEFParticleBanksNum++;
+    gNdsParticleBankRegisterCount++;
 
     return bank_id;
 }
@@ -911,6 +1038,11 @@ volatile u32 gNdsParticleDrawVisibleMax;
 volatile u32 gNdsParticleQuadEmitCount;
 volatile u32 gNdsParticleQuadEmitMax;
 volatile u32 gNdsParticleQuadMissCount;
+volatile u32 gNdsParticleInitAllCount;
+volatile u32 gNdsParticleBankRegisterCount;
+volatile u32 gNdsParticleQuadMissMask[2];
+volatile u32 gNdsParticleQuadMissFrameMask;
+volatile u32 gNdsParticleQuadStrideCount;
 
 /* Atlas row for (texture, frame), or NULL. A linear scan of 31 rows: the table
  * is sorted by (texture, frame) and a frame is looked up once per particle, so
@@ -1051,12 +1183,51 @@ void lbParticleDrawTextures(GObj *gobj)
             {
                 continue;
             }
+            /* Texture 2 of Dream Land's bank is not texture 2 of the common
+             * one, so the atlas key carries the bank. The use mask above
+             * deliberately does NOT -- it is a source-id diagnostic and only
+             * has 64 bits.
+             *
+             * THE KEY IS THE SLOT'S SCRIPT POINTER, NOT A LATCHED BANK ID.
+             * This first shipped as `(pc->bank_id & 7) == gNdsParticleBankPupupuID`
+             * and a 2026-08-01 soak reported BOTH gNdsParticleBankEFCommonID and
+             * gNdsParticleBankPupupuID as 0 -- efParticleInitAll resets
+             * sEFParticleBanksNum, so two loads either side of a reset land on
+             * the same slot -- which strided 128,278 of 128,298 common
+             * particles into Dream Land's key space and left 126,621 misses
+             * against 1,677 quads. sEFParticleScriptBanks holds the pointer the
+             * slot was registered with, so comparing it is an exact identity
+             * test that cannot collide however the ids come out. */
+            {
+                u32 slot = (u32)pc->bank_id & 7u;
+
+                if ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
+                    (sEFParticleScriptBanks[slot] ==
+                     (uintptr_t)&lGRPupupuParticleScriptBankLo))
+                {
+                    id += NDS_PARTICLE_QUAD_PUPUPU_STRIDE;
+                    gNdsParticleQuadStrideCount++;
+                }
+            }
             row = ndsParticleQuadFrameFor(id, pc->frame_id);
             if (row == NULL)
             {
                 /* Admitted set does not carry this one. Draw nothing rather
-                 * than the neighbouring atlas cell. */
+                 * than the neighbouring atlas cell.
+                 *
+                 * WHICH one, and at which frame. A bare count cannot separate
+                 * the three ways this fires -- an unadmitted texture, a frame
+                 * past the packed animation, or the bank stride landing on the
+                 * wrong key -- and a 2026-08-01 soak spent two builds on that
+                 * ambiguity with 128,295 misses against 1,677 emitted quads.
+                 * Source id, pre-stride; the stride has its own counter. */
                 gNdsParticleQuadMissCount++;
+                gNdsParticleQuadMissMask[pc->texture_id >> 5] |=
+                    1u << (pc->texture_id & 31u);
+                if ((u32)pc->frame_id < 32u)
+                {
+                    gNdsParticleQuadMissFrameMask |= 1u << pc->frame_id;
+                }
                 continue;
             }
             if (ndsRendererSubmitParticleQuad(atlas_name, &pc->pos, pc->size,

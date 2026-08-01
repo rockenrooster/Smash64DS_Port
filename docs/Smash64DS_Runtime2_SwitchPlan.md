@@ -531,6 +531,26 @@ of margin buys roughly fourteen textured-quad binds (Task 98: ~1,621
 ticks/bind) plus a few thousand interpreter steps, for *all* effects on the
 frames that carry the most effects. Workable, not comfortable.
 
+**THE PREMIUM IS DIFFUSE, and that is measured (2026-08-01).** The over-gate
+partition the census has always supported was finally run
+(`run-task37-profile-census.ps1 -SplitOverGate`, 71 marked frames against 57
+control, premium 474,032 cycles/frame). Grouped: **idle 44.4%** — the partition
+measuring the VBlank quantum, since a frame that misses the gate costs an extra
+VBlank and most of it is `swiWaitForIrq` — then the **tick HUD's own console
+13.5%**, soft float 10.9%, asset load 5.0%, animation 3.3%, and **collision
+2.9%**. Against the honest denominator of ~263,605 cycles/frame of real work,
+nothing exceeds 20% once the instrument is removed and the tail is a third.
+
+**L6's attribution, which four levers were chosen from, does not survive.** It
+read the over-gate frame as a hit-detection frame with 66.2% of its premium in
+soft float; collision is **2.9%**, and `func_ovl2_800ED490` plus
+`gmCollisionSetInvertMatrix` together cost less per frame than `memcpy`. That
+retrospectively explains L7 winning 534 cycles/frame: 534 cycles/frame is the
+size of what it converted. **The estimate was wrong, not the implementation.**
+
+So clause 4 has no point lever left to find, and options 2 and 3 below are not a
+fallback — they are the remaining path. Option 4 is the owner's.
+
 The honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
 
 1. **Buy headroom first.** ~~Eliminate in-match asset loads — the entire
@@ -554,6 +574,17 @@ The honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
    above 30 FPS, so if the real scripts cannot fit, a cheaper source-derived
    approximation with the visible delta recorded is the contract-compliant
    answer.
+4. **A COMPENSATED 30 Hz simulation — and this one is the OWNER'S CALL, in
+   writing.** `PROJECT_GOAL.md` ranks the original 60 Hz implementation fourth
+   in the sacrifice order, above only stable 30 FPS, and says outright that a
+   compensated 30 Hz version "is acceptable" if it "produces substantially the
+   same gameplay experience" — a judgement the plan reserves for the owner and
+   an agent must not make. `NDS_TASK106_UPDATES_PER_PRESENT=1` measures the
+   uncompensated ceiling at **−119,744 P95** against the current **120,128**
+   gap; it plays at half speed and is a ceiling, not a candidate. Compensating
+   it — advancing timers, physics integration and animation by two frames per
+   tick — is the real work, and it is the only remaining move with the measured
+   size to close the gate on its own.
    
    
 ** STRESS TEST Gate ** Mario CPU vs Fox CPU on Dream Land, Full Match (including testing Sudden Death via force switch) - 

@@ -23,6 +23,12 @@ extern volatile u32 gNdsParticleBankFloatOperands; /* BE f32 operands swapped  *
 extern volatile u32 gNdsParticleBankTextures;
 extern volatile u32 gNdsParticleBankEFCommonID;   /* bank id given to efcommon */
 extern volatile u32 gNdsParticleBankOtherID;      /* bank id given to any other*/
+extern volatile u32 gNdsParticleBankPupupuID;     /* Dream Land's, 0xff if none */
+extern volatile u32 gNdsParticlePupupuScriptsPacked;
+/* efParticleInitAll restarts bank numbering, so these two together say whether
+ * two banks were handed the same slot. */
+extern volatile u32 gNdsParticleInitAllCount;
+extern volatile u32 gNdsParticleBankRegisterCount;
 
 /* Runtime engagement. Start/reject are exact: every external entry point is
  * validated against the packed set before the source constructor runs. */
@@ -59,6 +65,13 @@ extern volatile u32 gNdsParticleDrawVisibleMax;    /* worst single frame       *
 extern volatile u32 gNdsParticleQuadEmitCount;
 extern volatile u32 gNdsParticleQuadEmitMax;
 extern volatile u32 gNdsParticleQuadMissCount;
+/* Which SOURCE texture ids missed (pre-stride), which frame indices missed, and
+ * how many draws took the Dream Land bank stride. A bare MissCount cannot tell
+ * an unadmitted texture from a frame past the packed animation from a stride
+ * applied to the wrong bank. */
+extern volatile u32 gNdsParticleQuadMissMask[2];
+extern volatile u32 gNdsParticleQuadMissFrameMask;
+extern volatile u32 gNdsParticleQuadStrideCount;
 
 /* Mirrors of the interpreter's own live/highwater tallies, published so a run
  * can read them without a symbol lookup into the imported translation unit. */

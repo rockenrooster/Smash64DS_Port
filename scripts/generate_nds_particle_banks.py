@@ -54,6 +54,43 @@ SCRIPT_BANK = ("efcommon_particle_scb",
 TEXTURE_BANK = ("efcommon_particle_txb",
                 "8bffc07309693cb79b29f4e4d1faf3fd29cb42a115ccb4ae143d9308480bc860")
 
+# Dream Land's own bank, and the reason BUGS.md's wind row still had an open VFX
+# half: `ndsParticleLoadEFCommonBank` covers the common bank and EVERY other
+# bank takes `ndsParticleRegisterEmptyBank`, so `grPupupuWhispyLeavesMakeEffect`
+# (script 0) and `grPupupuWhispyDustMakeEffect` (script 1) failed closed at
+# reject reason 2 before the atlas was ever consulted. A 2026-08-01 both-CPU
+# soak caught exactly that pair: `gNdsParticleRejectRing` script 0 and script 1,
+# bank 0, reason 2, twice each.
+#
+# It is small: 416 bytes of bytecode over five scripts, three textures. Scripts
+# 0 and 1 both draw TEXTURE 2 -- 16x16 with four frames, 1,024 texels -- and the
+# quad sheet has 1,408 texels free after the common set, so Whispy's leaves and
+# dust land without touching the 8,192-byte hard bound.
+PUPUPU_SCRIPT_BANK = ("grpupupu_particle_scb",
+                      "6d7b7769be48e778e1e48db2869a0a8388a7a9fd9795c6c0018429674e125166")
+PUPUPU_TEXTURE_BANK = ("grpupupu_particle_txb",
+                       "502f9a8eb3142d28e575a367610ac0ea278cf1af072fd221c1c437346e8dd98c")
+# The quad frame table is keyed by (texture id, frame), and texture 2 means a
+# different image in each bank. Pupupu rows are emitted at this stride so one
+# scan still answers both banks and the draw path adds the stride when the
+# particle's bank is Dream Land's.
+PUPUPU_QUAD_TEXTURE_STRIDE = 64
+# The two scripts the wind row needs, named in grpupupu.c:221 and :480. Only
+# the textures THESE reference got measured-live standing in the atlas at first
+# -- the very first attempt made all three Pupupu textures live and the two that
+# scripts 3 and 4 draw (a 32x32 and a 16x16) took the space before the
+# four-frame sheet that scripts 0 and 1 actually use, which is the exact failure
+# the QUAD_MEASURED_LIVE comment above warns about, reproduced in one commit.
+PUPUPU_MEASURED_LIVE_SCRIPTS = frozenset((0, 1))
+# ...and then the RUNTIME settled it, which the script closure could not.
+# With the bank drawing correctly for the first time (2026-08-01) a both-CPU
+# soak reported 3,741 strided draws of which 2,084 missed, at pre-stride ids 0
+# and 1 -- so Dream Land draws all three of its textures, not just the one the
+# two named scripts reference. Measured beats derived: this set is the live one,
+# and it costs the two non-live COMMON textures (3 and 9) their places, neither
+# of which any measured match has drawn.
+PUPUPU_MEASURED_LIVE_TEXTURES = frozenset((0, 1, 2))
+
 DEFAULT_HEADER = Path("include/nds/generated/nds_particle_banks.generated.h")
 DEFAULT_INC = Path("src/nds/generated/nds_particle_banks.generated.inc")
 DEFAULT_REPORT = Path("docs/optimization/NDS_PARTICLE_BANKS.generated.json")
@@ -111,8 +148,32 @@ QUAD_ATLAS_HEIGHT = 64
 # wasted sheet, and one missing from it becomes a QuadMiss. Read the mask as
 # BITS, not as a hex digit pattern: 0x08400000 is 22 and 27, and reading it as
 # 22/23/26 sent one round of this at textures the pack does not even carry.
-QUAD_MEASURED_LIVE = frozenset((22, 27))
+# REGRADED 2026-08-01 from a both-CPU soak's own mask, after this list cost
+# 127,989 QuadMisses in one match. It read (22, 27) because that was the single-
+# CPU mask, and a single-CPU match is Mario standing still. The both-CPU mask is
+# 0x08400007 -- bits 0, 1, 2, 22, 27 -- and admitting Pupupu had evicted texture
+# 0, which alone carries almost every particle a moving match draws: 130,714
+# visible particles produced 2,725 quads. Bits, not hex digits.
+QUAD_MEASURED_LIVE = frozenset((0, 1, 2, 22, 27))
 QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT * 2
+# The largest cell the atlas will hold, in texels per axis. This is the
+# "halving" the exclusion note below always pointed at, and texture 0 is why it
+# finally had to exist: at its source 32x32 it takes a shelf of its own -- the
+# packer groups by exact height -- so admitting it costs 32 of the atlas's 64
+# rows and wastes half of them, which pushed the 16x16 shelves past the bottom
+# edge and dropped the one texture a moving match draws most. At 16x16 it is an
+# ordinary cell. Reduced texture resolution is explicitly allowed by
+# PROJECT_GOAL.md; a particle that does not draw at all is not.
+QUAD_CELL_MAX = 16
+
+
+def quad_cell_dims(width: int, height: int) -> tuple[int, int]:
+    """Halve both axes until the cell fits QUAD_CELL_MAX. Aspect is preserved."""
+    cell_w, cell_h = width, height
+    while (cell_w > QUAD_CELL_MAX) or (cell_h > QUAD_CELL_MAX):
+        cell_w = max(1, cell_w // 2)
+        cell_h = max(1, cell_h // 2)
+    return cell_w, cell_h
 DEFAULT_QUAD_ASSET = Path("assets/particles/efcommon_particle_quads.rgb5a1.bin")
 QUAD_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"
 
@@ -1070,7 +1131,8 @@ def shelf_pack(cells: list[dict], width: int, height: int):
 
 
 def build_quad_sheet(textures: list[dict], report_rows: list[dict],
-                     frames_by_texture: dict[int, list[list]]) -> dict:
+                     frames_by_texture: dict[int, list[list]],
+                     extra_candidates: list[dict] | None = None) -> dict:
     """The DS draw path's payload: ONE RGB555+A1 atlas, shelf-packed.
 
     A SECOND encoding of the same texels, on purpose. The pack above chooses a
@@ -1115,19 +1177,31 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         if not report["packed"]:
             continue
         texture = textures[report["texture"]]
+        cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"])
         candidates.append({
             "texture": texture["id"],
-            "width": texture["width"],
-            "height": texture["height"],
+            "width": cell_w,
+            "height": cell_h,
+            "source_width": texture["width"],
+            "source_height": texture["height"],
             "frames": texture["frames"],
-            "bytes": texture["width"] * texture["height"] *
-                     texture["frames"] * 2,
+            "bytes": cell_w * cell_h * texture["frames"] * 2,
         })
+    # Dream Land's leaves and dust are measured-live too -- a 2026-08-01
+    # both-CPU soak caught the game asking for scripts 0 and 1 of that bank and
+    # being refused -- so they sort with the common bank's live set rather than
+    # behind it. They are 16x16x4 = 1,024 texels against the 1,408 the common
+    # set leaves free.
+    live = set(QUAD_MEASURED_LIVE)
+    for candidate in (extra_candidates or ()):
+        candidates.append(candidate)
+        if candidate.get("live"):
+            live.add(candidate["texture"])
     # Measured-live first, then ascending size. Admission is greedy and the
     # sheet is now half what it was, so "smallest first" alone would fill it
     # with whatever happens to be small and let a texture a match actually
     # draws fall off the end.
-    candidates.sort(key=lambda row: (row["texture"] not in QUAD_MEASURED_LIVE,
+    candidates.sort(key=lambda row: (row["texture"] not in live,
                                      row["bytes"], row["texture"]))
 
     def cells_for(rows):
@@ -1135,6 +1209,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         for row in rows:
             for frame in range(row["frames"]):
                 cells.append({"w": row["width"], "h": row["height"],
+                              "src_w": row.get("source_width", row["width"]),
+                              "src_h": row.get("source_height", row["height"]),
                               "texture": row["texture"], "frame": frame})
         return cells
 
@@ -1159,14 +1235,36 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     for index, cell in enumerate(cells):
         origin_x, origin_y = placement[index]
         pixels = frames_by_texture[cell["texture"]][cell["frame"]]
-        if len(pixels) != cell["w"] * cell["h"]:
+        if len(pixels) != cell["src_w"] * cell["src_h"]:
             raise SystemExit(
                 f"quad atlas texture {cell['texture']} frame {cell['frame']} "
-                f"has {len(pixels)} pixels, expected {cell['w'] * cell['h']}")
+                f"has {len(pixels)} pixels, expected "
+                f"{cell['src_w'] * cell['src_h']}")
+        # Box-average whenever the cell is smaller than the source. Averaging
+        # rather than point-sampling because these are soft particles: nearest
+        # on a 2x reduction drops every other texel of a gradient and reads as
+        # aliasing on a sprite that is already only sixteen texels wide. Alpha
+        # averages too, then meets the same >=128 cut the full-size path uses.
+        step_x = cell["src_w"] // cell["w"]
+        step_y = cell["src_h"] // cell["h"]
         for row in range(cell["h"]):
             base = ((origin_y + row) * QUAD_ATLAS_WIDTH + origin_x) * 2
             for column in range(cell["w"]):
-                red, green, blue, alpha = pixels[row * cell["w"] + column]
+                red = green = blue = alpha = 0
+                for sub_y in range(step_y):
+                    source = ((row * step_y + sub_y) * cell["src_w"] +
+                              column * step_x)
+                    for sub_x in range(step_x):
+                        texel = pixels[source + sub_x]
+                        red += texel[0]
+                        green += texel[1]
+                        blue += texel[2]
+                        alpha += texel[3]
+                taps = step_x * step_y
+                red //= taps
+                green //= taps
+                blue //= taps
+                alpha //= taps
                 if alpha >= 128:
                     value = (0x8000 |
                              (quantise_channel_5bit(red) >> 3) |
@@ -1191,6 +1289,66 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         "width": QUAD_ATLAS_WIDTH,
         "height": QUAD_ATLAS_HEIGHT,
         "budget_bytes": QUAD_SHEET_BUDGET_BYTES,
+    }
+
+
+def build_pupupu_bank(repo_root: Path,
+                      frames_by_texture: dict[int, list[list]]) -> dict:
+    """Dream Land's own particle bank, packed whole.
+
+    Whole rather than reachability-closed on purpose: the bank is 416 bytes of
+    bytecode over five scripts, so closing it over its spawn graph would cost
+    more analysis than it can possibly save, and a script the closure got wrong
+    would fail closed and be invisible. `derive_reachable_scripts` exists for
+    the common bank because that one is 10,912 bytes over 119 scripts.
+
+    The two the wind row needs are 0 (`grPupupuWhispyLeavesMakeEffect`) and 1
+    (`grPupupuWhispyDustMakeEffect`), both drawing TEXTURE 2 -- 16x16, four
+    frames. Their cells are handed to the shared quad sheet under
+    PUPUPU_QUAD_TEXTURE_STRIDE so one frame table still answers both banks.
+    """
+    script_payload = load_o2r_blob(repo_root, *PUPUPU_SCRIPT_BANK)
+    texture_payload = load_o2r_blob(repo_root, *PUPUPU_TEXTURE_BANK)
+    scripts = parse_script_bank(script_payload)
+    textures = parse_texture_bank(texture_payload)
+
+    wanted = sorted({script["texture_id"] for script in scripts})
+    out_of_range = [tid for tid in wanted if tid >= len(textures)]
+    if out_of_range:
+        raise SystemExit(f"pupupu scripts name absent textures {out_of_range}")
+
+    live_textures = ({script["texture_id"] for script in scripts
+                      if script["id"] in PUPUPU_MEASURED_LIVE_SCRIPTS} |
+                     set(PUPUPU_MEASURED_LIVE_TEXTURES))
+    quad_candidates = []
+    for texture in textures:
+        if texture["id"] not in wanted or texture["frames"] <= 0:
+            continue
+        frames = [decode_texture_frame(texture_payload, texture, frame)
+                  for frame in range(texture["frames"])]
+        key = PUPUPU_QUAD_TEXTURE_STRIDE + texture["id"]
+        frames_by_texture[key] = frames
+        cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"])
+        quad_candidates.append({
+            "texture": key,
+            "width": cell_w,
+            "height": cell_h,
+            "source_width": texture["width"],
+            "source_height": texture["height"],
+            "frames": texture["frames"],
+            "bytes": cell_w * cell_h * texture["frames"] * 2,
+            "live": texture["id"] in live_textures,
+        })
+
+    return {
+        "script_payload": script_payload,
+        "offsets": [script["offset"] for script in scripts],
+        "scripts": scripts,
+        "textures": textures,
+        "texture_rows": [(texture["width"], texture["height"],
+                          texture["frames"]) for texture in textures],
+        "quad_candidates": quad_candidates,
+        "wanted": wanted,
     }
 
 
@@ -1336,8 +1494,11 @@ def build_pack(repo_root: Path) -> dict:
                             + len(textures)           # frame counts
                             + 8)                      # exported scalars
     linked = len(script_payload) + table_bytes_resident
-    quads = build_quad_sheet(textures, report_rows, frames_by_texture)
+    pupupu = build_pupupu_bank(repo_root, frames_by_texture)
+    quads = build_quad_sheet(textures, report_rows, frames_by_texture,
+                             pupupu["quad_candidates"])
     return {
+        "pupupu": pupupu,
         "quads": quads,
         "scripts": scripts, "textures": textures, "reach": reach,
         "script_payload": script_payload, "rows": rows,
@@ -1511,6 +1672,36 @@ extern const u32 gNdsParticleTextureCount;
 /* NDSParticleTexture has no frame count; animation needs one. */
 extern const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT];
 
+/* ------------------------------------------------------------------------
+ * Dream Land's own bank. Whispy's leaves (script 0) and dust (script 1) live
+ * here, and until 2026-08-01 every non-common bank registered EMPTY, so both
+ * failed closed at reject reason 2 before the atlas was consulted.
+ *
+ * Carried far more cheaply than the common bank: 416 bytes of bytecode and a
+ * width/height pair per texture, with no NitroFS texel payload at all. The
+ * common bank ships one because its pack "only has to exist"; the DRAW path
+ * reads the quad atlas, and these textures are in it.
+ *
+ * Quad rows for this bank are emitted at NDS_PARTICLE_QUAD_PUPUPU_STRIDE +
+ * texture id, because texture 2 names a different image in each bank and one
+ * frame table has to answer both. */
+#define NDS_PUPUPU_SCRIPT_COUNT {len(pack["pupupu"]["scripts"])}u
+#define NDS_PUPUPU_SCRIPT_BANK_BYTES {len(pack["pupupu"]["script_payload"])}u
+#define NDS_PUPUPU_TEXTURE_COUNT {len(pack["pupupu"]["textures"])}u
+#define NDS_PARTICLE_QUAD_PUPUPU_STRIDE {PUPUPU_QUAD_TEXTURE_STRIDE}u
+
+typedef struct NDSPupupuTexture
+{{
+    u8 width;
+    u8 height;
+    u8 frames;
+}} NDSPupupuTexture;
+
+extern u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES];
+extern const u32 gNdsPupupuScriptBankBytes;
+extern const u32 gNdsPupupuScriptOffsets[NDS_PUPUPU_SCRIPT_COUNT];
+extern const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT];
+
 #endif
 """
 
@@ -1535,6 +1726,15 @@ def render_inc(pack: dict) -> str:
         f"    {{ {row['texture']:3d}, {row['frame']:3d}, {row['x']:3d}, "
         f"{row['y']:3d}, {row['w']:3d}, {row['h']:3d} }},"
         for row in pack["quads"]["frames"]
+    )
+    pupupu_offset_rows = "\n".join(
+        "    " + ", ".join(f"0x{value:08x}u"
+                           for value in pack["pupupu"]["offsets"][index:index + 6]) + ","
+        for index in range(0, len(pack["pupupu"]["offsets"]), 6)
+    )
+    pupupu_texture_rows = "\n".join(
+        f"    {{ {row[0]:3d}, {row[1]:3d}, {row[2]:3d} }}, /* texture {index} */"
+        for index, row in enumerate(pack["pupupu"]["texture_rows"])
     )
     return f"""/* Generated by scripts/generate_nds_particle_banks.py. */
 /* efcommon source SHA256-lo 0x{pack["source_checksum"]:08x}, table 0x{pack["table_checksum"]:08x}. */
@@ -1566,6 +1766,23 @@ const NDSParticleQuadFrame
 u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES]
     __attribute__((aligned(4))) = {{
 {_hex_rows(pack["script_payload"])}
+}};
+
+/* Dream Land's bank. Same big-endian-in-place contract as the common one
+ * above, and non-const for the same reason. */
+const u32 gNdsPupupuScriptBankBytes = NDS_PUPUPU_SCRIPT_BANK_BYTES;
+
+const u32 gNdsPupupuScriptOffsets[NDS_PUPUPU_SCRIPT_COUNT] = {{
+{pupupu_offset_rows}
+}};
+
+const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT] = {{
+{pupupu_texture_rows}
+}};
+
+u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES]
+    __attribute__((aligned(4))) = {{
+{_hex_rows(pack["pupupu"]["script_payload"])}
 }};
 
 /* The {pack["asset_bytes"]}-byte texel and palette blocks are NOT here. They ship as

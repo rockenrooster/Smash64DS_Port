@@ -22125,3 +22125,71 @@ tree has roughly **five kilobytes** of taskman arena margin, so a measurement
 has to be sized against the budget like any other code. Read `GENERALFREE` from
 a soak before adding any, and run `mapdiff` on a new lab flag before running the
 ROM.
+
+## 2026-08-01 — The bank id was not a bank, and the use mask was a single-CPU mask
+
+Dream Land's particle bank drew for the first time, and getting there cost three
+soaks because two of the three keys it needs were wrong in ways only a moving
+match could show.
+
+### `efParticleInitAll` resets bank numbering, so a bank id is not an identity
+
+The atlas has to tell efcommon's texture 2 from Dream Land's, so quad rows are
+keyed at `NDS_PARTICLE_QUAD_PUPUPU_STRIDE + id` and the draw path adds the
+stride for particles from Dream Land's bank. The first version asked
+`(pc->bank_id & 7) == gNdsParticleBankPupupuID`. A soak answered:
+
+```text
+gNdsParticleBankEFCommonID      0
+gNdsParticleBankPupupuID        0      both banks, one slot
+gNdsParticleInitAllCount        2
+gNdsParticleBankRegisterCount   3      three loads across two resets
+gNdsParticleQuadStrideCount     128278 of 128298 visible particles
+gNdsParticleQuadMissCount       126621 against 1677 emitted quads
+```
+
+`efParticleInitAll` sets `sEFParticleBanksNum = 0`, so two bank loads either
+side of one reset are handed the same slot number. Every common particle took
+Dream Land's stride, and the 1,677 that *did* draw were efcommon texture 2
+drawing Whispy's leaves. The fix is to compare the slot's registered script
+pointer — `sEFParticleScriptBanks[slot] == &lGRPupupuParticleScriptBankLo` — an
+identity test that cannot collide however the ids come out. Misses fell to
+2,084 and emits rose to 109,560 of 111,644.
+
+**Durable lesson:** a small integer handed out by an allocator that something
+else can reset is not an identity. Compare the thing, not the index.
+
+### A single-CPU soak is Mario standing still
+
+`QUAD_MEASURED_LIVE` held `(22, 27)` because that was the only use mask anything
+had ever read. Admitting Dream Land's sheet evicted common texture 0 on the
+recorded reasoning that "no measured match has drawn it". The both-CPU mask is
+`0x08400007` — bits 0, 1, 2, 22, 27. Texture 0 carries most of what a moving
+match draws.
+
+Texture 0 could not be re-admitted as it stood: at its source 32×32 the shelf
+packer gives it a row of its own and wastes half of it, which pushed the 16×16
+shelves past the bottom of a 64×64 atlas. Atlas cells are capped at 16×16 now
+(`QUAD_CELL_MAX`, box-averaged, aspect preserved), which is the halving the
+exclusion note had always pointed at. And once the bank drew correctly, the
+runtime corrected the *other* live set too: 3,741 strided draws with 2,084
+misses at pre-stride ids 0 and 1 said Dream Land draws all three of its
+textures, not just the sheet its two named scripts reference.
+
+**Durable lesson:** every "no match has ever drawn it" in this repository is a
+claim about the matches that were run. Regrade a measured-live list from a
+both-CPU mask, and never from a single-CPU one.
+
+### Two counters that were not measurements
+
+Both were caught in the same pass and both had been read as evidence:
+
+- `gNdsFighterProjectileProofWeaponCountMax` was `if (max == 0) max = 1;`. It
+  latched on the first weapon and never moved, so `WeaponCountMax 1` beside
+  `SpawnCall 11 / SpawnSuccess 7` read as a one-at-a-time pool limit and meant
+  nothing. It is `WEAPON_ALLOC_MAX` minus the measured free-list depth now.
+- `gNdsParticleQuadMissCount` was a bare total. It cannot separate an unadmitted
+  texture from a frame past the packed animation from a stride on the wrong
+  bank, and it cost two builds of guessing. It now carries a source-id mask, a
+  frame mask, and the stride count — three u32s that named the defect in one
+  run.
