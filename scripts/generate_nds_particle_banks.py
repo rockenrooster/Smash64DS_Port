@@ -78,11 +78,11 @@ DEFAULT_TEXTURE_ASSET = Path("assets/particles/efcommon_particle_textures.ds.bin
 # and palette_offset is a u16 ENTRY index from NDS_PARTICLE_PALETTE_ASSET_OFFSET.
 TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
 
-# The DS draw path's own payload, RGB555+A1. See build_quad_sheet for why the
-# texels are encoded twice and why the budget exists. 64 KiB against 119,872
-# free in VRAM_A+B after the battle's pinned static set, and against a measured
-# need of 1,280 bytes -- generous without claiming the whole space.
-QUAD_SHEET_BUDGET_BYTES = 64 * 1024
+# The DS draw path's own payload: ONE RGB555+A1 atlas. See build_quad_sheet for
+# why the texels are encoded twice and why these dimensions.
+QUAD_ATLAS_WIDTH = 128
+QUAD_ATLAS_HEIGHT = 128
+QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT * 2
 DEFAULT_QUAD_ASSET = Path("assets/particles/efcommon_particle_quads.rgb5a1.bin")
 QUAD_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"
 
@@ -1011,9 +1011,37 @@ def measure_error(source: list[list[tuple[int, int, int, int]]],
 # --------------------------------------------------------------------------
 # pack
 # --------------------------------------------------------------------------
+def shelf_pack(cells: list[dict], width: int, height: int):
+    """Shelf-pack fixed cells top-down. Returns placements, or None if it fails.
+
+    Every cell here is a power of two on both axes (16x8 up to 64x64), which is
+    what makes a shelf packer optimal rather than merely convenient: sorted by
+    descending height, each shelf is filled by cells of exactly its height, so
+    the only waste is the tail of a row.
+    """
+    order = sorted(range(len(cells)),
+                   key=lambda i: (-cells[i]["h"], -cells[i]["w"], i))
+    placed = {}
+    shelf_y = 0
+    shelf_h = 0
+    cursor_x = 0
+    for index in order:
+        cell = cells[index]
+        if (shelf_h != cell["h"]) or (cursor_x + cell["w"] > width):
+            if shelf_h != cell["h"] or cursor_x != 0:
+                shelf_y += shelf_h
+            shelf_h = cell["h"]
+            cursor_x = 0
+        if shelf_y + cell["h"] > height:
+            return None
+        placed[index] = (cursor_x, shelf_y)
+        cursor_x += cell["w"]
+    return placed
+
+
 def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                      frames_by_texture: dict[int, list[list]]) -> dict:
-    """The DS draw path's payload: the packed textures re-encoded as RGB555+A1.
+    """The DS draw path's payload: ONE RGB555+A1 atlas, shelf-packed.
 
     A SECOND encoding of the same texels, on purpose. The pack above chooses a
     format per texture by measured error and gets the whole reachable set into
@@ -1023,70 +1051,110 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     palette slot in its key. Teaching it palettes to save bytes we are not
     short of would be the expensive way round.
 
-    RGB555+A1 costs 16 bits a texel, so the whole reachable set would be
-    311,552 bytes against 119,872 free in VRAM_A+B after the battle's pinned
-    static set. Hence the budget and the admission order -- smallest first,
-    which maximises how many effects have a texture rather than which ones.
-    Both textures a real match was measured drawing (22 and 27) are among the
-    smallest, so the measured need of 1,280 bytes is met roughly fifty times
-    over inside the budget.
+    ONE ATLAS AND NOT ONE TEXTURE PER FRAME, because GL names are the binding
+    constraint rather than bytes: NDS_RENDERER_HW_TEXTURE_CACHE_COUNT is 48 and
+    the battle's static set already pins 24 of them, while the admitted set is
+    60 individual frames. An atlas spends ONE name, and -- the part that
+    actually matters for the gate -- ONE bind for every particle in the frame,
+    however many textures they came from. A per-frame scheme would break the
+    triangle batch on every texture change.
+
+    128x128 is the size that follows, and the constraint is STAGING rather than
+    VRAM. VRAM_A+B have 119,872 bytes free after the static set, so 256x128
+    (65,536) would fit there -- but the upload has to pass through
+    sNdsRendererHardwareTextureScratch, which is
+    NDS_RENDERER_HW_TEXTURE_MAX_TEXELS = 128*128, and a dedicated 64 KiB
+    staging buffer would be sixteen taskman arena steps of .bss, which is how
+    this ROM stops booting. 128x128 reuses the existing scratch exactly and
+    costs no new RAM at all. Growing it means streaming into VRAM through the
+    bank's LCD mapping instead, which is a real option (nds_renderer.c already
+    does the LCD dance) but is not needed by anything measured.
+
+    Admission is by ascending texture size, keeping each candidate only if the
+    whole set still packs -- the packer decides, not a byte budget, because
+    shelf waste is real and a byte count would admit a set that cannot be laid
+    out.
 
     Excluded textures are NAMED in the report rather than silently dropped: the
     runtime fails closed on a missing texture, so a BUGS.md row that needs one
     of the big multi-frame animations back reads the exclusion list, and the
-    honest answer for those is halving 64x64x10 rather than raising the budget.
+    honest answer for those is halving 64x64x10 rather than growing the atlas.
     """
-    rows = []
+    candidates = []
     for report in report_rows:
         if not report["packed"]:
             continue
-        texture_id = report["texture"]
-        texture = textures[texture_id]
-        rows.append({
-            "texture": texture_id,
+        texture = textures[report["texture"]]
+        candidates.append({
+            "texture": texture["id"],
             "width": texture["width"],
             "height": texture["height"],
             "frames": texture["frames"],
             "bytes": texture["width"] * texture["height"] *
                      texture["frames"] * 2,
         })
-    rows.sort(key=lambda row: (row["bytes"], row["texture"]))
+    candidates.sort(key=lambda row: (row["bytes"], row["texture"]))
 
-    admitted = []
-    excluded = []
-    used = 0
-    for row in rows:
-        if used + row["bytes"] <= QUAD_SHEET_BUDGET_BYTES:
-            row["offset"] = used
-            used += row["bytes"]
-            admitted.append(row)
+    def cells_for(rows):
+        cells = []
+        for row in rows:
+            for frame in range(row["frames"]):
+                cells.append({"w": row["width"], "h": row["height"],
+                              "texture": row["texture"], "frame": frame})
+        return cells
+
+    admitted: list[dict] = []
+    excluded: list[dict] = []
+    for candidate in candidates:
+        trial = admitted + [candidate]
+        if shelf_pack(cells_for(trial), QUAD_ATLAS_WIDTH,
+                      QUAD_ATLAS_HEIGHT) is None:
+            excluded.append(candidate)
         else:
-            excluded.append(row)
+            admitted.append(candidate)
     admitted.sort(key=lambda row: row["texture"])
 
-    payload = bytearray(used)
-    for row in admitted:
-        cursor = row["offset"]
-        for frame in frames_by_texture[row["texture"]]:
-            for red, green, blue, alpha in frame:
-                value = ((quantise_channel_5bit(red) >> 3) |
-                         ((quantise_channel_5bit(green) >> 3) << 5) |
-                         ((quantise_channel_5bit(blue) >> 3) << 10))
+    cells = cells_for(admitted)
+    placement = shelf_pack(cells, QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT)
+    if placement is None:
+        raise SystemExit("quad atlas failed to pack its own admitted set")
+
+    atlas = bytearray(QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT * 2)
+    frame_rows = []
+    for index, cell in enumerate(cells):
+        origin_x, origin_y = placement[index]
+        pixels = frames_by_texture[cell["texture"]][cell["frame"]]
+        if len(pixels) != cell["w"] * cell["h"]:
+            raise SystemExit(
+                f"quad atlas texture {cell['texture']} frame {cell['frame']} "
+                f"has {len(pixels)} pixels, expected {cell['w'] * cell['h']}")
+        for row in range(cell["h"]):
+            base = ((origin_y + row) * QUAD_ATLAS_WIDTH + origin_x) * 2
+            for column in range(cell["w"]):
+                red, green, blue, alpha = pixels[row * cell["w"] + column]
                 if alpha >= 128:
-                    value |= 0x8000
+                    value = (0x8000 |
+                             (quantise_channel_5bit(red) >> 3) |
+                             ((quantise_channel_5bit(green) >> 3) << 5) |
+                             ((quantise_channel_5bit(blue) >> 3) << 10))
                 else:
                     value = 0
-                struct.pack_into("<H", payload, cursor, value)
-                cursor += 2
-        if cursor != row["offset"] + row["bytes"]:
-            raise SystemExit(
-                f"quad sheet texture {row['texture']} wrote "
-                f"{cursor - row['offset']} of {row['bytes']} bytes")
+                struct.pack_into("<H", atlas, base + column * 2, value)
+        frame_rows.append({
+            "texture": cell["texture"], "frame": cell["frame"],
+            "x": origin_x, "y": origin_y, "w": cell["w"], "h": cell["h"],
+        })
+    frame_rows.sort(key=lambda row: (row["texture"], row["frame"]))
+    used = sum(row["bytes"] for row in admitted)
     return {
-        "payload": bytes(payload),
+        "payload": bytes(atlas),
         "admitted": admitted,
         "excluded": excluded,
+        "frames": frame_rows,
         "bytes": used,
+        "atlas_bytes": len(atlas),
+        "width": QUAD_ATLAS_WIDTH,
+        "height": QUAD_ATLAS_HEIGHT,
         "budget_bytes": QUAD_SHEET_BUDGET_BYTES,
     }
 
@@ -1326,34 +1394,51 @@ def render_header(pack: dict) -> str:
  * {pack["asset_bytes"]} bytes of the {pack["pack_bytes"]}-byte pack are in the file above. */
 #define NDS_PARTICLE_LINKED_BYTES {pack["linked_bytes"]}u
 
-/* THE DRAW PATH'S PAYLOAD, and a second encoding of the same texels. The pack
- * above chooses a DS format per texture by measured error; those formats are
- * paletted or alpha-indexed, and the renderer's texture cache uploads GL_RGBA
- * with no palette slot in its key. RGB555+A1 costs 16 bits a texel, so the
- * whole reachable set would be 311,552 bytes against 119,872 free in VRAM_A+B
- * after the battle's pinned static set -- hence a budget, and admission
- * smallest-first, which maximises how many effects have a texture at all.
+/* THE DRAW PATH'S PAYLOAD: one RGB555+A1 atlas, and a second encoding of the
+ * same texels. The pack above chooses a DS format per texture by measured
+ * error; those formats are paletted or alpha-indexed, and the renderer's
+ * texture cache uploads GL_RGBA with no palette slot in its key.
+ *
+ * ONE ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
+ * not bytes: the cache holds 48 and the battle's static set pins 24, while the
+ * admitted set is {len(pack["quads"]["frames"])} individual frames. An atlas spends one name -- and one
+ * BIND for every particle in the frame, whatever textures they came from, so
+ * the triangle batch never breaks on a texture change.
+ *
+ * {pack["quads"]["width"]}x{pack["quads"]["height"]} follows from that: DS dimensions are powers of two, this is
+ * 16 bits a texel, and VRAM_A+B have 119,872 free after the static set, so
+ * 256x256 does not fit and this is the largest that does. Admission is by
+ * ascending texture size, keeping each candidate only while the whole set
+ * still PACKS -- shelf waste is real, so a byte budget would admit a set that
+ * cannot be laid out.
  *
  * A texture the runtime asks for and does not find here draws nothing; it does
  * not draw something else. gNdsParticleTextureUseMask says which ones a real
  * match reached, and the excluded list is in the generated JSON report by name
- * so raising the budget is an informed decision rather than a hopeful one. */
+ * so growing the atlas is an informed decision rather than a hopeful one. */
 #define NDS_PARTICLE_QUAD_ASSET_PATH "{QUAD_ASSET_NITRO_PATH}"
-#define NDS_PARTICLE_QUAD_ASSET_BYTES {pack["quads"]["bytes"]}u
-#define NDS_PARTICLE_QUAD_BUDGET_BYTES {pack["quads"]["budget_bytes"]}u
+#define NDS_PARTICLE_QUAD_ATLAS_WIDTH {pack["quads"]["width"]}u
+#define NDS_PARTICLE_QUAD_ATLAS_HEIGHT {pack["quads"]["height"]}u
+#define NDS_PARTICLE_QUAD_ASSET_BYTES {pack["quads"]["atlas_bytes"]}u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES {pack["quads"]["bytes"]}u
 #define NDS_PARTICLE_QUAD_COUNT {len(pack["quads"]["admitted"])}u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT {len(pack["quads"]["frames"])}u
 
-typedef struct NDSParticleQuadTexture
+/* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
+ * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
+ * else. Coordinates are atlas texels, which is what glTexCoord2t16 takes. */
+typedef struct NDSParticleQuadFrame
 {{
-    u16 texture_id;   /* SOURCE texture id, so the runtime indexes by pc->texture_id */
-    u16 width;
-    u16 height;
-    u16 frames;
-    u32 offset;       /* byte offset into the RGB555+A1 payload, frame 0 */
-}} NDSParticleQuadTexture;
+    u8 texture_id;
+    u8 frame;
+    u8 x;
+    u8 y;
+    u8 width;
+    u8 height;
+}} NDSParticleQuadFrame;
 
-extern const NDSParticleQuadTexture
-    gNdsParticleQuadTextures[NDS_PARTICLE_QUAD_COUNT];
+extern const NDSParticleQuadFrame
+    gNdsParticleQuadFrames[NDS_PARTICLE_QUAD_FRAME_COUNT];
 
 /* DS TEXIMAGE_PARAM texture-format field values. */
 #define NDS_PARTICLE_FORMAT_NONE {DS_NONE}u
@@ -1412,9 +1497,9 @@ def render_inc(pack: dict) -> str:
         for index in range(0, len(pack["rows"]), 12)
     )
     quad_rows = "\n".join(
-        f"    {{ {row['texture']:3d}, {row['width']:3d}, {row['height']:3d}, "
-        f"{row['frames']:3d}, {row['offset']:6d}u }},"
-        for row in pack["quads"]["admitted"]
+        f"    {{ {row['texture']:3d}, {row['frame']:3d}, {row['x']:3d}, "
+        f"{row['y']:3d}, {row['w']:3d}, {row['h']:3d} }},"
+        for row in pack["quads"]["frames"]
     )
     return f"""/* Generated by scripts/generate_nds_particle_banks.py. */
 /* efcommon source SHA256-lo 0x{pack["source_checksum"]:08x}, table 0x{pack["table_checksum"]:08x}. */
@@ -1436,10 +1521,10 @@ const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT] = {{
 {frame_rows}
 }};
 
-/* Ordered by SOURCE texture id so a lookup is a scan of at most
- * NDS_PARTICLE_QUAD_COUNT rows; the admission that built it was by size. */
-const NDSParticleQuadTexture
-    gNdsParticleQuadTextures[NDS_PARTICLE_QUAD_COUNT] = {{
+/* Ordered by (SOURCE texture id, frame); the admission that built it was by
+ * size and the layout by shelf packing, so neither order survives here. */
+const NDSParticleQuadFrame
+    gNdsParticleQuadFrames[NDS_PARTICLE_QUAD_FRAME_COUNT] = {{
 {quad_rows}
 }};
 
@@ -1509,6 +1594,10 @@ def render_report(pack: dict) -> dict:
         # raising 65,536.
         "quads": {
             "budget_bytes": pack["quads"]["budget_bytes"],
+            "atlas_bytes": pack["quads"]["atlas_bytes"],
+            "atlas_width": pack["quads"]["width"],
+            "atlas_height": pack["quads"]["height"],
+            "frame_count": len(pack["quads"]["frames"]),
             "bytes": pack["quads"]["bytes"],
             "admitted": [row["texture"] for row in pack["quads"]["admitted"]],
             "excluded": [{"texture": row["texture"], "bytes": row["bytes"],
@@ -1584,9 +1673,10 @@ def main() -> int:
           f"pack={pack['pack_bytes']} "
           f"linked={pack['linked_bytes']} "
           f"asset={pack['asset_bytes']} "
+          f"atlas={pack['quads']['width']}x{pack['quads']['height']} "
           f"quads={len(pack['quads']['admitted'])}/"
           f"{len(pack['quads']['admitted']) + len(pack['quads']['excluded'])}"
-          f"@{pack['quads']['bytes']}B "
+          f" {len(pack['quads']['frames'])}frames "
           f"headroom={ESTIMATE['arena_headroom_bytes']} "
           f"spare={ESTIMATE['arena_headroom_bytes'] - pack['linked_bytes']} "
           f"source=0x{pack['source_checksum']:08x} "

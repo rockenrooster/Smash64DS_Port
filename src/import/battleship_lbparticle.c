@@ -71,6 +71,7 @@
 #include <nds/nds_particle_runtime.h>
 #include <nds/nds_startup.h>
 #include <nds/generated/nds_particle_banks.generated.h>
+#include <nds/nds_renderer.h>
 
 /* The DECOMP sc/scene.h, by path, not the port's <sc/scene.h>. INCLUDES puts
  * include/ ahead of the decomp tree, so the angled form silently selects
@@ -863,27 +864,139 @@ void ndsParticleRuntimePublishTallies(void)
     gNdsParticleRootSpawnCount = dLBParticleCurrentGeneratorID;
 }
 
-/* The DS textured-quad path is the next gated step. Until then this walks the
- * exact lists the source draw walks and records what it WOULD have drawn.
+/* THE DS TEXTURED-QUAD DRAW.
  *
- * Not a placeholder that gets thrown away: the walk, the camera-mask test and
- * the `size != 0` test are the first three things the real path has to do, and
- * the census it produces is what decides the upload set. The source's draw
- * (lb/lbparticle.c:1448) starts identically -- iterate the sixteen
- * sLBParticleStructsAllocLinks chains, take the ones the GObj's camera_mask
- * selects, skip zero-size particles -- and then projects and emits a texture
- * rectangle. Everything up to the projection is here. */
+ * The source (lb/lbparticle.c:1448) projects each particle to NDC, turns
+ * `pc->size` into a screen-space half-extent through the projection's column
+ * magnitudes, and emits an axis-aligned N64 texture rectangle. This does the
+ * same arithmetic and then emits a camera-facing quad instead, which is the DS
+ * hardware's native shape and costs no projection swap: the source's NDC
+ * half-extent is `size * |P col| / w`, and a WORLD-space quad of half-extent
+ * `size` projects to exactly that under the same matrix. So the billboard is
+ * the rectangle, expressed where the geometry engine already is.
+ *
+ * ONE BIND FOR THE WHOLE FRAME. Every admitted texture lives in one atlas, so
+ * the texture never changes across particles and the triangle batch is never
+ * broken by them -- which is what makes 41 quads affordable against a gate
+ * that has no headroom. The source sorts by image to minimise RDP tile loads;
+ * there is nothing here to sort.
+ *
+ * Fails closed at every step: no atlas name, no draw; a texture with no atlas
+ * row, no draw. A particle never draws the wrong image (docs/BUGS.md
+ * Coin->Sparkle, Slash->HitNormal). */
 volatile u32 gNdsParticleTextureUseMask[2];
 volatile u8 gNdsParticleTextureFrameMax[NDS_PARTICLE_TEXTURE_USE_IDS];
 volatile u32 gNdsParticleDrawVisibleCount;
 volatile u32 gNdsParticleDrawVisibleMax;
+volatile u32 gNdsParticleQuadEmitCount;
+volatile u32 gNdsParticleQuadEmitMax;
+volatile u32 gNdsParticleQuadMissCount;
+
+/* Atlas row for (texture, frame), or NULL. A linear scan of 31 rows: the table
+ * is sorted by (texture, frame) and a frame is looked up once per particle, so
+ * at 41 particles a frame this is bounded by ~1,300 compares -- cheaper than
+ * the index table it would take to avoid them. */
+static const NDSParticleQuadFrame *ndsParticleQuadFrameFor(u32 texture_id,
+                                                           u32 frame)
+{
+    u32 index;
+
+    for (index = 0u; index < NDS_PARTICLE_QUAD_FRAME_COUNT; index++)
+    {
+        const NDSParticleQuadFrame *row = &gNdsParticleQuadFrames[index];
+
+        if (row->texture_id == (u8)texture_id)
+        {
+            if (row->frame == (u8)frame)
+            {
+                return row;
+            }
+            if (row->frame > (u8)frame)
+            {
+                return NULL;
+            }
+        }
+        else if (row->texture_id > (u8)texture_id)
+        {
+            return NULL;
+        }
+    }
+    return NULL;
+}
+
+/* The camera basis, once per pass. `right` and `up` span the plane the
+ * billboard lives in, derived from the same CObj eye/at/up the source's own
+ * draw reads (lb/lbparticle.c:1487). Returns FALSE for a degenerate camera --
+ * a zero-length forward or an up parallel to it -- and the pass then draws
+ * nothing rather than emitting NaNs into the geometry engine. */
+#if NDS_R2_PARTICLE_DRAW
+static sb32 ndsParticleCameraBasis(Vec3f *right, Vec3f *up)
+{
+    CObj *cobj = CObjGetStruct(gGCCurrentCamera);
+    Vec3f forward;
+    f32 length;
+
+    if (cobj == NULL)
+    {
+        return FALSE;
+    }
+    forward.x = cobj->vec.at.x - cobj->vec.eye.x;
+    forward.y = cobj->vec.at.y - cobj->vec.eye.y;
+    forward.z = cobj->vec.at.z - cobj->vec.eye.z;
+    length = sqrtf(SQUARE(forward.x) + SQUARE(forward.y) + SQUARE(forward.z));
+    if (length == 0.0F)
+    {
+        return FALSE;
+    }
+    forward.x /= length;
+    forward.y /= length;
+    forward.z /= length;
+
+    right->x = (forward.y * cobj->vec.up.z) - (forward.z * cobj->vec.up.y);
+    right->y = (forward.z * cobj->vec.up.x) - (forward.x * cobj->vec.up.z);
+    right->z = (forward.x * cobj->vec.up.y) - (forward.y * cobj->vec.up.x);
+    length = sqrtf(SQUARE(right->x) + SQUARE(right->y) + SQUARE(right->z));
+    if (length == 0.0F)
+    {
+        return FALSE;
+    }
+    right->x /= length;
+    right->y /= length;
+    right->z /= length;
+
+    /* Re-orthogonalised rather than taken from the CObj: the source's `up` is
+     * a hint, not necessarily perpendicular to the view direction. */
+    up->x = (right->y * forward.z) - (right->z * forward.y);
+    up->y = (right->z * forward.x) - (right->x * forward.z);
+    up->z = (right->x * forward.y) - (right->y * forward.x);
+    return TRUE;
+}
+#endif
 
 void lbParticleDrawTextures(GObj *gobj)
 {
+    Vec3f right;
+    Vec3f up;
     u32 visible = 0u;
+    u32 emitted = 0u;
+    u32 atlas_name;
     u32 link;
 
     gNdsParticleDrawSeamCount++;
+#if NDS_R2_PARTICLE_DRAW
+    atlas_name = ndsRendererHardwareParticleAtlasName();
+    if ((atlas_name != 0u) && (ndsParticleCameraBasis(&right, &up) == FALSE))
+    {
+        atlas_name = 0u;
+    }
+#else
+    /* The census half only. The emit wedged the geometry engine on its first
+     * build and is behind NDS_R2_PARTICLE_DRAW until that is understood; the
+     * interpreter's measured NO-FREEZE full match must not depend on it. */
+    (void)right;
+    (void)up;
+    atlas_name = 0u;
+#endif
 
     for (link = 0u; link < ARRAY_COUNT(sLBParticleStructsAllocLinks); link++)
     {
@@ -895,6 +1008,7 @@ void lbParticleDrawTextures(GObj *gobj)
         }
         for (pc = sLBParticleStructsAllocLinks[link]; pc != NULL; pc = pc->next)
         {
+            const NDSParticleQuadFrame *row;
             u32 id;
 
             if (pc->size == 0.0F)
@@ -913,12 +1027,39 @@ void lbParticleDrawTextures(GObj *gobj)
             {
                 gNdsParticleTextureFrameMax[id] = (u8)(pc->frame_id + 1u);
             }
+            if (atlas_name == 0u)
+            {
+                continue;
+            }
+            row = ndsParticleQuadFrameFor(id, pc->frame_id);
+            if (row == NULL)
+            {
+                /* Admitted set does not carry this one. Draw nothing rather
+                 * than the neighbouring atlas cell. */
+                gNdsParticleQuadMissCount++;
+                continue;
+            }
+            if (ndsRendererSubmitParticleQuad(atlas_name, &pc->pos, pc->size,
+                                              &right, &up, row->x, row->y,
+                                              row->width, row->height) != FALSE)
+            {
+                emitted++;
+            }
         }
+    }
+    if (atlas_name != 0u)
+    {
+        ndsRendererEndParticleQuads();
     }
     gNdsParticleDrawVisibleCount += visible;
     if (visible > gNdsParticleDrawVisibleMax)
     {
         gNdsParticleDrawVisibleMax = visible;
+    }
+    gNdsParticleQuadEmitCount += emitted;
+    if (emitted > gNdsParticleQuadEmitMax)
+    {
+        gNdsParticleQuadEmitMax = emitted;
     }
     ndsParticleRuntimePublishTallies();
 }

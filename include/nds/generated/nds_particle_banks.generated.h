@@ -59,34 +59,51 @@
  * 137152 bytes of the 149347-byte pack are in the file above. */
 #define NDS_PARTICLE_LINKED_BYTES 12195u
 
-/* THE DRAW PATH'S PAYLOAD, and a second encoding of the same texels. The pack
- * above chooses a DS format per texture by measured error; those formats are
- * paletted or alpha-indexed, and the renderer's texture cache uploads GL_RGBA
- * with no palette slot in its key. RGB555+A1 costs 16 bits a texel, so the
- * whole reachable set would be 311,552 bytes against 119,872 free in VRAM_A+B
- * after the battle's pinned static set -- hence a budget, and admission
- * smallest-first, which maximises how many effects have a texture at all.
+/* THE DRAW PATH'S PAYLOAD: one RGB555+A1 atlas, and a second encoding of the
+ * same texels. The pack above chooses a DS format per texture by measured
+ * error; those formats are paletted or alpha-indexed, and the renderer's
+ * texture cache uploads GL_RGBA with no palette slot in its key.
+ *
+ * ONE ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
+ * not bytes: the cache holds 48 and the battle's static set pins 24, while the
+ * admitted set is 31 individual frames. An atlas spends one name -- and one
+ * BIND for every particle in the frame, whatever textures they came from, so
+ * the triangle batch never breaks on a texture change.
+ *
+ * 128x128 follows from that: DS dimensions are powers of two, this is
+ * 16 bits a texel, and VRAM_A+B have 119,872 free after the static set, so
+ * 256x256 does not fit and this is the largest that does. Admission is by
+ * ascending texture size, keeping each candidate only while the whole set
+ * still PACKS -- shelf waste is real, so a byte budget would admit a set that
+ * cannot be laid out.
  *
  * A texture the runtime asks for and does not find here draws nothing; it does
  * not draw something else. gNdsParticleTextureUseMask says which ones a real
  * match reached, and the excluded list is in the generated JSON report by name
- * so raising the budget is an informed decision rather than a hopeful one. */
+ * so growing the atlas is an informed decision rather than a hopeful one. */
 #define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"
-#define NDS_PARTICLE_QUAD_ASSET_BYTES 63744u
-#define NDS_PARTICLE_QUAD_BUDGET_BYTES 65536u
-#define NDS_PARTICLE_QUAD_COUNT 22u
+#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 128u
+#define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 128u
+#define NDS_PARTICLE_QUAD_ASSET_BYTES 32768u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 25344u
+#define NDS_PARTICLE_QUAD_COUNT 16u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 31u
 
-typedef struct NDSParticleQuadTexture
+/* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
+ * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
+ * else. Coordinates are atlas texels, which is what glTexCoord2t16 takes. */
+typedef struct NDSParticleQuadFrame
 {
-    u16 texture_id;   /* SOURCE texture id, so the runtime indexes by pc->texture_id */
-    u16 width;
-    u16 height;
-    u16 frames;
-    u32 offset;       /* byte offset into the RGB555+A1 payload, frame 0 */
-} NDSParticleQuadTexture;
+    u8 texture_id;
+    u8 frame;
+    u8 x;
+    u8 y;
+    u8 width;
+    u8 height;
+} NDSParticleQuadFrame;
 
-extern const NDSParticleQuadTexture
-    gNdsParticleQuadTextures[NDS_PARTICLE_QUAD_COUNT];
+extern const NDSParticleQuadFrame
+    gNdsParticleQuadFrames[NDS_PARTICLE_QUAD_FRAME_COUNT];
 
 /* DS TEXIMAGE_PARAM texture-format field values. */
 #define NDS_PARTICLE_FORMAT_NONE 0u

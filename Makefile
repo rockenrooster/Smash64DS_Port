@@ -609,6 +609,13 @@ NDS_R2_PARTICLE_RUNTIME ?= 0
 # 20x over the bound on the 0.25-2.00 one, and which of those SSB64 visits has
 # never been read off the running game. Off in both shipped blocks; it is a
 # measurement, and it comes out with the commit that wires L7 in or drops it.
+# R2-07 particle DRAW, separate from the runtime flag above because the
+# interpreter is proven and the draw is not. At 1 the atlas is bound and
+# camera-facing quads are emitted; the first build of it wedged the geometry
+# engine (GXSTAT=0e008900, geometry-busy-forever, PC parked in armWaitForIrq),
+# so it stays off until that is understood. NDS_R2_PARTICLE_RUNTIME=1 alone
+# keeps its measured NO-FREEZE full match.
+NDS_R2_PARTICLE_DRAW ?= 0
 NDS_R2_COLLISION_L7_ORACLE ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
@@ -2364,6 +2371,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK32_DRAW_HOT_TEXT $(NDS_TASK32_DRAW_HOT_TEXT)'; \
 		echo '#define NDS_FIGHTER_ANIM_AUDIT $(NDS_FIGHTER_ANIM_AUDIT)'; \
 		echo '#define NDS_FIGHTER_ANIM_CYCLER_KIND $(NDS_FIGHTER_ANIM_CYCLER_KIND)'; \
+		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \

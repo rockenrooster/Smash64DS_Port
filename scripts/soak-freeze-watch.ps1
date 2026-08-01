@@ -567,6 +567,16 @@ try {
             'gNdsParticleTextureUseMask[1]',
             'gNdsParticleDrawVisibleCount',
             'gNdsParticleDrawVisibleMax',
+            # The draw. EmitCount against VisibleCount is the fail-closed
+            # margin, and MissCount names the gap: a particle whose texture is
+            # not in the atlas draws NOTHING, so "no effects" and "wrong
+            # effects" stay distinguishable. AtlasBytes proves the upload ran.
+            'gNdsParticleQuadEmitCount',
+            'gNdsParticleQuadEmitMax',
+            'gNdsParticleQuadMissCount',
+            'gNdsRendererParticleAtlasPrepareCount',
+            'gNdsRendererParticleAtlasFailCount',
+            'gNdsRendererParticleAtlasBytes',
             # WHICH script was refused. Reason 4 means the pack marked the id
             # unreachable and failed closed -- a hole in the reachability
             # derivation, not a runtime bug. 1/2/3 mean the bank itself is

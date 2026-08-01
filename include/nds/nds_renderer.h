@@ -1187,6 +1187,30 @@ void ndsRendererHardwareResetSceneTextureVram(void);
 extern volatile u32 gNdsRendererSceneTextureVramResetEnable;
 extern volatile u32 gNdsRendererSceneTextureVramResetCount;
 s32 ndsRendererHardwarePrepareBattleStaticTextures(void);
+
+#if NDS_R2_PARTICLE_RUNTIME
+/* R2-07 particle draw path. One RGB555+A1 atlas, one GL name, one bind for
+ * every particle in the frame -- see the definition for why an atlas rather
+ * than a texture per frame. Prepared once per battle beside the static set and
+ * pinned; the name is 0 until then, and the draw seam declines on 0 rather
+ * than binding something else. */
+s32 ndsRendererHardwarePrepareParticleAtlas(void);
+u32 ndsRendererHardwareParticleAtlasName(void);
+void ndsRendererHardwareDiscardParticleAtlas(void);
+/* One camera-facing quad in world space. The caller supplies the camera basis
+ * because it reads the CObj the source's own draw reads, and because deriving
+ * it is per-frame work that must not repeat per particle. The batch opens on
+ * the first quad and closes in ndsRendererEndParticleQuads, so a whole
+ * particle pass is one glBegin and one bind. */
+s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
+                                  const Vec3f *right, const Vec3f *up,
+                                  u32 atlas_x, u32 atlas_y,
+                                  u32 atlas_w, u32 atlas_h);
+void ndsRendererEndParticleQuads(void);
+extern volatile u32 gNdsRendererParticleAtlasPrepareCount;
+extern volatile u32 gNdsRendererParticleAtlasFailCount;
+extern volatile u32 gNdsRendererParticleAtlasBytes;
+#endif
 void ndsRendererHardwareArmBattleStaticTextures(void);
 /* R2-03 E48 lab probe. Latches the generic colour path's per-frame branch counts
  * at two named frames and clears the running ones. Declared unconditionally so

@@ -10,6 +10,9 @@
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_task49_gx_differ.h>
+#if NDS_R2_PARTICLE_RUNTIME
+#include <nds/generated/nds_particle_banks.generated.h>
+#endif
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_HW_TRIANGLES 0
@@ -10921,6 +10924,249 @@ fail:
 #endif
 }
 
+#if NDS_R2_PARTICLE_RUNTIME
+/* R2-07 particle draw path -- the upload half.
+ *
+ * ONE atlas, one GL name, and therefore ONE bind for every particle in a
+ * frame. That is the whole reason it is an atlas: GL names are the binding
+ * constraint (the cache holds NDS_RENDERER_HW_TEXTURE_CACHE_COUNT = 48 and the
+ * battle's static set pins 24 of them, against 31 admitted particle frames),
+ * and a per-frame scheme would break the triangle batch on every texture
+ * change. The generator's shelf packer sized it to 128x128 so the upload fits
+ * sNdsRendererHardwareTextureScratch exactly and needs no new RAM -- a
+ * dedicated staging buffer would be sixteen taskman arena steps.
+ *
+ * Pinned like the static set, so the cache's LRU cannot evict it mid-match. It
+ * is allocated AFTER them and therefore lands above their VRAM span, which is
+ * why this does not disturb the static set's first/end address assertions. */
+static int sNdsRendererParticleAtlasName;
+static u32 sNdsRendererParticleAtlasPrepared;
+volatile u32 gNdsRendererParticleAtlasPrepareCount;
+volatile u32 gNdsRendererParticleAtlasFailCount;
+volatile u32 gNdsRendererParticleAtlasBytes;
+
+s32 ndsRendererHardwarePrepareParticleAtlas(void)
+{
+    FILE *file = NULL;
+    NDSRendererHardwareTextureCacheEntry *entry;
+    int size_x;
+    int size_y;
+
+    if (sNdsRendererParticleAtlasPrepared != 0u)
+    {
+        return TRUE;
+    }
+    gNdsRendererParticleAtlasPrepareCount++;
+    if ((NDS_PARTICLE_QUAD_ASSET_BYTES >
+         sizeof(sNdsRendererHardwareTextureScratch)) ||
+        (ndsRendererHardwareTextureSizeEnum(
+             NDS_PARTICLE_QUAD_ATLAS_WIDTH, &size_x) == FALSE) ||
+        (ndsRendererHardwareTextureSizeEnum(
+             NDS_PARTICLE_QUAD_ATLAS_HEIGHT, &size_y) == FALSE))
+    {
+        goto fail;
+    }
+    file = ndsRendererHardwareFencedTextureFopen(
+        NDS_PARTICLE_QUAD_ASSET_PATH, "rb");
+    if (file == NULL)
+    {
+        goto fail;
+    }
+    if (ndsRendererHardwareFencedTextureFread(
+            sNdsRendererHardwareTextureScratch, 1,
+            NDS_PARTICLE_QUAD_ASSET_BYTES, file) !=
+        NDS_PARTICLE_QUAD_ASSET_BYTES)
+    {
+        goto fail;
+    }
+    if (ndsRendererHardwareFencedTextureFclose(file) != 0)
+    {
+        file = NULL;
+        goto fail;
+    }
+    file = NULL;
+
+    entry = ndsRendererHardwareAllocTexture();
+    if (entry == NULL)
+    {
+        goto fail;
+    }
+    if ((entry->name == 0) &&
+        (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0))
+    {
+        goto fail;
+    }
+    ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+    if (ndsRendererHardwareFencedGlTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGBA, size_x, size_y, 0,
+            TEXGEN_TEXCOORD, sNdsRendererHardwareTextureScratch) == 0)
+    {
+        (void)ndsRendererHardwareReleaseTexture(entry);
+        goto fail;
+    }
+    /* THE KEY MUST BE ERASED, not merely left unset. ndsRendererHardwareAllocTexture
+     * recycles an entry, so `key`, `key_hash` and `key_generation` still hold
+     * whatever the previous occupant had -- and a source display-list lookup
+     * that happens to match them would bind the ATLAS in place of the texture
+     * it asked for. The first build of this left them alone and the run
+     * reported gNdsRendererBattleStaticTextureViolationCount 1 with stage
+     * rebuilds 2 -> 197: the stage kept finding a stale key that now pointed
+     * at the atlas, so its prepared run was invalidated ~197 times a match.
+     *
+     * Zeroing the key and dropping the entry out of the hash means nothing can
+     * reach the atlas except ndsRendererHardwareParticleAtlasName. */
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    ndsRendererHardwareTextureLookupRemove(entry);
+#endif
+    memset(&entry->key, 0, sizeof(entry->key));
+    entry->key_generation = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    entry->key_hash = 0u;
+#endif
+    entry->static_record_plus1 = 0u;
+    entry->static_owner_mask = 0u;
+    entry->params = (u32)glGetTexParameter();
+    entry->last_used_frame = 0u;
+    entry->pinned = TRUE;
+    entry->ready = TRUE;
+    sNdsRendererParticleAtlasName = entry->name;
+    sNdsRendererParticleAtlasPrepared = TRUE;
+    gNdsRendererParticleAtlasBytes = NDS_PARTICLE_QUAD_ASSET_BYTES;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    return TRUE;
+
+fail:
+    if (file != NULL)
+    {
+        (void)ndsRendererHardwareFencedTextureFclose(file);
+    }
+    sNdsRendererParticleAtlasName = 0;
+    sNdsRendererParticleAtlasPrepared = FALSE;
+    gNdsRendererParticleAtlasBytes = 0u;
+    gNdsRendererParticleAtlasFailCount++;
+    return FALSE;
+}
+
+u32 ndsRendererHardwareParticleAtlasName(void)
+{
+    return (sNdsRendererParticleAtlasPrepared != 0u)
+               ? (u32)sNdsRendererParticleAtlasName
+               : 0u;
+}
+
+void ndsRendererHardwareDiscardParticleAtlas(void)
+{
+    sNdsRendererParticleAtlasName = 0;
+    sNdsRendererParticleAtlasPrepared = FALSE;
+    gNdsRendererParticleAtlasBytes = 0u;
+}
+
+/* World coordinate -> v16. The scene's modelview carries a
+ * NDS_RENDERER_HW_WORLD_UNIT_SHIFT (=8) scale, so one world unit is
+ * 2^(12-8) = 16 in vertex space -- the same relation
+ * ndsRendererHardwareCoordToV16 applies to integer source vertices, restated
+ * for the f32 the particle interpreter holds. Getting this wrong does not
+ * fail; it draws the effects at 1/256 or 256x scale, which is why it is
+ * spelled out rather than folded into a literal. */
+static v16 ndsRendererParticleWorldToV16(f32 value)
+{
+    s32 scaled = (s32)(value * (f32)(1 << (12u -
+                                           NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+
+    if (scaled > 32767) { return (v16)32767; }
+    if (scaled < -32768) { return (v16)-32768; }
+    return (v16)scaled;
+}
+
+static u32 sNdsRendererParticleQuadOpen;
+
+/* One quad, camera-facing, in world space. `right` and `up` are the camera
+ * basis the caller derived from the CObj -- computed there because that is
+ * where the source's own draw reads the camera, and because it is per-frame
+ * work that must not be repeated per particle.
+ *
+ * The batch is opened lazily on the first quad and closed by
+ * ndsRendererEndParticleQuads, so the whole particle pass is ONE glBegin and
+ * ONE texture bind however many particles it carries. */
+s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
+                                  const Vec3f *right, const Vec3f *up,
+                                  u32 atlas_x, u32 atlas_y,
+                                  u32 atlas_w, u32 atlas_h)
+{
+    f32 rx;
+    f32 ry;
+    f32 rz;
+    f32 ux;
+    f32 uy;
+    f32 uz;
+    u32 corner;
+
+    if ((atlas_name == 0u) || (pos == NULL) || (right == NULL) || (up == NULL))
+    {
+        return FALSE;
+    }
+    if (sNdsRendererParticleQuadOpen == 0u)
+    {
+        ndsRendererHardwareEndBatch();
+        glEnable(GL_TEXTURE_2D);
+        ndsRendererHardwareBindTextureName(NULL, atlas_name);
+        /* Translucent, unlit, both faces: a billboard has no meaningful
+         * winding and the source draws these with the RDP's blender rather
+         * than the lighting pipeline. */
+        ndsRendererHardwareSetPolyFmt(
+            POLY_ALPHA(31) | POLY_CULL_NONE | POLY_ID(0));
+        glBegin(GL_QUAD);
+        sNdsRendererParticleQuadOpen = TRUE;
+    }
+
+    rx = right->x * size;
+    ry = right->y * size;
+    rz = right->z * size;
+    ux = up->x * size;
+    uy = up->y * size;
+    uz = up->z * size;
+
+    /* Counter-clockwise from the bottom-left, with T increasing downward to
+     * match the atlas rows. */
+    for (corner = 0u; corner < 4u; corner++)
+    {
+        f32 sx = ((corner == 0u) || (corner == 3u)) ? -1.0f : 1.0f;
+        f32 sy = (corner < 2u) ? -1.0f : 1.0f;
+        u32 texel_s = atlas_x + (((corner == 0u) || (corner == 3u))
+                                     ? 0u : atlas_w);
+        u32 texel_t = atlas_y + ((corner < 2u) ? atlas_h : 0u);
+
+        glTexCoord2t16((t16)(texel_s << 4), (t16)(texel_t << 4));
+        glVertex3v16(
+            ndsRendererParticleWorldToV16(pos->x + (rx * sx) + (ux * sy)),
+            ndsRendererParticleWorldToV16(pos->y + (ry * sx) + (uy * sy)),
+            ndsRendererParticleWorldToV16(pos->z + (rz * sx) + (uz * sy)));
+    }
+    return TRUE;
+}
+
+void ndsRendererEndParticleQuads(void)
+{
+    if (sNdsRendererParticleQuadOpen != 0u)
+    {
+        /* NO glEnd(). Task 29 removed libnds's dummy glEnd FIFO writes from
+         * this renderer and check-gbi-decode-fixtures.ps1 pins the count at
+         * one, because a primitive group ends when the NEXT glBegin starts --
+         * an extra FIFO write desynchronises the command stream instead of
+         * closing anything. The first build of this emitter called it and hung
+         * the ROM with GXSTAT=0e008900, geometry-engine-busy forever.
+         *
+         * So the group is left open exactly as ndsRendererHardwareEndBatch
+         * leaves its own, and the tracker is told nothing is open so a later
+         * reuse check cannot match stale state. */
+        sNdsRendererParticleQuadOpen = FALSE;
+        ndsRendererHardwareEndBatch();
+        sNdsRendererHardwareBoundTextureName = 0u;
+        sNdsRendererHardwareActiveTextureEntry = NULL;
+    }
+}
+#endif /* NDS_R2_PARTICLE_RUNTIME */
+
 void ndsRendererHardwareArmBattleStaticTextures(void)
 {
     if ((gNdsRendererBattleStaticTextureEnabled != 0u) &&
@@ -15706,6 +15952,45 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
 {
     return FALSE;
 }
+
+#if NDS_R2_PARTICLE_RUNTIME
+volatile u32 gNdsRendererParticleAtlasPrepareCount;
+volatile u32 gNdsRendererParticleAtlasFailCount;
+volatile u32 gNdsRendererParticleAtlasBytes;
+
+/* The particle atlas is a hardware-texture object; the software renderer has
+ * no texture cache to hold it, so the draw seam gets a name of 0 and declines
+ * rather than the whole configuration failing to link. */
+s32 ndsRendererHardwarePrepareParticleAtlas(void)
+{
+    gNdsRendererParticleAtlasPrepareCount++;
+    gNdsRendererParticleAtlasFailCount++;
+    return FALSE;
+}
+
+u32 ndsRendererHardwareParticleAtlasName(void)
+{
+    return 0u;
+}
+
+void ndsRendererHardwareDiscardParticleAtlas(void)
+{
+}
+
+s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
+                                  const Vec3f *right, const Vec3f *up,
+                                  u32 atlas_x, u32 atlas_y,
+                                  u32 atlas_w, u32 atlas_h)
+{
+    (void)atlas_name; (void)pos; (void)size; (void)right; (void)up;
+    (void)atlas_x; (void)atlas_y; (void)atlas_w; (void)atlas_h;
+    return FALSE;
+}
+
+void ndsRendererEndParticleQuads(void)
+{
+}
+#endif
 
 void ndsRendererHardwareArmBattleStaticTextures(void)
 {

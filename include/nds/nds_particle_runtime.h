@@ -52,6 +52,14 @@ extern volatile u8 gNdsParticleTextureFrameMax[NDS_PARTICLE_TEXTURE_USE_IDS];
 extern volatile u32 gNdsParticleDrawVisibleCount;  /* particles past the clip  */
 extern volatile u32 gNdsParticleDrawVisibleMax;    /* worst single frame       */
 
+/* The draw itself. Emit vs visible is the fail-closed margin: a particle whose
+ * texture is not in the atlas draws NOTHING rather than a neighbouring cell,
+ * and MissCount says how often, so "no effects appeared" and "effects appeared
+ * wrong" can never be confused for one another. */
+extern volatile u32 gNdsParticleQuadEmitCount;
+extern volatile u32 gNdsParticleQuadEmitMax;
+extern volatile u32 gNdsParticleQuadMissCount;
+
 /* Mirrors of the interpreter's own live/highwater tallies, published so a run
  * can read them without a symbol lookup into the imported translation unit. */
 extern volatile u32 gNdsParticleStructsLive;

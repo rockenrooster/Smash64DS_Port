@@ -128,17 +128,20 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # real match was measured needing (textures 22 and 27) and still leaves 56,128
 # bytes of VRAM unclaimed. A texture that is not admitted draws NOTHING -- it
 # never draws something else -- so the excluded list is reported by name.
-if (([int64]$report.quads.budget_bytes -ne 65536) -or
-    ([int64]$report.quads.bytes -ne 63744) -or
-    (@($report.quads.admitted).Count -ne 22) -or
-    (@($report.quads.excluded).Count -ne 9)) {
+if (([int64]$report.quads.atlas_width -ne 128) -or
+    ([int64]$report.quads.atlas_height -ne 128) -or
+    ([int64]$report.quads.atlas_bytes -ne 32768) -or
+    ([int64]$report.quads.bytes -ne 25344) -or
+    ([int64]$report.quads.frame_count -ne 31) -or
+    (@($report.quads.admitted).Count -ne 16) -or
+    (@($report.quads.excluded).Count -ne 15)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.bytes) B, " +
         "$(@($report.quads.admitted).Count) admitted, " +
         "$(@($report.quads.excluded).Count) excluded.")
 }
-if ([int64]$report.quads.bytes -gt [int64]$report.quads.budget_bytes) {
-    throw 'Particle quad sheet exceeded its own budget.'
+if ([int64]$report.quads.bytes -gt [int64]$report.quads.atlas_bytes) {
+    throw 'Particle quad atlas holds more texels than it has.'
 }
 # The two a live match actually drew. If admission order ever drops one of
 # these the effects stop appearing and nothing else would say so.
@@ -231,9 +234,12 @@ foreach ($token in @(
     '#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 136256u',
     '#define NDS_PARTICLE_LINKED_BYTES 12195u',
     '#define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"',
-    '#define NDS_PARTICLE_QUAD_ASSET_BYTES 63744u',
-    '#define NDS_PARTICLE_QUAD_BUDGET_BYTES 65536u',
-    '#define NDS_PARTICLE_QUAD_COUNT 22u',
+    '#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 128u',
+    '#define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 128u',
+    '#define NDS_PARTICLE_QUAD_ASSET_BYTES 32768u',
+    '#define NDS_PARTICLE_QUAD_TEXEL_BYTES 25344u',
+    '#define NDS_PARTICLE_QUAD_COUNT 16u',
+    '#define NDS_PARTICLE_QUAD_FRAME_COUNT 31u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
     '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x1973edecu',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
@@ -310,8 +316,8 @@ if (Test-Path -LiteralPath $assetPath) {
 $quadState = 'not built'
 if (Test-Path -LiteralPath $quadPath) {
     $quadBytes = (Get-Item -LiteralPath $quadPath).Length
-    if ($quadBytes -ne 63744) {
-        throw "Particle quad payload is $quadBytes bytes, expected 63744."
+    if ($quadBytes -ne 32768) {
+        throw "Particle quad atlas is $quadBytes bytes, expected 32768."
     }
     $quadState = 'built'
 }
@@ -326,4 +332,4 @@ Write-Output (('Particle bank pack passed: 87/119 reachable efcommon scripts, ' 
     '(10912 script bank + 1283 index) of 210320 B arena headroom (198125 B ' +
     'spare) plus 137152 B NitroFS payload, 7 bit-exact CI4 textures, linear ' +
     "texel order pinned, .inc $incState, payload $assetState, " +
-    "quads 22/31 at 63744 B of 65536 $quadState."))
+    "quad atlas 128x128, 16/31 textures in 31 frames at 77.3%% $quadState."))

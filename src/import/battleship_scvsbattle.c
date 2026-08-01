@@ -156,8 +156,22 @@ static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
 static void ndsSCVSBattleBeginSceneTextures(void)
 {
     ndsIFCommonNativeOamReleaseCloudTextures();
+#if NDS_R2_PARTICLE_DRAW
+    /* Before the reset, for the reason above: glResetTextures invalidates
+     * every name, so anything holding one has to let go first. */
+    ndsRendererHardwareDiscardParticleAtlas();
+#endif
     ndsRendererHardwareResetSceneTextureVram();
     (void)ndsRendererHardwarePrepareBattleStaticTextures();
+#if NDS_R2_PARTICLE_DRAW
+    /* After the static set so the atlas lands above its VRAM span. That is not
+     * yet enough: with this live the run reports
+     * gNdsRendererBattleStaticTextureViolationCount 1 and stage rebuilds
+     * 2 -> 197, so the atlas is disturbing static-texture ownership even though
+     * the upload itself succeeds (AtlasBytes 32,768, FailCount 0). Behind
+     * NDS_R2_PARTICLE_DRAW with the emit until that is understood. */
+    (void)ndsRendererHardwarePrepareParticleAtlas();
+#endif
     (void)ndsIFCommonNativeOamPrepareClouds();
 }
 

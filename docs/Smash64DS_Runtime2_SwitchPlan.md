@@ -1,4 +1,5 @@
 # Smash64DS Runtime 2 — Plan of Record
+Read `PROJECT_GOAL.md`
 
 The single Runtime 2 document: charter, design rules, budgets, phase plan,
 and the definition of the switch.
@@ -541,9 +542,12 @@ The honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
    above 30 FPS, so if the real scripts cannot fit, a cheaper source-derived
    approximation with the visible delta recorded is the contract-compliant
    answer.
-4. **Mario CPU vs Fox CPU on Dream Land, Full Match (including testing Sudden Death via force switch)** - 
+   
+   
+** STRESS TEST Gate ** Mario CPU vs Fox CPU on Dream Land, Full Match (including testing Sudden Death via force switch) - 
    match stress test gameplay start to finish must not exceed 1.12M P95 (minus loading states)
    pressing start at results screen restarts the P1 match, up to infinite successive matches.
+   **Optimization ideas are contained here to help get under 1.12M P95 Gate: ".\docs\optimization\OPTIMIZATION_IDEAS.md"**
 
 
 Do **not** resolve any of it by widening the gate. The gate is the product
