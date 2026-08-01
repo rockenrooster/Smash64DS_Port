@@ -3,6 +3,9 @@
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_task37_profile.h>
+#if NDS_R2_COLLISION_L7_ORACLE
+#include <nds/nds_r2_collision_oracle.h>
+#endif
 
 #if NDS_R2_PATH
 #include <nds/nds_r2_battle.h>
@@ -4811,6 +4814,14 @@ static void ndsBattlePlayablePresentFrame(void)
      * owns its only consumer and rewinds it itself), and rewinding an arena the
      * port may hold pointers into would be new risk bought for no measured
      * need. Add it only if a capture ever shows taskman.c:344 instead of :338. */
+#if NDS_R2_COLLISION_L7_ORACLE
+    /* R2-07 L7 step one, sampled HERE and not later: the invert latches the
+     * oracle keys on are set by this frame's hit detection and knocked down by
+     * ndsFTParamsInvalidateFighterParts as the NEXT tick moves joints, so this
+     * is the last point at which "the joints collision inverted this frame" is
+     * still readable. Read-only; off in both shipped blocks. */
+    ndsR2CollisionOracleSampleFrame();
+#endif
     func_80004AB0();
     ndsPlatformBeginFrame();
     ndsSObjPreviewBeginFrame();

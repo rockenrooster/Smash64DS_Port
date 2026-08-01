@@ -1464,6 +1464,22 @@ static void ndsFighterStructResetPool(void)
     sNdsFighterStructPoolUsedMask = 0u;
 }
 
+/* DO NOT ADD AN ACCESSOR FOR sNdsFighterPartsPool. R2-07 L7's first draft did,
+ * to give its oracle a flat array to walk, and the linker map answered a
+ * question the board had got wrong: in the shipping-shaped configuration this
+ * pool IS NOT LINKED. `.bss.sNdsFighterPartsPool` contributes 0 bytes to
+ * build-tickhud and 33,152 the moment anything outside references it, because
+ * ndsFighterPartsSyncDObj and ndsFighterStructPopulateJointsRecurse are
+ * eliminated there too (nm finds sNdsFighterStructPool and not this one).
+ *
+ * Two consequences, both load-bearing. The FTParts collision reads through
+ * ftGetParts do NOT come from here in that build, so "the port already owns the
+ * structure collision reads" is false for the ROM that ships -- anything hooking
+ * L7 on this pool would hook an array nothing populates. And a reference to it
+ * costs 33,152 bytes of image, which is eight taskman arena steps: enough on its
+ * own to drop the battle under ifCommonSetMaxNumGObj's 25 KiB latch. Walk the
+ * live GObj/DObj tree instead; battleship_gmcollision.c does. */
+
 static FTStruct *ndsFighterStructAlloc(u32 player)
 {
     FTStruct *fp;

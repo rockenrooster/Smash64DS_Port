@@ -558,6 +558,20 @@ try {
             'gNdsParticleTransformsMax',
             'gNdsParticleRootSpawnCount',
             'gNdsRendererTask36ReplayArenaStaleCount',
+            # R2-07 L7 step one, present only at NDS_R2_COLLISION_L7_ORACLE=1.
+            # MaxDevQ12[0..2] are the answer, in 1/4096 world units at probe
+            # offsets of 1/4/16 units; the gate is 82 (0.0200 world units).
+            # ScaleMin/Max settle which falsifier domain SSB64 actually visits
+            # -- inside 0.90-1.10 (3686..4506) the kernel is already proven,
+            # out at 0.25-2.00 (1024..8192) it is not.
+            'gNdsR2CollisionOracleSamples',
+            'gNdsR2CollisionOracleSingular',
+            'gNdsR2CollisionOracleMaxDevQ12[0]',
+            'gNdsR2CollisionOracleMaxDevQ12[1]',
+            'gNdsR2CollisionOracleMaxDevQ12[2]',
+            'gNdsR2CollisionOracleOverBoundCount',
+            'gNdsR2CollisionOracleScaleMinQ12',
+            'gNdsR2CollisionOracleScaleMaxQ12',
             # THE FGM ALLOWLIST, made visible on any natural run. A cue the game
             # asks for and the pack does not carry fails closed and is silent,
             # which is how five announcer lines went missing without a single

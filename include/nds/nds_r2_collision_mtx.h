@@ -38,10 +38,31 @@
  * That domain is reported, not gated, and which one SSB64 actually visits is
  * still unmeasured (scripts/census-fighter-gameplay-joints.ps1).
  *
- * Green on the bound is not clearance to wire this in. It still has to be
- * measured against real hurtbox dimensions and real joint scales, and the
- * `#define` include seam renames a decomp definition and its internal call sites
- * together, so these functions cannot simply be swapped underneath their callers.
+ * MEASURED ON THE RUNNING GAME 2026-07-31, which is what that clearance was
+ * waiting on (NDS_R2_COLLISION_L7_ORACLE, 460 samples over a natural mode-163
+ * match, every one a joint collision actually inverted that frame):
+ *
+ *   real joint scale         1.1138 - 1.1199   (ScaleMin/MaxQ12 4562 - 4587)
+ *   deviation, probe  1 unit  0.00049 world units   (MaxDevQ12 2)
+ *   deviation, probe  4 units 0.00122               (MaxDevQ12 5)
+ *   deviation, probe 16 units 0.00513               (MaxDevQ12 21)
+ *   over the 0.0200 bound     0 of 460
+ *   singular joints           0
+ *
+ * Two things settled. The scale domain is a SINGLE scale, ~1.12, spanning
+ * 0.006 -- so the 0.25-2.00 sweep that reads 0.427738 is not a domain SSB64
+ * visits, and the gated 0.90-1.10 sweep is near-right but centred slightly low;
+ * it should be re-centred on 1.11-1.12. And the synthetic figure is
+ * PESSIMISTIC: 0.016609 gated against 0.00513 measured, so the real margin is
+ * about 4x the bound at the furthest probe rather than the 1.2x the falsifier
+ * implies. The arithmetic is cleared.
+ *
+ * What is NOT cleared is the wiring, and it is a different problem: the
+ * `#define` include seam renames a decomp definition and its internal call
+ * sites together, so these functions cannot be swapped underneath their
+ * callers. The hook is the invert latch (board, R2-07 L7) -- and note the board
+ * names sNdsFighterPartsPool as the place to fill it, which the linker map
+ * refutes: that pool is not linked in the shipping-shaped build at all.
  *
  * Earlier revisions of this comment quoted 0.0226 compose and 0.3706 invert.
  * Both were stale -- re-measured on the matched control they are 0.017817 and

@@ -602,6 +602,14 @@ NDS_TASK39_FX_SHIELD ?= 0
 # block: the DS textured-quad draw path is a separate step, so at 1 the scripts
 # execute and nothing new is drawn yet.
 NDS_R2_PARTICLE_RUNTIME ?= 0
+# R2-07 L7 step one. Read-only oracle: re-does the collision joint inverse in
+# 20.12 alongside the decomp's float one and records the deviation on the joints
+# a real match inverts. Decides nothing and changes nothing -- it exists because
+# nds_r2_collision_mtx.h is green on a SYNTHETIC 0.90-1.10 scale sweep and
+# 20x over the bound on the 0.25-2.00 one, and which of those SSB64 visits has
+# never been read off the running game. Off in both shipped blocks; it is a
+# measurement, and it comes out with the commit that wires L7 in or drops it.
+NDS_R2_COLLISION_L7_ORACLE ?= 0
 # Task 44 stage steady-state excision: generation-based admission, dense
 # rigid/dynamic binding lists, and the hoisted GX capture-active test. Requires
 # the Task 36 hardware-compose stage owner; meaningless without it.
@@ -2347,6 +2355,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK32_DRAW_HOT_TEXT $(NDS_TASK32_DRAW_HOT_TEXT)'; \
 		echo '#define NDS_FIGHTER_ANIM_AUDIT $(NDS_FIGHTER_ANIM_AUDIT)'; \
 		echo '#define NDS_FIGHTER_ANIM_CYCLER_KIND $(NDS_FIGHTER_ANIM_CYCLER_KIND)'; \
+		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_TASK39_FX_SHIELD $(NDS_TASK39_FX_SHIELD)'; \

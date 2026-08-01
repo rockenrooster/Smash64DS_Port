@@ -2197,6 +2197,50 @@ diagnostic, gating both buffers on `!NDS_RENDERER_HW_TRIANGLES` returns 307,200
 bytes to the arena — 75 pages of arena sizing loop, against an SD margin that is
 currently one page.
 
+### R2-07 L7 — the arithmetic is CLEARED on the real domain, and the named hook does not exist (2026-07-31, evening)
+
+The SwitchPlan's own next action. The kernel was green on a *synthetic* sweep and
+its header said so: *"It still has to be measured against real hurtbox dimensions
+and real joint scales."* `NDS_R2_COLLISION_L7_ORACLE=1` is that measurement — a
+read-only pass after the gameplay tick over every part whose invert latch the
+decomp set this frame, re-doing the inverse in 20.12 and comparing against the
+decomp's own `gmCollisionGetWorldPosition`. 460 samples, one natural mode-163
+match, NO-FREEZE, arena unchanged at 1,290,240:
+
+| | measured | falsifier | bound |
+|---|---|---|---|
+| joint scale | **1.1138 – 1.1199** | gated 0.90–1.10 | — |
+| deviation, probe 1 unit | **0.00049** | 0.016609 | 0.0200 |
+| deviation, probe 4 units | **0.00122** | " | " |
+| deviation, probe 16 units | **0.00513** | " | " |
+| over bound | **0 of 460** | — | — |
+| singular joints | **0** | — | — |
+
+**The real domain is one scale, ~1.12, spanning 0.006.** The 0.25–2.00 sweep that
+reads 0.427738 is not a domain SSB64 visits; the gated sweep is near-right but
+centred slightly low and should move to 1.11–1.12. And the synthetic number is
+**pessimistic** — 0.016609 against 0.00513 measured, so the margin at the
+furthest probe is ~4x the bound, not the 1.2x the falsifier implies.
+**L7's arithmetic is cleared. Only the wiring is left.**
+
+**AND THE HOOK THIS ROW NAMES DOES NOT EXIST IN THE SHIPPING BUILD.** The row
+below concludes "the port already owns the structure collision reads" because
+`ftGetParts` resolves to `sNdsFighterPartsPool`. The linker map refutes it:
+`.bss.sNdsFighterPartsPool` contributes **0 bytes** to `build-tickhud` and
+**33,152** the instant anything outside references it — `ndsFighterPartsSyncDObj`
+and `ndsFighterStructPopulateJointsRecurse` are eliminated there too, and `nm`
+finds `sNdsFighterStructPool` but not this one. Anything hooking L7 on that pool
+would fill an array nothing populates. The oracle walks
+`gGCCommonLinks[nGCCommonLinkIDFighter]` → `gcGetTreeDObjNext` → `ftGetParts`
+instead, which is live in every configuration and costs no storage: **+2,260
+bytes** against the pool draft's +35,428.
+
+That 33,152 is also a standing warning. It is **eight arena steps**, and the
+first oracle draft dropped the battle straight under `ifCommonSetMaxNumGObj`'s
+25 KiB latch — the same failure the particle runtime hits, reached by adding an
+*instrument*. The arena is now tight enough that measurement itself has to be
+sized. Check `mapdiff` on any new lab flag before running it.
+
 ### R2-07 L7 — kernel GREEN, seam FOUND at the entry surface (2026-07-31, later)
 
 Supersedes the RED status below on both counts.
