@@ -669,6 +669,20 @@ try {
             'gNdsR2StageRejectCounts[4]',
             'gNdsR2StageRejectCounts[5]',
             'gNdsR2StageRejectCounts[6]',
+            # The LAST link in that chain, and it already existed: R2-07 E2
+            # ungated the reason mask and a first-rejection cache census on
+            # NDS_R2_STAGE_ROUTE_PROBE for exactly this question. TEXIMAGE in
+            # the mask means the eviction retry ran out of things to evict,
+            # which is two different failures with two different fixes --
+            # texture VRAM full (bytes) or every slot pinned/touched-this-frame
+            # (slots) -- and the census separates them.
+            'gNdsRendererProfileTextureRejectReasonMask',
+            'gNdsR2TexRejectCensusValid',
+            'gNdsR2TexRejectCensusFree',
+            'gNdsR2TexRejectCensusLive',
+            'gNdsR2TexRejectCensusPinned',
+            'gNdsR2TexRejectCensusThisFrame',
+            'gNdsR2TexRejectCensusEvictable',
             # BUGS.md: "sometimes Mario's fireballs don't spawn". These two make
             # the report falsifiable without a new probe -- the import already
             # counts both sides of the call (battleship_mario_fireball.c).

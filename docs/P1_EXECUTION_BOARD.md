@@ -136,14 +136,35 @@ coverage cut (9 of 31 textures) bought nothing and is reverted rather than
 kept. What survived the experiment is `QUAD_MEASURED_LIVE`: admitting the
 measured set first is correct at any sheet size and is free.
 
-**So the next question is what that resolve actually consults.** It is not
-capacity, not entries (48 slots, 28 in use), not the reuse key, and not any
-other refusal site. Candidates the atlas prepare touches and the resolve might
-read: the zeroed `entry->key` / `key_generation` / `key_hash`, the lookup
-removal, or the `sNdsRendererHardwareActiveTextureEntry = NULL` the quad pass
-leaves behind while the hardware is still bound to the atlas. Read
-`ndsRendererHardwareResolveStageSourceFrameTexture` against the atlas prepare
-before proposing anything else.
+**The last link was already instrumented.** R2-07 E2 ungated the texture reject
+mask and a first-rejection cache census on `NDS_R2_STAGE_ROUTE_PROBE` for
+exactly this chain; the symbols only had to be read:
+
+```
+gNdsRendererProfileTextureRejectReasonMask 4096   (TEXIMAGE)
+census at the first rejection:
+  Free 7   Live 41   Pinned 25   ThisFrame 16   Evictable 0
+```
+
+TEXIMAGE means `glTexImage2D` refused and the eviction retry then ran out of
+things to evict. **Nothing is evictable**: of 41 live entries, 25 are pinned
+(24 static + the atlas) and the other 16 were touched this frame. The control
+runs the same working set with 24 pinned and does not reject, so the entire
+difference is **one pinned entry and the VRAM block behind it**.
+
+And since 128x64 rejected identically to 128x128, the shortfall is not the
+sheet's byte count — it is where a 16-32 KB block lands in libnds's per-bank
+splitting. The same allocator has already refused a 4,096-byte upload with
+268,800 free (`PORTING.md`).
+
+**Two candidates, both cheap, neither guessed:**
+1. **Shrink to a small size class.** The measured live set is two textures
+   (22 at 16x16x2 frames, 27 at 16x8), so 64x64 RGB555+A1 = **8,192 bytes**
+   holds it with room. If a small block stops splitting the run, that is the
+   answer and it costs one generator constant.
+2. **Move the atlas out of the shared pool.** It is one pinned resident with a
+   fixed size and a scene lifetime — exactly the thing that should own its own
+   VRAM rather than compete for the cache's.
 
 Until then `NDS_R2_PARTICLE_DRAW` stays 0: the draw is correct (90,165 quads,
 zero atlas misses, NO-FREEZE, pools 41/48 and 8/10) and unshippable.

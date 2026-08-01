@@ -85,24 +85,27 @@ the control it was built from. The pacing is destroyed anyway: 196 of 566 frames
 against 4.** Read the histogram; a P95 alone calls this a win because the 128-sample window sits in a
 quiet stretch.
 
-**Fully attributed, both ends measured:** the atlas takes 32,768 B of texture VRAM →
-`ndsRendererHardwareResolveStageSourceFrameTexture` fails about one frame in ten (reject **site 2, 196
-times**) → `PrepareRun` FALSE → the native stage owner rejects → `r2_prepared_valid = 0` → 197 rebuilds,
-each drawing that frame through the generic renderer. Every other key component and refusal site is 0.
-**The fix is sized by the same run:** `gNdsParticleTextureUseMask` = `0x08400000`, so a live match draws
-**three** source textures (22/23/26) while the atlas is built for the 16-texture static reachability set.
-Admit by the measured set, and/or A3I5 at 8 bpp (16,384 B + a 32-entry palette).
+**Fully attributed, end to end, all counted:** atlas resident →
+`ndsRendererHardwareResolveStageSourceFrameTexture` fails ~1 frame in 10 (reject **site 2, 196 times**,
+mask **4096 = TEXIMAGE**) → `PrepareRun` FALSE → owner rejects → `r2_prepared_valid = 0` → 197 rebuilds,
+each drawing that frame generically. Every other key component and refusal site reads 0. The cache census
+at the first rejection says why nothing can be freed: **Free 7, Live 41, Pinned 25, ThisFrame 16,
+Evictable 0** — the control runs the same working set with 24 pinned and never rejects, so the whole
+difference is **one pinned entry and the VRAM block behind it**.
+**It is not the sheet's byte count**: 128x64 (−16,384 B, both measured-live textures kept) rejected
+*identically*, 196/197 to the digit. It is where a 16–32 KB block lands in libnds's per-bank splitting.
+Next: 64x64 = **8,192 B** holds the measured set (22 at 16x16x2, 27 at 16x8); otherwise give the atlas its
+own VRAM instead of the cache's.
 
-**Two earlier `DRAW=1` failures are closed and are worth not repeating.** It aborted at the GO countdown
-because `ifCommonSetMaxNumGObj` caps the GObj pool under 25 KiB free and the countdown dereferences the
-NULL — the runtime alone leaves **1,176 bytes** of margin (`PORTING.md`, second occurrence). And its first
-build wedged the geometry engine on a `glEnd()` the stream must not carry.
+**Two earlier `DRAW=1` failures are closed.** It aborted at the GO countdown because
+`ifCommonSetMaxNumGObj` caps the GObj pool under 25 KiB free and the countdown dereferences the NULL —
+the runtime alone leaves **1,176 bytes** of margin (`PORTING.md`, second occurrence); and its first build
+wedged the geometry engine on a `glEnd()` the stream must not carry.
 **Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
-freed zero — **check the `.map` before believing a size claim about linked data nothing reads**; and
+freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;
 **`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads exactly like the allocator's
-`while (TRUE);` — the soak separates the two verdicts now.
-**A latch is not a counter.** `gNdsRendererTask36*RejectReason` are reset per prepare, so both read 0 on
-the run that rebuilt 197 times; the counting versions found it in one soak.
+`while (TRUE);`; and **a latch is not a counter** — `gNdsRendererTask36*RejectReason` are reset per
+prepare and both read 0 on the run that rebuilt 197 times. Counting versions found it in one soak.
 
 ## SUCCESSIVE MATCHES and the ANNOUNCEMENTS: both FIXED (full write-ups in `docs/PORTING.md` + board)
 
