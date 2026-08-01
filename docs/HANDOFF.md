@@ -1,7 +1,12 @@
 # Handoff
 
-Updated: 2026-08-01, `9c30484`. **Boundary AND Latest both green; published battle ROM rebuilt
-(11,922,432 B); tick-HUD parity 0 drift; `smash64ds.nds` untouched per the owner.**
+Updated: 2026-08-01, `5ed4d8c`. **Boundary green; published battle ROM rebuilt (11,923,456 B) + tick-HUD
+sibling; `smash64ds.nds` untouched (owner: not needed for P1).**
+**KO FREEZE partly fixed — read `docs/BUGS.md` row 1 before touching effects.** EFDesc offsets held
+symbol ADDRESSES not offsets, and `lbRelocGetFileSize` reports `sizeof(Sprite)` for a LOADED file:
+both fixed. Still open — the burst freezes the first KO with a healthy heap, A/B-narrowed to its
+particle call and its unique `LBPARTICLE_MASK_GENLINK(1)`; ships off via
+`NDS_R2_KO_BURST_PARTICLE=0`, the only NO-FREEZE arm. **Retract "a source effect costs ~5 DObjs".**
 **Restart surface only, capped at 200 lines** — durable detail goes to its owning doc (board: queue +
 results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_STANDING_RULES.md`; `PORTING.md` for root causes).
 
@@ -18,15 +23,14 @@ results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_STANDING_RULES.md`; `PORTING
 **Uncapped baseline (`2236532`, DLDI-on, particles on, GObj cap gone): `WORK-H` P50 924,928,
 P95 1,257,280**, `VBI 2:457 3:93 4:13 5+:4`, max 19, slips 0
 (`artifacts/performance/r207-baseline-2026-08-01-nocap-128.json`). **+17,152 on the previous
-1,240,128, all of it `SRC` +15,296 and `MISC` +2,496 — and it is CONTENT, not regression**: the
-cap was refusing four of every eleven fireballs and Dream Land's bank drew nothing. Every figure
-before this one was measured with the pool capped; do not optimize against them.
-
-**The gate is a RANK, so the comparator is the over-gate COUNT: 18 of 128 frames exceed 1.12M** and
-P95 ≤ 1.12M needs six or fewer. Ranked per frame, `FTR` and `STG` are **flat on the worst frames**
-(`FTR` is 1,536 *below* its clean median on the worst frame); the excursion is `SRC` (+250K…+440K) and
-`MISC` (+77K…+120K), co-occurring. Counterfactuals: `SRC` back to its clean median → 18 → **1**; `MISC`
-→ 18 → **12**. **`SRC` is the gate, `MISC` second, `FTR`/`STG` not on the critical path.**
+1,240,128, all `SRC` +15,296 / `MISC` +2,496 — CONTENT, not regression**: the cap was refusing four
+of eleven fireballs and Dream Land's bank drew nothing. Every earlier figure was measured with the
+pool capped; do not optimize against them. **The gate is a RANK, so the comparator is the over-gate
+COUNT: 18 of 128 frames exceed 1.12M** and P95 ≤ 1.12M needs six or fewer. Ranked per frame, `FTR`
+and `STG` are **flat on the worst frames** (`FTR` is 1,536 *below* its clean median on the worst);
+the excursion is `SRC` (+250K…+440K) and `MISC` (+77K…+120K), co-occurring. Counterfactuals: `SRC`
+to its clean median → 18 → **1**; `MISC` → 18 → **12**. **`SRC` is the gate, `MISC` second,
+`FTR`/`STG` not on the critical path.**
 **`MISC` is not miscellaneous** — it is `DrawTicks − (FTR+STG+BG+HUD)` plus the flush
 (`taskman_seam.c:5008`), i.e. the transient weapon/effect/particle DObj draw, which is still the
 generic `ndsRendererScanList` route. Full per-frame table on the board.
@@ -40,22 +44,19 @@ than the work — **1.85 cycles/frame per byte, measured twice**. Engagement was
 Three findings that constrain whatever comes next. **(1) Hot ARM text costs ~1.85 cycles/frame of `FTR`
 mean per byte** — a lever must beat its own size. **(2) Soft float here is cheap**: 61 `__aeabi_*` calls
 became 36 SMULLs, a hardware divide and 24 conversions for **99 cycles per call**, not the ~800 assumed.
-**(3) Wrapping is additive, only replacing is subtractive** — the float version stayed linked throughout.
-
+**(3) Wrapping is additive, only replacing is subtractive** — the float version stayed linked.
 So the next lever must **delete work, not relocate it**. If collision is tried again it has to be the
 whole subsystem — `func_ovl2_800ED490` is the bigger half (228 instructions, 63 soft-float calls,
 40x/frame) — with the decomp versions dropped rather than bypassed. A cheaper inverse exists on the
-measured domain: the joint matrix is a rotation scaled per row, all three scales measure as one value
-1.114–1.120, so `R^-1[c][r] = M[r][c] / s_r^2` is three reciprocals and nine multiplies with `vec_scale`
-already computed. Needs an orthogonality guard. **Kept:**
+measured domain (row-scaled rotation; board has the derivation). **Kept:**
 `include/nds/nds_r2_collision_mtx.h` and `scripts/check-r2-collision-mtx.ps1`.
 
 **The L7 oracle outlived the lever, and its answer is already recorded** in `nds_r2_collision_mtx.h`
-(460 samples): **joint scale 1.1138–1.1199, a single scale spanning 0.006**, which is what makes the
-row-scaled inverse worth trying. **Do not re-run it** — rebuilding it aborted the ROM at the GO countdown
-(`GENERALFREE 20272` against the 25,600 latch, `MALLOCOVF 0`): its `.text` alone is more arena than the
-tree has spare. **Arena margin is the budget line for anything that adds code** — read
-`gNdsTaskmanGeneralHeapFreeMin` (26,876 today, latch at 25,600) before adding any.
+(460 samples): **joint scale 1.1138–1.1199, spanning 0.006**. **Do not re-run it** — rebuilding it
+aborted the ROM at the GO countdown (`GENERALFREE 20272`, `MALLOCOVF 0`): its `.text` alone is more
+arena than the tree has spare. **Arena margin is the budget line for anything that adds code** — read
+`gNdsTaskmanGeneralHeapFreeMin` (29,328 today, latch at 25,600) before adding any. Naming an unused
+global in a list KEEPS IT LINKED: referencing all 50 EFDescs cost 8,192 arena bytes and latched the cap.
 
 ## OPEN P1 #2 — `BUGS.md` is now entirely particles, VFX and audio cues, and ALL of it is P1
 
@@ -66,9 +67,8 @@ for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the rando
 `render-audio-fgm-phase-pack.py --derive <ids>` prints every selector field straight from
 `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, so authoring a cue is transcription. 56 → **88 cues**: seven
 announcer lines, 621 PublicWin, the eleven the crowd actor reaches, 96/153/85, the five **only a
-BOTH-CPU match reaches** (11 Escape, 13/14 GuardOn/Off, 278 GamePause, 369 FoxOttotto), and finally
-271 Magnify + 368 FoxWin, then 18 LightSwingLw1 + 514 AnnounceSuddenDeath + 365 FoxSelected once every
-fireball spawned and the match reached Sudden Death. Each fix uncovers the layer under it.
+BOTH-CPU match reaches** (11 Escape, 13/14 GuardOn/Off, 278 GamePause, 369 FoxOttotto), then 271
+Magnify + 368 FoxWin + 18 LightSwingLw1 + 514 AnnounceSuddenDeath + 365 FoxSelected.
 **85's `source_rate_above_u16` was never a hardware limit** — 90,510 Hz is fine for the channel timer and
 too big only for the `u16` in *our* pack entry, so it renders full-program AOT at 32,000. Two modulator
 findings, both from the decomp's own source: **target 24+ is cross-mod ANOTHER voice** (skipped before

@@ -1,6 +1,8 @@
 # Smash64DS Runtime 2 — Plan of Record
 Read `PROJECT_GOAL.md`
 
+The smash64ds.nds ROM is not needed for P1, so no need to build it yet.
+
 The single Runtime 2 document: charter, design rules, budgets, phase plan,
 and the definition of the switch.
 
