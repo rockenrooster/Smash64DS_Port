@@ -1371,8 +1371,15 @@ void lbParticleDrawTextures(GObj *gobj)
                 gNdsWhispyDrawX = world_pos.x;
                 gNdsWhispyDrawY = world_pos.y;
                 gNdsWhispyDrawSize = pc->size;
-                if ((world_pos.x > 2047.9f) || (world_pos.x < -2047.9f) ||
-                    (world_pos.y > 2047.9f) || (world_pos.y < -2047.9f))
+#if NDS_R2_PARTICLE_V16_HEADROOM
+#define NDS_PARTICLE_V16_REACH 4095.9f
+#else
+#define NDS_PARTICLE_V16_REACH 2047.9f
+#endif
+                if ((world_pos.x > NDS_PARTICLE_V16_REACH) ||
+                    (world_pos.x < -NDS_PARTICLE_V16_REACH) ||
+                    (world_pos.y > NDS_PARTICLE_V16_REACH) ||
+                    (world_pos.y < -NDS_PARTICLE_V16_REACH))
                 {
                     gNdsWhispyDrawClamped++;
                 }

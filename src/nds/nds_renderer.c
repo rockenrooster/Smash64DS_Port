@@ -11128,6 +11128,31 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
     gNdsRendererParticleAtlasBytes = 0u;
 }
 
+/* BUGS.md row 1, OFF BY DEFAULT pending the owner's visual approval.
+ *
+ * At the stock x16 the reach is 32767/16 = 2047.9 world units while the camera
+ * measured in a live match sees 3,148 -- so a particle between those two is
+ * clamped onto the rail instead of drawn where it belongs. Measured on Whispy's
+ * wind: 1,118 of 5,590 quads a match, twenty percent, land there.
+ *
+ * v16 is 16-bit and no encoding buys the range back; camera-relative emission
+ * does not either, since the camera's own half-width already exceeds it. The
+ * range has to come from SCALE. At 1 the particle pass halves the vertex factor
+ * to x8 (reach +/-4095.9, covering the camera) and the batch pushes a matching
+ * 2x modelview so the geometry lands in the same place at the same size.
+ *
+ * The cost, and the reason this needs approval rather than a quiet commit, is
+ * that halving the factor halves sub-unit resolution for every particle. */
+#ifndef NDS_R2_PARTICLE_V16_HEADROOM
+#define NDS_R2_PARTICLE_V16_HEADROOM 0
+#endif
+
+#if NDS_R2_PARTICLE_V16_HEADROOM
+#define NDS_RENDERER_PARTICLE_UNIT_SHIFT (NDS_RENDERER_HW_WORLD_UNIT_SHIFT + 1u)
+#else
+#define NDS_RENDERER_PARTICLE_UNIT_SHIFT NDS_RENDERER_HW_WORLD_UNIT_SHIFT
+#endif
+
 /* World coordinate -> v16. The scene's modelview carries a
  * NDS_RENDERER_HW_WORLD_UNIT_SHIFT (=8) scale, so one world unit is
  * 2^(12-8) = 16 in vertex space -- the same relation
@@ -11138,7 +11163,7 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
 static v16 ndsRendererParticleWorldToV16(f32 value)
 {
     s32 scaled = (s32)(value * (f32)(1 << (12u -
-                                           NDS_RENDERER_HW_WORLD_UNIT_SHIFT)));
+                                           NDS_RENDERER_PARTICLE_UNIT_SHIFT)));
 
     if (scaled > 32767) { return (v16)32767; }
     if (scaled < -32768) { return (v16)-32768; }
@@ -11176,6 +11201,15 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     if (sNdsRendererParticleQuadOpen == 0u)
     {
         ndsRendererHardwareEndBatch();
+#if NDS_R2_PARTICLE_V16_HEADROOM
+        /* Exactly compensates the halved vertex factor above, so the quads land
+         * where they always did and only their representable RANGE changes.
+         * Pushed before glBegin and popped in ndsRendererEndParticleQuads --
+         * once per frame for the whole pass, because the batch is opened lazily
+         * on the first quad and closed once. */
+        glPushMatrix();
+        glScalef32(inttof32(2), inttof32(2), inttof32(2));
+#endif
         glEnable(GL_TEXTURE_2D);
         ndsRendererHardwareBindTextureName(NULL, atlas_name);
         /* Translucent, unlit, both faces: a billboard has no meaningful
@@ -11230,6 +11264,14 @@ void ndsRendererEndParticleQuads(void)
          * reuse check cannot match stale state. */
         sNdsRendererParticleQuadOpen = FALSE;
         ndsRendererHardwareEndBatch();
+#if NDS_R2_PARTICLE_V16_HEADROOM
+        /* AFTER EndBatch, not before. The comment above is explicit that this
+         * group is left open exactly as EndBatch leaves its own and that an
+         * extra FIFO write here hung the ROM at GXSTAT=0e008900; popping the
+         * matrix before the batch is flushed would retroactively move vertices
+         * already queued against it. */
+        glPopMatrix(1);
+#endif
         /* The bound-texture name is LEFT ALONE. Clearing it here forced the
          * next binder to re-issue every frame, and the stage's prepared-run
          * reuse rides on that state: rebuilds went 2 -> 197 a match purely

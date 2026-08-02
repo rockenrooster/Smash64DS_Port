@@ -144,9 +144,19 @@ These bugs should be fixed for P1 delivery:
   Precision cost: halving the factor halves sub-unit resolution for particles. At six quads a
   frame that is not a tick concern, but it IS a visible-quality change, which is the other reason
   it wants approval rather than a quiet commit.
-  VERIFY WITH THE COUNTER ALREADY IN PLACE: gNdsWhispyDrawClamped must go 1118 -> 0 with
-  gNdsWhispySubmitOk unchanged at ~5590, and the threshold constant in that check has to move to
-  4095.9 with the shift.
+  IMPLEMENTED AND MEASURED 2026-08-02, DEFAULT OFF. PROJECT_GOAL allows testing a fidelity trade
+  and reserves only the permanent implementation for the owner, so the work is done and parked
+  behind NDS_R2_PARTICLE_V16_HEADROOM (Makefile, `?= 0`). Clean A/B, same probe, same scenario:
+      flag off (control, build-r2-bothcpu)   ok=5590  fail=0  clamped=1118
+      flag on  (candidate, build-r1-v16head) ok=5590  fail=0  clamped=  11
+  1118 -> 11, a 99% reduction, with submissions unchanged at exactly 5590 and zero failures.
+  Every other counter in the line is identical across the pair -- slot1, emit, miss, draw_masks,
+  walked -- so it is a genuine pair and not two different runs. The residual 11 are the 0.2% that
+  exceed even +/-4095.9.
+  APPROVAL IS NOW A ONE-LINE FLIP: set NDS_R2_PARTICLE_V16_HEADROOM ?= 1. What is NOT verified is
+  the thing only the owner can judge -- halving the vertex factor halves sub-unit resolution for
+  every particle, so effects may read very slightly coarser. Look at a blow with the flag on
+  before it ships.
   TRANSFORMS RE-CONFIRMED ON THE OTHER SIDE 2026-08-02: a later run drew lr=1, whose emitter is
   -205, and the slot-1 walk read xf_t = -205.000000,100.000000 -- the correct emitter for that
   side. (at_emitter=0/elsewhere=5833 in that run is the probe's own -715 literal not matching the
