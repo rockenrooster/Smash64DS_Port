@@ -103,10 +103,24 @@ These bugs should be fixed for P1 delivery:
   measurement: camera frustum, layer-15 dispatch, atlas exclusion, stale transform.
   NO CAUSE IS ESTABLISHED. Do not accept a fifth mechanism on this row without a measurement that
   could have refuted it, and do not re-test the four above -- each is refuted here with numbers.
-  The remaining untested step is the only one left between a correct world position and a pixel:
-  what ndsRendererSubmitParticleQuad does with these quads. Instrument INSIDE the submit -- final
-  screen-space coordinates and whether the quad survives to the GPU -- rather than inferring from
-  upstream state again, which is what produced all four wrong answers.
+  A REAL SECONDARY DEFECT FOUND IN THE SUBMIT, stated as arithmetic and explicitly NOT claimed as
+  the root cause. ndsRendererParticleWorldToV16 (nds_renderer.c:11138-11146) scales a world
+  coordinate by 1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT) = 16 and clamps to the v16 range, so
+  THE RENDERER CANNOT EXPRESS A PARTICLE VERTEX BEYOND +/-2047.9 WORLD UNITS -- while the camera
+  measured on the same frame sees +/-3148. Anything a particle does between 2048 and 3148 is
+  silently clamped onto the rail instead of drawn where it is.
+  Whispy is the effect that reaches it. Its dust carries rotate.y = 180deg, so a particle's drawn
+  x is -(pc->pos.x) - 715; at the measured slot1_absmax of 1352.46 that is -2067.5, past the rail,
+  and each quad corner extends a further +/-260 of `size` to about -2327. The far tail of the wind
+  therefore provably clamps, and a clamped corner collapses the quad.
+  BUT IT IS ONLY THE TAIL, so it cannot be the whole row: a particle at pos.x 417.69 draws at
+  -1132.7, comfortably representable, and those are invisible too. Fix it anyway -- it is a real
+  bound violation that will bite any effect crossing the stage, and it is cheap -- but do not
+  close row 1 on it, and re-measure afterwards rather than assuming.
+  STILL UNTESTED, and the only step left between a representable world position and a pixel: what
+  the GPU does with these quads once submitted. Instrument INSIDE the submit for final screen-space
+  coordinates and survival to the FIFO, rather than inferring from upstream state again -- that
+  inference is what produced all four wrong answers above.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
