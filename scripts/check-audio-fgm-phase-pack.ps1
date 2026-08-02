@@ -54,13 +54,19 @@ if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
 if (([int]$metadata.format_version -ne 4) -or
     ([int]$metadata.entry_bytes -ne 32) -or
     ([int]$metadata.envelope_point_bytes -ne 4) -or
-    ([int64]$metadata.resident_bytes -ne 725900) -or
+    # 725900 -> 725896 on 2026-08-02: FGM 430 and 439 moved onto the source
+    # note schedule, which re-renders them and lands four bytes shorter.
+    ([int64]$metadata.resident_bytes -ne 725896) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines for no runtime
     # reason; the bound that is real is the 53,248-byte cache-slot gate below.
     ([int64]$metadata.pack_limit_bytes -ne 786432) -or
-    ($metadata.mapping_sha256_lo -ne '0x984c7da6') -or
+    # 0x984c7da6 -> 0x4fb97922 on 2026-08-02: this hash covers the cue SELECTOR
+    # table, and 430/439 gained "aot_source_schedule" and dropped their
+    # ucd_pitch_automation debt. A mapping change is expected whenever a cue's
+    # render strategy changes and must never be repinned without one.
+    ($metadata.mapping_sha256_lo -ne '0x4fb97922') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 on the
     # owner's ear via FGM_OWNER_VOLUME_TRIM. The previous pin was
     # 81b94d1f3178b6b57d998fb7d01fe1316e20ac46ce22ccb82800c6b02d26cb75, and it
@@ -70,7 +76,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # played 127. An unchanged hash after an intended payload change is the
     # signal that the change did not land.
     ($metadata.pack_sha256 -ne
-        'bcf98317e73fe28324d46cfc17cff5f9218e97388dc3b294984ba2ca9d56cba4')) {
+        '95ec41c4af413165ce08e8e381f7790dfc6adc4d91ce6ea6af12f89b2f012fab')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -179,7 +185,7 @@ $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
     '#define NDS_AUDIO_FGM_ENTRY_COUNT 88u',
-    '#define NDS_AUDIO_FGM_PACK_BYTES 725900u',
+    '#define NDS_AUDIO_FGM_PACK_BYTES 725896u',
     '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x984c7da6u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
@@ -211,6 +217,6 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
 }
 
 Write-Output (('Audio FGM full coverage passed: 88 IDs, 0 exclusions, ' +
-    '725900-byte pack, 204800-byte cache, seven fused fork repairs, ' +
+    '725896-byte pack, 204800-byte cache, seven fused fork repairs, ' +
     'FGM 285 wind on a proven DS hardware loop, seven announcer lines, ' +
     'PublicWin 621 on PublicExcited''s AOT loop-and-ramp render.'))

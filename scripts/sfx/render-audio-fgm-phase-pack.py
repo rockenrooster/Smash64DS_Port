@@ -718,7 +718,13 @@ SELECTED = (
             "95e58d8f6340197445020e8239b623ff469056e6fffa35eaab5763bb9b2a1a11",
         "articulation_program_sha256":
             "ce7ca7fb5d393e272ce037e6929cb3d29e221112ad53093429b8d0d5808221f1",
-        "fidelity_debt": ("ucd_pitch_automation",),
+        # Same reason as 439 below, and more pronounced: the notes descend
+        # 13 -> 12 -> 11 -> 10 and the last is 150 of the 236 ticks, so this cue
+        # is a falling yell and the flat path rendered it as one held pitch.
+        # The owner's other trigger for the unfamiliar sound is "when i knock
+        # him off stage via a big hit", which is when this plays.
+        "aot_source_schedule": True,
+        "fidelity_debt": (),
     },
     {
         "id": 439,
@@ -744,7 +750,14 @@ SELECTED = (
             "fe49ea59dc5b1286afefa3db0b6b71958ba1ff398b0558e3d959877000109914",
         "articulation_program_sha256":
             "6c41de24317700de64f7999a9fc6945878b42f65fb55537f6ae3a6c689f99e23",
-        "fidelity_debt": ("ucd_pitch_automation",),
+        # Rendered on the source schedule so the note pitches survive. The notes
+        # are (13, 13, 13, 12): the cue FALLS a semitone on its last and longest
+        # note, and the flat single-rate path baked one pitch for all four and
+        # threw that away. On a death cry the fall is the recognisable part, and
+        # the owner reports an unfamiliar sound "right before someone dies via
+        # upwards KO boundary" -- which is this cue's trigger exactly.
+        "aot_source_schedule": True,
+        "fidelity_debt": (),
     },
     {
         "id": 292,

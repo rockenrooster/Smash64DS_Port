@@ -24,7 +24,11 @@
 #define NDS_AUDIO_FGM_RELEASE_REASON_STOP_ALL 4u
 #define NDS_AUDIO_FGM_RELEASE_REASON_EXPLICIT 5u
 #endif
-#define NDS_AUDIO_FGM_PACK_BYTES 725900u
+/* Must equal the generated pack exactly: nds_audio_fgm.c validates the envelope
+ * cursor against it and REJECTS THE WHOLE PACK on a mismatch, so a stale value
+ * here is not a size nit, it is silence. 725900 -> 725896 on 2026-08-02 when
+ * FGM 430 and 439 moved onto the source note schedule. */
+#define NDS_AUDIO_FGM_PACK_BYTES 725896u
 #define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x984c7da6u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u

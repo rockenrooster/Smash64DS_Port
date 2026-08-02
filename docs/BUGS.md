@@ -64,8 +64,11 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
 
 -Upwards KO boundary death: correct VFX and SFX never play for fighters.
   Almost fixed, I see the fighter die in the sparkle, but the SFX sound off, like the high pitch sound is getting clipped or something
-    NOT FIXED (audio half). The VFX half is done. Likely the same cue as the unrecognised SFX below
-    -- treat them as one investigation.
+    **FIXED** (2026-08-02) pending your ear -- same fix as the unrecognised SFX below, and the
+    "clipped high pitch" description is what a note schedule rendered as one flat pitch sounds
+    like. nSYAudioVoiceMarioDead (439) plays on this trigger and its notes are (13, 13, 13, 12):
+    the cue FALLS a semitone on its last and longest note, and the flat path baked one rate for
+    all four. Now rendered on the source schedule.
 
 -KO VFX wrong.
   Looks like the effect plays too close to the camera instead at the same z depth as the fighters and stage.
@@ -90,13 +93,25 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
 
 -A new SFX that i don't recognize has developed, don't know if its the wrong pitch or what.
     It happens right before someone dies via upwards KO boundary and when i knock him off stage via a big hit or I get knocked via big hit too.
-    NOT FIXED. Both triggers are big-knockback events, so treat it as one cue with the KO SFX row.
-    The crowd family is cleared as the source (see the crowd row for what was ruled out and how),
-    so the candidate is now a cue whose PITCH AUTOMATION is not modelled: 615, 618, 620 and 625
-    carry `ucd_pitch_automation` as declared fidelity debt, meaning the source sweeps pitch across
-    the cue and the pack ships one baked constant rate instead. A swept cue rendered flat is
-    exactly "wrong pitch, don't recognise it". Next: play those four in isolation with
-    export-fgm-cue-wav.py and see whether one of them is the sound.
+    **FIXED** (2026-08-02) pending your ear. Your two triggers named the two cues exactly.
+    Six cues declared `ucd_pitch_automation` as fidelity debt -- the source moves pitch across the
+    cue and the pack shipped ONE baked constant rate, so a falling yell came out as a held note,
+    which is precisely "wrong pitch, don't recognise it". Two of the six are your triggers:
+      430 nSYAudioVoiceMarioSmash2  notes 13 -> 12 -> 11 -> 10, last note 150 of 236 ticks
+                                    ("when i knock him off stage via a big hit")
+      439 nSYAudioVoiceMarioDead    notes 13, 13, 13, 12
+                                    ("right before someone dies via upwards KO boundary")
+    Both now render on the source note schedule instead of a flat rate. Their declared debt is
+    gone, and each reproduces its expected_retained_samples exactly (17,232 and 8,838).
+    WAVs sent so you can confirm before booting anything.
+    The four crowd cues (615, 618, 620, 625) still carry the same debt and were deliberately left
+    alone -- they are a shared-sample family and none of them is on your triggers. Do them only if
+    something still sounds wrong after this.
+    One trap worth keeping: re-rendering moved the pack from 725,900 to 725,896 bytes, and
+    NDS_AUDIO_FGM_PACK_BYTES in nds_audio_fgm.h is a RUNTIME constant the loader validates the
+    envelope cursor against -- it rejects the whole pack on mismatch. A stale value there is not a
+    size nit, it is total audio silence, and the pack checker only pins the header TEXT so it
+    passed while they disagreed. Always move that constant with the pack.
 
 -Hitting Fox's shield freezes match sometimes.
     **FIXED** (2026-08-02) pending a soak. This is the 2026-07-29 freeze class returning because
