@@ -24,8 +24,17 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
 
 -Some Crowd noise audio cues get cut off (the for big hits).
     Still not fixed.
-    NOT FIXED. Earlier release-ramp work covered the mid-waveform kill; the big-hit case is
-    unexamined and needs its own trigger. Next: latch which cue is killed on a big hit.
+    NOT FIXED. Earlier release-ramp work covered the mid-waveform kill; the big-hit case still
+    stands. RULED OUT 2026-08-02 so it is not re-walked: the whole reaction family (616 GaspM,
+    619 Amazed, 620 GaspClap, 622 DamageL, 623 DamageM, 625 DamageS) shares source sample 37 and
+    differs only by net_pitch_cents baked into the playback rate, and every rate checks out
+    exactly as 32000 * 2^(cents/1200) -- so the odd-looking 27-53 kHz figures are correct, not
+    corruption. The two cues shipping ds_volume 0 (620, 625) are ALSO correct: articulation 79
+    opens `vol 0` for 18 ticks and both carry packed_envelope_count 2, so that is a deliberate
+    fade-in, not a mute. And the runtime does step envelopes -- ndsAudioFgmUpdate runs per frame
+    from taskman_seam.c:4427, not only on a new play.
+    So the defect is not in cue data or envelope stepping. Next: latch WHICH cue is playing and
+    what releases it at the moment of a big hit, rather than auditing the pack again.
 
 -Respawn floating platform isn't visible when respawning after KO.
     Not fixed, I don't see the floating platform.
@@ -81,8 +90,13 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
 
 -A new SFX that i don't recognize has developed, don't know if its the wrong pitch or what.
     It happens right before someone dies via upwards KO boundary and when i knock him off stage via a big hit or I get knocked via big hit too.
-    NOT FIXED. Both triggers are big-knockback events, so one cue. Suspect a pitch-modulated cue
-    whose AOT render or DS frequency is wrong. Pairs with the KO SFX row above.
+    NOT FIXED. Both triggers are big-knockback events, so treat it as one cue with the KO SFX row.
+    The crowd family is cleared as the source (see the crowd row for what was ruled out and how),
+    so the candidate is now a cue whose PITCH AUTOMATION is not modelled: 615, 618, 620 and 625
+    carry `ucd_pitch_automation` as declared fidelity debt, meaning the source sweeps pitch across
+    the cue and the pack ships one baked constant rate instead. A swept cue rendered flat is
+    exactly "wrong pitch, don't recognise it". Next: play those four in isolation with
+    export-fgm-cue-wav.py and see whether one of them is the sound.
 
 -Hitting Fox's shield freezes match sometimes.
     **FIXED** (2026-08-02) pending a soak. This is the 2026-07-29 freeze class returning because
