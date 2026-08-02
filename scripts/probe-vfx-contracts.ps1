@@ -125,6 +125,12 @@ try {
         'set $slot1_absmax = 0.0',
         'set $draw_calls = 0',
         'set $draw_masks = 0',
+        'set $slot1_xf = 0',
+        'set $slot1_xf_seen = 0',
+        'set $slot1_xf_null = 0',
+        'set $slot1_xf_status = -1',
+        'set $slot1_xf_tx = 0.0',
+        'set $slot1_xf_ty = 0.0',
         'set $spark_calls = 0',
         'set $spark_x = 0.0',
         'set $spark_y = 0.0',
@@ -188,13 +194,24 @@ try {
         'continue',
         'end',
 
-        # Read the position through $r0, NOT through `pos`. The signature is
-        # efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32, s32, sb32), so
-        # pos is the first argument and lives in r0 at entry -- whereas the NAME
-        # `pos` is optimized out at -Os, which is why the 2026-08-02 run latched
-        # spark_calls=6 with every position reading 0.0 and looked, wrongly, like
-        # sparks were spawning at the origin.
-        'break efManagerDamageNormalLightMakeEffect',
+        # Break on the ndsBase* IMPLEMENTATION, not the plain name. The plain
+        # name resolved to "2 locations" at address 0x0 because the ROM carries
+        # both efManagerDamageNormalLightMakeEffect (0x0209384c, an 8-byte
+        # wrapper) and ndsBaseEFManagerDamageNormalLightMakeEffect (0x020919d0,
+        # the real body) -- so gdb split the breakpoint and ran the callback
+        # where r0 is not the argument. That is why two consecutive runs latched
+        # spark_calls=6 with every position exactly 0.0 and looked, wrongly,
+        # like sparks spawning at the origin.
+        #
+        # Read the position through $r0 rather than `pos`: the signature is
+        # (Vec3f *pos, s32, s32, sb32) so pos is the first argument and is in r0
+        # at entry, while the NAME is optimized out at -Os.
+        # `break *FUNC`, with the star. Plain `break FUNC` skips the prologue to
+        # the first statement, and by then r0 has been reused -- which is why
+        # pointing the breakpoint at the real implementation fixed the "2
+        # locations at 0x0" split and STILL read every position as 0.0. The star
+        # form stops at the exact entry address, where r0 is still argument one.
+        'break *ndsBaseEFManagerDamageNormalLightMakeEffect',
         'commands',
         'silent',
         'set $spark_calls = $spark_calls + 1',
@@ -210,7 +227,7 @@ try {
         'continue',
         'end',
 
-        'break efManagerSparkleWhiteDeadMakeEffect',
+        'break ndsBaseEFManagerSparkleWhiteDeadMakeEffect',
         'commands',
         'silent',
         'set $dead_calls = $dead_calls + 1',
@@ -458,6 +475,23 @@ try {
         'if -sLBParticleStructsAllocLinks[1]->pos.x > $slot1_absmax',
         'set $slot1_absmax = -sLBParticleStructsAllocLinks[1]->pos.x',
         'end',
+        # pc->pos above is the PRE-transform position and it has always looked
+        # sane. ndsParticleTransformForDraw (battleship_lbparticle.c:1161-1194)
+        # then multiplies it by pc->xf->affine, so a transform pointing at an
+        # ejected slot turns a sane pos into a garbage world position and the
+        # quad rasterizes nowhere. grPupupuFlowersFrontLoopEnd ejects without
+        # nulling, and this run already reported a ground transform reading
+        # -1.9e20. Latch the pointer, its status, and its translate: a status
+        # outside 0..2 or a translate in the e20 range is the ejected slot.
+        'set $slot1_xf = sLBParticleStructsAllocLinks[1]->xf',
+        'if $slot1_xf != 0',
+        'set $slot1_xf_seen = $slot1_xf_seen + 1',
+        'set $slot1_xf_status = $slot1_xf->transform_status',
+        'set $slot1_xf_tx = $slot1_xf->translate.x',
+        'set $slot1_xf_ty = $slot1_xf->translate.y',
+        'else',
+        'set $slot1_xf_null = $slot1_xf_null + 1',
+        'end',
         'end',
         # The callback stops itself rather than a separate tbreak at the same
         # address: two breakpoints on one PC, one of them auto-continuing, means
@@ -489,7 +523,8 @@ try {
             # invisible" and "some unrelated tail effect is".
             'miss=%u emit=%u missmask=%08x,%08x missframes=%08x ' +
             'cam_dist=%f cam_fovy=%f cam_vw=%d cam_vh=%d ' +
-            'draw_calls=%d draw_masks=%llx\n", ' +
+            'draw_calls=%d draw_masks=%llx ' +
+            'xf_seen=%d xf_null=%d xf_status=%d xf_t=%f,%f\n", ' +
             '$whispy_calls, $whispy_lr, ' +
             '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
             '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
@@ -508,7 +543,9 @@ try {
             'gNdsParticleQuadMissFrameMask, ' +
             'gGMCameraStruct.target_dist, gGMCameraStruct.fovy, ' +
             'gGMCameraStruct.viewport_width, gGMCameraStruct.viewport_height, ' +
-            '$draw_calls, $draw_masks'),
+            '$draw_calls, $draw_masks, ' +
+            '$slot1_xf_seen, $slot1_xf_null, $slot1_xf_status, ' +
+            '$slot1_xf_tx, $slot1_xf_ty'),
         'detach',
         'quit'
     )
