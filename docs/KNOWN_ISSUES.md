@@ -426,3 +426,17 @@ reverse; and on a clean run spend the single GDB session reading
 `gNdsVSResultsStartCount` so "N minutes" becomes "N minutes across M matches". A
 soak is passive — it never restarts the match — so a changing picture can be the
 results screen, host chrome, or nothing at all.
+
+## `nSYAudioBGMExplain` is 0 in the port and 34 in decomp
+
+`check-decomp-header-mirror.py` fails on it: `include/sys/audio.h:15` declares
+`nSYAudioBGMExplain = 0` while `gm/gmsound.h:30` has it at 34 ("How to Play").
+Pre-existing — that header has not been touched since 2026-07-14, and the
+mismatch predates the 2026-08-02 audio work that found it.
+
+Harmless today and a landmine tomorrow: it is the ONLY occurrence in `src/` or
+`include/`, so nothing reads it, but the first caller gets BGM 0 instead of the
+How-to-Play track. Not fixed here because the `= 0` looks deliberate — a
+placeholder meaning "not wired" reads exactly like this — and guessing wrong
+silently changes which music plays. Owner's call: set it to 34 to match decomp,
+or drop the declaration so the checker stops guarding a value nothing uses.

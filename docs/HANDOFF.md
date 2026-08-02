@@ -17,10 +17,12 @@ DustHeavy, DustHeavyDouble and MusicNote live; the generator's seam list did not
 starts 137 → 226, roots 251 → 340 (+89 on both — every rejected start became a real one).
 **The DS path also never applied the LBTransform**, and **`ftParamMakeEffect` now dispatches the
 particle-only kinds to their source makers**. **Retract "a source effect costs ~5 DObjs".**
-**The quad sheet is A5I3, not RGB555+A1** — one alpha bit made every soft particle a hard blob. One
-byte per texel keeps the proven 8,192-byte allocation at 128x64: admission 14 → 23 of 47, misses
-1,343 → 528, heap low-water +3,920. **Thirteen textures still off the sheet** — decision on the board.
-**A finished FGM note now RELEASES instead of `soundKill`** — five cues were cut mid-waveform.
+**The quad sheet is A5I3, not RGB555+A1** — one alpha bit made every soft particle a hard blob; the
+proven 8,192-byte 128x64 allocation admits 23 of 47. Owner SETTLED 2026-08-02: keep the baseline
+sheet — 13 textures stay off and ~366 draws a match render nothing.
+**The FGM pack pins TWO constants in `nds_audio_fgm.h`** (bytes AND mapping hash); either mismatch
+rejects the pack and boots a SILENT ROM. Moving one without the other did exactly that on
+2026-08-02. The checker DERIVES both from the binary now — never re-pin them anywhere.
 **Read `BUG_FIXING_PROCESS.md` v2 first**: source is the oracle, the owner is confirmation only, and a
 build is spent to confirm a written prediction — never to see whether it looks right. Restart surface
 only; durable detail belongs to its owning doc (board, `PERF_LEDGER`, `KNOWN_ISSUES`, `PORTING`).
@@ -81,12 +83,10 @@ for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the rando
 **SFX IS DONE for a both-CPU match: 282 play calls, 282 supported, MISS RING 0.**
 `render-audio-fgm-phase-pack.py --derive <ids>` prints every selector field straight from
 `fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, so authoring a cue is transcription. 56 → **88 cues** (the
-board lists which). **A cue can be internally source-exact and still wrong in the mix** — that is the
-open escape-roll row, and it is the contract dimension the first pass missed.
-**85's `source_rate_above_u16` was never a hardware limit** — 90,510 Hz is fine for the channel timer,
-too big only for the `u16` in *our* pack entry, so it renders full-program AOT at 32,000. Modulator
-rules, from the decomp: **target 24+ is cross-mod ANOTHER voice**, and **shapes 6/7 are 2/3 with the
-phase CLAMPED at the period** (`n_env.c:4158`/`:4172`); 4/5/8 call `randFloat*` and stay unsupported.
+board lists which). **A cue can be source-exact and still wrong in the MIX** (escape roll —
+`FGM_OWNER_VOLUME_TRIM`), **or source-exact per NOTE and wrong as a CUE**: the flat path bakes only
+the first note's rate and drops fork voices, which cut the crowd off. `FULL_PROGRAM_AOT_IDS` fixes
+it; `runtime_fidelity_debt` in the manifest lists who still needs it.
 **The crowd TRIGGER side BUILDS, RUNS and SHIPS ON** — `ft/ftpublic.c` compiled in place
 (`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`), 3,332 B paid for by the weapon pool, `ActorMakeCount 1`. **Five of
 its seven counters CANNOT fire**: the `#define` seam renames intra-TU references, so the actor registers
