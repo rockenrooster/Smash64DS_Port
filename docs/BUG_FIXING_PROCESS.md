@@ -1,309 +1,338 @@
 # Bug Fixing Process
 
 This document owns the process for taking a user-reported playtest bug in
-`BUGS.md` from symptom to verified closure. It does not own current bug status,
-product truth, verifier commands, or project history; those stay in their
-existing owning documents.
-
+`BUGS.md` from symptom to verified closure. It does not own bug status, product
+truth, verifier commands, or history; those stay in their owning documents.
 Every `BUGS.md` row blocks P1 unless the owner explicitly changes its scope.
+
+## The two laws
+
+The complete N64 source is in `decomp/BattleShip-main/decomp`. Correct behavior
+— including exactly where an effect appears, how big it is, how it moves, and
+how a cue sounds — is derivable from source as numbers. Therefore:
+
+1. **The source is the oracle. The owner is the final confirmation, never the
+   debugger.** Convert every "looks wrong / sounds off" report into measurable
+   quantities and iterate against those on your own instruments. Request an
+   owner check only when every quantity is green and you can predict, in one
+   sentence, what the owner will see or hear. An owner reply of "still not
+   right" on a candidate you could not predict is a process failure, not new
+   information — the candidate was sent before it was derived.
+2. **A ROM build is spent only to confirm a written prediction or to plant
+   batched probes.** Never build to "see whether it looks right now." Most
+   runtime values are readable on the existing ROM through GDB and captures.
+
+The expensive resources are owner round-trips and ROM builds. Source reading,
+GDB reads on a live ROM, static checkers, and image analysis are nearly free.
+Spend accordingly.
 
 ## What "fixed" means
 
-1st priority is to know what "correct behavior" is.
-Correct behavior is easily found in the Battleship project n64 decomp source ".\decomp\BattleShip-main\decomp\src".
+A fix is one continuous chain:
 
-".\decomp\BattleShip-main\decomp\BattleShip_o2r" contains n64 source game assets.
-
-A fix must establish one continuous proof chain:
-
-> reported symptom -> source contract -> earliest wrong seam -> root-cause fix
-> -> natural runtime proof -> regression gate -> owner acceptance when subjective
+> symptom -> observable contract from source -> first divergent measured value
+> -> root-cause fix at the owning seam -> every contract row green on the
+> natural path -> widest relevant verifier -> batched owner acceptance
 
 Compilation, a packed asset, a non-zero counter, one good frame, or failure to
-reproduce is not closure. The exact candidate that passes must be the candidate
-being offered to the owner.
-
-Disabling the affected feature, avoiding its trigger, or substituting unrelated
-content is containment, not a fix.
+reproduce is not closure. Disabling the feature, avoiding its trigger, or
+substituting other content is containment, not a fix.
 
 "1:1" means correct observable source behavior, not identical N64 code or
-architecture. Inspect BattleShip first and make the first implementation as
-source-faithful as practical. The implementation may be generated, specialized,
-or direct DS-native code when it preserves the same behavior; do not build a
-known-slow software renderer or interpreter when the correct direct path is
-already clear. A source-exact software/interpreter arm may still serve as a
-temporary oracle.
+architecture. Generated, specialized, or DS-native implementations are
+encouraged when they preserve the same observables. A candidate that pushes the
+scene's representative P95 over its budget or materially worsens the 2/3/4/5+
+VBlank histogram is intermediate, not fixed; record "optimization needed" as
+non-blocking debt only after the performance gate is met.
 
-An oracle or first implementation is intermediate if it pushes the scene's
-representative P95 above its applicable budget or materially worsens the
-2/3/4/5+ VBlank histogram or maximum interval. Iterate toward a direct DS-native
-path before marking the bug fixed. Record "optimization needed" as non-blocking
-debt only after the candidate meets the current performance gate.
+## Work clusters, not single rows
 
-## Keep `BUGS.md` lean
+Rows sharing a subsystem (today: particles/VFX; audio cues) share
+instrumentation, captures, builds, and the owner's acceptance session. Write
+the contracts for the whole cluster first, plant one batched probe build that
+answers every open question in it, and present one acceptance batch. Each row
+still keeps its own contract and proof. One bug per build is how a queue
+stalls; "prefer larger slices of work" is owner doctrine.
 
-`BUGS.md` is the user-facing queue, not an investigation log.
+## The evidence ladder
 
-- Preserve the user's symptom wording and ordering. Do not silently delete,
-  merge, split, or narrow a report.
-- Prefix a fully closed row with `**FIXED** (YYYY-MM-DD)`.
-- Use `**PARTLY FIXED** (YYYY-MM-DD)` only when an independently verified part
-  is closed and the remaining visible symptom is named.
-- For any row that is not fixed, append at most a 20-word current finding or
-  next step. Put evidence and reasoning in the owning documents below.
-- An umbrella report is not closed by one representative case. Track every
-  named case in the work packet and prove each one naturally.
-- A shared root cause may fix several rows, but each user-visible row keeps its
-  own acceptance proof.
+Use the cheapest rung that can falsify the current claim; escalate only when a
+rung is genuinely inconclusive.
 
-## Priority
+0. **Source + existing artifacts.** BattleShip constants and tables, CodeGraph
+   traces of the port path, prior captures and JSON under `artifacts/`.
+1. **Static and AOT checkers (seconds, no ROM).** `check-nds-particle-banks.ps1`,
+   the audio fixture checkers, `scripts/sfx/render-audio-fgm-phase-pack.py
+   --derive <id>` (prints a cue's full source selector chain), the asset
+   generators, and host fixture oracles (Step 2).
+2. **The existing ROM (minutes, no build).** GDB through the melonDS stub:
+   break at the maker/trigger, read arguments, structs, transforms;
+   frame-step captures; screenshots plus `compare-capture-pair.ps1`.
+3. **One batched instrumented build** carrying every probe the cluster needs.
+   Write each probe's predicted value before building; a run that fills no
+   prediction row was a wasted build — record why it happened.
+4. **The fix-candidate build**, confirming the predicted contract rows.
+5. **One widest relevant verifier** on the kept candidate (`VERIFYING.md` owns
+   commands and profile choice), then batched owner acceptance.
 
-Fix the highest class first; within a class, prefer the shared owner that can
-close several reports without weakening any contract.
+Standing rules: run the shortest event that reaches the trigger — never wait
+through a full match for a bug reachable in seconds; do not rerun an unchanged
+ROM or require routine A/B/A or long soaks; a performance A/B is owed only when
+active-frame work changed, the mechanism is plausibly hot, or pacing regressed;
+escalate to retail hardware only for conflicting evidence, intermittent
+failures, release qualification, or device-specific mechanisms.
 
-1. Freeze, crash, corruption, nondeterminism, or data loss.
-2. Gameplay, input, collision, state, timing, or scene-flow defects.
-3. Missing or wrong gameplay telegraphs, VFX, SFX, camera, HUD, or results.
-4. Cosmetic or acoustic mismatch that does not change gameplay meaning.
-5. Tooling defects that make evidence from classes 1-4 unreliable.
+## Step 1 — Intake
 
-Correctness bugs outrank optimization unless the owner explicitly changes the
-order. A performance regression introduced by a proposed fix remains part of
-that fix. A tooling defect that invalidates the current proof moves ahead of
-the bug that depends on that proof.
+Record the observable facts before proposing a cause: exact candidate identity
+(ROM/build, branch, dirty paths, emulator config); scene, fighter states,
+action, inputs, match time, preceding event; expected vs observed; frequency
+and shortest known trigger; capture or owner description; deterministic or
+intermittent. Preserve the user's wording and uncertainty — "sounds too loud"
+is a symptom, not a diagnosis. Reuse a valid existing failing capture instead
+of re-reproducing it. If the bug cannot be reproduced, do not guess a fix;
+improve the observation surface or obtain the missing trigger details.
 
-## Verification economy
+## Step 2 — Write the observable contract
 
-Use the cheapest evidence capable of falsifying the current claim. Expensive
-proof happens once, when promoting the final candidate.
+Decompose the symptom into the quantities that define "correct." **The
+contract is complete when matching every row within tolerance makes the
+reported symptom impossible.** Skipping this step is what made candidates
+bounce off the owner.
 
-- Diagnose from source, existing artifacts, and current runtime evidence before
-  building. Reuse a valid existing failing capture instead of reproducing it.
-- Do not build a ROM for every theory. Build only after one hypothesis predicts
-  a specific result, and prefer the smallest focused checker when it can answer.
-- During iteration, run the shortest targeted event. Do not wait through a full
-  match when the bug can be reached or captured earlier without changing it.
-- Do not repeat an unchanged ROM or require routine A/B/A, long soaks, or
-  32/128-frame samples. Escalate only when the first result is inconclusive.
-- Run a performance A/B only when active-frame work changed, the mechanism is
-  plausibly hot, or pacing regressed. Start with the synchronized eight-frame
-  comparison owned by `VERIFYING.md`.
-- Run one widest relevant verifier only after deciding to keep the candidate;
-  do not stack equivalent profiles or rerun an already-passing unchanged ROM.
-- An agent may pass named objective source, counter, image-analysis, and verifier
-  gates. Batch related owner visual/listen/play checks into one acceptance run.
-- Escalate to longer, broader, or retail-hardware proof only for conflicting
-  evidence, intermittent failures, release qualification, or device-specific
-  mechanisms.
+Visual dimensions: world position and attachment (does it follow its owner?),
+screen position, size/scale, count, texture/frame identity, color/palette,
+blend/opacity, motion (velocity, gravity, spread), spawn frame relative to
+trigger, lifetime, layer/z.
 
-## The workflow
+Audio dimensions: cue identity, level (peak/RMS), rate/pitch, duration and
+stop reason, envelope shape, pan, timing vs trigger, and the mix against
+concurrent channels — a cue can be internally source-exact and still wrong in
+the mix.
 
-### 1. Capture the report without interpreting it
+Each row: quantity; expected value with BattleShip `file:line`; tolerance; the
+DS probe that reads it. Pick tolerances from representation error (fixed-point
+conversion, projection rounding, resample ratio), never taste, and write them
+down. Example, from the Whispy row:
 
-Record the observable facts before proposing a cause:
+| Quantity | Expected (source) | Tol | Probe |
+|---|---|---|---|
+| Dust world x | -715 or -205 by `lr_players` (`ground.h:19`) | ±4 | GDB read of spawn args + `dust_xf->translate` |
+| Side selection | matches `gGRCommonStruct.pupupu.lr_players` | exact | same break |
+| Screen position | projection of the chosen side beside the tree at -525 | ±6 px | capture + image analysis |
+| Spawn timing | blow start + source frame offset | ±1 frame | frame-step capture |
 
-- exact ROM/candidate identity, branch, dirty paths, and emulator/device setup;
-- scene, fighter states, action, input, match time, and preceding event;
-- expected result, observed result, frequency, and shortest known trigger;
-- screenshot, video, audio note, freeze capture, or owner description;
-- whether the report is deterministic, intermittent, or not yet reproduced.
+Expected values come from, in order:
 
-The user's description is evidence of a symptom, not a diagnosis. Preserve
-uncertainty such as "sounds too loud" until the audio path is measured and the
-owner listens to the candidate.
+- **Constants and tables in source** (effect scripts, cue selector tables).
+- **A host fixture oracle** when the value is algorithmic: compile the source
+  algorithm into a host-side checker (existing pattern:
+  `scripts/native_light_sidecar_oracle.c`, `scripts/mp_topology_fixture.c`,
+  `scripts/fixtures/*_expected.json`). No emulator and no eye needed.
+- **The asset pipeline's own inputs** for appearance identity: the converted
+  source texture/frame is the definition of what the effect should show.
+- **A temporarily enabled source-exact interpreter arm** as an on-DS oracle for
+  side-by-side comparison; it remains intermediate if over budget.
+- **The owner, once, for genuine feel** — and then as a choice between
+  prepared alternatives (an A/B pair), never as an open "is this right?"
 
-### 2. Reproduce the failure on a known configuration
+Owner-approved presentation deltas (the fidelity rules in `AGENTS.md`, e.g.
+Dream Land water frozen at source frame 0) override raw source in the
+contract; cite the recorded approval instead of "fixing" an approved delta.
 
-Start with the verifier-covered configuration that exposes the real user path.
-Use an existing exact-candidate failure when it is sufficient; otherwise use the
-shortest natural trigger and capture one failing control before editing.
+## Step 3 — Localize: walk the chain and find the first wrong number
 
-- Hold ROM flags, emulator settings, inputs, and observation window constant.
-- Confirm that the guest reached the state under test; host title-bar motion or
-  a changing window hash is not guest liveness.
-- For intermittent bugs, record attempts and failures over a bounded exposure
-  instead of reporting only the successful attempt.
-- A diagnostic may accelerate a natural event, but it may not change the
-  behavior being judged. Final proof must exercise the natural path.
-- If the bug is not reproduced, do not guess a fix. Improve the observation
-  surface or obtain the missing trigger/candidate details.
+Follow the whole path and measure each stage's actual value against the
+contract; the first divergent value names the owning seam. Do not stare at the
+composite picture and guess.
 
-### 3. Define the source contract
-
-Before changing behavior, inspect the relevant BattleShip source and write down
-the exact expected event, state transition, timing, cue, effect, asset, branch,
-or cleanup behavior. Use CodeGraph first to trace the current port path.
-
-For substantial DS backend, renderer, memory, asset, or hardware changes, also
-inspect the comparable `sm64-nds` and `sm64ds-decomp` designs. `decomp/` remains
-read-only.
-
-Write four short statements in the work packet:
-
-1. **Expected:** what BattleShip requires.
-2. **Observed:** what this exact candidate does.
-3. **Earliest divergence:** the first seam where they differ.
-4. **Acceptance:** the observation that would falsify the proposed fix.
-
-### 4. Trace to the owning seam
-
-Follow the whole path rather than patching the last visible symptom:
-
-> trigger -> source state/event -> data or asset resolution -> runtime object or
-> channel -> backend submission -> visible/audible result -> cleanup
-
-Fix the earliest incorrect step shared by all affected callers. Check every
-caller and sibling path before editing the owner.
-
-Common classifications:
+> VFX: trigger -> source state/event -> maker + args -> LBTransform ->
+> bank/atlas resolve -> update -> draw submission -> pixels
+>
+> Audio: trigger -> cue id -> pack entry -> enqueue/channel -> mix -> PCM
 
 | Symptom | First evidence to collect |
 |---|---|
 | Wrong gameplay or scene flow | Source state transition, live status/input trace, first differing state |
-| Missing or wrong VFX | Trigger/effect ID, create/drop, asset/bank resolve, update, draw submission, client pixels |
-| Missing or wrong audio | Trigger/cue ID, pack lookup, enqueue/channel result, duration/stop reason, audible output |
+| Missing or wrong VFX | Trigger/effect ID, create/drop, asset/atlas resolve, update, draw submission, client pixels |
+| Missing or wrong audio | Trigger/cue ID, pack lookup, enqueue/channel result, duration/stop reason, rendered PCM |
 | Freeze or corruption | Guest frame/counter, PC and instruction, stack, allocator/DL/GFX/abort counters |
-| Performance regression | Same-tree matched A/B, engagement, typed ticks, P50/P95, VBlank histogram and maximum |
+| Performance regression | Matched same-tree A/B, engagement, typed ticks, P50/P95, VBlank histogram and maximum |
 | Harness or detector defect | Known-bad positive control, expected artifact, sample/hit count, guest-owned signal |
 
-For a freeze, classify the stopped guest before naming an owner. An allocator
-spin, display-list overflow, data abort, IRQ/wait state, and a slow live frame
-need different fixes even when the window looks equally frozen.
+Probe discipline (each learned the hard way):
 
-### 5. Run one falsifiable experiment
+- GDB command batches must be nm-checked; one absent symbol silently aborts
+  the rest. A halted-core screenshot can show a stale buffer — break on the
+  constructor, then step.
+- A counter with no compiled writer reads 0, which looks clean. Every probe
+  needs an engagement count or positive control: zero must mean "measured
+  zero," never "the hook never ran" or "the linker removed it."
+- Compare captures against the synchronized control arm and crop metrics to
+  the changed region; a full-frame metric hides a fully-wrong island, and a
+  candidate judged alone destroys things the control would have caught.
+- Change one causal variable at a time; define KEEP, REVERT, and inconclusive
+  before reading the result. When two hypotheses fail, re-trace the chain
+  instead of stacking a third speculative patch.
+- A diagnostic may accelerate the natural event but not change the behavior
+  being judged; final proof exercises the natural path. Confirm the guest
+  reached the state under test — host window motion is not guest liveness.
+- For a freeze, classify the stopped guest before naming an owner: an
+  allocator spin, DL overflow, data abort, IRQ/wait state, and a slow live
+  frame need different fixes even when the window looks equally frozen.
 
-State one hypothesis and its predicted observation before changing code. Use
-existing counters, checkers, captures, and scripts before adding a probe.
+`optimization/TASK_STANDING_RULES.md` owns measurement traps and time boxes.
 
-- Change one causal variable at a time. Use a matched control when attribution,
-  performance, or visible-output comparison requires it; do not manufacture one
-  for an objective focused check with an existing failing control.
-- Define KEEP, REVERT, and inconclusive outcomes before reading the result.
-- Every probe needs an engagement count or positive control. Zero must mean
-  "measured zero," not "the hook never ran" or "the linker removed it."
-- Verify debugger symbols exist in the candidate ELF before adding capture
-  commands; one missing GDB symbol can discard the rest of the batch.
-- Check that the intervention happened independently of the result counters.
-- When two plausible hypotheses fail, re-trace the flow instead of stacking a
-  third speculative patch.
+## Step 4 — Fix the root cause once
 
-Follow `optimization/TASK_STANDING_RULES.md` for measurement-specific traps and
-time boxes.
+Make the smallest mechanically correct change at the first divergent seam,
+shared by all affected callers — check every caller and sibling path first.
 
-### 6. Fix the root cause once
-
-Make the smallest mechanically correct change at the owning seam.
-
-- Reuse the existing source-backed or DS-native owner before adding another
-  path, cache, selector, or abstraction.
-- Do not hide a shared defect with a frame check, arbitrary offset, synthetic
+- Reuse the existing source-backed or DS-native owner before adding a path,
+  cache, selector, or abstraction.
+- Never hide a shared defect with a frame check, arbitrary offset, synthetic
   input, bug-specific effect, or permanent proof-only branch.
-- Keep port behavior under `src/nds` or `src/port`; compatibility declarations
-  belong under `include`.
-- Preserve unrelated dirty work and reverse only the experiment's own hunks if
-  it is rejected.
-- Remove temporary probes. Keep a diagnostic only when it prevents recurrence
-  and has its own runnable check.
-- If the bug exposed a repeatable workflow failure, improve the existing helper,
-  checker, or owning document in the same scoped change when safe.
+- Port behavior lives under `src/nds` or `src/port`; compatibility
+  declarations under `include`. Preserve unrelated dirty work; revert only
+  your own hunks when an experiment is rejected.
+- Remove temporary probes; keep a diagnostic only when it prevents recurrence
+  and has its own runnable check. If the bug exposed a repeatable workflow
+  failure, improve the owning helper/checker/doc in the same scoped change.
 
-### 7. Prove the candidate
+## Step 5 — Prove the candidate
 
-Use the least work that can falsify the fix, then one widest relevant verifier.
-`VERIFYING.md` owns the current commands and profile choice; do not copy stale
-command sequences into bug reports.
+1. Every contract row measured green on the exact candidate, natural path.
+2. One adjacent or sibling path that could regress from the same change.
+3. The widest relevant verifier in the configuration that will ship.
+4. Domain guards: **visuals** — synchronized control/candidate capture in
+   `artifacts/visibility` passing the image gates; **audio** —
+   event-to-cue-to-channel evidence and no unexplained drop/underrun (a packed
+   cue alone is not audible proof); **freeze/memory** — a classified failing
+   capture before the fix, a bounded stress run after it, reserve/overflow
+   counters healthy; **performance, when owed** — matched same-configuration
+   A/B with engagement, typed P50/P95, VBlank histogram and maximum.
 
-The final proof packet contains only the applicable items:
-
-1. the focused check or deterministic reproducer;
-2. the natural user path on the exact candidate;
-3. the expected state/output and the absence of the original failure;
-4. one adjacent or sibling path that could regress from the same change;
-5. the widest relevant verifier in the configuration that will ship;
-6. memory, pacing, cleanup, or drop guards relevant to the changed subsystem.
-
-Additional acceptance is mandatory by domain:
-
-- **Gameplay:** source-equivalent state and timing evidence plus verifier
-  coverage and an owner play test when feel is involved.
-- **Visuals:** source-derived presentation, trigger/create/draw evidence, and a
-  synchronized control/candidate capture in `artifacts/visibility`. An agent may
-  pass the objective image gates; batch final subjective approval with the
-  owner's next visual check.
-- **Audio:** event-to-cue-to-channel evidence, no unexplained drop/underrun, and
-  owner listen approval. A packed cue alone is not audible proof.
-- **Freeze/memory:** a classified failing capture before the fix, a bounded
-  stress run after it, and the relevant reserve/overflow counters remaining
-  healthy. A changing picture alone is not liveness.
-- **Performance, when required by the verification-economy rule:** a matched
-  same-configuration A/B with engagement, typed P50/P95, the 2/3/4/5+ VBlank
-  histogram, maximum interval, and correctness guards. Use the accuracy-focused
-  custom melonDS fork unless the mechanism is device-specific.
-
-Treat unexplained flashes, corruption, state differences, missing content,
-nondeterminism, or verifier contradictions as failures even if the original
+Unexplained flashes, corruption, state differences, missing content,
+nondeterminism, or verifier contradictions are failures even if the original
 symptom disappeared.
 
-### 8. Record evidence in its owner
+## Step 6 — Owner acceptance: batched, predicted, structured
 
-Do not turn `BUGS.md` into a second history or evidence ledger.
+Ask for the owner's eye or ear only when, for every row in the batch: the
+contract is green on the exact candidate; a one-sentence prediction of what
+the owner will perceive is written; the side-by-side or listenable evidence is
+attached from `artifacts/`. Batch every ready row of a cluster into one
+session. Present each row as:
+
+> **Prediction:** what you will see/hear, one sentence.
+> **Evidence:** capture/PCM path. **Verdict:** PASS / FAIL(dimension)
+
+On FAIL the owner names the wrong dimension from the contract vocabulary
+(position, size, count, motion, color, timing, loudness, pitch, mix, other).
+That answer is a new contract row: measure it, fix it, and re-verify only it
+plus adjacents — never re-prove rows already green, never resend an unchanged
+candidate.
+
+**If the owner rejects a candidate whose every row is source-exact, the
+contract was under-specified** — a dimension is missing (mix vs cue gain,
+atlas admission vs script correctness, screen vs world space). Widen the
+contract and continue; that, not another build, is what "Check Source" means.
+
+## When the gap is a decision, stop iterating
+
+If the divergence traces to a resource or architecture bound (atlas byte
+budget, pool size, VRAM/arena margin, admission policy), cosmetic iteration
+cannot close the row. Write a decision request on the board — the bound, the
+options with measured costs, one recommendation — mark the row
+`BLOCKED(decision: ...)`, and take the next row. Polishing inside a constraint
+that guarantees failure is the most expensive form of non-progress.
+
+## Keep `BUGS.md` lean, with visible stages
+
+`BUGS.md` is the user-facing queue, not an investigation log.
+
+- Preserve the user's symptom wording and ordering; never silently delete,
+  merge, split, or narrow a report.
+- Prefix closed rows `**FIXED** (YYYY-MM-DD)`; use `**PARTLY FIXED**` only when
+  an independently verified part is closed and the remaining symptom is named.
+- For open rows, append one line of at most 20 words, starting with the stage:
+  `CONTRACT` (expected values written) -> `LOCALIZED` (first divergent seam
+  named) -> `MEASURED` (all rows green on candidate) -> `OWNER-QUEUED`
+  (prediction and evidence ready) -> or `BLOCKED(decision: ...)`. Stages make
+  progress legible between owner sessions.
+- An umbrella report is not closed by one representative case: track every
+  named case in the packet and prove each naturally. A shared root cause may
+  fix several rows; each row keeps its own acceptance.
+
+## Priority
+
+1. Freeze, crash, corruption, nondeterminism, or data loss.
+2. Gameplay, input, collision, state, timing, or scene-flow defects.
+3. Missing or wrong telegraphs, VFX, SFX, camera, HUD, or results.
+4. Cosmetic or acoustic mismatch without gameplay meaning.
+5. Tooling defects that make evidence for classes 1–4 unreliable.
+
+Within a class, prefer the shared owner that closes several rows. Correctness
+outranks optimization unless the owner reorders. A performance regression
+introduced by a fix belongs to that fix. A tooling defect invalidating a
+current proof moves ahead of the bug depending on that proof.
+
+## Where evidence lives
 
 | Owner | What belongs there |
 |---|---|
-| `BUGS.md` | Original symptom, status prefix, and at most a 20-word open summary |
-| `P1_EXECUTION_BOARD.md` | Current blocker, decision, candidate identity, and dynamic queue impact |
-| `PORTING.md` | Append-only root cause, fix, and chronological result |
-| `PERF_LEDGER.md` | Reproducible performance evidence and rejected performance experiments |
-| `KNOWN_ISSUES.md` | Durable unresolved gap that outlives the current bug cycle |
-| `HANDOFF.md` | Only the immediate restart surface when this bug is the next work |
+| `BUGS.md` | Symptom, status prefix, one ≤20-word stage line |
+| `P1_EXECUTION_BOARD.md` | Current blocker, decisions, candidate identity, queue impact |
+| `PORTING.md` | Append-only root cause, fix, chronological result |
+| `PERF_LEDGER.md` | Reproducible performance evidence, rejected experiments |
+| `KNOWN_ISSUES.md` | Durable unresolved gaps outliving the cycle |
+| `HANDOFF.md` | Restart surface only |
 | `artifacts/visibility` | Permanent synchronized visual evidence |
-| `artifacts/performance` | Permanent measurements cited by a kept conclusion |
+| `artifacts/performance` | Permanent measurements cited by kept conclusions |
 
-Record source evidence, commands, candidate identity, result, and remaining
-uncertainty where another person can reproduce the conclusion. Do not duplicate
-volatile truth across documents.
+Record commands, candidate identity, results, and remaining uncertainty where
+another person can reproduce the conclusion. Do not duplicate volatile truth.
 
-### 9. Close or leave it honestly open
+## Close honestly
 
-Mark `**FIXED**` only when all applicable items below are true:
+Mark `**FIXED**` only when: symptom wording and scope are preserved; the root
+cause was demonstrated, not inferred; the fix engaged on the natural path of
+the exact candidate; the contract, focused check, and widest relevant verifier
+passed on the shipping arm; adjacent behavior, reserves, cleanup, and pacing
+remain acceptable; permanent evidence is stored and cited; the owner completed
+any subjective acceptance (batched is fine). A checker, counter, or capture
+that contradicts the story keeps the row open. After verified progress, follow
+the repository's commit and snapshot policy; the snapshot is the final project
+command, with nothing run afterward.
 
-- the original symptom wording and acceptance scope are preserved;
-- the failure was reproduced or its prior evidence was strong enough to
-  classify, and the root cause was demonstrated rather than inferred;
-- the fix engaged on the natural path of the exact candidate;
-- the focused check and widest relevant verifier passed on the shipping arm;
-- adjacent behavior, resource reserve, cleanup, and pacing remain acceptable;
-- permanent evidence is stored and cited;
-- the owner completed any required visual, listen, feel, or retail-hardware
-  acceptance, which may be batched across related fixes.
+## Anti-patterns — each has already cost a full loop
 
-If only a subset passes, mark `**PARTLY FIXED**` and name the remaining visible
-failure in 20 words or fewer. If a checker, counter, or capture contradicts the
-story, leave the row open.
-
-After verified progress, follow the repository's commit and snapshot policy.
-The snapshot must be the final project command, with nothing run afterward.
+- Building a ROM to "see if it looks right now."
+- Verifying the mechanism and calling the symptom fixed (transform applied ≠
+  dust beside the tree).
+- Sending the owner a candidate whose appearance you could not predict.
+- Re-proving already-green rows after a FAIL instead of measuring the named
+  dimension.
+- Iterating cosmetics against a resource bound that needs an owner decision.
+- One bug per build when five share the subsystem.
+- Waiting through a full match for a trigger reachable in seconds.
 
 ## Bug work packet
 
-Use this as a temporary investigation note or as the compact structure for the
-owning history entry. Do not paste the whole packet into `BUGS.md`.
+The working note per row (keep it in the investigation, not in `BUGS.md`):
 
 ```text
 Bug: <verbatim user report>
-Status: OPEN | PARTLY FIXED | FIXED
-Candidate: <ROM/build, branch, dirty paths, emulator/device configuration>
-Repro: <shortest natural trigger, frequency, failing control evidence>
-Expected: <BattleShip contract and source location>
-Observed: <exact candidate behavior>
-Earliest divergence: <first wrong owner/seam>
-Hypothesis: <one causal claim>
-Falsifier: <predicted measurement and KEEP/REVERT threshold>
-Fix seam: <shared owner and affected callers>
-Focused proof: <command/result>
-Natural proof: <event/state/output result>
-Widest verifier: <profile and result>
+Stage: CONTRACT | LOCALIZED | MEASURED | OWNER-QUEUED | BLOCKED(...) | FIXED
+Candidate: <ROM/build, branch, dirty paths, emulator config>
+Trigger: <shortest natural trigger; how the probe reaches it>
+Contract:
+| quantity | expected (file:line) | tol | probe | measured | verdict |
+Earliest divergence: <first red row and its seam>
+Fix seam: <owning seam and affected callers>
+Prediction: <one sentence — what the owner will see/hear>
+Proof: <focused check; natural-path result; widest verifier result>
 Artifacts: <permanent evidence paths>
-Owner gate: <visual/listen/play/hardware result, batched queue, or pending>
-Remaining: <none, or one precise visible failure>
+Owner verdict: <pending batch | PASS | FAIL(dimension)>
+Remaining: <none, or the one open dimension>
 ```
