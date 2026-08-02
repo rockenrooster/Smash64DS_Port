@@ -930,6 +930,25 @@ void ftPhysicsStopVelAll(GObj *fighter_gobj)
         fp->vel_push.z = 0.0F;
         fp->physics.vel_air = fp->vel_air;
         fp->physics.vel_ground = fp->vel_ground;
+        /* The KNOCKBACK velocity, and it is the whole of BUGS row 8. The source
+         * zeroes it here (ftphysics.c:453-455) and this did not, so "stop all
+         * velocity" stopped everything except the one that was actually moving
+         * a KO'd fighter. ftCommonDeadUpStarSetStatus calls this and then drives
+         * the fighter to camera_bound_top * 0.6 through physics.vel_air, so with
+         * vel_damage_air still live the fighter kept its launch speed and the
+         * correction was simply outvoted: measured, the star sparkle spawned at
+         * y 79,222 against a target of 2,400, with physics.vel_air.y holding the
+         * correct -33.36 the whole way up. The effect was never broken; it was
+         * drawn nine stage-heights above the screen.
+         *
+         * vel_damage_air is summed with vel_air to make the effective velocity
+         * (reloc_backend_cliff_ledge.c:7073), so leaving it out of a "stop all"
+         * is silent everywhere else too -- every other caller happens to be a
+         * state the knockback had already decayed in. */
+        fp->physics.vel_damage_air.x = 0.0F;
+        fp->physics.vel_damage_air.y = 0.0F;
+        fp->physics.vel_damage_air.z = 0.0F;
+        fp->physics.vel_damage_ground = 0.0F;
         fp->physics.vel_jostle_x = 0.0F;
         fp->physics.vel_jostle_z = 0.0F;
     }

@@ -24,8 +24,8 @@ These bugs should be fixed for P1 delivery:
 -Correct VFX isn't played for various things (running foot dust VFX, fireball hit VFX, fox down B, shield, hard landing vfx, etc)
   MEASURED: dust scripts now packed, rejects 49->0, script starts 137->226; other kinds unverified.
 
--Upwards KO boundary death: correct VFX and SFX never play for fighters
-  LOCALIZED: sparkle spawns at y=79222 vs target 2400 -- the star ascent's corrective vel_air.y never applies.
+-**FIXED** (2026-08-01) Upwards KO boundary death: correct VFX and SFX never play for fighters.
+  ftPhysicsStopVelAll never cleared vel_damage_air; sparkle 79222 -> 2399.99 against a 2400 target.
 
 -KO VFX wrong.
   Owner: I can kind of see that its trying to play the effect but it gets clipped or something so I can't see it fully. Check Source.
