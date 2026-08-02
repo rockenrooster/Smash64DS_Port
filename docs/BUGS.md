@@ -152,12 +152,29 @@ These bugs should be fixed for P1 delivery:
   (2) Read through $r0 rather than `pos`, correct in principle since pos is argument one. Still
   0.0. (3) `break *FUNC` with the star, to stop at the exact entry before the prologue can reuse
   r0. Still 0.0, and gdb reports the same address either way.
-  So $r0 appears to be unreadable on this remote, which matches the earlier finding that inferior
-  calls SIGILL here. NEXT: read the position from the CALLER instead -- break at
-  battleship_efmanager.c:1379, where `pos` is a live local being passed down -- rather than
-  attacking the callee's registers again. Worth ruling out first that the position is genuinely
-  (0,0,0), which would itself be the bug and would look identical.
-  Until then this row has exactly one measurement behind it, the earlier 17 sparks at |x| <= 1344.
+  (4) FIXED THE INSTRUMENT, AND THE ANSWER IS THAT THE POSITION IS REALLY ZERO. Breaking at the
+  caller instead -- battleship_efmanager.c:1379, where `pos` is a named parameter in a TU with its
+  own debug info -- resolves to ONE address (0x209384c) and reads cleanly.
+      spark_calls=6  spark_x=0.0  spark_y=0.0  spark_absmax=0.0
+      spark_player=1  spark_size=17  spark_ptr=022a8b74
+  WITH A CONTROL, because four zeroes and four failed reads look identical: `player` and `size`
+  are siblings of `pos` in the same frame and read 1 and 17 -- live, sensible, and matching
+  hitlog->attacker_player and ft_attack_coll->damage. So the frame IS readable. And spark_ptr is
+  022a8b74, a valid EWRAM address, so `pos` is NOT NULL -- it is a real Vec3f containing (0,0,0).
+  ROW 4's SYMPTOM IS EXPLAINED: every hit spark is spawned at the world origin, stage centre,
+  regardless of where the attack connected. That is "stray VFX played across the stage when
+  attacks are landed" -- the sparks are not scattered, they are all in the same wrong place while
+  the fight happens elsewhere. It also retires the earlier "17 sparks at |x| <= 1344" reading,
+  which came from a different build.
+  WHERE IT COMES FROM, not yet isolated: ftmain.c:2711 fills that Vec3f with
+  gmCollisionGetFighterAttackDamagePosition (gmcollision.c:1967), which composes three steps --
+  gmCollisionGetFighterAttackPosition, then gmCollisionGetWorldPosition(parts->mtx_translate, ...)
+  for the damage side, then gmCollisionGetCommonImpactPosition to blend them. The middle step
+  reads a fighter PART MATRIX, which this port maintains through its own matrix pipeline, so that
+  is the natural suspect -- but it is a suspect, not a finding, and four mechanisms were published
+  and refuted on row 1 today for exactly this kind of reasoning.
+  NEXT, one measurement: break at gmcollision.c:1979 and latch attack_pos and damage_pos
+  SEPARATELY. Whichever is zero names the step; if both are sane the fault is in the blend.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.

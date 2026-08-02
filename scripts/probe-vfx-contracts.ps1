@@ -136,7 +136,7 @@ try {
         'set $slot1_xf_at_emitter = 0',
         'set $slot1_xf_elsewhere = 0',
         'set $slot1_xf_gen = -1',
-        'set $spark_calls = 0',
+        'set $spark_calls = 0', 'set $spark_ptr = 0',
         'set $spark_x = 0.0',
         'set $spark_y = 0.0',
         'set $spark_absmax = 0.0',
@@ -216,11 +216,30 @@ try {
         # pointing the breakpoint at the real implementation fixed the "2
         # locations at 0x0" split and STILL read every position as 0.0. The star
         # form stops at the exact entry address, where r0 is still argument one.
-        'break *ndsBaseEFManagerDamageNormalLightMakeEffect',
+        # Read the CALLER's live local, not the callee's registers. Three
+        # attempts at the callee all returned 0.0 -- the ndsBase implementation
+        # (which fixed a real "2 locations at 0x0" split), $r0, and `break *FUNC`
+        # for the pre-prologue entry -- so $r0 is not readable on this remote,
+        # consistent with inferior calls SIGILLing here. battleship_efmanager.c
+        # :1379 is the port wrapper's tail call, where `pos` is a named
+        # parameter in a TU with its own debug info.
+        'break battleship_efmanager.c:1379',
         'commands',
         'silent',
         'set $spark_calls = $spark_calls + 1',
-        'set $spark_p = (Vec3f *)$r0',
+        # THE CONTROL. Four read paths have now returned pos->x == 0.0 and the
+        # last is a clean single-location breakpoint on a named parameter, so
+        # "the position really is the origin" is the leading reading -- which
+        # would itself be row 4's bug, sparks at stage centre instead of at the
+        # contact. But four failures and four zeroes look identical from here.
+        # `player` and `size` are siblings of `pos` in the same frame and are
+        # known non-zero (size is the caller's magnitude, player is 0 or 1, and
+        # a Fox hit gives 1). If they read sensibly, the frame is readable and
+        # the zero position is real. If they read 0 too, the frame is not
+        # readable and nothing from this breakpoint means anything.
+        'set $spark_ptr = (unsigned long)pos', 'set $spark_player = player',
+        'set $spark_size = size',
+        'set $spark_p = pos',
         'set $spark_x = $spark_p->x',
         'set $spark_y = $spark_p->y',
         'if $spark_p->x > $spark_absmax',
@@ -533,7 +552,7 @@ try {
 
         ('printf "VFXCONTRACT whispy_calls=%d lr=%d whispy_x=%f whispy_y=%f whispy_rotY=%f whispy_scale=%f ' +
             'slot1_frames=%d slot1_x=%f slot1_y=%f slot1_size=%f slot1_absmax=%f ' +
-            'spark_calls=%d spark_x=%f spark_y=%f spark_absmax=%f ' +
+            'spark_calls=%d spark_x=%f spark_y=%f spark_absmax=%f spark_player=%d spark_size=%d spark_ptr=%08lx ' +
             'dead_calls=%d dead_x=%f dead_y=%f rebirth_calls=%d explode_calls=%d ' +
             'frame_stops=%d forced=%d dust_frames=%d leaf_frames=%d leaf_x=%f ' +
             'mouth=%f,%f mouth_sx=%f eyes=%f,%f ground=%f,%f ground_sx=%f ' +
@@ -551,7 +570,7 @@ try {
             '$whispy_calls, $whispy_lr, ' +
             '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
             '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
-            '$spark_calls, $spark_x, $spark_y, $spark_absmax, ' +
+            '$spark_calls, $spark_x, $spark_y, $spark_absmax, ' + '$spark_player, $spark_size, $spark_ptr, ' +
             '$dead_calls, $dead_x, $dead_y, $rebirth_calls, $explode_calls, ' +
             '$frame_stops, $forced, ' +
             '$dust_frames, $leaf_frames, $leaf_x, ' +
