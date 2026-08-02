@@ -4,27 +4,20 @@ These bugs should be fixed for P1 delivery:
 
 -Whispy blow VFX not correct and not at correct location.
   Owner: still not right, spawning too far away from Whispy the Tree.
-  ROOT CAUSE FOUND, not the effect: WHISPY HAS NO FACE. Both emitters measure source-exact
-  (-715/-205 at y=100, leaves y=450 z=-696, each with the matching rotate.y) and agree with the
-  owner's own N64 capture. But map_gobj[0] (eyes) and map_gobj[1] (mouth) carry dl=0 AND mobj=0
-  across their root and every child/sibling -- built, positioned and animated by grPupupuProcUpdate,
-  with no geometry and nothing for whispy_eyes_texture/whispy_mouth_texture to drive. Three
-  identical trunks and no anchor saying which one is Whispy, so correct dust beside one of them
-  reads as coming from nowhere. Stage-geometry work, not effect work. (Walk covered root + one
-  level; geometry deeper than that would not have been seen.)
-  Why reading `dl` is sufficient and not the usual wrong-field mistake: DObj's display list is a
-  UNION (objtypes.h:429-438) over dv/dl/dls/multi_list/dl_link/dist_dl/dist_dl_link, all aliasing
-  one pointer. Zero there rules out the dl_link form these stage GObjs would otherwise use.
-  Localized to the ASSET side, not the runtime. grpupupu.c:666-667 builds both from relocData
-  descs at map_head + 0x10f0 (eyes) and + 0x1770 (mouth); a DObjDesc is 44 bytes with its
-  display-list pointer at +4. Both descriptors read 0,0 in memory, so gcSetupCustomDObjs did its
-  job faithfully on empty input -- the geometry never arrives.
-  CAVEAT THAT DECIDES THE NEXT STEP: grPupupuInitAll sets map_head = map_nodes - 0x10f0, so the
-  eyes descriptor address IS gMPCollisionGroundData->map_nodes exactly. On the DS, map_nodes comes
-  from the generated native stage, which may not lay out the original relocData map at all -- in
-  which case the zeros mean "this arithmetic points somewhere unrelated" rather than "the asset
-  lacks a face". Settle that first (scripts/stages/generate_nds_native_stage.py and whatever
-  populates map_nodes) before touching grpupupu.c.
+  RETRACTED: "Whispy has no face" was wrong and is withdrawn. The empty DObj trees are BY DESIGN.
+  What still stands: both emitters are source-exact -- dust (-715|-205, y=100), leaves y=450
+  z=-696/-762, each with the rotate.y its lr_players demands -- and all of it agrees with the
+  owner's N64 capture. The effect is not the defect.
+  What was wrong: map_gobj[0]/[1] do carry dl=0 and mobj=0 (dl is a union over every display-list
+  form, objtypes.h:429-438, so that read was sound), and their relocData descs at map_head+0x10f0
+  and +0x1770 do read 0,0 -- GRPupupuMap on disk is 290 BYTES, so both offsets are far past its
+  end. But this port does not draw the stage from those descs at all. The generated native stage
+  owns it: NDS_NATIVE_STAGE_SEGMENT_COUNT is 8 and generate_nds_native_stage.py:4136 lists them as
+  layer0, whispy_eyes, whispy_mouth, flowers_back, layer1, layer2, flowers_front, layer3. Segments
+  1 and 2 ARE the face; they are indexed, not named, in the generated .inc, which is why grepping
+  it for "whispy" finds nothing. The map_gobj GObjs exist to carry animation state for that path.
+  OPEN QUESTION, and the only one left: are native stage segments 1 and 2 actually submitted at
+  runtime? Nothing measured here answers that -- every reading so far was of the legacy DObj path.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
