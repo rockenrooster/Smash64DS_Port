@@ -12,6 +12,11 @@ These bugs should be fixed for P1 delivery:
   identical trunks and no anchor saying which one is Whispy, so correct dust beside one of them
   reads as coming from nowhere. Stage-geometry work, not effect work. (Walk covered root + one
   level; geometry deeper than that would not have been seen.)
+  Localized for whoever takes it: grpupupu.c:666-667 builds both from relocData descs --
+  llGRPupupuMapWhispyEyesTransformKindsDObjDesc/MObjSub and the Mouth pair, declared as file
+  offsets in include/reloc_data.h:466-470 (0x0f00/0x10f0/0x13b0/0x1770 in the Dream Land map).
+  grPupupuMakeMapGObj is linked and runs; the descs are offsets the port resolves at runtime, so
+  the question is whether that resolve returns them and whether the DS submits the resulting tree.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
@@ -20,7 +25,14 @@ These bugs should be fixed for P1 delivery:
   It lived 8 frames against the source's 390; alive at +24 now. Growth zeroed so it holds size.
 
 -Stray VFX are getting played across the stage when attacks are landed.
-  FALSIFIED as written: 17 sparks/match, |x| max 1344, all on stage. A denormal size draws in the RIGHT place, just sub-pixel -- it cannot move a particle, so that is not the cause either. Needs a fresh symptom.
+  OPEN, one untested mechanism left. spark_absmax 1344 measures the position handed to the MAKER
+  and came back clean, but ndsParticleTransformForDraw falls back to raw pc->pos when pc->xf is
+  NULL, and for a script-made particle that is the script-local origin -- i.e. stage centre. An
+  effect spawned at a fighter and DRAWN at world zero is the reported symptom, and no measurement
+  of the maker's argument can see it. Sampling slot 0 for xf==NULL returned count 0 because the
+  sample sits 6 frames after a KO burst, which is not when hit sparks are live; that is a timing
+  miss, not evidence. Next: count xf==NULL inside lbParticleDrawTextures itself.
+  (A denormal size cannot cause this -- it draws in the right place, just sub-pixel.)
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.

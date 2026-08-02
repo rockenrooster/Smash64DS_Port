@@ -129,6 +129,9 @@ try {
         'set $vis_after = -1',
         'set $slot2_count = -1',
         'set $slot2_size = -1.0',
+        'set $slot0_count = -1',
+        'set $slot0_noxf = -1',
+        'set $slot0_noxf_absmax = -1.0',
         'set $shot_explode = 0',
         'set $shot_star = 0',
         'set $shot_rebirth = 0',
@@ -155,6 +158,32 @@ try {
         # denormal, so before that fix the burst's particles were submitted,
         # counted, and sub-pixel, leaving only the DObj/matanim half on screen.
         # Reading the live size here says whether they now carry 100.
+        # ROW 4, AND IT IS A DIFFERENT QUESTION FROM THE ONE I ANSWERED FIRST.
+        # spark_absmax measures the position HANDED TO the maker, which came
+        # back clean at 1,344 -- but ndsParticleTransformForDraw falls back to
+        # raw pc->pos when pc->xf is NULL, and for a script-made particle that
+        # is the SCRIPT-LOCAL origin, i.e. the middle of the stage. An effect
+        # spawned correctly at a fighter and drawn at world zero is exactly
+        # "stray VFX played across the stage when attacks are landed", and no
+        # measurement of the maker's argument can see it. Slot 0 is where the
+        # ungenlinked combat effects live.
+        'set $slot0_count = 0',
+        'set $slot0_noxf = 0',
+        'set $slot0_noxf_absmax = 0.0',
+        'set $p = sLBParticleStructsAllocLinks[0]',
+        'while $p != 0',
+        'set $slot0_count = $slot0_count + 1',
+        'if $p->xf == 0',
+        'set $slot0_noxf = $slot0_noxf + 1',
+        'if $p->pos.x > $slot0_noxf_absmax',
+        'set $slot0_noxf_absmax = $p->pos.x',
+        'end',
+        'if -$p->pos.x > $slot0_noxf_absmax',
+        'set $slot0_noxf_absmax = -$p->pos.x',
+        'end',
+        'end',
+        'set $p = $p->next',
+        'end',
         'set $slot2_count = 0',
         'set $slot2_size = 0.0',
         'set $p = sLBParticleStructsAllocLinks[2]',
@@ -320,6 +349,7 @@ try {
             'star_updates=%d phase=%d wait=%d vy=%f vymax=%f posy=%f forced_damage=%d ' +
             'spark_calls=%d spark_absmax=%f ' +
             'burst_slot2_count=%d burst_slot2_size=%f ' +
+            'slot0_count=%d slot0_noxf=%d slot0_noxf_absmax=%f ' +
             'at_rebirth_created=%d dropped=%d mask=%#x active_after=%d created_after=%d ' +
             'at_results_created=%u dropped=%u kindmask=%#x ' +
             'miss=%u emit=%u structs_max=%u\n", ' +
@@ -328,6 +358,7 @@ try {
             '$star_updates, $star_phase, $star_wait, $star_vy, $star_vymax, $star_posy, $forced_damage, ' +
             '$spark_calls, $spark_absmax, ' +
             '$slot2_count, $slot2_size, ' +
+            '$slot0_count, $slot0_noxf, $slot0_noxf_absmax, ' +
             '$vis_before, $vis_dropped, $vis_mask, $vis_active, $vis_after, ' +
             'gNdsVisualEffectCreateCount, gNdsVisualEffectDropCount, ' +
             'gNdsVisualEffectKindMask, ' +
