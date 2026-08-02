@@ -50,7 +50,39 @@ These bugs should be fixed for P1 delivery:
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.
-  OWNER-QUEUED: gain law, master gain and modulator 92 (shape 3) all source-exact and modelled. Needs your ear.
+  OWNER-QUEUED: offline verification EXHAUSTED -- every mechanical dimension is source-exact and
+  nothing measurable supports "too loud". Listen to the WAVs below; that is now the cheapest step.
+  What the roll actually is (202_MarioMainMotion.c RollF/RollB, 208_FoxMainMotion.c RollB/TechB):
+  Mario's roll plays ONE cue, FGM 11 nSYAudioFGMEscape. FOX'S ROLL PLAYS TWO -- FGM 11 plus voice
+  364 nSYAudioVoiceFoxEscape, simultaneously. That is source behaviour, not a port defect, and it
+  is the most likely reason a roll can read as louder than expected. Which fighter was rolling
+  matters; the report says "escape roll?" so the cue was never pinned down.
+  Verified source-exact, each against decomp: root UCD program is 3 sequential notes (12,13,12 for
+  30+40+20 = 90 ticks = source_duration_ticks); articulation 54; modulator 92 (shape 3, target 10
+  volume, period 11, amp 110, offset 50) modelled; modulator 93 (target 28) correctly skipped --
+  24+ is cross-voice and FGM 11 has no forks, so there is no destination; modulator 94 (shape 7,
+  target 12 pitch, period 90, amp 260, offset -350) IS modelled -- it ramps pitch -93 -> -350 cents
+  across the cue, and _fgm_modulator_value does implement shape 7 via `if shape in (3, 7)`. The
+  comment at render-audio-fgm-phase-pack.py:3660 saying shape 7 is unimplemented is STALE; it was
+  written for FGM 85 where shape 7 sat on a cross-voice target and was skipped before evaluation.
+  Volume envelope is a single constant point, so packed_envelope_count 0 is correct. Shipping
+  ds_volume 127 over that point's 124 is the pack's normal baked-render convention, not an FGM 11
+  quirk -- 46 of 88 entries differ the same way.
+  Measured, not argued: decoded peak 23096 of 32767, zero clipped samples. Effective RMS ranks
+  33rd of 88 cues, 1.19x the pack median -- mid-pack, not an outlier. Fox's two cues time-aligned
+  and summed peak at 32768 with ONE hard-clipped sample in 16560 -- inaudible, but not the "30351,
+  zero clipped" this row briefly claimed: that first figure summed a 32000 Hz cue against a
+  16000 Hz one index-by-index, which plays the voice at double speed and misaligns the mix, so it
+  was answering nothing. `export-fgm-cue-wav.py --sum` resamples to the fastest rate now.
+  A decoder written independently of the pack reproduces decoded_peak for all 88 entries, so these
+  WAVs are bit-accurate to what the hardware reconstructs. Regenerate with
+  `python scripts/sfx/export-fgm-cue-wav.py 11 364 --volume --sum` (artifacts/ is gitignored):
+    artifacts/audio/fgm11-nSYAudioFGMEscape-as-ds-plays-it.wav      (Mario's roll, the whole sound)
+    artifacts/audio/fgm364-nSYAudioVoiceFoxEscape-as-ds-plays-it.wav
+    artifacts/audio/fgm-11-364-summed.wav                           (Fox's roll, as DS sums it)
+  This bisects the row without booting a ROM: wrong in the WAV means the render is wrong and it is
+  mine to fix; right in the WAV but wrong in game means the defect is in the in-game mix level, and
+  a deliberate DS-side attenuation is then an owner call under the sacrifice order.
 
 -**FIXED** (2026-08-01) the KO burst freezes the game.
 

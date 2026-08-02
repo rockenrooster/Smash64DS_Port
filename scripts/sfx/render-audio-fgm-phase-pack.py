@@ -3657,8 +3657,14 @@ def articulation_program_states(program: list[list], modulators: dict,
             # a single-voice render, so evaluating it would be inventing an
             # effect rather than reproducing one. Skipped BEFORE evaluation, so
             # its shape never has to be interpreted either -- FGM 85's is
-            # shape 7 (ramp_down_oneshot), which _fgm_modulator_value does not
-            # implement and now does not need to.
+            # shape 7 (ramp_down_oneshot).
+            #
+            # That skip is NOT why shape 7 renders correctly, and reading it
+            # that way costs real time: _fgm_modulator_value implements 7
+            # directly, in the `shape in (3, 7)` arm. FGM 11's modulator 94 is
+            # shape 7 on target 12, which is not cross-voice and so must be and
+            # is evaluated -- a -93 -> -350 cent pitch ramp across the escape
+            # roll. Do not infer an unimplemented shape from this branch.
             #
             # Only inert when the cue has no fork voices. With forks "another
             # voice" exists and dropping the modulation would be a real fidelity
@@ -5355,6 +5361,17 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "ds_trailing_samples_dropped": (
                 len(pcm) - selector["loop_start"] - len(runtime_pcm)
                 if "hardware_loop" in selector else 0),
+            # ACTIONABLE, cosmetic: seven non-looping voice cues (469, 471, 472,
+            # 490, 514, 527, 621) land an ODD count here, one past what their
+            # IMA nibbles hold -- two samples per byte can only ever yield an
+            # even number, so the odd sample is not encoded. Harmless today
+            # because nds_audio_fgm.c parses `sample_count`, validates it
+            # non-zero, and then plays from `data_bytes` instead, so nothing
+            # reads past the payload. Fix by rounding `runtime_pcm` to an even
+            # length before encode, NOT by editing the manifest; doing so
+            # reflows the pack sha256 pinned in check-audio-fgm-phase-pack.ps1.
+            # `export-fgm-cue-wav.py --check` tolerates exactly +1 and fails
+            # wider, so a real truncation still surfaces.
             "ds_sample_count": len(runtime_pcm),
             "net_pitch_cents": net_pitch_cents,
             "ds_frequency_hz": frequency,
