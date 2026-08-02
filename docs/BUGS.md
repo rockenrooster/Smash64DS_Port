@@ -221,8 +221,32 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
     routing the shield through the particle atlas, which is A5I3 for exactly this reason -- five
     bits of alpha, chosen because one bit made every soft particle a hard blob. Not done here: it
     is a real change to a second draw path and it is the owner's call.
-    NOT ESTABLISHED, so nobody re-derives it from a bad start: the texture's exact dimensions.
-    LoadBlock says 256 texels and SetTile line=2 says 16 bytes per row, which implies 16x16 IA8,
-    but decoding the file at offset 0 on that layout is not radially symmetric -- SetTextureImage
-    points at 0xaf0002, an address not resolved here. Two candidate renders were produced and
-    DELETED rather than filed, because a wrong image in artifacts/visibility is worse than none.
+    TEXTURE ADDRESS RESOLVED, and the asset is rendered:
+    artifacts/visibility/2026-08-02_n64-shield-texture.png, side by side with the DS shield in
+    2026-08-02_shield-n64-vs-ds.png. `SetTextureImage 00af0002` is not a raw address -- the
+    convention is in generate_battle_playable_texture_census.py:357,
+    `offset = (word & 0xFFFF) * 4`, so 0x0002 * 4 = FILE OFFSET 8 in the same file 163.
+    The layout follows from the tile flags rather than guesswork: SetTile fmt=3 siz=1 line=2 is
+    IA8 at 16 bytes per row, LoadBlock takes 256 16-bit texels = 512 bytes, and maskS=4 / maskT=5
+    give 16 x 32 -- with cmS=3, whose bit 0 is MIRROR. So the asset is a 16x32 half-bubble that
+    the hardware mirrors in S into the 32x32 disc SetTileSize declares. That mirror is why a
+    straight 32-wide decode never looked symmetric; an earlier attempt also read from offset 0
+    instead of 8 and split every row in half. Two renders from those wrong layouts were deleted
+    rather than filed -- a wrong image in artifacts/visibility is worse than none.
+    WHAT THE COMPARISON SHOWS, now that both are on screen at the same scale:
+      1. EDGE. The N64 alpha falls smoothly to zero over the last 3-4 texels, so the bubble has a
+         soft anti-aliased rim. ndsEFManagerBuildDisc emits 8 flat segments and the silhouette is
+         visibly faceted and stair-stepped. This is the dominant difference and vertex colours
+         cannot fix it -- only a texture can.
+      2. HIGHLIGHT PLACED WRONG. The source's bright spot is a small round hotspot at LOW CENTRE.
+         BuildDisc's highlight is the 4-vertex patch at (-92,76)..(20,143), i.e. UPPER LEFT, and
+         it is a quad rather than a disc. It is also shared with the reflector and rebirth
+         templates, so moving it needs a shield-specific variant.
+      3. The gradient DIRECTION is already right in both -- brighter toward the middle, player
+         colour at the rim. Do not "invert" it; a first read of the tinted render suggested that
+         and the byte values do not support it.
+    The source draws this as ONE TEXTURED QUAD (4 vertices). The DS spends 10 triangles to be less
+    accurate, so a textured quad would be both cheaper and closer. It needs texture space: the
+    particle atlas is 8,192 bytes with 7,744 used, and 32x32 A5I3 is 1,024, so it does not fit
+    there and the 16 KiB/32 KiB atlas sizes are already recorded as breaking stage texture
+    resolves. That is a VRAM decision, so it is the owner's.
