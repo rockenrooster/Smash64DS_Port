@@ -1067,6 +1067,12 @@ volatile f32 gNdsWhispyDrawX;
 volatile f32 gNdsWhispyDrawY;
 volatile f32 gNdsWhispyDrawSize;
 
+/* The scene camera pair, for the particle pass's own matrix load. Declared here
+ * rather than by including gmcamera.h, which drags the whole camera API into a
+ * TU that already textually includes two decomp sources. */
+extern Mtx44f gGMCameraMatrix;
+extern Mtx44f gGCMatrixPerspF;
+
 volatile u32 gNdsParticleQuadMissCount;
 volatile u32 gNdsParticleInitAllCount;
 volatile u32 gNdsParticleBankRegisterCount;
@@ -1236,6 +1242,32 @@ void lbParticleDrawTextures(GObj *gobj)
     if ((atlas_name != 0u) && (ndsParticleCameraBasis(&right, &up) == FALSE))
     {
         atlas_name = 0u;
+    }
+    if (atlas_name != 0u)
+    {
+        /* Hand the pass the scene camera. Without this the batch renders under
+         * whichever object's matrix was loaded last -- measured as
+         * PROJECTED_IDENTITY or a stage segment's compose, varying by frame --
+         * which drew every effect at the eye or inside a stage segment while
+         * its world position was perfectly correct. gGCMatrixPerspF and
+         * gGMCameraMatrix are the same pair gmcamera.c:1001 composes for the
+         * scene, in 20.12 as the renderer wants them. */
+        NDSRendererMatrix20p12 projection;
+        NDSRendererMatrix20p12 modelview;
+        u32 row;
+        u32 col;
+
+        for (row = 0u; row < 4u; row++)
+        {
+            for (col = 0u; col < 4u; col++)
+            {
+                projection.m[row][col] =
+                    (s32)(gGCMatrixPerspF[row][col] * 4096.0F);
+                modelview.m[row][col] =
+                    (s32)(gGMCameraMatrix[row][col] * 4096.0F);
+            }
+        }
+        ndsRendererSetParticleCamera(&projection, &modelview);
     }
 #else
     /* The census half only. The emit wedged the geometry engine on its first

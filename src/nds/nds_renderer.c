@@ -11172,6 +11172,61 @@ static v16 ndsRendererParticleWorldToV16(f32 value)
 
 static u32 sNdsRendererParticleQuadOpen;
 
+/* gNdsParticleMatrixModeSeen records the mode the batch INHERITED, latched
+ * before the camera load replaces it -- so it stays 0x12 by design and is the
+ * evidence of what the bug was, not a pass/fail. The regression guard is
+ * gNdsParticleCameraLoads == gNdsParticleBatchOpens: every batch must load its
+ * own camera. gNdsParticleCamT* samples the loaded translation so a silently
+ * empty matrix cannot masquerade as a working one. */
+volatile u32 gNdsParticleMatrixModeSeen;
+volatile u32 gNdsParticleMatrixLoadedSeen;
+volatile u32 gNdsParticleBatchOpens;
+volatile u32 gNdsParticleCameraLoads;
+volatile s32 gNdsParticleCamTx;
+volatile s32 gNdsParticleCamTy;
+volatile s32 gNdsParticleCamTz;
+
+/* THE PARTICLE PASS HAD NO MATRIX OF ITS OWN.
+ *
+ * It never loaded one, so every quad rendered under whatever the previously
+ * drawn object happened to leave in the hardware. Measured over a match:
+ * gNdsParticleMatrixModeSeen = 0x12, i.e. bits 1 and 4 -- PROJECTED_IDENTITY
+ * and STAGE_HW_COMPOSE -- across 599 batch opens, varying frame to frame.
+ *
+ * That is the whole family of "effects are in the wrong place" reports at once.
+ * Under PROJECTED_IDENTITY the modelview is identity, so world coordinates are
+ * read as view coordinates and the effect renders at the eye: the owner's "the
+ * KO effect plays too close to the camera instead of at the fighters' z depth".
+ * Under STAGE_HW_COMPOSE it inherits a stage segment's local matrix and lands
+ * wherever that segment is: "stray VFX across the stage", and Whispy's wind
+ * appearing far from the tree even though its emitter measures source-exact.
+ *
+ * The positions were never wrong -- the space they were drawn in was. So the
+ * game hands the pass its own camera and the batch loads it, exactly as any
+ * other root does. Set from lbParticleDrawTextures, which has the game headers
+ * this file deliberately does not. */
+/* Defined below with the rest of the matrix plumbing; the particle batch is
+ * the one caller that sits above it in the file. */
+static void ndsRendererCopyMtx20p12ToM4x4(
+    const NDSRendererMatrix20p12 *src, m4x4 *dst);
+
+static NDSRendererMatrix20p12 sNdsRendererParticleProjection;
+static NDSRendererMatrix20p12 sNdsRendererParticleModelview;
+static u32 sNdsRendererParticleCameraValid;
+
+void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
+                                  const NDSRendererMatrix20p12 *modelview)
+{
+    if ((projection == NULL) || (modelview == NULL))
+    {
+        sNdsRendererParticleCameraValid = FALSE;
+        return;
+    }
+    ndsRendererMatrixCopy20p12(&sNdsRendererParticleProjection, projection);
+    ndsRendererMatrixCopy20p12(&sNdsRendererParticleModelview, modelview);
+    sNdsRendererParticleCameraValid = TRUE;
+}
+
 /* One quad, camera-facing, in world space. `right` and `up` are the camera
  * basis the caller derived from the CObj -- computed there because that is
  * where the source's own draw reads the camera, and because it is per-frame
@@ -11200,7 +11255,53 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     }
     if (sNdsRendererParticleQuadOpen == 0u)
     {
+        /* TEMPORARY, BUGS.md rows 1/4/6/KO-VFX. The particle pass loads NO
+         * matrix, so every quad is drawn under whatever the last object left
+         * active. If that is a fighter bone or a stage segment rather than the
+         * scene's own camera matrix, particles land in that object's space --
+         * which is exactly "effects don't play at correct locations" and "the
+         * KO effect plays too close to the camera instead of at the fighters'
+         * z depth". Latch the mode so the guess is measured, not assumed. */
+        gNdsParticleMatrixModeSeen |= 1u << (sNdsRendererHardwareMatrixMode & 7u);
+        gNdsParticleMatrixLoadedSeen = sNdsRendererHardwareMatrixLoaded;
+        gNdsParticleBatchOpens++;
         ndsRendererHardwareEndBatch();
+        if (sNdsRendererParticleCameraValid != FALSE)
+        {
+            NDSRendererMatrix20p12 scaled_modelview;
+            m4x4 projection_hw;
+            m4x4 modelview_hw;
+            u32 col;
+
+            /* Same translation shift every other root load applies
+             * (ndsRendererLoadHardwareSplitMatrices): vertices arrive at
+             * world x 16 from ndsRendererParticleWorldToV16, so the matrix
+             * translation has to come down by WORLD_UNIT_SHIFT to match. */
+            ndsRendererMatrixCopy20p12(&scaled_modelview,
+                                       &sNdsRendererParticleModelview);
+            for (col = 0u; col < 4u; col++)
+            {
+                scaled_modelview.m[3][col] = ndsRendererRoundShiftS32Signed(
+                    scaled_modelview.m[3][col],
+                    NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+            }
+            ndsRendererCopyMtx20p12ToM4x4(&sNdsRendererParticleProjection,
+                                          &projection_hw);
+            ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+            glLoadMatrix4x4(&projection_hw);
+            ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
+            ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+            glLoadMatrix4x4(&modelview_hw);
+            /* The pass owns the hardware matrix now, and it is nobody else's
+             * mode -- so the next object load must not elide itself against
+             * a generation that no longer describes what is loaded. */
+            sNdsRendererHardwareMatrixLoaded = FALSE;
+            sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_NONE;
+            gNdsParticleCameraLoads++;
+            gNdsParticleCamTx = scaled_modelview.m[3][0];
+            gNdsParticleCamTy = scaled_modelview.m[3][1];
+            gNdsParticleCamTz = scaled_modelview.m[3][2];
+        }
 #if NDS_R2_PARTICLE_V16_HEADROOM
         /* Exactly compensates the halved vertex factor above, so the quads land
          * where they always did and only their representable RANGE changes.

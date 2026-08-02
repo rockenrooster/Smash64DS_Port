@@ -332,6 +332,14 @@ typedef struct NDSRendererMatrix20p12
     s32 m[4][4];
 } NDSRendererMatrix20p12;
 
+/* The particle pass draws in world space and therefore needs the scene camera,
+ * which it used to lack entirely -- quads inherited whichever object's matrix
+ * was last loaded, so effects rendered at the eye or inside a stage segment.
+ * The game supplies it here because gGMCameraMatrix and gGCMatrixPerspF live
+ * behind headers the renderer does not include. Pass NULLs to invalidate. */
+void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
+                                  const NDSRendererMatrix20p12 *modelview);
+
 /* Task 86. `*dst = *src` on this struct is 64 bytes, and GCC answers that with
  * `bl memcpy` rather than inline loads: on ARMv5 it cannot assume the pointers
  * are aligned, and 16 words is past the size it will open-code blind. Task 85
