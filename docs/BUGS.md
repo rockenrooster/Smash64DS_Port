@@ -10,10 +10,10 @@ These bugs should be fixed for P1 delivery:
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
 
 -Respawn floating platform isn't visible when respawning.
-  LOCALIZED: halo GObj is created and non-NULL; unproven that the DS seam submits its geometry.
+  LOCALIZED: submit path is live; the DS substitutes a RING on the fighter's TopN joint, not a lowering platform.
 
 -Stray VFX are getting played across the stage when attacks are landed.
-  CONTRACT needed: transform fix landed, no measurement yet that hit sparks land on the victim.
+  MEASURED: 17 hit sparks over a full match, |x| max 1344 -- all on the stage. Not the spark position.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.
@@ -25,7 +25,7 @@ These bugs should be fixed for P1 delivery:
   MEASURED: dust scripts now packed, rejects 49->0, script starts 137->226; other kinds unverified.
 
 -Upwards KO boundary death: correct VFX and SFX never play for fighters
-  LOCALIZED: star path runs and plays FGM 12; unmeasured whether the sparkle reaches the screen.
+  LOCALIZED: sparkle spawns at y=79222 vs target 2400 -- the star ascent's corrective vel_air.y never applies.
 
 -KO VFX wrong.
   Owner: I can kind of see that its trying to play the effect but it gets clipped or something so I can't see it fully. Check Source.

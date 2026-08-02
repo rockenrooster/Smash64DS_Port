@@ -71,6 +71,7 @@ $required = @(
     'grPupupuWhispyDustMakeEffect', 'gGRCommonStruct',
     'efManagerDamageNormalLightMakeEffect',
     'efManagerSparkleWhiteDeadMakeEffect', 'efManagerRebirthHaloMakeEffect',
+    'efManagerDeadExplodeMakeEffect',
     'ndsBattlePlayableFrameCompleteMarker', 'gNdsParticleQuadMissCount',
     'gLBParticleTransformsUsedNum', 'gNdsParticleTransformsMax',
     'sLBParticleStructsAllocLinks',
@@ -138,6 +139,10 @@ try {
         'set $ground_x = 0.0',
         'set $ground_y = 0.0',
         'set $ground_sx = 0.0',
+        'set $explode_calls = 0',
+        'set $cap_rebirth = 0',
+        'set $cap_explode = 0',
+        'set $cap_star = 0',
 
         # Call count only. grpupupu.c:507 was tried as the read site and gdb
         # resolved it to THREE locations because -Os inlines the maker, so a
@@ -177,6 +182,9 @@ try {
         'set $dead_calls = $dead_calls + 1',
         'set $dead_x = pos->x',
         'set $dead_y = pos->y',
+        'if $cap_star == 0',
+        'set $cap_star = 6',
+        'end',
         'continue',
         'end',
 
@@ -184,6 +192,22 @@ try {
         'commands',
         'silent',
         'set $rebirth_calls = $rebirth_calls + 1',
+        'set $cap_rebirth = 24',
+        'continue',
+        'end',
+
+        # The KO burst itself, for BUGS row 9 ("it gets clipped or something so
+        # I can't see it fully"). Six frames after the maker, which is inside
+        # dEFManagerDeadExplodeGenID's own animation rather than at its first
+        # frame, so a burst that dies partway through shows as a partial frame
+        # rather than as nothing.
+        'break efManagerDeadExplodeMakeEffect',
+        'commands',
+        'silent',
+        'set $explode_calls = $explode_calls + 1',
+        'if $cap_explode == 0',
+        'set $cap_explode = 6',
+        'end',
         'continue',
         'end',
 
@@ -276,6 +300,39 @@ try {
         # camera. Frame 20 is while the particles are still near
         # dGRPupupuWhispyDustEffectPositions, which is the frame that answers
         # "is it coming out of the tree".
+        # EVENT CAPTURES. Each maker arms a countdown and the frame marker
+        # spends it, so the screenshot lands a fixed number of frames INTO the
+        # effect rather than on the frame it was constructed -- an effect is
+        # rarely visible on frame 0, and the KO burst in particular is reported
+        # as partially visible, which only a mid-animation frame can show.
+        'if $cap_rebirth > 0',
+        'set $cap_rebirth = $cap_rebirth - 1',
+        'if $cap_rebirth == 0',
+        ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' +
+            $capture_helper + '" -EmulatorProcessId ' + $emulator.Id +
+            ' -Output "artifacts/visibility/' +
+            '2026-08-01_rebirth-halo-probe.png"'),
+        'end',
+        'end',
+        'if $cap_explode > 0',
+        'set $cap_explode = $cap_explode - 1',
+        'if $cap_explode == 0',
+        ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' +
+            $capture_helper + '" -EmulatorProcessId ' + $emulator.Id +
+            ' -Output "artifacts/visibility/' +
+            '2026-08-01_ko-burst-probe.png"'),
+        'end',
+        'end',
+        'if $cap_star > 0',
+        'set $cap_star = $cap_star - 1',
+        'if $cap_star == 0',
+        ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' +
+            $capture_helper + '" -EmulatorProcessId ' + $emulator.Id +
+            ' -Output "artifacts/visibility/' +
+            '2026-08-01_star-ko-probe.png"'),
+        'end',
+        'end',
+
         'if ($slot1_frames == 20) && (sLBParticleStructsAllocLinks[1] != 0)',
         # pwsh, NOT powershell. scripts/lib/melonds.ps1:349 uses a PS7 ternary,
         # so every harness script that dot-sources it is a parse error under
@@ -319,7 +376,7 @@ try {
         ('printf "VFXCONTRACT whispy_calls=%d lr=%d whispy_x=%f whispy_y=%f whispy_rotY=%f whispy_scale=%f ' +
             'slot1_frames=%d slot1_x=%f slot1_y=%f slot1_size=%f slot1_absmax=%f ' +
             'spark_calls=%d spark_x=%f spark_y=%f spark_absmax=%f ' +
-            'dead_calls=%d dead_x=%f dead_y=%f rebirth_calls=%d ' +
+            'dead_calls=%d dead_x=%f dead_y=%f rebirth_calls=%d explode_calls=%d ' +
             'frame_stops=%d forced=%d dust_frames=%d leaf_frames=%d leaf_x=%f ' +
             'mouth=%f,%f mouth_sx=%f eyes=%f,%f ground=%f,%f ground_sx=%f ' +
             'transforms_used=%u transforms_max=%u structs_max=%u ' +
@@ -328,7 +385,7 @@ try {
             '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
             '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
             '$spark_calls, $spark_x, $spark_y, $spark_absmax, ' +
-            '$dead_calls, $dead_x, $dead_y, $rebirth_calls, ' +
+            '$dead_calls, $dead_x, $dead_y, $rebirth_calls, $explode_calls, ' +
             '$frame_stops, $forced, ' +
             '$dust_frames, $leaf_frames, $leaf_x, ' +
             '$mouth_x, $mouth_y, $mouth_sx, $eyes_x, $eyes_y, ' +
