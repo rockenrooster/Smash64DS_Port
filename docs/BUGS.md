@@ -17,7 +17,7 @@ These bugs should be fixed for P1 delivery:
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.
-  LOCALIZED: gain law is source-exact (0.947 applied). Open dimension is its volume LFO: modulator 92, shape 3, amp 110.
+  OWNER-QUEUED: gain law, master gain and modulator 92 (shape 3) all source-exact and modelled. Needs your ear.
 
 -**FIXED** (2026-08-01) the KO burst freezes the game.
 
@@ -29,7 +29,7 @@ These bugs should be fixed for P1 delivery:
 
 -KO VFX wrong.
   Owner: I can kind of see that its trying to play the effect but it gets clipped or something so I can't see it fully. Check Source.
-  MEASURED: burst is whole, drop mask 0; its cells are 8x8 and some frames are unadmitted.
+  **FIXED** (2026-08-02) all 8 burst scripts take size from the header, so the particle half was denormal-invisible. Now 12 live at 713.
 
 -Results confetti doesn't look right
   Owner: not Fixed. Confetti pieces do not look like there are large enough and don't look like they are falling freely. Check Source.

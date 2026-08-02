@@ -127,6 +127,8 @@ try {
         'set $vis_mask = 0',
         'set $vis_active = -1',
         'set $vis_after = -1',
+        'set $slot2_count = -1',
+        'set $slot2_size = -1.0',
         'set $shot_explode = 0',
         'set $shot_star = 0',
         'set $shot_rebirth = 0',
@@ -144,6 +146,25 @@ try {
         'ignore $bpnum 5',
         'commands',
         'silent',
+        # ROW 9, CONFIRMED AT RUNTIME RATHER THAN INFERRED. The burst's particle
+        # half lands in alloc-link slot 2 -- LBPARTICLE_MASK_GENLINK(1) is 16 and
+        # lbparticle.c:324 files under bank_id >> 3 -- and all eight of its
+        # scripts (efcommon 42-45 and 60-63, named by dEFManagerDeadExplodeGenID)
+        # carry size 100.0 in the HEADER with no size opcode in bytecode. That is
+        # exactly the set the unswapped header word turned into a 5.7e-41
+        # denormal, so before that fix the burst's particles were submitted,
+        # counted, and sub-pixel, leaving only the DObj/matanim half on screen.
+        # Reading the live size here says whether they now carry 100.
+        'set $slot2_count = 0',
+        'set $slot2_size = 0.0',
+        'set $p = sLBParticleStructsAllocLinks[2]',
+        'while $p != 0',
+        'set $slot2_count = $slot2_count + 1',
+        'if $p->size > $slot2_size',
+        'set $slot2_size = $p->size',
+        'end',
+        'set $p = $p->next',
+        'end',
         (New-CaptureCommand 'ko-burst-probe' $emulator.Id),
         'continue',
         'end',
@@ -298,6 +319,7 @@ try {
             'star=%f,%f cam_top=%d map_top=%d ' +
             'star_updates=%d phase=%d wait=%d vy=%f vymax=%f posy=%f forced_damage=%d ' +
             'spark_calls=%d spark_absmax=%f ' +
+            'burst_slot2_count=%d burst_slot2_size=%f ' +
             'at_rebirth_created=%d dropped=%d mask=%#x active_after=%d created_after=%d ' +
             'at_results_created=%u dropped=%u kindmask=%#x ' +
             'miss=%u emit=%u structs_max=%u\n", ' +
@@ -305,6 +327,7 @@ try {
             '$star_x, $star_y, $cam_top, $map_top, ' +
             '$star_updates, $star_phase, $star_wait, $star_vy, $star_vymax, $star_posy, $forced_damage, ' +
             '$spark_calls, $spark_absmax, ' +
+            '$slot2_count, $slot2_size, ' +
             '$vis_before, $vis_dropped, $vis_mask, $vis_active, $vis_after, ' +
             'gNdsVisualEffectCreateCount, gNdsVisualEffectDropCount, ' +
             'gNdsVisualEffectKindMask, ' +
