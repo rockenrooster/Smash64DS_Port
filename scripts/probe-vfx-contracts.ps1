@@ -53,6 +53,7 @@ $gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
 $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 $artifact = Join-Path $root 'artifacts\verification\vfx-contract-probe.txt'
+$capture_helper = Join-Path $PSScriptRoot 'capture-running-melonds-window.ps1'
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
 $melon_dir = Split-Path -Parent $context.MelonDSPath
@@ -72,6 +73,7 @@ $required = @(
     'efManagerSparkleWhiteDeadMakeEffect', 'efManagerRebirthHaloMakeEffect',
     'ndsBattlePlayableFrameCompleteMarker', 'gNdsParticleQuadMissCount',
     'gLBParticleTransformsUsedNum', 'gNdsParticleTransformsMax',
+    'sLBParticleStructsAllocLinks',
     'gNdsBattlePlayablePacingPresentedFrames'
 )
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
@@ -104,15 +106,22 @@ try {
 
         # latches
         'set $whispy_calls = 0',
-        'set $whispy_xf_reads = 0',
         'set $dust_frames = 0',
         'set $frame_stops = 0',
+        'set $forced = 0',
+        'set $want = 0',
         'set $leaf_frames = 0',
         'set $leaf_x = 0.0',
         'set $whispy_lr = -1',
         'set $whispy_x = 0.0',
         'set $whispy_y = 0.0',
-        'set $whispy_size = 0.0',
+        'set $whispy_rot = 0.0',
+        'set $whispy_scale = 0.0',
+        'set $slot1_frames = 0',
+        'set $slot1_x = 0.0',
+        'set $slot1_y = 0.0',
+        'set $slot1_size = 0.0',
+        'set $slot1_absmax = 0.0',
         'set $spark_calls = 0',
         'set $spark_x = 0.0',
         'set $spark_y = 0.0',
@@ -122,25 +131,20 @@ try {
         'set $dead_y = 0.0',
         'set $rebirth_calls = 0',
 
-        # grpupupu.c:507 is the line after `gGRCommonStruct.pupupu.dust_xf = xf`,
-        # so the emitter transform is reachable through the GLOBAL. Reading the
-        # function's own `xf` and `pc` locals at :502 was tried first and gdb
-        # answered "value has been optimized out" -- this tree builds -Os, so a
-        # local that is dead after its last store is not addressable. Globals
-        # always are. The site is hit once per blow, not once per quad; an
-        # earlier version of this probe broke on ndsRendererSubmitParticleQuad
-        # and stopped the core ~95,000 times a match, which timed out at 300 s.
-        'break grpupupu.c:507',
+        # Call count only. grpupupu.c:507 was tried as the read site and gdb
+        # resolved it to THREE locations because -Os inlines the maker, so a
+        # latch taken there can be sampled in a copy that has not yet stored the
+        # global -- which is how the first run reported xf_reads=0 and nearly
+        # bought a wrong conclusion. Reading the function's own `xf`/`pc` locals
+        # was tried before that and gdb answered "value has been optimized out",
+        # which is what -Os does to a local that is dead after its last store.
+        # Every value below is therefore read from a GLOBAL at the frame marker,
+        # which is one location and cannot be confounded.
+        'break grPupupuWhispyDustMakeEffect',
         'commands',
         'silent',
         'set $whispy_calls = $whispy_calls + 1',
-        'set $whispy_lr = gGRCommonStruct.pupupu.lr_players',
-        'if gGRCommonStruct.pupupu.dust_xf != 0',
-        'set $whispy_xf_reads = $whispy_xf_reads + 1',
-        'set $whispy_x = gGRCommonStruct.pupupu.dust_xf->translate.x',
-        'set $whispy_y = gGRCommonStruct.pupupu.dust_xf->translate.y',
-        'set $whispy_size = gGRCommonStruct.pupupu.dust_xf->rotate.y',
-        'end',
+        'set $want = 1',
         'continue',
         'end',
 
@@ -175,51 +179,121 @@ try {
         'continue',
         'end',
 
-        # THE UNAMBIGUOUS READ. gdb resolves grpupupu.c:507 to THREE locations
-        # because -Os inlines the maker, so a latch taken there can be sampled
-        # in a copy that has not yet stored the global -- which is how the first
-        # run of this probe reported xf_reads=0 and nearly bought a wrong
-        # conclusion. The frame marker is one location and the transform is a
-        # global, so counting frames where it is non-NULL cannot be confounded.
+        # THE UNAMBIGUOUS READ, and the run governor.
+        #
+        # It also FORCES the wind, once. grPupupuInitAll seeds whispy_wind_wait
+        # to syUtilsRandIntRange(1140) + 960 and grPupupuWhispyUpdateStop reseeds
+        # it the same way, so the gap between blows is 16 to 35 SOURCE seconds
+        # (grvars.h). The first version of this probe stopped after 450 frames
+        # and read whispy_calls=0 -- not a finding about Whispy, just a run
+        # shorter than one wind cycle. Writing the countdown down to 4 changes
+        # WHEN the blow happens and nothing about WHERE: the emitter position is
+        # dGRPupupuWhispyDustEffectPositions[lr_players], a two-entry constant
+        # table, and lr_players is chosen from fighter positions at blow time.
+        # Both entries are a pass for the question being asked.
         'break ndsBattlePlayableFrameCompleteMarker',
         'commands',
         'silent',
         'set $frame_stops = $frame_stops + 1',
-        'if gGRCommonStruct.pupupu.dust_xf != 0',
+        'if ($frame_stops > 60) && ($forced < 3) && (gGRCommonStruct.pupupu.whispy_wind_wait > 4)',
+        'set gGRCommonStruct.pupupu.whispy_wind_wait = 4',
+        'set $forced = $forced + 1',
+        'end',
+        # LATCH ONLY ON THE FRAME AFTER A BLOW, never every frame.
+        #
+        # grPupupuFlowersFrontLoopEnd ejects the dust structs by generator id at
+        # the end of each blow and does NOT null gGRCommonStruct.pupupu.dust_xf,
+        # so the pointer dangles into a recycled pool slot for the 16-35 seconds
+        # until the next blow. That is source-faithful -- the only readers are
+        # guarded by whispy status, and the next maker overwrites it -- but it
+        # makes a per-frame sample worthless. The first run of this probe read
+        # 653 non-NULL frames out of 900 and reported translate (2238.58,
+        # 134.93) with rotate.y 0 at lr_players 0, which is not the source's
+        # (-715|-205, 100) and not its DTOR32(180) either. That was not a
+        # finding about Whispy; it was 650 samples of whatever last used the
+        # slot. $want is set by the maker's own breakpoint and consumed here one
+        # frame later, when the assignment at grpupupu.c:500 has definitely run
+        # and nothing can have recycled the transform yet.
+        'if ($want == 1) && (gGRCommonStruct.pupupu.dust_xf != 0)',
+        'set $want = 0',
         'set $dust_frames = $dust_frames + 1',
+        'set $whispy_lr = gGRCommonStruct.pupupu.lr_players',
         'set $whispy_x = gGRCommonStruct.pupupu.dust_xf->translate.x',
         'set $whispy_y = gGRCommonStruct.pupupu.dust_xf->translate.y',
-        'set $whispy_size = gGRCommonStruct.pupupu.dust_xf->rotate.y',
-        'end',
+        'set $whispy_rot = gGRCommonStruct.pupupu.dust_xf->rotate.y',
+        'set $whispy_scale = gGRCommonStruct.pupupu.dust_xf->scale.x',
         'if gGRCommonStruct.pupupu.leaves_xf != 0',
         'set $leaf_frames = $leaf_frames + 1',
         'set $leaf_x = gGRCommonStruct.pupupu.leaves_xf->translate.x',
+        'end',
+        'end',
+        # Alloc-link slot 1 IS the Whispy link. LBPARTICLE_MASK_GENLINK(0) is 8
+        # and lbparticle.c:324 files a struct under bank_id >> 3, so the dust and
+        # leaves are the only things in slot 1 -- efdisplay.c:87 draws exactly
+        # that slot through the DL-15 CLD GObj. pos is LOCAL to the transform, so
+        # this plus whispy_x is the world position, and the running absmax says
+        # how far downwind the sheet actually reaches.
+        # One screenshot, taken while the core is HALTED in the middle of a
+        # blow. The measured numbers say the emitter is exactly where BattleShip
+        # puts it, so the remaining half of "spawning too far away from Whispy
+        # the Tree" is a question about what the owner sees, and the owner is
+        # the oracle for that (docs render-fidelity doctrine). Second blow, not
+        # the first, so the wind is in its steady state rather than its opening
+        # frame. gdb holds the emulator here, so the window is showing the frame
+        # being measured and not a later one.
+        'if ($slot1_frames == 120) && (sLBParticleStructsAllocLinks[1] != 0)',
+        # pwsh, NOT powershell. scripts/lib/melonds.ps1:349 uses a PS7 ternary,
+        # so every harness script that dot-sources it is a parse error under
+        # Windows PowerShell 5.1 -- which is what `powershell` resolves to. The
+        # whole harness is driven from pwsh, so this only surfaces when a script
+        # is launched from somewhere that does not already know that, such as
+        # gdb's `shell`.
+        ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' +
+            $capture_helper + '" -EmulatorProcessId ' + $emulator.Id +
+            ' -Output "artifacts/visibility/' +
+            '2026-08-01_whispy-blow-probe.png"'),
+        'end',
+
+        'if sLBParticleStructsAllocLinks[1] != 0',
+        'set $slot1_frames = $slot1_frames + 1',
+        'set $slot1_x = sLBParticleStructsAllocLinks[1]->pos.x',
+        'set $slot1_y = sLBParticleStructsAllocLinks[1]->pos.y',
+        'set $slot1_size = sLBParticleStructsAllocLinks[1]->size',
+        'if sLBParticleStructsAllocLinks[1]->pos.x > $slot1_absmax',
+        'set $slot1_absmax = sLBParticleStructsAllocLinks[1]->pos.x',
+        'end',
+        'if -sLBParticleStructsAllocLinks[1]->pos.x > $slot1_absmax',
+        'set $slot1_absmax = -sLBParticleStructsAllocLinks[1]->pos.x',
+        'end',
         'end',
         # The callback stops itself rather than a separate tbreak at the same
         # address: two breakpoints on one PC, one of them auto-continuing, means
         # the continue resumes straight past the other's stop and the batch
         # never regains control. That cost one 260-second timeout.
-        'if $frame_stops < 450',
+        'if $frame_stops < 900',
         'continue',
         'end',
         'end',
 
-        # Run only until the Whispy dust has spawned twice. The blow is
-        # reachable in seconds and the process doc forbids waiting through a
-        # match for a trigger that is not at the end of one. Results-only rows
-        # (the confetti) need their own short run at their own trigger.
+        # BATTLE PHASE ONLY, and only long enough for two forced blows. The
+        # process doc forbids waiting through a match for a trigger that is not
+        # at the end of one; Results-only rows (the confetti) need their own
+        # short run at their own trigger.
         'continue',
 
-        ('printf "VFXCONTRACT whispy_calls=%d xf_reads=%d lr=%d whispy_x=%f whispy_y=%f whispy_rotY=%f ' +
+        ('printf "VFXCONTRACT whispy_calls=%d lr=%d whispy_x=%f whispy_y=%f whispy_rotY=%f whispy_scale=%f ' +
+            'slot1_frames=%d slot1_x=%f slot1_y=%f slot1_size=%f slot1_absmax=%f ' +
             'spark_calls=%d spark_x=%f spark_y=%f spark_absmax=%f ' +
             'dead_calls=%d dead_x=%f dead_y=%f rebirth_calls=%d ' +
-            'dust_frames=%d leaf_frames=%d leaf_x=%f ' +
+            'frame_stops=%d forced=%d dust_frames=%d leaf_frames=%d leaf_x=%f ' +
             'transforms_used=%u transforms_max=%u structs_max=%u ' +
             'miss=%u emit=%u\n", ' +
-            '$whispy_calls, $whispy_xf_reads, $whispy_lr, ' +
-            '$whispy_x, $whispy_y, $whispy_size, ' +
+            '$whispy_calls, $whispy_lr, ' +
+            '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
+            '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
             '$spark_calls, $spark_x, $spark_y, $spark_absmax, ' +
             '$dead_calls, $dead_x, $dead_y, $rebirth_calls, ' +
+            '$frame_stops, $forced, ' +
             '$dust_frames, $leaf_frames, $leaf_x, ' +
             'gLBParticleTransformsUsedNum, gNdsParticleTransformsMax, ' +
             'gNdsParticleStructsMax, ' +

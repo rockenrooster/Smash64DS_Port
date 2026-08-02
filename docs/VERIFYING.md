@@ -5,7 +5,12 @@ Use the least work that can falsify the change. Do not stack overlapping suites.
 ## Environment
 
 Run every repository command from PowerShell 7 (`pwsh`). Do not use Windows
-PowerShell 5.1.
+PowerShell 5.1. This is not a preference: `scripts/lib/melonds.ps1:349` uses a
+PS7 ternary, so *every* harness script that dot-sources it is a parse error
+under 5.1 — including any launched indirectly, which is how a probe spending
+`powershell` inside a gdb `shell` line lost a run on 2026-08-01. The failure
+reads as `UnexpectedToken` in the innocent caller, never in the file that
+actually holds the PS7 syntax.
 
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'

@@ -4,7 +4,7 @@ These bugs should be fixed for P1 delivery:
 
 -Whispy blow VFX not correct and not at correct location.
   Owner: still not right, spawning too far away from Whispy the Tree.
-  CONTRACT written (process doc Step 2 example); need the GDB read of dust_xf->translate.
+  MEASURED: emitter is source-exact -- translate (-715,100), rotate.y 180deg at lr 0. Screenshot queued.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
@@ -22,7 +22,7 @@ These bugs should be fixed for P1 delivery:
 -**FIXED** (2026-08-01) the KO burst freezes the game.
 
 -Correct VFX isn't played for various things (running foot dust VFX, fireball hit VFX, fox down B, shield, hard landing vfx, etc)
-  LOCALIZED: heavy/light dust scripts were never packed -- rejected 49x/match as inert; seam list fixed.
+  MEASURED: dust scripts now packed, rejects 49->0, script starts 137->226; other kinds unverified.
 
 -Upwards KO boundary death: correct VFX and SFX never play for fighters
   LOCALIZED: star path runs and plays FGM 12; unmeasured whether the sparkle reaches the screen.
