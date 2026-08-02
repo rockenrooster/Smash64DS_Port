@@ -387,8 +387,17 @@ static void ndsEFManagerBuildRing(NDSVisualTemplate *template,
                            0xdf000000u, 0u);
 }
 
+/* `glint_dx` slides the highlight patch along x. The patch is centred at
+ * (-39.5, 111), i.e. UPPER LEFT, which is where it has always been and where
+ * nothing in the source puts it. The owner's N64 capture and the extracted
+ * shield asset agree that the shield's highlight sits TOP MIDDLE -- "the glint
+ * is at the top middle where mario's ear is" -- so the shield passes +40 to
+ * centre it and the reflector and respawn pad pass 0 to stay byte-identical.
+ * They get their own reading when someone has a reference for them; guessing
+ * for all three off one screenshot is how the upper-left one got here. */
 static void ndsEFManagerBuildDisc(NDSVisualTemplate *template,
-                                  u32 center_rgba, u32 outer_rgba)
+                                  u32 center_rgba, u32 outer_rgba,
+                                  s16 glint_dx)
 {
     static const s16 outer[8][2] = {
         { 0, 180 }, { 127, 127 }, { 180, 0 }, { 127, -127 },
@@ -403,10 +412,14 @@ static void ndsEFManagerBuildDisc(NDSVisualTemplate *template,
         ndsEFManagerSetVertex(template, i + 1u, outer[i][0], outer[i][1],
                               0, outer_rgba);
     }
-    ndsEFManagerSetVertex(template, 9u, -92, 76, 0, 0xffffffb0u);
-    ndsEFManagerSetVertex(template, 10u, -58, 126, 0, 0xffffffb0u);
-    ndsEFManagerSetVertex(template, 11u, 20, 143, 0, 0xffffffb0u);
-    ndsEFManagerSetVertex(template, 12u, -28, 100, 0, 0xffffffb0u);
+    ndsEFManagerSetVertex(template, 9u, (s16)(-92 + glint_dx), 76, 0,
+                          0xffffffb0u);
+    ndsEFManagerSetVertex(template, 10u, (s16)(-58 + glint_dx), 126, 0,
+                          0xffffffb0u);
+    ndsEFManagerSetVertex(template, 11u, (s16)(20 + glint_dx), 143, 0,
+                          0xffffffb0u);
+    ndsEFManagerSetVertex(template, 12u, (s16)(-28 + glint_dx), 100, 0,
+                          0xffffffb0u);
     command = ndsEFManagerBeginTemplate(template, 13u);
     /* Flat translucent shield: use the same proven XLU state as hit sparks. */
     ndsEFManagerSetCommand(&template->display_list[command++],
@@ -465,16 +478,16 @@ static void ndsEFManagerInitVisualTemplates(void)
      * NOTE: the shield draws through gcDrawDObjTreeForGObj, so the 2026-08-02
      * particle-camera fix does NOT touch it. This row was its own defect. */
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShield],
-                          0xffffffc0u, 0xff0000c0u);
+                          0xffffffc0u, 0xff0000c0u, 40);
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShieldP2],
-                          0xffffffc0u, 0x00ff00c0u);
+                          0xffffffc0u, 0x00ff00c0u, 40);
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShieldP3],
-                          0xffffffc0u, 0x0000ffc0u);
+                          0xffffffc0u, 0x0000ffc0u, 40);
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShieldP4],
-                          0xffffffc0u, 0x000000c0u);
+                          0xffffffc0u, 0x000000c0u, 40);
     ndsEFManagerBuildDisc(
         &sNdsVisualTemplates[nNDSVisualTemplateShieldDamage],
-        0xffffffc0u, 0xc0c0c0c0u);
+        0xffffffc0u, 0xc0c0c0c0u, 40);
 #else
     ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateShield],
                           0x40b8ffffu, 0xe0ffffffu);
@@ -490,7 +503,7 @@ static void ndsEFManagerInitVisualTemplates(void)
      * Reproducing the original textured bursts needs the particle banks and
      * is P2 (KNOWN_ISSUES.md). */
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateReflector],
-                          0xe0ffff60u, 0x40b8ff50u);
+                          0xe0ffff60u, 0x40b8ff50u, 0);
     /* A DISC, not a ring. BUGS row 3 stayed open through a lifetime fix (8 ->
      * 390 frames) and a growth fix, and the owner still reported "I don't see
      * the floating platform" -- because everything about it was alive and
@@ -502,7 +515,7 @@ static void ndsEFManagerInitVisualTemplates(void)
      * source-derived approximation the reflector already uses, so this stays a
      * cheap approximation rather than a new asset. */
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateRebirth],
-                          0xffffffffu, 0x90e8ffffu);
+                          0xffffffffu, 0x90e8ffffu, 0);
     gNdsVisualEffectTemplateBytes =
         sizeof(*sNdsVisualTemplates) * NDS_VISUAL_TEMPLATE_COUNT;
 }
