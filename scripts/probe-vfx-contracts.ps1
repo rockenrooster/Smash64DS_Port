@@ -410,10 +410,15 @@ try {
         # whole harness is driven from pwsh, so this only surfaces when a script
         # is launched from somewhere that does not already know that, such as
         # gdb's `shell`.
+        # Date the capture at RUN time, not at edit time. This was a hardcoded
+        # 2026-08-01 and the 2026-08-02 re-observation silently overwrote it, so
+        # the artifact directory claimed a file was a day older than its
+        # contents -- the one thing a visibility artifact must never lie about,
+        # since the whole point of the directory is comparing across dates.
         ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' +
             $capture_helper + '" -EmulatorProcessId ' + $emulator.Id +
             ' -Output "artifacts/visibility/' +
-            '2026-08-01_whispy-blow-probe.png"'),
+            (Get-Date -Format 'yyyy-MM-dd') + '_whispy-blow-probe.png"'),
         'end',
 
         'if sLBParticleStructsAllocLinks[1] != 0',
