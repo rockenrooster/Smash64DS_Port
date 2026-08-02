@@ -3451,6 +3451,14 @@ static void *ndsRelocStaticBufferForAsset(u32 asset_id, size_t asset_size)
     return NULL;
 }
 
+/* Counts heap allocations DECLINED rather than allowed to spin. Any non-zero
+ * value means the general heap ran out during play and the ROM survived it --
+ * before the guards at the two loaders below, that was a hard freeze with no
+ * error and no recovery. A rising count in a soak is the heap budget getting
+ * tight, not a bug in itself. Defined here because both guarded sites are
+ * above the rest of this file's counter block. */
+volatile u32 gNdsRelocHeapDeclineCount;
+
 static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
 {
     NDSRelocLoadedFile *loaded;
@@ -3480,6 +3488,20 @@ static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
     heap = ndsRelocStaticBufferForAsset(asset_id, asset_size);
     if (heap == NULL)
     {
+        /* Ask BEFORE allocating. syTaskmanMalloc cannot return NULL -- on
+         * exhaustion syMallocSet spins in `while (TRUE);` (decomp
+         * src/sys/malloc.c:30) -- so the NULL test below it has always been
+         * dead code and this call is a freeze, not a failed load. Same defect
+         * the anim cache was moved off the heap for on 2026-07-29; that fix
+         * covered ndsR2AnimCacheStore and left the two loaders that reach the
+         * heap on their own. See the arena's own use of this guard at :6078. */
+        if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, asset_size,
+                                0x10) == FALSE)
+        {
+            gNdsRelocHeapDeclineCount++;
+            ndsRelocRecordExternalFixupFail(asset_id);
+            return NULL;
+        }
         heap = syTaskmanMalloc(asset_size, 0x10);
     }
     if (heap == NULL)
@@ -6532,6 +6554,24 @@ void *lbRelocGetStatusBufferFile(const void *file_id)
         return NULL;
     }
 
+    /* THE SHIELD FREEZE. This is the on-demand status-animation load, reached
+     * from a gameplay frame whenever a fighter enters a status whose asset is
+     * not resident -- and a shield hit drives rebound into damage-fall, which
+     * is one of the commonest routes there. syTaskmanMalloc does not fail, it
+     * HANGS (syMallocSet's `while (TRUE);`), so once the general heap is full
+     * this call never returns and the match freezes with no error. The NULL
+     * test under it could never fire.
+     *
+     * The 2026-07-29 freeze root-cause fixed ndsR2AnimCacheStore by giving the
+     * cache its own arena, but the loader underneath it kept allocating from
+     * the shared heap, which is why the class came back as "hitting Fox's
+     * shield freezes sometimes". Declining costs a missing animation for one
+     * status, which the caller already handles; hanging costs the match. */
+    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, asset_size, 0x10) == FALSE)
+    {
+        gNdsRelocHeapDeclineCount++;
+        return NULL;
+    }
     heap = syTaskmanMalloc(asset_size, 0x10);
     if (heap == NULL)
     {
