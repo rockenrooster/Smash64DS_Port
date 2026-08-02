@@ -126,10 +126,27 @@ These bugs should be fixed for P1 delivery:
   x is -(pc->pos.x) - 715; at the measured slot1_absmax of 1352.46 that is -2067.5, past the rail,
   and each quad corner extends a further +/-260 of `size` to about -2327. The far tail of the wind
   therefore provably clamps, and a clamped corner collapses the quad.
-  BUT IT IS ONLY THE TAIL, so it cannot be the whole row: a particle at pos.x 417.69 draws at
-  -1132.7, comfortably representable, and those are invisible too. Fix it anyway -- it is a real
-  bound violation that will bite any effect crossing the stage, and it is cheap -- but do not
-  close row 1 on it, and re-measure afterwards rather than assuming.
+  THE FIX, designed and costed but NOT APPLIED -- it is a rendering-side change and PROJECT_GOAL
+  requires the owner's visual approval for those. Three cheaper options were checked and all fail:
+    - encode it differently: impossible, v16 is 16-bit and 32767/16 = 2047.9 is the hard reach.
+    - emit camera-relative and add the origin back in the modelview: still fails, the camera's own
+      half-width is 3,148, so relative coordinates overflow too.
+    - cull instead of clamp: strictly better-looking than a pile of quads on an invisible wall,
+      and one comparison to implement -- but it makes the wind stop short at a boundary rather
+      than reach, so it trades a wrong position for a missing one. Fallback, not the fix.
+  So the range has to be bought with SCALE. Halve the world->v16 factor for the particle pass
+  (WORLD_UNIT_SHIFT 8 -> 9, giving x8 and +/-4095.9, which covers the 3,148 the camera sees) and
+  compensate with a matching scale in the modelview pushed at batch open in
+  ndsRendererSubmitParticleQuad, popped in ndsRendererEndParticleQuads. Cost is one push/pop per
+  frame for the whole particle pass, since the batch is already opened lazily and closed once.
+  Care: ndsRendererEndParticleQuads deliberately issues NO glEnd (nds_renderer.c:11221-11231, an
+  extra FIFO write hung the ROM at GXSTAT=0e008900), so the pop must respect that ordering.
+  Precision cost: halving the factor halves sub-unit resolution for particles. At six quads a
+  frame that is not a tick concern, but it IS a visible-quality change, which is the other reason
+  it wants approval rather than a quiet commit.
+  VERIFY WITH THE COUNTER ALREADY IN PLACE: gNdsWhispyDrawClamped must go 1118 -> 0 with
+  gNdsWhispySubmitOk unchanged at ~5590, and the threshold constant in that check has to move to
+  4095.9 with the shift.
   TRANSFORMS RE-CONFIRMED ON THE OTHER SIDE 2026-08-02: a later run drew lr=1, whose emitter is
   -205, and the slot-1 walk read xf_t = -205.000000,100.000000 -- the correct emitter for that
   side. (at_emitter=0/elsewhere=5833 in that run is the probe's own -715 literal not matching the
