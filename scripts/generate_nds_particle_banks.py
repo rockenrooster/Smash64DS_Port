@@ -141,7 +141,16 @@ TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
 # path needs thirteen frames from textures 10/13/18/19/20/21. At 8x8 they use
 # 832 texels, fitting the proven sheet's 896 free texels without changing its
 # one-name, one-allocation contract.
-QUAD_ATLAS_WIDTH = 64
+#
+# 128x64 IS BACK, AND IT IS STILL 8,192 BYTES. Everything above is about the
+# ALLOCATION, and every refuted variant grew it: 128x64 and 64x128 failed at
+# 16,384 bytes, 128x128 at 32,768, and a second page failed at two allocations.
+# The sheet is now A5I3 at one byte per texel instead of RGB555+A1 at two, so
+# 128x64 asks the allocator for exactly the 8,192-byte block that is already
+# proven and gets twice the texels for it. Nothing about the one-name,
+# one-allocation contract changes; the palette is sixteen bytes and lives in
+# VRAM F/G, which is not the allocator that was refusing.
+QUAD_ATLAS_WIDTH = 128
 QUAD_ATLAS_HEIGHT = 64
 # Admitted before anything else. These are the textures a natural single-CPU
 # Mario-vs-Fox match was OBSERVED drawing, so they must survive admission
@@ -161,7 +170,20 @@ QUAD_ATLAS_HEIGHT = 64
 QUAD_KO_LIVE = frozenset((10, 13, 18, 19, 20, 21, 24))
 QUAD_MEASURED_LIVE = frozenset(
     (0, 1, 2, 10, 13, 18, 19, 20, 21, 22, 24, 27))
-QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT * 2
+# A5I3: one byte per texel, 5-bit alpha, 3-bit index into a shared palette.
+# Two reasons, and the second is the one that shows on screen.
+#
+# RGB555+A1 gave particles ONE BIT of alpha -- `alpha >= 128 ? colour : 0` in
+# the assembler below -- so every soft-edged particle in the game was drawing as
+# a hard-edged blob. Particles are the one thing that needs a smooth fade.
+# A5I3 gives 32 levels.
+#
+# Eight palette entries is not a compromise here: the draw path leaves the
+# polygon in modulation mode and calls glColor with pc->primcolor per quad
+# (nds_renderer.c, ndsRendererSubmitParticleQuad), so the texture supplies shape
+# and the source supplies colour, exactly as the RDP's prim colour did.
+QUAD_ATLAS_PALETTE_ENTRIES = 8
+QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT
 # The largest cell the atlas will hold, in texels per axis. This is the
 # "halving" the exclusion note below always pointed at, and texture 0 is why it
 # finally had to exist: at its source 32x32 it takes a shelf of its own -- the
@@ -172,6 +194,18 @@ QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT * 2
 # PROJECT_GOAL.md; a particle that does not draw at all is not.
 QUAD_CELL_MAX = 16
 QUAD_KO_CELL_MAX = 8
+# A LONG ANIMATION PAYS PER FRAME, so it is sized per frame. After the A5I3
+# conversion doubled the texel budget the set that still would not fit was not
+# a set of big textures, it was a set of long ones: 28 is twenty frames, 25 is
+# fifteen, 17 is ten at 64x64. At 16x16 texture 28 alone wants 5,120 of the
+# 8,192 texels for an animation whose individual frames are on screen for one
+# or two presented frames each. Halving those to 8x8 costs resolution nobody
+# can resolve at that duration and buys the whole rest of the drawn set.
+# Same trade the KO cap already makes, keyed on the thing that actually drives
+# the cost. PROJECT_GOAL.md allows reduced texture resolution explicitly; it
+# does not allow a particle that draws nothing.
+QUAD_LONG_ANIMATION_FRAMES = 6
+QUAD_LONG_ANIMATION_CELL_MAX = 8
 
 
 def quad_cell_dims(width: int, height: int,
@@ -182,8 +216,8 @@ def quad_cell_dims(width: int, height: int,
         cell_w = max(1, cell_w // 2)
         cell_h = max(1, cell_h // 2)
     return cell_w, cell_h
-DEFAULT_QUAD_ASSET = Path("assets/particles/efcommon_particle_quads.rgb5a1.bin")
-QUAD_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"
+DEFAULT_QUAD_ASSET = Path("assets/particles/efcommon_particle_quads.a5i3.bin")
+QUAD_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_quads.a5i3.bin"
 
 # The port's efcommon bank handle. Only calls whose bank argument names it can
 # reach this bank; the per-fighter and per-stage banks are separate handles.
@@ -1171,8 +1205,11 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         if not report["packed"]:
             continue
         texture = textures[report["texture"]]
-        cell_max = (QUAD_KO_CELL_MAX if texture["id"] in QUAD_KO_LIVE
-                    else QUAD_CELL_MAX)
+        cell_max = QUAD_CELL_MAX
+        if texture["id"] in QUAD_KO_LIVE:
+            cell_max = QUAD_KO_CELL_MAX
+        elif texture["frames"] >= QUAD_LONG_ANIMATION_FRAMES:
+            cell_max = QUAD_LONG_ANIMATION_CELL_MAX
         cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"],
                                         cell_max)
         candidates.append({
@@ -1182,7 +1219,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             "source_width": texture["width"],
             "source_height": texture["height"],
             "frames": texture["frames"],
-            "bytes": cell_w * cell_h * texture["frames"] * 2,
+            "bytes": cell_w * cell_h * texture["frames"],
         })
     # Dream Land's leaves and dust are measured-live too -- a 2026-08-01
     # both-CPU soak caught the game asking for scripts 0 and 1 of that bank and
@@ -1227,10 +1264,9 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     if placement is None:
         raise SystemExit("quad atlas failed to pack its own admitted set")
 
-    atlas = bytearray(QUAD_SHEET_BUDGET_BYTES)
-    frame_rows = []
-    for index, cell in enumerate(cells):
-        origin_x, origin_y = placement[index]
+    # Two passes: the shared palette has to see every admitted texel first.
+    box_averaged = []
+    for cell in cells:
         pixels = frames_by_texture[cell["texture"]][cell["frame"]]
         if len(pixels) != cell["src_w"] * cell["src_h"]:
             raise SystemExit(
@@ -1239,8 +1275,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                 f"{cell['src_w'] * cell['src_h']}")
         step_x = cell["src_w"] // cell["w"]
         step_y = cell["src_h"] // cell["h"]
+        grid = []
         for row in range(cell["h"]):
-            base = ((origin_y + row) * QUAD_ATLAS_WIDTH + origin_x) * 2
             for column in range(cell["w"]):
                 red = green = blue = alpha = 0
                 for sub_y in range(step_y):
@@ -1253,31 +1289,51 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                         blue += texel[2]
                         alpha += texel[3]
                 taps = step_x * step_y
-                red //= taps
-                green //= taps
-                blue //= taps
-                alpha //= taps
-                if alpha >= 128:
-                    value = (0x8000 |
-                             (quantise_channel_5bit(red) >> 3) |
-                             ((quantise_channel_5bit(green) >> 3) << 5) |
-                             ((quantise_channel_5bit(blue) >> 3) << 10))
-                else:
-                    value = 0
-                struct.pack_into("<H", atlas, base + column * 2, value)
+                grid.append((red // taps, green // taps, blue // taps,
+                             alpha // taps))
+        box_averaged.append(grid)
+
+    # One palette for the whole sheet. Weight by texel so a texture that covers
+    # more of the atlas has more say, and ignore fully transparent texels --
+    # their colour is arbitrary and would otherwise pull an entry towards black.
+    colours = Counter()
+    for grid in box_averaged:
+        for red, green, blue, alpha in grid:
+            if alpha > 0:
+                colours[(quantise_channel_5bit(red),
+                         quantise_channel_5bit(green),
+                         quantise_channel_5bit(blue))] += 1
+    palette = build_palette(colours, QUAD_ATLAS_PALETTE_ENTRIES)
+    if not palette:
+        palette = [(255, 255, 255)]
+
+    atlas = bytearray(QUAD_SHEET_BUDGET_BYTES)
+    frame_rows = []
+    for index, cell in enumerate(cells):
+        origin_x, origin_y = placement[index]
+        encoded = encode_frame(box_averaged[index], DS_A5I3, palette,
+                               cell["w"])
+        for row in range(cell["h"]):
+            base = (origin_y + row) * QUAD_ATLAS_WIDTH + origin_x
+            atlas[base:base + cell["w"]] = \
+                encoded[row * cell["w"]:(row + 1) * cell["w"]]
         frame_rows.append({
             "texture": cell["texture"], "frame": cell["frame"],
             "x": origin_x, "y": origin_y, "w": cell["w"], "h": cell["h"],
         })
     frame_rows.sort(key=lambda row: (row["texture"], row["frame"]))
     used = sum(row["bytes"] for row in admitted)
+    palette_payload = b"".join(
+        struct.pack("<H", to_bgr555(colour)) for colour in palette)
     return {
-        "payload": bytes(atlas),
+        "payload": bytes(atlas) + palette_payload,
         "admitted": admitted,
         "excluded": excluded,
         "frames": frame_rows,
         "bytes": used,
         "atlas_bytes": len(atlas),
+        "palette_offset": len(atlas),
+        "palette_entries": len(palette),
         "width": QUAD_ATLAS_WIDTH,
         "height": QUAD_ATLAS_HEIGHT,
         "budget_bytes": QUAD_SHEET_BUDGET_BYTES,
@@ -1328,7 +1384,7 @@ def build_pupupu_bank(repo_root: Path,
             "source_width": texture["width"],
             "source_height": texture["height"],
             "frames": texture["frames"],
-            "bytes": cell_w * cell_h * texture["frames"] * 2,
+            "bytes": cell_w * cell_h * texture["frames"],
             "live": texture["id"] in live_textures,
         })
 
@@ -1582,19 +1638,27 @@ def render_header(pack: dict) -> str:
  * {pack["asset_bytes"]} bytes of the {pack["pack_bytes"]}-byte pack are in the file above. */
 #define NDS_PARTICLE_LINKED_BYTES {pack["linked_bytes"]}u
 
-/* THE DRAW PATH'S PAYLOAD: one RGB555+A1 atlas, and a second encoding of the
- * same texels. The pack above chooses a DS format per texture by measured
- * error; those formats are paletted or alpha-indexed, and the renderer's
- * texture cache uploads GL_RGBA with no palette slot in its key.
+/* THE DRAW PATH'S PAYLOAD: one A5I3 atlas, a second encoding of the same
+ * texels. The pack above chooses a DS format per texture by measured error and
+ * gets the whole reachable set into the NitroFS payload; this sheet is what the
+ * hardware quad path actually binds.
  *
- * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
- * not bytes: the cache holds 48 and the battle's static set pins 24, while the
+ * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
+ * too: the cache holds 48 and the battle's static set pins 24, while the
  * admitted set is {len(pack["quads"]["frames"])} individual frames. The atlas keeps
  * every particle in one bind.
  *
- * {pack["quads"]["width"]}x{pack["quads"]["height"]} is the measured-safe 8 KiB allocation. Larger or
- * additional allocations break stage texture resolves even with ample VRAM.
- * KO-only cells are reduced to 8x8 so their full measured closure fits here.
+ * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the allocation that is
+ * fixed here, not the texel count. 16,384 and 32,768 both broke stage texture
+ * resolves with ample VRAM free, and so did a second 8 KiB page. This sheet is
+ * {pack["quads"]["width"]}x{pack["quads"]["height"]} A5I3 at one byte per texel, so it asks for that
+ * same proven block and gets twice the texels RGB555+A1 could hold.
+ *
+ * A5I3 also fixed a fidelity bug rather than only a capacity one: RGB555+A1
+ * gave every particle ONE BIT of alpha, so soft-edged sprites drew as hard
+ * blobs. Five bits is 32 levels. Three index bits are enough because the draw
+ * path is in modulation mode and calls glColor with the source's primcolor, so
+ * the sheet carries shape and the game carries colour.
  *
  * A texture the runtime asks for and does not find here draws nothing; it does
  * not draw something else. gNdsParticleTextureUseMask says which ones a real
@@ -1603,7 +1667,10 @@ def render_header(pack: dict) -> str:
 #define NDS_PARTICLE_QUAD_ASSET_PATH "{QUAD_ASSET_NITRO_PATH}"
 #define NDS_PARTICLE_QUAD_ATLAS_WIDTH {pack["quads"]["width"]}u
 #define NDS_PARTICLE_QUAD_ATLAS_HEIGHT {pack["quads"]["height"]}u
-#define NDS_PARTICLE_QUAD_ASSET_BYTES {pack["quads"]["atlas_bytes"]}u
+#define NDS_PARTICLE_QUAD_ASSET_BYTES {len(pack["quads"]["payload"])}u
+#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES {pack["quads"]["atlas_bytes"]}u
+#define NDS_PARTICLE_QUAD_PALETTE_OFFSET {pack["quads"]["palette_offset"]}u
+#define NDS_PARTICLE_QUAD_PALETTE_ENTRIES {pack["quads"]["palette_entries"]}u
 #define NDS_PARTICLE_QUAD_TEXEL_BYTES {pack["quads"]["bytes"]}u
 #define NDS_PARTICLE_QUAD_COUNT {len(pack["quads"]["admitted"])}u
 #define NDS_PARTICLE_QUAD_FRAME_COUNT {len(pack["quads"]["frames"])}u

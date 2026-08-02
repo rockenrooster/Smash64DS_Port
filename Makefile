@@ -1562,7 +1562,7 @@ NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle
 # format the renderer's texture cache uploads. Separate from the file above
 # because that one is per-texture DS formats with palettes and the cache has no
 # palette slot in its key.
-NDS_PARTICLE_QUAD_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_quads.rgb5a1.bin
+NDS_PARTICLE_QUAD_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_quads.a5i3.bin
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -2346,7 +2346,7 @@ export NDS_NITROFS_PARTICLE_FILES :=
 ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 NDS_NITROFS_PARTICLE_FILES := \
 	$(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin \
-	$(NITROFS_DIR)/particles/efcommon_particle_quads.rgb5a1.bin
+	$(NITROFS_DIR)/particles/efcommon_particle_quads.a5i3.bin
 endif
 
 # The Task 39 hit-spark sheet. Unlike the payload above this one has a live
@@ -2635,7 +2635,7 @@ $(NITROFS_DIR)/particles/efcommon_particle_textures.ds.bin: $(NDS_PARTICLE_TEXTU
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
-$(NITROFS_DIR)/particles/efcommon_particle_quads.rgb5a1.bin: $(NDS_PARTICLE_QUAD_ASSET)
+$(NITROFS_DIR)/particles/efcommon_particle_quads.a5i3.bin: $(NDS_PARTICLE_QUAD_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 

@@ -59,31 +59,42 @@
  * 137152 bytes of the 149347-byte pack are in the file above. */
 #define NDS_PARTICLE_LINKED_BYTES 12195u
 
-/* THE DRAW PATH'S PAYLOAD: one RGB555+A1 atlas, and a second encoding of the
- * same texels. The pack above chooses a DS format per texture by measured
- * error; those formats are paletted or alpha-indexed, and the renderer's
- * texture cache uploads GL_RGBA with no palette slot in its key.
+/* THE DRAW PATH'S PAYLOAD: one A5I3 atlas, a second encoding of the same
+ * texels. The pack above chooses a DS format per texture by measured error and
+ * gets the whole reachable set into the NitroFS payload; this sheet is what the
+ * hardware quad path actually binds.
  *
- * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
- * not bytes: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 27 individual frames. The atlas keeps
+ * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
+ * too: the cache holds 48 and the battle's static set pins 24, while the
+ * admitted set is 54 individual frames. The atlas keeps
  * every particle in one bind.
  *
- * 64x64 is the measured-safe 8 KiB allocation. Larger or
- * additional allocations break stage texture resolves even with ample VRAM.
- * KO-only cells are reduced to 8x8 so their full measured closure fits here.
+ * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the allocation that is
+ * fixed here, not the texel count. 16,384 and 32,768 both broke stage texture
+ * resolves with ample VRAM free, and so did a second 8 KiB page. This sheet is
+ * 128x64 A5I3 at one byte per texel, so it asks for that
+ * same proven block and gets twice the texels RGB555+A1 could hold.
+ *
+ * A5I3 also fixed a fidelity bug rather than only a capacity one: RGB555+A1
+ * gave every particle ONE BIT of alpha, so soft-edged sprites drew as hard
+ * blobs. Five bits is 32 levels. Three index bits are enough because the draw
+ * path is in modulation mode and calls glColor with the source's primcolor, so
+ * the sheet carries shape and the game carries colour.
  *
  * A texture the runtime asks for and does not find here draws nothing; it does
  * not draw something else. gNdsParticleTextureUseMask says which ones a real
  * match reached, and the excluded list is in the generated JSON report by name
  * so growing the atlas is an informed decision rather than a hopeful one. */
-#define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"
-#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 64u
+#define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.a5i3.bin"
+#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 128u
 #define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u
-#define NDS_PARTICLE_QUAD_ASSET_BYTES 8192u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 8192u
-#define NDS_PARTICLE_QUAD_COUNT 14u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 27u
+#define NDS_PARTICLE_QUAD_ASSET_BYTES 8208u
+#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 8192u
+#define NDS_PARTICLE_QUAD_PALETTE_OFFSET 8192u
+#define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 8u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 7808u
+#define NDS_PARTICLE_QUAD_COUNT 23u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 54u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing

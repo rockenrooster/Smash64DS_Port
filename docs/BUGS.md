@@ -11,7 +11,13 @@ These bugs should be fixed for P1 delivery:
   plane (z -696/-762) and would also read as displaced if that is what is being seen.
 
 -Some Crowd noise audio cues get cut off.
-  Crowd actor live, every cue packed, miss ring empty. Truncation cause not yet measured.
+  NOT a stolen channel: measured 0 GenerationMismatch, 0 PoolExhaust, 6 of 8 handles peak, and all 174
+  stops were DURATION. Six of the thirteen crowd cues instead PLAY TOO FAST and so end early --
+  ds_frequency_hz against the rate their own source duration implies: Cheer 1.61x (2185 ms of cue in
+  1360 ms), DamageL 1.52x, Amazed 1.33x, GaspS 1.26x, GaspClap and DamageS ~1.2x; GaspL/Fox/Mario/Win/
+  Excited are 1.00x and sound right. All six short ones share one 44,800-sample wave
+  (trim_strategy untrimmed_shared_source_reuse, trim_applied false), so nothing is being truncated --
+  the rate is wrong. Next: check ds_frequency_hz for that shared sound against the N64 program.
 
 -Respawn floating platform isn't visible when respawning.
   Rebirth moved to the DS visual seam: the battle hardware path submits no source effect DL links.

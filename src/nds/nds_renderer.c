@@ -11056,13 +11056,32 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         goto fail;
     }
     ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+    /* A5I3, not GL_RGBA. One byte per texel is what lets a 128x64 sheet ask the
+     * allocator for the same 8,192-byte block that 64x64 RGB555+A1 already
+     * proved safe -- every larger request, 16,384 and 32,768 alike, broke stage
+     * texture resolves. It is also the fidelity fix: RGB555+A1 gave particles a
+     * SINGLE alpha bit, so every soft-edged sprite drew as a hard blob. Five
+     * bits is 32 levels.
+     *
+     * Three index bits are enough because the batch below runs in modulation
+     * mode and calls glColor with the source's primcolor per quad, so the sheet
+     * carries shape and the game carries colour -- the same division the RDP's
+     * prim colour made. The palette is sixteen bytes in VRAM F/G, which is not
+     * the allocator that was refusing. */
     if (ndsRendererHardwareFencedGlTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGBA, size_x, size_y, 0,
+            GL_TEXTURE_2D, 0, GL_RGB8_A5, size_x, size_y, 0,
             TEXGEN_TEXCOORD, sNdsRendererHardwareTextureScratch) == 0)
     {
         (void)ndsRendererHardwareReleaseTexture(entry);
         goto fail;
     }
+    /* The scratch is u16[], so the palette's BYTE offset has to be applied
+     * through a u8 pointer -- indexing it directly would land at twice the
+     * offset and hand the hardware texels as a palette. */
+    glColorTableEXT(
+        GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
+        (const u16 *)(((const u8 *)sNdsRendererHardwareTextureScratch) +
+                      NDS_PARTICLE_QUAD_PALETTE_OFFSET));
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareTextureLookupRemove(entry);
 #endif
