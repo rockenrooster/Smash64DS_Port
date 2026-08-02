@@ -33,8 +33,19 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
     opens `vol 0` for 18 ticks and both carry packed_envelope_count 2, so that is a deliberate
     fade-in, not a mute. And the runtime does step envelopes -- ndsAudioFgmUpdate runs per frame
     from taskman_seam.c:4427, not only on a new play.
-    So the defect is not in cue data or envelope stepping. Next: latch WHICH cue is playing and
-    what releases it at the moment of a big hit, rather than auditing the pack again.
+    So the defect is not in cue data or envelope stepping.
+    CHANNEL CONTENTION INSTRUMENTED AND NOT OBSERVED, with weak coverage -- read that carefully.
+    The suspect was the retire at nds_audio_fgm.c:1135: when soundPlaySample picks a channel that
+    still has a live software owner, the code assumes the owner finished and releases it. That is
+    justified only if the ARM7's inactive report is exact, and a big hit is when several short
+    cues fire into the 1.1-2.1 s a crowd reaction occupies. gNdsAudioFgmPrematureRetireCount now
+    counts retires taken while the owner's own end_tick was still in the future.
+    Measured over 900 frames: premature=0 durstop=0 exhaust=0. But durstop=0 means the retire path
+    NEVER RAN, so this clears nothing -- the scripted probe scenario does not produce the big hits
+    the row is about. The counter is the right instrument aimed at the wrong scenario.
+    NEXT: read these four counters after a BOTH-CPU soak with real big hits, not from
+    probe-vfx-contracts. Non-zero premature confirms contention; zero with durstop non-zero
+    genuinely clears it and moves the search to the release ramp length.
 
 -Respawn floating platform isn't visible when respawning after KO.
     Not fixed, I don't see the floating platform.

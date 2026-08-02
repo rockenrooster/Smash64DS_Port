@@ -131,6 +131,12 @@ volatile u32 gNdsAudioFgmLastGeneration;
 volatile u32 gNdsAudioFgmLastInstanceToken;
 volatile u32 gNdsAudioFgmInstanceTokenWrapCount;
 volatile u32 gNdsAudioFgmPoolExhaustCount;
+
+/* BUGS.md crowd cut-off. Counts channel retires taken while the previous owner's
+ * own expected end was still in the future -- i.e. a cue that was still sounding.
+ * Non-zero proves channel contention is the mechanism; zero clears it. */
+volatile u32 gNdsAudioFgmPrematureRetireCount;
+volatile u32 gNdsAudioFgmPrematureRetireLastID;
 volatile u32 gNdsAudioFgmHandleAcquireCount;
 volatile u32 gNdsAudioFgmHandleReleaseCount;
 volatile u32 gNdsAudioFgmHandleRecycleCount;
@@ -1147,11 +1153,28 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
             (sNdsAudioFgmChannelGenerations[channel] ==
              completed_handle->generation))
         {
+            /* BUGS.md "Some Crowd noise audio cues get cut off (the for big
+             * hits)". The retire above is justified by soundPlaySample only
+             * choosing an INACTIVE hardware channel -- so the owner must be
+             * finished. Measure that rather than trust it: if the owner's own
+             * expected end has not arrived, this call just ended a cue that was
+             * still sounding, and a big hit is exactly when it would happen,
+             * because several short cues fire into the 1.1-2.1 s a crowd
+             * reaction occupies. A non-zero count here is the row's mechanism;
+             * zero clears channel contention and moves the search elsewhere. */
+            u32 retire_now = cpuGetTiming();
+
+            if ((completed_handle->end_tick != 0u) &&
+                ((s32)(completed_handle->end_tick - retire_now) > 0))
+            {
+                gNdsAudioFgmPrematureRetireCount++;
+                gNdsAudioFgmPrematureRetireLastID = completed_handle->fgm_id;
+            }
             ndsAudioFgmReleaseHandle(
                 completed_handle, FALSE
                 NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
                     NDS_AUDIO_FGM_RELEASE_REASON_DURATION,
-                    cpuGetTiming()));
+                    retire_now));
             gNdsAudioFgmDurationStopCount++;
         }
         else
