@@ -69,11 +69,27 @@ These bugs should be fixed for P1 delivery:
 
 -Results confetti doesn't look right.
     not visible
-    Visible again after the same camera fix, but NOT FIXED: it should blanket the screen and shows
-    about twenty pieces. Ruled out by measurement -- pool size (raised to the source's 112/24/16,
-    StructsMax stayed 40 with 0 rejects, reverted as dead weight), scripts 108-111 all packed, and
-    atlas misses are 684 of 30,889. Live thread: the results-lab shows ZERO confetti at tic 130 and
-    200 while a full match shows a few. Use capture-results-tic.ps1, not a full-match soak.
+    **FIXED** (2026-08-02) pending your eye: 8 live pieces -> 112, drawn per seam 20 -> 62.
+    Nothing was broken -- the density is what the SOURCE PARAMETERS produce, and it took measuring
+    the right things to see that. The entry point is script 0x70 = 112, not 108-111: 112 is a pure
+    spawner (`a5 006c a5 006d a5 006e a5 006f ff`) that creates the four emitters, and
+    probe-results-confetti confirms both sheets live in slots 0 and 4, 4 pieces each, size 20,
+    texture 22, 8 generators. Nothing missing, nothing mis-sized, nothing mis-placed.
+    What is sparse is arrival against fall. Each emitter carries update_rate 0.07 and
+    lbparticle.c:2324 emits one piece per whole unit of `frame += rand() * rate`, so about one per
+    29 frames each. Gravity is 4.0 per frame squared, so a piece spawned at y = 1000 is past
+    y = -224 when the probe reads it and gone within ~30 frames, far short of its 136-frame life.
+    0.14 arrivals per frame against ~30 frames of residency is the twenty pieces you saw.
+    Fixed by specializing the four emitters to update_rate 0.42 at bank load
+    (NDS_R2_CONFETTI_UPDATE_RATE), which PROJECT_GOAL explicitly allows, plus the Results-scene
+    pool at the source's 112/24/16. BOTH were needed and that is why the pool alone did nothing
+    when tried first: at 0.07 the generators never asked for more than 40 structs.
+    Verified: StructsLive 112, DrawVisibleMax 62, Results present-interval max 6 and bucket[2]
+    576/713 -- identical pacing to before -- NO-FREEZE, 0 malloc overflows.
+    TWO HARNESS NOTES so they are not re-learned: the results-lab CANNOT test confetti, because
+    mnvsresults.c:3248 gates it on sMNVSResultsKind != NoContest and the lab is NoContest; and
+    probe-results-confetti does NOT rebuild, so a run whose floats are byte-identical to the
+    previous one measured the old ELF. Both cost a cycle here.
 
 -A new SFX that i don't recognize has developed, don't know if its the wrong pitch or what.
     **FIXED** (2026-08-02) -- you identified it as FGM 153 AltitudeWarn. Not new and not misfiring:

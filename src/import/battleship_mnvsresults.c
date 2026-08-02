@@ -213,14 +213,29 @@ void ndsMNVSResultsSetLoadScene(void)
 
 static void (*sNdsMNVSResultsFuncStart)(void);
 
+/* Claimed here because this is the only seam that brackets mnVSResultsFuncStart,
+ * which calls efParticleInitAll (mnvsresults.c:3339) and would otherwise take
+ * the battle's sizing. Pointless without the confetti rate raise in
+ * battleship_lbparticle.c -- measured: with the source rate, the bigger pool
+ * went entirely unused. Cleared after, so no other scene inherits it. */
+extern volatile u32 gNdsParticlePoolStructsWanted;
+extern volatile u32 gNdsParticlePoolGeneratorsWanted;
+extern volatile u32 gNdsParticlePoolTransformsWanted;
+
 static void ndsMNVSResultsFuncStartTimed(void)
 {
     u32 start = cpuGetTiming();
 
+    gNdsParticlePoolStructsWanted = 112u;
+    gNdsParticlePoolGeneratorsWanted = 24u;
+    gNdsParticlePoolTransformsWanted = 16u;
     if (sNdsMNVSResultsFuncStart != NULL)
     {
         sNdsMNVSResultsFuncStart();
     }
+    gNdsParticlePoolStructsWanted = 0u;
+    gNdsParticlePoolGeneratorsWanted = 0u;
+    gNdsParticlePoolTransformsWanted = 0u;
     gNdsVSResultsFuncStartTicks = cpuGetTiming() - start;
 }
 

@@ -196,15 +196,33 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
 #define NDS_R2_PARTICLE_POOL_GENERATORS 10
 #define NDS_R2_PARTICLE_POOL_TRANSFORMS 6
 
+/* The pool the NEXT efParticleInitAll should use, or 0 for the battle sizing
+ * above. Only the Results scene sets it, because only that scene both needs a
+ * bigger pool and has the room: the battle's general-heap low water is 24,404
+ * bytes and the 25 KiB cliff under it is what those constants defend, while
+ * Results reports 308,316 free.
+ *
+ * On its own this changes nothing and was reverted once for that reason -- at
+ * the source's update_rate the confetti emitters never asked for more than 40
+ * structs and a 112-struct pool sat unused with 0 rejects. It only matters
+ * alongside NDS_R2_CONFETTI_UPDATE_RATE. */
+volatile u32 gNdsParticlePoolStructsWanted;
+volatile u32 gNdsParticlePoolGeneratorsWanted;
+volatile u32 gNdsParticlePoolTransformsWanted;
+
 void efParticleInitAll(void)
 {
-    gEFParticleStructsGObj =
-        lbParticleAllocStructs(NDS_R2_PARTICLE_POOL_STRUCTS);
-    gEFParticleGeneratorsGObj =
-        lbParticleAllocGenerators(NDS_R2_PARTICLE_POOL_GENERATORS);
+    u32 structs = (gNdsParticlePoolStructsWanted != 0u) ?
+        gNdsParticlePoolStructsWanted : NDS_R2_PARTICLE_POOL_STRUCTS;
+    u32 generators = (gNdsParticlePoolGeneratorsWanted != 0u) ?
+        gNdsParticlePoolGeneratorsWanted : NDS_R2_PARTICLE_POOL_GENERATORS;
+    u32 transforms = (gNdsParticlePoolTransformsWanted != 0u) ?
+        gNdsParticlePoolTransformsWanted : NDS_R2_PARTICLE_POOL_TRANSFORMS;
 
-    lbParticleAllocTransforms(NDS_R2_PARTICLE_POOL_TRANSFORMS,
-                              sizeof(LBTransform));
+    gEFParticleStructsGObj = lbParticleAllocStructs((s32)structs);
+    gEFParticleGeneratorsGObj = lbParticleAllocGenerators((s32)generators);
+
+    lbParticleAllocTransforms((s32)transforms, sizeof(LBTransform));
     sEFParticleBanksNum = 0;
     /* Every call here restarts bank numbering, so two loads on either side of
      * one reset share a slot. That is how efcommon and Dream Land both reported
@@ -364,6 +382,59 @@ static void ndsParticleNormalizeHeader(u8 *header, sb32 swap)
     for (i = 0u; i < 10u; i++)
     {
         ndsParticleSwap32(&header[8u + (i * 4u)]);
+    }
+}
+
+/* THE RESULTS CONFETTI IS SPARSE BECAUSE ITS SOURCE PARAMETERS MAKE IT SPARSE,
+ * and the owner's "confetti should be blanketing the ENTIRE screen" is against
+ * what SSB64 shows, not against a broken port. Measured before touching it, so
+ * the specialization is aimed rather than hopeful:
+ *
+ *   efManagerConfettiMakeEffect makes script 0x70 = 112 TWICE (mnvsresults.c
+ *   :3216-3217). 112 is a pure spawner -- bytecode `a5 006c a5 006d a5 006e
+ *   a5 006f ff` -- so each call creates the four emitters 108..111, and
+ *   probe-results-confetti confirms the pair: slot 0 and slot 4 both live,
+ *   4 pieces each, size 20, texture 22, gens_used 8. Nothing is missing.
+ *
+ *   What is sparse is the arrival rate against the fall. Each emitter carries
+ *   update_rate 0.07, and lbparticle.c:2324 advances `frame += rand() * rate`
+ *   and emits once per whole unit, so that is about one piece every 29 frames
+ *   per emitter. Gravity is 4.0 per frame squared, so a piece spawned at
+ *   y = 1000 is already past y = -224 when the probe reads it and off screen
+ *   within about thirty frames -- long before its 136-frame lifetime. Arrival
+ *   0.14/frame against a residency of ~30 frames is the ~20 pieces on screen.
+ *
+ * Raising the rate is the one lever that adds pieces without touching the
+ * physics, the size, or the spawn positions -- all three of which measured
+ * correct. PROJECT_GOAL explicitly allows content to be specialized per
+ * configuration, and this is a Results-screen cosmetic with no gameplay term.
+ *
+ * THIS ALSO EXPLAINS WHY RAISING THE POOL ALONE DID NOTHING: at 0.07 the
+ * generators never asked for more than 40 structs, so a 112-struct pool sat
+ * unused with 0 rejects. The rate and the pool have to move together, and the
+ * Results scene claims the larger pool in battleship_mnvsresults.c. */
+#define NDS_R2_CONFETTI_FIRST_SCRIPT 108u
+#define NDS_R2_CONFETTI_LAST_SCRIPT 111u
+#define NDS_R2_CONFETTI_UPDATE_RATE 0.42F
+
+/* Counts the emitters this build raised. Four is the whole set; anything else
+ * means the bank moved out from under the id range. */
+volatile u32 gNdsConfettiDensityPatchCount;
+
+static void ndsParticleApplyConfettiDensity(u32 id, LBScript *script)
+{
+    if ((id < NDS_R2_CONFETTI_FIRST_SCRIPT) ||
+        (id > NDS_R2_CONFETTI_LAST_SCRIPT) || (script == NULL))
+    {
+        return;
+    }
+    /* Only ever upward, and only from the value the source actually carries.
+     * Clamping to a raise means a re-render that changes the script cannot be
+     * silently overridden downward by this. */
+    if (script->update_rate < NDS_R2_CONFETTI_UPDATE_RATE)
+    {
+        script->update_rate = NDS_R2_CONFETTI_UPDATE_RATE;
+        gNdsConfettiDensityPatchCount++;
     }
 }
 
@@ -675,6 +746,7 @@ static sb32 ndsParticleLoadEFCommonBank(s32 bank_id)
         }
         header = &bank[offset];
         ndsParticleNormalizeHeader(header, swap);
+        ndsParticleApplyConfettiDensity(id, (LBScript *)header);
         if (ndsParticleNormalizeBytecode(
                 header + sizeof(LBScriptHeader),
                 limit - offset - (u32)sizeof(LBScriptHeader),
