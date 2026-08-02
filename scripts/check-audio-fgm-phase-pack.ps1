@@ -5,6 +5,7 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $generator = Join-Path $PSScriptRoot 'sfx\render-audio-fgm-phase-pack.py'
 $verifierPath = Join-Path $PSScriptRoot 'verify-audio-fgm-phase-pack.ps1'
 $metadataPath = Join-Path $root 'assets/audio/fgm_phase_pack_ima.json'
+$packPath = Join-Path $root 'assets/audio/fgm_phase_pack_ima.bin'
 $headerPath = Join-Path $root 'include/nds/nds_audio_fgm.h'
 $runtimePath = Join-Path $root 'src/nds/nds_audio_fgm.c'
 
@@ -185,10 +186,33 @@ $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
     '#define NDS_AUDIO_FGM_ENTRY_COUNT 88u',
-    '#define NDS_AUDIO_FGM_PACK_BYTES 725896u',
-    '#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x984c7da6u',
     '#define NDS_AUDIO_FGM_CACHE_BYTES 204800u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
+}
+# NDS_AUDIO_FGM_PACK_BYTES and NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO are DERIVED
+# from the pack, never pinned as text. They used to be pinned in two places --
+# the manifest assertions above and a literal #define string here -- and on
+# 2026-08-02 the size was moved in both while the hash was moved in neither, so
+# this check actively REQUIRED the stale hash and passed. The runtime rejects the
+# whole pack on either mismatch, so the ROM booted with all 88 cues silent and
+# gNdsAudioFgmFormatFailCount 1. Comparing against the artifact cannot drift.
+$packBytes = (Get-Item -LiteralPath $packPath).Length
+$packHeaderBlob = [System.IO.File]::ReadAllBytes($packPath)[0..15]
+$packSizeField = [System.BitConverter]::ToUInt32($packHeaderBlob, 8)
+$packMappingLo = '0x{0:x8}' -f [System.BitConverter]::ToUInt32($packHeaderBlob, 12)
+if ($packSizeField -ne $packBytes) {
+    throw "Pack header size field $packSizeField disagrees with its own length $packBytes."
+}
+foreach ($pair in @(
+    @{ Name = 'NDS_AUDIO_FGM_PACK_BYTES'; Want = "${packBytes}u" },
+    @{ Name = 'NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO'; Want = "${packMappingLo}u" })) {
+    $found = [regex]::Match($header, "#define $($pair.Name)\s+(\S+)")
+    if (-not $found.Success) { throw "Runtime header lost: #define $($pair.Name)" }
+    if ($found.Groups[1].Value -ne $pair.Want) {
+        throw ("$($pair.Name) is $($found.Groups[1].Value) but the pack says $($pair.Want). " +
+               'The runtime rejects the whole pack on this mismatch: the ROM boots SILENT. ' +
+               "Set it in $headerPath and rebuild.")
+    }
 }
 # A packed cue the allowlist never admits is dead ROM, and an admitted cue with
 # no pack entry fails closed and is silent -- both were live defects. Keep the

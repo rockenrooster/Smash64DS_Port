@@ -47,10 +47,15 @@ allowlist.
 The canonical direct build command is:
 
 ```powershell
-make TARGET=smash64ds-battle-playable-hwtri -j4
+make TARGET=smash64ds-battle-playable-hwtri
 ```
 
-The clean audit used an isolated object tree and output directory:
+Pass no `-j`. The Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)` from `nproc`, and an
+explicit flag wins, so the `-j4` this file used to name here silently capped the
+shipping build at four threads on a 32-thread machine.
+
+The clean audit used an isolated object tree and output directory (recorded as
+run, with the `-j4` of the day; do not copy that flag forward):
 
 ```powershell
 make TARGET=smash64ds-battle-playable-hwtri `

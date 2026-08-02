@@ -24,12 +24,17 @@
 #define NDS_AUDIO_FGM_RELEASE_REASON_STOP_ALL 4u
 #define NDS_AUDIO_FGM_RELEASE_REASON_EXPLICIT 5u
 #endif
-/* Must equal the generated pack exactly: nds_audio_fgm.c validates the envelope
- * cursor against it and REJECTS THE WHOLE PACK on a mismatch, so a stale value
- * here is not a size nit, it is silence. 725900 -> 725896 on 2026-08-02 when
- * FGM 430 and 439 moved onto the source note schedule. */
+/* BOTH of these must equal the generated pack exactly, and BOTH move together
+ * whenever the pack is re-rendered.  ndsAudioFgmLoad checks the size against the
+ * file length, the header field, and the envelope cursor, and checks the mapping
+ * hash against header[12]; either mismatch rejects THE WHOLE PACK, which is not
+ * a size nit, it is total silence.  On 2026-08-02 the size moved 725900 -> 725896
+ * for the FGM 430/439 note schedules and the hash was left behind -- the ROM
+ * booted mute with gNdsAudioFgmFormatFailCount 1.  check-audio-fgm-phase-pack.ps1
+ * now derives both from the pack binary and prints the values to set here, so
+ * re-render, run it, and paste what it names.  Never pin them anywhere else. */
 #define NDS_AUDIO_FGM_PACK_BYTES 725896u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x984c7da6u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x4fb97922u
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

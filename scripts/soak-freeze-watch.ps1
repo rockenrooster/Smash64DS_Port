@@ -785,6 +785,12 @@ try {
             # vs Unsupported is the whole "is this cue packed yet" question, and
             # PlayFail separates "packed but the mixer refused" from it.
             'gNdsAudioFgmLoaded',
+            'gNdsAudioFgmResult',
+            'gNdsAudioFgmOpenFailCount',
+            'gNdsAudioFgmReadFailCount',
+            'gNdsAudioFgmFormatFailCount',
+            'gNdsAudioFgmResidentBytes',
+            'gNdsAudioFgmIncludedLookupFailCount',
             'gNdsAudioFgmSupportedCount',
             'gNdsAudioFgmPlayCalls',
             'gNdsAudioFgmSupportedPlayCount',
@@ -802,6 +808,18 @@ try {
             'gNdsAudioFgmMaxActiveHandles',
             'gNdsAudioFgmPoolExhaustCount',
             'gNdsAudioFgmDurationStopCount',
+            # BUGS.md crowd cut-off. DurationStop above counts every channel
+            # retire; PrematureRetire counts only those taken while the previous
+            # owner's own end_tick was still ahead -- a cue ended mid-sample.
+            # This is the row's acceptance, and it needs a BOTH-CPU soak: a
+            # scripted probe run reported both as 0, which cleared nothing
+            # because DurationStop 0 means the retire path never ran at all.
+            'gNdsAudioFgmPrematureRetireCount',
+            'gNdsAudioFgmPrematureRetireLastID',
+            # And the freeze guards: non-zero means the general heap ran out
+            # during play and the ROM DECLINED instead of spinning in
+            # syMallocSet. Before 2026-08-02 that was the shield freeze.
+            'gNdsRelocHeapDeclineCount',
             'gNdsAudioFgmReleaseRampCount',
             'gNdsAudioFgmGenerationMismatchCount',
             'gNdsAudioFgmStaleStopCount',
