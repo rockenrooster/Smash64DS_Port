@@ -33,7 +33,7 @@ These bugs should be fixed for P1 delivery:
 
 -Results confetti doesn't look right
   Owner: not Fixed. Confetti pieces do not look like there are large enough and don't look like they are falling freely. Check Source.
-  CONTRACT written (size 20.0, gravity 4.0, friction 0.95, 136 frames); GDB read next.
+  MEASURED: header `size` was never byte-swapped, so 20.0 read as a 5.7e-41 denormal. Fixed; needs owner.
 
 -BLOCKED(decision: particle atlas byte budget). Shared bound behind the three rows above.
   The sheet is 8,192 bytes because 16,384, 32,768 and a second page each broke stage

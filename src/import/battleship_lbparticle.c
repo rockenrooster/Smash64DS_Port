@@ -96,6 +96,7 @@
 #include <sys/dma.h>
 #include <sys/debug.h>
 #include <sys/taskman.h>
+#include <stddef.h>
 #include <string.h>
 
 /* The two functions the decomp leaves to assembly (lbParticleUpdateStruct and
@@ -323,8 +324,28 @@ static void ndsParticleSwap32(u8 *at)
     at[3] = b0;
 }
 
-/* LBScript's fixed 0x30-byte prefix: four u16 then eleven 4-byte words
- * (lbtypes.h:79-93). */
+/* LBScript's fixed 0x30-byte prefix: four u16 then TEN 4-byte words
+ * (lbtypes.h:79-93) -- flags, gravity, friction, vel.x/y/z, unk_0x20, unk_0x24,
+ * update_rate, size. It shipped as nine, and the tenth is `size` at 0x2C.
+ *
+ * An unswapped 20.0f is not zero and not obviously wrong: 0x41A00000 read back
+ * the other way round is 0x0000A041, a positive DENORMAL of 5.7e-41. It passes
+ * lbParticleDrawTextures' `pc->size == 0.0F` test, so the particle is fully
+ * alive, submits a real quad, costs no QuadMiss, and draws at a size no pixel
+ * can hold. Every counter reads clean and nothing appears on screen. That is
+ * the whole of "Results confetti pieces do not look like they are large
+ * enough": scripts 108-111 carry size 20.0 in the header and set no size
+ * opcode, so all four confetti generators emit invisible pieces. Any script
+ * that sets its size in BYTECODE instead -- lbpSetSize, lbpSetSizeLerp -- was
+ * always correct, which is why the Whispy dust measured a healthy 260.0 and hid
+ * this for as long as it did.
+ *
+ * The static assert is the real fix. The count was a bare literal that had to
+ * agree with a struct in another repository's header, and nothing checked it.
+ */
+_Static_assert(offsetof(LBScript, bytecode) == (8u + (10u * 4u)),
+               "LBScript prefix is not four u16 plus ten 4-byte words");
+
 /* `swap` is FALSE on a re-entry, where the bank is normalized already and the
  * walk is only rebuilding the per-scene tables. Swapping twice would swap back;
  * see the one-shot latch in ndsParticleLoadEFCommonBank. */
@@ -340,7 +361,7 @@ static void ndsParticleNormalizeHeader(u8 *header, sb32 swap)
     {
         ndsParticleSwap16(&header[i * 2u]);
     }
-    for (i = 0u; i < 9u; i++)
+    for (i = 0u; i < 10u; i++)
     {
         ndsParticleSwap32(&header[8u + (i * 4u)]);
     }
