@@ -1386,6 +1386,103 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
 }
 #endif
 
+volatile u32 gNdsSourceAssetQuadAttempts;
+volatile u32 gNdsSourceAssetQuadDrawn;
+volatile u32 gNdsSourceAssetQuadMissMask;
+
+/* ONE camera-facing textured quad from the shared sheet, drawn OUTSIDE the
+ * particle pass.
+ *
+ * The shield and the respawn pad are not particles -- they are GObj effects on
+ * DL link 18 with their own display procs -- but they are exactly what this
+ * path draws: a small alpha-blended source texture that always faces the
+ * camera. They were procedural untextured discs, which is what the owner filed
+ * against both.
+ *
+ * SELF-CONTAINED ON PURPOSE. It re-derives the basis, re-sets the camera and
+ * closes its own batch rather than joining the particle pass, because the two
+ * draws are ordered by the GObj display list and this file cannot know whether
+ * lbParticleDrawTextures has already run this frame. Borrowing the pass's state
+ * would make the shield correct or a frame stale depending on link order -- the
+ * kind of dependency that reads as an intermittent visual bug. The cost is one
+ * extra glBegin/glEnd and one atlas bind per shielding fighter, at most three
+ * on screen at once against the 599 batch opens a match already does.
+ *
+ * Fails closed and counts: a missing atlas, an unseated texture or a degenerate
+ * camera all leave the effect undrawn rather than drawing it wrong, and set a
+ * bit in gNdsSourceAssetQuadMissMask so an absent shield is diagnosable instead
+ * of mysterious. */
+sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
+                                    u32 color, u8 alpha)
+{
+    const NDSParticleQuadFrame *row;
+    Vec3f right;
+    Vec3f up;
+    u32 atlas_name;
+
+    gNdsSourceAssetQuadAttempts++;
+    if ((pos == NULL) || (size <= 0.0F) || (alpha == 0u))
+    {
+        gNdsSourceAssetQuadMissMask |= 1u << 0;
+        return FALSE;
+    }
+#if NDS_R2_PARTICLE_DRAW
+    atlas_name = ndsRendererHardwareParticleAtlasName();
+    if (atlas_name == 0u)
+    {
+        gNdsSourceAssetQuadMissMask |= 1u << 1;
+        return FALSE;
+    }
+    row = ndsParticleQuadFrameFor(texture_id, 0u);
+    if (row == NULL)
+    {
+        gNdsSourceAssetQuadMissMask |= 1u << 2;
+        return FALSE;
+    }
+    if (ndsParticleCameraBasis(&right, &up) == FALSE)
+    {
+        gNdsSourceAssetQuadMissMask |= 1u << 3;
+        return FALSE;
+    }
+    {
+        NDSRendererMatrix20p12 projection;
+        NDSRendererMatrix20p12 modelview;
+        u32 r;
+        u32 c;
+
+        /* Same identity-projection / combined-modelview pair the particle pass
+         * loads, and for the same reason: gGMCameraMatrix is ALREADY the
+         * view-projection (gmcamera.c:1001), so loading a projection on top of
+         * it applies perspective twice and collapses the quad off screen. */
+        for (r = 0u; r < 4u; r++)
+        {
+            for (c = 0u; c < 4u; c++)
+            {
+                projection.m[r][c] = (r == c) ? 4096 : 0;
+                modelview.m[r][c] = (s32)(gGMCameraMatrix[r][c] * 4096.0F);
+            }
+        }
+        ndsRendererSetParticleCamera(&projection, &modelview);
+    }
+    if (ndsRendererSubmitParticleQuad(atlas_name, pos, size, color, alpha,
+                                      &right, &up, row->x, row->y,
+                                      row->width, row->height) == FALSE)
+    {
+        ndsRendererEndParticleQuads();
+        gNdsSourceAssetQuadMissMask |= 1u << 4;
+        return FALSE;
+    }
+    ndsRendererEndParticleQuads();
+    gNdsSourceAssetQuadDrawn++;
+    return TRUE;
+#else
+    (void)texture_id; (void)color; (void)row; (void)right; (void)up;
+    (void)atlas_name;
+    gNdsSourceAssetQuadMissMask |= 1u << 5;
+    return FALSE;
+#endif
+}
+
 void lbParticleDrawTextures(GObj *gobj)
 {
     Vec3f right;

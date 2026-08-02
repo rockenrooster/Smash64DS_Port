@@ -259,12 +259,25 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # 6,592 are both consequences of one frame per texture, not of a smaller sheet.
 # 33 -> 32 admitted: the one that drops is not in QUAD_MEASURED_LIVE, which the
 # live-set assertion below is what actually guards.
+# 2026-08-02, tenth change: the shield and the respawn pad joined the sheet.
+# Neither is a particle -- they are GObj effects the port drew as untextured
+# procedural discs, which is what BUGS.md's "Shield VFX is not correct" and
+# "not using correct asset for the revival platform" were about -- but the quad
+# sheet is the port's only textured alpha-blended camera-facing draw, so their
+# real source textures ride it at SOURCE_QUAD_TEXTURE_STRIDE.
+#
+# THE ADDITION COSTS THE EXISTING SHEET NOTHING, and that was established
+# offline before a ROM was spent: at their native 16x32 and 32x16 the shelf
+# packer drops texture 41, which IS in QUAD_MEASURED_LIVE, so native resolution
+# is not affordable at any frame cap. At the default 16-texel cap both seat with
+# all 32 previous rows still admitted -- 32 -> 34 admitted and 6,592 -> 6,848
+# texels is exactly the two new cells (8x16 and 16x8) and nothing displaced.
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.atlas_bytes -ne 8192) -or
-    ([int64]$report.quads.bytes -ne 6592) -or
-    ([int64]$report.quads.frame_count -ne 32) -or
-    (@($report.quads.admitted).Count -ne 32) -or
+    ([int64]$report.quads.bytes -ne 6848) -or
+    ([int64]$report.quads.frame_count -ne 34) -or
+    (@($report.quads.admitted).Count -ne 34) -or
     (@($report.quads.excluded).Count -ne 4)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.bytes) B, " +

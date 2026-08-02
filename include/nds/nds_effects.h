@@ -24,6 +24,16 @@ typedef enum NDSVisualEffectKind
     nNDSVisualEffectKindCount
 } NDSVisualEffectKind;
 
+/* One camera-facing textured quad from the particle sheet, for a GObj effect
+ * that is not a particle. Defined in src/import/battleship_lbparticle.c beside
+ * the pass whose atlas and camera it borrows; texture_id is one of the
+ * NDS_PARTICLE_QUAD_*_TEXTURE keys the bank generator emits. Fails closed. */
+sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
+                                    u32 color, u8 alpha);
+extern volatile u32 gNdsSourceAssetQuadAttempts;
+extern volatile u32 gNdsSourceAssetQuadDrawn;
+extern volatile u32 gNdsSourceAssetQuadMissMask;
+
 GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
                                     const Vec3f *pos, f32 scale, s32 lr,
                                     GObj *fighter_gobj);

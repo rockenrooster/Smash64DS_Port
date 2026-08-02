@@ -22628,3 +22628,50 @@ strictly below 24, or the demand is still unmeasured.
 read **0** through both saturations, because it counts struct rejects only. A
 zero from the wrong counter is more expensive than no counter at all: it was
 sitting in every soak log next to the saturation it did not cover.
+
+## 2026-08-02 — The shield and the respawn pad get their own art, on a sheet that had room
+
+Both rows had the same shape: a GObj effect the port drew as an untextured
+procedural disc, against a source asset that is one small texture on a quad.
+
+* Shield — `dFTManagerCommon_Shield` (`relocData/163_FTManagerCommon.c:39`). The
+  whole asset is a three-entry `DObjDesc` whose one drawing node carries a
+  21-command DL over **exactly four vertices** and an IA8 16x32 texture. Four
+  vertices is a quad, so a camera-facing textured quad is the source
+  construction, not an approximation of it.
+* Respawn pad — `dEFCommonEffects3_RebirthHalo` (`85_EFCommonEffects3.c:856`), a
+  four-node chain drawing an I4 32x16 glow. The `(0, -60, 0)` on node[1] was
+  already handled; this is the art.
+
+Both textures were reachable at build time all along: the reloc payloads are
+extracted under `decomp/.../assets/us/relocData` as decompressed `.bin`, so
+`generate_nds_particle_banks.py` reads 163 at `0x0008` and 85 at `0x2BA8`
+directly. They ride the quad sheet because it is the port's only textured,
+alpha-blended, camera-facing draw — which is what both effects are.
+
+**The cell caps are measured, and the measurement was made without a build.** A
+throwaway probe monkeypatched the generator's `extra_candidates` and ran the
+real packer over five configurations. At native 16x32 and 32x16 the shelf packer
+drops texture **41**, which is in `QUAD_MEASURED_LIVE` — a silently absent
+effect, the same class of bug as the saturated pools earlier the same day. At
+the default 16-texel cap both seat with **all 32 previous rows still admitted**:
+32 -> 34 admitted and 6,592 -> 6,848 texels is exactly the two new cells and
+nothing displaced. Five configurations compared for the price of zero ROMs.
+
+The draw is deliberately self-contained (`ndsParticleDrawSourceAssetQuad`): it
+re-derives the basis, re-sets the camera and closes its own batch rather than
+joining the particle pass, because these effects sit on DL link 18 and the pass
+runs on its own GObj — borrowing its state would make the shield correct or a
+frame stale depending on link order. It fails closed to the old disc, so a
+missing atlas or an unseated texture degrades instead of disappearing.
+
+**Durable lesson, learned twice in one day.** The rebirth proc was first typed
+next to the shield proc and therefore landed inside `#if NDS_TASK39_FX_SHIELD`,
+whose value is 0 in the default configuration — the compile failed on exactly
+the shape of defect fixed hours earlier for `ndsRendererSetParticleCamera`. *A
+symbol's guard must be the guard of the thing it belongs to, not of whatever it
+was typed next to.* Adjacency in a file is not a statement about configuration.
+
+Not yet owner-verified: `verify-current.ps1 -Build` passing proves these build,
+link and hold their runtime contracts. It does not prove they look right, and
+under the render-fidelity doctrine the owner is the visual oracle for both.

@@ -91,6 +91,56 @@ PUPUPU_MEASURED_LIVE_SCRIPTS = frozenset((0, 1))
 # of which any measured match has drawn.
 PUPUPU_MEASURED_LIVE_TEXTURES = frozenset((0, 1, 2))
 
+# --------------------------------------------------------------------------
+# Source-asset quads -- textures that are NOT in any particle bank
+# --------------------------------------------------------------------------
+# The shield and the respawn pad are not particles. They are GObj effects the
+# port drew as untextured procedural discs, which is why BUGS.md carried
+# *"Shield VFX is not correct"* and *"not using correct asset for the revival
+# platform"* against them. Both source assets are single small textures sitting
+# in ordinary reloc files, and those files are already extracted at build time
+# under decomp/.../assets/us/relocData as decompressed .bin -- so the real art
+# is reachable here without any new extraction step.
+#
+# They ride the quad sheet because the sheet is the port's only textured,
+# alpha-blended, camera-facing draw, which is exactly what both effects are.
+# They are NOT free of consequence and the cell caps below are measured, not
+# chosen: at their native 16x32 and 32x16 the shelf packer drops texture 41,
+# which IS in QUAD_MEASURED_LIVE -- a silently absent effect, the same class of
+# bug as the saturated pools. At the default 16-texel cap both seat with every
+# existing row still admitted and 1,344 texels spare, i.e. this addition costs
+# the current sheet nothing. If the owner finds 8x16 too coarse the next lever
+# is naming non-live common textures to drop, not raising the 8,192-byte bound.
+RELOC_ASSET_DIR = Path("decomp/BattleShip-main/decomp/assets/us/relocData")
+SOURCE_QUAD_TEXTURE_STRIDE = 128
+SOURCE_QUAD_ASSETS = (
+    {
+        # dFTManagerCommon_Tex_0x0008, relocData/163_FTManagerCommon.c:18.
+        # The shield's whole asset is one 4-vertex DL over this texture, so a
+        # camera-facing quad IS the source construction, not an approximation
+        # of it.
+        "name": "SHIELD",
+        "file": "163.vpk0.bin",
+        "offset": 0x0008,
+        "format": "ia8",
+        "width": 16,
+        "height": 32,
+        "symbol": "dFTManagerCommon_Tex_0x0008",
+    },
+    {
+        # The halo glow, relocData/85_EFCommonEffects3.c -- "Halo glow texture
+        # @ file 0x2BA8 -- I4 32x16, 256 B", referenced by the four DLs that
+        # dEFCommonEffects3_RebirthHalo's node chain draws.
+        "name": "REBIRTH",
+        "file": "85.vpk0.bin",
+        "offset": 0x2BA8,
+        "format": "i4",
+        "width": 32,
+        "height": 16,
+        "symbol": "dEFCommonEffects3_RebirthHalo_glow",
+    },
+)
+
 DEFAULT_HEADER = Path("include/nds/generated/nds_particle_banks.generated.h")
 DEFAULT_INC = Path("src/nds/generated/nds_particle_banks.generated.inc")
 DEFAULT_REPORT = Path("docs/optimization/NDS_PARTICLE_BANKS.generated.json")
@@ -1592,6 +1642,89 @@ def build_pupupu_bank(repo_root: Path,
     }
 
 
+def decode_source_asset_texels(payload: bytes, asset: dict
+                               ) -> list[tuple[int, int, int, int]]:
+    """One N64 texture out of a reloc file, as RGBA the sheet encoder accepts.
+
+    Only the two formats the shield and the halo actually use. Both are
+    greyscale-with-coverage on the N64 and become A5I3 in the sheet, so the
+    intensity nibble is expanded to a colour and the coverage to alpha:
+
+    * IA8 -- one byte per texel, 4 bits intensity then 4 bits alpha.
+    * I4  -- one nibble per texel, high nibble first. Intensity IS the coverage
+      for an additive glow, so it drives alpha as well as colour; a halo stored
+      with a flat opaque alpha would draw as a solid box.
+
+    Nibbles expand by *17, which maps 0..15 onto 0..255 exactly and is the same
+    expansion the pack path uses elsewhere.
+    """
+    width = asset["width"]
+    height = asset["height"]
+    count = width * height
+    pixels: list[tuple[int, int, int, int]] = []
+
+    if asset["format"] == "ia8":
+        raw = payload[asset["offset"]:asset["offset"] + count]
+        if len(raw) != count:
+            raise SystemExit(
+                f"{asset['name']}: wanted {count} IA8 bytes at "
+                f"0x{asset['offset']:x}, file holds {len(raw)}")
+        for byte in raw:
+            level = (byte >> 4) * 17
+            pixels.append((level, level, level, (byte & 0xF) * 17))
+    elif asset["format"] == "i4":
+        raw = payload[asset["offset"]:asset["offset"] + (count // 2)]
+        if len(raw) != (count // 2):
+            raise SystemExit(
+                f"{asset['name']}: wanted {count // 2} I4 bytes at "
+                f"0x{asset['offset']:x}, file holds {len(raw)}")
+        for byte in raw:
+            for nibble in ((byte >> 4) & 0xF, byte & 0xF):
+                level = nibble * 17
+                pixels.append((level, level, level, level))
+    else:
+        raise SystemExit(f"{asset['name']}: unhandled format "
+                         f"{asset['format']!r}")
+    return pixels
+
+
+def build_source_asset_quads(repo_root: Path,
+                             frames_by_texture: dict[int, list[list]]
+                             ) -> list[dict]:
+    """Quad candidates for the non-particle source textures.
+
+    Single-frame by construction -- neither asset animates its texture; the
+    halo's motion is a rotation its AObj script drives on the DObj, not a frame
+    sequence. They are marked live because a shield or a respawn pad that
+    silently fails to seat is precisely the bug this is fixing.
+    """
+    candidates = []
+    for index, asset in enumerate(SOURCE_QUAD_ASSETS):
+        path = repo_root / RELOC_ASSET_DIR / asset["file"]
+        if not path.is_file():
+            raise SystemExit(f"{path}: missing reloc payload for "
+                             f"{asset['name']} ({asset['symbol']})")
+        payload = path.read_bytes()
+        pixels = decode_source_asset_texels(payload, asset)
+        key = SOURCE_QUAD_TEXTURE_STRIDE + index
+        frames_by_texture[key] = [pixels]
+        cell_w, cell_h = quad_cell_dims(asset["width"], asset["height"])
+        candidates.append({
+            "texture": key,
+            "width": cell_w,
+            "height": cell_h,
+            "source_width": asset["width"],
+            "source_height": asset["height"],
+            "frames": 1,
+            "frame_list": [0],
+            "packed_frames": 1,
+            "bytes": cell_w * cell_h,
+            "live": True,
+            "source_asset": asset["name"],
+        })
+    return candidates
+
+
 def build_pack(repo_root: Path) -> dict:
     script_payload = load_o2r_blob(repo_root, *SCRIPT_BANK)
     texture_payload = load_o2r_blob(repo_root, *TEXTURE_BANK)
@@ -1735,10 +1868,12 @@ def build_pack(repo_root: Path) -> dict:
                             + 8)                      # exported scalars
     linked = len(script_payload) + table_bytes_resident
     pupupu = build_pupupu_bank(repo_root, frames_by_texture)
+    source_quads = build_source_asset_quads(repo_root, frames_by_texture)
     quads = build_quad_sheet(textures, report_rows, frames_by_texture,
-                             pupupu["quad_candidates"])
+                             pupupu["quad_candidates"] + source_quads)
     return {
         "pupupu": pupupu,
+        "source_quads": source_quads,
         "quads": quads,
         "scripts": scripts, "textures": textures, "reach": reach,
         "script_payload": script_payload, "rows": rows,
@@ -1769,6 +1904,15 @@ def _hex_rows(data: bytes, per_row: int = 16) -> str:
 
 def render_header(pack: dict) -> str:
     scripts, textures = pack["scripts"], pack["textures"]
+    admitted_keys = {row["texture"] for row in pack["quads"]["admitted"]}
+    source_quad_defines = "\n".join(
+        f"#define NDS_PARTICLE_QUAD_{asset['name']}_TEXTURE "
+        f"{SOURCE_QUAD_TEXTURE_STRIDE + index}u"
+        f"  /* {asset['symbol']}, {asset['format'].upper()} "
+        f"{asset['width']}x{asset['height']}"
+        f"{'' if (SOURCE_QUAD_TEXTURE_STRIDE + index) in admitted_keys else ', NOT SEATED'} */"
+        for index, asset in enumerate(SOURCE_QUAD_ASSETS)
+    )
     return f"""/* Generated by scripts/generate_nds_particle_banks.py. */
 #ifndef SSB64_NDS_PARTICLE_BANKS_GENERATED_H
 #define SSB64_NDS_PARTICLE_BANKS_GENERATED_H
@@ -1936,6 +2080,13 @@ extern const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT];
 #define NDS_PUPUPU_SCRIPT_BANK_BYTES {len(pack["pupupu"]["script_payload"])}u
 #define NDS_PUPUPU_TEXTURE_COUNT {len(pack["pupupu"]["textures"])}u
 #define NDS_PARTICLE_QUAD_PUPUPU_STRIDE {PUPUPU_QUAD_TEXTURE_STRIDE}u
+
+/* Source-asset quads: textures that belong to no particle bank at all. The
+ * shield and the respawn pad are GObj effects whose source art is a single
+ * small texture in an ordinary reloc file, and the quad sheet is the port's
+ * only textured alpha-blended camera-facing draw -- which is what both effects
+ * are. Addressed by these keys, not by a bank id, because there is no bank. */
+{source_quad_defines}
 
 typedef struct NDSPupupuTexture
 {{

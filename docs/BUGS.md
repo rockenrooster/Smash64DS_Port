@@ -17,7 +17,7 @@ fix live next to the code that owns it -- the particle generator and its checker
 
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: not using correct asset for the revival platform.
-    CONTRACT: source is a four-node DObj chain reusing the MBallRays lists; the port draws a disc.
+    MEASURED: now draws the source I4 32x16 MBallRays glow as a quad, not a procedural disc.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
     Owner: sounds better, do one more volume down pass only for this asset.
@@ -44,7 +44,7 @@ fix live next to the code that owns it -- the particle generator and its checker
 
 -Shield VFX is not correct.
     Owner: no progress made visually yet
-    CONTRACT: the source shield is a textured quad, not a disc; the sheet now has room for its texture.
+    MEASURED: draws source IA8 16x32 dFTManagerCommon_Tex_0x0008 as a quad. Disc is the fallback.
     
 -Right side of stage looks like it compresses VFX (not sure if left side does it too...)
     MEASURED: particle vertices railed at 2047.9 world units, squashing x. Reach doubled; it did both sides.

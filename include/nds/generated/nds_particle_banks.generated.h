@@ -66,7 +66,7 @@
  *
  * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 32 individual frames. The atlas keeps
+ * admitted set is 34 individual frames. The atlas keeps
  * every particle in one bind.
  *
  * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the allocation that is
@@ -92,9 +92,9 @@
 #define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 8192u
 #define NDS_PARTICLE_QUAD_PALETTE_OFFSET 8192u
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 8u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 6592u
-#define NDS_PARTICLE_QUAD_COUNT 32u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 32u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 6848u
+#define NDS_PARTICLE_QUAD_COUNT 34u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 34u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
@@ -165,6 +165,14 @@ extern const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT];
 #define NDS_PUPUPU_SCRIPT_BANK_BYTES 416u
 #define NDS_PUPUPU_TEXTURE_COUNT 3u
 #define NDS_PARTICLE_QUAD_PUPUPU_STRIDE 64u
+
+/* Source-asset quads: textures that belong to no particle bank at all. The
+ * shield and the respawn pad are GObj effects whose source art is a single
+ * small texture in an ordinary reloc file, and the quad sheet is the port's
+ * only textured alpha-blended camera-facing draw -- which is what both effects
+ * are. Addressed by these keys, not by a bank id, because there is no bank. */
+#define NDS_PARTICLE_QUAD_SHIELD_TEXTURE 128u  /* dFTManagerCommon_Tex_0x0008, IA8 16x32 */
+#define NDS_PARTICLE_QUAD_REBIRTH_TEXTURE 129u  /* dEFCommonEffects3_RebirthHalo_glow, I4 32x16 */
 
 typedef struct NDSPupupuTexture
 {

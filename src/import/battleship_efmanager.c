@@ -7,6 +7,7 @@
 #include <wp/weapon.h>
 #include <reloc_data.h>
 #include <reloc_data_ftdata_symbols.h>
+#include <nds/generated/nds_particle_banks.generated.h>
 #include <nds/nds_effects.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_task39_effect_census.h>
@@ -672,6 +673,61 @@ static void ndsEFManagerDestroyVisualEffect(GObj *effect_gobj)
     gcEjectGObj(effect_gobj);
 }
 
+/* OUTSIDE #if NDS_TASK39_FX_SHIELD, and that is not incidental. The respawn pad
+ * has nothing to do with the shield flag, and this block sat inside it for one
+ * build: the flag is 0 in the DEFAULT configuration -- the published
+ * smash64ds.nds -- so the proc vanished while its use site did not, and the
+ * compile failed on exactly the shape of defect fixed hours earlier for
+ * ndsRendererSetParticleCamera. A symbol's guard must be the guard of the thing
+ * it belongs to, not of whatever it happens to be typed next to.
+ *
+ * ndsEFManagerBuildDisc's `outer` table reaches 180 vertex units on both axes,
+ * so every disc template -- shield and rebirth alike -- has a local radius of
+ * 180, and the quad has to match it or swapping between the sheet path and its
+ * tree-draw fallback would visibly resize the effect. (The builder's third
+ * argument is glint_dx, not a radius; reading it as one is how this constant
+ * was first written as 60.)
+ *
+ * The glow is I4 -- greyscale with no colour of its own -- so the tint is the
+ * port's choice; white keeps the source's additive-glow read and lets the
+ * texture's own intensity ramp do the shaping. Alpha 0xC0 is the source's own
+ * value for a translucent effect overlay (efmanager.c:4112). */
+#define NDS_R2_REBIRTH_QUAD_SIZE 180.0F
+#define NDS_R2_REBIRTH_QUAD_COLOR 0xffffffu
+#define NDS_R2_REBIRTH_QUAD_ALPHA 0xC0u
+
+/* THE RESPAWN PAD'S SOURCE ASSET IS THE MBallRays GLOW, NOT A DISC.
+ * dEFCommonEffects3_RebirthHalo (relocData/85_EFCommonEffects3.c:856) is a
+ * four-node chain: node[1] carries the MBallRays lists at translate
+ * (0, -60, 0), node[2] a second set at the origin, and its AnimJoint spins
+ * node[2] rotY 0 -> 2*pi over 30 frames on a self-looping script. Both nodes
+ * draw the same I4 32x16 glow texture. The -60 is already handled in
+ * ndsEFManagerVisualProcUpdate; this is the other half the owner asked for --
+ * *"not using correct asset for the revival platform"* -- the art itself.
+ *
+ * The spin is deliberately NOT reproduced. A camera-facing quad has no
+ * meaningful rotY, and the source's rotation is what makes a flat pair of ray
+ * fans read as a disc from any angle; a billboard already reads that way. If
+ * the owner wants the sweep back, the honest route is node[2] as a second quad
+ * with a rotating UV, not a spin on a quad that always faces you. */
+static void ndsEFManagerRebirthProcDisplay(GObj *effect_gobj)
+{
+    DObj *dobj = DObjGetStruct(effect_gobj);
+
+    if (dobj == NULL)
+    {
+        return;
+    }
+    if (ndsParticleDrawSourceAssetQuad(
+            NDS_PARTICLE_QUAD_REBIRTH_TEXTURE, &dobj->translate.vec.f,
+            dobj->scale.vec.f.x * NDS_R2_REBIRTH_QUAD_SIZE,
+            NDS_R2_REBIRTH_QUAD_COLOR,
+            NDS_R2_REBIRTH_QUAD_ALPHA) == FALSE)
+    {
+        gcDrawDObjTreeForGObj(effect_gobj);
+    }
+}
+
 #if NDS_TASK39_FX_SHIELD
 static NDSVisualTemplate *ndsEFManagerShieldTemplate(s32 player,
                                                     sb32 is_damage)
@@ -690,6 +746,26 @@ static NDSVisualTemplate *ndsEFManagerShieldTemplate(s32 player,
     return &sNdsVisualTemplates[player_templates[(u32)player & 3u]];
 }
 
+/* Local radius 180, same table, same reason as the rebirth constant above. */
+#define NDS_R2_SHIELD_QUAD_SIZE 180.0F
+/* 0xC0 on both prim and env for all five entries, efmanager.c:4112. The same
+ * value the disc templates carry; see the comment on dEFManagerShieldColors
+ * below for why alpha is the whole look of a shield. */
+#define NDS_R2_SHIELD_QUAD_ALPHA 0xC0u
+
+/* Rim colour per player, RGB only -- DS vertex colour has no alpha channel, so
+ * the transparency travels as the separate POLYGON_ATTR alpha above. The five
+ * values are the rim halves of the disc templates, which match
+ * dEFManagerShieldColors (efmanager.c:450). */
+static u32 ndsEFManagerShieldQuadColor(s32 player)
+{
+    static const u32 rim[] = {
+        0xff0000u, 0x00ff00u, 0x0000ffu, 0x000000u
+    };
+
+    return ((u32)player < ARRAY_COUNT(rim)) ? rim[player] : 0xc0c0c0u;
+}
+
 static void ndsEFManagerShieldProcDisplay(GObj *effect_gobj)
 {
     EFStruct *ep = efGetStruct(effect_gobj);
@@ -702,11 +778,31 @@ static void ndsEFManagerShieldProcDisplay(GObj *effect_gobj)
     {
         return;
     }
+    /* THE SOURCE SHIELD IS A TEXTURED QUAD, NOT A DISC. Its whole asset is
+     * dFTManagerCommon_Shield (relocData/163_FTManagerCommon.c:39): a three-node
+     * DObjDesc whose one drawing node carries a 21-command DL over exactly FOUR
+     * vertices and an IA8 16x32 texture. Four vertices is a quad, and a quad
+     * that always faces the camera is what the particle sheet draws -- so the
+     * shield now draws its own art instead of the procedural ring-and-disc that
+     * stood in for it, which is what the owner filed.
+     *
+     * The template is still built and still assigned, because it carries the
+     * per-player colour the source tints the bubble with and it is the fallback
+     * the tree draw uses when the sheet is unavailable (no atlas, texture not
+     * seated, degenerate camera). A shield that silently stops drawing is worse
+     * than one drawn plainly. */
     dobj->dl = ndsEFManagerShieldTemplate(
                    ep->effect_vars.shield.player,
                    ep->effect_vars.shield.is_damage_shield)
                    ->display_list;
-    gcDrawDObjTreeForGObj(effect_gobj);
+    if (ndsParticleDrawSourceAssetQuad(
+            NDS_PARTICLE_QUAD_SHIELD_TEXTURE, &dobj->translate.vec.f,
+            dobj->scale.vec.f.x * NDS_R2_SHIELD_QUAD_SIZE,
+            ndsEFManagerShieldQuadColor(ep->effect_vars.shield.player),
+            NDS_R2_SHIELD_QUAD_ALPHA) == FALSE)
+    {
+        gcDrawDObjTreeForGObj(effect_gobj);
+    }
     gNdsTask39FxShieldDrawCount++;
     ndsTask39EffectsEngage(NDS_TASK39_FX_ENGAGED_SHIELD);
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
@@ -933,7 +1029,8 @@ GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
 #if NDS_TASK39_FX_SHIELD
         (kind == nNDSVisualEffectShield) ? ndsEFManagerShieldProcDisplay :
 #endif
-                                           gcDrawDObjTreeForGObj,
+        (kind == nNDSVisualEffectRebirth) ? ndsEFManagerRebirthProcDisplay :
+                                            gcDrawDObjTreeForGObj,
         18, 2, -1);
     gNdsVisualEffectCreateCount++;
     gNdsVisualEffectActiveCount++;
