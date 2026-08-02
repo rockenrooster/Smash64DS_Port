@@ -9,6 +9,14 @@ never applied the LBTransform**, so transformed particles drew at their script-l
 for Whispy, stray hit VFX, the star-KO sparkle and the confetti. **`ftParamMakeEffect` now dispatches
 the particle-only kinds to their source makers** — 137 scripts started against 11, DObj peak 128 -> 125.
 **Retract "a source effect costs ~5 DObjs" and "a GObj pulls DObjs".**
+**The quad sheet is A5I3 now, not RGB555+A1** — it had ONE alpha bit, so every soft particle drew as a
+hard blob. One byte per texel keeps the proven 8,192-byte allocation at 128x64: admission 14 -> 23 of
+47, misses 1,343 -> 528, heap low-water +3,920 to 27,112, no rebuild storm. **Seven textures still off
+the sheet are core combat VFX** (dash dust, hit spark, star-KO sparkle) — decision request on the board.
+**A finished FGM note now RELEASES instead of `soundKill`** — five cues owned samples longer than their
+note and were cut mid-waveform; four are the crowd row.
+**Read `BUG_FIXING_PROCESS.md` v2 first**: source is the oracle, the owner is confirmation only, and a
+build is spent to confirm a written prediction — never to see whether it looks right.
 **Restart surface only, capped at 200 lines** — durable detail goes to its owning doc (board: queue +
 results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_STANDING_RULES.md`; `PORTING.md` for root causes).
 
@@ -67,15 +75,13 @@ for P1"**, and (2026-07-31) **do the missing SFX/VFX before diagnosing the rando
 
 **SFX IS DONE for a both-CPU match: 282 play calls, 282 supported, MISS RING 0.**
 `render-audio-fgm-phase-pack.py --derive <ids>` prints every selector field straight from
-`fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, so authoring a cue is transcription. 56 → **88 cues**: seven
-announcer lines, 621 PublicWin, the eleven the crowd actor reaches, 96/153/85, the five **only a
-BOTH-CPU match reaches** (11 Escape, 13/14 GuardOn/Off, 278 GamePause, 369 FoxOttotto), then 271
-Magnify + 368 FoxWin + 18 LightSwingLw1 + 514 AnnounceSuddenDeath + 365 FoxSelected.
-**85's `source_rate_above_u16` was never a hardware limit** — 90,510 Hz is fine for the channel timer and
-too big only for the `u16` in *our* pack entry, so it renders full-program AOT at 32,000. Two modulator
-findings, both from the decomp's own source: **target 24+ is cross-mod ANOTHER voice** (skipped before
-evaluation, and only for a fork-free cue), and **shapes 6/7 are 2/3 with the phase CLAMPED at the period
-rather than wrapped** (`n_env.c:4158`/`:4172`). Shapes 4/5/8 call `randFloat*` and stay unsupported.
+`fgm_ucd -> fgm_tbl -> B1_sounds2_ctl`, so authoring a cue is transcription. 56 → **88 cues** (the
+board lists which). **A cue can be internally source-exact and still wrong in the mix** — that is the
+open escape-roll row, and it is the contract dimension the first pass missed.
+**85's `source_rate_above_u16` was never a hardware limit** — 90,510 Hz is fine for the channel timer,
+too big only for the `u16` in *our* pack entry, so it renders full-program AOT at 32,000. Modulator
+rules, from the decomp: **target 24+ is cross-mod ANOTHER voice**, and **shapes 6/7 are 2/3 with the
+phase CLAMPED at the period** (`n_env.c:4158`/`:4172`); 4/5/8 call `randFloat*` and stay unsupported.
 **The crowd TRIGGER side BUILDS AND RUNS** — `ft/ftpublic.c` compiled in place
 (`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`), first ever build of that flag, 2026-08-01, NO-FREEZE to Results.
 "Its whole external surface already existed" was half wrong: five declarations plus
@@ -85,24 +91,18 @@ weapon pool paid for it. **Five of its seven counters CANNOT fire**: the `#defin
 so the actor registers the inner proc and the counter-carrying wrappers are gc'd. Read the source's own
 statics instead; the "wrap a decomp function to count its INTERNAL callers" refutation, hit again.
 
-**VFX — the interpreter is PROVEN CLEAN and the DRAW now WORKS.** Four tick-HUD ROMs differing only in
-the particle flags; control and `RUNTIME=1` are indistinguishable. `DRAW=1` with a 32 KB atlas put
-**196 of 566 frames at five or more VBlanks** against 4 while P95 came back *better* than its control —
-read the histogram, not the P95 alone. Attributed and fixed by one generator constant: a resident atlas
-made `ndsRendererHardwareResolveStageSourceFrameTexture` fail ~1 frame in 10 (site 2, mask 4096
-TEXIMAGE) → `PrepareRun` FALSE → 197 stage rebuilds. **The sheet is 64x64 = 8,192 B, a measured HARD
-BOUND and not a budget** (16,384 rejected exactly as 32,768 did); the draw then costs ~10,100 `MISC`
-P50 ticks and nothing else. **1,343 of 103,322 particles still miss it** now that the source effects
-fire — every id IS packed, so it is unadmitted (texture, frame) PAIRS; see `OPTIMIZATION_IDEAS.md`.
+**VFX — the interpreter is PROVEN CLEAN and the DRAW now WORKS.** A 32 KB atlas put **196 of 566
+frames at five or more VBlanks** against 4 while P95 came back *better* — read the histogram, not the
+P95. A resident atlas made `ndsRendererHardwareResolveStageSourceFrameTexture` fail ~1 frame in 10
+(site 2, mask 4096 TEXIMAGE) → `PrepareRun` FALSE → 197 stage rebuilds. **8,192 BYTES is the measured
+hard bound** — 16,384, 32,768 and a second page all failed — but it bounds the ALLOCATION, not the
+texels: A5I3 at 128x64 is the same 8,192 and doubled them.
 **Dream Land's bank is packed and drawing (2026-08-01)** — reject ring empty, 3,741 strided draws —
 and landing it broke the common draw twice over (board has the four-soak table). `efParticleInitAll`
 resets `sEFParticleBanksNum`, so `EFCommonID` and `PupupuID` both read **0** and every common particle
-took Dream Land's stride — key on `sEFParticleScriptBanks[slot]`, never a latched id. And
-`QUAD_MEASURED_LIVE` was graded from a **single-CPU** mask; both-CPU is `0x08400007`. Admitted
-`{0, 2, 22, 27, 64, 65, 66}`, 6,400 B, cells capped 16×16, **109,560 of 111,644 drawn**.
-**Audio: 88 cues.** **Fireball FIXED, and it is a MEMORY fix**: 704-byte `WPStruct` × 32 = 22,528 B for
-a pool whose P1 high-water is **one**, holding `GENERALFREE` at 14,796 under the 25,600
-`ifCommonSetMaxNumGObj` threshold all match — cap latched at 47, four of eleven spawns refused.
+took Dream Land's stride — key on `sEFParticleScriptBanks[slot]`, never a latched id.
+**Fireball FIXED, and it is a MEMORY fix**: 704-byte `WPStruct` × 32 held `GENERALFREE` at 14,796,
+under the 25,600 `ifCommonSetMaxNumGObj` threshold all match — cap latched at 47, four spawns refused.
 The pool is **3** now (high-water is one, measured twice), returning 20,416 B against the source's 32.
 **The arena margin is payable, and oversized source pools are where it is paid from.**
 **Do not read `sGCCommonsMaxNum` at end of run to decide whether that cap latched** — it is not sticky
