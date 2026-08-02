@@ -55,13 +55,30 @@ These bugs should be fixed for P1 delivery:
   SIZED (260, not a denormal), INSIDE THE CAMERA, and their TEXTURES ARE ADMITTED -- and still
   nothing appears. Every "is it there at all" question is now answered yes, which means the defect
   is in the draw itself.
-  Remaining candidates, in cost order, none yet tested: submitted but occluded (dust z=0 while
-  leaves are z=-696/-762, against a stage whose trunk and ground are large occluders); submitted
-  but degenerate in screen space; or dropped by a cull/visibility gate before submission. The
-  cheapest discriminator is a per-frame count of quads actually SUBMITTED for slot 1, next to the
-  554 that exist -- if submission is 0 the draw path drops them, and if it matches then they are
-  reaching the GPU and being lost in raster or depth. Do NOT resume the legacy-DObj archaeology;
-  it produced two withdrawn answers already.
+  LAYER-DISPATCH HYPOTHESIS ALSO REFUTED, same run. efDisplayInitAll (efdisplay.c:79-98) builds
+  four draw GObjs and gives each an alloc-link camera_mask -- links 0|2 on layer 18, LINK 1 ALONE
+  ON LAYER 15, link 3 on 25, link 4 on 10 -- and lbParticleDrawTextures skips any link whose bit
+  is clear in the GObj it was handed (battleship_lbparticle.c:1246). Since every effect repaired
+  this session lives on layer 18 or 10 and Whispy is the only thing on 15, an unwalked layer 15
+  would have explained the whole row. It is walked: ORing every camera_mask that reaches the draw
+  gives draw_masks=0x1f over draw_calls=3600 (4 per frame x 900), so bits 0,1,2,3,4 all arrive and
+  link 1 is iterated like the rest.
+  THAT PUTS THE DEFECT DOWNSTREAM OF SUBMISSION. Link 1 is dispatched; its particles carry size
+  260 so they pass the `pc->size == 0.0F` skip; their textures are admitted so ndsParticleQuadFrameFor
+  returns non-NULL rather than taking the miss branch. Nothing between the loop head and
+  ndsRendererSubmitParticleQuad can drop them except the transform step.
+  SURVIVING LEAD, and it is not a new guess -- it is a defect already observed in this exact
+  subsystem this session: ndsParticleTransformForDraw builds the quad basis from the particle's
+  attached transform, and grPupupuFlowersFrontLoopEnd EJECTS that transform without nulling the
+  pointer. An earlier Whispy probe read a dangling dust_xf for 653 of 900 samples because of it.
+  The same run reports gLBParticleTransformsUsedNum=1 of 6 and a ground transform reading
+  -1.9e20,-7.4e20 -- the shape of a freed slot, not a position. If Whispy's particles dereference
+  an ejected transform their quad basis is garbage and they rasterize nowhere visible, which fits
+  every surviving fact: created, alive, sized, in-camera, textured, dispatched, invisible.
+  NEXT: latch the transform pointer each slot-1 particle draws with, and whether the slot it
+  points at is still owned. Do NOT resume the legacy-DObj archaeology; it produced two withdrawn
+  answers already, and do not re-test the camera or the layer -- both are refuted above with
+  numbers.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.

@@ -123,6 +123,8 @@ try {
         'set $slot1_y = 0.0',
         'set $slot1_size = 0.0',
         'set $slot1_absmax = 0.0',
+        'set $draw_calls = 0',
+        'set $draw_masks = 0',
         'set $spark_calls = 0',
         'set $spark_x = 0.0',
         'set $spark_y = 0.0',
@@ -166,6 +168,23 @@ try {
         'silent',
         'set $whispy_calls = $whispy_calls + 1',
         'set $want = 1',
+        'continue',
+        'end',
+
+        # THE ROW-1 DISCRIMINATOR. efDisplayInitAll (efdisplay.c:79-98) builds
+        # four draw GObjs and gives each one an alloc-link camera_mask: links
+        # 0|2 on layer 18, link 1 on layer 15, link 3 on 25, link 4 on 10.
+        # lbParticleDrawTextures skips any link whose bit is clear in the GObj
+        # it was handed, so ORing every mask that actually reaches the draw says
+        # which links are dispatched at all. Whispy's dust and leaves are link 1,
+        # alone on layer 15 -- and every effect repaired this session (combat 0,
+        # KO burst 2, confetti 4) lives on 18 or 10. If bit 1 never appears here,
+        # layer 15 is not being walked and that is the whole bug.
+        'break lbParticleDrawTextures',
+        'commands',
+        'silent',
+        'set $draw_calls = $draw_calls + 1',
+        'set $draw_masks = $draw_masks | gobj->camera_mask',
         'continue',
         'end',
 
@@ -469,7 +488,8 @@ try {
             # refusals -- a 6.7% miss rate is equally consistent with "the wind is
             # invisible" and "some unrelated tail effect is".
             'miss=%u emit=%u missmask=%08x,%08x missframes=%08x ' +
-            'cam_dist=%f cam_fovy=%f cam_vw=%d cam_vh=%d\n", ' +
+            'cam_dist=%f cam_fovy=%f cam_vw=%d cam_vh=%d ' +
+            'draw_calls=%d draw_masks=%llx\n", ' +
             '$whispy_calls, $whispy_lr, ' +
             '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
             '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
@@ -487,7 +507,8 @@ try {
             'gNdsParticleQuadMissMask[0], gNdsParticleQuadMissMask[1], ' +
             'gNdsParticleQuadMissFrameMask, ' +
             'gGMCameraStruct.target_dist, gGMCameraStruct.fovy, ' +
-            'gGMCameraStruct.viewport_width, gGMCameraStruct.viewport_height'),
+            'gGMCameraStruct.viewport_width, gGMCameraStruct.viewport_height, ' +
+            '$draw_calls, $draw_masks'),
         'detach',
         'quit'
     )
