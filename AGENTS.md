@@ -103,11 +103,11 @@ Latest instead when normal/shared startup is affected. Do not stack DevFast,
 Boundary, and Latest when they cover the same runtime. The registry exposes
 only Latest and Boundary; the retired diagnostic fleet must not return.
 
-Subagent switch: **OFF**.
+Subagent switch: **OPENCODE-AGENT**.
 
-* `OFF`: let already-running subagents finish, but do not spawn, follow up, or
-  reassign one until the user explicitly switches this back to `ON`.
+* `OFF`: let already-running subagents finish, but do not spawn, follow up, or reassign one until the user explicitly switches this back to `ON`.
 * `ON`: keep up to **1** long-lived helper agent/agents and assign tasks with appropriate effort (OPUS 5: max, xhigh, high). Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings. New worktrees should be in D:\Stuff\DevFolder\Smash64DS_Port_worktrees
+* `OPENCODE-AGENT`: keep up to **4** opencode agents working for you, gathering context, searching files and other SIMPLE tasks using the "opencode-agent" skill. helpful documentation contained here: https://opencode.ai/docs/cli/ Always use the opencode/deepseek-v4-flash-free model. If you opt to not use the skill here is an example: pwsh.exe -command "opencode run -m opencode/deepseek-v4-flash-free --variant Max 'Do X. you will not recieve a reply from me'" "you will not recieve a reply from me" can be important so that it actually follows through without asking a question. Also remember these opencode agents are SIMPLE AI agents, cheap and not that smart, so shouldn't be trusted for writing code. May be useful for line count limited docs like HANDOFF.md since Opus 5 struggles with that.
 
 Prefer deletion, existing helpers, fixed DS hardware paths, and the fastest
 correct mechanically equivalent implementation. At equal cost, less code wins.

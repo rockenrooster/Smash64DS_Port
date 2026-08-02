@@ -157,6 +157,12 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # mark_loop/jump_loop, and it sat on the DS hardware-repeat path, which this
     # file already records as unable to ramp. Full note on the selector.
     153,
+    # 12 DeadUpStar, the other cue the owner named by filename. It declared
+    # source_loop_infinite and shipped ds_loop_flag 0 -- debt
+    # `source_loop_not_reproduced` -- so it sounded for 0.425 s of a 0.863 s
+    # note and stopped halfway. Articulation 83 ends with `vol 127, 150`, a
+    # 150-tick hold, which the flat path cannot express and this render can.
+    12,
     # BUGS.md "Some Crowd noise audio cues get cut off (the for big hits)".
     # Every OTHER mechanism for that row is now measured and cleared: the cue
     # rates are arithmetically right, the two ds_volume 0 cues are real
@@ -3638,8 +3644,13 @@ FGM_OWNER_VOLUME_TRIM = {
 # under 127 can be compensated; the generator refuses rather than clip the
 # volume, so a bad entry here fails the render instead of shipping quieter.
 FGM_ENCODE_HEADROOM = {
-    # 12 DeadUpStar: worst SNR in the pack at 17.4 dB, ds_volume 41 -> 82.
-    12: 0.5,
+    # Empty since 2026-08-02. FGM 12 was the only entry -- ds_volume 41 -> 82 to
+    # clear its full-scale decode -- and it moved to FULL_PROGRAM_AOT_IDS to get
+    # its dropped source loop back, where volume is normalised to 127 and there
+    # is no room to compensate. The guard below caught that rather than shipping
+    # the cue at half loudness: it asked for volume 254 and refused.
+    # The mechanism stays for the next cue that needs it; 35 others still decode
+    # at full scale and the ones with ds_volume headroom can use this.
 }
 
 

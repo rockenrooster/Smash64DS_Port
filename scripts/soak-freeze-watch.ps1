@@ -1039,7 +1039,29 @@ try {
                 # A run that never presented a battle frame has not been soaked;
                 # it has failed to boot, and calling that NO-FREEZE is exactly the
                 # false negative that cost this instrument two withdrawn verdicts.
-                if ($presented -eq 0u) {
+                #
+                # ...but PresentedFrames is PER BATTLE ENTRY, not per run:
+                # ndsBattlePlayablePacingStart (taskman_seam.c:4517) zeroes it every
+                # time the battle scene starts, and Sudden Death is a second entry.
+                # Measured 2026-08-02: a run whose match tied at TIME 00:00 ended
+                # inside the Sudden Death scene load -- the documented ~30 s of dead
+                # air -- and reported presented 0 with PlacementInitCount 2 and a
+                # screenshot of a fought-out match at 128%/81%. That is the OPPOSITE
+                # of never having started, and it read as a boot failure caused by
+                # the change under test. PlacementInitCount is the run-global
+                # witness: it rises once per battle entry and nothing resets it, so
+                # a non-zero value with presented 0 means the LAST entry has not
+                # drawn yet, which is a short run rather than a dead ROM.
+                $entries = $counter['gNdsSCVSBattlePlacementInitCount']
+                if (($presented -eq 0u) -and ($null -ne $entries) -and ($entries -gt 1u)) {
+                    $verdict = 'ENTRY-IN-PROGRESS'
+                    $diagnosis = (('battle entry {0} presented no frame yet -- ' +
+                        'PresentedFrames is per entry and Sudden Death/rematch ' +
+                        'resets it, so this run ended inside a scene load. ' +
+                        'Entries 1..{1} DID run. Re-soak longer to judge the last ' +
+                        'one.') -f $entries, ($entries - 1u))
+                    Write-Host "verdict CORRECTED to $verdict -- $diagnosis"
+                } elseif ($presented -eq 0u) {
                     $verdict = 'NEVER-STARTED'
                     $diagnosis = ('the ROM presented zero battle frames, so nothing ' +
                         'was soaked -- the picture moved, but not because of gameplay')

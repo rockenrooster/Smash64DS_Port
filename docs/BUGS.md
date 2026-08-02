@@ -7,17 +7,23 @@ These bugs should be fixed for P1 delivery:
     until the 2026-08-02 camera fix, which was itself broken for one build. Untested since.
 
 -fgm12-nSYAudioFGMDeadUpStar-as-ds-plays-it.wav doesn't sound right
-    **PARTLY FIXED** (2026-08-02). It was CLIPPING, which is your "high pitch getting clipped" on
-    the KO row too: decoded peak 32768, one past int16, and the worst SNR in the pack at 17.4 dB.
-    IMA predicts forward, so full-scale input makes it rail. Scaled the PCM 0.5 before encoding and
-    raised ds_volume 41 -> 82, which is loudness-neutral: peak 32768 -> 16998, no clipping. SNR
-    16.1 dB, 1.3 lower, which is the trade -- inaudible against audible clipping.
-    STILL WRONG and it needs the next pass: this cue declares source_loop_infinite and ships
-    ds_loop_flag 0, debt `source_loop_not_reproduced`. It sounds for 0.425 s of a 0.863 s note, so
-    it stops halfway. Also `spawn_mod 95` in articulation 83 is not applied.
+    **FIXED** (2026-08-02) pending your ear. Two defects, one move.
+    It was CLIPPING -- decoded peak 32768, one past int16, worst SNR in the pack at 17.4 dB. IMA
+    predicts forward, so full-scale input rails. And it declared source_loop_infinite while
+    shipping ds_loop_flag 0, so it sounded for 0.425 s of a 0.863 s note and stopped halfway.
+    Both are gone because the cue now renders through FULL_PROGRAM_AOT_IDS, which walks the source
+    program and bakes the whole schedule: 32000 Hz, 27600 samples = 0.863 s (was 0.425 s), peak
+    15605, SNR 16.086, volume 127, fidelity debt CLEAR.
+    The interim half-scale hack it replaces is gone with it. FGM_ENCODE_HEADROOM is now EMPTY --
+    FGM 12 was its only entry, and the AOT path normalizes volume to 127, which made the
+    compensation arithmetic demand ds_volume 254. The guard that caught that is kept: a headroom
+    entry needing over 127 now raises instead of silently clamping.
     SYSTEMIC, recorded so it is not rediscovered: 36 of 88 cues decode at full scale. The other 35
     are 19-39 dB and mostly one or two samples; the ones with ds_volume headroom can take the same
-    treatment via FGM_ENCODE_HEADROOM, the ones already at 127 cannot be compensated.
+    treatment via FGM_ENCODE_HEADROOM, the ones already at 127 need the AOT route instead.
+    Verified: pack 913168 -> 920152 bytes, mapping 0x5d1c7cf5, checker PASS, decode PASS (88
+    entries), and a 3.5-minute both-CPU soak reads FgmLoaded 1, FormatFail 0, 210 play calls,
+    0 miss-ring entries, 0 premature retires.
 
 -Some Crowd noise audio cues get cut off (like for big hits or upper bound KO).
     Not fixed. Mechanism still unidentified. Ruled out by measurement so they are not re-walked:
@@ -51,8 +57,24 @@ These bugs should be fixed for P1 delivery:
     pass if still wrong.
 
 -Correct VFX isn't played for various things (running foot dust VFX, fireball hit VFX, fox down B, shield, hard landing vfx, etc)
-    Partly. Re-test after the camera fix. A SECOND cause is real and unfixed: 366 draws a match are
-    refused because their texture is not on the 23-of-36 atlas sheet.
+    Partly. Re-test after the camera fix, which is the dominant cause and is fixed -- it collapsed
+    EVERY particle off screen, so every item on your list would have read as missing.
+    The second cause is now MEASURED rather than estimated, from the 2026-08-02 3.5-minute
+    both-CPU soak: 684 refused draws against 362,075 emitted and 362,759 visible, i.e. 99.81% of
+    particles do draw. Decoding QuadMissMask, the refused textures are exactly
+    17, 25, 29, 33, 34, 38, 40, 41, 45 -- nine of the thirteen the packer excludes.
+    Admitting all nine costs 6,016 bytes and the sheet has 448 free, so it needs space. Two
+    sources of space exist and both are now quantified rather than guessed:
+      - Six ADMITTED textures (3, 4, 5, 9, 11, 14 = 2,432 bytes) drew nothing in this match.
+        Do not drop them on one match's evidence: 10/13/18/19/20/21 also read unused here only
+        because KOBurstAttemptCount was 0, and 64/65/66 are Pupupu, whose bits live in
+        TextureUseMask[2] which the soak does not read. Regrade from a run that KOs.
+      - The nine refused are frame-count heavy, not resolution heavy: eight are 8x8 with 8-15
+        frames (25 alone is 15 frames = 960 bytes). A per-texture frame cap is the cheap lever
+        and PROJECT_GOAL explicitly allows reduced animation rates; it needs the draw path to
+        index frames modulo the packed count, which it does not do today.
+    Sizing so nobody re-derives it: A5I3 is one byte per texel, an 8x8 frame is 64 bytes, a 16x16
+    frame is 256, the sheet is 128x64 = 8,192 and currently holds 7,744 in 53 frames.
 
 -Upwards KO boundary death: correct VFX and SFX never play for fighters.
   Almost fixed, I see the fighter die in the sparkle, but the SFX sound off, like the high pitch sound is getting clipped or something and another SFX is played that i don't recognize.

@@ -64,7 +64,9 @@ if (([int]$metadata.format_version -ne 4) -or
     # hardware-repeat path for the schedule-walking AOT render, because a
     # hardware repeat cannot reproduce the pitch sweep its articulation puts
     # inside the loop. 0.108 s monotone -> 1.725 s swept.
-    ([int64]$metadata.resident_bytes -ne 913168) -or
+    # 913168 -> 920152: FGM 12 DeadUpStar joined it too, recovering the source loop
+    # it was dropping (0.425 s of a 0.863 s note) and clearing its clipping.
+    ([int64]$metadata.resident_bytes -ne 920152) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -76,7 +78,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # crowd cues gained the full-program AOT render. A mapping change is
     # expected whenever a cue's render strategy changes and must never be
     # repinned without one.
-    ($metadata.mapping_sha256_lo -ne '0x28f8ec2c') -or
+    ($metadata.mapping_sha256_lo -ne '0x5d1c7cf5') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 and then
     # 96 -> 68 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -5.4 dB total. The previous pin was
     # 81b94d1f3178b6b57d998fb7d01fe1316e20ac46ce22ccb82800c6b02d26cb75, and it
@@ -86,7 +88,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # played 127. An unchanged hash after an intended payload change is the
     # signal that the change did not land.
     ($metadata.pack_sha256 -ne
-        'ba65146e2652056d78fb99ff11394f6ae44bd347cd6ef9b335d1996eb4974e9a')) {
+        '967f9212524950c3a2277a8e59ca2c545117f20c56c58e3e0237e94cd2dd45c2')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
