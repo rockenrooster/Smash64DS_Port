@@ -3550,6 +3550,33 @@ def _fgm_relative_pitch(value: int, current: int) -> int:
             min(1200, max(-1200, current + value - 2400)))
 
 
+# OWNER-DIRECTED LEVEL TRIMS, by FGM id. These deliberately depart from the
+# source level, so they live in one visible table rather than as a magic number
+# at the assignment: anything here is a judgement call the owner made by ear and
+# can revise, not something derived from the sequence data.
+#
+# 11 nSYAudioFGMEscape -- the rolling dodge. Everything about the cue measures
+# source-exact (3-note program, articulation 54, all three modulators, no
+# clipping, 33rd of 88 by effective RMS) and the owner still hears it as too
+# loud, which is the case this table exists for. 127 -> 96 is about -2.5 dB.
+# PROJECT_GOAL puts audio fidelity first in the sacrifice order, so trading a
+# little of it for the owner's ear is the cheap and sanctioned direction.
+#
+# Applies to ds_volume and ds_initial_volume. A cue that also ships a PACKED
+# ENVELOPE would have its later points override this, so check
+# packed_envelope_count before trusting a trim on one; FGM 11's is 0.
+FGM_OWNER_VOLUME_TRIM = {
+    11: 96,
+}
+
+
+def fgm_owner_volume_trim(fgm_id: int, volume: int) -> int:
+    trimmed = FGM_OWNER_VOLUME_TRIM.get(int(fgm_id))
+    if trimmed is None:
+        return volume
+    return min(int(volume), int(trimmed))
+
+
 def _fgm_modulator_value(state: dict, sine_table: list[int]) -> float:
     """One LFO tick, transcribed from the engine's own switch.
 
@@ -5293,6 +5320,12 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 acoustic_oracle["decoded_clipped_sample_count"] <=
                 acoustic_oracle[
                     "old_hardware_loop_decoded_clipped_sample_count"])
+        # Trim HERE, not only in the metadata below. `records` is what
+        # PACK_ENTRY.pack writes into the .bin the ROM reads; the metadata dict
+        # is documentation. Trimming only the metadata left the manifest saying
+        # 96 while the pack still shipped 127 -- and the pack sha256 was
+        # unchanged, which is the tell that caught it.
+        volume = fgm_owner_volume_trim(selector["id"], volume)
         records.append({
             "id": selector["id"],
             "flags": flags,
@@ -5378,9 +5411,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             "source_duration_ticks": selector["duration_ticks"],
             "source_duration_microseconds": (
                 selector["duration_ticks"] * FGM_TIMER_MICROSECONDS),
-            "ds_volume": volume,
+            "ds_volume": fgm_owner_volume_trim(selector["id"], volume),
             "ds_pan": 64,
-            "ds_initial_volume": volume,
+            "ds_initial_volume": fgm_owner_volume_trim(selector["id"], volume),
             "packed_envelope_count": len(packed_envelope),
             "source_volume_envelope": envelope,
             "source_sound_gain_fields_used_by_fgm": False,

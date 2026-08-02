@@ -61,8 +61,16 @@ if (([int]$metadata.format_version -ne 4) -or
     # reason; the bound that is real is the 53,248-byte cache-slot gate below.
     ([int64]$metadata.pack_limit_bytes -ne 786432) -or
     ($metadata.mapping_sha256_lo -ne '0x984c7da6') -or
+    # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 on the
+    # owner's ear via FGM_OWNER_VOLUME_TRIM. The previous pin was
+    # 81b94d1f3178b6b57d998fb7d01fe1316e20ac46ce22ccb82800c6b02d26cb75, and it
+    # is worth knowing that the first attempt at that trim did NOT move this
+    # hash -- it edited the metadata dict instead of the `records` entry that
+    # PACK_ENTRY.pack writes, so the manifest claimed 96 while the ROM still
+    # played 127. An unchanged hash after an intended payload change is the
+    # signal that the change did not land.
     ($metadata.pack_sha256 -ne
-        '81b94d1f3178b6b57d998fb7d01fe1316e20ac46ce22ccb82800c6b02d26cb75')) {
+        'bcf98317e73fe28324d46cfc17cff5f9218e97388dc3b294984ba2ca9d56cba4')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
