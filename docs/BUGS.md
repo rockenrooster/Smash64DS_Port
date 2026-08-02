@@ -100,11 +100,36 @@ These bugs should be fixed for P1 delivery:
   Owner: not Fixed. Confetti pieces do not look like there are large enough and don't look like they are falling freely. Check Source.
   Header `size` was never byte-swapped: 20.0 read as a 5.7e-41 denormal. maxsize 0.000000 -> 20.000000, and the pieces are visible in the capture.
 
--BLOCKED(decision: particle atlas byte budget). Owner's call, not a defect.
-  The sheet is 8,192 bytes because 16,384, 32,768 and a second page each broke stage
-  texture resolves with VRAM free -- that bounds the ALLOCATION, not the texel count.
-  A5I3 doubled the texels inside the same allocation: admission 14 -> 23 of 47, misses
-  1,343 -> 528. THIRTEEN textures are still out (28 is 20 frames, 25 is 15, 17 and 29
-  are 10) and no packing wins them inside 8,192; 448 of the 8,192 bytes are free and the
-  smallest excluded cell is 512. So the choice is evict-and-swap or leave 0.6% of
-  particles undrawn. Options and measured costs in `docs/optimization/OPTIMIZATION_IDEAS.md`.
+-BLOCKED(decision: particle atlas RESOLUTION, not VRAM). Owner's call. One approval unblocks it.
+  CORRECTION: this row called itself a VRAM decision and offered "evict-and-swap or leave 0.6%
+  of particles undrawn". Both framings were wrong. Every option below is the SAME 128x64 = 8,192
+  byte allocation, so VRAM does not move and there is nothing to evict. The real axis is cell
+  resolution against how many textures exist at all, and the generator's own docstring named the
+  lever the whole time: "the honest answer for those is halving 64x64x10 rather than growing the
+  atlas". Nobody had measured what halving actually buys.
+  Measured by sweeping the two cell caps and re-running the real packer (quad_cell_dims snaps to
+  powers of two, so cap 12 behaves as 8 and cap 6 as 4 -- only four settings are distinct):
+    cell/long   admitted  excluded  frames   used  free
+      16 / 8      23        13        53     7744   448   <- shipping today
+      16 / 4      30         6       152     6928  1264
+       8 / 8      29         7        86     6592  1600
+       8 / 4      36         0       168     6032  2160   <- nothing missing
+  Per-texture sizing beats every global cap: start at the 8/4 floor, then upgrade textures back
+  toward 16x16 live-first while the set still packs. That admits ALL 36 and still keeps the four
+  most-drawn live textures (0, 10, 18, 19) at full 16x16 plus one at 16x8, using 7,328 of 8,192.
+  That is the recommended implementation, and it is strictly better than a uniform 8/4.
+  Cheaper equivalents exhausted first, as PROJECT_GOAL requires: frame dedup across all 168
+  candidate frames finds only 2 duplicates (1.2%) and zero empty frames, so sharing cells saves
+  nothing. A second page and 16,384/32,768-byte sheets were already tried and broke stage resolves.
+  Why it matters more than 0.6%: none of the 13 excluded textures is in QUAD_MEASURED_LIVE, so the
+  greedy admission never had to weigh them -- but the runtime FAILS CLOSED on a missing texture,
+  which is 528 draws a match rendering nothing. AGENTS.md forbids accepting "missing/corrupt
+  presentation" outright, while a smaller particle is exactly the "cheapest acceptable
+  source-derived approximation" it asks for. Particles are a few pixels on a 256x192 screen.
+  Look at the two renders before deciding -- they are the same 8,192 bytes, and the second holds
+  roughly half an effect vocabulary the first does not have at all (the coloured notes and
+  confetti are simply absent from baseline):
+    artifacts/visibility/atlas-2026-08-02/atlas-baseline-23of36.png
+    artifacts/visibility/atlas-2026-08-02/atlas-all-36-admitted.png
+  NOT IMPLEMENTED: this changes how 8 textures look, and PROJECT_GOAL requires owner approval for
+  a permanent visual-fidelity trade. Say go and it is a generator constant plus a repack.
