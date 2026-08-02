@@ -66,7 +66,7 @@
  *
  * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 53 individual frames. The atlas keeps
+ * admitted set is 54 individual frames. The atlas keeps
  * every particle in one bind.
  *
  * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the allocation that is
@@ -92,9 +92,9 @@
 #define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 8192u
 #define NDS_PARTICLE_QUAD_PALETTE_OFFSET 8192u
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 8u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 7744u
-#define NDS_PARTICLE_QUAD_COUNT 23u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 53u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 8000u
+#define NDS_PARTICLE_QUAD_COUNT 33u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 54u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing

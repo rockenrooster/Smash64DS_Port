@@ -234,15 +234,30 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # ViolationCount 0 -> 1, StagePrepareBuildCount 2 -> 244, and the Results
 # scoreboard panel disappeared. The generator carries the full note. These
 # numbers are a record of what was measured safe, not a preference.
+#
+# 2026-08-02, eighth change, and it is the one that finally closed the misses
+# WITHOUT touching the allocation: FRAME DECIMATION. The same 3.5-minute soak
+# that killed 128x128 also named the casualties -- QuadMissMask gave textures
+# 17, 25, 29, 33, 34, 38, 40, 41, 45, refused 100% of the time they were asked
+# for, and those are DustDash ("running foot dust"), DamageFire ("fireball hit"),
+# DamageNormalLight/Heavy, SparkleWhite(Multi), DamageCoin and SetOff -- the
+# BUGS.md row almost verbatim. They were excluded for FRAME COUNT, not size, so
+# the generator now packs an evenly-spaced subset of each animation and the
+# runtime lookup returns the nearest EARLIER packed frame. Admitted 23 -> 33,
+# every measured-live texture in, and atlas_bytes is UNCHANGED at 8,192 -- which
+# is the property that matters, because the allocation is what broke twice.
+# The cap is searched, not pinned (generator: QUAD_FRAME_CAP), so this asserts
+# the OUTCOME rather than the setting.
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.atlas_bytes -ne 8192) -or
-    ([int64]$report.quads.bytes -ne 7744) -or
-    ([int64]$report.quads.frame_count -ne 53) -or
-    (@($report.quads.admitted).Count -ne 23) -or
-    (@($report.quads.excluded).Count -ne 13)) {
+    ([int64]$report.quads.bytes -ne 8000) -or
+    ([int64]$report.quads.frame_count -ne 54) -or
+    (@($report.quads.admitted).Count -ne 33) -or
+    (@($report.quads.excluded).Count -ne 3)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.bytes) B, " +
+        "$([int64]$report.quads.frame_count) frames, " +
         "$(@($report.quads.admitted).Count) admitted, " +
         "$(@($report.quads.excluded).Count) excluded.")
 }
@@ -253,7 +268,16 @@ if ([int64]$report.quads.bytes -gt [int64]$report.quads.atlas_bytes) {
 # supply (1 has no image), plus Dream Land's leaf/dust sheet. If admission order
 # ever drops one the effects stop appearing and nothing else would say so --
 # which is exactly what happened on 2026-08-01 with texture 0.
-foreach ($id in @(0, 2, 10, 13, 18, 19, 20, 21, 22, 24, 27, 64, 65, 66)) {
+#
+# 15, 16, 17, 25, 29, 33, 34, 37, 38, 40, 41 and 45 joined on 2026-08-02 off the
+# same soak's TextureUseMask. The nine of those that were also on QuadMissMask
+# had been refused every single time for months while the only symptom was a
+# BUGS.md row saying some effects "aren't played" -- a bare miss COUNT reads as
+# 0.19% of draws and hides that, because a texture nobody can draw is
+# binary-absent rather than thinned. This list is the guard that makes the next
+# regrade fail loudly instead of quietly.
+foreach ($id in @(0, 2, 10, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 29,
+                  33, 34, 37, 38, 40, 41, 45, 64, 65, 66)) {
     if (@($report.quads.admitted) -notcontains $id) {
         throw "Particle quad sheet dropped measured texture $id."
     }
@@ -491,4 +515,12 @@ Write-Output (('Particle bank pack passed: 92/119 reachable efcommon scripts, ' 
     '(10912 script bank + 1283 index) of 210320 B arena headroom (198125 B ' +
     'spare) plus 168992 B NitroFS payload, 8 bit-exact CI4 textures, linear ' +
     "texel order pinned, .inc $incState, payload $assetState, " +
-    "quad atlas 128x64 A5I3, 23/36 textures in 53 frames $quadState."))
+    # Derived, not typed. This line read "23/36 textures in 53 frames" while the
+    # assertions above had already been updated to 33 and 54, so the success
+    # message described a sheet that no longer existed -- the one place anybody
+    # actually reads.
+    ("quad atlas $($report.quads.atlas_width)x$($report.quads.atlas_height) " +
+     "A5I3, $(@($report.quads.admitted).Count)/" +
+     "$(@($report.quads.admitted).Count + @($report.quads.excluded).Count) " +
+     "textures in $([int64]$report.quads.frame_count) frames " +
+     "(frame cap $($report.quads.frame_cap)) $quadState.")))

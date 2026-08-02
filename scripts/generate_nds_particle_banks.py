@@ -189,9 +189,33 @@ QUAD_ATLAS_HEIGHT = 64
 # visible particles produced 2,725 quads. Bits, not hex digits.
 # Up-star script 0x5C uses texture 24; a forced source-status run proved that
 # its missing cell produced one miss and zero quads. It fits only at 8x8.
+# REGRADED AGAIN 2026-08-02, from a 3.5-minute both-CPU soak that reached
+# Sudden Death. Two masks, read as BITS:
+#   TextureUseMask 0x2B4582C7 / 0x2366 -- drawn at least once:
+#     0 1 2 15 16 17 22 24 25 27 29 33 34 37 38 40 41 45
+#   QuadMissMask   0x22020000 / 0x2346 -- REFUSED every time, 684 draws lost:
+#     17 25 29 33 34 38 40 41 45
+# The refused nine are not obscure. Scout-mapped against efmanager.c they are
+# 17 DustDash, 25 DamageCoin, 29 SparkleWhiteMulti, 33/34 DamageNormalLight,
+# 38 SetOff, 40 DamageFire, 41 DamageNormalHeavy, 45 SparkleWhite -- which is
+# BUGS.md's "running foot dust VFX, fireball hit VFX ..." row almost verbatim.
+# They are all in the live set now, and QUAD_FRAME_CAP is what makes room.
+#
+# 684 of 362,759 draws sounds like 0.19% and is the WRONG metric: these nine were
+# refused 100% of the time they were asked for, so the effects are binary-absent,
+# not slightly thinned. Grade this list by which EFFECTS lose their texture, not
+# by share of draws.
+#
+# Everything demoted out of the list is demoted, not deleted -- the packer still
+# admits it if the sheet has room after the live set, which is how 3/4/5/9/11/14
+# got on the sheet in the first place. They drew nothing in this match, so they
+# lose their places to the nine that did.
+# Bits, not hex digits: 0x08400000 is 22 and 27, and reading it as 22/23/26 sent
+# one whole round of this at textures the pack does not even carry.
 QUAD_KO_LIVE = frozenset((10, 13, 18, 19, 20, 21, 24))
 QUAD_MEASURED_LIVE = frozenset(
-    (0, 1, 2, 10, 13, 18, 19, 20, 21, 22, 24, 27))
+    (0, 1, 2, 10, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 29, 33, 34,
+     37, 38, 40, 41, 45))
 # A5I3: one byte per texel, 5-bit alpha, 3-bit index into a shared palette.
 # Two reasons, and the second is the one that shows on screen.
 #
@@ -228,6 +252,32 @@ QUAD_KO_CELL_MAX = 8
 # does not allow a particle that draws nothing.
 QUAD_LONG_ANIMATION_FRAMES = 6
 QUAD_LONG_ANIMATION_CELL_MAX = 8
+# ...and then DECIMATE what is left, because halving the cell stopped being
+# enough. The cap above trades resolution; this one trades animation rate, which
+# PROJECT_GOAL.md allows in as many words ("reduced animation update rates",
+# "quantized animation poses"). It is the cheaper of the two for these assets:
+# 25 is fifteen 8x8 frames of DamageCoin, and nobody resolves fifteen distinct
+# poses of a coin that lives well under a second.
+#
+# WHY IT IS NEEDED, measured 2026-08-02 on a 3.5-minute both-CPU soak rather
+# than argued: nine textures were refused every time they were asked for --
+# 17, 25, 29, 33, 34, 38, 40, 41, 45 -- and the scout mapping puts the owner's
+# own BUGS.md list on exactly those. 17 is efManagerDustDashMakeEffect, i.e.
+# "running foot dust VFX". 40 is efManagerDamageFireMakeEffect, i.e. "fireball
+# hit VFX". 33/34 are DamageNormalLight and 41 is DamageNormalHeavy, the two
+# generic hit flashes. Admitting all nine at full frame counts costs 6,016 bytes
+# against 448 free. Decimated to four frames it is 3,328, which the sheet can
+# find once the live set below is regraded.
+#
+# THE RUNTIME HALF IS LOAD-BEARING AND LIVES ELSEWHERE. ndsParticleQuadFrameFor
+# (src/import/battleship_lbparticle.c) returns the NEAREST EARLIER packed frame,
+# so `frame` in the emitted row stays the SOURCE index and a decimated animation
+# plays at reduced rate over its full arc. Before 2026-08-02 that lookup was an
+# exact match returning NULL, and packing a subset here would have turned every
+# unpacked frame into a QuadMiss -- i.e. this constant would have made the bug
+# worse, not better. Do not raise the cap without checking that lookup still
+# clamps.
+QUAD_FRAME_CAP = 6
 
 
 def quad_cell_dims(width: int, height: int,
@@ -238,6 +288,20 @@ def quad_cell_dims(width: int, height: int,
         cell_w = max(1, cell_w // 2)
         cell_h = max(1, cell_h // 2)
     return cell_w, cell_h
+
+
+def quad_frame_list(frames: int, cap: int = QUAD_FRAME_CAP) -> list[int]:
+    """SOURCE frame indices to pack, evenly spaced across the animation.
+
+    Always keeps frame 0 and the final frame: the runtime lookup has no earlier
+    row to clamp to below the first packed frame, so dropping frame 0 would put
+    the start of every animation back on the miss path.
+    """
+    if frames <= cap:
+        return list(range(frames))
+    if cap <= 1:
+        return [0]
+    return sorted({round(i * (frames - 1) / (cap - 1)) for i in range(cap)})
 DEFAULT_QUAD_ASSET = Path("assets/particles/efcommon_particle_quads.a5i3.bin")
 QUAD_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_quads.a5i3.bin"
 
@@ -1254,6 +1318,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             cell_max = QUAD_LONG_ANIMATION_CELL_MAX
         cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"],
                                         cell_max)
+        frame_list = quad_frame_list(texture["frames"])
         candidates.append({
             "texture": texture["id"],
             "width": cell_w,
@@ -1261,7 +1326,9 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             "source_width": texture["width"],
             "source_height": texture["height"],
             "frames": texture["frames"],
-            "bytes": cell_w * cell_h * texture["frames"],
+            "frame_list": frame_list,
+            "packed_frames": len(frame_list),
+            "bytes": cell_w * cell_h * len(frame_list),
         })
     # Dream Land's leaves and dust are measured-live too -- a 2026-08-01
     # both-CPU soak caught the game asking for scripts 0 and 1 of that bank and
@@ -1277,28 +1344,71 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     # sheet is now half what it was, so "smallest first" alone would fill it
     # with whatever happens to be small and let a texture a match actually
     # draws fall off the end.
+    #
+    # Ranked on FULL source cost, not on the capped cost, so the admission order
+    # is the same at every cap the search below tries. Ranking on the capped
+    # cost would reshuffle priorities as the cap moves and make one cap's result
+    # depend on the ceiling it started from -- which is a very quiet way for the
+    # sheet to change when somebody edits an unrelated constant.
     candidates.sort(key=lambda row: (row["texture"] not in live,
-                                     row["bytes"], row["texture"]))
+                                     row["width"] * row["height"] *
+                                     row["frames"], row["texture"]))
 
     def cells_for(rows):
         cells = []
         for row in rows:
-            for frame in range(row["frames"]):
+            # SOURCE frame indices, which may be a decimated subset -- see
+            # quad_frame_list and the runtime's nearest-earlier lookup. Rows
+            # without the key are the Pupupu extras, which are short enough
+            # that the cap never bites.
+            frame_list = row.get("frame_list")
+            if frame_list is None:
+                frame_list = quad_frame_list(row["frames"])
+            for frame in frame_list:
                 cells.append({"w": row["width"], "h": row["height"],
                               "src_w": row.get("source_width", row["width"]),
                               "src_h": row.get("source_height", row["height"]),
                               "texture": row["texture"], "frame": frame})
         return cells
 
-    admitted: list[dict] = []
-    excluded: list[dict] = []
-    for candidate in candidates:
-        trial = admitted + [candidate]
-        if shelf_pack(cells_for(trial), QUAD_ATLAS_WIDTH,
-                      QUAD_ATLAS_HEIGHT) is None:
-            excluded.append(candidate)
-        else:
-            admitted.append(candidate)
+    def admit_at(cap: int) -> tuple[list[dict], list[dict]]:
+        """Greedy admission with every animation decimated to `cap` frames."""
+        admitted: list[dict] = []
+        excluded: list[dict] = []
+        for candidate in candidates:
+            trial = dict(candidate)
+            trial["frame_list"] = quad_frame_list(candidate["frames"], cap)
+            trial["packed_frames"] = len(trial["frame_list"])
+            trial["bytes"] = (candidate["width"] * candidate["height"] *
+                              trial["packed_frames"])
+            if shelf_pack(cells_for(admitted + [trial]), QUAD_ATLAS_WIDTH,
+                          QUAD_ATLAS_HEIGHT) is None:
+                excluded.append(trial)
+            else:
+                admitted.append(trial)
+        return admitted, excluded
+
+    # SELF-TUNING, and the reason is that a hand-picked cap is a number somebody
+    # has to re-derive every time an effect is added. The constraint is not byte
+    # count -- at cap 3 the sheet had 896 free bytes and STILL could not seat
+    # texture 66's four 16x16 cells, because shelf packing groups by exact height
+    # and the 16-tall shelves were full. So the only honest way to choose the cap
+    # is to try the good ones and keep the best that refuses nothing live.
+    #
+    # Measured 2026-08-02: cap 4 and cap 3 both drop texture 66, which is
+    # Pupupu -- Dream Land's leaves and dust, an open BUGS.md row. Cap 2 admits
+    # 31 of 36 with the whole live set intact and 1,856 bytes spare. Two frames
+    # is coarse; PROJECT_GOAL.md allows reduced animation rates and does NOT
+    # allow a particle that draws nothing, so a two-frame dash dust beats an
+    # absent one. If the sheet ever grows, this loop takes the better cap on its
+    # own without anyone editing a constant.
+    admitted, excluded = [], []
+    chosen_cap = QUAD_FRAME_CAP
+    for cap in range(QUAD_FRAME_CAP, 0, -1):
+        admitted, excluded = admit_at(cap)
+        chosen_cap = cap
+        if not any(row["texture"] in live for row in excluded):
+            break
     admitted.sort(key=lambda row: row["texture"])
 
     cells = cells_for(admitted)
@@ -1371,6 +1481,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         "payload": bytes(atlas) + palette_payload,
         "admitted": admitted,
         "excluded": excluded,
+        "frame_cap": chosen_cap,
         "frames": frame_rows,
         "bytes": used,
         "atlas_bytes": len(atlas),
@@ -1419,6 +1530,11 @@ def build_pupupu_bank(repo_root: Path,
         key = PUPUPU_QUAD_TEXTURE_STRIDE + texture["id"]
         frames_by_texture[key] = frames
         cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"])
+        # Same decimation the common bank gets, and `bytes` has to agree with it
+        # or the admission sort ranks this candidate by a cost it does not pay.
+        # It read the full frame count until 2026-08-02, which over-priced the
+        # four-frame Pupupu sheet and sorted it last among the live set.
+        frame_list = quad_frame_list(texture["frames"])
         quad_candidates.append({
             "texture": key,
             "width": cell_w,
@@ -1426,7 +1542,9 @@ def build_pupupu_bank(repo_root: Path,
             "source_width": texture["width"],
             "source_height": texture["height"],
             "frames": texture["frames"],
-            "bytes": cell_w * cell_h * texture["frames"],
+            "frame_list": frame_list,
+            "packed_frames": len(frame_list),
+            "bytes": cell_w * cell_h * len(frame_list),
             "live": texture["id"] in live_textures,
         })
 
@@ -1947,6 +2065,7 @@ def render_report(pack: dict) -> dict:
             "atlas_width": pack["quads"]["width"],
             "atlas_height": pack["quads"]["height"],
             "frame_count": len(pack["quads"]["frames"]),
+            "frame_cap": pack["quads"]["frame_cap"],
             "bytes": pack["quads"]["bytes"],
             "admitted": [row["texture"] for row in pack["quads"]["admitted"]],
             "admitted_cells": [
@@ -2032,6 +2151,7 @@ def main() -> int:
           f"quads={len(pack['quads']['admitted'])}/"
           f"{len(pack['quads']['admitted']) + len(pack['quads']['excluded'])}"
           f" {len(pack['quads']['frames'])}frames "
+          f"cap={pack['quads']['frame_cap']} "
           f"headroom={ESTIMATE['arena_headroom_bytes']} "
           f"spare={ESTIMATE['arena_headroom_bytes'] - pack['linked_bytes']} "
           f"source=0x{pack['source_checksum']:08x} "

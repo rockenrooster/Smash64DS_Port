@@ -1164,10 +1164,27 @@ volatile u32 gNdsParticleQuadStrideCount;
 /* Atlas row for (texture, frame), or NULL. A linear scan of 31 rows: the table
  * is sorted by (texture, frame) and a frame is looked up once per particle, so
  * at 41 particles a frame this is bounded by ~1,300 compares -- cheaper than
- * the index table it would take to avoid them. */
+ * the index table it would take to avoid them.
+ *
+ * NEAREST EARLIER FRAME, not exact match, and that is what lets the generator
+ * DECIMATE an animation. `row->frame` is the SOURCE frame index, so a texture
+ * packed at source frames 0/3/6/9 answers a request for frame 5 with frame 3 --
+ * the animation plays at a reduced rate over its full arc instead of vanishing.
+ * PROJECT_GOAL allows reduced animation update rates; a particle that does not
+ * draw at all is not an allowed approximation, and until 2026-08-02 that is
+ * exactly what an unpacked frame produced.
+ *
+ * This is a strict superset of the old exact-match behaviour: the equality test
+ * still short-circuits first, so every lookup that used to find a row finds the
+ * same row. Only the paths that used to return NULL can now return data. A
+ * request BELOW a texture's first packed frame still returns NULL -- there is
+ * no earlier frame to hold -- and a texture that is not on the sheet at all
+ * still returns NULL and still counts a QuadMiss, which is the case that needs
+ * atlas space rather than a lookup change. */
 static const NDSParticleQuadFrame *ndsParticleQuadFrameFor(u32 texture_id,
                                                            u32 frame)
 {
+    const NDSParticleQuadFrame *earlier = NULL;
     u32 index;
 
     for (index = 0u; index < NDS_PARTICLE_QUAD_FRAME_COUNT; index++)
@@ -1182,15 +1199,16 @@ static const NDSParticleQuadFrame *ndsParticleQuadFrameFor(u32 texture_id,
             }
             if (row->frame > (u8)frame)
             {
-                return NULL;
+                return earlier;
             }
+            earlier = row;
         }
         else if (row->texture_id > (u8)texture_id)
         {
-            return NULL;
+            return earlier;
         }
     }
-    return NULL;
+    return earlier;
 }
 
 /* The camera basis, once per pass. `right` and `up` span the plane the
