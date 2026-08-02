@@ -67,33 +67,46 @@ These bugs should be fixed for P1 delivery:
   260 so they pass the `pc->size == 0.0F` skip; their textures are admitted so ndsParticleQuadFrameFor
   returns non-NULL rather than taking the miss branch. Nothing between the loop head and
   ndsRendererSubmitParticleQuad can drop them except the transform step.
-  ROOT CAUSE FOUND 2026-08-02. The owner was right and "the emitters are source-exact" was true
-  but irrelevant: the emitter is correct and then the DRAW applies a stale transform on top of it.
-  Measured, latching the transform each slot-1 particle draws through:
-      xf_seen=554  xf_null=0  xf_status=0  xf_t=2238.583008,134.929138
-  All 554 Whispy particles hold a NON-NULL transform whose translate is (2238.58, 134.93). The
-  maker set (-715, 100) -- the probe reads that at the maker in the same run. (2238.58, 134.93) is
-  the exact dangling value an earlier probe this session saw in 653 of 900 dust_xf samples, i.e. a
-  recycled pool slot belonging to some other effect.
-  ndsParticleTransformForDraw (battleship_lbparticle.c:1161-1194) multiplies pc->pos by that
-  transform's affine, so a sane pc->pos.x of 417.69 is drawn at roughly 417 + 2238 = 2656, and the
-  furthest particle at 1352 lands near 3590 -- against the measured camera half-width of 3148.
-  THE WIND IS DRAWN 2,238 UNITS OFF, TO THE SCREEN EDGE AND PAST IT. That is precisely the
-  original report, "spawning too far away from Whispy the Tree", and it also explains why nothing
-  is visible in a centred capture.
-  THE MISSING MECHANISM, and it is a port gap not a source one: decomp's lb/lbparticle.c maintains
-  a reference count on every transform -- lbParticleGetTransform sets xf->users_num = 1 (:131) and
-  ten sites increment or decrement it as particles attach and die (:315, :545, :887, :910, :978,
-  :1080, :1318, :2560, :2722, :2794). src/import/battleship_lbparticle.c, which reimplements that
-  system for DS, has ZERO users_num sites. So a transform is returned to sLBParticleTransformsAllocFree
-  while particles still reference it, gets reallocated to another effect that writes its own
-  translate, and Whispy's particles read the new owner's position.
-  FIX SITE: src/import/battleship_lbparticle.c must maintain xf->users_num on particle attach and
-  death the way decomp does, and eject only at zero. Treat it as a risky change -- it is particle
-  lifetime, this file has taken four fixes today, and a wrong count is a use-after-free or a leak.
-  Checkpoint before starting, and re-run this probe: xf_t must read -715,100 and xf_null may not
-  rise. Do NOT re-test the camera or the layer dispatch; both are refuted above with numbers, and
-  do not resume the legacy-DObj archaeology.
+  RETRACTED 2026-08-02, both halves, within the hour of publishing them. A "root cause" was
+  committed here claiming (a) the wind is drawn 2,238 units off by a recycled transform and (b)
+  the port never reference-counts transforms. (b) is simply false and (a) is an over-read of my
+  own instrument. Neither should be relied on.
+  (b) WHY IT WAS WRONG: `rg users_num src/` returns nothing, so the port looked like it had
+  dropped decomp's refcount. It has not. battleship_lbparticle.c:133 `#include`s
+  decomp/.../lb/lbparticle.c textually -- that is the port's whole interposition pattern, with
+  #define/#undef around it -- so all ten users_num sites compile into battleship_lbparticle.o,
+  which is the only particle TU in the build. Greping `src/` for behaviour that lives in an
+  included decomp file will keep producing this answer; check the #include list first.
+  (a) WHY IT WAS WRONG: the probe reads `sLBParticleStructsAllocLinks[1]->xf`, and that is a LIST
+  HEAD, not a population. xf_seen=554 counts 554 SAMPLES OF THE HEAD across frames -- possibly a
+  different particle each frame, and not necessarily Whispy's dust at all, since slot 1 is
+  whatever GENLINK(0) put there. "All 554 Whispy particles hold a stale transform" does not
+  follow from it. The arithmetic built on top (drawn at 2656, off past the 3148 half-width) is
+  therefore unsupported too.
+  WHAT ACTUALLY SURVIVES, and it is still worth having: at the maker, grPupupuWhispyDustMakeEffect
+  sets xf->translate to dGRPupupuWhispyDustEffectPositions[lr] and the probe reads exactly
+  (-715, 100) with rotate.y 180deg, so creation is source-exact. At draw time SOME slot-1 particle
+  holds a transform reading (2238.58, 134.93) -- the same value an earlier probe saw in 653 of 900
+  dust_xf samples, so it is reproducible and it is not a Whispy position. Transform pressure is
+  NOT the explanation: the pool is 6 and the run used 1-2, nowhere near saturation.
+  THE WALK WAS RUN, and it refutes the transform hypothesis outright. Iterating the whole slot-1
+  list every frame instead of reading its head:
+      walked=5661  xf_seen=5661  xf_null=0  at_emitter=3085  elsewhere=2576
+      xf_t=2238.583008,134.929138  gen=168
+  3,085 of 5,661 slot-1 particle-visits hold a transform sitting exactly at the emitter's -715 --
+  Whispy's own, correctly placed. The other 2,576 belong to generator 168 at (2238.58, 134.93).
+  Slot 1 simply carries TWO effects, and the head read had been sampling the other one. Nothing is
+  dangling: xf_null is 0 across all 5,661 visits, and more than half are correct.
+  So Whispy's particles are created, alive, sized 260, inside a 3,148 half-width camera, textured
+  (absent from the quad-miss mask), dispatched (draw_masks bit 1 set), AND correctly transformed
+  -- and still nothing is visible. Four mechanisms have now been proposed and all four refuted by
+  measurement: camera frustum, layer-15 dispatch, atlas exclusion, stale transform.
+  NO CAUSE IS ESTABLISHED. Do not accept a fifth mechanism on this row without a measurement that
+  could have refuted it, and do not re-test the four above -- each is refuted here with numbers.
+  The remaining untested step is the only one left between a correct world position and a pixel:
+  what ndsRendererSubmitParticleQuad does with these quads. Instrument INSIDE the submit -- final
+  screen-space coordinates and whether the quad survives to the GPU -- rather than inferring from
+  upstream state again, which is what produced all four wrong answers.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.

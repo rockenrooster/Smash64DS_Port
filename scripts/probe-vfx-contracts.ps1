@@ -131,6 +131,11 @@ try {
         'set $slot1_xf_status = -1',
         'set $slot1_xf_tx = 0.0',
         'set $slot1_xf_ty = 0.0',
+        'set $pc1 = 0',
+        'set $slot1_walked = 0',
+        'set $slot1_xf_at_emitter = 0',
+        'set $slot1_xf_elsewhere = 0',
+        'set $slot1_xf_gen = -1',
         'set $spark_calls = 0',
         'set $spark_x = 0.0',
         'set $spark_y = 0.0',
@@ -483,14 +488,32 @@ try {
         # nulling, and this run already reported a ground transform reading
         # -1.9e20. Latch the pointer, its status, and its translate: a status
         # outside 0..2 or a translate in the e20 range is the ejected slot.
-        'set $slot1_xf = sLBParticleStructsAllocLinks[1]->xf',
-        'if $slot1_xf != 0',
-        'set $slot1_xf_seen = $slot1_xf_seen + 1',
-        'set $slot1_xf_status = $slot1_xf->transform_status',
-        'set $slot1_xf_tx = $slot1_xf->translate.x',
-        'set $slot1_xf_ty = $slot1_xf->translate.y',
-        'else',
+        # WALK the list, do not read its head. Reading
+        # sLBParticleStructsAllocLinks[1]->xf once per frame samples whatever
+        # particle happens to be at the head, which need not be Whispy's dust at
+        # all -- slot 1 is whatever GENLINK(0) put there. A published "root
+        # cause" was built on that head read on 2026-08-02 and had to be
+        # retracted, because 554 samples of one pointer is not a statement about
+        # 554 particles. Count particles whose transform translate is the
+        # emitter's -715 against those holding anything else, so the two
+        # populations are separated instead of conflated.
+        'set $pc1 = sLBParticleStructsAllocLinks[1]',
+        'while $pc1 != 0',
+        'set $slot1_walked = $slot1_walked + 1',
+        'if $pc1->xf == 0',
         'set $slot1_xf_null = $slot1_xf_null + 1',
+        'else',
+        'set $slot1_xf_seen = $slot1_xf_seen + 1',
+        'if ($pc1->xf->translate.x > -716) && ($pc1->xf->translate.x < -714)',
+        'set $slot1_xf_at_emitter = $slot1_xf_at_emitter + 1',
+        'else',
+        'set $slot1_xf_elsewhere = $slot1_xf_elsewhere + 1',
+        'set $slot1_xf_tx = $pc1->xf->translate.x',
+        'set $slot1_xf_ty = $pc1->xf->translate.y',
+        'set $slot1_xf_gen = $pc1->generator_id',
+        'end',
+        'end',
+        'set $pc1 = $pc1->next',
         'end',
         'end',
         # The callback stops itself rather than a separate tbreak at the same
@@ -524,7 +547,7 @@ try {
             'miss=%u emit=%u missmask=%08x,%08x missframes=%08x ' +
             'cam_dist=%f cam_fovy=%f cam_vw=%d cam_vh=%d ' +
             'draw_calls=%d draw_masks=%llx ' +
-            'xf_seen=%d xf_null=%d xf_status=%d xf_t=%f,%f\n", ' +
+            'walked=%d xf_seen=%d xf_null=%d at_emitter=%d elsewhere=%d xf_t=%f,%f gen=%d\n", ' +
             '$whispy_calls, $whispy_lr, ' +
             '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
             '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
@@ -544,8 +567,7 @@ try {
             'gGMCameraStruct.target_dist, gGMCameraStruct.fovy, ' +
             'gGMCameraStruct.viewport_width, gGMCameraStruct.viewport_height, ' +
             '$draw_calls, $draw_masks, ' +
-            '$slot1_xf_seen, $slot1_xf_null, $slot1_xf_status, ' +
-            '$slot1_xf_tx, $slot1_xf_ty'),
+            '$slot1_walked, $slot1_xf_seen, $slot1_xf_null, ' + '$slot1_xf_at_emitter, $slot1_xf_elsewhere, ' + '$slot1_xf_tx, $slot1_xf_ty, $slot1_xf_gen'),
         'detach',
         'quit'
     )
