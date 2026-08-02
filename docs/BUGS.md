@@ -44,12 +44,24 @@ These bugs should be fixed for P1 delivery:
   22020000,00002106 = texture ids 17, 25, 29, 33, 34, 40 and 45, every one of them in row 11's
   excluded 13, with ZERO refusals outside that list -- and Whispy's dust and leaf textures are not
   among them. Their textures are admitted and drawable.
-  NEXT, and it is one measurement, not a build: slot1_x=417.69 with slot1_absmax=1352.46 against
-  an emitter at -715 means these particles travel roughly 2,067 units. Read the camera's visible
-  world half-width on the same frame. If it is under ~1,300 the wind is simply blowing off-screen,
-  which is a velocity/scale problem in the DS port rather than a missing effect, and it would
-  explain "not correct" and "too far away" in one stroke. Do NOT resume the legacy-DObj
-  archaeology; it produced two withdrawn answers already.
+  OFF-SCREEN HYPOTHESIS REFUTED, same day, by the measurement it asked for. gGMCameraStruct reads
+  target_dist=6704.98, fovy=38, viewport 300x220, so the visible half-width at the stage plane is
+  6704.98 * tan(19deg) * 300/220 = 3,148 units against a furthest particle |x| of 1,352 -- inside
+  the frustum by 1,796 units, and the emitter at -715 is nowhere near an edge. The wind is not
+  blowing out of view. Recorded because it is worth exactly as much as a confirmation: nobody
+  should spend another run on camera bounds or on particle velocity scaling.
+  So the surviving contradiction is sharp and small. The wind particles are CREATED (3 dust and 3
+  leaf makers over 3 forced blows), ALIVE (554 particle-frames in alloc-link slot 1), CORRECTLY
+  SIZED (260, not a denormal), INSIDE THE CAMERA, and their TEXTURES ARE ADMITTED -- and still
+  nothing appears. Every "is it there at all" question is now answered yes, which means the defect
+  is in the draw itself.
+  Remaining candidates, in cost order, none yet tested: submitted but occluded (dust z=0 while
+  leaves are z=-696/-762, against a stage whose trunk and ground are large occluders); submitted
+  but degenerate in screen space; or dropped by a cull/visibility gate before submission. The
+  cheapest discriminator is a per-frame count of quads actually SUBMITTED for slot 1, next to the
+  554 that exist -- if submission is 0 the draw path drops them, and if it matches then they are
+  reaching the GPU and being lost in raster or depth. Do NOT resume the legacy-DObj archaeology;
+  it produced two withdrawn answers already.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
@@ -67,6 +79,14 @@ These bugs should be fixed for P1 delivery:
   xf->translate; that was checked across all twelve routed kinds.
   Most likely the report predates the denormal fix, which had many effects appearing and vanishing
   at once. Needs re-observation on the current ROM.
+  2026-08-02: THIS RUN PRODUCED NO USABLE SPARK DATA and the earlier reading still stands alone.
+  The probe latched spark_calls=6 with every position exactly 0.0, which looks like "sparks spawn
+  at the origin" and is not: `pos` is optimized out at -Os. Reading it through $r0 instead (it is
+  the first parameter of efManagerDamageNormalLightMakeEffect(Vec3f *, s32, s32, sb32), so it is
+  in r0 at entry) did NOT fix it, because gdb resolves that symbol to "2 locations" at address
+  0x0 -- so the callback is running somewhere r0 is not the argument. Fix the breakpoint before
+  trusting any number from it: break on a specific location, or on the call site in the caller.
+  Until then this row has exactly one measurement behind it, the earlier 17 sparks at |x| <= 1344.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.

@@ -169,17 +169,24 @@ try {
         'continue',
         'end',
 
+        # Read the position through $r0, NOT through `pos`. The signature is
+        # efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32, s32, sb32), so
+        # pos is the first argument and lives in r0 at entry -- whereas the NAME
+        # `pos` is optimized out at -Os, which is why the 2026-08-02 run latched
+        # spark_calls=6 with every position reading 0.0 and looked, wrongly, like
+        # sparks were spawning at the origin.
         'break efManagerDamageNormalLightMakeEffect',
         'commands',
         'silent',
         'set $spark_calls = $spark_calls + 1',
-        'set $spark_x = pos->x',
-        'set $spark_y = pos->y',
-        'if pos->x > $spark_absmax',
-        'set $spark_absmax = pos->x',
+        'set $spark_p = (Vec3f *)$r0',
+        'set $spark_x = $spark_p->x',
+        'set $spark_y = $spark_p->y',
+        'if $spark_p->x > $spark_absmax',
+        'set $spark_absmax = $spark_p->x',
         'end',
-        'if -pos->x > $spark_absmax',
-        'set $spark_absmax = -pos->x',
+        'if -$spark_p->x > $spark_absmax',
+        'set $spark_absmax = -$spark_p->x',
         'end',
         'continue',
         'end',
@@ -461,7 +468,8 @@ try {
             # turns on whether Whispy's own dust and leaf textures are among the
             # refusals -- a 6.7% miss rate is equally consistent with "the wind is
             # invisible" and "some unrelated tail effect is".
-            'miss=%u emit=%u missmask=%08x,%08x missframes=%08x\n", ' +
+            'miss=%u emit=%u missmask=%08x,%08x missframes=%08x ' +
+            'cam_dist=%f cam_fovy=%f cam_vw=%d cam_vh=%d\n", ' +
             '$whispy_calls, $whispy_lr, ' +
             '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
             '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
@@ -477,7 +485,9 @@ try {
             'gNdsParticleStructsMax, ' +
             'gNdsParticleQuadMissCount, gNdsParticleQuadEmitCount, ' +
             'gNdsParticleQuadMissMask[0], gNdsParticleQuadMissMask[1], ' +
-            'gNdsParticleQuadMissFrameMask'),
+            'gNdsParticleQuadMissFrameMask, ' +
+            'gGMCameraStruct.target_dist, gGMCameraStruct.fovy, ' +
+            'gGMCameraStruct.viewport_width, gGMCameraStruct.viewport_height'),
         'detach',
         'quit'
     )
