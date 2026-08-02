@@ -925,3 +925,32 @@ Full match, Results, rematch and Sudden Death without drops, corruption, hangs o
 Synchronized visual evidence and owner approval for particle alpha/blending, fireball, laser, shield and all four Reflector statuses.
 Final retail-DS cadence/visual acceptance after accuracy-melonDS qualification.
 Historical memory was used only to recover earlier dead ends and acceptance cautions; all checkout state and performance numbers above were reverified against the live tree.
+
+## Opened 2026-08-01 by the source-effect routing
+
+Two items the effect work created rather than found. Both are bounded and both
+have a named measurement; neither blocks the bug row that produced them.
+
+**Cache the particle quad's axis magnitudes.** `ndsParticleTransformForDraw`
+(src/import/battleship_lbparticle.c) calls `sqrtf` twice per particle per frame
+to recover the transform's X/Y scale. The source computes the same two numbers
+once per transform per frame and stores them in `xf->pc0_magnitude` /
+`xf->pc1_magnitude` — fields this port's LBTransform already carries — inside
+the `transform_id != dLBParticleCurrentTransformID` guard that is already there.
+Moving the two `sqrtf` calls inside that guard is a few lines and reuses
+existing storage. Worth roughly 200,000 `sqrtf` calls a match at the measured
+2026-08-01 volume (`gNdsParticleDrawVisibleCount` 103,322 over 2,043 presented
+frames), and the number to watch is `gNdsTickHudForegroundTicks`, not P95 alone.
+
+**Re-derive the particle atlas against the seams that are now live.** With the
+motion-script effects routed to source, `gNdsParticleQuadMissCount` is 1,381 of
+103,322 visible particles — 1.3% that draw nothing rather than draw the wrong
+cell. Every missing texture id is in `reach.packed_textures`, so this is not an
+unpacked texture: the admitted set is keyed on (texture, frame) pairs and
+`gNdsParticleQuadMissFrameMask` shows frames 0-14, 16 and 18 all missing, i.e.
+whole animations the generator did not admit because those scripts were not
+reachable when it last ran. Re-run `scripts/generate_nds_particle_banks.py` and
+price the result: the atlas is presently 64x64 / 8,192 bytes, and the earlier
+128x128 fits `sNdsRendererHardwareTextureScratch` exactly, so the question is
+VRAM against `NDS_RENDERER_HW_TEXTURE_CACHE_COUNT` and the 24 entries the
+battle's static set pins — not new RAM.

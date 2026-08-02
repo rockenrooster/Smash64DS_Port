@@ -22286,3 +22286,99 @@ with `-NoBuild` it does something worse — it hangs: forty minutes, 0.64 second
 of CPU, no `melonDS` process, a zero-byte log, and no timeout. `verify-all.ps1`
 establishes the runner slot and environment the harness does not establish for
 itself. Always go through the profile.
+
+## 2026-08-01 — LBPARTICLE_MASK_GENLINK indexed a 16-entry array with 8192
+
+The owner reported "the KO burst freezes the game." Three defects came out of
+it, and the third is the one that mattered.
+
+**1. EFDesc file offsets held symbol ADDRESSES.** On N64
+`llEFCommonEffects2DeadExplodeDefaultDObjDesc` and ~180 siblings are absolute
+linker symbols, so `&llFoo` IS the byte offset and `efManagerMakeEffect`'s raw
+`addr + o_dobjsetup` is correct arithmetic. This port supplies them as
+`static uintptr_t llFoo = 0x4F08u`, so `&llFoo` is a RAM address; all 182
+references are `&`-prefixed, so nothing ever read the value and nothing caught
+it. `gcSetupCustomDObjs` walked the result as a DObjDesc tree, allocating a
+136-byte DObj per bogus node until `syMallocSet` gave up — captured as
+`MALLOCOVF=1 req=136 head=112`, `dobjdesc=0x446da28`. Fixed by
+`ndsEFManagerResolveDescOffsets`.
+
+**2. `lbRelocGetFileSize` answers `sizeof(Sprite)` for an ALREADY LOADED file**,
+because `ndsRelocExternTreeAllocSize` returns 0 once an asset has a status node.
+Its 68 was read as "the effect assets are missing" and cost a wrong conclusion;
+EFCommonEffects1/2/3 are packed and resident at 52,736 / 28,352 / 13,616 bytes.
+`ndsRelocGetLoadedFileSize` is the one to use on a live file.
+
+**3. The freeze itself was one macro.** `LBPARTICLE_MASK_GENLINK` is invented by
+this port — the decomp *uses* it and never defines it — and it was written
+`(link) << 16`. `lbparticle.c` decodes the allocation-link slot as
+`bank_id >> 3` into `sLBParticleStructsAllocLinks[16]`, so `GENLINK(1)` asked
+for index 8192. Now `((link) + 1) * 8`, with a static assert.
+
+It is worth naming every site, because the freeze was the loudest symptom and
+not the only one. Five source call sites pass a non-zero link, and every one of
+them was writing a particle pointer far past the end of that array:
+
+| link | index written | caller | symptom |
+|---|---|---|---|
+| 1 | 8192 | KO burst `dEFManagerDeadExplodeGenID` | the reported freeze |
+| 1 | 8192 | script `0x5C` | |
+| 2 | 16384 | battle-score effect `0x43`/`0x44` | |
+| 2 | 16384 | positional generator | |
+| 3 | 24576 | Results confetti `0x70` | half the confetti never drew |
+
+`GENLINK(0)` is 33 of the 38 sites and `0 << 16` is still 0, which is exactly
+why every effect in the port except these five looked fine.
+
+**Durable lesson: a macro the decomp uses but never defines is a port-authored
+guess, and it deserves the same scrutiny as port-authored code.** Grepping the
+reference tree for a definition and finding none is the signal — not a reason
+to accept whatever the port already had. The decode that consumes it
+(`bank_id >> 3`, `bank_id & 7`) was in the same file the whole time and pins
+the encoding exactly.
+
+Two more things fell out of the same investigation.
+
+**The DS particle path never applied the LBTransform.** The source multiplies
+`pc->pos` by `pc->xf->affine` before projection (lbparticle.c:1683-1732); the DS
+quad path submitted `pc->pos` raw, so every transformed particle drew at its
+script-local origin instead of on the fighter. That is one owner for four
+separate owner reports — Whispy's gust, stray VFX on landed attacks, the star-KO
+sparkle, and the Results confetti.
+
+**"A GObj pulls DObjs" was wrong, and it had suppressed the source effects for
+weeks.** `gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32
+priority)` takes a run function second, not a DObjDesc (objman.c:1724). The
+eleven particle-only makers pass NULL there and never call `gcAddDObjForGObj`,
+so they allocate no DObj at all — while `ndsEFManagerMakeVisualEffect`, the
+stand-in they were held behind, takes an EFStruct *and* a real DObj. Routing
+them to source is cheaper than the substitute. Measured across the flag, same
+tree, KO-stress both-CPU soak:
+
+| | stand-ins | source |
+|---|---|---|
+| particle scripts started | 11 | 137 |
+| particle root spawns | 43 | 251 |
+| `gNdsGCDrawsActiveMax` | 128 | 125 |
+| `gNdsEffectPoolFreeMin` | 4 | 7 |
+| present interval bucket[2] | 2148 | 2717, max 6 |
+
+The same seam owns the motion-script effects. `ftParamMakeEffect` is where every
+`nEFKind` from a fighter's motion file arrives (ftmain.c:447 and 1139), and this
+port answered all of them with one of seven untextured primitives. Mario and Fox
+ask for effects there 178 times across their two motion files and 106 of those
+are dust. The source dispatch now runs for the particle-only kinds; the kinds
+whose source maker builds a DObj tree stay on the DS seam, because that geometry
+goes out as source effect DL links and the battle hardware path does not submit
+them. Same reason the respawn platform was invisible.
+
+**What it cost, stated plainly: 6,704 bytes of .text**, and the taskman arena
+charges .text one-for-one in 4,096-byte steps, so `gNdsTaskmanGeneralHeapFreeMin`
+fell 27,916 -> 21,468. Nothing was refused at that level — ten fireball spawns,
+ten successes, `MALLOCOVF=0`, `sGCCommonsActiveNum` 40 — but it is below the
+25,600 at which `ifCommonSetMaxNumGObj` caps the GObj pool, and that latch is
+evaluated every frame from `ifCommonBattleUpdateInterfaceAll`. Do not read
+`sGCCommonsMaxNum` at end of run to decide whether it fired: it is not sticky
+across the scene change, so the Results-screen sample always reads -1. Paid for
+with the two pools this run's own high-water numbers had made oversized —
+weapons 6 -> 3 against a peak of one, effects 12 -> 8 against a peak of five.

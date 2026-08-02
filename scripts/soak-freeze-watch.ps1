@@ -790,6 +790,21 @@ try {
             'gNdsAudioFgmSupportedPlayCount',
             'gNdsAudioFgmUnsupportedCallCount',
             'gNdsAudioFgmPlayFailCount',
+            # WHY a cue stopped, which is the only thing that separates BUGS.md
+            # "Some Crowd noise audio cues get cut off" from a cue that simply
+            # ended. DurationStop is a normal end; GenerationMismatch is the
+            # handle finding its channel reassigned under it, i.e. a steal, and
+            # a crowd cue is the likeliest victim because PublicWin and
+            # PublicExcited are the two longest in the pack at 950 and 1,200
+            # ticks. PoolExhaust and MaxActiveHandles bound the eight-handle
+            # pool that does the stealing. All unconditional in nds_audio_fgm.c,
+            # so they exist in every build -- the rule below applies.
+            'gNdsAudioFgmMaxActiveHandles',
+            'gNdsAudioFgmPoolExhaustCount',
+            'gNdsAudioFgmDurationStopCount',
+            'gNdsAudioFgmGenerationMismatchCount',
+            'gNdsAudioFgmStaleStopCount',
+            'gNdsAudioFgmStopAllCalls',
             'gNdsAudioFgmMissRingCount',
             # WHICH cue was refused, not just how many. The count alone cannot
             # tell "the announcer is still missing" from "an unrelated menu cue

@@ -3900,10 +3900,19 @@ extern volatile u32 gNdsTaskmanGeneralHeapFreeMin;
 /* Peak live DObjs. x136 bytes is heap the match never gives back. */
 extern volatile u32 gNdsGCDrawsActiveMax;
 /* DS weapon-pool size, replacing the source's WEAPON_ALLOC_MAX 32. The P1
- * Mario/Fox high-water is one live weapon; six retains five spare entries and
- * leaves the source crowd actor more than 2 KiB above the GObj latch. */
+ * Mario/Fox high-water is one live weapon; six retained five spare entries and
+ * left the source crowd actor more than 2 KiB above the GObj latch.
+ *
+ * Three since 2026-08-01, because routing the motion-script effects to their
+ * source makers cost 6,704 bytes of .text and the taskman arena charges that
+ * one-for-one -- two 4,096-byte steps, straight off gSYTaskmanGeneralHeap. The
+ * high-water is still one: that soak reported gNdsFighterProjectileProofWeapon
+ * CountMax 1 against ten spawn calls and ten successes. Three is 704 bytes per
+ * entry x 3 for a peak of one, so it keeps twice the measured need and hands
+ * 2,112 bytes back to the heap the effects now want. Do not cut it to one --
+ * a spare entry is what absorbs a frame where two fireballs overlap. */
 #ifndef NDS_R2_WEAPON_POOL
-#define NDS_R2_WEAPON_POOL 6
+#define NDS_R2_WEAPON_POOL 3
 #endif
 /* The effect-instance pool is the same kind of DS pool-size override; it lives
  * in include/nds/nds_effects.h, beside the effect counters it is measured with. */

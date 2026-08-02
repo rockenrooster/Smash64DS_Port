@@ -1330,22 +1330,30 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
     return effect_gobj;
 }
 
-/* THE "PARTICLE-ONLY" SPLIT WAS WRONG, and this is the correction.
+/* THE PARTICLE-ONLY SPLIT WAS RIGHT AFTER ALL, and this is the second
+ * correction -- the first one, which collapsed these eleven into
+ * NDS_R2_SOURCE_EFFECTS_FULL, was reasoning from a freeze that has since been
+ * attributed elsewhere.
  *
- * These eleven do not call efManagerMakeEffect, so they were classified as
- * building no DObj tree and therefore free of the DObj budget. That checked for
- * the absence of ONE call, not for the absence of allocation:
- * efManagerDamageNormalLightMakeEffect and its siblings call gcMakeGObjSPAfter
- * and make their own GObj, and a GObj pulls DObjs. Routing them froze the ROM
- * in the same place as routing all twenty -- DeadExplode's 136-byte DObj -- with
- * gSYTaskmanGeneralHeap down to 200 bytes from 26,876.
+ * It argued that "a GObj pulls DObjs", so calling gcMakeGObjSPAfter was as
+ * expensive as calling efManagerMakeEffect. Read the signature:
+ * gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
+ * (objman.c:1724). The second argument is a run function. Every one of these
+ * eleven passes NULL there and never calls gcAddDObjForGObj, so the tree they
+ * build is empty and they draw entirely through lbParticleDrawTextures.
  *
- * The honest model is that EVERY source effect allocates, gcGetDObjSetNextAlloc
- * grows the DObj pool out of the general heap with no ceiling, and the margin
- * to the ifCommonSetMaxNumGObj latch is nine DObjs. No meaningful group fits
- * behind that. The fix is the bounded fixed-pool effect runtime, not a better
- * subset. */
-#if NDS_R2_SOURCE_EFFECTS_FULL
+ * The stand-in they displace is the expensive one:
+ * ndsEFManagerMakeVisualEffect takes the same EFStruct AND a real
+ * gcAddDObjForGObj, so every substituted hit spark costs 136 bytes of general
+ * heap that gcGetDObjSetNextAlloc never gives back. Routing these to source
+ * LOWERS gNdsGCDrawsActiveMax.
+ *
+ * What actually froze the ROM when all twenty were routed was
+ * dEFManagerDeadExplodeEffectDesc's offsets holding symbol addresses, which
+ * sent gcSetupCustomDObjs walking garbage and allocating a DObj per bogus node
+ * -- see ndsEFManagerResolveDescOffsets above. The "gSYTaskmanGeneralHeap down
+ * to 200 bytes" reading was that walk, not eleven particles. */
+#if NDS_R2_SOURCE_EFFECTS_PARTICLE
 LBParticle *efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player,
                                                  s32 size, sb32 is_static)
 {
@@ -1393,12 +1401,17 @@ LBParticle *efManagerSetOffMakeEffect(Vec3f *pos, s32 size)
 {
     return ndsBaseEFManagerSetOffMakeEffect(pos, size);
 }
-#endif /* NDS_R2_SOURCE_EFFECTS_FULL */
+#endif /* NDS_R2_SOURCE_EFFECTS_PARTICLE */
 
 /* DObj TREE, therefore priced against the nine-DObj margin. All six take
  * efManagerMakeEffectNoForce, so the EFStruct pool bounds them -- but the bound
  * is (pool depth x DObjs per tree), which is what exhausted the heap when all
- * twenty were routed at once. Graduate these as their own measured group. */
+ * twenty were routed at once. Graduate these as their own measured group.
+ *
+ * They have a second problem that heap cannot fix: their geometry goes out as
+ * source effect DL links, which the battle hardware path does not submit, so
+ * routing them today swaps a visible primitive for an invisible one. Same seam
+ * as the respawn platform. */
 #if NDS_R2_SOURCE_EFFECTS_FULL
 GObj *efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
 {

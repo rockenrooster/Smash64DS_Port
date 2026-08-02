@@ -1358,19 +1358,37 @@ override NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI := 1
 # against a measured P1 high-water of one; the shipping soak must keep
 # gNdsTaskmanGeneralHeapFreeMin above the 25,600-byte GObj latch.
 NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 1
-# Route the remaining seventeen efManager*MakeEffect seams to their source
-# implementations instead of the untextured primitive stand-ins. Default 0 on a
-# MEASURED result, not caution: with all twenty routed the ROM froze MID-MATCH
-# on a KO with MALLOCOVF=1 (req 136, head 24). The failing allocation is a
-# 136-byte DObj from gcGetDObjSetNextAlloc, inside
-# efManagerMakeEffect(dEFManagerDeadExplodeEffectDesc) reached from
-# ftCommonDeadDownSetStatus -- so the cost is source effects building real DObj
-# trees out of gSYTaskmanGeneralHeap during play, not setup-time asset loading.
-# The seventeen drained the heap and the KO burst's own DObj was the straw.
-# DeadExplode and SparkleWhiteDead are unconditional. Rebirth uses the bounded
-# DS visual seam because the battle hardware path does not submit source effect
-# DL links. Raise this only with a soak whose
-# gNdsTaskmanGeneralHeapFreeMin stays above 25,600.
+# The eleven efManager*MakeEffect seams that spawn a particle and nothing else:
+# the hit sparks, the running/landing dust, the fire grind, the sparkles, the
+# flash and the set-off. ON, and the reason it is on is that routing them is
+# CHEAPER than the stand-in it replaces, not merely prettier.
+#
+# Each source maker takes an EFStruct and calls
+# gcMakeGObjSPAfter(nGCCommonKindEffect, NULL, ...) -- whose second argument is
+# a run function, not a DObjDesc (objman.c:1724) -- so it builds NO DObj at all
+# and draws entirely through lbParticleDrawTextures. The stand-in it displaces,
+# ndsEFManagerMakeVisualEffect, takes the same EFStruct AND a gcAddDObjForGObj,
+# so every stand-in is 136 bytes of general heap the match never gives back.
+# Watch gNdsGCDrawsActiveMax across this flag, not just the heap low-water.
+#
+# It was previously behind NDS_R2_SOURCE_EFFECTS_FULL because routing the group
+# "froze the ROM" -- an attribution that has since been retracted. That freeze
+# was the EFDesc offsets holding symbol ADDRESSES, which sent gcSetupCustomDObjs
+# walking garbage and allocating a 136-byte DObj per bogus node until syMallocSet
+# gave up; the per-effect cost it was blamed on never existed. The generator
+# already treats all eleven as P1 seams and has packed their scripts and
+# textures (docs/optimization/NDS_PARTICLE_BANKS.generated.json, reach.p1_seams).
+NDS_R2_SOURCE_EFFECTS_PARTICLE ?= 1
+# The six that DO build a DObj tree: damage slash, impact wave, catch swirl and
+# the three random spawn showers. Still 0, and now for a reason that is about
+# pixels rather than heap -- these submit their geometry as source effect DL
+# links, which the battle hardware path does not consume, so routing them trades
+# a visible untextured primitive for nothing on screen. That is the same seam
+# that kept the respawn platform invisible. The generator agrees they are the
+# odd ones out: all six appear in reach.p1_seams_without_bank_scripts, i.e. they
+# own no particle script. Raise this only with a soak whose
+# gNdsTaskmanGeneralHeapFreeMin stays above 25,600 AND a capture showing they
+# draw.
 NDS_R2_SOURCE_EFFECTS_FULL ?= 0
 # Effect-instance pool depth (source EFFECT_ALLOC_NUM is 38). Bounding it bounds
 # the DObj peak, which is what gcGetDObjSetNextAlloc grows out of the general
@@ -1379,7 +1397,22 @@ NDS_R2_SOURCE_EFFECTS_FULL ?= 0
 # burst spawnable. Depth minus four is the concurrent cosmetic-effect budget, so
 # read gNdsEffectPoolFreeMin from a soak before changing it: pinned at 4 means
 # saturated and refusing, well above 4 means the depth is bigger than the game
-# needs. DIAGNOSTIC ONLY, not a shipped default change.
+# needs.
+#
+# Routing the effects to their source makers made this pool LESS pressured, not
+# more, because a source particle effect holds an EFStruct for its particle's
+# lifetime while the DS stand-in it replaced also held a DObj. Measured on the
+# same tree with six times the effect volume, free-min went 4 (saturated and
+# refusing) -> 5 -> 7.
+#
+# STAYS AT TWELVE. Eight was tried on 2026-08-01 to buy heap back for that
+# routing and it bought nothing: EFFECT_ALLOC_NUM is spent through
+# syTaskmanMalloc, which comes out of the taskman ARENA in 4,096-byte steps,
+# not out of gSYTaskmanGeneralHeap, so four fewer entries did not move
+# gNdsTaskmanGeneralHeapFreeMin at all -- the whole measured gain that run was
+# the weapon pool. It did move the free-min straight back to 4, the floor at
+# which non-forced effects start being refused. Cut something that is actually
+# on the heap instead.
 NDS_R2_EFFECT_POOL ?= 12
 # Pull Dream Land's blast zones to a quarter so a passive both-CPU soak produces
 # KOs. Needed because the canonical one-minute match never yields one: measured
@@ -2513,6 +2546,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER $(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR $(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FT_PUBLIC $(NDS_IMPORT_BATTLESHIP_FT_PUBLIC)'; \
+		echo '#define NDS_R2_SOURCE_EFFECTS_PARTICLE $(NDS_R2_SOURCE_EFFECTS_PARTICLE)'; \
 		echo '#define NDS_R2_SOURCE_EFFECTS_FULL $(NDS_R2_SOURCE_EFFECTS_FULL)'; \
 		echo '#define NDS_R2_EFFECT_POOL $(NDS_R2_EFFECT_POOL)'; \
 		echo '#define NDS_R2_KO_STRESS $(NDS_R2_KO_STRESS)'; \

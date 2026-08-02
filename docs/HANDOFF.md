@@ -1,12 +1,14 @@
 # Handoff
 
-Updated: 2026-08-01, `5ed4d8c`. **Boundary green; published battle ROM rebuilt (11,923,456 B) + tick-HUD
-sibling; `smash64ds.nds` untouched (owner: not needed for P1).**
-**KO FREEZE partly fixed — read `docs/BUGS.md` row 1 before touching effects.** EFDesc offsets held
-symbol ADDRESSES not offsets, and `lbRelocGetFileSize` reports `sizeof(Sprite)` for a LOADED file:
-both fixed. Still open — the burst freezes the first KO with a healthy heap, A/B-narrowed to its
-particle call and its unique `LBPARTICLE_MASK_GENLINK(1)`; ships off via
-`NDS_R2_KO_BURST_PARTICLE=0`, the only NO-FREEZE arm. **Retract "a source effect costs ~5 DObjs".**
+Updated: 2026-08-01. **Boundary green; published battle ROM + tick-HUD sibling rebuilt;
+`smash64ds.nds` untouched (owner: not needed for P1).**
+**KO FREEZE FIXED, and it was one macro.** `LBPARTICLE_MASK_GENLINK` was `(link) << 16`; the decode is
+`bank_id >> 3` into a SIXTEEN-entry array, so the burst wrote index 8192. Four more sites were also out
+of bounds — Results confetti at 24576, the battle-score effect at 16384. **The DS particle path also
+never applied the LBTransform**, so transformed particles drew at their script-local origin: one owner
+for Whispy, stray hit VFX, the star-KO sparkle and the confetti. **`ftParamMakeEffect` now dispatches
+the particle-only kinds to their source makers** — 137 scripts started against 11, DObj peak 128 -> 125.
+**Retract "a source effect costs ~5 DObjs" and "a GObj pulls DObjs".**
 **Restart surface only, capped at 200 lines** — durable detail goes to its owning doc (board: queue +
 results; `PERF_LEDGER.md`; `KNOWN_ISSUES.md`; `TASK_STANDING_RULES.md`; `PORTING.md` for root causes).
 
@@ -78,25 +80,20 @@ rather than wrapped** (`n_env.c:4158`/`:4172`). Shapes 4/5/8 call `randFloat*` a
 (`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`), first ever build of that flag, 2026-08-01, NO-FREEZE to Results.
 "Its whole external surface already existed" was half wrong: five declarations plus
 `dFTCommonDataPublicFighterCallFGMs` (`ftcommondata.c` is not compiled here) had to be supplied.
-**It RUNS** (`ActorMakeCount 2`, `CommonCheckCount 36`, seven-minute soak NO-FREEZE) and is **still
-default 0 on a MEASURED margin**: `gNdsTaskmanGeneralHeapFreeMin` is 26,876 without it and 23,544 with,
-so it costs 3,332 B and lands 2,056 under the 25,600 latch. Audio yields to gameplay per the sacrifice
-order. **Five of its seven counters CANNOT fire**: the `#define` seam renames intra-TU references,
+**It RUNS and now SHIPS ON** (`ActorMakeCount 1`, NO-FREEZE to Results): it costs 3,332 B, and the
+weapon pool paid for it. **Five of its seven counters CANNOT fire**: the `#define` seam renames intra-TU references,
 so the actor registers the inner proc and the counter-carrying wrappers are gc'd. Read the source's own
 statics instead; the "wrap a decomp function to count its INTERNAL callers" refutation, hit again.
 
 **VFX — the interpreter is PROVEN CLEAN and the DRAW now WORKS.** Four tick-HUD ROMs differing only in
-the particle flags, one soak each; control and `RUNTIME=1` are indistinguishable. `DRAW=1` with the 32 KB
-atlas put **196 of 566 frames at five or more VBlanks** against 4 while `WORK-H` P95 came back *better*
-than its control — read the histogram, not the P95 alone.
-
-**Attributed, all counted:** atlas resident →
-`ndsRendererHardwareResolveStageSourceFrameTexture` fails ~1 frame in 10 (reject **site 2, 196 times**,
-mask **4096 = TEXIMAGE**) → `PrepareRun` FALSE → owner rejects → 197 rebuilds, each frame generic.
-**FIXED by one generator constant — the sheet is 64x64 = 8,192 B**, every symptom back to control
-(`StagePrepareBuildCount` 2, reuse 2,041, reject site 2 **1**). **The draw costs ~10,100 ticks
-(`MISC` P50) and five extra three-VBlank frames, and nothing else.**
-**8,192 is a measured HARD BOUND, not a budget** (16,384 rejected exactly as 32,768 did).
+the particle flags; control and `RUNTIME=1` are indistinguishable. `DRAW=1` with a 32 KB atlas put
+**196 of 566 frames at five or more VBlanks** against 4 while P95 came back *better* than its control —
+read the histogram, not the P95 alone. Attributed and fixed by one generator constant: a resident atlas
+made `ndsRendererHardwareResolveStageSourceFrameTexture` fail ~1 frame in 10 (site 2, mask 4096
+TEXIMAGE) → `PrepareRun` FALSE → 197 stage rebuilds. **The sheet is 64x64 = 8,192 B, a measured HARD
+BOUND and not a budget** (16,384 rejected exactly as 32,768 did); the draw then costs ~10,100 `MISC`
+P50 ticks and nothing else. **1,343 of 103,322 particles still miss it** now that the source effects
+fire — every id IS packed, so it is unadmitted (texture, frame) PAIRS; see `OPTIMIZATION_IDEAS.md`.
 **Dream Land's bank is packed and drawing (2026-08-01)** — reject ring empty, 3,741 strided draws —
 and landing it broke the common draw twice over (board has the four-soak table). `efParticleInitAll`
 resets `sEFParticleBanksNum`, so `EFCommonID` and `PupupuID` both read **0** and every common particle
@@ -106,8 +103,11 @@ took Dream Land's stride — key on `sEFParticleScriptBanks[slot]`, never a latc
 **Audio: 88 cues.** **Fireball FIXED, and it is a MEMORY fix**: 704-byte `WPStruct` × 32 = 22,528 B for
 a pool whose P1 high-water is **one**, holding `GENERALFREE` at 14,796 under the 25,600
 `ifCommonSetMaxNumGObj` threshold all match — cap latched at 47, four of eleven spawns refused.
-`NDS_R2_WEAPON_POOL = 12` returns **14,080 B** → `SpawnCall 16 / SpawnSuccess 16`, both fail counters 0,
-and that match reached **Sudden Death**, a first. **The arena margin is payable.**
+The pool is **3** now (high-water is one, measured twice), returning 20,416 B against the source's 32.
+**The arena margin is payable, and oversized source pools are where it is paid from.**
+**Do not read `sGCCommonsMaxNum` at end of run to decide whether that cap latched** — it is not sticky
+across the scene change, so the Results-screen sample always says -1. Read
+`gNdsTaskmanGeneralHeapFreeMin` against 25,600 and the spawn-fail counters.
 
 **Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
 freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;

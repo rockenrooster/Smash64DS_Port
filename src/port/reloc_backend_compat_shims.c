@@ -7583,6 +7583,139 @@ static void ndsFTParamGetVisualPosition(GObj *fighter_gobj, s32 joint_id,
     gmCollisionGetFighterPartsWorldPosition(fp->joints[joint_id], pos);
 }
 
+#if NDS_R2_SOURCE_EFFECTS_PARTICLE
+/* Verbatim from decomp/src/ef/efmanager.h, which this TU does not include.
+ * Each is defined by the decomp efmanager.c that src/import/battleship_efmanager.c
+ * compiles, unwrapped -- see ndsFTParamMakeSourceEffect below. */
+extern LBParticle *efManagerDustLightMakeEffect(Vec3f *pos, s32 lr,
+                                                f32 f_index);
+extern LBParticle *efManagerDustHeavyMakeEffect(Vec3f *pos, s32 lr);
+extern LBParticle *efManagerDustHeavyDoubleMakeEffect(Vec3f *pos, s32 lr,
+                                                      f32 f_index);
+extern LBParticle *efManagerDustExpandLargeMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerDustDashMakeEffect(Vec3f *pos, s32 lr, f32 scale);
+extern LBParticle *efManagerSparkleWhiteMultiExplodeMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerFuraSparkleMakeEffect(Vec3f *pos);
+extern LBParticle *efManagerMusicNoteMakeEffect(Vec3f *pos);
+/* These five ALSO have weak stand-in definitions further down this file, which
+ * NDS_R2_SOURCE_EFFECTS_PARTICLE overrides from battleship_efmanager.c. The
+ * attribute has to appear here, ahead of the calls below -- a plain
+ * declaration followed by a weak definition after first use is unspecified
+ * behaviour, and GCC says so. */
+extern __attribute__((weak)) LBParticle *
+efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
+extern __attribute__((weak)) LBParticle *
+efManagerSparkleWhiteMakeEffect(Vec3f *pos);
+extern __attribute__((weak)) LBParticle *
+efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
+extern __attribute__((weak)) LBParticle *
+efManagerFlashMiddleMakeEffect(Vec3f *pos);
+
+/* THE PARTICLE-ONLY HALF OF THE SOURCE DISPATCH (ftparam.c:1892-2112).
+ *
+ * ftParamMakeEffect is the seam every motion-script effect command arrives at
+ * -- ftmain.c:447 for nFTMotionEventEffect, ftmain.c:1139 for the collision
+ * variant -- and it is how a fighter asks for running dust, landing dust,
+ * flashes, sparkles and flame. The port's own switch below answers all of them
+ * with one of seven untextured DS primitives, which is the whole of BUGS.md
+ * "Correct VFX isn't played for various things (running foot dust VFX, ...)".
+ * Mario and Fox request effects from it 178 times across their two motion
+ * files and 106 of those are dust
+ * (scripts/check-battle-playable-attack-effects.ps1).
+ *
+ * The real makers were here the entire time. Every one of them is defined in
+ * the decomp efmanager.c that src/import/battleship_efmanager.c includes, and
+ * unlike the thirty in that file's rename block they were never wrapped, so
+ * they compile with their source bodies and --gc-sections was dropping them
+ * only because nothing called them.
+ *
+ * WHAT IS NOT HERE IS DELIBERATE, for two separate reasons.
+ *
+ * These fall through because their source maker builds a DObj tree whose
+ * geometry goes out as source effect display-list links, which the battle
+ * hardware path does not submit -- routing them would trade a visible
+ * primitive for nothing at all:
+ *   ShockSmall, ImpactWave, DamageFlyOrbs/Sparks/MDust, FireSpark, StarRodSpark
+ * Same seam that kept the respawn platform invisible. Move a kind up here when
+ * that path lands, not before.
+ *
+ * And these fall through because P1 cannot request them, while linking their
+ * maker would still cost .text -- which the taskman arena charges one-for-one
+ * against the general heap, the scarcest thing this change set spends:
+ *   DamageNormal, FlameLR/Random/Static, SparkleWhiteMulti, ChargeSparkle,
+ *   HealSparkles, FlashSmall/Large, Psionic, ThunderAmp
+ * Mario's and Fox's two motion files request seventeen distinct kinds
+ * (scripts/check-battle-playable-attack-effects.ps1) and none of those are
+ * among them; they belong to Ness, Samus, Kirby, Pikachu and Mewtwo. Each is
+ * three lines from ftparam.c when its fighter lands. Adding one back also
+ * needs ftParamGetEffectJointPosition (ftparam.c:1783) for the four that
+ * rotate through attr->effect_joint_ids.
+ *
+ * Position is already resolved by ndsFTParamGetVisualPosition, which is the
+ * source's own scatter / inverse-size / gmCollisionGetFighterPartsWorldPosition
+ * arithmetic, so these cases are the source's right-hand sides verbatim. */
+static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
+                                       void **effect)
+{
+    switch (effect_id)
+    {
+    case nEFKindDustLight:
+        *effect = efManagerDustLightMakeEffect(pos, lr, 1.0F);
+        return TRUE;
+    case nEFKindDustLightRapid:
+        *effect = efManagerDustLightMakeEffect(pos, lr, 2.0F);
+        return TRUE;
+    case nEFKindDustHeavyDouble:
+        *effect = efManagerDustHeavyDoubleMakeEffect(pos, lr, 1.0F);
+        return TRUE;
+    case nEFKindDustHeavyDoubleRapid:
+        *effect = efManagerDustHeavyDoubleMakeEffect(pos, lr, 1.7F);
+        return TRUE;
+    case nEFKindDustHeavy:
+        *effect = efManagerDustHeavyMakeEffect(pos, lr);
+        return TRUE;
+    case nEFKindDustHeavyReverse:
+        *effect = efManagerDustHeavyMakeEffect(pos, -lr);
+        return TRUE;
+    case nEFKindDustExpandLarge:
+        pos->x += ((syUtilsRandFloat() * 160.0F) - 80.0F);
+        pos->y += ((syUtilsRandFloat() * 160.0F) - 80.0F);
+        *effect = efManagerDustExpandLargeMakeEffect(pos);
+        return TRUE;
+    case nEFKindDustExpandSmall:
+        *effect = efManagerDustExpandSmallMakeEffect(pos, 1.0F);
+        return TRUE;
+    case nEFKindDustDashSmall:
+        *effect = efManagerDustDashMakeEffect(pos, lr, 1.0F);
+        return TRUE;
+    case nEFKindDustDashLarge:
+        *effect = efManagerDustDashMakeEffect(pos, lr, 1.5F);
+        return TRUE;
+    case nEFKindSparkleWhite:
+        *effect = efManagerSparkleWhiteMakeEffect(pos);
+        return TRUE;
+    case nEFKindSparkleWhiteMultiExplode:
+        *effect = efManagerSparkleWhiteMultiExplodeMakeEffect(pos);
+        return TRUE;
+    case nEFKindSparkleWhiteScale:
+        *effect = efManagerSparkleWhiteScaleMakeEffect(pos, 1.0F);
+        return TRUE;
+    case nEFKindFuraSparkle:
+        *effect = efManagerFuraSparkleMakeEffect(pos);
+        return TRUE;
+    case nEFKindFlashMiddle:
+        *effect = efManagerFlashMiddleMakeEffect(pos);
+        return TRUE;
+    case nEFKindMusicNote:
+        efManagerMusicNoteMakeEffect(pos);
+        *effect = NULL;
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+#endif /* NDS_R2_SOURCE_EFFECTS_PARTICLE */
+
 void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
                         Vec3f *effect_pos, Vec3f *effect_scatter, s32 lr,
                         sb32 is_scale_pos, u32 arg7)
@@ -7614,6 +7747,17 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
 #endif
     ndsFTParamGetVisualPosition(fighter_gobj, joint_id, effect_pos,
                                 effect_scatter, is_scale_pos, &pos);
+#if NDS_R2_SOURCE_EFFECTS_PARTICLE
+    {
+        void *source_effect = NULL;
+
+        if (ndsFTParamMakeSourceEffect(effect_id, lr, &pos,
+                                       &source_effect) != FALSE)
+        {
+            return source_effect;
+        }
+    }
+#endif
     switch (effect_id)
     {
     case nEFKindDamageNormal:
