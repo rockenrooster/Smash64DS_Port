@@ -480,7 +480,17 @@ static void ndsEFManagerInitVisualTemplates(void)
      * is P2 (KNOWN_ISSUES.md). */
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateReflector],
                           0xe0ffff60u, 0x40b8ff50u);
-    ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateRebirth],
+    /* A DISC, not a ring. BUGS row 3 stayed open through a lifetime fix (8 ->
+     * 390 frames) and a growth fix, and the owner still reported "I don't see
+     * the floating platform" -- because everything about it was alive and
+     * correctly sized and it was drawing an OUTLINE. The chain checks out:
+     * created, alive 390 frames, scale clamped to at least 0.2, template
+     * geometry present. What was left is that a thin ring is nearly invisible
+     * at this scale, and the source's respawn platform is not a ring: it is a
+     * solid translucent disc the fighter stands on. BuildDisc is the same
+     * source-derived approximation the reflector already uses, so this stays a
+     * cheap approximation rather than a new asset. */
+    ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateRebirth],
                           0xffffffffu, 0x90e8ffffu);
     gNdsVisualEffectTemplateBytes =
         sizeof(*sNdsVisualTemplates) * NDS_VISUAL_TEMPLATE_COUNT;

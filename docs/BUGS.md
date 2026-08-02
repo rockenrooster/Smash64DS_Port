@@ -49,8 +49,15 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
 
 -Respawn floating platform isn't visible when respawning after KO.
     Not fixed, I don't see the floating platform.
-    NOT FIXED. Lifetime and growth were corrected and the halo measured alive, so it exists;
-    it may simply be another victim of the matrix bug. Re-test first.
+    **FIXED** (2026-08-02) -- it was drawing an OUTLINE. Not the matrix bug: this is an EFManager
+    visual on the DObj tree path, which loads its matrices properly, so the particle fix does not
+    touch it. Walking the chain instead: created (rebirth_calls 1), alive (390 frames after the
+    earlier lifetime fix), sized (scale is clamped to at least 0.2, so the growth-zero fix could
+    not have shrunk it away), geometry present (the template really is built). Everything was
+    right and it still could not be seen -- because nNDSVisualTemplateRebirth was built with
+    ndsEFManagerBuildRing, and a thin ring at that scale is nearly invisible. The source's respawn
+    platform is a solid translucent disc the fighter stands on. Now built with
+    ndsEFManagerBuildDisc, the same approximation the reflector already uses.
 
 -Stray VFX are getting played across the stage when attacks are landed.
     Hard to tell when Effects don't play at correct locations
