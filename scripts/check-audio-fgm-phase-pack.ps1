@@ -77,8 +77,8 @@ if (([int]$metadata.format_version -ne 4) -or
     # expected whenever a cue's render strategy changes and must never be
     # repinned without one.
     ($metadata.mapping_sha256_lo -ne '0x28f8ec2c') -or
-    # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 on the
-    # owner's ear via FGM_OWNER_VOLUME_TRIM. The previous pin was
+    # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 and then
+    # 96 -> 68 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -5.4 dB total. The previous pin was
     # 81b94d1f3178b6b57d998fb7d01fe1316e20ac46ce22ccb82800c6b02d26cb75, and it
     # is worth knowing that the first attempt at that trim did NOT move this
     # hash -- it edited the metadata dict instead of the `records` entry that
@@ -86,7 +86,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # played 127. An unchanged hash after an intended payload change is the
     # signal that the change did not land.
     ($metadata.pack_sha256 -ne
-        'b56488dcd844274e125cdf61d5f6854a09bc20b054f6b1bae2e80dbbf029d34b')) {
+        'd7f21a83183095676b4d4edfb1de4ea30e69c7435ef579d74eb25f495e75f4ad')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

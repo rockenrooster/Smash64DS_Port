@@ -3623,8 +3623,13 @@ def _fgm_relative_pitch(value: int, current: int) -> int:
 # Applies to ds_volume and ds_initial_volume. A cue that also ships a PACKED
 # ENVELOPE would have its later points override this, so check
 # packed_envelope_count before trusting a trim on one; FGM 11's is 0.
+# 127 -> 96 -> 68 on 2026-08-02. The owner re-tested 96 and reported it still
+# too loud, so this is a second -3 dB rather than a repeat of the first: 96/127
+# is -2.4 dB and 68/96 is another -3.0, for -5.4 dB total against the source.
+# Halving perceived loudness is about -10 dB, so this is a little over half way
+# there and the table takes another pass if it is still wrong.
 FGM_OWNER_VOLUME_TRIM = {
-    11: 96,
+    11: 68,
 }
 
 

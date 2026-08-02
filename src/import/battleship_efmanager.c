@@ -721,6 +721,21 @@ static void ndsEFManagerVisualProcUpdate(GObj *effect_gobj)
             Vec3f pos = { 0.0F, 0.0F, 0.0F };
 
             gmCollisionGetFighterPartsWorldPosition(joint, &pos);
+            /* THE RESPAWN PAD SITS UNDER THE FIGHTER, NOT ON THEM. Read off the
+             * source asset rather than guessed: dEFManagerRebirthHaloEffectDesc
+             * points at llEFCommonEffects3RebirthHaloDObjDesc, reloc file 0x55
+             * offset 0x2AC0, and that is a CHAIN -- node[1] carries a display
+             * list at translate (0, -60, 0) and node[2] a second one at the
+             * origin. The port draws a single template and pinned it to the
+             * joint's own world position, so the pad rendered centred ON the
+             * fighter instead of sixty units beneath their feet. That is the
+             * owner's "I don't see the CORRECT floating platform": it is there
+             * and it is inside them.
+             * Only the pad moves; every other visual keeps the joint position. */
+            if (ep->effect_vars.common.size == nNDSVisualEffectRebirth)
+            {
+                pos.y -= 60.0F;
+            }
             dobj->translate.vec.f = pos;
 #if NDS_TASK39_FX_SHIELD
             if (ep->effect_vars.common.size == nNDSVisualEffectShield)
