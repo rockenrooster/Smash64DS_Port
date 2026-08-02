@@ -12,6 +12,9 @@ These bugs should be fixed for P1 delivery:
   identical trunks and no anchor saying which one is Whispy, so correct dust beside one of them
   reads as coming from nowhere. Stage-geometry work, not effect work. (Walk covered root + one
   level; geometry deeper than that would not have been seen.)
+  Why reading `dl` is sufficient and not the usual wrong-field mistake: DObj's display list is a
+  UNION (objtypes.h:429-438) over dv/dl/dls/multi_list/dl_link/dist_dl/dist_dl_link, all aliasing
+  one pointer. Zero there rules out the dl_link form these stage GObjs would otherwise use.
   Localized for whoever takes it: grpupupu.c:666-667 builds both from relocData descs --
   llGRPupupuMapWhispyEyesTransformKindsDObjDesc/MObjSub and the Mouth pair, declared as file
   offsets in include/reloc_data.h:466-470 (0x0f00/0x10f0/0x13b0/0x1770 in the Dream Land map).
