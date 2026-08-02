@@ -151,6 +151,28 @@ TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
 # one-allocation contract changes; the palette is sixteen bytes and lives in
 # VRAM F/G, which is not the allocator that was refusing.
 QUAD_ATLAS_WIDTH = 128
+# 64, and TRIED AT 128 ON 2026-08-02 AT THE OWNER'S REQUEST -- MEASURED, BROKEN,
+# REVERTED. Do not spend another round on it without reading this.
+#
+# The theory was that 16,384 fails for want of a CONTIGUOUS run rather than
+# capacity (scvsbattle.c:168: 262,144 texture VRAM, 136,192 static, 57,344 for
+# the interface's three atlases), and that the atlas failing closed made the
+# experiment cheap. Both halves of that were right and it still broke, because
+# the failure is not in the atlas -- the atlas UPLOADED FINE.
+# gNdsRendererParticleAtlasFailCount stayed 0 and AtlasBytes read 16,400. What
+# broke is everything that allocates AFTER it:
+#   gNdsRendererBattleStaticTextureViolationCount  0 -> 1
+#   gNdsR2StagePrepareBuildCount                   2 -> 244
+# and the Results scoreboard panel (KOs/Pts/Place, the 1P/2P markers) vanished
+# from the final frame. Taking the largest free run before the interface asks
+# for one is precisely what scvsbattle.c warned about; preparing the atlas last
+# only protects it from FAILING, not from succeeding at the interface's expense.
+#
+# The prize was real and is what makes this tempting: at 128 the sheet admits
+# 35 of 36 textures in 148 frames and gNdsParticleQuadMissCount fell 684 -> 0.
+# Anyone re-trying it needs a plan for the CONTIGUITY, not for the byte count --
+# reserving the atlas block before the interface allocates, or splitting the
+# sheet across two smaller allocations, not simply asking for more.
 QUAD_ATLAS_HEIGHT = 64
 # Admitted before anything else. These are the textures a natural single-CPU
 # Mario-vs-Fox match was OBSERVED drawing, so they must survive admission

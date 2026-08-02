@@ -227,6 +227,13 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # carried shape. Admitted rose again to include 3, 4, 5, 9, 11, 13, 14, 15, 16,
 # 21 and 37; the thirteen still out are long animations (28 is 20 frames, 25 is
 # 15, 17 and 29 are 10) and no packing wins them inside 8,192.
+#
+# 2026-08-02: 128x128 was tried at the owner's request and REVERTED after one
+# measured soak. The atlas itself uploaded (AtlasFailCount 0, AtlasBytes 16,400)
+# and misses fell 684 -> 0, but everything allocating after it broke --
+# ViolationCount 0 -> 1, StagePrepareBuildCount 2 -> 244, and the Results
+# scoreboard panel disappeared. The generator carries the full note. These
+# numbers are a record of what was measured safe, not a preference.
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.atlas_bytes -ne 8192) -or
@@ -355,15 +362,7 @@ foreach ($token in @(
     # and is the number 8,192 is a hard bound on; TEXEL_BYTES is how much of it
     # the packer actually filled.
     '#define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.a5i3.bin"',
-    '#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 128u',
-    '#define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u',
-    '#define NDS_PARTICLE_QUAD_ASSET_BYTES 8208u',
-    '#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 8192u',
-    '#define NDS_PARTICLE_QUAD_PALETTE_OFFSET 8192u',
     '#define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 8u',
-    '#define NDS_PARTICLE_QUAD_TEXEL_BYTES 7744u',
-    '#define NDS_PARTICLE_QUAD_COUNT 23u',
-    '#define NDS_PARTICLE_QUAD_FRAME_COUNT 53u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
     '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x179aea12u',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
@@ -379,6 +378,35 @@ foreach ($token in @(
         throw "Generated particle bank header lost: $token"
     }
 }
+# The quad-sheet geometry is DERIVED from the report, never pinned as literal
+# text. It used to be seven hardcoded `#define ...` strings here, which is the
+# same shape as the two hand-pinned FGM constants that shipped a silent ROM on
+# 2026-08-02: the pin and the artifact are two copies of one fact, and a resize
+# has to be typed into both or the checker guards the stale value. Comparing the
+# header against the generator's own report cannot drift.
+foreach ($pair in @(
+    @{ Name = 'NDS_PARTICLE_QUAD_ATLAS_WIDTH';      Want = $report.quads.atlas_width },
+    @{ Name = 'NDS_PARTICLE_QUAD_ATLAS_HEIGHT';     Want = $report.quads.atlas_height },
+    @{ Name = 'NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES';Want = $report.quads.atlas_bytes },
+    @{ Name = 'NDS_PARTICLE_QUAD_PALETTE_OFFSET';   Want = $report.quads.atlas_bytes },
+    @{ Name = 'NDS_PARTICLE_QUAD_TEXEL_BYTES';      Want = $report.quads.bytes },
+    @{ Name = 'NDS_PARTICLE_QUAD_COUNT';            Want = @($report.quads.admitted).Count },
+    @{ Name = 'NDS_PARTICLE_QUAD_FRAME_COUNT';      Want = $report.quads.frame_count })) {
+    $want = "$([int64]$pair.Want)u"
+    $found = [regex]::Match($header, "#define $($pair.Name)\s+(\S+)")
+    if (-not $found.Success) { throw "Generated particle bank header lost: #define $($pair.Name)" }
+    if ($found.Groups[1].Value -ne $want) {
+        throw ("$($pair.Name) is $($found.Groups[1].Value) but the generator " +
+               "report says $want.")
+    }
+}
+# ASSET_BYTES is texels plus the 8-entry A5I3 palette, so it is derived too.
+$wantAsset = "$(([int64]$report.quads.atlas_bytes) + 16)u"
+$foundAsset = [regex]::Match($header, '#define NDS_PARTICLE_QUAD_ASSET_BYTES\s+(\S+)')
+if ((-not $foundAsset.Success) -or ($foundAsset.Groups[1].Value -ne $wantAsset)) {
+    throw "NDS_PARTICLE_QUAD_ASSET_BYTES is not $wantAsset (texels + 16-byte palette)."
+}
+
 # The texels must not come back into the image under any name. A declaration is
 # how that regression would start.
 foreach ($banned in @('gNdsParticleTextureData', 'gNdsParticlePaletteData')) {
@@ -442,15 +470,18 @@ if (Test-Path -LiteralPath $assetPath) {
     $assetState = 'built'
 }
 
-# 8,192 texels plus the A5I3 sheet's own 8-entry palette. The texel half is the
-# allocation with the measured hard bound; the palette rides behind it in the
-# same file and is uploaded through glColorTableEXT, not through the texture.
+# Texels plus the A5I3 sheet's own 8-entry palette. The texel half is the
+# allocation the VRAM bound applies to; the palette rides behind it in the same
+# file and is uploaded through glColorTableEXT, not through the texture. Derived
+# from the report for the same reason as the header defines above -- this was a
+# literal 8208 and the resize had to be typed into it by hand.
 $quadPath = Join-Path $root 'assets/particles/efcommon_particle_quads.a5i3.bin'
 $quadState = 'not built'
+$quadExpect = ([int64]$report.quads.atlas_bytes) + 16
 if (Test-Path -LiteralPath $quadPath) {
     $quadBytes = (Get-Item -LiteralPath $quadPath).Length
-    if ($quadBytes -ne 8208) {
-        throw "Particle quad atlas is $quadBytes bytes, expected 8208."
+    if ($quadBytes -ne $quadExpect) {
+        throw "Particle quad atlas is $quadBytes bytes, expected $quadExpect."
     }
     $quadState = 'built'
 }

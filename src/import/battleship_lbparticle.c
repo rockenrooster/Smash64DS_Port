@@ -1266,12 +1266,27 @@ void lbParticleDrawTextures(GObj *gobj)
         u32 row;
         u32 col;
 
+        /* gGMCameraMatrix IS ALREADY THE VIEW-PROJECTION. gmcamera.c:1001 is
+         * `guMtxCatF(lookAt, gGCMatrixPerspF, gGMCameraMatrix)`, and the source
+         * then hands that single matrix to the RSP -- the N64 draws the whole
+         * scene with one combined matrix, not a projection/modelview pair.
+         *
+         * Loading gGCMatrixPerspF as the DS projection ON TOP of it applied the
+         * perspective TWICE, which collapsed every particle off screen. That
+         * shipped on 2026-08-02 and broke ALL VFX -- worse than the misplacement
+         * it was fixing, because a misplaced effect can still be play-tested and
+         * an absent one cannot. The tell was already in hand and misread: the
+         * confetti probe proved pieces were SUBMITTED with sane world positions
+         * and growing spread, and submitted is not the same question as visible.
+         * Walk created->alive->sized->IN-CAMERA->submitted, not a prefix of it.
+         *
+         * So the projection is identity and the combined matrix goes in as the
+         * modelview. */
         for (row = 0u; row < 4u; row++)
         {
             for (col = 0u; col < 4u; col++)
             {
-                projection.m[row][col] =
-                    (s32)(gGCMatrixPerspF[row][col] * 4096.0F);
+                projection.m[row][col] = (row == col) ? 4096 : 0;
                 modelview.m[row][col] =
                     (s32)(gGMCameraMatrix[row][col] * 4096.0F);
             }
