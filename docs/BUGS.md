@@ -4,7 +4,14 @@ These bugs should be fixed for P1 delivery:
 
 -Whispy blow VFX not correct and not at correct location.
   Owner: still not right, spawning too far away from Whispy the Tree.
-  MEASURED: both emitters source-exact and match the owner's N64 reference; dust y=100, leaves y=450 z=-696.
+  ROOT CAUSE FOUND, not the effect: WHISPY HAS NO FACE. Both emitters measure source-exact
+  (-715/-205 at y=100, leaves y=450 z=-696, each with the matching rotate.y) and agree with the
+  owner's own N64 capture. But map_gobj[0] (eyes) and map_gobj[1] (mouth) carry dl=0 AND mobj=0
+  across their root and every child/sibling -- built, positioned and animated by grPupupuProcUpdate,
+  with no geometry and nothing for whispy_eyes_texture/whispy_mouth_texture to drive. Three
+  identical trunks and no anchor saying which one is Whispy, so correct dust beside one of them
+  reads as coming from nowhere. Stage-geometry work, not effect work. (Walk covered root + one
+  level; geometry deeper than that would not have been seen.)
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
@@ -13,7 +20,7 @@ These bugs should be fixed for P1 delivery:
   It lived 8 frames against the source's 390; alive at +24 now. Growth zeroed so it holds size.
 
 -Stray VFX are getting played across the stage when attacks are landed.
-  FALSIFIED as written: 17 sparks/match, |x| max 1344, all on stage. Likely the denormal -- unsized particles drew at the transform origin. Recheck.
+  FALSIFIED as written: 17 sparks/match, |x| max 1344, all on stage. A denormal size draws in the RIGHT place, just sub-pixel -- it cannot move a particle, so that is not the cause either. Needs a fresh symptom.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.

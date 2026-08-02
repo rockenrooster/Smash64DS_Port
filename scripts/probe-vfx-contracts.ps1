@@ -139,6 +139,10 @@ try {
         'set $ground_x = 0.0',
         'set $ground_y = 0.0',
         'set $ground_sx = 0.0',
+        'set $eyes_dl = -1',
+        'set $eyes_mobj = -1',
+        'set $mouth_dl = -1',
+        'set $mouth_mobj = -1',
         'set $explode_calls = 0',
         'set $cap_rebirth = 0',
         'set $cap_explode = 0',
@@ -270,6 +274,54 @@ try {
         'set $eyes_x = ((DObj *)gGRCommonStruct.pupupu.map_gobj[0]->obj)->translate.vec.f.x',
         'set $eyes_y = ((DObj *)gGRCommonStruct.pupupu.map_gobj[0]->obj)->translate.vec.f.y',
         'end',
+        # DOES THE DS DRAW WHISPY'S FACE AT ALL? In the owner's N64 capture the
+        # eyes and mouth are the only thing identifying WHICH trunk is Whispy,
+        # and dust appearing beside a faceless trunk would read as coming from
+        # nowhere -- which is a complete explanation of "spawning too far away
+        # from Whispy the Tree" that has nothing to do with the emitter. A DObj
+        # with a NULL display list is built, positioned, walked and invisible.
+        # WALK THE TREE, do not read the root. A DObj root with dl == NULL is
+        # the ordinary shape of a scene-graph node -- the geometry hangs off
+        # ->child and ->sib_next -- so "root dl is 0" proves nothing at all.
+        # eyes_dl counts nodes in the eyes subtree that actually carry a display
+        # list; 0 across the whole walk is the only reading that means no face.
+        'set $eyes_dl = 0',
+        'set $eyes_mobj = 0',
+        # POINTER WALK, NEVER AN INFERIOR CALL. `set $d = gcGetTreeDObjNext($d)`
+        # was tried and the target took SIGILL at 0x0262f594 -- gdb cannot call
+        # a function on this remote without getting the ARM/Thumb entry state
+        # right, and a crashed inferior costs the whole run. Root plus one level
+        # of children and their siblings is enough to answer the question.
+        'set $d = ((DObj *)gGRCommonStruct.pupupu.map_gobj[0]->obj)',
+        'if $d->dl != 0',
+        'set $eyes_dl = $eyes_dl + 1',
+        'end',
+        'set $d = $d->child',
+        'while $d != 0',
+        'if $d->dl != 0',
+        'set $eyes_dl = $eyes_dl + 1',
+        'end',
+        'if $d->mobj != 0',
+        'set $eyes_mobj = $eyes_mobj + 1',
+        'end',
+        'set $d = $d->sib_next',
+        'end',
+        'set $mouth_dl = 0',
+        'set $mouth_mobj = 0',
+        'set $d = ((DObj *)gGRCommonStruct.pupupu.map_gobj[1]->obj)',
+        'if $d->dl != 0',
+        'set $mouth_dl = $mouth_dl + 1',
+        'end',
+        'set $d = $d->child',
+        'while $d != 0',
+        'if $d->dl != 0',
+        'set $mouth_dl = $mouth_dl + 1',
+        'end',
+        'if $d->mobj != 0',
+        'set $mouth_mobj = $mouth_mobj + 1',
+        'end',
+        'set $d = $d->sib_next',
+        'end',
         'if gGCCommonLinks[1] != 0',
         'set $ground_x = ((DObj *)gGCCommonLinks[1]->obj)->translate.vec.f.x',
         'set $ground_y = ((DObj *)gGCCommonLinks[1]->obj)->translate.vec.f.y',
@@ -379,6 +431,7 @@ try {
             'dead_calls=%d dead_x=%f dead_y=%f rebirth_calls=%d explode_calls=%d ' +
             'frame_stops=%d forced=%d dust_frames=%d leaf_frames=%d leaf_x=%f ' +
             'mouth=%f,%f mouth_sx=%f eyes=%f,%f ground=%f,%f ground_sx=%f ' +
+            'eyes_dl=%d eyes_mobj=%d mouth_dl=%d mouth_mobj=%d ' +
             'transforms_used=%u transforms_max=%u structs_max=%u ' +
             'miss=%u emit=%u\n", ' +
             '$whispy_calls, $whispy_lr, ' +
@@ -390,6 +443,7 @@ try {
             '$dust_frames, $leaf_frames, $leaf_x, ' +
             '$mouth_x, $mouth_y, $mouth_sx, $eyes_x, $eyes_y, ' +
             '$ground_x, $ground_y, $ground_sx, ' +
+            '$eyes_dl, $eyes_mobj, $mouth_dl, $mouth_mobj, ' +
             'gLBParticleTransformsUsedNum, gNdsParticleTransformsMax, ' +
             'gNdsParticleStructsMax, ' +
             'gNdsParticleQuadMissCount, gNdsParticleQuadEmitCount'),
