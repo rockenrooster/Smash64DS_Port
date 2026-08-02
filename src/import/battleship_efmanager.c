@@ -551,6 +551,18 @@ static s32 ndsEFManagerVisualLifetime(NDSVisualEffectKind kind)
     case nNDSVisualEffectHitFire:
     case nNDSVisualEffectSparkle:
         return 10;
+    /* BUGS row 3, "Respawn floating platform isn't visible when respawning."
+     * It was visible -- for EIGHT FRAMES. Every kind in this table is a hit
+     * flash that belongs on screen for an eighth of a second, and Rebirth was
+     * falling through to the same default while the source keeps its halo for
+     * FTCOMMON_REBIRTH_HALO_DESPAWN_WAIT (ftcommon.h:14) and spends the first
+     * FTCOMMON_REBIRTH_HALO_LOWER_WAIT of it descending. 390 is that constant.
+     * Measured before the change: gNdsVisualEffectActiveCount was already 0
+     * twenty-four frames after the maker ran, with the Rebirth bit set in
+     * gNdsVisualEffectKindMask -- created, then gone before anyone could see
+     * it. */
+    case nNDSVisualEffectRebirth:
+        return 390;
     default:
         return 8;
     }
@@ -569,6 +581,13 @@ static f32 ndsEFManagerVisualGrowth(NDSVisualEffectKind kind)
         return 0.12F;
     case nNDSVisualEffectSlash:
         return 0.10F;
+    /* Zero, and it is a precondition of the lifetime above rather than a taste
+     * call. Growth is per frame, so the default 0.04 over a hit flash's eight
+     * frames is a 32% swell and over Rebirth's 390 it is a scale of 16 -- the
+     * platform would fill the stage before it despawned. The source halo holds
+     * its size and descends; it never grows. */
+    case nNDSVisualEffectRebirth:
+        return 0.0F;
     default:
         return 0.04F;
     }

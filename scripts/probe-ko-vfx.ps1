@@ -68,7 +68,7 @@ $required = @(
     'gNdsParticleQuadMissCount', 'gNdsParticleQuadEmitCount',
     'gNdsVisualEffectCreateCount', 'gNdsVisualEffectDropCount',
     'gNdsVisualEffectKindMask', 'gMPCollisionGroundData',
-    'ftCommonDeadUpStarProcUpdate'
+    'ftCommonDeadUpStarProcUpdate', 'gGCCommonLinks'
 )
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
@@ -121,6 +121,12 @@ try {
         'set $star_vy = 0.0',
         'set $star_vymax = 0.0',
         'set $star_posy = 0.0',
+        'set $forced_damage = 0',
+        'set $vis_before = -1',
+        'set $vis_dropped = -1',
+        'set $vis_mask = 0',
+        'set $vis_active = -1',
+        'set $vis_after = -1',
         'set $shot_explode = 0',
         'set $shot_star = 0',
         'set $shot_rebirth = 0',
@@ -181,12 +187,30 @@ try {
         'commands',
         'silent',
         'set $rebirth_calls = $rebirth_calls + 1',
+        # READ THE VISUAL COUNTERS HERE, NOT AT THE END. The first run of this
+        # reported visual_created=0 against rebirth_calls=2 and that looked like
+        # the substitute never running -- but the printf happens at
+        # mnVSResultsMakeConfetti, which is INSIDE Results, and the scene change
+        # has already cleared them by then. structs_max read 0 in the same line
+        # for the same reason. This is the non-sticky-counter trap that
+        # sGCCommonsMaxNum is on record for; sampling one frame after the maker
+        # is the only reading that means anything.
+        'set $vis_before = gNdsVisualEffectCreateCount',
+        'set $vis_dropped = gNdsVisualEffectDropCount',
+        'set $vis_mask = gNdsVisualEffectKindMask',
         'if $shot_rebirth == 0',
         'set $shot_rebirth = 1',
         'tbreak ndsBattlePlayableFrameCompleteMarker',
         'ignore $bpnum 23',
         'commands',
         'silent',
+        # AFTER the halo exists, not at the maker's entry. Reading
+        # gNdsVisualEffectActiveCount in the maker's own callback reports the
+        # count BEFORE this halo is constructed, which is how a lifetime change
+        # from 8 to 390 frames produced a bit-identical run and briefly looked
+        # like it had done nothing.
+        'set $vis_active = gNdsVisualEffectActiveCount',
+        'set $vis_after = gNdsVisualEffectCreateCount',
         (New-CaptureCommand 'rebirth-halo-probe' $emulator.Id),
         'continue',
         'end',
@@ -241,20 +265,47 @@ try {
         'continue',
         'end',
 
+        # FORCE AN EARLY KO. Two level-3 CPUs starting from 0% reach their
+        # first KO near the end of the minute, and the one this probe caught
+        # landed ON the GAME SET frame -- so the match ended before anything
+        # respawned and rebirth_calls and explode_calls both stayed 0. Those
+        # are BUGS rows 3 and 9 and neither is observable without an EARLY
+        # death. Damage is the honest lever: it changes when the KO happens and
+        # nothing about what the KO path then does, which is the same argument
+        # as forcing Whispy's wind countdown.
+        'tbreak ndsBattlePlayableFrameCompleteMarker',
+        'ignore $bpnum 240',
+        'continue',
+        # Writing fp->damage was tried first and the run came back BIT-IDENTICAL:
+        # fighter.h:3309's `damage` is the port-only extension field, not what
+        # ftCommonDeadCheckBounds reads. The bound test is on POSITION
+        # (ftcommondead.c:629, `pos->x < map_bound_left`), so moving the fighter
+        # past the side blast zone is both simpler and unambiguous -- and it
+        # picks the SIDE KO deliberately, because that is the one that runs
+        # efManagerDeadExplodeMakeEffect. The upward bound at :635 gives the
+        # star KO, which is already covered.
+        'set $g = gGCCommonLinks[3]',
+        'if $g != 0',
+        'set ((DObj *)$g->obj)->translate.vec.f.x = gMPCollisionGroundData->map_bound_left - 500',
+        'set $forced_damage = 1',
+        'end',
+
         # The run ends where the match does, not on a frame count.
         'tbreak mnVSResultsMakeConfetti',
         'continue',
 
         ('printf "KOVFX explode_calls=%d star_calls=%d rebirth_calls=%d ' +
             'star=%f,%f cam_top=%d map_top=%d ' +
-            'star_updates=%d phase=%d wait=%d vy=%f vymax=%f posy=%f ' +
+            'star_updates=%d phase=%d wait=%d vy=%f vymax=%f posy=%f forced_damage=%d ' +
             'spark_calls=%d spark_absmax=%f ' +
-            'visual_created=%u visual_dropped=%u visual_kindmask=%#x ' +
+            'at_rebirth_created=%d dropped=%d mask=%#x active_after=%d created_after=%d ' +
+            'at_results_created=%u dropped=%u kindmask=%#x ' +
             'miss=%u emit=%u structs_max=%u\n", ' +
             '$explode_calls, $star_calls, $rebirth_calls, ' +
             '$star_x, $star_y, $cam_top, $map_top, ' +
-            '$star_updates, $star_phase, $star_wait, $star_vy, $star_vymax, $star_posy, ' +
+            '$star_updates, $star_phase, $star_wait, $star_vy, $star_vymax, $star_posy, $forced_damage, ' +
             '$spark_calls, $spark_absmax, ' +
+            '$vis_before, $vis_dropped, $vis_mask, $vis_active, $vis_after, ' +
             'gNdsVisualEffectCreateCount, gNdsVisualEffectDropCount, ' +
             'gNdsVisualEffectKindMask, ' +
             'gNdsParticleQuadMissCount, gNdsParticleQuadEmitCount, ' +

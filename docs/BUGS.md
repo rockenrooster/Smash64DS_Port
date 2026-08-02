@@ -9,8 +9,8 @@ These bugs should be fixed for P1 delivery:
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
 
--Respawn floating platform isn't visible when respawning.
-  LOCALIZED: submit path is live; the DS substitutes a RING on the fighter's TopN joint, not a lowering platform.
+-**FIXED** (2026-08-02) Respawn floating platform isn't visible when respawning.
+  It lived 8 frames against the source's 390; alive at +24 now. Growth zeroed so it holds size.
 
 -Stray VFX are getting played across the stage when attacks are landed.
   MEASURED: 17 hit sparks over a full match, |x| max 1344 -- all on the stage. Not the spark position.
