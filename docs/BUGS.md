@@ -16,16 +16,20 @@ These bugs should be fixed for P1 delivery:
   layer0, whispy_eyes, whispy_mouth, flowers_back, layer1, layer2, flowers_front, layer3. Segments
   1 and 2 ARE the face; they are indexed, not named, in the generated .inc, which is why grepping
   it for "whispy" finds nothing. The map_gobj GObjs exist to carry animation state for that path.
-  AND THE RETRACTION IS ITSELF ONLY HALF RIGHT, so treat the face as UNKNOWN in both directions.
-  reloc_backend_renderer_dl.c:6712-6713 maps native segments 1 and 2 to map_gobj[0] and [1] -- the
-  same GObjs whose DObj trees measure empty -- while the submit path (:7472-7479) indexes generated
-  native data rather than walking their display lists. So the empty tree is consistent BOTH with
-  "the native stage supplies the face" and with "nothing supplies it", and I argued both sides
-  within an hour. Two reversals is enough: stop reasoning about it and LOOK.
-  Cheapest decisive step, in order: (1) owner glances at Dream Land and says whether Whispy has
-  eyes and a mouth -- two seconds, settles it; (2) if not, count native segment 1/2 submissions in
-  ndsRendererAdapterNativeStage* at runtime. Do NOT extend the legacy-DObj archaeology; it has
-  produced two confident wrong answers already.
+  SETTLED: THE FACE IS PRESENT. The map_gobj reading was of the wrong tree entirely.
+  ndsRendererAdapterPrepareNativeStageMaterials (reloc_backend_renderer_dl.c:7417) resolves the
+  stage's four materials from binding_dobjs[{20,22,31,32}] in the LAYER-0 tree -- nothing to do
+  with map_gobj -- and bindings 20 and 22 are Whispy's eyes and mouth (generator material_snapshots
+  slots 0 and 1). It returns FALSE on any NULL mobj or any flag word != its expected 0x0001, and
+  that FALSE "rejects the whole native stage owner and drops the stage onto the generic path"
+  (:7445). Measured: gNdsR2StagePrepareBuildCount 2, gNdsR2StagePrepareReuseCount 2041 -- it
+  succeeded and stayed valid for the whole match, so both face materials resolved every frame, and
+  CommitNativeStageMaterials (:7471-7490) writes their texture_id_curr/next from
+  whispy_eyes_texture/whispy_mouth_texture on segments 1 and 2.
+  So NO DEFECT SURVIVES on this row: emitters source-exact, face present and animating. Same
+  standing as the stray-VFX row -- the report does not reproduce against any available
+  measurement, and the ROM has changed a great deal since it was written (the denormal fix alone
+  made a large fraction of particles visible for the first time). Needs re-observation.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
