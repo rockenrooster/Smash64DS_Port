@@ -25,14 +25,15 @@ These bugs should be fixed for P1 delivery:
   It lived 8 frames against the source's 390; alive at +24 now. Growth zeroed so it holds size.
 
 -Stray VFX are getting played across the stage when attacks are landed.
-  OPEN, one untested mechanism left. spark_absmax 1344 measures the position handed to the MAKER
-  and came back clean, but ndsParticleTransformForDraw falls back to raw pc->pos when pc->xf is
-  NULL, and for a script-made particle that is the script-local origin -- i.e. stage centre. An
-  effect spawned at a fighter and DRAWN at world zero is the reported symptom, and no measurement
-  of the maker's argument can see it. Sampling slot 0 for xf==NULL returned count 0 because the
-  sample sits 6 frames after a KO burst, which is not when hit sparks are live; that is a timing
-  miss, not evidence. Next: count xf==NULL inside lbParticleDrawTextures itself.
-  (A denormal size cannot cause this -- it draws in the right place, just sub-pixel.)
+  NO SURVIVING MECHANISM. Measured: 17 sparks/match, |x| max 1344, all on stage. Two candidate
+  causes raised and both eliminated: (1) a denormal size draws in the RIGHT place, just sub-pixel,
+  so it explains invisibility and never displacement; (2) the xf==NULL fallback to raw pc->pos is
+  CORRECT -- the makers that take it (FlashMiddle, FuraSparkle, via lbParticleMakeCommon) assign
+  pc->pos in world coordinates and attach no transform on purpose, which is exactly what that
+  branch expects. Every maker that uses script-local coordinates does attach a transform and set
+  xf->translate; that was checked across all twelve routed kinds.
+  Most likely the report predates the denormal fix, which had many effects appearing and vanishing
+  at once. Needs re-observation on the current ROM.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.
