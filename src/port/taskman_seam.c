@@ -4817,7 +4817,38 @@ static void ndsBattlePlayablePresentFrame(void)
      * `used=0` at the freeze, so nothing accumulates in it (the fighter contract
      * owns its only consumer and rewinds it itself), and rewinding an arena the
      * port may hold pointers into would be new risk bought for no measured
-     * need. Add it only if a capture ever shows taskman.c:344 instead of :338. */
+     * need. Add it only if a capture ever shows taskman.c:344 instead of :338.
+     *
+     * 2026-08-02: A CAPTURE SHOWED taskman.c:344, so the reset is here now, and
+     * this is the owner's "hitting Fox's shield freezes match sometimes".
+     *
+     * `used=0` was true of the frame that was sampled and false of the frame the
+     * freeze lands on -- the graphics heap leaks SIXTEEN BYTES A FRAME on this
+     * path, and the two captures prove it is a leak rather than a high-water:
+     *
+     *   graphics heap 53,248 -> spun at used=53,264 after 3,328 presented frames
+     *   graphics heap 81,920 -> spun at used=81,936 after 5,120 presented frames
+     *
+     * Same +16 overshoot at both sizes, and 81,920/53,248 = 5,120/3,328 to three
+     * decimal places. 53,248/3,328 is exactly 16 bytes per frame, which is one
+     * `Light` (ftdisplaylights.c:26 bumps the heap by one and nothing gives it
+     * back) or one `Vtx` -- and `scVSBattleFuncLights` runs once per frame.
+     * Growing the heap only buys frames, which is why the re-budget in
+     * battleship_scvsbattle.c moved the freeze without removing it.
+     *
+     * The other frame loop in this file has always done it (see the
+     * `syTaskmanResetGraphicsHeap` beside `func_80004AB0` in the fast-verify
+     * block), citing taskman.c:1093-1100 -- "resets these arenas before every
+     * source scene draw", both arenas, which is the source contract this path
+     * was honouring by half. `ndsFighterDisplayContractCapture` saving and
+     * restoring the pointer around the fighter draw is what made the leak
+     * invisible: it hides the fighter's own consumption, so what accumulates is
+     * everything else, at a rate small enough to take minutes.
+     *
+     * The "pointers into the arena" risk is why the reset goes HERE, at the top
+     * of the present, in the same position and order the other loop uses: the
+     * arena's contents are per-frame display data that has already been consumed
+     * by the previous frame's flush. */
 #if NDS_R2_COLLISION_L7_ORACLE
     /* R2-07 L7 step one, sampled HERE and not later: the invert latches the
      * oracle keys on are set by this frame's hit detection and knocked down by
@@ -4826,6 +4857,7 @@ static void ndsBattlePlayablePresentFrame(void)
      * still readable. Read-only; off in both shipped blocks. */
     ndsR2CollisionOracleSampleFrame();
 #endif
+    syTaskmanResetGraphicsHeap();
     func_80004AB0();
     ndsPlatformBeginFrame();
     ndsSObjPreviewBeginFrame();

@@ -3769,38 +3769,76 @@ static void ndsRelocSwapS16Pair(s16 *a, s16 *b)
     *b = tmp;
 }
 
-static void ndsRelocNormalizeS16Range(s16 *min_value, s16 *max_value)
+/* Undo the loader's word swap over a run of s16 that carries no other type.
+ *
+ * ndsRelocApplyWordByteSwap byte-swaps every 32-bit word of a reloc file. That
+ * is right for u32, f32 and pointers, and it EXCHANGES THE POSITIONS of any two
+ * s16 sharing a word. Every other struct in this file undoes that with explicit
+ * ndsRelocSwapS16Pair calls (Sprite, Bitmap, MObjSub); this is the same
+ * operation expressed over a byte range, because MPGroundData's second s16 run
+ * is long and its pairing is not obvious from the field names. */
+static void ndsRelocSwapWordS16Halves(void *base, u32 begin, u32 end)
 {
-    if ((min_value != NULL) &&
-        (max_value != NULL) &&
-        (*min_value > *max_value))
+    u32 offset;
+
+    for (offset = begin; offset < end; offset += (u32)sizeof(u32))
     {
-        ndsRelocSwapS16Pair(min_value, max_value);
+        s16 *pair = (s16 *)((u8 *)base + offset);
+
+        ndsRelocSwapS16Pair(&pair[0], &pair[1]);
     }
 }
 
+/* MPGroundData has TWO s16-only runs, both 4-aligned: the camera/map bounds
+ * ahead of bgm_id, and everything from alt_warning to the end of the struct.
+ *
+ * This used to be a `if (min > max) swap` heuristic over eight named pairs, and
+ * it was wrong twice over.
+ *
+ * It never touched `alt_warning` at all -- alt_warning is the FIRST s16 of the
+ * second run, so the word swap left it holding camera_bound_team_top. Dream
+ * Land therefore read +3500 where 255_GRPupupuMap.c:59 says -2900. FGM 153
+ * AltitudeWarn fires on `pos_prev.y >= alt_warning && topn.y < alt_warning`
+ * (decomp ftmain.c:1817) -- the bottom blast-zone whistle -- so at +3500 it
+ * played every time a fighter fell back down through y = 3500, which is exactly
+ * what a big upward knockback does. That is the owner's "FGM 153 AltitudeWarn
+ * plays at wrong trigger", and the trigger was never the defect: the threshold
+ * was.
+ *
+ * And because alt_warning shifts the rest of the run by one s16, the team
+ * fields do not pair top-with-bottom inside a word -- alt_warning pairs with
+ * team_top, team_bottom with team_right, team_left with map_team_top, and so
+ * on. The heuristic was comparing fields that never shared a word, so every
+ * team bound was left scrambled too.
+ *
+ * Swapping the halves of each word is the exact inverse and needs no heuristic.
+ * The static asserts pin the two runs; if a field is ever added between them
+ * the build fails rather than silently reverting to the old symptom. */
 static void ndsRelocNormalizeGroundDataBounds(MPGroundData *ground_data)
 {
+    _Static_assert((offsetof(MPGroundData, camera_bound_top) %
+                    sizeof(u32)) == 0u,
+                   "MPGroundData bounds run must start on a word");
+    _Static_assert((offsetof(MPGroundData, bgm_id) -
+                    offsetof(MPGroundData, camera_bound_top)) == 16u,
+                   "MPGroundData bounds run must be eight s16");
+    _Static_assert((offsetof(MPGroundData, alt_warning) %
+                    sizeof(u32)) == 0u,
+                   "MPGroundData alt_warning run must start on a word");
+    _Static_assert((sizeof(MPGroundData) -
+                    offsetof(MPGroundData, alt_warning)) == 32u,
+                   "MPGroundData alt_warning run must reach the struct end");
+
     if (ground_data == NULL)
     {
         return;
     }
-    ndsRelocNormalizeS16Range(&ground_data->camera_bound_bottom,
-                              &ground_data->camera_bound_top);
-    ndsRelocNormalizeS16Range(&ground_data->camera_bound_left,
-                              &ground_data->camera_bound_right);
-    ndsRelocNormalizeS16Range(&ground_data->map_bound_bottom,
-                              &ground_data->map_bound_top);
-    ndsRelocNormalizeS16Range(&ground_data->map_bound_left,
-                              &ground_data->map_bound_right);
-    ndsRelocNormalizeS16Range(&ground_data->camera_bound_team_bottom,
-                              &ground_data->camera_bound_team_top);
-    ndsRelocNormalizeS16Range(&ground_data->camera_bound_team_left,
-                              &ground_data->camera_bound_team_right);
-    ndsRelocNormalizeS16Range(&ground_data->map_bound_team_bottom,
-                              &ground_data->map_bound_team_top);
-    ndsRelocNormalizeS16Range(&ground_data->map_bound_team_left,
-                              &ground_data->map_bound_team_right);
+    ndsRelocSwapWordS16Halves(ground_data,
+                              (u32)offsetof(MPGroundData, camera_bound_top),
+                              (u32)offsetof(MPGroundData, bgm_id));
+    ndsRelocSwapWordS16Halves(ground_data,
+                              (u32)offsetof(MPGroundData, alt_warning),
+                              (u32)sizeof(MPGroundData));
 }
 
 static void ndsRelocNormalizeGroundMapHeader(NDSRelocLoadedFile *loaded,
@@ -5992,6 +6030,13 @@ volatile u32 gNdsR2AnimCacheArenaReservedBytes;
 volatile u32 gNdsR2AnimCacheArenaReserveCount;
 volatile u32 gNdsR2AnimCacheArenaReserveFailCount;
 volatile u32 gNdsR2AnimCacheArenaInvalidations;
+/* WHY the last overflow overflowed. Overflows 126 beside UsedBytes 3,728 and
+ * ReservedBytes 92,160 is not self-consistent -- a 92 KiB arena holding 3.7 KiB
+ * cannot refuse an animation of a few KiB -- and on 2026-08-02 that ambiguity
+ * cost a reading. These two make the arithmetic checkable from the soak: the
+ * request that was refused, and the arena's own cursor at that instant. */
+volatile u32 gNdsR2AnimCacheArenaOverflowLastSize;
+volatile u32 gNdsR2AnimCacheArenaOverflowLastUsed;
 
 /* Take the arena from the heap it is protecting, once, and only out of what is
  * genuinely spare.
@@ -6135,6 +6180,8 @@ static void *ndsR2AnimCacheArenaAlloc(u32 size)
     if (ndsR2AnimCacheArenaEnsure() == FALSE)
     {
         gNdsR2AnimCacheArenaOverflows++;
+        gNdsR2AnimCacheArenaOverflowLastSize = size;
+        gNdsR2AnimCacheArenaOverflowLastUsed = sNdsR2AnimCacheArenaUsed;
         return NULL;
     }
     aligned = (sNdsR2AnimCacheArenaUsed + 15u) & ~15u;
@@ -6142,6 +6189,8 @@ static void *ndsR2AnimCacheArenaAlloc(u32 size)
         (size > (sNdsR2AnimCacheArenaBytes - aligned)))
     {
         gNdsR2AnimCacheArenaOverflows++;
+        gNdsR2AnimCacheArenaOverflowLastSize = size;
+        gNdsR2AnimCacheArenaOverflowLastUsed = sNdsR2AnimCacheArenaUsed;
         return NULL;
     }
     sNdsR2AnimCacheArenaUsed = aligned + size;

@@ -44,7 +44,6 @@
       25,
       27,
       29,
-      31,
       33,
       34,
       37,
@@ -65,7 +64,7 @@
         "width": 16
       },
       {
-        "bytes": 512,
+        "bytes": 256,
         "frames": 3,
         "height": 16,
         "texture": 2,
@@ -86,7 +85,7 @@
         "width": 16
       },
       {
-        "bytes": 512,
+        "bytes": 256,
         "frames": 3,
         "height": 16,
         "texture": 5,
@@ -100,7 +99,7 @@
         "width": 8
       },
       {
-        "bytes": 128,
+        "bytes": 64,
         "frames": 3,
         "height": 8,
         "texture": 10,
@@ -114,42 +113,42 @@
         "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 64,
         "frames": 2,
         "height": 8,
         "texture": 13,
         "width": 8
       },
       {
-        "bytes": 512,
+        "bytes": 256,
         "frames": 3,
         "height": 16,
         "texture": 14,
         "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 8,
-        "height": 8,
+        "height": 16,
         "texture": 15,
-        "width": 8
+        "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 7,
-        "height": 8,
+        "height": 16,
         "texture": 16,
-        "width": 8
+        "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 10,
-        "height": 8,
+        "height": 16,
         "texture": 17,
-        "width": 8
+        "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 64,
         "frames": 3,
         "height": 8,
         "texture": 18,
@@ -163,7 +162,7 @@
         "width": 8
       },
       {
-        "bytes": 128,
+        "bytes": 64,
         "frames": 3,
         "height": 8,
         "texture": 20,
@@ -177,7 +176,7 @@
         "width": 8
       },
       {
-        "bytes": 512,
+        "bytes": 256,
         "frames": 2,
         "height": 16,
         "texture": 22,
@@ -191,11 +190,11 @@
         "width": 8
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 15,
-        "height": 8,
+        "height": 16,
         "texture": 25,
-        "width": 8
+        "width": 16
       },
       {
         "bytes": 128,
@@ -205,32 +204,25 @@
         "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 10,
-        "height": 8,
-        "texture": 29,
-        "width": 8
-      },
-      {
-        "bytes": 512,
-        "frames": 3,
         "height": 16,
-        "texture": 31,
+        "texture": 29,
         "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 9,
-        "height": 8,
+        "height": 16,
         "texture": 33,
-        "width": 8
+        "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 8,
-        "height": 8,
+        "height": 16,
         "texture": 34,
-        "width": 8
+        "width": 16
       },
       {
         "bytes": 256,
@@ -240,32 +232,32 @@
         "width": 16
       },
       {
-        "bytes": 512,
+        "bytes": 256,
         "frames": 3,
         "height": 16,
         "texture": 38,
         "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 9,
-        "height": 8,
+        "height": 16,
         "texture": 40,
-        "width": 8
+        "width": 16
       },
       {
-        "bytes": 512,
+        "bytes": 256,
         "frames": 3,
         "height": 16,
         "texture": 41,
         "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 9,
-        "height": 8,
+        "height": 16,
         "texture": 45,
-        "width": 8
+        "width": 16
       },
       {
         "bytes": 256,
@@ -282,7 +274,7 @@
         "width": 16
       },
       {
-        "bytes": 512,
+        "bytes": 256,
         "frames": 4,
         "height": 16,
         "texture": 66,
@@ -293,32 +285,39 @@
     "atlas_height": 64,
     "atlas_width": 128,
     "budget_bytes": 8192,
-    "bytes": 8000,
+    "bytes": 6592,
     "excluded": [
       {
-        "bytes": 128,
+        "bytes": 256,
+        "frames": 3,
+        "height": 16,
+        "texture": 31,
+        "width": 16
+      },
+      {
+        "bytes": 256,
         "frames": 8,
-        "height": 8,
+        "height": 16,
         "texture": 35,
-        "width": 8
+        "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 8,
-        "height": 8,
+        "height": 16,
         "texture": 36,
-        "width": 8
+        "width": 16
       },
       {
-        "bytes": 128,
+        "bytes": 256,
         "frames": 20,
-        "height": 8,
+        "height": 16,
         "texture": 28,
-        "width": 8
+        "width": 16
       }
     ],
-    "frame_cap": 2,
-    "frame_count": 54
+    "frame_cap": 1,
+    "frame_count": 32
   },
   "reach": {
     "p1_seams": [

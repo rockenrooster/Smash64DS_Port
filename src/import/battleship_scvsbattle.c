@@ -384,6 +384,57 @@ void scVSBattleFuncUpdate(void)
     }
 }
 
+/* 81,904 RESERVED BYTES THIS PORT WILL NEVER WRITE.
+ *
+ * This is NOT the shield-freeze fix -- that is the missing
+ * syTaskmanResetGraphicsHeap in taskman_seam.c, which has the derivation. This
+ * is the waste the same investigation walked into on the way there, and it is
+ * worth taking on its own.
+ *
+ * Measured at the freeze, twice:
+ *
+ *   DLBUF0   len=61,440  used=16
+ *   DLBUF1   len=20,480  used=0
+ *   DLBUF2/3 len=0
+ *
+ * dSCVSBattleTaskmanSetup is the N64's budget, and those two buffers are sized
+ * for the RSP/RDP display-list pipeline that the DS hardware renderer replaced.
+ * Sixteen bytes of 81,920 are ever written -- the gSPEndDisplayList the reset
+ * path puts in each. DL buffer 0 keeps 16,384 (a thousand times its observed
+ * use), DL buffer 1 keeps 4,096, the graphics heap stays at the source's own
+ * 0xD000, and the remaining 61,440 bytes go back to gSYTaskmanGeneralHeap --
+ * which lifts the free-space low-water (24,404 on 2026-08-02) clear of the
+ * 25,600 threshold ifCommonSetMaxNumGObj latches the GObj cap at, and buys back
+ * the arena margin that has been the stated blocker on the crowd actor and the
+ * shield rim.
+ *
+ * Do NOT reduce a DL buffer to zero. syTaskmanCheckBufferLengths tests
+ * `start + length < head` for all four and the reset writes into each, so a
+ * zero-length buffer hangs at the OTHER `while (TRUE);` on decomp taskman.c:338
+ * instead -- the same freeze wearing a different backtrace. */
+#define NDS_R2_VSBATTLE_DL_BUFFER0_BYTES (sizeof(Gfx) * 2048u)
+#define NDS_R2_VSBATTLE_DL_BUFFER1_BYTES (sizeof(Gfx) * 512u)
+#define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0xD000u
+
+/* Engagement proof: the re-budget must be visible without a debugger, because
+ * "the setup struct says X" and "the scene was built with X" have already
+ * differed once in this campaign. */
+volatile u32 gNdsSCVSBattleRebudgetCount;
+volatile u32 gNdsSCVSBattleRebudgetGraphicsBytes;
+
+static void ndsSCVSBattleRebudgetSceneArena(void)
+{
+    dSCVSBattleTaskmanSetup.scene_setup.dl_buffer0_size =
+        NDS_R2_VSBATTLE_DL_BUFFER0_BYTES;
+    dSCVSBattleTaskmanSetup.scene_setup.dl_buffer1_size =
+        NDS_R2_VSBATTLE_DL_BUFFER1_BYTES;
+    dSCVSBattleTaskmanSetup.scene_setup.graphics_arena_size =
+        NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES;
+    gNdsSCVSBattleRebudgetCount++;
+    gNdsSCVSBattleRebudgetGraphicsBytes =
+        (u32)dSCVSBattleTaskmanSetup.scene_setup.graphics_arena_size;
+}
+
 void scVSBattleStartScene(void)
 {
 #if NDS_DEV_LIVE_INPUT_PREVIEW
@@ -399,6 +450,7 @@ void scVSBattleStartScene(void)
 
     /* The N64 validation overlay is not staged on DS. */
     gSCManagerBackupData.boot = 0;
+    ndsSCVSBattleRebudgetSceneArena();
     ndsBaseSCVSBattleStartScene();
     ndsRendererHardwareDiscardBattleStaticTextures();
 
@@ -436,6 +488,7 @@ void scVSBattleStartScene(void)
 
     syVideoInit(&dSCVSBattleVideoSetup);
 
+    ndsSCVSBattleRebudgetSceneArena();
     setup = ndsSCVSBattleMakeTaskmanSetup();
     scManagerFuncUpdate(&setup);
 #endif

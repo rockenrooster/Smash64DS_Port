@@ -22382,3 +22382,249 @@ evaluated every frame from `ifCommonBattleUpdateInterfaceAll`. Do not read
 across the scene change, so the Results-screen sample always reads -1. Paid for
 with the two pools this run's own high-water numbers had made oversized —
 weapons 6 -> 3 against a peak of one, effects 12 -> 8 against a peak of five.
+
+## 2026-08-02 — The shield freeze is the GRAPHICS heap, and 81,904 unused bytes were sitting next to it
+
+Two months of "random freezes" were root-caused in July as heap exhaustion in
+`syMallocSet`'s `while (TRUE);`, and that fix was real. The owner's
+*"hitting Fox's shield freezes match sometimes"* survived it, and this is why:
+it was never that spin.
+
+A 7-minute both-CPU soak caught it. The guest parks at decomp
+`sys/taskman.c:344` -- `syTaskmanCheckBufferLengths`, the **graphics** heap's
+give-up, reached through `gmCameraDefaultProcDisplay -> syTaskmanUpdateDLBuffers`
+on an ordinary presented frame. The counters name it to the byte:
+
+```text
+GFXHEAP  start=0x22eb168 ptr=0x22f8178 end=0x22f8168   used 53,264 of 53,248
+DLBUF0   len=61,440  used=16
+DLBUF1   len=20,480  used=0
+DLBUF2/3 len=0
+MALLOCOVF=0
+```
+
+**Sixteen bytes over, beside 81,904 bytes of display-list buffer this port will
+never write.** `dSCVSBattleTaskmanSetup` is the N64's budget: `0xD000` of
+graphics heap against DL buffers sized for the RSP/RDP pipeline the DS hardware
+renderer replaced. Meanwhile the port draws MORE per frame than the N64 did in
+this scene -- graduating the source effect makers on 2026-08-01 took particle
+scripts 11 -> 137 and root spawns 43 -> 251, and every drawn DObj costs this heap
+a matrix through `syMatrixAdvanceW`.
+
+It reads as "sometimes" because it is a per-frame HIGH-WATER, not a leak. A
+shield hit spawns a burst of effects inside one frame; whether that frame crosses
+the line depends on what else is live. Nothing accumulates -- which is exactly
+why every heap-exhaustion fix missed it and why `MALLOCOVF` is 0 at the freeze.
+
+Fixed in `battleship_scvsbattle.c` by re-budgeting the scene arena before the
+setup struct is consumed: DL buffer 0 keeps 16,384 (a thousand times its observed
+use), DL buffer 1 keeps 4,096, the graphics heap takes `0x14000`, and the
+remaining 32,768 returns to `gSYTaskmanGeneralHeap` -- which also lifts the
+free-space low-water off the 25,600 threshold `ifCommonSetMaxNumGObj` latches the
+GObj cap at. The bytes were already reserved, so this costs nothing.
+
+**Do not reduce a DL buffer to zero.** `syTaskmanCheckBufferLengths` tests
+`start + length < head` for all four and the reset path writes a
+`gSPEndDisplayList` into each, so a zero-length buffer hangs at the OTHER
+`while (TRUE);` on line 338 -- the same freeze wearing a different backtrace.
+
+**Durable lessons.** *An N64 scene budget is a claim about the N64's per-frame
+draw population.* Every port that graduates more content into a frame inherits a
+ceiling nobody re-derived. And *"the allocator" is four different bugs*: the soak
+now prints `GFXHEAP` beside `MALLOCOVF` and `DLBUF0..3` precisely so the next one
+is classified from the capture instead of assumed from the last one.
+
+## 2026-08-02 — FGM 153 AltitudeWarn: the trigger was right, the threshold was scrambled
+
+The owner reported the altitude warning "plays at wrong trigger". It has exactly
+one trigger, `ftmain.c:1817`:
+
+```c
+if ((fp->coll_data.pos_prev.y >= gMPCollisionGroundData->alt_warning) &&
+    (topn_translate->y < gMPCollisionGroundData->alt_warning) && ...)
+    func_800269C0_275C0(nSYAudioFGMAltitudeWarn);
+```
+
+-- a downward crossing of the bottom blast-zone warning line, which Dream Land
+puts at **-2900** (`255_GRPupupuMap.c:59`). The port read **+3500**, so the cue
+fired every time a fighter fell back down through y = 3500, which is what a big
+upward knockback does.
+
+`ndsRelocApplyWordByteSwap` byte-swaps every 32-bit word of a reloc file. That is
+right for u32/f32/pointers and EXCHANGES THE POSITIONS of any two `s16` sharing a
+word. Every other struct in `reloc_backend_assets.c` undoes that with explicit
+`ndsRelocSwapS16Pair` calls; `MPGroundData` used an `if (min > max) swap`
+heuristic instead, and it was wrong twice over. It never touched `alt_warning` at
+all -- and because `alt_warning` shifts the rest of the run by one `s16`, the
+team fields do not pair top-with-bottom inside a word either
+(`alt_warning`/`team_top`, `team_bottom`/`team_right`, ...), so the heuristic was
+comparing fields that never shared a word. Replaced by the exact inverse: swap
+the two halves of every word across the two `s16`-only runs, with
+`_Static_assert`s pinning both.
+
+**Durable lesson: a heuristic that recovers the right answer for the cases
+somebody checked is not a decoder.** The four camera/map bound pairs came out
+correct by luck of sign; the nine fields after `bgm_id` never did, and no counter
+anywhere would have said so.
+
+## 2026-08-02 — Three more from the same day, short
+
+**The particle alpha channel was never submitted.** `lbparticle.c` ramps a
+particle's whole `SYColorRGBA` toward `target_primcolor` over
+`primcolor_target_length` frames; the DS caller packed r/g/b into a BGR555 word
+and the pass ran the entire batch at `POLY_ALPHA(31)`. Every particle therefore
+stayed 100% opaque for its whole life, and the tail that should dissolve sat
+there as a hard flat blob -- the owner's *"emitted objects turn flat at end of
+lifetime"*. DS vertex colour has no alpha, so this goes through `POLYGON_ATTR`,
+which latches at `glBegin`; the pass now starts a new primitive group when the
+alpha bucket moves, counted by `gNdsParticleQuadAlphaBreaks`. `POLY_ALPHA(0)` is
+WIREFRAME on this hardware, not invisible, so a fully transparent particle is
+skipped instead.
+
+**Resolution beats frame rate on the quad sheet.** The 2026-08-02 decimation pass
+got every missing effect drawing and the owner's verdict was "better but looks
+EXTREMELY PIXELATED". Swept on the host inside the unchanged 8,192 bytes: long
+cell 8 at cap 2 admits 33 in 8,000 texels with DustDash/DamageFire/DamageNormal*
+at 8x8; long cell 16 at cap 1 admits 32 in 6,592 texels with all of them at
+**16x16**. No cap from 6 down to 2 seats the live set at 16x16, so it is genuinely
+8x8x2f against 16x16x1f. The generator's self-tuning search now tries resolution
+first and falls back to frames, so nothing is pinned.
+
+**A cue must be allowed to finish its sample.** Five cues in the pack own a
+sample longer than the note that plays them -- four are crowd -- and
+`ndsAudioFgmUpdate` started its release ramp at the note end, 129-309 ms before
+the waveform was done. A non-looping DS voice stops itself, so the release now
+starts at whichever of note-end and audible-end comes last; looping voices are
+still bounded by the note, which is what `handle->loops` is for.
+
+## 2026-08-02 — CORRECTION: the shield freeze is a 16-byte-per-frame LEAK, not a high-water
+
+The entry above called the graphics-heap overflow a per-frame high-water and
+re-budgeted the scene arena for it. **The re-budget moved the freeze and did not
+remove it**, which is the measurement that refutes the story:
+
+```text
+graphics heap 53,248  ->  spun at used=53,264 after 3,328 presented frames
+graphics heap 81,920  ->  spun at used=81,936 after 5,120 presented frames
+```
+
+Same **+16** overshoot at both sizes, and `81,920 / 53,248 = 5,120 / 3,328` to
+three decimal places. `53,248 / 3,328` is exactly **16 bytes per frame**. A
+high-water does not scale with the ceiling; a leak does.
+
+Sixteen bytes is one `Light` -- `ftdisplaylights.c:26` bumps
+`gSYTaskmanGraphicsHeap.ptr` by one and nothing gives it back -- and
+`scVSBattleFuncLights` is the scene's per-frame lighting callback.
+
+**The real defect: the realtime battle present never rewound the graphics heap.**
+`taskman_seam.c` has two frame loops. The fast-verification one calls
+`syTaskmanResetGraphicsHeap()` beside `func_80004AB0()`, citing decomp
+taskman.c:1093-1100 -- *"resets these arenas before every source scene draw"*,
+**both** arenas. `ndsBattlePlayablePresentRealtimeFrame` called only
+`func_80004AB0()`, so it honoured half the contract. Fixed by adding the missing
+call in the same position and order.
+
+Two things kept it hidden for a month. `ndsFighterDisplayContractCapture` saves
+and restores the graphics-heap pointer around each fighter's source draw, so the
+largest consumer rewinds itself and what leaks is only the remainder -- at 16
+bytes a frame that is minutes of play, i.e. "sometimes". And the earlier
+investigation sampled `used=0` on a frame near a *different* freeze
+(taskman.c:338, the DL buffer) and concluded "nothing accumulates in it", then
+wrote the falsifier down: *"Add it only if a capture ever shows taskman.c:344
+instead of :338."* That was the right thing to write, and it is what fired.
+
+**Durable lessons.**
+
+*Scale the ceiling and see whether the failure scales with it.* One capture said
+"16 bytes over"; two captures at different sizes said "16 bytes per frame", and
+only the second is a mechanism. It cost one build and settled a class that three
+earlier fixes had each claimed.
+
+*A contract honoured by half is worse than one honoured by none*, because the
+half that works is what makes the other half look unnecessary. Two frame loops
+that both draw source scenes must call the same reset pair; the fast-verify loop
+had it right and the shipping loop did not.
+
+The scene-arena re-budget stands on its own merits and is now described as what
+it is: 81,904 bytes of RSP/RDP display-list buffer that this port never writes,
+returned to `gSYTaskmanGeneralHeap`. The graphics heap goes back to the source's
+own `0xD000`, because with the reset restored the per-frame use is about 16
+bytes.
+
+## 2026-08-02 — The published configuration was the only one that did not link
+
+`make` with no overrides — the command that builds the ROM users get — failed at
+link with exactly one undefined reference: `ndsRendererSetParticleCamera`, called
+unguarded from `lbParticleDrawTextures` (`battleship_lbparticle.c:1412`) but
+defined at `nds_renderer.c:11225`, nested inside `#if NDS_RENDERER_HW_TRIANGLES`
+opened at line 7121.
+
+The defaults are `NDS_RENDERER_HW_TRIANGLES ?= 0` and
+`NDS_R2_PARTICLE_RUNTIME ?= 1`. Every lab, tickhud, and `-hwtri` target overrides
+the first to `1`; nine `override NDS_RENDERER_HW_TRIANGLES := 1` lines in the
+Makefile say so. So the whole campaign — soaks, A/B runs, checkers, every
+measurement in this document — built the configuration where the symbol exists,
+and the one configuration that ships built nowhere.
+
+Fixed by giving the setter the `#else` twin its two siblings already had:
+`ndsRendererSubmitParticleQuad` and `ndsRendererEndParticleQuads` both had
+software-renderer stubs a few lines apart, and the third member of the same seam
+had simply never been added. The three are now commented as one seam.
+
+**And the link break was hiding a second one from the same commit.** With the
+default configuration linking again, `verify-current.ps1 -Build` ran to the
+runtime stage and failed on `TITLE_LOGO_FIRE`: mask `0x1f` where `0x3f` was
+required, GObj delta 3 where 1 was required. `ndsMNTitleMakeLogoFireBounded`
+(`battleship_mntitle.c:83`) samples `gcGetGObjsActiveNum()` *before*
+`efParticleInitAll()`, so its delta grades the two pool GObjs as well as the one
+`mnTitleMakeLogoFire` actually creates. It read 1 for as long as
+`NDS_R2_PARTICLE_RUNTIME` defaulted to 0 and the allocator was a stub; `9d6f6af2f`
+turned the runtime on and made it 3. The counter moved to after the pools, which
+is where it always belonged — pool *size* does not move this number, the count of
+pools does, so the 2026-08-02 pool regrade is not implicated.
+
+**Durable lesson.** *A configuration nothing builds is a configuration nothing
+verifies*, and "it builds" is not transitive across `#if`. One commit broke a
+link and a runtime invariant together, and the broken link is what kept the
+broken invariant invisible — the failures did not add up, they hid each other. The linker is the only
+sound checker for this — a static scan would be a heuristic — so the guard is
+procedural and now recorded at the point of use in `docs/VERIFYING.md`:
+`verify-current.ps1 -Build` is the only routine command that compiles the
+default, and adding a symbol inside that `#if` obliges its `#else` twin in the
+same edit.
+
+## 2026-08-02 — Two of six KO bursts drew nothing, and the counter that proved it read zero
+
+The owner's "not all vfx are played" for KOs has a measured cause. The first
+both-CPU soak long enough to reach six KOs reported `gNdsKOBurstAttemptCount 6`,
+`gNdsKOBurstCompleteCount 4`, `gNdsKOBurstDropMask 2` — `NDS_KO_BURST_DROP_XF`,
+set at `battleship_efmanager.c:1328` when `lbParticleAddTransformForStruct`
+returns NULL and the burst's particle is ejected.
+
+The same dump said why:
+
+    gNdsParticleStructsMax      26 of 48    1.8x, fine
+    gNdsParticleGeneratorsMax   10 of 10    SATURATED
+    gNdsParticleTransformsMax    6 of  6    SATURATED
+
+Both regrades that produced `48/10/6` were taken from matches that never ran a KO
+burst, so they graded the wrong population and then trimmed to fit it. Generators
+went to 24 (the source's own count, `efparticle.c:31`) and transforms to 24, four
+times the saturation mark; structs stay at 48 because 26 of 48 is a real
+measurement. The cost is `14*92 + 18*192 = 4,744` bytes against a general-heap low
+water of 144,336, which is 118,736 clear of the 25,600 cliff that
+`ifCommonSetMaxNumGObj` enforces.
+
+**Durable lessons.**
+
+*A saturated counter is a floor, not a measurement.* `TransformsMax 6 of 6` does
+not say demand is 6; it says demand is at least 6 and the rest was thrown away.
+Sizing "to the measurement" is only meaningful when the measurement did not hit
+the cap, and both earlier regrades on this pool quietly assumed otherwise. The
+new caps are sized to be *provable* — the next soak must report both Max counters
+strictly below 24, or the demand is still unmeasured.
+
+*Check that the all-clear counter covers the failure.* `gNdsParticleRejectCount`
+read **0** through both saturations, because it counts struct rejects only. A
+zero from the wrong counter is more expensive than no counter at all: it was
+sitting in every soak log next to the saturation it did not cover.

@@ -205,6 +205,20 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
     gSCManagerTransferBattleState.players[0].level = 3;
     gSCManagerTransferBattleState.pl_count = 0;
     gSCManagerTransferBattleState.cp_count = 2;
+    /* AND GIVE THE SOAK A MATCH LONG ENOUGH TO SOAK, which is the owner's own
+     * rule: *"if you want to run a longer soak for any reason, then you also
+     * need to change the match timer to match the soak time"*. Without this the
+     * both-CPU freeze soak spends one minute in gameplay and the rest watching a
+     * Results screen -- so a 7-minute run reads NO-FREEZE having exercised less
+     * play than the 3.5-minute run that caught the original heap-exhaustion
+     * hang. Two runs on 2026-08-02 were wasted exactly that way before the
+     * soak's own NOTE was believed.
+     *
+     * NDS_R2_BOTH_CPU only: this is the stress harness, never the shipped
+     * Boundary. Canonical mode 163 stays the one-minute Time match seeded above
+     * and is untouched by this branch. 7 matches the soak's -MinutesToRun
+     * ceiling, so the longest permitted soak is gameplay end to end. */
+    gSCManagerTransferBattleState.time_limit = 7;
 #endif
 #else
     gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_STOCK;

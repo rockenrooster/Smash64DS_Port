@@ -85,6 +85,10 @@ typedef struct NDSAudioFgmHandle {
     u8 allocated;
     u8 live;
     u8 ever_allocated;
+    /* Whether the hardware voice was started looping. A looping voice never
+     * reaches audible_end_tick, so only the note duration can bound it; a
+     * one-shot must be allowed to reach it. See the release below. */
+    u8 loops;
     /* The level this cue is currently sounding at, so the release below has
      * something to ramp down FROM. Seeded with the pack entry's volume and
      * followed along the envelope, because an envelope point changes it. */
@@ -985,7 +989,38 @@ void ndsAudioFgmUpdate(void)
              * NDS_AUDIO_FGM_RELEASE_MICROSECONDS. */
             if (handle->live != FALSE)
             {
-                s32 into_release = (s32)(now - handle->end_tick);
+                /* ...AND THE RELEASE STARTS AT WHICHEVER END COMES LAST.
+                 *
+                 * The ramp above turned the note-end kill from a click into a
+                 * fade, but it still SILENCED a one-shot that was genuinely
+                 * mid-waveform: for the five cues whose sample outlives their
+                 * note (PublicDamageM/GaspM/Mario/Fox, GroundGrind2 -- four of
+                 * them crowd) the ramp began 129-309 ms before the sample was
+                 * done, so the tail was faded out rather than played. The owner
+                 * still hears that as "some crowd noise audio cues get cut off".
+                 *
+                 * A non-looping DS voice stops itself when the sample runs out,
+                 * so waiting for audible_end_tick costs nothing audible on the
+                 * other 83 cues -- their samples finish first and this reduces
+                 * to the old test -- and on these five it lets the waveform
+                 * finish, which is what the N64 voice does. A LOOPING voice
+                 * never reaches audible_end_tick and must still be bounded by
+                 * the note, hence handle->loops.
+                 *
+                 * The cost is that a long one-shot holds its handle and its
+                 * cache slot a little longer, and the pool is eight deep with a
+                 * measured high-water of eight. gNdsAudioFgmPoolExhaustCount is
+                 * the counter that would show it; it must stay 0. */
+                u32 release_from = handle->end_tick;
+                s32 into_release;
+
+                if ((handle->loops == FALSE) &&
+                    (handle->audible_end_tick != 0u) &&
+                    ((s32)(handle->audible_end_tick - release_from) > 0))
+                {
+                    release_from = handle->audible_end_tick;
+                }
+                into_release = (s32)(now - release_from);
 
                 if (into_release >= (s32)ndsAudioFgmReleaseCpuTicks())
                 {
@@ -1216,6 +1251,7 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
         handle->start_tick +
         (u32)(((u64)BUS_CLOCK * entry->sample_count) / entry->frequency);
     handle->volume = entry->volume;
+    handle->loops = (((entry->flags & 1u) != 0u) ? TRUE : FALSE);
     handle->envelope_count = entry->envelope_count;
     handle->envelope_index = 0u;
     handle->channel = (s8)channel;

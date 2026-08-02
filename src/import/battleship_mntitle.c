@@ -82,11 +82,23 @@ static u32 ndsMNTitleCountSObjs(GObj *gobj)
 
 static void ndsMNTitleMakeLogoFireBounded(void)
 {
-    s32 before_count = gcGetGObjsActiveNum();
+    s32 before_count;
     s32 after_count;
     GObj *logo_fire_gobj;
 
     efParticleInitAll();
+    /* COUNTED AFTER THE POOLS, NOT BEFORE. This delta grades
+     * mnTitleMakeLogoFire -- one GObj -- but efParticleInitAll creates two of
+     * its own (the struct pool and the generator pool), and it used to create
+     * none because NDS_R2_PARTICLE_RUNTIME defaulted to 0 and the allocator was
+     * a stub. Commit 9d6f6af2f turned the runtime on by default and the delta
+     * silently became 3. Nothing caught it because the same commit also pulled
+     * battleship_lbparticle.c into the default build, whose call to
+     * ndsRendererSetParticleCamera did not link there -- so for that whole
+     * window the only configuration that could have failed this check was the
+     * one configuration nobody could build. Pool size does not move this
+     * number; the count of pools does. */
+    before_count = gcGetGObjsActiveNum();
     mnTitleMakeLogoFire();
 
     after_count = gcGetGObjsActiveNum();

@@ -128,6 +128,18 @@ Choose one widest relevant wrapper:
 .\scripts\verify-current.ps1 -Build -DelaySeconds 3 -RunnerSlot 2
 ```
 
+`-Build` here is the **only** routine command that builds the default
+configuration, and the default is the published `smash64ds.nds`:
+`NDS_RENDERER_HW_TRIANGLES ?= 0` with `NDS_R2_PARTICLE_RUNTIME ?= 1`. Every lab,
+tickhud, and `-hwtri` build overrides the first to `1`, so a function defined
+inside `#if NDS_RENDERER_HW_TRIANGLES` and called from an unguarded caller links
+everywhere except the ROM that ships. That is not hypothetical: on 2026-08-02
+`ndsRendererSetParticleCamera` had been in that state, and `make` with no
+overrides failed at link on that one symbol while the whole campaign stayed
+green. A linker is the only sound checker for this, so there is no static guard
+-- run this wrapper before any commit that publishes. When adding a symbol
+inside that `#if`, define its twin in the `#else` in the same edit.
+
 If an unchanged ROM hash already passed the chosen wrapper, do not rerun it.
 Use the one-minute gate only for timer/lifecycle/CPU/memory/M4-residency work or
 release qualification. Use renderer forensic checks only when renderer semantics

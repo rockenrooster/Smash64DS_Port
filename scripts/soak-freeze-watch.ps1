@@ -477,6 +477,41 @@ try {
             'gNdsR2AnimCacheFills',
             'gNdsR2AnimCacheHits',
             'gNdsR2AnimCacheRejects',
+            # Overflows alone CANNOT say why the cache stopped absorbing, and on
+            # 2026-08-02 that cost a wrong reading: Overflows 126 beside
+            # UsedBytes 3728 was read as "the 92,160-byte arena filled", which
+            # 3,728 bytes obviously did not. The arena has three distinct ways to
+            # stop working -- never reserved, reserved then dropped by a scene
+            # rewind, or genuinely full -- and the reject count is identical in
+            # all three. These six separate them, they were already compiled into
+            # the ROM, and only this list was missing them. Reserve/ReserveFail is
+            # the "did it ever engage" pair; GenerationMismatches is the ORDINARY
+            # second-entry drop; RangeFaults is not ordinary and means the block
+            # left the live region without a rewind. ReservedBytes is 0 whenever
+            # the cache is running unbacked, which is the state that sends every
+            # animation load to the shared heap and refills the freeze class.
+            'gNdsR2AnimCacheArenaReserveCount',
+            'gNdsR2AnimCacheArenaReserveFailCount',
+            'gNdsR2AnimCacheArenaReservedBytes',
+            'gNdsR2AnimCacheArenaGenerationMismatches',
+            'gNdsR2AnimCacheArenaRangeFaults',
+            'gNdsR2AnimCacheArenaInvalidations',
+            # The arithmetic behind the last refusal. Overflows beside
+            # ReservedBytes cannot say whether the arena was full or the request
+            # was absurd; these two can.
+            'gNdsR2AnimCacheArenaOverflowLastSize',
+            'gNdsR2AnimCacheArenaOverflowLastUsed',
+            # The VS battle scene arena re-budget (battleship_scvsbattle.c).
+            # 0 here means the graphics heap is back at the N64's 0xD000 and the
+            # shield freeze is armed again; the byte figure is the engagement
+            # proof that the setup struct the scene was actually built from
+            # carried the new value.
+            'gNdsSCVSBattleRebudgetCount',
+            'gNdsSCVSBattleRebudgetGraphicsBytes',
+            # Per-particle alpha engagement. Non-zero means particles are
+            # fading; 0 with particles drawing means every live particle shared
+            # one alpha, which is what the dropped-alpha bug looked like.
+            'gNdsParticleQuadAlphaBreaks',
             # R2-07 R1. The Battle -> Results hand-off is the visible half of the
             # owner's complaint -- ~30 s of dead air with the last battle frame
             # still on screen -- and this soak already reaches Results exactly

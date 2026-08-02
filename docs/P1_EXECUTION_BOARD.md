@@ -1,10 +1,67 @@
 # P1 Execution Board
 
-Updated: 2026-08-01 14:45 Central
+Updated: 2026-08-02 18:00 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
-## DECISION REQUEST — the particle sheet's 8,192-byte bound (2026-08-01)
+## CURRENT BLOCKER — none. Eight `BUGS.md` rows carry a candidate awaiting the owner (2026-08-02)
+
+Candidate identity: branch `codex/r2-runtime2`, lab build `build-r2-bothcpu`
+(`NDS_R2_BOTH_CPU=1`, 7-minute match timer), plus the published pair still to be
+rebuilt from the same tree. Widest relevant verifier is `verify-current.ps1
+-Build`, **not** Boundary: `scVSBattleStartScene` and the reloc asset loader are
+shared startup, so Boundary does not cover the change.
+
+| `BUGS.md` row | owning seam | state |
+|---|---|---|
+| Hitting Fox's shield freezes match | `taskman_seam.c` realtime present | missing `syTaskmanResetGraphicsHeap`; **NO-FREEZE at 11,179 frames** |
+| fgm12 still too harsh | `FGM_OWNER_VOLUME_TRIM` | 127 -> 90, the cue's own `ucd_volume` 180/255 |
+| FGM 153 AltitudeWarn wrong trigger | `reloc_backend_assets.c` word-swap | `alt_warning` +3500 vs source -2900; fixed |
+| VFX extremely pixelated | `generate_nds_particle_banks.py` | 8x8 -> 16x16, same 8,192 B; checker PASS |
+| particles turn flat at end of life | `battleship_lbparticle.c` submit | `primcolor.a` never submitted; fixed |
+| right side compresses VFX | `NDS_R2_PARTICLE_V16_HEADROOM` | flag was 0 with a positive measurement; now 1 |
+| star-KO twinkle misplaced | same rail | same fix, unverified |
+| crowd cues cut off | `nds_audio_fgm.c` release | release now ends at the audible end |
+| rolling dodge too loud | `FGM_OWNER_VOLUME_TRIM` | 68 -> 48, -8.4 dB total; checker PASS |
+| KO VFX: not all played | `NDS_R2_PARTICLE_POOL_*` | 2 of 6 bursts dropped on a saturated transform pool; 6 -> 24 |
+| results confetti coverage | `NDS_R2_CONFETTI_UPDATE_RATE` | pool 112 -> 384, rate 0.42 -> 1.26; 62 -> 244 pieces |
+
+**Queue impact.** Two rows stay open on ONE shared seam — **the battle hardware
+path does not submit source effect DL links** — and closing it closes both:
+the respawn platform (`dEFCommonEffects3_RebirthHalo`, a four-node DObjDesc chain
+reusing the MBallRays lists) and the shield (a textured billboard quad, reloc
+`0xa3`). The shield has a cheaper route that does not need that seam at all: the
+quad sheet now has ~1,600 free texels, which fits a 32x32 cell, so routing it
+through `ndsRendererSubmitParticleQuad` would give it the source's soft rim with
+no new vertex, command or VRAM budget. Untried.
+
+**The default configuration did not link, and had a second failure behind it.**
+`make` with no overrides — the published `smash64ds.nds` — failed on one
+undefined reference, `ndsRendererSetParticleCamera`, which lives inside `#if
+NDS_RENDERER_HW_TRIANGLES` while its caller is unguarded. Every lab, tickhud and
+`-hwtri` target overrides that flag to 1, so nothing in the campaign built the
+shipping configuration. Behind it sat a runtime failure from the same commit
+(`9d6f6af2f`): `TITLE_LOGO_FIRE` graded `efParticleInitAll`'s two pool GObjs as
+part of `mnTitleMakeLogoFire`'s delta. Both fixed; `docs/VERIFYING.md` now
+records that `verify-current.ps1 -Build` is the only routine command that
+compiles the default. **Owner question, not an action:** `smash64ds.nds` builds
+with `NDS_RENDERER_HW_TRIANGLES=0` and all three Task 39 FX flags at 0, so it
+has no particle quads and none of this queue's fixes are visible in it. Every
+row here was reported against, and is fixed in, the `-hwtri` ROM.
+
+**The 2026-08-01 DECISION REQUEST below is ANSWERED and closed.** Its
+recommendation was option 1, accept the 8,192-byte bound and its exclusions; the
+owner's *"looks extremely pixelated and low quality"* rejected that. Answered
+inside the bound instead, by spending the sheet on resolution rather than on
+frames — no allocation change, so neither known failure was re-run.
+
+**61,440 bytes returned to `gSYTaskmanGeneralHeap`**, from DL buffers 0/1 that
+reserve 81,920 and use 16. Measured effect: `gNdsTaskmanGeneralHeapFreeMin`
+**24,404 -> 144,336**, i.e. far clear of the 25,600 `ifCommonSetMaxNumGObj`
+latch — **re-price the crowd actor and the shield rim against the new margin
+before calling either blocked.**
+
+## DECISION REQUEST — the particle sheet's 8,192-byte bound (2026-08-01) — ANSWERED 2026-08-02, see above
 
 Raised per `BUG_FIXING_PROCESS.md` "when the gap is a decision, stop iterating".
 

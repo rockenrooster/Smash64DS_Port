@@ -3629,13 +3629,29 @@ def _fgm_relative_pitch(value: int, current: int) -> int:
 # Applies to ds_volume and ds_initial_volume. A cue that also ships a PACKED
 # ENVELOPE would have its later points override this, so check
 # packed_envelope_count before trusting a trim on one; FGM 11's is 0.
-# 127 -> 96 -> 68 on 2026-08-02. The owner re-tested 96 and reported it still
-# too loud, so this is a second -3 dB rather than a repeat of the first: 96/127
-# is -2.4 dB and 68/96 is another -3.0, for -5.4 dB total against the source.
-# Halving perceived loudness is about -10 dB, so this is a little over half way
-# there and the table takes another pass if it is still wrong.
+# 127 -> 96 -> 68 -> 48, all on 2026-08-02, each step on the owner's ear.
+# 96/127 is -2.4 dB, 68/96 another -3.0, 48/68 another -3.0: -8.4 dB total
+# against the source. Halving perceived loudness is about -10 dB, so the cue is
+# now most of the way there; the owner's wording moved "too loud" -> "sounds
+# better, do one more volume down pass", so this is the pass he asked for and
+# the table takes another only if he asks again.
+#
+# 12 nSYAudioFGMDeadUpStar is a DIFFERENT KIND OF ENTRY and the distinction
+# matters: it moves the cue TOWARD the source, not away from it. Its own
+# `ucd_volume` is 180 of 255 and its two notes carry velocities 100 and 50, so
+# the N64 never plays it at full scale. FULL_PROGRAM_AOT_IDS -- which this cue
+# needs, because it is the only thing that recovers its dropped source loop --
+# normalises the render to 127 and ships `packed_envelope_count 0`, so the DS
+# played it about 3 dB hot with no decay on the second note. The owner heard that
+# as *"still sounds too harsh compared to original n64 cue"*.
+# 127 * 180/255 = 90, which is the source's own scaling restored rather than a
+# judgement. If it is still harsh the next suspect is not the level: SNR is
+# 16.086 dB against a 14.0 floor, i.e. audible IMA quantisation, and that wants
+# FGM_ENCODE_HEADROOM -- which needs ds_volume room under 127, and this trim is
+# what creates it.
 FGM_OWNER_VOLUME_TRIM = {
-    11: 68,
+    11: 48,
+    12: 90,
 }
 
 # Pre-encode scale factor, applied with a matching ds_volume rise so the cue is

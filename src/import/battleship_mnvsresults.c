@@ -226,9 +226,15 @@ static void ndsMNVSResultsFuncStartTimed(void)
 {
     u32 start = cpuGetTiming();
 
-    gNdsParticlePoolStructsWanted = 112u;
-    gNdsParticlePoolGeneratorsWanted = 24u;
-    gNdsParticlePoolTransformsWanted = 16u;
+    /* 112/24/16 SATURATED -- the 2026-08-02 soak read StructsLive 112 of
+     * StructsMax 112, which is why the owner still saw confetti that did not
+     * cover the scene. Raised with NDS_R2_CONFETTI_UPDATE_RATE, never alone.
+     * Memory is not the constraint here (45,888 bytes against ~300 KB free);
+     * the Results present interval is, and the owner has taken that trade
+     * explicitly -- see NDS_R2_CONFETTI_UPDATE_RATE for the measured table. */
+    gNdsParticlePoolStructsWanted = 384u;
+    gNdsParticlePoolGeneratorsWanted = 48u;
+    gNdsParticlePoolTransformsWanted = 24u;
     if (sNdsMNVSResultsFuncStart != NULL)
     {
         sNdsMNVSResultsFuncStart();

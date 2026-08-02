@@ -11171,6 +11171,14 @@ static v16 ndsRendererParticleWorldToV16(f32 value)
 }
 
 static u32 sNdsRendererParticleQuadOpen;
+/* The POLY_ALPHA currently latched into the open group, so a quad only pays for
+ * a new group when its alpha actually differs. Reset with the batch. */
+static u32 sNdsRendererParticleQuadAlpha;
+/* How many times a frame's particle pass had to start a new primitive group
+ * because the alpha bucket moved. Engagement proof for the per-particle fade:
+ * 0 with particles drawing means every live particle shared one alpha, which is
+ * what the bug looked like. */
+volatile u32 gNdsParticleQuadAlphaBreaks;
 
 /* gNdsParticleMatrixModeSeen records the mode the batch INHERITED, latched
  * before the camera load replaces it -- so it stays 0x12 by design and is the
@@ -11236,7 +11244,7 @@ void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
  * ndsRendererEndParticleQuads, so the whole particle pass is ONE glBegin and
  * ONE texture bind however many particles it carries. */
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
-                                  u32 color,
+                                  u32 color, u8 alpha,
                                   const Vec3f *right, const Vec3f *up,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h)
@@ -11248,10 +11256,54 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     f32 uy;
     f32 uz;
     u32 corner;
+    u32 poly_alpha;
 
     if ((atlas_name == 0u) || (pos == NULL) || (right == NULL) || (up == NULL))
     {
         return FALSE;
+    }
+    /* BUGS.md "Whispy blow VFX ... emitted objects turn flat at end of
+     * lifetime".
+     *
+     * A source particle fades: lbparticle.c ramps pc->primcolor toward
+     * target_primcolor over primcolor_target_length frames, ALPHA INCLUDED, and
+     * the RDP blends with it. This path dropped that channel on the floor --
+     * the caller packed r/g/b into a BGR555 word and the pass ran the whole
+     * batch at POLY_ALPHA(31). So every particle stayed 100% opaque for its
+     * entire life and the tail, which should dissolve, instead sat there as a
+     * hard flat blob at exactly the moment the owner noticed it.
+     *
+     * DS vertex colour carries no alpha, so per-particle alpha has to be
+     * POLYGON_ATTR's, which latches at glBegin. The batch therefore reopens
+     * when the alpha BUCKET changes rather than staying one glBegin for the
+     * pass; particles in a burst share a ramp, so that is far fewer than one
+     * per quad, and gNdsParticleQuadAlphaBreaks measures it rather than
+     * assuming it.
+     *
+     * 8-bit source alpha to the hardware's 5 bits, and never to 0: POLY_ALPHA(0)
+     * is WIREFRAME on this hardware, not invisible. A fully transparent particle
+     * is skipped outright, which is also the cheaper answer. */
+    if (alpha == 0u)
+    {
+        return FALSE;
+    }
+    poly_alpha = ((u32)alpha >> 3) & 31u;
+    if (poly_alpha == 0u)
+    {
+        poly_alpha = 1u;
+    }
+    if ((sNdsRendererParticleQuadOpen != 0u) &&
+        (poly_alpha != sNdsRendererParticleQuadAlpha))
+    {
+        /* NO glEnd() -- ndsRendererEndParticleQuads explains why at length: an
+         * extra FIFO write desynchronises this command stream and hung the ROM
+         * at GXSTAT=0e008900. POLYGON_ATTR latches at glBegin, so re-issuing
+         * the format and starting the next group is the whole operation. */
+        ndsRendererHardwareSetPolyFmt(
+            POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0));
+        sNdsRendererParticleQuadAlpha = poly_alpha;
+        gNdsParticleQuadAlphaBreaks++;
+        glBegin(GL_QUAD);
     }
     if (sNdsRendererParticleQuadOpen == 0u)
     {
@@ -11317,7 +11369,8 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
          * winding and the source draws these with the RDP's blender rather
          * than the lighting pipeline. */
         ndsRendererHardwareSetPolyFmt(
-            POLY_ALPHA(31) | POLY_CULL_NONE | POLY_ID(0));
+            POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0));
+        sNdsRendererParticleQuadAlpha = poly_alpha;
         glBegin(GL_QUAD);
         sNdsRendererParticleQuadOpen = TRUE;
     }
@@ -11364,6 +11417,7 @@ void ndsRendererEndParticleQuads(void)
          * leaves its own, and the tracker is told nothing is open so a later
          * reuse check cannot match stale state. */
         sNdsRendererParticleQuadOpen = FALSE;
+        sNdsRendererParticleQuadAlpha = 0u;
         ndsRendererHardwareEndBatch();
 #if NDS_R2_PARTICLE_V16_HEADROOM
         /* AFTER EndBatch, not before. The comment above is explicit that this
@@ -16193,13 +16247,27 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
 {
 }
 
+/* lbParticleDrawTextures hands the pass its camera unconditionally -- it has no
+ * business knowing which renderer is under it -- so this half of the seam must
+ * exist in both configurations. It did not, and NDS_RENDERER_HW_TRIANGLES=0
+ * with NDS_R2_PARTICLE_RUNTIME=1 is the DEFAULT, i.e. the published
+ * smash64ds.nds: `make` with no overrides failed at link on this symbol alone.
+ * The three particle entry points below are one seam; add or remove them
+ * together. */
+void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
+                                  const NDSRendererMatrix20p12 *modelview)
+{
+    (void)projection; (void)modelview;
+}
+
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
-                                  u32 color,
+                                  u32 color, u8 alpha,
                                   const Vec3f *right, const Vec3f *up,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h)
 {
-    (void)atlas_name; (void)pos; (void)size; (void)color; (void)right; (void)up;
+    (void)atlas_name; (void)pos; (void)size; (void)color; (void)alpha;
+    (void)right; (void)up;
     (void)atlas_x; (void)atlas_y; (void)atlas_w; (void)atlas_h;
     return FALSE;
 }

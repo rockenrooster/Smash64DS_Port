@@ -191,10 +191,42 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
  *
  * THE MARGIN IS THE THING TO WATCH, not these three numbers. The soak prints
  * GENERALHEAP free on every run now; anything under ~4 KB of headroom over
- * 25,600 means the next feature trips the same cliff. */
+ * 25,600 means the next feature trips the same cliff.
+ *
+ * REGRADED 2026-08-02, and A SATURATED COUNTER IS A FLOOR, NOT A MEASUREMENT.
+ * Both regrades above were taken from matches that never ran a KO burst, so
+ * they graded the wrong population. The first both-CPU soak that reached six
+ * KOs reported:
+ *
+ *   StructsMax     26 of 48   1.8x, fine
+ *   GeneratorsMax  10 of 10   SATURATED
+ *   TransformsMax   6 of  6   SATURATED
+ *   KOBurstAttempt  6, Complete 4, DropMask 2 = NDS_KO_BURST_DROP_XF
+ *
+ * i.e. two of six KOs drew no burst at all: efManagerDeadExplodeMakeEffect
+ * (battleship_efmanager.c:1312) asks for one LBTransform, got NULL, and ejects
+ * its particle. That is the owner's "not all vfx are played", measured.
+ *
+ * Note gNdsParticleRejectCount read 0 through both saturations -- it counts
+ * struct rejects only, so it cannot be used as the all-clear for these pools.
+ * Read the three Max counters against the three caps.
+ *
+ * Structs stay at 48 because 26 of 48 is a real measurement. Generators and
+ * transforms are not: saturation says "at least this many", so the new caps
+ * are sized to be provable rather than to be tight. 24 each is the source's
+ * own generator count (efparticle.c:31) and 4x the transform saturation mark,
+ * costing 14*92 + 18*192 = 4,744 bytes against a measured general-heap low
+ * water of 144,336 -- 118,736 over the cliff before this change, 113,992 after.
+ * The source's 80 transforms (efparticle.c:33) would cost 15,360 and is where
+ * to go next if 24 saturates too; it covers four players and items, which P1
+ * does not have.
+ *
+ * PREDICTION, to be graded by the next both-CPU soak: DropMask 0, Complete ==
+ * Attempt, and both Max counters strictly below 24. If either pins at 24 again
+ * the demand is still unmeasured and this comment is still wrong. */
 #define NDS_R2_PARTICLE_POOL_STRUCTS 48
-#define NDS_R2_PARTICLE_POOL_GENERATORS 10
-#define NDS_R2_PARTICLE_POOL_TRANSFORMS 6
+#define NDS_R2_PARTICLE_POOL_GENERATORS 24
+#define NDS_R2_PARTICLE_POOL_TRANSFORMS 24
 
 /* The pool the NEXT efParticleInitAll should use, or 0 for the battle sizing
  * above. Only the Results scene sets it, because only that scene both needs a
@@ -412,10 +444,38 @@ static void ndsParticleNormalizeHeader(u8 *header, sb32 swap)
  * THIS ALSO EXPLAINS WHY RAISING THE POOL ALONE DID NOTHING: at 0.07 the
  * generators never asked for more than 40 structs, so a 112-struct pool sat
  * unused with 0 rejects. The rate and the pool have to move together, and the
- * Results scene claims the larger pool in battleship_mnvsresults.c. */
+ * Results scene claims the larger pool in battleship_mnvsresults.c.
+ *
+ * SECOND RAISE, 2026-08-02. 0.42 with a 112-struct pool got the owner from "not
+ * visible" to "I see its visible now but doesn't cover the whole scene", and the
+ * soak said why: StructsLive 112 of StructsMax 112, SATURATED, so the rate was
+ * no longer the limit and raising it alone would have done nothing. Both move
+ * together, again, for the same reason they had to the first time.
+ *
+ * THE COST IS FRAMES, NOT BYTES, AND THE OWNER HAS PRICED IT. Measured:
+ *
+ *   pool/rate    visible   Results present interval
+ *   112 / 0.42        62   mostly 2 VBlanks
+ *   192 / 0.63       123   mostly 3
+ *   384 / 1.26       244   mostly 4, max 8
+ *
+ * so this is about one extra VBlank per ~91 visible pieces. Memory never
+ * mattered -- 384/48/24 is 45,888 bytes (96/92/192 each) against ~300 KB free in
+ * this scene, RejectCount 0, MallocOverflow 0, NO-FREEZE at every setting.
+ * I backed this down to 192 on the sacrifice order and the owner overruled it:
+ * *"for bug fixing, prioritize correctness over FPS. I'll do a separate FPS
+ * pass"*. So 384/1.26 stands as the CORRECTNESS setting and the Results cadence
+ * cost above is handed to that pass rather than paid for here.
+ *
+ * ONE MEASUREMENT TRAP, because it nearly cost a wrong conclusion: those three
+ * rows are NOT directly comparable out of a freeze soak. Results interval
+ * samples were 713, 2543 and 1595 -- the scene was entered at different points
+ * and held for wildly different durations, and its early frames are cheaper than
+ * its settled ones. Compare Results arms at an equal SOURCE TIC
+ * (capture-results-tic.ps1), never across whole-match soaks. */
 #define NDS_R2_CONFETTI_FIRST_SCRIPT 108u
 #define NDS_R2_CONFETTI_LAST_SCRIPT 111u
-#define NDS_R2_CONFETTI_UPDATE_RATE 0.42F
+#define NDS_R2_CONFETTI_UPDATE_RATE 1.26F
 
 /* Counts the emitters this build raised. Four is the whole set; anything else
  * means the bank moved out from under the id range. */
@@ -1486,8 +1546,16 @@ void lbParticleDrawTextures(GObj *gobj)
             color = ((u32)(pc->primcolor.r >> 3) & 31u) |
                     (((u32)(pc->primcolor.g >> 3) & 31u) << 5) |
                     (((u32)(pc->primcolor.b >> 3) & 31u) << 10);
+            /* primcolor.a IS the particle's fade. lbparticle.c ramps the whole
+             * SYColorRGBA toward target_primcolor over primcolor_target_length
+             * frames, so dropping the alpha here -- which this did until
+             * 2026-08-02 -- leaves every particle fully opaque for its whole
+             * life. The owner saw that as "emitted objects turn flat at end of
+             * lifetime". BGR555 has no alpha channel on this hardware; it goes
+             * through POLYGON_ATTR instead. */
             if (ndsRendererSubmitParticleQuad(atlas_name, &world_pos, pc->size,
-                                              color, &quad_right, &quad_up,
+                                              color, pc->primcolor.a,
+                                              &quad_right, &quad_up,
                                               row->x, row->y,
                                               row->width, row->height) != FALSE)
             {

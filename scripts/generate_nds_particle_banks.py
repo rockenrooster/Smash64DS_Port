@@ -1306,30 +1306,33 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     of the big multi-frame animations back reads the exclusion list, and the
     honest answer for those is halving 64x64x10 rather than growing the atlas.
     """
-    candidates = []
-    for report in report_rows:
-        if not report["packed"]:
-            continue
-        texture = textures[report["texture"]]
-        cell_max = QUAD_CELL_MAX
-        if texture["id"] in QUAD_KO_LIVE:
-            cell_max = QUAD_KO_CELL_MAX
-        elif texture["frames"] >= QUAD_LONG_ANIMATION_FRAMES:
-            cell_max = QUAD_LONG_ANIMATION_CELL_MAX
-        cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"],
-                                        cell_max)
-        frame_list = quad_frame_list(texture["frames"])
-        candidates.append({
-            "texture": texture["id"],
-            "width": cell_w,
-            "height": cell_h,
-            "source_width": texture["width"],
-            "source_height": texture["height"],
-            "frames": texture["frames"],
-            "frame_list": frame_list,
-            "packed_frames": len(frame_list),
-            "bytes": cell_w * cell_h * len(frame_list),
-        })
+    def build_candidates(long_cell_max: int) -> list[dict]:
+        rows = []
+        for report in report_rows:
+            if not report["packed"]:
+                continue
+            texture = textures[report["texture"]]
+            cell_max = QUAD_CELL_MAX
+            if texture["id"] in QUAD_KO_LIVE:
+                cell_max = QUAD_KO_CELL_MAX
+            elif texture["frames"] >= QUAD_LONG_ANIMATION_FRAMES:
+                cell_max = long_cell_max
+            cell_w, cell_h = quad_cell_dims(texture["width"],
+                                            texture["height"], cell_max)
+            frame_list = quad_frame_list(texture["frames"])
+            rows.append({
+                "texture": texture["id"],
+                "width": cell_w,
+                "height": cell_h,
+                "source_width": texture["width"],
+                "source_height": texture["height"],
+                "frames": texture["frames"],
+                "frame_list": frame_list,
+                "packed_frames": len(frame_list),
+                "bytes": cell_w * cell_h * len(frame_list),
+            })
+        return rows
+
     # Dream Land's leaves and dust are measured-live too -- a 2026-08-01
     # both-CPU soak caught the game asking for scripts 0 and 1 of that bank and
     # being refused -- so they sort with the common bank's live set rather than
@@ -1337,22 +1340,28 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     # set leaves free.
     live = set(QUAD_MEASURED_LIVE)
     for candidate in (extra_candidates or ()):
-        candidates.append(candidate)
         if candidate.get("live"):
             live.add(candidate["texture"])
-    # Measured-live first, then ascending size. Admission is greedy and the
-    # sheet is now half what it was, so "smallest first" alone would fill it
-    # with whatever happens to be small and let a texture a match actually
-    # draws fall off the end.
-    #
-    # Ranked on FULL source cost, not on the capped cost, so the admission order
-    # is the same at every cap the search below tries. Ranking on the capped
-    # cost would reshuffle priorities as the cap moves and make one cap's result
-    # depend on the ceiling it started from -- which is a very quiet way for the
-    # sheet to change when somebody edits an unrelated constant.
-    candidates.sort(key=lambda row: (row["texture"] not in live,
-                                     row["width"] * row["height"] *
-                                     row["frames"], row["texture"]))
+
+    def candidate_set(long_cell_max: int) -> list[dict]:
+        rows = build_candidates(long_cell_max)
+        rows.extend(dict(row) for row in (extra_candidates or ()))
+        # Measured-live first, then ascending size. Admission is greedy and the
+        # sheet is now half what it was, so "smallest first" alone would fill it
+        # with whatever happens to be small and let a texture a match actually
+        # draws fall off the end.
+        #
+        # Ranked on SOURCE cost, not on the cell or the capped cost, so the
+        # admission order is the same at every (cell cap, frame cap) the search
+        # below tries. Ranking on the trial cost would reshuffle priorities as
+        # the search moved and make one setting's result depend on the ceiling
+        # it started from -- a very quiet way for the sheet to change when
+        # somebody edits an unrelated constant.
+        rows.sort(key=lambda row: (row["texture"] not in live,
+                                   row.get("source_width", row["width"]) *
+                                   row.get("source_height", row["height"]) *
+                                   row["frames"], row["texture"]))
+        return rows
 
     def cells_for(rows):
         cells = []
@@ -1371,11 +1380,11 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                               "texture": row["texture"], "frame": frame})
         return cells
 
-    def admit_at(cap: int) -> tuple[list[dict], list[dict]]:
+    def admit_at(rows: list[dict], cap: int) -> tuple[list[dict], list[dict]]:
         """Greedy admission with every animation decimated to `cap` frames."""
         admitted: list[dict] = []
         excluded: list[dict] = []
-        for candidate in candidates:
+        for candidate in rows:
             trial = dict(candidate)
             trial["frame_list"] = quad_frame_list(candidate["frames"], cap)
             trial["packed_frames"] = len(trial["frame_list"])
@@ -1388,26 +1397,49 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                 admitted.append(trial)
         return admitted, excluded
 
-    # SELF-TUNING, and the reason is that a hand-picked cap is a number somebody
-    # has to re-derive every time an effect is added. The constraint is not byte
-    # count -- at cap 3 the sheet had 896 free bytes and STILL could not seat
-    # texture 66's four 16x16 cells, because shelf packing groups by exact height
-    # and the 16-tall shelves were full. So the only honest way to choose the cap
-    # is to try the good ones and keep the best that refuses nothing live.
+    # SELF-TUNING, and the reason is that a hand-picked setting is a number
+    # somebody has to re-derive every time an effect is added. The constraint is
+    # not byte count -- at cap 3 the sheet had 896 free bytes and STILL could not
+    # seat texture 66's four 16x16 cells, because shelf packing groups by exact
+    # height and the 16-tall shelves were full. So the only honest way to choose
+    # is to try the good settings and keep the best that refuses nothing live.
     #
-    # Measured 2026-08-02: cap 4 and cap 3 both drop texture 66, which is
-    # Pupupu -- Dream Land's leaves and dust, an open BUGS.md row. Cap 2 admits
-    # 31 of 36 with the whole live set intact and 1,856 bytes spare. Two frames
-    # is coarse; PROJECT_GOAL.md allows reduced animation rates and does NOT
-    # allow a particle that draws nothing, so a two-frame dash dust beats an
-    # absent one. If the sheet ever grows, this loop takes the better cap on its
-    # own without anyone editing a constant.
+    # RESOLUTION IS TRIED BEFORE FRAME RATE, and that order is the owner's, not a
+    # preference. The 2026-08-02 decimation pass got every missing effect drawing
+    # and his verdict on the row was "better but looks EXTREMELY PIXELATED and low
+    # quality" -- so when two settings both seat the whole live set, the sheet is
+    # better spent on texels than on frames. Swept on the host before any ROM
+    # (scratchpad atlas_policy_sweep), inside the unchanged 8,192-byte sheet:
+    #
+    #   long cell  cap  admitted  texels  named effects
+    #           8    2        33   8,000  DustDash/DamageFire/DamageNormal* 8x8
+    #          16    1        32   6,592  ...all of them 16x16
+    #
+    # i.e. FOUR TIMES the texels per frame on exactly the effects BUGS.md names
+    # ("running foot dust VFX, fireball hit VFX ..."), for one frame instead of
+    # two. No cap from 6 down to 2 seats the live set at 16x16, so the choice is
+    # genuinely 8x8x2f against 16x16x1f and not a free lunch: what is spent is the
+    # animation, which PROJECT_GOAL.md allows in as many words ("static
+    # substitutes for expensive animation", "reduced animation update rates"),
+    # and what is bought is the resolution the owner actually complained about.
+    # Two frames of a ten-frame animation was a strobe between frame 0 and frame
+    # 9, not motion.
+    #
+    # The KO cap stays 8: at 16 the sheet drops texture 25 (DamageCoin), which is
+    # live. If the sheet ever grows, this loop takes the better setting on its own
+    # without anyone editing a constant.
     admitted, excluded = [], []
     chosen_cap = QUAD_FRAME_CAP
-    for cap in range(QUAD_FRAME_CAP, 0, -1):
-        admitted, excluded = admit_at(cap)
-        chosen_cap = cap
-        if not any(row["texture"] in live for row in excluded):
+    for long_cell_max in (QUAD_CELL_MAX, QUAD_LONG_ANIMATION_CELL_MAX):
+        rows = candidate_set(long_cell_max)
+        seated = False
+        for cap in range(QUAD_FRAME_CAP, 0, -1):
+            admitted, excluded = admit_at(rows, cap)
+            chosen_cap = cap
+            if not any(row["texture"] in live for row in excluded):
+                seated = True
+                break
+        if seated:
             break
     admitted.sort(key=lambda row: row["texture"])
 

@@ -315,6 +315,34 @@ if ($AuditLocalConfigs -and -not $SkipLocalConfigs -and
         -Root $Root -AllWorktrees -Check | Out-Null
 }
 
+# NO CONFIG MAY BE LEFT WITH BreakOnStartup = true. A GDB probe sets it, and if
+# it does not restore, melonDS boots the ROM HALTED waiting for a debugger that
+# never attaches -- so every later run captures a BLACK top screen. That does not
+# read as a stale config, it reads as a rendering regression in whatever changed
+# last. Measured 2026-08-02: three consecutive
+# verify-battle-playable-realtime-harness runs failed with "Top screen lacks
+# Dream Land green content: 0/49152 dominant-green pixels" against a ROM whose
+# own soak had just drawn 376,474 particles, purely because
+# emulators/melonds/melonDS.toml still said true. The slotted configs were clean,
+# which is why the same verifier passed inside verify-all and failed when invoked
+# directly -- the least obvious possible split.
+$breakOnStartup = @()
+foreach ($config in (Get-ChildItem -LiteralPath (Join-Path $Root 'emulators') `
+        -Filter 'melonDS.toml' -Recurse -File -ErrorAction SilentlyContinue)) {
+    $text = Get-Content -LiteralPath $config.FullName -Raw
+    foreach ($hit in [regex]::Matches(
+            $text, '(?m)^\s*BreakOnStartup\s*=\s*true\s*$')) {
+        $line = ($text.Substring(0, $hit.Index) -split "`n").Count
+        $breakOnStartup += ($config.FullName.Replace($Root, '').TrimStart('\', '/') +
+                            ':' + $line)
+    }
+}
+Assert-Policy ($breakOnStartup.Count -eq 0) (
+    'A melonDS config still has BreakOnStartup = true, so the next unattended ' +
+    'run boots halted and captures a black screen that looks like a rendering ' +
+    'regression. Set it false (the slot configs are the reference): ' +
+    ($breakOnStartup -join ', '))
+
 Write-Output (
     'melonDS policy check passed: repo-local executable only; ' +
     "$($script:MelonDSCanonicalWindowWidth)x$($script:MelonDSCanonicalWindowHeight) " +

@@ -680,16 +680,25 @@ NDS_R2_PARTICLE_RUNTIME ?= 1
 # starving the stage's texture resolve -- fixed by the 8,192-byte sheet, which
 # is a measured hard bound, not a budget (generate_nds_particle_banks.py).
 NDS_R2_PARTICLE_DRAW ?= 1
-# BUGS.md row 1, OFF pending the owner's visual approval. The particle pass
-# converts world -> v16 at x16, so it can only express +/-2047.9 world units
-# while the camera measured in a live match sees 3,148; Whispy's wind puts
-# 1,118 of its 5,590 quads a match past that and they draw on the rail instead
-# of where they belong. At 1 the pass halves the vertex factor to x8 (reach
-# +/-4095.9) and pushes a compensating 2x modelview, so position and size are
-# unchanged and only the range moves. The price is half the sub-unit resolution
-# for every particle, which is a visible-quality trade and therefore the owner's
-# call. Verify with gNdsWhispyDrawClamped: 1118 -> 0, gNdsWhispySubmitOk ~5590.
-NDS_R2_PARTICLE_V16_HEADROOM ?= 0
+# ON since 2026-08-02, and the owner's own report is what turned it on. The
+# particle pass converts world -> v16 at x16, so it can only express +/-2047.9
+# world units while the camera measured in a live match sees 3,148; Whispy's wind
+# puts 1,118 of its 5,590 quads a match past that. A CLAMPED VERTEX IS NOT A
+# MISPLACED ONE -- x is railed while y is not, so the quad is SQUASHED, and the
+# owner filed exactly that: *"Right side of stage looks like it compresses VFX"*.
+# At 1 the pass halves the vertex factor to x8 (reach +/-4095.9) and pushes a
+# compensating 2x modelview, so position and size are unchanged and only the
+# range moves. The price is half the sub-unit resolution for every particle,
+# which is a far smaller visual trade than railing a fifth of them, and the
+# owner's standing rule for this queue is *"for bug fixing, prioritize
+# correctness over FPS"*. Verify with gNdsWhispyDrawClamped: 1118 -> 0,
+# gNdsWhispySubmitOk ~5590.
+#
+# THE LESSON, for the second time in a fortnight: a measured, working fix parked
+# at a default of 0 is invisible to everyone including its author -- the fixed
+# sqrt sat that way for a month on 2026-07-31. Audit the 0 flags whenever a
+# symptom matches one of their descriptions.
+NDS_R2_PARTICLE_V16_HEADROOM ?= 1
 # R2-07 L7 step one. Read-only oracle: re-does the collision joint inverse in
 # 20.12 alongside the decomp's float one and records the deviation on the joints
 # a real match inverts. Decides nothing and changes nothing.

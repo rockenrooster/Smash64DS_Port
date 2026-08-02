@@ -248,13 +248,24 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # is the property that matters, because the allocation is what broke twice.
 # The cap is searched, not pinned (generator: QUAD_FRAME_CAP), so this asserts
 # the OUTCOME rather than the setting.
+#
+# 2026-08-02, ninth change: RESOLUTION TAKES PRIORITY OVER FRAME RATE, because
+# the owner's verdict on the decimation pass above was "better but looks
+# extremely pixelated and low quality". The generator's search now tries the
+# full 16x16 cell for long animations before falling back to 8x8, and takes the
+# first setting that seats the whole live set -- which is 16x16 at one frame.
+# Every effect BUGS.md names goes 8x8 -> 16x16, i.e. four times the texels per
+# frame, and the allocation is STILL 8,192. 54 frames -> 32 and 8,000 texels ->
+# 6,592 are both consequences of one frame per texture, not of a smaller sheet.
+# 33 -> 32 admitted: the one that drops is not in QUAD_MEASURED_LIVE, which the
+# live-set assertion below is what actually guards.
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.atlas_bytes -ne 8192) -or
-    ([int64]$report.quads.bytes -ne 8000) -or
-    ([int64]$report.quads.frame_count -ne 54) -or
-    (@($report.quads.admitted).Count -ne 33) -or
-    (@($report.quads.excluded).Count -ne 3)) {
+    ([int64]$report.quads.bytes -ne 6592) -or
+    ([int64]$report.quads.frame_count -ne 32) -or
+    (@($report.quads.admitted).Count -ne 32) -or
+    (@($report.quads.excluded).Count -ne 4)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.bytes) B, " +
         "$([int64]$report.quads.frame_count) frames, " +

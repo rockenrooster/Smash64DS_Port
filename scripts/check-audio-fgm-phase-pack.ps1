@@ -79,8 +79,17 @@ if (([int]$metadata.format_version -ne 4) -or
     # expected whenever a cue's render strategy changes and must never be
     # repinned without one.
     ($metadata.mapping_sha256_lo -ne '0x5d1c7cf5') -or
-    # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 and then
-    # 96 -> 68 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -5.4 dB total. The previous pin was
+    # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
+    # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
+    # source; the 68 pin was
+    # 967f9212524950c3a2277a8e59ca2c545117f20c56c58e3e0237e94cd2dd45c2 and the 48
+    # pin was b478f9eb8366b175596238a55c7200cdb58a8c925c9f1258b4dc407fbfe97fb2.
+    # Repinned again the same day for FGM 12 DeadUpStar 127 -> 90, which is not a
+    # taste trim: 90 is 127 * 180/255, i.e. the cue's own ucd_volume restored
+    # after FULL_PROGRAM_AOT_IDS normalised the render to full scale.
+    # Note that a level trim moves THIS hash and not mapping_sha256_lo: ds_volume
+    # is a record field, not a selector, so the mapping stays 0x5d1c7cf5 and
+    # resident_bytes stays 920152. The earlier pin was
     # 81b94d1f3178b6b57d998fb7d01fe1316e20ac46ce22ccb82800c6b02d26cb75, and it
     # is worth knowing that the first attempt at that trim did NOT move this
     # hash -- it edited the metadata dict instead of the `records` entry that
@@ -88,7 +97,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # played 127. An unchanged hash after an intended payload change is the
     # signal that the change did not land.
     ($metadata.pack_sha256 -ne
-        '967f9212524950c3a2277a8e59ca2c545117f20c56c58e3e0237e94cd2dd45c2')) {
+        '5f12e380c4036401414cc490f4a29cc708281ba574813ccaf13acb56327fa6db')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
