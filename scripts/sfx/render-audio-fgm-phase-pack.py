@@ -42,13 +42,17 @@ FGM_OUTPUT_RATE = 32000
 # cue into the fixed 200 KiB slot cache below, so pack growth costs ROM, which
 # PROJECT_GOAL says to spend. 512 KiB stopped the five P1 announcer lines
 # (TIME UP, GAME SET, winner-is, Mario, Fox) at 526,928 bytes with no runtime
-# reason, so it is 768 KiB now.
+# reason, so it went to 768 KiB. 768 KiB then stopped the seven crowd cues at
+# 887,160 bytes for the same non-reason, so it is 1 MiB now. Those seven leave
+# the shared-sample-37 dedup when they start rendering their own note schedules
+# and fork voices, which is where the growth comes from and is the point of the
+# change; ROM is the cheapest thing this project spends.
 #
 # THE CONSTRAINT THAT IS REAL is the largest cache slot: a cue whose IMA body
 # does not fit one can never be played, and until 2026-07-31 nothing checked it
 # -- the pack cap was standing in for a bound it does not actually express.
 # MAX_CUE_IMA_BYTES does now.
-MAX_PACK_BYTES = 768 * 1024
+MAX_PACK_BYTES = 1024 * 1024
 RUNTIME_CACHE_BYTES = (52 * 1024) + (3 * 28 * 1024) + (4 * 16 * 1024)
 MAX_CUE_IMA_BYTES = 52 * 1024
 MAX_RESIDENT_BYTES = 128 * 1024  # historical Phase-C comparison only
@@ -148,6 +152,28 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     271,
     # LightSwingLw1 and FoxSelected: two and three notes, no forks.
     18, 365,
+    # BUGS.md "Some Crowd noise audio cues get cut off (the for big hits)".
+    # Every OTHER mechanism for that row is now measured and cleared: the cue
+    # rates are arithmetically right, the two ds_volume 0 cues are real
+    # fade-ins, ndsAudioFgmUpdate does step envelopes, the assets are not
+    # truncated (ds_trailing_samples_dropped 0 across the family), and channel
+    # contention reads 0 premature retires against 188 channel reuses in a
+    # 5-minute both-CPU soak. What is left is the debt these seven declared all
+    # along, and it is not subtle:
+    #   615, 618, 620, 625  ucd_pitch_automation -- the flat path bakes the
+    #       FIRST note's rate for the whole cue, so 620 holds its opening
+    #       53,786 Hz through a schedule that falls to 47,918 and the gasp runs
+    #       ~10% fast and stops early.
+    #   616, 618, 619, 620, 623  omitted_fork_voice -- the source layers a
+    #       SECOND voice on top and the pack rendered only the first. 623
+    #       DamageM forks 625 DamageS, so the big-hit crowd reaction the owner
+    #       named is literally half its source. That is the "cut off".
+    # This render answers both at once: it walks the note schedule and mixes
+    # the simultaneous forks, which is what the seven existing fused repairs
+    # already do. 605, 609, 617 and 622 stay on the flat path -- their only
+    # declared debt is untrimmed_shared_source_reuse, which is a dedup note,
+    # not a defect.
+    615, 616, 618, 619, 620, 623, 625,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (

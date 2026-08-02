@@ -33,8 +33,8 @@
  * booted mute with gNdsAudioFgmFormatFailCount 1.  check-audio-fgm-phase-pack.ps1
  * now derives both from the pack binary and prints the values to set here, so
  * re-render, run it, and paste what it names.  Never pin them anywhere else. */
-#define NDS_AUDIO_FGM_PACK_BYTES 725896u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x4fb97922u
+#define NDS_AUDIO_FGM_PACK_BYTES 887160u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xb6be788eu
 #define NDS_AUDIO_FGM_CACHE_BYTES 204800u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 8u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

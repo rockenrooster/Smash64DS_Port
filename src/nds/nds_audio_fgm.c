@@ -68,6 +68,13 @@ typedef struct NDSAudioFgmHandle {
     u32 generation;
     u32 start_tick;
     u32 end_tick;
+    /* end_tick is the SOURCE note's length; audible_end_tick is when this DS
+     * sample actually stops making sound (sample_count / frequency).  They are
+     * not close: baking net_pitch_cents into the playback rate shortens every
+     * cue, and all 88 finish before their note does -- FGM 433 declares 760
+     * ticks for a 165-tick sample.  Anything asking "was this cut off?" must
+     * use audible_end_tick; end_tick answers yes for every cue, always. */
+    u32 audible_end_tick;
     u8 envelope_points[NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS *
                        NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES];
     u16 envelope_count;
@@ -1156,16 +1163,21 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
             /* BUGS.md "Some Crowd noise audio cues get cut off (the for big
              * hits)". The retire above is justified by soundPlaySample only
              * choosing an INACTIVE hardware channel -- so the owner must be
-             * finished. Measure that rather than trust it: if the owner's own
-             * expected end has not arrived, this call just ended a cue that was
-             * still sounding, and a big hit is exactly when it would happen,
-             * because several short cues fire into the 1.1-2.1 s a crowd
-             * reaction occupies. A non-zero count here is the row's mechanism;
-             * zero clears channel contention and moves the search elsewhere. */
+             * finished. Measure that rather than trust it.
+             *
+             * Measure it against audible_end_tick, NOT end_tick. This test was
+             * written against end_tick first and reported 3 hits over a 5-minute
+             * both-CPU soak, which read as confirmed channel contention and was
+             * wrong: end_tick is the source note length and every one of the 88
+             * cues outlives its own DS sample, so that form fires on ordinary
+             * completion and can only ever over-report. Against the audible end
+             * a hit means the hardware channel was reused while this cue was
+             * genuinely still sounding, which is the row's mechanism; zero
+             * clears contention and moves the search to the release ramp. */
             u32 retire_now = cpuGetTiming();
 
-            if ((completed_handle->end_tick != 0u) &&
-                ((s32)(completed_handle->end_tick - retire_now) > 0))
+            if ((completed_handle->audible_end_tick != 0u) &&
+                ((s32)(completed_handle->audible_end_tick - retire_now) > 0))
             {
                 gNdsAudioFgmPrematureRetireCount++;
                 gNdsAudioFgmPrematureRetireLastID = completed_handle->fgm_id;
@@ -1200,6 +1212,9 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
                                1000000u);
     handle->start_tick = cpuGetTiming();
     handle->end_tick = handle->start_tick + duration_cpu_ticks;
+    handle->audible_end_tick =
+        handle->start_tick +
+        (u32)(((u64)BUS_CLOCK * entry->sample_count) / entry->frequency);
     handle->volume = entry->volume;
     handle->envelope_count = entry->envelope_count;
     handle->envelope_index = 0u;

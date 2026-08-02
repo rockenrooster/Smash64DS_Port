@@ -57,17 +57,22 @@ if (([int]$metadata.format_version -ne 4) -or
     ([int]$metadata.envelope_point_bytes -ne 4) -or
     # 725900 -> 725896 on 2026-08-02: FGM 430 and 439 moved onto the source
     # note schedule, which re-renders them and lands four bytes shorter.
-    ([int64]$metadata.resident_bytes -ne 725896) -or
+    # 725896 -> 887160 later the same day: the seven defective crowd cues
+    # (615/616/618/619/620/623/625) joined FULL_PROGRAM_AOT_IDS, which leaves
+    # the shared-sample-37 dedup behind and is the whole point of the change.
+    ([int64]$metadata.resident_bytes -ne 887160) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
-    # holds the pack. 512 KiB blocked the five announcer lines for no runtime
-    # reason; the bound that is real is the 53,248-byte cache-slot gate below.
-    ([int64]$metadata.pack_limit_bytes -ne 786432) -or
-    # 0x984c7da6 -> 0x4fb97922 on 2026-08-02: this hash covers the cue SELECTOR
-    # table, and 430/439 gained "aot_source_schedule" and dropped their
-    # ucd_pitch_automation debt. A mapping change is expected whenever a cue's
-    # render strategy changes and must never be repinned without one.
-    ($metadata.mapping_sha256_lo -ne '0x4fb97922') -or
+    # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
+    # blocked the seven crowd cues, both for no runtime reason; the bound that
+    # is real is the 53,248-byte cache-slot gate below.
+    ([int64]$metadata.pack_limit_bytes -ne 1048576) -or
+    # 0x984c7da6 -> 0x4fb97922 -> 0xb6be788e on 2026-08-02: this hash covers the
+    # cue SELECTOR table. 430/439 gained "aot_source_schedule", then the seven
+    # crowd cues gained the full-program AOT render. A mapping change is
+    # expected whenever a cue's render strategy changes and must never be
+    # repinned without one.
+    ($metadata.mapping_sha256_lo -ne '0xb6be788e') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 on the
     # owner's ear via FGM_OWNER_VOLUME_TRIM. The previous pin was
     # 81b94d1f3178b6b57d998fb7d01fe1316e20ac46ce22ccb82800c6b02d26cb75, and it
@@ -77,7 +82,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # played 127. An unchanged hash after an intended payload change is the
     # signal that the change did not land.
     ($metadata.pack_sha256 -ne
-        '95ec41c4af413165ce08e8e381f7790dfc6adc4d91ce6ea6af12f89b2f012fab')) {
+        '0af529fbd796e46421a78d469e1654190b302b775cd4fb4878d8cde927418ec6')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -240,7 +245,18 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     if (-not $runtime.Contains($token)) { throw "Runtime cache lost: $token" }
 }
 
-Write-Output (('Audio FGM full coverage passed: 88 IDs, 0 exclusions, ' +
-    '725896-byte pack, 204800-byte cache, seven fused fork repairs, ' +
-    'FGM 285 wind on a proven DS hardware loop, seven announcer lines, ' +
-    'PublicWin 621 on PublicExcited''s AOT loop-and-ramp render.'))
+# Counted, not spelled out. This line said "725896-byte pack" and "seven fused
+# fork repairs" while the artifact was 887160 bytes with twelve, which is the
+# same drift that shipped a silent ROM this morning: a hand-written summary is
+# a second copy of a fact and it rots.
+$fusedForks = @($metadata.entries | Where-Object {
+    @($_.root_fork_programs).Count -gt 0 -and
+    @($_.omitted_fork_programs).Count -eq 0 }).Count
+$stillOmitting = @($metadata.entries | Where-Object {
+    @($_.omitted_fork_programs).Count -gt 0 }).Count
+Write-Output (("Audio FGM full coverage passed: $($metadata.entries.Count) IDs, " +
+    "0 exclusions, $($metadata.resident_bytes)-byte pack, " +
+    "$($metadata.resident_limit_bytes)-byte cache, $fusedForks fused fork " +
+    "repairs ($stillOmitting cue(s) still omit a fork voice), FGM 285 wind on " +
+    'a proven DS hardware loop, seven announcer lines, PublicWin 621 on ' +
+    'PublicExcited''s AOT loop-and-ramp render.'))

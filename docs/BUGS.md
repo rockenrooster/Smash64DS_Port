@@ -24,28 +24,35 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
 
 -Some Crowd noise audio cues get cut off (the for big hits).
     Still not fixed.
-    NOT FIXED. Earlier release-ramp work covered the mid-waveform kill; the big-hit case still
-    stands. RULED OUT 2026-08-02 so it is not re-walked: the whole reaction family (616 GaspM,
-    619 Amazed, 620 GaspClap, 622 DamageL, 623 DamageM, 625 DamageS) shares source sample 37 and
-    differs only by net_pitch_cents baked into the playback rate, and every rate checks out
-    exactly as 32000 * 2^(cents/1200) -- so the odd-looking 27-53 kHz figures are correct, not
-    corruption. The two cues shipping ds_volume 0 (620, 625) are ALSO correct: articulation 79
-    opens `vol 0` for 18 ticks and both carry packed_envelope_count 2, so that is a deliberate
-    fade-in, not a mute. And the runtime does step envelopes -- ndsAudioFgmUpdate runs per frame
-    from taskman_seam.c:4427, not only on a new play.
-    So the defect is not in cue data or envelope stepping.
-    CHANNEL CONTENTION INSTRUMENTED AND NOT OBSERVED, with weak coverage -- read that carefully.
-    The suspect was the retire at nds_audio_fgm.c:1135: when soundPlaySample picks a channel that
-    still has a live software owner, the code assumes the owner finished and releases it. That is
-    justified only if the ARM7's inactive report is exact, and a big hit is when several short
-    cues fire into the 1.1-2.1 s a crowd reaction occupies. gNdsAudioFgmPrematureRetireCount now
-    counts retires taken while the owner's own end_tick was still in the future.
-    Measured over 900 frames: premature=0 durstop=0 exhaust=0. But durstop=0 means the retire path
-    NEVER RAN, so this clears nothing -- the scripted probe scenario does not produce the big hits
-    the row is about. The counter is the right instrument aimed at the wrong scenario.
-    NEXT: read these four counters after a BOTH-CPU soak with real big hits, not from
-    probe-vfx-contracts. Non-zero premature confirms contention; zero with durstop non-zero
-    genuinely clears it and moves the search to the release ramp length.
+    **FIXED** (2026-08-02) pending your ear. The cues were cut off in the PACK, not at runtime:
+    seven of them declared the defect all along in runtime_fidelity_debt and the row was hunting
+    the runtime instead.
+      615, 618, 620, 625  ucd_pitch_automation -- the flat render bakes the FIRST note's rate for
+          the entire cue. 620 GaspClap held its opening 53,786 Hz through a schedule that falls to
+          47,918, so a 2.59 s crowd reaction played in 0.83 s. That is the "cut off", literally.
+      616, 618, 619, 620, 623  omitted_fork_voice -- the source layers a SECOND simultaneous voice
+          and the pack rendered only the first. 623 DamageM forks 625 DamageS, so the big-hit
+          reaction you named shipped as half its source.
+    All seven now go through FULL_PROGRAM_AOT_IDS, the same render the pack already used for
+    twenty other cues: it walks the note schedule and mixes the forks. Debt is CLEAR on all seven
+    and the checker now reports "0 cue(s) still omit a fork voice" -- counted from the manifest,
+    not spelled out, because the old hand-written summary was already lying about two numbers.
+    Lengths: 620 0.83 -> 2.59 s, 618 1.36 -> 2.30 s, 619 1.13 -> 1.96 s. 623 and 625 get their
+    second layer and get slightly SHORTER (1.17 -> 1.01), which is also correct -- the flat path
+    was playing more of the shared sample than the source program ever reaches.
+    Cost: the pack leaves the shared-sample-37 dedup and grows 725,896 -> 887,160 bytes, so the
+    768 KiB cap went to 1 MiB. That cap is a ROM budget only; the runtime streams into a fixed
+    200 KiB cache and ResidentBytes is unchanged at 207,632. WAVs are in artifacts/audio.
+    RULED OUT, so none of this is re-walked: cue rates are arithmetically correct
+    (32000 * 2^(cents/1200)); the two ds_volume 0 cues (620, 625) are real fade-ins, not mutes;
+    ndsAudioFgmUpdate does step envelopes every frame from taskman_seam.c:4427; no asset is
+    truncated (ds_trailing_samples_dropped is 0 across the family); and CHANNEL CONTENTION IS
+    CLEARED -- 0 premature retires against 188 channel reuses over a 5-minute both-CPU soak.
+    One correction worth keeping. That contention counter first read 3 and I took it as confirmed
+    contention; it was not. It compared against handle->end_tick, which is the SOURCE note length,
+    and every one of the 88 cues outlives its own DS sample (FGM 433 declares 760 ticks for a
+    165-tick sample), so that form fires on ordinary completion and can only over-report. It now
+    compares against handle->audible_end_tick = start + sample_count/frequency, and reads 0.
 
 -Respawn floating platform isn't visible when respawning after KO.
     Not fixed, I don't see the floating platform.
@@ -125,11 +132,18 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
     The four crowd cues (615, 618, 620, 625) still carry the same debt and were deliberately left
     alone -- they are a shared-sample family and none of them is on your triggers. Do them only if
     something still sounds wrong after this.
-    One trap worth keeping: re-rendering moved the pack from 725,900 to 725,896 bytes, and
-    NDS_AUDIO_FGM_PACK_BYTES in nds_audio_fgm.h is a RUNTIME constant the loader validates the
-    envelope cursor against -- it rejects the whole pack on mismatch. A stale value there is not a
-    size nit, it is total audio silence, and the pack checker only pins the header TEXT so it
-    passed while they disagreed. Always move that constant with the pack.
+    One trap worth keeping, and it bit for real before the day was out. Re-rendering moves the
+    pack, and nds_audio_fgm.h carries TWO constants the loader validates it against:
+    NDS_AUDIO_FGM_PACK_BYTES and NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO. Either mismatch rejects the
+    whole pack. I moved the size, left the hash, and every ROM built afterwards -- including the
+    published one -- booted with all 88 cues silent: FormatFailCount 1, 210 plays, 210 failures.
+    The control that proved it was mine and not pre-existing was build-r1-v16head from 03:20,
+    which reports Loaded 1 / FormatFail 0.
+    The checker did not catch it because it PINNED the stale hash as required header text. Both
+    values were hand-maintained in two places each, the size was updated in both and the hash in
+    neither, so the check actively required the broken value and passed. It now DERIVES both from
+    the pack binary and names the ROM-boots-silent consequence when they disagree; verified by
+    reverting the hash and watching it fail. Do not re-pin these anywhere.
 
 -Hitting Fox's shield freezes match sometimes.
     **FIXED** (2026-08-02) pending a soak. This is the 2026-07-29 freeze class returning because
