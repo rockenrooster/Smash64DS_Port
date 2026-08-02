@@ -10994,9 +10994,8 @@ fail:
  * constraint (the cache holds NDS_RENDERER_HW_TEXTURE_CACHE_COUNT = 48 and the
  * battle's static set pins 24 of them, against 31 admitted particle frames),
  * and a per-frame scheme would break the triangle batch on every texture
- * change. The generator's shelf packer sized it to 128x128 so the upload fits
- * sNdsRendererHardwareTextureScratch exactly and needs no new RAM -- a
- * dedicated staging buffer would be sixteen taskman arena steps.
+ * change. The generator's measured-safe 64x64 allocation fits the existing
+ * scratch and leaves the stage texture resolver on its prepared path.
  *
  * Pinned like the static set, so the cache's LRU cannot evict it mid-match. It
  * is allocated AFTER them and therefore lands above their VRAM span, which is
@@ -11018,7 +11017,7 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
     }
     gNdsRendererParticleAtlasPrepareCount++;
     if ((NDS_PARTICLE_QUAD_ASSET_BYTES >
-         sizeof(sNdsRendererHardwareTextureScratch)) ||
+          sizeof(sNdsRendererHardwareTextureScratch)) ||
         (ndsRendererHardwareTextureSizeEnum(
              NDS_PARTICLE_QUAD_ATLAS_WIDTH, &size_x) == FALSE) ||
         (ndsRendererHardwareTextureSizeEnum(
@@ -11064,17 +11063,6 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         (void)ndsRendererHardwareReleaseTexture(entry);
         goto fail;
     }
-    /* THE KEY MUST BE ERASED, not merely left unset. ndsRendererHardwareAllocTexture
-     * recycles an entry, so `key`, `key_hash` and `key_generation` still hold
-     * whatever the previous occupant had -- and a source display-list lookup
-     * that happens to match them would bind the ATLAS in place of the texture
-     * it asked for. The first build of this left them alone and the run
-     * reported gNdsRendererBattleStaticTextureViolationCount 1 with stage
-     * rebuilds 2 -> 197: the stage kept finding a stale key that now pointed
-     * at the atlas, so its prepared run was invalidated ~197 times a match.
-     *
-     * Zeroing the key and dropping the entry out of the hash means nothing can
-     * reach the atlas except ndsRendererHardwareParticleAtlasName. */
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareTextureLookupRemove(entry);
 #endif
@@ -11149,6 +11137,7 @@ static u32 sNdsRendererParticleQuadOpen;
  * ndsRendererEndParticleQuads, so the whole particle pass is ONE glBegin and
  * ONE texture bind however many particles it carries. */
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
+                                  u32 color,
                                   const Vec3f *right, const Vec3f *up,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h)
@@ -11185,6 +11174,7 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     ux = up->x * size;
     uy = up->y * size;
     uz = up->z * size;
+    glColor((rgb)color);
 
     /* Counter-clockwise from the bottom-left, with T increasing downward to
      * match the atlas rows. */
@@ -16042,11 +16032,12 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
 }
 
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
+                                  u32 color,
                                   const Vec3f *right, const Vec3f *up,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h)
 {
-    (void)atlas_name; (void)pos; (void)size; (void)right; (void)up;
+    (void)atlas_name; (void)pos; (void)size; (void)color; (void)right; (void)up;
     (void)atlas_x; (void)atlas_y; (void)atlas_w; (void)atlas_h;
     return FALSE;
 }

@@ -1022,10 +1022,11 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
  *
  * The latch is ifCommonSetMaxNumGObj at 25,600 free, so the first two both
  * capped the GObj pool for the whole match -- a correctness fix that shrinks
- * the arena is a regression with extra steps. Only DeadExplode and RebirthHalo
- * can spawn with the flag off (every other DObj-tree maker is behind it and
- * --gc-sections drops the maker and its desc together), so only those two are
- * unconditional. The rest come back exactly when their makers do.
+ * the arena is a regression with extra steps. DeadExplode is the only source
+ * DObj-tree maker that can spawn with the flag off, so it is the only
+ * unconditional desc. Rebirth uses the bounded DS visual seam: source effect
+ * DL links are not submitted by the battle hardware path, which is why the
+ * respawn platform was invisible.
  *
  * dEFManagerMBallThrown/CaptureKirbyStar/LoseKirbyStar are excluded for a
  * second reason: their file_head is &gITManagerCommonData, which this ROM does
@@ -1051,7 +1052,6 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 
 #define NDS_EF_MANAGER_DESCS(X) \
     X(dEFManagerDeadExplodeEffectDesc) \
-    X(dEFManagerRebirthHaloEffectDesc) \
     NDS_EF_MANAGER_DESCS_FULL(X)
 
 static void ndsEFManagerResolveAllDescOffsets(void)
@@ -1234,29 +1234,6 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
     u32 drop = 0u;
 
     gNdsKOBurstAttemptCount++;
-#if !NDS_R2_KO_BURST_PARTICLE
-    /* THE KO BURST IS OFF BY DEFAULT, and this is the only configuration
-     * measured NO-FREEZE: two KOs, a completed match, Results reached, heap
-     * low-water 29,328. Every configuration that spawns any part of the burst
-     * dies on the FIRST KO at presented frame 609.
-     *
-     * The narrowing, all on the published configuration:
-     *   burst + tree      FROZEN at 609   att=1 ok=1 drop=000 stage=6
-     *   burst, no tree    FROZEN at 609   att=1 ok=1 drop=400 stage=6
-     *   no burst          NO-FREEZE       att=2      drop=200, match completes
-     * with MALLOCOVF=0, the GObj cap unfired and 32,196 bytes free in the
-     * frozen case -- so this is not allocation, and it is not the DObj tree.
-     * What is left is the particle call itself, and the one thing that makes
-     * it unlike every effect that works is the generator link:
-     * lbParticleMakeScriptID(bank | LBPARTICLE_MASK_GENLINK(1), ...). Every
-     * healthy effect in this port uses GENLINK(0). That is the next thing to
-     * look at, not the heap.
-     *
-     * ftCommonDeadUpStar still plays efManagerSparkleWhiteDeadMakeEffect, which
-     * is particle-only on link 0 and works, so a KO is not silent. */
-    gNdsKOBurstDropMask |= NDS_KO_BURST_DROP_SUPPRESSED;
-    return NULL;
-#endif
     gNdsKOBurstStage = NDS_KO_BURST_STAGE_ENTER;
 
     gNdsKOBurstStage = NDS_KO_BURST_STAGE_PARTICLE;
@@ -1286,36 +1263,6 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
     }
     else { drop |= NDS_KO_BURST_DROP_PARTICLE; }
 
-#if !NDS_R2_KO_BURST_TREE
-    /* THE KO BURST SHIPS PARTICLE-ONLY. Everything above -- the generator
-     * script and its transform -- is the visible explosion, drawn through the
-     * textured-quad path that is already proven. What follows is the animated
-     * DObj tree, and it is the freeze the owner reported on 2026-08-01.
-     *
-     * Isolated by A/B on the published configuration: burst on, the game dies
-     * on the FIRST KO at presented frame 609; burst suppressed, two KOs and a
-     * completed match reaching Results, NO-FREEZE, heap low-water 29,328.
-     * The tree is not what breaks -- it builds correctly and reports
-     * att=1 ok=1 drop=000 stage=6 with MALLOCOVF=0 and the GObj cap unfired.
-     * It dies one frame LATER, in the update: efManagerFuncRun installs
-     * efManagerNoStructProcUpdate (this desc has no EFFECT_FLAG_USERDATA, so
-     * ep is NULL and the have-struct updater is correctly not used), which
-     * calls gcPlayAnimAll every frame. gcPlayAnimAll is NULL-safe at the top,
-     * so the fault is inside the anim-joint walk over o_anim_joint /
-     * o_matanim_joint -- an animation-data problem, not an allocation one. The
-     * abort context proves the shape: a data abort taken in System mode, after
-     * which calico schedules the idle thread and every capture reads as a bare
-     * armWaitForIrq with zeroed registers.
-     *
-     * PROJECT_GOAL ranks visual fidelity below stability, and a sprite-based
-     * approximation is explicitly allowed, so the tree waits for the animation
-     * defect rather than the KO waiting for the tree. Set NDS_R2_KO_BURST_TREE=1
-     * to work on it; that configuration currently freezes. */
-    gNdsKOBurstDropMask |= NDS_KO_BURST_DROP_TREE_OFF;
-    gNdsKOBurstStage = NDS_KO_BURST_STAGE_DONE;
-    gNdsKOBurstCompleteCount++;
-    return NULL;
-#endif
     gNdsKOBurstStage = NDS_KO_BURST_STAGE_MATANIM;
     /* Reassigned per KO from an address-valued table, so it needs resolving
      * every time -- the once-per-scene sweep in efManagerInitEffects cannot
@@ -1381,11 +1328,6 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
     if (drop == 0u) { gNdsKOBurstCompleteCount++; }
     gNdsKOBurstDropMask |= drop;
     return effect_gobj;
-}
-
-GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 scale)
-{
-    return ndsBaseEFManagerRebirthHaloMakeEffect(fighter_gobj, scale);
 }
 
 /* THE "PARTICLE-ONLY" SPLIT WAS WRONG, and this is the correction.

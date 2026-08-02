@@ -64,18 +64,14 @@
  * error; those formats are paletted or alpha-indexed, and the renderer's
  * texture cache uploads GL_RGBA with no palette slot in its key.
  *
- * ONE ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
+ * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
  * not bytes: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 13 individual frames. An atlas spends one name -- and one
- * BIND for every particle in the frame, whatever textures they came from, so
- * the triangle batch never breaks on a texture change.
+ * admitted set is 27 individual frames. The atlas keeps
+ * every particle in one bind.
  *
- * 64x64 follows from that: DS dimensions are powers of two, this is
- * 16 bits a texel, and VRAM_A+B have 119,872 free after the static set, so
- * 256x256 does not fit and this is the largest that does. Admission is by
- * ascending texture size, keeping each candidate only while the whole set
- * still PACKS -- shelf waste is real, so a byte budget would admit a set that
- * cannot be laid out.
+ * 64x64 is the measured-safe 8 KiB allocation. Larger or
+ * additional allocations break stage texture resolves even with ample VRAM.
+ * KO-only cells are reduced to 8x8 so their full measured closure fits here.
  *
  * A texture the runtime asks for and does not find here draws nothing; it does
  * not draw something else. gNdsParticleTextureUseMask says which ones a real
@@ -85,9 +81,9 @@
 #define NDS_PARTICLE_QUAD_ATLAS_WIDTH 64u
 #define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u
 #define NDS_PARTICLE_QUAD_ASSET_BYTES 8192u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 6400u
-#define NDS_PARTICLE_QUAD_COUNT 7u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 13u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 8192u
+#define NDS_PARTICLE_QUAD_COUNT 14u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 27u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing

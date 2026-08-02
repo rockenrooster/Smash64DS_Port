@@ -5,6 +5,9 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $generator = Join-Path $PSScriptRoot 'generate_nds_particle_banks.py'
 $reportPath = Join-Path $root 'docs/optimization/NDS_PARTICLE_BANKS.generated.json'
 $headerPath = Join-Path $root 'include/nds/generated/nds_particle_banks.generated.h'
+$effectHeaderPath = Join-Path $root 'include/ef/effect.h'
+$runtimePath = Join-Path $root 'src/import/battleship_lbparticle.c'
+$rendererPath = Join-Path $root 'src/nds/nds_renderer.c'
 $incPath = Join-Path $root 'src/nds/generated/nds_particle_banks.generated.inc'
 $assetPath = Join-Path $root 'assets/particles/efcommon_particle_textures.ds.bin'
 
@@ -31,6 +34,37 @@ foreach ($guard in @(
 # it `8 if y & 1 else 0`. This generator must never grow one.
 if ($source -match 'y\s*&\s*1') {
     throw 'Particle bank generator grew an odd-row parity test.'
+}
+
+# BattleShip stores the particle-list slot in bank_id >> 3. Its public macro
+# maps source genlink 0..3 to slots 1..4; a prior <<16 port typo indexed slot
+# 8192 for the KO burst and data-aborted on its first spawn.
+$effectHeader = Get-Content -LiteralPath $effectHeaderPath -Raw
+if (-not $effectHeader.Contains(
+        '#define LBPARTICLE_MASK_GENLINK(link) (((link) + 1) * 8)')) {
+    throw 'Particle generator-link encoding differs from BattleShip.'
+}
+
+# The DS draw must consume the source transform and tint, not only the local
+# script position. Ignoring this is visually valid-looking but puts Whispy,
+# hit, and KO effects at the stage origin.
+$runtime = Get-Content -LiteralPath $runtimePath -Raw
+foreach ($token in @(
+    'dLBParticleCurrentTransformID++;',
+    'syMatrixTraRotRpyRScaF(',
+    'world_pos->x = (xf->affine[0][0] * pc->pos.x)',
+    'ndsRendererSubmitParticleQuad(atlas_name, &world_pos, pc->size,')) {
+    if (-not $runtime.Contains($token)) {
+        throw "Particle draw lost its source transform contract: $token"
+    }
+}
+if ($runtime.Contains(
+        'ndsRendererSubmitParticleQuad(atlas_name, &pc->pos, pc->size,')) {
+    throw 'Particle draw regressed to a script-local position.'
+}
+$renderer = Get-Content -LiteralPath $rendererPath -Raw
+if (-not $renderer.Contains('glColor((rgb)color);')) {
+    throw 'Particle draw lost source prim-color modulation.'
 }
 
 & $Python $generator --repo-root $root --check
@@ -161,13 +195,16 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # and 1 -- Dream Land draws ALL THREE of its textures, not only the sheet its
 # two named scripts reference. All three are admitted now (64/65/66); it cost
 # common textures 3 and 9, neither of which any measured match has drawn.
+# 2026-08-01, fifth change: the upward-star KO runs efcommon script 0x5C,
+# which requests texture 24. Its focused run reported one miss and zero quads;
+# the 16x16 source cell fits the last 128 bytes when reduced to 8x8.
 if (([int64]$report.quads.atlas_width -ne 64) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.atlas_bytes -ne 8192) -or
-    ([int64]$report.quads.bytes -ne 6400) -or
-    ([int64]$report.quads.frame_count -ne 13) -or
-    (@($report.quads.admitted).Count -ne 7) -or
-    (@($report.quads.excluded).Count -ne 27)) {
+    ([int64]$report.quads.bytes -ne 8192) -or
+    ([int64]$report.quads.frame_count -ne 27) -or
+    (@($report.quads.admitted).Count -ne 14) -or
+    (@($report.quads.excluded).Count -ne 20)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.bytes) B, " +
         "$(@($report.quads.admitted).Count) admitted, " +
@@ -180,9 +217,19 @@ if ([int64]$report.quads.bytes -gt [int64]$report.quads.atlas_bytes) {
 # supply (1 has no image), plus Dream Land's leaf/dust sheet. If admission order
 # ever drops one the effects stop appearing and nothing else would say so --
 # which is exactly what happened on 2026-08-01 with texture 0.
-foreach ($id in @(0, 2, 22, 27, 64, 65, 66)) {
+foreach ($id in @(0, 2, 10, 13, 18, 19, 20, 21, 22, 24, 27, 64, 65, 66)) {
     if (@($report.quads.admitted) -notcontains $id) {
         throw "Particle quad sheet dropped measured texture $id."
+    }
+}
+$koCells = @($report.quads.admitted_cells | Where-Object {
+        [int]$_.texture -in @(10, 13, 18, 19, 20, 21, 24) })
+if ($koCells.Count -ne 7) {
+    throw "KO particle atlas closure has $($koCells.Count) textures, expected 7."
+}
+foreach ($cell in $koCells) {
+    if (([int]$cell.width -ne 8) -or ([int]$cell.height -ne 8)) {
+        throw "KO particle texture $($cell.texture) is not the measured-safe 8x8 cell."
     }
 }
 if ($report.checksums.source_sha256_lo -ne '0xa2a1e85f') {
@@ -272,9 +319,9 @@ foreach ($token in @(
     '#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 64u',
     '#define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u',
     '#define NDS_PARTICLE_QUAD_ASSET_BYTES 8192u',
-    '#define NDS_PARTICLE_QUAD_TEXEL_BYTES 6400u',
-    '#define NDS_PARTICLE_QUAD_COUNT 7u',
-    '#define NDS_PARTICLE_QUAD_FRAME_COUNT 13u',
+    '#define NDS_PARTICLE_QUAD_TEXEL_BYTES 8192u',
+    '#define NDS_PARTICLE_QUAD_COUNT 14u',
+    '#define NDS_PARTICLE_QUAD_FRAME_COUNT 27u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
     '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x1973edecu',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
@@ -367,4 +414,4 @@ Write-Output (('Particle bank pack passed: 87/119 reachable efcommon scripts, ' 
     '(10912 script bank + 1283 index) of 210320 B arena headroom (198125 B ' +
     'spare) plus 137152 B NitroFS payload, 7 bit-exact CI4 textures, linear ' +
     "texel order pinned, .inc $incState, payload $assetState, " +
-    "quad atlas 64x64, 7/34 textures in 13 frames $quadState."))
+    "quad atlas 64x64, 14/34 textures in 27 frames $quadState."))

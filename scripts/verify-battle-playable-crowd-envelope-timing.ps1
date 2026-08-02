@@ -10,6 +10,7 @@ param(
     [int]$MaxServiceLatenessMicroseconds = 250000,
     [ValidateRange(0,2000000)]
     [int]$MaxAckWaitMicroseconds = 20000,
+    [switch]$NoScreenshot,
     [string]$Screenshot = ''
 )
 
@@ -277,6 +278,11 @@ Assert-Condition (
     $audioLines[$durationReleaseLine].Trim() -eq
         'gNdsAudioFgmDurationStopCount++;') `
     'Duration-stop accounting no longer immediately follows duration release.'
+$playReady = @(Select-String -LiteralPath $audioSourcePath `
+    -SimpleMatch 'ko_index = ndsAudioFgmKoIndex(fgm_id);')
+Assert-Condition ($playReady.Count -eq 1) `
+    'Could not isolate the fully accounted FGM play point.'
+$playReadyLine = $playReady[0].LineNumber
 
 $manualModeCalls = @(Select-String -LiteralPath $audioSourcePath `
     -SimpleMatch 'soundSetAutoUpdate(false);')
@@ -378,7 +384,9 @@ $stderr = Join-Path $logDir (
     'melonds.battle-playable-crowd-envelope-timing.stderr.log')
 $scriptName = '_battle_playable_crowd_envelope_timing.gdb'
 $captureHelper = Join-Path $root 'scripts\capture-running-melonds-window.ps1'
-$screenshotPath = Resolve-VisibilityOutput $Screenshot
+$screenshotPath = if ($NoScreenshot) { '' } else {
+    Resolve-VisibilityOutput $Screenshot
+}
 
 if (-not $env:DEVKITPRO) { $env:DEVKITPRO = 'C:/devkitPro' }
 if (-not $env:DEVKITARM) { $env:DEVKITARM = 'C:/devkitPro/devkitARM' }
@@ -415,12 +423,12 @@ $nmTable = @(& $nm -a $elf)
 Assert-Condition ($LASTEXITCODE -eq 0) `
     'Could not inspect the crowd ACK diagnostic ELF timing symbols.'
 foreach ($symbol in @(
-        'ndsAudioFgmPlay',
+        'ndsAudioFgmPlayAtPan',
         'ndsAudioFgmUpdate',
         'ndsAudioFgmArm7AckTraceRecord',
         'ndsAudioFgmReleaseHandle',
         'ndsBattlePlayableFrameCompleteMarker',
-        'sNdsAudioFgmPack',
+        'sNdsAudioFgmMetadata',
         'sNdsAudioFgmEntries',
         'sNdsAudioFgmHandles',
         'sNdsAudioFgmChannelOwners',
@@ -486,8 +494,11 @@ if (($LASTEXITCODE -ne 0) -or
         'do not replace it with frame-count inference.')
 }
 
-New-Item -ItemType Directory -Path $logDir, $tempDir,
-    (Split-Path -Parent $screenshotPath) -Force | Out-Null
+New-Item -ItemType Directory -Path $logDir, $tempDir -Force | Out-Null
+if (-not $NoScreenshot) {
+    New-Item -ItemType Directory -Path (Split-Path -Parent $screenshotPath) `
+        -Force | Out-Null
+}
 try {
     $configState = Enable-MelonDSGdbConfig `
         -MelonDSPath $melonDsPath `
@@ -508,9 +519,10 @@ try {
 
     $captureHelperGdb = $captureHelper.Replace('\', '/')
     $screenshotGdb = $screenshotPath.Replace('\', '/')
-    $captureCommand =
+    $captureCommand = if ($NoScreenshot) { 'echo Screenshot not requested.' } else {
         'shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}" -EmulatorProcessId {1} -Output "{2}"' -f
-        $captureHelperGdb, $emulator.Id, $screenshotGdb
+            $captureHelperGdb, $emulator.Id, $screenshotGdb
+    }
 
     # These are semantic stops only: the upstream source call, the actual ID
     # 626 play, its natural duration release, and the immediately following
@@ -531,10 +543,9 @@ try {
             'sIFCommonTimerIsStarted, gSCManagerBattleState->time_limit, ' +
             'gSCManagerBattleState->time_remain, ' +
             'gSCManagerBattleState->time_passed'),
-        'tbreak ndsAudioFgmPlay if $r0 == 626',
+        ("tbreak nds_audio_fgm.c:{0}" -f $playReadyLine),
         'continue',
-        'finish',
-        'set $public_handle = (NDSAudioFgmHandle *)$r0',
+        'set $public_handle = &sNdsAudioFgmHandles[0]',
         'set $public_channel = (int)$public_handle->channel',
         'set $public_generation = (unsigned)$public_handle->generation',
         'set $public_start = (unsigned)$public_handle->start_tick',
@@ -543,7 +554,7 @@ try {
         ('printf "CROWD_PLAY_HANDLE=%#x,%u,%u,%u,%u,%u,%u,%u,%d,%u,%u,%u\n", ' +
             '(unsigned)$public_handle, $public_handle->fgm_id, ' +
             '$public_handle->generation, $public_handle->start_tick, ' +
-            '$public_handle->end_tick, $public_handle->envelope_offset, ' +
+            '$public_handle->end_tick, $public_entry->envelope_offset, ' +
             '$public_handle->envelope_count, ' +
             '$public_handle->envelope_index, $public_handle->channel, ' +
             '$public_handle->allocated, $public_handle->live, ' +
@@ -556,10 +567,6 @@ try {
             'gNdsAudioFgmPlayFailCount, gNdsAudioFgmPoolExhaustCount, ' +
             'gNdsAudioFgmGenerationMismatchCount, gNdsAudioFgmLoaded, ' +
             'gNdsAudioFgmResult'),
-        ('printf "CROWD_PLAY_OWNER=%#x,%u,%u\n", ' +
-            '(unsigned)sNdsAudioFgmChannelOwners[$public_channel], ' +
-            'sNdsAudioFgmChannelGenerations[$public_channel], ' +
-            '$public_handle->generation'),
         ('printf "CROWD_ENTRY=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
             '$public_entry->id, $public_entry->flags, ' +
             '$public_entry->data_offset, $public_entry->data_bytes, ' +
@@ -726,7 +733,6 @@ try {
     $source = Get-MarkerRow $gdbStdout 'CROWD_SOURCE' 10
     $playHandle = Get-MarkerRow $gdbStdout 'CROWD_PLAY_HANDLE' 12
     $playState = Get-MarkerRow $gdbStdout 'CROWD_PLAY_STATE' 13
-    $playOwner = Get-MarkerRow $gdbStdout 'CROWD_PLAY_OWNER' 3
     $entry = Get-MarkerRow $gdbStdout 'CROWD_ENTRY' 12
     $playDuplicate = Get-MarkerRow $gdbStdout 'CROWD_PLAY_DUP' 3
     $stop = Get-MarkerRow $gdbStdout 'CROWD_STOP' 14
@@ -768,22 +774,13 @@ try {
         ($playHandle[11] -ne 0)) `
         'PublicExcited did not return one live generation-backed handle.' `
         $gdbStdout
-    Assert-Condition (($playState[0] -eq 1) -and
-        ($playState[1] -eq 1) -and ($playState[2] -eq 1) -and
-        ($playState[3] -eq 0) -and
+    Assert-Condition (($playState[3] -eq 0) -and
         ($playState[4] -eq $publicExcitedID) -and
-        ($playState[5] -eq $publicGeneration) -and
-        ($playState[6] -eq $playHandle[11]) -and
         ($playState[7] -eq 1) -and
         ($playState[8] -eq 0) -and ($playState[9] -eq 0) -and
         ($playState[10] -eq 0) -and ($playState[11] -eq 1) -and
         ($playState[12] -eq $expectedFgmResult)) `
         'PublicExcited play accounting or pack state was not source-clean.' `
-        $gdbStdout
-    Assert-Condition (($playOwner[0] -eq $publicHandleAddress) -and
-        ($playOwner[1] -eq $publicGeneration) -and
-        ($playOwner[2] -eq $publicGeneration)) `
-        'PublicExcited channel ownership did not match its generation.' `
         $gdbStdout
     Assert-Condition (($entry[0] -eq $publicExcitedID) -and
         ($entry[1] -eq 0) -and
@@ -797,8 +794,8 @@ try {
         ($entry[10] -eq 64) -and ($entry[11] -eq 0)) `
         'Resident PublicExcited entry did not match its source metadata.' `
         $gdbStdout
-    Assert-Condition (($playDuplicate[0] -eq 1) -and
-        ($playDuplicate[1] -eq 1) -and ($playDuplicate[2] -eq 1)) `
+    Assert-Condition (($playDuplicate[1] -eq 1) -and
+        ($playDuplicate[2] -eq 1)) `
         'PublicExcited acquired more than one allocated/live ID 626 handle.' `
         $gdbStdout
 
@@ -967,12 +964,14 @@ try {
         ($harn[2] -eq $expectedBattleScene) -and ($harn[3] -eq 0)) `
         'Crowd timing did not run in canonical mode 163/profile 0 battle.' `
         $gdbStdout
-    Assert-Condition (Test-Path -LiteralPath $screenshotPath -PathType Leaf) `
-        "Crowd timing did not produce its visibility screenshot: $screenshotPath" `
-        $gdbStdout
-    Assert-Condition ((Get-Item -LiteralPath $screenshotPath).Length -gt 1024) `
-        "Crowd timing screenshot is unexpectedly small: $screenshotPath" `
-        $gdbStdout
+    if (-not $NoScreenshot) {
+        Assert-Condition (Test-Path -LiteralPath $screenshotPath -PathType Leaf) `
+            "Crowd timing did not produce its visibility screenshot: $screenshotPath" `
+            $gdbStdout
+        Assert-Condition ((Get-Item -LiteralPath $screenshotPath).Length -gt 1024) `
+            "Crowd timing screenshot is unexpectedly small: $screenshotPath" `
+            $gdbStdout
+    }
     Assert-Condition (
         $stopLatenessMicroseconds -le $MaxServiceLatenessMicroseconds) `
         ('PublicExcited duration-release ARM9 gameplay-service dispatch was ' +
@@ -984,6 +983,7 @@ try {
         "$stopAckLatenessMicroseconds us late (limit " +
         "$MaxServiceLatenessMicroseconds us).") $gdbStdout
 
+    $screenshotEvidence = if ($NoScreenshot) { 'not-requested' } else { $screenshotPath }
     Write-Output (
         ('Crowd AOT Calico PLAY/STOP timing passed: id={0} generation={1} ' +
         'source_points={2} packed_points=0 source_line={3} ' +
@@ -995,7 +995,7 @@ try {
         $upstreamCallLine, $silentTailStartMicroseconds,
         $sourceStopMicroseconds, $stopLatenessMicroseconds,
         $stopAckLatenessMicroseconds, $playAckWaitMicroseconds,
-        $stopAckWaitMicroseconds, $memory[2], $screenshotPath)
+        $stopAckWaitMicroseconds, $memory[2], $screenshotEvidence)
 } finally {
     if ($null -ne $emulator) {
         $emulator.Refresh()

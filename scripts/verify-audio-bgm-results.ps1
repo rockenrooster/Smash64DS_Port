@@ -131,7 +131,7 @@ try {
         'set confirm off',
         'set remotetimeout 5',
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
-        'break syAudioUpdateBGMState if gNdsAudioBgmResultsPlayCount == 1',
+        'break syAudioUpdateBGMState if gNdsAudioBgmResultsPlayCount == 1 && gNdsAudioBgmPlaying == 1 && gNdsAudioBgmSoundActive == 1',
         'continue',
         'delete breakpoints',
         'printf "AUDIO_CORE=%#x,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsAudioBgmResult, gNdsAudioBgmMask, gNdsAudioBgmPlaying, gNdsAudioBgmTrackID, gNdsAudioBgmPlayCalls, gNdsAudioBgmStopCalls, gNdsAudioBgmCheckCalls, gNdsAudioBgmOpenFailCount, gNdsAudioBgmReadFailCount, gNdsAudioBgmUnsupportedTrackCount, gNdsAudioBgmReadBytes, gNdsAudioBgmResidentBytes, gNdsAudioBgmChunkBytes, gNdsAudioBgmChunkPlayCount, gNdsAudioBgmElapsedFrames, gNdsAudioBgmRefillCount, gNdsAudioBgmUnsafeWriteCount, gNdsAudioBgmOverrunCount, gNdsAudioBgmStreamBytesPerSecond, gNdsAudioBgmExpectedBytesPerSecond, gNdsAudioBgmLoopCount',

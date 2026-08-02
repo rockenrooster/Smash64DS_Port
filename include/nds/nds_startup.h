@@ -3899,12 +3899,11 @@ extern volatile u32 gNdsWeaponPoolEntries;
 extern volatile u32 gNdsTaskmanGeneralHeapFreeMin;
 /* Peak live DObjs. x136 bytes is heap the match never gives back. */
 extern volatile u32 gNdsGCDrawsActiveMax;
-/* DS weapon-pool size, replacing the source's WEAPON_ALLOC_MAX 32. See the
- * measurement in src/import/battleship_wpmanager_core.c: 32 * 704 bytes held
- * gSYTaskmanGeneralHeap under the ifCommonSetMaxNumGObj threshold for the whole
- * match, which capped the GObj pool and refused four of eleven fireballs. */
+/* DS weapon-pool size, replacing the source's WEAPON_ALLOC_MAX 32. The P1
+ * Mario/Fox high-water is one live weapon; six retains five spare entries and
+ * leaves the source crowd actor more than 2 KiB above the GObj latch. */
 #ifndef NDS_R2_WEAPON_POOL
-#define NDS_R2_WEAPON_POOL 12
+#define NDS_R2_WEAPON_POOL 6
 #endif
 /* The effect-instance pool is the same kind of DS pool-size override; it lives
  * in include/nds/nds_effects.h, beside the effect counters it is measured with. */

@@ -107,7 +107,14 @@ struct EFStruct
 #include <ef/efmanager.h>
 #include <ef/efground.h>
 
-#define LBPARTICLE_MASK_GENLINK(link) ((link) << 16)
+#ifndef LBPARTICLE_MASK_GENLINK
+#define LBPARTICLE_MASK_GENLINK(link) (((link) + 1) * 8)
+#endif
+
+#if (LBPARTICLE_MASK_GENLINK(0) != 8) || \
+    (LBPARTICLE_MASK_GENLINK(3) != 32)
+#error "LBPARTICLE_MASK_GENLINK must encode BattleShip particle-list slots"
+#endif
 
 #define efGetStruct(effect_gobj) ((EFStruct *)(effect_gobj)->user_data.p)
 

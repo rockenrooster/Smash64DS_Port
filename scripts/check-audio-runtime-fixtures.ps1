@@ -316,7 +316,7 @@ $attackIDs = @($metadata.entries | Where-Object {
     } | ForEach-Object { [int]$_.id })
 Assert-EqualList -Label 'Resident attack/activation ID set' `
     -Actual $attackIDs -Expected ([int[]]@(215, 19, 41, 42, 43, 185, 186,
-            187, 189, 190, 217, 218, 219))
+            187, 189, 190, 217, 218, 219, 18))
 $qualification = $metadata.attack_activation_qualification
 Assert-EqualList -Label 'Source-qualified attack/activation ID set' `
     -Actual ([int[]]@($qualification.qualified_ids)) `

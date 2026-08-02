@@ -1354,22 +1354,10 @@ override NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI := 1
 # its thresholds, cooldowns, repeat limits and defeated-voice queue are the
 # source's rather than a translation.
 #
-# STILL DEFAULT 0, and 2026-08-01 measured the price instead of estimating it.
-# Its .text costs taskman arena one-for-one, and the number that matters is
-# gNdsTaskmanGeneralHeapFreeMin -- the battle-time low-water of
-# gSYTaskmanGeneralHeap, sampled every presented frame. Under 25,600
-# ifCommonSetMaxNumGObj caps the GObj pool for the rest of the match, which is
-# the latch that was silently deleting four of Mario's eleven fireballs.
-# Measured on the same tree, one build apart: OFF the low-water is 26,876 --
-# 1,276 clear of the threshold, so the shipping configuration no longer latches
-# at all. ON it is 23,544, so the actor costs 3,332 bytes and lands 2,056 UNDER:
-# NO-FREEZE, 560,419 quads with zero misses, miss ring empty, no spawn refused,
-# but the cap did latch and only happened to latch late enough to be harmless.
-# PROJECT_GOAL.md ranks audio fidelity FIRST in the sacrifice order and gameplay
-# fidelity above it, so when the two compete for heap the crowd yields. Turn
-# this on when the low-water clears 25,600 with margin; that is roughly 2,100
-# more bytes, and NDS_R2_WEAPON_POOL is where the last 14,080 came from.
-NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 0
+# The actor costs 3,332 bytes. NDS_R2_WEAPON_POOL now retains six entries
+# against a measured P1 high-water of one; the shipping soak must keep
+# gNdsTaskmanGeneralHeapFreeMin above the 25,600-byte GObj latch.
+NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 1
 # Route the remaining seventeen efManager*MakeEffect seams to their source
 # implementations instead of the untextured primitive stand-ins. Default 0 on a
 # MEASURED result, not caution: with all twenty routed the ROM froze MID-MATCH
@@ -1379,9 +1367,9 @@ NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 0
 # ftCommonDeadDownSetStatus -- so the cost is source effects building real DObj
 # trees out of gSYTaskmanGeneralHeap during play, not setup-time asset loading.
 # The seventeen drained the heap and the KO burst's own DObj was the straw.
-# The KO group (DeadExplode, SparkleWhiteDead, RebirthHalo) is unconditional on
-# the strength of its OWN soak -- NO-FREEZE, low-water 26,876 unchanged -- not
-# on this freeze. Raise this only with a soak whose
+# DeadExplode and SparkleWhiteDead are unconditional. Rebirth uses the bounded
+# DS visual seam because the battle hardware path does not submit source effect
+# DL links. Raise this only with a soak whose
 # gNdsTaskmanGeneralHeapFreeMin stays above 25,600.
 NDS_R2_SOURCE_EFFECTS_FULL ?= 0
 # Effect-instance pool depth (source EFFECT_ALLOC_NUM is 38). Bounding it bounds
@@ -1400,21 +1388,6 @@ NDS_R2_EFFECT_POOL ?= 12
 # ordinary bound check in ftcommondead.c, so the burst, scoring and respawn all
 # run for real. NEVER ship this: these are the gameplay blast zones.
 NDS_R2_KO_STRESS ?= 0
-# Build the KO burst's animated DObj tree. DEFAULT 0 -- the burst ships
-# particle-only -- because this configuration FREEZES on the first KO. The tree
-# itself builds correctly (att=1 ok=1 drop=000 stage=6, MALLOCOVF=0, GObj cap
-# unfired); it faults one frame later inside gcPlayAnimAll's anim-joint walk,
-# so the open defect is the effect ANIMATION data, not allocation. See the
-# block comment in src/import/battleship_efmanager.c. Owner report,
-# 2026-08-01: "the KO burst freezes the game".
-NDS_R2_KO_BURST_TREE ?= 0
-# Spawn the KO burst's particle at all. DEFAULT 0, which switches
-# efManagerDeadExplodeMakeEffect off entirely and is the ONLY configuration
-# measured NO-FREEZE (two KOs, completed match, Results reached). Anything that
-# spawns any part of the burst dies on the first KO at presented frame 609 with
-# a healthy heap, so the open defect is the particle path -- specifically its
-# LBPARTICLE_MASK_GENLINK(1) generator link, unique among this port's effects.
-NDS_R2_KO_BURST_PARTICLE ?= 0
 override NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_BGM := 1
 override NDS_IMPORT_BATTLESHIP_AUDIO_FGM := 1
@@ -2543,8 +2516,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_SOURCE_EFFECTS_FULL $(NDS_R2_SOURCE_EFFECTS_FULL)'; \
 		echo '#define NDS_R2_EFFECT_POOL $(NDS_R2_EFFECT_POOL)'; \
 		echo '#define NDS_R2_KO_STRESS $(NDS_R2_KO_STRESS)'; \
-		echo '#define NDS_R2_KO_BURST_TREE $(NDS_R2_KO_BURST_TREE)'; \
-		echo '#define NDS_R2_KO_BURST_PARTICLE $(NDS_R2_KO_BURST_PARTICLE)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI)'; \

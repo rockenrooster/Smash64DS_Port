@@ -487,7 +487,7 @@ def main() -> int:
             "BattleShip_o2r/audio/S1_music_sbk sequence "
             f"{args.sequence_index} + B1_sounds1_ctl/tbl"
         ),
-        "tool": "scripts/render-audio-bgm-pupupu.py",
+        "tool": "scripts/sfx/bgm/render-audio-bgm-pupupu.py",
         "sample_rate": OUTPUT_SAMPLE_RATE,
         "format": format_name,
         "bytes": len(payload),

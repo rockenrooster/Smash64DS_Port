@@ -1203,6 +1203,7 @@ void ndsRendererHardwareDiscardParticleAtlas(void);
  * the first quad and closes in ndsRendererEndParticleQuads, so a whole
  * particle pass is one glBegin and one bind. */
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
+                                  u32 color,
                                   const Vec3f *right, const Vec3f *up,
                                   u32 atlas_x, u32 atlas_y,
                                   u32 atlas_w, u32 atlas_h);

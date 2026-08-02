@@ -136,9 +136,11 @@ TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
 # CONTROL's own numbers: StagePrepareBuildCount 2, Reuse 2,041, five-VBlank
 # frames 4, and 117,937 quads emitted with ZERO misses.
 #
-# More coverage therefore cannot come from a bigger sheet. It has to come from
-# a second small atlas, a smaller per-texture format, or giving the atlas its
-# own VRAM instead of the texture cache's.
+# More coverage cannot come from another allocation either. A second 8 KiB page
+# reproduced the exact same violation/rebuild pair: 1 and 197. The corrected KO
+# path needs thirteen frames from textures 10/13/18/19/20/21. At 8x8 they use
+# 832 texels, fitting the proven sheet's 896 free texels without changing its
+# one-name, one-allocation contract.
 QUAD_ATLAS_WIDTH = 64
 QUAD_ATLAS_HEIGHT = 64
 # Admitted before anything else. These are the textures a natural single-CPU
@@ -154,7 +156,11 @@ QUAD_ATLAS_HEIGHT = 64
 # 0x08400007 -- bits 0, 1, 2, 22, 27 -- and admitting Pupupu had evicted texture
 # 0, which alone carries almost every particle a moving match draws: 130,714
 # visible particles produced 2,725 quads. Bits, not hex digits.
-QUAD_MEASURED_LIVE = frozenset((0, 1, 2, 22, 27))
+# Up-star script 0x5C uses texture 24; a forced source-status run proved that
+# its missing cell produced one miss and zero quads. It fits only at 8x8.
+QUAD_KO_LIVE = frozenset((10, 13, 18, 19, 20, 21, 24))
+QUAD_MEASURED_LIVE = frozenset(
+    (0, 1, 2, 10, 13, 18, 19, 20, 21, 22, 24, 27))
 QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT * 2
 # The largest cell the atlas will hold, in texels per axis. This is the
 # "halving" the exclusion note below always pointed at, and texture 0 is why it
@@ -165,12 +171,14 @@ QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT * 2
 # ordinary cell. Reduced texture resolution is explicitly allowed by
 # PROJECT_GOAL.md; a particle that does not draw at all is not.
 QUAD_CELL_MAX = 16
+QUAD_KO_CELL_MAX = 8
 
 
-def quad_cell_dims(width: int, height: int) -> tuple[int, int]:
-    """Halve both axes until the cell fits QUAD_CELL_MAX. Aspect is preserved."""
+def quad_cell_dims(width: int, height: int,
+                   cell_max: int = QUAD_CELL_MAX) -> tuple[int, int]:
+    """Halve both axes until the cell fits cell_max. Aspect is preserved."""
     cell_w, cell_h = width, height
-    while (cell_w > QUAD_CELL_MAX) or (cell_h > QUAD_CELL_MAX):
+    while (cell_w > cell_max) or (cell_h > cell_max):
         cell_w = max(1, cell_w // 2)
         cell_h = max(1, cell_h // 2)
     return cell_w, cell_h
@@ -1133,7 +1141,7 @@ def shelf_pack(cells: list[dict], width: int, height: int):
 def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                      frames_by_texture: dict[int, list[list]],
                      extra_candidates: list[dict] | None = None) -> dict:
-    """The DS draw path's payload: ONE RGB555+A1 atlas, shelf-packed.
+    """The DS draw path's payload: one 64x64 RGB555+A1 atlas.
 
     A SECOND encoding of the same texels, on purpose. The pack above chooses a
     format per texture by measured error and gets the whole reachable set into
@@ -1143,24 +1151,10 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     palette slot in its key. Teaching it palettes to save bytes we are not
     short of would be the expensive way round.
 
-    ONE ATLAS AND NOT ONE TEXTURE PER FRAME, because GL names are the binding
-    constraint rather than bytes: NDS_RENDERER_HW_TEXTURE_CACHE_COUNT is 48 and
-    the battle's static set already pins 24 of them, while the admitted set is
-    60 individual frames. An atlas spends ONE name, and -- the part that
-    actually matters for the gate -- ONE bind for every particle in the frame,
-    however many textures they came from. A per-frame scheme would break the
-    triangle batch on every texture change.
-
-    128x128 is the size that follows, and the constraint is STAGING rather than
-    VRAM. VRAM_A+B have 119,872 bytes free after the static set, so 256x128
-    (65,536) would fit there -- but the upload has to pass through
-    sNdsRendererHardwareTextureScratch, which is
-    NDS_RENDERER_HW_TEXTURE_MAX_TEXELS = 128*128, and a dedicated 64 KiB
-    staging buffer would be sixteen taskman arena steps of .bss, which is how
-    this ROM stops booting. 128x128 reuses the existing scratch exactly and
-    costs no new RAM at all. Growing it means streaming into VRAM through the
-    bank's LCD mapping instead, which is a real option (nds_renderer.c already
-    does the LCD dance) but is not needed by anything measured.
+    One texture per frame would exhaust GL names and break the triangle batch.
+    Any second or larger allocation was measured unsafe. The KO-only frames are
+    therefore box-averaged to 8x8 so their exact closure fits in the 8 KiB sheet
+    already proven by the stage-cache gate.
 
     Admission is by ascending texture size, keeping each candidate only if the
     whole set still packs -- the packer decides, not a byte budget, because
@@ -1177,7 +1171,10 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         if not report["packed"]:
             continue
         texture = textures[report["texture"]]
-        cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"])
+        cell_max = (QUAD_KO_CELL_MAX if texture["id"] in QUAD_KO_LIVE
+                    else QUAD_CELL_MAX)
+        cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"],
+                                        cell_max)
         candidates.append({
             "texture": texture["id"],
             "width": cell_w,
@@ -1230,7 +1227,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     if placement is None:
         raise SystemExit("quad atlas failed to pack its own admitted set")
 
-    atlas = bytearray(QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT * 2)
+    atlas = bytearray(QUAD_SHEET_BUDGET_BYTES)
     frame_rows = []
     for index, cell in enumerate(cells):
         origin_x, origin_y = placement[index]
@@ -1240,11 +1237,6 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                 f"quad atlas texture {cell['texture']} frame {cell['frame']} "
                 f"has {len(pixels)} pixels, expected "
                 f"{cell['src_w'] * cell['src_h']}")
-        # Box-average whenever the cell is smaller than the source. Averaging
-        # rather than point-sampling because these are soft particles: nearest
-        # on a 2x reduction drops every other texel of a gradient and reads as
-        # aliasing on a sprite that is already only sixteen texels wide. Alpha
-        # averages too, then meets the same >=128 cut the full-size path uses.
         step_x = cell["src_w"] // cell["w"]
         step_y = cell["src_h"] // cell["h"]
         for row in range(cell["h"]):
@@ -1595,18 +1587,14 @@ def render_header(pack: dict) -> str:
  * error; those formats are paletted or alpha-indexed, and the renderer's
  * texture cache uploads GL_RGBA with no palette slot in its key.
  *
- * ONE ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
+ * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are the binding constraint,
  * not bytes: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is {len(pack["quads"]["frames"])} individual frames. An atlas spends one name -- and one
- * BIND for every particle in the frame, whatever textures they came from, so
- * the triangle batch never breaks on a texture change.
+ * admitted set is {len(pack["quads"]["frames"])} individual frames. The atlas keeps
+ * every particle in one bind.
  *
- * {pack["quads"]["width"]}x{pack["quads"]["height"]} follows from that: DS dimensions are powers of two, this is
- * 16 bits a texel, and VRAM_A+B have 119,872 free after the static set, so
- * 256x256 does not fit and this is the largest that does. Admission is by
- * ascending texture size, keeping each candidate only while the whole set
- * still PACKS -- shelf waste is real, so a byte budget would admit a set that
- * cannot be laid out.
+ * {pack["quads"]["width"]}x{pack["quads"]["height"]} is the measured-safe 8 KiB allocation. Larger or
+ * additional allocations break stage texture resolves even with ample VRAM.
+ * KO-only cells are reduced to 8x8 so their full measured closure fits here.
  *
  * A texture the runtime asks for and does not find here draws nothing; it does
  * not draw something else. gNdsParticleTextureUseMask says which ones a real
@@ -1852,6 +1840,12 @@ def render_report(pack: dict) -> dict:
             "frame_count": len(pack["quads"]["frames"]),
             "bytes": pack["quads"]["bytes"],
             "admitted": [row["texture"] for row in pack["quads"]["admitted"]],
+            "admitted_cells": [
+                {"texture": row["texture"], "bytes": row["bytes"],
+                 "width": row["width"], "height": row["height"],
+                 "frames": row["frames"]}
+                for row in pack["quads"]["admitted"]
+            ],
             "excluded": [{"texture": row["texture"], "bytes": row["bytes"],
                           "width": row["width"], "height": row["height"],
                           "frames": row["frames"]}

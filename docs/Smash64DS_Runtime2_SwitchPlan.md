@@ -502,7 +502,7 @@ wrong thing and would block a correct switch indefinitely.
 - Ported particle banks (from the P1 row), SFX/voice/BGM, HUD, GAME SET →
   results flow. Cosmetic systems get explicit budgets so they cannot erase
   the headroom.
-- **All rows in `BUGS.md` fixed.** this is a P1 Bugs list and are required to be fixed for P1.
+- **All rows in `BUGS.md` fixed before optimization work.** this is a P1 Bugs list and are required to be fixed for P1.
 - Gate: full demo loop (Mario CPU vs Fox CPU, 1-minute and 5-minute match
   lengths) within total budget; battle P95 still ≤ 1.12M DLDI-on. The
   5-minute run is an **owner-instructed acceptance exception** to the

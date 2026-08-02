@@ -1123,6 +1123,72 @@ static sb32 ndsParticleCameraBasis(Vec3f *right, Vec3f *up)
     up->z = (right->x * forward.y) - (right->y * forward.x);
     return TRUE;
 }
+
+/* The source emitter multiplies every local particle position by its optional
+ * LBTransform before projection (lbparticle.c:1683-1732). The first DS quad
+ * path submitted pc->pos directly, which left Whispy, hit, and KO particles at
+ * their script-local origin. Reuse the source matrix builder and its
+ * Ready/Finished cache contract, then scale/mirror the camera-facing axes by
+ * the transformed local X/Y magnitudes. */
+static void ndsParticleTransformForDraw(LBParticle *pc,
+                                        const Vec3f *camera_right,
+                                        const Vec3f *camera_up,
+                                        Vec3f *world_pos,
+                                        Vec3f *quad_right,
+                                        Vec3f *quad_up)
+{
+    LBTransform *xf = pc->xf;
+
+    *world_pos = pc->pos;
+    *quad_right = *camera_right;
+    *quad_up = *camera_up;
+    if (xf == NULL)
+    {
+        return;
+    }
+    if (xf->transform_id != dLBParticleCurrentTransformID)
+    {
+        if (xf->transform_status != nLBTransformStatusFinished)
+        {
+            syMatrixTraRotRpyRScaF(
+                &xf->affine,
+                xf->translate.x, xf->translate.y, xf->translate.z,
+                xf->rotate.x, xf->rotate.y, xf->rotate.z,
+                xf->scale.x, xf->scale.y, xf->scale.z);
+        }
+        if (xf->transform_status == nLBTransformStatusReady)
+        {
+            xf->transform_status = nLBTransformStatusFinished;
+        }
+        xf->transform_id = dLBParticleCurrentTransformID;
+    }
+    world_pos->x = (xf->affine[0][0] * pc->pos.x) +
+                   (xf->affine[1][0] * pc->pos.y) +
+                   (xf->affine[2][0] * pc->pos.z) + xf->affine[3][0];
+    world_pos->y = (xf->affine[0][1] * pc->pos.x) +
+                   (xf->affine[1][1] * pc->pos.y) +
+                   (xf->affine[2][1] * pc->pos.z) + xf->affine[3][1];
+    world_pos->z = (xf->affine[0][2] * pc->pos.x) +
+                   (xf->affine[1][2] * pc->pos.y) +
+                   (xf->affine[2][2] * pc->pos.z) + xf->affine[3][2];
+    {
+        f32 scale_x = sqrtf(SQUARE(xf->affine[0][0]) +
+                            SQUARE(xf->affine[0][1]) +
+                            SQUARE(xf->affine[0][2]));
+        f32 scale_y = sqrtf(SQUARE(xf->affine[1][0]) +
+                            SQUARE(xf->affine[1][1]) +
+                            SQUARE(xf->affine[1][2]));
+
+        if (xf->affine[0][0] < 0.0F) { scale_x = -scale_x; }
+        if (xf->affine[1][1] < 0.0F) { scale_y = -scale_y; }
+        quad_right->x *= scale_x;
+        quad_right->y *= scale_x;
+        quad_right->z *= scale_x;
+        quad_up->x *= scale_y;
+        quad_up->y *= scale_y;
+        quad_up->z *= scale_y;
+    }
+}
 #endif
 
 void lbParticleDrawTextures(GObj *gobj)
@@ -1150,6 +1216,8 @@ void lbParticleDrawTextures(GObj *gobj)
     atlas_name = 0u;
 #endif
 
+    dLBParticleCurrentTransformID++;
+
     for (link = 0u; link < ARRAY_COUNT(sLBParticleStructsAllocLinks); link++)
     {
         LBParticle *pc;
@@ -1161,6 +1229,12 @@ void lbParticleDrawTextures(GObj *gobj)
         for (pc = sLBParticleStructsAllocLinks[link]; pc != NULL; pc = pc->next)
         {
             const NDSParticleQuadFrame *row;
+#if NDS_R2_PARTICLE_DRAW
+            Vec3f world_pos;
+            Vec3f quad_right;
+            Vec3f quad_up;
+            u32 color;
+#endif
             u32 id;
 
             if (pc->size == 0.0F)
@@ -1230,12 +1304,20 @@ void lbParticleDrawTextures(GObj *gobj)
                 }
                 continue;
             }
-            if (ndsRendererSubmitParticleQuad(atlas_name, &pc->pos, pc->size,
-                                              &right, &up, row->x, row->y,
+#if NDS_R2_PARTICLE_DRAW
+            ndsParticleTransformForDraw(pc, &right, &up, &world_pos,
+                                        &quad_right, &quad_up);
+            color = ((u32)(pc->primcolor.r >> 3) & 31u) |
+                    (((u32)(pc->primcolor.g >> 3) & 31u) << 5) |
+                    (((u32)(pc->primcolor.b >> 3) & 31u) << 10);
+            if (ndsRendererSubmitParticleQuad(atlas_name, &world_pos, pc->size,
+                                              color, &quad_right, &quad_up,
+                                              row->x, row->y,
                                               row->width, row->height) != FALSE)
             {
                 emitted++;
             }
+#endif
         }
     }
     if (atlas_name != 0u)
