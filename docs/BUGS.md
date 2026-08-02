@@ -263,9 +263,11 @@ These bugs should be fixed for P1 delivery:
   reported symptom is either downstream of the maker or does not reproduce on the current ROM.
   Re-observe before spending anything further on it -- and note the report predates the denormal
   fix, exactly like row 1's did.
-  The diagnostic is still compiled in. Remove the interposition in battleship_gmcollision.c when
-  this row closes; it costs six float stores a match and is the only trustworthy instrument on
-  this path right now.
+  DIAGNOSTIC REMOVED 2026-08-02, and removing it confirmed the mechanism a THIRD time, in reverse:
+  with the non-inlinable wrapper gone the function re-inlines, and gdb's reads of `pos` and
+  *spark_ptr went straight back to 0.000000 in the very next run. Wrapper present -> correct
+  values; wrapper absent -> zeros; in-code globals correct throughout. Re-add it the same way if
+  this row is ever reopened; battleship_gmcollision.c carries the recipe in a comment.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.

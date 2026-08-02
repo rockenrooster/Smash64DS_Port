@@ -111,69 +111,24 @@ f32 lbCommonCos(f32 angle);
 void syDebugPrintf(const char *fmt, ...);
 void scManagerRunPrintGObjStatus(void);
 
-/* TEMPORARY DIAGNOSTIC, BUGS.md row 4. Remove once the row is closed.
+/* BUGS.md row 4 was settled here and the probe is removed, per the standing rule
+ * that temporary instrumentation does not survive a handoff.
  *
- * The debugger has failed on this row five distinct ways -- the symbol split to
- * two locations at 0x0, $r0 is unreadable on this remote, `break FUNC` skips
- * the prologue, -Os discarded the attack_pos/damage_pos locals entirely, and
- * the reads that DID work produced an output that cannot be derived from the
- * inputs under the source arithmetic. Measured on one call at ftmain.c:2734:
- * attack collision (-1531.10, 321.06)/(-1713.10, 356.28), damage offset
- * (0, 10), valid joint, and dst (0,0) -- but dst is (attack_pos + damage_pos)
- * * 0.5, so even an all-zero part matrix would leave attack_pos/2 = (-811, 169).
+ * What it established, so nobody re-runs it: gmCollisionGetFighterAttackDamagePosition
+ * is CORRECT. Interposing on it and recording both halves plus the real dst
+ * into globals gave atk (2341.83, 33.05), dmg (2380.33, -155.55) and dst
+ * (2361.08, -61.25) -- the exact midpoint. Hit sparks get a true contact point,
+ * not the origin, and the "sparks at the world origin" reading was a debugger
+ * artifact: the function inlines at -Os, so the caller's `pos` lived in
+ * registers and the stack slot gdb read had never been written. The
+ * non-inlinable wrapper forced the spill and gdb then agreed with the globals
+ * to the last digit.
  *
- * So stop asking the debugger. Interposing here records attack_pos and the
- * real dst from INSIDE, where -Os cannot take them away, into plain globals.
- * gmcollision.c names this function exactly once (its definition) so the
- * #define moves the definition without capturing a call site -- the trap
- * battleship_lbparticle.c:113 documents for lbParticleMakeGenerator.
- *
- * Safe by construction: it computes nothing the base does not, and writes only
- * diagnostic globals. decomp/ is untouched. */
-#define gmCollisionGetFighterAttackDamagePosition \
-    ndsBaseGMCollisionGetFighterAttackDamagePosition
-
+ * Re-add the same way if the row is ever reopened -- gmcollision.c names that
+ * function exactly once, its definition, so a #define moves the definition
+ * without capturing a call site (the trap battleship_lbparticle.c documents for
+ * lbParticleMakeGenerator), and decomp/ stays untouched. */
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcollision.c"
-
-#undef gmCollisionGetFighterAttackDamagePosition
-
-volatile u32 gNdsHitPosCalls;
-volatile f32 gNdsHitPosAtkX;
-volatile f32 gNdsHitPosAtkY;
-volatile f32 gNdsHitPosDmgX;
-volatile f32 gNdsHitPosDmgY;
-volatile f32 gNdsHitPosDstX;
-volatile f32 gNdsHitPosDstY;
-
-void gmCollisionGetFighterAttackDamagePosition(Vec3f *dst,
-                                               FTAttackColl *attack_coll,
-                                               FTDamageColl *damage_coll)
-{
-    Vec3f attack_pos;
-    Vec3f damage_pos;
-    FTParts *parts;
-
-    ndsBaseGMCollisionGetFighterAttackDamagePosition(dst, attack_coll,
-                                                     damage_coll);
-
-    /* Recomputed exactly as the base does, so the two halves can be compared
-     * against the dst it actually produced. */
-    gmCollisionGetFighterAttackPosition(&attack_pos, attack_coll);
-    parts = ftGetParts(damage_coll->joint);
-    damage_pos = damage_coll->offset;
-    if (parts != NULL)
-    {
-        gmCollisionGetWorldPosition(parts->mtx_translate, &damage_pos);
-    }
-
-    gNdsHitPosCalls++;
-    gNdsHitPosAtkX = attack_pos.x;
-    gNdsHitPosAtkY = attack_pos.y;
-    gNdsHitPosDmgX = damage_pos.x;
-    gNdsHitPosDmgY = damage_pos.y;
-    gNdsHitPosDstX = dst->x;
-    gNdsHitPosDstY = dst->y;
-}
 
 #if NDS_R2_COLLISION_L7_ORACLE
 /* R2-07 L7 step one. Lives in THIS translation unit and not in a port file

@@ -604,7 +604,7 @@ try {
             # refusals -- a 6.7% miss rate is equally consistent with "the wind is
             # invisible" and "some unrelated tail effect is".
             'miss=%u emit=%u missmask=%08x,%08x missframes=%08x ' +
-            'cam_dist=%f cam_fovy=%f WSUB ok=%u fail=%u clamped=%u at=%f,%f sz=%f HITPOS n=%u atk=%f,%f dmg=%f,%f dst=%f,%f cam_vw=%d cam_vh=%d ' +
+            'cam_dist=%f cam_fovy=%f WSUB ok=%u fail=%u clamped=%u at=%f,%f sz=%f cam_vw=%d cam_vh=%d ' +
             'draw_calls=%d draw_masks=%llx ' +
             'walked=%d xf_seen=%d xf_null=%d at_emitter=%d elsewhere=%d xf_t=%f,%f gen=%d\n", ' +
             '$whispy_calls, $whispy_lr, ' +
@@ -624,10 +624,7 @@ try {
             'gNdsParticleQuadMissMask[0], gNdsParticleQuadMissMask[1], ' +
             'gNdsParticleQuadMissFrameMask, ' +
             'gGMCameraStruct.target_dist, gGMCameraStruct.fovy, ' +
-            'gNdsWhispySubmitOk, gNdsWhispySubmitFail, gNdsWhispyDrawClamped, ' + 'gNdsWhispyDrawX, gNdsWhispyDrawY, gNdsWhispyDrawSize, ' + 'gNdsHitPosCalls, gNdsHitPosAtkX, gNdsHitPosAtkY, ' +
-            'gNdsHitPosDmgX, gNdsHitPosDmgY, ' +
-            'gNdsHitPosDstX, gNdsHitPosDstY, ' +
-            'gGMCameraStruct.viewport_width, gGMCameraStruct.viewport_height, ' +
+            'gNdsWhispySubmitOk, gNdsWhispySubmitFail, gNdsWhispyDrawClamped, ' + 'gNdsWhispyDrawX, gNdsWhispyDrawY, gNdsWhispyDrawSize, ' +             'gGMCameraStruct.viewport_width, gGMCameraStruct.viewport_height, ' +
             '$draw_calls, $draw_masks, ' +
             '$slot1_walked, $slot1_xf_seen, $slot1_xf_null, ' + '$slot1_xf_at_emitter, $slot1_xf_elsewhere, ' + '$slot1_xf_tx, $slot1_xf_ty, $slot1_xf_gen'),
         'detach',
