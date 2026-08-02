@@ -86,7 +86,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # played 127. An unchanged hash after an intended payload change is the
     # signal that the change did not land.
     ($metadata.pack_sha256 -ne
-        'd7f21a83183095676b4d4edfb1de4ea30e69c7435ef579d74eb25f495e75f4ad')) {
+        'ba65146e2652056d78fb99ff11394f6ae44bd347cd6ef9b335d1996eb4974e9a')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

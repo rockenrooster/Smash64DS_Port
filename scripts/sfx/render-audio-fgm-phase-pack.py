@@ -3632,6 +3632,16 @@ FGM_OWNER_VOLUME_TRIM = {
     11: 68,
 }
 
+# Pre-encode scale factor, applied with a matching ds_volume rise so the cue is
+# exactly as loud as before. See the use site for why: IMA rails on full-scale
+# input and 36 of 88 cues decode at peak 32768. Only cues with ds_volume room
+# under 127 can be compensated; the generator refuses rather than clip the
+# volume, so a bad entry here fails the render instead of shipping quieter.
+FGM_ENCODE_HEADROOM = {
+    # 12 DeadUpStar: worst SNR in the pack at 17.4 dB, ds_volume 41 -> 82.
+    12: 0.5,
+}
+
 
 def fgm_owner_volume_trim(fgm_id: int, volume: int) -> int:
     trimmed = FGM_OWNER_VOLUME_TRIM.get(int(fgm_id))
@@ -5338,6 +5348,28 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             acoustic_oracle.update(ima_repeat_oracle(
                 ima, loop_point_words, len(runtime_pcm), guard_nibbles))
         else:
+            # ENCODE HEADROOM. IMA-ADPCM predicts forward, so a source that
+            # already sits at full scale makes the encoder overshoot and rail,
+            # and 36 of the 88 cues decode with a peak of 32768 -- one past
+            # int16. FGM 12 DeadUpStar is the worst of them at 17.4 dB SNR, and
+            # it is the cue the owner named twice: "the high pitch sound is
+            # getting clipped or something".
+            #
+            # Scaling the PCM down before the encode and raising ds_volume by
+            # the same factor is loudness-neutral -- the DS multiplies by volume
+            # on playback -- so this buys headroom for free wherever ds_volume
+            # has room under 127. FGM 12 plays at 41, so halving costs nothing.
+            # Cues already at 127 cannot be compensated and are left alone;
+            # their clipping is one or two samples at 29-39 dB and inaudible.
+            headroom = FGM_ENCODE_HEADROOM.get(int(selector["id"]))
+            if headroom is not None:
+                compensated = int(round(volume / headroom))
+                if compensated > 127:
+                    raise ValueError(
+                        f"FGM {selector['id']} headroom {headroom} needs volume "
+                        f"{compensated}, over the 127 cap")
+                volume = max(1, compensated)
+                runtime_pcm = [int(round(s * headroom)) for s in runtime_pcm]
             ima = ima_encode(runtime_pcm)
             decoded_ima = ima_decode(ima, len(runtime_pcm))
         metrics = audio_metrics(runtime_pcm, decoded_ima)
