@@ -4,6 +4,58 @@ Updated: 2026-08-01 14:45 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
+## DECISION REQUEST — the particle sheet's 8,192-byte bound (2026-08-01)
+
+Raised per `BUG_FIXING_PROCESS.md` "when the gap is a decision, stop iterating".
+
+**The bound.** The quad sheet is 8,192 bytes because every larger allocation has
+been measured to break stage texture resolves with VRAM free: 16,384 (as 128x64
+and as 64x128), 32,768 (128x128), and a second 8 KiB page all produced the same
+`ndsRendererHardwareResolveStageSourceFrameTexture` failure about one frame in
+ten and ~197 stage rebuilds a match. The A5I3 conversion bought everything that
+was available INSIDE that bound -- one byte per texel instead of two, admission
+14 -> 23 of 47, misses 1,343 -> 528 -- and it is now full: 7,808 of 8,192 texels
+used, 384 free.
+
+**What is still out, and it is not obscure.** Seven packed textures never reach
+the screen, and they belong to core combat effects:
+
+| tex | frames | owning seam |
+|---|---|---|
+| 17 | 10 at 64x64 | `efManagerDustDashMakeEffect` |
+| 25 | 15 | `efManagerDamageCoinMakeEffect` |
+| 28 | 20 | `efManagerDamageElectricMakeEffect` |
+| 29 | 10 | `efManagerSparkleWhiteMulti/MultiExplodeMakeEffect` (the star-KO sparkle) |
+| 33 | 9 | `efManagerDamageNormalLightMakeEffect` |
+| 38 | 3 | `efManagerSetOffMakeEffect` |
+| 45 | 9 | `efManagerSparkleWhiteMakeEffect` |
+
+At 8x8 they need ~5,440 texels against 384 free. No packing closes that, and
+frame-halving them only gets to ~2,336 -- still six times the room available.
+
+**Options, with measured cost.**
+
+1. **Accept.** 528 of 95,878 visible particles are invisible per match, 0.55%.
+   These are tail VARIANTS: the common dust and spark textures (0, 2, 10, 18,
+   19, 20) are admitted and draw, so no effect disappears entirely. Cost zero.
+2. **Sheet to 16,384 bytes.** Directly re-tests the recorded failure. Would need
+   the `gNdsR2TexRejectCensus*` counters (profile level 2) to say whether the
+   refusal is bytes or cache slots -- a question that has never actually been
+   answered, only worked around. One diagnostic build.
+3. **Drop every cell to 8x8.** Frees ~2,500 texels; costs half the linear
+   resolution on the thirteen cells that are currently 16x16, i.e. on the
+   effects that presently look correct. Trades a visible regression for a
+   partial fix.
+4. **A second sheet on its own cache slot.** Recorded failing, but that test
+   predates the current allocator state and the census was not read then.
+
+**Recommendation: option 1 for P1, then option 2 as one diagnostic build.**
+Accepting costs 0.55% of particles and no whole effect; the three alternatives
+each either re-run a known failure or regress the effects that already work. But
+option 2 is cheap and would finally answer bytes-versus-slots, which is the fact
+every one of these workarounds has been guessing at. It needs no owner decision
+to MEASURE -- only to ship.
+
 ## PARTICLE/VFX CLUSTER CONTRACT — the numbers each open row has to match (2026-08-01)
 
 Written to `BUG_FIXING_PROCESS.md` v2 Step 2: the source is the oracle, so each
