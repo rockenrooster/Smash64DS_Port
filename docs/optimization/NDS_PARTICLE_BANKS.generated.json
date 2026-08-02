@@ -1,24 +1,24 @@
 {
   "bytes": {
     "arena_headroom_bytes": 210320,
-    "asset_bytes": 137152,
-    "ds_palette_bytes": 896,
-    "ds_texture_bytes": 137040,
-    "ds_texture_data_bytes": 136256,
+    "asset_bytes": 168992,
+    "ds_palette_bytes": 992,
+    "ds_texture_bytes": 168870,
+    "ds_texture_data_bytes": 168000,
     "estimate_2026_07_27_bytes": 129768,
     "estimate_2026_07_27_scripts": 26,
     "estimate_2026_07_27_textures": 18,
     "index_table_bytes": 1283,
     "linked_bytes": 12195,
-    "pack_bytes": 149347,
-    "payload_bytes": 148064,
+    "pack_bytes": 181187,
+    "payload_bytes": 179904,
     "script_bank_bytes": 10912,
-    "source_texture_bytes": 220248,
+    "source_texture_bytes": 250656,
     "spare_bytes": 198125
   },
   "checksums": {
     "source_sha256_lo": "0xa2a1e85f",
-    "table_sha256_lo": "0x1973edec"
+    "table_sha256_lo": "0x179aea12"
   },
   "quads": {
     "admitted": [
@@ -33,6 +33,7 @@
       13,
       14,
       15,
+      16,
       18,
       19,
       20,
@@ -40,7 +41,6 @@
       22,
       24,
       27,
-      34,
       37,
       64,
       65,
@@ -125,6 +125,13 @@
         "width": 8
       },
       {
+        "bytes": 448,
+        "frames": 7,
+        "height": 8,
+        "texture": 16,
+        "width": 8
+      },
+      {
         "bytes": 192,
         "frames": 3,
         "height": 8,
@@ -174,13 +181,6 @@
         "width": 16
       },
       {
-        "bytes": 512,
-        "frames": 8,
-        "height": 8,
-        "texture": 34,
-        "width": 8
-      },
-      {
         "bytes": 256,
         "frames": 1,
         "height": 16,
@@ -213,8 +213,15 @@
     "atlas_height": 64,
     "atlas_width": 128,
     "budget_bytes": 8192,
-    "bytes": 7808,
+    "bytes": 7744,
     "excluded": [
+      {
+        "bytes": 512,
+        "frames": 8,
+        "height": 8,
+        "texture": 34,
+        "width": 8
+      },
       {
         "bytes": 512,
         "frames": 8,
@@ -268,6 +275,13 @@
         "bytes": 768,
         "frames": 3,
         "height": 16,
+        "texture": 31,
+        "width": 16
+      },
+      {
+        "bytes": 768,
+        "frames": 3,
+        "height": 16,
         "texture": 38,
         "width": 16
       },
@@ -293,7 +307,7 @@
         "width": 8
       }
     ],
-    "frame_count": 54
+    "frame_count": 53
   },
   "reach": {
     "p1_seams": [
@@ -315,6 +329,9 @@
       "efManagerDustDashMakeEffect",
       "efManagerDustExpandLargeMakeEffect",
       "efManagerDustExpandSmallMakeEffect",
+      "efManagerDustHeavyDoubleMakeEffect",
+      "efManagerDustHeavyMakeEffect",
+      "efManagerDustLightMakeEffect",
       "efManagerFireGrindMakeEffect",
       "efManagerFireSparkMakeEffect",
       "efManagerFlashLargeMakeEffect",
@@ -327,6 +344,7 @@
       "efManagerImpactAirWaveMakeEffect",
       "efManagerImpactWaveMakeEffect",
       "efManagerMarioEntryDokanMakeEffect",
+      "efManagerMusicNoteMakeEffect",
       "efManagerRebirthHaloMakeEffect",
       "efManagerReflectBreakMakeEffect",
       "efManagerSetOffMakeEffect",
@@ -370,6 +388,7 @@
       13,
       14,
       15,
+      16,
       17,
       18,
       19,
@@ -381,6 +400,7 @@
       27,
       28,
       29,
+      31,
       33,
       34,
       35,
@@ -443,6 +463,9 @@
       61,
       62,
       63,
+      64,
+      65,
+      66,
       69,
       70,
       71,
@@ -461,6 +484,8 @@
       85,
       86,
       87,
+      88,
+      89,
       90,
       91,
       92,
@@ -580,6 +605,25 @@
         "efManagerSetPrevStructAlloc"
       ],
       "efManagerDustExpandSmallMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDustHeavyDoubleMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDustHeavyMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerSetPrevStructAlloc"
+      ],
+      "efManagerDustLightMakeEffect": [
         "efGetStruct",
         "efManagerDestroyParticleGObj",
         "efManagerGetEffectNoForce",
@@ -723,6 +767,15 @@
       "63": [
         "efManagerDeadExplodeMakeEffect"
       ],
+      "64": [
+        "efManagerMusicNoteMakeEffect"
+      ],
+      "65": [
+        "efManagerMusicNoteMakeEffect"
+      ],
+      "66": [
+        "efManagerMusicNoteMakeEffect"
+      ],
       "73": [
         "efManagerDamageNormalLightMakeEffect"
       ],
@@ -742,13 +795,22 @@
         "efManagerDamageElectricMakeEffect"
       ],
       "85": [
-        "efManagerDustExpandSmallMakeEffect"
+        "efManagerDustExpandSmallMakeEffect",
+        "efManagerDustLightMakeEffect"
       ],
       "86": [
-        "efManagerDustExpandSmallMakeEffect"
+        "efManagerDustExpandSmallMakeEffect",
+        "efManagerDustLightMakeEffect"
       ],
       "87": [
         "efManagerDustExpandLargeMakeEffect"
+      ],
+      "88": [
+        "efManagerDustHeavyDoubleMakeEffect",
+        "efManagerDustHeavyMakeEffect"
+      ],
+      "89": [
+        "efManagerDustHeavyDoubleMakeEffect"
       ],
       "90": [
         "efManagerDustDashMakeEffect"
@@ -1134,14 +1196,17 @@
       "width": 16
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 28682,
+      "ds_format": "A5I3",
+      "ds_palette_entries": 5,
       "frames": 7,
       "height": 64,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 3.1451,
+      "mean_error": 0.2441,
+      "packed": true,
       "source_bytes": 28728,
       "source_format": "IA8",
+      "source_graded_alpha": true,
       "texture": 16,
       "width": 64
     },
@@ -1347,14 +1412,17 @@
       "width": 32
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 3148,
+      "ds_format": "PAL256",
+      "ds_palette_entries": 38,
       "frames": 3,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 0.0,
+      "mean_error": 0.0,
+      "packed": true,
       "source_bytes": 1680,
       "source_format": "CI4",
+      "source_graded_alpha": false,
       "texture": 31,
       "width": 32
     },

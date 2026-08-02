@@ -100,6 +100,17 @@ Run only the relevant group:
 Do not run all groups merely because they are cheap. `verify-dev-fast.ps1` is a
 cross-domain checkpoint helper, not an every-edit command.
 
+`verify-all.ps1` runs three of the forty-seven `check-*.ps1` scripts itself:
+`check-gbi-decode-fixtures`, `check-harness-registry`, and (since 2026-08-01)
+`check-nds-particle-banks`. The other forty-four are hand-run, which on
+2026-08-01 meant the particle-bank pins sat stale across a commit and cost seven
+failing runs of arrears to clear. **Actionable:** when a checker pins numbers
+that a generator can move, wire it into `verify-all.ps1` at the point of the
+change rather than trusting anyone to remember it. The generic version of that
+fix -- a static-checker aggregator -- is not worth building until a second
+checker has actually gone stale, because most of the forty-four need a specific
+ROM or build and would turn one wrapper into a fleet.
+
 ## Checkpoint Choice
 
 Choose one widest relevant wrapper:

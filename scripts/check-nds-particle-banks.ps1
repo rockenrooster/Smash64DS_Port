@@ -81,11 +81,19 @@ $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
 # because seeding from census.SUBSTITUTES alone described the effects Task 39
 # REPLACES, not the ones that still need a script -- the runtime reject ring
 # caught two P1 effects (Fox blaster glow, Results confetti) marked UNREACHABLE.
+# 2026-08-01: 41 -> 45 seams, 87 -> 92 scripts, 31 -> 33 textures, and the same
+# ring caught it again -- script 88 / bank 9 / reason 4 (slot holds the inert
+# script) 49 times a match. ndsFTParamMakeSourceEffect began routing the
+# motion-script kinds, so DustLight, DustHeavy, DustHeavyDouble and MusicNote
+# became live seams whose scripts had never been packed. Fixing the seam list
+# took the reject count to 0 and raised script starts 137 -> 226 with root
+# spawns 251 -> 340, the same +89 on both, which is what a rejected start
+# turning into a real one looks like.
 if (([int]$report.source.script_count -ne 119) -or
     ([int]$report.source.texture_count -ne 47) -or
-    (@($report.reach.reachable_scripts).Count -ne 87) -or
-    (@($report.reach.packed_textures).Count -ne 31) -or
-    (@($report.reach.p1_seams).Count -ne 41)) {
+    (@($report.reach.reachable_scripts).Count -ne 92) -or
+    (@($report.reach.packed_textures).Count -ne 33) -or
+    (@($report.reach.p1_seams).Count -ne 45)) {
     throw ('Particle bank enumeration changed: ' +
         "$(@($report.reach.reachable_scripts).Count)/$([int]$report.source.script_count) scripts, " +
         "$(@($report.reach.packed_textures).Count)/$([int]$report.source.texture_count) textures, " +
@@ -124,15 +132,22 @@ if (($actualDisplayListSeams -join ',') -ne ($expectedDisplayListSeams -join ','
 # size is fixed at one entry per source script. Growing the P1 seam list
 # therefore costs ROM and NitroFS payload, never arena -- which is why the
 # corrected seam list could be generous rather than minimal.
+#
+# 2026-08-01 confirms that prediction a second time: 87 -> 92 scripts and
+# 31 -> 33 textures moved every payload number below and left linked_bytes at
+# 12195 and script_bank_bytes at 10912 exactly. index_table_bytes is also fixed
+# at 1283 for the same reason -- one entry per SOURCE script id, not per packed
+# one. Only the two byte counts that cost arena are allowed to be constants
+# here in spirit; the rest are pinned so a payload change has to be noticed.
 if (([int64]$report.bytes.script_bank_bytes -ne 10912) -or
-    ([int64]$report.bytes.source_texture_bytes -ne 220248) -or
-    ([int64]$report.bytes.ds_texture_bytes -ne 137040) -or
-    ([int64]$report.bytes.ds_texture_data_bytes -ne 136256) -or
-    ([int64]$report.bytes.ds_palette_bytes -ne 896) -or
-    ([int64]$report.bytes.payload_bytes -ne 148064) -or
+    ([int64]$report.bytes.source_texture_bytes -ne 250656) -or
+    ([int64]$report.bytes.ds_texture_bytes -ne 168870) -or
+    ([int64]$report.bytes.ds_texture_data_bytes -ne 168000) -or
+    ([int64]$report.bytes.ds_palette_bytes -ne 992) -or
+    ([int64]$report.bytes.payload_bytes -ne 179904) -or
     ([int64]$report.bytes.index_table_bytes -ne 1283) -or
-    ([int64]$report.bytes.pack_bytes -ne 149347) -or
-    ([int64]$report.bytes.asset_bytes -ne 137152) -or
+    ([int64]$report.bytes.pack_bytes -ne 181187) -or
+    ([int64]$report.bytes.asset_bytes -ne 168992) -or
     ([int64]$report.bytes.linked_bytes -ne 12195) -or
     ([int64]$report.bytes.arena_headroom_bytes -ne 210320) -or
     ([int64]$report.bytes.spare_bytes -ne 198125)) {
@@ -198,13 +213,27 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # 2026-08-01, fifth change: the upward-star KO runs efcommon script 0x5C,
 # which requests texture 24. Its focused run reported one miss and zero quads;
 # the 16x16 source cell fits the last 128 bytes when reduced to 8x8.
-if (([int64]$report.quads.atlas_width -ne 64) -or
+#
+# 2026-08-01, sixth change, and the only one that bought room instead of
+# spending it: the sheet was RGB5A1 at 2 bytes a texel and 1-bit alpha, and is
+# now A5I3 (GL_RGB8_A5) at 1 byte, so the SAME 8,192-byte allocation holds twice
+# the texels -- 64x64 -> 128x64, 27 frames -> 53, admitted 14 -> 23, and a soak
+# put misses at 528 of 95,878 particles where they had been 1,343. 8,192 is the
+# measured hard bound on the ALLOCATION, not on the texel count: 16,384, 32,768
+# and a second 8 KiB page each broke stage texture resolves with VRAM free, so
+# doubling the texel yield inside it is the only lever that has ever worked.
+# A5I3 costs colour resolution the particle path does not use -- the quad pass
+# runs in modulation mode and glColors pc->primcolor, so the sheet only ever
+# carried shape. Admitted rose again to include 3, 4, 5, 9, 11, 13, 14, 15, 16,
+# 21 and 37; the thirteen still out are long animations (28 is 20 frames, 25 is
+# 15, 17 and 29 are 10) and no packing wins them inside 8,192.
+if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.atlas_bytes -ne 8192) -or
-    ([int64]$report.quads.bytes -ne 8192) -or
-    ([int64]$report.quads.frame_count -ne 27) -or
-    (@($report.quads.admitted).Count -ne 14) -or
-    (@($report.quads.excluded).Count -ne 20)) {
+    ([int64]$report.quads.bytes -ne 7744) -or
+    ([int64]$report.quads.frame_count -ne 53) -or
+    (@($report.quads.admitted).Count -ne 23) -or
+    (@($report.quads.excluded).Count -ne 13)) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.bytes) B, " +
         "$(@($report.quads.admitted).Count) admitted, " +
@@ -235,7 +264,12 @@ foreach ($cell in $koCells) {
 if ($report.checksums.source_sha256_lo -ne '0xa2a1e85f') {
     throw "efcommon source identity changed: $($report.checksums.source_sha256_lo)"
 }
-if ($report.checksums.table_sha256_lo -ne '0x1973edec') {
+# The source checksum above is the half that would mean an asset swap, and it
+# has not moved. This one is the packed table, and it moved on 2026-08-01 for
+# the two deliberate reasons recorded above: the A5I3 sheet and four more P1
+# seams. src/nds/nds_particle_banks.c carries the same pin as a _Static_assert,
+# so the value lives in exactly two places and both have to be argued for.
+if ($report.checksums.table_sha256_lo -ne '0x179aea12') {
     throw "Packed particle table changed: $($report.checksums.table_sha256_lo)"
 }
 
@@ -246,8 +280,8 @@ if ($report.checksums.table_sha256_lo -ne '0x1973edec') {
 $gradedFormats = @('A3I5', 'A5I3')
 $paletteFormats = @('PAL4', 'PAL16', 'PAL256')
 $packed = @($report.textures | Where-Object { $_.packed })
-if ($packed.Count -ne 31) {
-    throw "Expected 31 packed textures, found $($packed.Count)."
+if ($packed.Count -ne 33) {
+    throw "Expected 33 packed textures, found $($packed.Count)."
 }
 foreach ($texture in $packed) {
     if ($texture.source_graded_alpha) {
@@ -297,33 +331,41 @@ foreach ($texture in $packed) {
     }
 }
 $exact = @($packed | Where-Object { [double]$_.max_error -eq 0.0 }).Count
-if ($exact -ne 7) {
-    throw "Expected 7 bit-exact packed textures, found $exact."
+if ($exact -ne 8) {
+    throw "Expected 8 bit-exact packed textures, found $exact."
 }
 
 $header = Get-Content -LiteralPath $headerPath -Raw
 foreach ($token in @(
     '#define NDS_PARTICLE_SCRIPT_COUNT 119u',
-    '#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 87u',
+    '#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 92u',
     '#define NDS_PARTICLE_SCRIPT_UNREACHABLE 0xffffffffu',
     '#define NDS_PARTICLE_SCRIPT_BANK_BYTES 10912u',
     '#define NDS_PARTICLE_TEXTURE_COUNT 47u',
-    '#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 31u',
-    '#define NDS_PARTICLE_TEXTURE_DATA_BYTES 136256u',
-    '#define NDS_PARTICLE_PALETTE_ENTRIES 448u',
+    '#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 33u',
+    '#define NDS_PARTICLE_TEXTURE_DATA_BYTES 168000u',
+    '#define NDS_PARTICLE_PALETTE_ENTRIES 496u',
     '#define NDS_PARTICLE_TEXTURE_ASSET_PATH "nitro:/particles/efcommon_particle_textures.ds.bin"',
-    '#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 137152u',
-    '#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 136256u',
+    '#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 168992u',
+    '#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 168000u',
     '#define NDS_PARTICLE_LINKED_BYTES 12195u',
-    '#define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.rgb5a1.bin"',
-    '#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 64u',
+    # The quad sheet is A5I3, so the asset carries an 8-entry palette after the
+    # texels and the two byte counts differ: 8,192 texels + 16 palette bytes.
+    # NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES is the allocation the renderer uploads
+    # and is the number 8,192 is a hard bound on; TEXEL_BYTES is how much of it
+    # the packer actually filled.
+    '#define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.a5i3.bin"',
+    '#define NDS_PARTICLE_QUAD_ATLAS_WIDTH 128u',
     '#define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u',
-    '#define NDS_PARTICLE_QUAD_ASSET_BYTES 8192u',
-    '#define NDS_PARTICLE_QUAD_TEXEL_BYTES 8192u',
-    '#define NDS_PARTICLE_QUAD_COUNT 14u',
-    '#define NDS_PARTICLE_QUAD_FRAME_COUNT 27u',
+    '#define NDS_PARTICLE_QUAD_ASSET_BYTES 8208u',
+    '#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 8192u',
+    '#define NDS_PARTICLE_QUAD_PALETTE_OFFSET 8192u',
+    '#define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 8u',
+    '#define NDS_PARTICLE_QUAD_TEXEL_BYTES 7744u',
+    '#define NDS_PARTICLE_QUAD_COUNT 23u',
+    '#define NDS_PARTICLE_QUAD_FRAME_COUNT 53u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
-    '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x1973edecu',
+    '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x179aea12u',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
     # of spending 10,912 bytes of taskman arena on a writable copy.
     'extern u8 gNdsParticleScriptBank[NDS_PARTICLE_SCRIPT_BANK_BYTES];',
@@ -363,9 +405,9 @@ if (Test-Path -LiteralPath $incPath) {
         throw "Script offset table holds $($entries.Count) entries, expected 119."
     }
     $sentinels = @($entries | Where-Object { $_ -eq '0xffffffffu' }).Count
-    if ($sentinels -ne (119 - 87)) {
+    if ($sentinels -ne (119 - 92)) {
         throw ("Script offset table holds $sentinels unreachable sentinels, " +
-            "expected $(119 - 87).")
+            "expected $(119 - 92).")
     }
     $textureBlock = [regex]::Match(
         $inc, 'gNdsParticleTextures\[[^\]]*\]\s*=\s*\{(?<body>.*?)\n\};',
@@ -375,15 +417,15 @@ if (Test-Path -LiteralPath $incPath) {
     }
     $unpacked = @([regex]::Matches($textureBlock.Groups['body'].Value,
         '\{\s*0,\s*0,\s*0,\s*0,\s*0xffffffffu,\s*0xffffffffu\s*\}')).Count
-    if ($unpacked -ne (47 - 31)) {
+    if ($unpacked -ne (47 - 33)) {
         throw ("Texture table holds $unpacked sentinel rows, expected " +
-            "$(47 - 31).")
+            "$(47 - 33).")
     }
     foreach ($banned in @('gNdsParticleTextureData', 'gNdsParticlePaletteData')) {
         if ($inc.Contains("$banned[")) {
             throw ("Generated particle bank .inc defines $banned; the texel " +
                 'and palette blocks ship as NitroFS payload, and linking them ' +
-                'takes their 137152 bytes straight out of the taskman arena.')
+                'takes their 168992 bytes straight out of the taskman arena.')
         }
     }
     $incState = 'built'
@@ -394,24 +436,28 @@ if (Test-Path -LiteralPath $incPath) {
 $assetState = 'not built'
 if (Test-Path -LiteralPath $assetPath) {
     $assetBytes = (Get-Item -LiteralPath $assetPath).Length
-    $quadPath = Join-Path $root 'assets/particles/efcommon_particle_quads.rgb5a1.bin'
-$quadState = 'not built'
-if (Test-Path -LiteralPath $quadPath) {
-    $quadBytes = (Get-Item -LiteralPath $quadPath).Length
-    if ($quadBytes -ne 8192) {
-        throw "Particle quad atlas is $quadBytes bytes, expected 8192."
-    }
-    $quadState = 'built'
-}
-if ($assetBytes -ne 137152) {
-        throw "Particle texture payload is $assetBytes bytes, expected 137152."
+    if ($assetBytes -ne 168992) {
+        throw "Particle texture payload is $assetBytes bytes, expected 168992."
     }
     $assetState = 'built'
 }
 
-Write-Output (('Particle bank pack passed: 87/119 reachable efcommon scripts, ' +
-    '31/47 textures, 220248 B N64 texture -> 137040 B DS, 12195 B linked ' +
+# 8,192 texels plus the A5I3 sheet's own 8-entry palette. The texel half is the
+# allocation with the measured hard bound; the palette rides behind it in the
+# same file and is uploaded through glColorTableEXT, not through the texture.
+$quadPath = Join-Path $root 'assets/particles/efcommon_particle_quads.a5i3.bin'
+$quadState = 'not built'
+if (Test-Path -LiteralPath $quadPath) {
+    $quadBytes = (Get-Item -LiteralPath $quadPath).Length
+    if ($quadBytes -ne 8208) {
+        throw "Particle quad atlas is $quadBytes bytes, expected 8208."
+    }
+    $quadState = 'built'
+}
+
+Write-Output (('Particle bank pack passed: 92/119 reachable efcommon scripts, ' +
+    '33/47 textures, 250656 B N64 texture -> 168870 B DS, 12195 B linked ' +
     '(10912 script bank + 1283 index) of 210320 B arena headroom (198125 B ' +
-    'spare) plus 137152 B NitroFS payload, 7 bit-exact CI4 textures, linear ' +
+    'spare) plus 168992 B NitroFS payload, 8 bit-exact CI4 textures, linear ' +
     "texel order pinned, .inc $incState, payload $assetState, " +
-    "quad atlas 64x64, 14/34 textures in 27 frames $quadState."))
+    "quad atlas 128x64 A5I3, 23/36 textures in 53 frames $quadState."))

@@ -22,7 +22,7 @@ These bugs should be fixed for P1 delivery:
 -**FIXED** (2026-08-01) the KO burst freezes the game.
 
 -Correct VFX isn't played for various things (running foot dust VFX, fireball hit VFX, fox down B, shield, hard landing vfx, etc)
-  MEASURED: source makers now reached, 137 scripts against 11; 528 quads still miss the atlas.
+  LOCALIZED: heavy/light dust scripts were never packed -- rejected 49x/match as inert; seam list fixed.
 
 -Upwards KO boundary death: correct VFX and SFX never play for fighters
   LOCALIZED: star path runs and plays FGM 12; unmeasured whether the sparkle reaches the screen.

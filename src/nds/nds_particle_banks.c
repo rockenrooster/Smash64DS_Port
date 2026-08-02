@@ -27,5 +27,13 @@ _Static_assert(NDS_PARTICLE_SCRIPT_REACHABLE_COUNT <= NDS_PARTICLE_SCRIPT_COUNT,
  * generator recomputes them, so a silent asset swap changes the build. */
 _Static_assert(NDS_PARTICLE_BANKS_SOURCE_CHECKSUM == 0xa2a1e85fu,
                "efcommon source bank checksum changed");
-_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x1973edecu,
+/* 0x1973edec -> 0x179aea12 on 2026-08-01, deliberately. The SOURCE checksum
+ * above is unchanged, which is the half that would mean an asset swap; this one
+ * moved because the pack now closes over four more P1 seams -- DustLight,
+ * DustHeavy, DustHeavyDouble and MusicNote became live when
+ * ndsFTParamMakeSourceEffect started routing the motion-script kinds, and their
+ * scripts had never been packed. 87 -> 92 scripts, 31 -> 33 textures. The
+ * tripwire did its job: it is the only thing that would have stopped a
+ * regenerated pack from shipping unexamined. */
+_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x179aea12u,
                "efcommon packed table checksum changed");

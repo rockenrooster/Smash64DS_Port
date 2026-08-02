@@ -238,7 +238,27 @@ SCRIPT_CONSTRUCTORS = {
 # efManagerShieldMakeEffect is classified SUBSTITUTE by
 # generate_task39_effect_census.py through an explicit extra row rather than
 # through SUBSTITUTES, so name it here to keep the two lists equivalent.
-P1_EXTRA_SEAMS = frozenset(("efManagerShieldMakeEffect",))
+#
+# The four below joined it on 2026-08-01, when ndsFTParamMakeSourceEffect
+# started routing the motion-script effect kinds to their source makers. Until
+# then ftParamMakeEffect answered nEFKindDustLight, DustHeavy, DustHeavyDouble
+# and MusicNote with DS primitives, so those makers were never called and the
+# derivation had no reason to consider them P1 -- which meant their scripts
+# were never packed. The runtime then rejected script 0x58 forty-nine times a
+# match with reason 4 (the slot holds sNdsParticleInertScript), i.e. the hard
+# landing drew NOTHING. That is BUGS.md "Correct VFX isn't played for various
+# things ... hard landing vfx".
+#
+# THE RULE THIS ENCODES: routing a maker to source is not finished until this
+# list knows about it. A seam that becomes live without being named here fails
+# CLOSED and silently -- the reject ring is the only place it shows.
+P1_EXTRA_SEAMS = frozenset((
+    "efManagerShieldMakeEffect",
+    "efManagerDustLightMakeEffect",
+    "efManagerDustHeavyMakeEffect",
+    "efManagerDustHeavyDoubleMakeEffect",
+    "efManagerMusicNoteMakeEffect",
+))
 
 # THE SUBSTITUTE LIST IS NOT THE SEAM LIST. This derivation used to seed from
 # census.SUBSTITUTES alone, which is the set of effects Task 39 REPLACES with

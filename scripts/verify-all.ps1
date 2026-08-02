@@ -162,6 +162,15 @@ try {
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
         -Arguments @()
+    # 5.8 s, and it is here because a hand-run checker is a checker nobody runs:
+    # the A5I3 atlas conversion shipped in cffe9ff with every pinned number in
+    # check-nds-particle-banks.ps1 left stale, and the next person to run it by
+    # hand -- a day later, chasing an unrelated bug -- got seven consecutive
+    # failures that were all just arrears. Every pin in it is an argued number,
+    # so making a kept checkpoint prove them is the whole point of having them.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-nds-particle-banks.ps1') `
+        -Arguments @()
     if (-not $SkipRegistryCheck) {
         Invoke-VerifyScript `
             -Script (Join-Path $PSScriptRoot 'check-harness-registry.ps1') `
