@@ -152,6 +152,11 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     271,
     # LightSwingLw1 and FoxSelected: two and three notes, no forks.
     18, 365,
+    # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
+    # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
+    # mark_loop/jump_loop, and it sat on the DS hardware-repeat path, which this
+    # file already records as unable to ramp. Full note on the selector.
+    153,
     # BUGS.md "Some Crowd noise audio cues get cut off (the for big hits)".
     # Every OTHER mechanism for that row is now measured and cleared: the cue
     # rates are arithmetically right, the two ds_volume 0 cues are real
@@ -1640,15 +1645,29 @@ SELECTED = (
         "loop_start": 18880,
         "loop_end": 22044,
         "expected_retained_samples": 22208,
-        "hardware_loop": {
-            "alignment_tail_samples": 4,
-            "loop_point_words": 1,
-            "guard_nibbles": (),
-            # Read off the source by the generator's own seed check; a wrong
-            # value fails with the measured pair rather than shipping silently.
-            "ima_predictor": 5401,
-            "ima_index": 43,
-        },
+        # NO "hardware_loop" HERE ANY MORE, and the reason is the one this file
+        # already states for 621/626 sixty lines up: "a DS hardware repeat
+        # reproduces the loop bit-identically and therefore cannot ramp."
+        #
+        # 153 is that case with PITCH instead of volume. Articulation 150 opens
+        # `pitch 550`, then inside mark_loop/jump_loop it steps `pitch 2390` --
+        # about an octave and a half of sweep, repeating. That sweep IS the
+        # altitude warning; a siren that does not slide is not a siren.
+        #
+        # The hardware-repeat render also kept only the loop region: source is
+        # 22,208 samples with the loop at 18,880..22,044, and the pack shipped
+        # 3,168 -- the tail alone, with the 0.64 s attack discarded, while this
+        # selector's own expected_retained_samples said 22,208.
+        #
+        # Net effect on the owner's ear, and this is the cue they identified by
+        # name out of all 88: 1.725 s of sweeping warning came out as a 0.108 s
+        # monotone blip on repeat, 16x short and unrecognisable. It fires on the
+        # right trigger -- being knocked high -- which is why it read as "a new
+        # SFX I don't recognise" rather than as a missing one.
+        #
+        # FULL_PROGRAM_AOT_IDS walks the articulation and bakes the sweep into
+        # the samples at FGM_OUTPUT_RATE, which is the same answer 85/189/190/219
+        # already take for schedules the entry fields cannot express.
         "root_fork_programs": (),
         "root_program_sha256":
             "1157bb10b51cd2ff8e356bb88f6b03aba6857e6ef067134cee1d6abe5f308a30",

@@ -60,7 +60,11 @@ if (([int]$metadata.format_version -ne 4) -or
     # 725896 -> 887160 later the same day: the seven defective crowd cues
     # (615/616/618/619/620/623/625) joined FULL_PROGRAM_AOT_IDS, which leaves
     # the shared-sample-37 dedup behind and is the whole point of the change.
-    ([int64]$metadata.resident_bytes -ne 887160) -or
+    # 887160 -> 913168 on 2026-08-02: FGM 153 AltitudeWarn left the DS
+    # hardware-repeat path for the schedule-walking AOT render, because a
+    # hardware repeat cannot reproduce the pitch sweep its articulation puts
+    # inside the loop. 0.108 s monotone -> 1.725 s swept.
+    ([int64]$metadata.resident_bytes -ne 913168) -or
     ([int64]$metadata.resident_limit_bytes -ne 204800) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -72,7 +76,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # crowd cues gained the full-program AOT render. A mapping change is
     # expected whenever a cue's render strategy changes and must never be
     # repinned without one.
-    ($metadata.mapping_sha256_lo -ne '0xb6be788e') -or
+    ($metadata.mapping_sha256_lo -ne '0x28f8ec2c') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 on the
     # owner's ear via FGM_OWNER_VOLUME_TRIM. The previous pin was
     # 81b94d1f3178b6b57d998fb7d01fe1316e20ac46ce22ccb82800c6b02d26cb75, and it
@@ -82,7 +86,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # played 127. An unchanged hash after an intended payload change is the
     # signal that the change did not land.
     ($metadata.pack_sha256 -ne
-        '0af529fbd796e46421a78d469e1654190b302b775cd4fb4878d8cde927418ec6')) {
+        'b56488dcd844274e125cdf61d5f6854a09bc20b054f6b1bae2e80dbbf029d34b')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -150,22 +154,38 @@ if (($fgm285.ds_loop_strategy -ne 'source_loop_ds_hardware') -or
 # loop flag here cuts the warning off two thirds of the way through -- exactly
 # 285's failure, on a cue the owner would hear every time a fighter drops
 # below the stage.
+# ...and the paragraph above is what this pin USED to enforce. It is kept
+# because it is the reasoning that has to be answered, not because it was right:
+# it says the sample is 22,208 at 29,344 Hz (0.757 s), and the artifact never
+# was. A hardware repeat stores PNT + LEN, and 153 shipped PNT 1 word + LEN 396
+# words -- about 3,168 samples, 0.108 s. The attack was gone and the comment
+# describing 0.757 s was aspirational.
+#
+# 2026-08-02, and the owner found this one by ear out of all 88: articulation
+# 150 opens `pitch 550` and then steps `pitch 2390` INSIDE mark_loop/jump_loop,
+# roughly an octave and a half of sweep on repeat. That sweep is the altitude
+# warning. A DS hardware repeat replays its body bit-identically, which this
+# file already says for 621/626 -- "cannot ramp" -- so the cue came out as a
+# 0.108 s monotone blip looping, and read as an unfamiliar sound rather than a
+# missing one, because it fires on exactly the right trigger.
+#
+# It renders through FULL_PROGRAM_AOT_IDS now: the schedule is walked and the
+# sweep baked into 55,200 samples at 32,000 Hz = 1.725 s, matching the source's
+# declared duration exactly. Measured after the change, zero-crossing rate falls
+# 1,820 Hz -> 1,063 Hz across the first second, so the slide is really in there.
+# STILL OPEN and deliberately not pinned as fixed: the render decays to silence
+# at ~1.05 s and pads the rest, and it no longer repeats. The source loops
+# infinitely, so if the warning has to persist while a fighter is out of bounds,
+# that is the next piece of work.
 $fgm153 = $metadata.entries | Where-Object { [int]$_.id -eq 153 }
-$oracle153 = $fgm153.acoustic_oracle
-if (($fgm153.ds_loop_strategy -ne 'source_loop_ds_hardware') -or
-    ([int]$fgm153.ds_loop_flag -ne 1) -or
-    ([int]$fgm153.ds_loop_point_words -ne 1) -or
-    ([int]$fgm153.ds_loop_length_words -ne 396) -or
-    ([int]$fgm153.ds_ima_loop_body_nibbles -ne 3168) -or
-    (@($fgm153.ds_ima_guard_nibbles).Count -ne 0) -or
-    ([int]$fgm153.ds_ima_header_predictor -ne 5401) -or
-    ([int]$fgm153.ds_ima_header_index -ne 43) -or
-    ($oracle153.ds_repeat_oracle_model -ne
-        'header_once_pnt_latch_len_restore') -or
-    ($oracle153.ds_repeat_oracle_missing_restore_detected -ne $true) -or
-    ($oracle153.ds_repeat_oracle_wrong_pnt_detected -ne $true) -or
-    ($oracle153.ds_repeat_oracle_wrong_len_detected -ne $true)) {
-    throw 'FGM 153 lost its DS hardware altitude-warning loop.'
+if (($fgm153.ds_loop_strategy -ne 'source_program_aot') -or
+    ([int]$fgm153.ds_frequency_hz -ne 32000) -or
+    ([int]$fgm153.ds_sample_count -ne 55200) -or
+    (@($fgm153.runtime_fidelity_debt).Count -ne 0) -or
+    ($fgm153.acoustic_oracle.aot_strategy -ne
+        'source_program_schedule_and_simultaneous_forks')) {
+    throw ('FGM 153 AltitudeWarn is not on the schedule-walking AOT render; a ' +
+        'hardware repeat cannot repeat its pitch sweep.')
 }
 # 85 UnkGrind4 is the pack's answer to `source_rate_above_u16`, and the answer
 # is "do not store that rate at all". Its first note asks for 90,510 Hz --
