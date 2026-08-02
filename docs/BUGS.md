@@ -190,16 +190,28 @@ These bugs should be fixed for P1 delivery:
   gmCollisionGetFighterAttackDamagePosition STILL WRITES (0,0,0) INTO pos. That is the failing
   function, with its input and its output both measured on the same call, and it is not the maker,
   not the wrapper, and not the effect system.
-  WHAT THAT IMPLIES, unverified: dst = (attack_pos + damage_pos) * 0.5, so a zero dst against a
-  (-1622, 339) attack_pos requires damage_pos to be its exact negative, (+1622, -339). Real victim
-  geometry does not land there by chance, so either the damage side is actively wrong rather than
-  merely absent, or this build's behaviour departs from the decomp text (gmcollision.c has NO .o
-  in the build -- it is textually included somewhere, like lbparticle.c, so check the including
-  TU for an interposition before trusting the source reading).
-  NEXT, and the asymmetry is the clue: the ATTACK side's part matrices demonstrably work --
-  pos_curr is sane, and reloc_backend_diagnostic_recorders.c:13056 computes it via
-  gmCollisionGetWorldPosition(parts->mtx_translate, ...). So check the VICTIM's
-  ftGetParts(damage_coll->joint)->mtx_translate specifically, not part matrices in general.
+  NO INTERPOSITION: battleship_gmcollision.c:114 includes decomp's gmcollision.c verbatim, with
+  only DObjGetStruct and two array-size defines ahead of it. The decomp arithmetic is what runs.
+  ALL THREE INPUTS AND THE OUTPUT, MEASURED ON THE SAME CALL -- AND THEY DO NOT ADD UP:
+      atk(pos_curr)=-1531.103394,321.055847   (pos_prev=-1713.102051,356.276794)
+      doff(damage_coll->offset)=0.000000,10.000000   djoint=023a1d28   pos(out)=0.000000,0.000000
+  attack_pos is the midpoint of the two collision samples, about (-1622, 339). damage_coll->offset
+  is a small sane local joint offset and the joint pointer is valid and non-NULL. dst is
+  (attack_pos + damage_pos) * 0.5, so EVEN IF the victim's part matrix were all zeros -- the
+  worst case, which forces damage_pos to (0,0,0) -- dst would still be attack_pos/2 = (-811, 169).
+  NO value of that matrix produces the measured (0,0) from the measured inputs.
+  THAT INCONSISTENCY IS THE FINDING. It is not "the damage side is zero"; it is that this call's
+  output cannot be derived from this call's inputs under the source arithmetic. Exactly one of
+  these must be true, and the next step is to decide which rather than to theorise past it:
+    - `pos` is spilled to stack after the breakpoint line under -Os, so gdb is reading the slot
+      before the store. Against this: spark_ptr 022a8b74 independently shows the vector the maker
+      actually receives is zeroed, and that is a different read of the same object.
+    - ft_attack_coll at the breakpoint is not the collision the :2711 call consumed.
+    - the built code departs from the decomp text despite no interposition (inlining, or a
+      different overload reached).
+  DECIDE IT WITH A COMPILED COUNTER, not the debugger, which has now failed on this row five
+  separate ways: record attack_pos and damage_pos inside gmCollisionGetFighterAttackDamagePosition
+  itself and print them next to dst. One build, and it ends the ambiguity instead of adding to it.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.

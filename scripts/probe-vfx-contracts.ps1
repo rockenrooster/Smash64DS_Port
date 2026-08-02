@@ -136,7 +136,7 @@ try {
         'set $slot1_xf_at_emitter = 0',
         'set $slot1_xf_elsewhere = 0',
         'set $slot1_xf_gen = -1',
-        'set $spark_calls = 0', 'set $impact_calls = 0', 'set $atk_x = 0.0', 'set $atk_y = 0.0', 'set $dmg_x = 0.0', 'set $dmg_y = 0.0', 'set $spark_ptr = 0',
+        'set $spark_calls = 0', 'set $impact_calls = 0', 'set $doff_x = 0.0', 'set $doff_y = 0.0', 'set $djoint = 0', 'set $atk_x = 0.0', 'set $atk_y = 0.0', 'set $dmg_x = 0.0', 'set $dmg_y = 0.0', 'set $spark_ptr = 0',
         'set $spark_x = 0.0',
         'set $spark_y = 0.0',
         'set $spark_absmax = 0.0',
@@ -252,6 +252,14 @@ try {
         # callee loses it.
         'set $dmg_x = pos.x',
         'set $dmg_y = pos.y',
+        # The last unmeasured INPUT. damage_pos starts as damage_coll->offset and
+        # is then multiplied by the victim's part matrix, so if the offset itself
+        # is wrong the matrix is innocent. hitlog is live here -- its
+        # attacker_player is used on this very line -- and offset is plain
+        # pointer-chasing, no call, so this dodges the ftGetParts SIGILL.
+        'set $doff_x = hitlog->damage_coll->offset.x',
+        'set $doff_y = hitlog->damage_coll->offset.y',
+        'set $djoint = (unsigned long)hitlog->damage_coll->joint',
         'continue',
         'end',
 
@@ -584,7 +592,7 @@ try {
 
         ('printf "VFXCONTRACT whispy_calls=%d lr=%d whispy_x=%f whispy_y=%f whispy_rotY=%f whispy_scale=%f ' +
             'slot1_frames=%d slot1_x=%f slot1_y=%f slot1_size=%f slot1_absmax=%f ' +
-            'spark_calls=%d spark_x=%f spark_y=%f spark_absmax=%f spark_player=%d spark_size=%d spark_ptr=%08lx impact=%d atk=%f,%f dmg=%f,%f ' +
+            'spark_calls=%d spark_x=%f spark_y=%f spark_absmax=%f spark_player=%d spark_size=%d spark_ptr=%08lx impact=%d atk=%f,%f pos=%f,%f doff=%f,%f djoint=%08lx ' +
             'dead_calls=%d dead_x=%f dead_y=%f rebirth_calls=%d explode_calls=%d ' +
             'frame_stops=%d forced=%d dust_frames=%d leaf_frames=%d leaf_x=%f ' +
             'mouth=%f,%f mouth_sx=%f eyes=%f,%f ground=%f,%f ground_sx=%f ' +
@@ -602,7 +610,7 @@ try {
             '$whispy_calls, $whispy_lr, ' +
             '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
             '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
-            '$spark_calls, $spark_x, $spark_y, $spark_absmax, ' + '$spark_player, $spark_size, $spark_ptr, ' + '$impact_calls, $atk_x, $atk_y, $dmg_x, $dmg_y, ' +
+            '$spark_calls, $spark_x, $spark_y, $spark_absmax, ' + '$spark_player, $spark_size, $spark_ptr, ' + '$impact_calls, $atk_x, $atk_y, $dmg_x, $dmg_y, ' + '$doff_x, $doff_y, $djoint, ' +
             '$dead_calls, $dead_x, $dead_y, $rebirth_calls, $explode_calls, ' +
             '$frame_stops, $forced, ' +
             '$dust_frames, $leaf_frames, $leaf_x, ' +
