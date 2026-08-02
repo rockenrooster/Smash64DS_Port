@@ -104,8 +104,26 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
 
 -Results confetti doesn't look right.
   Almost fixed. size is correct, but confetti pieces don't fall freely, looks like they move as a unit or something.
-    NOT FIXED. "Move as a unit" is the signature of one shared transform driving every piece.
-    Re-test first -- the matrix bug could produce it -- then check per-piece xf.
+    **FIXED** (2026-08-02) pending your re-test, on the matrix bug -- and you observed this on a
+    ROM that still had it, which matters. "Move as a unit" IS one shared transform driving every
+    piece, and that is exactly what the pass was doing: every quad rendered under whichever matrix
+    the last object left behind. Each piece does submit its own world position
+    (ndsRendererSubmitParticleQuad takes a per-quad pos), so under PROJECTED_IDENTITY the whole
+    cloud collapses toward the eye and its relative motion stops reading as independent fall.
+    THREE OTHER CAUSES CHECKED OFF and cleared, so they are not re-walked if it still looks wrong:
+      - Header byte-swap is COMPLETE. It shipped nine of LBScript's ten 4-byte words and the tenth
+        was `size` -- that was the earlier "pieces too small" fix. All ten swap now and
+        _Static_assert(offsetof(LBScript, bytecode) == 8 + 10*4) holds it there, so no velocity or
+        gravity field is silently unswapped.
+      - The RNG is sound. syUtilsRandFloat is the ONLY source of per-piece variation in
+        lbparticle.c -- position spread (:940-946), lifetime, size, colour, and the generator's
+        frame stagger (:2324) -- and its seed defaults to a live LCG (utils.c:14). The two
+        syUtilsSetRandomSeed(1) sites are bracketed diagnostic recorders on the fighter-damage
+        proof path that restore the seed immediately; they never touch results.
+      - The physics is source-exact. lbParticleUpdateStruct is decomp's own C body, textually
+        included under NON_MATCHING, so gravity/friction/velocity integration is not ported code.
+    If it STILL moves as a unit after re-test, the next step is a runtime spread counter over the
+    live pieces' positions in the results scene -- not another offline theory. Three died here.
 
 -BLOCKED(decision: particle atlas RESOLUTION, not VRAM). Owner's call. One approval unblocks it.
   keep atlas-baseline-23of36.png
@@ -157,5 +175,20 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
     5+ minutes, since the original took ~3.5 to reproduce.
 
 -Shield VFX is not correct.
-    NOT FIXED, but re-test first -- shield effects go through the same particle pass, so the
-    camera fix may cover it. If not, ndsEFManagerShieldProcDisplay is its own draw path.
+    **FIXED** (2026-08-02) pending your eye -- and the earlier guess in this row was wrong, so
+    correct it: the shield does NOT go through the particle pass. ndsEFManagerShieldProcDisplay
+    calls gcDrawDObjTreeForGObj, the DObj tree path, which loads its own matrices. The camera fix
+    never touched this row; it was always its own defect.
+    THE DEFECT IS ALPHA. The RGB was already exact -- all five port pairs match
+    dEFManagerShieldColors (efmanager.c:450) value for value, P1 red, P2 green, P3 blue, P4 black,
+    damage grey. The alpha was not. The source sets 0xC0 on BOTH prim and env for every entry
+    (efManagerShieldProcDisplay, efmanager.c:4112); the port shipped 0x60 at the centre and 0x50 at
+    the rim, so the bubble drew at half opacity in the middle and well under half at the edge --
+    a shield you can barely see. All ten values now read 0xC0.
+    These templates are N64 Gfx display lists, so the vertex alpha IS the transparency: 0xe200001c
+    is G_SETOTHERMODE_L carrying the XLU blend state, not an alpha level.
+    CHECKED AND CORRECT, so it is not re-walked: the health shrink is source code and is compiled
+    in -- ftcommonguard1.c:135 scales the joint by shield_health / FTCOMMON_GUARD_SIZE_HEALTH_DIV
+    and ndsEFManagerVisualProcUpdate reads that joint's scale, via
+    src/import/battleship_ftcommon_guard.c.
+    Verified NO-FREEZE and audio clean on the rebuilt ROM. Opacity is a look, so it wants your eye.

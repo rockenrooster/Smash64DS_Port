@@ -453,17 +453,28 @@ static void ndsEFManagerInitVisualTemplates(void)
     ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateWave],
                           0x60ff80ffu, 0xffff80ffu);
 #if NDS_TASK39_FX_SHIELD
+    /* BUGS.md "Shield VFX is not correct". The RGB here was already exact --
+     * every pair matches dEFManagerShieldColors (efmanager.c:450) -- but the
+     * ALPHA was not, and alpha is the whole look of a shield bubble. The source
+     * sets 0xC0 on BOTH prim and env for all five entries
+     * (efManagerShieldProcDisplay, efmanager.c:4112); this shipped 0x60 centre
+     * and 0x50 rim, so the bubble drew at half opacity in the middle and less
+     * than half at the edge where it reads as an outline. These are N64 Gfx
+     * templates, so the vertex alpha IS the transparency -- 0xe200001c is
+     * G_SETOTHERMODE_L carrying the XLU blend state, not a level.
+     * NOTE: the shield draws through gcDrawDObjTreeForGObj, so the 2026-08-02
+     * particle-camera fix does NOT touch it. This row was its own defect. */
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShield],
-                          0xffffff60u, 0xff000050u);
+                          0xffffffc0u, 0xff0000c0u);
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShieldP2],
-                          0xffffff60u, 0x00ff0050u);
+                          0xffffffc0u, 0x00ff00c0u);
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShieldP3],
-                          0xffffff60u, 0x0000ff50u);
+                          0xffffffc0u, 0x0000ffc0u);
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShieldP4],
-                          0xffffff60u, 0x00000050u);
+                          0xffffffc0u, 0x000000c0u);
     ndsEFManagerBuildDisc(
         &sNdsVisualTemplates[nNDSVisualTemplateShieldDamage],
-        0xffffff60u, 0xc0c0c050u);
+        0xffffffc0u, 0xc0c0c0c0u);
 #else
     ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateShield],
                           0x40b8ffffu, 0xe0ffffffu);
