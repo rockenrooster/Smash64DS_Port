@@ -117,10 +117,19 @@ These bugs should be fixed for P1 delivery:
   -1132.7, comfortably representable, and those are invisible too. Fix it anyway -- it is a real
   bound violation that will bite any effect crossing the stage, and it is cheap -- but do not
   close row 1 on it, and re-measure afterwards rather than assuming.
+  TRANSFORMS RE-CONFIRMED ON THE OTHER SIDE 2026-08-02: a later run drew lr=1, whose emitter is
+  -205, and the slot-1 walk read xf_t = -205.000000,100.000000 -- the correct emitter for that
+  side. (at_emitter=0/elsewhere=5833 in that run is the probe's own -715 literal not matching the
+  lr=1 side, not a defect.) So Whispy's transforms are now confirmed correct on BOTH sides.
   STILL UNTESTED, and the only step left between a representable world position and a pixel: what
   the GPU does with these quads once submitted. Instrument INSIDE the submit for final screen-space
   coordinates and survival to the FIFO, rather than inferring from upstream state again -- that
   inference is what produced all four wrong answers above.
+  AND USE A COMPILED COUNTER, NOT GDB. Row 4 proved on this same ROM that gdb reads of STACK
+  LOCALS return 0.0 on this remote while struct-through-pointer reads and globals are sound -- a
+  false "sparks at the origin" root cause was published and withdrawn on the strength of it. Every
+  world_pos/screen-space value in the submit path is a local. Instrument it the way row 4 finally
+  was: an interposition writing plain globals.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
@@ -200,18 +209,29 @@ These bugs should be fixed for P1 delivery:
   (attack_pos + damage_pos) * 0.5, so EVEN IF the victim's part matrix were all zeros -- the
   worst case, which forces damage_pos to (0,0,0) -- dst would still be attack_pos/2 = (-811, 169).
   NO value of that matrix produces the measured (0,0) from the measured inputs.
-  THAT INCONSISTENCY IS THE FINDING. It is not "the damage side is zero"; it is that this call's
-  output cannot be derived from this call's inputs under the source arithmetic. Exactly one of
-  these must be true, and the next step is to decide which rather than to theorise past it:
-    - `pos` is spilled to stack after the breakpoint line under -Os, so gdb is reading the slot
-      before the store. Against this: spark_ptr 022a8b74 independently shows the vector the maker
-      actually receives is zeroed, and that is a different read of the same object.
-    - ft_attack_coll at the breakpoint is not the collision the :2711 call consumed.
-    - the built code departs from the decomp text despite no interposition (inlining, or a
-      different overload reached).
-  DECIDE IT WITH A COMPILED COUNTER, not the debugger, which has now failed on this row five
-  separate ways: record attack_pos and damage_pos inside gmCollisionGetFighterAttackDamagePosition
-  itself and print them next to dst. One build, and it ends the ambiguity instead of adding to it.
+  RESOLVED BY THE COMPILED COUNTER, AND IT RETRACTS THIS ROW'S ROOT CAUSE. A diagnostic
+  interposition on gmCollisionGetFighterAttackDamagePosition (battleship_gmcollision.c, temporary,
+  decomp untouched) records both halves and the real dst from INSIDE, where -Os cannot take them:
+      HITPOS n=2  atk=2341.830566,33.045624  dmg=2380.331055,-155.547882
+                  dst=2361.080811,-61.251129
+  Both halves are sane and dst is their EXACT midpoint -- (2341.83+2380.33)/2 = 2361.08 and
+  (33.05-155.55)/2 = -61.25. THE FUNCTION IS CORRECT. The hit position handed to the spark maker
+  is a proper contact point, not the origin.
+  SO "hit sparks spawn at the world origin" IS WITHDRAWN. It was a gdb artifact. The tell was
+  there and I read past it: dereferencing into the fighter struct worked perfectly -- the same run
+  read ft_attack_coll->pos_curr as 2341.830566, matching the in-code attack_pos to the last digit
+  -- while the caller's STACK local `pos` and the maker's *spark_ptr both read 0.0. A control that
+  proves the frame is readable (player=1, size=17) does NOT prove that every KIND of access in
+  that frame is readable, and treating it as though it did is what produced the false finding.
+  Treat gdb reads of stack locals on this remote as unreliable until someone establishes why;
+  struct-through-pointer reads and globals have both proven sound.
+  WHAT REMAINS OF ROW 4: nothing measured. The impact position is correct at the source, so the
+  reported symptom is either downstream of the maker or does not reproduce on the current ROM.
+  Re-observe before spending anything further on it -- and note the report predates the denormal
+  fix, exactly like row 1's did.
+  The diagnostic is still compiled in. Remove the interposition in battleship_gmcollision.c when
+  this row closes; it costs six float stores a match and is the only trustworthy instrument on
+  this path right now.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.
