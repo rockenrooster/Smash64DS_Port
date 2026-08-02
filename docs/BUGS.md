@@ -15,11 +15,16 @@ These bugs should be fixed for P1 delivery:
   Why reading `dl` is sufficient and not the usual wrong-field mistake: DObj's display list is a
   UNION (objtypes.h:429-438) over dv/dl/dls/multi_list/dl_link/dist_dl/dist_dl_link, all aliasing
   one pointer. Zero there rules out the dl_link form these stage GObjs would otherwise use.
-  Localized for whoever takes it: grpupupu.c:666-667 builds both from relocData descs --
-  llGRPupupuMapWhispyEyesTransformKindsDObjDesc/MObjSub and the Mouth pair, declared as file
-  offsets in include/reloc_data.h:466-470 (0x0f00/0x10f0/0x13b0/0x1770 in the Dream Land map).
-  grPupupuMakeMapGObj is linked and runs; the descs are offsets the port resolves at runtime, so
-  the question is whether that resolve returns them and whether the DS submits the resulting tree.
+  Localized to the ASSET side, not the runtime. grpupupu.c:666-667 builds both from relocData
+  descs at map_head + 0x10f0 (eyes) and + 0x1770 (mouth); a DObjDesc is 44 bytes with its
+  display-list pointer at +4. Both descriptors read 0,0 in memory, so gcSetupCustomDObjs did its
+  job faithfully on empty input -- the geometry never arrives.
+  CAVEAT THAT DECIDES THE NEXT STEP: grPupupuInitAll sets map_head = map_nodes - 0x10f0, so the
+  eyes descriptor address IS gMPCollisionGroundData->map_nodes exactly. On the DS, map_nodes comes
+  from the generated native stage, which may not lay out the original relocData map at all -- in
+  which case the zeros mean "this arithmetic points somewhere unrelated" rather than "the asset
+  lacks a face". Settle that first (scripts/stages/generate_nds_native_stage.py and whatever
+  populates map_nodes) before touching grpupupu.c.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.

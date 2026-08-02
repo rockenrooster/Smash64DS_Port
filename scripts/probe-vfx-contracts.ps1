@@ -143,6 +143,10 @@ try {
         'set $eyes_mobj = -1',
         'set $mouth_dl = -1',
         'set $mouth_mobj = -1',
+        'set $eyes_desc_dl = 0',
+        'set $mouth_desc_dl = 0',
+        'set $eyes_desc_w0 = 0',
+        'set $mouth_desc_w0 = 0',
         'set $explode_calls = 0',
         'set $cap_rebirth = 0',
         'set $cap_explode = 0',
@@ -292,6 +296,20 @@ try {
         # a function on this remote without getting the ARM/Thumb entry state
         # right, and a crashed inferior costs the whole run. Root plus one level
         # of children and their siblings is enough to answer the question.
+        # ASSET SIDE vs RUNTIME SIDE, which is the only question left on row 1.
+        # grPupupuMakeMapGObj hands gcSetupCustomDObjs a DObjDesc at
+        # map_head + offset (0x10f0 eyes, 0x1770 mouth) and a DObjDesc is 44
+        # bytes with its display-list pointer at +4. If the desc's pointer is
+        # non-zero and the built DObj's is zero, the loss is in
+        # gcSetupCustomDObjs and it is fixable here. If the desc's is zero too,
+        # Dream Land's map file never carried the face and it is an asset job.
+        'set $mh = (char *)gGRCommonStruct.pupupu.map_head',
+        'if $mh != 0',
+        'set $eyes_desc_dl = ((unsigned int *)($mh + 0x10f0))[1]',
+        'set $mouth_desc_dl = ((unsigned int *)($mh + 0x1770))[1]',
+        'set $eyes_desc_w0 = ((unsigned int *)($mh + 0x10f0))[0]',
+        'set $mouth_desc_w0 = ((unsigned int *)($mh + 0x1770))[0]',
+        'end',
         'set $d = ((DObj *)gGRCommonStruct.pupupu.map_gobj[0]->obj)',
         'if $d->dl != 0',
         'set $eyes_dl = $eyes_dl + 1',
@@ -432,6 +450,7 @@ try {
             'frame_stops=%d forced=%d dust_frames=%d leaf_frames=%d leaf_x=%f ' +
             'mouth=%f,%f mouth_sx=%f eyes=%f,%f ground=%f,%f ground_sx=%f ' +
             'eyes_dl=%d eyes_mobj=%d mouth_dl=%d mouth_mobj=%d ' +
+            'eyes_desc=%#x,%#x mouth_desc=%#x,%#x ' +
             'transforms_used=%u transforms_max=%u structs_max=%u ' +
             'miss=%u emit=%u\n", ' +
             '$whispy_calls, $whispy_lr, ' +
@@ -444,6 +463,7 @@ try {
             '$mouth_x, $mouth_y, $mouth_sx, $eyes_x, $eyes_y, ' +
             '$ground_x, $ground_y, $ground_sx, ' +
             '$eyes_dl, $eyes_mobj, $mouth_dl, $mouth_mobj, ' +
+            '$eyes_desc_w0, $eyes_desc_dl, $mouth_desc_w0, $mouth_desc_dl, ' +
             'gLBParticleTransformsUsedNum, gNdsParticleTransformsMax, ' +
             'gNdsParticleStructsMax, ' +
             'gNdsParticleQuadMissCount, gNdsParticleQuadEmitCount'),
