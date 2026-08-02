@@ -1,28 +1,32 @@
 # Handoff
 
-Updated: 2026-08-01. **Boundary green; published battle ROM + tick-HUD sibling rebuilt;
+Updated: 2026-08-02. **Boundary green; published battle ROM + tick-HUD sibling rebuilt;
 `smash64ds.nds` untouched (owner: not needed for P1).**
-**THREE ROOT CAUSES CLOSED, all in the particle path, all one line each.**
-**(1) KO FREEZE — one macro.** `LBPARTICLE_MASK_GENLINK` was `(link) << 16`; the decode is `bank_id >> 3`
-into a SIXTEEN-entry array, so the burst wrote index 8192. `((link)+1)*8` is confirmed independently by
-`efdisplay.c:79-98`, which gives each slot its own draw GObj and render mode.
-**(2) HEADER `size` WAS NEVER BYTE-SWAPPED.** `ndsParticleNormalizeHeader` swapped nine of `LBScript`'s
-TEN prefix words; the tenth is `size` at 0x2C. Unswapped `20.0f` is a positive DENORMAL of 5.7e-41 —
-it passes `pc->size == 0.0F`, submits a real quad, costs no QuadMiss, and prints as `0.000000`. Every
-particle sized by its header drew sub-pixel while every counter read clean. Confetti `maxsize`
-0.000000 → **20.000000**; scripts that size in BYTECODE (`lbpSetSize*`) were always right, which is why
-Whispy measured 260.0 and hid it. Guarded now by `_Static_assert` on `offsetof`.
-**(3) FOUR LIVE SEAMS HAD NO PACKED SCRIPTS.** My own `ftParamMakeEffect` routing made DustLight,
-DustHeavy, DustHeavyDouble and MusicNote live; the generator's seam list did not know. Rejects 49 → 0,
-starts 137 → 226, roots 251 → 340 (+89 on both — every rejected start became a real one).
-**The DS path also never applied the LBTransform**, and **`ftParamMakeEffect` now dispatches the
-particle-only kinds to their source makers**. **Retract "a source effect costs ~5 DObjs".**
-**The quad sheet is A5I3, not RGB555+A1** — one alpha bit made every soft particle a hard blob; the
-proven 8,192-byte 128x64 allocation admits 23 of 47. Owner SETTLED 2026-08-02: keep the baseline
-sheet — 13 textures stay off and ~366 draws a match render nothing.
+**FOUR PARTICLE-PATH ROOT CAUSES CLOSED AND GUARDED** (derivations in `docs/PORTING.md` + board):
+the `LBPARTICLE_MASK_GENLINK` macro wrote index 8192 (KO freeze); `LBScript.size` at 0x2C was never
+byte-swapped, and an unswapped `20.0f` is a DENORMAL that passes `!= 0` and prints `0.000000`, so
+header-sized particles drew sub-pixel with every counter clean (now `_Static_assert`ed on `offsetof`);
+four live `ftParamMakeEffect` seams had no packed scripts (rejects 49 → 0); and the DS path never
+applied the `LBTransform`. **Retract "a source effect costs ~5 DObjs".**
+**QUAD MISSES ARE ZERO (2026-08-02) and the sheet did NOT grow.** Nine textures were refused 100% of
+the time — DustDash, DamageFire, DamageNormalLight/Heavy, SparkleWhite(Multi), DamageCoin, SetOff,
+i.e. the owner's "running foot dust / fireball hit" row. They were excluded for FRAME COUNT, so the
+generator DECIMATES each animation and `ndsParticleQuadFrameFor` returns the nearest EARLIER packed
+frame instead of NULL — **both halves are required**. Admitted 23 → 33 of 36, `atlas_bytes` still 8,192,
+QuadMiss 684 → **0**, emit == visible (376,474). The cap is SEARCHED (6→1, keep the first that refuses
+nothing live), so do not pin it. **Never grow the allocation** — 16,384 and 32,768 each broke
+stage/interface resolves with VRAM free, and at cap 3 the sheet had 896 bytes free and still could not
+seat texture 66: the constraint is shelf CONTIGUITY, not bytes. **Grade an atlas by which EFFECTS lose a
+cell, never by share of draws** — 684 of 362,759 reads as 0.19% and hid nine absent effects for months.
 **The FGM pack pins TWO constants in `nds_audio_fgm.h`** (bytes AND mapping hash); either mismatch
 rejects the pack and boots a SILENT ROM. Moving one without the other did exactly that on
 2026-08-02. The checker DERIVES both from the binary now — never re-pin them anywhere.
+**`FULL_PROGRAM_AOT_IDS` is the fix for a cue that clips AND drops its loop** (FGM 12, 153): it bakes
+the source program, so it removes both at once and normalizes volume to 127. That normalization is
+why `FGM_ENCODE_HEADROOM` is now EMPTY — half-scale compensation there would demand ds_volume 254.
+**`PresentedFrames` is PER BATTLE ENTRY** (`taskman_seam.c:4517`), so a run ending inside a Sudden Death
+scene load reads 0 with `PlacementInitCount` 2 — `soak-freeze-watch` calls that ENTRY-IN-PROGRESS now,
+having previously called it NEVER-STARTED and blamed the change under test.
 **Read `BUG_FIXING_PROCESS.md` v2 first**: source is the oracle, the owner is confirmation only, and a
 build is spent to confirm a written prediction — never to see whether it looks right. Restart surface
 only; durable detail belongs to its owning doc (board, `PERF_LEDGER`, `KNOWN_ISSUES`, `PORTING`).
@@ -87,33 +91,29 @@ board lists which). **A cue can be source-exact and still wrong in the MIX** (es
 `FGM_OWNER_VOLUME_TRIM`), **or source-exact per NOTE and wrong as a CUE**: the flat path bakes only
 the first note's rate and drops fork voices, which cut the crowd off. `FULL_PROGRAM_AOT_IDS` fixes
 it; `runtime_fidelity_debt` in the manifest lists who still needs it.
-**The crowd TRIGGER side BUILDS, RUNS and SHIPS ON** — `ft/ftpublic.c` compiled in place
-(`NDS_IMPORT_BATTLESHIP_FT_PUBLIC`), 3,332 B paid for by the weapon pool, `ActorMakeCount 1`. **Five of
-its seven counters CANNOT fire**: the `#define` seam renames intra-TU references, so the actor registers
-the inner proc and the counter-carrying wrappers are gc'd — read the source's own statics instead. That
-is the "wrap a decomp function to count its INTERNAL callers" refutation, hit again.
+**The crowd TRIGGER side BUILDS, RUNS and SHIPS ON** — `ft/ftpublic.c` in place, `ActorMakeCount 1`.
+**Five of its seven counters CANNOT fire**: the `#define` seam renames intra-TU references, so the
+wrappers are gc'd — read the source's own statics. ("Wrap a decomp function to count its INTERNAL
+callers" refuted, again.)
 
 **VFX — the interpreter is PROVEN CLEAN and the DRAW now WORKS.** **8,192 BYTES is the measured hard
-bound** on the atlas ALLOCATION, not on its texels — 16,384, 32,768 and a second page each made
-`ndsRendererHardwareResolveStageSourceFrameTexture` fail ~1 frame in 10 → 197 stage rebuilds. Every
-pinned number and the argument for it is in `check-nds-particle-banks.ps1`, which `verify-all.ps1` now
-runs itself (5.8 s) because the A5I3 conversion shipped with all of them stale.
+bound** on the atlas ALLOCATION, not on its texels (see the quad-miss note above). Every pinned number
+and its argument is in `check-nds-particle-banks.ps1`, which `verify-all.ps1` runs itself (5.8 s).
 **Dream Land's bank is packed and drawing** — reject ring empty, 3,741 strided draws. `efParticleInitAll`
 resets `sEFParticleBanksNum`, so `EFCommonID` and `PupupuID` both read **0** and every common particle
 took Dream Land's stride — key on `sEFParticleScriptBanks[slot]`, never a latched id.
-**Fireball FIXED, and it is a MEMORY fix**: 704-byte `WPStruct` × 32 held `GENERALFREE` at 14,796, under
-the 25,600 `ifCommonSetMaxNumGObj` threshold all match — cap latched at 47, four spawns refused. The pool
-is **3** now (high-water one, measured twice), returning 20,416 B. **Oversized source pools are where the
-arena margin is paid from.** **Do not read `sGCCommonsMaxNum` at end of run to decide whether that cap
-latched** — not sticky across the scene change, so the Results sample always says -1. Read
-`gNdsTaskmanGeneralHeapFreeMin` against 25,600 and the spawn-fail counters.
+**Fireball FIXED, and it is a MEMORY fix**: 704-byte `WPStruct` × 32 held `GENERALFREE` at 14,796 under
+the 25,600 `ifCommonSetMaxNumGObj` threshold all match — cap latched at 47, four spawns refused. Pool is
+**3** now, returning 20,416 B. **Oversized source pools are where the arena margin is paid from.**
+**`sGCCommonsMaxNum` at end of run CANNOT clear that cap** — not sticky across the scene change, so the
+Results sample always says -1. Read `gNdsTaskmanGeneralHeapFreeMin` against 25,600 and the spawn-fail
+counters. (Still 24,404 as of 2026-08-02, i.e. UNDER: there is no arena margin to spend.)
 
 **Traps:** `--gc-sections` had already discarded the particle textures, so the board's named arena lever
 freed zero — **check the `.map` before believing a size claim about linked data nothing reads**;
 **`__excpt_entry`'s park is a self-branch too**, so a CPU abort reads like the allocator's
 `while (TRUE);`; **a latch is not a counter**; **an allocator index something else can reset is not an
-identity**; and **`pwsh`, never `powershell`** — `lib/melonds.ps1:349` is a PS7 ternary, so 5.1 makes
-every script that sources it a parse error naming the innocent caller (`VERIFYING.md`).
+identity**; and **`pwsh`, never `powershell`** (`lib/melonds.ps1:349` is a PS7 ternary — `VERIFYING.md`).
 
 ## SUCCESSIVE MATCHES and the ANNOUNCEMENTS: both FIXED (full write-ups in `docs/PORTING.md` + board)
 

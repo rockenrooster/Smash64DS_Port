@@ -1015,10 +1015,18 @@ try {
                     $samples += [pscustomobject]@{
                         counter = 'generalHeapFreeBytes'; value = $free }
                 }
-                # THE ACTUAL GUARD. -1 means ifCommonSetMaxNumGObj never capped
-                # the GObj pool; it is sticky, so any other value means the cap
-                # fired at some point in this run and every GObj request past it
-                # returned NULL. The GO countdown does not check.
+                # ONE-WAY ONLY, and this comment used to claim the opposite.
+                # A value other than -1 does mean ifCommonSetMaxNumGObj capped
+                # the GObj pool, and past that cap gcMakeGObj returns NULL while
+                # the GO countdown dereferences it. But -1 proves NOTHING: the
+                # cap is NOT sticky across a scene change, and this read happens
+                # at end of run, which is the Results scene, so a battle that
+                # latched at 47 still reports -1 here (docs/HANDOFF.md says so in
+                # as many words). Calling this "the actual guard" is how a
+                # 2026-08-02 run got reported as "the cap never fired" when its
+                # own gNdsTaskmanGeneralHeapFreeMin was 24,404 -- already under
+                # the 25,600 threshold. READ THE HEAP LOW-WATER AND THE SPAWN-FAIL
+                # COUNTERS; this line can only ever confirm, never clear.
                 $commonsMax = $counter['sGCCommonsMaxNum']
                 if (($null -ne $commonsMax) -and ($commonsMax -ne 4294967295u)) {
                     Write-Host (('  WARNING: the GObj pool cap FIRED at {0}. ' +

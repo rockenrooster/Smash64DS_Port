@@ -132,10 +132,11 @@ fix live next to the code that owns it -- the particle generator and its checker
     texture at all. The current disc cannot use it because v0 is always the centre.
     BLOCKED ON HEAP, not on the idea: the ring needs +8 vertices and +6 commands, and
     NDSVisualTemplate is a fixed 16/12 shared by all 14 templates, so raising both costs 2,464
-    bytes. The soak put gNdsTaskmanGeneralHeapFreeMin at 24,404 -- already under the 25,600
-    ifCommonSetMaxNumGObj threshold, which did not latch only because it samples at one moment.
-    Spending 2,464 there risks the GObj cap firing, which kills the battle. Splitting the
-    template array so only the seven disc templates pay costs ~1,008; that is the route.
+    bytes. The soak put gNdsTaskmanGeneralHeapFreeMin at 24,404 -- ALREADY UNDER the 25,600
+    ifCommonSetMaxNumGObj threshold, so the cap may well have latched during the battle already.
+    (sGCCommonsMaxNum reading -1 does NOT clear that: it is not sticky across a scene change and
+    the soak samples it in Results.) There is no margin to spend here. Splitting the template
+    array so only the seven disc templates pay costs ~1,008; that is the route if revisited.
     THE ATLAS ROUTE IS CLOSED AND MEASURED: 128x128 uploaded fine but broke everything
     allocating after it (Violation 0 -> 1, StagePrepareBuild 2 -> 244, Results scoreboard
     gone). A retry must solve CONTIGUITY, not byte count. The shield is not on that sheet.
