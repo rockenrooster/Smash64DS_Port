@@ -954,3 +954,31 @@ price the result: the atlas is presently 64x64 / 8,192 bytes, and the earlier
 128x128 fits `sNdsRendererHardwareTextureScratch` exactly, so the question is
 VRAM against `NDS_RENDERER_HW_TEXTURE_CACHE_COUNT` and the 24 entries the
 battle's static set pins — not new RAM.
+
+### The atlas admission set is now measurably stale
+
+Quantified 2026-08-01 after the routing, and this supersedes the vaguer note
+above. `gNdsParticleTextureUseMask` came back `996076583 / 8294`, i.e. the
+match now draws **twenty-four** distinct particle textures where the mask used
+to name about five. The 64x64 / 8,192-byte sheet admits **fourteen of
+forty-seven**, so these fourteen draw nothing at all:
+
+    1, 5, 11, 14, 15, 17, 25, 28, 29, 33, 34, 37, 38, 45
+
+Texture **1 is in `QUAD_MEASURED_LIVE` and still lost** its place to the greedy
+admission, which is the clearest sign the priority list no longer matches the
+game. Thirteen of the rest are not candidates at all, because
+`QUAD_MEASURED_LIVE` was measured before the source effects were routed and
+the constant is defined as the measured set.
+
+Re-deriving it is necessary but is not a fix: the budget is fixed, so admitting
+fourteen more means evicting fourteen. The question underneath is whether the
+sheet can exceed 8,192 bytes. `PORTING.md` records 16,384 and 32,768 both
+failing, and the failure was specific rather than fundamental -- a larger
+resident atlas made `ndsRendererHardwareResolveStageSourceFrameTexture` fail
+about one frame in ten, which dropped `PrepareRun` and forced ~197 stage
+rebuilds a match. That is VRAM cache contention against the 24 entries the
+battle's static set pins in `NDS_RENDERER_HW_TEXTURE_CACHE_COUNT`, not a limit
+of the packer. Options worth pricing, cheapest first: raise `QUAD_KO_CELL_MAX`
+off 8 only for the burst's own frames; a second small sheet bound to a
+different cache entry; evicting a static entry the battle does not draw.

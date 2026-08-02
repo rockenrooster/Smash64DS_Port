@@ -9,6 +9,11 @@ Every `BUGS.md` row blocks P1 unless the owner explicitly changes its scope.
 
 ## What "fixed" means
 
+1st priority is to know what "correct behavior" is.
+Correct behavior is easily found in the Battleship project n64 decomp source ".\decomp\BattleShip-main\decomp\src".
+
+".\decomp\BattleShip-main\decomp\BattleShip_o2r" contains n64 source game assets.
+
 A fix must establish one continuous proof chain:
 
 > reported symptom -> source contract -> earliest wrong seam -> root-cause fix
