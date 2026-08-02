@@ -4,7 +4,7 @@ These bugs should be fixed for P1 delivery:
 
 -Whispy blow VFX not correct and not at correct location.
   Owner: still not right, spawning too far away from Whispy the Tree.
-  MEASURED: emitter is source-exact -- translate (-715,100), rotate.y 180deg at lr 0. Screenshot queued.
+  MEASURED: both emitters source-exact and match the owner's N64 reference; dust y=100, leaves y=450 z=-696.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
@@ -17,7 +17,7 @@ These bugs should be fixed for P1 delivery:
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.
-  LOCALIZED: cue gain is source-exact, so the missing contract dimension is the mix, not the level.
+  LOCALIZED: gain law is source-exact (0.947 applied). Open dimension is its volume LFO: modulator 92, shape 3, amp 110.
 
 -**FIXED** (2026-08-01) the KO burst freezes the game.
 

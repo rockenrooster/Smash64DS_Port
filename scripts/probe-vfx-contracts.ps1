@@ -130,6 +130,14 @@ try {
         'set $dead_x = 0.0',
         'set $dead_y = 0.0',
         'set $rebirth_calls = 0',
+        'set $mouth_x = 0.0',
+        'set $mouth_y = 0.0',
+        'set $mouth_sx = 0.0',
+        'set $eyes_x = 0.0',
+        'set $eyes_y = 0.0',
+        'set $ground_x = 0.0',
+        'set $ground_y = 0.0',
+        'set $ground_sx = 0.0',
 
         # Call count only. grpupupu.c:507 was tried as the read site and gdb
         # resolved it to THREE locations because -Os inlines the maker, so a
@@ -222,6 +230,27 @@ try {
         'set $whispy_y = gGRCommonStruct.pupupu.dust_xf->translate.y',
         'set $whispy_rot = gGRCommonStruct.pupupu.dust_xf->rotate.y',
         'set $whispy_scale = gGRCommonStruct.pupupu.dust_xf->scale.x',
+        # WHERE THE DS ACTUALLY DRAWS THE TREE. The emitter matching
+        # dGRPupupuWhispyDustEffectPositions only proves the effect agrees with
+        # BattleShip's numbers; it says nothing about whether the DS puts the
+        # tree where those numbers assume. map_gobj[0] is the eyes and [1] the
+        # mouth (grpupupu.c), both children of the ground, so their translate is
+        # the face position the dust is supposed to come out of. Compare against
+        # GRPUPUPU_WHISPY_POS_X -525 and against the emitter y of 100.
+        'if gGRCommonStruct.pupupu.map_gobj[1] != 0',
+        'set $mouth_x = ((DObj *)gGRCommonStruct.pupupu.map_gobj[1]->obj)->translate.vec.f.x',
+        'set $mouth_y = ((DObj *)gGRCommonStruct.pupupu.map_gobj[1]->obj)->translate.vec.f.y',
+        'set $mouth_sx = ((DObj *)gGRCommonStruct.pupupu.map_gobj[1]->obj)->scale.vec.f.x',
+        'end',
+        'if gGRCommonStruct.pupupu.map_gobj[0] != 0',
+        'set $eyes_x = ((DObj *)gGRCommonStruct.pupupu.map_gobj[0]->obj)->translate.vec.f.x',
+        'set $eyes_y = ((DObj *)gGRCommonStruct.pupupu.map_gobj[0]->obj)->translate.vec.f.y',
+        'end',
+        'if gGCCommonLinks[1] != 0',
+        'set $ground_x = ((DObj *)gGCCommonLinks[1]->obj)->translate.vec.f.x',
+        'set $ground_y = ((DObj *)gGCCommonLinks[1]->obj)->translate.vec.f.y',
+        'set $ground_sx = ((DObj *)gGCCommonLinks[1]->obj)->scale.vec.f.x',
+        'end',
         'if gGRCommonStruct.pupupu.leaves_xf != 0',
         'set $leaf_frames = $leaf_frames + 1',
         'set $leaf_x = gGRCommonStruct.pupupu.leaves_xf->translate.x',
@@ -241,7 +270,13 @@ try {
         # the first, so the wind is in its steady state rather than its opening
         # frame. gdb holds the emulator here, so the window is showing the frame
         # being measured and not a later one.
-        'if ($slot1_frames == 120) && (sLBParticleStructsAllocLinks[1] != 0)',
+        # EARLY in the blow, not mid-flight. The first capture was taken at
+        # slot1_frames 120 and showed no dust anywhere on screen -- by then the
+        # sheet has swept 1,359 units downwind of the emitter and left the
+        # camera. Frame 20 is while the particles are still near
+        # dGRPupupuWhispyDustEffectPositions, which is the frame that answers
+        # "is it coming out of the tree".
+        'if ($slot1_frames == 20) && (sLBParticleStructsAllocLinks[1] != 0)',
         # pwsh, NOT powershell. scripts/lib/melonds.ps1:349 uses a PS7 ternary,
         # so every harness script that dot-sources it is a parse error under
         # Windows PowerShell 5.1 -- which is what `powershell` resolves to. The
@@ -286,6 +321,7 @@ try {
             'spark_calls=%d spark_x=%f spark_y=%f spark_absmax=%f ' +
             'dead_calls=%d dead_x=%f dead_y=%f rebirth_calls=%d ' +
             'frame_stops=%d forced=%d dust_frames=%d leaf_frames=%d leaf_x=%f ' +
+            'mouth=%f,%f mouth_sx=%f eyes=%f,%f ground=%f,%f ground_sx=%f ' +
             'transforms_used=%u transforms_max=%u structs_max=%u ' +
             'miss=%u emit=%u\n", ' +
             '$whispy_calls, $whispy_lr, ' +
@@ -295,6 +331,8 @@ try {
             '$dead_calls, $dead_x, $dead_y, $rebirth_calls, ' +
             '$frame_stops, $forced, ' +
             '$dust_frames, $leaf_frames, $leaf_x, ' +
+            '$mouth_x, $mouth_y, $mouth_sx, $eyes_x, $eyes_y, ' +
+            '$ground_x, $ground_y, $ground_sx, ' +
             'gLBParticleTransformsUsedNum, gNdsParticleTransformsMax, ' +
             'gNdsParticleStructsMax, ' +
             'gNdsParticleQuadMissCount, gNdsParticleQuadEmitCount'),
