@@ -1067,6 +1067,15 @@ volatile f32 gNdsWhispyDrawX;
 volatile f32 gNdsWhispyDrawY;
 volatile f32 gNdsWhispyDrawSize;
 
+/* The confetti spread probe that answered BUGS.md's "move as a unit" row lived
+ * here and is removed now that it has: over the results scene, Y spread grew
+ * 690.0 -> 2817.4 world units while the centroid fell 1146.0 -> -26.6, which is
+ * free independent fall and not a rigid cloud. The numbers are in BUGS.md.
+ * If it ever needs rebuilding: accumulate min/max/sum of world_pos per draw-seam
+ * call, gate on gNdsVSResultsTickCount so battle effects cannot pollute it, and
+ * compare the FIRST spread against the LAST -- spread alone proves nothing,
+ * because rigid pieces still sit apart. */
+
 /* The scene camera pair, for the particle pass's own matrix load. Declared here
  * rather than by including gmcamera.h, which drags the whole camera API into a
  * TU that already textually includes two decomp sources. */

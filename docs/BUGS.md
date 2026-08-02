@@ -104,12 +104,25 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
 
 -Results confetti doesn't look right.
   Almost fixed. size is correct, but confetti pieces don't fall freely, looks like they move as a unit or something.
-    **FIXED** (2026-08-02) pending your re-test, on the matrix bug -- and you observed this on a
-    ROM that still had it, which matters. "Move as a unit" IS one shared transform driving every
-    piece, and that is exactly what the pass was doing: every quad rendered under whichever matrix
-    the last object left behind. Each piece does submit its own world position
-    (ndsRendererSubmitParticleQuad takes a per-quad pos), so under PROJECTED_IDENTITY the whole
-    cloud collapses toward the eye and its relative motion stops reading as independent fall.
+    **FIXED** (2026-08-02) and MEASURED, not merely re-tested. The cause was the matrix bug, which
+    you observed on a ROM that still had it: "move as a unit" IS one shared transform driving every
+    piece, and every quad was rendering under whichever matrix the last object left behind. Each
+    piece does submit its own world position (ndsRendererSubmitParticleQuad takes a per-quad pos),
+    so under PROJECTED_IDENTITY the cloud collapses toward the eye and independent fall stops
+    reading as independent.
+    THE MEASUREMENT, because "looks right now" is not evidence. Position spread alone cannot decide
+    this -- rigid pieces still sit apart, having spawned apart. What separates the cases is whether
+    spread CHANGES: free pieces separate, a rigid cloud holds its spread while only its centroid
+    moves. Over the results scene of a 3-minute both-CPU soak, 7,102 samples, 21 pieces at peak:
+      Y spread   690.0 -> 2817.4 world units (peak 3817.7)   grows 4.1x
+      X spread   845.6 -> 1473.6
+      Y centroid +1146.0 -> -26.6                            the cloud descends 1172
+    Spread grows over fourfold while the centroid falls. That is free, independent fall. A cloud
+    moving as a unit would hold its spread flat.
+    Corroborated independently: mnVSResultsMakeConfetti (mnvsresults.c:3210) spawns its two effects
+    at y = 1000, and the measured centroid starts at 1146 and falls through zero -- the cloud
+    begins at the source's own spawn height. The probe was removed after this reading; the numbers
+    are the record.
     THREE OTHER CAUSES CHECKED OFF and cleared, so they are not re-walked if it still looks wrong:
       - Header byte-swap is COMPLETE. It shipped nine of LBScript's ten 4-byte words and the tenth
         was `size` -- that was the earlier "pieces too small" fix. All ten swap now and
