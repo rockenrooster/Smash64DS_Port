@@ -105,6 +105,9 @@ extern volatile u32 gNdsAudioFgmLoopPlayCount;
 extern volatile u32 gNdsAudioFgmStopCalls;
 extern volatile u32 gNdsAudioFgmStopAllCalls;
 extern volatile u32 gNdsAudioFgmDurationStopCount;
+/* Ramp steps written while a finished note falls silent. Zero with a non-zero
+ * DurationStopCount means the release never engaged. */
+extern volatile u32 gNdsAudioFgmReleaseRampCount;
 extern volatile u32 gNdsAudioFgmStaleStopCount;
 extern volatile u32 gNdsAudioFgmGenerationMismatchCount;
 extern volatile u32 gNdsAudioFgmActiveHandles;

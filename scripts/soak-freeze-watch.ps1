@@ -802,6 +802,7 @@ try {
             'gNdsAudioFgmMaxActiveHandles',
             'gNdsAudioFgmPoolExhaustCount',
             'gNdsAudioFgmDurationStopCount',
+            'gNdsAudioFgmReleaseRampCount',
             'gNdsAudioFgmGenerationMismatchCount',
             'gNdsAudioFgmStaleStopCount',
             'gNdsAudioFgmStopAllCalls',

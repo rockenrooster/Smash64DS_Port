@@ -19,6 +19,16 @@
 #define NDS_AUDIO_FGM_HANDLE_COUNT NDS_AUDIO_FGM_HANDLE_CAPACITY
 #define NDS_AUDIO_FGM_CHANNEL_COUNT 16u
 #define NDS_AUDIO_FGM_TIMER_MICROSECONDS 5750u
+/* How long a finished note takes to fall silent. ONE CONSTANT, and it is
+ * standing in for data the pack does not carry yet: the N64 release comes from
+ * each sound's ADSR in the bank, which the FGM pack generator reads but does
+ * not emit. Ten FGM ticks is 57.5 ms, chosen as the shortest window that is
+ * unambiguously a fade rather than a click while staying well under the
+ * smallest tail it has to cover (PublicFox, 129 ms). Replace it with the
+ * per-cue release when the pack carries one; the shape here is already right,
+ * only the length is generic. Extending a handle by 57.5 ms is affordable:
+ * the measured peak is six of eight handles with PoolExhaustCount 0. */
+#define NDS_AUDIO_FGM_RELEASE_MICROSECONDS (NDS_AUDIO_FGM_TIMER_MICROSECONDS * 10u)
 #define NDS_AUDIO_FGM_CACHE_SLOT_COUNT 8u
 #define NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS 32u
 
@@ -68,6 +78,10 @@ typedef struct NDSAudioFgmHandle {
     u8 allocated;
     u8 live;
     u8 ever_allocated;
+    /* The level this cue is currently sounding at, so the release below has
+     * something to ramp down FROM. Seeded with the pack entry's volume and
+     * followed along the envelope, because an envelope point changes it. */
+    u8 volume;
 } NDSAudioFgmHandle;
 
 typedef struct NDSAudioFgmCacheSlot {
@@ -105,6 +119,7 @@ volatile u32 gNdsAudioFgmLoopPlayCount;
 volatile u32 gNdsAudioFgmStopCalls;
 volatile u32 gNdsAudioFgmStopAllCalls;
 volatile u32 gNdsAudioFgmDurationStopCount;
+volatile u32 gNdsAudioFgmReleaseRampCount;
 volatile u32 gNdsAudioFgmStaleStopCount;
 volatile u32 gNdsAudioFgmGenerationMismatchCount;
 volatile u32 gNdsAudioFgmActiveHandles;
@@ -176,6 +191,14 @@ _Static_assert(offsetof(NDSAudioFgmArm7AckTrace, events) == 48u,
 _Static_assert(sizeof(NDSAudioFgmArm7AckTrace) == 112u,
                "FGM ARM7 ACK trace layout changed");
 #endif
+
+/* The release window in CPU ticks, derived the same way the duration is so the
+ * two cannot drift apart. */
+static u32 ndsAudioFgmReleaseCpuTicks(void)
+{
+    return (u32)(((u64)BUS_CLOCK * NDS_AUDIO_FGM_RELEASE_MICROSECONDS) /
+                 1000000u);
+}
 
 static u16 ndsAudioFgmReadLe16(const u8 *data)
 {
@@ -919,17 +942,56 @@ void ndsAudioFgmUpdate(void)
                     break;
                 }
                 soundSetVolume(handle->channel, point[2]);
+                handle->volume = point[2];
                 handle->envelope_index++;
                 gNdsAudioFgmEnvelopeStepCount++;
             }
-            if ((handle->live != FALSE) &&
-                ((s32)(now - handle->end_tick) >= 0))
+            /* THE NOTE ENDING IS A RELEASE, NOT A KILL, and this used to be a
+             * bare soundKill the instant end_tick passed.
+             *
+             * BUGS.md "Some Crowd noise audio cues get cut off". Five cues in
+             * the pack own a sample LONGER than the note that plays them, so
+             * that kill landed mid-waveform -- a click, and a lost tail. Four
+             * of the five are the crowd, which is exactly the row:
+             *   PublicDamageM  862 ms note vs 1,172 ms sample   -309 ms
+             *   PublicGaspM  1,322 ms note vs 1,618 ms sample   -295 ms
+             *   PublicMario  1,840 ms note vs 2,123 ms sample   -283 ms
+             *   GroundGrind2   316 ms note vs   457 ms sample   -141 ms
+             *   PublicFox    1,840 ms note vs 1,969 ms sample   -129 ms
+             * and all five carry zero packed envelope points, so nothing was
+             * fading them either. The other eight crowd cues run out before
+             * their note ends, which is what the N64 does too -- their samples
+             * do not loop (source_loop_infinite false, loop_start/end 0) -- so
+             * they are untouched by this.
+             *
+             * The N64 sequence player hands a finished note to the envelope's
+             * release phase rather than silencing the voice, so ramping to zero
+             * and then killing is the source-shaped behaviour, not a cosmetic
+             * fade. The window is one constant rather than per-cue release data
+             * because the pack does not carry release yet; see the note on
+             * NDS_AUDIO_FGM_RELEASE_MICROSECONDS. */
+            if (handle->live != FALSE)
             {
-                ndsAudioFgmReleaseHandle(
-                    handle, TRUE
-                    NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
-                        NDS_AUDIO_FGM_RELEASE_REASON_DURATION, now));
-                gNdsAudioFgmDurationStopCount++;
+                s32 into_release = (s32)(now - handle->end_tick);
+
+                if (into_release >= (s32)ndsAudioFgmReleaseCpuTicks())
+                {
+                    ndsAudioFgmReleaseHandle(
+                        handle, TRUE
+                        NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                            NDS_AUDIO_FGM_RELEASE_REASON_DURATION, now));
+                    gNdsAudioFgmDurationStopCount++;
+                }
+                else if ((into_release >= 0) && (handle->channel >= 0))
+                {
+                    u32 span = ndsAudioFgmReleaseCpuTicks();
+                    u32 remaining = span - (u32)into_release;
+
+                    soundSetVolume(
+                        handle->channel,
+                        (u8)(((u32)handle->volume * remaining) / span));
+                    gNdsAudioFgmReleaseRampCount++;
+                }
             }
         }
     }
@@ -1115,6 +1177,7 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
                                1000000u);
     handle->start_tick = cpuGetTiming();
     handle->end_tick = handle->start_tick + duration_cpu_ticks;
+    handle->volume = entry->volume;
     handle->envelope_count = entry->envelope_count;
     handle->envelope_index = 0u;
     handle->channel = (s8)channel;

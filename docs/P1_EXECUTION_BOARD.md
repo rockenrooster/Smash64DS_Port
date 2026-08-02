@@ -4,6 +4,54 @@ Updated: 2026-08-01 14:45 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
+## PARTICLE/VFX CLUSTER CONTRACT — the numbers each open row has to match (2026-08-01)
+
+Written to `BUG_FIXING_PROCESS.md` v2 Step 2: the source is the oracle, so each
+row below is quantities with a BattleShip citation and the probe that reads them
+on the DS. Rows marked MEASURED are green on the current candidate; the rest are
+what the next batched probe has to answer. No owner session until every row in a
+given report is green and its one-sentence prediction is written.
+
+**Results confetti** (`efManagerConfettiMakeEffect`, efmanager.c:6206; script
+0x70 = 112, children 108-111 via the generator's spawn graph)
+
+| Quantity | Expected (source) | Tol | Probe | State |
+|---|---|---|---|---|
+| Texture id | 22, all four children | exact | script header | MEASURED, 22 is admitted |
+| Particle size | **20.00** world half-extent | exact | `pc->size` at draw | not read |
+| Gravity | **4.000** | exact | script header | not read |
+| Friction | **0.950** | exact | script header | not read |
+| Initial velocity | **(0, 0, 0)** -- they fall, they are not thrown | exact | `pc->vel` at spawn | not read |
+| Particle lifetime | **136** frames | exact | script header | not read |
+| Generator link | slot 3, i.e. `bank \| 32` | exact | `bank_id >> 3` | MEASURED, macro fixed |
+| Spawn positions | two, `mnvsresults.c:3216-3217`, one per `is_genlink_mask` | exact | GDB at the maker | not read |
+
+Owner's report is "not large enough" and "not falling freely", which maps to the
+size row and the gravity/friction/velocity rows. Both are readable on the
+EXISTING ROM through GDB; neither needs a build.
+
+**Whispy blow** -- the contract is the worked example in `BUG_FIXING_PROCESS.md`
+Step 2. Note before probing that the port includes the SOURCE `grpupupu.c`
+(`battleship_grpupupu_ground.c:108`), so `lr_players`, the position tables and
+the 180-degree dust rotation are all original code; an inverted side would have
+to come from the inputs to `grPupupuWhispyGetLR`, not from a port rewrite. The
+two candidate origins are 510 units apart (-715 and -205 around the tree at
+-525, `ground.h:19`), which is the size of the reported error.
+
+**KO burst** -- `drop mask 0` and a whole tree are MEASURED. What is not measured
+is what reaches the screen: its cells are capped at 8x8 by `QUAD_KO_CELL_MAX` and
+some of its fourteen child scripts are still unadmitted, so "trying to play but I
+can't see it fully" is an admission question, not a spawn question. Blocked on
+the atlas decision below.
+
+**The bound.** The three rows above share the 8,192-byte particle sheet. A5I3
+took admission 14 -> 23 of 47 and misses 1,343 -> 528 inside that same
+allocation, and the remaining eight are long animations (28 is twenty frames, 25
+fifteen, 17 ten at 64x64) that no packing fits. Per "when the gap is a decision,
+stop iterating", options and measured costs are in
+`docs/optimization/OPTIMIZATION_IDEAS.md`; the row is BLOCKED(decision) rather
+than iterated.
+
 ## EVERY EFFECT DESC WAS HOLDING A SYMBOL ADDRESS WHERE AN OFFSET BELONGED (2026-08-01)
 
 The owner reported "the KO burst freezes the game". Two root causes fell out,
