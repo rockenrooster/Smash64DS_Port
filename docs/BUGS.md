@@ -173,8 +173,26 @@ These bugs should be fixed for P1 delivery:
   reads a fighter PART MATRIX, which this port maintains through its own matrix pipeline, so that
   is the natural suspect -- but it is a suspect, not a finding, and four mechanisms were published
   and refuted on row 1 today for exactly this kind of reasoning.
-  NEXT, one measurement: break at gmcollision.c:1979 and latch attack_pos and damage_pos
-  SEPARATELY. Whichever is zero names the step; if both are sane the fault is in the blend.
+  THAT SPLIT WAS ATTEMPTED AND CANNOT BE DONE FROM GDB. Breaking at gmcollision.c:1979 resolves
+  fine (0x206fb2e) but -Os has discarded both locals -- `No symbol "attack_pos" in current
+  context` -- and because a gdb batch abandons everything after its first error, that single read
+  cost the whole probe run. Registers are no way round it: $r0 is unreadable on this remote, the
+  same wall the four earlier attempts hit. The breakpoint is deliberately left OUT of
+  probe-vfx-contracts.ps1, with a comment, so nobody re-adds it.
+  STATIC REASONING NARROWS IT TO ONE SHARED CAUSE, which is worth more than the split would have
+  been. gmCollisionGetCommonImpactPosition (:1959) is a MIDPOINT: dst = (attack_pos + damage_pos)
+  * 0.5. For dst to be exactly (0,0,0) BOTH inputs must be zero -- any other combination leaves
+  half of the surviving term. And both have the same kind of way to be zero:
+    - damage_pos comes from gmCollisionGetWorldPosition(parts->mtx_translate, ...) (:196-205),
+      which computes M*offset + M[3]. An ALL-ZERO part matrix yields exactly (0,0,0) whatever the
+      offset is -- and part matrices are maintained by this port's own matrix pipeline.
+    - attack_pos comes from attack_coll->pos_curr/pos_prev (:1900-1912), plain reads of the
+      attack collision's world position.
+  So the suspect is fighter world-space collision data not being maintained port-side, feeding
+  both halves, rather than two independent defects. NOT established -- it is the reading that
+  survives, not a measurement.
+  NEXT: a temporary counter compiled into the port recording attack_coll->pos_curr and
+  parts->mtx_translate at the hit, since the debugger provably cannot reach either. One build.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.

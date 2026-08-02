@@ -136,7 +136,7 @@ try {
         'set $slot1_xf_at_emitter = 0',
         'set $slot1_xf_elsewhere = 0',
         'set $slot1_xf_gen = -1',
-        'set $spark_calls = 0', 'set $spark_ptr = 0',
+        'set $spark_calls = 0', 'set $impact_calls = 0', 'set $atk_x = 0.0', 'set $atk_y = 0.0', 'set $dmg_x = 0.0', 'set $dmg_y = 0.0', 'set $spark_ptr = 0',
         'set $spark_x = 0.0',
         'set $spark_y = 0.0',
         'set $spark_absmax = 0.0',
@@ -223,6 +223,14 @@ try {
         # consistent with inferior calls SIGILLing here. battleship_efmanager.c
         # :1379 is the port wrapper's tail call, where `pos` is a named
         # parameter in a TU with its own debug info.
+        # NOT breaking at gmcollision.c:1979 to split attack_pos from damage_pos.
+        # Tried on 2026-08-02: the line resolves fine (0x206fb2e) but -Os has
+        # discarded both locals, gdb answers `No symbol "attack_pos" in current
+        # context`, and because a gdb batch abandons everything after its first
+        # error that ONE read cost the whole probe. Registers are not a way
+        # around it either -- $r0 is unreadable on this remote. Split that step
+        # statically, or with a temporary counter compiled into the port, not
+        # from here.
         'break battleship_efmanager.c:1379',
         'commands',
         'silent',
@@ -552,7 +560,7 @@ try {
 
         ('printf "VFXCONTRACT whispy_calls=%d lr=%d whispy_x=%f whispy_y=%f whispy_rotY=%f whispy_scale=%f ' +
             'slot1_frames=%d slot1_x=%f slot1_y=%f slot1_size=%f slot1_absmax=%f ' +
-            'spark_calls=%d spark_x=%f spark_y=%f spark_absmax=%f spark_player=%d spark_size=%d spark_ptr=%08lx ' +
+            'spark_calls=%d spark_x=%f spark_y=%f spark_absmax=%f spark_player=%d spark_size=%d spark_ptr=%08lx impact=%d atk=%f,%f dmg=%f,%f ' +
             'dead_calls=%d dead_x=%f dead_y=%f rebirth_calls=%d explode_calls=%d ' +
             'frame_stops=%d forced=%d dust_frames=%d leaf_frames=%d leaf_x=%f ' +
             'mouth=%f,%f mouth_sx=%f eyes=%f,%f ground=%f,%f ground_sx=%f ' +
@@ -570,7 +578,7 @@ try {
             '$whispy_calls, $whispy_lr, ' +
             '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
             '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
-            '$spark_calls, $spark_x, $spark_y, $spark_absmax, ' + '$spark_player, $spark_size, $spark_ptr, ' +
+            '$spark_calls, $spark_x, $spark_y, $spark_absmax, ' + '$spark_player, $spark_size, $spark_ptr, ' + '$impact_calls, $atk_x, $atk_y, $dmg_x, $dmg_y, ' +
             '$dead_calls, $dead_x, $dead_y, $rebirth_calls, $explode_calls, ' +
             '$frame_stops, $forced, ' +
             '$dust_frames, $leaf_frames, $leaf_x, ' +
