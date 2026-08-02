@@ -452,7 +452,11 @@ try {
             'eyes_dl=%d eyes_mobj=%d mouth_dl=%d mouth_mobj=%d ' +
             'eyes_desc=%#x,%#x mouth_desc=%#x,%#x ' +
             'transforms_used=%u transforms_max=%u structs_max=%u ' +
-            'miss=%u emit=%u\n", ' +
+            # The COUNT says how much was refused; only the MASK says WHAT. Row 1
+            # turns on whether Whispy's own dust and leaf textures are among the
+            # refusals -- a 6.7% miss rate is equally consistent with "the wind is
+            # invisible" and "some unrelated tail effect is".
+            'miss=%u emit=%u missmask=%08x,%08x missframes=%08x\n", ' +
             '$whispy_calls, $whispy_lr, ' +
             '$whispy_x, $whispy_y, $whispy_rot, $whispy_scale, ' +
             '$slot1_frames, $slot1_x, $slot1_y, $slot1_size, $slot1_absmax, ' +
@@ -466,7 +470,9 @@ try {
             '$eyes_desc_w0, $eyes_desc_dl, $mouth_desc_w0, $mouth_desc_dl, ' +
             'gLBParticleTransformsUsedNum, gNdsParticleTransformsMax, ' +
             'gNdsParticleStructsMax, ' +
-            'gNdsParticleQuadMissCount, gNdsParticleQuadEmitCount'),
+            'gNdsParticleQuadMissCount, gNdsParticleQuadEmitCount, ' +
+            'gNdsParticleQuadMissMask[0], gNdsParticleQuadMissMask[1], ' +
+            'gNdsParticleQuadMissFrameMask'),
         'detach',
         'quit'
     )

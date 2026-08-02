@@ -26,10 +26,30 @@ These bugs should be fixed for P1 delivery:
   succeeded and stayed valid for the whole match, so both face materials resolved every frame, and
   CommitNativeStageMaterials (:7471-7490) writes their texture_id_curr/next from
   whispy_eyes_texture/whispy_mouth_texture on segments 1 and 2.
-  So NO DEFECT SURVIVES on this row: emitters source-exact, face present and animating. Same
-  standing as the stray-VFX row -- the report does not reproduce against any available
-  measurement, and the ROM has changed a great deal since it was written (the denormal fix alone
-  made a large fraction of particles visible for the first time). Needs re-observation.
+  RE-OBSERVED 2026-08-02 on the current ROM (build-r2-bothcpu tickhud, 12:20 AM, newer than the
+  last source change). I stopped asserting and looked:
+    artifacts/visibility/atlas-2026-08-02/whispy-trunk-zoom.png     (the trunk, 4x)
+    artifacts/visibility/atlas-2026-08-02/whispy-topscreen-2x.png   (whole top screen, 2x)
+  THE FACE IS THERE, visibly: two eyes, the snout, the mouth, on the left trunk. That is now
+  settled by an image rather than by a counter, and it agrees with the PrepareBuildCount reading.
+  The mouth faces LEFT toward stage centre and the dust emitter sits at world -715, 190 units left
+  of Whispy's -525 -- i.e. directly in front of the mouth, which is what the owner expected.
+  Emitters re-confirmed source-exact this run: whispy_x=-715 y=100 rotY=3.141593 (180 deg, lr=0),
+  leaf_x=-715, dust_frames=3 leaf_frames=3 over 3 forced wind cycles.
+  WHAT IS STILL WRONG, and this is a REOPEN, not a settle: no wind particle is visible anywhere in
+  a capture taken on a forced-blow frame, while the simulation reports slot1_frames=554 live
+  particle-frames in Whispy's alloc-link slot at slot1_size=260 -- real size, not a denormal.
+  So they exist, they are the right size, and nothing draws where the eye can find it.
+  The atlas is NOT the cause and that is now proven, not assumed: gNdsParticleQuadMissMask reads
+  22020000,00002106 = texture ids 17, 25, 29, 33, 34, 40 and 45, every one of them in row 11's
+  excluded 13, with ZERO refusals outside that list -- and Whispy's dust and leaf textures are not
+  among them. Their textures are admitted and drawable.
+  NEXT, and it is one measurement, not a build: slot1_x=417.69 with slot1_absmax=1352.46 against
+  an emitter at -715 means these particles travel roughly 2,067 units. Read the camera's visible
+  world half-width on the same frame. If it is under ~1,300 the wind is simply blowing off-screen,
+  which is a velocity/scale problem in the DS port rather than a missing effect, and it would
+  explain "not correct" and "too far away" in one stroke. Do NOT resume the legacy-DObj
+  archaeology; it produced two withdrawn answers already.
 
 -Some Crowd noise audio cues get cut off.
   OWNER-QUEUED: release ramp replaces the mid-waveform soundKill; 486 ramp steps measured.
@@ -126,6 +146,12 @@ These bugs should be fixed for P1 delivery:
   which is 528 draws a match rendering nothing. AGENTS.md forbids accepting "missing/corrupt
   presentation" outright, while a smaller particle is exactly the "cheapest acceptable
   source-derived approximation" it asks for. Particles are a few pixels on a 256x192 screen.
+  CONFIRMED AT RUNTIME 2026-08-02, and it makes this row the sole cause rather than a suspect:
+  gNdsParticleQuadMissMask on a live battle reads 22020000,00002106 = texture ids 17, 25, 29, 33,
+  34, 40, 45 across 366 refused draws of 5,454 emits. Every one is in the excluded 13 and there
+  are ZERO refusals outside it, so no second defect is hiding behind this one and admitting the
+  set removes every missing particle draw in the game. Six of the 13 (28, 31, 35, 36, 38, 41) were
+  never even requested in that run, so approving this repairs 7 textures now and insures 6 more.
   Look at the two renders before deciding -- they are the same 8,192 bytes, and the second holds
   roughly half an effect vocabulary the first does not have at all (the coloured notes and
   confetti are simply absent from baseline):
