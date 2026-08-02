@@ -1058,6 +1058,15 @@ volatile u32 gNdsParticleDrawVisibleCount;
 volatile u32 gNdsParticleDrawVisibleMax;
 volatile u32 gNdsParticleQuadEmitCount;
 volatile u32 gNdsParticleQuadEmitMax;
+/* TEMPORARY, BUGS.md row 1. Whispy's dust and leaves are alloc-link 1; these
+ * record what its quads are actually handed at the submit. Remove with the row. */
+volatile u32 gNdsWhispySubmitOk;
+volatile u32 gNdsWhispySubmitFail;
+volatile u32 gNdsWhispyDrawClamped;
+volatile f32 gNdsWhispyDrawX;
+volatile f32 gNdsWhispyDrawY;
+volatile f32 gNdsWhispyDrawSize;
+
 volatile u32 gNdsParticleQuadMissCount;
 volatile u32 gNdsParticleInitAllCount;
 volatile u32 gNdsParticleBankRegisterCount;
@@ -1337,6 +1346,36 @@ void lbParticleDrawTextures(GObj *gobj)
                                               row->width, row->height) != FALSE)
             {
                 emitted++;
+                if (link == 1u)
+                {
+                    gNdsWhispySubmitOk++;
+                }
+            }
+            else if (link == 1u)
+            {
+                gNdsWhispySubmitFail++;
+            }
+            /* TEMPORARY DIAGNOSTIC, BUGS.md row 1. Remove with that row.
+             *
+             * world_pos is a STACK LOCAL, and row 4 established the hard way
+             * that gdb reads those as 0.0 on this remote while globals are
+             * sound -- a whole root cause was published and withdrawn on that.
+             * So the last unmeasured step of row 1, what the submit actually
+             * receives for Whispy's link-1 particles and whether it accepts
+             * them, is recorded here into globals instead of read from outside.
+             * Also latches the v16 clamp: nds_renderer.c scales world by 16 and
+             * saturates at +/-32767, so |world| > 2047.9 is drawn on the rail
+             * rather than where it belongs. */
+            if (link == 1u)
+            {
+                gNdsWhispyDrawX = world_pos.x;
+                gNdsWhispyDrawY = world_pos.y;
+                gNdsWhispyDrawSize = pc->size;
+                if ((world_pos.x > 2047.9f) || (world_pos.x < -2047.9f) ||
+                    (world_pos.y > 2047.9f) || (world_pos.y < -2047.9f))
+                {
+                    gNdsWhispyDrawClamped++;
+                }
             }
 #endif
         }

@@ -103,6 +103,19 @@ These bugs should be fixed for P1 delivery:
   measurement: camera frustum, layer-15 dispatch, atlas exclusion, stale transform.
   NO CAUSE IS ESTABLISHED. Do not accept a fifth mechanism on this row without a measurement that
   could have refuted it, and do not re-test the four above -- each is refuted here with numbers.
+  MEASURED FROM INSIDE THE DRAW 2026-08-02, and it promotes the v16 clamp below from "the tail"
+  to the row's one measured defect:
+      WSUB ok=5590  fail=0  clamped=1118  at=1350.587280,295.159302  sz=283.557129
+  Every Whispy quad is SUBMITTED AND ACCEPTED -- 5,590 of them, zero rejections -- so the draw
+  path is not dropping them. But 1,118 of 5,590, TWENTY PERCENT, carry a world coordinate past
+  the +/-2047.9 the vertex format can express and are drawn on the rail instead of where they
+  belong. A fifth of the wind renders in the wrong place. That is not a tail; it is the reported
+  symptom, "not correct and not at correct location", measured.
+  Instrumented with globals rather than gdb, per row 4's lesson, in battleship_lbparticle.c's
+  link==1 branch. TEMPORARY -- remove with this row.
+  Note also that 5,590 quads over 900 frames is about six per frame, which is genuinely faint and
+  matches the owner's own "the VFX are so slight". The single capture showing nothing is therefore
+  weak evidence of absence and should not be leaned on.
   A REAL SECONDARY DEFECT FOUND IN THE SUBMIT, stated as arithmetic and explicitly NOT claimed as
   the root cause. ndsRendererParticleWorldToV16 (nds_renderer.c:11138-11146) scales a world
   coordinate by 1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT) = 16 and clamps to the v16 range, so
@@ -223,8 +236,12 @@ These bugs should be fixed for P1 delivery:
   -- while the caller's STACK local `pos` and the maker's *spark_ptr both read 0.0. A control that
   proves the frame is readable (player=1, size=17) does NOT prove that every KIND of access in
   that frame is readable, and treating it as though it did is what produced the false finding.
-  Treat gdb reads of stack locals on this remote as unreliable until someone establishes why;
-  struct-through-pointer reads and globals have both proven sound.
+  AND THE CAUSE OF THE ARTIFACT IS NOW KNOWN, confirmed in both directions. It is not the remote:
+  gmCollisionGetFighterAttackDamagePosition was being INLINED at -Os, so `pos` lived in registers
+  and the stack slot gdb read was never written. Adding the non-inlinable diagnostic wrapper
+  forced the spill, and the very same gdb read then returned 2361.080811,-61.251129 -- matching
+  the in-code value exactly. Nothing about the debugger changed; the codegen did. So the rule is
+  "a caller local is unreadable while the callee filling it is inlined", not "locals never read".
   WHAT REMAINS OF ROW 4: nothing measured. The impact position is correct at the source, so the
   reported symptom is either downstream of the maker or does not reproduce on the current ROM.
   Re-observe before spending anything further on it -- and note the report predates the denormal
