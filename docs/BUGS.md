@@ -204,4 +204,25 @@ camera pair gmcamera.c:1001 composes for the scene. Verified 599/599 batches loa
     in -- ftcommonguard1.c:135 scales the joint by shield_health / FTCOMMON_GUARD_SIZE_HEALTH_DIV
     and ndsEFManagerVisualProcUpdate reads that joint's scale, via
     src/import/battleship_ftcommon_guard.c.
-    Verified NO-FREEZE and audio clean on the rebuilt ROM. Opacity is a look, so it wants your eye.
+    Verified NO-FREEZE and audio clean on the rebuilt ROM. Screenshot:
+    artifacts/visibility/2026-08-02_shield-vfx.png (Fox guarding, caught by scripts/probe-shield-vfx.ps1;
+    a soak's final frame is always Results, so no shield frame existed before it).
+    CONFIRMED AGAINST THE EXTRACTED N64 ASSET, which is stronger than the C code alone. The shield
+    lives in relocData file 0xa3 = 163, gFTManagerCommonFile, 912 bytes: display list at 0x248,
+    DObjDesc at 0x300 (identity translate/rotate, scale 1). Two things fall straight out of it:
+      - `gDPSetPrimColor fa000000 ffffffc0` -- ALPHA 0xC0 IS IN THE SHIPPED N64 DATA, not just in
+        efManagerShieldProcDisplay. The 0x60/0x50 the port had was wrong against both sources.
+      - `gSPVertex` loads FOUR vertices. The N64 shield is a single textured billboard quad, NOT a
+        sphere, so the port's flat disc is structurally faithful and no sphere is owed.
+    THE REMAINING DIFFERENCE, and it is the one visible in the screenshot: the N64 quad carries an
+    IA texture (SetTile fmt=3, XLU via SetOtherMode_L e2001e01) whose alpha falls off to zero at
+    the rim, so the bubble has a SOFT edge. ndsEFManagerBuildDisc draws untextured vertex-coloured
+    geometry in 8 segments, so the DS bubble has a hard faceted silhouette. Closing that means
+    routing the shield through the particle atlas, which is A5I3 for exactly this reason -- five
+    bits of alpha, chosen because one bit made every soft particle a hard blob. Not done here: it
+    is a real change to a second draw path and it is the owner's call.
+    NOT ESTABLISHED, so nobody re-derives it from a bad start: the texture's exact dimensions.
+    LoadBlock says 256 texels and SetTile line=2 says 16 bytes per row, which implies 16x16 IA8,
+    but decoding the file at offset 0 on that layout is not radially symmetric -- SetTextureImage
+    points at 0xaf0002, an address not resolved here. Two candidate renders were produced and
+    DELETED rather than filed, because a wrong image in artifacts/visibility is worse than none.
