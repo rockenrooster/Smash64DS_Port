@@ -231,6 +231,30 @@ try {
         # around it either -- $r0 is unreadable on this remote. Split that step
         # statically, or with a temporary counter compiled into the port, not
         # from here.
+        # Splits the midpoint WITHOUT a build. attack_pos derives straight from
+        # ft_attack_coll->pos_curr/pos_prev, and ft_attack_coll is used ON the
+        # ftmain.c:2734 call line, so unlike the dead attack_pos/damage_pos
+        # locals at gmcollision.c:1979 the compiler has to keep it. If pos_curr
+        # is zero the attack side is the fault; if it is sane then damage_pos
+        # must be its exact negative, which can only come from the victim's part
+        # matrix, and that names the part-matrix pipeline instead.
+        'break ftmain.c:2734',
+        'commands',
+        'silent',
+        'set $impact_calls = $impact_calls + 1',
+        'set $atk_x = ft_attack_coll->pos_curr.x',
+        'set $atk_y = ft_attack_coll->pos_curr.y',
+        # And `pos` itself, the caller's own local at the same line -- the exact
+        # Vec3f whose address is handed to the maker. attack_pos is provably
+        # sane here, so if `pos` is already zero at the call site then
+        # gmCollisionGetFighterAttackDamagePosition zeroed it despite a good
+        # attack side; if `pos` is sane then something between this line and the
+        # callee loses it.
+        'set $dmg_x = pos.x',
+        'set $dmg_y = pos.y',
+        'continue',
+        'end',
+
         'break battleship_efmanager.c:1379',
         'commands',
         'silent',

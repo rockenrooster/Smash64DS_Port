@@ -179,20 +179,27 @@ These bugs should be fixed for P1 delivery:
   cost the whole probe run. Registers are no way round it: $r0 is unreadable on this remote, the
   same wall the four earlier attempts hit. The breakpoint is deliberately left OUT of
   probe-vfx-contracts.ps1, with a comment, so nobody re-adds it.
-  STATIC REASONING NARROWS IT TO ONE SHARED CAUSE, which is worth more than the split would have
-  been. gmCollisionGetCommonImpactPosition (:1959) is a MIDPOINT: dst = (attack_pos + damage_pos)
-  * 0.5. For dst to be exactly (0,0,0) BOTH inputs must be zero -- any other combination leaves
-  half of the surviving term. And both have the same kind of way to be zero:
-    - damage_pos comes from gmCollisionGetWorldPosition(parts->mtx_translate, ...) (:196-205),
-      which computes M*offset + M[3]. An ALL-ZERO part matrix yields exactly (0,0,0) whatever the
-      offset is -- and part matrices are maintained by this port's own matrix pipeline.
-    - attack_pos comes from attack_coll->pos_curr/pos_prev (:1900-1912), plain reads of the
-      attack collision's world position.
-  So the suspect is fighter world-space collision data not being maintained port-side, feeding
-  both halves, rather than two independent defects. NOT established -- it is the reading that
-  survives, not a measurement.
-  NEXT: a temporary counter compiled into the port recording attack_coll->pos_curr and
-  parts->mtx_translate at the hit, since the debugger provably cannot reach either. One build.
+  BUT THE SPLIT WAS GOT ANOTHER WAY, WITHOUT A BUILD, AND IT NAMES THE FAILING FUNCTION.
+  ft_attack_coll is used ON the ftmain.c:2734 call line, so unlike the dead locals inside
+  gmcollision.c the compiler has to keep it. Breaking there and reading both it and the caller's
+  own `pos` -- the very Vec3f whose address goes to the maker -- on the same six calls:
+      impact=6  atk(pos_curr)=-1531.103394,321.055847   pos=0.000000,0.000000
+  (an earlier run of the same breakpoint read pos_prev=-1713.102051,356.276794, so both attack
+  collision samples are sane world positions on Dream Land's left side.)
+  So attack_pos is the midpoint of two good samples, about (-1622, 339), and
+  gmCollisionGetFighterAttackDamagePosition STILL WRITES (0,0,0) INTO pos. That is the failing
+  function, with its input and its output both measured on the same call, and it is not the maker,
+  not the wrapper, and not the effect system.
+  WHAT THAT IMPLIES, unverified: dst = (attack_pos + damage_pos) * 0.5, so a zero dst against a
+  (-1622, 339) attack_pos requires damage_pos to be its exact negative, (+1622, -339). Real victim
+  geometry does not land there by chance, so either the damage side is actively wrong rather than
+  merely absent, or this build's behaviour departs from the decomp text (gmcollision.c has NO .o
+  in the build -- it is textually included somewhere, like lbparticle.c, so check the including
+  TU for an interposition before trusting the source reading).
+  NEXT, and the asymmetry is the clue: the ATTACK side's part matrices demonstrably work --
+  pos_curr is sane, and reloc_backend_diagnostic_recorders.c:13056 computes it via
+  gmCollisionGetWorldPosition(parts->mtx_translate, ...). So check the VICTIM's
+  ftGetParts(damage_coll->joint)->mtx_translate specifically, not part matrices in general.
 
 -The rolling dodge sound (escape roll?) sounds off, maybe too loud???
   Owner: still doesn't sound right. Check Source.
