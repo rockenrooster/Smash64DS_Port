@@ -308,6 +308,40 @@ NDS_EF_MANAGER_DESCS_FULL and the default build resolves only
 dEFManagerDeadExplodeEffectDesc, whose file (&gEFManagerFiles[1]) the span table
 already knew. Boundary passes at the tracked default.
 
+TWO MORE HYPOTHESES DIED ON 2026-08-03. Neither should be tried again.
+
+  "the files are loaded WITHOUT their internal fixups applied, because nothing
+  ever drew from them before" -- REFUTED WITHOUT SPENDING A RUN, from the
+  loaded-file table already captured in
+  artifacts/verification/2026-08-03_effectfile-fixups-probe.txt. All 38 resident
+  files read internal_fixups_applied=1 AND external_fixups_applied=1, including
+  163 (gFTManagerCommonFile, 912 B, intern_count 4), 83/84/85
+  (EFCommonEffects1/2/3) and 346. Zero files read 0. Unapplied fixups cannot
+  explain the foreign pointers or the respawn abort.
+
+  "the foreign pointers come from the DLLINKS arm, which walks dobj->dl_link as
+  DObjDLLink{list_id, dl} pairs -- and dl_link is the SAME UNION MEMBER as dl,
+  so over a real display list it would read DL words as {list_id, dl} and submit
+  any whose list_id lands in 0..3, which is exactly 0x14006 and 0x3F800000" --
+  REFUTED BY ITS OWN BREAKPOINT. `break *0x203971e` resolved to renderer_dl.c
+  :9011 and NEVER FIRED in 300 seconds. That arm does not run for these effects.
+  The mechanism is real and the arithmetic works; it simply is not what happens.
+
+So the submitted pointer comes from renderer_dl.c:8989, the only other call
+site, and it is `dobj->dl`. Which leaves the contradiction sharper than before
+and it is the whole remaining question: the DObj dumped AT a reject has
+dl=0x2367D98, inside asset 83 (0x2360170 + 52,736), and
+ndsRelocFindLoadedFileContaining is plain address containment with no generation
+or ownership test -- so that pointer cannot be refused, yet the breakpoint on
+the refusal fired with r5 holding that DObj.
+
+One of these is false and the next cycle should settle WHICH before theorising
+further: (a) r5 is not dobj at that PC, (b) the dumped node is not the node that
+was rejected -- the address was printed only for rejects 1-4 and the struct dump
+was taken at reject 6, (c) dobj->dl is mutated between the submit and the stop.
+Print dobj AND dl together on every reject, and dump the struct in the same
+breakpoint body rather than after the run. That is one probe.
+
 STILL OPEN: whether the gate fix makes them draw. That is a capture, not an
 argument, and it has not been taken yet.
 =============================================================================
