@@ -1370,9 +1370,31 @@ GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
  */
 
 
-/* The star KO. Source spawns efcommon script 0x5C directly. */
+/* The star KO. Source spawns efcommon script 0x5C directly.
+ *
+ * INSTRUMENTED because this row has now survived two fixes and the owner still
+ * reports *"not playing at location of the fighter"*. The source spawns it at
+ * fp->joints[nFTPartsJointTopN]->translate (ftcommondead.c:357) -- the
+ * fighter's own root joint -- and the port imports that function, so the
+ * position it receives SHOULD already be the fighter. Twice now this row has
+ * been answered with a theory (the v16 rail, then the spawn position) instead
+ * of a reading. These record what actually arrives, in whole units so the soak
+ * dump is legible: if x/y land near the fighter the position is fine and the
+ * complaint is resolution, and if they do not the caller is wrong. */
+volatile s32 gNdsStarKOSparkleLastX;
+volatile s32 gNdsStarKOSparkleLastY;
+volatile s32 gNdsStarKOSparkleLastZ;
+volatile u32 gNdsStarKOSparkleCount;
+
 LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos, f32 scale)
 {
+    if (pos != NULL)
+    {
+        gNdsStarKOSparkleLastX = (s32)pos->x;
+        gNdsStarKOSparkleLastY = (s32)pos->y;
+        gNdsStarKOSparkleLastZ = (s32)pos->z;
+        gNdsStarKOSparkleCount++;
+    }
     return ndsBaseEFManagerSparkleWhiteDeadMakeEffect(pos, scale);
 }
 

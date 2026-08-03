@@ -136,6 +136,19 @@ configuration, which costs a full cycle on a ROM the milestone does not ship.
 Several consecutive cycles went to it during the 2026-08-02 `BUGS.md` queue
 before that was caught.
 
+TWO GATES IN ONE SESSION FAILED FROM WINDOW OCCLUSION, NOT FROM THE ROM
+(2026-08-02). `assert-melonds-horizontal-detail` threw on `left_bush`, and
+`soak-freeze-watch` returned a FREEZE verdict — and `soak-freeze-watch` then
+contradicted its own verdict in the same report: *"the guest presented 9184
+frames across 22358 VBlanks — 2.4 VBlanks per frame, which is a normally paced
+ROM, not a stopped one. Suspect the CAPTURE before the ROM."* It also warns that
+an attached GDB halts a RUNNING core at an arbitrary PC, so the backtrace it
+prints beside a false freeze is not evidence of a hang. **Read the harness's own
+contradiction block before acting on its verdict**, and treat a picture-frozen
+verdict with healthy VBlank pacing as a capture failure until proven otherwise.
+The cost of not doing so is high: the first of these nearly reverted a correct
+fix, and the second aborted a run before its counter dump.
+
 A SCREENSHOT GATE'S FIRST FAILURE IS A MEASUREMENT, NOT A VERDICT.
 `assert-melonds-horizontal-detail.ps1` samples a named region of a captured
 frame, and capture runs on an interactive desktop — a foregrounded window, or a

@@ -778,6 +778,21 @@ try {
             'gNdsKOBurstAttemptCount',
             'gNdsKOBurstCompleteCount',
             'gNdsKOBurstDropMask',
+            # BUGS.md "Star KO twinkle not playing in correct spot". Where the
+            # sparkle was actually asked for, in whole units. The source spawns
+            # it at the fighter's TopN joint, so these should track the fighter.
+            'gNdsStarKOSparkleCount',
+            'gNdsStarKOSparkleLastX',
+            'gNdsStarKOSparkleLastY',
+            'gNdsStarKOSparkleLastZ',
+            # BUGS.md "Some Crowd noise audio cues get cut off". The only
+            # remaining mechanism once the handle pool and the sample cache are
+            # both shown to fail closed: a hardware channel reused while the cue
+            # was still audible. Zero here clears channel contention.
+            'gNdsAudioFgmPrematureRetireCount',
+            'gNdsAudioFgmPrematureRetireLastID',
+            'gNdsAudioFgmPoolExhaustCount',
+            'gNdsAudioFgmGenerationMismatchCount',
             # LIVE DObjs beside the high-water. gcGetDObjSetNextAlloc grows the
             # pool out of the general heap and never shrinks it, so peak is what
             # costs -- but peak only means "simultaneous" if ejected DObjs go
