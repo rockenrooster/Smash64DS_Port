@@ -24,7 +24,7 @@ What to look for, in the order the rows appear in `BUGS.md`:
 - The shield is the source's textured bubble, not a black ring and disc.
 - Hard landing throws a shockwave as well as dust.
 - KO bursts play on **every** KO, not four in six.
-- Results confetti covers the scene rather than falling in one column.
+- Results confetti pieces are visibly bigger (20 -> 32) and spread across x.
 - The Star KO twinkle fires at the top blast zone as the fighter vanishes.
 - Side-A hits no longer throw an oversized orange ball.
 
@@ -46,6 +46,16 @@ rows that had been argued from theory:
 - **The KO burst builds in full.** `Attempt` 3, `Complete` 3, `DropMask` 0,
   `QuadMiss` 0. Transform and generator pools read 13 and 11 against a cap of
   24 — strictly below it, so the demand is measured rather than floored.
+
+**Actionable, not done — the mix has no headroom.** Nothing in the tree sets a DS
+master volume; `nds_audio_fgm.c` and `nds_audio_bgm.c` both only call
+`soundEnable()`. 35 of 88 cues decode at the 32767 rail, and crowd 616 GaspM and
+hit 31 KickL both sit there at `ds_volume` 127 — summing to 200% of full scale,
+with up to 7 handles live. This is the one dimension the crowd row never
+measured. It predicts crackle on coincident peaks rather than a masked cue
+(crowd RMS is 2k–10k against ~32k peaks), so it is a lead, not a diagnosis, and
+a global trim would move every cue the owner has hand-tuned. Needs their ear
+before anything moves.
 
 **Actionable, not done:** `MissRingIDs[0]=17` twice, the only cue a natural
 match still asks for and does not get. Appending it to `FULL_COVERAGE_IDS`
@@ -76,6 +86,13 @@ reasoning is recorded at the append point in
   `gens_highwater`. `structs_used=384` against that scene's 384 **is** real
   saturation, and it is the one that matters: the confetti fan divides a fixed
   pool six ways.
+- **Coverage is count x AREA, and three raises only ever bought count.** The
+  confetti row went 112 -> 192 -> 384 pieces, each costing a VBlank of Results
+  interval, while piece size sat at the source's 20.0 — even though the owner's
+  own first wording was "pieces do not look like they are large enough". 32.0 is
+  2.56x the area at the same 384 pieces and `census-results-frame-cost` reads
+  3.95 VBlanks/present, unchanged. When a raise keeps hitting a resource bound,
+  check whether the other factor in the product was ever moved.
 - **Read the asset before assuming the atlas can hold it.** The Fox reflector
   row looked like the shield and rebirth rows and is not: those two carry SHAPE,
   which A5I3's one shared 8-entry palette can encode as white plus coverage.

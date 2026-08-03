@@ -491,14 +491,38 @@ static void ndsParticleNormalizeHeader(u8 *header, sb32 swap)
  * samples were 713, 2543 and 1595 -- the scene was entered at different points
  * and held for wildly different durations, and its early frames are cheaper than
  * its settled ones. Compare Results arms at an equal SOURCE TIC
- * (capture-results-tic.ps1), never across whole-match soaks. */
+ * (capture-results-tic.ps1), never across whole-match soaks.
+ *
+ * SIZE IS THE LEVER THIS BLOCK NEVER PULLED, and it is free. Everything above
+ * buys coverage with PIECES, which is why it kept running into the pool and the
+ * present interval. Coverage is pieces x area, and area was left at the source's
+ * 20.0 through all three raises -- while the owner's own first wording on this
+ * row, quoted at the top of probe-results-confetti.ps1, was "confetti pieces do
+ * not look like there are large enough". That dimension was in the report from
+ * the start and was never measured or moved.
+ *
+ * 32.0 is 2.56x the area per piece at exactly the same 384 structs, the same
+ * 1.26 rate, the same 24 generators and the same fill the DS was already doing
+ * -- a particle quad is two triangles whatever its size, so this costs geometry
+ * nothing and costs rasterisation only the extra covered pixels. It is a
+ * presentation delta with no source value, like the rate above it, and it is
+ * recorded as one rather than dressed up as a fix.
+ *
+ * GRAVITY WAS CONSIDERED AND REJECTED, so nobody re-derives it: residency looks
+ * like waste (~30 frames on screen against a 136-frame lifetime) but the
+ * measured split is 244 visible of 384 live, so 64% are already on screen and
+ * the ceiling from residency alone is about 1.5x. Buying that costs a 16x
+ * gravity cut -- residency goes as 1/sqrt(g) -- which turns falling confetti
+ * into hanging confetti. Wrong trade for the gain. */
 #define NDS_R2_CONFETTI_FIRST_SCRIPT 108u
 #define NDS_R2_CONFETTI_LAST_SCRIPT 111u
 #define NDS_R2_CONFETTI_UPDATE_RATE 1.26F
+#define NDS_R2_CONFETTI_PIECE_SIZE 32.0F
 
 /* Counts the emitters this build raised. Four is the whole set; anything else
  * means the bank moved out from under the id range. */
 volatile u32 gNdsConfettiDensityPatchCount;
+volatile u32 gNdsConfettiSizePatchCount;
 
 static void ndsParticleApplyConfettiDensity(u32 id, LBScript *script)
 {
@@ -514,6 +538,15 @@ static void ndsParticleApplyConfettiDensity(u32 id, LBScript *script)
     {
         script->update_rate = NDS_R2_CONFETTI_UPDATE_RATE;
         gNdsConfettiDensityPatchCount++;
+    }
+    /* Same clamp-upward-only contract as the rate, and counted separately so a
+     * bank whose size already exceeds this is distinguishable from one this
+     * never reached. probe-results-confetti reports maxsize, so the raise is
+     * checkable without a capture. */
+    if (script->size < NDS_R2_CONFETTI_PIECE_SIZE)
+    {
+        script->size = NDS_R2_CONFETTI_PIECE_SIZE;
+        gNdsConfettiSizePatchCount++;
     }
 }
 

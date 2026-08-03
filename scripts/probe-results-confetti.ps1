@@ -239,11 +239,13 @@ try {
             's0_y1=%f s0_headsize=%f s0_tex=%d s0_minx=%f s0_maxx=%f ' +
             's4_count=%d s4_sized=%d s4_maxsize=%f ' +
             's4_y1=%f s4_headsize=%f s4_tex=%d s4_minx=%f s4_maxx=%f ' +
-            'fan=%u gens_used=%u gens_highwater=%u structs_used=%u\n", ' +
+            'fan=%u ratepatch=%u sizepatch=%u ' +
+            'gens_used=%u gens_highwater=%u structs_used=%u\n", ' +
             '$s0count, $s0sized, $s0maxsize, $s0y1, $s0size, $s0tex, ' +
             '$s0minx, $s0maxx, ' +
             '$s4count, $s4sized, $s4maxsize, $s4y1, $s4size, $s4tex, ' +
             '$s4minx, $s4maxx, gNdsConfettiFanCount, ' +
+            'gNdsConfettiDensityPatchCount, gNdsConfettiSizePatchCount, ' +
             'gLBParticleGeneratorsUsedNum, gNdsParticleGeneratorsMax, ' +
             'gLBParticleStructsUsedNum'),
         ('printf "CONFETTI=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f\n", ' +
