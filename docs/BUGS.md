@@ -38,3 +38,4 @@ fix live next to the code that owns it -- the particle generator and its checker
     LOCALIZED: source spawns at the fighter's TopN joint translate (ftcommondead.c:357). Check the port's caller.
 
 -Some "hard hit" (side A attacks that hit) effects look like they don't belong there's an orange ball visual effect that looks too big.
+    MEASURED: light spark scale ramped unbounded to 4.9x at 40 damage; heavy is 1.0. Clamped 2.2.

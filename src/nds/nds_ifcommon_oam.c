@@ -1730,6 +1730,11 @@ static s32 ndsTask39EffectsArenaValid(void)
     return TRUE;
 }
 
+/* The light hit spark's size ceiling. Owner-calibrated; see the clamp below. */
+#define NDS_TASK39_HIT_SPARK_SCALE_MAX 2.2F
+
+volatile u32 gNdsTask39FxHitSparkScaleClampCount;
+
 void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
                             sb32 is_static, sb32 is_heavy)
 {
@@ -1788,6 +1793,27 @@ void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
         spark->scale = (size < 10) ?
             (((10 - size) * -0.05F) + 1.0F) :
             (((size - 10) * 0.13F) + 1.0F);
+        /* THE ORANGE BALL. `size` is damage and clamps at 40 upstream, so this
+         * ramp reaches (40-10)*0.13 + 1.0 = 4.9x -- nearly five times the
+         * sprite -- on a 256x192 screen. That is the owner's *"orange ball
+         * visual effect that looks too big"* on side-A hits: a forward tilt is
+         * normal-element and light, so it lands here, and HEAVY_ENV tints
+         * player 1's spark RED (generate_task39_hit_sparks.py:30), which is the
+         * orange.
+         *
+         * Note the heavy branch above is a flat 1.0, so before this the LIGHT
+         * spark could draw five times the size of the HEAVY one -- the ramp was
+         * never bounded, only the damage feeding it was.
+         *
+         * There is no source number to derive a ceiling from: the N64 draws
+         * particles here, not sprites, so the sprite's size is a port choice
+         * and the owner is its oracle. 2.2 keeps a big hit clearly bigger than
+         * a small one while staying near the heavy spark's own scale. */
+        if (spark->scale > NDS_TASK39_HIT_SPARK_SCALE_MAX)
+        {
+            spark->scale = NDS_TASK39_HIT_SPARK_SCALE_MAX;
+            gNdsTask39FxHitSparkScaleClampCount++;
+        }
     }
     gNdsTask39FxHitSparkSpawnCount++;
     ndsTask39EffectsEngage(NDS_TASK39_FX_ENGAGED_SPRITES);

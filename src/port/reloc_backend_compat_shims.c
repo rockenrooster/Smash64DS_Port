@@ -7990,6 +7990,18 @@ efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player, s32 size)
     return NULL;
 }
 
+/* NOT the owner's "orange ball", and the correction is worth keeping because it
+ * was asserted from memory and refuted by the source in one lookup. This seam
+ * was briefly halved on the claim that Mario's forward smash is a flame attack.
+ * It is not: nothing under src/ft/ftchar/ftmario sets an element field at all,
+ * and Mario's ONLY fire-element source is Special N, whose fireball is a WEAPON
+ * whose element comes from attr->element (wpmanager.c:197) and which reaches
+ * this function through the weapon switch at ftmain.c:2770, not the fighter one
+ * at ftmain.c:2715. A side-A attack is normal-element and never arrives here.
+ *
+ * The scale left alone at the source-derived value. The owner filed an orange
+ * ball on side-A hits; normal-element hits go to ndsTask39HitSparkSpawn under
+ * NDS_TASK39_FX_SPRITES, which is where that row has to be answered. */
 __attribute__((weak)) LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos,
                                                                s32 size)
 {
