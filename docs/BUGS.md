@@ -75,26 +75,6 @@ it should be planned as such rather than attempted as another atlas tweak.
     ftCommonDeadUpStarProcUpdate. Script 0x5C asks for texture 24, which IS admitted (32x32, source size),
     so the sheet is not the blocker here -- unlike the four rows above, this one IS a particle effect.
 
--Results confetti doesn't look right.
-    Owner: confetti falls behind fighter instead of infront and is not centered on the camera view: `artifacts/visibility/2026-08-03_owner_confetti-behind-fighter.png`
-    **STRUCTURAL DIFFERENCE FOUND** (mnvsresults.c:3208 + efmanager.c:6206). The source makes TWO confetti
-    emitters at DIFFERENT DEPTHS, on DIFFERENT GENERATOR LINKS:
-      pos0 = (0, 1000, -1000) is_genlink_mask FALSE -> bankID | LBPARTICLE_MASK_GENLINK(3)  = link 3, BEHIND
-      pos1 = (0, 1000,  -400) is_genlink_mask TRUE  -> bankID                                = link 0, IN FRONT
-    You are seeing link 3 and not link 0, which is exactly "falls behind the fighter instead of in front".
-    The port's per-link gate `gobj->camera_mask & (1 << link)` is SOURCE-EXACT (lbparticle.c:1500 uses the
-    same test), so the draw loop is not the defect. A GDB run confirms BOTH calls execute -- breakpoints
-    hit at mnvsresults.c:3216 and :3217. So both emitters are made; what is unproven is whether the
-    second one ALLOCATES (efManagerConfettiMakeEffect returns NULL on a short pool) and whether the
-    Results GObj's camera_mask carries both slots. LBPARTICLE_MASK_GENLINK(3)=32 puts them in alloc
-    slots 0 and 4, not 0 and 3.
-    The port's non-source horizontal FAN is now REMOVED (efManagerConfettiMakeEffect is no longer
-    overridden). It spread pieces to +/-900 in world x -- which is what makes them read as off-centre once
-    the Results camera moves -- and it divided the fixed 384-struct pool six ways, ~64 pieces per emitter
-    where the source gives 192. Source structure restored: two emitters, both at x=0, depths -400 and
-    -1000. Boundary green. Still open: whether the near (-400, in front) emitter allocates.
-    Both emitters sit at x=0: "not centered on the camera view" is the Results camera, not the emitter.
-
 -Some "hard hit" (side A attacks that hit) VFX look too big, please apply correct scaling to VFX.
     MEASURED: scale is source-exact (efmanager.c:2175/2197). Last cycle's clamp was in UNREACHABLE code.
 
