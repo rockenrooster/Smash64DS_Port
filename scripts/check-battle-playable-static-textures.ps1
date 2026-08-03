@@ -26,17 +26,16 @@ if (-not (Test-Path -LiteralPath $payload -PathType Leaf)) {
 }
 $payloadFile = Get-Item -LiteralPath $payload
 $payloadHash = (Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant()
-# BACK TO THE ORIGINAL BYTES, 2026-08-03, and the payload SHA is the proof: a
-# paletted repack landed here and was withdrawn the same day, and this file
-# hashes byte-for-byte identical to before it. The repack is correct and
-# lossless offline -- 22 of these 24 textures are sixteen-colour CI4 sources
-# stored at two bytes a texel, worth 74,496 bytes of texture VRAM -- but the
-# RUNTIME residency prepare failed with it on, silently falling back to ordinary
-# texture resolution while the stage still looked right at 27.8 FPS. See
-# repack_paletted in the generator for the full note and the re-enable criteria.
+# PALETTED, 2026-08-03. 22 of these 24 textures are sixteen-colour CI4 sources
+# that were stored expanded to two bytes a texel; repack_paletted puts the
+# indices back, losslessly, and returns 74,496 bytes of the DS's 262,144 to the
+# texture allocator. Withdrawn for a day when the runtime residency prepare
+# failed with it on -- that turned out to be the prepare asserting the corpus
+# STRADDLES texture banks A and B, which is a restatement of the old size and
+# not a property of a correct corpus. nds_renderer.c derives the bank mask now.
 if ($fixture.key_count -ne 24 -or $fixture.unique_output_count -ne 23 -or
-    $fixture.residency_bytes -ne 136192 -or $fixture.payload_bytes -ne 132096 -or
-    $payloadFile.Length -ne 132096 -or $payloadHash -ne $fixture.payload_sha256) {
+    $fixture.residency_bytes -ne 61696 -or $fixture.payload_bytes -ne 61210 -or
+    $payloadFile.Length -ne 61210 -or $payloadHash -ne $fixture.payload_sha256) {
     throw (
         'Unexpected generated static texture corpus: ' +
         "keys=$($fixture.key_count) outputs=$($fixture.unique_output_count) " +
@@ -192,8 +191,8 @@ int main(void)
     u32 output_bytes[24];
 
     if (ndsBattlePlayableStaticTextureKeyCount() != 24u ||
-        ndsBattlePlayableStaticTexturePayloadBytes() != 132096u ||
-        ndsBattlePlayableStaticTexturePreparedBytes() != 136192u)
+        ndsBattlePlayableStaticTexturePayloadBytes() != 61210u ||
+        ndsBattlePlayableStaticTexturePreparedBytes() != 61696u)
     {
         return 10;
     }
@@ -226,8 +225,8 @@ int main(void)
             view.logical_height != record->logical_height ||
             view.upload_width != record->upload_width ||
             view.upload_height != record->upload_height ||
-            record->payload_offset > 132096u ||
-            record->payload_bytes > 132096u - record->payload_offset)
+            record->payload_offset > 61210u ||
+            record->payload_bytes > 61210u - record->payload_offset)
         {
             return 50 + (int)index;
         }
@@ -372,7 +371,7 @@ int main(void)
 
     if (hits != 24u || output_count != 23u || field_misses != 1344u ||
         explicit_misses != 3u || invalids != 6u ||
-        prepared_bytes != 136192u)
+        prepared_bytes != 61696u)
     {
         return 170;
     }

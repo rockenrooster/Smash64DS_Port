@@ -11,6 +11,15 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+
+# Derived, for the reason recorded in verify-battle-mariofox-gcrunall-loop-
+# harness.ps1: the static corpus' residency size was a hand-typed literal here
+# too, and a lossless repack that freed 74,496 bytes of texture VRAM failed on
+# the restated number rather than on anything the ROM did wrong.
+$staticTextureFixture = (& (Get-Command python -ErrorAction Stop).Source -B `
+    (Join-Path $PSScriptRoot 'generate_battle_playable_static_textures.py') `
+    --repo-root $root --check --fixture-json | Out-String) | ConvertFrom-Json
+$expectedM4ResidencyBytes = [int64]$staticTextureFixture.residency_bytes
 $deadlineTicks = [int64]1120380
 $phaseOrder = @(
     'countdown438-445', 'early600-607', 'whispy1398-1405',
@@ -249,7 +258,7 @@ foreach ($phaseName in $phaseOrder) {
         }
         $m4Exact = ($m4Static[1] -eq 1 -and $m4Static[2] -eq 1 -and
             $m4Static[3] -eq 0 -and $m4Static[4] -eq 24 -and
-            $m4Static[5] -eq 136192 -and $m4Static[6] -eq 1 -and
+            $m4Static[5] -eq $expectedM4ResidencyBytes -and $m4Static[6] -eq 1 -and
             $m4Static[7] -eq 0x3fffff -and $m4Static[8] -eq 0x7 -and
             $m4Static[9] -eq 0 -and $m4Static[10] -gt 0 -and
             @($m4Fence[1..12] | Where-Object { $_ -ne 0 }).Count -eq 0)

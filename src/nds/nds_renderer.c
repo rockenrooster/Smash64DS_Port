@@ -3467,9 +3467,30 @@ static const NDSRendererHardwareTextureCacheEntry
 #if NDS_R2_PARTICLE_RUNTIME
 /* Declared here rather than beside the atlas prepare because the static-texture
  * ownership guard below runs long before it and has to recognise the atlas. */
-static int sNdsRendererParticleAtlasName;
+/* Every sheet is a PINNED cache entry for the life of the battle, so the sheet
+ * count is spent out of the same 48 slots the static corpus takes 24 of. Four
+ * leaves 20 evictable, which the stage and fighters share; this is the bound
+ * that would bite first if coverage were bought by adding sheets indefinitely,
+ * and it is a slot count rather than a byte count. */
+_Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS <= 8u,
+               "particle atlas sheets would crowd the texture cache");
+static int sNdsRendererParticleAtlasName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
 static u32 sNdsRendererParticleAtlasPrepared;
 static u16 sNdsRendererParticleAtlasPalette[NDS_PARTICLE_QUAD_PALETTE_ENTRIES];
+
+static s32 ndsRendererParticleAtlasOwnsName(int name)
+{
+    u32 sheet;
+
+    for (sheet = 0u; sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS; sheet++)
+    {
+        if (sNdsRendererParticleAtlasName[sheet] == name)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 #endif
 
 static void ndsRendererHardwareRecordBattleStaticTextureHit(
@@ -3502,7 +3523,7 @@ static void ndsRendererHardwareRecordBattleStaticTextureHit(
      * about. */
     if ((entry->pinned != 0u) && (entry->static_record_plus1 == 0u) &&
         (sNdsRendererParticleAtlasPrepared != 0u) &&
-        (entry->name == sNdsRendererParticleAtlasName))
+        (ndsRendererParticleAtlasOwnsName(entry->name) != FALSE))
     {
         return;
     }
@@ -11051,20 +11072,43 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
         goto fail;
     }
     file = NULL;
-    if ((gNdsRendererBattleStaticTexturePreparedCount !=
-         ndsBattlePlayableStaticTextureKeyCount()) ||
-        (gNdsRendererBattleStaticTexturePreparedBytes !=
-         ndsBattlePlayableStaticTexturePreparedBytes()) ||
-        ((gNdsRendererBattleStaticTextureAllocationSpanBytes =
-          gNdsRendererBattleStaticTextureEndAddress -
-          gNdsRendererBattleStaticTextureFirstAddress) !=
-         ndsBattlePlayableStaticTexturePreparedBytes()) ||
-        (gNdsRendererBattleStaticTextureFirstAddress != (u32)VRAM_A) ||
-        (gNdsRendererBattleStaticTextureEndAddress !=
-         ((u32)VRAM_A + ndsBattlePlayableStaticTexturePreparedBytes())) ||
-        (gNdsRendererBattleStaticTextureBankMask != 3u))
+    /* THE EXPECTED BANK MASK IS DERIVED, AND PINNING IT AT 3 COST A CYCLE.
+     *
+     * The span starts at VRAM_A and runs preparedBytes, so which banks it
+     * covers is arithmetic: always A, and B only once it passes A's 128 KiB.
+     * The literal 3 was true of one corpus size and read as a correctness
+     * check. On 2026-08-03 the corpus was repacked to DS paletted -- lossless,
+     * same pixels, 136,192 -> 61,696 bytes -- and the whole residency lifecycle
+     * failed with actual=(212,1,1,1,0,0): the prepare reached here with a
+     * perfectly good 24-texture span that no longer straddled the boundary, and
+     * this line rejected it. The renderer then fell back to ordinary texture
+     * resolution, which still LOOKS right and still runs at speed, so the
+     * failure was invisible outside the verifier.
+     *
+     * That mis-attribution also poisoned the atlas measurement it was running
+     * beside: a stage whose static textures never became resident renders
+     * untextured, which is exactly the symptom the 32,768-byte sheet was
+     * blamed for. Derive the mask, and a size change stops being a failure. */
     {
-        goto fail;
+        u32 expected_bank_mask =
+            (ndsBattlePlayableStaticTexturePreparedBytes() >
+             ((u32)VRAM_B - (u32)VRAM_A)) ? 3u : 1u;
+
+        if ((gNdsRendererBattleStaticTexturePreparedCount !=
+             ndsBattlePlayableStaticTextureKeyCount()) ||
+            (gNdsRendererBattleStaticTexturePreparedBytes !=
+             ndsBattlePlayableStaticTexturePreparedBytes()) ||
+            ((gNdsRendererBattleStaticTextureAllocationSpanBytes =
+              gNdsRendererBattleStaticTextureEndAddress -
+              gNdsRendererBattleStaticTextureFirstAddress) !=
+             ndsBattlePlayableStaticTexturePreparedBytes()) ||
+            (gNdsRendererBattleStaticTextureFirstAddress != (u32)VRAM_A) ||
+            (gNdsRendererBattleStaticTextureEndAddress !=
+             ((u32)VRAM_A + ndsBattlePlayableStaticTexturePreparedBytes())) ||
+            (gNdsRendererBattleStaticTextureBankMask != expected_bank_mask))
+        {
+            goto fail;
+        }
     }
     sNdsRendererBattleStaticTexturePrepared = TRUE;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -11114,22 +11158,48 @@ volatile u32 gNdsRendererParticleAtlasPrepareCount;
 volatile u32 gNdsRendererParticleAtlasFailCount;
 volatile u32 gNdsRendererParticleAtlasBytes;
 
+/* Sheets already uploaded when a later one fails. They are PINNED, so nothing
+ * else can reclaim them, and the prepare has just declared the atlas absent --
+ * without this, a mid-way failure leaks both their VRAM and their cache slots
+ * for the rest of the scene. Single-sheet code could not reach this state. */
+static void ndsRendererParticleAtlasReleaseSheets(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[i];
+
+        if ((entry->name != 0) &&
+            (ndsRendererParticleAtlasOwnsName(entry->name) != FALSE))
+        {
+            entry->pinned = FALSE;
+            (void)ndsRendererHardwareReleaseTexture(entry);
+        }
+    }
+}
+
 s32 ndsRendererHardwarePrepareParticleAtlas(void)
 {
     FILE *file = NULL;
     NDSRendererHardwareTextureCacheEntry *entry;
     int size_x;
     int size_y;
+    u32 sheet;
 
     if (sNdsRendererParticleAtlasPrepared != 0u)
     {
         return TRUE;
     }
     gNdsRendererParticleAtlasPrepareCount++;
-    /* TEXELS against the scratch, not texels+palette: at 128x256 the sheet is
-     * exactly the scratch buffer and the sixteen palette bytes would push the
-     * one-read form over it. The palette gets its own small read below. */
-    if ((NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES >
+    /* ONE SHEET AT A TIME against the scratch. The sheet size is fixed at the
+     * 8,192-byte allocation that has never been refused and the SHEET COUNT is
+     * what grew, so this reads and uploads NDS_PARTICLE_QUAD_ATLAS_SHEETS times
+     * rather than asking the allocator for one block four times the size --
+     * which is the request that broke stage texture resolves at 16,384 and at
+     * 32,768. The palette is shared and gets its own small read below. */
+    if ((NDS_PARTICLE_QUAD_SHEET_BYTES >
           sizeof(sNdsRendererHardwareTextureScratch)) ||
         (ndsRendererHardwareTextureSizeEnum(
              NDS_PARTICLE_QUAD_ATLAS_WIDTH, &size_x) == FALSE) ||
@@ -11144,11 +11214,7 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
     {
         goto fail;
     }
-    if ((ndsRendererHardwareFencedTextureFread(
-             sNdsRendererHardwareTextureScratch, 1,
-             NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES, file) !=
-         NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES) ||
-        (ndsRendererHardwareFencedTextureFseek(
+    if ((ndsRendererHardwareFencedTextureFseek(
              file, (long)NDS_PARTICLE_QUAD_PALETTE_OFFSET, SEEK_SET) != 0) ||
         (ndsRendererHardwareFencedTextureFread(
              sNdsRendererParticleAtlasPalette, 1,
@@ -11157,70 +11223,90 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
     {
         goto fail;
     }
+
+    for (sheet = 0u; sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS; sheet++)
+    {
+        if ((ndsRendererHardwareFencedTextureFseek(
+                 file, (long)(sheet * NDS_PARTICLE_QUAD_SHEET_BYTES),
+                 SEEK_SET) != 0) ||
+            (ndsRendererHardwareFencedTextureFread(
+                 sNdsRendererHardwareTextureScratch, 1,
+                 NDS_PARTICLE_QUAD_SHEET_BYTES, file) !=
+             NDS_PARTICLE_QUAD_SHEET_BYTES))
+        {
+            goto fail;
+        }
+
+        entry = ndsRendererHardwareAllocTexture();
+        if (entry == NULL)
+        {
+            goto fail;
+        }
+        if ((entry->name == 0) &&
+            (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0))
+        {
+            goto fail;
+        }
+        ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+        /* A3I5, one byte per texel: 32 palette entries and 8 alpha levels.
+         *
+         * Not GL_RGBA, for the reason that has not changed -- RGB555+A1 gives
+         * particles a SINGLE alpha bit, so every soft-edged sprite draws as a
+         * hard blob, and it costs two bytes a texel besides.
+         *
+         * A5I3 (8 entries, 32 alpha levels) held this slot until 2026-08-03 and
+         * its reasoning was sound while the sheet carried SHAPE and the batch
+         * supplied COLOUR through glColor per quad, exactly as the RDP's prim
+         * colour did. Fox's reflector is the asset that does not fit that
+         * division: it is two flat tones with no shape at all, so eight shared
+         * entries could not hold its specific blues alongside every other
+         * effect's greys, and the owner filed it as the wrong asset. Colour has
+         * no other source here; alpha resolution does -- 8 levels is four times
+         * what the RGB555+A1 failure had, spread over cells that are now at
+         * their source size instead of halved. */
+        if (ndsRendererHardwareFencedGlTexImage2D(
+                GL_TEXTURE_2D, 0, GL_RGB32_A3, size_x, size_y, 0,
+                TEXGEN_TEXCOORD, sNdsRendererHardwareTextureScratch) == 0)
+        {
+            (void)ndsRendererHardwareReleaseTexture(entry);
+            goto fail;
+        }
+        /* PER SHEET, INSIDE THE LOOP, AND THAT PLACEMENT IS THE WHOLE POINT.
+         * glColorTableEXT attaches the palette to the texture name that is
+         * BOUND RIGHT NOW, so one call outside this loop would leave three of
+         * the four sheets indexing whatever palette memory happened to follow.
+         * The sheets share one 64-byte table, uploaded four times: 256 bytes of
+         * VRAM F/G, which is not the allocator that was ever refusing.
+         *
+         * Read separately above, so no byte-offset arithmetic into a u16 buffer
+         * -- which is what used to hand the hardware texels as a palette when
+         * the offset was applied through the wrong pointer type. */
+        glColorTableEXT(
+            GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
+            sNdsRendererParticleAtlasPalette);
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        ndsRendererHardwareTextureLookupRemove(entry);
+#endif
+        memset(&entry->key, 0, sizeof(entry->key));
+        entry->key_generation = 0u;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        entry->key_hash = 0u;
+#endif
+        entry->static_record_plus1 = 0u;
+        entry->static_owner_mask = 0u;
+        entry->params = (u32)glGetTexParameter();
+        entry->last_used_frame = 0u;
+        entry->pinned = TRUE;
+        entry->ready = TRUE;
+        sNdsRendererParticleAtlasName[sheet] = entry->name;
+    }
+
     if (ndsRendererHardwareFencedTextureFclose(file) != 0)
     {
         file = NULL;
         goto fail;
     }
     file = NULL;
-
-    entry = ndsRendererHardwareAllocTexture();
-    if (entry == NULL)
-    {
-        goto fail;
-    }
-    if ((entry->name == 0) &&
-        (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0))
-    {
-        goto fail;
-    }
-    ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
-    /* A3I5, one byte per texel: 32 palette entries and 8 alpha levels.
-     *
-     * Not GL_RGBA, for the reason that has not changed -- RGB555+A1 gives
-     * particles a SINGLE alpha bit, so every soft-edged sprite draws as a hard
-     * blob, and it costs two bytes a texel besides.
-     *
-     * A5I3 (8 entries, 32 alpha levels) held this slot until 2026-08-03 and its
-     * reasoning was sound while the sheet carried SHAPE and the batch supplied
-     * COLOUR through glColor per quad, exactly as the RDP's prim colour did.
-     * Fox's reflector is the asset that does not fit that division: it is two
-     * flat tones with no shape at all, so eight shared entries could not hold
-     * its specific blues alongside every other effect's greys, and the owner
-     * filed it as the wrong asset. Colour has no other source here; alpha
-     * resolution does -- 8 levels is four times what the RGB555+A1 failure had,
-     * spread over cells that are now 32x32 instead of 16x16.
-     *
-     * The palette is 64 bytes in VRAM F/G, which is not the allocator that was
-     * ever refusing. */
-    if (ndsRendererHardwareFencedGlTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGB32_A3, size_x, size_y, 0,
-            TEXGEN_TEXCOORD, sNdsRendererHardwareTextureScratch) == 0)
-    {
-        (void)ndsRendererHardwareReleaseTexture(entry);
-        goto fail;
-    }
-    /* Read separately above, so no byte-offset arithmetic into a u16 buffer --
-     * which is what used to hand the hardware texels as a palette when the
-     * offset was applied through the wrong pointer type. */
-    glColorTableEXT(
-        GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
-        sNdsRendererParticleAtlasPalette);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    ndsRendererHardwareTextureLookupRemove(entry);
-#endif
-    memset(&entry->key, 0, sizeof(entry->key));
-    entry->key_generation = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    entry->key_hash = 0u;
-#endif
-    entry->static_record_plus1 = 0u;
-    entry->static_owner_mask = 0u;
-    entry->params = (u32)glGetTexParameter();
-    entry->last_used_frame = 0u;
-    entry->pinned = TRUE;
-    entry->ready = TRUE;
-    sNdsRendererParticleAtlasName = entry->name;
     sNdsRendererParticleAtlasPrepared = TRUE;
     gNdsRendererParticleAtlasBytes = NDS_PARTICLE_QUAD_ASSET_BYTES;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -11231,23 +11317,37 @@ fail:
     {
         (void)ndsRendererHardwareFencedTextureFclose(file);
     }
-    sNdsRendererParticleAtlasName = 0;
-    sNdsRendererParticleAtlasPrepared = FALSE;
-    gNdsRendererParticleAtlasBytes = 0u;
+    ndsRendererParticleAtlasReleaseSheets();
+    ndsRendererHardwareDiscardParticleAtlas();
     gNdsRendererParticleAtlasFailCount++;
     return FALSE;
 }
 
+/* 0 is "no atlas", so a sheet index the table never emits fails closed rather
+ * than binding sheet 0's texels under another sheet's coordinates. */
+u32 ndsRendererHardwareParticleAtlasNameForSheet(u32 sheet)
+{
+    if ((sNdsRendererParticleAtlasPrepared == 0u) ||
+        (sheet >= NDS_PARTICLE_QUAD_ATLAS_SHEETS))
+    {
+        return 0u;
+    }
+    return (u32)sNdsRendererParticleAtlasName[sheet];
+}
+
 u32 ndsRendererHardwareParticleAtlasName(void)
 {
-    return (sNdsRendererParticleAtlasPrepared != 0u)
-               ? (u32)sNdsRendererParticleAtlasName
-               : 0u;
+    return ndsRendererHardwareParticleAtlasNameForSheet(0u);
 }
 
 void ndsRendererHardwareDiscardParticleAtlas(void)
 {
-    sNdsRendererParticleAtlasName = 0;
+    u32 sheet;
+
+    for (sheet = 0u; sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS; sheet++)
+    {
+        sNdsRendererParticleAtlasName[sheet] = 0;
+    }
     sNdsRendererParticleAtlasPrepared = FALSE;
     gNdsRendererParticleAtlasBytes = 0u;
 }
@@ -11363,6 +11463,12 @@ static u32 sNdsRendererParticleQuadAlpha;
  * 0 with particles drawing means every live particle shared one alpha, which is
  * what the bug looked like. */
 volatile u32 gNdsParticleQuadAlphaBreaks;
+/* Companion to the above for the four-sheet atlas: how many times the pass had
+ * to rebind because the next quad's cell was packed on a different sheet. */
+volatile u32 gNdsParticleQuadSheetBreaks;
+/* The sheet currently bound into the open group, so a quad only pays for a
+ * rebind when its sheet actually differs. Reset with the batch. */
+static u32 sNdsRendererParticleQuadTexture;
 
 /* gNdsParticleMatrixModeSeen records the mode the batch INHERITED, latched
  * before the camera load replaces it -- so it stays 0x12 by design and is the
@@ -11477,16 +11583,34 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
         poly_alpha = 1u;
     }
     if ((sNdsRendererParticleQuadOpen != 0u) &&
-        (poly_alpha != sNdsRendererParticleQuadAlpha))
+        ((poly_alpha != sNdsRendererParticleQuadAlpha) ||
+         (atlas_name != sNdsRendererParticleQuadTexture)))
     {
         /* NO glEnd() -- ndsRendererEndParticleQuads explains why at length: an
          * extra FIFO write desynchronises this command stream and hung the ROM
          * at GXSTAT=0e008900. POLYGON_ATTR latches at glBegin, so re-issuing
-         * the format and starting the next group is the whole operation. */
+         * the format and starting the next group is the whole operation.
+         *
+         * A SHEET CHANGE COSTS EXACTLY THE SAME THING, which is what made
+         * splitting the atlas across four 8,192-byte allocations affordable:
+         * TEXIMAGE_PARAM latches per group just as POLYGON_ATTR does, so
+         * rebinding and reopening the group is a rebind plus a glBegin, not a
+         * flush. Counted separately from the alpha breaks so the two costs stay
+         * attributable -- if SheetBreaks ever approaches the quad count, the
+         * pack order and not the sheet count is what needs revisiting. */
+        if (atlas_name != sNdsRendererParticleQuadTexture)
+        {
+            ndsRendererHardwareBindTextureName(NULL, atlas_name);
+            sNdsRendererParticleQuadTexture = atlas_name;
+            gNdsParticleQuadSheetBreaks++;
+        }
         ndsRendererHardwareSetPolyFmt(
             POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0));
+        if (poly_alpha != sNdsRendererParticleQuadAlpha)
+        {
+            gNdsParticleQuadAlphaBreaks++;
+        }
         sNdsRendererParticleQuadAlpha = poly_alpha;
-        gNdsParticleQuadAlphaBreaks++;
         glBegin(GL_QUAD);
     }
     if (sNdsRendererParticleQuadOpen == 0u)
@@ -11548,6 +11672,7 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
         glPushMatrix();
         glEnable(GL_TEXTURE_2D);
         ndsRendererHardwareBindTextureName(NULL, atlas_name);
+        sNdsRendererParticleQuadTexture = atlas_name;
         /* Translucent, unlit, both faces: a billboard has no meaningful
          * winding and the source draws these with the RDP's blender rather
          * than the lighting pipeline. */
@@ -11639,6 +11764,7 @@ void ndsRendererEndParticleQuads(void)
          * reuse check cannot match stale state. */
         sNdsRendererParticleQuadOpen = FALSE;
         sNdsRendererParticleQuadAlpha = 0u;
+        sNdsRendererParticleQuadTexture = 0u;
         ndsRendererHardwareEndBatch();
         /* AFTER EndBatch, not before. The comment above is explicit that this
          * group is left open exactly as EndBatch leaves its own and that an
@@ -16466,6 +16592,12 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
     gNdsRendererParticleAtlasPrepareCount++;
     gNdsRendererParticleAtlasFailCount++;
     return FALSE;
+}
+
+u32 ndsRendererHardwareParticleAtlasNameForSheet(u32 sheet)
+{
+    (void)sheet;
+    return 0u;
 }
 
 u32 ndsRendererHardwareParticleAtlasName(void)

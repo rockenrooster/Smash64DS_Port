@@ -237,6 +237,29 @@ QUAD_ATLAS_WIDTH = 128
 # reserving the atlas block before the interface allocates, or splitting the
 # sheet across two smaller allocations, not simply asking for more.
 QUAD_ATLAS_HEIGHT = 64
+# THE SHEET SIZE IS FIXED AT 8,192 BYTES AND THE SHEET COUNT IS THE VARIABLE.
+# That is the whole answer to the note above, which asked for "a plan for the
+# CONTIGUITY, not for the byte count -- ... splitting the sheet across two
+# smaller allocations, not simply asking for more."
+#
+# 2026-08-03 measured the other branch to exhaustion. 74,496 bytes were freed
+# losslessly from the static battle corpus (22 of its 24 textures are CI4
+# sources that were stored at two bytes a texel), so a 32,768-byte sheet was
+# affordable by every byte count -- 110,336 free against 32,768 asked. It still
+# broke: 27.8 FPS -> 8.6, logic 55.6 Hz -> 17.2, and flat untextured white on
+# the stage where the texture resolve had started failing every frame
+# (artifacts/visibility/2026-08-03_atlas32k-candidate.png). Free space does not
+# buy a contiguous run, because libnds splits texture VRAM per bank and the
+# banks are already carved up by the static corpus and the interface atlases.
+#
+# So this asks for FOUR allocations of the size that has never once been
+# refused, instead of one of a size that has now been refused at 16,384 and at
+# 32,768. Same 32,768 texels, four separate glTexImage2D calls, each free to
+# land in whatever bank has an 8 KiB hole. The runtime binds per sheet and the
+# frame table carries which one -- a quad's sheet is known before it is drawn,
+# so a sheet change costs one texture bind and a new primitive group, exactly
+# what an alpha-bucket change already costs on this path.
+QUAD_ATLAS_SHEETS_MAX = 4
 # Admitted before anything else. These are the textures a natural single-CPU
 # Mario-vs-Fox match was OBSERVED drawing, so they must survive admission
 # whatever the packer does with the rest. Regrade this from the use mask after
@@ -322,8 +345,17 @@ QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT
 # non-integer resample, so it costs a blur the 2:1 halving never did, and it
 # saves texels the sheet no longer needs. 1.0x is inside the bar and cheaper to
 # produce.
-QUAD_CELL_MAX = 16
-QUAD_KO_CELL_MAX = 8
+#
+# 64 IS "NO REDUCTION": the largest source in the bank is 64x64, so a cap at 64
+# passes every texture through at its own resolution. The ladder below steps
+# down from it only if four sheets cannot seat the live set, and the owner's bar
+# ("source quality or 0.8x reduction MAX") is what makes 64 the entry rather
+# than the fallback. 0.8x is not on the ladder because it is not reachable: a
+# 2:1 box average is exact and a 0.8 resample is a blur, so 1.0x is both inside
+# the bar and cheaper to produce than the thing the bar permits.
+QUAD_CELL_MAX = 64
+QUAD_CELL_LADDER = (64, 32, 16, 8)
+QUAD_KO_CELL_MAX = 64
 # A LONG ANIMATION PAYS PER FRAME, so it is sized per frame. After the A5I3
 # conversion doubled the texel budget the set that still would not fit was not
 # a set of big textures, it was a set of long ones: 28 is twenty frames, 25 is
@@ -335,7 +367,7 @@ QUAD_KO_CELL_MAX = 8
 # the cost. PROJECT_GOAL.md allows reduced texture resolution explicitly; it
 # does not allow a particle that draws nothing.
 QUAD_LONG_ANIMATION_FRAMES = 6
-QUAD_LONG_ANIMATION_CELL_MAX = 8
+QUAD_LONG_ANIMATION_CELL_MAX = 64
 # ...and then DECIMATE what is left, because halving the cell stopped being
 # enough. The cap above trades resolution; this one trades animation rate, which
 # PROJECT_GOAL.md allows in as many words ("reduced animation update rates",
@@ -1334,30 +1366,44 @@ def measure_error(source: list[list[tuple[int, int, int, int]]],
 # --------------------------------------------------------------------------
 # pack
 # --------------------------------------------------------------------------
-def shelf_pack(cells: list[dict], width: int, height: int):
+def shelf_pack(cells: list[dict], width: int, height: int,
+               sheets: int = 1):
     """Shelf-pack fixed cells top-down. Returns placements, or None if it fails.
 
     Every cell here is a power of two on both axes (16x8 up to 64x64), which is
     what makes a shelf packer optimal rather than merely convenient: sorted by
     descending height, each shelf is filled by cells of exactly its height, so
     the only waste is the tail of a row.
+
+    `sheets` is how many SEPARATE sheets of width x height may be used, and a
+    placement is (sheet, x, y). Overflowing one sheet starts the next rather
+    than failing; only running out of sheets fails. See QUAD_ATLAS_SHEETS_MAX
+    for why the sheet count is the free variable and the sheet SIZE is not.
     """
     order = sorted(range(len(cells)),
                    key=lambda i: (-cells[i]["h"], -cells[i]["w"], i))
     placed = {}
+    sheet = 0
     shelf_y = 0
     shelf_h = 0
     cursor_x = 0
     for index in order:
         cell = cells[index]
+        if (cell["w"] > width) or (cell["h"] > height):
+            return None
         if (shelf_h != cell["h"]) or (cursor_x + cell["w"] > width):
             if shelf_h != cell["h"] or cursor_x != 0:
                 shelf_y += shelf_h
             shelf_h = cell["h"]
             cursor_x = 0
         if shelf_y + cell["h"] > height:
-            return None
-        placed[index] = (cursor_x, shelf_y)
+            sheet += 1
+            if sheet >= sheets:
+                return None
+            shelf_y = 0
+            shelf_h = cell["h"]
+            cursor_x = 0
+        placed[index] = (sheet, cursor_x, shelf_y)
         cursor_x += cell["w"]
     return placed
 
@@ -1390,7 +1436,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     of the big multi-frame animations back reads the exclusion list, and the
     honest answer for those is halving 64x64x10 rather than growing the atlas.
     """
-    def build_candidates(long_cell_max: int) -> list[dict]:
+    def build_candidates(rung: int) -> list[dict]:
         rows = []
         for report in report_rows:
             if not report["packed"]:
@@ -1400,7 +1446,12 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             if texture["id"] in QUAD_KO_LIVE:
                 cell_max = QUAD_KO_CELL_MAX
             elif texture["frames"] >= QUAD_LONG_ANIMATION_FRAMES:
-                cell_max = long_cell_max
+                cell_max = QUAD_LONG_ANIMATION_CELL_MAX
+            # The ladder scales the whole sheet together rather than one class of
+            # texture, so a rung is a single readable statement about the atlas
+            # ("everything at source", "everything at half") instead of three
+            # interacting caps. The per-class caps still bound their own rows.
+            cell_max = min(cell_max, rung)
             cell_w, cell_h = quad_cell_dims(texture["width"],
                                             texture["height"], cell_max)
             frame_list = quad_frame_list(texture["frames"])
@@ -1427,8 +1478,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         if candidate.get("live"):
             live.add(candidate["texture"])
 
-    def candidate_set(long_cell_max: int) -> list[dict]:
-        rows = build_candidates(long_cell_max)
+    def candidate_set(rung: int) -> list[dict]:
+        rows = build_candidates(rung)
         rows.extend(dict(row) for row in (extra_candidates or ()))
         # Measured-live first, then ascending size. Admission is greedy and the
         # sheet is now half what it was, so "smallest first" alone would fill it
@@ -1475,7 +1526,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             trial["bytes"] = (candidate["width"] * candidate["height"] *
                               trial["packed_frames"])
             if shelf_pack(cells_for(admitted + [trial]), QUAD_ATLAS_WIDTH,
-                          QUAD_ATLAS_HEIGHT) is None:
+                          QUAD_ATLAS_HEIGHT, QUAD_ATLAS_SHEETS_MAX) is None:
                 excluded.append(trial)
             else:
                 admitted.append(trial)
@@ -1514,12 +1565,14 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     # without anyone editing a constant.
     admitted, excluded = [], []
     chosen_cap = QUAD_FRAME_CAP
-    for long_cell_max in (QUAD_CELL_MAX, QUAD_LONG_ANIMATION_CELL_MAX):
-        rows = candidate_set(long_cell_max)
+    chosen_rung = QUAD_CELL_LADDER[0]
+    for rung in QUAD_CELL_LADDER:
+        rows = candidate_set(rung)
         seated = False
         for cap in range(QUAD_FRAME_CAP, 0, -1):
             admitted, excluded = admit_at(rows, cap)
             chosen_cap = cap
+            chosen_rung = rung
             if not any(row["texture"] in live for row in excluded):
                 seated = True
                 break
@@ -1528,9 +1581,18 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     admitted.sort(key=lambda row: row["texture"])
 
     cells = cells_for(admitted)
-    placement = shelf_pack(cells, QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT)
+    placement = shelf_pack(cells, QUAD_ATLAS_WIDTH, QUAD_ATLAS_HEIGHT,
+                           QUAD_ATLAS_SHEETS_MAX)
     if placement is None:
         raise SystemExit("quad atlas failed to pack its own admitted set")
+    sheets_used = max(sheet for sheet, _, _ in placement.values()) + 1
+    # NDSParticleQuadFrame.sheet is a u8 and the runtime indexes a fixed array
+    # with it, so an out-of-range sheet would bind another sheet's texels under
+    # this cell's coordinates rather than fail. Cheap to assert here; impossible
+    # to see on screen.
+    if not (0 < sheets_used <= QUAD_ATLAS_SHEETS_MAX) or sheets_used > 255:
+        raise SystemExit(f"quad atlas packed into {sheets_used} sheets, "
+                         f"outside 1..{QUAD_ATLAS_SHEETS_MAX}")
 
     # Two passes: the shared palette has to see every admitted texel first.
     box_averaged = []
@@ -1575,18 +1637,23 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     if not palette:
         palette = [(255, 255, 255)]
 
-    atlas = bytearray(QUAD_SHEET_BUDGET_BYTES)
+    # Sheets are concatenated in order, so sheet N starts at
+    # N * QUAD_SHEET_BUDGET_BYTES and the runtime reads one sheet per upload
+    # without any table.
+    atlas = bytearray(QUAD_SHEET_BUDGET_BYTES * sheets_used)
     frame_rows = []
     for index, cell in enumerate(cells):
-        origin_x, origin_y = placement[index]
+        sheet, origin_x, origin_y = placement[index]
         encoded = encode_frame(box_averaged[index], DS_A3I5, palette,
                                cell["w"])
+        sheet_base = sheet * QUAD_SHEET_BUDGET_BYTES
         for row in range(cell["h"]):
-            base = (origin_y + row) * QUAD_ATLAS_WIDTH + origin_x
+            base = sheet_base + (origin_y + row) * QUAD_ATLAS_WIDTH + origin_x
             atlas[base:base + cell["w"]] = \
                 encoded[row * cell["w"]:(row + 1) * cell["w"]]
         frame_rows.append({
             "texture": cell["texture"], "frame": cell["frame"],
+            "sheet": sheet,
             "x": origin_x, "y": origin_y, "w": cell["w"], "h": cell["h"],
         })
     frame_rows.sort(key=lambda row: (row["texture"], row["frame"]))
@@ -1598,6 +1665,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         "admitted": admitted,
         "excluded": excluded,
         "frame_cap": chosen_cap,
+        "cell_cap": chosen_rung,
         "frames": frame_rows,
         "bytes": used,
         "atlas_bytes": len(atlas),
@@ -1605,7 +1673,9 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         "palette_entries": len(palette),
         "width": QUAD_ATLAS_WIDTH,
         "height": QUAD_ATLAS_HEIGHT,
-        "budget_bytes": QUAD_SHEET_BUDGET_BYTES,
+        "sheets": sheets_used,
+        "sheet_bytes": QUAD_SHEET_BUDGET_BYTES,
+        "budget_bytes": QUAD_SHEET_BUDGET_BYTES * sheets_used,
     }
 
 
@@ -2025,22 +2095,23 @@ def render_header(pack: dict) -> str:
  * gets the whole reachable set into the NitroFS payload; this sheet is what the
  * hardware quad path actually binds.
  *
- * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
+ * ATLAS SHEETS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is {len(pack["quads"]["frames"])} individual frames. The atlas keeps
- * every particle in one bind.
+ * admitted set is {len(pack["quads"]["frames"])} individual frames. {pack["quads"]["sheets"]} sheets keep
+ * every particle in {pack["quads"]["sheets"]} binds instead of {len(pack["quads"]["frames"])}.
  *
- * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the allocation that is
- * fixed here, not the texel count. 16,384 and 32,768 both broke stage texture
- * resolves with ample VRAM free, and so did a second 8 KiB page. This sheet is
- * {pack["quads"]["width"]}x{pack["quads"]["height"]} A5I3 at one byte per texel, so it asks for that
- * same proven block and gets twice the texels RGB555+A1 could hold.
+ * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the ALLOCATION that is
+ * fixed here, not the texel count -- so coverage grows by asking for more of
+ * them rather than for a bigger one. 16,384 and 32,768 both broke stage texture
+ * resolves with VRAM free; each sheet here is {pack["quads"]["width"]}x{pack["quads"]["height"]} A3I5 at one byte
+ * per texel, which is the block size that has never been refused.
  *
- * A5I3 also fixed a fidelity bug rather than only a capacity one: RGB555+A1
+ * A3I5 also fixed a fidelity bug rather than only a capacity one: RGB555+A1
  * gave every particle ONE BIT of alpha, so soft-edged sprites drew as hard
- * blobs. Five bits is 32 levels. Three index bits are enough because the draw
- * path is in modulation mode and calls glColor with the source's primcolor, so
- * the sheet carries shape and the game carries colour.
+ * blobs. Three bits is 8 levels. Five index bits carry the assets that encode
+ * COLOUR rather than shape -- Fox's reflector is two flat blues and nothing
+ * else -- while the draw path stays in modulation mode and calls glColor with
+ * the source's primcolor for the rest.
  *
  * A texture the runtime asks for and does not find here draws nothing; it does
  * not draw something else. gNdsParticleTextureUseMask says which ones a real
@@ -2049,6 +2120,9 @@ def render_header(pack: dict) -> str:
 #define NDS_PARTICLE_QUAD_ASSET_PATH "{QUAD_ASSET_NITRO_PATH}"
 #define NDS_PARTICLE_QUAD_ATLAS_WIDTH {pack["quads"]["width"]}u
 #define NDS_PARTICLE_QUAD_ATLAS_HEIGHT {pack["quads"]["height"]}u
+#define NDS_PARTICLE_QUAD_ATLAS_SHEETS {pack["quads"]["sheets"]}u
+#define NDS_PARTICLE_QUAD_SHEET_BYTES {pack["quads"]["sheet_bytes"]}u
+#define NDS_PARTICLE_QUAD_CELL_CAP {pack["quads"]["cell_cap"]}u
 #define NDS_PARTICLE_QUAD_ASSET_BYTES {len(pack["quads"]["payload"])}u
 #define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES {pack["quads"]["atlas_bytes"]}u
 #define NDS_PARTICLE_QUAD_PALETTE_OFFSET {pack["quads"]["palette_offset"]}u
@@ -2064,6 +2138,10 @@ typedef struct NDSParticleQuadFrame
 {{
     u8 texture_id;
     u8 frame;
+    /* Which of the NDS_PARTICLE_QUAD_ATLAS_SHEETS allocations holds this cell.
+     * x/y are texels WITHIN that sheet, so the draw path binds by sheet and the
+     * coordinates never have to encode which one. */
+    u8 sheet;
     u8 x;
     u8 y;
     u8 width;
@@ -2167,8 +2245,8 @@ def render_inc(pack: dict) -> str:
         for index in range(0, len(pack["rows"]), 12)
     )
     quad_rows = "\n".join(
-        f"    {{ {row['texture']:3d}, {row['frame']:3d}, {row['x']:3d}, "
-        f"{row['y']:3d}, {row['w']:3d}, {row['h']:3d} }},"
+        f"    {{ {row['texture']:3d}, {row['frame']:3d}, {row['sheet']:2d}, "
+        f"{row['x']:3d}, {row['y']:3d}, {row['w']:3d}, {row['h']:3d} }},"
         for row in pack["quads"]["frames"]
     )
     pupupu_offset_rows = "\n".join(
@@ -2297,6 +2375,12 @@ def render_report(pack: dict) -> dict:
             "palette_entries": pack["quads"]["palette_entries"],
             "atlas_width": pack["quads"]["width"],
             "atlas_height": pack["quads"]["height"],
+            # Reported for the same reason as palette_entries: the checker
+            # derives the payload size from sheets x sheet_bytes + palette
+            # rather than pinning a total that changes whenever coverage does.
+            "sheets": pack["quads"]["sheets"],
+            "sheet_bytes": pack["quads"]["sheet_bytes"],
+            "cell_cap": pack["quads"]["cell_cap"],
             "frame_count": len(pack["quads"]["frames"]),
             "frame_cap": pack["quads"]["frame_cap"],
             "bytes": pack["quads"]["bytes"],
@@ -2380,11 +2464,13 @@ def main() -> int:
           f"pack={pack['pack_bytes']} "
           f"linked={pack['linked_bytes']} "
           f"asset={pack['asset_bytes']} "
-          f"atlas={pack['quads']['width']}x{pack['quads']['height']} "
+          f"atlas={pack['quads']['width']}x{pack['quads']['height']}"
+          f"x{pack['quads']['sheets']} "
           f"quads={len(pack['quads']['admitted'])}/"
           f"{len(pack['quads']['admitted']) + len(pack['quads']['excluded'])}"
           f" {len(pack['quads']['frames'])}frames "
           f"cap={pack['quads']['frame_cap']} "
+          f"cell={pack['quads']['cell_cap']} "
           f"headroom={ESTIMATE['arena_headroom_bytes']} "
           f"spare={ESTIMATE['arena_headroom_bytes'] - pack['linked_bytes']} "
           f"source=0x{pack['source_checksum']:08x} "

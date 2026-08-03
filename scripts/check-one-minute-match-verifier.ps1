@@ -41,8 +41,14 @@ $melon = Get-Content -LiteralPath $melonPath -Raw
 $gdb = Get-Content -LiteralPath $gdbPath -Raw
 $make = Get-Content -LiteralPath $makePath -Raw
 
-Assert-Text $taskman '#define NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT 2u' `
+# The 2 moved behind NDS_TASK106_UPDATES_PER_PRESENT and this pin kept naming
+# the old spelling, so it had gone red on a refactor that changed nothing it
+# cares about. Assert the VALUE and the alias, which is what "exactly two source
+# updates per present" actually means.
+Assert-Text $taskman '#define NDS_TASK106_UPDATES_PER_PRESENT 2u' `
     'Realtime scheduler no longer declares exactly two source updates per present.'
+Assert-Text $taskman '(?s)#define NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT\s*\\\s*\r?\n\s*NDS_TASK106_UPDATES_PER_PRESENT' `
+    'Realtime scheduler stopped aliasing its updates-per-present to Task 106.'
 Assert-Text $taskman 'updates_this_iteration =\s*NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT;' `
     'Realtime scheduler no longer executes the exact fixed two-update batch.'
 Assert-Text $taskman '(?s)for \(update_in_iteration = 0u;.*?update_in_iteration < updates_this_iteration;.*?ndsPlatformReadInput\(\);.*?ndsBattlePlayableAdvanceRealtimeLogicClock\(\);.*?ndsRunMarioFoxProofUpdate\(.*?\);.*?if \(terminal_update != 0u\).*?ndsBattlePlayablePresentRealtimeFrame\(\);' `
@@ -139,8 +145,15 @@ Assert-Text $owner '(?s)\$reserveBytes = \[int64\]\$ma\[6\] - \$audioResidentByt
     'One-minute verifier lost the conservative 128 KiB reserve gate.'
 Assert-Text $owner '\$expectedM4TeardownCount = if \(\$OneMinuteMatchProof\) \{ 1 \} else \{ 0 \}' `
     'One-minute verifier no longer requires exactly one M4 teardown.'
-Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq 24.*?\$m4FenceFinalValues\[5\] -eq 136192.*?\$m4FenceFinalValues\[7\] -eq \$expectedM4TeardownCount.*?\$m4FenceFinalCountSum -eq 0' `
+# The byte count is DERIVED in the owner now (see $expectedM4ResidencyBytes
+# there), because it was a hand-typed literal at six sites and a lossless
+# repack of the static corpus failed the run on that one restated number. What
+# this meta-check must keep asserting is that the residency IS still gated --
+# 24 keys against the generator's own size -- not what the size happens to be.
+Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq 24.*?\$m4FenceFinalValues\[5\] -eq \$expectedM4ResidencyBytes.*?\$m4FenceFinalValues\[7\] -eq \$expectedM4TeardownCount.*?\$m4FenceFinalCountSum -eq 0' `
     'One-minute verifier lost the exact M4 residency and zero post-GO work assertions.'
+Assert-Text $owner '\$expectedM4ResidencyBytes = \[int64\]\$staticTextureFixture\.residency_bytes' `
+    'One-minute verifier stopped deriving M4 residency bytes from the generator.'
 Assert-Text $owner '\$bp\[2\] -eq \(2 \* \$bp\[3\]\)' `
     'One-minute verifier lost the hard exact-two-updates-per-present ratio gate.'
 Assert-Text $owner 'gNdsBattlePlayablePacingRestartRequested = 1' `

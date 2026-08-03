@@ -1542,7 +1542,11 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
         }
         ndsRendererSetParticleCamera(&projection, &modelview);
     }
-    if (ndsRendererSubmitParticleQuad(atlas_name, pos, size, color, alpha,
+    /* Bind the sheet this cell was packed into -- see the note at the other
+     * submit site. atlas_name above only proves the atlas prepared. */
+    if (ndsRendererSubmitParticleQuad(
+            ndsRendererHardwareParticleAtlasNameForSheet(row->sheet),
+            pos, size, color, alpha,
                                       &right, &up, row->x, row->y,
                                       row->width, row->height) == FALSE)
     {
@@ -1728,7 +1732,13 @@ void lbParticleDrawTextures(GObj *gobj)
              * life. The owner saw that as "emitted objects turn flat at end of
              * lifetime". BGR555 has no alpha channel on this hardware; it goes
              * through POLYGON_ATTR instead. */
-            if (ndsRendererSubmitParticleQuad(atlas_name, &world_pos, pc->size,
+            /* The cell's own sheet, not the pass's. The atlas is four separate
+             * 8,192-byte allocations because that is the block size the DS
+             * texture allocator has never refused, so which one a quad binds is
+             * a property of the cell and travels in the frame row. */
+            if (ndsRendererSubmitParticleQuad(
+                    ndsRendererHardwareParticleAtlasNameForSheet(row->sheet),
+                    &world_pos, pc->size,
                                               color, pc->primcolor.a,
                                               &quad_right, &quad_up,
                                               row->x, row->y,

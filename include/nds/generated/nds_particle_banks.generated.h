@@ -64,22 +64,23 @@
  * gets the whole reachable set into the NitroFS payload; this sheet is what the
  * hardware quad path actually binds.
  *
- * ONE 8 KiB ATLAS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
+ * ATLAS SHEETS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 34 individual frames. The atlas keeps
- * every particle in one bind.
+ * admitted set is 32 individual frames. 4 sheets keep
+ * every particle in 4 binds instead of 32.
  *
- * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the allocation that is
- * fixed here, not the texel count. 16,384 and 32,768 both broke stage texture
- * resolves with ample VRAM free, and so did a second 8 KiB page. This sheet is
- * 128x64 A5I3 at one byte per texel, so it asks for that
- * same proven block and gets twice the texels RGB555+A1 could hold.
+ * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the ALLOCATION that is
+ * fixed here, not the texel count -- so coverage grows by asking for more of
+ * them rather than for a bigger one. 16,384 and 32,768 both broke stage texture
+ * resolves with VRAM free; each sheet here is 128x64 A3I5 at one byte
+ * per texel, which is the block size that has never been refused.
  *
- * A5I3 also fixed a fidelity bug rather than only a capacity one: RGB555+A1
+ * A3I5 also fixed a fidelity bug rather than only a capacity one: RGB555+A1
  * gave every particle ONE BIT of alpha, so soft-edged sprites drew as hard
- * blobs. Five bits is 32 levels. Three index bits are enough because the draw
- * path is in modulation mode and calls glColor with the source's primcolor, so
- * the sheet carries shape and the game carries colour.
+ * blobs. Three bits is 8 levels. Five index bits carry the assets that encode
+ * COLOUR rather than shape -- Fox's reflector is two flat blues and nothing
+ * else -- while the draw path stays in modulation mode and calls glColor with
+ * the source's primcolor for the rest.
  *
  * A texture the runtime asks for and does not find here draws nothing; it does
  * not draw something else. gNdsParticleTextureUseMask says which ones a real
@@ -88,13 +89,16 @@
 #define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.a5i3.bin"
 #define NDS_PARTICLE_QUAD_ATLAS_WIDTH 128u
 #define NDS_PARTICLE_QUAD_ATLAS_HEIGHT 64u
-#define NDS_PARTICLE_QUAD_ASSET_BYTES 8256u
-#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 8192u
-#define NDS_PARTICLE_QUAD_PALETTE_OFFSET 8192u
+#define NDS_PARTICLE_QUAD_ATLAS_SHEETS 4u
+#define NDS_PARTICLE_QUAD_SHEET_BYTES 8192u
+#define NDS_PARTICLE_QUAD_CELL_CAP 64u
+#define NDS_PARTICLE_QUAD_ASSET_BYTES 32832u
+#define NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES 32768u
+#define NDS_PARTICLE_QUAD_PALETTE_OFFSET 32768u
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 6848u
-#define NDS_PARTICLE_QUAD_COUNT 34u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 34u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 28032u
+#define NDS_PARTICLE_QUAD_COUNT 32u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 32u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
@@ -103,6 +107,10 @@ typedef struct NDSParticleQuadFrame
 {
     u8 texture_id;
     u8 frame;
+    /* Which of the NDS_PARTICLE_QUAD_ATLAS_SHEETS allocations holds this cell.
+     * x/y are texels WITHIN that sheet, so the draw path binds by sheet and the
+     * coordinates never have to encode which one. */
+    u8 sheet;
     u8 x;
     u8 y;
     u8 width;

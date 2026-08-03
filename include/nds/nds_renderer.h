@@ -1203,6 +1203,12 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void);
  * pinned; the name is 0 until then, and the draw seam declines on 0 rather
  * than binding something else. */
 s32 ndsRendererHardwarePrepareParticleAtlas(void);
+/* The quad sheet is NDS_PARTICLE_QUAD_ATLAS_SHEETS separate 8,192-byte
+ * allocations rather than one larger block -- see the note on
+ * QUAD_ATLAS_SHEETS_MAX in generate_nds_particle_banks.py. Each frame row
+ * carries the sheet it was packed into; the no-argument form is sheet 0 and
+ * exists for the callers that predate the split. */
+u32 ndsRendererHardwareParticleAtlasNameForSheet(u32 sheet);
 u32 ndsRendererHardwareParticleAtlasName(void);
 void ndsRendererHardwareDiscardParticleAtlas(void);
 /* One camera-facing quad in world space. The caller supplies the camera basis

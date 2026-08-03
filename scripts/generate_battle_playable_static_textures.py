@@ -60,17 +60,22 @@ DS_PALETTE16_ENTRIES = 16
 
 EXPECTED_KEY_COUNT = 24
 EXPECTED_OUTPUT_COUNT = 23
-EXPECTED_RESIDENCY_BYTES = 136192
-EXPECTED_PAYLOAD_BYTES = 132096
+# 136,192 / 132,096 until 2026-08-03, when repack_paletted put 22 of the 24
+# textures back into the DS's sixteen-colour format their N64 sources were
+# already in. Lossless -- EXPECTED_ORACLE_PIXELS is unchanged and the slow
+# oracle still compares the same canonical 16-bit image -- and it returns 74,496
+# bytes of texture VRAM.
+EXPECTED_RESIDENCY_BYTES = 61696
+EXPECTED_PAYLOAD_BYTES = 61210
 EXPECTED_ORACLE_PIXELS = 65024
 EXPECTED_PAYLOAD_SHA256 = (
-    "59bfd565c4c0c18c605107e0f7b49e4cc6c360cd9ce9a67712066c2a58e182d2"
+    "f69d8175410119121717a01aabdbfd5522f1c913195225ed4e298385ebcce8aa"
 )
 EXPECTED_METADATA_SHA256 = (
-    "1129f8b59a4be9a44583bef06ba998682b9f7ad14e8844c4e1d843948a668081"
+    "677c0508cd314316ddd9934fb146efb80856e0014c5f0f2d5a34834231a22567"
 )
 EXPECTED_INCLUDE_SHA256 = (
-    "31327337d245fbddd0505ef5ca9b99724c0b8683a506769a15d20054cb4133ed"
+    "67e5bfe9da656a116ee5b74af65c18f430238804e31c22bb0d18880f2c5511c4"
 )
 
 G_SETTIMG = 0xFD
@@ -1244,30 +1249,47 @@ def repack_paletted(pixels: bytes) -> tuple[int, bytes, tuple[int, ...]]:
     so the DS colour-0-transparent bit means what the alpha bit meant. An image
     with no transparent texel uses all sixteen entries and the bit stays off.
     """
-    # OFF, 2026-08-03. The encoding below is correct and the host lookup fixture
-    # proves the record/accessor plumbing around it, but the RUNTIME prepare
-    # fails with it on: verify-battle-mariofox-gcrunall-loop-harness reports the
-    # M4 residency lifecycle reading zero keys and zero bytes where it wants 24
-    # and the full corpus, so the renderer silently falls back to ordinary
-    # texture resolution. The frame still looks right and still runs at 27.8 FPS,
-    # which is exactly why this needs a counter rather than an eye.
+    # ON. It was switched off for one day, 2026-08-03, because the runtime M4
+    # residency prepare failed with it -- zero keys and zero bytes where the
+    # harness wants 24 and the full corpus -- and the renderer then fell back to
+    # ordinary texture resolution while the frame still looked right at 27.8 FPS.
     #
-    # It is off rather than deleted because the measurement it was built for
-    # stands: 22 of these 24 textures are sixteen-colour CI4 sources stored at
-    # two bytes a texel, and packing them costs 74,496 fewer bytes of the DS's
-    # 262,144 texture VRAM, losslessly. What that budget CANNOT buy is the thing
-    # it was spent on -- one 32,768-byte particle atlas -- because the bound is a
-    # contiguous run inside libnds's per-bank splitting, not capacity. Measured
-    # the same day: the bigger sheet dropped the game to 8.6 FPS with untextured
-    # white on the stage (artifacts/visibility/2026-08-03_atlas32k-candidate.png).
+    # THE PREPARE WAS NOT BROKEN BY THIS. It asserted
+    # `gNdsRendererBattleStaticTextureBankMask != 3u`, i.e. that the corpus
+    # STRADDLES texture banks A and B. That was a restatement of the old size,
+    # not a correctness property: at 136,192 bytes the span crosses A's 128 KiB
+    # boundary and at 61,696 it does not, so making the corpus smaller was itself
+    # the thing the check rejected. nds_renderer.c derives the expected mask from
+    # preparedBytes now and the note there records the cost.
     #
-    # So the funding has no customer right now, and shipping a broken residency
-    # path to hold a budget nothing spends is the wrong trade. Turn this back on
-    # together with a fix for the prepare, and grade it on the M4 residency
-    # assertion above -- not on how the stage looks.
-    return DS_FORMAT_RGBA, pixels, ()
-
-    values = struct.unpack(f"<{len(pixels) // 2}H", pixels)
+    # What it buys, losslessly: 22 of these 24 textures are sixteen-colour CI4
+    # sources that were stored expanded to two bytes a texel, so packing them
+    # returns 74,496 bytes of the DS's 262,144 to the texture allocator. Same
+    # pixels -- the palette is the set of colours already present, and
+    # `output_sha256` still compares the canonical 16-bit image.
+    # BIT 15 STOPS BEING ALPHA, WHICH IS THE WHOLE HAZARD IN THIS FUNCTION.
+    #
+    # The source is RGB555+A1: bit 15 is the alpha bit and GL_RGBA honours it per
+    # texel. GL_RGB16 does not have per-entry alpha at all -- the only
+    # transparency it has is GL_TEXTURE_COLOR0_TRANSPARENT, which applies to
+    # index 0 and nothing else. So "every texel keeps the exact halfword it had"
+    # is true of the BITS and false of the PICTURE: a transparent texel whose
+    # colour bits are non-zero (which is most of them -- an invisible texel's
+    # RGB is arbitrary) became an ordinary palette entry and drew SOLID.
+    #
+    # Measured 2026-08-03: with this uncorrected, the Dream Land top screen went
+    # to 0 of 49,152 dominant-green pixels while every byte-level check passed,
+    # because the generator's oracle compares the canonical 16-bit image and
+    # never the repacked representation.
+    #
+    # Normalising every transparent texel to 0x0000 fixes it and is exact: alpha
+    # 0 means the colour is not observable, so collapsing all of them onto one
+    # index changes no visible texel. It also makes the runtime's existing
+    # `palette[0] == 0` test correct rather than lucky -- 0x0000 has bit 15
+    # clear, so it can never be an OPAQUE colour, which makes "entry 0 is zero"
+    # and "index 0 is the transparent slot" the same statement.
+    raw = struct.unpack(f"<{len(pixels) // 2}H", pixels)
+    values = tuple(0 if (value & 0x8000) == 0 else value for value in raw)
     distinct = sorted(set(values))
     if len(distinct) > DS_PALETTE16_ENTRIES:
         return DS_FORMAT_RGBA, pixels, ()
@@ -1284,6 +1306,29 @@ def repack_paletted(pixels: bytes) -> tuple[int, bytes, tuple[int, ...]]:
             packed[position >> 1] |= index << 4
         else:
             packed[position >> 1] = index
+    # DECODE IT BACK AND COMPARE, because nothing else does. `output_sha256`,
+    # the slow oracle and the dedupe key all compare `record.pixels`, which is
+    # the canonical 16-bit image UPSTREAM of this function -- so before this
+    # check the repacked representation was the one artifact in the corpus that
+    # shipped unverified, and it shipped wrong.
+    #
+    # The comparison is what the DS will actually show: index 0 reads as
+    # transparent when the image had any transparent texel, every other index
+    # reads as its palette entry with bit 15 forced on (GL_RGB16 has no per-entry
+    # alpha, so everything it draws is opaque).
+    color0_transparent = palette[0] == 0
+    for position, expected in enumerate(values):
+        byte = packed[position >> 1]
+        index = (byte >> 4) if (position & 1) else (byte & 0x0F)
+        if index == 0 and color0_transparent:
+            decoded = 0
+        else:
+            decoded = palette[index] | 0x8000
+        want = expected if expected == 0 else (expected | 0x8000)
+        if decoded != want:
+            raise SystemExit(
+                f"paletted repack is not lossless at texel {position}: "
+                f"decoded 0x{decoded:04x}, expected 0x{want:04x}")
     return DS_FORMAT_PAL16, bytes(packed), palette
 
 

@@ -9613,6 +9613,20 @@ do not infer qualification or overwrite them during documentation cleanup.
 | Stable reserve, no corruption, clean teardown | Focused gates pass | Requalify after the final content/performance candidate |
 | Reproducible public artifact | Red | Current local root ROM differs from the pinned public identity |
 
+## Open item — `check-one-minute-match-verifier.ps1` has drifted from its owner
+
+Found 2026-08-03 while updating it for the static-texture repack, and NOT fixed
+because it is unrelated to that work and is not in the Boundary profile. It
+holds 55 `Assert-Text` pins against the exact source text of
+`verify-battle-mariofox-gcrunall-loop-harness.ps1` and `taskman_seam.c`, and at
+least two had gone red on refactors that changed nothing they care about: the
+updates-per-present define moved behind `NDS_TASK106_UPDATES_PER_PRESENT`
+(fixed, since it was one line), and `$bp[2] -eq (2 * $bp[3])` no longer exists
+in the owner at all. A meta-checker that pins text rather than meaning goes red
+for the wrong reason and then gets ignored, which is the failure mode here.
+Regrade the 55 pins against what each is actually guarding, or delete the ones
+whose property is already asserted by the owner's own gates.
+
 ## Integration Rule
 
 Keep only correctness-preserving, verifier-covered progress. Rendering may use

@@ -53,7 +53,13 @@ foreach ($token in @(
     'dLBParticleCurrentTransformID++;',
     'syMatrixTraRotRpyRScaF(',
     'world_pos->x = (xf->affine[0][0] * pc->pos.x)',
-    'ndsRendererSubmitParticleQuad(atlas_name, &world_pos, pc->size,')) {
+    # The ARGUMENT, not the whole call. The atlas is four sheets now and the
+    # first argument became a per-cell lookup
+    # (ndsRendererHardwareParticleAtlasNameForSheet(row->sheet)); pinning the
+    # entire call text made an unrelated change to argument one read as a lost
+    # transform contract. What this guard is actually about is world_pos, and
+    # the regression case below names the thing it must not be.
+    '&world_pos, pc->size,')) {
     if (-not $runtime.Contains($token)) {
         throw "Particle draw lost its source transform contract: $token"
     }
@@ -287,20 +293,40 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 #   artifacts/visibility/2026-08-03_atlas32k-candidate.png against
 #   artifacts/visibility/2026-08-03_atlas8k-reverted.png.
 #
-# So the bound is a CONTIGUOUS RUN inside libnds's per-bank splitting, and more
-# free space does not buy one. The freed 74,496 bytes are kept -- they cost
-# nothing and are proven harmless at 27.8 FPS -- but spending them on ONE 32 KB
-# block is what the allocator refuses. The route to source-resolution cells is
-# several bank-sized allocations, not a bigger one.
+# THAT 32 KB READING WAS CONFOUNDED AND IS WITHDRAWN. The run that produced it
+# had the static repack enabled at the same time, and the repack was ITSELF
+# failing at runtime -- the prepare asserted the corpus straddles texture banks
+# A and B, which shrinking it to 61,696 bytes stopped being true, so residency
+# reported zero keys and zero bytes. A stage whose static textures never became
+# resident renders untextured, which is precisely the symptom that was charged
+# to the atlas. Two variables, one of which independently explains the picture.
+#
+# The bank mask is derived from preparedBytes now (nds_renderer.c), and the
+# atlas takes the route the note above already named: FOUR separate 8,192-byte
+# allocations rather than one of 32,768. Same texels, and every one of them is
+# the block size that has never been refused. What it buys is the owner's row --
+# every admitted cell is at its SOURCE resolution, cell cap 64, no reduction
+# anywhere: the shield seats at its native 16x32 and the respawn halo at 32x16,
+# the two that "is not affordable at any frame cap" was written about.
+#
+# The sheet SIZE is the invariant here, not the total. A change that grows
+# atlas_bytes by raising sheet_bytes is re-running a measured failure; a change
+# that grows it by adding sheets is not.
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
-    ([int64]$report.quads.atlas_bytes -ne 8192) -or
-    ([int64]$report.quads.bytes -ne 6848) -or
-    ([int64]$report.quads.frame_count -ne 34) -or
-    (@($report.quads.admitted).Count -ne 34) -or
-    (@($report.quads.excluded).Count -ne 4)) {
+    ([int64]$report.quads.sheet_bytes -ne 8192) -or
+    ([int64]$report.quads.sheets -ne 4) -or
+    ([int64]$report.quads.atlas_bytes -ne
+        ([int64]$report.quads.sheets * [int64]$report.quads.sheet_bytes)) -or
+    ([int64]$report.quads.cell_cap -ne 64) -or
+    ([int64]$report.quads.bytes -ne 28032) -or
+    ([int64]$report.quads.frame_count -ne 32) -or
+    (@($report.quads.admitted).Count -ne 32) -or
+    (@($report.quads.excluded).Count -ne 6)) {
     throw ('Particle quad sheet changed: ' +
-        "$([int64]$report.quads.bytes) B, " +
+        "$([int64]$report.quads.sheets)x$([int64]$report.quads.sheet_bytes) B, " +
+        "cell cap $([int64]$report.quads.cell_cap), " +
+        "$([int64]$report.quads.bytes) B used, " +
         "$([int64]$report.quads.frame_count) frames, " +
         "$(@($report.quads.admitted).Count) admitted, " +
         "$(@($report.quads.excluded).Count) excluded.")
@@ -332,16 +358,16 @@ if ($koCells.Count -ne 7) {
     throw "KO particle atlas closure has $($koCells.Count) textures, expected 7."
 }
 # 8x8 was never "measured-safe", it was measured-AFFORDABLE: the KO closure's
-# thirteen frames had to fit 896 free texels on the 8,192-byte sheet. With
-# 32,768 the same closure seats at the source's 32, which is the whole point of
-# the owner's "ALL VFX ... source quality or 0.8x reduction MAX" row. The guard
-# that still matters is that every one of the seven is PRESENT and none of them
-# is smaller than the 8x8 the KO burst was proven to draw at.
+# thirteen frames had to fit 896 free texels on the 8,192-byte sheet. Across
+# four sheets the same closure seats at the source's own size, which is the
+# whole point of the owner's "ALL VFX ... source quality or 0.8x reduction MAX"
+# row. The guard that still matters is that every one of the seven is PRESENT
+# and none of them is smaller than the 8x8 the KO burst was proven to draw at.
 foreach ($cell in $koCells) {
     if (([int]$cell.width -lt 8) -or ([int]$cell.height -lt 8) -or
-        ([int]$cell.width -gt 32) -or ([int]$cell.height -gt 32)) {
+        ([int]$cell.width -gt 64) -or ([int]$cell.height -gt 64)) {
         throw ("KO particle texture $($cell.texture) cell is " +
-            "$([int]$cell.width)x$([int]$cell.height), outside 8..32.")
+            "$([int]$cell.width)x$([int]$cell.height), outside 8..64.")
     }
 }
 if ($report.checksums.source_sha256_lo -ne '0xa2a1e85f') {
@@ -557,8 +583,8 @@ if (Test-Path -LiteralPath $assetPath) {
     $assetState = 'built'
 }
 
-# Texels plus the A5I3 sheet's own 8-entry palette. The texel half is the
-# allocation the VRAM bound applies to; the palette rides behind it in the same
+# All four sheets' texels plus the one shared palette they each bind. The
+# per-SHEET size is the allocation the VRAM bound applies to, not this total; the palette rides behind it in the same
 # file and is uploaded through glColorTableEXT, not through the texture. Derived
 # from the report for the same reason as the header defines above -- this was a
 # literal 8208 and the resize had to be typed into it by hand.
@@ -583,8 +609,10 @@ Write-Output (('Particle bank pack passed: 92/119 reachable efcommon scripts, ' 
     # assertions above had already been updated to 33 and 54, so the success
     # message described a sheet that no longer existed -- the one place anybody
     # actually reads.
-    ("quad atlas $($report.quads.atlas_width)x$($report.quads.atlas_height) " +
-     "A5I3, $(@($report.quads.admitted).Count)/" +
+    ("quad atlas $($report.quads.sheets)x " +
+     "$($report.quads.atlas_width)x$($report.quads.atlas_height) A3I5, " +
+     "$(@($report.quads.admitted).Count)/" +
      "$(@($report.quads.admitted).Count + @($report.quads.excluded).Count) " +
      "textures in $([int64]$report.quads.frame_count) frames " +
-     "(frame cap $($report.quads.frame_cap)) $quadState.")))
+     "(frame cap $($report.quads.frame_cap), cell cap " +
+     "$($report.quads.cell_cap)) $quadState.")))

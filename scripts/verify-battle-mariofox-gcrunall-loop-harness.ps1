@@ -298,6 +298,33 @@ if ($RequireZeroPostGoTextureFence -and $foxCpuModeSelected -and
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ImportBattleShipFTManager = $true
+
+# DERIVED FROM THE GENERATOR, NOT TYPED HERE, and it was typed here SIX TIMES.
+# The static battle corpus' residency size appeared as a hand-typed literal at
+# every M4 assertion site in this file. On 2026-08-03 a lossless repack -- 22 of
+# its 24 textures are sixteen-colour CI4 sources that were stored expanded to
+# two bytes a texel -- took it to 61,696 and freed 74,496 bytes of texture VRAM.
+# Every other field of the residency lifecycle was correct and this one restated
+# number failed the run, which is exactly the defect the renderer's own
+# `bank mask != 3` check had: a generated size written down somewhere it reads
+# like a correctness property. Ask the generator once, at script scope, so a
+# future size change is a regeneration rather than a six-site edit.
+$staticTextureFixture = (& (Get-Command python -ErrorAction Stop).Source -B `
+    (Join-Path $PSScriptRoot 'generate_battle_playable_static_textures.py') `
+    --repo-root $root --check --fixture-json | Out-String) | ConvertFrom-Json
+$expectedM4ResidencyBytes = [int64]$staticTextureFixture.residency_bytes
+if ($expectedM4ResidencyBytes -le 0) {
+    throw 'Static texture generator reported no residency bytes.'
+}
+# The span starts at VRAM_A and runs residency bytes, so its end address and the
+# set of banks it covers are ARITHMETIC, not independent facts to pin. Both were
+# literals (0x06821400 and 3) that restated the old corpus size, and both failed
+# the repack for the same reason nds_renderer.c's own `bank mask != 3` did. Bank
+# A is 128 KiB; a span only reaches B once it passes that.
+$vramABase = 0x06800000
+$vramBankBytes = 0x20000
+$expectedM4SpanEnd = $vramABase + $expectedM4ResidencyBytes
+$expectedM4BankMask = if ($expectedM4ResidencyBytes -gt $vramBankBytes) { 3 } else { 1 }
 $task9FloatRoutineNames = @(
     'fadd', 'fsub', 'frsub', 'fmul', 'fdiv',
     'fcmpeq', 'fcmplt', 'fcmple', 'fcmpge', 'fcmpgt', 'fcmpun',
@@ -2743,7 +2770,7 @@ try {
             $m4FenceFinalValues[2] -eq 1 -and
             $m4FenceFinalValues[3] -eq 0 -and
             $m4FenceFinalValues[4] -eq 24 -and
-            $m4FenceFinalValues[5] -eq 136192 -and
+            $m4FenceFinalValues[5] -eq $expectedM4ResidencyBytes -and
             $m4FenceFinalValues[6] -eq 1 -and
             $m4FenceFinalValues[7] -eq $expectedM4TeardownCount -and
             $m4FenceFinalValues[10] -eq 0 -and
@@ -2812,7 +2839,7 @@ try {
             $publishedM4[2] -eq 1 -and
             $publishedM4[3] -eq 0 -and
             $publishedM4[4] -eq 24 -and
-            $publishedM4[5] -eq 136192 -and
+            $publishedM4[5] -eq $expectedM4ResidencyBytes -and
             $publishedM4[6] -eq 1 -and
             $publishedM4[7] -eq $expectedM4TeardownCount -and
             $publishedM4[8] -eq $expectedM4SeenMask -and
@@ -2834,9 +2861,9 @@ try {
             $publishedBanks[6] -eq 0x8b -and
             $publishedBanks[7] -eq 0x81 -and
             $publishedBanks[8] -eq 0x06800000 -and
-            $publishedBanks[9] -eq 0x06821400 -and
-            $publishedBanks[10] -eq 136192 -and
-            $publishedBanks[11] -eq 3
+            $publishedBanks[9] -eq $expectedM4SpanEnd -and
+            $publishedBanks[10] -eq $expectedM4ResidencyBytes -and
+            $publishedBanks[11] -eq $expectedM4BankMask
         ) "Published ROM did not naturally preserve the IFCommon OBJ/source-alpha palette banks and the exact contiguous bank-A/B static span (actual=$($publishedBanks -join ','))." $gdbStdout
         $publishedRendererDefaultsSummary =
             " intrinsicM3=9/$($publishedFast[1])/$($publishedFast[2]) intrinsicM4=24/$($publishedM4[5])/hits$($publishedM4[11])/fence0 water=2/0/1"
@@ -4476,7 +4503,7 @@ try {
                                         $m4Static[2] -eq 1 -and
                                         $m4Static[3] -eq 0 -and
                                         $m4Static[4] -eq 24 -and
-                                        $m4Static[5] -eq 136192 -and
+                                        $m4Static[5] -eq $expectedM4ResidencyBytes -and
                                         @($m4Static[6..10] |
                                             Where-Object { $_ -ne 0 }).Count -eq 0
                                     ) "Fast iteration did not preserve the prepared, deliberately unarmed M4 corpus at frame $frame (actual=$($m4Static -join ','))." $gdbStdout
@@ -4485,7 +4512,7 @@ try {
                                         $m4Static[2] -eq 1 -and
                                         $m4Static[3] -eq 0 -and
                                         $m4Static[4] -eq 24 -and
-                                        $m4Static[5] -eq 136192 -and
+                                        $m4Static[5] -eq $expectedM4ResidencyBytes -and
                                         $m4Static[6] -eq 1 -and
                                         ($m4Static[7] -band 0x3fffff) -eq
                                             0x3fffff -and
@@ -5270,9 +5297,9 @@ try {
                         } else {
                             Assert-Condition ($bankModesValid -and
                                 $banks[8] -eq 0x06800000 -and
-                                $banks[9] -eq 0x06821400 -and
-                                $banks[10] -eq 136192 -and
-                                $banks[11] -eq 3) "M4 VRAM bank ownership or exact contiguous bank-A/B static span does not match the battle contract (actual=$($banks -join ','))." $gdbStdout
+                                $banks[9] -eq $expectedM4SpanEnd -and
+                                $banks[10] -eq $expectedM4ResidencyBytes -and
+                                $banks[11] -eq $expectedM4BankMask) "M4 VRAM bank ownership or exact contiguous bank-A/B static span does not match the battle contract (actual=$($banks -join ','))." $gdbStdout
                         }
                     }
                     if ($benchmarkMakeIdentity.RendererBenchmarkMode -eq 2) {
