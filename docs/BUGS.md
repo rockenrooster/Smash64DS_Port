@@ -50,12 +50,40 @@ shield with ndsEFManagerBuildDisc(...) and routes it to a hand-written
 ndsEFManagerShieldProcDisplay, and the rebirth halo gets the same treatment.
 A procedurally generated disc is standing in for a loaded model.
 
-So the work is not a new renderer path. It is loading each EFDesc's DObjDesc
-through the reloc asset path the port already has (ndsRelocGetFileData) and
-letting the existing tree draw run, instead of synthesising a disc. The N64
-display lists in those DObjDescs still have to be converted to DS geometry,
-which is the real cost and the reason this is a planned task rather than a
-patch. Grade it on the owner's eye, per the render-fidelity doctrine.
+THE EXACT MECHANISM, and the port already wrote it down twice:
+
+  Makefile:1401 (NDS_R2_SOURCE_EFFECTS_FULL ?= 0)
+    "these submit their geometry as source effect DL links, which the battle
+     hardware path does not consume, so routing them trades a visible
+     untextured primitive for nothing on screen. That is the same seam that
+     kept the respawn platform invisible."
+  battleship_efmanager.c:1240
+    "source effect DL links are not submitted by the battle hardware path,
+     which is why the respawn platform was invisible."
+
+So the machinery is all present and PROVEN: efManagerMakeEffectForce loads a
+source DObjDesc and gcDrawDObjTreeForGObj draws it -- that is exactly how the
+KO burst (dEFManagerDeadExplodeEffectDesc) already works, unconditionally, with
+its offsets resolved by ndsEFManagerResolveAllDescOffsets. dEFManagerShieldEffectDesc
+and dEFManagerImpactWaveEffectDesc are ALREADY in that resolve list; they are
+just gated off.
+
+What is missing is one thing: the battle camera does not capture the DL links
+these effects register on (the reflector is DL link 15, the impact wave 10),
+so their geometry is built and never submitted. The port's stand-in registers
+on link 18, which IS captured -- which is why a procedural disc appears and the
+real model does not.
+
+THE WORK, in order:
+  1. Extend the battle camera's captured DL links to cover the source effect
+     links, and make the hardware path submit them.
+  2. Set NDS_R2_SOURCE_EFFECTS_FULL = 1.
+  3. Retire the ndsEFManagerBuildDisc stand-ins for shield and rebirth.
+ACCEPTANCE, already defined at Makefile:1409: a soak whose
+gNdsTaskmanGeneralHeapFreeMin stays above 25,600 AND a capture showing they
+draw. The 25,600 matters because ifCommonSetMaxNumGObj latches the GObj pool
+below it -- an earlier attempt at this flag capped the pool for a whole match,
+so this is a memory-risk change and not a cosmetic one.
 =============================================================================
 
 -Respawn floating platform isn't visible when respawning after KO.
@@ -88,10 +116,3 @@ patch. Grade it on the owner's eye, per the render-fidelity doctrine.
 
 -Some "hard hit" (side A attacks that hit) VFX look too big, please apply correct scaling to VFX.
     MEASURED: scale is source-exact (efmanager.c:2175/2197). Last cycle's clamp was in UNREACHABLE code.
-
--Shield freeze bug happened again. Screenshot: `artifacts/visibility/2026-08-03_owner_shield-freeze.png`
-    (copied into the repo from your Pictures folder -- tracked files must not carry your name.)
-    **FIXED** (2026-08-03) yesterday's fix converted 2 of the 35 `while (TRUE);` panics the port compiles,
-    both in taskman. objman.c held 19 more and they are the ones a shield hits -- it allocates a GObj,
-    a DObj and an MObj on the frame it spawns. All 19 record and fail the allocation now.
-    gNdsObjmanPanicCount must read 0; gNdsObjmanPanicMask names the site. Boundary green.
