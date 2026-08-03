@@ -163,6 +163,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerStockStealStartMakeEffect ndsBaseEFManagerStockStealStartMakeEffect
 #define efManagerStockStealEndMakeEffect ndsBaseEFManagerStockStealEndMakeEffect
 #define efManagerBattleScoreMakeEffect ndsBaseEFManagerBattleScoreMakeEffect
+#define efManagerConfettiMakeEffect ndsBaseEFManagerConfettiMakeEffect
 #define efManagerEggBreakMakeEffect ndsBaseEFManagerEggBreakMakeEffect
 #define efManagerFoxReflectorMakeEffect ndsBaseEFManagerFoxReflectorMakeEffect
 
@@ -213,6 +214,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerStockStealStartMakeEffect
 #undef efManagerStockStealEndMakeEffect
 #undef efManagerBattleScoreMakeEffect
+#undef efManagerConfettiMakeEffect
 #undef efManagerEggBreakMakeEffect
 #undef efManagerFoxReflectorMakeEffect
 
@@ -1372,6 +1374,65 @@ GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
 LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos, f32 scale)
 {
     return ndsBaseEFManagerSparkleWhiteDeadMakeEffect(pos, scale);
+}
+
+/* THE CONFETTI IS A COLUMN BECAUSE BOTH ITS EMITTER SETS SIT AT x = 0.
+ *
+ * mnvsresults.c:3212-3213 passes exactly two positions, `{0, 1000, -400}` and
+ * `{0, 1000, -1000}` -- same x, differing only in depth -- and each call spawns
+ * the four emitters 108..111. On the N64 the horizontal spread is per-piece:
+ * the emitters sit on the centre line and the pieces fan out as they fall.
+ *
+ * That fan is not reproducing here, and the owner's two screenshots are what
+ * settled it. Fox wins: a dense vertical column pinned to the LEFT edge. Mario
+ * wins: a sparse clump at the BOTTOM-RIGHT. Same confetti, different results
+ * camera framing -- which is the signature of a fixed, narrow world-space band
+ * that the camera moves around, not of too few pieces. It also explains why two
+ * density raises did not help: 62 -> 244 visible pieces all arrived in the same
+ * column. Density was never the limit; extent was.
+ *
+ * So the emitters fan out in x instead. PROJECT_GOAL allows content to be
+ * specialized per configuration, and this is a Results cosmetic with no
+ * gameplay term. Three x offsets per source call is 6 calls of 4 emitters = 24
+ * generators, against the 48 the Results scene claims in
+ * battleship_mnvsresults.c -- so it fits the pool that is already reserved, and
+ * gNdsParticleGeneratorsMax will say so.
+ *
+ * THE SPREAD IS THE OWNER'S CALIBRATION KNOB, not a derived constant. There is
+ * no source value for it, because the source does not need one. 900 is a first
+ * estimate from the screenshots: the column covers roughly a sixth of the
+ * screen, so three of them at +/-900 should span it. If it overshoots the stage
+ * edges or still leaves gaps, this is the number to move. */
+#define NDS_R2_CONFETTI_SPREAD_X 900.0F
+
+volatile u32 gNdsConfettiFanCount;
+
+LBParticle *efManagerConfettiMakeEffect(Vec3f *pos, sb32 is_genlink_mask)
+{
+    static const f32 offsets[] = {
+        -NDS_R2_CONFETTI_SPREAD_X, 0.0F, NDS_R2_CONFETTI_SPREAD_X
+    };
+    LBParticle *first = NULL;
+    u32 i;
+
+    if (pos == NULL)
+    {
+        return ndsBaseEFManagerConfettiMakeEffect(pos, is_genlink_mask);
+    }
+    for (i = 0u; i < ARRAY_COUNT(offsets); i++)
+    {
+        Vec3f spread = *pos;
+        LBParticle *made;
+
+        spread.x += offsets[i];
+        made = ndsBaseEFManagerConfettiMakeEffect(&spread, is_genlink_mask);
+        if (first == NULL)
+        {
+            first = made;
+        }
+        gNdsConfettiFanCount++;
+    }
+    return first;
 }
 
 /* The KO burst. Source selects a player- and type-specific DeathExplode
