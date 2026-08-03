@@ -13030,6 +13030,47 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
 }
 
+/* bit0 TREE, bit1 TREE_DLLINKS, bit2 DLLINKS, bit3 DLHEAD0, bit4 DLHEAD1,
+ * bit31 anything else. Only bit0 is accepted by the submit below, so a reject
+ * mask of 0x02 names TREE_DLLINKS as the kind the source models arrive with. */
+static u32 ndsStageGCDrawAllLoopCallbackKindBit(u32 kind)
+{
+    switch (kind)
+    {
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE:         return 1u << 0;
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS: return 1u << 1;
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS:      return 1u << 2;
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0:      return 1u << 3;
+    case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1:      return 1u << 4;
+    default:                                               return 1u << 31;
+    }
+}
+
+/* MEASURED, not assumed: with the flag on, the source models reach the submit
+ * as DLHEAD0 and NOTHING ELSE -- the probe's observed-kind mask reads 0x8 with
+ * no other bit set, and the reject mask reads the same 0x8. The submit accepted
+ * DOBJ_TREE alone, so all six frames were refused before the tree walk ever ran
+ * (nodes=0). ndsRendererAdapterSubmitStageDObjNode already handles DLHEAD0 in
+ * the same switch arm as DOBJ_TREE, so nothing downstream needed teaching.
+ *
+ * Flag-gated because at the tracked default this path carries the PROCEDURAL
+ * template effects, whose accepted kind is not being changed on the strength of
+ * a measurement taken with those effects absent (kindmask=0 in that run). */
+static sb32 ndsStageGCDrawAllLoopEffectKindAccepted(u32 callback_kind)
+{
+    if (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE)
+    {
+        return TRUE;
+    }
+#if NDS_R2_SOURCE_EFFECTS_FULL
+    if (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0)
+    {
+        return TRUE;
+    }
+#endif
+    return FALSE;
+}
+
 static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
                                                   u32 callback_kind)
 {
@@ -13050,14 +13091,40 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
         return;
     }
     gNdsEffectRendererDObjDrawCount++;
+    /* WHICH KIND ARRIVED, because the guard below has four clauses and a single
+     * reject counter cannot say which one fired. The source-model probe reads
+     * dobjdraw=6 reject=6 nodes=0 -- refused before the walk -- and dv is
+     * already established by the admission gate while the camera is non-NULL
+     * for the link-18 stand-ins drawing beside it, so callback_kind is the
+     * remaining clause. A MASK, not a last-value: several kinds reach here per
+     * frame and the last to arrive is not necessarily the refused one.
+     *
+     * The kinds are FOURCCs (DOBJ_TREE is 0x44545245, "DTRE"), NOT small enums,
+     * so `1u << kind` is undefined and `kind < 32` is never true -- an obvious
+     * shift-mask here would have stayed 0 and read as "nothing arrives". */
+    gNdsEffectRendererCallbackKindMask |=
+        ndsStageGCDrawAllLoopCallbackKindBit(callback_kind);
     root = DObjGetStruct(effect_gobj);
     if ((root == NULL) || (root->dv == NULL) ||
         (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
-        (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
+        (ndsStageGCDrawAllLoopEffectKindAccepted(callback_kind) == FALSE))
     {
+        gNdsEffectRendererRejectedKindMask |=
+            ndsStageGCDrawAllLoopCallbackKindBit(callback_kind);
         gNdsEffectRendererRejectedDrawCount++;
         return;
     }
+    /* THE DObj FLAGS, because the drawable test is ASYMMETRIC by kind
+     * (ndsRendererAdapterStageDObjDrawable, reloc_backend_renderer_dl.c:5886):
+     *
+     *   DOBJ_TREE / TREE_DLLINKS -> (flags & DOBJ_FLAG_NOTEXTURE) == 0
+     *   DLLINKS / DLHEAD0 / DLHEAD1 -> flags == DOBJ_FLAG_NONE
+     *
+     * Source models arrive as DLHEAD0, so ANY flag at all makes them
+     * undrawable and the walk emits nothing -- which is exactly the tris=0
+     * this path now reports. Record the flags rather than assume that: it is
+     * one OR and it turns the next cycle into a single run. */
+    gNdsEffectRendererDObjFlagsMask |= (u32)root->flags;
     triangle_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
     texture_ready_before =
         gNdsStageGCDrawAllLoopHardwareTextureReadyCount;

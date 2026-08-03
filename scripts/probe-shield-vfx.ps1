@@ -182,7 +182,8 @@ try {
         # second guard: no dv, no camera, or callback_kind != DOBJ_TREE).
         # nodes>0 with tris=0 means the walk ran and the geometry produced
         # nothing. Those need opposite fixes, which is why this is printed.
-        'printf "SHIELDWALK nodes=%u depth_overrun=%u sib_overrun=%u\n", gNdsRendererStageDObjNodeCount, gNdsRendererStageDObjDepthOverrunCount, gNdsRendererStageDObjSiblingOverrunCount',
+        'printf "SHIELDWALK nodes=%u depth_overrun=%u sib_overrun=%u kinds=0x%x rejkinds=0x%x\n", gNdsRendererStageDObjNodeCount, gNdsRendererStageDObjDepthOverrunCount, gNdsRendererStageDObjSiblingOverrunCount, gNdsEffectRendererCallbackKindMask, gNdsEffectRendererRejectedKindMask',
+        'printf "SHIELDFLAGS dobjflags=0x%x\n", gNdsEffectRendererDObjFlagsMask',
         'detach',
         'quit'
     )

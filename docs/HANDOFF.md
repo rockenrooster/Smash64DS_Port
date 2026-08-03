@@ -101,14 +101,28 @@ returns TRUE only when `dobj->dl` matches a procedural TEMPLATE pointer, which a
 ROM-asset list can never do. Both are open now, flag-gated, counted by
 `gNdsEffectRendererSourceModelAdmitCount`.
 
-**Proven, one probe run** (flag on): `admit=12 capture=6 dobjdraw=6 submit=0
-reject=6 tris=0`, `kindmask=0` (no stand-in exists, so all twelve are source
-models). Structurally-zero to twelve. **They still do not appear**: the submit
-emits ZERO triangles and rejects all six. Next seam is inside
-`ndsStageGCDrawAllLoopSubmitEffectDObj` — its second guard (`callback_kind !=
-DOBJ_TREE` is the live suspect; `dv` and camera are already established) or the
-walk emitting nothing. Print `gNdsRendererStageDObjNodeCount` beside SHIELDCHAIN
-to separate those in one run. Do not spend a fourth cycle on cell sizes here.
+A **fourth** gate sat behind those: the source models arrive as `DLHEAD0` and
+nothing else (observed-kind mask `0x8`), while the submit accepted `DOBJ_TREE`
+alone. `ndsRendererAdapterSubmitStageDObjNode` already handles DLHEAD0 in the
+same switch arm, so only the guard changed. Beware: these kinds are FOURCCs
+(`DOBJ_TREE` = `0x44545245`), so a `1u << kind` mask is undefined and reads 0 —
+which would have been reported as "nothing arrives".
+
+**Where it stands** (flag on, `probe-shield-vfx.ps1 -DrawCounter
+gNdsEffectRendererSourceModelAdmitCount`): `admit=12 capture=6 dobjdraw=6
+reject=6 tris=0 nodes=6 rejkinds=0x0`, `kindmask=0` throughout. Zero to twelve
+admits, past the guard, **and the walk now runs**. They still do not appear, and
+there are now two separate questions:
+
+1. `tris=0` — reject=6 is the `triangle_delta == 0` path now, not the guard.
+   Suspect `ndsRendererAdapterStageDObjDrawable` or a DL the hardware path will
+   not consume.
+2. `nodes=6` over 6 frames is **one node per frame**, but
+   `llFTManagerCommonShieldDObjDesc` is a **three-node** desc. So the DObj has
+   no child and no sibling chain — the tree was never built. That is a different
+   defect from the tree not being walked, and a correct walk is what exposed it.
+
+Do not spend a fourth cycle on cell sizes here.
 
 The KO blast pillar is NOT in this family: `efManagerSparkleWhiteDeadMakeEffect`
 (:3725) runs particle script 0x5C, whose texture 24 is admitted at source 32x32.

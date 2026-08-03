@@ -161,21 +161,44 @@ A SECOND GATE SITS BEHIND IT and also had to open: ndsEFManagerIsVisualEffectGOb
 pointer, which a ROM-asset display list can never do. Both are open now, flag-
 gated, counted by gNdsEffectRendererSourceModelAdmitCount.
 
-PROVEN, one probe run (probe-shield-vfx.ps1 -DrawCounter
-gNdsEffectRendererSourceModelAdmitCount, flag on):
+THE CALLBACK KIND WAS THE FOURTH GATE, and it is measured rather than guessed.
+The source models reach the submit as DLHEAD0 and as NOTHING ELSE -- observed
+kind mask 0x8, no other bit -- while the submit accepted DOBJ_TREE alone. That
+refused all six frames before the tree walk ever ran.
+ndsRendererAdapterSubmitStageDObjNode already handles DLHEAD0 in the same switch
+arm as DOBJ_TREE, so only the guard needed changing, and it is flag-gated
+because the default configuration carries the procedural template effects and
+their accepted kind is not being changed on a measurement taken with those
+effects absent.
 
-    admit=12  capture=6  dobjdraw=6  submit=0  reject=6  tris=0
-    kindmask=0                      <- no procedural stand-in exists; all
-                                       twelve admits are source models
+(The mask itself nearly lied: these kinds are FOURCCs -- DOBJ_TREE is
+0x44545245, "DTRE" -- so the obvious `1u << kind` shift-mask is undefined and
+`kind < 32` never true. It would have read 0 and been reported as "nothing
+arrives". ndsStageGCDrawAllLoopCallbackKindBit maps them explicitly.)
 
-From structurally-zero to twelve, and six frames reach the submit BODY. The
-shield still does not appear: the submit produces ZERO TRIANGLES and takes its
-reject path all six times. That is the next seam and it is inside
-ndsStageGCDrawAllLoopSubmitEffectDObj -- either its second guard (callback_kind
-!= NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE is the live suspect, since dv and
-camera are already established) or the walk emitting nothing. Print
-gNdsRendererStageDObjNodeCount alongside SHIELDCHAIN to separate those two in
-one run.
+WHERE IT STANDS, probe-shield-vfx.ps1 -DrawCounter
+gNdsEffectRendererSourceModelAdmitCount, flag on, three successive runs:
+
+    gate opened      admit=12 capture=6 dobjdraw=6 reject=6 tris=0 nodes=0
+    kind accepted    admit=12 capture=6 dobjdraw=6 reject=6 tris=0 nodes=6
+                     rejkinds 0x8 -> 0x0
+    kindmask=0 throughout: no procedural stand-in exists, so all twelve
+    admits are source models.
+
+Structurally-zero to twelve admits, past the guard, and THE WALK NOW RUNS. The
+shield still does not appear. Two facts point at the next seam, and they are
+different questions:
+
+  1. tris=0. The walk visits nodes and the submit still produces no geometry,
+     so reject=6 is now the `triangle_delta == 0` path, not the guard. Suspect
+     ndsRendererAdapterStageDObjDrawable or a DL the hardware path will not
+     consume.
+  2. nodes=6 over 6 frames is ONE NODE PER FRAME. llFTManagerCommonShieldDObjDesc
+     is a THREE-node desc (efmanager.c's own note: three nodes, one of which
+     carries a 21-command DL over four vertices). So the effect GObj's DObj has
+     no child and no sibling chain -- the tree was never built, which is a
+     different defect from the tree not being walked, and the walk being correct
+     is what made it visible.
 
 WHAT THE MEASUREMENTS SAID, and one of them retracts a claim above:
 

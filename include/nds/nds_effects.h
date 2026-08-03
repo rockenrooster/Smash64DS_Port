@@ -139,4 +139,13 @@ extern volatile u32 gNdsRendererStageDObjNodeCount;
 extern volatile u32 gNdsRendererStageDObjDepthOverrunCount;
 extern volatile u32 gNdsRendererStageDObjSiblingOverrunCount;
 
+/* Which NDS_OPENING_ROOM_DRAW_CALLBACK_* kinds reach the effect submit, and
+ * which of them it refuses. Masks rather than last-values: several kinds arrive
+ * per frame and the last one is not necessarily the refused one. */
+extern volatile u32 gNdsEffectRendererCallbackKindMask;
+extern volatile u32 gNdsEffectRendererRejectedKindMask;
+/* OR of the effect root DObj->flags seen at the submit. Non-zero means the
+ * DLHEAD0 drawable rule (flags == DOBJ_FLAG_NONE) rejects it. */
+extern volatile u32 gNdsEffectRendererDObjFlagsMask;
+
 #endif
