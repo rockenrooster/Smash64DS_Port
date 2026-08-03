@@ -42,9 +42,20 @@ these rows: the parameters were wrong because the MECHANISM is wrong. "The Halo
 is not the correct asset to use" is exactly right; the halo glow is one texture
 belonging to a model the port never draws.
 
-What this row family actually needs is the DObj path, not a better sprite. That
-is a scoped piece of work (four EFDescs, each with geometry + joint anim), and
-it should be planned as such rather than attempted as another atlas tweak.
+WHERE THE SEAM ACTUALLY IS, which is narrower than "implement the DObj path":
+the port ALREADY draws effect model trees. battleship_efmanager.c:1080 hands
+gcDrawDObjTreeForGObj to gcAddGObjDisplay for effects generally, and it works.
+What it substitutes for these rows is the GEOMETRY SOURCE -- :484 builds the
+shield with ndsEFManagerBuildDisc(...) and routes it to a hand-written
+ndsEFManagerShieldProcDisplay, and the rebirth halo gets the same treatment.
+A procedurally generated disc is standing in for a loaded model.
+
+So the work is not a new renderer path. It is loading each EFDesc's DObjDesc
+through the reloc asset path the port already has (ndsRelocGetFileData) and
+letting the existing tree draw run, instead of synthesising a disc. The N64
+display lists in those DObjDescs still have to be converted to DS geometry,
+which is the real cost and the reason this is a planned task rather than a
+patch. Grade it on the owner's eye, per the render-fidelity doctrine.
 =============================================================================
 
 -Respawn floating platform isn't visible when respawning after KO.
