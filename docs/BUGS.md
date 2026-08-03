@@ -9,14 +9,21 @@ fix live next to the code that owns it -- the particle generator and its checker
 
 -Some Crowd noise audio cues get cut off (like for big hits or upper bound KO).
    Owner: Still not fixed, not sure why they get cut off
-    LOCALIZED: nothing steals -- handle pool and sample cache both fail closed. Read gNdsAudioFgmPrematureRetireCount.
+    MEASURED (5-min both-CPU soak, NO-FREEZE): nothing steals and nothing retires early.
+    PrematureRetire 0, PoolExhaust 0, GenerationMismatch 0, StaleStop 0, StopAll 0, MaxHandles 7 of 8.
+    The cut-off was the release window closing at the NOTE end while the SAMPLE still had 129-309 ms
+    left; nds_audio_fgm.c:1014 now releases at max(note, audible) for non-looping cues. Owner re-test.
 
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: platform is invisible.
     MEASURED: 88 of 128 texels quantised to a near-black palette entry. Now white, alpha carries shape.
 
 -Fox down B VFX is not correct or using correct asset.
-    CONTRACT: source asset is llFoxSpecial2ReflectorDObjDesc, offset 0x2b0 of Fox's Special2 reloc file.
+    MEASURED: the asset is CI4 16x16 at 0x18 of relocData/346.vpk0.bin using only 2 palette indices --
+    208 texels index 1, 48 index 2 in a 3-column band. Its LUT at 0x08 gives the deep blue (0,8,239)
+    and cyan (0,231,247) this shipped INVERTED. Colours now taken from that LUT.
+    The atlas route is refuted, not skipped: A5I3 carries shape, and this texture is colour with no
+    shape -- its 81% body maps to alpha 0 and vanishes. The hexagon is geometry, not texture.
 
 -Shield VFX not correct
     Owner: Looks Black in color for some reason
@@ -27,7 +34,9 @@ fix live next to the code that owns it -- the particle generator and its checker
 
 -KO VFX not drawing correctly.
     Owner: looks like its drawing too close to camera and is low quality
-    LOCALIZED: "too close to camera" is the identity-matrix symptom; the burst draws outside the particle camera.
+    MEASURED: the burst now builds in full -- KOBurstAttempt 3, Complete 3, DropMask 0, QuadMiss 0,
+    over three KOs. It was 4 of 6 while the transform/generator pools were saturated; those are now
+    24 and read 13/11, strictly below the cap, so the demand is measured rather than floored.
 
 -Results confetti doesn't look right.
     Owner: STILL doesn't cover the whole scene, when troublshooting, just play results screen.
@@ -35,7 +44,10 @@ fix live next to the code that owns it -- the particle generator and its checker
  
 -Star KO twinkle not playing in correct spot
     Owner: Still not playing at location of the fighter, VFX also looks low quality
-    LOCALIZED: source spawns at the fighter's TopN joint translate (ftcommondead.c:357). Check the port's caller.
+    MEASURED: the caller is right. Over three KOs the spawn read (3451, 2399, -14999) -- y is
+    camera_bound_top * 0.6 and z is the source's own DeadUpStar recession, both set in ftcommondead.c
+    case 0 BEFORE the sparkle fires in case 1. It is at the fighter; the fighter is at the top blast
+    zone and goes invisible on the next line, which is what makes it look detached. Not a position bug.
 
 -Some "hard hit" (side A attacks that hit) effects look like they don't belong there's an orange ball visual effect that looks too big.
     MEASURED: light spark scale ramped unbounded to 4.9x at 40 damage; heavy is 1.0. Clamped 2.2.

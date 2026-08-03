@@ -505,8 +505,33 @@ static void ndsEFManagerInitVisualTemplates(void)
      * stays a source-derived approximation rather than a new palette.
      * Reproducing the original textured bursts needs the particle banks and
      * is P2 (KNOWN_ISSUES.md). */
+    /* BUGS.md "Fox down B VFX is not correct or using correct asset": the
+     * colours below are now the SOURCE's, read out of the asset rather than
+     * chosen. Fox's Special2 reloc payload (relocData/346.vpk0.bin) ends its
+     * reflector DL at 0x200-0x2a8 with SETTILESIZE 16x16, a LOADTLUT, and a
+     * CI texture; the CI4 texels at 0x18 use exactly two palette indices --
+     * 208 of 256 are index 1 and 48 are index 2, laid out as a three-column
+     * band down the left of every row. The RGBA5551 LUT at 0x08 gives
+     * index 1 = 0x007a (r0 g8 b239, the deep blue body) and
+     * index 2 = 0x073d (r0 g231 b247, the cyan edge). This shipped
+     * pale-cyan centre over a mid-blue rim, which is that pair inverted.
+     *
+     * THE ATLAS ROUTE WAS THE OBVIOUS FIX AND IT IS THE WRONG ONE. The two
+     * new source-asset quads (shield, rebirth) work because their identity is
+     * SHAPE: the sheet is A5I3, one 8-entry palette shared by all 8,192
+     * texels, so a cell can only carry white plus coverage. This texture's
+     * identity is COLOUR -- a flat two-tone band with no shape at all -- and
+     * under that convention its 81%-coverage body maps to LUT alpha 0 and
+     * disappears, leaving a cyan stripe floating on nothing. The hexagon the
+     * source draws is geometry (18 vertices, 6 triangles at 0x268-0x280), not
+     * texture, and the disc template already supplies a rounded barrier. So
+     * the asset contributes its palette here and nothing else.
+     *
+     * Alpha deliberately unchanged: the source LUT's alpha is one bit, which
+     * is not a translucency, and this template's whole look is its alpha --
+     * moving colour and alpha together would make the result unattributable. */
     ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateReflector],
-                          0xe0ffff60u, 0x40b8ff50u, 0);
+                          0x0008ef60u, 0x00e7f750u, 0);
     /* A DISC, not a ring. BUGS row 3 stayed open through a lifetime fix (8 ->
      * 390 frames) and a growth fix, and the owner still reported "I don't see
      * the floating platform" -- because everything about it was alive and

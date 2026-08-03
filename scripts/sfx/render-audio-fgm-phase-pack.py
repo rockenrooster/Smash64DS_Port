@@ -135,6 +135,17 @@ FULL_COVERAGE_IDS = (
     # reached SUDDEN DEATH: a light swing, the Sudden Death announcement, and
     # Fox's selection voice.
     18, 365, 514,
+    # ACTIONABLE, NOT DONE: FGM 17 is the only id a clean 5-minute both-CPU soak
+    # still asked for and did not get (2026-08-03) -- MissRingIDs[0]=17 twice,
+    # UnsupportedCallCount=2, nothing else in the ring. Appending it here the way
+    # every id above was appended raises KeyError: 17 at build_pack, because 17 is
+    # in neither the declared selectors (SELECTED / EXCLUDED_SOURCE_CUES) nor
+    # ATTACK_CUE_AUDIT, so the pack has no root-program hash to check it against.
+    # Adding it therefore means authoring a new audit entry, not editing a list.
+    # Left out deliberately: it costs two plays per match, and at id 17 it sits
+    # among the swings (18 LightSwingLw1, 19 Catch), not with the crowd cues the
+    # open BUGS.md row is about -- that row's cut-off was the release window, and
+    # nds_audio_fgm.c:1014 already holds the fix.
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
