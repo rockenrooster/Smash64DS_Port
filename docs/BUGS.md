@@ -9,7 +9,7 @@ fix live next to the code that owns it -- the particle generator and its checker
 
 -Some Crowd noise audio cues get cut off (like for big hits or upper bound KO).
    Owner: Still not fixed, not sure why they get cut off
-    LOCALIZED: the release-window fix landed and did not help, so the cut is handle stealing, not release.
+    LOCALIZED: nothing steals -- handle pool and sample cache both fail closed. Read gNdsAudioFgmPrematureRetireCount.
 
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: platform is invisible.
