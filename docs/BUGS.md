@@ -186,19 +186,33 @@ gNdsEffectRendererSourceModelAdmitCount, flag on, three successive runs:
     admits are source models.
 
 Structurally-zero to twelve admits, past the guard, and THE WALK NOW RUNS. The
-shield still does not appear. Two facts point at the next seam, and they are
-different questions:
+shield still does not appear, and TWO HYPOTHESES FOR WHY WERE TESTED AND BOTH
+DIED. Recorded because each cost a build and neither should be tried again:
 
-  1. tris=0. The walk visits nodes and the submit still produces no geometry,
-     so reject=6 is now the `triangle_delta == 0` path, not the guard. Suspect
-     ndsRendererAdapterStageDObjDrawable or a DL the hardware path will not
-     consume.
-  2. nodes=6 over 6 frames is ONE NODE PER FRAME. llFTManagerCommonShieldDObjDesc
-     is a THREE-node desc (efmanager.c's own note: three nodes, one of which
-     carries a 21-command DL over four vertices). So the effect GObj's DObj has
-     no child and no sibling chain -- the tree was never built, which is a
-     different defect from the tree not being walked, and the walk being correct
-     is what made it visible.
+  "a DObj flag makes it undrawable" -- the DLHEAD0 branch of
+  ndsRendererAdapterStageDObjDrawable (renderer_dl.c:5886) is the STRICT
+  `flags == DOBJ_FLAG_NONE`, where DOBJ_TREE only tests `(flags & NOTEXTURE)`.
+  REFUTED: dobjflags reads 0x0. The node is drawable.
+
+  "the geometry lives in dl_link[], which only the *_DLLINKS kinds read, while
+  DLHEAD0 submits `dl` and guards on `dv` -- a different field" -- REFUTED:
+  the field mask reads 0x7, so dl, dl_link and dv are ALL non-null, and routing
+  DLHEAD0 to TREE_DLLINKS left tris at 0 exactly as before. That routing was
+  reverted; it bought nothing.
+
+WHERE IT ACTUALLY STOPS: the node is drawable, the walk reaches it, every
+candidate geometry pointer is populated, and ndsRendererAdapterSubmitStageDL
+emits nothing from the display list. texready=0 AND texreject=0, so it does not
+reach texture handling at all. The next seam is inside SubmitStageDL -- what it
+does with a display list that came from a resolved source DObjDesc rather than
+from the stage's own baked program. Instrument THERE; everything upstream of it
+is now proven.
+
+SEPARATELY, and it is a different defect: nodes=6 over 6 frames is ONE NODE PER
+FRAME, but llFTManagerCommonShieldDObjDesc is a THREE-node desc (efmanager.c's
+own note: three nodes, one of which carries a 21-command DL over four vertices).
+So the effect GObj's DObj has no child and no sibling chain -- the tree was
+never built. Having a correct walk is what made that visible.
 
 WHAT THE MEASUREMENTS SAID, and one of them retracts a claim above:
 

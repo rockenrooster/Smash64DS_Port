@@ -15521,6 +15521,7 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsEffectRendererCallbackKindMask = 0u;
     gNdsEffectRendererRejectedKindMask = 0u;
     gNdsEffectRendererDObjFlagsMask = 0u;
+    gNdsEffectRendererDObjFieldMask = 0u;
     gNdsEffectRendererTriangleCount = 0u;
     gNdsEffectRendererTextureReadyCount = 0u;
     gNdsEffectRendererTextureRejectCount = 0u;

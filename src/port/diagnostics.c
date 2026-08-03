@@ -3569,6 +3569,7 @@ volatile u32 gNdsRendererStageDObjSiblingOverrunCount;
 volatile u32 gNdsEffectRendererCallbackKindMask;
 volatile u32 gNdsEffectRendererRejectedKindMask;
 volatile u32 gNdsEffectRendererDObjFlagsMask;
+volatile u32 gNdsEffectRendererDObjFieldMask;
 volatile u32 gNdsEffectRendererTriangleCount;
 volatile u32 gNdsEffectRendererTextureReadyCount;
 volatile u32 gNdsEffectRendererTextureRejectCount;

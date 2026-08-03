@@ -13125,6 +13125,14 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
      * this path now reports. Record the flags rather than assume that: it is
      * one OR and it turns the next cycle into a single run. */
     gNdsEffectRendererDObjFlagsMask |= (u32)root->flags;
+    /* WHICH FIELD HOLDS THE GEOMETRY. bit0 dl, bit1 dl_link, bit2 dv.
+     * The flags hypothesis above was REFUTED by its own counter (dobjflags read
+     * 0x0, so the drawable test passes), which is why this one is measured in
+     * the same build that acts on it rather than after it. */
+    gNdsEffectRendererDObjFieldMask |=
+        ((root->dl != NULL) ? 1u : 0u) |
+        ((root->dl_link != NULL) ? 2u : 0u) |
+        ((root->dv != NULL) ? 4u : 0u);
     triangle_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
     texture_ready_before =
         gNdsStageGCDrawAllLoopHardwareTextureReadyCount;
@@ -13133,8 +13141,24 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
     ndsRendererAdapterBeginStageTraversal();
     /* The effect path, and the only caller that walks the tree. An effect
      * EFDesc is a model -- shield, rebirth halo, Fox reflector, impact wave are
-     * all multi-node -- and submitting only the root drew the owner's "1/4
-     * slice of the complete circle". */
+     * all multi-node.
+     *
+     * TWO HYPOTHESES FOR THE REMAINING tris=0 WERE TESTED HERE AND BOTH DIED,
+     * which is why the kind is passed through unchanged:
+     *
+     *   "a DObj flag makes it undrawable" -- the DLHEAD0 drawable rule is the
+     *     strict `flags == DOBJ_FLAG_NONE` (renderer_dl.c:5886). REFUTED:
+     *     dobjflags reads 0x0, so the node IS drawable.
+     *   "the geometry is in dl_link[], which only the *_DLLINKS kinds read, and
+     *     DLHEAD0 submits `dl` while guarding on `dv`" -- REFUTED: the field
+     *     mask reads 0x7, so dl, dl_link and dv are ALL non-null, and routing
+     *     DLHEAD0 to TREE_DLLINKS left tris at 0 exactly as before.
+     *
+     * So the node is drawable, the walk reaches it, and every candidate
+     * geometry pointer is populated -- and ndsRendererAdapterSubmitStageDL
+     * still emits nothing from it. texready and texreject are both 0, so it
+     * does not even reach texture handling. That is the next seam and it is
+     * inside SubmitStageDL, not here. */
     ndsRendererAdapterSubmitEffectDObjTree(
         root,
         callback_kind,

@@ -114,9 +114,14 @@ reject=6 tris=0 nodes=6 rejkinds=0x0`, `kindmask=0` throughout. Zero to twelve
 admits, past the guard, **and the walk now runs**. They still do not appear, and
 there are now two separate questions:
 
-1. `tris=0` — reject=6 is the `triangle_delta == 0` path now, not the guard.
-   Suspect `ndsRendererAdapterStageDObjDrawable` or a DL the hardware path will
-   not consume.
+1. `tris=0`. **Two hypotheses tested, both dead — do not retry them.** "A DObj
+   flag makes it undrawable" (DLHEAD0 uses the strict `flags == DOBJ_FLAG_NONE`
+   rule): refuted, `dobjflags=0x0`. "Geometry is in `dl_link[]`, which only the
+   `*_DLLINKS` kinds read": refuted, `fields=0x7` — `dl`, `dl_link` and `dv` are
+   all non-null, and routing DLHEAD0→TREE_DLLINKS left `tris=0`; that routing
+   was reverted. **Where it stops**: `ndsRendererAdapterSubmitStageDL` emits
+   nothing from the list, with `texready=0` *and* `texreject=0` so it never
+   reaches texture handling. Instrument there — everything upstream is proven.
 2. `nodes=6` over 6 frames is **one node per frame**, but
    `llFTManagerCommonShieldDObjDesc` is a **three-node** desc. So the DObj has
    no child and no sibling chain — the tree was never built. That is a different

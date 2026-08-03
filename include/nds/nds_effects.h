@@ -145,7 +145,10 @@ extern volatile u32 gNdsRendererStageDObjSiblingOverrunCount;
 extern volatile u32 gNdsEffectRendererCallbackKindMask;
 extern volatile u32 gNdsEffectRendererRejectedKindMask;
 /* OR of the effect root DObj->flags seen at the submit. Non-zero means the
- * DLHEAD0 drawable rule (flags == DOBJ_FLAG_NONE) rejects it. */
+ * DLHEAD0 drawable rule (flags == DOBJ_FLAG_NONE) rejects it. Measured 0x0. */
 extern volatile u32 gNdsEffectRendererDObjFlagsMask;
+/* Which DObj field carries the geometry: bit0 dl, bit1 dl_link, bit2 dv.
+ * DLHEAD0 submits `dl`; only the *_DLLINKS kinds read `dl_link`. */
+extern volatile u32 gNdsEffectRendererDObjFieldMask;
 
 #endif
