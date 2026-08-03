@@ -87,8 +87,12 @@ it should be planned as such rather than attempted as another atlas tweak.
     hit at mnvsresults.c:3216 and :3217. So both emitters are made; what is unproven is whether the
     second one ALLOCATES (efManagerConfettiMakeEffect returns NULL on a short pool) and whether the
     Results GObj's camera_mask carries both slots. LBPARTICLE_MASK_GENLINK(3)=32 puts them in alloc
-    slots 0 and 4, not 0 and 3. Blocked on a probe fix: probe-results-confetti.ps1 reads
-    gNdsConfettiFanCount, which --gc-sections drops from the ROM because nothing reads it.
+    slots 0 and 4, not 0 and 3.
+    The port's non-source horizontal FAN is now REMOVED (efManagerConfettiMakeEffect is no longer
+    overridden). It spread pieces to +/-900 in world x -- which is what makes them read as off-centre once
+    the Results camera moves -- and it divided the fixed 384-struct pool six ways, ~64 pieces per emitter
+    where the source gives 192. Source structure restored: two emitters, both at x=0, depths -400 and
+    -1000. Boundary green. Still open: whether the near (-400, in front) emitter allocates.
     Both emitters sit at x=0: "not centered on the camera view" is the Results camera, not the emitter.
 
 -Some "hard hit" (side A attacks that hit) VFX look too big, please apply correct scaling to VFX.
@@ -96,3 +100,7 @@ it should be planned as such rather than attempted as another atlas tweak.
 
 -Shield freeze bug happened again. Screenshot: `artifacts/visibility/2026-08-03_owner_shield-freeze.png`
     (copied into the repo from your Pictures folder -- tracked files must not carry your name.)
+    **FIXED** (2026-08-03) yesterday's fix converted 2 of the 35 `while (TRUE);` panics the port compiles,
+    both in taskman. objman.c held 19 more and they are the ones a shield hits -- it allocates a GObj,
+    a DObj and an MObj on the frame it spawns. All 19 record and fail the allocation now.
+    gNdsObjmanPanicCount must read 0; gNdsObjmanPanicMask names the site. Boundary green.
