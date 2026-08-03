@@ -404,15 +404,66 @@ Three things follow directly and none of them need another argument:
 UNION MEMBER, so one non-NULL pointer sets all three bits; the mask can only
 ever read 0x0 or 0x7 and says nothing about which field the geometry is in.
 
-STILL OPEN, and it is now narrow: why the tree is one node when the desc that
-feeds it is two or three. Two of the four rows have no strong override at all --
-the `#if NDS_R2_SOURCE_EFFECTS_FULL` block at battleship_efmanager.c:250 defines
-efManagerShieldMakeEffect and efManagerRebirthHaloMakeEffect only, while
-ndsBaseEFManagerImpactWaveMakeEffect (:150) and
-ndsBaseEFManagerFoxReflectorMakeEffect (:1441) are compiled and unreferenced, so
-their weak shims still win. That does not by itself explain link 10 (the impact
-wave stand-in is a link-18 template, and all 72 draws report link 10), so the
-next cycle should read WHICH maker built the drawn GObj before adding overrides.
+CYCLE 4 NAMED THE 72 DRAWS AND THE ONE-NODE PARAGRAPH ABOVE IS WITHDRAWN
+(2026-08-03, one GDB session, both measurements, no rebuild).
+
+The Task39 census could not answer this: gNdsTask39Effect{Names,SpawnCount,
+OriginalCount,SubstituteCount,SkippedCount,Routes} are ALL ABSENT from the
+flag-on ELF (only gNdsTask39Fx* survive). Naming one would have lost the run --
+nm-check first. gcAddGObjDisplay is the better instrument anyway, because
+efmanager.c:1974 registers proc_display and dl_link there and every candidate
+maker has a distinct proc, so `info symbol $r1` names it outright:
+
+    DISP link=10 proc=0x20928CD -> efManagerImpactWaveProcDisplay + 1
+                 lr             -> efManagerMakeEffect + 83        (x8)
+
+ALL 72 LINK-10 DRAWS ARE THE IMPACT WAVE, AND IT IS ALREADY ON THE SOURCE PATH.
+Not a stand-in -- the substitute registers nNDSVisualEffectImpactWave on link 18
+and never appeared. So the "add a strong override for the impact wave"
+suggestion is RETRACTED: efManagerMakeEffect already builds it.
+
+AND ITS ONE-NODE SHAPE IS CORRECT BY CONSTRUCTION, which is what invalidates the
+paragraph this replaces. dEFManagerImpactWaveEffectDesc's flags are
+EFFECT_FLAG_USERDATA and nothing else -- and EFFECT_FLAG_USERDATA is 0x2, NOT
+0x1 (efdef.h:7). So efManagerMakeEffect takes `effect_flags & 0x1` FALSE and
+then `effect_flags & 0x4` FALSE, landing on
+
+    lbCommonInitDObj3Transforms(gcAddDObjForGObj(effect_gobj,
+                                (void*)(addr + o_dobjsetup)), ...)
+
+ONE DObj holding the raw display list, no children, no siblings. That is exactly
+the child=NULL sib=NULL ptr!=NULL DLH0 node the cycle-3 walk measured 72 times.
+Nothing was flattened. `ptr` is identical on every draw because every impact
+wave is the same file at the same offset: 0x2367F58 = EFCommonEffects1 + 0x7C28.
+
+THE TREE BUILDER IS FINE, MEASURED DIRECTLY. Breaking gcSetupCustomDObjs by name
+(objanim.c:2413, r0=gobj r1=dobjdesc) catches it running from
+efManagerMakeEffect+145 on effect GObjs with correct pointers and correct bytes:
+
+    SETUP gobj=0x23C6880 desc=0x235ED40  n0={id=0 dl=0x0} n1={id=1 dl=0x235ED30} n2={id=18}
+    SETUP gobj=0x23C8D08 desc=0x2372518  n0={id=0 dl=0x0} n1={id=1 dl=0x23724E8} n2={id=1 dl=0x23724F8}
+
+which is the on-disk shape exactly. It walks id==0 -> gcAddDObjForGObj(gobj,
+dl) and id!=0 -> gcAddChildForDObj, so those descs DO produce a proper tree
+whose root is transform-only. No byte-order defect, no wild desc pointer, no
+stubbed callee. Do not re-measure this.
+
+WHAT THIS MEANS FOR THE LADDER, and it is the important part: the shield, the
+rebirth halo and the reflector NEVER SPAWNED in either 901-frame run. No
+efManagerMakeEffect registration on link 15 appeared, and no rebirth occurred.
+Every tris=0 / texready=0 number on this board is IMPACT-WAVE data. Those three
+rows have still never been observed, so gate 1 cannot be judged from any capture
+taken so far, and the reflector's missing strong override
+(ndsBaseEFManagerFoxReflectorMakeEffect, battleship_efmanager.c:1441, still
+unreferenced) has never had a chance to matter.
+
+STILL OPEN, in order: (1) make a shield actually spawn under the probe -- that
+is a harness problem, not a renderer one, and it blocks the whole ladder;
+(2) why the impact wave, correctly constructed with a dl SubmitStageDL accepts,
+still yields tris=0. Its DL does contain `G_DL -> segment 0x0E` (0xDE000000
+0E000000) before its G_VTX, but that is a call-and-return and an unresolved
+segment E returns sNdsRendererAdapterEmptySegmentEDL rather than aborting, so
+segment E is NOT a sufficient explanation on its own.
 =============================================================================
 
 -Respawn floating platform isn't visible when respawning after KO.
@@ -441,7 +492,8 @@ next cycle should read WHICH maker built the drawn GObj before adding overrides.
     A hard landing also emits efManagerDustHeavyDoubleMakeEffect (efmanager.c:2982, script 0x58), which IS
     a particle effect -- so this row has a model half and a particle half, and only the wave is the model.
     LOCALIZED: o_dobjsetup is a raw F3DEX2 display list, not a desc (its EFDesc flags lack 0x4), and
-    every pointer in it is fixup-covered. It has no strong maker override, so its weak shim still wins.
+    every pointer in it is fixup-covered. It IS already built by the source efManagerMakeEffect as a
+    single DObj on link 10 -- correct by construction -- and still yields tris=0. That is the open part.
 
 -KO VFX not drawing correctly.
     Owner: Not fixed yet, the "blast pillar" VFX isn't drawing, and doesn't seen to draw on the same z axis as the fighters

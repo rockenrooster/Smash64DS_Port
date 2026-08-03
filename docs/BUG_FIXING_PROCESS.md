@@ -181,6 +181,16 @@ Probe discipline (each learned the hard way):
 - A counter with no compiled writer reads 0, which looks clean. Every probe
   needs an engagement count or positive control: zero must mean "measured
   zero," never "the hook never ran" or "the linker removed it."
+- **Derive what CORRECT looks like from the source before calling a measured
+  structure broken, and read the constants rather than assuming them.** On
+  2026-08-03 a one-node DObj was reported as "the tree was never built" for
+  three cycles. It was correct: that effect's EFDesc omits flag `0x4`, so
+  `efManagerMakeEffect` builds exactly one DObj holding a raw display list.
+  The assumption that flipped it was `EFFECT_FLAG_USERDATA == 0x1`; it is `0x2`
+  (`efdef.h:7`), which selects a different branch entirely. Also confirm the
+  thing you are debugging actually OCCURRED in the run — three of those four
+  effects never spawned once in two 901-frame captures, so every number
+  attributed to them was really about the fourth.
 - Compare captures against the synchronized control arm and crop metrics to
   the changed region; a full-frame metric hides a fully-wrong island, and a
   candidate judged alone destroys things the control would have caught.
