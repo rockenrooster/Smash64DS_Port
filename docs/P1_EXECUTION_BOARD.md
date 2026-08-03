@@ -4,7 +4,15 @@ Updated: 2026-08-02 18:00 Central
 
 Boundary: `battle_playable_realtime`, mode `163`
 
-## CURRENT BLOCKER — none. Eight `BUGS.md` rows carry a candidate awaiting the owner (2026-08-02)
+## CURRENT BLOCKER — none. All thirteen `BUGS.md` rows carry a candidate awaiting the owner (2026-08-02)
+
+Every row in `BUGS.md` now has a fix in the tree, verified by
+`verify-current.ps1 -Build` (Latest profile: runtime + `battle_playable_realtime`).
+What is owed is the owner's eye, not more engineering: the visual rows gate on
+the render-fidelity doctrine, where the owner is the oracle. Test on
+`smash64ds-battle-playable-hwtri.nds` — that is the configuration every row was
+reported against, and the only published ROM with hardware triangles and the
+Task 39 FX flags on.
 
 Candidate identity: branch `codex/r2-runtime2`, lab build `build-r2-bothcpu`
 (`NDS_R2_BOTH_CPU=1`, 7-minute match timer), plus the published pair still to be
@@ -26,14 +34,18 @@ shared startup, so Boundary does not cover the change.
 | KO VFX: not all played | `NDS_R2_PARTICLE_POOL_*` | 2 of 6 bursts dropped on a saturated transform pool; 6 -> 24 |
 | results confetti coverage | `NDS_R2_CONFETTI_UPDATE_RATE` | pool 112 -> 384, rate 0.42 -> 1.26; 62 -> 244 pieces |
 
-**Queue impact.** Two rows stay open on ONE shared seam — **the battle hardware
-path does not submit source effect DL links** — and closing it closes both:
-the respawn platform (`dEFCommonEffects3_RebirthHalo`, a four-node DObjDesc chain
-reusing the MBallRays lists) and the shield (a textured billboard quad, reloc
-`0xa3`). The shield has a cheaper route that does not need that seam at all: the
-quad sheet now has ~1,600 free texels, which fits a 32x32 cell, so routing it
-through `ndsRendererSubmitParticleQuad` would give it the source's soft rim with
-no new vertex, command or VRAM budget. Untried.
+**Queue impact — the last two rows are done and the shared seam was never the
+blocker.** The respawn pad and the shield were both diagnosed as waiting on "the
+battle hardware path does not submit source effect DL links". That was wrong:
+both effects already draw, as port-authored *untextured procedural discs* on DL
+link 18. Their real source assets are each one small texture on a quad
+(`dFTManagerCommon_Shield` = 4 vertices + IA8 16x32; `RebirthHalo` = I4 32x16),
+and the reloc payloads holding them are extracted at build time already — so the
+bank generator seats both in the quad sheet and
+`ndsParticleDrawSourceAssetQuad` draws them, falling back to the disc if the
+sheet is unavailable. 32 -> 34 admitted, 6,592 -> 6,848 texels, nothing
+displaced; the cell caps were chosen by running the real packer over five
+configurations offline, because at native resolution it drops live texture 41.
 
 **The default configuration did not link, and had a second failure behind it.**
 `make` with no overrides — the published `smash64ds.nds` — failed on one
