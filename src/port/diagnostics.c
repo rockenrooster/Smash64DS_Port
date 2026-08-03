@@ -85,6 +85,37 @@ volatile u32 gNdsTaskmanDLOverflowKind;
 volatile u32 gNdsTaskmanDLOverflowBytes;
 volatile u32 gNdsTaskmanGraphicsOverflowCount;
 volatile u32 gNdsTaskmanGraphicsOverflowBytes;
+
+/* AND THE SAME SPIN NINETEEN MORE TIMES, IN objman.c.
+ *
+ * The note above was written as though taskman.c held the freeze, and it held
+ * ONE of them. `rg 'while \(TRUE\);' decomp/.../src/` returns 35 sites in the
+ * translation units this port actually compiles: 19 in objman.c, 10 in
+ * taskman.c, and the rest in scheduler/malloc/main. So the 2026-08-03 fix
+ * closed two of thirty-five, the owner filed "Shield freeze bug happened
+ * again" the same afternoon, and that was the honest outcome of a fix that
+ * treated one instance of a pattern as the pattern.
+ *
+ * Every objman site is an exhausted pool -- gcGetGObjThread, gcGetGObjProcess,
+ * gcGetXObj/AObj/MObj/DObj/SObj/CObjSetNextAlloc, gcAddGObjProcess,
+ * gcAddXObjForDObjVar/ForCamera, gcInitGObjCommon -- or a broken stack/DL link.
+ * A shield effect allocates a GObj, a DObj and an MObj on the frame it spawns,
+ * which is exactly the shape of "it freezes when I shield".
+ *
+ * They record and fail the allocation now. Returning NULL is the SAFE answer
+ * here rather than a hopeful one: these pools are finite by construction and
+ * every caller already sits behind a NULL check, because on the N64 the same
+ * function could return NULL whenever the free list had a spare. The void ones
+ * (gcEjectGObjStack, gcMoveGObjCommon, gcLinkGObjDLCommon, gcMoveGObjDL/Head)
+ * simply return without relinking, which drops one frame of that object's
+ * display order.
+ *
+ * Both must read 0. Mask bit N is the Nth site in source order -- so a freeze
+ * report becomes "bit 6, the DObj pool is short" instead of a bisect. Left
+ * spinning on purpose: main.c's idle thread (an idle loop IS a spin) and
+ * scheduler.c's PAL branch (unreachable; the port sets the mode). */
+volatile u32 gNdsObjmanPanicCount;
+volatile u32 gNdsObjmanPanicMask;
 volatile u32 gNdsStartupTaskmanMallocCount;
 volatile u32 gNdsTaskmanGeneralHeapUsed;
 volatile u32 gNdsTaskmanDLContextsValid;

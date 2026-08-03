@@ -33,6 +33,7 @@ $patches = [ordered]@{
     'src/mv/mvopening/mvopeningroom.c' = 'src_mv_mvopening_mvopeningroom.patch'
     'src/sc/scmanager.c'             = 'src_sc_scmanager.patch'
     'src/sys/objhelper.c'            = 'src_sys_objhelper.patch'
+    'src/sys/objman.c'               = 'src_sys_objman.patch'
     'src/sys/taskman.c'              = 'src_sys_taskman.patch'
 }
 

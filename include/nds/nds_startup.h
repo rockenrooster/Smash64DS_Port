@@ -823,6 +823,15 @@ extern volatile u32 gNdsTaskmanDLOverflowKind;
 extern volatile u32 gNdsTaskmanDLOverflowBytes;
 extern volatile u32 gNdsTaskmanGraphicsOverflowCount;
 extern volatile u32 gNdsTaskmanGraphicsOverflowBytes;
+/* objman.c's NINETEEN `while (TRUE);` spins, same treatment. Every one is an
+ * exhausted object pool (GObj/GObjProcess/GObjThread/DObj/MObj/AObj/XObj/SObj/
+ * CObj) or a broken stack link, and every one of them is a dead handheld on a
+ * target with no debugger attached. Converting syTaskmanCheckBufferLengths
+ * alone left these reachable, which is why "the match froze" kept coming back.
+ * Count must read 0; the mask names WHICH site, numbered in source order, so a
+ * freeze report becomes "pool N is short" instead of a bisect. */
+extern volatile u32 gNdsObjmanPanicCount;
+extern volatile u32 gNdsObjmanPanicMask;
 extern volatile u32 gNdsStartupTaskmanMallocCount;
 extern volatile u32 gNdsTaskmanGeneralHeapUsed;
 extern volatile u32 gNdsTaskmanDLContextsValid;
