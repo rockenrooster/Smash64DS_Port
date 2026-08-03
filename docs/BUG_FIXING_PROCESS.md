@@ -166,6 +166,18 @@ Probe discipline (each learned the hard way):
 - GDB command batches must be nm-checked; one absent symbol silently aborts
   the rest. A halted-core screenshot can show a stale buffer — break on the
   constructor, then step.
+- **`break *ADDR` on an optimized build: disassemble the address first, and
+  never trust gdb's "file X, line N" reply as proof you are on that statement.**
+  At -O2 the line table attributes reordered and merged blocks freely. A 2026-08-03
+  probe broke on an address gdb called line 8572 (an early `return`); it was
+  actually a high-water-mark update on the *completed* path, so it reported a
+  rejection that never happened and published `dl`/`dobj` values read from a
+  clobbered r4 and a stack address. Prefer breaking on a **function entry by
+  name**, where the ABI guarantees r0–r3 hold the arguments. If an interior
+  address is unavoidable, quote the disassembly that proves which registers are
+  live in the probe's own comment, and sanity-check the result: a value that
+  never changes across many hits and many objects is a fixed address, not a
+  per-object pointer.
 - A counter with no compiled writer reads 0, which looks clean. Every probe
   needs an engagement count or positive control: zero must mean "measured
   zero," never "the hook never ran" or "the linker removed it."

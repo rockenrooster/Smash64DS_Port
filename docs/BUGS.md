@@ -196,10 +196,10 @@ DIED. Recorded because each cost a build and neither should be tried again:
 WHERE IT ACTUALLY STOPS: the node is drawable, the walk reaches it, every
 candidate geometry pointer is populated, and ndsRendererAdapterSubmitStageDL
 emits nothing from the display list. texready=0 AND texreject=0, so it does not
-reach texture handling at all. The next seam is inside SubmitStageDL -- what it
-does with a display list that came from a resolved source DObjDesc rather than
-from the stage's own baked program. Instrument THERE; everything upstream of it
-is now proven.
+reach texture handling at all. (The follow-on "instrument inside SubmitStageDL"
+is SUPERSEDED -- see the cycle-3 section below. The DL it is handed is one
+shared stand-in list, identical on every effect instance, so what SubmitStageDL
+does with it was never the interesting question.)
 
 SEPARATELY, and it is a different defect: nodes=6 over 6 frames is ONE NODE PER
 FRAME, but llFTManagerCommonShieldDObjDesc is a THREE-node desc (efmanager.c's
@@ -237,21 +237,38 @@ WHAT THE MEASUREMENTS SAID, and one of them retracts a claim above:
    that recursion fired on stage DObjs every frame regardless.) Any future
    verdict on these four rows needs a harness that produces the effect.
 
-THE SILENT RETURN IS CONFIRMED, AND TWO OF THE FOUR DESCS WERE NEVER RESOLVED
+THE SILENT RETURN IS RETRACTED -- IT NEVER FIRES (2026-08-03, cycle 3).
+
+The "confirmation" below was a WRONG BREAKPOINT ADDRESS, and the lesson is that
+gdb's line table is not evidence about which instruction you stopped on.
+`*0x2039592` was chosen because gdb answered "line 8572". Disassembled, it is
+
+    203958a  ldr r2,[r5,#0xa0] / cmp against a global / store the max
+    2039592  bhi 2039596      <-- the breakpoint
+    2039594  b   2039300      <-- 0x2039300 is the EPILOGUE
+
+i.e. a high-water-mark update on the COMPLETED path, where r5 is a stack address
+and r4 is long since clobbered. That is why `dobj` read 0x23c8a58 on all eight
+hits across many frames and many effects: a real DObj* cannot be constant. The
+readings `dl=0x14006`, `dl=0x3f800000` and the Vec3f-as-display-list inference
+drawn from them are all VOID. This also closes the (a)/(b)/(c) split recorded
+below in favour of (a): r5 was not dobj.
+
+The real early return, taken from the disassembly instead of the line table:
+
+    20395ec  movs r1,#8 / movs r0,r4 / bl ndsFighterDLScanRangeInTaskmanArena
+    20395f4  cmp r0,#0
+    20395f6  beq 20395fa
+    20395fa  b   2039300          <-- renderer_dl.c:8573, r4=dl and r5=dobj
+
+Measured at `*0x20395fa` over 901 frames on the same flag-on ROM: rejects=0.
+The silent return does not fire at all, so it was never the seam and nothing
+downstream of it needs instrumenting for that reason.
+
+TWO OF THE FOUR DESCS WERE NEVER RESOLVED
 (2026-08-03, two GDB reads on the existing flag-on ROM, no rebuild).
 
-Breaking on SubmitStageDL's own early return -- the one at renderer_dl.c:8571
-taken when the DL pointer is inside neither a loaded reloc file nor the taskman
-arena, and the ONLY exit that leaves tris, texready and texreject all 0 with no
-stat of any kind -- fires, on an nGCCommonKindEffect GObj on link 10:
-
-    dl=0x14006   dobj=0x23c8a58 gobjid=1011 dllink=10 child=NULL sib=NULL
-    dl=0x3f800000  (same dobj, same frame)
-
-Neither is an address. 0x3F800000 is 1.0f, and DObjDesc is {id, dl, translate,
-rotate, scale}, so that is a Vec3f component being submitted as a display list.
-
-Then the descs themselves, read live:
+The descs themselves, read live:
 
     dEFManagerRebirthHaloEffectDesc  o_dobjsetup = 0x20E8610   <- a RAM ADDRESS
     dEFManagerImpactWaveEffectDesc   o_dobjsetup = 0x7C28
@@ -327,23 +344,75 @@ TWO MORE HYPOTHESES DIED ON 2026-08-03. Neither should be tried again.
   :9011 and NEVER FIRED in 300 seconds. That arm does not run for these effects.
   The mechanism is real and the arithmetic works; it simply is not what happens.
 
-So the submitted pointer comes from renderer_dl.c:8989, the only other call
-site, and it is `dobj->dl`. Which leaves the contradiction sharper than before
-and it is the whole remaining question: the DObj dumped AT a reject has
-dl=0x2367D98, inside asset 83 (0x2360170 + 52,736), and
-ndsRelocFindLoadedFileContaining is plain address containment with no generation
-or ownership test -- so that pointer cannot be refused, yet the breakpoint on
-the refusal fired with r5 holding that DObj.
+A THIRD HYPOTHESIS DIED OFFLINE, WITHOUT AN EMULATOR (2026-08-03, cycle 3).
 
-One of these is false and the next cycle should settle WHICH before theorising
-further: (a) r5 is not dobj at that PC, (b) the dumped node is not the node that
-was rejected -- the address was printed only for rejects 1-4 and the struct dump
-was taken at reject 6, (c) dobj->dl is mutated between the submit and the stop.
-Print dobj AND dl together on every reject, and dump the struct in the same
-breakpoint body rather than after the run. That is one probe.
+  "fixups are applied, but the table does not COVER every pointer -- the root
+  node's dl offset is in it and the child/sibling nodes' are not" -- REFUTED by
+  walking the o2r internal reloc chains on disk. A DObjDesc tree is a packed
+  {id, dl, translate, rotate, scale} array of stride 0x2C terminated by id==18
+  (DOBJ_ARRAY_MAX, lbCommonSetupTreeDObjs, lbcommon.c:914), so every node's dl
+  offset is computable without a run:
 
-STILL OPEN: whether the gate fix makes them draw. That is a capture, not an
-argument, and it has not been taken yet.
+    163 FTManagerCommon  shield   @0x300   2 nodes, 4 chain slots
+                                  node0 dl=NULL   node1 dl@0x0330 COVERED
+    85  EFCommonEffects3 rebirth  @0x2AC0  3 nodes, 143 chain slots
+                                  node0 dl=NULL   node1 @0x2AF0 and node2 @0x2B1C COVERED
+    346 FoxSpecial2      reflector@0x2B0   2 nodes, 17 chain slots
+                                  node0 dl=NULL   node1 dl@0x02E0 COVERED
+
+  Every non-NULL dl is a chain slot and every uncovered one is genuinely NULL --
+  the id==0 root node is transform-only and carries no geometry, which is also
+  why "three-node desc" and "two desc entries" are both right: the DObj tree is
+  root + 2 children, of which exactly ONE draws.
+
+  THE IMPACT WAVE IS NOT A DESC AT ALL, and this is why its offsets looked
+  sparse at first. dEFManagerImpactWaveEffectDesc's flags are EFFECT_FLAG_USERDATA
+  WITHOUT 0x4, so efmanager.c:1999 passes o_dobjsetup to
+  gcAddChildForDObj(dobj, (void*)(addr + o_dobjsetup)) -- the argument IS the
+  display list. Decoded at 0x7C28 it is ordinary F3DEX2 (E7 pipesync, E3
+  setothermode, FC setcombine, FD settimg, 01 vtx, 06 tri2), and all three of
+  its pointer words -- both FD texture images and the 01 vertex array -- are
+  chain slots. The generator's fixup emission is correct for all four rows; do
+  not go looking there again.
+
+WHAT THE FLAG-ON ROM ACTUALLY DOES, measured at the effect-only walker
+(2026-08-03, `*0x2039778` = ndsRendererAdapterSubmitStageDObjTreeDepth, reached
+only when NDS_R2_SOURCE_EFFECTS_FULL=1, so it is cheap and unambiguous; r0=dobj
+r1=kind are argument registers). 72 hits over 901 frames, and every one of them
+identical:
+
+    kind=0x444C4830 ("DLH0")  child=NULL  sib_next=NULL  sib_prev=NULL
+    ptr=0x2367F58  flags=0x0  gobjid=1011  dllink=10
+    CHAIN admit=144 dobjdraw=72 submit=0 reject=72 tris=0 texready=0 texreject=0
+    WALK  nodes=72 depthovr=0 sibovr=0 kinds=0x8 rejkinds=0x0
+
+Three things follow directly and none of them need another argument:
+
+  * nodes == dobjdraw == 72 is ONE NODE PER DRAW. The walker never recurses,
+    because child and BOTH sibling links are NULL. The 2- and 3-node trees the
+    static walk above proves are in the assets are still not being built.
+  * flags=0x0 and ptr!=NULL, so the drawable test passes and the DLH0 arm IS
+    taken -- SubmitStageDL is called (renderer_dl.c:8989, `bl` at 0x203974A) and
+    returns without emitting. rejkinds=0x0 confirms the entry guard at
+    movement.c:13114 never fired, so reject=72 is the SECOND site, :13181,
+    which is simply `triangle_delta == 0`. submit=0 means "no triangles", NOT
+    "never called" -- it is only incremented past the submit.
+  * ptr is the SAME 0x2367F58 on all 72 draws, across two different DObj
+    addresses. One display list is standing in for every effect instance.
+
+`fields=0x7` was never a refutation of anything. dl, dl_link and dv are the SAME
+UNION MEMBER, so one non-NULL pointer sets all three bits; the mask can only
+ever read 0x0 or 0x7 and says nothing about which field the geometry is in.
+
+STILL OPEN, and it is now narrow: why the tree is one node when the desc that
+feeds it is two or three. Two of the four rows have no strong override at all --
+the `#if NDS_R2_SOURCE_EFFECTS_FULL` block at battleship_efmanager.c:250 defines
+efManagerShieldMakeEffect and efManagerRebirthHaloMakeEffect only, while
+ndsBaseEFManagerImpactWaveMakeEffect (:150) and
+ndsBaseEFManagerFoxReflectorMakeEffect (:1441) are compiled and unreferenced, so
+their weak shims still win. That does not by itself explain link 10 (the impact
+wave stand-in is a link-18 template, and all 72 draws report link 10), so the
+next cycle should read WHICH maker built the drawn GObj before adding overrides.
 =============================================================================
 
 -Respawn floating platform isn't visible when respawning after KO.
@@ -362,7 +431,8 @@ argument, and it has not been taken yet.
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     ROOT CAUSE FOUND (see banner): dEFManagerShieldEffectDesc is a model (llFTManagerCommonShieldDObjDesc).
     'Cut in half' is a 1:2 source cell on a square quad -- a symptom of drawing a model as a sprite.
-    LOCALIZED: desc resolves (0x300) and is validated now; SubmitStageDL's unloaded-DL return is the seam.
+    LOCALIZED: desc resolves (0x300), its one drawing dl IS fixup-covered, and SubmitStageDL never
+    rejects. The drawn DObj is a single node with no children, so the desc tree is still not built.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
@@ -370,7 +440,8 @@ argument, and it has not been taken yet.
     + MatAnimJoint. A material-animated model. No single atlas texture can be the 'correct asset' for it.
     A hard landing also emits efManagerDustHeavyDoubleMakeEffect (efmanager.c:2982, script 0x58), which IS
     a particle effect -- so this row has a model half and a particle half, and only the wave is the model.
-    LOCALIZED: its DObj is well formed with a valid dl; the pointer SubmitStageDL rejects is not that one.
+    LOCALIZED: o_dobjsetup is a raw F3DEX2 display list, not a desc (its EFDesc flags lack 0x4), and
+    every pointer in it is fixup-covered. It has no strong maker override, so its weak shim still wins.
 
 -KO VFX not drawing correctly.
     Owner: Not fixed yet, the "blast pillar" VFX isn't drawing, and doesn't seen to draw on the same z axis as the fighters
