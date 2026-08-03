@@ -9,6 +9,10 @@ fix live next to the code that owns it -- the particle generator and its checker
 
 -Some Crowd noise audio cues get cut off (like for big hits that reach upper bound KO boundary).
     Owner: Ok if source cuts them off, then lets change that, I don't want the sound cues interrupted if possible.
+    **FIXED** (2026-08-03) the audience no longer interrupts itself. Both cuts live in ftpublic.c and both
+    go through func_80026738_27338; battleship_ftpublic.c renames that symbol for this TU only, so fighter
+    voices and looping SFX keep source behaviour. Not a voice leak: the FGM mixer reclaims a handle on
+    REASON_DURATION. gNdsFtPublicCueLetRingCount counts declined interruptions. Boundary green.
 
 =============================================================================
 ONE FINDING EXPLAINS FOUR OF THESE ROWS, AND IT IS NOT THE ATLAS (2026-08-03)

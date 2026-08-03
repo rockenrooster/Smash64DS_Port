@@ -109,7 +109,39 @@ volatile u32 gNdsFtPublicPlayCommonCount;
 volatile u32 gNdsFtPublicLastCommonFGM;
 volatile u32 gNdsFtPublicCallStartCount;
 volatile u32 gNdsFtPublicLastCallFGM;
+volatile u32 gNdsFtPublicCueLetRingCount;
 
+/* BUGS.md crowd row. The owner, 2026-08-03: "Ok if source cuts them off, then
+ * lets change that, I don't want the sound cues interrupted if possible."
+ *
+ * This is a DELIBERATE DEVIATION FROM SOURCE, asked for by name. SSB64 cuts a
+ * crowd cue in two places, both inside this translation unit and both through
+ * func_80026738_27338: ftPublicPlayCommon (ftpublic.c:132) stops the previous
+ * common cue before starting the next, and ftPublicDecideCall (:165) calls
+ * ftPublicCommonStop() when a character call starts at knockback >= 130 -- the
+ * big hits, which is exactly when the owner noticed cues disappearing.
+ *
+ * Renaming the stop HERE is the same trick line 41 already uses for the play
+ * side, and it is what makes the deviation safe: the rename is scoped to this
+ * TU, so fighter voices and looping SFX -- the other callers of the real stop,
+ * in reloc_backend_compat_shims.c -- keep source behaviour untouched. Only the
+ * audience stops being interrupted.
+ *
+ * NOT A VOICE LEAK, and that was the thing worth checking before doing it. The
+ * FGM mixer reclaims a handle when its duration elapses
+ * (NDS_AUDIO_FGM_RELEASE_REASON_DURATION in nds_audio_fgm.c), so an un-stopped
+ * cue costs one voice until it ends naturally rather than costing one forever.
+ * Crowd cues are short and fire on big hits. gNdsFtPublicCueLetRingCount is how
+ * many interruptions were declined; if overlapping cues ever outrun the mixer's
+ * voices it will steal its own oldest, which is still better than the source's
+ * unconditional cut. */
+static void ndsFtPublicStopFGM(alSoundEffect *sfx)
+{
+    (void)sfx;
+    gNdsFtPublicCueLetRingCount++;
+}
+
+#define func_80026738_27338 ndsFtPublicStopFGM
 #define ftPublicMakeActor battleship_ftPublicMakeActor
 #define ftPublicCommonCheck battleship_ftPublicCommonCheck
 #define ftPublicPlayCommon battleship_ftPublicPlayCommon
@@ -124,6 +156,7 @@ volatile u32 gNdsFtPublicLastCallFGM;
 #undef ftPublicTryStartCall
 #undef ftPublicProcUpdate
 #undef func_800269C0_275C0
+#undef func_80026738_27338
 
 /* The one real definition, reached through the rename above. The port's
  * backend returns `void *` and the source assigns it to `alSoundEffect *`;
