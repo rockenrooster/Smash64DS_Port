@@ -163,7 +163,6 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerStockStealStartMakeEffect ndsBaseEFManagerStockStealStartMakeEffect
 #define efManagerStockStealEndMakeEffect ndsBaseEFManagerStockStealEndMakeEffect
 #define efManagerBattleScoreMakeEffect ndsBaseEFManagerBattleScoreMakeEffect
-#define efManagerConfettiMakeEffect ndsBaseEFManagerConfettiMakeEffect
 #define efManagerEggBreakMakeEffect ndsBaseEFManagerEggBreakMakeEffect
 #define efManagerFoxReflectorMakeEffect ndsBaseEFManagerFoxReflectorMakeEffect
 
@@ -214,7 +213,6 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerStockStealStartMakeEffect
 #undef efManagerStockStealEndMakeEffect
 #undef efManagerBattleScoreMakeEffect
-#undef efManagerConfettiMakeEffect
 #undef efManagerEggBreakMakeEffect
 #undef efManagerFoxReflectorMakeEffect
 
@@ -1423,82 +1421,34 @@ LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos, f32 scale)
     return ndsBaseEFManagerSparkleWhiteDeadMakeEffect(pos, scale);
 }
 
-/* THE CONFETTI IS A COLUMN BECAUSE BOTH ITS EMITTER SETS SIT AT x = 0.
+/* THE CONFETTI FAN IS GONE, AND THE OWNER'S OWN DIAGNOSIS IS WHY.
  *
- * mnvsresults.c:3212-3213 passes exactly two positions, `{0, 1000, -400}` and
- * `{0, 1000, -1000}` -- same x, differing only in depth -- and each call spawns
- * the four emitters 108..111. On the N64 the horizontal spread is per-piece:
- * the emitters sit on the centre line and the pieces fan out as they fall.
+ * This slot held a three-offset horizontal fan: every source call to
+ * efManagerConfettiMakeEffect was turned into three, at x -900 / 0 / +900, on
+ * the theory that the confetti was "a dense vertical column pinned to the left
+ * edge" and needed extent rather than density.
  *
- * That fan is not reproducing here, and the owner's two screenshots are what
- * settled it. Fox wins: a dense vertical column pinned to the LEFT edge. Mario
- * wins: a sparse clump at the BOTTOM-RIGHT. Same confetti, different results
- * camera framing -- which is the signature of a fixed, narrow world-space band
- * that the camera moves around, not of too few pieces. It also explains why two
- * density raises did not help: 62 -> 244 visible pieces all arrived in the same
- * column. Density was never the limit; extent was.
+ * 2026-08-03, looking at the Results screen: "confetti falls behind fighter
+ * instead of infront and is not centered on the camera view". Both halves of
+ * that indict the fan. Spreading pieces to +/-900 in WORLD x is exactly what
+ * makes them read as off-centre once the Results camera moves, and the axis the
+ * owner actually cares about is DEPTH, which the fan never touched.
  *
- * So the emitters fan out in x instead. PROJECT_GOAL allows content to be
- * specialized per configuration, and this is a Results cosmetic with no
- * gameplay term. Three x offsets per source call is 6 calls of 4 emitters = 24
- * generators, against the 48 the Results scene claims in
- * battleship_mnvsresults.c -- so it fits the pool that is already reserved, and
- * gNdsParticleGeneratorsMax will say so.
+ * The source's own structure is two emitters at two DEPTHS, not one at three
+ * widths -- mnvsresults.c:3208 passes {0,1000,-1000} and {0,1000,-400}, and
+ * efmanager.c:6206 puts them on different generator links. One falls behind the
+ * fighters and one falls in front of them. That is the effect the owner is
+ * describing the absence of.
  *
- * THE SPREAD IS THE OWNER'S CALIBRATION KNOB, not a derived constant. There is
- * no source value for it, because the source does not need one. 900 is a first
- * estimate from the screenshots: the column covers roughly a sixth of the
- * screen, so three of them at +/-900 should span it. If it overshoots the stage
- * edges or still leaves gaps, this is the number to move. */
-#define NDS_R2_CONFETTI_SPREAD_X 900.0F
-
-/* MEASURED 2026-08-03, probe-results-confetti.ps1 -Label xextent: the fan
- * reaches the pieces. fan=6 (two sheets x three offsets), slot 0 spans x
- * -1175.3 to +906.6 and slot 4 spans -1024.7 to +982.6 -- both straddling zero
- * by about the 900 asked for, against a source that put every piece at x=0.
+ * The fan also cost what it was trying to buy: six emitters divided the
+ * Results scene's fixed 384-struct pool six ways, about 64 pieces each where
+ * the source gives 192. Removing it restores full density per emitter for free.
  *
- * WIDTH WAS BOUGHT WITH DENSITY, and that is the honest limit of this change.
- * structs_used reads 384 against the 384 the Results scene asks for at
- * battleship_mnvsresults.c:235, so the pool is the binding constraint and six
- * emitters now divide what two used to have -- roughly 64 pieces each where the
- * source gave 192. Buying the density back means raising that pool, and the
- * measured table in battleship_lbparticle.c prices it at about one extra VBlank
- * per 91 visible pieces on a Results interval already at mostly 4 and max 8.
- * PROJECT_GOAL requires this screen to hold its cadence, and the owner has
- * reserved the FPS pass to themselves, so that trade is theirs to make and is
- * deliberately not taken here. 900 remains the number to move if they want it
- * narrower and denser instead. */
-
-volatile u32 gNdsConfettiFanCount;
-
-LBParticle *efManagerConfettiMakeEffect(Vec3f *pos, sb32 is_genlink_mask)
-{
-    static const f32 offsets[] = {
-        -NDS_R2_CONFETTI_SPREAD_X, 0.0F, NDS_R2_CONFETTI_SPREAD_X
-    };
-    LBParticle *first = NULL;
-    u32 i;
-
-    if (pos == NULL)
-    {
-        return ndsBaseEFManagerConfettiMakeEffect(pos, is_genlink_mask);
-    }
-    for (i = 0u; i < ARRAY_COUNT(offsets); i++)
-    {
-        Vec3f spread = *pos;
-        LBParticle *made;
-
-        spread.x += offsets[i];
-        made = ndsBaseEFManagerConfettiMakeEffect(&spread, is_genlink_mask);
-        if (first == NULL)
-        {
-            first = made;
-        }
-        gNdsConfettiFanCount++;
-    }
-    return first;
-}
-
+ * So the override is deleted rather than retuned, and the source function runs
+ * unmodified. NDS_R2_CONFETTI_SPREAD_X and gNdsConfettiFanCount go with it --
+ * the latter was unreadable anyway, since --gc-sections drops a counter nothing
+ * reads. What remains open is whether the second emitter ALLOCATES; that is a
+ * measurement, not another offset. */
 /* The KO burst. Source selects a player- and type-specific DeathExplode
  * generator with its own orientation, DObj/material animation and player
  * colours; the substitute discarded `player` entirely and scaled one red ring
