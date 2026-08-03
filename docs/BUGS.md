@@ -10,29 +10,66 @@ fix live next to the code that owns it -- the particle generator and its checker
 -Some Crowd noise audio cues get cut off (like for big hits that reach upper bound KO boundary).
     Owner: Ok if source cuts them off, then lets change that, I don't want the sound cues interrupted if possible.
 
+=============================================================================
+ONE FINDING EXPLAINS FOUR OF THESE ROWS, AND IT IS NOT THE ATLAS (2026-08-03)
+=============================================================================
+The respawn platform, the shield, Fox's down B and the hard-landing impact wave
+are NOT particle sprites in the source. Each is a full EFDesc drawn as an
+ANIMATED DObj MODEL TREE, with its own display-list link, geometry, joint
+animation and material:
+
+  efmanager.c:1648  dEFManagerRebirthHaloEffectDesc
+                    -> llEFCommonEffects3RebirthHaloDObjDesc + ...AnimJoint
+                       made by efManagerRebirthHaloMakeEffect(gobj, scale):5994
+  efmanager.c:460   dEFManagerShieldEffectDesc
+                    -> llFTManagerCommonShieldDObjDesc
+  efmanager.c:420   dEFManagerFoxReflectorEffectDesc
+                    -> llFoxSpecial2ReflectorDObjDesc + ...StartAnimJoint,
+                       texture file gFTDataFoxSpecial2, render gcDrawDObjTreeForGObj
+  efmanager.c:201   dEFManagerImpactWaveEffectDesc   <- the hard-landing wave
+                    -> llEFCommonEffects1ImpactWaveDObjDesc + MObjSub
+                       + AnimJoint + MatAnimJoint, render efManagerImpactWaveProcDisplay
+
+The port draws all four as flat camera-facing quads out of the particle atlas,
+using ONE texture lifted from each model's file (e.g. dEFCommonEffects3_
+RebirthHalo_glow for the platform). That is why three cycles of atlas work --
+bigger cells, more palette entries, source resolution -- never satisfied any of
+these rows: the parameters were wrong because the MECHANISM is wrong. "The Halo
+is not the correct asset to use" is exactly right; the halo glow is one texture
+belonging to a model the port never draws.
+
+What this row family actually needs is the DObj path, not a better sprite. That
+is a scoped piece of work (four EFDescs, each with geometry + joint anim), and
+it should be planned as such rather than attempted as another atlas tweak.
+=============================================================================
+
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: is don't see the floating revival platform at all. the Halo is not the correct asset to use
-    WRONG PROBLEM SOLVED: I fixed the halo's RESOLUTION (16x8 -> source 32x16). You are saying the halo
-    is the wrong ASSET. The revival PLATFORM is a separate source object; routing is the open question.
+    ROOT CAUSE FOUND (see banner): it is dEFManagerRebirthHaloEffectDesc, a MODEL with joint animation.
+    The port draws one texture from that model's file on a flat quad. Resolution was never the problem.
 
 -Fox down B VFX is not correct or using correct asset.
     Owner: you are still not using the correct asset for Fox's down B reflector.
-    WRONG PROBLEM SOLVED: A3I5 fixed the PALETTE (8 -> 32 entries, so two blues fit). Still unproven
-    that relocData/346 is the reflector the source draws. Verify the asset id before touching format again.
+    ROOT CAUSE FOUND (see banner): dEFManagerFoxReflectorEffectDesc renders via gcDrawDObjTreeForGObj
+    from gFTDataFoxSpecial2. It is an animated model, not a sprite. relocData/346 was the wrong lead.
 
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
-    LEAD: the cell is 16x32 (1:2) at source now, and the quad it draws on is square -- a 1:2 texture on a
-    1:1 quad reads as cut in half. Check the quad's aspect against row->width/row->height, not the cell.
+    ROOT CAUSE FOUND (see banner): dEFManagerShieldEffectDesc is a model (llFTManagerCommonShieldDObjDesc).
+    'Cut in half' is a 1:2 source cell on a square quad -- a symptom of drawing a model as a sprite.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
-    WRONG PROBLEM SOLVED: same as above -- I fixed the shockwave's resolution, not which texture routes.
+    ROOT CAUSE FOUND (see banner): it is dEFManagerImpactWaveEffectDesc -- DObjDesc + MObjSub + AnimJoint
+    + MatAnimJoint. A material-animated model. No single atlas texture can be the 'correct asset' for it.
+    A hard landing also emits efManagerDustHeavyDoubleMakeEffect (efmanager.c:2982, script 0x58), which IS
+    a particle effect -- so this row has a model half and a particle half, and only the wave is the model.
 
 -KO VFX not drawing correctly.
     Owner: Not fixed yet, the "blast pillar" VFX isn't drawing, and doesn't seen to draw on the same z axis as the fighters
-    OPEN: the v16 rail fix moved the twinkle to the fighter's depth and that part holds. The blast PILLAR
-    is a separate effect and has not been traced to a source maker yet.
+    TRACED: efManagerSparkleWhiteDeadMakeEffect (efmanager.c:3725) runs particle script 0x5C, driven from
+    ftCommonDeadUpStarProcUpdate. Script 0x5C asks for texture 24, which IS admitted (32x32, source size),
+    so the sheet is not the blocker here -- unlike the four rows above, this one IS a particle effect.
 
 -Results confetti doesn't look right.
     Owner: confetti falls behind fighter instead of infront and is not centered on the camera view: `artifacts/visibility/2026-08-03_owner_confetti-behind-fighter.png`
@@ -41,8 +78,13 @@ fix live next to the code that owns it -- the particle generator and its checker
       pos0 = (0, 1000, -1000) is_genlink_mask FALSE -> bankID | LBPARTICLE_MASK_GENLINK(3)  = link 3, BEHIND
       pos1 = (0, 1000,  -400) is_genlink_mask TRUE  -> bankID                                = link 0, IN FRONT
     You are seeing link 3 and not link 0, which is exactly "falls behind the fighter instead of in front".
-    The port's draw loop gates each link on `gobj->camera_mask & (1 << link)`
-    (battleship_lbparticle.c), so the next step is proving which of links 0/3 that mask admits at Results.
+    The port's per-link gate `gobj->camera_mask & (1 << link)` is SOURCE-EXACT (lbparticle.c:1500 uses the
+    same test), so the draw loop is not the defect. A GDB run confirms BOTH calls execute -- breakpoints
+    hit at mnvsresults.c:3216 and :3217. So both emitters are made; what is unproven is whether the
+    second one ALLOCATES (efManagerConfettiMakeEffect returns NULL on a short pool) and whether the
+    Results GObj's camera_mask carries both slots. LBPARTICLE_MASK_GENLINK(3)=32 puts them in alloc
+    slots 0 and 4, not 0 and 3. Blocked on a probe fix: probe-results-confetti.ps1 reads
+    gNdsConfettiFanCount, which --gc-sections drops from the ROM because nothing reads it.
     Both emitters sit at x=0: "not centered on the camera view" is the Results camera, not the emitter.
 
 -Some "hard hit" (side A attacks that hit) VFX look too big, please apply correct scaling to VFX.

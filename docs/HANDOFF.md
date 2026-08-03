@@ -59,19 +59,59 @@ behaviour) and scheduler.c's PAL branch (unreachable).
 ## The confetti structural difference, found and not yet fixed
 
 `mnvsresults.c:3208` makes **two** emitters at different depths on different
-generator links: `(0,1000,-1000)` on link 3 (behind) and `(0,1000,-400)` on
-link 0 (in front). The owner sees the far one only. The port's draw loop gates
-each link on `gobj->camera_mask & (1 << link)`, so the open question is which
-of links 0/3 that mask admits at Results. Both emitters sit at x=0, so "not
-centered on the camera view" is the Results camera, not the emitter.
+generator links: `(0,1000,-1000)` with `is_genlink_mask` FALSE, which
+`efmanager.c:6206` turns into `bankID | LBPARTICLE_MASK_GENLINK(3)`, and
+`(0,1000,-400)` with TRUE, which is `bankID` alone. `MASK_GENLINK(3)` is 32, so
+they land in alloc slots 0 and 4 -- one behind the fighters, one in front. The
+owner sees only the far one, which is the whole of "falls behind the fighter
+instead of infront".
 
-## Read this before re-fixing an asset row
+The port's per-link gate is **source-exact** -- `lbparticle.c:1500` uses the
+same `gobj->camera_mask & (1 << j)` -- so the draw loop is not the defect, and a
+GDB run confirms both calls execute (breakpoints hit at `mnvsresults.c:3216` and
+`:3217`). What is unproven is whether the second emitter ALLOCATES
+(`efManagerConfettiMakeEffect` returns NULL on a short pool) and whether the
+Results GObj's `camera_mask` carries both slots. Blocked on the probe symbol
+below. Both emitters sit at x=0, so "not centered on the camera view" is the
+Results camera, not the emitter.
 
-Four rows were marked FIXED on resolution grounds and the owner re-opened all
-four on ASSET grounds -- "the Halo is not the correct asset", "still not using
-the correct asset", "incorrect asset for the impact wave". Seating a texture at
-its source size is not the same as routing the source's texture. Verify the
-asset id against the source maker before changing a format or a cell again.
+## THE ASSET ROWS ARE MODELS, NOT SPRITES -- READ BEFORE TOUCHING THE ATLAS AGAIN
+
+Four of the owner's rows -- respawn platform, shield, Fox down B, hard-landing
+impact wave -- are not particle sprites in the source. Each is a full `EFDesc`
+drawn as an ANIMATED DObj MODEL TREE with its own display-list link, geometry,
+joint animation and material:
+
+| row | EFDesc | geometry + anim |
+|---|---|---|
+| respawn platform | `dEFManagerRebirthHaloEffectDesc` (efmanager.c:1648) | `llEFCommonEffects3RebirthHaloDObjDesc` + AnimJoint |
+| shield | `dEFManagerShieldEffectDesc` (:460) | `llFTManagerCommonShieldDObjDesc` |
+| Fox down B | `dEFManagerFoxReflectorEffectDesc` (:420) | `llFoxSpecial2ReflectorDObjDesc` + StartAnimJoint, render `gcDrawDObjTreeForGObj` |
+| impact wave | `dEFManagerImpactWaveEffectDesc` (:201) | DObjDesc + MObjSub + AnimJoint + **MatAnimJoint** |
+
+The port draws all four as flat camera-facing quads from the particle atlas,
+using one texture lifted out of each model's file. **That is why three cycles of
+atlas work never closed any of them** -- bigger cells, 32 palette entries and
+source resolution were all correct answers to the wrong question. The owner's
+"the Halo is not the correct asset to use" is precisely accurate: the halo glow
+is one texture belonging to a model the port never draws.
+
+This is scoped work on the DObj path, not another atlas tweak. Do not spend a
+fourth cycle on cell sizes for these rows.
+
+The KO blast pillar is NOT in this family: `efManagerSparkleWhiteDeadMakeEffect`
+(:3725) runs particle script 0x5C, whose texture 24 is admitted at source 32x32.
+That one is genuinely a particle effect and the sheet is not its blocker.
+
+## A counter nothing reads is a counter the linker deletes
+
+`probe-results-confetti.ps1` fails with "No symbol gNdsConfettiFanCount in
+current context" even though `battleship_efmanager.c:1472` defines it. The build
+uses `-fdata-sections` with `--gc-sections`, and a `volatile u32` that is only
+ever incremented has no reader, so its section is collected. Counters survive
+only because a marker block in `taskman_seam.c` names them. Add a new diagnostic
+to a marker dump in the same change that adds the counter, or it measures
+nothing.
 
 ## Standing hazards this cycle re-proved
 
