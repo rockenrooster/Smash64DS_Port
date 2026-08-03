@@ -167,11 +167,29 @@ try {
         # `pc->size == 0.0F` before it ever reaches the atlas -- which is why
         # such a piece costs no QuadMiss and would be invisible with every
         # counter clean. Counting sized vs unsized separates the two.
+        # X EXTENT, because "doesn't cover the whole scene" is a width question
+        # and every field above answers a count or a height one. The fan-out in
+        # efManagerConfettiMakeEffect offsets three emitters by +/-900 in x; if
+        # that reaches the pieces, minx/maxx straddle zero by roughly that much,
+        # and if it does not they cluster on one sign. Seeded from the head
+        # piece rather than a sentinel so the first comparison is meaningful.
         'set $s0count = 0',
         'set $s0sized = 0',
         'set $s0maxsize = 0.0',
+        'set $s0minx = 0.0',
+        'set $s0maxx = 0.0',
         'set $p = sLBParticleStructsAllocLinks[0]',
         'while $p != 0',
+        'if $s0count == 0',
+        'set $s0minx = $p->pos.x',
+        'set $s0maxx = $p->pos.x',
+        'end',
+        'if $p->pos.x < $s0minx',
+        'set $s0minx = $p->pos.x',
+        'end',
+        'if $p->pos.x > $s0maxx',
+        'set $s0maxx = $p->pos.x',
+        'end',
         'set $s0count = $s0count + 1',
         'if $p->size != 0',
         'set $s0sized = $s0sized + 1',
@@ -189,8 +207,20 @@ try {
         'set $s4count = 0',
         'set $s4sized = 0',
         'set $s4maxsize = 0.0',
+        'set $s4minx = 0.0',
+        'set $s4maxx = 0.0',
         'set $p = sLBParticleStructsAllocLinks[4]',
         'while $p != 0',
+        'if $s4count == 0',
+        'set $s4minx = $p->pos.x',
+        'set $s4maxx = $p->pos.x',
+        'end',
+        'if $p->pos.x < $s4minx',
+        'set $s4minx = $p->pos.x',
+        'end',
+        'if $p->pos.x > $s4maxx',
+        'set $s4maxx = $p->pos.x',
+        'end',
         'set $s4count = $s4count + 1',
         'if $p->size != 0',
         'set $s4sized = $s4sized + 1',
@@ -206,12 +236,14 @@ try {
         'set $p = $p->next',
         'end',
         ('printf "CONFETTISLOTS s0_count=%d s0_sized=%d s0_maxsize=%f ' +
-            's0_y1=%f s0_headsize=%f s0_tex=%d ' +
+            's0_y1=%f s0_headsize=%f s0_tex=%d s0_minx=%f s0_maxx=%f ' +
             's4_count=%d s4_sized=%d s4_maxsize=%f ' +
-            's4_y1=%f s4_headsize=%f s4_tex=%d ' +
-            'gens_used=%u gens_max=%u structs_used=%u\n", ' +
+            's4_y1=%f s4_headsize=%f s4_tex=%d s4_minx=%f s4_maxx=%f ' +
+            'fan=%u gens_used=%u gens_highwater=%u structs_used=%u\n", ' +
             '$s0count, $s0sized, $s0maxsize, $s0y1, $s0size, $s0tex, ' +
+            '$s0minx, $s0maxx, ' +
             '$s4count, $s4sized, $s4maxsize, $s4y1, $s4size, $s4tex, ' +
+            '$s4minx, $s4maxx, gNdsConfettiFanCount, ' +
             'gLBParticleGeneratorsUsedNum, gNdsParticleGeneratorsMax, ' +
             'gLBParticleStructsUsedNum'),
         ('printf "CONFETTI=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f\n", ' +

@@ -40,7 +40,11 @@ fix live next to the code that owns it -- the particle generator and its checker
 
 -Results confetti doesn't look right.
     Owner: STILL doesn't cover the whole scene, when troublshooting, just play results screen.
-    MEASURED: source spawns both emitters at x=0 (mnvsresults.c:3212); spread comes from per-piece randomisation.
+    MEASURED: source spawns both emitters at x=0 (mnvsresults.c:3212). The fan-out now reaches the
+    pieces -- fan=6, slot 0 spans x -1175 to +907 and slot 4 -1025 to +983, against a source that put
+    every piece at 0. But structs_used is 384 of a 384 pool, so six emitters divide what two had:
+    wider and sparser. More density costs ~1 VBlank per 91 pieces on a Results interval already at
+    mostly 4, max 8 -- that trade is the owner's FPS pass, not this row.
  
 -Star KO twinkle not playing in correct spot
     Owner: Still not playing at location of the fighter, VFX also looks low quality

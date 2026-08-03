@@ -67,6 +67,15 @@ reasoning is recorded at the append point in
   `#if NDS_RENDERER_HW_TRIANGLES` with an unguarded caller, so the one ROM that
   ships was the only one that failed to link; the rebirth display proc repeated
   the shape the same day inside `#if NDS_TASK39_FX_SHIELD`.
+- **Two equal counters are only saturation when the second one is the bound.**
+  `probe-results-confetti.ps1` printed `gens_used=24 gens_max=24`, which reads
+  exactly like the pool saturation above; `gens_max` is
+  `gNdsParticleGeneratorsMax`, a HIGH-WATER MARK, and the Results cap is 48 from
+  the override at `battleship_mnvsresults.c:236`. A pool bump was made and
+  reverted on that misread — cost one build. The field is now printed as
+  `gens_highwater`. `structs_used=384` against that scene's 384 **is** real
+  saturation, and it is the one that matters: the confetti fan divides a fixed
+  pool six ways.
 - **Read the asset before assuming the atlas can hold it.** The Fox reflector
   row looked like the shield and rebirth rows and is not: those two carry SHAPE,
   which A5I3's one shared 8-entry palette can encode as white plus coverage.

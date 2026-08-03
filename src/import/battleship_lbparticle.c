@@ -223,7 +223,26 @@ LBGenerator *ndsBaseLbParticleMakeGenerator(s32 bank_id, s32 script_id);
  *
  * PREDICTION, to be graded by the next both-CPU soak: DropMask 0, Complete ==
  * Attempt, and both Max counters strictly below 24. If either pins at 24 again
- * the demand is still unmeasured and this comment is still wrong. */
+ * the demand is still unmeasured and this comment is still wrong.
+ *
+ * GRADED 2026-08-03: PASSED, on both scenes, and these caps are now measured
+ * rather than floored. The both-CPU soak returned DropMask 0, Attempt 3 ==
+ * Complete 3, TransformsMax 13 and GeneratorsMax 11 -- all strictly under 24.
+ * probe-results-confetti.ps1, which reaches the heavier scene a battle soak
+ * never sees, read gens_used 24 against the 48 that
+ * ndsMNVSResultsFuncStartTimed asks for, with both sheets at 192 sized pieces.
+ *
+ * READ THE PROBE'S SECOND FIELD CAREFULLY. `gens_max` in the CONFETTISLOTS line
+ * is gNdsParticleGeneratorsMax -- a HIGH-WATER MARK, not a cap. It printed
+ * `gens_used=24 gens_max=24` and that reads exactly like the saturation this
+ * comment block warns about, so it was called saturated and generators were
+ * bumped to 48 here; the re-probe printed the same two numbers, because the
+ * cap the Results scene actually uses comes from the Wanted override at
+ * battleship_mnvsresults.c:236 and never from this define. Two equal counters
+ * are only saturation when the second one is the bound. The bump is reverted.
+ *
+ * Structs stay 48 / generators 24 / transforms 24 for the battle scene;
+ * Results overrides all three to 384/48/24 for its own frame. */
 #define NDS_R2_PARTICLE_POOL_STRUCTS 48
 #define NDS_R2_PARTICLE_POOL_GENERATORS 24
 #define NDS_R2_PARTICLE_POOL_TRANSFORMS 24

@@ -1452,6 +1452,23 @@ LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos, f32 scale)
  * edges or still leaves gaps, this is the number to move. */
 #define NDS_R2_CONFETTI_SPREAD_X 900.0F
 
+/* MEASURED 2026-08-03, probe-results-confetti.ps1 -Label xextent: the fan
+ * reaches the pieces. fan=6 (two sheets x three offsets), slot 0 spans x
+ * -1175.3 to +906.6 and slot 4 spans -1024.7 to +982.6 -- both straddling zero
+ * by about the 900 asked for, against a source that put every piece at x=0.
+ *
+ * WIDTH WAS BOUGHT WITH DENSITY, and that is the honest limit of this change.
+ * structs_used reads 384 against the 384 the Results scene asks for at
+ * battleship_mnvsresults.c:235, so the pool is the binding constraint and six
+ * emitters now divide what two used to have -- roughly 64 pieces each where the
+ * source gave 192. Buying the density back means raising that pool, and the
+ * measured table in battleship_lbparticle.c prices it at about one extra VBlank
+ * per 91 visible pieces on a Results interval already at mostly 4 and max 8.
+ * PROJECT_GOAL requires this screen to hold its cadence, and the owner has
+ * reserved the FPS pass to themselves, so that trade is theirs to make and is
+ * deliberately not taken here. 900 remains the number to move if they want it
+ * narrower and denser instead. */
+
 volatile u32 gNdsConfettiFanCount;
 
 LBParticle *efManagerConfettiMakeEffect(Vec3f *pos, sb32 is_genlink_mask)
