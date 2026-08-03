@@ -1202,9 +1202,16 @@ static intptr_t ndsEFManagerResolveOffset(intptr_t value)
 }
 
 /* Byte span of the LOADED file a desc offsets into, or 0 when this port has no
- * way to know. Only the three EF common files are knowable from the desc alone
- * -- file_head is a pointer to the slot, not a file id -- and they are the ones
- * that matter here. */
+ * way to know. file_head is a pointer to a slot, not a file id, so every entry
+ * here is a slot-address comparison and the table has to be written out.
+ *
+ * The three EF common files were the whole table until 2026-08-03, and the two
+ * fighter files below are why that mattered: a desc whose file_head is not
+ * listed gets span 0, and span 0 makes ndsEFManagerResolveDescOffsets return
+ * before it validates anything at all. The shield (&gFTManagerCommonFile) and
+ * Fox's reflector (&gFTDataFoxSpecial2) were both in that hole. Returning 0 has
+ * to mean "no such file", not "a file I decline to check", or the fail-closed
+ * path below is decoration. */
 static size_t ndsEFManagerFileSpan(void **file_head)
 {
     if (file_head == &gEFManagerFiles[0])
@@ -1218,6 +1225,14 @@ static size_t ndsEFManagerFileSpan(void **file_head)
     if (file_head == &gEFManagerFiles[2])
     {
         return ndsRelocGetLoadedFileSize(&llEFCommonEffects3FileID);
+    }
+    if (file_head == &gFTManagerCommonFile)
+    {
+        return ndsRelocGetLoadedFileSize(&llFTManagerCommonFileID);
+    }
+    if (file_head == &gFTDataFoxSpecial2)
+    {
+        return ndsRelocGetLoadedFileSize(&llFoxSpecial2FileID);
     }
     return 0u;
 }
@@ -1247,7 +1262,28 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     if (desc->proc_display == NULL) { return; }
 
     span = ndsEFManagerFileSpan(desc->file_head);
-    if (span == 0u) { return; }          /* not knowable: leave it alone */
+    if (span == 0u)
+    {
+        /* No span means the table above does not know this desc's file, so the
+         * offset checks below would be theatre. The NULL test is NOT theatre:
+         * an empty file slot makes efManagerMakeEffect compute 0 + offset and
+         * hand gcSetupCustomDObjs a DObjDesc in low memory, which is fatal
+         * whatever the span is, and this early return used to skip it.
+         *
+         * Counted rather than silent. Before 2026-08-03 this branch swallowed
+         * the shield and Fox's reflector without a trace, and "unvalidated"
+         * read exactly like "validated and fine". It must read 0 for the P1
+         * desc set now that the table covers both fighter files. */
+        gNdsEFDescUnknownFileCount++;
+        gNdsEFDescUnknownFileLast = (u32)(uintptr_t)desc;
+        if (*desc->file_head == NULL)
+        {
+            desc->proc_display = NULL;
+            gNdsEFDescDisabledCount++;
+            gNdsEFDescDisabledLast = (u32)(uintptr_t)desc;
+        }
+        return;
+    }
 
     if ((*desc->file_head == NULL) ||
         ((size_t)desc->o_dobjsetup >= span) ||
@@ -1257,6 +1293,7 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     {
         desc->proc_display = NULL;
         gNdsEFDescDisabledCount++;
+        gNdsEFDescDisabledLast = (u32)(uintptr_t)desc;
     }
 }
 
@@ -1284,6 +1321,29 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
  * dEFManagerMBallThrown/CaptureKirbyStar/LoseKirbyStar are excluded for a
  * second reason: their file_head is &gITManagerCommonData, which this ROM does
  * not link, so naming them is a link error rather than a fix. */
+/* THE RESPAWN PLATFORM AND FOX'S REFLECTOR are the last two entries below, and
+ * their absence from this list until 2026-08-03 IS those two rows.
+ *
+ * Measured on the flag-on ROM with no rebuild:
+ * dEFManagerRebirthHaloEffectDesc.o_dobjsetup read 0x20E8610 -- still the
+ * generated symbol's ADDRESS, never dereferenced to the offset it holds --
+ * while dEFManagerImpactWaveEffectDesc, which IS listed, read 0x7C28 and the
+ * shield read 0x300. Only a desc named here is ever passed to
+ * ndsEFManagerResolveDescOffsets, so an unlisted one keeps a RAM address in a
+ * field efManagerMakeEffect uses as a byte offset.
+ *
+ * It then computes *file_head + 0x20E8610 and hands gcSetupCustomDObjs a
+ * DObjDesc thirty-four megabytes past the file, and every symptom in the
+ * BUGS.md banner falls out of that one value: the tree is one node (measured
+ * child=NULL sib=NULL, which is the "nodes=6 over 6 frames" the banner records
+ * as a separate defect -- it is not separate), dobj->dl is whatever word was
+ * there (measured 0x14006 and 0x3F800000, the second being 1.0f, a Vec3f
+ * component, because DObjDesc is {id, dl, translate, rotate, scale}), and
+ * ndsRendererAdapterSubmitStageDL returns at renderer_dl.c:8571 because that
+ * value is inside no loaded file and no arena. That silent return is the only
+ * exit leaving tris, texready and texreject all 0 with no stat of any kind,
+ * which is exactly what three cycles chased through the atlas, the camera and
+ * the tree walk. */
 #if NDS_R2_SOURCE_EFFECTS_FULL
 #define NDS_EF_MANAGER_DESCS_FULL(X) \
     X(dEFManagerDamageSlashEffectDesc) \
@@ -1298,7 +1358,9 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     X(dEFManagerFireSparkEffectDesc) \
     X(dEFManagerShieldEffectDesc) \
     X(dEFManagerCatchSwirlEffectDesc) \
-    X(dEFManagerReflectBreakEffectDesc)
+    X(dEFManagerReflectBreakEffectDesc) \
+    X(dEFManagerRebirthHaloEffectDesc) \
+    X(dEFManagerFoxReflectorEffectDesc)
 #else
 #define NDS_EF_MANAGER_DESCS_FULL(X)
 #endif

@@ -184,6 +184,24 @@ try {
         # nothing. Those need opposite fixes, which is why this is printed.
         'printf "SHIELDWALK nodes=%u depth_overrun=%u sib_overrun=%u kinds=0x%x rejkinds=0x%x\n", gNdsRendererStageDObjNodeCount, gNdsRendererStageDObjDepthOverrunCount, gNdsRendererStageDObjSiblingOverrunCount, gNdsEffectRendererCallbackKindMask, gNdsEffectRendererRejectedKindMask',
         'printf "SHIELDFLAGS dobjflags=0x%x fields=0x%x\n", gNdsEffectRendererDObjFlagsMask, gNdsEffectRendererDObjFieldMask',
+        # THE DESC RESOLVER, and it is upstream of every counter above. An EFDesc
+        # that is not in battleship_efmanager.c's NDS_EF_MANAGER_DESCS list keeps
+        # a RAM ADDRESS in o_dobjsetup, efManagerMakeEffect adds it to the file
+        # base, and gcSetupCustomDObjs walks memory megabytes past the file --
+        # which yields a one-node tree whose dl is a random word, and that word
+        # is in no loaded file, so ndsRendererAdapterSubmitStageDL returns in
+        # silence. That is tris=0 with texready=0 AND texreject=0 and no stat,
+        # measured 2026-08-03 for the rebirth halo (o_dobjsetup 0x20E8610).
+        # unknownfile counts descs whose file_head the span table does not know,
+        # so their offsets were never bounds-checked; it must read 0.
+        # LAST on purpose: an absent symbol aborts the rest of a gdb batch.
+        'printf "EFDESC resolved=%u disabled=%u unknownfile=%u span=%u/%u/%u\n", gNdsEFDescResolveCount, gNdsEFDescDisabledCount, gNdsEFDescUnknownFileCount, gNdsEFDescEffectsSpan[0], gNdsEFDescEffectsSpan[1], gNdsEFDescEffectsSpan[2]',
+        # WHICH desc failed, symbolised. Only meaningful when the counts above
+        # are non-zero; both read as a bare 0 otherwise.
+        'printf "EFDESCLAST disabled="',
+        'info symbol gNdsEFDescDisabledLast',
+        'p/x gNdsEFDescDisabledLast',
+        'p/x gNdsEFDescUnknownFileLast',
         'detach',
         'quit'
     )

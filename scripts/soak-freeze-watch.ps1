@@ -772,6 +772,10 @@ try {
             # the next DObj-tree effect will walk garbage until the heap dies.
             'gNdsEFDescResolveCount',
             'gNdsEFDescDisabledCount',
+            # Descs whose file the span table does not recognise, so nothing
+            # bounds-checked their offsets. Silent before 2026-08-03, and it
+            # covered the shield and Fox's reflector the whole time. Must be 0.
+            'gNdsEFDescUnknownFileCount',
             'gNdsEFDescEffectsSpan[0]',
             'gNdsEFDescEffectsSpan[1]',
             'gNdsEFDescEffectsSpan[2]',

@@ -85,6 +85,21 @@ extern volatile u32 gNdsEFDescResolveCount;
  * measured byte span of EFCommonEffects1/2/3. A span equal to sizeof(Sprite)
  * means that asset is absent and lbRelocGetFileSize fell back to its stub. */
 extern volatile u32 gNdsEFDescDisabledCount;
+/* Descs whose file_head ndsEFManagerFileSpan does not recognise, so their
+ * offsets were never bounds-checked at all. This branch used to return in
+ * silence, and it swallowed the shield and Fox's reflector for three cycles --
+ * "unvalidated" read exactly like "validated and fine". Must be 0 for the P1
+ * desc set now that the span table covers gFTManagerCommonFile and
+ * gFTDataFoxSpecial2 as well as the three EF-common files. */
+extern volatile u32 gNdsEFDescUnknownFileCount;
+/* WHICH desc, not just how many. The first run with the two counters above read
+ * disabled=1 unknownfile=1 and could not say whether that was one desc failing
+ * both tests or two different ones -- and the answer decides the next move
+ * entirely (an out-of-span offset is a data bug; a NULL file slot is a missing
+ * asset). These hold the EFDesc address, which gdb symbolises, so one printf
+ * names it. Read them only when the counts above are non-zero. */
+extern volatile u32 gNdsEFDescDisabledLast;
+extern volatile u32 gNdsEFDescUnknownFileLast;
 extern volatile u32 gNdsEFDescEffectsSpan[3];
 /* Last checkpoint the KO burst reached. Latched, not cleared, so a frozen
  * capture names the step that faulted even with no usable backtrace -- the

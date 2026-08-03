@@ -237,6 +237,77 @@ WHAT THE MEASUREMENTS SAID, and one of them retracts a claim above:
    that recursion fired on stage DObjs every frame regardless.) Any future
    verdict on these four rows needs a harness that produces the effect.
 
+THE SILENT RETURN IS CONFIRMED, AND TWO OF THE FOUR DESCS WERE NEVER RESOLVED
+(2026-08-03, two GDB reads on the existing flag-on ROM, no rebuild).
+
+Breaking on SubmitStageDL's own early return -- the one at renderer_dl.c:8571
+taken when the DL pointer is inside neither a loaded reloc file nor the taskman
+arena, and the ONLY exit that leaves tris, texready and texreject all 0 with no
+stat of any kind -- fires, on an nGCCommonKindEffect GObj on link 10:
+
+    dl=0x14006   dobj=0x23c8a58 gobjid=1011 dllink=10 child=NULL sib=NULL
+    dl=0x3f800000  (same dobj, same frame)
+
+Neither is an address. 0x3F800000 is 1.0f, and DObjDesc is {id, dl, translate,
+rotate, scale}, so that is a Vec3f component being submitted as a display list.
+
+Then the descs themselves, read live:
+
+    dEFManagerRebirthHaloEffectDesc  o_dobjsetup = 0x20E8610   <- a RAM ADDRESS
+    dEFManagerImpactWaveEffectDesc   o_dobjsetup = 0x7C28
+    dEFManagerShieldEffectDesc       o_dobjsetup = 0x300
+
+Only a desc named in battleship_efmanager.c's NDS_EF_MANAGER_DESCS list is ever
+passed to ndsEFManagerResolveDescOffsets, and the rebirth halo and Fox's
+reflector were not in it. An unlisted desc keeps the generated symbol's ADDRESS
+in a field efManagerMakeEffect uses as a byte offset, so it computes
+*file_head + 0x20E8610 and hands gcSetupCustomDObjs a DObjDesc megabytes past
+the file. The one-node tree the note below calls "a different defect" is not
+different -- it is that same value.
+
+Both are in the list now, and ndsEFManagerFileSpan knows gFTManagerCommonFile
+and gFTDataFoxSpecial2 as well as the three EF-common files, because span 0 made
+ndsEFManagerResolveDescOffsets return BEFORE validating anything and the shield
+and the reflector were both in that hole. Measured: resolved 38 -> 42.
+
+AND IT IS STILL NOT ENOUGH. On the fixed flag-on ROM the probe reads
+admit=12 dobjdraw=6 submit=0 reject=6 tris=0 texready=0 texreject=0 nodes=6,
+i.e. unchanged. Two new facts came with it and both are new information rather
+than the old dead ends: disabled=1 (a desc failed validation and was neutralised)
+and unknownfile=1 (a desc's file is still unknown to the span table, which for
+this list can only be gFTDataFoxSpecial2 -- every other desc uses
+gEFManagerFiles[0..2]). gNdsEFDescDisabledLast/UnknownFileLast now hold the
+EFDesc address so one printf names them; they are unread as of this note.
+
+The impact wave complicates the story and the next cycle should start there
+rather than assume: the DObj dumped at the reject is WELL FORMED -- dl=0x2367D98
+inside EFCommonEffects1 (asset 83, 52,736 bytes), sane translate/rotate/scale,
+an anim_joint and an MObj -- so the rejected 0x14006 is NOT that node's dl. Some
+caller is handing SubmitStageDL a pointer that is not dobj->dl, and that is the
+open question. Do not re-run the desc read; it is above.
+
+AND THE FLAG-ON ARM NOW CRASHES, WHICH IS THE NEXT BLOCKER AND IS ATTRIBUTED.
+A 4-minute both-CPU soak of the flag-on ROM stopped after 1,032 presented frames
+with the PC in armWaitForIrq and every general register 0 -- calico's idle
+thread, i.e. the game thread is gone -- and sp_abt/lr_abt populated
+(lr_abt = threadSwitchTo+120), so it took a DATA ABORT rather than stalling.
+
+It is NOT the memory bound this flag has been feared for, and that fear can now
+be retired with a number: GENERALHEAP free = 130,080 against the 25,600 latch,
+COMMONSMAX = -1 (the GObj cap never fired), MALLOCOVF = 0, TASKARENA 1,253,376.
+Nor is it either closed freeze class: gNdsObjmanPanicCount and
+gNdsObjAnimRunawayCount both read 0.
+
+The honest attribution is this change. Resolving the rebirth halo's desc means
+efManagerMakeEffect finally builds its REAL DObj tree instead of a garbage
+one-node one, and KOBURST att=1 says a KO -- and therefore a respawn -- happened
+in that run. A construction that never ran before now runs and faults. That is
+progress in the sense that it is the next real seam, and it is why the flag
+stays at 0: nothing shipped is affected, because both new descs are inside
+NDS_EF_MANAGER_DESCS_FULL and the default build resolves only
+dEFManagerDeadExplodeEffectDesc, whose file (&gEFManagerFiles[1]) the span table
+already knew. Boundary passes at the tracked default.
+
 STILL OPEN: whether the gate fix makes them draw. That is a capture, not an
 argument, and it has not been taken yet.
 =============================================================================
@@ -245,16 +316,19 @@ argument, and it has not been taken yet.
     Owner: is don't see the floating revival platform at all. the Halo is not the correct asset to use
     ROOT CAUSE FOUND (see banner): it is dEFManagerRebirthHaloEffectDesc, a MODEL with joint animation.
     The port draws one texture from that model's file on a flat quad. Resolution was never the problem.
+    LOCALIZED: desc was never offset-resolved; listed now, and its real tree build data-aborts flag-on.
 
 -Fox down B VFX is not correct or using correct asset.
     Owner: you are still not using the correct asset for Fox's down B reflector.
     ROOT CAUSE FOUND (see banner): dEFManagerFoxReflectorEffectDesc renders via gcDrawDObjTreeForGObj
     from gFTDataFoxSpecial2. It is an animated model, not a sprite. relocData/346 was the wrong lead.
+    LOCALIZED: desc was unresolved and unvalidated; listed now, and its file is the one still unknown.
 
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     ROOT CAUSE FOUND (see banner): dEFManagerShieldEffectDesc is a model (llFTManagerCommonShieldDObjDesc).
     'Cut in half' is a 1:2 source cell on a square quad -- a symptom of drawing a model as a sprite.
+    LOCALIZED: desc resolves (0x300) and is validated now; SubmitStageDL's unloaded-DL return is the seam.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
@@ -262,6 +336,7 @@ argument, and it has not been taken yet.
     + MatAnimJoint. A material-animated model. No single atlas texture can be the 'correct asset' for it.
     A hard landing also emits efManagerDustHeavyDoubleMakeEffect (efmanager.c:2982, script 0x58), which IS
     a particle effect -- so this row has a model half and a particle half, and only the wave is the model.
+    LOCALIZED: its DObj is well formed with a valid dl; the pointer SubmitStageDL rejects is not that one.
 
 -KO VFX not drawing correctly.
     Owner: Not fixed yet, the "blast pillar" VFX isn't drawing, and doesn't seen to draw on the same z axis as the fighters
