@@ -1,102 +1,77 @@
 # Handoff
 
-Updated: 2026-08-03 late. The owner rewrote `BUGS.md`: every prior fix was
-rejected and four rows were added. **Boundary is GREEN** on
-`smash64ds-battle-playable-hwtri.nds` (zero GDB timeouts, zero exceptions),
-27.8 FPS in a live capture. Four rows are closed; four are blocked on ONE
-measured bound; the rest are measured with no defect left in the port.
+Updated: 2026-08-03 evening. **Boundary is GREEN** on
+`smash64ds-battle-playable-hwtri.nds` and a live capture reads **29.9 FPS /
+59.8 Hz logic**, up from 27.8. The owner re-opened five rows the same afternoon
+with sharper wording -- read `docs/BUGS.md` first, it is their board.
 
-## THE BOUND THAT OWNS FOUR ROWS -- READ BEFORE TOUCHING THE ATLAS
+## What the atlas bound actually was, because it was not contiguity
 
-The VFX atlas is 8,192 bytes and that caps every effect cell at 16x16 (8x8 for
-long animations) against 32x32 sources. Four rows -- respawn pad, shield, hard
-landing, and "ALL VFX low quality" -- are that one number.
+The 2026-08-03 morning conclusion ("the bound is a contiguous run inside
+libnds's per-bank splitting") is **WITHDRAWN**. That run had two changes in it
+and the other one explains the picture on its own.
 
-**It is NOT capacity, and 2026-08-03 measured it rather than arguing it.** The
-static battle corpus was repacked to DS paletted (22 of its 24 textures are
-sixteen-colour CI4 sources that were stored at two bytes a texel), which freed
-**74,496 bytes** of the 262,144 -- losslessly, same pixels, proven by the payload
-SHA. The atlas was then grown to 128x256 / 32,768 with cells at the source's 32.
-Result:
+`ndsRendererHardwarePrepareBattleStaticTextures` asserted
+`gNdsRendererBattleStaticTextureBankMask == 3` -- that the static corpus
+STRADDLES texture banks A and B. That is a restatement of one corpus size, not
+a property of a correct corpus. Repacking the corpus to DS paletted made it
+small enough to fit in bank A alone, the mask read 1, residency failed closed
+at zero keys, and the renderer fell back to ordinary texture resolution. A
+stage whose static textures never became resident renders untextured -- the
+exact symptom that got charged to a 32,768-byte particle sheet running beside
+it.
 
-```text
-27.8 FPS -> 8.6 FPS, logic 55.6 Hz -> 17.2 Hz, flat UNTEXTURED WHITE on the
-platform edge and lower-left -- the stage texture resolve failing and dropping
-every frame onto the generic renderer.
-artifacts/visibility/2026-08-03_atlas32k-candidate.png  (broken)
-artifacts/visibility/2026-08-03_atlas8k-reverted.png    (27.8 FPS, clean)
-```
+The mask is derived from preparedBytes now, and so are the span end and the
+residency byte count in the verifier, which restated the same size at **six**
+sites. If a generated size ever appears as a literal in a gate again, that is
+the defect, not the size.
 
-With 110,336 bytes free where 60,416 used to be. So the bound is a **contiguous
-run inside libnds's per-bank texture splitting**, and more free space does not
-buy one. The route to source-resolution cells is several bank-sized allocations,
-not a bigger one. Do not spend another cycle on a larger single block.
+## Where the atlas landed
 
-The repack itself is CORRECT offline and is left in the generator, switched off
-at `repack_paletted`: with it on, the runtime M4 residency prepare fails and the
-renderer silently falls back to ordinary texture resolution -- the stage still
-looks right and still runs at 27.8 FPS, which is exactly why it needs the
-verifier's counter and not an eye. Re-enable it together with a fix for the
-prepare, and grade it on the M4 residency assertion in
-`verify-battle-mariofox-gcrunall-loop-harness.ps1`, never on the picture.
+Four sheets of 8,192 bytes -- the allocation size that has never been refused --
+instead of one of 32,768. Same texels, bound per cell from the frame table; a
+sheet change costs a rebind plus a new primitive group, which is what an
+alpha-bucket change already cost. `NDS_PARTICLE_QUAD_ATLAS_SHEETS` is the free
+variable; **the sheet SIZE is the invariant**. Growing coverage means more
+sheets, never a bigger one.
 
-## What changed this cycle
+Every admitted cell is at SOURCE resolution now (cell cap 64, no reduction):
+shield 16x32 where it was 8x16, respawn halo 32x16 where it was 16x8, dust at
+its full 64x64. The static repack that paid for it is lossless and freed 74,496
+bytes; it also gained the oracle it never had, because nothing compared the
+repacked bytes -- `output_sha256` and the slow oracle both compare the canonical
+image upstream of the repack.
 
-- **The v16 rail is gone.** `ndsRendererSubmitParticleQuad` converted world to
-  v16 at a fixed x16, so anything past +/-2047.9 saturated: quads straddling it
-  collapsed along that axis ("VFX get x flattened around stage edges") and the
-  Star KO sparkle, which spawns at the receding fighter's z = -14,999, stopped
-  dead at -2,047 and hung near the camera. The factor is now chosen per BATCH
-  and escalates only when a quad needs it, so ordinary frames keep full x16
-  precision. `NDS_R2_PARTICLE_V16_HEADROOM` is deleted -- a fixed coarser factor
-  charged every hit spark for the one effect a match that leaves the stage.
-  Verify: `gNdsParticleWorldClampCount` must be 0; `gNdsParticleScaleShiftMax`
-  says how much range a Star KO frame had to buy.
-- **The freeze cannot recur as a freeze.** `syTaskmanCheckBufferLengths` ends
-  both overflow branches in `while (TRUE);`. That is the mechanism behind every
-  "the match froze" filed here. Under `SSB64_TARGET_NDS` it now records and
-  returns (sixth hunk of `scripts/decomp-patches/battleship/src_sys_taskman.patch`,
-  regenerated and verified to reproduce the tree byte-for-byte).
-  `gNdsTaskmanDLOverflowCount` / `gNdsTaskmanGraphicsOverflowCount` must be 0;
-  non-zero is still a real accounting defect, now diagnosable instead of dead.
-- **The VFX atlas is A3I5, not A5I3.** 32 palette entries instead of 8, at the
-  same 8,192 bytes and the same cell geometry -- alpha drops 32 levels to 8,
-  which no effect in the sheet was using. Fox's reflector carries COLOUR, two
-  flat blues, and a single shared 8-entry palette could only encode white plus
-  coverage. The checkers derive palette size from the generator report now
-  instead of pinning `+ 16`.
-- **Confetti is back at the source's own numbers.** Three cycles raised pool
-  (112 -> 384), rate (0.07 -> 1.26) and size (20 -> 32) against a fixed pool and
-  the owner rejected every one. The overrides are 0 and the clamp-upward-only
-  contract makes them inert, so `lbparticle` runs the source's values.
+## Freezes are structurally closed now, and yesterday's fix was one of thirty-five
 
-## Still open, and what each needs
+`rg 'while \(TRUE\);'` over the compiled decomp returns **35** sites. The
+2026-08-03 fix converted **2**, both in `syTaskmanCheckBufferLengths`, and the
+note it left read as though taskman owned the freeze. The owner filed "Shield
+freeze bug happened again" that afternoon against a build containing it.
 
-- **Hard-hit VFX too big.** Last cycle's 2.2 clamp is in `ndsTask39HitSparkSpawn`,
-  which is UNREACHABLE: `battleship_efmanager.c` provides a strong
-  `efManagerDamageNormalLightMakeEffect` that overrides the weak shim that was
-  its only external caller. The source ramp (`efmanager.c:2175`) is identical to
-  the port's, so the size has to be measured on the particle quad path.
-- **Crowd cues cut off.** The source cuts them ON PURPOSE: `ftPublicPlayCommon`
-  (`ftpublic.c:132`) stops the previous common cue, and `ftPublicDecideCall`
-  (`:165`) calls `ftPublicCommonStop()` when a character call starts at
-  knockback >= 130. Check the port plays the replacing call.
-- **Confetti.** Owner chose "find the structural difference". The tuning is
-  reverted; the untouched lead is the Results camera framing, which no cycle has
-  checked -- source-exact density can still read sparse through a wider frustum.
+objman.c held nineteen more, and they are the ones a shield hits -- a shield
+effect allocates a GObj, a DObj and an MObj on the frame it spawns, and every
+exhausted pool ended in a spin. They record and fail the allocation now;
+`gNdsObjmanPanicCount` must read 0 and `gNdsObjmanPanicMask` names the site in
+source order. Left spinning on purpose: main.c's idle thread (a spin IS the
+behaviour) and scheduler.c's PAL branch (unreachable).
 
-## What to look at, in BUGS.md order
+## The confetti structural difference, found and not yet fixed
 
-Test `smash64ds-battle-playable-hwtri.nds` -- the only published P1 ROM and the
-configuration every row was filed against. `smash64ds.nds` is P2 work; do not
-build it for this queue (owner, BUG_FIXING_PROCESS.md).
+`mnvsresults.c:3208` makes **two** emitters at different depths on different
+generator links: `(0,1000,-1000)` on link 3 (behind) and `(0,1000,-400)` on
+link 0 (in front). The owner sees the far one only. The port's draw loop gates
+each link on `gobj->camera_mask & (1 << link)`, so the open question is which
+of links 0/3 that mask admits at Results. Both emitters sit at x=0, so "not
+centered on the camera view" is the Results camera, not the emitter.
 
-- Star KO twinkle now follows the fighter out to the blast zone instead of
-  hanging near the camera, and effects no longer squash at the stage edges.
-- Fox's down B can carry its two source blues now the palette holds 32 entries.
-- Results confetti is back to the source's own density and size.
-- Shield, respawn pad and hard landing are unchanged -- they are the atlas bound
-  above, not a routing bug, and nothing this cycle could move them.
+## Read this before re-fixing an asset row
+
+Four rows were marked FIXED on resolution grounds and the owner re-opened all
+four on ASSET grounds -- "the Halo is not the correct asset", "still not using
+the correct asset", "incorrect asset for the impact wave". Seating a texture at
+its source size is not the same as routing the source's texture. Verify the
+asset id against the source maker before changing a format or a cell again.
 
 ## Standing hazards this cycle re-proved
 
