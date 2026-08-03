@@ -28,10 +28,17 @@ $patchDir = Join-Path $PSScriptRoot 'decomp-patches/battleship'
 # The port's own edits to the decompilation, keyed on -DSSB64_TARGET_NDS. Every
 # one of these files is compiled into the ROM through a src/import wrapper, so
 # they are build input and must survive a re-fetch.
+#
+# Patching a file that scripts/stages/generate_nds_native_stage.py pins costs a
+# verifier run if you forget: the M3 stage falsifier hashes its TEXT_INPUTS and
+# aborts Boundary with "SHA256 x != pinned y" before anything runs. objanim.c is
+# pinned there; re-pin it in the same change and say why the bytes moved.
 $patches = [ordered]@{
+    'src/ft/ftanim.c'                = 'src_ft_ftanim.patch'
     'src/mn/mncommon/mnstartup.c'    = 'src_mn_mncommon_mnstartup.patch'
     'src/mv/mvopening/mvopeningroom.c' = 'src_mv_mvopening_mvopeningroom.patch'
     'src/sc/scmanager.c'             = 'src_sc_scmanager.patch'
+    'src/sys/objanim.c'              = 'src_sys_objanim.patch'
     'src/sys/objhelper.c'            = 'src_sys_objhelper.patch'
     'src/sys/objman.c'               = 'src_sys_objman.patch'
     'src/sys/taskman.c'              = 'src_sys_taskman.patch'

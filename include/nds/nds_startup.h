@@ -832,6 +832,21 @@ extern volatile u32 gNdsTaskmanGraphicsOverflowBytes;
  * freeze report becomes "pool N is short" instead of a bisect. */
 extern volatile u32 gNdsObjmanPanicCount;
 extern volatile u32 gNdsObjmanPanicMask;
+/* The same freeze class one level down, in the animation-script parsers rather
+ * than the allocators. objman's nineteen spins were literal `while (TRUE);`;
+ * these four are `do { ... } while (anim_wait <= 0.0F);` loops that walk asset
+ * data and terminate only when the data is well formed. Three captures on
+ * 2026-08-02/03 stopped in the first of them on a script pointer of 0x23842ea,
+ * which is 2 mod 4 and so cannot be an AObjEvent32*.
+ *
+ * Count must read 0. Mask bit: 0/1 gcParseDObjAnimJoint (bad opcode / event
+ * limit), 2/3 gcParseMObjMatAnimJoint, 4/5 gcParseCObjCamAnimJoint, 6/7
+ * ftAnimParseDObjFigatree. Script and Opcode are the last fault's data, so a
+ * report names the stream instead of needing a bisect. */
+extern volatile u32 gNdsObjAnimRunawayCount;
+extern volatile u32 gNdsObjAnimRunawayMask;
+extern volatile u32 gNdsObjAnimRunawayScript;
+extern volatile u32 gNdsObjAnimRunawayOpcode;
 extern volatile u32 gNdsStartupTaskmanMallocCount;
 extern volatile u32 gNdsTaskmanGeneralHeapUsed;
 extern volatile u32 gNdsTaskmanDLContextsValid;

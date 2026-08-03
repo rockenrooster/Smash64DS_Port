@@ -1,0 +1,61 @@
+--- a/src/ft/ftanim.c
++++ b/src/ft/ftanim.c
+@@ -1,4 +1,15 @@
+ #include <ft/fighter.h>
++#if defined(SSB64_TARGET_NDS)
++#include <stdint.h>
++#include <nds/nds_startup.h>
++
++/* The event16 half of the objanim.c freeze -- see the block comment there. This
++ * is the parser a fighter actually runs (ftParamUpdateAnimKeys picks it whenever
++ * anim_desc.is_anim_joint is clear, i.e. for every ordinary figatree motion), so
++ * leaving it unbounded while bounding the event32 side would close one instance
++ * of the pattern again. Same counter, mask bits 6 and 7. */
++#define NDS_FTANIM_EVENT_LIMIT 4096u
++#endif
+ 
+ // // // // // // // // // // // //
+ //                               //
+@@ -70,6 +81,9 @@
+     s32 i;
+     u16 command_kind;
+     u16 flags;
++#if defined(SSB64_TARGET_NDS)
++    u32 events = 0;
++#endif
+ 
+     if (root_dobj->anim_wait != AOBJ_ANIM_NULL)
+     {
+@@ -386,9 +400,31 @@
+                 break;
+ 
+             default:
++#if defined(SSB64_TARGET_NDS)
++                gNdsObjAnimRunawayCount++;
++                gNdsObjAnimRunawayMask |= 1u << 6u;
++                gNdsObjAnimRunawayScript =
++                    (u32)(uintptr_t)root_dobj->anim_joint.event16;
++                gNdsObjAnimRunawayOpcode = command_kind;
++                root_dobj->anim_wait = AOBJ_ANIM_NULL;
++                return;
++#else
+                 break;
++#endif
+             }
+-        } 
++#if defined(SSB64_TARGET_NDS)
++            if (++events >= NDS_FTANIM_EVENT_LIMIT)
++            {
++                gNdsObjAnimRunawayCount++;
++                gNdsObjAnimRunawayMask |= 1u << 7u;
++                gNdsObjAnimRunawayScript =
++                    (u32)(uintptr_t)root_dobj->anim_joint.event16;
++                gNdsObjAnimRunawayOpcode = command_kind;
++                root_dobj->anim_wait = AOBJ_ANIM_NULL;
++                return;
++            }
++#endif
++        }
+         while (root_dobj->anim_wait <= 0.0F);
+     }
+ }

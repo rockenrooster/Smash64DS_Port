@@ -7,13 +7,6 @@ fix live next to the code that owns it -- the particle generator and its checker
 `battleship_lbparticle.c`, `battleship_efmanager.c`, `render-audio-fgm-phase-pack.py`
 -- so a row here should not need to be an essay.
 
--Some Crowd noise audio cues get cut off (like for big hits that reach upper bound KO boundary).
-    Owner: Ok if source cuts them off, then lets change that, I don't want the sound cues interrupted if possible.
-    **FIXED** (2026-08-03) the audience no longer interrupts itself. Both cuts live in ftpublic.c and both
-    go through func_80026738_27338; battleship_ftpublic.c renames that symbol for this TU only, so fighter
-    voices and looping SFX keep source behaviour. Not a voice leak: the FGM mixer reclaims a handle on
-    REASON_DURATION. gNdsFtPublicCueLetRingCount counts declined interruptions. Boundary green.
-
 =============================================================================
 ONE FINDING EXPLAINS FOUR OF THESE ROWS, AND IT IS NOT THE ATLAS (2026-08-03)
 =============================================================================
@@ -278,3 +271,12 @@ argument, and it has not been taken yet.
 
 -Some "hard hit" (side A attacks that hit) VFX look too big, please apply correct scaling to VFX.
     MEASURED: scale is source-exact (efmanager.c:2175/2197). Last cycle's clamp was in UNREACHABLE code.
+    
+-Shield Freeze is back
+    **FIXED** (2026-08-03) all three captures spun in gcParseDObjAnimJoint's event loop, whose `default:` case is
+    the one branch that consumes nothing -- an invalid opcode re-reads one word forever with interrupts still on,
+    which is exactly a frozen picture that keeps presenting. Measured opcode 100 (the captures' r6=0x64) on a
+    script pointer 2 mod 4, which cannot be an AObjEvent32*. All four animation parsers now record the fault and
+    end that one animation. 7-min both-CPU soak NO-FREEZE with gNdsObjAnimRunawayCount=10 on mask bit 0.
+    Open and no longer fatal: what hands the parser a misaligned script. Not the shield table (49 installs probed
+    clean) and not ndsRelocResolvePointerFromFileBase (its offset fallback measured 0 calls).

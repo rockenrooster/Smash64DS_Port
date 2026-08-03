@@ -2734,6 +2734,36 @@ static s32 ndsRelocFindKnownFileContaining(const void *ptr, size_t size,
                                             ptr, size, out_base, out_size);
 }
 
+/* Offset counts the file-relative fallback below; Misalign counts the words that
+ * fallback would have turned into an address no aligned type can live at, and
+ * Value is the last one. Misalign > 0 is the freeze class being refused at its
+ * source. Offset > 0 with Misalign 0 says the resolver ran and had nothing to
+ * refuse -- which is a different statement from "this never ran", and the two
+ * were indistinguishable before. Defined here for the same reason
+ * gNdsRelocHeapDeclineCount is: this file's counter block is further down. */
+volatile u32 gNdsRelocResolveOffsetCount;
+volatile u32 gNdsRelocResolveMisalignCount;
+volatile u32 gNdsRelocResolveMisalignValue;
+
+/* THE SHIELD FREEZE, at the seam that manufactures the pointer.
+ *
+ * This resolver's contract is "give me a pointer to a `size`-byte object of this
+ * file, or NULL". It had no alignment requirement, so its offset fallback --
+ * `base + raw` for ANY stored word no larger than the file -- happily returned
+ * addresses that no aligned type can live at. A figatree slot holding a plain
+ * data word rather than a relocated pointer resolves that way: the caller
+ * (lbCommonAddFighterPartsFigatree) hands it to gcAddDObjAnimJoint, and
+ * gcParseDObjAnimJoint then walks it and never terminates, because a misaligned
+ * LDR on ARM9 rotates the word it reads and the opcodes come out as noise. The
+ * three captures on 2026-08-02/03 all froze there on 0x23842ea -- an in-file
+ * address that is 2 mod 4, which is exactly the shape this function produced and
+ * nothing else in the port produces.
+ *
+ * A misaligned result is therefore not a pointer to refuse to trust; it is not a
+ * pointer at all. Return NULL, which every caller already handles -- the joint
+ * gets AOBJ_ANIM_NULL and no animation, the same answer a NULL slot already
+ * gets -- and count it, because "no misaligned words were seen" and "this code
+ * never ran" have to be distinguishable. */
 void *ndsRelocResolvePointerFromFileBase(const void *file_base,
                                          const void *ptr,
                                          size_t size)
@@ -2741,13 +2771,23 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
     const void *base = NULL;
     size_t data_size = 0u;
     uintptr_t raw;
+    uintptr_t align_mask;
+    uintptr_t resolved;
 
     if (ptr == NULL)
     {
         return NULL;
     }
+    align_mask = (size >= sizeof(u32)) ? (sizeof(u32) - 1u)
+                                       : ((size >= sizeof(u16)) ? 1u : 0u);
     if (ndsRelocFindKnownFileContaining(ptr, size, NULL, NULL) != FALSE)
     {
+        if (((uintptr_t)ptr & align_mask) != 0u)
+        {
+            gNdsRelocResolveMisalignCount++;
+            gNdsRelocResolveMisalignValue = (u32)(uintptr_t)ptr;
+            return NULL;
+        }
         return (void *)ptr;
     }
     if (ndsRelocFindKnownFileContaining(file_base, 1u, &base, &data_size) ==
@@ -2759,6 +2799,14 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
     raw = (uintptr_t)ptr;
     if ((raw > data_size) || (size > (size_t)(data_size - raw)))
     {
+        return NULL;
+    }
+    gNdsRelocResolveOffsetCount++;
+    resolved = (uintptr_t)base + raw;
+    if ((resolved & align_mask) != 0u)
+    {
+        gNdsRelocResolveMisalignCount++;
+        gNdsRelocResolveMisalignValue = (u32)resolved;
         return NULL;
     }
     return (u8 *)base + raw;

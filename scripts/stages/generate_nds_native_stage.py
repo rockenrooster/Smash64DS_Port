@@ -319,9 +319,14 @@ TEXT_INPUTS = {
         "decomp/BattleShip-main/decomp/src/gr/grdisplay.c",
         "d48f187c90f66f2284625977a9e5cd8450108407f91c4d4a9247d28f5646ac03",
     ),
+    # Re-pinned 2026-08-03 for src_sys_objanim.patch: the three animation-script
+    # parsers get an SSB64_TARGET_NDS-only event bound and a recorded fault on an
+    # unrecognised opcode, which is where the shield freeze actually stopped. The
+    # generator reads this file only for the two contract tokens below, and both
+    # still hold; nothing it derives lives inside those loops.
     "objanim": InputSpec(
         "decomp/BattleShip-main/decomp/src/sys/objanim.c",
-        "eddedabd7aaffb4090e01fe0edcfac77f4262f42b91a3fe8faeddae2e3356dde",
+        "89fc8a93bf70809514c1e88ef3c29af5c1311c010b59e8b696155ac9c6483bbe",
     ),
     "objdisplay": InputSpec(
         "decomp/BattleShip-main/decomp/src/sys/objdisplay.c",

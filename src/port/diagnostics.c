@@ -116,6 +116,15 @@ volatile u32 gNdsTaskmanGraphicsOverflowBytes;
  * scheduler.c's PAL branch (unreachable; the port sets the mode). */
 volatile u32 gNdsObjmanPanicCount;
 volatile u32 gNdsObjmanPanicMask;
+/* The animation-script parsers, same class one level down: four unbounded
+ * `do { ... } while (anim_wait <= 0.0F)` loops over asset data, and a `default:`
+ * case in each that consumes nothing at all, so an unrecognised opcode re-reads
+ * one word forever with interrupts still on -- a picture that freezes while the
+ * emulator keeps presenting. See nds_startup.h for the mask legend. */
+volatile u32 gNdsObjAnimRunawayCount;
+volatile u32 gNdsObjAnimRunawayMask;
+volatile u32 gNdsObjAnimRunawayScript;
+volatile u32 gNdsObjAnimRunawayOpcode;
 volatile u32 gNdsStartupTaskmanMallocCount;
 volatile u32 gNdsTaskmanGeneralHeapUsed;
 volatile u32 gNdsTaskmanDLContextsValid;

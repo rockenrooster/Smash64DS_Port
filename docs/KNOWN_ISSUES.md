@@ -440,3 +440,31 @@ How-to-Play track. Not fixed here because the `= 0` looks deliberate — a
 placeholder meaning "not wired" reads exactly like this — and guessing wrong
 silently changes which music plays. Owner's call: set it to 34 to match decomp,
 or drop the declaration so the checker stops guarding a value nothing uses.
+
+## Something hands the joint parser a misaligned animation script
+
+`gcParseDObjAnimJoint` used to freeze the match on this (BUGS.md "Shield Freeze
+is back", closed 2026-08-03). It no longer can: the four animation parsers bound
+their event loops and record a fault instead of spinning. What has NOT been
+found is the producer.
+
+The 7-minute both-CPU soak of 2026-08-03 reported `gNdsObjAnimRunawayCount=10`,
+`gNdsObjAnimRunawayMask=1` (bit 0, unrecognised opcode in the DObj event32
+parser), `gNdsObjAnimRunawayScript=0x238561A` and `gNdsObjAnimRunawayOpcode=100`.
+`0x238561A` is 2 mod 4, so it cannot be an `AObjEvent32*`; a misaligned `LDR` on
+ARM9 rotates the word it reads, which is where opcode 100 comes from. The three
+freeze captures show the same shape (`0x23842ea`, `r6=0x64`).
+
+Two candidate producers are already excluded by measurement, so do not re-run
+them: the shield table (`ftcommonguard1.c:238`, 49 installs probed on the live
+ROM, every one 4-aligned and in-file, `joint_num=27` against Fox's 28-entry
+`dFoxShieldPose_shield_anim_joint_*`), and `ndsRelocResolvePointerFromFileBase`
+(its offset fallback measured `gNdsRelocResolveOffsetCount=0`, i.e. it never ran).
+
+What is left: the parser rewriting its own pointer at `objanim.c:513/525`
+(`event32 = event32->p` on SetAnim/Jump reads a raw word out of the script with
+no validation), or `AObjAnimAdvance` walking off the end of a short script into
+neighbouring data. The counter now names the script address on every occurrence,
+so the next cycle can break on the writer instead of reproducing a freeze.
+
+Cost today: ten joints in seven minutes end their animation one pose early.

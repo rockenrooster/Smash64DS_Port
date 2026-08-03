@@ -870,6 +870,29 @@ try {
             # during play and the ROM DECLINED instead of spinning in
             # syMallocSet. Before 2026-08-02 that was the shield freeze.
             'gNdsRelocHeapDeclineCount',
+            # The other two freeze guards, and they were BOTH unreadable from
+            # here until 2026-08-03. objman's nineteen converted spins landed
+            # with a witness that this list never named, so a soak could not
+            # say whether an object pool had run short; and the animation-script
+            # parsers were still unbounded, which is where the three
+            # 2026-08-02/03 captures actually stopped. Both counts must read 0.
+            # ObjmanPanicMask names the pool; ObjAnimRunawayMask names the
+            # parser (0/1 DObj, 2/3 MObj, 4/5 CObj, 6/7 figatree) and
+            # Script/Opcode name the stream that faulted.
+            'gNdsObjmanPanicCount',
+            'gNdsObjmanPanicMask',
+            'gNdsObjAnimRunawayCount',
+            'gNdsObjAnimRunawayMask',
+            'gNdsObjAnimRunawayScript',
+            'gNdsObjAnimRunawayOpcode',
+            # ndsRelocResolvePointerFromFileBase. Misalign > 0 is a stored word
+            # refused BEFORE it could become an unwalkable animation script --
+            # the engagement proof for that fix. Offset is its positive control:
+            # 0 there means the resolver's fallback never ran at all, so a
+            # Misalign of 0 says nothing either way.
+            'gNdsRelocResolveOffsetCount',
+            'gNdsRelocResolveMisalignCount',
+            'gNdsRelocResolveMisalignValue',
             'gNdsAudioFgmReleaseRampCount',
             'gNdsAudioFgmGenerationMismatchCount',
             'gNdsAudioFgmStaleStopCount',
@@ -1313,6 +1336,21 @@ try {
             # run that does not need them. Guarded by the same nm filter, so a
             # ROM without the runtime prints nothing extra.
             ) + @(Select-SoakSymbols @(
+                # THE TWO CONVERTED FREEZE CLASSES, first, because a frozen run
+                # never reaches the clean-run globals and these are the ones
+                # that say the ROM survived something instead of spinning in it.
+                # objman's pools, then the animation-script parsers -- the three
+                # 2026-08-02/03 captures stopped in gcParseDObjAnimJoint's event
+                # loop, which no counter could see until it was bounded.
+                'gNdsObjmanPanicCount',
+                'gNdsObjmanPanicMask',
+                'gNdsObjAnimRunawayCount',
+                'gNdsObjAnimRunawayMask',
+                'gNdsObjAnimRunawayScript',
+                'gNdsObjAnimRunawayOpcode',
+                'gNdsRelocResolveOffsetCount',
+                'gNdsRelocResolveMisalignCount',
+                'gNdsRelocResolveMisalignValue',
                 'gNdsParticleBankLoadResult',
                 'gNdsParticleBankScriptsUnpacked',
                 'gNdsParticleBankScriptsRejected',
