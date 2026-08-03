@@ -109,6 +109,35 @@ MEMARENA, so it needs a soak or a marker dump. Get that number, take a capture
 of a shield and a respawn, and if both hold, flip the default. The 25,600 matters because ifCommonSetMaxNumGObj latches the GObj pool
 below it -- an earlier attempt at this flag capped the pool for a whole match,
 so this is a memory-risk change and not a cosmetic one.
+
+THE ACTUAL DEFECT, FOUND 2026-08-03 AND HALF-FIXED:
+ndsRendererAdapterSubmitStageDObj (reloc_backend_renderer_dl.c) submitted the
+DObj it was handed AND STOPPED. The source's gcDrawDObjTree (objdisplay.c)
+recurses into `child` and walks the whole `sib_next` chain from the first
+sibling. So every multi-node effect model was drawn ONE NODE DEEP -- which is
+the owner's own verdict on the first build that routed the real shield asset:
+"it is using the correct asset but its only like 1/2 or 1/4 of it, like a 1/4
+slice of the complete circle". One omission, four rows.
+
+Two halves are needed and BOTH are now written, both behind
+NDS_R2_SOURCE_EFFECTS_FULL:
+  1. Routing. The makers reached weak shims that call ndsEFManagerMakeVisualEffect
+     (a procedural disc, tagged NDS_TASK39_EFFECT_SUBSTITUTE in its own census).
+     Strong definitions in battleship_efmanager.c now forward shield, rebirth
+     halo and Fox reflector to their ndsBase* source makers.
+  2. Traversal. The tree walk above, bounded at depth 16 / 64 siblings with
+     overrun counters, because these trees come from resolved offsets that have
+     held garbage before.
+
+WHY IT IS STILL OFF: SubmitStageDObj is the STAGE path, not an effect path --
+the stage, weapons and effects all reach the hardware through it -- so recursing
+changes what the whole scene submits. A tickhud shield probe that completed
+inside 300s before the change timed out at 380s with it on. That is an
+unmeasured whole-frame cost, so it does not ship on the strength of one effect
+looking right. Boundary passes at the default (flag 0, walk inert).
+
+NEXT: measured A/B of whole-frame cost with the flag on. The walk is correct
+against gcDrawDObjTree; what is unknown is what it costs.
 =============================================================================
 
 -Respawn floating platform isn't visible when respawning after KO.

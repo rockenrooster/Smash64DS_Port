@@ -8835,12 +8835,133 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     }
 }
 
+/* ONE NODE IS NOT A TREE, AND THAT IS WHY THE SHIELD WAS A QUARTER CIRCLE.
+ *
+ * This submitted the DObj it was handed and stopped. The source does not:
+ * gcDrawDObjTree (objdisplay.c) recurses into `child` and, from the first
+ * sibling, walks the whole `sib_next` chain. Every multi-node effect model
+ * therefore drew only its ROOT node here -- the owner's own words on the first
+ * build that routed the real asset were "it is using the correct asset but its
+ * only like 1/2 or 1/4 of it, like a 1/4 slice of the complete circle".
+ *
+ * That single omission is what four BUGS.md rows have in common. The shield,
+ * Fox's reflector, the rebirth halo and the impact wave are all EFDescs whose
+ * geometry is a DObj tree, so all four were being drawn one node deep, and no
+ * amount of atlas resolution or palette work could ever have shown the rest of
+ * them.
+ *
+ * The sibling rule is the source's, kept exactly: only a node with no
+ * `sib_prev` walks the chain, so a tree is traversed once rather than once per
+ * sibling. Recursion depth is the model's own node depth, which these effect
+ * descs keep shallow.
+ *
+ * NOT copied from the source: gcPrepDObjMatrix and the matching gSPPopMatrix.
+ * The DS path composes its transform inside ndsRendererAdapterSubmitStageDL
+ * per display list rather than pushing an N64 matrix stack here, so adding a
+ * push/pop pair around the recursion would double-transform every child. */
+static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
+                                                  GObj *camera_gobj,
+                                                  u32 initial_geometry_mode);
+
+/* BOUNDED, because this walks a tree the PORT builds from resolved offsets and
+ * not one the N64 shipped. Those offsets have held raw symbol addresses before
+ * -- the note at Makefile:1393 records gcSetupCustomDObjs walking garbage and
+ * allocating a DObj per bogus node until the allocator gave up -- so a cycle or
+ * a wild pointer here is a real possibility, and unbounded recursion over one
+ * is a hung handheld rather than a wrong picture. The first build of this walk
+ * timed out a 300-second probe, which is exactly that failure.
+ *
+ * The limits are far above any real effect model (these descs are a root plus a
+ * handful of parts) and both overruns are counted, so hitting one is a
+ * diagnosable defect instead of a freeze. */
+#define NDS_RENDERER_STAGE_DOBJ_MAX_DEPTH 16u
+#define NDS_RENDERER_STAGE_DOBJ_MAX_SIBLINGS 64u
+
+volatile u32 gNdsRendererStageDObjDepthOverrunCount;
+volatile u32 gNdsRendererStageDObjSiblingOverrunCount;
+volatile u32 gNdsRendererStageDObjNodeCount;
+
+static void ndsRendererAdapterSubmitStageDObjTreeDepth(
+    DObj *dobj, u32 kind, GObj *camera_gobj, u32 initial_geometry_mode,
+    u32 depth)
+{
+    DObj *sibling;
+    u32 seen;
+
+    if (dobj == NULL)
+    {
+        return;
+    }
+    if (depth >= NDS_RENDERER_STAGE_DOBJ_MAX_DEPTH)
+    {
+        gNdsRendererStageDObjDepthOverrunCount++;
+        return;
+    }
+    gNdsRendererStageDObjNodeCount++;
+    ndsRendererAdapterSubmitStageDObjNode(dobj, kind, camera_gobj,
+                                          initial_geometry_mode);
+    if (dobj->child != NULL)
+    {
+        ndsRendererAdapterSubmitStageDObjTreeDepth(
+            dobj->child, kind, camera_gobj, initial_geometry_mode, depth + 1u);
+    }
+    if (dobj->sib_prev == NULL)
+    {
+        seen = 0u;
+        for (sibling = dobj->sib_next; sibling != NULL;
+             sibling = sibling->sib_next)
+        {
+            if (++seen > NDS_RENDERER_STAGE_DOBJ_MAX_SIBLINGS)
+            {
+                gNdsRendererStageDObjSiblingOverrunCount++;
+                break;
+            }
+            ndsRendererAdapterSubmitStageDObjTreeDepth(
+                sibling, kind, camera_gobj, initial_geometry_mode,
+                depth + 1u);
+        }
+    }
+}
+
+/* OFF BY DEFAULT, AND THE REASON IS THE FUNCTION'S NAME.
+ *
+ * This is SubmitStage DObj -- the stage, the weapons and the effects all reach
+ * the hardware through it. Recursing changes what the STAGE submits too, not
+ * just what the shield submits, and a tickhud probe that completed inside 300
+ * seconds before the change timed out at 380 with it on. That is a whole-scene
+ * cost that has not been measured, so it does not ship on the strength of a
+ * fix to one effect.
+ *
+ * It rides NDS_R2_SOURCE_EFFECTS_FULL because the two are useless apart: the
+ * flag makes the model effects exist, this makes more than their root node
+ * draw, and both are wanted or neither is. Next step is a measured A/B on
+ * whole-frame cost with the flag on -- the walk is correct against
+ * objdisplay.c's gcDrawDObjTree, what is unknown is what it costs. */
+static void ndsRendererAdapterSubmitStageDObjTree(DObj *dobj, u32 kind,
+                                                  GObj *camera_gobj,
+                                                  u32 initial_geometry_mode)
+{
+#if NDS_R2_SOURCE_EFFECTS_FULL
+    ndsRendererAdapterSubmitStageDObjTreeDepth(dobj, kind, camera_gobj,
+                                               initial_geometry_mode, 0u);
+#else
+    ndsRendererAdapterSubmitStageDObjNode(dobj, kind, camera_gobj,
+                                          initial_geometry_mode);
+#endif
+}
+
 void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
                                        void *camera_gobj_ptr,
                                        u32 initial_geometry_mode)
 {
-    DObj *dobj = dobj_ptr;
-    GObj *camera_gobj = camera_gobj_ptr;
+    ndsRendererAdapterSubmitStageDObjTree(dobj_ptr, kind, camera_gobj_ptr,
+                                          initial_geometry_mode);
+}
+
+static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
+                                                  GObj *camera_gobj,
+                                                  u32 initial_geometry_mode)
+{
     DObjDLLink *dl_link;
     u32 i;
 

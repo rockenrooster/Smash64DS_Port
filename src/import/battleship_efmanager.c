@@ -218,6 +218,47 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerEggBreakMakeEffect
 #undef efManagerFoxReflectorMakeEffect
 
+/* ROUTE THE THREE MODEL EFFECTS AT THEIR SOURCE MAKERS, WHICH IS THE HALF THE
+ * FLAG NEVER DID.
+ *
+ * BUGS.md has carried "the Halo is not the correct asset", "still not using the
+ * correct asset for Fox's down B" and a shield that "looks cut in half" for
+ * several cycles, and every attempt at them so far has been an atlas tweak.
+ * They are not sprites: each is an EFDesc whose geometry is a DObj tree with
+ * joint animation (dEFManagerShieldEffectDesc -> llFTManagerCommonShieldDObjDesc,
+ * dEFManagerRebirthHaloEffectDesc -> llEFCommonEffects3RebirthHaloDObjDesc,
+ * dEFManagerFoxReflectorEffectDesc -> llFoxSpecial2ReflectorDObjDesc).
+ *
+ * The source makers for all three are compiled and sitting right here under
+ * their ndsBase* names. What reaches them was a WEAK shim per effect
+ * (reloc_backend_compat_shims.c:1728 for the shield,
+ * battle_playable_compat_stubs.c:141 for the halo) that calls
+ * ndsEFManagerMakeVisualEffect instead -- a procedurally built disc, recorded
+ * in its own census as NDS_TASK39_EFFECT_SUBSTITUTE. So the model was never
+ * made, let alone drawn, and no cell size or palette could have changed that.
+ *
+ * Turning NDS_R2_SOURCE_EFFECTS_FULL on alone does NOT fix this, which was
+ * measured on 2026-08-03: the flag gates the offset-RESOLVE list, not the
+ * routing, so the stand-in still won and the owner's verdict on that build was
+ * "still wrong". These strong definitions are the other half -- a strong symbol
+ * beats the weak shim, which is the same mechanism battleship_efmanager.c
+ * already uses for efManagerDamageNormalLightMakeEffect.
+ *
+ * Gated on the flag because they inherit its cost and its acceptance test:
+ * gNdsTaskmanGeneralHeapFreeMin must stay above 25,600 (ifCommonSetMaxNumGObj
+ * latches the GObj pool below it) and the effects must be seen to draw. */
+#if NDS_R2_SOURCE_EFFECTS_FULL
+GObj *efManagerShieldMakeEffect(GObj *fighter_gobj)
+{
+    return ndsBaseEFManagerShieldMakeEffect(fighter_gobj);
+}
+
+GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
+{
+    return ndsBaseEFManagerRebirthHaloMakeEffect(fighter_gobj, size);
+}
+#endif
+
 #if NDS_TASK39_FX_SHIELD
 #define NDS_VISUAL_TEMPLATE_COUNT 14
 #define NDS_TASK39_SHIELD_MESH_SCALE (1.0F / 6.0F)
@@ -1331,8 +1372,15 @@ void efManagerInitEffects(void)
 
 GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
 {
+#if NDS_R2_SOURCE_EFFECTS_FULL
+    /* The source maker builds llFoxSpecial2ReflectorDObjDesc with its start/
+     * loop/hit/end anim joints. The stand-in below is a flat disc, which is
+     * what "still not using the correct asset" has meant every cycle. */
+    return ndsBaseEFManagerFoxReflectorMakeEffect(fighter_gobj);
+#else
     return ndsEFManagerMakeVisualEffect(nNDSVisualEffectReflector, NULL,
                                         1.6F, 1, fighter_gobj);
+#endif
 }
 
 /* ------------------------------------------------------------------------
