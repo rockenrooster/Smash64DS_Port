@@ -124,5 +124,19 @@ extern volatile u32 gNdsEffectRendererTriangleCount;
 extern volatile u32 gNdsEffectRendererTextureReadyCount;
 extern volatile u32 gNdsEffectRendererTextureRejectCount;
 extern volatile u32 gNdsEffectRendererRejectedDrawCount;
+/* Effect GObjs admitted to the hardware path because they carry a SOURCE model
+ * rather than one of the procedural templates -- links 10 and 15 as well as 18.
+ * Zero at the tracked default; non-zero is the engagement proof for
+ * NDS_R2_SOURCE_EFFECTS_FULL. */
+extern volatile u32 gNdsEffectRendererSourceModelAdmitCount;
+
+/* The effect DObj tree walk (reloc_backend_renderer_dl.c). Declared and reset
+ * here so they exist in EVERY build, not only the one that increments them:
+ * -fdata-sections plus --gc-sections deletes a volatile counter with no reader,
+ * and a probe that names an absent symbol loses its whole gdb run. NodeCount is
+ * what separates "the walk emitted nothing" from "the walk never ran". */
+extern volatile u32 gNdsRendererStageDObjNodeCount;
+extern volatile u32 gNdsRendererStageDObjDepthOverrunCount;
+extern volatile u32 gNdsRendererStageDObjSiblingOverrunCount;
 
 #endif

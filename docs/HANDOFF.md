@@ -75,33 +75,51 @@ Results GObj's `camera_mask` carries both slots. Blocked on the probe symbol
 below. Both emitters sit at x=0, so "not centered on the camera view" is the
 Results camera, not the emitter.
 
-## THE ASSET ROWS ARE MODELS, NOT SPRITES -- READ BEFORE TOUCHING THE ATLAS AGAIN
+## THE FOUR ASSET ROWS ARE A LINK COVERAGE GAP -- NOT THE ATLAS, NOT THE CAMERA
 
-Four of the owner's rows -- respawn platform, shield, Fox down B, hard-landing
-impact wave -- are not particle sprites in the source. Each is a full `EFDesc`
-drawn as an ANIMATED DObj MODEL TREE with its own display-list link, geometry,
-joint animation and material:
+Respawn platform, shield, Fox down B and hard-landing wave are source `EFDesc`
+MODELS, not sprites, and every EFDesc names the display link it draws on:
 
-| row | EFDesc | geometry + anim |
+| EFDesc | link | draws? |
 |---|---|---|
-| respawn platform | `dEFManagerRebirthHaloEffectDesc` (efmanager.c:1648) | `llEFCommonEffects3RebirthHaloDObjDesc` + AnimJoint |
-| shield | `dEFManagerShieldEffectDesc` (:460) | `llFTManagerCommonShieldDObjDesc` |
-| Fox down B | `dEFManagerFoxReflectorEffectDesc` (:420) | `llFoxSpecial2ReflectorDObjDesc` + StartAnimJoint, render `gcDrawDObjTreeForGObj` |
-| impact wave | `dEFManagerImpactWaveEffectDesc` (:201) | DObjDesc + MObjSub + AnimJoint + **MatAnimJoint** |
+| `dEFManagerShieldEffectDesc` (efmanager.c:460) | 15 | no |
+| `dEFManagerFoxReflectorEffectDesc` (:420) | 15 | no |
+| `dEFManagerRebirthHaloEffectDesc` (:1648) | 10 | no |
+| `dEFManagerImpactWaveEffectDesc` (:201) | 10 | no |
+| `dEFManagerDeadExplodeEffectDesc` (:850) — KO burst | **18** | **yes** |
 
-The port draws all four as flat camera-facing quads from the particle atlas,
-using one texture lifted out of each model's file. **That is why three cycles of
-atlas work never closed any of them** -- bigger cells, 32 palette entries and
-source resolution were all correct answers to the wrong question. The owner's
-"the Halo is not the correct asset to use" is precisely accurate: the halo glow
-is one texture belonging to a model the port never draws.
+`ndsStageGCDrawAllLoopIsEffectDisplay` required link 18, and the procedural
+stand-ins are hard-wired onto 18 by `ndsEFManagerMakeVisualEffect`. The KO burst
+is the control the repo was already carrying: same source-model route, works
+unconditionally, differs only in that field. That is what "the battle hardware
+path does not consume source effect DL links" meant — written twice, never
+located, and looked for in the atlas, then the camera passes, then the tree walk.
+The camera captures 10 (pass 3) and 15 (pass 4); it was never the gap.
 
-This is scoped work on the DObj path, not another atlas tweak. Do not spend a
-fourth cycle on cell sizes for these rows.
+A second gate sat behind it: `ndsEFManagerIsVisualEffectGObj` (efmanager.c:969)
+returns TRUE only when `dobj->dl` matches a procedural TEMPLATE pointer, which a
+ROM-asset list can never do. Both are open now, flag-gated, counted by
+`gNdsEffectRendererSourceModelAdmitCount`.
+
+**Proven, one probe run** (flag on): `admit=12 capture=6 dobjdraw=6 submit=0
+reject=6 tris=0`, `kindmask=0` (no stand-in exists, so all twelve are source
+models). Structurally-zero to twelve. **They still do not appear**: the submit
+emits ZERO triangles and rejects all six. Next seam is inside
+`ndsStageGCDrawAllLoopSubmitEffectDObj` — its second guard (`callback_kind !=
+DOBJ_TREE` is the live suspect; `dv` and camera are already established) or the
+walk emitting nothing. Print `gNdsRendererStageDObjNodeCount` beside SHIELDCHAIN
+to separate those in one run. Do not spend a fourth cycle on cell sizes here.
 
 The KO blast pillar is NOT in this family: `efManagerSparkleWhiteDeadMakeEffect`
 (:3725) runs particle script 0x5C, whose texture 24 is admitted at source 32x32.
 That one is genuinely a particle effect and the sheet is not its blocker.
+
+**The pacing harness cannot judge these rows.** `sample-tick-hud-buckets.ps1`
+reads `gNdsVisualEffectCreateCount=0` / `gNdsVisualEffectKindMask=0` over its
+window — zero effects of any kind. Use `probe-shield-vfx.ps1`, which drives both
+CPUs; it takes `-DrawCounter` now because it armed on the stand-in's counter and
+so could not see the very configuration it exists to judge (that is the real
+cause of the "380-second timeout" once misread as a performance result).
 
 ## A counter nothing reads is a counter the linker deletes
 

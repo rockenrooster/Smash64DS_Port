@@ -7,7 +7,24 @@ param(
     # Frames the shield must have been continuously drawn before the capture.
     # Not 0: the shield grows in, so frame 0 of a guard is a dot. Not large
     # either -- a CPU releases guard quickly and a long wait never fires.
-    [ValidateRange(1, 120)][int]$HoldFrames = 6
+    [ValidateRange(1, 120)][int]$HoldFrames = 6,
+    # WHICH COUNTER SAYS "A SHIELD IS ON SCREEN THIS FRAME", because that
+    # depends on which shield the ROM was built with and this probe could not
+    # see one of the two.
+    #
+    # gNdsTask39FxShieldDrawCount belongs to ndsEFManagerShieldProcDisplay --
+    # the PROCEDURAL stand-in. NDS_R2_SOURCE_EFFECTS_FULL=1 replaces that
+    # stand-in with the source model, so the counter stops advancing and this
+    # probe spends its whole budget and reports "no shield was drawn" about a
+    # ROM that draws one. That is not a hang and it is not a regression; it is
+    # the probe watching a counter the build no longer uses, and it cost this
+    # campaign one 380-second timeout that got misread as a performance result.
+    #
+    # gNdsEffectRendererSourceModelAdmitCount is the same signal for the source
+    # path: it advances once per captured source-model effect per frame.
+    [ValidateSet('gNdsTask39FxShieldDrawCount',
+                 'gNdsEffectRendererSourceModelAdmitCount')]
+    [string]$DrawCounter = 'gNdsTask39FxShieldDrawCount'
 )
 
 # ONE SCREENSHOT OF THE SHIELD, ON THE FRAME THE SHIELD IS ACTUALLY UP.
@@ -58,7 +75,7 @@ $emulator = $null
 # the whole run silently. Checked up front, as every harness here does.
 $required = @(
     'ndsBattlePlayableFrameCompleteMarker',
-    'gNdsTask39FxShieldDrawCount',
+    $DrawCounter,
     'gNdsVisualEffectKindMask',
     'gNdsBattlePlayablePacingPresentedFrames'
 )
@@ -105,12 +122,12 @@ try {
         # A shield is on screen this frame iff the draw counter moved since the
         # previous frame marker. Counting the RUN of such frames is what
         # separates a grown bubble from the first frame of a guard.
-        'if gNdsTask39FxShieldDrawCount > $prev_draws',
+        ('if ' + $DrawCounter + ' > $prev_draws'),
         'set $run = $run + 1',
         'else',
         'set $run = 0',
         'end',
-        'set $prev_draws = gNdsTask39FxShieldDrawCount',
+        ('set $prev_draws = ' + $DrawCounter),
         'if $run > $best_run',
         'set $best_run = $run',
         'end',
@@ -150,7 +167,22 @@ try {
 
         'continue',
 
-        'printf "SHIELDPROBE frames=%d shots=%d shot_frame=%d best_run=%d draws=%u kindmask=%u\n", $frames, $shots, $shot_frame, $best_run, gNdsTask39FxShieldDrawCount, gNdsVisualEffectKindMask',
+        ('printf "SHIELDPROBE counter=' + $DrawCounter +
+            ' frames=%d shots=%d shot_frame=%d best_run=%d draws=%u kindmask=%u\n"' +
+            ', $frames, $shots, $shot_frame, $best_run, ' + $DrawCounter +
+            ', gNdsVisualEffectKindMask'),
+        # THE EXISTENCE CHAIN, in one line, because "the shield is not on screen"
+        # has five distinct causes and the arming counter above only separates
+        # the first. admit -> dobjdraw -> submit -> tris is the order; the first
+        # of them that is 0 is where it stops. reject counts the two refusals in
+        # ndsStageGCDrawAllLoopSubmitEffectDObj (no dv / no camera / wrong
+        # callback kind, then zero triangles produced).
+        'printf "SHIELDCHAIN admit=%u dobjdraw=%u submit=%u reject=%u tris=%u texready=%u texreject=%u capture=%u\n", gNdsEffectRendererSourceModelAdmitCount, gNdsEffectRendererDObjDrawCount, gNdsEffectRendererSubmitCount, gNdsEffectRendererRejectedDrawCount, gNdsEffectRendererTriangleCount, gNdsEffectRendererTextureReadyCount, gNdsEffectRendererTextureRejectCount, gNdsEffectRendererCaptureCount',
+        # nodes=0 with dobjdraw>0 means the submit refused BEFORE the walk (its
+        # second guard: no dv, no camera, or callback_kind != DOBJ_TREE).
+        # nodes>0 with tris=0 means the walk ran and the geometry produced
+        # nothing. Those need opposite fixes, which is why this is printed.
+        'printf "SHIELDWALK nodes=%u depth_overrun=%u sib_overrun=%u\n", gNdsRendererStageDObjNodeCount, gNdsRendererStageDObjDepthOverrunCount, gNdsRendererStageDObjSiblingOverrunCount',
         'detach',
         'quit'
     )

@@ -8877,9 +8877,11 @@ static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
 #define NDS_RENDERER_STAGE_DOBJ_MAX_DEPTH 16u
 #define NDS_RENDERER_STAGE_DOBJ_MAX_SIBLINGS 64u
 
-volatile u32 gNdsRendererStageDObjDepthOverrunCount;
-volatile u32 gNdsRendererStageDObjSiblingOverrunCount;
-volatile u32 gNdsRendererStageDObjNodeCount;
+/* The three counters live in diagnostics.c, not here. Defining them inside this
+ * `#if NDS_RENDERER_HW_TRIANGLES` block would make them exist only in the
+ * configurations that increment them, and a probe naming an absent symbol loses
+ * its whole gdb run. nds_effects.h declares them; cliff_ledge.c resets them,
+ * which is also what keeps --gc-sections from collecting them. */
 
 static void ndsRendererAdapterSubmitStageDObjTreeDepth(
     DObj *dobj, u32 kind, GObj *camera_gobj, u32 initial_geometry_mode,
@@ -8923,29 +8925,36 @@ static void ndsRendererAdapterSubmitStageDObjTreeDepth(
     }
 }
 
-/* OFF BY DEFAULT, AND THE REASON IS THE FUNCTION'S NAME.
+/* EFFECTS ONLY, AND THE MEASUREMENT IS WHY.
  *
- * This is SubmitStage DObj -- the stage, the weapons and the effects all reach
- * the hardware through it. Recursing changes what the STAGE submits too, not
- * just what the shield submits, and a tickhud probe that completed inside 300
- * seconds before the change timed out at 380 with it on. That is a whole-scene
- * cost that has not been measured, so it does not ship on the strength of a
- * fix to one effect.
+ * The first version of this recursed inside ndsRendererAdapterSubmitStageDObj,
+ * which is the STAGE entry point -- the stage, the weapons and the effects all
+ * reach the hardware through it. A synchronized tick-HUD A/B on identical
+ * frames priced that at one whole VBlank:
  *
- * It rides NDS_R2_SOURCE_EFFECTS_FULL because the two are useless apart: the
- * flag makes the model effects exist, this makes more than their root node
- * draw, and both are wanted or neither is. Next step is a measured A/B on
- * whole-frame cost with the flag on -- the walk is correct against
- * objdisplay.c's gcDrawDObjTree, what is unknown is what it costs. */
-static void ndsRendererAdapterSubmitStageDObjTree(DObj *dobj, u32 kind,
-                                                  GObj *camera_gobj,
-                                                  u32 initial_geometry_mode)
+ *     frame   control      candidate
+ *       441   1,119,936    1,120,000
+ *       443   1,119,872    1,120,000
+ *       447   1,119,488    1,680,384   <- 2 VBlanks -> 3
+ *       449   1,119,872    1,680,256   <- 2 VBlanks -> 3
+ *
+ * +560,896 ticks is 560,190-per-VBlank almost exactly, on frames that were
+ * inside the 1.12M gate. The stage carries 57 DObjs (M3_NATIVE_STAGE_CHECK
+ * dobjs=57) and the native stage path already handles their geometry, so
+ * re-walking them bought nothing and cost a frame.
+ *
+ * The effect models are what needed the tree. So the recursion lives on the
+ * EFFECT call site now and the shared stage entry is a single-node submit
+ * again, exactly as it was. */
+void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
+                                            void *camera_gobj_ptr,
+                                            u32 initial_geometry_mode)
 {
 #if NDS_R2_SOURCE_EFFECTS_FULL
-    ndsRendererAdapterSubmitStageDObjTreeDepth(dobj, kind, camera_gobj,
+    ndsRendererAdapterSubmitStageDObjTreeDepth(dobj_ptr, kind, camera_gobj_ptr,
                                                initial_geometry_mode, 0u);
 #else
-    ndsRendererAdapterSubmitStageDObjNode(dobj, kind, camera_gobj,
+    ndsRendererAdapterSubmitStageDObjNode(dobj_ptr, kind, camera_gobj_ptr,
                                           initial_geometry_mode);
 #endif
 }
@@ -8954,7 +8963,7 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
                                        void *camera_gobj_ptr,
                                        u32 initial_geometry_mode)
 {
-    ndsRendererAdapterSubmitStageDObjTree(dobj_ptr, kind, camera_gobj_ptr,
+    ndsRendererAdapterSubmitStageDObjNode(dobj_ptr, kind, camera_gobj_ptr,
                                           initial_geometry_mode);
 }
 
@@ -9023,6 +9032,16 @@ void ndsRendererAdapterEndStageTraversal(void)
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
                                        void *camera_gobj,
                                        u32 initial_geometry_mode)
+{
+    (void)dobj;
+    (void)kind;
+    (void)camera_gobj;
+    (void)initial_geometry_mode;
+}
+
+void ndsRendererAdapterSubmitEffectDObjTree(void *dobj, u32 kind,
+                                            void *camera_gobj,
+                                            u32 initial_geometry_mode)
 {
     (void)dobj;
     (void)kind;

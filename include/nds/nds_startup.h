@@ -4838,6 +4838,12 @@ void ndsRendererAdapterEndStageTraversal(void);
 void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
                                        void *camera_gobj,
                                        u32 initial_geometry_mode);
+/* Same submit, but it walks the DObj tree (child + sibling chain) the way
+ * objdisplay.c's gcDrawDObjTree does. Effect-only on purpose: doing it on the
+ * stage entry above cost a whole VBlank on measured frames. */
+void ndsRendererAdapterSubmitEffectDObjTree(void *dobj, u32 kind,
+                                            void *camera_gobj,
+                                            u32 initial_geometry_mode);
 s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj);
 s32 ndsRendererAdapterCommitNativeStageDisplay(void *display_gobj,
                                                 s32 link_id);

@@ -12791,13 +12791,84 @@ static sb32 ndsStageGCDrawAllLoopIsWeaponDisplay(GObj *gobj, s32 link_id)
             (link_id == 14)) ? TRUE : FALSE;
 }
 
+/* THIS PREDICATE IS WHAT "THE BATTLE HARDWARE PATH DOES NOT CONSUME SOURCE
+ * EFFECT DL LINKS" ACTUALLY MEANS. The port wrote that sentence down twice --
+ * Makefile:1401 and battleship_efmanager.c:1240 -- and neither said where it
+ * lived, so three cycles looked for it in the particle atlas, in the camera's
+ * capture passes and in the DObj tree walk. It is here, and it is one call:
+ *
+ *   ndsEFManagerIsVisualEffectGObj (efmanager.c:969) returns TRUE only when
+ *   dobj->dl equals one of sNdsVisualTemplates[i].display_list.
+ *
+ * That is a pointer comparison against the PROCEDURAL stand-in templates. A
+ * source-made effect -- efManagerMakeEffectForce loading a real DObjDesc, which
+ * is what NDS_R2_SOURCE_EFFECTS_FULL switches the shield, rebirth halo, Fox
+ * reflector and impact wave over to -- carries the ROM asset's display list and
+ * can never match. So turning the flag on removed each stand-in and put nothing
+ * on screen in its place: not because the geometry was wrong, not because the
+ * camera dropped the link, but because this gate admits only the things the
+ * flag replaces.
+ *
+ * A source model is admitted on its own terms now: the same link-18 effect
+ * identity, plus a DObj carrying a display list, which is exactly what the
+ * submit below already requires before it will draw anything. */
+/* THE LINK IS THE WHOLE ANSWER, and the codebase was carrying its own control
+ * the entire time. Every EFDesc names the display link it draws on
+ * (efmanager.c, field 2 of the desc):
+ *
+ *     dEFManagerShieldEffectDesc        :460   link 15
+ *     dEFManagerFoxReflectorEffectDesc  :420   link 15
+ *     dEFManagerRebirthHaloEffectDesc   :1648  link 10
+ *     dEFManagerImpactWaveEffectDesc    :201   link 10
+ *     dEFManagerDeadExplodeEffectDesc   :850   link 18   <- the KO burst
+ *
+ * The first four are the four rows that have never drawn. The fifth is the KO
+ * burst, which BUGS.md records as working "unconditionally" through exactly the
+ * same source-model route. The only thing that differs between them is this
+ * field, and this predicate used to require 18.
+ *
+ * So "the battle hardware path does not consume source effect DL links" was a
+ * LINK COVERAGE GAP: the effect submit accepted one link, the procedural
+ * stand-ins were hard-wired onto it (ndsEFManagerMakeVisualEffect passes 18 to
+ * gcAddGObjDisplay), and the source models that live on 10 and 15 were never
+ * offered to the hardware at all. Not the atlas, not the camera -- the camera
+ * captures 10 in pass 3 and 15 in pass 4 -- and not the tree walk.
+ *
+ * Behind the second gate sits ndsEFManagerIsVisualEffectGObj (efmanager.c:969),
+ * which returns TRUE only when dobj->dl matches a procedural template pointer.
+ * A source model carries the ROM asset's list and can never match it, so both
+ * gates had to open for any of these to draw. */
+#define NDS_EFFECT_DISPLAY_LINK_TEMPLATE 18
+
 static sb32 ndsStageGCDrawAllLoopIsEffectDisplay(GObj *gobj, s32 link_id)
 {
-    return ((gobj != NULL) &&
-            (gobj->id == nGCCommonKindEffect) &&
-            (gobj->dl_link_id == 18) &&
-            (link_id == 18) &&
-            (ndsEFManagerIsVisualEffectGObj(gobj) != FALSE)) ? TRUE : FALSE;
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindEffect) ||
+        (gobj->dl_link_id != link_id))
+    {
+        return FALSE;
+    }
+    if ((link_id == NDS_EFFECT_DISPLAY_LINK_TEMPLATE) &&
+        (ndsEFManagerIsVisualEffectGObj(gobj) != FALSE))
+    {
+        return TRUE;
+    }
+#if NDS_R2_SOURCE_EFFECTS_FULL
+    /* 10 and 15 carry the four source models; 18 also carries the KO burst,
+     * which reaches here when it is not a template. A display list is required
+     * because the submit below refuses to draw without one anyway. */
+    if ((link_id == 10) || (link_id == 15) ||
+        (link_id == NDS_EFFECT_DISPLAY_LINK_TEMPLATE))
+    {
+        DObj *dobj = DObjGetStruct(gobj);
+
+        if ((dobj != NULL) && (dobj->dv != NULL))
+        {
+            gNdsEffectRendererSourceModelAdmitCount++;
+            return TRUE;
+        }
+    }
+#endif
+    return FALSE;
 }
 
 static void ndsStageGCDrawAllLoopRecordWeaponCapture(GObj *gobj,
@@ -12993,7 +13064,11 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
     texture_reject_before =
         gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
     ndsRendererAdapterBeginStageTraversal();
-    ndsRendererAdapterSubmitStageDObj(
+    /* The effect path, and the only caller that walks the tree. An effect
+     * EFDesc is a model -- shield, rebirth halo, Fox reflector, impact wave are
+     * all multi-node -- and submitting only the root drew the owner's "1/4
+     * slice of the complete circle". */
+    ndsRendererAdapterSubmitEffectDObjTree(
         root,
         callback_kind,
         sNdsStageGCDrawAllLoopCurrentCameraGObj,

@@ -82,17 +82,16 @@ battle camera captures them in five passes (gmcamera.c:1057-1099):
 
 and the port compiles that function. So the camera mask is not the gap. Pass 5
 demonstrably reaches the screen, because the procedural stand-ins on link 18
-draw. Whether passes 3 and 4 reach the DS hardware path is the open question --
-that is what "the battle hardware path does not consume source effect DL links"
-must actually mean, and it has not been measured. Measure which capture passes
-the hardware path submits BEFORE changing anything.
+draw.
+
+ANSWERED 2026-08-03, AND IT WAS NEVER A PASS QUESTION. "Which capture passes
+does the hardware path submit" was the wrong shape of question: the gate is
+PER-GObj, not per-pass, and it tests a display-list pointer. See "THE THIRD
+HALF" below. The pass table stays because it is correct and it is what rules the
+camera out; it is not where the work is.
 
 THE WORK, in order:
-  1. MEASURE which of the camera's six capture passes the DS hardware path
-     actually submits. Pass 5 does (the stand-ins draw). Passes 3 and 4 carry
-     the effect links and are the suspects. Do not skip this step -- the last
-     two attempts at this row family both published a mechanism before
-     measuring it, and both were wrong.
+  1. Admit source models at the hardware submit gate (done -- third half below).
   2. Set NDS_R2_SOURCE_EFFECTS_FULL = 1.
   3. Retire the ndsEFManagerBuildDisc stand-ins for shield and rebirth.
 MEASURED 2026-08-03, one build: with NDS_R2_SOURCE_EFFECTS_FULL=1 the
@@ -110,16 +109,18 @@ of a shield and a respawn, and if both hold, flip the default. The 25,600 matter
 below it -- an earlier attempt at this flag capped the pool for a whole match,
 so this is a memory-risk change and not a cosmetic one.
 
-THE ACTUAL DEFECT, FOUND 2026-08-03 AND HALF-FIXED:
+A REAL DEFECT, FOUND 2026-08-03:
 ndsRendererAdapterSubmitStageDObj (reloc_backend_renderer_dl.c) submitted the
 DObj it was handed AND STOPPED. The source's gcDrawDObjTree (objdisplay.c)
 recurses into `child` and walks the whole `sib_next` chain from the first
-sibling. So every multi-node effect model was drawn ONE NODE DEEP -- which is
-the owner's own verdict on the first build that routed the real shield asset:
-"it is using the correct asset but its only like 1/2 or 1/4 of it, like a 1/4
-slice of the complete circle". One omission, four rows.
+sibling. So every multi-node effect model was drawn ONE NODE DEEP.
 
-Two halves are needed and BOTH are now written, both behind
+Attributing the owner's "1/4 slice of the complete circle" to THIS is a guess
+and is not evidence: that row already has a measured explanation four lines
+down -- a 1:2 source cell drawn on a square atlas quad. Both are real; which one
+the owner was looking at is unsettled and only a capture decides it.
+
+Three halves are needed and ALL THREE are now written, all behind
 NDS_R2_SOURCE_EFFECTS_FULL:
   1. Routing. The makers reached weak shims that call ndsEFManagerMakeVisualEffect
      (a procedural disc, tagged NDS_TASK39_EFFECT_SUBSTITUTE in its own census).
@@ -127,17 +128,87 @@ NDS_R2_SOURCE_EFFECTS_FULL:
      halo and Fox reflector to their ndsBase* source makers.
   2. Traversal. The tree walk above, bounded at depth 16 / 64 siblings with
      overrun counters, because these trees come from resolved offsets that have
-     held garbage before.
+     held garbage before. Effect call site ONLY -- see measurement 1 below.
+  3. Admission. The submit gate, immediately below, which is the one that had
+     never been found.
 
-WHY IT IS STILL OFF: SubmitStageDObj is the STAGE path, not an effect path --
-the stage, weapons and effects all reach the hardware through it -- so recursing
-changes what the whole scene submits. A tickhud shield probe that completed
-inside 300s before the change timed out at 380s with it on. That is an
-unmeasured whole-frame cost, so it does not ship on the strength of one effect
-looking right. Boundary passes at the default (flag 0, walk inert).
+THE THIRD HALF, FOUND 2026-08-03 AFTER MEASURING THE FIRST TWO, AND IT IS A
+LINK COVERAGE GAP. The codebase was carrying its own control the whole time.
+Every EFDesc names the display link it draws on (efmanager.c, desc field 2):
 
-NEXT: measured A/B of whole-frame cost with the flag on. The walk is correct
-against gcDrawDObjTree; what is unknown is what it costs.
+    dEFManagerShieldEffectDesc        :460   link 15
+    dEFManagerFoxReflectorEffectDesc  :420   link 15
+    dEFManagerRebirthHaloEffectDesc   :1648  link 10
+    dEFManagerImpactWaveEffectDesc    :201   link 10
+    dEFManagerDeadExplodeEffectDesc   :850   link 18   <- the KO burst
+
+The first four are the four rows that have never drawn. The fifth is the KO
+burst, which this file already records as working "unconditionally" through the
+SAME source-model route. The only thing that differs between them is that
+field -- and ndsStageGCDrawAllLoopIsEffectDisplay required 18.
+
+So the hardware effect submit accepted exactly one link, the procedural
+stand-ins were hard-wired onto it (ndsEFManagerMakeVisualEffect passes 18 to
+gcAddGObjDisplay), and the source models on 10 and 15 were never offered to the
+hardware at all. THAT is what "the battle hardware path does not consume source
+effect DL links" meant. It was written twice, neither copy said where, and three
+cycles looked in the atlas, then in the camera's capture passes, then in the
+tree walk. The camera was never the gap: it captures 10 in pass 3 and 15 in
+pass 4, per the table above.
+
+A SECOND GATE SITS BEHIND IT and also had to open: ndsEFManagerIsVisualEffectGObj
+(efmanager.c:969) returns TRUE only when dobj->dl matches a procedural TEMPLATE
+pointer, which a ROM-asset display list can never do. Both are open now, flag-
+gated, counted by gNdsEffectRendererSourceModelAdmitCount.
+
+PROVEN, one probe run (probe-shield-vfx.ps1 -DrawCounter
+gNdsEffectRendererSourceModelAdmitCount, flag on):
+
+    admit=12  capture=6  dobjdraw=6  submit=0  reject=6  tris=0
+    kindmask=0                      <- no procedural stand-in exists; all
+                                       twelve admits are source models
+
+From structurally-zero to twelve, and six frames reach the submit BODY. The
+shield still does not appear: the submit produces ZERO TRIANGLES and takes its
+reject path all six times. That is the next seam and it is inside
+ndsStageGCDrawAllLoopSubmitEffectDObj -- either its second guard (callback_kind
+!= NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE is the live suspect, since dv and
+camera are already established) or the walk emitting nothing. Print
+gNdsRendererStageDObjNodeCount alongside SHIELDCHAIN to separate those two in
+one run.
+
+WHAT THE MEASUREMENTS SAID, and one of them retracts a claim above:
+
+1. The tree walk's cost was REAL and was MINE. Recursing inside
+   ndsRendererAdapterSubmitStageDObj -- the STAGE entry -- re-walked all 57
+   stage DObjs. Synchronized tick-HUD, identical frames:
+       frame 441  control 1,119,936  candidate 1,120,000
+       frame 443  control 1,119,872  candidate 1,120,000
+       frame 447  control 1,119,488  candidate 1,680,384   2 VBlanks -> 3
+       frame 449  control 1,119,872  candidate 1,680,256   2 VBlanks -> 3
+   +560,896 is one VBlank (560,190) on frames that were inside the gate. The
+   recursion is on the EFFECT call site only now, and the stage entry is a
+   single-node submit exactly as it was. Re-measured on one instrument:
+   p50 1,119,872 vs 1,119,936, p95 1,679,872 vs 1,680,128, VBI 388/67/11/4 both
+   arms, max 19 both. No pacing cost.
+
+2. THE "380-SECOND TIMEOUT" WAS NOT A PERFORMANCE RESULT and the sentence that
+   called it one is withdrawn. probe-shield-vfx.ps1 armed on
+   gNdsTask39FxShieldDrawCount, which belongs to the PROCEDURAL stand-in's
+   display proc. With the flag on that stand-in is gone, the counter never
+   advances, and the probe spends its whole budget reporting "no shield drawn"
+   about a build whose shield it cannot see. It takes -DrawCounter now.
+
+3. THE PACING HARNESS CANNOT JUDGE THESE ROWS AT ALL.
+   sample-tick-hud-buckets.ps1 over its window reads
+   gNdsVisualEffectCreateCount=0 and gNdsVisualEffectKindMask=0 -- ZERO effects
+   of any kind are created. Its A/B therefore only ever priced the flag with no
+   effect on screen. (The stage-path regression still showed up there because
+   that recursion fired on stage DObjs every frame regardless.) Any future
+   verdict on these four rows needs a harness that produces the effect.
+
+STILL OPEN: whether the gate fix makes them draw. That is a capture, not an
+argument, and it has not been taken yet.
 =============================================================================
 
 -Respawn floating platform isn't visible when respawning after KO.
