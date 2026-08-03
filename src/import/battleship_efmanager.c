@@ -693,7 +693,11 @@ static void ndsEFManagerDestroyVisualEffect(GObj *effect_gobj)
  * texture's own intensity ramp do the shaping. Alpha 0xC0 is the source's own
  * value for a translucent effect overlay (efmanager.c:4112). */
 #define NDS_R2_REBIRTH_QUAD_SIZE 180.0F
-#define NDS_R2_REBIRTH_QUAD_COLOR 0xffffffu
+/* BGR555 like the shield's -- see ndsEFManagerShieldQuadColor. 0xffffff happened
+ * to survive the wrong packing intact (all fifteen low bits set), which is why
+ * only the shield read as black and this one merely read as invisible; its
+ * fault was the texture encoding, not the colour. */
+#define NDS_R2_REBIRTH_QUAD_COLOR 0x7fffu
 #define NDS_R2_REBIRTH_QUAD_ALPHA 0xC0u
 
 /* THE RESPAWN PAD'S SOURCE ASSET IS THE MBallRays GLOW, NOT A DISC.
@@ -753,17 +757,33 @@ static NDSVisualTemplate *ndsEFManagerShieldTemplate(s32 player,
  * below for why alpha is the whole look of a shield. */
 #define NDS_R2_SHIELD_QUAD_ALPHA 0xC0u
 
-/* Rim colour per player, RGB only -- DS vertex colour has no alpha channel, so
- * the transparency travels as the separate POLYGON_ATTR alpha above. The five
- * values are the rim halves of the disc templates, which match
- * dEFManagerShieldColors (efmanager.c:450). */
+/* BGR555, NOT 0xRRGGBB. ndsRendererSubmitParticleQuad takes the DS's own vertex
+ * colour packing -- red in bits 0-4, green 5-9, blue 10-14 -- which
+ * lbParticleDrawTextures builds as `(r>>3) | (g>>3)<<5 | (b>>3)<<10`. This
+ * function first returned 0xRRGGBB constants, and 0xff0000 read through that
+ * packing is r=0 g=0 b=0: the owner reported the shield as *"Looks Black in
+ * color"*, which is exactly what it was. A wrong-unit colour does not look
+ * wrong, it looks like a different bug.
+ *
+ * Colour only -- DS vertex colour has no alpha channel, so the transparency
+ * travels as the separate POLYGON_ATTR alpha above. The values are the rim
+ * halves of the disc templates, which match dEFManagerShieldColors
+ * (efmanager.c:450). */
+#define NDS_R2_BGR555(r, g, b) \
+    ((((u32)(r) >> 3) & 31u) | ((((u32)(g) >> 3) & 31u) << 5) | \
+     ((((u32)(b) >> 3) & 31u) << 10))
+
 static u32 ndsEFManagerShieldQuadColor(s32 player)
 {
     static const u32 rim[] = {
-        0xff0000u, 0x00ff00u, 0x0000ffu, 0x000000u
+        NDS_R2_BGR555(0xff, 0x00, 0x00),
+        NDS_R2_BGR555(0x00, 0xff, 0x00),
+        NDS_R2_BGR555(0x00, 0x00, 0xff),
+        NDS_R2_BGR555(0x40, 0x40, 0x40)
     };
 
-    return ((u32)player < ARRAY_COUNT(rim)) ? rim[player] : 0xc0c0c0u;
+    return ((u32)player < ARRAY_COUNT(rim)) ?
+        rim[player] : NDS_R2_BGR555(0xc0, 0xc0, 0xc0);
 }
 
 static void ndsEFManagerShieldProcDisplay(GObj *effect_gobj)

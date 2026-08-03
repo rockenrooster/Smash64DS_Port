@@ -1646,14 +1646,26 @@ def decode_source_asset_texels(payload: bytes, asset: dict
                                ) -> list[tuple[int, int, int, int]]:
     """One N64 texture out of a reloc file, as RGBA the sheet encoder accepts.
 
-    Only the two formats the shield and the halo actually use. Both are
-    greyscale-with-coverage on the N64 and become A5I3 in the sheet, so the
-    intensity nibble is expanded to a colour and the coverage to alpha:
+    ALL SHAPE GOES IN ALPHA; THE COLOUR IS A FLAT WHITE. That is not a shortcut,
+    it is what A5I3 is for: five bits of alpha per texel against THREE bits of
+    index into ONE eight-entry palette shared by the entire sheet. Both of these
+    assets are greyscale on the N64 and are tinted at draw time, so encoding
+    their intensity as colour makes them compete for palette entries against a
+    sheet full of fire and sparks -- and lose.
 
-    * IA8 -- one byte per texel, 4 bits intensity then 4 bits alpha.
-    * I4  -- one nibble per texel, high nibble first. Intensity IS the coverage
-      for an additive glow, so it drives alpha as well as colour; a halo stored
-      with a flat opaque alpha would draw as a solid box.
+    Measured, first attempt: the halo's grey ramp put 88 of its 128 texels on
+    palette index 0, r24 g32 b16, near black, and the owner reported the respawn
+    platform as *invisible*. The shield spread across three entries and read
+    muddy. Encoding white and letting the quad's own colour do the tinting puts
+    every texel on the brightest entry and spends the whole 5-bit alpha channel
+    on the thing that actually varies.
+
+    * IA8 -- one byte per texel, 4 bits intensity then 4 bits alpha. Both matter
+      and both are coverage-like once the colour is gone, so they multiply: the
+      bubble's soft rim lives in its intensity ramp and would be lost if only
+      the alpha nibble survived.
+    * I4  -- one nibble per texel, high nibble first, no alpha channel at all.
+      Intensity IS the coverage for an additive glow.
 
     Nibbles expand by *17, which maps 0..15 onto 0..255 exactly and is the same
     expansion the pack path uses elsewhere.
@@ -1670,8 +1682,9 @@ def decode_source_asset_texels(payload: bytes, asset: dict
                 f"{asset['name']}: wanted {count} IA8 bytes at "
                 f"0x{asset['offset']:x}, file holds {len(raw)}")
         for byte in raw:
-            level = (byte >> 4) * 17
-            pixels.append((level, level, level, (byte & 0xF) * 17))
+            intensity = (byte >> 4) * 17
+            coverage = (byte & 0xF) * 17
+            pixels.append((255, 255, 255, (intensity * coverage) // 255))
     elif asset["format"] == "i4":
         raw = payload[asset["offset"]:asset["offset"] + (count // 2)]
         if len(raw) != (count // 2):
@@ -1680,8 +1693,7 @@ def decode_source_asset_texels(payload: bytes, asset: dict
                 f"0x{asset['offset']:x}, file holds {len(raw)}")
         for byte in raw:
             for nibble in ((byte >> 4) & 0xF, byte & 0xF):
-                level = nibble * 17
-                pixels.append((level, level, level, level))
+                pixels.append((255, 255, 255, nibble * 17))
     else:
         raise SystemExit(f"{asset['name']}: unhandled format "
                          f"{asset['format']!r}")
