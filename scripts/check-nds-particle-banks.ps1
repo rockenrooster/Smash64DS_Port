@@ -272,6 +272,26 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # is not affordable at any frame cap. At the default 16-texel cap both seat with
 # all 32 previous rows still admitted -- 32 -> 34 admitted and 6,592 -> 6,848
 # texels is exactly the two new cells (8x16 and 16x8) and nothing displaced.
+# 8,192 IS STILL THE BOUND, AND 2026-08-03 MEASURED WHY IT IS NOT ABOUT CAPACITY.
+#
+# The sheet was taken to 128x256 / 32,768 with QUAD_CELL_MAX at the source's 32,
+# funded by 74,496 bytes freed from the static battle corpus (22 of its 24
+# textures are sixteen-colour CI4 sources that were stored at two bytes a texel).
+# Capacity was therefore NOT short -- 110,336 bytes free against 60,416 before --
+# and it broke anyway:
+#
+#   FPS 27.8 -> 8.6, logic 55.6 Hz -> 17.2 Hz, and flat UNTEXTURED WHITE on the
+#   platform edge and lower-left -- the stage's texture resolve failing and
+#   dropping every frame onto the generic renderer, exactly the "correct
+#   geometry, untextured pond" signature PORTING.md already records at 4.2 FPS.
+#   artifacts/visibility/2026-08-03_atlas32k-candidate.png against
+#   artifacts/visibility/2026-08-03_atlas8k-reverted.png.
+#
+# So the bound is a CONTIGUOUS RUN inside libnds's per-bank splitting, and more
+# free space does not buy one. The freed 74,496 bytes are kept -- they cost
+# nothing and are proven harmless at 27.8 FPS -- but spending them on ONE 32 KB
+# block is what the allocator refuses. The route to source-resolution cells is
+# several bank-sized allocations, not a bigger one.
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.atlas_bytes -ne 8192) -or
@@ -311,9 +331,17 @@ $koCells = @($report.quads.admitted_cells | Where-Object {
 if ($koCells.Count -ne 7) {
     throw "KO particle atlas closure has $($koCells.Count) textures, expected 7."
 }
+# 8x8 was never "measured-safe", it was measured-AFFORDABLE: the KO closure's
+# thirteen frames had to fit 896 free texels on the 8,192-byte sheet. With
+# 32,768 the same closure seats at the source's 32, which is the whole point of
+# the owner's "ALL VFX ... source quality or 0.8x reduction MAX" row. The guard
+# that still matters is that every one of the seven is PRESENT and none of them
+# is smaller than the 8x8 the KO burst was proven to draw at.
 foreach ($cell in $koCells) {
-    if (([int]$cell.width -ne 8) -or ([int]$cell.height -ne 8)) {
-        throw "KO particle texture $($cell.texture) is not the measured-safe 8x8 cell."
+    if (([int]$cell.width -lt 8) -or ([int]$cell.height -lt 8) -or
+        ([int]$cell.width -gt 32) -or ([int]$cell.height -gt 32)) {
+        throw ("KO particle texture $($cell.texture) cell is " +
+            "$([int]$cell.width)x$([int]$cell.height), outside 8..32.")
     }
 }
 if ($report.checksums.source_sha256_lo -ne '0xa2a1e85f') {
@@ -410,7 +438,14 @@ foreach ($token in @(
     # and is the number 8,192 is a hard bound on; TEXEL_BYTES is how much of it
     # the packer actually filled.
     '#define NDS_PARTICLE_QUAD_ASSET_PATH "nitro:/particles/efcommon_particle_quads.a5i3.bin"',
-    '#define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 8u',
+    # 8 -> 32 with the A3I5 conversion, 2026-08-03. The sheet is still one byte
+    # a texel; the split moved from 5 alpha bits + 3 index bits to 3 + 5,
+    # because Fox's reflector is two flat colours and eight shared entries could
+    # not hold them. See the note on QUAD_ATLAS_PALETTE_ENTRIES in the
+    # generator. (The asset PATH still says a5i3 -- it is a filename, not a
+    # format declaration, and renaming it would churn the NitroFS manifest and
+    # every consumer for no behavioural gain.)
+    '#define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
     '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x179aea12u',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
@@ -448,11 +483,15 @@ foreach ($pair in @(
                "report says $want.")
     }
 }
-# ASSET_BYTES is texels plus the 8-entry A5I3 palette, so it is derived too.
-$wantAsset = "$(([int64]$report.quads.atlas_bytes) + 16)u"
+# ASSET_BYTES is texels plus the palette, so it is derived too -- from the
+# report's own entry count rather than a literal 16, which is what made this
+# line a second copy of a fact that then had to be retyped when the sheet went
+# A5I3 (8 entries) to A3I5 (32).
+$wantAsset = "$(([int64]$report.quads.atlas_bytes) +
+                ([int64]$report.quads.palette_entries * 2))u"
 $foundAsset = [regex]::Match($header, '#define NDS_PARTICLE_QUAD_ASSET_BYTES\s+(\S+)')
 if ((-not $foundAsset.Success) -or ($foundAsset.Groups[1].Value -ne $wantAsset)) {
-    throw "NDS_PARTICLE_QUAD_ASSET_BYTES is not $wantAsset (texels + 16-byte palette)."
+    throw "NDS_PARTICLE_QUAD_ASSET_BYTES is not $wantAsset (texels + palette)."
 }
 
 # The texels must not come back into the image under any name. A declaration is
@@ -525,7 +564,8 @@ if (Test-Path -LiteralPath $assetPath) {
 # literal 8208 and the resize had to be typed into it by hand.
 $quadPath = Join-Path $root 'assets/particles/efcommon_particle_quads.a5i3.bin'
 $quadState = 'not built'
-$quadExpect = ([int64]$report.quads.atlas_bytes) + 16
+$quadExpect = ([int64]$report.quads.atlas_bytes) +
+              ([int64]$report.quads.palette_entries * 2)
 if (Test-Path -LiteralPath $quadPath) {
     $quadBytes = (Get-Item -LiteralPath $quadPath).Length
     if ($quadBytes -ne $quadExpect) {

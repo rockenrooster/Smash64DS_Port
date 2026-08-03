@@ -333,7 +333,8 @@
       }
     ],
     "frame_cap": 1,
-    "frame_count": 34
+    "frame_count": 34,
+    "palette_entries": 32
   },
   "reach": {
     "p1_seams": [

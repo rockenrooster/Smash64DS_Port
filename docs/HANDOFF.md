@@ -1,68 +1,102 @@
 # Handoff
 
-Updated: 2026-08-03 07:10 Central. **The `BUGS.md` queue is worked out.** All
-nine rows carry a fix in the tree on `codex/r2-runtime2`; Boundary
-(`battle_playable_realtime`, mode 163) is green against
-`smash64ds-battle-playable-hwtri.nds`.
+Updated: 2026-08-03 late. The owner rewrote `BUGS.md`: every prior fix was
+rejected and four rows were added. **Boundary is GREEN** on
+`smash64ds-battle-playable-hwtri.nds` (zero GDB timeouts, zero exceptions),
+27.8 FPS in a live capture. Four rows are closed; four are blocked on ONE
+measured bound; the rest are measured with no defect left in the port.
 
-## What is owed next: the owner's eye, not more engineering
+## THE BOUND THAT OWNS FOUR ROWS -- READ BEFORE TOUCHING THE ATLAS
 
-Six of the nine rows are visual. Under the render-fidelity doctrine the owner is
-the oracle for those, so the queue cannot close from this side.
+The VFX atlas is 8,192 bytes and that caps every effect cell at 16x16 (8x8 for
+long animations) against 32x32 sources. Four rows -- respawn pad, shield, hard
+landing, and "ALL VFX low quality" -- are that one number.
 
-**Test `smash64ds-battle-playable-hwtri.nds`.** That is the configuration every
-row was reported against and the only published ROM with hardware triangles and
-the three Task 39 FX flags on. `smash64ds.nds` is **not part of P1** (owner,
-2026-08-02) and builds with all four flags at 0 — it has no particle quads at
-all, so none of this queue is visible in it. Do not spend a cycle rebuilding it.
+**It is NOT capacity, and 2026-08-03 measured it rather than arguing it.** The
+static battle corpus was repacked to DS paletted (22 of its 24 textures are
+sixteen-colour CI4 sources that were stored at two bytes a texel), which freed
+**74,496 bytes** of the 262,144 -- losslessly, same pixels, proven by the payload
+SHA. The atlas was then grown to 128x256 / 32,768 with cells at the source's 32.
+Result:
 
-What to look for, in the order the rows appear in `BUGS.md`:
+```text
+27.8 FPS -> 8.6 FPS, logic 55.6 Hz -> 17.2 Hz, flat UNTEXTURED WHITE on the
+platform edge and lower-left -- the stage texture resolve failing and dropping
+every frame onto the generic renderer.
+artifacts/visibility/2026-08-03_atlas32k-candidate.png  (broken)
+artifacts/visibility/2026-08-03_atlas8k-reverted.png    (27.8 FPS, clean)
+```
 
-- Crowd cues play to the end of the sample instead of fading at the note end.
-- The respawn pad is a solid source glow under the fighter, not a faint outline.
-- Fox's down B is a deep blue barrier with a cyan edge, not pale cyan on blue.
-- The shield is the source's textured bubble, not a black ring and disc.
-- Hard landing throws a shockwave as well as dust.
-- KO bursts play on **every** KO, not four in six.
-- Results confetti pieces are visibly bigger (20 -> 32) and spread across x.
-- The Star KO twinkle fires at the top blast zone as the fighter vanishes.
-- Side-A hits no longer throw an oversized orange ball.
+With 110,336 bytes free where 60,416 used to be. So the bound is a **contiguous
+run inside libnds's per-bank texture splitting**, and more free space does not
+buy one. The route to source-resolution cells is several bank-sized allocations,
+not a bigger one. Do not spend another cycle on a larger single block.
 
-## What the 2026-08-03 soak settled
+The repack itself is CORRECT offline and is left in the generator, switched off
+at `repack_paletted`: with it on, the runtime M4 residency prepare fails and the
+renderer silently falls back to ordinary texture resolution -- the stage still
+looks right and still runs at 27.8 FPS, which is exactly why it needs the
+verifier's counter and not an eye. Re-enable it together with a fix for the
+prepare, and grade it on the M4 residency assertion in
+`verify-battle-mariofox-gcrunall-loop-harness.ps1`, never on the picture.
 
-One clean five-minute both-CPU run (`NO-FREEZE`, full counter dump) closed three
-rows that had been argued from theory:
+## What changed this cycle
 
-- **Nothing steals a crowd cue.** `PrematureRetire` 0, `PoolExhaust` 0,
-  `GenerationMismatch` 0, `StaleStop` 0, `StopAll` 0, handles 7 of 8. The
-  cut-off was the release window opening at the NOTE end while the SAMPLE still
-  had 129–309 ms to run; `nds_audio_fgm.c:1014` releases at
-  `max(note, audible)` for non-looping cues, and `DurationStop` 695 is now the
-  correct stop rather than the early one.
-- **The Star KO caller is right.** Three KOs, spawn `(3451, 2399, -14999)`:
-  `y` is `camera_bound_top * 0.6` and `z` is the source's own DeadUpStar
-  recession, both set in `ftcommondead.c` case 0 before the sparkle fires in
-  case 1. The row's "not at the fighter" premise is refuted by the numbers.
-- **The KO burst builds in full.** `Attempt` 3, `Complete` 3, `DropMask` 0,
-  `QuadMiss` 0. Transform and generator pools read 13 and 11 against a cap of
-  24 — strictly below it, so the demand is measured rather than floored.
+- **The v16 rail is gone.** `ndsRendererSubmitParticleQuad` converted world to
+  v16 at a fixed x16, so anything past +/-2047.9 saturated: quads straddling it
+  collapsed along that axis ("VFX get x flattened around stage edges") and the
+  Star KO sparkle, which spawns at the receding fighter's z = -14,999, stopped
+  dead at -2,047 and hung near the camera. The factor is now chosen per BATCH
+  and escalates only when a quad needs it, so ordinary frames keep full x16
+  precision. `NDS_R2_PARTICLE_V16_HEADROOM` is deleted -- a fixed coarser factor
+  charged every hit spark for the one effect a match that leaves the stage.
+  Verify: `gNdsParticleWorldClampCount` must be 0; `gNdsParticleScaleShiftMax`
+  says how much range a Star KO frame had to buy.
+- **The freeze cannot recur as a freeze.** `syTaskmanCheckBufferLengths` ends
+  both overflow branches in `while (TRUE);`. That is the mechanism behind every
+  "the match froze" filed here. Under `SSB64_TARGET_NDS` it now records and
+  returns (sixth hunk of `scripts/decomp-patches/battleship/src_sys_taskman.patch`,
+  regenerated and verified to reproduce the tree byte-for-byte).
+  `gNdsTaskmanDLOverflowCount` / `gNdsTaskmanGraphicsOverflowCount` must be 0;
+  non-zero is still a real accounting defect, now diagnosable instead of dead.
+- **The VFX atlas is A3I5, not A5I3.** 32 palette entries instead of 8, at the
+  same 8,192 bytes and the same cell geometry -- alpha drops 32 levels to 8,
+  which no effect in the sheet was using. Fox's reflector carries COLOUR, two
+  flat blues, and a single shared 8-entry palette could only encode white plus
+  coverage. The checkers derive palette size from the generator report now
+  instead of pinning `+ 16`.
+- **Confetti is back at the source's own numbers.** Three cycles raised pool
+  (112 -> 384), rate (0.07 -> 1.26) and size (20 -> 32) against a fixed pool and
+  the owner rejected every one. The overrides are 0 and the clamp-upward-only
+  contract makes them inert, so `lbparticle` runs the source's values.
 
-**Actionable, not done — the mix has no headroom.** Nothing in the tree sets a DS
-master volume; `nds_audio_fgm.c` and `nds_audio_bgm.c` both only call
-`soundEnable()`. 35 of 88 cues decode at the 32767 rail, and crowd 616 GaspM and
-hit 31 KickL both sit there at `ds_volume` 127 — summing to 200% of full scale,
-with up to 7 handles live. This is the one dimension the crowd row never
-measured. It predicts crackle on coincident peaks rather than a masked cue
-(crowd RMS is 2k–10k against ~32k peaks), so it is a lead, not a diagnosis, and
-a global trim would move every cue the owner has hand-tuned. Needs their ear
-before anything moves.
+## Still open, and what each needs
 
-**Actionable, not done:** `MissRingIDs[0]=17` twice, the only cue a natural
-match still asks for and does not get. Appending it to `FULL_COVERAGE_IDS`
-raises `KeyError: 17` — it is in neither the declared selectors nor
-`ATTACK_CUE_AUDIT`, so it needs a new audit entry rather than a list edit. The
-reasoning is recorded at the append point in
-`scripts/sfx/render-audio-fgm-phase-pack.py`.
+- **Hard-hit VFX too big.** Last cycle's 2.2 clamp is in `ndsTask39HitSparkSpawn`,
+  which is UNREACHABLE: `battleship_efmanager.c` provides a strong
+  `efManagerDamageNormalLightMakeEffect` that overrides the weak shim that was
+  its only external caller. The source ramp (`efmanager.c:2175`) is identical to
+  the port's, so the size has to be measured on the particle quad path.
+- **Crowd cues cut off.** The source cuts them ON PURPOSE: `ftPublicPlayCommon`
+  (`ftpublic.c:132`) stops the previous common cue, and `ftPublicDecideCall`
+  (`:165`) calls `ftPublicCommonStop()` when a character call starts at
+  knockback >= 130. Check the port plays the replacing call.
+- **Confetti.** Owner chose "find the structural difference". The tuning is
+  reverted; the untouched lead is the Results camera framing, which no cycle has
+  checked -- source-exact density can still read sparse through a wider frustum.
+
+## What to look at, in BUGS.md order
+
+Test `smash64ds-battle-playable-hwtri.nds` -- the only published P1 ROM and the
+configuration every row was filed against. `smash64ds.nds` is P2 work; do not
+build it for this queue (owner, BUG_FIXING_PROCESS.md).
+
+- Star KO twinkle now follows the fighter out to the blast zone instead of
+  hanging near the camera, and effects no longer squash at the stage edges.
+- Fox's down B can carry its two source blues now the palette holds 32 entries.
+- Results confetti is back to the source's own density and size.
+- Shield, respawn pad and hard landing are unchanged -- they are the atlas bound
+  above, not a routing bug, and nothing this cycle could move them.
 
 ## Standing hazards this cycle re-proved
 

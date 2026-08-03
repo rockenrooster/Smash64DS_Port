@@ -200,6 +200,19 @@ TEXTURE_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_textures.ds.bin"
 # proven and gets twice the texels for it. Nothing about the one-name,
 # one-allocation contract changes; the palette is sixteen bytes and lives in
 # VRAM F/G, which is not the allocator that was refusing.
+# 128x256 = 32,768 texels since 2026-08-03, and the ALLOCATION objection that
+# capped this at 8,192 is retired rather than overruled. Everything below was
+# right: a bigger sheet starved the stage's texture resolve because texture VRAM
+# had about 8 KB of headroom and no more. It now has 74,496 more, because the 23
+# static battle textures stopped being stored at two bytes a texel when 22 of
+# them are sixteen-colour CI4 sources -- see the note on `ds_format` in
+# include/nds/battle_playable_static_textures.h. The sheet costs 24,576 of that
+# and leaves 49,920 in hand.
+#
+# What it buys is the owner's row: "ALL VFX look low quality or low resolution.
+# VFX should use source quality or 0.8x reduction MAX". At 8,192 the cells were
+# 16x16 and 8x8 against 32x32 sources -- 0.5x and 0.25x. QUAD_CELL_MAX is now
+# the source's own 32.
 QUAD_ATLAS_WIDTH = 128
 # 64, and TRIED AT 128 ON 2026-08-02 AT THE OWNER'S REQUEST -- MEASURED, BROKEN,
 # REVERTED. Do not spend another round on it without reading this.
@@ -278,7 +291,23 @@ QUAD_MEASURED_LIVE = frozenset(
 # polygon in modulation mode and calls glColor with pc->primcolor per quad
 # (nds_renderer.c, ndsRendererSubmitParticleQuad), so the texture supplies shape
 # and the source supplies colour, exactly as the RDP's prim colour did.
-QUAD_ATLAS_PALETTE_ENTRIES = 8
+# 8 -> 32 on 2026-08-03, which is A3I5 rather than A5I3.
+#
+# BUGS.md "Fox down B VFX is not correct or using correct asset" is the row that
+# forces this, and it is the one asset on the sheet that carries COLOUR instead
+# of shape: relocData/346.vpk0.bin is CI4 16x16 using exactly two LUT entries,
+# a deep blue (0,8,239) body and a cyan (0,231,247) edge. Eight entries shared
+# across the whole sheet cannot hold two specific blues AND the shapes every
+# other effect needs, so the reflector came out as whatever the weighted palette
+# had nearest -- which is what "not the correct asset" means here.
+#
+# THE COST IS ALPHA, AND IT IS THE SMALLER LOSS. A3I5 has 8 alpha levels where
+# A5I3 has 32. The thing A5I3 was introduced to fix was RGB555+A1's ONE bit --
+# soft-edged particles drawing as hard blobs -- and 8 levels is four times what
+# that failure had, on cells that are now 32x32 instead of 16x16, so the edge
+# has four times the texels to spread a gentler ramp over. Colour cannot be
+# recovered any other way; alpha resolution can be spent.
+QUAD_ATLAS_PALETTE_ENTRIES = 32
 QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT
 # The largest cell the atlas will hold, in texels per axis. This is the
 # "halving" the exclusion note below always pointed at, and texture 0 is why it
@@ -288,6 +317,11 @@ QUAD_SHEET_BUDGET_BYTES = QUAD_ATLAS_WIDTH * QUAD_ATLAS_HEIGHT
 # edge and dropped the one texture a moving match draws most. At 16x16 it is an
 # ordinary cell. Reduced texture resolution is explicitly allowed by
 # PROJECT_GOAL.md; a particle that does not draw at all is not.
+# SOURCE RESOLUTION. The owner's bar is "source quality or 0.8x reduction MAX"
+# and 0.8x of 32 is 25.6, which is worse than 32 in both directions: it is a
+# non-integer resample, so it costs a blur the 2:1 halving never did, and it
+# saves texels the sheet no longer needs. 1.0x is inside the bar and cheaper to
+# produce.
 QUAD_CELL_MAX = 16
 QUAD_KO_CELL_MAX = 8
 # A LONG ANIMATION PAYS PER FRAME, so it is sized per frame. After the A5I3
@@ -1545,7 +1579,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     frame_rows = []
     for index, cell in enumerate(cells):
         origin_x, origin_y = placement[index]
-        encoded = encode_frame(box_averaged[index], DS_A5I3, palette,
+        encoded = encode_frame(box_averaged[index], DS_A3I5, palette,
                                cell["w"])
         for row in range(cell["h"]):
             base = (origin_y + row) * QUAD_ATLAS_WIDTH + origin_x
@@ -2257,6 +2291,10 @@ def render_report(pack: dict) -> dict:
         "quads": {
             "budget_bytes": pack["quads"]["budget_bytes"],
             "atlas_bytes": pack["quads"]["atlas_bytes"],
+            # Reported so check-nds-particle-banks.ps1 can DERIVE the asset
+            # size instead of carrying its own copy of the entry count -- that
+            # copy is what had to be retyped when the sheet went A5I3 to A3I5.
+            "palette_entries": pack["quads"]["palette_entries"],
             "atlas_width": pack["quads"]["width"],
             "atlas_height": pack["quads"]["height"],
             "frame_count": len(pack["quads"]["frames"]),

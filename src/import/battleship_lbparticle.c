@@ -514,10 +514,36 @@ static void ndsParticleNormalizeHeader(u8 *header, sb32 swap)
  * the ceiling from residency alone is about 1.5x. Buying that costs a 16x
  * gravity cut -- residency goes as 1/sqrt(g) -- which turns falling confetti
  * into hanging confetti. Wrong trade for the gain. */
+/* BOTH RAISES ARE OFF, 2026-08-03, BY OWNER DECISION -- and the long block
+ * above is kept verbatim because its measurements are all still true. What
+ * changed is what they are being used for.
+ *
+ * Three raises took the rate 0.07 -> 0.42 -> 0.63 -> 1.26 and the pool 8 -> 112
+ * -> 192 -> 384, then the size 20 -> 32, each because the owner said the
+ * confetti still did not cover the scene. The result was twelve times the
+ * source's coverage and the answer was still "doesn't look right", which is the
+ * signal that the gap is STRUCTURAL and every number above was tuning around
+ * it. The owner's instruction on this row is now "read source, apply source
+ * behavior to DS", and asked to choose, they picked finding the structural
+ * difference over keeping the tuning.
+ *
+ * So the specialization is neutralized rather than deleted: the identifiers,
+ * the counters and the clamp-upward-only contract stay, set to values the
+ * source already exceeds, so nothing patches and gNdsConfettiDensityPatchCount
+ * and gNdsConfettiSizePatchCount both read 0. Restoring a raise is one constant
+ * if the structural search comes back empty.
+ *
+ * THE OPEN LEAD, so the next cycle does not start from the same three numbers:
+ * the Results CAMERA framing has never been compared against source. Every
+ * measurement on this row is world-space -- piece count, piece size, fan
+ * extent, fall speed -- and all of them are source-exact. If the DS Results
+ * camera sits further back than the N64's, source-exact confetti covers less of
+ * the screen and no amount of pieces fixes the framing. That is the one
+ * dimension the contract never had. */
 #define NDS_R2_CONFETTI_FIRST_SCRIPT 108u
 #define NDS_R2_CONFETTI_LAST_SCRIPT 111u
-#define NDS_R2_CONFETTI_UPDATE_RATE 1.26F
-#define NDS_R2_CONFETTI_PIECE_SIZE 32.0F
+#define NDS_R2_CONFETTI_UPDATE_RATE 0.0F
+#define NDS_R2_CONFETTI_PIECE_SIZE 0.0F
 
 /* Counts the emitters this build raised. Four is the whole set; anything else
  * means the bank moved out from under the id range. */
@@ -1734,18 +1760,13 @@ void lbParticleDrawTextures(GObj *gobj)
                 gNdsWhispyDrawX = world_pos.x;
                 gNdsWhispyDrawY = world_pos.y;
                 gNdsWhispyDrawSize = pc->size;
-#if NDS_R2_PARTICLE_V16_HEADROOM
-#define NDS_PARTICLE_V16_REACH 4095.9f
-#else
-#define NDS_PARTICLE_V16_REACH 2047.9f
-#endif
-                if ((world_pos.x > NDS_PARTICLE_V16_REACH) ||
-                    (world_pos.x < -NDS_PARTICLE_V16_REACH) ||
-                    (world_pos.y > NDS_PARTICLE_V16_REACH) ||
-                    (world_pos.y < -NDS_PARTICLE_V16_REACH))
-                {
-                    gNdsWhispyDrawClamped++;
-                }
+                /* Mirrors the renderer's own count rather than re-deriving a
+                 * reach here. The reach is no longer a constant this file can
+                 * know: ndsRendererSubmitParticleQuad now picks the vertex
+                 * factor per batch and escalates when a quad needs it, so the
+                 * only honest clamp count is the one taken at the conversion.
+                 * Same variable, so probe-vfx-contracts.ps1 keeps reading it. */
+                gNdsWhispyDrawClamped = gNdsParticleWorldClampCount;
             }
 #endif
         }

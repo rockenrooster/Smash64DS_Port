@@ -1,0 +1,20 @@
+--- a/src/sys/objhelper.c
++++ b/src/sys/objhelper.c
+@@ -1,4 +1,7 @@
+ #include <sys/obj.h>
++#if defined(SSB64_TARGET_NDS)
++#include <nds/nds_startup.h>
++#endif
+ 
+ // // // // // // // // // // // //
+ //                               //
+@@ -132,6 +135,9 @@
+ // 0x8000B1E8
+ void gcSleepCurrentGObjThread(s32 tics)
+ {
++#if defined(SSB64_TARGET_NDS)
++    gNdsTaskmanGObjThreadSleeps++;
++#endif
+     if (gGCCurrentProcess->exec.gobjthread->stack[7] != 0xFEDCBA98)
+     {
+         syDebugPrintf("gobjthread stack over  gobjid = %d\n", gGCCurrentProcess->parent_gobj->id);

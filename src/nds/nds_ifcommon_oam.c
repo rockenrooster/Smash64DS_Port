@@ -1730,7 +1730,35 @@ static s32 ndsTask39EffectsArenaValid(void)
     return TRUE;
 }
 
-/* The light hit spark's size ceiling. Owner-calibrated; see the clamp below. */
+/* THIS WHOLE SPRITE HIT-SPARK PATH IS UNREACHABLE IN THE SHIPPING ROM, and the
+ * clamp below is what proved it the expensive way.
+ *
+ * Its only external entry is the weak `efManagerDamageNormalLightMakeEffect` /
+ * `...HeavyMakeEffect` in reloc_backend_compat_shims.c, and
+ * `battleship_efmanager.c` provides STRONG definitions of both names under
+ * NDS_R2_SOURCE_EFFECTS_PARTICLE, which defaults to 1 and is not overridden by
+ * any target. The linker takes the strong ones. Disassembly of the published
+ * ROM, 2026-08-03:
+ *
+ *   020941c8 <efManagerDamageNormalLightMakeEffect>:
+ *     bl 209224c <ndsBaseEFManagerDamageNormalLightMakeEffect>
+ *
+ * -- straight to the source implementation, never here. `ndsTask39HitSparkSpawn`
+ * is reached only from this file's own heavy-spark death, which nothing starts,
+ * so gNdsTask39FxHitSparkSpawnCount is structurally 0.
+ *
+ * BUGS.md's *"orange ball ... looks too big"* row was answered here with the 2.2
+ * ceiling below and the owner re-filed it unchanged, because the effect the
+ * owner sees is drawn by the source particle path. The scale there is
+ * source-exact and was re-derived twice: efmanager.c:2175 ramps light to 4.9x
+ * at 40 damage and the heavy maker (efmanager.c:2197) sets no scale at all --
+ * both exactly what the port does. What was wrong is the IMAGE: a 32x32 spark
+ * box-averaged into a 16x16 atlas cell reads as a soft round blob, and
+ * magnified 4.9x that is an orange ball. The cell is source resolution now.
+ *
+ * Left in place rather than deleted because NDS_TASK39_FX_SPRITES gates more
+ * than this one path and a deletion is a separate, wider change. Do not tune
+ * this constant again -- nothing reads it. */
 #define NDS_TASK39_HIT_SPARK_SCALE_MAX 2.2F
 
 volatile u32 gNdsTask39FxHitSparkScaleClampCount;

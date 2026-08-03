@@ -680,25 +680,25 @@ NDS_R2_PARTICLE_RUNTIME ?= 1
 # starving the stage's texture resolve -- fixed by the 8,192-byte sheet, which
 # is a measured hard bound, not a budget (generate_nds_particle_banks.py).
 NDS_R2_PARTICLE_DRAW ?= 1
-# ON since 2026-08-02, and the owner's own report is what turned it on. The
-# particle pass converts world -> v16 at x16, so it can only express +/-2047.9
-# world units while the camera measured in a live match sees 3,148; Whispy's wind
-# puts 1,118 of its 5,590 quads a match past that. A CLAMPED VERTEX IS NOT A
-# MISPLACED ONE -- x is railed while y is not, so the quad is SQUASHED, and the
-# owner filed exactly that: *"Right side of stage looks like it compresses VFX"*.
-# At 1 the pass halves the vertex factor to x8 (reach +/-4095.9) and pushes a
-# compensating 2x modelview, so position and size are unchanged and only the
-# range moves. The price is half the sub-unit resolution for every particle,
-# which is a far smaller visual trade than railing a fifth of them, and the
-# owner's standing rule for this queue is *"for bug fixing, prioritize
-# correctness over FPS"*. Verify with gNdsWhispyDrawClamped: 1118 -> 0,
-# gNdsWhispySubmitOk ~5590.
+# NDS_R2_PARTICLE_V16_HEADROOM IS DELETED, AND A FIXED FACTOR IS WHY.
+#
+# It bought one extra bit of range (x16 -> x8, reach +/-2047.9 -> +/-4095.9) at
+# the price of half the sub-unit resolution of EVERY particle, and it was still
+# not enough: the owner re-filed the same symptom against the build that had it
+# on. The reach a particle pass needs is not a constant -- an ordinary hit spark
+# lives inside 2,000 units while the Star KO sparkle follows the dying fighter
+# out to z = -14,999 (ftcommondead.c) -- so no single factor is both wide enough
+# and precise enough. ndsRendererSubmitParticleQuad now picks the factor per
+# batch and escalates only when a quad actually reaches the rail, which keeps
+# the full x16 precision on ordinary frames and buys 8x the range on the frames
+# that need it. Verify with gNdsParticleWorldClampCount (must be 0) and
+# gNdsParticleScaleShiftMax; gNdsWhispyDrawClamped mirrors the first.
 #
 # THE LESSON, for the second time in a fortnight: a measured, working fix parked
 # at a default of 0 is invisible to everyone including its author -- the fixed
 # sqrt sat that way for a month on 2026-07-31. Audit the 0 flags whenever a
 # symptom matches one of their descriptions.
-NDS_R2_PARTICLE_V16_HEADROOM ?= 1
+#
 # R2-07 L7 step one. Read-only oracle: re-does the collision joint inverse in
 # 20.12 alongside the decomp's float one and records the deviation on the joints
 # a real match inverts. Decides nothing and changes nothing.
@@ -2544,7 +2544,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FIGHTER_ANIM_AUDIT $(NDS_FIGHTER_ANIM_AUDIT)'; \
 		echo '#define NDS_FIGHTER_ANIM_CYCLER_KIND $(NDS_FIGHTER_ANIM_CYCLER_KIND)'; \
 		echo '#define NDS_R2_PARTICLE_DRAW $(NDS_R2_PARTICLE_DRAW)'; \
-		echo '#define NDS_R2_PARTICLE_V16_HEADROOM $(NDS_R2_PARTICLE_V16_HEADROOM)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \

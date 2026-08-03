@@ -26,6 +26,14 @@ if (-not (Test-Path -LiteralPath $payload -PathType Leaf)) {
 }
 $payloadFile = Get-Item -LiteralPath $payload
 $payloadHash = (Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant()
+# BACK TO THE ORIGINAL BYTES, 2026-08-03, and the payload SHA is the proof: a
+# paletted repack landed here and was withdrawn the same day, and this file
+# hashes byte-for-byte identical to before it. The repack is correct and
+# lossless offline -- 22 of these 24 textures are sixteen-colour CI4 sources
+# stored at two bytes a texel, worth 74,496 bytes of texture VRAM -- but the
+# RUNTIME residency prepare failed with it on, silently falling back to ordinary
+# texture resolution while the stage still looked right at 27.8 FPS. See
+# repack_paletted in the generator for the full note and the re-enable criteria.
 if ($fixture.key_count -ne 24 -or $fixture.unique_output_count -ne 23 -or
     $fixture.residency_bytes -ne 136192 -or $fixture.payload_bytes -ne 132096 -or
     $payloadFile.Length -ne 132096 -or $payloadHash -ne $fixture.payload_sha256) {

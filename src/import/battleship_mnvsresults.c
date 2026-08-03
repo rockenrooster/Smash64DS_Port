@@ -232,9 +232,17 @@ static void ndsMNVSResultsFuncStartTimed(void)
      * Memory is not the constraint here (45,888 bytes against ~300 KB free);
      * the Results present interval is, and the owner has taken that trade
      * explicitly -- see NDS_R2_CONFETTI_UPDATE_RATE for the measured table. */
-    gNdsParticlePoolStructsWanted = 384u;
-    gNdsParticlePoolGeneratorsWanted = 48u;
-    gNdsParticlePoolTransformsWanted = 24u;
+    /* 384/48/24 UNTIL 2026-08-03, and the block above is why it grew. It is
+     * back to the source's own sizing with the rate raise it existed to feed
+     * (see NDS_R2_CONFETTI_UPDATE_RATE in battleship_lbparticle.c): the two
+     * always had to move together, so neutralizing one and leaving the other
+     * would just be a 384-struct pool sitting unused with 0 rejects, which is
+     * exactly the state the first raise was made to escape. The override stays
+     * as a named seam because the Results scene genuinely is the one scene that
+     * may want different sizing from the battle. */
+    gNdsParticlePoolStructsWanted = 0u;
+    gNdsParticlePoolGeneratorsWanted = 0u;
+    gNdsParticlePoolTransformsWanted = 0u;
     if (sNdsMNVSResultsFuncStart != NULL)
     {
         sNdsMNVSResultsFuncStart();

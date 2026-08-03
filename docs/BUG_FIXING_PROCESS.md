@@ -1,4 +1,5 @@
 # Bug Fixing Process
+do not build smash64ds.nds for P1 work. smash64ds.nds is for P2 work.
 
 This document owns the process for taking a user-reported playtest bug in
 `BUGS.md` from symptom to verified closure. It does not own bug status, product

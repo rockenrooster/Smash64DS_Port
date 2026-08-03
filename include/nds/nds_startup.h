@@ -815,6 +815,14 @@ extern volatile u32 gNdsTaskmanGraphicsHeapSize;
 extern volatile u32 gNdsTaskmanRdpKind;
 extern volatile u32 gNdsTaskmanRdpBufferSize;
 extern volatile u32 gNdsTaskmanMallocCount;
+/* syTaskmanCheckBufferLengths' two `while (TRUE);` spins, replaced by recovery
+ * under SSB64_TARGET_NDS. All four must read 0; see the long note beside their
+ * definitions in src/port/diagnostics.c. */
+extern volatile u32 gNdsTaskmanDLOverflowCount;
+extern volatile u32 gNdsTaskmanDLOverflowKind;
+extern volatile u32 gNdsTaskmanDLOverflowBytes;
+extern volatile u32 gNdsTaskmanGraphicsOverflowCount;
+extern volatile u32 gNdsTaskmanGraphicsOverflowBytes;
 extern volatile u32 gNdsStartupTaskmanMallocCount;
 extern volatile u32 gNdsTaskmanGeneralHeapUsed;
 extern volatile u32 gNdsTaskmanDLContextsValid;

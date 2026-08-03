@@ -52,6 +52,12 @@ OWNER_LABELS = tuple((name, mask) for name, _root, _count, mask in OWNER_SPECS) 
     ("whispy_mouth", WHISPY_MOUTH_OWNER_MASK),
 )
 
+# libnds GL_TEXTURE_TYPE_ENUM. GL_RGB16 is the DS's sixteen-colour paletted
+# format at four bits a texel; GL_RGBA is RGB555 plus one alpha bit at sixteen.
+DS_FORMAT_PAL16 = 3
+DS_FORMAT_RGBA = 8
+DS_PALETTE16_ENTRIES = 16
+
 EXPECTED_KEY_COUNT = 24
 EXPECTED_OUTPUT_COUNT = 23
 EXPECTED_RESIDENCY_BYTES = 136192
@@ -64,7 +70,7 @@ EXPECTED_METADATA_SHA256 = (
     "1129f8b59a4be9a44583bef06ba998682b9f7ad14e8844c4e1d843948a668081"
 )
 EXPECTED_INCLUDE_SHA256 = (
-    "cef1256e16f20d90d137312de099d4ff4044883cdc6f1aef38e9c4d8cca66430"
+    "31327337d245fbddd0505ef5ca9b99724c0b8683a506769a15d20054cb4133ed"
 )
 
 G_SETTIMG = 0xFD
@@ -191,6 +197,10 @@ class PreparedRecord:
     payload_offset: int = 0
     payload_bytes: int = 0
     output_sha256: str = ""
+    ds_format: int = 0
+    palette: tuple[int, ...] = ()
+    palette_offset: int = 0
+    palette_entries: int = 0
 
 
 @dataclass(frozen=True)
@@ -1218,16 +1228,97 @@ def metadata_payload(records: Sequence[PreparedRecord]) -> bytes:
     ).encode("ascii")
 
 
+def repack_paletted(pixels: bytes) -> tuple[int, bytes, tuple[int, ...]]:
+    """RGB555+A1 -> DS 16-colour paletted, when the image has that few colours.
+
+    LOSSLESS BY CONSTRUCTION AND CHECKED, not "close enough": the palette IS the
+    set of colours already present, so every texel keeps the exact halfword it
+    had. The N64 source for all of these is a CI4 tile whose sixteen-entry TLUT
+    convert_fast already expanded; this puts the indices back.
+
+    `record.pixels` stays the 16-bit form upstream of here, so the slow oracle
+    cross-check, `output_sha256` and the dedupe key all keep comparing the same
+    canonical image they always did. Only the packed representation changes.
+
+    Index 0 is reserved for the transparent colour whenever the image has one,
+    so the DS colour-0-transparent bit means what the alpha bit meant. An image
+    with no transparent texel uses all sixteen entries and the bit stays off.
+    """
+    # OFF, 2026-08-03. The encoding below is correct and the host lookup fixture
+    # proves the record/accessor plumbing around it, but the RUNTIME prepare
+    # fails with it on: verify-battle-mariofox-gcrunall-loop-harness reports the
+    # M4 residency lifecycle reading zero keys and zero bytes where it wants 24
+    # and the full corpus, so the renderer silently falls back to ordinary
+    # texture resolution. The frame still looks right and still runs at 27.8 FPS,
+    # which is exactly why this needs a counter rather than an eye.
+    #
+    # It is off rather than deleted because the measurement it was built for
+    # stands: 22 of these 24 textures are sixteen-colour CI4 sources stored at
+    # two bytes a texel, and packing them costs 74,496 fewer bytes of the DS's
+    # 262,144 texture VRAM, losslessly. What that budget CANNOT buy is the thing
+    # it was spent on -- one 32,768-byte particle atlas -- because the bound is a
+    # contiguous run inside libnds's per-bank splitting, not capacity. Measured
+    # the same day: the bigger sheet dropped the game to 8.6 FPS with untextured
+    # white on the stage (artifacts/visibility/2026-08-03_atlas32k-candidate.png).
+    #
+    # So the funding has no customer right now, and shipping a broken residency
+    # path to hold a budget nothing spends is the wrong trade. Turn this back on
+    # together with a fix for the prepare, and grade it on the M4 residency
+    # assertion above -- not on how the stage looks.
+    return DS_FORMAT_RGBA, pixels, ()
+
+    values = struct.unpack(f"<{len(pixels) // 2}H", pixels)
+    distinct = sorted(set(values))
+    if len(distinct) > DS_PALETTE16_ENTRIES:
+        return DS_FORMAT_RGBA, pixels, ()
+    if 0 in distinct:
+        distinct.remove(0)
+        palette = (0,) + tuple(distinct)
+    else:
+        palette = tuple(distinct)
+    index_of = {colour: index for index, colour in enumerate(palette)}
+    packed = bytearray((len(values) + 1) // 2)
+    for position, colour in enumerate(values):
+        index = index_of[colour]
+        if position & 1:
+            packed[position >> 1] |= index << 4
+        else:
+            packed[position >> 1] = index
+    return DS_FORMAT_PAL16, bytes(packed), palette
+
+
 def pack_payload(records: Sequence[PreparedRecord]) -> tuple[bytes, int]:
+    """Texels first, then every palette, in one payload.
+
+    Two blocks rather than two files because the runtime already streams this
+    payload as one span and a palette is thirty-two bytes; a second asset would
+    cost a NitroFS open per texture for less than a kilobyte in total.
+    """
     payload = bytearray()
-    output_offsets: dict[bytes, tuple[int, int]] = {}
+    output_offsets: dict[bytes, tuple[int, int, int, tuple[int, ...]]] = {}
     for record in records:
         existing = output_offsets.get(record.pixels)
         if existing is None:
-            existing = (len(payload), len(record.pixels))
+            ds_format, packed, palette = repack_paletted(record.pixels)
+            existing = (len(payload), len(packed), ds_format, palette)
             output_offsets[record.pixels] = existing
-            payload.extend(record.pixels)
-        record.payload_offset, record.payload_bytes = existing
+            payload.extend(packed)
+        record.payload_offset, record.payload_bytes, record.ds_format, _ = existing
+        record.palette = existing[3]
+    palette_offsets: dict[tuple[int, ...], int] = {}
+    for record in records:
+        if not record.palette:
+            record.palette_offset = 0
+            record.palette_entries = 0
+            continue
+        offset = palette_offsets.get(record.palette)
+        if offset is None:
+            offset = len(payload)
+            palette_offsets[record.palette] = offset
+            for colour in record.palette:
+                payload.extend(struct.pack("<H", colour))
+        record.palette_offset = offset
+        record.palette_entries = len(record.palette)
     return bytes(payload), len(output_offsets)
 
 
@@ -1237,6 +1328,10 @@ def build_include(
     census_sha256: str,
     metadata_sha256: str,
 ) -> bytes:
+    palette_offsets = [record.palette_offset for record in records
+                       if record.palette_entries]
+    palette_base = min(palette_offsets) if palette_offsets else len(payload)
+    palette_block = len(payload) - palette_base
     lines = [
         "/* Generated by scripts/generate_battle_playable_static_textures.py. */",
         "/* Metadata only; pixels live in the generated NitroFS payload. */",
@@ -1250,6 +1345,15 @@ def build_include(
         f"#define NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES {len(payload)}u",
         f"#define NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES {sum(record.payload_bytes for record in records)}u",
         f"#define NDS_BATTLE_STATIC_TEXTURE_KEY_WORDS {len(census.EXPECTED_KEY_FIELDS)}u",
+        "",
+        "/* The palettes are one contiguous block at the tail of the payload, and",
+        " * the renderer reads the WHOLE block in a single fseek+fread at prepare",
+        " * time. Reading each texture's palette where its record points cost 22",
+        " * extra NitroFS round trips inside a scene load that is already the",
+        " * longest pause in the game -- enough to push it past the marker window",
+        " * the harness allows. One read, then index by (palette_offset - base). */",
+        f"#define NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_OFFSET {palette_base}u",
+        f"#define NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_BYTES {palette_block}u",
         "",
         "static const NDSBattlePlayableStaticTextureRecord",
         "sNdsBattleStaticTextureRecords[NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT] =",
@@ -1266,6 +1370,8 @@ def build_include(
                 f"        {record.payload_offset}u, {record.payload_bytes}u, "
                 f"{record.logical_width}u, {record.logical_height}u, "
                 f"{record.upload_width}u, {record.upload_height}u,",
+                f"        {record.ds_format}u, {record.palette_entries}u, "
+                f"{record.palette_offset}u,",
                 "        {",
             ]
         )
@@ -1383,7 +1489,10 @@ def generate(repo_root: Path) -> GeneratedArtifacts:
     generated_include = build_include(
         records, payload, census_sha256, metadata_sha256
     )
-    residency_bytes = sum(record.upload_width * record.upload_height * 2 for record in records)
+    # TEXEL bytes only. Palettes are resident too, but in VRAM F/G, and lumping
+    # them in here would hide the one number this budget exists to track: what
+    # the 262,144-byte texture banks are actually holding.
+    residency_bytes = sum(record.payload_bytes for record in records)
     oracle_pixels = sum(record.logical_width * record.logical_height for record in records)
     return GeneratedArtifacts(
         include=generated_include,

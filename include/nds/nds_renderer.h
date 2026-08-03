@@ -1223,6 +1223,15 @@ void ndsRendererEndParticleQuads(void);
 extern volatile u32 gNdsRendererParticleAtlasPrepareCount;
 extern volatile u32 gNdsRendererParticleAtlasFailCount;
 extern volatile u32 gNdsRendererParticleAtlasBytes;
+/* The v16 rail, counted where it happens. Clamp must be 0: a quad that reaches
+ * it is drawn flattened onto the rail instead of where it belongs, which is
+ * BUGS.md's "VFX get x flattened around stage edges". ScaleEscalations and
+ * ScaleShiftMax say how much range the pass had to buy to keep it at 0 --
+ * 0/0 on an ordinary frame, non-zero on a Star KO, whose sparkle follows the
+ * dying fighter out to z = -14,999. */
+extern volatile u32 gNdsParticleWorldClampCount;
+extern volatile u32 gNdsParticleScaleEscalations;
+extern volatile u32 gNdsParticleScaleShiftMax;
 #endif
 void ndsRendererHardwareArmBattleStaticTextures(void);
 /* R2-03 E48 lab probe. Latches the generic colour path's per-frame branch counts

@@ -1,0 +1,27 @@
+--- a/src/sc/scmanager.c
++++ b/src/sc/scmanager.c
+@@ -853,7 +853,11 @@
+ 	lbBackupApplyOptions();
+ 
+ 	framebuffer = (u16*) gSYFramebufferSets;
++	#if defined(SSB64_TARGET_NDS)
++	end = (uintptr_t)gSYFramebufferSets + sizeof(gSYFramebufferSets);
++	#else
+ 	end = 0x80400000;
++	#endif
+ 
+ 	while ((uintptr_t)framebuffer < end)
+ 	{
+@@ -1282,6 +1286,7 @@
+ 	}
+ }
+ 
++#if !defined(SSB64_TARGET_NDS)
+ // 0x800A2698
+ void scManagerFuncUpdate(SYTaskmanSetup *arg)
+ {
+@@ -1552,3 +1557,4 @@
+ {
+ 	syDebugRunFuncPrint(scManagerFuncPrint);
+ }
++#endif

@@ -56,6 +56,35 @@ volatile u32 gNdsTaskmanGraphicsHeapSize;
 volatile u32 gNdsTaskmanRdpKind;
 volatile u32 gNdsTaskmanRdpBufferSize;
 volatile u32 gNdsTaskmanMallocCount;
+/* THE FREEZE THAT KEEPS COMING BACK, MADE SURVIVABLE.
+ *
+ * syTaskmanCheckBufferLengths (decomp src/sys/taskman.c:329) ends BOTH of its
+ * overflow branches in `while (TRUE);`. On N64 that is a developer assert on a
+ * devkit with a debugger attached; on a DS it is a dead console, and it is the
+ * mechanism behind every "the match froze" the owner has filed -- the DL-head
+ * overrun on a rematch, and the graphics-heap leak on a shield hit. Each was
+ * root-caused and each fix was correct, and the spin still guarantees that the
+ * NEXT accounting mistake anywhere in the port presents as a hang rather than
+ * as a glitch.
+ *
+ * So the port's build of that function recovers instead of spinning: it rewinds
+ * the overrun arena to its base, records what happened here, and returns. The
+ * frame that overran loses display-list content it was going to lose anyway --
+ * the writes past the end already happened before the check runs -- and the
+ * game keeps running. These counters are the alarm, and they must read 0: a
+ * non-zero Count is a real accounting defect that still needs its own fix, now
+ * with the kind, the byte overshoot and the frame recorded instead of a PC
+ * spinning in a loop with no state.
+ *
+ * This is deliberately NOT a substitute for the per-frame rewinds in
+ * ndsBattlePlayablePresentRealtimeFrame. Those are the fix; this is the
+ * guarantee that a future regression of the same class costs a visual artefact
+ * rather than the session. */
+volatile u32 gNdsTaskmanDLOverflowCount;
+volatile u32 gNdsTaskmanDLOverflowKind;
+volatile u32 gNdsTaskmanDLOverflowBytes;
+volatile u32 gNdsTaskmanGraphicsOverflowCount;
+volatile u32 gNdsTaskmanGraphicsOverflowBytes;
 volatile u32 gNdsStartupTaskmanMallocCount;
 volatile u32 gNdsTaskmanGeneralHeapUsed;
 volatile u32 gNdsTaskmanDLContextsValid;

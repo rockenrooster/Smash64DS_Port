@@ -3469,6 +3469,7 @@ static const NDSRendererHardwareTextureCacheEntry
  * ownership guard below runs long before it and has to recognise the atlas. */
 static int sNdsRendererParticleAtlasName;
 static u32 sNdsRendererParticleAtlasPrepared;
+static u16 sNdsRendererParticleAtlasPalette[NDS_PARTICLE_QUAD_PALETTE_ENTRIES];
 #endif
 
 static void ndsRendererHardwareRecordBattleStaticTextureHit(
@@ -3525,6 +3526,38 @@ static int sNdsRendererSceneMipTextureNames[
 #endif
 static u16 sNdsRendererHardwareTextureScratch[
     NDS_RENDERER_HW_TEXTURE_MAX_TEXELS];
+/* Sixteen entries is the whole of a GL_RGB16 palette; the static corpus never
+ * needs more (generate_battle_playable_static_textures.py falls back to direct
+ * colour above that). */
+/* The whole palette block, read once per prepare. Per-record reads cost 22
+ * extra NitroFS round trips inside the longest pause in the game. */
+static u8 sNdsRendererStaticTexturePaletteBlock[
+    NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES];
+static u16 sNdsRendererStaticTexturePalette[16];
+
+/* Bytes the record's payload span occupies, which is its ENCODING's business
+ * and not upload_width x upload_height x 2 any more. 0 means "not a format this
+ * uploader knows", which every caller treats as a rejection. */
+static u32 ndsRendererStaticTextureSpanBytes(
+    const NDSBattlePlayableStaticTextureRecord *record)
+{
+    u32 texels;
+
+    if (record == NULL)
+    {
+        return 0u;
+    }
+    texels = (u32)record->upload_width * (u32)record->upload_height;
+    if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
+    {
+        return (texels + 1u) >> 1;
+    }
+    if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_RGBA)
+    {
+        return texels * sizeof(u16);
+    }
+    return 0u;
+}
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_RENDERER_HW_TEXTURE_REFRESH_QUEUE_COUNT 2u
 #define NDS_RENDERER_HW_TEXTURE_REFRESH_SMALL_TEXELS 2048u
@@ -10744,6 +10777,26 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     {
         goto fail;
     }
+    /* ONE read for every palette, before the record loop. See the note beside
+     * sNdsRendererStaticTexturePaletteBlock: doing this per record put 22 extra
+     * NitroFS seeks and reads inside the scene load. */
+    {
+        u32 palette_block_bytes =
+            ndsBattlePlayableStaticTexturePaletteBlockBytes();
+
+        if ((palette_block_bytes >
+             sizeof(sNdsRendererStaticTexturePaletteBlock)) ||
+            (ndsRendererHardwareFencedTextureFseek(
+                 file,
+                 (long)ndsBattlePlayableStaticTexturePaletteBlockOffset(),
+                 SEEK_SET) != 0) ||
+            (ndsRendererHardwareFencedTextureFread(
+                 sNdsRendererStaticTexturePaletteBlock, 1,
+                 palette_block_bytes, file) != palette_block_bytes))
+        {
+            goto fail;
+        }
+    }
 
     for (record_index = 0u;
          record_index < ndsBattlePlayableStaticTextureKeyCount();
@@ -10778,8 +10831,8 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
              ndsBattlePlayableStaticTexturePayloadBytes() -
                  record->payload_offset) ||
             (record->payload_bytes !=
-             (u32)record->upload_width * (u32)record->upload_height *
-                 sizeof(u16)) ||
+             ndsRendererStaticTextureSpanBytes(record)) ||
+            (ndsRendererStaticTextureSpanBytes(record) == 0u) ||
             (ndsRendererHardwareTextureSizeEnum(
                  record->upload_width, &size_x) == FALSE) ||
             (ndsRendererHardwareTextureSizeEnum(
@@ -10840,17 +10893,51 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             goto fail;
         }
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
-        for (y = 0u; y < record->logical_height; y++)
+        /* The profile scan reads halfwords, so it only means anything for a
+         * direct-colour span. A paletted one is indices. */
+        if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_RGBA)
         {
-            for (x = 0u; x < record->logical_width; x++)
+            for (y = 0u; y < record->logical_height; y++)
             {
-                ndsRendererProfileTexturePixel(
-                    sNdsRendererHardwareTextureScratch[
-                        (y * record->upload_width) + x],
-                    &green_texels, &nonwhite_texels);
+                for (x = 0u; x < record->logical_width; x++)
+                {
+                    ndsRendererProfileTexturePixel(
+                        sNdsRendererHardwareTextureScratch[
+                            (y * record->upload_width) + x],
+                        &green_texels, &nonwhite_texels);
+                }
             }
         }
 #endif
+        if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
+        {
+            u32 palette_bytes = (u32)record->palette_entries * sizeof(u16);
+
+            u32 block_index;
+
+            if ((record->palette_entries == 0u) ||
+                (record->palette_entries >
+                 (u16)(sizeof(sNdsRendererStaticTexturePalette) /
+                       sizeof(sNdsRendererStaticTexturePalette[0]))) ||
+                (record->palette_offset <
+                 ndsBattlePlayableStaticTexturePaletteBlockOffset()))
+            {
+                goto fail;
+            }
+            block_index = record->palette_offset -
+                ndsBattlePlayableStaticTexturePaletteBlockOffset();
+            if ((block_index >
+                 ndsBattlePlayableStaticTexturePaletteBlockBytes()) ||
+                (palette_bytes >
+                 ndsBattlePlayableStaticTexturePaletteBlockBytes() -
+                     block_index))
+            {
+                goto fail;
+            }
+            memcpy(sNdsRendererStaticTexturePalette,
+                   &sNdsRendererStaticTexturePaletteBlock[block_index],
+                   palette_bytes);
+        }
 
         entry = ndsRendererHardwareAllocTexture();
         if (entry == NULL)
@@ -10864,13 +10951,36 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             goto fail;
         }
         ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
-        if (ndsRendererHardwareFencedGlTexImage2D(
-                GL_TEXTURE_2D, 0, GL_RGBA, size_x, size_y, 0,
-                TEXGEN_TEXCOORD,
-                sNdsRendererHardwareTextureScratch) == 0)
         {
-            (void)ndsRendererHardwareReleaseTexture(entry);
-            goto fail;
+            /* Colour 0 is the transparent one ONLY when the generator put a
+             * transparent colour there; an image with no transparent texel
+             * uses all sixteen entries and index 0 is real art. Reading the
+             * palette rather than carrying a flag keeps the two in step. */
+            int params = TEXGEN_TEXCOORD;
+            GL_TEXTURE_TYPE_ENUM type = GL_RGBA;
+
+            if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
+            {
+                type = GL_RGB16;
+                if (sNdsRendererStaticTexturePalette[0] == 0u)
+                {
+                    params |= GL_TEXTURE_COLOR0_TRANSPARENT;
+                }
+            }
+            if (ndsRendererHardwareFencedGlTexImage2D(
+                    GL_TEXTURE_2D, 0, type, size_x, size_y, 0,
+                    params,
+                    sNdsRendererHardwareTextureScratch) == 0)
+            {
+                (void)ndsRendererHardwareReleaseTexture(entry);
+                goto fail;
+            }
+            if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
+            {
+                glColorTableEXT(GL_TEXTURE_2D, 0,
+                                (int)record->palette_entries, 0, 0,
+                                sNdsRendererStaticTexturePalette);
+            }
         }
         {
             uintptr_t first = (uintptr_t)glGetTexturePointer(entry->name);
@@ -11016,7 +11126,10 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         return TRUE;
     }
     gNdsRendererParticleAtlasPrepareCount++;
-    if ((NDS_PARTICLE_QUAD_ASSET_BYTES >
+    /* TEXELS against the scratch, not texels+palette: at 128x256 the sheet is
+     * exactly the scratch buffer and the sixteen palette bytes would push the
+     * one-read form over it. The palette gets its own small read below. */
+    if ((NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES >
           sizeof(sNdsRendererHardwareTextureScratch)) ||
         (ndsRendererHardwareTextureSizeEnum(
              NDS_PARTICLE_QUAD_ATLAS_WIDTH, &size_x) == FALSE) ||
@@ -11031,10 +11144,16 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
     {
         goto fail;
     }
-    if (ndsRendererHardwareFencedTextureFread(
-            sNdsRendererHardwareTextureScratch, 1,
-            NDS_PARTICLE_QUAD_ASSET_BYTES, file) !=
-        NDS_PARTICLE_QUAD_ASSET_BYTES)
+    if ((ndsRendererHardwareFencedTextureFread(
+             sNdsRendererHardwareTextureScratch, 1,
+             NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES, file) !=
+         NDS_PARTICLE_QUAD_TEXEL_ASSET_BYTES) ||
+        (ndsRendererHardwareFencedTextureFseek(
+             file, (long)NDS_PARTICLE_QUAD_PALETTE_OFFSET, SEEK_SET) != 0) ||
+        (ndsRendererHardwareFencedTextureFread(
+             sNdsRendererParticleAtlasPalette, 1,
+             sizeof(sNdsRendererParticleAtlasPalette), file) !=
+         sizeof(sNdsRendererParticleAtlasPalette)))
     {
         goto fail;
     }
@@ -11056,32 +11175,37 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         goto fail;
     }
     ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
-    /* A5I3, not GL_RGBA. One byte per texel is what lets a 128x64 sheet ask the
-     * allocator for the same 8,192-byte block that 64x64 RGB555+A1 already
-     * proved safe -- every larger request, 16,384 and 32,768 alike, broke stage
-     * texture resolves. It is also the fidelity fix: RGB555+A1 gave particles a
-     * SINGLE alpha bit, so every soft-edged sprite drew as a hard blob. Five
-     * bits is 32 levels.
+    /* A3I5, one byte per texel: 32 palette entries and 8 alpha levels.
      *
-     * Three index bits are enough because the batch below runs in modulation
-     * mode and calls glColor with the source's primcolor per quad, so the sheet
-     * carries shape and the game carries colour -- the same division the RDP's
-     * prim colour made. The palette is sixteen bytes in VRAM F/G, which is not
-     * the allocator that was refusing. */
+     * Not GL_RGBA, for the reason that has not changed -- RGB555+A1 gives
+     * particles a SINGLE alpha bit, so every soft-edged sprite draws as a hard
+     * blob, and it costs two bytes a texel besides.
+     *
+     * A5I3 (8 entries, 32 alpha levels) held this slot until 2026-08-03 and its
+     * reasoning was sound while the sheet carried SHAPE and the batch supplied
+     * COLOUR through glColor per quad, exactly as the RDP's prim colour did.
+     * Fox's reflector is the asset that does not fit that division: it is two
+     * flat tones with no shape at all, so eight shared entries could not hold
+     * its specific blues alongside every other effect's greys, and the owner
+     * filed it as the wrong asset. Colour has no other source here; alpha
+     * resolution does -- 8 levels is four times what the RGB555+A1 failure had,
+     * spread over cells that are now 32x32 instead of 16x16.
+     *
+     * The palette is 64 bytes in VRAM F/G, which is not the allocator that was
+     * ever refusing. */
     if (ndsRendererHardwareFencedGlTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGB8_A5, size_x, size_y, 0,
+            GL_TEXTURE_2D, 0, GL_RGB32_A3, size_x, size_y, 0,
             TEXGEN_TEXCOORD, sNdsRendererHardwareTextureScratch) == 0)
     {
         (void)ndsRendererHardwareReleaseTexture(entry);
         goto fail;
     }
-    /* The scratch is u16[], so the palette's BYTE offset has to be applied
-     * through a u8 pointer -- indexing it directly would land at twice the
-     * offset and hand the hardware texels as a palette. */
+    /* Read separately above, so no byte-offset arithmetic into a u16 buffer --
+     * which is what used to hand the hardware texels as a palette when the
+     * offset was applied through the wrong pointer type. */
     glColorTableEXT(
         GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
-        (const u16 *)(((const u8 *)sNdsRendererHardwareTextureScratch) +
-                      NDS_PARTICLE_QUAD_PALETTE_OFFSET));
+        sNdsRendererParticleAtlasPalette);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareTextureLookupRemove(entry);
 #endif
@@ -11128,46 +11252,106 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
     gNdsRendererParticleAtlasBytes = 0u;
 }
 
-/* BUGS.md row 1, OFF BY DEFAULT pending the owner's visual approval.
+/* BUGS.md "VFX get x flattened around stage edges ... why is there a limit
+ * anyways???" and "Star KO twinkle not playing in correct spot".
  *
- * At the stock x16 the reach is 32767/16 = 2047.9 world units while the camera
- * measured in a live match sees 3,148 -- so a particle between those two is
- * clamped onto the rail instead of drawn where it belongs. Measured on Whispy's
- * wind: 1,118 of 5,590 quads a match, twenty percent, land there.
+ * THE LIMIT IS v16, AND IT IS ONE BUG WEARING TWO FACES. At the stock x16
+ * factor the reach is 32767/16 = 2047.9 world units. Every vertex past that
+ * SATURATES on the rail, so a quad straddling it has its far corners pinned to
+ * the same coordinate and collapses along that axis -- the owner's "x flattened
+ * around stage edges", measured at 1,118 of 5,590 quads a match on Whispy's
+ * wind alone, because the live camera reaches 3,148. The same rail is why the
+ * Star KO twinkle draws in the wrong place: ftcommondead.c recedes the dying
+ * fighter to z = -14,999 and the sparkle spawns AT it, so the fighter (drawn
+ * through the ordinary matrix path, which has 20.12 of range) recedes correctly
+ * while its twinkle stops dead at -2,047.9 and hangs near the camera. The
+ * fighter's own draw never had this limit; only the particle pass did.
  *
- * v16 is 16-bit and no encoding buys the range back; camera-relative emission
- * does not either, since the camera's own half-width already exceeds it. The
- * range has to come from SCALE. At 1 the particle pass halves the vertex factor
- * to x8 (reach +/-4095.9, covering the camera) and the batch pushes a matching
- * 2x modelview so the geometry lands in the same place at the same size.
+ * The range has to come from SCALE, since v16 is 16 bits and no encoding buys
+ * it back. A FIXED coarser factor was the previous shape of this and it is the
+ * wrong trade: it charges every ordinary hit spark a permanent loss of sub-unit
+ * resolution to pay for the one effect a match that leaves the stage.
  *
- * The cost, and the reason this needs approval rather than a quiet commit, is
- * that halving the factor halves sub-unit resolution for every particle. */
-#ifndef NDS_R2_PARTICLE_V16_HEADROOM
-#define NDS_R2_PARTICLE_V16_HEADROOM 0
-#endif
+ * So the factor is chosen per BATCH and escalates only when a quad actually
+ * needs it. Each quad's furthest corner picks the smallest shift that keeps it
+ * off the rail; if that is coarser than what the batch is running, the pass
+ * swaps its compensating modelview scale and continues. Vertices already queued
+ * were transformed when they were submitted and are unaffected. An ordinary
+ * frame never escalates and keeps the full x16 precision it has always had; a
+ * Star KO frame escalates once and spends 0.5 world units of precision on
+ * particles that are 15,000 units away. Monotonic within a frame, reset with
+ * the batch, so the choice is deterministic rather than order-dependent noise.
+ *
+ * NDS_RENDERER_PARTICLE_MAX_SCALE_SHIFT 4 reaches +/-32,767 world units, past
+ * every blast zone and past the DeadUpStar recession. */
+#define NDS_RENDERER_PARTICLE_MAX_SCALE_SHIFT 4u
 
-#if NDS_R2_PARTICLE_V16_HEADROOM
-#define NDS_RENDERER_PARTICLE_UNIT_SHIFT (NDS_RENDERER_HW_WORLD_UNIT_SHIFT + 1u)
-#else
-#define NDS_RENDERER_PARTICLE_UNIT_SHIFT NDS_RENDERER_HW_WORLD_UNIT_SHIFT
-#endif
-
-/* World coordinate -> v16. The scene's modelview carries a
- * NDS_RENDERER_HW_WORLD_UNIT_SHIFT (=8) scale, so one world unit is
- * 2^(12-8) = 16 in vertex space -- the same relation
+/* World coordinate -> v16 at the batch's current scale. The scene's modelview
+ * carries a NDS_RENDERER_HW_WORLD_UNIT_SHIFT (=8) scale, so at shift 0 one
+ * world unit is 2^(12-8) = 16 in vertex space -- the same relation
  * ndsRendererHardwareCoordToV16 applies to integer source vertices, restated
  * for the f32 the particle interpreter holds. Getting this wrong does not
  * fail; it draws the effects at 1/256 or 256x scale, which is why it is
  * spelled out rather than folded into a literal. */
-static v16 ndsRendererParticleWorldToV16(f32 value)
-{
-    s32 scaled = (s32)(value * (f32)(1 << (12u -
-                                           NDS_RENDERER_PARTICLE_UNIT_SHIFT)));
+#define NDS_RENDERER_PARTICLE_UNIT_SHIFT NDS_RENDERER_HW_WORLD_UNIT_SHIFT
 
-    if (scaled > 32767) { return (v16)32767; }
-    if (scaled < -32768) { return (v16)-32768; }
+/* Counted, not assumed: Clamp must read 0 on a fixed build. It is the direct
+ * measurement of the reported symptom, so a non-zero value means a quad was
+ * still drawn on the rail. */
+volatile u32 gNdsParticleWorldClampCount;
+volatile u32 gNdsParticleScaleEscalations;
+volatile u32 gNdsParticleScaleShiftMax;
+
+static u32 sNdsRendererParticleScaleShift;
+
+/* A world magnitude past this cannot be on screen under any camera this game
+ * builds, and converting it would overflow the s32 below -- which is undefined
+ * rather than merely wrong. Saturating here keeps the conversion total. */
+#define NDS_RENDERER_PARTICLE_WORLD_LIMIT 131072.0F
+
+/* No libm call for three magnitudes per quad; the sign bit is the whole job. */
+#define NDS_FABS(v) (((v) < 0.0F) ? -(v) : (v))
+
+static s32 ndsRendererParticleWorldFixed(f32 value)
+{
+    if (value > NDS_RENDERER_PARTICLE_WORLD_LIMIT)
+    {
+        value = NDS_RENDERER_PARTICLE_WORLD_LIMIT;
+    }
+    else if (value < -NDS_RENDERER_PARTICLE_WORLD_LIMIT)
+    {
+        value = -NDS_RENDERER_PARTICLE_WORLD_LIMIT;
+    }
+    return (s32)(value * (f32)(1 << (12u -
+                                     NDS_RENDERER_PARTICLE_UNIT_SHIFT)));
+}
+
+static v16 ndsRendererParticleWorldToV16(f32 value, u32 shift)
+{
+    s32 scaled = ndsRendererParticleWorldFixed(value) / (s32)(1 << shift);
+
+    if (scaled > 32767) { gNdsParticleWorldClampCount++; return (v16)32767; }
+    if (scaled < -32768) { gNdsParticleWorldClampCount++; return (v16)-32768; }
     return (v16)scaled;
+}
+
+/* The smallest shift that keeps `extent` (a world magnitude) off the rail. */
+static u32 ndsRendererParticleScaleShiftFor(f32 extent)
+{
+    u32 shift = 0u;
+    s32 scaled;
+
+    if (!(extent > 0.0F))
+    {
+        return 0u;
+    }
+    scaled = ndsRendererParticleWorldFixed(extent);
+    while ((shift < NDS_RENDERER_PARTICLE_MAX_SCALE_SHIFT) &&
+           ((scaled / (s32)(1 << shift)) > 32767))
+    {
+        shift++;
+    }
+    return shift;
 }
 
 static u32 sNdsRendererParticleQuadOpen;
@@ -11354,15 +11538,14 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
             gNdsParticleCamTy = scaled_modelview.m[3][1];
             gNdsParticleCamTz = scaled_modelview.m[3][2];
         }
-#if NDS_R2_PARTICLE_V16_HEADROOM
-        /* Exactly compensates the halved vertex factor above, so the quads land
-         * where they always did and only their representable RANGE changes.
-         * Pushed before glBegin and popped in ndsRendererEndParticleQuads --
-         * once per frame for the whole pass, because the batch is opened lazily
-         * on the first quad and closed once. */
+        /* The scale that compensates the vertex factor, so quads land where
+         * they always did and only their representable RANGE changes. Pushed
+         * unconditionally even at shift 0 (scale 1) so the pop in
+         * ndsRendererEndParticleQuads is symmetric whether or not the batch
+         * ever escalated, and so an escalation is a pop/push of a matrix that
+         * is already on the stack rather than a special first case. */
+        sNdsRendererParticleScaleShift = 0u;
         glPushMatrix();
-        glScalef32(inttof32(2), inttof32(2), inttof32(2));
-#endif
         glEnable(GL_TEXTURE_2D);
         ndsRendererHardwareBindTextureName(NULL, atlas_name);
         /* Translucent, unlit, both faces: a billboard has no meaningful
@@ -11381,6 +11564,40 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     ux = up->x * size;
     uy = up->y * size;
     uz = up->z * size;
+
+    /* The furthest corner this quad will reach, per axis, without evaluating
+     * all four: |centre| + |right leg| + |up leg| bounds every combination of
+     * the two signs. If it does not fit the batch's current factor, coarsen the
+     * factor now -- before any of this quad's vertices are queued. */
+    {
+        f32 ex = NDS_FABS(pos->x) + NDS_FABS(rx) + NDS_FABS(ux);
+        f32 ey = NDS_FABS(pos->y) + NDS_FABS(ry) + NDS_FABS(uy);
+        f32 ez = NDS_FABS(pos->z) + NDS_FABS(rz) + NDS_FABS(uz);
+        f32 extent = (ex > ey) ? ex : ey;
+        u32 needed;
+
+        if (ez > extent) { extent = ez; }
+        needed = ndsRendererParticleScaleShiftFor(extent);
+        if (needed > sNdsRendererParticleScaleShift)
+        {
+            /* Vertices already queued were transformed against the matrix that
+             * was live when they were submitted, so swapping it now moves only
+             * what follows. Pop back to the camera modelview, push the coarser
+             * compensation, continue the same primitive group -- no glEnd, for
+             * the reason ndsRendererEndParticleQuads states at length. */
+            s32 factor = inttof32(1 << needed);
+
+            glPopMatrix(1);
+            glPushMatrix();
+            glScalef32(factor, factor, factor);
+            sNdsRendererParticleScaleShift = needed;
+            gNdsParticleScaleEscalations++;
+            if (needed > gNdsParticleScaleShiftMax)
+            {
+                gNdsParticleScaleShiftMax = needed;
+            }
+        }
+    }
     glColor((rgb)color);
 
     /* Counter-clockwise from the bottom-left, with T increasing downward to
@@ -11392,12 +11609,16 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
         u32 texel_s = atlas_x + (((corner == 0u) || (corner == 3u))
                                      ? 0u : atlas_w);
         u32 texel_t = atlas_y + ((corner < 2u) ? atlas_h : 0u);
+        u32 shift = sNdsRendererParticleScaleShift;
 
         glTexCoord2t16((t16)(texel_s << 4), (t16)(texel_t << 4));
         glVertex3v16(
-            ndsRendererParticleWorldToV16(pos->x + (rx * sx) + (ux * sy)),
-            ndsRendererParticleWorldToV16(pos->y + (ry * sx) + (uy * sy)),
-            ndsRendererParticleWorldToV16(pos->z + (rz * sx) + (uz * sy)));
+            ndsRendererParticleWorldToV16(pos->x + (rx * sx) + (ux * sy),
+                                          shift),
+            ndsRendererParticleWorldToV16(pos->y + (ry * sx) + (uy * sy),
+                                          shift),
+            ndsRendererParticleWorldToV16(pos->z + (rz * sx) + (uz * sy),
+                                          shift));
     }
     return TRUE;
 }
@@ -11419,14 +11640,14 @@ void ndsRendererEndParticleQuads(void)
         sNdsRendererParticleQuadOpen = FALSE;
         sNdsRendererParticleQuadAlpha = 0u;
         ndsRendererHardwareEndBatch();
-#if NDS_R2_PARTICLE_V16_HEADROOM
         /* AFTER EndBatch, not before. The comment above is explicit that this
          * group is left open exactly as EndBatch leaves its own and that an
          * extra FIFO write here hung the ROM at GXSTAT=0e008900; popping the
          * matrix before the batch is flushed would retroactively move vertices
-         * already queued against it. */
+         * already queued against it. Pairs with the unconditional push at batch
+         * open, at whatever shift the pass escalated to. */
         glPopMatrix(1);
-#endif
+        sNdsRendererParticleScaleShift = 0u;
         /* The bound-texture name is LEFT ALONE. Clearing it here forced the
          * next binder to re-issue every frame, and the stage's prepared-run
          * reuse rides on that state: rebuilds went 2 -> 197 a match purely
@@ -16227,6 +16448,15 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
 volatile u32 gNdsRendererParticleAtlasPrepareCount;
 volatile u32 gNdsRendererParticleAtlasFailCount;
 volatile u32 gNdsRendererParticleAtlasBytes;
+/* The v16 rail counters' software-renderer twins. `battleship_lbparticle.c`
+ * reads the clamp count under NDS_R2_PARTICLE_DRAW, which defaults ON while
+ * NDS_RENDERER_HW_TRIANGLES defaults OFF -- so without these three the DEFAULT
+ * configuration is the one that fails to link, which is exactly the trap
+ * ndsRendererSetParticleCamera fell into on 2026-08-02. They stay real so a
+ * soak against either build reads the same field rather than dropping it. */
+volatile u32 gNdsParticleWorldClampCount;
+volatile u32 gNdsParticleScaleEscalations;
+volatile u32 gNdsParticleScaleShiftMax;
 
 /* The particle atlas is a hardware-texture object; the software renderer has
  * no texture cache to hold it, so the draw seam gets a name of 0 and declines

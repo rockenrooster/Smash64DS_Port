@@ -13,6 +13,9 @@ _Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 132096u,
                "canonical static texture payload size changed");
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 136192u,
                "canonical static texture prepared size changed");
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_BYTES <=
+                   NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES,
+               "static texture palette block outgrew the renderer's buffer");
 
 static void ndsBattlePlayableStaticTextureClearView(
     NDSBattlePlayableStaticTextureView *view)
@@ -29,6 +32,9 @@ static void ndsBattlePlayableStaticTextureClearView(
     view->logical_height = 0u;
     view->upload_width = 0u;
     view->upload_height = 0u;
+    view->ds_format = 0u;
+    view->palette_entries = 0u;
+    view->palette_offset = 0u;
 }
 
 static s32 ndsBattlePlayableStaticTextureProvenanceValid(
@@ -166,8 +172,35 @@ static s32 ndsBattlePlayableStaticTextureRecordValid(
     {
         return FALSE;
     }
-    expected_bytes = (u32)record->upload_width *
-        (u32)record->upload_height * 2u;
+    /* The span's size follows its ENCODING now, and this test is the only place
+     * that knows the relation -- so a record whose format and byte count
+     * disagree is rejected here rather than uploaded as garbage. */
+    {
+        u32 texels = (u32)record->upload_width * (u32)record->upload_height;
+
+        if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
+        {
+            if ((record->palette_entries == 0u) ||
+                (record->palette_entries > 16u))
+            {
+                return FALSE;
+            }
+            expected_bytes = (texels + 1u) >> 1;
+        }
+        else if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_RGBA)
+        {
+            if ((record->palette_entries != 0u) ||
+                (record->palette_offset != 0u))
+            {
+                return FALSE;
+            }
+            expected_bytes = texels * 2u;
+        }
+        else
+        {
+            return FALSE;
+        }
+    }
     if ((record->payload_bytes != expected_bytes) ||
         (record->payload_offset > NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES) ||
         (record->payload_bytes >
@@ -238,6 +271,9 @@ s32 ndsBattlePlayableStaticTextureLookup(
         out_view->logical_height = record->logical_height;
         out_view->upload_width = record->upload_width;
         out_view->upload_height = record->upload_height;
+        out_view->ds_format = record->ds_format;
+        out_view->palette_entries = record->palette_entries;
+        out_view->palette_offset = record->palette_offset;
         return NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_HIT;
     }
     return NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_MISS;
@@ -263,4 +299,14 @@ u32 ndsBattlePlayableStaticTexturePayloadBytes(void)
 u32 ndsBattlePlayableStaticTexturePreparedBytes(void)
 {
     return NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES;
+}
+
+u32 ndsBattlePlayableStaticTexturePaletteBlockOffset(void)
+{
+    return NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_OFFSET;
+}
+
+u32 ndsBattlePlayableStaticTexturePaletteBlockBytes(void)
+{
+    return NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_BYTES;
 }
