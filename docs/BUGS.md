@@ -68,15 +68,31 @@ its offsets resolved by ndsEFManagerResolveAllDescOffsets. dEFManagerShieldEffec
 and dEFManagerImpactWaveEffectDesc are ALREADY in that resolve list; they are
 just gated off.
 
-What is missing is one thing: the battle camera does not capture the DL links
-these effects register on (the reflector is DL link 15, the impact wave 10),
-so their geometry is built and never submitted. The port's stand-in registers
-on link 18, which IS captured -- which is why a procedural disc appears and the
-real model does not.
+WHAT IS MISSING IS DOWNSTREAM OF THE CAMERA, and an earlier version of this
+note said otherwise -- it claimed the battle camera does not capture these
+links. That is FALSE and was written without reading gmcamera.c. The source
+battle camera captures them in five passes (gmcamera.c:1057-1099):
+
+    pass 1: links 2, 1
+    pass 2: link 4
+    pass 3: links 12, 11, 10, 9, 7, 6      <- 10 is the impact wave
+    pass 4: links 15, 14, 13               <- 15 is the Fox reflector
+    pass 5: links 18, 17, 16               <- 18 is where the stand-ins live
+    pass 6: links 20, 19
+
+and the port compiles that function. So the camera mask is not the gap. Pass 5
+demonstrably reaches the screen, because the procedural stand-ins on link 18
+draw. Whether passes 3 and 4 reach the DS hardware path is the open question --
+that is what "the battle hardware path does not consume source effect DL links"
+must actually mean, and it has not been measured. Measure which capture passes
+the hardware path submits BEFORE changing anything.
 
 THE WORK, in order:
-  1. Extend the battle camera's captured DL links to cover the source effect
-     links, and make the hardware path submit them.
+  1. MEASURE which of the camera's six capture passes the DS hardware path
+     actually submits. Pass 5 does (the stand-ins draw). Passes 3 and 4 carry
+     the effect links and are the suspects. Do not skip this step -- the last
+     two attempts at this row family both published a mechanism before
+     measuring it, and both were wrong.
   2. Set NDS_R2_SOURCE_EFFECTS_FULL = 1.
   3. Retire the ndsEFManagerBuildDisc stand-ins for shield and rebirth.
 ACCEPTANCE, already defined at Makefile:1409: a soak whose
