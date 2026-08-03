@@ -7654,9 +7654,29 @@ efManagerFlashMiddleMakeEffect(Vec3f *pos);
  * geometry goes out as source effect display-list links, which the battle
  * hardware path does not submit -- routing them would trade a visible
  * primitive for nothing at all:
- *   ShockSmall, ImpactWave, DamageFlyOrbs/Sparks/MDust, FireSpark, StarRodSpark
+ *   ShockSmall, DamageFlyOrbs/Sparks/MDust, FireSpark, StarRodSpark
  * Same seam that kept the respawn platform invisible. Move a kind up here when
  * that path lands, not before.
+ *
+ * IMPACTWAVE LEFT THIS LIST ON 2026-08-02, and how that was settled matters
+ * more than the kind itself. The exclusion rule was applied to it by reading
+ * the SOURCE maker, which does build a DObj tree over effect DL links. But this
+ * port OVERRIDES efManagerImpactWaveMakeEffect with a substitute drawing
+ * nNDSVisualEffectImpactWave, a DL-link-18 visual-effect template the hardware
+ * path does submit -- so the rule's premise was false for this kind, and
+ * falling through is what cost the hard landing its shockwave while its dust
+ * played. Check for a port override before assuming a kind is blocked here.
+ *
+ * ROUTING IT THEN "FAILED" THE DETAIL GATE, AND THAT WAS NOISE. The first run
+ * threw "Horizontal detail region left_bush variation 22.379% is below required
+ * 40.000%", which reads exactly like a 162-unit opaque disc flattening scenery,
+ * and it was nearly reverted on that single arm. The owner asked whether their
+ * own interaction with the emulator window had caused it. Re-running the SAME
+ * change passed. assert-melonds-horizontal-detail samples a screenshot region,
+ * and capture runs on an interactive desktop (docs/VERIFYING.md), so a
+ * foregrounded window or a fighter standing in that region perturbs it. One
+ * failing arm of a screenshot gate is a measurement, not a verdict: re-run the
+ * candidate before believing it, exactly as an A/B would.
  *
  * And these fall through because P1 cannot request them, while linking their
  * maker would still cost .text -- which the taskman arena charges one-for-one
@@ -7689,6 +7709,16 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
         return TRUE;
     case nEFKindDustHeavyDoubleRapid:
         *effect = efManagerDustHeavyDoubleMakeEffect(pos, lr, 1.7F);
+        return TRUE;
+    /* The hard landing's shockwave -- see the ImpactWave paragraph above for
+     * why this is not blocked on the DL-links seam. The source branches on
+     * ground vs air and passes the floor angle so the ring lies along the
+     * slope (ftparam.c:1966); this seam has no `fp`, so both arms take the
+     * substitute at rotate 0. Dream Land's surfaces under a hard landing are
+     * flat, so the angle term is zero there; thread it when a sloped stage
+     * lands rather than widening this signature now. */
+    case nEFKindImpactWave:
+        *effect = efManagerImpactWaveMakeEffect(pos, 4, 0.0F);
         return TRUE;
     case nEFKindDustHeavy:
         *effect = efManagerDustHeavyMakeEffect(pos, lr);

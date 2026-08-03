@@ -23,7 +23,7 @@ fix live next to the code that owns it -- the particle generator and its checker
     MEASURED: colour passed as 0xRRGGBB where the API takes BGR555, so red packed to black.
 
 -Hard landing vfx not correct or not using correct asset.
-    LOCALIZED: no Landing-named function spawns an effect; they come from ftParamMakeEffect, ftparam.c:1966.
+    MEASURED: dust was wired, the shockwave was not. nEFKindImpactWave fell through; now routed.
 
 -KO VFX not drawing correctly.
     Owner: looks like its drawing too close to camera and is low quality

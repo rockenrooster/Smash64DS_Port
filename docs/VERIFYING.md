@@ -128,8 +128,25 @@ Choose one widest relevant wrapper:
 .\scripts\verify-current.ps1 -Build -DelaySeconds 3 -RunnerSlot 2
 ```
 
-`-Build` here is the **only** routine command that builds the default
-configuration, and the default is the published `smash64ds.nds`:
+**`smash64ds.nds` is not part of P1** (owner, 2026-08-02), so `-Build` is the
+wrong default reflex. P1 ships `smash64ds-battle-playable-hwtri.nds`, and
+Boundary above exercises it. Use `verify-current.ps1 -Build` only when a change
+genuinely touches normal or shared startup: it rebuilds the default
+configuration, which costs a full cycle on a ROM the milestone does not ship.
+Several consecutive cycles went to it during the 2026-08-02 `BUGS.md` queue
+before that was caught.
+
+A SCREENSHOT GATE'S FIRST FAILURE IS A MEASUREMENT, NOT A VERDICT.
+`assert-melonds-horizontal-detail.ps1` samples a named region of a captured
+frame, and capture runs on an interactive desktop — a foregrounded window, or a
+fighter standing in the sampled region, lowers its variation. On 2026-08-02 it
+threw `left_bush variation 22.379%` against a 40% floor and a correct change was
+nearly reverted on that one arm; re-running the same candidate passed. Re-run
+before believing it, the same way an A/B would.
+
+When `-Build` is genuinely warranted: it is the **only** routine command that
+builds the default configuration, and the default is the published
+`smash64ds.nds`:
 `NDS_RENDERER_HW_TRIANGLES ?= 0` with `NDS_R2_PARTICLE_RUNTIME ?= 1`. Every lab,
 tickhud, and `-hwtri` build overrides the first to `1`, so a function defined
 inside `#if NDS_RENDERER_HW_TRIANGLES` and called from an unguarded caller links
