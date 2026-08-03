@@ -95,9 +95,18 @@ THE WORK, in order:
      measuring it, and both were wrong.
   2. Set NDS_R2_SOURCE_EFFECTS_FULL = 1.
   3. Retire the ndsEFManagerBuildDisc stand-ins for shield and rebirth.
-ACCEPTANCE, already defined at Makefile:1409: a soak whose
-gNdsTaskmanGeneralHeapFreeMin stays above 25,600 AND a capture showing they
-draw. The 25,600 matters because ifCommonSetMaxNumGObj latches the GObj pool
+MEASURED 2026-08-03, one build: with NDS_R2_SOURCE_EFFECTS_FULL=1 the
+**Boundary profile PASSES**. That is half the acceptance test and it is the half
+everyone assumed would fail -- the flag has been sitting at 0 partly on the
+memory fear below. The ROM was rebuilt back to the tracked default afterwards so
+the published artifact matches the tracked configuration; nothing is shipped on
+a half-measured gate.
+
+ACCEPTANCE, already defined at Makefile:1409, and what is LEFT of it: a soak
+whose gNdsTaskmanGeneralHeapFreeMin stays above 25,600, AND a capture showing
+they draw. The heap half is unmeasured -- a passing Boundary run does not print
+MEMARENA, so it needs a soak or a marker dump. Get that number, take a capture
+of a shield and a respawn, and if both hold, flip the default. The 25,600 matters because ifCommonSetMaxNumGObj latches the GObj pool
 below it -- an earlier attempt at this flag capped the pool for a whole match,
 so this is a memory-risk change and not a cosmetic one.
 =============================================================================
