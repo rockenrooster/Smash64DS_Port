@@ -70,10 +70,20 @@ OPEN.
     cause would produce the same result. Bisect already showed ae7c3e735 ALONE
     hangs, so within that commit the remaining candidate is the resolver hunk --
     despite its counters reading 0 -- or its .text displacement.
-    DECISIVE NEXT TEST: revert the parsers AT ae7c3e735, not at HEAD. That is
-    the only build that separates that commit's parsers from its resolver. Pass
-    means the parsers; hang means the resolver (and its zero counters then mean
-    the mechanism is placement, not the rejection itself).
+    NAMED (cycle 28). Parser revert AT ae7c3e735 reaches 200 frames in 28s,
+    against the same commit hanging with them applied and the anchor passing.
+    So the parser patches trigger it -- and their counters read 0, so the
+    mechanism is PLACEMENT, not the bounded-loop logic.
+    THE DISPLACEMENT, measured: the patches add 312 bytes to .main
+    (0xca050 -> 0xca188), which shifts .main.rw from 0x020cd728 to 0x020cd860
+    and every later section with it. A 28-byte BSS pad did NOT reproduce the
+    hang (cycle 26), so it is this ~312-byte shift of .main.rw and beyond that
+    matters, not data growth as such.
+    THE REAL BUG IS WHATEVER THAT SHIFT DISPLACES, and it is latent and older
+    than this campaign -- the shipping arm is one symbol away from the same
+    cliff, so it must be fixed at its own seam rather than by keeping .main a
+    particular size. Next: nm-by-address around 0x020cd728/0x020cd860 in the two
+    ELFs to find what crossed a boundary.
     HARNESS TRAP WORTH REMEMBERING: unreferenced BSS is collected by
     --gc-sections, so the first discriminant build was byte-identical to the
     anchor and would have "passed" meaninglessly. Any padding probe must be
