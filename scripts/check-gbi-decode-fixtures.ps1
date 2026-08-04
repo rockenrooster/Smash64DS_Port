@@ -359,17 +359,31 @@ function Get-PrimEnvTexel0BlendMode {
         $alphaC = ($W0 -shr 9) -band 0x07
         $alphaD = ($W1 -shr 9) -band 0x07
     }
-    if (($colorA -ne 3) -or ($colorB -ne 5) -or
-        ($colorC -ne 1) -or ($colorD -ne 5)) {
+    # Mirrors the C recogniser's two-branch shape (nds_renderer.c
+    # ndsRendererHardwarePrimEnvTexel0BlendMode): the endpoint-lerp gate with
+    # its two alpha arms nested inside, then the degenerate constant form as a
+    # SEPARATE branch. Flattening these into one gate is what the C comment
+    # warns against -- a widened lerp gate admits every constant-d combine.
+    if (($colorA -eq 3) -and ($colorB -eq 5) -and
+        ($colorC -eq 1) -and ($colorD -eq 5)) {
+        if (($alphaA -eq 1) -and ($alphaB -eq 7) -and
+            ($alphaC -eq 3) -and ($alphaD -eq 7)) {
+            return 1
+        }
+        if (($alphaA -eq 7) -and ($alphaB -eq 7) -and
+            ($alphaC -eq 7) -and ($alphaD -eq 1)) {
+            return 2
+        }
         return 0
     }
-    if (($alphaA -eq 1) -and ($alphaB -eq 7) -and
-        ($alphaC -eq 3) -and ($alphaD -eq 7)) {
-        return 1
-    }
-    if (($alphaA -eq 7) -and ($alphaB -eq 7) -and
+    # Mode 3: colour (ZERO_AB, ZERO_AB, ZERO_C, PRIMITIVE) selects a flat
+    # primitive colour and alpha (0, 0, 0, TEXEL0) passes source coverage
+    # through untouched. The rebirth halo's beam is the live case.
+    if (($colorA -eq 15) -and ($colorB -eq 15) -and
+        ($colorC -eq 31) -and ($colorD -eq 3) -and
+        ($alphaA -eq 7) -and ($alphaB -eq 7) -and
         ($alphaC -eq 7) -and ($alphaD -eq 1)) {
-        return 2
+        return 3
     }
     return 0
 }
@@ -1326,6 +1340,19 @@ foreach ($secondCycle in @($false, $true)) {
     Assert-Equal (Get-PrimEnvTexel0BlendMode $blendSourceAlphaW0 $blendSourceAlphaW1 $secondCycle) 2 "G_CC_BLENDPE source-alpha form failed for secondCycle=$secondCycle."
 }
 Assert-Equal (Get-PrimEnvTexel0BlendMode ($blendPrimAlphaW0 -bxor 0x8000) $blendPrimAlphaW1) 0 'Non-BLENDPE combine entered the primitive/environment texture bake.'
+# THE THIRD ARM, which shipped with no fixture at all. The rebirth halo's beam
+# (85.vpk0.bin 0x28a0, G_SETCOMBINE FCFFFFFF FFFDF2F9) asks for rgb = PRIMITIVE
+# and alpha = TEXEL0 in BOTH cycles -- the renderer comment claims that and
+# nothing tested it, so it is asserted per cycle rather than once.
+$blendPrimRgbW0 = [Convert]::ToUInt32('fcffffff', 16)
+$blendPrimRgbW1 = [Convert]::ToUInt32('fffdf2f9', 16)
+foreach ($secondCycle in @($false, $true)) {
+    Assert-Equal (Get-PrimEnvTexel0BlendMode $blendPrimRgbW0 $blendPrimRgbW1 $secondCycle) 3 "Rebirth halo beam no longer decodes as the degenerate PRIM-RGB/TEXEL0-alpha combine for secondCycle=$secondCycle."
+}
+# The gate must stay narrow in both directions: the degenerate form is not a
+# lerp, and perturbing its constant colour mux must drop it back to 0 rather
+# than sliding into another arm.
+Assert-Equal (Get-PrimEnvTexel0BlendMode ($blendPrimRgbW0 -bxor 0x8000) $blendPrimRgbW1) 0 'Perturbed degenerate combine still entered a primitive/environment bake arm.'
 
 $blendEnvironments = @(
     [pscustomobject]@{ Name = 'red'; Color = [Convert]::ToUInt32('ff000055', 16); Zero = 0x801f; Half = 0xc21f },
@@ -1357,9 +1384,24 @@ foreach ($alphaCase in @(
     Assert-Equal (Resolve-PrimEnvTexel0Alpha 1 $alphaCase.Texel 192) $alphaCase.Prim 'BLENDPE TEXEL0*PRIMITIVE source-alpha oracle changed.'
     Assert-Equal (Resolve-PrimEnvTexel0Alpha 2 $alphaCase.Texel 192) $alphaCase.Source 'BLENDPE TEXEL0 passthrough source-alpha oracle changed.'
 }
-Assert-True ($renderer -match '(?s)static u32 ndsRendererHardwarePrimEnvTexel0BlendMode.*?color_a != NDS_RENDERER_CCMUX_PRIMITIVE.*?alpha_a == NDS_RENDERER_ACMUX_TEXEL0.*?alpha_a == NDS_RENDERER_ACMUX_0') 'Renderer no longer recognizes BLENDPE by active combine semantics and both alpha forms.'
+# The recogniser tests the colour mux POSITIVELY and nests its two alpha arms
+# inside that gate. Each arm must still name the mode it returns, so dropping
+# either arm -- or letting one fall through to the other's mode -- fails here.
+Assert-True ($renderer -match '(?s)static u32 ndsRendererHardwarePrimEnvTexel0BlendMode.*?color_a == NDS_RENDERER_CCMUX_PRIMITIVE.*?alpha_a == NDS_RENDERER_ACMUX_TEXEL0.*?return NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA;.*?alpha_a == NDS_RENDERER_ACMUX_0.*?return NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA;') 'Renderer no longer recognizes BLENDPE by active combine semantics and both alpha forms.'
+# The third arm (mode 3) is a SEPARATE branch on the degenerate constant form,
+# not a widened lerp gate. Its full colour and alpha mux are pinned because
+# loosening any one field would admit unrelated constant-d combines.
+Assert-True ($renderer -match '(?s)color_a == NDS_RENDERER_CCMUX_ZERO_AB.*?color_b == NDS_RENDERER_CCMUX_ZERO_AB.*?color_c == NDS_RENDERER_CCMUX_ZERO_C.*?color_d == NDS_RENDERER_CCMUX_PRIMITIVE.*?alpha_a == NDS_RENDERER_ACMUX_0.*?alpha_d == NDS_RENDERER_ACMUX_TEXEL0.*?return NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA;') 'Renderer lost the degenerate PRIM-RGB/TEXEL0-alpha recogniser arm or widened its mux gate.'
+# SOURCE_ALPHA and PRIM_RGB_TEXEL0_ALPHA have byte-identical alpha muxes, so
+# every alpha-side decision must treat them the same. Keying one alpha site on
+# a single mode is the asymmetry this guards.
+Assert-True ($renderer -match '(?s)static s32 ndsRendererHardwareBlendModeKeepsTexelCoverage.*?mode == NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA.*?mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA') 'Texel-coverage passthrough no longer treats both byte-identical alpha muxes alike.'
+# Mode 3 bakes differently from modes 1 and 2, so it must key on its own bit.
+Assert-True ($renderer.Contains('#define NDS_RENDERER_HW_TEXTURE_KEY_PRIM_RGB_TEXEL0_ALPHA (1u << 30)') -and $renderer -match '(?s)prim_env_blend_mode ==\s*NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA.*?key\.flags \|= NDS_RENDERER_HW_TEXTURE_KEY_PRIM_RGB_TEXEL0_ALPHA;') 'Degenerate PRIM-RGB bake no longer keys on its own cache-key bit.'
 Assert-True ($renderer -match '(?s)key\.flags \|= NDS_RENDERER_HW_TEXTURE_KEY_PRIM_ENV_BLEND;.*?stats->prim_color & 0xffffff00u.*?stats->env_color & 0xffffff00u' -and $renderer.Contains('ndsRendererHardwareBlendPrimEnvTexel0(')) 'BLENDPE bake no longer keys captured primitive/environment RGB before conversion.'
-Assert-True ($renderer -match '(?s)ndsRendererHardwareColorSource.*?NDS_RENDERER_PRIM_ENV_BLEND_NONE.*?return 0xffffffffu;' -and $renderer -match '(?s)ndsRendererHardwareAlpha.*?NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA.*?return 31u;') 'BLENDPE bake is being remodulated or source-alpha passthrough is no longer opaque at polygon level.'
+# The alpha site keys on the coverage HELPER, not on one mode, so both
+# byte-identical alpha muxes reach the opaque return together.
+Assert-True ($renderer -match '(?s)ndsRendererHardwareColorSource.*?NDS_RENDERER_PRIM_ENV_BLEND_NONE.*?return 0xffffffffu;' -and $renderer -match '(?s)static u32 ndsRendererHardwareAlpha.*?ndsRendererHardwareBlendModeKeepsTexelCoverage\(.*?ndsRendererHardwarePrimEnvTexel0BlendMode\(stats\)\) != FALSE.*?return 31u;') 'BLENDPE bake is being remodulated or source-alpha passthrough is no longer opaque at polygon level.'
 
 # StagePupupuFile2 DL 0x22D0 uses G_CC_TEMPLERP in cycle 1 and
 # COMBINED*SHADE / COMBINED*PRIMITIVE in cycle 2. Its generated MObj branch

@@ -1466,7 +1466,22 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * would miss 87.9% of the trace; 32 already reaches the compulsory floor, so 48
  * carries real headroom and evicts nothing in steady state -- which is why Task
  * 81 measured zero evictions and zero uploads in its window.
- * Re-derive with scripts/census-texture-key-rebuild.ps1. */
+ * Re-derive with scripts/census-texture-key-rebuild.ps1.
+ *
+ * DO NOT SIMPLY RAISE THIS. It was tried on 2026-08-04 and the ROM did not boot.
+ * The Task 93 trace above covers the STEADY-STATE battle; it never covered the
+ * scene after a KO, where BUGS row 6 measures the cache genuinely exhausted --
+ * five consecutive probe tags reading free=0 live=48 pinned=28 evictable=0
+ * thisframe=20, so nothing may be evicted and every further distinct texture is
+ * refused with reason 0x400 (ALLOC), 2,592 times in one match. That diagnosis
+ * stands. What does not work is paying for it in slots: 48 -> 96 costs +14,016
+ * bytes (entries are 292 each) and main RAM has no headroom to give.
+ * soak-freeze-watch.ps1:1104 records gNdsTaskmanGeneralHeapFreeMin at 24,404 --
+ * already under the 25,600 at which ifCommonSetMaxNumGObj permanently caps the
+ * GObj pool -- and binary growth costs that arena one for one. The measured
+ * result was a guest that never completed a single battle frame.
+ * Any fix for row 6 must be RAM-neutral or RAM-negative: shrink the 292-byte
+ * entry, or release some of the 28 pins. Do not re-run the growth experiment. */
 #define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 48u
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY 0u

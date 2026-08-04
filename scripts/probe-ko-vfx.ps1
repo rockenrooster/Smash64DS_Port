@@ -977,7 +977,12 @@ try {
             (@($bad_resolves + $multi_locations) -join ' / '))
     }
 
-    $capture | Select-String -Pattern 'KOVFX|KOSHOT|KOXLU|KOLATCH|KOWAVE'
+    # KOREJECT IS IN THIS LIST DELIBERATELY. It was added to the run in the
+    # 2026-08-04 reject-reason cycle and left out of this filter, so the one
+    # line the cycle existed to read never reached the console and had to be
+    # dug out of the artifact by hand. A diagnostic that is emitted but not
+    # surfaced is a diagnostic nobody reads.
+    $capture | Select-String -Pattern 'KOVFX|KOSHOT|KOXLU|KOLATCH|KOWAVE|KOREJECT'
     Write-Output "probe capture: $artifact"
 }
 finally {
