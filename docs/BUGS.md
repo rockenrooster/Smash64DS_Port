@@ -73,10 +73,14 @@ this is a fidelity call and the owner is the oracle. What changes per row:
                         becomes the joint-animated model: a round disc that
                         carries the reappearing fighter down and holds him.
                         Counts FOR the flip, subject to the owner's eye.
-  * Fox reflector    -- NO CHANGE EITHER WAY, see below. Do not count this row.
-  * impact wave      -- a static atlas quad becomes the material-animated model.
-  * reflector       -- STILL NEVER SPAWNS. Do not count this row either way;
-                        it needs the owner's own down-B on a flag-1 ROM.
+  * impact wave      -- MEASURED 2026-08-04 (cycle 59). A static atlas quad
+                        becomes the material-animated model, and the hard-edged
+                        black rectangle over the flower bed is gone. Counts FOR,
+                        subject to the owner's eye on the replacement.
+  * Fox reflector    -- DO NOT COUNT THIS ROW, either way. It never spawns
+                        unattended -- zero in 150 s of level-3 Fox -- and its
+                        desc is disabled anyway, so the flip changes nothing
+                        observable until the owner performs a down-B himself.
 Against: content-completeness doctrine says stand-ins are a temporary audit
 state, not a shipping state, which argues for the flip; the tail is 36,032
 worse on a frame already 127,040 over gate, which argues for optimize-first.
@@ -89,12 +93,12 @@ and a PIXEL-IDENTICAL flag-0 picture at two tics. So the decision is now purely
 shipping cost on the against side. Three rows count FOR (shield, wave, rebirth
 platform), all three OWNER-QUEUED with predictions written above. The owner
 concludes.
-EVIDENCE STILL MISSING, and it is what the decision actually needs: no
-synchronized before/after capture exists for any of the four. Blocking reason is
-tooling, not effort -- a cross-build render comparison must lock on
-gSCManagerBattleState->time_remain and no harness can (capture-melonds.ps1
--ExactFirstFrame locks the presented-frame counter, which R2-02 E8 measured into
-a 57% false delta). Land -ExactTimeRemain first, then the four captures.
+EVIDENCE: LANDED (supersedes this block's "still missing"). The blocker was
+tooling -- a cross-build render comparison must lock on
+gSCManagerBattleState->time_remain, and no harness could. capture-melonds.ps1
+-ExactTimeRemain now does, and every capture cited in this file uses it. Three of
+the four rows have their synchronized pair (shield c58->c59, wave c58->c59,
+platform c59->c60); the reflector has none and cannot, because it never spawns.
 
 EFFECT MOMENTS ARE NOW KNOWN (2026-08-04), which is what "gate 2 captures not
 closed" was actually blocked on -- a capture needs a tic and nobody had ever
@@ -649,16 +653,27 @@ do not restate them here.
     Owner: is don't see the floating revival platform at all. the Halo is not the correct asset to use
     CAUSE: dEFManagerRebirthHaloEffectDesc is a joint-animated MODEL, drawn as one flat quad.
     STAGE: OWNER-QUEUED -- round disc under the reappearing fighter; earlier captures were 85 tics early.
+    OWNER ASK (needs NDS_R2_SOURCE_EFFECTS_FULL=1): after a KO, does the platform come down from the top
+    of the screen as a round disc under the reappearing fighter, carry him a few seconds, then vanish?
 
 -Fox down B VFX is not correct or using correct asset.
     Owner: you are still not using the correct asset for Fox's down B reflector.
     CAUSE: dEFManagerFoxReflectorEffectDesc is an animated model from gFTDataFoxSpecial2, not a sprite.
     STAGE: LOCALIZED. Retry counter is compiled out at flag 0 and read 0 at flag 1; needs a flag-1 down-B.
+    OWNER ASK: one Fox down-B in a play session on a flag-1 ROM. Level-3 Fox never does it unattended --
+    zero spawns in 150 s -- so no automated run can reach this. Expect gNdsEFDescDeferRecoverCount > 0;
+    if it stays 0 the desc is still disabled and the retry never fired, which is the next seam.
 
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
     STAGE: OWNER-QUEUED -- round translucent per-player bubble on the guarding fighter; needs the owner's eye.
+    OWNER ASK (needs NDS_R2_SOURCE_EFFECTS_FULL=1): while a fighter guards, is it a round translucent
+    bubble in that player's colour, centred on him, big enough to enclose him, stage visible through it,
+    gone the instant he stops guarding?
+    STAND-IN SUB-ROW CLOSED (2026-08-04, cycle 61) as a MEASUREMENT ARTIFACT, not a defect. The flag-0
+    procedural shield's "one frame in a whole match" came from a run that ended after the first guard.
+    Seven guard-ons, a contiguous run of draws per guard, draw count 29 and climbing. Nothing to fix.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
@@ -667,6 +682,9 @@ do not restate them here.
     STAGE: MEASURED -- the black rectangle over the flower bed is gone now that its texture is admitted.
     Built correctly as a single DObj on link 10 (EFDesc omits flag 0x4, so a raw display list is right);
     executes fully, but its triangles still do not reach the effect counter. See 4c29b9615a.
+    OWNER ASK (needs NDS_R2_SOURCE_EFFECTS_FULL=1): on a hard landing, is what replaced the black
+    rectangle the right asset? The rectangle is measurably gone; whether the shape is correct is an eye
+    call nobody has made. The triangle-counter gap is bookkeeping and does not affect the picture.
 
 -KO VFX not drawing correctly.
     Owner: Not fixed yet, the "blast pillar" VFX isn't drawing, and doesn't seen to draw on the same z axis as the fighters
@@ -674,10 +692,22 @@ do not restate them here.
     particle script 0x2D plus dEFManagerDeadExplodeEffectDesc on DL link 18 -- NOT script 0x5C /
     efManagerSparkleWhiteDeadMakeEffect, which is the Star KO and fires zero times in the canonical run.
     STAGE: MEASURED -- pillar draws, grows and is player-red at KO tics 2864/920; z-order still open.
+    OWNER ASK (ships at the tracked default, no flag needed): the first half no longer reproduces -- the
+    pillar demonstrably draws and grows. Please confirm on this build, and if the wrong-axis symptom is
+    still there, re-describe it: which KO direction, and is the pillar in front of or behind the stage
+    and the fighters? No capture yet puts it over a fighter, so nothing here can judge depth.
 
 -Some "hard hit" (side A attacks that hit) VFX look too big, please apply correct scaling to VFX.
-    MEASURED: scale is source-exact (efmanager.c:2175/2197). Last cycle's clamp was in UNREACHABLE code.
-    
+    STAGE: MEASURED, and it is TWO paths, which is why the first answer read as a contradiction. The
+    SOURCE particle scale is source-exact (efmanager.c:2175/2197) and the clamp added for it was in
+    unreachable code. The thing actually on screen at the tracked default is the DS hit-spark SPRITE,
+    whose ramp reached (40-10)*0.13+1.0 = 4.9x on a 256x192 screen with player 1 tinted red -- the
+    owner's "orange ball" -- and it is now bounded by NDS_TASK39_HIT_SPARK_SCALE_MAX = 2.2
+    (nds_ifcommon_oam.c:1840). There is no source number for a sprite the N64 never drew, so 2.2 is a
+    port choice and the owner is its only oracle.
+    OWNER ASK: on a landed side-A, is the hit spark now a sensible size, and does a big hit still read
+    as clearly bigger than a small one?
+
 -Shield Freeze is back
     **FIXED** (2026-08-03) all three captures spun in gcParseDObjAnimJoint's event loop, whose `default:` case is
     the one branch that consumes nothing -- an invalid opcode re-reads one word forever with interrupts still on,

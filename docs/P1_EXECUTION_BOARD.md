@@ -1,24 +1,49 @@
 # P1 Execution Board
 
-Updated: 2026-08-02 18:00 Central
+Updated: 2026-08-04 (cycle 63)
 
 Boundary: `battle_playable_realtime`, mode `163`
 
-## CURRENT BLOCKER — none. All thirteen `BUGS.md` rows carry a candidate awaiting the owner (2026-08-02)
+## PUBLISHED 2026-08-04. Boundary GREEN on the new binary. New baseline:
 
-Every row in `BUGS.md` now has a fix in the tree, verified by
-`verify-current.ps1 -Build` (Latest profile: runtime + `battle_playable_realtime`).
-What is owed is the owner's eye, not more engineering: the visual rows gate on
-the render-fidelity doctrine, where the owner is the oracle. Test on
-`smash64ds-battle-playable-hwtri.nds` — that is the configuration every row was
-reported against, and the only published ROM with hardware triangles and the
-Task 39 FX flags on.
+| ROM | sha256 |
+|---|---|
+| `smash64ds-battle-playable-hwtri.nds` | `F9F0035433C47787C20F82B3545199ECA926FA0E813626A230E0C25BEC046ECE` |
+| `smash64ds.nds` | `4537DE66A165DDD65927F38BF9E8184849F54209F68B870AEE1F9CBECD6CCA9F` |
 
-Candidate identity: branch `codex/r2-runtime2`, lab build `build-r2-bothcpu`
-(`NDS_R2_BOTH_CPU=1`, 7-minute match timer), plus the published pair still to be
-rebuilt from the same tree. Widest relevant verifier is `verify-current.ps1
--Build`, **not** Boundary: `scVSBattleStartScene` and the reloc asset loader are
-shared startup, so Boundary does not cover the change.
+Pre-publish binaries are parked byte-for-byte at `builds/armA-preflip-baseline/`
+(`99A1F550...E3136B6A` / `60872438...86992D58`). They are the rollback path AND
+the A-arm of the publish A/B; do not delete them. The flag-identical tick-HUD
+sibling of this publish is `builds/build-c63-tickhud-pub` — it is the instrument
+every future measurement runs on, so rebuild it whenever the published pair is
+rebuilt.
+
+The publish was priced before it was taken (`PERF_LEDGER.md` "PUBLISH PRICING"):
+WORK-H median +7,488 a frame against the previous root ROM's own tree, attributed
+by a three-arm split ENTIRELY to the freeze-fix segment, with the un-flag-gated
+renderer surface a null result (mean +50) and the flag-0 picture PIXEL-IDENTICAL
+at two tics. `ALL` flat, VBlank max 20 -> 19, over-gate frames 16 -> 15.
+
+## CURRENT BLOCKER — none engineering-side. Every `BUGS.md` row is owner-gated.
+
+What is owed is the owner's eye, not more engineering. Each open row in
+`BUGS.md` now carries an explicit `OWNER ASK` line saying what to look at and
+which flag it needs. Two rows need a session the automation cannot produce: the
+Fox reflector needs one manual down-B, and the KO z-axis symptom needs the owner
+to confirm or re-describe it on the new binary.
+
+The one open ENGINEERING decision is `BLOCKED(decision: flip
+NDS_R2_SOURCE_EFFECTS_FULL)`, and it is the owner's: three rows count FOR
+(shield, wave, rebirth platform), the price is P95 +36,032 in the tail, and the
+shipping renderer fixes that made those rows work cost nil. Tracked default stays
+flag-0 until the owner says otherwise.
+
+OWED, small and named: a capture of Fox's entry Arwing, which is the only
+flag-0 exposure of the cycle-58/59 renderer change that has never been seen.
+`-ExactTimeRemain` CANNOT reach it — `capture-cut-g-exact-frames.ps1` correctly
+refuses tic 3600 because the entry runs before the match clock starts. The
+candidate is a LOW FRAME-COUNTER lock (`-ExactFirstFrame` at a small index),
+where cross-build drift is still negligible because almost no time has elapsed.
 
 | `BUGS.md` row | owning seam | state |
 |---|---|---|

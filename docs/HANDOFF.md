@@ -1,9 +1,21 @@
 # Handoff
 
-Updated: 2026-08-03 evening. **Boundary is GREEN** on
-`smash64ds-battle-playable-hwtri.nds` and a live capture reads **29.9 FPS /
-59.8 Hz logic**, up from 27.8. The owner re-opened five rows the same afternoon
-with sharper wording -- read `docs/BUGS.md` first, it is their board.
+Updated: 2026-08-04 (cycle 63). **PUBLISHED, and Boundary is GREEN on the new
+binary.** New baseline:
+`smash64ds-battle-playable-hwtri.nds` `F9F00354...EC046ECE`,
+`smash64ds.nds` `4537DE66...CD6CCA9F`. The pre-publish pair is parked byte-for-
+byte at `builds/armA-preflip-baseline/` (`99A1F550...E3136B6A` /
+`60872438...86992D58`) as the rollback path and as the A-arm of the publish A/B
+-- do not delete it. The flag-identical tick-HUD sibling is
+`builds/build-c63-tickhud-pub` (`BA648496...39CE778F`); it is the instrument
+every measurement runs on, so rebuild it whenever the published pair is rebuilt.
+
+Nothing is blocked engineering-side. Every open `BUGS.md` row now carries an
+explicit `OWNER ASK` line -- read `docs/BUGS.md` first, it is their board --
+and `docs/P1_EXECUTION_BOARD.md` carries the one open decision
+(`flip NDS_R2_SOURCE_EFFECTS_FULL`, the owner's) and the one small owed item
+(a capture of Fox's entry Arwing, which needs a low frame-counter lock because
+the entry runs before the match clock starts).
 
 ## What the atlas bound actually was, because it was not contiguity
 
@@ -75,70 +87,25 @@ Results GObj's `camera_mask` carries both slots. Blocked on the probe symbol
 below. Both emitters sit at x=0, so "not centered on the camera view" is the
 Results camera, not the emitter.
 
-## THE FOUR ASSET ROWS ARE A LINK COVERAGE GAP -- NOT THE ATLAS, NOT THE CAMERA
+## THE FOUR ASSET ROWS ARE CLOSED HERE -- BUGS.md OWNS THEM NOW
 
-Respawn platform, shield, Fox down B and hard-landing wave are source `EFDesc`
-MODELS, not sprites, and every EFDesc names the display link it draws on:
+This section carried a cycle-47 snapshot whose every live claim has since been
+refuted: `tris=0`, "the shield tree was never built", "one node per frame", and
+"the KO blast pillar is particle script 0x5C". All four are wrong as of cycles
+50-61 and were misleading a restarter, so the narrative is gone rather than
+annotated. What survives, and is still worth knowing before touching this area:
 
-| EFDesc | link | draws? |
-|---|---|---|
-| `dEFManagerShieldEffectDesc` (efmanager.c:460) | 15 | no |
-| `dEFManagerFoxReflectorEffectDesc` (:420) | 15 | no |
-| `dEFManagerRebirthHaloEffectDesc` (:1648) | 10 | no |
-| `dEFManagerImpactWaveEffectDesc` (:201) | 10 | no |
-| `dEFManagerDeadExplodeEffectDesc` (:850) — KO burst | **18** | **yes** |
+* An `EFDesc` names the display link it draws on, and the port once accepted
+  link 18 only. Shield and reflector are on 15, halo and wave on 10, KO burst on
+  18 -- which is why the KO burst was the only one that ever worked.
+* The KO blast pillar is `efManagerDeadExplodeMakeEffect` (particle script 0x2D
+  plus a model on link 18), NOT `efManagerSparkleWhiteDeadMakeEffect` / 0x5C.
+  0x5C is the Star KO and fires zero times in the canonical run.
+* The pacing harness cannot judge these rows -- `sample-tick-hud-buckets.ps1`
+  reads zero effects over its window. Use the per-row probes under `scripts/`.
 
-`ndsStageGCDrawAllLoopIsEffectDisplay` required link 18, and the procedural
-stand-ins are hard-wired onto 18 by `ndsEFManagerMakeVisualEffect`. The KO burst
-is the control the repo was already carrying: same source-model route, works
-unconditionally, differs only in that field. That is what "the battle hardware
-path does not consume source effect DL links" meant — written twice, never
-located, and looked for in the atlas, then the camera passes, then the tree walk.
-The camera captures 10 (pass 3) and 15 (pass 4); it was never the gap.
-
-A second gate sat behind it: `ndsEFManagerIsVisualEffectGObj` (efmanager.c:969)
-returns TRUE only when `dobj->dl` matches a procedural TEMPLATE pointer, which a
-ROM-asset list can never do. Both are open now, flag-gated, counted by
-`gNdsEffectRendererSourceModelAdmitCount`.
-
-A **fourth** gate sat behind those: the source models arrive as `DLHEAD0` and
-nothing else (observed-kind mask `0x8`), while the submit accepted `DOBJ_TREE`
-alone. `ndsRendererAdapterSubmitStageDObjNode` already handles DLHEAD0 in the
-same switch arm, so only the guard changed. Beware: these kinds are FOURCCs
-(`DOBJ_TREE` = `0x44545245`), so a `1u << kind` mask is undefined and reads 0 —
-which would have been reported as "nothing arrives".
-
-**Where it stands** (flag on, `probe-shield-vfx.ps1 -DrawCounter
-gNdsEffectRendererSourceModelAdmitCount`): `admit=12 capture=6 dobjdraw=6
-reject=6 tris=0 nodes=6 rejkinds=0x0`, `kindmask=0` throughout. Zero to twelve
-admits, past the guard, **and the walk now runs**. They still do not appear, and
-there are now two separate questions:
-
-1. `tris=0`. **Two hypotheses tested, both dead — do not retry them.** "A DObj
-   flag makes it undrawable" (DLHEAD0 uses the strict `flags == DOBJ_FLAG_NONE`
-   rule): refuted, `dobjflags=0x0`. "Geometry is in `dl_link[]`, which only the
-   `*_DLLINKS` kinds read": refuted, `fields=0x7` — `dl`, `dl_link` and `dv` are
-   all non-null, and routing DLHEAD0→TREE_DLLINKS left `tris=0`; that routing
-   was reverted. **Where it stops**: `ndsRendererAdapterSubmitStageDL` emits
-   nothing from the list, with `texready=0` *and* `texreject=0` so it never
-   reaches texture handling. Instrument there — everything upstream is proven.
-2. `nodes=6` over 6 frames is **one node per frame**, but
-   `llFTManagerCommonShieldDObjDesc` is a **three-node** desc. So the DObj has
-   no child and no sibling chain — the tree was never built. That is a different
-   defect from the tree not being walked, and a correct walk is what exposed it.
-
-Do not spend a fourth cycle on cell sizes here.
-
-The KO blast pillar is NOT in this family: `efManagerSparkleWhiteDeadMakeEffect`
-(:3725) runs particle script 0x5C, whose texture 24 is admitted at source 32x32.
-That one is genuinely a particle effect and the sheet is not its blocker.
-
-**The pacing harness cannot judge these rows.** `sample-tick-hud-buckets.ps1`
-reads `gNdsVisualEffectCreateCount=0` / `gNdsVisualEffectKindMask=0` over its
-window — zero effects of any kind. Use `probe-shield-vfx.ps1`, which drives both
-CPUs; it takes `-DrawCounter` now because it armed on the stand-in's counter and
-so could not see the very configuration it exists to judge (that is the real
-cause of the "380-second timeout" once misread as a performance result).
+Current state of all four rows, with predictions and owner asks:
+`docs/BUGS.md`. Do not re-derive it from here.
 
 ## A counter nothing reads is a counter the linker deletes
 
