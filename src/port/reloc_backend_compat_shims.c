@@ -1460,7 +1460,7 @@ void ftParamProcStopEffect(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
 
-    ndsEFManagerStopAttachedVisualEffects(fighter_gobj);
+    ndsEFManagerStopAttachedEffects(fighter_gobj);
     if (fp != NULL)
     {
         fp->is_effect_attach = FALSE;

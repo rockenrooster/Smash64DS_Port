@@ -38,7 +38,16 @@ GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
                                     const Vec3f *pos, f32 scale, s32 lr,
                                     GObj *fighter_gobj);
 s32 ndsEFManagerIsVisualEffectGObj(GObj *effect_gobj);
-void ndsEFManagerStopAttachedVisualEffects(GObj *fighter_gobj);
+/* Named for what it does: it stops EVERY effect attached to the fighter, source
+ * models included, exactly as source's ftParamProcStopEffect does. The old name
+ * said "VisualEffects" and the body matched the name rather than the contract,
+ * which is how source effects went a whole campaign with no owner ejecting
+ * them. */
+void ndsEFManagerStopAttachedEffects(GObj *fighter_gobj);
+/* Source-kind effects ejected by that walk. The engagement control for the fix:
+ * it must be non-zero on a flag-1 run in which anyone guards, and it stays 0 on
+ * a flag-0 run because no source effect is attached there. */
+extern volatile u32 gNdsEFManagerSourceEffectStopCount;
 
 /* DS effect-instance pool depth, replacing the source's EFFECT_ALLOC_NUM 38.
  *

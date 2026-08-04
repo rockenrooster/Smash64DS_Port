@@ -1130,7 +1130,26 @@ GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
     return effect_gobj;
 }
 
-void ndsEFManagerStopAttachedVisualEffects(GObj *fighter_gobj)
+/* THE MATCH IS ep->fighter_gobj AND NOTHING ELSE, because that is what source
+ * does. ftMainSetStatus calls ftParamProcStopEffect whenever the caller omits
+ * FTSTATUS_PRESERVE_EFFECT (ftmain.c:4449); that runs ftParamRunProcEffect over
+ * gGCCommonLinks[nGCCommonLinkIDEffect] and ejects EVERY effect whose
+ * ep->fighter_gobj matches, never asking what kind of effect it is.
+ *
+ * This walk used to carry `&& ndsEFManagerIsVisualEffectGObj(...)` in the match,
+ * and that predicate is true only when dobj->dl is one of the
+ * sNdsVisualTemplates[] display lists -- only the PROCEDURAL stand-ins. A source
+ * EFDesc effect carries the source model's display list, so it failed the test
+ * and NOTHING IN THE BUILD EVER EJECTED IT. The filter was harmless while the
+ * source path drew nothing; it became a leak the moment
+ * NDS_R2_SOURCE_EFFECTS_FULL made those effects real. Measured before the fix:
+ * three guards in one match left three shields drawing, link-15 draw count
+ * 1 -> 2 -> 3 and never down, still +3/frame 494 tics after the first spawn.
+ *
+ * So the kind test demotes from a MATCH filter to a TEARDOWN discriminator: the
+ * two kinds are allocated differently and must be released differently. Source
+ * effects mirror ftParamStopEffect (ftparam.c) exactly. */
+void ndsEFManagerStopAttachedEffects(GObj *fighter_gobj)
 {
     GObj *effect_gobj = gGCCommonLinks[nGCCommonLinkIDEffect];
 
@@ -1143,10 +1162,23 @@ void ndsEFManagerStopAttachedVisualEffects(GObj *fighter_gobj)
         GObj *next = effect_gobj->link_next;
         EFStruct *ep = efGetStruct(effect_gobj);
 
-        if ((ep != NULL) && (ep->fighter_gobj == fighter_gobj) &&
-            (ndsEFManagerIsVisualEffectGObj(effect_gobj) != FALSE))
+        if ((ep != NULL) && (ep->fighter_gobj == fighter_gobj))
         {
-            ndsEFManagerDestroyVisualEffect(effect_gobj);
+            if (ndsEFManagerIsVisualEffectGObj(effect_gobj) != FALSE)
+            {
+                ndsEFManagerDestroyVisualEffect(effect_gobj);
+            }
+            else
+            {
+                if (ep->xf != NULL)
+                {
+                    lbParticleEjectStructID(ep->xf->generator_id,
+                                            ep->bank_id >> 3);
+                }
+                efManagerSetPrevStructAlloc(ep);
+                gcEjectGObj(effect_gobj);
+                gNdsEFManagerSourceEffectStopCount++;
+            }
         }
         effect_gobj = next;
     }
@@ -1501,6 +1533,7 @@ void efManagerInitEffects(void)
     ndsTask39EffectCensusReset();
     gNdsVisualEffectCreateCount = 0u;
     gNdsVisualEffectDestroyCount = 0u;
+    gNdsEFManagerSourceEffectStopCount = 0u;
     gNdsVisualEffectDropCount = 0u;
     gNdsVisualEffectActiveCount = 0u;
     gNdsVisualEffectMaxActiveCount = 0u;

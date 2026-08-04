@@ -3575,6 +3575,7 @@ volatile u32 gNdsWeaponRendererFireballLastXBits;
 volatile u32 gNdsWeaponRendererFireballLastYBits;
 volatile u32 gNdsVisualEffectCreateCount;
 volatile u32 gNdsVisualEffectDestroyCount;
+volatile u32 gNdsEFManagerSourceEffectStopCount;
 volatile u32 gNdsVisualEffectDropCount;
 volatile u32 gNdsVisualEffectActiveCount;
 volatile u32 gNdsVisualEffectMaxActiveCount;

@@ -153,11 +153,25 @@ measured census exactly: three guards, three shields, draw count 1 -> 2 -> 3 and
 never down. It also predicts the admit/frame climb 1 -> 10, since every
 fighter-attached SOURCE effect is immortal, not only the shield -- so verify the
 climb falls out of this fix rather than fixing it twice.
-FIX SEAM: that walk. It must eject any effect matching ep->fighter_gobj, using
-each kind's correct teardown -- source's is lbParticleEjectStructID (when ep->xf
-is non-NULL) + efManagerSetPrevStructAlloc + gcEjectGObj; the stand-ins keep
-ndsEFManagerDestroyVisualEffect. NOT DONE: no edit, build, or re-census this
-cycle.
+FIXED (2026-08-04). The kind test demoted from a MATCH filter to a TEARDOWN
+discriminator, and the walk renamed ndsEFManagerStopAttachedEffects for what it
+actually contracts to do. Source-kind effects now tear down the source way
+(lbParticleEjectStructID when ep->xf is non-NULL, efManagerSetPrevStructAlloc,
+gcEjectGObj); stand-ins keep ndsEFManagerDestroyVisualEffect.
+RE-CENSUS ON THE SAME RUN, before -> after, identical tics:
+  link15/frame  1994: 1 -> 1   1982: 1 -> 0   1950: 2 -> 1   1936: 2 -> 0
+                1922: 3 -> 1   1914: 3 -> 0
+  link15 total at tic 1500      686 -> 17
+  admit/frame at tic 1810        10 -> 2, and it now returns to 0 after each
+                                 guard instead of ratcheting
+  source admits over the window 2851 -> 583
+Guard-on steps the count up, guard-end steps it back to baseline, three times.
+gNdsEFManagerSourceEffectStopCount = 4 is the engagement control (three guard
+ends plus the guard-on that clears whatever was attached, which is source's
+FTSTATUS_PRESERVE_NONE doing its job); the setoff transition still passes
+FTSTATUS_PRESERVE_EFFECT and is untouched. THE ADMIT CLIMB FELL OUT OF THIS FIX
+-- it was the same seam, not its own.
+artifacts/verification/2026-08-04_c50-onscreen-flag1-fixed.txt.
 ATTACHMENT IS A SEPARATE SEAM, and the "one cause, two symptoms" guess is wrong
 for it. Source does not move the shield from its update proc --
 efManagerShieldProcUpdate only clears is_damage_shield. It attaches through the
@@ -165,7 +179,15 @@ MATRIX: dEFManagerShieldEffectDesc's first DObj transform is main matrix kind
 0x4F, and efManagerShieldMakeEffect stores fp->joints[nFTPartsJointYRotN] in the
 effect root's user_data.p (efmanager.c:460, :4119). So "parked in world space"
 means that matrix kind is not honoured for source effect DObjs on the port; it is
-not a dead update process. Unproven, and next.
+not a dead update process. STILL OPEN, and now confirmed by eye on a live guard:
+with the lifetime fixed, the shield is a white quad sitting BESIDE and BELOW Fox
+on the platform rather than a bubble enclosing him
+(artifacts/visibility/2026-08-04_c50-shield-guarding-t1988-flag1.png, captured
+inside the 1994-1982 guard window, EXACT_LOCK 1988/1986). It no longer drifts
+across the stage only because it now dies with the guard. Renderer-side, so it
+gates on the fidelity budget and the owner's eye.
+GATE 6: the shield row's flip argument re-arms only when this second seam lands.
+Correct lifetime alone does not make the shield correct.
 
 4. CROPPING DOES NOT RESCUE THE PIXEL METRIC EITHER. compare-capture-pair.ps1
 now takes -CropX/-CropY/-CropW/-CropH (viewport-relative, applied to both images,
@@ -244,7 +266,7 @@ do not restate them here.
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: LOCALIZED. Immortal flag-1 shield: the stop-walk skips every non-stand-in effect. Seam named below.
+    STAGE: PARTLY FIXED (2026-08-04) -- lifetime correct now. Remaining: it does not ride the fighter's joint.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
