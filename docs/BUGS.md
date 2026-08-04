@@ -23,151 +23,33 @@ those corrected the models draw -- gate 1 green, submit 0->213, tris 0->10,551,
 texready 0->5,070 on a 781-frame flag-on run -- and the long-standing flag-on
 hang went with them (1,801 frames, 98.9% submit rate). See 8508fc8d6, fc905460d.
 
+FIXED (2026-08-04) -- the flag-0 tickhud freeze. The port allocated a GObj
+thread's coroutine LAZILY, at its first osStartThread, and returned SILENTLY
+when malloc failed -- while gcRunGObjProcess had already committed to a
+blocking osRecvMesg only that thread could satisfy. The battle announcer is the
+first start of its thread (logic frame 390) and its 4,208-byte request failed on
+a heap whose sbrk had reached its ceiling exactly, headroom 0. The freeze-fix
+parsers had taken 768 bytes of that heap (__heap_start_ntr 0x022915b0 ->
+0x022918b0), which is why they read as the trigger and why the defect was never
+theirs.
+BattleShip cannot fail there: objman.c:882 hands osCreateThread a pooled,
+arena-backed, recycled stack, and each GObjThread carries it inline. The port
+now builds the coroutine INSIDE that block at osCreateThread -- gcSetupObjman
+interposed in battleship_sys_objman.c to size it (4,208 B), and
+portCoroutineCreateStatic to carve the context off its top -- so nothing is
+allocated at thread-start time at all. Cost is arena, not heap, which is where
+the headroom is: 143,072 B of arena high-water headroom remain, and
+gobjthread->stack[7] == 0xFEDCBA98 becomes a live overflow guard for the port
+too.
+Both arms now reach presented frame 540, 345 past the freeze, with
+ProvisionFail=0, StartCreateFail=0, StartNoEntry=0 and the heap path down to the
+7 boot service threads. Boundary passed; 2.5-min soak NO-FREEZE at 2,043 frames
+through GAME SET and Results. WORK-H P95 1,079,680 (flag 0) / 1,057,536 (flag 1),
+both inside the 1.12M gate -- gate 5 finally has its control arm.
+artifacts/performance/2026-08-04_gobjpool-flag{0,1}-tickhud.json; the sizing and
+margin probes are artifacts/verification/2026-08-0{3,4}_gobj*.
+
 OPEN.
-  * BLOCKS GATE 5: the flag-0 tickhud arm HANGS between frame 175 and 200, so
-    there is no control arm to measure against. Not slowness -- both arms are
-    the same speed up to 175 (5f/21s .. 177f/27s) and the flag-0 one then stops
-    dead. Regression against a pre-campaign RingDump that completed
-    (artifacts/performance/2026-08-03_dobjtree_control_ringdump.json).
-    MECHANISM: placement, not logic. Three arms at one commit --
-      4d1015b75 anchor            200f/28s
-      ae7c3e735 with parsers      hangs
-      ae7c3e735 parsers reverted  200f/28s
-    The freeze-fix parser patches add 312 bytes to .main (0xca050 -> 0xca188),
-    shifting .main.rw from 0x020cd728 to 0x020cd860. They are the TRIGGER; the
-    defect is whatever those bytes displace, is older than this campaign, and
-    must be fixed at its own seam -- never by re-padding .main, and the parsers
-    stay bounded (the freeze row depends on them).
-    Refuted, do not re-run: runaway/panic counters 0 (21); desc validation
-    disabled=0 (22); resolver misalign=0, offsetcalls=0 (25); 28-byte BSS pad
-    does not reproduce (26); parser revert at HEAD does not fix, which
-    exonerates nothing since later commits remain (27); shift is non-uniform
-    with no symbol crossing a region edge, and stale absolute addresses are
-    noise at 10 hits vs ~8 expected by chance (29).
-    NOT A HANG (32/33). The scheduler walk found no deadlock (mutex 0x22a1e70
-    owner=0, nothing in WaitingOnMutex, the only irqWaitList entry is main on
-    a VBlank that plainly arrives) and the ARM9 alive throughout.
-    FIRST FROZEN LINK (33): gNdsBattlePlayablePacingDrawCalls, taskman_seam.c
-    :4881 -- the EARLIEST counter in the present bracket, frozen at 195 with
-    PresentedFrames (:4913), LogicFrames (390 = 2x195) and VBlanks (455).
-    So the battle present function stopped being ENTERED; it is not stalled
-    inside. Meanwhile gNdsFrameCounter advances ~690/s from its OTHER site,
-    main.c:86 -- adjacent unconditional statements cannot diverge, so a
-    different, non-VBlank-paced loop (11x 60Hz) is now running. PacingResult
-    never latched PASS despite presented 195 >= the 180 threshold at :4574,
-    confirming ndsBattlePlayablePacingUpdate stopped running too.
-    THERE IS NO EXIT (34). Breakpoint at the last present gives the chain:
-    ndsBattlePlayablePresentFrame <- ndsBattlePlayablePresentRealtimeFrame
-    <- syTaskmanRunTask (:8061) <- syTaskmanLoadScene(scVSBattleStartBattle)
-    <- ... <- scManagerRunLoop <- syMainThread5 <- portCoroutineTrampolineC.
-    The battle scene is a COROUTINE, not the main thread. Its loop
-    (syTaskmanRunTask) has exactly two breaks, :8043 terminal_update and
-    :8069 stop_after_iteration, and BOTH fall through to :8074-8078
-    ndsBattlePlayableRecordLifecycleTaskmanExit + ndsBattlePlayablePacingFinish
-    -- and PacingFinish sets PacingResult = PASS unconditionally at :4588.
-    Measured PacingResult is NOT PASS, so the loop never exited by either
-    path. The coroutine is SUSPENDED inside the loop and never resumed:
-    that is why DrawCalls (:4881) froze, why no exit ran, and why the machine
-    stayed alive on other threads. Coroutines resume from ndsOsRunThreads, and
-    a coroutine blocking on osRecvMesg(OS_MESG_BLOCK) yields (libultra_os.c
-    :237).
-    PARKED IN YIELD, STILL ELIGIBLE (35). At two frozen stops the battle
-    coroutine (arg=gSYMainThread5, so identity is confirmed) has
-    context.lr = portCoroutineYield+25 and finished=0 -- parked in a yield,
-    not finished. gSYMainThread5.state = 8 = OS_STATE_WAITING (PR/os.h:96).
-    REFUTED, do not re-run: the "thread latched in OS_STATE_RUNNING so
-    ndsOsRunThreads skips it" theory. :294-295 accepts WAITING, and the
-    thread is sThreads[1], so it IS resumed every pass -- ~690/s.
-    So the coroutine is resumed, returns from its yield, re-checks, and
-    yields again: it spins waiting on a condition that never becomes true.
-    THE WAIT IS NAMED (36). Unwinding the parked context.sp and mapping the
-    return addresses by nm gives:
-      portCoroutineYield+24 <- osRecvMesg+90 <- gcRunGObjProcess+98
-      <- ndsBaseGcRunAll+96 <- gcRunAll+10
-      <- ndsIFCommonBattleUpdateInterfaceAllOriginal+98
-      <- ifCommonBattleUpdateInterfaceAll+6 <- scVSBattleFuncUpdate+6
-      <- syTaskmanRunTask+2076 <- syTaskmanLoadScene <- syTaskmanStartTask
-      <- scManagerFuncUpdate   (the last three match cycle 34's live bt)
-    The queue is gGCMesgQueue (.main.bss), held in the parked r6; r10 is
-    gSCManagerBattleState. So a GObj process inside the INTERFACE update
-    blocks in osRecvMesg on gGCMesgQueue and the message never arrives.
-    PROTOCOL, from source (37). Exactly three sites touch this queue, all in
-    BattleShip: objman.c:2549 creates it with OSMesg sGCMesgs[1] -- DEPTH 1;
-    objman.c:2286 is our waiter, gcRunGObjProcess case nGCProcessKindThread
-    doing osStartThread(gobjthread) then osRecvMesg(BLOCK); objhelper.c:147
-    is the ONLY poster, gcSleepCurrentGObjThread doing
-    osSendMesg(..., OS_MESG_NOBLOCK) then osStopThread(NULL), per tic.
-    So it is a one-slot handshake: run the GObj thread, block until it sleeps.
-    The port's wait matches the measured spin exactly -- ndsOsWaitForQueue
-    (libultra_os.c:231-246) sets OS_STATE_WAITING, yields, sets RUNNING on
-    resume, re-checks MQ_IS_EMPTY -- which is why state read 8 at the stop.
-    NOBLOCK onto a depth-1 queue is a SILENT DROP in the port's osSendMesg
-    (:248-259 returns -1 via ndsOsWaitForQueue), so a drop path exists by
-    design and needs testing, not assuming.
-    DEADLOCK CLOSED (38). At the frozen stop: gGCMesgQueue validCount=0,
-    first=0, msgCount=1 -- empty, so NOT the drop path and NOT a broken
-    re-check. sThreads[6] (id 10000001) is the GObj thread, state=1 =
-    OS_STATE_STOPPED, finished=0, parked with this stack:
-      portCoroutineYield+25 <- osStopThread+64 <- gcSleepCurrentGObjThread+62
-      <- ifCommonCountdownThread+256 <- ndsOsThreadEntry
-    So the poster is the battle COUNTDOWN element, and it is STOPPED.
-    ndsOsRunThreads (libultra_os.c:294-295) resumes only WAITING or RUNNABLE,
-    so a STOPPED thread is never resumed and can never reach its
-    osSendMesg. gcRunGObjProcess blocks forever on a post that cannot happen.
-    Both halves parked; that is the whole freeze.
-    The handshake worked 307 times first (gNdsTaskmanGObjThreadSleeps=307),
-    so this is the LAST countdown sleep, not a broken-from-boot path -- which
-    fits the interface-update location and the ~6.5 s timing.
-    LEADING MECHANISM (39), source-read only, needs one confirming probe.
-    osStopThread(NULL) (libultra_os.c:152-164) sets STOPPED then yields --
-    exactly where thread 6 is parked -- and ONLY osStartThread lifts it, at
-    :141. But osStartThread has TWO SILENT RETURNS before that line:
-      :128 thread->port_entry == NULL
-      :136 portCoroutineCreate() == NULL   <- allocation failure
-    Either returns with no error, no counter, and the thread never runs, so
-    it never reaches its osSendMesg and osRecvMesg(BLOCK) blocks forever.
-    sThreads[5] is exactly that signature: id 10000003, state STOPPED,
-    port_coroutine == NULL -- registered but never started. And
-    gGCCurrentProcess (0x023c6bb0) sits 0x30 below sThreads[5] (0x023c6be0),
-    consistent with the blocked process owning THAT thread rather than 6.
-    This is the first candidate that can explain all three sensitivities at
-    once, via memory pressure on a GOBJ-stack allocation: the 312-byte
-    displacement shrinks what is left, tickhud costs more, and the flag-0
-    stand-ins allocate differently. Thread 6 parked mid-sleep is then normal.
-    CONFIRMED (40). Ownership: &gGCCurrentProcess->exec.gobjthread->thread ==
-    sThreads[5] (0x023c6be0) exactly. The GObj is the ANNOUNCER --
-    func_id 0x208c99d ifCommonAnnounceThread, parent gobj id 1016, kind
-    Thread -- born at countdown end, i.e. the countdown's successor, which is
-    why 307 sleeps precede it and why it is the FIRST start of that thread.
-    Discriminator: port_entry = 0x02089fdd (NON-NULL, so the :128 return did
-    not fire) with port_coroutine = 0. So portCoroutineCreate at :136
-    returned NULL -- THE ALLOCATION FAILED. It wants calloc(112) plus
-    malloc(NDS_OS_GOBJ_STACK_SIZE = 4096) from the ordinary C heap
-    (coroutine.c:188-195). osStartThread returns silently, the announcer
-    never runs, never posts, and gcRunGObjProcess blocks forever.
-    THE DIVERGENCE, from source (41). BattleShip does NOT allocate GObj
-    thread stacks on demand: objman.c:2376 seeds sGCThreadHead from
-    setup->gobjthreads -- a POOL preallocated at scene setup -- and
-    gcGetGObjThread() (:116-152) just hands one out. Each GObjThread carries
-    its stack inline, which is why gcSleepCurrentGObjThread checks the
-    guard word gobjthread->stack[7] == 0xFEDCBA98. Allocation cannot fail at
-    thread-start time in the source, so the source has no failure path and
-    needs none. The port instead mallocs a fresh 4096-byte coroutine stack at
-    FIRST START (libultra_os.c:130-137) and silently returns when it fails.
-    That laziness is the divergence and the owning seam.
-    FIX (designed, NOT yet implemented): provision the coroutine when the
-    GObjThread is handed out / the process is registered, not at first start
-    -- compute-once, loading time is cheap. Creation failure must be loud at
-    a moment that can still report, and BOTH silent returns in osStartThread
-    need counters regardless.
-    STILL OWED: free bytes + largest free block at the stop (mallinfo needs a
-    cast; gdb rejects it bare), the 312-byte heap-shrink arithmetic across
-    the two cycle-28 ELFs, and the SHIPPING-arm margin at the announcer's
-    birth -- the announcer is born in every match, so the tracked default
-    allocates the same ~4208 bytes at the same moment.
-    PROBE RULE: never call malloc in the guest from gdb -- p malloc(4096)
-    hung the target and cost a run's tail.
-    artifacts/verification/2026-08-03_flag0-queue.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.

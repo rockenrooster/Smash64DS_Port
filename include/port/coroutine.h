@@ -11,6 +11,23 @@ typedef struct PortCoroutine PortCoroutine;
 void portCoroutineInitMain(void);
 PortCoroutine *portCoroutineCreate(void (*entry)(void *), void *arg,
                                    size_t stack_size, int owner_id);
+
+/* Bytes of a caller-supplied block that portCoroutineCreateStatic keeps for its
+ * own context, carved off the top. Add this to the usable stack size to get the
+ * block size to reserve. */
+size_t portCoroutineStaticOverhead(void);
+
+/* Build a coroutine entirely inside `[base, base + size)` -- no heap at all.
+ * The context lives at the top of the block and the remainder is the stack, so
+ * a caller that already owns pooled, recycled storage (BattleShip's GObjStack
+ * pool) never has to allocate to start a thread. Returns NULL only when the
+ * block is structurally unusable (too small, or no entry), which is a build-time
+ * sizing error rather than a runtime condition.
+ *
+ * portCoroutineDestroy recognises these and returns the storage to the caller
+ * untouched instead of calling free(). */
+PortCoroutine *portCoroutineCreateStatic(void (*entry)(void *), void *arg,
+                                         void *base, size_t size, int owner_id);
 void portCoroutineDestroy(PortCoroutine *coroutine);
 void portCoroutineResume(PortCoroutine *coroutine);
 void portCoroutineYield(void);

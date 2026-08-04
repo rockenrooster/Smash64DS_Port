@@ -25,6 +25,9 @@ struct PortCoroutine {
     size_t stack_size;
     int finished;
     struct PortCoroutine *caller;
+    /* Storage is a caller-owned block, not two heap allocations: do not free
+     * it. Set only by portCoroutineCreateStatic. */
+    int is_static;
 };
 
 static PortCoroutine *sCurrentCoroutine;
@@ -213,12 +216,66 @@ PortCoroutine *portCoroutineCreate(void (*entry)(void *), void *arg,
     return coroutine;
 }
 
+size_t portCoroutineStaticOverhead(void)
+{
+    return (sizeof(PortCoroutine) + 7u) & ~(size_t)7u;
+}
+
+PortCoroutine *portCoroutineCreateStatic(void (*entry)(void *), void *arg,
+                                         void *base, size_t size, int owner_id)
+{
+    PortCoroutine *coroutine;
+    uintptr_t top;
+    size_t overhead = portCoroutineStaticOverhead();
+    size_t stack_size;
+#if !NDS_TASK20_STACK_PROFILE
+    (void)owner_id;
+#endif
+
+    if (entry == NULL || base == NULL) return NULL;
+    top = ((uintptr_t)base + size) & ~(uintptr_t)7u;
+    if (top < ((uintptr_t)base + overhead + NDS_COROUTINE_MIN_STACK)) {
+        return NULL;
+    }
+    top -= overhead;
+    stack_size = (size_t)(top - (uintptr_t)base);
+
+    coroutine = (PortCoroutine *)top;
+    memset(coroutine, 0, sizeof(*coroutine));
+    coroutine->entry = entry;
+    coroutine->arg = arg;
+    coroutine->stack = base;
+    coroutine->stack_size = stack_size;
+    coroutine->is_static = 1;
+#if NDS_TASK20_STACK_PROFILE
+    memset(base, NDS_TASK20_STACK_POISON, stack_size);
+#endif
+
+    /* The context sits directly above the stack, so `top` is both the initial
+     * SP and the context's address. It is 8-aligned, which AAPCS requires. */
+    coroutine->context.r4 = (u32)(uintptr_t)coroutine;
+    coroutine->context.sp = (u32)top;
+    coroutine->context.lr = (u32)(uintptr_t)ndsCoroutineTrampoline;
+#if NDS_TASK20_STACK_PROFILE
+    portCoroutineTask20Register(coroutine, owner_id, stack_size);
+#endif
+
+    return coroutine;
+}
+
 void portCoroutineDestroy(PortCoroutine *coroutine)
 {
     if (coroutine == NULL || coroutine == sCurrentCoroutine) return;
 #if NDS_TASK20_STACK_PROFILE
     portCoroutineTask20Retire(coroutine);
 #endif
+    if (coroutine->is_static) {
+        /* The block belongs to the caller's pool (BattleShip recycles it
+         * through gcEjectGObjStack). Clear it so a stale resume is impossible
+         * and hand it back; there is nothing to free. */
+        memset(coroutine, 0, sizeof(*coroutine));
+        return;
+    }
     free(coroutine->stack);
     memset(coroutine, 0, sizeof(*coroutine));
     free(coroutine);

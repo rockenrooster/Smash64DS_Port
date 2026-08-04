@@ -136,6 +136,13 @@ volatile u32 gNdsTaskmanLoopReached;
 volatile u32 gNdsTaskmanBoundedUpdateCount;
 volatile u32 gNdsTaskmanPostUpdateSkip;
 volatile u32 gNdsTaskmanGObjThreadSleeps;
+/* GObj thread provisioning; the legend is on the declarations in nds_os.h.
+ * Every one but GObjProvision and ThreadHeapCreate must read 0. */
+volatile u32 gNdsOsGObjThreadProvisionCount;
+volatile u32 gNdsOsGObjThreadProvisionFailCount;
+volatile u32 gNdsOsThreadHeapCreateCount;
+volatile u32 gNdsOsStartThreadNoEntryCount;
+volatile u32 gNdsOsStartThreadCreateFailCount;
 volatile u32 gNdsTaskmanPostUpdateLogoPosX;
 volatile u32 gNdsTaskmanPostUpdateLogoPosY;
 volatile u32 gNdsTaskmanPostUpdateOpening;

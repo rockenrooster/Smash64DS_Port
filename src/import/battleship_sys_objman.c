@@ -16,9 +16,56 @@
  * `mnVSResultsCheckExit` does not apply.
  *
  * Delete once the tap defect is closed; this is an instrument, not a seam. */
+#include <nds/nds_os.h>
+
 #define gcRunAll ndsBaseGcRunAll
+#define gcSetupObjman ndsBaseGcSetupObjman
 #include "../../decomp/BattleShip-main/decomp/src/sys/objman.c"
 #undef gcRunAll
+#undef gcSetupObjman
+
+extern void ndsBaseGcSetupObjman(GCSetup *setup);
+
+/* Size the GObj thread stack pool for a DS coroutine, once, for every scene.
+ *
+ * This is the seam that makes the 2026-08-03 announcer freeze structurally
+ * impossible. BattleShip gives a GObj thread 1536 bytes (`sizeof(u64) * 192`,
+ * e.g. scvsbattle.c:47) drawn from the taskman arena at scene setup and
+ * recycled through gcEjectGObjStack, and hands the top of that block to
+ * `osCreateThread`. The port ignored it and mallocd a private 4 KiB coroutine
+ * stack at the thread's FIRST START instead -- which, on a heap measured with
+ * zero headroom, failed for the announcer at logic frame 390 and returned
+ * silently while gcRunGObjProcess was already blocked in osRecvMesg waiting for
+ * that thread to post. Raising the block here lets osCreateThread build the
+ * coroutine in BattleShip's own pooled storage, so nothing is allocated at
+ * thread-start time at all.
+ *
+ * `gcSetupObjman` is called from exactly one place -- taskman.c:1309, a
+ * different translation unit -- so the rename interposes cleanly.
+ *
+ * Cost is arena, not heap, and the arena is where the headroom is: measured
+ * 2026-08-03 at the frozen stop, arena headroom 149,840 bytes against a C heap
+ * whose sbrk had reached its ceiling exactly. Roughly 2.7 KiB more per
+ * concurrently live GObj thread, of which that battle had at most three.
+ *
+ * A setup that also preallocates the stack array is dropped rather than
+ * re-carved: syTaskmanStartTask sized that array from the ORIGINAL stride, so
+ * walking it at the raised one would run off the end. Every shipped setup
+ * passes `gobjthreadstacks_num == 0` already, which makes gcGetGObjStackOfSize
+ * grow the pool from the arena on demand -- the path this keeps. */
+void gcSetupObjman(GCSetup *setup)
+{
+    GCSetup ds_setup = *setup;
+    size_t needed = ndsOsGObjThreadBlockBytes();
+
+    if (ds_setup.gobjthreadstack_size < needed)
+    {
+        ds_setup.gobjthreadstack_size = (needed + 7u) & ~(size_t)7u;
+        ds_setup.gobjthreadstacks = NULL;
+        ds_setup.gobjthreadstacks_num = 0;
+    }
+    ndsBaseGcSetupObjman(&ds_setup);
+}
 
 volatile u32 gNdsGcRunAllTapAliveCount;
 volatile u32 gNdsGcRunAllTapLostCount;

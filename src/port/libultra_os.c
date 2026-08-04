@@ -8,6 +8,11 @@
 #define NDS_OS_MAX_THREADS 64
 #define NDS_OS_SERVICE_STACK_SIZE (16u * 1024u)
 #define NDS_OS_GOBJ_STACK_SIZE (4u * 1024u)
+/* BattleShip's own split: main.c's service threads are 1..6, and objman hands
+ * GObj threads ids from 10000000 up (`dGCProcessThreadID`). The port's two
+ * private threads (os_selftest 90, video_bootstrap 91) sit below the line and
+ * pass no stack, so they stay on the service path. */
+#define NDS_OS_GOBJ_THREAD_ID_MIN 100
 
 static OSThread *sThreads[NDS_OS_MAX_THREADS];
 
@@ -106,10 +111,14 @@ static void ndsOsThreadEntry(void *arg)
     thread->state = OS_STATE_STOPPED;
 }
 
+size_t ndsOsGObjThreadBlockBytes(void)
+{
+    return (size_t)NDS_OS_GOBJ_STACK_SIZE + portCoroutineStaticOverhead();
+}
+
 void osCreateThread(OSThread *thread, OSId id, void (*entry)(void *),
                     void *arg, void *sp, OSPri priority)
 {
-    (void)sp;
     memset(thread, 0, sizeof(*thread));
     thread->id = id;
     thread->priority = priority;
@@ -117,6 +126,39 @@ void osCreateThread(OSThread *thread, OSId id, void (*entry)(void *),
     thread->port_entry = entry;
     thread->port_arg = arg;
     thread->context.pc = (u32)(uintptr_t)entry;
+
+    /* Provision the GObj thread's coroutine HERE, out of the pooled block the
+     * caller already owns, instead of mallocing one at first start.
+     *
+     * `sp` is BattleShip's own thread stack top -- objman.c:882 passes
+     * `&gobjthread->stack[sGCThreadStackSize / sizeof(u64)]`, pointing one past
+     * a GObjStack drawn from the taskman arena and recycled through
+     * gcEjectGObjStack. The port used to throw it away and malloc a private
+     * 4 KiB stack at the first `osStartThread`, which is the divergence that
+     * froze the 2026-08-03 battle: that malloc can fail mid-match, and the
+     * failure was silent while gcRunGObjProcess had already committed to a
+     * blocking osRecvMesg only the started thread could satisfy.
+     *
+     * Using the pooled block restores the source's ordering (storage exists
+     * before the thread does), costs the C heap nothing, and makes
+     * `gobjthread->stack[7] == 0xFEDCBA98` -- written by the caller right after
+     * this returns, 56 bytes above the base the stack grows down toward -- a
+     * live overflow guard for the port too. The objman seam clamps
+     * `gobjthreadstack_size` to ndsOsGObjThreadBlockBytes(), so a NULL here is
+     * a build-time sizing defect, never a runtime shortage. */
+    if ((id >= NDS_OS_GOBJ_THREAD_ID_MIN) && (sp != NULL) && (entry != NULL)) {
+        size_t block = ndsOsGObjThreadBlockBytes();
+
+        thread->port_coroutine = portCoroutineCreateStatic(
+            ndsOsThreadEntry, thread, (void *)((u8 *)sp - block), block,
+            (int)id);
+        if (thread->port_coroutine != NULL) {
+            gNdsOsGObjThreadProvisionCount++;
+        } else {
+            gNdsOsGObjThreadProvisionFailCount++;
+        }
+    }
+
     ndsOsRegisterThread(thread);
 }
 
@@ -125,15 +167,25 @@ void osStartThread(OSThread *thread)
     PortCoroutine *coroutine;
     size_t stack_size;
 
-    if (thread == NULL || thread->port_entry == NULL) return;
+    if (thread == NULL || thread->port_entry == NULL) {
+        gNdsOsStartThreadNoEntryCount++;
+        return;
+    }
 
     coroutine = thread->port_coroutine;
     if (coroutine == NULL) {
-        stack_size = (thread->id < 100) ? NDS_OS_SERVICE_STACK_SIZE
-                                        : NDS_OS_GOBJ_STACK_SIZE;
+        /* Service threads only: they are created once at boot, before anything
+         * competes for the heap. A GObj thread reaching this is the old defect
+         * and StartCreateFail is where it becomes visible instead of silent. */
+        stack_size = (thread->id < NDS_OS_GOBJ_THREAD_ID_MIN)
+            ? NDS_OS_SERVICE_STACK_SIZE : NDS_OS_GOBJ_STACK_SIZE;
         coroutine = portCoroutineCreate(ndsOsThreadEntry, thread, stack_size,
                                         thread->id);
-        if (coroutine == NULL) return;
+        if (coroutine == NULL) {
+            gNdsOsStartThreadCreateFailCount++;
+            return;
+        }
+        gNdsOsThreadHeapCreateCount++;
         thread->port_coroutine = coroutine;
     }
 

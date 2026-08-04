@@ -95,6 +95,11 @@ void ndsResetStartupDiagnostics(void)
     gNdsTaskmanBoundedUpdateCount = 0;
     gNdsTaskmanPostUpdateSkip = 0;
     gNdsTaskmanGObjThreadSleeps = 0;
+    gNdsOsGObjThreadProvisionCount = 0;
+    gNdsOsGObjThreadProvisionFailCount = 0;
+    gNdsOsThreadHeapCreateCount = 0;
+    gNdsOsStartThreadNoEntryCount = 0;
+    gNdsOsStartThreadCreateFailCount = 0;
     gNdsTaskmanPostUpdateLogoPosX = 0;
     gNdsTaskmanPostUpdateLogoPosY = 0;
     gNdsTaskmanPostUpdateOpening = 0;
