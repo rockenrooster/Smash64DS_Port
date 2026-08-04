@@ -65,10 +65,10 @@ per-frame-paired tooling: docs/PERF_LEDGER.md "GATE 5".
 BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL default, keep, or optimize
 first). Performance no longer decides it -- the two settings cost the same, so
 this is a fidelity call and the owner is the oracle. What changes per row:
-  * shield bubble    -- WITHDRAWN 2026-08-04. The per-guard leak is fixed and
-                        the model draws, but it still does not ride the fighter:
-                        its matrix never reaches the display list. See the
-                        gate-6 block below. Do not count this row for.
+  * shield bubble    -- OWNER-QUEUED 2026-08-04 (cycle 59). Six seams later it
+                        is a round translucent per-player-coloured bubble on the
+                        guarding fighter that dies with the guard. This row now
+                        counts FOR the flip, subject to the owner's eye.
   * rebirth platform -- one flat quad becomes the joint-animated model, i.e. the
                         platform appears at all on respawn.
   * Fox reflector    -- NO CHANGE EITHER WAY, see below. Do not count this row.
@@ -333,16 +333,74 @@ translucency are all correct by eye.
 artifacts/visibility/2026-08-04_c5{5,6,7,8}-shield-guarding-t1988-flag1-a.png
 plus the -zoom.png crops; the flat white smear on the platform is unchanged
 across all four arms and is therefore NOT the shield.
-REMAINING DIMENSION, and it is one: SHAPE. The bubble is a SQUARE, not SSB64's
-circle, and the env colour dominates where source modulates a white prim against
-the model's texture -- i.e. the shield texture's circular alpha is not reaching
-the polygon. Next read is the texture side of the same submit
-(gNdsEffectRendererTextureReadyCount / TextureRejectCount are already published
-and were 0 for this effect in the cycle-50 census), not another matrix or colour
-cycle.
-GATE 6: the shield row's flip argument re-arms only on the owner's eye, and the
-honest ask is now "right place, right size, right colour, square instead of
-round", not "is this a shield".
+  6. SHAPE: THE TEXTURE WAS REFUSED BY AN sm64-nds COMBINE RULE (2026-08-04,
+     cycle 59), and this was the last dimension. ready=0 AND reject=0 said no
+     bind was ever ATTEMPTED, which is a gate above the texture code, and it is
+     ndsRendererHardwareUseDecal: `b0 == d0` forces POLY_DECAL and, when
+     `a0 == PRIMITIVE`, also sets use_texture = false. That is sm64-nds's
+     g_setcombine rule transcribed whole (4e0ae66703). SSB64's shield DL is
+     G_CC_BLENDPE -- (PRIMITIVE - ENV) * TEXEL0 + ENV, alpha TEXEL0 * PRIM --
+     which trips both halves, so the port threw away the 16x32 IA8 circular
+     alpha at 163_FTManagerCommon.c:18 and drew the flat env colour: a green
+     SQUARE. `(a - b) * TEXEL0 + b` is a LERP whose weight is the texture, not a
+     decal, so the rule now requires the multiplier NOT to be TEXEL0/TEXEL1.
+     THE SAME LINE OWNED THE HALO AND THE WAVE. The two affected word pairs
+     (0xFC309661/0x552EFF7F, 0xFC30FE61/0x55FEF379) are SSB64's standard
+     translucent-effect combine; in the P1 battle only FTManagerCommon,
+     EFCommonEffects1/2/3, FoxSpecial3 and ITCommonObject carry one. Dream Land,
+     MarioModel/Main and FoxModel/Main carry none, and the flag-0 stand-ins emit
+     no G_SETCOMBINE at all, so the shipping default's exposure is Fox's ~2 s
+     entry Arwing plus items, which P1 has off. Corpus census (2,132 files,
+     3,210 b0==d0 combines, 284 changed):
+     artifacts/verification/2026-08-04_c59-combine-decal-census.txt.
+EVIDENCE, PAIRED, IDENTICAL RUN. probe-effect-texture.ps1 on both arms breaks at
+efManagerShieldProcDisplay and reads the published counters; the two runs hit the
+SAME tics with the SAME draw and triangle counts, so this is one variable:
+  tic   1994 1992 1990 1988 1986 1984 1950 ... 1916
+  c58   texready 5070 5070 5070 5070 5070 5070 5070 ... 5070   (frozen)
+  c59   texready 5160 5161 5162 5163 5164 5165 5166 ... 5176   (+1 per draw)
+  both  link15 0..16, tris 11127..11159 (+2 = one quad per draw), texreject 0
+Every shield submit now admits exactly one texture and rejects none, and the c59
+arm is already 90 admits ahead at tic 1994 -- effects that spawned earlier, i.e.
+the fix transfers off the shield on its own.
+artifacts/verification/2026-08-04_c5{8,9}-effect-texture*.txt.
+BY EYE, EXACT_LOCK 1988,1986 inside the 1994-1982 guard: the square is now a
+ROUND translucent bubble, bright at the centre and deep green at the rim --
+which is what (PRIM - ENV) * TEXEL0 + ENV looks like with white prim, Fox's
+green env and the texture's radial intensity -- with the canopy visible through
+it. artifacts/visibility/2026-08-04_c59-shield-guarding-t1988-flag1-a.png and
+-zoom.png against the c58 pair.
+The pixel metric confirms only that it cannot gate this: on the shield crop the
+same-build adjacent-present floor is 43.1% (c58) and 45.5% (c59) against a 26.9%
+cross-build delta, exactly as item 4 below predicts.
+GATE 6: the shield row is OWNER-QUEUED. Prediction, one sentence: while Fox
+guards you will see a round translucent green bubble centred on him, big enough
+to enclose him, with the stage visible through it, and it disappears the instant
+he stops guarding.
+
+TRANSFER CENSUS ON THE cycle-59 ARM (2026-08-04), because the combine fix is
+scene-wide and every appearance conclusion older than it is stale. Both arms
+captured at the same EXACT_LOCK, so each is a paired before/after:
+  * impact wave, tic 3272 (spawn 3277). CHANGED, and the old picture was
+    clearly wrong: c58 draws a hard-edged solid BLACK rectangle over the right
+    flower bed and over Fox standing in it; on c59 that rectangle is gone and
+    the region is textured foliage with the effect's own ragged shape. Crop
+    delta 19.6% against a same-build floor of 95.6-98.8% -- the number is
+    meaningless here, the rectangle's disappearance is not. Still an owner call
+    on whether what replaced it is the right asset.
+    artifacts/visibility/2026-08-04_c5{8,9}-wave-t3272-flag1-a.png.
+  * rebirth halo, tic 2814 (spawn 2819). NO CHANGE, and nothing halo-shaped is
+    on screen in EITHER arm: whole-viewport cross-build delta 395 pixels
+    (0.16%) against a 42.9% same-build floor. So the halo's remaining problem is
+    NOT texture admission -- it is upstream, at "does it draw where the camera
+    is at all", and the next cycle should spend its budget on the existence
+    chain rather than re-capturing this tic.
+    artifacts/visibility/2026-08-04_c5{8,9}-halo-t2814-flag1-a.png.
+  * Fox reflector: unchanged and unreachable here; it still never spawns.
+OWED AT THE PUBLISH POINT: the combine fix is in src/nds/nds_renderer.c and is
+NOT flag-gated, so it ships. Its flag-0 exposure is censused above (Fox's entry
+Arwing and items) but has not been run; Boundary at the tracked default is owed
+before the next publish, as its own deliberate step.
 
 FLAG-0 RE-MEASURED AFTER THE FIX (2026-08-04), because changing the walk could
 have changed stand-in lifetime too. It did not: the flag-0 census is unchanged
@@ -422,7 +480,7 @@ do not restate them here.
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: is don't see the floating revival platform at all. the Halo is not the correct asset to use
     CAUSE: dEFManagerRebirthHaloEffectDesc is a joint-animated MODEL, drawn as one flat quad.
-    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). No cross-build pair exists; arms diverge.
+    STAGE: LOCALIZED -- not a texture or colour seam; nothing halo-shaped is on screen at its own spawn tic.
 
 -Fox down B VFX is not correct or using correct asset.
     Owner: you are still not using the correct asset for Fox's down B reflector.
@@ -432,13 +490,13 @@ do not restate them here.
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: MEASURED -- billboard, guard size and per-player colour all correct now; it is a square, not a circle.
+    STAGE: OWNER-QUEUED -- round translucent per-player bubble on the guarding fighter; needs the owner's eye.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
     CAUSE: dEFManagerImpactWaveEffectDesc is a material-animated model, so no single atlas texture can
     be its 'correct asset'. The row also has a particle half (dust, script 0x58, efmanager.c:2982).
-    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). No cross-build pair exists; arms diverge.
+    STAGE: MEASURED -- the black rectangle over the flower bed is gone now that its texture is admitted.
     Built correctly as a single DObj on link 10 (EFDesc omits flag 0x4, so a raw display list is right);
     executes fully, but its triangles still do not reach the effect counter. See 4c29b9615a.
 

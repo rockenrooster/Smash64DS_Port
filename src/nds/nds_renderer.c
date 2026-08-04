@@ -7829,17 +7829,51 @@ static s32 ndsRendererHardwareOutputUsesAlpha(const NDSRendererStats *stats,
     return FALSE;
 }
 
+/* b == d IS NOT A DECAL WHEN THE TEXTURE IS THE WEIGHT.
+ *
+ * The `b0 == d0` test is sm64-nds's g_setcombine rule, transcribed whole
+ * (decomp/sm64-nds/src/nds/nds_renderer.c:928): it forces POLY_DECAL, and when
+ * `a0` is PRIMITIVE it additionally sets `use_texture = false`. Both halves are
+ * wrong for `(a - b) * TEXEL0 + b`, which is not a decal at all but a LERP from
+ * b to a with the texture as its weight -- dropping the texture collapses it to
+ * the flat colour b, and DS decal mode replaces the texel-weighted blend with
+ * "texel where opaque, polygon colour where not".
+ *
+ * SSB64 writes exactly that shape as G_CC_BLENDPE -- (PRIMITIVE - ENVIRONMENT)
+ * * TEXEL0 + ENVIRONMENT -- and it is the standard translucent-effect combine,
+ * not one asset's quirk: the same two word pairs (0xFC309661/0x552EFF7F and
+ * 0xFC30FE61/0x55FEF379) appear in FTManagerCommon (the shield),
+ * EFCommonEffects1/2/3 (rebirth halo, impact wave), FoxSpecial3 and
+ * ITCommonObject. So the shield's 16x32 IA8 circular alpha never reached its
+ * polygon: gNdsEffectRendererTextureReadyCount AND TextureRejectCount both read
+ * 0, because ndsRendererHardwareUseTexture refused before any bind was
+ * attempted, and the quad drew as a flat env-coloured SQUARE.
+ *
+ * Requiring the multiplier to be TEXEL0/TEXEL1 keeps every genuinely untextured
+ * decal (c = SHADE, PRIM_A, TEXEL0_A, LOD_FRAC, ...) on the sm64-nds rule. The
+ * relocData corpus was censused for the blast radius: 284 of the 3,210 b0 == d0
+ * combines in 2,132 files change, and inside the P1 battle only FTManagerCommon,
+ * EFCommonEffects1/2/3, FoxSpecial3 and ITCommonObject carry one -- the Mario
+ * and Fox models and the Dream Land stage carry none. */
 static s32 ndsRendererHardwareUseDecal(const NDSRendererStats *stats)
 {
+    u32 w0;
     u32 w1;
+    u32 multiplier;
 
     if ((stats == NULL) || (stats->texture_combine_count == 0u))
     {
         return FALSE;
     }
+    w0 = stats->texture_combine_w0;
     w1 = stats->texture_combine_w1;
-    return ((((w1 >> 28) & 0x0fu) == ((w1 >> 15) & 0x07u)) ?
-        TRUE : FALSE);
+    if (((w1 >> 28) & 0x0fu) != ((w1 >> 15) & 0x07u))
+    {
+        return FALSE;
+    }
+    multiplier = (w0 >> 15) & 0x1fu;
+    return (((multiplier == NDS_RENDERER_CCMUX_TEXEL0) ||
+             (multiplier == NDS_RENDERER_CCMUX_TEXEL1)) ? FALSE : TRUE);
 }
 
 static s32 ndsRendererHardwareUsePrimDepth(const NDSRendererStats *stats)
