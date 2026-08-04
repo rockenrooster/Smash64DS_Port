@@ -37,11 +37,21 @@ OPEN.
     (d4c7d3d7b's validation never disables anything at flag 0, because only
     dEFManagerDeadExplodeEffectDesc is resolved there and its file is in the
     span table). 8508fc8d6 was flag-gated in cycle 15 and the hang persisted.
-    RANGE ANCHORED (cycle 23): a clean 4d1015b75 flag-0 tickhud build reaches
-    200 frames in 28s, so the regression really is inside the campaign commits
-    and the dirty-baseline worry is resolved. That leaves 4c29b9615a, whose only
-    ungated change is a counter increment, so no suspect's mechanism is yet
-    explained and the next spend is the literal bisect at budget 200.
+    BISECTED TO ae7c3e735, THE FREEZE FIX (cycle 24). Budget-200 flag-0 tickhud
+    builds: 4d1015b75 reaches 200 in 28s; ae7c3e735 hangs; d4c7d3d7b hangs;
+    current hangs. The freeze fix is the first bad commit.
+    ITS RUNAWAY COUNTERS ARE NOT THE MECHANISM -- they read 0 at frame 175, and
+    that refutation stands. But the commit's ONLY runtime change outside the
+    bounded parsers is src/port/reloc_backend_assets.c (+48): the misalignment
+    rejection that makes ndsRelocResolvePointerFromFileBase return NULL for a
+    result that is not 4-aligned. That is fail-closed behaviour on a resolver,
+    it was never covered by the counters checked so far, and it is the prime
+    suspect.
+    NEXT READ (not a build): gNdsRelocResolveMisalignCount /
+    gNdsRelocResolveOffsetCount / gNdsRelocResolveMisalignValue at frame 175 on
+    the flag-0 arm. A non-zero misalign count names the seam outright. Note the
+    cycle-1 "refuted by gNdsRelocResolveOffsetCount=0" reading was taken on a
+    different build and configuration and does not carry over.
     BUILDING AN OLD COMMIT NEEDS THE DECOMP PATCHES REVERSED TOO: decomp/ is
     gitignored, so a checkout leaves the tracked patches applied and the build
     fails on undeclared runaway counters. Reverse-apply
