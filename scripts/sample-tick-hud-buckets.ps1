@@ -192,7 +192,19 @@ try {
     # measurement run to discover. It cost two in one session before this check
     # existed. nm reads the same ELF GDB will, so agreement is guaranteed.
     # -PerFrameGlobals gets the identical guard, for the identical reason.
-    if (($ExtraGlobals.Count + $PerFrameGlobals.Count) -ne 0) {
+    # ALWAYS-READ SYMBOLS GET THE SAME GUARD, because the caller-supplied lists
+    # are not the only way a name can be wrong. This block used to run ONLY when
+    # -ExtraGlobals or -PerFrameGlobals were passed, so a plain
+    # `-RingDump` invocation -- which reads four symbols unconditionally --
+    # validated nothing at all and the guard was inert exactly when it was the
+    # only check available. Found 2026-08-03 while diagnosing a run that
+    # exhausted its budget; these four were in fact present, but proving that
+    # took a separate nm pass the harness should have done itself.
+    $alwaysRead = @('ndsBattlePlayableFrameCompleteMarker',
+                    'gNdsBattlePlayablePacingPresentedFrames',
+                    'sBattleTickHudRing', 'sBattleTickHudRingHead',
+                    'sBattleTickHudRingCount')
+    if (($ExtraGlobals.Count + $PerFrameGlobals.Count + $alwaysRead.Count) -ne 0) {
         $nm = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-nm.exe'
         if (Test-Path -LiteralPath $nm -PathType Leaf) {
             $symbols = [System.Collections.Generic.HashSet[string]]::new(
@@ -200,7 +212,8 @@ try {
                     ForEach-Object { ($_ -split '\s+')[-1] }))
             foreach ($pair in @(
                 @{ n = '-ExtraGlobals';    v = $ExtraGlobals },
-                @{ n = '-PerFrameGlobals'; v = $PerFrameGlobals })) {
+                @{ n = '-PerFrameGlobals'; v = $PerFrameGlobals },
+                @{ n = 'always-read';      v = $alwaysRead })) {
                 # Validate the BASE identifier so an array element is readable:
                 # `gNdsTickHudNativeOwnerFallbackByReason[13]` is a legal GDB
                 # expression but never a symbol name, and R2-07 L5 needs exactly
