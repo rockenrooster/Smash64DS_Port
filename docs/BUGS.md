@@ -457,8 +457,81 @@ taken so far, and the reflector's missing strong override
 (ndsBaseEFManagerFoxReflectorMakeEffect, battleship_efmanager.c:1441, still
 unreferenced) has never had a chance to matter.
 
-STILL OPEN, in order: (1) make a shield actually spawn under the probe -- that
-is a harness problem, not a renderer one, and it blocks the whole ladder;
+CYCLE 5 SPAWNED ALL OF THEM, AND THE BLOCKER IS NOT THE HARNESS (2026-08-03).
+
+A 6001-frame flag-on session with gcAddGObjDisplay armed. It never reached its
+budget, and how it stopped is the finding:
+
+    DISP15 f=576 gobj=0x23C6880 proc -> efManagerShieldProcDisplay + 1
+                                lr   -> efManagerMakeEffect + 83
+    DISP15 f=646..653 (x6)      proc -> lbCommonDObjScaleXProcDisplay + 1
+    DISP18 f=816 gobj=0x23C8D08 proc -> gcDrawDObjTreeDLLinksForGObj + 1
+    DISP10 f=838 gobj=0x23C8D08 proc -> gcDrawDObjTreeDLLinksForGObj + 1
+    <nothing, ever again -- gdb CPU flat at 1.66s for the next 1,580 seconds
+     while melonDS burned a full core>
+
+THE SHIELD IS ON THE SOURCE PATH AND ITS OVERRIDE WORKS. Frame 576, link 15,
+efManagerShieldProcDisplay, from efManagerMakeEffect -- not a stand-in. And its
+GObj is 0x23C6880, the SAME GObj cycle 4 caught in gcSetupCustomDObjs with
+correct desc bytes (n0={id=0 dl=0} n1={id=1 dl=0x235ED30} n2={id=18}). So the
+shield is constructed correctly, from the source desc, with a proper 2-node
+tree. Construction is finished as a suspect.
+
+BUT IT IS NEVER DRAWN. The effect tree walker breakpoint (*0x2039778, which
+fires for every effect submit) printed NOT ONE line for a non-link-10 node in
+the 262 frames between the shield's creation and the hang. The shield exists,
+has a tree, and never enters ndsRendererAdapterSubmitStageDObjTreeDepth at all.
+The refusal is upstream of the walker, at the admission gate in movement.c --
+that is the next seam for the shield, and it is a different seam from anything
+this board has chased so far.
+
+THE HANG FOLLOWS THE REBIRTH HALO BY ~20 FRAMES. Both halo registrations land
+(f=816, f=838) and then every breakpoint stops firing forever while the guest
+keeps executing. This is the cycle-1 "flag-on arm crashes" defect, localised
+from "stopped after 1,032 frames" to "within ~20 frames of the rebirth halo's
+display registration". It is why no flag-on run has ever passed ~1,000 frames,
+and it -- not the run length -- is what has kept the ladder shut.
+
+THE REFLECTOR IS STILL UNMEASURED. No gcDrawDObjTreeForGObj registration
+appeared before the hang, which is NOT evidence that its missing strong
+override matters; the run simply died first. Do not add that override on this
+run's strength.
+
+lr_abt WAS NOT CAPTURED, and the reason is a probe defect worth not repeating:
+Invoke-GdbMarkerScript THROWS on timeout, so an abort read placed after the
+call never executes and the finally block kills the emulator first. When the
+thing being hunted is a hang, timeout is the EXPECTED path -- the abort read
+belongs in a catch.
+
+THE IMPACT WAVE EMITS NOTHING BECAUSE ITS GEOMETRY COMMANDS ARE NOT RECOGNISED
+(2026-08-03, cycle 5, the executor's own verdict on the effect submit).
+
+gNdsEffectDL* publish the stats of ndsRendererExecuteDisplayListWithVertexCache
+whenever an effect tree submit is on the stack. On the wave:
+
+    publish=6 blocker=0 commands=39 firstop=0xE7 unsupop=0x0 vtxcmd=0 tricmd=0
+
+firstop 0xE7 is the wave list's own first command, so this is the right list and
+publish=6 is its engagement proof. blocker=0 is NDS_RENDERER_BLOCKER_NONE and
+commands=39 is far past index 19 -- the list RUNS TO COMPLETION and does not
+bail. unsupop=0, so nothing was rejected as unknown. And yet vtxcmd=0 and
+tricmd=0: it counted ZERO vertex and ZERO triangle commands while the bytes hold
+one G_VTX at index 19 and four G_TRI2 at 20-23.
+
+So it is neither segment E nor an early stop. SEGMENT E IS FULLY EXCLUDED, from
+the bytes rather than a story: the G_DL at index 14 is 0xDE000000, param byte 0,
+which is G_DL_PUSH -- call and return -- and every triangle-emitting command
+sits INLINE AFTER it. An empty segment-E stub cannot remove them.
+
+What is left is a MICROCODE-VARIANT DECODE MISMATCH. 0x01 and 0x06 are G_VTX and
+G_TRI2 under F3DEX2, which is what this list is (it carries 0xD9 G_GEOMETRYMODE
+and 0xDE G_DL, both F3DEX2-only). Under F3DEX v1 the same bytes are G_MTX and
+G_DL -- both VALID, which is exactly why unsupop stays 0 and no blocker fires
+while the geometry silently never becomes geometry. That is the seam for this
+row: which GBI variant the effect submit hands the executor versus the stage.
+
+STILL OPEN, in order: (1) why the shield is refused before the effect walker --
+it is built correctly and never submitted;
 (2) why the impact wave, correctly constructed with a dl SubmitStageDL accepts,
 still yields tris=0. Its DL does contain `G_DL -> segment 0x0E` (0xDE000000
 0E000000) before its G_VTX, but that is a call-and-return and an unresolved

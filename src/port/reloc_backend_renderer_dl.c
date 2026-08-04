@@ -4963,6 +4963,12 @@ static NDSFighterDLDrawState sNdsRendererAdapterStagePersistentState;
 static NDSRendererStats sNdsRendererAdapterStagePersistentStats;
 static NDSRendererVertexCache sNdsRendererAdapterStageVertexCache;
 static sb32 sNdsRendererAdapterStagePersistentActive;
+/* Set only while an EFFECT tree submit is on the stack. The stage, the weapons
+ * and the effects all reach the hardware through the same SubmitStageDL, and
+ * the stage submits hundreds of lists per frame, so publishing the executor's
+ * verdict unconditionally would report the last stage list rather than the
+ * effect that is being investigated. */
+static sb32 sNdsRendererAdapterEffectSubmitActive;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
 static u32 sNdsRendererAdapterStageOwnerOccurrence;
 static u32 sNdsRendererAdapterStageNextOccurrence;
@@ -8730,6 +8736,17 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         render_stats,
         (sNdsRendererAdapterStagePersistentActive != FALSE) ?
             &sNdsRendererAdapterStageVertexCache : NULL);
+    if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+    {
+        gNdsEffectDLBlocker = render_stats->blocker;
+        gNdsEffectDLCommandCount = render_stats->command_count;
+        gNdsEffectDLFirstOpcode = render_stats->first_opcode;
+        gNdsEffectDLUnsupportedOpcode = render_stats->unsupported_opcode;
+        gNdsEffectDLVertexCommandCount = render_stats->vertex_command_count;
+        gNdsEffectDLTriangleCommandCount =
+            render_stats->triangle_command_count;
+        gNdsEffectDLPublishCount++;
+    }
 #if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererAdapterAccumulateDepth(
@@ -8950,6 +8967,7 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
                                             void *camera_gobj_ptr,
                                             u32 initial_geometry_mode)
 {
+    sNdsRendererAdapterEffectSubmitActive = TRUE;
 #if NDS_R2_SOURCE_EFFECTS_FULL
     ndsRendererAdapterSubmitStageDObjTreeDepth(dobj_ptr, kind, camera_gobj_ptr,
                                                initial_geometry_mode, 0u);
@@ -8957,6 +8975,7 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
     ndsRendererAdapterSubmitStageDObjNode(dobj_ptr, kind, camera_gobj_ptr,
                                           initial_geometry_mode);
 #endif
+    sNdsRendererAdapterEffectSubmitActive = FALSE;
 }
 
 void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,

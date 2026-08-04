@@ -145,6 +145,24 @@ extern volatile u32 gNdsEffectRendererRejectedDrawCount;
  * NDS_R2_SOURCE_EFFECTS_FULL. */
 extern volatile u32 gNdsEffectRendererSourceModelAdmitCount;
 
+/* THE EXECUTOR'S OWN VERDICT ON AN EFFECT DISPLAY LIST, because "tris=0" cannot
+ * distinguish "the list ran to its end and drew nothing" from "the walk stopped
+ * at command k". The impact wave is the case that needs it: it is proven to
+ * reach ndsRendererAdapterSubmitStageDL with a dl the loaded-file test accepts,
+ * and its geometry sits at command indices 19-23 of the list at
+ * EFCommonEffects1+0x7C28, INLINE AFTER the G_DL to segment 0x0E at index 14 --
+ * so an unresolved segment E (which returns an empty list rather than aborting)
+ * cannot be the explanation and a command count settles it in one read.
+ * Published only while an effect tree submit is on the stack, so stage traffic
+ * does not overwrite them. Last-value, not accumulating: one wave per read. */
+extern volatile u32 gNdsEffectDLBlocker;
+extern volatile u32 gNdsEffectDLCommandCount;
+extern volatile u32 gNdsEffectDLFirstOpcode;
+extern volatile u32 gNdsEffectDLUnsupportedOpcode;
+extern volatile u32 gNdsEffectDLVertexCommandCount;
+extern volatile u32 gNdsEffectDLTriangleCommandCount;
+extern volatile u32 gNdsEffectDLPublishCount;
+
 /* The effect DObj tree walk (reloc_backend_renderer_dl.c). Declared and reset
  * here so they exist in EVERY build, not only the one that increments them:
  * -fdata-sections plus --gc-sections deletes a volatile counter with no reader,

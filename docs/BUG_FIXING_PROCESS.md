@@ -181,6 +181,14 @@ Probe discipline (each learned the hard way):
 - A counter with no compiled writer reads 0, which looks clean. Every probe
   needs an engagement count or positive control: zero must mean "measured
   zero," never "the hook never ran" or "the linker removed it."
+- **When the thing you are hunting is a hang, the probe's TIMEOUT is the
+  expected path — put the abort read in a `catch`, not after the call.**
+  `Invoke-GdbMarkerScript` throws on timeout, so an abort read placed after it
+  never executes and the `finally` block kills the emulator before anything is
+  read. A 2026-08-03 session caught the hang it was looking for and still lost
+  `lr_abt` to this. (The streamed breakpoint output survives inside the
+  exception message, so a timed-out run is not necessarily a lost run — read
+  the exception before re-running.)
 - **Derive what CORRECT looks like from the source before calling a measured
   structure broken, and read the constants rather than assuming them.** On
   2026-08-03 a one-node DObj was reported as "the tree was never built" for

@@ -15526,6 +15526,13 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsEffectRendererTextureReadyCount = 0u;
     gNdsEffectRendererTextureRejectCount = 0u;
     gNdsEffectRendererRejectedDrawCount = 0u;
+    gNdsEffectDLBlocker = 0u;
+    gNdsEffectDLCommandCount = 0u;
+    gNdsEffectDLFirstOpcode = 0u;
+    gNdsEffectDLUnsupportedOpcode = 0u;
+    gNdsEffectDLVertexCommandCount = 0u;
+    gNdsEffectDLTriangleCommandCount = 0u;
+    gNdsEffectDLPublishCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarrySeedCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarryCaptureCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount = 0u;
