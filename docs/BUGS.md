@@ -503,6 +503,24 @@ call never executes and the finally block kills the emulator first. When the
 thing being hunted is a hang, timeout is the EXPECTED path -- the abort read
 belongs in a catch.
 
+THE FLAG-ON HANG IS GONE, AND THE SURVIVING RUN IS THE EVIDENCE (cycle 7).
+
+The same probe that stopped at ~838 frames for three cycles now reaches its
+full budget and prints its own tail:
+
+    frames=1801  admit=7813 dobjdraw=3887 submit=3845 reject=42
+                 tris=82,408 texready=37,908 texreject=0
+                 nodes=9,262 capture=3,926 rejkinds=0x0 blocker=0
+
+1,801 frames against a previous death at ~838, a 98.9% submit rate, and the
+timeout/abort path never armed. No separate fix was needed: the hang was a
+consequence of the refusal, not an independent defect.
+
+HONEST LIMIT ON THAT CLAIM: this run did not carry a KO counter, so "it crossed
+a respawn" is inferred from surviving well past the frame where the rebirth
+halo previously spawned and killed it, not measured directly. A KO counter in
+the next soak would close it properly.
+
 CYCLE 6 FIXED IT. THE SOURCE EFFECT MODELS DRAW (2026-08-03).
 
 THREE DEFECTS, ALL THE SAME CLASS: a source DObjDesc tree's id==0 root is
