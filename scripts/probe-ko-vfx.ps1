@@ -68,7 +68,9 @@ $artifact_name = if ([string]::IsNullOrWhiteSpace($EvidenceLabel)) {
 }
 $artifact = Join-Path $root ('artifacts\verification\' + $artifact_name)
 $capture_names = @(
+    $evidence_prefix + '_pre-death-baseline-probe.png',
     $evidence_prefix + '_ko-burst-probe.png',
+    $evidence_prefix + '_post-death-late-probe.png',
     $evidence_prefix + '_star-ko-probe.png',
     $evidence_prefix + '_rebirth-halo-probe.png'
 )
@@ -116,7 +118,52 @@ $required = @(
     'gNdsR2TexMemoFillCount', 'gNdsR2TexMemoStaleCount',
     'gNdsR2TexMemoVerifyFail',
     'gNdsR2StagePrepareReuseCount', 'gNdsR2StagePrepareBuildCount',
-    'gNdsRendererBattleStaticTextureViolationCount'
+    'gNdsRendererBattleStaticTextureViolationCount',
+    # Read but never declared required until now, which is the counter-with-no-
+    # writer trap one step earlier: an absent symbol makes gdb abandon the rest
+    # of the command batch silently.
+    'gNdsVisualEffectActiveCount', 'gNdsParticleStructsMax',
+    'sLBParticleStructsAllocLinks',
+    # When a capture happened, published rather than inferred from the HUD
+    # drawn inside it.
+    'gNdsFrameCounter', 'gNdsBattleTextHudTimeSeconds',
+    'gNdsBattleTextHudP0Stock', 'gNdsBattleTextHudP0Damage',
+    'gNdsBattleTextHudP1Stock', 'gNdsBattleTextHudP1Damage',
+    'gNdsFighterBattlePlayableVictimSlot',
+    'gNdsFighterBattlePlayableVictimStockStart',
+    'gNdsFighterBattlePlayableVictimStockFinal',
+    # BUGS row 6, the scene-wide post-death texture loss. The owner reports it
+    # never recovers for the rest of the match, which rules out ordinary
+    # eviction -- a cache that re-resolves every frame would refill on the next
+    # one. A pinned span uploaded once at scene prepare and then torn down or
+    # written through is the shape that loses everything at once and never
+    # heals, so its teardown/violation/prepare-fail rows are sampled directly.
+    'gNdsRendererBattleStaticTextureTeardownCount',
+    'gNdsRendererBattleStaticTexturePrepareFailCount',
+    'gNdsRendererBattleStaticTexturePrepareCount',
+    'gNdsRendererBattleStaticTexturePreparedCount',
+    'gNdsRendererBattleStaticTextureArmCount',
+    'gNdsRendererBattleStaticTexturePinnedHitCount',
+    'gNdsRendererBattleStaticTextureOwnerMask',
+    'gNdsRendererBattleStaticTextureSeenMask',
+    'gNdsRendererBattleStaticTextureAllocationSpanBytes',
+    'gNdsRendererBattleStaticTextureFirstAddress',
+    'gNdsRendererBattleStaticTextureEndAddress',
+    'gNdsRendererSceneTextureVramResetCount',
+    # Attempt-versus-stop. Rising bind/upload after the corruption means the
+    # renderer is still trying and being refused; flat means something latched.
+    'gNdsFighterDLAllDrawHardwareTextureBindCount',
+    'gNdsFighterDLAllDrawHardwareTextureReadyCount',
+    'gNdsFighterDLAllDrawHardwareTextureRejectCount',
+    'gNdsFighterDLAllDrawHardwareTextureUploadCount',
+    'gNdsEffectRendererTextureReadyCount',
+    'gNdsEffectRendererTextureRejectCount',
+    'gNdsRendererParticleAtlasFailCount',
+    'gNdsRendererParticleAtlasPrepareCount',
+    'gNdsRendererBattleTextureFenceCounts',
+    'gNdsRendererBattleTextureFenceFirstFrame',
+    'gNdsRendererBattleTextureFenceFirstClassPlus1',
+    'gNdsFighterDisplayContractNoTextureCount'
 )
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 $nm_lines = & $nm $elf
@@ -126,20 +173,55 @@ if ($missing.Count -gt 0) {
     throw "probe symbols absent from $elf : $($missing -join ', ')"
 }
 
+# ADDRESS-RESOLVED, NOT NAME-RESOLVED, AND THE MATCH MUST BE UNIQUE.
+# On 2026-08-04 `break <name>` handed this probe
+#   Breakpoint 1 at 0x0: efManagerDeadExplodeMakeEffect. (2 locations)
+# for three of its five makers, and the run still produced counters -- so the
+# transcript looked healthy while the stop site was whatever gdb picked. The
+# cause is the NDS_WEAK twin: battle_playable_compat_stubs.c defines weak
+# stand-ins for these makers, --gc-sections drops the unused body, and the
+# DWARF entry survives it, so gdb offers a live address and a dead one. nm
+# reports only what the linker actually kept -- there is exactly one T for
+# each of these names -- which is why resolution belongs here and not in gdb.
+# `W` is accepted deliberately: a surviving weak definition is still the code
+# that runs. `Select-Object -First 1` is gone on purpose; it would have made a
+# genuine duplicate silently pick one.
 function Get-TextAddress([string]$Name) {
-    $line = $nm_lines |
+    # NOT $matches: that is a PowerShell automatic variable holding regex
+    # results, and -match inside the filter overwrites it mid-pipeline.
+    $found = @($nm_lines |
         Where-Object {
-            $_ -match ('^([0-9a-fA-F]{8})\s+[Tt]\s+' +
+            $_ -match ('^([0-9a-fA-F]{8})\s+[TtWw]\s+' +
                 [regex]::Escape($Name) + '$')
-        } |
-        Select-Object -First 1
-    if ($null -eq $line) {
+        })
+    if ($found.Count -eq 0) {
         throw "$Name has no text symbol in $elf."
     }
-    return '0x' + ($line -split '\s+')[0]
+    if ($found.Count -gt 1) {
+        throw ("$Name has $($found.Count) text symbols in ${elf}: " +
+            ($found -join ' | '))
+    }
+    $address = '0x' + ($found[0] -split '\s+')[0]
+    if ($address -eq '0x00000000') {
+        throw "$Name resolved to a null address in $elf."
+    }
+    return $address
 }
 
 $impact_maker_address = Get-TextAddress 'efManagerImpactWaveMakeEffect'
+# Every stop site in this probe is an nm address. Breaking at the raw entry
+# also fixes the argument reads: gdb never skipped a prologue for these
+# functions anyway (it placed breakpoint 3 at 0x2095ca8, byte-identical to
+# nm's entry), so a named parameter here was already being read before its
+# DWARF location was live. At the entry the AAPCS guarantees r0-r3 hold the
+# arguments, so $r0 is the only reading that is true by construction.
+$explode_maker_address = Get-TextAddress 'efManagerDeadExplodeMakeEffect'
+$sparkle_maker_address = Get-TextAddress 'efManagerSparkleWhiteDeadMakeEffect'
+$rebirth_maker_address = Get-TextAddress 'efManagerRebirthHaloMakeEffect'
+$damage_maker_address = Get-TextAddress 'efManagerDamageNormalLightMakeEffect'
+$star_update_address = Get-TextAddress 'ftCommonDeadUpStarProcUpdate'
+$frame_marker_address = Get-TextAddress 'ndsBattlePlayableFrameCompleteMarker'
+$results_confetti_address = Get-TextAddress 'mnVSResultsMakeConfetti'
 $impact_display_symbols = @(
     'efManagerImpactWaveProcDisplay',
     'dEFManagerImpactWavePrimColorR',
@@ -177,9 +259,79 @@ function New-CaptureCommand(
     [int]$EmulatorProcessId,
     [string]$Prefix
 ) {
+    # THE PREFIX IS MANDATORY, AND THAT IS THE WHOLE FIX. All three call sites
+    # passed only two arguments, so PowerShell bound $Prefix to '' without a
+    # word of complaint and every run -- labelled or not -- wrote
+    # artifacts/visibility/_ko-burst-probe.png. The overwrite guard above was
+    # meanwhile checking <label>_ko-burst-probe.png, a name nothing ever wrote,
+    # so a labelled run silently clobbered the previous labelled run's evidence
+    # while the guard reported the path as free. Throwing here makes the broken
+    # call inexpressible instead of merely documented.
+    if ([string]::IsNullOrWhiteSpace($Prefix)) {
+        throw "New-CaptureCommand '$Name' called without an evidence prefix."
+    }
     return ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' +
         $capture_helper + '" -EmulatorProcessId ' + $EmulatorProcessId +
         ' -Output "artifacts/visibility/' + $Prefix + '_' + $Name + '.png"')
+}
+
+# EVERY CAPTURE STATES ITS OWN TIME AND ITS OWN TEXTURE STATE.
+# The 2026-08-04 run wrote three PNGs whose only timestamp was the HUD drawn
+# inside the picture, and two were then read as "match start" from that HUD
+# alone -- an inference a capture cannot support, because the KO path can fire
+# frames before the HUD reflects it. Frame counter, clock, stock and damage are
+# code-published globals, so a capture's position in the match becomes a number
+# in the artifact rather than a reading of the artifact.
+#
+# The texture rows answer the one question a screenshot cannot: after the
+# corruption appears, is the renderer STILL ATTEMPTING to bind and upload and
+# being refused (bind/upload keep climbing, or reject climbs), or has it
+# STOPPED ATTEMPTING (every counter flat)? Those two point at different owners
+# -- an allocator/VRAM bound versus a latched validation path -- and no amount
+# of looking at the corrupted frame distinguishes them.
+function New-StateCommand([string]$Name) {
+    return ('printf "KOSHOT tag=' + $Name + ' frame=%u clock=%u ' +
+        'p0stock=%u p0dmg=%u p1stock=%u p1dmg=%u ' +
+        'explode=%d star=%d rebirth=%d death_seen=%d ' +
+        'staticviol=%u staticteardown=%u staticprepfail=%u staticprep=%u ' +
+        'staticprepared=%u staticarm=%u staticpin=%u staticowner=%#x ' +
+        'staticseen=%#x staticspan=%u staticfirst=%#x staticend=%#x ' +
+        'vramreset=%u fbind=%u fready=%u freject=%u fupload=%u ' +
+        'eready=%u ereject=%u atlasfail=%u atlasprep=%u ' +
+        'memohit=%u memomiss=%u memofill=%u memostale=%u memoverify=%u ' +
+        'fence=%u fencefirstframe=%u fenceclass=%u notex=%u\n", ' +
+        'gNdsFrameCounter, gNdsBattleTextHudTimeSeconds, ' +
+        'gNdsBattleTextHudP0Stock, gNdsBattleTextHudP0Damage, ' +
+        'gNdsBattleTextHudP1Stock, gNdsBattleTextHudP1Damage, ' +
+        '$explode_calls, $star_calls, $rebirth_calls, $death_seen, ' +
+        'gNdsRendererBattleStaticTextureViolationCount, ' +
+        'gNdsRendererBattleStaticTextureTeardownCount, ' +
+        'gNdsRendererBattleStaticTexturePrepareFailCount, ' +
+        'gNdsRendererBattleStaticTexturePrepareCount, ' +
+        'gNdsRendererBattleStaticTexturePreparedCount, ' +
+        'gNdsRendererBattleStaticTextureArmCount, ' +
+        'gNdsRendererBattleStaticTexturePinnedHitCount, ' +
+        'gNdsRendererBattleStaticTextureOwnerMask, ' +
+        'gNdsRendererBattleStaticTextureSeenMask, ' +
+        'gNdsRendererBattleStaticTextureAllocationSpanBytes, ' +
+        'gNdsRendererBattleStaticTextureFirstAddress, ' +
+        'gNdsRendererBattleStaticTextureEndAddress, ' +
+        'gNdsRendererSceneTextureVramResetCount, ' +
+        'gNdsFighterDLAllDrawHardwareTextureBindCount, ' +
+        'gNdsFighterDLAllDrawHardwareTextureReadyCount, ' +
+        'gNdsFighterDLAllDrawHardwareTextureRejectCount, ' +
+        'gNdsFighterDLAllDrawHardwareTextureUploadCount, ' +
+        'gNdsEffectRendererTextureReadyCount, ' +
+        'gNdsEffectRendererTextureRejectCount, ' +
+        'gNdsRendererParticleAtlasFailCount, ' +
+        'gNdsRendererParticleAtlasPrepareCount, ' +
+        'gNdsR2TexMemoHitCount, gNdsR2TexMemoMissCount, ' +
+        'gNdsR2TexMemoFillCount, gNdsR2TexMemoStaleCount, ' +
+        'gNdsR2TexMemoVerifyFail, ' +
+        'gNdsRendererBattleTextureFenceCounts, ' +
+        'gNdsRendererBattleTextureFenceFirstFrame, ' +
+        'gNdsRendererBattleTextureFenceFirstClassPlus1, ' +
+        'gNdsFighterDisplayContractNoTextureCount')
 }
 
 try {
@@ -232,17 +384,35 @@ try {
         'set $shot_explode = 0',
         'set $shot_star = 0',
         'set $shot_rebirth = 0',
+        'set $shot_late = 0',
+        # Set ONLY by the two death makers. Nothing in the opening spawn can
+        # raise it, which is the whole point -- see the rebirth gate below.
+        'set $death_seen = 0',
+        'set $explode_x = 0.0',
+        'set $explode_y = 0.0',
+        'set $explode_z = 0.0',
+        'set $explode_kind = -1',
 
         # Each maker arms ONE delayed stop and disarms itself, so the whole
         # match costs three stops rather than one per frame. `ignore $bpnum N`
         # is the delay; the tbreak is temporary so it never fires twice.
-        'break efManagerDeadExplodeMakeEffect',
+        ('break *' + $explode_maker_address),
         'commands',
         'silent',
         'set $explode_calls = $explode_calls + 1',
+        'set $death_seen = 1',
+        # ROW 2 FOR FREE, and these are the exact quantities that row asks for:
+        # "it doesn't seem to play at the players death location off screen,
+        # check x,y,z coords". At the raw entry AAPCS puts the Vec3f* in r0 and
+        # the kind in r2, so this reads the argument the caller actually passed
+        # rather than a local whose DWARF location is not live yet.
+        'set $explode_x = ((Vec3f *)$r0)->x',
+        'set $explode_y = ((Vec3f *)$r0)->y',
+        'set $explode_z = ((Vec3f *)$r0)->z',
+        'set $explode_kind = $r2',
         'if $shot_explode == 0',
         'set $shot_explode = 1',
-        'tbreak ndsBattlePlayableFrameCompleteMarker',
+        ('tbreak *' + $frame_marker_address),
         'ignore $bpnum 5',
         'commands',
         'silent',
@@ -291,19 +461,40 @@ try {
         'end',
         'set $p = $p->next',
         'end',
-        (New-CaptureCommand 'ko-burst-probe' $emulator.Id),
+        (New-StateCommand 'ko-burst'),
+        (New-CaptureCommand 'ko-burst-probe' $emulator.Id $evidence_prefix),
+        'continue',
+        'end',
+        'end',
+        # BUGS ROW 6, THE LATE ARM. The owner reports that the post-death
+        # texture loss never recovers for the rest of the match. A cache that
+        # re-resolves every frame would refill on the next one, so "still
+        # broken three seconds later" is the measurement that separates
+        # eviction pressure from a state the renderer cannot leave. Armed as a
+        # sibling of the burst arm rather than nested inside it: this file
+        # already nests one commands block inside another, and a third level is
+        # not worth discovering the limits of mid-measurement.
+        'if $shot_late == 0',
+        'set $shot_late = 1',
+        ('tbreak *' + $frame_marker_address),
+        'ignore $bpnum 180',
+        'commands',
+        'silent',
+        (New-StateCommand 'post-death-late'),
+        (New-CaptureCommand 'post-death-late-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
         'end',
         'continue',
         'end',
 
-        'break efManagerSparkleWhiteDeadMakeEffect',
+        ('break *' + $sparkle_maker_address),
         'commands',
         'silent',
         'set $star_calls = $star_calls + 1',
-        'set $star_x = pos->x',
-        'set $star_y = pos->y',
+        'set $death_seen = 1',
+        'set $star_x = ((Vec3f *)$r0)->x',
+        'set $star_y = ((Vec3f *)$r0)->y',
         # THE NUMBER THAT SPLITS ROW 8 IN TWO. ftcommondead.c:340 drives the
         # fighter to camera_bound_top * 0.6 over FTCOMMON_DEADUP_WAIT (180)
         # frames and ftcommondead.c:357 then spawns the sparkle at whatever
@@ -319,18 +510,19 @@ try {
         'end',
         'if $shot_star == 0',
         'set $shot_star = 1',
-        'tbreak ndsBattlePlayableFrameCompleteMarker',
+        ('tbreak *' + $frame_marker_address),
         'ignore $bpnum 5',
         'commands',
         'silent',
-        (New-CaptureCommand 'star-ko-probe' $emulator.Id),
+        (New-StateCommand 'star-ko'),
+        (New-CaptureCommand 'star-ko-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
         'end',
         'continue',
         'end',
 
-        'break efManagerRebirthHaloMakeEffect',
+        ('break *' + $rebirth_maker_address),
         'commands',
         'silent',
         'set $rebirth_calls = $rebirth_calls + 1',
@@ -345,9 +537,17 @@ try {
         'set $vis_before = gNdsVisualEffectCreateCount',
         'set $vis_dropped = gNdsVisualEffectDropCount',
         'set $vis_mask = gNdsVisualEffectKindMask',
-        'if $shot_rebirth == 0',
+        # GATED ON A DEATH HAVING ACTUALLY HAPPENED, WHICH THE MAKER ALONE DOES
+        # NOT PROVE. Both fighters begin the match standing on revival
+        # platforms, so this maker fires during the OPENING SPAWN: the
+        # 2026-08-04 run read rebirth_calls=2 and armed its capture on the
+        # first of them, landing at match start with both fighters at 0% and
+        # full stock. That is a picture of the start of the match filed as
+        # evidence about respawning. $death_seen is raised only by the explode
+        # and star-KO callbacks, so this now waits for a real death.
+        'if $shot_rebirth == 0 && $death_seen == 1',
         'set $shot_rebirth = 1',
-        'tbreak ndsBattlePlayableFrameCompleteMarker',
+        ('tbreak *' + $frame_marker_address),
         'ignore $bpnum 23',
         'commands',
         'silent',
@@ -358,7 +558,8 @@ try {
         # like it had done nothing.
         'set $vis_active = gNdsVisualEffectActiveCount',
         'set $vis_after = gNdsVisualEffectCreateCount',
-        (New-CaptureCommand 'rebirth-halo-probe' $emulator.Id),
+        (New-StateCommand 'rebirth-halo'),
+        (New-CaptureCommand 'rebirth-halo-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
         'end',
@@ -375,7 +576,7 @@ try {
         # velocity the phase actually stored, and the wait it actually counts,
         # separates "the divide is gone" from "the ascent runs too long".
         # Sampled every call rather than once: the phase changes between them.
-        'break ftCommonDeadUpStarProcUpdate',
+        ('break *' + $star_update_address),
         'commands',
         'silent',
         'set $star_updates = $star_updates + 1',
@@ -385,11 +586,16 @@ try {
         # the name. And the struct has to be rebuilt from the GObj because the
         # function's own `fp` local is "value has been optimized out" at entry
         # under -Os; ftGetStruct is just ((FTStruct *)gobj->user_data.p).
-        'set $ftp = (FTStruct *)fighter_gobj->user_data.p',
+        # And $r0, NOT `fighter_gobj`, for the same reason one step further on.
+        # The stop is at the raw entry, so the parameter's DWARF location is
+        # not live yet -- which is exactly what the note above describes for
+        # the function's own `fp`. AAPCS puts the first argument in r0 there
+        # unconditionally, so this is the reading that cannot be optimized out.
+        'set $ftp = (FTStruct *)((GObj *)$r0)->user_data.p',
         'set $star_phase = $ftp->motion_vars.flags.flag1',
         'set $star_wait = $ftp->status_vars.common.dead.wait',
         'set $star_vy = $ftp->physics.vel_air.y',
-        'set $star_posy = ((DObj *)fighter_gobj->obj)->translate.vec.f.y',
+        'set $star_posy = ((DObj *)((GObj *)$r0)->obj)->translate.vec.f.y',
         'if $star_vy > $star_vymax',
         'set $star_vymax = $star_vy',
         'end',
@@ -399,18 +605,27 @@ try {
         # BUGS row 4, the same run for free: where the hit sparks are handed.
         # "Stray VFX across the stage" would show as an |x| far outside a
         # fighter's reach.
-        'break efManagerDamageNormalLightMakeEffect',
+        ('break *' + $damage_maker_address),
         'commands',
         'silent',
         'set $spark_calls = $spark_calls + 1',
-        'if pos->x > $spark_absmax',
-        'set $spark_absmax = pos->x',
+        'if ((Vec3f *)$r0)->x > $spark_absmax',
+        'set $spark_absmax = ((Vec3f *)$r0)->x',
         'end',
-        'if -pos->x > $spark_absmax',
-        'set $spark_absmax = -pos->x',
+        'if -((Vec3f *)$r0)->x > $spark_absmax',
+        'set $spark_absmax = -((Vec3f *)$r0)->x',
         'end',
         'continue',
         'end',
+
+        # EVERY STOP SITE, PRINTED, BEFORE THE MATCH IS ALLOWED TO RUN. This is
+        # the tripwire for the failure this probe just had: three breakpoints
+        # reported `at 0x0 ... (2 locations)` and the run continued to produce
+        # plausible counters. The addresses above come from nm so they can no
+        # longer be ambiguous, but the transcript is what proves it, and the
+        # PowerShell check after the run fails the whole probe on `at 0x0` or a
+        # multi-location entry rather than leaving it to be noticed.
+        'info breakpoints',
 
         # FORCE AN EARLY KO. Two level-3 CPUs starting from 0% reach their
         # first KO near the end of the minute, and the one this probe caught
@@ -420,9 +635,18 @@ try {
         # death. Damage is the honest lever: it changes when the KO happens and
         # nothing about what the KO path then does, which is the same argument
         # as forcing Whispy's wind countdown.
-        'tbreak ndsBattlePlayableFrameCompleteMarker',
+        ('tbreak *' + $frame_marker_address),
         'ignore $bpnum 240',
         'continue',
+        # THE NEGATIVE CONTROL FOR ROW 6, AND IT COSTS ONE STOP. Same match,
+        # same scene, same camera, one frame before the death is forced. If the
+        # post-death captures show missing textures and this one does not, the
+        # comparison is inside a single run on a single ROM -- no cross-build
+        # floor to argue about and no second fight to align. If this frame is
+        # ALREADY broken, the death is not the trigger and row 6's premise
+        # moves.
+        (New-StateCommand 'pre-death-baseline'),
+        (New-CaptureCommand 'pre-death-baseline-probe' $emulator.Id $evidence_prefix),
         # Writing fp->damage was tried first and the run came back BIT-IDENTICAL:
         # fighter.h:3309's `damage` is the port-only extension field, not what
         # ftCommonDeadCheckBounds reads. The bound test is on POSITION
@@ -438,12 +662,15 @@ try {
         'end',
 
         # The run ends where the match does, not on a frame count.
-        'tbreak mnVSResultsMakeConfetti',
+        ('tbreak *' + $results_confetti_address),
         'continue',
+        (New-StateCommand 'results'),
 
         ('printf "KOVFX explode_calls=%d star_calls=%d rebirth_calls=%d ' +
             'star=%f,%f cam_top=%d map_top=%d ' +
             'star_updates=%d phase=%d wait=%d vy=%f vymax=%f posy=%f forced_damage=%d ' +
+            'death_seen=%d explode_pos=%f,%f,%f explode_kind=%d ' +
+            'victim_slot=%d victim_stock=%d->%d ' +
             'spark_calls=%d spark_absmax=%f ' +
             'burst_slot2_count=%d burst_slot2_size=%f ' +
             'slot0_count=%d slot0_noxf=%d slot0_noxf_absmax=%f ' +
@@ -453,6 +680,10 @@ try {
             '$explode_calls, $star_calls, $rebirth_calls, ' +
             '$star_x, $star_y, $cam_top, $map_top, ' +
             '$star_updates, $star_phase, $star_wait, $star_vy, $star_vymax, $star_posy, $forced_damage, ' +
+            '$death_seen, $explode_x, $explode_y, $explode_z, $explode_kind, ' +
+            'gNdsFighterBattlePlayableVictimSlot, ' +
+            'gNdsFighterBattlePlayableVictimStockStart, ' +
+            'gNdsFighterBattlePlayableVictimStockFinal, ' +
             '$spark_calls, $spark_absmax, ' +
             '$slot2_count, $slot2_size, ' +
             '$slot0_count, $slot0_noxf, $slot0_noxf_absmax, ' +
@@ -471,7 +702,26 @@ try {
         -TimeoutSeconds $TimeoutSeconds
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $artifact) | Out-Null
     Set-Content -LiteralPath $artifact -Value $capture
-    $capture | Select-String -Pattern 'KOVFX'
+
+    # FAIL LOUDLY ON A BAD RESOLVE -- AFTER THE ARTIFACT IS ON DISK, because a
+    # probe that trips its own integrity check is precisely the run whose
+    # transcript someone needs to read. On 2026-08-04 three breakpoints
+    # resolved to 0x0 with "(2 locations)" and the run reported counters
+    # anyway; nothing in the pipeline treated that as a failure, so it was
+    # found by eye a session later.
+    $capture_text = ($capture | Out-String)
+    $bad_resolves = @([regex]::Matches($capture_text,
+        '(?m)^.*reakpoint \d+ at 0x0\b.*$') |
+        ForEach-Object { $_.Value.Trim() })
+    $multi_locations = @([regex]::Matches($capture_text,
+        '(?m)^.*\(\d+ locations\).*$') |
+        ForEach-Object { $_.Value.Trim() })
+    if (($bad_resolves.Count + $multi_locations.Count) -ne 0) {
+        throw ("breakpoint resolution failed; artifact kept at $artifact -- " +
+            (@($bad_resolves + $multi_locations) -join ' / '))
+    }
+
+    $capture | Select-String -Pattern 'KOVFX|KOSHOT'
     Write-Output "probe capture: $artifact"
 }
 finally {
