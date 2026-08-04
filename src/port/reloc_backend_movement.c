@@ -12861,7 +12861,24 @@ static sb32 ndsStageGCDrawAllLoopIsEffectDisplay(GObj *gobj, s32 link_id)
     {
         DObj *dobj = DObjGetStruct(gobj);
 
-        if ((dobj != NULL) && (dobj->dv != NULL))
+        /* A CHILD COUNTS. Requiring geometry on the ROOT excluded every
+         * tree-shaped source model, which is to say three of the four rows this
+         * gate exists to admit. gcSetupCustomDObjs (objanim.c:2413) builds the
+         * id==0 entry with gcAddDObjForGObj(gobj, dobjdesc->dl), and node0's dl
+         * is NULL by construction in all three descs -- the root is
+         * transform-only and the display list hangs off the child. So
+         * dobj->dv != NULL was only ever true for the impact wave, whose EFDesc
+         * omits flag 0x4 and therefore gets one DObj holding the list directly.
+         * Measured: every one of the 72 admitted draws in a 901-frame flag-on
+         * run was an impact wave, and the shield was created at frame 576 and
+         * never reached the walker at all.
+         *
+         * A child pointer is the cheap discriminator and needs no walk: the
+         * submit already recurses the tree and already declines nodes with no
+         * list, so admitting a transform-only root costs one traversal of a
+         * two- or three-node tree and cannot draw anything spurious. */
+        if ((dobj != NULL) &&
+            ((dobj->dv != NULL) || (dobj->child != NULL)))
         {
             gNdsEffectRendererSourceModelAdmitCount++;
             return TRUE;
@@ -13067,6 +13084,18 @@ static sb32 ndsStageGCDrawAllLoopEffectKindAccepted(u32 callback_kind)
     {
         return TRUE;
     }
+    /* TREE_DLLINKS ARRIVES TOO, once the transform-only-root rule above stops
+     * discarding tree-shaped effects. Measured the moment that landed: the
+     * observed-kind mask went 0x8 -> 0xa and the reject mask read 0x2, which is
+     * exactly this kind and nothing else. It is the rebirth halo, whose EFDesc
+     * names gcDrawDObjTreeDLLinksForGObj as its proc_display, so a DL-links
+     * tree is the correct shape rather than a surprise.
+     * ndsRendererAdapterSubmitStageDObjNode already walks it in the DLLINKS
+     * arm, so as with DLHEAD0 nothing downstream needed teaching. */
+    if (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS)
+    {
+        return TRUE;
+    }
 #endif
     return FALSE;
 }
@@ -13105,7 +13134,14 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
     gNdsEffectRendererCallbackKindMask |=
         ndsStageGCDrawAllLoopCallbackKindBit(callback_kind);
     root = DObjGetStruct(effect_gobj);
-    if ((root == NULL) || (root->dv == NULL) ||
+    /* Same transform-only-root rule as the admission gate above, and it has to
+     * be repeated here or the gate's work is undone one call later: with only
+     * the gate relaxed this path admitted 468 and rejected all 219 draws while
+     * the tree walker still ran 6 times, because a source desc tree's id==0
+     * root carries no display list. A root with a child is a tree; the walk
+     * below declines individual nodes that have nothing to draw. */
+    if ((root == NULL) ||
+        ((root->dv == NULL) && (root->child == NULL)) ||
         (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
         (ndsStageGCDrawAllLoopEffectKindAccepted(callback_kind) == FALSE))
     {

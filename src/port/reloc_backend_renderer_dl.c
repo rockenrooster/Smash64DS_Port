@@ -8742,9 +8742,13 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         gNdsEffectDLCommandCount = render_stats->command_count;
         gNdsEffectDLFirstOpcode = render_stats->first_opcode;
         gNdsEffectDLUnsupportedOpcode = render_stats->unsupported_opcode;
-        gNdsEffectDLVertexCommandCount = render_stats->vertex_command_count;
-        gNdsEffectDLTriangleCommandCount =
-            render_stats->triangle_command_count;
+        /* vertex_count/triangle_count, NOT the *_command_count pair: every
+         * site that increments those is wrapped in
+         * NDS_RENDERER_RECORD_PROOF_ONLY, which is ((void)0) whenever
+         * NDS_RENDERER_HW_TRIANGLES is set -- i.e. dead in every build that
+         * can draw. Reading them cost this investigation one wrong conclusion. */
+        gNdsEffectDLVertexCount = render_stats->vertex_count;
+        gNdsEffectDLTriangleCount = render_stats->triangle_count;
         gNdsEffectDLPublishCount++;
     }
 #if NDS_RENDERER_HW_TRIANGLES

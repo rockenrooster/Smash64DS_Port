@@ -15530,8 +15530,8 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsEffectDLCommandCount = 0u;
     gNdsEffectDLFirstOpcode = 0u;
     gNdsEffectDLUnsupportedOpcode = 0u;
-    gNdsEffectDLVertexCommandCount = 0u;
-    gNdsEffectDLTriangleCommandCount = 0u;
+    gNdsEffectDLVertexCount = 0u;
+    gNdsEffectDLTriangleCount = 0u;
     gNdsEffectDLPublishCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarrySeedCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarryCaptureCount = 0u;

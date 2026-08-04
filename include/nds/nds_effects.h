@@ -159,8 +159,8 @@ extern volatile u32 gNdsEffectDLBlocker;
 extern volatile u32 gNdsEffectDLCommandCount;
 extern volatile u32 gNdsEffectDLFirstOpcode;
 extern volatile u32 gNdsEffectDLUnsupportedOpcode;
-extern volatile u32 gNdsEffectDLVertexCommandCount;
-extern volatile u32 gNdsEffectDLTriangleCommandCount;
+extern volatile u32 gNdsEffectDLVertexCount;
+extern volatile u32 gNdsEffectDLTriangleCount;
 extern volatile u32 gNdsEffectDLPublishCount;
 
 /* The effect DObj tree walk (reloc_backend_renderer_dl.c). Declared and reset

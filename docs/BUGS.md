@@ -503,6 +503,53 @@ call never executes and the finally block kills the emulator first. When the
 thing being hunted is a hang, timeout is the EXPECTED path -- the abort read
 belongs in a catch.
 
+CYCLE 6 FIXED IT. THE SOURCE EFFECT MODELS DRAW (2026-08-03).
+
+THREE DEFECTS, ALL THE SAME CLASS: a source DObjDesc tree's id==0 root is
+TRANSFORM-ONLY. gcSetupCustomDObjs builds it with gcAddDObjForGObj(gobj,
+dobjdesc->dl) and node0's dl is NULL in every one of these descs, so the
+geometry hangs off the child. Three separate places demanded geometry at the
+root or refused the shape outright:
+
+  movement.c:12864  admission gate   required root->dv != NULL
+  movement.c:13125  submit guard     required root->dv != NULL (identical test,
+                                     and relaxing only the gate did nothing --
+                                     admit went 12 -> 468 while reject went
+                                     6 -> 219 and the walker still ran 6 times)
+  movement.c:13082  accepted kinds   took DOBJ_TREE and DLHEAD0 only
+
+Only the impact wave ever passed, because its EFDesc omits flag 0x4 and it
+therefore gets ONE DObj holding the display list directly. That is why every
+admitted draw for three cycles was an impact wave.
+
+The third one was found by measurement rather than reading: the moment the root
+rule was relaxed the observed-kind mask went 0x8 -> 0xa with reject mask 0x2,
+which is DOBJ_TREE_DLLINKS exactly. That is the rebirth halo, whose EFDesc names
+gcDrawDObjTreeDLLinksForGObj, so a DL-links tree is its correct shape.
+ndsRendererAdapterSubmitStageDObjNode already walked it.
+
+GATE 1, one 781-frame flag-on run, before -> after:
+
+    submit    0 -> 213        reject   219 -> 6
+    tris      0 -> 10,551     texready   0 -> 5,070
+    nodes     6 -> 663        rejkinds 0x2 -> 0x0
+
+Boundary passes at the tracked default. Note the submit-guard relaxation is NOT
+flag-gated -- it is a correctness fix for any tree-shaped effect -- which is
+why the default arm was re-verified rather than assumed.
+
+THE CYCLE-5 MICROCODE CONCLUSION BELOW IS WITHDRAWN, AND IT IS THE SAME TRAP
+THIS DOC ALREADY WARNS ABOUT. "vtxcmd=0 tricmd=0" was read as "the geometry
+commands are not recognised". Every site incrementing vertex_command_count and
+triangle_command_count is wrapped in NDS_RENDERER_RECORD_PROOF_ONLY, which is
+((void)0) whenever NDS_RENDERER_HW_TRIANGLES is set -- dead in every build that
+can draw. The live fields are vertex_count/triangle_count, and on the same wave
+they read vtx=18 tri=16: THE EXECUTOR DECODED THE GEOMETRY ALL ALONG. There is
+no F3DEX/F3DEX2 variant mismatch and no config seam to fix. blocker=0,
+commands=39 and unsupop=0 from that run remain valid; only the two *_command_
+counts were dead. gNdsEffectDL* now publish the live fields.
+
+--- superseded, kept for the reasoning only ---
 THE IMPACT WAVE EMITS NOTHING BECAUSE ITS GEOMETRY COMMANDS ARE NOT RECOGNISED
 (2026-08-03, cycle 5, the executor's own verdict on the effect submit).
 
