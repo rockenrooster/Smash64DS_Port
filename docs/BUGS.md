@@ -24,12 +24,15 @@ texready 0->5,070 on a 781-frame flag-on run -- and the long-standing flag-on
 hang went with them (1,801 frames, 98.9% submit rate). See 8508fc8d6, fc905460d.
 
 OPEN.
-  * Gate 5 (VBI A/B) unmeasured. The flag-off lab ROM stalls under every
-    sampler; its config is identical to the candidate apart from the flag, so
-    the "-MakeFlags silently cleared a knob" theory is refuted -- but the two
-    arms were built at different commits (bd7144e vs 0277af5), so no A/B so far
-    has been controlled. Rebuild both from one revision before trusting any
-    number. See fc3ac9c2d8.
+  * BLOCKS GATE 5: the flag-OFF tickhud lab ROM stalls. Now measured properly --
+    both arms rebuilt from bca626a758, generated configs differing in exactly
+    one line -- and it reproduces: flag-off fails to reach 300 presented frames
+    in 241s, flag-on reaches them in 32s. So it is caused by the flag being 0,
+    not by a build mismatch or a cleared make knob (both refuted).
+    BOUNDED: NDS_R2_BOTH_CPU is 0 in both arms, so neither is the canonical
+    both-CPU configuration and this may be specific to the passive-P1 lab ROM
+    rather than the shipping default -- Boundary passes at the tracked default
+    on this tree. Severity unresolved; that is the next thing to settle.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
