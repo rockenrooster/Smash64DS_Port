@@ -29,10 +29,17 @@ OPEN.
     one line -- and it reproduces: flag-off fails to reach 300 presented frames
     in 241s, flag-on reaches them in 32s. So it is caused by the flag being 0,
     not by a build mismatch or a cleared make knob (both refuted).
-    BOUNDED: NDS_R2_BOTH_CPU is 0 in both arms, so neither is the canonical
-    both-CPU configuration and this may be specific to the passive-P1 lab ROM
-    rather than the shipping default -- Boundary passes at the tracked default
-    on this tree. Severity unresolved; that is the next thing to settle.
+    NOT a passive-P1 artifact: flag-off stalls with NDS_R2_BOTH_CPU=1 too
+    (0/0 stall, 0/1 stall, 1/0 fine). But the TRACKED DEFAULT is also flag-off
+    and passes Boundary's real battle on this tree, so the discriminator is not
+    the flag alone -- it is flag 0 on the TICKHUD target. Bounded to the lab
+    instrument, not shown to affect the shipping arm.
+    CONSEQUENCE: gate 5 has no control arm, because the tick-HUD ROM is the
+    instrument every measurement runs on and its flag-0 build is the one that
+    stalls. Next: diff the tickhud target against the tracked default's build
+    (extra BSS/flags) rather than theorise, then bisect the flag-0 paths this
+    campaign touched (deferred-retry table, disabled-desc handling, the
+    admission block's #else shape).
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
