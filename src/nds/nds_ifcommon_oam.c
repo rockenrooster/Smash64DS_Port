@@ -383,7 +383,6 @@ volatile u32 gNdsTask39FxHitSparkUpdateCount;
 volatile u32 gNdsTask39FxHitSparkDrawCount;
 volatile u32 gNdsTask39FxHitSparkDropCount;
 volatile u32 gNdsTask39FxFlashDrawCount;
-volatile u32 gNdsTask39FxShieldDrawCount;
 volatile u32 gNdsTask39FxArenaRejectCount;
 volatile u32 gNdsTask39FxArenaBootSize;
 volatile u32 gNdsTask39FxObjVramBytes;
@@ -2101,7 +2100,6 @@ void ndsIFCommonNativeOamInit(void)
     gNdsTask39FxHitSparkDrawCount = 0u;
     gNdsTask39FxHitSparkDropCount = 0u;
     gNdsTask39FxFlashDrawCount = 0u;
-    gNdsTask39FxShieldDrawCount = 0u;
     gNdsTask39FxArenaRejectCount = 0u;
     gNdsTask39FxArenaBootSize = gNdsTaskmanArenaChosenSize;
     gNdsTask39FxObjVramBytes = 0u;

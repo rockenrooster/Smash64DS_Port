@@ -1,0 +1,48 @@
+GATE-6 EFFECTS CENSUS AT THE NEW TRACKED DEFAULT (2026-08-04, cycle 64)
+build builds/build-c64-flag1, target smash64ds-battle-playable-proof-hwtri,
+NDS_R2_SOURCE_EFFECTS_FULL and NDS_TASK39_FX_SHIELD both REMOVED from the
+build; source effects are unconditional. scripts/probe-effect-texture.ps1
+-Hits 60 (only 40 shield submits exist in one match, so the probe spent its
+900 s budget and threw AFTER emitting every row -- the rows are the capture).
+Break: efManagerShieldProcDisplay (source's own proc). tr = time_remain.
+
+EFXTEX n=1 tr=1994 gobj=0x23c9f78 draw=249 link15=0 tris=11127 texready=5160 texreject=0
+EFXTEX n=2 tr=1992 gobj=0x23c9f78 draw=250 link15=1 tris=11129 texready=5161 texreject=0
+EFXTEX n=3 tr=1990 gobj=0x23c9f78 draw=251 link15=2 tris=11131 texready=5162 texreject=0
+EFXTEX n=4 tr=1988 gobj=0x23c9f78 draw=252 link15=3 tris=11133 texready=5163 texreject=0
+EFXTEX n=5 tr=1986 gobj=0x23c9f78 draw=253 link15=4 tris=11135 texready=5164 texreject=0
+EFXTEX n=6 tr=1984 gobj=0x23c9f78 draw=254 link15=5 tris=11137 texready=5165 texreject=0
+EFXTEX n=7 tr=1950 gobj=0x23c9e80 draw=255 link15=6 tris=11139 texready=5166 texreject=0
+EFXTEX n=8 tr=1948 gobj=0x23c9e80 draw=256 link15=7 tris=11141 texready=5167 texreject=0
+EFXTEX n=9 tr=1946 gobj=0x23c9e80 draw=257 link15=8 tris=11143 texready=5168 texreject=0
+EFXTEX n=10 tr=1944 gobj=0x23c9e80 draw=258 link15=9 tris=11145 texready=5169 texreject=0
+EFXTEX n=11 tr=1942 gobj=0x23c9e80 draw=259 link15=10 tris=11147 texready=5170 texreject=0
+EFXTEX n=12 tr=1940 gobj=0x23c9e80 draw=260 link15=11 tris=11149 texready=5171 texreject=0
+EFXTEX n=13 tr=1938 gobj=0x23c9e80 draw=261 link15=12 tris=11151 texready=5172 texreject=0
+EFXTEX n=14 tr=1922 gobj=0x23c9e80 draw=262 link15=13 tris=11153 texready=5173 texreject=0
+EFXTEX n=15 tr=1920 gobj=0x23c9e80 draw=263 link15=14 tris=11155 texready=5174 texreject=0
+EFXTEX n=16 tr=1918 gobj=0x23c9e80 draw=264 link15=15 tris=11157 texready=5175 texreject=0
+EFXTEX n=17 tr=1916 gobj=0x23c9e80 draw=265 link15=16 tris=11159 texready=5176 texreject=0
+EFXTEX n=18 tr=130 gobj=0x23c9c90 draw=485 link15=17 tris=21808 texready=10307 texreject=0
+EFXTEX n=19 tr=128 gobj=0x23c9c90 draw=486 link15=18 tris=21810 texready=10308 texreject=0
+EFXTEX n=20 tr=126 gobj=0x23c9c90 draw=487 link15=19 tris=21812 texready=10309 texreject=0
+EFXTEX n=21 tr=110 gobj=0x23c1380 draw=490 link15=20 tris=21830 texready=10311 texreject=0
+EFXTEX n=22 tr=76 gobj=0x23c9e80 draw=495 link15=21 tris=21912 texready=10317 texreject=0
+EFXTEX n=23 tr=74 gobj=0x23c9e80 draw=496 link15=22 tris=21914 texready=10318 texreject=0
+EFXTEX n=24 tr=72 gobj=0x23c9e80 draw=497 link15=23 tris=21916 texready=10319 texreject=0
+EFXTEX n=25 tr=70 gobj=0x23c9e80 draw=498 link15=24 tris=21918 texready=10320 texreject=0
+EFXTEX n=26 tr=68 gobj=0x23c9e80 draw=499 link15=25 tris=21920 texready=10321 texreject=0
+EFXTEX n=27 tr=66 gobj=0x23c9e80 draw=500 link15=26 tris=21922 texready=10322 texreject=0
+EFXTEX n=28 tr=64 gobj=0x23c9e80 draw=501 link15=27 tris=21924 texready=10323 texreject=0
+EFXTEX n=29 tr=62 gobj=0x23c9e80 draw=502 link15=28 tris=21926 texready=10324 texreject=0
+EFXTEX n=30 tr=60 gobj=0x23c9e80 draw=503 link15=29 tris=21928 texready=10325 texreject=0
+EFXTEX n=31 tr=58 gobj=0x23c9e80 draw=504 link15=30 tris=21930 texready=10326 texreject=0
+EFXTEX n=32 tr=56 gobj=0x23c9e80 draw=505 link15=31 tris=21932 texready=10327 texreject=0
+EFXTEX n=33 tr=40 gobj=0x23c1380 draw=506 link15=32 tris=21934 texready=10328 texreject=0
+EFXTEX n=34 tr=38 gobj=0x23c1380 draw=507 link15=33 tris=21936 texready=10329 texreject=0
+EFXTEX n=35 tr=36 gobj=0x23c1380 draw=508 link15=34 tris=21938 texready=10330 texreject=0
+EFXTEX n=36 tr=34 gobj=0x23c1380 draw=509 link15=35 tris=21940 texready=10331 texreject=0
+EFXTEX n=37 tr=18 gobj=0x23c9e80 draw=510 link15=36 tris=21942 texready=10332 texreject=0
+EFXTEX n=38 tr=16 gobj=0x23c9e80 draw=511 link15=37 tris=21944 texready=10333 texreject=0
+EFXTEX n=39 tr=14 gobj=0x23c9e80 draw=512 link15=38 tris=21946 texready=10334 texreject=0
+EFXTEX n=40 tr=12 gobj=0x23c9e80 draw=513 link15=39 tris=21948 texready=10335 texreject=0

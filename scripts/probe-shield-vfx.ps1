@@ -14,34 +14,26 @@ param(
     # Not 0: the shield grows in, so frame 0 of a guard is a dot. Not large
     # either -- a CPU releases guard quickly and a long wait never fires.
     [ValidateRange(1, 120)][int]$HoldFrames = 6,
-    # WHICH COUNTER SAYS "A SHIELD IS ON SCREEN THIS FRAME", because that
-    # depends on which shield the ROM was built with and this probe could not
-    # see one of the two.
+    # WHICH COUNTER SAYS "A SHIELD IS ON SCREEN THIS FRAME".
     #
-    # gNdsTask39FxShieldDrawCount belongs to ndsEFManagerShieldProcDisplay --
-    # the PROCEDURAL stand-in. NDS_R2_SOURCE_EFFECTS_FULL=1 replaces that
-    # stand-in with the source model, so the counter stops advancing and this
-    # probe spends its whole budget and reports "no shield was drawn" about a
-    # ROM that draws one. That is not a hang and it is not a regression; it is
-    # the probe watching a counter the build no longer uses, and it cost this
-    # campaign one 380-second timeout that got misread as a performance result.
+    # gNdsTask39FxShieldDrawCount is GONE (2026-08-04): it belonged to
+    # ndsEFManagerShieldProcDisplay, the procedural stand-in, and that stand-in
+    # was deleted when the source model became the tracked default. Watching it
+    # once cost this campaign a 380-second timeout that got misread as a
+    # performance result -- a probe that arms on a counter the build no longer
+    # increments reports "no shield was drawn" about a ROM that draws one.
     #
-    # gNdsEffectRendererSourceModelAdmitCount is the same signal for the source
-    # path: it advances once per captured source-model effect per frame.
-    # gNdsTask39FxShieldDrawCount is the PROCEDURAL stand-in's counter and is
-    # dead once NDS_R2_SOURCE_EFFECTS_FULL removes it;
     # gNdsEffectRendererSourceModelAdmitCount counts every source admit and is
     # dominated by the impact wave, so arming on it shot an empty frame at 343.
-    # The three below are the flag-on arming signals: link 15 is the shield and
-    # the reflector (the wave and rebirth halo are link 10), KOBurst arms a
-    # respawn, and DeferRecover arms the reflector once its late-loading file
-    # has actually restored the desc.
-    [ValidateSet('gNdsTask39FxShieldDrawCount',
+    # Link 15 is the shield and the reflector (the wave and rebirth halo are
+    # link 10) and is the default for that reason; KOBurst arms a respawn, and
+    # DeferRecover arms the reflector once its late-loading file has actually
+    # restored the desc.
+    [ValidateSet('gNdsEffectRendererLink15DrawCount',
                  'gNdsEffectRendererSourceModelAdmitCount',
-                 'gNdsEffectRendererLink15DrawCount',
                  'gNdsKOBurstAttemptCount',
                  'gNdsEFDescDeferRecoverCount')]
-    [string]$DrawCounter = 'gNdsTask39FxShieldDrawCount'
+    [string]$DrawCounter = 'gNdsEffectRendererLink15DrawCount'
 )
 
 # ONE SCREENSHOT OF THE SHIELD, ON THE FRAME THE SHIELD IS ACTUALLY UP.
@@ -59,10 +51,10 @@ param(
 # emulator at the marker, so the window is showing the frame that armed it and
 # not a later one.
 #
-# ndsEFManagerShieldProcDisplay runs once per frame per shielding fighter, so
-# gNdsTask39FxShieldDrawCount advancing between two frame markers means a shield
-# is on screen RIGHT NOW. Requiring it to advance HoldFrames times in a row
-# rejects the one-frame flicker at guard start and lands on a grown bubble.
+# The chosen draw counter advances once per frame per shielding fighter, so it
+# advancing between two frame markers means a shield is on screen RIGHT NOW.
+# Requiring it to advance HoldFrames times in a row rejects the one-frame
+# flicker at guard start and lands on a grown bubble.
 #
 # Both CPUs, because a passive human slot never shields. Level-3 Fox guards on
 # its own within a few seconds of engagement.

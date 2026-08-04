@@ -1725,35 +1725,6 @@ void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
     }
 }
 
-__attribute__((weak)) GObj *efManagerShieldMakeEffect(GObj *fighter_gobj)
-{
-    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
-    f32 scale = 1.0F;
-
-    if ((fp != NULL) && (fp->attr != NULL))
-    {
-        f32 health_scale = fp->shield_health /
-                           FTCOMMON_GUARD_SIZE_HEALTH_DIV;
-
-        scale = (((FTCOMMON_GUARD_SIZE_SCALE_MUL_INIT * health_scale) +
-                  FTCOMMON_GUARD_SIZE_SCALE_MUL_ADD) *
-                 fp->attr->shield_size) /
-                FTCOMMON_GUARD_SIZE_SCALE_MUL_DIV;
-    }
-
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_EF_MANAGER_SHIELD_MAKE_EFFECT,
-        NDS_TASK39_EFFECT_SUBSTITUTE);
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunGuardOnActive != FALSE))
-    {
-        gNdsFighterDashRunGuardEffectCount++;
-    }
-    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectShield, NULL,
-                                        scale, 1, fighter_gobj);
-}
-
 __attribute__((weak)) GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -6113,17 +6084,6 @@ void func_ovl0_800C9A38(Mtx44f mtx, DObj *dobj)
     }
 }
 
-__attribute__((weak)) GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos)
-{
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCatchPullActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopCatchPullEffectCount++;
-    }
-    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectCatch, pos,
-                                        0.9F, 1, NULL);
-}
-
 void ftParamSetModelPartID(GObj *fighter_gobj, s32 joint_id,
                            s32 modelpart_id)
 {
@@ -8055,41 +8015,6 @@ __attribute__((weak)) LBParticle *efManagerDamageCoinMakeEffect(Vec3f *pos)
     (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectCoin, pos,
                                        0.75F, 1, NULL);
     return NULL;
-}
-
-__attribute__((weak)) GObj *
-efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
-{
-    GObj *effect_gobj = ndsEFManagerMakeVisualEffect(
-        nNDSVisualEffectSlash, pos,
-        ndsVisualDamageScale(size, 0.55F, 0.025F), 1, NULL);
-
-    if ((effect_gobj != NULL) && (DObjGetStruct(effect_gobj) != NULL))
-    {
-        DObjGetStruct(effect_gobj)->rotate.vec.f.z = rotate;
-    }
-    return effect_gobj;
-}
-
-__attribute__((weak)) GObj *
-efManagerDamageSpawnOrbsRandomMakeEffect(Vec3f *pos)
-{
-    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectSparkle, pos,
-                                        0.55F, 1, NULL);
-}
-
-__attribute__((weak)) GObj *
-efManagerDamageSpawnSparksRandomMakeEffect(Vec3f *pos, s32 lr)
-{
-    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectHitElectric, pos,
-                                        0.50F, lr, NULL);
-}
-
-__attribute__((weak)) GObj *
-efManagerDamageSpawnMDustRandomMakeEffect(Vec3f *pos, s32 lr)
-{
-    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectDust, pos,
-                                        0.50F, lr, NULL);
 }
 
 __attribute__((weak)) LBParticle *efManagerSetOffMakeEffect(Vec3f *pos,
@@ -13307,28 +13232,6 @@ GObj *efManagerQuakeMakeEffect(s32 id)
     gNdsPupupuGroundDeferredMask |= 1u << 2;
     return NULL;
 #endif
-}
-
-__attribute__((weak)) GObj *
-efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
-{
-    NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_EFFECT_SPAWN);
-    (void)index;
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopWallDamageActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopWallDamageImpactWaveCount++;
-    }
-    {
-        GObj *effect_gobj = ndsEFManagerMakeVisualEffect(
-            nNDSVisualEffectImpactWave, pos, 0.9F, 1, NULL);
-
-        if ((effect_gobj != NULL) && (DObjGetStruct(effect_gobj) != NULL))
-        {
-            DObjGetStruct(effect_gobj)->rotate.vec.f.z = rotate;
-        }
-        return effect_gobj;
-    }
 }
 
 #if !NDS_R2_PARTICLE_RUNTIME

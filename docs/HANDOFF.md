@@ -1,27 +1,30 @@
 # Handoff
 
-Updated: 2026-08-04 (cycle 63). **PUBLISHED, and Boundary is GREEN on the new
-binary.** New baseline:
-`smash64ds-battle-playable-hwtri.nds` `F9F00354...EC046ECE`,
-`smash64ds.nds` `4537DE66...CD6CCA9F`. The pre-publish pair is parked byte-for-
-byte at `builds/armA-preflip-baseline/` (`99A1F550...E3136B6A` /
-`60872438...86992D58`) as the rollback path and as the A-arm of the publish A/B
--- do not delete it. The flag-identical tick-HUD sibling is
-`builds/build-c63-tickhud-pub` (`BA648496...39CE778F`); it is the instrument
-every measurement runs on, so rebuild it whenever the published pair is rebuilt.
+Updated: 2026-08-04 (cycle 64). **PUBLISHED AT THE SOURCE-EFFECTS DEFAULT, and
+Boundary is GREEN on the new binary.** New baseline:
+`smash64ds-battle-playable-hwtri.nds` `9DAC2CBE...46751004`,
+`smash64ds.nds` `73082983...441E4255`. Tick-HUD sibling
+`builds/build-c64-tickhud-pub` (`67770E49...FF77D7FC`) -- the instrument every
+measurement runs on, so rebuild it whenever the published pair is rebuilt. Two
+parked rollbacks, neither deletable: `builds/armB-flag0-published/` is the last
+flag-0 publish (`F9F00354...EC046ECE` / `4537DE66...CD6CCA9F`) and this cycle's
+A-arm; `builds/armA-preflip-baseline/` is the pre-campaign pair.
 
-Nothing is blocked engineering-side. Every open `BUGS.md` row now carries an
-explicit `OWNER ASK` line -- read `docs/BUGS.md` first, it is their board --
-and `docs/P1_EXECUTION_BOARD.md` carries the one open decision
-(`flip NDS_R2_SOURCE_EFFECTS_FULL`, the owner's) and the one small owed item
-(a capture of Fox's entry Arwing, which needs a low frame-counter lock because
-the entry runs before the match clock starts).
+**Gate 6 is closed by owner decision** -- *"36k p95 is worth it for
+correctness"*. `NDS_R2_SOURCE_EFFECTS_FULL` and `NDS_TASK39_FX_SHIELD` are
+DELETED, not set: the shield, respawn platform, impact wave and Fox reflector
+draw their source EFDesc models and the procedural stand-ins are gone (-627
+lines). Paired 128-frame price against the previous publish: WORK-H P50 +6,592,
+P95 +25,600, over-gate 15 -> 19 of 128, slips 0. Retirement inventory, what was
+deliberately KEPT, census and soak: `docs/BUGS.md` "GATE 6 CLOSED".
+
+Nothing is blocked engineering-side. Every open `BUGS.md` row carries an explicit
+`OWNER ASK` line and all of them are now answerable on the published ROM -- read
+`docs/BUGS.md` first, it is their board. The one small owed item is a capture of
+Fox's entry Arwing, which needs a low frame-counter lock because the entry runs
+before the match clock starts.
 
 ## What the atlas bound actually was, because it was not contiguity
-
-The 2026-08-03 morning conclusion ("the bound is a contiguous run inside
-libnds's per-bank splitting") is **WITHDRAWN**. That run had two changes in it
-and the other one explains the picture on its own.
 
 `ndsRendererHardwarePrepareBattleStaticTextures` asserted
 `gNdsRendererBattleStaticTextureBankMask == 3` -- that the static corpus
@@ -89,11 +92,8 @@ Results camera, not the emitter.
 
 ## THE FOUR ASSET ROWS ARE CLOSED HERE -- BUGS.md OWNS THEM NOW
 
-This section carried a cycle-47 snapshot whose every live claim has since been
-refuted: `tris=0`, "the shield tree was never built", "one node per frame", and
-"the KO blast pillar is particle script 0x5C". All four are wrong as of cycles
-50-61 and were misleading a restarter, so the narrative is gone rather than
-annotated. What survives, and is still worth knowing before touching this area:
+They all draw from their source models in the published ROM as of cycle 64. What
+is still worth knowing before touching this area:
 
 * An `EFDesc` names the display link it draws on, and the port once accepted
   link 18 only. Shield and reflector are on 15, halo and wave on 10, KO burst on
@@ -103,9 +103,12 @@ annotated. What survives, and is still worth knowing before touching this area:
   0x5C is the Star KO and fires zero times in the canonical run.
 * The pacing harness cannot judge these rows -- `sample-tick-hud-buckets.ps1`
   reads zero effects over its window. Use the per-row probes under `scripts/`.
+* A capture tic comes from the effect's own SOURCE lifetime, never a fixed
+  offset below its spawn tic. The rebirth halo travels 90 tics before it can be
+  on screen, and that cost cycle 60 a wrong verdict.
 
-Current state of all four rows, with predictions and owner asks:
-`docs/BUGS.md`. Do not re-derive it from here.
+Current state, predictions and owner asks: `docs/BUGS.md`. Do not re-derive it
+from here.
 
 ## A counter nothing reads is a counter the linker deletes
 
@@ -185,12 +188,12 @@ generated `.inc` files are gitignored. `-j`/`MAKEFLAGS` rules are in `AGENTS.md`
 textures, source countdown, Dream Land water at frame 0, Task 16 `1/1/1`. Do not
 edit `decomp/`.
 
-If the owner rejects a visual row: shield/halo cell resolution is capped by the
-8,192-byte sheet bound, and the way to buy more is to name non-live common
-textures to drop, **not** to grow the sheet — every larger allocation has been
-measured to break stage texture resolves. The halo's source spin (node[2], rotY
-0 -> 2*pi over 30 frames) is deliberately not reproduced; a camera-facing quad
-has no meaningful rotY, so the honest route would be a second quad with a
-rotating UV.
+If the owner rejects a visual row, it is now a SOURCE MODEL question, not an
+atlas one: shield, respawn pad, wave and reflector stopped being quad-sheet
+cells in cycle 64. Their cells are still packed but nothing draws them —
+reclaiming that space needs a before/after picture, because dropping a cell
+re-runs the packer's admission. The 8,192-byte sheet size is still the
+invariant for the effects that DO use it; grow coverage with more sheets, never
+a bigger one.
 
 Run `New-Smash64DSSnapshot.ps1` last, and nothing after it.

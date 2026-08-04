@@ -1,42 +1,46 @@
 # P1 Execution Board
 
-Updated: 2026-08-04 (cycle 63)
+Updated: 2026-08-04 (cycle 64)
 
 Boundary: `battle_playable_realtime`, mode `163`
 
-## PUBLISHED 2026-08-04. Boundary GREEN on the new binary. New baseline:
+## PUBLISHED 2026-08-04 AT THE SOURCE-EFFECTS DEFAULT. Boundary GREEN. New baseline:
 
 | ROM | sha256 |
 |---|---|
-| `smash64ds-battle-playable-hwtri.nds` | `F9F0035433C47787C20F82B3545199ECA926FA0E813626A230E0C25BEC046ECE` |
-| `smash64ds.nds` | `4537DE66A165DDD65927F38BF9E8184849F54209F68B870AEE1F9CBECD6CCA9F` |
+| `smash64ds-battle-playable-hwtri.nds` | `9DAC2CBED46559F8D00A74AEF5B5D3167EB15E9C3BB864010B3DA3EB46751004` |
+| `smash64ds.nds` | `730829832AE25419A44A8B520E169971AB46E21D97BF9D9EECAE1A5E441E4255` |
 
-Pre-publish binaries are parked byte-for-byte at `builds/armA-preflip-baseline/`
-(`99A1F550...E3136B6A` / `60872438...86992D58`). They are the rollback path AND
-the A-arm of the publish A/B; do not delete them. The flag-identical tick-HUD
-sibling of this publish is `builds/build-c63-tickhud-pub` — it is the instrument
-every future measurement runs on, so rebuild it whenever the published pair is
-rebuilt.
+The flag-identical tick-HUD sibling is `builds/build-c64-tickhud-pub`
+(`67770E49...FF77D7FC`) — it is the instrument every measurement runs on, so
+rebuild it whenever the published pair is rebuilt.
 
-The publish was priced before it was taken (`PERF_LEDGER.md` "PUBLISH PRICING"):
-WORK-H median +7,488 a frame against the previous root ROM's own tree, attributed
-by a three-arm split ENTIRELY to the freeze-fix segment, with the un-flag-gated
-renderer surface a null result (mean +50) and the flag-0 picture PIXEL-IDENTICAL
-at two tics. `ALL` flat, VBlank max 20 -> 19, over-gate frames 16 -> 15.
+Two rollbacks are parked byte-for-byte and neither may be deleted:
+`builds/armB-flag0-published/` is the immediately previous publish
+(`F9F00354...EC046ECE` / `4537DE66...CD6CCA9F`), the last flag-0 binary and the
+A-arm of this cycle's A/B; `builds/armA-preflip-baseline/` is the pre-campaign
+pair (`99A1F550...E3136B6A` / `60872438...86992D58`).
+
+**GATE 6 IS CLOSED.** The owner decided it — *"36k p95 is worth it for
+correctness"* — so `NDS_R2_SOURCE_EFFECTS_FULL` was flipped and then DELETED,
+along with `NDS_TASK39_FX_SHIELD`, the procedural shield/reflector/respawn-pad
+templates and eight weak stand-in shims (−627/+112 lines, 12 files). The shield,
+respawn platform and impact wave now draw their source EFDesc models in the
+shipping ROM and there is no second mode to select. Priced paired-by-frame
+against the previous publish's own sibling, 128 frames: WORK-H P50 983,680 →
+990,272 (+6,592), P95 1,265,152 → 1,290,752 (+25,600), over-gate 15 → 19 of 128,
+`ALL` P50 identical, VBI max 19 → 20, slips 0 both — i.e. slightly cheaper in
+the tail than the +36,032 the owner agreed to pay. Census, soak and retirement
+inventory: `docs/BUGS.md` "GATE 6 CLOSED".
 
 ## CURRENT BLOCKER — none engineering-side. Every `BUGS.md` row is owner-gated.
 
-What is owed is the owner's eye, not more engineering. Each open row in
-`BUGS.md` now carries an explicit `OWNER ASK` line saying what to look at and
-which flag it needs. Two rows need a session the automation cannot produce: the
-Fox reflector needs one manual down-B, and the KO z-axis symptom needs the owner
-to confirm or re-describe it on the new binary.
-
-The one open ENGINEERING decision is `BLOCKED(decision: flip
-NDS_R2_SOURCE_EFFECTS_FULL)`, and it is the owner's: three rows count FOR
-(shield, wave, rebirth platform), the price is P95 +36,032 in the tail, and the
-shipping renderer fixes that made those rows work cost nil. Tracked default stays
-flag-0 until the owner says otherwise.
+What is owed is the owner's eye, not more engineering, and no row needs a
+special build any more: every `OWNER ASK` in `BUGS.md` is answerable on the
+published ROM. Three rows need a session the automation cannot produce — the Fox
+reflector needs one manual down-B (which is also the live test of the deferred
+desc retry), the KO z-axis symptom needs the owner to confirm or re-describe it,
+and the shield/platform/wave replacements need their visual acceptance.
 
 OWED, small and named: a capture of Fox's entry Arwing, which is the only
 flag-0 exposure of the cycle-58/59 renderer change that has never been seen.
@@ -444,8 +448,13 @@ before naming its phase.)*
 | `ifCommonSetMaxNumGObj` latch | 25,600 |
 | **margin** | **1,276 B = 9 DObjs** |
 
-Seventeen source effect trees do not fit in nine DObjs, so the rest are behind
-`NDS_R2_SOURCE_EFFECTS_FULL` (default 0) until heap is found.
+Seventeen source effect trees do not fit in nine DObjs, so the rest were behind
+`NDS_R2_SOURCE_EFFECTS_FULL` (default 0) until heap was found.
+**SUPERSEDED 2026-08-04 (cycle 64):** the heap was found elsewhere (61,440 B
+returned from DL buffers 0/1, and the GObj-pool coroutine moved out of the
+heap), the flag is deleted and all seventeen ship. The 2.5-min soak on the
+published configuration reads `gNdsTaskmanGeneralHeapFreeMin` **132,016** against
+the 25,600 latch, so the nine-DObj margin this table records no longer binds.
 
 **Two candidate heap sources are already closed by evidence.** The substitute
 templates are 14 x 16 vertices, roughly 5 KB total even if all were deleted. And

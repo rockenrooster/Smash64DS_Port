@@ -16,10 +16,12 @@ typedef enum NDSVisualEffectKind
     nNDSVisualEffectSlash,
     nNDSVisualEffectSparkle,
     nNDSVisualEffectImpactWave,
-    nNDSVisualEffectShield,
-    nNDSVisualEffectReflector,
+    /* Shield, Reflector and Rebirth are GONE (2026-08-04). Those three kinds
+     * were the procedural stand-ins for dEFManagerShieldEffectDesc,
+     * dEFManagerFoxReflectorEffectDesc and dEFManagerRebirthHaloEffectDesc,
+     * which all draw as source models now. The kinds that remain have no source
+     * EFDesc route and are still the DS presentation for their effect ids. */
     nNDSVisualEffectDeath,
-    nNDSVisualEffectRebirth,
     nNDSVisualEffectCatch,
     nNDSVisualEffectKindCount
 } NDSVisualEffectKind;
@@ -160,8 +162,8 @@ extern volatile u32 gNdsEffectRendererRejectedDrawCount;
 extern volatile u32 gNdsEffectRendererLink15DrawCount;
 /* Effect GObjs admitted to the hardware path because they carry a SOURCE model
  * rather than one of the procedural templates -- links 10 and 15 as well as 18.
- * Zero at the tracked default; non-zero is the engagement proof for
- * NDS_R2_SOURCE_EFFECTS_FULL. */
+ * NON-ZERO at the tracked default since 2026-08-04; zero means the source
+ * models stopped being admitted and is a regression, not a configuration. */
 extern volatile u32 gNdsEffectRendererSourceModelAdmitCount;
 
 /* THE EXECUTOR'S OWN VERDICT ON AN EFFECT DISPLAY LIST, because "tris=0" cannot

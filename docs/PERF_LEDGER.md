@@ -7186,3 +7186,47 @@ Evidence: `artifacts/performance/2026-08-04_c62-{A-anchor,M-precampaign,B-head}-
 `artifacts/visibility/2026-08-04_c62-pub-{A,B}-t{3400,1988}-{a,b}.png`.
 Note the JSON `gitShort` field records the REPO's HEAD at sample time, not the
 ROM's tree — all three read `1d81bf2a27` and only arm B is actually that tree.
+
+## GATE 6 PUBLISH — source effects become the default, and the flag is deleted (2026-08-04, cycle 64)
+
+Owner decision: *"36k p95 is worth it for correctness"*. This is the confirming
+A/B taken AFTER the flip and the stand-in retirement, on the two publishes' own
+tick-HUD siblings, so the delta it prices is exactly what the owner now runs.
+
+  arm A `builds/build-c63-tickhud-pub`  previous publish, `NDS_R2_SOURCE_EFFECTS_FULL=0`
+  arm B `builds/build-c64-tickhud-pub`  this publish, flag REMOVED, stand-ins deleted
+
+Both `-RingDump -Samples 128 -StartFrame 501`, frames 502..629, target
+`smash64ds-battle-playable-tickhud-hwtri`, melonDS `DE80E46B`, DLDI ON.
+
+| n=128, paired by frame | A (flag 0) | B (default) | delta | gate-5 predicted |
+|---|---|---|---|---|
+| WORK-H P50 | 983,680 | 990,272 | **+6,592** | +5,440 |
+| WORK-H P95 | 1,265,152 | 1,290,752 | **+25,600** | +36,032 |
+| WORK-H paired | — | — | 53 better / 75 worse, median **+15,904**, mean +33,119 | median +7,680 |
+| frames over 1.12M | **15 of 128** | **19 of 128** | +4 | 16 → 17 |
+| `ALL` P50 | 1,119,872 | 1,119,872 | 0 | — |
+| VBI 2/3/4/5+ | 519/91/15/4 max 19 | 509/103/11/5 max 20 | — | max 20 → 19 |
+| cadence violations | 0 | 0 | 0 | 0 |
+
+**The prediction held, and the tail came in 10,432 cheaper than the price the
+owner agreed to.** `BG` moved median +64 over a −128..+192 range, so the ~15,904
+paired median is signal rather than build placement — this arm pair really is
+slower, by about what gate 5 said.
+
+Two differences from gate 5 worth recording so they are not read as drift.
+First, arm B is not gate 5's arm B: it also carries the stand-in retirement
+(−627 lines), which removes per-effect DObj allocations the atlas path used to
+make, and that is the plausible reason the tail improved. Second, the over-gate
+count moved +4 rather than +1; at 15–19 of 128 that population is the asset-load
+excursion set, which the campaign has repeatedly measured as the thing holding
+the gate ("the gate is an event, not an average"). The milestone gate is met by
+neither arm and this flag was never what stood between them.
+
+The per-frame paired view is still not in `compare-tick-hud-buckets.ps1` — the
+gap gate 5 recorded. This row's pairing was computed from the two JSONs directly.
+**Still owed**, and it has now cost two cycles of ad-hoc arithmetic.
+
+Evidence: `artifacts/performance/2026-08-04_c64ab-{A-flag0,B-flag1}-128.json`.
+Correctness side (census, soak, retirement inventory): `docs/BUGS.md` "GATE 6
+CLOSED"; `artifacts/verification/2026-08-04_c64-effect-census-default.txt`.

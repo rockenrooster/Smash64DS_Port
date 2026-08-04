@@ -9386,13 +9386,8 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
                                             u32 initial_geometry_mode)
 {
     sNdsRendererAdapterEffectSubmitActive = TRUE;
-#if NDS_R2_SOURCE_EFFECTS_FULL
     ndsRendererAdapterSubmitStageDObjTreeDepth(dobj_ptr, kind, camera_gobj_ptr,
                                                initial_geometry_mode, 0u);
-#else
-    ndsRendererAdapterSubmitStageDObjNode(dobj_ptr, kind, camera_gobj_ptr,
-                                          initial_geometry_mode);
-#endif
     sNdsRendererAdapterEffectSubmitActive = FALSE;
 }
 

@@ -237,17 +237,15 @@ uintptr_t lEFCommonParticleTextureBankHi;
  * in its own census as NDS_TASK39_EFFECT_SUBSTITUTE. So the model was never
  * made, let alone drawn, and no cell size or palette could have changed that.
  *
- * Turning NDS_R2_SOURCE_EFFECTS_FULL on alone does NOT fix this, which was
- * measured on 2026-08-03: the flag gates the offset-RESOLVE list, not the
- * routing, so the stand-in still won and the owner's verdict on that build was
- * "still wrong". These strong definitions are the other half -- a strong symbol
- * beats the weak shim, which is the same mechanism battleship_efmanager.c
- * already uses for efManagerDamageNormalLightMakeEffect.
- *
- * Gated on the flag because they inherit its cost and its acceptance test:
- * gNdsTaskmanGeneralHeapFreeMin must stay above 25,600 (ifCommonSetMaxNumGObj
- * latches the GObj pool below it) and the effects must be seen to draw. */
-#if NDS_R2_SOURCE_EFFECTS_FULL
+ * Routing alone was not enough, which is why this took cycles 50-59: the
+ * renderer refused the models at the admission gate, at the submit guard and at
+ * the accepted-kind list, then drew them at the origin, in the ground plane, at
+ * 1/9th size and untextured. Those are all fixed and the models draw. The
+ * owner priced the result at P95 +36,032 and took it on 2026-08-04, so this is
+ * the only route now -- the weak stand-in shims these override are DELETED and
+ * there is no second definition left for a strong symbol to beat. Kept as
+ * one-line forwards because the decomp bodies compile under their ndsBase*
+ * names (the #define/#undef pair above). */
 GObj *efManagerShieldMakeEffect(GObj *fighter_gobj)
 {
     return ndsBaseEFManagerShieldMakeEffect(fighter_gobj);
@@ -257,14 +255,13 @@ GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
 {
     return ndsBaseEFManagerRebirthHaloMakeEffect(fighter_gobj, size);
 }
-#endif
 
-#if NDS_TASK39_FX_SHIELD
-#define NDS_VISUAL_TEMPLATE_COUNT 14
-#define NDS_TASK39_SHIELD_MESH_SCALE (1.0F / 6.0F)
-#else
-#define NDS_VISUAL_TEMPLATE_COUNT 10
-#endif
+/* Seven, down from fourteen. The shield's five disc templates, the reflector's
+ * and the respawn pad's went with the procedural stand-ins on 2026-08-04; what
+ * remains serves the effect kinds the source path does NOT replace -- hit
+ * sparks, flames, electric, sparkles/coins, the ripple/flash wave and the
+ * generic death ring. */
+#define NDS_VISUAL_TEMPLATE_COUNT 7
 #define NDS_VISUAL_TEMPLATE_VERTICES 16
 #define NDS_VISUAL_TEMPLATE_COMMANDS 12
 
@@ -276,14 +273,7 @@ typedef enum NDSVisualTemplateKind
     nNDSVisualTemplateElectric,
     nNDSVisualTemplateSparkle,
     nNDSVisualTemplateWave,
-    nNDSVisualTemplateShield,
-    nNDSVisualTemplateDeath,
-    nNDSVisualTemplateReflector,
-    nNDSVisualTemplateRebirth,
-    nNDSVisualTemplateShieldP2,
-    nNDSVisualTemplateShieldP3,
-    nNDSVisualTemplateShieldP4,
-    nNDSVisualTemplateShieldDamage
+    nNDSVisualTemplateDeath
 } NDSVisualTemplateKind;
 
 typedef struct NDSVisualTemplate
@@ -431,59 +421,9 @@ static void ndsEFManagerBuildRing(NDSVisualTemplate *template,
                            0xdf000000u, 0u);
 }
 
-/* `glint_dx` slides the highlight patch along x. The patch is centred at
- * (-39.5, 111), i.e. UPPER LEFT, which is where it has always been and where
- * nothing in the source puts it. The owner's N64 capture and the extracted
- * shield asset agree that the shield's highlight sits TOP MIDDLE -- "the glint
- * is at the top middle where mario's ear is" -- so the shield passes +40 to
- * centre it and the reflector and respawn pad pass 0 to stay byte-identical.
- * They get their own reading when someone has a reference for them; guessing
- * for all three off one screenshot is how the upper-left one got here. */
-static void ndsEFManagerBuildDisc(NDSVisualTemplate *template,
-                                  u32 center_rgba, u32 outer_rgba,
-                                  s16 glint_dx)
-{
-    static const s16 outer[8][2] = {
-        { 0, 180 }, { 127, 127 }, { 180, 0 }, { 127, -127 },
-        { 0, -180 }, { -127, -127 }, { -180, 0 }, { -127, 127 }
-    };
-    u32 command;
-    u32 i;
-
-    ndsEFManagerSetVertex(template, 0u, 0, 0, 0, center_rgba);
-    for (i = 0u; i < 8u; i++)
-    {
-        ndsEFManagerSetVertex(template, i + 1u, outer[i][0], outer[i][1],
-                              0, outer_rgba);
-    }
-    ndsEFManagerSetVertex(template, 9u, (s16)(-92 + glint_dx), 76, 0,
-                          0xffffffb0u);
-    ndsEFManagerSetVertex(template, 10u, (s16)(-58 + glint_dx), 126, 0,
-                          0xffffffb0u);
-    ndsEFManagerSetVertex(template, 11u, (s16)(20 + glint_dx), 143, 0,
-                          0xffffffb0u);
-    ndsEFManagerSetVertex(template, 12u, (s16)(-28 + glint_dx), 100, 0,
-                          0xffffffb0u);
-    command = ndsEFManagerBeginTemplate(template, 13u);
-    /* Flat translucent shield: use the same proven XLU state as hit sparks. */
-    ndsEFManagerSetCommand(&template->display_list[command++],
-                           0xe200001cu, 0x00504240u);
-    for (i = 0u; i < 8u; i += 2u)
-    {
-        ndsEFManagerSetCommand(
-            &template->display_list[command++],
-            0x06000000u |
-                ndsEFManagerPackTriangle(0u, i + 1u, i + 2u),
-            ndsEFManagerPackTriangle(0u, i + 2u,
-                                     ((i + 2u) & 7u) + 1u));
-    }
-    ndsEFManagerSetCommand(
-        &template->display_list[command++],
-        0x06000000u | ndsEFManagerPackTriangle(9u, 10u, 11u),
-        ndsEFManagerPackTriangle(9u, 11u, 12u));
-    ndsEFManagerSetCommand(&template->display_list[command],
-                           0xdf000000u, 0u);
-}
+/* ndsEFManagerBuildDisc IS GONE (2026-08-04). It built the shield bubble, Fox's
+ * reflector barrier and the respawn pad as a procedural glinted disc, and all
+ * three now draw their source EFDesc models. Nothing else ever used it. */
 
 static void ndsEFManagerInitVisualTemplates(void)
 {
@@ -509,82 +449,8 @@ static void ndsEFManagerInitVisualTemplates(void)
                           0xffffffffu, 0x90e8ffffu);
     ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateWave],
                           0x60ff80ffu, 0xffff80ffu);
-#if NDS_TASK39_FX_SHIELD
-    /* BUGS.md "Shield VFX is not correct". The RGB here was already exact --
-     * every pair matches dEFManagerShieldColors (efmanager.c:450) -- but the
-     * ALPHA was not, and alpha is the whole look of a shield bubble. The source
-     * sets 0xC0 on BOTH prim and env for all five entries
-     * (efManagerShieldProcDisplay, efmanager.c:4112); this shipped 0x60 centre
-     * and 0x50 rim, so the bubble drew at half opacity in the middle and less
-     * than half at the edge where it reads as an outline. These are N64 Gfx
-     * templates, so the vertex alpha IS the transparency -- 0xe200001c is
-     * G_SETOTHERMODE_L carrying the XLU blend state, not a level.
-     * NOTE: the shield draws through gcDrawDObjTreeForGObj, so the 2026-08-02
-     * particle-camera fix does NOT touch it. This row was its own defect. */
-    ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShield],
-                          0xffffffc0u, 0xff0000c0u, 40);
-    ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShieldP2],
-                          0xffffffc0u, 0x00ff00c0u, 40);
-    ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShieldP3],
-                          0xffffffc0u, 0x0000ffc0u, 40);
-    ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateShieldP4],
-                          0xffffffc0u, 0x000000c0u, 40);
-    ndsEFManagerBuildDisc(
-        &sNdsVisualTemplates[nNDSVisualTemplateShieldDamage],
-        0xffffffc0u, 0xc0c0c0c0u, 40);
-#else
-    ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateShield],
-                          0x40b8ffffu, 0xe0ffffffu);
-#endif
     ndsEFManagerBuildRing(&sNdsVisualTemplates[nNDSVisualTemplateDeath],
                           0xff4060ffu, 0xffffffffu);
-    /* BUGS.md #5 and #9: Reflector shared the Shield slot and Rebirth shared
-     * the Death slot, so Fox's down B drew Mario's P1 shield disc and a
-     * respawn drew the KO ring. Both get their own slot. The hues reuse pairs
-     * already chosen in this file -- the pre-Task39 shield ring's blue for the
-     * reflector barrier, the sparkle pair for the respawn flash -- so this
-     * stays a source-derived approximation rather than a new palette.
-     * Reproducing the original textured bursts needs the particle banks and
-     * is P2 (KNOWN_ISSUES.md). */
-    /* BUGS.md "Fox down B VFX is not correct or using correct asset": the
-     * colours below are now the SOURCE's, read out of the asset rather than
-     * chosen. Fox's Special2 reloc payload (relocData/346.vpk0.bin) ends its
-     * reflector DL at 0x200-0x2a8 with SETTILESIZE 16x16, a LOADTLUT, and a
-     * CI texture; the CI4 texels at 0x18 use exactly two palette indices --
-     * 208 of 256 are index 1 and 48 are index 2, laid out as a three-column
-     * band down the left of every row. The RGBA5551 LUT at 0x08 gives
-     * index 1 = 0x007a (r0 g8 b239, the deep blue body) and
-     * index 2 = 0x073d (r0 g231 b247, the cyan edge). This shipped
-     * pale-cyan centre over a mid-blue rim, which is that pair inverted.
-     *
-     * THE ATLAS ROUTE WAS THE OBVIOUS FIX AND IT IS THE WRONG ONE. The two
-     * new source-asset quads (shield, rebirth) work because their identity is
-     * SHAPE: the sheet is A5I3, one 8-entry palette shared by all 8,192
-     * texels, so a cell can only carry white plus coverage. This texture's
-     * identity is COLOUR -- a flat two-tone band with no shape at all -- and
-     * under that convention its 81%-coverage body maps to LUT alpha 0 and
-     * disappears, leaving a cyan stripe floating on nothing. The hexagon the
-     * source draws is geometry (18 vertices, 6 triangles at 0x268-0x280), not
-     * texture, and the disc template already supplies a rounded barrier. So
-     * the asset contributes its palette here and nothing else.
-     *
-     * Alpha deliberately unchanged: the source LUT's alpha is one bit, which
-     * is not a translucency, and this template's whole look is its alpha --
-     * moving colour and alpha together would make the result unattributable. */
-    ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateReflector],
-                          0x0008ef60u, 0x00e7f750u, 0);
-    /* A DISC, not a ring. BUGS row 3 stayed open through a lifetime fix (8 ->
-     * 390 frames) and a growth fix, and the owner still reported "I don't see
-     * the floating platform" -- because everything about it was alive and
-     * correctly sized and it was drawing an OUTLINE. The chain checks out:
-     * created, alive 390 frames, scale clamped to at least 0.2, template
-     * geometry present. What was left is that a thin ring is nearly invisible
-     * at this scale, and the source's respawn platform is not a ring: it is a
-     * solid translucent disc the fighter stands on. BuildDisc is the same
-     * source-derived approximation the reflector already uses, so this stays a
-     * cheap approximation rather than a new asset. */
-    ndsEFManagerBuildDisc(&sNdsVisualTemplates[nNDSVisualTemplateRebirth],
-                          0xffffffffu, 0x90e8ffffu, 0);
     gNdsVisualEffectTemplateBytes =
         sizeof(*sNdsVisualTemplates) * NDS_VISUAL_TEMPLATE_COUNT;
 }
@@ -617,17 +483,8 @@ static NDSVisualTemplate *ndsEFManagerGetVisualTemplate(
     case nNDSVisualEffectCatch:
         template_kind = nNDSVisualTemplateWave;
         break;
-    case nNDSVisualEffectShield:
-        template_kind = nNDSVisualTemplateShield;
-        break;
-    case nNDSVisualEffectReflector:
-        template_kind = nNDSVisualTemplateReflector;
-        break;
     case nNDSVisualEffectDeath:
         template_kind = nNDSVisualTemplateDeath;
-        break;
-    case nNDSVisualEffectRebirth:
-        template_kind = nNDSVisualTemplateRebirth;
         break;
     case nNDSVisualEffectSlash:
     case nNDSVisualEffectHitNormal:
@@ -654,18 +511,6 @@ static s32 ndsEFManagerVisualLifetime(NDSVisualEffectKind kind)
     case nNDSVisualEffectHitFire:
     case nNDSVisualEffectSparkle:
         return 10;
-    /* BUGS row 3, "Respawn floating platform isn't visible when respawning."
-     * It was visible -- for EIGHT FRAMES. Every kind in this table is a hit
-     * flash that belongs on screen for an eighth of a second, and Rebirth was
-     * falling through to the same default while the source keeps its halo for
-     * FTCOMMON_REBIRTH_HALO_DESPAWN_WAIT (ftcommon.h:14) and spends the first
-     * FTCOMMON_REBIRTH_HALO_LOWER_WAIT of it descending. 390 is that constant.
-     * Measured before the change: gNdsVisualEffectActiveCount was already 0
-     * twenty-four frames after the maker ran, with the Rebirth bit set in
-     * gNdsVisualEffectKindMask -- created, then gone before anyone could see
-     * it. */
-    case nNDSVisualEffectRebirth:
-        return 390;
     default:
         return 8;
     }
@@ -684,13 +529,6 @@ static f32 ndsEFManagerVisualGrowth(NDSVisualEffectKind kind)
         return 0.12F;
     case nNDSVisualEffectSlash:
         return 0.10F;
-    /* Zero, and it is a precondition of the lifetime above rather than a taste
-     * call. Growth is per frame, so the default 0.04 over a hit flash's eight
-     * frames is a 32% swell and over Rebirth's 390 it is a scale of 16 -- the
-     * platform would fill the stage before it despawned. The source halo holds
-     * its size and descends; it never grows. */
-    case nNDSVisualEffectRebirth:
-        return 0.0F;
     default:
         return 0.04F;
     }
@@ -741,164 +579,17 @@ static void ndsEFManagerDestroyVisualEffect(GObj *effect_gobj)
     gcEjectGObj(effect_gobj);
 }
 
-/* OUTSIDE #if NDS_TASK39_FX_SHIELD, and that is not incidental. The respawn pad
- * has nothing to do with the shield flag, and this block sat inside it for one
- * build: the flag is 0 in the DEFAULT configuration -- the published
- * smash64ds.nds -- so the proc vanished while its use site did not, and the
- * compile failed on exactly the shape of defect fixed hours earlier for
- * ndsRendererSetParticleCamera. A symbol's guard must be the guard of the thing
- * it belongs to, not of whatever it happens to be typed next to.
- *
- * ndsEFManagerBuildDisc's `outer` table reaches 180 vertex units on both axes,
- * so every disc template -- shield and rebirth alike -- has a local radius of
- * 180, and the quad has to match it or swapping between the sheet path and its
- * tree-draw fallback would visibly resize the effect. (The builder's third
- * argument is glint_dx, not a radius; reading it as one is how this constant
- * was first written as 60.)
- *
- * The glow is I4 -- greyscale with no colour of its own -- so the tint is the
- * port's choice; white keeps the source's additive-glow read and lets the
- * texture's own intensity ramp do the shaping. Alpha 0xC0 is the source's own
- * value for a translucent effect overlay (efmanager.c:4112). */
-#define NDS_R2_REBIRTH_QUAD_SIZE 180.0F
-/* BGR555 like the shield's -- see ndsEFManagerShieldQuadColor. 0xffffff happened
- * to survive the wrong packing intact (all fifteen low bits set), which is why
- * only the shield read as black and this one merely read as invisible; its
- * fault was the texture encoding, not the colour. */
-#define NDS_R2_REBIRTH_QUAD_COLOR 0x7fffu
-#define NDS_R2_REBIRTH_QUAD_ALPHA 0xC0u
-
-/* THE RESPAWN PAD'S SOURCE ASSET IS THE MBallRays GLOW, NOT A DISC.
- * dEFCommonEffects3_RebirthHalo (relocData/85_EFCommonEffects3.c:856) is a
- * four-node chain: node[1] carries the MBallRays lists at translate
- * (0, -60, 0), node[2] a second set at the origin, and its AnimJoint spins
- * node[2] rotY 0 -> 2*pi over 30 frames on a self-looping script. Both nodes
- * draw the same I4 32x16 glow texture. The -60 is already handled in
- * ndsEFManagerVisualProcUpdate; this is the other half the owner asked for --
- * *"not using correct asset for the revival platform"* -- the art itself.
- *
- * The spin is deliberately NOT reproduced. A camera-facing quad has no
- * meaningful rotY, and the source's rotation is what makes a flat pair of ray
- * fans read as a disc from any angle; a billboard already reads that way. If
- * the owner wants the sweep back, the honest route is node[2] as a second quad
- * with a rotating UV, not a spin on a quad that always faces you. */
-static void ndsEFManagerRebirthProcDisplay(GObj *effect_gobj)
-{
-    DObj *dobj = DObjGetStruct(effect_gobj);
-
-    if (dobj == NULL)
-    {
-        return;
-    }
-    if (ndsParticleDrawSourceAssetQuad(
-            NDS_PARTICLE_QUAD_REBIRTH_TEXTURE, &dobj->translate.vec.f,
-            dobj->scale.vec.f.x * NDS_R2_REBIRTH_QUAD_SIZE,
-            NDS_R2_REBIRTH_QUAD_COLOR,
-            NDS_R2_REBIRTH_QUAD_ALPHA) == FALSE)
-    {
-        gcDrawDObjTreeForGObj(effect_gobj);
-    }
-}
-
-#if NDS_TASK39_FX_SHIELD
-static NDSVisualTemplate *ndsEFManagerShieldTemplate(s32 player,
-                                                    sb32 is_damage)
-{
-    static const u8 player_templates[4] = {
-        nNDSVisualTemplateShield,
-        nNDSVisualTemplateShieldP2,
-        nNDSVisualTemplateShieldP3,
-        nNDSVisualTemplateShieldP4
-    };
-
-    if (is_damage != FALSE)
-    {
-        return &sNdsVisualTemplates[nNDSVisualTemplateShieldDamage];
-    }
-    return &sNdsVisualTemplates[player_templates[(u32)player & 3u]];
-}
-
-/* Local radius 180, same table, same reason as the rebirth constant above. */
-#define NDS_R2_SHIELD_QUAD_SIZE 180.0F
-/* 0xC0 on both prim and env for all five entries, efmanager.c:4112. The same
- * value the disc templates carry; see the comment on dEFManagerShieldColors
- * below for why alpha is the whole look of a shield. */
-#define NDS_R2_SHIELD_QUAD_ALPHA 0xC0u
-
-/* BGR555, NOT 0xRRGGBB. ndsRendererSubmitParticleQuad takes the DS's own vertex
- * colour packing -- red in bits 0-4, green 5-9, blue 10-14 -- which
- * lbParticleDrawTextures builds as `(r>>3) | (g>>3)<<5 | (b>>3)<<10`. This
- * function first returned 0xRRGGBB constants, and 0xff0000 read through that
- * packing is r=0 g=0 b=0: the owner reported the shield as *"Looks Black in
- * color"*, which is exactly what it was. A wrong-unit colour does not look
- * wrong, it looks like a different bug.
- *
- * Colour only -- DS vertex colour has no alpha channel, so the transparency
- * travels as the separate POLYGON_ATTR alpha above. The values are the rim
- * halves of the disc templates, which match dEFManagerShieldColors
- * (efmanager.c:450). */
-#define NDS_R2_BGR555(r, g, b) \
-    ((((u32)(r) >> 3) & 31u) | ((((u32)(g) >> 3) & 31u) << 5) | \
-     ((((u32)(b) >> 3) & 31u) << 10))
-
-static u32 ndsEFManagerShieldQuadColor(s32 player)
-{
-    static const u32 rim[] = {
-        NDS_R2_BGR555(0xff, 0x00, 0x00),
-        NDS_R2_BGR555(0x00, 0xff, 0x00),
-        NDS_R2_BGR555(0x00, 0x00, 0xff),
-        NDS_R2_BGR555(0x40, 0x40, 0x40)
-    };
-
-    return ((u32)player < ARRAY_COUNT(rim)) ?
-        rim[player] : NDS_R2_BGR555(0xc0, 0xc0, 0xc0);
-}
-
-static void ndsEFManagerShieldProcDisplay(GObj *effect_gobj)
-{
-    EFStruct *ep = efGetStruct(effect_gobj);
-    DObj *dobj = DObjGetStruct(effect_gobj);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    u32 start = cpuGetTiming();
-#endif
-
-    if ((ep == NULL) || (dobj == NULL))
-    {
-        return;
-    }
-    /* THE SOURCE SHIELD IS A TEXTURED QUAD, NOT A DISC. Its whole asset is
-     * dFTManagerCommon_Shield (relocData/163_FTManagerCommon.c:39): a three-node
-     * DObjDesc whose one drawing node carries a 21-command DL over exactly FOUR
-     * vertices and an IA8 16x32 texture. Four vertices is a quad, and a quad
-     * that always faces the camera is what the particle sheet draws -- so the
-     * shield now draws its own art instead of the procedural ring-and-disc that
-     * stood in for it, which is what the owner filed.
-     *
-     * The template is still built and still assigned, because it carries the
-     * per-player colour the source tints the bubble with and it is the fallback
-     * the tree draw uses when the sheet is unavailable (no atlas, texture not
-     * seated, degenerate camera). A shield that silently stops drawing is worse
-     * than one drawn plainly. */
-    dobj->dl = ndsEFManagerShieldTemplate(
-                   ep->effect_vars.shield.player,
-                   ep->effect_vars.shield.is_damage_shield)
-                   ->display_list;
-    if (ndsParticleDrawSourceAssetQuad(
-            NDS_PARTICLE_QUAD_SHIELD_TEXTURE, &dobj->translate.vec.f,
-            dobj->scale.vec.f.x * NDS_R2_SHIELD_QUAD_SIZE,
-            ndsEFManagerShieldQuadColor(ep->effect_vars.shield.player),
-            NDS_R2_SHIELD_QUAD_ALPHA) == FALSE)
-    {
-        gcDrawDObjTreeForGObj(effect_gobj);
-    }
-    gNdsTask39FxShieldDrawCount++;
-    ndsTask39EffectsEngage(NDS_TASK39_FX_ENGAGED_SHIELD);
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-    ndsTask39EffectsAddDrawTicks(cpuGetTiming() - start);
-#endif
-    ep->effect_vars.shield.is_damage_shield = FALSE;
-}
-#endif
+/* THE PROCEDURAL SHIELD AND RESPAWN-PAD DRAW PATHS ARE GONE (2026-08-04).
+ * ndsEFManagerShieldProcDisplay, ndsEFManagerShieldTemplate,
+ * ndsEFManagerShieldQuadColor, ndsEFManagerRebirthProcDisplay and the
+ * NDS_TASK39_FX_SHIELD flag that gated the first three all existed to draw a
+ * stand-in where a source EFDesc model belonged. Both models draw now --
+ * dEFManagerShieldEffectDesc on DL link 15 and dEFManagerRebirthHaloEffectDesc
+ * on link 10 -- so the stand-ins are deleted rather than left selectable.
+ * Their atlas cells (NDS_PARTICLE_QUAD_SHIELD_TEXTURE,
+ * NDS_PARTICLE_QUAD_REBIRTH_TEXTURE) are deliberately still packed: dropping
+ * them would re-run the quad packer's admission and could admit a different
+ * set of textures, which is a picture change nobody asked for. */
 
 static void ndsEFManagerVisualProcUpdate(GObj *effect_gobj)
 {
@@ -918,38 +609,7 @@ static void ndsEFManagerVisualProcUpdate(GObj *effect_gobj)
             Vec3f pos = { 0.0F, 0.0F, 0.0F };
 
             gmCollisionGetFighterPartsWorldPosition(joint, &pos);
-            /* THE RESPAWN PAD SITS UNDER THE FIGHTER, NOT ON THEM. Read off the
-             * source asset rather than guessed: dEFManagerRebirthHaloEffectDesc
-             * points at llEFCommonEffects3RebirthHaloDObjDesc, reloc file 0x55
-             * offset 0x2AC0, and that is a CHAIN -- node[1] carries a display
-             * list at translate (0, -60, 0) and node[2] a second one at the
-             * origin. The port draws a single template and pinned it to the
-             * joint's own world position, so the pad rendered centred ON the
-             * fighter instead of sixty units beneath their feet. That is the
-             * owner's "I don't see the CORRECT floating platform": it is there
-             * and it is inside them.
-             * Only the pad moves; every other visual keeps the joint position. */
-            if (ep->effect_vars.common.size == nNDSVisualEffectRebirth)
-            {
-                pos.y -= 60.0F;
-            }
             dobj->translate.vec.f = pos;
-#if NDS_TASK39_FX_SHIELD
-            if (ep->effect_vars.common.size == nNDSVisualEffectShield)
-            {
-                FTStruct *fp = ftGetStruct(ep->fighter_gobj);
-
-                if ((fp != NULL) && (fp->is_shield != FALSE))
-                {
-                    dobj->scale.vec.f.x = joint->scale.vec.f.x *
-                                          NDS_TASK39_SHIELD_MESH_SCALE;
-                    dobj->scale.vec.f.y = joint->scale.vec.f.y *
-                                          NDS_TASK39_SHIELD_MESH_SCALE;
-                    dobj->scale.vec.f.z = joint->scale.vec.f.z *
-                                          NDS_TASK39_SHIELD_MESH_SCALE;
-                }
-            }
-#endif
         }
         return;
     }
@@ -1041,12 +701,6 @@ GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
     {
         scale = 5.0F;
     }
-#if NDS_TASK39_FX_SHIELD
-    if (kind == nNDSVisualEffectShield)
-    {
-        scale *= NDS_TASK39_SHIELD_MESH_SCALE;
-    }
-#endif
     dobj->scale.vec.f.x = scale;
     dobj->scale.vec.f.y = scale;
     dobj->scale.vec.f.z = scale;
@@ -1089,17 +743,8 @@ GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
 
         if (fp != NULL)
         {
-            joint = fp->joints[(kind == nNDSVisualEffectShield) ?
-                                   nFTPartsJointYRotN :
-                                   nFTPartsJointTopN];
+            joint = fp->joints[nFTPartsJointTopN];
             fp->is_effect_attach = TRUE;
-#if NDS_TASK39_FX_SHIELD
-            if (kind == nNDSVisualEffectShield)
-            {
-                ep->effect_vars.shield.player = fp->player;
-                ep->effect_vars.shield.is_damage_shield = FALSE;
-            }
-#endif
         }
         dobj->user_data.p = joint;
         if (joint != NULL)
@@ -1112,14 +757,7 @@ GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
     }
     gcAddGObjProcess(effect_gobj, ndsEFManagerVisualProcUpdate,
                      nGCProcessKindFunc, 3);
-    gcAddGObjDisplay(
-        effect_gobj,
-#if NDS_TASK39_FX_SHIELD
-        (kind == nNDSVisualEffectShield) ? ndsEFManagerShieldProcDisplay :
-#endif
-        (kind == nNDSVisualEffectRebirth) ? ndsEFManagerRebirthProcDisplay :
-                                            gcDrawDObjTreeForGObj,
-        18, 2, -1);
+    gcAddGObjDisplay(effect_gobj, gcDrawDObjTreeForGObj, 18, 2, -1);
     gNdsVisualEffectCreateCount++;
     gNdsVisualEffectActiveCount++;
     if (gNdsVisualEffectActiveCount > gNdsVisualEffectMaxActiveCount)
@@ -1414,7 +1052,7 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
  * with no guaranteed layout, and because a desc left out is a heap-exhaustion
  * hang rather than a missing effect: too severe to leave to a pattern match.
  *
- * Deliberately NOT the full set of fifty, and split by NDS_R2_SOURCE_EFFECTS_FULL.
+ * Deliberately NOT the full set of fifty.
  * Naming a desc here KEEPS IT LINKED, and this list is charged in boot arena,
  * measured twice on 2026-08-01:
  *
@@ -1424,11 +1062,9 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
  *
  * The latch is ifCommonSetMaxNumGObj at 25,600 free, so the first two both
  * capped the GObj pool for the whole match -- a correctness fix that shrinks
- * the arena is a regression with extra steps. DeadExplode is the only source
- * DObj-tree maker that can spawn with the flag off, so it is the only
- * unconditional desc. Rebirth uses the bounded DS visual seam: source effect
- * DL links are not submitted by the battle hardware path, which is why the
- * respawn platform was invisible.
+ * the arena is a regression with extra steps. Sixteen descs is what the
+ * shipping default now carries, since the gate-6 flip made every entry below
+ * unconditional; the 2026-08-04 publish soak is the reading that covers it.
  *
  * dEFManagerMBallThrown/CaptureKirbyStar/LoseKirbyStar are excluded for a
  * second reason: their file_head is &gITManagerCommonData, which this ROM does
@@ -1456,8 +1092,8 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
  * exit leaving tris, texready and texreject all 0 with no stat of any kind,
  * which is exactly what three cycles chased through the atlas, the camera and
  * the tree walk. */
-#if NDS_R2_SOURCE_EFFECTS_FULL
-#define NDS_EF_MANAGER_DESCS_FULL(X) \
+#define NDS_EF_MANAGER_DESCS(X) \
+    X(dEFManagerDeadExplodeEffectDesc) \
     X(dEFManagerDamageSlashEffectDesc) \
     X(dEFManagerShockSmallEffectDesc) \
     X(dEFManagerDamageFlyOrbsEffectDesc) \
@@ -1473,13 +1109,6 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     X(dEFManagerReflectBreakEffectDesc) \
     X(dEFManagerRebirthHaloEffectDesc) \
     X(dEFManagerFoxReflectorEffectDesc)
-#else
-#define NDS_EF_MANAGER_DESCS_FULL(X)
-#endif
-
-#define NDS_EF_MANAGER_DESCS(X) \
-    X(dEFManagerDeadExplodeEffectDesc) \
-    NDS_EF_MANAGER_DESCS_FULL(X)
 
 static void ndsEFManagerResolveAllDescOffsets(void)
 {
@@ -1545,18 +1174,22 @@ void efManagerInitEffects(void)
     ndsEFManagerInitVisualTemplates();
 }
 
+/* The source maker builds llFoxSpecial2ReflectorDObjDesc with its start/loop/
+ * hit/end anim joints. The flat-disc stand-in that used to sit here is DELETED
+ * (2026-08-04) -- it was what "still not using the correct asset" meant every
+ * cycle, and resurrecting it would only re-hide the one seam left.
+ *
+ * THE RETRY IS THE LIVE PART, and it has never been observed to fire.
+ * dEFManagerFoxReflectorEffectDesc resolves with EFDescDisabledCount=1 -- its
+ * file is not resident when efManagerInitEffects sweeps -- so the desc is
+ * disabled and this call is the only thing that can recover it.
+ * gNdsEFDescDeferRecoverCount has read 0 in every automated run because level-3
+ * Fox never down-Bs unattended (zero spawns in 150 s). The owner's own manual
+ * down-B is what tests it live; keep this call and that counter together. */
 GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
 {
-#if NDS_R2_SOURCE_EFFECTS_FULL
-    /* The source maker builds llFoxSpecial2ReflectorDObjDesc with its start/
-     * loop/hit/end anim joints. The stand-in below is a flat disc, which is
-     * what "still not using the correct asset" has meant every cycle. */
     ndsEFManagerRetryDeferredDescs();
     return ndsBaseEFManagerFoxReflectorMakeEffect(fighter_gobj);
-#else
-    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectReflector, NULL,
-                                        1.6F, 1, fighter_gobj);
-#endif
 }
 
 /* ------------------------------------------------------------------------
@@ -1940,13 +1573,13 @@ LBParticle *efManagerSetOffMakeEffect(Vec3f *pos, s32 size)
 /* DObj TREE, therefore priced against the nine-DObj margin. All six take
  * efManagerMakeEffectNoForce, so the EFStruct pool bounds them -- but the bound
  * is (pool depth x DObjs per tree), which is what exhausted the heap when all
- * twenty were routed at once. Graduate these as their own measured group.
+ * twenty were routed at once.
  *
- * They have a second problem that heap cannot fix: their geometry goes out as
- * source effect DL links, which the battle hardware path does not submit, so
- * routing them today swaps a visible primitive for an invisible one. Same seam
- * as the respawn platform. */
-#if NDS_R2_SOURCE_EFFECTS_FULL
+ * GRADUATED 2026-08-04. The second problem -- "their geometry goes out as
+ * source effect DL links, which the battle hardware path does not submit" --
+ * was a link-coverage gap in ndsStageGCDrawAllLoopIsEffectDisplay, closed in
+ * cycle 50; the impact wave is the one of the six that spawns in P1 and it
+ * draws. The weak stand-in shims these used to override are deleted. */
 GObj *efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
 {
     return ndsBaseEFManagerDamageSlashMakeEffect(pos, size, rotate);
@@ -1971,4 +1604,3 @@ GObj *efManagerDamageSpawnMDustRandomMakeEffect(Vec3f *pos, s32 lr)
 {
     return ndsBaseEFManagerDamageSpawnMDustRandomMakeEffect(pos, lr);
 }
-#endif /* NDS_R2_SOURCE_EFFECTS_FULL */

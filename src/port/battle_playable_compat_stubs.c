@@ -138,17 +138,6 @@ NDS_WEAK LBParticle *efManagerSparkleWhiteDeadMakeEffect(Vec3f *pos,
     return NULL;
 }
 
-NDS_WEAK GObj *efManagerRebirthHaloMakeEffect(GObj *fighter_gobj, f32 size)
-{
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_EF_MANAGER_REBIRTH_HALO_MAKE_EFFECT,
-        NDS_TASK39_EFFECT_SUBSTITUTE);
-    f32 scale = (size > 5.0F) ? size * 0.05F : size;
-
-    return ndsEFManagerMakeVisualEffect(nNDSVisualEffectRebirth, NULL,
-                                        scale, 1, fighter_gobj);
-}
-
 NDS_WEAK void sc1PTrainingModeLoadWallpaper(void)
 {
 }

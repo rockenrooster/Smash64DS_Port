@@ -12852,7 +12852,6 @@ static sb32 ndsStageGCDrawAllLoopIsEffectDisplay(GObj *gobj, s32 link_id)
     {
         return TRUE;
     }
-#if NDS_R2_SOURCE_EFFECTS_FULL
     /* 10 and 15 carry the four source models; 18 also carries the KO burst,
      * which reaches here when it is not a template. A display list is required
      * because the submit below refuses to draw without one anyway. */
@@ -12884,7 +12883,6 @@ static sb32 ndsStageGCDrawAllLoopIsEffectDisplay(GObj *gobj, s32 link_id)
             return TRUE;
         }
     }
-#endif
     return FALSE;
 }
 
@@ -13068,18 +13066,13 @@ static u32 ndsStageGCDrawAllLoopCallbackKindBit(u32 kind)
  * no other bit set, and the reject mask reads the same 0x8. The submit accepted
  * DOBJ_TREE alone, so all six frames were refused before the tree walk ever ran
  * (nodes=0). ndsRendererAdapterSubmitStageDObjNode already handles DLHEAD0 in
- * the same switch arm as DOBJ_TREE, so nothing downstream needed teaching.
- *
- * Flag-gated because at the tracked default this path carries the PROCEDURAL
- * template effects, whose accepted kind is not being changed on the strength of
- * a measurement taken with those effects absent (kindmask=0 in that run). */
+ * the same switch arm as DOBJ_TREE, so nothing downstream needed teaching. */
 static sb32 ndsStageGCDrawAllLoopEffectKindAccepted(u32 callback_kind)
 {
     if (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE)
     {
         return TRUE;
     }
-#if NDS_R2_SOURCE_EFFECTS_FULL
     if (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0)
     {
         return TRUE;
@@ -13096,7 +13089,6 @@ static sb32 ndsStageGCDrawAllLoopEffectKindAccepted(u32 callback_kind)
     {
         return TRUE;
     }
-#endif
     return FALSE;
 }
 
@@ -13140,27 +13132,10 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
      * the tree walker still ran 6 times, because a source desc tree's id==0
      * root carries no display list. A root with a child is a tree; the walk
      * below declines individual nodes that have nothing to draw. */
-#if NDS_R2_SOURCE_EFFECTS_FULL
-    /* FLAG-GATED ON SCOPE, not on a measured regression. At the tracked default
-     * the link 10/15 admission block above is compiled out, so no source tree
-     * can reach here and the relaxation could only ever touch the link-18
-     * procedural templates -- behaviour the flag has no business changing. It
-     * was ungated originally on the argument that a tree-shaped effect is
-     * refused wrongly in any configuration, which is true but is not a licence
-     * to alter the shipping arm.
-     *
-     * DO NOT read this as the cause of the flag-off stall recorded in BUGS.md.
-     * Gating it was measured and did NOT fix that: the control still failed to
-     * reach 300 presented frames in 241s afterwards. This hunk is exonerated. */
     if ((root == NULL) ||
         ((root->dv == NULL) && (root->child == NULL)) ||
         (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
         (ndsStageGCDrawAllLoopEffectKindAccepted(callback_kind) == FALSE))
-#else
-    if ((root == NULL) || (root->dv == NULL) ||
-        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
-        (ndsStageGCDrawAllLoopEffectKindAccepted(callback_kind) == FALSE))
-#endif
     {
         gNdsEffectRendererRejectedKindMask |=
             ndsStageGCDrawAllLoopCallbackKindBit(callback_kind);
@@ -13240,8 +13215,8 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
     /* "A LINK-15 SOURCE EFFECT DREW TRIANGLES THIS FRAME", which is the arming
      * signal a shield capture needs and which no existing counter provided.
      * probe-shield-vfx.ps1 could only arm on gNdsTask39FxShieldDrawCount, which
-     * belongs to the procedural stand-in and is dead once
-     * NDS_R2_SOURCE_EFFECTS_FULL removes it, or on SourceModelAdmitCount, which
+     * belonged to the procedural stand-in and died with it, or on
+     * SourceModelAdmitCount, which
      * counts every source admit and is dominated by the impact wave -- so the
      * 2026-08-03 captures armed on a wave at frame 343 and shot an empty frame.
      * Link 15 carries the shield and Fox's reflector; the wave and the rebirth

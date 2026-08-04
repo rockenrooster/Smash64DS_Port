@@ -6,7 +6,7 @@ param(
     [int]$GdbPort = 4333,
     [ValidateRange(10,60)][int]$TimeoutSeconds = 30,
     [string]$Screenshot = '',
-    [ValidateRange(0,7)][int]$ExpectedEngagementMask = 7,
+    [ValidateRange(0,3)][int]$ExpectedEngagementMask = 3,
     [ValidateSet(0,1)][int]$FoxCpuMode = 1,
     [switch]$ProbeOnly
 )
@@ -93,7 +93,7 @@ try {
         )
     }
     $arguments += @(
-        '-ex', 'printf "FXSUMMARY=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsBattlePlayableFoxCpuEnabled, gNdsFighterNaturalCombatAttackerSlot, gNdsFighterNaturalCombatVictimSlot, gNdsFighterNaturalCombatVictimStartPercent, gNdsFighterNaturalCombatVictimFinalPercent, gNdsFighterNaturalCombatGuardOnFrames, gNdsFighterNaturalCombatGuardFrames, gNdsFighterNaturalCombatGuardOffFrames, gNdsTask39FxEngagementMask, gNdsTask39FxHitSparkSpawnCount, gNdsTask39FxFlashDrawCount, gNdsTask39FxShieldDrawCount, gNdsTask39FxArenaRejectCount',
+        '-ex', 'printf "FXSUMMARY=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsBattlePlayableFoxCpuEnabled, gNdsFighterNaturalCombatAttackerSlot, gNdsFighterNaturalCombatVictimSlot, gNdsFighterNaturalCombatVictimStartPercent, gNdsFighterNaturalCombatVictimFinalPercent, gNdsFighterNaturalCombatGuardOnFrames, gNdsFighterNaturalCombatGuardFrames, gNdsFighterNaturalCombatGuardOffFrames, gNdsTask39FxEngagementMask, gNdsTask39FxHitSparkSpawnCount, gNdsTask39FxFlashDrawCount, gNdsTask39FxArenaRejectCount',
         '-ex', 'printf "FXBUDGET=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsTask39FxSpawnTicks, gNdsTask39FxUpdateTicks, gNdsTask39FxDrawTicks, gNdsTask39FxFrameTicks, gNdsTask39FxMaxFrameTicks, gNdsTask39FxObjVramBytes, gNdsTask39FxObjVramRemaining, gNdsTaskmanArenaAllocFailCount',
         '-ex', 'printf "FXSTATIC=%u,%u,%u,%u,%u,%u,%u,%#x,%u\n", gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount',
         '-ex', 'printf "FXARENA=%u,%u,%u\n", gNdsTask39FxArenaBootSize, gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount',
@@ -142,7 +142,7 @@ try {
         throw "Task 39 GDB census failed with exit $($gdbProcess.ExitCode)."
     }
     $summary = [regex]::Match(
-        $stdout, '(?m)^FXSUMMARY=([0-9]+(?:,[0-9]+){12})\r?$')
+        $stdout, '(?m)^FXSUMMARY=([0-9]+(?:,[0-9]+){11})\r?$')
     if (-not $summary.Success) {
         throw 'Task 39 runtime census did not emit a parseable summary.'
     }

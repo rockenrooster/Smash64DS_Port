@@ -644,7 +644,6 @@ NDS_FIGHTER_ANIM_AUDIT ?= 0
 NDS_FIGHTER_ANIM_CYCLER_KIND ?= -1
 NDS_TASK39_FX_SPRITES ?= 0
 NDS_TASK39_FX_FLASH ?= 0
-NDS_TASK39_FX_SHIELD ?= 0
 # R2-07: compile the original particle bytecode interpreter (lb/lbparticle.c,
 # ef/efparticle.c) in place and let the real efcommon scripts run instead of the
 # recoloured 16-vertex stand-ins.
@@ -1038,7 +1037,6 @@ override NDS_TASK32_DRAW_HOT_TEXT := 1
 # Task 39: the owner-approved hurt flash, hit sparks, and flat 2D shield.
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
-override NDS_TASK39_FX_SHIELD := 1
 endif
 ifneq ($(filter $(TARGET),smash64ds-battle-playable-tickhud-hwtri smash64ds-battle-playable-proof-hwtri smash64ds-results-lab-hwtri),)
 # Profile-0 shipping path plus either the lightweight Task 41 timers or the
@@ -1147,7 +1145,6 @@ override NDS_TASK16_FLOAT_ADDSUB := 1
 override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
-override NDS_TASK39_FX_SHIELD := 1
 endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
 # block breaks the structural pin at check-gbi-decode-fixtures.ps1:1847).
@@ -1211,7 +1208,6 @@ override NDS_TASK16_FLOAT_ADDSUB := 1
 override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
-override NDS_TASK39_FX_SHIELD := 1
 endif
 NDS_TASK44_DEVICE_TARGETS := \
 	smash64ds-battle-playable-task44-on-hwtri \
@@ -1250,7 +1246,6 @@ override NDS_TASK16_FLOAT_ADDSUB := 1
 override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
-override NDS_TASK39_FX_SHIELD := 1
 endif
 NDS_FREEZE_DIAGNOSTIC_TARGETS := \
 	smash64ds-battle-playable-freeze-diagnostics-on-hwtri \
@@ -1279,7 +1274,6 @@ override NDS_TASK16_FLOAT_ADDSUB := 1
 override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
-override NDS_TASK39_FX_SHIELD := 1
 override NDS_FREEZE_DIAGNOSTICS := $(if $(filter %-on-hwtri,$(TARGET)),1,0)
 endif
 ifeq ($(TARGET),smash64ds-battle-playable-freeze-diagnostics-off-hwtri)
@@ -1398,17 +1392,14 @@ NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 1
 # already treats all eleven as P1 seams and has packed their scripts and
 # textures (docs/optimization/NDS_PARTICLE_BANKS.generated.json, reach.p1_seams).
 NDS_R2_SOURCE_EFFECTS_PARTICLE ?= 1
-# The six that DO build a DObj tree: damage slash, impact wave, catch swirl and
-# the three random spawn showers. Still 0, and now for a reason that is about
-# pixels rather than heap -- these submit their geometry as source effect DL
-# links, which the battle hardware path does not consume, so routing them trades
-# a visible untextured primitive for nothing on screen. That is the same seam
-# that kept the respawn platform invisible. The generator agrees they are the
-# odd ones out: all six appear in reach.p1_seams_without_bank_scripts, i.e. they
-# own no particle script. Raise this only with a soak whose
-# gNdsTaskmanGeneralHeapFreeMin stays above 25,600 AND a capture showing they
-# draw.
-NDS_R2_SOURCE_EFFECTS_FULL ?= 0
+# NDS_R2_SOURCE_EFFECTS_FULL is GONE (2026-08-04). It gated the six DObj-tree
+# makers -- damage slash, impact wave, catch swirl and the three random spawn
+# showers -- plus the shield, rebirth halo and Fox reflector, and the reason it
+# stayed 0 ("the battle hardware path does not consume source effect DL links")
+# was a link-coverage gap in reloc_backend_movement.c, closed in cycles 50-59.
+# The owner priced the flip at P95 +36,032 / P50 +5,440 and took it: the source
+# models are the tracked default and the procedural stand-ins they displaced are
+# deleted, so there is no second mode left to select. See docs/BUGS.md "GATE 6".
 # Effect-instance pool depth (source EFFECT_ALLOC_NUM is 38). Bounding it bounds
 # the DObj peak, which is what gcGetDObjSetNextAlloc grows out of the general
 # heap and never gives back -- see include/nds/nds_effects.h for the full
@@ -2547,7 +2538,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
-		echo '#define NDS_TASK39_FX_SHIELD $(NDS_TASK39_FX_SHIELD)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
 		echo '#define NDS_TASK10_GIT_SHORT "$(NDS_TASK10_GIT_SHORT)"'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
@@ -2566,7 +2556,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR $(NDS_IMPORT_BATTLESHIP_FOX_REFLECTOR)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FT_PUBLIC $(NDS_IMPORT_BATTLESHIP_FT_PUBLIC)'; \
 		echo '#define NDS_R2_SOURCE_EFFECTS_PARTICLE $(NDS_R2_SOURCE_EFFECTS_PARTICLE)'; \
-		echo '#define NDS_R2_SOURCE_EFFECTS_FULL $(NDS_R2_SOURCE_EFFECTS_FULL)'; \
 		echo '#define NDS_R2_EFFECT_POOL $(NDS_R2_EFFECT_POOL)'; \
 		echo '#define NDS_R2_KO_STRESS $(NDS_R2_KO_STRESS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI $(NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI)'; \
@@ -2867,7 +2856,6 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_TASK32_DRAW_HOT_TEXT=$(NDS_TASK32_DRAW_HOT_TEXT)'
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_SPRITES=$(NDS_TASK39_FX_SPRITES)'
 	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_FLASH=$(NDS_TASK39_FX_FLASH)'
-	@printf '%s\n' 'BENCH_MAKE_TASK39_FX_SHIELD=$(NDS_TASK39_FX_SHIELD)'
 	@printf '%s\n' 'BENCH_MAKE_R2_PATH=$(NDS_R2_PATH)'
 	@printf '%s\n' 'BENCH_MAKE_R2_STAGE_DIRECT=$(NDS_R2_STAGE_DIRECT)'
 	@printf '%s\n' 'BENCH_MAKE_R2_FIXED_SQRT=$(NDS_R2_FIXED_SQRT)'

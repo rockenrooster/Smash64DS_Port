@@ -28,7 +28,6 @@ void ndsIFCommonNativeOamCommit(void);
 
 #define NDS_TASK39_FX_ENGAGED_SPRITES (1u << 0)
 #define NDS_TASK39_FX_ENGAGED_FLASH (1u << 1)
-#define NDS_TASK39_FX_ENGAGED_SHIELD (1u << 2)
 
 void ndsTask39HitSparkSpawn(const Vec3f *pos, s32 player, s32 size,
                             sb32 is_static, sb32 is_heavy);
@@ -81,7 +80,6 @@ extern volatile u32 gNdsTask39FxHitSparkUpdateCount;
 extern volatile u32 gNdsTask39FxHitSparkDrawCount;
 extern volatile u32 gNdsTask39FxHitSparkDropCount;
 extern volatile u32 gNdsTask39FxFlashDrawCount;
-extern volatile u32 gNdsTask39FxShieldDrawCount;
 extern volatile u32 gNdsTask39FxArenaRejectCount;
 extern volatile u32 gNdsTask39FxObjVramBytes;
 extern volatile u32 gNdsTask39FxObjVramRemaining;

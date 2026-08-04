@@ -54,10 +54,23 @@ foreach ($kind in ($calls | Sort-Object -Unique)) {
     }
 }
 
+# The reflector left this table on 2026-08-04. Its DS stand-in was deleted with
+# the rest of the procedural set, so the contract it has to satisfy is no longer
+# "a bounded visual route" but "the SOURCE maker, with the deferred-desc retry
+# still in front of it" -- the retry is the only thing that can recover
+# dEFManagerFoxReflectorEffectDesc, whose file is not resident when
+# efManagerInitEffects sweeps.
+$reflector = Get-Content -LiteralPath (
+    Join-Path $root 'src/import/battleship_efmanager.c') -Raw
+if ($reflector -notmatch
+        '(?s)\bGObj \*efManagerFoxReflectorMakeEffect\s*\([^)]*\)\s*\{[^}]*?' +
+        'ndsEFManagerRetryDeferredDescs\(\)[^}]*?' +
+        'ndsBaseEFManagerFoxReflectorMakeEffect[^}]*?\n\}') {
+    throw ('Fox reflector no longer routes to the source maker behind the ' +
+           'deferred-desc retry.')
+}
+
 $direct = @(
-    @{ File = 'src/import/battleship_efmanager.c';
-       Function = 'efManagerFoxReflectorMakeEffect';
-       Kind = 'nNDSVisualEffectReflector' },
     @{ File = 'src/import/battleship_fox_blaster.c';
        Function = 'efManagerFoxBlasterGlowMakeEffect';
        Kind = 'nNDSVisualEffectHitElectric' },
@@ -105,5 +118,5 @@ if ([regex]::Matches($foxReflector,
 }
 
 Write-Output ('Attack visual effects passed: 178/178 Mario/Fox motion calls ' +
-    'across 17 source kinds plus reflector, blaster glow, and three fireball ' +
-    'routes have bounded DS presentation.')
+    'across 17 source kinds plus blaster glow and three fireball routes have ' +
+    'bounded DS presentation, and the reflector routes to its source maker.')

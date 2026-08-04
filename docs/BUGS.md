@@ -62,9 +62,15 @@ AHEAD; at n=128 that reverses, because a 40-sample P95 is the 3rd-worst frame.
 Full table, retraction of the cycle-43 percentiles, and the owed
 per-frame-paired tooling: docs/PERF_LEDGER.md "GATE 5".
 
-BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL default, keep, or optimize
-first). Performance no longer decides it -- the two settings cost the same, so
-this is a fidelity call and the owner is the oracle. What changes per row:
+RESOLVED (owner, 2026-08-04): **"36k p95 is worth it for correctness"**.
+NDS_R2_SOURCE_EFFECTS_FULL is FLIPPED AND THEN DELETED -- there is no flag and
+no second mode, because a deleted mode cannot rot. Shipped and published the
+same cycle; see "GATE 6 CLOSED" below for what was retired and what it measured.
+
+The decision packet that produced that verdict is kept below as the record of
+how it was reached. Performance did not decide it -- the two settings cost about
+the same at the median -- so it was a fidelity call and the owner was the oracle.
+What changed per row:
   * shield bubble    -- OWNER-QUEUED 2026-08-04 (cycle 59). Six seams later it
                         is a round translucent per-player-coloured bubble on the
                         guarding fighter that dies with the guard. This row now
@@ -116,7 +122,102 @@ is spawn-90 .. spawn-390.
 artifacts/verification/2026-08-04_gate6-effect-tics.txt.
 
 =============================================================================
-GATE 6 STOPS HERE: THE TWO ARMS ARE NOT THE SAME FIGHT (2026-08-04)
+GATE 6 CLOSED: THE SOURCE MODELS ARE THE DEFAULT AND THE STAND-INS ARE DELETED
+(2026-08-04, cycle 64)
+=============================================================================
+WHAT SHIPPED. `NDS_R2_SOURCE_EFFECTS_FULL` no longer exists -- not set to 1,
+REMOVED, along with every `#if` it guarded (`battleship_efmanager.c` x4,
+`reloc_backend_movement.c` x3, `reloc_backend_renderer_dl.c` x1) and its
+`nds_build_config.h` line. `NDS_TASK39_FX_SHIELD` is removed the same way,
+because its only job was to build the stand-in the source shield replaces.
+
+WHAT WAS RETIRED, and it is a deletion rather than a dark mode:
+  * `ndsEFManagerBuildDisc` and six of the fourteen visual templates (Shield,
+    ShieldP2/P3/P4, ShieldDamage, Reflector, Rebirth). Template count 14 -> 7.
+  * `ndsEFManagerShieldProcDisplay`, `ndsEFManagerShieldTemplate`,
+    `ndsEFManagerShieldQuadColor`, `ndsEFManagerRebirthProcDisplay` and the
+    `NDS_TASK39_SHIELD_MESH_SCALE` attach/scale special cases.
+  * The three `NDSVisualEffectKind` entries with no remaining producer --
+    `nNDSVisualEffectShield`, `Reflector`, `Rebirth`.
+  * `gNdsTask39FxShieldDrawCount` and `NDS_TASK39_FX_ENGAGED_SHIELD`.
+  * Eight weak stand-in shims the source makers now override outright:
+    `efManagerShieldMakeEffect` and `efManagerCatchSwirlMakeEffect`,
+    `efManagerDamageSlashMakeEffect`, `efManagerImpactWaveMakeEffect` and the
+    three `efManagerDamageSpawn*RandomMakeEffect`
+    (`reloc_backend_compat_shims.c`), plus `efManagerRebirthHaloMakeEffect`
+    (`battle_playable_compat_stubs.c`).
+  * `scripts/probe-standin-shield.ps1`, whose only subject was the stand-in.
+Net -627 / +112 lines across 12 files.
+
+KEPT ON PURPOSE, with the reason, because "delete everything" would have been
+wrong three times:
+  * `ndsEFManagerMakeVisualEffect` and the seven remaining templates. Thirteen
+    effect kinds still route through them (hit sparks, flames, electric,
+    coins/sparkles, ripple, the three flashes, egg break, slash, catch) and
+    none of those has a source EFDesc to graduate to. This is the DS
+    presentation for them, not a stand-in for something better.
+  * `ndsEFManagerRetryDeferredDescs` and its call in
+    `efManagerFoxReflectorMakeEffect` -- see the reflector row.
+  * The shield and rebirth ATLAS CELLS (`NDS_PARTICLE_QUAD_*_TEXTURE`). Nothing
+    draws them now, but removing them re-runs the quad packer's admission and
+    can admit a different texture set, which is a picture change nobody asked
+    for. Reclaim them in an atlas cycle with a before/after, not here.
+OWED, one line, not detoured into: the visual-effect `fighter_gobj` attach path
+(`ndsEFManagerMakeVisualEffect`, `ndsEFManagerVisualProcUpdate`, and the
+stand-in branch of `ndsEFManagerStopAttachedEffects`) now has NO caller that
+passes a non-NULL fighter -- the shield, reflector and halo were the only three.
+Three bounded proof counters went with those shims and are permanently 0:
+`gNdsFighterDashRunGuardEffectCount`, `gNdsStageMPPassiveLoopCatchPullEffectCount`,
+`gNdsStageMPPassiveLoopWallDamageImpactWaveCount`. The proof branches that read
+them (`reloc_backend_movement.c:2626`, `reloc_backend_cliff_ledge.c:3493,4696`)
+are obsolete bounded modes to migrate or delete.
+
+MEASURED AT THE NEW DEFAULT, `builds/build-c64-flag1`
+(`smash64ds-battle-playable-proof-hwtri`), one whole match:
+  * SHIELD UP AND DOWN, NINE TIMES. 40 shield submits in contiguous runs at
+    time_remain 1994-1984, 1950-1938, 1922-1916, 130-126, 110, 76-56, 40-34,
+    18-12 -- and NOTHING between them, which is the ejection fix holding. The
+    effect GObj changes per guard (0x23c9f78 -> 0x23c9e80 -> 0x23c9c90 ->
+    0x23c1380), so each guard makes and destroys its own.
+  * TEXTURED, EVERY DRAW. tris +2 (one quad) and texready +1 per submit,
+    texreject 0 for all 40. The combine fix is live at the tracked default.
+  * ADMITS RETURN TO BASELINE. `link15` steps exactly once per shield draw,
+    0..39, with no ratchet; the old leak read +3/frame forever.
+  * NO STAND-IN COUNTER REMAINS: `gNdsTask39FxShieldDrawCount` is absent from
+    the ELF (deleted), `gNdsEFDescDeferRecoverCount` is now PRESENT in the
+    shipping ELF where it used to be compiled out.
+  artifacts/verification/2026-08-04_c64-effect-census-default.txt.
+
+SOAK AT THE NEW DEFAULT, 2.5 min, `-IdenticalFramesToTrip 16`: **NO-FREEZE**,
+2,043 presented frames, one completed match, GAME SET and Results both reached
+(`gNdsVSResultsStartCount=1`), `gNdsObjmanPanicCount=0`,
+`gNdsSyMallocOverflowCount=0`, KO burst 2 attempted / 2 complete / drop mask 0,
+`gNdsEffectPoolFreeMin=7` (bound is 4, so not saturated),
+`gNdsTaskmanGeneralHeapFreeMin=132,016` (latch is 25,600),
+`gNdsEFDescDisabledCount=1` -- the reflector, expected, see its row. This is the
+first time the flag-1 arm has soaked through Results; the announcer/GObj-pool
+fix holds. artifacts/verification/freeze-soak/2026-08-04_081534-NO-FREEZE.png.
+
+PRICED, PAIRED BY FRAME, 128 frames 502..629, the two publishes' own tick-HUD
+siblings (`build-c63-tickhud-pub` flag 0 vs `build-c64-tickhud-pub` flag 1),
+same melonDS DE80E46B, DLDI ON:
+  WORK-H P50   983,680 -> 990,272   **+6,592**   (gate 5 predicted +5,440)
+  WORK-H P95 1,265,152 -> 1,290,752 **+25,600**  (gate 5 predicted +36,032)
+  paired      53 better / 75 worse, median +15,904, mean +33,119
+  over gate   15 -> 19 of 128        ALL P50 1,119,872 both
+  VBI 2/3/4/5+  519/91/15/4 max 19 -> 509/103/11/5 max 20, slips 0 both
+  BG control  median +64, range -128..+192 -- the delta is signal, not placement
+So the owner paid slightly less in the tail than the decision quoted. The
+milestone gate is still not met in either arm, and it is still the 15-19
+asset-load excursions that hold it, not this flag.
+artifacts/performance/2026-08-04_c64ab-{A-flag0,B-flag1}-128.json.
+
+BOUNDARY GREEN on the shipped binary; published pair and hashes are in
+docs/P1_EXECUTION_BOARD.md. The flag-0 pair is parked byte-identical at
+`builds/armB-flag0-published/` as the rollback.
+
+=============================================================================
+HOW GATE 6 GOT HERE: THE TWO ARMS WERE NOT THE SAME FIGHT (2026-08-04)
 =============================================================================
 No gate-6 row can move to OWNER-QUEUED, and the blocker is not tooling.
 
@@ -572,8 +673,8 @@ handed forward. artifacts/verification/2026-08-04_c51-onscreen-flag0-fixed.txt.
 RETRACTED (2026-08-04, cycle 61): THERE IS NO STAND-IN SPAWN DEFECT. "One frame
 in a whole match" was a run that ended after the first guard, not a match.
 Re-measured on a flag-0 proof-hwtri built at HEAD (builds/build-c61-flag0),
-breaking on the maker and on ndsEFManagerShieldProcDisplay
-(scripts/probe-standin-shield.ps1): SEVEN guard-ons at tics 3264, 633, 590, 557,
+breaking on the maker and on ndsEFManagerShieldProcDisplay (by the since-deleted
+scripts/probe-standin-shield.ps1): SEVEN guard-ons at tics 3264, 633, 590, 557,
 536, 517 and 449, each followed by a CONTIGUOUS run of draws on every presented
 frame until the guard ends -- 6, 9, 3, 2, 4 and 5 draws -- with
 gNdsVisualEffectActiveCount stepping 0 -> 1 and back once per guard and
@@ -632,12 +733,13 @@ OPEN.
     a broken retry. AND the desc is disabled anyway (EFDescDisabledCount=1), so
     a down-B alone would still draw nothing until the retry recovers it. Cheapest
     honest path is the owner's play session, not a new harness mode.
-  * Reflector: the deferred-retry fix CANNOT ENGAGE AT THE TRACKED DEFAULT.
-    gNdsEFDescDeferRecoverCount is absent from the flag-0 ELF entirely (nm on
-    both gate-5 arms) -- it is compiled inside NDS_R2_SOURCE_EFFECTS_FULL. At
-    flag 1 it exists and read 0 over 540 frames with EFDescDisabledCount=1, so
-    the desc is still disabled and the retry still never fired. Needs a Fox
-    down-B on a flag-1 ROM; a flag-0 run can never prove it. See 48fe59693c.
+  * Reflector: "the deferred-retry fix CANNOT ENGAGE AT THE TRACKED DEFAULT" is
+    CLOSED as of 2026-08-04. gNdsEFDescDeferRecoverCount used to be absent from
+    the flag-0 ELF entirely because it was compiled inside
+    NDS_R2_SOURCE_EFFECTS_FULL; the flag is gone and nm finds the symbol in the
+    shipping ELF. It still reads 0, because the retry only runs on a down-B and
+    the CPU never performs one. Owner's manual down-B is the test. See
+    48fe59693c.
   * Gate 2 captures not closed: link-15 arms the probe correctly now
     (artifacts/visibility/2026-08-03_shield-vfx.png) but link 15 carries the
     shield AND the reflector, so the frame does not prove which drew.
@@ -652,37 +754,51 @@ do not restate them here.
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: is don't see the floating revival platform at all. the Halo is not the correct asset to use
     CAUSE: dEFManagerRebirthHaloEffectDesc is a joint-animated MODEL, drawn as one flat quad.
-    STAGE: OWNER-QUEUED -- round disc under the reappearing fighter; earlier captures were 85 tics early.
-    OWNER ASK (needs NDS_R2_SOURCE_EFFECTS_FULL=1): after a KO, does the platform come down from the top
-    of the screen as a round disc under the reappearing fighter, carry him a few seconds, then vanish?
+    STAGE: SHIPS AT THE DEFAULT (2026-08-04) -- the source model is the only implementation now, the
+    procedural disc stand-in is deleted. Round disc under the reappearing fighter; earlier captures
+    were 85 tics early. The owner's eye in a play session is the final line on this row.
+    OWNER ASK (no flag needed, it is the published ROM): after a KO, does the platform come down from
+    the top of the screen as a round disc under the reappearing fighter, carry him a few seconds,
+    then vanish?
 
 -Fox down B VFX is not correct or using correct asset.
     Owner: you are still not using the correct asset for Fox's down B reflector.
     CAUSE: dEFManagerFoxReflectorEffectDesc is an animated model from gFTDataFoxSpecial2, not a sprite.
-    STAGE: LOCALIZED. Retry counter is compiled out at flag 0 and read 0 at flag 1; needs a flag-1 down-B.
-    OWNER ASK: one Fox down-B in a play session on a flag-1 ROM. Level-3 Fox never does it unattended --
-    zero spawns in 150 s -- so no automated run can reach this. Expect gNdsEFDescDeferRecoverCount > 0;
-    if it stays 0 the desc is still disabled and the retry never fired, which is the next seam.
+    STAGE: LOCALIZED, AND THE INSTRUMENT NOW SHIPS (2026-08-04). gNdsEFDescDeferRecoverCount used to be
+    compiled out of the published ELF entirely; it is in it now, and ndsEFManagerRetryDeferredDescs is
+    still the first line of efManagerFoxReflectorMakeEffect -- verified untouched through the stand-in
+    retirement, and the Boundary checker now asserts that shape instead of the deleted stand-in. No
+    stand-in was resurrected for this row: the flat disc is gone, so a down-B before the retry succeeds
+    draws NOTHING rather than the wrong asset. The soak reads gNdsEFDescDisabledCount=1, i.e. the desc
+    is still disabled at rest, exactly as expected -- its file is not resident when efManagerInitEffects
+    sweeps, and only the down-B path can recover it.
+    OWNER ASK: one Fox down-B in a play session on the published ROM. Level-3 Fox never does it
+    unattended -- zero spawns in 150 s -- so no automated run can reach this; the owner's manual down-B
+    IS the live test of the deferred retry. Expect gNdsEFDescDeferRecoverCount > 0; if it stays 0 the
+    desc is still disabled and the retry never fired, which is the next seam.
 
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: OWNER-QUEUED -- round translucent per-player bubble on the guarding fighter; needs the owner's eye.
-    OWNER ASK (needs NDS_R2_SOURCE_EFFECTS_FULL=1): while a fighter guards, is it a round translucent
-    bubble in that player's colour, centred on him, big enough to enclose him, stage visible through it,
-    gone the instant he stops guarding?
-    STAND-IN SUB-ROW CLOSED (2026-08-04, cycle 61) as a MEASUREMENT ARTIFACT, not a defect. The flag-0
-    procedural shield's "one frame in a whole match" came from a run that ended after the first guard.
-    Seven guard-ons, a contiguous run of draws per guard, draw count 29 and climbing. Nothing to fix.
+    STAGE: SHIPS AT THE DEFAULT (2026-08-04) -- round translucent per-player bubble on the guarding
+    fighter; needs the owner's eye. Nine guards measured on the shipping configuration, each one a
+    contiguous run of textured draws that stops when the guard does.
+    OWNER ASK (no flag needed, it is the published ROM): while a fighter guards, is it a round
+    translucent bubble in that player's colour, centred on him, big enough to enclose him, stage
+    visible through it, gone the instant he stops guarding?
+    STAND-IN SUB-ROW DELETED WITH ITS CODE (2026-08-04, cycle 64). It had already been closed in cycle
+    61 as a MEASUREMENT ARTIFACT rather than a defect -- "one frame in a whole match" came from a run
+    that ended after the first guard. The procedural shield no longer exists, so the row cannot recur.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
     CAUSE: dEFManagerImpactWaveEffectDesc is a material-animated model, so no single atlas texture can
     be its 'correct asset'. The row also has a particle half (dust, script 0x58, efmanager.c:2982).
-    STAGE: MEASURED -- the black rectangle over the flower bed is gone now that its texture is admitted.
+    STAGE: SHIPS AT THE DEFAULT (2026-08-04) -- the black rectangle over the flower bed is gone now that
+    its texture is admitted, and the source maker is the only route (the weak stand-in shim is deleted).
     Built correctly as a single DObj on link 10 (EFDesc omits flag 0x4, so a raw display list is right);
     executes fully, but its triangles still do not reach the effect counter. See 4c29b9615a.
-    OWNER ASK (needs NDS_R2_SOURCE_EFFECTS_FULL=1): on a hard landing, is what replaced the black
+    OWNER ASK (no flag needed, it is the published ROM): on a hard landing, is what replaced the black
     rectangle the right asset? The rectangle is measurably gone; whether the shape is correct is an eye
     call nobody has made. The triangle-counter gap is bookkeeping and does not affect the picture.
 
