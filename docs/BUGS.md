@@ -3,7 +3,7 @@ AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if n
 These bugs should be fixed for P1 delivery:
 
 - I see the floating platform, but its colors look off (too dark?), like it isn't rendering correctly.
-  LOCALIZED: beam is dl_link list 1, a separate source RDP stream; port collapses all four heads into one.
+  LOCALIZED: I4 beam converts to opaque grey — intensity lands in RGB, alpha forced 1 (nds_renderer.c:12114).
   
 - I see the death explode blast pillar thing, but the colors look off (too dark?) and it doesn't seem to play at the players death location off screen, check x,y,z coords. Also if a player hits the side boundaries, it should play horizontally im pretty sure.
   LOCALIZED: owner accepts current pillar; N64's whole-screen white KO flash is a deliberate omission, never re-add.

@@ -1,0 +1,128 @@
+Row 1 (revival platform) -- what DS texture format the beam's I4 image is
+uploaded as, and where the combine's alpha term is honoured.
+
+ANSWER: the beam's I4 fade ladder is converted to RGBA5551 with the intensity
+written into R, G and B and the alpha bit forced to 1. The ladder that exists
+ONLY in alpha becomes a grey ramp of fully opaque texels. This is the FIRST
+broken link and it dominates the picture. The four-stream collapse recorded in
+cycle 66 is real and still unfixed, but it is the SECOND link: it governs
+whether the slab is see-through, not whether it is grey.
+
+Cycle 67, 2026-08-04. Source read only -- no build, no emulator.
+
+======================================================================
+THE CONVERSION, VERBATIM
+======================================================================
+src/nds/nds_renderer.c:12114
+
+    static u16 ndsRendererHardwareConvertI(u8 intensity)
+    {
+        u16 v;
+
+        v = (u16)(intensity >> 3);
+        return (u16)((1u << 15) | v | (v << 5) | (v << 10));
+    }
+
+  bit 15 is the RGBA5551 alpha bit and it is set UNCONDITIONALLY.
+  v goes into all three colour lanes.
+
+The I4 arm that feeds it, nds_renderer.c:12522-12529:
+
+    if (format == NDS_RENDERER_HW_TEXTURE_FMT_I16)
+    {
+        if (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B)
+        {
+            u8 intensity4 = ndsRendererReadTexturePackedNibble(...);
+            return ndsRendererHardwareConvertI((u8)(intensity4 * 0x11u));
+        }
+
+Applied to the beam's image at 0x9b8 (ff ff ff ff 00 00 00 00 ee ee ee ee ...):
+
+  nibble  *0x11   >>3   emitted RGBA5551      appears as
+  ------  -----   ---   -------------------   -------------------
+  0xf     255     31    A=1 R=G=B=31          opaque WHITE
+  0xe     238     29    A=1 R=G=B=29          opaque light grey
+  0xd     221     27    A=1 R=G=B=27          opaque grey
+  0x0     0       0     A=1 R=G=B=0           opaque BLACK
+
+The photograph's measured greys 0 / 36 / 223 are that table. 0 is the zero
+rows, 223 is a high rung of the ramp. Nothing in the picture needs the render
+mode to explain it.
+
+What the source asked for instead (cycle 66 decode, DL 0x2890):
+    0x28a0  fcffffff fffdf2f9   rgb = PRIMITIVE      a = TEXEL0
+    0x28a8  fa000000 ffffffff   PRIM = 255,255,255,255
+    0x2898  d9ddfffb 00000000   clears G_SHADE|G_LIGHTING|G_SHADING_SMOOTH
+  -> constant white, unlit, with the intensity ladder as COVERAGE.
+The port produces the exact inverse: the ladder as colour, coverage constant.
+
+======================================================================
+WHY THE EXISTING RECOGNISER DOES NOT CATCH IT
+======================================================================
+The port already has the concept. ndsRendererHardwarePrimEnvTexel0BlendMode
+(nds_renderer.c:7748) classifies a combine so the texture bake can fold prim/env
+into the texels, the cache key carries the variant
+(NDS_RENDERER_HW_TEXTURE_KEY_PRIM_ENV_BLEND, :1493, applied at :14210-14217),
+and the bake runs per texel at :14608-14613.
+
+Its colour gate is :7794-7799 and requires the BLENDPE lerp shape:
+
+    color_a == PRIMITIVE && color_b == ENVIRONMENT &&
+    color_c == TEXEL0    && color_d == ENVIRONMENT
+
+The beam's colour path is the DEGENERATE form -- a = b = c = 0, d = PRIMITIVE,
+i.e. a constant with no texture term at all -- so it is rejected at the colour
+gate and never reaches the alpha tests below it. Its alpha path
+(a = b = c = 0, d = TEXEL0) would have matched NDS_RENDERER_PRIM_ENV_BLEND_
+SOURCE_ALPHA at :7808-7813 exactly. The recogniser was written for one source
+idiom and this is a second one.
+
+======================================================================
+RANKING THE TWO CAUSES
+======================================================================
+Cause A -- texture conversion (this document). Makes the beam GREY-TO-BLACK
+  and opaque per texel.
+Cause B -- the four-stream collapse (cycle 66). Makes the polygon opaque, so
+  ndsRendererHardwareAlpha returns 31 (nds_renderer.c:8304-8313).
+
+A dominates. Fixing only B leaves every texel's alpha bit at 1 and the ladder
+still in RGB, so the beam would become a uniformly see-through GREY slab --
+still grey, still a slab. Fixing only A puts white in the colour lanes and the
+ladder into the one alpha bit, which is the difference between the reported
+symptom and something recognisable. That matches the owner's wording: "colors
+look off (too dark?)" is A; "zero canopy visible through it" is B.
+
+======================================================================
+THE BOUNDED FIX, SPECIFIED BUT NOT ATTEMPTED
+======================================================================
+Add a third arm to ndsRendererHardwarePrimEnvTexel0BlendMode for the constant-
+colour idiom (color a/b/c == 0, color_d == PRIMITIVE, alpha a/b/c == 0,
+alpha_d == TEXEL0), and a bake beside ndsRendererHardwareBlendPrimEnvTexel0
+that emits PRIM's RGB with the source intensity as the alpha bit. The cache-key
+variant bit and the per-texel bake hook already exist, so the change is two
+functions and one switch arm -- genuinely local to the texture/combine seam.
+
+CEILING, AND IT IS HONEST: every runtime asset texture in this renderer is
+baked to RGBA5551 and uploaded as GL_RGBA (the scratch buffer is u16 throughout,
+nds_renderer.c:14615, uploaded at :14731). RGBA5551 has ONE alpha bit. So the
+bounded fix yields a WHITE beam with a hard-edged mask, not the source's
+32-level fade. Full fidelity needs an A5I3 (GL_RGB8_A5) upload path for runtime
+textures; today A5I3/A3I5 exist only for the pre-built particle atlas
+(:11476). That is a renderer-architecture change of the same class as the
+four-stream collapse and should not be smuggled in behind a bug fix.
+
+Per PROJECT_GOAL's visual-fidelity rule the hard-edged white beam is the
+cheapest acceptable source-derived approximation and is the right first
+candidate. It is a fidelity trade, so the owner's eye decides whether the hard
+edge is acceptable -- it is not mine to conclude.
+
+NOT DONE THIS CYCLE, and why: the fix is an edit + build + capture + owner
+judgement chain that did not fit the remaining budget, and an unverified
+renderer change must not be committed to close a cycle. The seam is located to
+the line; the next cycle starts at nds_renderer.c:7794.
+
+STILL UNMEASURED: builds/build-c66-halo-latch has never executed. The
+prediction it exists to test is unchanged -- the beam's list must read
+gNdsEffectDLSubmitOtherModeOut == ...In (no mode of its own) while an
+entry[2] leaf must read Out != In. Nothing above depends on that run; it
+confirms cause B's mechanism, not cause A's.

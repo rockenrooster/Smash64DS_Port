@@ -128,9 +128,20 @@ SOURCE_QUAD_ASSETS = (
         "symbol": "dFTManagerCommon_Tex_0x0008",
     },
     {
-        # The halo glow, relocData/85_EFCommonEffects3.c -- "Halo glow texture
-        # @ file 0x2BA8 -- I4 32x16, 256 B", referenced by the four DLs that
-        # dEFCommonEffects3_RebirthHalo's node chain draws.
+        # THE NAME IS WRONG AND IS KEPT ONLY BECAUSE IT IS ALREADY THE SYMBOL.
+        # relocData/85_EFCommonEffects3.c calls 0x2BA8 "Halo glow texture ...
+        # I4 32x16, 256 B" and this entry inherited that, but 0x2BA8 is NOT
+        # reachable from dEFCommonEffects3_RebirthHalo. Decoded from the file's
+        # own relocation chain on 2026-08-04 (artifacts/verification/
+        # 2026-08-04-c66-row1-halo-asset-dl.txt): RebirthHalo's DObjDesc @0x2AC0
+        # draws 0x2378, 0x2A88 and 0x27E8, whose leaves load images 0x918,
+        # 0x9B8 and 0xA40 -- never 0x2BA8. 0x2BA8 sits between RebirthHalo's
+        # AnimJoint (0x2B70) and ItemGetSwirl's MObjSub (0x2CA8), and the DLs
+        # that do load it (0x2EF0/0x2F80/0x3010/0x30A0) are ItemGetSwirl's.
+        # Inert today -- the procedural rebirth stand-in that consumed this
+        # atlas entry was deleted on 2026-08-04. Renaming the symbol would
+        # rewrite the generated header for a comment, so it stays; read this
+        # block, not the name.
         "name": "REBIRTH",
         "file": "85.vpk0.bin",
         "offset": 0x2BA8,
