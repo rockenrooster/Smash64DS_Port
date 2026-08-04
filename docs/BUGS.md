@@ -69,8 +69,10 @@ this is a fidelity call and the owner is the oracle. What changes per row:
                         is a round translucent per-player-coloured bubble on the
                         guarding fighter that dies with the guard. This row now
                         counts FOR the flip, subject to the owner's eye.
-  * rebirth platform -- one flat quad becomes the joint-animated model, i.e. the
-                        platform appears at all on respawn.
+  * rebirth platform -- OWNER-QUEUED 2026-08-04 (cycle 61). One flat quad
+                        becomes the joint-animated model: a round disc that
+                        carries the reappearing fighter down and holds him.
+                        Counts FOR the flip, subject to the owner's eye.
   * Fox reflector    -- NO CHANGE EITHER WAY, see below. Do not count this row.
   * impact wave      -- a static atlas quad becomes the material-animated model.
 Against: content-completeness doctrine says stand-ins are a temporary audit
@@ -91,8 +93,12 @@ the four desc addresses, over 150 s of natural flag-1 play:
     shield        1994, 1951, 1922, 130, 110, 77, 40, 18
     impact wave   3277, 2121, 2110, 2104, 2099, 2088, 1810, 113
     reflector     NEVER -- 0 spawns
-Capture a few tics BELOW a spawn tic (time_remain counts down) so the effect is
-on screen. artifacts/verification/2026-08-04_gate6-effect-tics.txt.
+Capture BELOW a spawn tic (time_remain counts down), but derive HOW FAR below
+from that effect's own source lifetime -- "a few tics" is only right for an
+effect that is on its owner immediately. The rebirth halo travels for 90 tics
+before it enters the camera and cost cycle 60 a wrong verdict for it; its window
+is spawn-90 .. spawn-390.
+artifacts/verification/2026-08-04_gate6-effect-tics.txt.
 
 =============================================================================
 GATE 6 STOPS HERE: THE TWO ARMS ARE NOT THE SAME FIGHT (2026-08-04)
@@ -393,6 +399,9 @@ captured at the same EXACT_LOCK, so each is a paired before/after:
     on screen in EITHER arm: whole-viewport cross-build delta 395 pixels
     (0.16%) against a 42.9% same-build floor. So the halo's remaining problem is
     NOT texture admission -- it is upstream. Walked in cycle 60, below.
+    RETRACTED IN PART, cycle 61: tic 2814 is 85 tics before the halo can be on
+    screen at all, so this pair measured an empty region and says nothing about
+    the halo either way. The combine fix's effect on it is still unmeasured.
     artifacts/visibility/2026-08-04_c5{8,9}-halo-t2814-flag1-a.png.
   * Fox reflector: unchanged and unreachable here; it still never spawns.
 OWED AT THE PUBLISH POINT: the combine fix is in src/nds/nds_renderer.c and is
@@ -442,14 +451,42 @@ MEASURED, before -> after, same run, same tics:
                         smoothly at ~248/tic, i.e. the respawn point at the
                         stage centre with the fighter coming down it
 artifacts/verification/2026-08-04_c60-halo-{attach,submit,world}.txt.
-STILL NOT VISIBLE, and that is now a POSITION/SCALE question, not existence:
-53 triangles a frame are being drawn at a live attached world position and
-nothing appears at tic 2814 or 2794. Next cycle: find where those triangles land
-on screen and how big they are -- the child's scale reads 1.00 and the shield
-needed gGCScaleX 9.33 not to be a 4.6-pixel dot, but 0x50 has no gGCScaleX, so
-the halo's size must come from its own geometry or its maker's argument.
-Do NOT re-walk the chain above; it is green.
-artifacts/visibility/2026-08-04_c60-halo-t{2814,2794}-flag1-a.png.
+VISIBLE, AND THE LAST DEFECT WAS THE CAPTURE TIC (2026-08-04, cycle 61).
+Cycle 60's "still not visible" was read off tics 2814 and 2794 -- 5 and 25 tics
+after the spawn -- and source says the platform CANNOT be on screen then.
+ftCommonRebirthDownSetStatus starts the fighter at
+gMPCollisionGroundData->map_bound_top, the TOP BLAST ZONE, and
+ftCommonRebirthCommonProcMap lowers him quadratically over
+FTCOMMON_REBIRTH_HALO_LOWER_WAIT = 90 tics (ftcommon.h:13,
+ftcommonrebirth.c:145); the camera is nFTCameraModeGhost for the first 45 of
+them (HALO_UNK_WAIT), so it is not even pointed at him. The halo then STANDS at
+the respawn point for the rest of FTCOMMON_REBIRTH_HALO_DESPAWN_WAIT = 390
+tics. The visible window for a spawn at 2819 is therefore 2729..2429, and both
+earlier captures land 85 tics before it opens -- confirmed by eye in the c60
+t2794 frame, where Mario is not on screen at all.
+PAIRED, IDENTICAL RUN, EXACT_LOCK 2700,2698 on both arms: on the cycle-59 arm
+Mario stands on NOTHING; on the cycle-60 arm he stands on a round disc at his
+feet. That is the 0x50 + stage-world-cache fix, and this is its first picture.
+Crop delta 10.93% against a same-build adjacent-present floor of 43.2%/46.5% on
+the same crop -- uninterpretable exactly as item 4 predicts, so the eye is the
+instrument here too.
+artifacts/visibility/2026-08-04_c{59,60}-halo-t2700-flag1-{a,b}.png and -zoom.
+SIZE WAS SOURCE-EXACT ALL ALONG AND NEEDED NO FIX. The model's own vertices,
+decoded from the shipped reloc file (EFCommonEffects3 DObjDesc RebirthHalo
+0x2AC0 -> DL links 0x2378/0x2A88 and 0x27E8), span X +/-276 Z +/-239 on the
+first node and X +/-310 Z +/-310 on the second -- a ~620-unit disc -- and total
+exactly 53 triangles, which is what the port submits. The child scale of 1.00 is
+correct too: the maker's argument is attr->halo_size, 1.0f for Mario
+(203_MarioMain.c:284) and 1.1f for Fox.
+RULE, AND IT COST A CYCLE: a capture tic comes from the EFFECT'S OWN source
+lifetime, never from a fixed offset below its spawn tic. "A few tics below the
+spawn" works for a shield because a shield is on its owner instantly; an effect
+created at a blast zone and travelling for 90 tics is invisible for its whole
+first second by design.
+GATE 6: the rebirth-platform row is OWNER-QUEUED. Prediction, one sentence:
+after a KO you will see the respawn platform come down from the top of the
+screen as a round disc under the reappearing fighter, carry him for a few
+seconds, and vanish when he drops off it.
 SHIELD REGRESSION CHECK on the same arm: unchanged, 207 pixels of 240,000 at
 EXACT_LOCK 1988 against cycle 59, all of it emulator chrome and the FPS text.
 artifacts/visibility/2026-08-04_c60-shield-guarding-t1988-flag1-a.png.
@@ -533,7 +570,7 @@ do not restate them here.
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: is don't see the floating revival platform at all. the Halo is not the correct asset to use
     CAUSE: dEFManagerRebirthHaloEffectDesc is a joint-animated MODEL, drawn as one flat quad.
-    STAGE: LOCALIZED -- chain is green and it draws 53 tris/frame attached; open dimension is position/scale.
+    STAGE: OWNER-QUEUED -- round disc under the reappearing fighter; earlier captures were 85 tics early.
 
 -Fox down B VFX is not correct or using correct asset.
     Owner: you are still not using the correct asset for Fox's down B reflector.
