@@ -13217,6 +13217,20 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
         gNdsEffectRendererRejectedDrawCount++;
         return;
     }
+    /* "A LINK-15 SOURCE EFFECT DREW TRIANGLES THIS FRAME", which is the arming
+     * signal a shield capture needs and which no existing counter provided.
+     * probe-shield-vfx.ps1 could only arm on gNdsTask39FxShieldDrawCount, which
+     * belongs to the procedural stand-in and is dead once
+     * NDS_R2_SOURCE_EFFECTS_FULL removes it, or on SourceModelAdmitCount, which
+     * counts every source admit and is dominated by the impact wave -- so the
+     * 2026-08-03 captures armed on a wave at frame 343 and shot an empty frame.
+     * Link 15 carries the shield and Fox's reflector; the wave and the rebirth
+     * halo are link 10, so this separates them. Counted only past the
+     * triangle_delta test, so it means DREW and not merely "was submitted". */
+    if ((effect_gobj != NULL) && (effect_gobj->dl_link_id == 15))
+    {
+        gNdsEffectRendererLink15DrawCount++;
+    }
     gNdsEffectRendererSubmitCount++;
     sNdsStageGCDrawAllLoopHardwareSubmitCount++;
     gNdsStageGCDrawAllLoopHardwareSubmitCount =

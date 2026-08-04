@@ -503,6 +503,37 @@ call never executes and the finally block kills the emulator first. When the
 thing being hunted is a hang, timeout is the EXPECTED path -- the abort read
 belongs in a catch.
 
+THE ARMING COUNTER WORKS, AND THE FLAG-ON ARM IS OVER GATE (cycle 11).
+
+gNdsEffectRendererLink15DrawCount counts link-15 source effects PAST the
+triangle_delta test, so it means drew and not merely submitted. Armed on it the
+capture behaves: shot_frame=1004 (past the f~576 shield rather than 343),
+best_run=9 consecutive drawing frames, and at the shot
+admit=1004 dobjdraw=484 submit=448 reject=36 tris=22,547 texready=10,946,
+walk nodes=1,389 kinds=0xa rejkinds=0x0. Gate 2 now has a probe that can
+actually catch its subject.
+
+TWO HONEST LIMITS ON THAT.
+
+First, the frame is NOT confirmed shield evidence. Link 15 carries the shield
+AND Fox's reflector, and the captured frame does not obviously show a shield
+bubble on either fighter. The counter proves a link-15 effect drew for nine
+straight frames; it does not prove WHICH, and the owner is the visual oracle
+here. A per-effect split (or a capture armed on a shield-only signal) is what
+would close it.
+
+Second, and this outranks the capture: THE FLAG-ON HUD READS 20 FPS.
+    ALL 1,680,064 / 2,240,640    WORK 1,374,208 / 1,803,520
+    VBI 2:508  3:436  4:40  5+:11  max:20
+Against a 1,120,000 gate at 30 FPS that is roughly 1.5-2x over, and the VBI
+histogram is dominated by 2- and 3-VBlank frames rather than the 2s a stable
+30 FPS needs. This is a single unpaired observation on a tick-HUD lab ROM, not
+the gate-5 A/B, so it is a WARNING rather than a verdict -- but it is the first
+performance number this campaign has taken with the source effects actually
+drawing, and gate 6 must not be proposed until gate 5 prices it properly.
+The reflector is still disabled=1 in this run, so this cost does not yet
+include it.
+
 GATE 2 IS BLOCKED ON A MISSING COUNTER, NOT ON THE PROBE'S TIMEOUT (cycle 10).
 
 The timeout ceiling was raised 400 -> 1800 and it changed nothing: the run still

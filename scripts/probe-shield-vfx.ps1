@@ -28,8 +28,19 @@ param(
     #
     # gNdsEffectRendererSourceModelAdmitCount is the same signal for the source
     # path: it advances once per captured source-model effect per frame.
+    # gNdsTask39FxShieldDrawCount is the PROCEDURAL stand-in's counter and is
+    # dead once NDS_R2_SOURCE_EFFECTS_FULL removes it;
+    # gNdsEffectRendererSourceModelAdmitCount counts every source admit and is
+    # dominated by the impact wave, so arming on it shot an empty frame at 343.
+    # The three below are the flag-on arming signals: link 15 is the shield and
+    # the reflector (the wave and rebirth halo are link 10), KOBurst arms a
+    # respawn, and DeferRecover arms the reflector once its late-loading file
+    # has actually restored the desc.
     [ValidateSet('gNdsTask39FxShieldDrawCount',
-                 'gNdsEffectRendererSourceModelAdmitCount')]
+                 'gNdsEffectRendererSourceModelAdmitCount',
+                 'gNdsEffectRendererLink15DrawCount',
+                 'gNdsKOBurstAttemptCount',
+                 'gNdsEFDescDeferRecoverCount')]
     [string]$DrawCounter = 'gNdsTask39FxShieldDrawCount'
 )
 

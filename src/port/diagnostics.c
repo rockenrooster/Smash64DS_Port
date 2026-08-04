@@ -3588,6 +3588,7 @@ volatile u32 gNdsEffectRendererTriangleCount;
 volatile u32 gNdsEffectRendererTextureReadyCount;
 volatile u32 gNdsEffectRendererTextureRejectCount;
 volatile u32 gNdsEffectRendererRejectedDrawCount;
+volatile u32 gNdsEffectRendererLink15DrawCount;
 volatile u32 gNdsEffectDLBlocker;
 volatile u32 gNdsEffectDLCommandCount;
 volatile u32 gNdsEffectDLFirstOpcode;

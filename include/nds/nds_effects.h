@@ -144,6 +144,11 @@ extern volatile u32 gNdsEffectRendererTriangleCount;
 extern volatile u32 gNdsEffectRendererTextureReadyCount;
 extern volatile u32 gNdsEffectRendererTextureRejectCount;
 extern volatile u32 gNdsEffectRendererRejectedDrawCount;
+/* Link-15 source effects (shield, Fox reflector) that actually DREW -- the
+ * arming signal a shield capture needs. The wave and rebirth halo are link 10,
+ * so this separates them; see reloc_backend_movement.c for why neither
+ * existing counter could do it. */
+extern volatile u32 gNdsEffectRendererLink15DrawCount;
 /* Effect GObjs admitted to the hardware path because they carry a SOURCE model
  * rather than one of the procedural templates -- links 10 and 15 as well as 18.
  * Zero at the tracked default; non-zero is the engagement proof for
