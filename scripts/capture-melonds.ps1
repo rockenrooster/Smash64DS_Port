@@ -19,6 +19,15 @@ param(
     [int]$SecondDelayMilliseconds = 0,
     [ValidateRange(-1,1000000)][int]$ExactFirstFrame = -1,
     [ValidateRange(-1,1000000)][int]$ExactSecondFrame = -1,
+    # Lock the exact capture on the simulation clock rather than the presented
+    # frame counter, capturing at `gSCManagerBattleState->time_remain ==
+    # $ExactTimeRemain` and again one tic later. Use this, NOT
+    # -ExactFirstFrame/-ExactSecondFrame, whenever the two captures come from
+    # DIFFERENT BUILDS: the presented-frame counter drifts against the match
+    # clock in proportion to how much faster one arm is, so the faster the
+    # candidate the more of the delta is the lock rather than the change.
+    # Full rationale on the parameter in capture-cut-g-exact-frames.ps1.
+    [ValidateRange(0,3600)][int]$ExactTimeRemain = 0,
     [ValidateRange(-1,1)][int]$FoxCpuMode = -1,
     [ValidateSet('','Fox','Mario','Natural')][string]$FighterAnimAudit = '',
     [ValidateRange(0,218)][int]$FighterAnimStartMotion = 0,
@@ -66,14 +75,27 @@ $fighterAnimAuditEnabled = -not [string]::IsNullOrWhiteSpace($FighterAnimAudit)
 $pauseCameraEnabled =
     (($PauseCameraPitch -ne 0.0) -or ($PauseCameraYaw -ne 0.0))
 $gdbSelectionEnabled = $rendererSelectionEnabled -or $foxSelectionEnabled
+$exactTimeCaptureEnabled = ($ExactTimeRemain -gt 0)
 $exactFrameCaptureEnabled =
-    (($ExactFirstFrame -ge 0) -or ($ExactSecondFrame -ge 0))
+    (($ExactFirstFrame -ge 0) -or ($ExactSecondFrame -ge 0) -or
+     $exactTimeCaptureEnabled)
 if ($exactFrameCaptureEnabled) {
-    if (($ExactFirstFrame -lt 0) -or ($ExactSecondFrame -lt 0)) {
-        throw '-ExactFirstFrame and -ExactSecondFrame must be supplied together.'
-    }
-    if ($ExactSecondFrame -ne ($ExactFirstFrame + 1)) {
-        throw 'Exact Cut G capture frames must be adjacent.'
+    if ($exactTimeCaptureEnabled) {
+        # One lock or the other. Accepting both would leave which one actually
+        # fired dependent on argument order, and a capture whose lock is
+        # ambiguous is worse than no capture -- it looks like evidence.
+        if (($ExactFirstFrame -ge 0) -or ($ExactSecondFrame -ge 0)) {
+            throw ('-ExactTimeRemain locks on the simulation clock and ' +
+                '-ExactFirstFrame/-ExactSecondFrame lock on the presented ' +
+                'frame counter; pass one or the other, never both.')
+        }
+    } else {
+        if (($ExactFirstFrame -lt 0) -or ($ExactSecondFrame -lt 0)) {
+            throw '-ExactFirstFrame and -ExactSecondFrame must be supplied together.'
+        }
+        if ($ExactSecondFrame -ne ($ExactFirstFrame + 1)) {
+            throw 'Exact Cut G capture frames must be adjacent.'
+        }
     }
     if ([string]::IsNullOrWhiteSpace($SecondOutput)) {
         throw '-SecondOutput is required for exact Cut G frame capture.'
@@ -472,8 +494,11 @@ try {
             -WindowHandle ([long]$emulator.MainWindowHandle) `
             -Output $Output `
             -SecondOutput $SecondOutput `
-            -FirstFrame $ExactFirstFrame `
-            -SecondFrame $ExactSecondFrame `
+            -FirstFrame $(if ($exactTimeCaptureEnabled) { 200 }
+                          else { $ExactFirstFrame }) `
+            -SecondFrame $(if ($exactTimeCaptureEnabled) { 201 }
+                           else { $ExactSecondFrame }) `
+            -TimeRemain $ExactTimeRemain `
             -FoxCpuMode $FoxCpuMode
     } else {
         Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
