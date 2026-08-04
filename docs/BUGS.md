@@ -82,8 +82,19 @@ OPEN.
     THE REAL BUG IS WHATEVER THAT SHIFT DISPLACES, and it is latent and older
     than this campaign -- the shipping arm is one symbol away from the same
     cliff, so it must be fixed at its own seam rather than by keeping .main a
-    particular size. Next: nm-by-address around 0x020cd728/0x020cd860 in the two
-    ELFs to find what crossed a boundary.
+    particular size.
+    RUNG 0 DONE (cycle 29), two negatives, no build. (i) The shift is NOT
+    uniform: per-symbol deltas cluster at 104/200/312/320/336 because the
+    patches insert code inside objanim.c/ftanim.c, so symbols move relative to
+    each other and only downstream sections move by the total. Ordinary linker
+    behaviour -- "everything moves by 0x138" was the wrong model and no symbol
+    is pinned in a way that crosses a region edge. (ii) Stale absolute addresses
+    are NOT the mechanism: searching the hanging ROM image for the pre-shift
+    address of every moved main-RAM symbol yields 10 hits against ~8 expected by
+    chance (11,710 symbols x 3M words / 2^32), so the hits are noise.
+    STILL UNDONE and now the highest-value step: the rung-2 PC capture. The
+    spinning PC names the victim directly, and no layout theory should be
+    pursued further until it is taken.
     HARNESS TRAP WORTH REMEMBERING: unreferenced BSS is collected by
     --gc-sections, so the first discriminant build was byte-identical to the
     anchor and would have "passed" meaninglessly. Any padding probe must be
