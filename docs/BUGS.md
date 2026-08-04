@@ -145,12 +145,28 @@ OPEN.
     malloc(NDS_OS_GOBJ_STACK_SIZE = 4096) from the ordinary C heap
     (coroutine.c:188-195). osStartThread returns silently, the announcer
     never runs, never posts, and gcRunGObjProcess blocks forever.
-    OPEN: the arena arithmetic (free bytes and largest block at the stop --
-    mallinfo needs a cast, gdb rejects it bare), then the fix. Preallocating
-    GObj stacks at process creation is the likely seam (loading time is
-    cheap), but the numbers come first. Counters still owed on BOTH silent
-    returns. PROBE RULE: never call malloc in the guest from gdb --
-    p malloc(4096) hung the target and cost this run's tail.
+    THE DIVERGENCE, from source (41). BattleShip does NOT allocate GObj
+    thread stacks on demand: objman.c:2376 seeds sGCThreadHead from
+    setup->gobjthreads -- a POOL preallocated at scene setup -- and
+    gcGetGObjThread() (:116-152) just hands one out. Each GObjThread carries
+    its stack inline, which is why gcSleepCurrentGObjThread checks the
+    guard word gobjthread->stack[7] == 0xFEDCBA98. Allocation cannot fail at
+    thread-start time in the source, so the source has no failure path and
+    needs none. The port instead mallocs a fresh 4096-byte coroutine stack at
+    FIRST START (libultra_os.c:130-137) and silently returns when it fails.
+    That laziness is the divergence and the owning seam.
+    FIX (designed, NOT yet implemented): provision the coroutine when the
+    GObjThread is handed out / the process is registered, not at first start
+    -- compute-once, loading time is cheap. Creation failure must be loud at
+    a moment that can still report, and BOTH silent returns in osStartThread
+    need counters regardless.
+    STILL OWED: free bytes + largest free block at the stop (mallinfo needs a
+    cast; gdb rejects it bare), the 312-byte heap-shrink arithmetic across
+    the two cycle-28 ELFs, and the SHIPPING-arm margin at the announcer's
+    birth -- the announcer is born in every match, so the tracked default
+    allocates the same ~4208 bytes at the same moment.
+    PROBE RULE: never call malloc in the guest from gdb -- p malloc(4096)
+    hung the target and cost a run's tail.
     artifacts/verification/2026-08-03_flag0-queue.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
