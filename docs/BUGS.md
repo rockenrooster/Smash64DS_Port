@@ -91,9 +91,22 @@ OPEN.
     The queue is gGCMesgQueue (.main.bss), held in the parked r6; r10 is
     gSCManagerBattleState. So a GObj process inside the INTERFACE update
     blocks in osRecvMesg on gGCMesgQueue and the message never arrives.
-    OPEN: read gGCMesgQueue validCount/msgCount/first at the stop, then the
-    poster -- was the send dropped (NOBLOCK onto a full queue) or never made.
-    Compare depth/consumers/flags against BattleShip before changing anything.
+    PROTOCOL, from source (37). Exactly three sites touch this queue, all in
+    BattleShip: objman.c:2549 creates it with OSMesg sGCMesgs[1] -- DEPTH 1;
+    objman.c:2286 is our waiter, gcRunGObjProcess case nGCProcessKindThread
+    doing osStartThread(gobjthread) then osRecvMesg(BLOCK); objhelper.c:147
+    is the ONLY poster, gcSleepCurrentGObjThread doing
+    osSendMesg(..., OS_MESG_NOBLOCK) then osStopThread(NULL), per tic.
+    So it is a one-slot handshake: run the GObj thread, block until it sleeps.
+    The port's wait matches the measured spin exactly -- ndsOsWaitForQueue
+    (libultra_os.c:231-246) sets OS_STATE_WAITING, yields, sets RUNNING on
+    resume, re-checks MQ_IS_EMPTY -- which is why state read 8 at the stop.
+    NOBLOCK onto a depth-1 queue is a SILENT DROP in the port's osSendMesg
+    (:248-259 returns -1 via ndsOsWaitForQueue), so a drop path exists by
+    design and needs testing, not assuming.
+    OPEN: validCount/first at the stop; and which of sThreads[5]/[6] (the two
+    dynamic entries, 0x23c6ba0/0x23c5eb8) is the GObj thread and its state --
+    never started, never posted, or posted into a full slot.
     artifacts/verification/2026-08-03_flag0-*.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
