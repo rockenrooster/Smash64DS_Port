@@ -7910,9 +7910,14 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #if NDS_TASK44_STAGE_STEADY
     sb32 steady_admitted = FALSE;
 #endif
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
+    /* UNCONDITIONAL. The reject label this feeds calls
+     * ndsRendererHardwareAbortBattleStaticTextures, which discards the whole
+     * hardware texture cache and leaves it unable to re-arm for the rest of the
+     * scene. Which branch got there therefore cannot be a profile-only fact --
+     * it is the difference between a next cycle that reads one counter and a
+     * next cycle that re-derives six branches. See nds_renderer.c's row 6 note. */
     u32 task36_reject_reason = 1u;
-
+#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
     gNdsRendererTask36AdapterRejectReason = 0u;
 #endif
 #if NDS_TASK103_STAGE_RUN_PHASE
@@ -7928,9 +7933,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     }
     if (cobj == NULL)
     {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
         task36_reject_reason = 2u;
-#endif
         goto reject;
     }
 #if NDS_TASK44_STAGE_STEADY
@@ -7978,9 +7981,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             ((i != 0u) &&
              (loaded[i]->owner_generation != topology_generation)))
         {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
             task36_reject_reason = 3u;
-#endif
             goto reject;
         }
         topology_generation = loaded[i]->owner_generation;
@@ -8025,9 +8026,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             (ndsRendererAdapterBuildNativeStageTopologyStamp(
                  workspace, topology_generation, &topology_stamp) == FALSE))
         {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
             task36_reject_reason = 4u;
-#endif
             goto reject;
         }
         workspace->topology_generation = topology_generation;
@@ -8062,10 +8061,14 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #endif
     if (ndsRendererAdapterPrepareNativeStageMatrices(cobj, workspace) == FALSE)
     {
+        task36_reject_reason = 5u;
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
-        task36_reject_reason =
-            (gNdsRendererTask36AdapterRejectReason != 0u) ?
-                gNdsRendererTask36AdapterRejectReason : 5u;
+        /* The matrix path publishes a finer sub-reason, but only when
+         * profiling is compiled in; 5u is the honest answer without it. */
+        if (gNdsRendererTask36AdapterRejectReason != 0u)
+        {
+            task36_reject_reason = gNdsRendererTask36AdapterRejectReason;
+        }
 #endif
         goto reject;
     }
@@ -8075,9 +8078,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #endif
     if (ndsRendererAdapterPrepareNativeStageMaterials(workspace) == FALSE)
     {
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
         task36_reject_reason = 7u;
-#endif
         goto reject;
     }
 #if NDS_TASK103_STAGE_RUN_PHASE
@@ -8126,9 +8127,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             &workspace->frame, &workspace->stats) == FALSE)
     {
         workspace->topology_valid = FALSE;
-#if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
         task36_reject_reason = 6u;
-#endif
         goto reject;
     }
 #if NDS_TASK103_STAGE_RUN_PHASE
@@ -8149,6 +8148,16 @@ reject:
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
     gNdsRendererTask36AdapterRejectReason = task36_reject_reason;
 #endif
+    /* BUGS row 6. Published unconditionally, and the FIRST reason is latched
+     * rather than only the last: the abort below is irreversible for the scene,
+     * so the branch that caused it is the one worth keeping. A later reject is
+     * a consequence of the first one, not independent evidence. */
+    gNdsRendererStageOwnerRejectCount++;
+    gNdsRendererStageOwnerLastRejectReason = task36_reject_reason;
+    if (gNdsRendererStageOwnerFirstRejectReason == 0u)
+    {
+        gNdsRendererStageOwnerFirstRejectReason = task36_reject_reason;
+    }
     workspace->active = FALSE;
     /* Before GO, a transient incomplete display graph falls back through the
      * prepared pinned corpus without conversion.  Only a post-arm owner

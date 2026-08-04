@@ -1308,6 +1308,23 @@ extern volatile u32 gNdsRendererEconomyAppliedOwnerMask;
 extern volatile u32 gNdsRendererEconomySkippedRunCount;
 extern volatile u32 gNdsRendererEconomySkippedTriangleCount;
 #endif
+/* BUGS ROW 6, AND DELIBERATELY OUTSIDE EVERY GUARD BELOW.
+ * ndsRendererAdapterPrepareNativeStageOwner's reject path aborts the pinned
+ * static-texture corpus, which discards the whole hardware texture cache and
+ * leaves it unable to re-arm for the rest of the scene. The existing records of
+ * that event (gNdsRendererM3PostArmFailureCount,
+ * gNdsRendererTask36AdapterRejectReason) sit inside
+ * `#if NDS_RENDERER_PROFILE_LEVEL == 1` and are nm-confirmed absent from the
+ * shipping ELF, so the shipping build could destroy its own texture cache
+ * silently. Putting these under the same guard would reproduce that bug
+ * exactly; they are unconditional on purpose. See nds_renderer.c for the
+ * reason-code table. */
+extern volatile u32 gNdsRendererStageOwnerRejectCount;
+extern volatile u32 gNdsRendererStageOwnerLastRejectReason;
+extern volatile u32 gNdsRendererStageOwnerFirstRejectReason;
+extern volatile u32 gNdsRendererStageOwnerAbortCount;
+extern volatile u32 gNdsRendererStaticTexturePreparedNow;
+
 #if NDS_RENDERER_PROFILE_LEVEL == 1
 extern volatile u32 gNdsRendererM3PreflightAttemptCount;
 extern volatile u32 gNdsRendererM3PreflightSuccessCount;

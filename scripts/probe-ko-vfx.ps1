@@ -71,6 +71,9 @@ $capture_names = @(
     $evidence_prefix + '_pre-death-baseline-probe.png',
     $evidence_prefix + '_ko-burst-probe.png',
     $evidence_prefix + '_post-death-late-probe.png',
+    $evidence_prefix + '_post-star-3s-probe.png',
+    $evidence_prefix + '_post-side-3s-probe.png',
+    $evidence_prefix + '_late-match-probe.png',
     $evidence_prefix + '_star-ko-probe.png',
     $evidence_prefix + '_rebirth-halo-probe.png'
 )
@@ -163,7 +166,15 @@ $required = @(
     'gNdsRendererBattleTextureFenceCounts',
     'gNdsRendererBattleTextureFenceFirstFrame',
     'gNdsRendererBattleTextureFenceFirstClassPlus1',
-    'gNdsFighterDisplayContractNoTextureCount'
+    'gNdsFighterDisplayContractNoTextureCount',
+    # Row 6's named suspect. Absent from any ROM built before 2026-08-04, so a
+    # run against an older ELF fails here rather than reporting zeros that look
+    # like "the abort never fired".
+    'gNdsRendererStageOwnerRejectCount',
+    'gNdsRendererStageOwnerFirstRejectReason',
+    'gNdsRendererStageOwnerLastRejectReason',
+    'gNdsRendererStageOwnerAbortCount',
+    'gNdsRendererStaticTexturePreparedNow'
 )
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 $nm_lines = & $nm $elf
@@ -299,7 +310,8 @@ function New-StateCommand([string]$Name) {
         'vramreset=%u fbind=%u fready=%u freject=%u fupload=%u ' +
         'eready=%u ereject=%u atlasfail=%u atlasprep=%u ' +
         'memohit=%u memomiss=%u memofill=%u memostale=%u memoverify=%u ' +
-        'fence=%u fencefirstframe=%u fenceclass=%u notex=%u\n", ' +
+        'fence=%u fencefirstframe=%u fenceclass=%u notex=%u ' +
+        'ownerreject=%u ownerfirst=%u ownerlast=%u abort=%u preparednow=%u\n", ' +
         'gNdsFrameCounter, gNdsBattleTextHudTimeSeconds, ' +
         'gNdsBattleTextHudP0Stock, gNdsBattleTextHudP0Damage, ' +
         'gNdsBattleTextHudP1Stock, gNdsBattleTextHudP1Damage, ' +
@@ -331,7 +343,18 @@ function New-StateCommand([string]$Name) {
         'gNdsRendererBattleTextureFenceCounts, ' +
         'gNdsRendererBattleTextureFenceFirstFrame, ' +
         'gNdsRendererBattleTextureFenceFirstClassPlus1, ' +
-        'gNdsFighterDisplayContractNoTextureCount')
+        'gNdsFighterDisplayContractNoTextureCount, ' +
+        # BUGS row 6, the whole point of the 2026-08-04 instrumentation.
+        # ownerfirst names WHICH of the six reject branches in
+        # ndsRendererAdapterPrepareNativeStageOwner destroyed the texture cache;
+        # abort counts the irreversible call; preparednow exposes the static
+        # flag that decides whether it can ever re-arm, so the permanent-latch
+        # claim stops being an inference from reading the source.
+        'gNdsRendererStageOwnerRejectCount, ' +
+        'gNdsRendererStageOwnerFirstRejectReason, ' +
+        'gNdsRendererStageOwnerLastRejectReason, ' +
+        'gNdsRendererStageOwnerAbortCount, ' +
+        'gNdsRendererStaticTexturePreparedNow')
 }
 
 try {
@@ -466,25 +489,17 @@ try {
         'continue',
         'end',
         'end',
-        # BUGS ROW 6, THE LATE ARM. The owner reports that the post-death
-        # texture loss never recovers for the rest of the match. A cache that
-        # re-resolves every frame would refill on the next one, so "still
-        # broken three seconds later" is the measurement that separates
-        # eviction pressure from a state the renderer cannot leave. Armed as a
-        # sibling of the burst arm rather than nested inside it: this file
-        # already nests one commands block inside another, and a third level is
-        # not worth discovering the limits of mid-measurement.
-        'if $shot_late == 0',
-        'set $shot_late = 1',
-        ('tbreak *' + $frame_marker_address),
-        'ignore $bpnum 180',
-        'commands',
-        'silent',
-        (New-StateCommand 'post-death-late'),
-        (New-CaptureCommand 'post-death-late-probe' $emulator.Id $evidence_prefix),
-        'continue',
-        'end',
-        'end',
+        # NO LATE ARM HERE, AND THAT IS A CORRECTION, NOT AN OMISSION.
+        # This block used to arm its own `tbreak *frame_marker; ignore 180`
+        # from inside the explode callback. The top-level sample chain further
+        # down arms tbreaks on THAT SAME ADDRESS, and two temporary breakpoints
+        # at one address with independent ignore counts do not survive each
+        # other: the 2026-08-04 12:05 run captured six frames, reached the side
+        # KO, and then sat for nine minutes without ever taking post-side-3s or
+        # late-match, because the top-level chain was waiting for a stop the
+        # callback's tbreak had already consumed. The fixed-frame chain covers
+        # the same ground deterministically and states its own frame numbers,
+        # so the event-armed duplicate is simply removed.
         'continue',
         'end',
 
@@ -647,19 +662,66 @@ try {
         # moves.
         (New-StateCommand 'pre-death-baseline'),
         (New-CaptureCommand 'pre-death-baseline-probe' $emulator.Id $evidence_prefix),
-        # Writing fp->damage was tried first and the run came back BIT-IDENTICAL:
-        # fighter.h:3309's `damage` is the port-only extension field, not what
-        # ftCommonDeadCheckBounds reads. The bound test is on POSITION
-        # (ftcommondead.c:629, `pos->x < map_bound_left`), so moving the fighter
-        # past the side blast zone is both simpler and unambiguous -- and it
-        # picks the SIDE KO deliberately, because that is the one that runs
-        # efManagerDeadExplodeMakeEffect. The upward bound at :635 gives the
-        # star KO, which is already covered.
+        # TWO DEATHS, STAR FIRST, AND THE STAR ONE IS THE CORRECTION.
+        #
+        # Writing fp->damage was tried first and the run came back
+        # BIT-IDENTICAL: fighter.h:3309's `damage` is the port-only extension
+        # field, not what ftCommonDeadCheckBounds reads. The bound tests are on
+        # POSITION, so moving the fighter across a blast zone enters exactly the
+        # branch a knockback-launched fighter enters -- it changes WHEN the KO
+        # happens, not what the KO path then does.
+        #
+        # This comment used to end "The upward bound at :635 gives the star KO,
+        # which is already covered." It was not covered: every run this probe
+        # had ever produced reported star_calls=0, because the only death it
+        # forced was a side KO and nothing else reaches the top bound inside a
+        # minute. A probe asserting coverage it does not have is how the next
+        # cycle gets misled, so rather than delete the claim the run now makes
+        # it true. ftcommondead.c:635 tests pos->y against map_bound_top and
+        # then takes ftCommonDeadUpStarSetStatus five times in six (:637-641),
+        # so the star path is reached the way the source reaches it.
+        'set $g = gGCCommonLinks[3]',
+        'if $g != 0',
+        'set ((DObj *)$g->obj)->translate.vec.f.y = gMPCollisionGroundData->map_bound_top + 500',
+        'set $forced_damage = 1',
+        'end',
+
+        # Three seconds after the star KO, on a fixed frame rather than armed
+        # from a maker: the star path does not call the explode maker, so the
+        # event-armed late sample below cannot see this death at all.
+        ('tbreak *' + $frame_marker_address),
+        'ignore $bpnum 180',
+        'continue',
+        (New-StateCommand 'post-star-3s'),
+        (New-CaptureCommand 'post-star-3s-probe' $emulator.Id $evidence_prefix),
+
+        # SECOND DEATH, SIDE KO, same fighter. The owner reported this after
+        # ordinary play rather than after one KO, so a single death is not a
+        # representative sample of the thing being hunted.
+        ('tbreak *' + $frame_marker_address),
+        'ignore $bpnum 180',
+        'continue',
         'set $g = gGCCommonLinks[3]',
         'if $g != 0',
         'set ((DObj *)$g->obj)->translate.vec.f.x = gMPCollisionGroundData->map_bound_left - 500',
-        'set $forced_damage = 1',
+        'set $forced_damage = $forced_damage + 2',
         'end',
+
+        ('tbreak *' + $frame_marker_address),
+        'ignore $bpnum 180',
+        'continue',
+        (New-StateCommand 'post-side-3s'),
+        (New-CaptureCommand 'post-side-3s-probe' $emulator.Id $evidence_prefix),
+
+        # Late in the match, well past both deaths. If the corruption is
+        # permanent this is where it is unambiguous, and if the scene is intact
+        # here then two forced deaths did not reproduce it -- which is a result,
+        # not a gap.
+        ('tbreak *' + $frame_marker_address),
+        'ignore $bpnum 600',
+        'continue',
+        (New-StateCommand 'late-match'),
+        (New-CaptureCommand 'late-match-probe' $emulator.Id $evidence_prefix),
 
         # The run ends where the match does, not on a frame count.
         ('tbreak *' + $results_confetti_address),

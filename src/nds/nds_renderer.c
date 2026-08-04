@@ -2806,6 +2806,40 @@ volatile u32 gNdsRendererBattleStaticTextureFirstAddress;
 volatile u32 gNdsRendererBattleStaticTextureEndAddress;
 volatile u32 gNdsRendererBattleStaticTextureAllocationSpanBytes;
 volatile u32 gNdsRendererBattleStaticTextureBankMask;
+
+/* BUGS ROW 6. THE MOST DESTRUCTIVE EVENT IN THIS RENDERER WAS INVISIBLE IN THE
+ * CONFIGURATION THAT SHIPS.
+ *
+ * ndsRendererAdapterPrepareNativeStageOwner rejects through a label that calls
+ * ndsRendererHardwareAbortBattleStaticTextures, which discards the entire
+ * hardware texture cache and clears sNdsRendererBattleStaticTexturePrepared --
+ * and ndsRendererHardwareArmBattleStaticTextures refuses to re-arm without
+ * that flag. So one transient "this frame cannot use the native fast path"
+ * removes every texture in the scene for the remainder of the match, with no
+ * path back. That is scene-wide and permanent, which is verbatim what the
+ * owner reported.
+ *
+ * The only existing records of it were gNdsRendererM3PostArmFailureCount and
+ * gNdsRendererTask36AdapterRejectReason, both inside
+ * `#if NDS_RENDERER_PROFILE_LEVEL == 1` and both nm-confirmed absent from the
+ * shipping ELF -- so a shipping build could destroy its own texture cache and
+ * leave no counter behind. These are unconditional.
+ *
+ * The FIRST-reject latch is the load-bearing field. A count only says it
+ * happened; the reason names which of the six branches in that function to go
+ * and read, which is the difference between a next cycle that measures and a
+ * next cycle that hunts. Reason codes are that function's own: 2 null CObj,
+ * 3 asset lookup/size/generation, 4 topology collect or stamp, 5 matrices,
+ * 6 ndsRendererPrepareNativeStageOwner, 7 materials, 1 unreached default. */
+volatile u32 gNdsRendererStageOwnerRejectCount;
+volatile u32 gNdsRendererStageOwnerLastRejectReason;
+volatile u32 gNdsRendererStageOwnerFirstRejectReason;
+volatile u32 gNdsRendererStageOwnerAbortCount;
+/* Mirrors sNdsRendererBattleStaticTexturePrepared, which is static and so
+ * cannot be read from a probe. Without it the permanent-latch claim is an
+ * inference from reading the source; with it the latch is observable. */
+volatile u32 gNdsRendererStaticTexturePreparedNow;
+
 static u32 sNdsRendererBattleStaticTexturePrepared;
 static u32 sNdsRendererBattleStaticTextureArmed;
 volatile u32 gNdsRendererBattleTextureFenceCounts[
@@ -10937,6 +10971,14 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     gNdsRendererBattleStaticTextureEndAddress = 0u;
     gNdsRendererBattleStaticTextureAllocationSpanBytes = 0u;
     gNdsRendererBattleStaticTextureBankMask = 0u;
+    /* Reset with the family they belong to, so a per-scene reading is a per-
+     * scene reading. The first-reject latch in particular is only meaningful
+     * against the scene it was armed in. */
+    gNdsRendererStageOwnerRejectCount = 0u;
+    gNdsRendererStageOwnerLastRejectReason = 0u;
+    gNdsRendererStageOwnerFirstRejectReason = 0u;
+    gNdsRendererStageOwnerAbortCount = 0u;
+    gNdsRendererStaticTexturePreparedNow = 0u;
     sNdsRendererBattleStaticTextureArmed = FALSE;
 
     /* A battle owns the cache from this point forward. Starting empty makes
@@ -11269,6 +11311,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
         }
     }
     sNdsRendererBattleStaticTexturePrepared = TRUE;
+    gNdsRendererStaticTexturePreparedNow = 1u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     return TRUE;
 
@@ -11972,10 +12015,15 @@ void ndsRendererHardwareDiscardBattleStaticTextures(void)
 #endif
     sNdsRendererBattleStaticTexturePrepared = FALSE;
     sNdsRendererBattleStaticTextureArmed = FALSE;
+    gNdsRendererStaticTexturePreparedNow = 0u;
 }
 
 void ndsRendererHardwareAbortBattleStaticTextures(void)
 {
+    /* Counted unconditionally and before anything else can early-out: this is
+     * the entry point that makes the scene's textures unrecoverable, so "was it
+     * called" must never depend on a build flag. See the row 6 note above. */
+    gNdsRendererStageOwnerAbortCount++;
 #if NDS_RENDERER_HW_TRIANGLES
     u32 was_prepared = sNdsRendererBattleStaticTexturePrepared;
 
@@ -11989,6 +12037,7 @@ void ndsRendererHardwareAbortBattleStaticTextures(void)
 #endif
     sNdsRendererBattleStaticTexturePrepared = FALSE;
     sNdsRendererBattleStaticTextureArmed = FALSE;
+    gNdsRendererStaticTexturePreparedNow = 0u;
 }
 
 static void ndsRendererHardwareBindNoTexture(NDSRendererStats *stats)
