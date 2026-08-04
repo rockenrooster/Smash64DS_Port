@@ -8,7 +8,15 @@ param(
     [string]$DiffImage,
     # Compare the whole window bitmap, chrome included. Off by default -- see
     # the note on window chrome below.
-    [switch]$IncludeWindowChrome
+    [switch]$IncludeWindowChrome,
+    # Restrict the comparison to a sub-rectangle of the compared region, in
+    # pixels relative to that region's own top-left (so 0,0 is the guest
+    # viewport's top-left by default, NOT the window's). All four must be given
+    # together. See "WHY A CROP IS MANDATORY FOR AN EFFECT" below.
+    [int]$CropX = -1,
+    [int]$CropY = -1,
+    [int]$CropW = -1,
+    [int]$CropH = -1
 )
 
 # Compare a matched-tic capture pair and report differing pixels and the maximum
@@ -37,6 +45,17 @@ param(
 # whose 400x600 client area sits below a 56px title/frame band with an 8px border
 # (check-melonds-policy.ps1 pins that geometry, including the exact 256x384
 # dual-screen aspect).
+
+# WHY A CROP IS MANDATORY FOR AN EFFECT. Even the guest viewport is far too big
+# to judge one VFX by. Measured 2026-08-04 on the gate-6 pairs: two ADJACENT
+# PRESENTS OF THE SAME BUILD differ over 36% of the viewport, because Dream
+# Land's canopy is a dense scrolling texture that repaints a third of the screen
+# every present. That floor swamps any shield/halo/wave-sized delta, so a
+# whole-viewport fraction can never gate one of these rows -- it is measuring the
+# stage. Pass -CropX/-CropY/-CropW/-CropH to restrict the comparison to the
+# effect's own screen region, and measure the same-build adjacent-present floor
+# ON THE SAME CROP: a cross-build number without its same-build floor is
+# uninterpretable.
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -76,6 +95,31 @@ try {
         }
         $region = New-Object System.Drawing.Rectangle `
             $GUEST_BORDER_X, $GUEST_BAND_TOP, $vw, $vh
+    }
+
+    # Apply the crop INSIDE whichever region was just chosen, so the caller's
+    # coordinates are viewport-relative and do not have to know the 8/56 chrome
+    # offsets. Reject a partly-specified or out-of-bounds crop loudly: silently
+    # clamping it would compare a rectangle nobody asked for and the number would
+    # still look like evidence.
+    $cropArgs = @($CropX, $CropY, $CropW, $CropH)
+    $cropGiven = @($cropArgs | Where-Object { $_ -ge 0 }).Count
+    if ($cropGiven -notin @(0, 4)) {
+        throw ('-CropX/-CropY/-CropW/-CropH must be given together; got ' +
+               "X=$CropX Y=$CropY W=$CropW H=$CropH.")
+    }
+    if ($cropGiven -eq 4) {
+        if (($CropW -le 0) -or ($CropH -le 0)) {
+            throw "Crop width and height must be positive; got ${CropW}x${CropH}."
+        }
+        if ((($CropX + $CropW) -gt $region.Width) -or
+            (($CropY + $CropH) -gt $region.Height)) {
+            throw ("Crop ${CropW}x${CropH} at $CropX,$CropY falls outside the " +
+                   "compared region, which is $($region.Width)x$($region.Height). " +
+                   'Crop coordinates are relative to that region, not the window.')
+        }
+        $region = New-Object System.Drawing.Rectangle `
+            ($region.X + $CropX), ($region.Y + $CropY), $CropW, $CropH
     }
 
     # LockBits, not GetPixel: a 416x664 pair is 276,224 pixels and GetPixel makes
@@ -128,10 +172,12 @@ try {
 
     $total = $region.Width * $region.Height
     $fraction = $differing / [double]$total
-    Write-Host ("compared {0:N0} pixels ({1}x{2} at {3},{4}{5})" -f `
+    Write-Host ("compared {0:N0} pixels ({1}x{2} at window {3},{4}{5}{6})" -f `
         $total, $region.Width, $region.Height, $region.X, $region.Y,
         $(if ($IncludeWindowChrome) { ' -- WINDOW CHROME INCLUDED' }
-          else { ' -- guest viewport' }))
+          else { ' -- guest viewport' }),
+        $(if ($cropGiven -eq 4) { " -- CROPPED to ${CropW}x${CropH} at ${CropX},${CropY}" }
+          else { '' }))
     Write-Host ("  control   {0}" -f (Split-Path -Leaf $Control))
     Write-Host ("  candidate {0}" -f (Split-Path -Leaf $Candidate))
     Write-Host ("  differing {0:N0} ({1:P4})" -f $differing, $fraction)

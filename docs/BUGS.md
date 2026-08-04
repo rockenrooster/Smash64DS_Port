@@ -65,8 +65,9 @@ per-frame-paired tooling: docs/PERF_LEDGER.md "GATE 5".
 BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL default, keep, or optimize
 first). Performance no longer decides it -- the two settings cost the same, so
 this is a fidelity call and the owner is the oracle. What changes per row:
-  * shield bubble    -- a 1:2 source cell stretched on a square quad becomes the
-                        source's animated model. Fixes "cut in half".
+  * shield bubble    -- WITHDRAWN 2026-08-04. Measured, the flip does not give
+                        this row its model; it leaks a detached quad per guard.
+                        See the gate-6 block below. Do not count this row for.
   * rebirth platform -- one flat quad becomes the joint-animated model, i.e. the
                         platform appears at all on respawn.
   * Fox reflector    -- NO CHANGE EITHER WAY, see below. Do not count this row.
@@ -92,6 +93,51 @@ the four desc addresses, over 150 s of natural flag-1 play:
 Capture a few tics BELOW a spawn tic (time_remain counts down) so the effect is
 on screen. artifacts/verification/2026-08-04_gate6-effect-tics.txt.
 
+=============================================================================
+GATE 6 STOPS HERE: THE TWO ARMS ARE NOT THE SAME FIGHT (2026-08-04)
+=============================================================================
+No gate-6 row can move to OWNER-QUEUED, and the blocker is not tooling.
+
+1. THE CROSS-BUILD PAIR IS IMPOSSIBLE AS BUILT. Both arms locked on the
+identical simulation tic -- EXACT_LOCK=gSCManagerBattleState->time_remain,
+1700,1698 printed by both -- and they are DIFFERENT GAMES at that tic: Mario
+44% (flag 1) versus 77% (flag 0), different fighter positions, different camera,
+FPS 20.0 versus 29.0. -ExactTimeRemain synchronizes the CLOCK, not the fight; a
+realtime-paced port whose arms present at different rates diverges, so a
+"before/after" pair at one tic compares two unrelated moments. Every cross-build
+pixel number for these rows is therefore meaningless, including this cycle's
+48.43%. Closing this needs deterministic input playback, not a capture rerun.
+artifacts/visibility/2026-08-04_g6-shield-t1700-flag{0,1}-a.png.
+
+2. THE FLAG-1 SHIELD IS A REGRESSION, NOT THE FIX THE PACKET ASSUMED. Proven on
+the capture ROM itself, same build, no cross-build inference: link-15 draws begin
+at exactly tic 1994 (the measured shield spawn), step 1 -> 2 -> 3 at 1950 and
+1922 (the other two spawns), and NEVER STEP BACK DOWN -- still +3/frame at tic
+1500, 494 tics later. Each instance contributes exactly 2 triangles, i.e. one
+quad. On screen that is a large translucent quad with a pink crescent parked in
+mid-air between the trunks, attached to neither fighter, occluding the stage;
+absent at tic 2010 in the same run, before the first spawn. So flipping the flag
+does not give the shield its model -- it leaks a detached quad per guard.
+Exhibit: artifacts/visibility/2026-08-04_g6-shield-flag1-t1700-detached-blob-
+zoom.png, control 2026-08-04_g6-shield-t2010-flag1-preshield-a.png.
+Also measured: the flag-0 procedural stand-in drew on ONE frame in a whole
+match (tic 3264), so "the flag-0 shield" is close to absent too.
+Census both arms: artifacts/verification/2026-08-04_gate6-onscreen-flag{0,1}.txt.
+
+3. A SPAWN TIC DOES TRANSFER; AN OFFSET WAS NEVER THE PROBLEM. The cycle-47
+guess that the offset below a spawn tic had to be tuned is refuted -- the shield
+draws on every frame from its spawn onward. What the earlier captures lacked was
+a recognizable shield, not a tic.
+
+4. CROPPING DOES NOT RESCUE THE PIXEL METRIC EITHER. compare-capture-pair.ps1
+now takes -CropX/-CropY/-CropW/-CropH (viewport-relative, applied to both images,
+partial or out-of-bounds crops throw). Measured on the shield's own region at tic
+1700: same-build adjacent-present floor 26.74% on the crop against 17.99% on the
+whole viewport -- the crop is NOISIER, because the effect sits over the scrolling
+canopy. The tool gap is closed and the conclusion is unchanged: these rows are
+judged by eye, not by a fraction.
+=============================================================================
+
 THE FLOOR IS THE STAGE, NOT THE INSTRUMENT (2026-08-04, corrects the entry
 below). Re-measured on a console-reduced ROM and it did NOT collapse: 36.5% and
 35.8% same-build adjacent-present, against 49.3% cross-build, at tic 1992.
@@ -99,10 +145,8 @@ Higher than the tickhud ROM's ~32%, not lower. Looking at the frame gives the
 real cause -- Dream Land's canopy is a dense, high-frequency, SCROLLING texture,
 so a one-present shift repaints a third of the screen no matter what ROM it is.
 CONSEQUENCE: a whole-viewport pixel metric can never be this row's instrument.
-Gate-6 pairs must be CROPPED to the effect's own screen region, which is what
-TASK_STANDING_RULES already says ("crop the geometry you changed ... and look").
-compare-capture-pair.ps1 compares the whole viewport and has no crop; that is
-the next tool gap, and it is small.
+(The crop that was owed here landed; it does not help either -- see item 4 of
+the gate-6 block below.)
 ALSO: the published target CANNOT be built to a lab dir. Makefile:54-56 --
 a PUBLISHED TARGET NAME publishes whatever BUILD says, so
 `smash64ds-battle-playable-hwtri` always writes the project root. Use
@@ -152,7 +196,7 @@ do not restate them here.
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: is don't see the floating revival platform at all. the Halo is not the correct asset to use
     CAUSE: dEFManagerRebirthHaloEffectDesc is a joint-animated MODEL, drawn as one flat quad.
-    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). Gate 5 priced it free; capture owed.
+    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). No cross-build pair exists; arms diverge.
 
 -Fox down B VFX is not correct or using correct asset.
     Owner: you are still not using the correct asset for Fox's down B reflector.
@@ -162,13 +206,13 @@ do not restate them here.
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). Gate 5 priced it free; link-15 capture owed.
+    STAGE: LOCALIZED. Flag 1 leaks one detached translucent quad per guard, never destroyed; do not flip.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
     CAUSE: dEFManagerImpactWaveEffectDesc is a material-animated model, so no single atlas texture can
     be its 'correct asset'. The row also has a particle half (dust, script 0x58, efmanager.c:2982).
-    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). Gate 5 priced it free; capture owed.
+    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). No cross-build pair exists; arms diverge.
     Built correctly as a single DObj on link 10 (EFDesc omits flag 0x4, so a raw display list is right);
     executes fully, but its triangles still do not reach the effect counter. See 4c29b9615a.
 
