@@ -503,6 +503,33 @@ call never executes and the finally block kills the emulator first. When the
 thing being hunted is a hang, timeout is the EXPECTED path -- the abort read
 belongs in a catch.
 
+THE REFLECTOR'S FILE LOADS LATE. FIX WRITTEN, NOT YET PROVEN (cycle 9).
+
+CAUSE, from the call graph rather than a run: efManagerInitEffects resolves
+every desc ONCE at startup, and gFTDataFoxSpecial2 is a Fox special-move file
+that is not resident that early. ndsEFManagerResolveDescOffsets then takes the
+span==0 branch, nulls proc_display, and can never undo it -- the function
+returns early on a NULL proc_display, so a disabled desc stays disabled for the
+whole run. The offsets themselves are fine; residency does not affect them.
+
+FIX: remember the proc and the desc in a four-entry deferred table, and retry
+the span check when the effect is actually made
+(ndsEFManagerRetryDeferredDescs, called from efManagerFoxReflectorMakeEffect).
+Overflow is counted separately so "the table was full" cannot read like "the
+file never loaded".
+
+NOT PROVEN, AND THE PROOF I WAS GIVEN CANNOT BE MET BY THIS DESIGN. The asked
+engagement proof was EFDESC disabled=0 unknownfile=0. Those counters are
+CUMULATIVE FROM STARTUP, and a deferred design still takes the startup disable
+once -- so disabled=0 is unreachable by construction, and the run after the fix
+reads disabled=1 unknownfile=1 exactly as before. The correct proof is
+gNdsEFDescDeferRecoverCount > 0, which needs Fox to actually down-B; the
+346-frame capture window contains no down-B, so the retry never executed. The
+fix is inert until a reflector is made and must be treated as UNVERIFIED.
+Boundary passes at the tracked default, so the default arm is unaffected.
+
+--- superseded: the conclusion below was right about the symptom, wrong that
+--- the desc is permanently unbacked ---
 THE REFLECTOR DOES NOT NEED A STRONG OVERRIDE. ITS DESC IS DISABLED (cycle 8).
 
 The shield capture run answered the override question as a side effect, and the

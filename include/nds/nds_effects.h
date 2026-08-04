@@ -100,6 +100,11 @@ extern volatile u32 gNdsEFDescUnknownFileCount;
  * names it. Read them only when the counts above are non-zero. */
 extern volatile u32 gNdsEFDescDisabledLast;
 extern volatile u32 gNdsEFDescUnknownFileLast;
+/* Descs deferred because their file was not resident at effect-init time, and
+ * recovered once it loaded. recover>0 with disabled back to 0 is the proof the
+ * reflector's file simply arrived late rather than being unbacked. */
+extern volatile u32 gNdsEFDescDeferRecoverCount;
+extern volatile u32 gNdsEFDescDeferOverflowCount;
 extern volatile u32 gNdsEFDescEffectsSpan[3];
 /* Last checkpoint the KO burst reached. Latched, not cleared, so a frozen
  * capture names the step that faulted even with no usable backtrace -- the

@@ -1250,6 +1250,72 @@ static size_t ndsEFManagerFileSpan(void **file_head)
  * file_head at all. So a desc whose file cannot back it produces an effect GObj
  * with no DObj tree -- nothing drawn, nothing walked -- and the guarded
  * accessors downstream see a NULL DObjGetStruct and return cleanly. */
+/* Descs whose file was not resident at efManagerInitEffects time. Four slots
+ * covers the P1 set with room to spare; overflow is counted rather than
+ * silently dropped, because "the retry table was full" and "the file never
+ * loaded" are different failures and must not read alike. */
+#define NDS_EF_DEFERRED_MAX 4u
+static EFDesc *sNdsEFDeferredDescs[NDS_EF_DEFERRED_MAX];
+static void (*sNdsEFDeferredProcs[NDS_EF_DEFERRED_MAX])(GObj *);
+static u32 sNdsEFDeferredCount;
+
+static void ndsEFManagerDeferDesc(EFDesc *desc)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsEFDeferredCount; i++)
+    {
+        if (sNdsEFDeferredDescs[i] == desc)
+        {
+            return;
+        }
+    }
+    if (sNdsEFDeferredCount >= NDS_EF_DEFERRED_MAX)
+    {
+        gNdsEFDescDeferOverflowCount++;
+        return;
+    }
+    sNdsEFDeferredDescs[sNdsEFDeferredCount] = desc;
+    sNdsEFDeferredProcs[sNdsEFDeferredCount] = desc->proc_display;
+    sNdsEFDeferredCount++;
+}
+
+/* Call before making an effect whose file loads after startup. Restores
+ * proc_display once the span is real and the slot is populated, and applies the
+ * same bounds check the startup path would have. Idempotent and cheap: it walks
+ * at most four entries and clears each one the first time it succeeds, so it is
+ * not a per-effect cost after the file arrives. */
+void ndsEFManagerRetryDeferredDescs(void)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsEFDeferredCount; i++)
+    {
+        EFDesc *desc = sNdsEFDeferredDescs[i];
+        size_t span;
+
+        if (desc == NULL)
+        {
+            continue;
+        }
+        span = ndsEFManagerFileSpan(desc->file_head);
+        if ((span == 0u) || (*desc->file_head == NULL))
+        {
+            continue;
+        }
+        sNdsEFDeferredDescs[i] = NULL;
+        if (((size_t)desc->o_dobjsetup >= span) ||
+            ((size_t)desc->o_mobjsub >= span) ||
+            ((size_t)desc->o_anim_joint >= span) ||
+            ((size_t)desc->o_matanim_joint >= span))
+        {
+            continue;
+        }
+        desc->proc_display = sNdsEFDeferredProcs[i];
+        gNdsEFDescDeferRecoverCount++;
+    }
+}
+
 static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 {
     size_t span;
@@ -1278,6 +1344,20 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
         gNdsEFDescUnknownFileLast = (u32)(uintptr_t)desc;
         if (*desc->file_head == NULL)
         {
+            /* DEFERRED, NOT DEAD. efManagerInitEffects resolves every desc once
+             * at startup, but gFTDataFoxSpecial2 is a Fox special-move file that
+             * is not resident yet at that point -- so the reflector was being
+             * disabled for a file that simply had not loaded, and stayed
+             * disabled forever because this function returns early once
+             * proc_display is NULL and can never re-enable it. Measured
+             * 2026-08-03: EFDESC disabled=1 unknownfile=1 naming
+             * dEFManagerFoxReflectorEffectDesc.
+             *
+             * The OFFSETS above are already correct -- resolving them does not
+             * depend on residency -- so all that is owed is the span check,
+             * retried once the file arrives. Remember the proc so the retry has
+             * something to restore. */
+            ndsEFManagerDeferDesc(desc);
             desc->proc_display = NULL;
             gNdsEFDescDisabledCount++;
             gNdsEFDescDisabledLast = (u32)(uintptr_t)desc;
@@ -1438,6 +1518,7 @@ GObj *efManagerFoxReflectorMakeEffect(GObj *fighter_gobj)
     /* The source maker builds llFoxSpecial2ReflectorDObjDesc with its start/
      * loop/hit/end anim joints. The stand-in below is a flat disc, which is
      * what "still not using the correct asset" has meant every cycle. */
+    ndsEFManagerRetryDeferredDescs();
     return ndsBaseEFManagerFoxReflectorMakeEffect(fighter_gobj);
 #else
     return ndsEFManagerMakeVisualEffect(nNDSVisualEffectReflector, NULL,

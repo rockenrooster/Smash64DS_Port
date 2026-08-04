@@ -2788,6 +2788,8 @@ volatile u32 gNdsEFDescDisabledCount;
 volatile u32 gNdsEFDescUnknownFileCount;
 volatile u32 gNdsEFDescDisabledLast;
 volatile u32 gNdsEFDescUnknownFileLast;
+volatile u32 gNdsEFDescDeferRecoverCount;
+volatile u32 gNdsEFDescDeferOverflowCount;
 volatile u32 gNdsEFDescEffectsSpan[3];
 volatile u32 gNdsKOBurstStage;
 volatile u32 gNdsKOBurstAttemptCount;
