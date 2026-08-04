@@ -181,6 +181,16 @@ Probe discipline (each learned the hard way):
 - A counter with no compiled writer reads 0, which looks clean. Every probe
   needs an engagement count or positive control: zero must mean "measured
   zero," never "the hook never ran" or "the linker removed it."
+- **In GDB/MI, never wrap a format-string `printf` in `-interpreter-exec
+  console "..."` — use `-data-evaluate-expression`.** The inner quotes are
+  unparseable, so GDB answers `^error` for that one command while every
+  other command in the same run succeeds, and the transcript looks healthy.
+  This cost two 2026-08-03 cycles: the first capture lost the frame counter
+  that distinguished a hang from a stall, and the second lost it again after
+  the lesson was already written down, because the `Con` helper made the
+  wrong form the convenient one. `-data-evaluate-expression <expr>` needs no
+  quoting at all. A probe helper that can express the broken form will
+  eventually be used to express it.
 - **When the thing you are hunting is a hang, the probe's TIMEOUT is the
   expected path — put the abort read in a `catch`, not after the call.**
   `Invoke-GdbMarkerScript` throws on timeout, so an abort read placed after it

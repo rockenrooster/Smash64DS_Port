@@ -56,9 +56,23 @@ OPEN.
     different, non-VBlank-paced loop (11x 60Hz) is now running. PacingResult
     never latched PASS despite presented 195 >= the 180 threshold at :4574,
     confirming ndsBattlePlayablePacingUpdate stopped running too.
-    So the battle scene STOPPED at frame 195 and control left it. The seam is
-    whatever exits/stops that scene, not pacing, scheduling, locks or IRQs.
-    OPEN: name that exit. artifacts/verification/2026-08-03_flag0-*.txt.
+    THERE IS NO EXIT (34). Breakpoint at the last present gives the chain:
+    ndsBattlePlayablePresentFrame <- ndsBattlePlayablePresentRealtimeFrame
+    <- syTaskmanRunTask (:8061) <- syTaskmanLoadScene(scVSBattleStartBattle)
+    <- ... <- scManagerRunLoop <- syMainThread5 <- portCoroutineTrampolineC.
+    The battle scene is a COROUTINE, not the main thread. Its loop
+    (syTaskmanRunTask) has exactly two breaks, :8043 terminal_update and
+    :8069 stop_after_iteration, and BOTH fall through to :8074-8078
+    ndsBattlePlayableRecordLifecycleTaskmanExit + ndsBattlePlayablePacingFinish
+    -- and PacingFinish sets PacingResult = PASS unconditionally at :4588.
+    Measured PacingResult is NOT PASS, so the loop never exited by either
+    path. The coroutine is SUSPENDED inside the loop and never resumed:
+    that is why DrawCalls (:4881) froze, why no exit ran, and why the machine
+    stayed alive on other threads. Coroutines resume from ndsOsRunThreads, and
+    a coroutine blocking on osRecvMesg(OS_MESG_BLOCK) yields (libultra_os.c
+    :237). OPEN: read syMainThread5's saved coroutine PC at a frozen stop --
+    it names the yield that never came back.
+    artifacts/verification/2026-08-03_flag0-*.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
