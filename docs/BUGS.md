@@ -401,6 +401,13 @@ OWED AT THE PUBLISH POINT: the combine fix is in src/nds/nds_renderer.c and is
 NOT flag-gated, so it ships. Its flag-0 exposure is censused above (Fox's entry
 Arwing and items) but has not been run; Boundary at the tracked default is owed
 before the next publish, as its own deliberate step.
+ALSO OWED, AND NOT MEASURED: the fix adds real active-frame work -- effects that
+drew untextured now bind and upload a texture. The capture HUD's running FPS
+readout differs on frames carrying one (shield 29.1 -> 27.9, wave 28.3 -> 27.0,
+halo 29.9 -> 29.9), which is suggestive, not a measurement: it is a host-side
+average on two arms that are not paced-matched. A paired A/B is owed if the flag
+is flipped, and the flag-0 arm's exposure is two seconds of Arwing. Do not read
+those three numbers as a priced regression.
 
 FLAG-0 RE-MEASURED AFTER THE FIX (2026-08-04), because changing the walk could
 have changed stand-in lifetime too. It did not: the flag-0 census is unchanged
