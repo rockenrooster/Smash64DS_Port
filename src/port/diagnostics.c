@@ -3615,6 +3615,8 @@ volatile s32 gNdsEffectDLVtx0[4];
 volatile u32 gNdsEffectDLColorMask;
 volatile u32 gNdsEffectDLPrimColor;
 volatile u32 gNdsEffectDLEnvColor;
+volatile u32 gNdsEffectDLOtherModeL;
+volatile u32 gNdsEffectDLOtherModeValid;
 volatile u32 gNdsRendererAdapterEffectPrepCount;
 volatile u32 gNdsRendererAdapterEffectPrepMask;
 volatile u32 gNdsRendererAdapterCustom47DetectedCount;

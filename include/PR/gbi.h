@@ -101,24 +101,44 @@ typedef union {
 
 #define G_CYC_1CYCLE 0u
 #define G_CYC_FILL 0u
-#define G_RM_AA_OPA_SURF 0u
-#define G_RM_AA_OPA_SURF2 0u
-#define G_RM_AA_XLU_SURF 0u
-#define G_RM_AA_XLU_SURF2 0u
-#define G_RM_AA_ZB_OPA_SURF 0u
-#define G_RM_AA_ZB_OPA_SURF2 0u
-#define G_RM_AA_ZB_XLU_SURF 0u
-#define G_RM_AA_ZB_XLU_SURF2 0u
-#define G_RM_CLD_SURF 0u
-#define G_RM_CLD_SURF2 0u
-#define G_RM_OPA_SURF 0u
-#define G_RM_OPA_SURF2 0u
-#define G_RM_XLU_SURF 0u
-#define G_RM_XLU_SURF2 0u
+
+/* THE RENDER MODES CARRY THEIR REAL othermode_l WORDS.
+ *
+ * These were all 0u, which made gDPSetRenderMode unfixable on its own: even
+ * with the macro un-stubbed, `mode1 | mode2` would have been zero and the
+ * 29-bit rendermode field of othermode_l would have been CLEARED rather than
+ * set. Both halves of the defect had to be repaired together.
+ *
+ * Every value below is the ordinary F3DEX2 encoding, taken from the authority
+ * rather than transcribed: they are the preprocessor's own expansion of
+ * decomp/BattleShip-main/decomp/include/PR/gbi.h (RM_AA_ZB_XLU_SURF(1) and
+ * friends), so they cannot drift from the source the effect procs were
+ * written against.
+ *
+ * What they buy: ndsRendererHardwareAlpha (nds_renderer.c:8295) returns a
+ * hardcoded alpha 31 -- fully opaque -- unless othermode_l shows one of
+ * ZMODE_XLU (0x800), FORCE_BL (0x4000), CVG_X_ALPHA (0x1000), or alpha
+ * compare == threshold. G_RM_AA_ZB_XLU_SURF sets all three of the first
+ * group; G_RM_CLD_SURF sets FORCE_BL. G_RM_AA_ZB_OPA_SURF sets none of them,
+ * so opaque geometry keeps the fast opaque path exactly as before. */
+#define G_RM_AA_OPA_SURF 0x00442048u
+#define G_RM_AA_OPA_SURF2 0x00112048u
+#define G_RM_AA_XLU_SURF 0x004041c8u
+#define G_RM_AA_XLU_SURF2 0x001041c8u
+#define G_RM_AA_ZB_OPA_SURF 0x00442078u
+#define G_RM_AA_ZB_OPA_SURF2 0x00112078u
+#define G_RM_AA_ZB_XLU_SURF 0x004049d8u
+#define G_RM_AA_ZB_XLU_SURF2 0x001049d8u
+#define G_RM_CLD_SURF 0x00404340u
+#define G_RM_CLD_SURF2 0x00104340u
+#define G_RM_OPA_SURF 0x0c084000u
+#define G_RM_OPA_SURF2 0x03024000u
+#define G_RM_XLU_SURF 0x00404240u
+#define G_RM_XLU_SURF2 0x00104240u
 #define G_RM_NOOP 0u
 #define G_RM_NOOP2 0u
 #define G_AC_NONE 0u
-#define G_AC_THRESHOLD 0u
+#define G_AC_THRESHOLD 1u
 #define G_TP_PERSP 0u
 #define G_TP_NONE 0u
 #define G_ZS_PIXEL 0u
@@ -134,7 +154,7 @@ typedef union {
 #define G_CC_DECALRGBA 0u
 #define G_CC_BLENDPEDECALA 0u
 #define G_CC_MODULATEIA_PRIM 0u
-#define G_AC_DITHER 0u
+#define G_AC_DITHER 3u
 #define G_CD_MAGICSQ 0u
 #define G_AD_PATTERN 0u
 #define G_TT_NONE 0u
@@ -336,14 +356,46 @@ typedef union {
     (void)(mode1); (void)(mode2); \
 } while (0)
 
+/* THESE TWO ALSO CARRY THEIR WORDS, for the same reason as the colour pair
+ * above and with the same consumer discipline.
+ *
+ * Both are G_SETOTHERMODE_L (0xe2) writes with a fixed shift/length header,
+ * so w0 is a constant per macro:
+ *   gDPSetRenderMode   -> sft=G_MDSFT_RENDERMODE(3), len=29
+ *                         w0 = 0xe2 | ((32-3-29)<<8) | (29-1) = 0xe200001c
+ *   gDPSetAlphaCompare -> sft=G_MDSFT_ALPHACOMPARE(0), len=2
+ *                         w0 = 0xe2 | ((32-0-2)<<8) | (2-1)   = 0xe2001e01
+ * ndsRendererRecordOtherMode (nds_renderer.c:5839) already decodes exactly
+ * this header, so no renderer change is needed to read them.
+ *
+ * SSB64 does not set effect translucency per effect: efDisplayXLUProcDisplay
+ * and efDisplayCLDProcDisplay (efdisplay.c:15, :5) are standalone bracket
+ * GObjs on links 15 and 18 at display orders 0 and 3 whose entire bodies are
+ * these macros, and they write the whole effect LAYER's blend state.
+ * efManagerShieldProcDisplay emits only prim/env and depends on that bracket
+ * entirely, so zeroing here made the shield, the rebirth halo, the blast
+ * pillar, and the impact wave all draw at polygon alpha 31.
+ *
+ * Nothing in the port executes gSYTaskmanDLHeads[] as a display list, so the
+ * only reader of these words is the effect-scoped scan in
+ * reloc_backend_renderer_dl.c (ndsRendererAdapterMarkDisplayProcHeads /
+ * ...CaptureDisplayProcColors), which applies them solely on the effect
+ * submit path. Stage, fighter, interface, menu, and movie draws are
+ * unaffected by construction, not by luck. */
 #define gDPSetRenderMode(pkt, mode1, mode2) do { \
-    NDS_GBI_ZERO_PACKET(pkt); \
-    (void)(mode1); (void)(mode2); \
+    Gfx *_nds_gbi_pkt = (Gfx *)(pkt); \
+    if (NDS_GBI_PACKET_IN_MAIN_RAM(_nds_gbi_pkt)) { \
+        _nds_gbi_pkt->words.w0 = 0xe200001cu; \
+        _nds_gbi_pkt->words.w1 = (u32)(mode1) | (u32)(mode2); \
+    } \
 } while (0)
 
 #define gDPSetAlphaCompare(pkt, type) do { \
-    NDS_GBI_ZERO_PACKET(pkt); \
-    (void)(type); \
+    Gfx *_nds_gbi_pkt = (Gfx *)(pkt); \
+    if (NDS_GBI_PACKET_IN_MAIN_RAM(_nds_gbi_pkt)) { \
+        _nds_gbi_pkt->words.w0 = 0xe2001e01u; \
+        _nds_gbi_pkt->words.w1 = (u32)(type); \
+    } \
 } while (0)
 
 #define gDPSetTexturePersp(pkt, type) do { \

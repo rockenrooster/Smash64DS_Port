@@ -184,6 +184,16 @@ $missing = $required | Where-Object { $symbols -notcontains $_ }
 if ($missing.Count -gt 0) {
     throw "probe symbols absent from $elf : $($missing -join ', ')"
 }
+# The effect layer's captured blend state (BUGS rows 1-4). OPTIONAL rather than
+# required, because this probe's whole job is to compare an arm that has the
+# capture against one that does not: putting these in $required would make the
+# control arm throw before it took a single picture, and putting them in the
+# KOSHOT line unconditionally would make gdb abandon the batch at the first
+# unknown symbol -- which looks like a healthy transcript with the rest of the
+# run missing.
+$has_effect_othermode =
+    ($symbols -contains 'gNdsEffectDLOtherModeL') -and
+    ($symbols -contains 'gNdsEffectDLOtherModeValid')
 
 # ADDRESS-RESOLVED, NOT NAME-RESOLVED, AND THE MATCH MUST BE UNIQUE.
 # On 2026-08-04 `break <name>` handed this probe
@@ -360,6 +370,26 @@ function New-StateCommand([string]$Name) {
         'gNdsRendererStageOwnerPostArmRejectCount')
 }
 
+# THE ENGAGEMENT LINE FOR ROWS 1-4, and it is deliberately its own printf.
+# othermodel is what ndsRendererHardwareAlpha reads to decide whether an effect
+# polygon is translucent at all: zero means it took the alpha-31 early return
+# and drew the effect fully opaque. valid=0 means no G_SETOTHERMODE_L word ever
+# reached the effect scan, which is the pre-fix state and must not be confused
+# with "the scan ran and found nothing". Emitted only when the ELF carries the
+# globals, so the same probe runs on both arms.
+function New-EffectXluCommand([string]$Name) {
+    if (-not $has_effect_othermode) {
+        return ('printf "KOXLU tag=' + $Name + ' othermodel=absent valid=absent\n"')
+    }
+    return ('printf "KOXLU tag=' + $Name +
+        ' othermodel=%#x valid=%u zmode=%#x forcebl=%u cvgxalpha=%u ac=%u\n"' +
+        ', gNdsEffectDLOtherModeL, gNdsEffectDLOtherModeValid' +
+        ', (gNdsEffectDLOtherModeL & 0xc00)' +
+        ', ((gNdsEffectDLOtherModeL >> 14) & 1)' +
+        ', ((gNdsEffectDLOtherModeL >> 12) & 1)' +
+        ', (gNdsEffectDLOtherModeL & 3)')
+}
+
 try {
     $config_state = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath `
@@ -488,6 +518,7 @@ try {
         'set $p = $p->next',
         'end',
         (New-StateCommand 'ko-burst'),
+        (New-EffectXluCommand 'ko-burst'),
         (New-CaptureCommand 'ko-burst-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
@@ -533,6 +564,7 @@ try {
         'commands',
         'silent',
         (New-StateCommand 'star-ko'),
+        (New-EffectXluCommand 'star-ko'),
         (New-CaptureCommand 'star-ko-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
@@ -577,6 +609,7 @@ try {
         'set $vis_active = gNdsVisualEffectActiveCount',
         'set $vis_after = gNdsVisualEffectCreateCount',
         (New-StateCommand 'rebirth-halo'),
+        (New-EffectXluCommand 'rebirth-halo'),
         (New-CaptureCommand 'rebirth-halo-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
@@ -664,6 +697,7 @@ try {
         # ALREADY broken, the death is not the trigger and row 6's premise
         # moves.
         (New-StateCommand 'pre-death-baseline'),
+        (New-EffectXluCommand 'pre-death-baseline'),
         (New-CaptureCommand 'pre-death-baseline-probe' $emulator.Id $evidence_prefix),
         # TWO DEATHS, STAR FIRST, AND THE STAR ONE IS THE CORRECTION.
         #
@@ -696,6 +730,7 @@ try {
         'ignore $bpnum 180',
         'continue',
         (New-StateCommand 'post-star-3s'),
+        (New-EffectXluCommand 'post-star-3s'),
         (New-CaptureCommand 'post-star-3s-probe' $emulator.Id $evidence_prefix),
 
         # SECOND DEATH, SIDE KO, same fighter. The owner reported this after

@@ -213,6 +213,12 @@ extern volatile s32 gNdsEffectDLVtx0[4];
 extern volatile u32 gNdsEffectDLColorMask;
 extern volatile u32 gNdsEffectDLPrimColor;
 extern volatile u32 gNdsEffectDLEnvColor;
+/* The effect LAYER's blend state, accumulated from the XLU/CLD bracket GObjs
+ * and from any proc that sets its own mode. Valid is the engagement bit: 0
+ * means no G_SETOTHERMODE_L word ever reached the scan, which is exactly the
+ * pre-fix state and reads identically to "the scan never ran" without it. */
+extern volatile u32 gNdsEffectDLOtherModeL;
+extern volatile u32 gNdsEffectDLOtherModeValid;
 
 /* The effect DObj tree walk (reloc_backend_renderer_dl.c). Declared and reset
  * here so they exist in EVERY build, not only the one that increments them:

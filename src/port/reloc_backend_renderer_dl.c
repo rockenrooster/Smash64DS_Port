@@ -6091,11 +6091,77 @@ static const Gfx *sNdsRendererAdapterDisplayProcHeadMark[
 static u32 sNdsRendererAdapterEffectColorMask;
 static u32 sNdsRendererAdapterEffectPrimColor;
 static u32 sNdsRendererAdapterEffectEnvColor;
+/* Colour is per-effect; BLEND STATE IS PER-LAYER AND STICKY. The XLU bracket
+ * GObj emits G_RM_AA_ZB_XLU_SURF at display order 0 and the CLD bracket
+ * switches to G_RM_CLD_SURF at order 3 (efdisplay.c:15, :5), and every effect
+ * drawn in between inherits it -- efManagerShieldProcDisplay emits no render
+ * mode of its own at all. So this accumulates across display procs instead of
+ * being rebuilt per span, which is what the RDP does. */
+static u32 sNdsRendererAdapterEffectOtherModeL;
+static u32 sNdsRendererAdapterEffectOtherModeValid;
+
+/* One G_SETOTHERMODE_L packet folded into the running value, using the same
+ * shift/length decode as ndsRendererRecordOtherMode (nds_renderer.c:5869) so
+ * the two cannot disagree about what a word means. */
+static void ndsRendererAdapterFoldDisplayProcOtherModeL(u32 w0, u32 w1)
+{
+    u32 bits = (w0 & 0xffu) + 1u;
+    u32 pos = (w0 >> 8) & 0xffu;
+    u32 shift;
+    u32 mask;
+
+    if ((bits > 32u) || (pos >= 32u) || ((bits + pos) > 32u))
+    {
+        return;
+    }
+    shift = 32u - pos - bits;
+    mask = (bits >= 32u) ? 0xffffffffu : (((1u << bits) - 1u) << shift);
+    sNdsRendererAdapterEffectOtherModeL =
+        (sNdsRendererAdapterEffectOtherModeL & ~mask) | (w1 & mask);
+    sNdsRendererAdapterEffectOtherModeValid = 1u;
+}
+
+/* The span one display proc emitted. Folding is idempotent (last writer wins
+ * per field), so scanning a span twice -- which the effect path does, once at
+ * its own draw and once when the next proc re-marks -- costs nothing. */
+static void ndsRendererAdapterScanDisplayProcOtherMode(void)
+{
+    u32 head;
+
+    for (head = 0u; head < NDS_RENDERER_STAGE_DL_HEADS; head++)
+    {
+        const Gfx *cursor = sNdsRendererAdapterDisplayProcHeadMark[head];
+        const Gfx *end = gSYTaskmanDLHeads[head];
+        u32 scanned = 0u;
+
+        if ((cursor == NULL) || (end == NULL) || (cursor >= end))
+        {
+            continue;
+        }
+        while ((cursor < end) &&
+               (scanned < NDS_RENDERER_ADAPTER_DISPLAY_PROC_SCAN_MAX))
+        {
+            if ((cursor->words.w0 >> 24) ==
+                NDS_FIGHTER_DL_OP_SETOTHERMODE_L)
+            {
+                ndsRendererAdapterFoldDisplayProcOtherModeL(
+                    cursor->words.w0, cursor->words.w1);
+            }
+            cursor++;
+            scanned++;
+        }
+    }
+}
 
 void ndsRendererAdapterMarkDisplayProcHeads(void)
 {
     u32 i;
 
+    /* Close the previous proc's span before opening this one. The XLU and CLD
+     * brackets draw NOTHING, so they never reach the effect submit path and
+     * their span would otherwise be overwritten unread -- which is precisely
+     * the state the shield depends on. */
+    ndsRendererAdapterScanDisplayProcOtherMode();
     for (i = 0u; i < NDS_RENDERER_STAGE_DL_HEADS; i++)
     {
         sNdsRendererAdapterDisplayProcHeadMark[i] = gSYTaskmanDLHeads[i];
@@ -6132,6 +6198,13 @@ void ndsRendererAdapterCaptureDisplayProcColors(void)
                 sNdsRendererAdapterEffectEnvColor = cursor->words.w1;
                 sNdsRendererAdapterEffectColorMask |= 2u;
             }
+            else if (op == NDS_FIGHTER_DL_OP_SETOTHERMODE_L)
+            {
+                /* The impact wave sets its own mode at the top of its own
+                 * proc (efmanager.c:3286), so the current span matters too. */
+                ndsRendererAdapterFoldDisplayProcOtherModeL(
+                    cursor->words.w0, cursor->words.w1);
+            }
             cursor++;
             scanned++;
         }
@@ -6139,6 +6212,8 @@ void ndsRendererAdapterCaptureDisplayProcColors(void)
     gNdsEffectDLColorMask = sNdsRendererAdapterEffectColorMask;
     gNdsEffectDLPrimColor = sNdsRendererAdapterEffectPrimColor;
     gNdsEffectDLEnvColor = sNdsRendererAdapterEffectEnvColor;
+    gNdsEffectDLOtherModeL = sNdsRendererAdapterEffectOtherModeL;
+    gNdsEffectDLOtherModeValid = sNdsRendererAdapterEffectOtherModeValid;
 }
 
 void ndsRendererAdapterBeginStageTraversal(void)
@@ -9159,6 +9234,15 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
         {
             render_stats->env_color = sNdsRendererAdapterEffectEnvColor;
+        }
+        /* THE ONLY WRITER OF THE CAPTURED BLEND STATE, and it is inside the
+         * effect-submit guard. Without this the effect layer inherits whatever
+         * othermode_l the previous list left, which is an opaque stage mode,
+         * and ndsRendererHardwareAlpha takes its alpha-31 early return for
+         * every effect polygon. */
+        if (sNdsRendererAdapterEffectOtherModeValid != 0u)
+        {
+            render_stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
         }
         effect_seed_before = render_stats->hardware_matrix_seed_count;
         effect_matrix_cmd_before = render_stats->matrix_command_count;
