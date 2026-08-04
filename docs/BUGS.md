@@ -62,11 +62,18 @@ OPEN.
     BSS LAYOUT REFUTED (cycle 26): a clean 4d1015b75 plus 28 bytes of live BSS
     padding reaches 200 frames in 28s. Data-layout growth alone does not
     reproduce the hang.
-    STILL UNTESTED, and it is the distinction that matters: ae7c3e735 also grew
-    .text (the bounded parsers), and CODE placement is not what a BSS pad
-    perturbs. So the remaining suspects are the parser change's CONTENT and its
-    .text displacement, in that order -- revert the parser hunks on top of the
-    current tree and probe at 200.
+    PARSER REVERT ON HEAD STILL HANGS (cycle 27): reverse-applying both decomp
+    patches on the current tree and probing at 200 stalls exactly as before. So
+    the parsers are not the SOLE cause of today's hang.
+    That does NOT exonerate the range, and the inference matters: this build
+    still carries d4c7d3d7b, 8508fc8d6 and 4c29b9615a, so an independent later
+    cause would produce the same result. Bisect already showed ae7c3e735 ALONE
+    hangs, so within that commit the remaining candidate is the resolver hunk --
+    despite its counters reading 0 -- or its .text displacement.
+    DECISIVE NEXT TEST: revert the parsers AT ae7c3e735, not at HEAD. That is
+    the only build that separates that commit's parsers from its resolver. Pass
+    means the parsers; hang means the resolver (and its zero counters then mean
+    the mechanism is placement, not the rejection itself).
     HARNESS TRAP WORTH REMEMBERING: unreferenced BSS is collected by
     --gc-sections, so the first discriminant build was byte-identical to the
     anchor and would have "passed" meaninglessly. Any padding probe must be
