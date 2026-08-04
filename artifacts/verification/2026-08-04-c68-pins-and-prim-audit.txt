@@ -1,0 +1,173 @@
+Owner report, verbatim: "does the revival platform mess with the lighting at all?
+FPS drops a lot, the scene gets dimmer and some things lose textures."
+
+HEADLINE: in three full one-minute matches -- one on the pre-fix ROM and two on
+the post-fix ROM -- the 24 pinned stage textures are NEVER dropped, no texture
+upload is EVER rejected, and the beam's prim colour has exactly ONE value. The
+reported symptom did not reproduce on any counter that would register it.
+Cycle 68, 2026-08-04. No build was spent; all four numbers come from runs that
+already existed.
+
+======================================================================
+1. THE PINS -- the primary result
+======================================================================
+gNdsRendererBattleStaticTexturePreparedCount is a LIVE count, not a high-water
+mark: zeroed at prepare (nds_renderer.c:11018), incremented once per prepared
+record (:11321), and zeroed again on teardown (:11383). It is additionally
+checked fail-closed against the expected key count at :11354. So 24 means 24 are
+resident right now, and a drop would read as a smaller number or 0.
+
+  tag                 frame  prepared  pinnedHits  teardown  prepareFail
+  pre-death-baseline    246     24         1,748       0          0
+  star-ko               342     24         5,396       0          0
+  rebirth-halo          383     24         6,954       0          0     <- maker
+  post-star-3s          427     24         8,431       0          0     <- on screen
+  ko-burst              614     24        14,897       0          0
+  post-side-3s          789     24        20,983       0          0
+  late-match           1390     24        44,237       0          0     <- +1007
+  results              2174     24        68,984       1          0     <- scene change
+
+BEFORE the halo: 24. DURING: 24. 1,007 frames AFTER the maker fired: 24. The
+owner says it never recovers; there is nothing to recover from in these runs.
+
+The pinned-HIT counter is the independent confirmation and it does not depend on
+the semantics above at all: it is incremented per hit at :3598 and it keeps
+climbing to the last frame -- 20,983 -> 44,237 over frames 789-1390 (38.7
+hits/frame) and 44,237 -> 68,984 over 1390-2174 (31.6 hits/frame). Evicted
+textures cannot serve hits. The pins are alive and working when the owner's
+report says they should be gone.
+
+This also positively confirms the row 9 fix (commit 4e18101cca) is holding: the
+24 pins survive the first KO, which is precisely what row 9 said they did not.
+
+======================================================================
+2. NO UPLOAD EVER FAILS
+======================================================================
+Zero at EVERY tag in ALL THREE runs:
+
+  gNdsFighterDLAllDrawHardwareTextureRejectCount   (freject)     0
+  gNdsEffectRendererTextureRejectCount             (ereject)     0
+  gNdsRendererParticleAtlasFailCount               (atlasfail)   0
+  gNdsRendererBattleStaticTextureViolationCount    (staticviol)  0
+  gNdsRendererStageOwnerAbortCount                 (abort)       0
+  gNdsRendererBattleStaticTexturePrepareFailCount                0
+
+ndsRendererHardwareRejectTexture (:12757) bumps
+stats->hardware_texture_reject_count UNCONDITIONALLY at :12765, and that is what
+feeds the two published reject counters. Both read 0, so there were no
+rejections to attribute -- which makes the ALLOC / GENTEX / TEXIMAGE split moot
+for these runs. Neither "cache thrashing" nor "VRAM exhausted" is happening.
+
+CAVEAT, so nobody reads a false zero later: the reason mask
+gNdsRendererProfileTextureRejectReasonMask IS present in the c68 ELF, but its
+writer is behind NDS_RENDERER_PROFILE_LEVEL >= 2 or NDS_R2_STAGE_ROUTE_PROBE
+(:12767-12777). Reading it on this ROM would be the counter-with-no-compiled-
+writer trap. It needs a flag-enabled build to mean anything, and it is not
+needed while the unconditional reject counters are 0.
+
+======================================================================
+3. PRIM DOES NOT ANIMATE -- two independent confirmations
+======================================================================
+(a) ASSET. A scan of all 13,616 bytes of 85.vpk0.bin finds exactly ONE
+    G_SETPRIMCOLOR in the entire file:
+
+      FFFFFFFF  x1  at 0x28a8
+
+    and exactly ONE combine decoding to mode 3, at 0x28a0 -- eight bytes
+    earlier, in the same list. The prim write and the mode-3 selection are
+    adjacent commands. There is no second prim value anywhere in the file to
+    animate to. Distinct prim values presented at the mode-3 bake = 1.
+
+(b) THE A/B ITSELF. The pre-fix ROM does not take the mode-3 branch at all, so
+    prim is not in its key; the post-fix ROM keys on prim. If prim varied, the
+    two would diverge on cache behaviour. They are BIT-IDENTICAL at all eight
+    tags, on every counter:
+
+      memofill    9  9  9  12  12  15  15  18   (both ROMs)
+      memostale   0  0  0   3   3   6   6   9   (both ROMs)
+      pinnedHits  1748 5396 6954 8431 14897 20983 44237 68984 (both ROMs)
+      ownerreject    1    1    1   40   168   298   335   501 (both ROMs)
+
+    18 cache fills across a whole match. A per-frame variant storm over the
+    halo's ~200-frame life would be in the hundreds.
+
+The coordinator independently killed this from the source while this was being
+measured: dEFManagerRebirthHaloEffectDesc (efmanager.c:1648) declares MatAnimJoint
+offset 0x0 -- no material animation joint, so an animated prim has nowhere to
+live -- and efManagerRebirthHaloMakeEffect (:5994) writes no colour at all.
+Three independent lines agree. The variant storm does not exist and c68 did not
+introduce one. Keying on prim is correct and costs exactly one cache entry.
+
+======================================================================
+4. THE LIGHTING CANDIDATE -- strongly narrowed, not killed
+======================================================================
+sNdsR2EpochUnlitVertexColor (:19224) is written at ONE site, :19489, inside
+ndsRendererNativeShadeProductionActions (:19430, 2 callers). Every read is in
+the native FIGHTER production path:
+
+  :20431  ndsRendererNativePrepareProductionRun        (drops POLY_FORMAT_LIGHT0)
+  :19608  ndsRendererNativeShadeProductionActions      (skips diffuse/ambient)
+  :20607  ndsRendererNativeEmitProductionRawTexturedRun
+  :20648  ndsRendererNativeEmitProductionRawUntexturedRun
+  :20707  ndsRendererNativeEmitProductionPrimitiveGroups
+  :20776  ndsRendererNativeEmitProductionCrossRun
+
+and the colour it substitutes is ndsRendererR2DenseVertexColor15(dense_id),
+which reads sNdsNativeFighterDenseVertices (:19230).
+
+THE STRUCTURAL POINT: the revival halo is an EFFECT, drawn through the effect DL
+path (the adapter's ndsRendererExecuteDisplayListWithVertexCache). It never
+enters ndsRendererNativeShadeProductionActions, so it CANNOT write this flag.
+The stage is not drawn through these emitters either, so it cannot read it.
+
+Therefore a stale flag can only mis-light FIGHTER geometry, using a value left
+by another FIGHTER epoch. That is exactly what E32's dark-maroon hurt flash was,
+and it is a real staleness risk worth closing -- but it is NOT a mechanism for a
+scene-wide dim, and the revival platform cannot be its trigger. It is not the
+leading explanation for the owner's wording.
+
+TO KILL IT PROPERLY needs one counter pair -- writes at :19489 versus reads at
+:20431 per frame. nm finds NO such instrumentation in the c68 ELF (no
+UnlitVertex / EpochUnlit / ShadeCallCount / ShadeFrameCount symbols), so this is
+the one question here that genuinely requires a build. Not built; awaiting the
+orchestrator's call.
+
+======================================================================
+5. THE DISCRIMINATOR CANNOT BE APPLIED, AND THAT IS THE REAL GAP
+======================================================================
+"Does the dimmed geometry still have its texture" separates one bug from two.
+It cannot be answered from these runs because NO capture shows dimming OR
+texture loss. All seven captures per run are clean, and the two ROMs differ by
+1,126 px in one 52x22 box (the beam) against a same-ROM floor of 0.
+
+So the honest state is: THE SYMPTOM DID NOT REPRODUCE. Three things are worth
+checking before hunting a mechanism, in cost order:
+
+  a. WHICH ROM the owner watched. These runs are the lab
+     smash64ds-battle-playable-proof-hwtri, not the published
+     smash64ds-battle-playable-hwtri. Rows 6 and 9 were reported from normal
+     play. The flags differ.
+  b. THE FPS HALF MAY BE THE HARNESS, NOT THE ROM. probe-ko-vfx.ps1 stops the
+     core at eight capture points and runs a PowerShell screenshot helper while
+     stopped; the window freezes each time. One run this cycle (c68run1) stalled
+     long enough in that helper that the guest advanced ~50 frames and every
+     later event-armed tag drifted. Somebody watching that window would see
+     "FPS drops a lot" with nothing wrong in the ROM at all. This does NOT
+     explain dimming or texture loss.
+  c. A LONGER OR DIFFERENTLY-DRIVEN MATCH. These runs force two early KOs at
+     fixed frames and finish in one minute. The owner plays.
+
+RECOMMENDED NEXT STEP, not taken: get the owner to say which ROM and roughly
+when, or capture a run on the published ROM under ordinary play. Hunting a
+mechanism for a symptom that no counter in three runs registers is the expensive
+order.
+
+======================================================================
+IDENTITY
+======================================================================
+Pre-fix  : builds/build-c66-halo-latch     (run c68-latch-probe)
+Post-fix : builds/build-c68-halo-primrgb   (runs c68-halo-primrgb, c68-repro)
+Branch   : codex/r2-runtime2
+c68-halo-primrgb's post-star-3s capture is discarded as a stalled capture; see
+2026-08-04-c68-row1-halo-prim-rgb.txt. Its counters are quoted here only where
+noted, and the c68 column above is c68-repro.
