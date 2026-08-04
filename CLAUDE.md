@@ -27,8 +27,12 @@ These are about this tool, so they are not in `AGENTS.md`:
 - **You can push to the github repo periodically on confirmed progress
 - ** Committing locally is ordinary work;
 - The owner's given name must not appear in tracked files. Scan before pushing.
-- End commit messages with
-  `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
+- End commit messages with a `Co-Authored-By` trailer crediting the model that
+  actually authored the change — e.g.
+  `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>` or
+  `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`. The trailer is an
+  authorship record, not a fixed string; an orchestrator committing an agent's
+  work credits the agent's model.
 - `.codegraph/` exists here, so the CodeGraph section of `AGENTS.md` applies:
   reach for `codegraph_explore` before grep or Read.
 - **Thirteen project-local skills own Nintendo DS work.** Eleven generic
