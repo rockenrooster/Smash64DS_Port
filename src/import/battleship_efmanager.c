@@ -1508,7 +1508,26 @@ GObj *efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
 }
 GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
 {
-    return ndsBaseEFManagerImpactWaveMakeEffect(pos, index, rotate);
+    /* Row 4's arming counter. The wave has never been captured, and without
+     * this a probe cannot tell "spawned and drew grey" from "never spawned":
+     * efManagerMakeEffectNoForce returns NULL on a full EFStruct pool and the
+     * source maker swallows it (efmanager.c:3335). Index is recorded because
+     * it IS the trigger identity -- the hard landing passes 4 and the owner
+     * reports neither white nor green. */
+    GObj *effect_gobj =
+        ndsBaseEFManagerImpactWaveMakeEffect(pos, index, rotate);
+
+    gNdsEffectImpactWaveLastIndex = index;
+    if (effect_gobj != NULL)
+    {
+        gNdsEffectImpactWaveMakeCount++;
+        gNdsEffectImpactWaveLastGObjID = (u32)effect_gobj->id;
+    }
+    else
+    {
+        gNdsEffectImpactWaveMakeNullCount++;
+    }
+    return effect_gobj;
 }
 GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos)
 {

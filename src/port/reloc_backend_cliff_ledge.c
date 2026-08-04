@@ -15552,6 +15552,13 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsEffectDLEnvColor = 0u;
     gNdsEffectDLOtherModeL = 0u;
     gNdsEffectDLOtherModeValid = 0u;
+    gNdsEffectDLSubmitOtherModeIn = 0u;
+    gNdsEffectDLSubmitOtherModeOut = 0u;
+    gNdsEffectDLSubmitCount = 0u;
+    gNdsEffectImpactWaveMakeCount = 0u;
+    gNdsEffectImpactWaveMakeNullCount = 0u;
+    gNdsEffectImpactWaveLastIndex = -1;
+    gNdsEffectImpactWaveLastGObjID = 0u;
     gNdsStageGCDrawAllLoopHardwareCarrySeedCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarryCaptureCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount = 0u;

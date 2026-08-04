@@ -219,6 +219,28 @@ extern volatile u32 gNdsEffectDLEnvColor;
  * pre-fix state and reads identically to "the scan never ran" without it. */
 extern volatile u32 gNdsEffectDLOtherModeL;
 extern volatile u32 gNdsEffectDLOtherModeValid;
+/* PER-SUBMIT, NOT PER-LAYER -- and the distinction cost cycle 65 a conclusion.
+ * gNdsEffectDLOtherModeL above is a single running LAYER value sampled at a
+ * frame marker, so reading it after "rebirth-halo" tells you the effect layer's
+ * sticky state when the core stopped, NOT the mode that effect's list ran with.
+ * These three are latched around each effect DL submit: In is the mode the list
+ * inherited, Out is what it left (an asset list carrying its own
+ * G_SETOTHERMODE_L moves Out away from In), Count is the engagement bit AND the
+ * ordinal a probe needs to attribute a reading to one submit. */
+extern volatile u32 gNdsEffectDLSubmitOtherModeIn;
+extern volatile u32 gNdsEffectDLSubmitOtherModeOut;
+extern volatile u32 gNdsEffectDLSubmitCount;
+
+/* Row 4: the impact wave has never been captured in nine cycles and had no
+ * arming counter at all, so "not showing the green impact effect" could not be
+ * separated from "never spawned". Index is the trigger identity, which is part
+ * of the answer rather than a footnote: efManagerImpactWaveMakeEffect's `index`
+ * selects the wave's appearance (efmanager.c:3329), the hard landing passes 4
+ * (reloc_backend_compat_shims.c:7681), and the owner reports grey/black. */
+extern volatile u32 gNdsEffectImpactWaveMakeCount;
+extern volatile u32 gNdsEffectImpactWaveMakeNullCount;
+extern volatile s32 gNdsEffectImpactWaveLastIndex;
+extern volatile u32 gNdsEffectImpactWaveLastGObjID;
 
 /* The effect DObj tree walk (reloc_backend_renderer_dl.c). Declared and reset
  * here so they exist in EVERY build, not only the one that increments them:

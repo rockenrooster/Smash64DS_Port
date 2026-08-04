@@ -9244,6 +9244,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         {
             render_stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
         }
+        /* Latched HERE, not at the display-proc marker, because the marker
+         * publishes the layer's sticky value and a probe stopping at one effect
+         * would read another effect's mode. This is the mode THIS list starts
+         * with; the Out latch below is what it finishes with. */
+        gNdsEffectDLSubmitOtherModeIn = render_stats->othermode_l;
         effect_seed_before = render_stats->hardware_matrix_seed_count;
         effect_matrix_cmd_before = render_stats->matrix_command_count;
         effect_xform_before = render_stats->transformed_vertex_count;
@@ -9265,6 +9270,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
          * two pointers out of the callee's argument register and got three
          * different answers; nds_effects.h records why that read can never
          * settle it. */
+        /* Out - In names an asset list that carries its own render mode: the
+         * rebirth halo's DObj entry[2] list-0 leaves set TEX_EDGE and restore
+         * OPA_SURF (85.vpk0.bin 0x23a8/0x2490), while its list-1 beam
+         * (0x2890) emits no G_SETOTHERMODE_L at all and leaves Out == In. */
+        gNdsEffectDLSubmitOtherModeOut = render_stats->othermode_l;
+        gNdsEffectDLSubmitCount++;
         gNdsEffectDLCfgMask =
             ((config.initial_projection != NULL) ? 1u : 0u) |
             ((config.initial_modelview != NULL) ? 2u : 0u);

@@ -1,0 +1,202 @@
+Row 1 (revival platform) -- does the RebirthHalo's baked asset display list
+carry a G_SETOTHERMODE_L (0xE2)?
+
+ANSWER: YES -- 16 of them, but ONLY on one of the effect's two dl_link buckets.
+The bucket that draws the white beam carries none, and in the source that
+bucket is a SEPARATE RDP output stream with its own render-mode preamble.
+
+Cycle 66, 2026-08-04. No build and no emulator were spent on this. Every number
+below is decoded from read-only bytes on disk.
+
+======================================================================
+INPUTS (read-only; both are extracted, not committed)
+======================================================================
+  decomp/BattleShip-main/decomp/assets/us/relocData/85.vpk0.bin   13,616 B
+  decomp/BattleShip-main/decomp/assets/us/relocData.csv           row 85
+
+  relocData.csv row 85:
+      1, 0x172784, 0x0044, 0x0393, 0xffff, 0x0d4c
+      isVpk0=1  dataOffset=0x172784  relocInternOffset=0x0044
+      compressedSize=0x0393  relocExternOffset=0xffff  decompressedSize=0x0d4c
+
+  compressedSize and decompressedSize are WORD counts, not bytes:
+      0x0393 * 4 = 3,660 = size of 85.vpk0
+      0x0d4c * 4 = 13,616 = size of 85.vpk0.bin          (both confirmed)
+  Internal relocation chain head = word 0x44 = byte 0x110; walking it with
+  chain[slot] = (word & 0xFFFF) * 4, next = word >> 16, terminator 0xFFFF
+  yields 143 internal fixups. No external chain (head 0xFFFF).
+
+  File 85 layout (decomp/BattleShip-main/decomp/tools/relocFileDescriptions.us.txt):
+      MObjSub      MBallRays      0x0108
+      DObjDesc     MBallRays      0x0628
+      AnimJoint    MBallRays      0x0710
+      MatAnimJoint MBallRays      0x0860
+      DObjDesc     RebirthHalo    0x2AC0     <- dEFManagerRebirthHaloEffectDesc
+      AnimJoint    RebirthHalo    0x2B70        (efmanager.c:1671)
+      MObjSub      ItemGetSwirl   0x2CA8
+      DObjDesc     ItemGetSwirl   0x3170
+
+======================================================================
+THE HALO'S DObjDesc (0x2AC0, 4 entries x 44 bytes, DL pointer at +4)
+======================================================================
+  entry[0] @0x2ac0 id=0   dl_ptr@0x2ac4 raw=0x00000000 -> NULL
+  entry[1] @0x2aec id=1   dl_ptr@0x2af0 raw=0x0ac70aa6 -> 0x2a98
+  entry[2] @0x2b18 id=2   dl_ptr@0x2b1c raw=0x0ade0aac -> 0x2ab0
+  entry[3] @0x2b44 id=18  dl_ptr@0x2b48 raw=0x00000000 -> NULL
+
+  The +4 pointer is a DObjDLLink[] table, terminator { list_id 4, NULL }:
+      entry[1] table @0x2a98: {0 -> 0x2378} {1 -> 0x2a88} {4 -> NULL}
+      entry[2] table @0x2ab0: {0 -> 0x27e8}               {4 -> NULL}
+
+======================================================================
+WHERE THE 0xE2 WORDS ARE
+======================================================================
+entry[2] / list_id 0 -> wrapper 0x27e8 -> four leaves 0x2388 0x24a0 0x25b8 0x26d0.
+Each leaf is bracketed identically. Leaf 1 verbatim:
+
+  0x2398: e3001001 00008000  SETOTHERMODE_H  cycle type
+  0x23a0: e2001e01 00000001  SETOTHERMODE_L  shift=0  len=2   ALPHACOMPARE=1 (G_AC_THRESHOLD)
+  0x23a8: e200001c 00553078  SETOTHERMODE_L  shift=3  len=29  RENDERMODE
+  0x23b0: fc127e24 fffff3f9  SETCOMBINE      rgb=(TEXEL0-0)*SHADE+0, a=TEXEL0
+  ... CI4 40x16 texture, 16-entry RGBA16 TLUT at 0x918, texels at 0xa40 ...
+  0x2480: e3001001 00000000  SETOTHERMODE_H
+  0x2488: e2001e01 00000000  SETOTHERMODE_L  ALPHACOMPARE=0 (G_AC_NONE)
+  0x2490: e200001c 00552078  SETOTHERMODE_L  RENDERMODE (restore)
+  0x2498: df000000 00000000  ENDDL
+
+  0x00553078 = G_RM_AA_ZB_TEX_EDGE | G_RM_AA_ZB_TEX_EDGE2
+      low half 0x3078 = AA_EN|Z_CMP|Z_UPD|IM_RD|CVG_DST_CLAMP|ZMODE_OPA
+                        |CVG_X_ALPHA|ALPHA_CVG_SEL
+      high half 0x0055 = GBL_c1|GBL_c2 of (CLR_IN, A_IN, CLR_MEM, A_MEM)
+  0x00552078 = the same without CVG_X_ALPHA = G_RM_AA_ZB_OPA_SURF|..._SURF2
+
+  4 leaves x (1 alpha-compare set + 1 rendermode set + the two restores) = 16
+  G_SETOTHERMODE_L commands. That is the whole count; there are none anywhere
+  else in the halo's reachable lists.
+
+======================================================================
+WHERE THEY ARE NOT -- THE WHITE BEAM
+======================================================================
+entry[1] / list_id 1 -> 0x2a88 -> 0x2890. Zero 0xE2 commands. Verbatim head:
+
+  0x2898: d9ddfffb 00000000  GEOMETRYMODE  clears G_SHADE|G_LIGHTING|G_SHADING_SMOOTH
+  0x28a0: fcffffff fffdf2f9  SETCOMBINE
+                             c1 rgb = PRIMITIVE      c1 a = TEXEL0
+                             c2 rgb = PRIMITIVE      c2 a = TEXEL0
+  0x28a8: fa000000 ffffffff  SETPRIMCOLOR rgba = 255,255,255,255
+  0x28b0: f5900000 07010030  SETTILE tile=7 fmt=I siz=16b
+  0x28b8: f5800200 00090230  SETTILE tile=0 fmt=I siz=4b     <- render tile is I4
+  0x28c0: d7000002 ffffffff  TEXTURE on
+  0x28c8: f2000000 0001c03c  SETTILESIZE 8 x 16
+  0x28d0: fd900000 0a41026e  SETTIMG -> image 0x9b8
+  0x28e0: f3000000 0703f800  LOADBLOCK
+
+  image 0x9b8, first 32 bytes:
+      ff ff ff ff 00 00 00 00 ee ee ee ee 00 00 00 00
+      dd dd dd dd 00 00 00 00 cc cc cc cc 00 00 00 00
+  I4, 8 px wide = 4 bytes per row. Rows alternate a solid intensity band and a
+  zero band, the intensity stepping 15,14,13,12,... down the 16 rows. That is
+  the beam's fade ladder, and it lives ENTIRELY IN ALPHA: rgb is the constant
+  white PRIM colour, alpha is TEXEL0 = the intensity byte.
+
+entry[1] / list_id 0 -> 0x2378 -> 0x1908. Zero 0xE2 commands.
+  0x1930: fcffffff fffe7d3e  SETCOMBINE  c1/c2 rgb = SHADE, a = 1
+  0x1938: d7000000 00000000  TEXTURE off
+  It also sets its own lights before drawing:
+  0x1910: db0a0000 ffffff00  MOVEWORD G_MW_LIGHTCOL light1  = white
+  0x1918: db0a0004 ffffff00  MOVEWORD G_MW_LIGHTCOL light1c = white
+  0x1920: db0a0018 b3b3b300  MOVEWORD G_MW_LIGHTCOL light2  = 0xb3 grey (ambient)
+  0x1928: db0a001c b3b3b300  MOVEWORD G_MW_LIGHTCOL light2c = 0xb3 grey
+  (The port DOES honour G_MW_LIGHTCOL -- nds_renderer.c:6913 routes index 0x0a
+  to ndsRendererRecordLightColorMoveWord. This is not the defect.)
+
+======================================================================
+WHY list_id 1 HAS NO MODE OF ITS OWN, AND WHAT THAT MEANS FOR THE PORT
+======================================================================
+list_id is not an ordering hint. In the source it selects one of FOUR separate
+RDP output streams:
+
+  objdisplay.c:1716-1739, gcDrawDObjTreeDLLinks
+      while (dl_link->list_id != ARRAY_COUNT(gSYTaskmanDLHeads)) {
+          ...
+          gSPDisplayList(gSYTaskmanDLHeads[dl_link->list_id]++, dl_link->dl);
+          dl_link++;
+      }
+
+Each head is its own command stream with its own render-mode preamble, written
+by the effect display brackets:
+
+  efdisplay.c:15-21  efDisplayXLUProcDisplay -> gSYTaskmanDLHeads[1]
+      gDPSetRenderMode(G_RM_AA_ZB_XLU_SURF, G_RM_AA_ZB_XLU_SURF2)
+      gDPSetAlphaCompare(G_AC_NONE)
+  efdisplay.c:5-12   efDisplayCLDProcDisplay -> gSYTaskmanDLHeads[1]
+      gDPSetRenderMode(G_RM_CLD_SURF, G_RM_CLD_SURF2)
+  efdisplay.c:66-77  efDisplayZPerspAAXLUProcDisplay -> gSYTaskmanDLHeads[0]
+      sets AA_ZB_XLU, draws particles, RESTORES G_RM_AA_ZB_OPA_SURF (line 76)
+
+So on the halo's link (dEFManagerRebirthHaloEffectDesc.dl_link = 10,
+efmanager.c:1651) head[0] ends the bracket at G_RM_AA_ZB_OPA_SURF, and head[1]
+carries a translucent mode written by the XLU/CLD brackets on their own links.
+The halo's list-0 leaves do not care -- they set their own mode. Its list-1
+beam depends entirely on head[1] already being translucent.
+
+The port collapses all four heads into ONE immediate GX stream:
+  reloc_backend_renderer_dl.c:9578-9592, ndsRendererAdapterSubmitStageDObjNode
+      for (i = 0; i < GC_COMMON_MAX_DLLINKS; i++, dl_link++) { ...
+          ndsRendererAdapterSubmitStageDL(dobj, dl_link->dl, ...); }
+Every dl_link entry is submitted back to back into the same state, and every
+effect submit first overwrites the mode with the captured LAYER value:
+  reloc_backend_renderer_dl.c:9243-9246
+      if (sNdsRendererAdapterEffectOtherModeValid != 0u)
+          render_stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
+
+The beam therefore runs with head[0]'s opaque mode, and:
+  nds_renderer.c:8304-8313, ndsRendererHardwareAlpha
+      if alpha-compare != THRESHOLD and !FORCE_BL and !CVG_X_ALPHA
+         and ZMODE != XLU  ->  return 31u
+G_RM_AA_ZB_OPA_SURF satisfies all four, so the beam's every polygon is
+submitted at POLY_ALPHA(31) -- fully opaque -- and its alpha ladder, which is
+the only thing that gives the beam its shape, is discarded.
+
+======================================================================
+WHAT IS PROVEN AND WHAT IS NOT
+======================================================================
+PROVEN, from bytes:
+  - the halo's asset DL does contain G_SETOTHERMODE_L; 16 words, all on
+    entry[2]/list 0, setting TEX_EDGE and restoring OPA_SURF around each leaf.
+  - the white beam (entry[1]/list 1) contains none, is unlit, is rgb=PRIM white
+    with alpha=TEXEL0 over an I4 fade ladder, and in the source draws into a
+    different RDP stream from the leaves.
+  - the port submits both buckets into one stream and forces the layer mode at
+    the head of every effect DL submit.
+  - ndsRendererHardwareAlpha returns 31 for that mode.
+
+NOT PROVEN this cycle -- the next cycle should measure, not assume:
+  - which of the three lists produces the pixels the owner photographed. The
+    measured greys 0/36/223 are consistent with the beam's ladder rendered with
+    intensity in RGB instead of alpha, but no capture separates the three
+    lists yet. gNdsEffectDLSubmitOtherModeIn/Out/Count (added this cycle) are
+    the instrument: the beam must show Out == In, a leaf must show Out != In.
+  - what DS texture format the beam's I4 image is uploaded as. If it lands as a
+    grey-ramp colour texture rather than white+alpha, honouring the render mode
+    alone will not restore the beam; both halves have to be right.
+  - the correct fix shape. Making a list-1 DL inherit head[1]'s mode rather
+    than head[0]'s is a renderer-seam change with blast radius beyond this
+    effect, and is not a one-line edit. It is not attempted here.
+
+SIDE FINDING, recorded not chased:
+  include/nds/generated/nds_particle_banks.generated.h:183 names atlas entry
+  129 "dEFCommonEffects3_RebirthHalo_glow, I4 32x16" for the texture at file
+  offset 0x2BA8. That texture is NOT reachable from the RebirthHalo DObjDesc;
+  0x2BA8 sits between RebirthHalo's AnimJoint (0x2B70) and ItemGetSwirl's
+  MObjSub (0x2CA8), and the DLs that load it (0x2EF0/0x2F80/0x3010/0x30A0) are
+  ItemGetSwirl's. The name came from a decomp comment. Inert -- the procedural
+  rebirth stand-in that used it was deleted on 2026-08-04.
+
+REPRODUCE:
+  Walk 85.vpk0.bin's internal chain from word 0x44, resolve the DObjDesc at
+  0x2AC0 (44-byte stride, DL pointer at +4), follow each DObjDLLink until
+  list_id 4, and disassemble each list as F3DEX2 (G_DL 0xDE, G_ENDDL 0xDF,
+  G_SETOTHERMODE_L 0xE2). No repository tooling is required; the O2R loader in
+  scripts/generate_battle_playable_texture_census.py uses the identical chain
+  decode (walk_chain, line 337) against the O2R copies of the same data.

@@ -468,3 +468,25 @@ neighbouring data. The counter now names the script address on every occurrence,
 so the next cycle can break on the writer instead of reproducing a freeze.
 
 Cost today: ten joints in seven minutes end their animation one pose early.
+
+## The `gs`-form GBI static initializers are all `{ 0 }`
+
+`include/PR/gbi.h:193-202` defines eleven `gs*` macros -- `gsDPSetRenderMode`,
+`gsDPSetPrimColor`, `gsDPSetCombineMode`, `gsDPSetAlphaCompare`,
+`gsDPSetBlendColor`, `gsSPSetGeometryMode`, `gsSPClearGeometryMode`,
+`gsSPSetLights1`, `gsDPPipeSync`, `gsSPEndDisplayList` -- as `{ 0 }`. The
+runtime `gDP*` twins of two of these were the 2026-08-04 effect-translucency
+defect (commit d9b61c1ed1); the static family was never audited.
+
+An element-per-macro `{ 0 }` keeps a static `Gfx[]` the right LENGTH but makes
+every command a G_NOOP, so the table links, draws, and silently carries no
+colour, mode or geometry state. Three compiled TUs use these forms:
+`src/import/battleship_ftdisplaymain.c`, `battleship_grwallpaper.c` and
+`battleship_ifcommon.c` (Makefile:1665, :1745, :1754) all `#include` decomp
+sources that build static `Gfx` tables with them.
+
+Not measured broken, and not chased on 2026-08-04: the row that raised it (the
+KO pillar's gold stars reading white) draws through the particle path, not a
+static `Gfx` table, and the owner has accepted that row. The next cycle that
+touches fighter display, the wallpaper or the HUD should decide whether each
+site wants a real packet or is genuinely inert, and say which.
