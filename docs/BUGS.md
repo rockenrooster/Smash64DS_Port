@@ -24,89 +24,31 @@ texready 0->5,070 on a 781-frame flag-on run -- and the long-standing flag-on
 hang went with them (1,801 frames, 98.9% submit rate). See 8508fc8d6, fc905460d.
 
 OPEN.
-  * BLOCKS GATE 5: the flag-0 tickhud arm HANGS between frame 175 and 200.
-    Not slowness -- timed budgets 5f/21s 35f/23s 100f/25s 150f/26s 177f/27s,
-    then 200f never in 201s, and the flag-1 arm matches those times exactly, so
-    both arms run at the same speed until the control stops dead. A regression:
-    a pre-campaign flag-0 tickhud RingDump completed
-    (artifacts/performance/2026-08-03_dobjtree_control_ringdump.json), so the
-    range is (4d1015b75 .. bca626a758].
-    THREE OF FOUR SUSPECTS REFUTED BY COUNTERS, no builds spent. At frame 175,
-    the last healthy frame: runaway=0 mask=0 panic=0 (ae7c3e735's bounded
-    parsers and objman never fire) and resolve=4 disabled=0 unknownfile=0
-    (d4c7d3d7b's validation never disables anything at flag 0, because only
-    dEFManagerDeadExplodeEffectDesc is resolved there and its file is in the
-    span table). 8508fc8d6 was flag-gated in cycle 15 and the hang persisted.
-    BISECTED TO ae7c3e735, THE FREEZE FIX (cycle 24). Budget-200 flag-0 tickhud
-    builds: 4d1015b75 reaches 200 in 28s; ae7c3e735 hangs; d4c7d3d7b hangs;
-    current hangs. The freeze fix is the first bad commit.
-    ITS RUNAWAY COUNTERS ARE NOT THE MECHANISM -- they read 0 at frame 175, and
-    that refutation stands. But the commit's ONLY runtime change outside the
-    bounded parsers is src/port/reloc_backend_assets.c (+48): the misalignment
-    rejection that makes ndsRelocResolvePointerFromFileBase return NULL for a
-    result that is not 4-aligned. That is fail-closed behaviour on a resolver,
-    it was never covered by the counters checked so far, and it is the prime
-    suspect.
-    THE RESOLVER IS EXONERATED TOO (cycle 25), on the right build this time:
-    RESOLVE@175 misalign=0 misalignval=0x0 offsetcalls=0. The alignment
-    rejection never fires and the offset fallback is never even entered, so it
-    must NOT be deleted -- it is inert here and still guards the 2-mod-4 script
-    pointer that caused the original freeze.
-    SO EVERY LOGIC PATH IN ae7c3e735 IS CLEAN AND BISECT STILL NAMES IT. What is
-    left in that commit is not behaviour: +7 BSS symbols (8391 -> 8398 across
-    the two builds; 4 runaway + 3 resolver counters) and the parser code-size
-    change. LEADING HYPOTHESIS is therefore LAYOUT, not logic -- ae7c3e735 is
-    the trigger, and the real defect is latent and older. That fits everything
-    seen: a reproducible frame, no counter movement, and a ROM whose pacing is
-    already documented as cache-placement sensitive.
-    BSS LAYOUT REFUTED (cycle 26): a clean 4d1015b75 plus 28 bytes of live BSS
-    padding reaches 200 frames in 28s. Data-layout growth alone does not
-    reproduce the hang.
-    PARSER REVERT ON HEAD STILL HANGS (cycle 27): reverse-applying both decomp
-    patches on the current tree and probing at 200 stalls exactly as before. So
-    the parsers are not the SOLE cause of today's hang.
-    That does NOT exonerate the range, and the inference matters: this build
-    still carries d4c7d3d7b, 8508fc8d6 and 4c29b9615a, so an independent later
-    cause would produce the same result. Bisect already showed ae7c3e735 ALONE
-    hangs, so within that commit the remaining candidate is the resolver hunk --
-    despite its counters reading 0 -- or its .text displacement.
-    NAMED (cycle 28). Parser revert AT ae7c3e735 reaches 200 frames in 28s,
-    against the same commit hanging with them applied and the anchor passing.
-    So the parser patches trigger it -- and their counters read 0, so the
-    mechanism is PLACEMENT, not the bounded-loop logic.
-    THE DISPLACEMENT, measured: the patches add 312 bytes to .main
-    (0xca050 -> 0xca188), which shifts .main.rw from 0x020cd728 to 0x020cd860
-    and every later section with it. A 28-byte BSS pad did NOT reproduce the
-    hang (cycle 26), so it is this ~312-byte shift of .main.rw and beyond that
-    matters, not data growth as such.
-    THE REAL BUG IS WHATEVER THAT SHIFT DISPLACES, and it is latent and older
-    than this campaign -- the shipping arm is one symbol away from the same
-    cliff, so it must be fixed at its own seam rather than by keeping .main a
-    particular size.
-    RUNG 0 DONE (cycle 29), two negatives, no build. (i) The shift is NOT
-    uniform: per-symbol deltas cluster at 104/200/312/320/336 because the
-    patches insert code inside objanim.c/ftanim.c, so symbols move relative to
-    each other and only downstream sections move by the total. Ordinary linker
-    behaviour -- "everything moves by 0x138" was the wrong model and no symbol
-    is pinned in a way that crosses a region edge. (ii) Stale absolute addresses
-    are NOT the mechanism: searching the hanging ROM image for the pre-shift
-    address of every moved main-RAM symbol yields 10 hits against ~8 expected by
-    chance (11,710 symbols x 3M words / 2^32), so the hits are noise.
-    STILL UNDONE and now the highest-value step: the rung-2 PC capture. The
-    spinning PC names the victim directly, and no layout theory should be
-    pursued further until it is taken.
-    HARNESS TRAP WORTH REMEMBERING: unreferenced BSS is collected by
-    --gc-sections, so the first discriminant build was byte-identical to the
-    anchor and would have "passed" meaninglessly. Any padding probe must be
-    referenced from live code (cliff_ledge.c's reset is the repo's own idiom)
-    and the symbol verified present with nm before the result is believed.
-    BUILDING AN OLD COMMIT NEEDS THE DECOMP PATCHES REVERSED TOO: decomp/ is
-    gitignored, so a checkout leaves the tracked patches applied and the build
-    fails on undeclared runaway counters. Reverse-apply
-    scripts/decomp-patches/battleship/*.patch before building any pre-ae7c3e735
-    commit, and re-apply them on return.
-    HARNESS LIMIT: once hung, a second GDB cannot attach; capturing the hang PC
-    needs an interrupt on an already-attached session, not a re-attach.
+  * BLOCKS GATE 5: the flag-0 tickhud arm HANGS between frame 175 and 200, so
+    there is no control arm to measure against. Not slowness -- both arms are
+    the same speed up to 175 (5f/21s .. 177f/27s) and the flag-0 one then stops
+    dead. Regression against a pre-campaign RingDump that completed
+    (artifacts/performance/2026-08-03_dobjtree_control_ringdump.json).
+    MECHANISM: placement, not logic. Three arms at one commit --
+      4d1015b75 anchor            200f/28s
+      ae7c3e735 with parsers      hangs
+      ae7c3e735 parsers reverted  200f/28s
+    The freeze-fix parser patches add 312 bytes to .main (0xca050 -> 0xca188),
+    shifting .main.rw from 0x020cd728 to 0x020cd860. They are the TRIGGER; the
+    defect is whatever those bytes displace, is older than this campaign, and
+    must be fixed at its own seam -- never by re-padding .main, and the parsers
+    stay bounded (the freeze row depends on them).
+    Refuted, do not re-run: runaway/panic counters 0 (21); desc validation
+    disabled=0 (22); resolver misalign=0, offsetcalls=0 (25); 28-byte BSS pad
+    does not reproduce (26); parser revert at HEAD does not fix, which
+    exonerates nothing since later commits remain (27); shift is non-uniform
+    with no symbol crossing a region edge, and stale absolute addresses are
+    noise at 10 hits vs ~8 expected by chance (29).
+    OPEN: the spinning PC. Pre-attach + interrupt is the right shape (a second
+    GDB cannot attach to a hung guest, 21), but gdb's `shell` stalls do not
+    block in batch, so `interrupt` had not completed before the next command
+    (30). Drive the timing host-side via Invoke-GdbMarkerScript's -ReadyFile
+    interactive mode instead.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
