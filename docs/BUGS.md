@@ -65,9 +65,10 @@ per-frame-paired tooling: docs/PERF_LEDGER.md "GATE 5".
 BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL default, keep, or optimize
 first). Performance no longer decides it -- the two settings cost the same, so
 this is a fidelity call and the owner is the oracle. What changes per row:
-  * shield bubble    -- WITHDRAWN 2026-08-04. Measured, the flip does not give
-                        this row its model; it leaks a detached quad per guard.
-                        See the gate-6 block below. Do not count this row for.
+  * shield bubble    -- WITHDRAWN 2026-08-04. The per-guard leak is fixed and
+                        the model draws, but it still does not ride the fighter:
+                        its matrix never reaches the display list. See the
+                        gate-6 block below. Do not count this row for.
   * rebirth platform -- one flat quad becomes the joint-animated model, i.e. the
                         platform appears at all on respawn.
   * Fox reflector    -- NO CHANGE EITHER WAY, see below. Do not count this row.
@@ -186,17 +187,47 @@ on the platform rather than a bubble enclosing him
 inside the 1994-1982 guard window, EXACT_LOCK 1988/1986). It no longer drifts
 across the stage only because it now dies with the guard. Renderer-side, so it
 gates on the fidelity budget and the owner's eye.
-ATTACHMENT, TWO STARTING FACTS ONLY (2026-08-04, not a confirmation): grep finds
-ZERO reads of user_data.p anywhere in src/port/reloc_backend_renderer_dl.c, and
-gcSetupCustomDObjs -- the function that builds an effect's DObj tree from the
-desc -- is defined at src/import/battleship_grpupupu_ground.c:35, not in the
-renderer. Consistent with "nothing binds the effect DObj to its joint", NOT proof
-of it: the matrix may be resolved elsewhere. Next cycle starts by reading
-gcSetupCustomDObjs for the desc's matrix-kind fields, then does the gdb read of
-the effect DObj's resolved matrix against fp->joints[nFTPartsJointYRotN] inside a
-guard window BEFORE any edit.
-GATE 6: the shield row's flip argument re-arms only when this second seam lands.
-Correct lifetime alone does not make the shield correct.
+ATTACHMENT: TWO SEAMS FIXED, A THIRD FOUND, PICTURE UNCHANGED (2026-08-04).
+Kind 0x4F is not an XObjTransformKind. Source routes every kind >= 66 through
+sGCMatrixFuncList[kind - 66] (objdisplay.c:1161); the battle task installs
+dLBCommonFuncMatrixList, whose pair 13 is func_ovl0_800C994C (lbcommon.c:1445).
+That callback ignores the DObj's own vectors and loads the matrix from the world
+matrix of the joint in dobj->user_data.p -- func_ovl2_800EDBA4 first, then
+parts->mtx_translate. That is the entire attachment mechanism.
+  1. FIXED. The port had no 0x4F case, so the root fell to
+     ndsRendererAdapterBuildDObjFallbackMtx, which for its 0/0/1 vectors builds
+     the IDENTITY -- the bubble sat at the world origin.
+     ndsRendererAdapterBuildJointAttachMtx implements the callback now. Measured
+     live inside the 1994-1982 guard: k0=0x4f, user_data.p bound, and the matrix
+     it reads tracks the fighter (x 109.7 -> 123.2 -> 129.9 over three tics).
+     The func_ovl2_800EDBA4 call is load-bearing, not ceremony: mtx_translate
+     read all zeros without it, so a plain copy collapses the quad to a point.
+  2. FIXED, and it is why fix 1 alone changed nothing.
+     ndsRendererAdapterCaptureStageWorldSourceKey keys the persistent
+     stage-world cache on the DObj's OWN translate/rotate/scale. For an attached
+     effect root those are the constants 0/0/1, so the entry matched forever and
+     the world matrix was built ONCE per guard -- one local build against ten
+     submits. 0x4F joins 0x4B on that function's refusal list, by the rule its
+     own comment already states; rebuilds are 2 per frame and tracking.
+  3. STILL OPEN, and it is what decides the picture. The shield's display list
+     executes with config.initial_projection == NULL AND initial_modelview ==
+     NULL (read at ndsRendererExecuteDisplayListWithVertexCache; cmds=8192
+     proves it is ndsRendererAdapterSubmitStageDL's own config). The world
+     matrix is computed correctly and then discarded before the GX sees it, so
+     the quad inherits whatever matrix the previous list left loaded -- which is
+     why all three builds render identical pixels.
+     ndsRendererAdapterPrepareInitialMatrices IS called for the shield's child
+     with a non-NULL CObj (cobj=0x234ee98, persist=1), so the NULL is produced
+     inside or after it. Start there.
+EVIDENCE, same lock in every arm (EXACT_LOCK 1988,1986): the guest viewport is
+BYTE-IDENTICAL between the pre-fix ROM and the fixed one, 0 of 120,000 pixels,
+so both fixes are engaged, source-correct and visually inert today.
+artifacts/visibility/2026-08-04_c53-shield-guarding-t1988-flag1-a.png;
+artifacts/verification/2026-08-04_c5{2,3}-shield-*.txt. Instruments:
+scripts/probe-shield-attach.ps1 (is the root bound and live) and
+scripts/probe-shield-submit.ps1 (does its matrix reach the DL).
+GATE 6: the shield row's flip argument stays disarmed until seam 3 lands.
+Correct lifetime and a correct matrix are not yet a correct shield.
 
 FLAG-0 RE-MEASURED AFTER THE FIX (2026-08-04), because changing the walk could
 have changed stand-in lifetime too. It did not: the flag-0 census is unchanged
@@ -286,7 +317,7 @@ do not restate them here.
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: PARTLY FIXED (2026-08-04) -- lifetime correct now. Remaining: it does not ride the fighter's joint.
+    STAGE: LOCALIZED -- lifetime, 0x4F matrix and its stale cache fixed; the effect DL still gets a NULL modelview.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used

@@ -60,6 +60,10 @@
 #define NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND 0x47u
 /* dLBCommonFuncMatrixList kind 0x4C maps to gmCameraLookAtFuncMatrix. */
 #define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu
+/* dLBCommonFuncMatrixList kind 0x4F maps to func_ovl0_800C994C: the DObj's local
+ * matrix IS the world matrix of the joint it is bound to. See
+ * ndsRendererAdapterBuildJointAttachMtx. */
+#define NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND 0x4Fu
 
 #if defined(__arm__)
 #define NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE \
@@ -1159,6 +1163,69 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
     return TRUE;
 }
 
+/* Matrix kind 0x4F, the joint-attach transform. It is not an XObjTransformKind
+ * enumerator: source routes every kind >= 66 through
+ * sGCMatrixFuncList[kind - 66] (objdisplay.c:1161), and the battle task installs
+ * dLBCommonFuncMatrixList, whose pair 13 is func_ovl0_800C994C
+ * (lbcommon.c:1445). That callback ignores the DObj's own translate/rotate/scale
+ * entirely and loads the matrix from the world matrix of the joint stored in
+ * dobj->user_data.p:
+ *
+ *     attach = dobj->user_data.p;  parts = attach->user_data.p;
+ *     func_ovl2_800EDBA4(attach);
+ *     gmCollisionCopyMatrix(f, parts->mtx_translate);
+ *     syMatrixF2LFixedW(&f, mtx);
+ *
+ * dEFManagerShieldEffectDesc's root DObj uses it (efmanager.c:462) and
+ * efManagerShieldMakeEffect stores fp->joints[nFTPartsJointYRotN] there
+ * (efmanager.c:4139). That is the whole attachment mechanism -- the shield has no
+ * update proc that moves it, so without this case the root fell to
+ * ndsRendererAdapterBuildDObjFallbackMtx, which for its identity vectors builds
+ * the identity and parks the bubble at the world origin. Measured 2026-08-04 on
+ * builds/build-c50-flag1 inside the tic 1994-1982 guard: k0=0x4f, user_data.p
+ * non-NULL, root translate/rotate 0 and scale 1.
+ *
+ * func_ovl2_800EDBA4 FIRST, exactly as source does, and not as a formality:
+ * mtx_translate is a per-frame cache that ndsFTParamsInvalidateFighterParts
+ * clears, and the fighter's own draw (kind 0x4B) reads unk_dobjtrans_0x10 rather
+ * than filling it, so the same probe read mtx_translate as all zeros. Copying it
+ * without the rebuild would collapse the bubble to a point rather than move it.
+ *
+ * gmCollisionCopyMatrix's copy into a local is skipped: it writes columns 0-2
+ * only, which is exactly what F2LFixedW reads. */
+static sb32 ndsRendererAdapterBuildJointAttachMtx(
+    DObj *dobj, NDSRendererMatrix20p12 *out)
+{
+    DObj *attach;
+    FTParts *parts;
+    Mtx mtx;
+
+    if ((dobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    attach = (DObj *)dobj->user_data.p;
+    if ((attach == NULL) || (attach == DOBJ_PARENT_NULL) ||
+        (attach->parent_gobj == NULL))
+    {
+        return FALSE;
+    }
+    parts = ftGetParts(attach);
+    if (parts == NULL)
+    {
+        return FALSE;
+    }
+    /* func_ovl2_800EDBA4 walks to the joint root and dereferences ftGetStruct and
+     * ftGetParts without a guard, so both are checked above before the call. */
+    func_ovl2_800EDBA4(attach);
+    if (ndsRendererAdapterF2LFixedWExact(&parts->mtx_translate, &mtx) == FALSE)
+    {
+        syMatrixF2LFixedW(&parts->mtx_translate, &mtx);
+    }
+    ndsRendererAdapterMtxFromN64(&mtx, out);
+    return TRUE;
+}
+
 static void ndsRendererAdapterGetDObjVectorTracks(
     DObj *dobj,
     GCTranslate **translate,
@@ -1366,6 +1433,13 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
         break;
     case NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND:
         if (ndsRendererAdapterBuildFighterPartsMtx(dobj, out) != FALSE)
+        {
+            return TRUE;
+        }
+        ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
+        break;
+    case NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND:
+        if (ndsRendererAdapterBuildJointAttachMtx(dobj, out) != FALSE)
         {
             return TRUE;
         }
@@ -2050,12 +2124,22 @@ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
         source_key->xobj_present_mask |= (u8)(1u << i);
         source_key->xobj_kinds[i] = xobj->kind;
         /* Kind 1 consumes an arbitrary 64-byte matrix. Kinds 33-40 consume
-         * live camera state, and 0x4B consumes live FTParts state. Keep those
-         * exact paths frame-local instead of enlarging this first stage-only
-         * proof cache. */
+         * live camera state, and 0x4B and 0x4F consume live FTParts state. Keep
+         * those exact paths frame-local instead of enlarging this first
+         * stage-only proof cache.
+         *
+         * 0x4F was measured missing from this list on 2026-08-04 and it is the
+         * reason the shield's attachment fix produced a byte-identical frame:
+         * the key hashes the DObj's OWN translate/rotate/scale, which for an
+         * attached effect root are the constants 0/0/1, so the entry matched on
+         * every later frame and the world matrix was built exactly once per
+         * guard -- one LOCAL build against ten submits, on the probe. A cached
+         * matrix is only sound when the local build is a pure function of what
+         * the key covers, and both fighter-parts kinds read state outside it. */
         if ((xobj->kind == 1u) ||
             ((xobj->kind >= 33u) && (xobj->kind <= 40u)) ||
-            (xobj->kind == NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND))
+            (xobj->kind == NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND) ||
+            (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND))
         {
             return FALSE;
         }
