@@ -47,11 +47,22 @@ OPEN.
     result that is not 4-aligned. That is fail-closed behaviour on a resolver,
     it was never covered by the counters checked so far, and it is the prime
     suspect.
-    NEXT READ (not a build): gNdsRelocResolveMisalignCount /
-    gNdsRelocResolveOffsetCount / gNdsRelocResolveMisalignValue at frame 175 on
-    the flag-0 arm. A non-zero misalign count names the seam outright. Note the
-    cycle-1 "refuted by gNdsRelocResolveOffsetCount=0" reading was taken on a
-    different build and configuration and does not carry over.
+    THE RESOLVER IS EXONERATED TOO (cycle 25), on the right build this time:
+    RESOLVE@175 misalign=0 misalignval=0x0 offsetcalls=0. The alignment
+    rejection never fires and the offset fallback is never even entered, so it
+    must NOT be deleted -- it is inert here and still guards the 2-mod-4 script
+    pointer that caused the original freeze.
+    SO EVERY LOGIC PATH IN ae7c3e735 IS CLEAN AND BISECT STILL NAMES IT. What is
+    left in that commit is not behaviour: +7 BSS symbols (8391 -> 8398 across
+    the two builds; 4 runaway + 3 resolver counters) and the parser code-size
+    change. LEADING HYPOTHESIS is therefore LAYOUT, not logic -- ae7c3e735 is
+    the trigger, and the real defect is latent and older. That fits everything
+    seen: a reproducible frame, no counter movement, and a ROM whose pacing is
+    already documented as cache-placement sensitive.
+    NEXT (one build, decisive): add 7 dummy volatile u32 BSS globals to a clean
+    4d1015b75 build and probe at 200. If it hangs, layout is confirmed and the
+    hunt moves to what those bytes displace; if it passes, the parser code
+    change is the remaining suspect and gets reverted hunk-by-hunk.
     BUILDING AN OLD COMMIT NEEDS THE DECOMP PATCHES REVERSED TOO: decomp/ is
     gitignored, so a checkout leaves the tracked patches applied and the build
     fails on undeclared runaway counters. Reverse-apply
