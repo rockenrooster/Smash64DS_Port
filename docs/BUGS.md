@@ -54,10 +54,18 @@ OPEN.
     artifacts/performance/2026-08-03_dobjtree_control_ringdump.json), so the
     bisect range is (4d1015b75 .. bca626a758] -- ae7c3e735, d4c7d3d7b,
     8508fc8d6, 4c29b9615a.
-    NEXT: run to 175 (which completes) and read gNdsObjAnimRunawayCount/Mask
-    plus the abort registers, then bisect the range. The freeze fix ae7c3e735 is
-    active at flag 0 and is the only campaign commit that changes per-frame
-    animation behaviour there.
+    FREEZE FIX EXONERATED BY ITS OWN COUNTERS. At frame 175, the last healthy
+    frame: runaway=0 mask=0x0 script=0x0 op=0 panic=0 pmask=0x0. ae7c3e735's
+    runaway path and objman's panic path both never fire on this arm, so the
+    parser patches are not the defect and must stay bounded as they are (the
+    freeze row's closure depends on them).
+    NEXT: bisect the remaining three -- d4c7d3d7b, 8508fc8d6, 4c29b9615a -- with
+    the marker probe at budget 200 (175 passes, 200 hangs, so 200 is the
+    discriminator and each arm costs one build plus ~30s).
+    HARNESS NOTE: once hung, a second GDB cannot attach and read the PC -- the
+    abort-read path timed out at 120s. Capturing the hang PC needs a different
+    idiom than the freeze soak's (interrupt an ALREADY-attached session rather
+    than re-attaching), so bisect first; it is cheaper than fixing the probe.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
