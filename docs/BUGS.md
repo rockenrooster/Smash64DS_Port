@@ -503,6 +503,34 @@ call never executes and the finally block kills the emulator first. When the
 thing being hunted is a hang, timeout is the EXPECTED path -- the abort read
 belongs in a catch.
 
+GATE 5 IS BLOCKED ON THE SAMPLER'S FRAME WINDOW, NOT A SYMBOL (cycle 13).
+
+sample-tick-hud-buckets.ps1 -RingDump aborted with "exceeded 900s before 32
+samples" on the flag-OFF control. Diagnosed before touching any ceiling, per
+the cycle-10 lesson that a raised timeout proved the timeout was never the
+limiter:
+
+  * NOT a missing or renamed symbol. nm --defined-only on BOTH freshly built
+    ELFs finds all four the run needs -- ndsBattlePlayableFrameCompleteMarker,
+    sBattleTickHudRing, sBattleTickHudRingHead, sBattleTickHudRingCount.
+    Note the harness's own nm guard did NOT cover this: it only runs when
+    -ExtraGlobals or -PerFrameGlobals are passed, and this invocation passed
+    neither, so the guard was inert. That is a hole worth closing -- the guard
+    should cover the symbols the script itself always reads.
+  * WHAT IT ACTUALLY WAITS ON: gNdsBattlePlayablePacingPresentedFrames must
+    reach StartFrame + Samples = 438 + 32 = 470 PRESENTED frames, with a GDB
+    stop at the frame-complete marker on every one.
+
+That distinction is the whole diagnosis. Other probes in this campaign reach
+1,801 MARKER frames well inside 900s, so the marker is not slow; the wait is on
+the PRESENTED-frame counter, which the harness's own -RingDump comment already
+warns can disagree with the marker. So the candidate causes are that the
+presented counter advances more slowly than the marker (plausible at the ~20 FPS
+the flag-on arm showed, and this failure was on the control), or that it stalls
+outright. Measure which before raising -TimeoutSeconds or lowering -Samples;
+either knob would paper over a stalled counter and produce a shorter window
+rather than an honest one.
+
 THE ARMING COUNTER WORKS, AND THE FLAG-ON ARM IS OVER GATE (cycle 11).
 
 gNdsEffectRendererLink15DrawCount counts link-15 source effects PAST the
