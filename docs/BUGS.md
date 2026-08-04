@@ -34,12 +34,20 @@ OPEN.
     and passes Boundary's real battle on this tree, so the discriminator is not
     the flag alone -- it is flag 0 on the TICKHUD target. Bounded to the lab
     instrument, not shown to affect the shipping arm.
+    NARROWED (rung 0, no runs): the tracked default's config differs from the
+    stalling lab config in exactly NDS_TICK_HUD, so the stalling combination is
+    flag 0 + NDS_TICK_HUD 1.
+    TWO SUSPECTS ALREADY DEAD, also without a build: at flag 0
+    NDS_EF_MANAGER_DESCS resolves only dEFManagerDeadExplodeEffectDesc, whose
+    file gEFManagerFiles[1] IS in the span table -- so span is never 0, nothing
+    is deferred or disabled, and neither the deferred-retry asymmetry nor any
+    "disabled desc returns NULL and a caller retries per frame" mechanism can
+    fire on that arm.
     CONSEQUENCE: gate 5 has no control arm, because the tick-HUD ROM is the
-    instrument every measurement runs on and its flag-0 build is the one that
-    stalls. Next: diff the tickhud target against the tracked default's build
-    (extra BSS/flags) rather than theorise, then bisect the flag-0 paths this
-    campaign touched (deferred-retry table, disabled-desc handling, the
-    admission block's #else shape).
+    instrument every measurement runs on. NEXT, and it is one build: probe a
+    flag-0 tickhud ROM built from a PRE-CAMPAIGN commit. That settles whether
+    this is a regression at all before any further bisect -- it has never been
+    established that this arm ever presented frames on this instrument.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
