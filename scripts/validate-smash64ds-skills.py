@@ -22,6 +22,7 @@ EXPECTED_SKILLS = {
     "nds-platform-runtime",
     "nds-port-and-optimize",
     "nds-review-low-level-change",
+    "smash64ds-opus-guardrails",
     "smash64ds-project-context",
 }
 

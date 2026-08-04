@@ -1,0 +1,4 @@
+skill:
+  display_name: "Smash64DS Opus Guardrails"
+  short_description: "Opus rails and cycle discipline for Smash64DS"
+  default_prompt: "Use $smash64ds-opus-guardrails before starting Opus work in this repository."
