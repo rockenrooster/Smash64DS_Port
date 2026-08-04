@@ -1478,6 +1478,10 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_CCMUX_ENVIRONMENT 5u
 #define NDS_RENDERER_CCMUX_PRIM_LOD_FRAC 14u
 #define NDS_RENDERER_CCMUX_ZERO_AB 15u
+/* G_CCMUX_0 is 31, and every colour field masks it to its own width: 4 bits for
+ * a and b (15), 5 bits for c (31), 3 bits for d (7). One name per width, so a
+ * gate cannot silently compare a c field against the a/b encoding. */
+#define NDS_RENDERER_CCMUX_ZERO_C 31u
 #define NDS_RENDERER_CCMUX_ZERO_D 7u
 #define NDS_RENDERER_ACMUX_COMBINED 0u
 #define NDS_RENDERER_ACMUX_TEXEL0 1u
@@ -1490,7 +1494,19 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_PRIM_ENV_BLEND_NONE 0u
 #define NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA 1u
 #define NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA 2u
+/* The rebirth halo's beam (85.vpk0.bin 0x28a0, G_SETCOMBINE FCFFFFFF FFFDF2F9)
+ * asks for rgb = PRIMITIVE and alpha = TEXEL0 in both cycles -- a constant
+ * colour, not the BLENDPE endpoint lerp above. Its texture is I4, so without
+ * this mode ndsRendererHardwareConvertI replicates the intensity into RGB and
+ * forces the alpha bit, and the beam draws as an opaque grey ramp on an opaque
+ * black surround. Modes 1 and 2 share one bake; this one does not, which is
+ * why it needs its own cache-key bit below. */
+#define NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA 3u
 #define NDS_RENDERER_HW_TEXTURE_KEY_PRIM_ENV_BLEND (1u << 31)
+/* Bit 30 is free: key.flags carries render_tile_flags in bits 0-7 and
+ * (load_kind << 8), and load_kind's largest value is NDS_RENDERER_TEXTURE_
+ * LOADTILE (1u << 6), so nothing above bit 14 is ever set there. */
+#define NDS_RENDERER_HW_TEXTURE_KEY_PRIM_RGB_TEXEL0_ALPHA (1u << 30)
 #define NDS_RENDERER_MDSFT_CYCLETYPE 20u
 #define NDS_RENDERER_CYCLETYPE_MASK (3u << NDS_RENDERER_MDSFT_CYCLETYPE)
 #define NDS_RENDERER_CYC_2CYCLE (1u << NDS_RENDERER_MDSFT_CYCLETYPE)
@@ -7791,28 +7807,62 @@ static u32 ndsRendererHardwarePrimEnvTexel0BlendMode(
      * (PRIMITIVE - ENVIRONMENT) * TEXEL0 + ENVIRONMENT. Decode the active
      * cycle so both raw forms remain data-independent: one multiplies source
      * coverage by primitive alpha, while the other passes source alpha. */
-    if ((color_a != NDS_RENDERER_CCMUX_PRIMITIVE) ||
-        (color_b != NDS_RENDERER_CCMUX_ENVIRONMENT) ||
-        (color_c != NDS_RENDERER_CCMUX_TEXEL0) ||
-        (color_d != NDS_RENDERER_CCMUX_ENVIRONMENT))
+    if ((color_a == NDS_RENDERER_CCMUX_PRIMITIVE) &&
+        (color_b == NDS_RENDERER_CCMUX_ENVIRONMENT) &&
+        (color_c == NDS_RENDERER_CCMUX_TEXEL0) &&
+        (color_d == NDS_RENDERER_CCMUX_ENVIRONMENT))
     {
+        if ((alpha_a == NDS_RENDERER_ACMUX_TEXEL0) &&
+            (alpha_b == NDS_RENDERER_ACMUX_0) &&
+            (alpha_c == NDS_RENDERER_ACMUX_PRIMITIVE) &&
+            (alpha_d == NDS_RENDERER_ACMUX_0))
+        {
+            return NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA;
+        }
+        if ((alpha_a == NDS_RENDERER_ACMUX_0) &&
+            (alpha_b == NDS_RENDERER_ACMUX_0) &&
+            (alpha_c == NDS_RENDERER_ACMUX_0) &&
+            (alpha_d == NDS_RENDERER_ACMUX_TEXEL0))
+        {
+            return NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA;
+        }
         return NDS_RENDERER_PRIM_ENV_BLEND_NONE;
     }
-    if ((alpha_a == NDS_RENDERER_ACMUX_TEXEL0) &&
-        (alpha_b == NDS_RENDERER_ACMUX_0) &&
-        (alpha_c == NDS_RENDERER_ACMUX_PRIMITIVE) &&
-        (alpha_d == NDS_RENDERER_ACMUX_0))
-    {
-        return NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA;
-    }
-    if ((alpha_a == NDS_RENDERER_ACMUX_0) &&
+    /* THE DEGENERATE CONSTANT FORM, and it is a separate branch rather than a
+     * loosened gate above. (0,0,0,PRIMITIVE) for colour multiplies nothing --
+     * it selects PRIM flat -- while (0,0,0,TEXEL0) for alpha passes source
+     * coverage through untouched. The lerp gate cannot be widened to admit it
+     * without also admitting every other constant-d combine in the game. */
+    if ((color_a == NDS_RENDERER_CCMUX_ZERO_AB) &&
+        (color_b == NDS_RENDERER_CCMUX_ZERO_AB) &&
+        (color_c == NDS_RENDERER_CCMUX_ZERO_C) &&
+        (color_d == NDS_RENDERER_CCMUX_PRIMITIVE) &&
+        (alpha_a == NDS_RENDERER_ACMUX_0) &&
         (alpha_b == NDS_RENDERER_ACMUX_0) &&
         (alpha_c == NDS_RENDERER_ACMUX_0) &&
         (alpha_d == NDS_RENDERER_ACMUX_TEXEL0))
     {
-        return NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA;
+        return NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA;
     }
     return NDS_RENDERER_PRIM_ENV_BLEND_NONE;
+}
+
+/* TRUE when the recognised combine's ALPHA mux is (0,0,0,TEXEL0): source
+ * coverage passes through untouched, and the bake has already placed it in the
+ * texel's alpha bit.
+ *
+ * SOURCE_ALPHA and PRIM_RGB_TEXEL0_ALPHA differ ONLY in their colour mux --
+ * their alpha muxes are byte-identical -- so every alpha-side decision has to
+ * treat them the same. Keying an alpha site on one mode alone would let the
+ * other multiply vertex alpha into coverage the texel already carries. The two
+ * call sites below are both unreachable for the rebirth-halo beam (its
+ * othermode_l 0x552078 takes their opaque early return first), so this closes a
+ * latent asymmetry rather than fixing a measured defect. */
+static s32 ndsRendererHardwareBlendModeKeepsTexelCoverage(u32 mode)
+{
+    return ((mode == NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA) ||
+            (mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA)) ?
+        TRUE : FALSE;
 }
 
 static s32 ndsRendererHardwareUsesTexel01Lerp(
@@ -8317,8 +8367,8 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
     }
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
-        if (ndsRendererHardwarePrimEnvTexel0BlendMode(stats) ==
-            NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA)
+        if (ndsRendererHardwareBlendModeKeepsTexelCoverage(
+                ndsRendererHardwarePrimEnvTexel0BlendMode(stats)) != FALSE)
         {
             /* GL_RGBA retains TEXEL0 coverage; do not multiply vertex alpha. */
             return 31u;
@@ -8365,8 +8415,8 @@ static s32 ndsRendererHardwareAlphaUsesVertex(
     }
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
-        if (ndsRendererHardwarePrimEnvTexel0BlendMode(stats) ==
-            NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA)
+        if (ndsRendererHardwareBlendModeKeepsTexelCoverage(
+                ndsRendererHardwarePrimEnvTexel0BlendMode(stats)) != FALSE)
         {
             return FALSE;
         }
@@ -13227,6 +13277,34 @@ static u16 ndsRendererHardwareBlendPrimEnvTexel0(u16 texel0,
     return (u16)((texel0 & 0x8000u) | red | (green << 5) | (blue << 10));
 }
 
+/* rgb = PRIMITIVE, alpha = TEXEL0 (NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_
+ * TEXEL0_ALPHA). The colour is flat, so the whole job is recovering the source
+ * coverage that the I-format arm has already folded away.
+ *
+ * ndsRendererHardwareConvertI writes v = intensity >> 3 into all three RGB5
+ * lanes and sets the alpha bit unconditionally, so the coverage this combine
+ * wants is still readable from any one lane -- and reading it back here is why
+ * that shared converter is left alone. It serves every I-format texture in the
+ * game; the defect is one caller's combine being unrecognised, not the
+ * converter being wrong.
+ *
+ * The destination is RGB555+A1, so coverage quantises to one bit. Round to
+ * nearest (>= 16 of 31) rather than "any non-zero": the beam's identity is its
+ * bright core, and a threshold of 1 would promote the entire faint outer ramp
+ * to fully opaque and draw a blob wider than the source. The lost fade is the
+ * hard-edge tradeoff the owner is being asked to judge; GL_RGB8_A5 is what
+ * would recover it. */
+static u16 ndsRendererHardwarePrimRgbTexel0Alpha(u16 texel0, u32 primitive)
+{
+    u32 coverage = texel0 & 0x1fu;
+    u32 red = (primitive >> 27) & 0x1fu;
+    u32 green = (primitive >> 19) & 0x1fu;
+    u32 blue = (primitive >> 11) & 0x1fu;
+    u16 opaque = (coverage >= 16u) ? (u16)0x8000u : (u16)0u;
+
+    return (u16)(opaque | red | (green << 5) | (blue << 10));
+}
+
 static void __attribute__((noinline))
 ndsRendererHardwareBuildTexel01Ci4Lut(
     const NDSRendererConfig *config,
@@ -14207,6 +14285,25 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         key.combine_w0 = stats->texture_combine_w0;
         key.combine_w1 = stats->texture_combine_w1;
     }
+    else if (prim_env_blend_mode ==
+             NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA)
+    {
+        /* ITS OWN BIT, BECAUSE THE EXISTING ONE DOES NOT SEPARATE THE BAKES.
+         * Modes 1 and 2 both bake through ndsRendererHardwareBlendPrimEnvTexel0,
+         * so one flag was enough to tell "baked" from "raw". This mode bakes
+         * differently, so sharing the flag would let a beam and a BLENDPE
+         * surface with equal prim/env collide on one cache entry and serve
+         * whichever was converted first.
+         *
+         * PRIM RGB is already keyed by the assignment below and must stay
+         * keyed: it is now the texel colour itself, not a blend endpoint. ENV
+         * is dropped rather than copied -- this combine never reads it, and
+         * keying on it would force a re-bake every time an unrelated list
+         * moved the env colour. */
+        key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_PRIM_RGB_TEXEL0_ALPHA;
+        key.combine_w0 = stats->prim_color & 0xffffff00u;
+        key.combine_w1 = 0u;
+    }
     else if (prim_env_blend_mode != NDS_RENDERER_PRIM_ENV_BLEND_NONE)
     {
         /* TEXEL1 and this bake are mutually exclusive. Reuse the key's
@@ -14604,6 +14701,12 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 
                         color = ndsRendererHardwareBlendTexel01(
                             color, color1, stats->prim_lod_fraction, x, y);
+                    }
+                    else if (prim_env_blend_mode ==
+                             NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA)
+                    {
+                        color = ndsRendererHardwarePrimRgbTexel0Alpha(
+                            color, stats->prim_color);
                     }
                     else if (prim_env_blend_mode !=
                              NDS_RENDERER_PRIM_ENV_BLEND_NONE)

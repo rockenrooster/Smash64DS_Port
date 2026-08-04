@@ -194,6 +194,32 @@ if ($missing.Count -gt 0) {
 $has_effect_othermode =
     ($symbols -contains 'gNdsEffectDLOtherModeL') -and
     ($symbols -contains 'gNdsEffectDLOtherModeValid')
+# THE SUBMIT LATCH, which is a different reading from the two above and has
+# never been printed. gNdsEffectDLOtherModeL is the effect LAYER's sticky value,
+# published at the display-proc marker; a probe stopping at one effect reads
+# whatever the last effect left there. The In/Out pair is latched around ONE
+# list's execution (reloc_backend_renderer_dl.c:9251 and :9277), so Out == In
+# says that list emitted no G_SETOTHERMODE_L of its own and inherited the mode
+# it was handed -- which is the question "which list actually makes the pixels"
+# reduces to. SubmitCount is the engagement guard: In == Out == 0 with
+# submits == 0 means the latch never ran, not that the mode was zero.
+# NOTE THE NAME. There is no gNdsEffectDLSubmitOtherModeCount; the counter beside
+# the pair is gNdsEffectDLSubmitCount (nds_effects.h:232).
+$has_effect_dl_latch =
+    ($symbols -contains 'gNdsEffectDLSubmitOtherModeIn') -and
+    ($symbols -contains 'gNdsEffectDLSubmitOtherModeOut') -and
+    ($symbols -contains 'gNdsEffectDLSubmitCount')
+# BUGS row 4's arming counters (battleship_efmanager.c:1520-1529), compiled in
+# but never yet read. makes/nulls separate "the wave spawned" from "the EFStruct
+# pool was full and the source maker swallowed the NULL" (efmanager.c:3335);
+# lastindex is the trigger identity, so a run where the wave never arms still
+# says WHICH trigger last asked for it. Optional for the same reason as the
+# block above: an older ELF must take pictures rather than throw.
+$has_impact_wave_counters =
+    ($symbols -contains 'gNdsEffectImpactWaveMakeCount') -and
+    ($symbols -contains 'gNdsEffectImpactWaveMakeNullCount') -and
+    ($symbols -contains 'gNdsEffectImpactWaveLastIndex') -and
+    ($symbols -contains 'gNdsEffectImpactWaveLastGObjID')
 
 # ADDRESS-RESOLVED, NOT NAME-RESOLVED, AND THE MATCH MUST BE UNIQUE.
 # On 2026-08-04 `break <name>` handed this probe
@@ -390,6 +416,36 @@ function New-EffectXluCommand([string]$Name) {
         ', (gNdsEffectDLOtherModeL & 3)')
 }
 
+# THE PER-LIST LATCH, one printf per capture so it reads as a time series
+# rather than a single end-of-run value. Its own guard and its own tag: the
+# XLU line above depends on a different pair of symbols, and folding two
+# independent guards into one printf makes four states of a line that should
+# have two.
+function New-EffectLatchCommand([string]$Name) {
+    if (-not $has_effect_dl_latch) {
+        return ('printf "KOLATCH tag=' + $Name +
+            ' in=absent out=absent submits=absent\n"')
+    }
+    return ('printf "KOLATCH tag=' + $Name +
+        ' in=%#x out=%#x same=%d submits=%u\n"' +
+        ', gNdsEffectDLSubmitOtherModeIn, gNdsEffectDLSubmitOtherModeOut' +
+        ', (gNdsEffectDLSubmitOtherModeIn == gNdsEffectDLSubmitOtherModeOut)' +
+        ', gNdsEffectDLSubmitCount')
+}
+
+# BUGS row 4. Cumulative, so the value at the last tag is the run's answer and
+# the earlier tags say when it armed.
+function New-ImpactWaveCommand([string]$Name) {
+    if (-not $has_impact_wave_counters) {
+        return ('printf "KOWAVE tag=' + $Name +
+            ' makes=absent nulls=absent lastindex=absent lastgobj=absent\n"')
+    }
+    return ('printf "KOWAVE tag=' + $Name +
+        ' makes=%u nulls=%u lastindex=%d lastgobj=%u\n"' +
+        ', gNdsEffectImpactWaveMakeCount, gNdsEffectImpactWaveMakeNullCount' +
+        ', gNdsEffectImpactWaveLastIndex, gNdsEffectImpactWaveLastGObjID')
+}
+
 try {
     $config_state = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath `
@@ -519,6 +575,8 @@ try {
         'end',
         (New-StateCommand 'ko-burst'),
         (New-EffectXluCommand 'ko-burst'),
+        (New-EffectLatchCommand 'ko-burst'),
+        (New-ImpactWaveCommand 'ko-burst'),
         (New-CaptureCommand 'ko-burst-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
@@ -565,6 +623,8 @@ try {
         'silent',
         (New-StateCommand 'star-ko'),
         (New-EffectXluCommand 'star-ko'),
+        (New-EffectLatchCommand 'star-ko'),
+        (New-ImpactWaveCommand 'star-ko'),
         (New-CaptureCommand 'star-ko-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
@@ -610,6 +670,8 @@ try {
         'set $vis_after = gNdsVisualEffectCreateCount',
         (New-StateCommand 'rebirth-halo'),
         (New-EffectXluCommand 'rebirth-halo'),
+        (New-EffectLatchCommand 'rebirth-halo'),
+        (New-ImpactWaveCommand 'rebirth-halo'),
         (New-CaptureCommand 'rebirth-halo-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
@@ -698,6 +760,8 @@ try {
         # moves.
         (New-StateCommand 'pre-death-baseline'),
         (New-EffectXluCommand 'pre-death-baseline'),
+        (New-EffectLatchCommand 'pre-death-baseline'),
+        (New-ImpactWaveCommand 'pre-death-baseline'),
         (New-CaptureCommand 'pre-death-baseline-probe' $emulator.Id $evidence_prefix),
         # TWO DEATHS, STAR FIRST, AND THE STAR ONE IS THE CORRECTION.
         #
@@ -731,6 +795,8 @@ try {
         'continue',
         (New-StateCommand 'post-star-3s'),
         (New-EffectXluCommand 'post-star-3s'),
+        (New-EffectLatchCommand 'post-star-3s'),
+        (New-ImpactWaveCommand 'post-star-3s'),
         (New-CaptureCommand 'post-star-3s-probe' $emulator.Id $evidence_prefix),
 
         # SECOND DEATH, SIDE KO, same fighter. The owner reported this after
@@ -749,6 +815,8 @@ try {
         'ignore $bpnum 180',
         'continue',
         (New-StateCommand 'post-side-3s'),
+        (New-EffectLatchCommand 'post-side-3s'),
+        (New-ImpactWaveCommand 'post-side-3s'),
         (New-CaptureCommand 'post-side-3s-probe' $emulator.Id $evidence_prefix),
 
         # Late in the match, well past both deaths. If the corruption is
@@ -759,12 +827,16 @@ try {
         'ignore $bpnum 600',
         'continue',
         (New-StateCommand 'late-match'),
+        (New-EffectLatchCommand 'late-match'),
+        (New-ImpactWaveCommand 'late-match'),
         (New-CaptureCommand 'late-match-probe' $emulator.Id $evidence_prefix),
 
         # The run ends where the match does, not on a frame count.
         ('tbreak *' + $results_confetti_address),
         'continue',
         (New-StateCommand 'results'),
+        (New-EffectLatchCommand 'results'),
+        (New-ImpactWaveCommand 'results'),
 
         ('printf "KOVFX explode_calls=%d star_calls=%d rebirth_calls=%d ' +
             'star=%f,%f cam_top=%d map_top=%d ' +
@@ -840,7 +912,7 @@ try {
             (@($bad_resolves + $multi_locations) -join ' / '))
     }
 
-    $capture | Select-String -Pattern 'KOVFX|KOSHOT'
+    $capture | Select-String -Pattern 'KOVFX|KOSHOT|KOXLU|KOLATCH|KOWAVE'
     Write-Output "probe capture: $artifact"
 }
 finally {

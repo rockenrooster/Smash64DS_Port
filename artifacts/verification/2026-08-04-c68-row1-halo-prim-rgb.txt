@@ -1,0 +1,247 @@
+Row 1 (revival platform "colors look off, too dark") -- the bounded fix built,
+run on the natural path, and measured against a synchronized control.
+
+RESULT: the beam's opaque grey ramp is gone. At the same tag, same frame, same
+match clock, the changed region goes from a 38-level opaque grey ramp (including
+the reported 0 / 36 / 223) to pure white 255,255,255 at 45.2% of the changed
+pixels, with canopy green and sky blue showing through where source coverage is
+now below the 1-bit threshold. 1,126 pixels changed against a same-ROM noise
+floor of 0. Cycle 68, 2026-08-04.
+
+NOT CLOSED. The hard edge is a fidelity trade and the owner's eye decides it.
+
+======================================================================
+PREMISE RE-VERIFIED FROM THE ASSET, NOT INHERITED
+======================================================================
+decomp/BattleShip-main/decomp/assets/us/relocData/85.vpk0.bin, beam list 0x2890:
+
+  0x28a0  FCFFFFFF FFFDF2F9   G_SETCOMBINE
+  0x28a8  FA000000 FFFFFFFF   G_SETPRIMCOLOR = 255,255,255,255
+  0x28b8  F5800200 00090230   G_SETTILE render tile: fmt=4 (I), siz=0 (4b)
+
+Decoded in BOTH cycle layouts -- they are identical, so the recogniser fires
+whatever G_SETCYCLETYPE says:
+
+  colour  a=15 b=15 c=31 d=3    -> 0, 0, 0, PRIMITIVE
+  alpha   a=7  b=7  c=7  d=1    -> 0, 0, 0, TEXEL0
+
+So rgb = PRIMITIVE (white), alpha = TEXEL0, on an I4 image. The cycle-67
+diagnosis is confirmed exactly; nothing was taken on trust.
+
+Note the zero encodings are field-width-specific. G_CCMUX_0 is 31 and each
+colour field masks it to its own width: 15 in the 4-bit a and b fields, 31 in
+the 5-bit c field, 7 in the 3-bit d field. The header had names for the a/b and
+d widths only; NDS_RENDERER_CCMUX_ZERO_C was added so a gate cannot compare a c
+field against the a/b encoding.
+
+======================================================================
+THE CHANGE
+======================================================================
+src/nds/nds_renderer.c
+
+1. NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA (3u), a third arm on
+   ndsRendererHardwarePrimEnvTexel0BlendMode. The existing BLENDPE lerp gate is
+   UNCHANGED -- it became the body of an `if` instead of an early-out `if not`,
+   with its two alpha arms intact inside it, and the degenerate constant form is
+   a SEPARATE branch below. The gate was not widened.
+
+2. ndsRendererHardwarePrimRgbTexel0Alpha: emits PRIM's RGB with the source
+   intensity as the alpha bit. ndsRendererHardwareConvertI is NOT touched -- it
+   serves every I-format texture in the game, and the coverage this combine wants
+   is still recoverable from any one of the RGB5 lanes it wrote. Coverage
+   quantises to one bit at >= 16 of 31 (round to nearest).
+
+3. Cache key: its OWN bit, NDS_RENDERER_HW_TEXTURE_KEY_PRIM_RGB_TEXEL0_ALPHA
+   (1u << 30). THE EXISTING BIT WAS NOT ENOUGH. Modes 1 and 2 both bake through
+   ndsRendererHardwareBlendPrimEnvTexel0, so one flag distinguished "baked" from
+   "raw" and that sufficed. Mode 3 bakes differently, so sharing the flag would
+   let a beam and a BLENDPE surface with equal prim/env collide on one entry and
+   serve whichever converted first. PRIM RGB was already keyed (combine_w0) and
+   stays keyed because it is now the texel colour itself; ENV is dropped
+   (combine_w1 = 0) because this combine never reads it and keying on it would
+   force a re-bake whenever an unrelated list moved the env colour.
+   Bit 30 is free: key.flags holds render_tile_flags in bits 0-7 and
+   (load_kind << 8), and load_kind's largest value is 1u << 6.
+
+4. ndsRendererHardwareBlendModeKeepsTexelCoverage, used at
+   ndsRendererHardwareAlpha and ndsRendererHardwareAlphaUsesVertex. BEYOND THE
+   BRIEF'S TWO EDITS, and stated as such: those two sites keyed on
+   SOURCE_ALPHA alone, but SOURCE_ALPHA and mode 3 have BYTE-IDENTICAL alpha
+   muxes and differ only in colour, so an alpha-side decision must treat them
+   the same or the new mode multiplies vertex alpha into coverage the texel
+   already carries. Both sites are unreachable for this beam (othermode_l
+   0x552078 takes their opaque early return first), so this closes a latent
+   asymmetry rather than fixing a measured defect.
+
+======================================================================
+MEASUREMENT -- and the control that made it interpretable
+======================================================================
+Four runs of probe-ko-vfx.ps1, natural one-minute match:
+  c67romA = c67-halo-latch      (build-c66-halo-latch, previous cycle)
+  c67romB = c68-latch-probe     (build-c66-halo-latch, re-run this cycle)
+  c68run1 = c68-halo-primrgb    (build-c68-halo-primrgb)
+  c68run2 = c68-repro           (build-c68-halo-primrgb, re-run)
+
+Pairwise changed pixels, cropped to the 3D viewport (14,56)-(408,345) so the
+FPS/clock HUD on the bottom screen cannot pollute the count:
+
+  tag                 c67romA/B  c68run1/2  c67rom vs c68run2
+  pre-death-baseline      0          0            0
+  rebirth-halo            0          0            0
+  post-star-3s            0      113,834        1,126  (0.99%)
+
+The same-ROM floor is 0 -- this harness is bit-deterministic at these tags, so
+1,126 is signal, not noise.
+
+pre-death-baseline (frame 246) and rebirth-halo (frame 383) are 0 in EVERY pair
+including cross-ROM, and that is correct rather than a dead fix: no revival
+platform is on camera at 246, and at 383 the camera is still on Fox. The fix
+can only show where the beam draws.
+
+c68run1's post-star-3s capture is DISCARDED as a bad capture. It differs from
+its OWN ROM's second run by 113,834 px (99.97%) and its later event-armed tags
+drifted (ko-burst frame 664 vs 614, clock 44 vs 41 at frame 789, results 2279 vs
+2174) while c68run2 reproduced the c67 ROM's tag frames EXACTLY. One run's
+capture stalled and the guest advanced during it -- the documented halted-core /
+stale-buffer trap. It is recorded here because a first reading of it looked like
+"the candidate changed the fight", and it did not: the ROM is deterministic and
+run 2 proves it.
+
+THE NUMBERS, changed pixels only, bbox (261,42)-(313,64) viewport-local
+(52 x 22 px, the beam and nothing else in the frame):
+
+  BEFORE (c67 ROM), 38 distinct grey levels, all opaque:
+    (0,0,0)         211  18.7%   <- the black surround, intensity-0 texels
+    (223,223,223)   107   9.5%
+    (36,36,36)       85   7.5%
+    (207,207,207)    85   7.5%
+    (52,52,52)       84   7.5%
+    (101,101,101)    83   7.4%
+    levels: 0 4 20 24 28 36 40 44 48 52 60 69 81 85 101 105 109 117 130 142
+            150 158 162 166 174 178 190 195 203 207 215 219 223 227 231 235
+            239 251
+
+  AFTER (c68 ROM):
+    (255,255,255)   509  45.2%   <- PRIM's RGB, flat white
+    (36,113,48)      87   7.7%   \
+    (69,162,85)      54   4.8%    | canopy showing THROUGH where coverage
+    (48,150,73)      52   4.6%    | is now below the 1-bit threshold
+    (36,138,60)      51   4.5%   /
+    (0,0,223)        14   1.2%   <- sky
+    17 grey levels remain, at low counts: platform geometry that is not the
+    beam, plus edge pixels.
+
+The reported 0 / 36 / 223 are all present in BEFORE and all absent from the
+beam in AFTER. The opaque black surround -- 18.7% of the changed pixels, and
+the single largest contributor to "too dark" -- is gone.
+
+Side by side, 7x nearest, same crop both arms:
+  artifacts/visibility/c68-halo-primrgb_beam-before-after.png
+
+======================================================================
+THE CEILING, MEASURED RATHER THAN ASSERTED
+======================================================================
+The DL texture upload is GL_RGBA at nds_renderer.c:14834 -- RGB555 + ONE alpha
+bit. So the beam is white with a HARD EDGE, not the source's 32-level fade.
+That is visible in the AFTER histogram: 45.2% of changed pixels are exactly
+255,255,255 with no intermediate coverage between them and the background.
+
+Threshold choice: >= 16 of 31, round to nearest, not "any non-zero". A
+threshold of 1 would promote the whole faint outer ramp to fully opaque and
+draw a beam WIDER than the source. This is a judgement inside a 1-bit
+constraint and it is the owner's to overrule.
+
+WHAT A5I3 WOULD COST, scoped honestly and NOT built:
+
+The generic helper already exists and is already parameterised by format and
+palette size: ndsRendererHardwarePrepareIFCommonAtlas (:10269), with wrappers
+...PrepareIFCommonCloudAtlas -> GL_RGB8_A5, 8 entries (:10343) and
+...PrepareIFCommonA3I5Atlas -> GL_RGB32_A3, 32 entries (:10352). A5I3 is LIVE
+today for the cloud atlas. (The particle/effect atlas moved A5I3 -> A3I5 on
+2026-08-03 because 8 SHARED palette entries could not hold Fox's reflector blues
+alongside every other effect's greys, :11508-11523. That history is the argument
+against sharing one A5I3 palette across cached DL textures -- and it does not
+apply to a beam that needs exactly one colour.)
+
+Routing the CACHED DL path to A5I3 needs four coupled changes:
+  1. sNdsRendererHardwareTextureScratch is `static u16` (:3608) and the whole
+     convert loop, the row staging and the unique-row compaction write u16
+     RGBA5551. A5I3 is one byte per texel.
+  2. NDSRendererHardwareTextureCacheEntry (:3427) carries no format; the upload
+     hardcodes GL_RGBA. Format becomes per-entry.
+  3. Each entry needs its own palette, and glColorTableEXT binds to the
+     CURRENTLY BOUND name -- so palette upload moves into the bind path.
+  4. VRAM accounting and eviction assume two bytes per texel.
+
+DOES THE CACHE GENUINELY NEED PER-ENTRY FORMAT? No -- one dedicated slot would
+do, and it is much cheaper. The atlas helpers already live entirely outside the
+cache (they set sNdsRendererHardwareActiveTextureEntry = NULL). The work would
+be a fill callback converting the I4 nibble plane to A5I3 bytes
+((alpha5 << 3) | index, alpha5 = nibble<<1 | nibble>>3, palette entry 1 =
+white), ONE prepare at load rather than per frame, a bind-time redirect keyed on
+the SEMANTIC discriminator already in hand (blend mode 3 + format I + size 4b,
+not a stage address or DL pointer), and a one-entry memo of the prepared name.
+That generalises to any list carrying this combine instead of hard-coding the
+beam.
+
+Recommendation stated, not taken: dedicated slot, not per-entry cache format.
+Whether the hard edge needs fixing at all is the owner's call.
+
+======================================================================
+ROW 4 -- FIRST EVER IMPACT-WAVE CAPTURE (free, same runs)
+======================================================================
+probe-ko-vfx.ps1 gained two optional blocks this cycle (guarded by
+$symbols -contains, never unconditional in the KOSHOT line, per the comments
+already in that block). The counters were compiled into the c66 ELF and had
+never been printed.
+
+  KOWAVE tag=results makes=11 nulls=0 lastindex=4 lastgobj=1011   (c68 run)
+  KOWAVE tag=results makes=9  nulls=0 lastindex=4 lastgobj=1011   (c66 ROM)
+
+The wave ARMS. makes rises from 0 through the match, nulls is 0 at every tag in
+every run -- the EFStruct pool never refused it -- and the last trigger index is
+4, the hard landing. First arming falls between frame 789 and 1390, i.e. once
+the fighters actually engage. So row 4's defect is DOWNSTREAM of the maker; the
+"never spawned" branch is eliminated.
+
+NAME CORRECTION: there is no gNdsEffectDLSubmitOtherModeCount. The counter
+beside the In/Out pair is gNdsEffectDLSubmitCount (nds_effects.h:232).
+
+======================================================================
+CYCLE-66 LATCH PREDICTION -- CONFIRMED, WITH A CONTROL THAT CAN FAIL
+======================================================================
+The prediction was: the beam's list emits no G_SETOTHERMODE_L of its own, so
+Out == In, while a list that carries its own mode reads Out != In.
+
+  KOLATCH tag=rebirth-halo   in=0x552078 out=0x552078 same=1 submits=72
+  KOLATCH tag=post-star-3s   in=0x552078 out=0x552078 same=1 submits=204
+  KOLATCH tag=late-match     in=0x5049d8 out=0x552078 same=0 submits=1272
+  KOLATCH tag=results        in=0x504341 out=0x504340 same=0 submits=1970
+                                                        (c66 ROM run)
+
+same=1 at both halo tags, and same=0 elsewhere in the SAME run -- so the latch
+can differ and same=1 is a measurement, not a stuck counter. submits=0 with
+in=out=0 at the two earliest tags is the engagement guard doing its job: that
+is "the latch never ran", not "the mode was zero".
+
+0x552078 decodes to ac=0, zmode=OPA, forcebl=0, cvgxalpha=0 -- an opaque render
+mode, which is also why the two alpha-side call sites in change 4 above are
+unreachable for this beam.
+
+======================================================================
+IDENTITY
+======================================================================
+Candidate : builds/build-c68-halo-primrgb/smash64ds-battle-playable-proof-hwtri
+Control   : builds/build-c66-halo-latch/smash64ds-battle-playable-proof-hwtri
+Branch    : codex/r2-runtime2
+Root ROMs UNCHANGED across this cycle (hashed before and after the build):
+  smash64ds.nds
+    730829832AE25419A44A8B520E169971AB46E21D97BF9D9EECAE1A5E441E4255
+  smash64ds-battle-playable-hwtri.nds
+    9DAC2CBED46559F8D00A74AEF5B5D3167EB15E9C3BB864010B3DA3EB46751004
+
+NOT DONE, deliberately: no A5I3 path, no verifier run (no gameplay-affecting
+code changed; the widest relevant verifier is owed when this is promoted), no
+performance A/B (active-frame work changed only in the texture bake for one
+combine, and the beam converts once per cache fill, not per frame -- if the
+owner promotes this, that claim is the thing to check).

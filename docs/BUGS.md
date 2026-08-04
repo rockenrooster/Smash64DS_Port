@@ -3,7 +3,7 @@ AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if n
 These bugs should be fixed for P1 delivery:
 
 - I see the floating platform, but its colors look off (too dark?), like it isn't rendering correctly.
-  LOCALIZED: I4 beam converts to opaque grey — intensity lands in RGB, alpha forced 1 (nds_renderer.c:12114).
+  OWNER-QUEUED: beam now white, 1-bit alpha; hard edge replaces source 32-level fade — A5I3 would restore it.
   
 - I see the death explode blast pillar thing, but the colors look off (too dark?) and it doesn't seem to play at the players death location off screen, check x,y,z coords. Also if a player hits the side boundaries, it should play horizontally im pretty sure.
   LOCALIZED: owner accepts current pillar; N64's whole-screen white KO flash is a deliberate omission, never re-add.
@@ -12,7 +12,7 @@ These bugs should be fixed for P1 delivery:
   LOCALIZED: now inherits the source's own translucent mode; unchanged by eye, cause not yet named.
   
 - Impact wave, not showing the green impact effect looks gray/black instead.
-  LOCALIZED: never captured; arming counters gNdsEffectImpactWave* now record spawn, index and NULL-pool at its maker.
+  LOCALIZED: maker healthy — makes=11 nulls=0 lastindex=4 first capture; wrong colour is downstream of spawn.
 
 - Fox reflector is green for some reason, should be blue
 
