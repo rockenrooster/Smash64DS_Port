@@ -7029,3 +7029,80 @@ stated in `census-vsresults-blit.ps1` above the code that produces the rows.
 
 **Device A/B not scheduled** — Results is not a hardware-specific risk and the
 gate is not yet met, so it is not an acceptance measurement.
+
+## GATE 5 — NDS_R2_SOURCE_EFFECTS_FULL paired A/B (2026-08-04)
+
+The comparison the flag-0 freeze had blocked since the campaign opened. Both
+arms built from one tree at 46d3fca71b, target
+`smash64ds-battle-playable-tickhud-hwtri`, `NDS_TICK_HUD_DRAW=0`, identical
+melonDS (DE80E46B) and window, DLDI ON, canonical mode 163, window
+frames 501..628.
+
+  arm A `build-gate5-flag0`  NDS_R2_SOURCE_EFFECTS_FULL=0 (atlas stand-ins)
+  arm B `build-gate5-flag1`  NDS_R2_SOURCE_EFFECTS_FULL=1 (source desc models)
+
+**VERDICT: no performance case for flipping the default. Arm B is equal at the
+median and worse in the tail, and NEITHER arm meets the gate.**
+
+| n=128, paired by frame | A (flag 0) | B (flag 1) | delta |
+|---|---|---|---|
+| WORK-H P50 | 983,104 | 988,544 | **+5,440** (+0.55%) |
+| WORK-H P95 | 1,247,040 | 1,283,072 | **+36,032** |
+| WORK-H paired | — | — | 47/128 better, 81 worse, **median +7,680** |
+| frames over 1.12M | **16 of 128** | **17 of 128** | +1 |
+| VBI 2/3/4/5+ | 551/60/13/4 max 20 | 548/64/12/4 max 19 | — |
+| FPS (5+ counted as 5, so an upper bound) | <=27.75 | <=27.71 | — |
+| cadence violations | 0 | 0 | 0 |
+
+Untouched-bucket noise bound for this pair: `BG` moved median 0, range
+-192..+192 over 128 paired frames. `BG` is only 3,968 ticks, so it bounds the
+noise tightly but cannot exhibit a 5,000-tick term; the ~5,000-7,000 build
+placement floor from Task 100 still applies to `WORK-H`, which puts both the
+P50 delta (+5,440) and the paired median (+7,680) at or inside it.
+
+**A 40-frame window said the opposite, and it was wrong.** The first pass
+(n=40, frames 501..540) read WORK-H P95 1,139,968 vs 1,058,624 — arm B ahead by
+81,344, with 3 over-gate frames in A and 0 in B — which is exactly the
+"flag 1 is FASTER than the stand-ins" surprise. It does not survive: at n=128
+the over-gate counts are 16 and 17, and the excursions simply fell outside
+501..540 in arm B. At n=40 the P95 index is the 3rd-worst sample of 40; at
+n=128 it is the 8th-worst of 128, so the short window resolves a different
+statistic. This is the same trap as "rank the whole distribution", and it is
+now the second time a 40-sample P95 has produced a verdict the 128-sample
+distribution reversed. **Treat n=40 as unusable for a gate decision.**
+
+**Retraction.** The cycle-43 freeze-fix commit (46d3fca71b) reported WORK-H P95
+1,079,680 / 1,057,536 "both inside the 1.12M gate". Those were n=40 AND carried
+the tick-HUD draw. Both figures are withdrawn as gate evidence; the honest
+numbers are the n=128 row above, and **the milestone gate is not met in either
+configuration**. The freeze-fix conclusions themselves are unaffected — they
+rest on counters and frame counts, not on percentiles.
+
+Mechanism, from the paired columns: `FTR` +3,840 median (55/128 better) against
+`STG` -4,096 median (114/128 better), and `SRC` -9,024 median against `MISC`
++1,472 with a P95 of +294,272. Effects move between brackets when the flag
+routes them through the desc-model path instead of the atlas quad path, so most
+of the per-bucket movement is attribution, not cost. The whole-loop answer is
+`WORK-H`, and it says equal-to-slightly-worse.
+
+Consistent with "the gate is an event, not an average": both arms sit near
+983,000 at P50 and are pushed over 1.12M by 16-17 asset-load excursions per 128
+frames. That excursion population, not the effects flag, is what the gate is
+waiting on.
+
+Evidence: `artifacts/performance/2026-08-04_gate5-{A-flag0,B-flag1}-128.json`
+(and the superseded `-A-flag0.json`/`-B-flag1.json` n=40 pair, kept because the
+retraction above depends on them). Paired-by-frame differencing is not in
+`compare-tick-hud-buckets.ps1`, which only diffs sorted percentiles — the gap
+that produced the n=40 misread. **Owed: fold a per-frame paired view into that
+script** so the standing rule "pair the arms by frame number" is what the tool
+does by default.
+
+**Screenshot half NOT landed.** The standing rules require a cross-build render
+comparison to lock on `gSCManagerBattleState->time_remain`, not on the presented
+frame counter, and no harness supports that lock: `capture-melonds.ps1
+-ExactFirstFrame` delegates to `capture-cut-g-exact-frames.ps1`, which breaks on
+the frame counter. With the arms 0.55% apart at P50 the drift is real, and R2-02
+E8 measured two simulation ticks of drift into a 57% top-screen pixel delta, so
+a frame-locked pair here would be misleading rather than merely imprecise.
+Owed: an `-ExactTimeRemain` lock in that harness, then the pair.

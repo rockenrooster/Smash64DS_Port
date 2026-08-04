@@ -49,13 +49,45 @@ both inside the 1.12M gate -- gate 5 finally has its control arm.
 artifacts/performance/2026-08-04_gobjpool-flag{0,1}-tickhud.json; the sizing and
 margin probes are artifacts/verification/2026-08-0{3,4}_gobj*.
 
+GATE 5 PRICED (2026-08-04). The paired A/B the freeze was blocking is done:
+128 frames, one tree, HUD draw off, identical melonDS/window/config.
+**Flipping the flag is free at the median and slightly worse in the tail, and
+neither setting meets the gate.** WORK-H P50 983,104 -> 988,544 (+5,440, inside
+the placement floor); P95 1,247,040 -> 1,283,072 (+36,032); paired 47/128
+better, 81 worse, median +7,680; over-gate frames 16 -> 17 of 128; FPS <=27.75
+vs <=27.71; VBI max 20 vs 19; slips 0 both.
+The earlier "flag-on costs FPS 20.0 / ALL 1.68M" warning is SUPERSEDED -- it was
+unpaired. So is this row's own first n=40 pass, which read flag 1 as 81,344
+AHEAD; at n=128 that reverses, because a 40-sample P95 is the 3rd-worst frame.
+Full table, retraction of the cycle-43 percentiles, and the owed
+per-frame-paired tooling: docs/PERF_LEDGER.md "GATE 5".
+
+BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL default, keep, or optimize
+first). Performance no longer decides it -- the two settings cost the same, so
+this is a fidelity call and the owner is the oracle. What changes per row:
+  * shield bubble    -- a 1:2 source cell stretched on a square quad becomes the
+                        source's animated model. Fixes "cut in half".
+  * rebirth platform -- one flat quad becomes the joint-animated model, i.e. the
+                        platform appears at all on respawn.
+  * Fox reflector    -- NO CHANGE EITHER WAY, see below. Do not count this row.
+  * impact wave      -- a static atlas quad becomes the material-animated model.
+Against: content-completeness doctrine says stand-ins are a temporary audit
+state, not a shipping state, which argues for the flip; the tail is 36,032
+worse on a frame already 127,040 over gate, which argues for optimize-first.
+EVIDENCE STILL MISSING, and it is what the decision actually needs: no
+synchronized before/after capture exists for any of the four. Blocking reason is
+tooling, not effort -- a cross-build render comparison must lock on
+gSCManagerBattleState->time_remain and no harness can (capture-melonds.ps1
+-ExactFirstFrame locks the presented-frame counter, which R2-02 E8 measured into
+a 57% false delta). Land -ExactTimeRemain first, then the four captures.
+
 OPEN.
-  * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
-    1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
-    not be proposed until gate 5 prices it. See 4c29b9615a.
-  * Reflector desc is disabled at startup because gFTDataFoxSpecial2 loads
-    after efManagerInitEffects. Deferred-retry fix written but UNVERIFIED --
-    proof is gNdsEFDescDeferRecoverCount>0, needs a Fox down-B. See 48fe59693c.
+  * Reflector: the deferred-retry fix CANNOT ENGAGE AT THE TRACKED DEFAULT.
+    gNdsEFDescDeferRecoverCount is absent from the flag-0 ELF entirely (nm on
+    both gate-5 arms) -- it is compiled inside NDS_R2_SOURCE_EFFECTS_FULL. At
+    flag 1 it exists and read 0 over 540 frames with EFDescDisabledCount=1, so
+    the desc is still disabled and the retry still never fired. Needs a Fox
+    down-B on a flag-1 ROM; a flag-0 run can never prove it. See 48fe59693c.
   * Gate 2 captures not closed: link-15 arms the probe correctly now
     (artifacts/visibility/2026-08-03_shield-vfx.png) but link 15 carries the
     shield AND the reflector, so the frame does not prove which drew.
@@ -70,26 +102,25 @@ do not restate them here.
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: is don't see the floating revival platform at all. the Halo is not the correct asset to use
     CAUSE: dEFManagerRebirthHaloEffectDesc is a joint-animated MODEL, drawn as one flat quad.
-    STAGE: draws flag-on (tree fix, 8508fc8d6). Awaiting a respawn capture. Flag still 0.
+    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). Gate 5 priced it free; capture owed.
 
 -Fox down B VFX is not correct or using correct asset.
     Owner: you are still not using the correct asset for Fox's down B reflector.
     CAUSE: dEFManagerFoxReflectorEffectDesc is an animated model from gFTDataFoxSpecial2, not a sprite.
-    STAGE: desc disabled at startup -- its file loads after effect init. Deferred-retry fix written but
-    UNVERIFIED (needs a down-B; proof is gNdsEFDescDeferRecoverCount>0). See 48fe59693c.
+    STAGE: LOCALIZED. Retry counter is compiled out at flag 0 and read 0 at flag 1; needs a flag-1 down-B.
 
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: builds and draws flag-on (8508fc8d6). The capture arms on link 15, but link 15 also carries
-    the reflector, so 2026-08-03_shield-vfx.png does not yet prove which drew. Flag still 0.
+    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). Gate 5 priced it free; link-15 capture owed.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
     CAUSE: dEFManagerImpactWaveEffectDesc is a material-animated model, so no single atlas texture can
     be its 'correct asset'. The row also has a particle half (dust, script 0x58, efmanager.c:2982).
-    STAGE: built correctly as a single DObj on link 10 -- its EFDesc omits flag 0x4, so a raw display
-    list is right. Executes fully, but its triangles do not reach the effect counter. See 4c29b9615a.
+    STAGE: BLOCKED(decision: flip NDS_R2_SOURCE_EFFECTS_FULL). Gate 5 priced it free; capture owed.
+    Built correctly as a single DObj on link 10 (EFDesc omits flag 0x4, so a raw display list is right);
+    executes fully, but its triangles still do not reach the effect counter. See 4c29b9615a.
 
 -KO VFX not drawing correctly.
     Owner: Not fixed yet, the "blast pillar" VFX isn't drawing, and doesn't seen to draw on the same z axis as the fighters
