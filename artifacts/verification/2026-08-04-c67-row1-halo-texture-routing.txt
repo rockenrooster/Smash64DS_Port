@@ -8,7 +8,9 @@ broken link and it dominates the picture. The four-stream collapse recorded in
 cycle 66 is real and still unfixed, but it is the SECOND link: it governs
 whether the slab is see-through, not whether it is grey.
 
-Cycle 67, 2026-08-04. Source read only -- no build, no emulator.
+Cycle 67, 2026-08-04. Everything above RUN RESULT is a source read -- no build
+was spent on it. The RUN RESULT section at the end photographs the same
+conclusion on the natural path.
 
 ======================================================================
 THE CONVERSION, VERBATIM
@@ -121,11 +123,12 @@ judgement chain that did not fit the remaining budget, and an unverified
 renderer change must not be committed to close a cycle. The seam is located to
 the line; the next cycle starts at nds_renderer.c:7794.
 
-STILL UNMEASURED: builds/build-c66-halo-latch has never executed. The
-prediction it exists to test is unchanged -- the beam's list must read
-gNdsEffectDLSubmitOtherModeOut == ...In (no mode of its own) while an
-entry[2] leaf must read Out != In. Nothing above depends on that run; it
-confirms cause B's mechanism, not cause A's.
+STILL UNMEASURED: the cycle-66 latch prediction -- the beam's list must read
+gNdsEffectDLSubmitOtherModeOut == ...In (no mode of its own) while an entry[2]
+leaf must read Out != In. builds/build-c66-halo-latch HAS now run (see RUN
+RESULT), but the probe never printed those three symbols; see the harness gap
+recorded there. Nothing above depends on that reading; it confirms cause B's
+mechanism, not cause A's.
 
 ======================================================================
 RUN RESULT -- builds/build-c66-halo-latch, 2026-08-04 (probe-ko-vfx.ps1
