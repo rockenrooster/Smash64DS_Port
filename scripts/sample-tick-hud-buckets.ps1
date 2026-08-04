@@ -401,6 +401,40 @@ try {
         -WindowStyle Hidden -PassThru
     if (-not $gdbProcess.WaitForExit($TimeoutSeconds * 1000)) {
         Stop-Process -Id $gdbProcess.Id -Force
+        # A timeout here is almost never "too slow" -- it is the battle present
+        # loop having stopped advancing, which this harness reported as a
+        # generic timeout for eleven cycles while the guest was demonstrably
+        # alive (2026-08-03: counter frozen at 195 while gNdsFrameCounter kept
+        # climbing). The breakpoint script is silent until the target frame, so
+        # the stdout carries no frame number; read the counter once from the
+        # still-running emulator and name it. Confined to the timeout branch:
+        # the measurement path is untouched whether or not this read works.
+        $frozenAt = $null
+        try {
+            $probeScript = Join-Path $temp 'tickhud-frozen-probe.gdb'
+            Set-Content -LiteralPath $probeScript -Encoding ASCII -Value @(
+                'set pagination off', 'set confirm off', 'set remotetimeout 10',
+                "target remote 127.0.0.1:$($context.GdbPort)",
+                'printf "FROZENAT=%u\n", gNdsBattlePlayablePacingPresentedFrames',
+                'detach', 'quit')
+            $probeOut = Join-Path $temp 'tickhud-frozen-probe.out'
+            $probe = Start-Process -FilePath $Gdb `
+                -ArgumentList @('-q', '-batch', '-x', $probeScript, $elf) `
+                -WorkingDirectory $root -RedirectStandardOutput $probeOut `
+                -RedirectStandardError (Join-Path $temp 'tickhud-frozen-probe.err') `
+                -WindowStyle Hidden -PassThru
+            if ($probe.WaitForExit(30000)) {
+                $m = [regex]::Match((Get-Content $probeOut -Raw), 'FROZENAT=(\d+)')
+                if ($m.Success) { $frozenAt = [uint32]$m.Groups[1].Value }
+            } else { Stop-Process -Id $probe.Id -Force }
+        } catch { }
+        if ($null -ne $frozenAt) {
+            throw ("Tick-HUD run FROZEN-AT-$frozenAt after ${TimeoutSeconds}s: " +
+                "gNdsBattlePlayablePacingPresentedFrames stopped at $frozenAt, " +
+                "short of the $ringEndFrame this run needs. The battle present " +
+                "loop stopped advancing -- this is a stall to diagnose, not a " +
+                "slow run to re-time with a longer -TimeoutSeconds.")
+        }
         throw "Tick-HUD GDB run exceeded ${TimeoutSeconds}s before $Samples samples."
     }
     if ($gdbProcess.ExitCode -ne 0) {
