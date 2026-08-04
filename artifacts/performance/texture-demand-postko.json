@@ -1,0 +1,186 @@
+{
+  "task": "BUGS row 6 - post-KO texture demand at the request site",
+  "target": "smash64ds-battle-playable-tickhud-hwtri",
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-c71-texdemand\\smash64ds-battle-playable-tickhud-hwtri.nds",
+  "romSha256": "64CA1D95BB254C20B0D968EA25D2731767675C85955CFAD050B6C356ADB52503",
+  "deathFrame": 200,
+  "startFrame": 350,
+  "windowFrames": 40,
+  "forced": "TKFORCED=1,200",
+  "timedOut": false,
+  "capturedUtc": "2026-08-04T21:33:36.3058971Z",
+  "requestsPerFrame": [
+    {
+      "Frame": 351,
+      "Requests": 113
+    },
+    {
+      "Frame": 352,
+      "Requests": 113
+    },
+    {
+      "Frame": 353,
+      "Requests": 113
+    },
+    {
+      "Frame": 354,
+      "Requests": 113
+    },
+    {
+      "Frame": 355,
+      "Requests": 113
+    },
+    {
+      "Frame": 356,
+      "Requests": 113
+    },
+    {
+      "Frame": 357,
+      "Requests": 113
+    },
+    {
+      "Frame": 358,
+      "Requests": 113
+    },
+    {
+      "Frame": 359,
+      "Requests": 113
+    },
+    {
+      "Frame": 360,
+      "Requests": 113
+    },
+    {
+      "Frame": 361,
+      "Requests": 113
+    },
+    {
+      "Frame": 362,
+      "Requests": 113
+    },
+    {
+      "Frame": 363,
+      "Requests": 113
+    },
+    {
+      "Frame": 364,
+      "Requests": 113
+    },
+    {
+      "Frame": 365,
+      "Requests": 113
+    },
+    {
+      "Frame": 366,
+      "Requests": 113
+    },
+    {
+      "Frame": 367,
+      "Requests": 113
+    },
+    {
+      "Frame": 368,
+      "Requests": 113
+    },
+    {
+      "Frame": 369,
+      "Requests": 113
+    },
+    {
+      "Frame": 370,
+      "Requests": 113
+    },
+    {
+      "Frame": 371,
+      "Requests": 113
+    },
+    {
+      "Frame": 372,
+      "Requests": 113
+    },
+    {
+      "Frame": 373,
+      "Requests": 113
+    },
+    {
+      "Frame": 374,
+      "Requests": 113
+    },
+    {
+      "Frame": 375,
+      "Requests": 113
+    },
+    {
+      "Frame": 376,
+      "Requests": 113
+    },
+    {
+      "Frame": 377,
+      "Requests": 113
+    },
+    {
+      "Frame": 378,
+      "Requests": 113
+    },
+    {
+      "Frame": 379,
+      "Requests": 113
+    },
+    {
+      "Frame": 380,
+      "Requests": 113
+    },
+    {
+      "Frame": 381,
+      "Requests": 113
+    },
+    {
+      "Frame": 382,
+      "Requests": 113
+    },
+    {
+      "Frame": 383,
+      "Requests": 113
+    },
+    {
+      "Frame": 384,
+      "Requests": 113
+    },
+    {
+      "Frame": 385,
+      "Requests": 113
+    },
+    {
+      "Frame": 386,
+      "Requests": 113
+    },
+    {
+      "Frame": 387,
+      "Requests": 113
+    },
+    {
+      "Frame": 388,
+      "Requests": 113
+    },
+    {
+      "Frame": 389,
+      "Requests": 113
+    },
+    {
+      "Frame": 390,
+      "Requests": 113
+    }
+  ],
+  "distinctPerFrame": [
+    {
+      "Frame": 389,
+      "Requests": 113,
+      "Distinct": 37
+    },
+    {
+      "Frame": 390,
+      "Requests": 113,
+      "Distinct": 37
+    }
+  ]
+}
