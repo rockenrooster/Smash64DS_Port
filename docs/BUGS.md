@@ -92,6 +92,25 @@ the four desc addresses, over 150 s of natural flag-1 play:
 Capture a few tics BELOW a spawn tic (time_remain counts down) so the effect is
 on screen. artifacts/verification/2026-08-04_gate6-effect-tics.txt.
 
+THE FLOOR IS THE STAGE, NOT THE INSTRUMENT (2026-08-04, corrects the entry
+below). Re-measured on a console-reduced ROM and it did NOT collapse: 36.5% and
+35.8% same-build adjacent-present, against 49.3% cross-build, at tic 1992.
+Higher than the tickhud ROM's ~32%, not lower. Looking at the frame gives the
+real cause -- Dream Land's canopy is a dense, high-frequency, SCROLLING texture,
+so a one-present shift repaints a third of the screen no matter what ROM it is.
+CONSEQUENCE: a whole-viewport pixel metric can never be this row's instrument.
+Gate-6 pairs must be CROPPED to the effect's own screen region, which is what
+TASK_STANDING_RULES already says ("crop the geometry you changed ... and look").
+compare-capture-pair.ps1 compares the whole viewport and has no crop; that is
+the next tool gap, and it is small.
+ALSO: the published target CANNOT be built to a lab dir. Makefile:54-56 --
+a PUBLISHED TARGET NAME publishes whatever BUILD says, so
+`smash64ds-battle-playable-hwtri` always writes the project root. Use
+`smash64ds-battle-playable-proof-hwtri`: same Makefile block, same scene
+harness and renderer flags (Makefile:1043-1074), NDS_TICK_HUD=0, and not a
+published name, so it lands in builds/. It still carries a small FPS/damage
+console; only the bucket table goes away.
+
 TWO CAPTURE-METHOD CORRECTIONS, both found by looking at the first attempt
 instead of trusting its pixel count:
   1. Gate-6 captures must come from the PUBLISHED battle target, never the
