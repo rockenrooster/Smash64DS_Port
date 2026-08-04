@@ -46,6 +46,57 @@ function Assert-True {
         throw $Message
     }
 }
+function Get-BigEndianUInt32 {
+    param(
+        [byte[]]$Bytes,
+        [int]$Offset
+    )
+    return [uint32](
+        ([uint32]$Bytes[$Offset] * 0x1000000) +
+        ([uint32]$Bytes[$Offset + 1] * 0x10000) +
+        ([uint32]$Bytes[$Offset + 2] * 0x100) +
+        [uint32]$Bytes[$Offset + 3])
+}
+function Set-GbiGeometryMode {
+    param(
+        [uint32]$Mode,
+        [uint32]$W0,
+        [uint32]$W1
+    )
+    [uint32]$clear = (-bnot $W0) -band 0x00ffffff
+    return [uint32](
+        ($Mode -band [uint32](-bnot $clear)) -bor
+        ($W1 -band 0x00ffffff))
+}
+function Get-FirstVtxState {
+    param(
+        [byte[]]$Bytes,
+        [int]$DataBase,
+        [int]$ListOffset,
+        [uint32]$InitialGeometryMode
+    )
+    [uint32]$mode = $InitialGeometryMode
+    for ($offset = $ListOffset; $offset -lt ($ListOffset + 0x800);
+         $offset += 8) {
+        $w0 = Get-BigEndianUInt32 $Bytes ($DataBase + $offset)
+        $w1 = Get-BigEndianUInt32 $Bytes ($DataBase + $offset + 4)
+        $op = $w0 -shr 24
+        if ($op -eq 0xd9) {
+            $mode = Set-GbiGeometryMode $mode $w0 $w1
+        }
+        elseif ($op -eq 0x01) {
+            return [pscustomobject]@{
+                CommandOffset = $offset
+                GeometryMode = $mode
+                VertexOffset = [int](($w1 -band 0xffff) * 4)
+            }
+        }
+        elseif ($op -eq 0xdf) {
+            break
+        }
+    }
+    throw ('Display list 0x{0:x} has no VTX command.' -f $ListOffset)
+}
 function Add-TextureLookupFixtureEntry {
     param(
         [byte[]]$Table,
@@ -281,6 +332,85 @@ function Test-Texel01LerpCombine {
         ((($W1 -shr 6) -band 0x07) -eq 7) -and
         ((($W1 -shr 21) -band 0x07) -eq 0) -and
         ((($W1 -shr 18) -band 0x07) -eq 3)
+}
+function Get-PrimEnvTexel0BlendMode {
+    param(
+        [uint32]$W0,
+        [uint32]$W1,
+        [bool]$UseSecondCycle = $false
+    )
+    if ($UseSecondCycle) {
+        $colorA = ($W0 -shr 5) -band 0x0f
+        $colorB = ($W1 -shr 24) -band 0x0f
+        $colorC = $W0 -band 0x1f
+        $colorD = ($W1 -shr 6) -band 0x07
+        $alphaA = ($W1 -shr 21) -band 0x07
+        $alphaB = ($W1 -shr 3) -band 0x07
+        $alphaC = ($W1 -shr 18) -band 0x07
+        $alphaD = $W1 -band 0x07
+    }
+    else {
+        $colorA = ($W0 -shr 20) -band 0x0f
+        $colorB = ($W1 -shr 28) -band 0x0f
+        $colorC = ($W0 -shr 15) -band 0x1f
+        $colorD = ($W1 -shr 15) -band 0x07
+        $alphaA = ($W0 -shr 12) -band 0x07
+        $alphaB = ($W1 -shr 12) -band 0x07
+        $alphaC = ($W0 -shr 9) -band 0x07
+        $alphaD = ($W1 -shr 9) -band 0x07
+    }
+    if (($colorA -ne 3) -or ($colorB -ne 5) -or
+        ($colorC -ne 1) -or ($colorD -ne 5)) {
+        return 0
+    }
+    if (($alphaA -eq 1) -and ($alphaB -eq 7) -and
+        ($alphaC -eq 3) -and ($alphaD -eq 7)) {
+        return 1
+    }
+    if (($alphaA -eq 7) -and ($alphaB -eq 7) -and
+        ($alphaC -eq 7) -and ($alphaD -eq 1)) {
+        return 2
+    }
+    return 0
+}
+function Blend-PrimEnvTexel0Rgb5551 {
+    param(
+        [uint16]$Texel0,
+        [uint32]$Primitive,
+        [uint32]$Environment
+    )
+    $redWeight = ($Texel0 -shr 0) -band 0x1f
+    $greenWeight = ($Texel0 -shr 5) -band 0x1f
+    $blueWeight = ($Texel0 -shr 10) -band 0x1f
+    $primitiveRed = ($Primitive -shr 27) -band 0x1f
+    $primitiveGreen = ($Primitive -shr 19) -band 0x1f
+    $primitiveBlue = ($Primitive -shr 11) -band 0x1f
+    $environmentRed = ($Environment -shr 27) -band 0x1f
+    $environmentGreen = ($Environment -shr 19) -band 0x1f
+    $environmentBlue = ($Environment -shr 11) -band 0x1f
+    $red = [Math]::Floor((($environmentRed * (31 - $redWeight)) +
+        ($primitiveRed * $redWeight) + 15) / 31)
+    $green = [Math]::Floor((($environmentGreen * (31 - $greenWeight)) +
+        ($primitiveGreen * $greenWeight) + 15) / 31)
+    $blue = [Math]::Floor((($environmentBlue * (31 - $blueWeight)) +
+        ($primitiveBlue * $blueWeight) + 15) / 31)
+    return [uint16](($Texel0 -band 0x8000) -bor $red -bor
+        ($green -shl 5) -bor ($blue -shl 10))
+}
+function Resolve-PrimEnvTexel0Alpha {
+    param(
+        [int]$Mode,
+        [int]$TexelAlpha,
+        [int]$PrimitiveAlpha
+    )
+    if ($Mode -eq 2) {
+        return $TexelAlpha
+    }
+    if ($Mode -eq 1) {
+        return [int][Math]::Floor(
+            (($TexelAlpha * $PrimitiveAlpha) + 127) / 255)
+    }
+    return -1
 }
 function Blend-Texel01Rgb5551 {
     param(
@@ -1184,11 +1314,59 @@ Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 1 -Dxt 1024 -FallbackWidth 4) 16
 Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 2 -Dxt 1024 -FallbackWidth 2) 8 'RGBA16 LOADBLOCK DXT source width mismatch.'
 Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 3 -Dxt 1024 -FallbackWidth 1) 4 'RGBA32 LOADBLOCK DXT source width mismatch.'
 Assert-Equal (Get-LoadBlockDxtSourceWidth -Size 0 -Dxt 0 -FallbackWidth 8) 8 'DXT-zero LOADBLOCK must retain its bounded fallback width.'
+# G_CC_BLENDPE has one RGB equation and two source-alpha forms in the imported
+# corpus. Decode fields rather than asset addresses or exact command words.
+$blendPrimAlphaW0 = [Convert]::ToUInt32('fc309661', 16)
+$blendPrimAlphaW1 = [Convert]::ToUInt32('552eff7f', 16)
+$blendSourceAlphaW0 = [Convert]::ToUInt32('fc30fe61', 16)
+$blendSourceAlphaW1 = [Convert]::ToUInt32('55fef379', 16)
+$blendWhite = [uint32]::MaxValue
+foreach ($secondCycle in @($false, $true)) {
+    Assert-Equal (Get-PrimEnvTexel0BlendMode $blendPrimAlphaW0 $blendPrimAlphaW1 $secondCycle) 1 "G_CC_BLENDPE primitive-alpha form failed for secondCycle=$secondCycle."
+    Assert-Equal (Get-PrimEnvTexel0BlendMode $blendSourceAlphaW0 $blendSourceAlphaW1 $secondCycle) 2 "G_CC_BLENDPE source-alpha form failed for secondCycle=$secondCycle."
+}
+Assert-Equal (Get-PrimEnvTexel0BlendMode ($blendPrimAlphaW0 -bxor 0x8000) $blendPrimAlphaW1) 0 'Non-BLENDPE combine entered the primitive/environment texture bake.'
+
+$blendEnvironments = @(
+    [pscustomobject]@{ Name = 'red'; Color = [Convert]::ToUInt32('ff000055', 16); Zero = 0x801f; Half = 0xc21f },
+    [pscustomobject]@{ Name = 'green'; Color = [Convert]::ToUInt32('00ff0066', 16); Zero = 0x83e0; Half = 0xc3f0 },
+    [pscustomobject]@{ Name = 'blue'; Color = [Convert]::ToUInt32('0000ff77', 16); Zero = 0xfc00; Half = 0xfe10 },
+    [pscustomobject]@{ Name = 'black'; Color = [Convert]::ToUInt32('00000088', 16); Zero = 0x8000; Half = 0xc210 }
+)
+foreach ($environment in $blendEnvironments) {
+    Assert-Equal (Blend-PrimEnvTexel0Rgb5551 0x8000 $blendWhite $environment.Color) $environment.Zero "BLENDPE $($environment.Name) environment endpoint changed."
+    Assert-Equal (Blend-PrimEnvTexel0Rgb5551 0xc210 $blendWhite $environment.Color) $environment.Half "BLENDPE $($environment.Name) half-texel blend changed."
+    Assert-Equal (Blend-PrimEnvTexel0Rgb5551 0xffff $blendWhite $environment.Color) 0xffff "BLENDPE white primitive endpoint changed for $($environment.Name) environment."
+}
+$blendIndexedPrimitives = @(
+    [pscustomobject]@{ Name = 'red'; Color = [Convert]::ToUInt32('ff0000ff', 16); Packed = 0x001f },
+    [pscustomobject]@{ Name = 'green'; Color = [Convert]::ToUInt32('00ff00ff', 16); Packed = 0x03e0 },
+    [pscustomobject]@{ Name = 'blue'; Color = [Convert]::ToUInt32('0000ffff', 16); Packed = 0x7c00 },
+    [pscustomobject]@{ Name = 'yellow'; Color = [Convert]::ToUInt32('ffff00ff', 16); Packed = 0x03ff },
+    [pscustomobject]@{ Name = 'white'; Color = [uint32]::MaxValue; Packed = 0x7fff }
+)
+foreach ($primitive in $blendIndexedPrimitives) {
+    Assert-Equal ((Blend-PrimEnvTexel0Rgb5551 0x7fff $primitive.Color 0) -band 0x7fff) $primitive.Packed "BLENDPE indexed $($primitive.Name) primitive was not retained."
+}
+Assert-Equal ((Blend-PrimEnvTexel0Rgb5551 0xc210 $blendWhite 0) -band 0x8000) 0x8000 'BLENDPE RGB bake discarded source A1 coverage.'
+foreach ($alphaCase in @(
+    [pscustomobject]@{ Texel = 0; Prim = 0; Source = 0 },
+    [pscustomobject]@{ Texel = 128; Prim = 96; Source = 128 },
+    [pscustomobject]@{ Texel = 255; Prim = 192; Source = 255 }
+)) {
+    Assert-Equal (Resolve-PrimEnvTexel0Alpha 1 $alphaCase.Texel 192) $alphaCase.Prim 'BLENDPE TEXEL0*PRIMITIVE source-alpha oracle changed.'
+    Assert-Equal (Resolve-PrimEnvTexel0Alpha 2 $alphaCase.Texel 192) $alphaCase.Source 'BLENDPE TEXEL0 passthrough source-alpha oracle changed.'
+}
+Assert-True ($renderer -match '(?s)static u32 ndsRendererHardwarePrimEnvTexel0BlendMode.*?color_a != NDS_RENDERER_CCMUX_PRIMITIVE.*?alpha_a == NDS_RENDERER_ACMUX_TEXEL0.*?alpha_a == NDS_RENDERER_ACMUX_0') 'Renderer no longer recognizes BLENDPE by active combine semantics and both alpha forms.'
+Assert-True ($renderer -match '(?s)key\.flags \|= NDS_RENDERER_HW_TEXTURE_KEY_PRIM_ENV_BLEND;.*?stats->prim_color & 0xffffff00u.*?stats->env_color & 0xffffff00u' -and $renderer.Contains('ndsRendererHardwareBlendPrimEnvTexel0(')) 'BLENDPE bake no longer keys captured primitive/environment RGB before conversion.'
+Assert-True ($renderer -match '(?s)ndsRendererHardwareColorSource.*?NDS_RENDERER_PRIM_ENV_BLEND_NONE.*?return 0xffffffffu;' -and $renderer -match '(?s)ndsRendererHardwareAlpha.*?NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA.*?return 31u;') 'BLENDPE bake is being remodulated or source-alpha passthrough is no longer opaque at polygon level.'
+
 # StagePupupuFile2 DL 0x22D0 uses G_CC_TEMPLERP in cycle 1 and
 # COMBINED*SHADE / COMBINED*PRIMITIVE in cycle 2. Its generated MObj branch
 # loads next through tile 6/TMEM 0x40 before current through tile 7/TMEM 0.
 $pondCombineW0 = [Convert]::ToUInt32('fc272c04', 16)
 $pondCombineW1 = [Convert]::ToUInt32('1f0c93ff', 16)
+Assert-Equal (Get-PrimEnvTexel0BlendMode $pondCombineW0 $pondCombineW1 $true) 0 'Dream Land TEMPLERP entered the BLENDPE texture bake.'
 Assert-True (Test-Texel01LerpCombine $pondCombineW0 $pondCombineW1) 'Dream Land pond TEXEL0/TEXEL1 combine mux did not decode as source TEMPLERP.'
 $pondLoads = @(
     [pscustomobject]@{ Valid = $true; Sequence = 1; Tile = 6; Tmem = 0x40; Image = 0x1e10; Texels = 256; Dxt = 1024 },
@@ -1486,6 +1664,12 @@ Assert-True ($renderer.Contains('sizeof(NDSRendererHardwareTextureKey) == 236u')
 Assert-True ($renderer -match '(?s)#if NDS_RENDERER_PROFILE_LEVEL < 2.*?entry = .*?sNdsRendererHardwareActiveTextureEntry.*?sNdsRendererHardwareTextureLookup\[slot\].*?value - 1u.*?#else\s*\(void\)key_hash;\s*for \(i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i\+\+\)') 'Texture lookup no longer keeps the open-address performance path independent from the forensic linear oracle.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareTextureLookupRemove.*?leaving tombstones.*?while \(sNdsRendererHardwareTextureLookup\[slot\] !=.*?NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY\).*?ndsRendererHardwareTextureLookupInsert') 'Texture lookup deletion no longer repairs its collision cluster to prevent long-match probe decay.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareTextureLookupRemove\(entry\);\s*#endif\s*entry->key = key;.*?entry->ready = TRUE;\s*#if NDS_RENDERER_PROFILE_LEVEL < 2\s*ndsRendererHardwareTextureLookupInsert\(entry\);') 'Texture refresh no longer removes the old hash mapping before publishing and indexing the exact replacement key.'
+# Cache slots and libnds GL names are both reused, so every long-lived stage or
+# fighter shortcut must retain the cache key generation as its identity fence.
+Assert-True ($renderer.Contains('u32 texture_generation;') -and $renderer.Contains('prepared->texture_generation = (resolved.entry != NULL) ?') -and $renderer.Contains('(entry->key_generation == prepared->texture_generation)') -and $renderer.Contains('(ndsRendererNativeStagePreparedTexturesValid() != FALSE)') -and $renderer.Contains('(ndsRendererNativeStagePreparedTextureValid(run) == FALSE)') -and ($renderer -match '(?s)ndsRendererTask36ReplayTexturesValid.*?ndsRendererNativeStagePreparedTextureValid\(\s*&run->prepared\)')) 'Native-stage prepared and replay paths no longer fence recycled texture slots by key generation.'
+Assert-True ($renderer.Contains('u32 entry_generation;') -and $renderer.Contains('memo->entry_generation = entry->key_generation;') -and ([regex]::Matches($renderer, 'entry->key_generation != memo->entry_generation').Count -eq 2)) 'Fighter run memo no longer rejects recycled texture names by cache key generation in both live and verify paths.'
+Assert-True ($renderer -match '(?s)segment = &sNdsNativeStageSegments\[segment_index\];\s*/\* The prepared table.*?for \(run_offset = 0u; run_offset < segment->run_count; run_offset\+\+\).*?ndsRendererNativeStagePreparedTextureValid\(\s*&sNdsNativeStageOwnerExecution\.runs\[run_index\]\) == FALSE\).*?return FALSE;\s*\}\s*\}\s*#if NDS_DREAMLAND_DS_MESH') 'Native-stage commit no longer validates one complete segment before its first GX/state mutation and returns the unhandled polarity on stale texture state.'
+Assert-True ([regex]::Matches($relocRendererDL, 'ndsRendererFinishNativeStageOwner\(\);\s*workspace->active = FALSE;\s*return FALSE;').Count -eq 2) 'Native-stage adapter no longer deactivates both profiled and normal commit paths before propagating an unhandled segment.'
 # R2-03 E12: the fighter memo removed the last warm-frame texture lookup, so
 # RENDER_TEXHASH now reads all zero and the coverage proof has two legs. Pin the
 # probe bound as an expression rather than the words 'bounded probes' -- the
@@ -2171,7 +2355,7 @@ Assert-True ($rendererAdapter.Contains('NDS_RENDERER_ADAPTER_G_MWO_POINT_ST')) '
 Assert-True ($rendererAdapter.Contains('state->vertices[index].s = (s16)(command->w1 >> 16)')) 'Battle DL adapter diagnostics do not replace cached vertex S.'
 Assert-True ($rendererAdapter.Contains('state->vertices[index].t = (s16)(command->w1 & 0xffffu)')) 'Battle DL adapter diagnostics do not replace cached vertex T.'
 Assert-True ($rendererAdapter.Contains('NDSRendererVertexCache sNdsRendererAdapterStageVertexCache')) 'Stage traversal renderer vertex cache is missing.'
-Assert-True ($rendererAdapter -match '(?s)ndsRendererAdapterBeginStageTraversal\(void\).*?ndsRendererInitVertexCache\(&sNdsRendererAdapterStageVertexCache\)') 'Stage traversal does not reset source RSP vertex-cache validity and snapshot ownership at its boundary.'
+Assert-True ($rendererAdapter -match '(?s)ndsRendererAdapterBeginStageTraversal\(void\).*?sNdsFighterDisplayCurrentLightValid.*?sNdsFighterDisplayCurrentLight\.l\.dir\[0\].*?light_dir_mask = 1u;.*?ndsRendererInitVertexCache\(&sNdsRendererAdapterStageVertexCache\)') 'Stage traversal does not seed the source-captured VS light direction before resetting source RSP vertex-cache validity and snapshot ownership.'
 Assert-True ($rendererAdapter -match '(?s)ndsRendererExecuteDisplayListWithVertexCache\(.*?&sNdsRendererAdapterStageVertexCache') 'Stage DObjs do not share the source RSP vertex cache.'
 Assert-True ($rendererAdapter -match '(?s)#if NDS_RENDERER_HW_TRIANGLES && \(NDS_RENDERER_PROFILE_LEVEL < 2\).*?ndsFighterDLDrawResetTransientRendererStats.*?offsetof\(NDSRendererStats, othermode_h\).*?prim_depth_command_count = 0u;') 'Profiles 0/1 no longer reset the exact transient renderer fields before reusing live ordered-list state.'
 Assert-True ($rendererAdapter -match '(?s)ndsFighterDLDrawResetRuntimeRendererStats.*?blocker = NDS_RENDERER_BLOCKER_NONE;.*?command_count = 0u;.*?unsupported_command_count = 0u;.*?end_command_count = 0u;.*?hardware_triangle_count = 0u;.*?hardware_texture_reject_count = 0u;') 'Profiles 0/1 null-callback traversal no longer clears only execution guards and owner-level hardware totals.'
@@ -2223,7 +2407,43 @@ Assert-True ($gcRunAllVerifier.Contains('RENDER_TEXUSE=')) 'gcRunAll verifier te
 Assert-True ($gcRunAllVerifier.Contains('hwftr=')) 'gcRunAll verifier hardware fighter summary is missing.'
 $movement = Get-Content (Join-Path $root 'src/port/reloc_backend_movement.c') -Raw
 Assert-True ($movement.Contains('ndsStageGCDrawAllLoopSubmitHardwareFrame')) 'Stage gcDrawAll hardware replay hook is missing.'
+Assert-True ($openingBackend -match '(?s)native_stage_handled =\s*ndsStageGCDrawAllLoopRecordCapturedDisplay\(.*?if \(native_stage_handled == FALSE\)\s*\{\s*current_gobj->proc_display\(current_gobj\);') 'Native-stage FALSE return no longer selects the source display-list fallback.'
 Assert-True (-not $movement.Contains('NDS_STAGE_GCDRAWALL_HW_SUBMIT_LIMIT')) 'Stage gcDrawAll hardware replay still has the old bounded submit limit.'
+Assert-True ($movement.Contains('NDS_RENDERER_GEOM_RESET_MODE | NDS_RENDERER_GEOM_LIGHTING')) 'VS battle traversal no longer inherits scVSBattleFuncLights G_LIGHTING state.'
+
+# EFCommonEffects3 RebirthHalo: the first 33-triangle body span inherits scene
+# lighting, then explicitly clears/restores it. Its other body and glow lists
+# explicitly disable lighting. Decode the shipped raw packet, not asset names.
+$effect3 = [IO.File]::ReadAllBytes((Resolve-Path (Join-Path $root 'decomp\BattleShip-main\BattleShip_o2r\reloc_effects\EFCommonEffects3')))
+$effect3Base = 0x50
+$vsLitMode = [uint32]0x00220404
+$haloMain = Get-FirstVtxState $effect3 $effect3Base 0x1908 $vsLitMode
+Assert-Equal $haloMain.CommandOffset 0x1940 'RebirthHalo main-body first VTX moved.'
+Assert-True (($haloMain.GeometryMode -band 0x00020000) -ne 0) 'RebirthHalo main-body normals are no longer lit at first VTX.'
+Assert-Equal $haloMain.VertexOffset 0x0e98 'RebirthHalo main-body first normal block moved.'
+Assert-Equal $effect3[$effect3Base + $haloMain.VertexOffset + 12] 0x1a 'RebirthHalo first normal X changed.'
+Assert-Equal $effect3[$effect3Base + $haloMain.VertexOffset + 13] 0x84 'RebirthHalo first normal Y changed.'
+Assert-Equal $effect3[$effect3Base + $haloMain.VertexOffset + 14] 0xf1 'RebirthHalo first normal Z changed.'
+$haloClearW0 = Get-BigEndianUInt32 $effect3 ($effect3Base + 0x20f0)
+$haloClearW1 = Get-BigEndianUInt32 $effect3 ($effect3Base + 0x20f4)
+$haloRestoreW0 = Get-BigEndianUInt32 $effect3 ($effect3Base + 0x2360)
+$haloRestoreW1 = Get-BigEndianUInt32 $effect3 ($effect3Base + 0x2364)
+$haloClearedMode = Set-GbiGeometryMode $vsLitMode $haloClearW0 $haloClearW1
+$haloRestoredMode = Set-GbiGeometryMode $haloClearedMode $haloRestoreW0 $haloRestoreW1
+Assert-True (($haloClearedMode -band 0x00220000) -eq 0) 'RebirthHalo 0x20F0 no longer clears LIGHTING and SHADING_SMOOTH.'
+Assert-True (($haloRestoredMode -band 0x00220000) -eq 0x00220000) 'RebirthHalo 0x2360 no longer restores LIGHTING and SHADING_SMOOTH.'
+foreach ($unlitList in @(0x2890, 0x2388, 0x24a0, 0x25b8, 0x26d0)) {
+    $firstVtx = Get-FirstVtxState $effect3 $effect3Base $unlitList $vsLitMode
+    Assert-True (($firstVtx.GeometryMode -band 0x00020000) -eq 0) ('RebirthHalo list 0x{0:x} first VTX must remain explicitly unlit.' -f $unlitList)
+}
+
+# Fox's source reflector does not share the halo contract: it clears lighting
+# before its white RGBA vertices. The battle light seed therefore does not own
+# its colour; the unlit TEXEL0*SHADE path remains runtime/visual-gated.
+$foxSpecial2 = [IO.File]::ReadAllBytes((Resolve-Path (Join-Path $root 'decomp\BattleShip-main\BattleShip_o2r\reloc_fighters_main\FoxSpecial2')))
+$reflector = Get-FirstVtxState $foxSpecial2 0x50 0x1b8 $vsLitMode
+Assert-Equal $reflector.CommandOffset 0x268 'Fox reflector first VTX moved.'
+Assert-True (($reflector.GeometryMode -band 0x00020000) -eq 0) 'Fox reflector first VTX must remain explicitly unlit.'
 $decodeHeader = Get-Content (Join-Path $root 'include/nds/nds_gbi_decode.h') -Raw
 Assert-True ($decodeHeader.Contains('/ 2u')) 'F3DEX2 packed triangle decode must stay on BattleShip index*2 packing.'
 Assert-True (-not $decodeHeader.Contains('/ 10u')) 'Stale F3DEX2 packed triangle /10 decode returned.'

@@ -5240,6 +5240,12 @@ static s32 ndsFighterMarioFoxVisitDLDrawCommand(
     }
 }
 
+/* scVSBattleFuncLights computes this once from gMPCollisionLightAngleX/Y and
+ * reaches ndsFighterDisplayContractSetLight through the imported gSPLight. */
+static Light sNdsFighterDisplayCurrentLight;
+static u32 sNdsFighterDisplayCurrentLightCount;
+static u32 sNdsFighterDisplayCurrentLightValid;
+
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
 
@@ -6140,6 +6146,17 @@ void ndsRendererAdapterBeginStageTraversal(void)
     bzero(&sNdsRendererAdapterStagePersistentState,
           sizeof(sNdsRendererAdapterStagePersistentState));
     ndsRendererInitStats(&sNdsRendererAdapterStagePersistentStats);
+    if ((sNdsFighterDisplayCurrentLightValid != FALSE) &&
+        (sNdsFighterDisplayCurrentLightCount != 0u))
+    {
+        sNdsRendererAdapterStagePersistentStats.light_dir_x =
+            sNdsFighterDisplayCurrentLight.l.dir[0];
+        sNdsRendererAdapterStagePersistentStats.light_dir_y =
+            sNdsFighterDisplayCurrentLight.l.dir[1];
+        sNdsRendererAdapterStagePersistentStats.light_dir_z =
+            sNdsFighterDisplayCurrentLight.l.dir[2];
+        sNdsRendererAdapterStagePersistentStats.light_dir_mask = 1u;
+    }
     ndsRendererInitVertexCache(&sNdsRendererAdapterStageVertexCache);
     sNdsRendererAdapterStagePersistentActive = TRUE;
 #if NDS_RENDERER_HW_TRIANGLES
@@ -8190,14 +8207,18 @@ s32 ndsRendererAdapterCommitNativeStageDisplay(
                 gNdsTask103CommitCount++;
                 if (task103_committed == FALSE)
                 {
-                    return TRUE;
+                    ndsRendererFinishNativeStageOwner();
+                    workspace->active = FALSE;
+                    return FALSE;
                 }
             }
 #else
             ndsRendererAdapterCommitNativeStageMaterials(workspace, i);
             if (ndsRendererCommitNativeStageSegment(i) == FALSE)
             {
-                return TRUE;
+                ndsRendererFinishNativeStageOwner();
+                workspace->active = FALSE;
+                return FALSE;
             }
 #endif
             workspace->next_segment++;
@@ -11293,9 +11314,6 @@ typedef struct NDSFighterDisplayContract {
 } NDSFighterDisplayContract;
 
 static NDSFighterDisplayContract sNdsFighterDisplayContract;
-static Light sNdsFighterDisplayCurrentLight;
-static u32 sNdsFighterDisplayCurrentLightCount;
-static u32 sNdsFighterDisplayCurrentLightValid;
 static sb32 sNdsFighterDisplayContractPlayback;
 static u32 sNdsFighterDisplayContractLastFrame[2] = {
     0xffffffffu, 0xffffffffu

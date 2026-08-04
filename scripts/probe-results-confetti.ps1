@@ -84,13 +84,13 @@ try {
         'commands',
         'silent',
         'if $confetti_calls == 0',
-        'set $p0x = pos->x',
-        'set $p0y = pos->y',
-        'set $p0z = pos->z',
+        'set $p0x = *(float *)$r0',
+        'set $p0y = *(float *)($r0 + 4)',
+        'set $p0z = *(float *)($r0 + 8)',
         'else',
-        'set $p1x = pos->x',
-        'set $p1y = pos->y',
-        'set $p1z = pos->z',
+        'set $p1x = *(float *)$r0',
+        'set $p1y = *(float *)($r0 + 4)',
+        'set $p1z = *(float *)($r0 + 8)',
         'end',
         'if is_genlink_mask == 0',
         'set $confetti_false = $confetti_false + 1',
@@ -106,16 +106,6 @@ try {
         'set $reject0 = gNdsParticleRejectCount',
         'set $emit0 = gNdsParticleQuadEmitCount',
         'set $miss0 = gNdsParticleQuadMissCount',
-        'tbreak mnvsresults.c:3216',
-        'continue',
-        'set $p0x = pos0.x',
-        'set $p0y = pos0.y',
-        'set $p0z = pos0.z',
-        'tbreak mnvsresults.c:3217',
-        'continue',
-        'set $p1x = pos1.x',
-        'set $p1y = pos1.y',
-        'set $p1z = pos1.z',
         # First sample: 40 ticks in, while the sheets are still near y=1000.
         'tbreak mnVSResultsFuncRun if sMNVSResultsTotalTimeTics >= 40',
         'continue',
@@ -167,12 +157,9 @@ try {
         # `pc->size == 0.0F` before it ever reaches the atlas -- which is why
         # such a piece costs no QuadMiss and would be invisible with every
         # counter clean. Counting sized vs unsized separates the two.
-        # X EXTENT, because "doesn't cover the whole scene" is a width question
-        # and every field above answers a count or a height one. The fan-out in
-        # efManagerConfettiMakeEffect offsets three emitters by +/-900 in x; if
-        # that reaches the pieces, minx/maxx straddle zero by roughly that much,
-        # and if it does not they cluster on one sign. Seeded from the head
-        # piece rather than a sentinel so the first comparison is meaningful.
+        # X extent is stochastic in the source: scripts 108..111 spawn children
+        # in a radial field around the two x=0 roots. Seed from the head rather
+        # than a sentinel so the first comparison remains meaningful.
         'set $s0count = 0',
         'set $s0sized = 0',
         'set $s0maxsize = 0.0',
@@ -239,15 +226,18 @@ try {
             's0_y1=%f s0_headsize=%f s0_tex=%d s0_minx=%f s0_maxx=%f ' +
             's4_count=%d s4_sized=%d s4_maxsize=%f ' +
             's4_y1=%f s4_headsize=%f s4_tex=%d s4_minx=%f s4_maxx=%f ' +
-            'fan=%u ratepatch=%u sizepatch=%u ' +
+            'ratepatch=%u sizepatch=%u ' +
             'gens_used=%u gens_highwater=%u structs_used=%u\n", ' +
             '$s0count, $s0sized, $s0maxsize, $s0y1, $s0size, $s0tex, ' +
             '$s0minx, $s0maxx, ' +
             '$s4count, $s4sized, $s4maxsize, $s4y1, $s4size, $s4tex, ' +
-            '$s4minx, $s4maxx, gNdsConfettiFanCount, ' +
-            'gNdsConfettiDensityPatchCount, gNdsConfettiSizePatchCount, ' +
+            '$s4minx, $s4maxx, gNdsConfettiDensityPatchCount, ' +
+            'gNdsConfettiSizePatchCount, ' +
             'gLBParticleGeneratorsUsedNum, gNdsParticleGeneratorsMax, ' +
             'gLBParticleStructsUsedNum'),
+        ('printf "CONFETTICONTRACT roots=%d false=%d true=%d generators=%u slot0=%d slot4=%d\n", ' +
+            '$confetti_calls, $confetti_false, $confetti_true, ' +
+            'gLBParticleGeneratorsUsedNum, $s0count, $s4count'),
         ('printf "CONFETTI=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f\n", ' +
             '$confetti_calls, $confetti_false, $confetti_true, ' +
             'gNdsParticleScriptStartCount-$script0, ' +
@@ -269,6 +259,12 @@ try {
         -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
         -ScriptName "results_confetti_$Label.gdb" `
         -TimeoutSeconds $TimeoutSeconds
+    if (($capture.Stdout -notmatch
+            'CONFETTICONTRACT roots=2 false=1 true=1 generators=8 slot0=[1-9][0-9]* slot4=[1-9][0-9]*') -or
+        ($capture.Stdout -notmatch
+            '(?m)^CONFETTI=(?:[^,\r\n]+,){16}0\.000000,1000\.000000,-1000\.000000,0\.000000,1000\.000000,-400\.000000,')) {
+        throw 'Results confetti source contract failed: expected ordered source roots, two branches, eight generators, and live slots 0/4.'
+    }
     Set-Content -LiteralPath $artifact -Value $capture.Stdout
     & $capture_helper -EmulatorProcessId $emulator.Id -Output $screenshot
     if ((-not (Test-Path -LiteralPath $screenshot -PathType Leaf)) -or

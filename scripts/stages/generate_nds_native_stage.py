@@ -470,7 +470,9 @@ SOURCE_CLOSURE_POLICIES = (
     {
         "path": "src/nds/nds_renderer.c",
         "closure": "ndsRendererNativeStagePrepareRun",
-        "tracked_bases": ("dense", "frame", "render_tile", "run", "stats"),
+        "tracked_bases": (
+            "dense", "entry", "frame", "render_tile", "run", "stats",
+        ),
         "fields": {
             **_classified(
                 FIELD_CLASS_IMMUTABLE,
@@ -485,7 +487,7 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
-                frame.config render_tile.uls render_tile.ult
+                entry.key_generation frame.config render_tile.uls render_tile.ult
                 stats.blend_color stats.othermode_l stats.texture_scale_s
                 stats.texture_scale_t stats.texture_state_flags
                 stats.texture_tiles
@@ -496,7 +498,7 @@ SOURCE_CLOSURE_POLICIES = (
                 """
                 prepared.alpha_ref prepared.alpha_test prepared.poly_fmt
                 prepared.texture_entry prepared.texture_format
-                prepared.texture_height prepared.texture_name
+                prepared.texture_generation prepared.texture_height prepared.texture_name
                 prepared.texture_params prepared.texture_width
                 prepared.textured prepared_dense.near_inside
                 prepared_dense.packed_color prepared_dense.s prepared_dense.t
@@ -583,10 +585,11 @@ SOURCE_CLOSURE_POLICIES = (
                 render_tile.masks render_tile.maskt render_tile.palette
                 render_tile.set_seen render_tile.shifts render_tile.shiftt
                 render_tile.size render_tile.tmem render_tile.uls
-                render_tile.ult render_tile.width stats.hardware_texture_format
+                render_tile.ult render_tile.width stats.env_color
+                stats.hardware_texture_format
                 stats.hardware_texture_height stats.hardware_texture_ready_count
                 stats.hardware_texture_upload_count stats.hardware_texture_width
-                stats.prim_lod_fraction stats.texture_combine_w0
+                stats.prim_color stats.prim_lod_fraction stats.texture_combine_w0
                 stats.texture_combine_w1 stats.texture_format
                 stats.texture_image stats.texture_image_width
                 stats.texture_load_block_dxt stats.texture_load_block_lrs
@@ -1172,7 +1175,7 @@ TASK26_GENERATED_CLOSURE_POLICIES = (
             prepared.alpha_ref prepared.alpha_test prepared.near_inside
             prepared.packed_color prepared.poly_fmt prepared.s prepared.t
             prepared.texture_entry prepared.texture_format
-            prepared.texture_height prepared.texture_name
+            prepared.texture_generation prepared.texture_height prepared.texture_name
             prepared.texture_params prepared.texture_width prepared.textured
             state.texture_prepare_alpha_constant
             state.texture_prepare_decal_depth state.texture_prepare_enabled

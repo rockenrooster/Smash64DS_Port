@@ -12777,7 +12777,9 @@ extern void ndsRendererAdapterResetDepthDiagnostics(void);
 
 static u32 ndsStageGCDrawAllLoopInitialGeometryMode(void)
 {
-    u32 mode = NDS_RENDERER_GEOM_RESET_MODE;
+    /* scVSBattleFuncLights establishes this before every battle display proc.
+     * Individual source lists remain free to clear and restore it. */
+    u32 mode = NDS_RENDERER_GEOM_RESET_MODE | NDS_RENDERER_GEOM_LIGHTING;
 
     return (sNdsStageGCDrawAllLoopCurrentDisplayLinkID == 6) ?
         mode : (mode & ~NDS_RENDERER_GEOM_ZBUFFER);

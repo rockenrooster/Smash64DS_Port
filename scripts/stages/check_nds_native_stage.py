@@ -321,7 +321,7 @@ def verify_consumed_fields_manifest(repo_root: Path) -> tuple[int, int]:
             "ndsRendererNativeStagePrepareGeneratedSegment0",
             "ndsRendererNativeStageHashGeneratedSegment0Outputs",
         ]
-        and sum(len(row["fields"]) for row in task26_closures) == 119,
+        and sum(len(row["fields"]) for row in task26_closures) == 120,
         "Task 26 generated-closure field certificate drifted",
     )
     bound_closures = {

@@ -8,6 +8,8 @@ $headerPath = Join-Path $root 'include/nds/generated/nds_particle_banks.generate
 $effectHeaderPath = Join-Path $root 'include/ef/effect.h'
 $runtimePath = Join-Path $root 'src/import/battleship_lbparticle.c'
 $rendererPath = Join-Path $root 'src/nds/nds_renderer.c'
+$objmanPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/sys/objman.c'
+$resultsPath = Join-Path $root 'decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c'
 $incPath = Join-Path $root 'src/nds/generated/nds_particle_banks.generated.inc'
 $assetPath = Join-Path $root 'assets/particles/efcommon_particle_textures.ds.bin'
 
@@ -67,6 +69,89 @@ foreach ($token in @(
 if ($runtime.Contains(
         'ndsRendererSubmitParticleQuad(atlas_name, &pc->pos, pc->size,')) {
     throw 'Particle draw regressed to a script-local position.'
+}
+# Billboard axes and the camera transform must come from the same current CObj.
+# Results uses the source default perspective; its camera callback does not
+# refresh gGMCameraMatrix, so that global must never return to this seam.
+$cameraHelper = [regex]::Match(
+    $runtime,
+    '(?s)static sb32 ndsParticleSetCurrentCamera\(.*?^\}',
+    [System.Text.RegularExpressions.RegexOptions]::Multiline).Value
+if ([string]::IsNullOrEmpty($cameraHelper)) {
+    throw 'Particle current-camera seam is missing.'
+}
+foreach ($token in @(
+    'CObjGetStruct(gGCCurrentCamera)',
+    'if (cobj->xobjs_num == 0)',
+    'for (i = 0u; i < (u32)cobj->xobjs_num; i++)',
+    'cobj->xobjs[i]->kind',
+    'case nGCMatrixKindPerspFastF:',
+    'case nGCMatrixKindPerspF:',
+    'case nGCMatrixKindOrtho:',
+    'syMatrixPerspF(projection_f, NULL,',
+    'syMatrixOrthoF(&projection_f,',
+    'syMatrixModLookAtF(&look_at_f,',
+    'cobj->projection.persp.fovy',
+    'cobj->projection.persp.aspect',
+    'cobj->projection.persp.near',
+    'cobj->projection.persp.far',
+    'cobj->projection.persp.scale',
+    'cobj->vec.eye.x',
+    'cobj->vec.at.x',
+    'cobj->vec.up.x',
+    'right->x = look_at_f[0][0]',
+    'right->y = look_at_f[1][0]',
+    'right->z = look_at_f[2][0]',
+    'up->x = look_at_f[0][1]',
+    'up->y = look_at_f[1][1]',
+    'up->z = look_at_f[2][1]',
+    'guMtxCatF(look_at_f, projection_f, projection_f)',
+    'projection.m[row][col] = (row == col) ? 4096 : 0',
+    '(s32)(projection_f[row][col] * 4096.0F)')) {
+    if (-not $cameraHelper.Contains($token)) {
+        throw "Particle current-camera seam lost: $token"
+    }
+}
+foreach ($kind in @(6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17)) {
+    if (-not $cameraHelper.Contains("case ${kind}:")) {
+        throw "Particle XObj matrix case $kind is missing."
+    }
+}
+if ($cameraHelper -notmatch
+    '(?s)if \(cobj->xobjs_num == 0\).*?guMtxIdentF\(projection_f\).*?right->x = 1\.0F.*?up->y = 1\.0F.*?\}\s*else\s*\{\s*f32 forward_x') {
+    throw 'Particle no-XObj camera no longer bypasses eye/at with screen axes.'
+}
+if ($cameraHelper -notmatch
+    '(?s)syMatrixPerspFastF\(projection_f.*?syMatrixLookAtF\(&look_at_f.*?for \(i = 0u;.*?switch \(kind\).*?case nGCMatrixKindPerspFastF:.*?case nGCMatrixKindPerspF:.*?case nGCMatrixKindOrtho:.*?case 6:.*?case 8:.*?case 10:.*?default:.*?syMatrixPerspFastF\(projection_f.*?syMatrixLookAtF\(&look_at_f.*?guMtxCatF\(look_at_f, projection_f, projection_f\)') {
+    throw 'Particle XObj matrices no longer apply ordered source overrides.'
+}
+if (([regex]::Matches($cameraHelper,
+        'guMtxCatF\(look_at_f, projection_f, projection_f\)').Count -ne 1) -or
+    ([regex]::Matches($runtime,
+        'ndsParticleSetCurrentCamera\(&right, &up\)').Count -ne 2)) {
+    throw 'Particle camera is no longer composed once per draw callback.'
+}
+if ($cameraHelper.Contains('gGMCameraMatrix') -or
+    $cameraHelper.Contains('combined_f') -or
+    $cameraHelper.Contains('cobj->xobjs[0]') -or
+    $cameraHelper.Contains('cobj->xobjs[1]')) {
+    throw 'Particle transform no longer belongs exclusively to the current CObj.'
+}
+$objman = Get-Content -LiteralPath $objmanPath -Raw
+if ($objman -notmatch
+    'dGCPerspDefault\s*=\s*\{\s*NULL,\s*0,\s*30\.0F,\s*4\.0F\s*/\s*3\.0F,\s*100\.0F,\s*12800\.0F,\s*1\.0F\s*\}') {
+    throw 'BattleShip default Results projection values changed.'
+}
+$results = Get-Content -LiteralPath $resultsPath -Raw
+$resultsCamera = [regex]::Match(
+    $results,
+    '(?s)void mnVSResultsMakeFighterCamera\(void\).*?^\}',
+    [System.Text.RegularExpressions.RegexOptions]::Multiline).Value
+if (($resultsCamera -notmatch
+        '(?s)COBJ_MASK_DLLINK\(18\).*?COBJ_MASK_DLLINK\(10\).*?TRUE') -or
+    ($resultsCamera -notmatch
+        '(?s)eye\.z\s*=\s*1800\.0F.*?at\.z\s*=\s*0\.0F.*?up\.y\s*=\s*1\.0F')) {
+    throw 'Results fighter camera no longer uses its source default projection/CObj.'
 }
 $renderer = Get-Content -LiteralPath $rendererPath -Raw
 if (-not $renderer.Contains('glColor((rgb)color);')) {

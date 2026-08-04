@@ -1487,6 +1487,10 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_ACMUX_ENVIRONMENT 5u
 #define NDS_RENDERER_ACMUX_1 6u
 #define NDS_RENDERER_ACMUX_0 7u
+#define NDS_RENDERER_PRIM_ENV_BLEND_NONE 0u
+#define NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA 1u
+#define NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA 2u
+#define NDS_RENDERER_HW_TEXTURE_KEY_PRIM_ENV_BLEND (1u << 31)
 #define NDS_RENDERER_MDSFT_CYCLETYPE 20u
 #define NDS_RENDERER_CYCLETYPE_MASK (3u << NDS_RENDERER_MDSFT_CYCLETYPE)
 #define NDS_RENDERER_CYC_2CYCLE (1u << NDS_RENDERER_MDSFT_CYCLETYPE)
@@ -4302,6 +4306,7 @@ typedef struct NDSNativeStagePreparedRun
     NDSRendererHardwareTextureCacheEntry *texture_entry;
     u32 texture_name;
     u32 texture_params;
+    u32 texture_generation;
     u32 poly_fmt;
     u16 texture_width;
     u16 texture_height;
@@ -4310,6 +4315,27 @@ typedef struct NDSNativeStagePreparedRun
     u8 alpha_test;
     u8 alpha_ref;
 } NDSNativeStagePreparedRun;
+
+static s32 ndsRendererNativeStagePreparedTextureValid(
+    const NDSNativeStagePreparedRun *prepared)
+{
+    const NDSRendererHardwareTextureCacheEntry *entry;
+
+    if (prepared == NULL)
+    {
+        return FALSE;
+    }
+    entry = prepared->texture_entry;
+    if (prepared->textured == FALSE)
+    {
+        return ((entry == NULL) && (prepared->texture_name == 0u) &&
+                (prepared->texture_generation == 0u)) ? TRUE : FALSE;
+    }
+    return ((entry != NULL) && (entry->ready != FALSE) &&
+            ((u32)entry->name == prepared->texture_name) &&
+            (entry->key_generation == prepared->texture_generation)) ?
+        TRUE : FALSE;
+}
 
 typedef struct NDSNativeStageOwnerExecution
 {
@@ -4402,6 +4428,20 @@ typedef struct NDSNativeStageValidationCache
 static NDSNativeFighterOwnerExecution sNdsNativeFighterOwnerExecution;
 static NDSNativeStageOwnerExecution sNdsNativeStageOwnerExecution;
 #if NDS_R2_STAGE_DIRECT
+static s32 ndsRendererNativeStagePreparedTexturesValid(void)
+{
+    u32 run_index;
+
+    for (run_index = 0u; run_index < NDS_NATIVE_STAGE_RUN_COUNT; run_index++)
+    {
+        if (ndsRendererNativeStagePreparedTextureValid(
+                &sNdsNativeStageOwnerExecution.runs[run_index]) == FALSE)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
 /* R2-02 E1a engagement counters. Non-static so a GDB stop can read them and
  * prove the elision actually engaged -- a flag that silently never fires is
  * indistinguishable from a null result, and this campaign has shipped that
@@ -4739,16 +4779,13 @@ static s32 ndsRendererTask36ReplayTexturesValid(void)
     {
         const NDSRendererTask36ReplayRun *run =
             &sNdsRendererTask36ReplayOwner.runs[run_index];
-        const NDSRendererHardwareTextureCacheEntry *entry =
-            run->prepared.texture_entry;
 
         if (run->valid == FALSE)
         {
             continue;
         }
-        if ((run->prepared.textured != FALSE) &&
-            ((entry == NULL) || (entry->ready == FALSE) ||
-             ((u32)entry->name != run->prepared.texture_name)))
+        if (ndsRendererNativeStagePreparedTextureValid(
+                &run->prepared) == FALSE)
         {
             return FALSE;
         }
@@ -7668,6 +7705,76 @@ static s32 ndsRendererHardwareUseSecondCycle(const NDSRendererStats *stats)
              NDS_RENDERER_CYC_2CYCLE)) ? TRUE : FALSE;
 }
 
+static u32 ndsRendererHardwarePrimEnvTexel0BlendMode(
+    const NDSRendererStats *stats)
+{
+    u32 w0;
+    u32 w1;
+    u32 color_a;
+    u32 color_b;
+    u32 color_c;
+    u32 color_d;
+    u32 alpha_a;
+    u32 alpha_b;
+    u32 alpha_c;
+    u32 alpha_d;
+
+    if ((stats == NULL) || (stats->texture_combine_count == 0u))
+    {
+        return NDS_RENDERER_PRIM_ENV_BLEND_NONE;
+    }
+    w0 = stats->texture_combine_w0;
+    w1 = stats->texture_combine_w1;
+    if (ndsRendererHardwareUseSecondCycle(stats) != FALSE)
+    {
+        color_a = (w0 >> 5) & 0x0fu;
+        color_b = (w1 >> 24) & 0x0fu;
+        color_c = w0 & 0x1fu;
+        color_d = (w1 >> 6) & 0x07u;
+        alpha_a = (w1 >> 21) & 0x07u;
+        alpha_b = (w1 >> 3) & 0x07u;
+        alpha_c = (w1 >> 18) & 0x07u;
+        alpha_d = w1 & 0x07u;
+    }
+    else
+    {
+        color_a = (w0 >> 20) & 0x0fu;
+        color_b = (w1 >> 28) & 0x0fu;
+        color_c = (w0 >> 15) & 0x1fu;
+        color_d = (w1 >> 15) & 0x07u;
+        alpha_a = (w0 >> 12) & 0x07u;
+        alpha_b = (w1 >> 12) & 0x07u;
+        alpha_c = (w0 >> 9) & 0x07u;
+        alpha_d = (w1 >> 9) & 0x07u;
+    }
+    /* BattleShip's G_CC_BLENDPE family is a texture-weighted endpoint lerp:
+     * (PRIMITIVE - ENVIRONMENT) * TEXEL0 + ENVIRONMENT. Decode the active
+     * cycle so both raw forms remain data-independent: one multiplies source
+     * coverage by primitive alpha, while the other passes source alpha. */
+    if ((color_a != NDS_RENDERER_CCMUX_PRIMITIVE) ||
+        (color_b != NDS_RENDERER_CCMUX_ENVIRONMENT) ||
+        (color_c != NDS_RENDERER_CCMUX_TEXEL0) ||
+        (color_d != NDS_RENDERER_CCMUX_ENVIRONMENT))
+    {
+        return NDS_RENDERER_PRIM_ENV_BLEND_NONE;
+    }
+    if ((alpha_a == NDS_RENDERER_ACMUX_TEXEL0) &&
+        (alpha_b == NDS_RENDERER_ACMUX_0) &&
+        (alpha_c == NDS_RENDERER_ACMUX_PRIMITIVE) &&
+        (alpha_d == NDS_RENDERER_ACMUX_0))
+    {
+        return NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA;
+    }
+    if ((alpha_a == NDS_RENDERER_ACMUX_0) &&
+        (alpha_b == NDS_RENDERER_ACMUX_0) &&
+        (alpha_c == NDS_RENDERER_ACMUX_0) &&
+        (alpha_d == NDS_RENDERER_ACMUX_TEXEL0))
+    {
+        return NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA;
+    }
+    return NDS_RENDERER_PRIM_ENV_BLEND_NONE;
+}
+
 static s32 ndsRendererHardwareUsesTexel01Lerp(
     const NDSRendererStats *stats)
 {
@@ -8051,6 +8158,12 @@ static s32 ndsRendererHardwareUsesLitPrimitiveModulate(
 
 static u32 ndsRendererHardwareColorSource(const NDSRendererStats *stats)
 {
+    if (ndsRendererHardwarePrimEnvTexel0BlendMode(stats) !=
+        NDS_RENDERER_PRIM_ENV_BLEND_NONE)
+    {
+        /* The converted texture already contains both captured endpoints. */
+        return 0xffffffffu;
+    }
     if (ndsRendererHardwareUsesLitPrimitiveModulate(stats) != FALSE)
     {
         return stats->prim_color;
@@ -8164,6 +8277,12 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
     }
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
+        if (ndsRendererHardwarePrimEnvTexel0BlendMode(stats) ==
+            NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA)
+        {
+            /* GL_RGBA retains TEXEL0 coverage; do not multiply vertex alpha. */
+            return 31u;
+        }
         if (ndsRendererHardwareOutputUsesAlpha(
                 stats, NDS_RENDERER_ACMUX_PRIMITIVE) != FALSE)
         {
@@ -8206,6 +8325,11 @@ static s32 ndsRendererHardwareAlphaUsesVertex(
     }
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
+        if (ndsRendererHardwarePrimEnvTexel0BlendMode(stats) ==
+            NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA)
+        {
+            return FALSE;
+        }
         if ((ndsRendererHardwareOutputUsesAlpha(
                  stats, NDS_RENDERER_ACMUX_PRIMITIVE) != FALSE) ||
             (ndsRendererHardwareOutputUsesAlpha(
@@ -13018,6 +13142,35 @@ static u16 ndsRendererHardwareBlendTexel01(u16 texel0, u16 texel1,
         x, y);
 }
 
+static u16 ndsRendererHardwareBlendPrimEnvTexel0(u16 texel0,
+                                                 u32 primitive,
+                                                 u32 environment)
+{
+    u32 red_weight = (texel0 >> 0) & 0x1fu;
+    u32 green_weight = (texel0 >> 5) & 0x1fu;
+    u32 blue_weight = (texel0 >> 10) & 0x1fu;
+    u32 primitive_red = (primitive >> 27) & 0x1fu;
+    u32 primitive_green = (primitive >> 19) & 0x1fu;
+    u32 primitive_blue = (primitive >> 11) & 0x1fu;
+    u32 environment_red = (environment >> 27) & 0x1fu;
+    u32 environment_green = (environment >> 19) & 0x1fu;
+    u32 environment_blue = (environment >> 11) & 0x1fu;
+    u32 red;
+    u32 green;
+    u32 blue;
+
+    /* DS direct-color textures expose RGB5+A1. Interpolate the captured N64
+     * endpoint colours at that exact RGB5 ceiling and retain source coverage;
+     * polygon alpha supplies PRIMITIVE alpha for the modulated raw form. */
+    red = ((environment_red * (31u - red_weight)) +
+           (primitive_red * red_weight) + 15u) / 31u;
+    green = ((environment_green * (31u - green_weight)) +
+             (primitive_green * green_weight) + 15u) / 31u;
+    blue = ((environment_blue * (31u - blue_weight)) +
+            (primitive_blue * blue_weight) + 15u) / 31u;
+    return (u16)((texel0 & 0x8000u) | red | (green << 5) | (blue << 10));
+}
+
 static void __attribute__((noinline))
 ndsRendererHardwareBuildTexel01Ci4Lut(
     const NDSRendererConfig *config,
@@ -13623,6 +13776,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     u32 primary_load_lrs;
     u32 primary_load_dxt;
     u32 primary_load_texels;
+    u32 prim_env_blend_mode;
     s32 materialize_s;
     s32 materialize_t;
     s32 wants_texel1;
@@ -13667,6 +13821,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     render_tile_index = ndsRendererActiveTextureTile(stats);
     render_tile = &stats->texture_tiles[render_tile_index];
     wants_texel1 = ndsRendererHardwareUsesTexel01Lerp(stats);
+    prim_env_blend_mode =
+        ndsRendererHardwarePrimEnvTexel0BlendMode(stats);
     primary_load = NULL;
     primary_image = stats->texture_image;
     primary_image_format = stats->texture_format;
@@ -13994,6 +14150,15 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         key.prim_lod_fraction = stats->prim_lod_fraction;
         key.combine_w0 = stats->texture_combine_w0;
         key.combine_w1 = stats->texture_combine_w1;
+    }
+    else if (prim_env_blend_mode != NDS_RENDERER_PRIM_ENV_BLEND_NONE)
+    {
+        /* TEXEL1 and this bake are mutually exclusive. Reuse the key's
+         * variant tail without growing its 236-byte DS cache footprint. Alpha
+         * is excluded because it remains live polygon state, not texel RGB. */
+        key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_PRIM_ENV_BLEND;
+        key.combine_w0 = stats->prim_color & 0xffffff00u;
+        key.combine_w1 = stats->env_color & 0xffffff00u;
     }
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -14383,6 +14548,12 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 
                         color = ndsRendererHardwareBlendTexel01(
                             color, color1, stats->prim_lod_fraction, x, y);
+                    }
+                    else if (prim_env_blend_mode !=
+                             NDS_RENDERER_PRIM_ENV_BLEND_NONE)
+                    {
+                        color = ndsRendererHardwareBlendPrimEnvTexel0(
+                            color, stats->prim_color, stats->env_color);
                     }
                 }
                 sNdsRendererHardwareTextureScratch[dst_index] = color;
@@ -19691,10 +19862,10 @@ volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoVerifyFail;
  * E5 deliberately excluded resolved->entry from its STABLE hash: "a pointer into
  * the hardware texture cache, which rotates for reasons unrelated to what is
  * drawn". So identity being stable is not residency being stable, and the memo
- * revalidates before trusting itself using the same two facts Task 36's replay
- * checks -- entry->ready and entry->name -- which is the established contract in
- * this file for exactly this hazard. A stale entry falls through to the full
- * path and refills. */
+ * revalidates before trusting itself using readiness, name, and the cache key
+ * generation. The generation is the identity fence: libnds may recycle a
+ * deleted GL name for different texels in the same slot. A stale entry falls
+ * through to the full path and refills. */
 typedef struct NDSR2RunTextureMemo
 {
     /* Slot index, not a pointer: sNdsRendererHardwareActiveTextureEntry is a
@@ -19702,6 +19873,7 @@ typedef struct NDSR2RunTextureMemo
      * the cache array is both writable and cheaper to validate than a cast. */
     u32 slot_plus1;
     u32 name;
+    u32 entry_generation;
     u32 params;
     u32 format;
     u32 width;
@@ -19741,7 +19913,8 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
         return FALSE;
     }
     entry = &sNdsRendererHardwareTextureCache[memo->slot_plus1 - 1u];
-    if ((entry->ready == FALSE) || ((u32)entry->name != memo->name))
+    if ((entry->ready == FALSE) || ((u32)entry->name != memo->name) ||
+        (entry->key_generation != memo->entry_generation))
     {
         memo->valid = 0u;
         gNdsR2TexMemoStaleCount++;
@@ -19817,6 +19990,7 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
     memo = &sNdsR2RunTextureMemo[run_index];
     memo->slot_plus1 = slot + 1u;
     memo->name = texture_name;
+    memo->entry_generation = entry->key_generation;
     memo->params = entry->params;
     memo->format = stats->hardware_texture_format;
     memo->width = stats->hardware_texture_width;
@@ -19858,7 +20032,8 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoVerify(
         return;
     }
     entry = &sNdsRendererHardwareTextureCache[memo->slot_plus1 - 1u];
-    if ((entry->ready == FALSE) || ((u32)entry->name != memo->name))
+    if ((entry->ready == FALSE) || ((u32)entry->name != memo->name) ||
+        (entry->key_generation != memo->entry_generation))
     {
         /* A stale entry is not a mismatch: the live path would have refilled
          * it. Counted separately so the two are never conflated. */
@@ -23084,6 +23259,8 @@ static s32 ndsRendererNativeStagePrepareRun(
     prepared->texture_entry = resolved.entry;
     prepared->texture_name = resolved.name;
     prepared->texture_params = resolved.params;
+    prepared->texture_generation = (resolved.entry != NULL) ?
+        resolved.entry->key_generation : 0u;
     prepared->texture_format = (u8)resolved.format;
     prepared->texture_width = (u16)resolved.width;
     prepared->texture_height = (u16)resolved.height;
@@ -23439,6 +23616,7 @@ static void ndsRendererNativeStageHashGeneratedSegment0Outputs(
         NDS_TASK26_HASH_FIELD((uintptr_t)prepared->texture_entry);
         NDS_TASK26_HASH_FIELD(prepared->texture_name);
         NDS_TASK26_HASH_FIELD(prepared->texture_params);
+        NDS_TASK26_HASH_FIELD(prepared->texture_generation);
         NDS_TASK26_HASH_FIELD(prepared->poly_fmt);
         NDS_TASK26_HASH_FIELD(prepared->texture_width);
         NDS_TASK26_HASH_FIELD(prepared->texture_height);
@@ -23642,9 +23820,7 @@ static void ndsRendererBenchmarkSegment0ArmRun(
     entry = prepared->texture_entry;
     if (prepared->textured != 0u)
     {
-        if ((entry == NULL) || (entry->ready == 0u) ||
-            (prepared->texture_name == 0u) ||
-            (prepared->texture_name != (u32)entry->name))
+        if (ndsRendererNativeStagePreparedTextureValid(prepared) == FALSE)
         {
             valid = FALSE;
         }
@@ -23983,7 +24159,7 @@ static void ndsRendererNativeStageTask36EndSegment(void)
 }
 #endif
 
-static void ndsRendererNativeStageBeginRun(
+static s32 ndsRendererNativeStageBeginRun(
     const NDSNativeStageRun *native_run,
     const NDSNativeStagePreparedRun *run,
     u32 submit_class,
@@ -23991,7 +24167,14 @@ static void ndsRendererNativeStageBeginRun(
     NDSRendererStats *stats,
     u32 replay)
 {
-    u32 poly_fmt = run->poly_fmt;
+    u32 poly_fmt;
+
+    if ((native_run == NULL) || (stats == NULL) ||
+        (ndsRendererNativeStagePreparedTextureValid(run) == FALSE))
+    {
+        return FALSE;
+    }
+    poly_fmt = run->poly_fmt;
 
     /* Dream Land's four static layer owners are closed front-facing stage
      * surfaces.  Keep actor owners (Whispy and flowers) two-sided. */
@@ -24156,6 +24339,7 @@ static void ndsRendererNativeStageBeginRun(
             (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
                 2u : 0u;
     }
+    return TRUE;
 }
 
 #if NDS_TASK36_HW_COMPOSE == 2
@@ -24258,9 +24442,12 @@ ndsRendererTask36ReplayRun(
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_t0 = cpuGetTiming();
 #endif
-    ndsRendererNativeStageBeginRun(
-        native_run, &run->prepared, native_run->submit_class,
-        segment_owner, stats, TRUE);
+    if (ndsRendererNativeStageBeginRun(
+            native_run, &run->prepared, native_run->submit_class,
+            segment_owner, stats, TRUE) == FALSE)
+    {
+        return FALSE;
+    }
 #if NDS_TASK103_STAGE_RUN_PHASE
     task103_t1 = cpuGetTiming();
 #endif
@@ -24834,9 +25021,16 @@ static u32 ndsRendererDreamLandDrawStatic3D(
 #endif
             continue;
         }
-        ndsRendererNativeStageBeginRun(
-            native_run, prepared_run, submit_class,
-            sNdsNativeStageSegments[source_segment].owner, stats, FALSE);
+        if (ndsRendererNativeStageBeginRun(
+                native_run, prepared_run, submit_class,
+                sNdsNativeStageSegments[source_segment].owner, stats,
+                FALSE) == FALSE)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererM3PostArmFailureCount++;
+#endif
+            continue;
+        }
         gx_words += 1u;
         for (triangle_offset = 0u;
              triangle_offset < triangle_count;
@@ -25018,6 +25212,7 @@ s32 ndsRendererPrepareNativeStageOwner(
      * it after the loop. */
     u32 r2_reuse =
         ((sNdsNativeStageOwnerExecution.r2_prepared_valid != 0u) &&
+         (ndsRendererNativeStagePreparedTexturesValid() != FALSE) &&
          (sNdsNativeStageOwnerExecution.r2_prepared_topology_generation ==
           frame->topology_generation) &&
          (sNdsNativeStageOwnerExecution.r2_prepared_topology_stamp ==
@@ -25737,6 +25932,21 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         return TRUE;
     }
     segment = &sNdsNativeStageSegments[segment_index];
+    /* The prepared table outlives the cache entries it names. Validate the
+     * whole segment before its first GX or renderer-state write so a recycled
+     * slot falls back as one source-owned segment, never as a mixed native/
+     * source segment after earlier runs have already emitted. BeginRun repeats
+     * this check as the defensive last gate at the point of use. */
+    for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
+    {
+        u32 run_index = (u32)segment->first_run + run_offset;
+
+        if (ndsRendererNativeStagePreparedTextureValid(
+                &sNdsNativeStageOwnerExecution.runs[run_index]) == FALSE)
+        {
+            return FALSE;
+        }
+    }
 #if NDS_DREAMLAND_DS_MESH
     /* Generator owner order is layer0,map0,map1,map2,layer1,layer2,map3,layer3.
      * Replace each static stage_geometry segment in place and leave every
@@ -25926,9 +26136,15 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
         task103_generic_start = cpuGetTiming();
         task103_generic_armed = 1u;
 #endif
-        ndsRendererNativeStageBeginRun(
-            run, prepared_run, run->submit_class, segment->owner, stats,
-            FALSE);
+        if (ndsRendererNativeStageBeginRun(
+                run, prepared_run, run->submit_class, segment->owner, stats,
+                FALSE) == FALSE)
+        {
+#if NDS_RENDERER_PROFILE_LEVEL == 1
+            gNdsRendererM3PostArmFailureCount++;
+#endif
+            return TRUE;
+        }
 #if NDS_TASK103_STAGE_RUN_PHASE
         gNdsTask103GenericBeginTicks += cpuGetTiming() - task103_generic_start;
 #endif

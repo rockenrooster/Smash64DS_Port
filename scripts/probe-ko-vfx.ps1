@@ -3,7 +3,12 @@ param(
     [string]$Build = 'build-r2-bothcpu',
     [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
-    [ValidateRange(60, 600)][int]$TimeoutSeconds = 480
+    [ValidateRange(60, 600)][int]$TimeoutSeconds = 480,
+    # Empty preserves the original artifact names. Candidate evidence should
+    # pass a unique label; labelled runs fail before launch rather than
+    # overwrite an existing verification artifact or visibility capture.
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')]
+    [string]$EvidenceLabel = ''
 )
 
 # THE KO HALF OF THE PARTICLE/VFX CLUSTER: BUGS rows 3, 8 and 9.
@@ -50,7 +55,35 @@ $root = Split-Path -Parent $PSScriptRoot
 $gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
 $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
-$artifact = Join-Path $root 'artifacts\verification\ko-vfx-probe.txt'
+$legacy_evidence_prefix = '2026-08-01'
+$evidence_prefix = if ([string]::IsNullOrWhiteSpace($EvidenceLabel)) {
+    $legacy_evidence_prefix
+} else {
+    $EvidenceLabel
+}
+$artifact_name = if ([string]::IsNullOrWhiteSpace($EvidenceLabel)) {
+    'ko-vfx-probe.txt'
+} else {
+    $EvidenceLabel + '_ko-vfx-probe.txt'
+}
+$artifact = Join-Path $root ('artifacts\verification\' + $artifact_name)
+$capture_names = @(
+    $evidence_prefix + '_ko-burst-probe.png',
+    $evidence_prefix + '_star-ko-probe.png',
+    $evidence_prefix + '_rebirth-halo-probe.png'
+)
+if (-not [string]::IsNullOrWhiteSpace($EvidenceLabel)) {
+    $candidate_outputs = @($artifact) + @($capture_names | ForEach-Object {
+        Join-Path $root ('artifacts\visibility\' + $_)
+    })
+    $existing_outputs = @($candidate_outputs | Where-Object {
+        Test-Path -LiteralPath $_
+    })
+    if ($existing_outputs.Count -ne 0) {
+        throw ("EvidenceLabel '{0}' would overwrite: {1}" -f
+            $EvidenceLabel, ($existing_outputs -join ', '))
+    }
+}
 $capture_helper = Join-Path $PSScriptRoot 'capture-running-melonds-window.ps1'
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
@@ -64,25 +97,89 @@ $emulator = $null
 $required = @(
     'efManagerDeadExplodeMakeEffect', 'efManagerSparkleWhiteDeadMakeEffect',
     'efManagerRebirthHaloMakeEffect', 'efManagerDamageNormalLightMakeEffect',
+    'efManagerImpactWaveMakeEffect',
     'ndsBattlePlayableFrameCompleteMarker', 'mnVSResultsMakeConfetti',
     'gNdsParticleQuadMissCount', 'gNdsParticleQuadEmitCount',
     'gNdsVisualEffectCreateCount', 'gNdsVisualEffectDropCount',
     'gNdsVisualEffectKindMask', 'gMPCollisionGroundData',
-    'ftCommonDeadUpStarProcUpdate', 'gGCCommonLinks'
+    'ftCommonDeadUpStarProcUpdate', 'gGCCommonLinks',
+    'dEFManagerDeadExplodeRotateD',
+    'dEFManagerDeadExplodeEnvColorChildR',
+    'dEFManagerDeadExplodeEnvColorChildG',
+    'dEFManagerDeadExplodeEnvColorChildB',
+    'dEFManagerDeadExplodeEnvColorSiblingR',
+    'dEFManagerDeadExplodeEnvColorSiblingG',
+    'dEFManagerDeadExplodeEnvColorSiblingB',
+    'gNdsKOBurstAttemptCount', 'gNdsKOBurstCompleteCount',
+    'gNdsKOBurstDropMask',
+    'gNdsR2TexMemoHitCount', 'gNdsR2TexMemoMissCount',
+    'gNdsR2TexMemoFillCount', 'gNdsR2TexMemoStaleCount',
+    'gNdsR2TexMemoVerifyFail',
+    'gNdsR2StagePrepareReuseCount', 'gNdsR2StagePrepareBuildCount',
+    'gNdsRendererBattleStaticTextureViolationCount'
 )
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
-$symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
+$nm_lines = & $nm $elf
+$symbols = $nm_lines | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = $required | Where-Object { $symbols -notcontains $_ }
 if ($missing.Count -gt 0) {
     throw "probe symbols absent from $elf : $($missing -join ', ')"
 }
 
+function Get-TextAddress([string]$Name) {
+    $line = $nm_lines |
+        Where-Object {
+            $_ -match ('^([0-9a-fA-F]{8})\s+[Tt]\s+' +
+                [regex]::Escape($Name) + '$')
+        } |
+        Select-Object -First 1
+    if ($null -eq $line) {
+        throw "$Name has no text symbol in $elf."
+    }
+    return '0x' + ($line -split '\s+')[0]
+}
+
+$impact_maker_address = Get-TextAddress 'efManagerImpactWaveMakeEffect'
+$impact_display_symbols = @(
+    'efManagerImpactWaveProcDisplay',
+    'dEFManagerImpactWavePrimColorR',
+    'dEFManagerImpactWavePrimColorG',
+    'dEFManagerImpactWavePrimColorB',
+    'dEFManagerImpactWaveEnvColorR',
+    'dEFManagerImpactWaveEnvColorG',
+    'dEFManagerImpactWaveEnvColorB'
+)
+$missing_impact_display_symbols = @($impact_display_symbols |
+    Where-Object { $symbols -notcontains $_ })
+$has_impact_display_evidence = ($missing_impact_display_symbols.Count -eq 0)
+$impact_display_address = if ($has_impact_display_evidence) {
+    Get-TextAddress 'efManagerImpactWaveProcDisplay'
+} else {
+    $null
+}
+$has_m3_postarm_counter =
+    ($symbols -contains 'gNdsRendererM3PostArmFailureCount')
+$m3_before_command = if ($has_m3_postarm_counter) {
+    'set $m3_postarm_before = gNdsRendererM3PostArmFailureCount'
+} else {
+    'set $m3_postarm_before = -1'
+}
+$m3_after_command = if ($has_m3_postarm_counter) {
+    'set $m3_postarm_after = gNdsRendererM3PostArmFailureCount'
+} else {
+    'set $m3_postarm_after = -1'
+}
+
 # NOT $Pid: that is a PowerShell automatic read-only variable, and binding a
 # parameter to it fails the whole script before the emulator ever launches.
-function New-CaptureCommand([string]$Name, [int]$EmulatorProcessId) {
+function New-CaptureCommand(
+    [string]$Name,
+    [int]$EmulatorProcessId,
+    [string]$Prefix
+) {
     return ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' +
         $capture_helper + '" -EmulatorProcessId ' + $EmulatorProcessId +
-        ' -Output "artifacts/visibility/2026-08-01_' + $Name + '.png"')
+        ' -Output "artifacts/visibility/' + $Prefix + '_' + $Name + '.png"')
 }
 
 try {

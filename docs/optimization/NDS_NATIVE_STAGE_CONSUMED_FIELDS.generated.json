@@ -854,6 +854,10 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "entry.key_generation",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "frame.binding_composed",
           "classification": "live_camera_dependent"
         },
@@ -883,6 +887,10 @@
         },
         {
           "access": "prepared.texture_format",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_generation",
           "classification": "callback_visible_mutation_output"
         },
         {
@@ -1352,6 +1360,10 @@
           "classification": "callback_visible_mutation_output"
         },
         {
+          "access": "stats.env_color",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "stats.hardware_texture_format",
           "classification": "live_camera_independent"
         },
@@ -1369,6 +1381,10 @@
         },
         {
           "access": "stats.hardware_texture_width",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.prim_color",
           "classification": "live_camera_independent"
         },
         {
@@ -3303,6 +3319,10 @@
         },
         {
           "access": "prepared.texture_format",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.texture_generation",
           "classification": "callback_visible_mutation_output"
         },
         {

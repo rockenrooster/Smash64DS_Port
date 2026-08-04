@@ -1286,12 +1286,6 @@ volatile f32 gNdsWhispyDrawSize;
  * compare the FIRST spread against the LAST -- spread alone proves nothing,
  * because rigid pieces still sit apart. */
 
-/* The scene camera pair, for the particle pass's own matrix load. Declared here
- * rather than by including gmcamera.h, which drags the whole camera API into a
- * TU that already textually includes two decomp sources. */
-extern Mtx44f gGMCameraMatrix;
-extern Mtx44f gGCMatrixPerspF;
-
 volatile u32 gNdsParticleQuadMissCount;
 volatile u32 gNdsParticleInitAllCount;
 volatile u32 gNdsParticleBankRegisterCount;
@@ -1349,51 +1343,192 @@ static const NDSParticleQuadFrame *ndsParticleQuadFrameFor(u32 texture_id,
     return earlier;
 }
 
-/* The camera basis, once per pass. `right` and `up` span the plane the
- * billboard lives in, derived from the same CObj eye/at/up the source's own
- * draw reads (lb/lbparticle.c:1487). Returns FALSE for a degenerate camera --
- * a zero-length forward or an up parallel to it -- and the pass then draws
- * nothing rather than emitting NaNs into the geometry engine. */
 #if NDS_R2_PARTICLE_DRAW
-static sb32 ndsParticleCameraBasis(Vec3f *right, Vec3f *up)
+/* Build both billboard axes and the DS camera load from one current CObj. The
+ * source particle draw does this once before iterating its pieces
+ * (lbparticle.c:1486-1649): look-at first, projection second, then one 20.12
+ * conversion. Reading the shared camera global here was subtly different
+ * because the Results callback does not prepare it, leaving the preceding
+ * battle matrix paired with the Results CObj-derived billboard axes. */
+static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
 {
-    CObj *cobj = CObjGetStruct(gGCCurrentCamera);
-    Vec3f forward;
-    f32 length;
+    CObj *cobj = (gGCCurrentCamera != NULL) ?
+        CObjGetStruct(gGCCurrentCamera) : NULL;
+    Mtx44f projection_f;
+    Mtx44f look_at_f;
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    u32 i;
+    u32 row;
+    u32 col;
 
     if (cobj == NULL)
     {
         return FALSE;
     }
-    forward.x = cobj->vec.at.x - cobj->vec.eye.x;
-    forward.y = cobj->vec.at.y - cobj->vec.eye.y;
-    forward.z = cobj->vec.at.z - cobj->vec.eye.z;
-    length = sqrtf(SQUARE(forward.x) + SQUARE(forward.y) + SQUARE(forward.z));
-    if (length == 0.0F)
+    if (cobj->xobjs_num == 0)
     {
-        return FALSE;
-    }
-    forward.x /= length;
-    forward.y /= length;
-    forward.z /= length;
+        f32 vscale_x = (f32)cobj->viewport.vp.vscale[0];
+        f32 vscale_y = -(f32)cobj->viewport.vp.vscale[1];
+        f32 vscale_z = (f32)cobj->viewport.vp.vscale[2];
 
-    right->x = (forward.y * cobj->vec.up.z) - (forward.z * cobj->vec.up.y);
-    right->y = (forward.z * cobj->vec.up.x) - (forward.x * cobj->vec.up.z);
-    right->z = (forward.x * cobj->vec.up.y) - (forward.y * cobj->vec.up.x);
-    length = sqrtf(SQUARE(right->x) + SQUARE(right->y) + SQUARE(right->z));
-    if (length == 0.0F)
+        if ((vscale_x == 0.0F) || (vscale_y == 0.0F) ||
+            (vscale_z == 0.0F))
+        {
+            return FALSE;
+        }
+        guMtxIdentF(projection_f);
+        projection_f[0][0] = 1.0F / vscale_x;
+        projection_f[1][1] = 1.0F / vscale_y;
+        projection_f[2][2] = -1.0F / vscale_z;
+        projection_f[3][0] =
+            -(f32)cobj->viewport.vp.vtrans[0] / vscale_x;
+        projection_f[3][1] =
+            -(f32)cobj->viewport.vp.vtrans[1] / vscale_y;
+        projection_f[3][2] =
+            (f32)cobj->viewport.vp.vtrans[2] / vscale_z;
+        right->x = 1.0F;
+        right->y = 0.0F;
+        right->z = 0.0F;
+        up->x = 0.0F;
+        up->y = 1.0F;
+        up->z = 0.0F;
+    }
+    else
     {
-        return FALSE;
-    }
-    right->x /= length;
-    right->y /= length;
-    right->z /= length;
+        f32 forward_x = cobj->vec.at.x - cobj->vec.eye.x;
+        f32 forward_y = cobj->vec.at.y - cobj->vec.eye.y;
+        f32 forward_z = cobj->vec.at.z - cobj->vec.eye.z;
+        f32 right_length_sq;
+        f32 up_length_sq;
 
-    /* Re-orthogonalised rather than taken from the CObj: the source's `up` is
-     * a hint, not necessarily perpendicular to the view direction. */
-    up->x = (right->y * forward.z) - (right->z * forward.y);
-    up->y = (right->z * forward.x) - (right->x * forward.z);
-    up->z = (right->x * forward.y) - (right->y * forward.x);
+        if ((SQUARE(forward_x) + SQUARE(forward_y) + SQUARE(forward_z)) ==
+            0.0F)
+        {
+            return FALSE;
+        }
+        /* The source's default clause resets both matrices. Seed those same
+         * defaults once so a valid projection-only or look-at-only list also
+         * has deterministic ownership, then apply every XObj in source order. */
+        syMatrixPerspFastF(projection_f, NULL,
+                           cobj->projection.persp.fovy,
+                           cobj->projection.persp.aspect,
+                           cobj->projection.persp.near,
+                           cobj->projection.persp.far,
+                           cobj->projection.persp.scale);
+        syMatrixLookAtF(&look_at_f,
+                        cobj->vec.eye.x, cobj->vec.eye.y,
+                        cobj->vec.eye.z, cobj->vec.at.x,
+                        cobj->vec.at.y, cobj->vec.at.z,
+                        cobj->vec.up.x, cobj->vec.up.y,
+                        cobj->vec.up.z);
+        for (i = 0u; i < (u32)cobj->xobjs_num; i++)
+        {
+            u32 kind = (cobj->xobjs[i] != NULL) ?
+                cobj->xobjs[i]->kind : nGCMatrixKindNull;
+
+            switch (kind)
+            {
+            case nGCMatrixKindPerspFastF:
+                syMatrixPerspFastF(projection_f, NULL,
+                                   cobj->projection.persp.fovy,
+                                   cobj->projection.persp.aspect,
+                                   cobj->projection.persp.near,
+                                   cobj->projection.persp.far,
+                                   cobj->projection.persp.scale);
+                break;
+            case nGCMatrixKindPerspF:
+                syMatrixPerspF(projection_f, NULL,
+                               cobj->projection.persp.fovy,
+                               cobj->projection.persp.aspect,
+                               cobj->projection.persp.near,
+                               cobj->projection.persp.far,
+                               cobj->projection.persp.scale);
+                break;
+            case nGCMatrixKindOrtho:
+                syMatrixOrthoF(&projection_f,
+                               cobj->projection.ortho.l,
+                               cobj->projection.ortho.r,
+                               cobj->projection.ortho.b,
+                               cobj->projection.ortho.t,
+                               cobj->projection.ortho.n,
+                               cobj->projection.ortho.f,
+                               cobj->projection.ortho.scale);
+                break;
+            case 6:
+            case 7:
+            case 12:
+            case 13:
+                syMatrixLookAtF(&look_at_f,
+                                cobj->vec.eye.x, cobj->vec.eye.y,
+                                cobj->vec.eye.z, cobj->vec.at.x,
+                                cobj->vec.at.y, cobj->vec.at.z,
+                                cobj->vec.up.x, cobj->vec.up.y,
+                                cobj->vec.up.z);
+                break;
+            case 8:
+            case 9:
+            case 14:
+            case 15:
+                syMatrixModLookAtF(&look_at_f,
+                                   cobj->vec.eye.x, cobj->vec.eye.y,
+                                   cobj->vec.eye.z, cobj->vec.at.x,
+                                   cobj->vec.at.y, cobj->vec.at.z,
+                                   cobj->vec.up.x, 0.0F, 1.0F, 0.0F);
+                break;
+            case 10:
+            case 11:
+            case 16:
+            case 17:
+                syMatrixModLookAtF(&look_at_f,
+                                   cobj->vec.eye.x, cobj->vec.eye.y,
+                                   cobj->vec.eye.z, cobj->vec.at.x,
+                                   cobj->vec.at.y, cobj->vec.at.z,
+                                   cobj->vec.up.x, 0.0F, 0.0F, 1.0F);
+                break;
+            default:
+                syMatrixPerspFastF(projection_f, NULL,
+                                   cobj->projection.persp.fovy,
+                                   cobj->projection.persp.aspect,
+                                   cobj->projection.persp.near,
+                                   cobj->projection.persp.far,
+                                   cobj->projection.persp.scale);
+                syMatrixLookAtF(&look_at_f,
+                                cobj->vec.eye.x, cobj->vec.eye.y,
+                                cobj->vec.eye.z, cobj->vec.at.x,
+                                cobj->vec.at.y, cobj->vec.at.z,
+                                cobj->vec.up.x, cobj->vec.up.y,
+                                cobj->vec.up.z);
+                break;
+            }
+        }
+        /* syMatrixLookAtF and syMatrixModLookAtF store final right/up in
+         * columns 0/1. Using those columns keeps billboard orientation equal
+         * to the final ordered XObj, including roll and forced-up variants. */
+        right->x = look_at_f[0][0];
+        right->y = look_at_f[1][0];
+        right->z = look_at_f[2][0];
+        up->x = look_at_f[0][1];
+        up->y = look_at_f[1][1];
+        up->z = look_at_f[2][1];
+        right_length_sq = SQUARE(right->x) + SQUARE(right->y) +
+                          SQUARE(right->z);
+        up_length_sq = SQUARE(up->x) + SQUARE(up->y) + SQUARE(up->z);
+        if (!(right_length_sq > 0.0F) || !(up_length_sq > 0.0F))
+        {
+            return FALSE;
+        }
+        guMtxCatF(look_at_f, projection_f, projection_f);
+    }
+    for (row = 0u; row < 4u; row++)
+    {
+        for (col = 0u; col < 4u; col++)
+        {
+            projection.m[row][col] = (row == col) ? 4096 : 0;
+            modelview.m[row][col] = (s32)(projection_f[row][col] * 4096.0F);
+        }
+    }
+    ndsRendererSetParticleCamera(&projection, &modelview);
     return TRUE;
 }
 
@@ -1517,30 +1652,10 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
         gNdsSourceAssetQuadMissMask |= 1u << 2;
         return FALSE;
     }
-    if (ndsParticleCameraBasis(&right, &up) == FALSE)
+    if (ndsParticleSetCurrentCamera(&right, &up) == FALSE)
     {
         gNdsSourceAssetQuadMissMask |= 1u << 3;
         return FALSE;
-    }
-    {
-        NDSRendererMatrix20p12 projection;
-        NDSRendererMatrix20p12 modelview;
-        u32 r;
-        u32 c;
-
-        /* Same identity-projection / combined-modelview pair the particle pass
-         * loads, and for the same reason: gGMCameraMatrix is ALREADY the
-         * view-projection (gmcamera.c:1001), so loading a projection on top of
-         * it applies perspective twice and collapses the quad off screen. */
-        for (r = 0u; r < 4u; r++)
-        {
-            for (c = 0u; c < 4u; c++)
-            {
-                projection.m[r][c] = (r == c) ? 4096 : 0;
-                modelview.m[r][c] = (s32)(gGMCameraMatrix[r][c] * 4096.0F);
-            }
-        }
-        ndsRendererSetParticleCamera(&projection, &modelview);
     }
     /* Bind the sheet this cell was packed into -- see the note at the other
      * submit site. atlas_name above only proves the atlas prepared. */
@@ -1577,50 +1692,10 @@ void lbParticleDrawTextures(GObj *gobj)
     gNdsParticleDrawSeamCount++;
 #if NDS_R2_PARTICLE_DRAW
     atlas_name = ndsRendererHardwareParticleAtlasName();
-    if ((atlas_name != 0u) && (ndsParticleCameraBasis(&right, &up) == FALSE))
+    if ((atlas_name != 0u) &&
+        (ndsParticleSetCurrentCamera(&right, &up) == FALSE))
     {
         atlas_name = 0u;
-    }
-    if (atlas_name != 0u)
-    {
-        /* Hand the pass the scene camera. Without this the batch renders under
-         * whichever object's matrix was loaded last -- measured as
-         * PROJECTED_IDENTITY or a stage segment's compose, varying by frame --
-         * which drew every effect at the eye or inside a stage segment while
-         * its world position was perfectly correct. gGCMatrixPerspF and
-         * gGMCameraMatrix are the same pair gmcamera.c:1001 composes for the
-         * scene, in 20.12 as the renderer wants them. */
-        NDSRendererMatrix20p12 projection;
-        NDSRendererMatrix20p12 modelview;
-        u32 row;
-        u32 col;
-
-        /* gGMCameraMatrix IS ALREADY THE VIEW-PROJECTION. gmcamera.c:1001 is
-         * `guMtxCatF(lookAt, gGCMatrixPerspF, gGMCameraMatrix)`, and the source
-         * then hands that single matrix to the RSP -- the N64 draws the whole
-         * scene with one combined matrix, not a projection/modelview pair.
-         *
-         * Loading gGCMatrixPerspF as the DS projection ON TOP of it applied the
-         * perspective TWICE, which collapsed every particle off screen. That
-         * shipped on 2026-08-02 and broke ALL VFX -- worse than the misplacement
-         * it was fixing, because a misplaced effect can still be play-tested and
-         * an absent one cannot. The tell was already in hand and misread: the
-         * confetti probe proved pieces were SUBMITTED with sane world positions
-         * and growing spread, and submitted is not the same question as visible.
-         * Walk created->alive->sized->IN-CAMERA->submitted, not a prefix of it.
-         *
-         * So the projection is identity and the combined matrix goes in as the
-         * modelview. */
-        for (row = 0u; row < 4u; row++)
-        {
-            for (col = 0u; col < 4u; col++)
-            {
-                projection.m[row][col] = (row == col) ? 4096 : 0;
-                modelview.m[row][col] =
-                    (s32)(gGMCameraMatrix[row][col] * 4096.0F);
-            }
-        }
-        ndsRendererSetParticleCamera(&projection, &modelview);
     }
 #else
     /* The census half only. The emit wedged the geometry engine on its first
