@@ -4820,6 +4820,12 @@ extern volatile u32 gNdsRendererAdapterCustom47LastRotateYBits;
 extern volatile u32 gNdsRendererAdapterCustom47LastTranslateX20p12;
 extern volatile u32 gNdsRendererAdapterCustom47LastTranslateY20p12;
 extern volatile u32 gNdsRendererAdapterCustom47LastTranslateZ20p12;
+/* How many of the applications above took the kind-44 branch
+ * (nGCMatrixKindRecalcRotRpyRSca, the shield's billboard) rather than the
+ * original 0x47 one. The two share the rewrite but not the orientation, and
+ * this is the engagement control that says whether the P1 scene contains any
+ * kind-44 DObj other than the source effect trees. */
+extern volatile u32 gNdsRendererAdapterMvpRecalcPerspScaCount;
 extern volatile u32 gNdsFighterDisplayContractSelectedCount;
 extern volatile u32 gNdsFighterDisplayContractHiddenCount;
 extern volatile u32 gNdsFighterDisplayContractNoTextureCount;

@@ -58,6 +58,17 @@
 /* wpmariofireball.c specifies hexadecimal 0x47 (decimal 71), which maps to
  * func_ovl0_800CA5C8 rather than enum nGCMatrixKind47 (decimal 47). */
 #define NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND 0x47u
+/* nGCMatrixKindRecalcRotRpyRSca, decimal 44 -- dEFManagerShieldEffectDesc's
+ * SECOND transform struct, i.e. the transform every non-root node of the shield
+ * tree carries (efmanager.c:472). Despite the enum name it applies NO rotation:
+ * gcPrepDObjMatrix case 44 (objdisplay.c:876) writes a pure scaled PERSPECTIVE
+ * block into sGCMatrixMvpF, emits gSPMvpRecalc plus the gMoveWd pairs for rows
+ * 0-2 ONLY, and `continue`s WITHOUT a gSPMatrix -- so the accumulated MVP's
+ * orientation is REPLACED by a screen-aligned block while its translation row,
+ * which is where the parent 0x4F joint attachment lives, survives untouched.
+ * That is a billboard, and it is the whole reason the shield is a circle facing
+ * the player rather than a quad wearing the fighter's yaw. */
+#define NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND 44u
 /* dLBCommonFuncMatrixList kind 0x4C maps to gmCameraLookAtFuncMatrix. */
 #define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu
 /* dLBCommonFuncMatrixList kind 0x4F maps to func_ovl0_800C994C: the DObj's local
@@ -1193,6 +1204,23 @@ static sb32 ndsRendererAdapterBuildFighterPartsMtx(
  *
  * gmCollisionCopyMatrix's copy into a local is skipped: it writes columns 0-2
  * only, which is exactly what F2LFixedW reads. */
+/* SOURCE'S gGCScaleX, AND IT IS NOT BOOKKEEPING. func_ovl0_800C994C's middle
+ * line is `gGCScaleX = sqrtf(SQUARE(f[0][0]) + SQUARE(f[0][1]) +
+ * SQUARE(f[0][2]))` -- the length of row 0 of the joint's world matrix -- and
+ * the kind-44 billboard below multiplies the perspective by it. For the shield
+ * that length is the SHIELD SIZE: ftCommonGuardUpdateShieldCollision writes
+ * `((0.65 * shield_health/55) + 0.35) * attr->shield_size / 30` into
+ * fp->joints[nFTPartsJointYRotN]->scale (ftcommonguard1.c:125), which for Fox
+ * at full health is 280/30 = 9.3333 -- exactly the row-0 length this probe
+ * measures. Dropping it makes the bubble a five-pixel dot, because the billboard
+ * then scales the model by 1.0 instead of by the guard's own size.
+ *
+ * gcDrawDObjTreeDLLinksForGObj resets it to 1.0 per tree, which
+ * ndsRendererAdapterPrepareInitialMatrices mirrors: the world build that calls
+ * this runs first, the recalc that consumes it runs after, both inside one
+ * call. */
+static f32 sNdsRendererAdapterMvpRecalcScaleX = 1.0F;
+
 static sb32 ndsRendererAdapterBuildJointAttachMtx(
     DObj *dobj, NDSRendererMatrix20p12 *out)
 {
@@ -1218,6 +1246,10 @@ static sb32 ndsRendererAdapterBuildJointAttachMtx(
     /* func_ovl2_800EDBA4 walks to the joint root and dereferences ftGetStruct and
      * ftGetParts without a guard, so both are checked above before the call. */
     func_ovl2_800EDBA4(attach);
+    sNdsRendererAdapterMvpRecalcScaleX =
+        sqrtf((parts->mtx_translate[0][0] * parts->mtx_translate[0][0]) +
+              (parts->mtx_translate[0][1] * parts->mtx_translate[0][1]) +
+              (parts->mtx_translate[0][2] * parts->mtx_translate[0][2]));
     if (ndsRendererAdapterF2LFixedWExact(&parts->mtx_translate, &mtx) == FALSE)
     {
         syMatrixF2LFixedW(&parts->mtx_translate, &mtx);
@@ -1587,6 +1619,25 @@ static void ndsRendererAdapterTask91LocalMemoProbe(
 }
 #endif
 
+/* THE TWO SOURCE MVP-RECALC CALLBACKS THE PORT IMPLEMENTS. Both `continue` out
+ * of gcPrepDObjMatrix without emitting a gSPMatrix, so neither contributes a
+ * local matrix to the parent chain: they rewrite the COMPOSED MVP instead, and
+ * ndsRendererAdapterApplyMvpRecalc is where that happens. A DObj carrying one
+ * must therefore skip it in the local build or the transform is applied twice
+ * and in the wrong space.
+ *
+ * The remaining recalc kinds (41-43, 45-50) still fall through to
+ * ndsRendererAdapterBuildRecalcLocalMtx, which composes them as ordinary local
+ * matrices. That is wrong by the same argument, but each has a different
+ * orientation formula and none has a measured consumer in the P1 scene, so they
+ * are left as they are rather than converted on speculation. */
+static sb32 ndsRendererAdapterIsMvpRecalcKind(u32 kind)
+{
+    return ((kind == NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND) ||
+            (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND)) ?
+        TRUE : FALSE;
+}
+
 static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
 {
@@ -1603,8 +1654,8 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
     for (i = 0u; i < dobj->xobjs_num; i++)
     {
         if ((dobj->xobjs[i] != NULL) &&
-            (dobj->xobjs[i]->kind ==
-                NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND))
+            (ndsRendererAdapterIsMvpRecalcKind(dobj->xobjs[i]->kind) !=
+                FALSE))
         {
             has_mvp_recalc_rpy_0x47 = TRUE;
             continue;
@@ -1639,28 +1690,29 @@ static sb32 ndsRendererAdapterBuildDObjLocalMatrix(
     return TRUE;
 }
 
-static DObj *ndsRendererAdapterFindDirectMvpRecalcRpy0x47(DObj *dobj)
+static u32 ndsRendererAdapterDirectMvpRecalcKind(DObj *dobj)
 {
     u32 i;
 
     if (dobj == NULL)
     {
-        return NULL;
+        return 0u;
     }
     for (i = 0u; i < dobj->xobjs_num; i++)
     {
         if ((dobj->xobjs[i] != NULL) &&
-            (dobj->xobjs[i]->kind ==
-                NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND))
+            (ndsRendererAdapterIsMvpRecalcKind(dobj->xobjs[i]->kind) !=
+                FALSE))
         {
-            return dobj;
+            return (u32)dobj->xobjs[i]->kind;
         }
     }
-    return NULL;
+    return 0u;
 }
 
-static void ndsRendererAdapterApplyMvpRecalcRpy0x47(
+static void ndsRendererAdapterApplyMvpRecalc(
     DObj *dobj,
+    u32 kind,
     CObj *cobj,
     NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 **projection_ptr,
@@ -1674,13 +1726,15 @@ static void ndsRendererAdapterApplyMvpRecalcRpy0x47(
     NDSRendererMatrix20p12 source_orientation;
     NDSRendererMatrix20p12 composed;
     s32 translate[4];
+    s32 scale_x;
+    s32 scale_y;
     u16 perspective_norm;
     u32 has_battle_camera = FALSE;
     u32 i;
     u32 row;
     u32 col;
 
-    if (dobj == NULL)
+    if ((dobj == NULL) || (ndsRendererAdapterIsMvpRecalcKind(kind) == FALSE))
     {
         return;
     }
@@ -1736,16 +1790,11 @@ static void ndsRendererAdapterApplyMvpRecalcRpy0x47(
         translate[col] = composed.m[3][col];
     }
 
-    /* func_ovl0_800CA5C8 replaces all three orientation rows of the current
-     * MVP with RotRpyR(x, y, 0) * gGCMatrixPerspF.  The translation row from
+    /* Both callbacks replace all three orientation rows of the current MVP with
+     * something built from gGCMatrixPerspF alone.  The translation row from
      * Tra * LookAt * Persp stays live.  The battle camera's adapter projection
      * contains LookAt * Persp, so seed the renderer with the completed MVP to
      * avoid applying LookAt a second time to the rewritten orientation. */
-    syMatrixRotRpyR(&rotation_mtx,
-                    dobj->rotate.vec.f.x,
-                    dobj->rotate.vec.f.y,
-                    0.0F);
-    ndsRendererAdapterMtxFromN64(&rotation_mtx, &rotation);
     perspective_norm = cobj->projection.persp.norm;
     syMatrixPerspFast(&perspective_mtx,
                       &perspective_norm,
@@ -1755,8 +1804,55 @@ static void ndsRendererAdapterApplyMvpRecalcRpy0x47(
                       cobj->projection.persp.far,
                       cobj->projection.persp.scale);
     ndsRendererAdapterMtxFromN64(&perspective_mtx, &perspective);
-    ndsRendererMtxMul20p12(
-        &rotation, &perspective, &source_orientation);
+    if (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND)
+    {
+        NDSRendererMatrix20p12 scale;
+
+        /* objdisplay.c:876. Only four elements of the perspective block
+         * survive, each scaled: [0][0] and [2][2]/[2][3] by gGCScaleX, [1][1]
+         * by gGCScaleX * scale.y. gGCScaleX is 1.0 at
+         * gcDrawDObjTreeDLLinksForGObj and is multiplied by scale.x HERE, so
+         * for a tree with one recalc node -- which is what the shield desc
+         * builds -- gGCScaleX is exactly this DObj's scale.x. A chain with two
+         * recalc nodes would accumulate; none exists in the P1 scene, and the
+         * apply counter below is what would show one appearing.
+         *
+         * diag(sx, sy, sx) * Persp reproduces those four writes and nothing
+         * else, because syMatrixPerspFast leaves every off-diagonal of rows 0-2
+         * at zero -- so this reuses the shared fixed-point multiply instead of
+         * hand-rolling four 20.12 products.
+         *
+         * Both factors are formed in FLOAT first, exactly as source does, so
+         * the guard-size term (see sNdsRendererAdapterMvpRecalcScaleX) is not
+         * quantized twice. */
+        if ((ndsRendererAdapterFloatPow2ToS32(
+                 sNdsRendererAdapterMvpRecalcScaleX * dobj->scale.vec.f.x,
+                 12u, &scale_x) == FALSE) ||
+            (ndsRendererAdapterFloatPow2ToS32(
+                 sNdsRendererAdapterMvpRecalcScaleX * dobj->scale.vec.f.y,
+                 12u, &scale_y) == FALSE))
+        {
+            gNdsRendererAdapterCustom47RejectCount++;
+            return;
+        }
+        ndsRendererAdapterMtxIdentity20p12(&scale);
+        scale.m[0][0] = scale_x;
+        scale.m[1][1] = scale_y;
+        scale.m[2][2] = scale_x;
+        ndsRendererMtxMul20p12(&scale, &perspective, &source_orientation);
+        gNdsRendererAdapterMvpRecalcPerspScaCount++;
+    }
+    else
+    {
+        /* func_ovl0_800CA5C8: RotRpyR(x, y, 0) * gGCMatrixPerspF. */
+        syMatrixRotRpyR(&rotation_mtx,
+                        dobj->rotate.vec.f.x,
+                        dobj->rotate.vec.f.y,
+                        0.0F);
+        ndsRendererAdapterMtxFromN64(&rotation_mtx, &rotation);
+        ndsRendererMtxMul20p12(
+            &rotation, &perspective, &source_orientation);
+    }
     for (row = 0u; row < 3u; row++)
     {
         for (col = 0u; col < 4u; col++)
@@ -2939,7 +3035,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     NDSRendererMatrix20p12 camera_projection;
     NDSRendererMatrix20p12 camera_modelview;
     NDSRendererMatrix20p12 dobj_world;
-    DObj *mvp_recalc_rpy_0x47;
+    u32 mvp_recalc_kind;
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
     u32 dobj_world_valid = FALSE;
@@ -2950,8 +3046,11 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     }
     *projection_ptr = NULL;
     *modelview_ptr = NULL;
-    mvp_recalc_rpy_0x47 =
-        ndsRendererAdapterFindDirectMvpRecalcRpy0x47(dobj);
+    /* gcDrawDObjTreeDLLinksForGObj resets gGCScaleX to 1.0 before every tree;
+     * the joint-attach build below is what raises it, and the recalc at the end
+     * of this function is what consumes it. Same order, same scope. */
+    sNdsRendererAdapterMvpRecalcScaleX = 1.0F;
+    mvp_recalc_kind = ndsRendererAdapterDirectMvpRecalcKind(dobj);
 
     if ((projection == NULL) || (modelview == NULL))
     {
@@ -3024,8 +3123,8 @@ static void ndsRendererAdapterPrepareInitialMatrices(
             ((*projection_ptr != NULL) ? 8u : 0u) |
             ((*modelview_ptr != NULL) ? 16u : 0u);
     }
-    ndsRendererAdapterApplyMvpRecalcRpy0x47(
-        mvp_recalc_rpy_0x47, cobj,
+    ndsRendererAdapterApplyMvpRecalc(
+        (mvp_recalc_kind != 0u) ? dobj : NULL, mvp_recalc_kind, cobj,
         projection, projection_ptr, modelview, modelview_ptr);
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
@@ -7366,11 +7465,11 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
             DObj *vp_dobj = workspace->binding_dobjs[vp_binding];
             NDSRendererMatrix20p12 vp_world;
 
-            /* An mvp-recalc RPY 0x47 rewrites the pair after composition, so
-             * those bindings keep the exact original path. */
+            /* An mvp-recalc (0x47 or the kind-44 billboard) rewrites the pair
+             * after composition, so those bindings keep the exact original
+             * path. */
             if ((vp_dobj == NULL) ||
-                (ndsRendererAdapterFindDirectMvpRecalcRpy0x47(vp_dobj) !=
-                 NULL) ||
+                (ndsRendererAdapterDirectMvpRecalcKind(vp_dobj) != 0u) ||
                 (ndsRendererAdapterBuildPersistentStageWorldMatrix(
                      vp_dobj, &vp_world) == FALSE))
             {
@@ -8665,6 +8764,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     NDSRendererMatrix20p12 initial_modelview;
     const NDSRendererMatrix20p12 *initial_projection_ptr;
     const NDSRendererMatrix20p12 *initial_modelview_ptr;
+    u32 effect_seed_before = 0u;
+    u32 effect_matrix_cmd_before = 0u;
+    u32 effect_xform_before = 0u;
+    u32 effect_hw_vertex_before = 0u;
+    u32 effect_hw_triangle_before = 0u;
 #if NDS_RENDERER_HW_TRIANGLES
     void *saved_graphics_heap_ptr;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -8842,6 +8946,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sNdsRendererAdapterStageListOrdinal++;
 #endif
 #endif
+    if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+    {
+        effect_seed_before = render_stats->hardware_matrix_seed_count;
+        effect_matrix_cmd_before = render_stats->matrix_command_count;
+        effect_xform_before = render_stats->transformed_vertex_count;
+        effect_hw_vertex_before = render_stats->hardware_vertex_count;
+        effect_hw_triangle_before = render_stats->hardware_triangle_count;
+    }
     ndsRendererExecuteDisplayListWithVertexCache(
         dl,
         &config,
@@ -8852,6 +8964,43 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             &sNdsRendererAdapterStageVertexCache : NULL);
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
+        /* The config's matrices read from OUR locals, and the executor's own
+         * verdict on them read as a delta. Cycles 53-55 tried to read the same
+         * two pointers out of the callee's argument register and got three
+         * different answers; nds_effects.h records why that read can never
+         * settle it. */
+        gNdsEffectDLCfgMask =
+            ((config.initial_projection != NULL) ? 1u : 0u) |
+            ((config.initial_modelview != NULL) ? 2u : 0u);
+        if (config.initial_modelview != NULL)
+        {
+            gNdsEffectDLCfgMvT[0] = config.initial_modelview->m[3][0];
+            gNdsEffectDLCfgMvT[1] = config.initial_modelview->m[3][1];
+            gNdsEffectDLCfgMvT[2] = config.initial_modelview->m[3][2];
+        }
+        gNdsEffectDLMatrixSeed =
+            render_stats->hardware_matrix_seed_count - effect_seed_before;
+        gNdsEffectDLMatrixCmd =
+            render_stats->matrix_command_count - effect_matrix_cmd_before;
+        gNdsEffectDLXformVertexCount =
+            render_stats->transformed_vertex_count - effect_xform_before;
+        gNdsEffectDLHwVertexCount =
+            render_stats->hardware_vertex_count - effect_hw_vertex_before;
+        gNdsEffectDLHwTriangleCount =
+            render_stats->hardware_triangle_count - effect_hw_triangle_before;
+#if NDS_RENDERER_HW_TRIANGLES
+        if (sNdsRendererAdapterStagePersistentActive != FALSE)
+        {
+            gNdsEffectDLVtx0[0] =
+                sNdsRendererAdapterStageVertexCache.transformed_vertices[0].x;
+            gNdsEffectDLVtx0[1] =
+                sNdsRendererAdapterStageVertexCache.transformed_vertices[0].y;
+            gNdsEffectDLVtx0[2] =
+                sNdsRendererAdapterStageVertexCache.transformed_vertices[0].z;
+            gNdsEffectDLVtx0[3] =
+                sNdsRendererAdapterStageVertexCache.transformed_vertices[0].w;
+        }
+#endif
         gNdsEffectDLBlocker = render_stats->blocker;
         gNdsEffectDLCommandCount = render_stats->command_count;
         gNdsEffectDLFirstOpcode = render_stats->first_opcode;

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Build = 'build-c52-flag1',
+    [string]$Build = 'build-c54-flag1',
     [string]$Target = 'smash64ds-battle-playable-proof-hwtri',
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
     [ValidateRange(30, 1800)][int]$TimeoutSeconds = 900,
@@ -47,7 +47,18 @@ $required = @(
     'ndsRendererAdapterBuildDObjLocalMatrix',
     'ndsRendererAdapterSubmitStageDL',
     'gSCManagerBattleState',
-    'gNdsEffectRendererTriangleCount'
+    'gNdsEffectRendererTriangleCount',
+    # A gdb batch aborts the REST of its commands on the first absent symbol,
+    # so every name the command list reads is checked here, not just the
+    # breakpoint targets.
+    'gNdsRendererAdapterEffectPrepMask',
+    'sNdsRendererAdapterStageWorldCache',
+    'sNdsRendererAdapterDObjWorldCache',
+    'gNdsEffectDLCfgMask',
+    'gNdsEffectDLCfgMvT',
+    'gNdsEffectDLMatrixSeed',
+    'gNdsEffectDLVtx0',
+    'gNdsRendererAdapterMvpRecalcPerspScaCount'
 )
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = $required | Where-Object { $symbols -notcontains $_ }
@@ -132,6 +143,14 @@ try {
         'set $dls = $dls + 1',
         'set $sdl = (Gfx *)$r1',
         'printf "SUBMIT n=%d dobj=%p dl=%p tris=%u\n", $dls, $r0, $r1, gNdsEffectRendererTriangleCount',
+        # The effect-submit publish block writes these AFTER the executor
+        # returns, so at this entry they describe the PREVIOUS effect submit --
+        # one frame of lag, and that is the whole cost of reading a global
+        # instead of a stack argument. cfg bit 0 projection, bit 1 modelview;
+        # seed is the hardware_matrix_seed_count delta, which is 1 only if the
+        # config's matrices composed into a valid traversal matrix.
+        'printf "DLCFG n=%u cfg=%u mvt=%d,%d,%d seed=%u mcmd=%u xf=%u hwv=%u hwt=%u\n", gNdsEffectDLPublishCount, gNdsEffectDLCfgMask, gNdsEffectDLCfgMvT[0], gNdsEffectDLCfgMvT[1], gNdsEffectDLCfgMvT[2], gNdsEffectDLMatrixSeed, gNdsEffectDLMatrixCmd, gNdsEffectDLXformVertexCount, gNdsEffectDLHwVertexCount, gNdsEffectDLHwTriangleCount',
+        'printf "DLVTX0 x=%d y=%d z=%d w=%d blocker=%u cmds=%u op=%u\n", gNdsEffectDLVtx0[0], gNdsEffectDLVtx0[1], gNdsEffectDLVtx0[2], gNdsEffectDLVtx0[3], gNdsEffectDLBlocker, gNdsEffectDLCommandCount, gNdsEffectDLFirstOpcode',
         'enable 4',
         'if ($locals + $dls) < 12',
         'continue',
@@ -140,15 +159,37 @@ try {
 
         'commands 4',
         'silent',
-        # DO NOT READ THE CONFIG THROUGH $r1 HERE. Cycle 53 did, got
-        # initial_projection == initial_modelview == NULL, and published a whole
-        # seam on it; cycle 54 ran the identical expression on the next ROM and
-        # got max_depth 0 and max_commands 0 -- literals that cannot be zero. r1
-        # is not reliably the config argument at this breakpoint, and the
-        # "cmds=8192 proves the pointer" check was worthless because it was read
-        # THROUGH the pointer under test. gNdsRendererAdapterEffectPrepMask is
-        # the sound answer: the code publishes its own verdict.
+        # THE CONFIG POINTER IS VALIDATED BY A REGISTER, NOT BY ITSELF. Cycle 53
+        # read the config through $r1 and "proved" the pointer with
+        # max_commands == 8192 -- a field read THROUGH the pointer under test,
+        # which proves nothing; cycle 54 got all-zero words on the next ROM and
+        # retracted the whole seam. Both runs lacked an INDEPENDENT check.
+        # There is one: ndsRendererAdapterSubmitStageDL passes the SAME &state
+        # as config.user and as callback_user, and callback_user is $r3 at this
+        # entry (0x2024768 is the symbol address; its first instruction is the
+        # `push`, so r0-r3 still hold the arguments). config->user == $r3 is a
+        # field agreeing with a register -- sound where a self-read is not.
         'printf "EXEC dl=%p shielddl=%p persist=%d effect=%d\n", $r0, $sdl, sNdsRendererAdapterStagePersistentActive, sNdsRendererAdapterEffectSubmitActive',
+        'printf "CFGID r1=%p r2=%p r3=%p user=%p match=%d\n", $r1, $r2, $r3, ((void **)$r1)[12], (int)(((void **)$r1)[12] == (void *)$r3)',
+        'printf "CFGRAW depth=%u cmds=%u lcmds=%u proj=%p mv=%p\n", ((unsigned int *)$r1)[0], ((unsigned int *)$r1)[1], ((unsigned int *)$r1)[2], ((void **)$r1)[3], ((void **)$r1)[4]',
+        'set $mv = ((int **)$r1)[4]',
+        'if $mv != 0',
+        'printf "CFGMV t=%d,%d,%d r0=%d,%d,%d\n", $mv[12], $mv[13], $mv[14], $mv[0], $mv[1], $mv[2]',
+        'end',
+        # The world matrix the prep actually built, read from the file-static
+        # stage-world cache instead of from any argument register. With prep
+        # mask bit 1 clear (the battle camera folds LookAt into the projection)
+        # ndsRendererAdapterPrepareInitialMatrices copies dobj_world straight
+        # into the modelview, so this IS what config.initial_modelview must
+        # carry -- an independent second opinion on the line above.
+        'set $wi = 0',
+        'while $wi < sNdsRendererAdapterStageWorldCacheCount',
+        'if (sNdsRendererAdapterStageWorldCache[$wi].dobj == $sroot) || (sNdsRendererAdapterStageWorldCache[$wi].dobj == $schild)',
+        'set $ws = sNdsRendererAdapterStageWorldCache[$wi].world_slot',
+        'printf "WORLD i=%d dobj=%p slot=%d vf=%u t=%d,%d,%d r0=%d,%d,%d\n", $wi, sNdsRendererAdapterStageWorldCache[$wi].dobj, $ws, sNdsRendererAdapterStageWorldCache[$wi].validated_frame, sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][2], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][2]',
+        'end',
+        'set $wi = $wi + 1',
+        'end',
         # File statics, so these are sound reads where the stack and the
         # argument registers are not.
         'printf "CAMCACHE count=%u frame=%u cobj0=%p pv0=%u mv0=%u\n", sNdsRendererAdapterCameraCacheCount, sNdsRendererAdapterCameraCacheFrame, sNdsRendererAdapterCameraCache[0].cobj, sNdsRendererAdapterCameraCache[0].projection_valid, sNdsRendererAdapterCameraCache[0].modelview_valid',
@@ -158,9 +199,11 @@ try {
         # battle value: the camera folds LookAt into the projection, so bit 1 is
         # legitimately clear and both pointers are handed over non-NULL.
         'printf "PREPMASK n=%u mask=0x%x\n", gNdsRendererAdapterEffectPrepCount, gNdsRendererAdapterEffectPrepMask',
-        'if $mv != 0',
-        'printf "MV t=%d,%d,%d r0=%d,%d,%d\n", $mv->m[3][0], $mv->m[3][1], $mv->m[3][2], $mv->m[0][0], $mv->m[0][1], $mv->m[0][2]',
-        'end',
+        # The MVP-recalc rewrite. persp_sca counts the kind-44 branch, which is
+        # the shield billboard; detected/applied/reject/mismatch are the shared
+        # 0x47 ledger. persp_sca climbing with applied means the shield took the
+        # rewrite; reject climbing instead names the camera guard.
+        'printf "RECALC persp_sca=%u detected=%u applied=%u reject=%u mismatch=%u\n", gNdsRendererAdapterMvpRecalcPerspScaCount, gNdsRendererAdapterCustom47DetectedCount, gNdsRendererAdapterCustom47AppliedCount, gNdsRendererAdapterCustom47RejectCount, gNdsRendererAdapterCustom47TranslationMismatchCount',
         'set $execs = $execs + 1',
         'if $execs < 14',
         'continue',
@@ -180,6 +223,7 @@ try {
 
         'continue',
         'printf "SUBMITDONE locals=%d dls=%d execs=%d tris=%u dobjdraw=%u reject=%u\n", $locals, $dls, $execs, gNdsEffectRendererTriangleCount, gNdsEffectRendererDObjDrawCount, gNdsEffectRendererRejectedDrawCount',
+        'printf "DLCFGDONE n=%u cfg=%u mvt=%d,%d,%d seed=%u mcmd=%u xf=%u hwv=%u hwt=%u\n", gNdsEffectDLPublishCount, gNdsEffectDLCfgMask, gNdsEffectDLCfgMvT[0], gNdsEffectDLCfgMvT[1], gNdsEffectDLCfgMvT[2], gNdsEffectDLMatrixSeed, gNdsEffectDLMatrixCmd, gNdsEffectDLXformVertexCount, gNdsEffectDLHwVertexCount, gNdsEffectDLHwTriangleCount',
         'detach',
         'quit'
     )

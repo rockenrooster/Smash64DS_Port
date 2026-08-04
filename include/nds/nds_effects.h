@@ -182,6 +182,30 @@ extern volatile u32 gNdsEffectDLVertexCount;
 extern volatile u32 gNdsEffectDLTriangleCount;
 extern volatile u32 gNdsEffectDLPublishCount;
 
+/* WHICH MATRIX THE EFFECT DISPLAY LIST ACTUALLY EXECUTED WITH, published by the
+ * submitter from its OWN locals. The config is a stack object and reading it
+ * through the argument register at ndsRendererExecuteDisplayListWithVertexCache
+ * has now produced three mutually contradictory answers on three ROMs -- cycle
+ * 53 read 8/8192/512 with both matrix pointers NULL, cycles 54 and 55 read five
+ * zero words on a pointer whose config->user matched callback_user exactly. A
+ * stack read is not evidence on this remote; a global written by the code that
+ * owns the value is. CfgMask is bit 0 initial_projection, bit 1
+ * initial_modelview. MatrixSeed is the DELTA of hardware_matrix_seed_count
+ * across the call, which ndsRendererInitTraversalState increments only when the
+ * config's matrices composed into a valid traversal matrix -- so
+ * CfgMask 3 with MatrixSeed 1 closes the gap between the prep verdict
+ * (gNdsRendererAdapterEffectPrepMask) and the executor with no register read at
+ * all. MatrixCmd is the delta of the list's own matrix commands: non-zero means
+ * the display list overrode what the config seeded. */
+extern volatile u32 gNdsEffectDLCfgMask;
+extern volatile s32 gNdsEffectDLCfgMvT[3];
+extern volatile u32 gNdsEffectDLMatrixSeed;
+extern volatile u32 gNdsEffectDLMatrixCmd;
+extern volatile u32 gNdsEffectDLXformVertexCount;
+extern volatile u32 gNdsEffectDLHwVertexCount;
+extern volatile u32 gNdsEffectDLHwTriangleCount;
+extern volatile s32 gNdsEffectDLVtx0[4];
+
 /* The effect DObj tree walk (reloc_backend_renderer_dl.c). Declared and reset
  * here so they exist in EVERY build, not only the one that increments them:
  * -fdata-sections plus --gc-sections deletes a volatile counter with no reader,

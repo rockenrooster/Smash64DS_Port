@@ -234,43 +234,83 @@ parts->mtx_translate. That is the entire attachment mechanism.
      the world matrix was built ONCE per guard -- one local build against ten
      submits. 0x4F joins 0x4B on that function's refusal list, by the rule its
      own comment already states; rebuilds are 2 per frame and tracking.
-  3. RETRACTED AND REPLACED (2026-08-04, cycle 54). The claim was "the display
-     list executes with config.initial_projection AND initial_modelview NULL, so
-     the matrix is discarded". IT IS FALSE, and the way it failed is the useful
-     part: it was read as $r1 at a breakpoint on
-     ndsRendererExecuteDisplayListWithVertexCache, where r1 is NOT reliably the
-     config. The check that "proved" the pointer -- max_commands == 8192, which
-     only ndsRendererAdapterSubmitStageDL sets -- was read THROUGH the pointer
-     under test, so it proved nothing; the identical expression on the next ROM
-     returned max_depth 0 and max_commands 0, which are literals and cannot be.
-     THE SOUND MEASUREMENT, published by the code itself:
-     gNdsRendererAdapterEffectPrepMask reads 0x7d on every effect prep -- camera
-     projection valid, DObj world valid, and BOTH pointers handed over non-NULL,
-     before and after the 0x47 rewrite. The matrices reach the config correctly.
-     Bit 1 (camera modelview) is legitimately clear and is NOT a defect: the
-     battle camera's kind 0x4C folds LookAt into the projection in one
-     ndsRendererMtxMul20p12(&lookat, &persp, projection), so there is no separate
-     view matrix to validate. The default-battle-camera fallback being gated on
-     BOTH flags is therefore correct too.
-     SO THE SEAM IS DOWNSTREAM OF THE CONFIG, inside the executor, and the
-     candidate -- named as a candidate, not measured -- is the persistent stage
-     vertex cache: SubmitStageDL passes &sNdsRendererAdapterStageVertexCache
-     whenever sNdsRendererAdapterStagePersistentActive (it is 1 during the effect
-     submit), and ndsRendererExecuteDisplayListWithVertexCache then seeds
-     ndsRendererInitTraversalState from vertex_cache->matrix_snapshots
-     (nds_renderer.c:28372-28380). If the snapshot stream outranks
-     config->initial_modelview, the effect inherits the stage's matrix, which is
-     exactly a quad pinned at the stage origin and insensitive to its own DObj
-     transforms. Measure that before touching it.
-EVIDENCE, same lock in every arm (EXACT_LOCK 1988,1986): the guest viewport is
-BYTE-IDENTICAL between the pre-fix ROM and the fixed one, 0 of 120,000 pixels,
-so both fixes are engaged, source-correct and visually inert today.
-artifacts/visibility/2026-08-04_c53-shield-guarding-t1988-flag1-a.png;
-artifacts/verification/2026-08-04_c5{2,3}-shield-*.txt. Instruments:
-scripts/probe-shield-attach.ps1 (is the root bound and live) and
-scripts/probe-shield-submit.ps1 (does its matrix reach the DL).
-GATE 6: the shield row's flip argument stays disarmed until seam 3 lands.
-Correct lifetime and a correct matrix are not yet a correct shield.
+  3. RETRACTED, THEN MEASURED FROM CODE; THE EXECUTOR IS INNOCENT (2026-08-04,
+     cycle 55). The cycle-54 candidate was "the persistent vertex cache's
+     matrix_snapshots outrank config->initial_modelview". REFUTED by the code
+     and by counters: ndsRendererInitTraversalState installs matrix_snapshots as
+     a POOL and then seeds state->modelview from config->initial_modelview
+     regardless (nds_renderer.c:6463-6522); the vertex_cache assignment below it
+     copies vertex arrays only.
+     THE WHOLE MATRIX CHAIN IS GREEN, published by the submitter from its own
+     locals (gNdsEffectDLCfgMask and friends, nds_effects.h): cfg=3 (both
+     matrices non-NULL), mvt 449217/7544832/-147456 -> 504513 -> 532161, i.e.
+     the bound joint's world translation tracking the fighter to the tick;
+     seed=1, so InitTraversalState composed a VALID traversal matrix from them;
+     mcmd=0, so the list issues no matrix command of its own; xf=4 hwv=6 hwt=2,
+     so the quad's four vertices are transformed and submitted. Prep mask stays
+     0x7d; bit 1 is legitimately clear because the battle camera's 0x4C folds
+     LookAt into the projection.
+     AND THE READ THAT STARTED ALL THIS IS DEAD FOR GOOD. At the executor's
+     symbol address the first instruction IS the `push`, so r1 IS the config by
+     the ABI -- and on the same run config->user read back equal to $r3 while
+     the five words before it read depth=0 cmds=0 proj=NULL mv=NULL against the
+     code's own 8/8192/non-NULL/non-NULL. A stack object is not readable through
+     this gdb stub; same lesson as the 0.0 stack locals, now with a positive
+     control. Do not spend another cycle reading a config.
+     artifacts/verification/2026-08-04_c55-shield-cfgid.txt and -dlcfg.txt.
+  4. THE SEAM WAS NEVER IN THE EXECUTOR: TWO SOURCE LINES, BOTH MISSING
+     (2026-08-04, cycles 56-57), and fixing them puts the bubble on the fighter.
+     4a. The shield's non-root nodes carry main matrix kind 0x2C = 44 =
+         nGCMatrixKindRecalcRotRpyRSca (efmanager.c, desc transform struct 2).
+         Despite the enum name it applies NO rotation: gcPrepDObjMatrix case 44
+         (objdisplay.c:876) writes a pure SCALED PERSPECTIVE block into
+         sGCMatrixMvpF, emits gSPMvpRecalc plus gMoveWd for rows 0-2 ONLY, and
+         `continue`s WITHOUT a gSPMatrix -- so the composed MVP's orientation is
+         REPLACED while its translation row, which is where the 0x4F attachment
+         lives, survives. That is a billboard. The port built it as an ordinary
+         local rotate/scale and multiplied it into the world chain, so the quad
+         wore the joint's yaw and lay flat in the ground plane. That is why
+         fixing 0x4F could not change the picture: it moved a quad within the
+         wrong plane. Now implemented in ndsRendererAdapterApplyMvpRecalc,
+         selected by the DObj's own XObj kind exactly as the existing 0x47 case
+         is -- not by effect/stage mode, and the native stage path defers the
+         same kinds to the slow path it already used for 0x47.
+     4b. The SIZE is the other callback's middle line. func_ovl0_800C994C sets
+         gGCScaleX = |row 0 of the joint's world matrix| (lbcommon.c:1454), and
+         case 44 multiplies the perspective by it. For the shield that length IS
+         THE GUARD SIZE: ftCommonGuardUpdateShieldCollision writes
+         ((0.65 * shield_health/55) + 0.35) * attr->shield_size / 30 into
+         fp->joints[nFTPartsJointYRotN]->scale (ftcommonguard1.c:125), which for
+         Fox (shield_size 280) at full health is 280/30 = 9.3333 -- exactly the
+         row-0 length the probe reads as r0=0,0,-38229 in 20.12. Without it the
+         billboard scales by 1.0: cycle 56 drew the quad correctly positioned and
+         camera-facing at 4.6 GUEST PIXELS across, a 101-pixel delta on the whole
+         viewport. The port now captures gGCScaleX in
+         ndsRendererAdapterBuildJointAttachMtx and resets it per prep, mirroring
+         gcDrawDObjTreeDLLinksForGObj's own reset.
+     ENGAGEMENT: gNdsRendererAdapterMvpRecalcPerspScaCount steps 0->1->2, once
+     per shield submit, reject=0 mismatch=0; the prep mask moves 0x7d -> 0x5d
+     because the rewrite hands over the completed MVP and NULLs the projection.
+     artifacts/verification/2026-08-04_c56-shield-recalc44.txt.
+EVIDENCE, single arm, EXACT_LOCK 1988,1986, inside the 1994-1982 guard window:
+the quad is now a large camera-facing square CENTRED ON THE GUARDING FIGHTER and
+comfortably enclosing him, about 45x38 guest pixels against Fox's ~30 -- 4,965
+viewport pixels (2.07%) against the cycle-56 arm. Position, scale, attachment
+and orientation are all correct by eye for the first time.
+artifacts/visibility/2026-08-04_c5{5,6,7}-shield-guarding-t1988-flag1-a.png plus
+the -zoom.png crops; the earlier flat white smear on the platform is unchanged
+across all three arms and is therefore NOT the shield.
+REMAINING DIMENSION, and it is one: COLOUR/TEXTURE. The bubble renders as a dark
+translucent square, not SSB64's bright translucent circle. Prime suspect is
+named by source and needs no build to check first: efManagerShieldProcDisplay
+writes gDPPipeSync + gDPSetPrimColor + gDPSetEnvColor (alpha 0xC0, per-player
+colours from dEFManagerShieldColors) into gSYTaskmanDLHeads[1] BEFORE calling
+gcDrawDObjTreeDLLinksForGObj, i.e. into a different DL head from the model list
+the port executes -- so those two colour commands very likely never reach the
+port's renderer at all, and the circular alpha comes from the model's texture.
+GATE 6: the shield row's flip argument re-arms only on the owner's eye, and the
+honest ask is now "is this the right shape in the right place, with the wrong
+colour", not "is this a shield".
 
 FLAG-0 RE-MEASURED AFTER THE FIX (2026-08-04), because changing the walk could
 have changed stand-in lifetime too. It did not: the flag-0 census is unchanged
@@ -360,7 +400,7 @@ do not restate them here.
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: LOCALIZED -- lifetime, 0x4F matrix and stale cache fixed; matrices reach the config, seam is inside the executor.
+    STAGE: MEASURED -- kind-44 billboard plus gGCScaleX restored; bubble now encloses the fighter, colour still wrong.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
