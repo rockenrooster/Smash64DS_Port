@@ -1890,9 +1890,17 @@ recoverable at all.
   `Joint0`s, and `gNdsFighterInitDamageCollMask`.
   **That is not "no hurtboxes", it is "the recorder never wrote".** The tell is `Joint0`: its reset
   value is `0xffffffffu` (`taskman_seam.c:1098-1099`), so a value of `0` means the reset never ran
-  *either* — everything is sitting at BSS zero. And `ndsResetStartupDiagnostics`, which contains that
-  reset (`taskman_seam.c:30`, declared `nds_startup.h:728`), has **zero callers anywhere in
-  `src/`** — dead code.
+  *either* — everything is sitting at BSS zero.
+  **CORRECTION (2026-08-04): `ndsResetStartupDiagnostics` is NOT dead code, and the "zero callers
+  anywhere in `src/`" that was recorded here is a search artefact, not a fact.** It is called at
+  `decomp/BattleShip-main/decomp/src/mn/mncommon/mnstartup.c:280`, inside an `SSB64_TARGET_NDS`
+  block, tracked as `scripts/decomp-patches/battleship/src_mn_mncommon_mnstartup.patch` — one of the
+  eight patched decomp files the Makefile compiles in place. `/decomp/` is gitignored, so ripgrep
+  skips it by default and any "no callers" sweep that does not pass `--no-ignore` will report a live
+  function as dead. **Search `decomp/` explicitly before calling anything unreferenced**, and check
+  `scripts/fetch-battleship-reference.ps1 -VerifyOnly` rather than grepping for the port edits: a
+  wrong `--no-ignore` spelling fails silently and reads as "absent". So `Joint0 == 0` still needs the
+  compile-time explanation below; it is not evidence that the reset never runs.
 
   **WHY it never wrote, run down to the mechanism: the family is COMPILE-TIME gated out of
   Boundary, and it is not a defect to fix.** The recorder is reached only through
