@@ -37,9 +37,16 @@ OPEN.
     (d4c7d3d7b's validation never disables anything at flag 0, because only
     dEFManagerDeadExplodeEffectDesc is resolved there and its file is in the
     span table). 8508fc8d6 was flag-gated in cycle 15 and the hang persisted.
-    That leaves 4c29b9615a, whose only ungated change is a counter increment --
-    so the mechanism is NOT yet explained by any suspect, and the next spend is
-    the actual bisect: build each candidate, marker probe at budget 200.
+    RANGE ANCHORED (cycle 23): a clean 4d1015b75 flag-0 tickhud build reaches
+    200 frames in 28s, so the regression really is inside the campaign commits
+    and the dirty-baseline worry is resolved. That leaves 4c29b9615a, whose only
+    ungated change is a counter increment, so no suspect's mechanism is yet
+    explained and the next spend is the literal bisect at budget 200.
+    BUILDING AN OLD COMMIT NEEDS THE DECOMP PATCHES REVERSED TOO: decomp/ is
+    gitignored, so a checkout leaves the tracked patches applied and the build
+    fails on undeclared runaway counters. Reverse-apply
+    scripts/decomp-patches/battleship/*.patch before building any pre-ae7c3e735
+    commit, and re-apply them on return.
     HARNESS LIMIT: once hung, a second GDB cannot attach; capturing the hang PC
     needs an interrupt on an already-attached session, not a re-attach.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
