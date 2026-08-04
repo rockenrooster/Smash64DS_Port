@@ -44,14 +44,19 @@ OPEN.
     exonerates nothing since later commits remain (27); shift is non-uniform
     with no symbol crossing a region edge, and stale absolute addresses are
     noise at 10 hits vs ~8 expected by chance (29).
-    CAPTURED (31): there is no spinning PC. Four stops spanning 36s all read
-    PC armWaitForIrq+4 (0x1fff390, nm-confirmed 8-byte fn), bt armWaitForIrq
-    <- armContextLoad, cpsr 0x1f, while presented stayed frozen at 195 --
-    inside the 175-200 window. The ARM9 is IDLE in calico's wait-for-IRQ, so
-    this is a blocked wait / lost wakeup, not a runaway loop, which is why
-    every counter-based probe came back clean. Attachment does not perturb
-    the repro. OPEN: name the blocked waiter and the event it misses.
-    artifacts/verification/2026-08-03_flag0-hang-pc.txt.
+    NOT A HANG (32). The scheduler walk retires both earlier readings. At one
+    stop cur=s_idleThread with s_mainThread Waiting on irqWaitMask=1 (VBlank);
+    15s later cur=s_mainThread RUNNING in ndsPlatformTickHudSort
+    (nds_platform.c:2091). The main thread cycles wait->render normally. No
+    deadlock: mutex 0x22a1e70 owner=0, no thread in WaitingOnMutex, the only
+    irqWaitList entry is main on a VBlank that plainly arrives. The sort is a
+    correct shell sort (gap 13->4->1->0), not a loop bug -- it is just a hot
+    spot two samples landed in. So the ARM9 is ALIVE; the only frozen quantity
+    is gNdsBattlePlayablePacingPresentedFrames, stuck at 195 across 51s.
+    The defect is therefore in whatever advances that counter, and the
+    "hang" is the harness waiting forever for a target it can never reach.
+    Cycle 31's idle-park was one sample of a normal frame wait.
+    artifacts/verification/2026-08-03_flag0-hang-{pc,threads}.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
