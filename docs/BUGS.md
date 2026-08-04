@@ -186,6 +186,15 @@ on the platform rather than a bubble enclosing him
 inside the 1994-1982 guard window, EXACT_LOCK 1988/1986). It no longer drifts
 across the stage only because it now dies with the guard. Renderer-side, so it
 gates on the fidelity budget and the owner's eye.
+ATTACHMENT, TWO STARTING FACTS ONLY (2026-08-04, not a confirmation): grep finds
+ZERO reads of user_data.p anywhere in src/port/reloc_backend_renderer_dl.c, and
+gcSetupCustomDObjs -- the function that builds an effect's DObj tree from the
+desc -- is defined at src/import/battleship_grpupupu_ground.c:35, not in the
+renderer. Consistent with "nothing binds the effect DObj to its joint", NOT proof
+of it: the matrix may be resolved elsewhere. Next cycle starts by reading
+gcSetupCustomDObjs for the desc's matrix-kind fields, then does the gdb read of
+the effect DObj's resolved matrix against fp->joints[nFTPartsJointYRotN] inside a
+guard window BEFORE any edit.
 GATE 6: the shield row's flip argument re-arms only when this second seam lands.
 Correct lifetime alone does not make the shield correct.
 
