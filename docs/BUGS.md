@@ -81,7 +81,38 @@ gSCManagerBattleState->time_remain and no harness can (capture-melonds.ps1
 -ExactFirstFrame locks the presented-frame counter, which R2-02 E8 measured into
 a 57% false delta). Land -ExactTimeRemain first, then the four captures.
 
+EFFECT MOMENTS ARE NOW KNOWN (2026-08-04), which is what "gate 2 captures not
+closed" was actually blocked on -- a capture needs a tic and nobody had ever
+recorded one. One no-build probe, breaking on efManagerMakeEffect conditioned on
+the four desc addresses, over 150 s of natural flag-1 play:
+    rebirth halo  time_remain 2819, 875
+    shield        1994, 1951, 1922, 130, 110, 77, 40, 18
+    impact wave   3277, 2121, 2110, 2104, 2099, 2088, 1810, 113
+    reflector     NEVER -- 0 spawns
+Capture a few tics BELOW a spawn tic (time_remain counts down) so the effect is
+on screen. artifacts/verification/2026-08-04_gate6-effect-tics.txt.
+
+TWO CAPTURE-METHOD CORRECTIONS, both found by looking at the first attempt
+instead of trusting its pixel count:
+  1. Gate-6 captures must come from the PUBLISHED battle target, never the
+     tickhud lab ROM. The tick HUD's text console owns the whole bottom screen
+     and rewrites FPS/TIME every frame, so it is roughly half the 400x600
+     compare area and it is churning. NDS_TICK_HUD_DRAW=0 does not remove it --
+     it only blanks the bucket table to dashes.
+  2. That console is what the same-build floor is made of: 31.8%/33.4% at
+     tic 1990 against a 49.1% cross-build delta. On the published ROM the floor
+     should collapse; until it does, no pixel metric here means anything.
+  Exhibit: artifacts/visibility/2026-08-04_gate6-shield-REJECTED-tickhud-
+  console-noshield.png -- it also shows no shield at tic 1990, so the offset
+  below a spawn tic has to be chosen and then VERIFIED BY EYE, not assumed.
+
 OPEN.
+  * Reflector: measured, it never gets the chance. Zero dEFManagerFoxReflector
+    EffectDesc spawns in 150 s of natural level-3 Fox play, so the down-B simply
+    does not occur in an automated window -- the engagement gap is not proof of
+    a broken retry. AND the desc is disabled anyway (EFDescDisabledCount=1), so
+    a down-B alone would still draw nothing until the retry recovers it. Cheapest
+    honest path is the owner's play session, not a new harness mode.
   * Reflector: the deferred-retry fix CANNOT ENGAGE AT THE TRACKED DEFAULT.
     gNdsEFDescDeferRecoverCount is absent from the flag-0 ELF entirely (nm on
     both gate-5 arms) -- it is compiled inside NDS_R2_SOURCE_EFFECTS_FULL. At
