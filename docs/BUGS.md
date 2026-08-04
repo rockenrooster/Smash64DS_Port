@@ -43,11 +43,21 @@ OPEN.
     is deferred or disabled, and neither the deferred-retry asymmetry nor any
     "disabled desc returns NULL and a caller retries per frame" mechanism can
     fire on that arm.
-    CONSEQUENCE: gate 5 has no control arm, because the tick-HUD ROM is the
-    instrument every measurement runs on. NEXT, and it is one build: probe a
-    flag-0 tickhud ROM built from a PRE-CAMPAIGN commit. That settles whether
-    this is a regression at all before any further bisect -- it has never been
-    established that this arm ever presented frames on this instrument.
+    IT IS A HANG AT A SPECIFIC FRAME, NOT SLOWNESS. Timed frame budgets on the
+    flag-0 arm: 5f/21s, 35f/23s, 100f/25s, 150f/26s, 175f/27s, then 200f never
+    completes in 201s. Boot is ~21s and the flag-1 arm matches it exactly to 35
+    frames (23s), so the two arms are the SAME SPEED -- the control simply stops
+    dead between frame 175 and 200. Every earlier "stall" reading was this hang
+    seen through a 300-frame budget.
+    Confirmed a regression: the coordinator holds a pre-campaign flag-0 tickhud
+    RingDump that completed (p50 1,119,936 / p95 1,680,128, VBI 388/67/11/4,
+    artifacts/performance/2026-08-03_dobjtree_control_ringdump.json), so the
+    bisect range is (4d1015b75 .. bca626a758] -- ae7c3e735, d4c7d3d7b,
+    8508fc8d6, 4c29b9615a.
+    NEXT: run to 175 (which completes) and read gNdsObjAnimRunawayCount/Mask
+    plus the abort registers, then bisect the range. The freeze fix ae7c3e735 is
+    active at flag 0 and is the only campaign commit that changes per-frame
+    animation behaviour there.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
