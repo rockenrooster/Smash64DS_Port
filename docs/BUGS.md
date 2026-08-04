@@ -70,8 +70,18 @@ OPEN.
     that is why DrawCalls (:4881) froze, why no exit ran, and why the machine
     stayed alive on other threads. Coroutines resume from ndsOsRunThreads, and
     a coroutine blocking on osRecvMesg(OS_MESG_BLOCK) yields (libultra_os.c
-    :237). OPEN: read syMainThread5's saved coroutine PC at a frozen stop --
-    it names the yield that never came back.
+    :237).
+    PARKED IN YIELD, STILL ELIGIBLE (35). At two frozen stops the battle
+    coroutine (arg=gSYMainThread5, so identity is confirmed) has
+    context.lr = portCoroutineYield+25 and finished=0 -- parked in a yield,
+    not finished. gSYMainThread5.state = 8 = OS_STATE_WAITING (PR/os.h:96).
+    REFUTED, do not re-run: the "thread latched in OS_STATE_RUNNING so
+    ndsOsRunThreads skips it" theory. :294-295 accepts WAITING, and the
+    thread is sThreads[1], so it IS resumed every pass -- ~690/s.
+    So the coroutine is resumed, returns from its yield, re-checks, and
+    yields again: it spins waiting on a condition that never becomes true.
+    OPEN: which wait. Unwind the saved context.sp (0x022aac38 that run) to
+    name the call site, then the queue and its validCount.
     artifacts/verification/2026-08-03_flag0-*.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must

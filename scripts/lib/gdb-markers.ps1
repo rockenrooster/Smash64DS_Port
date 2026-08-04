@@ -9,6 +9,44 @@ function Convert-MarkerUInt32 {
     return [Convert]::ToUInt32($Value, 10)
 }
 
+# Build MI commands for an interactive step. Probes must not hand-roll these.
+#
+# Two traps live here, each of which has already cost a cycle:
+#  1. A format-string `printf` wrapped in -interpreter-exec console "..." is
+#     unparseable (the inner quotes close the outer string). GDB answers
+#     ^error for that one command while every other command in the run
+#     succeeds, so the transcript looks healthy and the value is simply
+#     missing. Cost the frame counter twice on 2026-08-03.
+#  2. -data-evaluate-expression needs the expression QUOTED whenever it
+#     contains a space -- "(unsigned long*)x" fails with a bare "Usage:"
+#     reply for the same silent-looking reason.
+# Read values with New-GdbMiValueRead and neither form is expressible.
+function New-GdbMiValueRead {
+    param([Parameter(Mandatory)][string[]]$Expression)
+
+    return @($Expression | ForEach-Object {
+        '-data-evaluate-expression "' + ($_ -replace '"', '\"') + '"'
+    })
+}
+
+# Console commands that genuinely have no MI equivalent (info symbol, x, bt).
+# Never pass a printf with a format string through this -- use
+# New-GdbMiValueRead, which is why this rejects one outright rather than
+# letting it fail silently at runtime.
+function New-GdbMiConsole {
+    param([Parameter(Mandatory)][string[]]$Command)
+
+    return @($Command | ForEach-Object {
+        if ($_ -match '^\s*printf\s') {
+            throw ("New-GdbMiConsole cannot carry a printf ('$_'): the inner " +
+                   'quotes are unparseable inside -interpreter-exec console ' +
+                   'and GDB fails that command silently. Use ' +
+                   'New-GdbMiValueRead for value reads.')
+        }
+        '-interpreter-exec console "' + ($_ -replace '"', '\"') + '"'
+    })
+}
+
 function Invoke-GdbMarkerScript {
     param(
         [string]$Gdb,
