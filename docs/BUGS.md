@@ -503,6 +503,28 @@ call never executes and the finally block kills the emulator first. When the
 thing being hunted is a hang, timeout is the EXPECTED path -- the abort read
 belongs in a catch.
 
+GATE 2 IS BLOCKED ON A MISSING COUNTER, NOT ON THE PROBE'S TIMEOUT (cycle 10).
+
+The timeout ceiling was raised 400 -> 1800 and it changed nothing: the run still
+reads frames=346 shot_frame=343, byte-identical with a 1500s budget. The
+timeout was never the limiter. probe-shield-vfx.ps1 arms on a draw counter,
+takes ONE shot and exits, and with the flag on it armed at frame 343 on an
+IMPACT WAVE -- because gNdsEffectRendererSourceModelAdmitCount counts every
+source-model admit and the wave is by far the most frequent.
+
+So the probe has no signal that means "a shield is on screen" in a flag-on
+build. Its ValidateSet offers exactly two counters and both are wrong here:
+gNdsTask39FxShieldDrawCount belongs to the PROCEDURAL stand-in, which the flag
+removes, so it never advances; SourceModelAdmitCount is wave-dominated. The
+capture it produced is an empty frame (tris=0 at the shot), not shield evidence.
+
+WHAT GATE 2 ACTUALLY NEEDS FIRST: a shield-specific engagement counter -- an
+admit/draw counter keyed on the effect GObj's link, or a dedicated one bumped
+by the shield's own path -- added to the ValidateSet. That is a source change,
+not a probe parameter, which is why raising the range did not deliver the gate.
+The same argument applies to the respawn (KO counter) and the reflector
+(gNdsEFDescDeferRecoverCount): each needs its own arming signal.
+
 THE REFLECTOR'S FILE LOADS LATE. FIX WRITTEN, NOT YET PROVEN (cycle 9).
 
 CAUSE, from the call graph rather than a run: efManagerInitEffects resolves

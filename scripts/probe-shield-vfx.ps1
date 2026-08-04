@@ -3,7 +3,13 @@ param(
     [string]$Build = 'build-r2-bothcpu',
     [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
-    [ValidateRange(30, 400)][int]$TimeoutSeconds = 300,
+    # The ceiling was 400 and that was too small to see a source shield at all.
+    # The procedural stand-in appeared within the first couple of hundred
+    # frames, so 400s covered it; the SOURCE shield is made by
+    # efManagerMakeEffect and was first observed at frame 576, past which this
+    # probe simply timed out and shot an empty frame (2026-08-03: shot_frame=343
+    # with tris=0, twice). A KO/respawn and a Fox down-B are later still.
+    [ValidateRange(30, 1800)][int]$TimeoutSeconds = 300,
     # Frames the shield must have been continuously drawn before the capture.
     # Not 0: the shield grows in, so frame 0 of a guard is a dot. Not large
     # either -- a CPU releases guard quickly and a long wait never fires.
