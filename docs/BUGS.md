@@ -118,10 +118,25 @@ OPEN.
     The handshake worked 307 times first (gNdsTaskmanGObjThreadSleeps=307),
     so this is the LAST countdown sleep, not a broken-from-boot path -- which
     fits the interface-update location and the ~6.5 s timing.
-    OPEN: why the thread is STOPPED when gcRunGObjProcess called
-    osStartThread immediately before osRecvMesg (objman.c:2285-2286) -- read
-    the port's osStartThread/osStopThread state transitions against the
-    source's. Also still to explain: how flag-0 and tickhud each reach it.
+    LEADING MECHANISM (39), source-read only, needs one confirming probe.
+    osStopThread(NULL) (libultra_os.c:152-164) sets STOPPED then yields --
+    exactly where thread 6 is parked -- and ONLY osStartThread lifts it, at
+    :141. But osStartThread has TWO SILENT RETURNS before that line:
+      :128 thread->port_entry == NULL
+      :136 portCoroutineCreate() == NULL   <- allocation failure
+    Either returns with no error, no counter, and the thread never runs, so
+    it never reaches its osSendMesg and osRecvMesg(BLOCK) blocks forever.
+    sThreads[5] is exactly that signature: id 10000003, state STOPPED,
+    port_coroutine == NULL -- registered but never started. And
+    gGCCurrentProcess (0x023c6bb0) sits 0x30 below sThreads[5] (0x023c6be0),
+    consistent with the blocked process owning THAT thread rather than 6.
+    This is the first candidate that can explain all three sensitivities at
+    once, via memory pressure on a GOBJ-stack allocation: the 312-byte
+    displacement shrinks what is left, tickhud costs more, and the flag-0
+    stand-ins allocate differently. Thread 6 parked mid-sleep is then normal.
+    CONFIRM BEFORE FIXING: which thread the blocked gcRunGObjProcess owns,
+    and whether portCoroutineCreate returned NULL -- both silent paths need a
+    counter. Do not fix the wrong return.
     artifacts/verification/2026-08-03_flag0-queue.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
