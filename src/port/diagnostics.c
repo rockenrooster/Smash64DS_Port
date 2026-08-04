@@ -3604,6 +3604,8 @@ volatile u32 gNdsEffectDLUnsupportedOpcode;
 volatile u32 gNdsEffectDLVertexCount;
 volatile u32 gNdsEffectDLTriangleCount;
 volatile u32 gNdsEffectDLPublishCount;
+volatile u32 gNdsRendererAdapterEffectPrepCount;
+volatile u32 gNdsRendererAdapterEffectPrepMask;
 volatile u32 gNdsRendererAdapterCustom47DetectedCount;
 volatile u32 gNdsRendererAdapterCustom47AppliedCount;
 volatile u32 gNdsRendererAdapterCustom47RejectCount;

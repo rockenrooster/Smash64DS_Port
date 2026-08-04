@@ -2921,6 +2921,12 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
 }
 #endif
 
+/* Defined with the other stage statics further down; declared here because
+ * ndsRendererAdapterPrepareInitialMatrices publishes its verdict only for the
+ * effect submit. A tentative file-scope declaration, so this and the definition
+ * name the same object. */
+static sb32 sNdsRendererAdapterEffectSubmitActive;
+
 static void ndsRendererAdapterPrepareInitialMatrices(
     DObj *dobj,
     CObj *cobj,
@@ -3000,9 +3006,33 @@ static void ndsRendererAdapterPrepareInitialMatrices(
         MTXCOPY(modelview, &dobj_world);
         *modelview_ptr = modelview;
     }
+    /* WHICH OF THE THREE VERDICTS DIED, for the effect submit only. Cycle 53
+     * read config.initial_projection AND initial_modelview as NULL at the
+     * executor (raw words, max_commands 8192 proving the config), while the
+     * camera cache entry for the same CObj read projection_valid 1 -- and the
+     * code above cannot produce both of those. One of the two reads is about a
+     * different moment, and a latch taken here, between the decision and the
+     * config fill, is the only thing that can say which. Effect-only because
+     * the stage submits hundreds of lists per frame through this same path. */
+    if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+    {
+        gNdsRendererAdapterEffectPrepCount++;
+        gNdsRendererAdapterEffectPrepMask =
+            ((camera_projection_valid != FALSE) ? 1u : 0u) |
+            ((camera_modelview_valid != FALSE) ? 2u : 0u) |
+            ((dobj_world_valid != FALSE) ? 4u : 0u) |
+            ((*projection_ptr != NULL) ? 8u : 0u) |
+            ((*modelview_ptr != NULL) ? 16u : 0u);
+    }
     ndsRendererAdapterApplyMvpRecalcRpy0x47(
         mvp_recalc_rpy_0x47, cobj,
         projection, projection_ptr, modelview, modelview_ptr);
+    if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+    {
+        gNdsRendererAdapterEffectPrepMask |=
+            ((*projection_ptr != NULL) ? 32u : 0u) |
+            ((*modelview_ptr != NULL) ? 64u : 0u);
+    }
 }
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)

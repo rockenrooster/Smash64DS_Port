@@ -4803,6 +4803,12 @@ extern volatile u32 gNdsWeaponRendererFireballFirstXBits;
 extern volatile u32 gNdsWeaponRendererFireballFirstYBits;
 extern volatile u32 gNdsWeaponRendererFireballLastXBits;
 extern volatile u32 gNdsWeaponRendererFireballLastYBits;
+/* ndsRendererAdapterPrepareInitialMatrices' verdict for an EFFECT submit.
+ * Mask bits: 1 camera projection valid, 2 camera modelview valid, 4 DObj world
+ * valid, 8/16 projection/modelview pointer non-NULL before the 0x47 rewrite,
+ * 32/64 the same two after it. */
+extern volatile u32 gNdsRendererAdapterEffectPrepCount;
+extern volatile u32 gNdsRendererAdapterEffectPrepMask;
 extern volatile u32 gNdsRendererAdapterCustom47DetectedCount;
 extern volatile u32 gNdsRendererAdapterCustom47AppliedCount;
 extern volatile u32 gNdsRendererAdapterCustom47RejectCount;

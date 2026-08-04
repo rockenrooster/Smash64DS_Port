@@ -234,16 +234,34 @@ parts->mtx_translate. That is the entire attachment mechanism.
      the world matrix was built ONCE per guard -- one local build against ten
      submits. 0x4F joins 0x4B on that function's refusal list, by the rule its
      own comment already states; rebuilds are 2 per frame and tracking.
-  3. STILL OPEN, and it is what decides the picture. The shield's display list
-     executes with config.initial_projection == NULL AND initial_modelview ==
-     NULL (read at ndsRendererExecuteDisplayListWithVertexCache; cmds=8192
-     proves it is ndsRendererAdapterSubmitStageDL's own config). The world
-     matrix is computed correctly and then discarded before the GX sees it, so
-     the quad inherits whatever matrix the previous list left loaded -- which is
-     why all three builds render identical pixels.
-     ndsRendererAdapterPrepareInitialMatrices IS called for the shield's child
-     with a non-NULL CObj (cobj=0x234ee98, persist=1), so the NULL is produced
-     inside or after it. Start there.
+  3. RETRACTED AND REPLACED (2026-08-04, cycle 54). The claim was "the display
+     list executes with config.initial_projection AND initial_modelview NULL, so
+     the matrix is discarded". IT IS FALSE, and the way it failed is the useful
+     part: it was read as $r1 at a breakpoint on
+     ndsRendererExecuteDisplayListWithVertexCache, where r1 is NOT reliably the
+     config. The check that "proved" the pointer -- max_commands == 8192, which
+     only ndsRendererAdapterSubmitStageDL sets -- was read THROUGH the pointer
+     under test, so it proved nothing; the identical expression on the next ROM
+     returned max_depth 0 and max_commands 0, which are literals and cannot be.
+     THE SOUND MEASUREMENT, published by the code itself:
+     gNdsRendererAdapterEffectPrepMask reads 0x7d on every effect prep -- camera
+     projection valid, DObj world valid, and BOTH pointers handed over non-NULL,
+     before and after the 0x47 rewrite. The matrices reach the config correctly.
+     Bit 1 (camera modelview) is legitimately clear and is NOT a defect: the
+     battle camera's kind 0x4C folds LookAt into the projection in one
+     ndsRendererMtxMul20p12(&lookat, &persp, projection), so there is no separate
+     view matrix to validate. The default-battle-camera fallback being gated on
+     BOTH flags is therefore correct too.
+     SO THE SEAM IS DOWNSTREAM OF THE CONFIG, inside the executor, and the
+     candidate -- named as a candidate, not measured -- is the persistent stage
+     vertex cache: SubmitStageDL passes &sNdsRendererAdapterStageVertexCache
+     whenever sNdsRendererAdapterStagePersistentActive (it is 1 during the effect
+     submit), and ndsRendererExecuteDisplayListWithVertexCache then seeds
+     ndsRendererInitTraversalState from vertex_cache->matrix_snapshots
+     (nds_renderer.c:28372-28380). If the snapshot stream outranks
+     config->initial_modelview, the effect inherits the stage's matrix, which is
+     exactly a quad pinned at the stage origin and insensitive to its own DObj
+     transforms. Measure that before touching it.
 EVIDENCE, same lock in every arm (EXACT_LOCK 1988,1986): the guest viewport is
 BYTE-IDENTICAL between the pre-fix ROM and the fixed one, 0 of 120,000 pixels,
 so both fixes are engaged, source-correct and visually inert today.
@@ -342,7 +360,7 @@ do not restate them here.
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: LOCALIZED -- lifetime, 0x4F matrix and its stale cache fixed; the effect DL still gets a NULL modelview.
+    STAGE: LOCALIZED -- lifetime, 0x4F matrix and stale cache fixed; matrices reach the config, seam is inside the executor.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used

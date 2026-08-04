@@ -140,10 +140,24 @@ try {
 
         'commands 4',
         'silent',
-        'set $cfg = (NDSRendererConfig *)$r1',
-        'set $mv = (NDSRendererMatrix20p12 *)$cfg->initial_modelview',
-        'printf "EXEC dl=%p shielddl=%p mv=%p proj=%p depth=%u cmds=%u geom=%u user=%p\n", $r0, $sdl, $mv, $cfg->initial_projection, $cfg->max_depth, $cfg->max_commands, $cfg->initial_geometry_mode, $cfg->user',
-        'x/8xw $cfg',
+        # DO NOT READ THE CONFIG THROUGH $r1 HERE. Cycle 53 did, got
+        # initial_projection == initial_modelview == NULL, and published a whole
+        # seam on it; cycle 54 ran the identical expression on the next ROM and
+        # got max_depth 0 and max_commands 0 -- literals that cannot be zero. r1
+        # is not reliably the config argument at this breakpoint, and the
+        # "cmds=8192 proves the pointer" check was worthless because it was read
+        # THROUGH the pointer under test. gNdsRendererAdapterEffectPrepMask is
+        # the sound answer: the code publishes its own verdict.
+        'printf "EXEC dl=%p shielddl=%p persist=%d effect=%d\n", $r0, $sdl, sNdsRendererAdapterStagePersistentActive, sNdsRendererAdapterEffectSubmitActive',
+        # File statics, so these are sound reads where the stack and the
+        # argument registers are not.
+        'printf "CAMCACHE count=%u frame=%u cobj0=%p pv0=%u mv0=%u\n", sNdsRendererAdapterCameraCacheCount, sNdsRendererAdapterCameraCacheFrame, sNdsRendererAdapterCameraCache[0].cobj, sNdsRendererAdapterCameraCache[0].projection_valid, sNdsRendererAdapterCameraCache[0].modelview_valid',
+        'printf "SWCACHE ptr=%p count=%u attempted=%u\n", sNdsRendererAdapterStageWorldCache, sNdsRendererAdapterStageWorldCacheCount, sNdsRendererAdapterStageWorldCacheAllocationAttempted',
+        # 1 cam-proj valid, 2 cam-mv valid, 4 world valid, 8/16 proj/mv pointer
+        # non-NULL before the 0x47 rewrite, 32/64 after it. 0x7d is the healthy
+        # battle value: the camera folds LookAt into the projection, so bit 1 is
+        # legitimately clear and both pointers are handed over non-NULL.
+        'printf "PREPMASK n=%u mask=0x%x\n", gNdsRendererAdapterEffectPrepCount, gNdsRendererAdapterEffectPrepMask',
         'if $mv != 0',
         'printf "MV t=%d,%d,%d r0=%d,%d,%d\n", $mv->m[3][0], $mv->m[3][1], $mv->m[3][2], $mv->m[0][0], $mv->m[0][1], $mv->m[0][2]',
         'end',
