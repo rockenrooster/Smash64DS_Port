@@ -13140,10 +13140,27 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
      * the tree walker still ran 6 times, because a source desc tree's id==0
      * root carries no display list. A root with a child is a tree; the walk
      * below declines individual nodes that have nothing to draw. */
+#if NDS_R2_SOURCE_EFFECTS_FULL
+    /* FLAG-GATED ON SCOPE, not on a measured regression. At the tracked default
+     * the link 10/15 admission block above is compiled out, so no source tree
+     * can reach here and the relaxation could only ever touch the link-18
+     * procedural templates -- behaviour the flag has no business changing. It
+     * was ungated originally on the argument that a tree-shaped effect is
+     * refused wrongly in any configuration, which is true but is not a licence
+     * to alter the shipping arm.
+     *
+     * DO NOT read this as the cause of the flag-off stall recorded in BUGS.md.
+     * Gating it was measured and did NOT fix that: the control still failed to
+     * reach 300 presented frames in 241s afterwards. This hunk is exonerated. */
     if ((root == NULL) ||
         ((root->dv == NULL) && (root->child == NULL)) ||
         (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
         (ndsStageGCDrawAllLoopEffectKindAccepted(callback_kind) == FALSE))
+#else
+    if ((root == NULL) || (root->dv == NULL) ||
+        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (ndsStageGCDrawAllLoopEffectKindAccepted(callback_kind) == FALSE))
+#endif
     {
         gNdsEffectRendererRejectedKindMask |=
             ndsStageGCDrawAllLoopCallbackKindBit(callback_kind);

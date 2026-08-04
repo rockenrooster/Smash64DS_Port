@@ -503,6 +503,42 @@ call never executes and the finally block kills the emulator first. When the
 thing being hunted is a hang, timeout is the EXPECTED path -- the abort read
 belongs in a catch.
 
+THE STALL IS IN THE FLAG-OFF LAB BUILD, AND IT IS PROBABLY THE ARTIFACT
+RATHER THAN THE DEFAULT ARM (cycle 15).
+
+Identical minimal probe -- marker count only, no other reads -- on both arms:
+
+    build-abctl-effects-off   STALLED, <300 presented frames in 241s
+    build-abcand-effects-on   300 frames in 31s, presented=300
+
+So the FLAG-OFF arm is the broken one, which is the reverse of what three
+cycles of gate-5 failures suggested and is why this was chased as a possible
+class-1 on the shipping configuration.
+
+IT IS NOT THE SUBMIT-GUARD RELAXATION. That was the only non-flag-gated
+behaviour change on that arm and therefore the first suspect. It has now been
+flag-gated and re-measured: the control STILL fails to reach 300 frames in
+241s. The hunk is exonerated. The gating is kept anyway, because scoping a
+change to the arm that needs it is right regardless, but it is not a fix.
+
+WHAT THE EVIDENCE ACTUALLY FAVOURS: the lab ARTIFACT, not the default arm.
+Boundary has passed at the tracked default in cycles 6, 9, 11 and 15 -- every
+one of them AFTER the ungated change -- and Boundary runs the real battle to
+completion, which a stalled default arm could not do. The likelier explanation
+is that `make TARGET=... BUILD=build-abctl-effects-off
+NDS_R2_SOURCE_EFFECTS_FULL=0` does not reproduce whatever configuration the
+original build-abctl-effects-off carried, so the cycle-12 "control rebuild"
+produced a ROM that never reaches the battle marker. That would explain the
+sampler failure, this probe's failure, and why only the control is affected --
+without any default-arm defect at all.
+
+NEXT, AND CHEAPLY: confirm what the control ROM is doing rather than assuming
+-- a screenshot or a boot-scene read will say in one run whether it reaches the
+battle at all. If it does not, the flag-off control must be rebuilt with the
+configuration the candidate uses (only the flag differing) before ANY gate-5
+A/B is attempted, because every gate-5 attempt so far has been measuring a ROM
+that may never have entered the match.
+
 GATE 5 IS BLOCKED ON THE SAMPLER'S FRAME WINDOW, NOT A SYMBOL (cycle 13).
 
 sample-tick-hud-buckets.ps1 -RingDump aborted with "exceeded 900s before 32
