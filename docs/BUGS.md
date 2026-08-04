@@ -134,9 +134,23 @@ OPEN.
     once, via memory pressure on a GOBJ-stack allocation: the 312-byte
     displacement shrinks what is left, tickhud costs more, and the flag-0
     stand-ins allocate differently. Thread 6 parked mid-sleep is then normal.
-    CONFIRM BEFORE FIXING: which thread the blocked gcRunGObjProcess owns,
-    and whether portCoroutineCreate returned NULL -- both silent paths need a
-    counter. Do not fix the wrong return.
+    CONFIRMED (40). Ownership: &gGCCurrentProcess->exec.gobjthread->thread ==
+    sThreads[5] (0x023c6be0) exactly. The GObj is the ANNOUNCER --
+    func_id 0x208c99d ifCommonAnnounceThread, parent gobj id 1016, kind
+    Thread -- born at countdown end, i.e. the countdown's successor, which is
+    why 307 sleeps precede it and why it is the FIRST start of that thread.
+    Discriminator: port_entry = 0x02089fdd (NON-NULL, so the :128 return did
+    not fire) with port_coroutine = 0. So portCoroutineCreate at :136
+    returned NULL -- THE ALLOCATION FAILED. It wants calloc(112) plus
+    malloc(NDS_OS_GOBJ_STACK_SIZE = 4096) from the ordinary C heap
+    (coroutine.c:188-195). osStartThread returns silently, the announcer
+    never runs, never posts, and gcRunGObjProcess blocks forever.
+    OPEN: the arena arithmetic (free bytes and largest block at the stop --
+    mallinfo needs a cast, gdb rejects it bare), then the fix. Preallocating
+    GObj stacks at process creation is the likely seam (loading time is
+    cheap), but the numbers come first. Counters still owed on BOTH silent
+    returns. PROBE RULE: never call malloc in the guest from gdb --
+    p malloc(4096) hung the target and cost this run's tail.
     artifacts/verification/2026-08-03_flag0-queue.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
