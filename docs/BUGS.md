@@ -110,6 +110,31 @@ pixel number for these rows is therefore meaningless, including this cycle's
 48.43%. Closing this needs deterministic input playback, not a capture rerun.
 artifacts/visibility/2026-08-04_g6-shield-t1700-flag{0,1}-a.png.
 
+1b. NARROWED 2026-08-04 BY THIS CYCLE'S OWN PAIR: a cross-build pair IS possible
+when both arms present at the same rate. builds/build-c50-flag1 and
+build-c53-flag1 are different renderer code, both NDS_R2_SOURCE_EFFECTS_FULL=1,
+both ~29 FPS, and at EXACT_LOCK 1988,1986 they are the SAME fight -- shield
+spawn at exactly tic 1994 in both, Mario 30% / Fox 0% in both, guest viewport
+identical on 120,000 of 120,000 pixels. What diverged in item 1 was a 29 FPS arm
+against a 20 FPS one. The blocker is therefore the FPS GAP, not cross-build
+comparison as such: a renderer-only change judged at the SAME flag is measurable
+today, and only a flag-0/flag-1 pair needs deterministic input.
+
+4b. INPUT PLAYBACK EXISTS AND IS ALREADY THE SEAM (2026-08-04, traced, no build).
+osContGetReadData (controller_backend.c:243) serves sControllerPlaybackPads[]
+whenever sControllerPlaybackEnabled, bypassing the host keys entirely;
+ndsControllerPlaybackReset/SetEnabled/SetConnectedMask/SetPad/CommitFrame are the
+whole API and gNdsControllerPlaybackFrameCount/ReadCount its engagement counters.
+ndsFighterMarioFoxNaturalMotionPrepare (reloc_backend_movement.c:10381) already
+drives it -- and explicitly turns it OFF for the canonical harness: under
+NDS_DEV_LIVE_INPUT_PREVIEW the proof arm calls
+ndsControllerPlaybackSetEnabled(FALSE), so mode 163 reads live pads. Making two
+arms take identical input therefore needs no new harness mode; it is one branch
+in that block plus a constant idle pad. There is no RECORDER, though: SetPad is
+fed computed values by the natural-motion state machine, not a stored stream, so
+"playback" here means programmatic input, not replay. Given 1b, spend this only
+if an FPS-gap pair is genuinely required.
+
 2. THE FLAG-1 SHIELD IS A REGRESSION, NOT THE FIX THE PACKET ASSUMED. Proven on
 the capture ROM itself, same build, no cross-build inference: link-15 draws begin
 at exactly tic 1994 (the measured shield spawn), step 1 -> 2 -> 3 at 1950 and
