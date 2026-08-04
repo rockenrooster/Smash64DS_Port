@@ -75,6 +75,24 @@
  * matrix IS the world matrix of the joint it is bound to. See
  * ndsRendererAdapterBuildJointAttachMtx. */
 #define NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND 0x4Fu
+/* Kind 0x50 is 0x4F's NEIGHBOUR IN THE TABLE AND A DIFFERENT CALLBACK.
+ * sGCMatrixFuncList entries are {proc_diff, proc_same} PAIRS (objdisplay.h:20),
+ * so kind - 66 selects pair 14 of dLBCommonFuncMatrixList = func_ovl0_800C99CC
+ * (lbcommon.c:1461), not pair 13's func_ovl0_800C994C. It is a PURE TRANSLATION
+ * to the bound joint's world position and writes no gGCScaleX at all:
+ *
+ *     attach = dobj->user_data.p;
+ *     Vec3f p = { 0, 0, 0 };
+ *     gmCollisionGetFighterPartsWorldPosition(attach, &p);
+ *     syMatrixTra(mtx, p.x, p.y, p.z);
+ *
+ * dEFManagerRebirthHaloEffectDesc's root uses it (efmanager.c:1655) and
+ * efManagerRebirthHaloMakeEffect stores fp->joints[nFTPartsJointTopN] there
+ * (efmanager.c:6014). Do NOT confuse it with enum nGCMatrixKind50, which is
+ * DECIMAL 50; the 0x47 constant above records the same trap. Without this case
+ * 0x50 fell through to `default:` and the fallback identity, which is why the
+ * respawn platform was nowhere near the respawning fighter. */
+#define NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND 0x50u
 
 #if defined(__arm__)
 #define NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE \
@@ -1258,6 +1276,42 @@ static sb32 ndsRendererAdapterBuildJointAttachMtx(
     return TRUE;
 }
 
+/* Matrix kind 0x50, func_ovl0_800C99CC. Same attachment DATA as 0x4F -- the
+ * joint DObj in user_data.p -- and deliberately different maths: source takes
+ * only the joint's world POSITION and builds a pure translation, so the halo
+ * neither inherits the fighter's yaw nor scales with him. Its size comes from
+ * the child's own scale, which efManagerRebirthHaloMakeEffect writes from the
+ * maker's argument (efmanager.c:6017).
+ *
+ * gmCollisionGetFighterPartsWorldPosition dereferences
+ * ftGetStruct(main_dobj->parent_gobj) before testing anything, so the same two
+ * guards the 0x4F builder uses are required here. It also refreshes the
+ * per-frame transform cache itself (gmCollisionTransformMatrixAll when
+ * transform_update_mode is 0), which is why this path needs no separate
+ * func_ovl2_800EDBA4 call.
+ *
+ * Fills the caller's Mtx rather than the 20.12 output, so it shares the common
+ * ndsRendererAdapterMtxFromN64 tail with every other syMatrix* case. */
+static sb32 ndsRendererAdapterBuildJointAttachTraMtx(DObj *dobj, Mtx *out)
+{
+    DObj *attach;
+    Vec3f translate_base = { 0.0F, 0.0F, 0.0F };
+
+    if ((dobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    attach = (DObj *)dobj->user_data.p;
+    if ((attach == NULL) || (attach == DOBJ_PARENT_NULL) ||
+        (attach->parent_gobj == NULL) || (ftGetParts(attach) == NULL))
+    {
+        return FALSE;
+    }
+    gmCollisionGetFighterPartsWorldPosition(attach, &translate_base);
+    syMatrixTra(out, translate_base.x, translate_base.y, translate_base.z);
+    return TRUE;
+}
+
 static void ndsRendererAdapterGetDObjVectorTracks(
     DObj *dobj,
     GCTranslate **translate,
@@ -1476,6 +1530,12 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
             return TRUE;
         }
         ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
+        break;
+    case NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND:
+        if (ndsRendererAdapterBuildJointAttachTraMtx(dobj, &mtx) == FALSE)
+        {
+            ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
+        }
         break;
     case nGCMatrixKindVecTra:
         syMatrixTra(&mtx, translate->vec.f.x,
@@ -2231,11 +2291,22 @@ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
          * every later frame and the world matrix was built exactly once per
          * guard -- one LOCAL build against ten submits, on the probe. A cached
          * matrix is only sound when the local build is a pure function of what
-         * the key covers, and both fighter-parts kinds read state outside it. */
+         * the key covers, and both fighter-parts kinds read state outside it.
+         *
+         * 0x50 joined the list on 2026-08-04 for the identical reason, measured
+         * the identical way: the rebirth halo's root carries it, its own
+         * translate/rotate/scale are the same constants 0/0/1, and the probe saw
+         * ndsRendererAdapterBuildDObjLocalMatrix fire ONCE per spawn -- one
+         * build for the whole ~90-tic life of the platform. Adding the kind case
+         * without adding this line would have moved a frozen matrix instead of
+         * tracking the fighter, which is exactly what cycle 52 already paid for
+         * once. Any future kind that reads live FTParts state belongs here in
+         * the same commit that teaches the builder about it. */
         if ((xobj->kind == 1u) ||
             ((xobj->kind >= 33u) && (xobj->kind <= 40u)) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND) ||
-            (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND))
+            (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND) ||
+            (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND))
         {
             return FALSE;
         }

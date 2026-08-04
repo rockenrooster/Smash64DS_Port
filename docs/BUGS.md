@@ -392,9 +392,7 @@ captured at the same EXACT_LOCK, so each is a paired before/after:
   * rebirth halo, tic 2814 (spawn 2819). NO CHANGE, and nothing halo-shaped is
     on screen in EITHER arm: whole-viewport cross-build delta 395 pixels
     (0.16%) against a 42.9% same-build floor. So the halo's remaining problem is
-    NOT texture admission -- it is upstream, at "does it draw where the camera
-    is at all", and the next cycle should spend its budget on the existence
-    chain rather than re-capturing this tic.
+    NOT texture admission -- it is upstream. Walked in cycle 60, below.
     artifacts/visibility/2026-08-04_c5{8,9}-halo-t2814-flag1-a.png.
   * Fox reflector: unchanged and unreachable here; it still never spawns.
 OWED AT THE PUBLISH POINT: the combine fix is in src/nds/nds_renderer.c and is
@@ -408,6 +406,54 @@ halo 29.9 -> 29.9), which is suggestive, not a measurement: it is a host-side
 average on two arms that are not paced-matched. A paired A/B is owed if the flag
 is flipped, and the flag-0 arm's exposure is two seconds of Arwing. Do not read
 those three numbers as a priced regression.
+
+=============================================================================
+REBIRTH HALO: THE EXISTENCE CHAIN, WALKED (2026-08-04, cycle 60)
+=============================================================================
+It exists, it is attached, it is admitted and it DRAWS. Every link measured on
+the natural path, probe scripts/probe-halo-attach.ps1:
+  created   YES, at exactly the two recorded tics 2819 and 875.
+  alive     YES; a DObj carrying the halo's matrix kind reaches the local
+            matrix builder.
+  attached  YES; user_data.p is the Top joint efManagerRebirthHaloMakeEffect
+            stored (efmanager.c:6014) and its parent_gobj is non-NULL.
+  admitted  YES; reject=0 throughout.
+  submitted YES; 53 triangles per tic across the two DL links, texready +26 per
+            submit, so its texture is admitted too.
+So "the platform does not appear" was never an existence failure.
+
+TWO SEAMS, BOTH THE SHIELD'S OWN LESSONS REPEATED FOR THE SIBLING KIND:
+  1. FIXED. Kind 0x50 had no case, so the root fell to the fallback identity and
+     the halo was parked at the world ORIGIN. sGCMatrixFuncList entries are
+     {proc_diff, proc_same} PAIRS (objdisplay.h:20), so kind - 66 selects pair
+     14 = func_ovl0_800C99CC (lbcommon.c:1461), NOT pair 13's func_ovl0_800C994C
+     that 0x4F uses. Different maths: a PURE TRANSLATION to
+     gmCollisionGetFighterPartsWorldPosition of the bound joint, and no gGCScaleX
+     at all. And it is 0x50 = DECIMAL 80, not enum nGCMatrixKind50 = decimal 50,
+     which the port already has a case for -- the same hex/decimal trap the 0x47
+     constant records.
+  2. FIXED. 0x50 was missing from ndsRendererAdapterCaptureStageWorldSourceKey's
+     refusal list, exactly as 0x4F was in cycle 52, and measured the same way:
+     the local matrix was built ONCE per spawn -- one build for the platform's
+     whole life. Now rebuilt every tic.
+MEASURED, before -> after, same run, same tics:
+  local matrix builds   1 per spawn -> 1 per tic (16 consecutive tics probed)
+  root world translate  frozen identity -> (0, 8172 -> 7676, 0) descending
+                        smoothly at ~248/tic, i.e. the respawn point at the
+                        stage centre with the fighter coming down it
+artifacts/verification/2026-08-04_c60-halo-{attach,submit,world}.txt.
+STILL NOT VISIBLE, and that is now a POSITION/SCALE question, not existence:
+53 triangles a frame are being drawn at a live attached world position and
+nothing appears at tic 2814 or 2794. Next cycle: find where those triangles land
+on screen and how big they are -- the child's scale reads 1.00 and the shield
+needed gGCScaleX 9.33 not to be a 4.6-pixel dot, but 0x50 has no gGCScaleX, so
+the halo's size must come from its own geometry or its maker's argument.
+Do NOT re-walk the chain above; it is green.
+artifacts/visibility/2026-08-04_c60-halo-t{2814,2794}-flag1-a.png.
+SHIELD REGRESSION CHECK on the same arm: unchanged, 207 pixels of 240,000 at
+EXACT_LOCK 1988 against cycle 59, all of it emulator chrome and the FPS text.
+artifacts/visibility/2026-08-04_c60-shield-guarding-t1988-flag1-a.png.
+=============================================================================
 
 FLAG-0 RE-MEASURED AFTER THE FIX (2026-08-04), because changing the walk could
 have changed stand-in lifetime too. It did not: the flag-0 census is unchanged
@@ -487,7 +533,7 @@ do not restate them here.
 -Respawn floating platform isn't visible when respawning after KO.
     Owner: is don't see the floating revival platform at all. the Halo is not the correct asset to use
     CAUSE: dEFManagerRebirthHaloEffectDesc is a joint-animated MODEL, drawn as one flat quad.
-    STAGE: LOCALIZED -- not a texture or colour seam; nothing halo-shaped is on screen at its own spawn tic.
+    STAGE: LOCALIZED -- chain is green and it draws 53 tris/frame attached; open dimension is position/scale.
 
 -Fox down B VFX is not correct or using correct asset.
     Owner: you are still not using the correct asset for Fox's down B reflector.
