@@ -8159,12 +8159,43 @@ reject:
         gNdsRendererStageOwnerFirstRejectReason = task36_reject_reason;
     }
     workspace->active = FALSE;
-    /* Before GO, a transient incomplete display graph falls back through the
-     * prepared pinned corpus without conversion.  Only a post-arm owner
-     * failure invalidates M4 residency and records the fence violation. */
+    /* A FAILED DISPLAY-GRAPH PREPARE SAYS NOTHING ABOUT TEXTURE RESIDENCY, AND
+     * THIS IS WHERE IT USED TO CLAIM OTHERWISE.
+     *
+     * This block was:
+     *
+     *     if (gNdsRendererBattleStaticTextureArmCount != 0u)
+     *         ndsRendererHardwareAbortBattleStaticTextures();
+     *
+     * which discards the entire hardware texture cache and clears
+     * sNdsRendererBattleStaticTexturePrepared. Both Arm call sites
+     * (taskman_seam.c:5251 and :7975) fire only on the Wait->Go TRANSITION, so
+     * they never run again inside a match -- and Arm refuses to re-arm without
+     * Prepared anyway. One transient frame therefore dropped the 24 pinned
+     * statics for the remainder of the match with no path back.
+     *
+     * Measured on 2026-08-04 (build-row6-v1, two-death match): at frame 427,
+     * right after a star KO, abort went 0->1, preparednow 1->0, and
+     * staticpin froze at 7144 and never moved again through frame 2174. The
+     * scene stayed correctly textured -- the dynamic cache absorbed it -- but
+     * frame rate fell from 27.9 to 20.0 for the rest of the match, and the
+     * pinned corpus was gone for good.
+     *
+     * Nothing here justified that. The pinned corpus is uploaded at scene
+     * prepare and is untouched by whatever made this frame's display graph
+     * unusable; workspace->active = FALSE above is already the whole fallback
+     * contract, and the generic path does not read the workspace. So the
+     * correct behaviour on a post-arm reject is to degrade for THIS FRAME and
+     * leave every texture exactly where it is, which also leaves the next
+     * frame free to succeed normally.
+     *
+     * The event stays loud rather than becoming silent: the reject counters
+     * above fire unconditionally, and this one isolates the post-arm case that
+     * used to be destructive, so a regression here is still one counter away.
+     */
     if (gNdsRendererBattleStaticTextureArmCount != 0u)
     {
-        ndsRendererHardwareAbortBattleStaticTextures();
+        gNdsRendererStageOwnerPostArmRejectCount++;
     }
     return FALSE;
 }

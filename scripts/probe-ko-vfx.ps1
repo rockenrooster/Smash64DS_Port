@@ -174,7 +174,8 @@ $required = @(
     'gNdsRendererStageOwnerFirstRejectReason',
     'gNdsRendererStageOwnerLastRejectReason',
     'gNdsRendererStageOwnerAbortCount',
-    'gNdsRendererStaticTexturePreparedNow'
+    'gNdsRendererStaticTexturePreparedNow',
+    'gNdsRendererStageOwnerPostArmRejectCount'
 )
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 $nm_lines = & $nm $elf
@@ -311,7 +312,8 @@ function New-StateCommand([string]$Name) {
         'eready=%u ereject=%u atlasfail=%u atlasprep=%u ' +
         'memohit=%u memomiss=%u memofill=%u memostale=%u memoverify=%u ' +
         'fence=%u fencefirstframe=%u fenceclass=%u notex=%u ' +
-        'ownerreject=%u ownerfirst=%u ownerlast=%u abort=%u preparednow=%u\n", ' +
+        'ownerreject=%u ownerfirst=%u ownerlast=%u abort=%u preparednow=%u ' +
+        'postarmreject=%u\n", ' +
         'gNdsFrameCounter, gNdsBattleTextHudTimeSeconds, ' +
         'gNdsBattleTextHudP0Stock, gNdsBattleTextHudP0Damage, ' +
         'gNdsBattleTextHudP1Stock, gNdsBattleTextHudP1Damage, ' +
@@ -354,7 +356,8 @@ function New-StateCommand([string]$Name) {
         'gNdsRendererStageOwnerFirstRejectReason, ' +
         'gNdsRendererStageOwnerLastRejectReason, ' +
         'gNdsRendererStageOwnerAbortCount, ' +
-        'gNdsRendererStaticTexturePreparedNow')
+        'gNdsRendererStaticTexturePreparedNow, ' +
+        'gNdsRendererStageOwnerPostArmRejectCount')
 }
 
 try {

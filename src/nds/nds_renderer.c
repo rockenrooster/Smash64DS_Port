@@ -2835,6 +2835,12 @@ volatile u32 gNdsRendererStageOwnerRejectCount;
 volatile u32 gNdsRendererStageOwnerLastRejectReason;
 volatile u32 gNdsRendererStageOwnerFirstRejectReason;
 volatile u32 gNdsRendererStageOwnerAbortCount;
+/* Post-arm rejects, which used to be the destructive case. This is the counter
+ * that keeps the 2026-08-04 fix honest: it must climb exactly where the abort
+ * used to, while gNdsRendererStageOwnerAbortCount stays 0 and
+ * gNdsRendererStaticTexturePreparedNow stays 1. If this reads 0 across a match
+ * with a death, the lever is not being exercised and the proof is vacuous. */
+volatile u32 gNdsRendererStageOwnerPostArmRejectCount;
 /* Mirrors sNdsRendererBattleStaticTexturePrepared, which is static and so
  * cannot be read from a probe. Without it the permanent-latch claim is an
  * inference from reading the source; with it the latch is observable. */
@@ -10978,6 +10984,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     gNdsRendererStageOwnerLastRejectReason = 0u;
     gNdsRendererStageOwnerFirstRejectReason = 0u;
     gNdsRendererStageOwnerAbortCount = 0u;
+    gNdsRendererStageOwnerPostArmRejectCount = 0u;
     gNdsRendererStaticTexturePreparedNow = 0u;
     sNdsRendererBattleStaticTextureArmed = FALSE;
 

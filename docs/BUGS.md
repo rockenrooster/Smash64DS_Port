@@ -10,4 +10,5 @@ These bugs should be fixed for P1 delivery:
 - I see missing textures/texture corruption. But ONLY AFTER dying. I don't know if the death explode blast pillar or the floating revival platform triggers it. once it triggers, some things lose their textures.
 - Check scaling on the hit effects (for example, A attacks, Forward A, strong A), some look bigger than they should be.
 - The results screen confetti, shouldn't the spawner for the emitter be just above, out of frame with the camera so we don't "see" them spawning?
+- (found by instrumentation, not play) After the first KO the stage permanently drops its 24 pinned textures and runs slower for the rest of the match. MEASURED - fix proven on the natural path; tick/VBlank A/B still owed before any speed claim.
 

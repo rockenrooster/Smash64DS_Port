@@ -1323,6 +1323,7 @@ extern volatile u32 gNdsRendererStageOwnerRejectCount;
 extern volatile u32 gNdsRendererStageOwnerLastRejectReason;
 extern volatile u32 gNdsRendererStageOwnerFirstRejectReason;
 extern volatile u32 gNdsRendererStageOwnerAbortCount;
+extern volatile u32 gNdsRendererStageOwnerPostArmRejectCount;
 extern volatile u32 gNdsRendererStaticTexturePreparedNow;
 
 #if NDS_RENDERER_PROFILE_LEVEL == 1
