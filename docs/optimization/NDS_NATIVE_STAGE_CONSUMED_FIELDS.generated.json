@@ -2215,7 +2215,7 @@
       "path": "src/port/reloc_backend_renderer_dl.c"
     },
     {
-      "closure": "ndsRendererAdapterApplyMvpRecalcRpy0x47",
+      "closure": "ndsRendererAdapterApplyMvpRecalc",
       "fields": [
         {
           "access": "cobj.projection.persp.aspect",
@@ -2255,6 +2255,14 @@
         },
         {
           "access": "dobj.rotate.vec.f.y",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.scale.vec.f.x",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "dobj.scale.vec.f.y",
           "classification": "live_camera_independent"
         },
         {
@@ -3575,7 +3583,7 @@
         "ndsRendererAdapterBuildCameraMatrices",
         "ndsRendererAdapterBuildDObjXObjMatrix",
         "ndsRendererAdapterBuildDObjLocalMatrix",
-        "ndsRendererAdapterApplyMvpRecalcRpy0x47",
+        "ndsRendererAdapterApplyMvpRecalc",
         "ndsRendererAdapterPrepareNativeStageMatrices",
         "ndsRendererAdapterPrepareNativeStageBindingMatrix"
       ],

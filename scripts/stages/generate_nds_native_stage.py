@@ -832,7 +832,7 @@ SOURCE_CLOSURE_POLICIES = (
     },
     {
         "path": "src/port/reloc_backend_renderer_dl.c",
-        "closure": "ndsRendererAdapterApplyMvpRecalcRpy0x47",
+        "closure": "ndsRendererAdapterApplyMvpRecalc",
         "tracked_bases": ("cobj", "dobj"),
         "fields": {
             **_classified(
@@ -847,8 +847,8 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
-                dobj.rotate.vec.f.x dobj.rotate.vec.f.y dobj.xobjs
-                dobj.xobjs_num
+                dobj.rotate.vec.f.x dobj.rotate.vec.f.y dobj.scale.vec.f.x
+                dobj.scale.vec.f.y dobj.xobjs dobj.xobjs_num
                 """,
             ),
         },
@@ -4081,7 +4081,7 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
                     "ndsRendererAdapterBuildCameraMatrices",
                     "ndsRendererAdapterBuildDObjXObjMatrix",
                     "ndsRendererAdapterBuildDObjLocalMatrix",
-                    "ndsRendererAdapterApplyMvpRecalcRpy0x47",
+                    "ndsRendererAdapterApplyMvpRecalc",
                     "ndsRendererAdapterPrepareNativeStageMatrices",
                     "ndsRendererAdapterPrepareNativeStageBindingMatrix",
                 ],
