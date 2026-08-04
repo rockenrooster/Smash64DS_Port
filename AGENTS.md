@@ -109,7 +109,9 @@ Latest instead when normal/shared startup is affected. Do not stack DevFast,
 Boundary, and Latest when they cover the same runtime. The registry exposes
 only Latest and Boundary; the retired diagnostic fleet must not return.
 
-Subagent switch: **OFF**.
+Subagent switch: **OFF**. A `/goal` block's agent instruction **overrides this
+switch** — it is the newer and more specific order, so follow the goal block and
+do not stop to reconcile the two.
 
 * `OFF`: let already-running subagents finish, but do not spawn, follow up, or reassign one until the user explicitly switches this back to `ON`.
 * `ON`: keep up to **10** long-lived helper agent/agents and assign tasks with appropriate model and effort. Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings. New worktrees should be in D:\Stuff\DevFolder\Smash64DS_Port_worktrees

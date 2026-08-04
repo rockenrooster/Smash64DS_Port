@@ -9,21 +9,12 @@ ROOT = Path(__file__).resolve().parents[1]
 AGENTS = ROOT / ".agents" / "skills"
 CLAUDE = ROOT / ".claude" / "skills"
 
+# The Nintendo DS skill pack moved to the user's GLOBAL skills on 2026-08-04,
+# so it is no longer validated from here -- a global skill lives outside this
+# repository and has no canonical/bridge pair to check. What remains project
+# local is the skill that is about this repository itself.
 EXPECTED_SKILLS = {
-    "n64-to-nds-asset-conversion",
-    "nds-manage-memory-vram",
-    "nds-measure-performance",
-    "nds-optimize-2d-display",
-    "nds-optimize-arm7-audio",
-    "nds-optimize-arm9",
-    "nds-optimize-dma-storage",
-    "nds-optimize-fixed-math",
-    "nds-optimize-gx-3d",
-    "nds-platform-runtime",
-    "nds-port-and-optimize",
-    "nds-review-low-level-change",
     "smash64ds-opus-guardrails",
-    "smash64ds-project-context",
 }
 
 NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
@@ -37,40 +28,7 @@ META_VALUE_RE = re.compile(
 )
 REFERENCE_RE = re.compile(r"references/[A-Za-z0-9._/-]+\.md")
 SKILL_REF_RE = re.compile(r"\$([a-z0-9][a-z0-9-]{0,63})")
-GENERIC_PROJECT_TOKENS = (
-    "Smash64DS",
-    "BattleShip",
-    "Dream Land",
-    "mode 163",
-)
-CONTEXT_DYNAMIC_RE = (
-    re.compile(r"\bmode\s+\d+\b", re.IGNORECASE),
-    re.compile(r"\bTask\s+\d+\b"),
-    re.compile(r"\bWORK-H\b"),
-    re.compile(r"\b[0-9A-Fa-f]{64}\b"),
-)
-REQUIRED_SNIPPETS = {
-    "n64-to-nds-asset-conversion": (
-        "Do not reuse another asset's constants without proof.",
-        "matching project-context skill provides asset-specific baking rules",
-    ),
-    "nds-optimize-arm7-audio": (
-        "Qualification alone is read-only.",
-        "references/audio-qualification.md",
-    ),
-    "nds-platform-runtime": (
-        "Do not assume a frozen picture is an IRQ or platform failure.",
-    ),
-    "nds-review-low-level-change": (
-        "Review requests are read-only unless the user separately authorizes implementation.",
-    ),
-    "smash64ds-project-context": (
-        "Do not copy current mode numbers",
-        "docs/optimization/TASK_STANDING_RULES.md",
-        "docs/VERIFYING.md",
-        "references/ifcommon-assets.md",
-    ),
-}
+REQUIRED_SNIPPETS: dict[str, tuple[str, ...]] = {}
 
 errors: list[str] = []
 
@@ -125,31 +83,11 @@ for skill_name in sorted(EXPECTED_SKILLS & canonical_names):
         if snippet not in normalized_text:
             errors.append(f"{skill_file}: missing required contract '{snippet}'")
 
-    if name.startswith("nds-"):
-        for token in GENERIC_PROJECT_TOKENS:
-            if token in text:
-                errors.append(f"{skill_file}: generic skill contains project token '{token}'")
-
-    if name == "smash64ds-project-context":
-        for pattern in CONTEXT_DYNAMIC_RE:
-            if pattern.search(text):
-                errors.append(
-                    f"{skill_file}: context adapter duplicates dynamic truth matching "
-                    f"{pattern.pattern}"
-                )
-
     for reference in sorted(set(REFERENCE_RE.findall(text))):
         if not (skill_dir / reference).is_file():
             errors.append(f"{skill_file}: missing referenced file {reference}")
 
     referenced_skills = set(SKILL_REF_RE.findall(text))
-    if name == "nds-port-and-optimize":
-        required_routes = EXPECTED_SKILLS - {"smash64ds-project-context"}
-        for missing_route in sorted(required_routes - referenced_skills):
-            errors.append(
-                f"{skill_file}: entry point does not route $" + missing_route
-            )
-
     for referenced_skill in sorted(referenced_skills):
         if referenced_skill not in EXPECTED_SKILLS:
             errors.append(
