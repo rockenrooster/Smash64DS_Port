@@ -59,10 +59,19 @@ OPEN.
     the trigger, and the real defect is latent and older. That fits everything
     seen: a reproducible frame, no counter movement, and a ROM whose pacing is
     already documented as cache-placement sensitive.
-    NEXT (one build, decisive): add 7 dummy volatile u32 BSS globals to a clean
-    4d1015b75 build and probe at 200. If it hangs, layout is confirmed and the
-    hunt moves to what those bytes displace; if it passes, the parser code
-    change is the remaining suspect and gets reverted hunk-by-hunk.
+    BSS LAYOUT REFUTED (cycle 26): a clean 4d1015b75 plus 28 bytes of live BSS
+    padding reaches 200 frames in 28s. Data-layout growth alone does not
+    reproduce the hang.
+    STILL UNTESTED, and it is the distinction that matters: ae7c3e735 also grew
+    .text (the bounded parsers), and CODE placement is not what a BSS pad
+    perturbs. So the remaining suspects are the parser change's CONTENT and its
+    .text displacement, in that order -- revert the parser hunks on top of the
+    current tree and probe at 200.
+    HARNESS TRAP WORTH REMEMBERING: unreferenced BSS is collected by
+    --gc-sections, so the first discriminant build was byte-identical to the
+    anchor and would have "passed" meaninglessly. Any padding probe must be
+    referenced from live code (cliff_ledge.c's reset is the repo's own idiom)
+    and the symbol verified present with nm before the result is believed.
     BUILDING AN OLD COMMIT NEEDS THE DECOMP PATCHES REVERSED TOO: decomp/ is
     gitignored, so a checkout leaves the tracked patches applied and the build
     fails on undeclared runaway counters. Reverse-apply
