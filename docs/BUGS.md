@@ -129,6 +129,44 @@ guess that the offset below a spawn tic had to be tuned is refuted -- the shield
 draws on every frame from its spawn onward. What the earlier captures lacked was
 a recognizable shield, not a tic.
 
+5. WHY THE FLAG-1 SHIELD IS IMMORTAL, WITH THE SOURCE ORACLE (2026-08-04, no
+build spent). Source kills an attached effect through the status machine, not
+through the effect: ftMainSetStatus, when the caller does not pass
+FTSTATUS_PRESERVE_EFFECT and fp->is_effect_attach is set, calls
+ftParamProcStopEffect (ftmain.c:4449). That walks
+gGCCommonLinks[nGCCommonLinkIDEffect] and, for EVERY effect whose
+ep->fighter_gobj matches, runs ftParamStopEffect -> gcEjectGObj
+(ftparam.c, ftParamRunProcEffect / ftParamStopEffect). There is NO test of what
+kind of effect it is. Guard uses exactly this: ftCommonGuardOnSetStatus passes
+FTSTATUS_PRESERVE_NONE and makes the shield (ftcommonguard1.c:430); the setoff
+transition passes FTSTATUS_PRESERVE_EFFECT to keep it; leaving guard by any
+other status therefore ejects it.
+THE PORT ADDS A FILTER SOURCE DOES NOT HAVE. ftParamProcStopEffect is a port
+shim (reloc_backend_compat_shims.c:1459) forwarding to
+ndsEFManagerStopAttachedVisualEffects (battleship_efmanager.c:1133), whose match
+is `ep->fighter_gobj == fighter_gobj && ndsEFManagerIsVisualEffectGObj(...)`.
+That predicate (:969) is true only when dobj->dl is one of the
+sNdsVisualTemplates[] display lists -- i.e. only for the PROCEDURAL stand-ins. A
+source EFDesc effect carries the source model's display list, fails the test, and
+is never ejected by anything. That is the whole defect, and it predicts the
+measured census exactly: three guards, three shields, draw count 1 -> 2 -> 3 and
+never down. It also predicts the admit/frame climb 1 -> 10, since every
+fighter-attached SOURCE effect is immortal, not only the shield -- so verify the
+climb falls out of this fix rather than fixing it twice.
+FIX SEAM: that walk. It must eject any effect matching ep->fighter_gobj, using
+each kind's correct teardown -- source's is lbParticleEjectStructID (when ep->xf
+is non-NULL) + efManagerSetPrevStructAlloc + gcEjectGObj; the stand-ins keep
+ndsEFManagerDestroyVisualEffect. NOT DONE: no edit, build, or re-census this
+cycle.
+ATTACHMENT IS A SEPARATE SEAM, and the "one cause, two symptoms" guess is wrong
+for it. Source does not move the shield from its update proc --
+efManagerShieldProcUpdate only clears is_damage_shield. It attaches through the
+MATRIX: dEFManagerShieldEffectDesc's first DObj transform is main matrix kind
+0x4F, and efManagerShieldMakeEffect stores fp->joints[nFTPartsJointYRotN] in the
+effect root's user_data.p (efmanager.c:460, :4119). So "parked in world space"
+means that matrix kind is not honoured for source effect DObjs on the port; it is
+not a dead update process. Unproven, and next.
+
 4. CROPPING DOES NOT RESCUE THE PIXEL METRIC EITHER. compare-capture-pair.ps1
 now takes -CropX/-CropY/-CropW/-CropH (viewport-relative, applied to both images,
 partial or out-of-bounds crops throw). Measured on the shield's own region at tic
@@ -206,7 +244,7 @@ do not restate them here.
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: LOCALIZED. Flag 1 leaks one detached translucent quad per guard, never destroyed; do not flip.
+    STAGE: LOCALIZED. Immortal flag-1 shield: the stop-walk skips every non-stand-in effect. Seam named below.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used
