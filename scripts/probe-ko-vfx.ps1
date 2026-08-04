@@ -758,12 +758,31 @@ try {
         'quit'
     )
 
-    $capture = Invoke-GdbMarkerScript `
-        -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
-        -ScriptName 'ko_vfx_probe.gdb' `
-        -TimeoutSeconds $TimeoutSeconds
+    # A TIMED-OUT RUN IS NOT A LOST RUN -- UNLESS THE ARTIFACT WRITE IS AFTER
+    # THE CALL, WHICH IS WHAT IT WAS.
+    # Invoke-GdbMarkerScript THROWS on timeout, so on 2026-08-04 the 12:05 run
+    # stalled after its sixth capture, threw, and every counter it had already
+    # streamed -- including the row 6 reject and abort rows this probe exists to
+    # read -- went in the bin, because Set-Content sat below the call and the
+    # finally block then killed the emulator. Nine minutes of match, six good
+    # captures, and zero bytes of text. The streamed output survives inside the
+    # exception message, so catching it and writing the artifact anyway turns a
+    # timeout back into a readable run; the throw is re-raised afterwards so a
+    # hang still fails loudly.
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $artifact) | Out-Null
-    Set-Content -LiteralPath $artifact -Value $capture
+    $capture = $null
+    try {
+        $capture = Invoke-GdbMarkerScript `
+            -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
+            -ScriptName 'ko_vfx_probe.gdb' `
+            -TimeoutSeconds $TimeoutSeconds
+        Set-Content -LiteralPath $artifact -Value $capture
+    }
+    catch {
+        Set-Content -LiteralPath $artifact -Value ($_ | Out-String)
+        Write-Output "probe TIMED OUT or failed; partial transcript: $artifact"
+        throw
+    }
 
     # FAIL LOUDLY ON A BAD RESOLVE -- AFTER THE ARTIFACT IS ON DISK, because a
     # probe that trips its own integrity check is precisely the run whose
