@@ -189,6 +189,17 @@ gates on the fidelity budget and the owner's eye.
 GATE 6: the shield row's flip argument re-arms only when this second seam lands.
 Correct lifetime alone does not make the shield correct.
 
+FLAG-0 RE-MEASURED AFTER THE FIX (2026-08-04), because changing the walk could
+have changed stand-in lifetime too. It did not: the flag-0 census is unchanged
+from before the fix -- gNdsTask39FxShieldDrawCount totals 1 for a whole match
+(one frame, tic 3264), same stand-in pool oscillation, and
+gNdsEFManagerSourceEffectStopCount reads 0. That zero is the NEGATIVE CONTROL and
+it is the useful part: no source effect is attached at flag 0, so the new
+teardown branch never fires and the fix is inert on the shipping default.
+CONSEQUENCE: the stand-in's one-frame-per-match shield is NOT the lifetime
+seam's other face. It is its own defect on the stand-in SPAWN path, unlocalized,
+handed forward. artifacts/verification/2026-08-04_c51-onscreen-flag0-fixed.txt.
+
 4. CROPPING DOES NOT RESCUE THE PIXEL METRIC EITHER. compare-capture-pair.ps1
 now takes -CropX/-CropY/-CropW/-CropH (viewport-relative, applied to both images,
 partial or out-of-bounds crops throw). Measured on the shield's own region at tic
