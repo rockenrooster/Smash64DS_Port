@@ -24,48 +24,24 @@ texready 0->5,070 on a 781-frame flag-on run -- and the long-standing flag-on
 hang went with them (1,801 frames, 98.9% submit rate). See 8508fc8d6, fc905460d.
 
 OPEN.
-  * BLOCKS GATE 5: the flag-OFF tickhud lab ROM stalls. Now measured properly --
-    both arms rebuilt from bca626a758, generated configs differing in exactly
-    one line -- and it reproduces: flag-off fails to reach 300 presented frames
-    in 241s, flag-on reaches them in 32s. So it is caused by the flag being 0,
-    not by a build mismatch or a cleared make knob (both refuted).
-    NOT a passive-P1 artifact: flag-off stalls with NDS_R2_BOTH_CPU=1 too
-    (0/0 stall, 0/1 stall, 1/0 fine). But the TRACKED DEFAULT is also flag-off
-    and passes Boundary's real battle on this tree, so the discriminator is not
-    the flag alone -- it is flag 0 on the TICKHUD target. Bounded to the lab
-    instrument, not shown to affect the shipping arm.
-    NARROWED (rung 0, no runs): the tracked default's config differs from the
-    stalling lab config in exactly NDS_TICK_HUD, so the stalling combination is
-    flag 0 + NDS_TICK_HUD 1.
-    TWO SUSPECTS ALREADY DEAD, also without a build: at flag 0
-    NDS_EF_MANAGER_DESCS resolves only dEFManagerDeadExplodeEffectDesc, whose
-    file gEFManagerFiles[1] IS in the span table -- so span is never 0, nothing
-    is deferred or disabled, and neither the deferred-retry asymmetry nor any
-    "disabled desc returns NULL and a caller retries per frame" mechanism can
-    fire on that arm.
-    IT IS A HANG AT A SPECIFIC FRAME, NOT SLOWNESS. Timed frame budgets on the
-    flag-0 arm: 5f/21s, 35f/23s, 100f/25s, 150f/26s, 175f/27s, then 200f never
-    completes in 201s. Boot is ~21s and the flag-1 arm matches it exactly to 35
-    frames (23s), so the two arms are the SAME SPEED -- the control simply stops
-    dead between frame 175 and 200. Every earlier "stall" reading was this hang
-    seen through a 300-frame budget.
-    Confirmed a regression: the coordinator holds a pre-campaign flag-0 tickhud
-    RingDump that completed (p50 1,119,936 / p95 1,680,128, VBI 388/67/11/4,
-    artifacts/performance/2026-08-03_dobjtree_control_ringdump.json), so the
-    bisect range is (4d1015b75 .. bca626a758] -- ae7c3e735, d4c7d3d7b,
-    8508fc8d6, 4c29b9615a.
-    FREEZE FIX EXONERATED BY ITS OWN COUNTERS. At frame 175, the last healthy
-    frame: runaway=0 mask=0x0 script=0x0 op=0 panic=0 pmask=0x0. ae7c3e735's
-    runaway path and objman's panic path both never fire on this arm, so the
-    parser patches are not the defect and must stay bounded as they are (the
-    freeze row's closure depends on them).
-    NEXT: bisect the remaining three -- d4c7d3d7b, 8508fc8d6, 4c29b9615a -- with
-    the marker probe at budget 200 (175 passes, 200 hangs, so 200 is the
-    discriminator and each arm costs one build plus ~30s).
-    HARNESS NOTE: once hung, a second GDB cannot attach and read the PC -- the
-    abort-read path timed out at 120s. Capturing the hang PC needs a different
-    idiom than the freeze soak's (interrupt an ALREADY-attached session rather
-    than re-attaching), so bisect first; it is cheaper than fixing the probe.
+  * BLOCKS GATE 5: the flag-0 tickhud arm HANGS between frame 175 and 200.
+    Not slowness -- timed budgets 5f/21s 35f/23s 100f/25s 150f/26s 177f/27s,
+    then 200f never in 201s, and the flag-1 arm matches those times exactly, so
+    both arms run at the same speed until the control stops dead. A regression:
+    a pre-campaign flag-0 tickhud RingDump completed
+    (artifacts/performance/2026-08-03_dobjtree_control_ringdump.json), so the
+    range is (4d1015b75 .. bca626a758].
+    THREE OF FOUR SUSPECTS REFUTED BY COUNTERS, no builds spent. At frame 175,
+    the last healthy frame: runaway=0 mask=0 panic=0 (ae7c3e735's bounded
+    parsers and objman never fire) and resolve=4 disabled=0 unknownfile=0
+    (d4c7d3d7b's validation never disables anything at flag 0, because only
+    dEFManagerDeadExplodeEffectDesc is resolved there and its file is in the
+    span table). 8508fc8d6 was flag-gated in cycle 15 and the hang persisted.
+    That leaves 4c29b9615a, whose only ungated change is a counter increment --
+    so the mechanism is NOT yet explained by any suspect, and the next spend is
+    the actual bisect: build each candidate, marker probe at budget 200.
+    HARNESS LIMIT: once hung, a second GDB cannot attach; capturing the hang PC
+    needs an interrupt on an already-attached session, not a re-attach.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
