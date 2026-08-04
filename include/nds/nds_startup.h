@@ -4868,6 +4868,11 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
 /* Same submit, but it walks the DObj tree (child + sibling chain) the way
  * objdisplay.c's gcDrawDObjTree does. Effect-only on purpose: doing it on the
  * stage entry above cost a whole VBlank on measured frames. */
+/* Bracket a source proc_display so the effect submit can recover the prim/env
+ * it emitted: Mark before the proc runs, Capture before the tree is submitted.
+ * Both are no-ops outside NDS_RENDERER_HW_TRIANGLES. */
+void ndsRendererAdapterMarkDisplayProcHeads(void);
+void ndsRendererAdapterCaptureDisplayProcColors(void);
 void ndsRendererAdapterSubmitEffectDObjTree(void *dobj, u32 kind,
                                             void *camera_gobj,
                                             u32 initial_geometry_mode);

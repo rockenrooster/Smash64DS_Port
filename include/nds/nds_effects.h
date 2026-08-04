@@ -205,6 +205,12 @@ extern volatile u32 gNdsEffectDLXformVertexCount;
 extern volatile u32 gNdsEffectDLHwVertexCount;
 extern volatile u32 gNdsEffectDLHwTriangleCount;
 extern volatile s32 gNdsEffectDLVtx0[4];
+/* The prim/env this effect's own proc_display emitted, recovered from the DL
+ * head span it wrote. Mask bit 0 prim, bit 1 env; zero means the proc emitted
+ * neither and the effect keeps the previous list's RDP colour. */
+extern volatile u32 gNdsEffectDLColorMask;
+extern volatile u32 gNdsEffectDLPrimColor;
+extern volatile u32 gNdsEffectDLEnvColor;
 
 /* The effect DObj tree walk (reloc_backend_renderer_dl.c). Declared and reset
  * here so they exist in EVERY build, not only the one that increments them:

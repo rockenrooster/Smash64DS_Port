@@ -151,6 +151,10 @@ try {
         # config's matrices composed into a valid traversal matrix.
         'printf "DLCFG n=%u cfg=%u mvt=%d,%d,%d seed=%u mcmd=%u xf=%u hwv=%u hwt=%u\n", gNdsEffectDLPublishCount, gNdsEffectDLCfgMask, gNdsEffectDLCfgMvT[0], gNdsEffectDLCfgMvT[1], gNdsEffectDLCfgMvT[2], gNdsEffectDLMatrixSeed, gNdsEffectDLMatrixCmd, gNdsEffectDLXformVertexCount, gNdsEffectDLHwVertexCount, gNdsEffectDLHwTriangleCount',
         'printf "DLVTX0 x=%d y=%d z=%d w=%d blocker=%u cmds=%u op=%u\n", gNdsEffectDLVtx0[0], gNdsEffectDLVtx0[1], gNdsEffectDLVtx0[2], gNdsEffectDLVtx0[3], gNdsEffectDLBlocker, gNdsEffectDLCommandCount, gNdsEffectDLFirstOpcode',
+        # The prim/env this effect proc emitted into its DL head span. mask 3
+        # means both recovered; prim RGBA for a P1 human shield is
+        # dEFManagerShieldColors[0] = white with alpha 0xC0, env = red 0xC0.
+        'printf "DLCOL mask=%u prim=0x%08x env=0x%08x\n", gNdsEffectDLColorMask, gNdsEffectDLPrimColor, gNdsEffectDLEnvColor',
         'enable 4',
         'if ($locals + $dls) < 12',
         'continue',

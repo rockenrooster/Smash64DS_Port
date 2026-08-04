@@ -300,17 +300,49 @@ and orientation are all correct by eye for the first time.
 artifacts/visibility/2026-08-04_c5{5,6,7}-shield-guarding-t1988-flag1-a.png plus
 the -zoom.png crops; the earlier flat white smear on the platform is unchanged
 across all three arms and is therefore NOT the shield.
-REMAINING DIMENSION, and it is one: COLOUR/TEXTURE. The bubble renders as a dark
-translucent square, not SSB64's bright translucent circle. Prime suspect is
-named by source and needs no build to check first: efManagerShieldProcDisplay
-writes gDPPipeSync + gDPSetPrimColor + gDPSetEnvColor (alpha 0xC0, per-player
-colours from dEFManagerShieldColors) into gSYTaskmanDLHeads[1] BEFORE calling
-gcDrawDObjTreeDLLinksForGObj, i.e. into a different DL head from the model list
-the port executes -- so those two colour commands very likely never reach the
-port's renderer at all, and the circular alpha comes from the model's texture.
+  5. COLOUR: THE SEAM IS THE gDP MACRO, NOT THE HEAD STREAM (2026-08-04, cycle
+     58). The suspicion that the port never executes gSYTaskmanDLHeads[1] was
+     right about the symptom and wrong about where it starts. It never gets that
+     far: gDPSetPrimColor and gDPSetEnvColor were NDS_GBI_ZERO_PACKET stubs
+     (include/PR/gbi.h), so a source proc_display's colour was discarded at the
+     MACRO and the head held two zero words -- opcode 0x00, ignored by anything
+     that reads it. Every source effect therefore drew in whatever prim/env the
+     PREVIOUS list left in the renderer's persistent RDP state, which for an
+     effect submitted after the stage is the stage's dark green. Nothing about
+     it was effect-specific, which is why it belongs here and not in one row.
+     The two macros now carry their ordinary F3DEX2 words, and the port reads
+     the span back where source writes it: ndsRendererAdapterMarkDisplayProcHeads
+     runs in the captured-display hook, immediately before
+     `current_gobj->proc_display(current_gobj)`
+     (opening_movie_backend.c:4387), and ndsRendererAdapterCaptureDisplayProcColors
+     scans the span the proc appended and hands prim/env to the effect submit,
+     which seeds render_stats BEFORE the model list runs -- so the list's own
+     colour commands still win, exactly as they do on the RSP. General, not
+     per-effect: the rebirth halo, the impact wave and Yoshi's shield all express
+     colour the same way. Every other gDP macro still zeroes; only these two were
+     changed, and a zero packet was already being ignored, so nothing that
+     previously worked can start failing.
+EVIDENCE, single arm, EXACT_LOCK 1988,1986, inside the 1994-1982 guard window.
+Cycle 57 put the bubble on the fighter: a large camera-facing square CENTRED ON
+THE GUARDING FIGHTER and comfortably enclosing him, about 45x38 guest pixels
+against Fox's ~30, 4,965 viewport pixels (2.07%) against cycle 56. Cycle 58 then
+coloured it: bright GREEN at alpha 0xC0, which is dEFManagerShieldColors[1] --
+Fox's player index -- and the fighter is visibly through it, another 5,018
+pixels (2.09%). Position, scale, attachment, orientation, per-player colour and
+translucency are all correct by eye.
+artifacts/visibility/2026-08-04_c5{5,6,7,8}-shield-guarding-t1988-flag1-a.png
+plus the -zoom.png crops; the flat white smear on the platform is unchanged
+across all four arms and is therefore NOT the shield.
+REMAINING DIMENSION, and it is one: SHAPE. The bubble is a SQUARE, not SSB64's
+circle, and the env colour dominates where source modulates a white prim against
+the model's texture -- i.e. the shield texture's circular alpha is not reaching
+the polygon. Next read is the texture side of the same submit
+(gNdsEffectRendererTextureReadyCount / TextureRejectCount are already published
+and were 0 for this effect in the cycle-50 census), not another matrix or colour
+cycle.
 GATE 6: the shield row's flip argument re-arms only on the owner's eye, and the
-honest ask is now "is this the right shape in the right place, with the wrong
-colour", not "is this a shield".
+honest ask is now "right place, right size, right colour, square instead of
+round", not "is this a shield".
 
 FLAG-0 RE-MEASURED AFTER THE FIX (2026-08-04), because changing the walk could
 have changed stand-in lifetime too. It did not: the flag-0 census is unchanged
@@ -400,7 +432,7 @@ do not restate them here.
 -Shield VFX not correct
     Owner: texture looks cut in half: `artifacts/visibility/2026-08-03_owner_shield-cut-in-half.png`
     CAUSE: dEFManagerShieldEffectDesc is a model; 'cut in half' is a 1:2 source cell on a square quad.
-    STAGE: MEASURED -- kind-44 billboard plus gGCScaleX restored; bubble now encloses the fighter, colour still wrong.
+    STAGE: MEASURED -- billboard, guard size and per-player colour all correct now; it is a square, not a circle.
 
 -Hard landing vfx not not using correct asset.
     Owner: incorrect asset for the impact wave is being used

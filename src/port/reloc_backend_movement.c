@@ -13191,6 +13191,9 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
         gNdsStageGCDrawAllLoopHardwareTextureReadyCount;
     texture_reject_before =
         gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
+    /* Consume the colour this effect's own proc_display just emitted, before
+     * the tree submit inherits the previous list's persistent RDP state. */
+    ndsRendererAdapterCaptureDisplayProcColors();
     ndsRendererAdapterBeginStageTraversal();
     /* The effect path, and the only caller that walks the tree. An effect
      * EFDesc is a model -- shield, rebirth halo, Fox reflector, impact wave are
@@ -13472,6 +13475,16 @@ s32 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     sNdsStageGCDrawAllLoopCurrentCameraGObj = camera_gobj;
     sNdsStageGCDrawAllLoopCurrentDisplayGObj = display;
     sNdsStageGCDrawAllLoopCurrentDisplayLinkID = link_id;
+#if NDS_RENDERER_HW_TRIANGLES
+    /* WHERE THE PROC'S OWN RDP STATE STARTS. This hook runs immediately before
+     * `current_gobj->proc_display(current_gobj)` (opening_movie_backend.c:4387),
+     * so the four heads here bound exactly the span that proc is about to emit.
+     * A source effect's colour lives in that span and nowhere else --
+     * efManagerShieldProcDisplay writes prim/env into gSYTaskmanDLHeads[1] and
+     * then calls gcDrawDObjTreeDLLinksForGObj -- so the effect submit reads it
+     * back from here instead of any effect-specific field. */
+    ndsRendererAdapterMarkDisplayProcHeads();
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     ndsStageGCDrawAllLoopRecordWeaponCapture(display, link_id);
     ndsStageGCDrawAllLoopRecordEffectCapture(display, link_id);

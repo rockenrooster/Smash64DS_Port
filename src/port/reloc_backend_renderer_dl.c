@@ -5995,6 +5995,75 @@ static sb32 ndsRendererAdapterStatsHasArmedTile(
     return FALSE;
 }
 
+/* THE SOURCE PROC'S OWN prim/env, read back out of the DL head span it wrote.
+ *
+ * gDPSetPrimColor/gDPSetEnvColor now carry their words (include/PR/gbi.h), and
+ * a source effect's proc_display emits exactly those two immediately before it
+ * draws its model. Nothing executes the head streams on the DS, so this scans
+ * the span the proc appended and hands the values to the effect submit, which
+ * seeds them into the renderer's RDP state before the model list runs. Without
+ * it every source effect drew in whatever prim/env the previous list left
+ * behind -- the stage's, which is what made the shield bubble dark.
+ *
+ * Bounded and cheap: the shield's span is three commands, and a head whose
+ * pointer did not move is skipped outright. */
+#define NDS_RENDERER_ADAPTER_DISPLAY_PROC_SCAN_MAX 32u
+
+static const Gfx *sNdsRendererAdapterDisplayProcHeadMark[
+    NDS_RENDERER_STAGE_DL_HEADS];
+static u32 sNdsRendererAdapterEffectColorMask;
+static u32 sNdsRendererAdapterEffectPrimColor;
+static u32 sNdsRendererAdapterEffectEnvColor;
+
+void ndsRendererAdapterMarkDisplayProcHeads(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_RENDERER_STAGE_DL_HEADS; i++)
+    {
+        sNdsRendererAdapterDisplayProcHeadMark[i] = gSYTaskmanDLHeads[i];
+    }
+}
+
+void ndsRendererAdapterCaptureDisplayProcColors(void)
+{
+    u32 head;
+
+    sNdsRendererAdapterEffectColorMask = 0u;
+    for (head = 0u; head < NDS_RENDERER_STAGE_DL_HEADS; head++)
+    {
+        const Gfx *cursor = sNdsRendererAdapterDisplayProcHeadMark[head];
+        const Gfx *end = gSYTaskmanDLHeads[head];
+        u32 scanned = 0u;
+
+        if ((cursor == NULL) || (end == NULL) || (cursor >= end))
+        {
+            continue;
+        }
+        while ((cursor < end) &&
+               (scanned < NDS_RENDERER_ADAPTER_DISPLAY_PROC_SCAN_MAX))
+        {
+            u32 op = cursor->words.w0 >> 24;
+
+            if (op == NDS_FIGHTER_DL_OP_SETPRIMCOLOR)
+            {
+                sNdsRendererAdapterEffectPrimColor = cursor->words.w1;
+                sNdsRendererAdapterEffectColorMask |= 1u;
+            }
+            else if (op == NDS_FIGHTER_DL_OP_SETENVCOLOR)
+            {
+                sNdsRendererAdapterEffectEnvColor = cursor->words.w1;
+                sNdsRendererAdapterEffectColorMask |= 2u;
+            }
+            cursor++;
+            scanned++;
+        }
+    }
+    gNdsEffectDLColorMask = sNdsRendererAdapterEffectColorMask;
+    gNdsEffectDLPrimColor = sNdsRendererAdapterEffectPrimColor;
+    gNdsEffectDLEnvColor = sNdsRendererAdapterEffectEnvColor;
+}
+
 void ndsRendererAdapterBeginStageTraversal(void)
 {
     bzero(&sNdsRendererAdapterStagePersistentState,
@@ -8948,6 +9017,17 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
+        /* Source order: the proc emits prim/env into the head stream and THEN
+         * the model list, so these must land before the list executes and must
+         * be allowed to be overridden by the list's own colour commands. */
+        if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
+        {
+            render_stats->prim_color = sNdsRendererAdapterEffectPrimColor;
+        }
+        if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
+        {
+            render_stats->env_color = sNdsRendererAdapterEffectEnvColor;
+        }
         effect_seed_before = render_stats->hardware_matrix_seed_count;
         effect_matrix_cmd_before = render_stats->matrix_command_count;
         effect_xform_before = render_stats->transformed_vertex_count;
@@ -9333,6 +9413,14 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj, u32 kind,
     (void)kind;
     (void)camera_gobj;
     (void)initial_geometry_mode;
+}
+
+void ndsRendererAdapterMarkDisplayProcHeads(void)
+{
+}
+
+void ndsRendererAdapterCaptureDisplayProcColors(void)
+{
 }
 
 #endif

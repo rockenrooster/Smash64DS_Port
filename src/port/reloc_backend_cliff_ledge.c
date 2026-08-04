@@ -15547,6 +15547,9 @@ static void ndsFighterMarioFoxStageGCDrawAllLoopReset(void)
     gNdsEffectDLVtx0[1] = 0;
     gNdsEffectDLVtx0[2] = 0;
     gNdsEffectDLVtx0[3] = 0;
+    gNdsEffectDLColorMask = 0u;
+    gNdsEffectDLPrimColor = 0u;
+    gNdsEffectDLEnvColor = 0u;
     gNdsStageGCDrawAllLoopHardwareCarrySeedCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarryCaptureCount = 0u;
     gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount = 0u;

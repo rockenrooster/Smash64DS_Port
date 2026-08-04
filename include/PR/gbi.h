@@ -275,9 +275,31 @@ typedef union {
     (void)(cycle); \
 } while (0)
 
+/* THESE TWO CARRY THEIR WORDS; every other gDP macro here still zeroes.
+ *
+ * A source proc_display expresses an effect's colour by emitting exactly these
+ * two commands into gSYTaskmanDLHeads[] immediately before drawing the model --
+ * efManagerShieldProcDisplay writes the per-player dEFManagerShieldColors entry
+ * and alpha 0xC0 that way (efmanager.c:80101024). Zeroing them threw that away
+ * at the macro, so every source effect inherited whatever prim/env the previous
+ * list left in the renderer's persistent RDP state, which is why the shield
+ * bubble drew in the stage's dark green rather than translucent white.
+ *
+ * The words are the ordinary F3DEX2 encodings, so the renderer's existing
+ * NDS_RENDERER_OP_SETPRIMCOLOR / _SETENVCOLOR cases consume them unchanged --
+ * no new state, no per-effect code. A zeroed packet decodes as opcode 0x00 and
+ * was simply ignored, so nothing that previously worked can start failing;
+ * a consumer that never reads the span still sees the same packet count and
+ * the same buffer accounting. */
 #define gDPSetPrimColor(pkt, m, l, r, g, b, a) do { \
-    NDS_GBI_ZERO_PACKET(pkt); \
-    (void)(m); (void)(l); (void)(r); (void)(g); (void)(b); (void)(a); \
+    Gfx *_nds_gbi_pkt = (Gfx *)(pkt); \
+    if (NDS_GBI_PACKET_IN_MAIN_RAM(_nds_gbi_pkt)) { \
+        _nds_gbi_pkt->words.w0 = (0xfau << 24) | \
+            (((u32)(m) & 0xffu) << 8) | ((u32)(l) & 0xffu); \
+        _nds_gbi_pkt->words.w1 = (((u32)(r) & 0xffu) << 24) | \
+            (((u32)(g) & 0xffu) << 16) | (((u32)(b) & 0xffu) << 8) | \
+            ((u32)(a) & 0xffu); \
+    } \
 } while (0)
 
 #define gDPSetFillColor(pkt, color) do { \
@@ -291,8 +313,13 @@ typedef union {
 } while (0)
 
 #define gDPSetEnvColor(pkt, r, g, b, a) do { \
-    NDS_GBI_ZERO_PACKET(pkt); \
-    (void)(r); (void)(g); (void)(b); (void)(a); \
+    Gfx *_nds_gbi_pkt = (Gfx *)(pkt); \
+    if (NDS_GBI_PACKET_IN_MAIN_RAM(_nds_gbi_pkt)) { \
+        _nds_gbi_pkt->words.w0 = (0xfbu << 24); \
+        _nds_gbi_pkt->words.w1 = (((u32)(r) & 0xffu) << 24) | \
+            (((u32)(g) & 0xffu) << 16) | (((u32)(b) & 0xffu) << 8) | \
+            ((u32)(a) & 0xffu); \
+    } \
 } while (0)
 
 #define gDPSetCombineLERP(pkt, a0, b0, c0, d0, Aa0, Ab0, Ac0, Ad0, \
