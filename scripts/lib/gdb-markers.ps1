@@ -155,6 +155,21 @@ function Invoke-GdbMarkerScript {
                         if ($command -isnot [string]) {
                             throw 'Interactive GDB commands must be a flat string array.'
                         }
+                        # A one-element helper call returns a bare string, and
+                        # "string" + @(...) is STRING concatenation in
+                        # PowerShell, so a call site that forgets @() around
+                        # the first operand fuses every command onto one line.
+                        # GDB then rejects the whole line with a single parse
+                        # error and the run looks like one bad command instead
+                        # of a lost step. Cost a capture run on 2026-08-03.
+                        $verbs = ([regex]::Matches($command,
+                            '(?:^|\s)-(?:interpreter-exec|data-evaluate-expression|exec-|gdb-|stack-|var-)')).Count
+                        if ($verbs -gt 1) {
+                            throw ("Fused GDB command carries $verbs MI verbs on one " +
+                                   "line: '$command'. Wrap each helper call in @() " +
+                                   'before concatenating -- "string" + @(...) is ' +
+                                   'string concatenation, not array concatenation.')
+                        }
                         $gdbProcess.StandardInput.WriteLine([string]$command)
                     }
                     $gdbProcess.StandardInput.Flush()

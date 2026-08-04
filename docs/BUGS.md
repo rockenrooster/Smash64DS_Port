@@ -80,8 +80,20 @@ OPEN.
     thread is sThreads[1], so it IS resumed every pass -- ~690/s.
     So the coroutine is resumed, returns from its yield, re-checks, and
     yields again: it spins waiting on a condition that never becomes true.
-    OPEN: which wait. Unwind the saved context.sp (0x022aac38 that run) to
-    name the call site, then the queue and its validCount.
+    THE WAIT IS NAMED (36). Unwinding the parked context.sp and mapping the
+    return addresses by nm gives:
+      portCoroutineYield+24 <- osRecvMesg+90 <- gcRunGObjProcess+98
+      <- ndsBaseGcRunAll+96 <- gcRunAll+10
+      <- ndsIFCommonBattleUpdateInterfaceAllOriginal+98
+      <- ifCommonBattleUpdateInterfaceAll+6 <- scVSBattleFuncUpdate+6
+      <- syTaskmanRunTask+2076 <- syTaskmanLoadScene <- syTaskmanStartTask
+      <- scManagerFuncUpdate   (the last three match cycle 34's live bt)
+    The queue is gGCMesgQueue (.main.bss), held in the parked r6; r10 is
+    gSCManagerBattleState. So a GObj process inside the INTERFACE update
+    blocks in osRecvMesg on gGCMesgQueue and the message never arrives.
+    OPEN: read gGCMesgQueue validCount/msgCount/first at the stop, then the
+    poster -- was the send dropped (NOBLOCK onto a full queue) or never made.
+    Compare depth/consumers/flags against BattleShip before changing anything.
     artifacts/verification/2026-08-03_flag0-*.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
