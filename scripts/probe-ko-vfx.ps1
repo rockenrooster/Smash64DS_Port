@@ -220,6 +220,27 @@ $has_impact_wave_counters =
     ($symbols -contains 'gNdsEffectImpactWaveMakeNullCount') -and
     ($symbols -contains 'gNdsEffectImpactWaveLastIndex') -and
     ($symbols -contains 'gNdsEffectImpactWaveLastGObjID')
+# WHY A TEXTURE RESOLVE WAS REFUSED, which is the one thing the fence cannot
+# say. gNdsRendererBattleTextureFenceCounts[9] (MANIFEST_FALLBACK) counts calls
+# to ndsRendererHardwareRejectTexture, but the REASON goes into this mask and
+# its writer is behind NDS_RENDERER_PROFILE_LEVEL >= 2 or
+# NDS_R2_STAGE_ROUTE_PROBE (nds_renderer.c:12767-12777). Both are 0 in the
+# ordinary proof ROM, so the symbol is present with NO COMPILED WRITER and reads
+# a false 0 -- hence the guard here is on the CENSUS symbols, which only exist
+# when the probe flag is on, rather than on the mask alone.
+#
+# The census answers the follow-up TEXIMAGE always raises: the eviction retry
+# ran out of things to evict either because texture VRAM is genuinely full
+# (bytes) or because every slot is pinned/touched-this-frame so nothing MAY be
+# evicted (slots). free/live/pinned/evictable/thisframe separate those.
+$has_reject_reason =
+    ($symbols -contains 'gNdsRendererProfileTextureRejectReasonMask') -and
+    ($symbols -contains 'gNdsR2TexRejectCensusValid') -and
+    ($symbols -contains 'gNdsR2TexRejectCensusFree') -and
+    ($symbols -contains 'gNdsR2TexRejectCensusLive') -and
+    ($symbols -contains 'gNdsR2TexRejectCensusPinned') -and
+    ($symbols -contains 'gNdsR2TexRejectCensusEvictable') -and
+    ($symbols -contains 'gNdsR2TexRejectCensusThisFrame')
 
 # ADDRESS-RESOLVED, NOT NAME-RESOLVED, AND THE MATCH MUST BE UNIQUE.
 # On 2026-08-04 `break <name>` handed this probe
@@ -347,7 +368,14 @@ function New-StateCommand([string]$Name) {
         'vramreset=%u fbind=%u fready=%u freject=%u fupload=%u ' +
         'eready=%u ereject=%u atlasfail=%u atlasprep=%u ' +
         'memohit=%u memomiss=%u memofill=%u memostale=%u memoverify=%u ' +
-        'fence=%u fencefirstframe=%u fenceclass=%u notex=%u ' +
+        # PER CLASS, NOT THE ARRAY. gNdsRendererBattleTextureFenceCounts is
+        # u32[10] (nds_renderer.h:1517) and this line used to pass it to %u,
+        # which printed the array's ADDRESS -- 35241992 is 0x0219C008, not a
+        # count. Worse, it differs between builds because the address does, so
+        # a cross-build reading of it looked like a real behavioural delta.
+        # Order is the enum at nds_renderer.h:1505-1514.
+        'fence=conv%u/pal%u/alloc%u/io%u/create%u/upload%u/del%u/evict%u/' +
+        'refresh%u/fallback%u fencefirstframe=%u fenceclass=%u notex=%u ' +
         'ownerreject=%u ownerfirst=%u ownerlast=%u abort=%u preparednow=%u ' +
         'postarmreject=%u\n", ' +
         'gNdsFrameCounter, gNdsBattleTextHudTimeSeconds, ' +
@@ -378,7 +406,16 @@ function New-StateCommand([string]$Name) {
         'gNdsR2TexMemoHitCount, gNdsR2TexMemoMissCount, ' +
         'gNdsR2TexMemoFillCount, gNdsR2TexMemoStaleCount, ' +
         'gNdsR2TexMemoVerifyFail, ' +
-        'gNdsRendererBattleTextureFenceCounts, ' +
+        'gNdsRendererBattleTextureFenceCounts[0], ' +
+        'gNdsRendererBattleTextureFenceCounts[1], ' +
+        'gNdsRendererBattleTextureFenceCounts[2], ' +
+        'gNdsRendererBattleTextureFenceCounts[3], ' +
+        'gNdsRendererBattleTextureFenceCounts[4], ' +
+        'gNdsRendererBattleTextureFenceCounts[5], ' +
+        'gNdsRendererBattleTextureFenceCounts[6], ' +
+        'gNdsRendererBattleTextureFenceCounts[7], ' +
+        'gNdsRendererBattleTextureFenceCounts[8], ' +
+        'gNdsRendererBattleTextureFenceCounts[9], ' +
         'gNdsRendererBattleTextureFenceFirstFrame, ' +
         'gNdsRendererBattleTextureFenceFirstClassPlus1, ' +
         'gNdsFighterDisplayContractNoTextureCount, ' +
@@ -431,6 +468,26 @@ function New-EffectLatchCommand([string]$Name) {
         ', gNdsEffectDLSubmitOtherModeIn, gNdsEffectDLSubmitOtherModeOut' +
         ', (gNdsEffectDLSubmitOtherModeIn == gNdsEffectDLSubmitOtherModeOut)' +
         ', gNdsEffectDLSubmitCount')
+}
+
+# The reason bits are the enum at nds_renderer.c:1413-1425: 1<<0 MISSING_STATE,
+# 1<<1 BAD_CI_SIZE, 1<<2 UNSUPPORTED_FORMAT, 1<<3 BAD_DIMENSIONS,
+# 1<<4 BAD_UPLOAD_SIZE, 1<<5 BAD_SOURCE_RANGE, 1<<6 BAD_SOURCE_BYTES,
+# 1<<7 BAD_SOURCE_PTR, 1<<8 BAD_TLUT, 1<<9 BAD_TLUT_PTR, 1<<10 ALLOC,
+# 1<<11 GENTEX, 1<<12 TEXIMAGE. It is a MASK, so several may be set across a
+# match; the census is first-rejection-only and describes that one moment.
+function New-RejectReasonCommand([string]$Name) {
+    if (-not $has_reject_reason) {
+        return ('printf "KOREJECT tag=' + $Name + ' reason=absent census=absent\n"')
+    }
+    return ('printf "KOREJECT tag=' + $Name +
+        ' reason=%#x t1reason=%#x censusvalid=%u free=%u live=%u pinned=%u' +
+        ' evictable=%u thisframe=%u\n"' +
+        ', gNdsRendererProfileTextureRejectReasonMask' +
+        ', gNdsRendererProfileTexel1RejectReasonMask' +
+        ', gNdsR2TexRejectCensusValid, gNdsR2TexRejectCensusFree' +
+        ', gNdsR2TexRejectCensusLive, gNdsR2TexRejectCensusPinned' +
+        ', gNdsR2TexRejectCensusEvictable, gNdsR2TexRejectCensusThisFrame')
 }
 
 # BUGS row 4. Cumulative, so the value at the last tag is the run's answer and
@@ -577,6 +634,7 @@ try {
         (New-EffectXluCommand 'ko-burst'),
         (New-EffectLatchCommand 'ko-burst'),
         (New-ImpactWaveCommand 'ko-burst'),
+        (New-RejectReasonCommand 'ko-burst'),
         (New-CaptureCommand 'ko-burst-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
@@ -625,6 +683,7 @@ try {
         (New-EffectXluCommand 'star-ko'),
         (New-EffectLatchCommand 'star-ko'),
         (New-ImpactWaveCommand 'star-ko'),
+        (New-RejectReasonCommand 'star-ko'),
         (New-CaptureCommand 'star-ko-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
@@ -672,6 +731,7 @@ try {
         (New-EffectXluCommand 'rebirth-halo'),
         (New-EffectLatchCommand 'rebirth-halo'),
         (New-ImpactWaveCommand 'rebirth-halo'),
+        (New-RejectReasonCommand 'rebirth-halo'),
         (New-CaptureCommand 'rebirth-halo-probe' $emulator.Id $evidence_prefix),
         'continue',
         'end',
@@ -762,6 +822,7 @@ try {
         (New-EffectXluCommand 'pre-death-baseline'),
         (New-EffectLatchCommand 'pre-death-baseline'),
         (New-ImpactWaveCommand 'pre-death-baseline'),
+        (New-RejectReasonCommand 'pre-death-baseline'),
         (New-CaptureCommand 'pre-death-baseline-probe' $emulator.Id $evidence_prefix),
         # TWO DEATHS, STAR FIRST, AND THE STAR ONE IS THE CORRECTION.
         #
@@ -797,6 +858,7 @@ try {
         (New-EffectXluCommand 'post-star-3s'),
         (New-EffectLatchCommand 'post-star-3s'),
         (New-ImpactWaveCommand 'post-star-3s'),
+        (New-RejectReasonCommand 'post-star-3s'),
         (New-CaptureCommand 'post-star-3s-probe' $emulator.Id $evidence_prefix),
 
         # SECOND DEATH, SIDE KO, same fighter. The owner reported this after
@@ -817,6 +879,7 @@ try {
         (New-StateCommand 'post-side-3s'),
         (New-EffectLatchCommand 'post-side-3s'),
         (New-ImpactWaveCommand 'post-side-3s'),
+        (New-RejectReasonCommand 'post-side-3s'),
         (New-CaptureCommand 'post-side-3s-probe' $emulator.Id $evidence_prefix),
 
         # Late in the match, well past both deaths. If the corruption is
@@ -829,6 +892,7 @@ try {
         (New-StateCommand 'late-match'),
         (New-EffectLatchCommand 'late-match'),
         (New-ImpactWaveCommand 'late-match'),
+        (New-RejectReasonCommand 'late-match'),
         (New-CaptureCommand 'late-match-probe' $emulator.Id $evidence_prefix),
 
         # The run ends where the match does, not on a frame count.
@@ -837,6 +901,7 @@ try {
         (New-StateCommand 'results'),
         (New-EffectLatchCommand 'results'),
         (New-ImpactWaveCommand 'results'),
+        (New-RejectReasonCommand 'results'),
 
         ('printf "KOVFX explode_calls=%d star_calls=%d rebirth_calls=%d ' +
             'star=%f,%f cam_top=%d map_top=%d ' +

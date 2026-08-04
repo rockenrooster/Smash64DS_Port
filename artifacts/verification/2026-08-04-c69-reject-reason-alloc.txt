@@ -1,0 +1,214 @@
+Rows 6 (+ probably 5): WHY effect textures are refused. The reason mask is
+read, and it is a RESOURCE BOUND, not a malformed request.
+
+ANSWER: reason = 0x400 = bit 10 = NDS_RENDERER_HW_TEXREJECT_ALLOC
+(nds_renderer.c:1423). ndsRendererHardwareAllocTexture() returned NULL. The
+first-rejection census says why:
+
+    free=0  live=48  pinned=28  evictable=0  thisframe=20
+
+The hardware texture cache is 48 entries (NDS_RENDERER_HW_TEXTURE_CACHE_COUNT,
+:1470). 28 are PINNED and 20 were already TOUCHED THIS FRAME. 28 + 20 = 48.
+Nothing is free and nothing MAY be evicted, so the next texture request in that
+frame is refused. This is SLOT exhaustion, not VRAM byte exhaustion -- the
+distinction the census exists to make.
+
+Cycle 69, 2026-08-04. Candidate: builds/build-c69-rejectreason (the ordinary
+proof ROM plus NDS_R2_STAGE_ROUTE_PROBE=1, which is the only thing that compiles
+the reason-mask writer).
+
+======================================================================
+WHY THIS PRODUCES "DIM AND UNTEXTURED TOGETHER"
+======================================================================
+Proven by source read, and it is why the two symptoms are one event:
+
+  ndsRendererHardwareRejectTexture(..., ALLOC)      :14712 (alloc site)
+    -> ndsRendererHardwareResolveOrBindTexture returns FALSE
+    -> use_texture = FALSE                          :16711
+    -> state->texture_prepare_enabled = FALSE       :16719
+    -> the polygon is DRAWN WITH TEXTURING DISABLED, not skipped
+
+An object that loses this race still draws -- it draws its flat material colour
+with no texture modulation. That reads as dark AND untextured, on the same
+object, in the same frame. The owner's "same objects, dim and untextured
+together" is one defect, not two.
+
+======================================================================
+WHY EVERY REJECT COUNTER READ ZERO -- A RETRACTION
+======================================================================
+Cycle 68 reported "no upload ever fails; every reject counter zero". THAT WAS
+WRONG, and the error is worth recording because the counters looked clean.
+
+ndsRendererHardwareRejectTexture (:12757) records its fence UNCONDITIONALLY at
+:12761, but only bumps a counter inside `if (stats != NULL)` at :12763. The two
+published counters read by the probe -- gNdsFighterDLAllDrawHardwareTexture
+RejectCount and gNdsEffectRendererTextureRejectCount -- are per-owner views of
+stats->hardware_texture_reject_count. The rejecting path here is neither of
+those owners, so it rejected 2,592 times while both counters sat at 0.
+
+The fence is the counter that cannot lie, because it is upstream of the guard.
+
+======================================================================
+THE FENCE, PER CLASS -- and a harness defect that hid it
+======================================================================
+gNdsRendererBattleTextureFenceCounts is u32[10] (nds_renderer.h:1517). The
+probe's KOSHOT line passed the ARRAY to %u, printing its ADDRESS (35241992 =
+0x0219C008) and calling it "fence". Worse, the address differs between builds,
+so a cross-build reading of it looked like a behavioural delta. Now printed per
+class. Enum order is nds_renderer.h:1505-1514.
+
+  tag                 frame  conv  pal  alloc io create upload del evict fallback
+  pre-death-baseline    246     0    0     0   0     0      0    0    0        0
+  star-ko               342     0    0     0   0     0      0    0    0        0
+  rebirth-halo          384     5    5     5   0     5      5    3    3        5
+  post-star-3s          428   129  129   129   0     9      9    7    7      249
+  ko-burst              614   516  516   516   0    15     15   13   13     1017
+  post-side-3s          789   842  842   842   0    34     34   32   32     1650
+  late-match           1390   917  917   917   0    37     37   35   35     1797
+  results              2174  1326 1326  1326   0    60     60   58   58     2592
+
+FIRST fence event of the entire match: frame 355, class 9 (MANIFEST_FALLBACK,
+i.e. a rejection). Frame 355 sits between the star KO (342) and the rebirth halo
+maker (383) -- the revival-platform window. That is the transition frame, and it
+was already inside the cycle-68 data; no dense capture was needed to find it.
+It reads 355 identically on the pre-fix c66 ROM, the post-fix c68 ROM, and this
+c69 diagnostic ROM.
+
+Read the ratio: 2,592 refusals against 60 texture creations. The cache is not
+merely full, it is thrashing -- 1,326 alloc attempts, 58 evictions, 2,592
+refusals.
+
+======================================================================
+WHAT THIS SETTLES, AND WHAT IT DOES NOT
+======================================================================
+SETTLED:
+- The mechanism is slot exhaustion at the texture cache, refusing a bind, and
+  the refused polygon drawing flat. Chain link that breaks: REQUESTED ->
+  REJECTED, upstream of glBindTexture and upstream of poly format. Both of
+  those links are exonerated.
+- It PREDATES the cycle-68 mode-3 fix and that fix did not change it: the c66
+  and c68 ROMs are bit-identical on every cache counter at all eight tags,
+  including fencefirstframe=355.
+- Row 6 is ORTHOGONAL to row 9. The 24 pinned stage textures never drop
+  (cycle-68 audit). They are not the victim here -- they are 24 of the 28
+  pinned slots, i.e. a major cause of the pressure.
+
+NOT SETTLED, and deliberately not assumed:
+- Whether Fox's reflector (down-B, BUGS row 5 "green, should be blue") is the
+  SAME defect. The hypothesis is strong -- a refused texture draws flat material
+  colour, and "green" would then be the fallback colour rather than a palette
+  bug -- but it needs the REFLECTOR'S OWN reject fence, not an inference from
+  the halo's. It also needs the routing question answered first: the reflector
+  may be on the PARTICLE ATLAS path (ndsRendererHardwarePrepareIFCommonAtlas,
+  :10269, which allocates outside this cache and is a different upload site) or
+  on the cached DL path traced here. Only the latter is this bug. The atlas
+  moved A5I3 -> A3I5 on 2026-08-03 specifically because of the reflector, so it
+  has history on the atlas path.
+
+======================================================================
+VRAM HEADROOM -- THE QUESTION THAT DECIDES THE FIX. THERE IS ROOM.
+======================================================================
+Texture VRAM allocation, nds_platform.c:330-336, the NDS_RENDERER_HW_TRIANGLES
+path this ROM takes:
+
+    vramSetBankA(VRAM_A_TEXTURE)          128 KB  texture
+    vramSetBankB(VRAM_B_TEXTURE)          128 KB  texture
+    vramSetBankC(VRAM_C_MAIN_BG_...)              main BG (2D overlay)
+    vramSetBankD(VRAM_D_MAIN_BG_...)              main BG
+    vramSetBankE(VRAM_E_MAIN_SPRITE)              OAM sprites
+    vramSetBankF/G(VRAM_x_TEX_PALETTE_SLOT0/1)    texture PALETTE, not texels
+    vramSetBankH(VRAM_H_SUB_BG)                   sub screen
+
+  texture VRAM total      262,144 bytes (A + B)
+  battle static set        61,696 bytes (staticspan; 0x6800000-0x680F100)
+  remaining               200,448 bytes  = 76.5% FREE
+
+THE STRONGER PROOF, which does not depend on that arithmetic: bit 12
+NDS_RENDERER_HW_TEXREJECT_TEXIMAGE (:1425) NEVER FIRES. The mask is 0x400 and
+only 0x400, at every tag, across 2,592 rejections. TEXIMAGE is what a refused
+glTexImage2D sets -- the DS texture allocator declining to place texels. It
+declined ZERO times in a whole match. The renderer ran out of cache ENTRIES
+while texture VRAM still had roughly three quarters of itself free.
+
+REGIME: raising NDS_RENDERER_HW_TEXTURE_CACHE_COUNT is the lever that matches
+the measurement. It will NOT simply move the rejection from bit 10 to bit 12,
+because bit 12 has never been anywhere near firing.
+
+Also note the static set does not even reach one bank: :11350 picks a 1-bank or
+2-bank mask on (preparedBytes > VRAM_B - VRAM_A), and 61,696 < 131,072, so it
+takes one. Bank B is texture-configured and largely unused by the static set.
+
+======================================================================
+COST ESTIMATE -- FLAGGED AS AN ESTIMATE, NOT MEASURED
+======================================================================
+NDSRendererHardwareTextureCacheEntry (:3427) is 13 u32/int fields (52 bytes),
+plus u32 key_hash when NDS_RENDERER_PROFILE_LEVEL < 2 (this ROM: level 0, so
++4), plus NDSRendererHardwareTextureKey. The key is described in-tree as a
+"236-byte DS cache footprint" (:14212), giving roughly 292 bytes per entry.
+
+    48 entries (today)   ~14.0 KB main RAM
+    96 entries           ~28.0 KB   (+14.0 KB)
+   128 entries           ~37.4 KB   (+23.4 KB)
+
+CONFIRM BEFORE QUOTING: print sizeof(NDSRendererHardwareTextureCacheEntry) or
+add a _Static_assert rather than trusting the 236 figure second-hand.
+
+Watch NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT (128u, :1471) -- it is the hash
+lookup table for the cache and is only 2.7x the current entry count. Raising
+entries toward 128 without raising the lookup table changes its load factor.
+
+PERFORMANCE, NOT ONLY CORRECTNESS: with evictable=0 the surviving entries churn
+-- re-convert and re-upload every frame, permanently, which is the owner's "it
+also affects FPS for the rest of the match". gNdsRendererProfileTextureConvertTicks
+(:14638) is already instrumented and is the before number for that A/B. This
+makes the fix gate-relevant, so it needs a proper matched A/B on a fresh budget,
+NOT a tired one. Not started here on purpose.
+
+======================================================================
+THIS IS A DECISION, NOT A COSMETIC FIX
+======================================================================
+Per BUG_FIXING_PROCESS.md ("When the gap is a decision, stop iterating"), a
+resource bound cannot be closed by iteration. The bound is 48 cache slots with
+28 pinned. Options, costs NOT yet measured, and NO recommendation chosen here:
+
+  a. Raise NDS_RENDERER_HW_TEXTURE_CACHE_COUNT above 48. Costs RAM per entry
+     (NDSRendererHardwareTextureCacheEntry carries a ~236-byte key, :3427).
+  b. Shrink the pinned set. 28 of 48 slots -- 58% of the cache -- are pinned,
+     and 24 of those are the battle static texture set.
+  c. Permit eviction of touched-this-frame entries under pressure. Cheapest in
+     RAM, but risks re-uploading a texture already used this frame, which is
+     both a cost and a flicker risk.
+
+Sacrifice order and RAM budget make this the owner's call.
+
+======================================================================
+HANDOFF -- exact commands
+======================================================================
+ELF/ROM with the instrument:
+  builds/build-c69-rejectreason/smash64ds-battle-playable-proof-hwtri.{nds,elf}
+  (ordinary proof-hwtri + NDS_R2_STAGE_ROUTE_PROBE=1; nothing else differs)
+
+Reproduce this reading:
+  .\scripts\probe-ko-vfx.ps1 -Build 'build-c69-rejectreason' `
+      -Target 'smash64ds-battle-playable-proof-hwtri' `
+      -EvidenceLabel '<new-label>' -RunnerSlot 6
+  then read the KOREJECT and KOSHOT fence= lines in
+  artifacts/verification/<new-label>_ko-vfx-probe.txt
+
+NEXT STEP (step 2, not done -- budget):
+  Does the reflector reject on this path? Fox down-B is reachable far earlier
+  than a KO, so it does NOT need this probe's forced-death chain. Break at the
+  reflector's maker, sample gNdsRendererBattleTextureFenceCounts[9] and
+  gNdsRendererProfileTextureRejectReasonMask across the down-B, and check first
+  whether its texture goes through ndsRendererHardwarePrepareIFCommonAtlas
+  (:10269, separate allocation, NOT this cache) or the cached DL path. If the
+  atlas, this bug does not apply to row 5 and the green is a separate defect.
+
+Root ROMs UNCHANGED this cycle:
+  smash64ds.nds                      730829832AE25419A44A8B520E169971AB46E21D97BF9D9EECAE1A5E441E4255
+  smash64ds-battle-playable-hwtri.nds 9DAC2CBED46559F8D00A74AEF5B5D3167EB15E9C3BB864010B3DA3EB46751004
+
+Note: the c69 ROM runs marginally slower than c68 (the probe flag adds the mask
+writer and the census), so its tag frames land 1 frame later at two tags
+(rebirth-halo 384 vs 383, post-star-3s 428 vs 427). The fence first-frame is 355
+in both, so nothing in this document depends on that skew.
