@@ -153,7 +153,8 @@ does not give the shield its model -- it leaks a detached quad per guard.
 Exhibit: artifacts/visibility/2026-08-04_g6-shield-flag1-t1700-detached-blob-
 zoom.png, control 2026-08-04_g6-shield-t2010-flag1-preshield-a.png.
 Also measured: the flag-0 procedural stand-in drew on ONE frame in a whole
-match (tic 3264), so "the flag-0 shield" is close to absent too.
+match (tic 3264), so "the flag-0 shield" is close to absent too. RETRACTED
+cycle 61 -- that run ended after the first guard; see the flag-0 block below.
 Census both arms: artifacts/verification/2026-08-04_gate6-onscreen-flag{0,1}.txt.
 
 3. A SPAWN TIC DOES TRANSFER; AN OFFSET WAS NEVER THE PROBLEM. The cycle-47
@@ -491,6 +492,44 @@ SHIELD REGRESSION CHECK on the same arm: unchanged, 207 pixels of 240,000 at
 EXACT_LOCK 1988 against cycle 59, all of it emulator chrome and the FPS text.
 artifacts/visibility/2026-08-04_c60-shield-guarding-t1988-flag1-a.png.
 =============================================================================
+KO BLAST PILLAR: IT DRAWS, AND THE ROW WAS TRACING THE WRONG EFFECT (cycle 61)
+=============================================================================
+The row's trace named efManagerSparkleWhiteDeadMakeEffect and particle script
+0x5C. That is the STAR KO, driven from ftCommonDeadUpStarProcUpdate, and it
+never fires here: a maker-conditioned probe over a whole match caught ZERO hits
+on it. Both KOs in the canonical run are BOTTOM KOs.
+The owner's "blast pillar" is ftCommonDeadDownSetStatus ->
+efManagerDeadExplodeMakeEffect(&pos, player, 0) (ftcommondead.c:218), which makes
+TWO things from one call: a PARTICLE,
+lbParticleMakeScriptID(..., dEFManagerDeadExplodeGenID[(type % 2) * 4 + player]),
+and an EFDESC MODEL, dEFManagerDeadExplodeEffectDesc -- flags SPECIALLINK|0x4,
+DL LINK 18, both transforms plain nGCMatrixKindTraRotRpyRSca, with a per-player
+env colour written into the child and sibling MObj after creation
+(efmanager.c:4776, :850). Nothing exotic in either half.
+MEASURED on the cycle-60 arm, scripts/probe-ko-blast.ps1:
+  KOs in the run  exactly 2, both player 0, both type 0 (bottom), at tics 2864
+                  and 920 -- 45 tics before the recorded halo spawns 2819/875,
+                  which is FTCOMMON_DEAD_WAIT exactly.
+  maker reached   yes, both times; the particle half asks for script 0x2D, i.e.
+                  dEFManagerDeadExplodeGenID[0], the correct entry.
+  star KO         0 hits.
+BY EYE at EXACT_LOCK 2860,2858, four and six tics after the first KO: a tall
+pale-yellow spike rises out of the bottom blast zone and two tics later has
+grown a RED outer flame around its base -- player 0's env colour, and
+recognisably SSB64's KO burst. "Isn't drawing" no longer reproduces.
+artifacts/visibility/2026-08-04_c60-koblast-t2860-flag1-{a,b}.png,
+artifacts/verification/2026-08-04_c61-ko-blast-probe.txt.
+STILL OPEN, the owner's other half: "doesn't seem to draw on the same z axis as
+the fighters". Neither capture puts the pillar over a fighter, so nothing here
+judges it. Cheapest next steps: a c58 control at the same tic (the cycle-59
+combine fix is the plausible reason it draws at all, and that is unpriced), and
+the 920 KO, where the pillar and Fox may overlap.
+PROBE COST, RECORDED SO IT IS NOT REPAID: breaking on lbParticleMakeScriptID
+with a script-id CONDITION evaluates on the HOST once per particle spawn and
+slowed the guest so far that a 900-second run did not reach the first KO.
+-IncludeParticleBreak is off by default for that reason; the two makers alone
+answer the census and the run costs two minutes.
+=============================================================================
 
 FLAG-0 RE-MEASURED AFTER THE FIX (2026-08-04), because changing the walk could
 have changed stand-in lifetime too. It did not: the flag-0 census is unchanged
@@ -502,6 +541,21 @@ teardown branch never fires and the fix is inert on the shipping default.
 CONSEQUENCE: the stand-in's one-frame-per-match shield is NOT the lifetime
 seam's other face. It is its own defect on the stand-in SPAWN path, unlocalized,
 handed forward. artifacts/verification/2026-08-04_c51-onscreen-flag0-fixed.txt.
+RETRACTED (2026-08-04, cycle 61): THERE IS NO STAND-IN SPAWN DEFECT. "One frame
+in a whole match" was a run that ended after the first guard, not a match.
+Re-measured on a flag-0 proof-hwtri built at HEAD (builds/build-c61-flag0),
+breaking on the maker and on ndsEFManagerShieldProcDisplay
+(scripts/probe-standin-shield.ps1): SEVEN guard-ons at tics 3264, 633, 590, 557,
+536, 517 and 449, each followed by a CONTIGUOUS run of draws on every presented
+frame until the guard ends -- 6, 9, 3, 2, 4 and 5 draws -- with
+gNdsVisualEffectActiveCount stepping 0 -> 1 and back once per guard and
+gNdsTask39FxShieldDrawCount at 29 and still climbing when the probe's own
+timeout ended it at tic 440. The 3264 draw the old census saw is real and is a
+genuinely one-frame guard; the CPU then does not guard again for 2,600 tics,
+which is what a probe window ending early looks like. srcstop = 0 throughout, so
+the negative control above still holds. LESSON: a total counter read from a run
+that stopped early is not a match total -- print the tic beside it.
+artifacts/verification/2026-08-04_standin-shield-probe.txt.
 
 4. CROPPING DOES NOT RESCUE THE PIXEL METRIC EITHER. compare-capture-pair.ps1
 now takes -CropX/-CropY/-CropW/-CropH (viewport-relative, applied to both images,
@@ -592,9 +646,10 @@ do not restate them here.
 
 -KO VFX not drawing correctly.
     Owner: Not fixed yet, the "blast pillar" VFX isn't drawing, and doesn't seen to draw on the same z axis as the fighters
-    TRACED: efManagerSparkleWhiteDeadMakeEffect (efmanager.c:3725) runs particle script 0x5C, driven from
-    ftCommonDeadUpStarProcUpdate. Script 0x5C asks for texture 24, which IS admitted (32x32, source size),
-    so the sheet is not the blocker here -- unlike the four rows above, this one IS a particle effect.
+    TRACED, CORRECTED 2026-08-04: the blast pillar is efManagerDeadExplodeMakeEffect (efmanager.c:4776) --
+    particle script 0x2D plus dEFManagerDeadExplodeEffectDesc on DL link 18 -- NOT script 0x5C /
+    efManagerSparkleWhiteDeadMakeEffect, which is the Star KO and fires zero times in the canonical run.
+    STAGE: MEASURED -- pillar draws, grows and is player-red at KO tics 2864/920; z-order still open.
 
 -Some "hard hit" (side A attacks that hit) VFX look too big, please apply correct scaling to VFX.
     MEASURED: scale is source-exact (efmanager.c:2175/2197). Last cycle's clamp was in UNREACHABLE code.
