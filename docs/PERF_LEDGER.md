@@ -7106,3 +7106,83 @@ the frame counter. With the arms 0.55% apart at P50 the drift is real, and R2-02
 E8 measured two simulation ticks of drift into a 57% top-screen pixel delta, so
 a frame-locked pair here would be misleading rather than merely imprecise.
 Owed: an `-ExactTimeRemain` lock in that harness, then the pair.
+
+## PUBLISH PRICING, 2026-08-04 (cycle 62) — HELD, and the held reason is not the one expected
+
+The publish cycle's job was to price everything the root ROM does not yet carry.
+Arm A is the SHIPPING BINARY'S OWN TREE, not a nearby one: the root ROMs are
+dated 08-03 16:19, which is `4d1015b752`'s commit minute exactly, and
+`builds/build-anchor-4d1015b` is that commit's tick-HUD sibling (nm confirms it
+lacks `gNdsObjAnimRunawayCount`, added at 17:39, so its tree is genuinely older
+than the freeze fix). Arm B is `1d81bf2a27` built to the same target. Both
+sampled `-RingDump -Samples 128 -StartFrame 501`, frames 502..629, same melonDS
+`DE80E46B`, DLDI ON.
+
+**The publish delta is a real, consistent WORK-H regression.** Paired by frame:
+8 better / 120 worse, **median +7,488**, mean +7,366, 58 frames worse by more
+than the ±8,000 placement floor. P50 976,768 -> 983,680; P95 1,241,792 ->
+1,255,168.
+
+**It is not where the cycle's brief expected it.** A third sample splits the
+range at `46d3fca71b` (`builds/build-gate5-flag0`, the tree immediately before
+the effects campaign):
+
+| segment | WORK-H median | mean | worse >8k | better >8k |
+|---|---|---|---|---|
+| A -> M, the freeze fix + GObj pool + ~45 commits | **+7,296** | +7,316 | 52 | 7 |
+| M -> B, the effects campaign incl. the un-flag-gated renderer surface | **+640** | **+50** | 7 | 9 |
+
+The un-flag-gated surface the brief named — the cycle-58 `gDPSetPrimColor` /
+`gDPSetEnvColor` macros and the cycle-59 `b == d` combine rule — is a **null
+result**: mean +50 ticks a frame, 9 frames better against 7 worse. The entire
+regression belongs to the pre-campaign segment, and its buckets say so: A -> M is
+`STG` +5,120 on **128/128** frames and `SRC` +3,072 on 123/128 with `FTR` flat
+(median +576), while M -> B is `FTR` +7,296 on 128/128 against `STG` -6,016 on
+127/128 and `SRC` -2,304 on 119/128 — equal and opposite, i.e. attribution
+moving between brackets, which is why its whole-loop number is zero.
+
+**Nothing the player sees moved.** `ALL` P50 is identical across all three arms
+(1,119,872) and pairs at median -64, because +7,488 is 1.3% of one 560,190-tick
+VBlank period and lands in `WAIT` (121/128 better, median -7,744). VBlank
+histogram A -> B: 2:520->519, 3:91->91, 4:14->15, 5+:4->4, **max 20 -> 19**,
+cadence violations 0 both. WORK-H frames over 1.12M: **16 -> 15**, and M -> B
+alone moves 17 -> 15.
+
+**The screenshot half landed, and it is decisive.** The `-ExactTimeRemain` lock
+this ledger recorded as owed now exists, so the pair the previous entry could
+not take was taken — on the tick-HUD siblings of both arms (flag-identical to
+the published target except `NDS_TICK_HUD`), cropped to the TOP SCREEN, guest
+viewport rows 0..295, which excludes the console the earlier attempt was
+defeated by:
+
+| tic | cross-build A -> B | same-build floor A | same-build floor B |
+|---|---|---|---|
+| 3400 | **0 of 118,400 (0.0000%), max channel delta 0** | 17.4958% | 17.4958% |
+| 1988 | **0 of 118,400 (0.0000%), max channel delta 0** | 79.2576% | 79.2576% |
+
+Pixel-identical at two unrelated in-match moments against floors of 17% and 79%.
+The two arms' same-build floors are themselves identical to the pixel
+(20,715 and 93,841 both), which independently proves the arms are the same fight
+frame for frame. So the un-flag-gated renderer change alters **nothing** in the
+shipping picture, which is exactly what its own census predicted (flag-0
+exposure is Fox's entry Arwing plus items, and items are off).
+
+**Not reachable, and owed:** the Arwing itself. `capture-cut-g-exact-frames.ps1`
+refuses tic 3600 with "not source GO with a running one-minute timer and unlocked
+fighters" — correctly, the entry runs before the clock starts, so the
+`time_remain` lock cannot address it. A frame-counter lock at a low frame index
+is the cheap candidate.
+
+**VERDICT: publish HELD, not failed.** The brief's rule is "if the A/B prices a
+regression over the noise floor, stop and report", and it does. What the numbers
+recommend is to proceed: the picture is bit-identical, the wall clock and the
+pacing histogram do not move, the over-gate population improves, and the
++7,488 buys the `gcParseDObjAnimJoint` runaway guard that closed the owner's
+"Shield Freeze is back" plus the GObj-pool preallocation. The decision is the
+owner's; nothing was published, and the root ROMs are untouched at
+`99A1F550...E3136B6A` / `60872438...86992D58`.
+
+Evidence: `artifacts/performance/2026-08-04_c62-{A-anchor,M-precampaign,B-head}-128.{json,csv}`,
+`artifacts/visibility/2026-08-04_c62-pub-{A,B}-t{3400,1988}-{a,b}.png`.
+Note the JSON `gitShort` field records the REPO's HEAD at sample time, not the
+ROM's tree — all three read `1d81bf2a27` and only arm B is actually that tree.

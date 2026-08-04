@@ -75,9 +75,20 @@ this is a fidelity call and the owner is the oracle. What changes per row:
                         Counts FOR the flip, subject to the owner's eye.
   * Fox reflector    -- NO CHANGE EITHER WAY, see below. Do not count this row.
   * impact wave      -- a static atlas quad becomes the material-animated model.
+  * reflector       -- STILL NEVER SPAWNS. Do not count this row either way;
+                        it needs the owner's own down-B on a flag-1 ROM.
 Against: content-completeness doctrine says stand-ins are a temporary audit
 state, not a shipping state, which argues for the flip; the tail is 36,032
 worse on a frame already 127,040 over gate, which argues for optimize-first.
+COST LINE, FINAL (2026-08-04, cycle 62). The flip's own price is the GATE 5
+table above -- P50 free, P95 +36,032, over-gate 16 -> 17 of 128. Separately, the
+renderer fixes that made these four rows work are NOT flag-gated and ship at
+either setting, and they were priced this cycle at NIL: WORK-H mean +50 a frame
+and a PIXEL-IDENTICAL flag-0 picture at two tics. So the decision is now purely
+"three effects that look right versus P95 +36,032 in the tail", with no hidden
+shipping cost on the against side. Three rows count FOR (shield, wave, rebirth
+platform), all three OWNER-QUEUED with predictions written above. The owner
+concludes.
 EVIDENCE STILL MISSING, and it is what the decision actually needs: no
 synchronized before/after capture exists for any of the four. Blocking reason is
 tooling, not effort -- a cross-build render comparison must lock on
@@ -405,10 +416,23 @@ captured at the same EXACT_LOCK, so each is a paired before/after:
     the halo either way. The combine fix's effect on it is still unmeasured.
     artifacts/visibility/2026-08-04_c5{8,9}-halo-t2814-flag1-a.png.
   * Fox reflector: unchanged and unreachable here; it still never spawns.
-OWED AT THE PUBLISH POINT: the combine fix is in src/nds/nds_renderer.c and is
-NOT flag-gated, so it ships. Its flag-0 exposure is censused above (Fox's entry
-Arwing and items) but has not been run; Boundary at the tracked default is owed
-before the next publish, as its own deliberate step.
+OWED AT THE PUBLISH POINT -- NOW MEASURED (2026-08-04, cycle 62). The combine
+fix and the cycle-58 colour macros are in src/nds/nds_renderer.c and
+include/PR/gbi.h, are NOT flag-gated, and therefore ship. Priced against the
+tree the shipping root ROM was built from (4d1015b752, its tick-HUD sibling
+builds/build-anchor-4d1015b), 128 paired frames 502..629:
+  * COST AT FLAG 0: NIL. Splitting the range at 46d3fca71b isolates the effects
+    campaign to WORK-H median +640, MEAN +50, 9 frames better against 7 worse.
+    The whole +7,488 of the publish delta belongs to the earlier freeze-fix /
+    GObj-pool segment, which is FTR-flat and STG/SRC-heavy.
+  * APPEARANCE AT FLAG 0: PIXEL-IDENTICAL. Top-screen crops at tics 3400 and
+    1988, 0 of 118,400 pixels differing, max channel delta 0, against same-build
+    adjacent-present floors of 17.50% and 79.26%. Both arms' floors match to the
+    pixel, which proves they are the same fight.
+So the un-flag-gated surface changes nothing that ships, and the earlier worry
+that it "adds real active-frame work" is answered: not at the tracked default.
+Boundary at the tracked default is still owed and was not run -- the publish is
+HELD on the A/B finding, see docs/PERF_LEDGER.md "PUBLISH PRICING".
 ALSO OWED, AND NOT MEASURED: the fix adds real active-frame work -- effects that
 drew untextured now bind and upload a texture. The capture HUD's running FPS
 readout differs on frames carrying one (shield 29.1 -> 27.9, wave 28.3 -> 27.0,
