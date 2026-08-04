@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize Fixed Math"
-  short_description: "Replace expensive float/divide/sqrt work with proven DS-native arithmetic."
-  default_prompt: "Use $smash64ds-optimize-fixed-math for this Smash64DS_Port task."

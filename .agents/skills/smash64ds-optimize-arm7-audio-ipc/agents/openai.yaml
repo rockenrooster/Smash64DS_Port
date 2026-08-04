@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize ARM7 Audio IPC"
-  short_description: "Optimize BGM, FGM, mixer channels, ARM7 service, IPC, and streaming behavior."
-  default_prompt: "Use $smash64ds-optimize-arm7-audio-ipc for this Smash64DS_Port task."

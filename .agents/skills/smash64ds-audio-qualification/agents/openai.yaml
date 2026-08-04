@@ -1,4 +1,0 @@
-interface:
-  display_name: "Qualify P1 Audio Path"
-  short_description: "Qualify one audio path from source event to audible DS output with full evidence."
-  default_prompt: "Use $smash64ds-audio-qualification for this audio path."

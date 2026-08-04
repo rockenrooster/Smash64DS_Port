@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize 2D OAM Display"
-  short_description: "Optimize DS BG layers, sprites, OAM, wallpaper, display routing, and VBlank commits."
-  default_prompt: "Use $smash64ds-optimize-2d-oam-display for this Smash64DS_Port task."

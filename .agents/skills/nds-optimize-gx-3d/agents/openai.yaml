@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize Nintendo DS GX 3D"
-  short_description: "Optimize Nintendo DS GX 3D rendering"
-  default_prompt: "Use $nds-optimize-gx-3d to analyze and optimize this Nintendo DS 3D rendering path."

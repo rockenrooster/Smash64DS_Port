@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize Nintendo DS ARM7 Audio"
-  short_description: "Optimize ARM7 audio, channels, and IPC"
-  default_prompt: "Use $nds-optimize-arm7-audio to implement or optimize this Nintendo DS audio path."

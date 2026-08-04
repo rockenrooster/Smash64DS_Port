@@ -1,4 +1,0 @@
-interface:
-  display_name: "Measure Frame Pacing"
-  short_description: "Design trustworthy DS tick, VBlank, bucket, and subsystem performance experiments."
-  default_prompt: "Use $smash64ds-measure-frame-pacing for this Smash64DS_Port task."

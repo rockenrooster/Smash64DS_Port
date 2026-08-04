@@ -20,7 +20,13 @@ feel; the DS implementation may differ radically from the original engine.
 
 ## Hard Rules
 
-- Treat `decomp/` as read-only reference source. Never edit it.
+- Treat `decomp/` as read-only reference source. Never edit it. The one
+  sanctioned exception is `decomp/BattleShip-main/decomp`, which the Makefile
+  compiles in place: its five `SSB64_TARGET_NDS` edits are tracked as patches
+  under `scripts/decomp-patches/battleship/`. Change those files by editing the
+  patch, never the working tree. `/decomp/` is gitignored (third-party source
+  plus ROM-derived data); `scripts/fetch-battleship-reference.ps1` rebuilds it
+  from upstream at the pinned commits, and `-VerifyOnly` checks an existing tree.
 - Inspect relevant BattleShip source before changing gameplay or renderer behavior.
 - Inspect `decomp/sm64-nds` and `decomp/sm64ds-decomp` before substantial DS
   renderer, memory, asset, hardware, or backend architecture changes, or when stuck on an issue.
@@ -103,11 +109,11 @@ Latest instead when normal/shared startup is affected. Do not stack DevFast,
 Boundary, and Latest when they cover the same runtime. The registry exposes
 only Latest and Boundary; the retired diagnostic fleet must not return.
 
-Subagent switch: **OPENCODE-AGENT**.
+Subagent switch: **OFF**.
 
 * `OFF`: let already-running subagents finish, but do not spawn, follow up, or reassign one until the user explicitly switches this back to `ON`.
-* `ON`: keep up to **1** long-lived helper agent/agents and assign tasks with appropriate effort (OPUS 5: max, xhigh, high). Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings. New worktrees should be in D:\Stuff\DevFolder\Smash64DS_Port_worktrees
-* `OPENCODE-AGENT`: keep up to **4** opencode agents working for you, gathering context, searching files and other SIMPLE tasks using the "opencode-agent" skill. helpful documentation contained here: https://opencode.ai/docs/cli/ Always use the opencode/deepseek-v4-flash-free model. If you opt to not use the skill here is an example: pwsh.exe -command "opencode run -m opencode/deepseek-v4-flash-free --variant Max 'Do X. you will not recieve a reply from me'" "you will not recieve a reply from me" can be important so that it actually follows through without asking a question. Also remember these opencode agents are SIMPLE AI agents, cheap and not that smart, so shouldn't be trusted for writing code. May be useful for line count limited docs like HANDOFF.md since Opus 5 struggles with that.
+* `ON`: keep up to **10** long-lived helper agent/agents and assign tasks with appropriate model and effort. Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings. New worktrees should be in D:\Stuff\DevFolder\Smash64DS_Port_worktrees
+* `OPENCODE-AGENT`: please keep up to **5** opencode agents working for you concurrently using the "opencode-agent" skill. May also be useful for line count limited docs like HANDOFF.md since Opus 5 struggles with that. These are free and cost nothing.
 
 Prefer deletion, existing helpers, fixed DS hardware paths, and the fastest
 correct mechanically equivalent implementation. At equal cost, less code wins.
@@ -139,6 +145,7 @@ Prefer larger slices of work.
 Examples of inefficiencies:
 -Don't wait 120 seconds for a 60 second match timer.
 -Don't build a ROM just to test the smallest code changes (unless its for fixing bugs).
+-when testing a scene, go directly to the scene instead of waiting for a timer or a match to complete
 
 ## Current Boundary
 

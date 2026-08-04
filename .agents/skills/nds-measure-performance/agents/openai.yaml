@@ -1,4 +1,0 @@
-interface:
-  display_name: "Measure Nintendo DS Performance"
-  short_description: "Measure Nintendo DS frame time and tails"
-  default_prompt: "Use $nds-measure-performance to measure and attribute this Nintendo DS performance issue."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Manage Nintendo DS RAM and VRAM"
-  short_description: "Budget Nintendo DS memory and residency"
-  default_prompt: "Use $nds-manage-memory-vram to audit and improve this Nintendo DS memory or VRAM path."

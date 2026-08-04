@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize GX 3D"
-  short_description: "Optimize DS geometry submission, matrices, primitives, textures, and GX backpressure."
-  default_prompt: "Use $smash64ds-optimize-gx-3d for this Smash64DS_Port task."

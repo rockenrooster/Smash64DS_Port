@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize Nintendo DS 2D Display"
-  short_description: "Optimize Nintendo DS 2D and OAM display"
-  default_prompt: "Use $nds-optimize-2d-display to optimize this Nintendo DS 2D, BG, or OAM path."

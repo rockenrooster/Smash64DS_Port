@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize Nintendo DS DMA and Storage"
-  short_description: "Optimize DMA, card I/O, and data movement"
-  default_prompt: "Use $nds-optimize-dma-storage to optimize this Nintendo DS transfer or storage path."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Harden Platform Input IRQs"
-  short_description: "Debug DS startup, input polling, interrupts, shared state, and platform services."
-  default_prompt: "Use $smash64ds-harden-platform-input-irqs for this Smash64DS_Port task."

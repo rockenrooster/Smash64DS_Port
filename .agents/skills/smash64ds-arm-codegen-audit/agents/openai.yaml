@@ -1,4 +1,0 @@
-interface:
-  display_name: "Audit ARM Code Generation"
-  short_description: "Audit one measured ARM9/ARM7 hot symbol's devkitARM codegen and test one exact change."
-  default_prompt: "Use $smash64ds-arm-codegen-audit on this measured hot symbol."

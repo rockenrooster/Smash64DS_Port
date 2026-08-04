@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize ARM9 Memory"
-  short_description: "Investigate ARM9 CPU, cache, TCM, alignment, locality, and hot-code costs."
-  default_prompt: "Use $smash64ds-optimize-arm9-memory for this Smash64DS_Port task."

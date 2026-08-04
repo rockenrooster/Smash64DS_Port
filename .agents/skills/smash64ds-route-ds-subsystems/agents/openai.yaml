@@ -1,4 +1,0 @@
-interface:
-  display_name: "Route DS Subsystem Work"
-  short_description: "Classify low-level Smash64DS work and load only the relevant subsystem skills."
-  default_prompt: "Use $smash64ds-route-ds-subsystems for this Smash64DS_Port task."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Optimize Nintendo DS Fixed Math"
-  short_description: "Optimize Nintendo DS fixed-point arithmetic"
-  default_prompt: "Use $nds-optimize-fixed-math to optimize this measured Nintendo DS arithmetic path."

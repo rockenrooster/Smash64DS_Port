@@ -1,4 +1,0 @@
-interface:
-  display_name: "Budget RAM VRAM Assets"
-  short_description: "Plan DS memory residency, arenas, caches, texture VRAM, and asset lifetime."
-  default_prompt: "Use $smash64ds-budget-ram-vram-assets for this Smash64DS_Port task."
