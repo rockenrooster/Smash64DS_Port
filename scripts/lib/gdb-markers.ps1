@@ -48,6 +48,17 @@ function Invoke-GdbMarkerScript {
         }
     )
 
+    # MI interactive mode is useless without async: in the default all-stop
+    # synchronous mode GDB stops reading stdin the moment -exec-continue starts,
+    # so the -exec-interrupt this mode exists to deliver is never seen and the
+    # caller times out with no error. Only one caller ever knew to set this by
+    # hand, and a second capture attempt lost a cycle rediscovering it, so the
+    # mode now guarantees it rather than documenting it.
+    if ($MiInteractive -and
+        (-not ($patchedCommands -match '^\s*set\s+mi-async\s'))) {
+        $patchedCommands = @('set mi-async on') + $patchedCommands
+    }
+
     $gdbScriptPath = Join-Path $tempDir $ScriptName
     $gdbStdoutPath = Join-Path $tempDir ($ScriptName + '.out')
     $gdbStderrPath = Join-Path $tempDir ($ScriptName + '.err')

@@ -44,11 +44,14 @@ OPEN.
     exonerates nothing since later commits remain (27); shift is non-uniform
     with no symbol crossing a region edge, and stale absolute addresses are
     noise at 10 hits vs ~8 expected by chance (29).
-    OPEN: the spinning PC. Pre-attach + interrupt is the right shape (a second
-    GDB cannot attach to a hung guest, 21), but gdb's `shell` stalls do not
-    block in batch, so `interrupt` had not completed before the next command
-    (30). Drive the timing host-side via Invoke-GdbMarkerScript's -ReadyFile
-    interactive mode instead.
+    CAPTURED (31): there is no spinning PC. Four stops spanning 36s all read
+    PC armWaitForIrq+4 (0x1fff390, nm-confirmed 8-byte fn), bt armWaitForIrq
+    <- armContextLoad, cpsr 0x1f, while presented stayed frozen at 195 --
+    inside the 175-200 window. The ARM9 is IDLE in calico's wait-for-IRQ, so
+    this is a blocked wait / lost wakeup, not a runaway loop, which is why
+    every counter-based probe came back clean. Attachment does not perturb
+    the repro. OPEN: name the blocked waiter and the event it misses.
+    artifacts/verification/2026-08-03_flag0-hang-pc.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
