@@ -1124,10 +1124,6 @@
           "classification": "live_camera_independent"
         },
         {
-          "access": "entry.key",
-          "classification": "live_camera_independent"
-        },
-        {
           "access": "entry.key_generation",
           "classification": "live_camera_independent"
         },
@@ -1712,14 +1708,6 @@
         {
           "access": "candidate.site",
           "classification": "callback_visible_mutation_output"
-        },
-        {
-          "access": "entry.key.prim_lod_fraction",
-          "classification": "live_camera_independent"
-        },
-        {
-          "access": "entry.key.texel1_image",
-          "classification": "live_camera_independent"
         },
         {
           "access": "entry.key_generation",

@@ -567,7 +567,7 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
-                config.texture_data_layout entry.green_texels entry.key
+                config.texture_data_layout entry.green_texels
                 entry.key_generation entry.key_hash entry.last_used_frame
                 entry.name entry.nonwhite_texels entry.params entry.pinned
                 entry.profile_height entry.profile_width entry.ready
@@ -719,7 +719,6 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
-                entry.key.prim_lod_fraction entry.key.texel1_image
                 entry.key_generation entry.ready state.source_command_site
                 stats.texture_source_hash1 stats.texture_source_hash2
                 """,

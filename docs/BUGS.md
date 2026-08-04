@@ -17,7 +17,7 @@ These bugs should be fixed for P1 delivery:
 - Fox reflector is green for some reason, should be blue
 
 - I see missing textures/texture corruption. But ONLY AFTER dying. I don't know if the death explode blast pillar or the floating revival platform triggers it. once it triggers, some things lose their textures.
-  LOCALIZED: texture cache slot exhaustion (reason 0x400, evictable=0); more slots cost RAM the arena does not have.
+  MEASURED: static slots read their key from ROM; 48->69 entries at -64 bytes bss, reject reason 0.
 
 - Check scaling on the hit effects (for example, A attacks, Forward A, strong A), some look bigger than they should be.
 

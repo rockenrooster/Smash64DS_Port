@@ -701,7 +701,7 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
     required_tokens = (
         "_Static_assert(sizeof(NDSRendererHardwareTextureKey) == 236u",
         "return (memcmp(a, b, sizeof(*a)) == 0) ? TRUE : FALSE;",
-        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 48u",
+        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 69u",
         "u32 key_hash;",
     )
     for token in required_tokens:
@@ -713,9 +713,15 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
         "fields": list(fields),
         "pointer_identity_fields": ["image", "tlut_image", "texel1_image"],
         "equality": "memcmp over all 236 bytes",
-        "current_cache_entries": 48,
-        "cache_entry_bytes_profile_lt2": 280,
-        "cache_entry_bytes_profile_ge2": 276,
+        # The key left the entry on 2026-08-04: dynamic slots own a pool key and
+        # the 24 static slots read 56 of their 59 words out of the generated ROM
+        # record, keeping only the three runtime pointer words in RAM.
+        "current_cache_entries": 69,
+        "static_cache_entries": 24,
+        "cache_entry_bytes_profile_lt2": 44,
+        "cache_entry_bytes_profile_ge2": 40,
+        "dynamic_key_pool_bytes": 45 * 236,
+        "static_pointer_word_bytes": 24 * 12,
         "source_block_census_is_complete_key_census": False,
     }
 

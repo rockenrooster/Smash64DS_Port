@@ -1475,14 +1475,47 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * thisframe=20, so nothing may be evicted and every further distinct texture is
  * refused with reason 0x400 (ALLOC), 2,592 times in one match. That diagnosis
  * stands. What does not work is paying for it in slots: 48 -> 96 costs +14,016
- * bytes (entries are 292 each) and main RAM has no headroom to give.
+ * bytes (entries were 292 each) and main RAM has no headroom to give.
  * soak-freeze-watch.ps1:1104 records gNdsTaskmanGeneralHeapFreeMin at 24,404 --
  * already under the 25,600 at which ifCommonSetMaxNumGObj permanently caps the
  * GObj pool -- and binary growth costs that arena one for one. The measured
  * result was a guest that never completed a single battle frame.
- * Any fix for row 6 must be RAM-neutral or RAM-negative: shrink the 292-byte
- * entry, or release some of the 28 pins. Do not re-run the growth experiment. */
-#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 48u
+ * Any fix for row 6 must be RAM-neutral or RAM-negative: shrink the entry, or
+ * release some of the 28 pins. Do not re-run the growth experiment.
+ *
+ * 69 IS THAT RAM-NEGATIVE FIX, AND THE BYTES CAME FROM ROM DUPLICATION.
+ *
+ * Each of the 24 pinned static entries carried a resident 236-byte key that is
+ * byte-identical to the key_words[59] its generated ROM record already holds,
+ * except at the three POINTER words (image / tlut / texel1) where ROM stores an
+ * asset offset and the runtime needs a loaded address. So the key left the
+ * entry: dynamic slots own a pool key, static slots own three resident words
+ * and read the other 56 straight out of ROM. Repacking the entry's own fields
+ * (u8 flags, u16 dimensions) took it from 56 bytes to 44 on top of that.
+ *
+ *   before  48 x 292                                   = 14,016 bytes
+ *   after   69 x 44 + 45 x 236 + 24 x 12                = 13,944 bytes
+ *
+ * The cache is a fixed partition, which is what makes the pool index free:
+ * slots [0, STATIC_COUNT) are the static corpus, one slot per record index, and
+ * slots [STATIC_COUNT, CACHE_COUNT) are dynamic and own key pool entry
+ * slot - STATIC_COUNT. No free list, no back-pointer, no extra word per entry.
+ *
+ * WHY 69 AND NOT MORE. Every non-static entry needs its own 236-byte key, so
+ * the pool is CACHE_COUNT - STATIC_COUNT and the whole thing costs
+ * 280 x CACHE_COUNT - 5,376 bytes; 70 crosses the 14,016 the old cache spent.
+ * The demand it has to serve is 37 distinct keys per frame measured AT THE
+ * REQUEST SITE, so rejected requests still count (artifacts/performance/
+ * texture-demand-postko.json, 113 requests -> 37 distinct, flat over 40
+ * post-KO frames). 28 pinned + 37 distinct = 65 slots is therefore sufficient
+ * whatever fraction of the 37 turns out to be pinned, and 69 clears it by 4.
+ * Growing past 69 needs a smaller key, not more slots -- the 24-word texel1
+ * block is 96 of the 236 bytes and is zero on every entry that does not
+ * multitexture. */
+#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 69u
+#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 24u
+#define NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT \
+    (NDS_RENDERER_HW_TEXTURE_CACHE_COUNT - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT)
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY 0u
 #define NDS_RENDERER_CCMUX_COMBINED 0u
@@ -3439,25 +3472,38 @@ typedef struct NDSRendererHardwareTextureKey
     u32 combine_w1;
 } NDSRendererHardwareTextureKey;
 
+/* NO RESIDENT KEY. A slot's key lives either in the dynamic pool or in its
+ * generated ROM record plus three resident pointer words -- see the
+ * NDS_RENDERER_HW_TEXTURE_CACHE_COUNT note for why, and
+ * ndsRendererHardwareEntryKeyEqual for the one place that has to know which.
+ * Read a word through ndsRendererHardwareEntryKeyWord and a whole key through
+ * ndsRendererHardwareEntryCopyKey; there is no `entry->key` to reach for.
+ *
+ * The remaining fields are packed rather than one-u32-each because at 69 slots
+ * every four bytes spent here is 276 bytes of a budget with 72 to spare. Widths
+ * are the source's own: owner_mask and the upload dimensions are u16 in
+ * NDSBattlePlayableStaticTextureRecord, static_record_plus1 is bounded at 32 by
+ * ndsRendererHardwareRecordBattleStaticTextureHit, and ready/pinned are
+ * booleans. */
 typedef struct NDSRendererHardwareTextureCacheEntry
 {
     int name;
-    u32 ready;
-    u32 pinned;
-    u32 static_record_plus1;
-    u32 static_owner_mask;
     u32 params;
     u32 source_texels;
     u32 green_texels;
     u32 nonwhite_texels;
-    u32 profile_width;
-    u32 profile_height;
     u32 last_used_frame;
     u32 key_generation;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 key_hash;
 #endif
-    NDSRendererHardwareTextureKey key;
+    u16 profile_width;
+    u16 profile_height;
+    u16 static_owner_mask;
+    u8 ready;
+    u8 pinned;
+    u8 static_record_plus1;
+    u8 reserved;
 } NDSRendererHardwareTextureCacheEntry;
 
 typedef struct NDSRendererHardwareResolvedTexture
@@ -3518,6 +3564,15 @@ typedef struct NDSRendererHardwareLightShadeCacheEntry
 
 static NDSRendererHardwareTextureCacheEntry
     sNdsRendererHardwareTextureCache[NDS_RENDERER_HW_TEXTURE_CACHE_COUNT];
+/* Dynamic slot i owns pool entry i - STATIC_COUNT. The partition IS the pool
+ * index, which is why no entry carries one. */
+static NDSRendererHardwareTextureKey
+    sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT];
+/* The three words a generated record cannot supply, because ROM stores asset
+ * OFFSETS and a live key holds loaded ADDRESSES. Indexed by static slot, which
+ * is the record index. Order is image, tlut, texel1. */
+static u32 sNdsRendererHardwareStaticKeyPointers[
+    NDS_RENDERER_HW_TEXTURE_STATIC_COUNT][3];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
 static u8 sNdsRendererHardwareTextureLookup[
     NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT];
@@ -3531,8 +3586,260 @@ _Static_assert(
 _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <
                    NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT,
                "texture lookup must retain an empty cluster terminator");
+/* The lookup stores slot + 1 in a u8, so 254 slots is its hard ceiling. */
+_Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <= 254u,
+               "texture lookup stores slot+1 in a u8");
+/* The whole point of the exercise: this must not exceed the 14,016 bytes the
+ * 48-entry resident-key cache spent, because +14KB of bss took
+ * gNdsTaskmanGeneralHeapFreeMin under the GObj cap and the ROM stopped booting.
+ * 13,944 today. Raise CACHE_COUNT and this is what refuses. */
+_Static_assert(sizeof(sNdsRendererHardwareTextureCache) +
+                       sizeof(sNdsRendererHardwareTextureKeyPool) +
+                       sizeof(sNdsRendererHardwareStaticKeyPointers) <=
+                   14016u,
+               "texture cache storage must stay at or under the 48x292 budget");
 #endif
 #endif
+#if defined(__arm__)
+/* A static slot's key is its record's key_words with three words replaced, so
+ * these four have to agree or the reconstruction silently compares the wrong
+ * bytes. */
+_Static_assert(sizeof(NDSRendererHardwareTextureKey) ==
+                   NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT *
+                       sizeof(u32),
+               "texture key and generated record must hold the same words");
+_Static_assert(__builtin_offsetof(NDSRendererHardwareTextureKey, image) ==
+                   NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD * sizeof(u32),
+               "image word index disagrees with the generated record");
+_Static_assert(__builtin_offsetof(NDSRendererHardwareTextureKey, tlut_image) ==
+                   NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD * sizeof(u32),
+               "tlut word index disagrees with the generated record");
+_Static_assert(__builtin_offsetof(NDSRendererHardwareTextureKey,
+                                  texel1_image) ==
+                   NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD * sizeof(u32),
+               "texel1 word index disagrees with the generated record");
+#endif
+
+#define NDS_RENDERER_HW_TEXTURE_KEY_WORD(field) \
+    ((u32)(__builtin_offsetof(NDSRendererHardwareTextureKey, field) / \
+           sizeof(u32)))
+
+static u32 ndsRendererHardwareEntrySlot(
+    const NDSRendererHardwareTextureCacheEntry *entry)
+{
+    return (u32)(entry - sNdsRendererHardwareTextureCache);
+}
+
+/* The writable pool key of a dynamic slot; NULL for a static one. */
+static NDSRendererHardwareTextureKey *ndsRendererHardwareEntryDynamicKey(
+    const NDSRendererHardwareTextureCacheEntry *entry)
+{
+    u32 slot;
+
+    if (entry == NULL)
+    {
+        return NULL;
+    }
+    slot = ndsRendererHardwareEntrySlot(entry);
+    if ((slot < NDS_RENDERER_HW_TEXTURE_STATIC_COUNT) ||
+        (slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT))
+    {
+        return NULL;
+    }
+    return &sNdsRendererHardwareTextureKeyPool[
+        slot - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT];
+}
+
+/* The generated record backing a static slot; NULL for a dynamic or empty one. */
+static const NDSBattlePlayableStaticTextureRecord *
+ndsRendererHardwareEntryStaticRecord(
+    const NDSRendererHardwareTextureCacheEntry *entry)
+{
+    if ((entry == NULL) || (entry->static_record_plus1 == 0u) ||
+        (ndsRendererHardwareEntrySlot(entry) >=
+         NDS_RENDERER_HW_TEXTURE_STATIC_COUNT))
+    {
+        return NULL;
+    }
+    return ndsBattlePlayableStaticTextureRecordAt(
+        (u32)entry->static_record_plus1 - 1u);
+}
+
+static u32 ndsRendererHardwareEntryKeyWord(
+    const NDSRendererHardwareTextureCacheEntry *entry, u32 word)
+{
+    const NDSRendererHardwareTextureKey *dynamic;
+    const NDSBattlePlayableStaticTextureRecord *record;
+
+    if (word >= NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT)
+    {
+        return 0u;
+    }
+    dynamic = ndsRendererHardwareEntryDynamicKey(entry);
+    if (dynamic != NULL)
+    {
+        return ((const u32 *)dynamic)[word];
+    }
+    record = ndsRendererHardwareEntryStaticRecord(entry);
+    if (record == NULL)
+    {
+        return 0u;
+    }
+    switch (word)
+    {
+    case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD:
+        return sNdsRendererHardwareStaticKeyPointers[
+            ndsRendererHardwareEntrySlot(entry)][0];
+    case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD:
+        return sNdsRendererHardwareStaticKeyPointers[
+            ndsRendererHardwareEntrySlot(entry)][1];
+    case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD:
+        return sNdsRendererHardwareStaticKeyPointers[
+            ndsRendererHardwareEntrySlot(entry)][2];
+    default:
+        break;
+    }
+    return record->key_words[word];
+}
+
+/* Materialise a whole key. 236 bytes of copy -- callers that want one word use
+ * ndsRendererHardwareEntryKeyWord, and the lookup compares in place. */
+static void ndsRendererHardwareEntryCopyKey(
+    const NDSRendererHardwareTextureCacheEntry *entry,
+    NDSRendererHardwareTextureKey *out)
+{
+    const NDSRendererHardwareTextureKey *dynamic;
+    const NDSBattlePlayableStaticTextureRecord *record;
+    const u32 *pointers;
+
+    if (out == NULL)
+    {
+        return;
+    }
+    dynamic = ndsRendererHardwareEntryDynamicKey(entry);
+    if (dynamic != NULL)
+    {
+        *out = *dynamic;
+        return;
+    }
+    record = ndsRendererHardwareEntryStaticRecord(entry);
+    if (record == NULL)
+    {
+        memset(out, 0, sizeof(*out));
+        return;
+    }
+    memcpy(out, record->key_words, sizeof(*out));
+    pointers =
+        sNdsRendererHardwareStaticKeyPointers[
+            ndsRendererHardwareEntrySlot(entry)];
+    out->image = pointers[0];
+    out->tlut_image = pointers[1];
+    out->texel1_image = pointers[2];
+}
+
+/* THE ONE PLACE THAT KNOWS A SLOT MAY NOT OWN ITS KEY.
+ *
+ * Dynamic slots compare against the pool exactly as the resident key used to.
+ * Static slots compare the three runtime pointer words against RAM and the
+ * other 56 against ROM -- which is exact, not an approximation, because the
+ * prepare built the key by memcpy-ing key_words and then overwriting precisely
+ * those three. Word 0, word 4 and word 32 leave three contiguous spans. */
+static s32 ndsRendererHardwareEntryKeyEqual(
+    const NDSRendererHardwareTextureCacheEntry *entry,
+    const NDSRendererHardwareTextureKey *key)
+{
+    const NDSRendererHardwareTextureKey *dynamic;
+    const NDSBattlePlayableStaticTextureRecord *record;
+    const u32 *pointers;
+    const u32 *words;
+
+    if ((entry == NULL) || (key == NULL))
+    {
+        return FALSE;
+    }
+    dynamic = ndsRendererHardwareEntryDynamicKey(entry);
+    if (dynamic != NULL)
+    {
+        return (memcmp(dynamic, key, sizeof(*key)) == 0) ? TRUE : FALSE;
+    }
+    record = ndsRendererHardwareEntryStaticRecord(entry);
+    if (record == NULL)
+    {
+        return FALSE;
+    }
+    pointers =
+        sNdsRendererHardwareStaticKeyPointers[
+            ndsRendererHardwareEntrySlot(entry)];
+    words = (const u32 *)key;
+    if ((words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD] !=
+         pointers[0]) ||
+        (words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD] !=
+         pointers[1]) ||
+        (words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD] !=
+         pointers[2]))
+    {
+        return FALSE;
+    }
+    return ((memcmp(&record->key_words[1], &words[1],
+                    3u * sizeof(u32)) == 0) &&
+            (memcmp(&record->key_words[5], &words[5],
+                    27u * sizeof(u32)) == 0) &&
+            (memcmp(&record->key_words[33], &words[33],
+                    26u * sizeof(u32)) == 0)) ? TRUE : FALSE;
+}
+
+static void ndsRendererHardwareEntrySetKey(
+    NDSRendererHardwareTextureCacheEntry *entry,
+    const NDSRendererHardwareTextureKey *key)
+{
+    NDSRendererHardwareTextureKey *dynamic =
+        ndsRendererHardwareEntryDynamicKey(entry);
+
+    if ((dynamic == NULL) || (key == NULL))
+    {
+        return;
+    }
+    *dynamic = *key;
+}
+
+/* A static slot keeps only the three pointer words; the rest is its record. */
+static void ndsRendererHardwareEntrySetStaticKey(
+    NDSRendererHardwareTextureCacheEntry *entry,
+    const NDSRendererHardwareTextureKey *key)
+{
+    u32 slot = ndsRendererHardwareEntrySlot(entry);
+    u32 *pointers;
+
+    if ((key == NULL) || (slot >= NDS_RENDERER_HW_TEXTURE_STATIC_COUNT))
+    {
+        return;
+    }
+    pointers = sNdsRendererHardwareStaticKeyPointers[slot];
+    pointers[0] = key->image;
+    pointers[1] = key->tlut_image;
+    pointers[2] = key->texel1_image;
+}
+
+static void ndsRendererHardwareEntryClearKey(
+    NDSRendererHardwareTextureCacheEntry *entry)
+{
+    NDSRendererHardwareTextureKey *dynamic =
+        ndsRendererHardwareEntryDynamicKey(entry);
+    u32 slot;
+
+    if (dynamic != NULL)
+    {
+        memset(dynamic, 0, sizeof(*dynamic));
+        return;
+    }
+    slot = ndsRendererHardwareEntrySlot(entry);
+    if (slot < NDS_RENDERER_HW_TEXTURE_STATIC_COUNT)
+    {
+        memset(sNdsRendererHardwareStaticKeyPointers[slot], 0,
+               sizeof(sNdsRendererHardwareStaticKeyPointers[slot]));
+    }
+}
+
 static u32 sNdsRendererHardwareTextureCacheNext;
 static u32 sNdsRendererHardwareTextureKeyGeneration;
 static u32 sNdsRendererHardwareFrameSerial;
@@ -9519,7 +9826,7 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
         sNdsRendererHardwareActiveTextureEntry;
     if ((entry != NULL) && (entry->ready != 0u) &&
         (entry->key_hash == key_hash) &&
-        (ndsRendererHardwareTextureKeyEqual(&entry->key, key) != FALSE))
+        (ndsRendererHardwareEntryKeyEqual(entry, key) != FALSE))
     {
         sNdsRendererRuntimeFrameSummary.texture_lookup_active_hit_count++;
         return entry;
@@ -9537,7 +9844,7 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
         }
         entry = &sNdsRendererHardwareTextureCache[value - 1u];
         if ((entry->ready != 0u) && (entry->key_hash == key_hash) &&
-            (ndsRendererHardwareTextureKeyEqual(&entry->key, key) != FALSE))
+            (ndsRendererHardwareEntryKeyEqual(entry, key) != FALSE))
         {
             sNdsRendererRuntimeFrameSummary
                 .texture_lookup_table_hit_count++;
@@ -9549,15 +9856,21 @@ ndsRendererHardwareFindTexture(const NDSRendererHardwareTextureKey *key,
     (void)key_hash;
     for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
     {
-        if ((sNdsRendererHardwareTextureCache[i].ready != 0u) &&
-            (ndsRendererHardwareTextureKeyEqual(
-                 &sNdsRendererHardwareTextureCache[i].key, key) != FALSE))
+        NDSRendererHardwareTextureKey resident;
+
+        if (sNdsRendererHardwareTextureCache[i].ready == 0u)
+        {
+            continue;
+        }
+        if (ndsRendererHardwareEntryKeyEqual(
+                &sNdsRendererHardwareTextureCache[i], key) != FALSE)
         {
             return &sNdsRendererHardwareTextureCache[i];
         }
-        if ((sNdsRendererHardwareTextureCache[i].ready != 0u) &&
-            (ndsRendererHardwareTextureKeyWouldLegacyAlias(
-                 &sNdsRendererHardwareTextureCache[i].key, key) != FALSE))
+        ndsRendererHardwareEntryCopyKey(
+            &sNdsRendererHardwareTextureCache[i], &resident);
+        if (ndsRendererHardwareTextureKeyWouldLegacyAlias(
+                &resident, key) != FALSE)
         {
             ndsRendererProfileRecordTextureAliasAvoid();
         }
@@ -9589,7 +9902,7 @@ ndsRendererHardwareFindStageSourceFrameTexture(
         {
             continue;
         }
-        source_frame = entry->key;
+        ndsRendererHardwareEntryCopyKey(entry, &source_frame);
         source_frame.image = key->image;
         if (ndsRendererHardwareTextureKeyEqual(&source_frame, key) != FALSE)
         {
@@ -9613,13 +9926,18 @@ ndsRendererHardwareFindTexel1RefreshTexture(
     {
         NDSRendererHardwareTextureCacheEntry *entry =
             &sNdsRendererHardwareTextureCache[i];
+        /* Only ever a dynamic slot: this refuses pinned entries, and the static
+         * partition holds nothing else. */
+        const NDSRendererHardwareTextureKey *resident =
+            ndsRendererHardwareEntryDynamicKey(entry);
 
-        if ((entry->ready != 0u) && (entry->pinned == 0u) &&
-            (entry->key.texel1_image != 0u) &&
+        if ((resident != NULL) && (entry->ready != 0u) &&
+            (entry->pinned == 0u) &&
+            (resident->texel1_image != 0u) &&
             (entry->last_used_frame !=
              (sNdsRendererHardwareFrameSerial + 1u)) &&
             (ndsRendererHardwareTexel1RefreshCompatible(
-                 &entry->key, key) != FALSE))
+                 resident, key) != FALSE))
         {
             return entry;
         }
@@ -9922,6 +10240,11 @@ ndsRendererHardwareReleaseTexture(
     {
         ndsRendererHardwareFencedGlDeleteTextures(1, &entry->name);
     }
+    /* The key is no longer inside the entry, so zeroing the entry no longer
+     * zeroes it. Every reader gates on `ready`, but the particle atlas keeps a
+     * slot ready with a deliberately blank key, so a released slot must really
+     * be blank rather than merely unreachable. */
+    ndsRendererHardwareEntryClearKey(entry);
     memset(entry, 0, sizeof(*entry));
     return entry;
 }
@@ -9931,14 +10254,17 @@ static s32 ndsRendererHardwareEvictTexture(
 {
     u32 i;
 
-    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    /* The static partition is pinned by construction, so an eviction sweep that
+     * walked it would only ever be counting slots it may not take. */
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT; i++)
     {
-        u32 index = sNdsRendererHardwareTextureCacheNext %
-            NDS_RENDERER_HW_TEXTURE_CACHE_COUNT;
+        u32 index = NDS_RENDERER_HW_TEXTURE_STATIC_COUNT +
+            (sNdsRendererHardwareTextureCacheNext %
+             NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT);
         NDSRendererHardwareTextureCacheEntry *entry =
             &sNdsRendererHardwareTextureCache[index];
 
-        sNdsRendererHardwareTextureCacheNext = index + 1u;
+        sNdsRendererHardwareTextureCacheNext++;
         if ((entry != exclude) && (entry->name != 0) &&
             (entry->pinned == 0u) &&
             (entry->last_used_frame !=
@@ -9962,7 +10288,12 @@ ndsRendererHardwareAllocTexture(void)
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_ALLOC);
 
-    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    /* Dynamic slots only. Slots below STATIC_COUNT belong to the generated
+     * corpus one-for-one with its record indices and have no pool key to write,
+     * so handing one to a runtime texture would leave it keyless. The static
+     * prepare binds its own slots directly. */
+    for (i = NDS_RENDERER_HW_TEXTURE_STATIC_COUNT;
+         i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
     {
         if (sNdsRendererHardwareTextureCache[i].ready == 0u)
         {
@@ -9971,11 +10302,12 @@ ndsRendererHardwareAllocTexture(void)
                 ndsRendererHardwareReleaseTexture(entry) : entry;
         }
     }
-    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT; i++)
     {
-        index = sNdsRendererHardwareTextureCacheNext %
-            NDS_RENDERER_HW_TEXTURE_CACHE_COUNT;
-        sNdsRendererHardwareTextureCacheNext = index + 1u;
+        index = NDS_RENDERER_HW_TEXTURE_STATIC_COUNT +
+            (sNdsRendererHardwareTextureCacheNext %
+             NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT);
+        sNdsRendererHardwareTextureCacheNext++;
         entry = &sNdsRendererHardwareTextureCache[index];
         if ((entry->pinned == 0u) &&
             (entry->last_used_frame !=
@@ -10916,8 +11248,12 @@ static void ndsRendererStageTextureSiteRemember(
     plan->size = size;
     plan->width = width;
     plan->height = height;
-    plan->uses_texel1 = (entry->key.texel1_image != 0u) ? TRUE : FALSE;
-    plan->prim_lod_fraction = entry->key.prim_lod_fraction;
+    plan->uses_texel1 = (ndsRendererHardwareEntryKeyWord(
+                             entry,
+                             NDS_RENDERER_HW_TEXTURE_KEY_WORD(texel1_image)) !=
+                         0u) ? TRUE : FALSE;
+    plan->prim_lod_fraction = ndsRendererHardwareEntryKeyWord(
+        entry, NDS_RENDERER_HW_TEXTURE_KEY_WORD(prim_lod_fraction));
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     plan->semantic_key_hash = sNdsRendererSemanticLastTextureKeyHash;
     plan->semantic_params = sNdsRendererSemanticLastTextureParams;
@@ -11232,11 +11568,23 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                    palette_bytes);
         }
 
-        entry = ndsRendererHardwareAllocTexture();
-        if (entry == NULL)
+        /* THE SLOT IS THE RECORD INDEX. That identity is what lets a static
+         * entry drop its resident key: reading the other 56 words back out of
+         * ROM needs the record, and reading the three pointer words needs
+         * sNdsRendererHardwareStaticKeyPointers, and both are addressed by this
+         * one number. It also makes the corpus immune to the runtime allocator,
+         * which no longer touches slots below STATIC_COUNT at all. */
+        if (record_index >= NDS_RENDERER_HW_TEXTURE_STATIC_COUNT)
         {
             goto fail;
         }
+        entry = &sNdsRendererHardwareTextureCache[record_index];
+        if ((entry->ready != 0u) || (entry->name != 0))
+        {
+            entry = ndsRendererHardwareReleaseTexture(entry);
+        }
+        ndsRendererHardwareRecordBattleTextureFence(
+            NDS_RENDERER_BATTLE_TEXTURE_FENCE_ALLOC);
         if ((entry->name == 0) &&
             (ndsRendererHardwareFencedGlGenTextures(
                  1, &entry->name) == 0))
@@ -11306,7 +11654,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             }
         }
 
-        entry->key = key;
+        ndsRendererHardwareEntrySetStaticKey(entry, &key);
         sNdsRendererHardwareTextureKeyGeneration++;
         if (sNdsRendererHardwareTextureKeyGeneration == 0u)
         {
@@ -11560,7 +11908,7 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         ndsRendererHardwareTextureLookupRemove(entry);
 #endif
-        memset(&entry->key, 0, sizeof(entry->key));
+        ndsRendererHardwareEntryClearKey(entry);
         entry->key_generation = 0u;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         entry->key_hash = 0u;
@@ -14440,7 +14788,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         ndsRendererHardwareTextureLookupRemove(entry);
 #endif
-        entry->key = key;
+        ndsRendererHardwareEntrySetKey(entry, &key);
         sNdsRendererHardwareTextureKeyGeneration++;
         if (sNdsRendererHardwareTextureKeyGeneration == 0u)
         {
@@ -14878,7 +15226,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareTextureLookupRemove(entry);
 #endif
-    entry->key = key;
+    ndsRendererHardwareEntrySetKey(entry, &key);
     sNdsRendererHardwareTextureKeyGeneration++;
     if (sNdsRendererHardwareTextureKeyGeneration == 0u)
     {
@@ -23941,12 +24289,13 @@ static void ndsRendererBenchmarkSegment0HashTextureKey(
     u32 *out_hash_a,
     u32 *out_hash_b)
 {
-    NDSRendererHardwareTextureKey normalized = entry->key;
+    NDSRendererHardwareTextureKey normalized;
     const u32 *words;
     u32 hash_a = 2166136261u;
     u32 hash_b = 0x9e3779b9u;
     u32 i;
 
+    ndsRendererHardwareEntryCopyKey(entry, &normalized);
     normalized.image = ndsRendererBenchmarkSegment0NormalizeAssetAddress(
         normalized.image, valid);
     normalized.tlut_image =
@@ -28286,6 +28635,10 @@ u32 ndsRendererProfileGlobalStateHash(void)
         hash, sNdsRendererHardwareTriangleBatchMatrixGeneration);
     if (sNdsRendererHardwareActiveTextureEntry != NULL)
     {
+        NDSRendererHardwareTextureKey active;
+
+        ndsRendererHardwareEntryCopyKey(
+            sNdsRendererHardwareActiveTextureEntry, &active);
         hash = ndsRendererProfileHashU32(hash, 1u);
         hash = ndsRendererProfileHashU32(
             hash, (u32)sNdsRendererHardwareActiveTextureEntry->name);
@@ -28294,8 +28647,7 @@ u32 ndsRendererProfileGlobalStateHash(void)
         hash = ndsRendererProfileHashU32(
             hash, sNdsRendererHardwareActiveTextureEntry->params);
         hash = ndsRendererProfileHashU32(
-            hash, ndsRendererProfileTextureKeyHashFull(
-                &sNdsRendererHardwareActiveTextureEntry->key));
+            hash, ndsRendererProfileTextureKeyHashFull(&active));
     }
     else
     {

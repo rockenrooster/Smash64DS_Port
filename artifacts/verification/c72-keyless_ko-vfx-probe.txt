@@ -1,0 +1,207 @@
+@{Stdout=0x01fff384 in armWaitForIrq () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h:117
+Breakpoint 1 at 0x209738c: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c, line 1321.
+Breakpoint 2 at 0x2097340: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c, line 1271.
+Breakpoint 3 at 0x2096ad4: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c, line 254.
+Breakpoint 4 at 0x2088ec0: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondead.c, line 320.
+Breakpoint 5 at 0x20975e0: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c, line 1449.
+Num     Type           Disp Enb Address    What
+1       breakpoint     keep y   0x0209738c in efManagerDeadExplodeMakeEffect at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:1321
+        silent
+        set $explode_calls = $explode_calls + 1
+        set $death_seen = 1
+        set $explode_x = ((Vec3f *)$r0)->x
+        set $explode_y = ((Vec3f *)$r0)->y
+        set $explode_z = ((Vec3f *)$r0)->z
+        set $explode_kind = $r2
+        if $shot_explode == 0
+          set $shot_explode = 1
+          tbreak *0x02044b38
+          ignore $bpnum 5
+          commands
+            silent
+            set $slot0_count = 0
+            set $slot0_noxf = 0
+            set $slot0_noxf_absmax = 0.0
+            set $p = sLBParticleStructsAllocLinks[0]
+            while $p != 0
+              set $slot0_count = $slot0_count + 1
+              if $p->xf == 0
+                set $slot0_noxf = $slot0_noxf + 1
+                if $p->pos.x > $slot0_noxf_absmax
+                  set $slot0_noxf_absmax = $p->pos.x
+                end
+                if -$p->pos.x > $slot0_noxf_absmax
+                  set $slot0_noxf_absmax = -$p->pos.x
+                end
+              end
+              set $p = $p->next
+            end
+            set $slot2_count = 0
+            set $slot2_size = 0.0
+            set $p = sLBParticleStructsAllocLinks[2]
+            while $p != 0
+              set $slot2_count = $slot2_count + 1
+              if $p->size > $slot2_size
+                set $slot2_size = $p->size
+              end
+              set $p = $p->next
+            end
+            printf "KOSHOT tag=ko-burst frame=%u clock=%u p0stock=%u p0dmg=%u p1stock=%u p1dmg=%u explode=%d star=%d rebirth=%d death_seen=%d staticviol=%u staticteardown=%u staticprepfail=%u staticprep=%u staticprepared=%u staticarm=%u staticpin=%u staticowner=%#x staticseen=%#x staticspan=%u staticfirst=%#x staticend=%#x vramreset=%u fbind=%u fready=%u freject=%u fupload=%u eready=%u ereject=%u atlasfail=%u atlasprep=%u memohit=%u memomiss=%u memofill=%u memostale=%u memoverify=%u fence=conv%u/pal%u/alloc%u/io%u/create%u/upload%u/del%u/evict%u/refresh%u/fallback%u fencefirstframe=%u fenceclass=%u notex=%u ownerreject=%u ownerfirst=%u ownerlast=%u abort=%u preparednow=%u postarmreject=%u\n", gNdsFrameCounter, gNdsBattleTextHudTimeSeconds, gNdsBattleTextHudP0Stock, gNdsBattleTextHudP0Damage, gNdsBattleTextHudP1Stock, gNdsBattleTextHudP1Damage, $explode_calls, $star_calls, $rebirth_calls, $death_seen, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTextureTeardownCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureAllocationSpanBytes, gNdsRendererBattleStaticTextureFirstAddress, gNdsRendererBattleStaticTextureEndAddress, gNdsRendererSceneTextureVramResetCount, gNdsFighterDLAllDrawHardwareTextureBindCount, gNdsFighterDLAllDrawHardwareTextureReadyCount, gNdsFighterDLAllDrawHardwareTextureRejectCount, gNdsFighterDLAllDrawHardwareTextureUploadCount, gNdsEffectRendererTextureReadyCount, gNdsEffectRendererTextureRejectCount, gNdsRendererParticleAtlasFailCount, gNdsRendererParticleAtlasPrepareCount, gNdsR2TexMemoHitCount, gNdsR2TexMemoMissCount, gNdsR2TexMemoFillCount, gNdsR2TexMemoStaleCount, gNdsR2TexMemoVerifyFail, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9], gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsFighterDisplayContractNoTextureCount, gNdsRendererStageOwnerRejectCount, gNdsRendererStageOwnerFirstRejectReason, gNdsRendererStageOwnerLastRejectReason, gNdsRendererStageOwnerAbortCount, gNdsRendererStaticTexturePreparedNow, gNdsRendererStageOwnerPostArmRejectCount
+            printf "KOXLU tag=ko-burst othermodel=%#x valid=%u zmode=%#x forcebl=%u cvgxalpha=%u ac=%u\n", gNdsEffectDLOtherModeL, gNdsEffectDLOtherModeValid, (gNdsEffectDLOtherModeL & 0xc00), ((gNdsEffectDLOtherModeL >> 14) & 1), ((gNdsEffectDLOtherModeL >> 12) & 1), (gNdsEffectDLOtherModeL & 3)
+            printf "KOLATCH tag=ko-burst in=%#x out=%#x same=%d submits=%u\n", gNdsEffectDLSubmitOtherModeIn, gNdsEffectDLSubmitOtherModeOut, (gNdsEffectDLSubmitOtherModeIn == gNdsEffectDLSubmitOtherModeOut), gNdsEffectDLSubmitCount
+            printf "KOWAVE tag=ko-burst makes=%u nulls=%u lastindex=%d lastgobj=%u\n", gNdsEffectImpactWaveMakeCount, gNdsEffectImpactWaveMakeNullCount, gNdsEffectImpactWaveLastIndex, gNdsEffectImpactWaveLastGObjID
+            printf "KOREJECT tag=ko-burst reason=%#x t1reason=%#x censusvalid=%u free=%u live=%u pinned=%u evictable=%u thisframe=%u\n", gNdsRendererProfileTextureRejectReasonMask, gNdsRendererProfileTexel1RejectReasonMask, gNdsR2TexRejectCensusValid, gNdsR2TexRejectCensusFree, gNdsR2TexRejectCensusLive, gNdsR2TexRejectCensusPinned, gNdsR2TexRejectCensusEvictable, gNdsR2TexRejectCensusThisFrame
+            shell pwsh -NoProfile -ExecutionPolicy Bypass -File "D:\Stuff\DevFolder\Smash64DS_Port\scripts\capture-running-melonds-window.ps1" -EmulatorProcessId 12852 -Output "artifacts/visibility/c72-keyless_ko-burst-probe.png"
+            continue
+          end
+        end
+        continue
+2       breakpoint     keep y   0x02097340 in efManagerSparkleWhiteDeadMakeEffect at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:1271
+        silent
+        set $star_calls = $star_calls + 1
+        set $death_seen = 1
+        set $star_x = ((Vec3f *)$r0)->x
+        set $star_y = ((Vec3f *)$r0)->y
+        if gMPCollisionGroundData != 0
+          set $cam_top = gMPCollisionGroundData->camera_bound_top
+          set $map_top = gMPCollisionGroundData->map_bound_top
+        end
+        if $shot_star == 0
+          set $shot_star = 1
+          tbreak *0x02044b38
+          ignore $bpnum 5
+          commands
+            silent
+            printf "KOSHOT tag=star-ko frame=%u clock=%u p0stock=%u p0dmg=%u p1stock=%u p1dmg=%u explode=%d star=%d rebirth=%d death_seen=%d staticviol=%u staticteardown=%u staticprepfail=%u staticprep=%u staticprepared=%u staticarm=%u staticpin=%u staticowner=%#x staticseen=%#x staticspan=%u staticfirst=%#x staticend=%#x vramreset=%u fbind=%u fready=%u freject=%u fupload=%u eready=%u ereject=%u atlasfail=%u atlasprep=%u memohit=%u memomiss=%u memofill=%u memostale=%u memoverify=%u fence=conv%u/pal%u/alloc%u/io%u/create%u/upload%u/del%u/evict%u/refresh%u/fallback%u fencefirstframe=%u fenceclass=%u notex=%u ownerreject=%u ownerfirst=%u ownerlast=%u abort=%u preparednow=%u postarmreject=%u\n", gNdsFrameCounter, gNdsBattleTextHudTimeSeconds, gNdsBattleTextHudP0Stock, gNdsBattleTextHudP0Damage, gNdsBattleTextHudP1Stock, gNdsBattleTextHudP1Damage, $explode_calls, $star_calls, $rebirth_calls, $death_seen, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTextureTeardownCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureAllocationSpanBytes, gNdsRendererBattleStaticTextureFirstAddress, gNdsRendererBattleStaticTextureEndAddress, gNdsRendererSceneTextureVramResetCount, gNdsFighterDLAllDrawHardwareTextureBindCount, gNdsFighterDLAllDrawHardwareTextureReadyCount, gNdsFighterDLAllDrawHardwareTextureRejectCount, gNdsFighterDLAllDrawHardwareTextureUploadCount, gNdsEffectRendererTextureReadyCount, gNdsEffectRendererTextureRejectCount, gNdsRendererParticleAtlasFailCount, gNdsRendererParticleAtlasPrepareCount, gNdsR2TexMemoHitCount, gNdsR2TexMemoMissCount, gNdsR2TexMemoFillCount, gNdsR2TexMemoStaleCount, gNdsR2TexMemoVerifyFail, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9], gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsFighterDisplayContractNoTextureCount, gNdsRendererStageOwnerRejectCount, gNdsRendererStageOwnerFirstRejectReason, gNdsRendererStageOwnerLastRejectReason, gNdsRendererStageOwnerAbortCount, gNdsRendererStaticTexturePreparedNow, gNdsRendererStageOwnerPostArmRejectCount
+            printf "KOXLU tag=star-ko othermodel=%#x valid=%u zmode=%#x forcebl=%u cvgxalpha=%u ac=%u\n", gNdsEffectDLOtherModeL, gNdsEffectDLOtherModeValid, (gNdsEffectDLOtherModeL & 0xc00), ((gNdsEffectDLOtherModeL >> 14) & 1), ((gNdsEffectDLOtherModeL >> 12) & 1), (gNdsEffectDLOtherModeL & 3)
+            printf "KOLATCH tag=star-ko in=%#x out=%#x same=%d submits=%u\n", gNdsEffectDLSubmitOtherModeIn, gNdsEffectDLSubmitOtherModeOut, (gNdsEffectDLSubmitOtherModeIn == gNdsEffectDLSubmitOtherModeOut), gNdsEffectDLSubmitCount
+            printf "KOWAVE tag=star-ko makes=%u nulls=%u lastindex=%d lastgobj=%u\n", gNdsEffectImpactWaveMakeCount, gNdsEffectImpactWaveMakeNullCount, gNdsEffectImpactWaveLastIndex, gNdsEffectImpactWaveLastGObjID
+            printf "KOREJECT tag=star-ko reason=%#x t1reason=%#x censusvalid=%u free=%u live=%u pinned=%u evictable=%u thisframe=%u\n", gNdsRendererProfileTextureRejectReasonMask, gNdsRendererProfileTexel1RejectReasonMask, gNdsR2TexRejectCensusValid, gNdsR2TexRejectCensusFree, gNdsR2TexRejectCensusLive, gNdsR2TexRejectCensusPinned, gNdsR2TexRejectCensusEvictable, gNdsR2TexRejectCensusThisFrame
+            shell pwsh -NoProfile -ExecutionPolicy Bypass -File "D:\Stuff\DevFolder\Smash64DS_Port\scripts\capture-running-melonds-window.ps1" -EmulatorProcessId 12852 -Output "artifacts/visibility/c72-keyless_star-ko-probe.png"
+            continue
+          end
+        end
+        continue
+3       breakpoint     keep y   0x02096ad4 in efManagerRebirthHaloMakeEffect at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:254
+        silent
+        set $rebirth_calls = $rebirth_calls + 1
+        set $vis_before = gNdsVisualEffectCreateCount
+        set $vis_dropped = gNdsVisualEffectDropCount
+        set $vis_mask = gNdsVisualEffectKindMask
+        if $shot_rebirth == 0 && $death_seen == 1
+          set $shot_rebirth = 1
+          tbreak *0x02044b38
+          ignore $bpnum 23
+          commands
+            silent
+            set $vis_active = gNdsVisualEffectActiveCount
+            set $vis_after = gNdsVisualEffectCreateCount
+            printf "KOSHOT tag=rebirth-halo frame=%u clock=%u p0stock=%u p0dmg=%u p1stock=%u p1dmg=%u explode=%d star=%d rebirth=%d death_seen=%d staticviol=%u staticteardown=%u staticprepfail=%u staticprep=%u staticprepared=%u staticarm=%u staticpin=%u staticowner=%#x staticseen=%#x staticspan=%u staticfirst=%#x staticend=%#x vramreset=%u fbind=%u fready=%u freject=%u fupload=%u eready=%u ereject=%u atlasfail=%u atlasprep=%u memohit=%u memomiss=%u memofill=%u memostale=%u memoverify=%u fence=conv%u/pal%u/alloc%u/io%u/create%u/upload%u/del%u/evict%u/refresh%u/fallback%u fencefirstframe=%u fenceclass=%u notex=%u ownerreject=%u ownerfirst=%u ownerlast=%u abort=%u preparednow=%u postarmreject=%u\n", gNdsFrameCounter, gNdsBattleTextHudTimeSeconds, gNdsBattleTextHudP0Stock, gNdsBattleTextHudP0Damage, gNdsBattleTextHudP1Stock, gNdsBattleTextHudP1Damage, $explode_calls, $star_calls, $rebirth_calls, $death_seen, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTextureTeardownCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureAllocationSpanBytes, gNdsRendererBattleStaticTextureFirstAddress, gNdsRendererBattleStaticTextureEndAddress, gNdsRendererSceneTextureVramResetCount, gNdsFighterDLAllDrawHardwareTextureBindCount, gNdsFighterDLAllDrawHardwareTextureReadyCount, gNdsFighterDLAllDrawHardwareTextureRejectCount, gNdsFighterDLAllDrawHardwareTextureUploadCount, gNdsEffectRendererTextureReadyCount, gNdsEffectRendererTextureRejectCount, gNdsRendererParticleAtlasFailCount, gNdsRendererParticleAtlasPrepareCount, gNdsR2TexMemoHitCount, gNdsR2TexMemoMissCount, gNdsR2TexMemoFillCount, gNdsR2TexMemoStaleCount, gNdsR2TexMemoVerifyFail, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9], gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsFighterDisplayContractNoTextureCount, gNdsRendererStageOwnerRejectCount, gNdsRendererStageOwnerFirstRejectReason, gNdsRendererStageOwnerLastRejectReason, gNdsRendererStageOwnerAbortCount, gNdsRendererStaticTexturePreparedNow, gNdsRendererStageOwnerPostArmRejectCount
+            printf "KOXLU tag=rebirth-halo othermodel=%#x valid=%u zmode=%#x forcebl=%u cvgxalpha=%u ac=%u\n", gNdsEffectDLOtherModeL, gNdsEffectDLOtherModeValid, (gNdsEffectDLOtherModeL & 0xc00), ((gNdsEffectDLOtherModeL >> 14) & 1), ((gNdsEffectDLOtherModeL >> 12) & 1), (gNdsEffectDLOtherModeL & 3)
+            printf "KOLATCH tag=rebirth-halo in=%#x out=%#x same=%d submits=%u\n", gNdsEffectDLSubmitOtherModeIn, gNdsEffectDLSubmitOtherModeOut, (gNdsEffectDLSubmitOtherModeIn == gNdsEffectDLSubmitOtherModeOut), gNdsEffectDLSubmitCount
+            printf "KOWAVE tag=rebirth-halo makes=%u nulls=%u lastindex=%d lastgobj=%u\n", gNdsEffectImpactWaveMakeCount, gNdsEffectImpactWaveMakeNullCount, gNdsEffectImpactWaveLastIndex, gNdsEffectImpactWaveLastGObjID
+            printf "KOREJECT tag=rebirth-halo reason=%#x t1reason=%#x censusvalid=%u free=%u live=%u pinned=%u evictable=%u thisframe=%u\n", gNdsRendererProfileTextureRejectReasonMask, gNdsRendererProfileTexel1RejectReasonMask, gNdsR2TexRejectCensusValid, gNdsR2TexRejectCensusFree, gNdsR2TexRejectCensusLive, gNdsR2TexRejectCensusPinned, gNdsR2TexRejectCensusEvictable, gNdsR2TexRejectCensusThisFrame
+            shell pwsh -NoProfile -ExecutionPolicy Bypass -File "D:\Stuff\DevFolder\Smash64DS_Port\scripts\capture-running-melonds-window.ps1" -EmulatorProcessId 12852 -Output "artifacts/visibility/c72-keyless_rebirth-halo-probe.png"
+            continue
+          end
+        end
+        continue
+4       breakpoint     keep y   0x02088ec0 in ftCommonDeadUpStarProcUpdate at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondead.c:320
+        silent
+        set $star_updates = $star_updates + 1
+        set $ftp = (FTStruct *)((GObj *)$r0)->user_data.p
+        set $star_phase = $ftp->motion_vars.flags.flag1
+        set $star_wait = $ftp->status_vars.common.dead.wait
+        set $star_vy = $ftp->physics.vel_air.y
+        set $star_posy = ((DObj *)((GObj *)$r0)->obj)->translate.vec.f.y
+        if $star_vy > $star_vymax
+          set $star_vymax = $star_vy
+        end
+        continue
+5       breakpoint     keep y   0x020975e0 in efManagerDamageNormalLightMakeEffect at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:1449
+        silent
+        set $spark_calls = $spark_calls + 1
+        if ((Vec3f *)$r0)->x > $spark_absmax
+          set $spark_absmax = ((Vec3f *)$r0)->x
+        end
+        if -((Vec3f *)$r0)->x > $spark_absmax
+          set $spark_absmax = -((Vec3f *)$r0)->x
+        end
+        continue
+Temporary breakpoint 6 at 0x2044b38: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4628.
+
+Temporary breakpoint 6, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4628
+4628	    __asm__ volatile("" ::: "memory");
+KOSHOT tag=pre-death-baseline frame=246 clock=59 p0stock=1 p0dmg=0 p1stock=1 p1dmg=0 explode=0 star=0 rebirth=0 death_seen=0 staticviol=0 staticteardown=0 staticprepfail=0 staticprep=1 staticprepared=24 staticarm=1 staticpin=1748 staticowner=0x7 staticseen=0x3fffff staticspan=61696 staticfirst=0x6800000 staticend=0x680f100 vramreset=1 fbind=0 fready=0 freject=0 fupload=0 eready=0 ereject=0 atlasfail=0 atlasprep=1 memohit=2160 memomiss=9 memofill=9 memostale=0 memoverify=0 fence=conv0/pal0/alloc0/io0/create0/upload0/del0/evict0/refresh0/fallback0 fencefirstframe=0 fenceclass=0 notex=0 ownerreject=1 ownerfirst=6 ownerlast=6 abort=0 preparednow=1 postarmreject=0
+KOXLU tag=pre-death-baseline othermodel=0 valid=0 zmode=0 forcebl=0 cvgxalpha=0 ac=0
+KOLATCH tag=pre-death-baseline in=0 out=0 same=1 submits=0
+KOWAVE tag=pre-death-baseline makes=0 nulls=0 lastindex=-1 lastgobj=0
+KOREJECT tag=pre-death-baseline reason=0 t1reason=0 censusvalid=0 free=0 live=0 pinned=0 evictable=0 thisframe=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\c72-keyless_pre-death-baseline-probe.png
+Temporary breakpoint 7 at 0x2044b38: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4628.
+Temporary breakpoint 8 at 0x2044b38: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4628.
+KOSHOT tag=star-ko frame=343 clock=56 p0stock=1 p0dmg=0 p1stock=1 p1dmg=0 explode=0 star=1 rebirth=0 death_seen=1 staticviol=0 staticteardown=0 staticprepfail=0 staticprep=1 staticprepared=24 staticarm=1 staticpin=5396 staticowner=0x7 staticseen=0x3fffff staticspan=61696 staticfirst=0x6800000 staticend=0x680f100 vramreset=1 fbind=0 fready=0 freject=0 fupload=0 eready=0 ereject=0 atlasfail=0 atlasprep=1 memohit=3006 memomiss=9 memofill=9 memostale=0 memoverify=0 fence=conv0/pal0/alloc0/io0/create0/upload0/del0/evict0/refresh0/fallback0 fencefirstframe=0 fenceclass=0 notex=0 ownerreject=1 ownerfirst=6 ownerlast=6 abort=0 preparednow=1 postarmreject=0
+KOXLU tag=star-ko othermodel=0 valid=0 zmode=0 forcebl=0 cvgxalpha=0 ac=0
+KOLATCH tag=star-ko in=0 out=0 same=1 submits=0
+KOWAVE tag=star-ko makes=0 nulls=0 lastindex=-1 lastgobj=0
+KOREJECT tag=star-ko reason=0 t1reason=0 censusvalid=0 free=0 live=0 pinned=0 evictable=0 thisframe=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\c72-keyless_star-ko-probe.png
+Temporary breakpoint 9 at 0x2044b38: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4628.
+KOSHOT tag=rebirth-halo frame=384 clock=54 p0stock=1 p0dmg=0 p1stock=1 p1dmg=0 explode=0 star=1 rebirth=1 death_seen=1 staticviol=0 staticteardown=0 staticprepfail=0 staticprep=1 staticprepared=24 staticarm=1 staticpin=6954 staticowner=0x7 staticseen=0x3fffff staticspan=61696 staticfirst=0x6800000 staticend=0x680f100 vramreset=1 fbind=0 fready=0 freject=0 fupload=0 eready=624 ereject=0 atlasfail=0 atlasprep=1 memohit=3252 memomiss=9 memofill=9 memostale=0 memoverify=0 fence=conv5/pal5/alloc5/io0/create5/upload5/del0/evict0/refresh0/fallback5 fencefirstframe=355 fenceclass=10 notex=0 ownerreject=1 ownerfirst=6 ownerlast=6 abort=0 preparednow=1 postarmreject=0
+KOXLU tag=rebirth-halo othermodel=0x552078 valid=1 zmode=0 forcebl=0 cvgxalpha=0 ac=0
+KOLATCH tag=rebirth-halo in=0x552078 out=0x552078 same=1 submits=72
+KOWAVE tag=rebirth-halo makes=0 nulls=0 lastindex=-1 lastgobj=0
+KOREJECT tag=rebirth-halo reason=0 t1reason=0 censusvalid=0 free=0 live=0 pinned=0 evictable=0 thisframe=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\c72-keyless_rebirth-halo-probe.png
+
+Temporary breakpoint 7, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4628
+4628	    __asm__ volatile("" ::: "memory");
+KOSHOT tag=post-star-3s frame=428 clock=53 p0stock=1 p0dmg=0 p1stock=1 p1dmg=0 explode=0 star=1 rebirth=1 death_seen=1 staticviol=0 staticteardown=0 staticprepfail=0 staticprep=1 staticprepared=24 staticarm=1 staticpin=8626 staticowner=0x7 staticseen=0x3fffff staticspan=61696 staticfirst=0x6800000 staticend=0x680f100 vramreset=1 fbind=0 fready=0 freject=0 fupload=0 eready=1768 ereject=0 atlasfail=0 atlasprep=1 memohit=3636 memomiss=9 memofill=9 memostale=0 memoverify=0 fence=conv5/pal5/alloc5/io0/create5/upload5/del0/evict0/refresh0/fallback5 fencefirstframe=355 fenceclass=10 notex=0 ownerreject=1 ownerfirst=6 ownerlast=6 abort=0 preparednow=1 postarmreject=0
+KOXLU tag=post-star-3s othermodel=0x552078 valid=1 zmode=0 forcebl=0 cvgxalpha=0 ac=0
+KOLATCH tag=post-star-3s in=0x552078 out=0x552078 same=1 submits=204
+KOWAVE tag=post-star-3s makes=0 nulls=0 lastindex=-1 lastgobj=0
+KOREJECT tag=post-star-3s reason=0 t1reason=0 censusvalid=0 free=0 live=0 pinned=0 evictable=0 thisframe=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\c72-keyless_post-star-3s-probe.png
+Temporary breakpoint 10 at 0x2044b38: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4628.
+
+Temporary breakpoint 10, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4628
+4628	    __asm__ volatile("" ::: "memory");
+Temporary breakpoint 11 at 0x2044b38: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4628.
+Temporary breakpoint 12 at 0x2044b38: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4628.
+KOSHOT tag=ko-burst frame=614 clock=47 p0stock=1 p0dmg=0 p1stock=1 p1dmg=0 explode=1 star=1 rebirth=1 death_seen=1 staticviol=0 staticteardown=0 staticprepfail=0 staticprep=1 staticprepared=24 staticarm=1 staticpin=15732 staticowner=0x7 staticseen=0x3fffff staticspan=61696 staticfirst=0x6800000 staticend=0x680f100 vramreset=1 fbind=0 fready=0 freject=0 fupload=0 eready=5088 ereject=0 atlasfail=0 atlasprep=1 memohit=5301 memomiss=9 memofill=9 memostale=0 memoverify=0 fence=conv8/pal8/alloc8/io0/create8/upload8/del0/evict0/refresh0/fallback8 fencefirstframe=355 fenceclass=10 notex=0 ownerreject=1 ownerfirst=6 ownerlast=6 abort=0 preparednow=1 postarmreject=0
+KOXLU tag=ko-burst othermodel=0x504341 valid=1 zmode=0 forcebl=1 cvgxalpha=0 ac=1
+KOLATCH tag=ko-burst in=0x504341 out=0x504341 same=1 submits=603
+KOWAVE tag=ko-burst makes=0 nulls=0 lastindex=-1 lastgobj=0
+KOREJECT tag=ko-burst reason=0 t1reason=0 censusvalid=0 free=0 live=0 pinned=0 evictable=0 thisframe=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\c72-keyless_ko-burst-probe.png
+
+Temporary breakpoint 11, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4628
+4628	    __asm__ volatile("" ::: "memory");
+KOSHOT tag=post-side-3s frame=789 clock=41 p0stock=1 p0dmg=0 p1stock=1 p1dmg=0 explode=1 star=1 rebirth=2 death_seen=1 staticviol=0 staticteardown=0 staticprepfail=0 staticprep=1 staticprepared=24 staticarm=1 staticpin=22382 staticowner=0x7 staticseen=0x3fffff staticspan=61696 staticfirst=0x6800000 staticend=0x680f100 vramreset=1 fbind=0 fready=0 freject=0 fupload=0 eready=9257 ereject=0 atlasfail=0 atlasprep=1 memohit=6744 memomiss=9 memofill=9 memostale=0 memoverify=0 fence=conv8/pal8/alloc8/io0/create8/upload8/del0/evict0/refresh0/fallback8 fencefirstframe=355 fenceclass=10 notex=0 ownerreject=1 ownerfirst=6 ownerlast=6 abort=0 preparednow=1 postarmreject=0
+KOLATCH tag=post-side-3s in=0x552078 out=0x552078 same=1 submits=1116
+KOWAVE tag=post-side-3s makes=0 nulls=0 lastindex=-1 lastgobj=0
+KOREJECT tag=post-side-3s reason=0 t1reason=0 censusvalid=0 free=0 live=0 pinned=0 evictable=0 thisframe=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\c72-keyless_post-side-3s-probe.png
+Temporary breakpoint 13 at 0x2044b38: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c, line 4628.
+
+Temporary breakpoint 13, ndsBattlePlayableFrameCompleteMarker () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam.c:4628
+4628	    __asm__ volatile("" ::: "memory");
+KOSHOT tag=late-match frame=1391 clock=21 p0stock=1 p0dmg=38 p1stock=1 p1dmg=0 explode=1 star=1 rebirth=2 death_seen=1 staticviol=0 staticteardown=0 staticprepfail=0 staticprep=1 staticprepared=24 staticarm=1 staticpin=45220 staticowner=0x7 staticseen=0x3fffff staticspan=61696 staticfirst=0x6800000 staticend=0x680f100 vramreset=1 fbind=0 fready=0 freject=0 fupload=0 eready=10241 ereject=0 atlasfail=0 atlasprep=1 memohit=12153 memomiss=9 memofill=9 memostale=0 memoverify=0 fence=conv9/pal9/alloc9/io0/create9/upload9/del0/evict0/refresh0/fallback9 fencefirstframe=355 fenceclass=10 notex=0 ownerreject=1 ownerfirst=6 ownerlast=6 abort=0 preparednow=1 postarmreject=0
+KOLATCH tag=late-match in=0x5049d8 out=0x552078 same=0 submits=1272
+KOWAVE tag=late-match makes=8 nulls=0 lastindex=4 lastgobj=1011
+KOREJECT tag=late-match reason=0 t1reason=0 censusvalid=0 free=0 live=0 pinned=0 evictable=0 thisframe=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\c72-keyless_late-match-probe.png
+Temporary breakpoint 14 at 0x208d7c8: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c, line 3212.
+
+Temporary breakpoint 14, mnVSResultsMakeConfetti () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c:3212
+3212		Vec3f pos1 = { 0.0F, 1000.0F,  -400.0F };
+KOSHOT tag=results frame=2174 clock=0 p0stock=1 p0dmg=0 p1stock=1 p1dmg=0 explode=2 star=1 rebirth=3 death_seen=1 staticviol=0 staticteardown=1 staticprepfail=0 staticprep=1 staticprepared=24 staticarm=1 staticpin=70224 staticowner=0x7 staticseen=0x3fffff staticspan=61696 staticfirst=0x6800000 staticend=0x680f100 vramreset=1 fbind=0 fready=0 freject=0 fupload=0 eready=15423 ereject=0 atlasfail=0 atlasprep=1 memohit=17919 memomiss=9 memofill=9 memostale=0 memoverify=0 fence=conv10/pal10/alloc10/io0/create10/upload10/del0/evict0/refresh0/fallback10 fencefirstframe=355 fenceclass=10 notex=0 ownerreject=1 ownerfirst=6 ownerlast=6 abort=0 preparednow=0 postarmreject=0
+KOLATCH tag=results in=0x504341 out=0x504340 same=0 submits=1970
+KOWAVE tag=results makes=9 nulls=0 lastindex=4 lastgobj=1011
+KOREJECT tag=results reason=0 t1reason=0 censusvalid=0 free=0 live=0 pinned=0 evictable=0 thisframe=0
+KOVFX explode_calls=2 star_calls=1 rebirth_calls=3 star=0.000000,2399.980469 cam_top=4000 map_top=8300 star_updates=226 phase=2 wait=1 vy=0.000000 vymax=0.000000 posy=2399.980469 forced_damage=3 death_seen=1 explode_pos=0.000000,-3519.017578,0.000000 explode_kind=0 victim_slot=0 victim_stock=0->0 spark_calls=6 spark_absmax=0.000000 burst_slot2_count=12 burst_slot2_size=1283.782959 slot0_count=0 slot0_noxf=0 slot0_noxf_absmax=0.000000 at_rebirth_created=0 dropped=0 mask=0 active_after=0 created_after=0 at_results_created=0 dropped=0 kindmask=0 miss=70 emit=4615 structs_max=0
+[Inferior 1 (Remote target) detached]
+; Stderr=warning: 117	/home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h: No such file or directory
+warning: could not convert '$explode_calls' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+; ScriptPath=D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verifier-temp\slot6\ko_vfx_probe.gdb; StdoutPath=D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verifier-temp\slot6\ko_vfx_probe.gdb.out; StderrPath=D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verifier-temp\slot6\ko_vfx_probe.gdb.err}
