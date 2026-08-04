@@ -104,10 +104,25 @@ OPEN.
     NOBLOCK onto a depth-1 queue is a SILENT DROP in the port's osSendMesg
     (:248-259 returns -1 via ndsOsWaitForQueue), so a drop path exists by
     design and needs testing, not assuming.
-    OPEN: validCount/first at the stop; and which of sThreads[5]/[6] (the two
-    dynamic entries, 0x23c6ba0/0x23c5eb8) is the GObj thread and its state --
-    never started, never posted, or posted into a full slot.
-    artifacts/verification/2026-08-03_flag0-*.txt.
+    DEADLOCK CLOSED (38). At the frozen stop: gGCMesgQueue validCount=0,
+    first=0, msgCount=1 -- empty, so NOT the drop path and NOT a broken
+    re-check. sThreads[6] (id 10000001) is the GObj thread, state=1 =
+    OS_STATE_STOPPED, finished=0, parked with this stack:
+      portCoroutineYield+25 <- osStopThread+64 <- gcSleepCurrentGObjThread+62
+      <- ifCommonCountdownThread+256 <- ndsOsThreadEntry
+    So the poster is the battle COUNTDOWN element, and it is STOPPED.
+    ndsOsRunThreads (libultra_os.c:294-295) resumes only WAITING or RUNNABLE,
+    so a STOPPED thread is never resumed and can never reach its
+    osSendMesg. gcRunGObjProcess blocks forever on a post that cannot happen.
+    Both halves parked; that is the whole freeze.
+    The handshake worked 307 times first (gNdsTaskmanGObjThreadSleeps=307),
+    so this is the LAST countdown sleep, not a broken-from-boot path -- which
+    fits the interface-update location and the ~6.5 s timing.
+    OPEN: why the thread is STOPPED when gcRunGObjProcess called
+    osStartThread immediately before osRecvMesg (objman.c:2285-2286) -- read
+    the port's osStartThread/osStopThread state transitions against the
+    source's. Also still to explain: how flag-0 and tickhud each reach it.
+    artifacts/verification/2026-08-03_flag0-queue.txt.
   * One unpaired flag-on reading suggests the cost is high (FPS 20.0, ALL
     1.68M/2.24M against the 1.12M gate). Warning, not a verdict -- gate 6 must
     not be proposed until gate 5 prices it. See 4c29b9615a.
