@@ -503,6 +503,26 @@ call never executes and the finally block kills the emulator first. When the
 thing being hunted is a hang, timeout is the EXPECTED path -- the abort read
 belongs in a catch.
 
+THE REFLECTOR DOES NOT NEED A STRONG OVERRIDE. ITS DESC IS DISABLED (cycle 8).
+
+The shield capture run answered the override question as a side effect, and the
+answer is the opposite of the standing plan:
+
+    EFDESC     resolved=42 disabled=1 unknownfile=1 span=52736/28352/13616
+    EFDESCLAST disabled=dEFManagerFoxReflectorEffectDesc
+
+ndsEFManagerResolveDescOffsets fails its span lookup for gFTDataFoxSpecial2,
+takes the fail-closed branch and sets desc->proc_display = NULL. efManagerMakeEffect
+returns at `if (effect_desc->proc_display == NULL) return effect_gobj;`
+(efmanager.c:1972) BEFORE it creates a single DObj. So a strong
+efManagerFoxReflectorMakeEffect would call a maker that cannot build anything --
+adding it would have produced no change and looked like a failed hypothesis.
+DO NOT ADD THAT OVERRIDE. Fix the span/validation hole first; the override
+question only becomes real once the desc resolves.
+
+This is the same silent hole as the span-0 validator that hid the shield and
+the reflector once already, and it is the last of that family still open.
+
 THE FLAG-ON HANG IS GONE, AND THE SURVIVING RUN IS THE EVIDENCE (cycle 7).
 
 The same probe that stopped at ~838 frames for three cycles now reaches its
