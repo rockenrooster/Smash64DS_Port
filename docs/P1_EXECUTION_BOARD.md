@@ -286,6 +286,87 @@ pointer, bind ordinal within the list), revalidated on `entry->ready` /
 built with the level-2 verify arm that caught three subtly incomplete keys on the
 fighter path.
 
+### THE `Tex` MEMO IS REFUTED AS KEYED, AND THE ROM HAS UNDER 2.2 KB OF BSS HEADROOM (2026-08-05, cycle 78)
+
+**REVERT.** The memo above was built exactly as approved — keyed on (display-list
+pointer, bind ordinal), revalidated on `ready`/`name`/`key_generation`, reset from
+`ndsRendererHardwareResetSourceCaches` — behind `NDS_R2_EFFECT_TEX_MEMO`, default 0.
+All source is reverted; the flag does not exist in the tree. Nothing published;
+root ROMs `369FA999…` / `D16815BE…` re-verified unchanged.
+
+**Engagement, whole match, Boundary mode 163, DLDI on, frames 442–2040, 1600
+samples, arm `builds/build-r209-memo1s` (rom `6123B66F…`)**
+(`artifacts/performance/r209-memo1-boundary-1600.json` + `.csv`):
+
+| counter | value |
+|---|---:|
+| consults (hits + misses) | **10,336** |
+| hits | **471 (4.56%)** |
+| misses | 9,865 |
+| fills | 7,525 |
+| **evictions** | **7,517 — 99.9% of fills** |
+| stale (entry died under the memo) | **0** |
+| `OutOfScope` (negative control) | **0** |
+| scene-entry resets | 4 |
+| effect display lists submitted | 1,366 |
+
+`gNdsEffectPhaseTexTicks` **41,393,152** against the 34,394,304 the phase split
+measured — the memo *added* ~20% to the phase it was meant to cut.
+
+**10,336 consults over 1,366 list submissions is 7.57 texture resolves per effect
+display list**, which reconciles with the phase split's own denominator.
+
+**Working-set estimate, and it is an estimate.** A direct-mapped table of size `S`
+against a round-robin working set of `W` keys hits at about `S/W`, so
+`W ≈ 8 / 0.0456 ≈ 175` keys — roughly **23 distinct effect display-list
+addresses** at 7.57 binds each. 175 entries × 36 bytes = **6.3 KB**, three times
+the headroom that exists. Stated as an estimate because the exact distinct-key
+counter lived in the level-2 arm, which does not boot (below). Do not cite 23 as
+a count.
+
+**THE REAL FINDING IS THE BOOT CLIFF, AND IT BINDS EVERY FUTURE R2 CHANGE.**
+Same code, three table sizes, one tree, `NDS_R2_EFFECT_TEX_MEMO=0` as the datum
+(`fake_heap_start` `0x02294284`):
+
+| arm | `fake_heap_start` | Δ over flag-0 | boots? |
+|---|---|---:|---|
+| MEMO=0 | `0x02294284` | 0 | **yes** — frames 61–68 in ~50 s |
+| MEMO=1, 8 entries | `0x02294804` | **+1,408** | **yes** — frames 62–69 |
+| MEMO=2, 8 entries + diagnosis | `0x02294b24` | **+2,208** | **NO** |
+| MEMO=1, 64 entries | `0x022950c4` | +3,648 | **NO** |
+| MEMO=2, 64 entries + diagnosis | `0x02295824` | +5,536 | **NO** |
+
+A failing arm cannot reach battle presented frame **9** in 240 s, before any
+effect submits, so it is the footprint and not the logic — the §3.11 signature
+(`syMallocSet` spins forever, so exhaustion presents as a total freeze). The
+environment was proved good in the same session: `builds/build-c75-tickhud-publish`
+reached frames 61–68 normally between the failures.
+
+**So the campaign's binary is within 1,408–2,208 bytes of a boot cliff, and text
+counts against it as much as bss** — the level-2 arm added only 192 bytes of
+arrays and still died, the rest being its own code. Two consequences:
+
+- **Any R2 change that adds a table must state its byte cost and boot-probe
+  before it is measured.** An 8-sample `-StartFrame 60` run costs ~50 s and would
+  have saved three builds here.
+- **The `Tex` memo is not re-openable until RAM is freed.** It needs ~6.3 KB.
+
+**AND THE RESOLVER ALREADY HAS THIS MEMO — IT IS SWITCHED OFF BY AN ENUM.**
+`sNdsRendererStageTextureSites` (`nds_renderer.c:11086`) is a 128-entry cache keyed
+on `state->source_command_site`, the exact `Gfx` command address the executor
+already publishes per command — a strictly better key than (list, ordinal), free,
+and 12 KB already spent. `ndsRendererProfileSetOwner` (`nds_renderer.c:29241-29247`)
+enables it only for fast-run modes 4/7/8. **Every measured and published ROM builds
+`NDS_RENDERER_FAST_RUN_DEFAULT := 9`** (`NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE`,
+`Makefile:1088`), which is in neither that list nor `sNdsRendererFastOwnerEnabled`'s.
+Mode 9 was added after both lists and neither was updated. `Makefile:1028` records
+the fighter memo existing *only* because the native fighter path has no command
+site to key on; the effect path has one. Adding 9 to that enabling list is a
+one-line change with no new RAM — but it turns the cache on for the whole stage
+owner, so it needs its own arm, its own A/B and the owner's visual gate. **Not
+done, not measured, unowned.** Static read only; the runtime confirmation counter
+was in the level-2 arm that will not boot.
+
 ## R2-07 — the cycle-76 row, superseded above but kept for the findings it still owns
 
 Fresh 128-frame baseline on `f24f0cc1`, rom `F04F5D98…`, `dldi=ON`, ring dump

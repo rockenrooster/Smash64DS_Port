@@ -1,11 +1,9 @@
 # Handoff
 
-Updated: 2026-08-05 (cycle 77). **The campaign is on R2-07's performance gate,
-and the instrument was rebuilt underneath it.** Nothing is published from this
-work yet; the shipping pair is still cycle 75
-(`smash64ds-battle-playable-hwtri.nds` `D16815BE…`, `smash64ds.nds`
-`369FA999…`, tick-HUD sibling `builds/build-c75-tickhud-publish`
-`15FD0F8E…`).
+Updated: 2026-08-05 (cycle 78). **The campaign is on R2-07's performance gate.**
+Nothing is published from this work; the shipping pair is still cycle 75
+(`smash64ds-battle-playable-hwtri.nds` `D16815BE…`, `smash64ds.nds` `369FA999…`,
+tick-HUD sibling `builds/build-c75-tickhud-publish` `15FD0F8E…`).
 
 ## Read this first: every 128-frame measurement in the archive is unusable
 
@@ -106,15 +104,34 @@ no defect-shaped alternative in front of it: build the GX packet at match load,
 reserve patch offsets for the matrix and dynamic colour words, patch per frame,
 submit. No re-parse, no per-list config rebuild, no per-command dispatch.
 
+## The `Tex` memo is REFUTED, and the ROM is ~1.4–2.2 KB from a boot cliff
+
+Built as approved and reverted. Whole match, Boundary, 1600 samples, frames
+442–2040: **10,336 consults, 471 hits (4.56%), 7,517 evictions of 7,525 fills,
+0 stale, 0 out-of-scope, 1,366 effect lists = 7.57 resolves per list.** `Tex`
+ticks went *up* (41,393,152 vs 34,394,304); working set estimated ~175 keys
+≈ 6.3 KB, three times the headroom that exists.
+
+**The binding finding is RAM.** Same code, one tree, `fake_heap_start` over the
+flag-0 datum `0x02294284`: **+1,408 boots, +2,208 does not.** A failing arm cannot
+reach battle presented frame 9 in 240 s (§3.11: `syMallocSet` spins, so exhaustion
+is a total freeze); `build-c75-tickhud-publish` booted normally between the
+failures. **Text counts as much as bss.** Every future R2 table states its byte cost
+and takes an 8-sample `-StartFrame 60` boot probe (~50 s) *before* a measuring run.
+
 ## Next single step
 
-The **`Tex` memo** — designed and approved, not yet built: keyed on
-(display-list pointer, bind ordinal), revalidated on `entry->ready` /
-`entry->name` / `entry->key_generation`, **reset at scene entry** per §3.12,
-with the level-2 verify arm. It must keep touching `last_used_frame` (the
-eviction LRU), so the recoverable share is the key build, hash and lookup — not
-the whole 34.4M. Land it on its **own** arm; two changes in one arm is how a
-null result becomes unattributable.
+**The resolver's site cache is switched off by an enum.**
+`sNdsRendererStageTextureSites` (`nds_renderer.c:11086`) is a 128-entry memo keyed
+on `state->source_command_site` — the exact `Gfx` command address, a better key
+than the one just refuted, already built, 12 KB already spent.
+`ndsRendererProfileSetOwner` (`nds_renderer.c:29241-29247`) enables it only for
+fast-run modes 4/7/8, and every measured ROM builds mode **9**
+(`NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE`, `Makefile:1088`), added after both
+lists with neither updated. One line, no new RAM — but it turns the cache on for
+the whole stage owner: its own arm, its own A/B, the owner's visual gate. Static
+read only; confirm at runtime first. Then the packet path for the 65.57%
+interpreter share, still the larger half.
 
 **Boundary for all of it.** Same geometry, same textures, same materials — the
 effect models are a closed `BUGS.md` row the owner confirmed by eye and paid for
