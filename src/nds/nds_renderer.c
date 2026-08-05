@@ -830,6 +830,66 @@ static void ndsEffectPacketRecord(u32 command_class, const u32 *words,
     }
 }
 
+/* G3 STEP 3 -- OPTION B'S PRICE. The banked per-list partition charges 65.57%
+ * to "generic DL interpretation", but that lumps together two costs with
+ * opposite fates under a precompiled invariant packet: walking the source list
+ * and dispatching its opcodes (REMOVABLE -- the packet is the walk's answer)
+ * and transforming and projecting the vertices (NOT removable -- cycle 88
+ * proved the vertex words are the per-instance payload, so option B still
+ * computes them every frame). Only the first is what B buys.
+ *
+ * Four spans, all armed by the SAME flag the cycle-88 capture used, so the
+ * population is the effect lists and nothing else:
+ *
+ *   Exec  existing, the whole interpreter call
+ *   Vtx   the G_VTX handler -- per-vertex modelview/projection into the cache
+ *   Tri   the per-triangle submit -- classify, the clip-vertex divides, the
+ *         descending painter depth, the GX emit
+ *   TexX  texture resolve taken INSIDE Exec (the existing gNdsEffectPhaseTex
+ *         counter is armed by the whole-tree flag instead, so it can include
+ *         work outside this window and cannot close an identity with it)
+ *
+ * Traversal is DERIVED as Exec - TexX - Vtx - Tri and is never counted
+ * directly, for the same reason SBAS is derived from SRC: a residual that goes
+ * negative disproves the nesting, so the subtraction is itself the proof the
+ * three measured spans really sit inside Exec.
+ *
+ * THE TIMER READS BIAS THIS TOWARD B BEING SMALL, which is the safe direction.
+ * Each bracket charges roughly one timer-read latency to the span it wraps, and
+ * Vtx and Tri fire thousands of times per frame while Exec is entered once per
+ * list -- so Vtx+Tri are inflated and the derived traversal residual is
+ * deflated. The measured traversal share is therefore a LOWER bound on what a
+ * packet removes, never an optimistic one. */
+static u32 ndsEffectPhaseMark(void)
+{
+    return (sNdsEffectPacketArmed != 0u) ? cpuGetTiming() : 0u;
+}
+
+static void ndsEffectPhaseAddVtx(u32 mark)
+{
+    if (sNdsEffectPacketArmed != 0u)
+    {
+        gNdsEffectPhaseVtxTicks += cpuGetTiming() - mark;
+        gNdsEffectPhaseVtxCount++;
+    }
+}
+
+static void ndsEffectPhaseAddTri(u32 mark)
+{
+    if (sNdsEffectPacketArmed != 0u)
+    {
+        gNdsEffectPhaseTriTicks += cpuGetTiming() - mark;
+        gNdsEffectPhaseTriCount++;
+    }
+}
+
+#define NDS_EFFECT_PHASE_VTX(call) \
+    do { u32 nds_eff_m_ = ndsEffectPhaseMark(); call; \
+         ndsEffectPhaseAddVtx(nds_eff_m_); } while (0)
+#define NDS_EFFECT_PHASE_TRI(call) \
+    do { u32 nds_eff_m_ = ndsEffectPhaseMark(); call; \
+         ndsEffectPhaseAddTri(nds_eff_m_); } while (0)
+
 static void ndsEffectPacketSubmitBin(u32 bin)
 {
     if (sNdsEffectPacketArmed == 0u)
@@ -15834,8 +15894,17 @@ static s32 ndsRendererHardwareResolveResidentTexture(
         u32 phase_mark = cpuGetTiming();
         s32 phase_result = ndsRendererHardwareResolveOrBindTexture(
             stats, config, state, resolved, FALSE);
+        u32 phase_ticks = cpuGetTiming() - phase_mark;
 
-        gNdsEffectPhaseTexTicks += cpuGetTiming() - phase_mark;
+        gNdsEffectPhaseTexTicks += phase_ticks;
+        /* The in-Exec twin. gNdsEffectPhaseTexTicks is armed by the whole-tree
+         * flag, so it can accumulate outside the interpreter call and cannot
+         * close an identity against Exec; this one is armed by the same flag as
+         * the Vtx/Tri spans, so all four nest in the same window. */
+        if (sNdsEffectPacketArmed != 0u)
+        {
+            gNdsEffectPhaseTexInExecTicks += phase_ticks;
+        }
         return phase_result;
     }
 #endif
@@ -17228,6 +17297,12 @@ static s32 ndsRendererHardwareRawMatrixCompatible(
 #ifndef NDS_EFFECT_SUBMIT_BIN
 #define NDS_EFFECT_SUBMIT_BIN(bin) ((void)0)
 #endif
+#ifndef NDS_EFFECT_PHASE_VTX
+#define NDS_EFFECT_PHASE_VTX(call) do { call; } while (0)
+#endif
+#ifndef NDS_EFFECT_PHASE_TRI
+#define NDS_EFFECT_PHASE_TRI(call) do { call; } while (0)
+#endif
 
 static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     const NDSRendererTraversalState *state,
@@ -17993,7 +18068,8 @@ static inline void ndsRendererExecuteTriangleCommand(
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         state->semantic_tri2_half = 0u;
 #endif
-        ndsRendererSubmitHardwareTriangle(stats, config, state, packed);
+        NDS_EFFECT_PHASE_TRI(
+            ndsRendererSubmitHardwareTriangle(stats, config, state, packed));
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         sNdsRendererProfileTriangleSubmitTicks +=
             cpuGetTiming() - triangle_submit_start;
@@ -18019,13 +18095,13 @@ static inline void ndsRendererExecuteTriangleCommand(
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     state->semantic_tri2_half = 0u;
 #endif
-    ndsRendererSubmitHardwareTriangle(
-        stats, config, state, ndsGBIDecodeF3DEX2Tri2First(w0));
+    NDS_EFFECT_PHASE_TRI(ndsRendererSubmitHardwareTriangle(
+        stats, config, state, ndsGBIDecodeF3DEX2Tri2First(w0)));
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     state->semantic_tri2_half = 1u;
 #endif
-    ndsRendererSubmitHardwareTriangle(
-        stats, config, state, ndsGBIDecodeF3DEX2Tri2Second(w1));
+    NDS_EFFECT_PHASE_TRI(ndsRendererSubmitHardwareTriangle(
+        stats, config, state, ndsGBIDecodeF3DEX2Tri2Second(w1)));
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererProfileTriangleSubmitTicks +=
         cpuGetTiming() - triangle_submit_start;
@@ -19675,8 +19751,8 @@ static void ndsRendererNativeSubmitGenericTriangle(
         ndsRendererRecordTransformedTriangle(
             stats, state, packed);
     }
-    ndsRendererSubmitHardwareTriangle(
-        stats, config, state, packed);
+    NDS_EFFECT_PHASE_TRI(ndsRendererSubmitHardwareTriangle(
+        stats, config, state, packed));
 }
 
 static inline u32 ndsRendererNativeDecodeTriangle(
@@ -28671,7 +28747,8 @@ ndsRendererScanList(const Gfx *dl,
             break;
 
         case NDS_RENDERER_OP_VTX:
-            ndsRendererApplyVertexCommand(config, stats, state, w0, w1);
+            NDS_EFFECT_PHASE_VTX(
+                ndsRendererApplyVertexCommand(config, stats, state, w0, w1));
             break;
 
         case NDS_RENDERER_OP_TRI1:

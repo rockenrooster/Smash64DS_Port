@@ -3144,6 +3144,17 @@ volatile u32 gNdsEffectPacketColorVariantCount;
 volatile u32 gNdsEffectPacketMatrixMatchCount;
 volatile u32 gNdsEffectPacketMatrixVariantCount;
 volatile u32 gNdsEffectPacketGeomWordVariantCount;
+/* G3 step 3, option B's price. Three measured spans nested inside the existing
+ * Exec bracket, all armed by the same flag as the cycle-88 capture; traversal
+ * is DERIVED as Exec - TexInExec - Vtx - Tri so that a negative residual would
+ * disprove the nesting rather than pass silently. See the comment beside the
+ * span helpers in nds_renderer.c for why the timer reads bias the answer toward
+ * B being small. */
+volatile u32 gNdsEffectPhaseVtxTicks;
+volatile u32 gNdsEffectPhaseVtxCount;
+volatile u32 gNdsEffectPhaseTriTicks;
+volatile u32 gNdsEffectPhaseTriCount;
+volatile u32 gNdsEffectPhaseTexInExecTicks;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin

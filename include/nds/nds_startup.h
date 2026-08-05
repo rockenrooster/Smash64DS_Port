@@ -4427,6 +4427,13 @@ extern volatile u32 gNdsEffectPacketColorVariantCount;
 extern volatile u32 gNdsEffectPacketMatrixMatchCount;
 extern volatile u32 gNdsEffectPacketMatrixVariantCount;
 extern volatile u32 gNdsEffectPacketGeomWordVariantCount;
+/* G3 step 3: the traversal-versus-projection split inside Exec. Traversal is
+ * derived, never counted -- Exec - TexInExec - Vtx - Tri. */
+extern volatile u32 gNdsEffectPhaseVtxTicks;
+extern volatile u32 gNdsEffectPhaseVtxCount;
+extern volatile u32 gNdsEffectPhaseTriTicks;
+extern volatile u32 gNdsEffectPhaseTriCount;
+extern volatile u32 gNdsEffectPhaseTexInExecTicks;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

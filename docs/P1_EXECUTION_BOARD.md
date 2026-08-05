@@ -603,6 +603,94 @@ raw means giving them hardware-computed depth in place of the port's synthetic
 painter order — a **visual** change to layering, and therefore the owner's call.
 See the escalation below; do not route effects to the raw path without it.
 
+### G3 step 3 — OPTION B IS SMALL, AND THE COST IS GENUINELY THE PROJECTION (cycle 90)
+
+Boundary arm, frames 900–907, 645 instances, DLDI on, build
+`builds/build-tick-hud-buckets`, ROM `573F4F41`; artifact
+`artifacts/performance/2026-08-05_c90-effect-exec-split-boundary.json`. Three
+spans measured inside the existing Exec bracket, armed by the cycle-88 flag;
+**traversal is DERIVED** as `Exec − TexInExec − Vtx − Tri`, so a negative
+residual would disprove the nesting. Residual **+16,802,176, non-negative.**
+
+| span | ticks | share of Exec | per instance |
+|---|---:|---:|---:|
+| **Tri** (classify + clip divides + painter depth + GX emit) | 63,044,032 | **70.95%** | 97,743 |
+| **Traversal** (derived: walk, dispatch, state, in-Exec texture) | 16,802,176 | **18.91%** | 26,050 |
+| **Vtx** (G_VTX transform) | 9,006,080 | 10.14% | 13,963 |
+| Exec | 88,852,288 | 100% | 137,755 |
+
+**The bias correction closes on the banked figure to one tick, which is the
+cross-check that makes this usable.** The brackets charge a timer read to the
+span they wrap, and Vtx/Tri fire ~33x per list against Exec's once — so Exec
+reads 137,755/instance against the banked **101,359**. Charging the whole
+36,396 excess to Tri+Vtx gives 75,310, and 75,310 + 26,050 = **101,360 vs
+101,359 banked.** Traversal is unaffected by the correction because it is
+derived.
+
+**Option B's recoverable, both ends measured:** **low 19,167/instance (18.91%
+of banked Exec)**, **high 26,050/instance (25.7%)**. So B removes at most about
+a quarter of Exec and **74.3% of the cost is per-vertex and per-triangle work B
+must still pay every frame** — because cycle 88 proved the vertex words are the
+per-instance payload. B is real but small, and it is small for the decisive
+reason rather than an incidental one.
+
+Engagement exact: `gNdsEffectPhaseTriCount` **10,647 == `gNdsEffectDLTriangleTotal`
+10,647**; capture count 645 == `gNdsEffectDLSubmitCount`.
+
+**Instrument defect, stated rather than papered over:** `gNdsEffectPhaseTexInExecTicks`
+read **0**. There are three texture-resolve entry points charging
+`gNdsEffectPhaseTexTicks`; only one was given the in-Exec twin and it never
+fires while armed. In-Exec texture resolve is therefore folded into the derived
+traversal residual. That is *correct for B's accounting* — texture resolve is
+template-invariant, so a packet removes it — but it means the texture sub-share
+is not separately reported, and `gNdsEffectPhaseTexTicks` (18,086,656) spans
+work outside Exec so it cannot be substituted.
+
+**NOT DONE: the gate arm.** `builds/build-c90-split-bothcpu` is built and boot-
+headroom OK (113,952) but **not run**. Every figure above is Boundary-only.
+
+### G3 step 4 — STATIC PER-LAYER WORLD Z CANNOT REPRODUCE THE CURRENT ORDER (cycle 90)
+
+The owner's proposal — bake a fixed distinct world-Z per effect layer and let
+the depth test reproduce painter order by construction, giving A's win without
+A's fidelity cost. **Verdict: no, not as stated, and none of the fighter-Z
+measurements is what kills it.** Read from the specification, no build:
+
+- **The scheme orders per PRIMITIVE, not per layer.**
+  `ndsRendererHardwareNextProjectedDepth` decrements by `STEP` and returns
+  `counter / STEP`, giving **every no-Z primitive its own depth slot in
+  submission order**. Its comment records the exact failure a per-layer
+  constant would reintroduce: *"Subtracting one here made six consecutive no-Z
+  triangles share a depth after division, allowing an earlier stage triangle to
+  reject a later grass/bush draw."* Sharing a depth across primitives is a
+  **known, already-observed rendering bug**, not a hypothetical.
+- **The order is dynamic and scene-dependent.** The depth a given effect
+  receives depends on how many painter primitives preceded it *that frame*, and
+  on whether the first source-Z triangle has flipped the counter via
+  `ndsRendererHardwareEnterProjectedForeground` into its foreground range. A
+  static constant cannot reproduce an order defined by submission position.
+- **Precision budget, from the constants:** `BACKGROUND_START` `0x1000*6` and
+  `FOREGROUND_START` `(128-0x1000)*6` give **4,096 slots per range, one per
+  primitive**. Effects alone consume **1,331 primitives/frame** (cycle 89:
+  10,647 triangles over 8 frames) before stage no-Z geometry takes its share.
+  The slots are already substantially spent.
+
+**Consequently fighter-Z constancy (the owner's premise) is not the binding
+constraint and was not measured.** It would matter only if the target were
+per-object ordering; the specification is per-primitive. Reporting that the
+premise is untested is the honest form — it may well be true and still not help.
+
+**A variant does survive and is worth pricing, but it is a hypothesis, not a
+result.** Bake each template's per-triangle ordering into its model-space Z
+(the template's primitive set is fixed — 83 triangles over 8 templates), and
+carry the per-instance base depth in the **patched matrix's Z translation** —
+which is the one patch the original G3 design already called for. That
+reproduces per-primitive order by construction *if* base offsets are assigned
+in submission order. **Unmeasured and possibly fatal:** whether DS depth
+precision supports ~1,331 per-frame instance slots *plus* intra-template
+separation. That is the next cheap measurement, and it is the same question
+step 4 bullet 3 bounds but does not answer.
+
 ### G3 — RE-PRICED ON THE GATE ARM (cycle 79). The prize is 4–9x smaller than this row claims.
 
 **Every number below this heading is Boundary-derived and carries no arm
