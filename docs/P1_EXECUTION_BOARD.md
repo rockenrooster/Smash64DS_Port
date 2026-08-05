@@ -205,6 +205,67 @@ work, and the both-CPU stratification names the giver as `FTR` (−161,024 on
 `MISC`-hot frames, the fighter-absent signature). Against a 343,104 gap, ~315,000
 is the whole campaign.
 
+### THE EFFECT-SUBMIT PHASE SPLIT — an exact partition, and the denominator is the DISPLAY LIST
+
+Whole-match Boundary, 1600 samples, 50 stops. **The nine phases sum to the
+effect total with delta 0 and all four nesting invariants hold** (Tree≤Effect,
+DL≤Tree, four-phases≤DL, Tex≤Exec) — a true partition, so no phase hides inside
+another. Effect draw 160,627,648 ticks · 21,854 triangles · **1,360 display
+lists** · 1,436 nodes.
+
+| phase | ticks | share | per list |
+|---|---:|---:|---:|
+| **Exec − Tex — the generic DL interpreter** | **105,319,040** | **65.57%** | **77,440** |
+| **Tex — texture resolve** | **34,394,304** | **21.41%** | **25,289** |
+| Matrix | 11,124,608 | 6.93% | 8,179 |
+| per-list overhead (DL − four phases) | 3,677,824 | 2.29% | 2,704 |
+| residual | 3,523,008 | 2.19% | 2,590 |
+| walk + dispatch (Tree − DL) | 1,288,512 | 0.80% | 947 |
+| **Find** | 714,432 | **0.44%** | 525 |
+| **Material** | 402,752 | **0.25%** | 296 |
+| Color | 183,168 | 0.11% | 134 |
+
+**Both a-priori suspects are DEAD.** `Find` — the `ndsRelocFindLoadedFileContaining`
+linear scan with a 1-entry `static` memo, called per command range, which the
+orchestrator called "the textbook shape of a 100× multiplier" — is **0.44%**.
+`Material` is **0.25%**, and it independently clears §3.11 on inspection: it
+bump-allocates from `gSYTaskmanGraphicsHeap` with its caller saving and restoring
+the pointer and bounds-checking before it writes, so it cannot block the way
+`syMallocSet` can. Cost finding, not correctness finding. No code was spent on
+either.
+
+**The list count is real, reconciled across two instruments and two builds.**
+21,854 triangles at the separately measured 53/frame implies 412 active frames;
+1,360 lists over 412 frames is 3.30 lists/active frame; 160,627,648 total is
+**389,551 effect ticks per active frame against 363,004 measured by the upload
+probe in a different build — 7% apart.**
+
+**THE TRUE DENOMINATOR IS THE LIST, NOT THE TRIANGLE.** 16.1 triangles per list
+at 102,730 Exec ticks/list; per-triangle reads 4,819 only because the list
+happens to carry 16, and the constant barely tracks triangle count.
+
+**Open, and it decides whether the packet rewrite happens at all.** With
+`max_commands = 8192`, 8192 × 12.54 = **102,727 against a measured 102,730 —
+three ticks apart.** A re-parse of a 50-command list costs 50 commands, not
+8,192. That arithmetic is the signature of a loop running to its **cap** rather
+than to the list's end. Being measured now, interpretation fixed in advance:
+trip count ≈ 8,192 terminating on "cap exhausted" is a **bounded defect worth
+~105M ticks** and the rewrite is deferred; trip count ≈ real list length
+terminating on `G_ENDDL` means the interpreter is honestly generic and the
+precompiled-packet path is correct.
+
+**`Tex` is entirely cache-HIT cost**, not conversion or upload — the upload probe
+already proved 1 upload per ~1,408 frames and 0 evictions. It is the ~30-field
+key build, its hash, and the lookup, repeated per bind: **~3,328 ticks per
+resolve against the fighter's 1,013 for a *full* prepare**, i.e. 3.3× the
+fighter's whole price for what is only a hit. That is exactly what
+`NDS_R2_FIGHTER_RUN_MEMO` skips. The effect memo needs a different key — the
+fighter's `run_index` has no analogue here — so it is keyed on (display-list
+pointer, bind ordinal within the list), revalidated on `entry->ready` /
+`entry->name` / `entry->key_generation`, **reset at scene entry** per §3.12, and
+built with the level-2 verify arm that caught three subtly incomplete keys on the
+fighter path.
+
 ## R2-07 — the cycle-76 row, superseded above but kept for the findings it still owns
 
 Fresh 128-frame baseline on `f24f0cc1`, rom `F04F5D98…`, `dldi=ON`, ring dump
