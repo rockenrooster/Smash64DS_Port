@@ -35,19 +35,26 @@ These are about this tool, so they are not in `AGENTS.md`:
   work credits the agent's model.
 - `.codegraph/` exists here, so the CodeGraph section of `AGENTS.md` applies:
   reach for `codegraph_explore` before grep or Read.
-- **The Nintendo DS skill pack lives in the owner's global skills, not here**
-  (moved 2026-08-04). Do not re-add `nds-*`, `smash64ds-project-context`, or
-  `n64-to-nds-asset-conversion` to this repository; a global skill is available
-  to every project and has no canonical/bridge pair to maintain. What stays
-  project local is the skill that is *about this repository*:
+- **`nds-coding-practices` is project local on purpose — do not remove it**
+  (owner, 2026-08-05). It briefly lived in the owner's global skills
+  (2026-08-04), which reached Claude and Codex but no other coding agent; it is
+  back in-tree so *every* agent working this repo can read it. It is
+  **canonical-only**: `.agents/skills/nds-coding-practices/` with no
+  `.claude/` bridge, because Claude already receives it as the plugin skill
+  `anthropic-skills:nds-coding-practices` and a bridge would only duplicate that
+  surface. `validate-smash64ds-skills.py` encodes this in `BRIDGELESS_SKILLS`
+  and errors on a bridge appearing. `smash64ds-project-context` and
+  `n64-to-nds-asset-conversion` stay global — do not re-add those.
+  The skill that is *about this repository* also stays project local:
   `smash64ds-opus-guardrails`, which loads `CLAUDE.OPUS.md` and
   `AGENTS.OPUS.md` for Opus sessions. Its canonical text is
   `.agents/skills/<name>/SKILL.md` (harness-neutral, with its `references/` and
   `agents/openai.yaml`); `.claude/skills/<name>/SKILL.md` is a one-paragraph
   bridge that points at it. Edit the canonical file, never the bridge, and never
   fork a Claude-specific copy. `python scripts/validate-smash64ds-skills.py`
-  checks that every canonical skill has a matching bridge; nothing runs it
-  automatically, so run it after adding or renaming one. Both trees are tracked
+  checks that every canonical skill has a matching bridge *unless it is listed
+  bridgeless*; nothing runs it automatically, so run it after adding or renaming
+  one — it was RED from 2026-08-04 until 2026-08-05 for exactly this. Both trees are tracked
   — `.gitignore` excludes the *contents* of `/.agents/` and `/.claude/`
   precisely so `skills/` can be re-included, because a gitignored skill set
   silently disappears in a fresh clone and in every worktree.

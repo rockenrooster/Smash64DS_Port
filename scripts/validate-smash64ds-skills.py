@@ -9,13 +9,29 @@ ROOT = Path(__file__).resolve().parents[1]
 AGENTS = ROOT / ".agents" / "skills"
 CLAUDE = ROOT / ".claude" / "skills"
 
-# The Nintendo DS skill pack moved to the user's GLOBAL skills on 2026-08-04,
-# so it is no longer validated from here -- a global skill lives outside this
-# repository and has no canonical/bridge pair to check. What remains project
-# local is the skill that is about this repository itself.
+# Two kinds of project-local skill live here.
+#
+# `smash64ds-opus-guardrails` is *about this repository*, so it carries the full
+# canonical/bridge pair: canonical text under `.agents/skills/`, one-paragraph
+# bridge under `.claude/skills/`.
+#
+# `nds-coding-practices` is deliberately canonical-only (owner, 2026-08-05). It
+# briefly lived in the owner's global skills, which reached Claude and Codex but
+# nothing else; it is back in-tree so that EVERY coding agent working this repo
+# can read it, not just those two. Claude already receives it as the plugin skill
+# `anthropic-skills:nds-coding-practices`, so a `.claude/` bridge would only add
+# a duplicate surface -- hence no bridge is required, and one is treated as an
+# error rather than silently accepted.
 EXPECTED_SKILLS = {
     "smash64ds-opus-guardrails",
+    "nds-coding-practices",
 }
+
+# Canonical skills that intentionally have no `.claude/` bridge.
+BRIDGELESS_SKILLS = {
+    "nds-coding-practices",
+}
+EXPECTED_BRIDGES = EXPECTED_SKILLS - BRIDGELESS_SKILLS
 
 NAME_RE = re.compile(r"^[a-z0-9-]{1,64}$")
 FRONTMATTER_RE = re.compile(
@@ -47,9 +63,9 @@ for missing in sorted(EXPECTED_SKILLS - canonical_names):
     errors.append(f"Missing canonical skill: {missing}")
 for extra in sorted(canonical_names - EXPECTED_SKILLS):
     errors.append(f"Unexpected canonical skill: {extra}")
-for missing in sorted(EXPECTED_SKILLS - bridge_names):
+for missing in sorted(EXPECTED_BRIDGES - bridge_names):
     errors.append(f"Missing Claude bridge: {missing}")
-for extra in sorted(bridge_names - EXPECTED_SKILLS):
+for extra in sorted(bridge_names - EXPECTED_BRIDGES):
     errors.append(f"Unexpected Claude bridge: {extra}")
 
 for skill_name in sorted(EXPECTED_SKILLS & canonical_names):

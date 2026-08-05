@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nintendo DS Coding Practices"
+  short_description: "Write correct, efficient Nintendo DS code"
+  default_prompt: "Use $nds-coding-practices to implement or review this Nintendo DS code using correct hardware, libnds, memory, graphics, audio, and runtime practices."
