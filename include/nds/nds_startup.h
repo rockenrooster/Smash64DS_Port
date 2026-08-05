@@ -4293,6 +4293,12 @@ extern volatile u32 gNdsEffectPhaseTexTicks;
 extern volatile u32 gNdsEffectPhaseDLCount;
 extern volatile u32 gNdsEffectPhaseNodeCount;
 extern volatile u32 gNdsEffectPhaseActive;
+/* R2-08 cap-versus-end, cumulative. See diagnostics.c. */
+extern volatile u32 gNdsEffectDLCommandTotal;
+extern volatile u32 gNdsEffectDLTermCapCount;
+extern volatile u32 gNdsEffectDLTermEndCount;
+extern volatile u32 gNdsEffectDLTermOtherCount;
+extern volatile u32 gNdsEffectDLTermOtherMask;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

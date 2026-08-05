@@ -3090,6 +3090,13 @@ volatile u32 gNdsEffectPhaseNodeCount;
  * reloc_backend_renderer_dl.c; this is its cross-TU twin, set from the same
  * seam so the two cannot drift. */
 volatile u32 gNdsEffectPhaseActive;
+/* R2-08 cap-versus-end. Cumulative; see the publish site in
+ * reloc_backend_renderer_dl.c for why a tautology made these necessary. */
+volatile u32 gNdsEffectDLCommandTotal;
+volatile u32 gNdsEffectDLTermCapCount;
+volatile u32 gNdsEffectDLTermEndCount;
+volatile u32 gNdsEffectDLTermOtherCount;
+volatile u32 gNdsEffectDLTermOtherMask;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin

@@ -9376,6 +9376,35 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
         gNdsEffectDLBlocker = render_stats->blocker;
         gNdsEffectDLCommandCount = render_stats->command_count;
+#if NDS_TICK_HUD
+        /* R2-08 CAP-VERSUS-END. The two lines above are LAST-VALUE-WINS, so a
+         * stop reads one list; these are cumulative, so a stop reads the whole
+         * window. The question they settle is whether the interpreter stops at
+         * the list's end or runs to config->max_commands (8192): the executor
+         * sets blocker = BUDGET on exactly that path (nds_renderer.c:28303),
+         * and BLOCKER_NONE means it reached G_ENDDL under its own steam.
+         *
+         * This exists because an arithmetic COINCIDENCE nearly bought a
+         * deferral: 8192 x 12.54 = 102,727 against a measured 102,730 per list
+         * looks like proof the loop runs to its cap, but the 12.54 was obtained
+         * by dividing 102,730 BY 8192, so the agreement is a tautology and
+         * carries no information. Mean commands per list is the honest form of
+         * the same question and it is two adds. */
+        gNdsEffectDLCommandTotal += render_stats->command_count;
+        if (render_stats->blocker == NDS_RENDERER_BLOCKER_BUDGET)
+        {
+            gNdsEffectDLTermCapCount++;
+        }
+        else if (render_stats->blocker == NDS_RENDERER_BLOCKER_NONE)
+        {
+            gNdsEffectDLTermEndCount++;
+        }
+        else
+        {
+            gNdsEffectDLTermOtherCount++;
+            gNdsEffectDLTermOtherMask |= 1u << (render_stats->blocker & 31u);
+        }
+#endif
         gNdsEffectDLFirstOpcode = render_stats->first_opcode;
         gNdsEffectDLUnsupportedOpcode = render_stats->unsupported_opcode;
         /* vertex_count/triangle_count, NOT the *_command_count pair: every

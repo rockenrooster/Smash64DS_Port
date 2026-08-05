@@ -5111,7 +5111,10 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsEffectPhaseDLTicks + gNdsEffectPhaseFindTicks +
             gNdsEffectPhaseMaterialTicks + gNdsEffectPhaseMatrixTicks +
             gNdsEffectPhaseExecTicks + gNdsEffectPhaseTexTicks +
-            gNdsEffectPhaseDLCount + gNdsEffectPhaseNodeCount;
+            gNdsEffectPhaseDLCount + gNdsEffectPhaseNodeCount +
+            gNdsEffectDLCommandTotal + gNdsEffectDLTermCapCount +
+            gNdsEffectDLTermEndCount + gNdsEffectDLTermOtherCount +
+            gNdsEffectDLTermOtherMask;
         gNdsTickHudBuckets[nNDSTickHudBucketFighters] =
             gNdsTickHudFighterTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketStage] = gNdsTickHudStageTicks;
