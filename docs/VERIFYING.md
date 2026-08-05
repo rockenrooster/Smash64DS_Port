@@ -167,6 +167,27 @@ fix -- a static-checker aggregator -- is not worth building until a second
 checker has actually gone stale, because most of the forty-four need a specific
 ROM or build and would turn one wrapper into a fleet.
 
+## Run Economics — the both-CPU soak is final-acceptance only
+
+**The both-CPU soak is the most expensive run in this project. Run it ONCE, when
+you believe the goal is complete** (owner, 2026-08-05). It is not an iteration
+instrument and it is not a regression check. The cost is the whole chain: it
+builds its own `build-r2-bothcpu` stress ROM, then watches a real-time match
+long enough for a freeze to have somewhere to happen — and one game minute is
+~136 s of wall clock (`soak-freeze-watch.ps1`), which is why `-MinutesToRun`
+caps at 7.0 *wall* minutes and defaults to 2.5.
+
+Nothing in ordinary development needs it. Use instead:
+
+- **freeze/stability during iteration** — the Boundary soak, or a short
+  `NDS_R2_SOAK_MATCH_MINUTES` run; both catch hangs far cheaper.
+- **the performance gate** — the both-CPU *tick* run, which is a 60-second match
+  since the 2026-08-05 reseed and is a different and much cheaper thing than the
+  soak. Do not conflate the two because they share `NDS_R2_BOTH_CPU`.
+
+Budget a soak deliberately, say why the cheaper form will not do, and never
+launch one to "check something quickly".
+
 ## Checkpoint Choice
 
 Choose one widest relevant wrapper:
