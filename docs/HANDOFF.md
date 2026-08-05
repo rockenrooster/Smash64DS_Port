@@ -36,9 +36,11 @@ loading states excluded; the shipped ROM stays the Boundary hwtri pair.
 `Makefile:305-308` still forbids reporting a both-CPU P95 as the Boundary
 figure. Both-CPU is only ~10% worse at P95 — harder, not a different animal.
 
-**BLOCKER, pre-existing:** the Boundary verifier profile is RED on HEAD, since
-`4a413079` — a stale `EXPECTED_CENSUS_SHA256` pin over `nds_renderer.c` source
-text aborts the whole profile in pre-flight. See Parked on the board.
+**The Boundary verifier is GREEN again** (cycle 80). It had been red since
+`fcf93d00` — **35 commits, including the whole cycle-79 gate lane** — on a stale
+`EXPECTED_CENSUS_SHA256` that aborted the profile in pre-flight. Bisected to six
+`renderer_key_contract` constants; no texture corpus moved. Board carries the
+detail and the retraction. **Re-pin in the commit that changes what it covers.**
 
 ## The target: effect DObj submits, and the denominator is the display list
 

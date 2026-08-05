@@ -499,19 +499,41 @@ row 1's execution plan.
   +36,032 P95 on the bad window; real cost ~360,000 on every effect-active
   frame. The decision stands (make the submit path cheap, do not delete the
   models) — the number behind it did not.
-- **THE BOUNDARY VERIFIER IS RED ON HEAD, and has been since `4a413079`**
-  (found cycle 80, not caused by it). `generate_battle_playable_texture_census.py:255`
-  pins `EXPECTED_CENSUS_SHA256 = 829c895d…`; the tree computes `5e1fb387…`.
-  The census hashes `src/nds/nds_renderer.c` **source text**, and `4a413079`
-  (G1's site memo) edited that file without re-pinning — so G1 landed without a
-  green Boundary run and nobody noticed. It fails in a pre-flight of
-  `verify-battle-mariofox-gcrunall-loop-harness.ps1:317`, which then reports
-  "Static texture generator reported no residency bytes", so the *whole*
-  Boundary profile aborts before any runtime check. Decide whether the new
-  census is correct and re-pin, or fix what changed — do not re-pin blind, and
-  do not read the residency message as a texture bug; it is a cascade.
-  Same class as the drifted `Assert-Text` pins below: a hash over source text
-  fires on edits that change nothing it guards.
+- **RESOLVED cycle 80 — the Boundary verifier was RED for 35 commits, and the
+  first attributed cause was wrong.** `EXPECTED_CENSUS_SHA256` went stale at
+  **`fcf93d00`** (2026-08-04 17:05), *not* at `4a413079`. **RETRACTED:** the
+  census does **not** hash `nds_renderer.c` source text — `parse_renderer_contract`
+  extracts semantic facts (the key field tuple plus four required tokens), each
+  failing closed with its own message, and returns hardcoded constants. That
+  claim was inferred from a `read_text` call without reading what the parser
+  does with it.
+  Bisected: the pre-`fcf93d00` script against the pre-`fcf93d00` tree reproduces
+  `829c895d…` exactly. A field-level manifest diff moves **six leaves, all in
+  `renderer_key_contract`**, all corroborated by `nds_renderer.c`'s own defines —
+  `current_cache_entries` 48→69 (`CACHE_COUNT 69u`), `cache_entry_bytes_profile`
+  280/276→44/40, and three new fields `static_cache_entries` 24
+  (`STATIC_COUNT 24u`), `dynamic_key_pool_bytes` 10,620 ((69−24)×236),
+  `static_pointer_word_bytes` 288 (24×3×4). **Nothing in the texture corpus
+  moved**, and every `decomp/` input still matched its own pinned sha256, so it
+  was a reviewed consequence of a deliberate change, not corpus drift — which is
+  why re-pinning was correct here and would *not* have been had a corpus field
+  moved.
+  The second failure ("Static texture generator reported no residency bytes",
+  `verify-battle-mariofox-gcrunall-loop-harness.ps1:317`) was **one cause, not
+  two**: that generator imports the census, died on the same digest, emitted no
+  JSON, and the absent field read as 0. Its own `EXPECTED_INCLUDE_SHA256` then
+  needed re-pinning too, and that delta is **pure provenance** — the include
+  stamps the census digest in a header comment, so exactly one line changed
+  while `EXPECTED_PAYLOAD_SHA256`, `EXPECTED_METADATA_SHA256`, residency 61,696
+  and payload 61,210 all stayed put.
+  **The durable lesson: re-pin in the same commit that changes what the pin
+  covers.** A pin whose subject moves silently disables every gate downstream of
+  it — here the entire Boundary profile aborted in pre-flight, so 35 checkpoints
+  including the whole cycle-79 gate lane landed without a runtime check.
+  Two secondary notes: `src/nds/generated/…static_textures.generated.inc` is an
+  **untracked build product** whose on-disk copy was still the Aug-3 version, so
+  the build's prerequisites for it do not include the census script; and its
+  staleness was harmless only because the delta was a comment.
 - **`check-one-minute-match-verifier.ps1` has drifted from its owner**
   (2026-08-03): 55 `Assert-Text` pins against exact source text, at least two
   red on refactors that changed nothing they guard. Regrade the pins against

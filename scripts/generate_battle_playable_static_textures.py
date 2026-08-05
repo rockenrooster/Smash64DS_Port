@@ -75,7 +75,18 @@ EXPECTED_METADATA_SHA256 = (
     "677c0508cd314316ddd9934fb146efb80856e0014c5f0f2d5a34834231a22567"
 )
 EXPECTED_INCLUDE_SHA256 = (
-    "67e5bfe9da656a116ee5b74af65c18f430238804e31c22bb0d18880f2c5511c4"
+    # RE-PINNED 2026-08-05, and it is PURE PROVENANCE. The include stamps the
+    # census digest in a header comment, so re-pinning the census (see
+    # generate_battle_playable_texture_census.py) changes this file's bytes
+    # without changing one texture. The diff is exactly one line:
+    #   -/* Source census SHA256: 829c895d…. */
+    #   +/* Source census SHA256: 5e1fb387…. */
+    # EXPECTED_PAYLOAD_SHA256, EXPECTED_METADATA_SHA256, EXPECTED_RESIDENCY_BYTES
+    # (61,696), EXPECTED_PAYLOAD_BYTES (61,210) and EXPECTED_ORACLE_PIXELS
+    # (65,024) are all UNCHANGED, which is the proof that the corpus itself did
+    # not move -- those are the guards over the data, this one is over the
+    # emitted text. Same byte count before and after: 29,807.
+    "7149a6e595bb04a2da51b9f4c2aff19c643721e3ed22fb6cc4d3978ff9599583"
 )
 
 G_SETTIMG = 0xFD

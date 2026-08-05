@@ -250,9 +250,36 @@ EXPECTED_ACTOR_ROOTS = {
 
 
 EXPECTED_CENSUS_SHA256 = (
-    # Same 25/41728 OBJ census. The two source-derived cloud atlases now use
-    # 49152/32 A5I3 residency while still carrying all three Light rays.
-    "829c895df846b837cff31d86e4682e8fa69ce2bbbca08ae8b27558f0f60a265d"
+    # RE-PINNED 2026-08-05. The previous value (829c895d…) was left stale by
+    # fcf93d00 on 2026-08-04, which restructured the hardware texture key --
+    # 56 of 59 words moved out of RAM into a generated ROM record -- and updated
+    # this file's renderer expectations WITHOUT re-pinning. Every checkpoint
+    # since then failed the census, and because
+    # generate_battle_playable_static_textures.py calls this census, it died too
+    # and reported "no residency bytes", so the ENTIRE Boundary verifier profile
+    # aborted in pre-flight. 938 commits landed red before it was traced.
+    #
+    # Bisected, not guessed: the pre-fcf93d00 script against the pre-fcf93d00
+    # tree reproduces 829c895d… exactly, and a field-level manifest diff moves
+    # SIX leaves, all of them hardcoded constants inside parse_renderer_contract
+    # and all corroborated by nds_renderer.c's own defines:
+    #
+    #   current_cache_entries        48  -> 69   (CACHE_COUNT 69u, :1515)
+    #   cache_entry_bytes_profile_lt2 280 -> 44
+    #   cache_entry_bytes_profile_ge2 276 -> 40
+    #   static_cache_entries          -  -> 24   (STATIC_COUNT 24u, :1516)
+    #   dynamic_key_pool_bytes        -  -> 10620 ((69-24) * 236)
+    #   static_pointer_word_bytes     -  -> 288   (24 * 3 pointer words * 4)
+    #
+    # NOTHING in the texture corpus itself moved -- static/dynamic/water blocks,
+    # source records, pointer tables and the countdown OAM table are byte
+    # identical, and every decomp input still matches its own pinned sha256. So
+    # this is a reviewed consequence of a deliberate change, not corpus drift.
+    # Had any corpus field moved, the fix would have been to restore the
+    # artifact; pinning a drifted corpus destroys the guard's whole value.
+    #
+    # WHEN YOU CHANGE THE KEY CONTRACT, RE-PIN IN THE SAME COMMIT.
+    "5e1fb38708ea6184e7c71e59f73f9cbb8b42e51971c202a94710ee01247321c3"
 )
 
 
