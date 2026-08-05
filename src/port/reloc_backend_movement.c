@@ -13558,10 +13558,24 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #if NDS_RENDERER_HW_TRIANGLES
         if (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE)
         {
+            /* R2-07 MISC split. These two submits are the projectile and
+             * effect DObj halves of the MISC bucket: they run in the branch
+             * where ClassifyGObj REJECTED the GObj, so they are outside the
+             * STG bracket by construction and land in the residual. */
+#if NDS_TICK_HUD
+            u32 misc_split_mark = cpuGetTiming();
+#endif
             ndsStageGCDrawAllLoopSubmitWeaponDObj(stage_gobj,
                                                   callback_kind);
+#if NDS_TICK_HUD
+            gNdsMiscWeaponDrawTicks += cpuGetTiming() - misc_split_mark;
+            misc_split_mark = cpuGetTiming();
+#endif
             ndsStageGCDrawAllLoopSubmitEffectDObj(stage_gobj,
                                                   callback_kind);
+#if NDS_TICK_HUD
+            gNdsMiscEffectDrawTicks += cpuGetTiming() - misc_split_mark;
+#endif
         }
 #endif
         return;

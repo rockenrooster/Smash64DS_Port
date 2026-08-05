@@ -4270,6 +4270,12 @@ extern volatile u32 gNdsTickHudForegroundTicks;
 extern volatile u32 gNdsTickHudAudioTicks;
 extern volatile u32 gNdsTickHudSourceTicks;
 extern volatile u32 gNdsTickHudFlushTicks;
+/* R2-07 MISC split. Cumulative, never reset per frame -- difference them
+ * across two ring stops with -PerStopGlobals. See diagnostics.c. */
+extern volatile u32 gNdsMiscWeaponDrawTicks;
+extern volatile u32 gNdsMiscEffectDrawTicks;
+extern volatile u32 gNdsMiscParticleDrawTicks;
+extern volatile u32 gNdsMiscSplitAccountedTicks;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

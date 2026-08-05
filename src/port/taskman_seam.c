@@ -5092,6 +5092,14 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
         u32 named;
 
         misc_draw += gNdsTickHudFlushTicks;
+        /* R2-07 MISC split reader. Names all three cumulative sub-path
+         * counters so --gc-sections keeps them (a debugger is not a reader),
+         * and carries the running total the split accounts for -- MISC minus
+         * this, differenced across two ring stops, is the part still
+         * unexplained. */
+        gNdsMiscSplitAccountedTicks =
+            gNdsMiscWeaponDrawTicks + gNdsMiscEffectDrawTicks +
+            gNdsMiscParticleDrawTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketFighters] =
             gNdsTickHudFighterTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketStage] = gNdsTickHudStageTicks;

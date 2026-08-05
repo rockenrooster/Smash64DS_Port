@@ -1688,6 +1688,20 @@ void lbParticleDrawTextures(GObj *gobj)
     u32 emitted = 0u;
     u32 atlas_name;
     u32 link;
+#if NDS_TICK_HUD
+    /* R2-07 MISC split: the whole lbParticle quad pass, ticks not quads. The
+     * emit COUNT already exists (gNdsParticleQuadEmitCount) and is exactly the
+     * kind of number that got particles blamed once before at 0.21 quads a
+     * frame; this is what it costs.
+     *
+     * cpuGetTiming is forward-declared here rather than reached by including
+     * nds/timers.h. This translation unit's include order is load bearing --
+     * the header block above documents 826 errors from getting it wrong -- and
+     * one prototype is a smaller change than another header in that chain.
+     * libnds nds/timers.h:255 is the authority for the signature. */
+    extern u32 cpuGetTiming(void);
+    u32 misc_particle_mark = cpuGetTiming();
+#endif
 
     gNdsParticleDrawSeamCount++;
 #if NDS_R2_PARTICLE_DRAW
@@ -1871,4 +1885,7 @@ void lbParticleDrawTextures(GObj *gobj)
         gNdsParticleQuadEmitMax = emitted;
     }
     ndsParticleRuntimePublishTallies();
+#if NDS_TICK_HUD
+    gNdsMiscParticleDrawTicks += cpuGetTiming() - misc_particle_mark;
+#endif
 }

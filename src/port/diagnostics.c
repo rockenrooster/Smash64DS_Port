@@ -3020,6 +3020,27 @@ volatile u32 gNdsTickHudForegroundTicks;
 volatile u32 gNdsTickHudAudioTicks;
 volatile u32 gNdsTickHudSourceTicks;
 volatile u32 gNdsTickHudFlushTicks;
+/* R2-07: MISC is DrawTicks minus (FTR + STG + BG + HUD) plus the flush, i.e.
+ * everything drawn that no other bucket claims. It is now the campaign, and a
+ * residual cannot be optimised -- so these split it into the sub-paths that
+ * actually make it up.
+ *
+ * CUMULATIVE, deliberately, and NOT reset per frame like the buckets beside
+ * them. The tick-HUD ring carries bucket words only, so a per-frame value can
+ * only be read one frame per GDB stop; a running total differenced across two
+ * ring stops gives the whole window instead, which is what -PerStopGlobals is
+ * for. Ticks and not counts: the campaign has twice mistaken presence for cost
+ * (particles at 0.21 quads/frame, and the six proof-scoped counters that read
+ * zero for a whole match), and a count cannot tell those apart. */
+volatile u32 gNdsMiscWeaponDrawTicks;
+volatile u32 gNdsMiscEffectDrawTicks;
+volatile u32 gNdsMiscParticleDrawTicks;
+/* Written by ndsBattlePlayableFinalizePresentedIteration, which is what keeps
+ * the three above from being collected: --gc-sections drops a volatile u32
+ * that live code never names, and a debugger is not live code. This is also
+ * the cross-check -- MISC minus this is the part of the bucket the split does
+ * not yet explain. */
+volatile u32 gNdsMiscSplitAccountedTicks;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin
