@@ -139,11 +139,20 @@ quote these numbers as gate-arm numbers, and do not rebuild G3's case from them.
   went *up* 20% — reverted, flag deleted); L7 fixed-point collision (+534 won
   vs 6,481 lost to its own text); asset loads as the tail owner (refuted three
   times); Task 56 strips (ROM hangs the present loop — never completed a run).
-- **The ROM is ~1.4–2.2 KB from a boot cliff**: `fake_heap_start` probe —
-  +1,408 bytes boots, +2,208 does not; a failing arm never reaches presented
-  frame 9. **Text counts as much as bss.** Every new table/code states its byte
-  cost and takes an 8-sample `-StartFrame 60` boot probe (~50 s) before any
-  measuring run.
+- **The ROM has 96 BYTES of proven headroom — not 1.4 KB (corrected cycle 82).**
+  The old "+1,408 boots, +2,208 does not" was a **delta over a datum build, and
+  the datum moved every time the tree grew**: the tree had already spent 1,312
+  of that 1,408 by cycle 80, so quoting the band on a later tree overstates the
+  room by ~14x. Price it in **absolute `fake_heap_start`** (end of `.bss`, hence
+  the heap base; address delta == text+data+bss delta, verified to the byte).
+  Highest address ever proven to boot **`0x02294804`**; lowest proven to fail
+  **`0x02294b24`**; the 800-byte band between them has never been bisected. The
+  current gate-arm control links at **`0x022947a4`**. **Text counts as much as
+  bss.** `scripts/check-boot-headroom.ps1 -Build <dir>` reads any build's ELF and
+  returns OK / UNPROVEN / OVER CLIFF (exit 1) in under a second — run it after
+  every lab build, then the 8-sample `-StartFrame 60` boot probe (~50 s) only if
+  it says UNPROVEN. A failing arm never reaches presented frame 1 and the
+  harness reports a timeout, which reads exactly like a hung emulator.
 
 ## THE GATE LANE — in order, one row live at a time
 
@@ -199,6 +208,12 @@ dominated by six census counters inlined at several sites, not by the flip
 flip alone, because G3's packet builder spends from the same budget.
 
 ### G2 — footprint map DONE (cycle 79). Failing allocation NOT yet named; 32 KB NOT yet demonstrated.
+
+**PROMOTED TO BLOCKING, cycle 82.** Proven headroom is **96 bytes**
+(`0x022947a4` control against `0x02294804` highest-booting), so G2 no longer
+only funds G3 — it gates the **instrument** that ranks `SRC`, which is 68.9% of
+the gate arm's excursion. Two ring buckets need 1,040 bytes and cannot be had.
+Nothing that adds static footprint can be measured until this row lands.
 
 Authoritative, from the **shipped** ROM's matching ELF pair
 (`smash64ds-battle-playable-hwtri.elf`, Aug 4 20:33, pairs with the published
@@ -497,6 +512,29 @@ row 1's execution plan.
 
 ## Parked — open items with owners' notes, promote deliberately
 
+- **SRC sub-owner instrument: BLOCKED ON RAM, and the brackets are exonerated
+  (cycle 82).** The splitting experiment ran: enum + ring rows + published names,
+  **both accumulate brackets omitted**, so the only executable change left was a
+  loop bound. `builds/build-c82-src-nobracket` is **bss-identical to the failing
+  c81 arm (1,717,192) and 88 bytes SMALLER in text**, and it **still died** —
+  240 s, never reached ring stop 0, the liveness probe could not read
+  `gNdsBattlePlayablePacingPresentedFrames` at all (the §3.11 total-freeze
+  signature). `build-c80-gate-bothcpu` booted to frames 60–67 through the
+  identical harness in the same session. **So it is the cliff, not a defect:
+  +1,056 bytes of inert `.bss` is enough to kill the ROM on its own.** The arm
+  linked at `0x02294ba4`, 128 bytes above the lowest address ever measured to
+  fail; it was never committed. Control artifact
+  `artifacts/performance/2026-08-05_c82-bootprobe-control-c80.json`; the
+  candidate produced **no** JSON — it threw
+  `"exceeded 240s before 8 samples ... never reached ring stop 0"`, which is the
+  outcome, not a missing artifact.
+  **A ring bucket costs 520 bytes (128×4 ring + P50 + P95), so two cost 1,040
+  against 96 bytes of proven headroom — G2 is a hard prerequisite, and no
+  redesign of the brackets will change that.** The cheap fallback if G2 stalls:
+  two cumulative `volatile u32` counters (8 bytes) read through
+  `-PerStopGlobals` and differenced across ring stops — that buys per-stop sums
+  but **not** the per-frame series a hot-vs-clean excursion split needs.
+  The original design, still valid, follows.
 - **SRC sub-owner instrument: designed and built, DOES NOT BOOT (cycle 81).**
   Two ring buckets appended after `WORK` (so every existing index and the
   `named`/`OTHR`/`WORK` identity stay byte-identical): `SHDT` =
@@ -532,6 +570,16 @@ row 1's execution plan.
   `scene_harness.c` comment that cites it as the reason the both-CPU arm
   exists. `SHDT` above is the re-measurement.
 
+- **Task 56 strips may have been closed on the boot cliff, not on strips
+  (cycle 82, address evidence only — NOT re-tested).** `builds/build-t56-strips`
+  links at **`0x02294f04`**, 1,792 bytes above the highest address proven to boot
+  and 992 above the lowest proven to fail, i.e. deep in the failing region. Its
+  recorded symptom — "cannot reach presented frame 12 in 900 s" — is the cliff
+  signature, not a present-loop bug, and the control it was judged against
+  (`build-t56-control`, `0x0228cea4`) is a 3-day-older, ~31 KB smaller tree, so
+  it was never a matched control. Three attempts, two builds, three days were
+  spent on this. **Do not re-open before G2**; after G2, re-link it and run
+  `check-boot-headroom.ps1` before concluding anything about strips.
 - **+52,928 ticks/frame regression** between `2494daf9ad` and `e49a98167c`,
   null control, real, NOT in the three reverted hunks. Untested suspects:
   `38bba475` BLENDPE prim/env bake + `key_generation` fence, `0a060c7b`

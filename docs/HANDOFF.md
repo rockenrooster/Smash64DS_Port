@@ -113,20 +113,20 @@ no defect-shaped alternative in front of it: build the GX packet at match load,
 reserve patch offsets for the matrix and dynamic colour words, patch per frame,
 submit. No re-parse, no per-list config rebuild, no per-command dispatch.
 
-## The `Tex` memo is REFUTED, and the ROM is ~1.4–2.2 KB from a boot cliff
+## The `Tex` memo is REFUTED, and the ROM has 96 BYTES of headroom
 
-Built as approved and reverted. Whole match, Boundary, 1600 samples, frames
-442–2040: **10,336 consults, 471 hits (4.56%), 7,517 evictions of 7,525 fills,
-0 stale, 0 out-of-scope, 1,366 effect lists = 7.57 resolves per list.** `Tex`
-ticks went *up* (41,393,152 vs 34,394,304); working set estimated ~175 keys
-≈ 6.3 KB, three times the headroom that exists.
+Built as approved and reverted: 10,336 consults, **471 hits (4.56%)**, 7,517
+evictions of 7,525 fills, `Tex` ticks *up* (41,393,152 vs 34,394,304); working
+set ~175 keys ≈ 6.3 KB, far past the headroom that exists.
 
-**The binding finding is RAM.** Same code, one tree, `fake_heap_start` over the
-flag-0 datum `0x02294284`: **+1,408 boots, +2,208 does not.** A failing arm cannot
-reach battle presented frame 9 in 240 s (§3.11: `syMallocSet` spins, so exhaustion
-is a total freeze); `build-c75-tickhud-publish` booted normally between the
-failures. **Text counts as much as bss.** Every future R2 table states its byte cost
-and takes an 8-sample `-StartFrame 60` boot probe (~50 s) *before* a measuring run.
+**The binding finding is RAM, and it is 96 bytes, not 1.4 KB (corrected cycle
+82).** "+1,408 boots" was a delta over a datum the tree kept outgrowing — 1,312
+was already spent by cycle 80. Price it absolutely: highest `fake_heap_start`
+proven to boot **`0x02294804`**, lowest proven to fail **`0x02294b24`**, current
+control **`0x022947a4`**. **Text counts as much as bss.** Run
+`scripts/check-boot-headroom.ps1 -Build <dir>` after every lab build (OK /
+UNPROVEN / OVER CLIFF, exit 1); a failing arm never reaches presented frame 1 and
+the harness reports a timeout that looks exactly like a hung emulator.
 
 ## Next single step — the gate number changed, and the instrument is not ready
 
@@ -139,11 +139,12 @@ evenly through play, `FTR` 1.01x / `STG` 0.99x / `MISC` 1.04x, only `SRC` up. It
 moves the gate arm 3.08x but Boundary only 1.09x; no loading filter could do
 that. Audit: `scripts/analyze-load-frame-exclusion.ps1`.
 
-**Then the SRC sub-owner instrument, which does NOT boot.** Two ring buckets
-(`SHDT` hit detection, `SWRM` anim warm) at +1,120 bytes never reached presented
-frame 1 while the c80 control reached frame 60. Size-versus-defect unresolved;
-the one-build splitting experiment and full design are on the board's Parked
-list, and G2's headroom may be a prerequisite. G1 is measured and closed.
+**The SRC instrument is blocked on RAM — settled cycle 82, so G2 is next.** The
+splitting build (ring rows + names, **both brackets omitted**, bss-identical to
+the failing arm and 88 bytes smaller in text) **still died** while the c80
+control booted to frames 60–67 in the same session. It is the cliff, not a
+defect: +1,056 bytes of inert `.bss` kills the ROM. A ring bucket costs 520 bytes
+against 96 proven, so **G2 now gates the instrument, not only G3**. G1 is closed.
 
 **Boundary for all of it.** Same geometry, same textures, same materials — the
 effect models are a closed `BUGS.md` row the owner confirmed by eye and paid for
