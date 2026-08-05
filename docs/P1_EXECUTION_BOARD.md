@@ -159,23 +159,65 @@ upper bound). **Removing 100% of effect DObj submits leaves WORK-H P95 at
 1,536,768–1,578,333 against a 1,120,380 gate — a residual gap of
 416,388–457,953.** G3 cannot close the gate on the arm the gate reads on.
 
-**What actually owns the gate-arm tail.** Match-total excursion above each
-bucket's own P50 (`WAIT` and `HUD` are excluded from WORK-H by construction,
-so they are not targets):
+**RETRACTED (cycle 79, same author): "`OTHR` owns 48.3% of the gate-arm
+excursion" was wrong.** `OTHR` is not a region's cost, it is an accounting
+remainder — `taskman_seam.c:5137` computes it as `ALL - named`, and `named`
+does **not** include `WAIT`, so `OTHR` still contains the VBlank idle that
+Task 66 later broke out separately. The retracted table ranked `OTHR` while
+excluding `WAIT` as untargetable, double-counting the same idle time; their
+excursions differed by 0.04%.
 
-| bucket | excursion | share of WORK-H-relevant |
+The exact identity, verified frame-by-frame with **max error 0** over 1600
+frames:
+
+```
+WORK-H = (FTR + STG + BG + AUD + SRC + MISC) + (OTHR - WAIT)
+```
+
+`OTHR - WAIT`, the true unattributed work, is **flat ~19,159 ticks/frame**
+(P50 19,136, P95 19,776, range 17,984-20,352) and contributes **89 ticks** to
+the hot-vs-clean excursion. It is a P50 constant and is not a lever in any
+form. **`OTHR` needs no further attribution; this closes it.**
+
+**What actually owns the tail — and the two arms are INVERTED.** Mean on
+over-gate frames minus mean on clean frames (the metric that separates gate
+levers from P50 levers). Owners sum exactly to the WORK-H delta on both arms:
+
+| owner | **both-CPU** (gate) | **Boundary** |
 |---|---:|---:|
-| **OTHR** | 206,132,288 | **48.3%** |
-| **SRC** | 131,354,880 | **30.8%** |
-| `MISC` | 72,218,624 | 16.9% |
-| AUD / STG / FTR / BG | 17,151,680 | 4.0% |
+| **SRC** | **195,361 (69.6%)** | 91,350 (27.8%) |
+| **MISC** | 81,675 (29.1%) | **232,263 (70.6%)** |
+| AUD | 12,013 (4.3%) | 7,602 (2.3%) |
+| STG | 1,933 | 2,146 |
+| `OTHR-WAIT` | 89 | 158 |
+| FTR | −10,401 | −4,393 |
+| WORK-H hot−cold | 280,685 | 329,127 |
 
-Effect submits are 71.5% of `MISC`, so they are **~12.1% of the gate arm's
-WORK-H excursion**. `OTHR` — unattributed tick-HUD time — is the single
-largest owner and has never been broken down. **Attributing `OTHR` is the
-highest-value next measurement on this lane**, ahead of any packet-builder
-work. `SRC` is second and is plausibly inflated by the stress config itself
-(both fighters CPU-driven), which is worth confirming before it is optimised.
+**G3's lane was built on Boundary, where `MISC` genuinely is the tail at
+70.6%. The gate reads on both-CPU, where `SRC` is the tail at 69.6% and
+`MISC` is secondary.** `SRC` is inflated 1.54x at P95 by the stress config
+(P95 547,648 → 842,816) but is **not** a config artefact: it is still 27.8%
+of Boundary's excursion. FTR is anti-correlated on both arms, independently
+reproducing the existing Parked note.
+
+**Levers priced on the gate arm**, counterfactual "bucket never exceeds its
+own clean-frame mean" (an **upper bound** per lever — it assumes the entire
+hot-frame excess is removable, which for `SRC` it is not, since some excess
+is genuine extra AI work):
+
+| | WORK-H P95 | delta | over gate | residual vs 1,120,380 |
+|---|---:|---:|---:|---:|
+| baseline | 1,612,032 | — | 710 | 491,652 |
+| **SRC capped** | 1,217,623 | **394,409** | 235 | 97,243 |
+| `MISC` capped | 1,553,792 | 58,240 | 506 | 433,412 |
+| **SRC + MISC** | 1,062,592 | **549,440** | 62 | **−57,788** |
+
+The `MISC` figure (58,240) falls inside the independently-derived
+33,699–75,264 effect bracket, which cross-validates the method. **`SRC` is
+worth 6.8x the `MISC` lever, and the two together put the gate arm inside
+budget.** `SRC` is gameplay/CPU-AI cost, not renderer cost, so its lever is
+charter §7 territory (rate reduction / simulation-rate change) and needs the
+owner — it is not a G-lane renderer task.
 
 ### G3 (original row, Boundary-derived) — the effect packet path
 
