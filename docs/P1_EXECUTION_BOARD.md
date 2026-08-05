@@ -127,7 +127,60 @@ dominated by six census counters inlined at several sites, not by the flip
 (one condition). **The shipping cost is unmeasured** — G2 must measure the
 flip alone, because G3's packet builder spends from the same budget.
 
-### G2 — RAM headroom before any new code lands
+### G2 — footprint map DONE (cycle 79). Failing allocation NOT yet named; 32 KB NOT yet demonstrated.
+
+Authoritative, from the **shipped** ROM's matching ELF pair
+(`smash64ds-battle-playable-hwtri.elf`, Aug 4 20:33, pairs with the published
+`.nds`). Sections: **text 891,836 / data 147,712 / bss 1,709,640**.
+
+Top `.bss`, which is where the budget actually is (symbol total 1,709,401 of
+1,709,640 — so the ranking is essentially complete, not a sample):
+
+| symbol | bytes | share of bss |
+|---|---:|---:|
+| `gSYFramebufferSets` | 441,600 | 25.8% |
+| `sNdsAudioFgmCache` | 204,800 | 12.0% |
+| `sNdsRelocSceneFileBuffer` | 185,696 | 10.9% |
+| **`sOriginalSpritePreview`** | **153,600** | **9.0%** |
+| **`sOriginalSpriteDisplayPreview`** | **153,600** | **9.0%** |
+| `gSYZBuffer` | 140,800 | 8.2% |
+| `sNdsRendererHardwareTextureScratch` | 32,768 | 1.9% |
+| `sNdsRendererTask36ReplayOwner` | 30,880 | 1.8% |
+| `sNdsRelocLoadedFiles` | 29,184 | 1.7% |
+| `sNdsFighterDLAllDrawStates` | 27,136 | 1.6% |
+
+The top six are **74.9% of all bss**. Top `.text`:
+`ndsResetStartupDiagnostics` 33,260, `__dldi_start` 16,384, `categories`
+14,328, `ndsRendererHardwareResolveOrBindTexture` 10,944,
+`ndsRendererPrepareNativeStageOwner` 10,888, `ndsOpeningRoomRenderDLPreview`
+8,756. Top `.data` is `gNdsParticleScriptBank` 10,912 — note `nm` reports
+`__sp_usr` at 184,600,960, which is an absolute stack address and **not** a
+size; exclude it from any ranking.
+
+**Leading candidate, NOT yet verified removable.** The two sprite preview
+buffers total **307,200 bytes (300 KB, 18% of bss)** — nearly 10x the 32 KB
+exit on their own, and `sOriginalDLPreview` (13,824) plus
+`sOriginalDLDisplayPreview` (7,776) add 21,600 more. All four are declared
+**unguarded** in `src/nds/nds_platform.c:114/196/202/205`, so they are
+allocated in every configuration including the shipped battle ROM, even if
+the battle scene never populates them. `src/port/port_probe.c:53` says the
+"original asset previews now own the top-screen visual signal", which is a
+**dev preview** role.
+
+**The cheap next step is already wired:** `gNdsOriginalSpritePreviewReady`
+(`nds_platform.c:218`) is a published `volatile u32` set at `:617`/`:768`.
+Read it in battle on the existing tick-HUD ROM — zero build. If it stays 0
+through a match, the battle configuration never populates 300 KB of preview
+buffer and the deletion/guarding case is made on measurement rather than on
+the name. **Do not delete on the name alone**; `AGENTS.md` requires tracing
+unfamiliar assets before removing them, and these have a live dev role.
+
+**Not done this cycle:** the +2,208 failing allocation is **not named** — that
+needs a `fake_heap_start` build plus a gdb probe for the `syMallocSet` spin,
+and naming it by inference was explicitly out of scope. No headroom freed, no
+32 KB demonstrated, no build made for this row.
+
+### G2 (original row) — RAM headroom before any new code lands
 
 The boot cliff blocks every candidate that adds text or data (it is what
 actually killed the Tex memo arm). Produce the authoritative footprint map:
