@@ -63,7 +63,9 @@ NDS_OUTPUT_ROOT ?= $(if $(filter 1,$(NDS_PUBLISH_USER_ROM)),$(PROJECT_ROOT),$(PR
 # 11,557,888-byte published one). Say so at build time; rebuild the plain
 # target afterwards.
 ifeq ($(NDS_PUBLISH_USER_ROM),1)
-ifneq ($(BUILD),build)
+# BUILD has already been rewritten from `build` to `builds/build` above, so the
+# default spelling must be excluded too or this note fires on every bare make.
+ifeq ($(filter build builds/build,$(BUILD)),)
 $(info NOTE: BUILD=$(BUILD) is writing the PUBLISHED ROM $(TARGET).nds into the project root.)
 $(info       Run `make TARGET=$(TARGET)` with no overrides afterwards, or the root ROM stays this lab build.)
 # AND THE .elf/.nds PAIR AT THAT PATH IS SHARED BETWEEN BUILD DIRECTORIES, which
@@ -88,6 +90,19 @@ endif
 ifeq ($(NDS_PUBLISH_USER_ROM),0)
 ifeq ($(abspath $(NDS_OUTPUT_ROOT)),$(abspath $(PROJECT_ROOT)))
 $(error Non-published target "$(TARGET)" may not write into the project root)
+endif
+endif
+# P1 does not ship smash64ds.nds (owner, 2026-08-02), so a build that FALLS
+# INTO the default target is usually a mistake worth flagging: it costs a full
+# P2 build and overwrites the root pair the harnesses read. The note fires only
+# when TARGET was defaulted at the top level -- an explicit TARGET=smash64ds on
+# the command line (verify-all, build.ps1, publish work) stays silent.
+ifeq ($(MAKELEVEL),0)
+ifeq ($(TARGET)/$(origin TARGET),smash64ds/file)
+ifeq ($(strip $(filter-out all run,$(MAKECMDGOALS))),)
+$(info NOTE: TARGET defaulted to smash64ds -- the P2 ROM, not needed for P1.)
+$(info       P1 iteration wants `make p1` (published battle ROM + tick-HUD sibling) or `make p1-tick`.)
+endif
 endif
 endif
 NDS_DEV_SCENE_HARNESS ?= normal
@@ -2387,6 +2402,21 @@ distclean: clean-generated
 
 run: $(BUILD)
 	@echo "ROM ready: $(NDS_OUTPUT_ROOT)/$(NDS_OUTPUT_BASENAME).nds"
+
+# P1 convenience goals. P1 ships smash64ds-battle-playable-hwtri.nds and is
+# measured on its flag-identical tick-HUD sibling; bare `make` builds the P2
+# smash64ds.nds the milestone does not need. These wrap the exact TARGET/BUILD
+# pairs the Boundary verifier and sample-tick-hud-buckets.ps1 already use, so
+# alias builds stay incremental with harness builds. The sub-makes run
+# sequentially -- one build at a time is still the rule -- and `p1-tick` alone
+# is the cheap compile check during iteration.
+.PHONY: p1 p1-tick
+p1:
+	@+$(MAKE) --no-print-directory TARGET=smash64ds-battle-playable-hwtri BUILD=build-battle-playable-canonical-hwtri-harness
+	@+$(MAKE) --no-print-directory TARGET=smash64ds-battle-playable-tickhud-hwtri BUILD=build-tick-hud-buckets
+
+p1-tick:
+	@+$(MAKE) --no-print-directory TARGET=smash64ds-battle-playable-tickhud-hwtri BUILD=build-tick-hud-buckets
 
 else
 

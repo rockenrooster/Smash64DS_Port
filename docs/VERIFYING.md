@@ -29,6 +29,17 @@ zero gap, no swap, nearest filtering, and OSD off. Ports `3333/3334` are manual-
 `4323/4324`, phase-FGM slot 1 uses `3343/3344`, and slot 2 uses `4463/4464`.
 Lab outputs stay under `builds/`; exactly two ROMs publish at the repo root.
 
+## Building For P1
+
+P1 ships `smash64ds-battle-playable-hwtri.nds` and is measured on its
+flag-identical tick-HUD sibling. `make p1-tick` builds the measuring ROM (the
+cheap compile check during iteration); `make p1` also rebuilds the published
+battle ROM and its root pair. Bare `make` builds the P2 `smash64ds.nds` the
+milestone does not ship — the Makefile says so when TARGET was defaulted. The
+harnesses still build for themselves; the aliases use their exact TARGET/BUILD
+pairs, so alias and harness builds stay incremental with each other. One build
+at a time, never `-j`, never touch `MAKEFLAGS`.
+
 ## Fast Iteration
 
 1. Run the checker/build that directly covers the edited surface.
@@ -47,6 +58,25 @@ Lab outputs stay under `builds/`; exactly two ROMs publish at the repo root.
 Do not require routine A/B/A, 32-frame, or 128-frame promotion runs. Increase
 sample count only when the eight-frame decision is genuinely inconclusive.
 Historical experiments in `PERF_LEDGER.md` remain evidence, not current policy.
+
+R2-07 iteration rules (cycle 79):
+
+- **Gate readings are whole-match only** — `sample-tick-hud-buckets.ps1
+  -RingDump`, 1,600 samples, frames 440–2040, DLDI-on. A 128-frame window
+  reads the cheapest 6% of the match. Reserve the whole-match run for banked
+  baselines and KEEP decisions.
+- **Prefer one dual-route binary over two linked ROMs for A/B.** Route the
+  candidate at runtime behind a gdb-settable flag (the
+  `NDS_R2_STAGE_ROUTE_PROBE` pattern): one build, both arms in one run, zero
+  placement noise. Separately linked A/B ROMs have already confused two
+  comparisons on this placement-sensitive ROM.
+- **Per-list constants make short probes valid for iteration.** Effect-submit
+  cost is ~102,730 ticks/list; ticks-per-list from a few stops is a sound
+  progress metric for board lane G3. The P95 verdict still needs the
+  whole-match run.
+- **New tables or code: state the byte cost and run the 8-sample
+  `-StartFrame 60` boot probe (~50 s) before any measuring run.** The ROM is
+  ~1.4–2.2 KB from a boot cliff, and text counts as much as bss.
 
 Useful existing commands:
 
@@ -184,6 +214,16 @@ Scripted launches normalize the selected runner TOML. Do not audit mutable TOMLs
 on every run; `check-melonds-policy.ps1 -AuditLocalConfigs` is repair-only.
 Runner volume is zero for host silence, while ROM audio channels/counters remain
 live. Never alter the user's manual melonDS instance.
+
+Concurrency: measuring runs read guest-deterministic counters, so concurrent
+runs on separate slots should not move each other's tick series — but that is
+unproven until the board's parked calibration row passes (one solo-vs-paired
+run of the same ROM, identical ticks). Until then keep measuring runs solo.
+Screenshot-gated runs must never overlap another emulator window regardless:
+capture runs on the interactive desktop, and occlusion has already produced
+two false failures. Wall-clock liveness verdicts (STALLED / TOO SLOW) read
+observed frames/s, which host contention lowers — read the harness's own
+contradiction block before believing one.
 
 Use automated emulator/GDB/capture scripts only. For subjective play behavior,
 build the verifier-covered ROM and ask the user to test it. Use no$gba only for

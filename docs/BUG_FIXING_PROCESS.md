@@ -222,7 +222,8 @@ Probe discipline (each learned the hard way):
   allocator spin, DL overflow, data abort, IRQ/wait state, and a slow live
   frame need different fixes even when the window looks equally frozen.
 
-`optimization/TASK_STANDING_RULES.md` owns measurement traps and time boxes.
+`VERIFYING.md` and the board's standing rules own measurement traps and time
+boxes (`optimization/archive/TASK_STANDING_RULES.md` holds the archived list).
 
 ## Step 4 — Fix the root cause once
 

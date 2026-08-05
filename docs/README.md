@@ -12,10 +12,11 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`.
 | `ARCHITECTURE.md` | Stable source/backend/component boundaries |
 | `KNOWN_ISSUES.md` | Unresolved durable gaps only |
 | `BUGS.md` | User-reported playtest bugs |
+| `BACKLOG.md` | Minor deferred bugs the owner parked for after P1-critical work |
 | `BUG_FIXING_PROCESS.md` | Intake, diagnosis, proof, and closure process for `BUGS.md` |
 | `Smash64DS_Runtime2_SwitchPlan.md` | Runtime 2 charter, budgets, phase plan, and the definition of the switch |
-| `optimization/COMPILER_FIRST_ARCHITECTURE.md` | Campaign direction: what gets replaced, in what order, what each replacement must prove |
-| `optimization/TASK_STANDING_RULES.md` | How a performance task is run, measured, and judged |
+| `optimization/OPTIMIZATION_IDEAS.md` | Dated optimization reviews and idea bin for the P95 gate (corrections at top govern) |
+| `optimization/archive/TASK_STANDING_RULES.md` | Archived 2026-08-05 with the closed campaign docs; measurement law now lives in `VERIFYING.md` + the board |
 | `PERF_LEDGER.md` | Reproducible measurements and rejected experiments |
 | `DIAGNOSTIC_REFERENCE.md` | Marker definitions and manual diagnostics |
 | `PORTING.md` | Append-only chronological history |

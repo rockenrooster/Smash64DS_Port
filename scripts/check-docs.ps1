@@ -2,10 +2,15 @@ param(
     # 150 -> 160 (owner, 2026-08-01), for the owner's own addition to the
     # efficiency guidance -- prefer larger slices of work, do not soak 120 s for
     # a 60 s match, do not spend a ROM build on a change that does not need one.
-    # Raised rather than trimmed: the cap exists to stop AGENTS.md accumulating
-    # derived detail, not to bound what the owner puts in it.
-    [int]$AgentsMaxLines = 160,
-    [int]$AgentsMaxSectionLines = 45,
+    # 160 -> 170 (cycle 79, 2026-08-05): the file sat at 163 authored lines from
+    # the owner's own subagent-switch and efficiency additions, and this checker
+    # is hand-run, so the overage went unnoticed. Raised rather than trimmed:
+    # the cap exists to stop AGENTS.md accumulating derived detail, not to
+    # bound what the owner puts in it.
+    [int]$AgentsMaxLines = 170,
+    # 45 -> 55 (cycle 79, 2026-08-05): Hard Rules sat at 49 lines of owner
+    # rules; same rationale as the file cap above.
+    [int]$AgentsMaxSectionLines = 55,
     # Raised from 150 to 200 by the owner, 2026-07-31.
     [int]$HandoffMaxLines = 200
 )
@@ -28,7 +33,6 @@ $required = @(
     'docs/HARNESSES.md',
     'docs/KNOWN_ISSUES.md',
     'docs/Smash64DS_Runtime2_SwitchPlan.md',
-    'docs/optimization/TASK_STANDING_RULES.md',
     'docs/P1_EXECUTION_BOARD.md',
     'docs/PERF_LEDGER.md',
     'docs/PORTING.md',
@@ -81,8 +85,8 @@ $handoffLines = @(Get-Content -LiteralPath (Join-Path $root 'docs/HANDOFF.md')).
 if ($handoffLines -gt $HandoffMaxLines) {
     Fail-Docs ("docs/HANDOFF.md is too long: $handoffLines lines against a " +
         "$HandoffMaxLines-line cap. It is the restart surface only -- move durable " +
-        'detail to its owning doc (the board owns results, PERF_LEDGER measurements, ' +
-        'KNOWN_ISSUES durable gaps, TASK_STANDING_RULES how a task is run).')
+        'detail to its owning doc (the board owns queue and results, PERF_LEDGER ' +
+        'measurements, KNOWN_ISSUES durable gaps, VERIFYING.md how a task is run).')
 }
 
 $index = Read-RepoText 'docs/README.md'
@@ -116,8 +120,12 @@ foreach ($token in @(
         Fail-Docs "P1 board is missing '$token'"
     }
 }
-if ($board -notmatch '(?m)^Updated:\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}\s+Central\s*$') {
-    Fail-Docs 'P1 board update timestamp is not parseable'
+# The board dates by cycle, not wall clock: `Updated: YYYY-MM-DD (cycle N)`.
+# The old `HH:MM Central` regex matched nothing on the board for many cycles --
+# this checker is hand-run, so the drift went unnoticed until the cycle-79
+# board rewrite audited every pin.
+if ($board -notmatch '(?m)^Updated:\s*\d{4}-\d{2}-\d{2}\s+\(cycle\s+\d+\)') {
+    Fail-Docs 'P1 board update stamp is not parseable (want: Updated: YYYY-MM-DD (cycle N))'
 }
 if ($board -notmatch '(?m)^SHA-256\s+[0-9A-F]{64}\s*$') {
     Fail-Docs 'P1 board lacks the canonical SHA-256'

@@ -9,34 +9,95 @@ and the definition of the switch.
 Status: **in execution.** R2-00a/b/c, R2-01, R2-02 gated; R2-05 complete;
 R2-03 shipped E12/E28/E29/E46/E32/E64b/E65/E67/E69; R2-06 has Boundary green
 and equivalence. **R2-07 is the live phase.** The board
-(`docs/P1_EXECUTION_BOARD.md`) is the live queue and carries the banked
-baselines, the settled diagnosis, and the gate lane (G1–G4); this file stays
-the charter and is not a status log.
+(`docs/P1_EXECUTION_BOARD.md`) is the live queue; this file stays the charter
+and is not a status log.
 
-**The battle-frame P95 gate is NOT met. Gap: 343,104** — Boundary whole-match
-`WORK-H` P95 1,463,104 against the 1,120,380 gate; both-CPU stress 1,605,440
-(2026-08-04, git `f24f0cc1`, dldi=ON; tables on the board). The settled
-attribution: **effect DObj submits own the tail** — 99.3% of the `MISC`
-excursion, ~360K ticks on over-gate frames, 0 on clean ones, ~315K net
-recoverable — and the cost is a **per-list constant** (generic DL
-interpretation 65.57%, texture resolve 21.41%, matrix 6.93%). Every list
-terminates honestly at `G_ENDDL` at 626 ticks/command, so **the
-precompiled-packet path is the answer, not a workaround** (board lane G3).
-Clean-frame P95 ~1,056,640 is ~63K inside the gate. Separately, **the ROM is
-~1.4–2.2 KB from a RAM boot cliff** (+1,408 bytes boots, +2,208 does not; text
-counts as much as bss), so headroom recovery (G2) precedes any candidate that
-adds text or data.
+**The battle-frame P95 gate is NOT met, and the gap is 343,104.** Whole-match
+baseline, 2026-08-04, `git=f24f0cc1`, rom `F04F5D98…`, `dldi=ON`, 1,600 samples
+across frames 440–2040:
 
-Superseded diagnosis eras — E8's "every over-gate frame is an asset-load
-frame", L6's "hit-detection frame, 66.2% soft-float", the `FTR` flat-cut
-argument, and every 128-frame window figure (the window read the cheapest 6%
-of the match: P95 understated ~306,000, over-gate rate five-fold) — are
-refuted and archived. History lives in
-`docs/optimization/archive/P1_EXECUTION_BOARD_pre-cycle79.md` and this file's
-former header in
-`docs/optimization/archive/Smash64DS_Runtime2_SwitchPlan_pre-cycle79.md`.
-Do not price anything against a pre-2026-08-04 number: earlier baselines were
-taken under a GObj cap that no longer fires, on the bad window, or both.
+| arm | role | `WORK-H` P50 | P95 | over gate | VBlank |
+|---|---|---:|---:|---:|---|
+| **Boundary**, mode 163 | **gate of record** | 1,092,032 | **1,463,104** | 713/1600 (**44.6%**) | 2:1161 3:827 4:41 5+:10, max 20, slips 0 |
+| **both-CPU**, stress | optimization target | 1,098,240 | 1,605,440 | 704/1600 (44.0%) | 2:1118 3:822 4:90 5+:9, max 20, slips 0 |
+
+Excluding load frames (`SRC` > 2× that arm's own `SRC` median, a stated rule
+rather than a tuned one): Boundary 657/1544 (42.6%), both-CPU 582/1478 (39.4%).
+Both-CPU is only ~10% worse at P95 and essentially identical at P50 and
+over-gate rate — the stress arm is harder, but not the different animal it was
+assumed to be.
+
+**EVERY 128-FRAME FIGURE THIS CAMPAIGN EVER PUBLISHED WAS READ OFF THE CHEAPEST
+6% OF THE MATCH.** The same ROM and options over frames 441–568 read `WORK-H`
+P95 1,156,992 and 11/127 over gate (8.7%); the whole match reads 1,463,104 and
+44.6%. The window **understated P95 by ~306,000 and the over-gate rate
+five-fold**, because it sits in stop0–stop1 — stop0 is 8 of 96 over gate, while
+stop2 is 97 of 97 and stop12 is 95 of 95. Do not judge anything on a 128-frame
+window again; `sample-tick-hud-buckets.ps1` takes repeated ring dumps as of
+`58ca8723`.
+
+**`MISC` — the transient VFX draw path — is the tail, and it is a cost rather
+than a marker.** `MISC` P50 128,256 / P95 471,616, and it carries +326,976 of
+the +483,744 top-5% gap. Boundary frames with `MISC` above its P90 are
+**100% over gate** (160/160). The marker test that killed the old
+0.21-quads-per-frame claim was run and this survives it: `MISC`-hot and
+`SRC`-hot are near-disjoint populations (7% overlap), and among `SRC`-normal
+frames, `MISC`-hot is **79.9% over gate against 32.9%** — an independent 2.4×
+effect worth +156,480 median. Caveat kept honest: within that split `MISC`
++343,488 arrives with `FTR` −161,024 and `SRC` −66,496, so part of the rise is
+work moving between buckets; the net is +156,480, not +343,488. This confirms
+the owner's own report of 2026-08-04 — *"the most demanding parts of the game
+are drawing the VFX like projectiles (fox laser gun, Mario fireball), the
+revival platform, impact wave"*.
+
+**`FTR` IS NOT THE LEAD, AND THE FLAT-CUT ARGUMENT THAT SAID IT WAS IS HEREBY
+NARROWED.** An earlier version of this header argued that because `FTR` was flat
+(spread 1.01) a flat cut of X moves P95 by X, 1:1, making `FTR`'s 139K of
+overage the largest lever. `FTR` is flat *in the 128-frame window*; across the
+match it drops **−161,024** on `MISC`-hot frames, the signature of a fighter
+being absent during a KO or respawn. So the arithmetic holds at the median and
+weakens in the tail, and `FTR` is measured **anti-correlated** with the frames
+that miss the gate (41.9% over-gate when hot vs 44.9% when cold). `FTR` remains
+real work paid on every frame and still sits at 388,800 against its 250K line;
+it is ordinary phase work again, not the gate.
+
+**Why the older numbers on this page cannot be compared.** The 2026-08-01
+readings (1,240,128, then 1,257,280) were taken on builds where
+`ifCommonSetMaxNumGObj` had capped the GObj pool for the whole match —
+`gSYTaskmanGeneralHeap` at 14,796 bytes free against the 25,600 threshold, so
+`gcMakeGObj` refused for the rest of every match once the pool latched,
+measurably deleting four of Mario's eleven fireballs. That cap no longer fires
+(low-water 144,336 after DL buffers 0/1 returned 61,440 bytes). Between the
+content change and the window error, treat every pre-2026-08-04 P95 on this page
+as unusable.
+
+**The over-gate frames have two owners and neither is a renderer floor.**
+`FTR` and `STG` are flat on them — `FTR` is *below* its clean median on the
+worst frame of the run — while `SRC` runs +250K to +440K and `MISC` +77K to
++120K. Returning `SRC` alone to its clean median takes the over-gate set from
+18 frames to 1; returning `MISC` alone takes it to 12. So `SRC` is the gate and
+`MISC` — which is *everything drawn that is not fighter, stage, background or
+HUD*, i.e. the transient weapon/effect/particle DObj path — is second. The
+per-frame table is on the board.
+
+**E8's localization is WITHDRAWN — it was a run total, and a per-frame read does
+not support it.** This header said "every over-gate frame is an asset-load
+frame", and directed the remaining battle work at R2-04's §3.8 loading clause on
+that basis. Both halves are now refuted by measurement:
+
+- **R2-07 L2**, per-frame `gNdsTask75AssetLoadCount` inside one build: loads
+  intersect over-gate frames on **5 of 28** (4 of 28 against L1's list). **24 of
+  28 over-gate frames do no asset load at all.**
+- **R2-07 L6**, in-run over-gate/clean split: the over-gate frame is a
+  **hit-detection** frame. It runs `gmCollisionSetInvertMatrix` 34 times against
+  **zero** on a clean frame, **66.2% of its +510,390-cycle premium is
+  soft-float**, and the relocation walker is **0.5%**.
+
+So finishing §3.8 remains correct for its own reason — first-use loading during
+gameplay is a correctness clause — but **it is not the gate's answer, and must
+not be budgeted as one.** The gate's remaining work is the float collision body
+(board: R2-07 L7). Clean-frame P95 of 1,056,640 still stands and is still ~63K
+inside budget.
 
 ---
 
@@ -319,8 +380,8 @@ total                                      ~1.12M
 from these instead:
 
 - **Battle frame:** the gate itself — DLDI-on P95 ≤ 1.12M, with the remaining
-  gap owned by effect-active frames (see Status; the earlier asset-load
-  reading is refuted). Clean frames are ~63K under gate.
+  gap owned entirely by asset-load frames (see Status). Clean frames are ~63K
+  under gate.
 - **Cosmetic systems (R2-07):** the measured margin, not the table — on the
   frames that carry the most effects, roughly 23K DLDI-off and negative
   DLDI-on until the load work lands. For scale, 23K buys ~fourteen
@@ -340,8 +401,7 @@ from these instead:
   switch. No second repo, no divergent asset pipeline.
 - This file plus `PERF_LEDGER.md` rows are the only Runtime 2 documents.
   R2 work items enter `docs/P1_EXECUTION_BOARD.md` as ordinary rows;
-  `docs/VERIFYING.md` plus the board's standing rules govern how each phase is
-  measured and judged (`TASK_STANDING_RULES.md` was archived 2026-08-05).
+  `TASK_STANDING_RULES.md` governs how each phase is measured and judged.
 - New harness modes are legitimate for the early phases (they are scene-level
   capabilities); each phase's diagnostic mode is deleted or graduated when
   the next phase lands. No proof-only branches, no permanent seed/restore
@@ -509,46 +569,115 @@ wrong thing and would block a correct switch indefinitely.
   standing "never launch the five-minute configuration" rule in `AGENTS.md`;
   it applies to this gate only, not to routine iteration.
 
-**Where the gate work stands (2026-08-05).** The tail is the effect DObj
-submit path, and the work is the board's gate lane: **G1** (resolver site
-cache on for mode 9) → **G2** (RAM headroom against the boot cliff) → **G3**
-(the effect packet path) → **G4** (re-baseline, pick the next lever from the
-residue). Specs, protocols, and the settled diagnosis live on the board.
+**Budget reality — see the status header, which is the only live figure.** The
+cosmetic budget is the measured margin, and in the canonical DLDI-on
+configuration that margin is still negative: `WORK-H` P95 **1,173,760**, over
+gate by **53,760** (`f24f0cc1`, 2026-08-04). The historical readings this
+paragraph used to carry (1,232,448 → 1,147,200 after L9/L10/L9b, −85,248
+combined) are kept on the board, not here. **Re-measure before pricing anything
+against any number on this page** — the 2026-08-01 baselines were taken under a
+GObj cap that no longer fires, and a P95 is not comparable across a content
+change in either direction.
 
-The collision era of this clause is closed history, kept compact so nobody
-re-derives it: **L7 was wired, measured and reverted** (+534 cycles/frame won
-in `SRC` against 6,481 lost in `FTR`+`STG` to its own ARM text; what survives
-is the oracle-only header behind `NDS_R2_COLLISION_L7_ORACLE`, `Makefile:716`,
-default 0 — not compiled into the ROM). Collision is **2.9%** of the over-gate
-premium; L6's 66.2% soft-float attribution did not survive; the asset-load
-reading was refuted three times. **L9** (SSB64's sine table, −37,248 P95) and
-**L10** (the hardware square root, −12,160 P95) are banked.
-`NDS_TASK56_FIGHTER_PRIMITIVES=2` cannot be priced: that ROM hangs the present
-loop and has never completed a run in three attempts. The standing design
-constraint survives all of it — **1.85 cycles of `FTR` mean per byte of added
-ARM text: a change that adds text must beat its own footprint** — which is why
-deletion beats substitution and why the boot cliff (board G2) gates every
-candidate. Full history: the board archive.
+**The over-gate population is NOT "owned entirely by asset-load frames"** —
+that reading came from a run total and L2/L6 refuted it (see Status); the
+over-gate frame is a hit-detection frame and the lever is R2-07 L7. The same
+census says so directly: `SRC` runs P50 268,608 against P95 521,280, a 1.94
+spread and a 252,672 excursion above its own median, while `FTR` sits at 1.01
+and `STG` at 1.05. That excursion is the shape of the over-gate frame, and it is
+where L7 applies.
 
-The contingency ladder if the packet path lands short, in the order
-`PROJECT_GOAL.md`'s sacrifice list implies:
+**L7 IS CLOSED — WIRED, MEASURED, REVERTED, and the ~119,000-tick estimate this
+paragraph used to carry was never real.** Its kernel is green on its falsifier
+(2026-07-31: 0.016609 against the 0.0200 bound, from 0.126987, via the
+`(p - t).R^-1` restructure that stops storing `-t.R^-1`), and the conversion was
+then wired and priced: **+534 cycles/frame won in `SRC`, 6,481 lost in
+`FTR`+`STG`** to the added ARM text, at a measured **1.85 cycles of `FTR` mean
+per byte**. The wiring and its `NDS_R2_COLLISION_L7` flag were removed; what
+survives at `f24f0cc1` is the header `include/nds/nds_r2_collision_mtx.h` and
+its checker, consumed only by `src/import/battleship_gmcollision.c:142` inside
+`#if NDS_R2_COLLISION_L7_ORACLE` (`Makefile:716`, default `0`), so the kernel is
+not compiled into the ROM at all.
 
-1. **Buy headroom flat.** The P95 frame pays every flat bucket in full: `FTR`
-   at ~389K against its 250K line and `STG` at ~195K against 180K are the
-   flat levers, and deletion is the preferred instrument.
-2. **Run cosmetic systems below simulation rate.** 15 Hz particles are
-   allowed — but round-robin a quarter of the generators per frame, never
-   "every fourth frame, update everything": batching quarter-rate work onto
-   one frame lowers the mean while **raising P95** (R2-03 E30: when the
-   median falls and the P95 does not, stop cutting the median).
-3. **Reduce visual fidelity** — a cheaper source-derived approximation with
-   the visible delta recorded is the contract-compliant answer.
-4. **A COMPENSATED 30 Hz simulation — the OWNER'S CALL, in writing.**
-   `NDS_TASK106_UPDATES_PER_PRESENT=1` measured the uncompensated ceiling at
-   **−119,744 P95**, playing at half speed — a ceiling, not a candidate.
-   Compensating it (advancing timers, physics integration and animation two
-   frames per tick) is the only remaining move with the measured size to
-   close the gate alone, and the judgement is reserved for the owner.
+The 534 figure is not a failed implementation — it is the correct size of the
+thing converted, and the 2026-08-01 `-SplitOverGate` census says so
+independently: **collision is 2.9% of the over-gate premium**, not the 66.2%
+soft-float reading L6 reported and four levers were chosen from. Treat that
+1.85 cycles/byte as a standing design constraint on this target: on the battle
+path, **a change that adds text must beat its own footprint**, which is why the
+remaining direction is deletion rather than substitution.
+
+Clean frames still sit under gate. So the
+particle work — a 2,961-line bytecode interpreter (`lb/lbparticle.c`) plus
+`ef/efparticle.c`, `ef/efdisplay.c`, a DS pack step and textured-quad draws —
+must be priced against the clean-frame margin, and the load-elimination work
+that finishes R2-04's clause must land before or beside it. For scale, ~23K
+of margin buys roughly fourteen textured-quad binds (Task 98: ~1,621
+ticks/bind) plus a few thousand interpreter steps, for *all* effects on the
+frames that carry the most effects. Workable, not comfortable.
+
+**THE PREMIUM IS DIFFUSE, and that is measured (2026-08-01).** The over-gate
+partition the census has always supported was finally run
+(`run-task37-profile-census.ps1 -SplitOverGate`, 71 marked frames against 57
+control, premium 474,032 cycles/frame). Grouped: **idle 44.4%** — the partition
+measuring the VBlank quantum, since a frame that misses the gate costs an extra
+VBlank and most of it is `swiWaitForIrq` — then the **tick HUD's own console
+13.5%**, soft float 10.9%, asset load 5.0%, animation 3.3%, and **collision
+2.9%**. Against the honest denominator of ~263,605 cycles/frame of real work,
+nothing exceeds 20% once the instrument is removed and the tail is a third.
+
+**L6's attribution, which four levers were chosen from, does not survive.** It
+read the over-gate frame as a hit-detection frame with 66.2% of its premium in
+soft float; collision is **2.9%**, and `func_ovl2_800ED490` plus
+`gmCollisionSetInvertMatrix` together cost less per frame than `memcpy`. That
+retrospectively explains L7 winning 534 cycles/frame: 534 cycles/frame is the
+size of what it converted. **The estimate was wrong, not the implementation.**
+
+So clause 4 has no point lever left to find, and options 2 and 3 below are not a
+fallback — they are the remaining path. Option 4 is the owner's.
+
+The honest options, in the order `PROJECT_GOAL.md`'s sacrifice list implies:
+
+1. **Buy headroom first, and buy it FLAT.** Two earlier versions of this clause
+   were wrong: loads are ~18% of the over-gate population rather than all of it
+   (corrected 2026-07-31), and the `SRC`-only reading that replaced it came from
+   L6's retracted attribution. **L9** (SSB64's sine table, −37,248 P95) and
+   **L10** (the hardware square root, −12,160 P95, 3-VBlank 97 → 89) are banked;
+   **L7 is closed at +534 against −6,481** (above). What remains is the flat
+   arithmetic in the status header: the P95 frame pays every flat bucket in
+   full, so `FTR` at **389,056 P50 against its 250K line** is the largest single
+   lever on the board, not "ordinary phase work", and `STG` at **194,880 against
+   180K** is the second. Note that `NDS_TASK56_FIGHTER_PRIMITIVES=2` — the strip
+   topology, 1,878 → 1,012 vertices, statically proven linked in — **cannot be
+   priced today: that ROM hangs the battle present loop**, failing to reach
+   presented frame 12 in 900 s where its control does frames 10–13 in 30 s. It
+   has never completed a run in three attempts across two builds, so the
+   `PERF_LEDGER` KILL row citing `FTR` +5,824 has no completed run behind it
+   either.
+2. **Run the cosmetic systems below simulation rate.** `PROJECT_GOAL.md`
+   explicitly allows particles at 15 Hz — a quarter of the *mean* cost with
+   no gameplay change. **But never as "every fourth frame, update
+   everything":** the gate is a P95, and batching quarter-rate work onto one
+   frame in four lowers the mean while **raising P95** (R2-03 E30 recorded
+   the general form: when the median falls and the P95 does not, stop cutting
+   the median). Round-robin a quarter of the generators per frame so each
+   still advances at 15 Hz while per-frame cost stays flat — the flat profile
+   is what P95 rewards.
+3. **Reduce visual fidelity** — the sacrifice order puts visual fidelity
+   above 30 FPS, so if the real scripts cannot fit, a cheaper source-derived
+   approximation with the visible delta recorded is the contract-compliant
+   answer.
+4. **A COMPENSATED 30 Hz simulation — and this one is the OWNER'S CALL, in
+   writing.** `PROJECT_GOAL.md` ranks the original 60 Hz implementation fourth
+   in the sacrifice order, above only stable 30 FPS, and says outright that a
+   compensated 30 Hz version "is acceptable" if it "produces substantially the
+   same gameplay experience" — a judgement the plan reserves for the owner and
+   an agent must not make. `NDS_TASK106_UPDATES_PER_PRESENT=1` measures the
+   uncompensated ceiling at **−119,744 P95** against the current **120,128**
+   gap; it plays at half speed and is a ceiling, not a candidate. Compensating
+   it — advancing timers, physics integration and animation by two frames per
+   tick — is the real work, and it is the only remaining move with the measured
+   size to close the gate on its own.
    
    
 ** STRESS TEST Gate ** Mario CPU vs Fox CPU on Dream Land, Full Match (including testing Sudden Death via force switch) - 

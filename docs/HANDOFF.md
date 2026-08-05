@@ -1,6 +1,7 @@
 # Handoff
 
-Updated: 2026-08-05 (cycle 78). **The campaign is on R2-07's performance gate.**
+Updated: 2026-08-05 (cycle 79). **The campaign is on R2-07's performance gate;
+the queue is the board's gate lane G1→G2→G3→G4.**
 Nothing is published from this work; the shipping pair is still cycle 75
 (`smash64ds-battle-playable-hwtri.nds` `D16815BE…`, `smash64ds.nds` `369FA999…`,
 tick-HUD sibling `builds/build-c75-tickhud-publish` `15FD0F8E…`).
@@ -119,7 +120,7 @@ is a total freeze); `build-c75-tickhud-publish` booted normally between the
 failures. **Text counts as much as bss.** Every future R2 table states its byte cost
 and takes an 8-sample `-StartFrame 60` boot probe (~50 s) *before* a measuring run.
 
-## Next single step
+## Next single step — board lane G1
 
 **The resolver's site cache is switched off by an enum.**
 `sNdsRendererStageTextureSites` (`nds_renderer.c:11086`) is a 128-entry memo keyed
@@ -130,8 +131,9 @@ fast-run modes 4/7/8, and every measured ROM builds mode **9**
 (`NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE`, `Makefile:1088`), added after both
 lists with neither updated. One line, no new RAM — but it turns the cache on for
 the whole stage owner: its own arm, its own A/B, the owner's visual gate. Static
-read only; confirm at runtime first. Then the packet path for the 65.57%
-interpreter share, still the larger half.
+read only; confirm at runtime first. Then G2 (RAM headroom against the boot
+cliff) and G3, the packet path for the 65.57% interpreter share — specs on the
+board.
 
 **Boundary for all of it.** Same geometry, same textures, same materials — the
 effect models are a closed `BUGS.md` row the owner confirmed by eye and paid for
@@ -158,23 +160,10 @@ shield, revival platform, impact wave or reflector needs the owner.
 
 ## Open and unowned
 
-- **+52,928 ticks/frame** measured on identical frame ids between `2494daf9ad`
-  and `e49a98167c` with a null control — real, but **not** in the three hunks it
-  was attributed to (reverting all three moves `STG` −704, `MISC` −4,928).
-  Untested suspects: `38bba475`'s `G_CC_BLENDPE` prim/env texture-variant bake
-  and `key_generation` fence, `0a060c7b`'s alpha/blend recogniser,
-  `e8c675d3` / `999fcdf8`. Re-open against the whole-match instrument, not the
-  128-frame one.
-- **`check-decomp-header-mirror.py` is RED on HEAD** — `FTSTAT_OPENING1_START`
-  and `nSYAudioBGMExplain`, pre-existing, in files this cycle never touched. A
-  guard that exists to catch a class of bug is currently blind to it.
-- **`sNdsRendererRuntimeTextureCacheEvictCount` liveness is unproven** — it read
-  0 all run and never moved once. Do not cite evictions from that probe.
-- **The GATE 6 price the owner accepted was mismeasured.** The source-effects
-  flip was sold at +36,032 P95 on the bad window; the real cost is ~360,000 on
-  every frame an effect is alive. The decision stands on its merits — the answer
-  is to make the submit path cheap, not to delete the models — but the number
-  behind it did not.
+All parked items now live on the board's **Parked** list (one place, not two):
+the +52,928 regression bisect, the RED `check-decomp-header-mirror.py`, the
+unproven evict counter, the GATE 6 price correction, the concurrency
+calibration row, and the per-build ELF resolution fix.
 
 ## Restart surface
 
@@ -183,15 +172,18 @@ shield, revival platform, impact wave or reflector needs the owner.
 git status --short
 ```
 
-`docs/P1_EXECUTION_BOARD.md` is the only dynamic queue;
+Boundary contains only `battle_playable_realtime`, mode 163.
+
+`docs/P1_EXECUTION_BOARD.md` is the only dynamic queue — rewritten cycle 79
+from a 10,207-line log; history in
+`docs/optimization/archive/P1_EXECUTION_BOARD_pre-cycle79.md`.
 `docs/Smash64DS_Runtime2_SwitchPlan.md` is the charter. `docs/BUGS.md` carries
 the owner's verdicts — they edit it directly, so preserve their wording.
 
-**Uncommitted and not ours:** `docs/BUGS_BACKLOG.md` staged-as-deleted is the
-owner's own half-finished rename. Leave it alone.
-
 A clean checkout must build through `build.ps1`, not bare `make`: four of six
-generated `.inc` files are gitignored. Never pass `-j`, never override
+generated `.inc` files are gitignored. For iteration, `make p1-tick` builds the
+measuring ROM and `make p1` the published battle pair — bare `make` builds the
+P2 ROM P1 does not ship. Never pass `-j`, never override
 `MAKEFLAGS`, one build at a time. Never build a published target name for lab
 work — those hardcode output to the project root whatever `BUILD=` says.
 Preserve canonical mode 163, renderer mode 9, mip 0, static textures, source

@@ -14,11 +14,11 @@ Read these before starting, not after being surprised by them:
   fidelity) that decides what may be traded for frame rate.
 - `docs/P1_EXECUTION_BOARD.md` — the only dynamic queue. `docs/HANDOFF.md` — the
   restart surface, and nothing else.
-- `docs/optimization/TASK_STANDING_RULES.md` — how a performance task is run,
-  measured, and judged. Read it before proposing or gating an optimization; it
-  is where the campaign records what previous tasks learned the hard way.
-- `docs/VERIFYING.md` — which verifier covers which runtime, and why stacking
-  them is wasted time.
+- `docs/VERIFYING.md` — which verifier covers which runtime, why stacking them
+  is wasted time, and how a performance task is run, measured, and judged; the
+  board's standing-rules section carries the measurement law. (The owner
+  archived `TASK_STANDING_RULES.md` and the other closed optimization docs to
+  `docs/optimization/archive/` on 2026-08-05.)
 
 ## Claude Code specifics
 

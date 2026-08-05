@@ -140,7 +140,7 @@ durable unresolved gaps.
   for NULL, so a global NULL return would trade a hang for a wild write. An
   optional allocation must call `ndsSyMallocWouldFit` first and take its own
   fallback. Most `syTaskmanMalloc` call sites still commit blind — see
-  `docs/optimization/TASK_STANDING_RULES.md` for the unguarded list.
+  `docs/optimization/archive/TASK_STANDING_RULES.md` for the unguarded list.
   Corollary for harnesses: the halt is an infinite loop, so a verifier that
   waits on a marker will **time out** rather than fail. Read
   `gNdsSyMallocOverflowCount` before reading any timeout on this build as a
