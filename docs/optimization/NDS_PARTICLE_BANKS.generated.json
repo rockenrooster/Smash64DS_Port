@@ -333,6 +333,9 @@
     ],
     "frame_cap": 1,
     "frame_count": 32,
+    "held_frames": {
+      "25": 2
+    },
     "palette_entries": 32,
     "sheet_bytes": 8192,
     "sheets": 4

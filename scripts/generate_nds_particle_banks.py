@@ -405,6 +405,29 @@ QUAD_LONG_ANIMATION_CELL_MAX = 64
 # worse, not better. Do not raise the cap without checking that lookup still
 # clamps.
 QUAD_FRAME_CAP = 6
+# WHICH source frame a one-cell texture holds. The search above settles at cap 1
+# and quad_frame_list then returns [0], so every multi-frame animation ships its
+# opening frame -- 19 of the 32 admitted textures (commit 3d002c39 names and
+# ranks all nineteen). That frame 0 is a FALLBACK, not a choice: nothing ever
+# looked at the animation and decided the first frame represented it best.
+#
+# For texture 25 (DamageCoin, Mario's up-B coin, 16x16 CI4 x15) it is the worst
+# of the fifteen -- the most opaque, 148 of 256 texels, which is why the effect
+# reads as a flat yellow blob. The owner picked frame 2 by eye from
+# artifacts/visibility/2026-08-04_upb-coin-timeline-source-vs-port.png and
+# declined the same treatment for the other eighteen, so this table has exactly
+# one row and the rest keep frame 0.
+#
+# THE LOOKUP KEY STAYS 0. ndsParticleQuadFrameFor returns the nearest EARLIER
+# packed frame and NULL below the first one, so emitting the row as frame 2
+# would make source frames 0 and 1 miss and the coin would not draw at all for
+# its first two frames. What the held frame changes is the cell's CONTENT, not
+# its index -- hence a separate `source` on the cell.
+#
+# Inert unless the texture packs exactly one cell: if the sheet ever affords
+# more frames, the real animation wins and this table stops applying without
+# anyone editing it out.
+QUAD_HELD_FRAME = {25: 2}
 
 
 def quad_cell_dims(width: int, height: int,
@@ -429,6 +452,21 @@ def quad_frame_list(frames: int, cap: int = QUAD_FRAME_CAP) -> list[int]:
     if cap <= 1:
         return [0]
     return sorted({round(i * (frames - 1) / (cap - 1)) for i in range(cap)})
+
+
+def quad_cell_source_frame(texture: int, frames: int, frame_list: list[int],
+                           frame: int) -> int:
+    """SOURCE frame whose texels this cell holds. See QUAD_HELD_FRAME."""
+    if len(frame_list) != 1:
+        return frame
+    held = QUAD_HELD_FRAME.get(texture)
+    if held is None:
+        return frame
+    if not (0 <= held < frames):
+        raise SystemExit(
+            f"quad held frame {held} for texture {texture} is outside its "
+            f"{frames} source frames")
+    return held
 DEFAULT_QUAD_ASSET = Path("assets/particles/efcommon_particle_quads.a5i3.bin")
 QUAD_ASSET_NITRO_PATH = "nitro:/particles/efcommon_particle_quads.a5i3.bin"
 
@@ -1523,7 +1561,12 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                 cells.append({"w": row["width"], "h": row["height"],
                               "src_w": row.get("source_width", row["width"]),
                               "src_h": row.get("source_height", row["height"]),
-                              "texture": row["texture"], "frame": frame})
+                              "texture": row["texture"], "frame": frame,
+                              # Lookup key vs texels -- the same for every
+                              # texture but the one QUAD_HELD_FRAME names.
+                              "source": quad_cell_source_frame(
+                                  row["texture"], row["frames"], frame_list,
+                                  frame)})
         return cells
 
     def admit_at(rows: list[dict], cap: int) -> tuple[list[dict], list[dict]]:
@@ -1608,10 +1651,10 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     # Two passes: the shared palette has to see every admitted texel first.
     box_averaged = []
     for cell in cells:
-        pixels = frames_by_texture[cell["texture"]][cell["frame"]]
+        pixels = frames_by_texture[cell["texture"]][cell["source"]]
         if len(pixels) != cell["src_w"] * cell["src_h"]:
             raise SystemExit(
-                f"quad atlas texture {cell['texture']} frame {cell['frame']} "
+                f"quad atlas texture {cell['texture']} frame {cell['source']} "
                 f"has {len(pixels)} pixels, expected "
                 f"{cell['src_w'] * cell['src_h']}")
         step_x = cell["src_w"] // cell["w"]
@@ -1678,6 +1721,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         "frame_cap": chosen_cap,
         "cell_cap": chosen_rung,
         "frames": frame_rows,
+        "held_frames": {str(cell["texture"]): cell["source"]
+                        for cell in cells if cell["source"] != cell["frame"]},
         "bytes": used,
         "atlas_bytes": len(atlas),
         "palette_offset": len(atlas),
@@ -2395,6 +2440,10 @@ def render_report(pack: dict) -> dict:
             "frame_count": len(pack["quads"]["frames"]),
             "frame_cap": pack["quads"]["frame_cap"],
             "bytes": pack["quads"]["bytes"],
+            # Textures whose single cell holds a source frame other than 0.
+            # Everything absent from here is frozen on frame 0 -- see
+            # QUAD_HELD_FRAME and docs/BACKLOG.md.
+            "held_frames": pack["quads"]["held_frames"],
             "admitted": [row["texture"] for row in pack["quads"]["admitted"]],
             "admitted_cells": [
                 {"texture": row["texture"], "bytes": row["bytes"],
