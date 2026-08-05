@@ -160,6 +160,51 @@ thing.
 `gNdsMiscParticleDrawTicks`, cumulative, `NDS_TICK_HUD`-only, read via
 `-PerStopGlobals`.
 
+### TEXTURE THRASH IS FALSIFIED, AND THE REAL NUMBER IS 6,990 TICKS PER TRIANGLE
+
+The prim/env per-frame-minting hypothesis above is **dead**, measured on the
+whole-match Boundary instrument (1600 samples, 50 stops). Across ~1,408 frames
+of steady-state battle (stop 5 → 49) the effect path takes **exactly one texture
+upload**: 9,408 upload ticks, **6.7 ticks/frame**, 0 evictions, against
+93,975 effect-submit ticks/frame. **Uploads are 0.0071% of the effect cost.**
+Nothing is minted, re-uploaded or evicted while effects are alive; the pinned
+static corpus is doing its job.
+
+**The zeros are proven live, not proof-scoped** — `gNdsMiscTexUploadCount`
+reaches 27, upload ticks 268,032, bytes 88,192, with 26 of the 27 landing before
+~frame 600, then flat. That is the standing drill applied: a zero is only
+reportable once the counter has been shown able to be non-zero. **Exception,
+do not cite it:** `sNdsRendererRuntimeTextureCacheEvictCount` never moved once
+all run, so its liveness is **unproven**.
+
+**What replaced the hypothesis is worse than a cache bug:**
+
+```
+effect submit    153,428,992 ticks over the match
+effect triangles      21,950
+                 -> 6,990 TICKS PER EFFECT TRIANGLE
+```
+
+53 triangles/frame costing 363,004 ticks on hot windows. A hardware triangle on
+this path should cost **tens** of ticks — this is **~100× too expensive**, and
+`gNdsEffectRendererTextureReadyCount` = 10,336 against 21,950 triangles is
+roughly one texture *resolve* per two triangles, i.e. the shape of per-triangle
+state work rather than geometry work.
+
+**This forecloses BOTH branches of the earlier fork.** It is not cache thrash,
+so the bounded fix is not available; but it is not diffuse walk-and-dispatch
+either, because generic scaffolding does not cost 7,000 ticks a triangle.
+Something inside the submit is doing per-triangle work that belongs per-batch or
+at load. **A fixed-pool native runtime that keeps that call would inherit most
+of the cost** — the architecture go-ahead stays held until the phase split names
+the offender.
+
+**Recoverable figure, corrected: ~315,000, not 363,004.** `MISC` +365,136
+against `WORK-H` +317,136 means ~48,000 of the effect cost *displaces* other
+work, and the both-CPU stratification names the giver as `FTR` (−161,024 on
+`MISC`-hot frames, the fighter-absent signature). Against a 343,104 gap, ~315,000
+is the whole campaign.
+
 ## R2-07 — the cycle-76 row, superseded above but kept for the findings it still owns
 
 Fresh 128-frame baseline on `f24f0cc1`, rom `F04F5D98…`, `dldi=ON`, ring dump
