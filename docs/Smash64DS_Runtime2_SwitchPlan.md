@@ -12,37 +12,64 @@ and equivalence. **R2-07 is the live phase.** The board
 (`docs/P1_EXECUTION_BOARD.md`) is the live queue; this file stays the charter
 and is not a status log.
 
-**The battle-frame P95 gate, read in the canonical DLDI-on configuration
-(§3.9), is NOT yet met — but the gap is 53,760, not the six-figure number this
-page carried for four days.** Current baseline (2026-08-04):
-**`WORK-H` P95 1,173,760 against 1,120,000, P50 1,027,136, 12 of 128 frames
-over gate, `VBI 2:449 3:101 4:10 5+:8` max 20, slips 0**
-(`artifacts/performance/r207-baseline-2026-08-04-128.json`, `git=f24f0cc1`,
-rom `F04F5D98…`, `dldi=ON`, 128 frames). Every earlier figure on this page is
-superseded; do not optimize against one.
+**The battle-frame P95 gate is NOT met, and the gap is 343,104.** Whole-match
+baseline, 2026-08-04, `git=f24f0cc1`, rom `F04F5D98…`, `dldi=ON`, 1,600 samples
+across frames 440–2040:
 
-**A flat cut of 53,760 closes the gate outright, and that is the whole
-arithmetic.** P95 sits at sorted index 120 of 128, so it does not matter which
-frames the ticks come from. This retires a reasoning error that had already
-killed one whole class of candidate: the board argued that because `FTR` and
-`STG` are flat between clean and over-gate frames they are "not on the critical
-path for the gate at all however large they look in the P50." That confuses
-**variance attribution** with **level attribution**. `SRC` explains why some
-frames are worse than others; it does not follow that only `SRC` sets the height
-of the P95 frame. A flat bucket contributes its full value to *every* frame
-including the P95 one, so a flat cut of X moves P95 by X, 1:1. Clean-median
-against over-gate-median on the run above: `FTR` **−160**, `STG` +672, `MISC`
-+6,688, `SRC` **+279,392**.
+| arm | role | `WORK-H` P50 | P95 | over gate | VBlank |
+|---|---|---:|---:|---:|---|
+| **Boundary**, mode 163 | **gate of record** | 1,092,032 | **1,463,104** | 713/1600 (**44.6%**) | 2:1161 3:827 4:41 5+:10, max 20, slips 0 |
+| **both-CPU**, stress | optimization target | 1,098,240 | 1,605,440 | 704/1600 (44.0%) | 2:1118 3:822 4:90 5+:9, max 20, slips 0 |
 
-**Why the number came down.** The 2026-08-01 readings (1,240,128, then
-1,257,280) were taken on builds where `ifCommonSetMaxNumGObj` had capped the
-GObj pool for the whole match — `gSYTaskmanGeneralHeap` at 14,796 bytes free
-against the 25,600 threshold, so `gcMakeGObj` refused for the rest of every
-match once the pool latched, measurably deleting four of Mario's eleven
-fireballs. That cap no longer fires (low-water 144,336 after DL buffers 0/1
-returned 61,440 bytes), so those readings were taken under a *different content
-set* in both directions. The standing rule holds: do not compare a P95 across a
-content change.
+Excluding load frames (`SRC` > 2× that arm's own `SRC` median, a stated rule
+rather than a tuned one): Boundary 657/1544 (42.6%), both-CPU 582/1478 (39.4%).
+Both-CPU is only ~10% worse at P95 and essentially identical at P50 and
+over-gate rate — the stress arm is harder, but not the different animal it was
+assumed to be.
+
+**EVERY 128-FRAME FIGURE THIS CAMPAIGN EVER PUBLISHED WAS READ OFF THE CHEAPEST
+6% OF THE MATCH.** The same ROM and options over frames 441–568 read `WORK-H`
+P95 1,156,992 and 11/127 over gate (8.7%); the whole match reads 1,463,104 and
+44.6%. The window **understated P95 by ~306,000 and the over-gate rate
+five-fold**, because it sits in stop0–stop1 — stop0 is 8 of 96 over gate, while
+stop2 is 97 of 97 and stop12 is 95 of 95. Do not judge anything on a 128-frame
+window again; `sample-tick-hud-buckets.ps1` takes repeated ring dumps as of
+`58ca8723`.
+
+**`MISC` — the transient VFX draw path — is the tail, and it is a cost rather
+than a marker.** `MISC` P50 128,256 / P95 471,616, and it carries +326,976 of
+the +483,744 top-5% gap. Boundary frames with `MISC` above its P90 are
+**100% over gate** (160/160). The marker test that killed the old
+0.21-quads-per-frame claim was run and this survives it: `MISC`-hot and
+`SRC`-hot are near-disjoint populations (7% overlap), and among `SRC`-normal
+frames, `MISC`-hot is **79.9% over gate against 32.9%** — an independent 2.4×
+effect worth +156,480 median. Caveat kept honest: within that split `MISC`
++343,488 arrives with `FTR` −161,024 and `SRC` −66,496, so part of the rise is
+work moving between buckets; the net is +156,480, not +343,488. This confirms
+the owner's own report of 2026-08-04 — *"the most demanding parts of the game
+are drawing the VFX like projectiles (fox laser gun, Mario fireball), the
+revival platform, impact wave"*.
+
+**`FTR` IS NOT THE LEAD, AND THE FLAT-CUT ARGUMENT THAT SAID IT WAS IS HEREBY
+NARROWED.** An earlier version of this header argued that because `FTR` was flat
+(spread 1.01) a flat cut of X moves P95 by X, 1:1, making `FTR`'s 139K of
+overage the largest lever. `FTR` is flat *in the 128-frame window*; across the
+match it drops **−161,024** on `MISC`-hot frames, the signature of a fighter
+being absent during a KO or respawn. So the arithmetic holds at the median and
+weakens in the tail, and `FTR` is measured **anti-correlated** with the frames
+that miss the gate (41.9% over-gate when hot vs 44.9% when cold). `FTR` remains
+real work paid on every frame and still sits at 388,800 against its 250K line;
+it is ordinary phase work again, not the gate.
+
+**Why the older numbers on this page cannot be compared.** The 2026-08-01
+readings (1,240,128, then 1,257,280) were taken on builds where
+`ifCommonSetMaxNumGObj` had capped the GObj pool for the whole match —
+`gSYTaskmanGeneralHeap` at 14,796 bytes free against the 25,600 threshold, so
+`gcMakeGObj` refused for the rest of every match once the pool latched,
+measurably deleting four of Mario's eleven fireballs. That cap no longer fires
+(low-water 144,336 after DL buffers 0/1 returned 61,440 bytes). Between the
+content change and the window error, treat every pre-2026-08-04 P95 on this page
+as unusable.
 
 **The over-gate frames have two owners and neither is a renderer floor.**
 `FTR` and `STG` are flat on them — `FTR` is *below* its clean median on the

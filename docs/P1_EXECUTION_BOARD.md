@@ -4,7 +4,102 @@ Updated: 2026-08-04 (cycle 76)
 
 Boundary: `battle_playable_realtime`, mode `163`
 
-## R2-07 GATE — the gap is 53,760, and a regression that size landed today (2026-08-04, cycle 76)
+## R2-07 GATE — THE GAP IS 343,104, AND THE INSTRUMENT WAS THE PROBLEM (2026-08-04, cycle 77)
+
+**Read this before the cycle-76 row below, which it supersedes.** The owner
+directed the campaign onto the both-CPU configuration and a wider sample window
+(*"we should be profiling against the both CPU config so we are optimizing the
+most stressful way the game is played. might need a bigger sample window too"*).
+Doing so found that **every 128-frame figure this campaign ever published was
+read off the cheapest 6% of the match.**
+
+Same ROM (`F04F5D98…`), same options, Boundary arm:
+
+| window | `WORK-H` P50 | P95 | over gate |
+|---|---:|---:|---:|
+| 128 frames (441–568) | 1,027,008 | 1,156,992 | 11/127 (**8.7%**) |
+| **whole match (440–2040)** | 1,092,032 | **1,463,104** | 713/1600 (**44.6%**) |
+
+**P95 understated by ~306,000; the over-gate rate understated five-fold.** The
+window sits in stop0–stop1: stop0 is 8 of 96 over gate, stop2 is **97 of 97**,
+stop12 is **95 of 95**. Do not judge anything on a 128-frame window again.
+
+### The two baselines (1,600 samples, `dldi=ON`, slips 0 in both)
+
+**BOUNDARY — mode 163, `NDS_R2_BOTH_CPU=0` — THE GATE OF RECORD**
+`WORK-H` P50 **1,092,032** · P95 **1,463,104** · max 5,333,696 · over gate
+**713/1600 (44.6%)**, excluding load frames 657/1544 (42.6%)
+`FTR` 388,800/392,000 · `STG` 196,032/205,312 · `SRC` 304,384/554,176 ·
+`MISC` 128,256/471,616 · VBI 2:1161 3:827 4:41 5+:10, max 20
+
+**BOTH-CPU — `NDS_R2_BOTH_CPU=1` — STRESS, never the Boundary figure
+(`Makefile:305-308`)**
+`WORK-H` P50 **1,098,240** · P95 **1,605,440** · max 5,191,232 · over gate
+**704/1600 (44.0%)**, excluding load frames 582/1478 (39.4%)
+`FTR` 385,152/388,352 · `STG` 197,312/205,824 · `SRC` 356,800/836,544 ·
+`MISC` 110,336/451,840 · VBI 2:1118 3:822 4:90 5+:9, max 20
+
+Load frames excluded by a stated rule, not a tuned one: `SRC` > 2× that arm's
+own `SRC` median. Both-CPU is only ~10% worse at P95 and essentially identical
+at P50 and over-gate rate — harder, but not a different animal.
+
+### `MISC` is the tail, and it is a COST rather than a marker
+
+The owner named it by eye before any of this was measured. `MISC` P50 128,256 /
+P95 471,616, carrying **+326,976 of the +483,744 top-5% gap**. Boundary frames
+with `MISC` above its P90 are **100% over gate (160/160)**, median 1,402,176 vs
+1,063,040.
+
+**It passes the marker test that killed the 0.21-quads-per-frame claim.**
+`MISC`-hot and `SRC`-hot are near-disjoint (7% overlap). Controlling for `SRC`:
+
+| | n | over gate | `WORK-H` med |
+|---|---:|---:|---:|
+| `SRC` hot, `MISC` hot | 11 | 100.0% | 1,879,488 |
+| `SRC` hot, `MISC` cold | 149 | 100.0% | 1,576,256 |
+| **`SRC` normal, `MISC` hot** | **149** | **79.9%** | **1,230,656** |
+| `SRC` normal, `MISC` cold | 1291 | 32.9% | 1,074,176 |
+
+An independent **2.4× effect worth +156,480 median**. Honest caveat: within that
+split `MISC` +343,488 arrives with `FTR` −161,024 and `SRC` −66,496, so part is
+work moving between buckets — net `WORK-H` +156,480, not +343,488. `FTR` nearly
+halving alongside an effects spike is the signature of a fighter being absent,
+i.e. a KO or respawn.
+
+### `FTR` IS NOT THE LEAD — the cycle-76 flat-cut argument is NARROWED
+
+The row below argued that `FTR`, being flat at spread 1.01, takes P95 down 1:1
+and is therefore the largest lever. **`FTR` is flat only in the 128-frame
+window.** Across the match it drops **−161,024** on `MISC`-hot frames, and it is
+measured **anti-correlated** with the tail (41.9% over gate when hot vs 44.9%
+when cold). The arithmetic still holds at the median and weakens in the tail.
+`FTR` at 388,800 against its 250K line is ordinary phase work again, not the
+gate — and Task 56's bucket is not where the gate is lost.
+
+### Not evaluable, and not faked
+
+KO/respawn frame localisation. All six per-stop counters read **0 for the entire
+match in both arms**: `gNdsFighterBattlePlayableDeadFrames` only increments
+inside the natural-combat proof path gated on `gNdsFighterBattlePlayableMask` /
+`sNdsNaturalCombatPhase`, and the Task 39 spark counters sit behind an FX route
+whose flag `afb404f5` deleted. No conditional was computed from them; the VFX
+question was answered in-band from `MISC` instead. **Standing rule this
+re-proves: verify a counter is live in the shipped configuration BEFORE the
+measuring run.** A proof-scoped counter reads zero, which is indistinguishable
+from clean.
+
+### Instrument
+
+`58ca8723` repeated ring dumps (`-Samples` to 4096, `-RingStopStride` default
+96, ROM byte-identical) · `06e5819f` timeout cap 14400 plus STALLED / TOO SLOW /
+UNRESOLVED liveness that reads the frame counter twice six seconds apart and
+reports observed frames/s — **the Task 56 arm would have been called STALLED on
+night one** · `690192a1` the two baselines. Ring slots and presented frames are
+not the same count (a 64-frame span advances the ring 63 slots), so the stitcher
+records per-stop `ringStopSkews`; skews are ±1 and **both signs occur**, which is
+why it records skew instead of asserting a direction.
+
+## R2-07 — the cycle-76 row, superseded above but kept for the findings it still owns
 
 Fresh 128-frame baseline on `f24f0cc1`, rom `F04F5D98…`, `dldi=ON`, ring dump
 (`artifacts/performance/r207-baseline-2026-08-04-128.json` + `.csv`):
