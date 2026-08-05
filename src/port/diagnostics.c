@@ -3669,6 +3669,15 @@ volatile u32 gNdsEffectRendererCallbackKindMask;
 volatile u32 gNdsEffectRendererRejectedKindMask;
 volatile u32 gNdsEffectRendererDObjFlagsMask;
 volatile u32 gNdsEffectRendererDObjFieldMask;
+/* G1 stage texture-site memo: runtime route + census. Route 0 reproduces the
+ * shipped behaviour exactly (memo off for fast-run mode 9). See
+ * include/nds/nds_renderer.h for why these are not profile-gated. */
+volatile u32 gNdsG1SiteCacheRoute;
+volatile u32 gNdsG1SiteConsults;
+volatile u32 gNdsG1SiteHits;
+volatile u32 gNdsG1SiteRemembers;
+volatile u32 gNdsG1SiteOverwrites;
+volatile u32 gNdsG1SiteOccupancy;
 volatile u32 gNdsEffectRendererTriangleCount;
 volatile u32 gNdsEffectRendererTextureReadyCount;
 volatile u32 gNdsEffectRendererTextureRejectCount;

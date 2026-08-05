@@ -250,6 +250,31 @@
 #define NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION 8u
 #define NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE 9u
 
+/* G1 -- the stage texture-site memo's runtime route and its census.
+ *
+ * ndsRendererProfileSetOwner enables sNdsRendererStageTextureSites only for
+ * fast-run modes 4/7/8, and every measured ROM builds mode 9, so the memo has
+ * never executed in battle. Route 0 is that behaviour byte for byte; route 1
+ * adds mode 9. One binary carries both arms because this ROM's pacing is
+ * placement-sensitive and separately-linked A/B ROMs have confused two
+ * comparisons (board standing rule 7).
+ *
+ * The counters are deliberately NOT guarded by NDS_RENDERER_PROFILE_LEVEL: the
+ * tick-HUD measuring target builds at profile 0, and a proof-scoped counter
+ * reads 0 there indistinguishably from a clean one.
+ *
+ * Overwrites is the load-bearing number, not the hit rate. The refuted
+ * (dl-pointer, bind-ordinal) memo took 471 hits on 10,336 consults with 7,517
+ * evictions of 7,525 fills against a working set estimated at ~175 keys; this
+ * table holds 128. If the working set still overflows, Remember's round-robin
+ * fallback thrashes and the memo pays a probe walk to miss. */
+extern volatile u32 gNdsG1SiteCacheRoute;
+extern volatile u32 gNdsG1SiteConsults;
+extern volatile u32 gNdsG1SiteHits;
+extern volatile u32 gNdsG1SiteRemembers;
+extern volatile u32 gNdsG1SiteOverwrites;
+extern volatile u32 gNdsG1SiteOccupancy;
+
 #ifndef NDS_RENDERER_BENCHMARK_MODE
 #define NDS_RENDERER_BENCHMARK_MODE NDS_RENDERER_BENCHMARK_NONE
 #endif

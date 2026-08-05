@@ -109,6 +109,19 @@ param(
     # longer" into a failure that looks exactly like a stall, which is the
     # confusion the timeout message below exists to end.
     [ValidateRange(30,14400)][int]$TimeoutSeconds = 900,
+    # `name=value` pairs poked ONCE, at the first frame-complete marker, before
+    # the sample window. This is what makes standing rule 7 expressible on the
+    # gate instrument: prefer ONE binary with a runtime-settable route over two
+    # separately-linked A/B ROMs, because this ROM's pacing is cache-placement
+    # sensitive and split builds have already confused two comparisons. Without
+    # it, every "dual-route" A/B silently degraded into the two-build form the
+    # rule exists to forbid, and paid the +/-5,376 cross-build P95 floor for
+    # nothing.
+    #
+    # The poke lands at the first marker rather than straight after
+    # `target remote` on purpose: the marker is well past bss init, so a global
+    # set there cannot be zeroed out from under the run.
+    [string[]]$SetGlobals = @(),
     [string]$JsonOut = ''
 )
 
@@ -160,6 +173,28 @@ $PerFrameGlobals = @($PerFrameGlobals |
     ForEach-Object { $_ -split ',' } |
     ForEach-Object { $_.Trim() } |
     Where-Object { $_ -ne '' })
+# Same normalisation, same reason as the two lists above.
+$SetGlobals = @($SetGlobals |
+    ForEach-Object { $_ -split ',' } |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne '' })
+foreach ($pair in $SetGlobals) {
+    if ($pair -notmatch '^[A-Za-z_][A-Za-z0-9_]*\s*=\s*-?[0-9]+$') {
+        throw "-SetGlobals expects name=value pairs; got '$pair'."
+    }
+}
+# Poked at the first frame-complete marker, then the breakpoint is discarded so
+# it cannot interact with the sampling breakpoints installed below.
+$setGlobalLines = @(if ($SetGlobals.Count -gt 0) {
+    'break ndsBattlePlayableFrameCompleteMarker'
+    'continue'
+    foreach ($pair in $SetGlobals) { "set var $pair" }
+    foreach ($pair in $SetGlobals) {
+        $n = ($pair -split '=')[0].Trim()
+        "printf `"SETGLOBAL=$n,%u\n`", $n"
+    }
+    'delete'
+})
 # -PerStopGlobals needs it for the SAME reason, and did not have it: the three
 # lists above were normalised when they were added and this one was added later
 # (R2-07) without noticing the pattern. A single comma-joined string then
@@ -407,6 +442,7 @@ try {
         'set confirm off',
         'set remotetimeout 30',
         "target remote 127.0.0.1:$($context.GdbPort)",
+        $setGlobalLines,
         # The fallback counters run from boot, so a single read at the end would
         # charge the census window with every fallback taken during boot, the
         # menu and the seeding presents. Stop once at the start frame to take a
@@ -450,6 +486,7 @@ try {
         'set confirm off',
         'set remotetimeout 30',
         "target remote 127.0.0.1:$($context.GdbPort)",
+        $setGlobalLines,
         'set $tick_samples = 0',
         'break ndsBattlePlayableFrameCompleteMarker',
         'commands',
@@ -484,8 +521,18 @@ try {
     # line, and a blank line in a GDB script re-executes the previous command --
     # which next to a 'continue' would silently run the emulator on past the
     # frame the dump was supposed to be taken at.
+    # Flatten one extra level before filtering. -SetGlobals contributes a
+    # NESTED array, and a nested array piped straight into Where-Object is
+    # emitted as a single object that stringifies to one space-joined line --
+    # "break ... continue set var ... delete" -- which gdb rejects as a
+    # malformed breakpoint location. In -batch that error is printed and
+    # execution carries on, so the run still reaches its window and still
+    # prints a full, plausible bucket table with the poke silently unapplied.
+    # It was caught only because the arm carried its own engagement counters
+    # and they read 0 where the census said they must read 10,336.
     [System.IO.File]::WriteAllLines($gdbScript,
-        @($gdbLines | Where-Object { -not [string]::IsNullOrEmpty($_) }))
+        @($gdbLines | ForEach-Object { $_ } |
+            Where-Object { -not [string]::IsNullOrEmpty($_) }))
     $gdbProcess = Start-Process -FilePath $Gdb `
         -ArgumentList @('-q', '-batch', '-x', $gdbScript, $elf) `
         -WorkingDirectory $root `

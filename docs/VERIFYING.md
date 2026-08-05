@@ -70,6 +70,27 @@ R2-07 iteration rules (cycle 79):
   `NDS_R2_STAGE_ROUTE_PROBE` pattern): one build, both arms in one run, zero
   placement noise. Separately linked A/B ROMs have already confused two
   comparisons on this placement-sensitive ROM.
+  `sample-tick-hud-buckets.ps1 -SetGlobals name=value[,name=value]` is the
+  mechanism (added cycle 79, G1): it pokes the globals once at the first
+  frame-complete marker — past bss init, before the sample window — so both
+  arms come from one build. Until it existed the rule was not expressible on
+  the gate instrument and every "dual-route" A/B quietly degraded into the
+  two-build form the rule forbids, paying the ±5,376 cross-build P95 floor for
+  nothing.
+- **A poke that does not land still prints a full, plausible bucket table.**
+  `-SetGlobals` shipped broken for its first two runs: the gdb command lines
+  were spliced in as a NESTED array, and a nested array piped into
+  `Where-Object` is emitted as one object that stringifies to a single
+  space-joined line. gdb rejected that one malformed line, `-batch` printed
+  the error and carried on, and the run reached its window and produced a
+  complete percentile table with the route never applied — indistinguishable,
+  from the output table alone, from a candidate that engaged and saved
+  nothing. It was caught only because the arm carried its own engagement
+  counters (`-ExtraGlobals`) and they read 0 where the census had already
+  proved they must read 10,330. **Every routed arm carries a counter that
+  proves the route took, and that counter is checked before its ticks are
+  read.** Do not diagnose this class from console output — the console is
+  exactly where it hides.
 - **Per-list constants make short probes valid for iteration.** Effect-submit
   cost is ~102,730 ticks/list; ticks-per-list from a few stops is a sound
   progress metric for board lane G3. The P95 verdict still needs the

@@ -65,19 +65,56 @@ ARM text: a change that adds text must beat its own footprint.
 
 ## THE GATE LANE — in order, one row live at a time
 
-### G1 — Flip the resolver's site cache on for mode 9 (live, next step)
+### G1 — MEASURED (cycle 79). Mechanism proven, gate unmoved. Not shipped.
 
-`sNdsRendererStageTextureSites` (`nds_renderer.c:11086`): a 128-entry memo
-keyed on `state->source_command_site` (exact `Gfx` command address — a better
-key than the refuted memo), already built, 12 KB already spent.
-`ndsRendererProfileSetOwner` (`nds_renderer.c:29241-29247`) enables it only for
-fast-run modes 4/7/8; every measured ROM builds mode **9** (added after both
-lists, neither updated). One line, **zero new RAM**.
+`sNdsRendererStageTextureSites` (`nds_renderer.c:11086`), enabled in
+`ndsRendererProfileSetOwner` (`nds_renderer.c:28819` — the old `29241-29247`
+reference was stale by ~450 lines and is corrected here). Mode 9 now joins the
+4/7/8 list behind `gNdsG1SiteCacheRoute`; **route 0 is the default and
+reproduces shipped behaviour exactly**, so nothing about the shipped ROM
+changed.
 
-Protocol: confirm the static read at runtime first (liveness probe on the
-existing tickhud ROM); its own arm and A/B; owner's visual gate only if a
-visible pixel of shield/revival platform/impact wave/reflector changes.
-Target: part of the 21.41% `Tex` share (~25,289/list) on effect frames.
+**The memo works, and the ~175-key working-set fear was wrong.** Whole match,
+both-CPU, one binary, both routes (`builds/build-c79-g1-bothcpu`):
+
+| | route 1 (on) | route 0 (off) |
+|---|---:|---:|
+| `Tex` per list | **7,203** | 20,780 |
+| hit rate | **78.06%** (2,305/2,953) | — |
+| overwrites / occupancy | **0** / 26 of 128 | — |
+| WORK-H P50 | 1,089,024 | 1,095,552 |
+| WORK-H P95 | 1,615,872 | 1,612,032 |
+| over gate | 682/1600 | 710/1600 |
+| `MISC` P95 | 396,096 | 473,536 |
+
+`Tex`/list falls **65.3%** and `Exec` total falls **9,591,232 ticks/match**
+(~5,994/frame mean). `MISC` P95 falls 77,440 — 9.1x the ≥8,544 bucket floor.
+
+**But WORK-H P95 moved +3,840, INSIDE the ±5,376 floor: the gate did not
+move**, and this closes none of the 485,060 gap. Buckets locate; WORK-H
+decides. `ALL` P95 (+128) and the VBI histogram are unchanged, so pacing is
+unchanged.
+
+Two findings the next cycle should not re-derive:
+
+- **The both-CPU gate arm exercises this path ~3.5x LESS than Boundary** —
+  2,953 consults over 563 lists, against Boundary's 10,336 over 1,360. The
+  banked 21.41% / 25,289-per-list `Tex` figure is a Boundary-config number.
+  The gate arm is the *worst* case for any effect-texture lever, which is
+  worth knowing before G3 is sized against it.
+- **The refuted `(dl-pointer, bind-ordinal)` memo's failure does not
+  transfer.** It took 471 hits on 10,336 with 7,517 evictions of 7,525 fills;
+  this key takes 78% with **zero** evictions and 26 live slots. The site
+  address points into static source display-list data and is stable across
+  frames; the dl pointer was not.
+
+**Open before this can ship:** the owner's visual gate on shield / revival
+platform / impact wave / reflector (not run — see Inherited), and the byte
+cost. The measured **+1,924 bytes (text +1,796, bss +128)** is the
+*instrumented* build and sits INSIDE the +1,408/+2,208 cliff band; it is
+dominated by six census counters inlined at several sites, not by the flip
+(one condition). **The shipping cost is unmeasured** — G2 must measure the
+flip alone, because G3's packet builder spends from the same budget.
 
 ### G2 — RAM headroom before any new code lands
 
@@ -205,7 +242,14 @@ row 1's execution plan.
 6. New tables/code: byte cost stated + boot probe before measuring (see G2).
 7. Prefer one dual-route binary over separately-linked A/B ROMs wherever the
    change can be routed at runtime; this ROM's pacing is placement-sensitive
-   and split builds have confused two comparisons.
+   and split builds have confused two comparisons. `sample-tick-hud-buckets.ps1
+   -SetGlobals name=value` is the mechanism (cycle 79).
+8. **A routed arm must prove the route took before its ticks are read.** A poke
+   that silently fails still produces a complete, plausible percentile table,
+   which reads exactly like a candidate that engaged and saved nothing —
+   `-SetGlobals` did this on its first two runs (see `VERIFYING.md`). Pair
+   every `-SetGlobals` with an `-ExtraGlobals` counter that cannot be zero if
+   the route engaged.
 
 ## Acceptance Matrix
 

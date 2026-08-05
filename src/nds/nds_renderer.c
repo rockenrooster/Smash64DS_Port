@@ -11164,6 +11164,7 @@ static s32 ndsRendererStageTextureSiteTryBind(
     {
         return FALSE;
     }
+    gNdsG1SiteConsults++;
     plan = ndsRendererStageTextureSiteFind(state, stats);
     if (plan == NULL)
     {
@@ -11189,6 +11190,7 @@ static s32 ndsRendererStageTextureSiteTryBind(
         ndsRendererHardwareApplyTextureParams(entry->params);
         sNdsRendererHardwareActiveTextureEntry = entry;
     }
+    gNdsG1SiteHits++;
     stats->hardware_texture_ready_count++;
     stats->hardware_texture_format = plan->format;
     stats->hardware_texture_width = plan->width;
@@ -11257,13 +11259,27 @@ static void ndsRendererStageTextureSiteRemember(
     if (plan == NULL)
     {
         plan = empty;
+        if (plan != NULL)
+        {
+            gNdsG1SiteOccupancy++;
+        }
     }
     if (plan == NULL)
     {
         plan = &sNdsRendererStageTextureSites[
             sNdsRendererStageTextureSiteNext++ &
             (NDS_RENDERER_STAGE_TEXTURE_SITE_COUNT - 1u)];
+        /* Capacity thrash: the table is full and this slot belongs to a
+         * DIFFERENT site, so it is being taken from it. Near zero after warm-up
+         * means the working set fits in 128 entries; a large count means this
+         * memo is repeating the refuted one's failure with a different key. */
+        if ((plan->site != NULL) &&
+            (plan->site != state->source_command_site))
+        {
+            gNdsG1SiteOverwrites++;
+        }
     }
+    gNdsG1SiteRemembers++;
     plan->site = state->source_command_site;
     plan->entry = entry;
     plan->state_hash1 = stats->texture_source_hash1;
@@ -28797,11 +28813,16 @@ void ndsRendererProfileSetOwner(NDSRendererProfileOwner owner)
     sNdsRendererRuntimeOwner =
         ((u32)owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT) ? owner :
         NDS_RENDERER_PROFILE_OWNER_NONE;
+    /* G1: mode 9 (NATIVE_COMPLETE_STAGE) was added after this list and never
+     * joined it, so the memo has never run in any measured ROM. Route 1 adds
+     * it; route 0 leaves the shipped condition untouched. */
     sNdsRendererStageTextureSitesEnabled =
         (((mode == NDS_RENDERER_FAST_RUN_STAGE_TEXTURE_SITES) ||
           (mode == NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ||
           (mode ==
-           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION)) &&
+           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ||
+          ((mode == NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) &&
+           (gNdsG1SiteCacheRoute != 0u))) &&
          (sNdsRendererRuntimeOwner == NDS_RENDERER_PROFILE_OWNER_STAGE)) ?
             TRUE : FALSE;
     sNdsRendererFastOwnerEnabled =
