@@ -36,15 +36,26 @@ Noise floors: `WORK-H` P95 cross-build ±5,376; per-bucket placement ≥8,544 �
 buckets locate, `WORK-H` decides. 1.85 cycles of `FTR` mean per byte of added
 ARM text: a change that adds text must beat its own footprint.
 
-## The diagnosis the lane is built on (settled 2026-08-04/05)
+## The diagnosis the lane was built on — **BOUNDARY-ONLY, re-priced 2026-08-05**
 
-- **Effect DObj submits are the tail**: 99.3% of the `MISC` excursion,
-  359,717 ticks/frame on over-gate frames, **0** on clean ones. Net recoverable
-  ~315,000 (part displaces `FTR`).
-- **The cost is a per-list constant** (~102,730 Exec ticks/list, 1,360
-  lists/match, 16.1 tris/list): exact nine-phase partition — generic DL
+**Every figure in this section is a Boundary-arm figure.** It was banked without
+an arm label, and cycle 79 measured it on the both-CPU arm the owner's gate
+actually reads (G2a, commit `62fe823d`): the prize is 4–9× smaller there. Do not
+quote these numbers as gate-arm numbers, and do not rebuild G3's case from them.
+
+- **Effect DObj submits are the tail** *(Boundary)*: 99.3% of the `MISC`
+  excursion, 359,717 ticks/frame on over-gate frames, **0** on clean ones. Net
+  recoverable ~315,000 (part displaces `FTR`).
+  **On the both-CPU gate arm: 71.5% of the `MISC` excursion, and `MISC` is only
+  16.9% of the WORK-H excursion — so effect submits are ~12.1% of it. Measured
+  recoverable 33,699–75,264, not ~315,000.**
+- **The cost is a per-list constant** *(Boundary)* (~102,730 Exec ticks/list,
+  1,360 lists/match, 16.1 tris/list): exact nine-phase partition — generic DL
   interpreter 65.57% (77,440/list), texture resolve 21.41% (25,289/list),
   Matrix 6.93% (8,179/list), everything else ~5.8%.
+  **The constant does not hold on the gate arm: 527–563 lists/match at 83,632
+  ticks/list (44,073,856 total, versus Boundary's ~139,714,000) — 41% of the
+  lists and 81% of the per-list cost.**
 - **The interpreter is honestly generic**: every list terminates at `G_ENDDL`
   (1,360/1,360, none at the 8192 cap), 160.1 commands/list at **626
   ticks/command**. No overrun to fix — **the precompiled-packet path is the
@@ -191,9 +202,16 @@ Because the cost is a **per-list constant**, ticks/list from a few stops is a
 valid iteration metric — flip the route mid-run and read both constants from
 the same run, same frames, zero placement noise, zero extra builds. The
 whole-match sampling run is reserved for the KEEP decision and re-baseline.
-Success at iteration scale: packet-route ticks/list ≪ 102,730 (the submit-only
-residue should be a few thousand); at gate scale: whole-match P95 moves by
-most of the ~315K recoverable in both arms.
+Success at iteration scale: packet-route ticks/list ≪ 83,632 on the gate arm
+(≪ 102,730 on Boundary) — the submit-only residue should be a few thousand.
+
+**There is no longer a gate-scale success criterion for this row.** The prior
+one ("P95 moves by most of the ~315K recoverable in both arms") was written from
+the unlabelled Boundary diagnosis and is refuted: on the gate arm, removing
+*100%* of effect submits leaves WORK-H P95 at 1,536,768–1,578,333 against the
+1,120,380 budget — a residual gap of 416,388–457,953. **G3 cannot close the gate
+alone.** It remains a real Boundary-arm win and a partial gate-arm win; it is no
+longer the lane's answer, and G2's ≥32 KB exit exists only to fund it.
 
 ### G4 — Re-baseline and pick the next lever from the residue
 
@@ -302,7 +320,7 @@ As last graded (cycle 76); a row changes state only when its gate runs.
 | Dream Land collision, platforms, blast zones, wind, camera | Pass for current P1 stage | Dynamic presentation debt remains red separately |
 | Recognizable Dream Land presentation and required animation | Red | Whispy material/animation debt; Task 62 candidate rejected |
 | Complete overlapping BGM, FGM, voices, announcer, crowd | Red | Exact pitch/composite/voice coverage and listen gates remain |
-| Stable 30 FPS, representative P95 <= 1.12M ticks | Red | Gap 343,104; gate lane G1–G4 above |
+| Stable 30 FPS, representative P95 <= 1.12M ticks | Red | Gap **485,060 on the both-CPU gate arm** (343,104 is the Boundary figure and is not the gate); lane re-aiming, see the re-priced diagnosis above |
 | Stable reserve, no corruption, clean teardown | Focused gates pass | Requalify after the final content/performance candidate |
 | Reproducible public artifact | Red | Current local root ROM differs from the pinned public identity |
 
