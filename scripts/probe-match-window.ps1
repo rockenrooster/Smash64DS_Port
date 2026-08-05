@@ -15,11 +15,16 @@ param(
 
 # WHAT MATCH TIME DOES THE SAMPLING WINDOW ACTUALLY COVER?
 #
-# Every gate figure in this campaign is sampled at presented frames 440-2040
-# and labelled "whole match". That label was never checked, and the two arms
-# do not run the same match: scene_harness.c:182 seeds time_limit = 1 for
-# Boundary, and :221 seeds time_limit = 7 under NDS_R2_BOTH_CPU -- a
-# SEVEN-minute match, sized for the freeze soak, not for tick sampling.
+# Every gate figure in this campaign was sampled at presented frames 440-2040
+# and labelled "whole match". That label was never checked, and the two arms did
+# not run the same match: scene_harness.c seeded time_limit = 1 for Boundary and
+# 7 under NDS_R2_BOTH_CPU -- a SEVEN-minute match, sized for the freeze soak,
+# not for tick sampling. This probe measured the damage (12.6% coverage against
+# Boundary's 86.7%), the owner ruled both gate arms onto the 60-second match on
+# 2026-08-05, and the soak's long match now lives on NDS_R2_SOAK_MATCH_MINUTES.
+# The probe outlives the defect: coverage is part of a baseline's identity, so
+# every re-bank states it, and the denominator is now read from the guest rather
+# than typed on the command line.
 #
 # The frames-to-seconds conversion cannot be done by arithmetic from the VBI
 # histogram, because that assumes a fixed logic-to-presented ratio and this
@@ -50,7 +55,15 @@ $target = 'smash64ds-battle-playable-tickhud-hwtri'
 $counters = @(
     'gNdsBattleTextHudTimeSeconds',
     'gNdsBattlePlayablePacingLogicFrames',
-    'gNdsBattlePlayablePacingPresentedFrames'
+    'gNdsBattlePlayablePacingPresentedFrames',
+    # THE DENOMINATOR, READ OUT OF THE GUEST. Coverage was previously computed
+    # against -TimeLimitMinutes, a number typed on the command line -- so the
+    # probe built to catch a mislabelled window could itself be handed the wrong
+    # match length and would report a confident wrong percentage. The seeded
+    # value is a global struct field, so read it. -TimeLimitMinutes is now only
+    # a cross-check and disagreeing with the guest is an error, not a silent
+    # override.
+    'gSCManagerTransferBattleState.time_limit'
 )
 
 $context = Initialize-MelonDSVerifierContext `
@@ -93,7 +106,9 @@ try {
     }
     $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
     $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
-    $missing = $counters | Where-Object { $symbols -notcontains $_ }
+    # Compare on the BASE symbol: one counter is a struct field, and nm knows the
+    # struct, not the member.
+    $missing = $counters | Where-Object { $symbols -notcontains ($_ -split '\.')[0] }
     if ($missing.Count -gt 0) {
         throw ("Match-window symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
     }
@@ -151,13 +166,28 @@ try {
     $logicB = [int64]$samples['B']['gNdsBattlePlayablePacingLogicFrames']
     $presA = [int64]$samples['A']['gNdsBattlePlayablePacingPresentedFrames']
     $presB = [int64]$samples['B']['gNdsBattlePlayablePacingPresentedFrames']
-    $matchSeconds = $TimeLimitMinutes * 60
+    # The guest's own seeding decides the denominator. Stop A is inside the
+    # match, so the field is the live one and not a boot-time zero.
+    $seededMinutes = [int]$samples['A']['gSCManagerTransferBattleState.time_limit']
+    if ($seededMinutes -le 0) {
+        throw ("The guest seeded time_limit = $seededMinutes, so this is not a " +
+               'Time match and coverage has no denominator.')
+    }
+    if ($PSBoundParameters.ContainsKey('TimeLimitMinutes') -and
+        ($TimeLimitMinutes -ne $seededMinutes)) {
+        throw ("-TimeLimitMinutes $TimeLimitMinutes disagrees with the guest, " +
+               "which seeded $seededMinutes. Coverage computed against the wrong " +
+               'match length is exactly the defect this probe exists to catch.')
+    }
+    $TimeLimitMinutes = $seededMinutes
+    $matchSeconds = $seededMinutes * 60
     $elapsed = [math]::Abs($secA - $secB)
     $dPres = $presB - $presA
     $dLogic = $logicB - $logicA
 
     Write-Host ""
     Write-Host ("MATCH WINDOW -- arm $Arm, build $Build, frames $StartFrame..$EndFrame")
+    Write-Host ("  match timer      {0,8} min (read from the guest, not assumed)" -f $seededMinutes)
     Write-Host ("  clock            {0,8} s  ->{1,8} s   (elapsed {2} s of a {3} s match)" -f $secA, $secB, $elapsed, $matchSeconds)
     Write-Host ("  presented frames {0,8:N0}  ->{1,8:N0}   (delta {2:N0})" -f $presA, $presB, $dPres)
     Write-Host ("  logic frames     {0,8:N0}  ->{1,8:N0}   (delta {2:N0})" -f $logicA, $logicB, $dLogic)
@@ -169,7 +199,8 @@ try {
         $payload = [ordered]@{
             probe = 'match window coverage'; arm = $Arm; build = $Build
             rom = $rom; romSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $rom).Hash
-            timeLimitMinutes = $TimeLimitMinutes; matchSeconds = $matchSeconds
+            timeLimitMinutes = $seededMinutes; timeLimitSource = 'guest'
+            matchSeconds = $matchSeconds
             startFrame = $StartFrame; endFrame = $EndFrame
             clockStart = $secA; clockEnd = $secB; elapsedSeconds = $elapsed
             presentedDelta = $dPres; logicDelta = $dLogic

@@ -1,6 +1,6 @@
 # P1 Execution Board
 
-Updated: 2026-08-05 (cycle 79). Boundary: `battle_playable_realtime`, mode `163`.
+Updated: 2026-08-05 (cycle 80). Boundary: `battle_playable_realtime`, mode `163`.
 
 This board was rewritten from a 10,207-line append log into a queue. Every
 verdict, baseline, and instrument note carried forward unchanged; the full
@@ -14,43 +14,60 @@ workflow rules live in `docs/VERIFYING.md`.
 > "the soak was only meant to catch freezes, boundary and both cpu gates should
 > be the 60 sec match"
 
-**Both gate arms run the one-minute match.** The soak's long match exists only
-to catch freezes and belongs on its own flag — it must never again ride on
-`NDS_R2_BOTH_CPU`, because that silently made the gate arm sample a 420-second
-match. Reseeding is queued as row G2d; until it lands, every both-CPU figure
-below is superseded.
+**Both gate arms run the one-minute match. LANDED, cycle 80.** The `time_limit
+= 7` is gone from `scene_harness.c`'s `NDS_R2_BOTH_CPU` branch, and the soak's
+long match now lives on `NDS_R2_SOAK_MATCH_MINUTES` (Makefile, default 0 =
+canonical one-minute match). `soak-freeze-watch.ps1` derives that value from its
+own `-MinutesToRun` instead of a constant, so the match can no longer be shorter
+than the run watching it, and it *reads the seeded value back out of the guest*
+at end of run rather than trusting the flag. Proven end to end: resolved 2 →
+generated header `NDS_R2_SOAK_MATCH_MINUTES 2` → in-guest `time_limit = 2` with
+`gNdsVSResultsStartCount 0` over 2,705 presented battle frames, i.e. the soak
+spent none of its run on a Results screen.
+
+Both arms were re-banked on the corrected seed and **now measure identically**:
+match timer 1 min, clock 52 s → 0 s, coverage 86.7%, logic:presented 2.000.
 
 **A window is "whole match" only if its coverage was measured against the match
 clock.** Coverage is part of a baseline's identity now, not a footnote. The
 conversion: the sim runs 60 Hz and presents 30 Hz, ratio **measured at exactly
 2.000**, so 1,600 presented = 3,200 logic = **53.3 s**.
 
-## Banked baselines — Boundary sound, both-CPU SUPERSEDED
+## Banked baselines — BOTH ARMS RE-BANKED ON THE CORRECTED SEED (cycle 80)
 
-1,600 samples, frames 440–2040, `dldi=ON`, git `f24f0cc1`, ROM `F04F5D98…`,
-`sample-tick-hud-buckets.ps1 -RingDump` (stride 96, ROM byte-identical).
+1,600 samples, frames 441–2040, `dldi=ON`, git `34091054`+reseed,
+`sample-tick-hud-buckets.ps1 -RingDump` (stride 96), `slips=0` on both.
+Builds `builds/build-c80-gate-bothcpu` and `builds/build-c80-boundary`.
 **Never take a gate reading on a 128-frame window** — it reads the cheapest 6%
 of the match (P95 understated ~306,000, over-gate rate 5×).
 
-| arm | role | coverage | `WORK-H` P50 | P95 | over gate |
-|---|---|---|---:|---:|---:|
-| **Boundary** mode 163 | shipped configuration | **86.7%** of 60 s, ends at the buzzer — sound | 1,092,032 | 1,463,104 | 713/1600 (44.6%) |
-| ~~both-CPU~~ `NDS_R2_BOTH_CPU=1` | **SUPERSEDED — 420 s seed** | **12.6%** of 420 s (opening minute only) | 1,098,240 | 1,605,440 | 704/1600 (44.0%) |
+| arm | role | coverage | `WORK-H` P50 | P95 | over gate | gap to gate |
+|---|---|---|---:|---:|---:|---:|
+| **both-CPU** `NDS_R2_BOTH_CPU=1` | **THE GATE** | **86.7%** of 60 s | 1,094,464 | **1,624,064** | 704/1600 (44.0%) | **503,684** |
+| **Boundary** mode 163 | shipped configuration | **86.7%** of 60 s | 1,082,112 | 1,476,672 | 673/1600 (42.1%) | 356,292 |
 
-VBI 2/3/4/5+ (max): Boundary 1161/827/41/10 (20); both-CPU 1118/822/90/9 (20).
+VBI 2/3/4/5+ (max): both-CPU 1127/808/91/14 (20); Boundary 1194/784/51/11 (20).
 
-**The superseded figures are kept deliberately** — the gap between them and the
-corrected re-bank measures how badly the window distorted the lane, which is
-itself evidence. What is superseded: the both-CPU P50/P95/over-gate above, the
-**485,060 gap**, and *everything derived from them* — the SRC 69.6% / MISC 29.1%
-split, the 394,409 and 58,240 lever caps, and the 549,440 combined figure. The
-early-match window means the gate P95 is likely **optimistic**, so the real gap
-may be larger. Treat the SRC/MISC inversion between arms as **unproven**: it may
-be a window artefact, since Boundary's window holds the KO-heavy endgame and the
-buzzer while both-CPU's held only opening play.
+**The corrected gap is 503,684, not 485,060** — the early-match window was
+optimistic by 18,624, exactly as predicted. Every superseded both-CPU figure is
+now replaced above; the old ones are in the cycle-79 archive section.
 
-Boundary's own numbers stand: it trails the gate by 343,104, and its clean-frame
-P95 ~1,056,640 is ~63K inside budget. The shipped ROM remains
+**THE WINDOW RUNS PAST THE BUZZER ON BOTH ARMS — 43 frames, and they are cheap.**
+Frames 1998–2040 are post-buzzer GAME SET on *both* arms (contiguous, `SRC` <
+50,000 against medians of 355,328/300,736; gate-arm mean `WORK-H` 711,751). They
+are 2.7% of the window and they drag P50/P95 *down*. Gate arm, gameplay-only
+(441–1997): P50 1,100,096, P95 1,631,936 — 7,872 above the full-window P95, just
+outside the ±5,376 floor. Both arms carry the identical tail, so cross-arm
+comparison is unaffected; a single-arm figure should say which it quotes.
+
+Boundary's own numbers: it trails the gate by 356,292. **Its `WORK-H` P95 reads
++13,568 against the older banked `f24f0cc1` figure of 1,463,104, and that move
+predates this row** — this cycle's Boundary run reproduces the cycle-79 run
+*bit-identically* on every shared bucket (`ALL` P50 1,119,872 / P95 1,680,192 /
+mean 1,399,603, `named` 1,149,672, `SRC` P95 547,648), so the reseed did not
+touch it. The delta sits between `f24f0cc1` and the c79/c80 builds and is
+unattributed; treat 1,476,672 as the current Boundary baseline. The shipped ROM
+remains
 `smash64ds-battle-playable-hwtri.nds` (Boundary, mode 163). Label every figure
 with its arm AND its coverage; never present a both-CPU figure as the Boundary
 number (`Makefile:305-308`). Loading states are excluded from the gate by the
@@ -277,19 +294,35 @@ WORK-H = (FTR + STG + BG + AUD + SRC + MISC) + (OTHR - WAIT)
 the hot-vs-clean excursion. It is a P50 constant and is not a lever in any
 form. **`OTHR` needs no further attribution; this closes it.**
 
-**What actually owns the tail — and the two arms are INVERTED.** Mean on
-over-gate frames minus mean on clean frames (the metric that separates gate
-levers from P50 levers). Owners sum exactly to the WORK-H delta on both arms:
+**What actually owns the tail — the two arms are INVERTED, and cycle 80 CONFIRMED
+it is not a window artefact.** Mean on over-gate frames minus mean on clean
+frames (the metric that separates gate levers from P50 levers). Owners sum
+exactly to the WORK-H delta on both arms. Both columns below are now the
+**corrected 60-second match at 86.7% coverage**, same window, same method:
 
 | owner | **both-CPU** (gate) | **Boundary** |
 |---|---:|---:|
-| **SRC** | **195,361 (69.6%)** | 91,350 (27.8%) |
-| **MISC** | 81,675 (29.1%) | **232,263 (70.6%)** |
-| AUD | 12,013 (4.3%) | 7,602 (2.3%) |
-| STG | 1,933 | 2,146 |
-| `OTHR-WAIT` | 89 | 158 |
-| FTR | −10,401 | −4,393 |
-| WORK-H hot−cold | 280,685 | 329,127 |
+| **SRC** | **216,083 (68.9%)** | 91,350 (27.8%) |
+| **MISC** | 80,642 (25.7%) | **232,263 (70.6%)** |
+| AUD | 12,075 (3.8%) | 7,602 (2.3%) |
+| STG | 8,161 (2.6%) | 2,146 (0.7%) |
+| `OTHR-WAIT` | 149 | 158 |
+| BG | 23 | 2 |
+| FTR | −3,442 (−1.1%) | −4,393 (−1.3%) |
+| WORK-H hot−cold | 313,690 | 329,127 |
+
+**The inversion survived a 6.9× change in window size.** Gate-arm `SRC` share
+across three windows: 69.6% (12.6% of match), **68.9%** (86.7%), 67.4%
+(gameplay-only, 441–1997). `MISC`: 29.1%, **25.7%**, 26.7%. The shares are
+stable, so the two arms genuinely have different primary owners and the
+two-track scope stands on measurement rather than on an artefact.
+
+Method note: `scripts/analyze-tick-hud-excursion.ps1` computes this and **fails
+closed** — it verifies the per-frame identity `WORK-H = (FTR+STG+BG+AUD+SRC+
+MISC) + (OTHR−WAIT)` (max error 0 over 1,600 frames on both arms) and refuses to
+print a ranking whose owners do not sum to the WORK-H delta. It was validated by
+reproducing the cycle-79 both-CPU table and this Boundary table to the digit
+before being trusted on new data.
 
 **G3's lane was built on Boundary, where `MISC` genuinely is the tail at
 70.6%. The gate reads on both-CPU, where `SRC` is the tail at 69.6% and
@@ -303,20 +336,25 @@ own clean-frame mean" (an **upper bound** per lever — it assumes the entire
 hot-frame excess is removable, which for `SRC` it is not, since some excess
 is genuine extra AI work):
 
+**RE-DERIVED, cycle 80, on the corrected 86.7% window** (clean-frame means
+`SRC` 309,210, `MISC` 112,830):
+
 | | WORK-H P95 | delta | over gate | residual vs 1,120,380 |
 |---|---:|---:|---:|---:|
-| baseline | 1,612,032 | — | 710 | 491,652 |
-| **SRC capped** | 1,217,623 | **394,409** | 235 | 97,243 |
-| `MISC` capped | 1,553,792 | 58,240 | 506 | 433,412 |
-| **SRC + MISC** | 1,062,592 | **549,440** | 62 | **−57,788** |
+| baseline | 1,624,064 | — | 704 | 503,684 |
+| **SRC capped** | 1,209,050 | **415,014** | 202 | 88,670 |
+| `MISC` capped | 1,576,062 | 48,002 | 504 | 455,682 |
+| **SRC + MISC** | 1,085,504 | **538,560** | 64 | **−34,876** |
 
-The `MISC` figure (58,240) falls inside the independently-derived
-33,699–75,264 effect bracket, which cross-validates the method. **`SRC` is
-worth 6.8x the `MISC` lever, and the two together put the gate arm inside
-budget.**
+The `MISC` figure (48,002) still falls inside the independently-derived
+33,699–75,264 effect bracket, which cross-validates the method. **`SRC` is now
+worth 8.6x the `MISC` lever** (was 6.8x on the bad window), and the two
+together still put the gate arm inside budget — but by only 34,876, not
+57,788, so the combined lane has less margin than the superseded figures
+promised.
 
-The combined figure is **super-additive** — 394,409 + 58,240 = 452,649, but
-capping both moved P95 by 549,440. That is P95 being a position in a sorted
+The combined figure is **super-additive** — 415,014 + 48,002 = 463,016, but
+capping both moved P95 by 538,560. That is P95 being a position in a sorted
 list rather than a sum. It is not an arithmetic error; do not "correct" it
 into an addition.
 
@@ -343,9 +381,10 @@ mechanically equivalent DS-optimized port-side equivalent is wanted, not a
 compromise. Rate reduction and simulation-rate change are the LAST resort
 and the owner's call.
 
-**All of the above is PROVISIONAL on standing rule 1's window finding** —
-these both-CPU shares were computed inside a window now measured to cover
-12.6% of that arm's match.
+**No longer provisional (cycle 80).** These shares were re-measured on the
+corrected 60-second match at 86.7% coverage and moved by less than a
+percentage point, so the two-track scope rests on measurement, not on the
+window. The superseded 12.6%-window figures are in the cycle-79 archive.
 
 ### G3 (original row, Boundary-derived) — the effect packet path
 
@@ -402,7 +441,8 @@ row 1's execution plan.
 
 1. **Stable 30 FPS** — qualify the whole match at P95 ≤ 1.12M ARM9 ticks per
    presented frame on the **both-CPU stress config**, loading states excluded
-   (owner, 2026-08-05; gap 485,060; lane G1–G4), on the accuracy melonDS
+   (owner, 2026-08-05; **gap 503,684** on the corrected 60-second match at
+   86.7% coverage, cycle 80; lane G1–G4), on the accuracy melonDS
    fork. The shipped ROM stays the Boundary hwtri configuration. Hardware
    remains the final check for mechanisms the emulator cannot referee.
 2. **Mario/Fox completeness** — replace battle-reachable weak status callbacks
@@ -449,6 +489,19 @@ row 1's execution plan.
   +36,032 P95 on the bad window; real cost ~360,000 on every effect-active
   frame. The decision stands (make the submit path cheap, do not delete the
   models) — the number behind it did not.
+- **THE BOUNDARY VERIFIER IS RED ON HEAD, and has been since `4a413079`**
+  (found cycle 80, not caused by it). `generate_battle_playable_texture_census.py:255`
+  pins `EXPECTED_CENSUS_SHA256 = 829c895d…`; the tree computes `5e1fb387…`.
+  The census hashes `src/nds/nds_renderer.c` **source text**, and `4a413079`
+  (G1's site memo) edited that file without re-pinning — so G1 landed without a
+  green Boundary run and nobody noticed. It fails in a pre-flight of
+  `verify-battle-mariofox-gcrunall-loop-harness.ps1:317`, which then reports
+  "Static texture generator reported no residency bytes", so the *whole*
+  Boundary profile aborts before any runtime check. Decide whether the new
+  census is correct and re-pin, or fix what changed — do not re-pin blind, and
+  do not read the residency message as a texture bug; it is a cascade.
+  Same class as the drifted `Assert-Text` pins below: a hash over source text
+  fires on edits that change nothing it guards.
 - **`check-one-minute-match-verifier.ps1` has drifted from its owner**
   (2026-08-03): 55 `Assert-Text` pins against exact source text, at least two
   red on refactors that changed nothing they guard. Regrade the pins against
@@ -458,42 +511,35 @@ row 1's execution plan.
 ## Standing measurement rules (the ones that gate evidence)
 
 1. Whole-match `-RingDump` sampling is the only gate instrument; label every
-   figure with its arm **and its window**; DLDI-on only.
-   **"Whole match" is FALSE on the both-CPU gate arm (measured 2026-08-05).**
-   `scene_harness.c:221` seeds `time_limit = 7` under `NDS_R2_BOTH_CPU` — a
-   420 s match, sized for the freeze soak, never for tick sampling — against
-   `:182`'s `time_limit = 1` for Boundary. Both arms sample frames 440–2040.
-   Measured with `scripts/probe-match-window.ps1`:
+   figure with its arm **and its coverage**; DLDI-on only. **Coverage is part
+   of a baseline's identity, not a footnote** — a window is "whole match" only
+   if its fraction was measured against the match clock.
 
-   | | Boundary (163) | both-CPU (gate) |
-   |---|---:|---:|
-   | configured match | 60 s | **420 s** |
-   | clock at frame 440 → 2040 | 52 s → **0 s** | 412 s → 359 s |
-   | **fraction of match covered** | **86.7%** | **12.6%** |
-   | logic : presented | 2.000 | 2.000 |
+   **FIXED, cycle 80.** `scene_harness.c` used to seed `time_limit = 7` under
+   `NDS_R2_BOTH_CPU`, so the gate arm sampled frames 440–2040 of a 420-second
+   match — **12.6% coverage, the opening minute** — while the identical window
+   on Boundary covered 86.7% and ended at the buzzer. That one line superseded
+   every both-CPU tick figure in the campaign. Both arms now run the 60-second
+   match and measure identically (86.7%, clock 52 s → 0 s, logic:presented
+   2.000); the soak's long match lives on `NDS_R2_SOAK_MATCH_MINUTES`.
 
-   Boundary's window is the last 52 s ending exactly at the buzzer, so its
-   label is essentially true and it does **not** spill into Results. The
-   both-CPU window is the **first 53 s of a 7-minute match**. The frames-to-
-   seconds conversion is 1,600 presented = 3,200 logic = 53.3 s, because the
-   sim runs 60 Hz and presents 30 Hz (ratio measured at exactly 2.000, not
-   assumed from the VBI histogram).
+   `scripts/probe-match-window.ps1` measures coverage and **reads the match
+   timer out of the guest** (`gSCManagerTransferBattleState.time_limit`)
+   instead of taking it from the command line — its `-TimeLimitMinutes`
+   is now only a cross-check and disagreeing with the guest throws. Run it on
+   any new arm before banking that arm's ticks.
 
-   **Consequences, all live:** the banked both-CPU P95 is an early-match
-   figure and the 485,060 gap derived from it may be optimistic; and the
-   SRC/MISC inversion between arms **may be a window artefact rather than a
-   config difference**, since Boundary's window includes the KO-heavy endgame
-   and the buzzer while both-CPU's covers opening play only. Every both-CPU
-   share below (SRC 69.6% / MISC 29.1%) and every lever price derived from
-   them is **PROVISIONAL** until re-measured on a comparable window. Shares
-   already drift 2.1x (both-CPU `MISC` 104,076–221,815) and 4.2x (Boundary
-   `MISC` 94,756–399,021) across 200-frame blocks *inside* the sampled
-   window, so stability across the match should not be assumed.
+   **The window ends 43 frames past the buzzer on both arms** (1998–2040, GAME
+   SET, `SRC` < 50,000, gate-arm mean `WORK-H` 711,751). It is the same tail on
+   both, so cross-arm comparison is sound; a single-arm figure should say
+   whether it is full-window or gameplay-only.
 
-   **RULED, owner 2026-08-05 — see "THE MATCH LENGTH RULE" at the top of this
-   board.** Both gate arms run the 60-second match; the soak keeps its long
-   match on its own flag, because it was only ever meant to catch freezes.
-   Row G2d carries the reseed, the soak split, and the re-bank.
+   What the correction cost: the gap went 485,060 → **503,684**, i.e. the old
+   early-match window was optimistic by 18,624. What it did **not** overturn:
+   the SRC/MISC inversion, which held at 69.6% → 68.9% → 67.4% across a 12.6%,
+   an 86.7% and a gameplay-only window. Note shares still drift *within* a
+   window (both-CPU `MISC` 104,076–221,815 across 200-frame blocks), so a
+   sub-window share is still not a match-level one.
 2. Verify a counter is live in the shipped configuration BEFORE the measuring
    run; a proof-scoped counter reads 0, indistinguishable from clean.
 3. Eliminate candidates with a liveness probe on an already-built ROM before
@@ -525,7 +571,7 @@ As last graded (cycle 76); a row changes state only when its gate runs.
 | Dream Land collision, platforms, blast zones, wind, camera | Pass for current P1 stage | Dynamic presentation debt remains red separately |
 | Recognizable Dream Land presentation and required animation | Red | Whispy material/animation debt; Task 62 candidate rejected |
 | Complete overlapping BGM, FGM, voices, announcer, crowd | Red | Exact pitch/composite/voice coverage and listen gates remain |
-| Stable 30 FPS, representative P95 <= 1.12M ticks | Red | Gap **485,060 on the both-CPU gate arm** (343,104 is the Boundary figure and is not the gate); lane re-aiming, see the re-priced diagnosis above |
+| Stable 30 FPS, representative P95 <= 1.12M ticks | Red | Gap **503,684 on the both-CPU gate arm**, 60 s match at 86.7% coverage (356,292 is the Boundary figure and is not the gate); lane G1–G4 |
 | Stable reserve, no corruption, clean teardown | Focused gates pass | Requalify after the final content/performance candidate |
 | Reproducible public artifact | Red | Current local root ROM differs from the pinned public identity |
 

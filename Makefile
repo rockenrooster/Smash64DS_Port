@@ -322,6 +322,23 @@ NDS_R2_LOADFRAME_TIMING ?= 0
 # defines the shipped Boundary as Mario human vs level-3 Fox CPU at mode 163 and
 # PROJECT_GOAL.md's gate as representative gameplay; this is harder than either.
 NDS_R2_BOTH_CPU ?= 0
+# THE FREEZE SOAK'S MATCH LENGTH IN MINUTES, and nothing else's. 0 = leave the
+# harness seeding alone, which is the canonical one-minute Time match; non-zero
+# overrides scene_harness.c's time_limit.
+#
+# It exists because this used to ride on NDS_R2_BOTH_CPU: that branch seeded a
+# 7-minute match so a long soak would stay in gameplay, and the side effect was
+# that the both-CPU GATE arm sampled a 420-second match through a window sized
+# for a 60-second one. Measured 2026-08-05: 12.6% coverage against Boundary's
+# 86.7%, which superseded every both-CPU tick figure in the campaign. Owner's
+# ruling: "the soak was only meant to catch freezes, boundary and both cpu gates
+# should be the 60 sec match".
+#
+# SO IT MUST STAY 0 FOR ANY MEASURING RUN, and soak-freeze-watch.ps1 is the only
+# harness that sets it. It derives the value from its own -MinutesToRun instead
+# of hardcoding one, so the match can never again be shorter than the run that
+# watches it, and it verifies the value in-guest rather than trusting this flag.
+NDS_R2_SOAK_MATCH_MINUTES ?= 0
 # R2-03 E49. Teaches the native fighter owner the precedence E48 measured: an
 # epoch whose vertices carry a valid vertex colour and no material is emitted
 # from that colour raw and is NOT lit. The generic path has always done this
@@ -2508,6 +2525,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_RELOC_FIXUP_TIMING $(NDS_R2_RELOC_FIXUP_TIMING)'; \
 		echo '#define NDS_R2_LOADFRAME_TIMING $(NDS_R2_LOADFRAME_TIMING)'; \
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
+		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_R2_UNLIT_VERTEX_EPOCH $(NDS_R2_UNLIT_VERTEX_EPOCH)'; \
 		echo '#define NDS_R204_FPSHUD_SHADOW $(NDS_R204_FPSHUD_SHADOW)'; \
 		echo '#define NDS_TASK103_STAGE_RUN_PHASE $(NDS_TASK103_STAGE_RUN_PHASE)'; \

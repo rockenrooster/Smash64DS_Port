@@ -37,6 +37,38 @@ param(
     # (the owner reported a freeze there both times). Keep runs short by default;
     # spend the extra two minutes only when the question is past match two.
     [ValidateRange(0.5, 7.0)][double]$MinutesToRun = 2.5,
+    # THE MATCH TIMER, in game minutes, forwarded as NDS_R2_SOAK_MATCH_MINUTES.
+    # -1 = auto (the default and the right answer almost always), 0 = leave the
+    # harness seeding alone (the canonical one-minute Time match), 1..7 = force.
+    #
+    # This used to be seeded at 7 inside scene_harness.c's NDS_R2_BOTH_CPU
+    # branch, so every both-CPU build got a 420-second match whether it was
+    # soaking or being measured. It cost the campaign every both-CPU tick
+    # figure: the gate arm sampled frames 440-2040 of a 7-minute match, which is
+    # 12.6% coverage -- the opening minute -- while the identical window on
+    # Boundary covers 86.7% and ends at the buzzer. Owner's ruling 2026-08-05:
+    # "the soak was only meant to catch freezes, boundary and both cpu gates
+    # should be the 60 sec match". The match length is now the soak's own knob
+    # and no gate build sets it.
+    #
+    # AUTO IS DERIVED FROM -MinutesToRun RATHER THAN A CONSTANT, which is what
+    # makes the original trap inexpressible: a match can no longer be shorter
+    # than the run watching it. Two cases, and they want opposite things:
+    #
+    #   -PressStartSeconds 0 (a passive freeze soak) wants the match NEVER to
+    #   end, because every second after it is a Results screen and proves
+    #   nothing about gameplay. Ceiling(MinutesToRun) game minutes always
+    #   outlasts the run: one game minute costs at least 60 s of wall clock and
+    #   currently costs ~136 s, so this over-provisions and can never
+    #   under-provision however much faster the ROM gets.
+    #
+    #   -PressStartSeconds > 0 (a rematch/Results/Sudden-Death soak) wants the
+    #   match to END, or Results is never reached and START has nothing to
+    #   dismiss. That case gets 0, the canonical one-minute match. The old
+    #   hardcoded 7 silently broke this: at ~136 s per game minute a 7-minute
+    #   match needs ~16 minutes of wall clock and the ceiling here is 7, so no
+    #   both-CPU run could reach Results at all.
+    [ValidateRange(-1, 7)][int]$MatchMinutes = -1,
     # Consecutive identical frames needed to call it frozen. Two screens of a DS
     # game in motion never render byte-identically, but legitimately static
     # moments exist -- and the longest is much longer than it sounds. This port's
@@ -132,6 +164,22 @@ $context = Initialize-MelonDSVerifierContext `
 $rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
 $elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
 
+# Resolve -MatchMinutes before anything uses it: the build line, the config-header
+# check and the end-of-run coverage verdict all read the SAME number, so a soak
+# cannot build one match length and judge itself against another. See the
+# parameter's own comment for why auto splits on the press schedule.
+$resolvedMatchMinutes = $MatchMinutes
+if ($resolvedMatchMinutes -lt 0) {
+    $resolvedMatchMinutes = if ($PressStartSeconds -gt 0) {
+        0
+    } else {
+        [math]::Min(7, [int][math]::Ceiling($MinutesToRun))
+    }
+}
+Write-Host ("soak match timer: {0}" -f $(if ($resolvedMatchMinutes -gt 0) {
+    "$resolvedMatchMinutes game minute(s) (NDS_R2_SOAK_MATCH_MINUTES)" }
+    else { 'canonical 1-minute match (harness default, no override)' }))
+
 # This script exposed a -NoBuild switch and never built anything: the switch only
 # sets SMASH64DS_VERIFY_NO_BUILD, which OTHER verifiers read. So a soak silently
 # ran whatever ROM happened to be on disk. Measured 2026-07-30: a source fix went
@@ -148,7 +196,8 @@ if (-not $NoBuild) {
     # exact bug on 2026-07-31 and overwrote a hand-built diag ELF, which cost two
     # runs that printed nothing and read like an emulator hang.
     $makeArgs = @("TARGET=$Target", "BUILD=$Build",
-                  "NDS_R2_BOTH_CPU=$([int][bool]$BothCpu)")
+                  "NDS_R2_BOTH_CPU=$([int][bool]$BothCpu)",
+                  "NDS_R2_SOAK_MATCH_MINUTES=$resolvedMatchMinutes")
     if ($SecondEntryDiag) { $makeArgs += 'NDS_R2_SECOND_ENTRY_DIAG=1' }
     $makeArgs += $MakeFlags
     make -C $root @makeArgs
@@ -167,6 +216,24 @@ if (Test-Path -LiteralPath $configHeader -PathType Leaf) {
                "-BothCpu asked for $wantBothCpu. A both-CPU soak that is not " +
                'both-CPU never creates the tie and never reaches Sudden Death, ' +
                'and it looks exactly like a clean run. Rebuild without -NoBuild.')
+    }
+    # Same rule for the match timer, and it is the one this check exists for
+    # now: a soak whose ROM kept the canonical one-minute match spends its tail
+    # on a Results screen and still reports NO-FREEZE, which is the false
+    # negative that wasted two runs on 2026-08-02. -NoBuild runs are checked
+    # too -- the header describes the ROM actually on disk, and -NoBuild is
+    # exactly when it is easiest to soak a ROM built for something else. The
+    # in-guest read at the end of the run is the real proof; this only catches
+    # it before the minutes are spent.
+    $soakSeen = [regex]::Match(
+        (Get-Content -LiteralPath $configHeader -Raw),
+        '(?m)^#define\s+NDS_R2_SOAK_MATCH_MINUTES\s+(\d+)')
+    if ($soakSeen.Success -and
+        ([int]$soakSeen.Groups[1].Value -ne $resolvedMatchMinutes)) {
+        throw ("Soak ROM is NDS_R2_SOAK_MATCH_MINUTES=$($soakSeen.Groups[1].Value) " +
+               "but this run resolved $resolvedMatchMinutes. The match timer and " +
+               'the run length would disagree, so the run would watch a Results ' +
+               'screen and call it NO-FREEZE. Rebuild without -NoBuild.')
     }
     # Same rule for the second-entry instruments. Asking for them and silently
     # getting a build without them turns every ledger/chain global into a
@@ -1066,13 +1133,18 @@ try {
                 # over and every remaining second watches a Results screen that
                 # never exits, so the extra time proves nothing about gameplay.
                 $matchMinutes = $counter['gSCManagerTransferBattleState.time_limit']
-                if (($matchMinutes -gt 0u) -and ($MinutesToRun -gt $matchMinutes)) {
-                    # -f binds TIGHTER than +, so a format applied after a
-                    # concatenation formats only the last fragment and leaves every
-                    # earlier {0} literal. Parenthesise the concatenation.
-                    Write-Host (("  NOTE: soaked {0} min against a {1}-minute match " +
-                        'timer, so only the first {1} min covered gameplay. Raise ' +
-                        'the match timer to soak longer.') -f $MinutesToRun, $matchMinutes)
+                # THE MATCH TIMER, READ OUT OF THE GUEST. This is the only proof
+                # that the soak got the match it asked for: NDS_R2_SOAK_MATCH_MINUTES
+                # is a build flag, and reading a flag's default proves nothing about
+                # what the ROM seeded. The expected value is what THIS run resolved,
+                # so a build/soak mismatch cannot pass as a clean run.
+                $expectedMatch = if ($resolvedMatchMinutes -gt 0) { $resolvedMatchMinutes } else { 1 }
+                if ($matchMinutes -ne [uint32]$expectedMatch) {
+                    Write-Host (('  WARNING: the guest seeded a {0}-minute match but ' +
+                        'this run resolved {1}. The ROM is not the configuration ' +
+                        'that was asked for.') -f $matchMinutes, $expectedMatch)
+                } else {
+                    Write-Host ("  match timer confirmed in-guest: {0} minute(s)" -f $matchMinutes)
                 }
                 # The GObj-latch margin. CAVEAT, measured the first time this
                 # printed: the clean read happens at END of run, which is the
@@ -1165,6 +1237,31 @@ try {
                 } else {
                     Write-Host '  WARNING: no match completed. This run says nothing' `
                         'about match teardown, rematch, or cross-match drift.'
+                }
+                # A SOAK THAT PASSES WHILE TESTING NOTHING IS WORSE THAN ONE THAT
+                # FAILS, so this is a verdict and not the NOTE it used to be. A
+                # passive freeze soak exists to keep gameplay running; once the
+                # match ends, every remaining second watches a Results screen that
+                # never exits (mnVSResultsCheckExit needs START), and NO-FREEZE
+                # earned there is about the results loop, not about play. Two runs
+                # on 2026-08-02 were spent that way and read clean.
+                #
+                # Only fires when a press schedule was NOT configured: a
+                # rematch/Sudden-Death soak deliberately outlives its match,
+                # because reaching Results is the whole point of that run. Placed
+                # after the chain above so a more severe correction wins, and
+                # gated on NO-FREEZE so it can only ever downgrade a pass.
+                if (($verdict -eq 'NO-FREEZE') -and ($PressStartSeconds -le 0) -and
+                    ($matches_run -ge 1u)) {
+                    $verdict = 'SOAK-UNDERCOVERED'
+                    $diagnosis = (('the {0}-minute match ended during a {1}-minute ' +
+                        'passive soak, so the tail watched Results rather than ' +
+                        'gameplay. Re-run with -MatchMinutes {2} or higher; the ' +
+                        'default resolves this automatically, so this run was ' +
+                        'given an explicit value that was too small.') -f
+                        $matchMinutes, $MinutesToRun,
+                        [int][math]::Ceiling($MinutesToRun))
+                    Write-Host "verdict CORRECTED to $verdict -- $diagnosis"
                 }
             }
         }

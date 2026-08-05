@@ -205,20 +205,39 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
     gSCManagerTransferBattleState.players[0].level = 3;
     gSCManagerTransferBattleState.pl_count = 0;
     gSCManagerTransferBattleState.cp_count = 2;
-    /* AND GIVE THE SOAK A MATCH LONG ENOUGH TO SOAK, which is the owner's own
-     * rule: *"if you want to run a longer soak for any reason, then you also
-     * need to change the match timer to match the soak time"*. Without this the
-     * both-CPU freeze soak spends one minute in gameplay and the rest watching a
-     * Results screen -- so a 7-minute run reads NO-FREEZE having exercised less
-     * play than the 3.5-minute run that caught the original heap-exhaustion
-     * hang. Two runs on 2026-08-02 were wasted exactly that way before the
-     * soak's own NOTE was believed.
+    /* THE MATCH LENGTH IS NOT THIS FLAG'S BUSINESS. This branch changes WHO
+     * plays, never HOW LONG -- the one-minute Time match seeded above stands.
      *
-     * NDS_R2_BOTH_CPU only: this is the stress harness, never the shipped
-     * Boundary. Canonical mode 163 stays the one-minute Time match seeded above
-     * and is untouched by this branch. 7 matches the soak's -MinutesToRun
-     * ceiling, so the longest permitted soak is gameplay end to end. */
-    gSCManagerTransferBattleState.time_limit = 7;
+     * It used to seed time_limit = 7 here, for the freeze soak, and that made
+     * the gate arm sample a 420-second match through a window sized for a
+     * 60-second one: measured 2026-08-05, this arm's banked "whole match"
+     * baseline covered 12.6% of its own match (the opening minute) against
+     * Boundary's 86.7%. Every both-CPU tick figure in the campaign, and the
+     * SRC/MISC split derived from them, was superseded by that one line.
+     * Owner's ruling the same day: *"the soak was only meant to catch freezes,
+     * boundary and both cpu gates should be the 60 sec match"*.
+     *
+     * The soak's long match is real and still needed -- see the block below --
+     * but it is a soak property, not a stress-config property, so it lives on
+     * its own flag where reading it cannot be mistaken for reading the gate. */
+#endif
+#if NDS_R2_SOAK_MATCH_MINUTES
+    /* THE FREEZE SOAK'S LONG MATCH, on its own flag, off by default.
+     *
+     * The owner's rule this satisfies: *"if you want to run a longer soak for
+     * any reason, then you also need to change the match timer to match the
+     * soak time"*. Without it a long soak spends one minute in gameplay and the
+     * rest watching a Results screen, so a 7-minute run reads NO-FREEZE having
+     * exercised less play than the 3.5-minute run that caught the original
+     * heap-exhaustion hang. Two runs on 2026-08-02 were wasted exactly that way.
+     *
+     * soak-freeze-watch.ps1 computes this from its own -MinutesToRun rather
+     * than hardcoding a constant, so the match can no longer be shorter than
+     * the run that watches it. It is deliberately NOT tied to NDS_R2_BOTH_CPU:
+     * the soak runs single-CPU too (-BothCpu:$false), and a gate arm and a soak
+     * arm must be able to differ in match length without differing in anything
+     * else. Both gate arms build with this at 0 and get the 60-second match. */
+    gSCManagerTransferBattleState.time_limit = NDS_R2_SOAK_MATCH_MINUTES;
 #endif
 #else
     gSCManagerTransferBattleState.game_rules = SCBATTLE_GAMERULE_STOCK;

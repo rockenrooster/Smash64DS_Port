@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-08-05 (cycle 79). **The campaign is on R2-07's performance gate;
+Updated: 2026-08-05 (cycle 80). **The campaign is on R2-07's performance gate;
 the queue is the board's gate lane G1→G2→G3→G4.**
 Nothing is published from this work; the shipping pair is still cycle 75
 (`smash64ds-battle-playable-hwtri.nds` `D16815BE…`, `smash64ds.nds` `369FA999…`,
@@ -8,33 +8,37 @@ tick-HUD sibling `builds/build-c75-tickhud-publish` `15FD0F8E…`).
 
 ## Read this first: every 128-frame measurement in the archive is unusable
 
-The owner directed the campaign onto the both-CPU configuration and a wider
-window. Doing so found that **the 128-frame window reads the cheapest 6% of the
-match.** Same ROM, same options, Boundary arm:
+**The 128-frame window reads the cheapest 6% of the match.** Same ROM, same
+options, Boundary arm: frames 441–568 read `WORK-H` P95 1,156,992 at 8.7% over
+gate, against 1,463,104 and 44.6% whole-match — P95 understated ~306,000, the
+over-gate rate five times. It sits in stop0–stop1 (stop0 is 8 of 96 over gate,
+stop2 is 97 of 97). `sample-tick-hud-buckets.ps1` takes repeated ring dumps as
+of `58ca8723` (`-Samples` to 4096, `-RingStopStride` default 96, **ROM
+byte-identical**). Never take a gate reading on 128 frames again.
 
-| window | `WORK-H` P95 | over gate |
-|---|---:|---:|
-| 128 frames (441–568) | 1,156,992 | 8.7% |
-| **whole match (440–2040)** | **1,463,104** | **44.6%** |
+## The two baselines — label every figure with its arm AND its coverage
 
-P95 understated by ~306,000; over-gate rate by five times. It sits in
-stop0–stop1: stop0 is 8 of 96 over gate, stop2 is 97 of 97. `sample-tick-hud-buckets.ps1`
-takes repeated ring dumps as of `58ca8723` (`-Samples` to 4096, `-RingStopStride`
-default 96, **ROM byte-identical** so older evidence stays comparable). Never
-take a gate reading on 128 frames again.
+Re-banked cycle 80 on the corrected seed; both arms now run the **same 60-second
+match** (coverage 86.7%, clock 52 s → 0 s, logic:presented 2.000), and both
+windows end 43 frames past the buzzer in GAME SET.
 
-## The two baselines — label every figure with its arm
+| arm | role | coverage | `WORK-H` P50 | P95 | over gate |
+|---|---|---|---:|---:|---:|
+| **both-CPU** | **THE GATE (owner, 2026-08-05)** | 86.7% | 1,094,464 | **1,624,064** | 704/1600 (44.0%) |
+| **Boundary** mode 163 | shipped configuration | 86.7% | 1,082,112 | 1,476,672 | 673/1600 (42.1%) |
 
-| arm | role | `WORK-H` P50 | P95 | over gate |
-|---|---|---:|---:|---:|
-| **both-CPU** | **THE GATE (owner, 2026-08-05)** | 1,098,240 | **1,605,440** | 704/1600 (44.0%) |
-| **Boundary** mode 163 | shipped configuration | 1,092,032 | 1,463,104 | 713/1600 (44.6%) |
-
-Slips 0 in both. **Gap to the gate is 485,060** (Boundary trails at 343,104).
+Slips 0 in both. **Gap to the gate is 503,684** (Boundary trails at 356,292).
+The old 485,060 came off a 12.6% window: the gate arm seeded `time_limit = 7`.
+Fixed — the soak's long match is now `NDS_R2_SOAK_MATCH_MINUTES` and
+`probe-match-window.ps1` reads the match timer out of the guest.
 The owner's bar: the whole match under the P95 budget on the both-CPU config,
 loading states excluded; the shipped ROM stays the Boundary hwtri pair.
 `Makefile:305-308` still forbids reporting a both-CPU P95 as the Boundary
 figure. Both-CPU is only ~10% worse at P95 — harder, not a different animal.
+
+**BLOCKER, pre-existing:** the Boundary verifier profile is RED on HEAD, since
+`4a413079` — a stale `EXPECTED_CENSUS_SHA256` pin over `nds_renderer.c` source
+text aborts the whole profile in pre-flight. See Parked on the board.
 
 ## The target: effect DObj submits, and the denominator is the display list
 
