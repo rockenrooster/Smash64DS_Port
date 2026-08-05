@@ -3,7 +3,7 @@ AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary if n
 These bugs should be fixed for P1 delivery:
 
 - I see the floating platform, but its colors look off (too dark?), like it isn't rendering correctly.
-  OWNER-QUEUED: beam now white, 1-bit alpha; hard edge replaces source 32-level fade — A5I3 would restore it.
+  OWNER-QUEUED: A5I3 dedicated texture restores all 16 source alpha levels; hard edge gone. See c74-a5i3 capture.
   
 - I see the death explode blast pillar thing, but the colors look off (too dark?) and it doesn't seem to play at the players death location off screen, check x,y,z coords. Also if a player hits the side boundaries, it should play horizontally im pretty sure.
   CLOSED (2026-08-04): owner accepts current pillar; N64's whole-screen white KO flash is a deliberate omission, never re-add.

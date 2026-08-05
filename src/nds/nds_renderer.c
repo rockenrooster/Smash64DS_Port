@@ -2663,6 +2663,16 @@ static u32 sNdsRendererHardwareTriangleBatchMatrixMode;
 static u32 sNdsRendererHardwareTriangleBatchMatrixGeneration;
 static u32 sNdsRendererHardwareBoundTextureName;
 static int sNdsRendererHardwareNoTextureName;
+/* The rebirth-halo beam's dedicated A5I3 slot; the reasoning is at
+ * ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture. Identity rather than a
+ * cache key: one source image, one upload extent, one primitive colour, all
+ * three re-prepared when any of them moves. */
+static u32 sNdsRendererHardwarePrimRgbTexel0AlphaName;
+static u32 sNdsRendererHardwarePrimRgbTexel0AlphaImage;
+static u32 sNdsRendererHardwarePrimRgbTexel0AlphaExtent;
+static u32 sNdsRendererHardwarePrimRgbTexel0AlphaPrim;
+volatile u32 gNdsRendererPrimRgbTexel0AlphaPrepareCount;
+volatile u32 gNdsRendererPrimRgbTexel0AlphaBindCount;
 static s32 sNdsRendererHardwareProjectedDepth =
     NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;
 static u32 sNdsRendererHardwareProjectedBackground = TRUE;
@@ -10356,6 +10366,15 @@ void ndsRendererHardwareDiscardTextureCache(void)
             1, &sNdsRendererHardwareNoTextureName);
         sNdsRendererHardwareNoTextureName = 0;
     }
+    /* The beam's dedicated name is not a cache entry, so the loop above does
+     * not reach it -- and glResetTextures runs immediately after this in
+     * ndsRendererHardwareResetSceneTextureVram, which would leave the identity
+     * below claiming residency for a name that no longer exists. */
+    ndsRendererHardwareReleaseIFCommonCloudAtlas(
+        &sNdsRendererHardwarePrimRgbTexel0AlphaName);
+    sNdsRendererHardwarePrimRgbTexel0AlphaImage = 0u;
+    sNdsRendererHardwarePrimRgbTexel0AlphaExtent = 0u;
+    sNdsRendererHardwarePrimRgbTexel0AlphaPrim = 0u;
     sNdsRendererHardwareTextureCacheNext = 0u;
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -14207,6 +14226,172 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
     return FALSE;
 }
 
+/* THE REBIRTH-HALO BEAM'S EDGE, AND WHY IT GETS A TEXTURE OF ITS OWN.
+ *
+ * Its list (85.vpk0.bin 0x28a0) sets G_SETCOMBINE FCFFFFFF FFFDF2F9 -- rgb is
+ * constant PRIMITIVE, alpha is pure TEXEL0 -- over the I4 tile declared at
+ * 0x28b8 (fmt=I, siz=4b, 8x16, clamp on both axes) with PRIM white and opaque
+ * at 0x28a8. So the source image carries COVERAGE and nothing else, in sixteen
+ * levels, and the generic cache uploads every entry as GL_RGBA: RGB555 plus a
+ * SINGLE alpha bit. ndsRendererHardwarePrimRgbTexel0Alpha therefore had to
+ * threshold sixteen levels down to two, and the beam drew hard-edged where the
+ * source fades.
+ *
+ * GL_RGB8_A5 is one byte a texel -- three index bits and FIVE alpha bits. The
+ * sixteen source levels land in thirty-two slots injectively, so this recovers
+ * the ramp exactly rather than approximating it, and the alpha stored here is
+ * bit-identical to the 5-bit coverage the RGB555 bake already computed before
+ * discarding it: (n * 0x11) >> 3 equals round(n * 31 / 15) at all sixteen
+ * inputs. The combine can show one colour, so one palette holds PRIM.
+ *
+ * A DEDICATED NAME, NOT A PER-ENTRY CACHE FORMAT. The texture cache uploads one
+ * format for all of its entries; teaching it per-entry formats to serve a single
+ * 128-texel surface would put four just-closed rows at risk for a cosmetic one.
+ * This costs one name and consumes no cache entry -- it RETURNS one to a pool
+ * the post-KO scene already over-subscribes, and halves this surface's VRAM.
+ *
+ * The palette rides the texture NAME, not the bind. libnds documents
+ * glColorTableEXT as setting the palette on the currently bound texture and
+ * glDeleteTextures as deleting "associated palettes", and glAssignColorTable
+ * exists precisely to share one between names. So it is attached once at
+ * prepare, exactly as the cloud atlases and particle sheets already do, and the
+ * bind path needs nothing. */
+typedef struct NDSRendererPrimRgbTexel0AlphaFill
+{
+    const NDSRendererConfig *config;
+    const u8 *texels;
+    u32 source_width;
+    u32 source_origin_s;
+    u32 source_origin_t;
+    u32 width;
+    u32 height;
+    u32 upload_width;
+    u32 upload_height;
+} NDSRendererPrimRgbTexel0AlphaFill;
+
+static s32 ndsRendererHardwarePrimRgbTexel0AlphaFill(
+    u8 *pixels, u32 bytes, void *user_data)
+{
+    const NDSRendererPrimRgbTexel0AlphaFill *fill =
+        (const NDSRendererPrimRgbTexel0AlphaFill *)user_data;
+    u32 x;
+    u32 y;
+
+    if ((pixels == NULL) || (fill == NULL) || (fill->texels == NULL) ||
+        (fill->upload_width == 0u) || (fill->upload_height == 0u) ||
+        (fill->width > fill->upload_width) ||
+        (fill->height > fill->upload_height) ||
+        (bytes < (fill->upload_width * fill->upload_height)))
+    {
+        return FALSE;
+    }
+    /* The power-of-two tail lies outside the tile and must read as absent.
+     * Left uncleared it would be palette entry 0 at full coverage -- an opaque
+     * block of PRIM exactly where the old one-bit threshold used to put one. */
+    memset(pixels, 0, bytes);
+    for (y = 0u; y < fill->height; y++)
+    {
+        for (x = 0u; x < fill->width; x++)
+        {
+            u32 index = ((fill->source_origin_t + y) * fill->source_width) +
+                fill->source_origin_s + x;
+            u32 intensity = ndsRendererReadTexturePackedNibble(
+                fill->config, fill->texels, index,
+                NDS_RENDERER_HW_TEXTURE_FMT_I16,
+                NDS_RENDERER_HW_TEXTURE_SIZ_4B);
+
+            /* alpha5 in bits 3-7, palette index in bits 0-2. */
+            pixels[(y * fill->upload_width) + x] =
+                (u8)(((intensity * 0x11u) >> 3) << 3);
+        }
+    }
+    return TRUE;
+}
+
+static u32 ndsRendererHardwarePrimRgbTexel0AlphaExtentOf(u32 upload_width,
+                                                         u32 upload_height)
+{
+    return (upload_width << 16) | (upload_height & 0xffffu);
+}
+
+static s32 ndsRendererHardwarePrimRgbTexel0AlphaResident(
+    const NDSRendererStats *stats, u32 primary_image,
+    u32 upload_width, u32 upload_height)
+{
+    return ((sNdsRendererHardwarePrimRgbTexel0AlphaName != 0u) &&
+            (sNdsRendererHardwarePrimRgbTexel0AlphaImage == primary_image) &&
+            (sNdsRendererHardwarePrimRgbTexel0AlphaExtent ==
+                 ndsRendererHardwarePrimRgbTexel0AlphaExtentOf(
+                     upload_width, upload_height)) &&
+            (sNdsRendererHardwarePrimRgbTexel0AlphaPrim ==
+                 (stats->prim_color & 0xffffff00u))) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
+    const NDSRendererStats *stats, const NDSRendererConfig *config,
+    const u8 *texels_src, u32 primary_image, u32 source_width,
+    u32 source_origin_s, u32 source_origin_t, u32 width, u32 height,
+    u32 upload_width, u32 upload_height)
+{
+    NDSRendererPrimRgbTexel0AlphaFill fill;
+    u32 prim = stats->prim_color & 0xffffff00u;
+    u16 color = (u16)(((prim >> 27) & 0x1fu) |
+                      (((prim >> 19) & 0x1fu) << 5) |
+                      (((prim >> 11) & 0x1fu) << 10));
+    u16 palette[8];
+    u32 i;
+
+    fill.config = config;
+    fill.texels = texels_src;
+    fill.source_width = source_width;
+    fill.source_origin_s = source_origin_s;
+    fill.source_origin_t = source_origin_t;
+    fill.width = width;
+    fill.height = height;
+    fill.upload_width = upload_width;
+    fill.upload_height = upload_height;
+    /* Every index resolves to PRIM. The combine has no second colour, and the
+     * fill only ever writes index 0, so the remaining seven exist to make a
+     * stray index harmless rather than black. */
+    for (i = 0u; i < 8u; i++)
+    {
+        palette[i] = color;
+    }
+    if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
+            upload_width, upload_height, palette,
+            ndsRendererHardwarePrimRgbTexel0AlphaFill, &fill,
+            &sNdsRendererHardwarePrimRgbTexel0AlphaName) == FALSE)
+    {
+        sNdsRendererHardwarePrimRgbTexel0AlphaImage = 0u;
+        sNdsRendererHardwarePrimRgbTexel0AlphaExtent = 0u;
+        sNdsRendererHardwarePrimRgbTexel0AlphaPrim = 0u;
+        return FALSE;
+    }
+    sNdsRendererHardwarePrimRgbTexel0AlphaImage = primary_image;
+    sNdsRendererHardwarePrimRgbTexel0AlphaExtent =
+        ndsRendererHardwarePrimRgbTexel0AlphaExtentOf(upload_width,
+                                                      upload_height);
+    sNdsRendererHardwarePrimRgbTexel0AlphaPrim = prim;
+    gNdsRendererPrimRgbTexel0AlphaPrepareCount++;
+    return TRUE;
+}
+
+static void ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
+    NDSRendererStats *stats, u32 params, u32 format, u32 width, u32 height)
+{
+    ndsRendererHardwareBindTextureName(
+        stats, sNdsRendererHardwarePrimRgbTexel0AlphaName);
+    ndsRendererHardwareApplyTextureParams(
+        ndsRendererHardwareMergeTextureParams(params));
+    /* Not a cache entry, so nothing may be left pointing into the cache. */
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    stats->hardware_texture_ready_count++;
+    stats->hardware_texture_format = format;
+    stats->hardware_texture_width = width;
+    stats->hardware_texture_height = height;
+    gNdsRendererPrimRgbTexel0AlphaBindCount++;
+}
+
 static s32 ndsRendererHardwareResolveOrBindTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
@@ -14487,6 +14672,36 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             stats, format, size,
             NDS_RENDERER_HW_TEXREJECT_BAD_UPLOAD_SIZE);
         return FALSE;
+    }
+
+    /* Steady state for the rebirth-halo beam. Its dedicated A5I3 texture is
+     * already resident, so answer here rather than rebuilding a ~59-field key
+     * and taking a cache lookup that must miss: this surface never occupies a
+     * cache entry.
+     *
+     * LIVE BINDS ONLY. The hierarchy preflight hands back an entry pointer its
+     * caller revalidates and re-resolves when NULL, and this surface has no
+     * entry to give. The beam is a generic effect list and reaches the resolver
+     * through ndsRendererHardwareBindTexture, so preflight is not expected here
+     * at all; if it ever arrives it falls through to the generic RGBA path and
+     * gets the previous behaviour instead of a reject. */
+    if ((resolved == NULL) &&
+        (prim_env_blend_mode ==
+             NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA) &&
+        (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
+        (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
+        (ndsRendererHardwarePrimRgbTexel0AlphaResident(
+             stats, primary_image, upload_width, upload_height) != FALSE))
+    {
+        ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
+            stats,
+            ndsRendererHardwareTextureParams(stats, render_tile, upload_width,
+                                             upload_height),
+            format, width, height);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
+#endif
+        return TRUE;
     }
 
     if (primary_load_kind == NDS_RENDERER_TEXTURE_LOADTILE)
@@ -14838,6 +15053,30 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             stats, format, size,
             NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_PTR);
         return FALSE;
+    }
+
+    /* First sight of the beam this scene: build its dedicated A5I3 texture from
+     * the source in hand. Deliberately here rather than at scene load -- the
+     * discriminator is semantic (this combine over an I4 tile) and the extent
+     * comes from the tile, so nothing hardcodes an asset address or depends on
+     * load order. On failure the generic path continues and produces the
+     * previous one-bit result rather than dropping the draw. */
+    if ((resolved == NULL) && (use_texel1 == FALSE) &&
+        (prim_env_blend_mode ==
+             NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA) &&
+        (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
+        (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
+        (ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
+             stats, config, texels_src, primary_image, source_width,
+             source_origin_s, source_origin_t, width, height,
+             upload_width, upload_height) != FALSE))
+    {
+        ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
+            stats, params, format, width, height);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
+#endif
+        return TRUE;
     }
     tlut_src = NULL;
     palette_base = 0u;
