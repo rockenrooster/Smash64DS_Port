@@ -209,11 +209,22 @@ flip alone, because G3's packet builder spends from the same budget.
 
 ### G2 — footprint map DONE (cycle 79). Failing allocation NOT yet named; 32 KB NOT yet demonstrated.
 
-**PROMOTED TO BLOCKING, cycle 82.** Proven headroom is **96 bytes**
-(`0x022947a4` control against `0x02294804` highest-booting), so G2 no longer
-only funds G3 — it gates the **instrument** that ranks `SRC`, which is 68.9% of
-the gate arm's excursion. Two ring buckets need 1,040 bytes and cannot be had.
-Nothing that adds static footprint can be measured until this row lands.
+**EXIT MET, cycle 84 — ≥32 KB demonstrated at 4.2×.** `gSYZBuffer` gave back
+**134,400 bytes**; proven static headroom went **96 → 134,496 bytes**
+(`build-c84-zbuffer` links at `0x02273aa4` against `0x02294804` highest-booting).
+Boot probe PASS (frames 60–67, 8 samples, slips 0), Boundary green, root ROMs
+unchanged, `decomp/` verified untouched.
+
+**Report the two shortages separately — they are coupled through the heap.**
+Freeing bss lowers `fake_heap_start`, which enlarges the heap the arena callocs
+from, so the arena ate **131,072** of the 134,400 and its deficit is now closed:
+`gNdsTaskmanArenaChosenSize` 1,245,184 → **1,376,256** (its full `0x150000`
+request, first time ever) and `gNdsTaskmanArenaAllocFailCount` **32 → 0**. That
+is the predicted engagement to the digit. **Consequence for the next spender:**
+static headroom and arena health are the same 134,400 bytes seen twice — an
+instrument that adds N bytes re-starves the arena by ~N (quantised to `0x1000`)
+long before it reaches the boot cliff. The SRC ring buckets cost 1,040, so they
+now fit with ~129× margin *and* leave the arena at full request.
 
 Authoritative, from the **shipped** ROM's matching ELF pair
 (`smash64ds-battle-playable-hwtri.elf`, Aug 4 20:33, pairs with the published
@@ -291,15 +302,36 @@ freed yet.** Trace = who writes it, who reads it, in which configuration.
   deletion:** the DS renders through GX into VRAM, so the readback may be
   sampling the cleared black — exactly the failure libultraship documented in
   `decomp/…/port/bridge/framebuffer_capture.h:19`. Answer that before sizing it.
-- **`gSYZBuffer` 140,800 — BEST REMAINING CANDIDATE.** An N64 *software* Z-buffer
-  on hardware that has a depth buffer in VRAM. Every DS consumer found is a
-  pointer store or comparison — `SYVIDEO_ZBUFFER_START` (which resolves 6,400
-  bytes *below* the array base), `setup.zbuffer`, and `video_bootstrap.c:34`'s
-  `gSYVideoZBuffer == gSYZBuffer` equality check. **No dereference found.**
-  Entangled but tractable: the definition and extern live in `decomp`
-  (`src/sys/zbuffer.c:4`, `src/sys/video.h:69`) and are mirrored by
-  `include/sys/video.h:54`, so a decomp patch and the mirror must move together
-  or `sizeof`-bounded code overruns.
+- **`gSYZBuffer` — FREED, 134,400 bytes, cycle 84.** An N64 *software* Z-buffer
+  on hardware whose depth buffer is in VRAM. Reduced 140,800 → 6,400 bytes
+  (`320*10`, the border its own `SYVIDEO_ZBUFFER_START` arithmetic names) in
+  `src/import/battleship_sys_zbuffer.c` + the matching extern
+  `include/sys/video.h:54`. **No decomp patch was needed** — the import file was
+  a one-line `#include` of decomp's text, so the port already owned the TU;
+  `fetch-battleship-reference.ps1 -VerifyOnly` confirms `decomp/` untouched.
+
+  **The verdict rests on measurement, not on "no dereference found".** Gate-arm
+  control, frames 600–607, DLDI on
+  (`artifacts/performance/2026-08-05_c84-zbuffer-liveness.json`): `gSYZBuffer`
+  sampled at **9 points across all 70,400 halfwords — every one 0**, untouched
+  `.bss` deep in gameplay. **The `−6,400` offset is explained, and it was the
+  real hazard:** `gSYFramebufferSets` ends at `0x02211cd0`, *exactly*
+  `gSYZBuffer`'s address, so `SYVIDEO_ZBUFFER_START` = `gSYZBuffer − 6400` points
+  into the tail of `gSYFramebufferSets[2]` — a **live** buffer feeding the VS
+  Results photo wipe. Those 3 border samples still read **1**, so nothing writes
+  through the start pointer either. **Control, same run, same instant:**
+  `gSYFramebufferSets[0][0][0]`, `[1][115][160]`, `[2][0][0]` all read **1** —
+  the clear loop's `GPACK_RGBA5551(0,0,0,1)`. The probe demonstrably sees writes
+  (0→1) in the neighbouring bytes and sees none here.
+
+  Consumers, all enumerated and classified: `SYVIDEO_ZBUFFER_START` computes;
+  `video_bootstrap.c:19` and the imported scene setups **store**; `syVideoInit`
+  **stores** into `gSYVideoZBuffer`; `video_bootstrap.c:34` **compares**.
+  **Zero dereferences**, and nothing takes `sizeof(gSYZBuffer)` — which is what
+  makes a size reduction safe. Engagement proof that the surviving consumer
+  still works: `gNdsVideoBootstrapResult` reads `0x56494430`
+  (`NDS_VIDEO_BOOTSTRAP_PASS`) after the change, and that check can fail
+  (`0xBAD00001`).
 - **`sNdsRelocSceneFileBuffer` 185,696 — REFUTED as free.** Already
   harness-guarded (`reloc_backend_assets.c:352-358`): in harness builds the union
   is sized exactly `CASTLE_STATIC + BANK_113_STATIC` and serves as the **battle**

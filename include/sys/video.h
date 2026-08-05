@@ -51,7 +51,14 @@ typedef struct SYVideoSetup {
         ((((width) * (height)) - (((width) - (w_border)) * ((height) - (h_border)))) * \
         sizeof(type))))
 
-extern u16 gSYZBuffer[(320 * 240) - (((320 * 240) - (320 * 230)) * sizeof(u16))];
+/* Reduced from the N64 extent -- (320*240) - (((320*240) - (320*230)) *
+ * sizeof(u16)) = 70,400 halfwords -- to the 320x10 border the
+ * SYVIDEO_ZBUFFER_START arithmetic above actually names. The DS has a hardware
+ * depth buffer in VRAM; cycle 84 measured this storage still untouched .bss at
+ * frame 607 against a control that moved in the same run. The definition in
+ * src/import/battleship_sys_zbuffer.c carries the full proof and MUST be kept
+ * in step with this extent. Nothing takes sizeof(gSYZBuffer). */
+extern u16 gSYZBuffer[320 * 10];
 extern u16 gSYFramebufferSets[3][230][320];
 extern u16 *gSYVideoZBuffer;
 extern u32 gSYVideoColorDepth;
