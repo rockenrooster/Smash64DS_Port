@@ -128,20 +128,22 @@ is a total freeze); `build-c75-tickhud-publish` booted normally between the
 failures. **Text counts as much as bss.** Every future R2 table states its byte cost
 and takes an 8-sample `-StartFrame 60` boot probe (~50 s) *before* a measuring run.
 
-## Next single step — board lane G1
+## Next single step — the gate number changed, and the instrument is not ready
 
-**The resolver's site cache is switched off by an enum.**
-`sNdsRendererStageTextureSites` (`nds_renderer.c:11086`) is a 128-entry memo keyed
-on `state->source_command_site` — the exact `Gfx` command address, a better key
-than the one just refuted, already built, 12 KB already spent.
-`ndsRendererProfileSetOwner` (`nds_renderer.c:29241-29247`) enables it only for
-fast-run modes 4/7/8, and every measured ROM builds mode **9**
-(`NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE`, `Makefile:1088`), added after both
-lists with neither updated. One line, no new RAM — but it turns the cache on for
-the whole stage owner: its own arm, its own A/B, the owner's visual gate. Static
-read only; confirm at runtime first. Then G2 (RAM headroom against the boot
-cliff) and G3, the packet path for the 65.57% interpreter share — specs on the
-board.
+**The load-frame exclusion is REFUTED; the gap is 503,684, not 237,956.** The
+owner's "loading states excluded" bar must not be applied through the
+`SRC > 2x median` rule: it thresholds on the bucket being attributed (circular
+for SRC, 68.9% -> 52.3%), swings the gap **3.08x** across plausible thresholds,
+and drops frames that are not loads — 100 of 122 are isolated singletons spread
+evenly through play, `FTR` 1.01x / `STG` 0.99x / `MISC` 1.04x, only `SRC` up. It
+moves the gate arm 3.08x but Boundary only 1.09x; no loading filter could do
+that. Audit: `scripts/analyze-load-frame-exclusion.ps1`.
+
+**Then the SRC sub-owner instrument, which does NOT boot.** Two ring buckets
+(`SHDT` hit detection, `SWRM` anim warm) at +1,120 bytes never reached presented
+frame 1 while the c80 control reached frame 60. Size-versus-defect unresolved;
+the one-build splitting experiment and full design are on the board's Parked
+list, and G2's headroom may be a prerequisite. G1 is measured and closed.
 
 **Boundary for all of it.** Same geometry, same textures, same materials — the
 effect models are a closed `BUGS.md` row the owner confirmed by eye and paid for
@@ -168,10 +170,7 @@ shield, revival platform, impact wave or reflector needs the owner.
 
 ## Open and unowned
 
-All parked items now live on the board's **Parked** list (one place, not two):
-the +52,928 regression bisect, the RED `check-decomp-header-mirror.py`, the
-unproven evict counter, the GATE 6 price correction, the concurrency
-calibration row, and the per-build ELF resolution fix.
+All parked items live on the board's **Parked** list (one place, not two).
 
 ## Restart surface
 

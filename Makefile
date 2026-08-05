@@ -1605,6 +1605,17 @@ NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle
 # because that one is per-texture DS formats with palettes and the cache has no
 # palette slot in its key.
 NDS_PARTICLE_QUAD_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_quads.a5i3.bin
+# The battle static-texture metadata include and its NitroFS payload. Both are
+# build products of one generator invocation, and until 2026-08-05 NOTHING in
+# this Makefile knew how to produce either: only build.ps1 ran the generator, so
+# an incremental `make` linked whatever copy happened to be on disk. That is how
+# the .inc stayed at its Aug-3 content across three builds while its generator
+# and the census it imports had both moved -- harmless only because that day's
+# delta was a header comment. The next such delta would be data, and it would
+# reach a measured ROM with no error anywhere (see CLAUDE.md: this class "races
+# into a subtly wrong binary rather than an error").
+NDS_BATTLE_STATIC_TEXTURE_INC := $(PROJECT_ROOT)/src/nds/generated/battle_playable_static_textures.generated.inc
+NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_playable_static_textures.rgb5a1.bin
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -2701,7 +2712,8 @@ prune-obsolete-audio:
 $(OUTPUT).nds: prune-obsolete-audio $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES)
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
-	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC)
+	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
+	$(NDS_BATTLE_STATIC_TEXTURE_INC)
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 ifeq ($(NDS_TASK9_FLOAT_ITCM),1)
 NDS_TASK9_FLOAT_LIBGCC := $(shell $(CC) $(ARCH) -print-libgcc-file-name)
@@ -2834,7 +2846,29 @@ $(NITROFS_DIR)/audio/fgm_phase_pack_ima.bin: $(PROJECT_ROOT)/assets/audio/fgm_ph
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
-$(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(PROJECT_ROOT)/assets/renderer/battle_playable_static_textures.rgb5a1.bin
+# One generator invocation produces the metadata .inc AND the RGB555+A1 payload,
+# so they are a grouped target (`&:`) exactly like the particle bank above --
+# two separate rules would each run the generator. The census script is a
+# prerequisite because generate_battle_playable_static_textures.py imports it
+# (see its own comment at generate_battle_playable_texture_census.py:258): when
+# the census digest moved on 2026-08-05 the .inc's provenance stamp moved with
+# it, and nothing rebuilt. The generator verifies its own decomp inputs against
+# pinned sha256s, so corpus drift still fails closed and loudly rather than
+# being silently absorbed here.
+#
+# The `touch` is required, not cosmetic: the generator is deliberately
+# write-if-changed (generate_battle_playable_static_textures.py:1652 rewrites
+# only when the bytes differ), so a run that confirms the outputs are already
+# correct leaves both mtimes untouched. Without the touch the targets stay older
+# than their prerequisites and make re-runs the whole generator on EVERY build
+# forever -- correct output, wasted minutes.
+$(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET) &: \
+		$(PROJECT_ROOT)/scripts/generate_battle_playable_static_textures.py \
+		$(PROJECT_ROOT)/scripts/generate_battle_playable_texture_census.py
+	python "$(PROJECT_ROOT)/scripts/generate_battle_playable_static_textures.py" --repo-root "$(PROJECT_ROOT)"
+	@touch $(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
+
+$(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 

@@ -77,6 +77,36 @@ Noise floors: `WORK-H` P95 cross-build ±5,376; per-bucket placement ≥8,544 �
 buckets locate, `WORK-H` decides. 1.85 cycles of `FTR` mean per byte of added
 ARM text: a change that adds text must beat its own footprint.
 
+### The load-frame exclusion does NOT select loading states — do not apply it (cycle 81)
+
+The banked figures above are correct **because they are taken with the
+exclusion OFF**. `scripts/analyze-load-frame-exclusion.ps1` audits the rule
+("drop frames with `SRC` > 2× that arm's own `SRC` median"); artifacts
+`artifacts/performance/2026-08-05_c81-load-exclusion-audit-{bothcpu,boundary}.json`.
+Four findings, all from banked CSVs, no new run:
+
+- **The rule is circular for SRC.** It thresholds on the very bucket whose
+  excursion is being attributed, so it shrinks SRC's share whether or not a
+  load happened: applying it moves gate-arm `SRC` 68.9% → 52.3% and `MISC`
+  25.7% → 39.6%. **Never rank SRC with it on.**
+- **It is fragile.** Gate-arm gap by threshold: OFF 503,684, 1.5× 163,332,
+  2× 237,956, 2.5× 309,252, 3× 384,964, 4× 484,292 — a **3.08× swing on the
+  knob alone**.
+- **The dropped frames are not loads.** 122 frames form 110 runs, **100 of
+  them singletons**, longest 4, spread evenly (43 early / 42 mid / 37 late)
+  and **0 overlap the GAME SET tail**. A loading state is a contiguous
+  multi-frame event. Their other buckets are ordinary — `FTR` 1.01×, `STG`
+  0.99×, `MISC` 1.04× — and only `SRC` is elevated (2.80×).
+- **Cross-arm asymmetry settles it.** Both arms run the same stage, fighters
+  and assets, so a real loading filter must bite similarly. It swings the gate
+  arm 3.08× and Boundary only **1.09×** (356,292 → 327,236) — precisely
+  because the gate arm's tail *is* `SRC`. The rule tracks the tail, not loads.
+
+**Consequence: the gate is 503,684, not 237,956**, and the owner's intent
+(exclude genuine loading) needs a rule keyed on an actual load signal — the
+anim-cache warm step or the Task 75 asset-load counter — not on `SRC` itself.
+That instrument does not exist yet; see the inherited row below.
+
 ## The diagnosis the lane was built on — **BOUNDARY-ONLY, re-priced 2026-08-05**
 
 **Every figure in this section is a Boundary-arm figure.** It was banked without
@@ -466,6 +496,41 @@ row 1's execution plan.
    proof on the exact candidate ROM.
 
 ## Parked — open items with owners' notes, promote deliberately
+
+- **SRC sub-owner instrument: designed and built, DOES NOT BOOT (cycle 81).**
+  Two ring buckets appended after `WORK` (so every existing index and the
+  `named`/`OTHR`/`WORK` identity stay byte-identical): `SHDT` =
+  `ftMainProcSearchHitAll` (live-hitbox hit detection, the E35 claim under
+  test) and `SWRM` = `ndsR2AnimCachePreloadStep` (the one asset load inside
+  `SRC`, and the honest load signal the exclusion rule needs). Both bracket
+  **existing port-side wrappers**, so no `decomp/` edit is required —
+  `reloc_backend_diagnostic_recorders.c:5663` and
+  `battleship_scvsbattle.c:344`. Diff kept out of tree; re-derive from this
+  note.
+  **Two builds, neither reached presented frame 1** (the c80 control reached
+  frame 60 and produced 8 samples through the identical harness, so it is the
+  ROM, not the invocation): three buckets = text +168 / bss +1,600 = **+1,768**;
+  two buckets = text +64 / bss +1,056 = **+1,120**. The second is *below* the
+  +1,408-boots line the board records, so **size versus functional defect is
+  UNRESOLVED** — the +1,408/+2,208 band was measured on a smaller ROM and may
+  simply have tightened. **The splitting experiment is one build:** grow the
+  enum/ring and publish the buckets but leave the two accumulate brackets out.
+  Boots ⇒ the brackets are at fault; still dead ⇒ the cliff has moved and G2's
+  headroom is a hard prerequisite for any new instrument.
+  Note `scripts/sample-tick-hud-buckets.ps1`'s `$bucketNames` must move in the
+  same commit as the enum: an 11-bucket ROM read with 14 names returns adjacent
+  memory as plausible columns (`named` read 220.4% of `ALL`, `SWRM` 842,496 on
+  a ROM with no such bucket).
+- **R2-03 E35's magnitudes are no longer quotable; its mechanism stands.** It
+  measured live hitbox population as the owner of the `SRC` P95 excursion
+  (softfloat 283,072/frame, collision 75,088) — but on a **128-frame window,
+  frames 439–566, profiling 517–521 against 508–512**, which is exactly the
+  window class cycle 80 retired for reading the cheapest 6% of the match. What
+  survives is structural and window-robust: on hot frames a `gmCollision*` /
+  `func_ovl2_800ED490` population appears that is *exactly zero* on clean
+  frames. What does not survive is every tick figure it published, and the
+  `scene_harness.c` comment that cites it as the reason the both-CPU arm
+  exists. `SHDT` above is the re-measurement.
 
 - **+52,928 ticks/frame regression** between `2494daf9ad` and `e49a98167c`,
   null control, real, NOT in the three reverted hunks. Untested suspects:

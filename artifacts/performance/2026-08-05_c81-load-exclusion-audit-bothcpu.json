@@ -1,0 +1,103 @@
+{
+  "analysis": "load-frame exclusion audit",
+  "arm": "both-CPU (THE GATE), 60s match, 86.7% coverage",
+  "rowsCsv": "artifacts\\performance\\2026-08-05_c80-gate-bothcpu-rows.csv",
+  "gate": 1120380.0,
+  "rows": 1600,
+  "srcMedian": 355328,
+  "sweep": [
+    {
+      "multiple": 0.0,
+      "srcCut": 0,
+      "dropped": 0,
+      "workHP95": 1624064,
+      "gap": 503684.0,
+      "overGate": 704,
+      "judged": 1600
+    },
+    {
+      "multiple": 1.5,
+      "srcCut": 532992,
+      "dropped": 228,
+      "workHP95": 1283712,
+      "gap": 163332.0,
+      "overGate": 476,
+      "judged": 1372
+    },
+    {
+      "multiple": 2.0,
+      "srcCut": 710656,
+      "dropped": 122,
+      "workHP95": 1358336,
+      "gap": 237956.0,
+      "overGate": 582,
+      "judged": 1478
+    },
+    {
+      "multiple": 2.5,
+      "srcCut": 888320,
+      "dropped": 71,
+      "workHP95": 1429632,
+      "gap": 309252.0,
+      "overGate": 633,
+      "judged": 1529
+    },
+    {
+      "multiple": 3.0,
+      "srcCut": 1065984,
+      "dropped": 33,
+      "workHP95": 1505344,
+      "gap": 384964.0,
+      "overGate": 671,
+      "judged": 1567
+    },
+    {
+      "multiple": 4.0,
+      "srcCut": 1421312,
+      "dropped": 4,
+      "workHP95": 1604672,
+      "gap": 484292.0,
+      "overGate": 700,
+      "judged": 1596
+    }
+  ],
+  "gapSwingRatio": 3.08,
+  "droppedAt2x": 122,
+  "bucketSignature": [
+    {
+      "bucket": "SRC",
+      "droppedMean": 996360,
+      "keptMean": 355414,
+      "ratio": 2.803
+    },
+    {
+      "bucket": "FTR",
+      "droppedMean": 380774,
+      "keptMean": 378258,
+      "ratio": 1.007
+    },
+    {
+      "bucket": "STG",
+      "droppedMean": 193347,
+      "keptMean": 195546,
+      "ratio": 0.989
+    },
+    {
+      "bucket": "MISC",
+      "droppedMean": 153572,
+      "keptMean": 147879,
+      "ratio": 1.038
+    },
+    {
+      "bucket": "AUD",
+      "droppedMean": 12859,
+      "keptMean": 9227,
+      "ratio": 1.394
+    }
+  ],
+  "contiguousRuns": 110,
+  "singletonRuns": 100,
+  "longestRunFrames": 4.0,
+  "overlapWithGameSetTail": 0,
+  "capturedUtc": "2026-08-05T19:18:51.6447275Z"
+}
