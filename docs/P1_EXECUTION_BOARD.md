@@ -646,8 +646,66 @@ template-invariant, so a packet removes it — but it means the texture sub-shar
 is not separately reported, and `gNdsEffectPhaseTexTicks` (18,086,656) spans
 work outside Exec so it cannot be substituted.
 
-**NOT DONE: the gate arm.** `builds/build-c90-split-bothcpu` is built and boot-
-headroom OK (113,952) but **not run**. Every figure above is Boundary-only.
+**THE GATE ARM IS NOW RUN (cycle 91), AND THE TEXTURE TWIN CHANGES THE
+COMPOSITION — not B's size.** Whole match, both-CPU, 1,600 samples, frames
+439–2038, **86.7% coverage**, DLDI on, exclusion OFF. Two runs: the as-built
+`build-c90-split-bothcpu` (ROM `1A91A4A4`, artifact
+`artifacts/performance/2026-08-05_c91-effect-split-bothcpu.json`) and, after the
+`TexInExec` fix, `build-c91-slots-bothcpu`
+(`...c91-painter-slots-bothcpu.json`). Figures below are the fixed build.
+
+| span | ticks | share of Exec | per instance |
+|---|---:|---:|---:|
+| **Tri** | 41,091,968 | **70.98%** | 70,726 |
+| **TexInExec** (was 0) | 12,506,624 | **21.60%** | 21,526 |
+| **Vtx** | 5,142,656 | 8.88% | 8,851 |
+| spans sum | 58,741,248 | 101.47% | — |
+| **derived traversal residual** | **−848,384** | **−1.47%** | — |
+| Exec | 57,892,864 | 100% | 99,643 |
+
+**The residual is NEGATIVE, which is the instrument's own designed failure
+signal, and it fires for the right reason.** With `TexInExec` honest, Tri + Vtx
++ Texture alone exceed Exec by 1.47%: every span charges its own timer reads and
+Tri/Vtx/texture each fire many times per list against Exec's single bracket, so
+the raw shares are biased high. The bias correction is mandatory, not optional.
+**Consequence: the 18.91% "traversal" the Boundary run reported was mostly
+texture resolve.** True walk/dispatch/state traversal is ≈ 0.
+
+**Option B on the gate arm = `Exec − Tri − Vtx`** (a packet removes traversal
+*and* the template-invariant texture resolve): **11,658,240 ticks/match,
+20.14% of Exec**, i.e. **16,189–20,066 ticks/instance** (low end = that share of
+banked Exec/instance 80,394; high end = measured). Boundary was 19,167–26,050.
+Over 1,600 presented frames that is **5,879–7,286 ticks/frame — 1.2%–1.4% of the
+503,684 gap.**
+
+**And the prize is one G1 already tried.** `TexInExec` is 21,526 ticks/instance;
+G1 measured route-0 `Tex` at 20,780 per list and cut it **65.3%** — and WORK-H
+P95 moved +3,840, **inside the ±5,376 floor**. Two independent instruments price
+the same cost, and a two-thirds cut of it has already been measured to be worth
+nothing at the gate. **B is not a gate lever on the arm the gate reads on.**
+
+**Neither run is a baseline.** The phase instrument perturbs what it measures:
+WORK-H P95 reads 1,639,872 (c90) and 1,669,632 (c91) against banked 1,624,064 —
++15,808 and +45,568, both far outside the ±5,376 floor. **1,624,064 still
+stands.** Engagement is exact on both: `gNdsEffectPhaseDLCount` 581 ==
+`gNdsEffectDLSubmitCount` 581 == the c87 census instance count, and
+`gNdsEffectDLCensusUnique` 8. One honest mismatch: `gNdsEffectPhaseTriCount`
+7,946 vs `gNdsEffectDLTriangleTotal` 7,930, **+16 (0.20%)** — the two closed
+exactly on Boundary (10,647 == 10,647), so the gate arm has 16 triangles the
+phase bracket counts and the census does not. Unattributed, and too small to
+move any figure above.
+
+**The `TexInExec` defect is FIXED (cycle 91).** Three texture-resolve entry
+points charged `gNdsEffectPhaseTexTicks`; only `ResolveResidentTexture` had the
+in-Exec twin and it never fired. `ndsRendererHardwareBindTexture` and
+`ndsRendererHardwareResolveStageSourceFrameTexture` now carry it too. It reads
+**12,506,624 == `gNdsEffectPhaseTexTicks` 12,506,624, i.e. 100% of effect
+texture-resolve time is inside the Exec bracket.** That equality is informative
+rather than tautological: `sNdsEffectPacketArmed` wraps only the
+`ndsRendererExecuteDisplayListWithVertexCache` call
+(`reloc_backend_renderer_dl.c:9492/9508`) while `gNdsEffectPhaseActive` wraps the
+whole tree walk (9856/9861), so the twin's condition is strictly narrower and
+*could* have differed.
 
 ### G3 step 4 — STATIC PER-LAYER WORLD Z CANNOT REPRODUCE THE CURRENT ORDER (cycle 90)
 
@@ -669,11 +727,17 @@ measurements is what kills it.** Read from the specification, no build:
   on whether the first source-Z triangle has flipped the counter via
   `ndsRendererHardwareEnterProjectedForeground` into its foreground range. A
   static constant cannot reproduce an order defined by submission position.
-- **Precision budget, from the constants:** `BACKGROUND_START` `0x1000*6` and
-  `FOREGROUND_START` `(128-0x1000)*6` give **4,096 slots per range, one per
-  primitive**. Effects alone consume **1,331 primitives/frame** (cycle 89:
-  10,647 triangles over 8 frames) before stage no-Z geometry takes its share.
-  The slots are already substantially spent.
+- **Precision budget, from the constants — BOTH NUMBERS IN THIS BULLET WERE
+  WRONG. Corrected and measured in step 5 below; do not quote this bullet.**
+  The reserved band is **128 slots per endpoint, not 4,096** (the `0x1000` is
+  the v16 representation of clip-space 1.0, not a slot count; the literal `128`
+  in `FOREGROUND_START` is the band width, and
+  `ndsRendererHardwareSourceDepthToV16`'s comment says so outright). And effects
+  consume **~3.9 primitives/frame, not 1,331** — that figure divided
+  `gNdsEffectDLTriangleTotal`, which is cumulative from boot (one write site, a
+  `+=`, no reset anywhere), by an 8-frame window. The two errors run in opposite
+  directions; the conclusion "the slots are already substantially spent" is
+  **refuted by measurement** in step 5.
 
 **Consequently fighter-Z constancy (the owner's premise) is not the binding
 constraint and was not measured.** It would matter only if the target were
@@ -686,10 +750,82 @@ result.** Bake each template's per-triangle ordering into its model-space Z
 carry the per-instance base depth in the **patched matrix's Z translation** —
 which is the one patch the original G3 design already called for. That
 reproduces per-primitive order by construction *if* base offsets are assigned
-in submission order. **Unmeasured and possibly fatal:** whether DS depth
-precision supports ~1,331 per-frame instance slots *plus* intra-template
-separation. That is the next cheap measurement, and it is the same question
-step 4 bullet 3 bounds but does not answer.
+in submission order. **ANSWERED, cycle 91 — see step 5. The precision budget is
+comfortable and the variant fails anyway, for a structural reason that no amount
+of depth resolution fixes.**
+
+### G3 step 5 — DEPTH PRECISION IS NOT THE CONSTRAINT, AND THE VARIANT IS DEAD ANYWAY (cycle 91)
+
+**Verdict: NO.** Not on precision — on mechanism. The A-branch is closed.
+
+**Measured first, because it refutes the stated reason for doubt.** New census
+`gNdsPainterSlot*` (`nds_renderer.c`, all `#if NDS_TICK_HUD`), derived from the
+depth counter itself rather than incremented in
+`ndsRendererHardwareNextProjectedDepth`, because the M3 replay path decrements it
+in bulk (`triangle_count * STEP`) without calling the accessor. Folded once per
+renderer hardware frame. Gate arm, whole match, 1,600 samples, frames 439–2038,
+86.7% coverage, DLDI on, build `builds/build-c91-slots-bothcpu`; artifact
+`artifacts/performance/2026-08-05_c91-painter-slots-bothcpu.json`.
+
+| | measured | band | worst-frame use |
+|---|---:|---:|---:|
+| background slots, max frame | **72** | 128 | **56.2%** |
+| foreground slots, max frame | **107** | 128 | **83.6%** |
+| frames over either band | **0 / 2,044** | — | — |
+| background / foreground mean | 71.8 / 57.8 | — | — |
+
+Engagement: `gNdsPainterSlotFrames` **2,044** tracks the 2,038 presented frames,
+so the fold ran once per hardware frame across the whole match. **Zero over-band
+frames in 2,044 folds**, and 21 free slots in the tighter band at the worst
+frame of the match. The budget is not spent.
+
+**Where the ordering primitive comes from, and why that is fatal.** Painter
+primitives are emitted through `ndsRendererHardwareClampS64ToV16(projected_z)`
+(`nds_renderer.c`) — the slot **integer goes straight into the vertex z with no
+perspective divide** — and the projected path loads **identity for both
+projection and modelview**, so clip `w` is exactly 1.0 and the clip test
+`|z| ≤ w` becomes `|z_v16| ≤ 4096`. That is the whole mechanism: integer slots,
+uniform spacing, no perspective crowding, and the DS is in **Z-buffering** mode
+(`glFlush(GL_TRANS_MANUALSORT)`, bit 1 clear).
+
+**The packet and the painter order are mutually exclusive.** The integer depth
+slot exists *only* because the CPU owns the vertex on the projected-identity
+path — and CPU-owning the vertex is exactly what makes effect geometry
+per-instance and un-packetable (cycle 88, 638/638). Moving effects to the raw
+path to make geometry template-constant replaces identity with `RAW_COMPOSED`, a
+real perspective matrix: the emitted z is then divided by a per-vertex `w`, so
+"one integer slot per primitive" ceases to exist. A baked model-space Z and a
+matrix Z-translation preserve *order* (the map is monotonic in view Z) but not
+*spacing* — the separation two baked offsets produce depends on the instance's
+distance from the camera, which a build-time bake cannot know. Solving for the
+offset per instance per frame is precisely the per-frame CPU work the packet
+existed to remove.
+
+**So the deciding question was mis-aimed, and both of its inputs were wrong**
+(step 4 bullet 3, now corrected): the budget is 128 per band rather than 4,096,
+and demand is ~3.9 effect primitives/frame rather than 1,331. Fixing both makes
+the precision picture *better*, and the variant still fails.
+
+**Not measured, and not needed:** whether a single effect list ever straddles the
+`ndsRendererHardwareEnterProjectedForeground` switch. Background use is
+essentially constant (mean 71.8, max 72) so the switch fires at a stable point
+every frame, but a static intra-template Z could not express that discontinuity
+anyway. **Also still true and still the owner's call** (cycle 89): routing
+effects to the raw path at all is a visual change to layering.
+
+**Consequence for the lane:** G3's A-branch is closed. B is priced and small
+(step 3). The remaining G3 question is whether anything is worth doing here at
+all, given `SRC` is 8.6x the `MISC` lever on this arm.
+
+**Actionable, found in passing (cycle 91):** `/artifacts/` is gitignored
+(`.gitignore:24`), and **no artifact this board cites from cycles 85–90 is
+actually tracked** — `git ls-files artifacts/performance` matches none of them.
+The 197 JSON and 44 CSV files that *are* tracked predate the rule. So every
+"artifact `artifacts/performance/...json`" citation on this board is a path that
+does not exist in a fresh clone, which makes the evidence unreproducible for
+anyone but the machine that ran it. Either force-add cited evidence (`git add
+-f`) or stop citing paths as if they were committed; do not leave it ambiguous.
+Cycle 91's four artifacts are on disk and uncommitted, matching current practice.
 
 ### G3 — RE-PRICED ON THE GATE ARM (cycle 79). The prize is 4–9x smaller than this row claims.
 

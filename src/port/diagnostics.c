@@ -3155,6 +3155,17 @@ volatile u32 gNdsEffectPhaseVtxCount;
 volatile u32 gNdsEffectPhaseTriTicks;
 volatile u32 gNdsEffectPhaseTriCount;
 volatile u32 gNdsEffectPhaseTexInExecTicks;
+/* G3 step 5: the painter depth-slot census. Cumulative maxima and sums over the
+ * whole match, folded once per renderer-owned hardware frame. See the header for
+ * why the band is 128 rather than the 4,096 the board inferred. */
+volatile u32 gNdsPainterSlotFrames;
+volatile u32 gNdsPainterSlotBgMax;
+volatile u32 gNdsPainterSlotFgMax;
+volatile u32 gNdsPainterSlotTotalMax;
+volatile u32 gNdsPainterSlotBgSum;
+volatile u32 gNdsPainterSlotFgSum;
+volatile u32 gNdsPainterSlotBgOverBand;
+volatile u32 gNdsPainterSlotFgOverBand;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin

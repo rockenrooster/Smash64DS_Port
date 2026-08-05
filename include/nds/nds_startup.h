@@ -4434,6 +4434,24 @@ extern volatile u32 gNdsEffectPhaseVtxCount;
 extern volatile u32 gNdsEffectPhaseTriTicks;
 extern volatile u32 gNdsEffectPhaseTriCount;
 extern volatile u32 gNdsEffectPhaseTexInExecTicks;
+/* G3 step 5: the painter depth-slot census. The reserved no-Z bands are 128 v16
+ * depths at EACH endpoint -- see NDS_RENDERER_HW_SOURCE_DEPTH_MIN/MAX and the
+ * comment on ndsRendererHardwareSourceDepthToV16 -- not 4,096. The 0x1000 in
+ * BACKGROUND_START is the v16 representation of clip-space 1.0, not a slot
+ * count, and reading it as one overstates the budget 32x. Past 128 a background
+ * primitive descends into the source-Z range and starts ordering against stage
+ * geometry; past 128 a foreground primitive passes v16 -4096 and leaves the
+ * |z| <= w clip volume outright. Derived from the depth counter itself rather
+ * than counted at the accessor, because the M3 replay path decrements it in
+ * bulk (triangle_count * STEP) without calling the accessor at all. */
+extern volatile u32 gNdsPainterSlotFrames;
+extern volatile u32 gNdsPainterSlotBgMax;
+extern volatile u32 gNdsPainterSlotFgMax;
+extern volatile u32 gNdsPainterSlotTotalMax;
+extern volatile u32 gNdsPainterSlotBgSum;
+extern volatile u32 gNdsPainterSlotFgSum;
+extern volatile u32 gNdsPainterSlotBgOverBand;
+extern volatile u32 gNdsPainterSlotFgOverBand;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

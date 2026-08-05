@@ -15868,8 +15868,17 @@ static s32 ndsRendererHardwareBindTexture(
         u32 phase_mark = cpuGetTiming();
         s32 phase_result = ndsRendererHardwareResolveOrBindTexture(
             stats, config, state, NULL, FALSE);
+        u32 phase_ticks = cpuGetTiming() - phase_mark;
 
-        gNdsEffectPhaseTexTicks += cpuGetTiming() - phase_mark;
+        gNdsEffectPhaseTexTicks += phase_ticks;
+        /* The in-Exec twin, added cycle 91. This site and the stage-source-frame
+         * site below both charged gNdsEffectPhaseTexTicks with no twin, so
+         * gNdsEffectPhaseTexInExecTicks read 0 for a whole cycle and the texture
+         * sub-share folded silently into the derived traversal residual. */
+        if (sNdsEffectPacketArmed != 0u)
+        {
+            gNdsEffectPhaseTexInExecTicks += phase_ticks;
+        }
         return phase_result;
     }
 #endif
@@ -15929,8 +15938,14 @@ static s32 ndsRendererHardwareResolveStageSourceFrameTexture(
         u32 phase_mark = cpuGetTiming();
         s32 phase_result = ndsRendererHardwareResolveOrBindTexture(
             stats, config, state, resolved, TRUE);
+        u32 phase_ticks = cpuGetTiming() - phase_mark;
 
-        gNdsEffectPhaseTexTicks += cpuGetTiming() - phase_mark;
+        gNdsEffectPhaseTexTicks += phase_ticks;
+        /* The in-Exec twin, added cycle 91; see ndsRendererHardwareBindTexture. */
+        if (sNdsEffectPacketArmed != 0u)
+        {
+            gNdsEffectPhaseTexInExecTicks += phase_ticks;
+        }
         return phase_result;
     }
 #endif
@@ -16535,6 +16550,21 @@ static s32 ndsRendererHardwareNextProjectedDepth(void)
         NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
 }
 
+#if NDS_TICK_HUD
+/* G3 step 5. Slots consumed in the background band before this frame's first
+ * source-Z triangle flipped the counter. Captured at the transition because the
+ * counter is reloaded there and the value is otherwise unrecoverable. */
+static u32 sNdsPainterSlotBgUsed;
+
+static u32 ndsRendererHardwarePainterSlotsUsed(s32 start)
+{
+    s32 used = (start - sNdsRendererHardwareProjectedDepth) /
+        NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
+
+    return (used > 0) ? (u32)used : 0u;
+}
+#endif
+
 static void ndsRendererHardwareEnterProjectedForeground(void)
 {
     if (sNdsRendererHardwareProjectedBackground == FALSE)
@@ -16542,6 +16572,10 @@ static void ndsRendererHardwareEnterProjectedForeground(void)
         return;
     }
 
+#if NDS_TICK_HUD
+    sNdsPainterSlotBgUsed = ndsRendererHardwarePainterSlotsUsed(
+        NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START);
+#endif
     /* The DS cannot disable depth testing per polygon. Mirror sm64-nds'
      * source G_ZBUFFER transition: early no-Z background draws count down
      * from the far endpoint, then the first source-Z triangle moves later
@@ -16550,6 +16584,59 @@ static void ndsRendererHardwareEnterProjectedForeground(void)
         NDS_RENDERER_HW_PROJECTED_DEPTH_FOREGROUND_START;
     sNdsRendererHardwareProjectedBackground = FALSE;
 }
+
+#if NDS_TICK_HUD
+/* Folded once per renderer-owned hardware frame, immediately before the depth
+ * counter is reset, so gNdsPainterSlotFrames doubles as the engagement proof
+ * (it must track the frame serial). Derived from the counter rather than
+ * incremented inside ndsRendererHardwareNextProjectedDepth because the M3
+ * replay path decrements it in bulk without calling the accessor. */
+static void ndsRendererHardwarePainterSlotFoldFrame(void)
+{
+    u32 bg_used;
+    u32 fg_used;
+    u32 total;
+
+    if (sNdsRendererHardwareProjectedBackground != FALSE)
+    {
+        bg_used = ndsRendererHardwarePainterSlotsUsed(
+            NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START);
+        fg_used = 0u;
+    }
+    else
+    {
+        bg_used = sNdsPainterSlotBgUsed;
+        fg_used = ndsRendererHardwarePainterSlotsUsed(
+            NDS_RENDERER_HW_PROJECTED_DEPTH_FOREGROUND_START);
+    }
+    total = bg_used + fg_used;
+
+    gNdsPainterSlotFrames++;
+    gNdsPainterSlotBgSum += bg_used;
+    gNdsPainterSlotFgSum += fg_used;
+    if (bg_used > gNdsPainterSlotBgMax)
+    {
+        gNdsPainterSlotBgMax = bg_used;
+    }
+    if (fg_used > gNdsPainterSlotFgMax)
+    {
+        gNdsPainterSlotFgMax = fg_used;
+    }
+    if (total > gNdsPainterSlotTotalMax)
+    {
+        gNdsPainterSlotTotalMax = total;
+    }
+    if (bg_used > 128u)
+    {
+        gNdsPainterSlotBgOverBand++;
+    }
+    if (fg_used > 128u)
+    {
+        gNdsPainterSlotFgOverBand++;
+    }
+    sNdsPainterSlotBgUsed = 0u;
+}
+#endif
 
 static void ndsRendererHardwareClipVertex(
     const NDSRendererClipVertex20p12 *vtx, s32 z
@@ -29753,6 +29840,9 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
     }
     ndsRendererProfileResetSubmitSummary();
     sNdsRendererHardwareSubmitted = FALSE;
+#if NDS_TICK_HUD
+    ndsRendererHardwarePainterSlotFoldFrame();
+#endif
     sNdsRendererHardwareProjectedDepth =
         NDS_RENDERER_HW_PROJECTED_DEPTH_BACKGROUND_START;
     sNdsRendererHardwareProjectedBackground = TRUE;
