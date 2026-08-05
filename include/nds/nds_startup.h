@@ -4359,6 +4359,17 @@ extern volatile u32 gNdsEffectDLTermCapCount;
 extern volatile u32 gNdsEffectDLTermEndCount;
 extern volatile u32 gNdsEffectDLTermOtherCount;
 extern volatile u32 gNdsEffectDLTermOtherMask;
+/* G3 step 0: the UNIQUE-template census. Cumulative; see the recorder in
+ * reloc_backend_renderer_dl.c. Every prior G3 figure was an INSTANCE count, and
+ * an arena sized from instances is sized wrong by the reuse factor. */
+extern volatile u32 gNdsEffectDLCensusUnique;
+extern volatile u32 gNdsEffectDLCensusOverflow;
+extern volatile u32 gNdsEffectDLCensusStateVariants;
+extern volatile u32 gNdsEffectDLCensusCommandVariants;
+extern volatile u32 gNdsEffectDLCensusCommandMax;
+extern volatile u32 gNdsEffectDLCensusUniqueCommandTotal;
+extern volatile u32 gNdsEffectDLTriangleTotal;
+extern volatile u32 gNdsEffectDLVertexTotal;
 #endif
 /* The Task 75 load counter lives inside the NDS_TICK_HUD block above, but its
  * call site in reloc_backend_assets.c is unconditional, so a non-tick-HUD

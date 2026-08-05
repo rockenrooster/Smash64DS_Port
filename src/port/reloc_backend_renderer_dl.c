@@ -9025,6 +9025,74 @@ static sb32 ndsRendererAdapterPrepareMaterialSegment(
     return TRUE;
 }
 
+#if NDS_TICK_HUD
+/* G3 STEP 0 -- THE UNIQUE-TEMPLATE CENSUS, and it is the number a packet arena
+ * is sized by. Every G3 figure banked so far counts list INSTANCES
+ * (gNdsEffectDLSubmitCount: 1,360 Boundary, 527-563 gate arm); an arena sized
+ * from an instance count is wrong by whatever the reuse factor is, and that
+ * factor has never been measured.
+ *
+ * The key is the display-list pointer. That is sound WITHIN a match -- dl points
+ * into a loaded-file buffer resident for the scene, the same property G1's
+ * texture-site memo relies on -- and it is NOT sound across one: charter 3.12,
+ * the taskman arena rewinds and hands the next scene the same addresses. A
+ * builder sized by this census must re-derive at scene entry. The census only
+ * has to survive the window it measures, and P1 boots straight into one match.
+ *
+ * StateVariants/CommandVariants are the feasibility guards: if one dl is
+ * submitted under two different entry blend modes or yields two different
+ * command counts, then "one packet per unique dl" is not a complete key and the
+ * arena needs more entries than Unique. They must be read before Unique is
+ * trusted as the sizing input.
+ *
+ * Called from the epilogue, OUTSIDE the Exec bracket that closes above it, so
+ * ticks/list stays the interpreter's own cost rather than the census's. */
+#define NDS_EFFECT_DL_CENSUS_CAPACITY 256u
+
+static const Gfx *sNdsEffectDLCensusKey[NDS_EFFECT_DL_CENSUS_CAPACITY];
+static u32 sNdsEffectDLCensusOtherMode[NDS_EFFECT_DL_CENSUS_CAPACITY];
+static u32 sNdsEffectDLCensusCommands[NDS_EFFECT_DL_CENSUS_CAPACITY];
+
+static void ndsEffectDLCensusRecord(const Gfx *dl, u32 commands,
+                                    u32 othermode_in)
+{
+    u32 count = gNdsEffectDLCensusUnique;
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        if (sNdsEffectDLCensusKey[i] == dl)
+        {
+            if (sNdsEffectDLCensusOtherMode[i] != othermode_in)
+            {
+                gNdsEffectDLCensusStateVariants++;
+            }
+            if (sNdsEffectDLCensusCommands[i] != commands)
+            {
+                gNdsEffectDLCensusCommandVariants++;
+            }
+            return;
+        }
+    }
+    if (count >= NDS_EFFECT_DL_CENSUS_CAPACITY)
+    {
+        /* Overflow is reported, never silently truncated: a capped unique count
+         * reads exactly like a small one and would size the arena short. */
+        gNdsEffectDLCensusOverflow++;
+        return;
+    }
+    sNdsEffectDLCensusKey[count] = dl;
+    sNdsEffectDLCensusOtherMode[count] = othermode_in;
+    sNdsEffectDLCensusCommands[count] = commands;
+    gNdsEffectDLCensusUniqueCommandTotal += commands;
+    if (commands > gNdsEffectDLCensusCommandMax)
+    {
+        gNdsEffectDLCensusCommandMax = commands;
+    }
+    gNdsEffectDLCensusUnique = count + 1u;
+}
+#endif
+
 static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                             GObj *camera_gobj,
                                             u32 initial_geometry_mode)
@@ -9415,6 +9483,18 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         gNdsEffectDLVertexCount = render_stats->vertex_count;
         gNdsEffectDLTriangleCount = render_stats->triangle_count;
         gNdsEffectDLPublishCount++;
+#if NDS_TICK_HUD
+        /* Cumulative twins of the two last-value-wins deltas above: a stop reads
+         * one list from those, and the census needs the whole window. */
+        gNdsEffectDLTriangleTotal +=
+            render_stats->hardware_triangle_count - effect_hw_triangle_before;
+        gNdsEffectDLVertexTotal +=
+            render_stats->hardware_vertex_count - effect_hw_vertex_before;
+        /* OtherModeIn was latched for THIS list before the executor ran, so it
+         * is the entry state; render_stats->othermode_l is now the exit one. */
+        ndsEffectDLCensusRecord(dl, render_stats->command_count,
+                                (u32)gNdsEffectDLSubmitOtherModeIn);
+#endif
     }
 #if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2

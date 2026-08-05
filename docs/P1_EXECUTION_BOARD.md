@@ -388,6 +388,79 @@ candidates. **Exit: ≥32 KB static headroom demonstrated by the same
 `fake_heap_start` probe**, so G3's builder text plus arena bookkeeping fit with
 margin. No performance claim — this row is measured in bytes, not ticks.
 
+### G3 census — TAKEN ON THE CORRECTED WINDOW, BOTH ARMS (cycle 87). The arena is 8 templates.
+
+**The sizing input existed only as an instance count until now.** Every G3 figure
+on this board counts list *instances*; the arena is sized by *unique templates*,
+and nobody had counted those. Measured with `gNdsEffectDLCensus*`
+(`reloc_backend_renderer_dl.c`, all behind `#if NDS_TICK_HUD`), whole match,
+1,600 samples, frames 442–2041, **86.7% coverage, DLDI on, exclusion OFF**.
+Builds `builds/build-c87-census-{boundary,bothcpu}`; artifacts
+`artifacts/performance/2026-08-05_c87-census-{boundary,bothcpu}.json`.
+
+| | **both-CPU (gate)** | **Boundary (shipped)** |
+|---|---:|---:|
+| **unique templates** | **8** | **8** |
+| **command total over the 8** | **669** | **669** |
+| **max commands in one template** | **336** | **336** |
+| overflow / state variants / cmd variants | 0 / 0 / 0 | 0 / 0 / 0 |
+| instances / match | 581 | 1,366 |
+| reuse factor | 72.6x | 170.8x |
+| commands / instance | 111.2 | 159.5 |
+| Exec ticks / instance | 80,394 | 101,359 |
+| texture ticks / instance | 19,406 (24.1% of Exec) | not read this run |
+| triangles / instance | 13.65 | 16.07 |
+| vertices / instance | 40.95 | 48.2 |
+| terminated at `G_ENDDL` | 581/581 | 1,366/1,366 (0 at cap) |
+
+**THE TEMPLATE SET IS ARM-INDEPENDENT.** Uniques, command total and command max
+are *identical* on both arms while instances differ 2.35x. The 8 templates are a
+property of the owner-approved effect model set, not of match dynamics — so a
+fixed arena's size does not depend on how hard the match is, which is what makes
+it safe to fix at build time.
+
+**The pointer is a COMPLETE key: `StateVariants` 0 and `CommandVariants` 0 on
+both arms.** No template was ever submitted under a different entry
+`othermode_l`, and none ever produced a different command count. One packet per
+unique template suffices; no state multiplexing, no per-instance variation to
+encode. This was the open question that decided whether the arena is sized by 8
+or by 8 x (number of entry states).
+
+**The interpretation ratio is 325.7x on Boundary** (669 distinct commands
+executed 217,920 times) and 96.6x on the gate arm.
+
+Cross-checks, all independent: the run reproduces Boundary's banked per-list
+constants (160.1→159.5 commands, ~102,730→101,359 ticks, 16.1→16.07 tris,
+1,360→1,366 lists, all within 1.3%), and **the gate-arm figures the cycle-80
+caveat flagged as 12.6%-window artefacts largely HOLD** — 527–563 lists → 581,
+83,632 ticks/list → **80,394** (−3.9%). Vertices are exactly 3.000x triangles on
+both arms: every triangle is an independent 3-vertex submit, no strip reuse.
+
+Instrument cost **+3,488 bytes** (text +384, data 0, bss +3,104), headroom
+130,976 → **127,488** (36.5x margin), `fake_heap_start` 0x02274864 → 0x02275604
+— the address delta equals the section delta to the byte. Boot probe PASS
+(frames 61–68, 8 samples, slips 0); arena `ChosenSize` 1,376,256 → 1,372,160 and
+`AllocFailCount` 0 → 1, i.e. exactly one 0x1000 step, the predicted re-starve.
+**The shipped ROM pays none of it** — every part sits inside
+`diagnostics.c`'s `#if NDS_TICK_HUD` (3014–3150) and the published target builds
+`NDS_TICK_HUD 0`; the `NDS_TICK_HUD=0` configuration was link-checked via
+`smash64ds-battle-playable-proof-hwtri`.
+
+Both census arms are identity-checked against their banked baselines: Boundary
+WORK-H P95 1,480,576 vs 1,476,672 (+3,904) and gate 1,621,696 vs 1,624,064
+(−2,368) — both inside the ±5,376 floor, so the instrument does not move what it
+measures. **Neither is a new baseline; 1,624,064 still stands.**
+
+**Not measured, and it is the one gap before the arena constant is fixed:**
+per-template triangle/vertex counts. The census totals are per *instance*, so
+packet bytes for the 8 templates is currently an inference from the 1.91x
+command skew (~67 tris / ~200 verts over the set, order 4–8 KB of packet).
+Accumulating tris/verts per table entry is a small addition to the same
+instrument. **The census counts templates actually submitted, so 8 is a LOWER
+bound**: the builder must enumerate the closed effect-model set at match load
+rather than discover templates lazily, because lazy discovery is gameplay-time
+allocation and §3.11 makes that a freeze, not a slowdown.
+
 ### G3 — RE-PRICED ON THE GATE ARM (cycle 79). The prize is 4–9x smaller than this row claims.
 
 **Every number below this heading is Boundary-derived and carries no arm
@@ -407,8 +480,10 @@ measured on `build-c79-g1-bothcpu`, which still seeded the 420-second match, and
 was labelled "whole match". The same applies to G1's *2,953 consults over 563
 lists*. Counts **per window** are unaffected (both are 1,600 presented frames),
 but "per match" is the wrong denominator, and the effect density of an opening
-minute is not that of a full match with its KO-heavy endgame. **Re-measure these
-on the corrected seed before sizing G3 against them.** Already re-derived: the
+minute is not that of a full match with its KO-heavy endgame. **RESOLVED, cycle
+87 — re-measured on the corrected window (see the G3 census section above), and
+the gate-arm column largely HELD: 581 lists/match at 80,394 ticks/list, against
+527–563 at 83,632.** Already re-derived: the
 `MISC` share of the WORK-H excursion is 25.7% (was 29.1%), and the `MISC` lever
 is 48,002 (was 58,240) — still inside the bracket below.
 

@@ -3115,6 +3115,18 @@ volatile u32 gNdsEffectDLTermCapCount;
 volatile u32 gNdsEffectDLTermEndCount;
 volatile u32 gNdsEffectDLTermOtherCount;
 volatile u32 gNdsEffectDLTermOtherMask;
+/* G3 step 0, the unique-template census. Cumulative from boot and deliberately
+ * NOT reset beside the other effect counters: the arena the packet builder
+ * needs must hold every template the match uses, so the wanted figure is the
+ * running total at the last ring stop, not a per-frame value. */
+volatile u32 gNdsEffectDLCensusUnique;
+volatile u32 gNdsEffectDLCensusOverflow;
+volatile u32 gNdsEffectDLCensusStateVariants;
+volatile u32 gNdsEffectDLCensusCommandVariants;
+volatile u32 gNdsEffectDLCensusCommandMax;
+volatile u32 gNdsEffectDLCensusUniqueCommandTotal;
+volatile u32 gNdsEffectDLTriangleTotal;
+volatile u32 gNdsEffectDLVertexTotal;
 /* Task 66: the idle VBlank span, owned by the tick HUD rather than borrowed
  * from gNdsRendererProfileVBlankWaitTicks. That counter only accumulates under
  * NDS_RENDERER_PROFILE_LEVEL >= 1, and both the tick-HUD and proof targets pin

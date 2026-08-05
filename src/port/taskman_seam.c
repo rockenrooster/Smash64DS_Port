@@ -5114,7 +5114,15 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsEffectPhaseDLCount + gNdsEffectPhaseNodeCount +
             gNdsEffectDLCommandTotal + gNdsEffectDLTermCapCount +
             gNdsEffectDLTermEndCount + gNdsEffectDLTermOtherCount +
-            gNdsEffectDLTermOtherMask;
+            gNdsEffectDLTermOtherMask +
+            /* G3 step 0 census, same reason again: written only from a
+             * #if NDS_TICK_HUD block, read only by a debugger. */
+            gNdsEffectDLCensusUnique + gNdsEffectDLCensusOverflow +
+            gNdsEffectDLCensusStateVariants +
+            gNdsEffectDLCensusCommandVariants +
+            gNdsEffectDLCensusCommandMax +
+            gNdsEffectDLCensusUniqueCommandTotal +
+            gNdsEffectDLTriangleTotal + gNdsEffectDLVertexTotal;
         gNdsTickHudBuckets[nNDSTickHudBucketFighters] =
             gNdsTickHudFighterTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketStage] = gNdsTickHudStageTicks;
