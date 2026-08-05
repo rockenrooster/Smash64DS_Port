@@ -697,6 +697,43 @@ volatile u32 gNdsEffectPacketTotalColorWords;
 volatile u32 gNdsEffectPacketTotalMatrixWords;
 volatile u32 gNdsEffectPacketTotalMatrixCommands;
 volatile u32 gNdsEffectPacketTotalVertexCommands;
+/* G3 STEP 2 -- WHICH PREDICATE ACTUALLY DECIDES. The cycle-88 result proved
+ * effect vertices are CPU-projected, but not WHY the raw path was refused, and
+ * the two possibilities call for very different repairs: a single early flag
+ * test is narrow to fix, while a range or matrix condition genuinely true of
+ * effect geometry is a different and larger problem.
+ *
+ * ndsRendererHardwareClassifySubmit returns a distinct value at each of its
+ * predicates, so binning AT THE RETURN makes the histogram name the deciding
+ * predicate rather than merely the resulting class. The one place that is not
+ * one-to-one -- PROJECTED_RANGE_OR_MATRIX is returned from two sites -- is
+ * split into bins 3 and 4 by hand for exactly that reason.
+ *
+ *   0 source_zbuffered == FALSE      4 raw matrix incompatible
+ *   1 decal depth                    5 RAW current matrix   (the raw path)
+ *   2 prim depth                     6 RAW snapshot matrix  (the raw path)
+ *   3 raw vertex range reject        7 cross-matrix triangle
+ *
+ * Binned only while the effect capture is armed, so the population is the
+ * effect layer and nothing else -- the same arming the cycle-88 capture used,
+ * whose count matched gNdsEffectDLSubmitCount exactly. The total is published
+ * beside the bins so it can be checked against the renderer's own independent
+ * effect triangle count; if they disagree the histogram is measuring something
+ * other than what it claims.
+ *
+ * Named scalars rather than an array on purpose: sample-tick-hud-buckets.ps1
+ * validates -ExtraGlobals against the ELF symbol table by bare name, so an
+ * array element is not readable by the standard instrument and a bin nobody
+ * can read is not a measurement. */
+volatile u32 gNdsEffectSubmitNoZ;
+volatile u32 gNdsEffectSubmitDecal;
+volatile u32 gNdsEffectSubmitPrimDepth;
+volatile u32 gNdsEffectSubmitRangeReject;
+volatile u32 gNdsEffectSubmitMatrixReject;
+volatile u32 gNdsEffectSubmitRawCurrent;
+volatile u32 gNdsEffectSubmitRawSnapshot;
+volatile u32 gNdsEffectSubmitCrossMatrix;
+volatile u32 gNdsEffectSubmitTotal;
 
 static u32 sNdsEffectPacketArmed;
 static u32 sNdsEffectPacketCursor;
@@ -792,6 +829,28 @@ static void ndsEffectPacketRecord(u32 command_class, const u32 *words,
         gNdsEffectPacketTotalGeomWords += word_count;
     }
 }
+
+static void ndsEffectPacketSubmitBin(u32 bin)
+{
+    if (sNdsEffectPacketArmed == 0u)
+    {
+        return;
+    }
+    switch (bin)
+    {
+    case 0u: gNdsEffectSubmitNoZ++; break;
+    case 1u: gNdsEffectSubmitDecal++; break;
+    case 2u: gNdsEffectSubmitPrimDepth++; break;
+    case 3u: gNdsEffectSubmitRangeReject++; break;
+    case 4u: gNdsEffectSubmitMatrixReject++; break;
+    case 5u: gNdsEffectSubmitRawCurrent++; break;
+    case 6u: gNdsEffectSubmitRawSnapshot++; break;
+    default: gNdsEffectSubmitCrossMatrix++; break;
+    }
+    gNdsEffectSubmitTotal++;
+}
+
+#define NDS_EFFECT_SUBMIT_BIN(bin) ndsEffectPacketSubmitBin(bin)
 
 void ndsEffectPacketCaptureBegin(void)
 {
@@ -17161,6 +17220,15 @@ static s32 ndsRendererHardwareRawMatrixCompatible(
             (state->matrix_generation != 0u)) ? TRUE : FALSE;
 }
 
+/* The bin macro is defined by the G3 capture block above, which is itself
+ * nested inside the GX-record configuration guard. This classifier is not, so
+ * the fallback has to be unconditional rather than an #else on that block --
+ * otherwise a configuration that compiles the classifier without the capture
+ * fails at the first bin call rather than simply not counting. */
+#ifndef NDS_EFFECT_SUBMIT_BIN
+#define NDS_EFFECT_SUBMIT_BIN(bin) ((void)0)
+#endif
+
 static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     const NDSRendererTraversalState *state,
     u32 i0, u32 i1, u32 i2,
@@ -17177,20 +17245,24 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
 
     if (source_zbuffered == FALSE)
     {
+        NDS_EFFECT_SUBMIT_BIN(0u);
         return NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z;
     }
     if (decal_depth != FALSE)
     {
+        NDS_EFFECT_SUBMIT_BIN(1u);
         return NDS_RENDERER_HW_SUBMIT_PROJECTED_DECAL;
     }
     if (prim_depth != FALSE)
     {
+        NDS_EFFECT_SUBMIT_BIN(2u);
         return NDS_RENDERER_HW_SUBMIT_PROJECTED_PRIM_DEPTH;
     }
     mask = (1u << i0) | (1u << i1) | (1u << i2);
     if ((state->raw_vertex_fit_mask & mask) != mask)
     {
         ndsRendererProfileRecordRawCurrentRangeReject();
+        NDS_EFFECT_SUBMIT_BIN(3u);
         return NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX;
     }
 
@@ -17198,12 +17270,19 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
     {
         if (ndsRendererHardwareRawMatrixCompatible(state) == FALSE)
         {
+            /* Bin 4, NOT bin 3: both returns are the same enum value, so the
+             * class alone cannot say whether the raw path was refused because
+             * the vertices did not fit the v16 range or because the matrix was
+             * unusable. Those are different repairs, so they get different
+             * bins. */
+            NDS_EFFECT_SUBMIT_BIN(4u);
             return NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX;
         }
         ndsRendererProfileRecordRawCurrentCandidate();
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         ndsRendererHardwareQueueRawMatrixPosTest(state, i0);
 #endif
+        NDS_EFFECT_SUBMIT_BIN(5u);
         return NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX;
     }
 
@@ -17221,10 +17300,12 @@ static NDSRendererHWSubmitClass ndsRendererHardwareClassifySubmit(
         ndsRendererHardwareQueueSnapshotMatrixPosTest(
             state, snapshot_id, i0);
 #endif
+        NDS_EFFECT_SUBMIT_BIN(6u);
         return NDS_RENDERER_HW_SUBMIT_RAW_Z_SNAPSHOT_MATRIX;
     }
 
     ndsRendererProfileRecordRawCrossMatrix();
+    NDS_EFFECT_SUBMIT_BIN(7u);
     return NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX;
 }
 

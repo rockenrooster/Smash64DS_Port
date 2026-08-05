@@ -557,6 +557,52 @@ independent `gNdsEffectDLVertexTotal` 31,941** — the capture sees the effect
 layer's complete vertex stream and nothing else. Verts/tris is exactly 3.000,
 reproducing the census.
 
+### G3 step 2 — THE DECIDING PREDICATE IS NAMED (cycle 89). It is the FIRST one, and it is load-bearing.
+
+**100.000% of effect triangles are refused the raw path by
+`source_zbuffered == FALSE`, the first test in
+`ndsRendererHardwareClassifySubmit`.** Boundary arm, frames 900–907, DLDI on,
+build `builds/build-tick-hud-buckets`; artifact
+`artifacts/performance/2026-08-05_c89-effect-submit-class-boundary.json`.
+Binned at each return site, so the index names the *predicate*, not merely the
+resulting class (the two sites returning `PROJECTED_RANGE_OR_MATRIX` are split
+by hand into bins 3 and 4 for that reason):
+
+| bin | predicate | effect triangles | share |
+|---|---|---:|---:|
+| **0** | **`source_zbuffered == FALSE`** | **10,647** | **100.000%** |
+| 1–4 | decal / prim depth / range reject / matrix reject | 0 | 0% |
+| **5–6** | **RAW current + RAW snapshot (the raw path)** | **0** | **0%** |
+| 7 | cross-matrix | 0 | 0% |
+
+**Not one effect triangle reaches the range or matrix checks.** The exclusion is
+one predicate deep, and the range/matrix conditions are untested rather than
+failing — so nothing is known about whether effect geometry would satisfy them.
+
+Engagement is exact: `gNdsEffectSubmitTotal` **10,647 == `gNdsEffectDLTriangleTotal`
+10,647**, the renderer's own independent effect triangle count, so the histogram's
+population is precisely the effect triangles and nothing else. The cycle-88
+result reproduces on this separately linked ROM (SHA `1EA9CE6E` vs `1E06AFAF`):
+645/645 captures, 638 geometry variants, 638 colour matches, 31,941 vertices.
+
+**Why the predicate is load-bearing, and this is the part that decides the row.**
+`source_zbuffered` is the source display list's own `G_ZBUFFER` geometry-mode bit
+(`nds_renderer.c`, `stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER`) — a
+BattleShip asset property. The port's own comment states the constraint:
+**"The DS cannot disable depth testing per polygon."** So for non-Z geometry it
+reproduces N64 painter-order by handing every triangle its own monotonically
+descending depth (`sNdsRendererHardwareProjectedDepth`, step 6) and **emitting
+that z explicitly** — which requires the CPU to own the vertex, hence the
+projection, hence cycle 88's per-instance geometry. The projected path is not an
+oversight to be flipped; it is how draw order is reproduced on hardware with no
+per-polygon depth-test disable.
+
+**Consequence: there is no raw path for non-Z geometry today.** Bin 0 is not a
+gate that effects fail, it is a gate they are not eligible for. Making effects
+raw means giving them hardware-computed depth in place of the port's synthetic
+painter order — a **visual** change to layering, and therefore the owner's call.
+See the escalation below; do not route effects to the raw path without it.
+
 ### G3 — RE-PRICED ON THE GATE ARM (cycle 79). The prize is 4–9x smaller than this row claims.
 
 **Every number below this heading is Boundary-derived and carries no arm

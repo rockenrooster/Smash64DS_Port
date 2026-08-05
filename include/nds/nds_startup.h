@@ -4400,6 +4400,18 @@ extern volatile u32 gNdsEffectPacketTotalColorWords;
 extern volatile u32 gNdsEffectPacketTotalMatrixWords;
 extern volatile u32 gNdsEffectPacketTotalMatrixCommands;
 extern volatile u32 gNdsEffectPacketTotalVertexCommands;
+/* G3 step 2: which predicate in ndsRendererHardwareClassifySubmit refuses the
+ * raw path for effect triangles. Binned at the return sites, so index == the
+ * deciding predicate; see the table beside the definition. */
+extern volatile u32 gNdsEffectSubmitNoZ;
+extern volatile u32 gNdsEffectSubmitDecal;
+extern volatile u32 gNdsEffectSubmitPrimDepth;
+extern volatile u32 gNdsEffectSubmitRangeReject;
+extern volatile u32 gNdsEffectSubmitMatrixReject;
+extern volatile u32 gNdsEffectSubmitRawCurrent;
+extern volatile u32 gNdsEffectSubmitRawSnapshot;
+extern volatile u32 gNdsEffectSubmitCrossMatrix;
+extern volatile u32 gNdsEffectSubmitTotal;
 void ndsEffectPacketCaptureBegin(void);
 void ndsEffectPacketCaptureEnd(void);
 /* The per-template verdict, accumulated in reloc_backend_renderer_dl.c beside
