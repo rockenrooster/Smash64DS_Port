@@ -97,6 +97,69 @@ bumps on eviction, and the span scan hoists inside the effect-submit guard.
 *"the most demanding parts of the game are drawing the VFX like projectiles (fox
 laser gun, Mario fireball), the revival platform, impact wave, etc."*
 
+### UPDATE, same cycle — the code-level attribution above is FALSIFIED, and the placement floor was wrong
+
+**The three named hunks are not the +52,928.** Reverting all three together
+(stage lighting, the revalidation pre-pass, the display-proc span scan), paired
+by frame over 128 frames against the baseline: `STG` **−704**, `MISC`
+**−4,928**, `WORK-H` median **+576**. That is nothing. The attribution was
+code-level inference and it did not survive measurement; it is recorded as
+falsified rather than retried from another angle. Cuts 2 and 3 as scoped are
+dead, and the stage-lighting behaviour risk — it sits on a closed `BUGS.md` row
+the owner confirmed by eye — is not worth spending against a dead hypothesis.
+
+**The span-scan gate was VOID, not falsified, and a counter proved which.**
+`gNdsGbiOtherModeLWriteCount` differenced in-battle reads **27.34 render-mode
+writes per frame against 27.53 display procs — a ratio of 0.993, one write per
+proc.** The premise ("a handful a frame, from the bracket procs") was simply
+wrong, so the gate could skip at most ~0.7% of calls and never had the
+opportunity to move `MISC`. It was live, exact code that could not win. Reverted;
+it cost `FTR` +2,048 P50 / +3,328 P95 in pure text rent.
+
+**THE PER-BUCKET PLACEMENT FLOOR IS ≥8,544, NOT ±5,376.** The revert arm above
+only *removed* code and `FTR` moved **+8,544** — a bucket it does not touch. The
+±5,376 figure quoted all over this board is the `WORK-H` P95 floor; buckets
+partly cancel when summed, which is why the same arm moved `WORK-H` median only
++576. **A per-bucket delta of 5–8K is not a result**, and several historical
+per-bucket wins in that band cannot be distinguished from placement. Judge on
+`WORK-H`; use buckets to locate, never to decide.
+
+**The +52,928 stands and is now OPEN and UNOWNED.** It is measured on identical
+frame ids between `2494daf9ad` and `e49a98167c` with a null control, so it is
+real; it is simply not in the code that was named. Untested suspects, all inside
+`2494daf9ad..999fcdf8`: `38bba475`'s *other* parts — the `G_CC_BLENDPE` prim/env
+texture-variant bake, whose own commit message flags *"any effect that ramps or
+fades its colour mints one per frame… unmeasured"*, and the `key_generation`
+fence — plus `0a060c7b`'s alpha/blend recogniser and the texture-cache commits
+`e8c675d3` / `999fcdf8`. **Parked deliberately**: three arms produced no
+recovery, and every one was measured on a 128-frame single-CPU window that the
+owner has since identified as the wrong basis. Re-open it against the whole-match
+both-CPU instrument, not before.
+
+**Bisect method note.** The worktree route fails here: generators including
+`generate_nds_native_stage.py` changed inside the range, so an old-commit build
+mixes HEAD stage data with old runtime code. Revert the named hunks in the main
+tree instead — sound when the suspects land in different buckets, because one arm
+then separates both.
+
+**Instrument, committed `58ca8723`.** `sample-tick-hud-buckets.ps1` now takes
+**repeated ring dumps** — `-Samples` to 4096, one stop every `-RingStopStride`
+(default 96), stitched into one series, **ROM byte-identical** so all prior
+evidence stays comparable. Validated at 160 samples over 2 stops: 95 of 127
+overlapping rows bit-identical to the baseline, `STG`/`MISC` medians exact. Note
+that ring slots and presented frames are **not** the same count — a 64-frame span
+advanced the ring 63 slots, because the stop marker and the ring write are
+different points in the iteration — so the harness hard-fails only on certain
+loss and emits per-stop `ringStopSkews` rather than asserting an invariant nobody
+established. The ring was never a censored instrument: `sBattleTickHudRingCount`
+saturates at 128 (`src/nds/nds_platform.c:2137`) and the script already threw
+when `-Samples` exceeded it.
+
+**Pre-existing red, not ours:** `check-decomp-header-mirror.py` fails on HEAD
+with two disagreements, `FTSTAT_OPENING1_START` and `nSYAudioBGMExplain`, in
+files this cycle never touched. A guard that exists to catch a class of bug is
+currently blind to it; queue a fix rather than letting it ride as permanent red.
+
 ## PUBLISHED 2026-08-04, cycle 75. Boundary NOT re-run (owner's decision). Current baseline:
 
 | ROM | sha256 |

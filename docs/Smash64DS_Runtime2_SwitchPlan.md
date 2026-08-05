@@ -240,6 +240,32 @@ noisy, near a gate, or surprising. Noise policy: <10K ignore unless free;
 exact; 50–100K valuable; 100K+ major target. Do not accept a subsystem on P50
 if it creates P95 spikes.
 
+**The per-bucket placement floor is ≥8,544, and it is NOT the ±5,376 that
+applies to `WORK-H` P95.** Calibrated 2026-08-04 by an arm that only *removed*
+code: `FTR` moved **+8,544** while the change touched nothing in `FTR`. Buckets
+partly cancel when summed, which is why `WORK-H` is the more stable series — the
+same arm moved `WORK-H` median +576. So a per-bucket delta in the 5–8K range is
+**not a result**, however clean the story around it, and several historical
+per-bucket "wins" in that band cannot be distinguished from placement. Judge a
+change on `WORK-H`; use bucket deltas to locate, never to decide.
+
+**Two configurations, two numbers, never merged.** `NDS_R2_BOTH_CPU=1` (Mario
+CPU vs Fox CPU, continuous attacks, maximal live hitbox population) is the
+**optimization target** — it is the most stressful way the game is actually
+played, and the default Boundary understates cost badly because with no
+controller attached the human Mario stands still for the whole window.
+`NDS_R2_BOTH_CPU=0` at mode 163 is the **gate of record**, because
+`PROJECT_GOAL.md` gates on *representative* gameplay and `Makefile:305-308`
+forbids reporting a stress P95 as the Boundary figure. Label every figure with
+the arm it came from.
+
+**A 128-frame window is a weak instrument for anything transient.** It is ~4.3 s
+of a 60 s match at a fixed early offset, so it can miss every KO, respawn and
+revival platform — i.e. exactly the content the owner reports as the most
+demanding in the game (2026-08-04). It also puts P95 at sorted index 120 with
+only seven frames above it. `sample-tick-hud-buckets.ps1` takes repeated ring
+dumps as of `58ca8723`; use a whole-match span for any gate reading.
+
 All gate readings are taken **DLDI-on** — the owner's I/O configuration,
 pinned in the harness 2026-07-29. DLDI-off is optimistic by roughly 30K P95;
 report it only as a secondary, clearly labelled number, never as the gate
