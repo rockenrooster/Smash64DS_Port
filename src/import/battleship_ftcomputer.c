@@ -153,6 +153,24 @@ void ftComputerSetupAll(GObj *fighter_gobj)
 void ftComputerProcessAll(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
+    /* Cycle 86 SCPU. The level-3 CPU decision path, reached once per CPU fighter
+     * per logic update from ftMainProcUpdateInterrupt (decomp ft/ftmain.c:1269,
+     * case nFTPlayerKindCom), so it is nested inside that proc and therefore
+     * inside GCRA. This is the one sub-owner the two arms cannot share: the
+     * gate arm runs BOTH fighters as CPU and Boundary runs one, so SCPU should
+     * read about 2x on the gate arm. That ratio is the engagement proof.
+     *
+     * The guard is inverted into if/else rather than early-returning so the
+     * bracket has a single exit and the paused-Fox path is still charged what it
+     * costs -- mechanically identical (`if (c) { A; return; } B;` ==
+     * `if (c) { A; } else { B; }`), the same technique cycle 85 used on
+     * ndsR2AnimCachePreloadStep. cpuGetTiming is forward-declared for the reason
+     * given in battleship_lbparticle.c:1697; libnds nds/timers.h:255 is the
+     * authority for the signature. */
+#if NDS_TICK_HUD
+    extern u32 cpuGetTiming(void);
+    u32 computer_start = cpuGetTiming();
+#endif
 
     if ((gNdsSceneHarnessMode ==
          NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_REALTIME) &&
@@ -163,13 +181,17 @@ void ftComputerProcessAll(GObj *fighter_gobj)
         fp->input.cp.button_inputs = 0u;
         fp->input.cp.stick_range.x = 0;
         fp->input.cp.stick_range.y = 0;
-        return;
     }
-
-    ndsBaseFTComputerProcessAll(fighter_gobj);
+    else
+    {
+        ndsBaseFTComputerProcessAll(fighter_gobj);
 #if NDS_SHIP_TELEMETRY
-    gNdsFTComputerProcessCount++;
-    ndsFTComputerRecord(fp);
+        gNdsFTComputerProcessCount++;
+        ndsFTComputerRecord(fp);
+#endif
+    }
+#if NDS_TICK_HUD
+    gNdsTickHudSrcComputerTicks += cpuGetTiming() - computer_start;
 #endif
 }
 

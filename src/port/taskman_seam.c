@@ -5161,6 +5161,16 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsTickHudSrcHitDetectTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketSrcAnimWarm] =
             gNdsTickHudSrcAnimWarmTicks;
+        /* Cycle 86 SBAS split, published on the same terms and for the same
+         * reason: nested inside SRC, so after `named` and never part of it. */
+        gNdsTickHudBuckets[nNDSTickHudBucketSrcRunAll] =
+            gNdsTickHudSrcRunAllTicks;
+        gNdsTickHudBuckets[nNDSTickHudBucketSrcComputer] =
+            gNdsTickHudSrcComputerTicks;
+        gNdsTickHudBuckets[nNDSTickHudBucketSrcCatch] =
+            gNdsTickHudSrcCatchTicks;
+        gNdsTickHudBuckets[nNDSTickHudBucketSrcParams] =
+            gNdsTickHudSrcParamsTicks;
         /* Feed the HUD percentile window here, on the per-iteration path. The
          * HUD renderer only runs about twice a second, so sampling inside it
          * would build the distribution from half-second-spaced single frames
@@ -5234,6 +5244,10 @@ void ndsR2HostBattleIterationBegin(void)
     gNdsTickHudSourceTicks = 0u;
     gNdsTickHudSrcHitDetectTicks = 0u;
     gNdsTickHudSrcAnimWarmTicks = 0u;
+    gNdsTickHudSrcRunAllTicks = 0u;
+    gNdsTickHudSrcComputerTicks = 0u;
+    gNdsTickHudSrcCatchTicks = 0u;
+    gNdsTickHudSrcParamsTicks = 0u;
     gNdsTickHudFlushTicks = 0u;
     gNdsTickHudVBlankWaitTicks = 0u;
 #endif
@@ -7934,6 +7948,10 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 gNdsTickHudSourceTicks = 0u;
                 gNdsTickHudSrcHitDetectTicks = 0u;
                 gNdsTickHudSrcAnimWarmTicks = 0u;
+                gNdsTickHudSrcRunAllTicks = 0u;
+                gNdsTickHudSrcComputerTicks = 0u;
+                gNdsTickHudSrcCatchTicks = 0u;
+                gNdsTickHudSrcParamsTicks = 0u;
                 gNdsTickHudFlushTicks = 0u;
                 gNdsTickHudVBlankWaitTicks = 0u;
 #endif

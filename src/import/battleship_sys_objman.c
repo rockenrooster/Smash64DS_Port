@@ -77,7 +77,33 @@ void gcRunAll(void)
     u16 before = gSYControllerDevices[0].button_tap;
     u16 after;
 
+    /* Cycle 86 GCRA. This wrapper is the SOLE gateway to the whole simulation
+     * inside the SRC bracket: decomp's scene update (scvsbattle.c:75) calls
+     * ifCommonBattleUpdateInterfaceAll, whose game_status switch reaches
+     * ifCommonBattleGoUpdateInterface, which ends here (ifcommon.c:2970). So the
+     * span below is every GObj process -- both fighters' six-proc chains, the
+     * camera, effects, items, weapons and interface objects -- and SBAS - GCRA
+     * is exactly the work SRC does OUTSIDE the simulation. cpuGetTiming reads the
+     * free-running timer pair and never resets it, so nesting this inside SRC's
+     * own bracket is safe. Bracketing the existing port wrapper is what keeps
+     * decomp/ untouched. */
+#if NDS_TICK_HUD
+    /* cpuGetTiming and the bucket global are forward-declared here rather than
+     * reached by including nds/timers.h and nds/nds_startup.h. This TU's include
+     * order is load bearing -- it compiles decomp's objman.c in place behind two
+     * renames -- and two prototypes are a smaller change than two headers in
+     * that chain. libnds nds/timers.h:255 is the authority for the signature;
+     * include/nds/nds_startup.h is the authority for the global. Same technique
+     * as battleship_lbparticle.c:1697. */
+    extern u32 cpuGetTiming(void);
+    extern volatile u32 gNdsTickHudSrcRunAllTicks;
+    u32 runall_start = cpuGetTiming();
+#endif
+
     ndsBaseGcRunAll();
+#if NDS_TICK_HUD
+    gNdsTickHudSrcRunAllTicks += cpuGetTiming() - runall_start;
+#endif
     after = gSYControllerDevices[0].button_tap;
 
     gNdsGcRunAllEntryTapMask |= before;

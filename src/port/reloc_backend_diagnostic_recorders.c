@@ -5627,7 +5627,18 @@ void ftMainSearchFighterCatch(GObj *this_gobj)
 
 void ftMainProcSearchCatch(GObj *fighter_gobj)
 {
+    /* Cycle 86 SCAT. Grab/catch search, fighter proc priority 2 (decomp
+     * ft/ftmanager.c:861) -- the sequential sibling of SHDT at priority 1, and
+     * the other search population that can switch on. Nested inside GCRA and
+     * disjoint from every other bracketed proc. */
+#if NDS_TICK_HUD
+    u32 catch_start = cpuGetTiming();
+#endif
+
     battleship_ftMainProcSearchCatch(fighter_gobj);
+#if NDS_TICK_HUD
+    gNdsTickHudSrcCatchTicks += cpuGetTiming() - catch_start;
+#endif
 }
 
 void ftMainSearchHitItem(GObj *fighter_gobj)
@@ -5682,9 +5693,22 @@ void ftMainProcSearchHitAll(GObj *fighter_gobj)
 
 void ftMainProcParams(GObj *fighter_gobj)
 {
+    /* Cycle 86 SPRM. Fighter proc priority 0 (decomp ft/ftmanager.c:863), the
+     * last of the six and the one that carries the animation/event interpreter
+     * and the status/param update. The audit hook is deliberately INSIDE the
+     * bracket: it is compiled out of the measuring ROM
+     * (NDS_FIGHTER_ANIM_AUDIT 0) so it costs nothing there, and if it is ever
+     * enabled its cost belongs to this owner rather than silently to SGCO. */
+#if NDS_TICK_HUD
+    u32 params_start = cpuGetTiming();
+#endif
+
     battleship_ftMainProcParams(fighter_gobj);
 #if NDS_FIGHTER_ANIM_AUDIT
     ndsFighterAnimAuditUpdate(fighter_gobj);
+#endif
+#if NDS_TICK_HUD
+    gNdsTickHudSrcParamsTicks += cpuGetTiming() - params_start;
 #endif
 }
 #else

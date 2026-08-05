@@ -60,9 +60,34 @@ if ($rows.Count -eq 0) { throw "No rows in $RowsCsv." }
 #
 # Detected, not required: every banked CSV predates these columns and must still
 # analyse, because reproducing the banked table is how this script gets trusted.
+#
+# SBAS SPLIT (cycle 86). SBAS carried 61.5% of the gate arm's WORK-H excursion,
+# so it is split in turn. The composition was verified from source before the
+# brackets were placed: SRC brackets ndsTask39EffectsUpdate + scVSBattleFuncUpdate,
+# and the decomp scene update reaches gcRunAll (ifcommon.c:2970), which is the
+# SOLE gateway to the simulation. The fighter proc chain is ftmanager.c:858-863.
+#
+#   GCRA  gcRunAll                     the entire simulation (ringed)
+#   SCPU  ftComputerProcessAll         level-3 CPU AI, inside the interrupt proc
+#   SCAT  ftMainProcSearchCatch        grab/catch search, proc priority 2
+#   SPRM  ftMainProcParams             anim/event/status proc, priority 0
+#   SOUT  SRC - SWRM - GCRA            work in SRC OUTSIDE the simulation (derived)
+#   SGCO  GCRA - SCPU - SCAT - SHDT - SPRM   unattributed inside the sim (derived)
+#
+# The seven owners SHDT/SWRM/SOUT/SCPU/SCAT/SPRM/SGCO are DISJOINT and partition
+# SRC exactly, which is what the closure check below verifies. Note SHDT nests
+# inside GCRA, so it is subtracted there and never double-counted; the cycle-85
+# roll-up SBAS = SRC - SHDT - SWRM is reported as SOUT+SCPU+SCAT+SPRM+SGCO.
+# Both derived residuals are non-negative by construction if and only if the
+# nesting is real, so both throw -- the same falsifier, one level deeper.
 $csvColumns = @($rows[0].PSObject.Properties.Name)
-$srcSubOwners = @('SHDT', 'SWRM', 'SBAS')
 $hasSrcSplit = ($csvColumns -contains 'SHDT') -and ($csvColumns -contains 'SWRM')
+$hasSbasSplit = $hasSrcSplit -and
+    (@('GCRA', 'SCPU', 'SCAT', 'SPRM') |
+        Where-Object { $csvColumns -notcontains $_ }).Count -eq 0
+$srcSubOwners = if ($hasSbasSplit) {
+    @('SHDT', 'SWRM', 'SOUT', 'SCPU', 'SCAT', 'SPRM', 'SGCO')
+} else { @('SHDT', 'SWRM', 'SBAS') }
 
 function Get-Pct {
     param([int64[]]$Values, [double]$Q)
@@ -83,6 +108,15 @@ $all = @($rows | ForEach-Object {
         $r['SWRM'] = [int64]$_.SWRM
         $r['SBAS'] = $r['SRC'] - $r['SHDT'] - $r['SWRM']
     }
+    if ($hasSbasSplit) {
+        $r['GCRA'] = [int64]$_.GCRA
+        $r['SCPU'] = [int64]$_.SCPU
+        $r['SCAT'] = [int64]$_.SCAT
+        $r['SPRM'] = [int64]$_.SPRM
+        $r['SOUT'] = $r['SRC'] - $r['SWRM'] - $r['GCRA']
+        $r['SGCO'] = $r['GCRA'] - $r['SCPU'] - $r['SCAT'] -
+                     $r['SHDT'] - $r['SPRM']
+    }
     [pscustomobject]$r
 })
 
@@ -97,6 +131,30 @@ if ($hasSrcSplit) {
                "$($worst.frame): SRC $($worst.SRC), SHDT $($worst.SHDT), " +
                "SWRM $($worst.SWRM), residual $($worst.SBAS)). The split cannot " +
                "be attributed.")
+    }
+}
+
+# The same falsifier one level deeper. SOUT < 0 means gcRunAll ran outside the
+# SRC bracket on that frame; SGCO < 0 means a bracketed fighter proc ran outside
+# gcRunAll. Either makes every share below meaningless, so either throws.
+if ($hasSbasSplit) {
+    foreach ($probe in @(
+        @{ col = 'SOUT'
+           why = 'gcRunAll (GCRA) is not nested inside SRC: SRC - SWRM - GCRA < 0' }
+        @{ col = 'SGCO'
+           why = ('a bracketed fighter proc is not nested inside gcRunAll: ' +
+                  'GCRA - SCPU - SCAT - SHDT - SPRM < 0') })) {
+        $bad = @($all | Where-Object { $_.($probe.col) -lt 0 })
+        if ($bad.Count -ne 0) {
+            $worst = ($bad | Sort-Object -Property $probe.col | Select-Object -First 1)
+            throw ("$($probe.why): $($bad.Count) of $($all.Count) frames " +
+                   "(worst frame $($worst.frame): SRC $($worst.SRC), " +
+                   "GCRA $($worst.GCRA), SCPU $($worst.SCPU), " +
+                   "SCAT $($worst.SCAT), SHDT $($worst.SHDT), " +
+                   "SPRM $($worst.SPRM), SWRM $($worst.SWRM), " +
+                   "residual $($worst.($probe.col))). The split cannot be " +
+                   "attributed.")
+        }
     }
 }
 

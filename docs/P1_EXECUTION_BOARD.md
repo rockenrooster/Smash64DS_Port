@@ -546,6 +546,125 @@ transitions, CPU AI, particle bytecode, map collision, camera. **Splitting it is
 the next instrument row** — it cannot be optimised as one thing, and the same
 mistake that made `MISC` a campaign is available here.
 
+### The SBAS split — MEASURED, cycle 86. `SGCO` owns it; `SCPU` is a P50 lever.
+
+**The composition above was VERIFIED before instrumenting, and it was wrong in
+one load-bearing way.** `SRC` brackets `ndsTask39EffectsUpdate` +
+`scVSBattleFuncUpdate` (`taskman_seam.c:4442-4466`, its *only* writer, run twice
+per presented frame). But decomp's scene update is a one-liner
+(`sccommon/scvsbattle.c:75`) calling `ifCommonBattleUpdateInterfaceAll`, whose
+`game_status` switch reaches `ifCommonBattleGoUpdateInterface`, which **ends in
+`gcRunAll` (`ifcommon.c:2970`)**. So `gcRunAll` is the SOLE gateway to the whole
+simulation inside `SRC`, and it already had a port wrapper
+(`battleship_sys_objman.c:75`) — **no `decomp/` edit was needed.** The fighter
+proc chain is `ft/ftmanager.c:858-863`: six procs per fighter, priority 5→0
+(`UpdateInterrupt`, `PhysicsMapDefault`, `PhysicsMapCapture`, `SearchCatch`,
+`SearchHitAll` = `SHDT`, `Params`).
+
+**Measured dead, do not re-nominate:** all seven fighter-loop branches in the
+port's `scVSBattleFuncUpdate` (`battleship_scvsbattle.c:347-384`) read **0** on
+the gate arm — `gNdsFighterNaturalMotionRunAllCount` and all six siblings. The
+`gcRunAll` call at `reloc_backend_movement.c:12227` is in that dead chain.
+Bracketing it — the obvious reading of the source — would have measured nothing.
+
+Whole match, 1,600 samples, frames 443–2042, stride 96, DLDI on, **86.7%
+coverage**, exclusion OFF, `slips=0`. Build `builds/build-c86-sbas-bothcpu`;
+artifacts `artifacts/performance/2026-08-05_c86-gate-bothcpu{,-rows,-excursion}`.
+Identity closes with **max per-frame error 0** and both derived residuals are
+non-negative on every frame.
+
+| sub-owner | excursion | %SRC | %WORK-H | clean mean | hot mean | **hot/clean** |
+|---|---:|---:|---:|---:|---:|---:|
+| **`SGCO`** unattributed in `gcRunAll` | **153,291** | **73.6%** | **52.0%** | 256,011 | 409,303 | 1.60x |
+| `SHDT` hit detection | 25,995 | 12.5% | 8.8% | 4,470 | 30,464 | 6.81x |
+| `SPRM` `ftMainProcParams` | 14,774 | 7.1% | 5.0% | 2,011 | 16,785 | **8.35x** |
+| `SCPU` `ftComputerProcessAll` | 14,196 | 6.8% | 4.8% | 42,504 | 56,700 | **1.33x** |
+| `SCAT` `ftMainProcSearchCatch` | 83 | 0.0% | 0.0% | 1,522 | 1,605 | 1.05x |
+| `SWRM` anim warm | 2 | 0.0% | 0.0% | 597 | 600 | 1.00x |
+| `SOUT` outside the sim | −100 | −0.0% | −0.0% | 4,490 | 4,389 | 0.98x |
+
+**Boundary arm, same window/method** (`builds/build-c86-sbas-boundary`,
+`WORK-H` P95 1,476,352 against the banked 1,476,672 — **320 apart**, a near-exact
+reproduction). Identity max per-frame error **0**; `MISC` is still Boundary's tail
+at 68.7% and `SRC` is 29.3%, so the two-track scope is unchanged:
+
+| sub-owner | excursion | %SRC | %WORK-H | clean mean | hot mean | **hot/clean** |
+|---|---:|---:|---:|---:|---:|---:|
+| **`SGCO`** | **77,384** | **81.3%** | 23.8% | 254,300 | 331,683 | 1.30x |
+| `SHDT` | 10,797 | 11.3% | 3.3% | 4,007 | 14,804 | 3.69x |
+| `SPRM` | 5,338 | 5.6% | 1.6% | 1,819 | 7,156 | 3.93x |
+| `SCPU` | 1,754 | 1.8% | 0.5% | 20,132 | 21,885 | **1.09x** |
+| `SCAT` | 37 | 0.0% | 0.0% | 1,396 | 1,432 | 1.03x |
+| `SWRM` | −1 | −0.0% | −0.0% | 585 | 584 | 1.00x |
+| `SOUT` | −143 | −0.2% | −0.0% | 4,443 | 4,300 | 0.97x |
+
+**`SGCO` owns `SRC` on BOTH arms — 73.6% and 81.3%.** Like the cycle-85 ratio,
+that arm-independence is what makes it a structural finding rather than a stress
+-config artifact. `SCPU` is flat on both (1.33x / 1.09x), so it is a P50 lever on
+the gate arm and nothing at all on the shipped one.
+
+**Engagement proof for the `SCPU` bracket, predicted before it was measured.**
+The gate arm runs BOTH fighters as CPU and Boundary runs one, so the bracket must
+read ~2x. Clean-frame means: **42,504 (gate) vs 20,132 (Boundary) = 2.11x.** The
+span is measuring what it claims, and this is the negative control the flat
+reading needed before it could be trusted.
+
+**READ THE hot/clean COLUMN BEFORE NOMINATING ANYTHING.** `SCPU` is the trap:
+72,512 ticks at p50 mid-match makes the level-3 CPU AI look like the prize, and
+on the both-CPU arm it runs twice. But it is **1.33x** hot-vs-clean — a large
+FLAT owner, i.e. a P50 lever that cannot move the gate, exactly like the
+particles (flat ~47K) that already cost this campaign time. It is 6.8% of the
+SRC excursion. Conversely `SPRM` is small in absolute terms yet switches
+**8.35x**, the same bimodal shape that makes `SHDT` real. Absolute size and
+switching behaviour are different questions and only the second owns a tail.
+
+**What `SGCO` actually is, and what a split would have to bracket.** `SGCO` =
+`GCRA − SCPU − SCAT − SHDT − SPRM`, i.e. everything inside `gcRunAll` that the
+four bracketed spans do not claim:
+
+| content | port-side wrapper? |
+|---|---|
+| `ftMainProcUpdateInterrupt` less its AI | **NO** — decomp name, unwrapped |
+| `ftMainProcPhysicsMapDefault` | **NO** — decomp name, unwrapped |
+| `ftMainProcPhysicsMapCapture` | **NO** — decomp name, unwrapped |
+| `mpProcessUpdateMain` (map collision) | YES — `battleship_mpprocess_live_bridge.c:150` |
+| camera / effect / item / weapon / interface GObj procs | mixed; not enumerated |
+
+**The three unwrapped procs are why this split stopped where it did, and it is
+NOT a `decomp/` question.** `linker/nds_hot_text.ld:207-209` pins all three into
+ITCM **by exact symbol name** under a size ASSERT. The port's own rename-on-
+include pattern (`src/import/battleship_ftmain.c:47-70`) could wrap them without
+touching `decomp/` — but renaming them breaks those linker-script matches and
+moves the code out of hot text, changing the very cost being measured. **A next
+cycle that wants them must move the `.ld` entries in the same edit**, and should
+expect `mpProcessUpdateMain` to be nested inside the physics procs (so it is an
+overlay, not a disjoint owner — do not subtract it blindly).
+
+**Instrument cost and health.** +2,368 bytes (four ring buckets) on top of
+cycle 85's +1,152; `fake_heap_start` `0x02273f24` → **`0x02274864`**, leaving
+**130,976 bytes proven headroom** (`check-boot-headroom.ps1` OK). Boot probe
+PASS (frames 60–67, 8 samples, `slips=0`), and the arena stayed at its full
+request (`ChosenSize` 1,376,256, `AllocFailCount` 0) — the instrument did not
+re-starve what G2 freed. `named` read 959,960 on the boot probe, exactly
+FTR+STG+BG+AUD+HUD+SRC+MISC, proving the four new buckets are excluded from
+`named`; had they been included it would have read 1,226,456. **The shipped ROM
+pays nothing** — every bucket, global, bracket and name is behind
+`#if NDS_TICK_HUD`, and the published `-hwtri` target builds `NDS_TICK_HUD 0`.
+
+**A liveness lesson worth keeping: `SCPU` reads 0 at frames 60–67.** The CPU AI
+genuinely is not called during the pre-match countdown, so the boot probe alone
+would have looked exactly like a dead counter. It was proven non-zero (72,512
+p50) by an 8-sample probe at frame 600 **before** the whole-match runs were
+spent — standing rule 3 doing its job.
+
+**Do NOT re-bank the gate baseline on c85 (cycle 86).** Three whole-match
+gate-arm `WORK-H` P95 readings on identical terms (both-CPU, 86.7% coverage,
+1,600 samples, DLDI on, exclusion OFF): c80 **1,624,064** (banked), c85
+**1,612,928** (−11,136), c86 **1,625,088** (**+1,024**). c86 carries *more*
+instrument than c85 yet lands inside the ±5,376 floor of the banked figure, so
+c85's dip is not reproduced and its attribution to G2's z-buffer free was
+premature. **1,624,064 stands.**
+
 **`SWRM` is measured INERT over the gate window, and that is a negative result
 worth keeping.** It was designed as the honest load signal the circular
 `SRC > 2x median` rule needs. It cannot serve: the 41-entry warm list is

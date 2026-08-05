@@ -3028,6 +3028,15 @@ volatile u32 gNdsTickHudSourceTicks;
  * published as their own ring buckets but NOT added to `named`. */
 volatile u32 gNdsTickHudSrcHitDetectTicks;
 volatile u32 gNdsTickHudSrcAnimWarmTicks;
+/* Cycle 86 SBAS split. GCRA is gcRunAll -- the sole gateway to the whole
+ * simulation inside SRC (decomp ifcommon.c:2970) -- and SCPU/SCAT/SPRM are three
+ * of the six per-fighter procs, each bracketed on an existing port wrapper so no
+ * decomp/ edit was needed. Nested inside SRC exactly like the cycle-85 pair, so
+ * they are published after `named` is summed and never added to it. */
+volatile u32 gNdsTickHudSrcRunAllTicks;
+volatile u32 gNdsTickHudSrcComputerTicks;
+volatile u32 gNdsTickHudSrcCatchTicks;
+volatile u32 gNdsTickHudSrcParamsTicks;
 volatile u32 gNdsTickHudFlushTicks;
 /* R2-07: MISC is DrawTicks minus (FTR + STG + BG + HUD) plus the flush, i.e.
  * everything drawn that no other bucket claims. It is now the campaign, and a

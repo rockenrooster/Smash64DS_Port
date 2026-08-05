@@ -233,8 +233,14 @@ $target = 'smash64ds-battle-playable-tickhud-hwtri'
 # index is unchanged. They are nested inside SRC and must stay out of every
 # "named" total below, or the share double-counts them.
 $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
-                 'WAIT', 'WORK', 'SHDT', 'SWRM')
-$srcSubBuckets = @('SHDT', 'SWRM')
+                 'WAIT', 'WORK', 'SHDT', 'SWRM',
+                 'GCRA', 'SCPU', 'SCAT', 'SPRM')
+# GCRA/SCPU/SCAT/SPRM are the cycle-86 SBAS split, appended after the cycle-85
+# pair on the same terms: sub-spans of SRC, so out of every "named" total.
+# GCRA is gcRunAll -- the whole simulation; SCPU/SCAT/SPRM are three of the six
+# per-fighter procs. The analyzer derives SOUT = SBAS - GCRA and
+# SGCO = GCRA - SCPU - SCAT - SHDT - SPRM at zero byte cost.
+$srcSubBuckets = @('SHDT', 'SWRM', 'GCRA', 'SCPU', 'SCAT', 'SPRM')
 # Must match enum NDSTickHudNativeOwnerFallbackReason in include/nds/nds_startup.h.
 $fallbackReasons = if ($FallbackCensus) {
     @('calls', 'eligible', 'animLock', 'selected', 'displayList',

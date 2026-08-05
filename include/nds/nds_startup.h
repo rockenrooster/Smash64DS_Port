@@ -4193,6 +4193,41 @@ enum NDSTickHudBucket {
      * proof that these two spans really are nested inside SRC. */
     nNDSTickHudBucketSrcHitDetect,
     nNDSTickHudBucketSrcAnimWarm,
+    /* Cycle 86 SBAS split, appended after the cycle-85 pair for the same reason
+     * they were appended after WORK: every index that already existed keeps its
+     * value, so every banked measurement stays comparable.
+     *
+     * The composition was VERIFIED before these were chosen, not assumed. SRC
+     * brackets ndsTask39EffectsUpdate + scVSBattleFuncUpdate; the decomp scene
+     * update is a one-liner (scvsbattle.c:75) calling
+     * ifCommonBattleUpdateInterfaceAll, whose game_status switch reaches
+     * ifCommonBattleGoUpdateInterface, which ends in gcRunAll (ifcommon.c:2970).
+     * gcRunAll is therefore the SOLE gateway to the entire simulation inside
+     * SRC, and it already has a port wrapper -- so no decomp/ edit is needed.
+     *
+     * The fighter proc chain is decomp ft/ftmanager.c:858-863, six procs per
+     * fighter in priority order 5..0: UpdateInterrupt, PhysicsMapDefault,
+     * PhysicsMapCapture, SearchCatch, SearchHitAll (= SHDT), Params. Four of the
+     * six sub-owners below are bracketed on EXISTING port wrappers; the
+     * interrupt and the two physics procs are deliberately NOT wrapped, because
+     * linker/nds_hot_text.ld:207-209 pins them into ITCM by exact symbol name
+     * under a size ASSERT, and renaming them would move code out of hot text and
+     * change the very cost being measured.
+     *
+     * Strictly hierarchical and disjoint: SCPU nests inside the interrupt proc
+     * (ftmain.c:1269, case nFTPlayerKindCom); SCAT, SHDT and SPRM are separate
+     * sequential procs; all four nest inside GCRA. Two residuals are DERIVED by
+     * the analyzer at zero byte cost -- SOUT = SBAS - GCRA (work outside the sim:
+     * task39 sprites, the interface dispatch, port glue) and SGCO = GCRA - SCPU
+     * - SCAT - SHDT - SPRM (inside the sim, unattributed: the interrupt proc less
+     * its AI, both physics procs, camera, effects, items, weapons, interface
+     * GObjs). Their non-negativity on every frame is the proof the nesting is
+     * real -- the same falsifier the cycle-85 pair used. Like SHDT/SWRM these are
+     * sub-spans of SRC and are deliberately NOT added to `named`. */
+    nNDSTickHudBucketSrcRunAll,
+    nNDSTickHudBucketSrcComputer,
+    nNDSTickHudBucketSrcCatch,
+    nNDSTickHudBucketSrcParams,
     nNDSTickHudBucketCount,
     /* The on-screen table stops at OTHR: the console is 24 rows and rows 20-23
      * already carry the legend, the VBlank histogram and the build stamp. WAIT
@@ -4289,6 +4324,11 @@ extern volatile u32 gNdsTickHudSourceTicks;
  * the ring carries and not a pair of differenced totals. */
 extern volatile u32 gNdsTickHudSrcHitDetectTicks;
 extern volatile u32 gNdsTickHudSrcAnimWarmTicks;
+/* Cycle 86 SBAS split. Per-frame, reset alongside gNdsTickHudSourceTicks. */
+extern volatile u32 gNdsTickHudSrcRunAllTicks;
+extern volatile u32 gNdsTickHudSrcComputerTicks;
+extern volatile u32 gNdsTickHudSrcCatchTicks;
+extern volatile u32 gNdsTickHudSrcParamsTicks;
 extern volatile u32 gNdsTickHudFlushTicks;
 /* R2-07 MISC split. Cumulative, never reset per frame -- difference them
  * across two ring stops with -PerStopGlobals. See diagnostics.c. */

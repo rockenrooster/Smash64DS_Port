@@ -2064,7 +2064,8 @@ static u32 sBattleTickHudP50[nNDSTickHudBucketCount];
 static u32 sBattleTickHudP95[nNDSTickHudBucketCount];
 static const char *const sBattleTickHudNames[nNDSTickHudBucketCount] = {
     "ALL ", "FTR ", "STG ", "BG  ", "AUD ", "HUD ", "SRC ",
-    "MISC", "OTHR", "WAIT", "WORK", "SHDT", "SWRM"
+    "MISC", "OTHR", "WAIT", "WORK", "SHDT", "SWRM",
+    "GCRA", "SCPU", "SCAT", "SPRM"
 };
 
 /* Shell sort, Knuth gaps: no recursion, no allocation, and no worst case that
